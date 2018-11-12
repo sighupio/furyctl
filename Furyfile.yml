@@ -1,15 +1,11 @@
 
-# sshKeyPath: "~/.ssh/new_super_cool.key"
-vendorFolderName: "external_fury"
 roles:
-  - name: kube-node
+  - name: kube-node-common
     version: master
 
-# modules:
-#   - name: scripts
-#     version: master
-#   - name: roles/common
-#     version: master
+modules:
+  - name: aws-ark
+    version: master
 
 bases:
   - name: monitoring/prometheus-operated
