@@ -20,6 +20,8 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
+	"runtime"
+	"sync"
 
 	getter "github.com/hashicorp/go-getter"
 	"github.com/spf13/cobra"
@@ -96,7 +98,15 @@ func (f *Furyconf) Download(dev bool) error {
 	var rolesRepoURL string
 	var modulesRepoURL string
 	var katalogRepoURL string
-
+	var wg sync.WaitGroup
+	numberOfWorkers := runtime.NumCPU() + 1
+	channelLen := 0
+	for _, li := range [][]Package{f.Roles, f.Modules, f.Bases} {
+		channelLen += len(li)
+	}
+	errChan := make(chan error, channelLen)
+	jobs := make(chan []string, channelLen)
+	//log.Printf("workers = %d", numberOfWorkers)
 	if dev {
 		rolesRepoURL = rolesRepoDev
 		modulesRepoURL = modulesRepoDev
@@ -106,29 +116,43 @@ func (f *Furyconf) Download(dev bool) error {
 		modulesRepoURL = modulesRepo
 		katalogRepoURL = katalogRepo
 	}
-
+	wg.Add(numberOfWorkers)
+	for i := 0; i < numberOfWorkers; i++ {
+		go func(i int) {
+			for data := range jobs {
+				//log.Printf("%d : received data %v", i, data)
+				res := get(data[0], data[1])
+				errChan <- res
+				//log.Printf("%d : finished with data %v", i, data)
+			}
+			//log.Printf("%d : CLOSING", i)
+			wg.Done()
+		}(i)
+		//log.Printf("created worker %d", i)
+	}
 	for _, v := range f.Roles {
 		url := fmt.Sprintf("%s%s//%s?ref=%s", protocol, rolesRepoURL, v.Name, v.Version)
 		dir := fmt.Sprintf("%s/%s/%s", f.VendorFolderName, "roles", v.Name)
-		err := get(url, dir)
-		if err != nil {
-			return err
-		}
+		jobs <- []string{url, dir}
 	}
 	for _, v := range f.Modules {
 		url := fmt.Sprintf("%s%s//%s?ref=%s", protocol, modulesRepoURL, v.Name, v.Version)
 		dir := fmt.Sprintf("%s/%s/%s", f.VendorFolderName, "modules", v.Name)
-		err := get(url, dir)
-		if err != nil {
-			return err
-		}
+		jobs <- []string{url, dir}
 	}
 	for _, v := range f.Bases {
 		url := fmt.Sprintf("%s%s//%s?ref=%s", protocol, katalogRepoURL, v.Name, v.Version)
 		dir := fmt.Sprintf("%s/%s/%s", f.VendorFolderName, "bases", v.Name)
-		err := get(url, dir)
+		jobs <- []string{url, dir}
+	}
+	close(jobs)
+	//log.Print("closed jobs")
+	wg.Wait()
+	close(errChan)
+	//log.Print("finished")
+	for err := range errChan {
 		if err != nil {
-			return err
+			log.Print(err)
 		}
 	}
 	return nil
@@ -143,7 +167,7 @@ func (f *Furyconf) Validate() error {
 }
 
 func get(src, dest string) error {
-	fmt.Println("DOWNLOADING...\nSRC: ", src, "\nDST: ", dest)
+	log.Printf("SRC: %s\tDST: %s", src, dest)
 	pwd, err := os.Getwd()
 	if err != nil {
 		return err
@@ -154,7 +178,10 @@ func get(src, dest string) error {
 		Pwd:  pwd,
 		Mode: getter.ClientModeDir,
 	}
-	return client.Get()
+	//log.Printf("let's get %s -> %s", src, dest)
+	err = client.Get()
+	//log.Printf("done %s -> %s", src, dest)
+	return err
 }
 
 func addSSHKey(url, sshKeyPath string) string {
