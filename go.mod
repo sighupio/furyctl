@@ -12,7 +12,7 @@ require (
 	github.com/gogo/protobuf v1.1.1 // indirect
 	github.com/google/btree v0.0.0-20180813153112-4030bb1f1f0c // indirect
 	github.com/google/gofuzz v0.0.0-20170612174753-24818f796faf // indirect
-	github.com/graymeta/stow v0.0.0-20181004223953-b4f789357574
+	github.com/graymeta/stow v0.0.0-20181004223953-b4f789357574 // indirect
 	github.com/hashicorp/go-cleanhttp v0.5.0 // indirect
 	github.com/hashicorp/go-getter v0.0.0-20180809191950-4bda8fa99001
 	github.com/hashicorp/go-safetemp v1.0.0 // indirect
@@ -32,9 +32,8 @@ require (
 	github.com/spf13/pflag v1.0.3 // indirect
 	github.com/spf13/viper v1.2.1
 	github.com/ulikunitz/xz v0.5.4 // indirect
-	go.etcd.io/etcd v0.0.0-20181014065228-dac8c6fcc05b
+	go.etcd.io/etcd v0.0.0-20181014065228-dac8c6fcc05b // indirect
 	go.opencensus.io v0.18.0 // indirect
-	go.uber.org/zap v1.9.1
 	golang.org/x/crypto v0.0.0-20181015023909-0c41d7ab0a0e // indirect
 	golang.org/x/net v0.0.0-20181011144130-49bb7cea24b1 // indirect
 	golang.org/x/sys v0.0.0-20181011152604-fa43e7bc11ba // indirect
@@ -44,6 +43,6 @@ require (
 	k8s.io/api v0.0.0-20181018013834-843ad2d9b9ae // indirect
 	k8s.io/apimachinery v0.0.0-20181015213631-60666be32c5d // indirect
 	k8s.io/client-go v9.0.0+incompatible // indirect
-	k8s.io/kubernetes v1.12.1
+	k8s.io/kubernetes v1.12.1 // indirect
 	k8s.io/utils v0.0.0-20181022192358-4c3feeb576b0 // indirect
 )
