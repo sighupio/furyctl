@@ -167,7 +167,7 @@ func (f *Furyconf) Validate() error {
 }
 
 func get(src, dest string) error {
-	log.Printf("SRC: %s\tDST: %s", src, dest)
+	log.Printf("----\nSRC: %s\nDST: %s", src, dest)
 	pwd, err := os.Getwd()
 	if err != nil {
 		return err
