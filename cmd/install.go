@@ -30,13 +30,12 @@ import (
 
 const (
 	configFile              = "Furyfile"
-	protocol                = "git::ssh://"
-	modulesRepo             = "git@git.sighup.io/sighup/fury-modules.git"
-	rolesRepo               = "git@git.sighup.io/sighup/fury-roles.git"
-	katalogRepo             = "git@git.sighup.io/sighup/fury-katalog.git"
-	modulesRepoDev          = "git@git.incubator.sh/sighup/fury-modules.git"
-	rolesRepoDev            = "git@git.incubator.sh/sighup/fury-roles.git"
-	katalogRepoDev          = "git@git.incubator.sh/sighup/fury-katalog.git"
+	modulesRepo             = "git::ssh://git@git.sighup.io/sighup/fury-modules.git"
+	rolesRepo               = "git::ssh://git@git.sighup.io/sighup/fury-roles.git"
+	katalogRepo             = "git::ssh://git@git.sighup.io/sighup/fury-katalog.git"
+	modulesRepoDev          = "git@github.com:sighup-io/fury-modules.git"
+	rolesRepoDev            = "git@github.com:sighup-io/fury-roles.git"
+	katalogRepoDev          = "git@github.com:sighup-io/fury-katalog.git"
 	defaultVendorFolderName = "vendor"
 )
 
@@ -131,17 +130,17 @@ func (f *Furyconf) Download(dev bool) error {
 		//log.Printf("created worker %d", i)
 	}
 	for _, v := range f.Roles {
-		url := fmt.Sprintf("%s%s//%s?ref=%s", protocol, rolesRepoURL, v.Name, v.Version)
+		url := fmt.Sprintf("%s//%s?ref=%s", rolesRepoURL, v.Name, v.Version)
 		dir := fmt.Sprintf("%s/%s/%s", f.VendorFolderName, "roles", v.Name)
 		jobs <- []string{url, dir}
 	}
 	for _, v := range f.Modules {
-		url := fmt.Sprintf("%s%s//%s?ref=%s", protocol, modulesRepoURL, v.Name, v.Version)
+		url := fmt.Sprintf("%s//%s?ref=%s", modulesRepoURL, v.Name, v.Version)
 		dir := fmt.Sprintf("%s/%s/%s", f.VendorFolderName, "modules", v.Name)
 		jobs <- []string{url, dir}
 	}
 	for _, v := range f.Bases {
-		url := fmt.Sprintf("%s%s//%s?ref=%s", protocol, katalogRepoURL, v.Name, v.Version)
+		url := fmt.Sprintf("%s//%s?ref=%s", katalogRepoURL, v.Name, v.Version)
 		dir := fmt.Sprintf("%s/%s/%s", f.VendorFolderName, "bases", v.Name)
 		jobs <- []string{url, dir}
 	}
