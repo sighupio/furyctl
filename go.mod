@@ -1,4 +1,4 @@
-module git.incubator.sh/sighup/furyctl
+module github.com/sighup-io/furyctl
 
 require (
 	contrib.go.opencensus.io/exporter/ocagent v0.3.0 // indirect
