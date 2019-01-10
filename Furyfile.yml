@@ -1,14 +1,16 @@
 
-roles:
-  - name: kube-node-common
-    version: master
+# roles:
+#   - name: kube-node-common
+#     version: master
 
-modules:
-  - name: aws-ark
-    version: master
+# modules:
+#   - name: aws-ark
+#     version: master
 
 bases:
   - name: monitoring/prometheus-operated
     version: master
   - name: monitoring/prometheus-operator
+    version: master
+  - name: logging/curator
     version: master
