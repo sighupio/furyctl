@@ -66,12 +66,12 @@ var printDefaultCmd = &cobra.Command{
 // InitFuryfile default initial Furyfile config
 const InitFuryfile = `
 roles:
-  - name: kube-node-common
-    version: master
+  - name: aws/kube-node-common
+    version: v1.0.0
 
 bases:
   - name: monitoring/prometheus-operated
-    version: master
+    version: v1.0.0
   - name: monitoring/prometheus-operator
-    version: master
+    version: v1.0.0
 `
