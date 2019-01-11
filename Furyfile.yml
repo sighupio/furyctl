@@ -8,7 +8,7 @@
 #     version: master
 
 bases:
-  - name: monitoring/prometheus-operated
+  - name: monitoring
     version: master
   - name: monitoring/prometheus-operator
     version: master

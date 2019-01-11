@@ -83,14 +83,15 @@ func (f *Furyconf) Parse() ([]Package, error) {
 
 	// Now we generate the dowload url and local dir
 	for i := 0; i < len(pkgs); i++ {
-		if !strings.Contains(pkgs[i].Name, "/") {
-			return nil, fmt.Errorf("this %s named %s doesn't contain a '/", pkgs[i].kind, pkgs[i].Name)
-		}
-		block := strings.SplitN(pkgs[i].Name, "/", 2)
+		block := strings.Split(pkgs[i].Name, "/")
 		if !isBlockAllowed(block[0]) {
 			return nil, fmt.Errorf("Fury doesn't have a block called fury-kuberetes-%s", block[0])
 		}
-		pkgs[i].url = fmt.Sprintf("%s-%s//%s/%s?ref=%s", repoPrefix, block[0], pkgs[i].kind, block[1], pkgs[i].Version)
+		if len(block) == 2 {
+			pkgs[i].url = fmt.Sprintf("%s-%s//%s/%s?ref=%s", repoPrefix, block[0], pkgs[i].kind, block[1], pkgs[i].Version)
+		} else if len(block) == 1 {
+			pkgs[i].url = fmt.Sprintf("%s-%s//%s?ref=%s", repoPrefix, block[0], pkgs[i].kind, pkgs[i].Version)
+		}
 		pkgs[i].dir = fmt.Sprintf("%s/%s/%s", f.VendorFolderName, pkgs[i].kind, pkgs[i].Name)
 	}
 	return pkgs, nil
