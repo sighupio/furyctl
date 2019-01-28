@@ -25,20 +25,6 @@ const (
 	defaultVendorFolderName = "vendor"
 )
 
-var (
-	allowedBlocks = []string{
-		"monitoring",
-		"logging",
-		"ingress",
-		"glusterfs",
-		"on-prem",
-		"gke",
-		"aws",
-		"eks",
-		"aks",
-	}
-)
-
 // Furyconf is reponsible for the structure of the Furyfile
 type Furyconf struct {
 	VendorFolderName string    `yaml:"vendorFolderName"`
@@ -84,9 +70,6 @@ func (f *Furyconf) Parse() ([]Package, error) {
 	// Now we generate the dowload url and local dir
 	for i := 0; i < len(pkgs); i++ {
 		block := strings.Split(pkgs[i].Name, "/")
-		if !isBlockAllowed(block[0]) {
-			return nil, fmt.Errorf("Fury doesn't have a block called fury-kuberetes-%s", block[0])
-		}
 		if len(block) == 2 {
 			pkgs[i].url = fmt.Sprintf("%s-%s//%s/%s?ref=%s", repoPrefix, block[0], pkgs[i].kind, block[1], pkgs[i].Version)
 		} else if len(block) == 1 {
@@ -95,13 +78,4 @@ func (f *Furyconf) Parse() ([]Package, error) {
 		pkgs[i].dir = fmt.Sprintf("%s/%s/%s", f.VendorFolderName, pkgs[i].kind, pkgs[i].Name)
 	}
 	return pkgs, nil
-}
-
-func isBlockAllowed(b string) bool {
-	for _, v := range allowedBlocks {
-		if v == b {
-			return true
-		}
-	}
-	return false
 }

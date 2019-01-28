@@ -4,7 +4,7 @@ require (
 	contrib.go.opencensus.io/exporter/ocagent v0.3.0 // indirect
 	github.com/Azure/azure-sdk-for-go v21.3.0+incompatible // indirect
 	github.com/Azure/go-autorest v11.2.3+incompatible // indirect
-	github.com/aws/aws-sdk-go v1.15.54 // indirect
+	github.com/aws/aws-sdk-go v1.16.26 // indirect
 	github.com/bgentry/go-netrc v0.0.0-20140422174119-9fd32a8b3d3d // indirect
 	github.com/coreos/pkg v0.0.0-20180108230652-97fdf19511ea // indirect
 	github.com/dustin/go-humanize v1.0.0 // indirect

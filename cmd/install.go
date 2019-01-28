@@ -23,6 +23,7 @@ import (
 
 func init() {
 	rootCmd.AddCommand(installCmd)
+	installCmd.PersistentFlags().BoolVarP(&parallel, "parallel", "p", true, "if true enables parallel downloads")
 }
 
 // installCmd represents the install command
