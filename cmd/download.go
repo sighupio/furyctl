@@ -9,10 +9,17 @@ import (
 	getter "github.com/hashicorp/go-getter"
 )
 
+var parallel bool
+
 func download(packages []Package) error {
 	// Preparing all the necessary data for a worker pool
 	var wg sync.WaitGroup
-	numberOfWorkers := runtime.NumCPU() + 1
+	var numberOfWorkers int
+	if parallel {
+		numberOfWorkers = runtime.NumCPU() + 1
+	} else {
+		numberOfWorkers = 1
+	}
 	errChan := make(chan error, len(packages))
 	jobs := make(chan Package, len(packages))
 	//log.Printf("workers = %d", numberOfWorkers)
