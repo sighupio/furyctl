@@ -7,7 +7,26 @@ platform:
   arch: amd64
 
 steps:
-  - name: test
+  - name: lint
     image: golang
+    pull: always
+    depends_on: [ clone ]
     commands:
-      - echo "hello"
+      - find . -name "*.go" | xargs gofmt -s -d
+      - find . -name "*.go" | xargs go vet
+    when:
+      event:
+      - push
+
+  - name: build
+    image: golang
+    pull: always
+    depends_on: [ lint ]
+    commands:
+      -	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -ldflags '-extldflags "-static"' -o bin/linux/$(version)/furyctl  .
+      - CGO_ENABLED=0 GOOS=darwin GOARCH=amd64 go build -a -ldflags '-extldflags "-static"' -o bin/darwin/$(version)/furyctl .
+    when:
+      event:
+      - push
+
+
