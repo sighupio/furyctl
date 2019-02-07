@@ -2,31 +2,38 @@
 kind: pipeline
 name: test
 
-platform:
-  os: linux
-  arch: amd64
+workspace:
+  base: /go
+  path: src/github.com/sighup-io/furyctl
 
 steps:
   - name: lint
     image: golang
     pull: always
-    depends_on: [ clone ]
     commands:
       - find . -name "*.go" | xargs gofmt -s -d
       - find . -name "*.go" | xargs go vet
     when:
+      branch:
+      - master
       event:
       - push
 
   - name: build
     image: golang
     pull: always
-    depends_on: [ lint ]
+    depends_on: 
+      - lint
+    environment:
+      GOOS: linux
+      GOARCH: amd64
+      CGO_ENABLED: 0    
     commands:
-      -	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -ldflags '-extldflags "-static"' -o bin/linux/$(version)/furyctl  .
-      - CGO_ENABLED=0 GOOS=darwin GOARCH=amd64 go build -a -ldflags '-extldflags "-static"' -o bin/darwin/$(version)/furyctl .
+      - go build
+      #-	go build -a -ldflags '-extldflags "-static"' -o bin/linux/$(version)/furyctl  .
+      #- CGO_ENABLED=0 GOOS=darwin GOARCH=amd64 go build -a -ldflags '-extldflags "-static"' -o bin/darwin/$(version)/furyctl .
     when:
+      branch:
+      - master
       event:
       - push
-
-
