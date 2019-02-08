@@ -52,14 +52,13 @@ steps:
       - build-darwin
     settings:
       files:
-        - bin/darwin/latest
-        - bin/linux/latest
-    title: 0.1.1b #FIXME
+        - bin/darwin/latest/*
+        - bin/linux/latest/*
+    title: v0.1.1b #FIXME
     note: CHANGELOG.md
     prerelease: true  #FIXME
     when:
-      branch:
-        - master
+      event: tag
 
 trigger:
   branch:
