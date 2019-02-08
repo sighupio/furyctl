@@ -24,14 +24,14 @@ steps:
       GOOS: linux
       GOARCH: amd64
       CGO_ENABLED: 0    
-      version: v0.1.1
+      VERSION: v0.1.1
     commands:
       - go mod vendor
-      - go build -a -ldflags '-extldflags "-static"' -o bin/linux/$(version)/furyctl  .
-      - go build -a -ldflags '-extldflags "-static"' -o bin/darwin/$(version)/furyctl .
+      - go build -a -ldflags '-extldflags "-static"' -o bin/linux/$VERSION/furyctl  .
+      - go build -a -ldflags '-extldflags "-static"' -o bin/darwin/$VERSION/furyctl .
       - mkdir -p bin/{linux,darwin}/latest
-      - cp bin/linux/$(version)/furyctl bin/linux/latest/
-      - cp bin/darwin/$(version)/furyctl bin/darwin/latest/
+      - cp bin/linux/$VERSION/furyctl bin/linux/latest/
+      - cp bin/darwin/$VERSION/furyctl bin/darwin/latest/
     when:
       branch:
       - master
