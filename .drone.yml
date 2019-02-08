@@ -19,13 +19,12 @@ steps:
     environment:
       GOOS: linux
       GOARCH: amd64
-      CGO_ENABLED: 0    
-      VERSION: v0.1.1c #FIXME
+      CGO_ENABLED: 0
     commands:
       - go mod vendor
-      - go build -a -ldflags '-extldflags "-static"' -o bin/linux/$VERSION/furyctl  .
+      - go build -a -ldflags '-extldflags "-static"' -o bin/linux/$DRONE_TAG/furyctl  .
       - mkdir -p bin/linux/latest
-      - cp bin/linux/$VERSION/furyctl bin/linux/latest/furyctl-linux-amd64
+      - cp bin/linux/$DRONE_TAG/furyctl bin/linux/latest/furyctl-linux-amd64
 
   - name: build-darwin
     group: build
@@ -37,12 +36,11 @@ steps:
       GOOS: darwin
       GOARCH: amd64
       CGO_ENABLED: 0    
-      VERSION: v0.1.1c #FIXME
     commands:
       - go mod vendor
-      - go build -a -ldflags '-extldflags "-static"' -o bin/darwin/$VERSION/furyctl .
+      - go build -a -ldflags '-extldflags "-static"' -o bin/darwin/$DRONE_TAG/furyctl .
       - mkdir -p bin/darwin/latest
-      - cp bin/darwin/$VERSION/furyctl bin/darwin/latest/furyctl-darwin-amd64
+      - cp bin/darwin/$DRONE_TAG/furyctl bin/darwin/latest/furyctl-darwin-amd64
 
   - name: publish
     image: plugins/github-release
@@ -51,11 +49,11 @@ steps:
       - build-linux
       - build-darwin
     settings:
-      api_keys: xxxxxxxxx
+      # api_keys: xxxxxxxxx
       files:
         - bin/darwin/latest/*
         - bin/linux/latest/*
-      title: v0.1.1c #FIXME
+      title: v0.1.1e #FIXME
       note: CHANGELOG.md
       prerelease: true  #FIXME
     when:
