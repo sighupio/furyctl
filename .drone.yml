@@ -63,7 +63,7 @@ steps:
       branch:
         - master
       event:
-        - push #CHANGEME
+        - tag
 
 trigger:
   branch:
