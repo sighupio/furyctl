@@ -58,12 +58,10 @@ steps:
         - bin/linux/latest
     title: 0.1.1b #FIXME
     note: CHANGELOG.md
-    prerelease: true
+    prerelease: true  #FIXME
     when:
       branch:
         - master
-      event:
-        - tag
 
 trigger:
   branch:
