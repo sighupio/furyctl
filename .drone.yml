@@ -3,8 +3,8 @@ kind: pipeline
 name: test
 
 workspace:
-  base: /go
-  path: src/github.com/sighup-io/furyctl
+  base: /
+  path: github.com/sighup-io/furyctl
 
 steps:
   - name: lint
