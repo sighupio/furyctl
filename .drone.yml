@@ -60,11 +60,11 @@ steps:
     note: CHANGELOG.md
     prerelease: true
     when:
+      branch:
+        - master
       event:
         - push #CHANGEME
 
 trigger:
   branch:
   - master
-  event:
-  - push
