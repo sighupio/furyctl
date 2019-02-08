@@ -9,6 +9,11 @@ steps:
     commands:
       - find . -name "*.go" | xargs gofmt -s -d
       # - go vet ./...
+    when:
+      branch:
+        - master
+      event:
+        - push
 
   - name: build-linux
     group: build
@@ -25,6 +30,11 @@ steps:
       - go build -a -ldflags '-extldflags "-static"' -o bin/linux/$DRONE_TAG/furyctl  .
       - mkdir -p bin/linux/latest
       - cp bin/linux/$DRONE_TAG/furyctl bin/linux/latest/furyctl-linux-amd64
+    when:
+      branch:
+        - master
+      event:
+        - push
 
   - name: build-darwin
     group: build
@@ -41,6 +51,11 @@ steps:
       - go build -a -ldflags '-extldflags "-static"' -o bin/darwin/$DRONE_TAG/furyctl .
       - mkdir -p bin/darwin/latest
       - cp bin/darwin/$DRONE_TAG/furyctl bin/darwin/latest/furyctl-darwin-amd64
+    when:
+      branch:
+        - master
+      event:
+        - push
 
   - name: publish
     image: plugins/github-release
