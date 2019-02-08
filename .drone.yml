@@ -2,10 +2,6 @@
 kind: pipeline
 name: test
 
-workspace:
-  base: /
-  path: github.com/sighup-io/furyctl
-
 steps:
   - name: lint
     image: golang
