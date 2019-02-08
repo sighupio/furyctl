@@ -51,13 +51,16 @@ steps:
       - build-linux
       - build-darwin
     settings:
+      api_keys: xxxxxxxxx
       files:
         - bin/darwin/latest/*
         - bin/linux/latest/*
-    title: v0.1.1c #FIXME
-    note: CHANGELOG.md
-    prerelease: true  #FIXME
+      title: v0.1.1c #FIXME
+      note: CHANGELOG.md
+      prerelease: true  #FIXME
+    when:
+      event: tag
 
-trigger:
-  branch:
-  - master
+# trigger:
+#   branch:
+#   - master
