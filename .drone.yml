@@ -20,7 +20,7 @@ steps:
       GOOS: linux
       GOARCH: amd64
       CGO_ENABLED: 0    
-      VERSION: v0.1.1
+      VERSION: v0.1.1b #FIXME
     commands:
       - go mod vendor
       - go build -a -ldflags '-extldflags "-static"' -o bin/linux/$VERSION/furyctl  .
@@ -37,7 +37,7 @@ steps:
       GOOS: darwin
       GOARCH: amd64
       CGO_ENABLED: 0    
-      VERSION: v0.1.1
+      VERSION: v0.1.1b #FIXME
     commands:
       - go mod vendor
       - go build -a -ldflags '-extldflags "-static"' -o bin/darwin/$VERSION/furyctl .
@@ -45,7 +45,7 @@ steps:
       - cp bin/darwin/$VERSION/furyctl bin/darwin/latest/furyctl-darwin-amd64
 
   - name: publish
-    image: plugings/github-release
+    image: plugins/github-release
     pull: always
     depends_on: 
       - build-linux
@@ -56,7 +56,7 @@ steps:
       files:
         - bin/darwin/latest
         - bin/linux/latest
-    title: 0.1.1.b
+    title: 0.1.1b #FIXME
     note: CHANGELOG.md
     prerelease: true
     when:
