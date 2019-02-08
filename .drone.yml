@@ -9,13 +9,9 @@ steps:
     commands:
       - find . -name "*.go" | xargs gofmt -s -d
       # - go vet ./...
-    when:
-      branch:
-      - master
-      event:
-      - push
 
-  - name: build
+  - name: build-linux
+    group: build
     image: golang
     pull: always
     depends_on: 
@@ -28,13 +24,47 @@ steps:
     commands:
       - go mod vendor
       - go build -a -ldflags '-extldflags "-static"' -o bin/linux/$VERSION/furyctl  .
-      - go build -a -ldflags '-extldflags "-static"' -o bin/darwin/$VERSION/furyctl .
       - mkdir -p bin/linux/latest
+      - cp bin/linux/$VERSION/furyctl bin/linux/latest/furyctl-linux-amd64
+
+  - name: build-darwin
+    group: build
+    image: golang
+    pull: always
+    depends_on: 
+      - lint
+    environment:
+      GOOS: darwin
+      GOARCH: amd64
+      CGO_ENABLED: 0    
+      VERSION: v0.1.1
+    commands:
+      - go mod vendor
+      - go build -a -ldflags '-extldflags "-static"' -o bin/darwin/$VERSION/furyctl .
       - mkdir -p bin/darwin/latest
-      - cp bin/linux/$VERSION/furyctl bin/linux/latest/
-      - cp bin/darwin/$VERSION/furyctl bin/darwin/latest/
+      - cp bin/darwin/$VERSION/furyctl bin/darwin/latest/furyctl-darwin-amd64
+
+  - name: publish
+    image: plugings/github-release
+    pull: always
+    depends_on: 
+      - build-linux
+      - build-darwin
+    settings:
+      api_key:
+        from_secret: github_token
+      files:
+        - bin/darwin/latest
+        - bin/linux/latest
+    title: 0.1.1.b
+    note: CHANGELOG.md
+    prerelease: true
     when:
-      branch:
-      - master
       event:
-      - push
+        - push #CHANGEME
+
+trigger:
+  branch:
+  - master
+  event:
+  - push
