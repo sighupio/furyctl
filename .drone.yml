@@ -29,7 +29,8 @@ steps:
       - go mod vendor
       - go build -a -ldflags '-extldflags "-static"' -o bin/linux/$VERSION/furyctl  .
       - go build -a -ldflags '-extldflags "-static"' -o bin/darwin/$VERSION/furyctl .
-      - mkdir -p bin/{linux,darwin}/latest
+      - mkdir -p bin/linux/latest
+      - mkdir -p bin/darwin/latest
       - cp bin/linux/$VERSION/furyctl bin/linux/latest/
       - cp bin/darwin/$VERSION/furyctl bin/darwin/latest/
     when:
