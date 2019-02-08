@@ -20,7 +20,7 @@ steps:
       GOOS: linux
       GOARCH: amd64
       CGO_ENABLED: 0    
-      VERSION: v0.1.1b #FIXME
+      VERSION: v0.1.1c #FIXME
     commands:
       - go mod vendor
       - go build -a -ldflags '-extldflags "-static"' -o bin/linux/$VERSION/furyctl  .
@@ -37,7 +37,7 @@ steps:
       GOOS: darwin
       GOARCH: amd64
       CGO_ENABLED: 0    
-      VERSION: v0.1.1b #FIXME
+      VERSION: v0.1.1c #FIXME
     commands:
       - go mod vendor
       - go build -a -ldflags '-extldflags "-static"' -o bin/darwin/$VERSION/furyctl .
@@ -54,11 +54,9 @@ steps:
       files:
         - bin/darwin/latest/*
         - bin/linux/latest/*
-    title: v0.1.1b #FIXME
+    title: v0.1.1c #FIXME
     note: CHANGELOG.md
     prerelease: true  #FIXME
-    when:
-      event: tag
 
 trigger:
   branch:
