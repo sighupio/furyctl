@@ -51,8 +51,6 @@ steps:
       - build-linux
       - build-darwin
     settings:
-      api_key:
-        from_secret: github_token
       files:
         - bin/darwin/latest
         - bin/linux/latest
