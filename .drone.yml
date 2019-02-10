@@ -1,15 +1,14 @@
 ---
 kind: pipeline
-name: furyctl
+name: test
 
 steps:
   - name: lint
     image: golang
     pull: always
     commands:
-      - echo ${DRONE_TAG}
       - find . -name "*.go" | xargs gofmt -s -d
-      # - go vet ./...
+        #- go vet ./...
     when:
       event:
         - push
@@ -51,7 +50,7 @@ steps:
         - push
         - tag
 
-  - name: publish
+  - name: release
     image: plugins/github-release
     pull: always
     environment:
@@ -66,6 +65,5 @@ steps:
       checksum:
          - sha256
       title: ${DRONE_TAG}
-      #prerelease: true
     when:
       event: tag
