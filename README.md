@@ -40,29 +40,18 @@ You can get all packages in a group by using group name (like `logging`) or sing
 
 ### Install 
 
-You can install `furyctl` using proper endpoint for your OS and version you want.
-Available endpoints are built as follow:
-
-`https://s3.wasabisys.com/sighup-releases/{arch}/{version}/furyctl`
-
+You can find `furyctl` binaries on the [Releases page](releases). 
 
 Supported architectures are (64 bit):
 - `linux`
 - `darwin`
 
-Current availability versions are: 
-- `v0.1.0`
-- `latest`
-
-
-**E.g.** You can install the latest version of `furyctl` on your Linux distro with following command:
+Download right binary for your architecture and add it to your PATH. Assuming it's downloaded in your
+`~/Downloads` folder, you can run following commands (replacing `{arch}` with your architecture):
 
 ```
-wget https://s3.wasabisys.com/sighup-releases/linux/latest/furyctl \
-&& chmod +x furyctl \
-&& mv furyctl /usr/local/bin
+chmod +x  ~/Downloads/furyctl-{arch}-amd64 && mv ~/Downloads/furyctl-{arch}-amd64 /usr/local/bin/furyctl
 ```
-
 
 ### Usage
 
