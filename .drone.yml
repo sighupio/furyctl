@@ -1,20 +1,20 @@
 ---
 kind: pipeline
-name: test
+name: furyctl
 
 steps:
   - name: lint
     image: golang
     pull: always
     commands:
+      - echo ${DRONE_TAG}
       - find . -name "*.go" | xargs gofmt -s -d
       # - go vet ./...
     when:
-      branch:
-        - master
       event:
         - push
-
+        - tag
+      
   - name: build-linux
     group: build
     image: golang
@@ -27,14 +27,11 @@ steps:
       CGO_ENABLED: 0
     commands:
       - go mod vendor
-      - go build -a -ldflags '-extldflags "-static"' -o bin/linux/$DRONE_TAG/furyctl  .
-      - mkdir -p bin/linux/latest
-      - cp bin/linux/$DRONE_TAG/furyctl bin/linux/latest/furyctl-linux-amd64
+      - go build -a -ldflags '-extldflags "-static"' -o bin/releases/furyctl-linux-amd64  .
     when:
-      branch:
-        - master
       event:
         - push
+        - tag
 
   - name: build-darwin
     group: build
@@ -48,32 +45,27 @@ steps:
       CGO_ENABLED: 0    
     commands:
       - go mod vendor
-      - go build -a -ldflags '-extldflags "-static"' -o bin/darwin/$DRONE_TAG/furyctl .
-      - mkdir -p bin/darwin/latest
-      - cp bin/darwin/$DRONE_TAG/furyctl bin/darwin/latest/furyctl-darwin-amd64
+      - go build -a -ldflags '-extldflags "-static"' -o bin/releases/furyctl-darwin-amd64 .
     when:
-      branch:
-        - master
       event:
         - push
+        - tag
 
   - name: publish
     image: plugins/github-release
     pull: always
+    environment:
     depends_on: 
       - build-linux
       - build-darwin
     settings:
-      # api_keys: xxxxxxxxx
+      api_key: 
+        from_secret: GITHUB_TOKEN 
       files:
-        - bin/darwin/latest/*
-        - bin/linux/latest/*
-      title: v0.1.1e #FIXME
-      note: CHANGELOG.md
-      prerelease: true  #FIXME
+        - bin/releases/*
+      checksum:
+         - sha256
+      title: ${DRONE_TAG}
+      #prerelease: true
     when:
       event: tag
-
-# trigger:
-#   branch:
-#   - master
