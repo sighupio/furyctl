@@ -1,6 +1,7 @@
-## Furyctl Tutorial
+## Furyctl
 
-Furyctl is package manager for Fury distribution. It’s simple to use and reads a single Furyfile to download packages you need. Fury distribution offers three types of packages:
+Furyctl is package manager for Fury distribution. It’s simple to use and reads a single Furyfile to download 
+packages you need. Fury distribution offers three types of packages:
 
 - **Bases** : Sets of Kustomize bases to deploy basic components in Kubernetes 
 - **Modules**: Terraform modules to deploy kubernetes infrastructure and it’s dependencies
@@ -8,7 +9,9 @@ Furyctl is package manager for Fury distribution. It’s simple to use and reads
 
 ### Furyfile
 
-Furyfile is a simple YAML formatted file where you list which packages(and versions) you want to have. You can omit a type if you don't need any of its packages. An example Furyfile with packages listed would be like following:
+Furyfile is a simple YAML formatted file where you list which packages(and versions) you want to have. 
+You can omit a type if you don't need any of its packages. An example Furyfile with packages listed 
+would be like following:
 
 ```
 roles:
@@ -32,7 +35,8 @@ bases:
     version: master
 ```
 
-You can get all packages in a group by using group name (like `logging`) or single packages under a group (like `monitoring/prometheus-operator`).
+You can get all packages in a group by using group name (like `logging`) or single packages under a group 
+(like `monitoring/prometheus-operator`).
 
 ### Install 
 
