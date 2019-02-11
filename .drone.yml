@@ -64,6 +64,6 @@ steps:
         - bin/releases/*
       checksum:
          - sha256
-      title: ${DRONE_TAG}
+           #title: ${DRONE_TAG}
     when:
       event: tag
