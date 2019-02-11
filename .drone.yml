@@ -8,6 +8,7 @@ steps:
     pull: always
     commands:
       - find . -name "*.go" | xargs gofmt -s -d
+      - go vet ./...
     when:
       event:
         - push
