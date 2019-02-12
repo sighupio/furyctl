@@ -14,7 +14,7 @@ steps:
         - push
         - tag
       
-  - name: build-linux
+  - name: build-linux-push
     group: build
     image: golang
     pull: always
@@ -32,7 +32,7 @@ steps:
       event:
         - push
 
-  - name: build-darwin
+  - name: build-darwin-push
     group: build
     image: golang
     pull: always
