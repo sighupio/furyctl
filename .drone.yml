@@ -26,8 +26,7 @@ steps:
       CGO_ENABLED: 0
     commands:
       - go mod vendor
-      - go build -o bin/furyctl-linux-amd64  .
-      - ./bin/furyctl-linux-amd64
+      - go build
     when:
       event:
         - push
@@ -44,8 +43,7 @@ steps:
       CGO_ENABLED: 0    
     commands:
       - go mod vendor
-      - go build -o bin/furyctl-darwin-amd64 .
-      - ./bin/furyctl-darwin-amd64
+      - go build 
     when:
       event:
         - push
