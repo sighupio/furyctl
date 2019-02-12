@@ -26,11 +26,11 @@ steps:
       CGO_ENABLED: 0
     commands:
       - go mod vendor
-      - go build -a -ldflags '-extldflags "-static"' -o bin/releases/furyctl-linux-amd64  .
+      - go build -o bin/furyctl-linux-amd64  .
+      - ./bin/furyctl-linux-amd64
     when:
       event:
         - push
-        - tag
 
   - name: build-darwin
     group: build
@@ -44,10 +44,44 @@ steps:
       CGO_ENABLED: 0    
     commands:
       - go mod vendor
-      - go build -a -ldflags '-extldflags "-static"' -o bin/releases/furyctl-darwin-amd64 .
+      - go build -o bin/furyctl-darwin-amd64 .
+      - ./bin/furyctl-darwin-amd64
     when:
       event:
         - push
+
+  - name: build-linux
+    group: build-to-release
+    image: golang
+    pull: always
+    depends_on: 
+      - lint
+    environment:
+      GOOS: linux
+      GOARCH: amd64
+      CGO_ENABLED: 0
+    commands:
+      - go mod vendor
+      - go build -a -ldflags '-extldflags "-static"' -o bin/releases/furyctl-linux-amd64  .
+    when:
+      event:
+        - tag
+
+  - name: build-darwin
+    group: build-to-release
+    image: golang
+    pull: always
+    depends_on: 
+      - lint
+    environment:
+      GOOS: darwin
+      GOARCH: amd64
+      CGO_ENABLED: 0    
+    commands:
+      - go mod vendor
+      - go build -a -ldflags '-extldflags "-static"' -o bin/releases/furyctl-darwin-amd64 .
+    when:
+      event:
         - tag
 
   - name: release
@@ -64,6 +98,5 @@ steps:
         - bin/releases/*
       checksum:
          - sha256
-           #title: ${DRONE_TAG}
     when:
       event: tag
