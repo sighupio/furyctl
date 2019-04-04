@@ -21,19 +21,19 @@ import (
 	"github.com/spf13/cobra"
 )
 
+func init() {
+	// rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.furyctl.yaml)")
+	rootCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
+	rootCmd.AddCommand(versionCmd)
+	rootCmd.AddCommand(printDefaultCmd)
+}
+
 // Execute is the main entrypoint of furyctl
 func Execute() {
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Println(err)
 		os.Exit(1)
 	}
-}
-
-func init() {
-	// rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.furyctl.yaml)")
-	rootCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
-	rootCmd.AddCommand(versionCmd)
-	rootCmd.AddCommand(printDefaultCmd)
 }
 
 // rootCmd represents the base command when called without any subcommands
