@@ -10,6 +10,12 @@ import (
 	"github.com/bmatcuk/doublestar"
 )
 
+func MustMkdirInCurrentDirectory(dirname string) {
+	dir := MustGetCurrentDir()
+	p := filepath.Join(dir, dirname)
+	MustMkdir(p)
+}
+
 func MustMkdir(dirname string) {
 	err := os.Mkdir(dirname, 0700)
 	if err != nil {

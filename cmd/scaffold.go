@@ -41,15 +41,14 @@ var scaffoldCommand = &cobra.Command{
 }
 
 func scaffoldK8sManifests() {
-	dir := util.MustGetCurrentDir()
-	p := filepath.Join(dir, "manifests")
-	util.MustMkdir(p)
+	util.MustMkdirInCurrentDirectory("manifests")
 
 	type kustomizationFile struct {
 		Bases []string `yaml:"bases"`
 	}
 
-	absoluteVendorPath := filepath.Join(dir, "vendor")
+	currentDir := util.MustGetCurrentDir()
+	absoluteVendorPath := filepath.Join(currentDir, "vendor")
 	if _, err := os.Stat(absoluteVendorPath); os.IsNotExist(err) {
 		fmt.Println("no v endor folder found, run 'furyctl install'")
 		os.Exit(0)
@@ -69,19 +68,15 @@ func scaffoldK8sManifests() {
 		panic(err)
 	}
 
-	util.SafeWriteFileOrExit(filepath.Join(p, "kustomization.yml"), content)
+	util.SafeWriteFileOrExit(filepath.Join(currentDir, "manifests/kustomization.yml"), content)
 }
 
 func scaffoldAnsibleRules() {
-	dir := util.MustGetCurrentDir()
-	p := filepath.Join(dir, "ansible")
-	util.MustMkdir(p)
+	util.MustMkdirInCurrentDirectory("ansible")
 }
 
 func scaffoldTerraformModules() {
-	dir := util.MustGetCurrentDir()
-	p := filepath.Join(dir, "terraform")
-	util.MustMkdir(p)
+	util.MustMkdirInCurrentDirectory("terraform")
 }
 
 func scaffoldSecrect() {
