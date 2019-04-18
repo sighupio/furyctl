@@ -1,0 +1,89 @@
+// Copyright © 2018 Sighup SRL support@sighup.io
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+package cmd
+
+import (
+	"fmt"
+	"os"
+	"path/filepath"
+	"strings"
+
+	"github.com/sighup-io/furyctl/util"
+	"github.com/spf13/cobra"
+	"gopkg.in/yaml.v2"
+)
+
+func init() {
+	rootCmd.AddCommand(scaffoldCommand)
+}
+
+var scaffoldCommand = &cobra.Command{
+	Use:   "scaffold",
+	Short: "create required folders and files",
+	Long:  "scaffold a fury project creating required folders and files",
+	Run: func(cmd *cobra.Command, args []string) {
+		scaffoldTerraformModules()
+		scaffoldK8sManifests()
+		scaffoldAnsibleRules()
+	},
+}
+
+func scaffoldK8sManifests() {
+	dir := util.MustGetCurrentDir()
+	p := filepath.Join(dir, "manifests")
+	util.MustMkdir(p)
+
+	type kustomizationFile struct {
+		Bases []string `yaml:"bases"`
+	}
+
+	absoluteVendorPath := filepath.Join(dir, "vendor")
+	if _, err := os.Stat(absoluteVendorPath); os.IsNotExist(err) {
+		fmt.Println("no v endor folder found, run 'furyctl install'")
+		os.Exit(0)
+	}
+
+	bases := util.FindBasesFromVendor(absoluteVendorPath)
+
+	var relativeBases []string
+	const vendorPathRelativeToManifestsFolder = "../vendor"
+	for _, b := range bases {
+		s := strings.Replace(b, absoluteVendorPath, vendorPathRelativeToManifestsFolder, 1)
+		relativeBases = append(relativeBases, s)
+	}
+
+	content, err := yaml.Marshal(&kustomizationFile{Bases: relativeBases})
+	if err != nil {
+		panic(err)
+	}
+
+	util.SafeWriteFileOrExit(filepath.Join(p, "kustomization.yml"), content)
+}
+
+func scaffoldAnsibleRules() {
+	dir := util.MustGetCurrentDir()
+	p := filepath.Join(dir, "ansible")
+	util.MustMkdir(p)
+}
+
+func scaffoldTerraformModules() {
+	dir := util.MustGetCurrentDir()
+	p := filepath.Join(dir, "terraform")
+	util.MustMkdir(p)
+}
+
+func scaffoldSecrect() {
+	util.MustMkdir("secrets")
+}

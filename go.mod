@@ -6,6 +6,7 @@ require (
 	github.com/Azure/go-autorest v11.2.3+incompatible // indirect
 	github.com/aws/aws-sdk-go v1.16.26 // indirect
 	github.com/bgentry/go-netrc v0.0.0-20140422174119-9fd32a8b3d3d // indirect
+	github.com/bmatcuk/doublestar v1.1.1
 	github.com/coreos/pkg v0.0.0-20180108230652-97fdf19511ea // indirect
 	github.com/dustin/go-humanize v1.0.0 // indirect
 	github.com/go-ini/ini v1.39.0 // indirect
@@ -31,6 +32,7 @@ require (
 	github.com/spf13/cobra v0.0.3
 	github.com/spf13/pflag v1.0.3 // indirect
 	github.com/spf13/viper v1.2.1
+
 	github.com/ulikunitz/xz v0.5.4 // indirect
 	go.etcd.io/etcd v0.0.0-20181014065228-dac8c6fcc05b // indirect
 	go.opencensus.io v0.18.0 // indirect
@@ -40,6 +42,7 @@ require (
 	google.golang.org/api v0.0.0-20181026000445-511bab8e55de // indirect
 	google.golang.org/genproto v0.0.0-20181004005441-af9cb2a35e7f // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
+	gopkg.in/yaml.v2 v2.2.1
 	k8s.io/api v0.0.0-20181018013834-843ad2d9b9ae // indirect
 	k8s.io/apimachinery v0.0.0-20181015213631-60666be32c5d // indirect
 	k8s.io/client-go v9.0.0+incompatible // indirect
