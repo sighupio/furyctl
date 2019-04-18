@@ -1,16 +1,16 @@
 ## Furyctl
 
-Furyctl is package manager for Fury distribution. It’s simple to use and reads a single Furyfile to download 
+Furyctl is package manager for Fury distribution. It’s simple to use and reads a single Furyfile to download
 packages you need. Fury distribution offers three types of packages:
 
-- **Bases** : Sets of Kustomize bases to deploy basic components in Kubernetes 
+- **Bases** : Sets of Kustomize bases to deploy basic components in Kubernetes
 - **Modules**: Terraform modules to deploy kubernetes infrastructure and it’s dependencies
 - **Roles**: Ansible roles for deploying, configuring and managing a Kubernetes infrastructure
 
 ### Furyfile
 
-Furyfile is a simple YAML formatted file where you list which packages(and versions) you want to have. 
-You can omit a type if you don't need any of its packages. An example Furyfile with packages listed 
+Furyfile is a simple YAML formatted file where you list which packages(and versions) you want to have.
+You can omit a type if you don't need any of its packages. An example Furyfile with packages listed
 would be like following:
 
 ```
@@ -35,14 +35,15 @@ bases:
     version: master
 ```
 
-You can get all packages in a group by using group name (like `logging`) or single packages under a group 
+You can get all packages in a group by using group name (like `logging`) or single packages under a group
 (like `monitoring/prometheus-operator`).
 
-### Install 
+### Install
 
-You can find `furyctl` binaries on the [Releases page](releases). 
+You can find `furyctl` binaries on the [Releases page](releases).
 
 Supported architectures are (64 bit):
+
 - `linux`
 - `darwin`
 
@@ -69,6 +70,7 @@ Available Commands:
   help         Help about any command
   install      Download dependencies specified in Furyfile.yml
   printDefault Prints a basic Furyfile used to generate an INFRA project
+  scaffold     create required folders and files
   version      Prints the client version information
 
 Flags:
@@ -78,7 +80,7 @@ Flags:
 Use "furyctl [command] --help" for more information about a command.
 ```
 
-- To install packages, you can run `furyctl install` (within the same directory where your Furyfile is located): 
+- To install packages, you can run `furyctl install` (within the same directory where your Furyfile is located):
 
 ```bash
 $ furyctl install
@@ -90,9 +92,9 @@ $ furyctl install
 2019/02/04 17:46:07 SRC:  git@github.com:sighup-io/fury-kubernetes-monitoring//katalog/prometheus-operator?ref=master
 2019/02/04 17:46:07 DST:  vendor/katalog/monitoring/prometheus-operator
 ...
-```   
-You will find your packages under `vendor/{roles,modules,katalog}` directories created where you called `furyctl`.
+```
 
+You will find your packages under `vendor/{roles,modules,katalog}` directories created where you called `furyctl`.
 
 - You can get furyctl version with `furyctl version`:
 
