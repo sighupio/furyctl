@@ -37,6 +37,7 @@ var scaffoldCommand = &cobra.Command{
 		scaffoldTerraformModules()
 		scaffoldK8sManifests()
 		scaffoldAnsibleRules()
+		createGitIgnore()
 	},
 }
 
@@ -81,4 +82,13 @@ func scaffoldTerraformModules() {
 
 func scaffoldSecrect() {
 	util.MustMkdir("secrets")
+}
+
+func createGitIgnore() {
+	content := []byte(`*.retry
+.terraform
+*.tfstate
+*.backup
+`)
+	util.SafeWriteFileOrExit(".gitignore", content)
 }
