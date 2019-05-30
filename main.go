@@ -15,7 +15,7 @@
 package main
 
 import (
-	"github.com/sighup-io/furyctl/cmd"
+	"github.com/sighupio/furyctl/cmd"
 )
 
 func main() {

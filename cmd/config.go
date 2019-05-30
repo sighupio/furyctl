@@ -21,7 +21,7 @@ import (
 
 const (
 	configFile              = "Furyfile"
-	repoPrefix              = "git@github.com:sighup-io/fury-kubernetes"
+	repoPrefix              = "git@github.com:sighupio/fury-kubernetes"
 	defaultVendorFolderName = "vendor"
 )
 
