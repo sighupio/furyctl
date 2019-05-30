@@ -10,13 +10,16 @@ import (
 	"github.com/bmatcuk/doublestar"
 )
 
-func CreateFolderInCurrentDirectory(dirname string) {
+func CreateFolderInCurrentDirectory(dirname string) error {
 	currentDir, _ := os.Getwd()
 	p := filepath.Join(currentDir, dirname)
 	err := os.Mkdir(p, 0700)
 	if os.IsExist(err) {
 		fmt.Printf("skipping creation of folder '%s' because it already exists \n", dirname)
+	} else if err != nil {
+		return err
 	}
+	return nil
 }
 
 func SafeWriteFileOrExit(filename string, fileContent []byte) error {
