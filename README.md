@@ -40,7 +40,7 @@ You can get all packages in a group by using group name (like `logging`) or sing
 
 ### Install 
 
-You can find `furyctl` binaries on the [Releases page](https://github.com/sighup-io/furyctl/releases). 
+You can find `furyctl` binaries on the [Releases page](https://github.com/sighupio/furyctl/releases). 
 
 Supported architectures are (64 bit):
 - `linux`
@@ -50,7 +50,7 @@ Download right binary for your architecture and add it to your PATH. Assuming it
 `~/Downloads` folder, you can run following commands (replacing `{arch}` with your architecture):
 
 ```
-chmod +x  ~/Downloads/furyctl-{arch}-amd64 && mv ~/Downloads/furyctl-{arch}-amd64 /usr/local/bin/furyctl
+chmod +x  ~/Downloads/furyctl-{arch}-amd64.dms && mv ~/Downloads/furyctl-{arch}-amd64.dms /usr/local/bin/furyctl
 ```
 
 ### Usage
