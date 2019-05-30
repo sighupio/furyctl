@@ -40,7 +40,7 @@ You can get all packages in a group by using group name (like `logging`) or sing
 
 ### Install 
 
-You can find `furyctl` binaries on the [Releases page](https://github.com/sighup-io/furyctl/releases). 
+You can find `furyctl` binaries on the [Releases page](https://github.com/sighupio/furyctl/releases). 
 
 Supported architectures are (64 bit):
 - `linux`
