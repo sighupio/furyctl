@@ -51,7 +51,7 @@ func scaffoldK8sManifests() {
 	currentDir := util.MustGetCurrentDir()
 	absoluteVendorPath := filepath.Join(currentDir, "vendor")
 	if _, err := os.Stat(absoluteVendorPath); os.IsNotExist(err) {
-		fmt.Println("no v endor folder found, run 'furyctl install'")
+		fmt.Println("no 'vendor' folder found, run furyctl install'")
 		os.Exit(0)
 	}
 
