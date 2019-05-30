@@ -29,10 +29,11 @@ func SafeWriteFileOrExit(filename string, fileContent []byte) error {
 		fmt.Printf("skipping creation of file %s because it already exists\n", filename)
 		if filename == ".gitignore" {
 			fmt.Println(`add these enties on your .gitignore manually
-			*.retry
-			.terraform
-			*.tfstate
-			*.backup
+
+*.retry
+.terraform
+*.tfstate
+*.backup
 			`)
 		}
 		os.Exit(0)
