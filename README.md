@@ -50,7 +50,7 @@ Download right binary for your architecture and add it to your PATH. Assuming it
 `~/Downloads` folder, you can run following commands (replacing `{arch}` with your architecture):
 
 ```
-chmod +x  ~/Downloads/furyctl-{arch}-amd64.dms && mv ~/Downloads/furyctl-{arch}-amd64.dms /usr/local/bin/furyctl
+chmod +x  ~/Downloads/furyctl-{arch}-amd64 && mv ~/Downloads/furyctl-{arch}-amd64 /usr/local/bin/furyctl
 ```
 
 ### Usage
