@@ -10,43 +10,40 @@ import (
 	"github.com/bmatcuk/doublestar"
 )
 
-func MustMkdirInCurrentDirectory(dirname string) {
-	dir := MustGetCurrentDir()
-	p := filepath.Join(dir, dirname)
-	MustMkdir(p)
-}
-
-func MustMkdir(dirname string) {
-	err := os.Mkdir(dirname, 0700)
-	if err != nil {
-		panic(err)
+func CreateFolderInCurrentDirectory(dirname string) {
+	currentDir, _ := os.Getwd()
+	p := filepath.Join(currentDir, dirname)
+	err := os.Mkdir(p, 0700)
+	if os.IsExist(err) {
+		fmt.Printf("skipping creation of folder '%s' because it already exists \n", dirname)
 	}
 }
 
-func MustGetCurrentDir() string {
-	p, err := os.Getwd()
-	if err != nil {
-		panic(err)
-	}
-	return p
-}
-
-func SafeWriteFileOrExit(filename string, fileContent []byte) {
+func SafeWriteFileOrExit(filename string, fileContent []byte) error {
 	if _, err := os.Stat(filename); os.IsNotExist(err) {
 		err := ioutil.WriteFile(filename, fileContent, 0777)
 		if err != nil {
-			panic(err)
+			return err
 		}
 	} else {
-		fmt.Printf("file %s already exists\n", filename)
+		fmt.Printf("skipping creation of file %s because it already exists\n", filename)
+		if filename == ".gitignore" {
+			fmt.Println(`add these enties on your .gitignore manually
+			*.retry
+			.terraform
+			*.tfstate
+			*.backup
+			`)
+		}
 		os.Exit(0)
 	}
+	return nil
 }
 
-func FindBasesFromVendor(vendorPath string) (paths []string) {
+func FindBasesFromVendor(vendorPath string) (paths []string, err error) {
 	matches, err := doublestar.Glob(filepath.Join(vendorPath, "**", "kustomization.{yaml,yml}"))
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 
 	for _, v := range matches {
@@ -55,5 +52,5 @@ func FindBasesFromVendor(vendorPath string) (paths []string) {
 		paths = append(paths, s)
 	}
 
-	return paths
+	return paths, nil
 }

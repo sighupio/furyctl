@@ -42,20 +42,20 @@ var scaffoldCommand = &cobra.Command{
 }
 
 func scaffoldK8sManifests() {
-	util.MustMkdirInCurrentDirectory("manifests")
+	util.CreateFolderInCurrentDirectory("manifests")
 
 	type kustomizationFile struct {
 		Bases []string `yaml:"bases"`
 	}
 
-	currentDir := util.MustGetCurrentDir()
+	currentDir, _ := os.Getwd()
 	absoluteVendorPath := filepath.Join(currentDir, "vendor")
 	if _, err := os.Stat(absoluteVendorPath); os.IsNotExist(err) {
-		fmt.Println("no 'vendor' folder found, run furyctl install'")
+		fmt.Println("no 'vendor' folder found, run `furyctl install'")
 		os.Exit(0)
 	}
 
-	bases := util.FindBasesFromVendor(absoluteVendorPath)
+	bases, _ := util.FindBasesFromVendor(absoluteVendorPath)
 
 	var relativeBases []string
 	const vendorPathRelativeToManifestsFolder = "../vendor"
@@ -73,15 +73,15 @@ func scaffoldK8sManifests() {
 }
 
 func scaffoldAnsibleRules() {
-	util.MustMkdirInCurrentDirectory("ansible")
+	util.CreateFolderInCurrentDirectory("ansible")
 }
 
 func scaffoldTerraformModules() {
-	util.MustMkdirInCurrentDirectory("terraform")
+	util.CreateFolderInCurrentDirectory("terraform")
 }
 
 func scaffoldSecrect() {
-	util.MustMkdir("secrets")
+	util.CreateFolderInCurrentDirectory("secrets")
 }
 
 func createGitIgnore() {
