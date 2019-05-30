@@ -17,6 +17,7 @@ func CreateFolderInCurrentDirectory(dirname string) error {
 	if os.IsExist(err) {
 		fmt.Printf("skipping creation of folder '%s' because it already exists \n", dirname)
 	} else if err != nil {
+		fmt.Println(err)
 		return err
 	}
 	return nil
