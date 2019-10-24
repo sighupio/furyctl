@@ -27,11 +27,15 @@ const (
 
 // Furyconf is reponsible for the structure of the Furyfile
 type Furyconf struct {
-	VendorFolderName string    `yaml:"vendorFolderName"`
-	Roles            []Package `yaml:"roles"`
-	Modules          []Package `yaml:"modules"`
-	Bases            []Package `yaml:"bases"`
+	VendorFolderName string         `yaml:"vendorFolderName"`
+	Versions         VersionPattern `yaml:"versions"`
+	Roles            []Package      `yaml:"roles"`
+	Modules          []Package      `yaml:"modules"`
+	Bases            []Package      `yaml:"bases"`
 }
+
+// Map from glob pattern to version associated (e.g. {"aws/*" : "v1.15.4-1"}
+type VersionPattern map[string]string
 
 // Package is the type to contain the definition of a single package
 type Package struct {
@@ -69,11 +73,20 @@ func (f *Furyconf) Parse() ([]Package, error) {
 
 	// Now we generate the dowload url and local dir
 	for i := 0; i < len(pkgs); i++ {
+		version := pkgs[i].Version
+		if version == "" {
+			for k, v := range f.Versions {
+				if strings.HasPrefix(pkgs[i].Name, k) {
+					version = v
+					break
+				}
+			}
+		}
 		block := strings.Split(pkgs[i].Name, "/")
 		if len(block) == 2 {
-			pkgs[i].url = fmt.Sprintf("%s-%s//%s/%s?ref=%s", repoPrefix, block[0], pkgs[i].kind, block[1], pkgs[i].Version)
+			pkgs[i].url = fmt.Sprintf("%s-%s//%s/%s?ref=%s", repoPrefix, block[0], pkgs[i].kind, block[1], version)
 		} else if len(block) == 1 {
-			pkgs[i].url = fmt.Sprintf("%s-%s//%s?ref=%s", repoPrefix, block[0], pkgs[i].kind, pkgs[i].Version)
+			pkgs[i].url = fmt.Sprintf("%s-%s//%s?ref=%s", repoPrefix, block[0], pkgs[i].kind, version)
 		}
 		pkgs[i].dir = fmt.Sprintf("%s/%s/%s", f.VendorFolderName, pkgs[i].kind, pkgs[i].Name)
 	}

@@ -1,5 +1,10 @@
 
-# roles:
+versions:
+  aws/: v1.15.4
+  
+roles:
+  - name: aws/etcd
+
 #   - name: kube-node-common
 #     version: master
 
