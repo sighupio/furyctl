@@ -14,24 +14,26 @@ You can omit a type if you don't need any of its packages. An example Furyfile w
 would be like following:
 
 ```
+# all sections are optional
+
+# map of prefixes and versions used to force a specific version for all the matching roles/modules/bases
+versions:
+  # e.g. will force version v1.15.4 if the name matches "aws*"
+  aws: v1.15.4
+  monitoring: master
+
 roles:
-  - name: kube-node
-    version: master
-  - name: kube-single-master
-    version: master
+  - name: aws/etcd
+  - name: aws/kube-control-plane
 
 modules:
-  - name: aws-single-master
-    version: master
-  - name: aws-ark
-    version: master
+  - name: aws/aws-vpc
+  - name: aws/aws-kubernetes
 
 bases:
-  - name: monitoring/prometheus-operator
-    version: master
-  - name: monitoring/prometheus-operated
-    version: master
+  - name: monitoring
   - name: logging
+  # versions can be overridden if needed by specifying them for each package
     version: master
 ```
 

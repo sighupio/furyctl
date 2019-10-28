@@ -9,6 +9,7 @@ require (
 	github.com/coreos/pkg v0.0.0-20180108230652-97fdf19511ea // indirect
 	github.com/dustin/go-humanize v1.0.0 // indirect
 	github.com/go-ini/ini v1.39.0 // indirect
+	github.com/gobwas/glob v0.2.3
 	github.com/gogo/protobuf v1.1.1 // indirect
 	github.com/google/btree v0.0.0-20180813153112-4030bb1f1f0c // indirect
 	github.com/google/gofuzz v0.0.0-20170612174753-24818f796faf // indirect
@@ -46,3 +47,5 @@ require (
 	k8s.io/kubernetes v1.12.1 // indirect
 	k8s.io/utils v0.0.0-20181022192358-4c3feeb576b0 // indirect
 )
+
+go 1.13

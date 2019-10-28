@@ -59,9 +59,7 @@ func download(packages []Package) error {
 }
 
 func get(src, dest string) error {
-	log.Println("----")
-	log.Println("SRC: ", src)
-	log.Println("DST: ", dest)
+	log.Printf("downloading: %s -> %s\n", src, dest)
 	pwd, err := os.Getwd()
 	if err != nil {
 		return err
