@@ -1,6 +1,7 @@
 
 versions:
   aws: v1.15.4
+  monitoring: v1.15.4
 
 roles:
   - name: aws/etcd
@@ -16,6 +17,5 @@ bases:
   - name: monitoring
     version: master
   - name: monitoring/prometheus-operator
-    version: master
   - name: logging/curator
     version: master

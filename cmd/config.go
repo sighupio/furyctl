@@ -16,6 +16,7 @@ package cmd
 
 import (
 	"fmt"
+	"log"
 	"strings"
 )
 
@@ -78,6 +79,7 @@ func (f *Furyconf) Parse() ([]Package, error) {
 			for k, v := range f.Versions {
 				if strings.HasPrefix(pkgs[i].Name, k) {
 					version = v
+					log.Printf("using %v for package %s\n", version, pkgs[i].Name)
 					break
 				}
 			}
