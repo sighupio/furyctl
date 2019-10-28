@@ -15,4 +15,4 @@
 package cmd
 
 // FuryctlVersion is the version of the client
-const FuryctlVersion = "0.1.1"
+const FuryctlVersion = "0.1.3"
