@@ -15,7 +15,7 @@
 package cmd
 
 import (
-	"fmt"
+	"log"
 	"os"
 
 	"github.com/spf13/cobra"
@@ -24,7 +24,7 @@ import (
 // Execute is the main entrypoint of furyctl
 func Execute() {
 	if err := rootCmd.Execute(); err != nil {
-		fmt.Println(err)
+		log.Println(err)
 		os.Exit(1)
 	}
 }
@@ -49,7 +49,7 @@ var versionCmd = &cobra.Command{
 	Short: "Prints the client version information",
 	Long:  ``,
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("Furyctl version ", FuryctlVersion)
+		log.Println("Furyctl version ", FuryctlVersion)
 	},
 }
 
@@ -59,7 +59,7 @@ var printDefaultCmd = &cobra.Command{
 	Short: "Prints a basic Furyfile used to generate an INFRA project",
 	Long:  ``,
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println(InitFuryfile)
+		log.Println(InitFuryfile)
 	},
 }
 

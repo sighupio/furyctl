@@ -1,16 +1,17 @@
 
-# roles:
-#   - name: kube-node-common
-#     version: master
+versions:
+  aws: v1.15.4
+  monitoring: master
 
-# modules:
-#   - name: aws-ark
-#     version: master
+roles:
+  - name: aws/etcd
+  - name: aws/kube-control-plane
+
+modules:
+  - name: aws/aws-vpc
+  - name: aws/aws-kubernetes
 
 bases:
   - name: monitoring
-    version: master
-  - name: monitoring/prometheus-operator
-    version: master
-  - name: logging/curator
+  - name: logging
     version: master
