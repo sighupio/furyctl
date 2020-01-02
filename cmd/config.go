@@ -22,7 +22,8 @@ import (
 
 const (
 	configFile              = "Furyfile"
-	repoPrefix              = "git@github.com:sighupio/fury-kubernetes"
+	httpsRepoPrefix         = "git::https://github.com/sighupio/fury-kubernetes"
+	sshRepoPrefix           = "git@github.com:sighupio/fury-kubernetes"
 	defaultVendorFolderName = "vendor"
 )
 
@@ -72,6 +73,13 @@ func (f *Furyconf) Parse() ([]Package, error) {
 		pkgs = append(pkgs, v)
 	}
 
+	repoPrefix := sshRepoPrefix
+	dotGitParticle := ""
+	if https {
+		repoPrefix = httpsRepoPrefix
+		dotGitParticle = ".git"
+	}
+
 	// Now we generate the dowload url and local dir
 	for i := 0; i < len(pkgs); i++ {
 		version := pkgs[i].Version
@@ -86,9 +94,9 @@ func (f *Furyconf) Parse() ([]Package, error) {
 		}
 		block := strings.Split(pkgs[i].Name, "/")
 		if len(block) == 2 {
-			pkgs[i].url = fmt.Sprintf("%s-%s//%s/%s?ref=%s", repoPrefix, block[0], pkgs[i].kind, block[1], version)
+			pkgs[i].url = fmt.Sprintf("%s-%s%s//%s/%s?ref=%s", repoPrefix, block[0], dotGitParticle, pkgs[i].kind, block[1], version)
 		} else if len(block) == 1 {
-			pkgs[i].url = fmt.Sprintf("%s-%s//%s?ref=%s", repoPrefix, block[0], pkgs[i].kind, version)
+			pkgs[i].url = fmt.Sprintf("%s-%s%s//%s?ref=%s", repoPrefix, block[0], dotGitParticle, pkgs[i].kind, version)
 		}
 		pkgs[i].dir = fmt.Sprintf("%s/%s/%s", f.VendorFolderName, pkgs[i].kind, pkgs[i].Name)
 	}
