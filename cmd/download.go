@@ -10,6 +10,7 @@ import (
 )
 
 var parallel bool
+var https bool
 
 func download(packages []Package) error {
 	// Preparing all the necessary data for a worker pool
