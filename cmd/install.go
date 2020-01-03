@@ -24,7 +24,7 @@ import (
 func init() {
 	rootCmd.AddCommand(installCmd)
 	installCmd.PersistentFlags().BoolVarP(&parallel, "parallel", "p", true, "if true enables parallel downloads")
-	installCmd.PersistentFlags().BoolVarP(&https, "https", "", false, "if true downloads using https instead of ssh")
+	installCmd.PersistentFlags().BoolVarP(&https, "https", "H", false, "if true downloads using https instead of ssh")
 }
 
 // installCmd represents the install command
