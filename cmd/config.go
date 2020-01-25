@@ -104,7 +104,7 @@ func (f *Furyconf) Parse() ([]Package, error) {
 		}
 		block := strings.Split(pkgs[i].Name, "/")
 		url = newURL(urlPrefix, block, dotGitParticle, pkgs[i].kind, version)
-		pkgs[i].url = url.prefixStrategy()
+		pkgs[i].url = url.strategy()
 		pkgs[i].dir = fmt.Sprintf("%s/%s/%s", f.VendorFolderName, pkgs[i].kind, pkgs[i].Name)
 	}
 
@@ -131,7 +131,7 @@ func newURL(prefix string, blocks []string, dotGitParticle, kind, version string
 	}
 }
 
-func (n *UrlSpec) prefixStrategy() string {
+func (n *UrlSpec) strategy() string {
 	var url string
 	switch n.Prefix {
 	case registryRepoPrefix:
