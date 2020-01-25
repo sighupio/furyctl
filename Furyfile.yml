@@ -1,4 +1,3 @@
-
 versions:
   aws: v1.15.4
   monitoring: master
@@ -10,6 +9,9 @@ roles:
 modules:
   - name: aws/aws-vpc
   - name: aws/aws-kubernetes
+  - name: terraform-aws-acm
+    version: v2.5.0
+    registry: true
 
 bases:
   - name: monitoring

@@ -24,6 +24,7 @@ const (
 	configFile              = "Furyfile"
 	httpsRepoPrefix         = "git::https://github.com/sighupio/fury-kubernetes"
 	sshRepoPrefix           = "git@github.com:sighupio/fury-kubernetes"
+	registryRepoPrefix      = "git::https://github.com/terraform-aws-modules"
 	defaultVendorFolderName = "vendor"
 )
 
@@ -41,11 +42,12 @@ type VersionPattern map[string]string
 
 // Package is the type to contain the definition of a single package
 type Package struct {
-	Name    string `yaml:"name"`
-	Version string `yaml:"version"`
-	url     string
-	dir     string
-	kind    string
+	Name     string `yaml:"name"`
+	Version  string `yaml:"version"`
+	url      string
+	dir      string
+	kind     string
+	Registry bool `yaml:"registry"`
 }
 
 // Validate is used for validation of configuration and initization of default paramethers
@@ -82,7 +84,15 @@ func (f *Furyconf) Parse() ([]Package, error) {
 
 	// Now we generate the dowload url and local dir
 	for i := 0; i < len(pkgs); i++ {
+		url := new(UrlSpec)
+		var urlPrefix string
 		version := pkgs[i].Version
+		registry := pkgs[i].Registry
+		urlPrefix = repoPrefix
+		if registry {
+			urlPrefix = registryRepoPrefix
+			dotGitParticle = ".git"
+		}
 		if version == "" {
 			for k, v := range f.Versions {
 				if strings.HasPrefix(pkgs[i].Name, k) {
@@ -93,12 +103,53 @@ func (f *Furyconf) Parse() ([]Package, error) {
 			}
 		}
 		block := strings.Split(pkgs[i].Name, "/")
-		if len(block) == 2 {
-			pkgs[i].url = fmt.Sprintf("%s-%s%s//%s/%s?ref=%s", repoPrefix, block[0], dotGitParticle, pkgs[i].kind, block[1], version)
-		} else if len(block) == 1 {
-			pkgs[i].url = fmt.Sprintf("%s-%s%s//%s?ref=%s", repoPrefix, block[0], dotGitParticle, pkgs[i].kind, version)
-		}
+		url = newUrl(urlPrefix, block, dotGitParticle, pkgs[i].kind, version)
+		pkgs[i].url = url.prefixStrategy()
 		pkgs[i].dir = fmt.Sprintf("%s/%s/%s", f.VendorFolderName, pkgs[i].kind, pkgs[i].Name)
 	}
+
 	return pkgs, nil
+}
+
+type UrlSpec struct {
+	Prefix         string
+	Blocks         []string
+	DotGitParticle string
+	Kind           string
+	Version        string
+}
+
+func newUrl(prefix string, blocks []string, dotGitParticle, kind, version string) *UrlSpec {
+	return &UrlSpec{
+		Prefix:         prefix,
+		Blocks:         blocks,
+		DotGitParticle: dotGitParticle,
+		Kind:           kind,
+		Version:        version,
+	}
+}
+
+func (n *UrlSpec) prefixStrategy() string {
+	var url string
+	switch n.Prefix {
+	case registryRepoPrefix:
+		{
+			url = fmt.Sprintf("%s/%s%s?ref=%s", n.Prefix, n.Blocks[0], n.DotGitParticle, n.Version)
+		}
+	case httpsRepoPrefix, sshRepoPrefix:
+		{
+			url = n.internalBehaviourURL()
+		}
+	}
+	return url
+}
+
+func (n *UrlSpec) internalBehaviourURL() string {
+	var url string
+	if len(n.Blocks) == 2 {
+		url = fmt.Sprintf("%s-%s%s//%s/%s?ref=%s", n.Prefix, n.Blocks[0], n.DotGitParticle, n.Kind, n.Blocks[1], n.Version)
+	} else if len(n.Blocks) == 1 {
+		url = fmt.Sprintf("%s-%s%s//%s?ref=%s", n.Prefix, n.Blocks[0], n.DotGitParticle, n.Kind, n.Version)
+	}
+	return url
 }
