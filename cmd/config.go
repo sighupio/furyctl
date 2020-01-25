@@ -24,7 +24,9 @@ const (
 	configFile              = "Furyfile"
 	httpsRepoPrefix         = "git::https://github.com/sighupio/fury-kubernetes"
 	sshRepoPrefix           = "git@github.com:sighupio/fury-kubernetes"
-	registryRepoPrefix      = "git::https://github.com/terraform-aws-modules"
+	terraformAwsRegistry    = "git::https://github.com/terraform-aws-modules"
+	terraformAzureRegistry  = "git::https://github.com/Azure"
+	terraformGcpRegistry    = "git::https://github.com/terraform-google-modules"
 	defaultVendorFolderName = "vendor"
 )
 
@@ -47,7 +49,8 @@ type Package struct {
 	url      string
 	dir      string
 	kind     string
-	Registry bool `yaml:"registry"`
+	Provider string `yaml:"provider"`
+	Registry bool   `yaml:"registry"`
 }
 
 // Validate is used for validation of configuration and initization of default paramethers
@@ -88,9 +91,10 @@ func (f *Furyconf) Parse() ([]Package, error) {
 		var urlPrefix string
 		version := pkgs[i].Version
 		registry := pkgs[i].Registry
+		cloud := pkgs[i].Provider
 		urlPrefix = repoPrefix
 		if registry {
-			urlPrefix = registryRepoPrefix
+			urlPrefix = pickCloudProviderURL(cloud)
 			dotGitParticle = ".git"
 		}
 		if version == "" {
@@ -109,6 +113,29 @@ func (f *Furyconf) Parse() ([]Package, error) {
 	}
 
 	return pkgs, nil
+}
+
+func pickCloudProviderURL(cloudProvider string) string {
+	switch cloudProvider {
+	case "aws":
+		{
+			return terraformAwsRegistry
+		}
+	case "gcp":
+		{
+			return terraformGcpRegistry
+		}
+	case "azure":
+		{
+			return terraformAzureRegistry
+		}
+	default:
+		{
+			log.Fatalf("the cloud provider selected %s is not handled\n", cloudProvider)
+		}
+
+	}
+	return ""
 }
 
 // UrlSpec is the rappresentation of the fields needed to elaborate a url
@@ -134,7 +161,7 @@ func newURL(prefix string, blocks []string, dotGitParticle, kind, version string
 func (n *UrlSpec) strategy() string {
 	var url string
 	switch n.Prefix {
-	case registryRepoPrefix:
+	case terraformAwsRegistry, terraformAzureRegistry, terraformGcpRegistry:
 		{
 			url = fmt.Sprintf("%s/%s%s?ref=%s", n.Prefix, n.Blocks[0], n.DotGitParticle, n.Version)
 		}

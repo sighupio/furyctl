@@ -11,6 +11,15 @@ modules:
   - name: aws/aws-kubernetes
   - name: terraform-aws-acm
     version: v2.5.0
+    provider: aws
+    registry: true
+  - name: terraform-google-kubernetes-engine
+    version: v6.2.0
+    provider: gcp
+    registry: true
+  - name: terraform-azurerm-aks
+    version: v2.0
+    provider: azure
     registry: true
 
 bases:
