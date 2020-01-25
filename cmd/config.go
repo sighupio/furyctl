@@ -103,7 +103,7 @@ func (f *Furyconf) Parse() ([]Package, error) {
 			}
 		}
 		block := strings.Split(pkgs[i].Name, "/")
-		url = newUrl(urlPrefix, block, dotGitParticle, pkgs[i].kind, version)
+		url = newURL(urlPrefix, block, dotGitParticle, pkgs[i].kind, version)
 		pkgs[i].url = url.prefixStrategy()
 		pkgs[i].dir = fmt.Sprintf("%s/%s/%s", f.VendorFolderName, pkgs[i].kind, pkgs[i].Name)
 	}
@@ -111,6 +111,7 @@ func (f *Furyconf) Parse() ([]Package, error) {
 	return pkgs, nil
 }
 
+// UrlSpec is the rappresentation of the fields needed to elaborate a url
 type UrlSpec struct {
 	Prefix         string
 	Blocks         []string
@@ -119,7 +120,8 @@ type UrlSpec struct {
 	Version        string
 }
 
-func newUrl(prefix string, blocks []string, dotGitParticle, kind, version string) *UrlSpec {
+// newUrl initialize the UrlSpec struct
+func newURL(prefix string, blocks []string, dotGitParticle, kind, version string) *UrlSpec {
 	return &UrlSpec{
 		Prefix:         prefix,
 		Blocks:         blocks,
