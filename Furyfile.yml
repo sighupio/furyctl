@@ -11,18 +11,35 @@ modules:
   - name: aws/aws-kubernetes
   - name: terraform-aws-acm
     version: v2.5.0
-    provider: aws
+    provider:
+      name: aws
+      label: ufficial-modules
     registry: true
   - name: terraform-google-kubernetes-engine
     version: v6.2.0
-    provider: gcp
+    provider:
+      name: gcp
+      label: ufficial-modules
     registry: true
   - name: terraform-azurerm-aks
     version: v2.0
-    provider: azure
+    provider:
+      name: azure
+      label: ufficial-modules
     registry: true
 
 bases:
   - name: monitoring
   - name: logging
     version: master
+
+tfRepos:
+  aws:
+    - url: https://github.com/terraform-aws-modules
+      label: ufficial-modules
+  gcp:
+    - url: https://github.com/terraform-google-modules
+      label: ufficial-modules
+  azure:
+    - url: https://github.com/Azure
+      label: ufficial-modules

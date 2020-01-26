@@ -24,22 +24,33 @@ const (
 	configFile              = "Furyfile"
 	httpsRepoPrefix         = "git::https://github.com/sighupio/fury-kubernetes"
 	sshRepoPrefix           = "git@github.com:sighupio/fury-kubernetes"
-	terraformAwsRegistry    = "git::https://github.com/terraform-aws-modules"
-	terraformAzureRegistry  = "git::https://github.com/Azure"
-	terraformGcpRegistry    = "git::https://github.com/terraform-google-modules"
 	defaultVendorFolderName = "vendor"
 )
 
 // Furyconf is reponsible for the structure of the Furyfile
 type Furyconf struct {
-	VendorFolderName string         `yaml:"vendorFolderName"`
-	Versions         VersionPattern `yaml:"versions"`
-	Roles            []Package      `yaml:"roles"`
-	Modules          []Package      `yaml:"modules"`
-	Bases            []Package      `yaml:"bases"`
+	VendorFolderName string            `yaml:"vendorFolderName"`
+	Versions         VersionPattern    `yaml:"versions"`
+	Roles            []Package         `yaml:"roles"`
+	Modules          []Package         `yaml:"modules"`
+	Bases            []Package         `yaml:"bases"`
+	TfRegistries     TfRegistryPattern `mapstructure:"tfRepos"`
 }
 
-// Map from glob pattern to version associated (e.g. {"aws/*" : "v1.15.4-1"}
+// TfRegistryPattern is the abstraction of the following structure:
+//
+// aws:
+//   - uri: https://github.com/terraform-aws-modules
+//     label: ufficial-modules
+type TfRegistryPattern map[string][]TfRegistry
+
+//TfRegistry contains the couple uri/label to identify each tf new repo declared
+type TfRegistry struct {
+	BaseURI string `mapstructure:"url"`
+	Label   string `yaml:"label"`
+}
+
+//VersionPattern Map from glob pattern to version associated (e.g. {"aws/*" : "v1.15.4-1"}
 type VersionPattern map[string]string
 
 // Package is the type to contain the definition of a single package
@@ -49,11 +60,17 @@ type Package struct {
 	url      string
 	dir      string
 	kind     string
-	Provider string `yaml:"provider"`
-	Registry bool   `yaml:"registry"`
+	Provider ProviderSpec `yaml:"provider"`
+	Registry bool         `yaml:"registry"`
 }
 
-// Validate is used for validation of configuration and initization of default paramethers
+// ProviderSpec is the type that allows to explicit name of cloud provider and referenced label
+type ProviderSpec struct {
+	Name  string `yaml:"name"`
+	Label string `yaml:"label"`
+}
+
+// Validate is used for validation of configuration and initization of default parameters
 func (f *Furyconf) Validate() error {
 	if f.VendorFolderName == "" {
 		f.VendorFolderName = defaultVendorFolderName
@@ -77,7 +94,6 @@ func (f *Furyconf) Parse() ([]Package, error) {
 		v.kind = "katalog"
 		pkgs = append(pkgs, v)
 	}
-
 	repoPrefix := sshRepoPrefix
 	dotGitParticle := ""
 	if https {
@@ -87,14 +103,15 @@ func (f *Furyconf) Parse() ([]Package, error) {
 
 	// Now we generate the dowload url and local dir
 	for i := 0; i < len(pkgs); i++ {
-		url := new(UrlSpec)
+		url := new(URLSpec)
+		directory := new(DirSpec)
 		var urlPrefix string
 		version := pkgs[i].Version
 		registry := pkgs[i].Registry
 		cloud := pkgs[i].Provider
 		urlPrefix = repoPrefix
 		if registry {
-			urlPrefix = pickCloudProviderURL(cloud)
+			urlPrefix = f.pickCloudProviderURL(cloud)
 			dotGitParticle = ".git"
 		}
 		if version == "" {
@@ -107,49 +124,82 @@ func (f *Furyconf) Parse() ([]Package, error) {
 			}
 		}
 		block := strings.Split(pkgs[i].Name, "/")
-		url = newURL(urlPrefix, block, dotGitParticle, pkgs[i].kind, version)
+		url = newURL(urlPrefix, block, dotGitParticle, pkgs[i].kind, version, registry)
 		pkgs[i].url = url.strategy()
-		pkgs[i].dir = fmt.Sprintf("%s/%s/%s", f.VendorFolderName, pkgs[i].kind, pkgs[i].Name)
+		directory = newDir(f.VendorFolderName, pkgs[i].kind, pkgs[i].Name, pkgs[i].Registry, pkgs[i].Provider)
+		pkgs[i].dir = directory.strategy()
 	}
 
 	return pkgs, nil
 }
 
-func pickCloudProviderURL(cloudProvider string) string {
-	switch cloudProvider {
-	case "aws":
-		{
-			return terraformAwsRegistry
-		}
-	case "gcp":
-		{
-			return terraformGcpRegistry
-		}
-	case "azure":
-		{
-			return terraformAzureRegistry
-		}
-	default:
-		{
-			log.Fatalf("the cloud provider selected %s is not handled\n", cloudProvider)
-		}
+func (f *Furyconf) tfURI(providerMap TfRegistry, label string) (string, error) {
+	if providerMap.Label == label {
+		return fmt.Sprintf("git::%s", providerMap.BaseURI), nil
+	}
+	return "", fmt.Errorf("the label %s is not present\n", label)
+}
 
+func (f *Furyconf) getTfURI(providerName, label string) string {
+	for name, providerSpecList := range f.TfRegistries {
+		if name == providerName {
+			for _, providerMap := range providerSpecList {
+				uri, err := f.tfURI(providerMap, label)
+				if err != nil {
+					log.Fatal(err)
+				}
+				return uri
+			}
+		}
 	}
 	return ""
 }
 
-// UrlSpec is the rappresentation of the fields needed to elaborate a url
-type UrlSpec struct {
+func (f *Furyconf) pickCloudProviderURL(cloudProvider ProviderSpec) string {
+	name := cloudProvider.Name
+	label := cloudProvider.Label
+	return f.getTfURI(name, label)
+}
+
+type DirSpec struct {
+	VendorFolder string
+	Kind         string
+	Name         string
+	Registry     bool
+	Provider     ProviderSpec
+}
+
+func newDir(folder, kind, name string, registry bool, provider ProviderSpec) *DirSpec {
+	return &DirSpec{
+		VendorFolder: folder,
+		Kind:         kind,
+		Name:         name,
+		Registry:     registry,
+		Provider:     provider,
+	}
+}
+
+func (d *DirSpec) strategy() string {
+	if d.Registry {
+		return fmt.Sprintf("%s/%s/%s/%s/%s", d.VendorFolder, d.Kind, d.Provider.Label, d.Provider.Name, d.Name)
+	}
+	return fmt.Sprintf("%s/%s/%s", d.VendorFolder, d.Kind, d.Name)
+}
+
+//URLSpec is the rappresentation of the fields needed to elaborate a url
+type URLSpec struct {
 	Prefix         string
 	Blocks         []string
 	DotGitParticle string
 	Kind           string
 	Version        string
+	Registry       bool
 }
 
-// newUrl initialize the UrlSpec struct
-func newURL(prefix string, blocks []string, dotGitParticle, kind, version string) *UrlSpec {
-	return &UrlSpec{
+// newUrl initialize the URLSpec struct
+func newURL(prefix string, blocks []string, dotGitParticle, kind, version string, registry bool) *URLSpec {
+	return &URLSpec{
+		Registry:       registry,
 		Prefix:         prefix,
 		Blocks:         blocks,
 		DotGitParticle: dotGitParticle,
@@ -158,22 +208,17 @@ func newURL(prefix string, blocks []string, dotGitParticle, kind, version string
 	}
 }
 
-func (n *UrlSpec) strategy() string {
+func (n *URLSpec) strategy() string {
 	var url string
-	switch n.Prefix {
-	case terraformAwsRegistry, terraformAzureRegistry, terraformGcpRegistry:
-		{
-			url = fmt.Sprintf("%s/%s%s?ref=%s", n.Prefix, n.Blocks[0], n.DotGitParticle, n.Version)
-		}
-	case httpsRepoPrefix, sshRepoPrefix:
-		{
-			url = n.internalBehaviourURL()
-		}
+	if n.Registry {
+		url = fmt.Sprintf("%s/%s%s?ref=%s", n.Prefix, n.Blocks[0], n.DotGitParticle, n.Version)
+	} else {
+		url = n.internalBehaviourURL()
 	}
 	return url
 }
 
-func (n *UrlSpec) internalBehaviourURL() string {
+func (n *URLSpec) internalBehaviourURL() string {
 	var url string
 	if len(n.Blocks) == 2 {
 		url = fmt.Sprintf("%s-%s%s//%s/%s?ref=%s", n.Prefix, n.Blocks[0], n.DotGitParticle, n.Kind, n.Blocks[1], n.Version)
