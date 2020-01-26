@@ -15,6 +15,12 @@ modules:
       name: aws
       label: ufficial-modules
     registry: true
+  - name: tf_aws_bastion_s3_keys
+    version: v2.0.0
+    provider:
+      name: aws
+      label: community-modules
+    registry: true
   - name: terraform-google-kubernetes-engine
     version: v6.2.0
     provider:
@@ -37,6 +43,8 @@ tfRepos:
   aws:
     - url: https://github.com/terraform-aws-modules
       label: ufficial-modules
+    - url: https://github.com/terraform-community-modules
+      label: community-modules
   gcp:
     - url: https://github.com/terraform-google-modules
       label: ufficial-modules

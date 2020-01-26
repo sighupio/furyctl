@@ -133,32 +133,28 @@ func (f *Furyconf) Parse() ([]Package, error) {
 	return pkgs, nil
 }
 
-func (f *Furyconf) tfURI(providerMap TfRegistry, label string) (string, error) {
-	if providerMap.Label == label {
-		return fmt.Sprintf("git::%s", providerMap.BaseURI), nil
-	}
-	return "", fmt.Errorf("the label %s is not present\n", label)
-}
-
-func (f *Furyconf) getTfURI(providerName, label string) string {
+func (f *Furyconf) getTfURI(providerName, label string) (string, error) {
 	for name, providerSpecList := range f.TfRegistries {
 		if name == providerName {
 			for _, providerMap := range providerSpecList {
-				uri, err := f.tfURI(providerMap, label)
-				if err != nil {
-					log.Fatal(err)
+				fmt.Printf("provider analized is %v\n", providerMap)
+				if providerMap.Label == label {
+					return fmt.Sprintf("git::%s", providerMap.BaseURI), nil
 				}
-				return uri
 			}
 		}
 	}
-	return ""
+	return "", fmt.Errorf("no label %s found!", label)
 }
 
 func (f *Furyconf) pickCloudProviderURL(cloudProvider ProviderSpec) string {
 	name := cloudProvider.Name
 	label := cloudProvider.Label
-	return f.getTfURI(name, label)
+	url, err := f.getTfURI(name, label)
+	if err != nil {
+		log.Fatal(err)
+	}
+	return url
 }
 
 type DirSpec struct {
