@@ -29,23 +29,33 @@ const (
 
 // Furyconf is reponsible for the structure of the Furyfile
 type Furyconf struct {
-	VendorFolderName string            `yaml:"vendorFolderName"`
-	Versions         VersionPattern    `yaml:"versions"`
-	Roles            []Package         `yaml:"roles"`
-	Modules          []Package         `yaml:"modules"`
-	Bases            []Package         `yaml:"bases"`
-	TfRegistries     TfRegistryPattern `mapstructure:"tfRepos"`
+	VendorFolderName string          `yaml:"vendorFolderName"`
+	Versions         VersionPattern  `yaml:"versions"`
+	Roles            []Package       `yaml:"roles"`
+	Modules          []Package       `yaml:"modules"`
+	Bases            []Package       `yaml:"bases"`
+	Provider         ProviderPattern `mapstructure:"provider"`
+	//TfRegistries     TfRegistryPattern          `mapstructure:"tfRepos"`
 }
 
-// TfRegistryPattern is the abstraction of the following structure:
-//
-// aws:
-//   - uri: https://github.com/terraform-aws-modules
-//     label: ufficial-modules
-type TfRegistryPattern map[string][]TfRegistry
+// ProviderPattern is the abstraction of the following structure:
+//provider:
+//   modules:
+//     aws
+//      - uri: https://github.com/terraform-aws-modules
+//        label: ufficial-modules
+type ProviderPattern map[string]ProviderKind
 
-//TfRegistry contains the couple uri/label to identify each tf new repo declared
-type TfRegistry struct {
+// ProviderKind is the abstraction of the following structure:
+//
+// modules:
+//   aws
+//    - uri: https://github.com/terraform-aws-modules
+//      label: ufficial-modules
+type ProviderKind map[string][]RegistrySpec
+
+//RegistrySpec contains the couple uri/label to identify each tf new repo declared
+type RegistrySpec struct {
 	BaseURI string `mapstructure:"url"`
 	Label   string `yaml:"label"`
 }
@@ -110,10 +120,7 @@ func (f *Furyconf) Parse() ([]Package, error) {
 		registry := pkgs[i].Registry
 		cloud := pkgs[i].Provider
 		urlPrefix = repoPrefix
-		if registry {
-			urlPrefix = f.pickCloudProviderURL(cloud)
-			dotGitParticle = ".git"
-		}
+		kind := pkgs[i].kind
 		if version == "" {
 			for k, v := range f.Versions {
 				if strings.HasPrefix(pkgs[i].Name, k) {
@@ -123,8 +130,13 @@ func (f *Furyconf) Parse() ([]Package, error) {
 				}
 			}
 		}
+		kindSpec := newKind(kind, f.Provider)
+		if registry {
+			urlPrefix = kindSpec.pickCloudProviderURL(cloud)
+			dotGitParticle = ".git"
+		}
 		block := strings.Split(pkgs[i].Name, "/")
-		url = newURL(urlPrefix, block, dotGitParticle, pkgs[i].kind, version, registry)
+		url = newURL(urlPrefix, block, dotGitParticle, kind, version, registry)
 		pkgs[i].url = url.strategy()
 		directory = newDir(f.VendorFolderName, pkgs[i].kind, pkgs[i].Name, pkgs[i].Registry, pkgs[i].Provider)
 		pkgs[i].dir = directory.strategy()
@@ -133,8 +145,13 @@ func (f *Furyconf) Parse() ([]Package, error) {
 	return pkgs, nil
 }
 
-func (f *Furyconf) getTfURI(providerName, label string) (string, error) {
-	for name, providerSpecList := range f.TfRegistries {
+func newKind(kind string, provider ProviderPattern) ProviderKind {
+	providerChoosen := provider[kind]
+	return providerChoosen
+}
+
+func (k *ProviderKind) getLabeledURI(providerName, label string) (string, error) {
+	for name, providerSpecList := range *k {
 		if name == providerName {
 			for _, providerMap := range providerSpecList {
 				fmt.Printf("provider analized is %v\n", providerMap)
@@ -144,17 +161,26 @@ func (f *Furyconf) getTfURI(providerName, label string) (string, error) {
 			}
 		}
 	}
-	return "", fmt.Errorf("no label %s found!", label)
+	return "", fmt.Errorf("no label %s found\n", label)
 }
 
-func (f *Furyconf) pickCloudProviderURL(cloudProvider ProviderSpec) string {
+func (k *ProviderKind) pickCloudProviderURL(cloudProvider ProviderSpec) string {
 	name := cloudProvider.Name
 	label := cloudProvider.Label
-	url, err := f.getTfURI(name, label)
+	url, err := k.getLabeledURI(name, label)
 	if err != nil {
 		log.Fatal(err)
 	}
 	return url
+}
+
+func (f *Furyconf) pickProviderKind(kind string) (string, error) {
+	for name, _ := range f.Provider {
+		if name == kind {
+			return name, nil
+		}
+	}
+	return "", fmt.Errorf("the kind %s is not handled!", kind)
 }
 
 type DirSpec struct {

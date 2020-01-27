@@ -39,15 +39,18 @@ bases:
   - name: logging
     version: master
 
-tfRepos:
-  aws:
-    - url: https://github.com/terraform-aws-modules
-      label: ufficial-modules
-    - url: https://github.com/terraform-community-modules
-      label: community-modules
-  gcp:
-    - url: https://github.com/terraform-google-modules
-      label: ufficial-modules
-  azure:
-    - url: https://github.com/Azure
-      label: ufficial-modules
+provider:
+  roles: {}
+  bases: {}
+  modules:
+    aws:
+      - url: https://github.com/terraform-aws-modules
+        label: ufficial-modules
+      - url: https://github.com/terraform-community-modules
+        label: community-modules
+    gcp:
+      - url: https://github.com/terraform-google-modules
+        label: ufficial-modules
+    azure:
+      - url: https://github.com/Azure
+        label: ufficial-modules
