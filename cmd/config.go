@@ -35,7 +35,6 @@ type Furyconf struct {
 	Modules          []Package       `yaml:"modules"`
 	Bases            []Package       `yaml:"bases"`
 	Provider         ProviderPattern `mapstructure:"provider"`
-	//TfRegistries     TfRegistryPattern          `mapstructure:"tfRepos"`
 }
 
 // ProviderPattern is the abstraction of the following structure:
@@ -154,14 +153,13 @@ func (k *ProviderKind) getLabeledURI(providerName, label string) (string, error)
 	for name, providerSpecList := range *k {
 		if name == providerName {
 			for _, providerMap := range providerSpecList {
-				fmt.Printf("provider analized is %v\n", providerMap)
 				if providerMap.Label == label {
 					return fmt.Sprintf("git::%s", providerMap.BaseURI), nil
 				}
 			}
 		}
 	}
-	return "", fmt.Errorf("no label %s found\n", label)
+	return "", fmt.Errorf("no label %s found", label)
 }
 
 func (k *ProviderKind) pickCloudProviderURL(cloudProvider ProviderSpec) string {
@@ -174,15 +172,7 @@ func (k *ProviderKind) pickCloudProviderURL(cloudProvider ProviderSpec) string {
 	return url
 }
 
-func (f *Furyconf) pickProviderKind(kind string) (string, error) {
-	for name, _ := range f.Provider {
-		if name == kind {
-			return name, nil
-		}
-	}
-	return "", fmt.Errorf("the kind %s is not handled!", kind)
-}
-
+// DirSpec is the abstraction of the fields needed for generating a destination directory
 type DirSpec struct {
 	VendorFolder string
 	Kind         string
