@@ -13,7 +13,7 @@ modules:
     version: v2.5.0
     provider:
       name: aws
-      label: ufficial-modules
+      label: official-modules
     registry: true
   - name: tf_aws_bastion_s3_keys
     version: v2.0.0
@@ -25,13 +25,13 @@ modules:
     version: v6.2.0
     provider:
       name: gcp
-      label: ufficial-modules
+      label: official-modules
     registry: true
   - name: terraform-azurerm-aks
     version: v2.0
     provider:
       name: azure
-      label: ufficial-modules
+      label: official-modules
     registry: true
 
 bases:
@@ -45,12 +45,12 @@ provider:
   modules:
     aws:
       - url: https://github.com/terraform-aws-modules
-        label: ufficial-modules
+        label: official-modules
       - url: https://github.com/terraform-community-modules
         label: community-modules
     gcp:
       - url: https://github.com/terraform-google-modules
-        label: ufficial-modules
+        label: official-modules
     azure:
       - url: https://github.com/Azure
-        label: ufficial-modules
+        label: official-modules
