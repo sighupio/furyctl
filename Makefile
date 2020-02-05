@@ -1,5 +1,5 @@
 
-version = v0.1.4
+version = v0.1.7
 
 tag:
 	git tag $(version)
