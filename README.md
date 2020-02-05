@@ -42,7 +42,9 @@ You can get all packages in a group by using group name (like `logging`) or sing
 
 ### Install 
 
-You can find `furyctl` binaries on the [Releases page](https://github.com/sighupio/furyctl/releases). 
+#### Github Releases
+
+You can find `furyctl` binaries on the [Releases page](https://github.com/sighupio/furyctl/releases).
 
 Supported architectures are (64 bit):
 - `linux`
@@ -53,6 +55,15 @@ Download right binary for your architecture and add it to your PATH. Assuming it
 
 ```
 chmod +x  ~/Downloads/furyctl-{arch}-amd64 && mv ~/Downloads/furyctl-{arch}-amd64 /usr/local/bin/furyctl
+```
+
+#### Homebrew
+
+If you are a macOS user:
+
+```bash
+$ brew tap sighupio/furyctl
+$ brew install furyctl
 ```
 
 ### Usage

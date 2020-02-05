@@ -3,29 +3,46 @@ kind: pipeline
 name: test
 
 steps:
+  - name: fetch
+    image: docker:git
+    commands:
+      - git fetch --tags
+
   - name: lint
     image: golang
     pull: always
+    depends_on:
+      - fetch
     commands:
       - find . -name "*.go" | xargs gofmt -s -d
-      - go vet ./...
+      #- go vet ./...
     when:
       event:
         - push
         - tag
-      
+
+  - name: go-mod-vendor
+    image: golang
+    pull: always
+    depends_on:
+      - lint
+    commands:
+      - go mod vendor
+    when:
+      event:
+        - push
+
   - name: build-linux-push
     group: build
     image: golang
     pull: always
-    depends_on: 
-      - lint
+    depends_on:
+      - go-mod-vendor
     environment:
       GOOS: linux
       GOARCH: amd64
       CGO_ENABLED: 0
     commands:
-      - go mod vendor
       - go build
     when:
       event:
@@ -35,66 +52,32 @@ steps:
     group: build
     image: golang
     pull: always
-    depends_on: 
-      - lint
+    depends_on:
+      - go-mod-vendor
     environment:
       GOOS: darwin
       GOARCH: amd64
-      CGO_ENABLED: 0    
+      CGO_ENABLED: 0
     commands:
-      - go mod vendor
-      - go build 
+      - go build
     when:
       event:
         - push
 
-  - name: build-linux
-    group: build-to-release
-    image: golang
+  - name: build-release
+    image: goreleaser/goreleaser:v0.124
     pull: always
-    depends_on: 
+    depends_on:
       - lint
+      - fetch
     environment:
-      GOOS: linux
-      GOARCH: amd64
-      CGO_ENABLED: 0
+      GITHUB_TOKEN:
+        from_secret: GITHUB_TOKEN
+    secrets:
+      - GITHUB_TOKEN
     commands:
-      - go mod vendor
-      - go build -a -ldflags '-extldflags "-static"' -o bin/releases/furyctl-linux-amd64  .
+      - goreleaser check
+      - goreleaser --debug
     when:
       event:
         - tag
-
-  - name: build-darwin
-    group: build-to-release
-    image: golang
-    pull: always
-    depends_on: 
-      - lint
-    environment:
-      GOOS: darwin
-      GOARCH: amd64
-      CGO_ENABLED: 0    
-    commands:
-      - go mod vendor
-      - go build -a -ldflags '-extldflags "-static"' -o bin/releases/furyctl-darwin-amd64 .
-    when:
-      event:
-        - tag
-
-  - name: release
-    image: plugins/github-release
-    pull: always
-    environment:
-    depends_on: 
-      - build-linux
-      - build-darwin
-    settings:
-      api_key: 
-        from_secret: GITHUB_TOKEN 
-      files:
-        - bin/releases/*
-      checksum:
-         - sha256
-    when:
-      event: tag
