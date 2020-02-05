@@ -15,6 +15,7 @@
 package cmd
 
 import (
+	"fmt"
 	"log"
 	"os"
 
@@ -65,7 +66,7 @@ var printDefaultCmd = &cobra.Command{
 	Short: "Prints a basic Furyfile used to generate an INFRA project",
 	Long:  ``,
 	Run: func(cmd *cobra.Command, args []string) {
-		log.Println(InitFuryfile)
+		fmt.Println(InitFuryfile)
 	},
 }
 
