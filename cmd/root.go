@@ -49,7 +49,7 @@ var versionCmd = &cobra.Command{
 	Short: "Prints the client version information",
 	Long:  ``,
 	Run: func(cmd *cobra.Command, args []string) {
-		log.Println("Furyctl version ", FuryctlVersion)
+		log.Println("Furyctl version ", version)
 	},
 }
 
