@@ -12,6 +12,8 @@ builds:
       - darwin
     env:
       - CGO_ENABLED=0
+    ldflags:
+      - -s -w -X github.com/sighupio/furyctl/cmd.version={{.Version}} -X github.com/sighupio/furyctl/cmd.commit={{.Commit}} -X github.com/sighupio/furyctl/cmd.date={{.Date}}
   - binary: 'furyctl'
     id: furyctl-linux
     goarch:
@@ -20,6 +22,8 @@ builds:
       - linux
     env:
       - CGO_ENABLED=0
+    ldflags:
+      - -s -w -X github.com/sighupio/furyctl/cmd.version={{.Version}} -X github.com/sighupio/furyctl/cmd.commit={{.Commit}} -X github.com/sighupio/furyctl/cmd.date={{.Date}}
 archives:
   - format: tar.gz
     id: furyctl-darwin-tgz

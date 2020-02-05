@@ -21,6 +21,12 @@ import (
 	"github.com/spf13/cobra"
 )
 
+var (
+	version = "dev"
+	commit  = "none"
+	date    = "unknown"
+)
+
 // Execute is the main entrypoint of furyctl
 func Execute() {
 	if err := rootCmd.Execute(); err != nil {
