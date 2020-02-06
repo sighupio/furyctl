@@ -39,7 +39,6 @@ func init() {
 	// rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.furyctl.yaml)")
 	rootCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
 	rootCmd.AddCommand(versionCmd)
-	rootCmd.AddCommand(printDefaultCmd)
 }
 
 // rootCmd represents the base command when called without any subcommands
@@ -58,26 +57,3 @@ var versionCmd = &cobra.Command{
 		log.Println("Furyctl version ", version)
 	},
 }
-
-// printDefaultCmd represents the printDefault command
-var printDefaultCmd = &cobra.Command{
-	Use:   "printDefault",
-	Short: "Prints a basic Furyfile used to generate an INFRA project",
-	Long:  ``,
-	Run: func(cmd *cobra.Command, args []string) {
-		log.Println(InitFuryfile)
-	},
-}
-
-// InitFuryfile default initial Furyfile config
-const InitFuryfile = `
-roles:
-  - name: aws/kube-node-common
-    version: v1.0.0
-
-bases:
-  - name: monitoring/prometheus-operated
-    version: v1.0.0
-  - name: monitoring/prometheus-operator
-    version: v1.0.0
-`

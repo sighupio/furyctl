@@ -1,16 +1,16 @@
 ## Furyctl
 
-Furyctl is package manager for Fury distribution. It’s simple to use and reads a single Furyfile to download 
+Furyctl is package manager for Fury distribution. It’s simple to use and reads a single Furyfile to download
 packages you need. Fury distribution offers three types of packages:
 
-- **Bases** : Sets of Kustomize bases to deploy basic components in Kubernetes 
+- **Bases** : Sets of Kustomize bases to deploy basic components in Kubernetes
 - **Modules**: Terraform modules to deploy kubernetes infrastructure and it’s dependencies
 - **Roles**: Ansible roles for deploying, configuring and managing a Kubernetes infrastructure
 
 ### Furyfile
 
-Furyfile is a simple YAML formatted file where you list which packages(and versions) you want to have. 
-You can omit a type if you don't need any of its packages. An example Furyfile with packages listed 
+Furyfile is a simple YAML formatted file where you list which packages(and versions) you want to have.
+You can omit a type if you don't need any of its packages. An example Furyfile with packages listed
 would be like following:
 
 ```
@@ -37,10 +37,10 @@ bases:
     version: master
 ```
 
-You can get all packages in a group by using group name (like `logging`) or single packages under a group 
+You can get all packages in a group by using group name (like `logging`) or single packages under a group
 (like `monitoring/prometheus-operator`).
 
-### Install 
+### Install
 
 #### Github Releases
 
@@ -80,8 +80,8 @@ Usage:
 
 Available Commands:
   help         Help about any command
-  install      Download dependencies specified in Furyfile.yml
-  printDefault Prints a basic Furyfile used to generate an INFRA project
+  init         Initialize the minimum distribution configuration
+  vendor       Download dependencies specified in Furyfile.yml
   version      Prints the client version information
 
 Flags:
@@ -91,42 +91,34 @@ Flags:
 Use "furyctl [command] --help" for more information about a command.
 ```
 
-- To install packages, you can run `furyctl install` (within the same directory where your Furyfile is located): 
+- To download the minimal Kubernetes Fury Distribution files (within the same directory) you can run `furyctl init` command:
+```bash
+$ furyctl init --version v1.0.0
+2020/02/05 09:48:05 downloading: http::https://github.com/sighupio/poc-fury-distribution/releases/download/1.0.0/Furyfile.yml -> Furyfile.yml
+2020/02/05 09:49:05 downloading: http::https://github.com/sighupio/poc-fury-distribution/releases/download/1.0.0/kustomization.yaml -> kustomization.yaml
+```
+
+- To download packages, you can run `furyctl vendor` (within the same directory where your Furyfile is located):
 
 ```bash
-$ furyctl install
-
-2019/02/04 17:46:07 ----
-2019/02/04 17:46:07 SRC:  git@github.com:sighup-io/fury-kubernetes-monitoring//katalog/prometheus-operator?ref=master
-2019/02/04 17:46:07 DST:  vendor/katalog/monitoring/prometheus-operator
-2019/02/04 17:46:07 ----
-2019/02/04 17:46:07 SRC:  git@github.com:sighup-io/fury-kubernetes-monitoring//katalog/prometheus-operator?ref=master
-2019/02/04 17:46:07 DST:  vendor/katalog/monitoring/prometheus-operator
-...
-```   
+$ furyctl vendor
+2020/02/05 10:49:47 using v1.15.4 for package aws/etcd
+2020/02/05 10:49:47 using v1.15.4 for package aws/kube-control-plane
+2020/02/05 10:49:47 using v1.15.4 for package aws/aws-vpc
+2020/02/05 10:49:47 using v1.15.4 for package aws/aws-kubernetes
+2020/02/05 10:49:47 using master for package monitoring
+2020/02/05 10:49:47 downloading: git@github.com:sighupio/fury-kubernetes-aws//roles/kube-control-plane?ref=v1.15.4 -> vendor/roles/aws/kube-control-plane
+2020/02/05 10:49:47 downloading: git@github.com:sighupio/fury-kubernetes-aws//modules/aws-kubernetes?ref=v1.15.4 -> vendor/modules/aws/aws-kubernetes
+2020/02/05 10:49:47 downloading: git@github.com:sighupio/fury-kubernetes-monitoring//katalog?ref=master -> vendor/katalog/monitoring
+2020/02/05 10:49:47 downloading: git@github.com:sighupio/fury-kubernetes-aws//modules/aws-vpc?ref=v1.15.4 -> vendor/modules/aws/aws-vpc
+2020/02/05 10:49:47 downloading: git@github.com:sighupio/fury-kubernetes-aws//roles/etcd?ref=v1.15.4 -> vendor/roles/aws/etcd
+2020/02/05 10:49:49 downloading: git@github.com:sighupio/fury-kubernetes-logging//katalog?ref=master -> vendor/katalog/logging
+```
 You will find your packages under `vendor/{roles,modules,katalog}` directories created where you called `furyctl`.
-
 
 - You can get furyctl version with `furyctl version`:
 
 ```bash
 $ furyctl version
-
-Furyctl version  0.1.0
-```
-
-- You can print a Furyfile example with `furyctl printDefault`:
-
-```bash
-$ furyctl printDefault
-
-roles:
-  - name: aws/kube-node-common
-    version: v1.0.0
-
-bases:
-  - name: monitoring/prometheus-operated
-    version: v1.0.0
-  - name: monitoring/prometheus-operator
-    version: v1.0.0
+2020/02/06 13:44:44 Furyctl version  0.1.7
 ```

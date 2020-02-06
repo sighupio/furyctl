@@ -23,14 +23,14 @@ Current availability versions are:
 
 ```
 furyctl
-├── install : looks for a Furyfile (default `./Furyfile.yaml`) and download it's content`
-├── printDefault : prints a Furyfile example
+├── init : Downloads Furyfile.yml and kustomization.yaml from the distribution repository to the current directory.
+├── vendor : Downloads Fury packages specified inside Furyfile.yaml
 ├── help
 └── version
 ```
 
-Write a [`Furyfile.yml`](Furyfile.yml) in the root of your project and then simply run `furyctl install`.
-It will download what you have specified in the `vendor` directory in your project root.
+Write a [`Furyfile.yml`](Furyfile.yml) in the root of your project and then simply run `furyctl vendor`.
+It will download packages specified inside 'Furyfile.yaml' to the 'vendor' directory.
 
 
 

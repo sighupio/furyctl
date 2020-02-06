@@ -36,7 +36,7 @@ func download(packages []Package) error {
 		go func(i int) {
 			for data := range jobs {
 				//log.Printf("%d : received data %v", i, data)
-				res := get(data.url, data.dir)
+				res := get(data.url, data.dir, getter.ClientModeDir)
 				errChan <- res
 				//log.Printf("%d : finished with data %v", i, data)
 			}
@@ -59,7 +59,7 @@ func download(packages []Package) error {
 	return nil
 }
 
-func get(src, dest string) error {
+func get(src, dest string, mode getter.ClientMode) error {
 	log.Printf("downloading: %s -> %s\n", src, dest)
 	pwd, err := os.Getwd()
 	if err != nil {
@@ -69,7 +69,7 @@ func get(src, dest string) error {
 		Src:  src,
 		Dst:  dest,
 		Pwd:  pwd,
-		Mode: getter.ClientModeDir,
+		Mode: mode,
 	}
 	//log.Printf("let's get %s -> %s", src, dest)
 	err = client.Get()
