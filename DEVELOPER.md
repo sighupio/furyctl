@@ -25,7 +25,6 @@ Current availability versions are:
 furyctl
 ├── init : Downloads Furyfile.yml and kustomization.yaml from the distribution repository to the current directory.
 ├── vendor : Downloads Fury packages specified inside Furyfile.yaml
-├── printDefault : prints an example Furyfile
 ├── help
 └── version
 ```

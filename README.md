@@ -81,7 +81,6 @@ Usage:
 Available Commands:
   help         Help about any command
   init         Initialize the minimum distribution configuration
-  printDefault Prints a basic Furyfile used to generate an INFRA project
   vendor       Download dependencies specified in Furyfile.yml
   version      Prints the client version information
 
@@ -121,21 +120,5 @@ You will find your packages under `vendor/{roles,modules,katalog}` directories c
 
 ```bash
 $ furyctl version
-2020/02/05 10:50:46 Furyctl version  0.1.4
-```
-
-- You can print a Furyfile example with `furyctl printDefault`:
-
-```bash
-$ furyctl printDefault
-
-roles:
-  - name: aws/kube-node-common
-    version: v1.0.0
-
-bases:
-  - name: monitoring/prometheus-operated
-    version: v1.0.0
-  - name: monitoring/prometheus-operator
-    version: v1.0.0
+2020/02/06 13:44:44 Furyctl version  0.1.7
 ```
