@@ -1,4 +1,3 @@
-
 versions:
   aws: v1.15.4
   monitoring: master
@@ -10,8 +9,48 @@ roles:
 modules:
   - name: aws/aws-vpc
   - name: aws/aws-kubernetes
+  - name: terraform-aws-acm
+    version: v2.5.0
+    provider:
+      name: aws
+      label: official-modules
+    registry: true
+  - name: tf_aws_bastion_s3_keys
+    version: v2.0.0
+    provider:
+      name: aws
+      label: community-modules
+    registry: true
+  - name: terraform-google-kubernetes-engine
+    version: v6.2.0
+    provider:
+      name: gcp
+      label: official-modules
+    registry: true
+  - name: terraform-azurerm-aks
+    version: v2.0
+    provider:
+      name: azure
+      label: official-modules
+    registry: true
 
 bases:
   - name: monitoring
   - name: logging
     version: master
+
+provider:
+  roles: {}
+  bases: {}
+  modules:
+    aws:
+      - url: https://github.com/terraform-aws-modules
+        label: official-modules
+      - url: https://github.com/terraform-community-modules
+        label: community-modules
+    gcp:
+      - url: https://github.com/terraform-google-modules
+        label: official-modules
+    azure:
+      - url: https://github.com/Azure
+        label: official-modules
