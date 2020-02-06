@@ -22,14 +22,14 @@ import (
 )
 
 func init() {
-	rootCmd.AddCommand(installCmd)
-	installCmd.PersistentFlags().BoolVarP(&parallel, "parallel", "p", true, "if true enables parallel downloads")
-	installCmd.PersistentFlags().BoolVarP(&https, "https", "H", false, "if true downloads using https instead of ssh")
+	rootCmd.AddCommand(vendorCmd)
+	vendorCmd.PersistentFlags().BoolVarP(&parallel, "parallel", "p", true, "if true enables parallel downloads")
+	vendorCmd.PersistentFlags().BoolVarP(&https, "https", "H", false, "if true downloads using https instead of ssh")
 }
 
-// installCmd represents the install command
-var installCmd = &cobra.Command{
-	Use:   "install",
+// vendorCmd represents the vendor command
+var vendorCmd = &cobra.Command{
+	Use:   "vendor",
 	Short: "Download dependencies specified in Furyfile.yml",
 	Long:  "Download dependencies specified in Furyfile.yml",
 	Run: func(cmd *cobra.Command, args []string) {
