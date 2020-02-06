@@ -10,7 +10,7 @@ import (
 const (
 	furyFile                    = "Furyfile.yml"
 	kustomizationFile           = "kustomization.yaml"
-	httpsDistributionRepoPrefix = "http::https://github.com/sighupio/poc-fury-distribution/releases/download/"
+	httpsDistributionRepoPrefix = "http::https://github.com/sighupio/fury-distribution/releases/download/"
 )
 
 var fileNames = [...]string{furyFile, kustomizationFile}
