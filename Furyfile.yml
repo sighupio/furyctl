@@ -38,6 +38,12 @@ bases:
   - name: monitoring
   - name: logging
     version: master
+  - name: dr/velero/velero-base
+    version: feature/deprecate-and-update
+  - name: dr/velero/velero-aws
+    version: feature/deprecate-and-update
+  - name: dr/velero/velero-restic
+    version: feature/deprecate-and-update
 
 provider:
   roles: {}
