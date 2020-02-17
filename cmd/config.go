@@ -17,6 +17,7 @@ package cmd
 import (
 	"fmt"
 	"log"
+	"path"
 	"strings"
 )
 
@@ -235,10 +236,14 @@ func (n *URLSpec) strategy() string {
 
 func (n *URLSpec) getURLfromCompanyRepos() string {
 	var url string
-	if len(n.Blocks) == 2 {
-		url = fmt.Sprintf("%s-%s%s//%s/%s?ref=%s", n.Prefix, n.Blocks[0], n.DotGitParticle, n.Kind, n.Blocks[1], n.Version)
-	} else if len(n.Blocks) == 1 {
+	if len(n.Blocks) == 1 {
 		url = fmt.Sprintf("%s-%s%s//%s?ref=%s", n.Prefix, n.Blocks[0], n.DotGitParticle, n.Kind, n.Version)
+	} else if len(n.Blocks) >= 2 {
+		var remainingBlocks string
+		for i := 1; i < len(n.Blocks); i++ {
+			remainingBlocks = path.Join(remainingBlocks, n.Blocks[i])
+		}
+		url = fmt.Sprintf("%s-%s%s//%s/%s?ref=%s", n.Prefix, n.Blocks[0], n.DotGitParticle, n.Kind, remainingBlocks, n.Version)
 	}
 	return url
 }
