@@ -86,7 +86,6 @@ Available Commands:
 
 Flags:
   -h, --help     help for furyctl
-  -t, --toggle   Help message for toggle
 
 Use "furyctl [command] --help" for more information about a command.
 ```
