@@ -25,6 +25,7 @@ var (
 	version = "dev"
 	commit  = "none"
 	date    = "unknown"
+	debug = false
 )
 
 // Execute is the main entrypoint of furyctl
@@ -38,6 +39,8 @@ func Execute() {
 func init() {
 	// rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.furyctl.yaml)")
 	rootCmd.AddCommand(versionCmd)
+	rootCmd.PersistentFlags().BoolVar(&debug, "debug", false, "Enables furyctl debug output")
+
 }
 
 // rootCmd represents the base command when called without any subcommands
