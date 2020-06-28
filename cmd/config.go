@@ -110,7 +110,6 @@ func (f *Furyconf) Parse() ([]Package, error) {
 		repoPrefix = httpsRepoPrefix
 		dotGitParticle = ".git"
 	}
-
 	// Now we generate the dowload url and local dir
 	for i := 0; i < len(pkgs); i++ {
 		url := new(URLSpec)
@@ -223,27 +222,32 @@ func newURL(prefix string, blocks []string, dotGitParticle, kind, version string
 }
 
 func (n *URLSpec) strategy() string {
-	var url string
-	if n.Registry {
-		urlPrefix := n.KindSpec.pickCloudProviderURL(n.CloudProvider)
-		dotGitParticle := ".git"
-		url = fmt.Sprintf("%s/%s%s?ref=%s", urlPrefix, n.Blocks[0], dotGitParticle, n.Version)
-	} else {
-		url = n.getURLfromCompanyRepos()
+
+	if !n.Registry {
+		return n.getURLfromCompanyRepos()
 	}
-	return url
+
+	urlPrefix := n.KindSpec.pickCloudProviderURL(n.CloudProvider)
+	dotGitParticle := ".git"
+	return fmt.Sprintf("%s/%s%s?ref=%s", urlPrefix, n.Blocks[0], dotGitParticle, n.Version)
+
 }
 
 func (n *URLSpec) getURLfromCompanyRepos() string {
-	var url string
-	if len(n.Blocks) == 1 {
-		url = fmt.Sprintf("%s-%s%s//%s?ref=%s", n.Prefix, n.Blocks[0], n.DotGitParticle, n.Kind, n.Version)
-	} else if len(n.Blocks) >= 2 {
-		var remainingBlocks string
-		for i := 1; i < len(n.Blocks); i++ {
-			remainingBlocks = path.Join(remainingBlocks, n.Blocks[i])
-		}
-		url = fmt.Sprintf("%s-%s%s//%s/%s?ref=%s", n.Prefix, n.Blocks[0], n.DotGitParticle, n.Kind, remainingBlocks, n.Version)
+
+	if len(n.Blocks) == 0 {
+		// todo should return error?
+		return ""
 	}
-	return url
+
+	if len(n.Blocks) == 1 {
+		return fmt.Sprintf("%s-%s%s//%s?ref=%s", n.Prefix, n.Blocks[0], n.DotGitParticle, n.Kind, n.Version)
+	}
+	// always len(n.Blocks) >= 2 {
+	var remainingBlocks string
+	for i := 1; i < len(n.Blocks); i++ {
+		remainingBlocks = path.Join(remainingBlocks, n.Blocks[i])
+	}
+	return fmt.Sprintf("%s-%s%s//%s/%s?ref=%s", n.Prefix, n.Blocks[0], n.DotGitParticle, n.Kind, remainingBlocks, n.Version)
+
 }
