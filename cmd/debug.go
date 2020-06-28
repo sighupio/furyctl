@@ -34,6 +34,6 @@ func LogIfDebugOn(printf string, arguments ...interface{}) {
 	log.Printf(printf, arguments...)
 
 	if runtime.GOOS != "windows" {
-		log.Println(colorCyan)
+		log.Println(colorReset)
 	}
 }
