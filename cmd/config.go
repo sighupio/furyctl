@@ -148,13 +148,20 @@ func newKind(kind string, provider ProviderPattern) ProviderKind {
 
 func (k *ProviderKind) getLabeledURI(providerName, label string) (string, error) {
 	for name, providerSpecList := range *k {
-		if name == providerName {
-			for _, providerMap := range providerSpecList {
-				if providerMap.Label == label {
-					return fmt.Sprintf("git::%s", providerMap.BaseURI), nil
-				}
-			}
+
+		if name != providerName {
+			continue
 		}
+		for _, providerMap := range providerSpecList {
+
+			if providerMap.Label != label {
+				continue
+			}
+
+			return fmt.Sprintf("git::%s", providerMap.BaseURI), nil
+
+		}
+
 	}
 	return "", fmt.Errorf("no label %s found", label)
 }
