@@ -15,7 +15,7 @@ const (
 	colorCyan   = "\033[36m"
 	colorWhite  = "\033[37m"
 )
-
+// LogIfDebugOn prints a message on console if the flag --debug was passed to furyctl
 func LogIfDebugOn(printf string, arguments ...interface{}) {
 	debug, err := rootCmd.Flags().GetBool("debug")
 
