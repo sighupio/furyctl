@@ -4,6 +4,7 @@ import (
 	"log"
 	"os"
 	"runtime"
+	"strings"
 	"sync"
 
 	getter "github.com/hashicorp/go-getter"
@@ -13,6 +14,7 @@ var parallel bool
 var https bool
 
 func download(packages []Package) error {
+
 	// Preparing all the necessary data for a worker pool
 	var wg sync.WaitGroup
 	var numberOfWorkers int
@@ -23,7 +25,7 @@ func download(packages []Package) error {
 	}
 	errChan := make(chan error, len(packages))
 	jobs := make(chan Package, len(packages))
-	//log.Printf("workers = %d", numberOfWorkers)
+	LogIfDebugOn("workers = %d", numberOfWorkers)
 
 	// Populating the job channel with all the packages to downlaod
 	for _, p := range packages {
@@ -35,22 +37,22 @@ func download(packages []Package) error {
 		wg.Add(1)
 		go func(i int) {
 			for data := range jobs {
-				//log.Printf("%d : received data %v", i, data)
+				LogIfDebugOn("%d : received data %v", i, data)
 				res := get(data.url, data.dir, getter.ClientModeDir)
 				errChan <- res
-				//log.Printf("%d : finished with data %v", i, data)
+				LogIfDebugOn("%d : finished with data %v", i, data)
 			}
-			//log.Printf("%d : CLOSING", i)
+			LogIfDebugOn("%d : CLOSING", i)
 			wg.Done()
 		}(i)
-		//log.Printf("created worker %d", i)
+		LogIfDebugOn("created worker %d", i)
 	}
 
 	close(jobs)
 	//log.Print("closed jobs")
 	wg.Wait()
 	close(errChan)
-	//log.Print("finished")
+	LogIfDebugOn("finished")
 	for err := range errChan {
 		if err != nil {
 			log.Print(err)
@@ -60,7 +62,9 @@ func download(packages []Package) error {
 }
 
 func get(src, dest string, mode getter.ClientMode) error {
-	log.Printf("downloading: %s -> %s\n", src, dest)
+
+	logDownload(src, dest)
+
 	pwd, err := os.Getwd()
 	if err != nil {
 		return err
@@ -71,8 +75,34 @@ func get(src, dest string, mode getter.ClientMode) error {
 		Pwd:  pwd,
 		Mode: mode,
 	}
-	//log.Printf("let's get %s -> %s", src, dest)
+	LogIfDebugOn("let's get %s -> %s", src, dest)
 	err = client.Get()
-	//log.Printf("done %s -> %s", src, dest)
+	LogIfDebugOn("done %s -> %s", src, dest)
 	return err
+}
+
+func logDownload(src string, dest string) {
+
+	humanReadableSrc := src
+
+	if strings.Count(src, "@") >= 1 {
+		humanReadableSrc = strings.Join(strings.Split(src, ":")[1:], ":")
+		humanReadableSrc = strings.Replace(humanReadableSrc, "//", "/", 1)
+	}
+
+	if strings.Count(humanReadableSrc, "//") == 1 {
+		humanReadableSrc = strings.Join(strings.Split(humanReadableSrc, "//")[1:], "//")
+	}
+
+	if strings.Count(humanReadableSrc, "//") == 2 {
+		humanReadableSrc = strings.Join(strings.Split(src, "//")[1:], "//")
+		humanReadableSrc = strings.Replace(humanReadableSrc, "//", "/", 1)
+	}
+
+	if humanReadableSrc == "" {
+		log.Printf("parsing failed for: %s \n", src)
+	}
+
+	log.Printf("downloading: %s -> %s\n", humanReadableSrc, dest)
+
 }
