@@ -106,11 +106,13 @@ func (f *Furyconf) Parse() ([]Package, error) {
 	}
 	repoPrefix := sshRepoPrefix
 	dotGitParticle := ""
+
 	if https {
 		repoPrefix = httpsRepoPrefix
 		dotGitParticle = ".git"
 	}
-	// Now we generate the dowload url and local dir
+
+	// Now we generate the download url and local dir
 	for i := 0; i < len(pkgs); i++ {
 		version := pkgs[i].Version
 
@@ -130,6 +132,7 @@ func (f *Furyconf) Parse() ([]Package, error) {
 		pkgs[i].url = newURL(repoPrefix, strings.Split(pkgs[i].Name, "/"), dotGitParticle, pkgKind, version, registry, cloudPlatform,  newKind(pkgKind, f.Provider)).strategy()
 
 		pkgs[i].dir = newDir(f.VendorFolderName, pkgKind, pkgs[i].Name, registry, cloudPlatform).strategy()
+
 	}
 
 	return pkgs, nil
@@ -228,9 +231,7 @@ func (n *URLSpec) strategy() string {
 		return n.getURLfromCompanyRepos()
 	}
 
-	urlPrefix := n.KindSpec.pickCloudProviderURL(n.CloudProvider)
-	dotGitParticle := ".git"
-	return fmt.Sprintf("%s/%s%s?ref=%s", urlPrefix, n.Blocks[0], dotGitParticle, n.Version)
+	return fmt.Sprintf("%s/%s%s?ref=%s", n.KindSpec.pickCloudProviderURL(n.CloudProvider), n.Blocks[0], ".git", n.Version)
 
 }
 
