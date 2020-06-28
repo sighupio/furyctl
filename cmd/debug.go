@@ -28,12 +28,12 @@ func LogIfDebugOn(printf string, arguments ...interface{}) {
 	}
 
 	if runtime.GOOS != "windows" {
-		log.Println(colorRed)
+		log.Println(colorCyan)
 	}
 
 	log.Printf(printf, arguments...)
 
 	if runtime.GOOS != "windows" {
-		log.Println(colorReset)
+		log.Println(colorCyan)
 	}
 }
