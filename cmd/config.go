@@ -112,13 +112,7 @@ func (f *Furyconf) Parse() ([]Package, error) {
 	}
 	// Now we generate the dowload url and local dir
 	for i := 0; i < len(pkgs); i++ {
-		url := new(URLSpec)
-		directory := new(DirSpec)
 		version := pkgs[i].Version
-		registry := pkgs[i].Registry
-		cloudPlatform := pkgs[i].ProviderOpt
-		urlPrefix := repoPrefix
-		pkgKind := pkgs[i].kind
 
 		if version == "" {
 			for k, v := range f.Versions {
@@ -129,13 +123,13 @@ func (f *Furyconf) Parse() ([]Package, error) {
 				}
 			}
 		}
+		registry := pkgs[i].Registry
+		cloudPlatform := pkgs[i].ProviderOpt
+		pkgKind := pkgs[i].kind
 
-		kindSpec := newKind(pkgKind, f.Provider)
-		block := strings.Split(pkgs[i].Name, "/")
-		url = newURL(urlPrefix, block, dotGitParticle, pkgKind, version, registry, cloudPlatform, kindSpec)
-		pkgs[i].url = url.strategy()
-		directory = newDir(f.VendorFolderName, pkgKind, pkgs[i].Name, registry, cloudPlatform)
-		pkgs[i].dir = directory.strategy()
+		pkgs[i].url = newURL(repoPrefix, strings.Split(pkgs[i].Name, "/"), dotGitParticle, pkgKind, version, registry, cloudPlatform,  newKind(pkgKind, f.Provider)).strategy()
+
+		pkgs[i].dir = newDir(f.VendorFolderName, pkgKind, pkgs[i].Name, registry, cloudPlatform).strategy()
 	}
 
 	return pkgs, nil
