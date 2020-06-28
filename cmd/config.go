@@ -43,7 +43,7 @@ type Furyconf struct {
 //   modules:
 //     aws
 //      - uri: https://github.com/terraform-aws-modules
-//        label: ufficial-modules
+//        label: official-modules
 type ProviderPattern map[string]ProviderKind
 
 // ProviderKind is the abstraction of the following structure:
@@ -51,7 +51,7 @@ type ProviderPattern map[string]ProviderKind
 // modules:
 //   aws
 //    - uri: https://github.com/terraform-aws-modules
-//      label: ufficial-modules
+//      label: official-modules
 type ProviderKind map[string][]RegistrySpec
 
 //RegistrySpec contains the couple uri/label to identify each tf new repo declared
