@@ -49,7 +49,7 @@ func download(packages []Package) error {
 	}
 
 	close(jobs)
-	//log.Print("closed jobs")
+	LogIfDebugOn("closed jobs")
 	wg.Wait()
 	close(errChan)
 	LogIfDebugOn("finished")
