@@ -142,8 +142,7 @@ func (f *Furyconf) Parse() ([]Package, error) {
 }
 
 func newKind(kind string, provider ProviderPattern) ProviderKind {
-	providerChoosen := provider[kind]
-	return providerChoosen
+	return provider[kind]
 }
 
 func (k *ProviderKind) getLabeledURI(providerName, label string) (string, error) {
@@ -167,12 +166,13 @@ func (k *ProviderKind) getLabeledURI(providerName, label string) (string, error)
 }
 
 func (k *ProviderKind) pickCloudProviderURL(cloudProvider ProviderOptSpec) string {
-	name := cloudProvider.Name
-	label := cloudProvider.Label
-	url, err := k.getLabeledURI(name, label)
+
+	url, err := k.getLabeledURI(cloudProvider.Name, cloudProvider.Label)
+
 	if err != nil {
 		log.Fatal(err)
 	}
+
 	return url
 }
 
