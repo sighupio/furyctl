@@ -129,9 +129,9 @@ func (f *Furyconf) Parse() ([]Package, error) {
 		cloudPlatform := pkgs[i].ProviderOpt
 		pkgKind := pkgs[i].kind
 
-		pkgs[i].url = newURL(repoPrefix, strings.Split(pkgs[i].Name, "/"), dotGitParticle, pkgKind, version, registry, cloudPlatform,  newKind(pkgKind, f.Provider)).strategy()
+		pkgs[i].url = newURLSpec(repoPrefix, strings.Split(pkgs[i].Name, "/"), dotGitParticle, pkgKind, version, registry, cloudPlatform,  newKind(pkgKind, f.Provider)).getConsumableUrl()
 
-		pkgs[i].dir = newDir(f.VendorFolderName, pkgKind, pkgs[i].Name, registry, cloudPlatform).strategy()
+		pkgs[i].dir = newDir(f.VendorFolderName, pkgKind, pkgs[i].Name, registry, cloudPlatform).getConsumableDirectory()
 
 	}
 
@@ -191,8 +191,8 @@ func newDir(folder, kind, name string, registry bool, provider ProviderOptSpec) 
 		Provider:     provider,
 	}
 }
-
-func (d *DirSpec) strategy() string {
+// getConsumableDirectory returns a directory we can write to
+func (d *DirSpec) getConsumableDirectory() string {
 	if d.Registry {
 		return fmt.Sprintf("%s/%s/%s/%s/%s", d.VendorFolder, d.Kind, d.Provider.Label, d.Provider.Name, d.Name)
 	}
@@ -212,7 +212,7 @@ type URLSpec struct {
 }
 
 // newUrl initialize the URLSpec struct
-func newURL(prefix string, blocks []string, dotGitParticle, kind, version string, registry bool, cloud ProviderOptSpec, kindSpec ProviderKind) *URLSpec {
+func newURLSpec(prefix string, blocks []string, dotGitParticle, kind, version string, registry bool, cloud ProviderOptSpec, kindSpec ProviderKind) *URLSpec {
 	return &URLSpec{
 		Registry:       registry,
 		Prefix:         prefix,
@@ -224,18 +224,18 @@ func newURL(prefix string, blocks []string, dotGitParticle, kind, version string
 		KindSpec:       kindSpec,
 	}
 }
-
-func (n *URLSpec) strategy() string {
+//getConsumableUrl returns an url that can be used for download
+func (n *URLSpec) getConsumableUrl() string {
 
 	if !n.Registry {
-		return n.getURLfromCompanyRepos()
+		return n.getURLFromCompanyRepos()
 	}
 
 	return fmt.Sprintf("%s/%s%s?ref=%s", n.KindSpec.pickCloudProviderURL(n.CloudProvider), n.Blocks[0], ".git", n.Version)
 
 }
 
-func (n *URLSpec) getURLfromCompanyRepos() string {
+func (n *URLSpec) getURLFromCompanyRepos() string {
 
 	if len(n.Blocks) == 0 {
 		// todo should return error?
