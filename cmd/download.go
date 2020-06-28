@@ -99,9 +99,7 @@ func logDownload(src string, dest string) {
 		humanReadableSrc = strings.Replace(humanReadableSrc, "//", "/", 1)
 	}
 
-	if humanReadableSrc == "" {
-		log.Printf("parsing failed for: %s \n", src)
-	}
+	LogIfDebugOn("complete url downloading log: %s -> %s\n", humanReadableSrc, dest)
 
 	log.Printf("downloading: %s -> %s\n", humanReadableSrc, dest)
 
