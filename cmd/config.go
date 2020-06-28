@@ -199,7 +199,7 @@ func (d *DirSpec) strategy() string {
 	return fmt.Sprintf("%s/%s/%s", d.VendorFolder, d.Kind, d.Name)
 }
 
-//URLSpec is the rappresentation of the fields needed to elaborate a url
+//URLSpec is the representation of the fields needed to elaborate a url
 type URLSpec struct {
 	Prefix         string
 	Blocks         []string
@@ -247,9 +247,11 @@ func (n *URLSpec) getURLfromCompanyRepos() string {
 	}
 	// always len(n.Blocks) >= 2 {
 	var remainingBlocks string
+
 	for i := 1; i < len(n.Blocks); i++ {
 		remainingBlocks = path.Join(remainingBlocks, n.Blocks[i])
 	}
+
 	return fmt.Sprintf("%s-%s%s//%s/%s?ref=%s", n.Prefix, n.Blocks[0], n.DotGitParticle, n.Kind, remainingBlocks, n.Version)
 
 }
