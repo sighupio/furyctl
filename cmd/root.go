@@ -15,6 +15,7 @@
 package cmd
 
 import (
+	"github.com/sirupsen/logrus"
 	"log"
 	"os"
 
@@ -25,7 +26,6 @@ var (
 	version = "dev"
 	commit  = "none"
 	date    = "unknown"
-	debug = false
 )
 
 // Execute is the main entrypoint of furyctl
@@ -39,8 +39,22 @@ func Execute() {
 func init() {
 	// rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.furyctl.yaml)")
 	rootCmd.AddCommand(versionCmd)
-	rootCmd.PersistentFlags().BoolVar(&debug, "debug", false, "Enables furyctl debug output")
+	rootCmd.PersistentFlags().Bool("debug", false, "Enables furyctl debug output")
 
+}
+
+func bootstrapLogrus(cmd *cobra.Command) {
+	debug, err := cmd.Flags().GetBool("debug")
+
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	if debug {
+		logrus.SetLevel(logrus.DebugLevel)
+		return
+	}
+	logrus.SetLevel(logrus.InfoLevel)
 }
 
 // rootCmd represents the base command when called without any subcommands
@@ -48,6 +62,9 @@ var rootCmd = &cobra.Command{
 	Use:   "furyctl",
 	Short: "A command line tool to manage cluster deployment with kubernetes",
 	Long:  ``,
+	PersistentPreRun: func(cmd *cobra.Command, args []string) {
+		bootstrapLogrus(cmd)
+	},
 }
 
 // versionCmd represents the version command

@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"github.com/sirupsen/logrus"
 	"log"
 	"os"
 	"runtime"
@@ -25,7 +26,7 @@ func download(packages []Package) error {
 	}
 	errChan := make(chan error, len(packages))
 	jobs := make(chan Package, len(packages))
-	LogIfDebugOn("workers = %d", numberOfWorkers)
+	logrus.Debugf("workers = %d", numberOfWorkers)
 
 	// Populating the job channel with all the packages to downlaod
 	for _, p := range packages {
@@ -37,22 +38,22 @@ func download(packages []Package) error {
 		wg.Add(1)
 		go func(i int) {
 			for data := range jobs {
-				LogIfDebugOn("%d : received data %v", i, data)
+				logrus.Debugf("%d : received data %v", i, data)
 				res := get(data.url, data.dir, getter.ClientModeDir)
 				errChan <- res
-				LogIfDebugOn("%d : finished with data %v", i, data)
+				logrus.Debugf("%d : finished with data %v", i, data)
 			}
-			LogIfDebugOn("%d : CLOSING", i)
+			logrus.Debugf("%d : CLOSING", i)
 			wg.Done()
 		}(i)
-		LogIfDebugOn("created worker %d", i)
+		logrus.Debugf("created worker %d", i)
 	}
 
 	close(jobs)
-	LogIfDebugOn("closed jobs")
+	logrus.Debugf("closed jobs")
 	wg.Wait()
 	close(errChan)
-	LogIfDebugOn("finished")
+	logrus.Debugf("finished")
 	for err := range errChan {
 		if err != nil {
 			log.Print(err)
@@ -75,9 +76,9 @@ func get(src, dest string, mode getter.ClientMode) error {
 		Pwd:  pwd,
 		Mode: mode,
 	}
-	LogIfDebugOn("let's get %s -> %s", src, dest)
+	logrus.Debugf("let's get %s -> %s", src, dest)
 	err = client.Get()
-	LogIfDebugOn("done %s -> %s", src, dest)
+	logrus.Debugf("done %s -> %s", src, dest)
 	return err
 }
 
@@ -99,7 +100,7 @@ func logDownload(src string, dest string) {
 		humanReadableSrc = strings.Replace(humanReadableSrc, "//", "/", 1)
 	}
 
-	LogIfDebugOn("complete url downloading log: %s -> %s\n", humanReadableSrc, dest)
+	logrus.Debugf("complete url downloading log: %s -> %s\n", humanReadableSrc, dest)
 
 	log.Printf("downloading: %s -> %s\n", humanReadableSrc, dest)
 
