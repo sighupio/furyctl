@@ -1,7 +1,7 @@
 package cmd
 
 import (
-	"log"
+	"github.com/sirupsen/logrus"
 
 	getter "github.com/hashicorp/go-getter"
 	"github.com/spf13/cobra"
@@ -37,7 +37,7 @@ var initCmd = &cobra.Command{
 func downloadFile(url string, outputFileName string) error {
 	err := get(url, outputFileName, getter.ClientModeFile)
 	if err != nil {
-		log.Print(err)
+		logrus.Print(err)
 	}
 	return err
 }

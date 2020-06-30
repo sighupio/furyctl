@@ -16,7 +16,6 @@ package cmd
 
 import (
 	"github.com/sirupsen/logrus"
-	"log"
 	"os"
 
 	"github.com/spf13/cobra"
@@ -31,7 +30,7 @@ var (
 // Execute is the main entrypoint of furyctl
 func Execute() {
 	if err := rootCmd.Execute(); err != nil {
-		log.Println(err)
+		logrus.Errorln(err)
 		os.Exit(1)
 	}
 }
@@ -47,7 +46,7 @@ func bootstrapLogrus(cmd *cobra.Command) {
 	debug, err := cmd.Flags().GetBool("debug")
 
 	if err != nil {
-		log.Fatal(err)
+		logrus.Fatal(err)
 	}
 
 	if debug {
@@ -73,6 +72,6 @@ var versionCmd = &cobra.Command{
 	Short: "Prints the client version information",
 	Long:  ``,
 	Run: func(cmd *cobra.Command, args []string) {
-		log.Println("Furyctl version ", version)
+		logrus.Println("Furyctl version ", version)
 	},
 }
