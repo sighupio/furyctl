@@ -89,15 +89,13 @@ func humanReadableDownloadLog(src string, dest string) {
 
 	humanReadableSrc := src
 
-	// handles git@github.com:sighupio url type
 	if strings.Count(src, "@") >= 1 {
+		// handles git@github.com:sighupio url type
 		humanReadableSrc = strings.Join(strings.Split(src, ":")[1:], ":")
 		humanReadableSrc = strings.Replace(humanReadableSrc, "//", "/", 1)
-	}
-	// handles git::https://whatever.com//mymodule url type
-	if strings.Count(humanReadableSrc, "//") >= 1 {
-		humanReadableSrc = strings.Join(strings.Split(humanReadableSrc, "//")[1:], "//")
-		humanReadableSrc = strings.Replace(humanReadableSrc, "//", "/", 1)
+	} else if strings.Count(humanReadableSrc, "//") >= 1 {
+		// handles git::https://whatever.com//mymodule url type
+		humanReadableSrc = strings.Join(strings.Split(humanReadableSrc, "//")[1:], "/")
 	}
 
 	log.Printf("downloading: %s -> %s\n", humanReadableSrc, dest)
