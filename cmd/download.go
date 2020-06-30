@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"github.com/sirupsen/logrus"
-	"log"
 	"os"
 	"runtime"
 	"strings"
@@ -56,7 +55,9 @@ func download(packages []Package) error {
 	logrus.Debugf("finished")
 	for err := range errChan {
 		if err != nil {
-			log.Print(err)
+			//todo ISSUE: logrus doesn't escape string characters
+			errString := strings.Replace(err.Error(), "\n", " ", -1)
+			logrus.Errorln(errString)
 		}
 	}
 	return nil
@@ -64,7 +65,7 @@ func download(packages []Package) error {
 
 func get(src, dest string, mode getter.ClientMode) error {
 
-	logrus.Debugf("complete url downloading: %s -> %s\n", src, dest)
+	logrus.Debugf("complete url downloading: %s -> %s", src, dest)
 
 	humanReadableDownloadLog(src, dest)
 
@@ -98,6 +99,6 @@ func humanReadableDownloadLog(src string, dest string) {
 		humanReadableSrc = strings.Join(strings.Split(humanReadableSrc, "//")[1:], "/")
 	}
 
-	log.Printf("downloading: %s -> %s\n", humanReadableSrc, dest)
+	logrus.Infof("downloading: %s -> %s", humanReadableSrc, dest)
 
 }
