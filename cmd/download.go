@@ -64,7 +64,9 @@ func download(packages []Package) error {
 
 func get(src, dest string, mode getter.ClientMode) error {
 
-	logDownload(src, dest)
+	logrus.Debugf("complete url downloading: %s -> %s\n", src, dest)
+
+	humanReadableDownloadLog(src, dest)
 
 	pwd, err := os.Getwd()
 	if err != nil {
@@ -82,25 +84,21 @@ func get(src, dest string, mode getter.ClientMode) error {
 	return err
 }
 
-func logDownload(src string, dest string) {
+// humanReadableDownloadLog prints a humanReadable log
+func humanReadableDownloadLog(src string, dest string) {
 
 	humanReadableSrc := src
 
+	// handles git@github.com:sighupio url type
 	if strings.Count(src, "@") >= 1 {
 		humanReadableSrc = strings.Join(strings.Split(src, ":")[1:], ":")
 		humanReadableSrc = strings.Replace(humanReadableSrc, "//", "/", 1)
 	}
-
-	if strings.Count(humanReadableSrc, "//") == 1 {
+	// handles git::https://whatever.com//mymodule url type
+	if strings.Count(humanReadableSrc, "//") >= 1 {
 		humanReadableSrc = strings.Join(strings.Split(humanReadableSrc, "//")[1:], "//")
-	}
-
-	if strings.Count(humanReadableSrc, "//") == 2 {
-		humanReadableSrc = strings.Join(strings.Split(src, "//")[1:], "//")
 		humanReadableSrc = strings.Replace(humanReadableSrc, "//", "/", 1)
 	}
-
-	logrus.Debugf("complete url downloading log: %s -> %s\n", humanReadableSrc, dest)
 
 	log.Printf("downloading: %s -> %s\n", humanReadableSrc, dest)
 
