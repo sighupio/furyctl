@@ -1,9 +1,10 @@
 package cmd
 
 import (
-	"log"
+	"github.com/sirupsen/logrus"
 	"os"
 	"runtime"
+	"strings"
 	"sync"
 
 	getter "github.com/hashicorp/go-getter"
@@ -13,6 +14,7 @@ var parallel bool
 var https bool
 
 func download(packages []Package) error {
+
 	// Preparing all the necessary data for a worker pool
 	var wg sync.WaitGroup
 	var numberOfWorkers int
@@ -23,7 +25,7 @@ func download(packages []Package) error {
 	}
 	errChan := make(chan error, len(packages))
 	jobs := make(chan Package, len(packages))
-	//log.Printf("workers = %d", numberOfWorkers)
+	logrus.Debugf("workers = %d", numberOfWorkers)
 
 	// Populating the job channel with all the packages to downlaod
 	for _, p := range packages {
@@ -35,32 +37,38 @@ func download(packages []Package) error {
 		wg.Add(1)
 		go func(i int) {
 			for data := range jobs {
-				//log.Printf("%d : received data %v", i, data)
+				logrus.Debugf("%d : received data %v", i, data)
 				res := get(data.url, data.dir, getter.ClientModeDir)
 				errChan <- res
-				//log.Printf("%d : finished with data %v", i, data)
+				logrus.Debugf("%d : finished with data %v", i, data)
 			}
-			//log.Printf("%d : CLOSING", i)
+			logrus.Debugf("%d : CLOSING", i)
 			wg.Done()
 		}(i)
-		//log.Printf("created worker %d", i)
+		logrus.Debugf("created worker %d", i)
 	}
 
 	close(jobs)
-	//log.Print("closed jobs")
+	logrus.Debugf("closed jobs")
 	wg.Wait()
 	close(errChan)
-	//log.Print("finished")
+	logrus.Debugf("finished")
 	for err := range errChan {
 		if err != nil {
-			log.Print(err)
+			//todo ISSUE: logrus doesn't escape string characters
+			errString := strings.Replace(err.Error(), "\n", " ", -1)
+			logrus.Errorln(errString)
 		}
 	}
 	return nil
 }
 
 func get(src, dest string, mode getter.ClientMode) error {
-	log.Printf("downloading: %s -> %s\n", src, dest)
+
+	logrus.Debugf("complete url downloading: %s -> %s", src, dest)
+
+	humanReadableDownloadLog(src, dest)
+
 	pwd, err := os.Getwd()
 	if err != nil {
 		return err
@@ -71,8 +79,26 @@ func get(src, dest string, mode getter.ClientMode) error {
 		Pwd:  pwd,
 		Mode: mode,
 	}
-	//log.Printf("let's get %s -> %s", src, dest)
+	logrus.Debugf("let's get %s -> %s", src, dest)
 	err = client.Get()
-	//log.Printf("done %s -> %s", src, dest)
+	logrus.Debugf("done %s -> %s", src, dest)
 	return err
+}
+
+// humanReadableDownloadLog prints a humanReadable log
+func humanReadableDownloadLog(src string, dest string) {
+
+	humanReadableSrc := src
+
+	if strings.Count(src, "@") >= 1 {
+		// handles git@github.com:sighupio url type
+		humanReadableSrc = strings.Join(strings.Split(src, ":")[1:], ":")
+		humanReadableSrc = strings.Replace(humanReadableSrc, "//", "/", 1)
+	} else if strings.Count(humanReadableSrc, "//") >= 1 {
+		// handles git::https://whatever.com//mymodule url type
+		humanReadableSrc = strings.Join(strings.Split(humanReadableSrc, "//")[1:], "/")
+	}
+
+	logrus.Infof("downloading: %s -> %s", humanReadableSrc, dest)
+
 }

@@ -15,7 +15,7 @@
 package cmd
 
 import (
-	"log"
+	"github.com/sirupsen/logrus"
 	"os"
 
 	"github.com/spf13/cobra"
@@ -30,7 +30,7 @@ var (
 // Execute is the main entrypoint of furyctl
 func Execute() {
 	if err := rootCmd.Execute(); err != nil {
-		log.Println(err)
+		logrus.Errorln(err)
 		os.Exit(1)
 	}
 }
@@ -38,6 +38,22 @@ func Execute() {
 func init() {
 	// rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.furyctl.yaml)")
 	rootCmd.AddCommand(versionCmd)
+	rootCmd.PersistentFlags().Bool("debug", false, "Enables furyctl debug output")
+
+}
+
+func bootstrapLogrus(cmd *cobra.Command) {
+	debug, err := cmd.Flags().GetBool("debug")
+
+	if err != nil {
+		logrus.Fatal(err)
+	}
+
+	if debug {
+		logrus.SetLevel(logrus.DebugLevel)
+		return
+	}
+	logrus.SetLevel(logrus.InfoLevel)
 }
 
 // rootCmd represents the base command when called without any subcommands
@@ -45,6 +61,9 @@ var rootCmd = &cobra.Command{
 	Use:   "furyctl",
 	Short: "A command line tool to manage cluster deployment with kubernetes",
 	Long:  ``,
+	PersistentPreRun: func(cmd *cobra.Command, args []string) {
+		bootstrapLogrus(cmd)
+	},
 }
 
 // versionCmd represents the version command
@@ -53,6 +72,6 @@ var versionCmd = &cobra.Command{
 	Short: "Prints the client version information",
 	Long:  ``,
 	Run: func(cmd *cobra.Command, args []string) {
-		log.Println("Furyctl version ", version)
+		logrus.Println("Furyctl version ", version)
 	},
 }

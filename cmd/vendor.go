@@ -15,8 +15,7 @@
 package cmd
 
 import (
-	"log"
-
+	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -38,25 +37,31 @@ var vendorCmd = &cobra.Command{
 		viper.SetConfigName(configFile)
 		config := new(Furyconf)
 		if err := viper.ReadInConfig(); err != nil {
-			log.Fatalf("Error reading config file, %s", err)
+			logrus.Fatalf("Error reading config file, %s", err)
 		}
 		err := viper.Unmarshal(config)
 		if err != nil {
-			log.Fatalf("unable to decode into struct, %v", err)
+			logrus.Fatalf("unable to decode into struct, %v", err)
 		}
 
 		err = config.Validate()
 		if err != nil {
-			log.Println("ERROR VALIDATING: ", err)
+			logrus.WithError(err).Error("ERROR VALIDATING")
 		}
 
 		list, err := config.Parse()
+
 		if err != nil {
-			log.Println("ERROR PARSING: ", err)
+			//logrus.Errorln("ERROR PARSING: ", err)
+			logrus.WithError(err).Error("ERROR PARSING")
+
 		}
+
 		err = download(list)
 		if err != nil {
-			log.Println("ERROR DOWNLOADING: ", err)
+			//logrus.Errorln("ERROR DOWNLOADING: ", err)
+			logrus.WithError(err).Error("ERROR DOWNLOADING")
+
 		}
 	},
 }

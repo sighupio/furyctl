@@ -16,7 +16,7 @@ package cmd
 
 import (
 	"fmt"
-	"log"
+	"github.com/sirupsen/logrus"
 	"path"
 	"strings"
 )
@@ -43,7 +43,7 @@ type Furyconf struct {
 //   modules:
 //     aws
 //      - uri: https://github.com/terraform-aws-modules
-//        label: ufficial-modules
+//        label: official-modules
 type ProviderPattern map[string]ProviderKind
 
 // ProviderKind is the abstraction of the following structure:
@@ -51,7 +51,7 @@ type ProviderPattern map[string]ProviderKind
 // modules:
 //   aws
 //    - uri: https://github.com/terraform-aws-modules
-//      label: ufficial-modules
+//      label: official-modules
 type ProviderKind map[string][]RegistrySpec
 
 //RegistrySpec contains the couple uri/label to identify each tf new repo declared
@@ -106,67 +106,70 @@ func (f *Furyconf) Parse() ([]Package, error) {
 	}
 	repoPrefix := sshRepoPrefix
 	dotGitParticle := ""
+
 	if https {
 		repoPrefix = httpsRepoPrefix
 		dotGitParticle = ".git"
 	}
 
-	// Now we generate the dowload url and local dir
+	// Now we generate the download url and local dir
 	for i := 0; i < len(pkgs); i++ {
-		url := new(URLSpec)
-		directory := new(DirSpec)
 		version := pkgs[i].Version
-		registry := pkgs[i].Registry
-		cloudPlatform := pkgs[i].ProviderOpt
-		urlPrefix := repoPrefix
-		pkgKind := pkgs[i].kind
 
 		if version == "" {
 			for k, v := range f.Versions {
 				if strings.HasPrefix(pkgs[i].Name, k) {
 					version = v
-					log.Printf("using %v for package %s\n", version, pkgs[i].Name)
+					logrus.Infof("using %v for package %s", version, pkgs[i].Name)
 					break
 				}
 			}
 		}
+		registry := pkgs[i].Registry
+		cloudPlatform := pkgs[i].ProviderOpt
+		pkgKind := pkgs[i].kind
 
-		kindSpec := newKind(pkgKind, f.Provider)
-		block := strings.Split(pkgs[i].Name, "/")
-		url = newURL(urlPrefix, block, dotGitParticle, pkgKind, version, registry, cloudPlatform, kindSpec)
-		pkgs[i].url = url.strategy()
-		directory = newDir(f.VendorFolderName, pkgKind, pkgs[i].Name, registry, cloudPlatform)
-		pkgs[i].dir = directory.strategy()
+		pkgs[i].url = newURLSpec(repoPrefix, strings.Split(pkgs[i].Name, "/"), dotGitParticle, pkgKind, version, registry, cloudPlatform,  newKind(pkgKind, f.Provider)).getConsumableUrl()
+
+		pkgs[i].dir = newDir(f.VendorFolderName, pkgKind, pkgs[i].Name, registry, cloudPlatform).getConsumableDirectory()
+
 	}
 
 	return pkgs, nil
 }
 
 func newKind(kind string, provider ProviderPattern) ProviderKind {
-	providerChoosen := provider[kind]
-	return providerChoosen
+	return provider[kind]
 }
 
 func (k *ProviderKind) getLabeledURI(providerName, label string) (string, error) {
 	for name, providerSpecList := range *k {
-		if name == providerName {
-			for _, providerMap := range providerSpecList {
-				if providerMap.Label == label {
-					return fmt.Sprintf("git::%s", providerMap.BaseURI), nil
-				}
-			}
+
+		if name != providerName {
+			continue
 		}
+		for _, providerMap := range providerSpecList {
+
+			if providerMap.Label != label {
+				continue
+			}
+
+			return fmt.Sprintf("git::%s", providerMap.BaseURI), nil
+
+		}
+
 	}
 	return "", fmt.Errorf("no label %s found", label)
 }
 
 func (k *ProviderKind) pickCloudProviderURL(cloudProvider ProviderOptSpec) string {
-	name := cloudProvider.Name
-	label := cloudProvider.Label
-	url, err := k.getLabeledURI(name, label)
+
+	url, err := k.getLabeledURI(cloudProvider.Name, cloudProvider.Label)
+
 	if err != nil {
-		log.Fatal(err)
+		logrus.Fatal(err)
 	}
+
 	return url
 }
 
@@ -188,15 +191,15 @@ func newDir(folder, kind, name string, registry bool, provider ProviderOptSpec) 
 		Provider:     provider,
 	}
 }
-
-func (d *DirSpec) strategy() string {
+// getConsumableDirectory returns a directory we can write to
+func (d *DirSpec) getConsumableDirectory() string {
 	if d.Registry {
 		return fmt.Sprintf("%s/%s/%s/%s/%s", d.VendorFolder, d.Kind, d.Provider.Label, d.Provider.Name, d.Name)
 	}
 	return fmt.Sprintf("%s/%s/%s", d.VendorFolder, d.Kind, d.Name)
 }
 
-//URLSpec is the rappresentation of the fields needed to elaborate a url
+//URLSpec is the representation of the fields needed to elaborate a url
 type URLSpec struct {
 	Prefix         string
 	Blocks         []string
@@ -209,7 +212,7 @@ type URLSpec struct {
 }
 
 // newUrl initialize the URLSpec struct
-func newURL(prefix string, blocks []string, dotGitParticle, kind, version string, registry bool, cloud ProviderOptSpec, kindSpec ProviderKind) *URLSpec {
+func newURLSpec(prefix string, blocks []string, dotGitParticle, kind, version string, registry bool, cloud ProviderOptSpec, kindSpec ProviderKind) *URLSpec {
 	return &URLSpec{
 		Registry:       registry,
 		Prefix:         prefix,
@@ -221,29 +224,34 @@ func newURL(prefix string, blocks []string, dotGitParticle, kind, version string
 		KindSpec:       kindSpec,
 	}
 }
+//getConsumableUrl returns an url that can be used for download
+func (n *URLSpec) getConsumableUrl() string {
 
-func (n *URLSpec) strategy() string {
-	var url string
-	if n.Registry {
-		urlPrefix := n.KindSpec.pickCloudProviderURL(n.CloudProvider)
-		dotGitParticle := ".git"
-		url = fmt.Sprintf("%s/%s%s?ref=%s", urlPrefix, n.Blocks[0], dotGitParticle, n.Version)
-	} else {
-		url = n.getURLfromCompanyRepos()
+	if !n.Registry {
+		return n.getURLFromCompanyRepos()
 	}
-	return url
+
+	return fmt.Sprintf("%s/%s%s?ref=%s", n.KindSpec.pickCloudProviderURL(n.CloudProvider), n.Blocks[0], ".git", n.Version)
+
 }
 
-func (n *URLSpec) getURLfromCompanyRepos() string {
-	var url string
-	if len(n.Blocks) == 1 {
-		url = fmt.Sprintf("%s-%s%s//%s?ref=%s", n.Prefix, n.Blocks[0], n.DotGitParticle, n.Kind, n.Version)
-	} else if len(n.Blocks) >= 2 {
-		var remainingBlocks string
-		for i := 1; i < len(n.Blocks); i++ {
-			remainingBlocks = path.Join(remainingBlocks, n.Blocks[i])
-		}
-		url = fmt.Sprintf("%s-%s%s//%s/%s?ref=%s", n.Prefix, n.Blocks[0], n.DotGitParticle, n.Kind, remainingBlocks, n.Version)
+func (n *URLSpec) getURLFromCompanyRepos() string {
+
+	if len(n.Blocks) == 0 {
+		// todo should return error?
+		return ""
 	}
-	return url
+
+	if len(n.Blocks) == 1 {
+		return fmt.Sprintf("%s-%s%s//%s?ref=%s", n.Prefix, n.Blocks[0], n.DotGitParticle, n.Kind, n.Version)
+	}
+	// always len(n.Blocks) >= 2 {
+	var remainingBlocks string
+
+	for i := 1; i < len(n.Blocks); i++ {
+		remainingBlocks = path.Join(remainingBlocks, n.Blocks[i])
+	}
+
+	return fmt.Sprintf("%s-%s%s//%s/%s?ref=%s", n.Prefix, n.Blocks[0], n.DotGitParticle, n.Kind, remainingBlocks, n.Version)
+
 }
