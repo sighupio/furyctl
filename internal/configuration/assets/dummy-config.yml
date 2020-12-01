@@ -1,0 +1,8 @@
+apiVersion: v0.1.0
+kind: Bootstrap
+metadata:
+  name: my-dummy
+spec:
+  provisioner: dummy
+
+  rsaBits: 4096
