@@ -1,0 +1,6 @@
+apiVersion: v0.1.0
+kind: Cluster
+metadata:
+  name: my-cluster
+spec:
+  provisioner: undefined

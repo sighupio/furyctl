@@ -1,0 +1,6 @@
+apiVersion: v0.1.0
+kind: Pizza
+metadata:
+  name: my-pizza
+spec:
+  provisioner: undefined

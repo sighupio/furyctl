@@ -1,0 +1,17 @@
+apiVersion: v0.1.0
+kind: Cluster
+metadata:
+  name: my-cluster
+spec:
+  provisioner: aws-simple
+
+  region: "eu-central-1"
+  version: "1.18.8"
+  publicSubnetID: "subnet-2e2fda52"
+  privateSubnetID: "subnet-8308f0cf"
+  trustedCIDRs:
+    - "0.0.0.0/0"
+  masterInstanceType: "m5.large"
+  workerInstanceType: "m5.large"
+  workerCount: 1
+  podNetworkCIDR: "172.16.0.0/16"

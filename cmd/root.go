@@ -15,9 +15,11 @@
 package cmd
 
 import (
-	"github.com/sirupsen/logrus"
 	"os"
+	"time"
 
+	"github.com/briandowns/spinner"
+	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
 
@@ -25,6 +27,8 @@ var (
 	version = "dev"
 	commit  = "none"
 	date    = "unknown"
+	s       *spinner.Spinner
+	debug   bool
 )
 
 // Execute is the main entrypoint of furyctl
@@ -36,6 +40,7 @@ func Execute() {
 }
 
 func init() {
+	s = spinner.New(spinner.CharSets[11], 100*time.Millisecond, spinner.WithWriter(logrus.StandardLogger().Out))
 	// rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.furyctl.yaml)")
 	rootCmd.AddCommand(versionCmd)
 	rootCmd.PersistentFlags().Bool("debug", false, "Enables furyctl debug output")
@@ -43,14 +48,15 @@ func init() {
 }
 
 func bootstrapLogrus(cmd *cobra.Command) {
-	debug, err := cmd.Flags().GetBool("debug")
+	d, err := cmd.Flags().GetBool("debug")
 
 	if err != nil {
 		logrus.Fatal(err)
 	}
 
-	if debug {
+	if d {
 		logrus.SetLevel(logrus.DebugLevel)
+		debug = true
 		return
 	}
 	logrus.SetLevel(logrus.InfoLevel)
