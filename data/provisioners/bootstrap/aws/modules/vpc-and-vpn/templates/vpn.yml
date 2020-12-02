@@ -1,0 +1,60 @@
+#cloud-config
+write_files:
+  - owner: root:root
+    path: /etc/cron.d/furyagent_ssh_users
+    content: |
+      */5 * * * * root /usr/local/bin/furyagent configure ssh-keys --config=/var/lib/SIGHUP/furyagent.yml --overwrite=true
+
+
+  - path: /var/lib/SIGHUP/furyagent.yml
+    content: |
+      ${furyagent}
+
+  - path: /etc/openvpn/server.conf
+    content: |
+      port ${openvpn_port}
+      proto udp
+      dev tun
+      ca /etc/openvpn/pki/ca.crt
+      cert /etc/openvpn/pki/server.crt
+      key /etc/openvpn/pki/server.key
+      dh /etc/openvpn/pki/dhp${openvpn_dhparam_bits}.pem
+      cipher AES-256-CBC
+      auth SHA512
+      topology subnet
+      server ${openvpn_subnet_network} ${openvpn_subnet_netmask}
+%{ for route in openvpn_routes ~}
+      push "route ${route["network"]} ${route["netmask"]}"
+%{ endfor ~}
+%{ for dns in openvpn_dns_servers ~}
+      push "dhcp-option DNS ${dns}"
+%{ endfor ~}
+      ifconfig-pool-persist ipp.txt
+      keepalive 10 120
+      comp-lzo
+      persist-key
+      persist-tun
+      status openvpn-status.log
+      verb 3
+      explicit-exit-notify 1
+      tls-server
+      tls-auth /etc/openvpn/pki/ta.key 0
+runcmd:
+  - wget https://github.com/sighupio/furyagent/releases/download/${furyagent_version}/furyagent-linux-amd64
+  - chmod +x furyagent-linux-amd64
+  - mv furyagent-linux-amd64 /usr/local/bin/furyagent
+  - mkdir -p /var/lib/SIGHUP/tmp
+  - mkdir -p /etc/openvpn/pki
+  - furyagent configure ssh-keys --config=/var/lib/SIGHUP/furyagent.yml --overwrite=true
+  - furyagent configure openvpn --config=/var/lib/SIGHUP/furyagent.yml --overwrite=true
+  - openssl genpkey -genparam -algorithm DH -out /etc/openvpn/pki/dhp${openvpn_dhparam_bits}.pem -pkeyopt dh_paramgen_prime_len:${openvpn_dhparam_bits}
+  - DEBIAN_FRONTEND=noninteractive apt-get update
+  - DEBIAN_FRONTEND=noninteractive apt-get install -yqq openvpn iptables-persistent
+  - modprobe iptable_nat
+  - echo "net.bridge.bridge-nf-call-iptables=1" >> /etc/sysctl.conf
+  - sed -i 's/^#net.ipv4.ip_forward=1/net.ipv4.ip_forward=1/' /etc/sysctl.d/99-sysctl.conf
+  - sysctl --quiet --system
+  - iptables -t nat -A POSTROUTING -o eth0 -j MASQUERADE
+  - netfilter-persistent save
+  - systemctl daemon-reload
+  - systemctl restart openvpn

@@ -104,6 +104,16 @@ func bootstrapParser(config *Configuration) (err error) {
 		config.Provisioner = provisioner.(string)
 		config.Spec = dummySpec
 		return nil
+	case provisioner == "aws":
+		awsSpec := bootstrapcfg.AWS{}
+		err = yaml.Unmarshal(specBytes, &awsSpec)
+		if err != nil {
+			log.Errorf("error parsing configuration file: %v", err)
+			return err
+		}
+		config.Provisioner = provisioner.(string)
+		config.Spec = awsSpec
+		return nil
 	default:
 		log.Error("Error parsing the configuration file. Provisioner not found")
 		return errors.New("Bootstrap provisioner not found")

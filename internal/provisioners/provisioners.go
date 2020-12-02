@@ -6,6 +6,7 @@ import (
 
 	"github.com/gobuffalo/packr/v2"
 	"github.com/hashicorp/terraform-exec/tfexec"
+	"github.com/sighupio/furyctl/internal/bootstrap/provisioners/aws"
 	"github.com/sighupio/furyctl/internal/bootstrap/provisioners/dummy"
 	"github.com/sighupio/furyctl/internal/configuration"
 	log "github.com/sirupsen/logrus"
@@ -52,6 +53,8 @@ func getClusterProvisioner(config configuration.Configuration) (Provisioner, err
 }
 func getBootstrapProvisioner(config configuration.Configuration) (Provisioner, error) {
 	switch {
+	case config.Provisioner == "aws":
+		return aws.New(&config), nil
 	case config.Provisioner == "dummy":
 		return dummy.New(&config), nil
 	default:
