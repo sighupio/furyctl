@@ -1,0 +1,5 @@
+users:
+%{ for user in users ~}
+  - name: ${user}
+    user_id: ${user}
+%{ endfor ~}
