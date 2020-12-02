@@ -18,8 +18,8 @@ var bootstrapProjectDefaultSubDirs = []string{"logs", "configuration"}
 
 // Bootstrap Represents the possible actions that can be made via CLI after some simple validations
 type Bootstrap struct {
-	bootstrapOptions *Options
-	s                *spinner.Spinner
+	options *Options
+	s       *spinner.Spinner
 
 	project     *project.Project
 	provisioner *provisioners.Provisioner
@@ -42,10 +42,10 @@ func New(opts *Options) (b *Bootstrap, err error) {
 		return nil, err
 	}
 	b = &Bootstrap{
-		s:                opts.Spin,
-		bootstrapOptions: opts,
-		project:          opts.Project,
-		provisioner:      &p,
+		s:           opts.Spin,
+		options:     opts,
+		project:     opts.Project,
+		provisioner: &p,
 	}
 	return b, nil
 }
@@ -91,7 +91,7 @@ func (c *Bootstrap) Init() (err error) {
 	c.s.Suffix = " Initializing terraform project"
 	c.s.Start()
 
-	err = tf.Init(context.Background(), tfexec.BackendConfig(fmt.Sprintf("%v/backend.conf", c.bootstrapOptions.TerraformOpts.ConfigDir)))
+	err = tf.Init(context.Background(), tfexec.BackendConfig(fmt.Sprintf("%v/backend.conf", c.options.TerraformOpts.ConfigDir)))
 	if err != nil {
 		log.Errorf("error while running terraform init in the project dir: %v", err)
 		return err
@@ -125,10 +125,10 @@ func (c *Bootstrap) installProvisionerTerraformFiles() (err error) {
 func (c *Bootstrap) initTerraformExecutor() (err error) {
 	tf := &tfexec.Terraform{}
 	// Create the terraform executor
-	c.bootstrapOptions.TerraformOpts.LogDir = "logs"
-	c.bootstrapOptions.TerraformOpts.ConfigDir = "configuration"
+	c.options.TerraformOpts.LogDir = "logs"
+	c.options.TerraformOpts.ConfigDir = "configuration"
 
-	tf, err = terraform.NewExecutor(*c.bootstrapOptions.TerraformOpts)
+	tf, err = terraform.NewExecutor(*c.options.TerraformOpts)
 	if err != nil {
 		log.Errorf("Error while initializing the terraform executor: %v", err)
 		return err
