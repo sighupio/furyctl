@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"os"
 
+	"github.com/sighupio/furyctl/pkg/utils"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -42,7 +43,12 @@ func (p *Project) CreateSubDirs(subDirs []string) (err error) {
 
 // WriteFile writes a new file (fileName) with the content specified
 func (p *Project) WriteFile(fileName string, content []byte) (err error) {
-	return ioutil.WriteFile(fmt.Sprintf("%v/%v", p.Path, fileName), content, os.FileMode(defaultFilePermission))
+	filePath := fmt.Sprintf("%v/%v", p.Path, fileName)
+	err = utils.EnsureDir(filePath)
+	if err != nil {
+		return err
+	}
+	return ioutil.WriteFile(filePath, content, os.FileMode(defaultFilePermission))
 }
 
 // Check if the project directory exists.
