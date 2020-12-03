@@ -25,12 +25,6 @@ func validate() (err error) {
 		return errors.New("do not use both --terraform-binary and --terraform-version")
 	}
 
-	log.Debugf("validating backend arguments --backend %v --backend-config %v", backend, backendConfigPath)
-	if backend != "local" && backendConfigPath == "" {
-		log.Errorf("use the --backend-config flag while using %v backend", backend)
-		return fmt.Errorf("use the --backend-config flag while using %v backend", backend)
-	}
-
 	return nil
 }
 
@@ -65,12 +59,10 @@ func pre(cmd *cobra.Command, args []string) (err error) {
 		Project:                  p,
 		ProvisionerConfiguration: config,
 		TerraformOpts: &terraform.TerraformOptions{
-			Version:           terraformVersion,
-			BinaryPath:        terraformBinaryPath,
-			WorkingDir:        workingDir,
-			Backend:           backend,
-			BackendConfigPath: backendConfigPath,
-			Debug:             debug,
+			Version:    terraformVersion,
+			BinaryPath: terraformBinaryPath,
+			WorkingDir: workingDir,
+			Debug:      debug,
 		},
 	}
 	b, err = bootstrap.New(bootstrapOpts)
@@ -82,8 +74,6 @@ func pre(cmd *cobra.Command, args []string) (err error) {
 }
 
 var (
-	backend             string
-	backendConfigPath   string
 	configFilePath      string
 	workingDir          string
 	terraformBinaryPath string
@@ -161,14 +151,6 @@ func init() {
 	bootstrapInitCmd.PersistentFlags().StringVar(&configFilePath, "config", "bootstrap.yml", "Bootstrap Configuration file path")
 	bootstrapUpdateCmd.PersistentFlags().StringVar(&configFilePath, "config", "bootstrap.yml", "Bootstrap Configuration file path")
 	bootstrapDestroyCmd.PersistentFlags().StringVar(&configFilePath, "config", "bootstrap.yml", "Bootstrap Configuration file path")
-
-	bootstrapInitCmd.PersistentFlags().StringVar(&backend, "backend", "local", "terraform backend type")
-	bootstrapUpdateCmd.PersistentFlags().StringVar(&backend, "backend", "local", "terraform backend type")
-	bootstrapDestroyCmd.PersistentFlags().StringVar(&backend, "backend", "local", "terraform backend type")
-
-	bootstrapInitCmd.PersistentFlags().StringVar(&backendConfigPath, "backend-config", "", "terraform backend configuration file path")
-	bootstrapUpdateCmd.PersistentFlags().StringVar(&backendConfigPath, "backend-config", "", "terraform backend configuration file path")
-	bootstrapDestroyCmd.PersistentFlags().StringVar(&backendConfigPath, "backend-config", "", "terraform backend configuration file path")
 
 	bootstrapInitCmd.PersistentFlags().StringVarP(&workingDir, "workdir", "w", ".", "Working dir used to place logs and state file")
 	bootstrapUpdateCmd.PersistentFlags().StringVarP(&workingDir, "workdir", "w", ".", "Working dir used to place logs and state file")

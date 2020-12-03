@@ -12,13 +12,20 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
+// StateConfiguration represents the terraform state configuration to be used
+type StateConfiguration struct {
+	Backend string            `yaml:"backend"`
+	Config  map[string]string `yaml:"config"`
+}
+
 // Configuration represents the base of the configuration file
 type Configuration struct {
-	APIVersion  string      `yaml:"apiVersion"`
-	Kind        string      `yaml:"kind"`
-	Metadata    Metadata    `yaml:"metadata"`
-	Spec        interface{} `yaml:"spec"`
-	Provisioner string
+	APIVersion         string             `yaml:"apiVersion"`
+	Kind               string             `yaml:"kind"`
+	Metadata           Metadata           `yaml:"metadata"`
+	Spec               interface{}        `yaml:"spec"`
+	StateConfiguration StateConfiguration `yaml:"state"`
+	Provisioner        string
 }
 
 // Metadata represents a set of metadata information to be used while performing operations
