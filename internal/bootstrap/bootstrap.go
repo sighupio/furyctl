@@ -47,6 +47,15 @@ func New(opts *Options) (b *Bootstrap, err error) {
 		project:     opts.Project,
 		provisioner: &p,
 	}
+
+	b.options.TerraformOpts.LogDir = "logs"
+	b.options.TerraformOpts.ConfigDir = "configuration"
+	if opts.ProvisionerConfiguration.StateConfiguration.Backend == "" { //The default should be a local file
+		opts.ProvisionerConfiguration.StateConfiguration.Backend = "local"
+	}
+	b.options.TerraformOpts.Backend = opts.ProvisionerConfiguration.StateConfiguration.Backend
+	b.options.TerraformOpts.BackendConfig = opts.ProvisionerConfiguration.StateConfiguration.Config
+
 	return b, nil
 }
 
@@ -223,9 +232,6 @@ func (c *Bootstrap) installProvisionerTerraformFiles() (err error) {
 // creates the terraform executor to being used by the bootstrap instance and its provisioner
 func (c *Bootstrap) initTerraformExecutor() (err error) {
 	tf := &tfexec.Terraform{}
-	// Create the terraform executor
-	c.options.TerraformOpts.LogDir = "logs"
-	c.options.TerraformOpts.ConfigDir = "configuration"
 
 	tf, err = terraform.NewExecutor(*c.options.TerraformOpts)
 	if err != nil {
