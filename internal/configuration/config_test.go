@@ -10,6 +10,7 @@ import (
 
 var sampleAWSSimpleConfig Configuration
 var sampleDummyConfig Configuration
+var sampleDummyWithStateConfig Configuration
 
 func init() {
 	sampleAWSSimpleConfig.APIVersion = "v0.1.0"
@@ -41,6 +42,25 @@ func init() {
 		RSABits:     4096,
 		Provisioner: "dummy",
 	}
+
+	sampleDummyWithStateConfig.APIVersion = "v0.1.0"
+	sampleDummyWithStateConfig.Kind = "Bootstrap"
+	sampleDummyWithStateConfig.Metadata = Metadata{
+		Name: "my-dummy",
+	}
+	sampleDummyWithStateConfig.Provisioner = "dummy"
+	sampleDummyWithStateConfig.Spec = bootstrapcfg.Dummy{
+		RSABits:     4096,
+		Provisioner: "dummy",
+	}
+	sampleDummyWithStateConfig.StateConfiguration = StateConfiguration{
+		Backend: "s3",
+		Config: map[string]string{
+			"bucket": "im-fury",
+			"key":    "demo",
+			"region": "eu-milan-1",
+		},
+	}
 }
 
 func TestParseClusterConfigurationFile(t *testing.T) {
@@ -54,6 +74,13 @@ func TestParseClusterConfigurationFile(t *testing.T) {
 		wantErr bool
 	}{
 		{
+			name: "Dummy bootstrap with state",
+			args: args{
+				path: "assets/dummy-config-state.yml",
+			},
+			want:    &sampleDummyWithStateConfig,
+			wantErr: false,
+		}, {
 			name: "AWS Simple",
 			args: args{
 				path: "assets/sample-config.yml",

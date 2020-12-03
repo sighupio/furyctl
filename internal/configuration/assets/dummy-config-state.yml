@@ -1,0 +1,14 @@
+apiVersion: v0.1.0
+kind: Bootstrap
+metadata:
+  name: my-dummy
+state:
+  backend: s3
+  config:
+    bucket: "im-fury"
+    key: "demo"
+    region: "eu-milan-1"
+spec:
+  provisioner: dummy
+
+  rsaBits: 4096
