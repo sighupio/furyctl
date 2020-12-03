@@ -115,18 +115,75 @@ var (
 			return nil
 		},
 	}
+	bootstrapUpdateCmd = &cobra.Command{
+		Use:     "update",
+		Short:   "Update the bootstrap project",
+		PreRunE: pre,
+		RunE: func(cmd *cobra.Command, args []string) (err error) {
+			err = p.Check()
+			if err != nil {
+				return fmt.Errorf("the project %v has to be created. Execute bootstrap init before bootstrap update. %v", workingDir, err)
+			}
+			err = b.Update()
+			if err != nil {
+				return err
+			}
+			return nil
+		},
+	}
+	bootstrapDestroyCmd = &cobra.Command{
+		Use:     "destroy",
+		Short:   "Destroy the bootstrap project",
+		PreRunE: pre,
+		RunE: func(cmd *cobra.Command, args []string) (err error) {
+			err = p.Check()
+			if err != nil {
+				return fmt.Errorf("the project %v has to be created. Execute bootstrap init before cluster destroy. %v", workingDir, err)
+			}
+			err = b.Destroy()
+			if err != nil {
+				return err
+			}
+			return nil
+		},
+	}
 )
 
 func init() {
 	bootstrapInitCmd.PersistentFlags().StringVar(&terraformBinaryPath, "terraform-binary", "", "Terraform binary to use. No compatible with --terraform-version")
+	bootstrapUpdateCmd.PersistentFlags().StringVar(&terraformBinaryPath, "terraform-binary", "", "Terraform binary to use. No compatible with --terraform-version")
+	bootstrapDestroyCmd.PersistentFlags().StringVar(&terraformBinaryPath, "terraform-binary", "", "Terraform binary to use. No compatible with --terraform-version")
+
 	bootstrapInitCmd.PersistentFlags().StringVar(&terraformVersion, "terraform-version", "", "Terraform version to download and use. Incompatible if it is used along with --terrafor-binary. Example 0.12.12")
+	bootstrapUpdateCmd.PersistentFlags().StringVar(&terraformVersion, "terraform-version", "", "Terraform version to download and use. Incompatible if it is used along with --terrafor-binary. Example 0.12.12")
+	bootstrapDestroyCmd.PersistentFlags().StringVar(&terraformVersion, "terraform-version", "", "Terraform version to download and use. Incompatible if it is used along with --terrafor-binary. Example 0.12.12")
+
 	bootstrapInitCmd.PersistentFlags().StringVar(&configFilePath, "config", "bootstrap.yml", "Bootstrap Configuration file path")
+	bootstrapUpdateCmd.PersistentFlags().StringVar(&configFilePath, "config", "bootstrap.yml", "Bootstrap Configuration file path")
+	bootstrapDestroyCmd.PersistentFlags().StringVar(&configFilePath, "config", "bootstrap.yml", "Bootstrap Configuration file path")
+
 	bootstrapInitCmd.PersistentFlags().StringVar(&backend, "backend", "local", "terraform backend type")
+	bootstrapUpdateCmd.PersistentFlags().StringVar(&backend, "backend", "local", "terraform backend type")
+	bootstrapDestroyCmd.PersistentFlags().StringVar(&backend, "backend", "local", "terraform backend type")
+
 	bootstrapInitCmd.PersistentFlags().StringVar(&backendConfigPath, "backend-config", "", "terraform backend configuration file path")
+	bootstrapUpdateCmd.PersistentFlags().StringVar(&backendConfigPath, "backend-config", "", "terraform backend configuration file path")
+	bootstrapDestroyCmd.PersistentFlags().StringVar(&backendConfigPath, "backend-config", "", "terraform backend configuration file path")
 
 	bootstrapInitCmd.PersistentFlags().StringVarP(&workingDir, "workdir", "w", ".", "Working dir used to place logs and state file")
+	bootstrapUpdateCmd.PersistentFlags().StringVarP(&workingDir, "workdir", "w", ".", "Working dir used to place logs and state file")
+	bootstrapDestroyCmd.PersistentFlags().StringVarP(&workingDir, "workdir", "w", ".", "Working dir used to place logs and state file")
+
 	bootstrapInitCmd.MarkPersistentFlagRequired("config")
+	bootstrapUpdateCmd.MarkPersistentFlagRequired("config")
+	bootstrapDestroyCmd.MarkPersistentFlagRequired("config")
+
 	bootstrapInitCmd.MarkPersistentFlagRequired("workdir")
+	bootstrapUpdateCmd.MarkPersistentFlagRequired("workdir")
+	bootstrapDestroyCmd.MarkPersistentFlagRequired("workdir")
+
 	bootstrapCmd.AddCommand(bootstrapInitCmd)
+	bootstrapCmd.AddCommand(bootstrapUpdateCmd)
+	bootstrapCmd.AddCommand(bootstrapDestroyCmd)
 	rootCmd.AddCommand(bootstrapCmd)
 }
