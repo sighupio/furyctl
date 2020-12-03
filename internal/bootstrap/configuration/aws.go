@@ -8,6 +8,6 @@ type AWS struct {
 	PublicSubnetsCIDRs  []string `yaml:"publicSubnetsCIDRs"`
 	PrivateSubnetsCIDRs []string `yaml:"privateSubnetsCIDRs"`
 	VPNSubnetCIDR       string   `yaml:"vpnSubnetCIDR"`
-	VPNOperatorCIDRs    []string `yaml:"vpnOperatorCIDRs"`
 	VPNSSHUsers         []string `yaml:"vpnSSHUsers"`
+	VPNOperatorCIDRs    []string `yaml:"vpnOperatorCIDRs"`
 }

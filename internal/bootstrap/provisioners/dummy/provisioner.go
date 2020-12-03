@@ -105,21 +105,14 @@ func (d Dummy) Destroy() (err error) {
 	return nil
 }
 
-// Credentials gathers the kubeconfig in form of binary data
-func (d Dummy) Credentials() ([]byte, error) {
-	log.Info("Gathering dummy kubeconfig file")
+// Output gathers the Output in form of binary data
+func (d Dummy) Output() ([]byte, error) {
+	log.Info("Gathering dummy output file as json")
 	var output map[string]tfexec.OutputMeta
 	output, err := d.terraform.Output(context.Background())
 	if err != nil {
 		log.Fatalf("Error while getting project output: %v", err)
 		return nil, err
 	}
-	kubeconfig := output["public_key_openssh"]
-	var k string
-	err = json.Unmarshal(kubeconfig.Value, &k)
-	if err != nil {
-		log.Fatalf("Error while tranforming the kubeconfig value into string: %v", err)
-		return nil, err
-	}
-	return []byte(k), nil
+	return json.Marshal(output)
 }
