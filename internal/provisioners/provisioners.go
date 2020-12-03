@@ -24,7 +24,7 @@ type Provisioner interface {
 
 	Update() error
 	Destroy() error
-	Credentials() ([]byte, error)
+	Output() ([]byte, error)
 
 	Box() *packr.Box
 }
