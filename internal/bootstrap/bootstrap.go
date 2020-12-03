@@ -14,7 +14,7 @@ import (
 )
 
 // List of default subdirectories needed to run any provisioner.
-var bootstrapProjectDefaultSubDirs = []string{"logs", "configuration"}
+var bootstrapProjectDefaultSubDirs = []string{"logs", "configuration", "output"}
 
 // Bootstrap Represents the possible actions that can be made via CLI after some simple validations
 type Bootstrap struct {
@@ -25,7 +25,7 @@ type Bootstrap struct {
 	provisioner *provisioners.Provisioner
 }
 
-// Options are valid configuration needed to proceed with the cluster management
+// Options are valid configuration needed to proceed with the bootstrap management
 type Options struct {
 	Spin                     *spinner.Spinner
 	Project                  *project.Project
@@ -33,7 +33,7 @@ type Options struct {
 	TerraformOpts            *terraform.TerraformOptions
 }
 
-// New builds a Bootstrap object with some configurations using ClusterOptions
+// New builds a Bootstrap object with some configurations using Options
 func New(opts *Options) (b *Bootstrap, err error) {
 	// Grab the right provisioner
 	p, err := provisioners.Get(*opts.ProvisionerConfiguration)
@@ -97,7 +97,106 @@ func (c *Bootstrap) Init() (err error) {
 		return err
 	}
 	c.s.Stop()
-	// c.postInit()
+	c.postInit()
+	return nil
+}
+
+func (c *Bootstrap) postInit() {
+	prov := *c.provisioner
+	fmt.Printf(`%v
+
+::SIGHUP::
+
+The init phase has been completed. 
+Take a look to the %v path to discover the source code of the project.
+
+Everything is set to actually create the infrastructure. 
+
+Run furyctl bootstrap update command whenever you want.
+
+`, prov.InitMessage(), c.project.Path)
+}
+
+func (c *Bootstrap) postUpdate() {
+	proj := *c.project
+	prov := *c.provisioner
+	fmt.Printf(`%v
+::SIGHUP::
+The bootstrap project has been created. 
+The output file is located at %v/output/output.json
+`, prov.UpdateMessage(), proj.Path)
+}
+
+func (c *Bootstrap) postDestroy() {
+	prov := *c.provisioner
+	fmt.Printf(`%v
+::SIGHUP::
+The bootstrap has been destroyed
+`, prov.DestroyMessage())
+}
+
+// Update updates the bootstrap (terraform apply)
+func (c *Bootstrap) Update() (err error) {
+	c.s.Stop()
+	c.s.Suffix = " Initializing the terraform executor"
+	c.s.Start()
+	err = c.initTerraformExecutor()
+	if err != nil {
+		log.Errorf("Error while initializing the terraform executor: %v", err)
+		return err
+	}
+
+	prov := *c.provisioner
+	c.s.Stop()
+	c.s.Suffix = " Applying terraform project"
+	c.s.Start()
+	err = prov.Update()
+	if err != nil {
+		log.Errorf("Error while updating the bootstrap. Take a look to the logs. %v", err)
+		return err
+	}
+	c.s.Stop()
+	c.s.Suffix = " Saving kubeconfig"
+	c.s.Start()
+	output, err := prov.Output()
+	if err != nil {
+		log.Errorf("Error while getting the output with the bootstrap data: %v", err)
+		return err
+	}
+
+	proj := *c.project
+	err = proj.WriteFile("output/output.json", output)
+	if err != nil {
+		log.Errorf("Error while writting the output.json to the project directory: %v", err)
+		return err
+	}
+	c.s.Stop()
+	c.postUpdate()
+	return nil
+}
+
+// Destroy destroys the bootstrap (terraform destroy)
+func (c *Bootstrap) Destroy() (err error) {
+	c.s.Stop()
+	c.s.Suffix = " Initializing the terraform executor"
+	c.s.Start()
+	err = c.initTerraformExecutor()
+	if err != nil {
+		log.Errorf("Error while initializing the terraform executor: %v", err)
+		return err
+	}
+
+	prov := *c.provisioner
+	c.s.Stop()
+	c.s.Suffix = " Destroying terraform project"
+	c.s.Start()
+	err = prov.Destroy()
+	if err != nil {
+		log.Errorf("Error while destroying the bootstrap. Take a look to the logs. %v", err)
+		return err
+	}
+	c.s.Stop()
+	c.postDestroy()
 	return nil
 }
 
@@ -121,7 +220,7 @@ func (c *Bootstrap) installProvisionerTerraformFiles() (err error) {
 	return nil
 }
 
-// creates the terraform executor to being used by the cluster instance and its provisioner
+// creates the terraform executor to being used by the bootstrap instance and its provisioner
 func (c *Bootstrap) initTerraformExecutor() (err error) {
 	tf := &tfexec.Terraform{}
 	// Create the terraform executor
