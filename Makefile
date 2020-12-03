@@ -6,7 +6,7 @@ tag:
 
 clean:
 	GO111MODULE=on packr2 clean
-	rm -rf bin
+	rm -rf bin furyctl
 
 build: clean
 	GO111MODULE=on packr2 build
