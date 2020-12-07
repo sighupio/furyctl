@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"fmt"
 	"github.com/sirupsen/logrus"
 	"os"
 	"runtime"
@@ -67,7 +68,6 @@ func get(src, dest string, mode getter.ClientMode) error {
 
 	logrus.Debugf("complete url downloading: %s -> %s", src, dest)
 
-	humanReadableDownloadLog(src, dest)
 
 	pwd, err := os.Getwd()
 	if err != nil {
@@ -80,8 +80,32 @@ func get(src, dest string, mode getter.ClientMode) error {
 		Mode: mode,
 	}
 	logrus.Debugf("let's get %s -> %s", src, dest)
-	err = client.Get()
+
+	gitFolder := fmt.Sprintf("%s/.git",dest)
+
+	if _, err := os.Stat(dest); !os.IsNotExist(err) {
+		logrus.Infof("%s already exists! removing it",dest)
+		removeContents(dest)
+		humanReadableDownloadLog(src, dest)
+		err = client.Get()
+		logrus.Infof("removing %s",gitFolder)
+		removeContents(gitFolder)
+	}else {
+		humanReadableDownloadLog(src, dest)
+		err = client.Get()
+		logrus.Infof("removing %s",gitFolder)
+		removeContents(gitFolder)
+	}
+
+
+	/*	gitFolder := fmt.Sprintf("%s/.git",dest)
+
+		if _, err := os.Stat(gitFolder); !os.IsNotExist(err) {
+			logrus.Infof("%s found, removing it!",gitFolder)
+			removeContents(gitFolder)
+		}*/
 	logrus.Debugf("done %s -> %s", src, dest)
+
 	return err
 }
 
@@ -101,4 +125,13 @@ func humanReadableDownloadLog(src string, dest string) {
 
 	logrus.Infof("downloading: %s -> %s", humanReadableSrc, dest)
 
+}
+
+
+func removeContents(dir string) error {
+	err:= os.RemoveAll(dir)
+		if err != nil {
+			return err
+		}
+	return nil
 }
