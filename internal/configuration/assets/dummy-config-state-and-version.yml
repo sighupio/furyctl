@@ -2,6 +2,7 @@ kind: Bootstrap
 metadata:
   name: my-dummy
 executor:
+  version: "0.12.12"
   state:
     backend: s3
     config:

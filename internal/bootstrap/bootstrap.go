@@ -14,7 +14,7 @@ import (
 )
 
 // List of default subdirectories needed to run any provisioner.
-var bootstrapProjectDefaultSubDirs = []string{"logs", "configuration", "output"}
+var bootstrapProjectDefaultSubDirs = []string{"logs", "configuration", "output", "bin"}
 
 // Bootstrap Represents the possible actions that can be made via CLI after some simple validations
 type Bootstrap struct {
@@ -48,13 +48,15 @@ func New(opts *Options) (b *Bootstrap, err error) {
 		provisioner: &p,
 	}
 
+	b.options.TerraformOpts.Version = b.options.ProvisionerConfiguration.Executor.Version
+	b.options.TerraformOpts.BinaryPath = b.options.ProvisionerConfiguration.Executor.Path
 	b.options.TerraformOpts.LogDir = "logs"
 	b.options.TerraformOpts.ConfigDir = "configuration"
-	if opts.ProvisionerConfiguration.StateConfiguration.Backend == "" { //The default should be a local file
-		opts.ProvisionerConfiguration.StateConfiguration.Backend = "local"
+	if opts.ProvisionerConfiguration.Executor.StateConfiguration.Backend == "" { //The default should be a local file
+		opts.ProvisionerConfiguration.Executor.StateConfiguration.Backend = "local"
 	}
-	b.options.TerraformOpts.Backend = opts.ProvisionerConfiguration.StateConfiguration.Backend
-	b.options.TerraformOpts.BackendConfig = opts.ProvisionerConfiguration.StateConfiguration.Config
+	b.options.TerraformOpts.Backend = opts.ProvisionerConfiguration.Executor.StateConfiguration.Backend
+	b.options.TerraformOpts.BackendConfig = opts.ProvisionerConfiguration.Executor.StateConfiguration.Config
 
 	return b, nil
 }

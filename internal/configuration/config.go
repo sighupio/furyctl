@@ -12,6 +12,16 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
+// TerraformExecutor represents the terraform executor configuration to be used
+type TerraformExecutor struct {
+	// Local Path
+	Path string `yaml:"path"`
+	// Version to download
+	Version string `yaml:"version"`
+	// StateConfiguration configures the terraform state to use
+	StateConfiguration StateConfiguration `yaml:"state"`
+}
+
 // StateConfiguration represents the terraform state configuration to be used
 type StateConfiguration struct {
 	Backend string            `yaml:"backend"`
@@ -20,12 +30,11 @@ type StateConfiguration struct {
 
 // Configuration represents the base of the configuration file
 type Configuration struct {
-	APIVersion         string             `yaml:"apiVersion"`
-	Kind               string             `yaml:"kind"`
-	Metadata           Metadata           `yaml:"metadata"`
-	Spec               interface{}        `yaml:"spec"`
-	StateConfiguration StateConfiguration `yaml:"state"`
-	Provisioner        string
+	Kind        string            `yaml:"kind"`
+	Metadata    Metadata          `yaml:"metadata"`
+	Spec        interface{}       `yaml:"spec"`
+	Executor    TerraformExecutor `yaml:"executor"`
+	Provisioner string
 }
 
 // Metadata represents a set of metadata information to be used while performing operations
