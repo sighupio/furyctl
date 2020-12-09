@@ -85,13 +85,21 @@ func get(src, dest string, mode getter.ClientMode) error {
 
 	if _, err := os.Stat(dest); !os.IsNotExist(err) {
 		logrus.Infof("%s already exists! removing it", dest)
-		removeDir(dest)
+		err = removeDir(dest)
+		if err != nil{
+			logrus.Error(err)
+			return err
+		}
 	}
 
 	humanReadableDownloadLog(src, dest)
-	err = client.Get()
+	_ = client.Get()
 	logrus.Infof("removing %s",gitFolder)
-	removeDir(gitFolder)
+	err = removeDir(gitFolder)
+	if err != nil{
+		logrus.Error(err)
+		return err
+	}
 
 	logrus.Debugf("done %s -> %s", src, dest)
 
