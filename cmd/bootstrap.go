@@ -1,8 +1,8 @@
 package cmd
 
 import (
-	"errors"
 	"fmt"
+	"os"
 
 	"github.com/sighupio/furyctl/internal/bootstrap"
 	"github.com/sighupio/furyctl/internal/configuration"
@@ -18,16 +18,6 @@ var (
 	b      *bootstrap.Bootstrap
 )
 
-func validate() (err error) {
-	log.Debugf("validating terraform arguments --terraform-binary %v --terraform-version %v", terraformBinaryPath, terraformVersion)
-	if terraformBinaryPath != "" && terraformVersion != "" {
-		log.Error("--terraform-binary and --terraform-version detected")
-		return errors.New("do not use both --terraform-binary and --terraform-version")
-	}
-
-	return nil
-}
-
 func parseConfig() (err error) {
 	log.Debugf("parsing configuration file %v", configFilePath)
 	config, err = configuration.Parse(configFilePath)
@@ -40,28 +30,23 @@ func parseConfig() (err error) {
 
 func pre(cmd *cobra.Command, args []string) (err error) {
 	log.Debug("passing pre-flight checks")
-	err = validate()
-	if err != nil {
-		log.Errorf("validation failed: %v", err)
-		return err
-	}
 	err = parseConfig()
 	if err != nil {
 		log.Errorf("error parsing configuration file: %v", err)
 		return err
 	}
-	log.Debug("validated and configuration parsed")
+	wd, _ := os.Getwd()
+	workingDirFullPath := fmt.Sprintf("%v/%v", wd, workingDir)
+	log.Debug("pre-flight checks ok!")
 	p = &project.Project{
-		Path: workingDir,
+		Path: workingDirFullPath,
 	}
 	bootstrapOpts := &bootstrap.Options{
 		Spin:                     s,
 		Project:                  p,
 		ProvisionerConfiguration: config,
 		TerraformOpts: &terraform.TerraformOptions{
-			Version:    terraformVersion,
-			BinaryPath: terraformBinaryPath,
-			WorkingDir: workingDir,
+			WorkingDir: workingDirFullPath,
 			Debug:      debug,
 		},
 	}
@@ -74,10 +59,8 @@ func pre(cmd *cobra.Command, args []string) (err error) {
 }
 
 var (
-	configFilePath      string
-	workingDir          string
-	terraformBinaryPath string
-	terraformVersion    string
+	configFilePath string
+	workingDir     string
 
 	bootstrapCmd = &cobra.Command{
 		Use:   "bootstrap",
@@ -140,14 +123,6 @@ var (
 )
 
 func init() {
-	bootstrapInitCmd.PersistentFlags().StringVar(&terraformBinaryPath, "terraform-binary", "", "Terraform binary to use. No compatible with --terraform-version")
-	bootstrapUpdateCmd.PersistentFlags().StringVar(&terraformBinaryPath, "terraform-binary", "", "Terraform binary to use. No compatible with --terraform-version")
-	bootstrapDestroyCmd.PersistentFlags().StringVar(&terraformBinaryPath, "terraform-binary", "", "Terraform binary to use. No compatible with --terraform-version")
-
-	bootstrapInitCmd.PersistentFlags().StringVar(&terraformVersion, "terraform-version", "", "Terraform version to download and use. Incompatible if it is used along with --terrafor-binary. Example 0.12.12")
-	bootstrapUpdateCmd.PersistentFlags().StringVar(&terraformVersion, "terraform-version", "", "Terraform version to download and use. Incompatible if it is used along with --terrafor-binary. Example 0.12.12")
-	bootstrapDestroyCmd.PersistentFlags().StringVar(&terraformVersion, "terraform-version", "", "Terraform version to download and use. Incompatible if it is used along with --terrafor-binary. Example 0.12.12")
-
 	bootstrapInitCmd.PersistentFlags().StringVar(&configFilePath, "config", "bootstrap.yml", "Bootstrap Configuration file path")
 	bootstrapUpdateCmd.PersistentFlags().StringVar(&configFilePath, "config", "bootstrap.yml", "Bootstrap Configuration file path")
 	bootstrapDestroyCmd.PersistentFlags().StringVar(&configFilePath, "config", "bootstrap.yml", "Bootstrap Configuration file path")
