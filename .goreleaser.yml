@@ -1,7 +1,7 @@
 ---
 before:
   hooks:
-    - go mod vendor
+    - packr2 build
 project_name: furyctl
 builds:
   - binary: 'furyctl'
