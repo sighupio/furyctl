@@ -68,7 +68,6 @@ func get(src, dest string, mode getter.ClientMode) error {
 
 	logrus.Debugf("complete url downloading: %s -> %s", src, dest)
 
-
 	pwd, err := os.Getwd()
 	if err != nil {
 		return err
@@ -81,12 +80,12 @@ func get(src, dest string, mode getter.ClientMode) error {
 	}
 	logrus.Debugf("let's get %s -> %s", src, dest)
 
-	gitFolder := fmt.Sprintf("%s/.git",dest)
+	gitFolder := fmt.Sprintf("%s/.git", dest)
 
 	if _, err := os.Stat(dest); !os.IsNotExist(err) {
 		logrus.Infof("%s already exists! removing it", dest)
 		err = removeDir(dest)
-		if err != nil{
+		if err != nil {
 			logrus.Error(err)
 			return err
 		}
@@ -94,9 +93,9 @@ func get(src, dest string, mode getter.ClientMode) error {
 
 	humanReadableDownloadLog(src, dest)
 	_ = client.Get()
-	logrus.Infof("removing %s",gitFolder)
+	logrus.Infof("removing %s", gitFolder)
 	err = removeDir(gitFolder)
-	if err != nil{
+	if err != nil {
 		logrus.Error(err)
 		return err
 	}
@@ -125,9 +124,9 @@ func humanReadableDownloadLog(src string, dest string) {
 }
 
 func removeDir(dir string) error {
-	err:= os.RemoveAll(dir)
-		if err != nil {
-			return err
-		}
+	err := os.RemoveAll(dir)
+	if err != nil {
+		return err
+	}
 	return nil
 }

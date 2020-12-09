@@ -129,7 +129,7 @@ func (f *Furyconf) Parse() ([]Package, error) {
 		cloudPlatform := pkgs[i].ProviderOpt
 		pkgKind := pkgs[i].kind
 
-		pkgs[i].url = newURLSpec(repoPrefix, strings.Split(pkgs[i].Name, "/"), dotGitParticle, pkgKind, version, registry, cloudPlatform,  newKind(pkgKind, f.Provider)).getConsumableUrl()
+		pkgs[i].url = newURLSpec(repoPrefix, strings.Split(pkgs[i].Name, "/"), dotGitParticle, pkgKind, version, registry, cloudPlatform, newKind(pkgKind, f.Provider)).getConsumableUrl()
 
 		pkgs[i].dir = newDir(f.VendorFolderName, pkgKind, pkgs[i].Name, registry, cloudPlatform).getConsumableDirectory()
 
@@ -191,6 +191,7 @@ func newDir(folder, kind, name string, registry bool, provider ProviderOptSpec) 
 		Provider:     provider,
 	}
 }
+
 // getConsumableDirectory returns a directory we can write to
 func (d *DirSpec) getConsumableDirectory() string {
 	if d.Registry {
@@ -224,6 +225,7 @@ func newURLSpec(prefix string, blocks []string, dotGitParticle, kind, version st
 		KindSpec:       kindSpec,
 	}
 }
+
 //getConsumableUrl returns an url that can be used for download
 func (n *URLSpec) getConsumableUrl() string {
 
