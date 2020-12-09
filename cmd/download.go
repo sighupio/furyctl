@@ -84,26 +84,15 @@ func get(src, dest string, mode getter.ClientMode) error {
 	gitFolder := fmt.Sprintf("%s/.git",dest)
 
 	if _, err := os.Stat(dest); !os.IsNotExist(err) {
-		logrus.Infof("%s already exists! removing it",dest)
-		removeContents(dest)
-		humanReadableDownloadLog(src, dest)
-		err = client.Get()
-		logrus.Infof("removing %s",gitFolder)
-		removeContents(gitFolder)
-	}else {
-		humanReadableDownloadLog(src, dest)
-		err = client.Get()
-		logrus.Infof("removing %s",gitFolder)
-		removeContents(gitFolder)
+		logrus.Infof("%s already exists! removing it", dest)
+		removeDir(dest)
 	}
 
+	humanReadableDownloadLog(src, dest)
+	err = client.Get()
+	logrus.Infof("removing %s",gitFolder)
+	removeDir(gitFolder)
 
-	/*	gitFolder := fmt.Sprintf("%s/.git",dest)
-
-		if _, err := os.Stat(gitFolder); !os.IsNotExist(err) {
-			logrus.Infof("%s found, removing it!",gitFolder)
-			removeContents(gitFolder)
-		}*/
 	logrus.Debugf("done %s -> %s", src, dest)
 
 	return err
@@ -127,8 +116,7 @@ func humanReadableDownloadLog(src string, dest string) {
 
 }
 
-
-func removeContents(dir string) error {
+func removeDir(dir string) error {
 	err:= os.RemoveAll(dir)
 		if err != nil {
 			return err
