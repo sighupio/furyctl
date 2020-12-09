@@ -30,7 +30,8 @@ func NewExecutor(opts TerraformOptions) (tf *tfexec.Terraform, err error) {
 	if err != nil {
 		return nil, err
 	}
-	tfBinary, err := ensure(opts.BinaryPath, opts.Version)
+	downloadPath := fmt.Sprintf("%v/bin", opts.WorkingDir)
+	tfBinary, err := ensure(opts.BinaryPath, opts.Version, downloadPath)
 	if err != nil {
 		return nil, err
 	}
