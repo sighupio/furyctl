@@ -71,7 +71,7 @@ release:
   name_template: '{{ .Tag }}'
 brews:
   - name: furyctl
-    github:
+    tap:
       owner: sighupio
       name: homebrew-furyctl
     folder: Formula

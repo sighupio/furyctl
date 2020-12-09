@@ -65,7 +65,7 @@ steps:
         - push
 
   - name: build-release
-    image: goreleaser/goreleaser:v0.124
+    image: ghcr.io/goreleaser/goreleaser:v0.142.0
     pull: always
     depends_on:
       - lint
