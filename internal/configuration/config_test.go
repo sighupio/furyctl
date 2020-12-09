@@ -11,9 +11,9 @@ import (
 var sampleAWSSimpleConfig Configuration
 var sampleDummyConfig Configuration
 var sampleDummyWithStateConfig Configuration
+var sampleDummyWithStateAndVersionConfig Configuration
 
 func init() {
-	sampleAWSSimpleConfig.APIVersion = "v0.1.0"
 	sampleAWSSimpleConfig.Kind = "Cluster"
 	sampleAWSSimpleConfig.Metadata = Metadata{
 		Name: "my-cluster",
@@ -32,7 +32,6 @@ func init() {
 		PodNetworkCIDR:     "172.16.0.0/16",
 	}
 
-	sampleDummyConfig.APIVersion = "v0.1.0"
 	sampleDummyConfig.Kind = "Bootstrap"
 	sampleDummyConfig.Metadata = Metadata{
 		Name: "my-dummy",
@@ -43,7 +42,6 @@ func init() {
 		Provisioner: "dummy",
 	}
 
-	sampleDummyWithStateConfig.APIVersion = "v0.1.0"
 	sampleDummyWithStateConfig.Kind = "Bootstrap"
 	sampleDummyWithStateConfig.Metadata = Metadata{
 		Name: "my-dummy",
@@ -53,7 +51,7 @@ func init() {
 		RSABits:     4096,
 		Provisioner: "dummy",
 	}
-	sampleDummyWithStateConfig.StateConfiguration = StateConfiguration{
+	sampleDummyWithStateConfig.Executor.StateConfiguration = StateConfiguration{
 		Backend: "s3",
 		Config: map[string]string{
 			"bucket": "im-fury",
@@ -64,6 +62,10 @@ func init() {
 }
 
 func TestParseClusterConfigurationFile(t *testing.T) {
+
+	sampleDummyWithStateAndVersionConfig := sampleDummyWithStateConfig
+	sampleDummyWithStateAndVersionConfig.Executor.Version = "0.12.12"
+
 	type args struct {
 		path string
 	}
@@ -72,7 +74,14 @@ func TestParseClusterConfigurationFile(t *testing.T) {
 		args    args
 		want    *Configuration
 		wantErr bool
-	}{
+	}{{
+		name: "Dummy bootstrap with state and custom version",
+		args: args{
+			path: "assets/dummy-config-state-and-version.yml",
+		},
+		want:    &sampleDummyWithStateAndVersionConfig,
+		wantErr: false,
+	},
 		{
 			name: "Dummy bootstrap with state",
 			args: args{
