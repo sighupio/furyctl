@@ -1,81 +1,64 @@
 ---
 kind: pipeline
-name: test
+name: release
 
 steps:
-  - name: fetch
-    image: docker:git
-    commands:
-      - git fetch --tags
-
   - name: lint
     image: golang
     pull: always
     depends_on:
-      - fetch
+      - clone
     commands:
-      - find . -name "*.go" | xargs gofmt -s -d
-      #- go vet ./...
+      - test -z $(gofmt -l .)
     when:
       event:
         - push
         - tag
 
-  - name: go-mod-vendor
+  - name: test
     image: golang
+    pull: always
+    depends_on:
+      - clone
+    commands:
+      - go test -v ./...
+    when:
+      event:
+        - push
+        - tag
+
+  - name: build
+    image: ghcr.io/goreleaser/goreleaser:v0.149.0
     pull: always
     depends_on:
       - lint
-    commands:
-      - go mod vendor
-    when:
-      event:
-        - push
-
-  - name: build-linux-push
-    group: build
-    image: golang
-    pull: always
-    depends_on:
-      - go-mod-vendor
+      - test
     environment:
-      GOOS: linux
-      GOARCH: amd64
-      CGO_ENABLED: 0
+      GITHUB_TOKEN:
+        from_secret: GITHUB_TOKEN
     commands:
-      - go build
-    when:
-      event:
-        - push
-
-  - name: build-darwin-push
-    group: build
-    image: golang
-    pull: always
-    depends_on:
-      - go-mod-vendor
-    environment:
-      GOOS: darwin
-      GOARCH: amd64
-      CGO_ENABLED: 0
-    commands:
-      - go build
+      - go get -u github.com/gobuffalo/packr/v2/packr2
+      - git reset --hard
+      - git fetch --tags
+      - goreleaser check
+      - goreleaser --debug build --skip-validate --rm-dist
     when:
       event:
         - push
 
   - name: build-release
-    image: ghcr.io/goreleaser/goreleaser:v0.142.0
+    image: ghcr.io/goreleaser/goreleaser:v0.149.0
     pull: always
     depends_on:
       - lint
-      - fetch
+      - test
     environment:
       GITHUB_TOKEN:
         from_secret: GITHUB_TOKEN
-    secrets:
-      - GITHUB_TOKEN
     commands:
+      - go get -u github.com/gobuffalo/packr/v2/packr2
+      - git reset --hard
+      - git fetch --tags
       - goreleaser check
       - goreleaser --debug
     when:
