@@ -3,7 +3,7 @@
 - [x] Gabriele Lana
 - [x] Jacopo Nardiello
 - [ ] Gabriele Lana
-- [ ] Luca Novara
+- [x] Luca Novara
 - [ ] Philippe Scorsolini
 
 > If you think someone else can review this document, feel free to add them into the list.
@@ -19,7 +19,7 @@ It is time to extend its functionalities to provide a way to self-provision Kube
 
 # Problem+
 
-The main reason to start this feature is to make it simpler to deploy a production-grade cluster from a SIGHUP 
+The main reason to start this feature is to make it simpler to deploy a production-grade cluster from a SIGHUP
 well-known command-line interface (CLI) tool: `furyctl`.
 
 It is not only about deploying (one shoot) Kubernetes Clusters, it has to be maintained during the time, so any
@@ -97,7 +97,7 @@ We found multiple alternatives; some of them got a try:
     - It seems to be maintained by a single person.
 - [Terraform](https://github.com/hashicorp/terraform): Using the terraform code natively could be a good idea. For sure more complicated than using Terranova (Terranova was born because using terraform golang code is complex)
 Angel’s skills are not good enough to develop this CLI starting from the terraform code.
-- [Terraform-exec](https://github.com/hashicorp/terraform-exec): it is a project maintained by hashicorp, making easy execute terraform code from golang. It is just a wrapper around a terraform binary. 
+- [Terraform-exec](https://github.com/hashicorp/terraform-exec): it is a project maintained by hashicorp, making easy execute terraform code from golang. It is just a wrapper around a terraform binary.
 As you can see, this seems to be the easier path with our current environment.
 
 
