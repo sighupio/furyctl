@@ -2,7 +2,6 @@ package dummy
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 
 	"github.com/gobuffalo/packr/v2"
@@ -32,6 +31,11 @@ func (d *Dummy) DestroyMessage() string {
 	return `
 Dummy
 `
+}
+
+// Enterprise return a boolean indicating it is not an enterprise provisioner
+func (d *Dummy) Enterprise() bool {
+	return false
 }
 
 // Dummy represents a dummy provisioner
@@ -103,16 +107,4 @@ func (d Dummy) Destroy() (err error) {
 	}
 	log.Info("Dummy destroyed")
 	return nil
-}
-
-// Output gathers the Output in form of binary data
-func (d Dummy) Output() ([]byte, error) {
-	log.Info("Gathering dummy output file as json")
-	var output map[string]tfexec.OutputMeta
-	output, err := d.terraform.Output(context.Background())
-	if err != nil {
-		log.Fatalf("Error while getting project output: %v", err)
-		return nil, err
-	}
-	return json.Marshal(output)
 }

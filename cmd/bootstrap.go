@@ -46,8 +46,9 @@ func pre(cmd *cobra.Command, args []string) (err error) {
 		Project:                  p,
 		ProvisionerConfiguration: config,
 		TerraformOpts: &terraform.TerraformOptions{
-			WorkingDir: workingDirFullPath,
-			Debug:      debug,
+			GitHubToken: gitHubToken,
+			WorkingDir:  workingDirFullPath,
+			Debug:       debug,
 		},
 	}
 	b, err = bootstrap.New(bootstrapOpts)
@@ -61,10 +62,11 @@ func pre(cmd *cobra.Command, args []string) (err error) {
 var (
 	configFilePath string
 	workingDir     string
+	gitHubToken    string
 
 	bootstrapCmd = &cobra.Command{
 		Use:   "bootstrap",
-		Short: "Bootstrap the cluster lifecycle management",
+		Short: "Creates the required infrastructure to deploy a battle-tested Kubernetes cluster, mostly network components",
 		Args:  cobra.NoArgs,
 		Run: func(cmd *cobra.Command, args []string) {
 			cmd.Help()
@@ -72,7 +74,7 @@ var (
 	}
 	bootstrapInitCmd = &cobra.Command{
 		Use:     "init",
-		Short:   "Init a bootstrap project",
+		Short:   "Init a the project. Creates a directory with everything in place to apply the configuration",
 		PreRunE: pre,
 		RunE: func(cmd *cobra.Command, args []string) (err error) {
 
@@ -90,7 +92,7 @@ var (
 	}
 	bootstrapUpdateCmd = &cobra.Command{
 		Use:     "update",
-		Short:   "Update the bootstrap project",
+		Short:   "Applies changes to the project. Running for the first time creates everything. Upcoming executions only applies changes.",
 		PreRunE: pre,
 		RunE: func(cmd *cobra.Command, args []string) (err error) {
 			err = p.Check()
@@ -106,7 +108,7 @@ var (
 	}
 	bootstrapDestroyCmd = &cobra.Command{
 		Use:     "destroy",
-		Short:   "Destroy the bootstrap project",
+		Short:   "ATTENTION: Destroys the project. Ensure you destroy the cluster before destroying the bootstrap project.",
 		PreRunE: pre,
 		RunE: func(cmd *cobra.Command, args []string) (err error) {
 			err = p.Check()
@@ -123,13 +125,17 @@ var (
 )
 
 func init() {
-	bootstrapInitCmd.PersistentFlags().StringVar(&configFilePath, "config", "bootstrap.yml", "Bootstrap Configuration file path")
-	bootstrapUpdateCmd.PersistentFlags().StringVar(&configFilePath, "config", "bootstrap.yml", "Bootstrap Configuration file path")
-	bootstrapDestroyCmd.PersistentFlags().StringVar(&configFilePath, "config", "bootstrap.yml", "Bootstrap Configuration file path")
+	bootstrapInitCmd.PersistentFlags().StringVarP(&configFilePath, "config", "c", "bootstrap.yml", "Bootstrap configuration file path")
+	bootstrapUpdateCmd.PersistentFlags().StringVarP(&configFilePath, "config", "c", "bootstrap.yml", "Bootstrap configuration file path")
+	bootstrapDestroyCmd.PersistentFlags().StringVarP(&configFilePath, "config", "c", "bootstrap.yml", "Bootstrap configuration file path")
 
-	bootstrapInitCmd.PersistentFlags().StringVarP(&workingDir, "workdir", "w", ".", "Working dir used to place logs and state file")
-	bootstrapUpdateCmd.PersistentFlags().StringVarP(&workingDir, "workdir", "w", ".", "Working dir used to place logs and state file")
-	bootstrapDestroyCmd.PersistentFlags().StringVarP(&workingDir, "workdir", "w", ".", "Working dir used to place logs and state file")
+	bootstrapInitCmd.PersistentFlags().StringVarP(&workingDir, "workdir", "w", "", "Working directory to create and place all project files. Must not exists.")
+	bootstrapUpdateCmd.PersistentFlags().StringVarP(&workingDir, "workdir", "w", "", "Working directory with all project files")
+	bootstrapDestroyCmd.PersistentFlags().StringVarP(&workingDir, "workdir", "w", "", "Working directory with all project files")
+
+	bootstrapInitCmd.PersistentFlags().StringVarP(&gitHubToken, "token", "t", "", "GitHub token to access enterprise repositories. Contact sales@sighup.io")
+	bootstrapUpdateCmd.PersistentFlags().StringVarP(&gitHubToken, "token", "t", "", "GitHub token to access enterprise repositories. Contact sales@sighup.io")
+	bootstrapDestroyCmd.PersistentFlags().StringVarP(&gitHubToken, "token", "t", "", "GitHub token to access enterprise repositories. Contact sales@sighup.io")
 
 	bootstrapInitCmd.MarkPersistentFlagRequired("config")
 	bootstrapUpdateCmd.MarkPersistentFlagRequired("config")
