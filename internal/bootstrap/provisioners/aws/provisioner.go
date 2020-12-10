@@ -2,7 +2,6 @@ package aws
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"strings"
 
@@ -40,6 +39,11 @@ func (d *AWS) DestroyMessage() string {
 	return `
 TBD
 `
+}
+
+// Enterprise return a boolean indicating it is an enterprise provisioner
+func (d *AWS) Enterprise() bool {
+	return true
 }
 
 // AWS represents a dummy provisioner
@@ -85,14 +89,6 @@ func (d AWS) TerraformFiles() []string {
 		"output.tf",
 		"main.tf",
 		"variables.tf",
-		"modules/vpc-and-vpn/output.tf",
-		"modules/vpc-and-vpn/main.tf",
-		"modules/vpc-and-vpn/vpn.tf",
-		"modules/vpc-and-vpn/variables.tf",
-		"modules/vpc-and-vpn/templates/furyagent.yml",
-		"modules/vpc-and-vpn/templates/ssh-users.yml",
-		"modules/vpc-and-vpn/templates/vpn.yml",
-		"modules/vpc-and-vpn/vpc.tf",
 	}
 }
 
@@ -137,16 +133,4 @@ func (d AWS) Destroy() (err error) {
 	}
 	log.Info("AWS Bootstrap destroyed")
 	return nil
-}
-
-// Output gathers the Output in form of binary data
-func (d AWS) Output() ([]byte, error) {
-	log.Info("Gathering aws output file as json")
-	var output map[string]tfexec.OutputMeta
-	output, err := d.terraform.Output(context.Background())
-	if err != nil {
-		log.Fatalf("Error while getting project output: %v", err)
-		return nil, err
-	}
-	return json.Marshal(output)
 }

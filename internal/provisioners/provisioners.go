@@ -22,9 +22,10 @@ type Provisioner interface {
 	TerraformExecutor() (tf *tfexec.Terraform)
 	TerraformFiles() []string
 
+	Enterprise() bool
+
 	Update() error
 	Destroy() error
-	Output() ([]byte, error)
 
 	Box() *packr.Box
 }
