@@ -123,16 +123,17 @@ func (c *Bootstrap) postInit() {
 	prov := *c.provisioner
 	fmt.Printf(`%v
 
-::SIGHUP::
+[FURYCTL]
 
-The init phase has been completed. 
+The init phase has been completed.
 Take a look to the %v path to discover the source code of the project.
+If you are curious about the entire terraform execution log, discover it in the %v/logs/terraform.logs file.
 
-Everything is set to actually create the infrastructure. 
+Everything is set to create the infrastructure; execute:
 
-Run furyctl bootstrap update command whenever you want.
+$ furyctl bootstrap update
 
-`, prov.InitMessage(), c.project.Path)
+`, prov.InitMessage(), c.project.Path, c.project.Path)
 }
 
 func (c *Bootstrap) postUpdate() {
@@ -142,6 +143,7 @@ func (c *Bootstrap) postUpdate() {
 ::SIGHUP::
 The bootstrap project has been created. 
 The output file is located at %v/output/output.json
+
 `, prov.UpdateMessage(), proj.Path)
 }
 
