@@ -1,6 +1,6 @@
 
 module "vpc-and-vpn" {
-  source                   = "./modules/vpc-and-vpn"
+  source                   = "https://github.com/sighupio/furyctl-provisioners/archive/v0.1.0.zip//furyctl-provisioners-0.1.0/modules/bootstrap/aws/vpc-and-vpn"
   name                     = var.name
   network_cidr             = var.network_cidr
   public_subnetwork_cidrs  = var.public_subnetwork_cidrs
