@@ -2,6 +2,8 @@ package bootstrap
 
 import (
 	"context"
+	"encoding/json"
+	"errors"
 	"fmt"
 
 	"github.com/briandowns/spinner"
@@ -40,6 +42,11 @@ func New(opts *Options) (b *Bootstrap, err error) {
 	if err != nil {
 		log.Errorf("error creating the bootstrap instance while adquiring the right provisioner: %v", err)
 		return nil, err
+	}
+	if p.Enterprise() && opts.TerraformOpts.GitHubToken == "" {
+		errorMsg := fmt.Sprintf("error creating the bootstrap instance. The %v provisioner is an enterprise feature and requires a valid GitHub token. Contact sales@sighup.io", opts.ProvisionerConfiguration.Provisioner)
+		log.Error(errorMsg)
+		return nil, errors.New(errorMsg)
 	}
 	b = &Bootstrap{
 		s:           opts.Spin,
@@ -167,9 +174,9 @@ func (c *Bootstrap) Update() (err error) {
 		return err
 	}
 	c.s.Stop()
-	c.s.Suffix = " Saving kubeconfig"
+	c.s.Suffix = " Saving outputs"
 	c.s.Start()
-	output, err := prov.Output()
+	output, err := c.output()
 	if err != nil {
 		log.Errorf("Error while getting the output with the bootstrap data: %v", err)
 		return err
@@ -245,4 +252,17 @@ func (c *Bootstrap) initTerraformExecutor() (err error) {
 	prov := *c.provisioner
 	prov.SetTerraformExecutor(tf)
 	return nil
+}
+
+// Output gathers the Output in form of binary data
+func (c *Bootstrap) output() ([]byte, error) {
+	prov := *c.provisioner
+	log.Info("Gathering output file as json")
+	var output map[string]tfexec.OutputMeta
+	output, err := prov.TerraformExecutor().Output(context.Background())
+	if err != nil {
+		log.Fatalf("Error while getting project output: %v", err)
+		return nil, err
+	}
+	return json.Marshal(output)
 }

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"strings"
 
 	"github.com/hashicorp/terraform-exec/tfexec"
 	log "github.com/sirupsen/logrus"
@@ -20,6 +21,8 @@ type TerraformOptions struct {
 
 	WorkingDir string
 	ConfigDir  string
+
+	GitHubToken string
 
 	LogDir string
 	Debug  bool
@@ -47,7 +50,36 @@ func NewExecutor(opts TerraformOptions) (tf *tfexec.Terraform, err error) {
 	if err != nil {
 		return nil, err
 	}
+	if opts.GitHubToken != "" {
+		err = configureGitHubNetrcAccess(opts.WorkingDir, opts.GitHubToken, opts.ConfigDir)
+		if err != nil {
+			return nil, err
+		}
+		// Gets all os environment
+		netRcEnv := envMap(os.Environ())
+		// Adds/Override NETRC to use our own netrc file
+		netRcEnv["NETRC"] = fmt.Sprintf("%v/%v/.netrc", opts.WorkingDir, opts.ConfigDir)
+		// Set the env to the executor
+		tf.SetEnv(netRcEnv)
+	}
 	return tf, err
+}
+
+func envMap(environ []string) map[string]string {
+	env := map[string]string{}
+	for _, ev := range environ {
+		parts := strings.SplitN(ev, "=", 2)
+		if len(parts) == 0 {
+			continue
+		}
+		k := parts[0]
+		v := ""
+		if len(parts) == 2 {
+			v = parts[1]
+		}
+		env[k] = v
+	}
+	return env
 }
 
 func validateTerraformBinaryOrVersion(opts TerraformOptions) (err error) {
@@ -86,12 +118,13 @@ func configureBackend(workingDir string, backend string, backendConfig map[strin
 	return nil
 }
 
-// CreateBackendFile creates the backend.tf terraform file with the backend configuration choosen
-func createBackendFile(path string, backend string) (err error) {
-	backendFileContent := fmt.Sprintf(`terraform {
-  backend "%v" {}
-}`, backend)
-	return ioutil.WriteFile(fmt.Sprintf("%v/backend.tf", path), []byte(backendFileContent), os.FileMode(0644))
+// configureGitHubNetrcAccess creates the .netrc file with the credentials to access github private repos
+func configureGitHubNetrcAccess(path string, token string, configDir string) (err error) {
+	netrc := fmt.Sprintf(`machine github.com
+login furyctl
+password %v
+`, token)
+	return ioutil.WriteFile(fmt.Sprintf("%v/%v/.netrc", path, configDir), []byte(netrc), os.FileMode(0644))
 }
 
 func createBackendConfigFile(path string, configDir string, backendConfig map[string]string) (err error) {
@@ -107,6 +140,14 @@ func createBackendConfigFile(path string, configDir string, backendConfig map[st
 		return err
 	}
 	return nil
+}
+
+// CreateBackendFile creates the backend.tf terraform file with the backend configuration choosen
+func createBackendFile(path string, backend string) (err error) {
+	backendFileContent := fmt.Sprintf(`terraform {
+  backend "%v" {}
+}`, backend)
+	return ioutil.WriteFile(fmt.Sprintf("%v/backend.tf", path), []byte(backendFileContent), os.FileMode(0644))
 }
 
 type tfwriter struct {
