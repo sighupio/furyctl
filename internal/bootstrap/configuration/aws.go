@@ -7,7 +7,17 @@ type AWS struct {
 	NetworkCIDR         string   `yaml:"networkCIDR"`
 	PublicSubnetsCIDRs  []string `yaml:"publicSubnetsCIDRs"`
 	PrivateSubnetsCIDRs []string `yaml:"privateSubnetsCIDRs"`
-	VPNSubnetCIDR       string   `yaml:"vpnSubnetCIDR"`
-	VPNSSHUsers         []string `yaml:"vpnSSHUsers"`
-	VPNOperatorCIDRs    []string `yaml:"vpnOperatorCIDRs"`
+	VPN                 AWSVPN   `yaml:"vpn"`
+}
+
+// AWSVPN represents an VPN configuration
+type AWSVPN struct {
+	Port          int      `yaml:"port"`
+	InstanceType  string   `yaml:"instanceType"`
+	DiskSize      int      `yaml:"diskSize"`
+	OperatorName  string   `yaml:"operatorName"`
+	DHParamsBits  int      `yaml:"dhParamsBits"`
+	SubnetCIDR    string   `yaml:"subnetCIDR"`
+	SSHUsers      []string `yaml:"sshUsers"`
+	OperatorCIDRs []string `yaml:"operatorCIDRs"`
 }
