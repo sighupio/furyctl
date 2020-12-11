@@ -116,6 +116,53 @@ func (d AWS) TerraformFiles() []string {
 	}
 }
 
+// Plan runs a dry run execution
+func (d AWS) Plan() (err error) {
+	log.Info("[DRYRUN] Updating AWS Bootstrap project")
+	spec := d.config.Spec.(cfg.AWS)
+
+	var opts []tfexec.PlanOption
+	opts = append(opts, tfexec.Var(fmt.Sprintf("name=%v", d.config.Metadata.Name)))
+	opts = append(opts, tfexec.Var(fmt.Sprintf("network_cidr=%v", spec.NetworkCIDR)))
+	opts = append(opts, tfexec.Var(fmt.Sprintf("public_subnetwork_cidrs=[\"%v\"]", strings.Join(spec.PublicSubnetsCIDRs, "\",\""))))
+	opts = append(opts, tfexec.Var(fmt.Sprintf("private_subnetwork_cidrs=[\"%v\"]", strings.Join(spec.PrivateSubnetsCIDRs, "\",\""))))
+	opts = append(opts, tfexec.Var(fmt.Sprintf("vpn_subnetwork_cidr=%v", spec.VPN.SubnetCIDR)))
+	if spec.VPN.Port != 0 {
+		opts = append(opts, tfexec.Var(fmt.Sprintf("vpn_port=%v", spec.VPN.Port)))
+	}
+	if spec.VPN.InstanceType != "" {
+		opts = append(opts, tfexec.Var(fmt.Sprintf("vpn_instance_type=%v", spec.VPN.InstanceType)))
+	}
+	if spec.VPN.DiskSize != 0 {
+		opts = append(opts, tfexec.Var(fmt.Sprintf("vpn_instance_disk_size=%v", spec.VPN.DiskSize)))
+	}
+	if spec.VPN.OperatorName != "" {
+		opts = append(opts, tfexec.Var(fmt.Sprintf("vpn_operator_name=%v", spec.VPN.OperatorName)))
+	}
+	if spec.VPN.DHParamsBits != 0 {
+		opts = append(opts, tfexec.Var(fmt.Sprintf("vpn_dhparams_bits=%v", spec.VPN.DHParamsBits)))
+	}
+	if len(spec.VPN.OperatorCIDRs) != 0 {
+		opts = append(opts, tfexec.Var(fmt.Sprintf("vpn_operator_cidrs=[\"%v\"]", strings.Join(spec.VPN.OperatorCIDRs, "\",\""))))
+	}
+	if len(spec.VPN.SSHUsers) != 0 {
+		opts = append(opts, tfexec.Var(fmt.Sprintf("vpn_ssh_users=[\"%v\"]", strings.Join(spec.VPN.SSHUsers, "\",\""))))
+	}
+	changes, err := d.terraform.Plan(context.Background(), opts...)
+	if err != nil {
+		log.Fatalf("[DRYRUN] Something went wrong while updating aws. %v", err)
+		return err
+	}
+	if changes {
+		log.Warn("[DRYRUN] Something changed along the time. Remove dryrun option to apply the desired state")
+	} else {
+		log.Info("[DRYRUN] Everything is up to date")
+	}
+
+	log.Info("[DRYRUN] AWS Updated")
+	return nil
+}
+
 // Update runs terraform apply in the project
 func (d AWS) Update() (err error) {
 	log.Info("Updating AWS Bootstrap project")
