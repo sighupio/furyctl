@@ -1,7 +1,6 @@
 kind: Bootstrap
 metadata:
   name: my-dummy
+provisioner: dummy
 spec:
-  provisioner: dummy
-
   rsaBits: 4096

@@ -2,8 +2,6 @@ package configuration
 
 // AWSSimple represents the configuration spec of a simple AWS K8S cluster
 type AWSSimple struct {
-	Provisioner string `yaml:"provisioner"` // Required attribute
-
 	Region             string   `yaml:"region"`
 	Version            string   `yaml:"version"`
 	PublicSubnetID     string   `yaml:"publicSubnetID"`

@@ -8,7 +8,7 @@ executor:
       bucket: "im-fury"
       key: "demo"
       region: "eu-milan-1"
+provisioner: dummy
 spec:
-  provisioner: dummy
 
   rsaBits: 4096
