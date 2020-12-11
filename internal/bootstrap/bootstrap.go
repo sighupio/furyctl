@@ -156,7 +156,7 @@ The bootstrap has been destroyed
 }
 
 // Update updates the bootstrap (terraform apply)
-func (c *Bootstrap) Update() (err error) {
+func (c *Bootstrap) Update(dryrun bool) (err error) {
 	c.s.Stop()
 	c.s.Suffix = " Initializing the terraform executor"
 	c.s.Start()
@@ -168,30 +168,45 @@ func (c *Bootstrap) Update() (err error) {
 
 	prov := *c.provisioner
 	c.s.Stop()
-	c.s.Suffix = " Applying terraform project"
-	c.s.Start()
-	err = prov.Update()
-	if err != nil {
-		log.Errorf("Error while updating the bootstrap. Take a look to the logs. %v", err)
-		return err
-	}
-	c.s.Stop()
-	c.s.Suffix = " Saving outputs"
-	c.s.Start()
-	output, err := c.output()
-	if err != nil {
-		log.Errorf("Error while getting the output with the bootstrap data: %v", err)
-		return err
-	}
 
-	proj := *c.project
-	err = proj.WriteFile("output/output.json", output)
-	if err != nil {
-		log.Errorf("Error while writting the output.json to the project directory: %v", err)
-		return err
+	if !dryrun {
+		c.s.Suffix = " Applying terraform project"
+		c.s.Start()
+		err = prov.Update()
+		if err != nil {
+			log.Errorf("Error while updating the bootstrap. Take a look to the logs. %v", err)
+			return err
+		}
+		c.s.Stop()
+		c.s.Suffix = " Saving outputs"
+		c.s.Start()
+		output, err := c.output()
+		if err != nil {
+			log.Errorf("Error while getting the output with the bootstrap data: %v", err)
+			return err
+		}
+
+		proj := *c.project
+		err = proj.WriteFile("output/output.json", output)
+		if err != nil {
+			log.Errorf("Error while writting the output.json to the project directory: %v", err)
+			return err
+		}
+		c.s.Stop()
+		c.postUpdate()
+	} else {
+		c.s.Suffix = " [DRYRUN] Applying terraform project"
+		c.s.Start()
+		err = prov.Plan()
+		if err != nil {
+			log.Errorf("[DRYRUN] Error while updating the bootstrap. Take a look to the logs. %v", err)
+			return err
+		}
+		c.s.Stop()
+		proj := *c.project
+		log.Infof("[DRYRUN] Discover the resulting plan in the %v/logs/terraform.logs file", proj.Path)
+		c.postPlan()
 	}
-	c.s.Stop()
-	c.postUpdate()
 	return nil
 }
 
