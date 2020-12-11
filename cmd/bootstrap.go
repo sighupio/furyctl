@@ -1,8 +1,12 @@
 package cmd
 
 import (
+	"bufio"
 	"fmt"
 	"os"
+	"os/signal"
+	"strings"
+	"syscall"
 
 	"github.com/sighupio/furyctl/internal/bootstrap"
 	"github.com/sighupio/furyctl/internal/configuration"
@@ -28,7 +32,38 @@ func parseConfig() (err error) {
 	return nil
 }
 
+func warning() {
+	fmt.Print(`
+  Forced stop of the bootstrap process.
+  furyctl can not guarantee the correct behavior after this
+  action. Try to recover the state of the process running:
+
+  $ furyctl bootstrap update
+
+`)
+}
+
+func handleSignal(c chan os.Signal) {
+	go func() {
+		<-c
+		fmt.Println("\r  Are you sure you want to stop it?\n  Write 'yes' to force close it. Press enter to continue")
+		reader := bufio.NewReader(os.Stdin)
+		text, _ := reader.ReadString('\n')
+		text = strings.Replace(text, "\n", "", -1)
+		if strings.Compare("yes", text) == 0 {
+			warning()
+			os.Exit(1)
+		}
+		handleSignal(c)
+	}()
+}
+
 func pre(cmd *cobra.Command, args []string) (err error) {
+
+	c := make(chan os.Signal)
+	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
+	handleSignal(c)
+
 	log.Debug("passing pre-flight checks")
 	err = parseConfig()
 	if err != nil {
