@@ -122,14 +122,14 @@ func (c *Bootstrap) Init() (err error) {
 func (c *Bootstrap) postInit() {
 	prov := *c.provisioner
 	fmt.Printf(`%v
-
 [FURYCTL]
 
-The init phase has been completed.
-Take a look to the %v path to discover the source code of the project.
-If you are curious about the entire terraform execution log, discover it in the %v/logs/terraform.logs file.
+Init phase completed.
 
-Everything is set to create the infrastructure; execute:
+Project directory: %v
+Terraform logs: %v/logs/terraform.logs
+
+Everything ready to create the infrastructure; execute:
 
 $ furyctl bootstrap update
 
@@ -140,19 +140,52 @@ func (c *Bootstrap) postUpdate() {
 	proj := *c.project
 	prov := *c.provisioner
 	fmt.Printf(`%v
-::SIGHUP::
-The bootstrap project has been created. 
-The output file is located at %v/output/output.json
+[FURYCTL]
+Update phase completed.
 
-`, prov.UpdateMessage(), proj.Path)
+Project directory: %v
+Terraform logs: %v/logs/terraform.logs
+Output file: %v/output/output.json
+
+Everything is up to date.
+Ready to update or destroy the infrastructure; execute:
+
+$ furyctl bootstrap update
+or
+$ furyctl bootstrap destroy
+
+`, prov.UpdateMessage(), proj.Path, proj.Path, proj.Path)
+}
+
+func (c *Bootstrap) postPlan() {
+	proj := *c.project
+	fmt.Printf(`[FURYCTL]
+Update (dryrun) phase completed.
+Discover the upcoming changes in the terraform log file.
+
+Project directory: %v
+Terraform logs: %v/logs/terraform.logs
+
+Ready to update or destroy the infrastructure; execute:
+
+$ furyctl bootstrap update
+or
+$ furyctl bootstrap destroy
+
+`, proj.Path, proj.Path)
 }
 
 func (c *Bootstrap) postDestroy() {
 	prov := *c.provisioner
+	proj := *c.project
 	fmt.Printf(`%v
-::SIGHUP::
-The bootstrap has been destroyed
-`, prov.DestroyMessage())
+[FURYCTL]
+Destroy phase completed.
+
+Project directory: %v
+Terraform logs: %v/logs/terraform.logs
+
+`, prov.DestroyMessage(), proj.Path, proj.Path)
 }
 
 // Update updates the bootstrap (terraform apply)
