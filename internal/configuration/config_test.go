@@ -20,7 +20,6 @@ func init() {
 	}
 	sampleAWSSimpleConfig.Provisioner = "aws-simple"
 	sampleAWSSimpleConfig.Spec = clustercfg.AWSSimple{
-		Provisioner:        "aws-simple",
 		Region:             "eu-central-1",
 		Version:            "1.18.8",
 		PublicSubnetID:     "subnet-2e2fda52",
@@ -38,8 +37,7 @@ func init() {
 	}
 	sampleDummyConfig.Provisioner = "dummy"
 	sampleDummyConfig.Spec = bootstrapcfg.Dummy{
-		RSABits:     4096,
-		Provisioner: "dummy",
+		RSABits: 4096,
 	}
 
 	sampleDummyWithStateConfig.Kind = "Bootstrap"
@@ -48,8 +46,7 @@ func init() {
 	}
 	sampleDummyWithStateConfig.Provisioner = "dummy"
 	sampleDummyWithStateConfig.Spec = bootstrapcfg.Dummy{
-		RSABits:     4096,
-		Provisioner: "dummy",
+		RSABits: 4096,
 	}
 	sampleDummyWithStateConfig.Executor.StateConfiguration = StateConfiguration{
 		Backend: "s3",
