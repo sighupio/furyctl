@@ -183,20 +183,35 @@ func (d AWS) Plan() (err error) {
 func (d AWS) Update() (err error) {
 	log.Info("Updating AWS Bootstrap project")
 	spec := d.config.Spec.(cfg.AWS)
-	err = d.terraform.Apply(context.Background(),
-		tfexec.Var(fmt.Sprintf("name=%v", d.config.Metadata.Name)),
-		tfexec.Var(fmt.Sprintf("network_cidr=%v", spec.NetworkCIDR)),
-		tfexec.Var(fmt.Sprintf("public_subnetwork_cidrs=[\"%v\"]", strings.Join(spec.PublicSubnetsCIDRs, "\",\""))),
-		tfexec.Var(fmt.Sprintf("private_subnetwork_cidrs=[\"%v\"]", strings.Join(spec.PrivateSubnetsCIDRs, "\",\""))),
-		tfexec.Var(fmt.Sprintf("vpn_subnetwork_cidr=%v", spec.VPN.SubnetCIDR)),
-		tfexec.Var(fmt.Sprintf("vpn_port=%v", spec.VPN.Port)),
-		tfexec.Var(fmt.Sprintf("vpn_instance_type=%v", spec.VPN.InstanceType)),
-		tfexec.Var(fmt.Sprintf("vpn_instance_disk_size=%v", spec.VPN.DiskSize)),
-		tfexec.Var(fmt.Sprintf("vpn_operator_name=%v", spec.VPN.OperatorName)),
-		tfexec.Var(fmt.Sprintf("vpn_dhparams_bits=%v", spec.VPN.DHParamsBits)),
-		tfexec.Var(fmt.Sprintf("vpn_operator_cidrs=[\"%v\"]", strings.Join(spec.VPN.OperatorCIDRs, "\",\""))),
-		tfexec.Var(fmt.Sprintf("vpn_ssh_users=[\"%v\"]", strings.Join(spec.VPN.SSHUsers, "\",\""))),
-	)
+
+	var opts []tfexec.ApplyOption
+	opts = append(opts, tfexec.Var(fmt.Sprintf("name=%v", d.config.Metadata.Name)))
+	opts = append(opts, tfexec.Var(fmt.Sprintf("network_cidr=%v", spec.NetworkCIDR)))
+	opts = append(opts, tfexec.Var(fmt.Sprintf("public_subnetwork_cidrs=[\"%v\"]", strings.Join(spec.PublicSubnetsCIDRs, "\",\""))))
+	opts = append(opts, tfexec.Var(fmt.Sprintf("private_subnetwork_cidrs=[\"%v\"]", strings.Join(spec.PrivateSubnetsCIDRs, "\",\""))))
+	opts = append(opts, tfexec.Var(fmt.Sprintf("vpn_subnetwork_cidr=%v", spec.VPN.SubnetCIDR)))
+	if spec.VPN.Port != 0 {
+		opts = append(opts, tfexec.Var(fmt.Sprintf("vpn_port=%v", spec.VPN.Port)))
+	}
+	if spec.VPN.InstanceType != "" {
+		opts = append(opts, tfexec.Var(fmt.Sprintf("vpn_instance_type=%v", spec.VPN.InstanceType)))
+	}
+	if spec.VPN.DiskSize != 0 {
+		opts = append(opts, tfexec.Var(fmt.Sprintf("vpn_instance_disk_size=%v", spec.VPN.DiskSize)))
+	}
+	if spec.VPN.OperatorName != "" {
+		opts = append(opts, tfexec.Var(fmt.Sprintf("vpn_operator_name=%v", spec.VPN.OperatorName)))
+	}
+	if spec.VPN.DHParamsBits != 0 {
+		opts = append(opts, tfexec.Var(fmt.Sprintf("vpn_dhparams_bits=%v", spec.VPN.DHParamsBits)))
+	}
+	if len(spec.VPN.OperatorCIDRs) != 0 {
+		opts = append(opts, tfexec.Var(fmt.Sprintf("vpn_operator_cidrs=[\"%v\"]", strings.Join(spec.VPN.OperatorCIDRs, "\",\""))))
+	}
+	if len(spec.VPN.SSHUsers) != 0 {
+		opts = append(opts, tfexec.Var(fmt.Sprintf("vpn_ssh_users=[\"%v\"]", strings.Join(spec.VPN.SSHUsers, "\",\""))))
+	}
+	err = d.terraform.Apply(context.Background(), opts...)
 	if err != nil {
 		log.Fatalf("Something went wrong while updating aws. %v", err)
 		return err
@@ -210,20 +225,35 @@ func (d AWS) Update() (err error) {
 func (d AWS) Destroy() (err error) {
 	log.Info("Destroying AWS Bootstrap project")
 	spec := d.config.Spec.(cfg.AWS)
-	err = d.terraform.Destroy(context.Background(),
-		tfexec.Var(fmt.Sprintf("name=%v", d.config.Metadata.Name)),
-		tfexec.Var(fmt.Sprintf("network_cidr=%v", spec.NetworkCIDR)),
-		tfexec.Var(fmt.Sprintf("public_subnetwork_cidrs=[\"%v\"]", strings.Join(spec.PublicSubnetsCIDRs, "\",\""))),
-		tfexec.Var(fmt.Sprintf("private_subnetwork_cidrs=[\"%v\"]", strings.Join(spec.PrivateSubnetsCIDRs, "\",\""))),
-		tfexec.Var(fmt.Sprintf("vpn_subnetwork_cidr=%v", spec.VPN.SubnetCIDR)),
-		tfexec.Var(fmt.Sprintf("vpn_port=%v", spec.VPN.Port)),
-		tfexec.Var(fmt.Sprintf("vpn_instance_type=%v", spec.VPN.InstanceType)),
-		tfexec.Var(fmt.Sprintf("vpn_instance_disk_size=%v", spec.VPN.DiskSize)),
-		tfexec.Var(fmt.Sprintf("vpn_operator_name=%v", spec.VPN.OperatorName)),
-		tfexec.Var(fmt.Sprintf("vpn_dhparams_bits=%v", spec.VPN.DHParamsBits)),
-		tfexec.Var(fmt.Sprintf("vpn_operator_cidrs=[\"%v\"]", strings.Join(spec.VPN.OperatorCIDRs, "\",\""))),
-		tfexec.Var(fmt.Sprintf("vpn_ssh_users=[\"%v\"]", strings.Join(spec.VPN.SSHUsers, "\",\""))),
-	)
+
+	var opts []tfexec.DestroyOption
+	opts = append(opts, tfexec.Var(fmt.Sprintf("name=%v", d.config.Metadata.Name)))
+	opts = append(opts, tfexec.Var(fmt.Sprintf("network_cidr=%v", spec.NetworkCIDR)))
+	opts = append(opts, tfexec.Var(fmt.Sprintf("public_subnetwork_cidrs=[\"%v\"]", strings.Join(spec.PublicSubnetsCIDRs, "\",\""))))
+	opts = append(opts, tfexec.Var(fmt.Sprintf("private_subnetwork_cidrs=[\"%v\"]", strings.Join(spec.PrivateSubnetsCIDRs, "\",\""))))
+	opts = append(opts, tfexec.Var(fmt.Sprintf("vpn_subnetwork_cidr=%v", spec.VPN.SubnetCIDR)))
+	if spec.VPN.Port != 0 {
+		opts = append(opts, tfexec.Var(fmt.Sprintf("vpn_port=%v", spec.VPN.Port)))
+	}
+	if spec.VPN.InstanceType != "" {
+		opts = append(opts, tfexec.Var(fmt.Sprintf("vpn_instance_type=%v", spec.VPN.InstanceType)))
+	}
+	if spec.VPN.DiskSize != 0 {
+		opts = append(opts, tfexec.Var(fmt.Sprintf("vpn_instance_disk_size=%v", spec.VPN.DiskSize)))
+	}
+	if spec.VPN.OperatorName != "" {
+		opts = append(opts, tfexec.Var(fmt.Sprintf("vpn_operator_name=%v", spec.VPN.OperatorName)))
+	}
+	if spec.VPN.DHParamsBits != 0 {
+		opts = append(opts, tfexec.Var(fmt.Sprintf("vpn_dhparams_bits=%v", spec.VPN.DHParamsBits)))
+	}
+	if len(spec.VPN.OperatorCIDRs) != 0 {
+		opts = append(opts, tfexec.Var(fmt.Sprintf("vpn_operator_cidrs=[\"%v\"]", strings.Join(spec.VPN.OperatorCIDRs, "\",\""))))
+	}
+	if len(spec.VPN.SSHUsers) != 0 {
+		opts = append(opts, tfexec.Var(fmt.Sprintf("vpn_ssh_users=[\"%v\"]", strings.Join(spec.VPN.SSHUsers, "\",\""))))
+	}
+	err = d.terraform.Destroy(context.Background(), opts...)
 	if err != nil {
 		log.Fatalf("Something went wrong while destroying AWS Bootstrap project. %v", err)
 		return err
