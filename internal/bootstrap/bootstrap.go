@@ -314,5 +314,5 @@ func (c *Bootstrap) output() ([]byte, error) {
 		log.Fatalf("Error while getting project output: %v", err)
 		return nil, err
 	}
-	return json.Marshal(output)
+	return json.MarshalIndent(output, "", "    ")
 }
