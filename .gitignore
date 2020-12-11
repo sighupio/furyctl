@@ -3,3 +3,4 @@ bin
 .idea
 *-packr.go
 furyctl
+demo
