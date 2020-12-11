@@ -132,21 +132,13 @@ func init() {
 	bootstrapUpdateCmd.PersistentFlags().StringVarP(&configFilePath, "config", "c", "bootstrap.yml", "Bootstrap configuration file path")
 	bootstrapDestroyCmd.PersistentFlags().StringVarP(&configFilePath, "config", "c", "bootstrap.yml", "Bootstrap configuration file path")
 
-	bootstrapInitCmd.PersistentFlags().StringVarP(&workingDir, "workdir", "w", "", "Working directory to create and place all project files. Must not exists.")
-	bootstrapUpdateCmd.PersistentFlags().StringVarP(&workingDir, "workdir", "w", "", "Working directory with all project files")
-	bootstrapDestroyCmd.PersistentFlags().StringVarP(&workingDir, "workdir", "w", "", "Working directory with all project files")
+	bootstrapInitCmd.PersistentFlags().StringVarP(&workingDir, "workdir", "w", "./bootstrap", "Working directory to create and place all project files. Must not exists.")
+	bootstrapUpdateCmd.PersistentFlags().StringVarP(&workingDir, "workdir", "w", "./bootstrap", "Working directory with all project files")
+	bootstrapDestroyCmd.PersistentFlags().StringVarP(&workingDir, "workdir", "w", "./bootstrap", "Working directory with all project files")
 
 	bootstrapInitCmd.PersistentFlags().StringVarP(&gitHubToken, "token", "t", "", "GitHub token to access enterprise repositories. Contact sales@sighup.io")
 	bootstrapUpdateCmd.PersistentFlags().StringVarP(&gitHubToken, "token", "t", "", "GitHub token to access enterprise repositories. Contact sales@sighup.io")
 	bootstrapDestroyCmd.PersistentFlags().StringVarP(&gitHubToken, "token", "t", "", "GitHub token to access enterprise repositories. Contact sales@sighup.io")
-
-	bootstrapInitCmd.MarkPersistentFlagRequired("config")
-	bootstrapUpdateCmd.MarkPersistentFlagRequired("config")
-	bootstrapDestroyCmd.MarkPersistentFlagRequired("config")
-
-	bootstrapInitCmd.MarkPersistentFlagRequired("workdir")
-	bootstrapUpdateCmd.MarkPersistentFlagRequired("workdir")
-	bootstrapDestroyCmd.MarkPersistentFlagRequired("workdir")
 
 	bootstrapCmd.AddCommand(bootstrapInitCmd)
 	bootstrapCmd.AddCommand(bootstrapUpdateCmd)
