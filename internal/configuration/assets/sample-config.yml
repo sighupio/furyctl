@@ -1,9 +1,8 @@
 kind: Cluster
 metadata:
   name: my-cluster
+provisioner: aws-simple
 spec:
-  provisioner: aws-simple
-
   region: "eu-central-1"
   version: "1.18.8"
   publicSubnetID: "subnet-2e2fda52"
