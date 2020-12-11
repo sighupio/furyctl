@@ -79,6 +79,27 @@ func (d Dummy) TerraformFiles() []string {
 	return []string{"main.tf"}
 }
 
+// Plan runs terraform plan in the project
+func (d Dummy) Plan() (err error) {
+	log.Info("[DRYRUN] Updating Dummy")
+	spec := d.config.Spec.(dummycfg.Dummy)
+	changes, err := d.terraform.Plan(context.Background(),
+		tfexec.Var(fmt.Sprintf("rsa_bits=%v", spec.RSABits)),
+	)
+	if err != nil {
+		log.Fatalf("[DRYRUN] Something went wrong while updating dummy. %v", err)
+		return err
+	}
+	if changes {
+		log.Warn("[DRYRUN] Something changed along the time. Remove dryrun option to apply the desired state")
+	} else {
+		log.Info("[DRYRUN] Everything is up to date")
+	}
+
+	log.Info("[DRYRUN] Dummy Updated")
+	return nil
+}
+
 // Update runs terraform apply in the project
 func (d Dummy) Update() (err error) {
 	log.Info("Updating Dummy")

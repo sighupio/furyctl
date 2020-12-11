@@ -63,6 +63,7 @@ var (
 	configFilePath string
 	workingDir     string
 	gitHubToken    string
+	dryRun         bool
 
 	bootstrapCmd = &cobra.Command{
 		Use:   "bootstrap",
@@ -99,7 +100,7 @@ var (
 			if err != nil {
 				return fmt.Errorf("the project %v has to be created. Execute bootstrap init before bootstrap update. %v", workingDir, err)
 			}
-			err = b.Update()
+			err = b.Update(dryRun)
 			if err != nil {
 				return err
 			}
@@ -125,6 +126,8 @@ var (
 )
 
 func init() {
+	bootstrapUpdateCmd.PersistentFlags().BoolVar(&dryRun, "dry-run", false, "Dry run execution")
+
 	bootstrapInitCmd.PersistentFlags().StringVarP(&configFilePath, "config", "c", "bootstrap.yml", "Bootstrap configuration file path")
 	bootstrapUpdateCmd.PersistentFlags().StringVarP(&configFilePath, "config", "c", "bootstrap.yml", "Bootstrap configuration file path")
 	bootstrapDestroyCmd.PersistentFlags().StringVarP(&configFilePath, "config", "c", "bootstrap.yml", "Bootstrap configuration file path")
