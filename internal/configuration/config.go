@@ -34,7 +34,7 @@ type Configuration struct {
 	Metadata    Metadata          `yaml:"metadata"`
 	Spec        interface{}       `yaml:"spec"`
 	Executor    TerraformExecutor `yaml:"executor"`
-	Provisioner string
+	Provisioner string            `yaml:"provisioner"`
 }
 
 // Metadata represents a set of metadata information to be used while performing operations
@@ -77,7 +77,7 @@ func Parse(path string) (*Configuration, error) {
 }
 
 func clusterParser(config *Configuration) (err error) {
-	provisioner := config.Spec.(map[interface{}]interface{})["provisioner"]
+	provisioner := config.Provisioner
 	log.Debugf("provisioner: %v", provisioner)
 	specBytes, err := yaml.Marshal(config.Spec)
 	if err != nil {
@@ -92,7 +92,6 @@ func clusterParser(config *Configuration) (err error) {
 			log.Errorf("error parsing configuration file: %v", err)
 			return err
 		}
-		config.Provisioner = provisioner.(string)
 		config.Spec = awsSimpleSpec
 		return nil
 	default:
@@ -102,7 +101,7 @@ func clusterParser(config *Configuration) (err error) {
 }
 
 func bootstrapParser(config *Configuration) (err error) {
-	provisioner := config.Spec.(map[interface{}]interface{})["provisioner"]
+	provisioner := config.Provisioner
 	log.Debugf("provisioner: %v", provisioner)
 	specBytes, err := yaml.Marshal(config.Spec)
 	if err != nil {
@@ -117,7 +116,6 @@ func bootstrapParser(config *Configuration) (err error) {
 			log.Errorf("error parsing configuration file: %v", err)
 			return err
 		}
-		config.Provisioner = provisioner.(string)
 		config.Spec = dummySpec
 		return nil
 	case provisioner == "aws":
@@ -127,7 +125,6 @@ func bootstrapParser(config *Configuration) (err error) {
 			log.Errorf("error parsing configuration file: %v", err)
 			return err
 		}
-		config.Provisioner = provisioner.(string)
 		config.Spec = awsSpec
 		return nil
 	default:
