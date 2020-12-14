@@ -94,6 +94,15 @@ func clusterParser(config *Configuration) (err error) {
 		}
 		config.Spec = awsSimpleSpec
 		return nil
+	case provisioner == "eks":
+		eksSpec := clustercfg.EKS{}
+		err = yaml.Unmarshal(specBytes, &eksSpec)
+		if err != nil {
+			log.Errorf("error parsing configuration file: %v", err)
+			return err
+		}
+		config.Spec = eksSpec
+		return nil
 	default:
 		log.Error("Error parsing the configuration file. Provisioner not found")
 		return errors.New("Cluster provisioner not found")
