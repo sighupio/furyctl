@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
 	"os"
 	"os/signal"
@@ -22,12 +23,17 @@ var (
 	b      *bootstrap.Bootstrap
 )
 
-func parseConfig() (err error) {
-	log.Debugf("parsing configuration file %v", configFilePath)
-	config, err = configuration.Parse(configFilePath)
+func parseConfig(path string, kind string) (err error) {
+	log.Debugf("parsing configuration file %v", path)
+	config, err = configuration.Parse(path)
 	if err != nil {
 		log.Errorf("error parsing configuration file: %v", err)
 		return err
+	}
+	if config.Kind != kind {
+		errMessage := fmt.Sprintf("error parsing configuration file. Unexpected kind. Got: %v but: %v expected", config.Kind, kind)
+		log.Error(errMessage)
+		return errors.New(errMessage)
 	}
 	return nil
 }
@@ -65,7 +71,7 @@ func pre(cmd *cobra.Command, args []string) (err error) {
 	handleSignal(c)
 
 	log.Debug("passing pre-flight checks")
-	err = parseConfig()
+	err = parseConfig(configFilePath, "Bootstrap")
 	if err != nil {
 		log.Errorf("error parsing configuration file: %v", err)
 		return err

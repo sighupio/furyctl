@@ -8,12 +8,54 @@ import (
 	clustercfg "github.com/sighupio/furyctl/internal/cluster/configuration"
 )
 
+var sampleEKSConfig Configuration
 var sampleAWSSimpleConfig Configuration
 var sampleDummyConfig Configuration
 var sampleDummyWithStateConfig Configuration
 var sampleDummyWithStateAndVersionConfig Configuration
 
 func init() {
+
+	sampleEKSConfig.Kind = "Cluster"
+	sampleEKSConfig.Metadata = Metadata{
+		Name: "demo",
+	}
+	sampleEKSConfig.Executor.Version = "0.12.29"
+	sampleEKSConfig.Executor.StateConfiguration = StateConfiguration{
+		Backend: "s3",
+		Config: map[string]string{
+			"bucket": "terraform-e2e-fury-testing-angel",
+			"key":    "cli/demo/cluster",
+			"region": "eu-central-1",
+		},
+	}
+	sampleEKSConfig.Provisioner = "eks"
+	sampleEKSConfig.Spec = clustercfg.EKS{
+		Version:      "1.18",
+		Network:      "vpc-1",
+		SubNetworks:  []string{"subnet-1", "subnet-2", "subnet-3"},
+		DMZCIDRRange: "0.0.0.0/0",
+		SSHPublicKey: "123",
+		NodePools: []clustercfg.EKSNodePool{
+			{
+				Name:         "one",
+				Version:      "1.18",
+				MinSize:      0,
+				MaxSize:      10,
+				InstanceType: "m",
+				MaxPods:      100,
+				VolumeSize:   50,
+				Labels: map[string]string{
+					"hello": "World",
+				},
+				Taints: []string{"hello"},
+				Tags: map[string]string{
+					"hello": "World",
+				},
+			},
+		},
+	}
+
 	sampleAWSSimpleConfig.Kind = "Cluster"
 	sampleAWSSimpleConfig.Metadata = Metadata{
 		Name: "my-cluster",
@@ -72,13 +114,21 @@ func TestParseClusterConfigurationFile(t *testing.T) {
 		want    *Configuration
 		wantErr bool
 	}{{
-		name: "Dummy bootstrap with state and custom version",
+		name: "EKS config",
 		args: args{
-			path: "assets/dummy-config-state-and-version.yml",
+			path: "assets/eks-cluster.yml",
 		},
-		want:    &sampleDummyWithStateAndVersionConfig,
+		want:    &sampleEKSConfig,
 		wantErr: false,
 	},
+		{
+			name: "Dummy bootstrap with state and custom version",
+			args: args{
+				path: "assets/dummy-config-state-and-version.yml",
+			},
+			want:    &sampleDummyWithStateAndVersionConfig,
+			wantErr: false,
+		},
 		{
 			name: "Dummy bootstrap with state",
 			args: args{

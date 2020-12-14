@@ -8,6 +8,7 @@ import (
 	"github.com/hashicorp/terraform-exec/tfexec"
 	"github.com/sighupio/furyctl/internal/bootstrap/provisioners/aws"
 	"github.com/sighupio/furyctl/internal/bootstrap/provisioners/dummy"
+	"github.com/sighupio/furyctl/internal/cluster/provisioners/eks"
 	"github.com/sighupio/furyctl/internal/configuration"
 	log "github.com/sirupsen/logrus"
 )
@@ -46,8 +47,8 @@ func Get(config configuration.Configuration) (Provisioner, error) {
 
 func getClusterProvisioner(config configuration.Configuration) (Provisioner, error) {
 	switch {
-	// case config.Provisioner == "aws-simple":
-	// 	return awssimple.New(&config), nil
+	case config.Provisioner == "eks":
+		return eks.New(&config), nil
 	default:
 		log.Error("Provisioner not found")
 		return nil, errors.New("Provisioner not found")
