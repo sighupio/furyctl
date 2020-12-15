@@ -15,6 +15,8 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+const initExecutorMessage = " Initializing the terraform executor"
+
 // List of default subdirectories needed to run any provisioner.
 var clusterProjectDefaultSubDirs = []string{"logs", "configuration", "output", "credentials", "bin"}
 
@@ -32,7 +34,7 @@ type Options struct {
 	Spin                     *spinner.Spinner
 	Project                  *project.Project
 	ProvisionerConfiguration *configuration.Configuration
-	TerraformOpts            *terraform.TerraformOptions
+	TerraformOpts            *terraform.Options
 }
 
 // New builds a Cluster object with some configurations using Options
@@ -59,7 +61,7 @@ func New(opts *Options) (c *Cluster, err error) {
 	c.options.TerraformOpts.BinaryPath = c.options.ProvisionerConfiguration.Executor.Path
 	c.options.TerraformOpts.LogDir = "logs"
 	c.options.TerraformOpts.ConfigDir = "configuration"
-	if opts.ProvisionerConfiguration.Executor.StateConfiguration.Backend == "" { //The default should be a local file
+	if opts.ProvisionerConfiguration.Executor.StateConfiguration.Backend == "" { // The default should be a local file
 		opts.ProvisionerConfiguration.Executor.StateConfiguration.Backend = "local"
 	}
 	c.options.TerraformOpts.Backend = opts.ProvisionerConfiguration.Executor.StateConfiguration.Backend
@@ -82,7 +84,7 @@ func (c *Cluster) Init() (err error) {
 
 	// terraform executor
 	c.s.Stop()
-	c.s.Suffix = " Initializing the terraform executor"
+	c.s.Suffix = initExecutorMessage
 	c.s.Start()
 	err = c.initTerraformExecutor()
 
@@ -191,7 +193,7 @@ Terraform logs: %v/logs/terraform.logs
 // Update updates the cluster (terraform apply)
 func (c *Cluster) Update(dryrun bool) (err error) {
 	c.s.Stop()
-	c.s.Suffix = " Initializing the terraform executor"
+	c.s.Suffix = initExecutorMessage
 	c.s.Start()
 	err = c.initTerraformExecutor()
 	if err != nil {
@@ -213,7 +215,8 @@ func (c *Cluster) Update(dryrun bool) (err error) {
 		c.s.Stop()
 		c.s.Suffix = " Saving outputs"
 		c.s.Start()
-		output, err := c.output()
+		var output []byte
+		output, err = c.output()
 		if err != nil {
 			log.Errorf("Error while getting the output with the cluster data: %v", err)
 			return err
@@ -246,7 +249,7 @@ func (c *Cluster) Update(dryrun bool) (err error) {
 // Destroy destroys the cluster (terraform destroy)
 func (c *Cluster) Destroy() (err error) {
 	c.s.Stop()
-	c.s.Suffix = " Initializing the terraform executor"
+	c.s.Suffix = initExecutorMessage
 	c.s.Start()
 	err = c.initTerraformExecutor()
 	if err != nil {
@@ -290,9 +293,7 @@ func (c *Cluster) installProvisionerTerraformFiles() (err error) {
 
 // creates the terraform executor to being used by the cluster instance and its provisioner
 func (c *Cluster) initTerraformExecutor() (err error) {
-	tf := &tfexec.Terraform{}
-
-	tf, err = terraform.NewExecutor(*c.options.TerraformOpts)
+	tf, err := terraform.NewExecutor(*c.options.TerraformOpts)
 	if err != nil {
 		log.Errorf("Error while initializing the terraform executor: %v", err)
 		return err

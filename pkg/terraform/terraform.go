@@ -12,7 +12,7 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-type TerraformOptions struct {
+type Options struct {
 	Version    string
 	BinaryPath string
 
@@ -28,7 +28,7 @@ type TerraformOptions struct {
 	Debug  bool
 }
 
-func NewExecutor(opts TerraformOptions) (tf *tfexec.Terraform, err error) {
+func NewExecutor(opts Options) (tf *tfexec.Terraform, err error) {
 	err = validateTerraformBinaryOrVersion(opts)
 	if err != nil {
 		return nil, err
@@ -60,7 +60,10 @@ func NewExecutor(opts TerraformOptions) (tf *tfexec.Terraform, err error) {
 		// Adds/Override NETRC to use our own netrc file
 		netRcEnv["NETRC"] = fmt.Sprintf("%v/%v/.netrc", opts.WorkingDir, opts.ConfigDir)
 		// Set the env to the executor
-		tf.SetEnv(netRcEnv)
+		err = tf.SetEnv(netRcEnv)
+		if err != nil {
+			return nil, err
+		}
 	}
 	return tf, err
 }
@@ -82,7 +85,7 @@ func envMap(environ []string) map[string]string {
 	return env
 }
 
-func validateTerraformBinaryOrVersion(opts TerraformOptions) (err error) {
+func validateTerraformBinaryOrVersion(opts Options) (err error) {
 	if opts.BinaryPath != "" && opts.Version != "" {
 		log.Errorf("terraform binary and terraform version can not be used together")
 		return errors.New("terraform binary and terraform version can not be used together")
@@ -156,9 +159,12 @@ type tfwriter struct {
 }
 
 func (c *tfwriter) Write(data []byte) (n int, err error) {
-	c.logfile.Write(data)
+	n, err = c.logfile.Write(data)
+	if err != nil {
+		return 0, err
+	}
 	if c.debug {
 		fmt.Print(string(data))
 	}
-	return len(data), nil
+	return n, nil
 }

@@ -2,6 +2,7 @@
 SHELL := /bin/bash
 
 PROJECTNAME := $(shell basename "$(PWD)")
+CURRENT_DIR := $(shell pwd)
 
 .PHONY: help
 all: help
@@ -16,6 +17,12 @@ help: Makefile
 ## deps: download requires dependencies
 deps:
 	@go get -u github.com/gobuffalo/packr/v2/packr2
+
+.PHONY:
+## policeman: Execute policeman
+policeman:
+	@docker pull quay.io/sighup/policeman
+	@docker run --rm -v ${CURRENT_DIR}:/app -w /app quay.io/sighup/policeman
 
 .PHONY: lint
 ## lint: Execute linter. Can cause modifications

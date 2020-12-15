@@ -10,7 +10,6 @@ import (
 
 var sampleEKSConfig Configuration
 var sampleAWSBootstrap Configuration
-var sampleAWSBootstrapLocalState Configuration
 
 func init() {
 
