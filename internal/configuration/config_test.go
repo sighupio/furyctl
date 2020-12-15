@@ -9,12 +9,31 @@ import (
 )
 
 var sampleEKSConfig Configuration
-var sampleAWSSimpleConfig Configuration
-var sampleDummyConfig Configuration
-var sampleDummyWithStateConfig Configuration
-var sampleDummyWithStateAndVersionConfig Configuration
+var sampleAWSBootstrap Configuration
+var sampleAWSBootstrapLocalState Configuration
 
 func init() {
+
+	sampleAWSBootstrap.Kind = "Bootstrap"
+	sampleAWSBootstrap.Metadata = Metadata{
+		Name: "my-aws-poc",
+	}
+	sampleAWSBootstrap.Provisioner = "aws"
+	sampleAWSBootstrap.Spec = bootstrapcfg.AWS{
+		NetworkCIDR:         "10.0.0.0/16",
+		PublicSubnetsCIDRs:  []string{"10.0.1.0/24", "10.0.2.0/24", "10.0.3.0/24"},
+		PrivateSubnetsCIDRs: []string{"10.0.101.0/24", "10.0.102.0/24", "10.0.103.0/24"},
+		VPN: bootstrapcfg.AWSVPN{
+			InstanceType:  "t3.large",
+			Port:          1194,
+			DiskSize:      50,
+			DHParamsBits:  2048,
+			SubnetCIDR:    "192.168.100.0/24",
+			SSHUsers:      []string{"angelbarrera92"},
+			OperatorName:  "sighup",
+			OperatorCIDRs: []string{"1.2.3.4/32"},
+		},
+	}
 
 	sampleEKSConfig.Kind = "Cluster"
 	sampleEKSConfig.Metadata = Metadata{
@@ -55,55 +74,15 @@ func init() {
 			},
 		},
 	}
-
-	sampleAWSSimpleConfig.Kind = "Cluster"
-	sampleAWSSimpleConfig.Metadata = Metadata{
-		Name: "my-cluster",
-	}
-	sampleAWSSimpleConfig.Provisioner = "aws-simple"
-	sampleAWSSimpleConfig.Spec = clustercfg.AWSSimple{
-		Region:             "eu-central-1",
-		Version:            "1.18.8",
-		PublicSubnetID:     "subnet-2e2fda52",
-		PrivateSubnetID:    "subnet-8308f0cf",
-		TrustedCIDRs:       []string{"0.0.0.0/0"},
-		MasterInstanceType: "m5.large",
-		WorkerInstanceType: "m5.large",
-		WorkerCount:        1,
-		PodNetworkCIDR:     "172.16.0.0/16",
-	}
-
-	sampleDummyConfig.Kind = "Bootstrap"
-	sampleDummyConfig.Metadata = Metadata{
-		Name: "my-dummy",
-	}
-	sampleDummyConfig.Provisioner = "dummy"
-	sampleDummyConfig.Spec = bootstrapcfg.Dummy{
-		RSABits: 4096,
-	}
-
-	sampleDummyWithStateConfig.Kind = "Bootstrap"
-	sampleDummyWithStateConfig.Metadata = Metadata{
-		Name: "my-dummy",
-	}
-	sampleDummyWithStateConfig.Provisioner = "dummy"
-	sampleDummyWithStateConfig.Spec = bootstrapcfg.Dummy{
-		RSABits: 4096,
-	}
-	sampleDummyWithStateConfig.Executor.StateConfiguration = StateConfiguration{
-		Backend: "s3",
-		Config: map[string]string{
-			"bucket": "im-fury",
-			"key":    "demo",
-			"region": "eu-milan-1",
-		},
-	}
 }
 
 func TestParseClusterConfigurationFile(t *testing.T) {
 
-	sampleDummyWithStateAndVersionConfig := sampleDummyWithStateConfig
-	sampleDummyWithStateAndVersionConfig.Executor.Version = "0.12.12"
+	sampleAWSBootstrapLocalState := sampleAWSBootstrap
+	sampleAWSBootstrapLocalState.Executor.StateConfiguration.Backend = "local"
+	sampleAWSBootstrapLocalState.Executor.StateConfiguration.Config = map[string]string{
+		"path": "mystate.tfstate",
+	}
 
 	type args struct {
 		path string
@@ -113,35 +92,29 @@ func TestParseClusterConfigurationFile(t *testing.T) {
 		args    args
 		want    *Configuration
 		wantErr bool
-	}{{
-		name: "EKS config",
-		args: args{
-			path: "assets/eks-cluster.yml",
-		},
-		want:    &sampleEKSConfig,
-		wantErr: false,
-	},
+	}{
 		{
-			name: "Dummy bootstrap with state and custom version",
+			name: "AWS config",
 			args: args{
-				path: "assets/dummy-config-state-and-version.yml",
+				path: "assets/aws-bootstrap.yml",
 			},
-			want:    &sampleDummyWithStateAndVersionConfig,
+			want:    &sampleAWSBootstrap,
 			wantErr: false,
 		},
 		{
-			name: "Dummy bootstrap with state",
+			name: "AWS config - File State",
 			args: args{
-				path: "assets/dummy-config-state.yml",
+				path: "assets/aws-bootstrap-file-state.yml",
 			},
-			want:    &sampleDummyWithStateConfig,
+			want:    &sampleAWSBootstrapLocalState,
 			wantErr: false,
-		}, {
-			name: "AWS Simple",
+		},
+		{
+			name: "EKS config",
 			args: args{
-				path: "assets/sample-config.yml",
+				path: "assets/eks-cluster.yml",
 			},
-			want:    &sampleAWSSimpleConfig,
+			want:    &sampleEKSConfig,
 			wantErr: false,
 		},
 		{
@@ -153,19 +126,20 @@ func TestParseClusterConfigurationFile(t *testing.T) {
 			wantErr: true,
 		},
 		{
+			name: "Undefined provisioner for bootstrap",
+			args: args{
+				path: "assets/invalid-provisioner-bootstrap.yml",
+			},
+			want:    nil,
+			wantErr: true,
+		},
+		{
 			name: "Invalid kind",
 			args: args{
 				path: "assets/invalid-kind.yml",
 			},
 			want:    nil,
 			wantErr: true,
-		}, {
-			name: "Dummy bootstrap",
-			args: args{
-				path: "assets/dummy-config.yml",
-			},
-			want:    &sampleDummyConfig,
-			wantErr: false,
 		},
 	}
 	for _, tt := range tests {
