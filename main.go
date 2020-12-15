@@ -19,6 +19,5 @@ import (
 )
 
 func main() {
-	//log.SetFlags(log.Lshortfile)
 	cmd.Execute()
 }

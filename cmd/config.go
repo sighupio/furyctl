@@ -16,9 +16,10 @@ package cmd
 
 import (
 	"fmt"
-	"github.com/sirupsen/logrus"
 	"path"
 	"strings"
+
+	"github.com/sirupsen/logrus"
 )
 
 const (
@@ -90,7 +91,7 @@ func (f *Furyconf) Validate() error {
 
 // Parse reads the furyconf structs and created a list of packaged to be downloaded
 func (f *Furyconf) Parse() ([]Package, error) {
-	pkgs := make([]Package, 0, 0)
+	pkgs := make([]Package, 0)
 	// First we aggreggate all packages in one single list
 	for _, v := range f.Roles {
 		v.kind = "roles"
@@ -129,7 +130,7 @@ func (f *Furyconf) Parse() ([]Package, error) {
 		cloudPlatform := pkgs[i].ProviderOpt
 		pkgKind := pkgs[i].kind
 
-		pkgs[i].url = newURLSpec(repoPrefix, strings.Split(pkgs[i].Name, "/"), dotGitParticle, pkgKind, version, registry, cloudPlatform, newKind(pkgKind, f.Provider)).getConsumableUrl()
+		pkgs[i].url = newURLSpec(repoPrefix, strings.Split(pkgs[i].Name, "/"), dotGitParticle, pkgKind, version, registry, cloudPlatform, newKind(pkgKind, f.Provider)).getConsumableURL()
 
 		pkgs[i].dir = newDir(f.VendorFolderName, pkgKind, pkgs[i].Name, registry, cloudPlatform).getConsumableDirectory()
 
@@ -226,8 +227,8 @@ func newURLSpec(prefix string, blocks []string, dotGitParticle, kind, version st
 	}
 }
 
-//getConsumableUrl returns an url that can be used for download
-func (n *URLSpec) getConsumableUrl() string {
+//getConsumableURL returns an url that can be used for download
+func (n *URLSpec) getConsumableURL() string {
 
 	if !n.Registry {
 		return n.getURLFromCompanyRepos()

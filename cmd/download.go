@@ -2,11 +2,12 @@ package cmd
 
 import (
 	"fmt"
-	"github.com/sirupsen/logrus"
 	"os"
 	"runtime"
 	"strings"
 	"sync"
+
+	"github.com/sirupsen/logrus"
 
 	getter "github.com/hashicorp/go-getter"
 )
@@ -82,7 +83,7 @@ func get(src, dest string, mode getter.ClientMode) error {
 
 	gitFolder := fmt.Sprintf("%s/.git", dest)
 
-	if _, err := os.Stat(dest); !os.IsNotExist(err) {
+	if _, err = os.Stat(dest); !os.IsNotExist(err) {
 		logrus.Infof("%s already exists! removing it", dest)
 		err = removeDir(dest)
 		if err != nil {
@@ -92,7 +93,11 @@ func get(src, dest string, mode getter.ClientMode) error {
 	}
 
 	humanReadableDownloadLog(src, dest)
-	_ = client.Get()
+	err = client.Get()
+	if err != nil {
+		logrus.Error(err)
+		return err
+	}
 	logrus.Infof("removing %s", gitFolder)
 	err = removeDir(gitFolder)
 	if err != nil {

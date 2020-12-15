@@ -1,4 +1,4 @@
-## Furyctl
+# Furyctl
 
 Furyctl is package manager for Fury distribution. It’s simple to use and reads a single Furyfile to download
 packages you need. Fury distribution offers three types of packages:
@@ -13,7 +13,7 @@ Furyfile is a simple YAML formatted file where you list which packages(and versi
 You can omit a type if you don't need any of its packages. An example Furyfile with packages listed
 would be like following:
 
-```
+```yaml
 # all sections are optional
 
 # map of prefixes and versions used to force a specific version for all the matching roles/modules/bases
@@ -40,9 +40,9 @@ bases:
 You can get all packages in a group by using group name (like `logging`) or single packages under a group
 (like `monitoring/prometheus-operator`).
 
-### Install
+## Install
 
-#### Github Releases
+### Github Releases
 
 You can find `furyctl` binaries on the [Releases page](https://github.com/sighupio/furyctl/releases).
 
@@ -53,20 +53,20 @@ Supported architectures are (64 bit):
 Download right binary for your architecture and add it to your PATH. Assuming it's downloaded in your
 `~/Downloads` folder, you can run following commands (replacing `{arch}` with your architecture):
 
-```
+```bash
 chmod +x  ~/Downloads/furyctl-{arch}-amd64 && mv ~/Downloads/furyctl-{arch}-amd64 /usr/local/bin/furyctl
 ```
 
-#### Homebrew
+### Homebrew
 
 If you are a macOS user:
 
 ```bash
-$ brew tap sighupio/furyctl
-$ brew install furyctl
+brew tap sighupio/furyctl
+brew install furyctl
 ```
 
-### Usage
+## Usage
 
 - Once you installed furyctl binary you can see available commands with `furyctl --help`:
 

@@ -17,21 +17,21 @@ import (
 
 // InitMessage return a custom provisioner message the user will see once the cluster is ready to be updated
 func (e *EKS) InitMessage() string {
-	return `[EKS]
+	return `[EKS] Init
 TBD
 `
 }
 
 // UpdateMessage return a custom provisioner message the user will see once the cluster is updated
 func (e *EKS) UpdateMessage() string {
-	return `[EKS]
+	return `[EKS] Update
 TBD
 `
 }
 
 // DestroyMessage return a custom provisioner message the user will see once the cluster is destroyed
 func (e *EKS) DestroyMessage() string {
-	return `[EKS]
+	return `[EKS] Destroy
 TBD
 `
 }
@@ -62,7 +62,8 @@ func (e EKS) createVarFile() (err error) {
 	buffer.WriteString(fmt.Sprintf("dmz_cidr_range = \"%v\"\n", spec.DMZCIDRRange))
 	buffer.WriteString(fmt.Sprintf("ssh_public_key = \"%v\"\n", spec.SSHPublicKey))
 	if len(spec.Tags) > 0 {
-		tags, err := json.Marshal(spec.Tags)
+		var tags []byte
+		tags, err = json.Marshal(spec.Tags)
 		if err != nil {
 			return err
 		}
@@ -80,7 +81,8 @@ func (e EKS) createVarFile() (err error) {
 			buffer.WriteString(fmt.Sprintf("max_pods = %v\n", np.MaxPods))
 			buffer.WriteString(fmt.Sprintf("volume_size = %v\n", np.VolumeSize))
 			if len(np.Labels) > 0 {
-				labels, err := json.Marshal(np.Labels)
+				var labels []byte
+				labels, err = json.Marshal(np.Labels)
 				if err != nil {
 					return err
 				}
@@ -96,7 +98,8 @@ func (e EKS) createVarFile() (err error) {
 			}
 
 			if len(np.Tags) > 0 {
-				tags, err := json.Marshal(np.Tags)
+				var tags []byte
+				tags, err = json.Marshal(np.Tags)
 				if err != nil {
 					return err
 				}
@@ -109,7 +112,7 @@ func (e EKS) createVarFile() (err error) {
 		}
 		buffer.WriteString("]\n")
 	}
-	err = ioutil.WriteFile(fmt.Sprintf("%v/eks.tfvars", e.terraform.WorkingDir()), buffer.Bytes(), 0644)
+	err = ioutil.WriteFile(fmt.Sprintf("%v/eks.tfvars", e.terraform.WorkingDir()), buffer.Bytes(), 0600)
 	if err != nil {
 		return err
 	}
@@ -158,8 +161,12 @@ func (e EKS) TerraformFiles() []string {
 // Plan runs a dry run execution
 func (e EKS) Plan() (err error) {
 	log.Info("[DRYRUN] Updating EKS Cluster project")
-	e.createVarFile()
-	changes, err := e.terraform.Plan(context.Background(), tfexec.VarFile(fmt.Sprintf("%v/eks.tfvars", e.terraform.WorkingDir())))
+	err = e.createVarFile()
+	if err != nil {
+		return err
+	}
+	var changes bool
+	changes, err = e.terraform.Plan(context.Background(), tfexec.VarFile(fmt.Sprintf("%v/eks.tfvars", e.terraform.WorkingDir())))
 	if err != nil {
 		log.Fatalf("[DRYRUN] Something went wrong while updating eks. %v", err)
 		return err
@@ -177,7 +184,10 @@ func (e EKS) Plan() (err error) {
 // Update runs terraform apply in the project
 func (e EKS) Update() (err error) {
 	log.Info("Updating EKS project")
-	e.createVarFile()
+	err = e.createVarFile()
+	if err != nil {
+		return err
+	}
 	err = e.terraform.Apply(context.Background(), tfexec.VarFile(fmt.Sprintf("%v/eks.tfvars", e.terraform.WorkingDir())))
 	if err != nil {
 		log.Fatalf("Something went wrong while updating eks. %v", err)
@@ -191,7 +201,10 @@ func (e EKS) Update() (err error) {
 // Destroy runs terraform destroy in the project
 func (e EKS) Destroy() (err error) {
 	log.Info("Destroying EKS project")
-	e.createVarFile()
+	err = e.createVarFile()
+	if err != nil {
+		return err
+	}
 	err = e.terraform.Destroy(context.Background(), tfexec.VarFile(fmt.Sprintf("%v/eks.tfvars", e.terraform.WorkingDir())))
 	if err != nil {
 		log.Fatalf("Something went wrong while destroying EKS cluster project. %v", err)

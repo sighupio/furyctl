@@ -31,16 +31,34 @@ Then, use furyagent to manage VPN profiles.
 // UpdateMessage return a custom provisioner message the user will see once the cluster is updated
 func (d *AWS) UpdateMessage() string {
 	var output map[string]tfexec.OutputMeta
-	output, _ = d.terraform.Output(context.Background())
+	output, err := d.terraform.Output(context.Background())
+	if err != nil {
+		log.Error("Can not get output values")
+	}
 	spec := d.config.Spec.(cfg.AWS)
 	sshUsers := spec.VPN.SSHUsers
 	var vpnInstanceIP, vpnOperatorName, vpcID string
 	var publicSubnetsIDs, privateSubnetsIDs []string
-	json.Unmarshal(output["vpn_ip"].Value, &vpnInstanceIP)
-	json.Unmarshal(output["vpn_operator_name"].Value, &vpnOperatorName)
-	json.Unmarshal(output["vpc_id"].Value, &vpcID)
-	json.Unmarshal(output["public_subnets"].Value, &publicSubnetsIDs)
-	json.Unmarshal(output["private_subnets"].Value, &privateSubnetsIDs)
+	err = json.Unmarshal(output["vpn_ip"].Value, &vpnInstanceIP)
+	if err != nil {
+		log.Error("Can not get `vpn_ip` value")
+	}
+	err = json.Unmarshal(output["vpn_operator_name"].Value, &vpnOperatorName)
+	if err != nil {
+		log.Error("Can not get `vpn_operator_name` value")
+	}
+	err = json.Unmarshal(output["vpc_id"].Value, &vpcID)
+	if err != nil {
+		log.Error("Can not get `vpc_id` value")
+	}
+	err = json.Unmarshal(output["public_subnets"].Value, &publicSubnetsIDs)
+	if err != nil {
+		log.Error("Can not get `public_subnets` value")
+	}
+	err = json.Unmarshal(output["private_subnets"].Value, &privateSubnetsIDs)
+	if err != nil {
+		log.Error("Can not get `private_subnets` value")
+	}
 
 	return fmt.Sprintf(`[AWS] - VPC and VPN
 
