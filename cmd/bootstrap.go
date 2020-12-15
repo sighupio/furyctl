@@ -3,6 +3,8 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"os/signal"
+	"syscall"
 
 	"github.com/sighupio/furyctl/internal/bootstrap"
 	"github.com/sighupio/furyctl/internal/project"
@@ -12,6 +14,8 @@ import (
 )
 
 func bPre(cmd *cobra.Command, args []string) (err error) {
+	stop := make(chan os.Signal, 1)
+	signal.Notify(stop, os.Interrupt, syscall.SIGTERM)
 	handleStopSignal("bootstrap", stop)
 
 	log.Debug("passing pre-flight checks")

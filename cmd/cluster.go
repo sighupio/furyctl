@@ -3,6 +3,8 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"os/signal"
+	"syscall"
 
 	"github.com/sighupio/furyctl/internal/cluster"
 	"github.com/sighupio/furyctl/internal/project"
@@ -12,7 +14,8 @@ import (
 )
 
 func cPre(cmd *cobra.Command, args []string) (err error) {
-
+	stop := make(chan os.Signal, 1)
+	signal.Notify(stop, os.Interrupt, syscall.SIGTERM)
 	handleStopSignal("cluster", stop)
 
 	log.Debug("passing pre-flight checks")
