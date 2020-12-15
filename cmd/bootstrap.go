@@ -1,98 +1,42 @@
 package cmd
 
 import (
-	"bufio"
-	"errors"
 	"fmt"
 	"os"
-	"os/signal"
-	"strings"
-	"syscall"
 
 	"github.com/sighupio/furyctl/internal/bootstrap"
-	"github.com/sighupio/furyctl/internal/configuration"
 	"github.com/sighupio/furyctl/internal/project"
 	"github.com/sighupio/furyctl/pkg/terraform"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
 
-var (
-	p      *project.Project
-	config *configuration.Configuration
-	b      *bootstrap.Bootstrap
-)
-
-func parseConfig(path string, kind string) (err error) {
-	log.Debugf("parsing configuration file %v", path)
-	config, err = configuration.Parse(path)
-	if err != nil {
-		log.Errorf("error parsing configuration file: %v", err)
-		return err
-	}
-	if config.Kind != kind {
-		errMessage := fmt.Sprintf("error parsing configuration file. Unexpected kind. Got: %v but: %v expected", config.Kind, kind)
-		log.Error(errMessage)
-		return errors.New(errMessage)
-	}
-	return nil
-}
-
-func warning() {
-	fmt.Print(`
-  Forced stop of the bootstrap process.
-  furyctl can not guarantee the correct behavior after this
-  action. Try to recover the state of the process running:
-
-  $ furyctl bootstrap update
-
-`)
-}
-
-func handleSignal(c chan os.Signal) {
-	go func() {
-		<-c
-		fmt.Println("\r  Are you sure you want to stop it?\n  Write 'yes' to force close it. Press enter to continue")
-		reader := bufio.NewReader(os.Stdin)
-		text, _ := reader.ReadString('\n')
-		text = strings.Replace(text, "\n", "", -1)
-		if strings.Compare("yes", text) == 0 {
-			warning()
-			os.Exit(1)
-		}
-		handleSignal(c)
-	}()
-}
-
-func pre(cmd *cobra.Command, args []string) (err error) {
-
-	c := make(chan os.Signal)
-	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
-	handleSignal(c)
+func bPre(cmd *cobra.Command, args []string) (err error) {
+	handleStopSignal("bootstrap", stop)
 
 	log.Debug("passing pre-flight checks")
-	err = parseConfig(configFilePath, "Bootstrap")
+	err = parseConfig(bConfigFilePath, "Bootstrap")
 	if err != nil {
 		log.Errorf("error parsing configuration file: %v", err)
 		return err
 	}
 	wd, _ := os.Getwd()
-	workingDirFullPath := fmt.Sprintf("%v/%v", wd, workingDir)
+	workingDirFullPath := fmt.Sprintf("%v/%v", wd, bWorkingDir)
 	log.Debug("pre-flight checks ok!")
-	p = &project.Project{
+	prj = &project.Project{
 		Path: workingDirFullPath,
 	}
 	bootstrapOpts := &bootstrap.Options{
 		Spin:                     s,
-		Project:                  p,
-		ProvisionerConfiguration: config,
+		Project:                  prj,
+		ProvisionerConfiguration: cfg,
 		TerraformOpts: &terraform.TerraformOptions{
-			GitHubToken: gitHubToken,
+			GitHubToken: bGitHubToken,
 			WorkingDir:  workingDirFullPath,
 			Debug:       debug,
 		},
 	}
-	b, err = bootstrap.New(bootstrapOpts)
+	boot, err = bootstrap.New(bootstrapOpts)
 	if err != nil {
 		log.Errorf("the bootstrap provisioner can not be initialized: %v", err)
 		return err
@@ -101,10 +45,12 @@ func pre(cmd *cobra.Command, args []string) (err error) {
 }
 
 var (
-	configFilePath string
-	workingDir     string
-	gitHubToken    string
-	dryRun         bool
+	boot *bootstrap.Bootstrap
+
+	bConfigFilePath string
+	bWorkingDir     string
+	bGitHubToken    string
+	bDryRun         bool
 
 	bootstrapCmd = &cobra.Command{
 		Use:   "bootstrap",
@@ -117,15 +63,15 @@ var (
 	bootstrapInitCmd = &cobra.Command{
 		Use:     "init",
 		Short:   "Init a the project. Creates a directory with everything in place to apply the configuration",
-		PreRunE: pre,
+		PreRunE: bPre,
 		RunE: func(cmd *cobra.Command, args []string) (err error) {
 
-			err = p.Check()
+			err = prj.Check()
 			if err == nil {
-				return fmt.Errorf("the project %v seems to be already created. Choose another working directory", workingDir)
+				return fmt.Errorf("the project %v seems to be already created. Choose another working directory", bWorkingDir)
 			}
 
-			err = b.Init()
+			err = boot.Init()
 			if err != nil {
 				return err
 			}
@@ -135,13 +81,14 @@ var (
 	bootstrapUpdateCmd = &cobra.Command{
 		Use:     "update",
 		Short:   "Applies changes to the project. Running for the first time creates everything. Upcoming executions only applies changes.",
-		PreRunE: pre,
+		PreRunE: bPre,
 		RunE: func(cmd *cobra.Command, args []string) (err error) {
-			err = p.Check()
+			err = prj.Check()
 			if err != nil {
-				return fmt.Errorf("the project %v has to be created. Execute bootstrap init before bootstrap update. %v", workingDir, err)
+				return fmt.Errorf("the project %v has to be created. Execute bootstrap init before bootstrap update. %v", bWorkingDir, err)
 			}
-			err = b.Update(dryRun)
+
+			err = boot.Update(bDryRun)
 			if err != nil {
 				return err
 			}
@@ -151,13 +98,14 @@ var (
 	bootstrapDestroyCmd = &cobra.Command{
 		Use:     "destroy",
 		Short:   "ATTENTION: Destroys the project. Ensure you destroy the cluster before destroying the bootstrap project.",
-		PreRunE: pre,
+		PreRunE: bPre,
 		RunE: func(cmd *cobra.Command, args []string) (err error) {
-			err = p.Check()
+			err = prj.Check()
 			if err != nil {
-				return fmt.Errorf("the project %v has to be created. Execute bootstrap init before cluster destroy. %v", workingDir, err)
+				return fmt.Errorf("the project %v has to be created. Execute bootstrap init before cluster destroy. %v", bWorkingDir, err)
 			}
-			err = b.Destroy()
+
+			err = boot.Destroy()
 			if err != nil {
 				return err
 			}
@@ -167,19 +115,19 @@ var (
 )
 
 func init() {
-	bootstrapUpdateCmd.PersistentFlags().BoolVar(&dryRun, "dry-run", false, "Dry run execution")
+	bootstrapUpdateCmd.PersistentFlags().BoolVar(&bDryRun, "dry-run", false, "Dry run execution")
 
-	bootstrapInitCmd.PersistentFlags().StringVarP(&configFilePath, "config", "c", "bootstrap.yml", "Bootstrap configuration file path")
-	bootstrapUpdateCmd.PersistentFlags().StringVarP(&configFilePath, "config", "c", "bootstrap.yml", "Bootstrap configuration file path")
-	bootstrapDestroyCmd.PersistentFlags().StringVarP(&configFilePath, "config", "c", "bootstrap.yml", "Bootstrap configuration file path")
+	bootstrapInitCmd.PersistentFlags().StringVarP(&bConfigFilePath, "config", "c", "bootstrap.yml", "Bootstrap configuration file path")
+	bootstrapUpdateCmd.PersistentFlags().StringVarP(&bConfigFilePath, "config", "c", "bootstrap.yml", "Bootstrap configuration file path")
+	bootstrapDestroyCmd.PersistentFlags().StringVarP(&bConfigFilePath, "config", "c", "bootstrap.yml", "Bootstrap configuration file path")
 
-	bootstrapInitCmd.PersistentFlags().StringVarP(&workingDir, "workdir", "w", "./bootstrap", "Working directory to create and place all project files. Must not exists.")
-	bootstrapUpdateCmd.PersistentFlags().StringVarP(&workingDir, "workdir", "w", "./bootstrap", "Working directory with all project files")
-	bootstrapDestroyCmd.PersistentFlags().StringVarP(&workingDir, "workdir", "w", "./bootstrap", "Working directory with all project files")
+	bootstrapInitCmd.PersistentFlags().StringVarP(&bWorkingDir, "workdir", "w", "./bootstrap", "Working directory to create and place all project files. Must not exists.")
+	bootstrapUpdateCmd.PersistentFlags().StringVarP(&bWorkingDir, "workdir", "w", "./bootstrap", "Working directory with all project files")
+	bootstrapDestroyCmd.PersistentFlags().StringVarP(&bWorkingDir, "workdir", "w", "./bootstrap", "Working directory with all project files")
 
-	bootstrapInitCmd.PersistentFlags().StringVarP(&gitHubToken, "token", "t", "", "GitHub token to access enterprise repositories. Contact sales@sighup.io")
-	bootstrapUpdateCmd.PersistentFlags().StringVarP(&gitHubToken, "token", "t", "", "GitHub token to access enterprise repositories. Contact sales@sighup.io")
-	bootstrapDestroyCmd.PersistentFlags().StringVarP(&gitHubToken, "token", "t", "", "GitHub token to access enterprise repositories. Contact sales@sighup.io")
+	bootstrapInitCmd.PersistentFlags().StringVarP(&bGitHubToken, "token", "t", "", "GitHub token to access enterprise repositories. Contact sales@sighup.io")
+	bootstrapUpdateCmd.PersistentFlags().StringVarP(&bGitHubToken, "token", "t", "", "GitHub token to access enterprise repositories. Contact sales@sighup.io")
+	bootstrapDestroyCmd.PersistentFlags().StringVarP(&bGitHubToken, "token", "t", "", "GitHub token to access enterprise repositories. Contact sales@sighup.io")
 
 	bootstrapCmd.AddCommand(bootstrapInitCmd)
 	bootstrapCmd.AddCommand(bootstrapUpdateCmd)
