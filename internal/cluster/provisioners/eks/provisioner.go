@@ -17,22 +17,65 @@ import (
 
 // InitMessage return a custom provisioner message the user will see once the cluster is ready to be updated
 func (e *EKS) InitMessage() string {
-	return `[EKS] Init
-TBD
+	return `[EKS] Fury
+
+This provisioner creates a battle-tested AWS EKS Kubernetes Cluster
+with a private and production-grade setup.
+
+Requires to connect to a VPN server to deploy the cluster from this computer.
+Use a bastion host (inside the EKS VPC) as an alternative method to deploy the cluster.
+
+The provisioner requires the following software installed:
+- /bin/sh
+- wget or curl
+- aws-cli
+- kubectl
 `
 }
 
 // UpdateMessage return a custom provisioner message the user will see once the cluster is updated
 func (e *EKS) UpdateMessage() string {
-	return `[EKS] Update
-TBD
-`
+	var output map[string]tfexec.OutputMeta
+	output, err := e.terraform.Output(context.Background())
+	if err != nil {
+		log.Error("Can not get output values")
+	}
+	var clusterEndpoint, clusterOperatorName string
+	err = json.Unmarshal(output["cluster_endpoint"].Value, &clusterEndpoint)
+	if err != nil {
+		log.Error("Can not get `cluster_endpoint` value")
+	}
+	err = json.Unmarshal(output["operator_ssh_user"].Value, &clusterOperatorName)
+	if err != nil {
+		log.Error("Can not get `operator_ssh_user` value")
+	}
+	return fmt.Sprintf(`[EKS] Fury
+
+All the cluster components are up to date.
+EKS Kubernetes cluster ready.
+
+EKS Cluster Endpoint: %v
+SSH Operator Name: %v
+
+Use the ssh %v username to access the EKS instances with the configured SSH key.
+Discover the instances by running
+
+$ kubectl get nodes
+
+Then access by running:
+
+$ ssh %v@node-name-reported-by-kubectl-get-nodes
+
+`, clusterEndpoint, clusterOperatorName, clusterOperatorName, clusterOperatorName)
 }
 
 // DestroyMessage return a custom provisioner message the user will see once the cluster is destroyed
 func (e *EKS) DestroyMessage() string {
-	return `[EKS] Destroy
-TBD
+	return `[EKS] Fury
+All cluster components were destroyed.
+EKS control plane and workers went away.
+
+Had problems, contact us at sales@sighup.io.
 `
 }
 
