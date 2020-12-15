@@ -143,11 +143,16 @@ func (c *Cluster) postUpdate() {
 	prov := *c.provisioner
 	fmt.Printf(`%v
 [FURYCTL]
-Update phase completed.
+Update phase completed. The Kubernetes Cluster is up to date.
 
 Project directory: %v
 Terraform logs: %v/logs/terraform.logs
 Output file: %v/output/output.json
+Kubernetes configuration file: %v/credentials/kubeconfig
+
+Use it by running:
+$ export KUBECONFIG=%v/credentials/kubeconfig
+$ kubectl get nodes
 
 Everything is up to date.
 Ready to update or destroy the infrastructure; execute:
@@ -156,7 +161,7 @@ $ furyctl cluster update
 or
 $ furyctl cluster destroy
 
-`, prov.UpdateMessage(), proj.Path, proj.Path, proj.Path)
+`, prov.UpdateMessage(), proj.Path, proj.Path, proj.Path, proj.Path, proj.Path)
 }
 
 func (c *Cluster) postPlan() {
@@ -229,6 +234,23 @@ func (c *Cluster) Update(dryrun bool) (err error) {
 			return err
 		}
 		c.s.Stop()
+
+		c.s.Suffix = " Saving kubernetes configuration file"
+		c.s.Start()
+		var kc []byte
+		kc, err = c.kubeconfig()
+		if err != nil {
+			log.Errorf("Error while getting the kubeconfig from the cluster: %v", err)
+			return err
+		}
+
+		err = proj.WriteFile("credentials/kubeconfig", kc)
+		if err != nil {
+			log.Errorf("Error while writting the kubeconfig to the project directory: %v", err)
+			return err
+		}
+		c.s.Stop()
+
 		c.postUpdate()
 	} else {
 		c.s.Suffix = " [DRYRUN] Applying terraform project"
@@ -316,4 +338,23 @@ func (c *Cluster) output() ([]byte, error) {
 		return nil, err
 	}
 	return json.MarshalIndent(output, "", "    ")
+}
+
+// kubeconfig gathers the kubeconfig in form of binary data
+func (c *Cluster) kubeconfig() ([]byte, error) {
+	prov := *c.provisioner
+	log.Info("Gathering output file as json")
+	var output map[string]tfexec.OutputMeta
+	output, err := prov.TerraformExecutor().Output(context.Background())
+	if err != nil {
+		log.Fatalf("Error while getting project output: %v", err)
+		return nil, err
+	}
+	var creds string
+	err = json.Unmarshal(output["kubeconfig"].Value, &creds)
+	if err != nil {
+		log.Fatalf("Error while tranforming the kubeconfig value into string: %v", err)
+		return nil, err
+	}
+	return []byte(creds), nil
 }
