@@ -52,8 +52,11 @@ func handleStopSignal(command string, c chan os.Signal) {
 		<-c
 		fmt.Println("\r  Are you sure you want to stop it?\n  Write 'yes' to force close it. Press enter to continue")
 		reader := bufio.NewReader(os.Stdin)
-		text, _ := reader.ReadString('\n')
-		text = strings.Replace(text, "\n", "", -1)
+		text, err := reader.ReadString('\n')
+		if err != nil {
+			os.Exit(2)
+		}
+		text = strings.ReplaceAll(text, "\n", "")
 		if strings.Compare("yes", text) == 0 {
 			warning(command)
 			os.Exit(1)
@@ -64,7 +67,7 @@ func handleStopSignal(command string, c chan os.Signal) {
 
 func init() {
 
-	stop := make(chan os.Signal)
+	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, os.Interrupt, syscall.SIGTERM)
 
 }

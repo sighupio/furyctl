@@ -2,7 +2,7 @@
 
 ## Install
 Get the right binary for you:
-```
+```bash
 wget https://s3.wasabisys.com/sighup-releases/linux/latest/furyctl
 chmod +x furyctl
 mv furyctl /usr/local/bin
@@ -15,13 +15,13 @@ Supported architectures are (64 bit):
 - `linux`
 - `darwin`
 
-Current availability versions are: 
+Current availability versions are:
 - `v0.1.0`
 - `latest`
 
 ## Usage
 
-```
+```bash
 furyctl
 ├── init : Downloads Furyfile.yml and kustomization.yaml from the distribution repository to the current directory.
 ├── vendor : Downloads Fury packages specified inside Furyfile.yaml
