@@ -1,6 +1,0 @@
-kind: Bootstrap
-metadata:
-  name: my-dummy
-provisioner: dummy
-spec:
-  rsaBits: 4096

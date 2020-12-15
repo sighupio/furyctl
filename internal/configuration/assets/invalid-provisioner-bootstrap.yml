@@ -1,0 +1,5 @@
+kind: Bootstrap
+metadata:
+  name: my-base
+provisioner: undefined
+spec: {}

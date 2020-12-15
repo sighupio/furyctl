@@ -85,15 +85,6 @@ func clusterParser(config *Configuration) (err error) {
 		return err
 	}
 	switch {
-	case provisioner == "aws-simple":
-		awsSimpleSpec := clustercfg.AWSSimple{}
-		err = yaml.Unmarshal(specBytes, &awsSimpleSpec)
-		if err != nil {
-			log.Errorf("error parsing configuration file: %v", err)
-			return err
-		}
-		config.Spec = awsSimpleSpec
-		return nil
 	case provisioner == "eks":
 		eksSpec := clustercfg.EKS{}
 		err = yaml.Unmarshal(specBytes, &eksSpec)
@@ -118,15 +109,6 @@ func bootstrapParser(config *Configuration) (err error) {
 		return err
 	}
 	switch {
-	case provisioner == "dummy":
-		dummySpec := bootstrapcfg.Dummy{}
-		err = yaml.Unmarshal(specBytes, &dummySpec)
-		if err != nil {
-			log.Errorf("error parsing configuration file: %v", err)
-			return err
-		}
-		config.Spec = dummySpec
-		return nil
 	case provisioner == "aws":
 		awsSpec := bootstrapcfg.AWS{}
 		err = yaml.Unmarshal(specBytes, &awsSpec)
