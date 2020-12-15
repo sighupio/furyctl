@@ -21,7 +21,10 @@ func cPre(cmd *cobra.Command, args []string) (err error) {
 		log.Errorf("error parsing configuration file: %v", err)
 		return err
 	}
-	wd, _ := os.Getwd()
+	wd, err := os.Getwd()
+	if err != nil {
+		return err
+	}
 	workingDirFullPath := fmt.Sprintf("%v/%v", wd, cWorkingDir)
 	log.Debug("pre-flight checks ok!")
 	prj = &project.Project{
@@ -31,7 +34,7 @@ func cPre(cmd *cobra.Command, args []string) (err error) {
 		Spin:                     s,
 		Project:                  prj,
 		ProvisionerConfiguration: cfg,
-		TerraformOpts: &terraform.TerraformOptions{
+		TerraformOpts: &terraform.Options{
 			GitHubToken: cGitHubToken,
 			WorkingDir:  workingDirFullPath,
 			Debug:       cDryRun,
@@ -57,8 +60,12 @@ var (
 		Use:   "cluster",
 		Short: "Creates a battle-tested Kubernetes cluster",
 		Args:  cobra.NoArgs,
-		Run: func(cmd *cobra.Command, args []string) {
-			cmd.Help()
+		RunE: func(cmd *cobra.Command, args []string) (err error) {
+			err = cmd.Help()
+			if err != nil {
+				return err
+			}
+			return nil
 		},
 	}
 	clusterInitCmd = &cobra.Command{

@@ -2,11 +2,12 @@ package cmd
 
 import (
 	"fmt"
-	"github.com/sirupsen/logrus"
 	"os"
 	"runtime"
 	"strings"
 	"sync"
+
+	"github.com/sirupsen/logrus"
 
 	getter "github.com/hashicorp/go-getter"
 )
@@ -40,7 +41,7 @@ func download(packages []Package) error {
 		go func(i int) {
 			for data := range jobs {
 				logrus.Debugf("%d : received data %v", i, data)
-				res := get(data.url, data.dir, getter.ClientModeDir,true)
+				res := get(data.url, data.dir, getter.ClientModeDir, true)
 				errChan <- res
 				logrus.Debugf("%d : finished with data %v", i, data)
 			}

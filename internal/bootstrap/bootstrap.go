@@ -15,6 +15,8 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+const initExecutorMessage = " Initializing the terraform executor"
+
 // List of default subdirectories needed to run any provisioner.
 var bootstrapProjectDefaultSubDirs = []string{"logs", "configuration", "output", "bin"}
 
@@ -32,7 +34,7 @@ type Options struct {
 	Spin                     *spinner.Spinner
 	Project                  *project.Project
 	ProvisionerConfiguration *configuration.Configuration
-	TerraformOpts            *terraform.TerraformOptions
+	TerraformOpts            *terraform.Options
 }
 
 // New builds a Bootstrap object with some configurations using Options
@@ -59,7 +61,7 @@ func New(opts *Options) (b *Bootstrap, err error) {
 	b.options.TerraformOpts.BinaryPath = b.options.ProvisionerConfiguration.Executor.Path
 	b.options.TerraformOpts.LogDir = "logs"
 	b.options.TerraformOpts.ConfigDir = "configuration"
-	if opts.ProvisionerConfiguration.Executor.StateConfiguration.Backend == "" { //The default should be a local file
+	if opts.ProvisionerConfiguration.Executor.StateConfiguration.Backend == "" { // The default should be a local file
 		opts.ProvisionerConfiguration.Executor.StateConfiguration.Backend = "local"
 	}
 	b.options.TerraformOpts.Backend = opts.ProvisionerConfiguration.Executor.StateConfiguration.Backend
@@ -82,7 +84,7 @@ func (c *Bootstrap) Init() (err error) {
 
 	// terraform executor
 	c.s.Stop()
-	c.s.Suffix = " Initializing the terraform executor"
+	c.s.Suffix = initExecutorMessage
 	c.s.Start()
 	err = c.initTerraformExecutor()
 
@@ -191,7 +193,7 @@ Terraform logs: %v/logs/terraform.logs
 // Update updates the bootstrap (terraform apply)
 func (c *Bootstrap) Update(dryrun bool) (err error) {
 	c.s.Stop()
-	c.s.Suffix = " Initializing the terraform executor"
+	c.s.Suffix = initExecutorMessage
 	c.s.Start()
 	err = c.initTerraformExecutor()
 	if err != nil {
@@ -213,7 +215,8 @@ func (c *Bootstrap) Update(dryrun bool) (err error) {
 		c.s.Stop()
 		c.s.Suffix = " Saving outputs"
 		c.s.Start()
-		output, err := c.output()
+		var output []byte
+		output, err = c.output()
 		if err != nil {
 			log.Errorf("Error while getting the output with the bootstrap data: %v", err)
 			return err
@@ -246,7 +249,7 @@ func (c *Bootstrap) Update(dryrun bool) (err error) {
 // Destroy destroys the bootstrap (terraform destroy)
 func (c *Bootstrap) Destroy() (err error) {
 	c.s.Stop()
-	c.s.Suffix = " Initializing the terraform executor"
+	c.s.Suffix = initExecutorMessage
 	c.s.Start()
 	err = c.initTerraformExecutor()
 	if err != nil {
@@ -290,9 +293,7 @@ func (c *Bootstrap) installProvisionerTerraformFiles() (err error) {
 
 // creates the terraform executor to being used by the bootstrap instance and its provisioner
 func (c *Bootstrap) initTerraformExecutor() (err error) {
-	tf := &tfexec.Terraform{}
-
-	tf, err = terraform.NewExecutor(*c.options.TerraformOpts)
+	tf, err := terraform.NewExecutor(*c.options.TerraformOpts)
 	if err != nil {
 		log.Errorf("Error while initializing the terraform executor: %v", err)
 		return err

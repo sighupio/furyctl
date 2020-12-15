@@ -20,7 +20,10 @@ func bPre(cmd *cobra.Command, args []string) (err error) {
 		log.Errorf("error parsing configuration file: %v", err)
 		return err
 	}
-	wd, _ := os.Getwd()
+	wd, err := os.Getwd()
+	if err != nil {
+		return err
+	}
 	workingDirFullPath := fmt.Sprintf("%v/%v", wd, bWorkingDir)
 	log.Debug("pre-flight checks ok!")
 	prj = &project.Project{
@@ -30,7 +33,7 @@ func bPre(cmd *cobra.Command, args []string) (err error) {
 		Spin:                     s,
 		Project:                  prj,
 		ProvisionerConfiguration: cfg,
-		TerraformOpts: &terraform.TerraformOptions{
+		TerraformOpts: &terraform.Options{
 			GitHubToken: bGitHubToken,
 			WorkingDir:  workingDirFullPath,
 			Debug:       debug,
@@ -56,8 +59,12 @@ var (
 		Use:   "bootstrap",
 		Short: "Creates the required infrastructure to deploy a battle-tested Kubernetes cluster, mostly network components",
 		Args:  cobra.NoArgs,
-		Run: func(cmd *cobra.Command, args []string) {
-			cmd.Help()
+		RunE: func(cmd *cobra.Command, args []string) (err error) {
+			err = cmd.Help()
+			if err != nil {
+				return err
+			}
+			return nil
 		},
 	}
 	bootstrapInitCmd = &cobra.Command{

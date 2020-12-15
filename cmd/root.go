@@ -77,6 +77,7 @@ var versionCmd = &cobra.Command{
 	Short: "Prints the client version information",
 	Long:  ``,
 	Run: func(cmd *cobra.Command, args []string) {
-		logrus.Println("Furyctl version ", version)
+		logrus.Printf("Furyctl version %v\n", version)
+		logrus.Printf("built %v from commit %v", date, commit)
 	},
 }
