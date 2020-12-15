@@ -44,7 +44,6 @@ func init() {
 	// rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.furyctl.yaml)")
 	rootCmd.AddCommand(versionCmd)
 	rootCmd.PersistentFlags().Bool("debug", false, "Enables furyctl debug output")
-
 }
 
 func bootstrapLogrus(cmd *cobra.Command) {
