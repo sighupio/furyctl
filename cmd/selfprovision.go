@@ -5,9 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"os/signal"
 	"strings"
-	"syscall"
 
 	"github.com/sighupio/furyctl/internal/configuration"
 	"github.com/sighupio/furyctl/internal/project"
@@ -63,11 +61,4 @@ func handleStopSignal(command string, c chan os.Signal) {
 		}
 		handleStopSignal(command, c)
 	}()
-}
-
-func init() {
-
-	stop := make(chan os.Signal, 1)
-	signal.Notify(stop, os.Interrupt, syscall.SIGTERM)
-
 }
