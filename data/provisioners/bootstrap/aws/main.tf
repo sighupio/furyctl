@@ -1,3 +1,9 @@
+/**
+ * Copyright (c) 2020 SIGHUP s.r.l All rights reserved.
+ * Use of this source code is governed by a BSD-style
+ * license that can be found in the LICENSE file.
+ */
+
 module "vpc-and-vpn" {
   source = "https://github.com/sighupio/furyctl-provisioners/archive/v0.1.1.zip//furyctl-provisioners-0.1.1/modules/bootstrap/aws/vpc-and-vpn"
 

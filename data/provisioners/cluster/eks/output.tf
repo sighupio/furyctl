@@ -1,3 +1,9 @@
+/**
+ * Copyright (c) 2020 SIGHUP s.r.l All rights reserved.
+ * Use of this source code is governed by a BSD-style
+ * license that can be found in the LICENSE file.
+ */
+
 output "cluster_endpoint" {
   description = "The endpoint for your Kubernetes API server"
   value       = module.fury.cluster_endpoint
