@@ -1,3 +1,9 @@
+/**
+ * Copyright (c) 2020 SIGHUP s.r.l All rights reserved.
+ * Use of this source code is governed by a BSD-style
+ * license that can be found in the LICENSE file.
+ */
+
 output "furyagent" {
   description = "furyagent.yml used by the vpn instance and ready to use to create a vpn profile"
   sensitive   = true
