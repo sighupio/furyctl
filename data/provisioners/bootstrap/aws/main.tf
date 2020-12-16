@@ -5,7 +5,7 @@
  */
 
 module "vpc-and-vpn" {
-  source = "https://github.com/sighupio/furyctl-provisioners/archive/v0.1.2.zip//furyctl-provisioners-0.1.2/modules/bootstrap/aws/vpc-and-vpn"
+  source = "https://github.com/sighupio/furyctl-provisioners/archive/v0.1.5.zip//furyctl-provisioners-0.1.5/modules/bootstrap/aws/vpc-and-vpn"
 
   name                     = var.name
   network_cidr             = var.network_cidr
@@ -19,4 +19,5 @@ module "vpc-and-vpn" {
   vpn_dhparams_bits        = var.vpn_dhparams_bits
   vpn_operator_cidrs       = var.vpn_operator_cidrs
   vpn_ssh_users            = var.vpn_ssh_users
+  tags                     = var.tags
 }

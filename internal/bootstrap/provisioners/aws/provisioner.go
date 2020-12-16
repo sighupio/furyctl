@@ -165,6 +165,14 @@ func (d AWS) Plan() (err error) {
 	opts = append(opts, tfexec.Var(fmt.Sprintf("public_subnetwork_cidrs=[\"%v\"]", strings.Join(spec.PublicSubnetsCIDRs, "\",\""))))
 	opts = append(opts, tfexec.Var(fmt.Sprintf("private_subnetwork_cidrs=[\"%v\"]", strings.Join(spec.PrivateSubnetsCIDRs, "\",\""))))
 	opts = append(opts, tfexec.Var(fmt.Sprintf("vpn_subnetwork_cidr=%v", spec.VPN.SubnetCIDR)))
+	if len(spec.Tags) > 0 {
+		var tags []byte
+		tags, err = json.Marshal(spec.Tags)
+		if err != nil {
+			return err
+		}
+		opts = append(opts, tfexec.Var(fmt.Sprintf("tags=%v\n", string(tags))))
+	}
 	if spec.VPN.Port != 0 {
 		opts = append(opts, tfexec.Var(fmt.Sprintf("vpn_port=%v", spec.VPN.Port)))
 	}
@@ -212,6 +220,14 @@ func (d AWS) Update() (err error) {
 	opts = append(opts, tfexec.Var(fmt.Sprintf("public_subnetwork_cidrs=[\"%v\"]", strings.Join(spec.PublicSubnetsCIDRs, "\",\""))))
 	opts = append(opts, tfexec.Var(fmt.Sprintf("private_subnetwork_cidrs=[\"%v\"]", strings.Join(spec.PrivateSubnetsCIDRs, "\",\""))))
 	opts = append(opts, tfexec.Var(fmt.Sprintf("vpn_subnetwork_cidr=%v", spec.VPN.SubnetCIDR)))
+	if len(spec.Tags) > 0 {
+		var tags []byte
+		tags, err = json.Marshal(spec.Tags)
+		if err != nil {
+			return err
+		}
+		opts = append(opts, tfexec.Var(fmt.Sprintf("tags=%v\n", string(tags))))
+	}
 	if spec.VPN.Port != 0 {
 		opts = append(opts, tfexec.Var(fmt.Sprintf("vpn_port=%v", spec.VPN.Port)))
 	}
@@ -254,6 +270,14 @@ func (d AWS) Destroy() (err error) {
 	opts = append(opts, tfexec.Var(fmt.Sprintf("public_subnetwork_cidrs=[\"%v\"]", strings.Join(spec.PublicSubnetsCIDRs, "\",\""))))
 	opts = append(opts, tfexec.Var(fmt.Sprintf("private_subnetwork_cidrs=[\"%v\"]", strings.Join(spec.PrivateSubnetsCIDRs, "\",\""))))
 	opts = append(opts, tfexec.Var(fmt.Sprintf("vpn_subnetwork_cidr=%v", spec.VPN.SubnetCIDR)))
+	if len(spec.Tags) > 0 {
+		var tags []byte
+		tags, err = json.Marshal(spec.Tags)
+		if err != nil {
+			return err
+		}
+		opts = append(opts, tfexec.Var(fmt.Sprintf("tags=%v\n", string(tags))))
+	}
 	if spec.VPN.Port != 0 {
 		opts = append(opts, tfexec.Var(fmt.Sprintf("vpn_port=%v", spec.VPN.Port)))
 	}
