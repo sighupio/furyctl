@@ -196,6 +196,15 @@ Terraform logs: %v/logs/terraform.logs
 
 // Update updates the bootstrap (terraform apply)
 func (c *Bootstrap) Update(dryrun bool) (err error) {
+	// Project structure
+	c.s.Stop()
+	c.s.Suffix = " Updating project structure"
+	c.s.Start()
+	err = c.project.CreateSubDirs(bootstrapProjectDefaultSubDirs)
+	if err != nil {
+		log.Warnf("error while updating project subdirectories: %v", err)
+	}
+
 	c.s.Stop()
 	c.s.Suffix = initExecutorMessage
 	c.s.Start()
@@ -205,8 +214,29 @@ func (c *Bootstrap) Update(dryrun bool) (err error) {
 		return err
 	}
 
+	// Install the provisioner files into the project structure
+	c.s.Stop()
+	c.s.Suffix = " Updating provisioner terraform files"
+	c.s.Start()
+	err = c.installProvisionerTerraformFiles()
+	if err != nil {
+		log.Warnf("error while copying terraform project from the provisioner to the project dir: %v", err)
+	}
+
 	prov := *c.provisioner
 	c.s.Stop()
+
+	// Init the terraform project
+	tf := prov.TerraformExecutor()
+	// TODO Improve this init command. hardcoded backend.conf value.
+	c.s.Suffix = " Re-Initializing terraform project"
+	c.s.Start()
+
+	err = tf.Init(context.Background(), tfexec.BackendConfig(fmt.Sprintf("%v/backend.conf", c.options.TerraformOpts.ConfigDir)))
+	if err != nil {
+		log.Errorf("error while running terraform init in the project dir: %v", err)
+		return err
+	}
 
 	if !dryrun {
 		c.s.Suffix = " Applying terraform project"
@@ -252,6 +282,15 @@ func (c *Bootstrap) Update(dryrun bool) (err error) {
 
 // Destroy destroys the bootstrap (terraform destroy)
 func (c *Bootstrap) Destroy() (err error) {
+	// Project structure
+	c.s.Stop()
+	c.s.Suffix = " Updating project structure"
+	c.s.Start()
+	err = c.project.CreateSubDirs(bootstrapProjectDefaultSubDirs)
+	if err != nil {
+		log.Warnf("error while updating project subdirectories: %v", err)
+	}
+
 	c.s.Stop()
 	c.s.Suffix = initExecutorMessage
 	c.s.Start()
@@ -261,7 +300,30 @@ func (c *Bootstrap) Destroy() (err error) {
 		return err
 	}
 
+	// Install the provisioner files into the project structure
+	c.s.Stop()
+	c.s.Suffix = " Updating provisioner terraform files"
+	c.s.Start()
+	err = c.installProvisionerTerraformFiles()
+	if err != nil {
+		log.Warnf("error while copying terraform project from the provisioner to the project dir: %v", err)
+	}
+
 	prov := *c.provisioner
+	c.s.Stop()
+
+	// Init the terraform project
+	tf := prov.TerraformExecutor()
+	// TODO Improve this init command. hardcoded backend.conf value.
+	c.s.Suffix = " Re-Initializing terraform project"
+	c.s.Start()
+
+	err = tf.Init(context.Background(), tfexec.BackendConfig(fmt.Sprintf("%v/backend.conf", c.options.TerraformOpts.ConfigDir)))
+	if err != nil {
+		log.Errorf("error while running terraform init in the project dir: %v", err)
+		return err
+	}
+
 	c.s.Stop()
 	c.s.Suffix = " Destroying terraform project"
 	c.s.Start()
