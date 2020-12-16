@@ -1,14 +1,14 @@
 # Contributing
 
-## local setup
+## Local Setup
 
-### prerequisites
+### Prerequisites
 
 required go version >= 1.11
 
-in order to install dependencies and run this package export env `GO111MODULE=on`
-is necessary because usage of `go mod` is opt-in at the time of writing
+To install dependencies and run this package export env `GO111MODULE=on`.
+It is required because of the usage of `go mod` is opt-in at the time of writing.
 
-### download dependencies
+### Download dependencies
 
 run `go mod download`
