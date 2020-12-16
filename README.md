@@ -1,17 +1,17 @@
 # Furyctl
 
-Furyctl is package manager for Fury distribution. It’s simple to use and reads a single Furyfile to download
+Furyctl is the package manager for Fury distribution. It’s simple to use and reads a single Furyfile to download
 packages you need. Fury distribution offers three types of packages:
 
 - **Bases** : Sets of Kustomize bases to deploy basic components in Kubernetes
-- **Modules**: Terraform modules to deploy kubernetes infrastructure and it’s dependencies
-- **Roles**: Ansible roles for deploying, configuring and managing a Kubernetes infrastructure
+- **Modules**: Terraform modules to deploy Kubernetes infrastructure and it’s dependencies
+- **Roles**: Ansible roles for deploying, configuring, and managing a Kubernetes infrastructure
 
 ### Furyfile
 
 Furyfile is a simple YAML formatted file where you list which packages(and versions) you want to have.
 You can omit a type if you don't need any of its packages. An example Furyfile with packages listed
-would be like following:
+would be like the following:
 
 ```yaml
 # all sections are optional
@@ -37,7 +37,7 @@ bases:
     version: master
 ```
 
-You can get all packages in a group by using group name (like `logging`) or single packages under a group
+You can get all packages in a group by using a group name (like `logging`) or single packages under a group
 (like `monitoring/prometheus-operator`).
 
 ## Install
@@ -54,7 +54,7 @@ Download right binary for your architecture and add it to your PATH. Assuming it
 `~/Downloads` folder, you can run following commands (replacing `{arch}` with your architecture):
 
 ```bash
-chmod +x  ~/Downloads/furyctl-{arch}-amd64 && mv ~/Downloads/furyctl-{arch}-amd64 /usr/local/bin/furyctl
+chmod +x ~/Downloads/furyctl-{arch}-amd64 && mv ~/Downloads/furyctl-{arch}-amd64 /usr/local/bin/furyctl
 ```
 
 ### Homebrew
@@ -119,5 +119,5 @@ You will find your packages under `vendor/{roles,modules,katalog}` directories c
 
 ```bash
 $ furyctl version
-2020/02/06 13:44:44 Furyctl version  0.1.7
+2020/02/06 13:44:44 Furyctl version 0.1.7
 ```
