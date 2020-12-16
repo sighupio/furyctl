@@ -24,6 +24,12 @@ variable "private_subnetwork_cidrs" {
   type        = list(string)
 }
 
+variable "tags" {
+  description = "A map of tags to add to all resources"
+  type        = map(string)
+  default     = {}
+}
+
 variable "vpn_subnetwork_cidr" {
   description = "VPN Subnet CIDR, should be different from the network_cidr"
   type        = string
