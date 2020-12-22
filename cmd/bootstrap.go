@@ -12,6 +12,7 @@ import (
 
 	"github.com/sighupio/furyctl/internal/bootstrap"
 	"github.com/sighupio/furyctl/internal/project"
+	"github.com/sighupio/furyctl/pkg/analytics"
 	"github.com/sighupio/furyctl/pkg/terraform"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -88,8 +89,10 @@ var (
 
 			err = boot.Init()
 			if err != nil {
+				analytics.TrackBootstrapInit(bGitHubToken, false, cfg.Provisioner)
 				return err
 			}
+			analytics.TrackBootstrapInit(bGitHubToken, true, cfg.Provisioner)
 			return nil
 		},
 	}
@@ -105,8 +108,10 @@ var (
 
 			err = boot.Update(bDryRun)
 			if err != nil {
+				analytics.TrackBootstrapUpdate(bGitHubToken, false, cfg.Provisioner, bDryRun)
 				return err
 			}
+			analytics.TrackBootstrapUpdate(bGitHubToken, true, cfg.Provisioner, bDryRun)
 			return nil
 		},
 	}
@@ -122,8 +127,10 @@ var (
 
 			err = boot.Destroy()
 			if err != nil {
+				analytics.TrackBootstrapDestroy(bGitHubToken, false, cfg.Provisioner)
 				return err
 			}
+			analytics.TrackBootstrapDestroy(bGitHubToken, true, cfg.Provisioner)
 			return nil
 		},
 	}

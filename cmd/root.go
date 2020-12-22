@@ -19,6 +19,7 @@ import (
 	"time"
 
 	"github.com/briandowns/spinner"
+	"github.com/sighupio/furyctl/pkg/analytics"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
@@ -27,8 +28,10 @@ var (
 	version = "dev"
 	commit  = "none"
 	date    = "unknown"
-	s       *spinner.Spinner
-	debug   bool
+
+	s                *spinner.Spinner
+	debug            bool
+	disableAnalytics bool
 )
 
 // Execute is the main entrypoint of furyctl
@@ -44,6 +47,12 @@ func init() {
 	// rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.furyctl.yaml)")
 	rootCmd.AddCommand(versionCmd)
 	rootCmd.PersistentFlags().Bool("debug", false, "Enables furyctl debug output")
+	rootCmd.PersistentFlags().BoolVarP(&disableAnalytics, "disable", "d", false, "Disable analytics")
+
+	cobra.OnInitialize(func() {
+		analytics.Version(version)
+		analytics.Disable(disableAnalytics)
+	})
 }
 
 func bootstrapLogrus(cmd *cobra.Command) {

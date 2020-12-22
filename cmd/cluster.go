@@ -12,6 +12,7 @@ import (
 
 	"github.com/sighupio/furyctl/internal/cluster"
 	"github.com/sighupio/furyctl/internal/project"
+	"github.com/sighupio/furyctl/pkg/analytics"
 	"github.com/sighupio/furyctl/pkg/terraform"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -88,8 +89,10 @@ var (
 
 			err = clu.Init()
 			if err != nil {
+				analytics.TrackClusterInit(cGitHubToken, false, cfg.Provisioner)
 				return err
 			}
+			analytics.TrackClusterInit(cGitHubToken, true, cfg.Provisioner)
 			return nil
 		},
 	}
@@ -106,8 +109,10 @@ var (
 
 			err = clu.Update(cDryRun)
 			if err != nil {
+				analytics.TrackClusterUpdate(cGitHubToken, false, cfg.Provisioner, cDryRun)
 				return err
 			}
+			analytics.TrackClusterUpdate(cGitHubToken, true, cfg.Provisioner, cDryRun)
 			return nil
 		},
 	}
@@ -124,8 +129,10 @@ var (
 
 			err = clu.Destroy()
 			if err != nil {
+				analytics.TrackClusterDestroy(cGitHubToken, false, cfg.Provisioner)
 				return err
 			}
+			analytics.TrackClusterDestroy(cGitHubToken, true, cfg.Provisioner)
 			return nil
 		},
 	}
