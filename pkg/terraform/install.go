@@ -6,7 +6,14 @@ package terraform
 
 import (
 	"context"
+	"fmt"
+	"io/ioutil"
+	"os"
+	"path/filepath"
 
+	"github.com/hashicorp/go-checkpoint"
+	"github.com/hashicorp/go-version"
+	"github.com/hashicorp/terraform-exec/tfexec"
 	"github.com/hashicorp/terraform-exec/tfinstall"
 	log "github.com/sirupsen/logrus"
 )
@@ -34,20 +41,95 @@ func checkBinary(terraformBinaryPath string) (binPath string, err error) {
 	return binPath, nil
 }
 
-func install(terraformVersion string, terraformDownloadPath string) (binPath string, err error) {
-	binPath, err = tfinstall.Find(context.Background(), tfinstall.ExactVersion(terraformVersion, terraformDownloadPath))
+func alreadyAvailable(terraformVersion string, terraformDownloadPath string) (bool, string) {
+	// validate version
+	v, err := version.NewVersion(terraformVersion)
 	if err != nil {
-		log.Errorf("Error downloading version %v: %v", terraformVersion, err)
-		return "", err
+		log.Warning(err)
+		return false, ""
+	}
+	expectedTerraformBinary := filepath.Join(terraformDownloadPath, "terraform")
+	binPath, err := tfinstall.Find(context.Background(), tfinstall.ExactPath(expectedTerraformBinary))
+	if err != nil {
+		defer os.RemoveAll(expectedTerraformBinary)
+		defer os.RemoveAll(binPath)
+		log.Warning(err)
+		return false, ""
+	}
+	wd, err := ioutil.TempDir("", "tfexec")
+	if err != nil {
+		defer os.RemoveAll(expectedTerraformBinary)
+		defer os.RemoveAll(binPath)
+		log.Warning(err)
+		return false, ""
+	}
+	defer os.RemoveAll(wd) // Clean up
+	tf, err := tfexec.NewTerraform(wd, binPath)
+	if err != nil {
+		defer os.RemoveAll(expectedTerraformBinary)
+		defer os.RemoveAll(binPath)
+		log.Warning(err)
+		return false, ""
+	}
+	installedV, _, err := tf.Version(context.Background(), true)
+	if err != nil {
+		defer os.RemoveAll(expectedTerraformBinary)
+		defer os.RemoveAll(binPath)
+		log.Warning(err)
+		return false, ""
+	}
+	if !v.Equal(installedV) {
+		log.Warning("The installed version is different to the required version")
+		log.Debug("Removing old terraform version")
+		defer os.RemoveAll(expectedTerraformBinary)
+		defer os.RemoveAll(binPath)
+		return false, ""
+	}
+	log.Debugf("%s is up to date with the requested %s version", binPath, terraformVersion)
+	log.Info("terraform is up to date")
+	return true, binPath
+}
+
+func install(terraformVersion string, terraformDownloadPath string) (binPath string, err error) {
+	ready, binPath := alreadyAvailable(terraformVersion, terraformDownloadPath)
+	if !ready {
+		binPath, err = tfinstall.Find(context.Background(), tfinstall.ExactVersion(terraformVersion, terraformDownloadPath))
+		if err != nil {
+			log.Errorf("Error downloading version %v: %v", terraformVersion, err)
+			return "", err
+		}
 	}
 	return binPath, nil
 }
 
 func installLatest(terraformDownloadPath string) (binPath string, err error) {
-	binPath, err = tfinstall.Find(context.Background(), tfinstall.LatestVersion(terraformDownloadPath, false))
+	terraformVersion, err := latestVersion(true)
 	if err != nil {
-		log.Errorf("Error downloading latest version: %v", err)
 		return "", err
 	}
+	ready, binPath := alreadyAvailable(terraformVersion, terraformDownloadPath)
+	if !ready {
+		binPath, err = tfinstall.Find(context.Background(), tfinstall.LatestVersion(terraformDownloadPath, false))
+		if err != nil {
+			log.Errorf("Error downloading latest version: %v", err)
+			return "", err
+		}
+	}
 	return binPath, nil
+}
+
+func latestVersion(forceCheckpoint bool) (string, error) {
+	resp, err := checkpoint.Check(&checkpoint.CheckParams{
+		Product: "terraform",
+		Force:   forceCheckpoint,
+	})
+	if err != nil {
+		return "", err
+	}
+
+	if resp.CurrentVersion == "" {
+		return "", fmt.Errorf("could not determine latest version of terraform using checkpoint: CHECKPOINT_DISABLE may be set")
+	}
+
+	return resp.CurrentVersion, nil
 }
