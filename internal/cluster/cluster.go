@@ -78,7 +78,7 @@ func (c *Cluster) Init() (err error) {
 
 	// Enterprise token validation
 	if prov.Enterprise() && c.options.TerraformOpts.GitHubToken == "" {
-		errorMsg := fmt.Sprintf("error creating the cluster instance. The %v provisioner is an enterprise feature and requires a valid GitHub token. Contact sales@sighup.io", opts.ProvisionerConfiguration.Provisioner)
+		errorMsg := fmt.Sprintf("error creating the cluster instance. The %v provisioner is an enterprise feature and requires a valid GitHub token. Contact sales@sighup.io", c.options.ProvisionerConfiguration.Provisioner)
 		log.Error(errorMsg)
 		return errors.New(errorMsg)
 	}
