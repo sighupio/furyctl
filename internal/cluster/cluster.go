@@ -50,9 +50,7 @@ func New(opts *Options) (c *Cluster, err error) {
 		return nil, err
 	}
 	if p.Enterprise() && opts.TerraformOpts.GitHubToken == "" {
-		errorMsg := fmt.Sprintf("error creating the cluster instance. The %v provisioner is an enterprise feature and requires a valid GitHub token. Contact sales@sighup.io", opts.ProvisionerConfiguration.Provisioner)
-		log.Error(errorMsg)
-		return nil, errors.New(errorMsg)
+		log.Warningf("The %v provisioner is an enterprise feature and requires a valid GitHub token", opts.ProvisionerConfiguration.Provisioner)
 	}
 	c = &Cluster{
 		s:           opts.Spin,
@@ -76,6 +74,15 @@ func New(opts *Options) (c *Cluster, err error) {
 
 // Init intializes a project directory with all files (terraform project, subdirectories...) running terraform init on it
 func (c *Cluster) Init() (err error) {
+	prov := *c.provisioner
+
+	// Enterprise token validation
+	if prov.Enterprise() && c.options.TerraformOpts.GitHubToken == "" {
+		errorMsg := fmt.Sprintf("error creating the cluster instance. The %v provisioner is an enterprise feature and requires a valid GitHub token. Contact sales@sighup.io", opts.ProvisionerConfiguration.Provisioner)
+		log.Error(errorMsg)
+		return errors.New(errorMsg)
+	}
+
 	// Project structure
 	c.s.Stop()
 	c.s.Suffix = " Creating project structure"
@@ -108,7 +115,6 @@ func (c *Cluster) Init() (err error) {
 	}
 
 	// Init the terraform project
-	prov := *c.provisioner
 	tf := prov.TerraformExecutor()
 	// TODO Improve this init command. hardcoded backend.conf value.
 	c.s.Stop()
