@@ -13,6 +13,7 @@ import (
 
 var parallel bool
 var https bool
+var filter string
 
 func download(packages []Package) error {
 
