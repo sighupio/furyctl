@@ -89,20 +89,38 @@ func (f *Furyconf) Validate() error {
 }
 
 // Parse reads the furyconf structs and created a list of packaged to be downloaded
-func (f *Furyconf) Parse() ([]Package, error) {
+func (f *Furyconf) Parse(filter string) ([]Package, error) {
 	pkgs := make([]Package, 0, 0)
 	// First we aggreggate all packages in one single list
 	for _, v := range f.Roles {
 		v.kind = "roles"
-		pkgs = append(pkgs, v)
+		if len(filter)>0 {
+			if strings.HasPrefix(v.Name, filter) {
+				pkgs = append(pkgs, v)
+			}
+		}else{
+			pkgs = append(pkgs, v)
+		}
 	}
 	for _, v := range f.Modules {
 		v.kind = "modules"
-		pkgs = append(pkgs, v)
+		if len(filter)>0 {
+			if strings.HasPrefix(v.Name, filter) {
+				pkgs = append(pkgs, v)
+			}
+		}else{
+			pkgs = append(pkgs, v)
+		}
 	}
 	for _, v := range f.Bases {
 		v.kind = "katalog"
-		pkgs = append(pkgs, v)
+		if len(filter)>0 {
+			if strings.HasPrefix(v.Name, filter) {
+				pkgs = append(pkgs, v)
+			}
+		}else{
+			pkgs = append(pkgs, v)
+		}
 	}
 	repoPrefix := sshRepoPrefix
 	dotGitParticle := ""
