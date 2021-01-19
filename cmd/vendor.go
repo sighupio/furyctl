@@ -24,7 +24,7 @@ func init() {
 	rootCmd.AddCommand(vendorCmd)
 	vendorCmd.PersistentFlags().BoolVarP(&parallel, "parallel", "p", true, "if true enables parallel downloads")
 	vendorCmd.PersistentFlags().BoolVarP(&https, "https", "H", false, "if true downloads using https instead of ssh")
-	vendorCmd.PersistentFlags().StringVarP(&filter, "filter", "f", "","Add filtering on download, to reduce update scope")
+	vendorCmd.PersistentFlags().StringVarP(&prefix, "prefix", "P", "","Add filtering on download with prefix, to reduce update scope")
 }
 
 // vendorCmd represents the vendor command
@@ -50,7 +50,7 @@ var vendorCmd = &cobra.Command{
 			logrus.WithError(err).Error("ERROR VALIDATING")
 		}
 
-		list, err := config.Parse(filter)
+		list, err := config.Parse(prefix)
 
 		if err != nil {
 			//logrus.Errorln("ERROR PARSING: ", err)
