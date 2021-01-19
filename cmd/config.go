@@ -94,31 +94,19 @@ func (f *Furyconf) Parse(prefix string) ([]Package, error) {
 	// First we aggreggate all packages in one single list
 	for _, v := range f.Roles {
 		v.kind = "roles"
-		if len(prefix) > 0 {
-			if strings.HasPrefix(v.Name, prefix) {
-				pkgs = append(pkgs, v)
-			}
-		} else {
+		if strings.HasPrefix(v.Name, prefix) {
 			pkgs = append(pkgs, v)
 		}
 	}
 	for _, v := range f.Modules {
 		v.kind = "modules"
-		if len(prefix) > 0 {
-			if strings.HasPrefix(v.Name, prefix) {
-				pkgs = append(pkgs, v)
-			}
-		} else {
+		if strings.HasPrefix(v.Name, prefix) {
 			pkgs = append(pkgs, v)
 		}
 	}
 	for _, v := range f.Bases {
 		v.kind = "katalog"
-		if len(prefix) > 0 {
-			if strings.HasPrefix(v.Name, prefix) {
-				pkgs = append(pkgs, v)
-			}
-		} else {
+		if strings.HasPrefix(v.Name, prefix) {
 			pkgs = append(pkgs, v)
 		}
 	}
