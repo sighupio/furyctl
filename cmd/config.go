@@ -89,13 +89,13 @@ func (f *Furyconf) Validate() error {
 }
 
 // Parse reads the furyconf structs and created a list of packaged to be downloaded
-func (f *Furyconf) Parse(filter string) ([]Package, error) {
+func (f *Furyconf) Parse(prefix string) ([]Package, error) {
 	pkgs := make([]Package, 0, 0)
 	// First we aggreggate all packages in one single list
 	for _, v := range f.Roles {
 		v.kind = "roles"
-		if len(filter)>0 {
-			if strings.HasPrefix(v.Name, filter) {
+		if len(prefix)>0 {
+			if strings.HasPrefix(v.Name, prefix) {
 				pkgs = append(pkgs, v)
 			}
 		}else{
@@ -104,8 +104,8 @@ func (f *Furyconf) Parse(filter string) ([]Package, error) {
 	}
 	for _, v := range f.Modules {
 		v.kind = "modules"
-		if len(filter)>0 {
-			if strings.HasPrefix(v.Name, filter) {
+		if len(prefix)>0 {
+			if strings.HasPrefix(v.Name, prefix) {
 				pkgs = append(pkgs, v)
 			}
 		}else{
@@ -114,8 +114,8 @@ func (f *Furyconf) Parse(filter string) ([]Package, error) {
 	}
 	for _, v := range f.Bases {
 		v.kind = "katalog"
-		if len(filter)>0 {
-			if strings.HasPrefix(v.Name, filter) {
+		if len(prefix)>0 {
+			if strings.HasPrefix(v.Name, prefix) {
 				pkgs = append(pkgs, v)
 			}
 		}else{
