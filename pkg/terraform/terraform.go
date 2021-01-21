@@ -54,23 +54,39 @@ func NewExecutor(opts Options) (tf *tfexec.Terraform, err error) {
 	if err != nil {
 		return nil, err
 	}
+	// Gets all os environment
+	netRcEnv := envMap(os.Environ())
 	if opts.GitHubToken != "" {
 		err = configureGitHubNetrcAccess(opts.WorkingDir, opts.GitHubToken, opts.ConfigDir)
 		if err != nil {
 			return nil, err
 		}
-		// Gets all os environment
-		netRcEnv := envMap(os.Environ())
 		// Adds/Override NETRC to use our own netrc file
 		netRcEnv["NETRC"] = fmt.Sprintf("%v/%v/.netrc", opts.WorkingDir, opts.ConfigDir)
-		// Set the env to the executor
-		err = tf.SetEnv(netRcEnv)
-		if err != nil {
-			return nil, err
-		}
+	}
+	// Set the env to the executor
+	err = tf.SetEnv(netRcEnv)
+	if err != nil {
+		return nil, err
 	}
 	return tf, err
 }
+
+var forbidenTerraformEnvs = map[string]bool{
+	"TF_LOG":                  true,
+	"TF_INPUT":                true,
+	"TF_IN_AUTOMATION":        true,
+	"TF_LOG_PATH":             true,
+	"TF_REATTACH_PROVIDERS":   true,
+	"TF_APPEND_USER_AGENT":    true,
+	"TF_WORKSPACE":            true,
+	"TF_DISABLE_PLUGIN_TLS":   true,
+	"TF_SKIP_PROVIDER_VERIFY": true,
+}
+
+const (
+	varEnvVarPrefix = "TF_VAR_"
+)
 
 func envMap(environ []string) map[string]string {
 	env := map[string]string{}
@@ -84,7 +100,11 @@ func envMap(environ []string) map[string]string {
 		if len(parts) == 2 {
 			v = parts[1]
 		}
-		env[k] = v
+		if !strings.HasPrefix(k, varEnvVarPrefix) && !forbidenTerraformEnvs[k] {
+			env[k] = v
+		} else {
+			log.Warnf("%v Environment variable discarted. Executor will not use it", k)
+		}
 	}
 	return env
 }
