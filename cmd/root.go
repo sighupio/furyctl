@@ -22,6 +22,7 @@ import (
 	"github.com/sighupio/furyctl/pkg/analytics"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 )
 
 var (
@@ -53,6 +54,8 @@ func init() {
 		analytics.Version(version)
 		analytics.Disable(disableAnalytics)
 	})
+	viper.AutomaticEnv()
+	viper.SetEnvPrefix("furyctl")
 }
 
 func bootstrapLogrus(cmd *cobra.Command) {
