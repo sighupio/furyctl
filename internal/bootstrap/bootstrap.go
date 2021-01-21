@@ -73,7 +73,7 @@ func New(opts *Options) (b *Bootstrap, err error) {
 }
 
 // Init intializes a project directory with all files (terraform project, subdirectories...) running terraform init on it
-func (c *Bootstrap) Init() (err error) {
+func (c *Bootstrap) Init(reset bool) (err error) {
 	prov := *c.provisioner
 
 	// Enterprise token validation
@@ -81,6 +81,16 @@ func (c *Bootstrap) Init() (err error) {
 		errorMsg := fmt.Sprintf("error while initiating the bootstap process. The %v provisioner is an enterprise feature and requires a valid GitHub token. Contact sales@sighup.io", c.options.ProvisionerConfiguration.Provisioner)
 		log.Error(errorMsg)
 		return errors.New(errorMsg)
+	}
+
+	// Reset the project directory
+	if reset {
+		log.Warn("Cleaning up the workdir")
+		err = c.project.Reset()
+		if err != nil {
+			log.Errorf("Error cleaning up the workdir")
+			return err
+		}
 	}
 
 	// Project structure

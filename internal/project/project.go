@@ -26,6 +26,20 @@ type Project struct {
 	Path string
 }
 
+// Reset deletes and recreates the (p.Path) base directory
+func (p *Project) Reset() (err error) {
+	_, err = os.Stat(p.Path)
+	if !os.IsNotExist(err) { // Exists
+		log.Warnf("Removing %v directory", p.Path)
+		err = os.RemoveAll(p.Path)
+		if err != nil {
+			log.Errorf("Error removing the base dir %v. %v", p.Path, err)
+			return err
+		}
+	}
+	return nil
+}
+
 // CreateSubDirs creates directories inside the p.Path base directory
 func (p *Project) CreateSubDirs(subDirs []string) (err error) {
 	_, err = os.Stat(p.Path)

@@ -78,6 +78,7 @@ var (
 	bConfigFilePath string
 	bWorkingDir     string
 	bGitHubToken    string
+	bReset          bool
 	bDryRun         bool
 
 	bootstrapCmd = &cobra.Command{
@@ -99,11 +100,11 @@ var (
 		RunE: func(cmd *cobra.Command, args []string) (err error) {
 
 			err = prj.Check()
-			if err == nil {
+			if err == nil && !bReset {
 				return fmt.Errorf("the project %v seems to be already created. Choose another working directory", bWorkingDir)
 			}
 
-			err = boot.Init()
+			err = boot.Init(bReset)
 			if err != nil {
 				analytics.TrackBootstrapInit(bGitHubToken, false, cfg.Provisioner)
 				return err
@@ -166,6 +167,8 @@ func init() {
 	bootstrapInitCmd.PersistentFlags().StringVarP(&bGitHubToken, "token", "t", "", "GitHub token to access enterprise repositories. Contact sales@sighup.io")
 	bootstrapUpdateCmd.PersistentFlags().StringVarP(&bGitHubToken, "token", "t", "", "GitHub token to access enterprise repositories. Contact sales@sighup.io")
 	bootstrapDestroyCmd.PersistentFlags().StringVarP(&bGitHubToken, "token", "t", "", "GitHub token to access enterprise repositories. Contact sales@sighup.io")
+
+	bootstrapInitCmd.PersistentFlags().BoolVar(&bReset, "reset", false, "Forces the re-initialization of the project. It deletes the content of the workdir recreating everything")
 
 	bootstrapCmd.AddCommand(bootstrapInitCmd)
 	bootstrapCmd.AddCommand(bootstrapUpdateCmd)
