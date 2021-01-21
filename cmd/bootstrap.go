@@ -5,9 +5,11 @@
 package cmd
 
 import (
+	"bufio"
 	"fmt"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 
 	"github.com/sighupio/furyctl/internal/bootstrap"
@@ -17,6 +19,20 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
+
+func bPreDestroy(cmd *cobra.Command, args []string) (err error) {
+	fmt.Println("\r  Are you sure you want to destroy it?\n  Write 'yes' to continue")
+	reader := bufio.NewReader(os.Stdin)
+	text, err := reader.ReadString('\n')
+	if err != nil {
+		os.Exit(2)
+	}
+	text = strings.ReplaceAll(text, "\n", "")
+	if strings.Compare("yes", text) == 0 {
+		return bPre(cmd, args)
+	}
+	return fmt.Errorf("Destroy command aborted")
+}
 
 func bPre(cmd *cobra.Command, args []string) (err error) {
 	stop := make(chan os.Signal, 1)
@@ -118,7 +134,7 @@ var (
 	bootstrapDestroyCmd = &cobra.Command{
 		Use:     "destroy",
 		Short:   "ATTENTION: Destroys the project. Ensure you destroy the cluster before destroying the bootstrap project.",
-		PreRunE: bPre,
+		PreRunE: bPreDestroy,
 		RunE: func(cmd *cobra.Command, args []string) (err error) {
 			err = prj.Check()
 			if err != nil {
