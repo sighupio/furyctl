@@ -12,7 +12,7 @@ module "fury" {
   network         = var.network
   subnetworks     = var.subnetworks
   dmz_cidr_range  = var.dmz_cidr_range
-  ssh_public_key  = var.ssh_public_key
+  ssh_public_key  = file(var.ssh_public_key)
   node_pools      = var.node_pools
   tags            = var.tags
 }
