@@ -50,7 +50,7 @@ func NewExecutor(opts Options) (tf *tfexec.Terraform, err error) {
 	if err != nil {
 		return nil, err
 	}
-	err = configureBackend(opts.WorkingDir, opts.Backend, opts.BackendConfig, opts.ConfigDir)
+	err = createBackendFile(opts.WorkingDir, opts.Backend, opts.BackendConfig)
 	if err != nil {
 		return nil, err
 	}
@@ -113,18 +113,6 @@ func configureLogger(tf *tfexec.Terraform, workingDir string, logDir string, deb
 	return nil
 }
 
-func configureBackend(workingDir string, backend string, backendConfig map[string]string, configDir string) (err error) {
-	err = createBackendFile(workingDir, backend)
-	if err != nil {
-		return err
-	}
-	err = createBackendConfigFile(workingDir, configDir, backendConfig)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
 // configureGitHubNetrcAccess creates the .netrc file with the credentials to access github private repos
 func configureGitHubNetrcAccess(path string, token string, configDir string) (err error) {
 	netrc := fmt.Sprintf(`machine github.com
@@ -134,27 +122,19 @@ password %v
 	return ioutil.WriteFile(fmt.Sprintf("%v/%v/.netrc", path, configDir), []byte(netrc), os.FileMode(0644))
 }
 
-func createBackendConfigFile(path string, configDir string, backendConfig map[string]string) (err error) {
-	dst := fmt.Sprintf("%v/%v/backend.conf", path, configDir)
-	var sb bytes.Buffer
-	defer sb.Reset()
-	for key, element := range backendConfig {
-		sb.WriteString(fmt.Sprintf("%v = \"%v\"\n", key, element))
-	}
-	err = ioutil.WriteFile(dst, sb.Bytes(), os.FileMode(0644))
-	if err != nil {
-		log.Errorf("Error while creating the backend configuration file")
-		return err
-	}
-	return nil
-}
-
 // CreateBackendFile creates the backend.tf terraform file with the backend configuration choosen
-func createBackendFile(path string, backend string) (err error) {
-	backendFileContent := fmt.Sprintf(`terraform {
-  backend "%v" {}
-}`, backend)
-	return ioutil.WriteFile(fmt.Sprintf("%v/backend.tf", path), []byte(backendFileContent), os.FileMode(0644))
+func createBackendFile(path string, backend string, backendConfig map[string]string) (err error) {
+	var backendFilebuffer bytes.Buffer
+	backendFilebuffer.WriteString(fmt.Sprintf(`terraform {
+  backend "%v" {
+`, backend))
+	for k, v := range backendConfig {
+		backendFilebuffer.WriteString(fmt.Sprintf("    %v = \"%v\"\n", k, v))
+	}
+	backendFilebuffer.WriteString(`  }
+}`)
+	backendFileContent := backendFilebuffer.Bytes()
+	return ioutil.WriteFile(fmt.Sprintf("%v/backend.tf", path), backendFileContent, os.FileMode(0644))
 }
 
 type tfwriter struct {
