@@ -126,12 +126,11 @@ func (c *Bootstrap) Init(reset bool) (err error) {
 
 	// Init the terraform project
 	tf := prov.TerraformExecutor()
-	// TODO Improve this init command. hardcoded backend.conf value.
 	c.s.Stop()
 	c.s.Suffix = " Initializing terraform project"
 	c.s.Start()
 
-	err = tf.Init(context.Background(), tfexec.BackendConfig(fmt.Sprintf("%v/backend.conf", c.options.TerraformOpts.ConfigDir)))
+	err = tf.Init(context.Background())
 	if err != nil {
 		log.Errorf("error while running terraform init in the project dir: %v", err)
 		return err
@@ -244,11 +243,10 @@ func (c *Bootstrap) Update(dryrun bool) (err error) {
 
 	// Init the terraform project
 	tf := prov.TerraformExecutor()
-	// TODO Improve this init command. hardcoded backend.conf value.
 	c.s.Suffix = " Re-Initializing terraform project"
 	c.s.Start()
 
-	err = tf.Init(context.Background(), tfexec.BackendConfig(fmt.Sprintf("%v/backend.conf", c.options.TerraformOpts.ConfigDir)))
+	err = tf.Init(context.Background())
 	if err != nil {
 		log.Errorf("error while running terraform init in the project dir: %v", err)
 		return err
@@ -330,11 +328,10 @@ func (c *Bootstrap) Destroy() (err error) {
 
 	// Init the terraform project
 	tf := prov.TerraformExecutor()
-	// TODO Improve this init command. hardcoded backend.conf value.
 	c.s.Suffix = " Re-Initializing terraform project"
 	c.s.Start()
 
-	err = tf.Init(context.Background(), tfexec.BackendConfig(fmt.Sprintf("%v/backend.conf", c.options.TerraformOpts.ConfigDir)))
+	err = tf.Init(context.Background())
 	if err != nil {
 		log.Errorf("error while running terraform init in the project dir: %v", err)
 		return err
