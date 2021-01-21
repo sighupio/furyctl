@@ -5,9 +5,11 @@
 package cmd
 
 import (
+	"bufio"
 	"fmt"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 
 	"github.com/sighupio/furyctl/internal/cluster"
@@ -17,6 +19,20 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
+
+func cPreDestroy(cmd *cobra.Command, args []string) (err error) {
+	fmt.Println("\r  Are you sure you want to destroy the cluster?\n  Write 'yes' to continue")
+	reader := bufio.NewReader(os.Stdin)
+	text, err := reader.ReadString('\n')
+	if err != nil {
+		os.Exit(2)
+	}
+	text = strings.ReplaceAll(text, "\n", "")
+	if strings.Compare("yes", text) == 0 {
+		return cPre(cmd, args)
+	}
+	return fmt.Errorf("Destroy command aborted")
+}
 
 func cPre(cmd *cobra.Command, args []string) (err error) {
 	stop := make(chan os.Signal, 1)
@@ -119,7 +135,7 @@ var (
 	clusterDestroyCmd = &cobra.Command{
 		Use:     "destroy",
 		Short:   "ATTENTION: Destroys the cluster project",
-		PreRunE: cPre,
+		PreRunE: cPreDestroy,
 		RunE: func(cmd *cobra.Command, args []string) (err error) {
 			err = prj.Check()
 
