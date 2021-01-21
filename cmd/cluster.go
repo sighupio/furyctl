@@ -18,6 +18,7 @@ import (
 	"github.com/sighupio/furyctl/pkg/terraform"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 )
 
 func cPreDestroy(cmd *cobra.Command, args []string) (err error) {
@@ -38,6 +39,12 @@ func cPre(cmd *cobra.Command, args []string) (err error) {
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, os.Interrupt, syscall.SIGTERM)
 	handleStopSignal("cluster", stop)
+
+	// viper can get the token from an environment variable: FURYCTL_TOKEN
+	viper.BindPFlag("token", cmd.Flags().Lookup("token"))
+	if cGitHubToken == "" { // Takes precedence the token from the cli
+		cGitHubToken = viper.GetString("token")
+	}
 
 	log.Debug("passing pre-flight checks")
 	err = parseConfig(cConfigFilePath, "Cluster")
