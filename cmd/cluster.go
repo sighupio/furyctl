@@ -79,6 +79,7 @@ var (
 	cWorkingDir     string
 	cGitHubToken    string
 	cDryRun         bool
+	cReset          bool
 
 	clusterCmd = &cobra.Command{
 		Use:   "cluster",
@@ -99,11 +100,11 @@ var (
 		RunE: func(cmd *cobra.Command, args []string) (err error) {
 
 			err = prj.Check()
-			if err == nil {
+			if err == nil && !cReset {
 				return fmt.Errorf("the project %v seems to be already created. Choose another working directory", cWorkingDir)
 			}
 
-			err = clu.Init()
+			err = clu.Init(cReset)
 			if err != nil {
 				analytics.TrackClusterInit(cGitHubToken, false, cfg.Provisioner)
 				return err
@@ -168,6 +169,8 @@ func init() {
 	clusterInitCmd.PersistentFlags().StringVarP(&cGitHubToken, "token", "t", "", "GitHub token to access enterprise repositories. Contact sales@sighup.io")
 	clusterUpdateCmd.PersistentFlags().StringVarP(&cGitHubToken, "token", "t", "", "GitHub token to access enterprise repositories. Contact sales@sighup.io")
 	clusterDestroyCmd.PersistentFlags().StringVarP(&cGitHubToken, "token", "t", "", "GitHub token to access enterprise repositories. Contact sales@sighup.io")
+
+	clusterInitCmd.PersistentFlags().BoolVar(&cReset, "reset", false, "Forces the re-initialization of the project. It deletes the content of the workdir recreating everything")
 
 	clusterCmd.AddCommand(clusterInitCmd)
 	clusterCmd.AddCommand(clusterUpdateCmd)
