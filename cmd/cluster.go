@@ -6,6 +6,7 @@ package cmd
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
 	"os"
 	"os/signal"
@@ -13,6 +14,7 @@ import (
 	"syscall"
 
 	"github.com/sighupio/furyctl/internal/cluster"
+	"github.com/sighupio/furyctl/internal/configuration"
 	"github.com/sighupio/furyctl/internal/project"
 	"github.com/sighupio/furyctl/pkg/analytics"
 	"github.com/sighupio/furyctl/pkg/terraform"
@@ -82,11 +84,12 @@ func cPre(cmd *cobra.Command, args []string) (err error) {
 var (
 	clu *cluster.Cluster
 
-	cConfigFilePath string
-	cWorkingDir     string
-	cGitHubToken    string
-	cDryRun         bool
-	cReset          bool
+	cConfigFilePath      string
+	cWorkingDir          string
+	cGitHubToken         string
+	cTemplateProvisioner string
+	cDryRun              bool
+	cReset               bool
 
 	clusterCmd = &cobra.Command{
 		Use:   "cluster",
@@ -97,6 +100,21 @@ var (
 			if err != nil {
 				return err
 			}
+			return nil
+		},
+	}
+	clusterTemplateCmd = &cobra.Command{
+		Use:   "template",
+		Short: "Get a template configuration file for a specific provisioner",
+		RunE: func(cmd *cobra.Command, args []string) (err error) {
+			if cTemplateProvisioner == "" {
+				return errors.New("You must specify a provisioner")
+			}
+			tpl, err := configuration.Template("Cluster", cTemplateProvisioner)
+			if err != nil {
+				return err
+			}
+			fmt.Println(tpl)
 			return nil
 		},
 	}
@@ -179,8 +197,11 @@ func init() {
 
 	clusterInitCmd.PersistentFlags().BoolVar(&cReset, "reset", false, "Forces the re-initialization of the project. It deletes the content of the workdir recreating everything")
 
+	clusterTemplateCmd.PersistentFlags().StringVar(&cTemplateProvisioner, "provisioner", "", "Cluster provisioner")
+
 	clusterCmd.AddCommand(clusterInitCmd)
 	clusterCmd.AddCommand(clusterUpdateCmd)
 	clusterCmd.AddCommand(clusterDestroyCmd)
+	clusterCmd.AddCommand(clusterTemplateCmd)
 	rootCmd.AddCommand(clusterCmd)
 }
