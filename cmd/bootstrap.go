@@ -6,6 +6,7 @@ package cmd
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
 	"os"
 	"os/signal"
@@ -13,6 +14,7 @@ import (
 	"syscall"
 
 	"github.com/sighupio/furyctl/internal/bootstrap"
+	"github.com/sighupio/furyctl/internal/configuration"
 	"github.com/sighupio/furyctl/internal/project"
 	"github.com/sighupio/furyctl/pkg/analytics"
 	"github.com/sighupio/furyctl/pkg/terraform"
@@ -82,11 +84,12 @@ func bPre(cmd *cobra.Command, args []string) (err error) {
 var (
 	boot *bootstrap.Bootstrap
 
-	bConfigFilePath string
-	bWorkingDir     string
-	bGitHubToken    string
-	bReset          bool
-	bDryRun         bool
+	bConfigFilePath      string
+	bWorkingDir          string
+	bGitHubToken         string
+	bTemplateProvisioner string
+	bReset               bool
+	bDryRun              bool
 
 	bootstrapCmd = &cobra.Command{
 		Use:   "bootstrap",
@@ -97,6 +100,21 @@ var (
 			if err != nil {
 				return err
 			}
+			return nil
+		},
+	}
+	bootstrapTemplateCmd = &cobra.Command{
+		Use:   "template",
+		Short: "Get a template configuration file for a specific provisioner",
+		RunE: func(cmd *cobra.Command, args []string) (err error) {
+			if bTemplateProvisioner == "" {
+				return errors.New("You must specify a provisioner")
+			}
+			tpl, err := configuration.Template("Bootstrap", bTemplateProvisioner)
+			if err != nil {
+				return err
+			}
+			fmt.Println(tpl)
 			return nil
 		},
 	}
@@ -177,8 +195,11 @@ func init() {
 
 	bootstrapInitCmd.PersistentFlags().BoolVar(&bReset, "reset", false, "Forces the re-initialization of the project. It deletes the content of the workdir recreating everything")
 
+	bootstrapTemplateCmd.PersistentFlags().StringVar(&bTemplateProvisioner, "provisioner", "", "Bootstrap provisioner")
+
 	bootstrapCmd.AddCommand(bootstrapInitCmd)
 	bootstrapCmd.AddCommand(bootstrapUpdateCmd)
 	bootstrapCmd.AddCommand(bootstrapDestroyCmd)
+	bootstrapCmd.AddCommand(bootstrapTemplateCmd)
 	rootCmd.AddCommand(bootstrapCmd)
 }
