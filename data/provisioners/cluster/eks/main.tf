@@ -5,7 +5,7 @@
  */
 
 module "fury" {
-  source = "github.com/sighupio/fury-eks-installer//modules/eks?ref=v1.2.0"
+  source = "github.com/sighupio/fury-eks-installer//modules/eks?ref=v1.4.0"
 
   cluster_name    = var.cluster_name
   cluster_version = var.cluster_version
@@ -15,4 +15,10 @@ module "fury" {
   ssh_public_key  = var.ssh_public_key
   node_pools      = var.node_pools
   tags            = var.tags
+
+  # Specific AWS variables.
+  # Enables managing auth using these variables
+  eks_map_users    = var.eks_map_users
+  eks_map_roles    = var.eks_map_roles
+  eks_map_accounts = var.eks_map_accounts
 }

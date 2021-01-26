@@ -103,6 +103,23 @@ func clusterTemplate(config *Configuration) error {
 			Tags: map[string]string{
 				"myTag": "MyValue # Use this tags to annotate all resources. Optional",
 			},
+			Auth: clustercfg.EKSAuth{
+				AdditionalAccounts: []string{"777777777777", "88888888888", "# Additional AWS account numbers to add to the aws-auth configmap"},
+				Users: []clustercfg.EKSAuthData{
+					{
+						Username: "user1 # Any username",
+						Groups:   []string{"system:masters", "# Any K8S Group"},
+						UserARN:  "arn:user:7777777... # The user ARN",
+					},
+				},
+				Roles: []clustercfg.EKSAuthData{
+					{
+						Username: "user1 # Any username",
+						Groups:   []string{"system:masters", "# Any K8S Group"},
+						RoleARN:  "arn:role:7777777... # The role ARN",
+					},
+				},
+			},
 			NodePools: []clustercfg.EKSNodePool{
 				{
 					Name:         "my-node-pool. Required. Name of the node pool",
@@ -112,6 +129,7 @@ func clusterTemplate(config *Configuration) error {
 					InstanceType: "t3.micro. Required. AWS EC2 isntance types",
 					MaxPods:      110,
 					VolumeSize:   50,
+					SubNetworks:  []string{"subnet-1", "# any subnet id where you want your nodes running"},
 					Labels: map[string]string{
 						"environment": "dev. # Node labels. Use it to tag nodes then use it on Kubernetes",
 					},
