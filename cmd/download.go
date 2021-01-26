@@ -40,7 +40,7 @@ func download(packages []Package) error {
 		go func(i int) {
 			for data := range jobs {
 				logrus.Debugf("%d : received data %v", i, data)
-				res := get(data.url, data.dir, getter.ClientModeDir)
+				res := get(data.url, data.dir, getter.ClientModeDir,true)
 				errChan <- res
 				logrus.Debugf("%d : finished with data %v", i, data)
 			}
@@ -65,7 +65,7 @@ func download(packages []Package) error {
 	return nil
 }
 
-func get(src, dest string, mode getter.ClientMode) error {
+func get(src, dest string, mode getter.ClientMode, cleanGitFolder bool) error {
 
 	logrus.Debugf("complete url downloading: %s -> %s", src, dest)
 
@@ -82,20 +82,24 @@ func get(src, dest string, mode getter.ClientMode) error {
 	logrus.Debugf("let's get %s -> %s", src, dest)
 
 	gitFolder := fmt.Sprintf("%s/.git", dest)
+	if cleanGitFolder {
 
-	if _, err := os.Stat(dest); !os.IsNotExist(err) {
-		logrus.Infof("%s already exists! removing it", dest)
-		err = removeDir(dest)
-		if err != nil {
-			logrus.Error(err)
-			return err
+		if _, err := os.Stat(dest); !os.IsNotExist(err) {
+			logrus.Infof("%s already exists! removing it", dest)
+			err = removeDir(dest)
+			if err != nil {
+				logrus.Error(err)
+				return err
+			}
 		}
 	}
 
 	humanReadableDownloadLog(src, dest)
 	_ = client.Get()
-	logrus.Infof("removing %s", gitFolder)
-	err = removeDir(gitFolder)
+	if cleanGitFolder {
+		logrus.Infof("removing %s", gitFolder)
+		err = removeDir(gitFolder)
+	}
 	if err != nil {
 		logrus.Error(err)
 		return err
