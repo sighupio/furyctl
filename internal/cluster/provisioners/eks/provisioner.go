@@ -116,6 +116,40 @@ func (e EKS) createVarFile() (err error) {
 		}
 		buffer.WriteString(fmt.Sprintf("tags = %v\n", string(tags)))
 	}
+
+	if len(spec.Auth.AdditionalAccounts) > 0 {
+		buffer.WriteString(fmt.Sprintf("eks_map_accounts = [\"%v\"]\n", strings.Join(spec.Auth.AdditionalAccounts, "\",\"")))
+	}
+
+	if len(spec.Auth.Users) > 0 {
+		buffer.WriteString("eks_map_users = [\n")
+		for _, account := range spec.Auth.Users {
+			buffer.WriteString(fmt.Sprintf(`{
+	groups = ["%v"]
+	username = "%v"
+	userarn = "%v"
+}
+`, strings.Join(account.Groups, "\",\""), account.Username, account.UserARN,
+			))
+		}
+		buffer.WriteString("]\n")
+
+	}
+
+	if len(spec.Auth.Roles) > 0 {
+		buffer.WriteString("eks_map_roles = [\n")
+		for _, account := range spec.Auth.Roles {
+			buffer.WriteString(fmt.Sprintf(`{
+	groups = ["%v"]
+	username = "%v"
+	rolearn = "%v"
+}
+`, strings.Join(account.Groups, "\",\""), account.Username, account.RoleARN,
+			))
+		}
+		buffer.WriteString("]\n")
+	}
+
 	if len(spec.NodePools) > 0 {
 		buffer.WriteString("node_pools = [\n")
 		for _, np := range spec.NodePools {
@@ -127,6 +161,11 @@ func (e EKS) createVarFile() (err error) {
 			buffer.WriteString(fmt.Sprintf("instance_type = \"%v\"\n", np.InstanceType))
 			buffer.WriteString(fmt.Sprintf("max_pods = %v\n", np.MaxPods))
 			buffer.WriteString(fmt.Sprintf("volume_size = %v\n", np.VolumeSize))
+			if len(np.SubNetworks) > 0 {
+				buffer.WriteString(fmt.Sprintf("subnetworks = [\"%v\"]\n", strings.Join(np.SubNetworks, "\",\"")))
+			} else {
+				buffer.WriteString("subnetworks = null\n")
+			}
 			if len(np.Labels) > 0 {
 				var labels []byte
 				labels, err = json.Marshal(np.Labels)

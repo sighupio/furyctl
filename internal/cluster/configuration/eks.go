@@ -13,6 +13,22 @@ type EKS struct {
 	SSHPublicKey string            `yaml:"sshPublicKey"`
 	NodePools    []EKSNodePool     `yaml:"nodePools"`
 	Tags         map[string]string `yaml:"tags"`
+	Auth         EKSAuth           `yaml:"auth"`
+}
+
+// EKSAuth represent a auth structure
+type EKSAuth struct {
+	AdditionalAccounts []string      `yaml:"additionalAccounts"`
+	Users              []EKSAuthData `yaml:"users"`
+	Roles              []EKSAuthData `yaml:"roles"`
+}
+
+// EKSAuthData represent a auth structure
+type EKSAuthData struct {
+	Username string   `yaml:"username"`
+	Groups   []string `yaml:"groups"`
+	UserARN  string   `yaml:"userarn,omitempty"`
+	RoleARN  string   `yaml:"rolearn,omitempty"`
 }
 
 // EKSNodePool represent a node pool configuration
@@ -26,5 +42,6 @@ type EKSNodePool struct {
 	VolumeSize   int               `yaml:"volumeSize"`
 	Labels       map[string]string `yaml:"labels"`
 	Taints       []string          `yaml:"taints"`
+	SubNetworks  []string          `yaml:"subnetworks"`
 	Tags         map[string]string `yaml:"tags"`
 }
