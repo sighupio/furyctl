@@ -44,6 +44,7 @@ variable "node_pools" {
     instance_type = string
     max_pods      = number # null to use default upstream configuration
     volume_size   = number
+    subnetworks   = list(string) # null to use default upstream configuration
     labels        = map(string)
     taints        = list(string)
     tags          = map(string)
@@ -61,4 +62,56 @@ variable "resource_group_name" {
   type        = string
   description = "Resource group name where every resource will be placed. Required only in AKS installer (*)"
   default     = ""
+}
+
+variable "eks_map_accounts" {
+  description = "Additional AWS account numbers to add to the aws-auth configmap"
+  type        = list(string)
+
+  # example = [
+  #   "777777777777",
+  #   "888888888888",
+  # ]
+  default = []
+}
+
+variable "eks_map_roles" {
+  description = "Additional IAM roles to add to the aws-auth configmap"
+  type = list(object({
+    rolearn  = string
+    username = string
+    groups   = list(string)
+  }))
+
+  # example = [
+  #   {
+  #     rolearn  = "arn:aws:iam::66666666666:role/role1"
+  #     username = "role1"
+  #     groups   = ["system:masters"]
+  #   },
+  # ]
+  default = []
+}
+
+variable "eks_map_users" {
+  description = "Additional IAM users to add to the aws-auth configmap"
+  type = list(object({
+    userarn  = string
+    username = string
+    groups   = list(string)
+  }))
+
+  # example = [
+  #   {
+  #     userarn  = "arn:aws:iam::66666666666:user/user1"
+  #     username = "user1"
+  #     groups   = ["system:masters"]
+  #   },
+  #   {
+  #     userarn  = "arn:aws:iam::66666666666:user/user2"
+  #     username = "user2"
+  #     groups   = ["system:masters"]
+  #   },
+  # ]
+  default = []
 }
