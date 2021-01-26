@@ -46,7 +46,7 @@ var initCmd = &cobra.Command{
 }
 
 func downloadFile(url string, outputFileName string) error {
-	err := get(url, outputFileName, getter.ClientModeFile,false)
+	err := get(url, outputFileName, getter.ClientModeFile, false)
 	if err != nil {
 		logrus.Print(err)
 	}
