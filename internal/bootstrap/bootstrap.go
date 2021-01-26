@@ -159,7 +159,7 @@ Terraform logs: %v/logs/terraform.logs
 
 Everything ready to create the infrastructure; execute:
 
-$ furyctl bootstrap update
+$ furyctl bootstrap apply
 
 `, prov.InitMessage(), c.project.Path, c.project.Path)
 }
@@ -169,16 +169,16 @@ func (c *Bootstrap) postUpdate() {
 	prov := *c.provisioner
 	fmt.Printf(`%v
 [FURYCTL]
-Update phase completed.
+Apply phase completed.
 
 Project directory: %v
 Terraform logs: %v/logs/terraform.logs
 Output file: %v/output/output.json
 
 Everything is up to date.
-Ready to update or destroy the infrastructure; execute:
+Ready to apply or destroy the infrastructure; execute:
 
-$ furyctl bootstrap update
+$ furyctl bootstrap apply
 or
 $ furyctl bootstrap destroy
 
@@ -188,15 +188,15 @@ $ furyctl bootstrap destroy
 func (c *Bootstrap) postPlan() {
 	proj := *c.project
 	fmt.Printf(`[FURYCTL]
-Update (dryrun) phase completed.
+Apply (dryrun) phase completed.
 Discover the upcoming changes in the terraform log file.
 
 Project directory: %v
 Terraform logs: %v/logs/terraform.logs
 
-Ready to update or destroy the infrastructure; execute:
+Ready to apply or destroy the infrastructure; execute:
 
-$ furyctl bootstrap update
+$ furyctl bootstrap apply
 or
 $ furyctl bootstrap destroy
 
