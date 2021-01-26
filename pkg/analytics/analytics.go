@@ -19,10 +19,10 @@ const (
 	mixpanelToken = "07964a709c19657ded1d402e5f5469b2"
 
 	bootstrapInitEvent    = "BootstrapInit"
-	bootstrapUpdateEvent  = "BootstrapUpdate"
+	bootstrapApplyEvent   = "BootstrapApply"
 	bootstrapDestroyEvent = "BootstrapDestroy"
 	clusterInitEvent      = "ClusterInit"
-	clusterUpdateEvent    = "ClusterUpdate"
+	clusterApplyEvent     = "ClusterApply"
 	clusterDestroyEvent   = "ClusterDestroy"
 )
 
@@ -119,14 +119,14 @@ func TrackBootstrapInit(token string, success bool, provisioner string) {
 	track(bootstrapInitEvent, success, token, props)
 }
 
-// TrackBootstrapUpdate sends a tracking event to mixpanel when the user uses the bootstrap update command
-func TrackBootstrapUpdate(token string, success bool, provisioner string, dryRun bool) {
+// TrackBootstrapApply sends a tracking event to mixpanel when the user uses the bootstrap update command
+func TrackBootstrapApply(token string, success bool, provisioner string, dryRun bool) {
 	props := map[string]interface{}{
 		"provisioner": provisioner,
 		"dryRun":      dryRun,
 		"githubToken": token,
 	}
-	track(bootstrapUpdateEvent, success, token, props)
+	track(bootstrapApplyEvent, success, token, props)
 }
 
 // TrackBootstrapDestroy sends a tracking event to mixpanel when the user uses the bootstrap destroy command
@@ -147,14 +147,14 @@ func TrackClusterInit(token string, success bool, provisioner string) {
 	track(clusterInitEvent, success, token, props)
 }
 
-// TrackClusterUpdate sends a tracking event to mixpanel when the user uses the cluster update command
-func TrackClusterUpdate(token string, success bool, provisioner string, dryRun bool) {
+// TrackClusterApply sends a tracking event to mixpanel when the user uses the cluster update command
+func TrackClusterApply(token string, success bool, provisioner string, dryRun bool) {
 	props := map[string]interface{}{
 		"provisioner": provisioner,
 		"dryRun":      dryRun,
 		"githubToken": token,
 	}
-	track(clusterUpdateEvent, success, token, props)
+	track(clusterApplyEvent, success, token, props)
 }
 
 // TrackClusterDestroy sends a tracking event to mixpanel when the user uses the cluster destroy command
