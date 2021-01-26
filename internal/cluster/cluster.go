@@ -159,7 +159,7 @@ Terraform logs: %v/logs/terraform.logs
 
 Everything ready to create the infrastructure; execute:
 
-$ furyctl cluster update
+$ furyctl cluster apply
 
 `, prov.InitMessage(), c.project.Path, c.project.Path)
 }
@@ -169,7 +169,7 @@ func (c *Cluster) postUpdate() {
 	prov := *c.provisioner
 	fmt.Printf(`%v
 [FURYCTL]
-Update phase completed. The Kubernetes Cluster is up to date.
+Apply phase completed. The Kubernetes Cluster is up to date.
 
 Project directory: %v
 Terraform logs: %v/logs/terraform.logs
@@ -181,9 +181,9 @@ $ export KUBECONFIG=%v/secrets/kubeconfig
 $ kubectl get nodes
 
 Everything is up to date.
-Ready to update or destroy the infrastructure; execute:
+Ready to apply or destroy the infrastructure; execute:
 
-$ furyctl cluster update
+$ furyctl cluster apply
 or
 $ furyctl cluster destroy
 
@@ -199,9 +199,9 @@ Discover the upcoming changes in the terraform log file.
 Project directory: %v
 Terraform logs: %v/logs/terraform.logs
 
-Ready to update or destroy the infrastructure; execute:
+Ready to apply or destroy the infrastructure; execute:
 
-$ furyctl cluster update
+$ furyctl cluster apply
 or
 $ furyctl cluster destroy
 
