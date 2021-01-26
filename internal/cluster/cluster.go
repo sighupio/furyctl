@@ -22,7 +22,7 @@ import (
 const initExecutorMessage = " Initializing the terraform executor"
 
 // List of default subdirectories needed to run any provisioner.
-var clusterProjectDefaultSubDirs = []string{"logs", "configuration", "output", "credentials", "bin"}
+var clusterProjectDefaultSubDirs = []string{"logs", "configuration", "output", "bin", "secrets"}
 
 // Cluster Represents the possible actions that can be made via CLI after some simple validations
 type Cluster struct {
@@ -103,6 +103,13 @@ func (c *Cluster) Init(reset bool) (err error) {
 		return err
 	}
 
+	// .gitignore and .gitattributes
+	err = c.createGitFiles()
+	if err != nil {
+		log.Errorf("error while initializing project git files: %v", err)
+		return err
+	}
+
 	// terraform executor
 	c.s.Stop()
 	c.s.Suffix = initExecutorMessage
@@ -167,10 +174,10 @@ Update phase completed. The Kubernetes Cluster is up to date.
 Project directory: %v
 Terraform logs: %v/logs/terraform.logs
 Output file: %v/output/output.json
-Kubernetes configuration file: %v/credentials/kubeconfig
+Kubernetes configuration file: %v/secrets/kubeconfig
 
 Use it by running:
-$ export KUBECONFIG=%v/credentials/kubeconfig
+$ export KUBECONFIG=%v/secrets/kubeconfig
 $ kubectl get nodes
 
 Everything is up to date.
@@ -223,6 +230,13 @@ func (c *Cluster) Update(dryrun bool) (err error) {
 	err = c.project.CreateSubDirs(clusterProjectDefaultSubDirs)
 	if err != nil {
 		log.Warnf("error while initializing project subdirectories: %v", err)
+	}
+
+	// .gitignore and .gitattributes
+	err = c.createGitFiles()
+	if err != nil {
+		log.Errorf("error while initializing project git files: %v", err)
+		return err
 	}
 
 	c.s.Stop()
@@ -293,7 +307,7 @@ func (c *Cluster) Update(dryrun bool) (err error) {
 			return err
 		}
 
-		err = proj.WriteFile("credentials/kubeconfig", kc)
+		err = proj.WriteFile("secrets/kubeconfig", kc)
 		if err != nil {
 			log.Errorf("Error while writting the kubeconfig to the project directory: %v", err)
 			return err
@@ -326,6 +340,13 @@ func (c *Cluster) Destroy() (err error) {
 	err = c.project.CreateSubDirs(clusterProjectDefaultSubDirs)
 	if err != nil {
 		log.Warnf("error while initializing project subdirectories: %v", err)
+	}
+
+	// .gitignore and .gitattributes
+	err = c.createGitFiles()
+	if err != nil {
+		log.Errorf("error while initializing project git files: %v", err)
+		return err
 	}
 
 	c.s.Stop()
@@ -436,4 +457,35 @@ func (c *Cluster) kubeconfig() ([]byte, error) {
 		return nil, err
 	}
 	return []byte(creds), nil
+}
+
+func (c *Cluster) createGitFiles() error {
+
+	c.s.Stop()
+	c.s.Suffix = " Creating .gitattributes file"
+	c.s.Start()
+	gitattributes := `*secrets/** filter=git-crypt diff=git-crypt
+*output/** filter=git-crypt diff=git-crypt
+*logs/** filter=git-crypt diff=git-crypt
+*configuration/** filter=git-crypt diff=git-crypt
+`
+	err := c.project.WriteFile(".gitattributes", []byte(gitattributes))
+	if err != nil {
+		log.Errorf("error while creating .gitattributes: %v", err)
+		return err
+	}
+
+	c.s.Stop()
+	c.s.Suffix = " Creating .gitignore file"
+	c.s.Start()
+	gitignore := `.terraform
+bin
+`
+	err = c.project.WriteFile(".gitignore", []byte(gitignore))
+	if err != nil {
+		log.Errorf("error while creating .gitignore: %v", err)
+		return err
+	}
+
+	return nil
 }

@@ -22,7 +22,7 @@ import (
 const initExecutorMessage = " Initializing the terraform executor"
 
 // List of default subdirectories needed to run any provisioner.
-var bootstrapProjectDefaultSubDirs = []string{"logs", "configuration", "output", "bin"}
+var bootstrapProjectDefaultSubDirs = []string{"logs", "configuration", "output", "bin", "secrets"}
 
 // Bootstrap Represents the possible actions that can be made via CLI after some simple validations
 type Bootstrap struct {
@@ -100,6 +100,13 @@ func (c *Bootstrap) Init(reset bool) (err error) {
 	err = c.project.CreateSubDirs(bootstrapProjectDefaultSubDirs)
 	if err != nil {
 		log.Errorf("error while initializing project subdirectories: %v", err)
+		return err
+	}
+
+	// .gitignore and .gitattributes
+	err = c.createGitFiles()
+	if err != nil {
+		log.Errorf("error while initializing project git files: %v", err)
 		return err
 	}
 
@@ -220,6 +227,13 @@ func (c *Bootstrap) Update(dryrun bool) (err error) {
 		log.Warnf("error while updating project subdirectories: %v", err)
 	}
 
+	// .gitignore and .gitattributes
+	err = c.createGitFiles()
+	if err != nil {
+		log.Errorf("error while initializing project git files: %v", err)
+		return err
+	}
+
 	c.s.Stop()
 	c.s.Suffix = initExecutorMessage
 	c.s.Start()
@@ -303,6 +317,13 @@ func (c *Bootstrap) Destroy() (err error) {
 	err = c.project.CreateSubDirs(bootstrapProjectDefaultSubDirs)
 	if err != nil {
 		log.Warnf("error while updating project subdirectories: %v", err)
+	}
+
+	// .gitignore and .gitattributes
+	err = c.createGitFiles()
+	if err != nil {
+		log.Errorf("error while initializing project git files: %v", err)
+		return err
 	}
 
 	c.s.Stop()
@@ -395,4 +416,35 @@ func (c *Bootstrap) output() ([]byte, error) {
 		return nil, err
 	}
 	return json.MarshalIndent(output, "", "    ")
+}
+
+func (c *Bootstrap) createGitFiles() error {
+
+	c.s.Stop()
+	c.s.Suffix = " Creating .gitattributes file"
+	c.s.Start()
+	gitattributes := `*secrets/** filter=git-crypt diff=git-crypt
+*output/** filter=git-crypt diff=git-crypt
+*logs/** filter=git-crypt diff=git-crypt
+*configuration/** filter=git-crypt diff=git-crypt
+`
+	err := c.project.WriteFile(".gitattributes", []byte(gitattributes))
+	if err != nil {
+		log.Errorf("error while creating .gitattributes: %v", err)
+		return err
+	}
+
+	c.s.Stop()
+	c.s.Suffix = " Creating .gitignore file"
+	c.s.Start()
+	gitignore := `.terraform
+bin
+`
+	err = c.project.WriteFile(".gitignore", []byte(gitignore))
+	if err != nil {
+		log.Errorf("error while creating .gitignore: %v", err)
+		return err
+	}
+
+	return nil
 }
