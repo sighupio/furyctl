@@ -138,22 +138,22 @@ var (
 			return nil
 		},
 	}
-	bootstrapUpdateCmd = &cobra.Command{
-		Use:     "update",
+	bootstrapApplyCmd = &cobra.Command{
+		Use:     "apply",
 		Short:   "Applies changes to the project. Running for the first time creates everything. Upcoming executions only applies changes.",
 		PreRunE: bPre,
 		RunE: func(cmd *cobra.Command, args []string) (err error) {
 			err = prj.Check()
 			if err != nil {
-				return fmt.Errorf("the project %v has to be created. Execute bootstrap init before bootstrap update. %v", bWorkingDir, err)
+				return fmt.Errorf("the project %v has to be created. Execute bootstrap init before bootstrap apply. %v", bWorkingDir, err)
 			}
 
 			err = boot.Update(bDryRun)
 			if err != nil {
-				analytics.TrackBootstrapUpdate(bGitHubToken, false, cfg.Provisioner, bDryRun)
+				analytics.TrackBootstrapApply(bGitHubToken, false, cfg.Provisioner, bDryRun)
 				return err
 			}
-			analytics.TrackBootstrapUpdate(bGitHubToken, true, cfg.Provisioner, bDryRun)
+			analytics.TrackBootstrapApply(bGitHubToken, true, cfg.Provisioner, bDryRun)
 			return nil
 		},
 	}
@@ -179,18 +179,18 @@ var (
 )
 
 func init() {
-	bootstrapUpdateCmd.PersistentFlags().BoolVar(&bDryRun, "dry-run", false, "Dry run execution")
+	bootstrapApplyCmd.PersistentFlags().BoolVar(&bDryRun, "dry-run", false, "Dry run execution")
 
 	bootstrapInitCmd.PersistentFlags().StringVarP(&bConfigFilePath, "config", "c", "bootstrap.yml", "Bootstrap configuration file path")
-	bootstrapUpdateCmd.PersistentFlags().StringVarP(&bConfigFilePath, "config", "c", "bootstrap.yml", "Bootstrap configuration file path")
+	bootstrapApplyCmd.PersistentFlags().StringVarP(&bConfigFilePath, "config", "c", "bootstrap.yml", "Bootstrap configuration file path")
 	bootstrapDestroyCmd.PersistentFlags().StringVarP(&bConfigFilePath, "config", "c", "bootstrap.yml", "Bootstrap configuration file path")
 
 	bootstrapInitCmd.PersistentFlags().StringVarP(&bWorkingDir, "workdir", "w", "./bootstrap", "Working directory to create and place all project files. Must not exists.")
-	bootstrapUpdateCmd.PersistentFlags().StringVarP(&bWorkingDir, "workdir", "w", "./bootstrap", "Working directory with all project files")
+	bootstrapApplyCmd.PersistentFlags().StringVarP(&bWorkingDir, "workdir", "w", "./bootstrap", "Working directory with all project files")
 	bootstrapDestroyCmd.PersistentFlags().StringVarP(&bWorkingDir, "workdir", "w", "./bootstrap", "Working directory with all project files")
 
 	bootstrapInitCmd.PersistentFlags().StringVarP(&bGitHubToken, "token", "t", "", "GitHub token to access enterprise repositories. Contact sales@sighup.io")
-	bootstrapUpdateCmd.PersistentFlags().StringVarP(&bGitHubToken, "token", "t", "", "GitHub token to access enterprise repositories. Contact sales@sighup.io")
+	bootstrapApplyCmd.PersistentFlags().StringVarP(&bGitHubToken, "token", "t", "", "GitHub token to access enterprise repositories. Contact sales@sighup.io")
 	bootstrapDestroyCmd.PersistentFlags().StringVarP(&bGitHubToken, "token", "t", "", "GitHub token to access enterprise repositories. Contact sales@sighup.io")
 
 	bootstrapInitCmd.PersistentFlags().BoolVar(&bReset, "reset", false, "Forces the re-initialization of the project. It deletes the content of the workdir recreating everything")
@@ -198,7 +198,7 @@ func init() {
 	bootstrapTemplateCmd.PersistentFlags().StringVar(&bTemplateProvisioner, "provisioner", "", "Bootstrap provisioner")
 
 	bootstrapCmd.AddCommand(bootstrapInitCmd)
-	bootstrapCmd.AddCommand(bootstrapUpdateCmd)
+	bootstrapCmd.AddCommand(bootstrapApplyCmd)
 	bootstrapCmd.AddCommand(bootstrapDestroyCmd)
 	bootstrapCmd.AddCommand(bootstrapTemplateCmd)
 	rootCmd.AddCommand(bootstrapCmd)
