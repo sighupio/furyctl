@@ -4,8 +4,24 @@
  * license that can be found in the LICENSE file.
  */
 
+provider "local" {
+  version = "= 2.0.0"
+}
+
+provider "null" {
+  version = "= 3.0.0"
+}
+
+provider "aws" {
+  version = "= 3.19.0"
+}
+
+provider "external" {
+  version = "= 2.0.0"
+}
+
 module "vpc-and-vpn" {
-  source = "https://github.com/sighupio/furyctl-provisioners/archive/v0.1.8.zip//furyctl-provisioners-0.1.8/modules/bootstrap/aws/vpc-and-vpn"
+  source = "https://github.com/sighupio/furyctl-provisioners/archive/v0.1.9.zip//furyctl-provisioners-0.1.9/modules/bootstrap/aws/vpc-and-vpn"
 
   name                     = var.name
   network_cidr             = var.network_cidr
