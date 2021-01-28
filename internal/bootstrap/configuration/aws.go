@@ -15,6 +15,7 @@ type AWS struct {
 
 // AWSVPN represents an VPN configuration
 type AWSVPN struct {
+	Instances     int      `yaml:"instances"`
 	Port          int      `yaml:"port"`
 	InstanceType  string   `yaml:"instanceType"`
 	DiskSize      int      `yaml:"diskSize"`
