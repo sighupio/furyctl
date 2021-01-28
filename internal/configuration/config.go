@@ -114,7 +114,11 @@ func bootstrapParser(config *Configuration) (err error) {
 	}
 	switch {
 	case provisioner == "aws":
-		awsSpec := bootstrapcfg.AWS{}
+		awsSpec := bootstrapcfg.AWS{
+			VPN: bootstrapcfg.AWSVPN{
+				Instances: 1,
+			},
+		}
 		err = yaml.Unmarshal(specBytes, &awsSpec)
 		if err != nil {
 			log.Errorf("error parsing configuration file: %v", err)

@@ -35,6 +35,12 @@ variable "vpn_subnetwork_cidr" {
   type        = string
 }
 
+variable "vpn_instances" {
+  description = "VPN Servers"
+  type        = number
+  default     = 1
+}
+
 variable "vpn_port" {
   description = "VPN Server Port"
   type        = number

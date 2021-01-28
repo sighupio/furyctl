@@ -11,7 +11,7 @@ output "furyagent" {
 }
 
 output "vpn_ip" {
-  description = "VPN instance IP"
+  description = "VPN instance IPs"
   value       = module.vpc-and-vpn.vpn_ip
 }
 
