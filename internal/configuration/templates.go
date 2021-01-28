@@ -69,6 +69,7 @@ func bootstrapTemplate(config *Configuration) error {
 			PublicSubnetsCIDRs:  []string{"Required", "10.0.10.0/24", "10.0.10.0/24", "10.0.10.0/24"},
 			PrivateSubnetsCIDRs: []string{"Required", "10.0.192.0/24", "10.0.192.0/24", "10.0.192.0/24"},
 			VPN: bootstrapcfg.AWSVPN{
+				Instances:     2,
 				Port:          1194,
 				InstanceType:  "t3.micro # This is the default value. Specify any AWS EC2 instance type",
 				DiskSize:      50,

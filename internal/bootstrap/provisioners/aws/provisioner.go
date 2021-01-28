@@ -43,9 +43,9 @@ func (d *AWS) UpdateMessage() string {
 	}
 	spec := d.config.Spec.(cfg.AWS)
 	sshUsers := spec.VPN.SSHUsers
-	var vpnInstanceIP, vpnOperatorName, vpcID string
-	var publicSubnetsIDs, privateSubnetsIDs []string
-	err = json.Unmarshal(output["vpn_ip"].Value, &vpnInstanceIP)
+	var vpnOperatorName, vpcID string
+	var vpnInstanceIPs, publicSubnetsIDs, privateSubnetsIDs []string
+	err = json.Unmarshal(output["vpn_ip"].Value, &vpnInstanceIPs)
 	if err != nil {
 		log.Error("Can not get `vpn_ip` value")
 	}
@@ -66,6 +66,20 @@ func (d *AWS) UpdateMessage() string {
 		log.Error("Can not get `private_subnets` value")
 	}
 
+	vpnFragment := ""
+	if len(vpnInstanceIPs) > 0 {
+		vpnSSHFragment := ""
+		for _, server := range vpnInstanceIPs {
+			vpnSSHFragment = vpnSSHFragment + fmt.Sprintf("$ ssh %v@%v\n", vpnOperatorName, server)
+		}
+		vpnFragment = fmt.Sprintf(`
+Your VPN instance IPs are: %v
+Use the ssh %v username to access the VPN instance with any SSH key configured
+for the following GitHub users: %v.
+
+%v`, vpnInstanceIPs, vpnOperatorName, sshUsers, vpnSSHFragment)
+	}
+
 	return fmt.Sprintf(`[AWS] - VPC and VPN
 
 All the bootstrap components are up to date.
@@ -75,13 +89,7 @@ VPC and VPN ready:
 VPC: %v
 Public Subnets: %v
 Private Subnets: %v
-
-Your VPN instance IP is: %v
-Use the ssh %v username to access the VPN instance with any SSH key configured
-for the following GitHub users: %v.
-
-$ ssh %v@%v
-
+%v
 Then create a openvpn configuration (ovpn) file using the furyagent cli:
 
 $ furyagent configure openvpn-client --client-name <your-name-goes-here> --config %v/secrets/furyagent.yml > <your-name-goes-here>.ovpn
@@ -92,7 +100,7 @@ $ furyagent configure openvpn-client --list --config %v/secrets/furyagent.yml
 
 IMPORTANT! Connect to the VPN with the created ovpn profile to continue deploying
 an AWS Kubernetes cluster.
-`, vpcID, publicSubnetsIDs, privateSubnetsIDs, vpnInstanceIP, vpnOperatorName, sshUsers, vpnOperatorName, vpnInstanceIP, d.terraform.WorkingDir(), d.terraform.WorkingDir())
+`, vpcID, publicSubnetsIDs, privateSubnetsIDs, vpnFragment, d.terraform.WorkingDir(), d.terraform.WorkingDir())
 }
 
 // DestroyMessage return a custom provisioner message the user will see once the cluster is destroyed
@@ -138,6 +146,7 @@ func (d AWS) createVarFile() (err error) {
 		}
 		buffer.WriteString(fmt.Sprintf("tags = %v\n", string(tags)))
 	}
+	buffer.WriteString(fmt.Sprintf("vpn_instances = %v\n", spec.VPN.Instances))
 	if spec.VPN.Port != 0 {
 		buffer.WriteString(fmt.Sprintf("vpn_port = %v\n", spec.VPN.Port))
 	}
