@@ -84,11 +84,11 @@ $ ssh %v@%v
 
 Then create a openvpn configuration (ovpn) file using the furyagent cli:
 
-$ furyagent configure openvpn-client --client-name <your-name-goes-here> --config %v/furyagent.yml > <your-name-goes-here>.ovpn
+$ furyagent configure openvpn-client --client-name <your-name-goes-here> --config %v/secrets/furyagent.yml > <your-name-goes-here>.ovpn
 
 Discover already registered vpn clients running:
 
-$ furyagent configure openvpn-client --list --config %v/furyagent.yml
+$ furyagent configure openvpn-client --list --config %v/secrets/furyagent.yml
 
 IMPORTANT! Connect to the VPN with the created ovpn profile to continue deploying
 an AWS Kubernetes cluster.
