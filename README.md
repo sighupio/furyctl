@@ -3,8 +3,8 @@
 Furyctl is the package manager for Fury distribution. It’s simple to use and reads a single Furyfile to download
 packages you need. Fury distribution offers three types of packages:
 
-- **Bases** : Sets of Kustomize bases to deploy basic components in Kubernetes
-- **Modules**: Terraform modules to deploy Kubernetes infrastructure and it’s dependencies
+- **Bases** : Sets of Kustomize bases to deploy necessary components in Kubernetes
+- **Modules**: Terraform modules to deploy Kubernetes infrastructure, and it’s dependencies
 - **Roles**: Ansible roles for deploying, configuring, and managing a Kubernetes infrastructure
 
 In addition to the package manager feature, it enables you to self-provision Fury Clusters.
@@ -78,7 +78,7 @@ brew install furyctl
 ```bash
 $ furyctl --help
 
-A command line tool to manage cluster deployment with kubernetes
+A command line tool to manage cluster deployment with Kubernetes
 
 Usage:
   furyctl [command]
@@ -134,14 +134,15 @@ INFO[0000] Furyctl version 0.2.3
 
 The self-provisioning feature is available with two commands:
 
-- `furyctl bootstrap`: Use it to create the required infrastructure in where to place the cluster. Skip it if you
+- `furyctl bootstrap`: Use it to create the required infrastructure to place the cluster. Skip it if you
 already managed to have passed all the cluster requirements.
 - `furyctl cluster`: Deploys a Fury cluster.
 
 Both commands provide the following subcommands:
 
+- `furyctl {bootstrap,cluster} template --provisioner {provisioner_name}`: Creates a `yml` configuration file with some default options making easy replacing these with the right values.
 - `furyctl {bootstrap,cluster} init`: Initializes the project that deploys the infrastructure.
-- `furyctl {bootstrap,cluster} update`: Actually creates or updates the infrastructure.
+- `furyctl {bootstrap,cluster} apply`: Actually creates or updates the infrastructure.
 - `furyctl {bootstrap,cluster} destroy`: Destroys the infrastructure.
 
 All these three subcommands accept the following options:
@@ -152,7 +153,7 @@ All these three subcommands accept the following options:
 -w, --workdir string:  Working directory with all project files
 ```
 
-update subcommand also implements the following option:
+`apply` subcommand also implements the following option:
 
 ```bash
 --dry-run: Dry run execution
@@ -166,9 +167,9 @@ Use the `Furyfile.yml` file while using package-manager features.
 ```yaml
 kind: # Cluster or Bootstrap
 metadata:
-  name: # Name of the deployment. Can be used by the provisioners as unique identifier.
+  name: # Name of the deployment. It can be used by the provisioners as a unique identifier.
 executor: # This is an optional attribute. It defines the terraform executor to use along with the backend configuration
-  version: # Optional attribute. Terraform version to use. Default is latests
+  version: # Optional attribute. Terraform version to use. Default is latest
   state: # Optional attribute. It configures the backend configuration file.
     backend: # Optional attribute. It configures the backend to use. Default to local
     config: # Optional attribute. It configures the configuration of the selected backend configuration. It accepts multiple key values.
@@ -186,11 +187,11 @@ The bootstrap command will create the underlay requirements to deploy a Kubernet
 components are network-related stuff.
 
 Once the bootstrap process is up to date, the cluster command can be triggered using outputs from the
-`bootstrap update` command.
+`bootstrap apply` command.
 
 ```bash
 +--------------------------+   +--------------------------+   +--------------------------+   +--------------------------+
-| furyctl bootstrap init   +-->+ furyctl bootstrap update +-->+ furyctl cluster init     +-->+ furyctl cluster update   |
+| furyctl bootstrap init   +-->+ furyctl bootstrap apply  +-->+ furyctl cluster init     +-->+ furyctl cluster apply   |
 +--------------------------+   +--------------------------+   +--------------------------+   +--------------------------+
 ```
 
@@ -200,7 +201,7 @@ The following workflow describes a setup of a cluster using an already existing 
 
 ```bash
 +--------------------------+   +--------------------------+
-+ furyctl cluster init     +-->+ furyctl cluster update   |
++ furyctl cluster init     +-->+ furyctl cluster apply    |
 +--------------------------+   +--------------------------+
 ```
 
@@ -211,9 +212,11 @@ These provisioners are terraform projects integrated with the `furyctl` binary. 
 the cluster EKS provisioner) or enterprise only (like the bootstrap AWS, contact sales@sighup.io)
 
 To use an **enterprise** provisioner, you need to specify a token in the
-`furyctl {bootstrap,cluster} {init,update,destroy} --token YOUR_TOKEN` commands.
+`furyctl {bootstrap,cluster} {init,apply,destroy} --token YOUR_TOKEN` commands.
 
-Contact sales@sighup.io to get more details about this feature.
+> You can use an environment variable to avoid passing the token via console: `FURYCTL_TOKEN`.
+
+Contact [sales@sighup.io](mailto:sales@sighup.io) to get more details about this feature.
 
 ##### Bootstrap
 
