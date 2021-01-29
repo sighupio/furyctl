@@ -31,6 +31,8 @@ The main differences between bootstrap and cluster provisioners:
 - The `configuration struct` goes
   - bootstrap at: `internal/bootstrap/configuration/{provisioner-name}.go`.
   - cluster: `internal/cluster/configuration/{provisioner-name}.go`.
+- The `templated configuration` goes:
+  - `internal/configuration/templates.go`. Create the desired configuration file to let the `furyctl` output it as `yml`
 - The `provisioner implementation` goes
   - **bootstrap** at `internal/bootstrap/provisioners/{provisioner-name}/provisioner.go`
   - **cluster** at `internal/cluster/provisioners/{provisioner-name}/provisioner.go`
