@@ -66,8 +66,8 @@ func bootstrapTemplate(config *Configuration) error {
 	case config.Provisioner == "aws":
 		spec := bootstrapcfg.AWS{
 			NetworkCIDR:         "10.0.0.0/16 # Required. Specific VPC Network CIDR to create",
-			PublicSubnetsCIDRs:  []string{"Required", "10.0.10.0/24", "10.0.10.0/24", "10.0.10.0/24"},
-			PrivateSubnetsCIDRs: []string{"Required", "10.0.192.0/24", "10.0.192.0/24", "10.0.192.0/24"},
+			PublicSubnetsCIDRs:  []string{"Required", "10.0.10.0/24", "10.0.20.0/24", "10.0.30.0/24"},
+			PrivateSubnetsCIDRs: []string{"Required", "10.0.192.0/24", "10.0.182.0/24", "10.0.172.0/24"},
 			VPN: bootstrapcfg.AWSVPN{
 				Instances:     2,
 				Port:          1194,
