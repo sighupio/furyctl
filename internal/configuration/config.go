@@ -126,6 +126,19 @@ func bootstrapParser(config *Configuration) (err error) {
 		}
 		config.Spec = awsSpec
 		return nil
+	case provisioner == "gcp":
+		gcpSpec := bootstrapcfg.GCP{
+			VPN: bootstrapcfg.GCPVPN{
+				Instances: 1,
+			},
+		}
+		err = yaml.Unmarshal(specBytes, &gcpSpec)
+		if err != nil {
+			log.Errorf("error parsing configuration file: %v", err)
+			return err
+		}
+		config.Spec = gcpSpec
+		return nil
 	default:
 		log.Error("Error parsing the configuration file. Provisioner not found")
 		return errors.New("Bootstrap provisioner not found")
