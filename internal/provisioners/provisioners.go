@@ -11,6 +11,7 @@ import (
 	"github.com/gobuffalo/packr/v2"
 	"github.com/hashicorp/terraform-exec/tfexec"
 	"github.com/sighupio/furyctl/internal/bootstrap/provisioners/aws"
+	"github.com/sighupio/furyctl/internal/bootstrap/provisioners/gcp"
 	"github.com/sighupio/furyctl/internal/cluster/provisioners/eks"
 	"github.com/sighupio/furyctl/internal/configuration"
 	log "github.com/sirupsen/logrus"
@@ -61,6 +62,8 @@ func getBootstrapProvisioner(config configuration.Configuration) (Provisioner, e
 	switch {
 	case config.Provisioner == "aws":
 		return aws.New(&config), nil
+	case config.Provisioner == "gcp":
+		return gcp.New(&config), nil // TODO add the GCP provisioner
 	default:
 		log.Error("Provisioner not found")
 		return nil, errors.New("Provisioner not found")
