@@ -98,6 +98,21 @@ func clusterParser(config *Configuration) (err error) {
 		}
 		config.Spec = eksSpec
 		return nil
+	case provisioner == "gke":
+		gkeSpec := clustercfg.GKE{
+			NetworkProjectID:               "",
+			ControlPlaneCIDR:               "10.0.0.0/28",
+			AdditionalFirewallRules:        true,
+			AdditionalClusterFirewallRules: false,
+			DisalbeDefaultSNAT:             false,
+		}
+		err = yaml.Unmarshal(specBytes, &gkeSpec)
+		if err != nil {
+			log.Errorf("error parsing configuration file: %v", err)
+			return err
+		}
+		config.Spec = gkeSpec
+		return nil
 	default:
 		log.Error("Error parsing the configuration file. Provisioner not found")
 		return errors.New("Cluster provisioner not found")
