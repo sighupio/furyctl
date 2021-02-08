@@ -180,6 +180,48 @@ func clusterTemplate(config *Configuration) error {
 			},
 		}
 		config.Spec = spec
+	case config.Provisioner == "gke":
+		spec := clustercfg.GKE{
+			Version:                        "1.18.12-gke.1206 # GKE Control plane version",
+			Network:                        "vpc-id1 # Identificator of the Network",
+			NetworkProjectID:               "12309123 # OPTIONAL. The project ID of the shared VPC's host (for shared vpc support)",
+			ControlPlaneCIDR:               "10.0.0.0/28 # OPTIONAL. DEFAULT VALUE. The IP range in CIDR notation to use for the hosted master network",
+			AdditionalFirewallRules:        true,
+			AdditionalClusterFirewallRules: false,
+			DisalbeDefaultSNAT:             false,
+			SubNetworks: []string{
+				"subnet-id0 # Identificator of the subnets. Index 0: Cluster Subnet",
+				"subnet-id1 # Identificator of the subnets. Index 1: Pod Subnet",
+				"subnet-id2 # Identificator of the subnets. Index 1: Service Subnet",
+			},
+
+			DMZCIDRRange: "10.0.0.0/8. Required. Network CIDR range from where cluster control plane will be accessible",
+			SSHPublicKey: "sha-rsa 190jd0132w. Required. Cluster administrator public ssh key. Used to access cluster nodes.",
+			Tags: map[string]string{
+				"myTag": "MyValue # Use this tags to annotate all resources. Optional",
+			},
+
+			NodePools: []clustercfg.GKENodePool{
+				{
+					Name:         "my-node-pool. Required. Name of the node pool",
+					Version:      "1.18.12-gke.1206. Required. null to use Control Plane version.",
+					MinSize:      1,
+					MaxSize:      1,
+					InstanceType: "n1-standard-1. Required. GCP instance types",
+					MaxPods:      110,
+					VolumeSize:   50,
+					SubNetworks:  []string{"subnet-1", "# availability zones (example: us-central1-a) where to place the nodes. Useful to don't create them on all zones"},
+					Labels: map[string]string{
+						"environment": "dev. # Node labels. Use it to tag nodes then use it on Kubernetes",
+					},
+					Taints: []string{"key1=value1:NoSchedule. As an example"},
+					Tags: map[string]string{
+						"myTag": "MyValue # Use this tags to annotate nodepool resources. Optional",
+					},
+				},
+			},
+		}
+		config.Spec = spec
 	default:
 		log.Errorf("Error creating a template configuration file. Parser not found for %v provisioner", config.Provisioner)
 		return fmt.Errorf("Error creating a template configuration file. Parser not found for %v provisioner", config.Provisioner)
