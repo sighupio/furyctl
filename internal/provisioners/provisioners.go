@@ -13,6 +13,7 @@ import (
 	"github.com/sighupio/furyctl/internal/bootstrap/provisioners/aws"
 	"github.com/sighupio/furyctl/internal/bootstrap/provisioners/gcp"
 	"github.com/sighupio/furyctl/internal/cluster/provisioners/eks"
+	"github.com/sighupio/furyctl/internal/cluster/provisioners/gke"
 	"github.com/sighupio/furyctl/internal/configuration"
 	log "github.com/sirupsen/logrus"
 )
@@ -53,6 +54,8 @@ func getClusterProvisioner(config configuration.Configuration) (Provisioner, err
 	switch {
 	case config.Provisioner == "eks":
 		return eks.New(&config), nil
+	case config.Provisioner == "gke":
+		return gke.New(&config), nil
 	default:
 		log.Error("Provisioner not found")
 		return nil, errors.New("Provisioner not found")
@@ -63,7 +66,7 @@ func getBootstrapProvisioner(config configuration.Configuration) (Provisioner, e
 	case config.Provisioner == "aws":
 		return aws.New(&config), nil
 	case config.Provisioner == "gcp":
-		return gcp.New(&config), nil // TODO add the GCP provisioner
+		return gcp.New(&config), nil
 	default:
 		log.Error("Provisioner not found")
 		return nil, errors.New("Provisioner not found")
