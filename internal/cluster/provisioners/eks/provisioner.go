@@ -196,7 +196,7 @@ func (e EKS) createVarFile() (err error) {
 			if len(np.SubNetworks) > 0 {
 				buffer.WriteString(fmt.Sprintf("subnetworks = [\"%v\"]\n", strings.Join(np.SubNetworks, "\",\"")))
 			} else {
-				buffer.WriteString("subnetworks = null\n")
+				buffer.WriteString("subnetworks = []\n")
 			}
 			if len(np.Labels) > 0 {
 				var labels []byte
