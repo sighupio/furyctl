@@ -224,6 +224,8 @@ The current list of available `bootstrap` provisioners are:
 
 - `aws` **(enterprise)**: It creates a VPC with all the requirements to deploy a Kubernetes Cluster. It also includes
 a VPN instance easily manageable by using `furyagent`.
+- `gcp` **(enterprise)**: It creates a Network with all the requirements to deploy a Kubernetes Cluster. It also
+includes a VPN instance easily manageable by using `furyagent`.
 
 ##### Clusters
 
@@ -231,6 +233,8 @@ The current list of available `cluster` provisioners are:
 
 - `eks`: It creates an EKS cluster on an already existing VPC. It uses the already existing
 [fury-eks-installer](https://github.com/sighupio/fury-eks-installer) terraform code.
+- `gke`: It creates an GKE cluster on an already existing Network. It uses the already existing
+[fury-gke-installer](https://github.com/sighupio/fury-gke-installer) terraform code.
 
 #### Additional details
 
