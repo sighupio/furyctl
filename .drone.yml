@@ -58,11 +58,22 @@ steps:
       - go get -u github.com/gobuffalo/packr/v2/packr2
       - git reset --hard
       - git fetch --tags
-      - goreleaser check
-      - goreleaser --debug build --skip-validate --rm-dist
+      - GO111MODULE=on goreleaser check
+      - GO111MODULE=on goreleaser --debug build --skip-validate --rm-dist
     when:
       event:
         - push
+
+  - name: integration
+    image: debian:latest
+    depends_on:
+      - build
+    commands:
+      - ./dist/furyctl-linux_linux_amd64/furyctl version
+    when:
+      event:
+        - push
+        - tags
 
   - name: build-release
     image: ghcr.io/goreleaser/goreleaser:v0.149.0
@@ -70,6 +81,7 @@ steps:
     depends_on:
       - lint
       - test
+      - integration
     environment:
       GITHUB_TOKEN:
         from_secret: GITHUB_TOKEN
@@ -77,8 +89,8 @@ steps:
       - go get -u github.com/gobuffalo/packr/v2/packr2
       - git reset --hard
       - git fetch --tags
-      - goreleaser check
-      - goreleaser --debug
+      - GO111MODULE=on goreleaser check
+      - GO111MODULE=on goreleaser --debug release
     when:
       event:
         - tag
