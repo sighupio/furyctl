@@ -39,7 +39,7 @@ test:
 ## clean: Removes temporal and build results
 clean: deps
 	@GO111MODULE=on packr2 clean
-	@rm -rf bin furyctl
+	@rm -rf bin furyctl dist
 	@go mod tidy
 
 .PHONY: build
