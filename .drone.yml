@@ -15,7 +15,7 @@ steps:
 
 ---
 kind: pipeline
-name: release
+name: Build Test and Release
 
 depends_on:
   - license
@@ -65,11 +65,12 @@ steps:
         - push
 
   - name: integration
-    image: debian:latest
+    image: quay.io/sighup/e2e-furyctl:v1.2.1_v0.2.2_v1.20.1_20.04
     depends_on:
       - build
     commands:
       - ./dist/furyctl-linux_linux_amd64/furyctl version
+      - bats -t ./automated-tests/integration/gcp-gke/tests.sh
     when:
       event:
         - push
