@@ -19,6 +19,11 @@ output "operator_ssh_user" {
   value       = module.fury.operator_ssh_user
 }
 
+output "eks_cluster_oidc_issuer_url" {
+  description = "The URL on the EKS cluster OIDC Issuer"
+  value       = module.fury.eks_cluster_oidc_issuer_url
+}
+
 output "kubeconfig" {
   sensitive = true
   value     = <<EOT
