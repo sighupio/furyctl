@@ -17,6 +17,9 @@ fi
         ./dist/furyctl-${OS}_${OS}_amd64/furyctl version
     }
     run init
+    if [[ $status -ne 0 ]]; then
+        echo "$output" >&3
+    fi
     [ "$status" -eq 0 ]
 }
 
@@ -26,6 +29,10 @@ fi
         ./dist/furyctl-${OS}_${OS}_amd64/furyctl -d --debug bootstrap init --config ./automated-tests/integration/gcp-gke/bootstrap.yml -w ./automated-tests/integration/gcp-gke/bootstrap --reset
     }
     run init
+
+    if [[ $status -ne 0 ]]; then
+        echo "$output" >&3
+    fi
     [ "$status" -eq 0 ]
 }
 
@@ -35,5 +42,8 @@ fi
         ./dist/furyctl-${OS}_${OS}_amd64/furyctl -d --debug cluster init --config ./automated-tests/integration/gcp-gke/cluster.yml -w ./automated-tests/integration/gcp-gke/cluster --reset
     }
     run init
+    if [[ $status -ne 0 ]]; then
+        echo "$output" >&3
+    fi
     [ "$status" -eq 0 ]
 }
