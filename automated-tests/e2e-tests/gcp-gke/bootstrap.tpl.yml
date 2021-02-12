@@ -1,0 +1,29 @@
+# Copyright (c) 2021 SIGHUP s.r.l All rights reserved.
+# Use of this source code is governed by a BSD-style
+# license that can be found in the LICENSE file.
+
+kind: Bootstrap
+metadata:
+  name: e2e-${CI_BUILD_NUMBER}
+spec:
+  publicSubnetsCIDRs:  
+    - 10.0.1.0/24
+  privateSubnetsCIDRs: 
+    - 10.0.101.0/24
+  clusterNetwork:
+    subnetworkCIDR: 10.1.0.0/16
+    podSubnetworkCIDR: 10.2.0.0/16
+    serviceSubnetworkCIDR: 10.3.0.0/16
+  vpn:
+    subnetCIDR: 192.168.200.0/24
+    sshUsers:
+      - jnardiello
+provisioner: gcp
+executor:
+  version: 0.13.6
+  state:
+    backend: s3
+    config:
+      bucket: ${TERRAFORM_TF_STATES_BUCKET_NAME}
+      key: ${CI_REPO}/${DRONE_BRANCH}/${CI_BUILD_NUMBER}/bootstrap/gcp.state
+      region: ${AWS_DEFAULT_REGION}
