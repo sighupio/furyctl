@@ -24,6 +24,10 @@ import (
 )
 
 func bPreDestroy(cmd *cobra.Command, args []string) (err error) {
+	if bForce {
+		log.Warn("Force destroy of the bootstrap project")
+		return bPre(cmd, args)
+	}
 	fmt.Println("\r  Are you sure you want to destroy it?\n  Write 'yes' to continue")
 	reader := bufio.NewReader(os.Stdin)
 	text, err := reader.ReadString('\n')
@@ -92,6 +96,7 @@ var (
 	bReset               bool
 	bReconfigure         bool
 	bDryRun              bool
+	bForce               bool
 
 	bootstrapCmd = &cobra.Command{
 		Use:   "bootstrap",
@@ -200,6 +205,8 @@ func init() {
 	bootstrapDestroyCmd.PersistentFlags().BoolVar(&bReconfigure, "reconfigure", false, "Reconfigure the backend, ignoring any saved configuration")
 
 	bootstrapInitCmd.PersistentFlags().BoolVar(&bReset, "reset", false, "Forces the re-initialization of the project. It deletes the content of the workdir recreating everything")
+
+	bootstrapDestroyCmd.PersistentFlags().BoolVar(&bForce, "force", false, "Forces the destroy of the project. Doesn't ask for confirmation")
 
 	bootstrapTemplateCmd.PersistentFlags().StringVar(&bTemplateProvisioner, "provisioner", "", "Bootstrap provisioner")
 
