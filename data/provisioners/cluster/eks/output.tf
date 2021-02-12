@@ -37,17 +37,17 @@ clusters:
 - cluster:
     server: ${module.fury.cluster_endpoint}
     certificate-authority-data: ${module.fury.cluster_certificate_authority}
-  name: kubernetes
+  name: kubernetes-${var.cluster_name}
 contexts:
 - context:
-    cluster: kubernetes
-    user: aws
-  name: aws
-current-context: aws
+    cluster: kubernetes-${var.cluster_name}
+    user: aws-${var.cluster_name}
+  name: aws-${var.cluster_name}
+current-context: aws-${var.cluster_name}
 kind: Config
 preferences: {}
 users:
-- name: aws
+- name: aws-${var.cluster_name}
   user:
     exec:
       apiVersion: client.authentication.k8s.io/v1alpha1
