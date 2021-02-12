@@ -78,6 +78,46 @@ steps:
         - push
         - tags
 
+  - name: e2e-gcp
+    image: quay.io/sighup/e2e-furyctl:v1.2.1_v0.2.2_v1.20.1_20.04
+    pull: always
+    privileged: true # Required to connect to the VPN
+    depends_on:
+      - build
+    environment:
+      FURYCTL_TOKEN:
+        from_secret: FURYCTL_TOKEN
+
+      TERRAFORM_TF_STATES_BUCKET_NAME:
+        from_secret: TERRAFORM_TF_STATES_BUCKET_NAME
+      AWS_ACCESS_KEY_ID:
+        from_secret: AWS_ACCESS_KEY_ID
+      AWS_SECRET_ACCESS_KEY:
+        from_secret: AWS_SECRET_ACCESS_KEY
+      AWS_REGION:
+        from_secret: AWS_REGION
+      AWS_DEFAULT_REGION:
+        from_secret: AWS_REGION
+
+      GCP_CREDENTIALS:
+        from_secret: GCP_CREDENTIALS
+      GCP_CREDENTIALS_PATH: /tmp/terraform-credentials.json
+
+      GOOGLE_PROJECT:
+        from_secret: GOOGLE_PROJECT
+      CLOUDSDK_CORE_PROJECT:
+        from_secret: GOOGLE_PROJECT
+      GOOGLE_REGION:
+        from_secret: GOOGLE_REGION
+    commands:
+      - echo $${GCP_CREDENTIALS} | base64 -d > $${GCP_CREDENTIALS_PATH}
+      - export GOOGLE_APPLICATION_CREDENTIALS=$${GCP_CREDENTIALS_PATH}
+      - bats -t ./automated-tests/e2e-tests/gcp-gke/tests.sh
+    when:
+      event:
+        - push
+        - tags
+
   - name: build-release
     image: ghcr.io/goreleaser/goreleaser:v0.149.0
     pull: always
