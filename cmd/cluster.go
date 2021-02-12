@@ -24,6 +24,10 @@ import (
 )
 
 func cPreDestroy(cmd *cobra.Command, args []string) (err error) {
+	if cForce {
+		log.Warn("Force destroy of the cluster project")
+		return cPre(cmd, args)
+	}
 	fmt.Println("\r  Are you sure you want to destroy the cluster?\n  Write 'yes' to continue")
 	reader := bufio.NewReader(os.Stdin)
 	text, err := reader.ReadString('\n')
@@ -92,6 +96,7 @@ var (
 	cDryRun              bool
 	cReset               bool
 	cReconfigure         bool
+	cForce               bool
 
 	clusterCmd = &cobra.Command{
 		Use:   "cluster",
@@ -202,6 +207,8 @@ func init() {
 	clusterDestroyCmd.PersistentFlags().BoolVar(&cReconfigure, "reconfigure", false, "Reconfigure the backend, ignoring any saved configuration")
 
 	clusterInitCmd.PersistentFlags().BoolVar(&cReset, "reset", false, "Forces the re-initialization of the project. It deletes the content of the workdir recreating everything")
+
+	clusterDestroyCmd.PersistentFlags().BoolVar(&cForce, "force", false, "Forces the destroy of the project. Doesn't ask for confirmation")
 
 	clusterTemplateCmd.PersistentFlags().StringVar(&cTemplateProvisioner, "provisioner", "", "Cluster provisioner")
 
