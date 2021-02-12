@@ -24,6 +24,11 @@ output "eks_cluster_oidc_issuer_url" {
   value       = module.fury.eks_cluster_oidc_issuer_url
 }
 
+output "eks_worker_iam_role_name" {
+  description = "Default IAM role name for EKS worker groups"
+  value       = module.fury.eks_worker_iam_role_name
+}
+
 output "kubeconfig" {
   sensitive = true
   value     = <<EOT
