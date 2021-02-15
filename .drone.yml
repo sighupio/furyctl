@@ -64,7 +64,8 @@ steps:
       event:
         - push
 
-  - name: integration
+  - &integration
+    name: integration-gcp-gke
     image: quay.io/sighup/e2e-furyctl:v1.2.1_v0.2.2_v1.20.1_20.04
     depends_on:
       - build
@@ -77,6 +78,11 @@ steps:
       event:
         - push
         - tags
+
+  - <<: *integration
+    name: integration-aws-eks
+    commands:
+      - bats -t ./automated-tests/integration/aws-eks/tests.sh
 
   - name: e2e-gcp
     image: quay.io/sighup/e2e-furyctl:v1.2.1_v0.2.2_v1.20.1_20.04
@@ -124,7 +130,8 @@ steps:
     depends_on:
       - lint
       - test
-      - integration
+      - integration-gcp-gke
+      - integration-aws-eks
     environment:
       GITHUB_TOKEN:
         from_secret: GITHUB_TOKEN
