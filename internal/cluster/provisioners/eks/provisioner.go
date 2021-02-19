@@ -128,7 +128,7 @@ func (e EKS) createVarFile() (err error) {
 	groups = ["%v"]
 	username = "%v"
 	userarn = "%v"
-}
+},
 `, strings.Join(account.Groups, "\",\""), account.Username, account.UserARN,
 			))
 		}
@@ -143,7 +143,7 @@ func (e EKS) createVarFile() (err error) {
 	groups = ["%v"]
 	username = "%v"
 	rolearn = "%v"
-}
+},
 `, strings.Join(account.Groups, "\",\""), account.Username, account.RoleARN,
 			))
 		}
