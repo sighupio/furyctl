@@ -155,11 +155,19 @@ func (e EKS) createVarFile() (err error) {
 		for _, np := range spec.NodePools {
 			buffer.WriteString("{\n")
 			buffer.WriteString(fmt.Sprintf("name = \"%v\"\n", np.Name))
-			buffer.WriteString(fmt.Sprintf("version = \"%v\"\n", np.Version))
+			if np.Version != "" {
+				buffer.WriteString(fmt.Sprintf("version = \"%v\"\n", np.Version))
+			} else {
+				buffer.WriteString("version = null\n")
+			}
 			buffer.WriteString(fmt.Sprintf("min_size = %v\n", np.MinSize))
 			buffer.WriteString(fmt.Sprintf("max_size = %v\n", np.MaxSize))
 			buffer.WriteString(fmt.Sprintf("instance_type = \"%v\"\n", np.InstanceType))
-			buffer.WriteString(fmt.Sprintf("max_pods = %v\n", np.MaxPods))
+			if np.MaxPods > 0 {
+				buffer.WriteString(fmt.Sprintf("max_pods = %v\n", np.MaxPods))
+			} else {
+				buffer.WriteString("max_pods = null\n")
+			}
 			buffer.WriteString(fmt.Sprintf("volume_size = %v\n", np.VolumeSize))
 
 			if len(np.AdditionalFirewallRules) > 0 {
@@ -196,7 +204,7 @@ func (e EKS) createVarFile() (err error) {
 			if len(np.SubNetworks) > 0 {
 				buffer.WriteString(fmt.Sprintf("subnetworks = [\"%v\"]\n", strings.Join(np.SubNetworks, "\",\"")))
 			} else {
-				buffer.WriteString("subnetworks = []\n")
+				buffer.WriteString("subnetworks = null\n")
 			}
 			if len(np.Labels) > 0 {
 				var labels []byte
