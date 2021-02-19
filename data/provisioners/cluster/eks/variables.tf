@@ -48,6 +48,14 @@ variable "node_pools" {
     labels        = map(string)
     taints        = list(string)
     tags          = map(string)
+    additional_firewall_rules = list(object({
+      name        = string
+      direction   = string
+      source_cidr = string
+      protocol    = string
+      ports       = string
+      tags        = map(string)
+    }))
   }))
   default = []
 }

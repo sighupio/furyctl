@@ -161,6 +161,38 @@ func (e EKS) createVarFile() (err error) {
 			buffer.WriteString(fmt.Sprintf("instance_type = \"%v\"\n", np.InstanceType))
 			buffer.WriteString(fmt.Sprintf("max_pods = %v\n", np.MaxPods))
 			buffer.WriteString(fmt.Sprintf("volume_size = %v\n", np.VolumeSize))
+
+			if len(np.AdditionalFirewallRules) > 0 {
+
+				buffer.WriteString("additional_firewall_rules = [\n")
+				for _, fwRule := range np.AdditionalFirewallRules {
+
+					fwRuleTags := "{}"
+					if len(fwRule.Tags) > 0 {
+						var tags []byte
+						tags, err = json.Marshal(fwRule.Tags)
+						if err != nil {
+							return err
+						}
+						fwRuleTags = string(tags)
+					}
+
+					buffer.WriteString(fmt.Sprintf(`{
+			name = "%v"
+			direction = "%v"
+			source_cidr = "%v"
+			protocol = "%v"
+			ports = "%v"
+			tags = %v
+		},
+		`, fwRule.Name, fwRule.Direction, fwRule.SourceCIDR, fwRule.Protocol, fwRule.Ports, fwRuleTags,
+					))
+				}
+				buffer.WriteString("]\n")
+			} else {
+				buffer.WriteString("additional_firewall_rules = []\n")
+			}
+
 			if len(np.SubNetworks) > 0 {
 				buffer.WriteString(fmt.Sprintf("subnetworks = [\"%v\"]\n", strings.Join(np.SubNetworks, "\",\"")))
 			} else {

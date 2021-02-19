@@ -33,15 +33,26 @@ type EKSAuthData struct {
 
 // EKSNodePool represent a node pool configuration
 type EKSNodePool struct {
-	Name         string            `yaml:"name"`
-	Version      string            `yaml:"version"`
-	MinSize      int               `yaml:"minSize"`
-	MaxSize      int               `yaml:"maxSize"`
-	InstanceType string            `yaml:"instanceType"`
-	MaxPods      int               `yaml:"maxPods"`
-	VolumeSize   int               `yaml:"volumeSize"`
-	Labels       map[string]string `yaml:"labels"`
-	Taints       []string          `yaml:"taints"`
-	SubNetworks  []string          `yaml:"subnetworks"`
-	Tags         map[string]string `yaml:"tags"`
+	Name                    string              `yaml:"name"`
+	Version                 string              `yaml:"version"`
+	MinSize                 int                 `yaml:"minSize"`
+	MaxSize                 int                 `yaml:"maxSize"`
+	InstanceType            string              `yaml:"instanceType"`
+	MaxPods                 int                 `yaml:"maxPods"`
+	VolumeSize              int                 `yaml:"volumeSize"`
+	Labels                  map[string]string   `yaml:"labels"`
+	Taints                  []string            `yaml:"taints"`
+	SubNetworks             []string            `yaml:"subnetworks"`
+	Tags                    map[string]string   `yaml:"tags"`
+	AdditionalFirewallRules []EKSNodePoolFwRule `yaml:"additionalFirewallRules"`
+}
+
+// EKSNodePoolFwRule represent an additional firewall rule to add to a specific node pool in the cluster
+type EKSNodePoolFwRule struct {
+	Name       string            `yaml:"name"`
+	Direction  string            `yaml:"direction"`
+	SourceCIDR string            `yaml:"sourceCIDR"`
+	Protocol   string            `yaml:"protocol"`
+	Ports      string            `yaml:"ports"`
+	Tags       map[string]string `yaml:"tags"`
 }
