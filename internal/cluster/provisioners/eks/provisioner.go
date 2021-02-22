@@ -180,12 +180,12 @@ func (e EKS) createVarFile() (err error) {
 					buffer.WriteString(fmt.Sprintf(`{
 			name = "%v"
 			direction = "%v"
-			source_cidr = "%v"
+			cidr_block = "%v"
 			protocol = "%v"
 			ports = "%v"
 			tags = %v
 		},
-		`, fwRule.Name, fwRule.Direction, fwRule.SourceCIDR, fwRule.Protocol, fwRule.Ports, fwRuleTags,
+		`, fwRule.Name, fwRule.Direction, fwRule.CIDRBlock, fwRule.Protocol, fwRule.Ports, fwRuleTags,
 					))
 				}
 				buffer.WriteString("]\n")

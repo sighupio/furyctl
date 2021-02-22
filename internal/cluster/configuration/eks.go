@@ -49,10 +49,10 @@ type EKSNodePool struct {
 
 // EKSNodePoolFwRule represent an additional firewall rule to add to a specific node pool in the cluster
 type EKSNodePoolFwRule struct {
-	Name       string            `yaml:"name"`
-	Direction  string            `yaml:"direction"`
-	SourceCIDR string            `yaml:"sourceCIDR"`
-	Protocol   string            `yaml:"protocol"`
-	Ports      string            `yaml:"ports"`
-	Tags       map[string]string `yaml:"tags"`
+	Name      string            `yaml:"name"`
+	Direction string            `yaml:"direction"`
+	CIDRBlock string            `yaml:"cidrBlock"`
+	Protocol  string            `yaml:"protocol"`
+	Ports     string            `yaml:"ports"`
+	Tags      map[string]string `yaml:"tags"`
 }
