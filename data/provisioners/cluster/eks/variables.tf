@@ -51,7 +51,7 @@ variable "node_pools" {
     additional_firewall_rules = list(object({
       name        = string
       direction   = string
-      source_cidr = string
+      cidr_block  = string
       protocol    = string
       ports       = string
       tags        = map(string)
