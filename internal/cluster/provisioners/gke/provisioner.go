@@ -161,6 +161,37 @@ func (e GKE) createVarFile() (err error) {
 				buffer.WriteString("tags = {}\n")
 			}
 
+			if len(np.AdditionalFirewallRules) > 0 {
+
+				buffer.WriteString("additional_firewall_rules = [\n")
+				for _, fwRule := range np.AdditionalFirewallRules {
+
+					fwRuleTags := "{}"
+					if len(fwRule.Tags) > 0 {
+						var tags []byte
+						tags, err = json.Marshal(fwRule.Tags)
+						if err != nil {
+							return err
+						}
+						fwRuleTags = string(tags)
+					}
+
+					buffer.WriteString(fmt.Sprintf(`{
+			name = "%v"
+			direction = "%v"
+			cidr_block = "%v"
+			protocol = "%v"
+			ports = "%v"
+			tags = %v
+		},
+		`, fwRule.Name, fwRule.Direction, fwRule.CIDRBlock, fwRule.Protocol, fwRule.Ports, fwRuleTags,
+					))
+				}
+				buffer.WriteString("]\n")
+			} else {
+				buffer.WriteString("additional_firewall_rules = []\n")
+			}
+
 			buffer.WriteString("},\n")
 		}
 		buffer.WriteString("]\n")
