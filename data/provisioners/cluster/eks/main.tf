@@ -29,8 +29,7 @@ provider "template" {
 }
 
 module "fury" {
-  # source = "github.com/sighupio/fury-eks-installer//modules/eks?ref=v1.4.2"
-  source = "github.com/sighupio/fury-eks-installer//modules/eks?ref=enable-additoinal-sg-on-node-pools"
+  source = "github.com/sighupio/fury-eks-installer//modules/eks?ref=v1.5.0"
 
   cluster_name    = var.cluster_name
   cluster_version = var.cluster_version
