@@ -137,7 +137,7 @@ func (c *Bootstrap) Init(reset bool) (err error) {
 	c.s.Suffix = " Initializing terraform project"
 	c.s.Start()
 
-	err = tf.Init(context.Background())
+	err = tf.Init(context.Background(), tfexec.Reconfigure(c.options.TerraformOpts.ReconfigureBackend))
 	if err != nil {
 		log.Errorf("error while running terraform init in the project dir: %v", err)
 		return err
@@ -260,7 +260,7 @@ func (c *Bootstrap) Update(dryrun bool) (err error) {
 	c.s.Suffix = " Re-Initializing terraform project"
 	c.s.Start()
 
-	err = tf.Init(context.Background())
+	err = tf.Init(context.Background(), tfexec.Reconfigure(c.options.TerraformOpts.ReconfigureBackend))
 	if err != nil {
 		log.Errorf("error while running terraform init in the project dir: %v", err)
 		return err
@@ -352,7 +352,7 @@ func (c *Bootstrap) Destroy() (err error) {
 	c.s.Suffix = " Re-Initializing terraform project"
 	c.s.Start()
 
-	err = tf.Init(context.Background())
+	err = tf.Init(context.Background(), tfexec.Reconfigure(c.options.TerraformOpts.ReconfigureBackend))
 	if err != nil {
 		log.Errorf("error while running terraform init in the project dir: %v", err)
 		return err

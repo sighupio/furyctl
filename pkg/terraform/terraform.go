@@ -20,8 +20,9 @@ type Options struct {
 	Version    string
 	BinaryPath string
 
-	Backend       string
-	BackendConfig map[string]string
+	Backend            string
+	BackendConfig      map[string]string
+	ReconfigureBackend bool
 
 	WorkingDir string
 	ConfigDir  string

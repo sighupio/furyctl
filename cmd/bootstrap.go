@@ -68,9 +68,10 @@ func bPre(cmd *cobra.Command, args []string) (err error) {
 		Project:                  prj,
 		ProvisionerConfiguration: cfg,
 		TerraformOpts: &terraform.Options{
-			GitHubToken: bGitHubToken,
-			WorkingDir:  workingDirFullPath,
-			Debug:       debug,
+			GitHubToken:        bGitHubToken,
+			WorkingDir:         workingDirFullPath,
+			Debug:              debug,
+			ReconfigureBackend: bReconfigure,
 		},
 	}
 	boot, err = bootstrap.New(bootstrapOpts)
@@ -89,6 +90,7 @@ var (
 	bGitHubToken         string
 	bTemplateProvisioner string
 	bReset               bool
+	bReconfigure         bool
 	bDryRun              bool
 
 	bootstrapCmd = &cobra.Command{
@@ -192,6 +194,10 @@ func init() {
 	bootstrapInitCmd.PersistentFlags().StringVarP(&bGitHubToken, "token", "t", "", "GitHub token to access enterprise repositories. Contact sales@sighup.io")
 	bootstrapApplyCmd.PersistentFlags().StringVarP(&bGitHubToken, "token", "t", "", "GitHub token to access enterprise repositories. Contact sales@sighup.io")
 	bootstrapDestroyCmd.PersistentFlags().StringVarP(&bGitHubToken, "token", "t", "", "GitHub token to access enterprise repositories. Contact sales@sighup.io")
+
+	bootstrapInitCmd.PersistentFlags().BoolVar(&bReconfigure, "reconfigure", false, "Reconfigure the backend, ignoring any saved configuration")
+	bootstrapApplyCmd.PersistentFlags().BoolVar(&bReconfigure, "reconfigure", false, "Reconfigure the backend, ignoring any saved configuration")
+	bootstrapDestroyCmd.PersistentFlags().BoolVar(&bReconfigure, "reconfigure", false, "Reconfigure the backend, ignoring any saved configuration")
 
 	bootstrapInitCmd.PersistentFlags().BoolVar(&bReset, "reset", false, "Forces the re-initialization of the project. It deletes the content of the workdir recreating everything")
 
