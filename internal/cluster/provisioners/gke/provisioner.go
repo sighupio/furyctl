@@ -106,7 +106,7 @@ func (e GKE) createVarFile() (err error) {
 	buffer.WriteString(fmt.Sprintf("cluster_version = \"%v\"\n", spec.Version))
 	buffer.WriteString(fmt.Sprintf("network = \"%v\"\n", spec.Network))
 	buffer.WriteString(fmt.Sprintf("subnetworks = [\"%v\"]\n", strings.Join(spec.SubNetworks, "\",\"")))
-	buffer.WriteString(fmt.Sprintf("dmz_cidr_range = \"%v\"\n", spec.DMZCIDRRange))
+	buffer.WriteString(fmt.Sprintf("dmz_cidr_range = [\"%v\"]\n", strings.Join(spec.DMZCIDRRange.Values, "\",\"")))
 	buffer.WriteString(fmt.Sprintf("ssh_public_key = \"%v\"\n", spec.SSHPublicKey))
 	if len(spec.Tags) > 0 {
 		var tags []byte

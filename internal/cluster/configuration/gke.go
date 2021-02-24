@@ -16,7 +16,7 @@ type GKE struct {
 	DisalbeDefaultSNAT             bool   `yaml:"disalbeDefaultSNAT"`
 
 	SubNetworks  []string          `yaml:"subnetworks"`
-	DMZCIDRRange string            `yaml:"dmzCIDRRange"`
+	DMZCIDRRange DMZCIDRRange      `yaml:"dmzCIDRRange"`
 	SSHPublicKey string            `yaml:"sshPublicKey"`
 	NodePools    []GKENodePool     `yaml:"nodePools"`
 	Tags         map[string]string `yaml:"tags"`
