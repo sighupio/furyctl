@@ -20,6 +20,14 @@ spec:
       maxSize: 1
       volumeSize: 50
       instanceType: n1-standard-1
+      additionalFirewallRules:
+      - name: dns
+        direction: ingress
+        cidrBlock: 0.0.0.0/0
+        protocol: UDP
+        ports: 53-53
+        tags:
+          allow: dns
 provisioner: gke
 executor:
   version: 0.13.6
