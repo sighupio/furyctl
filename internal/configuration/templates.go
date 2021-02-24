@@ -223,7 +223,7 @@ func clusterTemplate(config *Configuration) error {
 							Name:      "The name of rule # Identify the rule using a description",
 							Direction: "ingress|egress # Choose one",
 							CIDRBlock: "0.0.0.0/0 # CIDR Block",
-							Protocol:  "TCP|UDP # Any supported AWS security group protocol",
+							Protocol:  "TCP|UDP # Any supported GCP security group protocol",
 							Ports:     "80-80 # Port range. This one means from 80 to 80",
 							Tags: map[string]string{
 								"myTag": "MyValue # Use this tags to annotate nodepool resources. Optional",
