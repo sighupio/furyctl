@@ -16,37 +16,6 @@ type EKS struct {
 	Auth         EKSAuth           `yaml:"auth"`
 }
 
-// DMZCIDRRange represents a string or a list of strings
-type DMZCIDRRange struct {
-	Values []string
-}
-
-//UnmarshalYAML unmarshall the DMZCIDRRange
-func (sm *DMZCIDRRange) UnmarshalYAML(unmarshal func(interface{}) error) error {
-	var multi []string
-	err := unmarshal(&multi)
-	if err != nil {
-		var single string
-		err := unmarshal(&single)
-		if err != nil {
-			return err
-		}
-		sm.Values = make([]string, 1)
-		sm.Values[0] = single
-	} else {
-		sm.Values = multi
-	}
-	return nil
-}
-
-//MarshalYAML marshall the DMZCIDRRange
-func (sm DMZCIDRRange) MarshalYAML() (interface{}, error) {
-	if len(sm.Values) == 1 {
-		return sm.Values[0], nil
-	}
-	return sm.Values, nil
-}
-
 // EKSAuth represent a auth structure
 type EKSAuth struct {
 	AdditionalAccounts []string      `yaml:"additionalAccounts"`

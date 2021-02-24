@@ -12,7 +12,9 @@ spec:
     - e2e-${CI_BUILD_NUMBER}-cluster-subnet
     - e2e-${CI_BUILD_NUMBER}-cluster-pod-subnet
     - e2e-${CI_BUILD_NUMBER}-cluster-service-subnet
-  dmzCIDRRange: 10.0.0.0/8
+  dmzCIDRRange:
+    - 10.0.0.0/8
+    - 192.168.0.0/16
   sshPublicKey: ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDCjjHeHnfhplyak6p+HaDnl7Vz8knFjUfgpvtx2FzfrzVmNWh7EuBWrisYeh/vwCFvluOQtt5/J56Gu+N5q70XAEeuh1COeeYlRm0EHZtm0dAM7PCvZ4Ga20PYWGJAGWiKo3g+jh2AexEXw+t6O9qvTy1G2OQ7uOGBfu+fa4tpBpGpHI0IrdwVJ6m1sd08ghmyjvWeIlxOwIF2SCcQqFosUngrvVieemEeojRRc7sedqUrehLEOX8udF+vLV8cRvzUMqrpmyLnEBRtcFzOhKMKiE+xlk9IKKWnMXYDhXlj4AFDQ19Yii2Z9uRUMVr/YVpDNvR7lBZo+EvRg0w5w9u9
   nodePools:
     - name: my-node-pool
