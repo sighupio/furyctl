@@ -6,7 +6,7 @@ kind: Cluster
 metadata:
   name: e2e-${CI_BUILD_NUMBER}
 spec:
-  version: 1.18.15-gke.800
+  version: 1.18.12-gke.1210
   network: e2e-${CI_BUILD_NUMBER}
   subnetworks:
     - e2e-${CI_BUILD_NUMBER}-cluster-subnet
