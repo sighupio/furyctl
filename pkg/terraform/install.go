@@ -15,6 +15,7 @@ import (
 	"github.com/hashicorp/go-version"
 	"github.com/hashicorp/terraform-exec/tfexec"
 	"github.com/hashicorp/terraform-exec/tfinstall"
+	"github.com/sighupio/furyctl/pkg/utils"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -93,6 +94,10 @@ func alreadyAvailable(terraformVersion string, terraformDownloadPath string) (bo
 func install(terraformVersion string, terraformDownloadPath string) (binPath string, err error) {
 	ready, binPath := alreadyAvailable(terraformVersion, terraformDownloadPath)
 	if !ready {
+		err := utils.EnsureDir(filepath.Join(terraformDownloadPath, "terraform"))
+		if err != nil {
+			return "", err
+		}
 		binPath, err = tfinstall.Find(context.Background(), tfinstall.ExactVersion(terraformVersion, terraformDownloadPath))
 		if err != nil {
 			log.Errorf("Error downloading version %v: %v", terraformVersion, err)
@@ -109,6 +114,10 @@ func installLatest(terraformDownloadPath string) (binPath string, err error) {
 	}
 	ready, binPath := alreadyAvailable(terraformVersion, terraformDownloadPath)
 	if !ready {
+		err := utils.EnsureDir(filepath.Join(terraformDownloadPath, "terraform"))
+		if err != nil {
+			return "", err
+		}
 		binPath, err = tfinstall.Find(context.Background(), tfinstall.LatestVersion(terraformDownloadPath, false))
 		if err != nil {
 			log.Errorf("Error downloading latest version: %v", err)
