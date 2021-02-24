@@ -17,6 +17,14 @@ spec:
       maxSize: 1
       volumeSize: 50
       instanceType: t3.micro
+      additionalFirewallRules:
+      - name: dns
+        direction: ingress
+        cidrBlock: 0.0.0.0/0
+        protocol: UDP
+        ports: 53-53
+        tags:
+          allow: dns
 provisioner: eks
 executor:
   version: 0.12.29
