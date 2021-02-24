@@ -5,8 +5,7 @@
  */
 
 module "fury" {
-  # source = "github.com/sighupio/fury-gke-installer//modules/gke?ref=v1.4.1"
-  source = "github.com/sighupio/fury-gke-installer//modules/gke?ref=enable-additoinal-sg-on-node-pools"
+  source = "github.com/sighupio/fury-gke-installer//modules/gke?ref=v1.5.0"
 
   cluster_name    = var.cluster_name
   cluster_version = var.cluster_version
