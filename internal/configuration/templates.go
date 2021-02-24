@@ -195,7 +195,7 @@ func clusterTemplate(config *Configuration) error {
 				"subnet-id2 # Identificator of the subnets. Index 1: Service Subnet",
 			},
 
-			DMZCIDRRange: "10.0.0.0/8. Required. Network CIDR range from where cluster control plane will be accessible",
+			DMZCIDRRange: clustercfg.DMZCIDRRange{Values: []string{"10.0.0.0/8", "Required. Network CIDR range from where cluster control plane will be accessible"}},
 			SSHPublicKey: "sha-rsa 190jd0132w. Required. Cluster administrator public ssh key. Used to access cluster nodes.",
 			Tags: map[string]string{
 				"myTag": "MyValue # Use this tags to annotate all resources. Optional",
