@@ -25,7 +25,6 @@ variable "subnetworks" {
 }
 
 variable "dmz_cidr_range" {
-  type        = string
   description = "Network CIDR range from where cluster control plane will be accessible"
 }
 
