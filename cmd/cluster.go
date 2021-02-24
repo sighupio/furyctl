@@ -68,9 +68,10 @@ func cPre(cmd *cobra.Command, args []string) (err error) {
 		Project:                  prj,
 		ProvisionerConfiguration: cfg,
 		TerraformOpts: &terraform.Options{
-			GitHubToken: cGitHubToken,
-			WorkingDir:  workingDirFullPath,
-			Debug:       cDryRun,
+			GitHubToken:        cGitHubToken,
+			WorkingDir:         workingDirFullPath,
+			Debug:              cDryRun,
+			ReconfigureBackend: cReconfigure,
 		},
 	}
 	clu, err = cluster.New(clusterOpts)
@@ -90,6 +91,7 @@ var (
 	cTemplateProvisioner string
 	cDryRun              bool
 	cReset               bool
+	cReconfigure         bool
 
 	clusterCmd = &cobra.Command{
 		Use:   "cluster",
@@ -194,6 +196,10 @@ func init() {
 	clusterInitCmd.PersistentFlags().StringVarP(&cGitHubToken, "token", "t", "", "GitHub token to access enterprise repositories. Contact sales@sighup.io")
 	clusterApplyCmd.PersistentFlags().StringVarP(&cGitHubToken, "token", "t", "", "GitHub token to access enterprise repositories. Contact sales@sighup.io")
 	clusterDestroyCmd.PersistentFlags().StringVarP(&cGitHubToken, "token", "t", "", "GitHub token to access enterprise repositories. Contact sales@sighup.io")
+
+	clusterInitCmd.PersistentFlags().BoolVar(&cReconfigure, "reconfigure", false, "Reconfigure the backend, ignoring any saved configuration")
+	clusterApplyCmd.PersistentFlags().BoolVar(&cReconfigure, "reconfigure", false, "Reconfigure the backend, ignoring any saved configuration")
+	clusterDestroyCmd.PersistentFlags().BoolVar(&cReconfigure, "reconfigure", false, "Reconfigure the backend, ignoring any saved configuration")
 
 	clusterInitCmd.PersistentFlags().BoolVar(&cReset, "reset", false, "Forces the re-initialization of the project. It deletes the content of the workdir recreating everything")
 
