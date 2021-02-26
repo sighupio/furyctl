@@ -29,6 +29,11 @@ output "eks_worker_iam_role_name" {
   value       = module.fury.eks_worker_iam_role_name
 }
 
+output "eks_workers_asg_names" {
+  description = "Names of the autoscaling groups containing workers."
+  value       = module.fury.eks_workers_asg_names
+}
+
 output "kubeconfig" {
   sensitive = true
   value     = <<EOT
