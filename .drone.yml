@@ -63,6 +63,7 @@ steps:
     when:
       event:
         - push
+        - tag
 
   - &integration
     name: integration-gcp-gke
@@ -77,7 +78,7 @@ steps:
     when:
       event:
         - push
-        - tags
+        - tag
 
   - <<: *integration
     name: integration-aws-eks
@@ -122,7 +123,7 @@ steps:
       - bats -t ./automated-tests/e2e-tests/gcp-gke/tests.sh
     when:
       event:
-        - tags
+        - tag
 
   - <<: *e2e
     name: e2e-aws
@@ -147,7 +148,7 @@ steps:
       - git reset --hard
       - git fetch --tags
       - GO111MODULE=on goreleaser check
-      - GO111MODULE=on goreleaser --debug release
+      - GO111MODULE=on goreleaser --debug release --rm-dist
     when:
       event:
         - tag
