@@ -122,7 +122,6 @@ steps:
       - bats -t ./automated-tests/e2e-tests/gcp-gke/tests.sh
     when:
       event:
-        - push
         - tags
 
   - <<: *e2e
