@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
+// Package configuration TODO
 package configuration
 
 import (
@@ -32,7 +33,7 @@ func Template(kind string, provisioner string) (string, error) {
 		}
 	default:
 		log.Errorf("Error creating a template configuration file. Parser not found for %v kind", kind)
-		return "", fmt.Errorf("Error creating a template configuration file. Parser not found for %v kind", kind)
+		return "", fmt.Errorf("error creating a template configuration file. Parser not found for %v kind", kind)
 	}
 	b, err := yaml.Marshal(config)
 	if err != nil {
@@ -112,7 +113,7 @@ func bootstrapTemplate(config *Configuration) error {
 		config.Spec = spec
 	default:
 		log.Errorf("Error creating a template configuration file. Parser not found for %v provisioner", config.Provisioner)
-		return fmt.Errorf("Error creating a template configuration file. Parser not found for %v provisioner", config.Provisioner)
+		return fmt.Errorf("error creating a template configuration file. Parser not found for %v provisioner", config.Provisioner)
 	}
 	createBase(config)
 	return nil
@@ -234,9 +235,69 @@ func clusterTemplate(config *Configuration) error {
 			},
 		}
 		config.Spec = spec
+	case config.Provisioner == "vsphere":
+		spec := clustercfg.VSphere{
+			Version:         "1.20.5 # Place here the Kubernetes version you want to use",
+			EnvironmentName: "production # The environment name of the cluster",
+			Config:          clustercfg.VSphereConfig{
+				DatacenterName: "westeros # Get the name of datacenter from vShpere dashboard",
+				Datastore:      "main # Get the name of datastore from vSphere dashboard",
+				EsxiHost:       []string{"host1", "host2", "host3", "# Names of the hosts where the VMs are going to be created"},
+			},
+			NetworkConfig:   clustercfg.VSphereNetworkConfig{
+				Name:        "main-network # The name of the vSphere network",
+				Gateway:     "10.0.0.1 # The IP of the network gateway",
+				Nameservers: []string{"8.8.4.4", "1.1.1.1"},
+				Domain:      "localdomain",
+			},
+			Boundary:        true,
+			MasterNode:      clustercfg.VSphereKubeNode{
+				Count:    1,
+				CPU:      1,
+				MemSize:  4096,
+				DiskSize: 100,
+				Template: "ubuntu-20.04 # The name of the base image to use for the VMs",
+				Labels:   map[string]string{
+					"environment": "dev. # Node labels. Use it to tag nodes then use it on Kubernetes",
+				},
+				Taints:   []string{"key1=value1:NoSchedule. As an example"},
+			},
+			InfraNode:       clustercfg.VSphereKubeNode{
+				Count:    1,
+				CPU:      1,
+				MemSize:  8192,
+				DiskSize: 100,
+				Template: "ubuntu-20.04 # The name of the base image to use for the VMs",
+				Labels:   map[string]string{
+					"environment": "dev. # Node labels. Use it to tag nodes then use it on Kubernetes",
+				},
+				Taints:   []string{"key1=value1:NoSchedule. As an example"},
+			},
+			NodePools:       []clustercfg.VSphereKubeNode{
+				{
+					Role:     "applications",
+					Count:    1,
+					CPU:      1,
+					MemSize:  8192,
+					DiskSize: 100,
+					Template: "ubuntu-20.04 # The name of the base image to use for the VMs",
+					Labels:   map[string]string{
+						"environment": "dev. # Node labels. Use it to tag nodes then use it on Kubernetes",
+					},
+					Taints:   []string{"key1=value1:NoSchedule. As an example"},
+				},
+			},
+			ClusterPODCIDR:  "172.21.0.0/16",
+			ClusterSVCCIDR:  "172.23.0.0/16",
+			ClusterCIDR:     "10.2.0.0/16",
+			SSHPublicKey:    []string{
+				"/home/foo/.ssh/id_rsa.pub",
+			},
+		}
+		config.Spec = spec
 	default:
-		log.Errorf("Error creating a template configuration file. Parser not found for %v provisioner", config.Provisioner)
-		return fmt.Errorf("Error creating a template configuration file. Parser not found for %v provisioner", config.Provisioner)
+		log.Errorf("error creating a template configuration file. Parser not found for %v provisioner", config.Provisioner)
+		return fmt.Errorf("error creating a template configuration file. Parser not found for %v provisioner", config.Provisioner)
 	}
 	createBase(config)
 	return nil
