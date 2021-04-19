@@ -15,9 +15,10 @@ type VSphere struct {
 
 	Boundary bool `yaml:"boundary"`
 
-	MasterNode VSphereKubeNode   `yaml:"masterNode"`
-	InfraNode  VSphereKubeNode   `yaml:"infraNode"`
-	NodePools  []VSphereKubeNode `yaml:"nodePools"`
+	LoadBalancerNode VSphereKubeLoadBalancer `yaml:"lbNode"`
+	MasterNode       VSphereKubeNode         `yaml:"masterNode"`
+	InfraNode        VSphereKubeNode         `yaml:"infraNode"`
+	NodePools        []VSphereKubeNode       `yaml:"nodePools"`
 
 	ClusterPODCIDR string   `yaml:"clusterPODCIDR"`
 	ClusterSVCCIDR string   `yaml:"clusterSVCCIDR"`
