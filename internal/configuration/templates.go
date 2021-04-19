@@ -251,6 +251,11 @@ func clusterTemplate(config *Configuration) error {
 				Domain:      "localdomain",
 			},
 			Boundary:        true,
+			LoadBalancerNode: clustercfg.VSphereKubeLoadBalancer{
+				Count:            1,
+				Template: "ubuntu-20.04 # The name of the base image to use for the VMs",
+				CustomScriptPath: "./do-something.sh # A script that you want to run after first boot",
+			},
 			MasterNode:      clustercfg.VSphereKubeNode{
 				Count:    1,
 				CPU:      1,
