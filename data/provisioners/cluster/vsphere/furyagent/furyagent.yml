@@ -1,0 +1,3 @@
+storage:
+  provider: local
+  path: .
