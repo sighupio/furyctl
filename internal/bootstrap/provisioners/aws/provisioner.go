@@ -216,6 +216,11 @@ func (d AWS) TerraformFiles() []string {
 }
 
 // Plan runs a dry run execution
+func (d AWS) Prepare() (err error) {
+	return nil
+}
+
+// Plan runs a dry run execution
 func (d AWS) Plan() (err error) {
 	log.Info("[DRYRUN] Updating AWS Bootstrap project")
 	err = d.createVarFile()

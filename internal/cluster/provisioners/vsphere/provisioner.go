@@ -10,10 +10,14 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/gobuffalo/packr/v2"
 	"github.com/hashicorp/terraform-exec/tfexec"
+	"github.com/sighupio/furyagent/pkg/component"
+	"github.com/sighupio/furyagent/pkg/storage"
 	cfg "github.com/sighupio/furyctl/internal/cluster/configuration"
 	"github.com/sighupio/furyctl/internal/configuration"
 	log "github.com/sirupsen/logrus"
@@ -195,6 +199,7 @@ func (e VSphere) Box() *packr.Box {
 
 // TODO: find Terraform files
 // TODO: find Ansible files
+// TODO: rename method TerraformFiles() in FilesToBudle()
 
 // TerraformFiles returns the list of files conforming the terraform project
 func (e VSphere) TerraformFiles() []string {
@@ -204,6 +209,7 @@ func (e VSphere) TerraformFiles() []string {
 		"output.tf",
 		"main.tf",
 		"variables.tf",
+		"furyagent/furyagent.yml",
 	}
 }
 
@@ -228,6 +234,58 @@ func (e VSphere) Plan() (err error) {
 	}
 
 	log.Info("[DRYRUN] VSphere Updated")
+	return nil
+}
+
+func (e VSphere) Prepare() error {
+	startingPath, err := os.Getwd()
+	if err != nil {
+		return err
+	}
+
+	err = os.Chdir(filepath.Join(e.terraform.WorkingDir(), "furyagent"))
+	if err != nil {
+		return err
+	}
+
+	s := storage.Config{
+		Provider:  "local",
+		LocalPath: ".",
+	}
+
+	store, err := storage.Init(&s)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	var data component.ClusterComponentData = component.ClusterComponentData{
+		ClusterConfig: &component.ClusterConfig{},
+		Data:          store,
+	}
+
+	log.Info("Creating master pki")
+	var master component.ClusterComponent = component.Master{
+		ClusterComponentData: data,
+	}
+	err = master.Init("")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	log.Info("Creating etcd pki")
+	var etcd component.ClusterComponent = component.Etcd{
+		ClusterComponentData: data,
+	}
+	err = etcd.Init("")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	err = os.Chdir(startingPath)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 

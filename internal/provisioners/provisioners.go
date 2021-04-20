@@ -32,6 +32,7 @@ type Provisioner interface {
 
 	Enterprise() bool
 
+	Prepare() error
 	Plan() error
 	Update() error
 	Destroy() error

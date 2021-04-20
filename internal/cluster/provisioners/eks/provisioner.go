@@ -284,6 +284,10 @@ func (e EKS) TerraformFiles() []string {
 	}
 }
 
+func (e EKS) Prepare() (err error) {
+	return nil
+}
+
 // Plan runs a dry run execution
 func (e EKS) Plan() (err error) {
 	log.Info("[DRYRUN] Updating EKS Cluster project")
