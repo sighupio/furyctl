@@ -272,6 +272,10 @@ func (e GKE) Plan() (err error) {
 	return nil
 }
 
+func (e GKE) Prepare() (err error) {
+	return nil
+}
+
 // Update runs terraform apply in the project
 func (e GKE) Update() (err error) {
 	log.Info("Updating GKE project")
