@@ -1,9 +1,10 @@
 module github.com/sighupio/furyctl
 
 require (
-	github.com/aws/aws-sdk-go v1.16.26 // indirect
+	github.com/Azure/go-autorest/autorest/to v0.4.0 // indirect
 	github.com/briandowns/spinner v1.12.0
 	github.com/denisbrodbeck/machineid v1.0.1
+	github.com/dnaeon/go-vcr v1.1.0 // indirect
 	github.com/dukex/mixpanel v0.0.0-20180925151559-f8d5594f958e
 	github.com/gobuffalo/packr/v2 v2.8.1
 	github.com/hashicorp/go-checkpoint v0.5.0
@@ -12,6 +13,7 @@ require (
 	github.com/hashicorp/terraform-exec v0.11.0
 	github.com/karrick/godirwalk v1.16.1 // indirect
 	github.com/rogpeppe/go-internal v1.8.0 // indirect
+	github.com/sighupio/furyagent v0.2.3
 	github.com/sirupsen/logrus v1.8.1
 	github.com/spf13/cobra v1.1.3
 	github.com/spf13/viper v1.7.0
