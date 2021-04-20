@@ -41,8 +41,7 @@ type VSphereKubeNode struct {
 	Template string            `yaml:"template"`
 	Labels   map[string]string `yaml:"labels"`
 	Taints   []string          `yaml:"taints"`
-	// TODO: restore
-	// CustomScriptPath string `yaml:"customScriptPath"`
+	CustomScriptPath string `yaml:"customScriptPath"`
 }
 
 // TODO: can you do that?
