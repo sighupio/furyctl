@@ -76,7 +76,7 @@ func Parse(path string) (*Configuration, error) {
 		return baseConfig, nil
 	default:
 		log.Errorf("Error parsing the configuration file. Parser not found for %v kind", baseConfig.Kind)
-		return nil, fmt.Errorf("Parser not found for %v kind", baseConfig.Kind)
+		return nil, fmt.Errorf("parser not found for %v kind", baseConfig.Kind)
 	}
 }
 
@@ -113,9 +113,18 @@ func clusterParser(config *Configuration) (err error) {
 		}
 		config.Spec = gkeSpec
 		return nil
+	case provisioner == "vsphere":
+		vsphereSpec := clustercfg.VSphere{}
+		err = yaml.Unmarshal(specBytes, &vsphereSpec)
+		if err != nil {
+			log.Errorf("error parsing configuration file: %v", err)
+			return err
+		}
+		config.Spec = vsphereSpec
+		return nil
 	default:
 		log.Error("Error parsing the configuration file. Provisioner not found")
-		return errors.New("Cluster provisioner not found")
+		return errors.New("cluster provisioner not found")
 	}
 }
 
@@ -156,6 +165,6 @@ func bootstrapParser(config *Configuration) (err error) {
 		return nil
 	default:
 		log.Error("Error parsing the configuration file. Provisioner not found")
-		return errors.New("Bootstrap provisioner not found")
+		return errors.New("bootstrap provisioner not found")
 	}
 }
