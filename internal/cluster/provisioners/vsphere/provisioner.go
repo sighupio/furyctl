@@ -209,8 +209,18 @@ func (e VSphere) TerraformFiles() []string {
 		"output.tf",
 		"main.tf",
 		"variables.tf",
-		"furyagent/furyagent.yml",
+		"furyagent/furyagent.yml", // TODO: probably don't needed
 	}
+}
+
+// Prepare the environment before running anything
+func (e VSphere) Prepare() error {
+	err := createPKI(e.terraform.WorkingDir())
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 // Plan runs a dry run execution
@@ -237,13 +247,46 @@ func (e VSphere) Plan() (err error) {
 	return nil
 }
 
-func (e VSphere) Prepare() error {
+// Update runs terraform apply in the project
+func (e VSphere) Update() (err error) {
+	log.Info("Updating VSphere project")
+	err = e.createVarFile()
+	if err != nil {
+		return err
+	}
+	err = e.terraform.Apply(context.Background(), tfexec.VarFile(fmt.Sprintf("%v/vsphere.tfvars", e.terraform.WorkingDir())))
+	if err != nil {
+		log.Fatalf("Something went wrong while updating vsphere. %v", err)
+		return err
+	}
+
+	log.Info("VSphere Updated")
+	return nil
+}
+
+// Destroy runs terraform destroy in the project
+func (e VSphere) Destroy() (err error) {
+	log.Info("Destroying VSphere project")
+	err = e.createVarFile()
+	if err != nil {
+		return err
+	}
+	err = e.terraform.Destroy(context.Background(), tfexec.VarFile(fmt.Sprintf("%v/vsphere.tfvars", e.terraform.WorkingDir())))
+	if err != nil {
+		log.Fatalf("Something went wrong while destroying VSphere cluster project. %v", err)
+		return err
+	}
+	log.Info("VSphere destroyed")
+	return nil
+}
+
+func createPKI(workingDirectory string) error {
 	startingPath, err := os.Getwd()
 	if err != nil {
 		return err
 	}
 
-	err = os.Chdir(filepath.Join(e.terraform.WorkingDir(), "furyagent"))
+	err = os.Chdir(filepath.Join(workingDirectory, "furyagent"))
 	if err != nil {
 		return err
 	}
@@ -286,38 +329,5 @@ func (e VSphere) Prepare() error {
 		return err
 	}
 
-	return nil
-}
-
-// Update runs terraform apply in the project
-func (e VSphere) Update() (err error) {
-	log.Info("Updating VSphere project")
-	err = e.createVarFile()
-	if err != nil {
-		return err
-	}
-	err = e.terraform.Apply(context.Background(), tfexec.VarFile(fmt.Sprintf("%v/vsphere.tfvars", e.terraform.WorkingDir())))
-	if err != nil {
-		log.Fatalf("Something went wrong while updating vsphere. %v", err)
-		return err
-	}
-
-	log.Info("VSphere Updated")
-	return nil
-}
-
-// Destroy runs terraform destroy in the project
-func (e VSphere) Destroy() (err error) {
-	log.Info("Destroying VSphere project")
-	err = e.createVarFile()
-	if err != nil {
-		return err
-	}
-	err = e.terraform.Destroy(context.Background(), tfexec.VarFile(fmt.Sprintf("%v/vsphere.tfvars", e.terraform.WorkingDir())))
-	if err != nil {
-		log.Fatalf("Something went wrong while destroying VSphere cluster project. %v", err)
-		return err
-	}
-	log.Info("VSphere destroyed")
 	return nil
 }
