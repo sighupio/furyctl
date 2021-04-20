@@ -131,6 +131,16 @@ func (c *Cluster) Init(reset bool) (err error) {
 		return err
 	}
 
+	// Ask the provisioner to prepare its own environment
+	c.s.Stop()
+	c.s.Suffix = " Preparing the provisioner environment"
+	c.s.Start()
+	err = prov.Prepare()
+	if err != nil {
+		log.Errorf("error while preparing provisioner environment: %v", err)
+		return err
+	}
+
 	// Init the terraform project
 	tf := prov.TerraformExecutor()
 	c.s.Stop()

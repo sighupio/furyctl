@@ -267,6 +267,10 @@ func (d GCP) Plan() (err error) {
 	return nil
 }
 
+func (d GCP) Prepare() (err error) {
+	return nil
+}
+
 // Update runs terraform apply in the project
 func (d GCP) Update() (err error) {
 	log.Info("Updating GCP Bootstrap project")
