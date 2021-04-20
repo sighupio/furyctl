@@ -209,7 +209,6 @@ func (e VSphere) TerraformFiles() []string {
 		"output.tf",
 		"main.tf",
 		"variables.tf",
-		"furyagent/furyagent.yml", // TODO: probably don't needed
 	}
 }
 
@@ -286,7 +285,13 @@ func createPKI(workingDirectory string) error {
 		return err
 	}
 
-	err = os.Chdir(filepath.Join(workingDirectory, "furyagent"))
+	furyagentPath := filepath.Join(workingDirectory, "furyagent")
+	err = os.MkdirAll(furyagentPath, 0755)
+	if err != nil {
+		return err
+	}
+
+	err = os.Chdir(furyagentPath)
 	if err != nil {
 		return err
 	}
