@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
+// Package provisioners TODO
 package provisioners
 
 import (
@@ -14,6 +15,7 @@ import (
 	"github.com/sighupio/furyctl/internal/bootstrap/provisioners/gcp"
 	"github.com/sighupio/furyctl/internal/cluster/provisioners/eks"
 	"github.com/sighupio/furyctl/internal/cluster/provisioners/gke"
+	"github.com/sighupio/furyctl/internal/cluster/provisioners/vsphere"
 	"github.com/sighupio/furyctl/internal/configuration"
 	log "github.com/sirupsen/logrus"
 )
@@ -46,7 +48,7 @@ func Get(config configuration.Configuration) (Provisioner, error) {
 		return getBootstrapProvisioner(config)
 	default:
 		log.Errorf("Kind %v not found", config.Kind)
-		return nil, fmt.Errorf("Kind %v not found", config.Kind)
+		return nil, fmt.Errorf("kind %v not found", config.Kind)
 	}
 }
 
@@ -56,6 +58,8 @@ func getClusterProvisioner(config configuration.Configuration) (Provisioner, err
 		return eks.New(&config), nil
 	case config.Provisioner == "gke":
 		return gke.New(&config), nil
+	case config.Provisioner == "vsphere":
+		return vsphere.New(&config), nil
 	default:
 		log.Error("Provisioner not found")
 		return nil, errors.New("Provisioner not found")
