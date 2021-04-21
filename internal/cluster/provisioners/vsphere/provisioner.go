@@ -211,6 +211,8 @@ func (e VSphere) TerraformFiles() []string {
 		"output.tf",
 		"main.tf",
 		"variables.tf",
+		"provision/ansible.cfg",
+		"provision/all-in-one.yml",
 	}
 }
 
