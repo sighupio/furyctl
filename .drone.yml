@@ -85,6 +85,11 @@ steps:
     commands:
       - bats -t ./automated-tests/integration/aws-eks/tests.sh
 
+  - <<: *integration
+    name: integration-vsphere
+    commands:
+      - bats -t ./automated-tests/integration/vsphere/tests.sh
+
   - &e2e
     name: e2e-gcp
     image: quay.io/sighup/e2e-furyctl:v1.2.1_v0.2.2_v1.20.1_20.04
@@ -138,6 +143,7 @@ steps:
       - test
       - integration-gcp-gke
       - integration-aws-eks
+      - integration-vsphere
       - e2e-gcp
       - e2e-aws
     environment:
