@@ -239,46 +239,46 @@ func clusterTemplate(config *Configuration) error {
 		spec := clustercfg.VSphere{
 			Version:         "1.20.5 # Place here the Kubernetes version you want to use",
 			EnvironmentName: "production # The environment name of the cluster",
-			Config:          clustercfg.VSphereConfig{
+			Config: clustercfg.VSphereConfig{
 				DatacenterName: "westeros # Get the name of datacenter from vShpere dashboard",
 				Datastore:      "main # Get the name of datastore from vSphere dashboard",
 				EsxiHost:       []string{"host1", "host2", "host3", "# Names of the hosts where the VMs are going to be created"},
 			},
-			NetworkConfig:   clustercfg.VSphereNetworkConfig{
+			NetworkConfig: clustercfg.VSphereNetworkConfig{
 				Name:        "main-network # The name of the vSphere network",
 				Gateway:     "10.0.0.1 # The IP of the network gateway",
 				Nameservers: []string{"8.8.4.4", "1.1.1.1"},
 				Domain:      "localdomain",
 			},
-			Boundary:        true,
+			Boundary: true,
 			LoadBalancerNode: clustercfg.VSphereKubeLoadBalancer{
 				Count:            1,
-				Template: "ubuntu-20.04 # The name of the base image to use for the VMs",
+				Template:         "ubuntu-20.04 # The name of the base image to use for the VMs",
 				CustomScriptPath: "./do-something.sh # A script that you want to run after first boot",
 			},
-			MasterNode:      clustercfg.VSphereKubeNode{
+			MasterNode: clustercfg.VSphereKubeNode{
 				Count:    1,
 				CPU:      1,
 				MemSize:  4096,
 				DiskSize: 100,
 				Template: "ubuntu-20.04 # The name of the base image to use for the VMs",
-				Labels:   map[string]string{
+				Labels: map[string]string{
 					"environment": "dev. # Node labels. Use it to tag nodes then use it on Kubernetes",
 				},
-				Taints:   []string{"key1=value1:NoSchedule. As an example"},
+				Taints: []string{"key1=value1:NoSchedule. As an example"},
 			},
-			InfraNode:       clustercfg.VSphereKubeNode{
+			InfraNode: clustercfg.VSphereKubeNode{
 				Count:    1,
 				CPU:      1,
 				MemSize:  8192,
 				DiskSize: 100,
 				Template: "ubuntu-20.04 # The name of the base image to use for the VMs",
-				Labels:   map[string]string{
+				Labels: map[string]string{
 					"environment": "dev. # Node labels. Use it to tag nodes then use it on Kubernetes",
 				},
-				Taints:   []string{"key1=value1:NoSchedule. As an example"},
+				Taints: []string{"key1=value1:NoSchedule. As an example"},
 			},
-			NodePools:       []clustercfg.VSphereKubeNode{
+			NodePools: []clustercfg.VSphereKubeNode{
 				{
 					Role:     "applications",
 					Count:    1,
@@ -286,16 +286,16 @@ func clusterTemplate(config *Configuration) error {
 					MemSize:  8192,
 					DiskSize: 100,
 					Template: "ubuntu-20.04 # The name of the base image to use for the VMs",
-					Labels:   map[string]string{
+					Labels: map[string]string{
 						"environment": "dev. # Node labels. Use it to tag nodes then use it on Kubernetes",
 					},
-					Taints:   []string{"key1=value1:NoSchedule. As an example"},
+					Taints: []string{"key1=value1:NoSchedule. As an example"},
 				},
 			},
-			ClusterPODCIDR:  "172.21.0.0/16",
-			ClusterSVCCIDR:  "172.23.0.0/16",
-			ClusterCIDR:     "10.2.0.0/16",
-			SSHPublicKey:    []string{
+			ClusterPODCIDR: "172.21.0.0/16",
+			ClusterSVCCIDR: "172.23.0.0/16",
+			ClusterCIDR:    "10.2.0.0/16",
+			SSHPublicKey: []string{
 				"/home/foo/.ssh/id_rsa.pub",
 			},
 		}
