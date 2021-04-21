@@ -9,7 +9,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io/fs"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -239,7 +238,7 @@ func downloadAnsibleRoles(workingDirectory string) error {
 
 	downloadPath := filepath.Join(workingDirectory, "provision/roles")
 	log.Infof("Ansible roles download path: %v", downloadPath)
-	err := os.Mkdir(downloadPath, fs.FileMode(0755))
+	err := os.Mkdir(downloadPath, 0755)
 	if err != nil {
 		return err
 	}
