@@ -33,15 +33,15 @@ type VSphereKubeLoadBalancer struct {
 }
 
 type VSphereKubeNode struct {
-	Role     string            `yaml:"role"`
-	Count    int               `yaml:"count"`
-	CPU      int               `yaml:"cpu"`
-	MemSize  int               `yaml:"memSize"`
-	DiskSize int               `yaml:"diskSize"`
-	Template string            `yaml:"template"`
-	Labels   map[string]string `yaml:"labels"`
-	Taints   []string          `yaml:"taints"`
-	CustomScriptPath string `yaml:"customScriptPath"`
+	Role             string            `yaml:"role"`
+	Count            int               `yaml:"count"`
+	CPU              int               `yaml:"cpu"`
+	MemSize          int               `yaml:"memSize"`
+	DiskSize         int               `yaml:"diskSize"`
+	Template         string            `yaml:"template"`
+	Labels           map[string]string `yaml:"labels"`
+	Taints           []string          `yaml:"taints"`
+	CustomScriptPath string            `yaml:"customScriptPath"`
 }
 
 // TODO: can you do that?
