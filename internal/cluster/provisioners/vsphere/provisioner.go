@@ -9,12 +9,14 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io/fs"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
 
 	"github.com/gobuffalo/packr/v2"
+	getter "github.com/hashicorp/go-getter"
 	"github.com/hashicorp/terraform-exec/tfexec"
 	"github.com/sighupio/furyagent/pkg/component"
 	"github.com/sighupio/furyagent/pkg/storage"
@@ -218,7 +220,38 @@ func (e VSphere) Prepare() error {
 	if err != nil {
 		return err
 	}
+	err = downloadAnsibleRoles(e.terraform.WorkingDir())
+	if err != nil {
+		return err
+	}
+	return nil
+}
 
+func downloadAnsibleRoles(workingDirectory string) error {
+	p_netrc := os.Getenv("NETRC")
+	defer os.Setenv("NETRC", p_netrc)
+
+	netrcpath := filepath.Join(workingDirectory, "configuration/.netrc")
+	log.Infof("Configuring the NETRC environment variable: %v", netrcpath)
+	os.Setenv("NETRC", netrcpath)
+
+	downloadPath := filepath.Join(workingDirectory, "provision/roles")
+	log.Infof("Ansible roles download path: %v", downloadPath)
+	err := os.Mkdir(downloadPath, fs.FileMode(0755))
+	if err != nil {
+		return err
+	}
+
+	client := &getter.Client{
+		Src:  "https://github.com/sighupio/furyctl-provisioners/archive/vsphere.zip//furyctl-provisioners-vsphere/roles",
+		Dst:  downloadPath,
+		Pwd:  workingDirectory,
+		Mode: getter.ClientModeAny,
+	}
+	err = client.Get()
+	if err != nil {
+		return err
+	}
 	return nil
 }
 
