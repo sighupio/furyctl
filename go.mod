@@ -5,6 +5,7 @@ require (
 	github.com/briandowns/spinner v1.12.0
 	github.com/denisbrodbeck/machineid v1.0.1
 	github.com/dukex/mixpanel v0.0.0-20180925151559-f8d5594f958e
+	github.com/fatih/color v1.10.0 // indirect
 	github.com/gobuffalo/packr/v2 v2.8.1
 	github.com/golang/protobuf v1.5.2 // indirect
 	github.com/hashicorp/go-checkpoint v0.5.0
@@ -17,6 +18,7 @@ require (
 	github.com/sirupsen/logrus v1.8.1
 	github.com/spf13/cobra v1.1.3
 	github.com/spf13/viper v1.7.0
+	github.com/stretchr/testify v1.6.1 // indirect
 	go.opencensus.io v0.22.2 // indirect
 	golang.org/x/crypto v0.0.0-20210421170649-83a5a9bb288b // indirect
 	golang.org/x/lint v0.0.0-20201208152925-83fdc39ff7b5 // indirect
