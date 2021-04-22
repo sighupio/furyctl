@@ -11,14 +11,14 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"os/exec"
+	"runtime"
 	"path/filepath"
 	"strings"
 
 	"github.com/gobuffalo/packr/v2"
 	getter "github.com/hashicorp/go-getter"
 	"github.com/hashicorp/terraform-exec/tfexec"
-	"github.com/sighupio/furyagent/pkg/component"
-	"github.com/sighupio/furyagent/pkg/storage"
 	cfg "github.com/sighupio/furyctl/internal/cluster/configuration"
 	"github.com/sighupio/furyctl/internal/configuration"
 	log "github.com/sirupsen/logrus"
@@ -212,6 +212,7 @@ func (e VSphere) TerraformFiles() []string {
 		"variables.tf",
 		"provision/ansible.cfg",
 		"provision/all-in-one.yml",
+		"furyagent/furyagent.yml",
 	}
 }
 
@@ -316,58 +317,61 @@ func (e VSphere) Destroy() (err error) {
 }
 
 func createPKI(workingDirectory string) error {
-	startingPath, err := os.Getwd()
+	source := ""
+	currentOS := runtime.GOOS
+        switch currentOS {
+        case "darwin":
+	     source = "https://github.com/sighupio/furyagent/releases/download/v0.2.3/furyagent-darwin-amd64"
+        case "linux":
+             source = "https://github.com/sighupio/furyagent/releases/download/v0.2.3/furyagent-linux-amd64"
+        default:
+             return fmt.Errorf("Windows %s is not supported, sorry ;-)", currentOS)
+        }
+
+	downloadPath := filepath.Join(workingDirectory, "furyagent")
+	log.Infof("Download furyagent: %v", downloadPath)
+	err := os.MkdirAll(downloadPath, 0755)
+
 	if err != nil {
 		return err
 	}
 
-	furyagentPath := filepath.Join(workingDirectory, "furyagent")
-	err = os.MkdirAll(furyagentPath, 0755)
+	client := &getter.Client{
+		Src:  source,
+		Dst:  downloadPath,
+		Pwd:  workingDirectory,
+		Mode: getter.ClientModeAny,
+	}
+	err = client.Get()
 	if err != nil {
 		return err
 	}
 
-	err = os.Chdir(furyagentPath)
-	if err != nil {
-		return err
-	}
+        tokens := strings.Split(source, "/")
+        downloadedExecutableName := tokens[len(tokens)-1]
+        wantedExecutableName := "furyagent"
 
-	s := storage.Config{
-		Provider:  "local",
-		LocalPath: ".",
-	}
-
-	store, err := storage.Init(&s)
+        err = os.Rename(filepath.Join(downloadPath, downloadedExecutableName), filepath.Join(downloadPath, wantedExecutableName))
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	var data component.ClusterComponentData = component.ClusterComponentData{
-		ClusterConfig: &component.ClusterConfig{},
-		Data:          store,
-	}
+        os.Chmod(filepath.Join(downloadPath, wantedExecutableName), 0755)
 
-	log.Info("Creating master pki")
-	var master component.ClusterComponent = component.Master{
-		ClusterComponentData: data,
-	}
-	err = master.Init("")
+        cmd := exec.Command("./furyagent", "init", "master")
+        cmd.Dir = downloadPath
+        out, err := cmd.Output()
 	if err != nil {
+		log.Debugf("%s", out)
 		log.Fatal(err)
 	}
 
-	log.Info("Creating etcd pki")
-	var etcd component.ClusterComponent = component.Etcd{
-		ClusterComponentData: data,
-	}
-	err = etcd.Init("")
+        cmd = exec.Command("./furyagent", "init", "etcd")
+        cmd.Dir = downloadPath
+        out, err = cmd.Output()
 	if err != nil {
+		log.Debugf("%s", out)
 		log.Fatal(err)
-	}
-
-	err = os.Chdir(startingPath)
-	if err != nil {
-		return err
 	}
 
 	return nil
