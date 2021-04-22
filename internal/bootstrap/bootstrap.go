@@ -269,7 +269,7 @@ func (c *Bootstrap) Update(dryrun bool) (err error) {
 	if !dryrun {
 		c.s.Suffix = " Applying terraform project"
 		c.s.Start()
-		err = prov.Update()
+		_, err = prov.Update()
 		if err != nil {
 			log.Errorf("Error while updating the bootstrap. Take a look to the logs. %v", err)
 			return err

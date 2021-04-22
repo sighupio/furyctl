@@ -285,7 +285,7 @@ func (c *Cluster) Update(dryrun bool) (err error) {
 	if !dryrun {
 		c.s.Suffix = " Applying terraform project"
 		c.s.Start()
-		err = prov.Update()
+		kubeconfig, err := prov.Update()
 		if err != nil {
 			log.Errorf("Error while updating the cluster. Take a look to the logs. %v", err)
 			return err
@@ -308,16 +308,7 @@ func (c *Cluster) Update(dryrun bool) (err error) {
 		}
 		c.s.Stop()
 
-		c.s.Suffix = " Saving kubernetes configuration file"
-		c.s.Start()
-		var kc []byte
-		kc, err = c.kubeconfig()
-		if err != nil {
-			log.Errorf("Error while getting the kubeconfig from the cluster: %v", err)
-			return err
-		}
-
-		err = proj.WriteFile("secrets/kubeconfig", kc)
+		err = proj.WriteFile("secrets/kubeconfig", []byte(kubeconfig))
 		if err != nil {
 			log.Errorf("Error while writting the kubeconfig to the project directory: %v", err)
 			return err
@@ -448,25 +439,6 @@ func (c *Cluster) output() ([]byte, error) {
 		return nil, err
 	}
 	return json.MarshalIndent(output, "", "    ")
-}
-
-// kubeconfig gathers the kubeconfig in form of binary data
-func (c *Cluster) kubeconfig() ([]byte, error) {
-	prov := *c.provisioner
-	log.Info("Gathering output file as json")
-	var output map[string]tfexec.OutputMeta
-	output, err := prov.TerraformExecutor().Output(context.Background())
-	if err != nil {
-		log.Fatalf("Error while getting project output: %v", err)
-		return nil, err
-	}
-	var creds string
-	err = json.Unmarshal(output["kubeconfig"].Value, &creds)
-	if err != nil {
-		log.Fatalf("Error while tranforming the kubeconfig value into string: %v", err)
-		return nil, err
-	}
-	return []byte(creds), nil
 }
 
 func (c *Cluster) createGitFiles() error {

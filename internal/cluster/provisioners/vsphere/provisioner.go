@@ -284,50 +284,52 @@ func (e VSphere) Plan() (err error) {
 }
 
 // Update runs terraform apply in the project
-func (e VSphere) Update() (err error) {
+func (e VSphere) Update() (string, error) {
 	log.Info("Updating VSphere project")
-	err = e.createVarFile()
+	err := e.createVarFile()
 	if err != nil {
-		return err
+		return "", err
 	}
 	err = e.terraform.Apply(context.Background(), tfexec.VarFile(fmt.Sprintf("%v/vsphere.tfvars", e.terraform.WorkingDir())))
 	if err != nil {
 		log.Fatalf("Something went wrong while updating vsphere. %v", err)
-		return err
+		return "", err
 	}
 
 	var output map[string]tfexec.OutputMeta
 	output, err = e.terraform.Output(context.Background())
 	if err != nil {
 		log.Error("Can not get output values")
+                return "", err
 	}
 
         var ansibleInventory, haproxyConfig string
 	err = json.Unmarshal(output["ansible_inventory"].Value, &ansibleInventory)
 	if err != nil {
 		log.Error("Can not get `ansible_inventory` value")
+                return "", err
 	}
 	err = json.Unmarshal(output["haproxy_config"].Value, &haproxyConfig)
 	if err != nil {
 		log.Error("Can not get `haproxy_config` value")
+                return "", err
 	}
 
         filePath := filepath.Join(e.terraform.WorkingDir(), "provision/hosts.ini")
         err = ioutil.WriteFile(filePath, []byte(ansibleInventory), 0644)
 	if err != nil {
-	       return err
+                return "", err
 	}
 
         filePath = filepath.Join(e.terraform.WorkingDir(), "provision/haproxy.cfg")
         err = ioutil.WriteFile(filePath, []byte(haproxyConfig), 0644)
 	if err != nil {
-	       return err
+                return "", err
 	}
 
-        runAnsiblePlaybook(filepath.Join(e.terraform.WorkingDir(), "provision"))
-
+        kubeconfig, err := runAnsiblePlaybook(filepath.Join(e.terraform.WorkingDir(), "provision"))
 	log.Info("VSphere Updated")
-	return nil
+	return kubeconfig, err
 }
 
 // Destroy runs terraform destroy in the project
@@ -407,7 +409,7 @@ func createPKI(workingDirectory string) error {
 	return nil
 }
 
-func runAnsiblePlaybook(workingDir string) error {
+func runAnsiblePlaybook(workingDir string) (string, error) {
 	log.Infof("Run Ansible playbook in : %v", workingDir)
 
         cmd := exec.Command("ansible", "--version")
@@ -416,6 +418,7 @@ func runAnsiblePlaybook(workingDir string) error {
 	if err != nil {
 		log.Debug("Please make sure you have Ansible installed in this machine")
 		log.Fatal(err)
+                return "", err
 	}
 
         cmd = exec.Command("ansible-playbook", "all-in-one.yml")
@@ -425,11 +428,14 @@ func runAnsiblePlaybook(workingDir string) error {
 	err = cmd.Start()
 	if err != nil {
 		log.Fatal(err)
+                return "", err
 	}
 	err = cmd.Wait()
 	if err != nil {
 		log.Fatal(err)
+                return "", err
 	}
 
-	return nil
+        dat, err := ioutil.ReadFile(filepath.Join(workingDir, "../secrets/users/admin.conf"))
+	return string(dat), err
 }

@@ -277,20 +277,20 @@ func (e GKE) Prepare() (err error) {
 }
 
 // Update runs terraform apply in the project
-func (e GKE) Update() (err error) {
+func (e GKE) Update() (string, error) {
 	log.Info("Updating GKE project")
-	err = e.createVarFile()
+	err := e.createVarFile()
 	if err != nil {
-		return err
+		return "", err
 	}
 	err = e.terraform.Apply(context.Background(), tfexec.VarFile(fmt.Sprintf("%v/gke.tfvars", e.terraform.WorkingDir())))
 	if err != nil {
 		log.Fatalf("Something went wrong while updating gke. %v", err)
-		return err
+		return "", err
 	}
 
 	log.Info("GKE Updated")
-	return nil
+	return e.kubeconfig()
 }
 
 // Destroy runs terraform destroy in the project
@@ -307,4 +307,21 @@ func (e GKE) Destroy() (err error) {
 	}
 	log.Info("GKE destroyed")
 	return nil
+}
+
+func (e GKE) kubeconfig() (string, error) {
+	log.Info("Gathering output file as json")
+	var output map[string]tfexec.OutputMeta
+	output, err := e.terraform.Output(context.Background())
+	if err != nil {
+		log.Fatalf("Error while getting project output: %v", err)
+		return "", err
+	}
+	var creds string
+	err = json.Unmarshal(output["kubeconfig"].Value, &creds)
+	if err != nil {
+		log.Fatalf("Error while tranforming the kubeconfig value into string: %v", err)
+		return "", err
+	}
+	return creds, nil
 }
