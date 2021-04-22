@@ -1,0 +1,52 @@
+# Copyright (c) 2021 SIGHUP s.r.l All rights reserved.
+# Use of this source code is governed by a BSD-style
+# license that can be found in the LICENSE file.
+
+kind: Cluster
+metadata:
+  name: e2e-${CI_BUILD_NUMBER}
+spec:
+  version: "1.20.5"
+  environmentName: "drone"
+  config:
+    datacenterName: "${VSPHERE_DATACENTER}"
+    datastore: "${VSPHERE_DATASTORE}"
+    esxiHosts:
+    - "${VSPHERE_HOST}"
+  networkConfig:
+    name: "${VSPHERE_NET}"
+    nameservers:
+    - 1.1.1.1
+    - 8.8.8.8
+    domain: localdomain
+  boundary: true
+  lbNode:
+    count: 1
+    template: "${VSPHERE_TEMPLATE_PREFIX}/sighup-oraclelinux7.9-template-v20210413"
+  masterNode:
+    count: 1
+    cpu: 2
+    memSize: 8192
+    diskSize: 100
+    template: "${VSPHERE_TEMPLATE_PREFIX}/sighup-oraclelinux7.9-template-v20210413"
+  infraNode:
+    count: 1
+    cpu: 2
+    memSize: 8192
+    diskSize: 100
+    template: "${VSPHERE_TEMPLATE_PREFIX}/sighup-oraclelinux7.9-template-v20210413"
+  nodePools: []
+  clusterPODCIDR: 172.21.0.0/16
+  clusterSVCCIDR: 172.23.0.0/16
+  clusterCIDR: 10.4.10.0/16
+  sshPublicKeys:
+    - /tmp/sshkey.pub
+provisioner: vsphere
+executor:
+  version: 0.13.6
+  state:
+    backend: s3
+    config:
+      bucket: ${TERRAFORM_TF_STATES_BUCKET_NAME}
+      key: ${CI_REPO}/${DRONE_BRANCH}/${CI_BUILD_NUMBER}/cluster/vsphere.state
+      region: ${AWS_DEFAULT_REGION}

@@ -122,6 +122,23 @@ steps:
         from_secret: GOOGLE_PROJECT
       GOOGLE_REGION:
         from_secret: GOOGLE_REGION
+
+      VSPHERE_USER:
+        from_secret: VSPHERE_USER
+      VSPHERE_PASSWORD:
+        from_secret: VSPHERE_PASSWORD
+      VSPHERE_SERVER:
+        from_secret: VSPHERE_SERVER
+      VSPHERE_DATACENTER:
+        from_secret: VSPHERE_DATACENTER
+      VSPHERE_DATASTORE:
+        from_secret: VSPHERE_DATASTORE
+      VSPHERE_HOST:
+        from_secret: VSPHERE_HOST
+      VSPHERE_NET:
+        from_secret: VSPHERE_NET
+      VSPHERE_TEMPLATE_PREFIX:
+        from_secret: VSPHERE_TEMPLATE_PREFIX
     commands:
       - echo $${GCP_CREDENTIALS} | base64 -d > $${GCP_CREDENTIALS_PATH}
       - export GOOGLE_APPLICATION_CREDENTIALS=$${GCP_CREDENTIALS_PATH}
@@ -134,6 +151,14 @@ steps:
     name: e2e-aws
     commands:
       - bats -t ./automated-tests/e2e-tests/aws-eks/tests.sh
+
+  - <<: *e2e
+    name: e2e-vsphere
+    commands:
+      - bats -t ./automated-tests/e2e-tests/vsphere/tests.sh
+    when:
+      event:
+        - push
 
   - name: build-release
     image: ghcr.io/goreleaser/goreleaser:v0.149.0
