@@ -239,6 +239,7 @@ func downloadAnsibleRoles(workingDirectory string) error {
 	downloadPath := filepath.Join(workingDirectory, "provision/roles")
 	log.Infof("Ansible roles download path: %v", downloadPath)
 	err := os.Mkdir(downloadPath, 0755)
+
 	if err != nil {
 		return err
 	}
@@ -253,6 +254,7 @@ func downloadAnsibleRoles(workingDirectory string) error {
 	if err != nil {
 		return err
 	}
+
 	return nil
 }
 
