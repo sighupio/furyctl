@@ -55,7 +55,7 @@ steps:
       GITHUB_TOKEN:
         from_secret: GITHUB_TOKEN
     commands:
-      - go get -u github.com/gobuffalo/packr/v2/packr2
+      - GO111MODULE=on go get -u github.com/gobuffalo/packr/v2/packr2@v2.8.1
       - git reset --hard
       - git fetch --tags
       - GO111MODULE=on goreleaser check
@@ -144,7 +144,7 @@ steps:
       GITHUB_TOKEN:
         from_secret: GITHUB_TOKEN
     commands:
-      - go get -u github.com/gobuffalo/packr/v2/packr2
+      - GO111MODULE=on go get -u github.com/gobuffalo/packr/v2/packr2@v2.8.1
       - git reset --hard
       - git fetch --tags
       - GO111MODULE=on goreleaser check
