@@ -26,7 +26,7 @@ require (
 	golang.org/x/net v0.0.0-20210420072503-d25e30425868 // indirect
 	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c // indirect
 	golang.org/x/sys v0.0.0-20210421221651-33663a62ff08 // indirect
-	golang.org/x/term v0.0.0-20210421210424-b80969c67360 // indirect
+	golang.org/x/term v0.0.0-20210422114643-f5beecf764ed // indirect
 	golang.org/x/tools v0.1.0 // indirect
 	google.golang.org/grpc v1.26.0 // indirect
 	gopkg.in/yaml.v2 v2.4.0

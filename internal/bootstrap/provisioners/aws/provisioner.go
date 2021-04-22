@@ -243,21 +243,21 @@ func (d AWS) Plan() (err error) {
 }
 
 // Update runs terraform apply in the project
-func (d AWS) Update() (err error) {
+func (d AWS) Update() (string, error) {
 	log.Info("Updating AWS Bootstrap project")
-	err = d.createVarFile()
+	err := d.createVarFile()
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	err = d.terraform.Apply(context.Background(), tfexec.VarFile(fmt.Sprintf("%v/aws.tfvars", d.terraform.WorkingDir())))
 	if err != nil {
 		log.Fatalf("Something went wrong while updating aws. %v", err)
-		return err
+		return "", err
 	}
 
 	log.Info("AWS Updated")
-	return nil
+	return "", nil
 }
 
 // Destroy runs terraform destroy in the project
