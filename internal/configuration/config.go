@@ -114,7 +114,11 @@ func clusterParser(config *Configuration) (err error) {
 		config.Spec = gkeSpec
 		return nil
 	case provisioner == "vsphere":
-		vsphereSpec := clustercfg.VSphere{}
+		vsphereSpec := clustercfg.VSphere{
+			NetworkConfig: clustercfg.VSphereNetworkConfig{
+				Domain: "localdomain",
+			},
+		}
 		err = yaml.Unmarshal(specBytes, &vsphereSpec)
 		if err != nil {
 			log.Errorf("error parsing configuration file: %v", err)
