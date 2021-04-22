@@ -312,20 +312,20 @@ func (e EKS) Plan() (err error) {
 }
 
 // Update runs terraform apply in the project
-func (e EKS) Update() (err error) {
+func (e EKS) Update() (string, error) {
 	log.Info("Updating EKS project")
-	err = e.createVarFile()
+	err := e.createVarFile()
 	if err != nil {
-		return err
+		return "", err
 	}
 	err = e.terraform.Apply(context.Background(), tfexec.VarFile(fmt.Sprintf("%v/eks.tfvars", e.terraform.WorkingDir())))
 	if err != nil {
 		log.Fatalf("Something went wrong while updating eks. %v", err)
-		return err
+		return "", err
 	}
 
 	log.Info("EKS Updated")
-	return nil
+	return e.kubeconfig()
 }
 
 // Destroy runs terraform destroy in the project
@@ -342,4 +342,21 @@ func (e EKS) Destroy() (err error) {
 	}
 	log.Info("EKS destroyed")
 	return nil
+}
+
+func (e EKS) kubeconfig() (string, error) {
+	log.Info("Gathering output file as json")
+	var output map[string]tfexec.OutputMeta
+	output, err := e.terraform.Output(context.Background())
+	if err != nil {
+		log.Fatalf("Error while getting project output: %v", err)
+		return "", err
+	}
+	var creds string
+	err = json.Unmarshal(output["kubeconfig"].Value, &creds)
+	if err != nil {
+		log.Fatalf("Error while tranforming the kubeconfig value into string: %v", err)
+		return "", err
+	}
+	return creds, err
 }

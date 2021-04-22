@@ -272,21 +272,21 @@ func (d GCP) Prepare() (err error) {
 }
 
 // Update runs terraform apply in the project
-func (d GCP) Update() (err error) {
+func (d GCP) Update() (string, error) {
 	log.Info("Updating GCP Bootstrap project")
-	err = d.createVarFile()
+	err := d.createVarFile()
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	err = d.terraform.Apply(context.Background(), tfexec.VarFile(fmt.Sprintf("%v/gcp.tfvars", d.terraform.WorkingDir())))
 	if err != nil {
 		log.Fatalf("Something went wrong while updating gcp. %v", err)
-		return err
+		return "", err
 	}
 
 	log.Info("GCP Updated")
-	return nil
+	return "", nil
 }
 
 // Destroy runs terraform destroy in the project

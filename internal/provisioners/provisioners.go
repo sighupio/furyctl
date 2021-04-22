@@ -34,7 +34,7 @@ type Provisioner interface {
 
 	Prepare() error
 	Plan() error
-	Update() error
+	Update() (string, error)
 	Destroy() error
 
 	Box() *packr.Box
