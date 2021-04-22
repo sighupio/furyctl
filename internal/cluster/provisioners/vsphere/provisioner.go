@@ -296,6 +296,34 @@ func (e VSphere) Update() (err error) {
 		return err
 	}
 
+	var output map[string]tfexec.OutputMeta
+	output, err = e.terraform.Output(context.Background())
+	if err != nil {
+		log.Error("Can not get output values")
+	}
+
+        var ansibleInventory, haproxyConfig string
+	err = json.Unmarshal(output["ansible_inventory"].Value, &ansibleInventory)
+	if err != nil {
+		log.Error("Can not get `ansible_inventory` value")
+	}
+	err = json.Unmarshal(output["haproxy_config"].Value, &haproxyConfig)
+	if err != nil {
+		log.Error("Can not get `haproxy_config` value")
+	}
+
+        filePath := filepath.Join(e.terraform.WorkingDir(), "provision/hosts.ini")
+        err = ioutil.WriteFile(filePath, []byte(ansibleInventory), 0644)
+	if err != nil {
+	       return err
+	}
+
+        filePath = filepath.Join(e.terraform.WorkingDir(), "provision/haproxy.cfg")
+        err = ioutil.WriteFile(filePath, []byte(haproxyConfig), 0644)
+	if err != nil {
+	       return err
+	}
+
 	log.Info("VSphere Updated")
 	return nil
 }
