@@ -324,6 +324,8 @@ func (e VSphere) Update() (err error) {
 	       return err
 	}
 
+        runAnsiblePlaybook(filepath.Join(e.terraform.WorkingDir(), "provision"))
+
 	log.Info("VSphere Updated")
 	return nil
 }
@@ -399,6 +401,33 @@ func createPKI(workingDirectory string) error {
         out, err = cmd.Output()
 	if err != nil {
 		log.Debugf("%s", out)
+		log.Fatal(err)
+	}
+
+	return nil
+}
+
+func runAnsiblePlaybook(workingDir string) error {
+	log.Infof("Run Ansible playbook in : %v", workingDir)
+
+        cmd := exec.Command("ansible", "--version")
+        cmd.Dir = workingDir
+        err := cmd.Run()
+	if err != nil {
+		log.Debug("Please make sure you have Ansible installed in this machine")
+		log.Fatal(err)
+	}
+
+        cmd = exec.Command("ansible-playbook", "all-in-one.yml")
+        cmd.Dir = workingDir
+        cmd.Stdout = os.Stdout
+        cmd.Stderr = os.Stderr
+	err = cmd.Start()
+	if err != nil {
+		log.Fatal(err)
+	}
+	err = cmd.Wait()
+	if err != nil {
 		log.Fatal(err)
 	}
 
