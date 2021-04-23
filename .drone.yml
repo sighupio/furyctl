@@ -156,9 +156,6 @@ steps:
     name: e2e-vsphere
     commands:
       - bats -t ./automated-tests/e2e-tests/vsphere/tests.sh
-    when:
-      event:
-        - push
 
   - name: build-release
     image: ghcr.io/goreleaser/goreleaser:v0.149.0
@@ -171,6 +168,7 @@ steps:
       - integration-vsphere
       - e2e-gcp
       - e2e-aws
+      - e2e-vsphere
     environment:
       GITHUB_TOKEN:
         from_secret: GITHUB_TOKEN

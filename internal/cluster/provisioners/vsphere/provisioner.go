@@ -76,6 +76,7 @@ func (e VSphere) createVarFile() (err error) {
 	buffer.WriteString(fmt.Sprintf("net_gateway = \"%v\"\n", spec.NetworkConfig.Gateway))
 	buffer.WriteString(fmt.Sprintf("net_nameservers = [\"%v\"]\n", strings.Join(spec.NetworkConfig.Nameservers, "\",\"")))
 	buffer.WriteString(fmt.Sprintf("net_domain = \"%v\"\n", spec.NetworkConfig.Domain))
+	buffer.WriteString(fmt.Sprintf("ip_offset = %v\n", spec.NetworkConfig.IPOffset))
 	buffer.WriteString(fmt.Sprintf("enable_boundary_targets = %v\n", spec.Boundary))
 	// TODO: check plural
 	buffer.WriteString(fmt.Sprintf("ssh_public_keys = [\"%v\"]\n", strings.Join(spec.SSHPublicKey, "\",\"")))

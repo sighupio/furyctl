@@ -87,7 +87,7 @@ fi
     [ "$status" -eq 0 ]
 }
 
-@test "PING" {
+@test "Ping" {
     info
     ping(){
         cd ./automated-tests/e2e-tests/vsphere/cluster/provision && ansible all -m ping

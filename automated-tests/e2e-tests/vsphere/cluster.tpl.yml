@@ -19,6 +19,7 @@ spec:
     - 1.1.1.1
     - 8.8.8.8
     domain: localdomain
+    ipOffset: 2551
   boundary: true
   lbNode:
     count: 1
@@ -38,7 +39,7 @@ spec:
   nodePools: []
   clusterPODCIDR: 172.21.0.0/16
   clusterSVCCIDR: 172.23.0.0/16
-  clusterCIDR: 10.4.10.0/16
+  clusterCIDR: 10.4.0.0/16
   sshPublicKeys:
     - /tmp/sshkey.pub
 provisioner: vsphere
