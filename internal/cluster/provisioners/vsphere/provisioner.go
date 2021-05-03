@@ -12,8 +12,8 @@ import (
 	"io/ioutil"
 	"os"
 	"os/exec"
-	"runtime"
 	"path/filepath"
+	"runtime"
 	"strings"
 
 	"github.com/gobuffalo/packr/v2"
@@ -76,6 +76,7 @@ func (e VSphere) createVarFile() (err error) {
 	buffer.WriteString(fmt.Sprintf("net_gateway = \"%v\"\n", spec.NetworkConfig.Gateway))
 	buffer.WriteString(fmt.Sprintf("net_nameservers = [\"%v\"]\n", strings.Join(spec.NetworkConfig.Nameservers, "\",\"")))
 	buffer.WriteString(fmt.Sprintf("net_domain = \"%v\"\n", spec.NetworkConfig.Domain))
+	buffer.WriteString(fmt.Sprintf("ip_offset = %v\n", spec.NetworkConfig.IPOffset))
 	buffer.WriteString(fmt.Sprintf("enable_boundary_targets = %v\n", spec.Boundary))
 	// TODO: check plural
 	buffer.WriteString(fmt.Sprintf("ssh_public_keys = [\"%v\"]\n", strings.Join(spec.SSHPublicKey, "\",\"")))
@@ -300,34 +301,34 @@ func (e VSphere) Update() (string, error) {
 	output, err = e.terraform.Output(context.Background())
 	if err != nil {
 		log.Error("Can not get output values")
-                return "", err
+		return "", err
 	}
 
-        var ansibleInventory, haproxyConfig string
+	var ansibleInventory, haproxyConfig string
 	err = json.Unmarshal(output["ansible_inventory"].Value, &ansibleInventory)
 	if err != nil {
 		log.Error("Can not get `ansible_inventory` value")
-                return "", err
+		return "", err
 	}
 	err = json.Unmarshal(output["haproxy_config"].Value, &haproxyConfig)
 	if err != nil {
 		log.Error("Can not get `haproxy_config` value")
-                return "", err
+		return "", err
 	}
 
-        filePath := filepath.Join(e.terraform.WorkingDir(), "provision/hosts.ini")
-        err = ioutil.WriteFile(filePath, []byte(ansibleInventory), 0644)
+	filePath := filepath.Join(e.terraform.WorkingDir(), "provision/hosts.ini")
+	err = ioutil.WriteFile(filePath, []byte(ansibleInventory), 0644)
 	if err != nil {
-                return "", err
+		return "", err
 	}
 
-        filePath = filepath.Join(e.terraform.WorkingDir(), "provision/haproxy.cfg")
-        err = ioutil.WriteFile(filePath, []byte(haproxyConfig), 0644)
+	filePath = filepath.Join(e.terraform.WorkingDir(), "provision/haproxy.cfg")
+	err = ioutil.WriteFile(filePath, []byte(haproxyConfig), 0644)
 	if err != nil {
-                return "", err
+		return "", err
 	}
 
-        kubeconfig, err := runAnsiblePlaybook(filepath.Join(e.terraform.WorkingDir(), "provision"))
+	kubeconfig, err := runAnsiblePlaybook(filepath.Join(e.terraform.WorkingDir(), "provision"))
 	log.Info("VSphere Updated")
 	return kubeconfig, err
 }
@@ -351,14 +352,14 @@ func (e VSphere) Destroy() (err error) {
 func createPKI(workingDirectory string) error {
 	source := ""
 	currentOS := runtime.GOOS
-        switch currentOS {
-        case "darwin":
-	     source = "https://github.com/sighupio/furyagent/releases/download/v0.2.3/furyagent-darwin-amd64"
-        case "linux":
-             source = "https://github.com/sighupio/furyagent/releases/download/v0.2.3/furyagent-linux-amd64"
-        default:
-             return fmt.Errorf("Windows %s is not supported, sorry ;-)", currentOS)
-        }
+	switch currentOS {
+	case "darwin":
+		source = "https://github.com/sighupio/furyagent/releases/download/v0.2.3/furyagent-darwin-amd64"
+	case "linux":
+		source = "https://github.com/sighupio/furyagent/releases/download/v0.2.3/furyagent-linux-amd64"
+	default:
+		return fmt.Errorf("Windows %s is not supported, sorry ;-)", currentOS)
+	}
 
 	downloadPath := filepath.Join(workingDirectory, "furyagent")
 	log.Infof("Download furyagent: %v", downloadPath)
@@ -379,28 +380,28 @@ func createPKI(workingDirectory string) error {
 		return err
 	}
 
-        tokens := strings.Split(source, "/")
-        downloadedExecutableName := tokens[len(tokens)-1]
-        wantedExecutableName := "furyagent"
+	tokens := strings.Split(source, "/")
+	downloadedExecutableName := tokens[len(tokens)-1]
+	wantedExecutableName := "furyagent"
 
-        err = os.Rename(filepath.Join(downloadPath, downloadedExecutableName), filepath.Join(downloadPath, wantedExecutableName))
+	err = os.Rename(filepath.Join(downloadPath, downloadedExecutableName), filepath.Join(downloadPath, wantedExecutableName))
 	if err != nil {
 		log.Fatal(err)
 	}
 
-        os.Chmod(filepath.Join(downloadPath, wantedExecutableName), 0755)
+	os.Chmod(filepath.Join(downloadPath, wantedExecutableName), 0755)
 
-        cmd := exec.Command("./furyagent", "init", "master")
-        cmd.Dir = downloadPath
-        out, err := cmd.Output()
+	cmd := exec.Command("./furyagent", "init", "master")
+	cmd.Dir = downloadPath
+	out, err := cmd.Output()
 	if err != nil {
 		log.Debugf("%s", out)
 		log.Fatal(err)
 	}
 
-        cmd = exec.Command("./furyagent", "init", "etcd")
-        cmd.Dir = downloadPath
-        out, err = cmd.Output()
+	cmd = exec.Command("./furyagent", "init", "etcd")
+	cmd.Dir = downloadPath
+	out, err = cmd.Output()
 	if err != nil {
 		log.Debugf("%s", out)
 		log.Fatal(err)
@@ -412,30 +413,30 @@ func createPKI(workingDirectory string) error {
 func runAnsiblePlaybook(workingDir string) (string, error) {
 	log.Infof("Run Ansible playbook in : %v", workingDir)
 
-        cmd := exec.Command("ansible", "--version")
-        cmd.Dir = workingDir
-        err := cmd.Run()
+	cmd := exec.Command("ansible", "--version")
+	cmd.Dir = workingDir
+	err := cmd.Run()
 	if err != nil {
 		log.Debug("Please make sure you have Ansible installed in this machine")
 		log.Fatal(err)
-                return "", err
+		return "", err
 	}
 
-        cmd = exec.Command("ansible-playbook", "all-in-one.yml")
-        cmd.Dir = workingDir
-        cmd.Stdout = os.Stdout
-        cmd.Stderr = os.Stderr
+	cmd = exec.Command("ansible-playbook", "all-in-one.yml")
+	cmd.Dir = workingDir
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
 	err = cmd.Start()
 	if err != nil {
 		log.Fatal(err)
-                return "", err
+		return "", err
 	}
 	err = cmd.Wait()
 	if err != nil {
 		log.Fatal(err)
-                return "", err
+		return "", err
 	}
 
-        dat, err := ioutil.ReadFile(filepath.Join(workingDir, "../secrets/users/admin.conf"))
+	dat, err := ioutil.ReadFile(filepath.Join(workingDir, "../secrets/users/admin.conf"))
 	return string(dat), err
 }
