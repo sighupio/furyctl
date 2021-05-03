@@ -116,7 +116,8 @@ func clusterParser(config *Configuration) (err error) {
 	case provisioner == "vsphere":
 		vsphereSpec := clustercfg.VSphere{
 			NetworkConfig: clustercfg.VSphereNetworkConfig{
-				Domain: "localdomain",
+				Domain:   "localdomain",
+				IPOffset: 0,
 			},
 		}
 		err = yaml.Unmarshal(specBytes, &vsphereSpec)

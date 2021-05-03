@@ -85,6 +85,11 @@ steps:
     commands:
       - bats -t ./automated-tests/integration/aws-eks/tests.sh
 
+  - <<: *integration
+    name: integration-vsphere
+    commands:
+      - bats -t ./automated-tests/integration/vsphere/tests.sh
+
   - &e2e
     name: e2e-gcp
     image: quay.io/sighup/e2e-furyctl:v1.2.1_v0.2.2_v1.20.1_20.04
@@ -117,6 +122,23 @@ steps:
         from_secret: GOOGLE_PROJECT
       GOOGLE_REGION:
         from_secret: GOOGLE_REGION
+
+      VSPHERE_USER:
+        from_secret: VSPHERE_USER
+      VSPHERE_PASSWORD:
+        from_secret: VSPHERE_PASSWORD
+      VSPHERE_SERVER:
+        from_secret: VSPHERE_SERVER
+      VSPHERE_DATACENTER:
+        from_secret: VSPHERE_DATACENTER
+      VSPHERE_DATASTORE:
+        from_secret: VSPHERE_DATASTORE
+      VSPHERE_HOST:
+        from_secret: VSPHERE_HOST
+      VSPHERE_NET:
+        from_secret: VSPHERE_NET
+      VSPHERE_TEMPLATE_PREFIX:
+        from_secret: VSPHERE_TEMPLATE_PREFIX
     commands:
       - echo $${GCP_CREDENTIALS} | base64 -d > $${GCP_CREDENTIALS_PATH}
       - export GOOGLE_APPLICATION_CREDENTIALS=$${GCP_CREDENTIALS_PATH}
@@ -130,6 +152,11 @@ steps:
     commands:
       - bats -t ./automated-tests/e2e-tests/aws-eks/tests.sh
 
+  - <<: *e2e
+    name: e2e-vsphere
+    commands:
+      - bats -t ./automated-tests/e2e-tests/vsphere/tests.sh
+
   - name: build-release
     image: ghcr.io/goreleaser/goreleaser:v0.149.0
     pull: always
@@ -138,8 +165,10 @@ steps:
       - test
       - integration-gcp-gke
       - integration-aws-eks
+      - integration-vsphere
       - e2e-gcp
       - e2e-aws
+      - e2e-vsphere
     environment:
       GITHUB_TOKEN:
         from_secret: GITHUB_TOKEN
