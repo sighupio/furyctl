@@ -249,6 +249,7 @@ func clusterTemplate(config *Configuration) error {
 				Gateway:     "10.0.0.1 # The IP of the network gateway",
 				Nameservers: []string{"8.8.4.4", "1.1.1.1"},
 				Domain:      "localdomain",
+				IPOffset:    0,
 			},
 			Boundary: true,
 			LoadBalancerNode: clustercfg.VSphereKubeLoadBalancer{

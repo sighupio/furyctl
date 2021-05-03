@@ -55,6 +55,7 @@ type VSphereNetworkConfig struct {
 	Gateway     string   `yaml:"gateway"`
 	Nameservers []string `yaml:"nameservers"`
 	Domain      string   `yaml:"domain"`
+	IPOffset    int      `yaml:"ipOffset"`
 }
 
 type VSphereConfig struct {

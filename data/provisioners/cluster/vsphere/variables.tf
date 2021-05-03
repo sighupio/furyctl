@@ -62,6 +62,12 @@ variable "net_domain" {
   description = "DNS search domain names to configure on the VMs."
 }
 
+variable "ip_offset" {
+  type        = number
+  default     = 0
+  description = "Number to sum at every IP calculation. Enable deploying multiple clusters in the same network"
+}
+
 variable "enable_boundary_targets" {
   description = "Enable boundary on all the nodes"
   type        = bool
