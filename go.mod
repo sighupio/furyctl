@@ -14,6 +14,7 @@ require (
 	github.com/hashicorp/terraform-exec v0.11.0
 	github.com/karrick/godirwalk v1.16.1 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
+	github.com/relex/aini v1.2.1
 	github.com/rogpeppe/go-internal v1.8.0 // indirect
 	github.com/sirupsen/logrus v1.8.1
 	github.com/spf13/cobra v1.1.3
