@@ -335,7 +335,7 @@ func (e VSphere) Plan() (err error) {
 	var changes bool
 	changes, err = e.terraform.Plan(context.Background(), tfexec.VarFile(fmt.Sprintf("%v/vsphere.tfvars", e.terraform.WorkingDir())))
 	if err != nil {
-		log.Fatalf("[DRYRUN] Something went wrong while updating gke. %v", err)
+		log.Fatalf("[DRYRUN] Something went wrong while updating vsphere. %v", err)
 		return err
 	}
 	if changes {
