@@ -127,8 +127,11 @@ func (e VSphere) createVarFile() (err error) {
 	buffer.WriteString(fmt.Sprintf("kube_version = \"%v\"\n", spec.Version))
 	buffer.WriteString(fmt.Sprintf("env = \"%v\"\n", spec.EnvironmentName))
 	buffer.WriteString(fmt.Sprintf("datacenter = \"%v\"\n", spec.Config.DatacenterName))
-	// TODO: check plural
-	buffer.WriteString(fmt.Sprintf("esxihosts = [\"%v\"]\n", strings.Join(spec.Config.EsxiHost, "\",\"")))
+	if len(spec.Config.EsxiHost) > 0 {
+		buffer.WriteString(fmt.Sprintf("esxihosts = [\"%v\"]\n", strings.Join(spec.Config.EsxiHost, "\",\"")))
+	} else {
+		buffer.WriteString("esxihosts = []\n")
+	}
 	buffer.WriteString(fmt.Sprintf("datastore = \"%v\"\n", spec.Config.Datastore))
 	buffer.WriteString(fmt.Sprintf("network = \"%v\"\n", spec.NetworkConfig.Name))
 	buffer.WriteString(fmt.Sprintf("net_cidr = \"%v\"\n", spec.ClusterCIDR))
@@ -137,8 +140,11 @@ func (e VSphere) createVarFile() (err error) {
 	buffer.WriteString(fmt.Sprintf("net_domain = \"%v\"\n", spec.NetworkConfig.Domain))
 	buffer.WriteString(fmt.Sprintf("ip_offset = %v\n", spec.NetworkConfig.IPOffset))
 	buffer.WriteString(fmt.Sprintf("enable_boundary_targets = %v\n", spec.Boundary))
-	// TODO: check plural
-	buffer.WriteString(fmt.Sprintf("ssh_public_keys = [\"%v\"]\n", strings.Join(spec.SSHPublicKey, "\",\"")))
+	if len(spec.SSHPublicKey) > 0 {
+		buffer.WriteString(fmt.Sprintf("ssh_public_keys = [\"%v\"]\n", strings.Join(spec.SSHPublicKey, "\",\"")))
+	} else {
+		buffer.WriteString("ssh_public_keys = []\n")
+	}
 	buffer.WriteString(fmt.Sprintf("kube_lb_count = %v\n", spec.LoadBalancerNode.Count))
 	buffer.WriteString(fmt.Sprintf("kube_lb_template = \"%v\"\n", spec.LoadBalancerNode.Template))
 	buffer.WriteString(fmt.Sprintf("kube_lb_custom_script_path = \"%v\"\n", spec.LoadBalancerNode.CustomScriptPath))
@@ -163,8 +169,7 @@ func (e VSphere) createVarFile() (err error) {
 	} else {
 		buffer.WriteString("kube_master_taints = []\n")
 	}
-	// TODO: restore
-	// buffer.WriteString(fmt.Sprintf("kube_master_custom_script_path = \"%v\"\n", spec.MasterNode.CustomScriptPath))
+	buffer.WriteString(fmt.Sprintf("kube_master_custom_script_path = \"%v\"\n", spec.MasterNode.CustomScriptPath))
 
 	buffer.WriteString(fmt.Sprintf("kube_pod_cidr = \"%v\"\n", spec.ClusterPODCIDR))
 	buffer.WriteString(fmt.Sprintf("kube_svc_cidr = \"%v\"\n", spec.ClusterSVCCIDR))
@@ -189,7 +194,7 @@ func (e VSphere) createVarFile() (err error) {
 	} else {
 		buffer.WriteString("kube_infra_taints = []\n")
 	}
-	// buffer.WriteString(fmt.Sprintf("kube_infra_custom_script_path = \"%v\"\n", spec.InfraNode..CustomScriptPath))
+	buffer.WriteString(fmt.Sprintf("kube_infra_custom_script_path = \"%v\"\n", spec.InfraNode.CustomScriptPath))
 
 	if len(spec.NodePools) > 0 {
 		buffer.WriteString("node_pools = [\n")
