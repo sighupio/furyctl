@@ -387,7 +387,7 @@ func (e VSphere) Update() (string, error) {
 		return "", err
 	}
 
-	kubeconfig, err := runAnsiblePlaybook(filepath.Join(e.terraform.WorkingDir(), "provision"))
+	kubeconfig, err := runAnsiblePlaybook(filepath.Join(e.terraform.WorkingDir(), "provision"), filepath.Join(e.terraform.WorkingDir(), "logs"))
 	log.Info("VSphere Updated")
 	return kubeconfig, err
 }
@@ -469,12 +469,24 @@ func createPKI(workingDirectory string) error {
 	return nil
 }
 
-func runAnsiblePlaybook(workingDir string) (string, error) {
+func runAnsiblePlaybook(workingDir string, logDir string) (string, error) {
 	log.Infof("Run Ansible playbook in : %v", workingDir)
+
+	// TODO: Get the debug flag from the CLI to output both to a file and stdout
+	// open the log file for writing
+	logFilePath := filepath.Join(logDir, "ansible.log")
+	logFile, err := os.Create(logFilePath)
+	if err != nil {
+		log.Errorf("Can not open the log file %v", logFilePath)
+		return "", err
+	}
+	defer logFile.Close()
 
 	cmd := exec.Command("ansible", "--version")
 	cmd.Dir = workingDir
-	err := cmd.Run()
+	cmd.Stdout = logFile
+	cmd.Stderr = logFile
+	err = cmd.Run()
 	if err != nil {
 		log.Debug("Please make sure you have Ansible installed in this machine")
 		log.Fatal(err)
@@ -483,8 +495,8 @@ func runAnsiblePlaybook(workingDir string) (string, error) {
 
 	cmd = exec.Command("ansible-playbook", "all-in-one.yml")
 	cmd.Dir = workingDir
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
+	cmd.Stdout = logFile
+	cmd.Stderr = logFile
 	err = cmd.Start()
 	if err != nil {
 		log.Fatal(err)
