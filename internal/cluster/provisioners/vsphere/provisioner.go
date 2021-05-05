@@ -14,11 +14,13 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"strconv"
 	"strings"
 
 	"github.com/gobuffalo/packr/v2"
 	getter "github.com/hashicorp/go-getter"
 	"github.com/hashicorp/terraform-exec/tfexec"
+	"github.com/relex/aini"
 	cfg "github.com/sighupio/furyctl/internal/cluster/configuration"
 	"github.com/sighupio/furyctl/internal/configuration"
 	log "github.com/sirupsen/logrus"
@@ -35,21 +37,78 @@ type VSphere struct {
 func (e *VSphere) InitMessage() string {
 	return `[VSphere] Fury
 
-TODO: ...
+This provisioner creates a battle-tested Kubernetes vSphere Cluster
+with a private and production-grade setup.
+
+It will deploy all the components required to run a Kubernetes Cluster:
+- Load Balancer (Control Plane & Infrastructure components)
+- Kubernetes Control Plane
+- Dedicated intrastructure nodes
+- General node pools
+
+Requires to connect to a VPN server to deploy the cluster from this computer.
+Use a bastion host (inside the same vSphere network) as an alternative method to deploy the cluster.
+
+The provisioner requires the following software installed:
+- ansible
+
+And internet connection to download remote repositories from the SIGHUP enterprise repositories.
 `
 }
 
 // UpdateMessage return a custom provisioner message the user will see once the cluster is updated
 func (e *VSphere) UpdateMessage() string {
-	// Take the output from Terraform
-	// Take the output from Ansible
-	// Format everything in a nice way
-	return "TODO"
+	var output map[string]tfexec.OutputMeta
+	output, err := e.terraform.Output(context.Background())
+	if err != nil {
+		log.Error("Can not get output values")
+	}
+	var inventoryOutput string
+	err = json.Unmarshal(output["ansible_inventory"].Value, &inventoryOutput)
+	if err != nil {
+		log.Error("Can not get `ansible_inventory` value")
+	}
+	inventory, _ := aini.Parse(strings.NewReader(inventoryOutput))
+	kubernetes_control_plane_address := strings.Replace(inventory.Groups["all"].Vars["kubernetes_control_plane_address"], "\"", "", -1)
+	enable_boundary_targets := strings.Replace(inventory.Groups["all"].Vars["enable_boundary_targets"], "\"", "", -1)
+	enable_boundary_targets_b, _ := strconv.ParseBool(enable_boundary_targets)
+	clusterOperatorName := strings.Replace(inventory.Groups["all"].Vars["ansible_user"], "\"", "", -1)
+	boundary_message := ""
+
+	if enable_boundary_targets_b {
+		boundary_message = fmt.Sprintf(`
+Boundary is enabled in this setup so you can use SIGHUP Boundary setup to access this cluster with the boundary-ops user
+`)
+	}
+
+	return fmt.Sprintf(`[vSphere] Fury
+
+All the cluster components are up to date.
+vSphere Kubernetes cluster ready.
+
+vSphere Cluster Endpoint: %v
+SSH Operator Name: %v
+
+Use the ssh %v username to access the vSphere instances with the configured SSH key. %v
+Discover the instances by running
+
+$ kubectl get nodes
+
+Then access by running:
+
+$ ssh %v@node-name-reported-by-kubectl-get-nodes
+
+`, kubernetes_control_plane_address, clusterOperatorName, clusterOperatorName, boundary_message, clusterOperatorName)
 }
 
 // DestroyMessage return a custom provisioner message the user will see once the cluster is destroyed
 func (e *VSphere) DestroyMessage() string {
-	return "TODO"
+	return `[VSphere] Fury
+All cluster components were destroyed.
+vSphere control plane, load balancer and workers went away.
+
+Had problems, contact us at sales@sighup.io.
+`
 }
 
 // Enterprise return a boolean indicating it is an enterprise provisioner
