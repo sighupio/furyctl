@@ -175,9 +175,9 @@ func (e VSphere) createVarFile() (err error) {
 	return nil
 }
 
-// New instantiates a new GKE provisioner
+// New instantiates a new vSphere provisioner
 func New(config *configuration.Configuration) *VSphere {
-	b := packr.New("gkecluster", projectPath)
+	b := packr.New("vsphereCluster", projectPath)
 	return &VSphere{
 		box:    b,
 		config: config,
