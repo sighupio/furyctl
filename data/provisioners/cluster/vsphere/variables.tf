@@ -14,6 +14,54 @@ variable "kube_version" {
   description = "Kubernetes version"
 }
 
+variable "etcd_version" {
+  type        = string
+  description = "ETCD Version to install"
+  default     = "v3.4.15"
+}
+
+variable "oidc_client_id" {
+  type        = string
+  description = "OIDC Client ID"
+  default     = ""
+}
+
+variable "oidc_issuer_url" {
+  type        = string
+  description = "OIDC Issuer URL"
+  default     = ""
+}
+
+variable "oidc_ca_file" {
+  type        = string
+  description = "OIDC CA File"
+  default     = ""
+}
+
+variable "cri_proxy" {
+  type        = string
+  description = "CRI Proxy configuration"
+  default     = ""
+}
+
+variable "cri_version" {
+  type        = string
+  description = "CRI Version"
+  default     = ""
+}
+
+variable "cri_dns" {
+  type        = list(string)
+  description = "DNS Servers for the CRI"
+  default     = []
+}
+
+variable "cri_mirrors" {
+  type        = list(string)
+  description = "Mirror Servers for the CRI"
+  default     = []
+}
+
 variable "env" {
   type        = string
   description = "Cluster environment"

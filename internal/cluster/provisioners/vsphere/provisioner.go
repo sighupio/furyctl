@@ -125,6 +125,32 @@ func (e VSphere) createVarFile() (err error) {
 	spec := e.config.Spec.(cfg.VSphere)
 	buffer.WriteString(fmt.Sprintf("name = \"%v\"\n", e.config.Metadata.Name))
 	buffer.WriteString(fmt.Sprintf("kube_version = \"%v\"\n", spec.Version))
+	if spec.ETCDConfig.Version != "" {
+		buffer.WriteString(fmt.Sprintf("etcd_version = \"%v\"\n", spec.ETCDConfig.Version))
+	}
+	if spec.OIDCConfig.IssuerURL != "" {
+		buffer.WriteString(fmt.Sprintf("oidc_issuer_url = \"%v\"\n", spec.OIDCConfig.IssuerURL))
+	}
+	if spec.OIDCConfig.ClientID != "" {
+		buffer.WriteString(fmt.Sprintf("oidc_client_id = \"%v\"\n", spec.OIDCConfig.ClientID))
+	}
+	if spec.OIDCConfig.CAFile != "" {
+		buffer.WriteString(fmt.Sprintf("oidc_ca_file = \"%v\"\n", spec.OIDCConfig.CAFile))
+	}
+
+	if spec.CRIConfig.Version != "" {
+		buffer.WriteString(fmt.Sprintf("cri_version = \"%v\"\n", spec.CRIConfig.Version))
+	}
+	if spec.CRIConfig.Proxy != "" {
+		buffer.WriteString(fmt.Sprintf("cri_proxy = \"%v\"\n", spec.CRIConfig.Proxy))
+	}
+	if len(spec.CRIConfig.DNS) > 0 {
+		buffer.WriteString(fmt.Sprintf("cri_dns = [\"%v\"]\n", strings.Join(spec.CRIConfig.DNS, "\",\"")))
+	}
+	if len(spec.CRIConfig.Mirrors) > 0 {
+		buffer.WriteString(fmt.Sprintf("cri_mirrors = [\"%v\"]\n", strings.Join(spec.CRIConfig.Mirrors, "\",\"")))
+	}
+
 	buffer.WriteString(fmt.Sprintf("env = \"%v\"\n", spec.EnvironmentName))
 	buffer.WriteString(fmt.Sprintf("datacenter = \"%v\"\n", spec.Config.DatacenterName))
 	if len(spec.Config.EsxiHost) > 0 {
@@ -311,7 +337,7 @@ func downloadAnsibleRoles(workingDirectory string) error {
 	}
 
 	client := &getter.Client{
-		Src:  "https://github.com/sighupio/furyctl-provisioners/archive/v0.4.0-rc1.zip//furyctl-provisioners-0.4.0-rc1/roles",
+		Src:  "https://github.com/sighupio/furyctl-provisioners/archive/v0.4.0-rc2.zip//furyctl-provisioners-0.4.0-rc2/roles",
 		Dst:  downloadPath,
 		Pwd:  workingDirectory,
 		Mode: getter.ClientModeAny,

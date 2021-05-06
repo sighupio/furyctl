@@ -237,7 +237,21 @@ func clusterTemplate(config *Configuration) error {
 		config.Spec = spec
 	case config.Provisioner == "vsphere":
 		spec := clustercfg.VSphere{
-			Version:         "1.20.5 # Place here the Kubernetes version you want to use",
+			Version: "1.20.5 # Place here the Kubernetes version you want to use",
+			ETCDConfig: clustercfg.VSphereETCDConfig{
+				Version: "v3.4.15 # OPTIONAL. Place there the ETCD version you want to use",
+			},
+			OIDCConfig: clustercfg.VSphereOIDCConfig{
+				IssuerURL: "https://dex.internal.example.com/ # OPTIONAL. Place here the issuer URL of your oidc provider",
+				ClientID:  "oidc-auth-client # OPTIONAL. Place here the client ID",
+				CAFile:    "/etc/pki/ca-trust/source/anchors/example.com.cer # OPTIONAL. The CA certificate to use",
+			},
+			CRIConfig: clustercfg.VSphereCRIConfig{
+				Version: "18.06.2.ce # OPTIONAL. This is the default value for oracle linux docker CRI",
+				DNS:     []string{"1.1.1.1", "8.8.8.8", "# OPTIONAL. Set here your DNS servers"},
+				Proxy:   "\"HTTP_PROXY=http://systems.example.com:8080\" \"NO_PROXY=.example.com,.group.example.com\"",
+				Mirrors: []string{"https://mirror.gcr.io", "# OPTIONAL. Set here your dockerhub mirrors"},
+			},
 			EnvironmentName: "production # The environment name of the cluster",
 			Config: clustercfg.VSphereConfig{
 				DatacenterName: "westeros # Get the name of datacenter from vShpere dashboard",
