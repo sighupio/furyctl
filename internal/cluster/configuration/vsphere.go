@@ -7,7 +7,11 @@ package configuration
 
 // VSphere represents the configuration spec of a VSphere Cluster
 type VSphere struct {
-	Version         string        `yaml:"version"`
+	Version    string            `yaml:"version"`
+	ETCDConfig VSphereETCDConfig `yaml:"etcd"`
+	OIDCConfig VSphereOIDCConfig `yaml:"oidc"`
+	CRIConfig  VSphereCRIConfig  `yaml:"cri"`
+
 	EnvironmentName string        `yaml:"environmentName"`
 	Config          VSphereConfig `yaml:"config"`
 
@@ -24,6 +28,23 @@ type VSphere struct {
 	ClusterSVCCIDR string   `yaml:"clusterSVCCIDR"`
 	ClusterCIDR    string   `yaml:"clusterCIDR"`
 	SSHPublicKey   []string `yaml:"sshPublicKeys"`
+}
+
+type VSphereETCDConfig struct {
+	Version string `yaml:"version"`
+}
+
+type VSphereOIDCConfig struct {
+	IssuerURL string `yaml:"issuerURL"`
+	ClientID  string `yaml:"clientID"`
+	CAFile    string `yaml:"caFile"`
+}
+
+type VSphereCRIConfig struct {
+	Version string   `yaml:"version"`
+	DNS     []string `yaml:"dns"`
+	Proxy   string   `yaml:"proxy"`
+	Mirrors []string `yaml:"mirrors"`
 }
 
 type VSphereKubeLoadBalancer struct {
