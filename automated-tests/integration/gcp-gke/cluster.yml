@@ -9,7 +9,7 @@ provisioner: gke
 executor:
   version: "0.13.6"
 spec:
-  version: 1.18.15-gke.800
+  version: 1.18.17-gke.700
   network: furyctl
   subnetworks:
   - furyctl-cluster-subnet
