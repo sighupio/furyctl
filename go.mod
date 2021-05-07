@@ -9,17 +9,15 @@ require (
 	github.com/gobuffalo/packr/v2 v2.8.1
 	github.com/golang/protobuf v1.5.2 // indirect
 	github.com/hashicorp/go-checkpoint v0.5.0
-	github.com/hashicorp/go-getter v1.5.1
-	github.com/hashicorp/go-version v1.2.1
-	github.com/hashicorp/terraform-exec v0.11.0
+	github.com/hashicorp/go-getter v1.5.3
+	github.com/hashicorp/go-version v1.3.0
+	github.com/hashicorp/terraform-exec v0.13.3
 	github.com/karrick/godirwalk v1.16.1 // indirect
-	github.com/pkg/errors v0.9.1 // indirect
 	github.com/relex/aini v1.2.1
 	github.com/rogpeppe/go-internal v1.8.0 // indirect
 	github.com/sirupsen/logrus v1.8.1
 	github.com/spf13/cobra v1.1.3
 	github.com/spf13/viper v1.7.0
-	github.com/stretchr/testify v1.6.1 // indirect
 	go.opencensus.io v0.22.2 // indirect
 	golang.org/x/crypto v0.0.0-20210506145944-38f3c27a63bf // indirect
 	golang.org/x/lint v0.0.0-20201208152925-83fdc39ff7b5 // indirect
