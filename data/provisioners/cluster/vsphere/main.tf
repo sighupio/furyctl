@@ -41,18 +41,19 @@ locals {
 }
 
 module "fury" {
-  source = "https://github.com/sighupio/furyctl-provisioners/archive/v0.4.0-rc2.zip//furyctl-provisioners-0.4.0-rc2/modules/cluster/vsphere"
+  source = "https://github.com/sighupio/furyctl-provisioners/archive/v0.4.0-rc3.zip//furyctl-provisioners-0.4.0-rc3/modules/cluster/vsphere"
 
-  name            = var.name
-  kube_version    = var.kube_version
-  etcd_version    = var.etcd_version
-  oidc_client_id  = var.oidc_client_id
-  oidc_issuer_url = var.oidc_issuer_url
-  oidc_ca_file    = var.oidc_ca_file
-  cri_version     = var.cri_version
-  cri_proxy       = var.cri_proxy
-  cri_dns         = var.cri_dns
-  cri_mirrors     = var.cri_mirrors
+  name                        = var.name
+  kube_version                = var.kube_version
+  kube_control_plane_endpoint = var.kube_control_plane_endpoint
+  etcd_version                = var.etcd_version
+  oidc_client_id              = var.oidc_client_id
+  oidc_issuer_url             = var.oidc_issuer_url
+  oidc_ca_file                = var.oidc_ca_file
+  cri_version                 = var.cri_version
+  cri_proxy                   = var.cri_proxy
+  cri_dns                     = var.cri_dns
+  cri_mirrors                 = var.cri_mirrors
 
   env = var.env
 

@@ -14,6 +14,12 @@ variable "kube_version" {
   description = "Kubernetes version"
 }
 
+variable "kube_control_plane_endpoint" {
+  type        = string
+  description = "Kubernetes control plane endpoint. Default to the VIP of the load balancer"
+  default     = ""
+}
+
 variable "etcd_version" {
   type        = string
   description = "ETCD Version to install"
