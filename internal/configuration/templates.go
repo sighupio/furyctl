@@ -237,7 +237,8 @@ func clusterTemplate(config *Configuration) error {
 		config.Spec = spec
 	case config.Provisioner == "vsphere":
 		spec := clustercfg.VSphere{
-			Version: "1.20.5 # Place here the Kubernetes version you want to use",
+			Version:              "1.20.5 # Place here the Kubernetes version you want to use",
+			ControlPlaneEndpoint: "my-cluster.localdomain # OPTIONAL. Kubernetes control plane endpoint. Default to the VIP of the load balancer",
 			ETCDConfig: clustercfg.VSphereETCDConfig{
 				Version: "v3.4.15 # OPTIONAL. Place there the ETCD version you want to use",
 			},

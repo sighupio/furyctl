@@ -125,6 +125,7 @@ func (e VSphere) createVarFile() (err error) {
 	spec := e.config.Spec.(cfg.VSphere)
 	buffer.WriteString(fmt.Sprintf("name = \"%v\"\n", e.config.Metadata.Name))
 	buffer.WriteString(fmt.Sprintf("kube_version = \"%v\"\n", spec.Version))
+	buffer.WriteString(fmt.Sprintf("kube_control_plane_endpoint = \"%v\"\n", spec.ControlPlaneEndpoint))
 	if spec.ETCDConfig.Version != "" {
 		buffer.WriteString(fmt.Sprintf("etcd_version = \"%v\"\n", spec.ETCDConfig.Version))
 	}
@@ -337,7 +338,7 @@ func downloadAnsibleRoles(workingDirectory string) error {
 	}
 
 	client := &getter.Client{
-		Src:  "https://github.com/sighupio/furyctl-provisioners/archive/v0.4.0-rc2.zip//furyctl-provisioners-0.4.0-rc2/roles",
+		Src:  "https://github.com/sighupio/furyctl-provisioners/archive/v0.4.0-rc3.zip//furyctl-provisioners-0.4.0-rc3/roles",
 		Dst:  downloadPath,
 		Pwd:  workingDirectory,
 		Mode: getter.ClientModeAny,

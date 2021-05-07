@@ -7,10 +7,11 @@ package configuration
 
 // VSphere represents the configuration spec of a VSphere Cluster
 type VSphere struct {
-	Version    string            `yaml:"version"`
-	ETCDConfig VSphereETCDConfig `yaml:"etcd"`
-	OIDCConfig VSphereOIDCConfig `yaml:"oidc"`
-	CRIConfig  VSphereCRIConfig  `yaml:"cri"`
+	Version              string            `yaml:"version"`
+	ControlPlaneEndpoint string            `yaml:"controlPlaneEndpoint"`
+	ETCDConfig           VSphereETCDConfig `yaml:"etcd"`
+	OIDCConfig           VSphereOIDCConfig `yaml:"oidc"`
+	CRIConfig            VSphereCRIConfig  `yaml:"cri"`
 
 	EnvironmentName string        `yaml:"environmentName"`
 	Config          VSphereConfig `yaml:"config"`
