@@ -138,7 +138,7 @@ Had problems, contact us at sales@sighup.io.
 
 // Enterprise return a boolean indicating it is an enterprise provisioner
 func (d *GCP) Enterprise() bool {
-	return true
+	return false
 }
 
 // GCP represents a dummy provisioner
