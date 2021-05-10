@@ -25,7 +25,7 @@ provider "google" {
 }
 
 module "vpc-and-vpn" {
-  source = "https://github.com/sighupio/furyctl-provisioners/archive/v0.3.1.zip//furyctl-provisioners-0.3.1/modules/bootstrap/gcp/vpc-and-vpn"
+  source = "github.com/sighupio/fury-gke-installer//modules/vpc-and-vpn?ref=v1.6.0"
 
   name                             = var.name
   public_subnetwork_cidrs          = var.public_subnetwork_cidrs
