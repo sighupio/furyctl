@@ -21,7 +21,7 @@ provider "external" {
 }
 
 module "vpc-and-vpn" {
-  source = "https://github.com/sighupio/furyctl-provisioners/archive/v0.3.0.zip//furyctl-provisioners-0.3.0/modules/bootstrap/aws/vpc-and-vpn"
+  source = "github.com/sighupio/fury-eks-installer//modules/vpc-and-vpn?ref=v1.6.0"
 
   name                     = var.name
   network_cidr             = var.network_cidr
