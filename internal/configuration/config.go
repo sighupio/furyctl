@@ -20,8 +20,6 @@ import (
 type TerraformExecutor struct {
 	// Local Path
 	Path string `yaml:"path"`
-	// Version to download
-	Version string `yaml:"version"`
 	// StateConfiguration configures the terraform state to use
 	StateConfiguration StateConfiguration `yaml:"state"`
 }

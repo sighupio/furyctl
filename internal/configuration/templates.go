@@ -51,8 +51,7 @@ func createBase(config *Configuration) {
 		},
 	}
 	config.Executor = TerraformExecutor{
-		Path:    "/your/terraform/binary # Set this value if you need to use an already installed terraform binary",
-		Version: "0.12.29 # Set this value to download a specific terraform version. If version and path is not specified, latest terraform version will be downloaded",
+		Path: "/your/terraform/binary # Set this value if you need to use an already installed terraform binary",
 		StateConfiguration: StateConfiguration{
 			Backend: "local # Specify your backend configuration. local is the default one. https://www.terraform.io/docs/configuration/backend.html",
 			Config: map[string]string{
