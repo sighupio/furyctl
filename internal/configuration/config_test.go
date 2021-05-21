@@ -43,7 +43,6 @@ func init() {
 	sampleEKSConfig.Metadata = Metadata{
 		Name: "demo",
 	}
-	sampleEKSConfig.Executor.Version = "0.12.29"
 	sampleEKSConfig.Executor.StateConfiguration = StateConfiguration{
 		Backend: "s3",
 		Config: map[string]string{
