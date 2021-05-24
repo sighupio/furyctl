@@ -1,6 +1,26 @@
-# Migration path
+# Upgrading to v0.6
 
-Having a project with a terraform executor defined prior to != 0.15.4
+If you are a `furyctl` user with a prior version from v0.6, you could be affected by the breaking changes introduced
+in this new release `(v0.6.0)`.
+
+The following `executor` attributes *(`path` and `version`)* has been deprecated to make your life easier
+in future upgrades.
+
+```yaml
+...
+executor: # You couldn't use both attributes at the same time. Both attributes have been deprecated
+  path: /usr/local/bin/terraform
+  version: 0.12.28
+...
+```
+
+So, if you already have a project using an executor version different to `0.15.4`
+you need to follow one of the paths bellows:
+
+- [Upgrading to v0.6](#upgrading-to-v06)
+  - [I am in 0.12.X](#i-am-in-012x)
+  - [I am in 0.13.X, 0.14.X or 0.15.X](#i-am-in-013x-014x-or-015x)
+- [IMPORTANT Notes](#important-notes)
 
 ## I am in 0.12.X
 
@@ -8,9 +28,8 @@ Having a project with a terraform executor defined prior to != 0.15.4
 > aws bootstrap
 > eks cluster
 
-
 If you already have deployed a `{cluster, bootrap}` using furyctl version `< 0.6` and you used an executor version
-0.12.X like this one:
+`0.12.X` like this one:
 
 ```yaml
 kind: Bootstrap
@@ -44,7 +63,7 @@ spec:
     - 54.27.48.48/32
 ```
 
-You have to manually migrate the terraform project to 0.13.X by downloading a terraform 0.13.X version. Then:
+You have to manually migrate the terraform project to `0.13.X` by downloading a terraform `0.13.X` version. Then:
 
 ```bash
 $ cd bootstrap/
@@ -73,7 +92,7 @@ metadata:
   name: demo
 provisioner: aws
 executor:
-  version: 0.13.7 # Place here the latest 0.13 Version
+  version: 0.13.7 # Place here the latest 0.13 available version
   state:
     backend: s3
     config:
@@ -92,8 +111,7 @@ $ furyctl bootstrap apply --config bootstrap.yml --reconfigure
 
 **`WARNING`** Don't forget the `--reconfigure` flag.
 
-After the command finishes, **download the new `furyctl` version (0.6.0).**
-This release deprecates the `executor.version` and `executor.path`.
+After the command finishes, **download the new `furyctl` version (`v0.6.0`).**
 Then modify again the `bootstrap.yml` file in order to remove the `executor.version`:
 
 ```yaml
@@ -120,18 +138,17 @@ $ furyctl bootstrap init --reset --config bootstrap.yml --reconfigure
 $ furyctl bootstrap apply --config bootstrap.yml
 ```
 
-
-## I am in 0.13.X or 0.14.X
+## I am in 0.13.X, 0.14.X or 0.15.X
 
 > The following provisioners could be affected. It depends on your `executor.version` or `executor.path` definition.
 > aws bootstrap
 > eks cluster
 > gcp bootstrap
 > gke cluster
-
+> vsphere cluster
 
 If you already have deployed a `{cluster, bootrap}` using furyctl version `< 0.6` and you used an executor version
-0.1{3,4}.X like this one:
+`0.1{3,4,5}.X` like this one:
 
 ```yaml
 kind: Bootstrap
@@ -147,9 +164,9 @@ executor:
       key: furyctl-upgrade-test
       region: eu-west-1
 spec:
-  publicSubnetsCIDRs:  
+  publicSubnetsCIDRs:
     - 10.0.1.0/24
-  privateSubnetsCIDRs: 
+  privateSubnetsCIDRs:
     - 10.0.101.0/24
   clusterNetwork:
     subnetworkCIDR: 10.1.0.0/16
@@ -162,8 +179,7 @@ spec:
       - angelbarrera92
 ```
 
-**Download the new `furyctl` version (0.6.0).**
-This release deprecates the `executor.version` and `executor.path`.
+**Download the new `furyctl` version (`0.6.0`).**
 Then modify again the `bootstrap.yml` file in order to remove the `executor.version`:
 
 ```yaml
@@ -191,7 +207,6 @@ $ furyctl bootstrap apply --config bootstrap.yml
 ```
 
 **`WARNING`** Don't forget the `--reconfigure` flag.
-
 
 # IMPORTANT Notes
 
