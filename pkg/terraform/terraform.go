@@ -6,7 +6,6 @@ package terraform
 
 import (
 	"bytes"
-	"errors"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -17,8 +16,7 @@ import (
 )
 
 type Options struct {
-	Version    string
-	BinaryPath string
+	Version string
 
 	Backend            string
 	BackendConfig      map[string]string
@@ -34,12 +32,8 @@ type Options struct {
 }
 
 func NewExecutor(opts Options) (tf *tfexec.Terraform, err error) {
-	err = validateTerraformBinaryOrVersion(opts)
-	if err != nil {
-		return nil, err
-	}
 	downloadPath := fmt.Sprintf("%v/bin", opts.WorkingDir)
-	tfBinary, err := ensure(opts.BinaryPath, opts.Version, downloadPath)
+	tfBinary, err := ensure(opts.Version, downloadPath)
 	if err != nil {
 		return nil, err
 	}
@@ -108,14 +102,6 @@ func envMap(environ []string) map[string]string {
 		}
 	}
 	return env
-}
-
-func validateTerraformBinaryOrVersion(opts Options) (err error) {
-	if opts.BinaryPath != "" && opts.Version != "" {
-		log.Errorf("terraform binary and terraform version can not be used together")
-		return errors.New("terraform binary and terraform version can not be used together")
-	}
-	return nil
 }
 
 func configureLogger(tf *tfexec.Terraform, workingDir string, logDir string, debug bool) (err error) {

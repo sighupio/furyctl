@@ -59,7 +59,6 @@ func New(opts *Options) (b *Bootstrap, err error) {
 		provisioner: &p,
 	}
 	b.options.TerraformOpts.Version = "0.15.4"
-	b.options.TerraformOpts.BinaryPath = b.options.ProvisionerConfiguration.Executor.Path
 	b.options.TerraformOpts.LogDir = "logs"
 	b.options.TerraformOpts.ConfigDir = "configuration"
 	if opts.ProvisionerConfiguration.Executor.StateConfiguration.Backend == "" { // The default should be a local file

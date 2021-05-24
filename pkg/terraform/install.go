@@ -20,26 +20,13 @@ import (
 )
 
 // ensure ensures a working terraform version to be used in the project
-func ensure(terraformBinaryPath string, terraformVersion string, terraformDownloadPath string) (binPath string, err error) {
-	if terraformBinaryPath != "" {
-		log.Debugf("Check if %v the terraform binary path is valid", terraformBinaryPath)
-		return checkBinary(terraformBinaryPath)
-	}
+func ensure(terraformVersion string, terraformDownloadPath string) (binPath string, err error) {
 	if terraformVersion != "" {
 		log.Debugf("Installing terraform %v version", terraformVersion)
 		return install(terraformVersion, terraformDownloadPath)
 	}
 	log.Debug("Installing terraform latest version")
 	return installLatest(terraformDownloadPath)
-}
-
-func checkBinary(terraformBinaryPath string) (binPath string, err error) {
-	binPath, err = tfinstall.Find(context.Background(), tfinstall.ExactPath(terraformBinaryPath))
-	if err != nil {
-		log.Errorf("Terraform binary not found %v", err)
-		return "", err
-	}
-	return binPath, nil
 }
 
 func alreadyAvailable(terraformVersion string, terraformDownloadPath string) (bool, string) {
