@@ -18,8 +18,6 @@ import (
 
 // TerraformExecutor represents the terraform executor configuration to be used
 type TerraformExecutor struct {
-	// Local Path
-	Path string `yaml:"path"`
 	// StateConfiguration configures the terraform state to use
 	StateConfiguration StateConfiguration `yaml:"state"`
 }
