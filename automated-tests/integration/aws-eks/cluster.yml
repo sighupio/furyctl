@@ -6,8 +6,6 @@ kind: Cluster
 metadata:
   name: furyctl
 provisioner: eks
-executor:
-  version: 0.12.29
 spec:
   version: "1.18"
   network: vpc-tobedefined

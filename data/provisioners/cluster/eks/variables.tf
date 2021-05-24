@@ -48,12 +48,12 @@ variable "node_pools" {
     taints        = list(string)
     tags          = map(string)
     additional_firewall_rules = list(object({
-      name        = string
-      direction   = string
-      cidr_block  = string
-      protocol    = string
-      ports       = string
-      tags        = map(string)
+      name       = string
+      direction  = string
+      cidr_block = string
+      protocol   = string
+      ports      = string
+      tags       = map(string)
     }))
   }))
   default = []

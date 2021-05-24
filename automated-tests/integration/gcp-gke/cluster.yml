@@ -6,10 +6,8 @@ kind: Cluster
 metadata:
   name: furyctl
 provisioner: gke
-executor:
-  version: "0.13.6"
 spec:
-  version: 1.18.17-gke.700
+  version: 1.19.9-gke.1900
   network: furyctl
   subnetworks:
   - furyctl-cluster-subnet

@@ -4,28 +4,20 @@
  * license that can be found in the LICENSE file.
  */
 
-provider "local" {
-  version = "2.0.0"
+terraform {
+  required_version = "0.15.4"
+  required_providers {
+    local    = "= 2.0.0"
+    null     = "= 3.0.0"
+    external = "= 2.0.0"
+    random   = "3.0.1"
+    google   = "3.55.0"
+  }
 }
 
-provider "null" {
-  version = "3.0.0"
-}
-
-provider "external" {
-  version = "2.0.0"
-}
-
-provider "random" {
-  version = "3.0.1"
-}
-
-provider "google" {
-  version = "3.55.0"
-}
 
 module "vpc-and-vpn" {
-  source = "github.com/sighupio/fury-gke-installer//modules/vpc-and-vpn?ref=v1.6.0"
+  source = "github.com/sighupio/fury-gke-installer//modules/vpc-and-vpn?ref=v1.7.0-rc0"
 
   name                             = var.name
   public_subnetwork_cidrs          = var.public_subnetwork_cidrs

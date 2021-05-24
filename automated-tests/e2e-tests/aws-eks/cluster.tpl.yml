@@ -27,7 +27,6 @@ spec:
           allow: dns
 provisioner: eks
 executor:
-  version: 0.12.29
   state:
     backend: s3
     config:

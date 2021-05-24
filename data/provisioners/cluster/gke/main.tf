@@ -4,8 +4,20 @@
  * license that can be found in the LICENSE file.
  */
 
+terraform {
+  required_version = "0.15.4"
+  required_providers {
+    google      = "3.49.0"
+    google-beta = "3.49.0"
+    kubernetes  = "1.13.3"
+    null        = "3.0.0"
+    random      = "3.0.0"
+    external    = "2.0.0"
+  }
+}
+
 module "fury" {
-  source = "github.com/sighupio/fury-gke-installer//modules/gke?ref=v1.5.0"
+  source = "github.com/sighupio/fury-gke-installer//modules/gke?ref=v1.7.0-rc0"
 
   cluster_name    = var.cluster_name
   cluster_version = var.cluster_version

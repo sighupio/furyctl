@@ -6,8 +6,6 @@ kind: Bootstrap
 metadata:
   name: furyctl
 provisioner: aws
-executor:
-  version: 0.12.29
 spec:
   networkCIDR: 10.0.0.0/16
   publicSubnetsCIDRs:  

@@ -20,7 +20,6 @@ spec:
       - jnardiello
 provisioner: gcp
 executor:
-  version: 0.13.6
   state:
     backend: s3
     config:
