@@ -60,7 +60,6 @@ func New(opts *Options) (c *Cluster, err error) {
 	}
 
 	c.options.TerraformOpts.Version = "0.15.4"
-	c.options.TerraformOpts.BinaryPath = c.options.ProvisionerConfiguration.Executor.Path
 	c.options.TerraformOpts.LogDir = "logs"
 	c.options.TerraformOpts.ConfigDir = "configuration"
 	if opts.ProvisionerConfiguration.Executor.StateConfiguration.Backend == "" { // The default should be a local file
