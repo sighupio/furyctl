@@ -9,10 +9,10 @@ terraform {
   required_providers {
     aws        = "= 3.37.0"
     kubernetes = "= 1.13.3"
-    local = "= 1.4.0"
-    null = "= 2.1.0"
-    random = "= 2.1.0"
-    template = "= 2.1.0"
+    local      = "= 1.4.0"
+    null       = "= 2.1.0"
+    random     = "= 2.1.0"
+    template   = "= 2.1.0"
   }
 }
 

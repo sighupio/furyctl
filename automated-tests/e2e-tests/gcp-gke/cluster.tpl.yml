@@ -6,7 +6,7 @@ kind: Cluster
 metadata:
   name: e2e-${CI_BUILD_NUMBER}
 spec:
-  version: 1.18.17-gke.700
+  version: 1.19.9-gke.1900
   network: e2e-${CI_BUILD_NUMBER}
   subnetworks:
     - e2e-${CI_BUILD_NUMBER}-cluster-subnet
@@ -32,7 +32,6 @@ spec:
           allow: dns
 provisioner: gke
 executor:
-  version: 0.13.6
   state:
     backend: s3
     config:
