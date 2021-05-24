@@ -6,8 +6,6 @@ kind: Bootstrap
 metadata:
   name: furyctl
 provisioner: gcp
-executor:
-  version: "0.13.6"
 spec:
   publicSubnetsCIDRs:  
     - 10.0.1.0/24

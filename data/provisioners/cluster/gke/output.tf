@@ -5,11 +5,13 @@
  */
 
 output "cluster_endpoint" {
+  sensitive   = true
   description = "The endpoint for your Kubernetes API server"
   value       = module.fury.cluster_endpoint
 }
 
 output "cluster_certificate_authority" {
+  sensitive   = true
   description = "The base64 encoded certificate data required to communicate with your cluster. Add this to the certificate-authority-data section of the kubeconfig file for your cluster"
   value       = module.fury.cluster_certificate_authority
 }
