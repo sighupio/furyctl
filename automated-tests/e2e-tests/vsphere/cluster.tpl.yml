@@ -19,7 +19,7 @@ spec:
     - 1.1.1.1
     - 8.8.8.8
     domain: localdomain
-    ipOffset: 2551
+    ipOffset: 1818
   boundary: true
   lbNode:
     count: 1

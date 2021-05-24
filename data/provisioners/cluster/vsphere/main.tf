@@ -8,12 +8,13 @@ provider "vsphere" {
   allow_unverified_ssl = true
 }
 
-provider "tls" {
-  version = "~>3.1.0"
-}
-
-provider "local" {
-  version = "~>2.1.0"
+terraform {
+  required_version = "0.15.4"
+  required_providers {
+    local   = "2.1.0"
+    tls     = "3.1.0"
+    vsphere = "1.25.0"
+  }
 }
 
 resource "tls_private_key" "fury" {
@@ -41,7 +42,7 @@ locals {
 }
 
 module "fury" {
-  source = "https://github.com/sighupio/furyctl-provisioners/archive/v0.4.0.zip//furyctl-provisioners-0.4.0/modules/cluster/vsphere"
+  source = "https://github.com/sighupio/furyctl-provisioners/archive/v0.5.0-rc0.zip//furyctl-provisioners-0.5.0-rc0/modules/cluster/vsphere"
 
   name                        = var.name
   kube_version                = var.kube_version
