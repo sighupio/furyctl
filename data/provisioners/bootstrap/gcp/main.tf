@@ -17,7 +17,7 @@ terraform {
 
 
 module "vpc-and-vpn" {
-  source = "github.com/sighupio/fury-gke-installer//modules/vpc-and-vpn?ref=v1.7.0-rc0"
+  source = "github.com/sighupio/fury-gke-installer//modules/vpc-and-vpn?ref=v1.7.0"
 
   name                             = var.name
   public_subnetwork_cidrs          = var.public_subnetwork_cidrs
