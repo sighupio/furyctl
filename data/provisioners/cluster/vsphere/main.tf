@@ -6,6 +6,8 @@
 
 provider "vsphere" {
   allow_unverified_ssl = true
+  api_timeout          = 10
+  vim_keep_alive       = 20
 }
 
 terraform {
@@ -13,7 +15,7 @@ terraform {
   required_providers {
     local   = "2.1.0"
     tls     = "3.1.0"
-    vsphere = "1.25.0"
+    vsphere = "1.26.0"
   }
 }
 
@@ -42,7 +44,7 @@ locals {
 }
 
 module "fury" {
-  source = "https://github.com/sighupio/furyctl-provisioners/archive/v0.5.0-rc0.zip//furyctl-provisioners-0.5.0-rc0/modules/cluster/vsphere"
+  source = "https://github.com/sighupio/furyctl-provisioners/archive/v0.5.0-rc1.zip//furyctl-provisioners-0.5.0-rc1/modules/cluster/vsphere"
 
   name                        = var.name
   kube_version                = var.kube_version
