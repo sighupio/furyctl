@@ -1,4 +1,4 @@
-# LGTM (Looks Good To Me) (TODO)
+# LGTM (Looks Good To Me)
 
 - [ ] Giovanni Laieta
 - [ ] Ramiro Algozino
@@ -7,7 +7,7 @@
 
 # Status+
 
-_Draft_
+_Done_
 
 # Description+
 
