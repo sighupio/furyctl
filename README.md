@@ -169,7 +169,6 @@ kind: # Cluster or Bootstrap
 metadata:
   name: # Name of the deployment. It can be used by the provisioners as a unique identifier.
 executor: # This is an optional attribute. It defines the terraform executor to use along with the backend configuration
-  version: # Optional attribute. Terraform version to use. Default is latest
   state: # Optional attribute. It configures the backend configuration file.
     backend: # Optional attribute. It configures the backend to use. Default to local
     config: # Optional attribute. It configures the configuration of the selected backend configuration. It accepts multiple key values.
