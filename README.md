@@ -169,7 +169,6 @@ kind: # Cluster or Bootstrap
 metadata:
   name: # Name of the deployment. It can be used by the provisioners as a unique identifier.
 executor: # This is an optional attribute. It defines the terraform executor to use along with the backend configuration
-  version: # Optional attribute. Terraform version to use. Default is latest
   state: # Optional attribute. It configures the backend configuration file.
     backend: # Optional attribute. It configures the backend to use. Default to local
     config: # Optional attribute. It configures the configuration of the selected backend configuration. It accepts multiple key values.
@@ -209,7 +208,7 @@ The following workflow describes a setup of a cluster using an already existing 
 
 To deploy all the components, `furyctl` introduces a new concept: `provisioners`.
 These provisioners are terraform projects integrated with the `furyctl` binary. They can be open (like
-the cluster EKS provisioner) or enterprise only (like the bootstrap AWS, contact sales@sighup.io)
+the cluster EKS provisioner) or enterprise only (like the vSphere cluster, contact sales@sighup.io)
 
 To use an **enterprise** provisioner, you need to specify a token in the
 `furyctl {bootstrap,cluster} {init,apply,destroy} --token YOUR_TOKEN` commands.
@@ -222,9 +221,9 @@ Contact [sales@sighup.io](mailto:sales@sighup.io) to get more details about this
 
 The current list of available `bootstrap` provisioners are:
 
-- `aws` **(enterprise)**: It creates a VPC with all the requirements to deploy a Kubernetes Cluster. It also includes
+- `aws`: It creates a VPC with all the requirements to deploy a Kubernetes Cluster. It also includes
 a VPN instance easily manageable by using `furyagent`.
-- `gcp` **(enterprise)**: It creates a Network with all the requirements to deploy a Kubernetes Cluster. It also
+- `gcp`: It creates a Network with all the requirements to deploy a Kubernetes Cluster. It also
 includes a VPN instance easily manageable by using `furyagent`.
 
 ##### Clusters
@@ -235,6 +234,7 @@ The current list of available `cluster` provisioners are:
 [fury-eks-installer](https://github.com/sighupio/fury-eks-installer) terraform code.
 - `gke`: It creates an GKE cluster on an already existing Network. It uses the already existing
 [fury-gke-installer](https://github.com/sighupio/fury-gke-installer) terraform code.
+- `vsphere` **(enterprise)**: It creates a Kubernetes cluster on an already existing vSphere cluster.
 
 #### Additional details
 
