@@ -1,7 +1,7 @@
-# Upgrading to v0.6
+# Upgrading to v0.5.1
 
-If you are a `furyctl` user with a prior version from v0.6, you could be affected by the breaking changes introduced
-in this new release `(v0.6.0)`.
+If you are a `furyctl` user with a prior version from v0.5.1, you could be affected by the breaking changes introduced
+in this new release `(v0.5.1)`.
 
 The following `executor` attributes *(`path` and `version`)* has been deprecated to make your life easier
 in future upgrades.
@@ -17,7 +17,7 @@ executor: # You couldn't use both attributes at the same time. Both attributes h
 So, if you already have a project using an executor version different to `0.15.4`
 you need to follow one of the paths bellows:
 
-- [Upgrading to v0.6](#upgrading-to-v06)
+- [Upgrading to v0.5.1](#upgrading-to-v051)
   - [I am in 0.12.X](#i-am-in-012x)
   - [I am in 0.13.X, 0.14.X or 0.15.X](#i-am-in-013x-014x-or-015x)
 - [IMPORTANT Notes](#important-notes)
@@ -28,7 +28,7 @@ you need to follow one of the paths bellows:
 > aws bootstrap
 > eks cluster
 
-If you already have deployed a `{cluster, bootrap}` using furyctl version `< 0.6` and you used an executor version
+If you already have deployed a `{cluster, bootrap}` using furyctl version `< 0.5.1` and you used an executor version
 `0.12.X` like this one:
 
 ```yaml
@@ -111,7 +111,7 @@ $ furyctl bootstrap apply --config bootstrap.yml --reconfigure
 
 **`WARNING`** Don't forget the `--reconfigure` flag.
 
-After the command finishes, **download the new `furyctl` version (`v0.6.0`).**
+After the command finishes, **download the new `furyctl` version (`v0.5.1`).**
 Then modify again the `bootstrap.yml` file in order to remove the `executor.version`:
 
 ```yaml
@@ -147,7 +147,7 @@ $ furyctl bootstrap apply --config bootstrap.yml
 > gke cluster
 > vsphere cluster
 
-If you already have deployed a `{cluster, bootrap}` using furyctl version `< 0.6` and you used an executor version
+If you already have deployed a `{cluster, bootrap}` using furyctl version `< 0.5.1` and you used an executor version
 `0.1{3,4,5}.X` like this one:
 
 ```yaml
@@ -179,7 +179,7 @@ spec:
       - angelbarrera92
 ```
 
-**Download the new `furyctl` version (`0.6.0`).**
+**Download the new `furyctl` version (`0.5.1`).**
 Then modify again the `bootstrap.yml` file in order to remove the `executor.version`:
 
 ```yaml
