@@ -40,6 +40,7 @@ variable "node_pools" {
     version       = string # null to use cluster_version
     min_size      = number
     max_size      = number
+    spot_instance_price = string
     instance_type = string
     max_pods      = number # null to use default upstream configuration
     volume_size   = number
