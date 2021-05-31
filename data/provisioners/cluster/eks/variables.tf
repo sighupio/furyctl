@@ -41,6 +41,7 @@ variable "node_pools" {
     min_size              = number
     max_size              = number
     instance_type         = string
+    spot_instance         = string
     os                    = optional(string)
     max_pods              = optional(number) # null to use default upstream configuration
     volume_size           = number
