@@ -34,3 +34,9 @@ func (sm DMZCIDRRange) MarshalYAML() (interface{}, error) {
 	}
 	return sm.Values, nil
 }
+
+// SpotInstanceSpec describe the agnostic rapresentation of the spotInstance
+type SpotInstanceSpec struct {
+	Enabled bool `yaml:"enabled"`
+	Price string `yaml:"price"`
+}
