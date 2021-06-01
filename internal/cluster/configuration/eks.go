@@ -39,7 +39,7 @@ type EKSNodePool struct {
 	MaxSize                 int                 `yaml:"maxSize"`
 	InstanceType            string              `yaml:"instanceType"`
 	MaxPods                 int                 `yaml:"maxPods"`
-	SpotInstancePrice       string              `yaml:"spotInstancePrice"`
+	SpotInstance       		SpotInstanceSpec    `yaml:"spotInstancePrice"`
 	VolumeSize              int                 `yaml:"volumeSize"`
 	Labels                  map[string]string   `yaml:"labels"`
 	Taints                  []string            `yaml:"taints"`
@@ -47,6 +47,8 @@ type EKSNodePool struct {
 	Tags                    map[string]string   `yaml:"tags"`
 	AdditionalFirewallRules []EKSNodePoolFwRule `yaml:"additionalFirewallRules"`
 }
+
+
 
 // EKSNodePoolFwRule represent an additional firewall rule to add to a specific node pool in the cluster
 type EKSNodePoolFwRule struct {
