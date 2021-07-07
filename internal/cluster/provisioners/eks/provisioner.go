@@ -160,12 +160,7 @@ func (e EKS) createVarFile() (err error) {
 			} else {
 				buffer.WriteString("version = null\n")
 			}
-			if np.SpotInstance.Enabled  {
-				// aws will require that the price also will be set
-				buffer.WriteString(fmt.Sprintf("spot_price = \"%v\"\n", np.SpotInstance.Price))
-			} else {
-				buffer.WriteString(fmt.Sprintf("spot_price = %s\n", ""))
-			}
+			buffer.WriteString(fmt.Sprintf("spot_instance = \"%v\"\n", np.SpotInstance))
 			buffer.WriteString(fmt.Sprintf("min_size = %v\n", np.MinSize))
 			buffer.WriteString(fmt.Sprintf("max_size = %v\n", np.MaxSize))
 			buffer.WriteString(fmt.Sprintf("instance_type = \"%v\"\n", np.InstanceType))
