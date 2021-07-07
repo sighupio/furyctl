@@ -41,7 +41,7 @@ type EKSNodePool struct {
 	OS                      string              `yaml:"os"`
 	TargetGroups            []string            `yaml:"targetGroups"`
 	MaxPods                 int                 `yaml:"maxPods"`
-	SpotInstance       		SpotInstanceSpec    `yaml:"spotInstance"`
+	SpotInstance       		bool    			`yaml:"spotInstance"`
 	VolumeSize              int                 `yaml:"volumeSize"`
 	Labels                  map[string]string   `yaml:"labels"`
 	Taints                  []string            `yaml:"taints"`
