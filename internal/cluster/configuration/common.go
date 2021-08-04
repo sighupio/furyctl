@@ -9,7 +9,7 @@ type DMZCIDRRange struct {
 	Values []string
 }
 
-//UnmarshalYAML unmarshall the DMZCIDRRange
+// UnmarshalYAML unmarshall the DMZCIDRRange
 func (sm *DMZCIDRRange) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	var multi []string
 	err := unmarshal(&multi)
@@ -27,10 +27,11 @@ func (sm *DMZCIDRRange) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	return nil
 }
 
-//MarshalYAML marshall the DMZCIDRRange
+// MarshalYAML marshall the DMZCIDRRange
 func (sm DMZCIDRRange) MarshalYAML() (interface{}, error) {
 	if len(sm.Values) == 1 {
 		return sm.Values[0], nil
 	}
+
 	return sm.Values, nil
 }
