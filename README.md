@@ -130,6 +130,18 @@ $ furyctl version
 INFO[0000] Furyctl version 0.2.3
 ```
 
+#### Autocomplete
+
+You can enable autocompletion for `furyctl` cli on your shell similar to the one
+for `kubectl`. Currently autocompletion is supported for `bash`, `zsh`, `fish`
+and `powershell`. To see the options and info about how to setup, run the
+command:
+
+``` bash
+$ furyctl completion -h
+```
+
+
 ### Self-Provisioning
 
 The self-provisioning feature is available with two commands:
