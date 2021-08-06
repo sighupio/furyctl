@@ -280,7 +280,7 @@ func (e EKS) createVarFile() (err error) {
 func New(config *configuration.Configuration) *EKS {
 	b := packr.New("ekscluster", projectPath)
 	return &EKS{
-		box: b,
+		box:    b,
 		config: config,
 	}
 }
