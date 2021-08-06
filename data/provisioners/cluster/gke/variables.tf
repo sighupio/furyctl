@@ -40,6 +40,7 @@ variable "node_pools" {
     version       = string # null to use cluster_version
     min_size      = number
     max_size      = number
+    preemptible   = bool
     instance_type = string
     os            = optional(string)
     max_pods      = optional(number) # null to use default upstream configuration

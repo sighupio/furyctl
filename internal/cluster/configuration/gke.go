@@ -30,6 +30,7 @@ type GKENodePool struct {
 	MaxSize                 int                 `yaml:"maxSize"`
 	InstanceType            string              `yaml:"instanceType"`
 	OS                      string              `yaml:"os"`
+	SpotInstance            bool                `yaml:"spotInstance"`
 	MaxPods                 int                 `yaml:"maxPods"`
 	VolumeSize              int                 `yaml:"volumeSize"`
 	Labels                  map[string]string   `yaml:"labels"`

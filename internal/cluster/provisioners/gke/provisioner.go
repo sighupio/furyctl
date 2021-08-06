@@ -14,9 +14,10 @@ import (
 
 	"github.com/gobuffalo/packr/v2"
 	"github.com/hashicorp/terraform-exec/tfexec"
+	log "github.com/sirupsen/logrus"
+
 	cfg "github.com/sighupio/furyctl/internal/cluster/configuration"
 	"github.com/sighupio/furyctl/internal/configuration"
-	log "github.com/sirupsen/logrus"
 )
 
 // InitMessage return a custom provisioner message the user will see once the cluster is ready to be updated
@@ -133,6 +134,8 @@ func (e GKE) createVarFile() (err error) {
 				buffer.WriteString(fmt.Sprintf("max_pods = %v\n", np.MaxPods))
 			}
 			buffer.WriteString(fmt.Sprintf("volume_size = %v\n", np.VolumeSize))
+			buffer.WriteString(fmt.Sprintf("preemptible = %v\n", np.SpotInstance))
+
 			if len(np.SubNetworks) > 0 {
 				buffer.WriteString(fmt.Sprintf("subnetworks = [\"%v\"]\n", strings.Join(np.SubNetworks, "\",\"")))
 			} else {

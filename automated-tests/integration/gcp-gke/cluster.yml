@@ -21,3 +21,9 @@ spec:
     maxSize: 1
     volumeSize: 50
     instanceType: n1-standard-1
+  - name: my-spot-node-pool
+    minSize: 1
+    maxSize: 1
+    volumeSize: 50
+    spotInstance: true
+    instanceType: n1-standard-1
