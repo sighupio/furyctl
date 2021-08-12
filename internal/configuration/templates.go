@@ -163,6 +163,7 @@ func clusterTemplate(config *Configuration) error {
 					Tags: map[string]string{
 						"myTag": "MyValue # Use this tags to annotate nodepool resources. Optional",
 					},
+					TargetGroupArns: []string{"target-group-arn-1", "# target group arns to configure the autoscaling group"},
 					AdditionalFirewallRules: []clustercfg.EKSNodePoolFwRule{
 						{
 							Name:      "The name of rule # Identify the rule using a description",

@@ -170,6 +170,12 @@ func (e EKS) createVarFile() (err error) {
 			}
 			buffer.WriteString(fmt.Sprintf("volume_size = %v\n", np.VolumeSize))
 
+			if len(np.TargetGroupArns) > 0 {
+				buffer.WriteString(fmt.Sprintf("target_group_arns = [\"%v\"]\n", strings.Join(np.TargetGroupArns, "\",\"")))
+			} else {
+				buffer.WriteString("target_group_arns = []\n")
+			}
+
 			if len(np.AdditionalFirewallRules) > 0 {
 
 				buffer.WriteString("additional_firewall_rules = [\n")

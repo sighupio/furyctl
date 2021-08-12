@@ -44,6 +44,7 @@ type EKSNodePool struct {
 	Taints                  []string            `yaml:"taints"`
 	SubNetworks             []string            `yaml:"subnetworks"`
 	Tags                    map[string]string   `yaml:"tags"`
+	TargetGroupArns         []string            `yaml:"target_group_arns"`
 	AdditionalFirewallRules []EKSNodePoolFwRule `yaml:"additionalFirewallRules"`
 }
 
