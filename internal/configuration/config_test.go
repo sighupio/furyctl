@@ -60,13 +60,14 @@ func init() {
 		SSHPublicKey: "123",
 		NodePools: []clustercfg.EKSNodePool{
 			{
-				Name:         "one",
-				Version:      "1.18",
-				MinSize:      0,
-				MaxSize:      10,
-				InstanceType: "m",
-				MaxPods:      100,
-				VolumeSize:   50,
+				Name:            "one",
+				Version:         "1.18",
+				MinSize:         0,
+				MaxSize:         10,
+				InstanceType:    "m",
+				MaxPods:         100,
+				VolumeSize:      50,
+				TargetGroupArns: []string{"targetgroup-id1"},
 				Labels: map[string]string{
 					"hello": "World",
 				},

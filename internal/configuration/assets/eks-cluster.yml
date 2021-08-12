@@ -33,7 +33,6 @@ spec:
       volumeSize: 50
       target_group_arns: 
         - "targetgroup-id1"
-        - "targetgroup-id2"
       labels:
         hello: World
       taints:
