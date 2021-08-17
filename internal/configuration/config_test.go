@@ -65,6 +65,7 @@ func init() {
 				MinSize:      0,
 				MaxSize:      10,
 				InstanceType: "m",
+				AmiId:        "ami-123456",
 				MaxPods:      100,
 				VolumeSize:   50,
 				Labels: map[string]string{

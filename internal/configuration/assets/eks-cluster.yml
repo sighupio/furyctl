@@ -29,6 +29,7 @@ spec:
       minSize: 0
       maxSize: 10
       instanceType: "m"
+      amiId: "ami-123456"
       maxPods: 100
       volumeSize: 50
       labels:

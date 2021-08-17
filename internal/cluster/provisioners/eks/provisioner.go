@@ -163,6 +163,7 @@ func (e EKS) createVarFile() (err error) {
 			buffer.WriteString(fmt.Sprintf("min_size = %v\n", np.MinSize))
 			buffer.WriteString(fmt.Sprintf("max_size = %v\n", np.MaxSize))
 			buffer.WriteString(fmt.Sprintf("instance_type = \"%v\"\n", np.InstanceType))
+			buffer.WriteString(fmt.Sprintf("eks_ami_id = \"%v\"\n", np.AmiId))
 			if np.MaxPods > 0 {
 				buffer.WriteString(fmt.Sprintf("max_pods = %v\n", np.MaxPods))
 			} else {

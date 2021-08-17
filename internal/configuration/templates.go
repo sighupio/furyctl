@@ -153,6 +153,7 @@ func clusterTemplate(config *Configuration) error {
 					MinSize:      0,
 					MaxSize:      1,
 					InstanceType: "t3.micro. Required. AWS EC2 isntance types",
+					AmiId:        "ami-123456 # Custom ami_id for nodes",
 					MaxPods:      110,
 					VolumeSize:   50,
 					SubNetworks:  []string{"subnet-1", "# any subnet id where you want your nodes running"},
