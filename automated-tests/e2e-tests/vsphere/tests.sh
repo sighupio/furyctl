@@ -14,7 +14,8 @@ fi
 @test "Prepare temporal ssh key" {
     info
     ssh_keys(){
-        ssh-keygen -b 2048 -t rsa -f /tmp/sshkey -q -N ""
+        ssh-keygen -b 2048 -t rsa -f ./automated-tests/e2e-tests/vsphere/sshkey -q -N ""
+        cp ./automated-tests/e2e-tests/vsphere/sshkey.pub /tmp/sshkey.pub
     }
     run ssh_keys
     if [[ $status -ne 0 ]]; then
@@ -113,21 +114,6 @@ fi
     if [[ $status -ne 0 ]]; then
         echo "$output" >&3
         cat ./automated-tests/e2e-tests/vsphere/cluster/secrets/kubeconfig >&3
-    fi
-    [ "$status" -eq 0 ]
-}
-
-@test "Cluster destroy" {
-    info
-    destroy(){
-        ./dist/furyctl-${OS}_${OS}_amd64/furyctl -d --debug cluster destroy --force --config ./automated-tests/e2e-tests/vsphere/cluster.yml -w ./automated-tests/e2e-tests/vsphere/cluster
-    }
-    run destroy
-
-    if [[ $status -ne 0 ]]; then
-        echo "$output" >&3
-        echo "  TERRAFORM LOGS:" >&3
-        cat ./automated-tests/e2e-tests/vsphere/cluster/logs/terraform.logs >&3
     fi
     [ "$status" -eq 0 ]
 }
