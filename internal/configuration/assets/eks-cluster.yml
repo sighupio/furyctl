@@ -30,6 +30,10 @@ spec:
       maxSize: 10
       instanceType: "m"
       maxPods: 100
+      os: "centos"
+      targetGroups:
+        - "t1"
+        - "t2"
       volumeSize: 50
       labels:
         hello: World
