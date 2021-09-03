@@ -66,6 +66,8 @@ func init() {
 				MaxSize:      10,
 				InstanceType: "m",
 				MaxPods:      100,
+				OS:           "centos",
+				TargetGroups: []string{"t1", "t2"},
 				VolumeSize:   50,
 				Labels: map[string]string{
 					"hello": "World",
