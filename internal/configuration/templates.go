@@ -209,6 +209,7 @@ func clusterTemplate(config *Configuration) error {
 					MinSize:      1,
 					MaxSize:      1,
 					InstanceType: "n1-standard-1. Required. GCP instance types",
+					OS:           "COS # The operating system to use. Do not specify to use the default one (COS)",
 					MaxPods:      110,
 					VolumeSize:   50,
 					SubNetworks:  []string{"subnet-1", "# availability zones (example: us-central1-a) where to place the nodes. Useful to don't create them on all zones"},
