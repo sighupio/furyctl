@@ -5,6 +5,7 @@
  */
 
 terraform {
+  experiments      = [module_variable_optional_attrs]
   required_version = "0.15.4"
   required_providers {
     google      = "3.55.0"
@@ -17,7 +18,7 @@ terraform {
 }
 
 module "fury" {
-  source = "github.com/sighupio/fury-gke-installer//modules/gke?ref=v1.7.0"
+  source = "github.com/sighupio/fury-gke-installer//modules/gke?ref=no-preemtible-instances_os-parameter"
 
   cluster_name    = var.cluster_name
   cluster_version = var.cluster_version
