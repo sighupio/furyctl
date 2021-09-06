@@ -6,7 +6,7 @@ kind: Cluster
 metadata:
   name: e2e-${CI_BUILD_NUMBER}
 spec:
-  version: "1.18"
+  version: "1.20"
   network: ${NETWORK_ID}
   subnetworks: ${PRIVATE_SUBNETS}
   dmzCIDRRange: ${NETWORK_CIDR}

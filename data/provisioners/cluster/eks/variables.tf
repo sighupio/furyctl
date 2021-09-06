@@ -20,7 +20,7 @@ variable "network" {
 }
 
 variable "subnetworks" {
-  type        = list
+  type        = list(any)
   description = "List of subnets where the cluster will be hosted"
 }
 
@@ -36,17 +36,19 @@ variable "ssh_public_key" {
 variable "node_pools" {
   description = "An object list defining node pools configurations"
   type = list(object({
-    name          = string
-    version       = string # null to use cluster_version
-    min_size      = number
-    max_size      = number
-    instance_type = string
-    max_pods      = number # null to use default upstream configuration
-    volume_size   = number
-    subnetworks   = list(string) # null to use default upstream configuration
-    labels        = map(string)
-    taints        = list(string)
-    tags          = map(string)
+    name                  = string
+    version               = string # null to use cluster_version
+    min_size              = number
+    max_size              = number
+    instance_type         = string
+    os                    = optional(string)
+    max_pods              = number # null to use default upstream configuration
+    volume_size           = number
+    subnetworks           = list(string) # null to use default upstream configuration
+    labels                = map(string)
+    taints                = list(string)
+    tags                  = map(string)
+    eks_target_group_arns = optional(list(string))
     additional_firewall_rules = list(object({
       name       = string
       direction  = string
@@ -60,7 +62,7 @@ variable "node_pools" {
 }
 
 variable "tags" {
-  type        = map
+  type        = map(any)
   description = "The tags to apply to all resources"
   default     = {}
 }

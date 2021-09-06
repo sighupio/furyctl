@@ -157,6 +157,17 @@ steps:
     commands:
       - bats -t ./automated-tests/e2e-tests/vsphere/tests.sh
 
+  - <<: *e2e
+    name: e2e-vsphere-destroy
+    depends_on: 
+      - e2e-vsphere
+    failure: ignore
+    commands:
+      - echo " Our vsphere environment is not so stable"
+      - echo " The destroy phase fails randomly because of disconnection events between vsphere nodes and the API"
+      - echo " Ignore errors on this step"
+      - bats -t ./automated-tests/e2e-tests/vsphere/tests-destroy.sh
+
   - name: build-release
     image: ghcr.io/goreleaser/goreleaser:v0.149.0
     pull: always
