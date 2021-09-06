@@ -18,7 +18,7 @@ terraform {
 }
 
 module "fury" {
-  source = "github.com/sighupio/fury-eks-installer//modules/eks?ref=no-spot-instance_eks-ami-id-rename"
+  source = "github.com/sighupio/fury-eks-installer//modules/eks?ref=v1.8.0"
 
   cluster_name    = var.cluster_name
   cluster_version = var.cluster_version
