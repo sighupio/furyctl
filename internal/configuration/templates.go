@@ -121,7 +121,7 @@ func clusterTemplate(config *Configuration) error {
 	switch {
 	case config.Provisioner == "eks":
 		spec := clustercfg.EKS{
-			Version:      "1.18 # EKS Control plane version",
+			Version:      "1.20 # EKS Control plane version",
 			Network:      "vpc-id1 # Identificator of the VPC",
 			SubNetworks:  []string{"subnet-id1 # Identificator of the subnets"},
 			DMZCIDRRange: clustercfg.DMZCIDRRange{Values: []string{"10.0.0.0/8", "Required. Network CIDR range from where cluster control plane will be accessible"}},
@@ -159,7 +159,9 @@ func clusterTemplate(config *Configuration) error {
 					Labels: map[string]string{
 						"environment": "dev. # Node labels. Use it to tag nodes then use it on Kubernetes",
 					},
-					Taints: []string{"key1=value1:NoSchedule. As an example"},
+					OS:           "ami-12345 # The ami-id to use. Do not specify to use the default one",
+					TargetGroups: []string{"target-12345", "the target-id to associate the instance to a loadbalancer"},
+					Taints:       []string{"key1=value1:NoSchedule. As an example"},
 					Tags: map[string]string{
 						"myTag": "MyValue # Use this tags to annotate nodepool resources. Optional",
 					},
@@ -207,6 +209,7 @@ func clusterTemplate(config *Configuration) error {
 					MinSize:      1,
 					MaxSize:      1,
 					InstanceType: "n1-standard-1. Required. GCP instance types",
+					OS:           "COS # The operating system to use. Do not specify to use the default one (COS)",
 					MaxPods:      110,
 					VolumeSize:   50,
 					SubNetworks:  []string{"subnet-1", "# availability zones (example: us-central1-a) where to place the nodes. Useful to don't create them on all zones"},
