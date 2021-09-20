@@ -165,7 +165,7 @@ func (e EKS) createVarFile() (err error) {
 			buffer.WriteString(fmt.Sprintf("instance_type = \"%v\"\n", np.InstanceType))
 
 			if np.OS != "" {
-				buffer.WriteString(fmt.Sprintf("os = %v\n", np.OS))
+				buffer.WriteString(fmt.Sprintf("os = \"%v\"\n", np.OS))
 			}
 			if len(np.TargetGroups) > 0 {
 				buffer.WriteString(fmt.Sprintf("eks_target_group_arns = [\"%v\"]\n", strings.Join(np.TargetGroups, "\",\"")))
