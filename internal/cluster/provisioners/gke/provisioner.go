@@ -127,7 +127,7 @@ func (e GKE) createVarFile() (err error) {
 			buffer.WriteString(fmt.Sprintf("max_size = %v\n", np.MaxSize))
 			buffer.WriteString(fmt.Sprintf("instance_type = \"%v\"\n", np.InstanceType))
 			if np.OS != "" {
-				buffer.WriteString(fmt.Sprintf("os = %v\n", np.OS))
+				buffer.WriteString(fmt.Sprintf("os = \"%v\"\n", np.OS))
 			}
 			if np.MaxPods > 0 {
 				buffer.WriteString(fmt.Sprintf("max_pods = %v\n", np.MaxPods))
