@@ -127,9 +127,11 @@ func (e GKE) createVarFile() (err error) {
 			buffer.WriteString(fmt.Sprintf("max_size = %v\n", np.MaxSize))
 			buffer.WriteString(fmt.Sprintf("instance_type = \"%v\"\n", np.InstanceType))
 			if np.OS != "" {
-				buffer.WriteString(fmt.Sprintf("os = %v\n", np.OS))
+				buffer.WriteString(fmt.Sprintf("os = \"%v\"\n", np.OS))
 			}
-			buffer.WriteString(fmt.Sprintf("max_pods = %v\n", np.MaxPods))
+			if np.MaxPods > 0 {
+				buffer.WriteString(fmt.Sprintf("max_pods = %v\n", np.MaxPods))
+			}
 			buffer.WriteString(fmt.Sprintf("volume_size = %v\n", np.VolumeSize))
 			if len(np.SubNetworks) > 0 {
 				buffer.WriteString(fmt.Sprintf("subnetworks = [\"%v\"]\n", strings.Join(np.SubNetworks, "\",\"")))

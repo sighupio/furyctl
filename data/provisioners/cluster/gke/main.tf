@@ -18,7 +18,7 @@ terraform {
 }
 
 module "fury" {
-  source = "github.com/sighupio/fury-gke-installer//modules/gke?ref=v1.8.0"
+  source = "github.com/sighupio/fury-gke-installer//modules/gke?ref=v1.8.1"
 
   cluster_name    = var.cluster_name
   cluster_version = var.cluster_version

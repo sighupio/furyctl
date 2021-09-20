@@ -165,7 +165,7 @@ func (e EKS) createVarFile() (err error) {
 			buffer.WriteString(fmt.Sprintf("instance_type = \"%v\"\n", np.InstanceType))
 
 			if np.OS != "" {
-				buffer.WriteString(fmt.Sprintf("os = %v\n", np.OS))
+				buffer.WriteString(fmt.Sprintf("os = \"%v\"\n", np.OS))
 			}
 			if len(np.TargetGroups) > 0 {
 				buffer.WriteString(fmt.Sprintf("eks_target_group_arns = [\"%v\"]\n", strings.Join(np.TargetGroups, "\",\"")))
@@ -173,8 +173,6 @@ func (e EKS) createVarFile() (err error) {
 
 			if np.MaxPods > 0 {
 				buffer.WriteString(fmt.Sprintf("max_pods = %v\n", np.MaxPods))
-			} else {
-				buffer.WriteString("max_pods = null\n")
 			}
 			buffer.WriteString(fmt.Sprintf("volume_size = %v\n", np.VolumeSize))
 
