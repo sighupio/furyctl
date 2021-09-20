@@ -7,7 +7,7 @@ metadata:
   name: furyctl
 provisioner: gke
 spec:
-  version: 1.20.9-gke.700
+  version: 1.20.9-gke.701
   network: furyctl
   subnetworks:
   - furyctl-cluster-subnet
