@@ -42,7 +42,7 @@ variable "node_pools" {
     max_size              = number
     instance_type         = string
     os                    = optional(string)
-    max_pods              = number # null to use default upstream configuration
+    max_pods              = optional(number) # null to use default upstream configuration
     volume_size           = number
     subnetworks           = list(string) # null to use default upstream configuration
     labels                = map(string)
