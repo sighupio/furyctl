@@ -173,8 +173,6 @@ func (e EKS) createVarFile() (err error) {
 
 			if np.MaxPods > 0 {
 				buffer.WriteString(fmt.Sprintf("max_pods = %v\n", np.MaxPods))
-			} else {
-				buffer.WriteString("max_pods = null\n")
 			}
 			buffer.WriteString(fmt.Sprintf("volume_size = %v\n", np.VolumeSize))
 
