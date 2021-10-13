@@ -78,6 +78,12 @@ variable "datacenter" {
   description = "Datacenter Name as seen in vCenter"
 }
 
+variable "vsphere_cluster" {
+  type = string
+  description = "vSphere Cluster name that will be used as Resource Pool to deploy the VMs"
+  default = ""
+}
+
 variable "esxihosts" {
   type        = list(string)
   description = "Hostname where to create the VMs"
