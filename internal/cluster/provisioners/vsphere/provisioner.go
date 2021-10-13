@@ -154,6 +154,7 @@ func (e VSphere) createVarFile() (err error) {
 
 	buffer.WriteString(fmt.Sprintf("env = \"%v\"\n", spec.EnvironmentName))
 	buffer.WriteString(fmt.Sprintf("datacenter = \"%v\"\n", spec.Config.DatacenterName))
+	buffer.WriteString(fmt.Sprintf("vsphere_cluster = \"%v\"\n", spec.Config.Cluster))
 	if len(spec.Config.EsxiHost) > 0 {
 		buffer.WriteString(fmt.Sprintf("esxihosts = [\"%v\"]\n", strings.Join(spec.Config.EsxiHost, "\",\"")))
 	} else {

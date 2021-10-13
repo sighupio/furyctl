@@ -84,4 +84,5 @@ type VSphereConfig struct {
 	DatacenterName string   `yaml:"datacenterName"`
 	Datastore      string   `yaml:"datastore"`
 	EsxiHost       []string `yaml:"esxiHosts"`
+	Cluster        string   `yaml:"cluster"`
 }
