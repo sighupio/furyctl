@@ -36,7 +36,7 @@ brew tap sighupio/furyctl
 brew install furyctl
 ```
 
-You can check that everything is working correctly with `furyctl version`:
+Check that everything is working correctly with `furyctl version`:
 
 ```bash
 ➜ furyctl version
@@ -46,12 +46,12 @@ INFO[0000] built 2021-09-20T15:36:15Z from commit 012d862edc6b452752a8955fc624f6
 
 > 💡 **TIP**
 >
-> You can enable autocompletion for `furyctl` cli on your shell (currently autocompletion is supported for `bash`, `zsh`, `fish`).
+> Enable autocompletion for `furyctl` cli on your shell (currently autocompletion is supported for `bash`, `zsh`, `fish`).
 > To see the instruction to enable it, run `furyctl completion -h`
 
 ## Usage
 
-Once you have installed furyctl binary, you can see available commands with `furyctl --help`:
+See the available commands with `furyctl --help`:
 
 ```bash
 $ furyctl --help
@@ -73,11 +73,13 @@ Available Commands:
 
 ## Download and manage the Kubernetes Fury Distribution modules
 
-Furyctl can be used as a package manager for Fury distribution. 
+`furyctl` can be used as a package manager for Fury distribution.
 It offers a simple way to download all the desired modules of the Fury Distribution by reading a single `Furyfile`.
 
-1. Write a Furyfile
-2. Download the modules
+The process requires the following steps:
+
+1. Write a `Furyfile`
+2. Use `furyctl vendor` to download all the modules
 
 ### 1. Write a Furyfile
 
@@ -104,8 +106,7 @@ bases:
   - name: opa/
 ```
 
-In reality, each module it's composed by a set of packages. In the previous `Furyfile`, we downloaded every module's packages. 
-You can cherry-pick single packages using the `module/package` syntax.
+In reality, each module it's composed by a set of packages. In the previous `Furyfile`, we downloaded every module's packages. You can cherry-pick single packages using the `module/package` syntax.
 
 A more complete `Furyfile` would be:
 
@@ -157,7 +158,7 @@ To download packages, run `furyctl vendor` (within the same directory where your
 
 The self-provisioning feature is available with two commands:
 
-- `furyctl bootstrap`: Use it to create the required infrastructure to place the cluster. Skip it if you
+- `furyctl bootstrap`: use it to create the required infrastructure to place the cluster. Skip it if you
 already managed to have passed all the cluster requirements.
 - `furyctl cluster`: Deploys a Fury cluster.
 
