@@ -1,9 +1,9 @@
 <h1 align="center">
-  <img src="docs/assets/fury-epta-white.png" width="200px"/><br/>
+  <img src="docs/assets/furyctl-logo.png" width="200px"/><br/>
   Furyctl
 </h1>
 
-<p align="center">The CLI tool for the Kubernetes Fury Distribution.</p>
+<p align="center">The multi-purpose CLI tool for the Kubernetes Fury Distribution.</p>
 
 [![Build Status](https://ci.sighup.io/api/badges/sighupio/furyctl/status.svg)](https://ci.sighup.io/sighupio/furyctl)
 ![Release](https://img.shields.io/github/v/release/sighupio/furyctl?label=Furyctl)
