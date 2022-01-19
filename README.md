@@ -76,7 +76,7 @@ Available Commands:
   version     Prints the client version information
 ```
 
-## Download and manage the KFD modules
+## Download and manage KFD modules
 
 `furyctl` can be used as a package manager for the KFD.
 It providers a simple way to download all the desired modules of the KFD by reading a single `Furyfile`.
@@ -164,9 +164,9 @@ Run `furyctl vendor` (within the same directory where your `Furyfile` is located
 >
 > Use the `-H` flag in the `furyctl vendor` command to download using HTPP(S) instead of the default SSH. This is useful if you are in an environment that restricts the SSH traffic.
 
-## Self-Provisioning
+## Cluster creation
 
-The self-provisioning feature is available via two commands:
+The Cluster creation feature is available via two commands:
 
 - `furyctl bootstrap`: creates the required networking infrastructure
 - `furyctl cluster`: creates a Fury cluster.
@@ -178,7 +178,7 @@ Both commands provide the following subcommands:
 - `furyctl {bootstrap,cluster} apply`: Actually creates or updates the infrastructure.
 - `furyctl {bootstrap,cluster} destroy`: Destroys the infrastructure.
 
-All these three subcommands accept the following options:
+The subcommands accept the following options:
 
 ```bash
 -c, --config string:   Configuration file path
@@ -186,16 +186,14 @@ All these three subcommands accept the following options:
 -w, --workdir string:  Working directory with all project files
 ```
 
-`apply` subcommand also implements the following option:
-
-```bash
---dry-run: Dry run execution
-```
+> 💡 **TIP**
+>
+> You can use the `--dry-run` flag simulate the execution of a command
 
 ### Configuration file
 
-The self-provisioning feature uses a different configuration file than the `Furyfile.yml`.
-While the `Furyfile.yml` file is used by the package-manager features, the self-provision features use a separated `cluster.yml` file:
+The cluster creation feature uses a different configuration file than the `Furyfile.yml`.
+While the `Furyfile.yml` file is used by the package-manager features, the cluster creation feature use a separated `cluster.yml` file:
 
 ```yaml
 kind:           # Cluster or Bootstrap
@@ -239,9 +237,8 @@ The following workflow describes a setup of a cluster using an already existing 
 
 ### Provisioners
 
-To deploy all the components, `furyctl` introduces a new concept: `provisioners`.
-These provisioners are terraform projects integrated with the `furyctl` binary. They can be open (like
-the cluster EKS provisioner) or enterprise only (like the vSphere cluster, contact sales@sighup.io)
+To deploy all the infrastructure components `furyctl` uses *provisioners*.
+Provisioners are terraform projects directly integrated with the `furyctl` binary. Provisioners can be open-source (e.g. cluster EKS provisioner) or enterprise only (e.g. vSphere provisioner).
 
 To use an **enterprise** provisioner, you need to specify a token in the
 `furyctl {bootstrap,cluster} {init,apply,destroy} --token YOUR_TOKEN` commands.
@@ -269,11 +266,9 @@ The available `cluster` provisioners are:
 | `gke`       | Creates an GKE cluster on an already existing Network. It uses the [fury-gke-installer](https://github.com/sighupio/fury-gke-installer). |
 | `vsphere`   | **(enterprise)**: Creates a Kubernetes cluster on an already existing vSphere cluster.                                                   |
 
-#### Additional details
+## Contributing
 
-If you want to understand how to integrate more provisioners, read the [`CONTRIBUTING.md`](CONTRIBUTING.md) file.
-
-To better understand how to use this self-provisioning feature take a look at the official Fury [documentaton site](https://kubernetesfury.com).
+To contribute to furyctl and add more provisioners, read the [`CONTRIBUTING.md`](CONTRIBUTING.md) file.
 
 ## License
 
