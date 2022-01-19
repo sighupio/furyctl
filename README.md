@@ -3,7 +3,7 @@
   Furyctl
 </h1>
 
-<p align="center">The multi-purpose CLI tool for the Kubernetes Fury Distribution.</p>
+<p align="center">The multi-purpose command line tool for the Kubernetes Fury Distribution.</p>
 
 [![Build Status](https://ci.sighup.io/api/badges/sighupio/furyctl/status.svg)](https://ci.sighup.io/sighupio/furyctl)
 ![Release](https://img.shields.io/github/v/release/sighupio/furyctl?label=Furyctl)
@@ -14,14 +14,19 @@
 
 Furyctl is a simple CLI tool to:
 
-- download and manage the Kubernetes Fury Distribution modules
-- self-provision Fury clusters on AWS, GCP and vSphere
+- download and manage the Kubernetes Fury Distribution (KFD) modules
+- create and manage Fury clusters on AWS, GCP and vSphere
 
-## Install
+<br/>
+
+![Furyctl usage](docs/assets/furyctl.gif)
+
+
+## Installation
 
 You can find `furyctl` binaries on the [Releases page](https://github.com/sighupio/furyctl/releases).
 
-To download the latest `0.6.1` release, run:
+To download the latest release, run:
 
 ```bash
 wget -q https://github.com/sighupio/furyctl/releases/download/v0.6.1/furyctl-$(uname -s)-amd64 -O /tmp/furyctl
@@ -71,19 +76,20 @@ Available Commands:
   version     Prints the client version information
 ```
 
-## Download and manage the Kubernetes Fury Distribution modules
+## Download and manage the KFD modules
 
-`furyctl` can be used as a package manager for Fury distribution.
-It offers a simple way to download all the desired modules of the Fury Distribution by reading a single `Furyfile`.
+`furyctl` can be used as a package manager for the KFD.
+It providers a simple way to download all the desired modules of the KFD by reading a single `Furyfile`.
 
 The process requires the following steps:
 
 1. Write a `Furyfile`
-2. Use `furyctl vendor` to download all the modules
+2. Run `furyctl vendor` to download all the modules
 
 ### 1. Write a Furyfile
 
 A `Furyfile` is a simple YAML formatted file that lists which modules (and versions) of the KFD you want to download.
+
 An example `Furyfile` is the following:
 
 ```yaml
@@ -106,7 +112,7 @@ bases:
   - name: opa/
 ```
 
-In reality, each module it's composed by a set of packages. In the previous `Furyfile`, we downloaded every module's packages. You can cherry-pick single packages using the `module/package` syntax.
+Each module is composed by a set of packages. In the previous `Furyfile`, we downloaded every module's packages. You can cherry-pick single packages using the `module/package` syntax.
 
 A more complete `Furyfile` would be:
 
@@ -150,17 +156,20 @@ You can find out what packages are inside each module by referring to each modul
 
 ### 2. Download the modules
 
-To download packages, run `furyctl vendor` (within the same directory where your `Furyfile` is located)
+Run `furyctl vendor` (within the same directory where your `Furyfile` is located) to download the modules.
 
 `furyctl` will download all the packages in a `vendor/` directory.
 
+> 💡 **TIP**
+>
+> Use the `-H` flag in the `furyctl vendor` command to download using HTPP(S) instead of the default SSH. This is useful if you are in an environment that restricts the SSH traffic.
+
 ## Self-Provisioning
 
-The self-provisioning feature is available with two commands:
+The self-provisioning feature is available via two commands:
 
-- `furyctl bootstrap`: use it to create the required infrastructure to place the cluster. Skip it if you
-already managed to have passed all the cluster requirements.
-- `furyctl cluster`: Deploys a Fury cluster.
+- `furyctl bootstrap`: creates the required networking infrastructure
+- `furyctl cluster`: creates a Fury cluster.
 
 Both commands provide the following subcommands:
 
@@ -186,7 +195,7 @@ All these three subcommands accept the following options:
 ### Anatomy of the configuration file
 
 The self-provisioning feature uses a different configuration file than the `Furyfile.yml`.
-Use the `Furyfile.yml` file while using package-manager features.
+While the `Furyfile.yml` file is used by the package-manager features, the self-provision features use a separated `cluster.yml` file:
 
 ```yaml
 kind:           # Cluster or Bootstrap
@@ -268,4 +277,4 @@ To better understand how to use this self-provisioning feature take a look at th
 
 ## License
 
-Daryl is open-source software and it's released under the following [LICENSE](LICENSE)
+Furyctl is an open-source software and it's released under the following [LICENSE](LICENSE)
