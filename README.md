@@ -192,7 +192,7 @@ All these three subcommands accept the following options:
 --dry-run: Dry run execution
 ```
 
-### Anatomy of the configuration file
+### Configuration file
 
 The self-provisioning feature uses a different configuration file than the `Furyfile.yml`.
 While the `Furyfile.yml` file is used by the package-manager features, the self-provision features use a separated `cluster.yml` file:
@@ -212,7 +212,7 @@ provisioner:    # Defines what provisioner to use.
 spec: {}        # Input variables of the provisioner. Read each provisioner definition to understand what are the valid values.
 ```
 
-### Workflow to deploy a cluster from zero
+### Deploy a cluster from zero
 
 The following workflow describes a complete setup of a cluster from scratch.
 The bootstrap command will create the underlay requirements to deploy a Kubernetes cluster. Most of these
@@ -227,7 +227,7 @@ Once the bootstrap process is up to date, the cluster command can be triggered u
 +--------------------------+   +--------------------------+   +--------------------------+   +--------------------------+
 ```
 
-### Workflow to deploy a cluster from an already existing infrastructure
+### Deploy a cluster from an already existing infrastructure
 
 The following workflow describes a setup of a cluster using an already existing underlay infrastructure.
 
@@ -252,22 +252,22 @@ Contact [sales@sighup.io](mailto:sales@sighup.io) to get more details about this
 
 #### Bootstrap
 
-The current list of available `bootstrap` provisioners are:
+The available `bootstrap` provisioners are:
 
-- `aws`: It creates a VPC with all the requirements to deploy a Kubernetes Cluster. It also includes
-a VPN instance easily manageable by using `furyagent`.
-- `gcp`: It creates a Network with all the requirements to deploy a Kubernetes Cluster. It also
-includes a VPN instance easily manageable by using `furyagent`.
+| Provisioner | Description                                                                                                                                            |
+| ----------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| `aws`       | It creates a VPC with all the requirements to deploy a Kubernetes Cluster. It also includes a VPN instance easily manageable by using `furyagent`.     |
+| `gcp`       | It creates a Network with all the requirements to deploy a Kubernetes Cluster. It also includes a VPN instance easily manageable by using `furyagent`. |
 
 #### Clusters
 
-The current list of available `cluster` provisioners are:
+The available `cluster` provisioners are:
 
-- `eks`: It creates an EKS cluster on an already existing VPC. It uses the already existing
-[fury-eks-installer](https://github.com/sighupio/fury-eks-installer) terraform code.
-- `gke`: It creates an GKE cluster on an already existing Network. It uses the already existing
-[fury-gke-installer](https://github.com/sighupio/fury-gke-installer) terraform code.
-- `vsphere` **(enterprise)**: It creates a Kubernetes cluster on an already existing vSphere cluster.
+| Provisioner |                                                               Description                                                                |
+| ----------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| `eks`       | Creates an EKS cluster on an already existing VPC. It uses the [fury-eks-installer](https://github.com/sighupio/fury-eks-installer)      |
+| `gke`       | Creates an GKE cluster on an already existing Network. It uses the [fury-gke-installer](https://github.com/sighupio/fury-gke-installer). |
+| `vsphere`   | **(enterprise)**: Creates a Kubernetes cluster on an already existing vSphere cluster.                                                   |
 
 #### Additional details
 
