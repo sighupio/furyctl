@@ -10,7 +10,7 @@
 ![Slack](https://img.shields.io/badge/slack-@kubernetes/fury-yellow.svg?logo=slack)
 ![License](https://img.shields.io/github/license/sighupio/furyctl)
 
-<KFD-DOCS>
+<!-- <KFD-DOCS> -->
 
 Furyctl is a simple CLI tool to:
 
