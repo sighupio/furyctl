@@ -10,7 +10,7 @@
 ![Slack](https://img.shields.io/badge/slack-@kubernetes/fury-yellow.svg?logo=slack)
 ![License](https://img.shields.io/github/license/sighupio/furyctl)
 
-# Furyctl
+<KFD-DOCS>
 
 Furyctl is a simple CLI tool to:
 
@@ -20,7 +20,6 @@ Furyctl is a simple CLI tool to:
 <br/>
 
 ![Furyctl usage](docs/assets/furyctl.gif)
-
 
 ## Installation
 
@@ -266,10 +265,19 @@ The available `cluster` provisioners are:
 | `gke`       | Creates an GKE cluster on an already existing Network. It uses the [fury-gke-installer](https://github.com/sighupio/fury-gke-installer). |
 | `vsphere`   | **(enterprise)**: Creates a Kubernetes cluster on an already existing vSphere cluster.                                                   |
 
+<!-- </KFD-DOCS> -->
+<!-- <FOOTER> -->
+  
 ## Contributing
 
-To contribute to furyctl and add more provisioners, read the [`CONTRIBUTING.md`](CONTRIBUTING.md) file.
+Before contributing, please read first the [Contributing Guidelines](docs/CONTRIBUTING.md).
+
+### Reporting Issues
+
+In case you experience any problem with the module, please [open a new issue](https://github.com/sighupio/furyctl/issues/new/choose).
 
 ## License
 
-Furyctl is an open-source software and it's released under the following [LICENSE](LICENSE)
+This module is open-source and it's released under the following [LICENSE](LICENSE)
+
+<!-- </FOOTER> -->
