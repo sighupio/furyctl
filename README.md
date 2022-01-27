@@ -181,7 +181,6 @@ The subcommands accept the following options:
 
 ```bash
 -c, --config string:   Configuration file path
--t, --token string:    GitHub token to access enterprise repositories. Contact sales@sighup.io
 -w, --workdir string:  Working directory with all project files
 ```
 
@@ -237,14 +236,7 @@ The following workflow describes a setup of a cluster using an already existing 
 ### Provisioners
 
 To deploy all the infrastructure components `furyctl` uses *provisioners*.
-Provisioners are terraform projects directly integrated with the `furyctl` binary. Provisioners can be open-source (e.g. cluster EKS provisioner) or enterprise only (e.g. vSphere provisioner).
-
-To use an **enterprise** provisioner, you need to specify a token in the
-`furyctl {bootstrap,cluster} {init,apply,destroy} --token YOUR_TOKEN` commands.
-
-> You can use an environment variable to avoid passing the token via console: `FURYCTL_TOKEN`.
-
-Contact [sales@sighup.io](mailto:sales@sighup.io) to get more details about this feature.
+Provisioners are terraform projects directly integrated with the `furyctl` binary.
 
 #### Bootstrap
 
@@ -263,7 +255,7 @@ The available `cluster` provisioners are:
 | ----------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
 | `eks`       | Creates an EKS cluster on an already existing VPC. It uses the [fury-eks-installer](https://github.com/sighupio/fury-eks-installer)      |
 | `gke`       | Creates an GKE cluster on an already existing Network. It uses the [fury-gke-installer](https://github.com/sighupio/fury-gke-installer). |
-| `vsphere`   | **(enterprise)**: Creates a Kubernetes cluster on an already existing vSphere cluster.                                                   |
+| `vsphere`   | Creates a Kubernetes cluster on an already existing vSphere cluster.                                                   |
 
 <!-- </KFD-DOCS> -->
 <!-- <FOOTER> -->
