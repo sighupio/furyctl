@@ -46,7 +46,7 @@ steps:
         - tag
 
   - name: build
-    image: ghcr.io/goreleaser/goreleaser:v0.149.0
+    image: ghcr.io/goreleaser/goreleaser:v1.4.1
     pull: always
     depends_on:
       - lint
@@ -169,7 +169,7 @@ steps:
       - bats -t ./automated-tests/e2e-tests/vsphere/tests-destroy.sh
 
   - name: build-release
-    image: ghcr.io/goreleaser/goreleaser:v0.149.0
+    image: ghcr.io/goreleaser/goreleaser:v1.4.1
     pull: always
     depends_on:
       - lint
