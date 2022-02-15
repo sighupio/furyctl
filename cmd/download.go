@@ -74,6 +74,8 @@ func get(src, dest string, mode getter.ClientMode, cleanGitFolder bool) error {
 
 	logrus.Debugf("complete url downloading: %s -> %s", src, dest)
 
+	var tempDest = dest + ".tmp"
+
 	pwd, err := os.Getwd()
 	if err != nil {
 		return err
@@ -81,27 +83,35 @@ func get(src, dest string, mode getter.ClientMode, cleanGitFolder bool) error {
 
 	client := &getter.Client{
 		Src:  src,
-		Dst:  dest,
+		Dst:  tempDest,
 		Pwd:  pwd,
 		Mode: mode,
 	}
 
 	logrus.Debugf("let's get %s -> %s", src, dest)
 
-	if _, err := os.Stat(dest); !os.IsNotExist(err) {
-		logrus.Infof("%s already exists! removing it", dest)
-		err = removeDir(dest)
-		if err != nil {
-			logrus.Error(err)
-			return err
-		}
-	}
-
 	humanReadableDownloadLog(src, dest)
 
 	err = client.Get()
 	if err != nil {
+		_ = removeDir(tempDest)
 		return err
+	}else{
+		if _, err := os.Stat(dest); !os.IsNotExist(err) {
+			logrus.Infof("%s already exists! removing it", dest)
+			err = removeDir(dest)
+			if err != nil {
+				logrus.Error(err)
+				return err
+			}
+		}
+
+		err = renameDir(tempDest, dest)
+		if err != nil {
+			logrus.Error(err)
+			return err
+		}
+
 	}
 
 	if cleanGitFolder {
@@ -140,6 +150,14 @@ func humanReadableDownloadLog(src string, dest string) {
 
 func removeDir(dir string) error {
 	err := os.RemoveAll(dir)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func renameDir(src string, dest string) error {
+	err := os.Rename(src, dest)
 	if err != nil {
 		return err
 	}
