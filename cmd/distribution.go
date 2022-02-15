@@ -131,7 +131,7 @@ func downloadFile(url string, outputFileName string) error {
 }
 
 func mergeFuryfile(url string, mergedFileName string) error {
-	err := merge(url, mergedFileName, getter.ClientModeFile, false)
+	err := mergeYAML(url, mergedFileName, getter.ClientModeFile)
 	if err != nil {
 		logrus.Print(err)
 	}
