@@ -173,13 +173,13 @@ func mergeYAML(src, dest string, mode getter.ClientMode) error {
 		currentFuryfile := map[string]interface{}{}
 
 		// read one yaml file
-		data, _ := ioutil.ReadFile("conf.yaml")
+		data, _ := ioutil.ReadFile(tempDest)
 		if err := yaml.Unmarshal(data, &newFuryfile); err != nil {
 
 		}
 
 		// read another yaml file
-		data1, _ := ioutil.ReadFile("conf1.yaml")
+		data1, _ := ioutil.ReadFile(dest)
 		if err := yaml.Unmarshal(data1, &currentFuryfile); err != nil {
 
 		}
