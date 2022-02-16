@@ -11,7 +11,7 @@ import (
 	"strings"
 	"sync"
 	"io/ioutil"
-	"sigs.k8s.io/yaml"
+	"gopkg.in/yaml.v3"
 
 	"github.com/sirupsen/logrus"
 
@@ -185,7 +185,7 @@ func mergeYAML(src, dest string, mode getter.ClientMode) error {
 		}
 
 		// merge both yaml data recursively
-		currentFuryfile = deepMerge(newFuryfile, currentFuryfile)
+		currentFuryfile = deepMerge(currentFuryfile, newFuryfile)
 
 		result, err := yaml.Marshal(currentFuryfile)
 		if err != nil {
