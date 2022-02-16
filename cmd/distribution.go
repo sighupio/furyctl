@@ -151,6 +151,7 @@ func init() {
 
 	distributionCmd.AddCommand(initCmd)
 	distributionCmd.AddCommand(downloadCmd)
+	distributionCmd.AddCommand(updateCmd)
 
 	rootCmd.AddCommand(distributionCmd)
 }
