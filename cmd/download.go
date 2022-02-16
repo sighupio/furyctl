@@ -160,14 +160,6 @@ func mergeYAML(src, dest string, mode getter.ClientMode) error {
 		_ = removeDir(tempDest)
 		return err
 	}else{
-		//if _, err := os.Stat(dest); !os.IsNotExist(err) {
-		//	logrus.Infof("%s already exists! removing it", dest)
-		//	err = removeDir(dest)
-		//	if err != nil {
-		//		logrus.Error(err)
-		//		return err
-		//	}
-		//}
 
 		newFuryfile := map[string]interface{}{}
 		currentFuryfile := map[string]interface{}{}
@@ -197,6 +189,14 @@ func mergeYAML(src, dest string, mode getter.ClientMode) error {
 		if err != nil {
 			logrus.Error(err)
 			return err
+		}
+
+		if _, err := os.Stat(tempDest); !os.IsNotExist(err) {
+			err = removeDir(tempDest)
+			if err != nil {
+				logrus.Error(err)
+				return err
+			}
 		}
 
 	}
