@@ -96,7 +96,7 @@ func get(src, dest string, mode getter.ClientMode, cleanGitFolder bool) error {
 	if err != nil {
 		_ = removeDir(tempDest)
 		return err
-	}else{
+	} else {
 		if _, err := os.Stat(dest); !os.IsNotExist(err) {
 			logrus.Infof("%s already exists! removing it", dest)
 			err = removeDir(dest)
