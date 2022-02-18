@@ -111,14 +111,6 @@ func downloadFile(url string, outputFileName string) error {
 	return err
 }
 
-func mergeFuryfile(url string, mergedFileName string) error {
-	err := merge(url, mergedFileName, getter.ClientModeFile, false)
-	if err != nil {
-		logrus.Print(err)
-	}
-	return err
-}
-
 func init() {
 
 	initCmd.PersistentFlags().StringVarP(&distributionVersion, "version", "v","", "Specify the Kubernetes Fury Distribution version")
