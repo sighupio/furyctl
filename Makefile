@@ -44,7 +44,7 @@ clean: deps
 
 .PHONY: build
 ## build: Builds the solution for linux and macos amd64 
-build: deps clean test
+build: lint deps clean test
 	@GO111MODULE=on packr2 build
 	@GO111MODULE=on CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -ldflags '-extldflags "-static"' -o bin/linux/$(version)/furyctl  .
 	@GO111MODULE=on CGO_ENABLED=0 GOOS=darwin GOARCH=amd64 go build -a -ldflags '-extldflags "-static"' -o bin/darwin/$(version)/furyctl .
