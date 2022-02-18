@@ -41,7 +41,6 @@ var (
 		Short: "Initialize the minimum distribution configuration",
 		Long:  "Initialize the current directory with the minimum distribution configuration",
 		RunE: func(cmd *cobra.Command, args []string) (err error) {
-			// if distributionVersion is empty throw error
 			if distributionVersion == "" {
 				return fmt.Errorf("--version <version> flag is required")
 			}
@@ -73,30 +72,28 @@ var (
 			viper.SetConfigName(configFile)
 			config := new(Furyconf)
 			if err := viper.ReadInConfig(); err != nil {
-				logrus.Fatalf("Error reading config file, %s", err)
+				logrus.Fatalf("error reading Furyfile.yml config file, %s", err)
 			}
 			err := viper.Unmarshal(config)
 			if err != nil {
-				logrus.Fatalf("unable to decode into struct, %v", err)
+				logrus.Fatalf("unable to decode Furyfile.yml file into struct, %v", err)
 			}
 
 			err = config.Validate()
 			if err != nil {
-				logrus.WithError(err).Error("ERROR VALIDATING")
+				logrus.WithError(err).Error("Furyfile.yml validation failed")
 			}
 
 			list, err := config.Parse(prefix)
 
 			if err != nil {
-				//logrus.Errorln("ERROR PARSING: ", err)
-				logrus.WithError(err).Error("ERROR PARSING")
+				logrus.WithError(err).Error("Furyfile.yml parsing failed")
 
 			}
 
 			err = download(list)
 			if err != nil {
-				//logrus.Errorln("ERROR DOWNLOADING: ", err)
-				logrus.WithError(err).Error("ERROR DOWNLOADING")
+				logrus.WithError(err).Error("Furyfile.yml defined packages download failed")
 
 			}
 		},
@@ -122,11 +119,11 @@ func mergeFuryfile(url string, mergedFileName string) error {
 func init() {
 
 	initCmd.PersistentFlags().StringVarP(&distributionVersion, "version", "v","", "Specify the Kubernetes Fury Distribution version")
-	initCmd.PersistentFlags().BoolVar(&initKustomize, "kustomize", false,"Initialize kustomize.yaml file")
+	initCmd.PersistentFlags().BoolVar(&initKustomize, "kustomize", false,"Use this flag to enable the download of a sample kustomization.yaml file")
 
-	downloadCmd.PersistentFlags().BoolVarP(&parallel, "parallel", "p", true, "if true enables parallel downloads")
-	downloadCmd.PersistentFlags().BoolVarP(&https, "https", "H", false, "if true downloads using https instead of ssh")
-	downloadCmd.PersistentFlags().StringVarP(&prefix, "prefix", "P", "", "Add filtering on download with prefix, to reduce update scope")
+	downloadCmd.PersistentFlags().BoolVarP(&parallel, "parallel", "p", true, "Use this flag to enable parallel downloads")
+	downloadCmd.PersistentFlags().BoolVarP(&https, "https", "H", false, "If set download using https instead of ssh")
+	downloadCmd.PersistentFlags().StringVarP(&prefix, "prefix", "P", "", "Use this flag to reduce the download scope, example: --prefix monitoring")
 	
 	distributionCmd.AddCommand(initCmd)
 	distributionCmd.AddCommand(downloadCmd)
