@@ -21,7 +21,7 @@ const (
 
 var (
     distributionVersion string
-	initKustomize bool
+	skipKustomize bool
 
 	distributionCmd = &cobra.Command{
 		Use:   "distribution",
@@ -36,10 +36,10 @@ var (
 		},
 	}
 
-	initCmd = &cobra.Command{
-		Use:   "init",
-		Short: "Initialize the minimum distribution configuration",
-		Long:  "Initialize the current directory with the minimum distribution configuration",
+	templateCmd = &cobra.Command{
+		Use:   "template",
+		Short: "Download Furyfile.yml and kustomization.yaml template files",
+		Long:  "Download Furyfile.yml and kustomization.yaml template files with the minimum distribution configuration",
 		RunE: func(cmd *cobra.Command, args []string) (err error) {
 			// if distributionVersion is empty throw error
 			if distributionVersion == "" {
@@ -52,7 +52,7 @@ var (
 				return err
 			}
 
-			if initKustomize {
+			if !skipKustomize {
 				url := httpsDistributionRepoPrefix + distributionVersion + "/" + kustomizationFile
 				err = downloadFile(url, kustomizationFile)
 				if err != nil {
@@ -113,14 +113,14 @@ func downloadFile(url string, outputFileName string) error {
 
 func init() {
 
-	initCmd.PersistentFlags().StringVarP(&distributionVersion, "version", "v","", "Specify the Kubernetes Fury Distribution version")
-	initCmd.PersistentFlags().BoolVar(&initKustomize, "kustomize", false,"Initialize kustomize.yaml file")
+	templateCmd.PersistentFlags().StringVarP(&distributionVersion, "version", "v","", "Specify the Kubernetes Fury Distribution version")
+	templateCmd.PersistentFlags().BoolVar(&skipKustomize, "skip-kustomize", false,"Skip downloading kustomization.yaml template file")
 
 	downloadCmd.PersistentFlags().BoolVarP(&parallel, "parallel", "p", true, "if true enables parallel downloads")
 	downloadCmd.PersistentFlags().BoolVarP(&https, "https", "H", false, "if true downloads using https instead of ssh")
 	downloadCmd.PersistentFlags().StringVarP(&prefix, "prefix", "P", "", "Add filtering on download with prefix, to reduce update scope")
 	
-	distributionCmd.AddCommand(initCmd)
+	distributionCmd.AddCommand(templateCmd)
 	distributionCmd.AddCommand(downloadCmd)
 
 	rootCmd.AddCommand(distributionCmd)
