@@ -20,8 +20,8 @@ const (
 )
 
 var (
-    distributionVersion string
-	initKustomize bool
+	distributionVersion string
+	skipKustomize       bool
 
 	distributionCmd = &cobra.Command{
 		Use:   "distribution",
@@ -36,10 +36,10 @@ var (
 		},
 	}
 
-	initCmd = &cobra.Command{
-		Use:   "init",
-		Short: "Initialize the minimum distribution configuration",
-		Long:  "Initialize the current directory with the minimum distribution configuration",
+	templateCmd = &cobra.Command{
+		Use:   "template",
+		Short: "Download Furyfile.yml and kustomization.yaml template files",
+		Long:  "Download Furyfile.yml and kustomization.yaml template files with the minimum distribution configuration",
 		RunE: func(cmd *cobra.Command, args []string) (err error) {
 			if distributionVersion == "" {
 				return fmt.Errorf("--version <version> flag is required")
@@ -51,7 +51,7 @@ var (
 				return err
 			}
 
-			if initKustomize {
+			if !skipKustomize {
 				url := httpsDistributionRepoPrefix + distributionVersion + "/" + kustomizationFile
 				err = downloadFile(url, kustomizationFile)
 				if err != nil {
@@ -108,24 +108,16 @@ func downloadFile(url string, outputFileName string) error {
 	return err
 }
 
-func mergeFuryfile(url string, mergedFileName string) error {
-	err := merge(url, mergedFileName, getter.ClientModeFile, false)
-	if err != nil {
-		logrus.Print(err)
-	}
-	return err
-}
-
 func init() {
 
-	initCmd.PersistentFlags().StringVarP(&distributionVersion, "version", "v","", "Specify the Kubernetes Fury Distribution version")
-	initCmd.PersistentFlags().BoolVar(&initKustomize, "kustomize", false,"Use this flag to enable the download of a sample kustomization.yaml file")
+	templateCmd.PersistentFlags().StringVarP(&distributionVersion, "version", "v", "", "Specify the Kubernetes Fury Distribution version")
+	templateCmd.PersistentFlags().BoolVar(&skipKustomize, "skip-kustomize", false, "Use this flag to skip the download of a sample kustomization.yaml file")
 
 	downloadCmd.PersistentFlags().BoolVarP(&parallel, "parallel", "p", true, "Use this flag to enable parallel downloads")
 	downloadCmd.PersistentFlags().BoolVarP(&https, "https", "H", false, "If set download using https instead of ssh")
 	downloadCmd.PersistentFlags().StringVarP(&prefix, "prefix", "P", "", "Use this flag to reduce the download scope, example: --prefix monitoring")
-	
-	distributionCmd.AddCommand(initCmd)
+
+	distributionCmd.AddCommand(templateCmd)
 	distributionCmd.AddCommand(downloadCmd)
 
 	rootCmd.AddCommand(distributionCmd)
