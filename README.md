@@ -43,7 +43,9 @@ brew install furyctl
 ```
 
 
-via asdf plugin:
+Installation with [asdf](https://github.com/asdf-vm/asdf)
+
+Add furyctl asdf plugin:
 
 ```bash
 asdf plugin add furyctl
