@@ -33,17 +33,27 @@ chmod +x /tmp/furyctl
 sudo mv /tmp/furyctl /usr/local/bin/furyctl
 ```
 
-Alternatively, [Homebrew](https://brew.sh/) users can use `brew` to install `furyctl`:
+Alternatively, you can install `furyctl` using brew or via asdf plugin:
+
+with [Homebrew](https://brew.sh/) :
 
 ```bash
 brew tap sighupio/furyctl
 brew install furyctl
 ```
 
+
+via asdf plugin:
+
+```bash
+asdf plugin add furyctl
+```
+
+
 Check that everything is working correctly with `furyctl version`:
 
 ```bash
-➜ furyctl version
+furyctl version
 INFO[0000] Furyctl version 0.6.1                        
 INFO[0000] built 2021-09-20T15:36:15Z from commit 012d862edc6b452752a8955fc624f6064566a6cb 
 ```
@@ -58,7 +68,7 @@ INFO[0000] built 2021-09-20T15:36:15Z from commit 012d862edc6b452752a8955fc624f6
 See the available commands with `furyctl --help`:
 
 ```bash
-$ furyctl --help
+furyctl --help
 
 A command-line tool to manage cluster deployment with Kubernetes
 
