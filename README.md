@@ -33,7 +33,7 @@ chmod +x /tmp/furyctl
 sudo mv /tmp/furyctl /usr/local/bin/furyctl
 ```
 
-Alternatively, you can install `furyctl` using brew or via asdf plugin:
+Alternatively, you can install `furyctl` using a brew tap or via an asdf plugin.
 
 with [Homebrew](https://brew.sh/) :
 
