@@ -35,7 +35,7 @@ sudo mv /tmp/furyctl /usr/local/bin/furyctl
 
 Alternatively, you can install `furyctl` using a brew tap or via an asdf plugin.
 
-with [Homebrew](https://brew.sh/) :
+### Installation with [Homebrew](https://brew.sh/) :
 
 ```bash
 brew tap sighupio/furyctl
