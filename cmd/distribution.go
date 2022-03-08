@@ -98,10 +98,37 @@ var (
 			}
 		},
 	}
+	updateCmd = &cobra.Command{
+		Use:   "update",
+		Short: "Update Furyfile.yml in place with the latest version of dependencies",
+		Long:  "Update Furyfile.yml in place with the latest version of dependencies, downloaded from the Fury distribution repository",
+		RunE: func(cmd *cobra.Command, args []string) (err error) {
+			// if distributionVersion is empty throw error
+			if distributionVersion == "" {
+				return fmt.Errorf("--version <version> flag is required")
+			}
+
+			url := httpsDistributionRepoPrefix + distributionVersion + "/" + furyFile
+			err = mergeFuryfile(url, furyFile)
+			if err != nil {
+				return err
+			}
+
+			return nil
+		},
+	}
 )
 
 func downloadFile(url string, outputFileName string) error {
 	err := get(url, outputFileName, getter.ClientModeFile, false)
+	if err != nil {
+		logrus.Print(err)
+	}
+	return err
+}
+
+func mergeFuryfile(url string, mergedFileName string) error {
+	err := mergeYAML(url, mergedFileName, getter.ClientModeFile)
 	if err != nil {
 		logrus.Print(err)
 	}
@@ -117,8 +144,11 @@ func init() {
 	downloadCmd.PersistentFlags().BoolVarP(&https, "https", "H", false, "If set download using https instead of ssh")
 	downloadCmd.PersistentFlags().StringVarP(&prefix, "prefix", "P", "", "Use this flag to reduce the download scope, example: --prefix monitoring")
 
+	updateCmd.PersistentFlags().StringVarP(&distributionVersion, "version", "v", "", "Specify the Kubernetes Fury Distribution version")
+
 	distributionCmd.AddCommand(templateCmd)
 	distributionCmd.AddCommand(downloadCmd)
+	distributionCmd.AddCommand(updateCmd)
 
 	rootCmd.AddCommand(distributionCmd)
 }
