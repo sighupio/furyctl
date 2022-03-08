@@ -80,10 +80,13 @@ brews:
       name: homebrew-furyctl
     folder: Formula
     homepage: 'https://gihub.com/sighupio/furyctl'
-    description: 'Furyctl  binary'
+    description: 'Furyctl binary'
     conflicts:
       - furyctl
     test: |
       system "#{bin}/furyctl"
     install: |
       bin.install 'furyctl'
+    ids:
+      - furyctl-darwin-tgz
+      - furyctl-linux-tgz
