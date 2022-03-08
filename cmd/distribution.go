@@ -144,7 +144,7 @@ func init() {
 	downloadCmd.PersistentFlags().BoolVarP(&https, "https", "H", false, "If set download using https instead of ssh")
 	downloadCmd.PersistentFlags().StringVarP(&prefix, "prefix", "P", "", "Use this flag to reduce the download scope, example: --prefix monitoring")
 
-	updateCmd.PersistentFlags().StringVarP(&distributionVersion, "version", "v","", "Specify the Kubernetes Fury Distribution version")
+	updateCmd.PersistentFlags().StringVarP(&distributionVersion, "version", "v", "", "Specify the Kubernetes Fury Distribution version")
 
 	distributionCmd.AddCommand(templateCmd)
 	distributionCmd.AddCommand(downloadCmd)

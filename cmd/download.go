@@ -6,12 +6,12 @@ package cmd
 
 import (
 	"fmt"
+	"gopkg.in/yaml.v3"
+	"io/ioutil"
 	"os"
 	"runtime"
 	"strings"
 	"sync"
-	"io/ioutil"
-	"gopkg.in/yaml.v3"
 
 	"github.com/sirupsen/logrus"
 
@@ -129,7 +129,6 @@ func get(src, dest string, mode getter.ClientMode, cleanGitFolder bool) error {
 	return err
 }
 
-
 func mergeYAML(src, dest string, mode getter.ClientMode) error {
 
 	logrus.Debugf("complete url downloading: %s -> %s", src, dest)
@@ -156,7 +155,7 @@ func mergeYAML(src, dest string, mode getter.ClientMode) error {
 	if err != nil {
 		_ = removeDir(tempDest)
 		return err
-	}else{
+	} else {
 
 		newFuryfile := map[string]interface{}{}
 		currentFuryfile := map[string]interface{}{}
