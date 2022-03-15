@@ -100,8 +100,8 @@ var (
 	}
 	updateCmd = &cobra.Command{
 		Use:   "update",
-		Short: "Update Furyfile.yml in place with the latest version of dependencies",
-		Long:  "Update Furyfile.yml in place with the latest version of dependencies, downloaded from the Fury distribution repository",
+		Short: "Experimental: Update Furyfile.yml in place with the latest version of dependencies",
+		Long:  "Experimental: Update Furyfile.yml in place with the latest version of dependencies, downloaded from the Fury distribution repository",
 		RunE: func(cmd *cobra.Command, args []string) (err error) {
 			// if distributionVersion is empty throw error
 			if distributionVersion == "" {
