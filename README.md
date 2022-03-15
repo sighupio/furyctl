@@ -28,7 +28,7 @@ You can find `furyctl` binaries on the [Releases page](https://github.com/sighup
 To download the latest release, run:
 
 ```bash
-wget -q https://github.com/sighupio/furyctl/releases/download/v0.6.1/furyctl-$(uname -s)-amd64 -O /tmp/furyctl
+wget -q https://github.com/sighupio/furyctl/releases/download/v1.0.0/furyctl-$(uname -s)-amd64 -O /tmp/furyctl
 chmod +x /tmp/furyctl
 sudo mv /tmp/furyctl /usr/local/bin/furyctl
 ```
@@ -56,8 +56,7 @@ Check that everything is working correctly with `furyctl version`:
 
 ```bash
 furyctl version
-INFO[0000] Furyctl version 0.6.1                        
-INFO[0000] built 2021-09-20T15:36:15Z from commit 012d862edc6b452752a8955fc624f6064566a6cb 
+INFO[0000] Furyctl version 1.0.0 
 ```
 
 > 💡 **TIP**
@@ -70,21 +69,25 @@ INFO[0000] built 2021-09-20T15:36:15Z from commit 012d862edc6b452752a8955fc624f6
 See the available commands with `furyctl --help`:
 
 ```bash
-furyctl --help
-
-A command-line tool to manage cluster deployment with Kubernetes
+A command line tool to manage cluster deployment with kubernetes
 
 Usage:
   furyctl [command]
 
 Available Commands:
-  bootstrap   Creates the required infrastructure to deploy a battle-tested Kubernetes cluster, mostly network components
-  cluster     Creates a battle-tested Kubernetes cluster
-  completion  Generate completion script
-  help        Help about any command
-  init        Initialize the minimum distribution configuration
-  vendor      Download dependencies specified in Furyfile.yml
-  version     Prints the client version information
+  bootstrap    Creates the required infrastructure to deploy a battle-tested Kubernetes cluster, mostly network components
+  cluster      Creates a battle-tested Kubernetes cluster
+  completion   Generate completion script
+  distribution Manages Kubernetes Fury Distribution, initialize Furyfile.yml and download Fury distribution modules
+  help         Help about any command
+  version      Prints the client version information
+
+Flags:
+      --debug     Enables furyctl debug output
+  -d, --disable   Disable analytics
+  -h, --help      help for furyctl
+
+Use "furyctl [command] --help" for more information about a command.
 ```
 
 ## Download and manage KFD modules
@@ -94,14 +97,14 @@ It providers a simple way to download all the desired modules of the KFD by read
 
 The process requires the following steps:
 
-1. Write a `Furyfile`
-2. Run `furyctl vendor` to download all the modules
+1. Write a `Furyfile.yml` or download it with, for example: `furyctl distribution template --version v1.23.1`
+2. Run `furyctl distribution download` to download all the modules defined in the `Furyfile.yml`
 
 ### 1. Write a Furyfile
 
-A `Furyfile` is a simple YAML formatted file that lists which modules (and versions) of the KFD you want to download.
+A `Furyfile.yml` is a simple YAML formatted file that lists which modules (and versions) of the KFD you want to download.
 
-An example `Furyfile` is the following:
+An example `Furyfile.yml` is the following:
 
 ```yaml
 # Here you can specify which versions of the modules to use
@@ -123,9 +126,9 @@ bases:
   - name: opa/
 ```
 
-Each module is composed by a set of packages. In the previous `Furyfile`, we downloaded every module's packages. You can cherry-pick single packages using the `module/package` syntax.
+Each module is composed by a set of packages. In the previous `Furyfile.yml`, we downloaded every module's packages. You can cherry-pick single packages using the `module/package` syntax.
 
-A more complete `Furyfile` would be:
+A more complete `Furyfile.yml` would be:
 
 ```yaml
 # Here you can specify which versions of the modules to use
@@ -167,13 +170,13 @@ You can find out what packages are inside each module by referring to each modul
 
 ### 2. Download the modules
 
-Run `furyctl vendor` (within the same directory where your `Furyfile` is located) to download the modules.
+Run `furyctl distribution download` (within the same directory where your `Furyfile.yml` is located) to download the modules.
 
 `furyctl` will download all the packages in a `vendor/` directory.
 
 > 💡 **TIP**
 >
-> Use the `-H` flag in the `furyctl vendor` command to download using HTPP(S) instead of the default SSH. This is useful if you are in an environment that restricts the SSH traffic.
+> Use the `-H` flag in the `furyctl distribution download` command to download using HTTP(S) instead of the default SSH. This is useful if you are in an environment that restricts the SSH traffic.
 
 ## Cluster creation
 
