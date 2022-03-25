@@ -1,4 +1,4 @@
-# Copyright (c) 2020 SIGHUP s.r.l All rights reserved.
+# Copyright (c) 2022 SIGHUP s.r.l All rights reserved.
 # Use of this source code is governed by a BSD-style
 # license that can be found in the LICENSE file.
 
@@ -7,9 +7,10 @@ name: license
 
 steps:
   - name: check
-    image: ghcr.io/google/addlicense:v1.0.0
+    image: golang
     pull: always
     commands:
+      - go get -u github.com/google/addlicense
       - addlicense -c "SIGHUP s.r.l" -v -l bsd --check .
 
 ---
