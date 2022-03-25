@@ -35,7 +35,7 @@ spec:
       maxSize: 1
       volumeSize: 50
       instanceType: t3.micro
-      preemptible: true
+      spotInstance: true
 provisioner: gke
 executor:
   state:

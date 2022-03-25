@@ -25,5 +25,5 @@ spec:
     minSize: 1
     maxSize: 1
     volumeSize: 50
-    preemptible: true
+    spotInstance: true
     instanceType: n1-standard-1
