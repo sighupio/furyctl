@@ -1,4 +1,4 @@
-// Copyright (c) 2020 SIGHUP s.r.l All rights reserved.
+// Copyright (c) 2022 SIGHUP s.r.l All rights reserved.
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
@@ -6,6 +6,8 @@ package cmd
 
 import (
 	"fmt"
+	"gopkg.in/yaml.v3"
+	"io/ioutil"
 	"os"
 	"runtime"
 	"strings"
@@ -72,7 +74,9 @@ func download(packages []Package) error {
 
 func get(src, dest string, mode getter.ClientMode, cleanGitFolder bool) error {
 
-	logrus.Debugf("complete url downloading: %s -> %s", src, dest)
+	logrus.Debugf("starting download process: %s -> %s", src, dest)
+
+	var tempDest = dest + ".tmp"
 
 	pwd, err := os.Getwd()
 	if err != nil {
@@ -81,33 +85,116 @@ func get(src, dest string, mode getter.ClientMode, cleanGitFolder bool) error {
 
 	client := &getter.Client{
 		Src:  src,
-		Dst:  dest,
+		Dst:  tempDest,
+		Pwd:  pwd,
+		Mode: mode,
+	}
+
+	logrus.Debugf("downloading temporary file: %s -> %s", src, tempDest)
+
+	humanReadableDownloadLog(src, dest)
+
+	err = removeDir(tempDest)
+	if err != nil {
+		logrus.Errorf("failed to remove: %s", tempDest)
+		return err
+	}
+
+	err = client.Get()
+	if err != nil {
+		_ = removeDir(tempDest)
+		return err
+	} else {
+		err = renameDir(tempDest, dest)
+		if err != nil {
+			logrus.Error(err)
+			return err
+		}
+
+	}
+
+	if cleanGitFolder {
+		gitFolder := fmt.Sprintf("%s/.git", dest)
+		logrus.Infof("cleaning git subfolder: %s", gitFolder)
+		err = removeDir(gitFolder)
+	}
+
+	if err != nil {
+		logrus.Error(err)
+		return err
+	}
+
+	logrus.Debugf("download process finished: %s -> %s", src, dest)
+
+	return err
+}
+
+func mergeYAML(src, dest string, mode getter.ClientMode) error {
+
+	logrus.Debugf("complete url downloading: %s -> %s", src, dest)
+
+	var tempDest = dest + ".tmp"
+
+	pwd, err := os.Getwd()
+	if err != nil {
+		return err
+	}
+
+	client := &getter.Client{
+		Src:  src,
+		Dst:  tempDest,
 		Pwd:  pwd,
 		Mode: mode,
 	}
 
 	logrus.Debugf("let's get %s -> %s", src, dest)
 
-	if _, err := os.Stat(dest); !os.IsNotExist(err) {
-		logrus.Infof("%s already exists! removing it", dest)
-		err = removeDir(dest)
-		if err != nil {
-			logrus.Error(err)
-			return err
-		}
-	}
-
 	humanReadableDownloadLog(src, dest)
 
 	err = client.Get()
 	if err != nil {
+		_ = removeDir(tempDest)
 		return err
-	}
+	} else {
 
-	if cleanGitFolder {
-		gitFolder := fmt.Sprintf("%s/.git", dest)
-		logrus.Infof("removing %s", gitFolder)
-		err = removeDir(gitFolder)
+		newFuryfile := map[string]interface{}{}
+		currentFuryfile := map[string]interface{}{}
+
+		// read one yaml file
+		data, _ := ioutil.ReadFile(tempDest)
+		if err := yaml.Unmarshal(data, &newFuryfile); err != nil {
+
+		}
+
+		// read another yaml file
+		data1, _ := ioutil.ReadFile(dest)
+		if err := yaml.Unmarshal(data1, &currentFuryfile); err != nil {
+
+		}
+
+		// merge both yaml data recursively
+		currentFuryfile = deepMerge(currentFuryfile, newFuryfile)
+
+		result, err := yaml.Marshal(currentFuryfile)
+		if err != nil {
+			logrus.Error(err)
+			return err
+		}
+
+		err = ioutil.WriteFile(dest, result, 0644)
+		if err != nil {
+			logrus.Error(err)
+			return err
+		}
+
+		if _, err := os.Stat(tempDest); !os.IsNotExist(err) {
+			err = removeDir(tempDest)
+			if err != nil {
+				logrus.Error(err)
+				return err
+			}
+		}
+
 	}
 
 	if err != nil {
@@ -144,4 +231,39 @@ func removeDir(dir string) error {
 		return err
 	}
 	return nil
+}
+
+func renameDir(src string, dest string) error {
+	if _, err := os.Stat(dest); !os.IsNotExist(err) {
+		logrus.Infof("removing target path: %s", dest)
+		err = removeDir(dest)
+		if err != nil {
+			logrus.Error(err)
+			return err
+		}
+	}
+	err := os.Rename(src, dest)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func deepMerge(a, b map[string]interface{}) map[string]interface{} {
+	out := make(map[string]interface{}, len(a))
+	for k, v := range a {
+		out[k] = v
+	}
+	for k, v := range b {
+		if v, ok := v.(map[string]interface{}); ok {
+			if bv, ok := out[k]; ok {
+				if bv, ok := bv.(map[string]interface{}); ok {
+					out[k] = deepMerge(bv, v)
+					continue
+				}
+			}
+		}
+		out[k] = v
+	}
+	return out
 }
