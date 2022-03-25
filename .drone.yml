@@ -17,6 +17,9 @@ steps:
 kind: pipeline
 name: Build Test and Release
 
+node:
+  runner: internal
+
 depends_on:
   - license
 
@@ -192,9 +195,3 @@ steps:
     when:
       event:
         - tag
-
-
-volumes:
-  - name: hosttmp
-    host:
-      path: /tmp
