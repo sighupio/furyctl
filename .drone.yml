@@ -177,8 +177,8 @@ steps:
       - integration-gcp-gke
       - integration-aws-eks
       - integration-vsphere
-      - e2e-gcp
       - e2e-aws
+      - e2e-gcp
       - e2e-vsphere
     environment:
       GITHUB_TOKEN:

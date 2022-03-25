@@ -30,6 +30,12 @@ spec:
         ports: 53-53
         tags:
           allow: dns
+    - name: my-preemptible-pool
+      minSize: 1
+      maxSize: 1
+      volumeSize: 50
+      instanceType: t3.micro
+      preemptible: true
 provisioner: gke
 executor:
   state:

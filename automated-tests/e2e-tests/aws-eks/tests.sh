@@ -197,12 +197,26 @@ fi
     [ "$status" -eq 0 ]
 }
 
-@test "kubectl" {
+@test "kubectl get pods" {
     info
     cluster_info(){
         export KUBECONFIG=./automated-tests/e2e-tests/aws-eks/cluster/secrets/kubeconfig
         kubectl get pods -A >&3
-        kubectl get nodes -o wide >&3
+    }
+    run cluster_info
+
+    if [[ $status -ne 0 ]]; then
+        echo "$output" >&3
+        cat ./automated-tests/e2e-tests/aws-eks/cluster/secrets/kubeconfig >&3
+    fi
+    [ "$status" -eq 0 ]
+}
+
+@test "kubectl get nodes" {
+    info
+    cluster_info(){
+        export KUBECONFIG=./automated-tests/e2e-tests/aws-eks/cluster/secrets/kubeconfig
+        kubectl get nodes -o wide --show-labels >&3
     }
     run cluster_info
 
