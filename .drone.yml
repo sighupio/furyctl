@@ -7,10 +7,9 @@ name: license
 
 steps:
   - name: check
-    image: golang
+    image: ghcr.io/google/addlicense:v1.0.0
     pull: always
     commands:
-      - go get -u github.com/google/addlicense
       - addlicense -c "SIGHUP s.r.l" -v -l bsd --check .
 
 ---
