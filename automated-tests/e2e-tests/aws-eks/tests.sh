@@ -227,6 +227,22 @@ fi
     [ "$status" -eq 0 ]
 }
 
+@test "kubectl get nodes verify spot presence" {
+    info
+    test(){
+        export KUBECONFIG=./automated-tests/e2e-tests/aws-eks/cluster/secrets/kubeconfig
+        data=$(kubectl get nodes --show-labels | grep "node.kubernetes.io/lifecycle=spot")
+        if [ "${data}" == "" ]; then return 1; fi
+    }
+    loop_it test 60 5
+    status=${loop_it_result}
+    if [[ $status -ne 0 ]]; then
+        echo "$output" >&3
+        cat ./automated-tests/e2e-tests/aws-eks/cluster/secrets/kubeconfig >&3
+    fi
+    [ "$status" -eq 0 ]
+}
+
 @test "Cluster destroy" {
     info
     destroy(){
