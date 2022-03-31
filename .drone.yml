@@ -193,5 +193,8 @@ steps:
       - GO111MODULE=on goreleaser check
       - GO111MODULE=on goreleaser --debug release --rm-dist
     when:
-      event:
-        - tag
+      ref:
+        exclude:
+          - refs/tags/v**-rc**
+        include:
+          - refs/tags/v**
