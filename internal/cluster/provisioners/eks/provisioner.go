@@ -14,9 +14,10 @@ import (
 
 	"github.com/gobuffalo/packr/v2"
 	"github.com/hashicorp/terraform-exec/tfexec"
+	log "github.com/sirupsen/logrus"
+
 	cfg "github.com/sighupio/furyctl/internal/cluster/configuration"
 	"github.com/sighupio/furyctl/internal/configuration"
-	log "github.com/sirupsen/logrus"
 )
 
 // InitMessage return a custom provisioner message the user will see once the cluster is ready to be updated
@@ -53,7 +54,8 @@ func (e *EKS) UpdateMessage() string {
 	if err != nil {
 		log.Error("Can not get `operator_ssh_user` value")
 	}
-	return fmt.Sprintf(`[EKS] Fury
+	return fmt.Sprintf(
+		`[EKS] Fury
 
 All the cluster components are up to date.
 EKS Kubernetes cluster ready.
@@ -70,7 +72,8 @@ Then access by running:
 
 $ ssh %v@node-name-reported-by-kubectl-get-nodes
 
-`, clusterEndpoint, clusterOperatorName, clusterOperatorName, clusterOperatorName)
+`, clusterEndpoint, clusterOperatorName, clusterOperatorName, clusterOperatorName,
+	)
 }
 
 // DestroyMessage return a custom provisioner message the user will see once the cluster is destroyed
@@ -118,19 +121,27 @@ func (e EKS) createVarFile() (err error) {
 	}
 
 	if len(spec.Auth.AdditionalAccounts) > 0 {
-		buffer.WriteString(fmt.Sprintf("eks_map_accounts = [\"%v\"]\n", strings.Join(spec.Auth.AdditionalAccounts, "\",\"")))
+		buffer.WriteString(
+			fmt.Sprintf(
+				"eks_map_accounts = [\"%v\"]\n",
+				strings.Join(spec.Auth.AdditionalAccounts, "\",\""),
+			),
+		)
 	}
 
 	if len(spec.Auth.Users) > 0 {
 		buffer.WriteString("eks_map_users = [\n")
 		for _, account := range spec.Auth.Users {
-			buffer.WriteString(fmt.Sprintf(`{
+			buffer.WriteString(
+				fmt.Sprintf(
+					`{
 	groups = ["%v"]
 	username = "%v"
 	userarn = "%v"
 },
 `, strings.Join(account.Groups, "\",\""), account.Username, account.UserARN,
-			))
+				),
+			)
 		}
 		buffer.WriteString("]\n")
 
@@ -139,13 +150,16 @@ func (e EKS) createVarFile() (err error) {
 	if len(spec.Auth.Roles) > 0 {
 		buffer.WriteString("eks_map_roles = [\n")
 		for _, account := range spec.Auth.Roles {
-			buffer.WriteString(fmt.Sprintf(`{
+			buffer.WriteString(
+				fmt.Sprintf(
+					`{
 	groups = ["%v"]
 	username = "%v"
 	rolearn = "%v"
 },
 `, strings.Join(account.Groups, "\",\""), account.Username, account.RoleARN,
-			))
+				),
+			)
 		}
 		buffer.WriteString("]\n")
 	}
@@ -160,6 +174,7 @@ func (e EKS) createVarFile() (err error) {
 			} else {
 				buffer.WriteString("version = null\n")
 			}
+			buffer.WriteString(fmt.Sprintf("spot_instance = %v\n", np.SpotInstance))
 			buffer.WriteString(fmt.Sprintf("min_size = %v\n", np.MinSize))
 			buffer.WriteString(fmt.Sprintf("max_size = %v\n", np.MaxSize))
 			buffer.WriteString(fmt.Sprintf("instance_type = \"%v\"\n", np.InstanceType))
@@ -191,7 +206,9 @@ func (e EKS) createVarFile() (err error) {
 						fwRuleTags = string(tags)
 					}
 
-					buffer.WriteString(fmt.Sprintf(`{
+					buffer.WriteString(
+						fmt.Sprintf(
+							`{
 			name = "%v"
 			direction = "%v"
 			cidr_block = "%v"
@@ -200,7 +217,8 @@ func (e EKS) createVarFile() (err error) {
 			tags = %v
 		},
 		`, fwRule.Name, fwRule.Direction, fwRule.CIDRBlock, fwRule.Protocol, fwRule.Ports, fwRuleTags,
-					))
+						),
+					)
 				}
 				buffer.WriteString("]\n")
 			} else {
@@ -248,7 +266,10 @@ func (e EKS) createVarFile() (err error) {
 	if err != nil {
 		return err
 	}
-	err = e.terraform.FormatWrite(context.Background(), tfexec.Dir(fmt.Sprintf("%v/eks.tfvars", e.terraform.WorkingDir())))
+	err = e.terraform.FormatWrite(
+		context.Background(),
+		tfexec.Dir(fmt.Sprintf("%v/eks.tfvars", e.terraform.WorkingDir())),
+	)
 	if err != nil {
 		return err
 	}
@@ -302,7 +323,10 @@ func (e EKS) Plan() (err error) {
 		return err
 	}
 	var changes bool
-	changes, err = e.terraform.Plan(context.Background(), tfexec.VarFile(fmt.Sprintf("%v/eks.tfvars", e.terraform.WorkingDir())))
+	changes, err = e.terraform.Plan(
+		context.Background(),
+		tfexec.VarFile(fmt.Sprintf("%v/eks.tfvars", e.terraform.WorkingDir())),
+	)
 	if err != nil {
 		log.Fatalf("[DRYRUN] Something went wrong while updating eks. %v", err)
 		return err
@@ -324,7 +348,10 @@ func (e EKS) Update() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	err = e.terraform.Apply(context.Background(), tfexec.VarFile(fmt.Sprintf("%v/eks.tfvars", e.terraform.WorkingDir())))
+	err = e.terraform.Apply(
+		context.Background(),
+		tfexec.VarFile(fmt.Sprintf("%v/eks.tfvars", e.terraform.WorkingDir())),
+	)
 	if err != nil {
 		log.Fatalf("Something went wrong while updating eks. %v", err)
 		return "", err
@@ -341,7 +368,10 @@ func (e EKS) Destroy() (err error) {
 	if err != nil {
 		return err
 	}
-	err = e.terraform.Destroy(context.Background(), tfexec.VarFile(fmt.Sprintf("%v/eks.tfvars", e.terraform.WorkingDir())))
+	err = e.terraform.Destroy(
+		context.Background(),
+		tfexec.VarFile(fmt.Sprintf("%v/eks.tfvars", e.terraform.WorkingDir())),
+	)
 	if err != nil {
 		log.Fatalf("Something went wrong while destroying EKS cluster project. %v", err)
 		return err

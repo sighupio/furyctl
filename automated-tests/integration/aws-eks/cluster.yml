@@ -19,3 +19,10 @@ spec:
     maxSize: 1
     volumeSize: 50
     instanceType: t3.micro
+  - name: my-spot-node-pool
+    minSize: 1
+    maxSize: 1
+    spotInstance: true
+    volumeSize: 50
+    instanceType: t3.micro
+
