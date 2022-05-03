@@ -7,7 +7,7 @@ name: license
 
 steps:
   - name: check
-    image: golang
+    image: golang:1.16
     pull: always
     commands:
       - go get -u github.com/google/addlicense
