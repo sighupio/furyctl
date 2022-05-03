@@ -22,6 +22,9 @@ type: docker
 node:
   runner: internal
 
+node:
+  runner: internal
+
 depends_on:
   - license
 
@@ -196,5 +199,7 @@ steps:
       - goreleaser --debug release --rm-dist
     when:
       ref:
+        exclude:
+          - refs/tags/v**-rc**
         include:
           - refs/tags/v**
