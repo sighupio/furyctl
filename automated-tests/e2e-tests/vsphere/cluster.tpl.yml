@@ -23,19 +23,19 @@ spec:
   boundary: true
   lbNode:
     count: 1
-    template: "${VSPHERE_TEMPLATE_PREFIX}/sighup-oraclelinux7.9-template-v20210413"
+    template: "${VSPHERE_TEMPLATE_PREFIX}/sighup-ubuntu20LTS-template-v20210115"
   masterNode:
     count: 1
     cpu: 2
     memSize: 8192
     diskSize: 100
-    template: "${VSPHERE_TEMPLATE_PREFIX}/sighup-oraclelinux7.9-template-v20210413"
+    template: "${VSPHERE_TEMPLATE_PREFIX}/sighup-ubuntu20LTS-template-v20210115"
   infraNode:
     count: 1
     cpu: 2
     memSize: 8192
     diskSize: 100
-    template: "${VSPHERE_TEMPLATE_PREFIX}/sighup-oraclelinux7.9-template-v20210413"
+    template: "${VSPHERE_TEMPLATE_PREFIX}/sighup-ubuntu20LTS-template-v20210115"
   nodePools: []
   clusterPODCIDR: 172.21.0.0/16
   clusterSVCCIDR: 172.23.0.0/16
