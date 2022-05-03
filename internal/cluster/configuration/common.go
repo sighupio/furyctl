@@ -1,4 +1,4 @@
-// Copyright (c) 2020 SIGHUP s.r.l All rights reserved.
+// Copyright (c) 2022 SIGHUP s.r.l All rights reserved.
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
@@ -9,7 +9,7 @@ type DMZCIDRRange struct {
 	Values []string
 }
 
-//UnmarshalYAML unmarshall the DMZCIDRRange
+// UnmarshalYAML unmarshall the DMZCIDRRange
 func (sm *DMZCIDRRange) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	var multi []string
 	err := unmarshal(&multi)
@@ -27,10 +27,11 @@ func (sm *DMZCIDRRange) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	return nil
 }
 
-//MarshalYAML marshall the DMZCIDRRange
+// MarshalYAML marshall the DMZCIDRRange
 func (sm DMZCIDRRange) MarshalYAML() (interface{}, error) {
 	if len(sm.Values) == 1 {
 		return sm.Values[0], nil
 	}
+
 	return sm.Values, nil
 }
