@@ -13,13 +13,6 @@
         name: vmtoolsd
         state: restarted
 
-- name: Install Boundary target
-  hosts: all
-  become: true
-  roles:
-    - name: boundary/target
-      when: enable_boundary_targets|default(false)|bool == true
-
 - name: Copy CA certificates to HAProxy
   hosts: haproxy
   become: true
