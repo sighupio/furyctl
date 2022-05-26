@@ -85,7 +85,7 @@ vSphere Kubernetes cluster ready.
 vSphere Cluster Endpoint: %v
 SSH Operator Name: %v
 
-Use the ssh %v username to access the vSphere instances with the configured SSH key. %v
+Use the ssh %v username to access the vSphere instances with the configured SSH key.
 Discover the instances by running
 
 $ kubectl get nodes
