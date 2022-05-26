@@ -18,8 +18,6 @@ type VSphere struct {
 
 	NetworkConfig VSphereNetworkConfig `yaml:"networkConfig"`
 
-	Boundary bool `yaml:"boundary"`
-
 	LoadBalancerNode VSphereKubeLoadBalancer `yaml:"lbNode"`
 	MasterNode       VSphereKubeNode         `yaml:"masterNode"`
 	InfraNode        VSphereKubeNode         `yaml:"infraNode"`

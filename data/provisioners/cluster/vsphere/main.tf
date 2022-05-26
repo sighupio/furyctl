@@ -70,7 +70,6 @@ module "fury" {
   net_domain      = var.net_domain
   ip_offset       = var.ip_offset
 
-  enable_boundary_targets = var.enable_boundary_targets
   os_user                 = var.os_user
   ssh_public_keys         = local.ssh_public_keys
 

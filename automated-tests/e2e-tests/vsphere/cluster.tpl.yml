@@ -20,7 +20,6 @@ spec:
     - 8.8.8.8
     domain: localdomain
     ipOffset: 1818
-  boundary: true
   lbNode:
     count: 1
     template: "${VSPHERE_TEMPLATE_PREFIX}/sighup-ubuntu20LTS-template-v20210115"

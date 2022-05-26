@@ -14,7 +14,6 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
-	"strconv"
 	"strings"
 
 	"github.com/gobuffalo/packr/v2"
@@ -69,19 +68,16 @@ func (e *VSphere) UpdateMessage() string {
 		log.Error("Can not get `ansible_inventory` value")
 	}
 	inventory, _ := aini.Parse(strings.NewReader(inventoryOutput))
-	kubernetes_control_plane_address := strings.Replace(inventory.Groups["all"].Vars["kubernetes_control_plane_address"], "\"", "", -1)
-	enable_boundary_targets := strings.Replace(inventory.Groups["all"].Vars["enable_boundary_targets"], "\"", "", -1)
-	enable_boundary_targets_b, _ := strconv.ParseBool(enable_boundary_targets)
+	kubernetes_control_plane_address := strings.Replace(
+		inventory.Groups["all"].Vars["kubernetes_control_plane_address"],
+		"\"",
+		"",
+		-1,
+	)
 	clusterOperatorName := strings.Replace(inventory.Groups["all"].Vars["ansible_user"], "\"", "", -1)
-	boundary_message := ""
 
-	if enable_boundary_targets_b {
-		boundary_message = fmt.Sprintf(`
-Boundary is enabled in this setup so you can use SIGHUP Boundary setup to access this cluster with the boundary-ops user
-`)
-	}
-
-	return fmt.Sprintf(`[vSphere] Fury
+	return fmt.Sprintf(
+		`[vSphere] Fury
 
 All the cluster components are up to date.
 vSphere Kubernetes cluster ready.
@@ -98,7 +94,8 @@ Then access by running:
 
 $ ssh %v@node-name-reported-by-kubectl-get-nodes
 
-`, kubernetes_control_plane_address, clusterOperatorName, clusterOperatorName, boundary_message, clusterOperatorName)
+`, kubernetes_control_plane_address, clusterOperatorName, clusterOperatorName, clusterOperatorName,
+	)
 }
 
 // DestroyMessage return a custom provisioner message the user will see once the cluster is destroyed
@@ -164,10 +161,14 @@ func (e VSphere) createVarFile() (err error) {
 	buffer.WriteString(fmt.Sprintf("network = \"%v\"\n", spec.NetworkConfig.Name))
 	buffer.WriteString(fmt.Sprintf("net_cidr = \"%v\"\n", spec.ClusterCIDR))
 	buffer.WriteString(fmt.Sprintf("net_gateway = \"%v\"\n", spec.NetworkConfig.Gateway))
-	buffer.WriteString(fmt.Sprintf("net_nameservers = [\"%v\"]\n", strings.Join(spec.NetworkConfig.Nameservers, "\",\"")))
+	buffer.WriteString(
+		fmt.Sprintf(
+			"net_nameservers = [\"%v\"]\n",
+			strings.Join(spec.NetworkConfig.Nameservers, "\",\""),
+		),
+	)
 	buffer.WriteString(fmt.Sprintf("net_domain = \"%v\"\n", spec.NetworkConfig.Domain))
 	buffer.WriteString(fmt.Sprintf("ip_offset = %v\n", spec.NetworkConfig.IPOffset))
-	buffer.WriteString(fmt.Sprintf("enable_boundary_targets = %v\n", spec.Boundary))
 	if len(spec.SSHPublicKey) > 0 {
 		buffer.WriteString(fmt.Sprintf("ssh_public_keys = [\"%v\"]\n", strings.Join(spec.SSHPublicKey, "\",\"")))
 	} else {
@@ -193,7 +194,12 @@ func (e VSphere) createVarFile() (err error) {
 		buffer.WriteString("kube_master_labels = {}\n")
 	}
 	if len(spec.MasterNode.Taints) > 0 {
-		buffer.WriteString(fmt.Sprintf("kube_master_taints = [\"%v\"]\n", strings.Join(spec.MasterNode.Taints, "\",\"")))
+		buffer.WriteString(
+			fmt.Sprintf(
+				"kube_master_taints = [\"%v\"]\n",
+				strings.Join(spec.MasterNode.Taints, "\",\""),
+			),
+		)
 	} else {
 		buffer.WriteString("kube_master_taints = []\n")
 	}
@@ -260,7 +266,10 @@ func (e VSphere) createVarFile() (err error) {
 	if err != nil {
 		return err
 	}
-	err = e.terraform.FormatWrite(context.Background(), tfexec.Dir(fmt.Sprintf("%v/vsphere.tfvars", e.terraform.WorkingDir())))
+	err = e.terraform.FormatWrite(
+		context.Background(),
+		tfexec.Dir(fmt.Sprintf("%v/vsphere.tfvars", e.terraform.WorkingDir())),
+	)
 	if err != nil {
 		return err
 	}
@@ -355,7 +364,10 @@ func (e VSphere) Plan() (err error) {
 		return err
 	}
 	var changes bool
-	changes, err = e.terraform.Plan(context.Background(), tfexec.VarFile(fmt.Sprintf("%v/vsphere.tfvars", e.terraform.WorkingDir())))
+	changes, err = e.terraform.Plan(
+		context.Background(),
+		tfexec.VarFile(fmt.Sprintf("%v/vsphere.tfvars", e.terraform.WorkingDir())),
+	)
 	if err != nil {
 		log.Fatalf("[DRYRUN] Something went wrong while updating vsphere. %v", err)
 		return err
@@ -377,7 +389,10 @@ func (e VSphere) Update() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	err = e.terraform.Apply(context.Background(), tfexec.VarFile(fmt.Sprintf("%v/vsphere.tfvars", e.terraform.WorkingDir())))
+	err = e.terraform.Apply(
+		context.Background(),
+		tfexec.VarFile(fmt.Sprintf("%v/vsphere.tfvars", e.terraform.WorkingDir())),
+	)
 	if err != nil {
 		log.Fatalf("Something went wrong while updating vsphere. %v", err)
 		return "", err
@@ -414,7 +429,10 @@ func (e VSphere) Update() (string, error) {
 		return "", err
 	}
 
-	kubeconfig, err := runAnsiblePlaybook(filepath.Join(e.terraform.WorkingDir(), "provision"), filepath.Join(e.terraform.WorkingDir(), "logs"))
+	kubeconfig, err := runAnsiblePlaybook(
+		filepath.Join(e.terraform.WorkingDir(), "provision"),
+		filepath.Join(e.terraform.WorkingDir(), "logs"),
+	)
 	log.Info("VSphere Updated")
 	return kubeconfig, err
 }
@@ -426,7 +444,10 @@ func (e VSphere) Destroy() (err error) {
 	if err != nil {
 		return err
 	}
-	err = e.terraform.Destroy(context.Background(), tfexec.VarFile(fmt.Sprintf("%v/vsphere.tfvars", e.terraform.WorkingDir())))
+	err = e.terraform.Destroy(
+		context.Background(),
+		tfexec.VarFile(fmt.Sprintf("%v/vsphere.tfvars", e.terraform.WorkingDir())),
+	)
 	if err != nil {
 		log.Fatalf("Something went wrong while destroying VSphere cluster project. %v", err)
 		return err
