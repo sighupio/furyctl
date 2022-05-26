@@ -443,11 +443,12 @@ func (e VSphere) Destroy() (err error) {
 func createPKI(workingDirectory string) error {
 	source := ""
 	currentOS := runtime.GOOS
+	currentArch := runtime.GOARCH
 	switch currentOS {
 	case "darwin":
-		source = "https://github.com/sighupio/furyagent/releases/download/v0.2.3/furyagent-darwin-amd64"
+		source = fmt.Sprintf("https://github.com/sighupio/furyagent/releases/download/v0.2.3/furyagent-darwin-%s", currentArch)
 	case "linux":
-		source = "https://github.com/sighupio/furyagent/releases/download/v0.2.3/furyagent-linux-amd64"
+		source = fmt.Sprintf("https://github.com/sighupio/furyagent/releases/download/v0.2.3/furyagent-linux-%s", currentArch)
 	default:
 		return fmt.Errorf("Windows %s is not supported, sorry ;-)", currentOS)
 	}

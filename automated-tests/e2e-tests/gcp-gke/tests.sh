@@ -10,11 +10,15 @@ OS="linux"
 if [[ "$OSTYPE" == "darwin"* ]]; then
     OS="darwin"
 fi
+CPUARCH="amd64"
+if [[ $(uname -m) -eq "arm64" ]]; then
+	CPUARCH="arm64"
+fi
 
 @test "furyctl" {
     info
     init(){
-        ./dist/furyctl-${OS}_${OS}_amd64/furyctl version
+        ./dist/furyctl-${OS}_${OS}_${CPUARCH}/furyctl version
     }
     run init
     if [[ $status -ne 0 ]]; then
@@ -35,7 +39,7 @@ fi
 @test "Bootstrap init" {
     info
     init(){
-        ./dist/furyctl-${OS}_${OS}_amd64/furyctl -d --debug bootstrap init --config ./automated-tests/e2e-tests/gcp-gke/bootstrap.yml -w ./automated-tests/e2e-tests/gcp-gke/bootstrap --reset
+        ./dist/furyctl-${OS}_${OS}_${CPUARCH}/furyctl -d --debug bootstrap init --config ./automated-tests/e2e-tests/gcp-gke/bootstrap.yml -w ./automated-tests/e2e-tests/gcp-gke/bootstrap --reset
     }
     run init
 
@@ -48,7 +52,7 @@ fi
 @test "Bootstrap apply (dry-run)" {
     info
     apply(){
-        ./dist/furyctl-${OS}_${OS}_amd64/furyctl -d --debug bootstrap apply --dry-run --config ./automated-tests/e2e-tests/gcp-gke/bootstrap.yml -w ./automated-tests/e2e-tests/gcp-gke/bootstrap
+        ./dist/furyctl-${OS}_${OS}_${CPUARCH}/furyctl -d --debug bootstrap apply --dry-run --config ./automated-tests/e2e-tests/gcp-gke/bootstrap.yml -w ./automated-tests/e2e-tests/gcp-gke/bootstrap
     }
     run apply
 
@@ -63,7 +67,7 @@ fi
 @test "Bootstrap apply" {
     info
     apply(){
-        ./dist/furyctl-${OS}_${OS}_amd64/furyctl -d --debug bootstrap apply --config ./automated-tests/e2e-tests/gcp-gke/bootstrap.yml -w ./automated-tests/e2e-tests/gcp-gke/bootstrap
+        ./dist/furyctl-${OS}_${OS}_${CPUARCH}/furyctl -d --debug bootstrap apply --config ./automated-tests/e2e-tests/gcp-gke/bootstrap.yml -w ./automated-tests/e2e-tests/gcp-gke/bootstrap
     }
     run apply
 
@@ -154,7 +158,7 @@ fi
 @test "Cluster init" {
     info
     init(){
-        ./dist/furyctl-${OS}_${OS}_amd64/furyctl -d --debug cluster init --config ./automated-tests/e2e-tests/gcp-gke/cluster.yml -w ./automated-tests/e2e-tests/gcp-gke/cluster --reset
+        ./dist/furyctl-${OS}_${OS}_${CPUARCH}/furyctl -d --debug cluster init --config ./automated-tests/e2e-tests/gcp-gke/cluster.yml -w ./automated-tests/e2e-tests/gcp-gke/cluster --reset
     }
     run init
 
@@ -167,7 +171,7 @@ fi
 @test "Cluster apply (dry-run)" {
     info
     apply(){
-        ./dist/furyctl-${OS}_${OS}_amd64/furyctl -d --debug cluster apply --dry-run --config ./automated-tests/e2e-tests/gcp-gke/cluster.yml -w ./automated-tests/e2e-tests/gcp-gke/cluster
+        ./dist/furyctl-${OS}_${OS}_${CPUARCH}/furyctl -d --debug cluster apply --dry-run --config ./automated-tests/e2e-tests/gcp-gke/cluster.yml -w ./automated-tests/e2e-tests/gcp-gke/cluster
     }
     run apply
 
@@ -182,7 +186,7 @@ fi
 @test "Cluster apply" {
     info
     apply(){
-        ./dist/furyctl-${OS}_${OS}_amd64/furyctl -d --debug cluster apply --config ./automated-tests/e2e-tests/gcp-gke/cluster.yml -w ./automated-tests/e2e-tests/gcp-gke/cluster
+        ./dist/furyctl-${OS}_${OS}_${CPUARCH}/furyctl -d --debug cluster apply --config ./automated-tests/e2e-tests/gcp-gke/cluster.yml -w ./automated-tests/e2e-tests/gcp-gke/cluster
     }
     run apply
 
@@ -229,7 +233,7 @@ fi
 @test "Cluster destroy" {
     info
     destroy(){
-        ./dist/furyctl-${OS}_${OS}_amd64/furyctl -d --debug cluster destroy --force --config ./automated-tests/e2e-tests/gcp-gke/cluster.yml -w ./automated-tests/e2e-tests/gcp-gke/cluster
+        ./dist/furyctl-${OS}_${OS}_${CPUARCH}/furyctl -d --debug cluster destroy --force --config ./automated-tests/e2e-tests/gcp-gke/cluster.yml -w ./automated-tests/e2e-tests/gcp-gke/cluster
     }
     run destroy
 
@@ -257,7 +261,7 @@ fi
 @test "Bootstrap destroy" {
     info
     destroy(){
-        ./dist/furyctl-${OS}_${OS}_amd64/furyctl -d --debug bootstrap destroy --force --config ./automated-tests/e2e-tests/gcp-gke/bootstrap.yml -w ./automated-tests/e2e-tests/gcp-gke/bootstrap
+        ./dist/furyctl-${OS}_${OS}_${CPUARCH}/furyctl -d --debug bootstrap destroy --force --config ./automated-tests/e2e-tests/gcp-gke/bootstrap.yml -w ./automated-tests/e2e-tests/gcp-gke/bootstrap
     }
     run destroy
 

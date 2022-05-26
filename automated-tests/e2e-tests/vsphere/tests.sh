@@ -10,6 +10,10 @@ OS="linux"
 if [[ "$OSTYPE" == "darwin"* ]]; then
     OS="darwin"
 fi
+CPUARCH="amd64"
+if [[ $(uname -m) -eq "arm64" ]]; then
+	CPUARCH="arm64"
+fi
 
 @test "Prepare temporal ssh key" {
     info
@@ -27,7 +31,7 @@ fi
 @test "furyctl" {
     info
     init(){
-        ./dist/furyctl-${OS}_${OS}_amd64/furyctl version
+        ./dist/furyctl-${OS}_${OS}_${CPUARCH}/furyctl version
     }
     run init
     if [[ $status -ne 0 ]]; then
@@ -48,7 +52,7 @@ fi
 @test "Cluster init" {
     info
     init(){
-        ./dist/furyctl-${OS}_${OS}_amd64/furyctl -d --debug cluster init --config ./automated-tests/e2e-tests/vsphere/cluster.yml -w ./automated-tests/e2e-tests/vsphere/cluster --reset
+        ./dist/furyctl-${OS}_${OS}_${CPUARCH}/furyctl -d --debug cluster init --config ./automated-tests/e2e-tests/vsphere/cluster.yml -w ./automated-tests/e2e-tests/vsphere/cluster --reset
     }
     run init
 
@@ -61,7 +65,7 @@ fi
 @test "Cluster apply (dry-run)" {
     info
     apply(){
-        ./dist/furyctl-${OS}_${OS}_amd64/furyctl -d --debug cluster apply --dry-run --config ./automated-tests/e2e-tests/vsphere/cluster.yml -w ./automated-tests/e2e-tests/vsphere/cluster
+        ./dist/furyctl-${OS}_${OS}_${CPUARCH}/furyctl -d --debug cluster apply --dry-run --config ./automated-tests/e2e-tests/vsphere/cluster.yml -w ./automated-tests/e2e-tests/vsphere/cluster
     }
     run apply
 
@@ -76,7 +80,7 @@ fi
 @test "Cluster apply" {
     info
     apply(){
-        ./dist/furyctl-${OS}_${OS}_amd64/furyctl -d --debug cluster apply --config ./automated-tests/e2e-tests/vsphere/cluster.yml -w ./automated-tests/e2e-tests/vsphere/cluster
+        ./dist/furyctl-${OS}_${OS}_${CPUARCH}/furyctl -d --debug cluster apply --config ./automated-tests/e2e-tests/vsphere/cluster.yml -w ./automated-tests/e2e-tests/vsphere/cluster
     }
     run apply
 
