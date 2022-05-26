@@ -11,7 +11,7 @@ if [[ "$OSTYPE" == "darwin"* ]]; then
     OS="darwin"
 fi
 CPUARCH="amd64_v1"
-if [[ $(uname -m) -eq "arm64" ]]; then
+if [[ $(uname -m) == "arm64" ]]; then
 	CPUARCH="arm64"
 fi
 

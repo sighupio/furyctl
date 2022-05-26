@@ -28,8 +28,8 @@ You can find `furyctl` binaries on the [Releases page](https://github.com/sighup
 To download the latest release, run:
 
 ```bash
-CPUARCH="amd64"
-if [[ $(uname -m) -eq "arm64" ]]; then
+CPUARCH="amd64_v1"
+if [[ $(uname -m) == "arm64" ]]; then
 	CPUARCH="arm64"
 fi
 wget -q "https://github.com/sighupio/furyctl/releases/download/v0.6.2/furyctl-$(uname -s)-${CPUARCH}" -O /tmp/furyctl
