@@ -11,13 +11,15 @@ require (
 	github.com/hashicorp/go-getter v1.5.3
 	github.com/hashicorp/go-version v1.3.0
 	github.com/hashicorp/terraform-exec v0.13.3
+	github.com/karrick/godirwalk v1.17.0 // indirect
 	github.com/relex/aini v1.2.1
 	github.com/rogpeppe/go-internal v1.8.1 // indirect
 	github.com/sirupsen/logrus v1.8.1
 	github.com/spf13/cobra v1.4.0
 	github.com/spf13/viper v1.8.1
-	golang.org/x/sys v0.0.0-20220502124256-b6088ccd6cba // indirect
-	golang.org/x/term v0.0.0-20220411215600-e5f449aeb171 // indirect
+	golang.org/x/sync v0.0.0-20220513210516-0976fa681c29 // indirect
+	golang.org/x/sys v0.0.0-20220520151302-bc2c85ada10a // indirect
+	golang.org/x/term v0.0.0-20220526004731-065cf7ba2467 // indirect
 	golang.org/x/tools v0.1.10 // indirect
 	gopkg.in/yaml.v2 v2.4.0
 )

@@ -28,7 +28,11 @@ You can find `furyctl` binaries on the [Releases page](https://github.com/sighup
 To download the latest release, run:
 
 ```bash
-wget -q https://github.com/sighupio/furyctl/releases/download/v0.6.1/furyctl-$(uname -s)-amd64 -O /tmp/furyctl
+CPUARCH="amd64"
+if [[ $(uname -m) -eq "arm64" ]]; then
+	CPUARCH="arm64"
+fi
+wget -q "https://github.com/sighupio/furyctl/releases/download/v0.6.2/furyctl-$(uname -s)-${CPUARCH}" -O /tmp/furyctl
 chmod +x /tmp/furyctl
 sudo mv /tmp/furyctl /usr/local/bin/furyctl
 ```
@@ -56,8 +60,8 @@ Check that everything is working correctly with `furyctl version`:
 
 ```bash
 furyctl version
-INFO[0000] Furyctl version 0.6.1                        
-INFO[0000] built 2021-09-20T15:36:15Z from commit 012d862edc6b452752a8955fc624f6064566a6cb 
+INFO[0000] Furyctl version 0.6.1
+INFO[0000] built 2021-09-20T15:36:15Z from commit 012d862edc6b452752a8955fc624f6064566a6cb
 ```
 
 > 💡 **TIP**
@@ -279,7 +283,7 @@ The available `cluster` provisioners are:
 
 <!-- </KFD-DOCS> -->
 <!-- <FOOTER> -->
-  
+
 ## Contributing
 
 Before contributing, please read first the [Contributing Guidelines](docs/CONTRIBUTING.md).
