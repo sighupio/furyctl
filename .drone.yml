@@ -171,6 +171,32 @@ steps:
       - echo " Ignore errors on this step"
       - bats -t ./automated-tests/e2e-tests/vsphere/tests-destroy.sh
 
+  - name: build-prerelease
+    image: ghcr.io/goreleaser/goreleaser:v1.4.1
+    pull: always
+    depends_on:
+      - lint
+      - test
+      - integration-gcp-gke
+      - integration-aws-eks
+      - integration-vsphere
+      - e2e-aws
+      - e2e-gcp
+      - e2e-vsphere
+    environment:
+      GITHUB_TOKEN:
+        from_secret: GITHUB_TOKEN
+    commands:
+      - GO111MODULE=on go get -u github.com/gobuffalo/packr/v2/packr2@v2.8.3
+      - git reset --hard
+      - git fetch --tags
+      - GO111MODULE=on goreleaser --config .goreleaser.prerelease.yml check
+      - GO111MODULE=on goreleaser --config .goreleaser.prerelease.yml --debug release --rm-dist
+    when:
+      ref:
+        include:
+          - refs/tags/v**-rc**
+
   - name: build-release
     image: ghcr.io/goreleaser/goreleaser:v1.4.1
     pull: always
