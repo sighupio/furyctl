@@ -100,7 +100,7 @@ func clusterParser(config *Configuration) (err error) {
 			ControlPlaneCIDR:               "10.0.0.0/28",
 			AdditionalFirewallRules:        true,
 			AdditionalClusterFirewallRules: false,
-			DisalbeDefaultSNAT:             false,
+			DisableDefaultSNAT:             false,
 		}
 		err = yaml.Unmarshal(specBytes, &gkeSpec)
 		if err != nil {

@@ -189,7 +189,7 @@ func clusterTemplate(config *Configuration) error {
 			ControlPlaneCIDR:               "10.0.0.0/28 # OPTIONAL. DEFAULT VALUE. The IP range in CIDR notation to use for the hosted master network",
 			AdditionalFirewallRules:        true,
 			AdditionalClusterFirewallRules: false,
-			DisalbeDefaultSNAT:             false,
+			DisableDefaultSNAT:             false,
 			SubNetworks: []string{
 				"subnet-id0 # Identificator of the subnets. Index 0: Cluster Subnet",
 				"subnet-id1 # Identificator of the subnets. Index 1: Pod Subnet",
