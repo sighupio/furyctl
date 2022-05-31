@@ -81,6 +81,7 @@ brews:
     tap:
       owner: sighupio
       name: homebrew-furyctl
+    skip_upload: auto
     folder: Formula
     homepage: 'https://gihub.com/sighupio/furyctl'
     description: 'Furyctl binary'
