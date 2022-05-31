@@ -75,6 +75,7 @@ release:
     owner: sighupio
     name: furyctl
   name_template: '{{ .Tag }}'
+  prerelease: auto
 brews:
   - name: furyctl
     tap:
