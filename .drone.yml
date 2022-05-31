@@ -10,7 +10,7 @@ steps:
     image: golang:1.17-alpine
     pull: always
     commands:
-      - go install github.com/google/addlicense
+      - go install github.com/google/addlicense@v1.0.0
       - addlicense -c "SIGHUP s.r.l" -v -l bsd --check .
 
 ---
