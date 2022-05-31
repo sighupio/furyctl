@@ -8,7 +8,7 @@ require (
 	github.com/fatih/color v1.10.0 // indirect
 	github.com/gobuffalo/packr/v2 v2.8.3
 	github.com/hashicorp/go-checkpoint v0.5.0
-	github.com/hashicorp/go-getter v1.5.3
+	github.com/hashicorp/go-getter v1.5.11
 	github.com/hashicorp/go-version v1.3.0
 	github.com/hashicorp/terraform-exec v0.13.3
 	github.com/karrick/godirwalk v1.17.0 // indirect
