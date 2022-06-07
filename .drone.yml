@@ -22,9 +22,6 @@ type: docker
 node:
   runner: internal
 
-node:
-  runner: internal
-
 depends_on:
   - license
 
