@@ -2,8 +2,9 @@
 # Use of this source code is governed by a BSD-style
 # license that can be found in the LICENSE file.
 
-kind: pipeline
 name: license
+kind: pipeline
+type: docker
 
 steps:
   - name: check
@@ -14,8 +15,9 @@ steps:
       - addlicense -c "SIGHUP s.r.l" -v -l bsd --check .
 
 ---
-kind: pipeline
 name: Build Test and Release
+kind: pipeline
+type: docker
 
 node:
   runner: internal

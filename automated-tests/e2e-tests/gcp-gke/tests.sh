@@ -10,9 +10,9 @@ OS="linux"
 if [[ "$OSTYPE" == "darwin"* ]]; then
     OS="darwin"
 fi
-CPUARCH="amd64"
-if [ $(uname -m) = "arm64" ]; then
-	CPUARCH="arm64"
+CPUARCH="amd64_v1"
+if [ "$(uname -m)" = "arm64" ]; then
+	CPUARCH="arm64_v1"
 fi
 
 @test "furyctl" {
@@ -82,7 +82,7 @@ fi
 @test "Create openvpn profile" {
     info
     apply(){
-        furyagent configure openvpn-client --client-name e2e-${CI_BUILD_NUMBER} --config ./automated-tests/e2e-tests/gcp-gke/bootstrap/secrets/furyagent.yml > /tmp/e2e.ovpn
+        furyagent configure openvpn-client --client-name e2e-"${CI_BUILD_NUMBER}" --config ./automated-tests/e2e-tests/gcp-gke/bootstrap/secrets/furyagent.yml > /tmp/e2e.ovpn
     }
     run apply
 
@@ -95,9 +95,9 @@ fi
 @test "Wait for openvpn instance SSH port open" {
     info
     check(){
-        instance_ip=$(cat ./automated-tests/e2e-tests/gcp-gke/bootstrap/output/output.json | jq -r .vpn_ip.value[0])
+        instance_ip=$(jq -r .vpn_ip.value[0] ./automated-tests/e2e-tests/gcp-gke/bootstrap/output/output.json)
         echo "  VPN Public IP: $instance_ip" >&3
-        wait-for -t 60 $instance_ip:22 -- echo "VPN Instance $instance_ip SSH Port (22) UP!"
+        wait-for -t 60 "$instance_ip:22" -- echo "VPN Instance $instance_ip SSH Port (22) UP!"
     }
     run check
 
@@ -113,8 +113,8 @@ fi
         vpn-connect /tmp/e2e.ovpn
     }
     vpntest(){
-        tuns=$(netstat -i | grep tun0 | wc -l)
-        if [ $tuns -eq 0 ]; then echo "VPN Connection not ready yet"; return 1; fi
+        tuns=$(netstat -i | grep -c tun0)
+        if [ "$tuns" -eq 0 ]; then echo "VPN Connection not ready yet"; return 1; fi
     }
     run apply
     if [[ $status -ne 0 ]]; then
@@ -130,12 +130,12 @@ fi
 @test "Test Ping" {
     info
     check(){
-        public_cidr=$(cat ./automated-tests/e2e-tests/gcp-gke/bootstrap/output/output.json | jq -r .public_subnets_cidr_blocks.value[0])
+        public_cidr=$(jq -r .public_subnets_cidr_blocks.value[0] ./automated-tests/e2e-tests/gcp-gke/bootstrap/output/output.json)
         echo "  Public CIDR: $public_cidr" >&3
-        ips=$(nmap $public_cidr | grep -oE "\b([0-9]{1,3}\.){3}[0-9]{1,3}\b")
-        for ip in $(echo $ips); do
+        ips=$(nmap "$public_cidr" | grep -oE "\b([0-9]{1,3}\.){3}[0-9]{1,3}\b")
+        for ip in $ips; do
             echo "  Public (internal) ip discovered: $ip" >&3
-            timeout 3 ping -c1 $ip
+            timeout 3 ping -c1 "$ip"
         done
     }
     run check
