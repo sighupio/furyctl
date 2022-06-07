@@ -12,7 +12,7 @@ if [[ "${OSTYPE}" == "darwin"* ]]; then
 fi
 CPUARCH="amd64_v1"
 if [ "$(uname -m)" = "arm64" ]; then
-	CPUARCH="arm64_v1"
+	CPUARCH="arm64"
 fi
 
 @test "furyctl" {
