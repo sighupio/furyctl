@@ -11,8 +11,8 @@ if [[ "${OSTYPE}" == "darwin"* ]]; then
     OS="darwin"
 fi
 CPUARCH="amd64_v1"
-if [ $(uname -m) = "arm64" ]; then
-	CPUARCH="arm64"
+if [ "$(uname -m)" = "arm64" ]; then
+	CPUARCH="arm64_v1"
 fi
 
 @test "furyctl" {
