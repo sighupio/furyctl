@@ -177,7 +177,7 @@ Run `furyctl vendor` (within the same directory where your `Furyfile` is located
 
 > 💡 **TIP**
 >
-> Use the `-H` flag in the `furyctl vendor` command to download using HTPP(S) instead of the default SSH. This is useful if you are in an environment that restricts the SSH traffic.
+> Use the `-H` flag in the `furyctl vendor` command to download using HTTP(S) instead of the default SSH. This is useful if you are in an environment that restricts the SSH traffic.
 
 ## Cluster creation
 
