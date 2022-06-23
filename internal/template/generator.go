@@ -44,7 +44,7 @@ func funcMap() template.FuncMap {
 type genConfig struct {
 	source  string
 	target  string
-	context map[string]map[string]interface{}
+	context map[string]map[interface{}]interface{}
 }
 
 func (tm *TemplateModel) Generate() error {
@@ -125,7 +125,10 @@ func (tm *TemplateModel) Generate() error {
 	})
 }
 
-func (tm *TemplateModel) prepareTargetFilename(context map[string]map[string]interface{}, currentTarget string) (string, error) {
+func (tm *TemplateModel) prepareTargetFilename(
+	context map[string]map[interface{}]interface{},
+	currentTarget string,
+) (string, error) {
 	var realTarget string
 	if tm.Config.Templates.ProcessFilename { //try to process filename as template
 		tpl := template.Must(
@@ -148,8 +151,8 @@ func (tm *TemplateModel) prepareTargetFilename(context map[string]map[string]int
 
 }
 
-func (tm *TemplateModel) prepareContext() (map[string]map[string]interface{}, error) {
-	context := make(map[string]map[string]interface{})
+func (tm *TemplateModel) prepareContext() (map[string]map[interface{}]interface{}, error) {
+	context := make(map[string]map[interface{}]interface{})
 	envMap := mapEnvironmentVars()
 	context["Env"] = envMap
 	for k, v := range tm.Config.Data {
@@ -174,8 +177,8 @@ func (tm *TemplateModel) prepareContext() (map[string]map[string]interface{}, er
 	return context, nil
 }
 
-func readYamlConfig(yamlFilePath string) (map[string]interface{}, error) {
-	var body map[string]interface{}
+func readYamlConfig(yamlFilePath string) (map[interface{}]interface{}, error) {
+	var body map[interface{}]interface{}
 
 	yamlFile, err := ioutil.ReadFile(yamlFilePath)
 	if err != nil {
@@ -248,8 +251,8 @@ func fsCopy(src, dst string) (int64, error) {
 	return nBytes, err
 }
 
-func mapEnvironmentVars() map[string]interface{} {
-	envMap := make(map[string]interface{})
+func mapEnvironmentVars() map[interface{}]interface{} {
+	envMap := make(map[interface{}]interface{})
 
 	for _, v := range os.Environ() {
 		part := strings.Split(v, "=")

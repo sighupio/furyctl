@@ -12,15 +12,15 @@ const (
 )
 
 type Mapper struct {
-	context map[string]map[string]interface{}
+	context map[string]map[interface{}]interface{}
 }
 
-func NewMapper(context map[string]map[string]interface{}) *Mapper {
+func NewMapper(context map[string]map[interface{}]interface{}) *Mapper {
 	return &Mapper{context: context}
 }
 
-func (m *Mapper) MapDynamicValues() (map[string]map[string]interface{}, error) {
-	mappedCtx := make(map[string]map[string]interface{}, len(m.context))
+func (m *Mapper) MapDynamicValues() (map[string]map[interface{}]interface{}, error) {
+	mappedCtx := make(map[string]map[interface{}]interface{}, len(m.context))
 
 	for k, c := range m.context {
 		res, err := injectDynamicRes(c, c, k)
@@ -35,14 +35,37 @@ func (m *Mapper) MapDynamicValues() (map[string]map[string]interface{}, error) {
 }
 
 func injectDynamicRes(
-	m map[string]interface{},
-	parent map[string]interface{},
+	m map[interface{}]interface{},
+	parent map[interface{}]interface{},
 	parentKey string,
-) (map[string]interface{}, error) {
+) (map[interface{}]interface{}, error) {
 	for k, v := range m {
-		vMap, checkMap := v.(map[string]interface{})
+		spl := strings.Split(k.(string), "://")
+
+		if len(spl) > 1 {
+
+			source := spl[0]
+			sourceValue := spl[1]
+
+			switch source {
+			case Env:
+				envVar := os.Getenv(sourceValue)
+				fmt.Printf("changing %+v to env var value %+v \n", k, envVar)
+				parent[parentKey] = envVar
+			case File:
+				content, err := readValueFromFile(sourceValue)
+				if err != nil {
+					return nil, err
+				}
+				parent[parentKey] = content
+			}
+
+			continue
+		}
+
+		vMap, checkMap := v.(map[interface{}]interface{})
 		if checkMap {
-			if _, err := injectDynamicRes(vMap, m, k); err != nil {
+			if _, err := injectDynamicRes(vMap, m, k.(string)); err != nil {
 				return nil, err
 			}
 
@@ -52,37 +75,14 @@ func injectDynamicRes(
 		vArr, checkArr := v.([]interface{})
 		if checkArr {
 			for _, j := range vArr {
-				if j, ok := j.(map[string]interface{}); ok {
-					if _, err := injectDynamicRes(j, m, k); err != nil {
+				if j, ok := j.(map[interface{}]interface{}); ok {
+					if _, err := injectDynamicRes(j, m, k.(string)); err != nil {
 						return nil, err
 					}
 				}
 			}
 			continue
 		}
-
-		spl := strings.Split(k, "://")
-
-		if len(spl) > 1 {
-			
-			source := spl[0]
-			sourceValue := spl[1]
-
-			switch source {
-			case Env:
-				fmt.Printf("changing %+v to env var \n", k)
-				parent[parentKey] = os.Getenv(sourceValue)
-				break
-			case File:
-				content, err := readValueFromFile(sourceValue)
-				if err != nil {
-					return nil, err
-				}
-				parent[parentKey] = content
-				break
-			}
-		}
-
 	}
 
 	return m, nil

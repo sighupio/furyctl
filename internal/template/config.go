@@ -8,7 +8,7 @@ type Templates struct {
 }
 
 type Config struct {
-	Data    map[string]map[string]interface{} `yaml:"data,omitempty"`
+	Data    map[string]map[interface{}]interface{} `yaml:"data,omitempty"`
 	Include map[string]string
 	//Include Include `yaml:"include,omitempty"`
 	Templates Templates `yaml:"templates,omitempty"`
