@@ -13,7 +13,7 @@ import (
 	"github.com/Masterminds/sprig/v3"
 	"gopkg.in/yaml.v2"
 
-	"github.com/sighupio/furyctl/internal/template/generator/mapper"
+	"github.com/sighupio/furyctl/internal/template/mapper"
 )
 
 func toYAML(v interface{}) string {
