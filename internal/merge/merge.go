@@ -1,36 +1,85 @@
 package merge
 
 import (
-	"os"
-
-	"gopkg.in/yaml.v3"
+	"fmt"
+	"strings"
 )
 
-func Merge(base, custom map[string]interface{}) (map[string]interface{}, error) {
-	if parent, ok := custom["spec"]; ok {
-		if d, ok := parent.(map[string]interface{})["distribution"]; ok {
-			base["data"] = DeepCopy(base["data"].(map[string]interface{}), d.(map[string]interface{}))
+type DefaultModel struct {
+	content map[string]interface{}
+	path    string
+}
+
+type Merger struct {
+	base   Mergeable
+	custom Mergeable
+}
+
+type Mergeable interface {
+	Get() (map[string]interface{}, error)
+	Content() map[string]interface{}
+	Path() string
+}
+
+func NewDefaultModel(content map[string]interface{}, path string) *DefaultModel {
+	return &DefaultModel{
+		content: content,
+		path:    path,
+	}
+}
+
+func NewMerger(b, c Mergeable) *Merger {
+	return &Merger{
+		base:   b,
+		custom: c,
+	}
+}
+
+func (b *DefaultModel) Content() map[string]interface{} {
+	return (*b).content
+}
+
+func (b *DefaultModel) Path() string {
+	return (*b).path
+}
+
+func (b *DefaultModel) Get() (map[string]interface{}, error) {
+	ret := (*b).content
+
+	fields := strings.Split((*b).path[1:], ".")
+
+	for _, f := range fields {
+		mapAtKey, ok := ret[f]
+		if !ok {
+			return nil, fmt.Errorf("cannot access key %s on map", f)
+		}
+
+		ret, ok = mapAtKey.(map[string]interface{})
+		if !ok {
+			return nil, fmt.Errorf("data structure is invalid on key %s", f)
 		}
 	}
 
-	return base, nil
+	return ret, nil
 }
 
-func ReadYAMLfromFile(path string) (map[string]interface{}, error) {
-	var yamlRes map[string]interface{}
-
-	res, err := os.ReadFile(path)
+func (m *Merger) Merge() (map[string]interface{}, error) {
+	preparedBase, err := m.base.Get()
 	if err != nil {
-		return yamlRes, err
+		return nil, fmt.Errorf("incorrect base file, %s", err.Error())
 	}
 
-	err = yaml.Unmarshal(res, &yamlRes)
+	preparedCustom, err := m.custom.Get()
+	if err != nil {
+		return preparedBase, nil
+	}
 
-	return yamlRes, err
+	m.base.Content()[m.base.Path()] = deepCopy(preparedBase, preparedCustom)
 
+	return m.base.Content(), nil
 }
 
-func DeepCopy(a, b map[string]interface{}) map[string]interface{} {
+func deepCopy(a, b map[string]interface{}) map[string]interface{} {
 	out := make(map[string]interface{}, len(a))
 	for k, v := range a {
 		out[k] = v
@@ -39,7 +88,7 @@ func DeepCopy(a, b map[string]interface{}) map[string]interface{} {
 		if v, ok := v.(map[string]interface{}); ok {
 			if bv, ok := out[k]; ok {
 				if bv, ok := bv.(map[string]interface{}); ok {
-					out[k] = DeepCopy(bv, v)
+					out[k] = deepCopy(bv, v)
 					continue
 				}
 			}

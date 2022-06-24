@@ -3,6 +3,7 @@ package cmd
 import (
 	"fmt"
 	"github.com/sighupio/furyctl/internal/merge"
+	yaml2 "github.com/sighupio/furyctl/internal/yaml"
 	"gopkg.in/yaml.v3"
 	"os"
 	"strings"
@@ -26,17 +27,22 @@ var (
 			distributionFilePath := "distribution.yaml"
 			furyctlFilePath := "furyctl.yaml"
 
-			distributionFile, err := merge.ReadYAMLfromFile(distributionFilePath)
+			distributionFile, err := yaml2.FromFile(distributionFilePath)
 			if err != nil {
 				return err
 			}
 
-			furyctlFile, err := merge.ReadYAMLfromFile(furyctlFilePath)
+			furyctlFile, err := yaml2.FromFile(furyctlFilePath)
 			if err != nil {
 				return err
 			}
 
-			mergedDistribution, err := merge.Merge(distributionFile, furyctlFile)
+			merger := merge.NewMerger(
+				merge.NewDefaultModel(distributionFile, ".data"),
+				merge.NewDefaultModel(furyctlFile, ".spec.distribution"),
+			)
+
+			mergedDistribution, err := merger.Merge()
 			if err != nil {
 				return err
 			}
