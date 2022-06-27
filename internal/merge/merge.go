@@ -17,6 +17,7 @@ type Merger struct {
 
 type Mergeable interface {
 	Get() (map[string]interface{}, error)
+	Walk(map[string]interface{}) error
 	Content() map[string]interface{}
 	Path() string
 }
@@ -63,6 +64,30 @@ func (b *DefaultModel) Get() (map[string]interface{}, error) {
 	return ret, nil
 }
 
+func (b *DefaultModel) Walk(mergedSection map[string]interface{}) error {
+	ret := &b.content
+
+	fields := strings.Split(b.Path()[1:], ".")
+
+	for _, f := range fields {
+		_, ok := (*ret)[f]
+		if !ok {
+			return fmt.Errorf("cannot access key %s on map", f)
+		}
+
+		_, ok = (*ret)[f].(map[string]interface{})
+		if !ok {
+			return fmt.Errorf("data structure is invalid on key %s", f)
+		}
+
+		ret = (*ret)[f].(map[string]interface{})
+	}
+
+	*ret = mergedSection
+
+	return nil
+}
+
 func (m *Merger) Merge() (map[string]interface{}, error) {
 	preparedBase, err := m.base.Get()
 	if err != nil {
@@ -74,9 +99,12 @@ func (m *Merger) Merge() (map[string]interface{}, error) {
 		return preparedBase, nil
 	}
 
-	m.base.Content()[m.base.Path()] = deepCopy(preparedBase, preparedCustom)
+	mergedSection := deepCopy(preparedBase, preparedCustom)
 
-	return m.base.Content(), nil
+	err = m.base.Walk(mergedSection)
+
+	return m.base.Content(), err
+
 }
 
 func deepCopy(a, b map[string]interface{}) map[string]interface{} {
