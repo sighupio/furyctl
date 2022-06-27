@@ -18,7 +18,7 @@ func TestTemplateModel_Will_Generate_UserHello(t *testing.T) {
 	conf := map[string]interface{}{
 		"data": map[string]interface{}{
 			"meta": map[string]string{
-				"name": "pippo",
+				"name": "test",
 			},
 		},
 	}
