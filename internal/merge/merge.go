@@ -2,31 +2,11 @@ package merge
 
 import (
 	"fmt"
-	"strings"
 )
-
-type DefaultModel struct {
-	content map[string]interface{}
-	path    string
-}
 
 type Merger struct {
 	base   Mergeable
 	custom Mergeable
-}
-
-type Mergeable interface {
-	Get() (map[string]interface{}, error)
-	Walk(map[string]interface{}) error
-	Content() map[string]interface{}
-	Path() string
-}
-
-func NewDefaultModel(content map[string]interface{}, path string) *DefaultModel {
-	return &DefaultModel{
-		content: content,
-		path:    path,
-	}
 }
 
 func NewMerger(b, c Mergeable) *Merger {
@@ -34,56 +14,6 @@ func NewMerger(b, c Mergeable) *Merger {
 		base:   b,
 		custom: c,
 	}
-}
-
-func (b *DefaultModel) Content() map[string]interface{} {
-	return (*b).content
-}
-
-func (b *DefaultModel) Path() string {
-	return (*b).path
-}
-
-func (b *DefaultModel) Get() (map[string]interface{}, error) {
-	ret := (*b).content
-
-	fields := strings.Split((*b).path[1:], ".")
-
-	for _, f := range fields {
-		mapAtKey, ok := ret[f]
-		if !ok {
-			return nil, fmt.Errorf("cannot access key %s on map", f)
-		}
-
-		ret, ok = mapAtKey.(map[string]interface{})
-		if !ok {
-			return nil, fmt.Errorf("data structure is invalid on key %s", f)
-		}
-	}
-
-	return ret, nil
-}
-
-func (b *DefaultModel) Walk(mergedSection map[string]interface{}) error {
-	ret := b.content
-
-	fields := strings.Split(b.Path()[1:], ".")
-
-	for _, f := range fields[:len(fields)-1] {
-		_, ok := ret[f]
-		if !ok {
-			return fmt.Errorf("cannot access key %s on map", f)
-		}
-
-		ret, ok = ret[f].(map[string]interface{})
-		if !ok {
-			return fmt.Errorf("data structure is invalid on key %s", f)
-		}
-	}
-
-	ret[fields[len(fields)-1]] = mergedSection
-
-	return nil
 }
 
 func (m *Merger) Merge() (map[string]interface{}, error) {

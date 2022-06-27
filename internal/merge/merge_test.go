@@ -3,17 +3,19 @@ package merge_test
 import (
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+
 	"github.com/sighupio/furyctl/internal/merge"
 )
 
-func Test_Merge(t *testing.T) {
+func Test_NewMerger(t *testing.T) {
 	a := map[string]interface{}{
 		"data": map[string]interface{}{
 			"meta": map[string]string{
-				"name": "pippo",
+				"name": "testName",
 			},
 			"test": map[string]interface{}{
-				"testArray": "lorem ipsum",
+				"testString": "lorem ipsum",
 			},
 		},
 	}
@@ -21,12 +23,12 @@ func Test_Merge(t *testing.T) {
 	b := map[string]interface{}{
 		"data": map[string]interface{}{
 			"meta": map[string]string{
-				"name": "pippo2",
+				"name": "testNewName",
 				"foo":  "bar",
 			},
-			"lollo": "pippo",
+			"example": "string",
 			"test": map[string]interface{}{
-				"pippolandia": "pippo1",
+				"example": "string",
 			},
 		},
 	}
@@ -36,8 +38,54 @@ func Test_Merge(t *testing.T) {
 		merge.NewDefaultModel(b, ".data.test"),
 	)
 
-	res, _ := merger.Merge()
+	assert.NotEmpty(t, merger)
+}
 
-	t.Log(res)
-	t.Log(merger)
+func Test_Merge(t *testing.T) {
+	a := map[string]interface{}{
+		"data": map[string]interface{}{
+			"meta": map[string]string{
+				"name": "testName",
+			},
+			"test": map[string]interface{}{
+				"testString": "lorem ipsum",
+			},
+		},
+	}
+
+	b := map[string]interface{}{
+		"data": map[string]interface{}{
+			"meta": map[string]string{
+				"name": "testNewName",
+				"foo":  "bar",
+			},
+			"example": "string",
+			"test": map[string]interface{}{
+				"newTestString": "string",
+			},
+		},
+	}
+
+	expectedRes := map[string]interface{}{
+		"data": map[string]interface{}{
+			"meta": map[string]string{
+				"name": "testName",
+			},
+			"test": map[string]interface{}{
+				"newTestString": "string",
+				"testString":    "lorem ipsum",
+			},
+		},
+	}
+
+	merger := merge.NewMerger(
+		merge.NewDefaultModel(a, ".data.test"),
+		merge.NewDefaultModel(b, ".data.test"),
+	)
+
+	res, err := merger.Merge()
+
+	assert.NoError(t, err)
+	assert.NotEmpty(t, res)
+	assert.Equal(t, expectedRes, res)
 }

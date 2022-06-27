@@ -81,6 +81,7 @@ func injectDynamicRes(
 					}
 				}
 			}
+
 			continue
 		}
 	}
