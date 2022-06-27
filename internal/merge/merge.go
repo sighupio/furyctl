@@ -65,25 +65,23 @@ func (b *DefaultModel) Get() (map[string]interface{}, error) {
 }
 
 func (b *DefaultModel) Walk(mergedSection map[string]interface{}) error {
-	ret := &b.content
+	ret := b.content
 
 	fields := strings.Split(b.Path()[1:], ".")
 
-	for _, f := range fields {
-		_, ok := (*ret)[f]
+	for _, f := range fields[:len(fields)-1] {
+		_, ok := ret[f]
 		if !ok {
 			return fmt.Errorf("cannot access key %s on map", f)
 		}
 
-		_, ok = (*ret)[f].(map[string]interface{})
+		ret, ok = ret[f].(map[string]interface{})
 		if !ok {
 			return fmt.Errorf("data structure is invalid on key %s", f)
 		}
-
-		ret = (*ret)[f].(map[string]interface{})
 	}
 
-	*ret = mergedSection
+	ret[fields[len(fields)-1]] = mergedSection
 
 	return nil
 }
