@@ -1,4 +1,4 @@
-// Copyright (c) 2020 SIGHUP s.r.l All rights reserved.
+// Copyright (c) 2022 SIGHUP s.r.l All rights reserved.
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
@@ -100,7 +100,7 @@ func clusterParser(config *Configuration) (err error) {
 			ControlPlaneCIDR:               "10.0.0.0/28",
 			AdditionalFirewallRules:        true,
 			AdditionalClusterFirewallRules: false,
-			DisalbeDefaultSNAT:             false,
+			DisableDefaultSNAT:             false,
 		}
 		err = yaml.Unmarshal(specBytes, &gkeSpec)
 		if err != nil {

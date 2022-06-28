@@ -1,5 +1,5 @@
 #!/usr/bin/env bats
-# Copyright (c) 2021 SIGHUP s.r.l All rights reserved.
+# Copyright (c) 2017-present SIGHUP s.r.l All rights reserved.
 # Use of this source code is governed by a BSD-style
 # license that can be found in the LICENSE file.
 
@@ -7,33 +7,37 @@
 load "./../../helper"
 
 OS="linux"
-if [[ "$OSTYPE" == "darwin"* ]]; then
+if [[ "${OSTYPE}" == "darwin"* ]]; then
     OS="darwin"
+fi
+CPUARCH="amd64_v1"
+if [ "$(uname -m)" = "arm64" ]; then
+	CPUARCH="arm64"
 fi
 
 @test "furyctl" {
     info
     init(){
-        ./dist/furyctl-${OS}_${OS}_amd64/furyctl version
+        ./dist/furyctl-${OS}_${OS}_${CPUARCH}/furyctl version
     }
     run init
-    if [[ $status -ne 0 ]]; then
-        echo "$output" >&3
+    if [[ ${status} -ne 0 ]]; then
+        echo "${output}" >&3
     fi
-    [ "$status" -eq 0 ]
+    [ "${status}" -eq 0 ]
 }
 
 @test "Bootstrap init" {
     info
     init(){
-        ./dist/furyctl-${OS}_${OS}_amd64/furyctl -d --debug bootstrap init --config ./automated-tests/integration/gcp-gke/bootstrap.yml -w ./automated-tests/integration/gcp-gke/bootstrap --reset
+        ./dist/furyctl-${OS}_${OS}_${CPUARCH}/furyctl -d --debug bootstrap init --config ./automated-tests/integration/gcp-gke/bootstrap.yml -w ./automated-tests/integration/gcp-gke/bootstrap --reset
     }
     run init
 
-    if [[ $status -ne 0 ]]; then
-        echo "$output" >&3
+    if [[ ${status} -ne 0 ]]; then
+        echo "${output}" >&3
     fi
-    [ "$status" -eq 0 ]
+    [ "${status}" -eq 0 ]
 }
 
 @test "Bootstrap structure" {
@@ -50,22 +54,22 @@ fi
         fi
     }
     run test
-    if [[ $status -ne 0 ]]; then
-        echo "$output" >&3
+    if [[ ${status} -ne 0 ]]; then
+        echo "${output}" >&3
     fi
-    [ "$status" -eq 0 ]
+    [ "${status}" -eq 0 ]
 }
 
 @test "Cluster init" {
     info
     init(){
-        ./dist/furyctl-${OS}_${OS}_amd64/furyctl -d --debug cluster init --config ./automated-tests/integration/gcp-gke/cluster.yml -w ./automated-tests/integration/gcp-gke/cluster --reset
+        ./dist/furyctl-${OS}_${OS}_${CPUARCH}/furyctl -d --debug cluster init --config ./automated-tests/integration/gcp-gke/cluster.yml -w ./automated-tests/integration/gcp-gke/cluster --reset
     }
     run init
-    if [[ $status -ne 0 ]]; then
-        echo "$output" >&3
+    if [[ ${status} -ne 0 ]]; then
+        echo "${output}" >&3
     fi
-    [ "$status" -eq 0 ]
+    [ "${status}" -eq 0 ]
 }
 
 @test "Cluster structure" {
@@ -82,8 +86,8 @@ fi
         fi
     }
     run test
-    if [[ $status -ne 0 ]]; then
-        echo "$output" >&3
+    if [[ ${status} -ne 0 ]]; then
+        echo "${output}" >&3
     fi
-    [ "$status" -eq 0 ]
+    [ "${status}" -eq 0 ]
 }

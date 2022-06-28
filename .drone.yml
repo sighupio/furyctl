@@ -2,20 +2,25 @@
 # Use of this source code is governed by a BSD-style
 # license that can be found in the LICENSE file.
 
-kind: pipeline
 name: license
+kind: pipeline
+type: docker
 
 steps:
   - name: check
-    image: golang
+    image: golang:1.17-alpine
     pull: always
     commands:
-      - go get -u github.com/google/addlicense
+      - go install github.com/google/addlicense@v1.0.0
       - addlicense -c "SIGHUP s.r.l" -v -l bsd --check .
 
 ---
-kind: pipeline
 name: Build Test and Release
+kind: pipeline
+type: docker
+
+node:
+  runner: internal
 
 depends_on:
   - license
@@ -46,7 +51,7 @@ steps:
         - tag
 
   - name: build
-    image: ghcr.io/goreleaser/goreleaser:v0.149.0
+    image: ghcr.io/goreleaser/goreleaser:v1.9.2
     pull: always
     depends_on:
       - lint
@@ -55,11 +60,11 @@ steps:
       GITHUB_TOKEN:
         from_secret: GITHUB_TOKEN
     commands:
-      - GO111MODULE=on go get -u github.com/gobuffalo/packr/v2/packr2@v2.8.1
+      - go install github.com/gobuffalo/packr/v2/packr2@v2.8.3
       - git reset --hard
       - git fetch --tags
-      - GO111MODULE=on goreleaser check
-      - GO111MODULE=on goreleaser --debug build --skip-validate --rm-dist
+      - goreleaser check
+      - goreleaser --debug build --skip-validate --rm-dist
     when:
       event:
         - push
@@ -159,7 +164,7 @@ steps:
 
   - <<: *e2e
     name: e2e-vsphere-destroy
-    depends_on: 
+    depends_on:
       - e2e-vsphere
     failure: ignore
     commands:
@@ -169,7 +174,7 @@ steps:
       - bats -t ./automated-tests/e2e-tests/vsphere/tests-destroy.sh
 
   - name: build-release
-    image: ghcr.io/goreleaser/goreleaser:v0.149.0
+    image: ghcr.io/goreleaser/goreleaser:v1.9.2
     pull: always
     depends_on:
       - lint
@@ -177,18 +182,19 @@ steps:
       - integration-gcp-gke
       - integration-aws-eks
       - integration-vsphere
-      - e2e-gcp
       - e2e-aws
+      - e2e-gcp
       - e2e-vsphere
     environment:
       GITHUB_TOKEN:
         from_secret: GITHUB_TOKEN
     commands:
-      - GO111MODULE=on go get -u github.com/gobuffalo/packr/v2/packr2@v2.8.1
+      - go install github.com/gobuffalo/packr/v2/packr2@v2.8.3
       - git reset --hard
       - git fetch --tags
-      - GO111MODULE=on goreleaser check
-      - GO111MODULE=on goreleaser --debug release --rm-dist
+      - goreleaser check
+      - goreleaser --debug release --rm-dist
     when:
-      event:
-        - tag
+      ref:
+        include:
+          - refs/tags/v**

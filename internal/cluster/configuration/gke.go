@@ -1,4 +1,4 @@
-// Copyright (c) 2020 SIGHUP s.r.l All rights reserved.
+// Copyright (c) 2022 SIGHUP s.r.l All rights reserved.
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
@@ -13,7 +13,7 @@ type GKE struct {
 	ControlPlaneCIDR               string `yaml:"controlPlaneCIDR"`
 	AdditionalFirewallRules        bool   `yaml:"additionalFirewallRules"`
 	AdditionalClusterFirewallRules bool   `yaml:"additionalClusterFirewallRules"`
-	DisalbeDefaultSNAT             bool   `yaml:"disalbeDefaultSNAT"`
+	DisableDefaultSNAT             bool   `yaml:"disableDefaultSNAT"`
 
 	SubNetworks  []string          `yaml:"subnetworks"`
 	DMZCIDRRange DMZCIDRRange      `yaml:"dmzCIDRRange"`
@@ -31,6 +31,7 @@ type GKENodePool struct {
 	InstanceType            string              `yaml:"instanceType"`
 	OS                      string              `yaml:"os"`
 	MaxPods                 int                 `yaml:"maxPods"`
+	SpotInstance            bool                `yaml:"spotInstance"`
 	VolumeSize              int                 `yaml:"volumeSize"`
 	Labels                  map[string]string   `yaml:"labels"`
 	Taints                  []string            `yaml:"taints"`
