@@ -9,25 +9,25 @@ import (
 )
 
 func Test_NewMerger(t *testing.T) {
-	a := map[string]interface{}{
-		"data": map[string]interface{}{
+	a := map[string]any{
+		"data": map[string]any{
 			"meta": map[string]string{
 				"name": "testName",
 			},
-			"test": map[string]interface{}{
+			"test": map[string]any{
 				"testString": "lorem ipsum",
 			},
 		},
 	}
 
-	b := map[string]interface{}{
-		"data": map[string]interface{}{
+	b := map[string]any{
+		"data": map[string]any{
 			"meta": map[string]string{
 				"name": "testNewName",
 				"foo":  "bar",
 			},
 			"example": "string",
-			"test": map[string]interface{}{
+			"test": map[string]any{
 				"example": "string",
 			},
 		},
@@ -42,36 +42,36 @@ func Test_NewMerger(t *testing.T) {
 }
 
 func Test_Merge(t *testing.T) {
-	a := map[string]interface{}{
-		"data": map[string]interface{}{
+	a := map[string]any{
+		"data": map[string]any{
 			"meta": map[string]string{
 				"name": "testName",
 			},
-			"test": map[string]interface{}{
+			"test": map[string]any{
 				"testString": "lorem ipsum",
 			},
 		},
 	}
 
-	b := map[string]interface{}{
-		"data": map[string]interface{}{
+	b := map[string]any{
+		"data": map[string]any{
 			"meta": map[string]string{
 				"name": "testNewName",
 				"foo":  "bar",
 			},
 			"example": "string",
-			"test": map[string]interface{}{
+			"test": map[string]any{
 				"newTestString": "string",
 			},
 		},
 	}
 
-	expectedRes := map[string]interface{}{
-		"data": map[string]interface{}{
+	expectedRes := map[string]any{
+		"data": map[string]any{
 			"meta": map[string]string{
 				"name": "testName",
 			},
-			"test": map[string]interface{}{
+			"test": map[string]any{
 				"newTestString": "string",
 				"testString":    "lorem ipsum",
 			},

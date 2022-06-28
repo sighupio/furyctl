@@ -11,12 +11,12 @@ import (
 )
 
 type Meta struct {
-	Name map[string]interface{} `yaml:"name,flow"`
+	Name map[string]any `yaml:"name,flow"`
 }
 
 func TestTemplateModel_Will_Generate_UserHello(t *testing.T) {
-	conf := map[string]interface{}{
-		"data": map[string]interface{}{
+	conf := map[string]any{
+		"data": map[string]any{
 			"meta": map[string]string{
 				"name": "test",
 			},
@@ -49,16 +49,16 @@ func TestTemplateModel_Will_Generate_UserHello(t *testing.T) {
 		panic(err)
 	}
 
-	expectedRes := "A nice day at pip"
+	expectedRes := "A nice day at tes"
 
 	assert.Equal(t, expectedRes, string(result))
 }
 
 func TestTemplateModel_Will_Generate_Dynamic_Values_From_Env(t *testing.T) {
-	conf := map[string]interface{}{
-		"data": map[string]interface{}{
+	conf := map[string]any{
+		"data": map[string]any{
 			"meta": Meta{
-				Name: map[string]interface{}{"env://TEST_USER_TYMLATE": ""},
+				Name: map[string]any{"env://TEST_USER_TYMLATE": ""},
 			},
 		},
 	}
@@ -101,10 +101,10 @@ func TestTemplateModel_Will_Generate_Dynamic_Values_From_Env(t *testing.T) {
 func TestTemplateModel_Will_Generate_Dynamic_Values_From_File(t *testing.T) {
 	path, err := os.MkdirTemp("", "test")
 
-	conf := map[string]interface{}{
-		"data": map[string]interface{}{
+	conf := map[string]any{
+		"data": map[string]any{
 			"meta": Meta{
-				Name: map[string]interface{}{"file://" + path + "/tymlate_test_file.txt": ""},
+				Name: map[string]any{"file://" + path + "/tymlate_test_file.txt": ""},
 			},
 		},
 	}

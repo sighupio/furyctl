@@ -5,43 +5,15 @@ import (
 	"path/filepath"
 	"strings"
 	"text/template"
-
-	"github.com/Masterminds/sprig/v3"
-	"gopkg.in/yaml.v2"
 )
-
-func toYAML(v interface{}) string {
-	data, err := yaml.Marshal(v)
-	if err != nil {
-		// Swallow errors inside of a template.
-		return ""
-	}
-	return strings.TrimSuffix(string(data), "\n")
-}
-
-func fromYAML(str string) map[string]interface{} {
-	m := map[string]interface{}{}
-
-	if err := yaml.Unmarshal([]byte(str), &m); err != nil {
-		m["Error"] = err.Error()
-	}
-	return m
-}
-
-func funcMap() template.FuncMap {
-	f := sprig.TxtFuncMap()
-	f["toYaml"] = toYAML
-	f["fromYaml"] = fromYAML
-	return f
-}
 
 type generator struct {
 	source  string
 	target  string
-	context map[string]map[interface{}]interface{}
+	context map[string]map[any]any
 }
 
-func NewGenerator(source, target string, context map[string]map[interface{}]interface{}) *generator {
+func NewGenerator(source, target string, context map[string]map[any]any) *generator {
 	return &generator{
 		source:  source,
 		target:  target,

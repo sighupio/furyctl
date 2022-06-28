@@ -12,15 +12,15 @@ const (
 )
 
 type Mapper struct {
-	context map[string]map[interface{}]interface{}
+	context map[string]map[any]any
 }
 
-func NewMapper(context map[string]map[interface{}]interface{}) *Mapper {
+func NewMapper(context map[string]map[any]any) *Mapper {
 	return &Mapper{context: context}
 }
 
-func (m *Mapper) MapDynamicValues() (map[string]map[interface{}]interface{}, error) {
-	mappedCtx := make(map[string]map[interface{}]interface{}, len(m.context))
+func (m *Mapper) MapDynamicValues() (map[string]map[any]any, error) {
+	mappedCtx := make(map[string]map[any]any, len(m.context))
 
 	for k, c := range m.context {
 		res, err := injectDynamicRes(c, c, k)
@@ -35,10 +35,10 @@ func (m *Mapper) MapDynamicValues() (map[string]map[interface{}]interface{}, err
 }
 
 func injectDynamicRes(
-	m map[interface{}]interface{},
-	parent map[interface{}]interface{},
+	m map[any]any,
+	parent map[any]any,
 	parentKey string,
-) (map[interface{}]interface{}, error) {
+) (map[any]any, error) {
 	for k, v := range m {
 		spl := strings.Split(k.(string), "://")
 
@@ -63,7 +63,7 @@ func injectDynamicRes(
 			continue
 		}
 
-		vMap, checkMap := v.(map[interface{}]interface{})
+		vMap, checkMap := v.(map[any]any)
 		if checkMap {
 			if _, err := injectDynamicRes(vMap, m, k.(string)); err != nil {
 				return nil, err
@@ -72,10 +72,10 @@ func injectDynamicRes(
 			continue
 		}
 
-		vArr, checkArr := v.([]interface{})
+		vArr, checkArr := v.([]any)
 		if checkArr {
 			for _, j := range vArr {
-				if j, ok := j.(map[interface{}]interface{}); ok {
+				if j, ok := j.(map[any]any); ok {
 					if _, err := injectDynamicRes(j, m, k.(string)); err != nil {
 						return nil, err
 					}

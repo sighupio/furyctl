@@ -9,12 +9,12 @@ import (
 )
 
 func TestNewDefaultModel(t *testing.T) {
-	content := map[string]interface{}{
-		"data": map[string]interface{}{
+	content := map[string]any{
+		"data": map[string]any{
 			"meta": map[string]string{
 				"name": "pippo",
 			},
-			"test": map[string]interface{}{
+			"test": map[string]any{
 				"testString": "lorem ipsum",
 			},
 		},
@@ -30,12 +30,12 @@ func TestNewDefaultModel(t *testing.T) {
 }
 
 func TestDefaultModel_Content(t *testing.T) {
-	content := map[string]interface{}{
-		"data": map[string]interface{}{
+	content := map[string]any{
+		"data": map[string]any{
 			"meta": map[string]string{
 				"name": "pippo",
 			},
-			"test": map[string]interface{}{
+			"test": map[string]any{
 				"testString": "lorem ipsum",
 			},
 		},
@@ -49,12 +49,12 @@ func TestDefaultModel_Content(t *testing.T) {
 }
 
 func TestDefaultModel_Path(t *testing.T) {
-	content := map[string]interface{}{
-		"data": map[string]interface{}{
+	content := map[string]any{
+		"data": map[string]any{
 			"meta": map[string]string{
 				"name": "pippo",
 			},
-			"test": map[string]interface{}{
+			"test": map[string]any{
 				"testString": "lorem ipsum",
 			},
 		},
@@ -68,18 +68,18 @@ func TestDefaultModel_Path(t *testing.T) {
 }
 
 func TestDefaultModel_Get(t *testing.T) {
-	content := map[string]interface{}{
-		"data": map[string]interface{}{
+	content := map[string]any{
+		"data": map[string]any{
 			"meta": map[string]string{
 				"name": "pippo",
 			},
-			"test": map[string]interface{}{
+			"test": map[string]any{
 				"testString": "lorem ipsum",
 			},
 		},
 	}
 
-	expectedRes := map[string]interface{}{
+	expectedRes := map[string]any{
 		"testString": "lorem ipsum",
 	}
 
@@ -94,28 +94,28 @@ func TestDefaultModel_Get(t *testing.T) {
 }
 
 func TestDefaultModel_Walk(t *testing.T) {
-	content := map[string]interface{}{
-		"data": map[string]interface{}{
+	content := map[string]any{
+		"data": map[string]any{
 			"meta": map[string]string{
 				"name": "pippo",
 			},
-			"test": map[string]interface{}{
+			"test": map[string]any{
 				"testString": "lorem ipsum",
 			},
 		},
 	}
 
-	target := map[string]interface{}{
+	target := map[string]any{
 		"testString":    "lorem ipsum",
 		"testNewString": "lorem ipsum new",
 	}
 
-	expectedRes := map[string]interface{}{
-		"data": map[string]interface{}{
+	expectedRes := map[string]any{
+		"data": map[string]any{
 			"meta": map[string]string{
 				"name": "pippo",
 			},
-			"test": map[string]interface{}{
+			"test": map[string]any{
 				"testNewString": "lorem ipsum new",
 				"testString":    "lorem ipsum",
 			},

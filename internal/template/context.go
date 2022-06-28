@@ -10,8 +10,8 @@ import (
 
 func CreateContextFromModel(
 	tm *Model,
-) (map[string]map[interface{}]interface{}, error) {
-	context := make(map[string]map[interface{}]interface{})
+) (map[string]map[any]any, error) {
+	context := make(map[string]map[any]any)
 	envMap := mapEnvironmentVars()
 	context["Env"] = envMap
 	for k, v := range tm.Config.Data {
@@ -36,8 +36,8 @@ func CreateContextFromModel(
 	return context, nil
 }
 
-func readYamlConfig(yamlFilePath string) (map[interface{}]interface{}, error) {
-	var body map[interface{}]interface{}
+func readYamlConfig(yamlFilePath string) (map[any]any, error) {
+	var body map[any]any
 
 	yamlFile, err := ioutil.ReadFile(yamlFilePath)
 	if err != nil {
@@ -51,8 +51,8 @@ func readYamlConfig(yamlFilePath string) (map[interface{}]interface{}, error) {
 	return body, nil
 }
 
-func mapEnvironmentVars() map[interface{}]interface{} {
-	envMap := make(map[interface{}]interface{})
+func mapEnvironmentVars() map[any]any {
+	envMap := make(map[any]any)
 
 	for _, v := range os.Environ() {
 		part := strings.Split(v, "=")

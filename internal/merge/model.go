@@ -6,24 +6,24 @@ import (
 )
 
 type Mergeable interface {
-	Get() (map[string]interface{}, error)
-	Walk(map[string]interface{}) error
-	Content() map[string]interface{}
+	Get() (map[string]any, error)
+	Walk(map[string]any) error
+	Content() map[string]any
 	Path() string
 }
 
 type DefaultModel struct {
-	content map[string]interface{}
+	content map[string]any
 	path    string
 }
 
-func NewDefaultModel(content map[string]interface{}, path string) *DefaultModel {
+func NewDefaultModel(content map[string]any, path string) *DefaultModel {
 	return &DefaultModel{
 		content: content,
 		path:    path,
 	}
 }
-func (b *DefaultModel) Content() map[string]interface{} {
+func (b *DefaultModel) Content() map[string]any {
 	return (*b).content
 }
 
@@ -31,7 +31,7 @@ func (b *DefaultModel) Path() string {
 	return (*b).path
 }
 
-func (b *DefaultModel) Get() (map[string]interface{}, error) {
+func (b *DefaultModel) Get() (map[string]any, error) {
 	ret := (*b).content
 
 	fields := strings.Split((*b).path[1:], ".")
@@ -42,7 +42,7 @@ func (b *DefaultModel) Get() (map[string]interface{}, error) {
 			return nil, fmt.Errorf("cannot access key %s on map", f)
 		}
 
-		ret, ok = mapAtKey.(map[string]interface{})
+		ret, ok = mapAtKey.(map[string]any)
 		if !ok {
 			return nil, fmt.Errorf("data structure is invalid on key %s", f)
 		}
@@ -51,7 +51,7 @@ func (b *DefaultModel) Get() (map[string]interface{}, error) {
 	return ret, nil
 }
 
-func (b *DefaultModel) Walk(mergedSection map[string]interface{}) error {
+func (b *DefaultModel) Walk(mergedSection map[string]any) error {
 	ret := b.content
 
 	fields := strings.Split(b.Path()[1:], ".")
@@ -62,7 +62,7 @@ func (b *DefaultModel) Walk(mergedSection map[string]interface{}) error {
 			return fmt.Errorf("cannot access key %s on map", f)
 		}
 
-		ret, ok = ret[f].(map[string]interface{})
+		ret, ok = ret[f].(map[string]any)
 		if !ok {
 			return fmt.Errorf("data structure is invalid on key %s", f)
 		}
