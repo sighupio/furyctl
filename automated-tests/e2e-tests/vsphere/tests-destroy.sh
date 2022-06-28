@@ -10,6 +10,10 @@ OS="linux"
 if [[ "$OSTYPE" == "darwin"* ]]; then
     OS="darwin"
 fi
+CPUARCH="amd64_v1"
+if [ "$(uname -m)" = "arm64" ]; then
+	CPUARCH="arm64"
+fi
 
 @test "Prepare temporal ssh key" {
     info
@@ -26,7 +30,7 @@ fi
 @test "Cluster destroy" {
     info
     destroy(){
-        ./dist/furyctl-${OS}_${OS}_amd64/furyctl -d --debug cluster destroy --force --config ./automated-tests/e2e-tests/vsphere/cluster.yml -w ./automated-tests/e2e-tests/vsphere/cluster
+        ./dist/furyctl-${OS}_${OS}_${CPUARCH}/furyctl -d --debug cluster destroy --force --config ./automated-tests/e2e-tests/vsphere/cluster.yml -w ./automated-tests/e2e-tests/vsphere/cluster
     }
     run destroy
 

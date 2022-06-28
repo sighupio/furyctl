@@ -1,4 +1,4 @@
-// Copyright (c) 2020 SIGHUP s.r.l All rights reserved.
+// Copyright (c) 2022 SIGHUP s.r.l All rights reserved.
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
@@ -444,11 +444,12 @@ func (e VSphere) Destroy() (err error) {
 func createPKI(workingDirectory string) error {
 	source := ""
 	currentOS := runtime.GOOS
+	currentArch := runtime.GOARCH
 	switch currentOS {
 	case "darwin":
-		source = "https://github.com/sighupio/furyagent/releases/download/v0.2.3/furyagent-darwin-amd64"
+		source = fmt.Sprintf("https://github.com/sighupio/furyagent/releases/download/v0.2.3/furyagent-darwin-%s", currentArch)
 	case "linux":
-		source = "https://github.com/sighupio/furyagent/releases/download/v0.2.3/furyagent-linux-amd64"
+		source = fmt.Sprintf("https://github.com/sighupio/furyagent/releases/download/v0.2.3/furyagent-linux-%s", currentArch)
 	default:
 		return fmt.Errorf("Windows %s is not supported, sorry ;-)", currentOS)
 	}

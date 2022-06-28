@@ -1,4 +1,4 @@
-// Copyright (c) 2020 SIGHUP s.r.l All rights reserved.
+// Copyright (c) 2022 SIGHUP s.r.l All rights reserved.
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
@@ -72,45 +72,57 @@ func download(packages []Package) error {
 
 func get(src, dest string, mode getter.ClientMode, cleanGitFolder bool) error {
 
-	logrus.Debugf("complete url downloading: %s -> %s", src, dest)
+	logrus.Debugf("starting download process: %s -> %s", src, dest)
+
+	var tempDest = dest + ".tmp"
 
 	pwd, err := os.Getwd()
 	if err != nil {
 		return err
 	}
+
 	client := &getter.Client{
 		Src:  src,
-		Dst:  dest,
+		Dst:  tempDest,
 		Pwd:  pwd,
 		Mode: mode,
 	}
-	logrus.Debugf("let's get %s -> %s", src, dest)
 
-	gitFolder := fmt.Sprintf("%s/.git", dest)
-	if cleanGitFolder {
-
-		if _, err := os.Stat(dest); !os.IsNotExist(err) {
-			logrus.Infof("%s already exists! removing it", dest)
-			err = removeDir(dest)
-			if err != nil {
-				logrus.Error(err)
-				return err
-			}
-		}
-	}
+	logrus.Debugf("downloading temporary file: %s -> %s", src, tempDest)
 
 	humanReadableDownloadLog(src, dest)
-	_ = client.Get()
+
+	err = removeDir(tempDest)
+	if err != nil {
+		logrus.Errorf("failed to remove: %s", tempDest)
+		return err
+	}
+
+	err = client.Get()
+	if err != nil {
+		_ = removeDir(tempDest)
+		return err
+	} else {
+		err = renameDir(tempDest, dest)
+		if err != nil {
+			logrus.Error(err)
+			return err
+		}
+
+	}
+
 	if cleanGitFolder {
-		logrus.Infof("removing %s", gitFolder)
+		gitFolder := fmt.Sprintf("%s/.git", dest)
+		logrus.Infof("cleaning git subfolder: %s", gitFolder)
 		err = removeDir(gitFolder)
 	}
+
 	if err != nil {
 		logrus.Error(err)
 		return err
 	}
 
-	logrus.Debugf("done %s -> %s", src, dest)
+	logrus.Debugf("download process finished: %s -> %s", src, dest)
 
 	return err
 }
@@ -135,6 +147,22 @@ func humanReadableDownloadLog(src string, dest string) {
 
 func removeDir(dir string) error {
 	err := os.RemoveAll(dir)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func renameDir(src string, dest string) error {
+	if _, err := os.Stat(dest); !os.IsNotExist(err) {
+		logrus.Infof("removing target path: %s", dest)
+		err = removeDir(dest)
+		if err != nil {
+			logrus.Error(err)
+			return err
+		}
+	}
+	err := os.Rename(src, dest)
 	if err != nil {
 		return err
 	}

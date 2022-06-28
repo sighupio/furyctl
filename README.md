@@ -1,84 +1,82 @@
-# Furyctl
+<h1 align="center">
+  <img src="docs/assets/furyctl-logo.png" width="200px"/><br/>
+  Furyctl
+</h1>
 
-Furyctl is the package manager for Fury distribution. It’s simple to use and reads a single Furyfile to download
-packages you need. Fury distribution offers three types of packages:
+<p align="center">The multi-purpose command line tool for the Kubernetes Fury Distribution.</p>
 
-- **Bases** : Sets of Kustomize bases to deploy necessary components in Kubernetes
-- **Modules**: Terraform modules to deploy Kubernetes infrastructure, and it’s dependencies
-- **Roles**: Ansible roles for deploying, configuring, and managing a Kubernetes infrastructure
+[![Build Status](https://ci.sighup.io/api/badges/sighupio/furyctl/status.svg)](https://ci.sighup.io/sighupio/furyctl)
+![Release](https://img.shields.io/github/v/release/sighupio/furyctl?label=Furyctl)
+![Slack](https://img.shields.io/badge/slack-@kubernetes/fury-yellow.svg?logo=slack)
+![License](https://img.shields.io/github/license/sighupio/furyctl)
 
-In addition to the package manager feature, it enables you to self-provision Fury Clusters.
-Read more about this feature on its documentation site.
+<!-- <KFD-DOCS> -->
 
-## Furyfile
+Furyctl is a simple CLI tool to:
 
-Furyfile is a simple YAML formatted file where you list which packages(and versions) you want to have.
-You can omit a type if you don't need any of its packages. An example Furyfile with packages listed
-would be like the following:
+- download and manage the Kubernetes Fury Distribution (KFD) modules
+- create and manage Fury clusters on AWS, GCP and vSphere
 
-```yaml
-# all sections are optional
+<br/>
 
-# map of prefixes and versions used to force a specific version for all the matching roles/modules/bases
-versions:
-  # e.g. will force version v1.15.4 if the name matches "aws*"
-  aws: v1.15.4
-  monitoring: master
+![Furyctl usage](docs/assets/furyctl.gif)
 
-roles:
-  - name: aws/etcd
-  - name: aws/kube-control-plane
-
-modules:
-  - name: aws/aws-vpc
-  - name: aws/aws-kubernetes
-
-bases:
-  - name: monitoring
-  - name: logging
-  # versions can be overridden if needed by specifying them for each package
-    version: master
-```
-
-You can get all packages in a group by using a group name *(like `logging`)* or single packages under a group
-(like `monitoring/prometheus-operator`).
-
-## Install
-
-### Github Releases
+## Installation
 
 You can find `furyctl` binaries on the [Releases page](https://github.com/sighupio/furyctl/releases).
 
-Supported architectures are *(64 bit)*:
-- `linux`
-- `darwin`
-
-Download the right binary for your architecture, then add it to your `PATH`. Assuming it's downloaded in your
-`~/Downloads` folder, you can run following commands (replacing `{arch}` with your architecture):
+To download the latest release, run:
 
 ```bash
-chmod +x ~/Downloads/furyctl-{arch}-amd64 && mv ~/Downloads/furyctl-{arch}-amd64 /usr/local/bin/furyctl
+CPUARCH="amd64"
+if [ $(uname -m) = "arm64" ]; then
+	CPUARCH="arm64"
+fi
+wget -q "https://github.com/sighupio/furyctl/releases/download/v0.6.2/furyctl-$(uname -s)-${CPUARCH}" -O /tmp/furyctl
+chmod +x /tmp/furyctl
+sudo mv /tmp/furyctl /usr/local/bin/furyctl
 ```
 
-### Homebrew
+Alternatively, you can install `furyctl` using a brew tap or via an asdf plugin.
 
-If you are a macOS user:
+### Installation with [Homebrew](https://brew.sh/)
 
 ```bash
 brew tap sighupio/furyctl
 brew install furyctl
 ```
 
-## Usage
 
-### Package Manager
+### Installation with [asdf](https://github.com/asdf-vm/asdf)
 
-- Once you installed furyctl binary you can see available commands with `furyctl --help`:
+Add furyctl asdf plugin:
 
 ```bash
-$ furyctl --help
+asdf plugin add furyctl
+```
 
-A command line tool to manage cluster deployment with Kubernetes
+
+Check that everything is working correctly with `furyctl version`:
+
+```bash
+furyctl version
+INFO[0000] Furyctl version 0.6.1
+INFO[0000] built 2021-09-20T15:36:15Z from commit 012d862edc6b452752a8955fc624f6064566a6cb
+```
+
+> 💡 **TIP**
+>
+> Enable autocompletion for `furyctl` cli on your shell (currently autocompletion is supported for `bash`, `zsh`, `fish`).
+> To see the instruction to enable it, run `furyctl completion -h`
+
+## Usage
+
+See the available commands with `furyctl --help`:
+
+```bash
+furyctl --help
+
+A command-line tool to manage cluster deployment with Kubernetes
 
 Usage:
   furyctl [command]
@@ -86,69 +84,107 @@ Usage:
 Available Commands:
   bootstrap   Creates the required infrastructure to deploy a battle-tested Kubernetes cluster, mostly network components
   cluster     Creates a battle-tested Kubernetes cluster
+  completion  Generate completion script
   help        Help about any command
   init        Initialize the minimum distribution configuration
   vendor      Download dependencies specified in Furyfile.yml
   version     Prints the client version information
-
-Flags:
-      --debug   Enables furyctl debug output
-  -h, --help    help for furyctl
-
-Use "furyctl [command] --help" for more information about a command.
 ```
 
-- To download the minimal Kubernetes Fury Distribution files (within the same directory) you can run `furyctl init` command:
-```bash
-$ furyctl init --version v1.0.0
-2020/02/05 09:48:05 downloading: http::https://github.com/sighupio/poc-fury-distribution/releases/download/1.0.0/Furyfile.yml -> Furyfile.yml
-2020/02/05 09:49:05 downloading: http::https://github.com/sighupio/poc-fury-distribution/releases/download/1.0.0/kustomization.yaml -> kustomization.yaml
+## Download and manage KFD modules
+
+`furyctl` can be used as a package manager for the KFD.
+It providers a simple way to download all the desired modules of the KFD by reading a single `Furyfile`.
+
+The process requires the following steps:
+
+1. Write a `Furyfile`
+2. Run `furyctl vendor` to download all the modules
+
+### 1. Write a Furyfile
+
+A `Furyfile` is a simple YAML formatted file that lists which modules (and versions) of the KFD you want to download.
+
+An example `Furyfile` is the following:
+
+```yaml
+# Here you can specify which versions of the modules to use
+versions:
+  networking: v1.7.0
+  monitoring: v1.13.0
+  logging: v1.9.1
+  ingress: v1.11.2
+  dr: v1.8.0
+  opa: v1.5.0
+
+# The bases are a sets of Kustomize bases to deploy Kubernetes components
+bases:
+  - name: networking/
+  - name: monitoring/
+  - name: logging/
+  - name: ingress/
+  - name: dr/
+  - name: opa/
 ```
 
-- To download packages, you can run `furyctl vendor` (within the same directory where your Furyfile is located):
+Each module is composed by a set of packages. In the previous `Furyfile`, we downloaded every module's packages. You can cherry-pick single packages using the `module/package` syntax.
 
-```bash
-$ furyctl vendor
-2020/02/05 10:49:47 using v1.15.4 for package aws/etcd
-2020/02/05 10:49:47 using v1.15.4 for package aws/kube-control-plane
-2020/02/05 10:49:47 using v1.15.4 for package aws/aws-vpc
-2020/02/05 10:49:47 using v1.15.4 for package aws/aws-kubernetes
-2020/02/05 10:49:47 using master for package monitoring
-2020/02/05 10:49:47 downloading: git@github.com:sighupio/fury-kubernetes-aws//roles/kube-control-plane?ref=v1.15.4 -> vendor/roles/aws/kube-control-plane
-2020/02/05 10:49:47 downloading: git@github.com:sighupio/fury-kubernetes-aws//modules/aws-kubernetes?ref=v1.15.4 -> vendor/modules/aws/aws-kubernetes
-2020/02/05 10:49:47 downloading: git@github.com:sighupio/fury-kubernetes-monitoring//katalog?ref=master -> vendor/katalog/monitoring
-2020/02/05 10:49:47 downloading: git@github.com:sighupio/fury-kubernetes-aws//modules/aws-vpc?ref=v1.15.4 -> vendor/modules/aws/aws-vpc
-2020/02/05 10:49:47 downloading: git@github.com:sighupio/fury-kubernetes-aws//roles/etcd?ref=v1.15.4 -> vendor/roles/aws/etcd
-2020/02/05 10:49:49 downloading: git@github.com:sighupio/fury-kubernetes-logging//katalog?ref=master -> vendor/katalog/logging
+A more complete `Furyfile` would be:
+
+```yaml
+# Here you can specify which versions of the modules to use
+versions:
+  networking: v1.7.0
+  monitoring: v1.13.0
+  logging: v1.9.1
+  ingress: v1.11.2
+  dr: v1.8.0
+  opa: v1.5.0
+
+# The bases are a sets of Kustomize bases to deploy Kubernetes components
+bases:
+  - name: networking/calico
+  - name: monitoring/prometheus-operator
+  - name: monitoring/prometheus-operated
+  - name: monitoring/grafana
+  - name: monitoring/goldpinger
+  - name: monitoring/configs
+  - name: monitoring/kubeadm-sm
+  - name: monitoring/kube-proxy-metrics
+  - name: monitoring/kube-state-metrics
+  - name: monitoring/node-exporter
+  - name: monitoring/metrics-server
+  - name: monitoring/alertmanager-operated
+  - name: logging/elasticsearch-single
+  - name: logging/cerebro
+  - name: logging/curator
+  - name: logging/fluentd
+  - name: logging/kibana
+  - name: ingress/cert-manager
+  - name: ingress/nginx
+  - name: ingress/forecastle
+  - name: dr/velero
+  - name: opa/gatekeeper
 ```
-You will find your packages under `vendor/{roles,modules,katalog}` directories created where you executed `furyctl`.
 
-- You can get furyctl version with `furyctl version`:
+You can find out what packages are inside each module by referring to each module documentation.
 
-```bash
-$ furyctl version
-INFO[0000] Furyctl version 0.2.3
-```
+### 2. Download the modules
 
-#### Autocomplete
+Run `furyctl vendor` (within the same directory where your `Furyfile` is located) to download the modules.
 
-You can enable autocompletion for `furyctl` cli on your shell similar to the one
-for `kubectl`. Currently autocompletion is supported for `bash`, `zsh`, `fish`
-and `powershell`. To see the options and info about how to setup, run the
-command:
+`furyctl` will download all the packages in a `vendor/` directory.
 
-``` bash
-$ furyctl completion -h
-```
+> 💡 **TIP**
+>
+> Use the `-H` flag in the `furyctl vendor` command to download using HTTP(S) instead of the default SSH. This is useful if you are in an environment that restricts the SSH traffic.
 
+## Cluster creation
 
-### Self-Provisioning
+The Cluster creation feature is available via two commands:
 
-The self-provisioning feature is available with two commands:
-
-- `furyctl bootstrap`: Use it to create the required infrastructure to place the cluster. Skip it if you
-already managed to have passed all the cluster requirements.
-- `furyctl cluster`: Deploys a Fury cluster.
+- `furyctl bootstrap`: creates the required networking infrastructure
+- `furyctl cluster`: creates a Fury cluster.
 
 Both commands provide the following subcommands:
 
@@ -157,7 +193,7 @@ Both commands provide the following subcommands:
 - `furyctl {bootstrap,cluster} apply`: Actually creates or updates the infrastructure.
 - `furyctl {bootstrap,cluster} destroy`: Destroys the infrastructure.
 
-All these three subcommands accept the following options:
+The subcommands accept the following options:
 
 ```bash
 -c, --config string:   Configuration file path
@@ -165,33 +201,31 @@ All these three subcommands accept the following options:
 -w, --workdir string:  Working directory with all project files
 ```
 
-`apply` subcommand also implements the following option:
+> 💡 **TIP**
+>
+> You can use the `--dry-run` flag simulate the execution of a command
 
-```bash
---dry-run: Dry run execution
-```
+### Configuration file
 
-#### Anatomy of the configuration file
-
-The self-provisioning feature uses a different configuration file than the `Furyfile.yml`.
-Use the `Furyfile.yml` file while using package-manager features.
+The cluster creation feature uses a different configuration file than the `Furyfile.yml`.
+While the `Furyfile.yml` file is used by the package-manager features, the cluster creation feature use a separated `cluster.yml` file:
 
 ```yaml
-kind: # Cluster or Bootstrap
+kind:           # Cluster or Bootstrap
 metadata:
-  name: # Name of the deployment. It can be used by the provisioners as a unique identifier.
-executor: # This is an optional attribute. It defines the terraform executor to use along with the backend configuration
-  state: # Optional attribute. It configures the backend configuration file.
-    backend: # Optional attribute. It configures the backend to use. Default to local
-    config: # Optional attribute. It configures the configuration of the selected backend configuration. It accepts multiple key values.
-      # bucket: "my-bucket" # Example
-      # key: "terraform.tfvars"
-      # region: "eu-home-1" # Example
-provisioner: # Defines what provisioner to use.
-spec: {} # Input variables of the provisioner. Read each provisioner definition to understand what are the valid values.
+  name:         # Name of the deployment. It can be used by the provisioners as a unique identifier.
+executor:       # This is an optional attribute. It defines the terraform executor to use along with the backend configuration
+  state:        # Optional attribute. It configures the backend configuration file.
+    backend:    # Optional attribute. It configures the backend to use. Default to local
+    config:     # Optional attribute. It configures the configuration of the selected backend configuration. It accepts multiple key values.
+      # bucket: "my-bucket"         # Example
+      # key: "terraform.tfvars"     # Example
+      # region: "eu-home-1"         # Example
+provisioner:    # Defines what provisioner to use.
+spec: {}        # Input variables of the provisioner. Read each provisioner definition to understand what are the valid values.
 ```
 
-#### Workflow to deploy a cluster from zero
+### Deploy a cluster from zero
 
 The following workflow describes a complete setup of a cluster from scratch.
 The bootstrap command will create the underlay requirements to deploy a Kubernetes cluster. Most of these
@@ -206,7 +240,7 @@ Once the bootstrap process is up to date, the cluster command can be triggered u
 +--------------------------+   +--------------------------+   +--------------------------+   +--------------------------+
 ```
 
-#### Workflow to deploy a cluster from an already existing infrastructure
+### Deploy a cluster from an already existing infrastructure
 
 The following workflow describes a setup of a cluster using an already existing underlay infrastructure.
 
@@ -216,11 +250,10 @@ The following workflow describes a setup of a cluster using an already existing 
 +--------------------------+   +--------------------------+
 ```
 
-#### Provisioners
+### Provisioners
 
-To deploy all the components, `furyctl` introduces a new concept: `provisioners`.
-These provisioners are terraform projects integrated with the `furyctl` binary. They can be open (like
-the cluster EKS provisioner) or enterprise only (like the vSphere cluster, contact sales@sighup.io)
+To deploy all the infrastructure components `furyctl` uses *provisioners*.
+Provisioners are terraform projects directly integrated with the `furyctl` binary. Provisioners can be open-source (e.g. cluster EKS provisioner) or enterprise only (e.g. vSphere provisioner).
 
 To use an **enterprise** provisioner, you need to specify a token in the
 `furyctl {bootstrap,cluster} {init,apply,destroy} --token YOUR_TOKEN` commands.
@@ -229,27 +262,38 @@ To use an **enterprise** provisioner, you need to specify a token in the
 
 Contact [sales@sighup.io](mailto:sales@sighup.io) to get more details about this feature.
 
-##### Bootstrap
+#### Bootstrap
 
-The current list of available `bootstrap` provisioners are:
+The available `bootstrap` provisioners are:
 
-- `aws`: It creates a VPC with all the requirements to deploy a Kubernetes Cluster. It also includes
-a VPN instance easily manageable by using `furyagent`.
-- `gcp`: It creates a Network with all the requirements to deploy a Kubernetes Cluster. It also
-includes a VPN instance easily manageable by using `furyagent`.
+| Provisioner | Description                                                                                                                                            |
+| ----------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| `aws`       | It creates a VPC with all the requirements to deploy a Kubernetes Cluster. It also includes a VPN instance easily manageable by using `furyagent`.     |
+| `gcp`       | It creates a Network with all the requirements to deploy a Kubernetes Cluster. It also includes a VPN instance easily manageable by using `furyagent`. |
 
-##### Clusters
+#### Clusters
 
-The current list of available `cluster` provisioners are:
+The available `cluster` provisioners are:
 
-- `eks`: It creates an EKS cluster on an already existing VPC. It uses the already existing
-[fury-eks-installer](https://github.com/sighupio/fury-eks-installer) terraform code.
-- `gke`: It creates an GKE cluster on an already existing Network. It uses the already existing
-[fury-gke-installer](https://github.com/sighupio/fury-gke-installer) terraform code.
-- `vsphere` **(enterprise)**: It creates a Kubernetes cluster on an already existing vSphere cluster.
+| Provisioner |                                                               Description                                                                |
+| ----------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| `eks`       | Creates an EKS cluster on an already existing VPC. It uses the [fury-eks-installer](https://github.com/sighupio/fury-eks-installer)      |
+| `gke`       | Creates an GKE cluster on an already existing Network. It uses the [fury-gke-installer](https://github.com/sighupio/fury-gke-installer). |
+| `vsphere`   | **(enterprise)**: Creates a Kubernetes cluster on an already existing vSphere cluster.                                                   |
 
-#### Additional details
+<!-- </KFD-DOCS> -->
+<!-- <FOOTER> -->
 
-If you want to understand how to integrate more provisioners, read the [`CONTRIBUTING.md`](CONTRIBUTING.md) file.
-On the other side, to better understand how to use this self-provisioning feature take a look at the official Fury
-[documentaton site](https://kubernetesfury.com).
+## Contributing
+
+Before contributing, please read first the [Contributing Guidelines](docs/CONTRIBUTING.md).
+
+### Reporting Issues
+
+In case you experience any problem with the module, please [open a new issue](https://github.com/sighupio/furyctl/issues/new/choose).
+
+## License
+
+This module is open-source and it's released under the following [LICENSE](LICENSE)
+
+<!-- </FOOTER> -->

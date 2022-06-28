@@ -1,4 +1,4 @@
-// Copyright (c) 2020 SIGHUP s.r.l All rights reserved.
+// Copyright (c) 2022 SIGHUP s.r.l All rights reserved.
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
@@ -14,9 +14,10 @@ import (
 
 	"github.com/gobuffalo/packr/v2"
 	"github.com/hashicorp/terraform-exec/tfexec"
+	log "github.com/sirupsen/logrus"
+
 	cfg "github.com/sighupio/furyctl/internal/cluster/configuration"
 	"github.com/sighupio/furyctl/internal/configuration"
-	log "github.com/sirupsen/logrus"
 )
 
 // InitMessage return a custom provisioner message the user will see once the cluster is ready to be updated
@@ -53,7 +54,8 @@ func (e *GKE) UpdateMessage() string {
 	if err != nil {
 		log.Error("Can not get `operator_ssh_user` value")
 	}
-	return fmt.Sprintf(`[GKE] Fury
+	return fmt.Sprintf(
+		`[GKE] Fury
 
 All the cluster components are up to date.
 GKE Kubernetes cluster ready.
@@ -70,7 +72,8 @@ Then access by running:
 
 $ ssh %v@node-name-reported-by-kubectl-get-nodes
 
-`, clusterEndpoint, clusterOperatorName, clusterOperatorName, clusterOperatorName)
+`, clusterEndpoint, clusterOperatorName, clusterOperatorName, clusterOperatorName,
+	)
 }
 
 // DestroyMessage return a custom provisioner message the user will see once the cluster is destroyed
@@ -133,6 +136,8 @@ func (e GKE) createVarFile() (err error) {
 				buffer.WriteString(fmt.Sprintf("max_pods = %v\n", np.MaxPods))
 			}
 			buffer.WriteString(fmt.Sprintf("volume_size = %v\n", np.VolumeSize))
+			buffer.WriteString(fmt.Sprintf("spot_instance = %v\n", np.SpotInstance))
+
 			if len(np.SubNetworks) > 0 {
 				buffer.WriteString(fmt.Sprintf("subnetworks = [\"%v\"]\n", strings.Join(np.SubNetworks, "\",\"")))
 			} else {
@@ -181,7 +186,9 @@ func (e GKE) createVarFile() (err error) {
 						fwRuleTags = string(tags)
 					}
 
-					buffer.WriteString(fmt.Sprintf(`{
+					buffer.WriteString(
+						fmt.Sprintf(
+							`{
 			name = "%v"
 			direction = "%v"
 			cidr_block = "%v"
@@ -190,7 +197,8 @@ func (e GKE) createVarFile() (err error) {
 			tags = %v
 		},
 		`, fwRule.Name, fwRule.Direction, fwRule.CIDRBlock, fwRule.Protocol, fwRule.Ports, fwRuleTags,
-					))
+						),
+					)
 				}
 				buffer.WriteString("]\n")
 			} else {
@@ -206,13 +214,16 @@ func (e GKE) createVarFile() (err error) {
 	buffer.WriteString(fmt.Sprintf("gke_master_ipv4_cidr_block = \"%v\"\n", spec.ControlPlaneCIDR))
 	buffer.WriteString(fmt.Sprintf("gke_add_additional_firewall_rules = %v\n", spec.AdditionalFirewallRules))
 	buffer.WriteString(fmt.Sprintf("gke_add_cluster_firewall_rules = %v\n", spec.AdditionalClusterFirewallRules))
-	buffer.WriteString(fmt.Sprintf("gke_disable_default_snat = %v\n", spec.DisalbeDefaultSNAT))
+	buffer.WriteString(fmt.Sprintf("gke_disable_default_snat = %v\n", spec.DisableDefaultSNAT))
 
 	err = ioutil.WriteFile(fmt.Sprintf("%v/gke.tfvars", e.terraform.WorkingDir()), buffer.Bytes(), 0600)
 	if err != nil {
 		return err
 	}
-	err = e.terraform.FormatWrite(context.Background(), tfexec.Dir(fmt.Sprintf("%v/gke.tfvars", e.terraform.WorkingDir())))
+	err = e.terraform.FormatWrite(
+		context.Background(),
+		tfexec.Dir(fmt.Sprintf("%v/gke.tfvars", e.terraform.WorkingDir())),
+	)
 	if err != nil {
 		return err
 	}
@@ -262,7 +273,10 @@ func (e GKE) Plan() (err error) {
 		return err
 	}
 	var changes bool
-	changes, err = e.terraform.Plan(context.Background(), tfexec.VarFile(fmt.Sprintf("%v/gke.tfvars", e.terraform.WorkingDir())))
+	changes, err = e.terraform.Plan(
+		context.Background(),
+		tfexec.VarFile(fmt.Sprintf("%v/gke.tfvars", e.terraform.WorkingDir())),
+	)
 	if err != nil {
 		log.Fatalf("[DRYRUN] Something went wrong while updating gke. %v", err)
 		return err
@@ -288,7 +302,10 @@ func (e GKE) Update() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	err = e.terraform.Apply(context.Background(), tfexec.VarFile(fmt.Sprintf("%v/gke.tfvars", e.terraform.WorkingDir())))
+	err = e.terraform.Apply(
+		context.Background(),
+		tfexec.VarFile(fmt.Sprintf("%v/gke.tfvars", e.terraform.WorkingDir())),
+	)
 	if err != nil {
 		log.Fatalf("Something went wrong while updating gke. %v", err)
 		return "", err
@@ -305,7 +322,10 @@ func (e GKE) Destroy() (err error) {
 	if err != nil {
 		return err
 	}
-	err = e.terraform.Destroy(context.Background(), tfexec.VarFile(fmt.Sprintf("%v/gke.tfvars", e.terraform.WorkingDir())))
+	err = e.terraform.Destroy(
+		context.Background(),
+		tfexec.VarFile(fmt.Sprintf("%v/gke.tfvars", e.terraform.WorkingDir())),
+	)
 	if err != nil {
 		log.Fatalf("Something went wrong while destroying GKE cluster project. %v", err)
 		return err

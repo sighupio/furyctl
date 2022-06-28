@@ -12,6 +12,7 @@ builds:
     id: furyctl-darwin
     goarch:
       - amd64
+      - arm64
     goos:
       - darwin
     env:
@@ -22,6 +23,7 @@ builds:
     id: furyctl-linux
     goarch:
       - amd64
+      - arm64
     goos:
       - linux
     env:
@@ -73,17 +75,22 @@ release:
     owner: sighupio
     name: furyctl
   name_template: '{{ .Tag }}'
+  prerelease: auto
 brews:
   - name: furyctl
     tap:
       owner: sighupio
       name: homebrew-furyctl
+    skip_upload: auto
     folder: Formula
     homepage: 'https://gihub.com/sighupio/furyctl'
-    description: 'Furyctl  binary'
+    description: 'Furyctl binary'
     conflicts:
       - furyctl
     test: |
       system "#{bin}/furyctl"
     install: |
       bin.install 'furyctl'
+    ids:
+      - furyctl-darwin-tgz
+      - furyctl-linux-tgz
