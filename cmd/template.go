@@ -27,12 +27,12 @@ var (
 			distributionFilePath := "distribution.yaml"
 			furyctlFilePath := "furyctl.yaml"
 
-			distributionFile, err := yaml2.FromFile(distributionFilePath)
+			distributionFile, err := yaml2.FromFile[map[string]interface{}](distributionFilePath)
 			if err != nil {
 				return err
 			}
 
-			furyctlFile, err := yaml2.FromFile(furyctlFilePath)
+			furyctlFile, err := yaml2.FromFile[map[string]interface{}](furyctlFilePath)
 			if err != nil {
 				return err
 			}

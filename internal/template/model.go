@@ -35,7 +35,7 @@ func NewTemplateModel(source, target, configPath, suffix string, stopIfNotEmpty 
 	if len(configPath) > 0 {
 		readFile, err := ioutil.ReadFile(configPath)
 		if err != nil {
-			panic(err)
+			return nil, err
 		}
 
 		if err = yaml.Unmarshal(readFile, &model); err != nil {
@@ -76,7 +76,7 @@ func (tm *Model) Generate() error {
 		return osErr
 	}
 
-	context, cErr := CreateContextFromModel(tm)
+	context, cErr := NewContext(tm)
 	if cErr != nil {
 		return cErr
 	}
@@ -93,8 +93,7 @@ func (tm *Model) Generate() error {
 		info os.FileInfo,
 		err error,
 	) error {
-		return applyTemplates(
-			tm,
+		return tm.applyTemplates(
 			relSource,
 			info,
 			context,
@@ -103,8 +102,7 @@ func (tm *Model) Generate() error {
 	})
 }
 
-func applyTemplates(
-	tm *Model,
+func (tm *Model) applyTemplates(
 	relSource string,
 	info os.FileInfo,
 	context map[string]map[any]any,
@@ -156,9 +154,6 @@ func applyTemplates(
 	}
 
 	_, err = io.CopyFromSourceToTarget(relSource, realTarget)
-	if err != nil {
-		return err
-	}
 
 	return err
 }

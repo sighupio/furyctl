@@ -5,8 +5,8 @@ import (
 	"os"
 )
 
-func FromFile(path string) (map[string]interface{}, error) {
-	var yamlRes map[string]interface{}
+func FromFile[T any](path string) (T, error) {
+	var yamlRes T
 
 	res, err := os.ReadFile(path)
 	if err != nil {

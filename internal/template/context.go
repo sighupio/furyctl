@@ -1,54 +1,37 @@
 package template
 
 import (
-	"gopkg.in/yaml.v2"
-	"io/ioutil"
+	yaml2 "github.com/sighupio/furyctl/internal/yaml"
 	"os"
 	"path/filepath"
 	"strings"
 )
 
-func CreateContextFromModel(
-	tm *Model,
-) (map[string]map[any]any, error) {
+func NewContext(tm *Model) (map[string]map[any]any, error) {
 	context := make(map[string]map[any]any)
-	envMap := mapEnvironmentVars()
-	context["Env"] = envMap
+
+	context["Env"] = mapEnvironmentVars()
+
 	for k, v := range tm.Config.Data {
 		context[k] = v
 	}
 
 	for k, v := range tm.Config.Include {
-		var cPath string
+		cPath := filepath.Join(filepath.Dir(tm.ConfigPath), v)
+
 		if filepath.IsAbs(v) {
 			cPath = v
-		} else {
-			cPath = filepath.Join(filepath.Dir(tm.ConfigPath), v) //if relative, it is relative to master config
 		}
 
-		if yamlConfig, err := readYamlConfig(cPath); err != nil {
+		yamlConfig, err := yaml2.FromFile[map[any]any](cPath)
+		if err != nil {
 			return nil, err
-		} else {
-			context[k] = yamlConfig
 		}
+
+		context[k] = yamlConfig
 	}
 
 	return context, nil
-}
-
-func readYamlConfig(yamlFilePath string) (map[any]any, error) {
-	var body map[any]any
-
-	yamlFile, err := ioutil.ReadFile(yamlFilePath)
-	if err != nil {
-		return nil, err
-	}
-	err = yaml.Unmarshal(yamlFile, &body)
-	if err != nil {
-		return nil, err
-	}
-
-	return body, nil
 }
 
 func mapEnvironmentVars() map[any]any {
