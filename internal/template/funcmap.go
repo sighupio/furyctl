@@ -1,33 +1,23 @@
 package template
 
 import (
-	"github.com/Masterminds/sprig/v3"
-	"gopkg.in/yaml.v2"
-	"strings"
 	"text/template"
+
+	"github.com/Masterminds/sprig/v3"
 )
 
-func toYAML(v any) string {
-	data, err := yaml.Marshal(v)
-	if err != nil {
-		// Swallow errors inside of a template.
-		return ""
-	}
-	return strings.TrimSuffix(string(data), "\n")
+type FuncMap struct {
+	FuncMap template.FuncMap
 }
 
-func fromYAML(str string) map[string]any {
-	m := map[string]any{}
-
-	if err := yaml.Unmarshal([]byte(str), &m); err != nil {
-		m["Error"] = err.Error()
-	}
-	return m
+func NewFuncMap() FuncMap {
+	return FuncMap{FuncMap: sprig.TxtFuncMap()}
 }
 
-func funcMap() template.FuncMap {
-	f := sprig.TxtFuncMap()
-	f["toYaml"] = toYAML
-	f["fromYaml"] = fromYAML
-	return f
+func (f *FuncMap) Add(name string, fn interface{}) {
+	f.FuncMap[name] = fn
+}
+
+func (f *FuncMap) Delete(name string) {
+	delete(f.FuncMap, name)
 }

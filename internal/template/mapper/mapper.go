@@ -89,6 +89,17 @@ func injectDynamicRes(
 	return m, nil
 }
 
+func (m *Mapper) MapEnvironmentVars() map[any]any {
+	envMap := make(map[any]any)
+
+	for _, v := range os.Environ() {
+		part := strings.Split(v, "=")
+		envMap[part[0]] = part[1]
+	}
+
+	return envMap
+}
+
 func readValueFromFile(path string) (string, error) {
 	val, err := os.ReadFile(path)
 

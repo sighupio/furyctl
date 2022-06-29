@@ -2,13 +2,16 @@ package template
 
 import (
 	"fmt"
-	"github.com/sighupio/furyctl/internal/io"
-	"github.com/sighupio/furyctl/internal/template/mapper"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
+
+	"github.com/sighupio/furyctl/internal/io"
+	"github.com/sighupio/furyctl/internal/template/mapper"
+	yaml2 "github.com/sighupio/furyctl/internal/yaml"
+	fTemplate "github.com/sighupio/furyctl/pkg/template"
 
 	"gopkg.in/yaml.v2"
 )
@@ -19,6 +22,7 @@ type Model struct {
 	ConfigPath           string
 	Config               Config
 	Suffix               string
+	Context              map[string]map[any]any
 	StopIfTargetNotEmpty bool
 }
 
@@ -76,7 +80,7 @@ func (tm *Model) Generate() error {
 		return osErr
 	}
 
-	context, cErr := NewContext(tm)
+	context, cErr := tm.generateContext()
 	if cErr != nil {
 		return cErr
 	}
@@ -88,6 +92,12 @@ func (tm *Model) Generate() error {
 		return err
 	}
 
+	context["Env"] = ctxMapper.MapEnvironmentVars()
+
+	funcMap := NewFuncMap()
+	funcMap.Add("toYaml", fTemplate.ToYAML)
+	funcMap.Add("fromYaml", fTemplate.FromYAML)
+
 	return filepath.Walk(tm.SourcePath, func(
 		relSource string,
 		info os.FileInfo,
@@ -97,6 +107,7 @@ func (tm *Model) Generate() error {
 			relSource,
 			info,
 			context,
+			funcMap,
 			err,
 		)
 	})
@@ -106,6 +117,7 @@ func (tm *Model) applyTemplates(
 	relSource string,
 	info os.FileInfo,
 	context map[string]map[any]any,
+	funcMap FuncMap,
 	err error,
 ) error {
 	if tm.isExcluded(relSource) {
@@ -127,6 +139,7 @@ func (tm *Model) applyTemplates(
 		relSource,
 		currentTarget,
 		context,
+		funcMap,
 	)
 
 	realTarget, fErr := gen.processFilename(tm)
@@ -156,4 +169,29 @@ func (tm *Model) applyTemplates(
 	_, err = io.CopyFromSourceToTarget(relSource, realTarget)
 
 	return err
+}
+
+func (tm *Model) generateContext() (map[string]map[any]any, error) {
+	context := make(map[string]map[any]any)
+
+	for k, v := range tm.Config.Data {
+		context[k] = v
+	}
+
+	for k, v := range tm.Config.Include {
+		cPath := filepath.Join(filepath.Dir(tm.ConfigPath), v)
+
+		if filepath.IsAbs(v) {
+			cPath = v
+		}
+
+		yamlConfig, err := yaml2.FromFile[map[any]any](cPath)
+		if err != nil {
+			return nil, err
+		}
+
+		context[k] = yamlConfig
+	}
+
+	return context, nil
 }
