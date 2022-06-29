@@ -6,6 +6,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strings"
 )
 
 func CheckDirIsEmpty(target string) error {
@@ -22,22 +23,24 @@ func CheckDirIsEmpty(target string) error {
 }
 
 func CopyBufferToFile(b bytes.Buffer, source, target string) error {
-	if b.String() != "" {
-		fmt.Printf("%s --> %s\n", source, target)
-		destination, err := os.Create(target)
-		if err != nil {
-			return err
-		}
-
-		_, err = b.WriteTo(destination)
-		if err != nil {
-			return err
-		}
-
-		defer destination.Close()
-	} else {
+	if strings.TrimSpace(b.String()) == "" {
 		fmt.Printf("%s --> resulted in an empty file (%d bytes). Skipping.\n", source, b.Len())
+		return nil
 	}
+
+	fmt.Printf("%s --> %s\n", source, target)
+
+	destination, err := os.Create(target)
+	if err != nil {
+		return err
+	}
+
+	_, err = b.WriteTo(destination)
+	if err != nil {
+		return err
+	}
+
+	defer destination.Close()
 
 	return nil
 }
