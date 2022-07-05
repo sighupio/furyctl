@@ -22,6 +22,22 @@ func CheckDirIsEmpty(target string) error {
 	return nil
 }
 
+func AppendBufferToFile(b bytes.Buffer, target string) error {
+	destination, err := os.OpenFile(target, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	if err != nil {
+		return err
+	}
+
+	_, err = b.WriteTo(destination)
+	if err != nil {
+		return err
+	}
+
+	defer destination.Close()
+
+	return nil
+}
+
 func CopyBufferToFile(b bytes.Buffer, source, target string) error {
 	if strings.TrimSpace(b.String()) == "" {
 		fmt.Printf("%s --> resulted in an empty file (%d bytes). Skipping.\n", source, b.Len())

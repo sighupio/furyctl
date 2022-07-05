@@ -1,6 +1,7 @@
 package template
 
 import (
+	"bytes"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -20,18 +21,29 @@ type Model struct {
 	SourcePath           string
 	TargetPath           string
 	ConfigPath           string
+	OutputPath           string
 	Config               Config
 	Suffix               string
 	Context              map[string]map[any]any
 	StopIfTargetNotEmpty bool
+	DryRun               bool
 }
 
-func NewTemplateModel(source, target, configPath, suffix string, stopIfNotEmpty bool) (*Model, error) {
+func NewTemplateModel(
+	source,
+	target,
+	configPath,
+	outPath,
+	suffix string,
+	stopIfNotEmpty,
+	dryRun bool,
+) (*Model, error) {
 	var model Config
 
 	if len(source) < 1 {
 		return nil, fmt.Errorf("source must be set")
 	}
+
 	if len(target) < 1 {
 		return nil, fmt.Errorf("target must be set")
 	}
@@ -58,9 +70,11 @@ func NewTemplateModel(source, target, configPath, suffix string, stopIfNotEmpty 
 		SourcePath:           source,
 		TargetPath:           target,
 		ConfigPath:           configPath,
+		OutputPath:           outPath,
 		Config:               model,
 		Suffix:               suffix,
 		StopIfTargetNotEmpty: stopIfNotEmpty,
+		DryRun:               dryRun,
 	}, nil
 }
 
@@ -140,6 +154,7 @@ func (tm *Model) applyTemplates(
 		currentTarget,
 		context,
 		funcMap,
+		tm.DryRun,
 	)
 
 	realTarget, fErr := gen.processFilename(tm)
@@ -158,7 +173,34 @@ func (tm *Model) applyTemplates(
 	}
 
 	if strings.HasSuffix(info.Name(), tm.Suffix) {
-		content, cErr := gen.processFile()
+		tmpl := gen.processTemplate()
+
+		if tmpl == nil {
+			return fmt.Errorf("no template found for %s", relSource)
+		}
+
+		if tm.DryRun {
+			missingKeys := gen.getMissingKeys(tmpl)
+
+			if len(missingKeys) > 0 {
+				fmt.Printf(
+					"[WARN] missing keys in template %s. Writing to %s/tmpl-debug.log\n",
+					relSource,
+					tm.OutputPath,
+				)
+
+				debugFilePath := filepath.Join(tm.OutputPath, "tmpl-debug.log")
+
+				outLog := fmt.Sprintf("[%s]\n%s\n", relSource, strings.Join(missingKeys, "\n"))
+
+				err := io.AppendBufferToFile(*bytes.NewBufferString(outLog), debugFilePath)
+				if err != nil {
+					return err
+				}
+			}
+		}
+
+		content, cErr := gen.processFile(tmpl)
 		if cErr != nil {
 			return cErr
 		}

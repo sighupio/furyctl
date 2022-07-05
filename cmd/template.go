@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/sighupio/furyctl/internal/merge"
 	yaml2 "github.com/sighupio/furyctl/internal/yaml"
+	"github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v3"
 	"os"
 	"strings"
@@ -14,6 +15,8 @@ import (
 )
 
 var (
+	tDryRun bool
+
 	TemplateCmd = &cobra.Command{
 		Use:   "template",
 		Short: "This is a POC for furyctl's Template Engine in go.",
@@ -49,7 +52,7 @@ var (
 
 			outYaml, err := yaml.Marshal(mergedDistribution)
 			if err != nil {
-				panic(err)
+				return err
 			}
 
 			outDirPath, err := os.MkdirTemp("", "furyctl-dist-")
@@ -59,12 +62,22 @@ var (
 
 			confPath := outDirPath + "/config.yaml"
 
+			logrus.Debugf("config path = %s", confPath)
+
 			err = os.WriteFile(confPath, outYaml, os.ModePerm)
 			if err != nil {
 				return err
 			}
 
-			templateModel, err := template.NewTemplateModel(source, target, confPath, suffix, false)
+			templateModel, err := template.NewTemplateModel(
+				source,
+				target,
+				confPath,
+				outDirPath,
+				suffix,
+				false,
+				tDryRun,
+			)
 			if err != nil {
 				return err
 			}
@@ -91,4 +104,5 @@ var (
 
 func init() {
 	rootCmd.AddCommand(TemplateCmd)
+	TemplateCmd.PersistentFlags().BoolVar(&tDryRun, "dry-run", false, "Dry run execution")
 }

@@ -1,7 +1,6 @@
 package mapper
 
 import (
-	"fmt"
 	"os"
 	"strings"
 )
@@ -50,7 +49,6 @@ func injectDynamicRes(
 			switch source {
 			case Env:
 				envVar := os.Getenv(sourceValue)
-				fmt.Printf("changing %+v to env var value %+v \n", k, envVar)
 				parent[parentKey] = envVar
 			case File:
 				content, err := readValueFromFile(sourceValue)
