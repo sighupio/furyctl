@@ -1,7 +1,6 @@
 package template
 
 import (
-	"bytes"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -182,21 +181,9 @@ func (tm *Model) applyTemplates(
 		if tm.DryRun {
 			missingKeys := gen.getMissingKeys(tmpl)
 
-			if len(missingKeys) > 0 {
-				fmt.Printf(
-					"[WARN] missing keys in template %s. Writing to %s/tmpl-debug.log\n",
-					relSource,
-					tm.OutputPath,
-				)
-
-				debugFilePath := filepath.Join(tm.OutputPath, "tmpl-debug.log")
-
-				outLog := fmt.Sprintf("[%s]\n%s\n", relSource, strings.Join(missingKeys, "\n"))
-
-				err := io.AppendBufferToFile(*bytes.NewBufferString(outLog), debugFilePath)
-				if err != nil {
-					return err
-				}
+			err := gen.writeMissingKeysToFile(missingKeys, relSource, tm.OutputPath)
+			if err != nil {
+				return err
 			}
 		}
 

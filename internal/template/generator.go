@@ -2,6 +2,8 @@ package template
 
 import (
 	"bytes"
+	"fmt"
+	"github.com/sighupio/furyctl/internal/io"
 	"path/filepath"
 	"strings"
 	"text/template"
@@ -164,6 +166,28 @@ func (g *generator) getContextValueFromPath(path string) any {
 	}
 
 	return ret
+}
+
+func (f *generator) writeMissingKeysToFile(
+	missingKeys []string,
+	tmplPath,
+	outputPath string,
+) error {
+	if len(missingKeys) == 0 {
+		return nil
+	}
+
+	fmt.Printf(
+		"[WARN] missing keys in template %s. Writing to %s/tmpl-debug.log\n",
+		tmplPath,
+		outputPath,
+	)
+
+	debugFilePath := filepath.Join(outputPath, "tmpl-debug.log")
+
+	outLog := fmt.Sprintf("[%s]\n%s\n", tmplPath, strings.Join(missingKeys, "\n"))
+
+	return io.AppendBufferToFile(*bytes.NewBufferString(outLog), debugFilePath)
 }
 
 func (g *generator) processFilename(
