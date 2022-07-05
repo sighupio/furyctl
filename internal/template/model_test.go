@@ -37,7 +37,9 @@ func TestNewTemplateModel(t *testing.T) {
 		path+"/source",
 		path+"/target",
 		path+"/configTest.yaml",
+		path,
 		".tpl",
+		false,
 		false,
 	)
 

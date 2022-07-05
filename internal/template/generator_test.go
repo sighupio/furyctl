@@ -39,7 +39,15 @@ func TestTemplateModel_Will_Generate_UserHello(t *testing.T) {
 
 	defer os.RemoveAll(path)
 
-	tm, err := template.NewTemplateModel(path+"/source", path+"/target", path+"/configTest.yaml", ".tpl", false)
+	tm, err := template.NewTemplateModel(
+		path+"/source",
+		path+"/target",
+		path+"/configTest.yaml",
+		path,
+		".tpl",
+		false,
+		false,
+	)
 
 	err = tm.Generate()
 	assert.NoError(t, err)
@@ -79,7 +87,15 @@ func TestTemplateModel_Will_Generate_Dynamic_Values_From_Env(t *testing.T) {
 
 	defer os.RemoveAll(path)
 
-	tm, err := template.NewTemplateModel(path+"/source", path+"/target", path+"/configTest.yaml", ".tpl", false)
+	tm, err := template.NewTemplateModel(
+		path+"/source",
+		path+"/target",
+		path+"/configTest.yaml",
+		path,
+		".tpl",
+		false,
+		false,
+	)
 
 	os.Setenv("TEST_USER_TYMLATE", "Tymlate")
 
@@ -123,7 +139,15 @@ func TestTemplateModel_Will_Generate_Dynamic_Values_From_File(t *testing.T) {
 
 	defer os.RemoveAll(path)
 
-	tm, err := template.NewTemplateModel(path+"/source", path+"/target", path+"/configTest.yaml", ".tpl", false)
+	tm, err := template.NewTemplateModel(
+		path+"/source",
+		path+"/target",
+		path+"/configTest.yaml",
+		path,
+		".tpl",
+		false,
+		false,
+	)
 
 	exampleStr := "Tymlate! It's a nice day!"
 
