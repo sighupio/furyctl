@@ -10,6 +10,20 @@ import (
 	"text/template/parse"
 )
 
+var (
+	// MapParseNodeToAlias is a map of parse.Node to its alias.
+	MapParseNodeToAlias = map[parse.NodeType]interface{}{
+		parse.NodeList:     &ListNode{},
+		parse.NodeRange:    &RangeNode{},
+		parse.NodePipe:     &PipeNode{},
+		parse.NodeTemplate: &TemplateNode{},
+		parse.NodeIf:       &IfNode{},
+		parse.NodeAction:   &ActionNode{},
+		parse.NodeField:    &FieldNode{},
+		parse.NodeVariable: &VariableNode{},
+	}
+)
+
 type Node struct {
 	Fields []string
 }
@@ -36,26 +50,13 @@ func (f *Node) FromNodeList(nodes []parse.Node) []string {
 }
 
 func mapToAliasInterface(n parse.Node) interface{} {
-	switch n.Type() {
-	case parse.NodeList:
-		return reflect.ValueOf(n).Convert(reflect.TypeOf(&ListNode{})).Interface()
-	case parse.NodeRange:
-		return reflect.ValueOf(n).Convert(reflect.TypeOf(&RangeNode{})).Interface()
-	case parse.NodePipe:
-		return reflect.ValueOf(n).Convert(reflect.TypeOf(&PipeNode{})).Interface()
-	case parse.NodeTemplate:
-		return reflect.ValueOf(n).Convert(reflect.TypeOf(&TemplateNode{})).Interface()
-	case parse.NodeIf:
-		return reflect.ValueOf(n).Convert(reflect.TypeOf(&IfNode{})).Interface()
-	case parse.NodeAction:
-		return reflect.ValueOf(n).Convert(reflect.TypeOf(&ActionNode{})).Interface()
-	case parse.NodeField:
-		return reflect.ValueOf(n).Convert(reflect.TypeOf(&FieldNode{})).Interface()
-	case parse.NodeVariable:
-		return reflect.ValueOf(n).Convert(reflect.TypeOf(&VariableNode{})).Interface()
+	t := MapParseNodeToAlias[n.Type()]
+
+	if t == nil {
+		return nil
 	}
 
-	return nil
+	return reflect.ValueOf(n).Convert(reflect.TypeOf(t)).Interface()
 }
 
 type FieldsSetter interface {
