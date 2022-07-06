@@ -132,7 +132,6 @@ func (a *ActionNode) Set(n *Node) {
 type FieldNode parse.FieldNode
 
 func (f *FieldNode) Set(n *Node) {
-
 	n.Set(append(n.Fields, stringsToPath(f.Ident)))
 }
 
