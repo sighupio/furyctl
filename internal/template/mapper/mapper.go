@@ -37,6 +37,17 @@ func (m *Mapper) MapDynamicValues() (map[string]map[any]any, error) {
 	return mappedCtx, nil
 }
 
+func (m *Mapper) MapEnvironmentVars() map[any]any {
+	envMap := make(map[any]any)
+
+	for _, v := range os.Environ() {
+		part := strings.Split(v, "=")
+		envMap[part[0]] = part[1]
+	}
+
+	return envMap
+}
+
 func injectDynamicRes(
 	m map[any]any,
 	parent map[any]any,
@@ -89,17 +100,6 @@ func injectDynamicRes(
 	}
 
 	return m, nil
-}
-
-func (m *Mapper) MapEnvironmentVars() map[any]any {
-	envMap := make(map[any]any)
-
-	for _, v := range os.Environ() {
-		part := strings.Split(v, "=")
-		envMap[part[0]] = part[1]
-	}
-
-	return envMap
 }
 
 func readValueFromFile(path string) (string, error) {
