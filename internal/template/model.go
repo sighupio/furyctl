@@ -160,12 +160,12 @@ func (tm *Model) applyTemplates(
 		tm.DryRun,
 	)
 
-	realTarget, fErr := gen.processFilename(tm)
+	realTarget, fErr := gen.ProcessFilename(tm)
 	if fErr != nil { //maybe we should fail back to real name instead?
 		return fErr
 	}
 
-	gen.updateTarget(realTarget)
+	gen.UpdateTarget(realTarget)
 
 	currentTargetDir := filepath.Dir(realTarget)
 
@@ -176,22 +176,22 @@ func (tm *Model) applyTemplates(
 	}
 
 	if strings.HasSuffix(info.Name(), tm.Suffix) {
-		tmpl := gen.processTemplate()
+		tmpl := gen.ProcessTemplate()
 
 		if tmpl == nil {
 			return fmt.Errorf("no template found for %s", relSource)
 		}
 
 		if tm.DryRun {
-			missingKeys := gen.getMissingKeys(tmpl)
+			missingKeys := gen.GetMissingKeys(tmpl)
 
-			err := gen.writeMissingKeysToFile(missingKeys, relSource, tm.OutputPath)
+			err := gen.WriteMissingKeysToFile(missingKeys, relSource, tm.OutputPath)
 			if err != nil {
 				return err
 			}
 		}
 
-		content, cErr := gen.processFile(tmpl)
+		content, cErr := gen.ProcessFile(tmpl)
 		if cErr != nil {
 			return cErr
 		}
