@@ -115,6 +115,8 @@ func (tm *Model) Generate() error {
 		return err
 	}
 
+	tm.Context = context
+
 	return filepath.Walk(tm.SourcePath, tm.applyTemplates)
 }
 
