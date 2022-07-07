@@ -8,6 +8,7 @@ import (
 	"bufio"
 	"errors"
 	"fmt"
+	"github.com/sighupio/furyctl/internal/provisioners"
 	"os"
 	"os/signal"
 	"strings"
@@ -186,6 +187,8 @@ var (
 )
 
 func init() {
+	supportedProvisioners := provisioners.GetSupportedBootstrapProvisioners()
+
 	bootstrapApplyCmd.PersistentFlags().BoolVar(&bDryRun, "dry-run", false, "Dry run execution")
 
 	bootstrapInitCmd.PersistentFlags().StringVarP(&bConfigFilePath, "config", "c", "bootstrap.yml", "Bootstrap configuration file path")
@@ -208,7 +211,12 @@ func init() {
 
 	bootstrapDestroyCmd.PersistentFlags().BoolVar(&bForce, "force", false, "Forces the destroy of the project. Doesn't ask for confirmation")
 
-	bootstrapTemplateCmd.PersistentFlags().StringVar(&bTemplateProvisioner, "provisioner", "", "Bootstrap provisioner")
+	bootstrapTemplateCmd.PersistentFlags().StringVar(
+		&bTemplateProvisioner,
+		"provisioner",
+		"",
+		fmt.Sprintf("Bootstrap provisioner, valid options are: %s", strings.Join(supportedProvisioners, ", ")),
+	)
 
 	bootstrapCmd.AddCommand(bootstrapInitCmd)
 	bootstrapCmd.AddCommand(bootstrapApplyCmd)

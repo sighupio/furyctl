@@ -20,6 +20,13 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+var (
+	// supportedBootstrapProvisioners is a list of supported bootstrap provisioners
+	supportedBootstrapProvisioners = []string{"aws", "gcp"}
+	// supportedClusterProvisioners is a list of supported cluster provisioners
+	supportedClusterProvisioners = []string{"eks", "gke", "vsphere"}
+)
+
 // Provisioner represents a kubernetes terraform provisioner
 type Provisioner interface {
 	InitMessage() string
@@ -51,6 +58,14 @@ func Get(config configuration.Configuration) (Provisioner, error) {
 		log.Errorf("Kind %v not found", config.Kind)
 		return nil, fmt.Errorf("kind %v not found", config.Kind)
 	}
+}
+
+func GetSupportedBootstrapProvisioners() []string {
+	return supportedBootstrapProvisioners
+}
+
+func GetSupportedClusterProvisioners() []string {
+	return supportedClusterProvisioners
 }
 
 func getClusterProvisioner(config configuration.Configuration) (Provisioner, error) {

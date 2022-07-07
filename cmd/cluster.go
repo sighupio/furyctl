@@ -8,6 +8,7 @@ import (
 	"bufio"
 	"errors"
 	"fmt"
+	"github.com/sighupio/furyctl/internal/provisioners"
 	"os"
 	"os/signal"
 	"strings"
@@ -188,6 +189,8 @@ var (
 )
 
 func init() {
+	supportedProvisioners := provisioners.GetSupportedClusterProvisioners()
+
 	clusterApplyCmd.PersistentFlags().BoolVar(&cDryRun, "dry-run", false, "Dry run execution")
 
 	clusterInitCmd.PersistentFlags().StringVarP(&cConfigFilePath, "config", "c", "cluster.yml", "Cluster configuration file path")
@@ -210,7 +213,12 @@ func init() {
 
 	clusterDestroyCmd.PersistentFlags().BoolVar(&cForce, "force", false, "Forces the destroy of the project. Doesn't ask for confirmation")
 
-	clusterTemplateCmd.PersistentFlags().StringVar(&cTemplateProvisioner, "provisioner", "", "Cluster provisioner")
+	clusterTemplateCmd.PersistentFlags().StringVar(
+		&cTemplateProvisioner,
+		"provisioner",
+		"",
+		fmt.Sprintf("Cluster provisioner, valid options are: %s", strings.Join(supportedProvisioners, ", ")),
+	)
 
 	clusterCmd.AddCommand(clusterInitCmd)
 	clusterCmd.AddCommand(clusterApplyCmd)
