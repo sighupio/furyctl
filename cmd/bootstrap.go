@@ -13,14 +13,15 @@ import (
 	"strings"
 	"syscall"
 
+	log "github.com/sirupsen/logrus"
+	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
+
 	"github.com/sighupio/furyctl/internal/bootstrap"
 	"github.com/sighupio/furyctl/internal/configuration"
 	"github.com/sighupio/furyctl/internal/project"
 	"github.com/sighupio/furyctl/pkg/analytics"
 	"github.com/sighupio/furyctl/pkg/terraform"
-	log "github.com/sirupsen/logrus"
-	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 )
 
 func bPreDestroy(cmd *cobra.Command, args []string) (err error) {
@@ -117,7 +118,7 @@ var (
 			if bTemplateProvisioner == "" {
 				return errors.New("You must specify a provisioner")
 			}
-			tpl, err := configuration.Template("Bootstrap", bTemplateProvisioner)
+			tpl, err := configuration.Template("Bootstrap", strings.ToLower(bTemplateProvisioner))
 			if err != nil {
 				return err
 			}
