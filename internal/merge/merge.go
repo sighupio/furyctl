@@ -36,7 +36,6 @@ func (m *Merger) Merge() (map[string]any, error) {
 	err = m.base.Walk(mergedSection)
 
 	return m.base.Content(), err
-
 }
 
 func deepCopy(a, b map[string]any) map[string]any {

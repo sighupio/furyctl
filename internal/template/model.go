@@ -28,6 +28,7 @@ type Model struct {
 	Config               Config
 	Suffix               string
 	Context              map[string]map[any]any
+	FuncMap              FuncMap
 	StopIfTargetNotEmpty bool
 	DryRun               bool
 }
@@ -69,6 +70,10 @@ func NewTemplateModel(
 		}
 	}
 
+	funcMap := NewFuncMap()
+	funcMap.Add("toYaml", fTemplate.ToYAML)
+	funcMap.Add("fromYaml", fTemplate.FromYAML)
+
 	return &Model{
 		SourcePath:           source,
 		TargetPath:           target,
@@ -76,6 +81,7 @@ func NewTemplateModel(
 		OutputPath:           outPath,
 		Config:               model,
 		Suffix:               suffix,
+		FuncMap:              funcMap,
 		StopIfTargetNotEmpty: stopIfNotEmpty,
 		DryRun:               dryRun,
 	}, nil
@@ -109,32 +115,12 @@ func (tm *Model) Generate() error {
 		return err
 	}
 
-	context["Env"] = ctxMapper.MapEnvironmentVars()
-
-	funcMap := NewFuncMap()
-	funcMap.Add("toYaml", fTemplate.ToYAML)
-	funcMap.Add("fromYaml", fTemplate.FromYAML)
-
-	return filepath.Walk(tm.SourcePath, func(
-		relSource string,
-		info os.FileInfo,
-		err error,
-	) error {
-		return tm.applyTemplates(
-			relSource,
-			info,
-			context,
-			funcMap,
-			err,
-		)
-	})
+	return filepath.Walk(tm.SourcePath, tm.applyTemplates)
 }
 
 func (tm *Model) applyTemplates(
 	relSource string,
 	info os.FileInfo,
-	context map[string]map[any]any,
-	funcMap FuncMap,
 	err error,
 ) error {
 	if tm.isExcluded(relSource) {
@@ -155,8 +141,8 @@ func (tm *Model) applyTemplates(
 	gen := NewGenerator(
 		relSource,
 		currentTarget,
-		context,
-		funcMap,
+		tm.Context,
+		tm.FuncMap,
 		tm.DryRun,
 	)
 
