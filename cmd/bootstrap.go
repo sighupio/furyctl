@@ -8,7 +8,6 @@ import (
 	"bufio"
 	"errors"
 	"fmt"
-	"github.com/sighupio/furyctl/internal/provisioners"
 	"os"
 	"os/signal"
 	"strings"
@@ -187,8 +186,6 @@ var (
 )
 
 func init() {
-	supportedProvisioners := provisioners.GetSupportedBootstrapProvisioners()
-
 	bootstrapApplyCmd.PersistentFlags().BoolVar(&bDryRun, "dry-run", false, "Dry run execution")
 
 	bootstrapInitCmd.PersistentFlags().StringVarP(&bConfigFilePath, "config", "c", "bootstrap.yml", "Bootstrap configuration file path")
@@ -215,7 +212,7 @@ func init() {
 		&bTemplateProvisioner,
 		"provisioner",
 		"",
-		fmt.Sprintf("Bootstrap provisioner, valid options are: %s", strings.Join(supportedProvisioners, ", ")),
+		"Bootstrap provisioner, valid options are: aws, gcp",
 	)
 
 	bootstrapCmd.AddCommand(bootstrapInitCmd)

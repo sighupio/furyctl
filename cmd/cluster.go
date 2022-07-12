@@ -8,7 +8,6 @@ import (
 	"bufio"
 	"errors"
 	"fmt"
-	"github.com/sighupio/furyctl/internal/provisioners"
 	"os"
 	"os/signal"
 	"strings"
@@ -189,8 +188,6 @@ var (
 )
 
 func init() {
-	supportedProvisioners := provisioners.GetSupportedClusterProvisioners()
-
 	clusterApplyCmd.PersistentFlags().BoolVar(&cDryRun, "dry-run", false, "Dry run execution")
 
 	clusterInitCmd.PersistentFlags().StringVarP(&cConfigFilePath, "config", "c", "cluster.yml", "Cluster configuration file path")
@@ -217,7 +214,7 @@ func init() {
 		&cTemplateProvisioner,
 		"provisioner",
 		"",
-		fmt.Sprintf("Cluster provisioner, valid options are: %s", strings.Join(supportedProvisioners, ", ")),
+		"Cluster provisioner, valid options are: eks, gke, vsphere",
 	)
 
 	clusterCmd.AddCommand(clusterInitCmd)
