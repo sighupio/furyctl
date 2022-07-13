@@ -208,7 +208,12 @@ func init() {
 
 	bootstrapDestroyCmd.PersistentFlags().BoolVar(&bForce, "force", false, "Forces the destroy of the project. Doesn't ask for confirmation")
 
-	bootstrapTemplateCmd.PersistentFlags().StringVar(&bTemplateProvisioner, "provisioner", "", "Bootstrap provisioner")
+	bootstrapTemplateCmd.PersistentFlags().StringVar(
+		&bTemplateProvisioner,
+		"provisioner",
+		"",
+		"Bootstrap provisioner, valid options are: aws, gcp",
+	)
 
 	bootstrapCmd.AddCommand(bootstrapInitCmd)
 	bootstrapCmd.AddCommand(bootstrapApplyCmd)
