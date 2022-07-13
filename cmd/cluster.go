@@ -210,7 +210,12 @@ func init() {
 
 	clusterDestroyCmd.PersistentFlags().BoolVar(&cForce, "force", false, "Forces the destroy of the project. Doesn't ask for confirmation")
 
-	clusterTemplateCmd.PersistentFlags().StringVar(&cTemplateProvisioner, "provisioner", "", "Cluster provisioner")
+	clusterTemplateCmd.PersistentFlags().StringVar(
+		&cTemplateProvisioner,
+		"provisioner",
+		"",
+		"Cluster provisioner, valid options are: eks, gke, vsphere",
+	)
 
 	clusterCmd.AddCommand(clusterInitCmd)
 	clusterCmd.AddCommand(clusterApplyCmd)
