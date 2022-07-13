@@ -87,8 +87,10 @@ var (
 
 			if !tNoOverwrite {
 				err = os.RemoveAll(target)
-				logrus.Errorf("%+v", err)
-				return nil
+				if err != nil {
+					logrus.Errorf("%+v", err)
+					return nil
+				}
 			}
 
 			templateModel, err := template.NewTemplateModel(
