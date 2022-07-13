@@ -181,7 +181,7 @@ func (tm *Model) applyTemplates(
 
 		content, cErr := gen.ProcessFile(tmpl)
 		if cErr != nil {
-			return cErr
+			return fmt.Errorf("%+v filePath: %s", cErr, relSource)
 		}
 
 		return io.CopyBufferToFile(content, relSource, realTarget)

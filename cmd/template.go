@@ -19,7 +19,8 @@ import (
 )
 
 var (
-	tDryRun bool
+	tDryRun      bool
+	tNoOverwrite bool
 
 	TemplateCmd = &cobra.Command{
 		Use:   "template",
@@ -36,12 +37,19 @@ var (
 
 			distributionFile, err := yaml2.FromFile[map[string]interface{}](distributionFilePath)
 			if err != nil {
-				return err
+				logrus.Errorf("%+v", err)
+				return nil
 			}
 
 			furyctlFile, err := yaml2.FromFile[map[string]interface{}](furyctlFilePath)
 			if err != nil {
-				return err
+				logrus.Errorf("%+v", err)
+				return nil
+			}
+
+			if _, err := os.Stat(source); os.IsNotExist(err) {
+				logrus.Errorf("source directory does not exist")
+				return nil
 			}
 
 			merger := merge.NewMerger(
@@ -51,17 +59,20 @@ var (
 
 			mergedDistribution, err := merger.Merge()
 			if err != nil {
-				return err
+				logrus.Errorf("%+v", err)
+				return nil
 			}
 
 			outYaml, err := yaml.Marshal(mergedDistribution)
 			if err != nil {
-				return err
+				logrus.Errorf("%+v", err)
+				return nil
 			}
 
 			outDirPath, err := os.MkdirTemp("", "furyctl-dist-")
 			if err != nil {
-				return err
+				logrus.Errorf("%+v", err)
+				return nil
 			}
 
 			confPath := outDirPath + "/config.yaml"
@@ -70,7 +81,14 @@ var (
 
 			err = os.WriteFile(confPath, outYaml, os.ModePerm)
 			if err != nil {
-				return err
+				logrus.Errorf("%+v", err)
+				return nil
+			}
+
+			if !tNoOverwrite {
+				err = os.RemoveAll(target)
+				logrus.Errorf("%+v", err)
+				return nil
 			}
 
 			templateModel, err := template.NewTemplateModel(
@@ -79,11 +97,12 @@ var (
 				confPath,
 				outDirPath,
 				suffix,
-				false,
+				tNoOverwrite,
 				tDryRun,
 			)
 			if err != nil {
-				return err
+				logrus.Errorf("%+v", err)
+				return nil
 			}
 
 			dss, _ := cmd.Flags().GetStringSlice("datasource")
@@ -95,13 +114,19 @@ var (
 				for _, v := range dss {
 					parts := strings.Split(v, "=")
 					if len(parts) != 2 {
-						return fmt.Errorf("datasource must be given in a form of name=pathToFile")
+						logrus.Errorf("%+v", fmt.Errorf("datasource must be given in a form of name=pathToFile"))
 					}
 					templateModel.Config.Include[parts[0]] = parts[1]
 				}
 			}
 
-			return templateModel.Generate()
+			err = templateModel.Generate()
+			if err != nil {
+				logrus.Errorf("%+v", err)
+				return nil
+			}
+
+			return nil
 		},
 	}
 )
@@ -109,4 +134,10 @@ var (
 func init() {
 	rootCmd.AddCommand(TemplateCmd)
 	TemplateCmd.PersistentFlags().BoolVar(&tDryRun, "dry-run", false, "Dry run execution")
+	TemplateCmd.PersistentFlags().BoolVar(
+		&tNoOverwrite,
+		"no-overwrite",
+		false,
+		"Stop if target directory is not empty",
+	)
 }

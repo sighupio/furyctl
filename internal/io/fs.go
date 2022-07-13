@@ -14,16 +14,13 @@ import (
 )
 
 func CheckDirIsEmpty(target string) error {
-	if _, err := os.Stat(target); os.IsExist(err) {
-		err := filepath.Walk(target, func(path string, info os.FileInfo, err error) error {
-			return fmt.Errorf("the target directory is not empty: %s", path)
-		})
-		if err != nil {
-			return err
-		}
+	if _, err := os.Stat(target); os.IsNotExist(err) {
+		return nil
 	}
 
-	return nil
+	return filepath.Walk(target, func(path string, info os.FileInfo, err error) error {
+		return fmt.Errorf("the target directory is not empty: %s", path)
+	})
 }
 
 func AppendBufferToFile(b bytes.Buffer, target string) error {
