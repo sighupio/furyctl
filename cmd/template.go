@@ -37,13 +37,13 @@ var (
 
 			distributionFile, err := yaml2.FromFile[map[string]interface{}](distributionFilePath)
 			if err != nil {
-				logrus.Errorf("%+v", err)
+				logrus.Errorf("%s - %+v", distributionFilePath, err)
 				return nil
 			}
 
 			furyctlFile, err := yaml2.FromFile[map[string]interface{}](furyctlFilePath)
 			if err != nil {
-				logrus.Errorf("%+v", err)
+				logrus.Errorf("%s - %+v", furyctlFilePath, err)
 				return nil
 			}
 
