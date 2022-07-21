@@ -5,7 +5,6 @@ require (
 	github.com/briandowns/spinner v1.12.0
 	github.com/denisbrodbeck/machineid v1.0.1
 	github.com/dukex/mixpanel v0.0.0-20180925151559-f8d5594f958e
-	github.com/gobuffalo/packr/v2 v2.8.3
 	github.com/fatih/color v1.10.0 // indirect
 	github.com/gobuffalo/packr/v2 v2.8.3
 	github.com/hashicorp/go-checkpoint v0.5.0
