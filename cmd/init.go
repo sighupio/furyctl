@@ -7,7 +7,7 @@ package cmd
 import (
 	"github.com/sirupsen/logrus"
 
-	getter "github.com/hashicorp/go-getter"
+	"github.com/hashicorp/go-getter"
 	"github.com/spf13/cobra"
 )
 
