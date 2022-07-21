@@ -78,8 +78,14 @@ func bootstrapLogrus(cmd *cobra.Command) {
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
 	Use:   "furyctl",
-	Short: "A command line tool to manage cluster deployment with kubernetes",
-	Long:  ``,
+	Short: "The multi-purpose command line tool for the Kubernetes Fury Distribution",
+	Long: `The multi-purpose command line tool for the Kubernetes Fury Distribution.
+
+Furyctl is a simple CLI tool to:
+
+- download and manage the Kubernetes Fury Distribution (KFD) modules
+- create and manage Kubernetes Fury clusters
+`,
 	PersistentPreRun: func(cmd *cobra.Command, args []string) {
 		bootstrapLogrus(cmd)
 	},
