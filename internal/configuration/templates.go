@@ -189,7 +189,7 @@ func clusterTemplate(config *Configuration) error {
 			ControlPlaneCIDR:               "10.0.0.0/28 # OPTIONAL. DEFAULT VALUE. The IP range in CIDR notation to use for the hosted master network",
 			AdditionalFirewallRules:        true,
 			AdditionalClusterFirewallRules: false,
-			DisalbeDefaultSNAT:             false,
+			DisableDefaultSNAT:             false,
 			SubNetworks: []string{
 				"subnet-id0 # Identificator of the subnets. Index 0: Cluster Subnet",
 				"subnet-id1 # Identificator of the subnets. Index 1: Pod Subnet",
@@ -258,7 +258,8 @@ func clusterTemplate(config *Configuration) error {
 			Config: clustercfg.VSphereConfig{
 				DatacenterName: "westeros # Get the name of datacenter from vShpere dashboard",
 				Datastore:      "main # Get the name of datastore from vSphere dashboard",
-				EsxiHost:       []string{"host1", "host2", "host3", "# Names of the hosts where the VMs are going to be created"},
+				EsxiHost:       []string{"host1", "host2", "host3", "# Names of the hosts where the VMs are going to be created. Use only when not specifying a vSphere cluster"},
+				Cluster:        "cluster1 # (Optional) vSphere Cluster (resource pool) where the Virtual Machines will be created. Use this option or specify the EsxiHost list when you don't have a cluster.",
 			},
 			NetworkConfig: clustercfg.VSphereNetworkConfig{
 				Name:        "main-network # The name of the vSphere network",

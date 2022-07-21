@@ -13,7 +13,7 @@ type GKE struct {
 	ControlPlaneCIDR               string `yaml:"controlPlaneCIDR"`
 	AdditionalFirewallRules        bool   `yaml:"additionalFirewallRules"`
 	AdditionalClusterFirewallRules bool   `yaml:"additionalClusterFirewallRules"`
-	DisalbeDefaultSNAT             bool   `yaml:"disalbeDefaultSNAT"`
+	DisableDefaultSNAT             bool   `yaml:"disableDefaultSNAT"`
 
 	SubNetworks  []string          `yaml:"subnetworks"`
 	DMZCIDRRange DMZCIDRRange      `yaml:"dmzCIDRRange"`

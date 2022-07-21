@@ -4,6 +4,11 @@ SHELL := /bin/bash
 PROJECTNAME := $(shell basename "$(PWD)")
 CURRENT_DIR := $(shell pwd)
 
+GOARCH = "amd64"
+ifeq ("$(shell uname -m)", "arm64")
+	GOARCH = "arm64"
+endif
+
 .PHONY: help
 all: help
 help: Makefile
@@ -43,11 +48,11 @@ clean: deps
 	@go mod tidy
 
 .PHONY: build
-## build: Builds the solution for linux and macos amd64 
+## build: Builds the solution for linux and macos amd64 or arm64
 build: lint deps clean test
 	@GO111MODULE=on packr2 build
-	@GO111MODULE=on CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -ldflags '-extldflags "-static"' -o bin/linux/$(version)/furyctl  .
-	@GO111MODULE=on CGO_ENABLED=0 GOOS=darwin GOARCH=amd64 go build -a -ldflags '-extldflags "-static"' -o bin/darwin/$(version)/furyctl .
+	@GO111MODULE=on CGO_ENABLED=0 GOOS=linux GOARCH=${GOARCH} go build -a -ldflags '-extldflags "-static"' -o bin/linux-${GOARCH}/$(version)/furyctl  .
+	@GO111MODULE=on CGO_ENABLED=0 GOOS=darwin GOARCH=${GOARCH} go build -a -ldflags '-extldflags "-static"' -o bin/darwin-${GOARCH}/$(version)/furyctl .
 	@mkdir -p bin/{darwin,linux}/latest
-	@cp bin/darwin/$(version)/furyctl bin/darwin/latest/furyctl
-	@cp bin/linux/$(version)/furyctl bin/linux/latest/furyctl
+	@cp bin/darwin-${GOARCH}/$(version)/furyctl bin/darwin/latest/furyctl
+	@cp bin/linux-${GOARCH}/$(version)/furyctl bin/linux/latest/furyctl
