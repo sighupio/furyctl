@@ -117,7 +117,7 @@ var (
 			if cTemplateProvisioner == "" {
 				return errors.New("You must specify a provisioner")
 			}
-			tpl, err := configuration.Template("Cluster", cTemplateProvisioner)
+			tpl, err := configuration.Template("Cluster", strings.ToLower(cTemplateProvisioner))
 			if err != nil {
 				return err
 			}
