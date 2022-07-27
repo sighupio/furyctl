@@ -12,9 +12,17 @@ import (
 
 func init() {
 	rootCmd.AddCommand(vendorCmd)
-	vendorCmd.PersistentFlags().BoolVarP(&parallel, "parallel", "p", true, "if true enables parallel downloads")
-	vendorCmd.PersistentFlags().BoolVarP(&https, "https", "H", false, "if true downloads using https instead of ssh")
-	vendorCmd.PersistentFlags().StringVarP(&prefix, "prefix", "P", "", "Add filtering on download with prefix, to reduce update scope")
+	vendorCmd.PersistentFlags().BoolVarP(&conf.DownloadOpts.Parallel, "parallel", "p", true, "if true enables parallel downloads")
+	vendorCmd.PersistentFlags().BoolVarP(&conf.DownloadOpts.Https, "https", "H", false, "if true downloads using https instead of ssh")
+	vendorCmd.PersistentFlags().StringVarP(&conf.Prefix, "prefix", "P", "", "Add filtering on download with prefix, to reduce update scope")
+}
+
+var conf = Config{}
+
+type Config struct {
+	Packages     []Package
+	DownloadOpts DownloadOpts
+	Prefix       string
 }
 
 // vendorCmd represents the vendor command
@@ -40,7 +48,7 @@ var vendorCmd = &cobra.Command{
 			logrus.WithError(err).Error("ERROR VALIDATING")
 		}
 
-		list, err := config.Parse(prefix)
+		list, err := config.Parse(conf.Prefix)
 
 		if err != nil {
 			//logrus.Errorln("ERROR PARSING: ", err)
@@ -48,7 +56,7 @@ var vendorCmd = &cobra.Command{
 
 		}
 
-		err = download(list)
+		err = Download(conf.DownloadOpts, list)
 		if err != nil {
 			//logrus.Errorln("ERROR DOWNLOADING: ", err)
 			logrus.WithError(err).Error("ERROR DOWNLOADING")

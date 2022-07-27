@@ -7,31 +7,105 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"path"
 	"runtime"
 	"strings"
 	"sync"
 
+	"github.com/hashicorp/go-getter"
 	"github.com/sirupsen/logrus"
-
-	getter "github.com/hashicorp/go-getter"
 )
 
-var parallel bool
-var https bool
-var prefix string
+var (
+	fallbackHttpsRepoPrefix = "git::https://github.com/sighupio/fury-kubernetes"
+	fallbackSshRepoPrefix   = "git@github.com:sighupio/fury-kubernetes"
+	httpsRepoPrefix         = "git::https://github.com/sighupio/kubernetes-fury"
+	sshRepoPrefix           = "git@github.com:sighupio/kubernetes-fury"
+)
 
-func download(packages []Package) error {
+type DownloadOpts struct {
+	Parallel bool
+	Https    bool
+	Fallback bool
+}
 
-	// Preparing all the necessary data for a worker pool
-	var wg sync.WaitGroup
-	var numberOfWorkers int
-	if parallel {
-		numberOfWorkers = runtime.NumCPU() + 1
-	} else {
-		numberOfWorkers = 1
+//PackageURL is the representation of the fields needed to elaborate a url
+type PackageURL struct {
+	Prefix        string
+	Blocks        []string
+	Kind          string
+	Version       string
+	Registry      bool
+	CloudProvider ProviderOptSpec
+	KindSpec      ProviderKind
+}
+
+// newUrl initialize the PackageURL struct
+func newPackageURL(prefix string, blocks []string, kind, version string, registry bool, cloud ProviderOptSpec, kindSpec ProviderKind) *PackageURL {
+	return &PackageURL{
+		Prefix:        prefix,
+		Registry:      registry,
+		Blocks:        blocks,
+		Kind:          kind,
+		Version:       version,
+		CloudProvider: cloud,
+		KindSpec:      kindSpec,
 	}
+}
+
+//getConsumableURL returns an url that can be used for download
+func (n *PackageURL) getConsumableURL() string {
+
+	if !n.Registry {
+		return n.getURLFromCompanyRepos()
+	}
+
+	return fmt.Sprintf("%s/%s%s?ref=%s", n.KindSpec.pickCloudProviderURL(n.CloudProvider), n.Blocks[0], ".git", n.Version)
+
+}
+
+func (n *PackageURL) getURLFromCompanyRepos() string {
+	if len(n.Blocks) == 0 {
+		// todo should return error?
+		return ""
+	}
+
+	dG := ""
+
+	if strings.HasPrefix(n.Prefix, "git::https") {
+		dG = ".git"
+	}
+
+	if len(n.Blocks) == 1 {
+		return fmt.Sprintf("%s-%s%s//%s?ref=%s", n.Prefix, n.Blocks[0], dG, n.Kind, n.Version)
+	}
+	// always len(n.Blocks) >= 2 {
+	var remainingBlocks string
+
+	for i := 1; i < len(n.Blocks); i++ {
+		remainingBlocks = path.Join(remainingBlocks, n.Blocks[i])
+	}
+
+	return fmt.Sprintf("%s-%s%s//%s/%s?ref=%s", n.Prefix, n.Blocks[0], dG, n.Kind, remainingBlocks, n.Version)
+
+}
+
+func Download(opts DownloadOpts, pkgs []Package) error {
+	if opts.Parallel {
+		return parallelDownload(pkgs, opts)
+	}
+
+	return download(pkgs, opts)
+}
+
+func parallelDownload(packages []Package, opts DownloadOpts) error {
+	//Preparing all the necessary data for a worker pool
+	var wg sync.WaitGroup
 	errChan := make(chan error, len(packages))
 	jobs := make(chan Package, len(packages))
+
+	numberOfWorkers := runtime.NumCPU() + 1
+
 	logrus.Debugf("workers = %d", numberOfWorkers)
 
 	// Populating the job channel with all the packages to downlaod
@@ -45,8 +119,45 @@ func download(packages []Package) error {
 		go func(i int) {
 			for data := range jobs {
 				logrus.Debugf("%d : received data %v", i, data)
-				res := get(data.url, data.dir, getter.ClientModeDir, true)
-				errChan <- res
+				p := ""
+
+				if opts.Https {
+					p = httpsRepoPrefix
+				} else {
+					p = sshRepoPrefix
+				}
+
+				pU := newPackageURL(
+					p,
+					strings.Split(data.Name, "/"),
+					data.Kind,
+					data.Version,
+					data.Registry,
+					data.ProviderOpt,
+					data.ProviderKind)
+
+				u := pU.getConsumableURL()
+
+				err := get(u, data.Dir, getter.ClientModeDir, true)
+
+				if err != nil && strings.Contains(err.Error(), "remote: Repository not found.") {
+					o := humanReadableSource(pU.getConsumableURL())
+
+					if opts.Https {
+						pU.Prefix = fallbackHttpsRepoPrefix
+					} else {
+						pU.Prefix = fallbackSshRepoPrefix
+					}
+
+					logrus.Warningf("error downloading %s, falling back to %s", o, humanReadableSource(pU.getConsumableURL()))
+
+					err = get(pU.getConsumableURL(), data.Dir, getter.ClientModeDir, true)
+					if err != nil {
+						logrus.Error(err.Error())
+					}
+				}
+
+				errChan <- err
 				logrus.Debugf("%d : finished with data %v", i, data)
 			}
 			logrus.Debugf("%d : CLOSING", i)
@@ -70,11 +181,51 @@ func download(packages []Package) error {
 	return nil
 }
 
+func download(packages []Package, opts DownloadOpts) error {
+	var repoPrefix string
+
+	if opts.Https {
+		repoPrefix = httpsRepoPrefix
+	} else {
+		repoPrefix = sshRepoPrefix
+	}
+
+	for _, p := range packages {
+		pU := newPackageURL(
+			repoPrefix,
+			strings.Split(p.Name, "/"),
+			p.Kind,
+			p.Version,
+			p.Registry,
+			p.ProviderOpt,
+			p.ProviderKind)
+
+		u := pU.getConsumableURL()
+
+		err := get(u, p.Dir, getter.ClientModeDir, true)
+		if err != nil && strings.Contains(err.Error(), "remote: Repository not found.") {
+			o := humanReadableSource(pU.getConsumableURL())
+
+			if opts.Https {
+				pU.Prefix = fallbackHttpsRepoPrefix
+			} else {
+				pU.Prefix = fallbackSshRepoPrefix
+			}
+
+			logrus.Warningf("error downloading %s, falling back to %s", o, humanReadableSource(pU.getConsumableURL()))
+
+			err = get(pU.getConsumableURL(), p.Dir, getter.ClientModeDir, true)
+			if err != nil {
+				logrus.Error(err.Error())
+			}
+		}
+	}
+
+	return nil
+}
+
 func get(src, dest string, mode getter.ClientMode, cleanGitFolder bool) error {
-
 	logrus.Debugf("starting download process: %s -> %s", src, dest)
-
-	var tempDest = dest + ".tmp"
 
 	pwd, err := os.Getwd()
 	if err != nil {
@@ -83,43 +234,40 @@ func get(src, dest string, mode getter.ClientMode, cleanGitFolder bool) error {
 
 	client := &getter.Client{
 		Src:  src,
-		Dst:  tempDest,
+		Dst:  dest + ".tmp",
 		Pwd:  pwd,
 		Mode: mode,
 	}
 
-	logrus.Debugf("downloading temporary file: %s -> %s", src, tempDest)
+	logrus.Debugf("downloading temporary file: %s -> %s", client.Src, client.Dst)
 
-	humanReadableDownloadLog(src, dest)
+	h := humanReadableSource(src)
 
-	err = removeDir(tempDest)
-	if err != nil {
-		logrus.Errorf("failed to remove: %s", tempDest)
+	logrus.Infof("downloading: %s -> %s", h, dest)
+
+	if err := removeDir(client.Dst); err != nil {
+		logrus.Errorf("failed to remove: %s", client.Dst)
 		return err
 	}
 
-	err = client.Get()
-	if err != nil {
-		_ = removeDir(tempDest)
-		return err
-	} else {
-		err = renameDir(tempDest, dest)
-		if err != nil {
-			logrus.Error(err)
-			return err
-		}
+	if err := client.Get(); err != nil {
+		removeDir(client.Dst)
 
+		return err
+	}
+
+	if err := renameDir(client.Dst, dest); err != nil {
+		logrus.Error(err)
+		return err
 	}
 
 	if cleanGitFolder {
 		gitFolder := fmt.Sprintf("%s/.git", dest)
 		logrus.Infof("cleaning git subfolder: %s", gitFolder)
-		err = removeDir(gitFolder)
-	}
-
-	if err != nil {
-		logrus.Error(err)
-		return err
+		if err := removeDir(gitFolder); err != nil {
+			logrus.Error(err)
+			return err
+		}
 	}
 
 	logrus.Debugf("download process finished: %s -> %s", src, dest)
@@ -127,30 +275,26 @@ func get(src, dest string, mode getter.ClientMode, cleanGitFolder bool) error {
 	return err
 }
 
-// humanReadableDownloadLog prints a humanReadable log
-func humanReadableDownloadLog(src string, dest string) {
-
-	humanReadableSrc := src
+// humanReadableSource returns a human-readable string for the given source
+func humanReadableSource(src string) (humanReadableSrc string) {
+	humanReadableSrc = src
 
 	if strings.Count(src, "@") >= 1 {
 		// handles git@github.com:sighupio url type
 		humanReadableSrc = strings.Join(strings.Split(src, ":")[1:], ":")
 		humanReadableSrc = strings.Replace(humanReadableSrc, "//", "/", 1)
-	} else if strings.Count(humanReadableSrc, "//") >= 1 {
+	}
+
+	if strings.Count(humanReadableSrc, "//") >= 1 {
 		// handles git::https://whatever.com//mymodule url type
 		humanReadableSrc = strings.Join(strings.Split(humanReadableSrc, "//")[1:], "/")
 	}
 
-	logrus.Infof("downloading: %s -> %s", humanReadableSrc, dest)
-
+	return humanReadableSrc
 }
 
 func removeDir(dir string) error {
-	err := os.RemoveAll(dir)
-	if err != nil {
-		return err
-	}
-	return nil
+	return os.RemoveAll(dir)
 }
 
 func renameDir(src string, dest string) error {
