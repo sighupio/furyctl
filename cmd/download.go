@@ -140,7 +140,7 @@ func parallelDownload(packages []Package, opts DownloadOpts) error {
 
 				err := get(u, data.Dir, getter.ClientModeDir, true)
 
-				if err != nil && strings.Contains(err.Error(), "remote: Repository not found.") {
+				if err != nil && strings.Contains(err.Error(), "Repository not found") {
 					o := humanReadableSource(pU.getConsumableURL())
 
 					if opts.Https {
