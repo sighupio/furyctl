@@ -31,7 +31,7 @@ fi
     info
     test_dir="./automated-tests/integration/template-engine/test-data/simple-dry-run"
     init(){
-        cd ${test_dir} && ../../dist/furyctl-${OS}_${OS}_${CPUARCH}/furyctl -d --debug template --dry-run
+        cd ${test_dir} && ../../../../../dist/furyctl-${OS}_${OS}_${CPUARCH}/furyctl -d --debug template --dry-run
         cat ./target/file.txt | grep "testValue"
     }
     run init
@@ -46,7 +46,7 @@ fi
     info
     test_dir="./automated-tests/integration/template-engine/test-data/simple"
     init(){
-        cd ${test_dir} && ../../dist/furyctl-${OS}_${OS}_${CPUARCH}/furyctl -d --debug template
+        cd ${test_dir} && ../../../../../dist/furyctl-${OS}_${OS}_${CPUARCH}/furyctl -d --debug template
         cat ./target/file.txt | grep "testValue"
     }
     run init
