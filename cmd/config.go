@@ -102,14 +102,15 @@ func (f *Furyconf) Parse(prefix string) ([]Package, error) {
 
 	// Now we parse packages and create a list of directories to be downloaded
 	for i := range pkgs {
-		if pkgs[i].Version == "" {
-			for k, v := range f.Versions {
-				if strings.HasPrefix(pkgs[i].Name, k) {
-					pkgs[i].Version = v
-					logrus.Infof("using %v for package %s", pkgs[i].Version, pkgs[i].Name)
-					break
-				}
+		for k, v := range f.Versions {
+			if strings.HasPrefix(pkgs[i].Name, k) {
+				pkgs[i].Version = v
+				break
 			}
+		}
+
+		if pkgs[i].Version == "" {
+			return nil, fmt.Errorf("no version found for package %s. Read the docs in the errors section", pkgs[i].Name)
 		}
 
 		pkgs[i].ProviderKind = f.Provider[pkgs[i].Kind]
