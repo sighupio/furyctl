@@ -181,7 +181,7 @@ func parallelDownload(packages []Package, opts DownloadOpts) error {
 	return nil
 }
 
-func download(packages []Package, opts DownloadOpts) error {
+func download(packages []Package, opts DownloadOpts) (downloadErr error) {
 	var repoPrefix string
 
 	if opts.Https {
@@ -202,8 +202,8 @@ func download(packages []Package, opts DownloadOpts) error {
 
 		u := pU.getConsumableURL()
 
-		err := get(u, p.Dir, getter.ClientModeDir, true)
-		if err != nil && strings.Contains(err.Error(), "remote: Repository not found.") {
+		downloadErr = get(u, p.Dir, getter.ClientModeDir, true)
+		if downloadErr != nil && strings.Contains(downloadErr.Error(), "remote: Repository not found.") {
 			o := humanReadableSource(pU.getConsumableURL())
 
 			if opts.Https {
@@ -214,14 +214,14 @@ func download(packages []Package, opts DownloadOpts) error {
 
 			logrus.Warningf("error downloading %s, falling back to %s", o, humanReadableSource(pU.getConsumableURL()))
 
-			err = get(pU.getConsumableURL(), p.Dir, getter.ClientModeDir, true)
-			if err != nil {
-				logrus.Error(err.Error())
+			downloadErr = get(pU.getConsumableURL(), p.Dir, getter.ClientModeDir, true)
+			if downloadErr != nil {
+				logrus.Error(downloadErr.Error())
 			}
 		}
 	}
 
-	return nil
+	return downloadErr
 }
 
 func get(src, dest string, mode getter.ClientMode, cleanGitFolder bool) error {
