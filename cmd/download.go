@@ -89,14 +89,6 @@ func (n *PackageURL) getURLFromCompanyRepos() string {
 
 }
 
-func Download(opts DownloadOpts, pkgs []Package) error {
-	if opts.Parallel {
-		return parallelDownload(pkgs, opts)
-	}
-
-	return download(pkgs, opts)
-}
-
 func downloadProcess(wg *sync.WaitGroup, opts DownloadOpts, data Package, errChan chan<- error, i int) {
 	defer wg.Done()
 	logrus.Debugf("%d : received data %v", i, data)
@@ -134,7 +126,6 @@ func downloadProcess(wg *sync.WaitGroup, opts DownloadOpts, data Package, errCha
 
 		downloadErr = get(pU.getConsumableURL(), data.Dir, getter.ClientModeDir, true)
 		if downloadErr != nil {
-			logrus.Error(downloadErr.Error())
 			errChan <- downloadErr
 		}
 	}
@@ -144,7 +135,7 @@ func downloadProcess(wg *sync.WaitGroup, opts DownloadOpts, data Package, errCha
 	logrus.Debugf("%d : CLOSING", i)
 }
 
-func parallelDownload(packages []Package, opts DownloadOpts) (downloadErr error) {
+func Download(packages []Package, opts DownloadOpts) (downloadErr error) {
 	//Preparing all the necessary data for a worker pool
 	var wg sync.WaitGroup
 	errChan := make(chan error, len(packages))
@@ -188,49 +179,6 @@ func parallelDownload(packages []Package, opts DownloadOpts) (downloadErr error)
 			logrus.Errorln(errString)
 		}
 	}
-	return downloadErr
-}
-
-func download(packages []Package, opts DownloadOpts) (downloadErr error) {
-	var repoPrefix string
-
-	if opts.Https {
-		repoPrefix = httpsRepoPrefix
-	} else {
-		repoPrefix = sshRepoPrefix
-	}
-
-	for _, p := range packages {
-		pU := newPackageURL(
-			repoPrefix,
-			strings.Split(p.Name, "/"),
-			p.Kind,
-			p.Version,
-			p.Registry,
-			p.ProviderOpt,
-			p.ProviderKind)
-
-		u := pU.getConsumableURL()
-
-		downloadErr = get(u, p.Dir, getter.ClientModeDir, true)
-		if downloadErr != nil && strings.Contains(downloadErr.Error(), "remote: Repository not found.") {
-			o := humanReadableSource(pU.getConsumableURL())
-
-			if opts.Https {
-				pU.Prefix = fallbackHttpsRepoPrefix
-			} else {
-				pU.Prefix = fallbackSshRepoPrefix
-			}
-
-			logrus.Warningf("error downloading %s, falling back to %s", o, humanReadableSource(pU.getConsumableURL()))
-
-			downloadErr = get(pU.getConsumableURL(), p.Dir, getter.ClientModeDir, true)
-			if downloadErr != nil {
-				logrus.Error(downloadErr.Error())
-			}
-		}
-	}
-
 	return downloadErr
 }
 
