@@ -5,15 +5,13 @@
 package cmd
 
 import (
-	"fmt"
 	"github.com/sighupio/furyctl/internal/merge"
 	yaml2 "github.com/sighupio/furyctl/internal/yaml"
 	"github.com/sirupsen/logrus"
-	"gopkg.in/yaml.v3"
-	"os"
-	"strings"
-
 	"github.com/spf13/cobra"
+	"gopkg.in/yaml.v2"
+	"os"
+	"path/filepath"
 
 	"github.com/sighupio/furyctl/internal/template"
 )
@@ -35,13 +33,13 @@ var (
 			distributionFilePath := "distribution.yaml"
 			furyctlFilePath := "furyctl.yaml"
 
-			distributionFile, err := yaml2.FromFile[map[string]interface{}](distributionFilePath)
+			distributionFile, err := yaml2.FromFile[map[string]any](distributionFilePath)
 			if err != nil {
 				logrus.Errorf("%s - %+v", distributionFilePath, err)
 				return nil
 			}
 
-			furyctlFile, err := yaml2.FromFile[map[string]interface{}](furyctlFilePath)
+			furyctlFile, err := yaml2.FromFile[map[string]any](furyctlFilePath)
 			if err != nil {
 				logrus.Errorf("%s - %+v", furyctlFilePath, err)
 				return nil
@@ -75,19 +73,17 @@ var (
 				return nil
 			}
 
-			confPath := outDirPath + "/config.yaml"
+			confPath := filepath.Join(outDirPath, "config.yaml")
 
 			logrus.Debugf("config path = %s", confPath)
 
-			err = os.WriteFile(confPath, outYaml, os.ModePerm)
-			if err != nil {
+			if err = os.WriteFile(confPath, outYaml, os.ModePerm); err != nil {
 				logrus.Errorf("%+v", err)
 				return nil
 			}
 
 			if !tNoOverwrite {
-				err = os.RemoveAll(target)
-				if err != nil {
+				if err = os.RemoveAll(target); err != nil {
 					logrus.Errorf("%+v", err)
 					return nil
 				}
@@ -107,23 +103,7 @@ var (
 				return nil
 			}
 
-			dss, _ := cmd.Flags().GetStringSlice("datasource")
-
-			if len(dss) > 0 {
-				if templateModel.Config.Include == nil {
-					templateModel.Config.Include = make(map[string]string)
-				}
-				for _, v := range dss {
-					parts := strings.Split(v, "=")
-					if len(parts) != 2 {
-						logrus.Errorf("%+v", fmt.Errorf("datasource must be given in a form of name=pathToFile"))
-					}
-					templateModel.Config.Include[parts[0]] = parts[1]
-				}
-			}
-
-			err = templateModel.Generate()
-			if err != nil {
+			if err = templateModel.Generate(); err != nil {
 				logrus.Errorf("%+v", err)
 				return nil
 			}
@@ -135,8 +115,8 @@ var (
 
 func init() {
 	rootCmd.AddCommand(TemplateCmd)
-	TemplateCmd.PersistentFlags().BoolVar(&tDryRun, "dry-run", false, "Dry run execution")
-	TemplateCmd.PersistentFlags().BoolVar(
+	TemplateCmd.Flags().BoolVar(&tDryRun, "dry-run", false, "Dry run execution")
+	TemplateCmd.Flags().BoolVar(
 		&tNoOverwrite,
 		"no-overwrite",
 		false,

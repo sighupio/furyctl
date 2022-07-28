@@ -7,7 +7,7 @@ package template_test
 import (
 	"github.com/sighupio/furyctl/internal/template"
 	"github.com/stretchr/testify/assert"
-	"gopkg.in/yaml.v3"
+	"gopkg.in/yaml.v2"
 	"os"
 	"testing"
 )

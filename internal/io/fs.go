@@ -7,6 +7,7 @@ package io
 import (
 	"bytes"
 	"fmt"
+	"github.com/sirupsen/logrus"
 	"io"
 	"os"
 	"path/filepath"
@@ -19,6 +20,10 @@ func CheckDirIsEmpty(target string) error {
 	}
 
 	return filepath.Walk(target, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return fmt.Errorf("the target directory is not empty, error while checking %s: %w", path, err)
+		}
+
 		return fmt.Errorf("the target directory is not empty: %s", path)
 	})
 }
@@ -29,35 +34,35 @@ func AppendBufferToFile(b bytes.Buffer, target string) error {
 		return err
 	}
 
+	defer destination.Close()
+
 	_, err = b.WriteTo(destination)
 	if err != nil {
 		return err
 	}
-
-	defer destination.Close()
 
 	return nil
 }
 
 func CopyBufferToFile(b bytes.Buffer, source, target string) error {
 	if strings.TrimSpace(b.String()) == "" {
-		fmt.Printf("%s --> resulted in an empty file (%d bytes). Skipping.\n", source, b.Len())
+		logrus.Printf("%s --> resulted in an empty file (%d bytes). Skipping.\n", source, b.Len())
 		return nil
 	}
 
-	fmt.Printf("%s --> %s\n", source, target)
+	logrus.Printf("%s --> %s\n", source, target)
 
 	destination, err := os.Create(target)
 	if err != nil {
 		return err
 	}
 
+	defer destination.Close()
+
 	_, err = b.WriteTo(destination)
 	if err != nil {
 		return err
 	}
-
-	defer destination.Close()
 
 	return nil
 }
@@ -86,6 +91,5 @@ func CopyFromSourceToTarget(src, dst string) (int64, error) {
 
 	defer destination.Close()
 
-	nBytes, err := io.Copy(destination, source)
-	return nBytes, err
+	return io.Copy(destination, source)
 }

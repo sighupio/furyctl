@@ -7,7 +7,7 @@ package yaml_test
 import (
 	yaml2 "github.com/sighupio/furyctl/internal/yaml"
 	"github.com/stretchr/testify/assert"
-	"gopkg.in/yaml.v3"
+	"gopkg.in/yaml.v2"
 	"os"
 	"testing"
 )
