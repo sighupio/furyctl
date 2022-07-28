@@ -26,7 +26,7 @@ var (
 		Long:  `This is a POC for furyctl's Template Engine in go.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 
-			//TODO: Hardcoded for now, we have to think a final strategy for them.
+			//TODO(rm-2470): To be reworked in redmine task - Define template command flags.
 			source := "source"
 			target := "target"
 			suffix := ".tpl"
