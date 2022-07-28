@@ -1,0 +1,4 @@
+spec:
+  distribution:
+    test:
+      hello: testValue
