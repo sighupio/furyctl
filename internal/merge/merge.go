@@ -20,7 +20,7 @@ func NewMerger(b, c Mergeable) *Merger {
 	}
 }
 
-func (m *Merger) Merge() (map[string]any, error) {
+func (m *Merger) Merge() (map[any]any, error) {
 	preparedBase, err := m.base.Get()
 	if err != nil {
 		return nil, fmt.Errorf("incorrect base file, %s", err.Error())
@@ -38,15 +38,15 @@ func (m *Merger) Merge() (map[string]any, error) {
 	return m.base.Content(), err
 }
 
-func deepCopy(a, b map[string]any) map[string]any {
-	out := make(map[string]any, len(a))
+func deepCopy(a, b map[any]any) map[any]any {
+	out := make(map[any]any, len(a))
 	for k, v := range a {
 		out[k] = v
 	}
 	for k, v := range b {
-		if v, ok := v.(map[string]any); ok {
+		if v, ok := v.(map[any]any); ok {
 			if bv, ok := out[k]; ok {
-				if bv, ok := bv.(map[string]any); ok {
+				if bv, ok := bv.(map[any]any); ok {
 					out[k] = deepCopy(bv, v)
 					continue
 				}

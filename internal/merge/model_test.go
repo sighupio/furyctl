@@ -13,12 +13,12 @@ import (
 )
 
 func TestNewDefaultModel(t *testing.T) {
-	content := map[string]any{
-		"data": map[string]any{
-			"meta": map[string]string{
+	content := map[any]any{
+		"data": map[any]any{
+			"meta": map[any]string{
 				"name": "example",
 			},
-			"test": map[string]any{
+			"test": map[any]any{
 				"testString": "lorem ipsum",
 			},
 		},
@@ -34,12 +34,12 @@ func TestNewDefaultModel(t *testing.T) {
 }
 
 func TestDefaultModel_Content(t *testing.T) {
-	content := map[string]any{
-		"data": map[string]any{
-			"meta": map[string]string{
+	content := map[any]any{
+		"data": map[any]any{
+			"meta": map[any]string{
 				"name": "example",
 			},
-			"test": map[string]any{
+			"test": map[any]any{
 				"testString": "lorem ipsum",
 			},
 		},
@@ -53,12 +53,12 @@ func TestDefaultModel_Content(t *testing.T) {
 }
 
 func TestDefaultModel_Path(t *testing.T) {
-	content := map[string]any{
-		"data": map[string]any{
-			"meta": map[string]string{
+	content := map[any]any{
+		"data": map[any]any{
+			"meta": map[any]string{
 				"name": "example",
 			},
-			"test": map[string]any{
+			"test": map[any]any{
 				"testString": "lorem ipsum",
 			},
 		},
@@ -72,18 +72,18 @@ func TestDefaultModel_Path(t *testing.T) {
 }
 
 func TestDefaultModel_Get(t *testing.T) {
-	content := map[string]any{
-		"data": map[string]any{
-			"meta": map[string]string{
+	content := map[any]any{
+		"data": map[any]any{
+			"meta": map[any]string{
 				"name": "example",
 			},
-			"test": map[string]any{
+			"test": map[any]any{
 				"testString": "lorem ipsum",
 			},
 		},
 	}
 
-	expectedRes := map[string]any{
+	expectedRes := map[any]any{
 		"testString": "lorem ipsum",
 	}
 
@@ -98,28 +98,28 @@ func TestDefaultModel_Get(t *testing.T) {
 }
 
 func TestDefaultModel_Walk(t *testing.T) {
-	content := map[string]any{
-		"data": map[string]any{
-			"meta": map[string]string{
+	content := map[any]any{
+		"data": map[any]any{
+			"meta": map[any]string{
 				"name": "example",
 			},
-			"test": map[string]any{
+			"test": map[any]any{
 				"testString": "lorem ipsum",
 			},
 		},
 	}
 
-	target := map[string]any{
+	target := map[any]any{
 		"testString":    "lorem ipsum",
 		"testNewString": "lorem ipsum new",
 	}
 
-	expectedRes := map[string]any{
-		"data": map[string]any{
-			"meta": map[string]string{
+	expectedRes := map[any]any{
+		"data": map[any]any{
+			"meta": map[any]string{
 				"name": "example",
 			},
-			"test": map[string]any{
+			"test": map[any]any{
 				"testNewString": "lorem ipsum new",
 				"testString":    "lorem ipsum",
 			},

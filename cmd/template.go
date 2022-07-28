@@ -5,6 +5,7 @@
 package cmd
 
 import (
+	"fmt"
 	"github.com/sighupio/furyctl/internal/merge"
 	yaml2 "github.com/sighupio/furyctl/internal/yaml"
 	"github.com/sirupsen/logrus"
@@ -33,21 +34,18 @@ var (
 			distributionFilePath := "distribution.yaml"
 			furyctlFilePath := "furyctl.yaml"
 
-			distributionFile, err := yaml2.FromFile[map[string]any](distributionFilePath)
+			distributionFile, err := yaml2.FromFile[map[any]any](distributionFilePath)
 			if err != nil {
-				logrus.Errorf("%s - %+v", distributionFilePath, err)
-				return nil
+				return fmt.Errorf("%s - %w", distributionFilePath, err)
 			}
 
-			furyctlFile, err := yaml2.FromFile[map[string]any](furyctlFilePath)
+			furyctlFile, err := yaml2.FromFile[map[any]any](furyctlFilePath)
 			if err != nil {
-				logrus.Errorf("%s - %+v", furyctlFilePath, err)
-				return nil
+				return fmt.Errorf("%s - %w", furyctlFilePath, err)
 			}
 
 			if _, err := os.Stat(source); os.IsNotExist(err) {
-				logrus.Errorf("source directory does not exist")
-				return nil
+				return fmt.Errorf("source directory does not exist")
 			}
 
 			merger := merge.NewMerger(
@@ -57,20 +55,17 @@ var (
 
 			mergedDistribution, err := merger.Merge()
 			if err != nil {
-				logrus.Errorf("%+v", err)
-				return nil
+				return err
 			}
 
 			outYaml, err := yaml.Marshal(mergedDistribution)
 			if err != nil {
-				logrus.Errorf("%+v", err)
-				return nil
+				return err
 			}
 
 			outDirPath, err := os.MkdirTemp("", "furyctl-dist-")
 			if err != nil {
-				logrus.Errorf("%+v", err)
-				return nil
+				return err
 			}
 
 			confPath := filepath.Join(outDirPath, "config.yaml")
@@ -78,14 +73,12 @@ var (
 			logrus.Debugf("config path = %s", confPath)
 
 			if err = os.WriteFile(confPath, outYaml, os.ModePerm); err != nil {
-				logrus.Errorf("%+v", err)
-				return nil
+				return err
 			}
 
 			if !tNoOverwrite {
 				if err = os.RemoveAll(target); err != nil {
-					logrus.Errorf("%+v", err)
-					return nil
+					return err
 				}
 			}
 
@@ -99,16 +92,10 @@ var (
 				tDryRun,
 			)
 			if err != nil {
-				logrus.Errorf("%+v", err)
-				return nil
+				return err
 			}
 
-			if err = templateModel.Generate(); err != nil {
-				logrus.Errorf("%+v", err)
-				return nil
-			}
-
-			return nil
+			return templateModel.Generate()
 		},
 	}
 )

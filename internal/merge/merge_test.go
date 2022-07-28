@@ -13,25 +13,25 @@ import (
 )
 
 func Test_NewMerger(t *testing.T) {
-	a := map[string]any{
-		"data": map[string]any{
-			"meta": map[string]string{
+	a := map[any]any{
+		"data": map[any]any{
+			"meta": map[any]string{
 				"name": "testName",
 			},
-			"test": map[string]any{
+			"test": map[any]any{
 				"testString": "lorem ipsum",
 			},
 		},
 	}
 
-	b := map[string]any{
-		"data": map[string]any{
-			"meta": map[string]string{
+	b := map[any]any{
+		"data": map[any]any{
+			"meta": map[any]string{
 				"name": "testNewName",
 				"foo":  "bar",
 			},
 			"example": "string",
-			"test": map[string]any{
+			"test": map[any]any{
 				"example": "string",
 			},
 		},
@@ -46,36 +46,36 @@ func Test_NewMerger(t *testing.T) {
 }
 
 func Test_Merge(t *testing.T) {
-	a := map[string]any{
-		"data": map[string]any{
-			"meta": map[string]string{
+	a := map[any]any{
+		"data": map[any]any{
+			"meta": map[any]string{
 				"name": "testName",
 			},
-			"test": map[string]any{
+			"test": map[any]any{
 				"testString": "lorem ipsum",
 			},
 		},
 	}
 
-	b := map[string]any{
-		"data": map[string]any{
-			"meta": map[string]string{
+	b := map[any]any{
+		"data": map[any]any{
+			"meta": map[any]string{
 				"name": "testNewName",
 				"foo":  "bar",
 			},
 			"example": "string",
-			"test": map[string]any{
+			"test": map[any]any{
 				"newTestString": "string",
 			},
 		},
 	}
 
-	expectedRes := map[string]any{
-		"data": map[string]any{
-			"meta": map[string]string{
+	expectedRes := map[any]any{
+		"data": map[any]any{
+			"meta": map[any]string{
 				"name": "testName",
 			},
-			"test": map[string]any{
+			"test": map[any]any{
 				"newTestString": "string",
 				"testString":    "lorem ipsum",
 			},
