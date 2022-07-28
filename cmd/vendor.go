@@ -11,10 +11,9 @@ import (
 )
 
 func init() {
-	rootCmd.AddCommand(vendorCmd)
-	vendorCmd.PersistentFlags().BoolVarP(&conf.DownloadOpts.Parallel, "parallel", "p", true, "if true enables parallel downloads")
 	vendorCmd.PersistentFlags().BoolVarP(&conf.DownloadOpts.Https, "https", "H", false, "if true downloads using https instead of ssh")
 	vendorCmd.PersistentFlags().StringVarP(&conf.Prefix, "prefix", "P", "", "Add filtering on download with prefix, to reduce update scope")
+	rootCmd.AddCommand(vendorCmd)
 }
 
 var conf = Config{}
@@ -27,10 +26,11 @@ type Config struct {
 
 // vendorCmd represents the vendor command
 var vendorCmd = &cobra.Command{
-	Use:   "vendor",
-	Short: "Download dependencies specified in Furyfile.yml",
-	Long:  "Download dependencies specified in Furyfile.yml",
-	Run: func(cmd *cobra.Command, args []string) {
+	Use:          "vendor",
+	Short:        "Download dependencies specified in Furyfile.yml",
+	Long:         "Download dependencies specified in Furyfile.yml",
+	SilenceUsage: true,
+	RunE: func(cmd *cobra.Command, args []string) error {
 		viper.SetConfigType("yml")
 		viper.AddConfigPath(".")
 		viper.SetConfigName(configFile)
@@ -51,16 +51,18 @@ var vendorCmd = &cobra.Command{
 		list, err := config.Parse(conf.Prefix)
 
 		if err != nil {
-			//logrus.Errorln("ERROR PARSING: ", err)
-			logrus.WithError(err).Error("ERROR PARSING")
-
+			logrus.Error(err)
 		}
 
-		err = Download(conf.DownloadOpts, list)
+		for _, p := range list {
+			logrus.Infof("using %v for package %s", p.Version, p.Name)
+		}
+
+		err = Download(list, conf.DownloadOpts)
 		if err != nil {
-			//logrus.Errorln("ERROR DOWNLOADING: ", err)
 			logrus.WithError(err).Error("ERROR DOWNLOADING")
-
 		}
+
+		return err
 	},
 }
