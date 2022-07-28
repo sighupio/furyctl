@@ -16,7 +16,7 @@ func TestNewDefaultModel(t *testing.T) {
 	content := map[string]any{
 		"data": map[string]any{
 			"meta": map[string]string{
-				"name": "pippo",
+				"name": "example",
 			},
 			"test": map[string]any{
 				"testString": "lorem ipsum",
@@ -37,7 +37,7 @@ func TestDefaultModel_Content(t *testing.T) {
 	content := map[string]any{
 		"data": map[string]any{
 			"meta": map[string]string{
-				"name": "pippo",
+				"name": "example",
 			},
 			"test": map[string]any{
 				"testString": "lorem ipsum",
@@ -56,7 +56,7 @@ func TestDefaultModel_Path(t *testing.T) {
 	content := map[string]any{
 		"data": map[string]any{
 			"meta": map[string]string{
-				"name": "pippo",
+				"name": "example",
 			},
 			"test": map[string]any{
 				"testString": "lorem ipsum",
@@ -75,7 +75,7 @@ func TestDefaultModel_Get(t *testing.T) {
 	content := map[string]any{
 		"data": map[string]any{
 			"meta": map[string]string{
-				"name": "pippo",
+				"name": "example",
 			},
 			"test": map[string]any{
 				"testString": "lorem ipsum",
@@ -101,7 +101,7 @@ func TestDefaultModel_Walk(t *testing.T) {
 	content := map[string]any{
 		"data": map[string]any{
 			"meta": map[string]string{
-				"name": "pippo",
+				"name": "example",
 			},
 			"test": map[string]any{
 				"testString": "lorem ipsum",
@@ -117,7 +117,7 @@ func TestDefaultModel_Walk(t *testing.T) {
 	expectedRes := map[string]any{
 		"data": map[string]any{
 			"meta": map[string]string{
-				"name": "pippo",
+				"name": "example",
 			},
 			"test": map[string]any{
 				"testNewString": "lorem ipsum new",
