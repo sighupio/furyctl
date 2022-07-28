@@ -28,15 +28,15 @@ func NewDefaultModel(content map[string]any, path string) *DefaultModel {
 	}
 }
 func (b *DefaultModel) Content() map[string]any {
-	return (*b).content
+	return b.content
 }
 
 func (b *DefaultModel) Path() string {
-	return (*b).path
+	return b.path
 }
 
 func (b *DefaultModel) Get() (map[string]any, error) {
-	ret := (*b).content
+	ret := b.content
 
 	fields := strings.Split((*b).path[1:], ".")
 

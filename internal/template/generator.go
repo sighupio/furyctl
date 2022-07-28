@@ -8,6 +8,7 @@ import (
 	"bytes"
 	"fmt"
 	"github.com/sighupio/furyctl/internal/io"
+	"github.com/sirupsen/logrus"
 	"path/filepath"
 	"strings"
 	"text/template"
@@ -110,7 +111,7 @@ func (g *generator) WriteMissingKeysToFile(
 		return nil
 	}
 
-	fmt.Printf(
+	logrus.Printf(
 		"[WARN] missing keys in template %s. Writing to %s/tmpl-debug.log\n",
 		tmplPath,
 		outputPath,
