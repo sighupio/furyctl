@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"os"
 	"path"
-	"runtime"
 	"strings"
 	"sync"
 
@@ -98,87 +97,98 @@ func Download(opts DownloadOpts, pkgs []Package) error {
 	return download(pkgs, opts)
 }
 
-func parallelDownload(packages []Package, opts DownloadOpts) error {
+func downloadProcess(wg *sync.WaitGroup, opts DownloadOpts, data Package, errChan chan<- error, i int) {
+	defer wg.Done()
+	logrus.Debugf("%d : received data %v", i, data)
+	p := ""
+
+	if opts.Https {
+		p = httpsRepoPrefix
+	} else {
+		p = sshRepoPrefix
+	}
+
+	pU := newPackageURL(
+		p,
+		strings.Split(data.Name, "/"),
+		data.Kind,
+		data.Version,
+		data.Registry,
+		data.ProviderOpt,
+		data.ProviderKind)
+
+	u := pU.getConsumableURL()
+
+	downloadErr := get(u, data.Dir, getter.ClientModeDir, true)
+
+	if downloadErr != nil && strings.Contains(downloadErr.Error(), "Repository not found") {
+		o := humanReadableSource(pU.getConsumableURL())
+
+		if opts.Https {
+			pU.Prefix = fallbackHttpsRepoPrefix
+		} else {
+			pU.Prefix = fallbackSshRepoPrefix
+		}
+
+		logrus.Warningf("error downloading %s, falling back to %s", o, humanReadableSource(pU.getConsumableURL()))
+
+		downloadErr = get(pU.getConsumableURL(), data.Dir, getter.ClientModeDir, true)
+		if downloadErr != nil {
+			logrus.Error(downloadErr.Error())
+			errChan <- downloadErr
+		}
+	}
+
+	logrus.Debugf("%d : ERRCHAN %d", i, len(errChan))
+	logrus.Debugf("%d : finished with data %v", i, data)
+	logrus.Debugf("%d : CLOSING", i)
+}
+
+func parallelDownload(packages []Package, opts DownloadOpts) (downloadErr error) {
 	//Preparing all the necessary data for a worker pool
 	var wg sync.WaitGroup
 	errChan := make(chan error, len(packages))
 	jobs := make(chan Package, len(packages))
-
-	numberOfWorkers := runtime.NumCPU() + 1
-
-	logrus.Debugf("workers = %d", numberOfWorkers)
 
 	// Populating the job channel with all the packages to downlaod
 	for _, p := range packages {
 		jobs <- p
 	}
 
-	// Starting all the workers necessary
-	for i := 0; i < numberOfWorkers; i++ {
+	logrus.Debugf("workers = %d", len(jobs))
+
+	i := 0
+
+	for _, data := range packages {
+		// Starting all the workers necessary
+		i++
+		data := data
+
 		wg.Add(1)
-		go func(i int) {
-			for data := range jobs {
-				logrus.Debugf("%d : received data %v", i, data)
-				p := ""
 
-				if opts.Https {
-					p = httpsRepoPrefix
-				} else {
-					p = sshRepoPrefix
-				}
+		go downloadProcess(&wg, opts, data, errChan, i)
 
-				pU := newPackageURL(
-					p,
-					strings.Split(data.Name, "/"),
-					data.Kind,
-					data.Version,
-					data.Registry,
-					data.ProviderOpt,
-					data.ProviderKind)
-
-				u := pU.getConsumableURL()
-
-				err := get(u, data.Dir, getter.ClientModeDir, true)
-
-				if err != nil && strings.Contains(err.Error(), "Repository not found") {
-					o := humanReadableSource(pU.getConsumableURL())
-
-					if opts.Https {
-						pU.Prefix = fallbackHttpsRepoPrefix
-					} else {
-						pU.Prefix = fallbackSshRepoPrefix
-					}
-
-					logrus.Warningf("error downloading %s, falling back to %s", o, humanReadableSource(pU.getConsumableURL()))
-
-					err = get(pU.getConsumableURL(), data.Dir, getter.ClientModeDir, true)
-					if err != nil {
-						logrus.Error(err.Error())
-					}
-				}
-
-				errChan <- err
-				logrus.Debugf("%d : finished with data %v", i, data)
-			}
-			logrus.Debugf("%d : CLOSING", i)
-			wg.Done()
-		}(i)
 		logrus.Debugf("created worker %d", i)
 	}
 
+	wg.Wait()
+
 	close(jobs)
 	logrus.Debugf("closed jobs")
-	wg.Wait()
+
 	close(errChan)
+	logrus.Debugf("closed errChan")
+
 	logrus.Debugf("finished")
-	for err := range errChan {
-		if err != nil {
+
+	for downloadErr = range errChan {
+		if downloadErr != nil {
 			//todo ISSUE: logrus doesn't escape string characters
-			errString := strings.Replace(err.Error(), "\n", " ", -1)
+			errString := strings.Replace(downloadErr.Error(), "\n", " ", -1)
 			logrus.Errorln(errString)
 		}
 	}
-	return nil
+	return downloadErr
 }
 
 func download(packages []Package, opts DownloadOpts) (downloadErr error) {
