@@ -26,10 +26,11 @@ type Config struct {
 
 // vendorCmd represents the vendor command
 var vendorCmd = &cobra.Command{
-	Use:          "vendor",
-	Short:        "Download dependencies specified in Furyfile.yml",
-	Long:         "Download dependencies specified in Furyfile.yml",
-	SilenceUsage: true,
+	Use:           "vendor",
+	Short:         "Download dependencies specified in Furyfile.yml",
+	Long:          "Download dependencies specified in Furyfile.yml",
+	SilenceUsage:  true,
+	SilenceErrors: true,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		viper.SetConfigType("yml")
 		viper.AddConfigPath(".")
@@ -58,11 +59,6 @@ var vendorCmd = &cobra.Command{
 			logrus.Infof("using %v for package %s", p.Version, p.Name)
 		}
 
-		err = Download(list, conf.DownloadOpts)
-		if err != nil {
-			logrus.WithError(err).Error("ERROR DOWNLOADING")
-		}
-
-		return err
+		return Download(list, conf.DownloadOpts)
 	},
 }
