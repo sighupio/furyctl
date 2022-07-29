@@ -23,8 +23,9 @@ var (
 
 	TemplateCmd = &cobra.Command{
 		Use:   "template",
-		Short: "This is a POC for furyctl's Template Engine in go.",
-		Long:  `This is a POC for furyctl's Template Engine in go.`,
+		Short: "Renders the distribution's manifests from a template and a configuration file",
+		Long:  `Generates a folder with the Kustomization project for deploying Kubernetes Fury Distribution into a cluster.
+The generated folder will be created starting from a provided template and the parameters set in a configuration file that is merged with default values.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 
 			//TODO(rm-2470): To be reworked in redmine task - Define template command flags.
