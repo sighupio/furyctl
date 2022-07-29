@@ -109,10 +109,6 @@ func (f *Furyconf) Parse(prefix string) ([]Package, error) {
 			}
 		}
 
-		if pkgs[i].Version == "" {
-			return nil, fmt.Errorf("no version found for package %s. Read the docs in the errors section", pkgs[i].Name)
-		}
-
 		pkgs[i].ProviderKind = f.Provider[pkgs[i].Kind]
 		pkgs[i].Dir = newDir(f.VendorFolderName, pkgs[i]).getConsumableDirectory()
 	}

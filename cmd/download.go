@@ -90,16 +90,20 @@ func (n *PackageURL) getURLFromCompanyRepos() string {
 }
 
 func downloadProcess(wg *sync.WaitGroup, opts DownloadOpts, data Package, errChan chan<- error, i int) {
+	// deferring the worker to be done
 	defer wg.Done()
-	logrus.Debugf("%d : received data %v", i, data)
-	p := ""
 
+	logrus.Debugf("%d : received data %v", i, data)
+
+	// Checking git clone protocol
+	p := ""
 	if opts.Https {
 		p = httpsRepoPrefix
 	} else {
 		p = sshRepoPrefix
 	}
 
+	// Create the package URL from the data received to download the package
 	pU := newPackageURL(
 		p,
 		strings.Split(data.Name, "/"),
@@ -113,6 +117,7 @@ func downloadProcess(wg *sync.WaitGroup, opts DownloadOpts, data Package, errCha
 
 	downloadErr := get(u, data.Dir, getter.ClientModeDir, true)
 
+	// Checking if repository was found otherwise fallback to the old prefix, if fallback fails sends error to the error channel
 	if downloadErr != nil && strings.Contains(downloadErr.Error(), "Repository not found") {
 		o := humanReadableSource(pU.getConsumableURL())
 
@@ -129,10 +134,6 @@ func downloadProcess(wg *sync.WaitGroup, opts DownloadOpts, data Package, errCha
 			errChan <- downloadErr
 		}
 	}
-
-	logrus.Debugf("%d : ERRCHAN %d", i, len(errChan))
-	logrus.Debugf("%d : finished with data %v", i, data)
-	logrus.Debugf("%d : CLOSING", i)
 }
 
 func Download(packages []Package, opts DownloadOpts) (downloadErr error) {
@@ -148,13 +149,8 @@ func Download(packages []Package, opts DownloadOpts) (downloadErr error) {
 
 	logrus.Debugf("workers = %d", len(jobs))
 
-	i := 0
-
-	for _, data := range packages {
-		// Starting all the workers necessary
-		i++
-		data := data
-
+	// Starting the workers to download the packages in parallel
+	for i, data := range packages {
 		wg.Add(1)
 
 		go downloadProcess(&wg, opts, data, errChan, i)
@@ -162,16 +158,20 @@ func Download(packages []Package, opts DownloadOpts) (downloadErr error) {
 		logrus.Debugf("created worker %d", i)
 	}
 
+	// Waiting for all the workers to finish
 	wg.Wait()
 
+	// Closing the job channel
 	close(jobs)
 	logrus.Debugf("closed jobs")
 
+	// Closing the error channel
 	close(errChan)
 	logrus.Debugf("closed errChan")
 
 	logrus.Debugf("finished")
 
+	// Checking if there was any error during the download, if so, print it
 	for downloadErr = range errChan {
 		if downloadErr != nil {
 			//todo ISSUE: logrus doesn't escape string characters
@@ -215,7 +215,7 @@ func get(src, dest string, mode getter.ClientMode, cleanGitFolder bool) error {
 	}
 
 	if err := renameDir(client.Dst, dest); err != nil {
-		logrus.Error(err)
+		//logrus.Error(err)
 		return err
 	}
 
@@ -223,7 +223,7 @@ func get(src, dest string, mode getter.ClientMode, cleanGitFolder bool) error {
 		gitFolder := fmt.Sprintf("%s/.git", dest)
 		logrus.Infof("cleaning git subfolder: %s", gitFolder)
 		if err := removeDir(gitFolder); err != nil {
-			logrus.Error(err)
+			//logrus.Error(err)
 			return err
 		}
 	}
