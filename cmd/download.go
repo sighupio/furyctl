@@ -52,7 +52,7 @@ func newPackageURL(prefix string, blocks []string, kind, version string, registr
 	}
 }
 
-//getConsumableURL returns an url that can be used for download
+// getConsumableURL returns an url that can be used for download
 func (n *PackageURL) getConsumableURL() string {
 
 	if !n.Registry {
