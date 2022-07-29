@@ -28,7 +28,7 @@ type DownloadOpts struct {
 	Fallback bool
 }
 
-//PackageURL is the representation of the fields needed to elaborate a url
+// PackageURL is the representation of the fields needed to elaborate an url
 type PackageURL struct {
 	Prefix        string
 	Blocks        []string
