@@ -96,11 +96,10 @@ func downloadProcess(wg *sync.WaitGroup, opts DownloadOpts, data Package, errCha
 	logrus.Debugf("%d : received data %v", i, data)
 
 	// Checking git clone protocol
-	p := ""
+	p := sshRepoPrefix
+
 	if opts.Https {
 		p = httpsRepoPrefix
-	} else {
-		p = sshRepoPrefix
 	}
 
 	// Create the package URL from the data received to download the package
@@ -131,8 +130,7 @@ func downloadProcess(wg *sync.WaitGroup, opts DownloadOpts, data Package, errCha
 
 		downloadErr = get(pU.getConsumableURL(), data.Dir, getter.ClientModeDir, true)
 		if downloadErr != nil {
-			err := os.RemoveAll(data.Dir)
-			if err != nil {
+			if err := os.RemoveAll(data.Dir); err != nil {
 				logrus.Errorf("error removing directory %s: %s", data.Dir, err.Error())
 			}
 			errChan <- downloadErr
@@ -165,15 +163,7 @@ func Download(packages []Package, opts DownloadOpts) error {
 	// Waiting for all the workers to finish
 	wg.Wait()
 
-	// Closing the job channel
-	close(jobs)
-	logrus.Debugf("closed jobs")
-
-	// Closing the error channel
-	close(errChan)
-	logrus.Debugf("closed errChan")
-
-	logrus.Debugf("finished")
+	logrus.Debugf("finished downloading all packages")
 
 	// Checking if there was any error during the download, if so, print it
 	for err := range errChan {
@@ -183,7 +173,11 @@ func Download(packages []Package, opts DownloadOpts) error {
 		}
 	}
 
-	return errors.New("download failed. See the logs for more information")
+	if len(errChan) > 0 {
+		return errors.New("download failed. See the logs for more information")
+	}
+
+	return nil
 }
 
 func get(src, dest string, mode getter.ClientMode, cleanGitFolder bool) error {
