@@ -7,11 +7,12 @@ package template
 import (
 	"bytes"
 	"fmt"
-	"github.com/sighupio/furyctl/internal/io"
-	"github.com/sirupsen/logrus"
 	"path/filepath"
 	"strings"
 	"text/template"
+
+	"github.com/sighupio/furyctl/internal/io"
+	"github.com/sirupsen/logrus"
 )
 
 type generator struct {
@@ -111,8 +112,8 @@ func (g *generator) WriteMissingKeysToFile(
 		return nil
 	}
 
-	logrus.Printf(
-		"[WARN] missing keys in template %s. Writing to %s/tmpl-debug.log\n",
+	logrus.Warnf(
+		"missing keys in template %s. Writing to %s/tmpl-debug.log\n",
 		tmplPath,
 		outputPath,
 	)

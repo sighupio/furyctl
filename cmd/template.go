@@ -6,13 +6,14 @@ package cmd
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
+
 	"github.com/sighupio/furyctl/internal/merge"
 	yaml2 "github.com/sighupio/furyctl/internal/yaml"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v2"
-	"os"
-	"path/filepath"
 
 	"github.com/sighupio/furyctl/internal/template"
 )
@@ -105,7 +106,12 @@ The generated folder will be created starting from a provided template and the p
 
 func init() {
 	rootCmd.AddCommand(TemplateCmd)
-	TemplateCmd.Flags().BoolVar(&tDryRun, "dry-run", false, "Dry run execution")
+	TemplateCmd.Flags().BoolVar(
+		&tDryRun,
+		"dry-run",
+		false,
+		"Furyctl will try its best to generate the manifests despite the errors",
+	)
 	TemplateCmd.Flags().BoolVar(
 		&tNoOverwrite,
 		"no-overwrite",
