@@ -65,7 +65,6 @@ func (n *PackageURL) getConsumableURL() string {
 
 func (n *PackageURL) getURLFromCompanyRepos() string {
 	if len(n.Blocks) == 0 {
-		// todo should return error?
 		return ""
 	}
 
@@ -78,8 +77,8 @@ func (n *PackageURL) getURLFromCompanyRepos() string {
 	if len(n.Blocks) == 1 {
 		return fmt.Sprintf("%s-%s%s//%s?ref=%s", n.Prefix, n.Blocks[0], dG, n.Kind, n.Version)
 	}
-	// always len(n.Blocks) >= 2 {
-	var remainingBlocks string
+
+	remainingBlocks := ""
 
 	for i := 1; i < len(n.Blocks); i++ {
 		remainingBlocks = path.Join(remainingBlocks, n.Blocks[i])
@@ -174,7 +173,6 @@ func Download(packages []Package, opts DownloadOpts) (downloadErr error) {
 	// Checking if there was any error during the download, if so, print it
 	for downloadErr = range errChan {
 		if downloadErr != nil {
-			//todo ISSUE: logrus doesn't escape string characters
 			errString := strings.Replace(downloadErr.Error(), "\n", " ", -1)
 			logrus.Errorln(errString)
 		}
@@ -203,29 +201,22 @@ func get(src, dest string, mode getter.ClientMode, cleanGitFolder bool) error {
 
 	logrus.Infof("downloading: %s -> %s", h, dest)
 
-	if err := removeDir(client.Dst); err != nil {
-		logrus.Errorf("failed to remove: %s", client.Dst)
+	if err := os.RemoveAll(client.Dst); err != nil {
 		return err
 	}
 
 	if err := client.Get(); err != nil {
-		removeDir(client.Dst)
-
-		return err
+		return os.RemoveAll(client.Dst)
 	}
 
 	if err := renameDir(client.Dst, dest); err != nil {
-		//logrus.Error(err)
 		return err
 	}
 
 	if cleanGitFolder {
 		gitFolder := fmt.Sprintf("%s/.git", dest)
 		logrus.Infof("cleaning git subfolder: %s", gitFolder)
-		if err := removeDir(gitFolder); err != nil {
-			//logrus.Error(err)
-			return err
-		}
+		return os.RemoveAll(gitFolder)
 	}
 
 	logrus.Debugf("download process finished: %s -> %s", src, dest)
@@ -251,22 +242,15 @@ func humanReadableSource(src string) (humanReadableSrc string) {
 	return humanReadableSrc
 }
 
-func removeDir(dir string) error {
-	return os.RemoveAll(dir)
-}
-
 func renameDir(src string, dest string) error {
 	if _, err := os.Stat(dest); !os.IsNotExist(err) {
 		logrus.Infof("removing target path: %s", dest)
-		err = removeDir(dest)
+		err = os.RemoveAll(dest)
 		if err != nil {
 			logrus.Error(err)
 			return err
 		}
 	}
-	err := os.Rename(src, dest)
-	if err != nil {
-		return err
-	}
-	return nil
+
+	return os.Rename(src, dest)
 }
