@@ -5,6 +5,7 @@
 package cmd
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path"
@@ -130,12 +131,16 @@ func downloadProcess(wg *sync.WaitGroup, opts DownloadOpts, data Package, errCha
 
 		downloadErr = get(pU.getConsumableURL(), data.Dir, getter.ClientModeDir, true)
 		if downloadErr != nil {
+			err := os.RemoveAll(data.Dir)
+			if err != nil {
+				logrus.Errorf("error removing directory %s: %s", data.Dir, err.Error())
+			}
 			errChan <- downloadErr
 		}
 	}
 }
 
-func Download(packages []Package, opts DownloadOpts) (downloadErr error) {
+func Download(packages []Package, opts DownloadOpts) error {
 	//Preparing all the necessary data for a worker pool
 	var wg sync.WaitGroup
 	errChan := make(chan error, len(packages))
@@ -171,13 +176,14 @@ func Download(packages []Package, opts DownloadOpts) (downloadErr error) {
 	logrus.Debugf("finished")
 
 	// Checking if there was any error during the download, if so, print it
-	for downloadErr = range errChan {
-		if downloadErr != nil {
-			errString := strings.Replace(downloadErr.Error(), "\n", " ", -1)
+	for err := range errChan {
+		if err != nil {
+			errString := strings.Replace(err.Error(), "\n", " ", -1)
 			logrus.Errorln(errString)
 		}
 	}
-	return downloadErr
+
+	return errors.New("download failed. See the logs for more information")
 }
 
 func get(src, dest string, mode getter.ClientMode, cleanGitFolder bool) error {
@@ -206,7 +212,7 @@ func get(src, dest string, mode getter.ClientMode, cleanGitFolder bool) error {
 	}
 
 	if err := client.Get(); err != nil {
-		return os.RemoveAll(client.Dst)
+		return err
 	}
 
 	if err := renameDir(client.Dst, dest); err != nil {

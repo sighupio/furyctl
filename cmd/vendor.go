@@ -36,23 +36,23 @@ var vendorCmd = &cobra.Command{
 		viper.AddConfigPath(".")
 		viper.SetConfigName(configFile)
 		config := new(Furyconf)
+
 		if err := viper.ReadInConfig(); err != nil {
-			logrus.Fatalf("Error reading config file, %s", err)
-		}
-		err := viper.Unmarshal(config)
-		if err != nil {
-			logrus.Fatalf("unable to decode into struct, %v", err)
+			return err
 		}
 
-		err = config.Validate()
-		if err != nil {
-			logrus.WithError(err).Error("ERROR VALIDATING")
+		if err := viper.Unmarshal(config); err != nil {
+			return err
+		}
+
+		if err := config.Validate(); err != nil {
+			return err
 		}
 
 		list, err := config.Parse(conf.Prefix)
 
 		if err != nil {
-			logrus.Error(err)
+			return err
 		}
 
 		for _, p := range list {
