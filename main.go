@@ -1,4 +1,4 @@
-// Copyright © 2018 Sighup SRL support@sighup.io
+// Copyright © 2017-present SIGHUP SRL support@sighup.io
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
