@@ -163,18 +163,24 @@ func Download(packages []Package, opts DownloadOpts) error {
 	// Waiting for all the workers to finish
 	wg.Wait()
 
+	// Closing the job channel
+	close(jobs)
+
+	// Closing the error channel
+	close(errChan)
+
 	logrus.Debugf("finished downloading all packages")
 
 	// Checking if there was any error during the download, if so, print it
-	for err := range errChan {
-		if err != nil {
-			errString := strings.Replace(err.Error(), "\n", " ", -1)
-			logrus.Errorln(errString)
-		}
-	}
-
 	if len(errChan) > 0 {
-		return errors.New("download failed. See the logs for more information")
+		for err := range errChan {
+			if err != nil {
+				errString := strings.Replace(err.Error(), "\n", " ", -1)
+				logrus.Errorln(errString)
+			}
+		}
+
+		return errors.New("download failed. See the logs")
 	}
 
 	return nil
@@ -216,12 +222,14 @@ func get(src, dest string, mode getter.ClientMode, cleanGitFolder bool) error {
 	if cleanGitFolder {
 		gitFolder := fmt.Sprintf("%s/.git", dest)
 		logrus.Infof("cleaning git subfolder: %s", gitFolder)
-		return os.RemoveAll(gitFolder)
+		if err = os.RemoveAll(gitFolder); err != nil {
+			return err
+		}
 	}
 
 	logrus.Debugf("download process finished: %s -> %s", src, dest)
 
-	return err
+	return nil
 }
 
 // humanReadableSource returns a human-readable string for the given source
