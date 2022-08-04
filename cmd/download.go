@@ -135,6 +135,8 @@ func downloadProcess(wg *sync.WaitGroup, opts DownloadOpts, data Package, errCha
 			}
 			errChan <- downloadErr
 		}
+	} else if downloadErr != nil {
+		errChan <- downloadErr
 	}
 }
 
