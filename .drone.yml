@@ -41,6 +41,8 @@ steps:
     pull: always
     commands:
       - go test -v ./...
+    environment:
+      CGO_ENABLED: 0
     when:
       event:
         - push
@@ -53,6 +55,7 @@ steps:
       - lint
       - test
     environment:
+      CGO_ENABLED: 0
       GITHUB_TOKEN:
         from_secret: GITHUB_TOKEN
     commands:
@@ -72,6 +75,7 @@ steps:
     depends_on:
       - build
     environment:
+      CGO_ENABLED: 0
       FURYCTL_TOKEN:
         from_secret: FURYCTL_TOKEN
     commands:
@@ -99,6 +103,7 @@ steps:
     depends_on:
       - build
     environment:
+      CGO_ENABLED: 0
       FURYCTL_TOKEN:
         from_secret: FURYCTL_TOKEN
 
@@ -182,6 +187,7 @@ steps:
       - e2e-gcp
       - e2e-vsphere
     environment:
+      CGO_ENABLED: 0
       GITHUB_TOKEN:
         from_secret: GITHUB_TOKEN
     commands:
