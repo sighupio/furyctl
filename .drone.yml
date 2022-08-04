@@ -8,7 +8,7 @@ type: docker
 
 steps:
   - name: check
-    image: golang:1.17-alpine
+    image: golang:1.18.1-alpine
     pull: always
     commands:
       - go install github.com/google/addlicense@v1.0.0
@@ -27,10 +27,8 @@ depends_on:
 
 steps:
   - name: lint
-    image: golang
+    image: golang:1.18.1-alpine
     pull: always
-    depends_on:
-      - clone
     commands:
       - test -z $(gofmt -l .)
     when:
@@ -39,10 +37,8 @@ steps:
         - tag
 
   - name: test
-    image: golang
+    image: golang:1.18.1-alpine
     pull: always
-    depends_on:
-      - clone
     commands:
       - go test -v ./...
     when:
