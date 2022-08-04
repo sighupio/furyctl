@@ -56,7 +56,11 @@ var vendorCmd = &cobra.Command{
 		}
 
 		for _, p := range list {
-			logrus.Infof("using %v for package %s", p.Version, p.Name)
+			if p.Version == "" {
+				logrus.Warnf("package %s has no version specified. Using default branch from remote.", p.Name)
+			} else {
+				logrus.Infof("using %v for package %s", p.Version, p.Name)
+			}
 		}
 
 		return Download(list, conf.DownloadOpts)
