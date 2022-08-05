@@ -1,9 +1,11 @@
+<!-- markdownlint-disable MD033 -->
 <h1 align="center">
   <img src="docs/assets/furyctl-logo.png" width="200px"/><br/>
   Furyctl
 </h1>
 
 <p align="center">The multi-purpose command line tool for the Kubernetes Fury Distribution.</p>
+<!-- markdownlint-eable MD033 -->
 
 [![Build Status](https://ci.sighup.io/api/badges/sighupio/furyctl/status.svg)](https://ci.sighup.io/sighupio/furyctl)
 ![Release](https://img.shields.io/github/v/release/sighupio/furyctl?label=Furyctl)
@@ -15,13 +17,15 @@
 Furyctl is a simple CLI tool to:
 
 - download and manage the Kubernetes Fury Distribution (KFD) modules
-- create and manage Fury clusters on AWS, GCP and vSphere
+- create and manage Fury clusters on AWS, GCP, and vSphere
 
 <br/>
 
 ![Furyctl usage](docs/assets/furyctl.gif)
 
 ## Installation
+
+### Installation from binaries
 
 You can find `furyctl` binaries on the [Releases page](https://github.com/sighupio/furyctl/releases).
 
@@ -32,7 +36,7 @@ CPUARCH="amd64"
 if [ $(uname -m) = "arm64" ]; then
 	CPUARCH="arm64"
 fi
-wget -q "https://github.com/sighupio/furyctl/releases/download/v0.6.2/furyctl-$(uname -s)-${CPUARCH}" -O /tmp/furyctl
+wget -q "https://github.com/sighupio/furyctl/releases/download/v0.7.0/furyctl-$(uname -s)-${CPUARCH}" -O /tmp/furyctl
 chmod +x /tmp/furyctl
 sudo mv /tmp/furyctl /usr/local/bin/furyctl
 ```
@@ -46,7 +50,6 @@ brew tap sighupio/furyctl
 brew install furyctl
 ```
 
-
 ### Installation with [asdf](https://github.com/asdf-vm/asdf)
 
 Add furyctl asdf plugin:
@@ -54,7 +57,6 @@ Add furyctl asdf plugin:
 ```bash
 asdf plugin add furyctl
 ```
-
 
 Check that everything is working correctly with `furyctl version`:
 
@@ -94,7 +96,7 @@ Available Commands:
 ## Download and manage KFD modules
 
 `furyctl` can be used as a package manager for the KFD.
-It providers a simple way to download all the desired modules of the KFD by reading a single `Furyfile`.
+It provides a simple way to download all the desired modules of the KFD by reading a single `Furyfile`.
 
 The process requires the following steps:
 
@@ -127,7 +129,7 @@ bases:
   - name: opa/
 ```
 
-Each module is composed by a set of packages. In the previous `Furyfile`, we downloaded every module's packages. You can cherry-pick single packages using the `module/package` syntax.
+Each module is composed of a set of packages. In the previous `Furyfile`, we downloaded all packages of each module. You can cherry-pick single packages using the `module/package` syntax.
 
 A more complete `Furyfile` would be:
 
@@ -167,7 +169,7 @@ bases:
   - name: opa/gatekeeper
 ```
 
-You can find out what packages are inside each module by referring to each module documentation.
+You can find out what packages are inside each module by referring to each module's documentation.
 
 ### 2. Download the modules
 
@@ -208,7 +210,7 @@ The subcommands accept the following options:
 ### Configuration file
 
 The cluster creation feature uses a different configuration file than the `Furyfile.yml`.
-While the `Furyfile.yml` file is used by the package-manager features, the cluster creation feature use a separated `cluster.yml` file:
+While the `Furyfile.yml` file is used by the package-manager features, the cluster creation feature uses a separated `cluster.yml` file:
 
 ```yaml
 kind:           # Cluster or Bootstrap
@@ -253,7 +255,7 @@ The following workflow describes a setup of a cluster using an already existing 
 ### Provisioners
 
 To deploy all the infrastructure components `furyctl` uses *provisioners*.
-Provisioners are terraform projects directly integrated with the `furyctl` binary. Provisioners can be open-source (e.g. cluster EKS provisioner) or enterprise only (e.g. vSphere provisioner).
+Provisioners are Terraform projects directly integrated with the `furyctl` binary. Provisioners can be open-source (e.g. cluster EKS provisioner) or enterprise only (e.g. vSphere provisioner).
 
 To use an **enterprise** provisioner, you need to specify a token in the
 `furyctl {bootstrap,cluster} {init,apply,destroy} --token YOUR_TOKEN` commands.
@@ -267,7 +269,7 @@ Contact [sales@sighup.io](mailto:sales@sighup.io) to get more details about this
 The available `bootstrap` provisioners are:
 
 | Provisioner | Description                                                                                                                                            |
-| ----------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `aws`       | It creates a VPC with all the requirements to deploy a Kubernetes Cluster. It also includes a VPN instance easily manageable by using `furyagent`.     |
 | `gcp`       | It creates a Network with all the requirements to deploy a Kubernetes Cluster. It also includes a VPN instance easily manageable by using `furyagent`. |
 
@@ -275,7 +277,7 @@ The available `bootstrap` provisioners are:
 
 The available `cluster` provisioners are:
 
-| Provisioner |                                                               Description                                                                |
+| Provisioner | Description                                                                                                                              |
 | ----------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
 | `eks`       | Creates an EKS cluster on an already existing VPC. It uses the [fury-eks-installer](https://github.com/sighupio/fury-eks-installer)      |
 | `gke`       | Creates an GKE cluster on an already existing Network. It uses the [fury-gke-installer](https://github.com/sighupio/fury-gke-installer). |
