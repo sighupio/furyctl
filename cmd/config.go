@@ -6,7 +6,6 @@ package cmd
 
 import (
 	"fmt"
-	"path"
 	"strings"
 
 	"github.com/sirupsen/logrus"
@@ -14,8 +13,6 @@ import (
 
 const (
 	configFile              = "Furyfile"
-	httpsRepoPrefix         = "git::https://github.com/sighupio/fury-kubernetes"
-	sshRepoPrefix           = "git@github.com:sighupio/fury-kubernetes"
 	defaultVendorFolderName = "vendor"
 )
 
@@ -56,16 +53,17 @@ type VersionPattern map[string]string
 
 // Package is the type to contain the definition of a single package
 type Package struct {
-	Name        string `yaml:"name"`
-	Version     string `yaml:"version"`
-	url         string
-	dir         string
-	kind        string
-	ProviderOpt ProviderOptSpec `mapstructure:"provider"`
-	Registry    bool            `mapstructure:"registry"`
+	Name         string          `yaml:"name"`
+	Version      string          `yaml:"version"`
+	Url          string          `yaml:"url"`
+	Dir          string          `yaml:"dir"`
+	Kind         string          `yaml:"kind"`
+	ProviderOpt  ProviderOptSpec `mapstructure:"provider"`
+	ProviderKind ProviderKind    `mapstructure:"providerKind"`
+	Registry     bool            `mapstructure:"registry"`
 }
 
-// ProviderSpec is the type that allows to explicit name of cloud provider and referenced label
+// ProviderOptSpec is the type that allows to explicit name of cloud provider and referenced label
 type ProviderOptSpec struct {
 	Name  string `mapstructure:"name"`
 	Label string `mapstructure:"label"`
@@ -82,61 +80,40 @@ func (f *Furyconf) Validate() error {
 // Parse reads the furyconf structs and created a list of packaged to be downloaded
 func (f *Furyconf) Parse(prefix string) ([]Package, error) {
 	pkgs := make([]Package, 0, 0)
-	// First we aggreggate all packages in one single list
+	// First we aggregate all packages in one single list
 	for _, v := range f.Roles {
-		v.kind = "roles"
+		v.Kind = "roles"
 		if strings.HasPrefix(v.Name, prefix) {
 			pkgs = append(pkgs, v)
 		}
 	}
 	for _, v := range f.Modules {
-		v.kind = "modules"
+		v.Kind = "modules"
 		if strings.HasPrefix(v.Name, prefix) {
 			pkgs = append(pkgs, v)
 		}
 	}
 	for _, v := range f.Bases {
-		v.kind = "katalog"
+		v.Kind = "katalog"
 		if strings.HasPrefix(v.Name, prefix) {
 			pkgs = append(pkgs, v)
 		}
 	}
-	repoPrefix := sshRepoPrefix
-	dotGitParticle := ""
 
-	if https {
-		repoPrefix = httpsRepoPrefix
-		dotGitParticle = ".git"
-	}
-
-	// Now we generate the download url and local dir
-	for i := 0; i < len(pkgs); i++ {
-		version := pkgs[i].Version
-
-		if version == "" {
-			for k, v := range f.Versions {
-				if strings.HasPrefix(pkgs[i].Name, k) {
-					version = v
-					logrus.Infof("using %v for package %s", version, pkgs[i].Name)
-					break
-				}
+	// Now we parse packages and create a list of directories to be downloaded
+	for i := range pkgs {
+		for k, v := range f.Versions {
+			if strings.HasPrefix(pkgs[i].Name, k) {
+				pkgs[i].Version = v
+				break
 			}
 		}
-		registry := pkgs[i].Registry
-		cloudPlatform := pkgs[i].ProviderOpt
-		pkgKind := pkgs[i].kind
 
-		pkgs[i].url = newURLSpec(repoPrefix, strings.Split(pkgs[i].Name, "/"), dotGitParticle, pkgKind, version, registry, cloudPlatform, newKind(pkgKind, f.Provider)).getConsumableURL()
-
-		pkgs[i].dir = newDir(f.VendorFolderName, pkgKind, pkgs[i].Name, registry, cloudPlatform).getConsumableDirectory()
-
+		pkgs[i].ProviderKind = f.Provider[pkgs[i].Kind]
+		pkgs[i].Dir = newDir(f.VendorFolderName, pkgs[i]).getConsumableDirectory()
 	}
 
 	return pkgs, nil
-}
-
-func newKind(kind string, provider ProviderPattern) ProviderKind {
-	return provider[kind]
 }
 
 func (k *ProviderKind) getLabeledURI(providerName, label string) (string, error) {
@@ -179,13 +156,13 @@ type DirSpec struct {
 	Provider     ProviderOptSpec
 }
 
-func newDir(folder, kind, name string, registry bool, provider ProviderOptSpec) *DirSpec {
+func newDir(vendorFolder string, pkg Package) *DirSpec {
 	return &DirSpec{
-		VendorFolder: folder,
-		Kind:         kind,
-		Name:         name,
-		Registry:     registry,
-		Provider:     provider,
+		VendorFolder: vendorFolder,
+		Kind:         pkg.Kind,
+		Name:         pkg.Name,
+		Registry:     pkg.Registry,
+		Provider:     pkg.ProviderOpt,
 	}
 }
 
@@ -195,62 +172,4 @@ func (d *DirSpec) getConsumableDirectory() string {
 		return fmt.Sprintf("%s/%s/%s/%s/%s", d.VendorFolder, d.Kind, d.Provider.Label, d.Provider.Name, d.Name)
 	}
 	return fmt.Sprintf("%s/%s/%s", d.VendorFolder, d.Kind, d.Name)
-}
-
-//URLSpec is the representation of the fields needed to elaborate a url
-type URLSpec struct {
-	Prefix         string
-	Blocks         []string
-	DotGitParticle string
-	Kind           string
-	Version        string
-	Registry       bool
-	CloudProvider  ProviderOptSpec
-	KindSpec       ProviderKind
-}
-
-// newUrl initialize the URLSpec struct
-func newURLSpec(prefix string, blocks []string, dotGitParticle, kind, version string, registry bool, cloud ProviderOptSpec, kindSpec ProviderKind) *URLSpec {
-	return &URLSpec{
-		Registry:       registry,
-		Prefix:         prefix,
-		Blocks:         blocks,
-		DotGitParticle: dotGitParticle,
-		Kind:           kind,
-		Version:        version,
-		CloudProvider:  cloud,
-		KindSpec:       kindSpec,
-	}
-}
-
-//getConsumableURL returns an url that can be used for download
-func (n *URLSpec) getConsumableURL() string {
-
-	if !n.Registry {
-		return n.getURLFromCompanyRepos()
-	}
-
-	return fmt.Sprintf("%s/%s%s?ref=%s", n.KindSpec.pickCloudProviderURL(n.CloudProvider), n.Blocks[0], ".git", n.Version)
-
-}
-
-func (n *URLSpec) getURLFromCompanyRepos() string {
-
-	if len(n.Blocks) == 0 {
-		// todo should return error?
-		return ""
-	}
-
-	if len(n.Blocks) == 1 {
-		return fmt.Sprintf("%s-%s%s//%s?ref=%s", n.Prefix, n.Blocks[0], n.DotGitParticle, n.Kind, n.Version)
-	}
-	// always len(n.Blocks) >= 2 {
-	var remainingBlocks string
-
-	for i := 1; i < len(n.Blocks); i++ {
-		remainingBlocks = path.Join(remainingBlocks, n.Blocks[i])
-	}
-
-	return fmt.Sprintf("%s-%s%s//%s/%s?ref=%s", n.Prefix, n.Blocks[0], n.DotGitParticle, n.Kind, remainingBlocks, n.Version)
-
 }

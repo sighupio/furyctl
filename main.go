@@ -15,9 +15,16 @@
 package main
 
 import (
+	"os"
+
+	"github.com/sirupsen/logrus"
+
 	"github.com/sighupio/furyctl/cmd"
 )
 
 func main() {
-	cmd.Execute()
+	if err := cmd.Execute(); err != nil {
+		logrus.Error(err)
+		os.Exit(1)
+	}
 }

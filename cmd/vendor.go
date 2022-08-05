@@ -11,48 +11,58 @@ import (
 )
 
 func init() {
+	vendorCmd.PersistentFlags().BoolVarP(&conf.DownloadOpts.Https, "https", "H", false, "if true downloads using https instead of ssh")
+	vendorCmd.PersistentFlags().StringVarP(&conf.Prefix, "prefix", "P", "", "Add filtering on download with prefix, to reduce update scope")
 	rootCmd.AddCommand(vendorCmd)
-	vendorCmd.PersistentFlags().BoolVarP(&parallel, "parallel", "p", true, "if true enables parallel downloads")
-	vendorCmd.PersistentFlags().BoolVarP(&https, "https", "H", false, "if true downloads using https instead of ssh")
-	vendorCmd.PersistentFlags().StringVarP(&prefix, "prefix", "P", "", "Add filtering on download with prefix, to reduce update scope")
+}
+
+var conf = Config{}
+
+type Config struct {
+	Packages     []Package
+	DownloadOpts DownloadOpts
+	Prefix       string
 }
 
 // vendorCmd represents the vendor command
 var vendorCmd = &cobra.Command{
-	Use:   "vendor",
-	Short: "Download dependencies specified in Furyfile.yml",
-	Long:  "Download dependencies specified in Furyfile.yml",
-	Run: func(cmd *cobra.Command, args []string) {
+	Use:           "vendor",
+	Short:         "Download dependencies specified in Furyfile.yml",
+	Long:          "Download dependencies specified in Furyfile.yml",
+	SilenceUsage:  true,
+	SilenceErrors: true,
+	RunE: func(cmd *cobra.Command, args []string) error {
 		viper.SetConfigType("yml")
 		viper.AddConfigPath(".")
 		viper.SetConfigName(configFile)
 		config := new(Furyconf)
+
 		if err := viper.ReadInConfig(); err != nil {
-			logrus.Fatalf("Error reading config file, %s", err)
+			return err
 		}
-		err := viper.Unmarshal(config)
+
+		if err := viper.Unmarshal(config); err != nil {
+			return err
+		}
+
+		if err := config.Validate(); err != nil {
+			return err
+		}
+
+		list, err := config.Parse(conf.Prefix)
+
 		if err != nil {
-			logrus.Fatalf("unable to decode into struct, %v", err)
+			return err
 		}
 
-		err = config.Validate()
-		if err != nil {
-			logrus.WithError(err).Error("ERROR VALIDATING")
+		for _, p := range list {
+			if p.Version == "" {
+				logrus.Warnf("package %s has no version specified. Using default branch from remote.", p.Name)
+			} else {
+				logrus.Infof("using %v for package %s", p.Version, p.Name)
+			}
 		}
 
-		list, err := config.Parse(prefix)
-
-		if err != nil {
-			//logrus.Errorln("ERROR PARSING: ", err)
-			logrus.WithError(err).Error("ERROR PARSING")
-
-		}
-
-		err = download(list)
-		if err != nil {
-			//logrus.Errorln("ERROR DOWNLOADING: ", err)
-			logrus.WithError(err).Error("ERROR DOWNLOADING")
-
-		}
+		return Download(list, conf.DownloadOpts)
 	},
 }
