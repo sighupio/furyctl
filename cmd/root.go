@@ -5,15 +5,15 @@
 package cmd
 
 import (
-	"os"
 	"time"
 
 	"github.com/briandowns/spinner"
-	"github.com/sighupio/furyctl/internal/io"
-	"github.com/sighupio/furyctl/pkg/analytics"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
+
+	"github.com/sighupio/furyctl/internal/io"
+	"github.com/sighupio/furyctl/pkg/analytics"
 )
 
 var (
@@ -28,16 +28,14 @@ var (
 )
 
 // Execute is the main entrypoint of furyctl
-func Execute() {
-	if err := rootCmd.Execute(); err != nil {
-		logrus.Errorln(err)
-		os.Exit(1)
-	}
+func Execute() error {
+	return rootCmd.Execute()
 }
 
 func init() {
 	// rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.furyctl.yaml)")
 	rootCmd.AddCommand(versionCmd)
+
 	rootCmd.PersistentFlags().Bool("debug", false, "Enables furyctl debug output")
 	rootCmd.PersistentFlags().BoolVarP(&disableAnalytics, "disable", "d", false, "Disable analytics")
 	rootCmd.PersistentFlags().BoolVarP(&disableTty, "no-tty", "T", false, "Disable TTY")
