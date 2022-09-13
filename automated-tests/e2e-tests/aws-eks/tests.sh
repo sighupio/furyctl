@@ -18,7 +18,7 @@ fi
 @test "furyctl" {
     info
     init(){
-        ./dist/furyctl-${OS}_${OS}_${CPUARCH}/furyctl version
+        ./dist/furyctl-${OS}_${OS}_${CPUARCH}/furyctl --no-tty version
     }
     run init
     if [[ $status -ne 0 ]]; then
@@ -39,7 +39,7 @@ fi
 @test "Bootstrap init" {
     info
     init(){
-        ./dist/furyctl-${OS}_${OS}_${CPUARCH}/furyctl -d --debug bootstrap init --config ./automated-tests/e2e-tests/aws-eks/bootstrap.yml -w ./automated-tests/e2e-tests/aws-eks/bootstrap --reset
+        ./dist/furyctl-${OS}_${OS}_${CPUARCH}/furyctl --no-tty -d --debug bootstrap init --config ./automated-tests/e2e-tests/aws-eks/bootstrap.yml -w ./automated-tests/e2e-tests/aws-eks/bootstrap --reset
     }
     run init
 
@@ -52,7 +52,7 @@ fi
 @test "Bootstrap apply (dry-run)" {
     info
     apply(){
-        ./dist/furyctl-${OS}_${OS}_${CPUARCH}/furyctl -d --debug bootstrap apply --dry-run --config ./automated-tests/e2e-tests/aws-eks/bootstrap.yml -w ./automated-tests/e2e-tests/aws-eks/bootstrap
+        ./dist/furyctl-${OS}_${OS}_${CPUARCH}/furyctl --no-tty -d --debug bootstrap apply --dry-run --config ./automated-tests/e2e-tests/aws-eks/bootstrap.yml -w ./automated-tests/e2e-tests/aws-eks/bootstrap
     }
     run apply
 
@@ -67,7 +67,7 @@ fi
 @test "Bootstrap apply" {
     info
     apply(){
-        ./dist/furyctl-${OS}_${OS}_${CPUARCH}/furyctl -d --debug bootstrap apply --config ./automated-tests/e2e-tests/aws-eks/bootstrap.yml -w ./automated-tests/e2e-tests/aws-eks/bootstrap
+        ./dist/furyctl-${OS}_${OS}_${CPUARCH}/furyctl --no-tty -d --debug bootstrap apply --config ./automated-tests/e2e-tests/aws-eks/bootstrap.yml -w ./automated-tests/e2e-tests/aws-eks/bootstrap
     }
     run apply
 
@@ -164,7 +164,7 @@ fi
 @test "Cluster init" {
     info
     init(){
-        ./dist/furyctl-${OS}_${OS}_${CPUARCH}/furyctl -d --debug cluster init --config ./automated-tests/e2e-tests/aws-eks/cluster.yml -w ./automated-tests/e2e-tests/aws-eks/cluster --reset
+        ./dist/furyctl-${OS}_${OS}_${CPUARCH}/furyctl --no-tty -d --debug cluster init --config ./automated-tests/e2e-tests/aws-eks/cluster.yml -w ./automated-tests/e2e-tests/aws-eks/cluster --reset
     }
     run init
 
@@ -177,7 +177,7 @@ fi
 @test "Cluster apply (dry-run)" {
     info
     apply(){
-        ./dist/furyctl-${OS}_${OS}_${CPUARCH}/furyctl -d --debug cluster apply --dry-run --config ./automated-tests/e2e-tests/aws-eks/cluster.yml -w ./automated-tests/e2e-tests/aws-eks/cluster
+        ./dist/furyctl-${OS}_${OS}_${CPUARCH}/furyctl --no-tty -d --debug cluster apply --dry-run --config ./automated-tests/e2e-tests/aws-eks/cluster.yml -w ./automated-tests/e2e-tests/aws-eks/cluster
     }
     run apply
 
@@ -192,7 +192,7 @@ fi
 @test "Cluster apply" {
     info
     apply(){
-        ./dist/furyctl-${OS}_${OS}_${CPUARCH}/furyctl -d --debug cluster apply --config ./automated-tests/e2e-tests/aws-eks/cluster.yml -w ./automated-tests/e2e-tests/aws-eks/cluster
+        ./dist/furyctl-${OS}_${OS}_${CPUARCH}/furyctl --no-tty -d --debug cluster apply --config ./automated-tests/e2e-tests/aws-eks/cluster.yml -w ./automated-tests/e2e-tests/aws-eks/cluster
     }
     run apply
 
@@ -253,7 +253,7 @@ fi
 @test "Cluster destroy" {
     info
     destroy(){
-        ./dist/furyctl-${OS}_${OS}_${CPUARCH}/furyctl -d --debug cluster destroy --force --config ./automated-tests/e2e-tests/aws-eks/cluster.yml -w ./automated-tests/e2e-tests/aws-eks/cluster
+        ./dist/furyctl-${OS}_${OS}_${CPUARCH}/furyctl --no-tty -d --debug cluster destroy --force --config ./automated-tests/e2e-tests/aws-eks/cluster.yml -w ./automated-tests/e2e-tests/aws-eks/cluster
     }
     run destroy
 
@@ -281,7 +281,7 @@ fi
 @test "Bootstrap destroy" {
     info
     destroy(){
-        ./dist/furyctl-${OS}_${OS}_${CPUARCH}/furyctl -d --debug bootstrap destroy --force --config ./automated-tests/e2e-tests/aws-eks/bootstrap.yml -w ./automated-tests/e2e-tests/aws-eks/bootstrap
+        ./dist/furyctl-${OS}_${OS}_${CPUARCH}/furyctl --no-tty -d --debug bootstrap destroy --force --config ./automated-tests/e2e-tests/aws-eks/bootstrap.yml -w ./automated-tests/e2e-tests/aws-eks/bootstrap
     }
     run destroy
 

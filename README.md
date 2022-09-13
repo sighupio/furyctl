@@ -32,11 +32,7 @@ You can find `furyctl` binaries on the [Releases page](https://github.com/sighup
 To download the latest release, run:
 
 ```bash
-CPUARCH="amd64"
-if [ $(uname -m) = "arm64" ]; then
-	CPUARCH="arm64"
-fi
-wget -q "https://github.com/sighupio/furyctl/releases/download/v0.7.0/furyctl-$(uname -s)-${CPUARCH}" -O /tmp/furyctl
+wget -q "https://github.com/sighupio/furyctl/releases/download/v0.8.0/furyctl-$(uname -s)-amd64" -O /tmp/furyctl
 chmod +x /tmp/furyctl
 sudo mv /tmp/furyctl /usr/local/bin/furyctl
 ```
@@ -62,8 +58,8 @@ Check that everything is working correctly with `furyctl version`:
 
 ```bash
 furyctl version
-INFO[0000] Furyctl version 0.6.1
-INFO[0000] built 2021-09-20T15:36:15Z from commit 012d862edc6b452752a8955fc624f6064566a6cb
+INFO[0000] Furyctl version 0.8.0
+INFO[0000] built 2022-09-13T16:52:19Z from commit b3c9df89803ed7a4fe4a05d6c3eb859cc00276b6
 ```
 
 > 💡 **TIP**
@@ -238,7 +234,7 @@ Once the bootstrap process is up to date, the cluster command can be triggered u
 
 ```bash
 +--------------------------+   +--------------------------+   +--------------------------+   +--------------------------+
-| furyctl bootstrap init   +-->+ furyctl bootstrap apply  +-->+ furyctl cluster init     +-->+ furyctl cluster apply   |
+| furyctl bootstrap init   +-->+ furyctl bootstrap apply  +-->+ furyctl cluster init     +-->+ furyctl cluster apply    |
 +--------------------------+   +--------------------------+   +--------------------------+   +--------------------------+
 ```
 
