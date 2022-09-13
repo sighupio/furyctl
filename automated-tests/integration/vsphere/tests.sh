@@ -18,7 +18,7 @@ fi
 @test "furyctl" {
     info
     init(){
-        ./dist/furyctl-${OS}_${OS}_${CPUARCH}/furyctl version
+        ./dist/furyctl-${OS}_${OS}_${CPUARCH}/furyctl --no-tty version
     }
     run init
     if [[ ${status} -ne 0 ]]; then
@@ -30,7 +30,7 @@ fi
 @test "Cluster init" {
     info
     init(){
-        ./dist/furyctl-${OS}_${OS}_${CPUARCH}/furyctl -d --debug cluster init --config ./automated-tests/integration/vsphere/cluster.yml -w ./automated-tests/integration/vsphere/cluster --reset
+        ./dist/furyctl-${OS}_${OS}_${CPUARCH}/furyctl --no-tty -d --debug cluster init --config ./automated-tests/integration/vsphere/cluster.yml -w ./automated-tests/integration/vsphere/cluster --reset
     }
     run init
     if [[ ${status} -ne 0 ]]; then
