@@ -12,7 +12,6 @@ builds:
     id: furyctl-darwin
     goarch:
       - amd64
-      - arm64
     goos:
       - darwin
     env:
@@ -23,7 +22,6 @@ builds:
     id: furyctl-linux
     goarch:
       - amd64
-      - arm64
     goos:
       - linux
     env:
