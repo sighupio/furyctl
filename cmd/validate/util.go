@@ -1,79 +1,86 @@
 package validate
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
-	"os"
+	"path/filepath"
+	"strings"
 
+	"github.com/hashicorp/go-getter"
 	log "github.com/sirupsen/logrus"
-	"gopkg.in/yaml.v2"
 
+	"github.com/sighupio/furyctl/cmd/cmdutil"
 	"github.com/sighupio/furyctl/internal/schema/santhosh"
 )
+
+const defaultSchemaBaseUrl = "git::https://git@github.com/sighupio/fury-distribution//schemas?ref=feature/create-draft-of-the-furyctl-yaml-json-schema"
 
 var (
 	ErrHasValidationErrors = errors.New("schema has validation errors")
 	ErrUnknownOutputFormat = errors.New("unknown output format")
 )
 
-type FuryDistributionSpecs struct {
-	Version string `json:"version"`
-	Kind    string `json:"kind"`
+type FuryctlConfig struct {
+	ApiVersion string `yaml:"apiVersion"`
+	Kind       string `yaml:"kind"`
+	Spec       struct {
+		DistributionVersion string `yaml:"distributionVersion"`
+	} `yaml:"spec"`
 }
 
-func LoadConfig[T any](file string) T {
-	var conf T
+func GetSchemaPath(basePath string, conf FuryctlConfig) string {
+	parts := strings.Split(conf.ApiVersion, "/")
+	foo := strings.Replace(parts[0], ".sighup.io", "", 1)
+	bar := parts[1]
+	filename := fmt.Sprintf("%s-%s-%s.json", strings.ToLower(conf.Kind), foo, bar)
 
-	configData, err := os.ReadFile(file)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	if err := yaml.Unmarshal(configData, &conf); err != nil {
-		log.Fatal(err)
-	}
-
-	return conf
+	return filepath.Join(basePath, conf.Spec.DistributionVersion, filename)
 }
 
-func PrintSummary(output string, hasErrors bool) {
-	switch output {
-	case "text":
-		if hasErrors {
-			fmt.Println("Validation failed")
-		} else {
-			fmt.Println("Validation succeeded")
-		}
+func ParseArgs(args []string) (string, error) {
+	basePath := cmdutil.GetWd()
 
-	case "json":
-		if hasErrors {
-			fmt.Println("{\"result\":\"Validation failed\"}")
-		} else {
-			fmt.Println("{\"result\":\"Validation succeeded\"}")
-		}
+	furyctlFile := filepath.Join(basePath, "furyctl.yaml")
 
-	default:
-		log.Fatal(fmt.Errorf("'%s': %w", output, ErrUnknownOutputFormat))
+	if len(args) == 1 {
+		furyctlFile = args[0]
+	}
+
+	if len(args) > 1 {
+		return "", fmt.Errorf("%v, only 1 expected", cmdutil.ErrTooManyArguments)
+	}
+
+	return furyctlFile, nil
+}
+
+func DownloadSchemas(distroLocation string) (string, error) {
+	src := defaultSchemaBaseUrl
+	if distroLocation != "" {
+		src = distroLocation
+	}
+
+	dst := "/tmp/fury-distribution/schemas"
+
+	client := &getter.Client{
+		Src:  src,
+		Dst:  dst,
+		Mode: getter.ClientModeDir,
+	}
+
+	return dst, client.Get()
+}
+
+func PrintSummary(hasErrors bool) {
+	if hasErrors {
+		fmt.Println("Validation failed")
+	} else {
+		fmt.Println("Validation succeeded")
 	}
 }
 
-func PrintResults(output string, err error, conf any, configFile string) {
+func PrintResults(err error, conf any, configFile string) {
 	ptrPaths := santhosh.GetPtrPaths(err)
 
-	switch output {
-	case "text":
-		printTextResults(ptrPaths, err, conf, configFile)
-
-	case "json":
-		printJSONResults(ptrPaths, err, conf, configFile)
-
-	default:
-		log.Fatal(fmt.Errorf("'%s': %w", output, ErrUnknownOutputFormat))
-	}
-}
-
-func printTextResults(ptrPaths [][]any, err error, conf any, configFile string) {
 	fmt.Printf("CONFIG FILE %s\n", configFile)
 
 	for _, path := range ptrPaths {
@@ -90,34 +97,4 @@ func printTextResults(ptrPaths [][]any, err error, conf any, configFile string) 
 	}
 
 	fmt.Println(err)
-}
-
-func printJSONResults(ptrPaths [][]any, err error, conf any, configFile string) {
-	for _, path := range ptrPaths {
-		value, serr := santhosh.GetValueAtPath(conf, path)
-		if serr != nil {
-			log.Fatal(serr)
-		}
-
-		jv, jerr := json.Marshal(
-			map[string]any{
-				"file":    configFile,
-				"message": "path contains an invalid configuration value",
-				"path":    santhosh.JoinPtrPath(path),
-				"value":   value,
-			},
-		)
-		if jerr != nil {
-			log.Fatal(jerr)
-		}
-
-		fmt.Println(jv)
-	}
-
-	jv, jerr := json.Marshal(err)
-	if jerr != nil {
-		log.Fatal(jerr)
-	}
-
-	fmt.Println(jv)
 }

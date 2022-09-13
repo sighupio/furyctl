@@ -7,7 +7,7 @@ require (
 	github.com/dukex/mixpanel v0.0.0-20180925151559-f8d5594f958e
 	github.com/gobuffalo/packr/v2 v2.8.3
 	github.com/hashicorp/go-checkpoint v0.5.0
-	github.com/hashicorp/go-getter v1.6.1
+	github.com/hashicorp/go-getter v1.6.2
 	github.com/hashicorp/go-version v1.3.0
 	github.com/hashicorp/terraform-exec v0.13.3
 	github.com/relex/aini v1.2.1
