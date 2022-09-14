@@ -31,7 +31,7 @@ var vendorCmd = &cobra.Command{
 	Long:          "download KFD modules and dependencies specified in Furyfile.yml",
 	SilenceUsage:  true,
 	SilenceErrors: true,
-	RunE: func(cmd *cobra.Command, args []string) error {
+	RunE: func(_ *cobra.Command, _ []string) error {
 		viper.SetConfigType("yml")
 		viper.AddConfigPath(".")
 		viper.SetConfigName(configFile)
@@ -50,7 +50,6 @@ var vendorCmd = &cobra.Command{
 		}
 
 		list, err := config.Parse(conf.Prefix)
-
 		if err != nil {
 			return err
 		}

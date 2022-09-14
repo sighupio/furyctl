@@ -206,7 +206,7 @@ func (tm *Model) generateContext() (map[string]map[any]any, error) {
 			cPath = v
 		}
 
-		yamlConfig, err := yaml2.FromFile[map[any]any](cPath)
+		yamlConfig, err := yaml2.FromFileV2[map[any]any](cPath)
 		if err != nil {
 			return nil, err
 		}

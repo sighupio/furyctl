@@ -5,18 +5,19 @@
 package yaml_test
 
 import (
-	yaml2 "github.com/sighupio/furyctl/internal/yaml"
-	"github.com/stretchr/testify/assert"
-	"gopkg.in/yaml.v2"
 	"os"
 	"testing"
+
+	yaml "github.com/sighupio/furyctl/internal/yaml"
+	"github.com/stretchr/testify/assert"
+	yaml2 "gopkg.in/yaml.v2"
 )
 
 type TestYaml struct {
 	Test string `yaml:"test"`
 }
 
-func TestFromFile(t *testing.T) {
+func TestFromFileV2(t *testing.T) {
 	test := TestYaml{
 		"test",
 	}
@@ -29,7 +30,7 @@ func TestFromFile(t *testing.T) {
 
 	assert.NoError(t, err)
 
-	testBytes, err := yaml.Marshal(test)
+	testBytes, err := yaml2.Marshal(test)
 
 	assert.NoError(t, err)
 
@@ -39,7 +40,7 @@ func TestFromFile(t *testing.T) {
 
 	defer os.RemoveAll(path)
 
-	testRes, err := yaml2.FromFile[TestYaml](path + "/test.yaml")
+	testRes, err := yaml.FromFileV2[TestYaml](path + "/test.yaml")
 
 	assert.NoError(t, err)
 
