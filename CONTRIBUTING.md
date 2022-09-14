@@ -76,13 +76,13 @@ Then, add the `Dummy` configuration to the configuration parser in the `internal
 +               dummySpec := bootstrapcfg.Dummy{}
 +               err = yaml.Unmarshal(specBytes, &dummySpec)
 +               if err != nil {
-+                       log.Errorf("error parsing configuration file: %v", err)
++                       logrus.Errorf("error parsing configuration file: %v", err)
 +                       return err
 +               }
 +               config.Spec = dummySpec
 +               return nil
         default:
-                log.Error("Error parsing the configuration file. Provisioner not found")
+                logrus.Error("Error parsing the configuration file. Provisioner not found")
                 return errors.New("Bootstrap provisioner not found")
 ```
 
@@ -139,7 +139,7 @@ index 8c5a6d8..a3d6ecf 100644
 +       case config.Provisioner == "dummy":
 +               return dummy.New(&config), nil
         default:
-                log.Error("Provisioner not found")
+                logrus.Error("Provisioner not found")
                 return nil, errors.New("Provisioner not found")
 ```
 

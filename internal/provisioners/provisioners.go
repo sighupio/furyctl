@@ -17,7 +17,7 @@ import (
 	"github.com/sighupio/furyctl/internal/cluster/provisioners/gke"
 	"github.com/sighupio/furyctl/internal/cluster/provisioners/vsphere"
 	"github.com/sighupio/furyctl/internal/configuration"
-	log "github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 )
 
 // Provisioner represents a kubernetes terraform provisioner
@@ -48,7 +48,7 @@ func Get(config configuration.Configuration) (Provisioner, error) {
 	case config.Kind == "Bootstrap":
 		return getBootstrapProvisioner(config)
 	default:
-		log.Errorf("Kind %v not found", config.Kind)
+		logrus.Errorf("Kind %v not found", config.Kind)
 		return nil, fmt.Errorf("kind %v not found", config.Kind)
 	}
 }
@@ -62,7 +62,7 @@ func getClusterProvisioner(config configuration.Configuration) (Provisioner, err
 	case config.Provisioner == "vsphere":
 		return vsphere.New(&config), nil
 	default:
-		log.Error("Provisioner not found")
+		logrus.Error("Provisioner not found")
 		return nil, errors.New("Provisioner not found")
 	}
 }
@@ -73,7 +73,7 @@ func getBootstrapProvisioner(config configuration.Configuration) (Provisioner, e
 	case config.Provisioner == "gcp":
 		return gcp.New(&config), nil
 	default:
-		log.Error("Provisioner not found")
+		logrus.Error("Provisioner not found")
 		return nil, errors.New("Provisioner not found")
 	}
 }

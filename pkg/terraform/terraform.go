@@ -12,7 +12,7 @@ import (
 	"strings"
 
 	"github.com/hashicorp/terraform-exec/tfexec"
-	log "github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 )
 
 type Options struct {
@@ -98,7 +98,7 @@ func envMap(environ []string) map[string]string {
 		if !strings.HasPrefix(k, varEnvVarPrefix) && !forbidenTerraformEnvs[k] {
 			env[k] = v
 		} else {
-			log.Warnf("%v Environment variable discarted. Executor will not use it", k)
+			logrus.Warnf("%v Environment variable discarted. Executor will not use it", k)
 		}
 	}
 	return env
@@ -106,13 +106,13 @@ func envMap(environ []string) map[string]string {
 
 func configureLogger(tf *tfexec.Terraform, workingDir string, logDir string, debug bool) (err error) {
 	logFile, err := os.Create(fmt.Sprintf("%v/%v/terraform.logs", workingDir, logDir))
-	tf.SetLogger(log.StandardLogger())
+	tf.SetLogger(logrus.StandardLogger())
 	c := &tfwriter{
 		logfile: logFile,
 		debug:   debug,
 	}
 	if err != nil {
-		log.Errorf("Can not init log file. %v", err)
+		logrus.Errorf("Can not init log file. %v", err)
 		return err
 	}
 	tf.SetStdout(c)
