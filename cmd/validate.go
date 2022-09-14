@@ -54,5 +54,4 @@ var validateCmd = &cobra.Command{
 
 func init() {
 	validateCmd.Flags().StringP("distro-location", "l", "", "Base URL used to download schemas.")
-	rootCmd.AddCommand(validateCmd)
 }
