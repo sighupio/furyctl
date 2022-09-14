@@ -23,7 +23,8 @@ import (
 	"github.com/relex/aini"
 	cfg "github.com/sighupio/furyctl/internal/cluster/configuration"
 	"github.com/sighupio/furyctl/internal/configuration"
-	log "github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus"
+	"google.golang.org/appengine/log"
 )
 
 // VSphere represents the VSphere provisioner
@@ -61,12 +62,12 @@ func (e *VSphere) UpdateMessage() string {
 	var output map[string]tfexec.OutputMeta
 	output, err := e.terraform.Output(context.Background())
 	if err != nil {
-		log.Error("Can not get output values")
+		logrus.Error("Can not get output values")
 	}
 	var inventoryOutput string
 	err = json.Unmarshal(output["ansible_inventory"].Value, &inventoryOutput)
 	if err != nil {
-		log.Error("Can not get `ansible_inventory` value")
+		logrus.Error("Can not get `ansible_inventory` value")
 	}
 	inventory, _ := aini.Parse(strings.NewReader(inventoryOutput))
 	kubernetes_control_plane_address := strings.Replace(inventory.Groups["all"].Vars["kubernetes_control_plane_address"], "\"", "", -1)
@@ -327,11 +328,11 @@ func downloadAnsibleRoles(workingDirectory string) error {
 	defer os.Setenv("NETRC", p_netrc)
 
 	netrcpath := filepath.Join(workingDirectory, "configuration/.netrc")
-	log.Infof("Configuring the NETRC environment variable: %v", netrcpath)
+	logrus.Infof("Configuring the NETRC environment variable: %v", netrcpath)
 	os.Setenv("NETRC", netrcpath)
 
 	downloadPath := filepath.Join(workingDirectory, "provision/roles")
-	log.Infof("Ansible roles download path: %v", downloadPath)
+	logrus.Infof("Ansible roles download path: %v", downloadPath)
 	if err := os.Mkdir(downloadPath, 0755); err != nil {
 		return err
 	}
@@ -348,7 +349,7 @@ func downloadAnsibleRoles(workingDirectory string) error {
 
 // Plan runs a dry run execution
 func (e VSphere) Plan() (err error) {
-	log.Info("[DRYRUN] Updating VSphere Cluster project")
+	logrus.Info("[DRYRUN] Updating VSphere Cluster project")
 	// TODO: give the name of the file
 	err = e.createVarFile()
 	if err != nil {
@@ -357,48 +358,48 @@ func (e VSphere) Plan() (err error) {
 	var changes bool
 	changes, err = e.terraform.Plan(context.Background(), tfexec.VarFile(fmt.Sprintf("%v/vsphere.tfvars", e.terraform.WorkingDir())))
 	if err != nil {
-		log.Fatalf("[DRYRUN] Something went wrong while updating vsphere. %v", err)
+		logrus.Fatalf("[DRYRUN] Something went wrong while updating vsphere. %v", err)
 		return err
 	}
 	if changes {
-		log.Warn("[DRYRUN] Something changed along the time. Remove dryrun option to apply the desired state")
+		logrus.Warn("[DRYRUN] Something changed along the time. Remove dryrun option to apply the desired state")
 	} else {
-		log.Info("[DRYRUN] Everything is up to date")
+		logrus.Info("[DRYRUN] Everything is up to date")
 	}
 
-	log.Info("[DRYRUN] VSphere Updated")
+	logrus.Info("[DRYRUN] VSphere Updated")
 	return nil
 }
 
 // Update runs terraform apply in the project
 func (e VSphere) Update() (string, error) {
-	log.Info("Updating VSphere project")
+	logrus.Info("Updating VSphere project")
 	err := e.createVarFile()
 	if err != nil {
 		return "", err
 	}
 	err = e.terraform.Apply(context.Background(), tfexec.VarFile(fmt.Sprintf("%v/vsphere.tfvars", e.terraform.WorkingDir())))
 	if err != nil {
-		log.Fatalf("Something went wrong while updating vsphere. %v", err)
+		logrus.Fatalf("Something went wrong while updating vsphere. %v", err)
 		return "", err
 	}
 
 	var output map[string]tfexec.OutputMeta
 	output, err = e.terraform.Output(context.Background())
 	if err != nil {
-		log.Error("Can not get output values")
+		logrus.Error("Can not get output values")
 		return "", err
 	}
 
 	var ansibleInventory, haproxyConfig string
 	err = json.Unmarshal(output["ansible_inventory"].Value, &ansibleInventory)
 	if err != nil {
-		log.Error("Can not get `ansible_inventory` value")
+		logrus.Error("Can not get `ansible_inventory` value")
 		return "", err
 	}
 	err = json.Unmarshal(output["haproxy_config"].Value, &haproxyConfig)
 	if err != nil {
-		log.Error("Can not get `haproxy_config` value")
+		logrus.Error("Can not get `haproxy_config` value")
 		return "", err
 	}
 
@@ -415,23 +416,23 @@ func (e VSphere) Update() (string, error) {
 	}
 
 	kubeconfig, err := runAnsiblePlaybook(filepath.Join(e.terraform.WorkingDir(), "provision"), filepath.Join(e.terraform.WorkingDir(), "logs"))
-	log.Info("VSphere Updated")
+	logrus.Info("VSphere Updated")
 	return kubeconfig, err
 }
 
 // Destroy runs terraform destroy in the project
 func (e VSphere) Destroy() (err error) {
-	log.Info("Destroying VSphere project")
+	logrus.Info("Destroying VSphere project")
 	err = e.createVarFile()
 	if err != nil {
 		return err
 	}
 	err = e.terraform.Destroy(context.Background(), tfexec.VarFile(fmt.Sprintf("%v/vsphere.tfvars", e.terraform.WorkingDir())))
 	if err != nil {
-		log.Fatalf("Something went wrong while destroying VSphere cluster project. %v", err)
+		logrus.Fatalf("Something went wrong while destroying VSphere cluster project. %v", err)
 		return err
 	}
-	log.Info("VSphere destroyed")
+	logrus.Info("VSphere destroyed")
 	return nil
 }
 
@@ -467,7 +468,7 @@ func createPKI(workingDirectory string) error {
 		filepath.Join(downloadPath, downloadedExecutableName),
 		filepath.Join(downloadPath, wantedExecutableName),
 	); err != nil {
-		log.Fatal(err)
+		logrus.Fatal(err)
 	}
 
 	os.Chmod(filepath.Join(downloadPath, wantedExecutableName), 0755)
@@ -476,30 +477,30 @@ func createPKI(workingDirectory string) error {
 	cmd.Dir = downloadPath
 	out, err := cmd.Output()
 	if err != nil {
-		log.Debugf("%s", out)
-		log.Fatal(err)
+		logrus.Debugf("%s", out)
+		logrus.Fatal(err)
 	}
 
 	cmd = exec.Command("./furyagent", "init", "etcd")
 	cmd.Dir = downloadPath
 	out, err = cmd.Output()
 	if err != nil {
-		log.Debugf("%s", out)
-		log.Fatal(err)
+		logrus.Debugf("%s", out)
+		logrus.Fatal(err)
 	}
 
 	return nil
 }
 
 func runAnsiblePlaybook(workingDir string, logDir string) (string, error) {
-	log.Infof("Run Ansible playbook in : %v", workingDir)
+	logrus.Infof("Run Ansible playbook in : %v", workingDir)
 
 	// TODO: Get the debug flag from the CLI to output both to a file and stdout
 	// open the log file for writing
 	logFilePath := filepath.Join(logDir, "ansible.log")
 	logFile, err := os.Create(logFilePath)
 	if err != nil {
-		log.Errorf("Can not open the log file %v", logFilePath)
+		logrus.Errorf("Can not open the log file %v", logFilePath)
 		return "", err
 	}
 	defer logFile.Close()
@@ -510,8 +511,8 @@ func runAnsiblePlaybook(workingDir string, logDir string) (string, error) {
 	cmd.Stderr = logFile
 	err = cmd.Run()
 	if err != nil {
-		log.Debug("Please make sure you have Ansible installed in this machine")
-		log.Fatal(err)
+		logrus.Debug("Please make sure you have Ansible installed in this machine")
+		logrus.Fatal(err)
 		return "", err
 	}
 
@@ -521,12 +522,12 @@ func runAnsiblePlaybook(workingDir string, logDir string) (string, error) {
 	cmd.Stderr = logFile
 	err = cmd.Start()
 	if err != nil {
-		log.Fatal(err)
+		logrus.Fatal(err)
 		return "", err
 	}
 	err = cmd.Wait()
 	if err != nil {
-		log.Fatal(err)
+		logrus.Fatal(err)
 		return "", err
 	}
 

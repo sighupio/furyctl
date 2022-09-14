@@ -14,7 +14,7 @@ import (
 
 	"github.com/gobuffalo/packr/v2"
 	"github.com/hashicorp/terraform-exec/tfexec"
-	log "github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 
 	cfg "github.com/sighupio/furyctl/internal/cluster/configuration"
 	"github.com/sighupio/furyctl/internal/configuration"
@@ -43,16 +43,16 @@ func (e *EKS) UpdateMessage() string {
 	var output map[string]tfexec.OutputMeta
 	output, err := e.terraform.Output(context.Background())
 	if err != nil {
-		log.Error("Can not get output values")
+		logrus.Error("Can not get output values")
 	}
 	var clusterEndpoint, clusterOperatorName string
 	err = json.Unmarshal(output["cluster_endpoint"].Value, &clusterEndpoint)
 	if err != nil {
-		log.Error("Can not get `cluster_endpoint` value")
+		logrus.Error("Can not get `cluster_endpoint` value")
 	}
 	err = json.Unmarshal(output["operator_ssh_user"].Value, &clusterOperatorName)
 	if err != nil {
-		log.Error("Can not get `operator_ssh_user` value")
+		logrus.Error("Can not get `operator_ssh_user` value")
 	}
 	return fmt.Sprintf(
 		`[EKS] Fury
@@ -320,7 +320,7 @@ func (e EKS) Prepare() (err error) {
 
 // Plan runs a dry run execution
 func (e EKS) Plan() (err error) {
-	log.Info("[DRYRUN] Updating EKS Cluster project")
+	logrus.Info("[DRYRUN] Updating EKS Cluster project")
 	err = e.createVarFile()
 	if err != nil {
 		return err
@@ -331,22 +331,22 @@ func (e EKS) Plan() (err error) {
 		tfexec.VarFile(fmt.Sprintf("%v/eks.tfvars", e.terraform.WorkingDir())),
 	)
 	if err != nil {
-		log.Fatalf("[DRYRUN] Something went wrong while updating eks. %v", err)
+		logrus.Fatalf("[DRYRUN] Something went wrong while updating eks. %v", err)
 		return err
 	}
 	if changes {
-		log.Warn("[DRYRUN] Something changed along the time. Remove dryrun option to apply the desired state")
+		logrus.Warn("[DRYRUN] Something changed along the time. Remove dryrun option to apply the desired state")
 	} else {
-		log.Info("[DRYRUN] Everything is up to date")
+		logrus.Info("[DRYRUN] Everything is up to date")
 	}
 
-	log.Info("[DRYRUN] EKS Updated")
+	logrus.Info("[DRYRUN] EKS Updated")
 	return nil
 }
 
 // Update runs terraform apply in the project
 func (e EKS) Update() (string, error) {
-	log.Info("Updating EKS project")
+	logrus.Info("Updating EKS project")
 	err := e.createVarFile()
 	if err != nil {
 		return "", err
@@ -356,17 +356,17 @@ func (e EKS) Update() (string, error) {
 		tfexec.VarFile(fmt.Sprintf("%v/eks.tfvars", e.terraform.WorkingDir())),
 	)
 	if err != nil {
-		log.Fatalf("Something went wrong while updating eks. %v", err)
+		logrus.Fatalf("Something went wrong while updating eks. %v", err)
 		return "", err
 	}
 
-	log.Info("EKS Updated")
+	logrus.Info("EKS Updated")
 	return e.kubeconfig()
 }
 
 // Destroy runs terraform destroy in the project
 func (e EKS) Destroy() (err error) {
-	log.Info("Destroying EKS project")
+	logrus.Info("Destroying EKS project")
 	err = e.createVarFile()
 	if err != nil {
 		return err
@@ -376,25 +376,25 @@ func (e EKS) Destroy() (err error) {
 		tfexec.VarFile(fmt.Sprintf("%v/eks.tfvars", e.terraform.WorkingDir())),
 	)
 	if err != nil {
-		log.Fatalf("Something went wrong while destroying EKS cluster project. %v", err)
+		logrus.Fatalf("Something went wrong while destroying EKS cluster project. %v", err)
 		return err
 	}
-	log.Info("EKS destroyed")
+	logrus.Info("EKS destroyed")
 	return nil
 }
 
 func (e EKS) kubeconfig() (string, error) {
-	log.Info("Gathering output file as json")
+	logrus.Info("Gathering output file as json")
 	var output map[string]tfexec.OutputMeta
 	output, err := e.terraform.Output(context.Background())
 	if err != nil {
-		log.Fatalf("Error while getting project output: %v", err)
+		logrus.Fatalf("Error while getting project output: %v", err)
 		return "", err
 	}
 	var creds string
 	err = json.Unmarshal(output["kubeconfig"].Value, &creds)
 	if err != nil {
-		log.Fatalf("Error while tranforming the kubeconfig value into string: %v", err)
+		logrus.Fatalf("Error while tranforming the kubeconfig value into string: %v", err)
 		return "", err
 	}
 	return creds, err

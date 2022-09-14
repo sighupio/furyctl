@@ -16,8 +16,7 @@ import (
 	"github.com/hashicorp/terraform-exec/tfexec"
 	cfg "github.com/sighupio/furyctl/internal/bootstrap/configuration"
 	"github.com/sighupio/furyctl/internal/configuration"
-
-	log "github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 )
 
 // InitMessage return a custom provisioner message the user will see once the cluster is ready to be updated
@@ -39,7 +38,7 @@ func (d *AWS) UpdateMessage() string {
 	var output map[string]tfexec.OutputMeta
 	output, err := d.terraform.Output(context.Background())
 	if err != nil {
-		log.Error("Can not get output values")
+		logrus.Error("Can not get output values")
 	}
 	spec := d.config.Spec.(cfg.AWS)
 	sshUsers := spec.VPN.SSHUsers
@@ -47,23 +46,23 @@ func (d *AWS) UpdateMessage() string {
 	var vpnInstanceIPs, publicSubnetsIDs, privateSubnetsIDs []string
 	err = json.Unmarshal(output["vpn_ip"].Value, &vpnInstanceIPs)
 	if err != nil {
-		log.Error("Can not get `vpn_ip` value")
+		logrus.Error("Can not get `vpn_ip` value")
 	}
 	err = json.Unmarshal(output["vpn_operator_name"].Value, &vpnOperatorName)
 	if err != nil {
-		log.Error("Can not get `vpn_operator_name` value")
+		logrus.Error("Can not get `vpn_operator_name` value")
 	}
 	err = json.Unmarshal(output["vpc_id"].Value, &vpcID)
 	if err != nil {
-		log.Error("Can not get `vpc_id` value")
+		logrus.Error("Can not get `vpc_id` value")
 	}
 	err = json.Unmarshal(output["public_subnets"].Value, &publicSubnetsIDs)
 	if err != nil {
-		log.Error("Can not get `public_subnets` value")
+		logrus.Error("Can not get `public_subnets` value")
 	}
 	err = json.Unmarshal(output["private_subnets"].Value, &privateSubnetsIDs)
 	if err != nil {
-		log.Error("Can not get `private_subnets` value")
+		logrus.Error("Can not get `private_subnets` value")
 	}
 
 	vpnFragment := ""
@@ -222,29 +221,29 @@ func (d AWS) Prepare() (err error) {
 
 // Plan runs a dry run execution
 func (d AWS) Plan() (err error) {
-	log.Info("[DRYRUN] Updating AWS Bootstrap project")
+	logrus.Info("[DRYRUN] Updating AWS Bootstrap project")
 	err = d.createVarFile()
 	if err != nil {
 		return err
 	}
 	changes, err := d.terraform.Plan(context.Background(), tfexec.VarFile(fmt.Sprintf("%v/aws.tfvars", d.terraform.WorkingDir())))
 	if err != nil {
-		log.Fatalf("[DRYRUN] Something went wrong while updating aws. %v", err)
+		logrus.Fatalf("[DRYRUN] Something went wrong while updating aws. %v", err)
 		return err
 	}
 	if changes {
-		log.Warn("[DRYRUN] Something changed along the time. Remove dryrun option to apply the desired state")
+		logrus.Warn("[DRYRUN] Something changed along the time. Remove dryrun option to apply the desired state")
 	} else {
-		log.Info("[DRYRUN] Everything is up to date")
+		logrus.Info("[DRYRUN] Everything is up to date")
 	}
 
-	log.Info("[DRYRUN] AWS Updated")
+	logrus.Info("[DRYRUN] AWS Updated")
 	return nil
 }
 
 // Update runs terraform apply in the project
 func (d AWS) Update() (string, error) {
-	log.Info("Updating AWS Bootstrap project")
+	logrus.Info("Updating AWS Bootstrap project")
 	err := d.createVarFile()
 	if err != nil {
 		return "", err
@@ -252,17 +251,17 @@ func (d AWS) Update() (string, error) {
 
 	err = d.terraform.Apply(context.Background(), tfexec.VarFile(fmt.Sprintf("%v/aws.tfvars", d.terraform.WorkingDir())))
 	if err != nil {
-		log.Fatalf("Something went wrong while updating aws. %v", err)
+		logrus.Fatalf("Something went wrong while updating aws. %v", err)
 		return "", err
 	}
 
-	log.Info("AWS Updated")
+	logrus.Info("AWS Updated")
 	return "", nil
 }
 
 // Destroy runs terraform destroy in the project
 func (d AWS) Destroy() (err error) {
-	log.Info("Destroying AWS Bootstrap project")
+	logrus.Info("Destroying AWS Bootstrap project")
 	err = d.createVarFile()
 	if err != nil {
 		return err
@@ -270,9 +269,9 @@ func (d AWS) Destroy() (err error) {
 
 	err = d.terraform.Destroy(context.Background(), tfexec.VarFile(fmt.Sprintf("%v/aws.tfvars", d.terraform.WorkingDir())))
 	if err != nil {
-		log.Fatalf("Something went wrong while destroying AWS Bootstrap project. %v", err)
+		logrus.Fatalf("Something went wrong while destroying AWS Bootstrap project. %v", err)
 		return err
 	}
-	log.Info("AWS Bootstrap destroyed")
+	logrus.Info("AWS Bootstrap destroyed")
 	return nil
 }

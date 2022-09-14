@@ -13,7 +13,7 @@ import (
 	"strings"
 	"syscall"
 
-	log "github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
@@ -26,7 +26,7 @@ import (
 
 func bPreDestroy(cmd *cobra.Command, args []string) (err error) {
 	if bForce {
-		log.Warn("Force destroy of the bootstrap project")
+		logrus.Warn("Force destroy of the bootstrap project")
 		return bPre(cmd, args)
 	}
 	fmt.Println("\r  Are you sure you want to destroy it?\n  Write 'yes' to continue")
@@ -53,10 +53,10 @@ func bPre(cmd *cobra.Command, args []string) (err error) {
 		bGitHubToken = viper.GetString("token")
 	}
 
-	log.Debug("passing pre-flight checks")
+	logrus.Debug("passing pre-flight checks")
 	err = parseConfig(bConfigFilePath, "Bootstrap")
 	if err != nil {
-		log.Errorf("error parsing configuration file: %v", err)
+		logrus.Errorf("error parsing configuration file: %v", err)
 		return err
 	}
 	wd, err := os.Getwd()
@@ -64,7 +64,7 @@ func bPre(cmd *cobra.Command, args []string) (err error) {
 		return err
 	}
 	workingDirFullPath := fmt.Sprintf("%v/%v", wd, bWorkingDir)
-	log.Debug("pre-flight checks ok!")
+	logrus.Debug("pre-flight checks ok!")
 	prj = &project.Project{
 		Path: workingDirFullPath,
 	}
@@ -81,7 +81,7 @@ func bPre(cmd *cobra.Command, args []string) (err error) {
 	}
 	boot, err = bootstrap.New(bootstrapOpts)
 	if err != nil {
-		log.Errorf("the bootstrap provisioner can not be initialized: %v", err)
+		logrus.Errorf("the bootstrap provisioner can not be initialized: %v", err)
 		return err
 	}
 	return nil
