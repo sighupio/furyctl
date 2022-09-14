@@ -13,7 +13,7 @@ import (
 func init() {
 	vendorCmd.PersistentFlags().BoolVarP(&conf.DownloadOpts.Https, "https", "H", false, "if true downloads using https instead of ssh")
 	vendorCmd.PersistentFlags().StringVarP(&conf.Prefix, "prefix", "P", "", "Add filtering on download with prefix, to reduce update scope")
-	rootCmd.AddCommand(vendorCmd)
+	vendorCmd.PersistentFlags().BoolVarP(&conf.DownloadOpts.Parallel, "parallel", "p", true, "if true enables parallel downloads")
 }
 
 var conf = Config{}

@@ -22,7 +22,7 @@ var (
 	tDryRun      bool
 	tNoOverwrite bool
 
-	TemplateCmd = &cobra.Command{
+	templateCmd = &cobra.Command{
 		Use:   "template",
 		Short: "Renders the distribution's manifests from a template and a configuration file",
 		Long: `Generates a folder with the Kustomization project for deploying Kubernetes Fury Distribution into a cluster.
@@ -105,14 +105,13 @@ The generated folder will be created starting from a provided template and the p
 )
 
 func init() {
-	rootCmd.AddCommand(TemplateCmd)
-	TemplateCmd.Flags().BoolVar(
+	templateCmd.Flags().BoolVar(
 		&tDryRun,
 		"dry-run",
 		false,
 		"Furyctl will try its best to generate the manifests despite the errors",
 	)
-	TemplateCmd.Flags().BoolVar(
+	templateCmd.Flags().BoolVar(
 		&tNoOverwrite,
 		"no-overwrite",
 		false,
