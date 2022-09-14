@@ -21,7 +21,6 @@ var fileNames = [...]string{furyFile, kustomizationFile}
 var distributionVersion string
 
 func init() {
-	rootCmd.AddCommand(initCmd)
 	initCmd.Flags().StringVar(&distributionVersion, "version", "", "Specify the Kubernetes Fury Distribution version")
 	err := initCmd.MarkFlagRequired("version")
 	if err != nil {
