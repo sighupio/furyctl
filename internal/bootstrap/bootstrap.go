@@ -16,7 +16,7 @@ import (
 	"github.com/sighupio/furyctl/internal/project"
 	"github.com/sighupio/furyctl/internal/provisioners"
 	"github.com/sighupio/furyctl/pkg/terraform"
-	log "github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 )
 
 const initExecutorMessage = " Initializing the terraform executor"
@@ -46,11 +46,11 @@ func New(opts *Options) (b *Bootstrap, err error) {
 	// Grab the right provisioner
 	p, err := provisioners.Get(*opts.ProvisionerConfiguration)
 	if err != nil {
-		log.Errorf("error creating the bootstrap instance while adquiring the right provisioner: %v", err)
+		logrus.Errorf("error creating the bootstrap instance while adquiring the right provisioner: %v", err)
 		return nil, err
 	}
 	if p.Enterprise() && opts.TerraformOpts.GitHubToken == "" {
-		log.Warningf("The %v provisioner is an enterprise feature and requires a valid GitHub token", opts.ProvisionerConfiguration.Provisioner)
+		logrus.Warningf("The %v provisioner is an enterprise feature and requires a valid GitHub token", opts.ProvisionerConfiguration.Provisioner)
 	}
 	b = &Bootstrap{
 		s:           opts.Spin,
@@ -77,16 +77,16 @@ func (c *Bootstrap) Init(reset bool) (err error) {
 	// Enterprise token validation
 	if prov.Enterprise() && c.options.TerraformOpts.GitHubToken == "" {
 		errorMsg := fmt.Sprintf("error while initiating the bootstap process. The %v provisioner is an enterprise feature and requires a valid GitHub token. Contact sales@sighup.io", c.options.ProvisionerConfiguration.Provisioner)
-		log.Error(errorMsg)
+		logrus.Error(errorMsg)
 		return errors.New(errorMsg)
 	}
 
 	// Reset the project directory
 	if reset {
-		log.Warn("Cleaning up the workdir")
+		logrus.Warn("Cleaning up the workdir")
 		err = c.project.Reset()
 		if err != nil {
-			log.Errorf("Error cleaning up the workdir")
+			logrus.Errorf("Error cleaning up the workdir")
 			return err
 		}
 	}
@@ -97,14 +97,14 @@ func (c *Bootstrap) Init(reset bool) (err error) {
 	c.s.Start()
 	err = c.project.CreateSubDirs(bootstrapProjectDefaultSubDirs)
 	if err != nil {
-		log.Errorf("error while initializing project subdirectories: %v", err)
+		logrus.Errorf("error while initializing project subdirectories: %v", err)
 		return err
 	}
 
 	// .gitignore and .gitattributes
 	err = c.createGitFiles()
 	if err != nil {
-		log.Errorf("error while initializing project git files: %v", err)
+		logrus.Errorf("error while initializing project git files: %v", err)
 		return err
 	}
 
@@ -115,7 +115,7 @@ func (c *Bootstrap) Init(reset bool) (err error) {
 	err = c.initTerraformExecutor()
 
 	if err != nil {
-		log.Errorf("error while initializing terraform executor: %v", err)
+		logrus.Errorf("error while initializing terraform executor: %v", err)
 		return err
 	}
 
@@ -125,7 +125,7 @@ func (c *Bootstrap) Init(reset bool) (err error) {
 	c.s.Start()
 	err = c.installProvisionerTerraformFiles()
 	if err != nil {
-		log.Errorf("error while copying terraform project from the provisioner to the project dir: %v", err)
+		logrus.Errorf("error while copying terraform project from the provisioner to the project dir: %v", err)
 		return err
 	}
 
@@ -137,7 +137,7 @@ func (c *Bootstrap) Init(reset bool) (err error) {
 
 	err = tf.Init(context.Background(), tfexec.Reconfigure(c.options.TerraformOpts.ReconfigureBackend))
 	if err != nil {
-		log.Errorf("error while running terraform init in the project dir: %v", err)
+		logrus.Errorf("error while running terraform init in the project dir: %v", err)
 		return err
 	}
 	c.s.Stop()
@@ -222,13 +222,13 @@ func (c *Bootstrap) Update(dryrun bool) (err error) {
 	c.s.Start()
 	err = c.project.CreateSubDirs(bootstrapProjectDefaultSubDirs)
 	if err != nil {
-		log.Warnf("error while updating project subdirectories: %v", err)
+		logrus.Warnf("error while updating project subdirectories: %v", err)
 	}
 
 	// .gitignore and .gitattributes
 	err = c.createGitFiles()
 	if err != nil {
-		log.Errorf("error while initializing project git files: %v", err)
+		logrus.Errorf("error while initializing project git files: %v", err)
 		return err
 	}
 
@@ -237,7 +237,7 @@ func (c *Bootstrap) Update(dryrun bool) (err error) {
 	c.s.Start()
 	err = c.initTerraformExecutor()
 	if err != nil {
-		log.Errorf("Error while initializing the terraform executor: %v", err)
+		logrus.Errorf("Error while initializing the terraform executor: %v", err)
 		return err
 	}
 
@@ -247,7 +247,7 @@ func (c *Bootstrap) Update(dryrun bool) (err error) {
 	c.s.Start()
 	err = c.installProvisionerTerraformFiles()
 	if err != nil {
-		log.Warnf("error while copying terraform project from the provisioner to the project dir: %v", err)
+		logrus.Warnf("error while copying terraform project from the provisioner to the project dir: %v", err)
 	}
 
 	prov := *c.provisioner
@@ -260,7 +260,7 @@ func (c *Bootstrap) Update(dryrun bool) (err error) {
 
 	err = tf.Init(context.Background(), tfexec.Reconfigure(c.options.TerraformOpts.ReconfigureBackend))
 	if err != nil {
-		log.Errorf("error while running terraform init in the project dir: %v", err)
+		logrus.Errorf("error while running terraform init in the project dir: %v", err)
 		return err
 	}
 
@@ -269,7 +269,7 @@ func (c *Bootstrap) Update(dryrun bool) (err error) {
 		c.s.Start()
 		_, err = prov.Update()
 		if err != nil {
-			log.Errorf("Error while updating the bootstrap. Take a look to the logs. %v", err)
+			logrus.Errorf("Error while updating the bootstrap. Take a look to the logs. %v", err)
 			return err
 		}
 		c.s.Stop()
@@ -278,14 +278,14 @@ func (c *Bootstrap) Update(dryrun bool) (err error) {
 		var output []byte
 		output, err = c.output()
 		if err != nil {
-			log.Errorf("Error while getting the output with the bootstrap data: %v", err)
+			logrus.Errorf("Error while getting the output with the bootstrap data: %v", err)
 			return err
 		}
 
 		proj := *c.project
 		err = proj.WriteFile("output/output.json", output)
 		if err != nil {
-			log.Errorf("Error while writting the output.json to the project directory: %v", err)
+			logrus.Errorf("Error while writting the output.json to the project directory: %v", err)
 			return err
 		}
 		c.s.Stop()
@@ -295,12 +295,12 @@ func (c *Bootstrap) Update(dryrun bool) (err error) {
 		c.s.Start()
 		err = prov.Plan()
 		if err != nil {
-			log.Errorf("[DRYRUN] Error while updating the bootstrap. Take a look to the logs. %v", err)
+			logrus.Errorf("[DRYRUN] Error while updating the bootstrap. Take a look to the logs. %v", err)
 			return err
 		}
 		c.s.Stop()
 		proj := *c.project
-		log.Infof("[DRYRUN] Discover the resulting plan in the %v/logs/terraform.logs file", proj.Path)
+		logrus.Infof("[DRYRUN] Discover the resulting plan in the %v/logs/terraform.logs file", proj.Path)
 		c.postPlan()
 	}
 	return nil
@@ -314,13 +314,13 @@ func (c *Bootstrap) Destroy() (err error) {
 	c.s.Start()
 	err = c.project.CreateSubDirs(bootstrapProjectDefaultSubDirs)
 	if err != nil {
-		log.Warnf("error while updating project subdirectories: %v", err)
+		logrus.Warnf("error while updating project subdirectories: %v", err)
 	}
 
 	// .gitignore and .gitattributes
 	err = c.createGitFiles()
 	if err != nil {
-		log.Errorf("error while initializing project git files: %v", err)
+		logrus.Errorf("error while initializing project git files: %v", err)
 		return err
 	}
 
@@ -329,7 +329,7 @@ func (c *Bootstrap) Destroy() (err error) {
 	c.s.Start()
 	err = c.initTerraformExecutor()
 	if err != nil {
-		log.Errorf("Error while initializing the terraform executor: %v", err)
+		logrus.Errorf("Error while initializing the terraform executor: %v", err)
 		return err
 	}
 
@@ -339,7 +339,7 @@ func (c *Bootstrap) Destroy() (err error) {
 	c.s.Start()
 	err = c.installProvisionerTerraformFiles()
 	if err != nil {
-		log.Warnf("error while copying terraform project from the provisioner to the project dir: %v", err)
+		logrus.Warnf("error while copying terraform project from the provisioner to the project dir: %v", err)
 	}
 
 	prov := *c.provisioner
@@ -352,7 +352,7 @@ func (c *Bootstrap) Destroy() (err error) {
 
 	err = tf.Init(context.Background(), tfexec.Reconfigure(c.options.TerraformOpts.ReconfigureBackend))
 	if err != nil {
-		log.Errorf("error while running terraform init in the project dir: %v", err)
+		logrus.Errorf("error while running terraform init in the project dir: %v", err)
 		return err
 	}
 
@@ -361,7 +361,7 @@ func (c *Bootstrap) Destroy() (err error) {
 	c.s.Start()
 	err = prov.Destroy()
 	if err != nil {
-		log.Errorf("Error while destroying the bootstrap. Take a look to the logs. %v", err)
+		logrus.Errorf("Error while destroying the bootstrap. Take a look to the logs. %v", err)
 		return err
 	}
 	c.s.Stop()
@@ -377,12 +377,12 @@ func (c *Bootstrap) installProvisionerTerraformFiles() (err error) {
 	for _, tfFileName := range prov.TerraformFiles() {
 		tfFile, err := b.Find(tfFileName)
 		if err != nil {
-			log.Errorf("Error while finding the right file in the box: %v", err)
+			logrus.Errorf("Error while finding the right file in the box: %v", err)
 			return err
 		}
 		err = proj.WriteFile(tfFileName, tfFile)
 		if err != nil {
-			log.Errorf("Error while writing the binary data from the box to the project dir: %v", err)
+			logrus.Errorf("Error while writing the binary data from the box to the project dir: %v", err)
 			return err
 		}
 	}
@@ -393,7 +393,7 @@ func (c *Bootstrap) installProvisionerTerraformFiles() (err error) {
 func (c *Bootstrap) initTerraformExecutor() (err error) {
 	tf, err := terraform.NewExecutor(*c.options.TerraformOpts)
 	if err != nil {
-		log.Errorf("Error while initializing the terraform executor: %v", err)
+		logrus.Errorf("Error while initializing the terraform executor: %v", err)
 		return err
 	}
 
@@ -406,11 +406,11 @@ func (c *Bootstrap) initTerraformExecutor() (err error) {
 // Output gathers the Output in form of binary data
 func (c *Bootstrap) output() ([]byte, error) {
 	prov := *c.provisioner
-	log.Info("Gathering output file as json")
+	logrus.Info("Gathering output file as json")
 	var output map[string]tfexec.OutputMeta
 	output, err := prov.TerraformExecutor().Output(context.Background())
 	if err != nil {
-		log.Fatalf("Error while getting project output: %v", err)
+		logrus.Fatalf("Error while getting project output: %v", err)
 		return nil, err
 	}
 	return json.MarshalIndent(output, "", "    ")
@@ -428,7 +428,7 @@ func (c *Bootstrap) createGitFiles() error {
 `
 	err := c.project.WriteFile(".gitattributes", []byte(gitattributes))
 	if err != nil {
-		log.Errorf("error while creating .gitattributes: %v", err)
+		logrus.Errorf("error while creating .gitattributes: %v", err)
 		return err
 	}
 
@@ -440,7 +440,7 @@ bin
 `
 	err = c.project.WriteFile(".gitignore", []byte(gitignore))
 	if err != nil {
-		log.Errorf("error while creating .gitignore: %v", err)
+		logrus.Errorf("error while creating .gitignore: %v", err)
 		return err
 	}
 
