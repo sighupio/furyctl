@@ -24,7 +24,6 @@ import (
 	cfg "github.com/sighupio/furyctl/internal/cluster/configuration"
 	"github.com/sighupio/furyctl/internal/configuration"
 	"github.com/sirupsen/logrus"
-	"google.golang.org/appengine/log"
 )
 
 // VSphere represents the VSphere provisioner
@@ -444,7 +443,7 @@ func createPKI(workingDirectory string) error {
 	)
 	downloadPath := filepath.Join(workingDirectory, "furyagent")
 
-	log.Infof("Download furyagent: %v", downloadPath)
+	logrus.Infof("Download furyagent: %v", downloadPath)
 
 	if err := os.MkdirAll(downloadPath, 0755); err != nil {
 		return err
