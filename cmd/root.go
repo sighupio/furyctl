@@ -36,6 +36,7 @@ func init() {
 	rootCmd.AddCommand(bootstrapCmd)
 	rootCmd.AddCommand(clusterCmd)
 	rootCmd.AddCommand(completionCmd)
+	rootCmd.AddCommand(initCmd)
 	rootCmd.AddCommand(templateCmd)
 	rootCmd.AddCommand(validateCmd)
 	rootCmd.AddCommand(vendorCmd)
@@ -92,7 +93,7 @@ Furyctl is a simple CLI tool to:
 - create and manage Kubernetes Fury clusters
 `,
 	SilenceUsage: true,
-	PersistentPreRun: func(cmd *cobra.Command, args []string) {
+	PersistentPreRun: func(cmd *cobra.Command, _ []string) {
 		bootstrapLogrus(cmd)
 	},
 }
