@@ -225,5 +225,4 @@ func init() {
 	clusterCmd.AddCommand(clusterApplyCmd)
 	clusterCmd.AddCommand(clusterDestroyCmd)
 	clusterCmd.AddCommand(clusterTemplateCmd)
-	rootCmd.AddCommand(clusterCmd)
 }
