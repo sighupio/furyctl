@@ -92,7 +92,8 @@ Furyctl is a simple CLI tool to:
 - download and manage the Kubernetes Fury Distribution (KFD) modules
 - create and manage Kubernetes Fury clusters
 `,
-	SilenceUsage: true,
+	SilenceUsage:  true,
+	SilenceErrors: true,
 	PersistentPreRun: func(cmd *cobra.Command, _ []string) {
 		bootstrapLogrus(cmd)
 	},
