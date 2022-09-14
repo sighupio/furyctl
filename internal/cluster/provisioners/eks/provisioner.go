@@ -14,7 +14,7 @@ import (
 
 	"github.com/gobuffalo/packr/v2"
 	"github.com/hashicorp/terraform-exec/tfexec"
-	log "github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 
 	cfg "github.com/sighupio/furyctl/internal/cluster/configuration"
 	"github.com/sighupio/furyctl/internal/configuration"
@@ -22,12 +22,12 @@ import (
 
 // InitMessage return a custom provisioner message the user will see once the cluster is ready to be updated
 func (e *EKS) InitMessage() string {
-	return `Kubernetes Fury EKS
+	return `[EKS] Fury
 
-This provisioner creates a battle-tested Kubernetes Fury Cluster based on AWS EKS
-with a private control plane and a production-grade setup.
+This provisioner creates a battle-tested AWS EKS Kubernetes Cluster
+with a private and production-grade setup.
 
-Requires network connectivity to the target VPC (like a VPN connection) to deploy the cluster.
+Requires to connect to a VPN server to deploy the cluster from this computer.
 Use a bastion host (inside the EKS VPC) as an alternative method to deploy the cluster.
 
 The provisioner requires the following software installed:
@@ -43,36 +43,34 @@ func (e *EKS) UpdateMessage() string {
 	var output map[string]tfexec.OutputMeta
 	output, err := e.terraform.Output(context.Background())
 	if err != nil {
-		log.Error("Can not get output values")
+		logrus.Error("Can not get output values")
 	}
 	var clusterEndpoint, clusterOperatorName string
 	err = json.Unmarshal(output["cluster_endpoint"].Value, &clusterEndpoint)
 	if err != nil {
-		log.Error("Can not get `cluster_endpoint` value")
+		logrus.Error("Can not get `cluster_endpoint` value")
 	}
 	err = json.Unmarshal(output["operator_ssh_user"].Value, &clusterOperatorName)
 	if err != nil {
-		log.Error("Can not get `operator_ssh_user` value")
+		logrus.Error("Can not get `operator_ssh_user` value")
 	}
 	return fmt.Sprintf(
-		`Kubernetes Fury EKS
+		`[EKS] Fury
 
 All the cluster components are up to date.
-
-Kubernetes Fury EKS cluster is ready.
+EKS Kubernetes cluster ready.
 
 EKS Cluster Endpoint: %v
 SSH Operator Name: %v
 
 Use the ssh %v username to access the EKS instances with the configured SSH key.
-
 Discover the instances by running
 
 $ kubectl get nodes
 
-Then access them by running:
+Then access by running:
 
-$ ssh %v@<node-name-reported-by-kubectl-get-nodes>
+$ ssh %v@node-name-reported-by-kubectl-get-nodes
 
 `, clusterEndpoint, clusterOperatorName, clusterOperatorName, clusterOperatorName,
 	)
@@ -80,13 +78,11 @@ $ ssh %v@<node-name-reported-by-kubectl-get-nodes>
 
 // DestroyMessage return a custom provisioner message the user will see once the cluster is destroyed
 func (e *EKS) DestroyMessage() string {
-	return `Kubernetes Fury EKS
-
+	return `[EKS] Fury
 All cluster components were destroyed.
-
 EKS control plane and workers went away.
 
-If you faced any problems, please contact support if you have a subscription or write us to sales@sighup.io.
+Had problems, contact us at sales@sighup.io.
 `
 }
 
@@ -112,7 +108,7 @@ func (e EKS) createVarFile() (err error) {
 	buffer.WriteString(fmt.Sprintf("cluster_name = \"%v\"\n", e.config.Metadata.Name))
 	buffer.WriteString(fmt.Sprintf("cluster_version = \"%v\"\n", spec.Version))
 	if spec.LogRetentionDays != 0 {
-		buffer.WriteString(fmt.Sprintf("cluster_log_retention_days = %v\n", spec.LogRetentionDays))
+		buffer.WriteString(fmt.Sprintf("cluster_log_retention_in_days = %v\n", spec.LogRetentionDays))
 	}
 	buffer.WriteString(fmt.Sprintf("network = \"%v\"\n", spec.Network))
 	buffer.WriteString(fmt.Sprintf("subnetworks = [\"%v\"]\n", strings.Join(spec.SubNetworks, "\",\"")))
@@ -269,14 +265,6 @@ func (e EKS) createVarFile() (err error) {
 		}
 		buffer.WriteString("]\n")
 	}
-	// For this version we will check for this field value to be present, otherwise we could trigger an unwanted rollout of the node pools for existing clusters.
-	// The switch from launch configurations to launch templates for the Node Pools requires some manual intervention.
-	// We could automate this away though.
-	if spec.NodePoolsLaunchKind == "" {
-		log.Fatalf(".spec.nodePoolsKind is not set in the cluster configuration file. Please set it explicitly to `launch_configurations`, `launch_templates` or `both` to avoid unwanted node pools rollouts. For new clusters you can use `launch_templates`, for existing clusters please check the Fury EKS Installer docs: https://github.com/sighupio/fury-eks-installer/blob/master/docs/upgrades/v1.9-to-v1.10.0.md")
-	} else {
-		buffer.WriteString(fmt.Sprintf("node_pools_launch_kind = \"%v\"\n", spec.NodePoolsLaunchKind))
-	}
 	err = ioutil.WriteFile(fmt.Sprintf("%v/eks.tfvars", e.terraform.WorkingDir()), buffer.Bytes(), 0600)
 	if err != nil {
 		return err
@@ -332,7 +320,7 @@ func (e EKS) Prepare() (err error) {
 
 // Plan runs a dry run execution
 func (e EKS) Plan() (err error) {
-	log.Info("[DRYRUN] Updating EKS Cluster project")
+	logrus.Info("[DRYRUN] Updating EKS Cluster project")
 	err = e.createVarFile()
 	if err != nil {
 		return err
@@ -343,22 +331,22 @@ func (e EKS) Plan() (err error) {
 		tfexec.VarFile(fmt.Sprintf("%v/eks.tfvars", e.terraform.WorkingDir())),
 	)
 	if err != nil {
-		log.Fatalf("[DRYRUN] Got error while updating EKS: %v", err)
+		logrus.Fatalf("[DRYRUN] Something went wrong while updating eks. %v", err)
 		return err
 	}
 	if changes {
-		log.Warn("[DRYRUN] Something has changed in the mean time. Remove --dry-run flag to apply the desired state")
+		logrus.Warn("[DRYRUN] Something changed along the time. Remove dryrun option to apply the desired state")
 	} else {
-		log.Info("[DRYRUN] Everything is up to date")
+		logrus.Info("[DRYRUN] Everything is up to date")
 	}
 
-	log.Info("[DRYRUN] EKS Updated")
+	logrus.Info("[DRYRUN] EKS Updated")
 	return nil
 }
 
 // Update runs terraform apply in the project
 func (e EKS) Update() (string, error) {
-	log.Info("Updating EKS project")
+	logrus.Info("Updating EKS project")
 	err := e.createVarFile()
 	if err != nil {
 		return "", err
@@ -368,17 +356,17 @@ func (e EKS) Update() (string, error) {
 		tfexec.VarFile(fmt.Sprintf("%v/eks.tfvars", e.terraform.WorkingDir())),
 	)
 	if err != nil {
-		log.Fatalf("Got error while updating EKS: %v", err)
+		logrus.Fatalf("Something went wrong while updating eks. %v", err)
 		return "", err
 	}
 
-	log.Info("EKS Updated")
+	logrus.Info("EKS Updated")
 	return e.kubeconfig()
 }
 
 // Destroy runs terraform destroy in the project
 func (e EKS) Destroy() (err error) {
-	log.Info("Destroying EKS project")
+	logrus.Info("Destroying EKS project")
 	err = e.createVarFile()
 	if err != nil {
 		return err
@@ -388,25 +376,25 @@ func (e EKS) Destroy() (err error) {
 		tfexec.VarFile(fmt.Sprintf("%v/eks.tfvars", e.terraform.WorkingDir())),
 	)
 	if err != nil {
-		log.Fatalf("Got error while destroying EKS cluster project: %v", err)
+		logrus.Fatalf("Something went wrong while destroying EKS cluster project. %v", err)
 		return err
 	}
-	log.Info("EKS destroyed")
+	logrus.Info("EKS destroyed")
 	return nil
 }
 
 func (e EKS) kubeconfig() (string, error) {
-	log.Info("Gathering output file as json")
+	logrus.Info("Gathering output file as json")
 	var output map[string]tfexec.OutputMeta
 	output, err := e.terraform.Output(context.Background())
 	if err != nil {
-		log.Fatalf("Error while getting project output: %v", err)
+		logrus.Fatalf("Error while getting project output: %v", err)
 		return "", err
 	}
 	var creds string
 	err = json.Unmarshal(output["kubeconfig"].Value, &creds)
 	if err != nil {
-		log.Fatalf("Error while tranforming the kubeconfig value into string: %v", err)
+		logrus.Fatalf("Error while tranforming the kubeconfig value into string: %v", err)
 		return "", err
 	}
 	return creds, err

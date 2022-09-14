@@ -16,16 +16,16 @@ import (
 	"github.com/hashicorp/terraform-exec/tfexec"
 	"github.com/hashicorp/terraform-exec/tfinstall"
 	"github.com/sighupio/furyctl/pkg/utils"
-	log "github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 )
 
 // ensure ensures a working terraform version to be used in the project
 func ensure(terraformVersion string, terraformDownloadPath string) (binPath string, err error) {
 	if terraformVersion != "" {
-		log.Debugf("Installing terraform %v version", terraformVersion)
+		logrus.Debugf("Installing terraform %v version", terraformVersion)
 		return install(terraformVersion, terraformDownloadPath)
 	}
-	log.Debug("Installing terraform latest version")
+	logrus.Debug("Installing terraform latest version")
 	return installLatest(terraformDownloadPath)
 }
 
@@ -33,7 +33,7 @@ func alreadyAvailable(terraformVersion string, terraformDownloadPath string) (bo
 	// validate version
 	v, err := version.NewVersion(terraformVersion)
 	if err != nil {
-		log.Warning(err)
+		logrus.Warning(err)
 		return false, ""
 	}
 	expectedTerraformBinary := filepath.Join(terraformDownloadPath, "terraform")
@@ -41,14 +41,14 @@ func alreadyAvailable(terraformVersion string, terraformDownloadPath string) (bo
 	if err != nil {
 		defer os.RemoveAll(expectedTerraformBinary)
 		defer os.RemoveAll(binPath)
-		log.Warning(err)
+		logrus.Warning(err)
 		return false, ""
 	}
 	wd, err := ioutil.TempDir("", "tfexec")
 	if err != nil {
 		defer os.RemoveAll(expectedTerraformBinary)
 		defer os.RemoveAll(binPath)
-		log.Warning(err)
+		logrus.Warning(err)
 		return false, ""
 	}
 	defer os.RemoveAll(wd) // Clean up
@@ -56,25 +56,25 @@ func alreadyAvailable(terraformVersion string, terraformDownloadPath string) (bo
 	if err != nil {
 		defer os.RemoveAll(expectedTerraformBinary)
 		defer os.RemoveAll(binPath)
-		log.Warning(err)
+		logrus.Warning(err)
 		return false, ""
 	}
 	installedV, _, err := tf.Version(context.Background(), true)
 	if err != nil {
 		defer os.RemoveAll(expectedTerraformBinary)
 		defer os.RemoveAll(binPath)
-		log.Warning(err)
+		logrus.Warning(err)
 		return false, ""
 	}
 	if !v.Equal(installedV) {
-		log.Warning("The installed version is different to the required version")
-		log.Debug("Removing old terraform version")
+		logrus.Warning("The installed version is different to the required version")
+		logrus.Debug("Removing old terraform version")
 		defer os.RemoveAll(expectedTerraformBinary)
 		defer os.RemoveAll(binPath)
 		return false, ""
 	}
-	log.Debugf("%s is up to date with the requested %s version", binPath, terraformVersion)
-	log.Info("terraform is up to date")
+	logrus.Debugf("%s is up to date with the requested %s version", binPath, terraformVersion)
+	logrus.Info("terraform is up to date")
 	return true, binPath
 }
 
@@ -87,7 +87,7 @@ func install(terraformVersion string, terraformDownloadPath string) (binPath str
 		}
 		binPath, err = tfinstall.Find(context.Background(), tfinstall.ExactVersion(terraformVersion, terraformDownloadPath))
 		if err != nil {
-			log.Errorf("Error downloading version %v: %v", terraformVersion, err)
+			logrus.Errorf("Error downloading version %v: %v", terraformVersion, err)
 			return "", err
 		}
 	}
@@ -107,7 +107,7 @@ func installLatest(terraformDownloadPath string) (binPath string, err error) {
 		}
 		binPath, err = tfinstall.Find(context.Background(), tfinstall.LatestVersion(terraformDownloadPath, false))
 		if err != nil {
-			log.Errorf("Error downloading latest version: %v", err)
+			logrus.Errorf("Error downloading latest version: %v", err)
 			return "", err
 		}
 	}
