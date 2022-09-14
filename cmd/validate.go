@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"path/filepath"
 
 	"github.com/spf13/cobra"
 
@@ -11,25 +12,31 @@ import (
 )
 
 var (
-	errSchemaDownload   = fmt.Errorf("error downloading json schema for furyctl.yaml")
 	errDefaultsDownload = fmt.Errorf("error downloading json schema for furyctl.yaml")
 
 	validateCmd = &cobra.Command{
 		Use:   "validate",
 		Short: "Validate Furyfile",
 		RunE: func(cmd *cobra.Command, _ []string) error {
+			debug := cmd.Flag("debug").Value.String() == "true"
 			furyctlFilePath := cmd.Flag("config").Value.String()
 			schemasLocation := cmd.Flag("schemas-location").Value.String()
 			defaultsLocation := cmd.Flag("defaults-location").Value.String()
 
 			schemasPath, err := validate.DownloadFolder(schemasLocation, "schemas")
 			if err != nil {
-				return fmt.Errorf("%s: %w", errSchemaDownload, err)
+				return err
+			}
+			if !debug {
+				defer validate.CleanupTempDir(filepath.Base(schemasPath))
 			}
 
 			defaultsPath, err := validate.DownloadFolder(defaultsLocation, "defaults")
 			if err != nil {
-				return fmt.Errorf("%s: %w", errDefaultsDownload, err)
+				return err
+			}
+			if !debug {
+				defer validate.CleanupTempDir(filepath.Base(defaultsPath))
 			}
 
 			hasErrors := error(nil)
@@ -41,18 +48,21 @@ var (
 
 			defaultedFuryctlFilePath, err := validate.MergeConfigAndDefaults(furyctlFilePath, defaultPath)
 			if err != nil {
-				return fmt.Errorf("error merging config and defaults: %w", err)
+				return err
+			}
+			if !debug {
+				defer validate.CleanupTempDir(filepath.Base(defaultedFuryctlFilePath))
 			}
 
 			schema, err := santhosh.LoadSchema(schemaPath)
 			if err != nil {
-				return fmt.Errorf("failed to load schema: %w", err)
+				return err
 			}
 
 			conf := cmdutil.LoadConfig[any](defaultedFuryctlFilePath)
 
 			if err := schema.ValidateInterface(conf); err != nil {
-				validate.PrintResults(err, conf, defaultedFuryctlFilePath)
+				validate.PrintResults(err, defaultedFuryctlFilePath)
 
 				hasErrors = validate.ErrHasValidationErrors
 			}
