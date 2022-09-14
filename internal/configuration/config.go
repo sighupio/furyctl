@@ -11,8 +11,8 @@ import (
 
 	bootstrapcfg "github.com/sighupio/furyctl/internal/bootstrap/configuration"
 	clustercfg "github.com/sighupio/furyctl/internal/cluster/configuration"
+	"github.com/sirupsen/logrus"
 
-	log "github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v2"
 )
 
@@ -47,13 +47,13 @@ type Metadata struct {
 func Parse(path string) (*Configuration, error) {
 	content, err := ioutil.ReadFile(path)
 	if err != nil {
-		log.Errorf("error parsing configuration file: %v", err)
+		logrus.Errorf("error parsing configuration file: %v", err)
 		return nil, err
 	}
 	baseConfig := &Configuration{}
 	err = yaml.Unmarshal(content, &baseConfig)
 	if err != nil {
-		log.Errorf("error parsing configuration file: %v", err)
+		logrus.Errorf("error parsing configuration file: %v", err)
 		return nil, err
 	}
 
@@ -71,17 +71,17 @@ func Parse(path string) (*Configuration, error) {
 		}
 		return baseConfig, nil
 	default:
-		log.Errorf("Error parsing the configuration file. Parser not found for %v kind", baseConfig.Kind)
+		logrus.Errorf("Error parsing the configuration file. Parser not found for %v kind", baseConfig.Kind)
 		return nil, fmt.Errorf("parser not found for %v kind", baseConfig.Kind)
 	}
 }
 
 func clusterParser(config *Configuration) (err error) {
 	provisioner := config.Provisioner
-	log.Debugf("provisioner: %v", provisioner)
+	logrus.Debugf("provisioner: %v", provisioner)
 	specBytes, err := yaml.Marshal(config.Spec)
 	if err != nil {
-		log.Errorf("error parsing configuration file: %v", err)
+		logrus.Errorf("error parsing configuration file: %v", err)
 		return err
 	}
 	switch {
@@ -89,7 +89,7 @@ func clusterParser(config *Configuration) (err error) {
 		eksSpec := clustercfg.EKS{}
 		err = yaml.Unmarshal(specBytes, &eksSpec)
 		if err != nil {
-			log.Errorf("error parsing configuration file: %v", err)
+			logrus.Errorf("error parsing configuration file: %v", err)
 			return err
 		}
 		config.Spec = eksSpec
@@ -104,7 +104,7 @@ func clusterParser(config *Configuration) (err error) {
 		}
 		err = yaml.Unmarshal(specBytes, &gkeSpec)
 		if err != nil {
-			log.Errorf("error parsing configuration file: %v", err)
+			logrus.Errorf("error parsing configuration file: %v", err)
 			return err
 		}
 		config.Spec = gkeSpec
@@ -118,23 +118,23 @@ func clusterParser(config *Configuration) (err error) {
 		}
 		err = yaml.Unmarshal(specBytes, &vsphereSpec)
 		if err != nil {
-			log.Errorf("error parsing configuration file: %v", err)
+			logrus.Errorf("error parsing configuration file: %v", err)
 			return err
 		}
 		config.Spec = vsphereSpec
 		return nil
 	default:
-		log.Error("Error parsing the configuration file. Provisioner not found")
+		logrus.Error("Error parsing the configuration file. Provisioner not found")
 		return errors.New("cluster provisioner not found")
 	}
 }
 
 func bootstrapParser(config *Configuration) (err error) {
 	provisioner := config.Provisioner
-	log.Debugf("provisioner: %v", provisioner)
+	logrus.Debugf("provisioner: %v", provisioner)
 	specBytes, err := yaml.Marshal(config.Spec)
 	if err != nil {
-		log.Errorf("error parsing configuration file: %v", err)
+		logrus.Errorf("error parsing configuration file: %v", err)
 		return err
 	}
 	switch {
@@ -146,7 +146,7 @@ func bootstrapParser(config *Configuration) (err error) {
 		}
 		err = yaml.Unmarshal(specBytes, &awsSpec)
 		if err != nil {
-			log.Errorf("error parsing configuration file: %v", err)
+			logrus.Errorf("error parsing configuration file: %v", err)
 			return err
 		}
 		config.Spec = awsSpec
@@ -159,13 +159,13 @@ func bootstrapParser(config *Configuration) (err error) {
 		}
 		err = yaml.Unmarshal(specBytes, &gcpSpec)
 		if err != nil {
-			log.Errorf("error parsing configuration file: %v", err)
+			logrus.Errorf("error parsing configuration file: %v", err)
 			return err
 		}
 		config.Spec = gcpSpec
 		return nil
 	default:
-		log.Error("Error parsing the configuration file. Provisioner not found")
+		logrus.Error("Error parsing the configuration file. Provisioner not found")
 		return errors.New("bootstrap provisioner not found")
 	}
 }

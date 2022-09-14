@@ -13,7 +13,7 @@ import (
 
 	"github.com/sighupio/furyctl/internal/configuration"
 	"github.com/sighupio/furyctl/internal/project"
-	log "github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 )
 
 var (
@@ -24,15 +24,15 @@ var (
 )
 
 func parseConfig(path string, kind string) (err error) {
-	log.Debugf("parsing configuration file %v", path)
+	logrus.Debugf("parsing configuration file %v", path)
 	cfg, err = configuration.Parse(path)
 	if err != nil {
-		log.Errorf("error parsing configuration file: %v", err)
+		logrus.Errorf("error parsing configuration file: %v", err)
 		return err
 	}
 	if cfg.Kind != kind {
 		errMessage := fmt.Sprintf("error parsing configuration file. Unexpected kind. Got: %v but: %v expected", cfg.Kind, kind)
-		log.Error(errMessage)
+		logrus.Error(errMessage)
 		return errors.New(errMessage)
 	}
 	return nil
