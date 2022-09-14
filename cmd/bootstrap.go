@@ -220,5 +220,4 @@ func init() {
 	bootstrapCmd.AddCommand(bootstrapApplyCmd)
 	bootstrapCmd.AddCommand(bootstrapDestroyCmd)
 	bootstrapCmd.AddCommand(bootstrapTemplateCmd)
-	rootCmd.AddCommand(bootstrapCmd)
 }
