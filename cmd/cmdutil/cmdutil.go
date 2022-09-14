@@ -2,9 +2,9 @@ package cmdutil
 
 import (
 	"errors"
-	"log"
 	"os"
 
+	"github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v3"
 )
 
@@ -18,7 +18,7 @@ var (
 func GetWd() string {
 	cwd, err := os.Getwd()
 	if err != nil {
-		log.Fatal(err)
+		logrus.Fatal(err)
 	}
 
 	return cwd
@@ -29,11 +29,11 @@ func LoadConfig[T any](file string) T {
 
 	configData, err := os.ReadFile(file)
 	if err != nil {
-		log.Fatal(err)
+		logrus.Fatal(err)
 	}
 
 	if err := yaml.Unmarshal(configData, &conf); err != nil {
-		log.Fatal(err)
+		logrus.Fatal(err)
 	}
 
 	return conf

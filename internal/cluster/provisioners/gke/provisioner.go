@@ -14,7 +14,7 @@ import (
 
 	"github.com/gobuffalo/packr/v2"
 	"github.com/hashicorp/terraform-exec/tfexec"
-	log "github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 
 	cfg "github.com/sighupio/furyctl/internal/cluster/configuration"
 	"github.com/sighupio/furyctl/internal/configuration"
@@ -43,16 +43,16 @@ func (e *GKE) UpdateMessage() string {
 	var output map[string]tfexec.OutputMeta
 	output, err := e.terraform.Output(context.Background())
 	if err != nil {
-		log.Error("Can not get output values")
+		logrus.Error("Can not get output values")
 	}
 	var clusterEndpoint, clusterOperatorName string
 	err = json.Unmarshal(output["cluster_endpoint"].Value, &clusterEndpoint)
 	if err != nil {
-		log.Error("Can not get `cluster_endpoint` value")
+		logrus.Error("Can not get `cluster_endpoint` value")
 	}
 	err = json.Unmarshal(output["operator_ssh_user"].Value, &clusterOperatorName)
 	if err != nil {
-		log.Error("Can not get `operator_ssh_user` value")
+		logrus.Error("Can not get `operator_ssh_user` value")
 	}
 	return fmt.Sprintf(
 		`[GKE] Fury
@@ -267,7 +267,7 @@ func (e GKE) TerraformFiles() []string {
 
 // Plan runs a dry run execution
 func (e GKE) Plan() (err error) {
-	log.Info("[DRYRUN] Updating GKE Cluster project")
+	logrus.Info("[DRYRUN] Updating GKE Cluster project")
 	err = e.createVarFile()
 	if err != nil {
 		return err
@@ -278,16 +278,16 @@ func (e GKE) Plan() (err error) {
 		tfexec.VarFile(fmt.Sprintf("%v/gke.tfvars", e.terraform.WorkingDir())),
 	)
 	if err != nil {
-		log.Fatalf("[DRYRUN] Something went wrong while updating gke. %v", err)
+		logrus.Fatalf("[DRYRUN] Something went wrong while updating gke. %v", err)
 		return err
 	}
 	if changes {
-		log.Warn("[DRYRUN] Something changed along the time. Remove dryrun option to apply the desired state")
+		logrus.Warn("[DRYRUN] Something changed along the time. Remove dryrun option to apply the desired state")
 	} else {
-		log.Info("[DRYRUN] Everything is up to date")
+		logrus.Info("[DRYRUN] Everything is up to date")
 	}
 
-	log.Info("[DRYRUN] GKE Updated")
+	logrus.Info("[DRYRUN] GKE Updated")
 	return nil
 }
 
@@ -297,7 +297,7 @@ func (e GKE) Prepare() (err error) {
 
 // Update runs terraform apply in the project
 func (e GKE) Update() (string, error) {
-	log.Info("Updating GKE project")
+	logrus.Info("Updating GKE project")
 	err := e.createVarFile()
 	if err != nil {
 		return "", err
@@ -307,17 +307,17 @@ func (e GKE) Update() (string, error) {
 		tfexec.VarFile(fmt.Sprintf("%v/gke.tfvars", e.terraform.WorkingDir())),
 	)
 	if err != nil {
-		log.Fatalf("Something went wrong while updating gke. %v", err)
+		logrus.Fatalf("Something went wrong while updating gke. %v", err)
 		return "", err
 	}
 
-	log.Info("GKE Updated")
+	logrus.Info("GKE Updated")
 	return e.kubeconfig()
 }
 
 // Destroy runs terraform destroy in the project
 func (e GKE) Destroy() (err error) {
-	log.Info("Destroying GKE project")
+	logrus.Info("Destroying GKE project")
 	err = e.createVarFile()
 	if err != nil {
 		return err
@@ -327,25 +327,25 @@ func (e GKE) Destroy() (err error) {
 		tfexec.VarFile(fmt.Sprintf("%v/gke.tfvars", e.terraform.WorkingDir())),
 	)
 	if err != nil {
-		log.Fatalf("Something went wrong while destroying GKE cluster project. %v", err)
+		logrus.Fatalf("Something went wrong while destroying GKE cluster project. %v", err)
 		return err
 	}
-	log.Info("GKE destroyed")
+	logrus.Info("GKE destroyed")
 	return nil
 }
 
 func (e GKE) kubeconfig() (string, error) {
-	log.Info("Gathering output file as json")
+	logrus.Info("Gathering output file as json")
 	var output map[string]tfexec.OutputMeta
 	output, err := e.terraform.Output(context.Background())
 	if err != nil {
-		log.Fatalf("Error while getting project output: %v", err)
+		logrus.Fatalf("Error while getting project output: %v", err)
 		return "", err
 	}
 	var creds string
 	err = json.Unmarshal(output["kubeconfig"].Value, &creds)
 	if err != nil {
-		log.Fatalf("Error while tranforming the kubeconfig value into string: %v", err)
+		logrus.Fatalf("Error while tranforming the kubeconfig value into string: %v", err)
 		return "", err
 	}
 	return creds, nil
