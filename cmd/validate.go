@@ -10,48 +10,85 @@ import (
 	"github.com/sighupio/furyctl/internal/schema/santhosh"
 )
 
-var ErrSchemaDownload = fmt.Errorf("error downloading json schema for furyctl.yaml")
+var (
+	errSchemaDownload   = fmt.Errorf("error downloading json schema for furyctl.yaml")
+	errDefaultsDownload = fmt.Errorf("error downloading json schema for furyctl.yaml")
 
-var validateCmd = &cobra.Command{
-	Use:   "validate",
-	Short: "Validate Furyfile",
-	RunE: func(cmd *cobra.Command, args []string) error {
-		distroLocation := cmd.Flag("distro-location").Value.String()
+	validateCmd = &cobra.Command{
+		Use:   "validate",
+		Short: "Validate Furyfile",
+		RunE: func(cmd *cobra.Command, _ []string) error {
+			furyctlFilePath := cmd.Flag("config").Value.String()
+			schemasLocation := cmd.Flag("schemas-location").Value.String()
+			defaultsLocation := cmd.Flag("defaults-location").Value.String()
 
-		schemasPath, err := validate.DownloadSchemas(distroLocation)
-		if err != nil {
-			return fmt.Errorf("%s: %w", ErrSchemaDownload, err)
-		}
+			schemasPath, err := validate.DownloadFolder(schemasLocation, "schemas")
+			if err != nil {
+				return fmt.Errorf("%s: %w", errSchemaDownload, err)
+			}
 
-		hasErrors := error(nil)
-		furyctlFile, err := validate.ParseArgs(args)
-		if err != nil {
-			return err
-		}
+			defaultsPath, err := validate.DownloadFolder(defaultsLocation, "defaults")
+			if err != nil {
+				return fmt.Errorf("%s: %w", errDefaultsDownload, err)
+			}
 
-		minimalConf := cmdutil.LoadConfig[validate.FuryctlConfig](furyctlFile)
+			hasErrors := error(nil)
 
-		schemaPath := validate.GetSchemaPath(schemasPath, minimalConf)
+			minimalConf := cmdutil.LoadConfig[validate.FuryctlConfig](furyctlFilePath)
 
-		schema, err := santhosh.LoadSchema(schemaPath)
-		if err != nil {
-			return fmt.Errorf("failed to load schema: %w", err)
-		}
+			schemaPath := validate.GetSchemaPath(schemasPath, minimalConf)
+			defaultPath := validate.GetDefaultPath(defaultsPath, minimalConf)
 
-		conf := cmdutil.LoadConfig[any](furyctlFile)
+			defaultedFuryctlFilePath, err := validate.MergeConfigAndDefaults(furyctlFilePath, defaultPath)
+			if err != nil {
+				return fmt.Errorf("error merging config and defaults: %w", err)
+			}
 
-		if err := schema.ValidateInterface(conf); err != nil {
-			validate.PrintResults(err, conf, furyctlFile)
+			schema, err := santhosh.LoadSchema(schemaPath)
+			if err != nil {
+				return fmt.Errorf("failed to load schema: %w", err)
+			}
 
-			hasErrors = validate.ErrHasValidationErrors
-		}
+			conf := cmdutil.LoadConfig[any](defaultedFuryctlFilePath)
 
-		validate.PrintSummary(hasErrors != nil)
+			if err := schema.ValidateInterface(conf); err != nil {
+				validate.PrintResults(err, conf, defaultedFuryctlFilePath)
 
-		return hasErrors
-	},
-}
+				hasErrors = validate.ErrHasValidationErrors
+			}
+
+			validate.PrintSummary(hasErrors != nil)
+
+			return hasErrors
+		},
+	}
+)
 
 func init() {
-	validateCmd.Flags().StringP("distro-location", "l", "", "Base URL used to download schemas.")
+	validateCmd.Flags().StringP(
+		"config",
+		"c",
+		"furyctl.yaml",
+		"Path to the furyctl.yaml file",
+	)
+
+	validateCmd.Flags().StringP(
+		"schemas-location",
+		"",
+		"",
+		"Base URL used to download schemas. "+
+			"It can either be a local path(eg: /path/to/fury/distribution//schemas) or "+
+			"a remote URL(eg: https://git@github.com/sighupio/fury-distribution//schemas?ref=BRANCH_NAME)."+
+			"Any format supported by hashicorp/go-getter can be used.",
+	)
+
+	validateCmd.Flags().StringP(
+		"defaults-location",
+		"",
+		"",
+		"Base URL used to download defaults. "+
+			"It can either be a local path(eg: /path/to/fury/distribution//defaults) or "+
+			"a remote URL(eg: https://git@github.com/sighupio/fury-distribution//defaults?ref=BRANCH_NAME)."+
+			"Any format supported by hashicorp/go-getter can be used.",
+	)
 }

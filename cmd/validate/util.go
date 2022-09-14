@@ -3,21 +3,29 @@ package validate
 import (
 	"errors"
 	"fmt"
+	"os"
 	"path/filepath"
 	"strings"
 
 	"github.com/hashicorp/go-getter"
+	"github.com/sirupsen/logrus"
 	log "github.com/sirupsen/logrus"
+	"gopkg.in/yaml.v2"
 
-	"github.com/sighupio/furyctl/cmd/cmdutil"
+	"github.com/sighupio/furyctl/internal/merge"
 	"github.com/sighupio/furyctl/internal/schema/santhosh"
+	yaml2 "github.com/sighupio/furyctl/internal/yaml"
 )
 
-const defaultSchemaBaseUrl = "git::https://git@github.com/sighupio/fury-distribution//schemas?ref=feature/create-draft-of-the-furyctl-yaml-json-schema"
+const defaultBaseUrl = "https://git@github.com/sighupio/fury-distribution//%s?ref=feature/create-draft-of-the-furyctl-yaml-json-schema"
 
 var (
+	downloadProtocols = []string{"", "git::", "file::", "http::", "s3::", "gcs::", "mercurial::"}
+
 	ErrHasValidationErrors = errors.New("schema has validation errors")
 	ErrUnknownOutputFormat = errors.New("unknown output format")
+	ErrDownloadingSchemas  = errors.New("error downloading schemas")
+	ErrCreatingTempDir     = errors.New("error creating temp dir")
 )
 
 type FuryctlConfig struct {
@@ -29,45 +37,81 @@ type FuryctlConfig struct {
 }
 
 func GetSchemaPath(basePath string, conf FuryctlConfig) string {
-	parts := strings.Split(conf.ApiVersion, "/")
-	foo := strings.Replace(parts[0], ".sighup.io", "", 1)
-	bar := parts[1]
-	filename := fmt.Sprintf("%s-%s-%s.json", strings.ToLower(conf.Kind), foo, bar)
+	avp := strings.Split(conf.ApiVersion, "/")
+	ns := strings.Replace(avp[0], ".sighup.io", "", 1)
+	ver := avp[1]
+	filename := fmt.Sprintf("%s-%s-%s.json", strings.ToLower(conf.Kind), ns, ver)
 
 	return filepath.Join(basePath, conf.Spec.DistributionVersion, filename)
 }
 
-func ParseArgs(args []string) (string, error) {
-	basePath := cmdutil.GetWd()
-
-	furyctlFile := filepath.Join(basePath, "furyctl.yaml")
-
-	if len(args) == 1 {
-		furyctlFile = args[0]
-	}
-
-	if len(args) > 1 {
-		return "", fmt.Errorf("%v, only 1 expected", cmdutil.ErrTooManyArguments)
-	}
-
-	return furyctlFile, nil
+func GetDefaultPath(basePath string, conf FuryctlConfig) string {
+	return filepath.Join(basePath, conf.Spec.DistributionVersion, "furyctl-defaults.yaml")
 }
 
-func DownloadSchemas(distroLocation string) (string, error) {
-	src := defaultSchemaBaseUrl
+func DownloadFolder(distroLocation string, name string) (string, error) {
+	src := fmt.Sprintf(defaultBaseUrl, name)
 	if distroLocation != "" {
 		src = distroLocation
 	}
 
-	dst := "/tmp/fury-distribution/schemas"
-
-	client := &getter.Client{
-		Src:  src,
-		Dst:  dst,
-		Mode: getter.ClientModeDir,
+	dir, err := os.MkdirTemp("", fmt.Sprintf("furyctl-%s-", name))
+	if err != nil {
+		return "", fmt.Errorf("%s: %w", ErrCreatingTempDir, err)
 	}
 
-	return dst, client.Get()
+	logrus.Debugf("Downloading '%s' from '%s' in '%s'", name, src, dir)
+
+	return dir, clientGet(src, dir)
+}
+
+func MergeConfigAndDefaults(furyctlFilePath string, defaultsFilePath string) (string, error) {
+	defaultsFile, err := yaml2.FromFile[map[any]any](defaultsFilePath)
+	if err != nil {
+		return "", err
+	}
+
+	furyctlFile, err := yaml2.FromFile[map[any]any](furyctlFilePath)
+	if err != nil {
+		return "", err
+	}
+
+	defaultsModel := merge.NewDefaultModel(defaultsFile, ".data")
+	distributionModel := merge.NewDefaultModel(furyctlFile, ".spec.distribution")
+
+	merger := merge.NewMerger(defaultsModel, distributionModel)
+
+	defaultedDistribution, err := merger.Merge()
+	if err != nil {
+		return "", err
+	}
+
+	furyctlModel := merge.NewDefaultModel(furyctlFile, ".spec.distribution")
+	defaultedDistributionModel := merge.NewDefaultModel(defaultedDistribution, ".data")
+
+	merger2 := merge.NewMerger(furyctlModel, defaultedDistributionModel)
+
+	defaultedFuryctl, err := merger2.Merge()
+	if err != nil {
+		return "", err
+	}
+
+	outYaml, err := yaml.Marshal(defaultedFuryctl)
+	if err != nil {
+		return "", err
+	}
+
+	outDirPath, err := os.MkdirTemp("", "furyctl-defaulted-")
+	if err != nil {
+		return "", err
+	}
+
+	confPath := filepath.Join(outDirPath, "config.yaml")
+	if err := os.WriteFile(confPath, outYaml, os.ModePerm); err != nil {
+		return "", err
+	}
+
+	return confPath, nil
 }
 
 func PrintSummary(hasErrors bool) {
@@ -97,4 +141,42 @@ func PrintResults(err error, conf any, configFile string) {
 	}
 
 	fmt.Println(err)
+}
+
+// clientGet tries a few different protocols to get the source file or directory.
+func clientGet(src, dst string) error {
+	protocols := []string{""}
+	if !urlHasForcedProtocol(src) {
+		protocols = downloadProtocols
+	}
+
+	for _, protocol := range protocols {
+		fullSrc := fmt.Sprintf("%s%s", protocol, src)
+
+		logrus.Debugf("Trying to download from: %s", fullSrc)
+
+		client := &getter.Client{
+			Src:  fullSrc,
+			Dst:  dst,
+			Mode: getter.ClientModeDir,
+		}
+
+		if err := client.Get(); err == nil {
+			logrus.Debug("Download successful")
+
+			return nil
+		}
+	}
+
+	return ErrDownloadingSchemas
+}
+
+func urlHasForcedProtocol(url string) bool {
+	for _, dp := range downloadProtocols {
+		if strings.HasPrefix(url, dp) {
+			return true
+		}
+	}
+
+	return false
 }
