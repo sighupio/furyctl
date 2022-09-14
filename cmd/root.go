@@ -33,7 +33,12 @@ func Execute() error {
 }
 
 func init() {
-	// rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.furyctl.yaml)")
+	rootCmd.AddCommand(bootstrapCmd)
+	rootCmd.AddCommand(clusterCmd)
+	rootCmd.AddCommand(completionCmd)
+	rootCmd.AddCommand(templateCmd)
+	rootCmd.AddCommand(validateCmd)
+	rootCmd.AddCommand(vendorCmd)
 	rootCmd.AddCommand(versionCmd)
 
 	rootCmd.PersistentFlags().Bool("debug", false, "Enables furyctl debug output")
@@ -54,13 +59,13 @@ func init() {
 
 		s = spinner.New(spinner.CharSets[11], 100*time.Millisecond, spinner.WithWriter(w))
 	})
+
 	viper.AutomaticEnv()
 	viper.SetEnvPrefix("furyctl")
 }
 
 func bootstrapLogrus(cmd *cobra.Command) {
 	d, err := cmd.Flags().GetBool("debug")
-
 	if err != nil {
 		logrus.Fatal(err)
 	}
@@ -68,8 +73,10 @@ func bootstrapLogrus(cmd *cobra.Command) {
 	if d {
 		logrus.SetLevel(logrus.DebugLevel)
 		debug = true
+
 		return
 	}
+
 	logrus.SetLevel(logrus.InfoLevel)
 }
 
@@ -84,18 +91,8 @@ Furyctl is a simple CLI tool to:
 - download and manage the Kubernetes Fury Distribution (KFD) modules
 - create and manage Kubernetes Fury clusters
 `,
+	SilenceUsage: true,
 	PersistentPreRun: func(cmd *cobra.Command, args []string) {
 		bootstrapLogrus(cmd)
-	},
-}
-
-// versionCmd represents the version command
-var versionCmd = &cobra.Command{
-	Use:   "version",
-	Short: "Prints the client version information",
-	Long:  ``,
-	Run: func(_ *cobra.Command, _ []string) {
-		logrus.Printf("Furyctl version %v\n", version)
-		logrus.Printf("built %v from commit %v", date, commit)
 	},
 }
