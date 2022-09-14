@@ -10,10 +10,9 @@ import (
 	"path/filepath"
 
 	"github.com/sighupio/furyctl/internal/merge"
-	yaml2 "github.com/sighupio/furyctl/internal/yaml"
+	"github.com/sighupio/furyctl/internal/yaml"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
-	"gopkg.in/yaml.v2"
 
 	"github.com/sighupio/furyctl/internal/template"
 )
@@ -29,7 +28,7 @@ var (
 The generated folder will be created starting from a provided template and the parameters set in a configuration file that is merged with default values.`,
 		SilenceUsage:  true,
 		SilenceErrors: true,
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(_ *cobra.Command, _ []string) error {
 			//TODO(rm-2470): To be reworked in redmine task - Define template command flags.
 			source := "source"
 			target := "target"
@@ -37,12 +36,12 @@ The generated folder will be created starting from a provided template and the p
 			distributionFilePath := "distribution.yaml"
 			furyctlFilePath := "furyctl.yaml"
 
-			distributionFile, err := yaml2.FromFile[map[any]any](distributionFilePath)
+			distributionFile, err := yaml.FromFileV2[map[any]any](distributionFilePath)
 			if err != nil {
 				return fmt.Errorf("%s - %w", distributionFilePath, err)
 			}
 
-			furyctlFile, err := yaml2.FromFile[map[any]any](furyctlFilePath)
+			furyctlFile, err := yaml.FromFileV2[map[any]any](furyctlFilePath)
 			if err != nil {
 				return fmt.Errorf("%s - %w", furyctlFilePath, err)
 			}
@@ -61,7 +60,7 @@ The generated folder will be created starting from a provided template and the p
 				return err
 			}
 
-			outYaml, err := yaml.Marshal(mergedDistribution)
+			outYaml, err := yaml.MarshalV2(mergedDistribution)
 			if err != nil {
 				return err
 			}

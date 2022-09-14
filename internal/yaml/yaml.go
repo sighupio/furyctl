@@ -5,20 +5,44 @@
 package yaml
 
 import (
-	"gopkg.in/yaml.v2"
 	"os"
+
+	v2 "gopkg.in/yaml.v2"
+	v3 "gopkg.in/yaml.v3"
 )
 
-func FromFile[T any](path string) (T, error) {
-	var yamlRes T
+func FromFileV2[T any](path string) (T, error) {
+	var data T
 
 	res, err := os.ReadFile(path)
 	if err != nil {
-		return yamlRes, err
+		return data, err
 	}
 
-	err = yaml.Unmarshal(res, &yamlRes)
+	err = v2.Unmarshal(res, &data)
 
-	return yamlRes, err
+	return data, err
+}
 
+func MarshalV2(in any) ([]byte, error) {
+	return v2.Marshal(in)
+}
+
+func FromFileV3[T any](file string) (T, error) {
+	var data T
+
+	res, err := os.ReadFile(file)
+	if err != nil {
+		return data, err
+	}
+
+	if err := v3.Unmarshal(res, &data); err != nil {
+		return data, err
+	}
+
+	return data, err
+}
+
+func MarshalV3(in any) ([]byte, error) {
+	return v3.Marshal(in)
 }
