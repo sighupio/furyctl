@@ -16,8 +16,7 @@ import (
 	"github.com/hashicorp/terraform-exec/tfexec"
 	cfg "github.com/sighupio/furyctl/internal/bootstrap/configuration"
 	"github.com/sighupio/furyctl/internal/configuration"
-
-	log "github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 )
 
 // InitMessage return a custom provisioner message the user will see once the cluster is ready to be updated
@@ -39,7 +38,7 @@ func (d *GCP) UpdateMessage() string {
 	var output map[string]tfexec.OutputMeta
 	output, err := d.terraform.Output(context.Background())
 	if err != nil {
-		log.Error("Can not get output values")
+		logrus.Error("Can not get output values")
 	}
 	spec := d.config.Spec.(cfg.GCP)
 	sshUsers := spec.VPN.SSHUsers
@@ -52,31 +51,31 @@ func (d *GCP) UpdateMessage() string {
 
 	err = json.Unmarshal(output["vpn_ip"].Value, &vpnInstanceIPs)
 	if err != nil {
-		log.Error("Can not get `vpn_ip` value")
+		logrus.Error("Can not get `vpn_ip` value")
 	}
 	err = json.Unmarshal(output["vpn_operator_name"].Value, &vpnOperatorName)
 	if err != nil {
-		log.Error("Can not get `vpn_operator_name` value")
+		logrus.Error("Can not get `vpn_operator_name` value")
 	}
 	err = json.Unmarshal(output["network_name"].Value, &networkName)
 	if err != nil {
-		log.Error("Can not get `network_name` value")
+		logrus.Error("Can not get `network_name` value")
 	}
 	err = json.Unmarshal(output["public_subnets"].Value, &publicSubnetsIDs)
 	if err != nil {
-		log.Error("Can not get `public_subnets` value")
+		logrus.Error("Can not get `public_subnets` value")
 	}
 	err = json.Unmarshal(output["private_subnets"].Value, &privateSubnetsIDs)
 	if err != nil {
-		log.Error("Can not get `private_subnets` value")
+		logrus.Error("Can not get `private_subnets` value")
 	}
 	err = json.Unmarshal(output["cluster_subnet"].Value, &clusterSubnet)
 	if err != nil {
-		log.Error("Can not get `cluster_subnet` value")
+		logrus.Error("Can not get `cluster_subnet` value")
 	}
 	err = json.Unmarshal(output["additional_cluster_subnet"].Value, &additionalClusterSubnet)
 	if err != nil {
-		log.Error("Can not get `additional_cluster_subnet` value")
+		logrus.Error("Can not get `additional_cluster_subnet` value")
 	}
 
 	for _, subnet := range additionalClusterSubnet {
@@ -251,23 +250,23 @@ func (d GCP) TerraformFiles() []string {
 
 // Plan runs a dry run execution
 func (d GCP) Plan() (err error) {
-	log.Info("[DRYRUN] Updating GCP Bootstrap project")
+	logrus.Info("[DRYRUN] Updating GCP Bootstrap project")
 	err = d.createVarFile()
 	if err != nil {
 		return err
 	}
 	changes, err := d.terraform.Plan(context.Background(), tfexec.VarFile(fmt.Sprintf("%v/gcp.tfvars", d.terraform.WorkingDir())))
 	if err != nil {
-		log.Fatalf("[DRYRUN] Something went wrong while updating gcp. %v", err)
+		logrus.Fatalf("[DRYRUN] Something went wrong while updating gcp. %v", err)
 		return err
 	}
 	if changes {
-		log.Warn("[DRYRUN] Something changed along the time. Remove dryrun option to apply the desired state")
+		logrus.Warn("[DRYRUN] Something changed along the time. Remove dryrun option to apply the desired state")
 	} else {
-		log.Info("[DRYRUN] Everything is up to date")
+		logrus.Info("[DRYRUN] Everything is up to date")
 	}
 
-	log.Info("[DRYRUN] GCP Updated")
+	logrus.Info("[DRYRUN] GCP Updated")
 	return nil
 }
 
@@ -277,7 +276,7 @@ func (d GCP) Prepare() (err error) {
 
 // Update runs terraform apply in the project
 func (d GCP) Update() (string, error) {
-	log.Info("Updating GCP Bootstrap project")
+	logrus.Info("Updating GCP Bootstrap project")
 	err := d.createVarFile()
 	if err != nil {
 		return "", err
@@ -285,17 +284,17 @@ func (d GCP) Update() (string, error) {
 
 	err = d.terraform.Apply(context.Background(), tfexec.VarFile(fmt.Sprintf("%v/gcp.tfvars", d.terraform.WorkingDir())))
 	if err != nil {
-		log.Fatalf("Something went wrong while updating gcp. %v", err)
+		logrus.Fatalf("Something went wrong while updating gcp. %v", err)
 		return "", err
 	}
 
-	log.Info("GCP Updated")
+	logrus.Info("GCP Updated")
 	return "", nil
 }
 
 // Destroy runs terraform destroy in the project
 func (d GCP) Destroy() (err error) {
-	log.Info("Destroying GCP Bootstrap project")
+	logrus.Info("Destroying GCP Bootstrap project")
 	err = d.createVarFile()
 	if err != nil {
 		return err
@@ -303,9 +302,9 @@ func (d GCP) Destroy() (err error) {
 
 	err = d.terraform.Destroy(context.Background(), tfexec.VarFile(fmt.Sprintf("%v/gcp.tfvars", d.terraform.WorkingDir())))
 	if err != nil {
-		log.Fatalf("Something went wrong while destroying GCP Bootstrap project. %v", err)
+		logrus.Fatalf("Something went wrong while destroying GCP Bootstrap project. %v", err)
 		return err
 	}
-	log.Info("GCP Bootstrap destroyed")
+	logrus.Info("GCP Bootstrap destroyed")
 	return nil
 }

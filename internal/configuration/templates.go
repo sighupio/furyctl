@@ -10,8 +10,8 @@ import (
 
 	bootstrapcfg "github.com/sighupio/furyctl/internal/bootstrap/configuration"
 	clustercfg "github.com/sighupio/furyctl/internal/cluster/configuration"
+	"github.com/sirupsen/logrus"
 
-	log "github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v2"
 )
 
@@ -32,7 +32,7 @@ func Template(kind string, provisioner string) (string, error) {
 			return "", err
 		}
 	default:
-		log.Errorf("Error creating a template configuration file. Parser not found for %v kind", kind)
+		logrus.Errorf("Error creating a template configuration file. Parser not found for %v kind", kind)
 		return "", fmt.Errorf("error creating a template configuration file. Parser not found for %v kind", kind)
 	}
 	b, err := yaml.Marshal(config)

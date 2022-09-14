@@ -12,7 +12,7 @@ import (
 
 	"github.com/denisbrodbeck/machineid"
 	"github.com/dukex/mixpanel"
-	log "github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 )
 
 const (
@@ -86,10 +86,10 @@ func track(event string, success bool, token string, props map[string]interface{
 		e := &mixpanel.Event{Properties: props}
 		trackID := getTrackID(token)
 		if err := mixpanelClient.Track(trackID, event, e); err != nil {
-			log.WithError(err).Debugf("Failed to send analytics: %s", err)
+			logrus.WithError(err).Debugf("Failed to send analytics: %s", err)
 		}
 	} else {
-		log.Debugf("not sending event for %s", event)
+		logrus.Debugf("not sending event for %s", event)
 	}
 }
 
@@ -103,7 +103,7 @@ func getTrackID(token string) string {
 func generateMachineID() string {
 	mid, err := machineid.ProtectedID("furyctl")
 	if err != nil {
-		log.WithError(err).Debug("failed to generate a machine id")
+		logrus.WithError(err).Debug("failed to generate a machine id")
 		mid = "na"
 	}
 
