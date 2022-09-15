@@ -19,4 +19,5 @@ var (
 
 func init() {
 	validateCmd.AddCommand(validate.NewConfigCmd(version))
+	validateCmd.AddCommand(validate.NewDependenciesCmd(version))
 }

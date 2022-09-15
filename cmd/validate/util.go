@@ -17,6 +17,8 @@ import (
 	"github.com/sighupio/furyctl/internal/distribution"
 )
 
+const DefaultBaseUrl = "https://git@github.com/sighupio/fury-distribution?ref=%s"
+
 var (
 	downloadProtocols = []string{"", "git::", "file::", "http::", "s3::", "gcs::", "mercurial::"}
 

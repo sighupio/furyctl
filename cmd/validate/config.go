@@ -19,8 +19,6 @@ import (
 	"github.com/sighupio/furyctl/internal/yaml"
 )
 
-const defaultBaseUrl = "https://git@github.com/sighupio/fury-distribution?ref=%s"
-
 var errHasValidationErrors = fmt.Errorf("furyctl.yaml contains validation errors")
 
 func NewConfigCmd(version string) *cobra.Command {
@@ -62,7 +60,7 @@ func NewConfigCmd(version string) *cobra.Command {
 			}
 
 			if distroLocation == "" {
-				distroLocation = fmt.Sprintf(defaultBaseUrl, furyctlConfVersion.String())
+				distroLocation = fmt.Sprintf(DefaultBaseUrl, furyctlConfVersion.String())
 			}
 
 			repoPath, err := downloadDirectory(distroLocation)
