@@ -11,9 +11,9 @@ if [[ "${OSTYPE}" == "darwin"* ]]; then
     OS="darwin"
 fi
 CPUARCH="amd64_v1"
-if [ "$(uname -m)" = "arm64" ]; then
-	CPUARCH="arm64"
-fi
+# if [ "$(uname -m)" = "arm64" ]; then
+# 	CPUARCH="arm64_v1"
+# fi
 
 @test "furyctl" {
     info
@@ -30,7 +30,10 @@ fi
 @test "Cluster init" {
     info
     init(){
-        ./dist/furyctl-${OS}_${OS}_${CPUARCH}/furyctl --no-tty -d --debug cluster init --config ./automated-tests/integration/vsphere/cluster.yml -w ./automated-tests/integration/vsphere/cluster --reset
+        ./dist/furyctl-${OS}_${OS}_${CPUARCH}/furyctl --no-tty -d --debug cluster init \
+            --config ./automated-tests/integration/vsphere/cluster.yml \
+            -w ./automated-tests/integration/vsphere/cluster \
+            --reset
     }
     run init
     if [[ ${status} -ne 0 ]]; then
@@ -43,7 +46,14 @@ fi
     info
     project_dir="./automated-tests/integration/vsphere/cluster"
     test(){
-        if [ -e ${project_dir}/provision/roles/boundary/target/tasks/main.yml ] && [ -e ${project_dir}/provision/ansible.cfg ] && [ -e ${project_dir}/bin/terraform ] && [ -e ${project_dir}/configuration/.netrc ] && [ -e ${project_dir}/logs/terraform.logs ] && [ -e ${project_dir}/.gitignore ] && [ -e ${project_dir}/.gitattributes ] && [ -e ${project_dir}/backend.tf ]
+        if [ -e ${project_dir}/provision/roles/boundary/target/tasks/main.yml ] && \
+            [ -e ${project_dir}/provision/ansible.cfg ] && \
+            [ -e ${project_dir}/bin/terraform ] && \
+            [ -e ${project_dir}/configuration/.netrc ] && \
+            [ -e ${project_dir}/logs/terraform.logs ] && \
+            [ -e ${project_dir}/.gitignore ] && \
+            [ -e ${project_dir}/.gitattributes ] && \
+            [ -e ${project_dir}/backend.tf ]
         then
             echo "  All files exist, directory intact" >&3
             return 0

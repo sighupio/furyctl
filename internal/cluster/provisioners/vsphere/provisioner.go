@@ -311,14 +311,14 @@ func (e VSphere) TerraformFiles() []string {
 
 // Prepare the environment before running anything
 func (e VSphere) Prepare() error {
-	err := createPKI(e.terraform.WorkingDir())
-	if err != nil {
-		return err
+	if err := createPKI(e.terraform.WorkingDir()); err != nil {
+		return fmt.Errorf("error creating PKI: %v", err)
 	}
-	err = downloadAnsibleRoles(e.terraform.WorkingDir())
-	if err != nil {
-		return err
+
+	if err := downloadAnsibleRoles(e.terraform.WorkingDir()); err != nil {
+		return fmt.Errorf("error downloading Ansible roles: %v", err)
 	}
+
 	return nil
 }
 
@@ -337,7 +337,7 @@ func downloadAnsibleRoles(workingDirectory string) error {
 	}
 
 	client := &getter.Client{
-		Src:  "https://github.com/sighupio/furyctl-provisioners/archive/refs/v0.6.0.zip//furyctl-provisioners-0.6.0/roles",
+		Src:  "https://github.com/sighupio/furyctl-provisioners/archive/refs/tags/v0.6.0.zip//furyctl-provisioners-0.6.0/roles",
 		Dst:  downloadPath,
 		Pwd:  workingDirectory,
 		Mode: getter.ClientModeAny,
