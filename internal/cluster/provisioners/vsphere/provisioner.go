@@ -332,24 +332,18 @@ func downloadAnsibleRoles(workingDirectory string) error {
 
 	downloadPath := filepath.Join(workingDirectory, "provision/roles")
 	log.Infof("Ansible roles download path: %v", downloadPath)
-	err := os.Mkdir(downloadPath, 0755)
-
-	if err != nil {
+	if err := os.Mkdir(downloadPath, 0755); err != nil {
 		return err
 	}
 
 	client := &getter.Client{
-		Src:  "https://github.com/sighupio/furyctl-provisioners/archive/v0.5.0.zip//furyctl-provisioners-0.5.0/roles",
+		Src:  "https://github.com/sighupio/furyctl-provisioners/archive/refs/v0.6.0.zip//furyctl-provisioners-0.6.0/roles",
 		Dst:  downloadPath,
 		Pwd:  workingDirectory,
 		Mode: getter.ClientModeAny,
 	}
-	err = client.Get()
-	if err != nil {
-		return err
-	}
 
-	return nil
+	return client.Get()
 }
 
 // Plan runs a dry run execution
@@ -442,23 +436,16 @@ func (e VSphere) Destroy() (err error) {
 }
 
 func createPKI(workingDirectory string) error {
-	source := ""
-	currentOS := runtime.GOOS
-	currentArch := runtime.GOARCH
-	switch currentOS {
-	case "darwin":
-		source = fmt.Sprintf("https://github.com/sighupio/furyagent/releases/download/v0.2.3/furyagent-darwin-%s", currentArch)
-	case "linux":
-		source = fmt.Sprintf("https://github.com/sighupio/furyagent/releases/download/v0.2.3/furyagent-linux-%s", currentArch)
-	default:
-		return fmt.Errorf("Windows %s is not supported, sorry ;-)", currentOS)
-	}
-
+	source := fmt.Sprintf(
+		"https://github.com/sighupio/furyagent/releases/download/v0.3.0/furyagent-%s-%s",
+		runtime.GOOS,
+		runtime.GOARCH,
+	)
 	downloadPath := filepath.Join(workingDirectory, "furyagent")
-	log.Infof("Download furyagent: %v", downloadPath)
-	err := os.MkdirAll(downloadPath, 0755)
 
-	if err != nil {
+	log.Infof("Download furyagent: %v", downloadPath)
+
+	if err := os.MkdirAll(downloadPath, 0755); err != nil {
 		return err
 	}
 
@@ -468,8 +455,7 @@ func createPKI(workingDirectory string) error {
 		Pwd:  workingDirectory,
 		Mode: getter.ClientModeAny,
 	}
-	err = client.Get()
-	if err != nil {
+	if err := client.Get(); err != nil {
 		return err
 	}
 
@@ -477,8 +463,10 @@ func createPKI(workingDirectory string) error {
 	downloadedExecutableName := tokens[len(tokens)-1]
 	wantedExecutableName := "furyagent"
 
-	err = os.Rename(filepath.Join(downloadPath, downloadedExecutableName), filepath.Join(downloadPath, wantedExecutableName))
-	if err != nil {
+	if err := os.Rename(
+		filepath.Join(downloadPath, downloadedExecutableName),
+		filepath.Join(downloadPath, wantedExecutableName)
+	); err != nil {
 		log.Fatal(err)
 	}
 
