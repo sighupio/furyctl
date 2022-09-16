@@ -20,12 +20,19 @@ var (
 	ErrEnvironmentDepsValidation = errors.New("error while validating environment dependencies")
 )
 
+var execCommand = exec.Command
+
 func NewDependenciesCmd(version string) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "dependencies",
 		Short: "Validate furyctl.yaml file",
 		RunE: func(cmd *cobra.Command, _ []string) error {
-			debug := cmd.Flag("debug").Value.String() == "true"
+			debug := false
+
+			if cmd.Flag("debug") != nil {
+				debug = cmd.Flag("debug").Value.String() == "true"
+			}
+
 			furyctlPath := cmd.Flag("config").Value.String()
 			distroLocation := cmd.Flag("distro-location").Value.String()
 
@@ -176,7 +183,7 @@ func validateSystemDependencies(kfdManifest distribution.Manifest) error {
 }
 
 func checkAnsibleVersion(ver string) error {
-	out, err := exec.Command("ansible", "--version").Output()
+	out, err := execCommand("ansible", "--version").Output()
 	if err != nil {
 		return err
 	}
@@ -207,7 +214,7 @@ func checkAnsibleVersion(ver string) error {
 }
 
 func checkTerraformVersion(ver string) error {
-	out, err := exec.Command("terraform", "--version").Output()
+	out, err := execCommand("terraform", "--version").Output()
 	if err != nil {
 		return err
 	}
@@ -238,7 +245,7 @@ func checkTerraformVersion(ver string) error {
 }
 
 func checkKubectlVersion(ver string) error {
-	out, err := exec.Command("kubectl", "version", "--client").Output()
+	out, err := execCommand("kubectl", "version", "--client").Output()
 	if err != nil {
 		return err
 	}
@@ -272,7 +279,7 @@ func checkKubectlVersion(ver string) error {
 }
 
 func checkKustomizeVersion(ver string) error {
-	out, err := exec.Command("kustomize", "version", "--short").Output()
+	out, err := execCommand("kustomize", "version", "--short").Output()
 	if err != nil {
 		return err
 	}
@@ -307,7 +314,7 @@ func checkFuryagentVersion(ver string) error {
 		return nil
 	}
 
-	out, err := exec.Command("furyagent", "version").Output()
+	out, err := execCommand("furyagent", "version").Output()
 	if err != nil {
 		return err
 	}
