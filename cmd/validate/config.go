@@ -28,7 +28,12 @@ func NewConfigCmd(version string) *cobra.Command {
 		Use:   "config",
 		Short: "Validate furyctl.yaml file",
 		RunE: func(cmd *cobra.Command, _ []string) error {
-			debug := cmd.Flag("debug").Value.String() == "true"
+			debug := false
+
+			if cmd.Flag("debug") != nil {
+				debug = cmd.Flag("debug").Value.String() == "true"
+			}
+
 			furyctlPath := cmd.Flag("config").Value.String()
 			distroLocation := cmd.Flag("distro-location").Value.String()
 
