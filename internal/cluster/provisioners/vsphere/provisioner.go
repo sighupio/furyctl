@@ -465,7 +465,7 @@ func createPKI(workingDirectory string) error {
 
 	if err := os.Rename(
 		filepath.Join(downloadPath, downloadedExecutableName),
-		filepath.Join(downloadPath, wantedExecutableName)
+		filepath.Join(downloadPath, wantedExecutableName),
 	); err != nil {
 		log.Fatal(err)
 	}
