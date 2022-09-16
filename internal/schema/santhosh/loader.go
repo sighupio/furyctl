@@ -10,11 +10,11 @@ import (
 )
 
 var (
-	ErrCannotLoadSchema = errors.New("failed to read schema file")
+	ErrCannotLoadSchema = errors.New("failed to load schema file")
 )
 
-func LoadSchema(schemaPath string) (schema *jsonschema.Schema, errSchema error) {
-	berr := fmt.Errorf("%w: '%s'", ErrCannotLoadSchema, schemaPath)
+func LoadSchema(schemaPath string) (*jsonschema.Schema, error) {
+	berr := fmt.Errorf("%w '%s'", ErrCannotLoadSchema, schemaPath)
 
 	data, err := os.ReadFile(schemaPath)
 	if err != nil {
@@ -26,8 +26,8 @@ func LoadSchema(schemaPath string) (schema *jsonschema.Schema, errSchema error) 
 		return nil, fmt.Errorf("%w: %v", berr, err)
 	}
 
-	schema, errSchema = compiler.Compile(schemaPath)
-	if errSchema != nil {
+	schema, err := compiler.Compile(schemaPath)
+	if err != nil {
 		return nil, fmt.Errorf("%w: %v", berr, err)
 	}
 
