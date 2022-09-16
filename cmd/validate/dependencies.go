@@ -1,6 +1,7 @@
 package validate
 
 import (
+	"errors"
 	"fmt"
 	"github.com/sighupio/furyctl/internal/distribution"
 	"github.com/sighupio/furyctl/internal/semver"
@@ -12,6 +13,11 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+)
+
+var (
+	ErrSystemDepsValidation      = errors.New("error while validating system dependencies")
+	ErrEnvironmentDepsValidation = errors.New("error while validating environment dependencies")
 )
 
 func NewDependenciesCmd(version string) *cobra.Command {
@@ -100,70 +106,70 @@ func NewDependenciesCmd(version string) *cobra.Command {
 }
 
 func validateEnvDependencies(kind string) error {
-	errors := make([]error, 0)
+	errs := make([]error, 0)
 
 	if kind == "EKSCluster" {
 		if os.Getenv("AWS_ACCESS_KEY_ID") == "" {
 			missingAccessKeyIdErr := fmt.Errorf("missing environment variable with key: AWS_ACCESS_KEY_ID")
 			logrus.Error(missingAccessKeyIdErr)
-			errors = append(errors, missingAccessKeyIdErr)
+			errs = append(errs, missingAccessKeyIdErr)
 		}
 
 		if os.Getenv("AWS_SECRET_ACCESS_KEY") == "" {
 			missingSecretAccessKeyErr := fmt.Errorf("missing environment variable with key: AWS_SECRET_ACCESS_KEY")
 			logrus.Error(missingSecretAccessKeyErr)
-			errors = append(errors, missingSecretAccessKeyErr)
+			errs = append(errs, missingSecretAccessKeyErr)
 		}
 
 		if os.Getenv("AWS_DEFAULT_REGION") == "" {
 			missingDefaultRegionErr := fmt.Errorf("missing environment variable with key: AWS_DEFAULT_REGION")
 			logrus.Error(missingDefaultRegionErr)
-			errors = append(errors, missingDefaultRegionErr)
+			errs = append(errs, missingDefaultRegionErr)
 		}
 	}
 
-	if len(errors) > 0 {
-		return fmt.Errorf("error while validating environment dependencies")
+	if len(errs) > 0 {
+		return ErrEnvironmentDepsValidation
 	}
 
 	return nil
 }
 
 func validateSystemDependencies(kfdManifest distribution.Manifest) error {
-	errors := make([]error, 0)
+	errs := make([]error, 0)
 
 	err := checkAnsibleVersion(kfdManifest.Tools.Ansible)
 	if err != nil {
 		logrus.Error(err)
-		errors = append(errors, err)
+		errs = append(errs, err)
 	}
 
 	err = checkTerraformVersion(kfdManifest.Tools.Terraform)
 	if err != nil {
 		logrus.Error(err)
-		errors = append(errors, err)
+		errs = append(errs, err)
 	}
 
 	err = checkKubectlVersion(kfdManifest.Tools.Kubectl)
 	if err != nil {
 		logrus.Error(err)
-		errors = append(errors, err)
+		errs = append(errs, err)
 	}
 
 	err = checkKustomizeVersion(kfdManifest.Tools.Kustomize)
 	if err != nil {
 		logrus.Error(err)
-		errors = append(errors, err)
+		errs = append(errs, err)
 	}
 
 	err = checkFuryagentVersion(kfdManifest.Tools.Furyagent)
 	if err != nil {
 		logrus.Error(err)
-		errors = append(errors, err)
+		errs = append(errs, err)
 	}
 
-	if len(errors) > 0 {
-		return fmt.Errorf("error while validating system dependencies")
+	if len(errs) > 0 {
+		return ErrSystemDepsValidation
 	}
 
 	return nil
@@ -177,7 +183,7 @@ func checkAnsibleVersion(ver string) error {
 
 	s := string(out)
 
-	pattern := regexp.MustCompile("ansible \\[.*\\]")
+	pattern := regexp.MustCompile("ansible \\[.*]")
 
 	versionStringIndex := pattern.FindStringIndex(s)
 	if versionStringIndex == nil {
