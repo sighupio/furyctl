@@ -11,13 +11,16 @@ if [[ "$OSTYPE" == "darwin"* ]]; then
     OS="darwin"
 fi
 CPUARCH="amd64_v1"
-if [ "$(uname -m)" = "arm64" ]; then
-	CPUARCH="arm64"
-fi
+# if [ "$(uname -m)" = "arm64" ]; then
+# 	CPUARCH="arm64"
+# fi
 
-@test "Prepare temporal ssh key" {
+@test "Prepare temporary ssh key" {
     info
     ssh_keys(){
+        if [ -f ./automated-tests/e2e-tests/vsphere/sshkey ]; then
+            rm ./automated-tests/e2e-tests/vsphere/sshkey
+        fi
         ssh-keygen -b 2048 -t rsa -f ./automated-tests/e2e-tests/vsphere/sshkey -q -N ""
         cp ./automated-tests/e2e-tests/vsphere/sshkey.pub /tmp/sshkey.pub
     }
@@ -26,6 +29,7 @@ fi
         echo "$output" >&3
     fi
     [ "$status" -eq 0 ]
+
 }
 
 @test "furyctl" {
@@ -52,7 +56,10 @@ fi
 @test "Cluster init" {
     info
     init(){
-        ./dist/furyctl-${OS}_${OS}_${CPUARCH}/furyctl --no-tty -d --debug cluster init --config ./automated-tests/e2e-tests/vsphere/cluster.yml -w ./automated-tests/e2e-tests/vsphere/cluster --reset
+        ./dist/furyctl-${OS}_${OS}_${CPUARCH}/furyctl --no-tty -d --debug cluster init \
+            --config ./automated-tests/e2e-tests/vsphere/cluster.yml \
+            -w ./automated-tests/e2e-tests/vsphere/cluster \
+            --reset
     }
     run init
 
@@ -65,7 +72,9 @@ fi
 @test "Cluster apply (dry-run)" {
     info
     apply(){
-        ./dist/furyctl-${OS}_${OS}_${CPUARCH}/furyctl --no-tty -d --debug cluster apply --dry-run --config ./automated-tests/e2e-tests/vsphere/cluster.yml -w ./automated-tests/e2e-tests/vsphere/cluster
+        ./dist/furyctl-${OS}_${OS}_${CPUARCH}/furyctl --no-tty -d --debug cluster apply --dry-run \
+            --config ./automated-tests/e2e-tests/vsphere/cluster.yml \
+            -w ./automated-tests/e2e-tests/vsphere/cluster
     }
     run apply
 
@@ -80,7 +89,9 @@ fi
 @test "Cluster apply" {
     info
     apply(){
-        ./dist/furyctl-${OS}_${OS}_${CPUARCH}/furyctl --no-tty -d --debug cluster apply --config ./automated-tests/e2e-tests/vsphere/cluster.yml -w ./automated-tests/e2e-tests/vsphere/cluster
+        ./dist/furyctl-${OS}_${OS}_${CPUARCH}/furyctl --no-tty -d --debug cluster apply \
+            --config ./automated-tests/e2e-tests/vsphere/cluster.yml \
+            -w ./automated-tests/e2e-tests/vsphere/cluster
     }
     run apply
 
