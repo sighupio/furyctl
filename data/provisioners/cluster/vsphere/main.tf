@@ -61,7 +61,6 @@ module "fury" {
   env = var.env
 
   datacenter      = var.datacenter
-  vsphere_cluster = var.vsphere_cluster
   esxihosts       = var.esxihosts
   datastore       = var.datastore
   network         = var.network
