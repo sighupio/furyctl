@@ -11,11 +11,11 @@ if [[ "$OSTYPE" == "darwin"* ]]; then
     OS="darwin"
 fi
 CPUARCH="amd64_v1"
-if [ "$(uname -m)" = "arm64" ]; then
-	CPUARCH="arm64"
-fi
+# if [ "$(uname -m)" = "arm64" ]; then
+# 	CPUARCH="arm64"
+# fi
 
-@test "Prepare temporal ssh key" {
+@test "Prepare temporary ssh key" {
     info
     ssh_keys(){
         cp ./automated-tests/e2e-tests/vsphere/sshkey.pub /tmp/sshkey.pub
