@@ -337,7 +337,7 @@ func downloadAnsibleRoles(workingDirectory string) error {
 	}
 
 	client := &getter.Client{
-		Src:  "https://github.com/sighupio/furyctl-provisioners/archive/refs/tags/v0.6.1.zip//furyctl-provisioners-0.6.1/roles",
+		Src:  "https://github.com/sighupio/furyctl-provisioners/archive/refs/tags/v0.5.0.zip//furyctl-provisioners-0.5.0/roles",
 		Dst:  downloadPath,
 		Pwd:  workingDirectory,
 		Mode: getter.ClientModeAny,

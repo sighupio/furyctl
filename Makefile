@@ -41,7 +41,7 @@ test:
 	@go test -v ./...
 
 .PHONY: clean
-## clean: Removes temporal and build results
+## clean: Removes temporary and build results
 clean: deps
 	@GO111MODULE=on packr2 clean
 	@rm -rf bin furyctl dist
