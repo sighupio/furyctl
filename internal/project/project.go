@@ -10,8 +10,9 @@ import (
 	"io/ioutil"
 	"os"
 
-	"github.com/sighupio/furyctl/pkg/utils"
 	"github.com/sirupsen/logrus"
+
+	"github.com/sighupio/furyctl/pkg/utils"
 )
 
 const (
