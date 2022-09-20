@@ -31,8 +31,6 @@ spec:
     # whathever: "something"
   infrastructure:
     vpc:
-      # the bootstrap phase can be enabled or disabled
-      enabled: true
       # new network configuration, with a more hierarchical structure
       network:
         cidr: 10.1.0.0/16
@@ -47,7 +45,6 @@ spec:
             - 10.1.50.0/24
       vpn:
         # the vpn creation can be optional
-        enabled: true
         instances: 2
         port: 1194
         instanceType: t3.micro
@@ -163,7 +160,7 @@ spec:
       ingress:
         overrides:
           nodeSelector: {}
-          tolerations: {}
+          tolerations: []
           # override ingresses parameters
           ingresses:
             forecastle:
@@ -182,9 +179,9 @@ spec:
             # can be certManager, secret or none
             provider: certManager # it uses the configuration below as default when certManager is chosen
             secret: #if we want to use custom certificates, the template should create a secret and set it as default certificate in NGINX, so patch nginx deployment accordingly
-              cert: {file://relative/path/to/ssl.crt}
-              key: {file://relative/path/to/ssl.key}
-              ca: {file://relative/path/to/ssl.ca}
+              cert: test
+              key: test
+              ca: test
         # the standard configuration for cert-manager on the ingress module
         certManager:
           # to create the clusterIssuer, this is an additional clusterIssuer than the two provided by cert-manager, for simplicity
@@ -209,7 +206,7 @@ spec:
       logging:
         overrides:
           nodeSelector: {}
-          tolerations: {}
+          tolerations: []
           ingresses:
             opensearch-dashboards:
               disableAuth: false
@@ -237,7 +234,7 @@ spec:
       monitoring:
         overrides:
           nodeSelector: {}
-          tolerations: {}
+          tolerations: []
           # override ingresses parameters
           ingresses:
             prometheus:
@@ -268,7 +265,7 @@ spec:
       policy:
         overrides:
           nodeSelector: {}
-          tolerations: {}
+          tolerations: []
           # override ingresses parameters
           ingresses:
             gpm:
@@ -283,7 +280,7 @@ spec:
       dr:
         overrides:
           nodeSelector: {}
-          tolerations: {}
+          tolerations: []
       # auth module configuration
       auth:
         overrides:
@@ -297,22 +294,22 @@ spec:
             dex:
               host: ""
               ingressClass: ""
-          tolerations: {}
+          tolerations: []
         provider:
           # can be none, basicAuth or sso. SSO uses pomerium+dex
           type: none
           basicAuth:
             username: admin
-            password: {env://KFD_BASIC_AUTH_PASSWORD}
+            password: test
         pomerium:
           secrets:
             # override environment variables here
             ##COOKIE_SECRET is obtained with  `head -c32 /dev/urandom | base64` see https://www.pomerium.io/reference/#cookie-secret
-            COOKIE_SECRET: {env://KFD_AUTH_POMERIUM_COOKIE_SECRET}
+            COOKIE_SECRET: test
             ##IDP_CLIENT_SECRET is the secret configured in the pomerium Dex static client
-            IDP_CLIENT_SECRET: {env://KFD_AUTH_POMERIUM_IDP_CLIENT_SECRET}
+            IDP_CLIENT_SECRET: test
             ##SHARED_SECRET is obtained with  `head -c32 /dev/urandom | base64` see https://www.pomerium.io/reference/#shared-secret
-            SHARED_SECRET: {env://KFD_AUTH_POMERIUM_SHARED_SECRET}
+            SHARED_SECRET: test
         dex:
           # see dex documentation for more information
           connectors:

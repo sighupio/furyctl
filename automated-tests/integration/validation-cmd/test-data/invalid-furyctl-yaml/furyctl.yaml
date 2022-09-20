@@ -32,8 +32,6 @@ spec:
     # whathever: "something"
   infrastructure:
     vpc:
-      # the bootstrap phase can be enabled or disabled
-      enabled: true
       # new network configuration, with a more hierarchical structure
       network:
         cidr: 10.1.0.0/16
@@ -48,7 +46,6 @@ spec:
             - 10.1.50.0/24
       vpn:
         # the vpn creation can be optional
-        enabled: true
         instances: 2
         port: 1194
         instanceType: t3.micro
@@ -80,70 +77,70 @@ spec:
       - subnet-0ae4e9199d9192226
       - subnet-01787e8da51e4f070
     apiServerEndpointAccess:
-     # by default all clusters are created with a private control plane - (needs to be added to the installer's options)
-     type: "private"
-     # cidr allowed to talk with the apiServer
-     allowedCidrs:
-       - 10.1.0.0/16
-     nodeAllowedSshPublicKey: "ssh-ed25519 XYZ"
-     nodePools:
-       - name: worker
-         # optional, was OS, and version was removed
-         ami:
-           id: null
-           owner: null
-         # sizing, with a more hierarchical structure
-         size:
-           min: 1
-           max: 3
-         instance:
-           type: t3.micro
-           # optional, this enable spot instances on the ASG
-           spot: false
-           volumeSize: 50
-         # optional, this parameter is used when external target groups are attached to the ASG, otherwise everytime furyctl executes the target groups will be removed
-         attachedTargetGroups:
-           - arn:aws:elasticloadbalancing:eu-west-1:026908869948:targetgroup/adv-staging-external-nginx/6294703cfe87d756
-           - arn:aws:elasticloadbalancing:eu-west-1:026908869948:targetgroup/adv-staging-internal-nginx/81625fbe0462e332
-         # labels that are added to the nodes
-         labels:
-           nodepool: worker
-           node.kubernetes.io/role: worker
-         # optional, taints added to the nodes
-         taints:
-           - node.kubernetes.io/role=worker:NoSchedule
-         # tags added to the ASG
-         tags:
-           k8s.io/cluster-autoscaler/node-template/label/nodepool: "worker"
-           k8s.io/cluster-autoscaler/node-template/label/node.kubernetes.io/role: "worker"
-         # additional rules added to the ASG nodes security group
-         additionalFirewallRules:
-           - name: traffic_80_from_172_31_0_0_16
-             type: ingress
-             cidrBlocks:
-               - 172.31.0.0/16
-             protocol: TCP
-             ports:
-               from: 80
-               to: 80
-     # aws-auth configmap definiton
-     awsAuth:
-       # Additional AWS account id to add to the aws-auth configmap, optional
-       additionalAccounts:
-         - "777777777777"
-         - "88888888888"
-       # Additional users to add to the aws-auth configmap, optional
-       users:
-         - username: "samuele"
-           groups:
-             - system:masters
-           userarn: "arn:aws:iam::363601582189:user/samuele"
-       # Additional roles to add to the aws-auth configmap, optional
-       roles:
-         - username: "sighup-support"
-           groups:
-             - sighup-support:masters
-           rolearn: "arn:aws:iam::363601582189:role/k8s-sighup-support-role"
+      # by default all clusters are created with a private control plane - (needs to be added to the installer's options)
+      type: "private"
+      # cidr allowed to talk with the apiServer
+      allowedCidrs:
+        - 10.1.0.0/16
+      nodeAllowedSshPublicKey: "ssh-ed25519 XYZ"
+      nodePools:
+        - name: worker
+          # optional, was OS, and version was removed
+          ami:
+            id: null
+            owner: null
+          # sizing, with a more hierarchical structure
+          size:
+            min: 1
+            max: 3
+          instance:
+            type: t3.micro
+            # optional, this enable spot instances on the ASG
+            spot: false
+            volumeSize: 50
+          # optional, this parameter is used when external target groups are attached to the ASG, otherwise everytime furyctl executes the target groups will be removed
+          attachedTargetGroups:
+            - arn:aws:elasticloadbalancing:eu-west-1:026908869948:targetgroup/adv-staging-external-nginx/6294703cfe87d756
+            - arn:aws:elasticloadbalancing:eu-west-1:026908869948:targetgroup/adv-staging-internal-nginx/81625fbe0462e332
+          # labels that are added to the nodes
+          labels:
+            nodepool: worker
+            node.kubernetes.io/role: worker
+          # optional, taints added to the nodes
+          taints:
+            - node.kubernetes.io/role=worker:NoSchedule
+          # tags added to the ASG
+          tags:
+            k8s.io/cluster-autoscaler/node-template/label/nodepool: "worker"
+            k8s.io/cluster-autoscaler/node-template/label/node.kubernetes.io/role: "worker"
+          # additional rules added to the ASG nodes security group
+          additionalFirewallRules:
+            - name: traffic_80_from_172_31_0_0_16
+              type: ingress
+              cidrBlocks:
+                - 172.31.0.0/16
+              protocol: TCP
+              ports:
+                from: 80
+                to: 80
+      # aws-auth configmap definiton
+      awsAuth:
+        # Additional AWS account id to add to the aws-auth configmap, optional
+        additionalAccounts:
+          - "777777777777"
+          - "88888888888"
+        # Additional users to add to the aws-auth configmap, optional
+        users:
+          - username: "samuele"
+            groups:
+              - system:masters
+            userarn: "arn:aws:iam::363601582189:user/samuele"
+        # Additional roles to add to the aws-auth configmap, optional
+        roles:
+          - username: "sighup-support"
+            groups:
+              - sighup-support:masters
+            rolearn: "arn:aws:iam::363601582189:role/k8s-sighup-support-role"
   # distribution configuration, a subset of the `distribution.yaml` file and some additional configurations for prerequisites
   # in this phase we are managing the kustomize project AND the terraform prerequisites for the distro modules
   distribution:
@@ -164,7 +161,7 @@ spec:
       ingress:
         overrides:
           nodeSelector: {}
-          tolerations: {}
+          tolerations: []
           # override ingresses parameters
           ingresses:
             forecastle:
@@ -183,9 +180,9 @@ spec:
             # can be certManager, secret or none
             provider: certManager # it uses the configuration below as default when certManager is chosen
             secret: #if we want to use custom certificates, the template should create a secret and set it as default certificate in NGINX, so patch nginx deployment accordingly
-              cert: {file://relative/path/to/ssl.crt}
-              key: {file://relative/path/to/ssl.key}
-              ca: {file://relative/path/to/ssl.ca}
+              cert: test
+              key: test
+              ca: test
         # the standard configuration for cert-manager on the ingress module
         certManager:
           # to create the clusterIssuer, this is an additional clusterIssuer than the two provided by cert-manager, for simplicity
@@ -194,7 +191,7 @@ spec:
             # can be route53 or http01 , if http01 we need to extrapolate the ingress type. If single the class will be nginx, if dual the class will be external
             type: http01
             # if auth type is route53, should be taken automatically from the role generation using module.ingress.dns.public settings
-        # this key will manage the creation of the AWS zones and the iam roles needed for ingress module, eg: certManager and externalDns 
+        # this key will manage the creation of the AWS zones and the iam roles needed for ingress module, eg: certManager and externalDns
         dns:
           public:
             enabled: true
@@ -210,7 +207,7 @@ spec:
       logging:
         overrides:
           nodeSelector: {}
-          tolerations: {}
+          tolerations: []
           ingresses:
             opensearch-dashboards:
               disableAuth: false
@@ -238,7 +235,7 @@ spec:
       monitoring:
         overrides:
           nodeSelector: {}
-          tolerations: {}
+          tolerations: []
           # override ingresses parameters
           ingresses:
             prometheus:
@@ -269,7 +266,7 @@ spec:
       policy:
         overrides:
           nodeSelector: {}
-          tolerations: {}
+          tolerations: []
           # override ingresses parameters
           ingresses:
             gpm:
@@ -284,7 +281,7 @@ spec:
       dr:
         overrides:
           nodeSelector: {}
-          tolerations: {}
+          tolerations: []
       # auth module configuration
       auth:
         overrides:
@@ -298,22 +295,22 @@ spec:
             dex:
               host: ""
               ingressClass: ""
-          tolerations: {}
+          tolerations: []
         provider:
           # can be none, basicAuth or sso. SSO uses pomerium+dex
           type: none
           basicAuth:
             username: admin
-            password: {env://KFD_BASIC_AUTH_PASSWORD}
+            password: test
         pomerium:
           secrets:
             # override environment variables here
             ##COOKIE_SECRET is obtained with  `head -c32 /dev/urandom | base64` see https://www.pomerium.io/reference/#cookie-secret
-            COOKIE_SECRET: {env://KFD_AUTH_POMERIUM_COOKIE_SECRET}
+            COOKIE_SECRET: test
             ##IDP_CLIENT_SECRET is the secret configured in the pomerium Dex static client
-            IDP_CLIENT_SECRET: {env://KFD_AUTH_POMERIUM_IDP_CLIENT_SECRET}
+            IDP_CLIENT_SECRET: test
             ##SHARED_SECRET is obtained with  `head -c32 /dev/urandom | base64` see https://www.pomerium.io/reference/#shared-secret
-            SHARED_SECRET: {env://KFD_AUTH_POMERIUM_SHARED_SECRET}
+            SHARED_SECRET: test
         dex:
           # see dex documentation for more information
           connectors:

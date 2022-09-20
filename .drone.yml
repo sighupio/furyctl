@@ -193,6 +193,8 @@ steps:
       - integration-gcp-gke
       - integration-aws-eks
       - integration-vsphere
+      - integration-template-engine
+      - integration-validation-cmd
       - e2e-aws
       - e2e-gcp
       - e2e-vsphere
