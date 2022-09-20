@@ -48,7 +48,7 @@ func NewDependenciesCmd(version string) *cobra.Command {
 			furyctlConfVersion := minimalConf.Spec.DistributionVersion
 
 			if version != "dev" {
-				furyctlBinVersion, err := semver.NewVersion(version)
+				furyctlBinVersion, err := semver.NewVersion(fmt.Sprintf("v%s", version))
 				if err != nil {
 					return err
 				}
