@@ -20,9 +20,10 @@ import (
 	getter "github.com/hashicorp/go-getter"
 	"github.com/hashicorp/terraform-exec/tfexec"
 	"github.com/relex/aini"
+	"github.com/sirupsen/logrus"
+
 	cfg "github.com/sighupio/furyctl/internal/cluster/configuration"
 	"github.com/sighupio/furyctl/internal/configuration"
-	"github.com/sirupsen/logrus"
 )
 
 // VSphere represents the VSphere provisioner
