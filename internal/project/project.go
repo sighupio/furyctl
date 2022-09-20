@@ -12,7 +12,7 @@ import (
 
 	"github.com/sirupsen/logrus"
 
-	"github.com/sighupio/furyctl/pkg/utils"
+	"github.com/sighupio/furyctl/internal/io"
 )
 
 const (
@@ -63,7 +63,7 @@ func (p *Project) CreateSubDirs(subDirs []string) (err error) {
 // WriteFile writes a new file (fileName) with the content specified
 func (p *Project) WriteFile(fileName string, content []byte) (err error) {
 	filePath := fmt.Sprintf("%v/%v", p.Path, fileName)
-	err = utils.EnsureDir(filePath)
+	err = io.EnsureDir(filePath)
 	if err != nil {
 		return err
 	}
