@@ -19,8 +19,6 @@ import (
 	"github.com/sighupio/furyctl/internal/yaml"
 )
 
-const defaultBaseUrl = "https://git@github.com/sighupio/fury-distribution?ref=%s"
-
 var errHasValidationErrors = fmt.Errorf("furyctl.yaml contains validation errors")
 
 func NewConfigCmd(version string) *cobra.Command {
@@ -28,9 +26,9 @@ func NewConfigCmd(version string) *cobra.Command {
 		Use:   "config",
 		Short: "Validate furyctl.yaml file",
 		RunE: func(cmd *cobra.Command, _ []string) error {
-			debug := cmd.Flag("debug").Value.String() == "true"
-			furyctlPath := cmd.Flag("config").Value.String()
-			distroLocation := cmd.Flag("distro-location").Value.String()
+			debug := flag[bool](cmd, "debug").(bool)
+			furyctlPath := flag[string](cmd, "config").(string)
+			distroLocation := flag[string](cmd, "distro-location").(string)
 
 			minimalConf, err := yaml.FromFileV3[distribution.FuryctlConfig](furyctlPath)
 			if err != nil {
@@ -40,7 +38,7 @@ func NewConfigCmd(version string) *cobra.Command {
 			furyctlConfVersion := minimalConf.Spec.DistributionVersion
 
 			if version != "dev" {
-				furyctlBinVersion, err := semver.NewVersion(version)
+				furyctlBinVersion, err := semver.NewVersion(fmt.Sprintf("v%s", version))
 				if err != nil {
 					return err
 				}
@@ -57,7 +55,7 @@ func NewConfigCmd(version string) *cobra.Command {
 			}
 
 			if distroLocation == "" {
-				distroLocation = fmt.Sprintf(defaultBaseUrl, furyctlConfVersion.String())
+				distroLocation = fmt.Sprintf(DefaultBaseUrl, furyctlConfVersion.String())
 			}
 
 			repoPath, err := downloadDirectory(distroLocation)
