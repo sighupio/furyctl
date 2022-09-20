@@ -6,11 +6,16 @@ package semver
 
 import (
 	"fmt"
-	"strconv"
+	"regexp"
 	"strings"
 )
 
-var ErrInvalidSemver = fmt.Errorf("invalid semantic version")
+var (
+	// Link: https://regex101.com/r/Ly7O1x/3/
+	regex = regexp.MustCompile(`^(?P<major>0|[1-9]\d*)\.(?P<minor>0|[1-9]\d*)\.(?P<patch>0|[1-9]\d*)(?:-(?P<prerelease>(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\+(?P<buildmetadata>[0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?$`)
+
+	ErrInvalidSemver = fmt.Errorf("invalid semantic version")
+)
 
 func NewVersion(v string) (Version, error) {
 	if !isValid(v) {
@@ -57,29 +62,9 @@ func SameMinor(a, b Version) bool {
 }
 
 func isValid(v string) bool {
-	if !strings.HasPrefix(v, "v") {
+	if v[0] != 'v' {
 		return false
 	}
 
-	v = strings.TrimPrefix(v, "v")
-
-	parts := strings.Split(v, ".")
-
-	if len(parts) != 3 {
-		return false
-	}
-
-	if _, err := strconv.Atoi(parts[0]); err != nil {
-		return false
-	}
-
-	if _, err := strconv.Atoi(parts[1]); err != nil {
-		return false
-	}
-
-	if _, err := strconv.Atoi(parts[2]); err != nil {
-		return false
-	}
-
-	return true
+	return regex.Match([]byte(v[1:]))
 }
