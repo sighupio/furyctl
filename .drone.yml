@@ -93,7 +93,6 @@ steps:
       - test
       - build
       - test-integration
-      - integration-validation-cmd
       - test-e2e
     environment:
       CGO_ENABLED: 0
