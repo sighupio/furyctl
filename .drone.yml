@@ -47,8 +47,7 @@ steps:
       - git fetch --tags
       - make build
 
-  - &integration
-    name: integration-aws-eks
+  - name: integration-template-engine
     image: quay.io/sighup/e2e-furyctl:v1.2.1_v0.2.2_v1.20.1_20.04
     depends_on:
       - build
@@ -57,15 +56,16 @@ steps:
       FURYCTL_TOKEN:
         from_secret: FURYCTL_TOKEN
     commands:
-      - bats -t ./test/integration/aws-eks/tests.sh
-
-  - <<: *integration
-    name: integration-template-engine
-    commands:
       - bats -t ./test/integration/template-engine/tests.sh
 
-  - <<: *integration
-    name: integration-validation-cmd
+  - name: integration-validation-cmd
+    image: quay.io/sighup/e2e-furyctl:v1.2.1_v0.2.2_v1.20.1_20.04
+    depends_on:
+      - build
+    environment:
+      CGO_ENABLED: 0
+      FURYCTL_TOKEN:
+        from_secret: FURYCTL_TOKEN
     commands:
       - bats -t ./test/integration/validation-cmd/tests.sh
 
