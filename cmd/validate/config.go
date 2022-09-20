@@ -143,7 +143,7 @@ func NewConfigCmd(version string) *cobra.Command {
 	return cmd
 }
 
-func mergeConfigAndDefaults(furyctlFilePath string, defaultsFilePath string) (string, error) {
+func mergeConfigAndDefaults(furyctlFilePath, defaultsFilePath string) (string, error) {
 	defaultsFile, err := yaml.FromFileV2[map[any]any](defaultsFilePath)
 	if err != nil {
 		return "", fmt.Errorf("%w: %v", ErrYamlUnmarshalFile, err)
