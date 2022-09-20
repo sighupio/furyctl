@@ -59,29 +59,6 @@ steps:
       - bats -t ./test/integration/template-engine/tests.sh
       - bats -t ./test/integration/validation-cmd/tests.sh
 
-  - name: test-e2e
-    image: quay.io/sighup/e2e-furyctl:v1.2.1_v0.2.2_v1.20.1_20.04
-    pull: always
-    privileged: true # Required to connect to the VPN
-    depends_on:
-      - build
-    environment:
-      CGO_ENABLED: 0
-      FURYCTL_TOKEN:
-        from_secret: FURYCTL_TOKEN
-      TERRAFORM_TF_STATES_BUCKET_NAME:
-        from_secret: TERRAFORM_TF_STATES_BUCKET_NAME
-      AWS_ACCESS_KEY_ID:
-        from_secret: AWS_ACCESS_KEY_ID
-      AWS_SECRET_ACCESS_KEY:
-        from_secret: AWS_SECRET_ACCESS_KEY
-      AWS_REGION:
-        from_secret: AWS_REGION
-      AWS_DEFAULT_REGION:
-        from_secret: AWS_REGION
-    commands:
-      - bats -t ./test/e2e/aws-eks/tests.sh
-
   - name: build-release
     image: ghcr.io/goreleaser/goreleaser:v1.11.4
     pull: always
