@@ -341,7 +341,7 @@ func TestValidateSystemDependencies(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := validateSystemDependencies(tt.manifest)
+			err := validateSystemDependencies(tt.manifest, "")
 			if err != nil {
 				if tt.wantErr == nil {
 					t.Errorf("validateSystemDependencies() error = %v, wantErr %v", err, tt.wantErr)
@@ -388,7 +388,7 @@ func TestCheckAnsibleVersion(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := checkAnsibleVersion(tt.version)
+			err := checkAnsibleVersion(tt.version, "")
 			if err != nil {
 				if tt.wantErr == nil {
 					t.Errorf("checkAnsibleVersion() error = %v, wantErr %v", err, tt.wantErr)
@@ -435,7 +435,7 @@ func TestCheckTerraformVersion(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := checkTerraformVersion(tt.version)
+			err := checkTerraformVersion(tt.version, "")
 			if err != nil {
 				if tt.wantErr == nil {
 					t.Errorf("checkTerraformVersion() error = %v, wantErr %v", err, tt.wantErr)
@@ -482,7 +482,7 @@ func TestCheckKubectlVersion(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := checkKubectlVersion(tt.version)
+			err := checkKubectlVersion(tt.version, "")
 			if err != nil {
 				if tt.wantErr == nil {
 					t.Errorf("checkKubectlVersion() error = %v, wantErr %v", err, tt.wantErr)
@@ -529,7 +529,7 @@ func TestCheckKustomizeVersion(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := checkKustomizeVersion(tt.version)
+			err := checkKustomizeVersion(tt.version, "")
 			if err != nil {
 				if tt.wantErr == nil {
 					t.Errorf("checkKustomizeVersion() error = %v, wantErr %v", err, tt.wantErr)
@@ -576,7 +576,7 @@ func TestCheckFuryagentVersion(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := checkFuryagentVersion(tt.version)
+			err := checkFuryagentVersion(tt.version, "")
 			if err != nil {
 				if tt.wantErr == nil {
 					t.Errorf("checkFuryagentVersion() error = %v, wantErr %v", err, tt.wantErr)

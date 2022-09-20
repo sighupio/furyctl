@@ -29,7 +29,7 @@ CPUARCH="amd64_v1"
 
 @test "invalid furyctl yaml" {
     info
-    test_dir="./automated-tests/integration/validation-cmd/test-data/invalid-furyctl-yaml"
+    test_dir="./automated-tests/integration/validation-cmd/test-data/config-invalid-furyctl-yaml"
     abs_test_dir=${PWD}/${test_dir}
     furyctl_bin=${PWD}/dist/furyctl-${OS}_${OS}_${CPUARCH}/furyctl
     init(){
@@ -47,7 +47,7 @@ CPUARCH="amd64_v1"
 
 @test "valid furyctl yaml" {
     info
-    test_dir="./automated-tests/integration/validation-cmd/test-data/valid-furyctl-yaml"
+    test_dir="./automated-tests/integration/validation-cmd/test-data/config-valid-furyctl-yaml"
     abs_test_dir=${PWD}/${test_dir}
     furyctl_bin=${PWD}/dist/furyctl-${OS}_${OS}_${CPUARCH}/furyctl
     init(){
@@ -56,4 +56,92 @@ CPUARCH="amd64_v1"
     run init
 
     [ "${status}" -eq 0 ]
+}
+
+@test "dependencies missing" {
+    info
+    test_dir="./automated-tests/integration/validation-cmd/test-data/dependencies-missing"
+    abs_test_dir=${PWD}/${test_dir}
+    furyctl_bin=${PWD}/dist/furyctl-${OS}_${OS}_${CPUARCH}/furyctl
+    init(){
+        cd ${test_dir} && \
+        ${furyctl_bin} -d --debug \
+            validate dependencies \
+                --config ${abs_test_dir}/furyctl.yaml \
+                --distro-location ${abs_test_dir} \
+                --bin-path=${abs_test_dir}
+    }
+    run init
+
+    [ "${status}" -eq 1 ]
+
+    if [[ ${output} != *"ansible: no such file or directory"* ]] || \
+        [[ ${output} != *"terraform: no such file or directory"* ]] || \
+        [[ ${output} != *"kubectl: no such file or directory"* ]] || \
+        [[ ${output} != *"kustomize: no such file or directory"* ]] || \
+        [[ ${output} != *"furyagent: no such file or directory"* ]]; then
+        echo "${output}" >&3
+    fi
+
+    [[ "${output}" == *"error while validating system dependencies"* ]]
+}
+
+@test "wrong dependencies installed" {
+    info
+    test_dir="./automated-tests/integration/validation-cmd/test-data/dependencies-wrong"
+    abs_test_dir=${PWD}/${test_dir}
+    furyctl_bin=${PWD}/dist/furyctl-${OS}_${OS}_${CPUARCH}/furyctl
+    init(){
+        cd ${test_dir} && \
+        ${furyctl_bin} -d --debug \
+            validate dependencies \
+                --config ${abs_test_dir}/furyctl.yaml \
+                --distro-location ${abs_test_dir} \
+                --bin-path=${abs_test_dir}
+    }
+    run init
+
+    [ "${status}" -eq 1 ]
+
+    if [[ ${output} != *"ansible version on system"* ]] || \
+       [[ ${output} != *"terraform version on system"* ]] || \
+       [[ ${output} != *"kubectl version on system"* ]] || \
+       [[ ${output} != *"kustomize version on system"* ]] || \
+       [[ ${output} != *"furyagent version on system"* ]]; then
+        echo "${output}" >&3
+    fi
+
+    [[ "${output}" == *"error while validating system dependencies"* ]]
+}
+
+@test "correct dependencies installed" {
+    info
+    test_dir="./automated-tests/integration/validation-cmd/test-data/dependencies-correct"
+    abs_test_dir=${PWD}/${test_dir}
+    furyctl_bin=${PWD}/dist/furyctl-${OS}_${OS}_${CPUARCH}/furyctl
+    init(){
+        export AWS_ACCESS_KEY_ID=foo
+        export AWS_SECRET_ACCESS_KEY=bar
+        export AWS_DEFAULT_REGION=baz
+
+        cd ${test_dir} && \
+        ${furyctl_bin} -d --debug \
+            validate dependencies \
+                --config ${abs_test_dir}/furyctl.yaml \
+                --distro-location ${abs_test_dir} \
+                --bin-path=${abs_test_dir}
+    }
+    run init
+
+    [ "${status}" -eq 0 ]
+
+    if [[ ${output} != *"ansible version on system"* ]] && \
+       [[ ${output} != *"terraform version on system"* ]] && \
+       [[ ${output} != *"kubectl version on system"* ]] && \
+       [[ ${output} != *"kustomize version on system"* ]] && \
+       [[ ${output} != *"furyagent version on system"* ]]; then
+        echo "${output}" >&3
+    fi
+
+    [[ "${output}" == *"All dependencies are satisfied"* ]]
 }

@@ -9,10 +9,12 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	"github.com/hashicorp/go-getter"
 	"github.com/sirupsen/logrus"
+	"github.com/spf13/cobra"
 
 	"github.com/sighupio/furyctl/internal/distribution"
 )
@@ -34,6 +36,34 @@ var (
 	ErrYamlMarshalFile     = errors.New("error marshaling yaml file")
 	ErrYamlUnmarshalFile   = errors.New("error unmarshaling yaml file")
 )
+
+func flag[T bool | int | string](cmd *cobra.Command, name string) any {
+	var f T
+
+	if cmd == nil {
+		return f
+	}
+
+	if cmd.Flag(name) == nil {
+		return f
+	}
+
+	v := cmd.Flag(name).Value.String()
+
+	if v == "true" {
+		return true
+	}
+
+	if v == "false" {
+		return false
+	}
+
+	if vv, err := strconv.Atoi(v); err == nil {
+		return vv
+	}
+
+	return v
+}
 
 func getSchemaPath(basePath string, conf distribution.FuryctlConfig) (string, error) {
 	avp := strings.Split(conf.ApiVersion, "/")

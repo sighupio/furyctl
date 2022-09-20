@@ -33,14 +33,10 @@ func NewDependenciesCmd(version string) *cobra.Command {
 		Use:   "dependencies",
 		Short: "Validate furyctl.yaml file",
 		RunE: func(cmd *cobra.Command, _ []string) error {
-			debug := false
-
-			if cmd.Flag("debug") != nil {
-				debug = cmd.Flag("debug").Value.String() == "true"
-			}
-
-			furyctlPath := cmd.Flag("config").Value.String()
-			distroLocation := cmd.Flag("distro-location").Value.String()
+			debug := flag[bool](cmd, "debug").(bool)
+			binPath := flag[string](cmd, "bin-path").(string)
+			furyctlPath := flag[string](cmd, "config").(string)
+			distroLocation := flag[string](cmd, "distro-location").(string)
 
 			minimalConf, err := yaml.FromFileV3[distribution.FuryctlConfig](furyctlPath)
 			if err != nil {
@@ -93,7 +89,7 @@ func NewDependenciesCmd(version string) *cobra.Command {
 			}
 
 			logrus.Debugln("Checking system dependencies")
-			if err := validateSystemDependencies(kfdManifest); err != nil {
+			if err := validateSystemDependencies(kfdManifest, binPath); err != nil {
 				return err
 			}
 
@@ -102,9 +98,18 @@ func NewDependenciesCmd(version string) *cobra.Command {
 				return err
 			}
 
+			fmt.Println("All dependencies are satisfied")
+
 			return nil
 		},
 	}
+
+	cmd.Flags().StringP(
+		"bin-path",
+		"b",
+		"",
+		"Path to the bin folder where all dependencies are installed",
+	)
 
 	cmd.Flags().StringP(
 		"config",
@@ -156,31 +161,31 @@ func validateEnvDependencies(kind distribution.Kind) error {
 	return nil
 }
 
-func validateSystemDependencies(kfdManifest distribution.Manifest) error {
+func validateSystemDependencies(kfdManifest distribution.Manifest, binPath string) error {
 	errs := make([]error, 0)
 
-	if err := checkAnsibleVersion(kfdManifest.Tools.Ansible); err != nil {
+	if err := checkAnsibleVersion(kfdManifest.Tools.Ansible, binPath); err != nil {
 		logrus.Error(err)
 		errs = append(errs, err)
 	}
 
-	if err := checkTerraformVersion(kfdManifest.Tools.Terraform); err != nil {
+	if err := checkTerraformVersion(kfdManifest.Tools.Terraform, binPath); err != nil {
 		logrus.Error(err)
 		errs = append(errs, err)
 	}
 
-	if err := checkKubectlVersion(kfdManifest.Tools.Kubectl); err != nil {
+	if err := checkKubectlVersion(kfdManifest.Tools.Kubectl, binPath); err != nil {
 		logrus.Error(err)
 		errs = append(errs, err)
 	}
 
-	if err := checkKustomizeVersion(kfdManifest.Tools.Kustomize); err != nil {
+	if err := checkKustomizeVersion(kfdManifest.Tools.Kustomize, binPath); err != nil {
 		logrus.Error(err)
 		errs = append(errs, err)
 	}
 
 	if kfdManifest.Tools.Furyagent != "" {
-		if err := checkFuryagentVersion(kfdManifest.Tools.Furyagent); err != nil {
+		if err := checkFuryagentVersion(kfdManifest.Tools.Furyagent, binPath); err != nil {
 			logrus.Error(err)
 			errs = append(errs, err)
 		}
@@ -193,12 +198,13 @@ func validateSystemDependencies(kfdManifest distribution.Manifest) error {
 	return nil
 }
 
-func checkAnsibleVersion(wantVer string) error {
+func checkAnsibleVersion(wantVer string, binPath string) error {
 	if wantVer == "" {
 		return fmt.Errorf("ansible: %w", ErrEmptyToolVersion)
 	}
 
-	out, err := execCommand("ansible", "--version").Output()
+	path := filepath.Join(binPath, "ansible")
+	out, err := execCommand(path, "--version").Output()
 	if err != nil {
 		return err
 	}
@@ -228,12 +234,13 @@ func checkAnsibleVersion(wantVer string) error {
 	return nil
 }
 
-func checkTerraformVersion(wantVer string) error {
+func checkTerraformVersion(wantVer string, binPath string) error {
 	if wantVer == "" {
 		return fmt.Errorf("terraform: %w", ErrEmptyToolVersion)
 	}
 
-	out, err := execCommand("terraform", "--version").Output()
+	path := filepath.Join(binPath, "terraform")
+	out, err := execCommand(path, "--version").Output()
 	if err != nil {
 		return err
 	}
@@ -263,12 +270,13 @@ func checkTerraformVersion(wantVer string) error {
 	return nil
 }
 
-func checkKubectlVersion(wantVer string) error {
+func checkKubectlVersion(wantVer string, binPath string) error {
 	if wantVer == "" {
 		return fmt.Errorf("kubectl: %w", ErrEmptyToolVersion)
 	}
 
-	out, err := execCommand("kubectl", "version", "--client").Output()
+	path := filepath.Join(binPath, "kubectl")
+	out, err := execCommand(path, "version", "--client").Output()
 	if err != nil {
 		return err
 	}
@@ -301,12 +309,13 @@ func checkKubectlVersion(wantVer string) error {
 	return nil
 }
 
-func checkKustomizeVersion(wantVer string) error {
+func checkKustomizeVersion(wantVer string, binPath string) error {
 	if wantVer == "" {
 		return fmt.Errorf("kustomize: %w", ErrEmptyToolVersion)
 	}
 
-	out, err := execCommand("kustomize", "version", "--short").Output()
+	path := filepath.Join(binPath, "kustomize")
+	out, err := execCommand(path, "version", "--short").Output()
 	if err != nil {
 		return err
 	}
@@ -336,12 +345,13 @@ func checkKustomizeVersion(wantVer string) error {
 	return nil
 }
 
-func checkFuryagentVersion(wantVer string) error {
+func checkFuryagentVersion(wantVer string, binPath string) error {
 	if wantVer == "" {
 		return fmt.Errorf("furyagent: %w", ErrEmptyToolVersion)
 	}
 
-	out, err := execCommand("furyagent", "version").Output()
+	path := filepath.Join(binPath, "furyagent")
+	out, err := execCommand(path, "version").Output()
 	if err != nil {
 		return err
 	}
