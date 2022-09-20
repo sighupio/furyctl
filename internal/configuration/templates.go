@@ -151,7 +151,7 @@ func clusterTemplate(config *Configuration) error {
 			NodePools: []clustercfg.EKSNodePool{
 				{
 					Name:         "my-node-pool. Required. Name of the node pool",
-					Version:      "1.18. Required. null to use Control Plane version.",
+					Version:      "1.23. Required. null to use Control Plane version.",
 					MinSize:      0,
 					MaxSize:      1,
 					InstanceType: "t3.micro. Required. AWS EC2 isntance types",
@@ -185,7 +185,7 @@ func clusterTemplate(config *Configuration) error {
 		config.Spec = spec
 	case config.Provisioner == "gke":
 		spec := clustercfg.GKE{
-			Version:                        "1.18.12-gke.1206 # GKE Control plane version",
+			Version:                        "1.23.12-gke.1206 # GKE Control plane version",
 			Network:                        "vpc-id1 # Identificator of the Network",
 			NetworkProjectID:               "12309123 # OPTIONAL. The project ID of the shared VPC's host (for shared vpc support)",
 			ControlPlaneCIDR:               "10.0.0.0/28 # OPTIONAL. DEFAULT VALUE. The IP range in CIDR notation to use for the hosted master network",
@@ -207,7 +207,7 @@ func clusterTemplate(config *Configuration) error {
 			NodePools: []clustercfg.GKENodePool{
 				{
 					Name:         "my-node-pool. Required. Name of the node pool",
-					Version:      "1.18.12-gke.1206. Required. null to use Control Plane version.",
+					Version:      "1.23.12-gke.1206. Required. null to use Control Plane version.",
 					MinSize:      1,
 					MaxSize:      1,
 					InstanceType: "n1-standard-1. Required. GCP instance types",
