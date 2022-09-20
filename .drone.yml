@@ -67,7 +67,6 @@ steps:
       - test
       - build
       - test-integration
-      - test-e2e
     environment:
       CGO_ENABLED: 0
       GITHUB_TOKEN:
