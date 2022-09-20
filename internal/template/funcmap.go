@@ -5,9 +5,11 @@
 package template
 
 import (
+	"strings"
 	"text/template"
 
 	"github.com/Masterminds/sprig/v3"
+	"gopkg.in/yaml.v2"
 )
 
 type FuncMap struct {
@@ -24,4 +26,22 @@ func (f *FuncMap) Add(name string, fn interface{}) {
 
 func (f *FuncMap) Delete(name string) {
 	delete(f.FuncMap, name)
+}
+
+func toYAML(v any) string {
+	data, err := yaml.Marshal(v)
+	if err != nil {
+		// Swallow errors inside of a template.
+		return ""
+	}
+	return strings.TrimSuffix(string(data), "\n")
+}
+
+func fromYAML(str string) map[string]any {
+	m := map[string]any{}
+
+	if err := yaml.Unmarshal([]byte(str), &m); err != nil {
+		m["Error"] = err.Error()
+	}
+	return m
 }

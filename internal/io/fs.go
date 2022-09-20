@@ -94,3 +94,16 @@ func CopyFromSourceToTarget(src, dst string) (int64, error) {
 
 	return io.Copy(destination, source)
 }
+
+// EnsureDir creates the directories to host the file.
+// Example: hello/world.md will create the hello dir if it does not exists.
+func EnsureDir(fileName string) (err error) {
+	dirName := filepath.Dir(fileName)
+	if _, serr := os.Stat(dirName); serr != nil {
+		err := os.MkdirAll(dirName, os.ModePerm)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}

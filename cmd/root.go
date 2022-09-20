@@ -12,9 +12,9 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
+	"github.com/sighupio/furyctl/internal/analytics"
 	"github.com/sighupio/furyctl/internal/cobrax"
 	"github.com/sighupio/furyctl/internal/io"
-	"github.com/sighupio/furyctl/pkg/analytics"
 )
 
 type rootConfig struct {
