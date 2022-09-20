@@ -441,7 +441,6 @@ func (c *Cluster) output() ([]byte, error) {
 }
 
 func (c *Cluster) createGitFiles() error {
-
 	c.s.Stop()
 	c.s.Suffix = " Creating .gitattributes file"
 	c.s.Start()

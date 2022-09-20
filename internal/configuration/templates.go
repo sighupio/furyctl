@@ -16,7 +16,7 @@ import (
 )
 
 // Template generates a yaml with a sample configuration requested by the client
-func Template(kind string, provisioner string) (string, error) {
+func Template(kind, provisioner string) (string, error) {
 	config := Configuration{}
 	config.Kind = kind
 	config.Provisioner = provisioner
