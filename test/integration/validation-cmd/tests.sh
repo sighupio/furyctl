@@ -20,7 +20,7 @@ FURYCTL="${PWD}/dist/furyctl_${OS}_${CPUARCH}/furyctl"
 @test "furyctl" {
     info
     init(){
-        "${FURYCTL} version"
+        "${FURYCTL}" version
     }
     run init
     if [[ ${status} -ne 0 ]]; then
@@ -31,7 +31,7 @@ FURYCTL="${PWD}/dist/furyctl_${OS}_${CPUARCH}/furyctl"
 
 @test "invalid furyctl yaml" {
     info
-    test_dir="./test/integration/validation-cmd/test-data/config-invalid-furyctl-yaml"
+    test_dir="./test/integration/validation-cmd/data/config-invalid-furyctl-yaml"
     abs_test_dir=${PWD}/${test_dir}
     init(){
         cd ${test_dir} && ${FURYCTL} -d --debug validate config --config ${abs_test_dir}/furyctl.yaml --distro-location ${abs_test_dir}
@@ -48,7 +48,7 @@ FURYCTL="${PWD}/dist/furyctl_${OS}_${CPUARCH}/furyctl"
 
 @test "valid furyctl yaml" {
     info
-    test_dir="./test/integration/validation-cmd/test-data/config-valid-furyctl-yaml"
+    test_dir="./test/integration/validation-cmd/data/config-valid-furyctl-yaml"
     abs_test_dir=${PWD}/${test_dir}
     init(){
         cd ${test_dir} && ${FURYCTL} -d --debug validate config --config ${abs_test_dir}/furyctl.yaml --distro-location ${abs_test_dir}
@@ -60,7 +60,7 @@ FURYCTL="${PWD}/dist/furyctl_${OS}_${CPUARCH}/furyctl"
 
 @test "dependencies missing" {
     info
-    test_dir="./test/integration/validation-cmd/test-data/dependencies-missing"
+    test_dir="./test/integration/validation-cmd/data/dependencies-missing"
     abs_test_dir=${PWD}/${test_dir}
     init(){
         cd ${test_dir} && \
@@ -87,7 +87,7 @@ FURYCTL="${PWD}/dist/furyctl_${OS}_${CPUARCH}/furyctl"
 
 @test "wrong dependencies installed" {
     info
-    test_dir="./test/integration/validation-cmd/test-data/dependencies-wrong"
+    test_dir="./test/integration/validation-cmd/data/dependencies-wrong"
     abs_test_dir=${PWD}/${test_dir}
     init(){
         cd ${test_dir} && \
@@ -114,7 +114,7 @@ FURYCTL="${PWD}/dist/furyctl_${OS}_${CPUARCH}/furyctl"
 
 @test "correct dependencies installed" {
     info
-    test_dir="./test/integration/validation-cmd/test-data/dependencies-correct"
+    test_dir="./test/integration/validation-cmd/data/dependencies-correct"
     abs_test_dir=${PWD}/${test_dir}
     init(){
         export AWS_ACCESS_KEY_ID=foo
