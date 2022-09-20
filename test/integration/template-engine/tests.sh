@@ -11,14 +11,16 @@ if [[ "${OSTYPE}" == "darwin"* ]]; then
     OS="darwin"
 fi
 CPUARCH="amd64_v1"
-if [ "$(uname -m)" = "arm64" ]; then
-	CPUARCH="arm64"
-fi
+# if [ "$(uname -m)" = "arm64" ]; then
+# 	CPUARCH="arm64"
+# fi
+
+FURYCTL="${PWD}/dist/furyctl_${OS}_${CPUARCH}/furyctl"
 
 @test "furyctl" {
     info
     init(){
-        ./dist/furyctl-${OS}_${OS}_${CPUARCH}/furyctl version
+        "${FURYCTL}" version
     }
     run init
     if [[ ${status} -ne 0 ]]; then
@@ -30,9 +32,8 @@ fi
 @test "no distribution file" {
     info
     test_dir="./test/integration/template-engine/test-data/no-distribution-yaml"
-    furyctl_bin=${PWD}/dist/furyctl-${OS}_${OS}_${CPUARCH}/furyctl
     init(){
-        cd ${test_dir} && ${furyctl_bin} -d --debug template
+        cd ${test_dir} && ${FURYCTL} -d --debug template
     }
     run init
 
@@ -47,9 +48,8 @@ fi
 @test "no furyctl.yaml file" {
     info
     test_dir="./test/integration/template-engine/test-data/no-furyctl-yaml"
-    furyctl_bin=${PWD}/dist/furyctl-${OS}_${OS}_${CPUARCH}/furyctl
     init(){
-        cd ${test_dir} && ${furyctl_bin} -d --debug template
+        cd ${test_dir} && ${FURYCTL} -d --debug template
     }
     run init
 
@@ -64,9 +64,8 @@ fi
 @test "no data property in distribution.yaml file" {
     info
     test_dir="./test/integration/template-engine/test-data/distribution-yaml-no-data-property"
-    furyctl_bin=${PWD}/dist/furyctl-${OS}_${OS}_${CPUARCH}/furyctl
     init(){
-        cd ${test_dir} && ${furyctl_bin} -d --debug template
+        cd ${test_dir} && ${FURYCTL} -d --debug template
     }
     run init
 
@@ -81,9 +80,8 @@ fi
 @test "empty template" {
     info
     test_dir="./test/integration/template-engine/test-data/empty"
-    furyctl_bin=${PWD}/dist/furyctl-${OS}_${OS}_${CPUARCH}/furyctl
     init(){
-        cd ${test_dir} && ${furyctl_bin} -d --debug template
+        cd ${test_dir} && ${FURYCTL} -d --debug template
         if [ -f ./target/file.txt ]; then false; else true; fi
     }
     run init
@@ -97,9 +95,8 @@ fi
 @test "simple template dry-run" {
     info
     test_dir="./test/integration/template-engine/test-data/simple-dry-run"
-    furyctl_bin=${PWD}/dist/furyctl-${OS}_${OS}_${CPUARCH}/furyctl
     init(){
-        cd ${test_dir} && ${furyctl_bin} -d --debug template --dry-run
+        cd ${test_dir} && ${FURYCTL} -d --debug template --dry-run
         cat ./target/file.txt | grep "testValue"
     }
     run init
@@ -113,9 +110,8 @@ fi
 @test "simple template" {
     info
     test_dir="./test/integration/template-engine/test-data/simple"
-    furyctl_bin=${PWD}/dist/furyctl-${OS}_${OS}_${CPUARCH}/furyctl
     init(){
-        cd ${test_dir} && ${furyctl_bin} -d --debug template
+        cd ${test_dir} && ${FURYCTL} -d --debug template
         cat ./target/file.txt | grep "testValue"
     }
     run init
@@ -129,9 +125,8 @@ fi
 @test "complex template dry-run" {
     info
     test_dir="./test/integration/template-engine/test-data/complex"
-    furyctl_bin=${PWD}/dist/furyctl-${OS}_${OS}_${CPUARCH}/furyctl
     init(){
-        cd ${test_dir} && ${furyctl_bin} -d --debug template --dry-run
+        cd ${test_dir} && ${FURYCTL} -d --debug template --dry-run
 
         # test that the config/example.yaml file has been generated
         if [ ! -f ./target/config/example.yaml ]; then
@@ -169,9 +164,8 @@ fi
 @test "complex template" {
     info
     test_dir="./test/integration/template-engine/test-data/complex"
-    furyctl_bin=${PWD}/dist/furyctl-${OS}_${OS}_${CPUARCH}/furyctl
     init(){
-        cd ${test_dir} && ${furyctl_bin} -d --debug template
+        cd ${test_dir} && ${FURYCTL} -d --debug template
 
         # test that the config/example.yaml file has been generated
         if [ ! -f ./target/config/example.yaml ]; then

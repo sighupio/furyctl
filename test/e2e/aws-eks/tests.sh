@@ -14,10 +14,12 @@ CPUARCH="amd64_v1"
 # 	CPUARCH="arm64"
 # fi
 
+FURYCTL=./dist/furyctl_${OS}_${CPUARCH}/furyctl
+
 @test "furyctl" {
     info
     init(){
-        ./dist/furyctl-${OS}_${OS}_${CPUARCH}/furyctl --no-tty version
+        ${FURYCTL} --no-tty version
     }
     run init
     if [[ $status -ne 0 ]]; then
@@ -38,7 +40,7 @@ CPUARCH="amd64_v1"
 @test "Bootstrap init" {
     info
     init(){
-        ./dist/furyctl-${OS}_${OS}_${CPUARCH}/furyctl --no-tty -d --debug bootstrap init --config ./test/e2e/aws-eks/bootstrap.yml -w ./test/e2e/aws-eks/bootstrap --reset
+        ${FURYCTL} --no-tty -d --debug bootstrap init --config ./test/e2e/aws-eks/bootstrap.yml -w ./test/e2e/aws-eks/bootstrap --reset
     }
     run init
 
@@ -51,7 +53,7 @@ CPUARCH="amd64_v1"
 @test "Bootstrap apply (dry-run)" {
     info
     apply(){
-        ./dist/furyctl-${OS}_${OS}_${CPUARCH}/furyctl --no-tty -d --debug bootstrap apply --dry-run --config ./test/e2e/aws-eks/bootstrap.yml -w ./test/e2e/aws-eks/bootstrap
+        ${FURYCTL} --no-tty -d --debug bootstrap apply --dry-run --config ./test/e2e/aws-eks/bootstrap.yml -w ./test/e2e/aws-eks/bootstrap
     }
     run apply
 
@@ -66,7 +68,7 @@ CPUARCH="amd64_v1"
 @test "Bootstrap apply" {
     info
     apply(){
-        ./dist/furyctl-${OS}_${OS}_${CPUARCH}/furyctl --no-tty -d --debug bootstrap apply --config ./test/e2e/aws-eks/bootstrap.yml -w ./test/e2e/aws-eks/bootstrap
+        ${FURYCTL} --no-tty -d --debug bootstrap apply --config ./test/e2e/aws-eks/bootstrap.yml -w ./test/e2e/aws-eks/bootstrap
     }
     run apply
 
@@ -163,7 +165,7 @@ CPUARCH="amd64_v1"
 @test "Cluster init" {
     info
     init(){
-        ./dist/furyctl-${OS}_${OS}_${CPUARCH}/furyctl --no-tty -d --debug cluster init --config ./test/e2e/aws-eks/cluster.yml -w ./test/e2e/aws-eks/cluster --reset
+        ${FURYCTL} --no-tty -d --debug cluster init --config ./test/e2e/aws-eks/cluster.yml -w ./test/e2e/aws-eks/cluster --reset
     }
     run init
 
@@ -176,7 +178,7 @@ CPUARCH="amd64_v1"
 @test "Cluster apply (dry-run)" {
     info
     apply(){
-        ./dist/furyctl-${OS}_${OS}_${CPUARCH}/furyctl --no-tty -d --debug cluster apply --dry-run --config ./test/e2e/aws-eks/cluster.yml -w ./test/e2e/aws-eks/cluster
+        ${FURYCTL} --no-tty -d --debug cluster apply --dry-run --config ./test/e2e/aws-eks/cluster.yml -w ./test/e2e/aws-eks/cluster
     }
     run apply
 
@@ -191,7 +193,7 @@ CPUARCH="amd64_v1"
 @test "Cluster apply" {
     info
     apply(){
-        ./dist/furyctl-${OS}_${OS}_${CPUARCH}/furyctl --no-tty -d --debug cluster apply --config ./test/e2e/aws-eks/cluster.yml -w ./test/e2e/aws-eks/cluster
+        ${FURYCTL} --no-tty -d --debug cluster apply --config ./test/e2e/aws-eks/cluster.yml -w ./test/e2e/aws-eks/cluster
     }
     run apply
 
@@ -252,7 +254,7 @@ CPUARCH="amd64_v1"
 @test "Cluster destroy" {
     info
     destroy(){
-        ./dist/furyctl-${OS}_${OS}_${CPUARCH}/furyctl --no-tty -d --debug cluster destroy --force --config ./test/e2e/aws-eks/cluster.yml -w ./test/e2e/aws-eks/cluster
+        ${FURYCTL} --no-tty -d --debug cluster destroy --force --config ./test/e2e/aws-eks/cluster.yml -w ./test/e2e/aws-eks/cluster
     }
     run destroy
 
@@ -280,7 +282,7 @@ CPUARCH="amd64_v1"
 @test "Bootstrap destroy" {
     info
     destroy(){
-        ./dist/furyctl-${OS}_${OS}_${CPUARCH}/furyctl --no-tty -d --debug bootstrap destroy --force --config ./test/e2e/aws-eks/bootstrap.yml -w ./test/e2e/aws-eks/bootstrap
+        ${FURYCTL} --no-tty -d --debug bootstrap destroy --force --config ./test/e2e/aws-eks/bootstrap.yml -w ./test/e2e/aws-eks/bootstrap
     }
     run destroy
 

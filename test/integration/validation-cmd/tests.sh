@@ -15,10 +15,12 @@ CPUARCH="amd64_v1"
 # 	CPUARCH="arm64"
 # fi
 
+FURYCTL="${PWD}/dist/furyctl_${OS}_${CPUARCH}/furyctl"
+
 @test "furyctl" {
     info
     init(){
-        ./dist/furyctl-${OS}_${OS}_${CPUARCH}/furyctl version
+        "${FURYCTL} version"
     }
     run init
     if [[ ${status} -ne 0 ]]; then
@@ -31,9 +33,8 @@ CPUARCH="amd64_v1"
     info
     test_dir="./test/integration/validation-cmd/test-data/config-invalid-furyctl-yaml"
     abs_test_dir=${PWD}/${test_dir}
-    furyctl_bin=${PWD}/dist/furyctl-${OS}_${OS}_${CPUARCH}/furyctl
     init(){
-        cd ${test_dir} && ${furyctl_bin} -d --debug validate config --config ${abs_test_dir}/furyctl.yaml --distro-location ${abs_test_dir}
+        cd ${test_dir} && ${FURYCTL} -d --debug validate config --config ${abs_test_dir}/furyctl.yaml --distro-location ${abs_test_dir}
     }
     run init
 
@@ -49,9 +50,8 @@ CPUARCH="amd64_v1"
     info
     test_dir="./test/integration/validation-cmd/test-data/config-valid-furyctl-yaml"
     abs_test_dir=${PWD}/${test_dir}
-    furyctl_bin=${PWD}/dist/furyctl-${OS}_${OS}_${CPUARCH}/furyctl
     init(){
-        cd ${test_dir} && ${furyctl_bin} -d --debug validate config --config ${abs_test_dir}/furyctl.yaml --distro-location ${abs_test_dir}
+        cd ${test_dir} && ${FURYCTL} -d --debug validate config --config ${abs_test_dir}/furyctl.yaml --distro-location ${abs_test_dir}
     }
     run init
 
@@ -62,10 +62,9 @@ CPUARCH="amd64_v1"
     info
     test_dir="./test/integration/validation-cmd/test-data/dependencies-missing"
     abs_test_dir=${PWD}/${test_dir}
-    furyctl_bin=${PWD}/dist/furyctl-${OS}_${OS}_${CPUARCH}/furyctl
     init(){
         cd ${test_dir} && \
-        ${furyctl_bin} -d --debug \
+        ${FURYCTL} -d --debug \
             validate dependencies \
                 --config ${abs_test_dir}/furyctl.yaml \
                 --distro-location ${abs_test_dir} \
@@ -90,10 +89,9 @@ CPUARCH="amd64_v1"
     info
     test_dir="./test/integration/validation-cmd/test-data/dependencies-wrong"
     abs_test_dir=${PWD}/${test_dir}
-    furyctl_bin=${PWD}/dist/furyctl-${OS}_${OS}_${CPUARCH}/furyctl
     init(){
         cd ${test_dir} && \
-        ${furyctl_bin} -d --debug \
+        ${FURYCTL} -d --debug \
             validate dependencies \
                 --config ${abs_test_dir}/furyctl.yaml \
                 --distro-location ${abs_test_dir} \
@@ -118,14 +116,13 @@ CPUARCH="amd64_v1"
     info
     test_dir="./test/integration/validation-cmd/test-data/dependencies-correct"
     abs_test_dir=${PWD}/${test_dir}
-    furyctl_bin=${PWD}/dist/furyctl-${OS}_${OS}_${CPUARCH}/furyctl
     init(){
         export AWS_ACCESS_KEY_ID=foo
         export AWS_SECRET_ACCESS_KEY=bar
         export AWS_DEFAULT_REGION=baz
 
         cd ${test_dir} && \
-        ${furyctl_bin} -d --debug \
+        ${FURYCTL} -d --debug \
             validate dependencies \
                 --config ${abs_test_dir}/furyctl.yaml \
                 --distro-location ${abs_test_dir} \
