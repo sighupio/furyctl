@@ -26,9 +26,9 @@ var (
 	ErrSystemDepsValidation      = errors.New("error while validating system dependencies")
 	ErrEnvironmentDepsValidation = errors.New("error while validating environment dependencies")
 	ErrEmptyToolVersion          = errors.New("empty tool version")
-)
 
-var execCommand = exec.Command
+	execCommand = exec.Command
+)
 
 func NewDependenciesCmd(version string) *cobra.Command {
 	cmd := &cobra.Command{
