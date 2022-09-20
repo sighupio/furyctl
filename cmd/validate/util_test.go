@@ -133,7 +133,7 @@ func TestClientGet(t *testing.T) {
 	in := filepath.Join(tmpDir, "in")
 	out := filepath.Join(tmpDir, "out")
 
-	if err := os.MkdirAll(in, 0755); err != nil {
+	if err := os.MkdirAll(in, 0o755); err != nil {
 		t.Fatalf("error creating temp dir: %v", err)
 	}
 

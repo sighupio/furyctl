@@ -32,7 +32,7 @@ The generated folder will be created starting from a provided template and the p
 		SilenceUsage:  true,
 		SilenceErrors: true,
 		RunE: func(_ *cobra.Command, _ []string) error {
-			//TODO(rm-2470): To be reworked in redmine task - Define template command flags.
+			// TODO(rm-2470): To be reworked in redmine task - Define template command flags.
 			source := "source"
 			target := "target"
 			suffix := ".tpl"
