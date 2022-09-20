@@ -18,14 +18,14 @@ import (
 	"github.com/sighupio/furyctl/internal/project"
 	"github.com/sighupio/furyctl/pkg/analytics"
 	"github.com/sighupio/furyctl/pkg/terraform"
-	log "github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
 
 func cPreDestroy(cmd *cobra.Command, args []string) (err error) {
 	if cForce {
-		log.Warn("Force destroy of the cluster project")
+		logrus.Warn("Force destroy of the cluster project")
 		return cPre(cmd, args)
 	}
 	fmt.Println("\r  Are you sure you want to destroy the cluster?\n  Write 'yes' to continue")
@@ -52,10 +52,10 @@ func cPre(cmd *cobra.Command, args []string) (err error) {
 		cGitHubToken = viper.GetString("token")
 	}
 
-	log.Debug("passing pre-flight checks")
+	logrus.Debug("passing pre-flight checks")
 	err = parseConfig(cConfigFilePath, "Cluster")
 	if err != nil {
-		log.Errorf("error parsing configuration file: %v", err)
+		logrus.Errorf("error parsing configuration file: %v", err)
 		return err
 	}
 	wd, err := os.Getwd()
@@ -63,7 +63,7 @@ func cPre(cmd *cobra.Command, args []string) (err error) {
 		return err
 	}
 	workingDirFullPath := fmt.Sprintf("%v/%v", wd, cWorkingDir)
-	log.Debug("pre-flight checks ok!")
+	logrus.Debug("pre-flight checks ok!")
 	prj = &project.Project{
 		Path: workingDirFullPath,
 	}
@@ -80,7 +80,7 @@ func cPre(cmd *cobra.Command, args []string) (err error) {
 	}
 	clu, err = cluster.New(clusterOpts)
 	if err != nil {
-		log.Errorf("the cluster provisioner can not be initialized: %v", err)
+		logrus.Errorf("the cluster provisioner can not be initialized: %v", err)
 		return err
 	}
 	return nil
@@ -221,5 +221,4 @@ func init() {
 	clusterCmd.AddCommand(clusterApplyCmd)
 	clusterCmd.AddCommand(clusterDestroyCmd)
 	clusterCmd.AddCommand(clusterTemplateCmd)
-	rootCmd.AddCommand(clusterCmd)
 }

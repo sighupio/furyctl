@@ -11,7 +11,7 @@ import (
 	"os"
 
 	"github.com/sighupio/furyctl/pkg/utils"
-	log "github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 )
 
 const (
@@ -30,10 +30,10 @@ type Project struct {
 func (p *Project) Reset() (err error) {
 	_, err = os.Stat(p.Path)
 	if !os.IsNotExist(err) { // Exists
-		log.Warnf("Removing %v directory", p.Path)
+		logrus.Warnf("Removing %v directory", p.Path)
 		err = os.RemoveAll(p.Path)
 		if err != nil {
-			log.Errorf("Error removing the base dir %v. %v", p.Path, err)
+			logrus.Errorf("Error removing the base dir %v. %v", p.Path, err)
 			return err
 		}
 	}
@@ -44,14 +44,14 @@ func (p *Project) Reset() (err error) {
 func (p *Project) CreateSubDirs(subDirs []string) (err error) {
 	_, err = os.Stat(p.Path)
 	if !os.IsNotExist(err) {
-		log.Error(pathAlreadyExistsErr)
+		logrus.Error(pathAlreadyExistsErr)
 		return errors.New(pathAlreadyExistsErr)
 	}
 	if os.IsNotExist(err) {
 		for _, subDir := range subDirs {
 			err = os.MkdirAll(fmt.Sprintf("%v/%v", p.Path, subDir), defaultDirPermission)
 			if err != nil {
-				log.Errorf(pathCreationErr, err)
+				logrus.Errorf(pathCreationErr, err)
 				return err
 			}
 		}
@@ -74,7 +74,7 @@ func (p *Project) WriteFile(fileName string, content []byte) (err error) {
 func (p *Project) Check() error {
 	_, err := os.Stat(p.Path)
 	if os.IsNotExist(err) {
-		log.Errorf("Directory does not exists. %v", err)
+		logrus.Errorf("Directory does not exists. %v", err)
 		return errors.New("Directory does not exists")
 	}
 	return nil

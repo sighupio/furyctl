@@ -27,28 +27,30 @@ type Furyconf struct {
 }
 
 // ProviderPattern is the abstraction of the following structure:
-//provider:
-//   modules:
-//     aws
-//      - uri: https://github.com/terraform-aws-modules
-//        label: official-modules
+// provider:
+//
+//	modules:
+//	  aws
+//	   - uri: https://github.com/terraform-aws-modules
+//	     label: official-modules
 type ProviderPattern map[string]ProviderKind
 
 // ProviderKind is the abstraction of the following structure:
 //
 // modules:
-//   aws
-//    - uri: https://github.com/terraform-aws-modules
-//      label: official-modules
+//
+//	aws
+//	 - uri: https://github.com/terraform-aws-modules
+//	   label: official-modules
 type ProviderKind map[string][]RegistrySpec
 
-//RegistrySpec contains the couple uri/label to identify each tf new repo declared
+// RegistrySpec contains the couple uri/label to identify each tf new repo declared
 type RegistrySpec struct {
 	BaseURI string `mapstructure:"url"`
 	Label   string `mapstructure:"label"`
 }
 
-//VersionPattern Map from glob pattern to version associated (e.g. {"aws/*" : "v1.15.4-1"}
+// VersionPattern Map from glob pattern to version associated (e.g. {"aws/*" : "v1.15.4-1"}
 type VersionPattern map[string]string
 
 // Package is the type to contain the definition of a single package

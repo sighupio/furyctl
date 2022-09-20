@@ -13,7 +13,7 @@ import (
 func init() {
 	vendorCmd.PersistentFlags().BoolVarP(&conf.DownloadOpts.Https, "https", "H", false, "if true downloads using https instead of ssh")
 	vendorCmd.PersistentFlags().StringVarP(&conf.Prefix, "prefix", "P", "", "Add filtering on download with prefix, to reduce update scope")
-	rootCmd.AddCommand(vendorCmd)
+	vendorCmd.PersistentFlags().BoolVarP(&conf.DownloadOpts.Parallel, "parallel", "p", true, "if true enables parallel downloads")
 }
 
 var conf = Config{}
@@ -31,7 +31,7 @@ var vendorCmd = &cobra.Command{
 	Long:          "Download dependencies specified in Furyfile.yml",
 	SilenceUsage:  true,
 	SilenceErrors: true,
-	RunE: func(cmd *cobra.Command, args []string) error {
+	RunE: func(_ *cobra.Command, _ []string) error {
 		viper.SetConfigType("yml")
 		viper.AddConfigPath(".")
 		viper.SetConfigName(configFile)
@@ -50,7 +50,6 @@ var vendorCmd = &cobra.Command{
 		}
 
 		list, err := config.Parse(conf.Prefix)
-
 		if err != nil {
 			return err
 		}
