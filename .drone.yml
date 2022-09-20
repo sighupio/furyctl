@@ -1,19 +1,6 @@
 # Copyright (c) 2017-present SIGHUP s.r.l All rights reserved.
 # Use of this source code is governed by a BSD-style
 # license that can be found in the LICENSE file.
-
-name: license
-kind: pipeline
-type: docker
-
-steps:
-  - name: check
-    image: golang:1.18.1-alpine
-    pull: always
-    commands:
-      - go install github.com/google/addlicense@v1.0.0
-      - addlicense -c "SIGHUP s.r.l" -y 2017-present -v -l bsd --check .
-
 ---
 name: Build Test and Release
 kind: pipeline
@@ -22,31 +9,27 @@ type: docker
 node:
   runner: internal
 
-depends_on:
-  - license
-
 steps:
-  - name: lint
-    image: golang:1.18.1-alpine
+  - name: check
+    image: quay.io/sighup/golang:1.19.0
     pull: always
     commands:
-      - test -z $(gofmt -l .)
-    when:
-      event:
-        - push
-        - tag
+      - go install github.com/google/addlicense@v1.0.0
+      - make license-check
+
+  - name: lint
+    image: quay.io/sighup/golang:1.19.0
+    pull: always
+    commands:
+      - make lint
 
   - name: test
-    image: golang:1.18.1-alpine
+    image: quay.io/sighup/golang:1.19.0
     pull: always
     commands:
-      - go test -v ./...
+      - make test
     environment:
       CGO_ENABLED: 0
-    when:
-      event:
-        - push
-        - tag
 
   - name: build
     image: ghcr.io/goreleaser/goreleaser:v1.9.2
@@ -59,15 +42,9 @@ steps:
       GITHUB_TOKEN:
         from_secret: GITHUB_TOKEN
     commands:
-      - go install github.com/gobuffalo/packr/v2/packr2@v2.8.3
       - git reset --hard
       - git fetch --tags
-      - goreleaser check
-      - goreleaser --debug build --skip-validate --rm-dist
-    when:
-      event:
-        - push
-        - tag
+      - make build
 
   - &integration
     name: integration-gcp-gke
@@ -80,10 +57,6 @@ steps:
         from_secret: FURYCTL_TOKEN
     commands:
       - bats -t ./automated-tests/integration/gcp-gke/tests.sh
-    when:
-      event:
-        - push
-        - tag
 
   - <<: *integration
     name: integration-aws-eks
@@ -190,6 +163,7 @@ steps:
     depends_on:
       - lint
       - test
+      - build
       - integration-gcp-gke
       - integration-aws-eks
       - integration-vsphere
@@ -203,12 +177,16 @@ steps:
       GITHUB_TOKEN:
         from_secret: GITHUB_TOKEN
     commands:
-      - go install github.com/gobuffalo/packr/v2/packr2@v2.8.3
       - git reset --hard
       - git fetch --tags
-      - goreleaser check
-      - goreleaser --debug release --rm-dist
+      - make release
     when:
       ref:
         include:
           - refs/tags/v**
+
+trigger:
+  event:
+    exclude:
+      - pull_request
+      - promote
