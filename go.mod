@@ -1,5 +1,7 @@
 module github.com/sighupio/furyctl
 
+go 1.19
+
 require (
 	github.com/briandowns/spinner v1.12.0
 	github.com/denisbrodbeck/machineid v1.0.1
@@ -98,5 +100,3 @@ require (
 	google.golang.org/protobuf v1.26.0 // indirect
 	gopkg.in/ini.v1 v1.62.0 // indirect
 )
-
-go 1.18
