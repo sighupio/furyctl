@@ -14,10 +14,7 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/sighupio/furyctl/internal/bootstrap/provisioners/aws"
-	"github.com/sighupio/furyctl/internal/bootstrap/provisioners/gcp"
 	"github.com/sighupio/furyctl/internal/cluster/provisioners/eks"
-	"github.com/sighupio/furyctl/internal/cluster/provisioners/gke"
-	"github.com/sighupio/furyctl/internal/cluster/provisioners/vsphere"
 	"github.com/sighupio/furyctl/internal/configuration"
 )
 
@@ -58,10 +55,6 @@ func getClusterProvisioner(config configuration.Configuration) (Provisioner, err
 	switch {
 	case config.Provisioner == "eks":
 		return eks.New(&config), nil
-	case config.Provisioner == "gke":
-		return gke.New(&config), nil
-	case config.Provisioner == "vsphere":
-		return vsphere.New(&config), nil
 	default:
 		logrus.Error("Provisioner not found")
 		return nil, errors.New("Provisioner not found")
@@ -72,8 +65,6 @@ func getBootstrapProvisioner(config configuration.Configuration) (Provisioner, e
 	switch {
 	case config.Provisioner == "aws":
 		return aws.New(&config), nil
-	case config.Provisioner == "gcp":
-		return gcp.New(&config), nil
 	default:
 		logrus.Error("Provisioner not found")
 		return nil, errors.New("Provisioner not found")

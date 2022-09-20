@@ -92,7 +92,6 @@ imports:
 	@goimports -v -w -e -local github.com/sighupio main.go
 	@goimports -v -w -e -local github.com/sighupio cmd/
 	@goimports -v -w -e -local github.com/sighupio internal/
-	@goimports -v -w -e -local github.com/sighupio pkg/
 
 gci:
 	@find . -name "*.go" -type f -not -path '*/vendor/*' \
