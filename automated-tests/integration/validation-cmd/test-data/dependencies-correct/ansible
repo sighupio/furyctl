@@ -1,0 +1,13 @@
+#!/bin/sh
+
+cat <<EOF
+ansible [core 2.11.2]
+config file = None
+configured module search path = ['', '']
+ansible python module location = ./ansible
+ansible collection location = ./ansible/collections
+executable location = ./bin/ansible
+python version = 3.9.14
+jinja version = 3.1.2
+libyaml = True
+EOF
