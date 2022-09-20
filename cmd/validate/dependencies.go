@@ -23,6 +23,7 @@ import (
 var (
 	ErrSystemDepsValidation      = errors.New("error while validating system dependencies")
 	ErrEnvironmentDepsValidation = errors.New("error while validating environment dependencies")
+	ErrEmptyToolVersion          = errors.New("empty tool version")
 )
 
 var execCommand = exec.Command
@@ -125,10 +126,10 @@ func NewDependenciesCmd(version string) *cobra.Command {
 	return cmd
 }
 
-func validateEnvDependencies(kind string) error {
+func validateEnvDependencies(kind distribution.Kind) error {
 	errs := make([]error, 0)
 
-	if kind == "EKSCluster" {
+	if kind.Equals(distribution.EKSCluster) {
 		if os.Getenv("AWS_ACCESS_KEY_ID") == "" {
 			missingAccessKeyIdErr := fmt.Errorf("missing environment variable with key: AWS_ACCESS_KEY_ID")
 			logrus.Error(missingAccessKeyIdErr)
@@ -158,34 +159,31 @@ func validateEnvDependencies(kind string) error {
 func validateSystemDependencies(kfdManifest distribution.Manifest) error {
 	errs := make([]error, 0)
 
-	err := checkAnsibleVersion(kfdManifest.Tools.Ansible)
-	if err != nil {
+	if err := checkAnsibleVersion(kfdManifest.Tools.Ansible); err != nil {
 		logrus.Error(err)
 		errs = append(errs, err)
 	}
 
-	err = checkTerraformVersion(kfdManifest.Tools.Terraform)
-	if err != nil {
+	if err := checkTerraformVersion(kfdManifest.Tools.Terraform); err != nil {
 		logrus.Error(err)
 		errs = append(errs, err)
 	}
 
-	err = checkKubectlVersion(kfdManifest.Tools.Kubectl)
-	if err != nil {
+	if err := checkKubectlVersion(kfdManifest.Tools.Kubectl); err != nil {
 		logrus.Error(err)
 		errs = append(errs, err)
 	}
 
-	err = checkKustomizeVersion(kfdManifest.Tools.Kustomize)
-	if err != nil {
+	if err := checkKustomizeVersion(kfdManifest.Tools.Kustomize); err != nil {
 		logrus.Error(err)
 		errs = append(errs, err)
 	}
 
-	err = checkFuryagentVersion(kfdManifest.Tools.Furyagent)
-	if err != nil {
-		logrus.Error(err)
-		errs = append(errs, err)
+	if kfdManifest.Tools.Furyagent != "" {
+		if err := checkFuryagentVersion(kfdManifest.Tools.Furyagent); err != nil {
+			logrus.Error(err)
+			errs = append(errs, err)
+		}
 	}
 
 	if len(errs) > 0 {
@@ -195,7 +193,11 @@ func validateSystemDependencies(kfdManifest distribution.Manifest) error {
 	return nil
 }
 
-func checkAnsibleVersion(ver string) error {
+func checkAnsibleVersion(wantVer string) error {
+	if wantVer == "" {
+		return fmt.Errorf("ansible: %w", ErrEmptyToolVersion)
+	}
+
 	out, err := execCommand("ansible", "--version").Output()
 	if err != nil {
 		return err
@@ -219,14 +221,18 @@ func checkAnsibleVersion(ver string) error {
 
 	systemAnsibleVersion := strings.TrimRight(versionStringTokens[len(versionStringTokens)-1], "]")
 
-	if systemAnsibleVersion != ver {
-		return fmt.Errorf("ansible version on system: %s, required version: %s", systemAnsibleVersion, ver)
+	if systemAnsibleVersion != wantVer {
+		return fmt.Errorf("ansible version on system: %s, required version: %s", systemAnsibleVersion, wantVer)
 	}
 
 	return nil
 }
 
-func checkTerraformVersion(ver string) error {
+func checkTerraformVersion(wantVer string) error {
+	if wantVer == "" {
+		return fmt.Errorf("terraform: %w", ErrEmptyToolVersion)
+	}
+
 	out, err := execCommand("terraform", "--version").Output()
 	if err != nil {
 		return err
@@ -250,14 +256,18 @@ func checkTerraformVersion(ver string) error {
 
 	systemTerraformVersion := strings.TrimLeft(versionStringTokens[len(versionStringTokens)-1], "v")
 
-	if systemTerraformVersion != ver {
-		return fmt.Errorf("terraform version on system: %s, required version: %s", systemTerraformVersion, ver)
+	if systemTerraformVersion != wantVer {
+		return fmt.Errorf("terraform version on system: %s, required version: %s", systemTerraformVersion, wantVer)
 	}
 
 	return nil
 }
 
-func checkKubectlVersion(ver string) error {
+func checkKubectlVersion(wantVer string) error {
+	if wantVer == "" {
+		return fmt.Errorf("kubectl: %w", ErrEmptyToolVersion)
+	}
+
 	out, err := execCommand("kubectl", "version", "--client").Output()
 	if err != nil {
 		return err
@@ -284,14 +294,18 @@ func checkKubectlVersion(ver string) error {
 		"\"",
 	)
 
-	if systemKubectlVersion != ver {
-		return fmt.Errorf("kubectl version on system: %s, required version: %s", systemKubectlVersion, ver)
+	if systemKubectlVersion != wantVer {
+		return fmt.Errorf("kubectl version on system: %s, required version: %s", systemKubectlVersion, wantVer)
 	}
 
 	return nil
 }
 
-func checkKustomizeVersion(ver string) error {
+func checkKustomizeVersion(wantVer string) error {
+	if wantVer == "" {
+		return fmt.Errorf("kustomize: %w", ErrEmptyToolVersion)
+	}
+
 	out, err := execCommand("kustomize", "version", "--short").Output()
 	if err != nil {
 		return err
@@ -315,16 +329,16 @@ func checkKustomizeVersion(ver string) error {
 
 	systemKustomizeVersion := strings.TrimLeft(versionStringTokens[len(versionStringTokens)-1], "v")
 
-	if systemKustomizeVersion != ver {
-		return fmt.Errorf("kustomize version on system: %s, required version: %s", systemKustomizeVersion, ver)
+	if systemKustomizeVersion != wantVer {
+		return fmt.Errorf("kustomize version on system: %s, required version: %s", systemKustomizeVersion, wantVer)
 	}
 
 	return nil
 }
 
-func checkFuryagentVersion(ver string) error {
-	if ver == "" {
-		return nil
+func checkFuryagentVersion(wantVer string) error {
+	if wantVer == "" {
+		return fmt.Errorf("furyagent: %w", ErrEmptyToolVersion)
 	}
 
 	out, err := execCommand("furyagent", "version").Output()
@@ -350,8 +364,8 @@ func checkFuryagentVersion(ver string) error {
 
 	systemFuryagentVersion := versionStringTokens[len(versionStringTokens)-1]
 
-	if systemFuryagentVersion != ver {
-		return fmt.Errorf("furyagent version on system: %s, required version: %s", systemFuryagentVersion, ver)
+	if systemFuryagentVersion != wantVer {
+		return fmt.Errorf("furyagent version on system: %s, required version: %s", systemFuryagentVersion, wantVer)
 	}
 
 	return nil

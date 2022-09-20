@@ -49,7 +49,7 @@ func getSchemaPath(basePath string, conf distribution.FuryctlConfig) (string, er
 		return "", fmt.Errorf("kind is empty")
 	}
 
-	filename := fmt.Sprintf("%s-%s-%s.json", strings.ToLower(conf.Kind), ns, ver)
+	filename := fmt.Sprintf("%s-%s-%s.json", strings.ToLower(conf.Kind.String()), ns, ver)
 
 	return filepath.Join(basePath, "schemas", filename), nil
 }

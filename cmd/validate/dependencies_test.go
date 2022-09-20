@@ -7,12 +7,13 @@ package validate
 import (
 	"bytes"
 	"fmt"
-	"github.com/sighupio/furyctl/internal/distribution"
-	"github.com/sighupio/furyctl/internal/yaml"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"testing"
+
+	"github.com/sighupio/furyctl/internal/distribution"
+	"github.com/sighupio/furyctl/internal/yaml"
 )
 
 var (
@@ -267,7 +268,7 @@ func TestNewDependenciesCmd_SuccessValidation(t *testing.T) {
 func TestValidateEnvDependencies(t *testing.T) {
 	tests := []struct {
 		name    string
-		kind    string
+		kind    distribution.Kind
 		setup   func()
 		wantErr error
 	}{
