@@ -10,14 +10,14 @@ import (
 	"github.com/sighupio/furyctl/cmd/validate"
 )
 
-var (
-	validateCmd = &cobra.Command{
+func NewValidateCommand(version string) *cobra.Command {
+	validateCmd := &cobra.Command{
 		Use:   "validate",
 		Short: "Validate fury config files and dependencies",
 	}
-)
 
-func init() {
 	validateCmd.AddCommand(validate.NewConfigCmd(version))
 	validateCmd.AddCommand(validate.NewDependenciesCmd(version))
+
+	return validateCmd
 }

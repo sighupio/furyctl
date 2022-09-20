@@ -15,16 +15,28 @@
 package main
 
 import (
-	"os"
-
-	"github.com/sirupsen/logrus"
-
 	"github.com/sighupio/furyctl/cmd"
+	"github.com/sirupsen/logrus"
+)
+
+var (
+	version   = "unknown"
+	gitCommit = "unknown"
+	buildTime = "unknown"
+	goVersion = "unknown"
+	osArch    = "unknown"
 )
 
 func main() {
-	if err := cmd.Execute(); err != nil {
-		logrus.Error(err)
-		os.Exit(1)
+	versions := map[string]string{
+		"version":   version,
+		"gitCommit": gitCommit,
+		"buildTime": buildTime,
+		"goVersion": goVersion,
+		"osArch":    osArch,
+	}
+
+	if err := cmd.NewRootCommand(versions).Execute(); err != nil {
+		logrus.Fatal(err)
 	}
 }

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-package cmd
+package dump
 
 import (
 	"fmt"
@@ -17,11 +17,14 @@ import (
 	"github.com/sighupio/furyctl/internal/template"
 )
 
-var (
-	tDryRun      bool
-	tNoOverwrite bool
+type templateConfig struct {
+	DryRun      bool
+	NoOverwrite bool
+}
 
-	templateCmd = &cobra.Command{
+func NewTemplateCmd() *cobra.Command {
+	cfg := templateConfig{}
+	templateCmd := &cobra.Command{
 		Use:   "template",
 		Short: "Renders the distribution's manifests from a template and a configuration file",
 		Long: `Generates a folder with the Kustomization project for deploying Kubernetes Fury Distribution into a cluster.
@@ -78,7 +81,7 @@ The generated folder will be created starting from a provided template and the p
 				return err
 			}
 
-			if !tNoOverwrite {
+			if !cfg.NoOverwrite {
 				if err = os.RemoveAll(target); err != nil {
 					return err
 				}
@@ -90,8 +93,8 @@ The generated folder will be created starting from a provided template and the p
 				confPath,
 				outDirPath,
 				suffix,
-				tNoOverwrite,
-				tDryRun,
+				cfg.NoOverwrite,
+				cfg.DryRun,
 			)
 			if err != nil {
 				return err
@@ -100,19 +103,19 @@ The generated folder will be created starting from a provided template and the p
 			return templateModel.Generate()
 		},
 	}
-)
 
-func init() {
 	templateCmd.Flags().BoolVar(
-		&tDryRun,
+		&cfg.DryRun,
 		"dry-run",
 		false,
 		"Furyctl will try its best to generate the manifests despite the errors",
 	)
 	templateCmd.Flags().BoolVar(
-		&tNoOverwrite,
+		&cfg.NoOverwrite,
 		"no-overwrite",
 		false,
 		"Stop if target directory is not empty",
 	)
+
+	return templateCmd
 }
