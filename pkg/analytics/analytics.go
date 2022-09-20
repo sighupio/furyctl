@@ -32,20 +32,6 @@ var (
 	version        string
 )
 
-func enabled() bool {
-	return !disable
-}
-
-// Version will set the version of the CLI
-func Version(v string) {
-	version = v
-}
-
-// Disable will disable analytics
-func Disable(d bool) {
-	disable = d
-}
-
 func init() {
 	c := &http.Client{
 		Timeout: time.Second * 5,
@@ -58,6 +44,20 @@ func init() {
 	}
 
 	mixpanelClient = mixpanel.NewFromClient(c, mixpanelToken, "https://api-eu.mixpanel.com")
+}
+
+func enabled() bool {
+	return !disable
+}
+
+// Version will set the version of the CLI
+func Version(v string) {
+	version = v
+}
+
+// Disable will disable analytics
+func Disable(d bool) {
+	disable = d
 }
 
 func track(event string, success bool, token string, props map[string]interface{}) {
