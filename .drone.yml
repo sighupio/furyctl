@@ -81,9 +81,6 @@ steps:
         from_secret: AWS_REGION
     commands:
       - bats -t ./test/e2e/aws-eks/tests.sh
-    when:
-      event:
-        - tag
 
   - name: build-release
     image: ghcr.io/goreleaser/goreleaser:v1.11.4
