@@ -15,9 +15,9 @@ executor:
       region: "eu-central-1"
 provisioner: eks
 spec:
-  version: "1.18"
+  version: "1.23"
   network: "vpc-1"
-  subnetworks: 
+  subnetworks:
     - "subnet-1"
     - "subnet-2"
     - "subnet-3"
@@ -25,7 +25,7 @@ spec:
   sshPublicKey: "123"
   nodePools:
     - name: "one"
-      version: "1.18"
+      version: "1.23"
       minSize: 0
       maxSize: 10
       instanceType: "m"

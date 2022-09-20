@@ -53,7 +53,7 @@ func init() {
 	}
 	sampleEKSConfig.Provisioner = "eks"
 	sampleEKSConfig.Spec = clustercfg.EKS{
-		Version:      "1.18",
+		Version:      "1.23",
 		Network:      "vpc-1",
 		SubNetworks:  []string{"subnet-1", "subnet-2", "subnet-3"},
 		DMZCIDRRange: clustercfg.DMZCIDRRange{Values: []string{"0.0.0.0/0"}},
@@ -61,7 +61,7 @@ func init() {
 		NodePools: []clustercfg.EKSNodePool{
 			{
 				Name:         "one",
-				Version:      "1.18",
+				Version:      "1.23",
 				MinSize:      0,
 				MaxSize:      10,
 				InstanceType: "m",
