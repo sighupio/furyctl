@@ -47,7 +47,7 @@ steps:
       - git fetch --tags
       - make build
 
-  - name: integration-template-engine
+  - name: test-integration
     image: quay.io/sighup/e2e-furyctl:v1.2.1_v0.2.2_v1.20.1_20.04
     depends_on:
       - build
@@ -57,19 +57,9 @@ steps:
         from_secret: FURYCTL_TOKEN
     commands:
       - bats -t ./test/integration/template-engine/tests.sh
-
-  - name: integration-validation-cmd
-    image: quay.io/sighup/e2e-furyctl:v1.2.1_v0.2.2_v1.20.1_20.04
-    depends_on:
-      - build
-    environment:
-      CGO_ENABLED: 0
-      FURYCTL_TOKEN:
-        from_secret: FURYCTL_TOKEN
-    commands:
       - bats -t ./test/integration/validation-cmd/tests.sh
 
-  - name: e2e-aws
+  - name: test-e2e
     image: quay.io/sighup/e2e-furyctl:v1.2.1_v0.2.2_v1.20.1_20.04
     pull: always
     privileged: true # Required to connect to the VPN
@@ -79,7 +69,6 @@ steps:
       CGO_ENABLED: 0
       FURYCTL_TOKEN:
         from_secret: FURYCTL_TOKEN
-
       TERRAFORM_TF_STATES_BUCKET_NAME:
         from_secret: TERRAFORM_TF_STATES_BUCKET_NAME
       AWS_ACCESS_KEY_ID:
@@ -103,10 +92,9 @@ steps:
       - lint
       - test
       - build
-      - integration-aws-eks
-      - integration-template-engine
+      - test-integration
       - integration-validation-cmd
-      - e2e-aws
+      - test-e2e
     environment:
       CGO_ENABLED: 0
       GITHUB_TOKEN:
