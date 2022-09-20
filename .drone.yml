@@ -42,12 +42,13 @@ steps:
       GITHUB_TOKEN:
         from_secret: GITHUB_TOKEN
     commands:
+      - go install github.com/gobuffalo/packr/v2/packr2@v2.8.3
       - git reset --hard
       - git fetch --tags
       - make build
 
   - &integration
-    name: integration-gcp-gke
+    name: integration-aws-eks
     image: quay.io/sighup/e2e-furyctl:v1.2.1_v0.2.2_v1.20.1_20.04
     depends_on:
       - build
@@ -56,30 +57,19 @@ steps:
       FURYCTL_TOKEN:
         from_secret: FURYCTL_TOKEN
     commands:
-      - bats -t ./automated-tests/integration/gcp-gke/tests.sh
-
-  - <<: *integration
-    name: integration-aws-eks
-    commands:
-      - bats -t ./automated-tests/integration/aws-eks/tests.sh
-
-  - <<: *integration
-    name: integration-vsphere
-    commands:
-      - bats -t ./automated-tests/integration/vsphere/tests.sh
+      - bats -t ./test/integration/aws-eks/tests.sh
 
   - <<: *integration
     name: integration-template-engine
     commands:
-      - bats -t ./automated-tests/integration/template-engine/tests.sh
+      - bats -t ./test/integration/template-engine/tests.sh
 
   - <<: *integration
     name: integration-validation-cmd
     commands:
-      - bats -t ./automated-tests/integration/validation-cmd/tests.sh
+      - bats -t ./test/integration/validation-cmd/tests.sh
 
-  - &e2e
-    name: e2e-gcp
+  - name: e2e-aws
     image: quay.io/sighup/e2e-furyctl:v1.2.1_v0.2.2_v1.20.1_20.04
     pull: always
     privileged: true # Required to connect to the VPN
@@ -100,62 +90,11 @@ steps:
         from_secret: AWS_REGION
       AWS_DEFAULT_REGION:
         from_secret: AWS_REGION
-
-      GCP_CREDENTIALS:
-        from_secret: GCP_CREDENTIALS
-      GCP_CREDENTIALS_PATH: /tmp/terraform-credentials.json
-
-      GOOGLE_PROJECT:
-        from_secret: GOOGLE_PROJECT
-      CLOUDSDK_CORE_PROJECT:
-        from_secret: GOOGLE_PROJECT
-      GOOGLE_REGION:
-        from_secret: GOOGLE_REGION
-
-      VSPHERE_USER:
-        from_secret: VSPHERE_USER
-      VSPHERE_PASSWORD:
-        from_secret: VSPHERE_PASSWORD
-      VSPHERE_SERVER:
-        from_secret: VSPHERE_SERVER
-      VSPHERE_DATACENTER:
-        from_secret: VSPHERE_DATACENTER
-      VSPHERE_DATASTORE:
-        from_secret: VSPHERE_DATASTORE
-      VSPHERE_HOST:
-        from_secret: VSPHERE_HOST
-      VSPHERE_NET:
-        from_secret: VSPHERE_NET
-      VSPHERE_TEMPLATE_PREFIX:
-        from_secret: VSPHERE_TEMPLATE_PREFIX
     commands:
-      - echo $${GCP_CREDENTIALS} | base64 -d > $${GCP_CREDENTIALS_PATH}
-      - export GOOGLE_APPLICATION_CREDENTIALS=$${GCP_CREDENTIALS_PATH}
-      - bats -t ./automated-tests/e2e-tests/gcp-gke/tests.sh
+      - bats -t ./test/e2e/aws-eks/tests.sh
     when:
       event:
         - tag
-
-  - <<: *e2e
-    name: e2e-aws
-    commands:
-      - bats -t ./automated-tests/e2e-tests/aws-eks/tests.sh
-
-  - <<: *e2e
-    name: e2e-vsphere
-    commands:
-      - bats -t ./automated-tests/e2e-tests/vsphere/tests.sh
-
-  - <<: *e2e
-    name: e2e-vsphere-destroy
-    depends_on:
-      - e2e-vsphere
-    failure: ignore
-    commands:
-      - echo " Our vsphere environment is not so stable"
-      - echo " The destroy phase fails randomly because of disconnection events between vsphere nodes and the API"
-      - echo " Ignore errors on this step"
-      - bats -t ./automated-tests/e2e-tests/vsphere/tests-destroy.sh
 
   - name: build-release
     image: ghcr.io/goreleaser/goreleaser:v1.9.2
@@ -164,19 +103,16 @@ steps:
       - lint
       - test
       - build
-      - integration-gcp-gke
       - integration-aws-eks
-      - integration-vsphere
       - integration-template-engine
       - integration-validation-cmd
       - e2e-aws
-      - e2e-gcp
-      - e2e-vsphere
     environment:
       CGO_ENABLED: 0
       GITHUB_TOKEN:
         from_secret: GITHUB_TOKEN
     commands:
+      - go install github.com/gobuffalo/packr/v2/packr2@v2.8.3
       - git reset --hard
       - git fetch --tags
       - make release
