@@ -78,7 +78,11 @@ func NewConfigCmd(version string) *cobra.Command {
 				)
 			}
 
-			schemaPath := getSchemaPath(repoPath, minimalConf)
+			schemaPath, err := getSchemaPath(repoPath, minimalConf)
+			if err != nil {
+				return err
+			}
+
 			defaultPath := getDefaultPath(repoPath)
 
 			defaultedFuryctlPath, err := mergeConfigAndDefaults(furyctlPath, defaultPath)
