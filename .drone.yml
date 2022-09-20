@@ -32,7 +32,7 @@ steps:
       CGO_ENABLED: 0
 
   - name: build
-    image: ghcr.io/goreleaser/goreleaser:v1.9.2
+    image: ghcr.io/goreleaser/goreleaser:v1.11.4
     pull: always
     depends_on:
       - lint
@@ -97,7 +97,7 @@ steps:
         - tag
 
   - name: build-release
-    image: ghcr.io/goreleaser/goreleaser:v1.9.2
+    image: ghcr.io/goreleaser/goreleaser:v1.11.4
     pull: always
     depends_on:
       - lint
