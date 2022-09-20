@@ -74,7 +74,7 @@ func NewConfigCmd(version string) *cobra.Command {
 				return err
 			}
 
-			if !semver.SameMinor(furyctlConfVersion, kfdManifest.Version) {
+			if !semver.SamePatch(furyctlConfVersion, kfdManifest.Version) {
 				return fmt.Errorf(
 					"minor versions mismatch: furyctl.yaml has %s, but furyctl has %s",
 					furyctlConfVersion.String(),
