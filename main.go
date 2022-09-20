@@ -15,8 +15,9 @@
 package main
 
 import (
-	"github.com/sighupio/furyctl/cmd"
 	"github.com/sirupsen/logrus"
+
+	"github.com/sighupio/furyctl/cmd"
 )
 
 var (

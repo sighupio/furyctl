@@ -15,8 +15,9 @@ import (
 	"github.com/hashicorp/go-version"
 	"github.com/hashicorp/terraform-exec/tfexec"
 	"github.com/hashicorp/terraform-exec/tfinstall"
-	"github.com/sighupio/furyctl/pkg/utils"
 	"github.com/sirupsen/logrus"
+
+	"github.com/sighupio/furyctl/pkg/utils"
 )
 
 // ensure ensures a working terraform version to be used in the project

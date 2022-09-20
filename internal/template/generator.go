@@ -13,8 +13,9 @@ import (
 	"strings"
 	"text/template"
 
-	"github.com/sighupio/furyctl/internal/io"
 	"github.com/sirupsen/logrus"
+
+	"github.com/sighupio/furyctl/internal/io"
 )
 
 var (
