@@ -27,6 +27,7 @@ func NewDefaultModel(content map[any]any, path string) *DefaultModel {
 		path:    path,
 	}
 }
+
 func (b *DefaultModel) Content() map[any]any {
 	return b.content
 }

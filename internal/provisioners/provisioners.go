@@ -66,6 +66,7 @@ func getClusterProvisioner(config configuration.Configuration) (Provisioner, err
 		return nil, errors.New("Provisioner not found")
 	}
 }
+
 func getBootstrapProvisioner(config configuration.Configuration) (Provisioner, error) {
 	switch {
 	case config.Provisioner == "aws":
