@@ -1,0 +1,6 @@
+#!/bin/sh
+
+cat <<EOF
+Terraform v0.15.3
+on darwin_amd64
+EOF

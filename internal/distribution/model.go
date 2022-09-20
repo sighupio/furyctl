@@ -6,9 +6,19 @@ package distribution
 
 import "github.com/sighupio/furyctl/internal/semver"
 
+type Kind string
+
+func (k Kind) String() string {
+	return string(k)
+}
+
+func (k Kind) Equals(kk Kind) bool {
+	return k == kk
+}
+
 type FuryctlConfig struct {
 	ApiVersion string `yaml:"apiVersion"`
-	Kind       string `yaml:"kind"`
+	Kind       Kind   `yaml:"kind"`
 	Spec       struct {
 		DistributionVersion semver.Version `yaml:"distributionVersion"`
 	} `yaml:"spec"`
