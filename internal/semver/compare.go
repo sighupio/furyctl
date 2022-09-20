@@ -26,6 +26,21 @@ func (s Version) String() string {
 	return string(s)
 }
 
+// SamePatch takes two versions and tell if they are part of the same patch
+func SamePatch(a, b Version) bool {
+	if a == b {
+		return true
+	}
+
+	ap := strings.Split(a.String(), ".")
+	ma := fmt.Sprintf("%s.%s.%s", ap[0], ap[1], ap[2])
+
+	bp := strings.Split(b.String(), ".")
+	mb := fmt.Sprintf("%s.%s.%s", bp[0], bp[1], bp[2])
+
+	return ma == mb
+}
+
 // SameMinor takes two versions and tell if they are part of the same minor
 func SameMinor(a, b Version) bool {
 	if a == b {
