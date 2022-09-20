@@ -5,17 +5,19 @@
 package cmd
 
 import (
-	"github.com/sirupsen/logrus"
+	"fmt"
+
 	"github.com/spf13/cobra"
 )
 
-// versionCmd represents the version command
-var versionCmd = &cobra.Command{
-	Use:   "version",
-	Short: "Prints the client version information",
-	Long:  ``,
-	Run: func(_ *cobra.Command, _ []string) {
-		logrus.Printf("Furyctl version %v\n", version)
-		logrus.Printf("built %v from commit %v", date, commit)
-	},
+func NewVersionCmd(versions map[string]string) *cobra.Command {
+	return &cobra.Command{
+		Use:   "version",
+		Short: "Print the version number of furyctl",
+		Run: func(_ *cobra.Command, _ []string) {
+			for k, v := range versions {
+				fmt.Printf("%s: %s\n", k, v)
+			}
+		},
+	}
 }
