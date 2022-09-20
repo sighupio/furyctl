@@ -202,7 +202,7 @@ func (d GCP) createVarFile() (err error) {
 		buffer.WriteString(fmt.Sprintf("vpn_ssh_users = [\"%v\"]\n", strings.Join(spec.VPN.SSHUsers, "\",\"")))
 	}
 
-	err = ioutil.WriteFile(fmt.Sprintf("%v/gcp.tfvars", d.terraform.WorkingDir()), buffer.Bytes(), 0600)
+	err = ioutil.WriteFile(fmt.Sprintf("%v/gcp.tfvars", d.terraform.WorkingDir()), buffer.Bytes(), 0o600)
 	if err != nil {
 		return err
 	}

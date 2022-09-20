@@ -13,9 +13,7 @@ import (
 	"github.com/santhosh-tekuri/jsonschema"
 )
 
-var (
-	ErrCannotLoadSchema = errors.New("failed to load schema file")
-)
+var ErrCannotLoadSchema = errors.New("failed to load schema file")
 
 func LoadSchema(schemaPath string) (*jsonschema.Schema, error) {
 	berr := fmt.Errorf("%w '%s'", ErrCannotLoadSchema, schemaPath)

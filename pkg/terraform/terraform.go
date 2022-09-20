@@ -105,7 +105,7 @@ func envMap(environ []string) map[string]string {
 	return env
 }
 
-func configureLogger(tf *tfexec.Terraform, workingDir string, logDir string, debug bool) (err error) {
+func configureLogger(tf *tfexec.Terraform, workingDir, logDir string, debug bool) (err error) {
 	logFile, err := os.Create(fmt.Sprintf("%v/%v/terraform.logs", workingDir, logDir))
 	tf.SetLogger(logrus.StandardLogger())
 	c := &tfwriter{
@@ -122,16 +122,16 @@ func configureLogger(tf *tfexec.Terraform, workingDir string, logDir string, deb
 }
 
 // configureGitHubNetrcAccess creates the .netrc file with the credentials to access github private repos
-func configureGitHubNetrcAccess(path string, token string, configDir string) (err error) {
+func configureGitHubNetrcAccess(path, token, configDir string) (err error) {
 	netrc := fmt.Sprintf(`machine github.com
 login furyctl
 password %v
 `, token)
-	return ioutil.WriteFile(fmt.Sprintf("%v/%v/.netrc", path, configDir), []byte(netrc), os.FileMode(0644))
+	return ioutil.WriteFile(fmt.Sprintf("%v/%v/.netrc", path, configDir), []byte(netrc), os.FileMode(0o644))
 }
 
 // CreateBackendFile creates the backend.tf terraform file with the backend configuration choosen
-func createBackendFile(path string, backend string, backendConfig map[string]string) (err error) {
+func createBackendFile(path, backend string, backendConfig map[string]string) (err error) {
 	var backendFilebuffer bytes.Buffer
 	backendFilebuffer.WriteString(fmt.Sprintf(`terraform {
   backend "%v" {
@@ -142,7 +142,7 @@ func createBackendFile(path string, backend string, backendConfig map[string]str
 	backendFilebuffer.WriteString(`  }
 }`)
 	backendFileContent := backendFilebuffer.Bytes()
-	return ioutil.WriteFile(fmt.Sprintf("%v/backend.tf", path), backendFileContent, os.FileMode(0644))
+	return ioutil.WriteFile(fmt.Sprintf("%v/backend.tf", path), backendFileContent, os.FileMode(0o644))
 }
 
 type tfwriter struct {

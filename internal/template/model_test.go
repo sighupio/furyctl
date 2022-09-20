@@ -5,11 +5,12 @@
 package template_test
 
 import (
+	"os"
+	"testing"
+
 	"github.com/sighupio/furyctl/internal/template"
 	"github.com/stretchr/testify/assert"
 	"gopkg.in/yaml.v2"
-	"os"
-	"testing"
 )
 
 func TestNewTemplateModel(t *testing.T) {

@@ -149,7 +149,7 @@ func (tm *Model) applyTemplates(
 	)
 
 	realTarget, fErr := gen.ProcessFilename(tm)
-	if fErr != nil { //maybe we should fail back to real name instead?
+	if fErr != nil { // maybe we should fail back to real name instead?
 		return fErr
 	}
 
