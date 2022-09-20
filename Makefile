@@ -110,7 +110,7 @@ lint-go:
 .PHONY: test
 
 test:
-	@go test -v -race -covermode=atomic -coverprofile=coverage.out ./...
+	@go test -v -covermode=atomic -coverprofile=coverage.out ./...
 
 .PHONY: clean build release
 
