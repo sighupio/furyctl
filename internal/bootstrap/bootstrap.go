@@ -417,7 +417,6 @@ func (c *Bootstrap) output() ([]byte, error) {
 }
 
 func (c *Bootstrap) createGitFiles() error {
-
 	c.s.Stop()
 	c.s.Suffix = " Creating .gitattributes file"
 	c.s.Start()

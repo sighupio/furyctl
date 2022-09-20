@@ -220,7 +220,7 @@ func (e GKE) createVarFile() (err error) {
 	buffer.WriteString(fmt.Sprintf("gke_add_cluster_firewall_rules = %v\n", spec.AdditionalClusterFirewallRules))
 	buffer.WriteString(fmt.Sprintf("gke_disable_default_snat = %v\n", spec.DisableDefaultSNAT))
 
-	err = ioutil.WriteFile(fmt.Sprintf("%v/gke.tfvars", e.terraform.WorkingDir()), buffer.Bytes(), 0600)
+	err = ioutil.WriteFile(fmt.Sprintf("%v/gke.tfvars", e.terraform.WorkingDir()), buffer.Bytes(), 0o600)
 	if err != nil {
 		return err
 	}

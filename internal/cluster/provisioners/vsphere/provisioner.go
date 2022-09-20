@@ -262,7 +262,7 @@ func (e VSphere) createVarFile() (err error) {
 		buffer.WriteString("]\n")
 	}
 
-	err = ioutil.WriteFile(fmt.Sprintf("%v/vsphere.tfvars", e.terraform.WorkingDir()), buffer.Bytes(), 0600)
+	err = ioutil.WriteFile(fmt.Sprintf("%v/vsphere.tfvars", e.terraform.WorkingDir()), buffer.Bytes(), 0o600)
 	if err != nil {
 		return err
 	}
@@ -341,7 +341,7 @@ func downloadAnsibleRoles(workingDirectory string) error {
 
 	downloadPath := filepath.Join(workingDirectory, "provision/roles")
 	logrus.Infof("Ansible roles download path: %v", downloadPath)
-	if err := os.Mkdir(downloadPath, 0755); err != nil {
+	if err := os.Mkdir(downloadPath, 0o755); err != nil {
 		return err
 	}
 
@@ -418,13 +418,13 @@ func (e VSphere) Update() (string, error) {
 	}
 
 	filePath := filepath.Join(e.terraform.WorkingDir(), "provision/hosts.ini")
-	err = ioutil.WriteFile(filePath, []byte(ansibleInventory), 0644)
+	err = ioutil.WriteFile(filePath, []byte(ansibleInventory), 0o644)
 	if err != nil {
 		return "", err
 	}
 
 	filePath = filepath.Join(e.terraform.WorkingDir(), "provision/haproxy.cfg")
-	err = ioutil.WriteFile(filePath, []byte(haproxyConfig), 0644)
+	err = ioutil.WriteFile(filePath, []byte(haproxyConfig), 0o644)
 	if err != nil {
 		return "", err
 	}
@@ -466,7 +466,7 @@ func createPKI(workingDirectory string) error {
 
 	logrus.Infof("Download furyagent: %v", downloadPath)
 
-	if err := os.MkdirAll(downloadPath, 0755); err != nil {
+	if err := os.MkdirAll(downloadPath, 0o755); err != nil {
 		return err
 	}
 
@@ -491,7 +491,7 @@ func createPKI(workingDirectory string) error {
 		logrus.Fatal(err)
 	}
 
-	os.Chmod(filepath.Join(downloadPath, wantedExecutableName), 0755)
+	os.Chmod(filepath.Join(downloadPath, wantedExecutableName), 0o755)
 
 	cmd := exec.Command("./furyagent", "init", "master")
 	cmd.Dir = downloadPath
@@ -512,7 +512,7 @@ func createPKI(workingDirectory string) error {
 	return nil
 }
 
-func runAnsiblePlaybook(workingDir string, logDir string) (string, error) {
+func runAnsiblePlaybook(workingDir, logDir string) (string, error) {
 	logrus.Infof("Run Ansible playbook in : %v", workingDir)
 
 	// TODO: Get the debug flag from the CLI to output both to a file and stdout

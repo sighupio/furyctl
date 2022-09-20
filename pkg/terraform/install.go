@@ -20,7 +20,7 @@ import (
 )
 
 // ensure ensures a working terraform version to be used in the project
-func ensure(terraformVersion string, terraformDownloadPath string) (binPath string, err error) {
+func ensure(terraformVersion, terraformDownloadPath string) (binPath string, err error) {
 	if terraformVersion != "" {
 		logrus.Debugf("Installing terraform %v version", terraformVersion)
 		return install(terraformVersion, terraformDownloadPath)
@@ -29,7 +29,7 @@ func ensure(terraformVersion string, terraformDownloadPath string) (binPath stri
 	return installLatest(terraformDownloadPath)
 }
 
-func alreadyAvailable(terraformVersion string, terraformDownloadPath string) (bool, string) {
+func alreadyAvailable(terraformVersion, terraformDownloadPath string) (bool, string) {
 	// validate version
 	v, err := version.NewVersion(terraformVersion)
 	if err != nil {
@@ -78,7 +78,7 @@ func alreadyAvailable(terraformVersion string, terraformDownloadPath string) (bo
 	return true, binPath
 }
 
-func install(terraformVersion string, terraformDownloadPath string) (binPath string, err error) {
+func install(terraformVersion, terraformDownloadPath string) (binPath string, err error) {
 	ready, binPath := alreadyAvailable(terraformVersion, terraformDownloadPath)
 	if !ready {
 		err := utils.EnsureDir(filepath.Join(terraformDownloadPath, "terraform"))

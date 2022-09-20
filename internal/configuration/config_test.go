@@ -12,11 +12,12 @@ import (
 	clustercfg "github.com/sighupio/furyctl/internal/cluster/configuration"
 )
 
-var sampleEKSConfig Configuration
-var sampleAWSBootstrap Configuration
+var (
+	sampleEKSConfig    Configuration
+	sampleAWSBootstrap Configuration
+)
 
 func init() {
-
 	sampleAWSBootstrap.Kind = "Bootstrap"
 	sampleAWSBootstrap.Metadata = Metadata{
 		Name: "my-aws-poc",
@@ -83,7 +84,6 @@ func init() {
 }
 
 func TestParseClusterConfigurationFile(t *testing.T) {
-
 	sampleAWSBootstrapLocalState := sampleAWSBootstrap
 	sampleAWSBootstrapLocalState.Executor.StateConfiguration.Backend = "local"
 	sampleAWSBootstrapLocalState.Executor.StateConfiguration.Config = map[string]string{
