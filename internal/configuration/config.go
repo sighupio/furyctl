@@ -9,11 +9,11 @@ import (
 	"fmt"
 	"io/ioutil"
 
+	"github.com/sirupsen/logrus"
+	"gopkg.in/yaml.v2"
+
 	bootstrapcfg "github.com/sighupio/furyctl/internal/bootstrap/configuration"
 	clustercfg "github.com/sighupio/furyctl/internal/cluster/configuration"
-	"github.com/sirupsen/logrus"
-
-	"gopkg.in/yaml.v2"
 )
 
 // TerraformExecutor represents the terraform executor configuration to be used

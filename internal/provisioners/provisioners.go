@@ -11,13 +11,14 @@ import (
 
 	"github.com/gobuffalo/packr/v2"
 	"github.com/hashicorp/terraform-exec/tfexec"
+	"github.com/sirupsen/logrus"
+
 	"github.com/sighupio/furyctl/internal/bootstrap/provisioners/aws"
 	"github.com/sighupio/furyctl/internal/bootstrap/provisioners/gcp"
 	"github.com/sighupio/furyctl/internal/cluster/provisioners/eks"
 	"github.com/sighupio/furyctl/internal/cluster/provisioners/gke"
 	"github.com/sighupio/furyctl/internal/cluster/provisioners/vsphere"
 	"github.com/sighupio/furyctl/internal/configuration"
-	"github.com/sirupsen/logrus"
 )
 
 // Provisioner represents a kubernetes terraform provisioner

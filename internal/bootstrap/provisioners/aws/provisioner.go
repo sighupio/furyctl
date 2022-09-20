@@ -14,9 +14,10 @@ import (
 
 	"github.com/gobuffalo/packr/v2"
 	"github.com/hashicorp/terraform-exec/tfexec"
+	"github.com/sirupsen/logrus"
+
 	cfg "github.com/sighupio/furyctl/internal/bootstrap/configuration"
 	"github.com/sighupio/furyctl/internal/configuration"
-	"github.com/sirupsen/logrus"
 )
 
 // InitMessage return a custom provisioner message the user will see once the cluster is ready to be updated

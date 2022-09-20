@@ -9,8 +9,9 @@ import (
 	"os"
 	"testing"
 
-	"github.com/sighupio/furyctl/internal/template/mapper"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/sighupio/furyctl/internal/template/mapper"
 )
 
 func TestNewMapper(t *testing.T) {

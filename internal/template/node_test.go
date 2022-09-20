@@ -10,8 +10,9 @@ import (
 	"text/template"
 	"text/template/parse"
 
-	template2 "github.com/sighupio/furyctl/internal/template"
 	"github.com/stretchr/testify/assert"
+
+	template2 "github.com/sighupio/furyctl/internal/template"
 )
 
 func TestNewNode(t *testing.T) {

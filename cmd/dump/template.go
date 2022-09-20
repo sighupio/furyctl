@@ -9,12 +9,12 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/sighupio/furyctl/internal/merge"
-	"github.com/sighupio/furyctl/internal/yaml"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 
+	"github.com/sighupio/furyctl/internal/merge"
 	"github.com/sighupio/furyctl/internal/template"
+	"github.com/sighupio/furyctl/internal/yaml"
 )
 
 type templateConfig struct {

@@ -12,12 +12,12 @@ import (
 	"regexp"
 	"strings"
 
+	"gopkg.in/yaml.v2"
+
 	"github.com/sighupio/furyctl/internal/io"
 	"github.com/sighupio/furyctl/internal/template/mapper"
 	yaml2 "github.com/sighupio/furyctl/internal/yaml"
 	fTemplate "github.com/sighupio/furyctl/pkg/template"
-
-	"gopkg.in/yaml.v2"
 )
 
 type Model struct {
