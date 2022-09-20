@@ -12,11 +12,12 @@ import (
 
 	"github.com/briandowns/spinner"
 	"github.com/hashicorp/terraform-exec/tfexec"
+	"github.com/sirupsen/logrus"
+
 	"github.com/sighupio/furyctl/internal/configuration"
 	"github.com/sighupio/furyctl/internal/project"
 	"github.com/sighupio/furyctl/internal/provisioners"
 	"github.com/sighupio/furyctl/pkg/terraform"
-	"github.com/sirupsen/logrus"
 )
 
 const initExecutorMessage = " Initializing the terraform executor"
