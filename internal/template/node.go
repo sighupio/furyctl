@@ -10,19 +10,17 @@ import (
 	"text/template/parse"
 )
 
-var (
-	// MapParseNodeToAlias is a map of parse.Node to its alias.
-	MapParseNodeToAlias = map[parse.NodeType]interface{}{
-		parse.NodeList:     &ListNode{},
-		parse.NodeRange:    &RangeNode{},
-		parse.NodePipe:     &PipeNode{},
-		parse.NodeTemplate: &TemplateNode{},
-		parse.NodeIf:       &IfNode{},
-		parse.NodeAction:   &ActionNode{},
-		parse.NodeField:    &FieldNode{},
-		parse.NodeVariable: &VariableNode{},
-	}
-)
+// MapParseNodeToAlias is a map of parse.Node to its alias.
+var MapParseNodeToAlias = map[parse.NodeType]interface{}{
+	parse.NodeList:     &ListNode{},
+	parse.NodeRange:    &RangeNode{},
+	parse.NodePipe:     &PipeNode{},
+	parse.NodeTemplate: &TemplateNode{},
+	parse.NodeIf:       &IfNode{},
+	parse.NodeAction:   &ActionNode{},
+	parse.NodeField:    &FieldNode{},
+	parse.NodeVariable: &VariableNode{},
+}
 
 type Node struct {
 	Fields []string

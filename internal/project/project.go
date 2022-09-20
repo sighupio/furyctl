@@ -17,8 +17,8 @@ import (
 const (
 	pathAlreadyExistsErr  = "Directory already exists"
 	pathCreationErr       = "Path dir couldn't be created. %v"
-	defaultDirPermission  = 0700
-	defaultFilePermission = 0600
+	defaultDirPermission  = 0o700
+	defaultFilePermission = 0o600
 )
 
 // Project represents a simple structure with a couple of useful methods to init a project
