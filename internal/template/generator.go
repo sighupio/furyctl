@@ -6,7 +6,9 @@ package template
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
+	"os"
 	"path/filepath"
 	"strings"
 	"text/template"
@@ -40,8 +42,18 @@ func NewGenerator(
 }
 
 func (g *generator) ProcessTemplate() *template.Template {
-	return template.Must(
-		template.New(filepath.Base(g.source)).Funcs(g.funcMap.FuncMap).ParseFiles(g.source))
+	const helpersPath = "source/_helpers.tpl"
+	if _, err := os.Stat(helpersPath); err == nil {
+		return template.Must(
+			template.New(filepath.Base(g.source)).Funcs(g.funcMap.FuncMap).ParseFiles(g.source, helpersPath))
+	} else if errors.Is(err, os.ErrNotExist) {
+		logrus.Warnf("template helpers file '%s' not found\n", helpersPath)
+		return template.Must(
+			template.New(filepath.Base(g.source)).Funcs(g.funcMap.FuncMap).ParseFiles(g.source))
+	} else {
+		logrus.Fatalf("got unexpected error when checking if helper file exists at path %s: %s\n", helpersPath, err)
+		panic(err)
+	}
 }
 
 func (g *generator) GetMissingKeys(tpl *template.Template) []string {
