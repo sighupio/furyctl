@@ -13,6 +13,7 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/sighupio/furyctl/internal/cobrax"
 	"github.com/sighupio/furyctl/internal/distribution"
 	"github.com/sighupio/furyctl/internal/semver"
 	"github.com/sighupio/furyctl/internal/yaml"
@@ -33,10 +34,10 @@ func NewDependenciesCmd(version string) *cobra.Command {
 		Use:   "dependencies",
 		Short: "Validate furyctl.yaml file",
 		RunE: func(cmd *cobra.Command, _ []string) error {
-			debug := flag[bool](cmd, "debug").(bool)
-			binPath := flag[string](cmd, "bin-path").(string)
-			furyctlPath := flag[string](cmd, "config").(string)
-			distroLocation := flag[string](cmd, "distro-location").(string)
+			debug := cobrax.Flag[bool](cmd, "debug").(bool)
+			binPath := cobrax.Flag[string](cmd, "bin-path").(string)
+			furyctlPath := cobrax.Flag[string](cmd, "config").(string)
+			distroLocation := cobrax.Flag[string](cmd, "distro-location").(string)
 
 			minimalConf, err := yaml.FromFileV3[distribution.FuryctlConfig](furyctlPath)
 			if err != nil {
