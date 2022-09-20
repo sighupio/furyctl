@@ -39,7 +39,7 @@ sudo mv /tmp/furyctl /usr/local/bin/furyctl
 
 Alternatively, you can install `furyctl` using a brew tap or via an asdf plugin.
 
-> ⚠️ M1 users: please download `darwin/amd64` binaries instead of using homebrew or asdf. Eventhough furyctl can be build for `arm64`, some of its dependendecies are not available yet for this architecture.
+> ⚠️ M1 users: please download `darwin/amd64` binaries instead of using homebrew or asdf. Even though furyctl can be build for `arm64`, some of its dependendecies are not available yet for this architecture.
 
 ### Installation with [Homebrew](https://brew.sh/)
 
