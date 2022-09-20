@@ -83,32 +83,6 @@ func bootstrapTemplate(config *Configuration) error {
 			},
 		}
 		config.Spec = spec
-	case config.Provisioner == "gcp":
-		spec := bootstrapcfg.GCP{
-			PublicSubnetsCIDRs:  []string{"Required", "10.0.1.0/24", "10.0.2.0/24"},
-			PrivateSubnetsCIDRs: []string{"Required", "10.0.11.0/24", "10.0.12.0/24"},
-			ClusterNetwork: bootstrapcfg.GCPClusterNetwork{
-				ControlPlaneCIDR:      "10.0.0.0/28 # Optional. Control Plane CIDR. This value is the default one",
-				SubnetworkCIDR:        "10.1.0.0/16 # Required. Cluster nodes subnetwork",
-				PodSubnetworkCIDR:     "10.2.0.0/16 # Required. Pod subnetwork CIDR",
-				ServiceSubnetworkCIDR: "10.3.0.0/16 # Required. Service subnetwork CIDR",
-			},
-			VPN: bootstrapcfg.GCPVPN{
-				Instances:     2,
-				Port:          1194,
-				InstanceType:  "n1-standard-1 # This is the default value. Specify any GCP instance type",
-				DiskSize:      50,
-				OperatorName:  "sighup # This is the default value. SSH User to access the instance",
-				DHParamsBits:  2048,
-				SubnetCIDR:    "172.16.0.0/16 # Required attribute. Should be different from the networkCIDR",
-				SSHUsers:      []string{"Required", "angelbarrera92", "jnardiello"},
-				OperatorCIDRs: []string{"0.0.0.0/0", "This is the default value"},
-			},
-			Tags: map[string]string{
-				"myTag": "MyValue # Use this tags to annotate all resources. Optional",
-			},
-		}
-		config.Spec = spec
 	default:
 		log.Errorf(
 			"Error creating a template configuration file. Parser not found for %v provisioner",

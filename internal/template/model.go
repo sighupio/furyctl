@@ -17,7 +17,6 @@ import (
 	"github.com/sighupio/furyctl/internal/io"
 	"github.com/sighupio/furyctl/internal/template/mapper"
 	yaml2 "github.com/sighupio/furyctl/internal/yaml"
-	fTemplate "github.com/sighupio/furyctl/pkg/template"
 )
 
 type Model struct {
@@ -71,8 +70,8 @@ func NewTemplateModel(
 	}
 
 	funcMap := NewFuncMap()
-	funcMap.Add("toYaml", fTemplate.ToYAML)
-	funcMap.Add("fromYaml", fTemplate.FromYAML)
+	funcMap.Add("toYaml", toYAML)
+	funcMap.Add("fromYaml", fromYAML)
 
 	return &Model{
 		SourcePath:           source,
