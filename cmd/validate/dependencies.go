@@ -7,16 +7,17 @@ package validate
 import (
 	"errors"
 	"fmt"
-	"github.com/sighupio/furyctl/internal/distribution"
-	"github.com/sighupio/furyctl/internal/semver"
-	"github.com/sighupio/furyctl/internal/yaml"
-	"github.com/sirupsen/logrus"
-	"github.com/spf13/cobra"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"regexp"
 	"strings"
+
+	"github.com/sighupio/furyctl/internal/distribution"
+	"github.com/sighupio/furyctl/internal/semver"
+	"github.com/sighupio/furyctl/internal/yaml"
+	"github.com/sirupsen/logrus"
+	"github.com/spf13/cobra"
 )
 
 var (
@@ -82,13 +83,21 @@ func NewDependenciesCmd(version string) *cobra.Command {
 				return err
 			}
 
+			if !semver.SamePatch(furyctlConfVersion, kfdManifest.Version) {
+				return fmt.Errorf(
+					"versions mismatch: furyctl.yaml has %s, but furyctl has %s",
+					furyctlConfVersion.String(),
+					kfdManifest.Version.String(),
+				)
+			}
+
 			logrus.Debugln("Checking system dependencies")
-			if err = validateSystemDependencies(kfdManifest); err != nil {
+			if err := validateSystemDependencies(kfdManifest); err != nil {
 				return err
 			}
 
 			logrus.Debugln("Checking environment dependencies")
-			if err = validateEnvDependencies(minimalConf.Kind); err != nil {
+			if err := validateEnvDependencies(minimalConf.Kind); err != nil {
 				return err
 			}
 
