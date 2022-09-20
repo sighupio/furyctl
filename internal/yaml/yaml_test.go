@@ -8,9 +8,10 @@ import (
 	"os"
 	"testing"
 
-	yaml "github.com/sighupio/furyctl/internal/yaml"
 	"github.com/stretchr/testify/assert"
 	yaml2 "gopkg.in/yaml.v2"
+
+	yaml "github.com/sighupio/furyctl/internal/yaml"
 )
 
 type TestYaml struct {

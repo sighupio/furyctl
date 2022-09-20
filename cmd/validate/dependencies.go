@@ -13,12 +13,13 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/sirupsen/logrus"
+	"github.com/spf13/cobra"
+
 	"github.com/sighupio/furyctl/internal/cobrax"
 	"github.com/sighupio/furyctl/internal/distribution"
 	"github.com/sighupio/furyctl/internal/semver"
 	"github.com/sighupio/furyctl/internal/yaml"
-	"github.com/sirupsen/logrus"
-	"github.com/spf13/cobra"
 )
 
 var (
