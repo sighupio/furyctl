@@ -8,12 +8,13 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"github.com/sighupio/furyctl/cmd/validate"
-	"github.com/sighupio/furyctl/internal/distribution"
-	"github.com/sighupio/furyctl/internal/yaml"
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/sighupio/furyctl/cmd/validate"
+	"github.com/sighupio/furyctl/internal/distribution"
+	"github.com/sighupio/furyctl/internal/yaml"
 )
 
 var (

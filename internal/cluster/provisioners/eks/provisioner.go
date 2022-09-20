@@ -268,7 +268,7 @@ func (e EKS) createVarFile() (err error) {
 		}
 		buffer.WriteString("]\n")
 	}
-	err = ioutil.WriteFile(fmt.Sprintf("%v/eks.tfvars", e.terraform.WorkingDir()), buffer.Bytes(), 0600)
+	err = ioutil.WriteFile(fmt.Sprintf("%v/eks.tfvars", e.terraform.WorkingDir()), buffer.Bytes(), 0o600)
 	if err != nil {
 		return err
 	}

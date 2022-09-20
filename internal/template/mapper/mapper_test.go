@@ -6,10 +6,11 @@ package mapper_test
 
 import (
 	"fmt"
-	"github.com/sighupio/furyctl/internal/template/mapper"
-	"github.com/stretchr/testify/assert"
 	"os"
 	"testing"
+
+	"github.com/sighupio/furyctl/internal/template/mapper"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestNewMapper(t *testing.T) {

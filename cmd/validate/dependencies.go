@@ -199,7 +199,7 @@ func validateSystemDependencies(kfdManifest distribution.Manifest, binPath strin
 	return nil
 }
 
-func checkAnsibleVersion(wantVer string, binPath string) error {
+func checkAnsibleVersion(wantVer, binPath string) error {
 	if wantVer == "" {
 		return fmt.Errorf("ansible: %w", ErrEmptyToolVersion)
 	}
@@ -235,7 +235,7 @@ func checkAnsibleVersion(wantVer string, binPath string) error {
 	return nil
 }
 
-func checkTerraformVersion(wantVer string, binPath string) error {
+func checkTerraformVersion(wantVer, binPath string) error {
 	if wantVer == "" {
 		return fmt.Errorf("terraform: %w", ErrEmptyToolVersion)
 	}
@@ -271,7 +271,7 @@ func checkTerraformVersion(wantVer string, binPath string) error {
 	return nil
 }
 
-func checkKubectlVersion(wantVer string, binPath string) error {
+func checkKubectlVersion(wantVer, binPath string) error {
 	if wantVer == "" {
 		return fmt.Errorf("kubectl: %w", ErrEmptyToolVersion)
 	}
@@ -310,7 +310,7 @@ func checkKubectlVersion(wantVer string, binPath string) error {
 	return nil
 }
 
-func checkKustomizeVersion(wantVer string, binPath string) error {
+func checkKustomizeVersion(wantVer, binPath string) error {
 	if wantVer == "" {
 		return fmt.Errorf("kustomize: %w", ErrEmptyToolVersion)
 	}
@@ -346,7 +346,7 @@ func checkKustomizeVersion(wantVer string, binPath string) error {
 	return nil
 }
 
-func checkFuryagentVersion(wantVer string, binPath string) error {
+func checkFuryagentVersion(wantVer, binPath string) error {
 	if wantVer == "" {
 		return fmt.Errorf("furyagent: %w", ErrEmptyToolVersion)
 	}
