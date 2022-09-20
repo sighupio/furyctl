@@ -17,7 +17,7 @@ import (
 	"github.com/sighupio/furyctl/internal/configuration"
 	"github.com/sighupio/furyctl/internal/project"
 	"github.com/sighupio/furyctl/internal/provisioners"
-	"github.com/sighupio/furyctl/pkg/terraform"
+	"github.com/sighupio/furyctl/internal/terraform"
 )
 
 const initExecutorMessage = " Initializing the terraform executor"
