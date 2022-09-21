@@ -15,6 +15,8 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/sighupio/furyctl/internal/distribution"
+	"github.com/sighupio/furyctl/internal/semver"
+	"github.com/sighupio/furyctl/internal/yaml"
 )
 
 const DefaultBaseUrl = "https://git@github.com/sighupio/fury-distribution?ref=%s"
@@ -26,16 +28,83 @@ var (
 
 	ErrCreatingTempDir     = errors.New("error creating temp dir")
 	ErrDownloadingFolder   = errors.New("error downloading folder")
-	ErrHasValidationErrors = errors.New("schema has validation errors")
 	ErrMergeCompleteConfig = errors.New("error merging complete config")
 	ErrMergeDistroConfig   = errors.New("error merging distribution config")
-	ErrUnknownOutputFormat = errors.New("unknown output format")
 	ErrWriteFile           = errors.New("error writing file")
 	ErrYamlMarshalFile     = errors.New("error marshaling yaml file")
 	ErrYamlUnmarshalFile   = errors.New("error unmarshaling yaml file")
 )
 
-func getSchemaPath(basePath string, conf distribution.FuryctlConfig) (string, error) {
+type downloadResult struct {
+	RepoPath       string
+	MinimalConf    distribution.FuryctlConfig
+	DistroManifest distribution.Manifest
+}
+
+func DownloadDistro(
+	version string,
+	distroLocation string,
+	furyctlConfPath string,
+	debug bool,
+) (downloadResult, error) {
+	minimalConf, err := yaml.FromFileV3[distribution.FuryctlConfig](furyctlConfPath)
+	if err != nil {
+		return downloadResult{}, err
+	}
+
+	furyctlConfVersion := minimalConf.Spec.DistributionVersion
+
+	if version != "unknown" {
+		furyctlBinVersion, err := semver.NewVersion(fmt.Sprintf("v%s", version))
+		if err != nil {
+			return downloadResult{}, err
+		}
+
+		sameMinors := semver.SameMinor(furyctlConfVersion, furyctlBinVersion)
+
+		if !sameMinors {
+			logrus.Warnf(
+				"this version of furyctl ('%s') does not support distribution version '%s', results may be inaccurate",
+				furyctlBinVersion,
+				furyctlConfVersion,
+			)
+		}
+	}
+
+	if distroLocation == "" {
+		distroLocation = fmt.Sprintf(DefaultBaseUrl, furyctlConfVersion.String())
+	}
+
+	repoPath, err := DownloadDirectory(distroLocation)
+	if err != nil {
+		return downloadResult{}, err
+	}
+	if !debug {
+		defer CleanupTempDir(filepath.Base(repoPath))
+	}
+
+	kfdPath := filepath.Join(repoPath, "kfd.yaml")
+	kfdManifest, err := yaml.FromFileV3[distribution.Manifest](kfdPath)
+	if err != nil {
+		return downloadResult{}, err
+	}
+
+	if !semver.SamePatch(furyctlConfVersion, kfdManifest.Version) {
+		return downloadResult{}, fmt.Errorf(
+			"minor versions mismatch: furyctl.yaml has %s, but furyctl has %s",
+			furyctlConfVersion.String(),
+			kfdManifest.Version.String(),
+		)
+	}
+
+	return downloadResult{
+		RepoPath:       repoPath,
+		MinimalConf:    minimalConf,
+		DistroManifest: kfdManifest,
+	}, nil
+}
+
+func GetSchemaPath(basePath string, conf distribution.FuryctlConfig) (string, error) {
 	avp := strings.Split(conf.ApiVersion, "/")
 
 	if len(avp) < 2 {
@@ -54,11 +123,11 @@ func getSchemaPath(basePath string, conf distribution.FuryctlConfig) (string, er
 	return filepath.Join(basePath, "schemas", filename), nil
 }
 
-func getDefaultPath(basePath string) string {
+func GetDefaultPath(basePath string) string {
 	return filepath.Join(basePath, "furyctl-defaults.yaml")
 }
 
-func downloadDirectory(src string) (string, error) {
+func DownloadDirectory(src string) (string, error) {
 	baseDst, err := os.MkdirTemp("", "furyctl-")
 	if err != nil {
 		return "", fmt.Errorf("%w: %v", ErrCreatingTempDir, err)
@@ -68,14 +137,14 @@ func downloadDirectory(src string) (string, error) {
 
 	logrus.Debugf("Downloading '%s' in '%s'", src, dst)
 
-	if err := clientGet(src, dst); err != nil {
+	if err := ClientGet(src, dst); err != nil {
 		return "", fmt.Errorf("%w '%s': %v", ErrDownloadingFolder, src, err)
 	}
 
 	return dst, nil
 }
 
-func cleanupTempDir(dir string) {
+func CleanupTempDir(dir string) {
 	if err := os.RemoveAll(dir); err != nil {
 		if !errors.Is(err, os.ErrNotExist) {
 			logrus.Error(err)
@@ -83,10 +152,10 @@ func cleanupTempDir(dir string) {
 	}
 }
 
-// clientGet tries a few different protocols to get the source file or directory.
-func clientGet(src, dst string) error {
+// ClientGet tries a few different protocols to get the source file or directory.
+func ClientGet(src, dst string) error {
 	protocols := []string{""}
-	if !urlHasForcedProtocol(src) {
+	if !UrlHasForcedProtocol(src) {
 		protocols = downloadProtocols
 	}
 
@@ -112,8 +181,8 @@ func clientGet(src, dst string) error {
 	return errDownloadOptionsExausted
 }
 
-// urlHasForcedProtocol checks if the url has a forced protocol as described in hashicorp/go-getter.
-func urlHasForcedProtocol(url string) bool {
+// UrlHasForcedProtocol checks if the url has a forced protocol as described in hashicorp/go-getter.
+func UrlHasForcedProtocol(url string) bool {
 	for _, dp := range downloadProtocols {
 		if dp != "" && strings.HasPrefix(url, dp) {
 			return true
