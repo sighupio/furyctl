@@ -24,6 +24,7 @@ require (
 
 require (
 	github.com/google/go-cmp v0.5.8
+	github.com/sighupio/fury-distribution v1.23.3-0.20220921133521-56315a3610fa
 	gopkg.in/yaml.v3 v3.0.1
 )
 
