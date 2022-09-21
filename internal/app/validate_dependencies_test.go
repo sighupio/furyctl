@@ -11,234 +11,90 @@ import (
 	"github.com/sighupio/furyctl/internal/app"
 	"github.com/sighupio/furyctl/internal/distribution"
 	"github.com/sighupio/furyctl/internal/execx"
-	"github.com/sighupio/furyctl/internal/yaml"
 )
 
-var (
-	valDepWrongKFDConf = distribution.Manifest{
-		Version: "v1.24.7",
-		Modules: struct {
-			Auth       string `yaml:"auth"`
-			Dr         string `yaml:"dr"`
-			Ingress    string `yaml:"ingress"`
-			Logging    string `yaml:"logging"`
-			Monitoring string `yaml:"monitoring"`
-			Opa        string `yaml:"opa"`
-		}{},
-		Kubernetes: struct {
-			Eks struct {
-				Version   string `yaml:"version"`
-				Installer string `yaml:"installer"`
-			} `yaml:"eks"`
-		}{},
-		FuryctlSchemas: struct {
-			Eks []struct {
-				ApiVersion string `yaml:"apiVersion"`
-				Kind       string `yaml:"kind"`
-			} `yaml:"eks"`
-		}{},
-		Tools: struct {
-			Ansible   string `yaml:"ansible"`
-			Furyagent string `yaml:"furyagent"`
-			Kubectl   string `yaml:"kubectl"`
-			Kustomize string `yaml:"kustomize"`
-			Terraform string `yaml:"terraform"`
-		}{
-			Ansible:   "2.10.0",
-			Furyagent: "0.0.2",
-			Kubectl:   "1.21.4",
-			Kustomize: "3.9.8",
-			Terraform: "0.15.9",
+func TestValidateDependencies(t *testing.T) {
+	testCases := []struct {
+		desc         string
+		executor     execx.Executor
+		envs         map[string]string
+		kfdConf      distribution.Manifest
+		wantErrCount int
+		wantErrVal   any
+		wantErrType  error
+	}{
+		{
+			desc:         "missing tools and envs",
+			executor:     execx.NewStdExecutor(),
+			kfdConf:      correctKFDConf,
+			wantErrCount: 8,
+			wantErrVal:   &fs.PathError{},
+			wantErrType:  app.ErrMissingEnvVar,
+		},
+		{
+			desc:     "has all tools and envs",
+			executor: execx.NewFakeExecutor(),
+			kfdConf:  correctKFDConf,
+			envs: map[string]string{
+				"AWS_ACCESS_KEY_ID":     "test",
+				"AWS_SECRET_ACCESS_KEY": "test",
+				"AWS_DEFAULT_REGION":    "test",
+			},
+			wantErrCount: 0,
+		},
+		{
+			desc:     "has wrong tools",
+			executor: execx.NewFakeExecutor(),
+			kfdConf:  wrongKFDConf,
+			envs: map[string]string{
+				"AWS_ACCESS_KEY_ID":     "test",
+				"AWS_SECRET_ACCESS_KEY": "test",
+				"AWS_DEFAULT_REGION":    "test",
+			},
+			wantErrCount: 5,
+			wantErrType:  app.ErrWrongToolVersion,
 		},
 	}
+	for _, tC := range testCases {
+		tC := tC
 
-	valDepCorrectKFDConf = distribution.Manifest{
-		Version: "v1.24.7",
-		Modules: struct {
-			Auth       string `yaml:"auth"`
-			Dr         string `yaml:"dr"`
-			Ingress    string `yaml:"ingress"`
-			Logging    string `yaml:"logging"`
-			Monitoring string `yaml:"monitoring"`
-			Opa        string `yaml:"opa"`
-		}{},
-		Kubernetes: struct {
-			Eks struct {
-				Version   string `yaml:"version"`
-				Installer string `yaml:"installer"`
-			} `yaml:"eks"`
-		}{},
-		FuryctlSchemas: struct {
-			Eks []struct {
-				ApiVersion string `yaml:"apiVersion"`
-				Kind       string `yaml:"kind"`
-			} `yaml:"eks"`
-		}{},
-		Tools: struct {
-			Ansible   string `yaml:"ansible"`
-			Furyagent string `yaml:"furyagent"`
-			Kubectl   string `yaml:"kubectl"`
-			Kustomize string `yaml:"kustomize"`
-			Terraform string `yaml:"terraform"`
-		}{
-			Ansible:   "2.11.2",
-			Furyagent: "0.0.1",
-			Kubectl:   "1.21.1",
-			Kustomize: "3.9.4",
-			Terraform: "0.15.4",
-		},
-	}
-)
+		t.Run(tC.desc, func(t *testing.T) {
+			tmpDir, configFilePath := setupDistroFolder(t, correctFuryctlDefaults, tC.kfdConf)
+			defer rmDirTemp(t, tmpDir)
 
-func TestValidateDependencies_MissingToolsAndEnvs(t *testing.T) {
-	tmpDir := mkDirTemp(t, "furyctl-deps-validation-")
-	defer rmDirTemp(t, tmpDir)
+			for k, v := range tC.envs {
+				t.Setenv(k, v)
+			}
 
-	configFilePath := filepath.Join(tmpDir, "furyctl.yaml")
+			vd := app.NewValidateDependencies(tC.executor)
 
-	configYaml, err := yaml.MarshalV2(furyConfig)
-	if err != nil {
-		t.Fatalf("error marshaling config: %v", err)
-	}
+			res, err := vd.Execute(app.ValidateDependenciesRequest{
+				BinPath:           filepath.Join(tmpDir, "bin"),
+				FuryctlBinVersion: "unknown",
+				DistroLocation:    tmpDir,
+				FuryctlConfPath:   configFilePath,
+				Debug:             true,
+			})
+			if err != nil {
+				t.Fatalf("Unexpected error: %v", err)
+			}
 
-	if err = os.WriteFile(configFilePath, configYaml, os.ModePerm); err != nil {
-		t.Fatalf("error writing config file: %v", err)
-	}
+			if tC.wantErrCount != len(res.Errors) {
+				t.Errorf("Expected %d validation errors, got %d", tC.wantErrCount, len(res.Errors))
+				for _, err := range res.Errors {
+					t.Log(err)
+				}
+			}
 
-	kfdFilePath := filepath.Join(tmpDir, "kfd.yaml")
+			for _, err := range res.Errors {
+				notErrAs := tC.wantErrVal != nil && !errors.As(err, &tC.wantErrVal)
+				notErrIs := tC.wantErrType != nil && !errors.Is(err, tC.wantErrType)
 
-	kfdYaml, err := yaml.MarshalV2(valDepCorrectKFDConf)
-	if err != nil {
-		t.Fatalf("error marshaling config: %v", err)
-	}
-
-	if err = os.WriteFile(kfdFilePath, kfdYaml, os.ModePerm); err != nil {
-		t.Fatalf("error writing kfd file: %v", err)
-	}
-
-	vd := app.NewValidateDependencies(execx.NewStdExecutor())
-
-	res, err := vd.Execute(app.ValidateDependenciesRequest{
-		BinPath:           filepath.Join(tmpDir, "bin"),
-		FuryctlBinVersion: "unknown",
-		DistroLocation:    tmpDir,
-		FuryctlConfPath:   configFilePath,
-		Debug:             true,
-	})
-
-	if len(res.Errors) == 0 {
-		t.Fatal("Expected validation errors, got none")
-	}
-
-	if len(res.Errors) != 8 {
-		t.Fatalf("Expected 8 validation errors, got %d", len(res.Errors))
-	}
-
-	for _, err := range res.Errors {
-		var terr *fs.PathError
-
-		if !errors.As(err, &terr) && !errors.Is(err, app.ErrMissingEnvVar) {
-			t.Fatalf("Unexpected error: %v", err)
-		}
-	}
-}
-
-func TestValidateDependencies_HasAllToolsAndEnvs(t *testing.T) {
-	tmpDir := mkDirTemp(t, "furyctl-deps-validation-")
-	defer rmDirTemp(t, tmpDir)
-
-	configFilePath := filepath.Join(tmpDir, "furyctl.yaml")
-
-	configYaml, err := yaml.MarshalV2(furyConfig)
-	if err != nil {
-		t.Fatalf("error marshaling config: %v", err)
-	}
-
-	if err = os.WriteFile(configFilePath, configYaml, os.ModePerm); err != nil {
-		t.Fatalf("error writing config file: %v", err)
-	}
-
-	kfdFilePath := filepath.Join(tmpDir, "kfd.yaml")
-
-	kfdYaml, err := yaml.MarshalV2(valDepCorrectKFDConf)
-	if err != nil {
-		t.Fatalf("error marshaling config: %v", err)
-	}
-
-	if err = os.WriteFile(kfdFilePath, kfdYaml, os.ModePerm); err != nil {
-		t.Fatalf("error writing kfd file: %v", err)
-	}
-
-	t.Setenv("AWS_ACCESS_KEY_ID", "test")
-	t.Setenv("AWS_SECRET_ACCESS_KEY", "test")
-	t.Setenv("AWS_DEFAULT_REGION", "test")
-
-	vd := app.NewValidateDependencies(execx.NewFakeExecutor())
-
-	res, err := vd.Execute(app.ValidateDependenciesRequest{
-		BinPath:           filepath.Join(tmpDir, "bin"),
-		FuryctlBinVersion: "unknown",
-		DistroLocation:    tmpDir,
-		FuryctlConfPath:   configFilePath,
-		Debug:             true,
-	})
-
-	if len(res.Errors) != 0 {
-		t.Errorf("Did not expect validation errors, got %d", len(res.Errors))
-		for _, err := range res.Errors {
-			t.Log(err)
-		}
-	}
-}
-
-func TestValidateDependencies_HasWrongTools(t *testing.T) {
-	tmpDir := mkDirTemp(t, "furyctl-deps-validation-")
-	defer rmDirTemp(t, tmpDir)
-
-	configFilePath := filepath.Join(tmpDir, "furyctl.yaml")
-
-	configYaml, err := yaml.MarshalV2(furyConfig)
-	if err != nil {
-		t.Fatalf("error marshaling config: %v", err)
-	}
-
-	if err = os.WriteFile(configFilePath, configYaml, os.ModePerm); err != nil {
-		t.Fatalf("error writing config file: %v", err)
-	}
-
-	kfdFilePath := filepath.Join(tmpDir, "kfd.yaml")
-
-	kfdYaml, err := yaml.MarshalV2(valDepWrongKFDConf)
-	if err != nil {
-		t.Fatalf("error marshaling config: %v", err)
-	}
-
-	if err = os.WriteFile(kfdFilePath, kfdYaml, os.ModePerm); err != nil {
-		t.Fatalf("error writing kfd file: %v", err)
-	}
-
-	t.Setenv("AWS_ACCESS_KEY_ID", "test")
-	t.Setenv("AWS_SECRET_ACCESS_KEY", "test")
-	t.Setenv("AWS_DEFAULT_REGION", "test")
-
-	vd := app.NewValidateDependencies(execx.NewFakeExecutor())
-
-	res, err := vd.Execute(app.ValidateDependenciesRequest{
-		BinPath:           filepath.Join(tmpDir, "bin"),
-		FuryctlBinVersion: "unknown",
-		DistroLocation:    tmpDir,
-		FuryctlConfPath:   configFilePath,
-		Debug:             true,
-	})
-
-	if len(res.Errors) != 5 {
-		t.Fatalf("Expected 5 validation errors, got %d", len(res.Errors))
-	}
-
-	for _, err := range res.Errors {
-		if !errors.Is(err, app.ErrWrongToolVersion) {
-			t.Errorf("Unexpected error: %v", err)
-		}
+				if notErrAs && notErrIs {
+					t.Fatalf("got error = %v, want = %v", err, tC.wantErrVal)
+				}
+			}
+		})
 	}
 }
 
