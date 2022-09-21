@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-package validate
+package validate_test
 
 import (
 	"fmt"
@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/sighupio/furyctl/internal/app/validate"
 	"github.com/sighupio/furyctl/internal/distribution"
 	"github.com/sighupio/furyctl/internal/semver"
 )
@@ -81,17 +82,17 @@ func TestGetSchemaPath(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := getSchemaPath(tt.basePath, tt.conf)
+			got, err := validate.GetSchemaPath(tt.basePath, tt.conf)
 			if err != nil {
 				if err.Error() != tt.wantErr.Error() {
-					t.Errorf("getSchemaPath() error = %v, wantErr %v", err, tt.wantErr)
+					t.Errorf("validate.GetSchemaPath() error = %v, wantErr %v", err, tt.wantErr)
 				}
 
 				return
 			}
 
 			if got != tt.want {
-				t.Errorf("getSchemaPath() = %v, want %v", got, tt.want)
+				t.Errorf("validate.GetSchemaPath() = %v, want %v", got, tt.want)
 			}
 		})
 	}
@@ -113,7 +114,7 @@ func TestDownloadDirectory(t *testing.T) {
 		_ = os.RemoveAll(tmpDir)
 	}()
 
-	dlDir, err := downloadDirectory(tmpDir)
+	dlDir, err := validate.DownloadDirectory(tmpDir)
 	if err != nil {
 		t.Fatalf("error downloading directory: %v", err)
 	}
@@ -147,7 +148,7 @@ func TestClientGet(t *testing.T) {
 		_ = os.RemoveAll(tmpDir)
 	}()
 
-	err = clientGet(in, out)
+	err = validate.ClientGet(in, out)
 	if err != nil {
 		t.Fatalf("error getting directory: %v", err)
 	}
@@ -177,7 +178,7 @@ func TestUrlHasForcedProtocol(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := urlHasForcedProtocol(tt.url); got != tt.want {
+			if got := validate.UrlHasForcedProtocol(tt.url); got != tt.want {
 				t.Errorf("urlHasForcedProtocol() = %v, want %v", got, tt.want)
 			}
 		})

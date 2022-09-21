@@ -4,16 +4,6 @@
  * license that can be found in the LICENSE file.
  */
 
-terraform {
-  required_version = "0.15.4"
-  required_providers {
-    local    = "2.0.0"
-    null     = "3.0.0"
-    aws      = "3.37.0"
-    external = "2.0.0"
-  }
-}
-
 module "vpc-and-vpn" {
   source = "github.com/sighupio/fury-eks-installer//modules/vpc-and-vpn?ref=v1.10.0"
 
