@@ -1,33 +1,21 @@
-// Copyright (c) 2017-present SIGHUP s.r.l All rights reserved.
-// Use of this source code is governed by a BSD-style
-// license that can be found in the LICENSE file.
-
-package validate_test
+package app_test
 
 import (
-	"bytes"
 	"encoding/json"
-	"fmt"
+	"errors"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"testing"
 
-	"github.com/sighupio/furyctl/cmd/validate"
+	"github.com/sighupio/furyctl/internal/app"
+	"github.com/sighupio/furyctl/internal/app/validate"
 	"github.com/sighupio/furyctl/internal/distribution"
 	"github.com/sighupio/furyctl/internal/yaml"
 )
 
 var (
-	furyConfig = map[string]interface{}{
-		"apiVersion": "kfd.sighup.io/v1alpha2",
-		"kind":       "EKSCluster",
-		"spec": map[string]interface{}{
-			"distributionVersion": "v1.24.7",
-			"distribution":        map[string]interface{}{},
-		},
-	}
-
-	kfdConfig = distribution.Manifest{
+	valConfKFDConf = distribution.Manifest{
 		Version: "v1.24.7",
 		Modules: struct {
 			Auth       string `yaml:"auth"`
@@ -58,7 +46,7 @@ var (
 		}{},
 	}
 
-	defaults = map[string]interface{}{
+	valConfCorrectDefaults = map[string]interface{}{
 		"data": map[string]interface{}{
 			"modules": map[string]interface{}{
 				"ingress": map[string]interface{}{
@@ -68,7 +56,7 @@ var (
 		},
 	}
 
-	failingDefaults = map[string]interface{}{
+	valConfWrongDefaults = map[string]interface{}{
 		"data": map[string]interface{}{
 			"modules": map[string]interface{}{
 				"ingress": map[string]interface{}{
@@ -79,7 +67,7 @@ var (
 		},
 	}
 
-	schema = map[string]interface{}{
+	valConfSchema = map[string]interface{}{
 		"$schema":              "http://json-schema.org/draft-07/schema#",
 		"$id":                  "https://schema.sighup.io/kfd/1.23.2/ekscluster-kfd-v1alpha2.json",
 		"type":                 "object",
@@ -125,44 +113,34 @@ var (
 	}
 )
 
-func TestNewConfigCmd_ConfigNotFound(t *testing.T) {
-	tmpDir, err := os.MkdirTemp("", "furyctl-config-validation-")
-	if err != nil {
-		t.Fatalf("error creating temp dir: %v", err)
-	}
-
-	defer func() {
-		_ = os.RemoveAll(tmpDir)
-	}()
+func TestValidateConfig_FuryctlConfigNotFound(t *testing.T) {
+	tmpDir := mkDirTemp(t, "furyctl-config-validation-")
+	defer rmDirTemp(t, tmpDir)
 
 	configFilePath := filepath.Join(tmpDir, "furyctl.yaml")
 
-	expectedErr := fmt.Errorf("open %s: no such file or directory", configFilePath)
+	vc := app.NewValidateConfig()
+	_, err := vc.Execute(app.ValidateConfigRequest{
+		FuryctlBinVersion: "unknown",
+		DistroLocation:    tmpDir,
+		FuryctlConfPath:   configFilePath,
+		Debug:             true,
+	})
 
-	b := bytes.NewBufferString("")
-	valCmd := validate.NewConfigCmd("dev")
+	if err == nil {
+		t.Error("Expected error, got none")
+	}
 
-	valCmd.SetOut(b)
+	var terr *fs.PathError
 
-	args := []string{"--config", configFilePath}
-	valCmd.SetArgs(args)
-
-	err = valCmd.Execute()
-	if err != nil && err.Error() != expectedErr.Error() {
-		t.Errorf("Expected error %v, got %v", expectedErr, err)
-		return
+	if !errors.As(err, &terr) {
+		t.Fatalf("Unexpected error: %v", err)
 	}
 }
 
-func TestNewConfigCmd_WrongDistroLocation(t *testing.T) {
-	tmpDir, err := os.MkdirTemp("", "furyctl-config-validation-")
-	if err != nil {
-		t.Fatalf("error creating temp dir: %v", err)
-	}
-
-	defer func() {
-		_ = os.RemoveAll(tmpDir)
-	}()
+func TestValidateConfig_WrongDistroLocation(t *testing.T) {
+	tmpDir := mkDirTemp(t, "furyctl-config-validation-")
+	defer rmDirTemp(t, tmpDir)
 
 	configFilePath := filepath.Join(tmpDir, "furyctl.yaml")
 
@@ -171,36 +149,30 @@ func TestNewConfigCmd_WrongDistroLocation(t *testing.T) {
 		t.Fatalf("error marshaling config: %v", err)
 	}
 
-	if err = os.WriteFile(configFilePath, configYaml, os.ModePerm); err != nil {
+	if err := os.WriteFile(configFilePath, configYaml, os.ModePerm); err != nil {
 		t.Fatalf("error writing config file: %v", err)
 	}
 
-	expectedErr := fmt.Errorf("error downloading folder 'wrong-location': downloading options exausted")
+	vc := app.NewValidateConfig()
+	_, err = vc.Execute(app.ValidateConfigRequest{
+		FuryctlBinVersion: "unknown",
+		DistroLocation:    "file::/tmp/does-not-exist",
+		FuryctlConfPath:   configFilePath,
+		Debug:             true,
+	})
 
-	b := bytes.NewBufferString("")
-	valCmd := validate.NewConfigCmd("dev")
+	if err == nil {
+		t.Error("Expected error, got none")
+	}
 
-	valCmd.SetOut(b)
-
-	args := []string{"--config", configFilePath, "--distro-location", "wrong-location"}
-	valCmd.SetArgs(args)
-
-	err = valCmd.Execute()
-	if err != nil && err.Error() != expectedErr.Error() {
-		t.Errorf("Expected error %v, got %v", expectedErr, err)
-		return
+	if !errors.Is(err, validate.ErrDownloadingFolder) {
+		t.Fatalf("Unexpected error: %v", err)
 	}
 }
 
-func TestNewConfigCmd_SuccessValidation(t *testing.T) {
-	tmpDir, err := os.MkdirTemp("", "furyctl-config-validation-")
-	if err != nil {
-		t.Fatalf("error creating temp dir: %v", err)
-	}
-
-	defer func() {
-		_ = os.RemoveAll(tmpDir)
-	}()
+func TestValidateConfig_Success(t *testing.T) {
+	tmpDir := mkDirTemp(t, "furyctl-config-validation-")
+	defer rmDirTemp(t, tmpDir)
 
 	configFilePath := filepath.Join(tmpDir, "furyctl.yaml")
 
@@ -209,13 +181,13 @@ func TestNewConfigCmd_SuccessValidation(t *testing.T) {
 		t.Fatalf("error marshaling config: %v", err)
 	}
 
-	if err = os.WriteFile(configFilePath, configYaml, os.ModePerm); err != nil {
+	if err := os.WriteFile(configFilePath, configYaml, os.ModePerm); err != nil {
 		t.Fatalf("error writing config file: %v", err)
 	}
 
 	kfdFilePath := filepath.Join(tmpDir, "kfd.yaml")
 
-	kfdYaml, err := yaml.MarshalV2(kfdConfig)
+	kfdYaml, err := yaml.MarshalV2(valConfKFDConf)
 	if err != nil {
 		t.Fatalf("error marshaling config: %v", err)
 	}
@@ -226,7 +198,7 @@ func TestNewConfigCmd_SuccessValidation(t *testing.T) {
 
 	defaultsFilePath := filepath.Join(tmpDir, "furyctl-defaults.yaml")
 
-	defaultsYaml, err := yaml.MarshalV2(defaults)
+	defaultsYaml, err := yaml.MarshalV2(valConfCorrectDefaults)
 	if err != nil {
 		t.Fatalf("error marshaling furyctl defaults: %v", err)
 	}
@@ -244,7 +216,7 @@ func TestNewConfigCmd_SuccessValidation(t *testing.T) {
 
 	schemaFilePath := filepath.Join(schemasPath, "ekscluster-kfd-v1alpha2.json")
 
-	schemaJson, err := json.Marshal(schema)
+	schemaJson, err := json.Marshal(valConfSchema)
 	if err != nil {
 		t.Fatalf("error marshaling schema: %v", err)
 	}
@@ -253,30 +225,25 @@ func TestNewConfigCmd_SuccessValidation(t *testing.T) {
 		t.Fatalf("error writing schema json: %v", err)
 	}
 
-	b := bytes.NewBufferString("")
-	valCmd := validate.NewConfigCmd("dev")
-
-	valCmd.SetOut(b)
-
-	args := []string{"--config", configFilePath, "--distro-location", tmpDir}
-	valCmd.SetArgs(args)
-
-	err = valCmd.Execute()
+	vc := app.NewValidateConfig()
+	res, err := vc.Execute(app.ValidateConfigRequest{
+		FuryctlBinVersion: "unknown",
+		DistroLocation:    tmpDir,
+		FuryctlConfPath:   configFilePath,
+		Debug:             true,
+	})
 	if err != nil {
-		t.Errorf("Expected no error, got %v", err)
-		return
+		t.Fatalf("Unexpected error: %v", err)
+	}
+
+	if res.Error != nil {
+		t.Fatalf("Unexpected validation error: %v", res.Error)
 	}
 }
 
-func TestNewConfigCmd_FailValidation(t *testing.T) {
-	tmpDir, err := os.MkdirTemp("", "furyctl-config-validation-")
-	if err != nil {
-		t.Fatalf("error creating temp dir: %v", err)
-	}
-
-	defer func() {
-		_ = os.RemoveAll(tmpDir)
-	}()
+func TestValidateConfig_Failure(t *testing.T) {
+	tmpDir := mkDirTemp(t, "furyctl-config-validation-")
+	defer rmDirTemp(t, tmpDir)
 
 	configFilePath := filepath.Join(tmpDir, "furyctl.yaml")
 
@@ -285,13 +252,13 @@ func TestNewConfigCmd_FailValidation(t *testing.T) {
 		t.Fatalf("error marshaling config: %v", err)
 	}
 
-	if err = os.WriteFile(configFilePath, configYaml, os.ModePerm); err != nil {
+	if err := os.WriteFile(configFilePath, configYaml, os.ModePerm); err != nil {
 		t.Fatalf("error writing config file: %v", err)
 	}
 
 	kfdFilePath := filepath.Join(tmpDir, "kfd.yaml")
 
-	kfdYaml, err := yaml.MarshalV2(kfdConfig)
+	kfdYaml, err := yaml.MarshalV2(valConfKFDConf)
 	if err != nil {
 		t.Fatalf("error marshaling config: %v", err)
 	}
@@ -302,7 +269,7 @@ func TestNewConfigCmd_FailValidation(t *testing.T) {
 
 	defaultsFilePath := filepath.Join(tmpDir, "furyctl-defaults.yaml")
 
-	defaultsYaml, err := yaml.MarshalV2(failingDefaults)
+	defaultsYaml, err := yaml.MarshalV2(valConfWrongDefaults)
 	if err != nil {
 		t.Fatalf("error marshaling furyctl defaults: %v", err)
 	}
@@ -320,7 +287,7 @@ func TestNewConfigCmd_FailValidation(t *testing.T) {
 
 	schemaFilePath := filepath.Join(schemasPath, "ekscluster-kfd-v1alpha2.json")
 
-	schemaJson, err := json.Marshal(schema)
+	schemaJson, err := json.Marshal(valConfSchema)
 	if err != nil {
 		t.Fatalf("error marshaling schema: %v", err)
 	}
@@ -329,19 +296,18 @@ func TestNewConfigCmd_FailValidation(t *testing.T) {
 		t.Fatalf("error writing schema json: %v", err)
 	}
 
-	b := bytes.NewBufferString("")
-	valCmd := validate.NewConfigCmd("dev")
+	vc := app.NewValidateConfig()
+	res, err := vc.Execute(app.ValidateConfigRequest{
+		FuryctlBinVersion: "unknown",
+		DistroLocation:    tmpDir,
+		FuryctlConfPath:   configFilePath,
+		Debug:             true,
+	})
+	if err != nil {
+		t.Fatalf("Unexpected error: %v", err)
+	}
 
-	valCmd.SetOut(b)
-
-	args := []string{"--config", configFilePath, "--distro-location", tmpDir}
-	valCmd.SetArgs(args)
-
-	expectedError := "furyctl.yaml contains validation errors"
-
-	err = valCmd.Execute()
-	if err != nil && err.Error() != expectedError {
-		t.Errorf("Expected error %q, got %v", expectedError, err)
-		return
+	if res.Error == nil {
+		t.Fatalf("Expected validation errors, got none")
 	}
 }
