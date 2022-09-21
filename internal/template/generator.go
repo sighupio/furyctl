@@ -52,7 +52,6 @@ func (g *generator) ProcessTemplate() *template.Template {
 			template.New(filepath.Base(g.source)).Funcs(g.funcMap.FuncMap).ParseFiles(g.source))
 	} else {
 		logrus.Fatalf("got unexpected error when checking if helper file exists at path %s: %s\n", helpersPath, err)
-		panic(err)
 	}
 }
 
