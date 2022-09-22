@@ -13,6 +13,7 @@ import (
 
 	"github.com/sighupio/furyctl/internal/app"
 	"github.com/sighupio/furyctl/internal/cobrax"
+	"github.com/sighupio/furyctl/internal/netx"
 )
 
 var ErrDownloadFailed = fmt.Errorf("dependencies download failed")
@@ -26,7 +27,7 @@ func NewDependenciesCmd(furyctlBinVersion string) *cobra.Command {
 			furyctlPath := cobrax.Flag[string](cmd, "config").(string)
 			distroLocation := cobrax.Flag[string](cmd, "distro-location").(string)
 
-			dd := app.NewDownloadDependencies()
+			dd := app.NewDownloadDependencies(netx.NewGoGetterClient())
 
 			res, err := dd.Execute(app.DownloadDependenciesRequest{
 				FuryctlBinVersion: furyctlBinVersion,
