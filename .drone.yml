@@ -76,9 +76,7 @@ steps:
   - name: build
     image: ghcr.io/goreleaser/goreleaser:v1.11.4
     depends_on:
-      - lint
-      - test-unit
-      - test-integration
+      - prepare
     pull: always
     commands:
       - go install github.com/gobuffalo/packr/v2/packr2@v2.8.3
