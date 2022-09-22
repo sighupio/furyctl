@@ -64,7 +64,8 @@ steps:
     depends_on:
       - build
     commands:
-      - make test-integration
+      - bats -t ./test/integration/template-engine/tests.sh
+      - bats -t ./test/integration/validation-cmd/tests.sh
     environment:
       CGO_ENABLED: 0
       FURYCTL_TOKEN:
