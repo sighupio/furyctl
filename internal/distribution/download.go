@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-package validate
+package distribution
 
 import (
 	"errors"
@@ -14,7 +14,6 @@ import (
 	"github.com/hashicorp/go-getter"
 	"github.com/sirupsen/logrus"
 
-	"github.com/sighupio/furyctl/internal/distribution"
 	"github.com/sighupio/furyctl/internal/semver"
 	"github.com/sighupio/furyctl/internal/yaml"
 )
@@ -37,42 +36,40 @@ var (
 
 type downloadResult struct {
 	RepoPath       string
-	MinimalConf    distribution.FuryctlConfig
-	DistroManifest distribution.Manifest
+	MinimalConf    FuryctlConfig
+	DistroManifest Manifest
 }
 
-func DownloadDistro(
-	version string,
+func Download(
+	furyctlBinVersion string,
 	distroLocation string,
 	furyctlConfPath string,
 	debug bool,
 ) (downloadResult, error) {
-	minimalConf, err := yaml.FromFileV3[distribution.FuryctlConfig](furyctlConfPath)
+	minimalConf, err := yaml.FromFileV3[FuryctlConfig](furyctlConfPath)
 	if err != nil {
 		return downloadResult{}, err
 	}
 
-	furyctlConfVersion := minimalConf.Spec.DistributionVersion
+	furyctlConfSemVer := minimalConf.Spec.DistributionVersion
 
-	if version != "unknown" {
-		furyctlBinVersion, err := semver.NewVersion(fmt.Sprintf("v%s", version))
+	if furyctlBinVersion != "unknown" {
+		furyctlBinSemVer, err := semver.NewVersion(fmt.Sprintf("v%s", furyctlBinVersion))
 		if err != nil {
 			return downloadResult{}, err
 		}
 
-		sameMinors := semver.SameMinor(furyctlConfVersion, furyctlBinVersion)
-
-		if !sameMinors {
+		if !semver.SameMinor(furyctlConfSemVer, furyctlBinSemVer) {
 			logrus.Warnf(
 				"this version of furyctl ('%s') does not support distribution version '%s', results may be inaccurate",
 				furyctlBinVersion,
-				furyctlConfVersion,
+				furyctlConfSemVer,
 			)
 		}
 	}
 
 	if distroLocation == "" {
-		distroLocation = fmt.Sprintf(DefaultBaseUrl, furyctlConfVersion.String())
+		distroLocation = fmt.Sprintf(DefaultBaseUrl, furyctlConfSemVer.String())
 	}
 
 	repoPath, err := DownloadDirectory(distroLocation)
@@ -84,15 +81,15 @@ func DownloadDistro(
 	}
 
 	kfdPath := filepath.Join(repoPath, "kfd.yaml")
-	kfdManifest, err := yaml.FromFileV3[distribution.Manifest](kfdPath)
+	kfdManifest, err := yaml.FromFileV3[Manifest](kfdPath)
 	if err != nil {
 		return downloadResult{}, err
 	}
 
-	if !semver.SamePatch(furyctlConfVersion, kfdManifest.Version) {
+	if !semver.SamePatch(furyctlConfSemVer, kfdManifest.Version) {
 		return downloadResult{}, fmt.Errorf(
-			"minor versions mismatch: furyctl.yaml has %s, but furyctl has %s",
-			furyctlConfVersion.String(),
+			"versions mismatch: furyctl.yaml = '%s', furyctl binary = '%s'",
+			furyctlConfSemVer.String(),
 			kfdManifest.Version.String(),
 		)
 	}
@@ -104,7 +101,7 @@ func DownloadDistro(
 	}, nil
 }
 
-func GetSchemaPath(basePath string, conf distribution.FuryctlConfig) (string, error) {
+func GetSchemaPath(basePath string, conf FuryctlConfig) (string, error) {
 	avp := strings.Split(conf.ApiVersion, "/")
 
 	if len(avp) < 2 {
@@ -167,7 +164,7 @@ func ClientGet(src, dst string) error {
 		client := &getter.Client{
 			Src:  fullSrc,
 			Dst:  dst,
-			Mode: getter.ClientModeDir,
+			Mode: getter.ClientModeAny,
 		}
 
 		err := client.Get()

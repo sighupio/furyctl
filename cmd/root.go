@@ -78,6 +78,7 @@ Furyctl is a simple CLI tool to:
 	rootCmd.PersistentFlags().BoolVarP(&rootCmd.config.DisableTty, "no-tty", "T", false, "Disable TTY")
 
 	rootCmd.AddCommand(NewCompletionCmd())
+	rootCmd.AddCommand(NewDownloadCmd(versions["version"]))
 	rootCmd.AddCommand(NewDumpCmd())
 	rootCmd.AddCommand(NewValidateCommand(versions["version"]))
 	rootCmd.AddCommand(NewVersionCmd(versions))
