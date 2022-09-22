@@ -9,7 +9,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/sighupio/furyctl/internal/app/validate"
+	"github.com/sighupio/furyctl/internal/distribution"
 	"github.com/sighupio/furyctl/internal/merge"
 	"github.com/sighupio/furyctl/internal/schema/santhosh"
 	"github.com/sighupio/furyctl/internal/yaml"
@@ -38,24 +38,24 @@ func NewValidateConfig() *ValidateConfig {
 type ValidateConfig struct{}
 
 func (h *ValidateConfig) Execute(req ValidateConfigRequest) (ValidateConfigResponse, error) {
-	res, err := validate.DownloadDistro(req.FuryctlBinVersion, req.DistroLocation, req.FuryctlConfPath, req.Debug)
+	res, err := distribution.Download(req.FuryctlBinVersion, req.DistroLocation, req.FuryctlConfPath, req.Debug)
 	if err != nil {
 		return ValidateConfigResponse{}, err
 	}
 
-	schemaPath, err := validate.GetSchemaPath(res.RepoPath, res.MinimalConf)
+	schemaPath, err := distribution.GetSchemaPath(res.RepoPath, res.MinimalConf)
 	if err != nil {
 		return ValidateConfigResponse{}, err
 	}
 
-	defaultPath := validate.GetDefaultPath(res.RepoPath)
+	defaultPath := distribution.GetDefaultPath(res.RepoPath)
 
 	defaultedFuryctlConfPath, err := h.mergeConfigAndDefaults(req.FuryctlConfPath, defaultPath)
 	if err != nil {
 		return ValidateConfigResponse{}, err
 	}
 	if !req.Debug {
-		defer validate.CleanupTempDir(filepath.Base(defaultedFuryctlConfPath))
+		defer distribution.CleanupTempDir(filepath.Base(defaultedFuryctlConfPath))
 	}
 
 	schema, err := santhosh.LoadSchema(schemaPath)
@@ -81,12 +81,12 @@ func (h *ValidateConfig) Execute(req ValidateConfigRequest) (ValidateConfigRespo
 func (h *ValidateConfig) mergeConfigAndDefaults(furyctlFilePath, defaultsFilePath string) (string, error) {
 	defaultsFile, err := yaml.FromFileV2[map[any]any](defaultsFilePath)
 	if err != nil {
-		return "", fmt.Errorf("%w: %v", validate.ErrYamlUnmarshalFile, err)
+		return "", fmt.Errorf("%w: %v", distribution.ErrYamlUnmarshalFile, err)
 	}
 
 	furyctlFile, err := yaml.FromFileV2[map[any]any](furyctlFilePath)
 	if err != nil {
-		return "", fmt.Errorf("%w: %v", validate.ErrYamlUnmarshalFile, err)
+		return "", fmt.Errorf("%w: %v", distribution.ErrYamlUnmarshalFile, err)
 	}
 
 	defaultsModel := merge.NewDefaultModel(defaultsFile, ".data")
@@ -96,7 +96,7 @@ func (h *ValidateConfig) mergeConfigAndDefaults(furyctlFilePath, defaultsFilePat
 
 	defaultedDistribution, err := distroMerger.Merge()
 	if err != nil {
-		return "", fmt.Errorf("%w: %v", validate.ErrMergeDistroConfig, err)
+		return "", fmt.Errorf("%w: %v", distribution.ErrMergeDistroConfig, err)
 	}
 
 	furyctlModel := merge.NewDefaultModel(furyctlFile, ".spec.distribution")
@@ -106,22 +106,22 @@ func (h *ValidateConfig) mergeConfigAndDefaults(furyctlFilePath, defaultsFilePat
 
 	defaultedFuryctl, err := furyctlMerger.Merge()
 	if err != nil {
-		return "", fmt.Errorf("%w: %v", validate.ErrMergeCompleteConfig, err)
+		return "", fmt.Errorf("%w: %v", distribution.ErrMergeCompleteConfig, err)
 	}
 
 	outYaml, err := yaml.MarshalV2(defaultedFuryctl)
 	if err != nil {
-		return "", fmt.Errorf("%w: %v", validate.ErrYamlMarshalFile, err)
+		return "", fmt.Errorf("%w: %v", distribution.ErrYamlMarshalFile, err)
 	}
 
 	outDirPath, err := os.MkdirTemp("", "furyctl-defaulted-")
 	if err != nil {
-		return "", fmt.Errorf("%w: %v", validate.ErrCreatingTempDir, err)
+		return "", fmt.Errorf("%w: %v", distribution.ErrCreatingTempDir, err)
 	}
 
 	confPath := filepath.Join(outDirPath, "config.yaml")
 	if err := os.WriteFile(confPath, outYaml, os.ModePerm); err != nil {
-		return "", fmt.Errorf("%w: %v", validate.ErrWriteFile, err)
+		return "", fmt.Errorf("%w: %v", distribution.ErrWriteFile, err)
 	}
 
 	return confPath, nil
