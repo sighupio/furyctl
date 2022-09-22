@@ -17,60 +17,65 @@ steps:
       - go install github.com/google/addlicense@v1.0.0
       - make license-check
 
-  - name: lint
-    image: quay.io/sighup/golang:1.19.0
-    pull: always
-    commands:
-      - make lint
-
-  - name: test
-    image: quay.io/sighup/golang:1.19.0
-    pull: always
-    commands:
-      - make test
-    environment:
-      CGO_ENABLED: 0
-
   - name: build
     image: ghcr.io/goreleaser/goreleaser:v1.11.4
     pull: always
-    depends_on:
-      - lint
-      - test
-    environment:
-      CGO_ENABLED: 0
-      GITHUB_TOKEN:
-        from_secret: GITHUB_TOKEN
     commands:
       - go install github.com/gobuffalo/packr/v2/packr2@v2.8.3
       - git reset --hard
       - git fetch --tags
       - make build
+    environment:
+      GOCACHE: /drone/src/.go/cache
+      GOMODCACHE: /drone/src/.go/modcache
+      GOTMPDIR: /drone/src/.go/tmp
+      CGO_ENABLED: 0
+      GITHUB_TOKEN:
+        from_secret: GITHUB_TOKEN
+
+  - name: lint
+    image: quay.io/sighup/golang:1.19.0
+    depends_on:
+      - build
+    pull: always
+    commands:
+      - make lint
+    environment:
+      GOCACHE: /drone/src/.go/cache
+      GOMODCACHE: /drone/src/.go/modcache
+      GOTMPDIR: /drone/src/.go/tmp
+
+  - name: test-unit
+    image: quay.io/sighup/golang:1.19.0
+    depends_on:
+      - build
+    pull: always
+    commands:
+      - make test-unit
+    environment:
+      CGO_ENABLED: 0
+      GOCACHE: /drone/src/.go/cache
+      GOMODCACHE: /drone/src/.go/modcache
+      GOTMPDIR: /drone/src/.go/tmp
 
   - name: test-integration
     image: quay.io/sighup/e2e-furyctl:v1.2.1_v0.2.2_v1.20.1_20.04
     depends_on:
       - build
+    commands:
+      - make test-integration
     environment:
       CGO_ENABLED: 0
       FURYCTL_TOKEN:
         from_secret: FURYCTL_TOKEN
-    commands:
-      - bats -t ./test/integration/template-engine/tests.sh
-      - bats -t ./test/integration/validation-cmd/tests.sh
 
   - name: build-release
     image: ghcr.io/goreleaser/goreleaser:v1.11.4
     pull: always
     depends_on:
       - lint
-      - test
-      - build
+      - test-unit
       - test-integration
-    environment:
-      CGO_ENABLED: 0
-      GITHUB_TOKEN:
-        from_secret: GITHUB_TOKEN
     commands:
       - go install github.com/gobuffalo/packr/v2/packr2@v2.8.3
       - git reset --hard
@@ -80,6 +85,13 @@ steps:
       ref:
         include:
           - refs/tags/v**
+    environment:
+      GOCACHE: /drone/src/.go/cache
+      GOMODCACHE: /drone/src/.go/modcache
+      GOTMPDIR: /drone/src/.go/tmp
+      CGO_ENABLED: 0
+      GITHUB_TOKEN:
+        from_secret: GITHUB_TOKEN
 
 trigger:
   event:
