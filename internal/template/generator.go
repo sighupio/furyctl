@@ -18,9 +18,7 @@ import (
 	"github.com/sighupio/furyctl/internal/io"
 )
 
-var (
-	ErrProcessTemplate = errors.New("error processing template")
-)
+var ErrProcessTemplate = errors.New("error processing template")
 
 type generator struct {
 	source  string
