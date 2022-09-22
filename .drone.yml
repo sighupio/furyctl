@@ -27,6 +27,11 @@ steps:
     commands:
       - go install github.com/google/addlicense@v1.0.0
       - make license-check
+    environment:
+      CGO_ENABLED: 0
+      GOCACHE: /drone/src/.go/cache
+      GOMODCACHE: /drone/src/.go/modcache
+      GOTMPDIR: /drone/src/.go/tmp
 
   - name: lint
     image: quay.io/sighup/golang:1.19.0
@@ -34,7 +39,6 @@ steps:
       - prepare
     pull: always
     commands:
-      - ls -la /drone/src/.go/cache
       - make lint
     environment:
       CGO_ENABLED: 0
@@ -56,12 +60,13 @@ steps:
       GOTMPDIR: /drone/src/.go/tmp
 
   - name: test-integration
-    image: quay.io/sighup/e2e-furyctl:v1.2.1_v0.2.2_v1.20.1_20.04
+    image: quay.io/sighup/golang:1.19.0
     depends_on:
       - prepare
     commands:
-      - bats -t ./test/integration/template-engine/tests.sh
-      - bats -t ./test/integration/validation-cmd/tests.sh
+      - git clone --depth 1 --branch v1.8.0 https://github.com/bats-core/bats-core.git
+      - ./bats-core/install.sh /usr/local
+      - make test-integration
 
   - name: build
     image: ghcr.io/goreleaser/goreleaser:v1.11.4
