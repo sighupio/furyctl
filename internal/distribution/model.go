@@ -42,35 +42,45 @@ func (c *FuryctlConfig) UnmarshalYAML(unmarshal func(any) error) error {
 	return nil
 }
 
+type ManifestModules struct {
+	Auth       string `yaml:"auth"`
+	Dr         string `yaml:"dr"`
+	Ingress    string `yaml:"ingress"`
+	Logging    string `yaml:"logging"`
+	Monitoring string `yaml:"monitoring"`
+	Opa        string `yaml:"opa"`
+}
+
+type ManifestProvider struct {
+	Version   string `yaml:"version"`
+	Installer string `yaml:"installer"`
+}
+
+type ManifestKubernetes struct {
+	Eks ManifestProvider `yaml:"eks"`
+}
+
+type ManifestSchemas struct {
+	Eks []struct {
+		ApiVersion string `yaml:"apiVersion"`
+		Kind       string `yaml:"kind"`
+	} `yaml:"eks"`
+}
+
+type ManifestTools struct {
+	Ansible   string `yaml:"ansible"`
+	Furyagent string `yaml:"furyagent"`
+	Kubectl   string `yaml:"kubectl"`
+	Kustomize string `yaml:"kustomize"`
+	Terraform string `yaml:"terraform"`
+}
+
 type Manifest struct {
-	Version semver.Version `yaml:"version"`
-	Modules struct {
-		Auth       string `yaml:"auth"`
-		Dr         string `yaml:"dr"`
-		Ingress    string `yaml:"ingress"`
-		Logging    string `yaml:"logging"`
-		Monitoring string `yaml:"monitoring"`
-		Opa        string `yaml:"opa"`
-	} `yaml:"modules"`
-	Kubernetes struct {
-		Eks struct {
-			Version   string `yaml:"version"`
-			Installer string `yaml:"installer"`
-		} `yaml:"eks"`
-	} `yaml:"kubernets"`
-	FuryctlSchemas struct {
-		Eks []struct {
-			ApiVersion string `yaml:"apiVersion"`
-			Kind       string `yaml:"kind"`
-		} `yaml:"eks"`
-	} `yaml:"furyctlSchemas"`
-	Tools struct {
-		Ansible   string `yaml:"ansible"`
-		Furyagent string `yaml:"furyagent"`
-		Kubectl   string `yaml:"kubectl"`
-		Kustomize string `yaml:"kustomize"`
-		Terraform string `yaml:"terraform"`
-	} `yaml:"tools"`
+	Version        semver.Version     `yaml:"version"`
+	Modules        ManifestModules    `yaml:"modules"`
+	Kubernetes     ManifestKubernetes `yaml:"kubernetes"`
+	FuryctlSchemas ManifestSchemas    `yaml:"furyctlSchemas"`
+	Tools          ManifestTools      `yaml:"tools"`
 }
 
 func (m *Manifest) UnmarshalYAML(unmarshal func(any) error) error {
