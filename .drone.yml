@@ -67,6 +67,11 @@ steps:
       - git clone --depth 1 --branch v1.8.0 https://github.com/bats-core/bats-core.git
       - ./bats-core/install.sh /usr/local
       - make test-integration
+    environment:
+      CGO_ENABLED: 0
+      GOCACHE: /drone/src/.go/cache
+      GOMODCACHE: /drone/src/.go/modcache
+      GOTMPDIR: /drone/src/.go/tmp
 
   - name: build
     image: ghcr.io/goreleaser/goreleaser:v1.11.4
