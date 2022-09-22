@@ -5,7 +5,7 @@
  */
 
 module "vpc-and-vpn" {
-  source = "github.com/sighupio/fury-eks-installer//modules/vpc-and-vpn?ref=v1.9.1"
+  source = "github.com/sighupio/fury-eks-installer//modules/vpc-and-vpn?ref={{ .kubernetes.eks.installer }}"
 
   name                     = var.name
   network_cidr             = var.network_cidr
