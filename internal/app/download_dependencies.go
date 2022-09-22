@@ -14,6 +14,7 @@ import (
 	"strings"
 
 	"github.com/sighupio/furyctl/internal/distribution"
+	"github.com/sighupio/furyctl/internal/netx"
 	"github.com/sighupio/furyctl/internal/semver"
 )
 
@@ -38,11 +39,15 @@ func (v DownloadDependenciesResponse) HasErrors() bool {
 	return v.Error != nil
 }
 
-func NewDownloadDependencies() *DownloadDependencies {
-	return &DownloadDependencies{}
+func NewDownloadDependencies(client netx.Client) *DownloadDependencies {
+	return &DownloadDependencies{
+		client: client,
+	}
 }
 
-type DownloadDependencies struct{}
+type DownloadDependencies struct {
+	client netx.Client
+}
 
 func (dd *DownloadDependencies) Execute(req DownloadDependenciesRequest) (DownloadDependenciesResponse, error) {
 	dres, err := distribution.Download(req.FuryctlBinVersion, req.DistroLocation, req.FuryctlConfPath, req.Debug)
@@ -85,7 +90,7 @@ func (dd *DownloadDependencies) DownloadModules(modules distribution.ManifestMod
 		for _, prefix := range []string{defaultPrefix, fallbackPrefix} {
 			src := fmt.Sprintf("git::%s-%s.git?ref=%s", prefix, name, version)
 
-			if err := distribution.ClientGet(src, filepath.Join(basePath, "vendor", "modules", name)); err != nil {
+			if err := dd.client.Download(src, filepath.Join(basePath, "vendor", "modules", name)); err != nil {
 				errors = append(errors, fmt.Errorf("%w '%s': %v", distribution.ErrDownloadingFolder, src, err))
 				continue
 			}
@@ -116,7 +121,7 @@ func (dd *DownloadDependencies) DownloadInstallers(installers distribution.Manif
 
 		src := fmt.Sprintf("git::https://github.com/sighupio/fury-%s-installer?ref=%s", name, version)
 
-		if err := distribution.ClientGet(src, filepath.Join(basePath, "vendor", "installers", name)); err != nil {
+		if err := dd.client.Download(src, filepath.Join(basePath, "vendor", "installers", name)); err != nil {
 			return err
 		}
 	}
@@ -143,9 +148,9 @@ func (dd *DownloadDependencies) DownloadTools(tools distribution.ManifestTools) 
 			continue
 		}
 
-		dst := filepath.Join(basePath, "vendor", "bin")
+		dst := filepath.Join(basePath, "vendor", "bin", name)
 
-		if err := distribution.ClientGet(src, dst); err != nil {
+		if err := dd.client.Download(src, dst); err != nil {
 			return err
 		}
 
