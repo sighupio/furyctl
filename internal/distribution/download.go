@@ -11,9 +11,9 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/hashicorp/go-getter"
 	"github.com/sirupsen/logrus"
 
+	"github.com/sighupio/furyctl/internal/netx"
 	"github.com/sighupio/furyctl/internal/semver"
 	"github.com/sighupio/furyctl/internal/yaml"
 )
@@ -21,10 +21,6 @@ import (
 const DefaultBaseUrl = "https://git@github.com/sighupio/fury-distribution?ref=%s"
 
 var (
-	downloadProtocols = []string{"", "git::", "file::", "http::", "s3::", "gcs::", "mercurial::"}
-
-	errDownloadOptionsExausted = errors.New("downloading options exausted")
-
 	ErrCreatingTempDir     = errors.New("error creating temp dir")
 	ErrDownloadingFolder   = errors.New("error downloading folder")
 	ErrMergeCompleteConfig = errors.New("error merging complete config")
@@ -134,7 +130,7 @@ func DownloadDirectory(src string) (string, error) {
 
 	logrus.Debugf("Downloading '%s' in '%s'", src, dst)
 
-	if err := ClientGet(src, dst); err != nil {
+	if err := netx.NewGoGetterClient().Download(src, dst); err != nil {
 		return "", fmt.Errorf("%w '%s': %v", ErrDownloadingFolder, src, err)
 	}
 
@@ -147,44 +143,4 @@ func CleanupTempDir(dir string) {
 			logrus.Error(err)
 		}
 	}
-}
-
-// ClientGet tries a few different protocols to get the source file or directory.
-func ClientGet(src, dst string) error {
-	protocols := []string{""}
-	if !UrlHasForcedProtocol(src) {
-		protocols = downloadProtocols
-	}
-
-	for _, protocol := range protocols {
-		fullSrc := fmt.Sprintf("%s%s", protocol, src)
-
-		logrus.Debugf("Trying to download from: %s", fullSrc)
-
-		client := &getter.Client{
-			Src:  fullSrc,
-			Dst:  dst,
-			Mode: getter.ClientModeAny,
-		}
-
-		err := client.Get()
-		if err == nil {
-			return nil
-		}
-
-		logrus.Debug(err)
-	}
-
-	return errDownloadOptionsExausted
-}
-
-// UrlHasForcedProtocol checks if the url has a forced protocol as described in hashicorp/go-getter.
-func UrlHasForcedProtocol(url string) bool {
-	for _, dp := range downloadProtocols {
-		if dp != "" && strings.HasPrefix(url, dp) {
-			return true
-		}
-	}
-
-	return false
 }
