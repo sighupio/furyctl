@@ -6,9 +6,6 @@ kind: pipeline
 type: docker
 name: main
 
-node:
-  runner: internal
-
 steps:
   - name: prepare
     image: quay.io/sighup/golang:1.19.0
