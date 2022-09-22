@@ -21,6 +21,7 @@ steps:
     image: ghcr.io/goreleaser/goreleaser:v1.11.4
     pull: always
     commands:
+      - mkdir -p .go/cache .go/modcache .go/tmp
       - go install github.com/gobuffalo/packr/v2/packr2@v2.8.3
       - git reset --hard
       - git fetch --tags
