@@ -6,7 +6,6 @@ package distribution_test
 
 import (
 	"fmt"
-	"os"
 	"path/filepath"
 	"testing"
 
@@ -94,32 +93,5 @@ func TestGetSchemaPath(t *testing.T) {
 				t.Errorf("distribution.GetSchemaPath() = %v, want %v", got, tt.want)
 			}
 		})
-	}
-}
-
-func TestDownloadDirectory(t *testing.T) {
-	tmpDir, err := os.MkdirTemp("", "furyctl-download-test-")
-	if err != nil {
-		t.Fatalf("error creating temp dir: %v", err)
-	}
-
-	src, err := os.Create(filepath.Join(tmpDir, "test.txt"))
-	if err != nil {
-		t.Fatalf("error creating temp input file: %v", err)
-	}
-
-	defer func() {
-		src.Close()
-		_ = os.RemoveAll(tmpDir)
-	}()
-
-	dlDir, err := distribution.DownloadDirectory(tmpDir)
-	if err != nil {
-		t.Fatalf("error downloading directory: %v", err)
-	}
-
-	_, err = os.Stat(filepath.Join(dlDir, "test.txt"))
-	if err != nil {
-		t.Fatalf("error checking downloaded file: %v", err)
 	}
 }
