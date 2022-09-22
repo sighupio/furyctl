@@ -14,6 +14,7 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/sighupio/furyctl/internal/netx"
+	"github.com/sighupio/furyctl/internal/osx"
 	"github.com/sighupio/furyctl/internal/semver"
 	"github.com/sighupio/furyctl/internal/yaml"
 )
@@ -68,15 +69,25 @@ func Download(
 		distroLocation = fmt.Sprintf(DefaultBaseUrl, furyctlConfSemVer.String())
 	}
 
-	repoPath, err := DownloadDirectory(distroLocation)
+	baseDst, err := os.MkdirTemp("", "furyctl-")
 	if err != nil {
-		return downloadResult{}, err
+		return downloadResult{}, fmt.Errorf("%w: %v", ErrCreatingTempDir, err)
 	}
-	if !debug {
-		defer CleanupTempDir(filepath.Base(repoPath))
+	src := distroLocation
+	dst := filepath.Join(baseDst, "data")
+
+	logrus.Debugf("Downloading '%s' in '%s'", src, dst)
+
+	if err := netx.NewGoGetterClient().Download(src, dst); err != nil {
+		return downloadResult{}, fmt.Errorf("%w '%s': %v", ErrDownloadingFolder, src, err)
 	}
 
-	kfdPath := filepath.Join(repoPath, "kfd.yaml")
+	if !debug {
+		defer osx.CleanupTempDir(filepath.Base(dst))
+
+	}
+
+	kfdPath := filepath.Join(dst, "kfd.yaml")
 	kfdManifest, err := yaml.FromFileV3[Manifest](kfdPath)
 	if err != nil {
 		return downloadResult{}, err
@@ -91,7 +102,7 @@ func Download(
 	}
 
 	return downloadResult{
-		RepoPath:       repoPath,
+		RepoPath:       dst,
 		MinimalConf:    minimalConf,
 		DistroManifest: kfdManifest,
 	}, nil
@@ -118,29 +129,4 @@ func GetSchemaPath(basePath string, conf FuryctlConfig) (string, error) {
 
 func GetDefaultPath(basePath string) string {
 	return filepath.Join(basePath, "furyctl-defaults.yaml")
-}
-
-func DownloadDirectory(src string) (string, error) {
-	baseDst, err := os.MkdirTemp("", "furyctl-")
-	if err != nil {
-		return "", fmt.Errorf("%w: %v", ErrCreatingTempDir, err)
-	}
-
-	dst := filepath.Join(baseDst, "data")
-
-	logrus.Debugf("Downloading '%s' in '%s'", src, dst)
-
-	if err := netx.NewGoGetterClient().Download(src, dst); err != nil {
-		return "", fmt.Errorf("%w '%s': %v", ErrDownloadingFolder, src, err)
-	}
-
-	return dst, nil
-}
-
-func CleanupTempDir(dir string) {
-	if err := os.RemoveAll(dir); err != nil {
-		if !errors.Is(err, os.ErrNotExist) {
-			logrus.Error(err)
-		}
-	}
 }
