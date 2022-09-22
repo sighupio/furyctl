@@ -164,7 +164,10 @@ func (tm *Model) applyTemplates(
 	}
 
 	if strings.HasSuffix(info.Name(), tm.Suffix) {
-		tmpl := gen.ProcessTemplate()
+		tmpl, err := gen.ProcessTemplate()
+		if err != nil {
+			return err
+		}
 
 		if tmpl == nil {
 			return fmt.Errorf("no template found for %s", relSource)
