@@ -106,10 +106,14 @@ lint: lint-go
 lint-go:
 	@golangci-lint -v run --color=always --config=${_PROJECT_DIRECTORY}/.rules/.golangci.yml ./...
 
-.PHONY: test
+.PHONY: test-unit test-integration
 
-test:
+test-unit:
 	@go test -v -covermode=atomic -coverprofile=coverage.out ./...
+
+test-integration:
+	@bats -t ./test/integration/template-engine/tests.sh
+	@bats -t ./test/integration/validation-cmd/tests.sh
 
 .PHONY: clean build release
 
