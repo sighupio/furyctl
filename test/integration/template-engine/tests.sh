@@ -3,7 +3,6 @@
 # Use of this source code is governed by a BSD-style
 # license that can be found in the LICENSE file.
 
-
 load "./../../helper"
 
 OS="linux"
@@ -15,12 +14,20 @@ CPUARCH="amd64_v1"
 # 	CPUARCH="arm64"
 # fi
 
-FURYCTL="${PWD}/dist/furyctl_${OS}_${CPUARCH}/furyctl"
+FURYCTL="${PWD}/dist/furyctl"
+
+@test "prepare" {
+    info
+    init(){
+        go build -o ${PWD}/dist/furyctl ${PWD}/main.go
+    }
+    run init
+}
 
 @test "furyctl" {
     info
     init(){
-        "${FURYCTL}" version
+        ${FURYCTL} version
     }
     run init
     if [[ ${status} -ne 0 ]]; then

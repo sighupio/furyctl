@@ -14,6 +14,8 @@ import (
 	"github.com/sighupio/furyctl/internal/cobrax"
 )
 
+var ErrValidationFailed = fmt.Errorf("validation failed")
+
 func NewConfigCmd(version string) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "config",
@@ -40,7 +42,7 @@ func NewConfigCmd(version string) *cobra.Command {
 
 				fmt.Println(res.Error)
 
-				return nil
+				return ErrValidationFailed
 			}
 
 			fmt.Println("Config validation succeeded")

@@ -50,7 +50,7 @@ func NewDependenciesCmd(version string, executor execx.Executor) *cobra.Command 
 				return ErrDependencies
 			}
 
-			fmt.Println("Dependencies validation succeeded")
+			fmt.Println("dependencies validation succeeded")
 
 			return nil
 		},
