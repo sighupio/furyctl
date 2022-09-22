@@ -11,6 +11,7 @@ import (
 
 	"github.com/sighupio/furyctl/internal/distribution"
 	"github.com/sighupio/furyctl/internal/merge"
+	"github.com/sighupio/furyctl/internal/osx"
 	"github.com/sighupio/furyctl/internal/schema/santhosh"
 	"github.com/sighupio/furyctl/internal/yaml"
 )
@@ -55,7 +56,7 @@ func (h *ValidateConfig) Execute(req ValidateConfigRequest) (ValidateConfigRespo
 		return ValidateConfigResponse{}, err
 	}
 	if !req.Debug {
-		defer distribution.CleanupTempDir(filepath.Base(defaultedFuryctlConfPath))
+		defer osx.CleanupTempDir(filepath.Base(defaultedFuryctlConfPath))
 	}
 
 	schema, err := santhosh.LoadSchema(schemaPath)
