@@ -2,9 +2,10 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-package validate
+package download
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/sirupsen/logrus"
@@ -12,56 +13,48 @@ import (
 
 	"github.com/sighupio/furyctl/internal/app"
 	"github.com/sighupio/furyctl/internal/cobrax"
-	"github.com/sighupio/furyctl/internal/execx"
 )
 
-var ErrDependencies = fmt.Errorf("dependencies are not satisfied")
+var ErrDownloadFailed = fmt.Errorf("dependencies download failed")
 
-func NewDependenciesCmd(furyctlBinVersion string, executor execx.Executor) *cobra.Command {
+func NewDependenciesCmd(furyctlBinVersion string) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "dependencies",
-		Short: "Validate furyctl.yaml file",
+		Short: "Download dependencies",
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			debug := cobrax.Flag[bool](cmd, "debug").(bool)
-			binPath := cobrax.Flag[string](cmd, "bin-path").(string)
 			furyctlPath := cobrax.Flag[string](cmd, "config").(string)
 			distroLocation := cobrax.Flag[string](cmd, "distro-location").(string)
 
-			vd := app.NewValidateDependencies(executor)
+			dd := app.NewDownloadDependencies()
 
-			res, err := vd.Execute(app.ValidateDependenciesRequest{
-				BinPath:           binPath,
+			res, err := dd.Execute(app.DownloadDependenciesRequest{
 				FuryctlBinVersion: furyctlBinVersion,
 				DistroLocation:    distroLocation,
 				FuryctlConfPath:   furyctlPath,
 				Debug:             debug,
 			})
 			if err != nil {
-				return err
+				if !errors.Is(err, app.ErrUnsupportedTools) {
+					return err
+				}
+
+				logrus.Warnf("unsupported tools: %v", err)
 			}
 
 			if res.HasErrors() {
 				logrus.Debugf("Repository path: %s", res.RepoPath)
 
-				for _, err := range res.Errors {
-					logrus.Error(err)
-				}
+				fmt.Println(res.Error)
 
-				return ErrDependencies
+				return ErrDownloadFailed
 			}
 
-			fmt.Println("dependencies validation succeeded")
+			fmt.Println("dependencies download succeeded")
 
 			return nil
 		},
 	}
-
-	cmd.Flags().StringP(
-		"bin-path",
-		"b",
-		"",
-		"Path to the bin folder where all dependencies are installed",
-	)
 
 	cmd.Flags().StringP(
 		"config",
