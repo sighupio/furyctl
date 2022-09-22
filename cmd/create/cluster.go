@@ -11,7 +11,8 @@ import (
 	"fmt"
 	tJson "github.com/hashicorp/terraform-json"
 	schm "github.com/sighupio/fury-distribution/pkg/schemas"
-	"github.com/sighupio/furyctl/cmd/validate"
+	"github.com/sighupio/furyctl/internal/app/validate"
+	"github.com/sighupio/furyctl/internal/cobrax"
 	"github.com/sighupio/furyctl/internal/distribution"
 	"github.com/sighupio/furyctl/internal/template"
 	"github.com/sighupio/furyctl/internal/yaml"
@@ -44,10 +45,10 @@ func NewClusterCmd() *cobra.Command {
 		Short: "Creates a battle-tested Kubernetes cluster",
 		RunE: func(cmd *cobra.Command, args []string) (err error) {
 			//debug := validate.Flag[bool](cmd, "debug").(bool)
-			furyctlPath := validate.Flag[string](cmd, "config").(string)
-			distroLocation := validate.Flag[string](cmd, "distro-location").(string)
-			phase := validate.Flag[string](cmd, "phase").(string)
-			vpnAutoConnect := validate.Flag[bool](cmd, "vpn-auto-connect").(bool)
+			furyctlPath := cobrax.Flag[string](cmd, "config").(string)
+			distroLocation := cobrax.Flag[string](cmd, "distro-location").(string)
+			phase := cobrax.Flag[string](cmd, "phase").(string)
+			vpnAutoConnect := cobrax.Flag[bool](cmd, "vpn-auto-connect").(bool)
 
 			infraPath := path.Join(".infrastructure")
 			vendorPath, err := filepath.Abs("./vendor")
