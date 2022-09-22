@@ -6,13 +6,19 @@ package template
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
+	"os"
 	"path/filepath"
 	"strings"
 	"text/template"
 
 	"github.com/sighupio/furyctl/internal/io"
 	"github.com/sirupsen/logrus"
+)
+
+var (
+	ErrProcessTemplate = errors.New("error processing template")
 )
 
 type generator struct {
@@ -39,9 +45,22 @@ func NewGenerator(
 	}
 }
 
-func (g *generator) ProcessTemplate() *template.Template {
-	return template.Must(
-		template.New(filepath.Base(g.source)).Funcs(g.funcMap.FuncMap).ParseFiles(g.source))
+func (g *generator) ProcessTemplate() (*template.Template, error) {
+	const helpersPath = "source/_helpers.tpl"
+
+	_, err := os.Stat(helpersPath)
+
+	if err == nil {
+		return template.New(filepath.Base(g.source)).Funcs(g.funcMap.FuncMap).ParseFiles(g.source, helpersPath)
+	}
+
+	if errors.Is(err, os.ErrNotExist) {
+		logrus.Warnf("template helpers file '%s' not found\n", helpersPath)
+
+		return template.New(filepath.Base(g.source)).Funcs(g.funcMap.FuncMap).ParseFiles(g.source)
+	}
+
+	return nil, fmt.Errorf("%w using helper '%s': %v", ErrProcessTemplate, helpersPath, err)
 }
 
 func (g *generator) GetMissingKeys(tpl *template.Template) []string {
