@@ -14,7 +14,7 @@ import (
 	"github.com/santhosh-tekuri/jsonschema"
 
 	"github.com/sighupio/furyctl/internal/app"
-	"github.com/sighupio/furyctl/internal/app/validate"
+	"github.com/sighupio/furyctl/internal/distribution"
 	"github.com/sighupio/furyctl/internal/yaml"
 )
 
@@ -119,7 +119,7 @@ func TestValidateConfig(t *testing.T) {
 				rmDirTemp(t, tmpDir)
 			},
 			wantErr:     true,
-			wantErrType: validate.ErrDownloadingFolder,
+			wantErrType: distribution.ErrDownloadingFolder,
 		},
 		{
 			desc: "success",

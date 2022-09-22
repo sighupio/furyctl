@@ -12,7 +12,6 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/sighupio/furyctl/internal/app/validate"
 	"github.com/sighupio/furyctl/internal/distribution"
 	"github.com/sighupio/furyctl/internal/execx"
 )
@@ -55,7 +54,7 @@ type ValidateDependencies struct {
 func (vd *ValidateDependencies) Execute(req ValidateDependenciesRequest) (ValidateDependenciesResponse, error) {
 	res := ValidateDependenciesResponse{}
 
-	dres, err := validate.DownloadDistro(req.FuryctlBinVersion, req.DistroLocation, req.FuryctlConfPath, req.Debug)
+	dres, err := distribution.Download(req.FuryctlBinVersion, req.DistroLocation, req.FuryctlConfPath, req.Debug)
 	if err != nil {
 		return res, err
 	}

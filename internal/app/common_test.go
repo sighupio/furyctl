@@ -46,34 +46,11 @@ var (
 	}
 
 	correctKFDConf = distribution.Manifest{
-		Version: "v1.24.7",
-		Modules: struct {
-			Auth       string `yaml:"auth"`
-			Dr         string `yaml:"dr"`
-			Ingress    string `yaml:"ingress"`
-			Logging    string `yaml:"logging"`
-			Monitoring string `yaml:"monitoring"`
-			Opa        string `yaml:"opa"`
-		}{},
-		Kubernetes: struct {
-			Eks struct {
-				Version   string `yaml:"version"`
-				Installer string `yaml:"installer"`
-			} `yaml:"eks"`
-		}{},
-		FuryctlSchemas: struct {
-			Eks []struct {
-				ApiVersion string `yaml:"apiVersion"`
-				Kind       string `yaml:"kind"`
-			} `yaml:"eks"`
-		}{},
-		Tools: struct {
-			Ansible   string `yaml:"ansible"`
-			Furyagent string `yaml:"furyagent"`
-			Kubectl   string `yaml:"kubectl"`
-			Kustomize string `yaml:"kustomize"`
-			Terraform string `yaml:"terraform"`
-		}{
+		Version:        "v1.24.7",
+		Modules:        distribution.ManifestModules{},
+		Kubernetes:     distribution.ManifestKubernetes{},
+		FuryctlSchemas: distribution.ManifestSchemas{},
+		Tools: distribution.ManifestTools{
 			Ansible:   "2.11.2",
 			Furyagent: "0.0.1",
 			Kubectl:   "1.21.1",
@@ -83,34 +60,11 @@ var (
 	}
 
 	wrongKFDConf = distribution.Manifest{
-		Version: "v1.24.7",
-		Modules: struct {
-			Auth       string `yaml:"auth"`
-			Dr         string `yaml:"dr"`
-			Ingress    string `yaml:"ingress"`
-			Logging    string `yaml:"logging"`
-			Monitoring string `yaml:"monitoring"`
-			Opa        string `yaml:"opa"`
-		}{},
-		Kubernetes: struct {
-			Eks struct {
-				Version   string `yaml:"version"`
-				Installer string `yaml:"installer"`
-			} `yaml:"eks"`
-		}{},
-		FuryctlSchemas: struct {
-			Eks []struct {
-				ApiVersion string `yaml:"apiVersion"`
-				Kind       string `yaml:"kind"`
-			} `yaml:"eks"`
-		}{},
-		Tools: struct {
-			Ansible   string `yaml:"ansible"`
-			Furyagent string `yaml:"furyagent"`
-			Kubectl   string `yaml:"kubectl"`
-			Kustomize string `yaml:"kustomize"`
-			Terraform string `yaml:"terraform"`
-		}{
+		Version:        "v1.24.7",
+		Modules:        distribution.ManifestModules{},
+		Kubernetes:     distribution.ManifestKubernetes{},
+		FuryctlSchemas: distribution.ManifestSchemas{},
+		Tools: distribution.ManifestTools{
 			Ansible:   "2.10.0",
 			Furyagent: "0.0.2",
 			Kubectl:   "1.21.4",

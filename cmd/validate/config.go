@@ -16,7 +16,7 @@ import (
 
 var ErrValidationFailed = fmt.Errorf("validation failed")
 
-func NewConfigCmd(version string) *cobra.Command {
+func NewConfigCmd(furyctlBinVersion string) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "config",
 		Short: "Validate furyctl.yaml file",
@@ -28,7 +28,7 @@ func NewConfigCmd(version string) *cobra.Command {
 			vc := app.NewValidateConfig()
 
 			res, err := vc.Execute(app.ValidateConfigRequest{
-				FuryctlBinVersion: version,
+				FuryctlBinVersion: furyctlBinVersion,
 				DistroLocation:    distroLocation,
 				FuryctlConfPath:   furyctlPath,
 				Debug:             debug,

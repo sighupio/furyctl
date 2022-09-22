@@ -11,14 +11,14 @@ import (
 	"github.com/sighupio/furyctl/internal/execx"
 )
 
-func NewValidateCommand(version string) *cobra.Command {
+func NewValidateCommand(furyctlBinVersion string) *cobra.Command {
 	validateCmd := &cobra.Command{
 		Use:   "validate",
 		Short: "Validate fury config files and dependencies",
 	}
 
-	validateCmd.AddCommand(validate.NewConfigCmd(version))
-	validateCmd.AddCommand(validate.NewDependenciesCmd(version, execx.NewStdExecutor()))
+	validateCmd.AddCommand(validate.NewConfigCmd(furyctlBinVersion))
+	validateCmd.AddCommand(validate.NewDependenciesCmd(furyctlBinVersion, execx.NewStdExecutor()))
 
 	return validateCmd
 }
