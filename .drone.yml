@@ -6,71 +6,99 @@ kind: pipeline
 type: docker
 name: main
 
-node:
-  runner: internal
-
 steps:
-  - name: check
+  - name: prepare
     image: quay.io/sighup/golang:1.19.0
+    depends_on:
+      - clone
+    pull: always
+    commands:
+      - mkdir -p .go/cache .go/modcache .go/tmp
+      - go mod download
+
+  - name: license
+    image: quay.io/sighup/golang:1.19.0
+    depends_on:
+      - clone
     pull: always
     commands:
       - go install github.com/google/addlicense@v1.0.0
       - make license-check
+    environment:
+      CGO_ENABLED: 0
+      GOCACHE: /drone/src/.go/cache
+      GOMODCACHE: /drone/src/.go/modcache
+      GOTMPDIR: /drone/src/.go/tmp
 
   - name: lint
     image: quay.io/sighup/golang:1.19.0
+    depends_on:
+      - prepare
     pull: always
     commands:
       - make lint
-
-  - name: test
-    image: quay.io/sighup/golang:1.19.0
-    pull: always
-    commands:
-      - make test
     environment:
       CGO_ENABLED: 0
+      GOCACHE: /drone/src/.go/cache
+      GOMODCACHE: /drone/src/.go/modcache
+      GOTMPDIR: /drone/src/.go/tmp
+
+  - name: test-unit
+    image: quay.io/sighup/golang:1.19.0
+    depends_on:
+      - prepare
+    pull: always
+    commands:
+      - make test-unit
+    environment:
+      CGO_ENABLED: 0
+      GOCACHE: /drone/src/.go/cache
+      GOMODCACHE: /drone/src/.go/modcache
+      GOTMPDIR: /drone/src/.go/tmp
+
+  - name: test-integration
+    image: quay.io/sighup/golang:1.19.0
+    depends_on:
+      - prepare
+    commands:
+      - git clone --depth 1 --branch v1.8.0 https://github.com/bats-core/bats-core.git
+      - ./bats-core/install.sh /usr/local
+      - make test-integration
+    environment:
+      CGO_ENABLED: 0
+      GOCACHE: /drone/src/.go/cache
+      GOMODCACHE: /drone/src/.go/modcache
+      GOTMPDIR: /drone/src/.go/tmp
 
   - name: build
     image: ghcr.io/goreleaser/goreleaser:v1.11.4
-    pull: always
     depends_on:
-      - lint
-      - test
-    environment:
-      CGO_ENABLED: 0
-      GITHUB_TOKEN:
-        from_secret: GITHUB_TOKEN
+      - prepare
+    pull: always
     commands:
       - go install github.com/gobuffalo/packr/v2/packr2@v2.8.3
       - git reset --hard
       - git fetch --tags
       - make build
-
-  - name: test-integration
-    image: quay.io/sighup/e2e-furyctl:v1.2.1_v0.2.2_v1.20.1_20.04
-    depends_on:
-      - build
+    when:
+      ref:
+        exclude:
+          - refs/tags/v**
     environment:
       CGO_ENABLED: 0
-      FURYCTL_TOKEN:
-        from_secret: FURYCTL_TOKEN
-    commands:
-      - bats -t ./test/integration/template-engine/tests.sh
-      - bats -t ./test/integration/validation-cmd/tests.sh
+      GOCACHE: /drone/src/.go/cache
+      GOMODCACHE: /drone/src/.go/modcache
+      GOTMPDIR: /drone/src/.go/tmp
+      GITHUB_TOKEN:
+        from_secret: GITHUB_TOKEN
 
   - name: build-release
     image: ghcr.io/goreleaser/goreleaser:v1.11.4
     pull: always
     depends_on:
       - lint
-      - test
-      - build
+      - test-unit
       - test-integration
-    environment:
-      CGO_ENABLED: 0
-      GITHUB_TOKEN:
-        from_secret: GITHUB_TOKEN
     commands:
       - go install github.com/gobuffalo/packr/v2/packr2@v2.8.3
       - git reset --hard
@@ -80,6 +108,13 @@ steps:
       ref:
         include:
           - refs/tags/v**
+    environment:
+      CGO_ENABLED: 0
+      GOCACHE: /drone/src/.go/cache
+      GOMODCACHE: /drone/src/.go/modcache
+      GOTMPDIR: /drone/src/.go/tmp
+      GITHUB_TOKEN:
+        from_secret: GITHUB_TOKEN
 
 trigger:
   event:
