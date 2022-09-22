@@ -7,11 +7,12 @@ package io
 import (
 	"bytes"
 	"fmt"
-	"github.com/sirupsen/logrus"
 	"io"
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/sirupsen/logrus"
 )
 
 func CheckDirIsEmpty(target string) error {
@@ -29,7 +30,7 @@ func CheckDirIsEmpty(target string) error {
 }
 
 func AppendBufferToFile(b bytes.Buffer, target string) error {
-	destination, err := os.OpenFile(target, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	destination, err := os.OpenFile(target, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644)
 	if err != nil {
 		return err
 	}
@@ -92,4 +93,17 @@ func CopyFromSourceToTarget(src, dst string) (int64, error) {
 	defer destination.Close()
 
 	return io.Copy(destination, source)
+}
+
+// EnsureDir creates the directories to host the file.
+// Example: hello/world.md will create the hello dir if it does not exists.
+func EnsureDir(fileName string) (err error) {
+	dirName := filepath.Dir(fileName)
+	if _, serr := os.Stat(dirName); serr != nil {
+		err := os.MkdirAll(dirName, os.ModePerm)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }

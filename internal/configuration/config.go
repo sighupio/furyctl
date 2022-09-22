@@ -9,11 +9,11 @@ import (
 	"fmt"
 	"io/ioutil"
 
+	"github.com/sirupsen/logrus"
+	"gopkg.in/yaml.v2"
+
 	bootstrapcfg "github.com/sighupio/furyctl/internal/bootstrap/configuration"
 	clustercfg "github.com/sighupio/furyctl/internal/cluster/configuration"
-	"github.com/sirupsen/logrus"
-
-	"gopkg.in/yaml.v2"
 )
 
 // TerraformExecutor represents the terraform executor configuration to be used
@@ -94,35 +94,6 @@ func clusterParser(config *Configuration) (err error) {
 		}
 		config.Spec = eksSpec
 		return nil
-	case provisioner == "gke":
-		gkeSpec := clustercfg.GKE{
-			NetworkProjectID:               "",
-			ControlPlaneCIDR:               "10.0.0.0/28",
-			AdditionalFirewallRules:        true,
-			AdditionalClusterFirewallRules: false,
-			DisableDefaultSNAT:             false,
-		}
-		err = yaml.Unmarshal(specBytes, &gkeSpec)
-		if err != nil {
-			logrus.Errorf("error parsing configuration file: %v", err)
-			return err
-		}
-		config.Spec = gkeSpec
-		return nil
-	case provisioner == "vsphere":
-		vsphereSpec := clustercfg.VSphere{
-			NetworkConfig: clustercfg.VSphereNetworkConfig{
-				Domain:   "localdomain",
-				IPOffset: 0,
-			},
-		}
-		err = yaml.Unmarshal(specBytes, &vsphereSpec)
-		if err != nil {
-			logrus.Errorf("error parsing configuration file: %v", err)
-			return err
-		}
-		config.Spec = vsphereSpec
-		return nil
 	default:
 		logrus.Error("Error parsing the configuration file. Provisioner not found")
 		return errors.New("cluster provisioner not found")
@@ -150,19 +121,6 @@ func bootstrapParser(config *Configuration) (err error) {
 			return err
 		}
 		config.Spec = awsSpec
-		return nil
-	case provisioner == "gcp":
-		gcpSpec := bootstrapcfg.GCP{
-			VPN: bootstrapcfg.GCPVPN{
-				Instances: 1,
-			},
-		}
-		err = yaml.Unmarshal(specBytes, &gcpSpec)
-		if err != nil {
-			logrus.Errorf("error parsing configuration file: %v", err)
-			return err
-		}
-		config.Spec = gcpSpec
 		return nil
 	default:
 		logrus.Error("Error parsing the configuration file. Provisioner not found")

@@ -12,11 +12,12 @@ import (
 	clustercfg "github.com/sighupio/furyctl/internal/cluster/configuration"
 )
 
-var sampleEKSConfig Configuration
-var sampleAWSBootstrap Configuration
+var (
+	sampleEKSConfig    Configuration
+	sampleAWSBootstrap Configuration
+)
 
 func init() {
-
 	sampleAWSBootstrap.Kind = "Bootstrap"
 	sampleAWSBootstrap.Metadata = Metadata{
 		Name: "my-aws-poc",
@@ -53,7 +54,7 @@ func init() {
 	}
 	sampleEKSConfig.Provisioner = "eks"
 	sampleEKSConfig.Spec = clustercfg.EKS{
-		Version:      "1.18",
+		Version:      "1.23",
 		Network:      "vpc-1",
 		SubNetworks:  []string{"subnet-1", "subnet-2", "subnet-3"},
 		DMZCIDRRange: clustercfg.DMZCIDRRange{Values: []string{"0.0.0.0/0"}},
@@ -61,7 +62,7 @@ func init() {
 		NodePools: []clustercfg.EKSNodePool{
 			{
 				Name:         "one",
-				Version:      "1.18",
+				Version:      "1.23",
 				MinSize:      0,
 				MaxSize:      10,
 				InstanceType: "m",
@@ -82,7 +83,6 @@ func init() {
 }
 
 func TestParseClusterConfigurationFile(t *testing.T) {
-
 	sampleAWSBootstrapLocalState := sampleAWSBootstrap
 	sampleAWSBootstrapLocalState.Executor.StateConfiguration.Backend = "local"
 	sampleAWSBootstrapLocalState.Executor.StateConfiguration.Config = map[string]string{

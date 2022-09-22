@@ -10,15 +10,16 @@ import (
 	"io/ioutil"
 	"os"
 
-	"github.com/sighupio/furyctl/pkg/utils"
 	"github.com/sirupsen/logrus"
+
+	"github.com/sighupio/furyctl/internal/io"
 )
 
 const (
 	pathAlreadyExistsErr  = "Directory already exists"
 	pathCreationErr       = "Path dir couldn't be created. %v"
-	defaultDirPermission  = 0700
-	defaultFilePermission = 0600
+	defaultDirPermission  = 0o700
+	defaultFilePermission = 0o600
 )
 
 // Project represents a simple structure with a couple of useful methods to init a project
@@ -62,7 +63,7 @@ func (p *Project) CreateSubDirs(subDirs []string) (err error) {
 // WriteFile writes a new file (fileName) with the content specified
 func (p *Project) WriteFile(fileName string, content []byte) (err error) {
 	filePath := fmt.Sprintf("%v/%v", p.Path, fileName)
-	err = utils.EnsureDir(filePath)
+	err = io.EnsureDir(filePath)
 	if err != nil {
 		return err
 	}

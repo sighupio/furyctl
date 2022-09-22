@@ -13,13 +13,12 @@ import (
 	"strings"
 	"text/template"
 
-	"github.com/sighupio/furyctl/internal/io"
 	"github.com/sirupsen/logrus"
+
+	"github.com/sighupio/furyctl/internal/io"
 )
 
-var (
-	ErrProcessTemplate = errors.New("error processing template")
-)
+var ErrProcessTemplate = errors.New("error processing template")
 
 type generator struct {
 	source  string
@@ -96,7 +95,7 @@ func (g *generator) ProcessFilename(
 ) (string, error) {
 	var realTarget string
 
-	if tm.Config.Templates.ProcessFilename { //try to process filename as template
+	if tm.Config.Templates.ProcessFilename { // try to process filename as template
 		tpl := template.Must(
 			template.New("currentTarget").Funcs(g.funcMap.FuncMap).Parse(g.target))
 
@@ -112,7 +111,7 @@ func (g *generator) ProcessFilename(
 
 	suf := tm.Suffix
 	if strings.HasSuffix(realTarget, suf) {
-		realTarget = realTarget[:len(realTarget)-len(tm.Suffix)] //cut off extension (.tmpl) from the end
+		realTarget = realTarget[:len(realTarget)-len(tm.Suffix)] // cut off extension (.tmpl) from the end
 	}
 
 	return realTarget, nil

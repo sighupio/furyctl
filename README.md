@@ -17,7 +17,7 @@
 Furyctl is a simple CLI tool to:
 
 - download and manage the Kubernetes Fury Distribution (KFD) modules
-- create and manage Fury clusters on AWS, GCP, and vSphere
+- create and manage Fury clusters on AWS
 
 <br/>
 
@@ -248,13 +248,9 @@ The following workflow describes a setup of a cluster using an already existing 
 +--------------------------+   +--------------------------+
 ```
 
-### Provisioners
+### Installers
 
-To deploy all the infrastructure components `furyctl` uses *provisioners*.
-Provisioners are Terraform projects directly integrated with the `furyctl` binary. Provisioners can be open-source (e.g. cluster EKS provisioner) or enterprise only (e.g. vSphere provisioner).
-
-To use an **enterprise** provisioner, you need to specify a token in the
-`furyctl {bootstrap,cluster} {init,apply,destroy} --token YOUR_TOKEN` commands.
+To deploy all the infrastructure components `furyctl` uses *installers*.
 
 > You can use an environment variable to avoid passing the token via console: `FURYCTL_TOKEN`.
 
@@ -267,7 +263,6 @@ The available `bootstrap` provisioners are:
 | Provisioner | Description                                                                                                                                            |
 | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `aws`       | It creates a VPC with all the requirements to deploy a Kubernetes Cluster. It also includes a VPN instance easily manageable by using `furyagent`.     |
-| `gcp`       | It creates a Network with all the requirements to deploy a Kubernetes Cluster. It also includes a VPN instance easily manageable by using `furyagent`. |
 
 #### Clusters
 
@@ -276,8 +271,6 @@ The available `cluster` provisioners are:
 | Provisioner | Description                                                                                                                              |
 | ----------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
 | `eks`       | Creates an EKS cluster on an already existing VPC. It uses the [fury-eks-installer](https://github.com/sighupio/fury-eks-installer)      |
-| `gke`       | Creates an GKE cluster on an already existing Network. It uses the [fury-gke-installer](https://github.com/sighupio/fury-gke-installer). |
-| `vsphere`   | **(enterprise)**: Creates a Kubernetes cluster on an already existing vSphere cluster.                                                   |
 
 <!-- </KFD-DOCS> -->
 <!-- <FOOTER> -->

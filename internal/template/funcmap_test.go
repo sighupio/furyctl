@@ -5,9 +5,11 @@
 package template_test
 
 import (
-	"github.com/sighupio/furyctl/internal/template"
-	"github.com/stretchr/testify/assert"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
+
+	"github.com/sighupio/furyctl/internal/template"
 )
 
 func TestNewFuncMap(t *testing.T) {

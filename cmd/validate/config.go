@@ -12,6 +12,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 
+	"github.com/sighupio/furyctl/internal/cobrax"
 	"github.com/sighupio/furyctl/internal/distribution"
 	"github.com/sighupio/furyctl/internal/merge"
 	"github.com/sighupio/furyctl/internal/schema/santhosh"
@@ -26,9 +27,9 @@ func NewConfigCmd(version string) *cobra.Command {
 		Use:   "config",
 		Short: "Validate furyctl.yaml file",
 		RunE: func(cmd *cobra.Command, _ []string) error {
-			debug := flag[bool](cmd, "debug").(bool)
-			furyctlPath := flag[string](cmd, "config").(string)
-			distroLocation := flag[string](cmd, "distro-location").(string)
+			debug := cobrax.Flag[bool](cmd, "debug").(bool)
+			furyctlPath := cobrax.Flag[string](cmd, "config").(string)
+			distroLocation := cobrax.Flag[string](cmd, "distro-location").(string)
 
 			minimalConf, err := yaml.FromFileV3[distribution.FuryctlConfig](furyctlPath)
 			if err != nil {
@@ -142,7 +143,7 @@ func NewConfigCmd(version string) *cobra.Command {
 	return cmd
 }
 
-func mergeConfigAndDefaults(furyctlFilePath string, defaultsFilePath string) (string, error) {
+func mergeConfigAndDefaults(furyctlFilePath, defaultsFilePath string) (string, error) {
 	defaultsFile, err := yaml.FromFileV2[map[any]any](defaultsFilePath)
 	if err != nil {
 		return "", fmt.Errorf("%w: %v", ErrYamlUnmarshalFile, err)

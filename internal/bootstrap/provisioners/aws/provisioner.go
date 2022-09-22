@@ -14,9 +14,10 @@ import (
 
 	"github.com/gobuffalo/packr/v2"
 	"github.com/hashicorp/terraform-exec/tfexec"
+	"github.com/sirupsen/logrus"
+
 	cfg "github.com/sighupio/furyctl/internal/bootstrap/configuration"
 	"github.com/sighupio/furyctl/internal/configuration"
-	"github.com/sirupsen/logrus"
 )
 
 // InitMessage return a custom provisioner message the user will see once the cluster is ready to be updated
@@ -168,7 +169,7 @@ func (d AWS) createVarFile() (err error) {
 		buffer.WriteString(fmt.Sprintf("vpn_ssh_users = [\"%v\"]\n", strings.Join(spec.VPN.SSHUsers, "\",\"")))
 	}
 
-	err = ioutil.WriteFile(fmt.Sprintf("%v/aws.tfvars", d.terraform.WorkingDir()), buffer.Bytes(), 0600)
+	err = ioutil.WriteFile(fmt.Sprintf("%v/aws.tfvars", d.terraform.WorkingDir()), buffer.Bytes(), 0o600)
 	if err != nil {
 		return err
 	}

@@ -1,58 +1,137 @@
-.DEFAULT_GOAL: help
-SHELL := /bin/bash
+_PROJECT_DIRECTORY = $(dir $(realpath $(firstword $(MAKEFILE_LIST))))
+_GOLANG_IMAGE = golang:1.19.1
+_PROJECTNAME = furyctl
+_GOARCH = "amd64"
 
-PROJECTNAME := $(shell basename "$(PWD)")
-CURRENT_DIR := $(shell pwd)
+NETRC_FILE ?= ~/.netrc
 
-GOARCH = "amd64"
 ifeq ("$(shell uname -m)", "arm64")
-	GOARCH = "arm64"
+	_GOARCH = "arm64"
 endif
 
-.PHONY: help
-all: help
-help: Makefile
-	@echo
-	@echo " Choose a command run in "$(PROJECTNAME)":"
-	@echo
-	@sed -n 's/^##//p' $< | column -t -s ':' |  sed -e 's/^/ /'
-	@echo
+#1: docker image
+#2: make target
+define run-docker
+	@docker run --rm \
+		-e CGO_ENABLED=0 \
+		-e GOARCH=${_GOARCH} \
+		-e GOOS=linux \
+		-w /app \
+		-v ${NETRC_FILE}:/root/.netrc \
+		-v ${_PROJECT_DIRECTORY}:/app \
+		$(1) $(2)
+endef
 
-.PHONY: deps
-## deps: download requires dependencies
-deps:
-	@go get -u github.com/gobuffalo/packr/v2/packr2
+.PHONY: env
 
-.PHONY:
-## policeman: Execute policeman
-policeman:
-	@docker pull quay.io/sighup/policeman
-	@docker run --rm -v ${CURRENT_DIR}:/app -w /app quay.io/sighup/policeman
+env:
+	@echo 'export CGO_ENABLED=0'
+	@echo 'export GOARCH=${_GOARCH}'
+	@grep -v '^#' .env | sed 's/^/export /'
 
-.PHONY: lint
-## lint: Execute linter. Can cause modifications
-lint:
-	@gofmt -s -w .
+.PHONY: mod-download mod-tidy mod-verify
 
-.PHONY: test
-## test: Check the linter and unit tests results
-test:
-	@test -z $(gofmt -l .)
-	@go test -v ./...
+mod-download:
+	@go mod download
 
-.PHONY: clean
-## clean: Removes temporary and build results
-clean: deps
-	@GO111MODULE=on packr2 clean
-	@rm -rf bin furyctl dist
+mod-tidy:
 	@go mod tidy
 
-.PHONY: build
-## build: Builds the solution for linux and macos amd64 or arm64
-build: lint deps clean test
-	@GO111MODULE=on packr2 build
-	@GO111MODULE=on CGO_ENABLED=0 GOOS=linux GOARCH=${GOARCH} go build -a -ldflags '-extldflags "-static"' -o bin/linux-${GOARCH}/$(version)/furyctl  .
-	@GO111MODULE=on CGO_ENABLED=0 GOOS=darwin GOARCH=${GOARCH} go build -a -ldflags '-extldflags "-static"' -o bin/darwin-${GOARCH}/$(version)/furyctl .
-	@mkdir -p bin/{darwin,linux}/latest
-	@cp bin/darwin-${GOARCH}/$(version)/furyctl bin/darwin/latest/furyctl
-	@cp bin/linux-${GOARCH}/$(version)/furyctl bin/linux/latest/furyctl
+mod-verify:
+	@go mod verify
+
+.PHONY: mod-check-upgrades mod-upgrade
+
+mod-check-upgrades:
+	@go list -mod=readonly -u -f "{{if (and (not (or .Main .Indirect)) .Update)}}{{.Path}}: {{.Version}} -> {{.Update.Version}}{{end}}" -m all
+
+mod-upgrade:
+	@go get -u ./... && go mod tidy
+
+.PHONY: generate license-add license-check
+
+license-add:
+	@addlicense -c "SIGHUP s.r.l" -y 2017-present -v -l bsd \
+	-ignore "scripts/e2e/libs/**/*" \
+	-ignore "vendor/**/*" \
+	-ignore "*.gen.go" \
+	-ignore ".idea/*" \
+	-ignore ".vscode/*" \
+	-ignore "*.js" \
+	-ignore "kind-config.yaml" \
+	-ignore ".husky/**/*" \
+	-ignore ".go/**/*" \
+	.
+
+license-check:
+	@addlicense -c "SIGHUP s.r.l" -y 2017-present -v -l bsd \
+	-ignore "scripts/e2e/libs/**/*" \
+	-ignore "vendor/**/*" \
+	-ignore "*.gen.go" \
+	-ignore ".idea/*" \
+	-ignore ".vscode/*" \
+	-ignore "*.js" \
+	-ignore "kind-config.yaml" \
+	-ignore ".husky/**/*" \
+	-ignore ".go/**/*" \
+	--check .
+
+.PHONY: fmt fumpt imports gci
+
+fmt:
+	@find . -name "*.go" -type f -not -path '*/vendor/*' \
+	| sed 's/^\.\///g' \
+	| xargs -I {} sh -c 'echo "formatting {}.." && gofmt -w -s {}'
+
+fumpt:
+	@find . -name "*.go" -type f -not -path '*/vendor/*' \
+	| sed 's/^\.\///g' \
+	| xargs -I {} sh -c 'echo "formatting {}.." && gofumpt -w -extra {}'
+
+imports:
+	@goimports -v -w -e -local github.com/sighupio main.go
+	@goimports -v -w -e -local github.com/sighupio cmd/
+	@goimports -v -w -e -local github.com/sighupio internal/
+
+gci:
+	@find . -name "*.go" -type f -not -path '*/vendor/*' \
+	| sed 's/^\.\///g' \
+	| xargs -I {} sh -c 'echo "formatting imports for {}.." && \
+	gci write --skip-generated -s standard,default,"prefix(github.com/sighupio)" {}'
+
+.PHONY: lint lint-go
+
+lint: lint-go
+
+lint-go:
+	@golangci-lint -v run --color=always --config=${_PROJECT_DIRECTORY}/.rules/.golangci.yml ./...
+
+.PHONY: test
+
+test:
+	@go test -v -covermode=atomic -coverprofile=coverage.out ./...
+
+.PHONY: clean build release
+
+clean: deps
+	@if [ -d bin ]; then rm -rf bin; fi
+	@if [ -d dist ]; then rm -rf dist; fi
+	@if [ -f furyctl ]; then rm furyctl; fi
+
+build:
+	@export GO_VERSION=$$(go version | cut -d ' ' -f 3) && \
+	goreleaser check && \
+	goreleaser release --debug --snapshot --rm-dist
+
+release:
+	@export GO_VERSION=$$(go version | cut -d ' ' -f 3) && \
+	goreleaser check && \
+	goreleaser --debug release --rm-dist
+
+# Helpers
+
+%-docker:
+	$(call run-docker,${_GOLANG_IMAGE},make $*)
+
+check-variable-%: # detection of undefined variables.
+	@[[ "${${*}}" ]] || (echo '*** Please define variable `${*}` ***' && exit 1)

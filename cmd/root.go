@@ -12,89 +12,75 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
+	"github.com/sighupio/furyctl/internal/analytics"
+	"github.com/sighupio/furyctl/internal/cobrax"
 	"github.com/sighupio/furyctl/internal/io"
-	"github.com/sighupio/furyctl/pkg/analytics"
 )
 
-var (
-	version = "dev"
-	commit  = "none"
-	date    = "unknown"
-
-	s                *spinner.Spinner
-	debug            bool
-	disableAnalytics bool
-	disableTty       bool
-)
-
-// Execute is the main entrypoint of furyctl
-func Execute() error {
-	return rootCmd.Execute()
+type rootConfig struct {
+	Spinner          *spinner.Spinner
+	Debug            bool
+	DisableAnalytics bool
+	DisableTty       bool
 }
 
-func init() {
-	rootCmd.AddCommand(bootstrapCmd)
-	rootCmd.AddCommand(clusterCmd)
-	rootCmd.AddCommand(completionCmd)
-	rootCmd.AddCommand(initCmd)
-	rootCmd.AddCommand(templateCmd)
-	rootCmd.AddCommand(validateCmd)
-	rootCmd.AddCommand(vendorCmd)
-	rootCmd.AddCommand(versionCmd)
-
-	rootCmd.PersistentFlags().Bool("debug", false, "Enables furyctl debug output")
-	rootCmd.PersistentFlags().BoolVarP(&disableAnalytics, "disable", "d", false, "Disable analytics")
-	rootCmd.PersistentFlags().BoolVarP(&disableTty, "no-tty", "T", false, "Disable TTY")
-
-	cobra.OnInitialize(func() {
-		analytics.Version(version)
-		analytics.Disable(disableAnalytics)
-
-		w := logrus.StandardLogger().Out
-		if disableTty {
-			w = io.NewNullWriter()
-			f := new(logrus.TextFormatter)
-			f.DisableColors = true
-			logrus.SetFormatter(f)
-		}
-
-		s = spinner.New(spinner.CharSets[11], 100*time.Millisecond, spinner.WithWriter(w))
-	})
-
-	viper.AutomaticEnv()
-	viper.SetEnvPrefix("furyctl")
+type RootCommand struct {
+	*cobra.Command
+	config *rootConfig
 }
 
-func bootstrapLogrus(cmd *cobra.Command) {
-	d, err := cmd.Flags().GetBool("debug")
-	if err != nil {
-		logrus.Fatal(err)
-	}
-
-	if d {
-		logrus.SetLevel(logrus.DebugLevel)
-		debug = true
-
-		return
-	}
-
-	logrus.SetLevel(logrus.InfoLevel)
-}
-
-// rootCmd represents the base command when called without any subcommands
-var rootCmd = &cobra.Command{
-	Use:   "furyctl",
-	Short: "The multi-purpose command line tool for the Kubernetes Fury Distribution",
-	Long: `The multi-purpose command line tool for the Kubernetes Fury Distribution.
+func NewRootCommand(versions map[string]string) *RootCommand {
+	cfg := &rootConfig{}
+	rootCmd := &RootCommand{
+		Command: &cobra.Command{
+			Use:   "furyctl",
+			Short: "The multi-purpose command line tool for the Kubernetes Fury Distribution",
+			Long: `The multi-purpose command line tool for the Kubernetes Fury Distribution.
 
 Furyctl is a simple CLI tool to:
 
 - download and manage the Kubernetes Fury Distribution (KFD) modules
 - create and manage Kubernetes Fury clusters
 `,
-	SilenceUsage:  true,
-	SilenceErrors: true,
-	PersistentPreRun: func(cmd *cobra.Command, _ []string) {
-		bootstrapLogrus(cmd)
-	},
+			SilenceUsage:  true,
+			SilenceErrors: true,
+			PersistentPreRun: func(cmd *cobra.Command, _ []string) {
+				// Configure the spinner
+				w := logrus.StandardLogger().Out
+				if cobrax.Flag[bool](cmd, "no-tty").(bool) {
+					w = io.NewNullWriter()
+					f := new(logrus.TextFormatter)
+					f.DisableColors = true
+					logrus.SetFormatter(f)
+				}
+				cfg.Spinner = spinner.New(spinner.CharSets[11], 100*time.Millisecond, spinner.WithWriter(w))
+
+				// Set log level
+				if cobrax.Flag[bool](cmd, "debug").(bool) {
+					logrus.SetLevel(logrus.DebugLevel)
+				} else {
+					logrus.SetLevel(logrus.InfoLevel)
+				}
+
+				// Configure analytics
+				analytics.Version(versions["version"])
+				analytics.Disable(cobrax.Flag[bool](cmd, "disable-analytics").(bool))
+			},
+		},
+		config: cfg,
+	}
+
+	viper.AutomaticEnv()
+	viper.SetEnvPrefix("furyctl")
+
+	rootCmd.PersistentFlags().BoolVarP(&rootCmd.config.Debug, "debug", "D", false, "Enables furyctl debug output")
+	rootCmd.PersistentFlags().BoolVarP(&rootCmd.config.DisableAnalytics, "disable", "d", false, "Disable analytics")
+	rootCmd.PersistentFlags().BoolVarP(&rootCmd.config.DisableTty, "no-tty", "T", false, "Disable TTY")
+
+	rootCmd.AddCommand(NewCompletionCmd())
+	rootCmd.AddCommand(NewDumpCmd())
+	rootCmd.AddCommand(NewValidateCommand(versions["version"]))
+	rootCmd.AddCommand(NewVersionCmd(versions))
+
+	return rootCmd
 }

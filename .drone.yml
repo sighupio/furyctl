@@ -2,54 +2,37 @@
 # Use of this source code is governed by a BSD-style
 # license that can be found in the LICENSE file.
 
-name: license
 kind: pipeline
 type: docker
-
-steps:
-  - name: check
-    image: golang:1.18.1-alpine
-    pull: always
-    commands:
-      - go install github.com/google/addlicense@v1.0.0
-      - addlicense -c "SIGHUP s.r.l" -y 2017-present -v -l bsd --check .
-
----
-name: Build Test and Release
-kind: pipeline
-type: docker
+name: main
 
 node:
   runner: internal
 
-depends_on:
-  - license
-
 steps:
-  - name: lint
-    image: golang:1.18.1-alpine
+  - name: check
+    image: quay.io/sighup/golang:1.19.0
     pull: always
     commands:
-      - test -z $(gofmt -l .)
-    when:
-      event:
-        - push
-        - tag
+      - go install github.com/google/addlicense@v1.0.0
+      - make license-check
+
+  - name: lint
+    image: quay.io/sighup/golang:1.19.0
+    pull: always
+    commands:
+      - make lint
 
   - name: test
-    image: golang:1.18.1-alpine
+    image: quay.io/sighup/golang:1.19.0
     pull: always
     commands:
-      - go test -v ./...
+      - make test
     environment:
       CGO_ENABLED: 0
-    when:
-      event:
-        - push
-        - tag
 
   - name: build
-    image: ghcr.io/goreleaser/goreleaser:v1.9.2
+    image: ghcr.io/goreleaser/goreleaser:v1.11.4
     pull: always
     depends_on:
       - lint
@@ -62,15 +45,9 @@ steps:
       - go install github.com/gobuffalo/packr/v2/packr2@v2.8.3
       - git reset --hard
       - git fetch --tags
-      - goreleaser check
-      - goreleaser --debug build --skip-validate --rm-dist
-    when:
-      event:
-        - push
-        - tag
+      - make build
 
-  - &integration
-    name: integration-gcp-gke
+  - name: test-integration
     image: quay.io/sighup/e2e-furyctl:v1.2.1_v0.2.2_v1.20.1_20.04
     depends_on:
       - build
@@ -79,125 +56,17 @@ steps:
       FURYCTL_TOKEN:
         from_secret: FURYCTL_TOKEN
     commands:
-      - bats -t ./automated-tests/integration/gcp-gke/tests.sh
-    when:
-      event:
-        - push
-        - tag
-
-  - <<: *integration
-    name: integration-aws-eks
-    commands:
-      - bats -t ./automated-tests/integration/aws-eks/tests.sh
-
-  - <<: *integration
-    name: integration-vsphere
-    commands:
-      - bats -t ./automated-tests/integration/vsphere/tests.sh
-
-  - <<: *integration
-    name: integration-template-engine
-    commands:
-      - bats -t ./automated-tests/integration/template-engine/tests.sh
-
-  - <<: *integration
-    name: integration-validation-cmd
-    commands:
-      - bats -t ./automated-tests/integration/validation-cmd/tests.sh
-
-  - &e2e
-    name: e2e-gcp
-    image: quay.io/sighup/e2e-furyctl:v1.2.1_v0.2.2_v1.20.1_20.04
-    pull: always
-    privileged: true # Required to connect to the VPN
-    depends_on:
-      - build
-    environment:
-      CGO_ENABLED: 0
-      FURYCTL_TOKEN:
-        from_secret: FURYCTL_TOKEN
-
-      TERRAFORM_TF_STATES_BUCKET_NAME:
-        from_secret: TERRAFORM_TF_STATES_BUCKET_NAME
-      AWS_ACCESS_KEY_ID:
-        from_secret: AWS_ACCESS_KEY_ID
-      AWS_SECRET_ACCESS_KEY:
-        from_secret: AWS_SECRET_ACCESS_KEY
-      AWS_REGION:
-        from_secret: AWS_REGION
-      AWS_DEFAULT_REGION:
-        from_secret: AWS_REGION
-
-      GCP_CREDENTIALS:
-        from_secret: GCP_CREDENTIALS
-      GCP_CREDENTIALS_PATH: /tmp/terraform-credentials.json
-
-      GOOGLE_PROJECT:
-        from_secret: GOOGLE_PROJECT
-      CLOUDSDK_CORE_PROJECT:
-        from_secret: GOOGLE_PROJECT
-      GOOGLE_REGION:
-        from_secret: GOOGLE_REGION
-
-      VSPHERE_USER:
-        from_secret: VSPHERE_USER
-      VSPHERE_PASSWORD:
-        from_secret: VSPHERE_PASSWORD
-      VSPHERE_SERVER:
-        from_secret: VSPHERE_SERVER
-      VSPHERE_DATACENTER:
-        from_secret: VSPHERE_DATACENTER
-      VSPHERE_DATASTORE:
-        from_secret: VSPHERE_DATASTORE
-      VSPHERE_HOST:
-        from_secret: VSPHERE_HOST
-      VSPHERE_NET:
-        from_secret: VSPHERE_NET
-      VSPHERE_TEMPLATE_PREFIX:
-        from_secret: VSPHERE_TEMPLATE_PREFIX
-    commands:
-      - echo $${GCP_CREDENTIALS} | base64 -d > $${GCP_CREDENTIALS_PATH}
-      - export GOOGLE_APPLICATION_CREDENTIALS=$${GCP_CREDENTIALS_PATH}
-      - bats -t ./automated-tests/e2e-tests/gcp-gke/tests.sh
-    when:
-      event:
-        - tag
-
-  - <<: *e2e
-    name: e2e-aws
-    commands:
-      - bats -t ./automated-tests/e2e-tests/aws-eks/tests.sh
-
-  - <<: *e2e
-    name: e2e-vsphere
-    commands:
-      - bats -t ./automated-tests/e2e-tests/vsphere/tests.sh
-
-  - <<: *e2e
-    name: e2e-vsphere-destroy
-    depends_on:
-      - e2e-vsphere
-    failure: ignore
-    commands:
-      - echo " Our vsphere environment is not so stable"
-      - echo " The destroy phase fails randomly because of disconnection events between vsphere nodes and the API"
-      - echo " Ignore errors on this step"
-      - bats -t ./automated-tests/e2e-tests/vsphere/tests-destroy.sh
+      - bats -t ./test/integration/template-engine/tests.sh
+      - bats -t ./test/integration/validation-cmd/tests.sh
 
   - name: build-release
-    image: ghcr.io/goreleaser/goreleaser:v1.9.2
+    image: ghcr.io/goreleaser/goreleaser:v1.11.4
     pull: always
     depends_on:
       - lint
       - test
-      - integration-gcp-gke
-      - integration-aws-eks
-      - integration-vsphere
-      - integration-template-engine
-      - integration-validation-cmd
-      - e2e-aws
-      - e2e-gcp
-      - e2e-vsphere
+      - build
+      - test-integration
     environment:
       CGO_ENABLED: 0
       GITHUB_TOKEN:
@@ -206,9 +75,14 @@ steps:
       - go install github.com/gobuffalo/packr/v2/packr2@v2.8.3
       - git reset --hard
       - git fetch --tags
-      - goreleaser check
-      - goreleaser --debug release --rm-dist
+      - make release
     when:
       ref:
         include:
           - refs/tags/v**
+
+trigger:
+  event:
+    exclude:
+      - pull_request
+      - promote

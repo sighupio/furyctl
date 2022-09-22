@@ -13,30 +13,32 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/sirupsen/logrus"
+	"github.com/spf13/cobra"
+
+	"github.com/sighupio/furyctl/internal/cobrax"
 	"github.com/sighupio/furyctl/internal/distribution"
 	"github.com/sighupio/furyctl/internal/semver"
 	"github.com/sighupio/furyctl/internal/yaml"
-	"github.com/sirupsen/logrus"
-	"github.com/spf13/cobra"
 )
 
 var (
 	ErrSystemDepsValidation      = errors.New("error while validating system dependencies")
 	ErrEnvironmentDepsValidation = errors.New("error while validating environment dependencies")
 	ErrEmptyToolVersion          = errors.New("empty tool version")
-)
 
-var execCommand = exec.Command
+	execCommand = exec.Command
+)
 
 func NewDependenciesCmd(version string) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "dependencies",
 		Short: "Validate furyctl.yaml file",
 		RunE: func(cmd *cobra.Command, _ []string) error {
-			debug := flag[bool](cmd, "debug").(bool)
-			binPath := flag[string](cmd, "bin-path").(string)
-			furyctlPath := flag[string](cmd, "config").(string)
-			distroLocation := flag[string](cmd, "distro-location").(string)
+			debug := cobrax.Flag[bool](cmd, "debug").(bool)
+			binPath := cobrax.Flag[string](cmd, "bin-path").(string)
+			furyctlPath := cobrax.Flag[string](cmd, "config").(string)
+			distroLocation := cobrax.Flag[string](cmd, "distro-location").(string)
 
 			minimalConf, err := yaml.FromFileV3[distribution.FuryctlConfig](furyctlPath)
 			if err != nil {
@@ -198,7 +200,7 @@ func validateSystemDependencies(kfdManifest distribution.Manifest, binPath strin
 	return nil
 }
 
-func checkAnsibleVersion(wantVer string, binPath string) error {
+func checkAnsibleVersion(wantVer, binPath string) error {
 	if wantVer == "" {
 		return fmt.Errorf("ansible: %w", ErrEmptyToolVersion)
 	}
@@ -234,7 +236,7 @@ func checkAnsibleVersion(wantVer string, binPath string) error {
 	return nil
 }
 
-func checkTerraformVersion(wantVer string, binPath string) error {
+func checkTerraformVersion(wantVer, binPath string) error {
 	if wantVer == "" {
 		return fmt.Errorf("terraform: %w", ErrEmptyToolVersion)
 	}
@@ -270,7 +272,7 @@ func checkTerraformVersion(wantVer string, binPath string) error {
 	return nil
 }
 
-func checkKubectlVersion(wantVer string, binPath string) error {
+func checkKubectlVersion(wantVer, binPath string) error {
 	if wantVer == "" {
 		return fmt.Errorf("kubectl: %w", ErrEmptyToolVersion)
 	}
@@ -309,7 +311,7 @@ func checkKubectlVersion(wantVer string, binPath string) error {
 	return nil
 }
 
-func checkKustomizeVersion(wantVer string, binPath string) error {
+func checkKustomizeVersion(wantVer, binPath string) error {
 	if wantVer == "" {
 		return fmt.Errorf("kustomize: %w", ErrEmptyToolVersion)
 	}
@@ -345,7 +347,7 @@ func checkKustomizeVersion(wantVer string, binPath string) error {
 	return nil
 }
 
-func checkFuryagentVersion(wantVer string, binPath string) error {
+func checkFuryagentVersion(wantVer, binPath string) error {
 	if wantVer == "" {
 		return fmt.Errorf("furyagent: %w", ErrEmptyToolVersion)
 	}

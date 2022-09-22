@@ -12,11 +12,12 @@ import (
 
 	"github.com/briandowns/spinner"
 	"github.com/hashicorp/terraform-exec/tfexec"
+	"github.com/sirupsen/logrus"
+
 	"github.com/sighupio/furyctl/internal/configuration"
 	"github.com/sighupio/furyctl/internal/project"
 	"github.com/sighupio/furyctl/internal/provisioners"
-	"github.com/sighupio/furyctl/pkg/terraform"
-	"github.com/sirupsen/logrus"
+	"github.com/sighupio/furyctl/internal/terraform"
 )
 
 const initExecutorMessage = " Initializing the terraform executor"
@@ -441,7 +442,6 @@ func (c *Cluster) output() ([]byte, error) {
 }
 
 func (c *Cluster) createGitFiles() error {
-
 	c.s.Stop()
 	c.s.Suffix = " Creating .gitattributes file"
 	c.s.Start()
