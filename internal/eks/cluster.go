@@ -13,7 +13,7 @@ import (
 var ErrUnsupportedApiVersion = errors.New("unsupported api version")
 
 type ClusterCreator interface {
-	Create() error
+	Create(dryRun bool) error
 }
 
 func NewClusterCreator(

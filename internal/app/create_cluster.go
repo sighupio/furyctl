@@ -21,6 +21,7 @@ type CreateClusterRequest struct {
 	FuryctlConfPath   string
 	FuryctlBinVersion string
 	Phase             string
+	DryRun            bool
 	VpnAutoConnect    bool
 	Debug             bool
 }
@@ -92,7 +93,7 @@ func (h *CreateCluster) Execute(req CreateClusterRequest) (CreateClusterResponse
 			return CreateClusterResponse{}, err
 		}
 
-		err = eksCluster.Create()
+		err = eksCluster.Create(req.DryRun)
 		if err != nil {
 			return CreateClusterResponse{}, err
 		}
