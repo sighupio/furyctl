@@ -15,6 +15,7 @@ import (
 
 	"github.com/sighupio/furyctl/internal/app"
 	"github.com/sighupio/furyctl/internal/distribution"
+	"github.com/sighupio/furyctl/internal/netx"
 	"github.com/sighupio/furyctl/internal/yaml"
 )
 
@@ -158,7 +159,7 @@ func TestValidateConfig(t *testing.T) {
 
 			defer tC.teardown(t, tmpDir)
 
-			vc := app.NewValidateConfig()
+			vc := app.NewValidateConfig(netx.NewGoGetterClient())
 			res, err := vc.Execute(app.ValidateConfigRequest{
 				FuryctlBinVersion: "unknown",
 				DistroLocation:    tmpDir,
