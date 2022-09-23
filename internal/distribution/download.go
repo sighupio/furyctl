@@ -37,11 +37,22 @@ type downloadResult struct {
 	DistroManifest Manifest
 }
 
-func Download(
+func NewDownloader(client netx.Client, debug bool) *Downloader {
+	return &Downloader{
+		client: client,
+		debug:  debug,
+	}
+}
+
+type Downloader struct {
+	client netx.Client
+	debug  bool
+}
+
+func (d *Downloader) Download(
 	furyctlBinVersion string,
 	distroLocation string,
 	furyctlConfPath string,
-	debug bool,
 ) (downloadResult, error) {
 	minimalConf, err := yaml.FromFileV3[FuryctlConfig](furyctlConfPath)
 	if err != nil {
@@ -82,7 +93,7 @@ func Download(
 		return downloadResult{}, fmt.Errorf("%w '%s': %v", ErrDownloadingFolder, src, err)
 	}
 
-	if !debug {
+	if !d.debug {
 		defer osx.CleanupTempDir(filepath.Base(dst))
 	}
 
