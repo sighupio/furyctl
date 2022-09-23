@@ -84,7 +84,6 @@ func Download(
 
 	if !debug {
 		defer osx.CleanupTempDir(filepath.Base(dst))
-
 	}
 
 	kfdPath := filepath.Join(dst, "kfd.yaml")
