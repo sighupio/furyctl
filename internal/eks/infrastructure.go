@@ -16,7 +16,8 @@ import (
 	"path/filepath"
 	"regexp"
 
-	tJson "github.com/hashicorp/terraform-json"
+	tfjson "github.com/hashicorp/terraform-json"
+
 	"github.com/sighupio/furyctl/internal/distribution"
 	"github.com/sighupio/furyctl/internal/template"
 	"github.com/sighupio/furyctl/internal/yaml"
@@ -170,7 +171,7 @@ func (i *Infrastructure) TerraformApply(timestamp int64) error {
 	}
 
 	var applyLogOut struct {
-		Outputs map[string]*tJson.StateOutput `json:"outputs"`
+		Outputs map[string]*tfjson.StateOutput `json:"outputs"`
 	}
 
 	parsedApplyLog, err := ioutil.ReadFile(path.Join(i.LogsPath, fmt.Sprintf("%d.log", timestamp)))
