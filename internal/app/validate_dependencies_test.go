@@ -15,11 +15,13 @@ import (
 	"github.com/sighupio/furyctl/internal/app"
 	"github.com/sighupio/furyctl/internal/distribution"
 	"github.com/sighupio/furyctl/internal/execx"
+	"github.com/sighupio/furyctl/internal/netx"
 )
 
 func TestValidateDependencies(t *testing.T) {
 	testCases := []struct {
 		desc         string
+		client       netx.Client
 		executor     execx.Executor
 		envs         map[string]string
 		kfdConf      distribution.Manifest
@@ -29,6 +31,7 @@ func TestValidateDependencies(t *testing.T) {
 	}{
 		{
 			desc:         "missing tools and envs",
+			client:       netx.NewGoGetterClient(),
 			executor:     execx.NewStdExecutor(),
 			kfdConf:      correctKFDConf,
 			wantErrCount: 8,
@@ -37,6 +40,7 @@ func TestValidateDependencies(t *testing.T) {
 		},
 		{
 			desc:     "has all tools and envs",
+			client:   netx.NewGoGetterClient(),
 			executor: execx.NewFakeExecutor(),
 			kfdConf:  correctKFDConf,
 			envs: map[string]string{
@@ -48,6 +52,7 @@ func TestValidateDependencies(t *testing.T) {
 		},
 		{
 			desc:     "has wrong tools",
+			client:   netx.NewGoGetterClient(),
 			executor: execx.NewFakeExecutor(),
 			kfdConf:  wrongKFDConf,
 			envs: map[string]string{
@@ -70,7 +75,7 @@ func TestValidateDependencies(t *testing.T) {
 				t.Setenv(k, v)
 			}
 
-			vd := app.NewValidateDependencies(tC.executor)
+			vd := app.NewValidateDependencies(tC.client, tC.executor)
 
 			res, err := vd.Execute(app.ValidateDependenciesRequest{
 				BinPath:           filepath.Join(tmpDir, "bin"),
@@ -133,7 +138,7 @@ func TestHelperProcess(t *testing.T) {
 		fmt.Fprintf(os.Stdout, "Version: {kustomize/v3.9.4 GitCommit:xxxxxxx"+
 			"BuildDate:2021-05-12T14:00:00Z GoOs:darwin GoArch:amd64}")
 	case "furyagent":
-		fmt.Fprintf(os.Stdout, "furyagent version 0.0.1")
+		fmt.Fprintf(os.Stdout, "furyagent version 0.3.0")
 	default:
 		fmt.Fprintf(os.Stdout, "command not found")
 	}

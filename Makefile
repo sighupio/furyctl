@@ -109,9 +109,10 @@ lint-go:
 .PHONY: test-unit test-integration
 
 test-unit:
-	@go test -v -covermode=atomic -coverprofile=coverage.out ./...
+	@go test -v -covermode=atomic -coverprofile=coverage.out -tags=unit ./...
 
 test-integration:
+	@go test -v -covermode=atomic -coverprofile=coverage.out -tags=integration -timeout 120s ./...
 	@bats -t ./test/integration/template-engine/tests.sh
 	@bats -t ./test/integration/validation-cmd/tests.sh
 
