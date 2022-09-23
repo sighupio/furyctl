@@ -5,8 +5,9 @@
 package cmd
 
 import (
-	"github.com/sighupio/furyctl/cmd/create"
 	"github.com/spf13/cobra"
+
+	"github.com/sighupio/furyctl/cmd/create"
 )
 
 func NewCreateCommand(version string) *cobra.Command {

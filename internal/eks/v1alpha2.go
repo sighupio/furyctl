@@ -13,10 +13,11 @@ import (
 	"strings"
 	"time"
 
-	schm "github.com/sighupio/fury-distribution/pkg/schemas"
+	"github.com/sirupsen/logrus"
+
+	"github.com/sighupio/fury-distribution/pkg/schemas"
 	"github.com/sighupio/furyctl/internal/distribution"
 	"github.com/sighupio/furyctl/internal/yaml"
-	"github.com/sirupsen/logrus"
 )
 
 var ErrUnsupportedPhase = fmt.Errorf("unsupported phase")
@@ -138,7 +139,7 @@ func (v *V1alpha2) Distribution() error {
 	return nil
 }
 
-func (v *V1alpha2) CreateTfVars(furyFile schm.EksclusterKfdV1Alpha2Json, infraPath string) error {
+func (v *V1alpha2) CreateTfVars(furyFile schemas.EksclusterKfdV1Alpha2Json, infraPath string) error {
 	var buffer bytes.Buffer
 
 	buffer.WriteString(fmt.Sprintf("name = \"%v\"\n", furyFile.Metadata.Name))
@@ -262,10 +263,10 @@ func (v *V1alpha2) CreateTfVars(furyFile schm.EksclusterKfdV1Alpha2Json, infraPa
 	return os.WriteFile(targetTfVars, buffer.Bytes(), 0o600)
 }
 
-func (v *V1alpha2) GetConfigFile() (schm.EksclusterKfdV1Alpha2Json, error) {
-	furyFile, err := yaml.FromFileV3[schm.EksclusterKfdV1Alpha2Json](v.ConfigPath)
+func (v *V1alpha2) GetConfigFile() (schemas.EksclusterKfdV1Alpha2Json, error) {
+	furyFile, err := yaml.FromFileV3[schemas.EksclusterKfdV1Alpha2Json](v.ConfigPath)
 	if err != nil {
-		return schm.EksclusterKfdV1Alpha2Json{}, err
+		return schemas.EksclusterKfdV1Alpha2Json{}, err
 	}
 
 	return furyFile, nil
