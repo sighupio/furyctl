@@ -6,6 +6,7 @@ package eks
 
 import (
 	"errors"
+
 	"github.com/sighupio/furyctl/internal/distribution"
 )
 
