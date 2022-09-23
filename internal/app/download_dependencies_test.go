@@ -25,17 +25,7 @@ func TestDownloadDependencies(t *testing.T) {
 		wantFiles   []string
 	}{
 		{
-			desc: "success",
-			setup: func(t *testing.T) (string, string) {
-				t.Helper()
-
-				return setupDistroFolder(t, correctFuryctlDefaults, correctKFDConf)
-			},
-			teardown: func(t *testing.T, tmpDir string) {
-				t.Helper()
-
-				rmDirTemp(t, tmpDir)
-			},
+			desc:        "success",
 			wantErr:     false,
 			wantDepsErr: false,
 			wantFiles: []string{
@@ -65,10 +55,6 @@ func TestDownloadDependencies(t *testing.T) {
 		tC := tC
 
 		t.Run(tC.desc, func(t *testing.T) {
-			tmpDir, configFilePath := tC.setup(t)
-
-			defer tC.teardown(t, tmpDir)
-
 			basePath, err := os.MkdirTemp("", "furyctl-test-")
 			if err != nil {
 				t.Fatalf("error creating tmp dir for test: %v", err)
@@ -77,12 +63,17 @@ func TestDownloadDependencies(t *testing.T) {
 
 			t.Logf("basePath: %s", basePath)
 
+			distroLocation, err := filepath.Abs("../../test/data/v1.23.3/distro")
+			if err != nil {
+				t.Fatal(err)
+			}
+
 			vc := app.NewDownloadDependencies(netx.NewGoGetterClient(), basePath)
 
 			res, err := vc.Execute(app.DownloadDependenciesRequest{
 				FuryctlBinVersion: "unknown",
-				DistroLocation:    tmpDir,
-				FuryctlConfPath:   configFilePath,
+				DistroLocation:    distroLocation,
+				FuryctlConfPath:   "../../test/data/v1.23.3/furyctl.yaml",
 				Debug:             true,
 			})
 
