@@ -10,12 +10,11 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
-	"runtime"
 	"strings"
 
 	"github.com/sighupio/furyctl/internal/distribution"
 	"github.com/sighupio/furyctl/internal/netx"
-	"github.com/sighupio/furyctl/internal/semver"
+	"github.com/sighupio/furyctl/internal/tools"
 )
 
 var (
@@ -39,14 +38,22 @@ func (v DownloadDependenciesResponse) HasErrors() bool {
 	return v.Error != nil
 }
 
-func NewDownloadDependencies(client netx.Client) *DownloadDependencies {
-	return &DownloadDependencies{
-		client: client,
+func NewDownloadDependencies(client netx.Client) (*DownloadDependencies, error) {
+	basePath, err := os.Getwd()
+	if err != nil {
+		return nil, err
 	}
+
+	return &DownloadDependencies{
+		client:   client,
+		basePath: basePath,
+	}, nil
 }
 
 type DownloadDependencies struct {
-	client netx.Client
+	client      netx.Client
+	toolFactory tools.Factory
+	basePath    string
 }
 
 func (dd *DownloadDependencies) Execute(req DownloadDependenciesRequest) (DownloadDependenciesResponse, error) {
@@ -75,11 +82,6 @@ func (dd *DownloadDependencies) DownloadModules(modules distribution.ManifestMod
 	defaultPrefix := "https://github.com/sighupio/kubernetes-fury"
 	fallbackPrefix := "https://github.com/sighupio/fury-kubernetes"
 
-	basePath, err := os.Getwd()
-	if err != nil {
-		return err
-	}
-
 	mods := reflect.ValueOf(modules)
 
 	for i := 0; i < mods.NumField(); i++ {
@@ -90,7 +92,7 @@ func (dd *DownloadDependencies) DownloadModules(modules distribution.ManifestMod
 		for _, prefix := range []string{defaultPrefix, fallbackPrefix} {
 			src := fmt.Sprintf("git::%s-%s.git?ref=%s", prefix, name, version)
 
-			if err := dd.client.Download(src, filepath.Join(basePath, "vendor", "modules", name)); err != nil {
+			if err := dd.client.Download(src, filepath.Join(dd.basePath, "vendor", "modules", name)); err != nil {
 				errors = append(errors, fmt.Errorf("%w '%s': %v", distribution.ErrDownloadingFolder, src, err))
 				continue
 			}
@@ -108,11 +110,6 @@ func (dd *DownloadDependencies) DownloadModules(modules distribution.ManifestMod
 }
 
 func (dd *DownloadDependencies) DownloadInstallers(installers distribution.ManifestKubernetes) error {
-	basePath, err := os.Getwd()
-	if err != nil {
-		return err
-	}
-
 	insts := reflect.ValueOf(installers)
 
 	for i := 0; i < insts.NumField(); i++ {
@@ -121,7 +118,7 @@ func (dd *DownloadDependencies) DownloadInstallers(installers distribution.Manif
 
 		src := fmt.Sprintf("git::https://github.com/sighupio/fury-%s-installer?ref=%s", name, version)
 
-		if err := dd.client.Download(src, filepath.Join(basePath, "vendor", "installers", name)); err != nil {
+		if err := dd.client.Download(src, filepath.Join(dd.basePath, "vendor", "installers", name)); err != nil {
 			return err
 		}
 	}
@@ -130,11 +127,6 @@ func (dd *DownloadDependencies) DownloadInstallers(installers distribution.Manif
 }
 
 func (dd *DownloadDependencies) DownloadTools(tools distribution.ManifestTools) error {
-	basePath, err := os.Getwd()
-	if err != nil {
-		return err
-	}
-
 	tls := reflect.ValueOf(tools)
 
 	unsupportedTools := []string{}
@@ -142,22 +134,20 @@ func (dd *DownloadDependencies) DownloadTools(tools distribution.ManifestTools) 
 		name := strings.ToLower(tls.Type().Field(i).Name)
 		version := tls.Field(i).Interface().(string)
 
-		src, dstName := dd.fmtPaths(name, version, runtime.GOOS, "amd64")
-		if src == "" {
+		tool := dd.toolFactory.Create(name, version)
+		if tool == nil {
 			unsupportedTools = append(unsupportedTools, name)
 			continue
 		}
 
-		dst := filepath.Join(basePath, "vendor", "bin", name)
+		dst := filepath.Join(dd.basePath, "vendor", "bin", name)
 
-		if err := dd.client.Download(src, dst); err != nil {
+		if err := dd.client.Download(tool.SrcPath(), dst); err != nil {
 			return err
 		}
 
-		if dstName != name {
-			if err := os.Rename(filepath.Join(dst, dstName), filepath.Join(dst, name)); err != nil {
-				return err
-			}
+		if err := tool.Rename(dst); err != nil {
+			return err
 		}
 	}
 
@@ -166,47 +156,4 @@ func (dd *DownloadDependencies) DownloadTools(tools distribution.ManifestTools) 
 	}
 
 	return nil
-}
-
-// fmtPaths returns the final location of the tool to download and the name of the downloaded binary
-func (dd *DownloadDependencies) fmtPaths(toolName, toolVersion, osName, archName string) (string, string) {
-	if toolName == "furyagent" {
-		return fmt.Sprintf(
-			"https://github.com/sighupio/furyagent/releases/download/%s/furyagent-%s-%s",
-			semver.EnsurePrefix(toolVersion, "v"),
-			osName,
-			archName,
-		), fmt.Sprintf("furyagent-%s-%s", osName, archName)
-	}
-
-	if toolName == "kubectl" {
-		return fmt.Sprintf(
-			"https://dl.k8s.io/release/%s/bin/%s/%s/kubectl",
-			semver.EnsurePrefix(toolVersion, "v"),
-			osName,
-			archName,
-		), "kubectl"
-	}
-
-	if toolName == "kustomize" {
-		return fmt.Sprintf(
-			"https://github.com/kubernetes-sigs/kustomize/releases/download/kustomize/%s/kustomize_%s_%s_%s.tar.gz",
-			semver.EnsurePrefix(toolVersion, "v"),
-			semver.EnsurePrefix(toolVersion, "v"),
-			osName,
-			archName,
-		), "kustomize"
-	}
-
-	if toolName == "terraform" {
-		return fmt.Sprintf(
-			"https://releases.hashicorp.com/terraform/%s/terraform_%s_%s_%s.zip",
-			semver.EnsureNoPrefix(toolVersion, "v"),
-			semver.EnsureNoPrefix(toolVersion, "v"),
-			osName,
-			archName,
-		), "terraform"
-	}
-
-	return "", ""
 }

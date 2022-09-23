@@ -27,7 +27,10 @@ func NewDependenciesCmd(furyctlBinVersion string) *cobra.Command {
 			furyctlPath := cobrax.Flag[string](cmd, "config").(string)
 			distroLocation := cobrax.Flag[string](cmd, "distro-location").(string)
 
-			dd := app.NewDownloadDependencies(netx.NewGoGetterClient())
+			dd, err := app.NewDownloadDependencies(netx.NewGoGetterClient())
+			if err != nil {
+				return err
+			}
 
 			res, err := dd.Execute(app.DownloadDependenciesRequest{
 				FuryctlBinVersion: furyctlBinVersion,
