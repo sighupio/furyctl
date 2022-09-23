@@ -28,26 +28,6 @@ type V1alpha2 struct {
 	VpnAutoConnect bool
 }
 
-func (v *V1alpha2) WithPhase(phase string) ClusterCreator {
-	v.Phase = phase
-	return v
-}
-
-func (v *V1alpha2) WithKfdManifest(kfdManifest distribution.Manifest) ClusterCreator {
-	v.KfdManifest = kfdManifest
-	return v
-}
-
-func (v *V1alpha2) WithConfigPath(configPath string) ClusterCreator {
-	v.ConfigPath = configPath
-	return v
-}
-
-func (v *V1alpha2) WithVpnAutoConnect(vpnAutoConnect bool) ClusterCreator {
-	v.VpnAutoConnect = vpnAutoConnect
-	return v
-}
-
 func (v *V1alpha2) Create() error {
 	logrus.Infof("Running phase: %s", v.Phase)
 
@@ -89,6 +69,11 @@ func (v *V1alpha2) Infrastructure() error {
 	}
 
 	err = infra.CopyFromTemplate(v.KfdManifest)
+	if err != nil {
+		return err
+	}
+
+	err = infra.CreateFolderStructure()
 	if err != nil {
 		return err
 	}
@@ -183,27 +168,62 @@ func (v *V1alpha2) CreateTfVars(furyFile schm.EksclusterKfdV1Alpha2Json, infraPa
 		strings.Join(privateSubnetworkCidrs, ",")))
 
 	if furyFile.Spec.Infrastructure.Vpc.Vpn != nil {
-		buffer.WriteString(fmt.Sprintf("vpn_subnetwork_cidr = \"%v\"\n", furyFile.Spec.Infrastructure.Vpc.Vpn.VpnClientsSubnetCidr))
-		buffer.WriteString(fmt.Sprintf("vpn_instances = %v\n", furyFile.Spec.Infrastructure.Vpc.Vpn.Instances))
+		buffer.WriteString(
+			fmt.Sprintf(
+				"vpn_subnetwork_cidr = \"%v\"\n",
+				furyFile.Spec.Infrastructure.Vpc.Vpn.VpnClientsSubnetCidr,
+			),
+		)
+		buffer.WriteString(
+			fmt.Sprintf(
+				"vpn_instances = %v\n",
+				furyFile.Spec.Infrastructure.Vpc.Vpn.Instances,
+			),
+		)
 
 		if furyFile.Spec.Infrastructure.Vpc.Vpn.Port != 0 {
-			buffer.WriteString(fmt.Sprintf("vpn_port = %v\n", furyFile.Spec.Infrastructure.Vpc.Vpn.Port))
+			buffer.WriteString(
+				fmt.Sprintf(
+					"vpn_port = %v\n",
+					furyFile.Spec.Infrastructure.Vpc.Vpn.Port,
+				),
+			)
 		}
 
 		if furyFile.Spec.Infrastructure.Vpc.Vpn.InstanceType != "" {
-			buffer.WriteString(fmt.Sprintf("vpn_instance_type = \"%v\"\n", furyFile.Spec.Infrastructure.Vpc.Vpn.InstanceType))
+			buffer.WriteString(
+				fmt.Sprintf(
+					"vpn_instance_type = \"%v\"\n",
+					furyFile.Spec.Infrastructure.Vpc.Vpn.InstanceType,
+				),
+			)
 		}
 
 		if furyFile.Spec.Infrastructure.Vpc.Vpn.DiskSize != 0 {
-			buffer.WriteString(fmt.Sprintf("vpn_instance_disk_size = %v\n", furyFile.Spec.Infrastructure.Vpc.Vpn.DiskSize))
+			buffer.WriteString(
+				fmt.Sprintf(
+					"vpn_instance_disk_size = %v\n",
+					furyFile.Spec.Infrastructure.Vpc.Vpn.DiskSize,
+				),
+			)
 		}
 
 		if furyFile.Spec.Infrastructure.Vpc.Vpn.OperatorName != "" {
-			buffer.WriteString(fmt.Sprintf("vpn_operator_name = \"%v\"\n", furyFile.Spec.Infrastructure.Vpc.Vpn.OperatorName))
+			buffer.WriteString(
+				fmt.Sprintf(
+					"vpn_operator_name = \"%v\"\n",
+					furyFile.Spec.Infrastructure.Vpc.Vpn.OperatorName,
+				),
+			)
 		}
 
 		if furyFile.Spec.Infrastructure.Vpc.Vpn.DhParamsBits != 0 {
-			buffer.WriteString(fmt.Sprintf("vpn_dhparams_bits = %v\n", furyFile.Spec.Infrastructure.Vpc.Vpn.DhParamsBits))
+			buffer.WriteString(
+				fmt.Sprintf(
+					"vpn_dhparams_bits = %v\n",
+					furyFile.Spec.Infrastructure.Vpc.Vpn.DhParamsBits,
+				),
+			)
 		}
 
 		if len(furyFile.Spec.Infrastructure.Vpc.Vpn.Ssh.AllowedFromCidrs) != 0 {
@@ -213,7 +233,12 @@ func (v *V1alpha2) CreateTfVars(furyFile schm.EksclusterKfdV1Alpha2Json, infraPa
 				allowedCidrs[i] = fmt.Sprintf("\"%v\"", cidr)
 			}
 
-			buffer.WriteString(fmt.Sprintf("vpn_operator_cidrs = [%v]\n", strings.Join(allowedCidrs, ",")))
+			buffer.WriteString(
+				fmt.Sprintf(
+					"vpn_operator_cidrs = [%v]\n",
+					strings.Join(allowedCidrs, ","),
+				),
+			)
 		}
 
 		if len(furyFile.Spec.Infrastructure.Vpc.Vpn.Ssh.GithubUsersName) != 0 {
@@ -223,7 +248,12 @@ func (v *V1alpha2) CreateTfVars(furyFile schm.EksclusterKfdV1Alpha2Json, infraPa
 				githubUsers[i] = fmt.Sprintf("\"%v\"", gu)
 			}
 
-			buffer.WriteString(fmt.Sprintf("vpn_ssh_users = [%v]\n", strings.Join(githubUsers, ",")))
+			buffer.WriteString(
+				fmt.Sprintf(
+					"vpn_ssh_users = [%v]\n",
+					strings.Join(githubUsers, ","),
+				),
+			)
 		}
 	}
 
