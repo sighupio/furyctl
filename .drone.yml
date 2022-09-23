@@ -61,6 +61,7 @@ steps:
     depends_on:
       - prepare
     commands:
+      - echo $${NETRC_FILE} > /root/.netrc
       - git clone --depth 1 --branch v1.8.0 https://github.com/bats-core/bats-core.git
       - ./bats-core/install.sh /usr/local
       - make test-integration
@@ -69,6 +70,8 @@ steps:
       GOCACHE: /drone/src/.go/cache
       GOMODCACHE: /drone/src/.go/modcache
       GOTMPDIR: /drone/src/.go/tmp
+      NETRC_FILE:
+        from_secret: NETRC_FILE
 
   - name: build
     image: ghcr.io/goreleaser/goreleaser:v1.11.4
