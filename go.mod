@@ -23,6 +23,7 @@ require (
 )
 
 require (
+	github.com/hashicorp/terraform-json v0.10.0
 	github.com/sighupio/fury-distribution v1.23.3-0.20220921133521-56315a3610fa
 	gopkg.in/yaml.v3 v3.0.1
 )
@@ -48,7 +49,6 @@ require (
 	github.com/hashicorp/go-safetemp v1.0.0 // indirect
 	github.com/hashicorp/go-uuid v1.0.1 // indirect
 	github.com/hashicorp/hcl v1.0.0 // indirect
-	github.com/hashicorp/terraform-json v0.10.0 // indirect
 	github.com/huandu/xstrings v1.3.2 // indirect
 	github.com/imdario/mergo v0.3.12 // indirect
 	github.com/inconshreveable/mousetrap v1.0.1 // indirect
