@@ -30,9 +30,8 @@ func NewFakeExecutor() *FakeExecutor {
 
 type FakeExecutor struct{}
 
-func (e *FakeExecutor) Command(path string, arg ...string) *exec.Cmd {
-	name := filepath.Base(path)
-	cs := []string{"-test.run=TestHelperProcess", "--", name}
+func (e *FakeExecutor) Command(name string, arg ...string) *exec.Cmd {
+	cs := []string{"-test.run=TestHelperProcess", "--", filepath.Base(name)}
 	cs = append(cs, arg...)
 
 	return exec.Command(os.Args[0], cs...)

@@ -5,8 +5,8 @@
 package download
 
 import (
-	"errors"
 	"fmt"
+	"os"
 
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -27,10 +27,12 @@ func NewDependenciesCmd(furyctlBinVersion string) *cobra.Command {
 			furyctlPath := cobrax.Flag[string](cmd, "config").(string)
 			distroLocation := cobrax.Flag[string](cmd, "distro-location").(string)
 
-			dd, err := app.NewDownloadDependencies(netx.NewGoGetterClient())
+			basePath, err := os.Getwd()
 			if err != nil {
 				return err
 			}
+
+			dd := app.NewDownloadDependencies(netx.NewGoGetterClient(), basePath)
 
 			res, err := dd.Execute(app.DownloadDependenciesRequest{
 				FuryctlBinVersion: furyctlBinVersion,
@@ -39,22 +41,24 @@ func NewDependenciesCmd(furyctlBinVersion string) *cobra.Command {
 				Debug:             debug,
 			})
 			if err != nil {
-				if !errors.Is(err, app.ErrUnsupportedTools) {
-					return err
-				}
+				return err
+			}
 
-				logrus.Warnf("unsupported tools: %v", err)
+			for _, ut := range res.UnsupTools {
+				logrus.Warn(fmt.Sprintf("'%s' download is not supported", ut))
 			}
 
 			if res.HasErrors() {
 				logrus.Debugf("Repository path: %s", res.RepoPath)
 
-				fmt.Println(res.Error)
+				for _, err := range res.DepsErrors {
+					logrus.Error(err)
+				}
 
 				return ErrDownloadFailed
 			}
 
-			fmt.Println("dependencies download succeeded")
+			logrus.Info("Dependencies download succeeded")
 
 			return nil
 		},

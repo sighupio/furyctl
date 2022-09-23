@@ -7,7 +7,6 @@ package app
 import (
 	"errors"
 	"fmt"
-	"os"
 	"path/filepath"
 	"reflect"
 	"strings"
@@ -30,24 +29,20 @@ type DownloadDependenciesRequest struct {
 }
 
 type DownloadDependenciesResponse struct {
-	Error    error
-	RepoPath string
+	DepsErrors []error
+	UnsupTools []string
+	RepoPath   string
 }
 
 func (v DownloadDependenciesResponse) HasErrors() bool {
-	return v.Error != nil
+	return len(v.DepsErrors) > 0
 }
 
-func NewDownloadDependencies(client netx.Client) (*DownloadDependencies, error) {
-	basePath, err := os.Getwd()
-	if err != nil {
-		return nil, err
-	}
-
+func NewDownloadDependencies(client netx.Client, basePath string) *DownloadDependencies {
 	return &DownloadDependencies{
 		client:   client,
 		basePath: basePath,
-	}, nil
+	}
 }
 
 type DownloadDependencies struct {
@@ -57,30 +52,35 @@ type DownloadDependencies struct {
 }
 
 func (dd *DownloadDependencies) Execute(req DownloadDependenciesRequest) (DownloadDependenciesResponse, error) {
-	dres, err := distribution.Download(req.FuryctlBinVersion, req.DistroLocation, req.FuryctlConfPath, req.Debug)
+	dloader := distribution.NewDownloader(dd.client, req.Debug)
+
+	dres, err := dloader.Download(req.FuryctlBinVersion, req.DistroLocation, req.FuryctlConfPath)
 	if err != nil {
 		return DownloadDependenciesResponse{}, err
 	}
 
+	errs := []error{}
 	if err := dd.DownloadModules(dres.DistroManifest.Modules); err != nil {
-		return DownloadDependenciesResponse{}, err
+		errs = append(errs, err)
 	}
 	if err := dd.DownloadInstallers(dres.DistroManifest.Kubernetes); err != nil {
-		return DownloadDependenciesResponse{}, err
+		errs = append(errs, err)
 	}
-	if err := dd.DownloadTools(dres.DistroManifest.Tools); err != nil {
-		return DownloadDependenciesResponse{}, err
+	ut, err := dd.DownloadTools(dres.DistroManifest.Tools)
+	if err != nil {
+		errs = append(errs, err)
 	}
 
 	return DownloadDependenciesResponse{
-		Error:    nil,
-		RepoPath: dres.RepoPath,
+		DepsErrors: errs,
+		UnsupTools: ut,
+		RepoPath:   dres.RepoPath,
 	}, nil
 }
 
 func (dd *DownloadDependencies) DownloadModules(modules distribution.ManifestModules) error {
-	defaultPrefix := "https://github.com/sighupio/kubernetes-fury"
-	fallbackPrefix := "https://github.com/sighupio/fury-kubernetes"
+	newPrefix := "https://github.com/sighupio/kubernetes-fury"
+	oldPrefix := "https://github.com/sighupio/fury-kubernetes"
 
 	mods := reflect.ValueOf(modules)
 
@@ -89,7 +89,7 @@ func (dd *DownloadDependencies) DownloadModules(modules distribution.ManifestMod
 		version := mods.Field(i).Interface().(string)
 
 		errors := []error{}
-		for _, prefix := range []string{defaultPrefix, fallbackPrefix} {
+		for _, prefix := range []string{oldPrefix, newPrefix} {
 			src := fmt.Sprintf("git::%s-%s.git?ref=%s", prefix, name, version)
 
 			if err := dd.client.Download(src, filepath.Join(dd.basePath, "vendor", "modules", name)); err != nil {
@@ -126,7 +126,7 @@ func (dd *DownloadDependencies) DownloadInstallers(installers distribution.Manif
 	return nil
 }
 
-func (dd *DownloadDependencies) DownloadTools(tools distribution.ManifestTools) error {
+func (dd *DownloadDependencies) DownloadTools(tools distribution.ManifestTools) ([]string, error) {
 	tls := reflect.ValueOf(tools)
 
 	unsupportedTools := []string{}
@@ -140,20 +140,16 @@ func (dd *DownloadDependencies) DownloadTools(tools distribution.ManifestTools) 
 			continue
 		}
 
-		dst := filepath.Join(dd.basePath, "vendor", "bin", name)
+		dst := filepath.Join(dd.basePath, "vendor", "bin")
 
 		if err := dd.client.Download(tool.SrcPath(), dst); err != nil {
-			return err
+			return unsupportedTools, err
 		}
 
 		if err := tool.Rename(dst); err != nil {
-			return err
+			return unsupportedTools, err
 		}
 	}
 
-	if unsupportedTools != nil {
-		return fmt.Errorf("%w: %v", ErrUnsupportedTools, unsupportedTools)
-	}
-
-	return nil
+	return unsupportedTools, nil
 }

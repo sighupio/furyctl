@@ -12,6 +12,7 @@ import (
 
 	"github.com/sighupio/furyctl/internal/app"
 	"github.com/sighupio/furyctl/internal/cobrax"
+	"github.com/sighupio/furyctl/internal/netx"
 )
 
 var ErrValidationFailed = fmt.Errorf("validation failed")
@@ -25,7 +26,7 @@ func NewConfigCmd(furyctlBinVersion string) *cobra.Command {
 			furyctlPath := cobrax.Flag[string](cmd, "config").(string)
 			distroLocation := cobrax.Flag[string](cmd, "distro-location").(string)
 
-			vc := app.NewValidateConfig()
+			vc := app.NewValidateConfig(netx.NewGoGetterClient())
 
 			res, err := vc.Execute(app.ValidateConfigRequest{
 				FuryctlBinVersion: furyctlBinVersion,
@@ -40,12 +41,12 @@ func NewConfigCmd(furyctlBinVersion string) *cobra.Command {
 			if res.HasErrors() {
 				logrus.Debugf("Repository path: %s", res.RepoPath)
 
-				fmt.Println(res.Error)
+				logrus.Error(res.Error)
 
 				return ErrValidationFailed
 			}
 
-			fmt.Println("Config validation succeeded")
+			logrus.Info("Config validation succeeded")
 
 			return nil
 		},

@@ -11,6 +11,7 @@ import (
 
 	"github.com/sighupio/furyctl/internal/distribution"
 	"github.com/sighupio/furyctl/internal/merge"
+	"github.com/sighupio/furyctl/internal/netx"
 	"github.com/sighupio/furyctl/internal/osx"
 	"github.com/sighupio/furyctl/internal/schema/santhosh"
 	"github.com/sighupio/furyctl/internal/yaml"
@@ -32,14 +33,20 @@ func (v ValidateConfigResponse) HasErrors() bool {
 	return v.Error != nil
 }
 
-func NewValidateConfig() *ValidateConfig {
-	return &ValidateConfig{}
+func NewValidateConfig(client netx.Client) *ValidateConfig {
+	return &ValidateConfig{
+		client: client,
+	}
 }
 
-type ValidateConfig struct{}
+type ValidateConfig struct {
+	client netx.Client
+}
 
-func (h *ValidateConfig) Execute(req ValidateConfigRequest) (ValidateConfigResponse, error) {
-	res, err := distribution.Download(req.FuryctlBinVersion, req.DistroLocation, req.FuryctlConfPath, req.Debug)
+func (vc *ValidateConfig) Execute(req ValidateConfigRequest) (ValidateConfigResponse, error) {
+	dloader := distribution.NewDownloader(vc.client, req.Debug)
+
+	res, err := dloader.Download(req.FuryctlBinVersion, req.DistroLocation, req.FuryctlConfPath)
 	if err != nil {
 		return ValidateConfigResponse{}, err
 	}
@@ -51,7 +58,7 @@ func (h *ValidateConfig) Execute(req ValidateConfigRequest) (ValidateConfigRespo
 
 	defaultPath := distribution.GetDefaultPath(res.RepoPath)
 
-	defaultedFuryctlConfPath, err := h.mergeConfigAndDefaults(req.FuryctlConfPath, defaultPath)
+	defaultedFuryctlConfPath, err := vc.mergeConfigAndDefaults(req.FuryctlConfPath, defaultPath)
 	if err != nil {
 		return ValidateConfigResponse{}, err
 	}
@@ -79,7 +86,7 @@ func (h *ValidateConfig) Execute(req ValidateConfigRequest) (ValidateConfigRespo
 	return ValidateConfigResponse{}, nil
 }
 
-func (h *ValidateConfig) mergeConfigAndDefaults(furyctlFilePath, defaultsFilePath string) (string, error) {
+func (vc *ValidateConfig) mergeConfigAndDefaults(furyctlFilePath, defaultsFilePath string) (string, error) {
 	defaultsFile, err := yaml.FromFileV2[map[any]any](defaultsFilePath)
 	if err != nil {
 		return "", fmt.Errorf("%w: %v", distribution.ErrYamlUnmarshalFile, err)
