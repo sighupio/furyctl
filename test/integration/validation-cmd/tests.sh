@@ -147,5 +147,5 @@ FURYCTL="${PWD}/dist/furyctl"
         echo "${output}" >&3
     fi
 
-    [[ "${output}" == *"dependencies validation succeeded"* ]]
+    [[ "${output}" == *"Dependencies validation succeeded"* ]]
 }
