@@ -6,11 +6,12 @@ package app
 
 import (
 	"errors"
+	"path/filepath"
+
 	"github.com/sighupio/furyctl/internal/app/validate"
 	"github.com/sighupio/furyctl/internal/distribution"
 	"github.com/sighupio/furyctl/internal/eks"
 	"github.com/sighupio/furyctl/internal/execx"
-	"path/filepath"
 )
 
 var ErrUnsupportedDistributionKind = errors.New("unsupported distribution kind")

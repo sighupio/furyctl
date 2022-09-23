@@ -6,23 +6,17 @@ package eks
 
 import (
 	"bytes"
-	"encoding/json"
 	"fmt"
-	tJson "github.com/hashicorp/terraform-json"
-	schm "github.com/sighupio/fury-distribution/pkg/schemas"
-	"github.com/sighupio/furyctl/internal/distribution"
-	"github.com/sighupio/furyctl/internal/template"
-	"github.com/sighupio/furyctl/internal/yaml"
-	"github.com/sirupsen/logrus"
-	"io"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"path"
-	"path/filepath"
-	"regexp"
 	"strings"
 	"time"
+
+	schm "github.com/sighupio/fury-distribution/pkg/schemas"
+	"github.com/sighupio/furyctl/internal/distribution"
+	"github.com/sighupio/furyctl/internal/yaml"
+	"github.com/sirupsen/logrus"
 )
 
 var ErrUnsupportedPhase = fmt.Errorf("unsupported phase")
@@ -82,92 +76,85 @@ func (v *V1alpha2) Create() error {
 }
 
 func (v *V1alpha2) Infrastructure() error {
-	var config template.Config
+	timestamp := time.Now().Unix()
 
-	infraPath := path.Join(".infrastructure")
-
-	err := os.Mkdir(infraPath, 0o755)
+	infra, err := NewInfrastructure()
 	if err != nil {
 		return err
 	}
 
-	sourceTfDir := path.Join("configs", "provisioners", "bootstrap", "aws")
-	targetTfDir := path.Join(infraPath, "terraform")
-
-	outDirPath, err := os.MkdirTemp("", "furyctl-infra-")
+	err = infra.CreateFolder()
 	if err != nil {
 		return err
 	}
 
-	tfConfVars := map[string]map[any]any{
-		"kubernetes": {
-			"eks": v.KfdManifest.Kubernetes.Eks,
-		},
-	}
-
-	config.Data = tfConfVars
-
-	tfConfigPath := path.Join(outDirPath, "tf-config.yaml")
-	tfConfig, err := yaml.MarshalV2(config)
+	err = infra.CopyFromTemplate(v.KfdManifest)
 	if err != nil {
 		return err
 	}
 
-	err = os.WriteFile(tfConfigPath, tfConfig, 0o644)
+	furyFile, err := v.GetConfigFile()
 	if err != nil {
 		return err
 	}
 
-	templateModel, err := template.NewTemplateModel(
-		sourceTfDir,
-		targetTfDir,
-		tfConfigPath,
-		outDirPath,
-		".tpl",
-		true,
-		false,
-	)
+	err = v.CreateTfVars(furyFile, infra.Path)
 	if err != nil {
 		return err
 	}
 
-	err = templateModel.Generate()
-
-	logrus.Infoln("Generating directory structure")
-
-	planPath := path.Join(infraPath, "terraform", "plan")
-	logsPath := path.Join(infraPath, "terraform", "logs")
-	outputsPath := path.Join(infraPath, "terraform", "outputs")
-	secretsPath := path.Join(infraPath, "terraform", "secrets")
-
-	binPath, err := filepath.Abs("./vendor")
+	err = infra.TerraformInit()
 	if err != nil {
 		return err
 	}
 
-	err = os.Mkdir(planPath, 0o755)
+	err = infra.TerraformPlan(timestamp)
 	if err != nil {
 		return err
 	}
 
-	err = os.Mkdir(logsPath, 0o755)
+	err = infra.TerraformApply(timestamp)
 	if err != nil {
 		return err
 	}
 
-	err = os.Mkdir(outputsPath, 0o755)
-	if err != nil {
-		return err
+	if furyFile.Spec.Infrastructure.Vpc.Vpn != nil && furyFile.Spec.Infrastructure.Vpc.Vpn.Instances > 0 {
+		clientName := furyFile.Metadata.Name
+
+		whoamiResp, err := exec.Command("whoami").Output()
+		if err != nil {
+			return err
+		}
+
+		whoami := strings.TrimSpace(string(whoamiResp))
+		clientName = fmt.Sprintf("%s-%s", clientName, whoami)
+
+		err = infra.CreateOvpnFile(clientName)
+		if err != nil {
+			return err
+		}
+
+		if v.VpnAutoConnect {
+			err = infra.CreateOvpnConnection(clientName)
+			if err != nil {
+				return err
+			}
+		}
 	}
 
-	logrus.Infoln("Generating tvars file")
+	return nil
+}
 
+func (v *V1alpha2) Kubernetes() error {
+	return nil
+}
+
+func (v *V1alpha2) Distribution() error {
+	return nil
+}
+
+func (v *V1alpha2) CreateTfVars(furyFile schm.EksclusterKfdV1Alpha2Json, infraPath string) error {
 	var buffer bytes.Buffer
-
-	furyFile, err := yaml.FromFileV3[schm.EksclusterKfdV1Alpha2Json](v.ConfigPath)
-	if err != nil {
-		return err
-	}
 
 	buffer.WriteString(fmt.Sprintf("name = \"%v\"\n", furyFile.Metadata.Name))
 	buffer.WriteString(fmt.Sprintf(
@@ -242,149 +229,14 @@ func (v *V1alpha2) Infrastructure() error {
 
 	targetTfVars := path.Join(infraPath, "terraform", "main.auto.tfvars")
 
-	err = os.WriteFile(targetTfVars, buffer.Bytes(), 0o600)
-	if err != nil {
-		return err
-	}
-
-	terraformBinPath := path.Join(binPath, "bin", "terraform")
-	furyAgentBinPath := path.Join(binPath, "bin", "furyagent")
-
-	terraformInitCmd := exec.Command(terraformBinPath, "init")
-	terraformInitCmd.Stdout = os.Stdout
-	terraformInitCmd.Stderr = os.Stderr
-	terraformInitCmd.Dir = path.Join(infraPath, "terraform")
-
-	err = terraformInitCmd.Run()
-	if err != nil {
-		return err
-	}
-
-	var planBuffer bytes.Buffer
-
-	terraformPlanCmd := exec.Command(terraformBinPath, "plan", "--out=plan/terraform.plan", "-no-color")
-	terraformPlanCmd.Stdout = io.MultiWriter(os.Stdout, &planBuffer)
-	terraformPlanCmd.Stderr = os.Stderr
-	terraformPlanCmd.Dir = path.Join(infraPath, "terraform")
-
-	err = terraformPlanCmd.Run()
-	if err != nil {
-		return err
-	}
-
-	timestamp := time.Now().Unix()
-
-	err = os.WriteFile(path.Join(planPath, fmt.Sprintf("plan-%d.log", timestamp)), planBuffer.Bytes(), 0o600)
-	if err != nil {
-		return err
-	}
-
-	var applyBuffer bytes.Buffer
-
-	terraformApplyCmd := exec.Command(terraformBinPath, "apply", "-no-color", "-json", "plan/terraform.plan")
-	terraformApplyCmd.Stdout = io.MultiWriter(os.Stdout, &applyBuffer)
-	terraformApplyCmd.Stderr = os.Stderr
-	terraformApplyCmd.Dir = path.Join(infraPath, "terraform")
-
-	err = terraformApplyCmd.Run()
-	if err != nil {
-		return err
-	}
-
-	err = os.WriteFile(path.Join(logsPath, fmt.Sprintf("%d.log", timestamp)), applyBuffer.Bytes(), 0o600)
-	if err != nil {
-		return err
-	}
-
-	var applyLogOut struct {
-		Outputs map[string]*tJson.StateOutput `json:"outputs"`
-	}
-
-	parsedApplyLog, err := ioutil.ReadFile(path.Join(logsPath, fmt.Sprintf("%d.log", timestamp)))
-	if err != nil {
-		return err
-	}
-
-	applyLog := string(parsedApplyLog)
-
-	pattern := regexp.MustCompile("(\"outputs\":){(.*?)}}")
-
-	outputsStringIndex := pattern.FindStringIndex(applyLog)
-	if outputsStringIndex == nil {
-		return fmt.Errorf("can't get outputs from terraform apply logs")
-	}
-
-	outputsString := fmt.Sprintf("{%s}", applyLog[outputsStringIndex[0]:outputsStringIndex[1]])
-
-	// Checking if the outputs are valid json
-	err = json.Unmarshal([]byte(outputsString), &applyLogOut)
-	if err != nil {
-		return err
-	}
-
-	err = ioutil.WriteFile(path.Join(outputsPath, "output.json"), []byte(outputsString), 0o600)
-	if err != nil {
-		return err
-	}
-
-	if furyFile.Spec.Infrastructure.Vpc.Vpn != nil && furyFile.Spec.Infrastructure.Vpc.Vpn.Instances > 0 {
-		var furyAgentBuffer bytes.Buffer
-
-		clientName := furyFile.Metadata.Name
-
-		whoamiResp, err := exec.Command("whoami").Output()
-		if err != nil {
-			return err
-		}
-
-		whoami := strings.TrimSpace(string(whoamiResp))
-		clientName = fmt.Sprintf("%s-%s", clientName, whoami)
-
-		furyAgentCmd := exec.Command(furyAgentBinPath,
-			"configure",
-			"openvpn-client",
-			fmt.Sprintf("--client-name=%s", clientName),
-			"--config=furyagent.yml",
-		)
-		furyAgentCmd.Stdout = io.MultiWriter(os.Stdout, &furyAgentBuffer)
-		furyAgentCmd.Stderr = os.Stderr
-		furyAgentCmd.Dir = secretsPath
-
-		err = furyAgentCmd.Run()
-		if err != nil {
-			return err
-		}
-
-		err = os.WriteFile(path.Join(secretsPath, fmt.Sprintf("%s.ovpn", clientName)), furyAgentBuffer.Bytes(), 0o600)
-		if err != nil {
-			return err
-		}
-
-		if v.VpnAutoConnect {
-			openVpnCmd := exec.Command(
-				"openvpn",
-				"--config",
-				fmt.Sprintf("%s.ovpn", clientName),
-				"--daemon",
-			)
-			openVpnCmd.Stdout = os.Stdout
-			openVpnCmd.Stderr = os.Stderr
-			openVpnCmd.Dir = secretsPath
-
-			err = openVpnCmd.Run()
-			if err != nil {
-				return err
-			}
-		}
-	}
-
-	return nil
+	return os.WriteFile(targetTfVars, buffer.Bytes(), 0o600)
 }
 
-func (v *V1alpha2) Kubernetes() error {
-	return nil
-}
+func (v *V1alpha2) GetConfigFile() (schm.EksclusterKfdV1Alpha2Json, error) {
+	furyFile, err := yaml.FromFileV3[schm.EksclusterKfdV1Alpha2Json](v.ConfigPath)
+	if err != nil {
+		return schm.EksclusterKfdV1Alpha2Json{}, err
+	}
 
-func (v *V1alpha2) Distribution() error {
-	return nil
+	return furyFile, nil
 }
