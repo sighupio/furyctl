@@ -7,9 +7,10 @@ package create
 import (
 	"fmt"
 
+	"github.com/spf13/cobra"
+
 	"github.com/sighupio/furyctl/internal/app"
 	"github.com/sighupio/furyctl/internal/cobrax"
-	"github.com/spf13/cobra"
 )
 
 var ErrClusterCreationFailed = fmt.Errorf("cluster creation failed")
