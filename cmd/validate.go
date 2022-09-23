@@ -8,7 +8,6 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/sighupio/furyctl/cmd/validate"
-	"github.com/sighupio/furyctl/internal/execx"
 )
 
 func NewValidateCommand(furyctlBinVersion string) *cobra.Command {
@@ -18,7 +17,7 @@ func NewValidateCommand(furyctlBinVersion string) *cobra.Command {
 	}
 
 	validateCmd.AddCommand(validate.NewConfigCmd(furyctlBinVersion))
-	validateCmd.AddCommand(validate.NewDependenciesCmd(furyctlBinVersion, execx.NewStdExecutor()))
+	validateCmd.AddCommand(validate.NewDependenciesCmd(furyctlBinVersion))
 
 	return validateCmd
 }

@@ -52,7 +52,7 @@ var (
 		FuryctlSchemas: distribution.ManifestSchemas{},
 		Tools: distribution.ManifestTools{
 			Ansible:   "2.11.2",
-			Furyagent: "0.0.1",
+			Furyagent: "0.3.0",
 			Kubectl:   "1.21.1",
 			Kustomize: "3.9.4",
 			Terraform: "0.15.4",
