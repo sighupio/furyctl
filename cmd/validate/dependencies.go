@@ -13,11 +13,12 @@ import (
 	"github.com/sighupio/furyctl/internal/app"
 	"github.com/sighupio/furyctl/internal/cobrax"
 	"github.com/sighupio/furyctl/internal/execx"
+	"github.com/sighupio/furyctl/internal/netx"
 )
 
 var ErrDependencies = fmt.Errorf("dependencies are not satisfied")
 
-func NewDependenciesCmd(furyctlBinVersion string, executor execx.Executor) *cobra.Command {
+func NewDependenciesCmd(furyctlBinVersion string) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "dependencies",
 		Short: "Validate furyctl.yaml file",
@@ -27,7 +28,7 @@ func NewDependenciesCmd(furyctlBinVersion string, executor execx.Executor) *cobr
 			furyctlPath := cobrax.Flag[string](cmd, "config").(string)
 			distroLocation := cobrax.Flag[string](cmd, "distro-location").(string)
 
-			vd := app.NewValidateDependencies(executor)
+			vd := app.NewValidateDependencies(netx.NewGoGetterClient(), execx.NewStdExecutor())
 
 			res, err := vd.Execute(app.ValidateDependenciesRequest{
 				BinPath:           binPath,
@@ -50,7 +51,7 @@ func NewDependenciesCmd(furyctlBinVersion string, executor execx.Executor) *cobr
 				return ErrDependencies
 			}
 
-			fmt.Println("dependencies validation succeeded")
+			logrus.Info("Dependencies validation succeeded")
 
 			return nil
 		},
