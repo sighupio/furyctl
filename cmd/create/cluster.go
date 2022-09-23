@@ -25,6 +25,7 @@ func NewClusterCmd(version string) *cobra.Command {
 			distroLocation := cobrax.Flag[string](cmd, "distro-location").(string)
 			phase := cobrax.Flag[string](cmd, "phase").(string)
 			vpnAutoConnect := cobrax.Flag[bool](cmd, "vpn-auto-connect").(bool)
+			dryRun := cobrax.Flag[bool](cmd, "dry-run").(bool)
 
 			cc := app.NewCreateCluster()
 
@@ -33,6 +34,7 @@ func NewClusterCmd(version string) *cobra.Command {
 				FuryctlBinVersion: version,
 				DistroLocation:    distroLocation,
 				Phase:             phase,
+				DryRun:            dryRun,
 				VpnAutoConnect:    vpnAutoConnect,
 				Debug:             debug,
 			})

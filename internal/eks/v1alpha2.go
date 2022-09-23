@@ -29,34 +29,34 @@ type V1alpha2 struct {
 	VpnAutoConnect bool
 }
 
-func (v *V1alpha2) Create() error {
+func (v *V1alpha2) Create(dryRun bool) error {
 	logrus.Infof("Running phase: %s", v.Phase)
 
 	switch v.Phase {
 	case "infrastructure":
-		return v.Infrastructure()
+		return v.Infrastructure(dryRun)
 	case "kubernetes":
-		return v.Kubernetes()
+		return v.Kubernetes(dryRun)
 	case "distribution":
-		return v.Distribution()
+		return v.Distribution(dryRun)
 	case "":
-		err := v.Infrastructure()
+		err := v.Infrastructure(dryRun)
 		if err != nil {
 			return err
 		}
 
-		err = v.Kubernetes()
+		err = v.Kubernetes(dryRun)
 		if err != nil {
 			return err
 		}
 
-		return v.Distribution()
+		return v.Distribution(dryRun)
 	default:
 		return ErrUnsupportedPhase
 	}
 }
 
-func (v *V1alpha2) Infrastructure() error {
+func (v *V1alpha2) Infrastructure(dryRun bool) error {
 	timestamp := time.Now().Unix()
 
 	infra, err := NewInfrastructure()
@@ -99,31 +99,33 @@ func (v *V1alpha2) Infrastructure() error {
 		return err
 	}
 
-	err = infra.TerraformApply(timestamp)
-	if err != nil {
-		return err
-	}
-
-	if furyFile.Spec.Infrastructure.Vpc.Vpn != nil && furyFile.Spec.Infrastructure.Vpc.Vpn.Instances > 0 {
-		clientName := furyFile.Metadata.Name
-
-		whoamiResp, err := exec.Command("whoami").Output()
+	if !dryRun {
+		err = infra.TerraformApply(timestamp)
 		if err != nil {
 			return err
 		}
 
-		whoami := strings.TrimSpace(string(whoamiResp))
-		clientName = fmt.Sprintf("%s-%s", clientName, whoami)
+		if furyFile.Spec.Infrastructure.Vpc.Vpn != nil && furyFile.Spec.Infrastructure.Vpc.Vpn.Instances > 0 {
+			clientName := furyFile.Metadata.Name
 
-		err = infra.CreateOvpnFile(clientName)
-		if err != nil {
-			return err
-		}
-
-		if v.VpnAutoConnect {
-			err = infra.CreateOvpnConnection(clientName)
+			whoamiResp, err := exec.Command("whoami").Output()
 			if err != nil {
 				return err
+			}
+
+			whoami := strings.TrimSpace(string(whoamiResp))
+			clientName = fmt.Sprintf("%s-%s", clientName, whoami)
+
+			err = infra.CreateOvpnFile(clientName)
+			if err != nil {
+				return err
+			}
+
+			if v.VpnAutoConnect {
+				err = infra.CreateOvpnConnection(clientName)
+				if err != nil {
+					return err
+				}
 			}
 		}
 	}
@@ -131,11 +133,11 @@ func (v *V1alpha2) Infrastructure() error {
 	return nil
 }
 
-func (v *V1alpha2) Kubernetes() error {
+func (v *V1alpha2) Kubernetes(dryRun bool) error {
 	return nil
 }
 
-func (v *V1alpha2) Distribution() error {
+func (v *V1alpha2) Distribution(dryRun bool) error {
 	return nil
 }
 
