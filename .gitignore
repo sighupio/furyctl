@@ -6,3 +6,6 @@ bin
 furyctl
 demo
 dist/
+.infrastructure
+.kubernetes
+.distribution

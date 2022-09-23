@@ -81,17 +81,18 @@ func (h *CreateCluster) Execute(req CreateClusterRequest) (CreateClusterResponse
 	}
 
 	if res.MinimalConf.Kind.Equals(distribution.EKSCluster) {
-		eksCluster, err := eks.NewClusterCreator(res.MinimalConf.ApiVersion)
+		eksCluster, err := eks.NewClusterCreator(
+			res.MinimalConf.ApiVersion,
+			req.Phase,
+			res.DistroManifest,
+			req.FuryctlConfPath,
+			req.VpnAutoConnect,
+		)
 		if err != nil {
 			return CreateClusterResponse{}, err
 		}
 
-		err = eksCluster.
-			WithPhase(req.Phase).
-			WithKfdManifest(res.DistroManifest).
-			WithConfigPath(req.FuryctlConfPath).
-			WithVpnAutoConnect(req.VpnAutoConnect).
-			Create()
+		err = eksCluster.Create()
 		if err != nil {
 			return CreateClusterResponse{}, err
 		}
