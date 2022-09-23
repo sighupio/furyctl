@@ -48,14 +48,18 @@ func Test_Downloader_Download(t *testing.T) {
 		tC := tC
 
 		t.Run(tC.desc, func(t *testing.T) {
-			distroLocation, err := filepath.Abs("../../test/data/distro/" + tC.wantDistroVer)
+			distroLocation, err := filepath.Abs(fmt.Sprintf("../../test/data/%s/distro", tC.wantDistroVer))
 			if err != nil {
 				t.Fatal(err)
 			}
 
 			d := distribution.NewDownloader(netx.NewGoGetterClient(), true)
 
-			res, err := d.Download(tC.furyctlBinVer, distroLocation, "../../test/data/furyctl.yaml")
+			res, err := d.Download(
+				tC.furyctlBinVer,
+				distroLocation,
+				fmt.Sprintf("../../test/data/%s/furyctl.yaml", tC.wantDistroVer),
+			)
 			if err != nil {
 				t.Fatal(err)
 			}

@@ -17,8 +17,10 @@ import (
 )
 
 var (
-	ErrDownloadingModule = errors.New("error downloading module")
-	ErrUnsupportedTools  = errors.New("unsupported tools")
+	ErrDownloadingModule  = errors.New("error downloading module")
+	ErrUnsupportedTools   = errors.New("unsupported tools")
+	ErrModuleHasNoVersion = errors.New("module has no version")
+	ErrModuleHasNoName    = errors.New("module has no name")
 )
 
 type DownloadDependenciesRequest struct {
@@ -87,6 +89,14 @@ func (dd *DownloadDependencies) DownloadModules(modules distribution.ManifestMod
 	for i := 0; i < mods.NumField(); i++ {
 		name := strings.ToLower(mods.Type().Field(i).Name)
 		version := mods.Field(i).Interface().(string)
+
+		if name == "" {
+			return ErrModuleHasNoName
+		}
+
+		if version == "" {
+			return fmt.Errorf("%s: %w", name, ErrModuleHasNoVersion)
+		}
 
 		errors := []error{}
 		for _, prefix := range []string{oldPrefix, newPrefix} {
