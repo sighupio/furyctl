@@ -9,7 +9,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"path"
@@ -174,7 +173,7 @@ func (i *Infrastructure) TerraformApply(timestamp int64) error {
 		Outputs map[string]*tfjson.StateOutput `json:"outputs"`
 	}
 
-	parsedApplyLog, err := ioutil.ReadFile(path.Join(i.LogsPath, fmt.Sprintf("%d.log", timestamp)))
+	parsedApplyLog, err := os.ReadFile(path.Join(i.LogsPath, fmt.Sprintf("%d.log", timestamp)))
 	if err != nil {
 		return err
 	}
@@ -195,7 +194,7 @@ func (i *Infrastructure) TerraformApply(timestamp int64) error {
 		return err
 	}
 
-	return ioutil.WriteFile(path.Join(i.OutputsPath, "output.json"), []byte(outputsString), 0o600)
+	return os.WriteFile(path.Join(i.OutputsPath, "output.json"), []byte(outputsString), 0o600)
 }
 
 func (i *Infrastructure) CreateOvpnFile(clientName string) error {
