@@ -17,7 +17,6 @@ import (
 
 	"github.com/sighupio/fury-distribution/pkg/schemas"
 	"github.com/sighupio/furyctl/internal/distribution"
-	"github.com/sighupio/furyctl/internal/yaml"
 )
 
 var ErrUnsupportedPhase = fmt.Errorf("unsupported phase")
@@ -25,6 +24,7 @@ var ErrUnsupportedPhase = fmt.Errorf("unsupported phase")
 type V1alpha2 struct {
 	Phase          string
 	KfdManifest    distribution.Manifest
+	FuryFile       schemas.EksclusterKfdV1Alpha2Json
 	ConfigPath     string
 	VpnAutoConnect bool
 }
@@ -40,12 +40,14 @@ func (v *V1alpha2) Create(dryRun bool) error {
 	case "distribution":
 		return v.Distribution(dryRun)
 	case "":
-		err := v.Infrastructure(dryRun)
-		if err != nil {
-			return err
+		if v.FuryFile.Spec.Distribution != nil {
+			err := v.Infrastructure(dryRun)
+			if err != nil {
+				return err
+			}
 		}
 
-		err = v.Kubernetes(dryRun)
+		err := v.Kubernetes(dryRun)
 		if err != nil {
 			return err
 		}
@@ -79,12 +81,7 @@ func (v *V1alpha2) Infrastructure(dryRun bool) error {
 		return err
 	}
 
-	furyFile, err := v.GetConfigFile()
-	if err != nil {
-		return err
-	}
-
-	err = v.CreateTfVars(furyFile, infra.Path)
+	err = v.CreateTfVars(infra.Path)
 	if err != nil {
 		return err
 	}
@@ -105,8 +102,8 @@ func (v *V1alpha2) Infrastructure(dryRun bool) error {
 			return err
 		}
 
-		if furyFile.Spec.Infrastructure.Vpc.Vpn != nil && furyFile.Spec.Infrastructure.Vpc.Vpn.Instances > 0 {
-			clientName := furyFile.Metadata.Name
+		if v.FuryFile.Spec.Infrastructure.Vpc.Vpn != nil && v.FuryFile.Spec.Infrastructure.Vpc.Vpn.Instances > 0 {
+			clientName := v.FuryFile.Metadata.Name
 
 			whoamiResp, err := exec.Command("whoami").Output()
 			if err != nil {
@@ -141,24 +138,24 @@ func (v *V1alpha2) Distribution(dryRun bool) error {
 	return nil
 }
 
-func (v *V1alpha2) CreateTfVars(furyFile schemas.EksclusterKfdV1Alpha2Json, infraPath string) error {
+func (v *V1alpha2) CreateTfVars(infraPath string) error {
 	var buffer bytes.Buffer
 
-	buffer.WriteString(fmt.Sprintf("name = \"%v\"\n", furyFile.Metadata.Name))
+	buffer.WriteString(fmt.Sprintf("name = \"%v\"\n", v.FuryFile.Metadata.Name))
 	buffer.WriteString(fmt.Sprintf(
 		"network_cidr = \"%v\"\n",
-		furyFile.Spec.Infrastructure.Vpc.Network.Cidr,
+		v.FuryFile.Spec.Infrastructure.Vpc.Network.Cidr,
 	))
 
-	publicSubnetworkCidrs := make([]string, len(furyFile.Spec.Infrastructure.Vpc.Network.SubnetsCidrs.Public))
+	publicSubnetworkCidrs := make([]string, len(v.FuryFile.Spec.Infrastructure.Vpc.Network.SubnetsCidrs.Public))
 
-	for i, cidr := range furyFile.Spec.Infrastructure.Vpc.Network.SubnetsCidrs.Public {
+	for i, cidr := range v.FuryFile.Spec.Infrastructure.Vpc.Network.SubnetsCidrs.Public {
 		publicSubnetworkCidrs[i] = fmt.Sprintf("\"%v\"", cidr)
 	}
 
-	privateSubnetworkCidrs := make([]string, len(furyFile.Spec.Infrastructure.Vpc.Network.SubnetsCidrs.Private))
+	privateSubnetworkCidrs := make([]string, len(v.FuryFile.Spec.Infrastructure.Vpc.Network.SubnetsCidrs.Private))
 
-	for i, cidr := range furyFile.Spec.Infrastructure.Vpc.Network.SubnetsCidrs.Private {
+	for i, cidr := range v.FuryFile.Spec.Infrastructure.Vpc.Network.SubnetsCidrs.Private {
 		privateSubnetworkCidrs[i] = fmt.Sprintf("\"%v\"", cidr)
 	}
 
@@ -170,69 +167,69 @@ func (v *V1alpha2) CreateTfVars(furyFile schemas.EksclusterKfdV1Alpha2Json, infr
 		"private_subnetwork_cidrs = [%v]\n",
 		strings.Join(privateSubnetworkCidrs, ",")))
 
-	if furyFile.Spec.Infrastructure.Vpc.Vpn != nil {
+	if v.FuryFile.Spec.Infrastructure.Vpc.Vpn != nil {
 		buffer.WriteString(
 			fmt.Sprintf(
 				"vpn_subnetwork_cidr = \"%v\"\n",
-				furyFile.Spec.Infrastructure.Vpc.Vpn.VpnClientsSubnetCidr,
+				v.FuryFile.Spec.Infrastructure.Vpc.Vpn.VpnClientsSubnetCidr,
 			),
 		)
 		buffer.WriteString(
 			fmt.Sprintf(
 				"vpn_instances = %v\n",
-				furyFile.Spec.Infrastructure.Vpc.Vpn.Instances,
+				v.FuryFile.Spec.Infrastructure.Vpc.Vpn.Instances,
 			),
 		)
 
-		if furyFile.Spec.Infrastructure.Vpc.Vpn.Port != 0 {
+		if v.FuryFile.Spec.Infrastructure.Vpc.Vpn.Port != 0 {
 			buffer.WriteString(
 				fmt.Sprintf(
 					"vpn_port = %v\n",
-					furyFile.Spec.Infrastructure.Vpc.Vpn.Port,
+					v.FuryFile.Spec.Infrastructure.Vpc.Vpn.Port,
 				),
 			)
 		}
 
-		if furyFile.Spec.Infrastructure.Vpc.Vpn.InstanceType != "" {
+		if v.FuryFile.Spec.Infrastructure.Vpc.Vpn.InstanceType != "" {
 			buffer.WriteString(
 				fmt.Sprintf(
 					"vpn_instance_type = \"%v\"\n",
-					furyFile.Spec.Infrastructure.Vpc.Vpn.InstanceType,
+					v.FuryFile.Spec.Infrastructure.Vpc.Vpn.InstanceType,
 				),
 			)
 		}
 
-		if furyFile.Spec.Infrastructure.Vpc.Vpn.DiskSize != 0 {
+		if v.FuryFile.Spec.Infrastructure.Vpc.Vpn.DiskSize != 0 {
 			buffer.WriteString(
 				fmt.Sprintf(
 					"vpn_instance_disk_size = %v\n",
-					furyFile.Spec.Infrastructure.Vpc.Vpn.DiskSize,
+					v.FuryFile.Spec.Infrastructure.Vpc.Vpn.DiskSize,
 				),
 			)
 		}
 
-		if furyFile.Spec.Infrastructure.Vpc.Vpn.OperatorName != "" {
+		if v.FuryFile.Spec.Infrastructure.Vpc.Vpn.OperatorName != "" {
 			buffer.WriteString(
 				fmt.Sprintf(
 					"vpn_operator_name = \"%v\"\n",
-					furyFile.Spec.Infrastructure.Vpc.Vpn.OperatorName,
+					v.FuryFile.Spec.Infrastructure.Vpc.Vpn.OperatorName,
 				),
 			)
 		}
 
-		if furyFile.Spec.Infrastructure.Vpc.Vpn.DhParamsBits != 0 {
+		if v.FuryFile.Spec.Infrastructure.Vpc.Vpn.DhParamsBits != 0 {
 			buffer.WriteString(
 				fmt.Sprintf(
 					"vpn_dhparams_bits = %v\n",
-					furyFile.Spec.Infrastructure.Vpc.Vpn.DhParamsBits,
+					v.FuryFile.Spec.Infrastructure.Vpc.Vpn.DhParamsBits,
 				),
 			)
 		}
 
-		if len(furyFile.Spec.Infrastructure.Vpc.Vpn.Ssh.AllowedFromCidrs) != 0 {
-			allowedCidrs := make([]string, len(furyFile.Spec.Infrastructure.Vpc.Vpn.Ssh.AllowedFromCidrs))
+		if len(v.FuryFile.Spec.Infrastructure.Vpc.Vpn.Ssh.AllowedFromCidrs) != 0 {
+			allowedCidrs := make([]string, len(v.FuryFile.Spec.Infrastructure.Vpc.Vpn.Ssh.AllowedFromCidrs))
 
-			for i, cidr := range furyFile.Spec.Infrastructure.Vpc.Vpn.Ssh.AllowedFromCidrs {
+			for i, cidr := range v.FuryFile.Spec.Infrastructure.Vpc.Vpn.Ssh.AllowedFromCidrs {
 				allowedCidrs[i] = fmt.Sprintf("\"%v\"", cidr)
 			}
 
@@ -244,10 +241,10 @@ func (v *V1alpha2) CreateTfVars(furyFile schemas.EksclusterKfdV1Alpha2Json, infr
 			)
 		}
 
-		if len(furyFile.Spec.Infrastructure.Vpc.Vpn.Ssh.GithubUsersName) != 0 {
-			githubUsers := make([]string, len(furyFile.Spec.Infrastructure.Vpc.Vpn.Ssh.GithubUsersName))
+		if len(v.FuryFile.Spec.Infrastructure.Vpc.Vpn.Ssh.GithubUsersName) != 0 {
+			githubUsers := make([]string, len(v.FuryFile.Spec.Infrastructure.Vpc.Vpn.Ssh.GithubUsersName))
 
-			for i, gu := range furyFile.Spec.Infrastructure.Vpc.Vpn.Ssh.GithubUsersName {
+			for i, gu := range v.FuryFile.Spec.Infrastructure.Vpc.Vpn.Ssh.GithubUsersName {
 				githubUsers[i] = fmt.Sprintf("\"%v\"", gu)
 			}
 
@@ -263,13 +260,4 @@ func (v *V1alpha2) CreateTfVars(furyFile schemas.EksclusterKfdV1Alpha2Json, infr
 	targetTfVars := path.Join(infraPath, "terraform", "main.auto.tfvars")
 
 	return os.WriteFile(targetTfVars, buffer.Bytes(), 0o600)
-}
-
-func (v *V1alpha2) GetConfigFile() (schemas.EksclusterKfdV1Alpha2Json, error) {
-	furyFile, err := yaml.FromFileV3[schemas.EksclusterKfdV1Alpha2Json](v.ConfigPath)
-	if err != nil {
-		return schemas.EksclusterKfdV1Alpha2Json{}, err
-	}
-
-	return furyFile, nil
 }
