@@ -6,9 +6,9 @@ package app
 
 import (
 	"errors"
+	"github.com/sighupio/furyctl/internal/netx"
 	"path/filepath"
 
-	"github.com/sighupio/furyctl/internal/app/validate"
 	"github.com/sighupio/furyctl/internal/distribution"
 	"github.com/sighupio/furyctl/internal/eks"
 	"github.com/sighupio/furyctl/internal/execx"
@@ -30,10 +30,16 @@ type CreateClusterResponse struct {
 	Error error
 }
 
-type CreateCluster struct{}
+type CreateCluster struct {
+	client   netx.Client
+	executor execx.Executor
+}
 
-func NewCreateCluster() *CreateCluster {
-	return &CreateCluster{}
+func NewCreateCluster(client netx.Client, executor execx.Executor) *CreateCluster {
+	return &CreateCluster{
+		client:   client,
+		executor: executor,
+	}
 }
 
 func (v CreateClusterResponse) HasErrors() bool {
@@ -46,7 +52,7 @@ func (h *CreateCluster) Execute(req CreateClusterRequest) (CreateClusterResponse
 		return CreateClusterResponse{}, err
 	}
 
-	vc := NewValidateConfig()
+	vc := NewValidateConfig(h.client)
 
 	_, err = vc.Execute(ValidateConfigRequest{
 		FuryctlBinVersion: req.FuryctlBinVersion,
@@ -58,7 +64,7 @@ func (h *CreateCluster) Execute(req CreateClusterRequest) (CreateClusterResponse
 		return CreateClusterResponse{}, err
 	}
 
-	vd := NewValidateDependencies(execx.NewStdExecutor())
+	vd := NewValidateDependencies(h.client, h.executor)
 
 	_, err = vd.Execute(ValidateDependenciesRequest{
 		BinPath:           "",
@@ -71,12 +77,20 @@ func (h *CreateCluster) Execute(req CreateClusterRequest) (CreateClusterResponse
 		return CreateClusterResponse{}, err
 	}
 
-	err = DownloadRequirements(req.FuryctlConfPath, req.DistroLocation, vendorPath)
+	dl := NewDownloadDependencies(h.client, vendorPath)
+	_, err = dl.Execute(DownloadDependenciesRequest{
+		FuryctlBinVersion: req.FuryctlBinVersion,
+		DistroLocation:    req.DistroLocation,
+		FuryctlConfPath:   req.FuryctlConfPath,
+		Debug:             req.Debug,
+	})
 	if err != nil {
 		return CreateClusterResponse{}, err
 	}
 
-	res, err := validate.DownloadDistro(req.FuryctlBinVersion, req.DistroLocation, req.FuryctlConfPath, req.Debug)
+	dloader := distribution.NewDownloader(h.client, req.Debug)
+
+	res, err := dloader.Download(req.FuryctlBinVersion, req.DistroLocation, req.FuryctlConfPath)
 	if err != nil {
 		return CreateClusterResponse{}, err
 	}
@@ -104,8 +118,4 @@ func (h *CreateCluster) Execute(req CreateClusterRequest) (CreateClusterResponse
 	return CreateClusterResponse{
 		Error: ErrUnsupportedDistributionKind,
 	}, nil
-}
-
-func DownloadRequirements(configPath, distroLocation, dlPath string) error {
-	return nil
 }
