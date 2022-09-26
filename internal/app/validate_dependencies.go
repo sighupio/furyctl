@@ -100,7 +100,8 @@ func (vd *ValidateDependencies) validateEnvVarsDependencies(kind distribution.Ki
 func (vd *ValidateDependencies) validateSystemDependencies(kfdManifest distribution.Manifest, binPath string) []error {
 	errs := make([]error, 0)
 
-	if err := vd.checkAnsibleVersion(kfdManifest.Tools.Ansible, binPath); err != nil {
+	// binPath is empty here because ansible is not handled by vendor dependencies
+	if err := vd.checkAnsibleVersion(kfdManifest.Tools.Ansible, ""); err != nil {
 		errs = append(errs, err)
 	}
 

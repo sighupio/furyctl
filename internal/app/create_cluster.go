@@ -52,24 +52,18 @@ func (h *CreateCluster) Execute(req CreateClusterRequest) (CreateClusterResponse
 		return CreateClusterResponse{}, err
 	}
 
-	vc := NewValidateConfig(h.client)
+	dloader := distribution.NewDownloader(h.client, req.Debug)
 
-	_, err = vc.Execute(ValidateConfigRequest{
-		FuryctlBinVersion: req.FuryctlBinVersion,
-		DistroLocation:    req.DistroLocation,
-		FuryctlConfPath:   req.FuryctlConfPath,
-		Debug:             req.Debug,
-	})
+	res, err := dloader.Download(req.FuryctlBinVersion, req.DistroLocation, req.FuryctlConfPath)
 	if err != nil {
 		return CreateClusterResponse{}, err
 	}
 
-	vd := NewValidateDependencies(h.client, h.executor)
+	vc := NewValidateConfig(h.client)
 
-	_, err = vd.Execute(ValidateDependenciesRequest{
-		BinPath:           "",
+	_, err = vc.Execute(ValidateConfigRequest{
 		FuryctlBinVersion: req.FuryctlBinVersion,
-		DistroLocation:    req.DistroLocation,
+		DistroLocation:    res.RepoPath,
 		FuryctlConfPath:   req.FuryctlConfPath,
 		Debug:             req.Debug,
 	})
@@ -80,7 +74,7 @@ func (h *CreateCluster) Execute(req CreateClusterRequest) (CreateClusterResponse
 	dl := NewDownloadDependencies(h.client, vendorPath)
 	_, err = dl.Execute(DownloadDependenciesRequest{
 		FuryctlBinVersion: req.FuryctlBinVersion,
-		DistroLocation:    req.DistroLocation,
+		DistroLocation:    res.RepoPath,
 		FuryctlConfPath:   req.FuryctlConfPath,
 		Debug:             req.Debug,
 	})
@@ -88,9 +82,15 @@ func (h *CreateCluster) Execute(req CreateClusterRequest) (CreateClusterResponse
 		return CreateClusterResponse{}, err
 	}
 
-	dloader := distribution.NewDownloader(h.client, req.Debug)
+	vd := NewValidateDependencies(h.client, h.executor)
 
-	res, err := dloader.Download(req.FuryctlBinVersion, req.DistroLocation, req.FuryctlConfPath)
+	_, err = vd.Execute(ValidateDependenciesRequest{
+		BinPath:           vendorPath,
+		FuryctlBinVersion: req.FuryctlBinVersion,
+		DistroLocation:    res.RepoPath,
+		FuryctlConfPath:   req.FuryctlConfPath,
+		Debug:             req.Debug,
+	})
 	if err != nil {
 		return CreateClusterResponse{}, err
 	}
