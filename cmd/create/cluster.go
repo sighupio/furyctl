@@ -6,6 +6,8 @@ package create
 
 import (
 	"fmt"
+	"github.com/sighupio/furyctl/internal/execx"
+	"github.com/sighupio/furyctl/internal/netx"
 
 	"github.com/spf13/cobra"
 
@@ -27,7 +29,7 @@ func NewClusterCmd(version string) *cobra.Command {
 			vpnAutoConnect := cobrax.Flag[bool](cmd, "vpn-auto-connect").(bool)
 			dryRun := cobrax.Flag[bool](cmd, "dry-run").(bool)
 
-			cc := app.NewCreateCluster()
+			cc := app.NewCreateCluster(netx.NewGoGetterClient(), execx.NewStdExecutor())
 
 			res, err := cc.Execute(app.CreateClusterRequest{
 				FuryctlConfPath:   furyctlPath,
