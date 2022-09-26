@@ -6,6 +6,8 @@ package eks
 
 import (
 	"errors"
+	"github.com/sighupio/fury-distribution/pkg/schemas"
+	"github.com/sighupio/furyctl/internal/yaml"
 
 	"github.com/sighupio/furyctl/internal/distribution"
 )
@@ -25,9 +27,15 @@ func NewClusterCreator(
 ) (ClusterCreator, error) {
 	switch apiVersion {
 	case "kfd.sighup.io/v1alpha2":
+		furyFile, err := yaml.FromFileV3[schemas.EksclusterKfdV1Alpha2Json](configPath)
+		if err != nil {
+			return nil, err
+		}
+
 		return &V1alpha2{
 			Phase:          phase,
 			KfdManifest:    kfdManifest,
+			FuryFile:       furyFile,
 			ConfigPath:     configPath,
 			VpnAutoConnect: vpnAutoConnect,
 		}, nil
