@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/go-playground/validator/v10"
 	"github.com/sirupsen/logrus"
 
 	"github.com/sighupio/fury-distribution/pkg/config"
@@ -40,14 +41,16 @@ type downloadResult struct {
 
 func NewDownloader(client netx.Client, debug bool) *Downloader {
 	return &Downloader{
-		client: client,
-		debug:  debug,
+		client:   client,
+		validate: config.NewValidator(),
+		debug:    debug,
 	}
 }
 
 type Downloader struct {
-	client netx.Client
-	debug  bool
+	client   netx.Client
+	validate *validator.Validate
+	debug    bool
 }
 
 func (d *Downloader) Download(
@@ -57,6 +60,10 @@ func (d *Downloader) Download(
 ) (downloadResult, error) {
 	minimalConf, err := yaml.FromFileV3[config.Furyctl](furyctlConfPath)
 	if err != nil {
+		return downloadResult{}, err
+	}
+
+	if err := d.validate.Struct(minimalConf); err != nil {
 		return downloadResult{}, err
 	}
 
@@ -96,6 +103,10 @@ func (d *Downloader) Download(
 	kfdPath := filepath.Join(dst, "kfd.yaml")
 	kfdManifest, err := yaml.FromFileV3[config.KFD](kfdPath)
 	if err != nil {
+		return downloadResult{}, err
+	}
+
+	if err := d.validate.Struct(kfdManifest); err != nil {
 		return downloadResult{}, err
 	}
 
