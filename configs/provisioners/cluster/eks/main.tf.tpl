@@ -4,6 +4,10 @@
  * license that can be found in the LICENSE file.
  */
 
+terraform {
+  experiments     = [module_variable_optional_attrs]
+}
+
 module "fury" {
   source = "github.com/sighupio/fury-eks-installer//modules/eks?ref={{ .kubernetes.eks.installer }}"
 
