@@ -26,7 +26,7 @@ require (
 	github.com/google/go-cmp v0.5.8
 	github.com/go-playground/validator/v10 v10.11.1
 	github.com/hashicorp/terraform-json v0.10.0
-	github.com/sighupio/fury-distribution v1.23.3-0.20220927123927-46467e2f03ea
+	github.com/sighupio/fury-distribution v1.23.3-0.20220927125444-6ce8e5794f09
 	gopkg.in/yaml.v3 v3.0.1
 )
 

@@ -46,10 +46,29 @@ var (
 	}
 
 	correctKFDConf = config.KFD{
-		Version:        "v1.24.7",
-		Modules:        config.KFDModules{},
-		Kubernetes:     config.KFDKubernetes{},
-		FuryctlSchemas: config.KFDSchemas{},
+		Version: "v1.24.7",
+		Modules: config.KFDModules{
+			Auth:       "v0.0.1",
+			Dr:         "v1.9.3",
+			Ingress:    "v1.12.2",
+			Logging:    "v2.0.3",
+			Monitoring: "v1.14.2",
+			Opa:        "v1.7.0",
+		},
+		Kubernetes: config.KFDKubernetes{
+			Eks: config.KFDProvider{
+				Version:   "1.23",
+				Installer: "v1.9.1",
+			},
+		},
+		FuryctlSchemas: config.KFDSchemas{
+			Eks: []config.KFDSchema{
+				{
+					ApiVersion: "kfd.sighup.io/v1alpha2",
+					Kind:       "EKSCluster",
+				},
+			},
+		},
 		Tools: config.KFDTools{
 			Ansible:   "2.11.2",
 			Furyagent: "0.3.0",
@@ -59,11 +78,30 @@ var (
 		},
 	}
 
-	wrongKFDConf = config.KFD{
-		Version:        "v1.24.7",
-		Modules:        config.KFDModules{},
-		Kubernetes:     config.KFDKubernetes{},
-		FuryctlSchemas: config.KFDSchemas{},
+	wrongToolsKFDConf = config.KFD{
+		Version: "v1.24.7",
+		Modules: config.KFDModules{
+			Auth:       "v0.0.1",
+			Dr:         "v1.9.3",
+			Ingress:    "v1.12.2",
+			Logging:    "v2.0.3",
+			Monitoring: "v1.14.2",
+			Opa:        "v1.7.0",
+		},
+		Kubernetes: config.KFDKubernetes{
+			Eks: config.KFDProvider{
+				Version:   "1.23",
+				Installer: "v1.9.1",
+			},
+		},
+		FuryctlSchemas: config.KFDSchemas{
+			Eks: []config.KFDSchema{
+				{
+					ApiVersion: "kfd.sighup.io/v1alpha2",
+					Kind:       "EKSCluster",
+				},
+			},
+		},
 		Tools: config.KFDTools{
 			Ansible:   "2.10.0",
 			Furyagent: "0.0.2",

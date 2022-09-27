@@ -54,7 +54,7 @@ func TestValidateDependencies(t *testing.T) {
 			desc:     "has wrong tools",
 			client:   netx.NewGoGetterClient(),
 			executor: execx.NewFakeExecutor(),
-			kfdConf:  wrongKFDConf,
+			kfdConf:  wrongToolsKFDConf,
 			envs: map[string]string{
 				"AWS_ACCESS_KEY_ID":     "test",
 				"AWS_SECRET_ACCESS_KEY": "test",
