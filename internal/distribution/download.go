@@ -33,7 +33,7 @@ var (
 	ErrYamlUnmarshalFile   = errors.New("error unmarshaling yaml file")
 )
 
-type downloadResult struct {
+type DownloadResult struct {
 	RepoPath       string
 	MinimalConf    config.Furyctl
 	DistroManifest config.KFD
@@ -57,14 +57,14 @@ func (d *Downloader) Download(
 	furyctlBinVersion string,
 	distroLocation string,
 	furyctlConfPath string,
-) (downloadResult, error) {
+) (DownloadResult, error) {
 	minimalConf, err := yaml.FromFileV3[config.Furyctl](furyctlConfPath)
 	if err != nil {
-		return downloadResult{}, err
+		return DownloadResult{}, err
 	}
 
 	if err := d.validate.Struct(minimalConf); err != nil {
-		return downloadResult{}, err
+		return DownloadResult{}, err
 	}
 
 	furyctlConfVersion := minimalConf.Spec.DistributionVersion
@@ -85,7 +85,7 @@ func (d *Downloader) Download(
 
 	baseDst, err := os.MkdirTemp("", "furyctl-")
 	if err != nil {
-		return downloadResult{}, fmt.Errorf("%w: %v", ErrCreatingTempDir, err)
+		return DownloadResult{}, fmt.Errorf("%w: %v", ErrCreatingTempDir, err)
 	}
 	src := distroLocation
 	dst := filepath.Join(baseDst, "data")
@@ -93,7 +93,7 @@ func (d *Downloader) Download(
 	logrus.Debugf("Downloading '%s' in '%s'", src, dst)
 
 	if err := netx.NewGoGetterClient().Download(src, dst); err != nil {
-		return downloadResult{}, fmt.Errorf("%w '%s': %v", ErrDownloadingFolder, src, err)
+		return DownloadResult{}, fmt.Errorf("%w '%s': %v", ErrDownloadingFolder, src, err)
 	}
 
 	if !d.debug {
@@ -103,22 +103,22 @@ func (d *Downloader) Download(
 	kfdPath := filepath.Join(dst, "kfd.yaml")
 	kfdManifest, err := yaml.FromFileV3[config.KFD](kfdPath)
 	if err != nil {
-		return downloadResult{}, err
+		return DownloadResult{}, err
 	}
 
 	if err := d.validate.Struct(kfdManifest); err != nil {
-		return downloadResult{}, err
+		return DownloadResult{}, err
 	}
 
 	if !semver.SamePatchStr(furyctlConfVersion, kfdManifest.Version) {
-		return downloadResult{}, fmt.Errorf(
+		return DownloadResult{}, fmt.Errorf(
 			"versions mismatch: furyctl.yaml = '%s', furyctl binary = '%s'",
 			furyctlConfVersion,
 			kfdManifest.Version,
 		)
 	}
 
-	return downloadResult{
+	return DownloadResult{
 		RepoPath:       dst,
 		MinimalConf:    minimalConf,
 		DistroManifest: kfdManifest,
