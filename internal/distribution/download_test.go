@@ -9,9 +9,9 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/sighupio/fury-distribution/pkg/config"
 	"github.com/sighupio/furyctl/internal/distribution"
 	"github.com/sighupio/furyctl/internal/netx"
-	"github.com/sighupio/furyctl/internal/semver"
 )
 
 func Test_Downloader_Download(t *testing.T) {
@@ -71,10 +71,10 @@ func Test_Downloader_Download(t *testing.T) {
 			if res.MinimalConf.ApiVersion != tC.wantApiVer {
 				t.Errorf("ApiVersion: want = %s, got = %s", tC.wantApiVer, res.MinimalConf.ApiVersion)
 			}
-			if res.MinimalConf.Kind.String() != tC.wantKind {
+			if res.MinimalConf.Kind != tC.wantKind {
 				t.Errorf("Kind: want = %s, got = %s", tC.wantKind, res.MinimalConf.Kind)
 			}
-			if res.MinimalConf.Spec.DistributionVersion != semver.Version(tC.wantDistroVer) {
+			if res.MinimalConf.Spec.DistributionVersion != tC.wantDistroVer {
 				t.Errorf(
 					"DistributionVersion: want = %s, got = %s",
 					tC.wantDistroVer,
@@ -82,7 +82,7 @@ func Test_Downloader_Download(t *testing.T) {
 				)
 			}
 
-			if res.DistroManifest.Version != semver.Version(tC.wantDistroVer) {
+			if res.DistroManifest.Version != tC.wantDistroVer {
 				t.Errorf("ApiVersion: want = %s, got = %s", tC.wantDistroVer, res.DistroManifest.Version)
 			}
 		})
@@ -93,18 +93,18 @@ func TestGetSchemaPath(t *testing.T) {
 	tests := []struct {
 		name     string
 		basePath string
-		conf     distribution.FuryctlConfig
+		conf     config.Furyctl
 		want     string
 		wantErr  error
 	}{
 		{
 			name:     "test with base path",
 			basePath: "testpath",
-			conf: distribution.FuryctlConfig{
+			conf: config.Furyctl{
 				ApiVersion: "kfd.sighup.io/v1alpha2",
 				Kind:       "EKSCluster",
 				Spec: struct {
-					DistributionVersion semver.Version `yaml:"distributionVersion"`
+					DistributionVersion string `yaml:"distributionVersion"`
 				}{},
 			},
 			want: fmt.Sprintf("%s", filepath.Join(
@@ -117,11 +117,11 @@ func TestGetSchemaPath(t *testing.T) {
 		{
 			name:     "test without base path",
 			basePath: "",
-			conf: distribution.FuryctlConfig{
+			conf: config.Furyctl{
 				ApiVersion: "kfd.sighup.io/v1alpha2",
 				Kind:       "EKSCluster",
 				Spec: struct {
-					DistributionVersion semver.Version `yaml:"distributionVersion"`
+					DistributionVersion string `yaml:"distributionVersion"`
 				}{},
 			},
 			want:    fmt.Sprintf("%s", filepath.Join("schemas", "ekscluster-kfd-v1alpha2.json")),
@@ -130,11 +130,11 @@ func TestGetSchemaPath(t *testing.T) {
 		{
 			name:     "test with invalid apiVersion",
 			basePath: "",
-			conf: distribution.FuryctlConfig{
+			conf: config.Furyctl{
 				ApiVersion: "",
 				Kind:       "EKSCluster",
 				Spec: struct {
-					DistributionVersion semver.Version `yaml:"distributionVersion"`
+					DistributionVersion string `yaml:"distributionVersion"`
 				}{},
 			},
 			want:    "",
@@ -143,11 +143,11 @@ func TestGetSchemaPath(t *testing.T) {
 		{
 			name:     "test with invalid kind",
 			basePath: "",
-			conf: distribution.FuryctlConfig{
+			conf: config.Furyctl{
 				ApiVersion: "kfd.sighup.io/v1alpha2",
 				Kind:       "",
 				Spec: struct {
-					DistributionVersion semver.Version `yaml:"distributionVersion"`
+					DistributionVersion string `yaml:"distributionVersion"`
 				}{},
 			},
 			want:    "",
