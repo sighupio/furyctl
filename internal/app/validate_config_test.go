@@ -12,6 +12,7 @@ import (
 	"testing"
 
 	"github.com/santhosh-tekuri/jsonschema"
+
 	"github.com/sighupio/furyctl/internal/app"
 	"github.com/sighupio/furyctl/internal/distribution"
 	"github.com/sighupio/furyctl/internal/netx"
