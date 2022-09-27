@@ -11,7 +11,7 @@ import (
 	"runtime"
 	"testing"
 
-	"github.com/sighupio/furyctl/internal/tools"
+	"github.com/sighupio/furyctl/internal/dependencies/tools"
 )
 
 func Test_Kustomize_SrcPath(t *testing.T) {
