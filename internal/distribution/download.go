@@ -144,6 +144,6 @@ func GetSchemaPath(basePath string, conf config.Furyctl) (string, error) {
 	return filepath.Join(basePath, "schemas", filename), nil
 }
 
-func GetDefaultPath(basePath string) string {
+func GetDefaultsPath(basePath string) string {
 	return filepath.Join(basePath, "furyctl-defaults.yaml")
 }

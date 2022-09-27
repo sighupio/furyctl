@@ -7,7 +7,7 @@ package tools_test
 import (
 	"testing"
 
-	"github.com/sighupio/furyctl/internal/tools"
+	"github.com/sighupio/furyctl/internal/dependencies/tools"
 )
 
 func Test_Factory_Create(t *testing.T) {

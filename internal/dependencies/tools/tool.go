@@ -4,9 +4,14 @@
 
 package tools
 
+import "github.com/sighupio/furyctl/internal/execx"
+
 type Tool interface {
 	SrcPath() string
 	Rename(basePath string) error
+	CheckBinVersion(basePath string) error
+	SupportsDownload() bool
+	SetExecutor(executor execx.Executor)
 }
 
 func NewFactory() *Factory {
@@ -16,8 +21,11 @@ func NewFactory() *Factory {
 type Factory struct{}
 
 func (f *Factory) Create(name, version string) Tool {
+	if name == "ansible" {
+		return NewAnsible(version)
+	}
 	if name == "furyagent" {
-		return NewFuryAgent(version)
+		return NewFuryagent(version)
 	}
 	if name == "kubectl" {
 		return NewKubectl(version)
