@@ -13,10 +13,11 @@ import (
 func NewCreateCommand(version string) *cobra.Command {
 	createCmd := &cobra.Command{
 		Use:   "create",
-		Short: "Create a cluster",
+		Short: "Create a cluster or a config file",
 	}
 
 	createCmd.AddCommand(create.NewClusterCmd(version))
+	createCmd.AddCommand(create.NewConfigCmd())
 
 	return createCmd
 }
