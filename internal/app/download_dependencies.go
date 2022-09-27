@@ -49,11 +49,11 @@ func (dd *DownloadDependencies) Execute(req DownloadDependenciesRequest) (Downlo
 
 	depsdl := dependencies.NewDownloader(dd.client, dd.basePath)
 
-	errs, ut := depsdl.DownloadAll(dres.DistroManifest)
+	errs, uts := depsdl.DownloadAll(dres.DistroManifest)
 
 	return DownloadDependenciesResponse{
 		DepsErrors: errs,
-		UnsupTools: ut,
+		UnsupTools: uts,
 		RepoPath:   dres.RepoPath,
 	}, nil
 }
