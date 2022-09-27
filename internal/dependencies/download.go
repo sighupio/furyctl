@@ -3,6 +3,7 @@ package dependencies
 import (
 	"errors"
 	"fmt"
+	"os"
 	"path/filepath"
 	"reflect"
 	"strings"
@@ -125,6 +126,11 @@ func (dd *Downloader) DownloadTools(tools config.KFDTools) ([]string, error) {
 		}
 
 		if err := tool.Rename(dst); err != nil {
+			return unsupportedTools, err
+		}
+
+		err := os.Chmod(filepath.Join(dst, name), 0o755)
+		if err != nil {
 			return unsupportedTools, err
 		}
 	}

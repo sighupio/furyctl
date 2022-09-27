@@ -30,6 +30,8 @@ func (tv *Validator) Validate(kfdManifest config.KFD, binPath string) []error {
 
 	tls := reflect.ValueOf(kfdManifest.Tools)
 	for i := 0; i < tls.NumField(); i++ {
+		var err error
+
 		name := strings.ToLower(tls.Type().Field(i).Name)
 		version := tls.Field(i).Interface().(string)
 
@@ -40,10 +42,15 @@ func (tv *Validator) Validate(kfdManifest config.KFD, binPath string) []error {
 		tool := tv.toolFactory.Create(name, version)
 		tool.SetExecutor(tv.executor)
 
-		if err := tool.CheckBinVersion(binPath); err != nil {
-			errs = append(errs, err)
+		if tool.SupportsDownload() {
+			err = tool.CheckBinVersion(binPath)
+		} else {
+			err = tool.CheckBinVersion("")
 		}
 
+		if err != nil {
+			errs = append(errs, err)
+		}
 	}
 
 	return errs
