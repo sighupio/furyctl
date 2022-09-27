@@ -6,7 +6,9 @@ package eks
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
+	"github.com/sighupio/fury-distribution/pkg/schema"
 	"os"
 	"os/exec"
 	"path"
@@ -81,7 +83,7 @@ func (v *V1alpha2) Infrastructure(dryRun bool) error {
 		return err
 	}
 
-	err = v.CreateTfVars(infra.Path)
+	err = v.CreateInfraTfVars(infra.Path)
 	if err != nil {
 		return err
 	}
@@ -131,6 +133,60 @@ func (v *V1alpha2) Infrastructure(dryRun bool) error {
 }
 
 func (v *V1alpha2) Kubernetes(dryRun bool) error {
+	timestamp := time.Now().Unix()
+
+	kube, err := NewKubernetes()
+	if err != nil {
+		return err
+	}
+
+	err = kube.CreateFolder()
+	if err != nil {
+		return err
+	}
+
+	err = kube.CopyFromTemplate(v.KfdManifest)
+	if err != nil {
+		return err
+	}
+
+	err = kube.CreateFolderStructure()
+	if err != nil {
+		return err
+	}
+
+	err = v.CreateKubernetesTfVars(kube.Path)
+	if err != nil {
+		return err
+	}
+
+	err = kube.TerraformInit()
+	if err != nil {
+		return err
+	}
+
+	err = kube.TerraformPlan(timestamp)
+	if err != nil {
+		return err
+	}
+
+	if !dryRun {
+		err = kube.TerraformApply(timestamp)
+		if err != nil {
+			return err
+		}
+
+		err = kube.CreateKubeconfig()
+		if err != nil {
+			return err
+		}
+
+		err = kube.CreateKubeconfigEnv()
+		if err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 
@@ -138,7 +194,7 @@ func (v *V1alpha2) Distribution(dryRun bool) error {
 	return nil
 }
 
-func (v *V1alpha2) CreateTfVars(infraPath string) error {
+func (v *V1alpha2) CreateInfraTfVars(infraPath string) error {
 	var buffer bytes.Buffer
 
 	buffer.WriteString(fmt.Sprintf("name = \"%v\"\n", v.FuryFile.Metadata.Name))
@@ -258,6 +314,195 @@ func (v *V1alpha2) CreateTfVars(infraPath string) error {
 	}
 
 	targetTfVars := path.Join(infraPath, "terraform", "main.auto.tfvars")
+
+	return os.WriteFile(targetTfVars, buffer.Bytes(), 0o600)
+}
+
+func (v *V1alpha2) CreateKubernetesTfVars(kubePath string) error {
+	var buffer bytes.Buffer
+
+	buffer.WriteString(fmt.Sprintf("cluster_name = \"%v\"\n", v.FuryFile.Metadata.Name))
+	buffer.WriteString(fmt.Sprintf("cluster_version = \"%v\"\n", v.KfdManifest.Kubernetes.Eks.Version))
+	buffer.WriteString(fmt.Sprintf("network = \"%v\"\n", v.FuryFile.Spec.Kubernetes.VpcId))
+
+	subnetIds := make([]string, len(v.FuryFile.Spec.Kubernetes.SubnetIds))
+
+	for i, subnetId := range v.FuryFile.Spec.Kubernetes.SubnetIds {
+		subnetIds[i] = fmt.Sprintf("\"%v\"", subnetId)
+	}
+
+	buffer.WriteString(fmt.Sprintf("subnetworks = [%v]\n", strings.Join(subnetIds, ",")))
+
+	dmzCidrRange := make([]string, len(v.FuryFile.Spec.Kubernetes.ApiServerEndpointAccess.AllowedCidrs))
+
+	for i, cidr := range v.FuryFile.Spec.Kubernetes.ApiServerEndpointAccess.AllowedCidrs {
+		dmzCidrRange[i] = fmt.Sprintf("\"%v\"", cidr)
+	}
+
+	buffer.WriteString(fmt.Sprintf("dmz_cidr_range = [%v]\n", strings.Join(dmzCidrRange, ",")))
+	buffer.WriteString(fmt.Sprintf("ssh_public_key = \"%v\"\n", v.FuryFile.Spec.Kubernetes.NodeAllowedSshPublicKey))
+	if v.FuryFile.Spec.Tags != nil && len(v.FuryFile.Spec.Tags) > 0 {
+		var tags []byte
+		tags, err := json.Marshal(v.FuryFile.Spec.Tags)
+		if err != nil {
+			return err
+		}
+		buffer.WriteString(fmt.Sprintf("tags = %v\n", string(tags)))
+	}
+
+	if len(v.FuryFile.Spec.Kubernetes.AwsAuth.AdditionalAccounts) > 0 {
+		buffer.WriteString(
+			fmt.Sprintf(
+				"eks_map_accounts = [\"%v\"]\n",
+				strings.Join(v.FuryFile.Spec.Kubernetes.AwsAuth.AdditionalAccounts, "\",\""),
+			),
+		)
+	}
+
+	if len(v.FuryFile.Spec.Kubernetes.AwsAuth.Users) > 0 {
+		buffer.WriteString("eks_map_users = [\n")
+		for _, account := range v.FuryFile.Spec.Kubernetes.AwsAuth.Users {
+			buffer.WriteString(
+				fmt.Sprintf(
+					`{
+						groups = ["%v"]
+						username = "%v"
+						userarn = "%v"
+					},`,
+					strings.Join(account.Groups, "\",\""), account.Username, account.Userarn,
+				),
+			)
+		}
+		buffer.WriteString("]\n")
+
+	}
+
+	if len(v.FuryFile.Spec.Kubernetes.AwsAuth.Roles) > 0 {
+		buffer.WriteString("eks_map_roles = [\n")
+		for _, account := range v.FuryFile.Spec.Kubernetes.AwsAuth.Roles {
+			buffer.WriteString(
+				fmt.Sprintf(
+					`{
+						groups = ["%v"]
+						username = "%v"
+						rolearn = "%v"
+					},`,
+					strings.Join(account.Groups, "\",\""), account.Username, account.Rolearn,
+				),
+			)
+		}
+		buffer.WriteString("]\n")
+	}
+
+	if len(v.FuryFile.Spec.Kubernetes.NodePools) > 0 {
+		buffer.WriteString("node_pools = [\n")
+		for _, np := range v.FuryFile.Spec.Kubernetes.NodePools {
+			buffer.WriteString("{\n")
+			buffer.WriteString(fmt.Sprintf("name = \"%v\"\n", np.Name))
+			buffer.WriteString("version = null\n")
+			buffer.WriteString(fmt.Sprintf("spot_instance = %v\n", np.Instance.Spot))
+			buffer.WriteString(fmt.Sprintf("min_size = %v\n", np.Size.Min))
+			buffer.WriteString(fmt.Sprintf("max_size = %v\n", np.Size.Max))
+			buffer.WriteString(fmt.Sprintf("instance_type = \"%v\"\n", np.Instance.Type))
+
+			if len(np.AttachedTargetGroups) > 0 {
+				attachedTargetGroups := make([]string, len(np.AttachedTargetGroups))
+
+				for i, tg := range np.AttachedTargetGroups {
+					attachedTargetGroups[i] = fmt.Sprintf("\"%v\"", tg)
+				}
+
+				buffer.WriteString(
+					fmt.Sprintf(
+						"eks_target_group_arns = [%v]\n",
+						strings.Join(attachedTargetGroups, ","),
+					))
+			}
+
+			buffer.WriteString(fmt.Sprintf("volume_size = %v\n", np.Instance.VolumeSize))
+
+			if len(np.AdditionalFirewallRules) > 0 {
+				buffer.WriteString("additional_firewall_rules = [\n")
+				for _, fwRule := range np.AdditionalFirewallRules {
+					fwRuleTags := "{}"
+					if len(fwRule.Tags) > 0 {
+						var tags []byte
+						tags, err := json.Marshal(fwRule.Tags)
+						if err != nil {
+							return err
+						}
+						fwRuleTags = string(tags)
+					}
+
+					buffer.WriteString(
+						fmt.Sprintf(
+							`{
+								name = "%v"
+								direction = "%v"
+								cidr_block = "%v"
+								protocol = "%v"
+								ports = "%v"
+								tags = %v
+							},`,
+							fwRule.Name,
+							fwRule.Type,
+							fwRule.CidrBlocks,
+							fwRule.Protocol,
+							fwRule.Ports,
+							fwRuleTags,
+						),
+					)
+				}
+				buffer.WriteString("]\n")
+			} else {
+				buffer.WriteString("additional_firewall_rules = []\n")
+			}
+
+			if len(np.SubnetIds) > 0 {
+				npSubNetIds := make([]string, len(np.SubnetIds))
+
+				for i, subnetId := range np.SubnetIds {
+					npSubNetIds[i] = fmt.Sprintf("\"%v\"", subnetId)
+				}
+
+				buffer.WriteString(fmt.Sprintf("subnetworks = [%v]\n", strings.Join(npSubNetIds, ",")))
+			} else {
+				buffer.WriteString("subnetworks = null\n")
+			}
+			if len(np.Labels) > 0 {
+				var labels []byte
+				labels, err := json.Marshal(np.Labels)
+				if err != nil {
+					return err
+				}
+				buffer.WriteString(fmt.Sprintf("labels = %v\n", string(labels)))
+			} else {
+				buffer.WriteString("labels = {}\n")
+			}
+
+			if len(np.Taints) > 0 {
+				buffer.WriteString(fmt.Sprintf("taints = [\"%v\"]\n", strings.Join(np.Taints, "\",\"")))
+			} else {
+				buffer.WriteString("taints = []\n")
+			}
+
+			if len(np.Tags) > 0 {
+				var tags []byte
+				tags, err := json.Marshal(np.Tags)
+				if err != nil {
+					return err
+				}
+				buffer.WriteString(fmt.Sprintf("tags = %v\n", string(tags)))
+			} else {
+				buffer.WriteString("tags = {}\n")
+			}
+
+			buffer.WriteString("},\n")
+		}
+		buffer.WriteString("]\n")
+	}
+
+	targetTfVars := path.Join(kubePath, "terraform", "main.auto.tfvars")
 
 	return os.WriteFile(targetTfVars, buffer.Bytes(), 0o600)
 }
