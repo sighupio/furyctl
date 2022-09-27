@@ -8,7 +8,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"github.com/sighupio/fury-distribution/pkg/schema"
 	"os"
 	"os/exec"
 	"path"

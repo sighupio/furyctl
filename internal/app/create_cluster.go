@@ -7,6 +7,7 @@ package app
 import (
 	"errors"
 	"fmt"
+	"os"
 	"path/filepath"
 
 	"github.com/sighupio/furyctl/internal/config"
@@ -52,15 +53,16 @@ func (v CreateClusterResponse) HasErrors() bool {
 }
 
 func (h *CreateCluster) Execute(req CreateClusterRequest) (CreateClusterResponse, error) {
-	// Determine the vendor path
-	vendorPath, err := filepath.Abs("./vendor")
+	basePath, err := os.Getwd()
 	if err != nil {
 		return CreateClusterResponse{}, err
 	}
 
+	vendorPath := filepath.Join(basePath, "vendor")
+
 	// Init downloaders
 	distrodl := distribution.NewDownloader(h.client, req.Debug)
-	depsdl := dependencies.NewDownloader(h.client, vendorPath)
+	depsdl := dependencies.NewDownloader(h.client, basePath)
 
 	// Download the distribution
 	res, err := distrodl.Download(req.FuryctlBinVersion, req.DistroLocation, req.FuryctlConfPath)
@@ -112,7 +114,9 @@ func (h *CreateCluster) validateDependencies(res distribution.DownloadResult, ve
 	toolsValidator := tools.NewValidator(h.executor)
 	envVarsValidator := envvars.NewValidator()
 
-	if errs := toolsValidator.Validate(res.DistroManifest, vendorPath); len(errs) > 0 {
+	binPath := filepath.Join(vendorPath, "bin")
+
+	if errs := toolsValidator.Validate(res.DistroManifest, binPath); len(errs) > 0 {
 		return fmt.Errorf("errors validating tools: %v", errs)
 	}
 
