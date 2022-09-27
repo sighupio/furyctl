@@ -103,9 +103,7 @@ func TestGetSchemaPath(t *testing.T) {
 			conf: config.Furyctl{
 				ApiVersion: "kfd.sighup.io/v1alpha2",
 				Kind:       "EKSCluster",
-				Spec: struct {
-					DistributionVersion string `yaml:"distributionVersion"`
-				}{},
+				Spec:       config.FuryctlSpec{},
 			},
 			want: fmt.Sprintf("%s", filepath.Join(
 				"testpath",
@@ -120,9 +118,7 @@ func TestGetSchemaPath(t *testing.T) {
 			conf: config.Furyctl{
 				ApiVersion: "kfd.sighup.io/v1alpha2",
 				Kind:       "EKSCluster",
-				Spec: struct {
-					DistributionVersion string `yaml:"distributionVersion"`
-				}{},
+				Spec:       config.FuryctlSpec{},
 			},
 			want:    fmt.Sprintf("%s", filepath.Join("schemas", "ekscluster-kfd-v1alpha2.json")),
 			wantErr: nil,
@@ -133,9 +129,7 @@ func TestGetSchemaPath(t *testing.T) {
 			conf: config.Furyctl{
 				ApiVersion: "",
 				Kind:       "EKSCluster",
-				Spec: struct {
-					DistributionVersion string `yaml:"distributionVersion"`
-				}{},
+				Spec:       config.FuryctlSpec{},
 			},
 			want:    "",
 			wantErr: fmt.Errorf("invalid apiVersion: "),
@@ -146,9 +140,7 @@ func TestGetSchemaPath(t *testing.T) {
 			conf: config.Furyctl{
 				ApiVersion: "kfd.sighup.io/v1alpha2",
 				Kind:       "",
-				Spec: struct {
-					DistributionVersion string `yaml:"distributionVersion"`
-				}{},
+				Spec:       config.FuryctlSpec{},
 			},
 			want:    "",
 			wantErr: fmt.Errorf("kind is empty"),
