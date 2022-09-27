@@ -11,6 +11,7 @@ import (
 	"reflect"
 	"strings"
 
+	"github.com/sighupio/fury-distribution/pkg/config"
 	"github.com/sighupio/furyctl/internal/distribution"
 	"github.com/sighupio/furyctl/internal/netx"
 	"github.com/sighupio/furyctl/internal/tools"
@@ -80,7 +81,7 @@ func (dd *DownloadDependencies) Execute(req DownloadDependenciesRequest) (Downlo
 	}, nil
 }
 
-func (dd *DownloadDependencies) DownloadModules(modules distribution.ManifestModules) error {
+func (dd *DownloadDependencies) DownloadModules(modules config.KFDModules) error {
 	newPrefix := "https://github.com/sighupio/kubernetes-fury"
 	oldPrefix := "https://github.com/sighupio/fury-kubernetes"
 
@@ -119,12 +120,12 @@ func (dd *DownloadDependencies) DownloadModules(modules distribution.ManifestMod
 	return nil
 }
 
-func (dd *DownloadDependencies) DownloadInstallers(installers distribution.ManifestKubernetes) error {
+func (dd *DownloadDependencies) DownloadInstallers(installers config.KFDKubernetes) error {
 	insts := reflect.ValueOf(installers)
 
 	for i := 0; i < insts.NumField(); i++ {
 		name := strings.ToLower(insts.Type().Field(i).Name)
-		version := insts.Field(i).Interface().(distribution.ManifestProvider).Installer
+		version := insts.Field(i).Interface().(config.KFDProvider).Installer
 
 		src := fmt.Sprintf("git::https://github.com/sighupio/fury-%s-installer?ref=%s", name, version)
 
@@ -136,7 +137,7 @@ func (dd *DownloadDependencies) DownloadInstallers(installers distribution.Manif
 	return nil
 }
 
-func (dd *DownloadDependencies) DownloadTools(tools distribution.ManifestTools) ([]string, error) {
+func (dd *DownloadDependencies) DownloadTools(tools config.KFDTools) ([]string, error) {
 	tls := reflect.ValueOf(tools)
 
 	unsupportedTools := []string{}

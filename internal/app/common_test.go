@@ -10,7 +10,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/sighupio/furyctl/internal/distribution"
+	"github.com/sighupio/fury-distribution/pkg/config"
 	"github.com/sighupio/furyctl/internal/yaml"
 )
 
@@ -45,12 +45,12 @@ var (
 		},
 	}
 
-	correctKFDConf = distribution.Manifest{
+	correctKFDConf = config.KFD{
 		Version:        "v1.24.7",
-		Modules:        distribution.ManifestModules{},
-		Kubernetes:     distribution.ManifestKubernetes{},
-		FuryctlSchemas: distribution.ManifestSchemas{},
-		Tools: distribution.ManifestTools{
+		Modules:        config.KFDModules{},
+		Kubernetes:     config.KFDKubernetes{},
+		FuryctlSchemas: config.KFDSchemas{},
+		Tools: config.KFDTools{
 			Ansible:   "2.11.2",
 			Furyagent: "0.3.0",
 			Kubectl:   "1.21.1",
@@ -59,12 +59,12 @@ var (
 		},
 	}
 
-	wrongKFDConf = distribution.Manifest{
+	wrongKFDConf = config.KFD{
 		Version:        "v1.24.7",
-		Modules:        distribution.ManifestModules{},
-		Kubernetes:     distribution.ManifestKubernetes{},
-		FuryctlSchemas: distribution.ManifestSchemas{},
-		Tools: distribution.ManifestTools{
+		Modules:        config.KFDModules{},
+		Kubernetes:     config.KFDKubernetes{},
+		FuryctlSchemas: config.KFDSchemas{},
+		Tools: config.KFDTools{
 			Ansible:   "2.10.0",
 			Furyagent: "0.0.2",
 			Kubectl:   "1.21.4",
@@ -93,7 +93,7 @@ func rmDirTemp(t *testing.T, dir string) {
 	}
 }
 
-func setupDistroFolder(t *testing.T, furyctlDefaults map[string]any, kfdConf distribution.Manifest) (string, string) {
+func setupDistroFolder(t *testing.T, furyctlDefaults map[string]any, kfdConf config.KFD) (string, string) {
 	t.Helper()
 
 	tmpDir := mkDirTemp(t, "furyctl-validate-test-")

@@ -6,10 +6,10 @@ package eks
 
 import (
 	"errors"
-	"github.com/sighupio/fury-distribution/pkg/schemas"
-	"github.com/sighupio/furyctl/internal/yaml"
 
-	"github.com/sighupio/furyctl/internal/distribution"
+	"github.com/sighupio/fury-distribution/pkg/config"
+	"github.com/sighupio/fury-distribution/pkg/schema"
+	"github.com/sighupio/furyctl/internal/yaml"
 )
 
 var ErrUnsupportedApiVersion = errors.New("unsupported api version")
@@ -21,13 +21,13 @@ type ClusterCreator interface {
 func NewClusterCreator(
 	apiVersion string,
 	phase string,
-	kfdManifest distribution.Manifest,
+	kfdManifest config.KFD,
 	configPath string,
 	vpnAutoConnect bool,
 ) (ClusterCreator, error) {
 	switch apiVersion {
 	case "kfd.sighup.io/v1alpha2":
-		furyFile, err := yaml.FromFileV3[schemas.EksclusterKfdV1Alpha2Json](configPath)
+		furyFile, err := yaml.FromFileV3[schema.EksclusterKfdV1Alpha2](configPath)
 		if err != nil {
 			return nil, err
 		}

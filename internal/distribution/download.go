@@ -13,6 +13,7 @@ import (
 
 	"github.com/sirupsen/logrus"
 
+	"github.com/sighupio/fury-distribution/pkg/config"
 	"github.com/sighupio/furyctl/internal/netx"
 	"github.com/sighupio/furyctl/internal/osx"
 	"github.com/sighupio/furyctl/internal/semver"
@@ -33,8 +34,8 @@ var (
 
 type downloadResult struct {
 	RepoPath       string
-	MinimalConf    FuryctlConfig
-	DistroManifest Manifest
+	MinimalConf    config.Furyctl
+	DistroManifest config.KFD
 }
 
 func NewDownloader(client netx.Client, debug bool) *Downloader {
@@ -54,30 +55,25 @@ func (d *Downloader) Download(
 	distroLocation string,
 	furyctlConfPath string,
 ) (downloadResult, error) {
-	minimalConf, err := yaml.FromFileV3[FuryctlConfig](furyctlConfPath)
+	minimalConf, err := yaml.FromFileV3[config.Furyctl](furyctlConfPath)
 	if err != nil {
 		return downloadResult{}, err
 	}
 
-	furyctlConfSemVer := minimalConf.Spec.DistributionVersion
+	furyctlConfVersion := minimalConf.Spec.DistributionVersion
 
 	if furyctlBinVersion != "unknown" {
-		furyctlBinSemVer, err := semver.NewVersion(fmt.Sprintf("v%s", furyctlBinVersion))
-		if err != nil {
-			return downloadResult{}, err
-		}
-
-		if !semver.SameMinor(furyctlConfSemVer, furyctlBinSemVer) {
+		if !semver.SameMinorStr(furyctlConfVersion, furyctlBinVersion) {
 			logrus.Warnf(
 				"this version of furyctl ('%s') does not support distribution version '%s', results may be inaccurate",
 				furyctlBinVersion,
-				furyctlConfSemVer,
+				furyctlConfVersion,
 			)
 		}
 	}
 
 	if distroLocation == "" {
-		distroLocation = fmt.Sprintf(DefaultBaseUrl, furyctlConfSemVer.String())
+		distroLocation = fmt.Sprintf(DefaultBaseUrl, furyctlConfVersion)
 	}
 
 	baseDst, err := os.MkdirTemp("", "furyctl-")
@@ -98,16 +94,16 @@ func (d *Downloader) Download(
 	}
 
 	kfdPath := filepath.Join(dst, "kfd.yaml")
-	kfdManifest, err := yaml.FromFileV3[Manifest](kfdPath)
+	kfdManifest, err := yaml.FromFileV3[config.KFD](kfdPath)
 	if err != nil {
 		return downloadResult{}, err
 	}
 
-	if !semver.SamePatch(furyctlConfSemVer, kfdManifest.Version) {
+	if !semver.SamePatchStr(furyctlConfVersion, kfdManifest.Version) {
 		return downloadResult{}, fmt.Errorf(
 			"versions mismatch: furyctl.yaml = '%s', furyctl binary = '%s'",
-			furyctlConfSemVer.String(),
-			kfdManifest.Version.String(),
+			furyctlConfVersion,
+			kfdManifest.Version,
 		)
 	}
 
@@ -118,7 +114,7 @@ func (d *Downloader) Download(
 	}, nil
 }
 
-func GetSchemaPath(basePath string, conf FuryctlConfig) (string, error) {
+func GetSchemaPath(basePath string, conf config.Furyctl) (string, error) {
 	avp := strings.Split(conf.ApiVersion, "/")
 
 	if len(avp) < 2 {
@@ -132,7 +128,7 @@ func GetSchemaPath(basePath string, conf FuryctlConfig) (string, error) {
 		return "", fmt.Errorf("kind is empty")
 	}
 
-	filename := fmt.Sprintf("%s-%s-%s.json", strings.ToLower(conf.Kind.String()), ns, ver)
+	filename := fmt.Sprintf("%s-%s-%s.json", strings.ToLower(conf.Kind), ns, ver)
 
 	return filepath.Join(basePath, "schemas", filename), nil
 }
