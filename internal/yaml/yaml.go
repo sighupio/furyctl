@@ -19,9 +19,11 @@ func FromFileV2[T any](path string) (T, error) {
 		return data, err
 	}
 
-	err = v2.Unmarshal(res, &data)
+	if err := v2.Unmarshal(res, &data); err != nil {
+		return data, err
+	}
 
-	return data, err
+	return data, nil
 }
 
 func MarshalV2(in any) ([]byte, error) {
@@ -40,7 +42,7 @@ func FromFileV3[T any](file string) (T, error) {
 		return data, err
 	}
 
-	return data, err
+	return data, nil
 }
 
 func MarshalV3(in any) ([]byte, error) {
