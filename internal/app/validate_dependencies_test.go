@@ -12,8 +12,8 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/sighupio/fury-distribution/pkg/config"
 	"github.com/sighupio/furyctl/internal/app"
-	"github.com/sighupio/furyctl/internal/distribution"
 	"github.com/sighupio/furyctl/internal/execx"
 	"github.com/sighupio/furyctl/internal/netx"
 )
@@ -24,7 +24,7 @@ func TestValidateDependencies(t *testing.T) {
 		client       netx.Client
 		executor     execx.Executor
 		envs         map[string]string
-		kfdConf      distribution.Manifest
+		kfdConf      config.KFD
 		wantErrCount int
 		wantErrVal   any
 		wantErrType  error

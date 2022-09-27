@@ -17,7 +17,7 @@ import (
 
 	tfjson "github.com/hashicorp/terraform-json"
 
-	"github.com/sighupio/furyctl/internal/distribution"
+	"github.com/sighupio/fury-distribution/pkg/config"
 	"github.com/sighupio/furyctl/internal/template"
 	"github.com/sighupio/furyctl/internal/yaml"
 )
@@ -63,7 +63,7 @@ func (i *Infrastructure) CreateFolder() error {
 	return os.Mkdir(i.Path, 0o755)
 }
 
-func (i *Infrastructure) CopyFromTemplate(kfdManifest distribution.Manifest) error {
+func (i *Infrastructure) CopyFromTemplate(kfdManifest config.KFD) error {
 	var config template.Config
 
 	sourceTfDir := path.Join("configs", "provisioners", "bootstrap", "aws")

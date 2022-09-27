@@ -12,6 +12,7 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/sighupio/fury-distribution/pkg/config"
 	"github.com/sighupio/furyctl/internal/distribution"
 	"github.com/sighupio/furyctl/internal/execx"
 	"github.com/sighupio/furyctl/internal/netx"
@@ -73,10 +74,10 @@ func (vd *ValidateDependencies) Execute(req ValidateDependenciesRequest) (Valida
 	return res, nil
 }
 
-func (vd *ValidateDependencies) validateEnvVarsDependencies(kind distribution.Kind) []error {
+func (vd *ValidateDependencies) validateEnvVarsDependencies(kind string) []error {
 	errs := make([]error, 0)
 
-	if kind.Equals(distribution.EKSCluster) {
+	if kind == "EKSCluster" {
 		if os.Getenv("AWS_ACCESS_KEY_ID") == "" {
 			errs = append(errs, fmt.Errorf("%w: AWS_ACCESS_KEY_ID", ErrMissingEnvVar))
 		}
@@ -97,7 +98,7 @@ func (vd *ValidateDependencies) validateEnvVarsDependencies(kind distribution.Ki
 	return nil
 }
 
-func (vd *ValidateDependencies) validateSystemDependencies(kfdManifest distribution.Manifest, binPath string) []error {
+func (vd *ValidateDependencies) validateSystemDependencies(kfdManifest config.KFD, binPath string) []error {
 	errs := make([]error, 0)
 
 	// binPath is empty here because ansible is not handled by vendor dependencies

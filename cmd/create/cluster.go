@@ -6,13 +6,13 @@ package create
 
 import (
 	"fmt"
-	"github.com/sighupio/furyctl/internal/execx"
-	"github.com/sighupio/furyctl/internal/netx"
 
 	"github.com/spf13/cobra"
 
 	"github.com/sighupio/furyctl/internal/app"
 	"github.com/sighupio/furyctl/internal/cobrax"
+	"github.com/sighupio/furyctl/internal/execx"
+	"github.com/sighupio/furyctl/internal/netx"
 )
 
 var ErrClusterCreationFailed = fmt.Errorf("cluster creation failed")
@@ -21,7 +21,7 @@ func NewClusterCmd(version string) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "cluster",
 		Short: "Creates a battle-tested Kubernetes cluster",
-		RunE: func(cmd *cobra.Command, args []string) (err error) {
+		RunE: func(cmd *cobra.Command, _ []string) (err error) {
 			debug := cobrax.Flag[bool](cmd, "debug").(bool)
 			furyctlPath := cobrax.Flag[string](cmd, "config").(string)
 			distroLocation := cobrax.Flag[string](cmd, "distro-location").(string)

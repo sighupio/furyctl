@@ -6,12 +6,12 @@ package app
 
 import (
 	"errors"
-	"github.com/sighupio/furyctl/internal/netx"
 	"path/filepath"
 
 	"github.com/sighupio/furyctl/internal/distribution"
 	"github.com/sighupio/furyctl/internal/eks"
 	"github.com/sighupio/furyctl/internal/execx"
+	"github.com/sighupio/furyctl/internal/netx"
 )
 
 var ErrUnsupportedDistributionKind = errors.New("unsupported distribution kind")
@@ -95,7 +95,7 @@ func (h *CreateCluster) Execute(req CreateClusterRequest) (CreateClusterResponse
 		return CreateClusterResponse{}, err
 	}
 
-	if res.MinimalConf.Kind.Equals(distribution.EKSCluster) {
+	if res.MinimalConf.Kind == "EKSCluster" {
 		eksCluster, err := eks.NewClusterCreator(
 			res.MinimalConf.ApiVersion,
 			req.Phase,

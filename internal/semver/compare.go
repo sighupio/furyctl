@@ -18,6 +18,7 @@ var (
 	ErrInvalidSemver = fmt.Errorf("invalid semantic version")
 )
 
+// NewVersion takes a string and returns a Version
 func NewVersion(v string) (Version, error) {
 	if !isValid(v) {
 		return "", fmt.Errorf("%w: %s", ErrInvalidSemver, v)
@@ -32,7 +33,12 @@ func (s Version) String() string {
 	return string(s)
 }
 
-// SamePatch takes two versions and tell if they are part of the same patch
+// SamePatchStr takes two version strings and tell if they match down to patch level
+func SamePatchStr(a, b string) bool {
+	return SamePatch(Version(a), Version(b))
+}
+
+// SamePatchStr takes two versions and tell if they match down to patch level
 func SamePatch(a, b Version) bool {
 	if a == b {
 		return true
@@ -44,7 +50,12 @@ func SamePatch(a, b Version) bool {
 	return aMajor == bMajor && aMinor == bMinor && aPatch == bPatch
 }
 
-// SameMinor takes two versions and tell if they are part of the same minor
+// SameMinorStr takes two version strings and tell if they match down to minor level
+func SameMinorStr(a, b string) bool {
+	return SameMinor(Version(a), Version(b))
+}
+
+// SameMinorStr takes two versions and tell if they match down to minor level
 func SameMinor(a, b Version) bool {
 	if a == b {
 		return true
