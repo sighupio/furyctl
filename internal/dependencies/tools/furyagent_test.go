@@ -11,7 +11,7 @@ import (
 	"runtime"
 	"testing"
 
-	"github.com/sighupio/furyctl/internal/tools"
+	"github.com/sighupio/furyctl/internal/dependencies/tools"
 )
 
 func Test_FuryAgent_SrcPath(t *testing.T) {
@@ -35,7 +35,7 @@ func Test_FuryAgent_SrcPath(t *testing.T) {
 	}
 	for _, tC := range testCases {
 		t.Run(tC.desc, func(t *testing.T) {
-			fa := tools.NewFuryAgent(tC.version)
+			fa := tools.NewFuryagent(tC.version)
 			if fa.SrcPath() != wantSrcPath {
 				t.Errorf("Wrong furyagent src path: want = %s, got = %s", wantSrcPath, fa.SrcPath())
 			}
@@ -53,7 +53,7 @@ func Test_FuryAgent_Rename(t *testing.T) {
 		t.Fatalf("error creating temp file: %v", err)
 	}
 
-	fa := tools.NewFuryAgent("0.3.0")
+	fa := tools.NewFuryagent("0.3.0")
 
 	if err := fa.Rename(tmpDir); err != nil {
 		t.Fatalf("Error renaming furyagent binary: %v", err)
