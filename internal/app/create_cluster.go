@@ -6,8 +6,13 @@ package app
 
 import (
 	"errors"
+	"fmt"
 	"path/filepath"
 
+	"github.com/sighupio/furyctl/internal/config"
+	"github.com/sighupio/furyctl/internal/dependencies"
+	"github.com/sighupio/furyctl/internal/dependencies/envvars"
+	"github.com/sighupio/furyctl/internal/dependencies/tools"
 	"github.com/sighupio/furyctl/internal/distribution"
 	"github.com/sighupio/furyctl/internal/eks"
 	"github.com/sighupio/furyctl/internal/execx"
@@ -47,54 +52,38 @@ func (v CreateClusterResponse) HasErrors() bool {
 }
 
 func (h *CreateCluster) Execute(req CreateClusterRequest) (CreateClusterResponse, error) {
+	// Determine the vendor path
 	vendorPath, err := filepath.Abs("./vendor")
 	if err != nil {
 		return CreateClusterResponse{}, err
 	}
 
-	dloader := distribution.NewDownloader(h.client, req.Debug)
+	// Init downloaders
+	distrodl := distribution.NewDownloader(h.client, req.Debug)
+	depsdl := dependencies.NewDownloader(h.client, vendorPath)
 
-	res, err := dloader.Download(req.FuryctlBinVersion, req.DistroLocation, req.FuryctlConfPath)
+	// Download the distribution
+	res, err := distrodl.Download(req.FuryctlBinVersion, req.DistroLocation, req.FuryctlConfPath)
 	if err != nil {
 		return CreateClusterResponse{}, err
 	}
 
-	vc := NewValidateConfig(h.client)
-
-	_, err = vc.Execute(ValidateConfigRequest{
-		FuryctlBinVersion: req.FuryctlBinVersion,
-		DistroLocation:    res.RepoPath,
-		FuryctlConfPath:   req.FuryctlConfPath,
-		Debug:             req.Debug,
-	})
-	if err != nil {
+	// Validate the furyctl.yaml file
+	if err := config.Validate(req.FuryctlConfPath, res.RepoPath); err != nil {
 		return CreateClusterResponse{}, err
 	}
 
-	dl := NewDownloadDependencies(h.client, vendorPath)
-	_, err = dl.Execute(DownloadDependenciesRequest{
-		FuryctlBinVersion: req.FuryctlBinVersion,
-		DistroLocation:    res.RepoPath,
-		FuryctlConfPath:   req.FuryctlConfPath,
-		Debug:             req.Debug,
-	})
-	if err != nil {
+	// Download the dependencies
+	if errs, _ := depsdl.DownloadAll(res.DistroManifest); len(errs) > 0 {
+		return CreateClusterResponse{}, fmt.Errorf("errors downloading dependencies: %v", errs)
+	}
+
+	// Validate the dependencies
+	if err := h.validateDependencies(res, vendorPath); err != nil {
 		return CreateClusterResponse{}, err
 	}
 
-	vd := NewValidateDependencies(h.client, h.executor)
-
-	_, err = vd.Execute(ValidateDependenciesRequest{
-		BinPath:           vendorPath,
-		FuryctlBinVersion: req.FuryctlBinVersion,
-		DistroLocation:    res.RepoPath,
-		FuryctlConfPath:   req.FuryctlConfPath,
-		Debug:             req.Debug,
-	})
-	if err != nil {
-		return CreateClusterResponse{}, err
-	}
-
+	// Create the cluster
 	if res.MinimalConf.Kind == "EKSCluster" {
 		eksCluster, err := eks.NewClusterCreator(
 			res.MinimalConf.ApiVersion,
@@ -107,8 +96,7 @@ func (h *CreateCluster) Execute(req CreateClusterRequest) (CreateClusterResponse
 			return CreateClusterResponse{}, err
 		}
 
-		err = eksCluster.Create(req.DryRun)
-		if err != nil {
+		if err := eksCluster.Create(req.DryRun); err != nil {
 			return CreateClusterResponse{}, err
 		}
 
@@ -118,4 +106,19 @@ func (h *CreateCluster) Execute(req CreateClusterRequest) (CreateClusterResponse
 	return CreateClusterResponse{
 		Error: ErrUnsupportedDistributionKind,
 	}, nil
+}
+
+func (h *CreateCluster) validateDependencies(res distribution.DownloadResult, vendorPath string) error {
+	toolsValidator := tools.NewValidator(h.executor)
+	envVarsValidator := envvars.NewValidator()
+
+	if errs := toolsValidator.Validate(res.DistroManifest, vendorPath); len(errs) > 0 {
+		return fmt.Errorf("errors validating tools: %v", errs)
+	}
+
+	if errs := envVarsValidator.Validate(res.MinimalConf.Kind); len(errs) > 0 {
+		return fmt.Errorf("errors validating env vars: %v", errs)
+	}
+
+	return nil
 }
