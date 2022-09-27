@@ -24,7 +24,7 @@ require (
 
 require (
 	github.com/hashicorp/terraform-json v0.10.0
-	github.com/sighupio/fury-distribution v1.23.3-0.20220921133521-56315a3610fa
+	github.com/sighupio/fury-distribution v1.23.3-0.20220927092203-11c2f36303fa
 	gopkg.in/yaml.v3 v3.0.1
 )
 

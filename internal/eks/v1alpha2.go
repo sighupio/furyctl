@@ -15,16 +15,16 @@ import (
 
 	"github.com/sirupsen/logrus"
 
-	"github.com/sighupio/fury-distribution/pkg/schemas"
-	"github.com/sighupio/furyctl/internal/distribution"
+	"github.com/sighupio/fury-distribution/pkg/config"
+	"github.com/sighupio/fury-distribution/pkg/schema"
 )
 
 var ErrUnsupportedPhase = fmt.Errorf("unsupported phase")
 
 type V1alpha2 struct {
 	Phase          string
-	KfdManifest    distribution.Manifest
-	FuryFile       schemas.EksclusterKfdV1Alpha2Json
+	KfdManifest    config.KFD
+	FuryFile       schema.EksclusterKfdV1Alpha2
 	ConfigPath     string
 	VpnAutoConnect bool
 }
