@@ -29,6 +29,7 @@ type CreateClusterRequest struct {
 	Phase             string
 	DryRun            bool
 	VpnAutoConnect    bool
+	SkipDownload      bool
 	Debug             bool
 }
 
@@ -75,9 +76,11 @@ func (h *CreateCluster) Execute(req CreateClusterRequest) (CreateClusterResponse
 		return CreateClusterResponse{}, err
 	}
 
-	// Download the dependencies
-	if errs, _ := depsdl.DownloadAll(res.DistroManifest); len(errs) > 0 {
-		return CreateClusterResponse{}, fmt.Errorf("errors downloading dependencies: %v", errs)
+	if !req.SkipDownload {
+		// Download the dependencies
+		if errs, _ := depsdl.DownloadAll(res.DistroManifest); len(errs) > 0 {
+			return CreateClusterResponse{}, fmt.Errorf("errors downloading dependencies: %v", errs)
+		}
 	}
 
 	// Validate the dependencies
