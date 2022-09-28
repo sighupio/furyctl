@@ -15,8 +15,6 @@ import (
 	"path/filepath"
 	"regexp"
 
-	tfjson "github.com/hashicorp/terraform-json"
-
 	"github.com/sighupio/fury-distribution/pkg/config"
 	"github.com/sighupio/furyctl/internal/template"
 	"github.com/sighupio/furyctl/internal/yaml"
@@ -151,8 +149,9 @@ func (i *Infrastructure) TerraformPlan(timestamp int64) error {
 	return os.WriteFile(path.Join(i.PlanPath, logFilePath), planBuffer.Bytes(), 0o600)
 }
 
-func (i *Infrastructure) TerraformApply(timestamp int64) error {
+func (i *Infrastructure) TerraformApply(timestamp int64) (OutputJson, error) {
 	var applyBuffer bytes.Buffer
+	var applyLogOut OutputJson
 
 	terraformApplyCmd := exec.Command(i.TerraformPath, "apply", "-no-color", "-json", "plan/terraform.plan")
 	terraformApplyCmd.Stdout = io.MultiWriter(os.Stdout, &applyBuffer)
@@ -161,21 +160,17 @@ func (i *Infrastructure) TerraformApply(timestamp int64) error {
 
 	err := terraformApplyCmd.Run()
 	if err != nil {
-		return err
+		return applyLogOut, err
 	}
 
 	err = os.WriteFile(path.Join(i.LogsPath, fmt.Sprintf("%d.log", timestamp)), applyBuffer.Bytes(), 0o600)
 	if err != nil {
-		return err
-	}
-
-	var applyLogOut struct {
-		Outputs map[string]*tfjson.StateOutput `json:"outputs"`
+		return applyLogOut, err
 	}
 
 	parsedApplyLog, err := os.ReadFile(path.Join(i.LogsPath, fmt.Sprintf("%d.log", timestamp)))
 	if err != nil {
-		return err
+		return applyLogOut, err
 	}
 
 	applyLog := string(parsedApplyLog)
@@ -184,17 +179,19 @@ func (i *Infrastructure) TerraformApply(timestamp int64) error {
 
 	outputsStringIndex := pattern.FindStringIndex(applyLog)
 	if outputsStringIndex == nil {
-		return fmt.Errorf("can't get outputs from terraform apply logs")
+		return applyLogOut, fmt.Errorf("can't get outputs from terraform apply logs")
 	}
 
 	outputsString := fmt.Sprintf("{%s}", applyLog[outputsStringIndex[0]:outputsStringIndex[1]])
 
 	err = json.Unmarshal([]byte(outputsString), &applyLogOut)
 	if err != nil {
-		return err
+		return applyLogOut, err
 	}
 
-	return os.WriteFile(path.Join(i.OutputsPath, "output.json"), []byte(outputsString), 0o600)
+	err = os.WriteFile(path.Join(i.OutputsPath, "output.json"), []byte(outputsString), 0o600)
+
+	return applyLogOut, err
 }
 
 func (i *Infrastructure) CreateOvpnFile(clientName string) error {
