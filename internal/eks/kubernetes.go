@@ -25,7 +25,7 @@ type Kubernetes struct {
 }
 
 func NewKubernetes() (*Kubernetes, error) {
-	infraPath := path.Join(".kubernetes")
+	kubePath := path.Join(".kubernetes")
 
 	binPath, err := filepath.Abs("./vendor")
 	if err != nil {
@@ -34,13 +34,13 @@ func NewKubernetes() (*Kubernetes, error) {
 
 	terraformPath := path.Join(binPath, "bin", "terraform")
 
-	planPath := path.Join(infraPath, "terraform", "plan")
-	logsPath := path.Join(infraPath, "terraform", "logs")
-	outputsPath := path.Join(infraPath, "terraform", "outputs")
-	secretsPath := path.Join(infraPath, "terraform", "secrets")
+	planPath := path.Join(kubePath, "terraform", "plan")
+	logsPath := path.Join(kubePath, "terraform", "logs")
+	outputsPath := path.Join(kubePath, "terraform", "outputs")
+	secretsPath := path.Join(kubePath, "terraform", "secrets")
 
 	return &Kubernetes{
-		Path:          infraPath,
+		Path:          kubePath,
 		TerraformPath: terraformPath,
 		PlanPath:      planPath,
 		LogsPath:      logsPath,
