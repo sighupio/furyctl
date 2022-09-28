@@ -134,6 +134,11 @@ func (v *V1alpha2) Infrastructure(dryRun bool) error {
 func (v *V1alpha2) Kubernetes(dryRun bool) error {
 	timestamp := time.Now().Unix()
 
+	infra, err := NewInfrastructure()
+	if err != nil {
+		return err
+	}
+
 	kube, err := NewKubernetes()
 	if err != nil {
 		return err
@@ -154,7 +159,7 @@ func (v *V1alpha2) Kubernetes(dryRun bool) error {
 		return err
 	}
 
-	err = v.CreateKubernetesTfVars(kube.Path)
+	err = v.CreateKubernetesTfVars(kube.Path, infra.OutputsPath)
 	if err != nil {
 		return err
 	}
@@ -317,24 +322,75 @@ func (v *V1alpha2) CreateInfraTfVars(infraPath string) error {
 	return os.WriteFile(targetTfVars, buffer.Bytes(), 0o600)
 }
 
-func (v *V1alpha2) CreateKubernetesTfVars(kubePath string) error {
+func (v *V1alpha2) CreateKubernetesTfVars(kubePath string, infraOutPath string) error {
 	var buffer bytes.Buffer
+
+	subnetIdsSource := v.FuryFile.Spec.Kubernetes.SubnetIds
+	vpcIdSource := v.FuryFile.Spec.Kubernetes.VpcId
+	allowedCidrsSource := v.FuryFile.Spec.Kubernetes.ApiServerEndpointAccess.AllowedCidrs
+
+	if infraOutJson, err := os.ReadFile(path.Join(infraOutPath, "output.json")); err == nil {
+		var infraOut OutputJson
+
+		if err := json.Unmarshal(infraOutJson, &infraOut); err == nil {
+			if infraOut.Outputs["private_subnets"] == nil {
+				return fmt.Errorf("private_subnets not found in infra output")
+			}
+
+			s, ok := infraOut.Outputs["private_subnets"].Value.([]interface{})
+			if !ok {
+				return fmt.Errorf("cannot read private_subnets from infrastructure's output.json")
+			}
+
+			if infraOut.Outputs["vpc_id"] == nil {
+				return fmt.Errorf("vpc_id not found in infra output")
+			}
+
+			v, ok := infraOut.Outputs["vpc_id"].Value.(string)
+			if !ok {
+				return fmt.Errorf("cannot read vpc_id from infrastructure's output.json")
+			}
+
+			if infraOut.Outputs["vpc_cidr_block"] == nil {
+				return fmt.Errorf("vpc_cidr_block not found in infra output")
+			}
+
+			c, ok := infraOut.Outputs["vpc_cidr_block"].Value.(string)
+			if !ok {
+				return fmt.Errorf("cannot read vpc_cidr_block from infrastructure's output.json")
+			}
+
+			subs := make([]schema.TypesAwsSubnetId, len(s))
+			for i, sub := range s {
+				ss, ok := sub.(string)
+				if !ok {
+					return fmt.Errorf("cannot read private_subnets from infrastructure's output.json")
+				}
+
+				subs[i] = schema.TypesAwsSubnetId(ss)
+			}
+
+			subnetIdsSource = subs
+			vpcIdSource = schema.TypesAwsVpcId(v)
+			allowedCidrsSource = []schema.TypesCidr{schema.TypesCidr(c)}
+		}
+	}
 
 	buffer.WriteString(fmt.Sprintf("cluster_name = \"%v\"\n", v.FuryFile.Metadata.Name))
 	buffer.WriteString(fmt.Sprintf("cluster_version = \"%v\"\n", v.KfdManifest.Kubernetes.Eks.Version))
-	buffer.WriteString(fmt.Sprintf("network = \"%v\"\n", v.FuryFile.Spec.Kubernetes.VpcId))
+	buffer.WriteString(fmt.Sprintf("network = \"%v\"\n", vpcIdSource))
 
-	subnetIds := make([]string, len(v.FuryFile.Spec.Kubernetes.SubnetIds))
+	subnetIds := make([]string, len(subnetIdsSource))
 
-	for i, subnetId := range v.FuryFile.Spec.Kubernetes.SubnetIds {
+	for i, subnetId := range subnetIdsSource {
 		subnetIds[i] = fmt.Sprintf("\"%v\"", subnetId)
 	}
 
 	buffer.WriteString(fmt.Sprintf("subnetworks = [%v]\n", strings.Join(subnetIds, ",")))
 
-	dmzCidrRange := make([]string, len(v.FuryFile.Spec.Kubernetes.ApiServerEndpointAccess.AllowedCidrs))
+	dmzCidrRange := make([]string, len(allowedCidrsSource))
 
-	for i, cidr := range v.FuryFile.Spec.Kubernetes.ApiServerEndpointAccess.AllowedCidrs {
+	for i, cidr := range allowedCidrsSource {
 		dmzCidrRange[i] = fmt.Sprintf("\"%v\"", cidr)
 	}
 
