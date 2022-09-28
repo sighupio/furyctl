@@ -28,6 +28,7 @@ func NewClusterCmd(version string) *cobra.Command {
 			phase := cobrax.Flag[string](cmd, "phase").(string)
 			vpnAutoConnect := cobrax.Flag[bool](cmd, "vpn-auto-connect").(bool)
 			dryRun := cobrax.Flag[bool](cmd, "dry-run").(bool)
+			skipDownload := cobrax.Flag[bool](cmd, "skip-download").(bool)
 
 			cc := app.NewCreateCluster(netx.NewGoGetterClient(), execx.NewStdExecutor())
 
@@ -38,6 +39,7 @@ func NewClusterCmd(version string) *cobra.Command {
 				Phase:             phase,
 				DryRun:            dryRun,
 				VpnAutoConnect:    vpnAutoConnect,
+				SkipDownload:      skipDownload,
 				Debug:             debug,
 			})
 			if err != nil {
@@ -78,6 +80,12 @@ func NewClusterCmd(version string) *cobra.Command {
 			"It can either be a local path(eg: /path/to/fury/distribution) or "+
 			"a remote URL(eg: https://git@github.com/sighupio/fury-distribution?ref=BRANCH_NAME)."+
 			"Any format supported by hashicorp/go-getter can be used.",
+	)
+
+	cmd.Flags().Bool(
+		"skip-download",
+		false,
+		"Skip downloading the distribution modules, installers and binaries",
 	)
 
 	cmd.Flags().Bool(

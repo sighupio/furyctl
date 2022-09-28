@@ -98,7 +98,7 @@ func (v *V1alpha2) Infrastructure(dryRun bool) error {
 	}
 
 	if !dryRun {
-		err = infra.TerraformApply(timestamp)
+		_, err = infra.TerraformApply(timestamp)
 		if err != nil {
 			return err
 		}
@@ -170,17 +170,17 @@ func (v *V1alpha2) Kubernetes(dryRun bool) error {
 	}
 
 	if !dryRun {
-		err = kube.TerraformApply(timestamp)
+		out, err := kube.TerraformApply(timestamp)
 		if err != nil {
 			return err
 		}
 
-		err = kube.CreateKubeconfig()
+		err = kube.CreateKubeconfig(out)
 		if err != nil {
 			return err
 		}
 
-		err = kube.CreateKubeconfigEnv()
+		err = kube.SetKubeconfigEnv()
 		if err != nil {
 			return err
 		}
