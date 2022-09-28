@@ -6,6 +6,7 @@ package eks
 
 import (
 	"errors"
+	tfjson "github.com/hashicorp/terraform-json"
 
 	"github.com/sighupio/fury-distribution/pkg/config"
 	"github.com/sighupio/fury-distribution/pkg/schema"
@@ -13,6 +14,10 @@ import (
 )
 
 var ErrUnsupportedApiVersion = errors.New("unsupported api version")
+
+type OutputJson struct {
+	Outputs map[string]*tfjson.StateOutput `json:"outputs"`
+}
 
 type ClusterCreator interface {
 	Create(dryRun bool) error
