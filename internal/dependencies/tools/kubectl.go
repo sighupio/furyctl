@@ -64,7 +64,7 @@ func (k *Kubectl) CheckBinVersion(binPath string) error {
 	path := filepath.Join(binPath, "kubectl")
 	out, err := k.executor.Command(path, "version", "--client").Output()
 	if err != nil {
-		return err
+		return fmt.Errorf("error running %s: %w", path, err)
 	}
 
 	s := string(out)
