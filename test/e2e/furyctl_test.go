@@ -150,7 +150,7 @@ var (
 		})
 
 		Context("validate dependencies", func() {
-			FuryctlValidateDependencies := func(basepath string, binpath string) ([]byte, error) {
+			FuryctlValidateDependencies := func(basepath, binpath string) ([]byte, error) {
 				absBasepath := Abs(basepath)
 
 				return exec.Command(
