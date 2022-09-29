@@ -82,12 +82,27 @@ var (
 		}
 	}
 
+	RunCmd = func(cmd string, args ...string) (string, error) {
+		out, err := exec.Command(cmd, args...).CombinedOutput()
+
+		DebugIfErr(out, err)
+
+		return string(out), err
+	}
+
+	DebugIfErr = func(out []byte, err error) {
+		if err != nil {
+			fmt.Println("Command output:")
+			fmt.Println(string(out))
+		}
+	}
+
 	_ = BeforeSuite(func() {
 		tmpdir := MkdirTemp("furyctl-e2e")
 
 		furyctl = filepath.Join(tmpdir, "furyctl")
 
-		if out, err := exec.Command("go", "build", "-o", furyctl, "../../main.go").CombinedOutput(); err != nil {
+		if out, err := RunCmd("go", "build", "-o", furyctl, "../../main.go"); err != nil {
 			Fail(fmt.Sprintf("Could not build furyctl: %v\nOutput: %s", err, out))
 		}
 	})
@@ -95,10 +110,10 @@ var (
 	_ = Describe("furyctl", func() {
 		Context("version", func() {
 			It("should print its version information", func() {
-				out, err := exec.Command(furyctl, "version").CombinedOutput()
+				out, err := RunCmd(furyctl, "version")
 
 				Expect(err).To(Not(HaveOccurred()))
-				Expect(string(out)).To(ContainSubstring(
+				Expect(out).To(ContainSubstring(
 					"buildTime: unknown\n" +
 						"gitCommit: unknown\n" +
 						"goVersion: unknown\n" +
@@ -109,130 +124,134 @@ var (
 		})
 
 		Context("validate config", func() {
-			FuryctlValidateConfig := func(basepath string) ([]byte, error) {
+			FuryctlValidateConfig := func(basepath string) (string, error) {
 				absBasepath := Abs(basepath)
 
-				return exec.Command(
+				return RunCmd(
 					furyctl, "validate", "config",
 					"--config", filepath.Join(absBasepath, "furyctl.yaml"),
 					"--distro-location", absBasepath,
 					"--debug",
-				).CombinedOutput()
+				)
 			}
 
 			It("should report an error when the furyctl.yaml is not found", func() {
 				out, err := FuryctlValidateConfig("../data/e2e/validate/config/")
 
 				Expect(err).To(HaveOccurred())
-				Expect(string(out)).To(ContainSubstring("furyctl.yaml: no such file or directory"))
+				Expect(out).To(ContainSubstring("furyctl.yaml: no such file or directory"))
 			})
 
 			It("should report an error when the kfd.yaml is not found", func() {
 				out, err := FuryctlValidateConfig("../data/e2e/validate/config/nodistro")
 
 				Expect(err).To(HaveOccurred())
-				Expect(string(out)).To(ContainSubstring("kfd.yaml: no such file or directory"))
+				Expect(out).To(ContainSubstring("kfd.yaml: no such file or directory"))
 			})
 
 			It("should report an error when config validation fails", func() {
 				out, err := FuryctlValidateConfig("../data/e2e/validate/config/wrong")
 
 				Expect(err).To(HaveOccurred())
-				Expect(string(out)).To(ContainSubstring("config validation failed"))
+				Expect(out).To(ContainSubstring("config validation failed"))
 			})
 
 			It("should exit without errors when config validation succeeds", func() {
 				out, err := FuryctlValidateConfig("../data/e2e/validate/config/correct")
 
 				Expect(err).To(Not(HaveOccurred()))
-				Expect(string(out)).To(ContainSubstring("config validation succeeded"))
+				Expect(out).To(ContainSubstring("config validation succeeded"))
 			})
 		})
 
 		Context("validate dependencies", func() {
-			FuryctlValidateDependencies := func(basepath, binpath string) ([]byte, error) {
+			FuryctlValidateDependencies := func(basepath, binpath string) (string, error) {
 				absBasepath := Abs(basepath)
 
-				return exec.Command(
+				return RunCmd(
 					furyctl, "validate", "dependencies",
 					"--config", filepath.Join(absBasepath, "furyctl.yaml"),
 					"--distro-location", absBasepath,
 					"--bin-path", binpath,
 					"--debug",
-				).CombinedOutput()
+				)
 			}
 
 			It("should report an error when dependencies are missing", func() {
 				out, err := FuryctlValidateDependencies("../data/e2e/validate/dependencies/missing", "/tmp")
 
 				Expect(err).To(HaveOccurred())
-				Expect(string(out)).To(ContainSubstring("ansible: no such file or directory"))
-				Expect(string(out)).To(ContainSubstring("terraform: no such file or directory"))
-				Expect(string(out)).To(ContainSubstring("kubectl: no such file or directory"))
-				Expect(string(out)).To(ContainSubstring("kustomize: no such file or directory"))
-				Expect(string(out)).To(ContainSubstring("furyagent: no such file or directory"))
-				Expect(string(out)).To(ContainSubstring("missing environment variable: AWS_ACCESS_KEY_ID"))
-				Expect(string(out)).To(ContainSubstring("missing environment variable: AWS_SECRET_ACCESS_KEY"))
-				Expect(string(out)).To(ContainSubstring("missing environment variable: AWS_DEFAULT_REGION"))
+				Expect(out).To(ContainSubstring("ansible:"))
+				Expect(out).To(ContainSubstring("terraform:"))
+				Expect(out).To(ContainSubstring("kubectl:"))
+				Expect(out).To(ContainSubstring("kustomize:"))
+				Expect(out).To(ContainSubstring("furyagent:"))
+				Expect(out).To(ContainSubstring("missing environment variable: AWS_ACCESS_KEY_ID"))
+				Expect(out).To(ContainSubstring("missing environment variable: AWS_SECRET_ACCESS_KEY"))
+				Expect(out).To(ContainSubstring("missing environment variable: AWS_DEFAULT_REGION"))
 			})
 
-			It("should report an error when dependencies are wrong", func() {
-				out, err := FuryctlValidateDependencies(
-					"../data/e2e/validate/dependencies/wrong",
-					"../data/e2e/validate/dependencies/wrong",
-				)
-
-				Expect(err).To(HaveOccurred())
-				Expect(string(out)).To(
-					ContainSubstring("ansible: wrong tool version - installed = 2.11.1, expected = 2.11.2"),
-				)
-				Expect(string(out)).To(
-					ContainSubstring("furyagent: wrong tool version - installed = 0.2.4, expected = 0.3.0"),
-				)
-				Expect(string(out)).To(
-					ContainSubstring("kubectl: wrong tool version - installed = 1.23.6, expected = 1.23.7"),
-				)
-				Expect(string(out)).To(
-					ContainSubstring("kustomize: wrong tool version - installed = 3.9.0, expected = 3.10.0"),
-				)
-				Expect(string(out)).To(
-					ContainSubstring("terraform: wrong tool version - installed = 0.15.3, expected = 0.15.4"),
-				)
-				Expect(string(out)).To(ContainSubstring("missing environment variable: AWS_ACCESS_KEY_ID"))
-				Expect(string(out)).To(ContainSubstring("missing environment variable: AWS_SECRET_ACCESS_KEY"))
-				Expect(string(out)).To(ContainSubstring("missing environment variable: AWS_DEFAULT_REGION"))
-			})
-
-			It("should exit without errors when dependencies are correct", func() {
-				RestoreEnvVars := BackupEnvVars("AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY", "AWS_DEFAULT_REGION")
+			It("should report an error when dependencies are wrong", Serial, func() {
+				RestoreEnvVars := BackupEnvVars("PATH")
 				defer RestoreEnvVars()
 
+				bp := Abs("../data/e2e/validate/dependencies/wrong")
+
+				os.Setenv("PATH", bp+":"+os.Getenv("PATH"))
+
+				out, err := FuryctlValidateDependencies(bp, bp)
+
+				Expect(err).To(HaveOccurred())
+				Expect(out).To(
+					ContainSubstring("ansible: wrong tool version - installed = 2.11.1, expected = 2.11.2"),
+				)
+				Expect(out).To(
+					ContainSubstring("furyagent: wrong tool version - installed = 0.2.4, expected = 0.3.0"),
+				)
+				Expect(out).To(
+					ContainSubstring("kubectl: wrong tool version - installed = 1.23.6, expected = 1.23.7"),
+				)
+				Expect(out).To(
+					ContainSubstring("kustomize: wrong tool version - installed = 3.9.0, expected = 3.10.0"),
+				)
+				Expect(out).To(
+					ContainSubstring("terraform: wrong tool version - installed = 0.15.3, expected = 0.15.4"),
+				)
+				Expect(out).To(ContainSubstring("missing environment variable: AWS_ACCESS_KEY_ID"))
+				Expect(out).To(ContainSubstring("missing environment variable: AWS_SECRET_ACCESS_KEY"))
+				Expect(out).To(ContainSubstring("missing environment variable: AWS_DEFAULT_REGION"))
+			})
+
+			It("should exit without errors when dependencies are correct", Serial, func() {
+				RestoreEnvVars := BackupEnvVars("PATH", "AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY", "AWS_DEFAULT_REGION")
+				defer RestoreEnvVars()
+
+				bp := Abs("../data/e2e/validate/dependencies/correct")
+
+				os.Setenv("PATH", bp+":"+os.Getenv("PATH"))
 				os.Setenv("AWS_ACCESS_KEY_ID", "test")
 				os.Setenv("AWS_SECRET_ACCESS_KEY", "test")
 				os.Setenv("AWS_DEFAULT_REGION", "test")
 
-				out, err := FuryctlValidateDependencies(
-					"../data/e2e/validate/dependencies/correct",
-					"../data/e2e/validate/dependencies/correct",
-				)
+				out, err := FuryctlValidateDependencies(bp, bp)
 
 				Expect(err).To(Not(HaveOccurred()))
-				Expect(string(out)).To(ContainSubstring("Dependencies validation succeeded"))
+				Expect(out).To(ContainSubstring("Dependencies validation succeeded"))
 			})
 		})
 
 		Context("download dependencies", Label("slow"), func() {
 			basepath := "../data/e2e/download/dependencies"
-			FuryctlDownloadDependencies := func(basepath string) ([]byte, error) {
+			FuryctlDownloadDependencies := func(basepath string) (string, error) {
 				absBasepath := Abs(basepath)
 
-				return exec.Command(
+				return RunCmd(
 					furyctl, "download", "dependencies",
 					"--config", filepath.Join(absBasepath, "furyctl.yaml"),
 					"--distro-location", absBasepath+"/distro",
 					"--workdir", absBasepath,
 					"--debug",
-				).CombinedOutput()
+				)
 			}
 
 			It("should download all dependencies for v1.23.3", func() {
@@ -269,13 +288,13 @@ var (
 
 		Context("dump template", func() {
 			basepath := "../data/e2e/dump/template"
-			FuryctlDumpTemplate := func(workdir string, dryRun bool) ([]byte, error) {
+			FuryctlDumpTemplate := func(workdir string, dryRun bool) (string, error) {
 				args := []string{"dump", "template", "--debug", "--workdir", workdir}
 				if dryRun {
 					args = append(args, "--dry-run")
 				}
 
-				return exec.Command(furyctl, args...).CombinedOutput()
+				return RunCmd(furyctl, args...)
 			}
 			Setup := func(folder string) string {
 				bp := filepath.Join(basepath, folder)
@@ -292,7 +311,7 @@ var (
 				out, err := FuryctlDumpTemplate(bp, false)
 
 				Expect(err).To(HaveOccurred())
-				Expect(string(out)).To(ContainSubstring("distribution.yaml: no such file or directory"))
+				Expect(out).To(ContainSubstring("distribution.yaml: no such file or directory"))
 			})
 
 			It("fails if no furyctl.yaml file is found", func() {
@@ -301,7 +320,7 @@ var (
 				out, err := FuryctlDumpTemplate(bp, false)
 
 				Expect(err).To(HaveOccurred())
-				Expect(string(out)).To(ContainSubstring("furyctl.yaml: no such file or directory"))
+				Expect(out).To(ContainSubstring("furyctl.yaml: no such file or directory"))
 			})
 
 			It("fails if no data properties are found in distribution.yaml file", func() {
@@ -310,7 +329,7 @@ var (
 				out, err := FuryctlDumpTemplate(bp, false)
 
 				Expect(err).To(HaveOccurred())
-				Expect(string(out)).To(ContainSubstring("incorrect base file, cannot access key data on map"))
+				Expect(out).To(ContainSubstring("incorrect base file, cannot access key data on map"))
 			})
 
 			It("fails if given an empty template", func() {
@@ -369,12 +388,12 @@ var (
 
 		Context("create config", func() {
 			basepath := "../data/e2e/create/config"
-			FuryctlCreateConfig := func(workdir string) ([]byte, error) {
-				return exec.Command(
+			FuryctlCreateConfig := func(workdir string) (string, error) {
+				return RunCmd(
 					furyctl, "create", "config",
 					"--config", workdir+"/target/furyctl.yaml",
 					"--debug",
-				).CombinedOutput()
+				)
 			}
 			Setup := func(folder string) string {
 				bp := filepath.Join(basepath, folder)

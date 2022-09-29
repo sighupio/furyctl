@@ -115,7 +115,7 @@ test-integration:
 	@go test -v -covermode=atomic -coverprofile=coverage.out -tags=integration -timeout 120s ./...
 
 test-e2e:
-	@go test -v -covermode=atomic -coverprofile=coverage.out -tags=e2e -timeout 120s ./...
+	@ginkgo run -v --covermode=atomic --coverprofile=coverage.out --tags=e2e --timeout 120s -p test/e2e
 
 .PHONY: clean build release
 
