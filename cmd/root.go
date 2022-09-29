@@ -5,6 +5,8 @@
 package cmd
 
 import (
+	"os"
+	"path/filepath"
 	"time"
 
 	"github.com/briandowns/spinner"
@@ -24,6 +26,7 @@ type rootConfig struct {
 	Debug            bool
 	DisableAnalytics bool
 	DisableTty       bool
+	Workdir          string
 }
 
 type RootCommand struct {
@@ -73,6 +76,21 @@ Furyctl is a simple CLI tool to:
 				// Configure analytics
 				analytics.Version(versions["version"])
 				analytics.Disable(cobrax.Flag[bool](cmd, "disable-analytics").(bool))
+
+				// Change working directory if it is specified
+				if workdir := cobrax.Flag[string](cmd, "workdir").(string); workdir != "" {
+					// get absolute path of workdir
+					absWorkdir, err := filepath.Abs(workdir)
+					if err != nil {
+						logrus.Fatalf("Error getting absolute path of workdir: %v", err)
+					}
+
+					if err := os.Chdir(absWorkdir); err != nil {
+						logrus.Fatalf("Could not change directory: %v", err)
+					}
+
+					logrus.Debugf("Changed working directory to %s", absWorkdir)
+				}
 			},
 			PersistentPostRun: func(_ *cobra.Command, _ []string) {
 				// Show update message if available at the end of the command
@@ -95,6 +113,7 @@ Furyctl is a simple CLI tool to:
 	rootCmd.PersistentFlags().BoolVarP(&rootCmd.config.Debug, "debug", "D", false, "Enables furyctl debug output")
 	rootCmd.PersistentFlags().BoolVarP(&rootCmd.config.DisableAnalytics, "disable", "d", false, "Disable analytics")
 	rootCmd.PersistentFlags().BoolVarP(&rootCmd.config.DisableTty, "no-tty", "T", false, "Disable TTY")
+	rootCmd.PersistentFlags().StringVarP(&rootCmd.config.Workdir, "workdir", "w", "", "Switch to a different working directory before executing the given subcommand.")
 
 	rootCmd.AddCommand(NewCompletionCmd())
 	rootCmd.AddCommand(NewCreateCommand(versions["version"]))
