@@ -23,7 +23,7 @@ var ErrConfigCreationFailed = fmt.Errorf("config creation failed")
 func NewConfigCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "config",
-		Short: "TODO",
+		Short: "scaffolds a new furyctl config file",
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			config := cobrax.Flag[string](cmd, "config").(string)
 			version := cobrax.Flag[string](cmd, "version").(string)
