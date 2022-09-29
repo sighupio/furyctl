@@ -9,7 +9,7 @@ metadata:
   name: awesome-cluster-staging
 spec:
   # with this version we will download the kfd.yaml file from the distribution to gather all the other components versions
-  distributionVersion: "v1.24.7"
+  distributionVersion: v1.24.7
   # Under the hood, furyctl uses other tools like terraform, kustomize, etc
   toolsConfiguration:
     terraform:

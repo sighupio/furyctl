@@ -105,5 +105,9 @@ func createNewEmptyConfigFile(path string) (*os.File, error) {
 		absPath = fmt.Sprintf("%s.%d%s", trimAbsPath, now, ext)
 	}
 
+	if err := os.MkdirAll(filepath.Dir(absPath), 0755); err != nil {
+		return nil, err
+	}
+
 	return os.Create(absPath)
 }
