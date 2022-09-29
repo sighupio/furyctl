@@ -21,7 +21,7 @@ func NewClusterCmd(version string) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "cluster",
 		Short: "Creates a battle-tested Kubernetes cluster",
-		RunE: func(cmd *cobra.Command, _ []string) (err error) {
+		RunE: func(cmd *cobra.Command, _ []string) error {
 			debug := cobrax.Flag[bool](cmd, "debug").(bool)
 			furyctlPath := cobrax.Flag[string](cmd, "config").(string)
 			distroLocation := cobrax.Flag[string](cmd, "distro-location").(string)
