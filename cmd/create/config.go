@@ -69,7 +69,7 @@ func NewConfigCmd() *cobra.Command {
 	cmd.Flags().StringP(
 		"version",
 		"v",
-		"1.23",
+		"v1.23.3",
 		"distribution version to use",
 	)
 
