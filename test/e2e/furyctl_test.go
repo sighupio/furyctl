@@ -26,11 +26,41 @@ func TestE2e(t *testing.T) {
 var (
 	furyctl string
 
-	_ = BeforeSuite(func() {
-		tmpdir, err := os.MkdirTemp("", "furyctl-e2e")
+	Abs = func(path string) string {
+		absPath, err := filepath.Abs(path)
 		if err != nil {
 			Fail(err.Error())
 		}
+
+		return absPath
+	}
+
+	FileContent = func(path string) string {
+		content, ferr := ioutil.ReadFile(path)
+		if ferr != nil {
+			Fail(ferr.Error())
+		}
+
+		return string(content)
+	}
+
+	MkdirTemp = func(pattern string) string {
+		tmpdir, err := os.MkdirTemp("", pattern)
+		if err != nil {
+			Fail(err.Error())
+		}
+
+		return tmpdir
+	}
+
+	RemoveAll = func(path string) {
+		if err := os.RemoveAll(path); err != nil && !os.IsNotExist(err) {
+			Fail(err.Error())
+		}
+	}
+
+	_ = BeforeSuite(func() {
+		tmpdir := MkdirTemp("furyctl-e2e")
 
 		furyctl = filepath.Join(tmpdir, "furyctl")
 
@@ -42,13 +72,9 @@ var (
 	_ = Describe("furyctl", func() {
 		Context("version", func() {
 			It("should print its version information", func() {
-				cmd := exec.Command(furyctl, "version")
+				out, err := exec.Command(furyctl, "version").CombinedOutput()
 
-				out, err := cmd.CombinedOutput()
-				if err != nil {
-					Fail(fmt.Sprintf("furyctl validate config failed: %v\nOutput: %s", err, out))
-				}
-
+				Expect(err).To(Not(HaveOccurred()))
 				Expect(string(out)).To(ContainSubstring(
 					"buildTime: unknown\n" +
 						"gitCommit: unknown\n" +
@@ -61,20 +87,29 @@ var (
 
 		Context("validate config", func() {
 			FuryctlValidateConfig := func(basepath string) ([]byte, error) {
-				absBasepath, err := filepath.Abs(basepath)
-				if err != nil {
-					Fail(err.Error())
-				}
+				absBasepath := Abs(basepath)
 
-				cmd := exec.Command(
+				return exec.Command(
 					furyctl, "validate", "config",
 					"--config", filepath.Join(absBasepath, "furyctl.yaml"),
 					"--distro-location", absBasepath,
 					"--debug",
-				)
-
-				return cmd.CombinedOutput()
+				).CombinedOutput()
 			}
+
+			It("should report an error when the furyctl.yaml is not found", func() {
+				out, err := FuryctlValidateConfig("../data/e2e/validate/config/")
+
+				Expect(err).To(HaveOccurred())
+				Expect(string(out)).To(ContainSubstring("furyctl.yaml: no such file or directory"))
+			})
+
+			It("should report an error when the kfd.yaml is not found", func() {
+				out, err := FuryctlValidateConfig("../data/e2e/validate/config/nodistro")
+
+				Expect(err).To(HaveOccurred())
+				Expect(string(out)).To(ContainSubstring("kfd.yaml: no such file or directory"))
+			})
 
 			It("should report an error when config validation fails", func() {
 				out, err := FuryctlValidateConfig("../data/e2e/validate/config/wrong")
@@ -93,20 +128,15 @@ var (
 
 		Context("validate dependencies", func() {
 			FuryctlValidateDependencies := func(basepath string, binpath string) ([]byte, error) {
-				absBasepath, err := filepath.Abs(basepath)
-				if err != nil {
-					Fail(err.Error())
-				}
+				absBasepath := Abs(basepath)
 
-				cmd := exec.Command(
+				return exec.Command(
 					furyctl, "validate", "dependencies",
 					"--config", filepath.Join(absBasepath, "furyctl.yaml"),
 					"--distro-location", absBasepath,
 					"--bin-path", binpath,
 					"--debug",
-				)
-
-				return cmd.CombinedOutput()
+				).CombinedOutput()
 			}
 
 			It("should report an error when dependencies are missing", func() {
@@ -171,6 +201,52 @@ var (
 			})
 		})
 
+		Context("download dependencies", Label("slow"), func() {
+			basepath := "../data/e2e/download/dependencies"
+			FuryctlDownloadDependencies := func(basepath string) ([]byte, error) {
+				absBasepath := Abs(basepath)
+
+				return exec.Command(
+					furyctl, "download", "dependencies",
+					"--config", filepath.Join(absBasepath, "furyctl.yaml"),
+					"--distro-location", absBasepath+"/distro",
+					"--workdir", absBasepath,
+					"--debug",
+				).CombinedOutput()
+			}
+
+			It("should download all dependencies for v1.23.3", func() {
+				bp := basepath + "/v1.23.3"
+				vp := bp + "/vendor"
+
+				RemoveAll(vp)
+				defer RemoveAll(vp)
+
+				_, err := FuryctlDownloadDependencies(bp)
+
+				Expect(err).To(Not(HaveOccurred()))
+				Expect(vp + "/bin/furyagent").To(BeAnExistingFile())
+				Expect(vp + "/bin/kubectl").To(BeAnExistingFile())
+				Expect(vp + "/bin/kustomize").To(BeAnExistingFile())
+				Expect(vp + "/bin/terraform").To(BeAnExistingFile())
+				Expect(vp + "/installers/eks/README.md").To(BeAnExistingFile())
+				Expect(vp + "/installers/eks/modules/eks/main.tf").To(BeAnExistingFile())
+				Expect(vp + "/installers/eks/modules/vpc-and-vpn/main.tf").To(BeAnExistingFile())
+				Expect(vp + "/modules/auth/README.md").To(BeAnExistingFile())
+				Expect(vp + "/modules/auth/katalog/gangway/kustomization.yaml").To(BeAnExistingFile())
+				Expect(vp + "/modules/dr/README.md").To(BeAnExistingFile())
+				Expect(vp + "/modules/dr/katalog/velero/velero-aws/kustomization.yaml").To(BeAnExistingFile())
+				Expect(vp + "/modules/ingress/README.md").To(BeAnExistingFile())
+				Expect(vp + "/modules/ingress/katalog/nginx/kustomization.yaml").To(BeAnExistingFile())
+				Expect(vp + "/modules/logging/README.md").To(BeAnExistingFile())
+				Expect(vp + "/modules/logging/katalog/configs/kustomization.yaml").To(BeAnExistingFile())
+				Expect(vp + "/modules/monitoring/README.md").To(BeAnExistingFile())
+				Expect(vp + "/modules/monitoring/katalog/configs/kustomization.yaml").To(BeAnExistingFile())
+				Expect(vp + "/modules/opa/README.md").To(BeAnExistingFile())
+				Expect(vp + "/modules/opa/katalog/gatekeeper/kustomization.yaml").To(BeAnExistingFile())
+			})
+		})
+
 		Context("dump template", func() {
 			basepath := "../data/e2e/dump/template"
 			FuryctlDumpTemplate := func(workdir string, dryRun bool) ([]byte, error) {
@@ -179,83 +255,95 @@ var (
 					args = append(args, "--dry-run")
 				}
 
-				cmd := exec.Command(furyctl, args...)
-
-				return cmd.CombinedOutput()
+				return exec.Command(furyctl, args...).CombinedOutput()
 			}
-			FileContent := func(path string) string {
-				content, ferr := ioutil.ReadFile(path)
-				if ferr != nil {
-					Fail(ferr.Error())
-				}
+			Setup := func(folder string) string {
+				bp := filepath.Join(basepath, folder)
+				tp := filepath.Join(bp, "target")
 
-				return string(content)
+				RemoveAll(tp)
+
+				return bp
 			}
 
-			It("no distribution file", func() {
-				out, err := FuryctlDumpTemplate(basepath+"/no-distribution-yaml", false)
+			It("no distribution yaml", func() {
+				bp := Setup("no-distribution-yaml")
+
+				out, err := FuryctlDumpTemplate(bp, false)
 
 				Expect(err).To(HaveOccurred())
 				Expect(string(out)).To(ContainSubstring("distribution.yaml: no such file or directory"))
 			})
 
 			It("no furyctl.yaml file", func() {
-				out, err := FuryctlDumpTemplate(basepath+"/no-furyctl-yaml", false)
+				bp := Setup("no-furyctl-yaml")
+
+				out, err := FuryctlDumpTemplate(bp, false)
 
 				Expect(err).To(HaveOccurred())
 				Expect(string(out)).To(ContainSubstring("furyctl.yaml: no such file or directory"))
 			})
 
 			It("no data property in distribution.yaml file", func() {
-				out, err := FuryctlDumpTemplate(basepath+"/distribution-yaml-no-data-property", false)
+				bp := Setup("distribution-yaml-no-data-property")
+
+				out, err := FuryctlDumpTemplate(bp, false)
 
 				Expect(err).To(HaveOccurred())
 				Expect(string(out)).To(ContainSubstring("incorrect base file, cannot access key data on map"))
 			})
 
 			It("empty template", func() {
-				_, err := FuryctlDumpTemplate(basepath+"/empty", false)
+				bp := Setup("empty")
+
+				_, err := FuryctlDumpTemplate(bp, false)
 
 				Expect(err).To(HaveOccurred())
-				Expect(basepath + "/empty/target/file.txt").To(Not(BeAnExistingFile()))
+				Expect(bp + "/target/file.txt").To(Not(BeAnExistingFile()))
 			})
 
 			It("simple template dry-run", func() {
-				_, err := FuryctlDumpTemplate(basepath+"/simple-dry-run", true)
+				bp := Setup("simple-dry-run")
+
+				_, err := FuryctlDumpTemplate(bp, true)
 
 				Expect(err).To(Not(HaveOccurred()))
-				Expect(FileContent(basepath + "/simple-dry-run/target/file.txt")).To(ContainSubstring("testValue"))
+				Expect(FileContent(bp + "/target/file.txt")).To(ContainSubstring("testValue"))
 			})
 
 			It("simple template", func() {
-				_, err := FuryctlDumpTemplate(basepath+"/simple", false)
+				bp := Setup("simple")
+
+				_, err := FuryctlDumpTemplate(bp, false)
 
 				Expect(err).To(Not(HaveOccurred()))
-				Expect(FileContent(basepath + "/simple/target/file.txt")).To(ContainSubstring("testValue"))
+				Expect(FileContent(bp + "/target/file.txt")).To(ContainSubstring("testValue"))
 			})
 
 			It("complex template dry-run", func() {
-				_, err := FuryctlDumpTemplate(basepath+"/complex-dry-run", true)
+				bp := Setup("complex-dry-run")
+
+				_, err := FuryctlDumpTemplate(bp, true)
 
 				Expect(err).To(Not(HaveOccurred()))
-				Expect(basepath + "/complex-dry-run/target/config/example.yaml").To(BeAnExistingFile())
-				Expect(basepath + "/complex-dry-run/target/kustomization.yaml").To(BeAnExistingFile())
-				Expect(FileContent(basepath + "/complex-dry-run/target/config/example.yaml")).
-					To(ContainSubstring("configdata: example"))
-				Expect(FileContent(basepath + "/complex-dry-run/target/kustomization.yaml")).
-					To(Equal(FileContent(basepath + "/complex-dry-run/data/expected-kustomization.yaml")))
+				Expect(bp + "/target/config/example.yaml").To(BeAnExistingFile())
+				Expect(bp + "/target/kustomization.yaml").To(BeAnExistingFile())
+				Expect(FileContent(bp + "/target/config/example.yaml")).To(ContainSubstring("configdata: example"))
+				Expect(FileContent(bp + "/target/kustomization.yaml")).
+					To(Equal(FileContent(bp + "/data/expected-kustomization.yaml")))
 			})
 
 			It("complex template", func() {
-				_, err := FuryctlDumpTemplate(basepath+"/complex", false)
+				bp := Setup("complex")
+
+				_, err := FuryctlDumpTemplate(bp, false)
 
 				Expect(err).To(Not(HaveOccurred()))
-				Expect(basepath + "/complex/target/config/example.yaml").To(BeAnExistingFile())
-				Expect(basepath + "/complex/target/kustomization.yaml").To(BeAnExistingFile())
-				Expect(FileContent(basepath + "/complex/target/config/example.yaml")).
-					To(ContainSubstring("configdata: example"))
-				Expect(FileContent(basepath + "/complex/target/kustomization.yaml")).
-					To(Equal(FileContent(basepath + "/complex/data/expected-kustomization.yaml")))
+				Expect(bp + "/target/config/example.yaml").To(BeAnExistingFile())
+				Expect(bp + "/target/kustomization.yaml").To(BeAnExistingFile())
+				Expect(FileContent(bp + "/target/config/example.yaml")).To(ContainSubstring("configdata: example"))
+				Expect(FileContent(bp + "/target/kustomization.yaml")).
+					To(Equal(FileContent(bp + "/data/expected-kustomization.yaml")))
 			})
 		})
 	})
