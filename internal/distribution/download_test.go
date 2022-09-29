@@ -49,7 +49,7 @@ func Test_Downloader_Download(t *testing.T) {
 		tC := tC
 
 		t.Run(tC.desc, func(t *testing.T) {
-			distroPath := fmt.Sprintf("../../test/data/e2e/download/dependencies/%s/distro", tC.wantDistroVer)
+			distroPath := fmt.Sprintf("../../test/data/integration/%s/distro", tC.wantDistroVer)
 			absDistroPath, err := filepath.Abs(distroPath)
 			if err != nil {
 				t.Fatal(err)
@@ -60,7 +60,7 @@ func Test_Downloader_Download(t *testing.T) {
 			res, err := d.Download(
 				tC.furyctlBinVer,
 				absDistroPath,
-				fmt.Sprintf("../../test/data/e2e/download/dependencies/%s/furyctl.yaml", tC.wantDistroVer),
+				fmt.Sprintf("../../test/data/integration/%s/furyctl.yaml", tC.wantDistroVer),
 			)
 			if err != nil {
 				t.Fatal(err)
