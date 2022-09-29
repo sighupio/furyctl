@@ -5,23 +5,33 @@
 package create
 
 import (
+	"errors"
 	"fmt"
+	"os"
+	"path/filepath"
 
 	"github.com/spf13/cobra"
 
-	"github.com/sighupio/furyctl/internal/app"
 	"github.com/sighupio/furyctl/internal/cobrax"
+	"github.com/sighupio/furyctl/internal/config"
+	"github.com/sighupio/furyctl/internal/dependencies"
+	"github.com/sighupio/furyctl/internal/distribution"
+	"github.com/sighupio/furyctl/internal/eks"
 	"github.com/sighupio/furyctl/internal/execx"
 	"github.com/sighupio/furyctl/internal/netx"
 )
 
-var ErrClusterCreationFailed = fmt.Errorf("cluster creation failed")
+var (
+	ErrClusterCreationFailed       = errors.New("cluster creation failed")
+	ErrUnsupportedDistributionKind = errors.New("unsupported distribution kind")
+)
 
 func NewClusterCmd(version string) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "cluster",
 		Short: "Creates a battle-tested Kubernetes cluster",
 		RunE: func(cmd *cobra.Command, _ []string) error {
+			// Get flags
 			debug := cobrax.Flag[bool](cmd, "debug").(bool)
 			furyctlPath := cobrax.Flag[string](cmd, "config").(string)
 			distroLocation := cobrax.Flag[string](cmd, "distro-location").(string)
@@ -30,31 +40,67 @@ func NewClusterCmd(version string) *cobra.Command {
 			dryRun := cobrax.Flag[bool](cmd, "dry-run").(bool)
 			skipDownload := cobrax.Flag[bool](cmd, "skip-download").(bool)
 
-			cc := app.NewCreateCluster(netx.NewGoGetterClient(), execx.NewStdExecutor())
-
-			res, err := cc.Execute(app.CreateClusterRequest{
-				FuryctlConfPath:   furyctlPath,
-				FuryctlBinVersion: version,
-				DistroLocation:    distroLocation,
-				Phase:             phase,
-				DryRun:            dryRun,
-				VpnAutoConnect:    vpnAutoConnect,
-				SkipDownload:      skipDownload,
-				Debug:             debug,
-			})
+			// Init paths
+			basePath, err := os.Getwd()
 			if err != nil {
 				return err
 			}
 
-			if res.HasErrors() {
-				fmt.Println(res.Error)
+			vendorPath := filepath.Join(basePath, "vendor")
 
-				return ErrClusterCreationFailed
+			// Init collaborators
+			client := netx.NewGoGetterClient()
+			executor := execx.NewStdExecutor()
+			distrodl := distribution.NewDownloader(client, debug)
+			depsdl := dependencies.NewDownloader(client, basePath)
+			depsvl := dependencies.NewValidator(executor)
+
+			// Download the distribution
+			res, err := distrodl.Download(version, distroLocation, furyctlPath)
+			if err != nil {
+				return err
 			}
 
-			fmt.Println("cluster creation succeeded")
+			// Validate the furyctl.yaml file
+			if err := config.Validate(furyctlPath, res.RepoPath); err != nil {
+				return err
+			}
 
-			return nil
+			// Download the dependencies
+			if !skipDownload {
+				if errs, _ := depsdl.DownloadAll(res.DistroManifest); len(errs) > 0 {
+					return fmt.Errorf("errors downloading dependencies: %v", errs)
+				}
+			}
+
+			// Validate the dependencies
+			if err := depsvl.Validate(res, vendorPath); err != nil {
+				return err
+			}
+
+			// Create the cluster
+			if res.MinimalConf.Kind == "EKSCluster" {
+				eksCluster, err := eks.NewClusterCreator(
+					res.MinimalConf.ApiVersion,
+					phase,
+					res.DistroManifest,
+					furyctlPath,
+					vpnAutoConnect,
+				)
+				if err != nil {
+					return err
+				}
+
+				if err := eksCluster.Create(dryRun); err != nil {
+					return err
+				}
+
+				fmt.Println("cluster creation succeeded")
+
+				return nil
+			}
+
+			return ErrUnsupportedDistributionKind
 		},
 	}
 
