@@ -10,8 +10,10 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 
-	"github.com/sighupio/furyctl/internal/app"
 	"github.com/sighupio/furyctl/internal/cobrax"
+	"github.com/sighupio/furyctl/internal/dependencies/envvars"
+	"github.com/sighupio/furyctl/internal/dependencies/tools"
+	"github.com/sighupio/furyctl/internal/distribution"
 	"github.com/sighupio/furyctl/internal/execx"
 	"github.com/sighupio/furyctl/internal/netx"
 )
@@ -28,23 +30,24 @@ func NewDependenciesCmd(furyctlBinVersion string) *cobra.Command {
 			furyctlPath := cobrax.Flag[string](cmd, "config").(string)
 			distroLocation := cobrax.Flag[string](cmd, "distro-location").(string)
 
-			vd := app.NewValidateDependencies(netx.NewGoGetterClient(), execx.NewStdExecutor())
+			dloader := distribution.NewDownloader(netx.NewGoGetterClient(), debug)
 
-			res, err := vd.Execute(app.ValidateDependenciesRequest{
-				BinPath:           binPath,
-				FuryctlBinVersion: furyctlBinVersion,
-				DistroLocation:    distroLocation,
-				FuryctlConfPath:   furyctlPath,
-				Debug:             debug,
-			})
+			dres, err := dloader.Download(furyctlBinVersion, distroLocation, furyctlPath)
 			if err != nil {
 				return err
 			}
 
-			if res.HasErrors() {
-				logrus.Debugf("Repository path: %s", res.RepoPath)
+			toolsValidator := tools.NewValidator(execx.NewStdExecutor())
+			envVarsValidator := envvars.NewValidator()
+			errs := make([]error, 0)
 
-				for _, err := range res.Errors {
+			errs = append(errs, toolsValidator.Validate(dres.DistroManifest, binPath)...)
+			errs = append(errs, envVarsValidator.Validate(dres.MinimalConf.Kind)...)
+
+			if len(errs) > 0 {
+				logrus.Debugf("Repository path: %s", dres.RepoPath)
+
+				for _, err := range errs {
 					logrus.Error(err)
 				}
 
