@@ -124,9 +124,11 @@ FURYCTL="${PWD}/dist/furyctl"
     test_dir="./test/integration/validation-cmd/data/dependencies-correct"
     abs_test_dir=${PWD}/${test_dir}
     init(){
+        OLDPATH=${PATH}
         export AWS_ACCESS_KEY_ID=foo
         export AWS_SECRET_ACCESS_KEY=bar
         export AWS_DEFAULT_REGION=baz
+        export PATH=${abs_test_dir}:${PATH}
 
         cd ${test_dir} && \
         ${FURYCTL} -d --debug \
@@ -134,6 +136,8 @@ FURYCTL="${PWD}/dist/furyctl"
                 --config ${abs_test_dir}/furyctl.yaml \
                 --distro-location ${abs_test_dir} \
                 --bin-path=${abs_test_dir}
+
+        export PATH=${OLDPATH}
     }
     run init
 
