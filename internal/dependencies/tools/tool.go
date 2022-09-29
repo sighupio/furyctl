@@ -4,7 +4,9 @@
 
 package tools
 
-import "github.com/sighupio/furyctl/internal/execx"
+import (
+	"github.com/sighupio/furyctl/internal/execx"
+)
 
 type Tool interface {
 	SrcPath() string
