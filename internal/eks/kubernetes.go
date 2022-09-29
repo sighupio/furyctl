@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"github.com/sighupio/fury-distribution/pkg/config"
 	"github.com/sighupio/furyctl/internal/template"
-	"github.com/sighupio/furyctl/internal/yaml"
 	"io"
 	"os"
 	"os/exec"
@@ -16,114 +15,59 @@ import (
 )
 
 type Kubernetes struct {
-	Path          string
-	TerraformPath string
-	PlanPath      string
-	LogsPath      string
-	OutputsPath   string
-	SecretsPath   string
+	base *Base
 }
 
 func NewKubernetes() (*Kubernetes, error) {
-	kubePath := path.Join(".kubernetes")
-
-	binPath, err := filepath.Abs("./vendor")
+	base, err := NewBase(".kubernetes")
 	if err != nil {
-		return &Kubernetes{}, err
+		return nil, err
 	}
 
-	terraformPath := path.Join(binPath, "bin", "terraform")
-
-	planPath := path.Join(kubePath, "terraform", "plan")
-	logsPath := path.Join(kubePath, "terraform", "logs")
-	outputsPath := path.Join(kubePath, "terraform", "outputs")
-	secretsPath := path.Join(kubePath, "terraform", "secrets")
-
 	return &Kubernetes{
-		Path:          kubePath,
-		TerraformPath: terraformPath,
-		PlanPath:      planPath,
-		LogsPath:      logsPath,
-		OutputsPath:   outputsPath,
-		SecretsPath:   secretsPath,
+		base: base,
 	}, nil
 }
 
 func (k *Kubernetes) CreateFolder() error {
-	return os.Mkdir(k.Path, 0o755)
+	return k.base.CreateFolder()
+}
+
+func (k *Kubernetes) CreateFolderStructure() error {
+	return k.base.CreateFolderStructure()
+}
+
+func (k *Kubernetes) Path() string {
+	return k.base.Path
 }
 
 func (k *Kubernetes) CopyFromTemplate(kfdManifest config.KFD) error {
-	var config template.Config
+	var cfg template.Config
 
 	sourceTfDir := path.Join("configs", "provisioners", "cluster", "eks")
-	targetTfDir := path.Join(k.Path, "terraform")
-
-	outDirPath, err := os.MkdirTemp("", "furyctl-kube-")
-	if err != nil {
-		return err
-	}
-
+	targetTfDir := path.Join(k.base.Path, "terraform")
+	prefix := "kube"
 	tfConfVars := map[string]map[any]any{
 		"kubernetes": {
 			"eks": kfdManifest.Kubernetes.Eks,
 		},
 	}
 
-	config.Data = tfConfVars
+	cfg.Data = tfConfVars
 
-	tfConfigPath := path.Join(outDirPath, "tf-config.yaml")
-	tfConfig, err := yaml.MarshalV2(config)
-	if err != nil {
-		return err
-	}
-
-	err = os.WriteFile(tfConfigPath, tfConfig, 0o644)
-	if err != nil {
-		return err
-	}
-
-	templateModel, err := template.NewTemplateModel(
+	return k.base.CopyFromTemplate(
+		cfg,
+		prefix,
 		sourceTfDir,
 		targetTfDir,
-		tfConfigPath,
-		outDirPath,
-		".tpl",
-		true,
-		false,
 	)
-	if err != nil {
-		return err
-	}
-
-	err = templateModel.Generate()
-	return nil
-}
-
-func (k *Kubernetes) CreateFolderStructure() error {
-	err := os.Mkdir(k.PlanPath, 0o755)
-	if err != nil {
-		return err
-	}
-
-	err = os.Mkdir(k.LogsPath, 0o755)
-	if err != nil {
-		return err
-	}
-
-	err = os.Mkdir(k.SecretsPath, 0o755)
-	if err != nil {
-		return err
-	}
-
-	return os.Mkdir(k.OutputsPath, 0o755)
 }
 
 func (k *Kubernetes) TerraformInit() error {
-	terraformInitCmd := exec.Command(k.TerraformPath, "init")
+	terraformInitCmd := exec.Command(k.base.TerraformPath, "init")
 	terraformInitCmd.Stdout = os.Stdout
 	terraformInitCmd.Stderr = os.Stderr
-	terraformInitCmd.Dir = path.Join(k.Path, "terraform")
+	terraformInitCmd.Dir = path.Join(k.base.Path, "terraform")
 
 	return terraformInitCmd.Run()
 }
@@ -131,10 +75,10 @@ func (k *Kubernetes) TerraformInit() error {
 func (k *Kubernetes) TerraformPlan(timestamp int64) error {
 	var planBuffer bytes.Buffer
 
-	terraformPlanCmd := exec.Command(k.TerraformPath, "plan", "--out=plan/terraform.plan", "-no-color")
+	terraformPlanCmd := exec.Command(k.base.TerraformPath, "plan", "--out=plan/terraform.plan", "-no-color")
 	terraformPlanCmd.Stdout = io.MultiWriter(os.Stdout, &planBuffer)
 	terraformPlanCmd.Stderr = os.Stderr
-	terraformPlanCmd.Dir = path.Join(k.Path, "terraform")
+	terraformPlanCmd.Dir = path.Join(k.base.Path, "terraform")
 
 	err := terraformPlanCmd.Run()
 	if err != nil {
@@ -143,29 +87,29 @@ func (k *Kubernetes) TerraformPlan(timestamp int64) error {
 
 	logFilePath := fmt.Sprintf("plan-%d.log", timestamp)
 
-	return os.WriteFile(path.Join(k.PlanPath, logFilePath), planBuffer.Bytes(), 0o600)
+	return os.WriteFile(path.Join(k.base.PlanPath, logFilePath), planBuffer.Bytes(), 0o600)
 }
 
 func (k *Kubernetes) TerraformApply(timestamp int64) (OutputJson, error) {
 	var applyBuffer bytes.Buffer
 	var applyLogOut OutputJson
 
-	terraformApplyCmd := exec.Command(k.TerraformPath, "apply", "-no-color", "-json", "plan/terraform.plan")
+	terraformApplyCmd := exec.Command(k.base.TerraformPath, "apply", "-no-color", "-json", "plan/terraform.plan")
 	terraformApplyCmd.Stdout = io.MultiWriter(os.Stdout, &applyBuffer)
 	terraformApplyCmd.Stderr = os.Stderr
-	terraformApplyCmd.Dir = path.Join(k.Path, "terraform")
+	terraformApplyCmd.Dir = path.Join(k.base.Path, "terraform")
 
 	err := terraformApplyCmd.Run()
 	if err != nil {
 		return applyLogOut, err
 	}
 
-	err = os.WriteFile(path.Join(k.LogsPath, fmt.Sprintf("%d.log", timestamp)), applyBuffer.Bytes(), 0o600)
+	err = os.WriteFile(path.Join(k.base.LogsPath, fmt.Sprintf("%d.log", timestamp)), applyBuffer.Bytes(), 0o600)
 	if err != nil {
 		return applyLogOut, err
 	}
 
-	parsedApplyLog, err := os.ReadFile(path.Join(k.LogsPath, fmt.Sprintf("%d.log", timestamp)))
+	parsedApplyLog, err := os.ReadFile(path.Join(k.base.LogsPath, fmt.Sprintf("%d.log", timestamp)))
 	if err != nil {
 		return applyLogOut, err
 	}
@@ -186,7 +130,7 @@ func (k *Kubernetes) TerraformApply(timestamp int64) (OutputJson, error) {
 		return applyLogOut, err
 	}
 
-	err = os.WriteFile(path.Join(k.OutputsPath, "output.json"), []byte(outputsString), 0o600)
+	err = os.WriteFile(path.Join(k.base.OutputsPath, "output.json"), []byte(outputsString), 0o600)
 
 	return applyLogOut, err
 }
@@ -201,11 +145,11 @@ func (k *Kubernetes) CreateKubeconfig(o OutputJson) error {
 		return fmt.Errorf("can't get kubeconfig from terraform apply logs")
 	}
 
-	return os.WriteFile(path.Join(k.SecretsPath, "kubeconfig"), []byte(kubeString), 0o600)
+	return os.WriteFile(path.Join(k.base.SecretsPath, "kubeconfig"), []byte(kubeString), 0o600)
 }
 
 func (k *Kubernetes) SetKubeconfigEnv() error {
-	kubePath, err := filepath.Abs(path.Join(k.SecretsPath, "kubeconfig"))
+	kubePath, err := filepath.Abs(path.Join(k.base.SecretsPath, "kubeconfig"))
 	if err != nil {
 		return err
 	}
