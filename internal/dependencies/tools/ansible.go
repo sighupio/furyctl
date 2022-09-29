@@ -50,6 +50,7 @@ func (a *Ansible) Rename(basePath string) error {
 	return nil
 }
 
+//nolint:dupl // it will be refactored
 func (a *Ansible) CheckBinVersion(binPath string) error {
 	if a.version == "" {
 		return fmt.Errorf("ansible: %w", ErrEmptyToolVersion)

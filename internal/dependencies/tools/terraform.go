@@ -57,6 +57,7 @@ func (t *Terraform) Rename(basePath string) error {
 	return nil
 }
 
+//nolint:dupl // it will be refactored
 func (t *Terraform) CheckBinVersion(binPath string) error {
 	if t.version == "" {
 		return fmt.Errorf("terraform: %w", ErrEmptyToolVersion)
