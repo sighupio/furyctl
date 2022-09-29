@@ -5,19 +5,19 @@
 apiVersion: kfd.sighup.io/v1alpha2
 kind: EKSCluster
 metadata:
-  name: awesome-cluster-staging
+  name: example
 spec:
   distributionVersion: v1.23.3
   toolsConfiguration:
     terraform:
       state:
         s3:
-          bucketName: awesome-bucket-created-outside-furyctl
-          keyPrefix: furyctl/
+          bucketName: example-bucket
+          keyPrefix: example-cluster/
           region: eu-west-1
   tags:
-    env: "staging"
-    k8s: "awesome"
+    env: "example"
+    k8s: "example2"
   infrastructure:
     vpc:
       network:
@@ -41,18 +41,18 @@ spec:
         vpnClientsSubnetCidr: 172.16.0.0/16
         ssh:
           publicKeys:
-            - "ssh-ed25519 XYX"
+            - "ssh-ed25519 XYZ"
             - "{file://relative/path/to/ssh.pub}"
           githubUsersName:
-            - lnovara
+            - johndoe
           allowedFromCidrs:
             - 0.0.0.0/0
   kubernetes:
-    vpcId: vpc-0f92da9b4a2089963
+    vpcId: vpc-0123456789abcdef0
     subnetIds:
-      - subnet-0ab84702287e38ccb
-      - subnet-0ae4e9199d9192226
-      - subnet-01787e8da51e4f070
+      - subnet-0123456789abcdef0
+      - subnet-0123456789abcdef1
+      - subnet-0123456789abcdef2
     apiServerEndpointAccess:
       type: private
       allowedCidrs:
@@ -61,18 +61,22 @@ spec:
     nodePools:
       - name: worker
         ami:
-          id: null
-          owner: null
+          id: ami-0123456789abcdef0
+          owner: "123456789012"
         size:
           min: 1
           max: 3
+        subnetIds:
+          - subnet-0123456789abcdef0
+          - subnet-0123456789abcdef1
+          - subnet-0123456789abcdef2
         instance:
           type: t3.micro
           spot: false
           volumeSize: 50
         attachedTargetGroups:
-          - arn:aws:elasticloadbalancing:eu-west-1:026908869948:targetgroup/adv-staging-external-nginx/6294703cfe87d756
-          - arn:aws:elasticloadbalancing:eu-west-1:026908869948:targetgroup/adv-staging-internal-nginx/81625fbe0462e332
+          - arn:aws:elasticloadbalancing:eu-west-1:123456789012:targetgroup/example-external-nginx/0123456789abcdee
+          - arn:aws:elasticloadbalancing:eu-west-1:123456789012:targetgroup/example-internal-nginx/0123456789abcdef
         labels:
           nodepool: worker
           node.kubernetes.io/role: worker
@@ -90,20 +94,21 @@ spec:
             ports:
               from: 80
               to: 80
+            tags: {}
     awsAuth:
       additionalAccounts:
         - "777777777777"
         - "88888888888"
       users:
-        - username: "samuele"
+        - username: "johndoe"
           groups:
             - system:masters
-          userarn: "arn:aws:iam::363601582189:user/samuele"
+          userarn: "arn:aws:iam::123456789012:user/johndoe"
       roles:
-        - username: "sighup-support"
+        - username: "example"
           groups:
-            - sighup-support:masters
-          rolearn: "arn:aws:iam::363601582189:role/k8s-sighup-support-role"
+            - example:masters
+          rolearn: "arn:aws:iam::123456789012:role/k8s-example-role"
   distribution:
     common:
       nodeSelector:
@@ -122,7 +127,7 @@ spec:
               disableAuth: false
               host: ""
               ingressClass: ""
-        baseDomain: internal.fury-demo.sighup.io
+        baseDomain: example.dev
         nginx:
           type: single
           tls:
@@ -138,12 +143,12 @@ spec:
         dns:
           public:
             enabled: true
-            name: "fury-demo.sighup.io"
+            name: "example.dev"
             create: false
           private:
             enabled: true
-            name: "internal.fury-demo.sighup.io"
-            vpcId: "vpc123123123123"
+            name: "internal.example.dev"
+            vpcId: "vpc-0123456789abcdef0"
       logging:
         overrides:
           nodeSelector: {}
@@ -240,7 +245,7 @@ spec:
               config:
                 clientID: "{env://KFD_AUTH_DEX_CONNECTORS_GITHUB_CLIENT_ID}"
                 clientSecret: "{env://KFD_AUTH_DEX_CONNECTORS_GITHUB_CLIENT_SECRET}"
-                redirectURI: https://login.fury-demo.sighup.io/callback
+                redirectURI: https://login.example.dev/callback
                 loadAllGroups: false
                 teamNameField: slug
                 useLoginAsID: false

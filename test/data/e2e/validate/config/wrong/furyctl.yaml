@@ -9,7 +9,7 @@ metadata:
   name: awesome-cluster-staging
 spec:
   # with this version we will download the kfd.yaml file from the distribution to gather all the other components versions
-  distributionVersion: "v1.23.3"
+  distributionVersion: v1.23.3
   test: test # should make the validation fail
   # Under the hood, furyctl uses other tools like terraform, kustomize, etc
   toolsConfiguration:
