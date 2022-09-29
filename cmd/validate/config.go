@@ -10,8 +10,9 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 
-	"github.com/sighupio/furyctl/internal/app"
 	"github.com/sighupio/furyctl/internal/cobrax"
+	"github.com/sighupio/furyctl/internal/config"
+	"github.com/sighupio/furyctl/internal/distribution"
 	"github.com/sighupio/furyctl/internal/netx"
 )
 
@@ -26,22 +27,17 @@ func NewConfigCmd(furyctlBinVersion string) *cobra.Command {
 			furyctlPath := cobrax.Flag[string](cmd, "config").(string)
 			distroLocation := cobrax.Flag[string](cmd, "distro-location").(string)
 
-			vc := app.NewValidateConfig(netx.NewGoGetterClient())
+			dloader := distribution.NewDownloader(netx.NewGoGetterClient(), debug)
 
-			res, err := vc.Execute(app.ValidateConfigRequest{
-				FuryctlBinVersion: furyctlBinVersion,
-				DistroLocation:    distroLocation,
-				FuryctlConfPath:   furyctlPath,
-				Debug:             debug,
-			})
+			res, err := dloader.Download(furyctlBinVersion, distroLocation, furyctlPath)
 			if err != nil {
 				return err
 			}
 
-			if res.HasErrors() {
+			if err := config.Validate(furyctlPath, res.RepoPath); err != nil {
 				logrus.Debugf("Repository path: %s", res.RepoPath)
 
-				logrus.Error(res.Error)
+				logrus.Error(err)
 
 				return ErrValidationFailed
 			}

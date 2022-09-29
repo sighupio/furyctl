@@ -11,8 +11,9 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 
-	"github.com/sighupio/furyctl/internal/app"
 	"github.com/sighupio/furyctl/internal/cobrax"
+	"github.com/sighupio/furyctl/internal/dependencies"
+	"github.com/sighupio/furyctl/internal/distribution"
 	"github.com/sighupio/furyctl/internal/netx"
 )
 
@@ -32,26 +33,27 @@ func NewDependenciesCmd(furyctlBinVersion string) *cobra.Command {
 				return err
 			}
 
-			dd := app.NewDownloadDependencies(netx.NewGoGetterClient(), basePath)
+			client := netx.NewGoGetterClient()
 
-			res, err := dd.Execute(app.DownloadDependenciesRequest{
-				FuryctlBinVersion: furyctlBinVersion,
-				DistroLocation:    distroLocation,
-				FuryctlConfPath:   furyctlPath,
-				Debug:             debug,
-			})
+			distrodl := distribution.NewDownloader(client, debug)
+
+			dres, err := distrodl.Download(furyctlBinVersion, distroLocation, furyctlPath)
 			if err != nil {
 				return err
 			}
 
-			for _, ut := range res.UnsupTools {
+			depsdl := dependencies.NewDownloader(client, basePath)
+
+			errs, uts := depsdl.DownloadAll(dres.DistroManifest)
+
+			for _, ut := range uts {
 				logrus.Warn(fmt.Sprintf("'%s' download is not supported", ut))
 			}
 
-			if res.HasErrors() {
-				logrus.Debugf("Repository path: %s", res.RepoPath)
+			if len(errs) > 0 {
+				logrus.Debugf("Repository path: %s", dres.RepoPath)
 
-				for _, err := range res.DepsErrors {
+				for _, err := range errs {
 					logrus.Error(err)
 				}
 
