@@ -1,4 +1,5 @@
 coverage.out
+coverage.out.*
 vendor
 bin
 .idea
@@ -9,3 +10,4 @@ dist/
 .infrastructure
 .kubernetes
 .distribution
+test/data/e2e/**/target

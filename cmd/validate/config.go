@@ -15,7 +15,7 @@ import (
 	"github.com/sighupio/furyctl/internal/netx"
 )
 
-var ErrValidationFailed = fmt.Errorf("validation failed")
+var ErrValidationFailed = fmt.Errorf("config validation failed")
 
 func NewConfigCmd(furyctlBinVersion string) *cobra.Command {
 	cmd := &cobra.Command{
@@ -46,7 +46,7 @@ func NewConfigCmd(furyctlBinVersion string) *cobra.Command {
 				return ErrValidationFailed
 			}
 
-			logrus.Info("Config validation succeeded")
+			logrus.Info("config validation succeeded")
 
 			return nil
 		},

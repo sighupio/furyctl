@@ -106,15 +106,16 @@ lint: lint-go
 lint-go:
 	@golangci-lint -v run --color=always --config=${_PROJECT_DIRECTORY}/.rules/.golangci.yml ./...
 
-.PHONY: test-unit test-integration
+.PHONY: test-unit test-integration test-e2e
 
 test-unit:
 	@go test -v -covermode=atomic -coverprofile=coverage.out -tags=unit ./...
 
 test-integration:
 	@go test -v -covermode=atomic -coverprofile=coverage.out -tags=integration -timeout 120s ./...
-	@bats -t ./test/integration/template-engine/tests.sh
-	@bats -t ./test/integration/validation-cmd/tests.sh
+
+test-e2e:
+	@ginkgo run -v --covermode=atomic --coverprofile=coverage.out --tags=e2e --timeout 120s -p test/e2e
 
 .PHONY: clean build release
 

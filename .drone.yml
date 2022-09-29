@@ -8,7 +8,7 @@ name: main
 
 steps:
   - name: prepare
-    image: quay.io/sighup/golang:1.19.0
+    image: quay.io/sighup/golang:1.19.1
     depends_on:
       - clone
     pull: always
@@ -17,7 +17,7 @@ steps:
       - go mod download
 
   - name: license
-    image: quay.io/sighup/golang:1.19.0
+    image: quay.io/sighup/golang:1.19.1
     depends_on:
       - clone
     pull: always
@@ -31,7 +31,7 @@ steps:
       GOTMPDIR: /drone/src/.go/tmp
 
   - name: lint
-    image: quay.io/sighup/golang:1.19.0
+    image: quay.io/sighup/golang:1.19.1
     depends_on:
       - prepare
     pull: always
@@ -44,7 +44,7 @@ steps:
       GOTMPDIR: /drone/src/.go/tmp
 
   - name: test-unit
-    image: quay.io/sighup/golang:1.19.0
+    image: quay.io/sighup/golang:1.19.1
     depends_on:
       - prepare
     pull: always
@@ -57,14 +57,27 @@ steps:
       GOTMPDIR: /drone/src/.go/tmp
 
   - name: test-integration
-    image: quay.io/sighup/golang:1.19.0
+    image: quay.io/sighup/golang:1.19.1
     depends_on:
       - prepare
     commands:
       - echo $${NETRC_FILE} > /root/.netrc
-      - git clone --depth 1 --branch v1.8.0 https://github.com/bats-core/bats-core.git
-      - ./bats-core/install.sh /usr/local
       - make test-integration
+    environment:
+      CGO_ENABLED: 0
+      GOCACHE: /drone/src/.go/cache
+      GOMODCACHE: /drone/src/.go/modcache
+      GOTMPDIR: /drone/src/.go/tmp
+      NETRC_FILE:
+        from_secret: NETRC_FILE
+
+  - name: test-e2e
+    image: quay.io/sighup/golang:1.19.1
+    depends_on:
+      - prepare
+    commands:
+      - echo $${NETRC_FILE} > /root/.netrc
+      - make test-e2e
     environment:
       CGO_ENABLED: 0
       GOCACHE: /drone/src/.go/cache
