@@ -1,4 +1,5 @@
 coverage.out
+coverage.out.*
 vendor
 bin
 .idea
