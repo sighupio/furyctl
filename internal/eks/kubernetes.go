@@ -4,14 +4,15 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"github.com/sighupio/fury-distribution/pkg/config"
-	"github.com/sighupio/furyctl/internal/template"
 	"io"
 	"os"
 	"os/exec"
 	"path"
 	"path/filepath"
 	"regexp"
+
+	"github.com/sighupio/fury-distribution/pkg/config"
+	"github.com/sighupio/furyctl/internal/template"
 )
 
 type Kubernetes struct {
