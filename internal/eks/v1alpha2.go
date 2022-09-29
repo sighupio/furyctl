@@ -82,7 +82,7 @@ func (v *V1alpha2) Infrastructure(dryRun bool) error {
 		return err
 	}
 
-	err = v.CreateInfraTfVars(infra.Path)
+	err = v.CreateInfraTfVars(infra.base.Path)
 	if err != nil {
 		return err
 	}
@@ -159,7 +159,7 @@ func (v *V1alpha2) Kubernetes(dryRun bool) error {
 		return err
 	}
 
-	err = v.CreateKubernetesTfVars(kube.Path, infra.OutputsPath)
+	err = v.CreateKubernetesTfVars(kube.Path(), infra.OutputsPath())
 	if err != nil {
 		return err
 	}
@@ -195,6 +195,18 @@ func (v *V1alpha2) Kubernetes(dryRun bool) error {
 }
 
 func (v *V1alpha2) Distribution(dryRun bool) error {
+	//timestamp := time.Now().Unix()
+
+	distro, err := NewDistribution()
+	if err != nil {
+		return err
+	}
+
+	err = distro.CreateFolder()
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 
