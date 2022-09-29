@@ -79,7 +79,7 @@ func (a *Ansible) CheckBinVersion(binPath string) error {
 	systemAnsibleVersion := strings.TrimRight(versionStringTokens[len(versionStringTokens)-1], "]")
 
 	if systemAnsibleVersion != a.version {
-		return fmt.Errorf("%w: installed = %s, expected = %s", ErrWrongToolVersion, systemAnsibleVersion, a.version)
+		return fmt.Errorf("ansible: %w - installed = %s, expected = %s", ErrWrongToolVersion, systemAnsibleVersion, a.version)
 	}
 
 	return nil

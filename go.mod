@@ -26,7 +26,10 @@ require (
 	github.com/google/go-cmp v0.5.8
 	github.com/go-playground/validator/v10 v10.11.1
 	github.com/hashicorp/terraform-json v0.10.0
-	github.com/sighupio/fury-distribution v1.23.3-0.20220927154048-3a624c214c67
+	github.com/onsi/ginkgo/v2 v2.1.6
+	github.com/onsi/gomega v1.20.2
+	github.com/sighupio/fury-distribution v1.23.3-0.20220927125444-6ce8e5794f09
+	golang.org/x/exp v0.0.0-20220927162542-c76eaa363f9d
 	gopkg.in/yaml.v3 v3.0.1
 )
 
@@ -95,6 +98,6 @@ require (
 	google.golang.org/appengine v1.6.7 // indirect
 	google.golang.org/genproto v0.0.0-20210602131652-f16073e35f0c // indirect
 	google.golang.org/grpc v1.38.0 // indirect
-	google.golang.org/protobuf v1.26.0 // indirect
+	google.golang.org/protobuf v1.28.0 // indirect
 	gopkg.in/ini.v1 v1.62.0 // indirect
 )

@@ -88,7 +88,7 @@ func (f *Furyagent) CheckBinVersion(binPath string) error {
 	systemFuryagentVersion := versionStringTokens[len(versionStringTokens)-1]
 
 	if systemFuryagentVersion != f.version {
-		return fmt.Errorf("%w: installed = %s, expected = %s", ErrWrongToolVersion, systemFuryagentVersion, f.version)
+		return fmt.Errorf("furyagent: %w - installed = %s, expected = %s", ErrWrongToolVersion, systemFuryagentVersion, f.version)
 	}
 
 	return nil
