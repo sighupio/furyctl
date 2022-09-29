@@ -7,7 +7,6 @@ project_name: furyctl
 before:
   hooks:
     - go mod tidy
-    - packr2 build
 builds:
   - env:
       - CGO_ENABLED=0
