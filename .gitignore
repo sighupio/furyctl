@@ -3,7 +3,6 @@ coverage.out.*
 vendor
 bin
 .idea
-*-packr.go
 furyctl
 demo
 dist/
