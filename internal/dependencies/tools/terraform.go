@@ -65,7 +65,7 @@ func (t *Terraform) CheckBinVersion(binPath string) error {
 	path := filepath.Join(binPath, "terraform")
 	out, err := t.executor.Command(path, "--version").Output()
 	if err != nil {
-		return err
+		return fmt.Errorf("error running %s: %w", path, err)
 	}
 
 	s := string(out)
