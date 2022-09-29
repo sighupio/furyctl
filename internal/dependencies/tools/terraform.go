@@ -86,7 +86,7 @@ func (t *Terraform) CheckBinVersion(binPath string) error {
 	systemTerraformVersion := strings.TrimLeft(versionStringTokens[len(versionStringTokens)-1], "v")
 
 	if systemTerraformVersion != t.version {
-		return fmt.Errorf("%w: installed = %s, expected = %s", ErrWrongToolVersion, systemTerraformVersion, t.version)
+		return fmt.Errorf("terraform: %w - installed = %s, expected = %s", ErrWrongToolVersion, systemTerraformVersion, t.version)
 	}
 
 	return nil
