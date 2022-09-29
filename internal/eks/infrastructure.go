@@ -12,65 +12,53 @@ import (
 	"os"
 	"os/exec"
 	"path"
-	"path/filepath"
 	"regexp"
 
 	"github.com/sighupio/fury-distribution/pkg/config"
 	"github.com/sighupio/furyctl/internal/template"
-	"github.com/sighupio/furyctl/internal/yaml"
 )
 
 type Infrastructure struct {
-	Path          string
-	TerraformPath string
+	base          *Base
 	FuryagentPath string
-	PlanPath      string
-	LogsPath      string
-	OutputsPath   string
-	SecretsPath   string
 }
 
 func NewInfrastructure() (*Infrastructure, error) {
-	infraPath := path.Join(".infrastructure")
-
-	binPath, err := filepath.Abs("./vendor")
+	base, err := NewBase(".infrastructure")
 	if err != nil {
-		return &Infrastructure{}, err
+		return nil, err
 	}
 
-	terraformPath := path.Join(binPath, "bin", "terraform")
-	furyAgentPath := path.Join(binPath, "bin", "furyagent")
-
-	planPath := path.Join(infraPath, "terraform", "plan")
-	logsPath := path.Join(infraPath, "terraform", "logs")
-	outputsPath := path.Join(infraPath, "terraform", "outputs")
-	secretsPath := path.Join(infraPath, "terraform", "secrets")
+	furyAgentPath := path.Join(base.VendorPath, "bin", "furyagent")
 
 	return &Infrastructure{
-		Path:          infraPath,
-		TerraformPath: terraformPath,
+		base:          base,
 		FuryagentPath: furyAgentPath,
-		PlanPath:      planPath,
-		LogsPath:      logsPath,
-		OutputsPath:   outputsPath,
-		SecretsPath:   secretsPath,
 	}, nil
 }
 
 func (i *Infrastructure) CreateFolder() error {
-	return os.Mkdir(i.Path, 0o755)
+	return i.base.CreateFolder()
+}
+
+func (i *Infrastructure) CreateFolderStructure() error {
+	return i.base.CreateFolderStructure()
+}
+
+func (i *Infrastructure) Path() string {
+	return i.base.Path
+}
+
+func (i *Infrastructure) OutputsPath() string {
+	return i.base.OutputsPath
 }
 
 func (i *Infrastructure) CopyFromTemplate(kfdManifest config.KFD) error {
-	var config template.Config
+	var cfg template.Config
 
 	sourceTfDir := path.Join("configs", "provisioners", "bootstrap", "aws")
-	targetTfDir := path.Join(i.Path, "terraform")
-
-	outDirPath, err := os.MkdirTemp("", "furyctl-infra-")
-	if err != nil {
-		return err
-	}
+	targetTfDir := path.Join(i.base.Path, "terraform")
+	prefix := "infra"
 
 	tfConfVars := map[string]map[any]any{
 		"kubernetes": {
@@ -78,55 +66,21 @@ func (i *Infrastructure) CopyFromTemplate(kfdManifest config.KFD) error {
 		},
 	}
 
-	config.Data = tfConfVars
+	cfg.Data = tfConfVars
 
-	tfConfigPath := path.Join(outDirPath, "tf-config.yaml")
-	tfConfig, err := yaml.MarshalV2(config)
-	if err != nil {
-		return err
-	}
-
-	err = os.WriteFile(tfConfigPath, tfConfig, 0o644)
-	if err != nil {
-		return err
-	}
-
-	templateModel, err := template.NewTemplateModel(
+	return i.base.CopyFromTemplate(
+		cfg,
+		prefix,
 		sourceTfDir,
 		targetTfDir,
-		tfConfigPath,
-		outDirPath,
-		".tpl",
-		true,
-		false,
 	)
-	if err != nil {
-		return err
-	}
-
-	err = templateModel.Generate()
-	return nil
-}
-
-func (i *Infrastructure) CreateFolderStructure() error {
-	err := os.Mkdir(i.PlanPath, 0o755)
-	if err != nil {
-		return err
-	}
-
-	err = os.Mkdir(i.LogsPath, 0o755)
-	if err != nil {
-		return err
-	}
-
-	return os.Mkdir(i.OutputsPath, 0o755)
 }
 
 func (i *Infrastructure) TerraformInit() error {
-	terraformInitCmd := exec.Command(i.TerraformPath, "init")
+	terraformInitCmd := exec.Command(i.base.TerraformPath, "init")
 	terraformInitCmd.Stdout = os.Stdout
 	terraformInitCmd.Stderr = os.Stderr
-	terraformInitCmd.Dir = path.Join(i.Path, "terraform")
+	terraformInitCmd.Dir = path.Join(i.base.Path, "terraform")
 
 	return terraformInitCmd.Run()
 }
@@ -134,10 +88,10 @@ func (i *Infrastructure) TerraformInit() error {
 func (i *Infrastructure) TerraformPlan(timestamp int64) error {
 	var planBuffer bytes.Buffer
 
-	terraformPlanCmd := exec.Command(i.TerraformPath, "plan", "--out=plan/terraform.plan", "-no-color")
+	terraformPlanCmd := exec.Command(i.base.TerraformPath, "plan", "--out=plan/terraform.plan", "-no-color")
 	terraformPlanCmd.Stdout = io.MultiWriter(os.Stdout, &planBuffer)
 	terraformPlanCmd.Stderr = os.Stderr
-	terraformPlanCmd.Dir = path.Join(i.Path, "terraform")
+	terraformPlanCmd.Dir = path.Join(i.base.Path, "terraform")
 
 	err := terraformPlanCmd.Run()
 	if err != nil {
@@ -146,29 +100,29 @@ func (i *Infrastructure) TerraformPlan(timestamp int64) error {
 
 	logFilePath := fmt.Sprintf("plan-%d.log", timestamp)
 
-	return os.WriteFile(path.Join(i.PlanPath, logFilePath), planBuffer.Bytes(), 0o600)
+	return os.WriteFile(path.Join(i.base.PlanPath, logFilePath), planBuffer.Bytes(), 0o600)
 }
 
 func (i *Infrastructure) TerraformApply(timestamp int64) (OutputJson, error) {
 	var applyBuffer bytes.Buffer
 	var applyLogOut OutputJson
 
-	terraformApplyCmd := exec.Command(i.TerraformPath, "apply", "-no-color", "-json", "plan/terraform.plan")
+	terraformApplyCmd := exec.Command(i.base.TerraformPath, "apply", "-no-color", "-json", "plan/terraform.plan")
 	terraformApplyCmd.Stdout = io.MultiWriter(os.Stdout, &applyBuffer)
 	terraformApplyCmd.Stderr = os.Stderr
-	terraformApplyCmd.Dir = path.Join(i.Path, "terraform")
+	terraformApplyCmd.Dir = path.Join(i.base.Path, "terraform")
 
 	err := terraformApplyCmd.Run()
 	if err != nil {
 		return applyLogOut, err
 	}
 
-	err = os.WriteFile(path.Join(i.LogsPath, fmt.Sprintf("%d.log", timestamp)), applyBuffer.Bytes(), 0o600)
+	err = os.WriteFile(path.Join(i.base.LogsPath, fmt.Sprintf("%d.log", timestamp)), applyBuffer.Bytes(), 0o600)
 	if err != nil {
 		return applyLogOut, err
 	}
 
-	parsedApplyLog, err := os.ReadFile(path.Join(i.LogsPath, fmt.Sprintf("%d.log", timestamp)))
+	parsedApplyLog, err := os.ReadFile(path.Join(i.base.LogsPath, fmt.Sprintf("%d.log", timestamp)))
 	if err != nil {
 		return applyLogOut, err
 	}
@@ -189,7 +143,7 @@ func (i *Infrastructure) TerraformApply(timestamp int64) (OutputJson, error) {
 		return applyLogOut, err
 	}
 
-	err = os.WriteFile(path.Join(i.OutputsPath, "output.json"), []byte(outputsString), 0o600)
+	err = os.WriteFile(path.Join(i.base.OutputsPath, "output.json"), []byte(outputsString), 0o600)
 
 	return applyLogOut, err
 }
@@ -205,7 +159,7 @@ func (i *Infrastructure) CreateOvpnFile(clientName string) error {
 	)
 	furyAgentCmd.Stdout = io.MultiWriter(os.Stdout, &furyAgentBuffer)
 	furyAgentCmd.Stderr = os.Stderr
-	furyAgentCmd.Dir = i.SecretsPath
+	furyAgentCmd.Dir = i.base.SecretsPath
 
 	err := furyAgentCmd.Run()
 	if err != nil {
@@ -214,7 +168,7 @@ func (i *Infrastructure) CreateOvpnFile(clientName string) error {
 
 	return os.WriteFile(
 		path.Join(
-			i.SecretsPath,
+			i.base.SecretsPath,
 			fmt.Sprintf("%s.ovpn", clientName)),
 		furyAgentBuffer.Bytes(),
 		0o600,
@@ -223,6 +177,7 @@ func (i *Infrastructure) CreateOvpnFile(clientName string) error {
 
 func (i *Infrastructure) CreateOvpnConnection(clientName string) error {
 	openVpnCmd := exec.Command(
+		"sudo",
 		"openvpn",
 		"--config",
 		fmt.Sprintf("%s.ovpn", clientName),
@@ -230,7 +185,7 @@ func (i *Infrastructure) CreateOvpnConnection(clientName string) error {
 	)
 	openVpnCmd.Stdout = os.Stdout
 	openVpnCmd.Stderr = os.Stderr
-	openVpnCmd.Dir = i.SecretsPath
+	openVpnCmd.Dir = i.base.SecretsPath
 
 	return openVpnCmd.Run()
 }
