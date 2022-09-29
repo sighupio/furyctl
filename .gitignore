@@ -9,3 +9,4 @@ dist/
 .infrastructure
 .kubernetes
 .distribution
+test/data/e2e/**/target
