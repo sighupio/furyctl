@@ -85,7 +85,7 @@ func (k *Kustomize) CheckBinVersion(binPath string) error {
 	systemKustomizeVersion := strings.TrimLeft(versionStringTokens[len(versionStringTokens)-1], "v")
 
 	if systemKustomizeVersion != k.version {
-		return fmt.Errorf("%w: installed = %s, expected = %s", ErrWrongToolVersion, systemKustomizeVersion, k.version)
+		return fmt.Errorf("kustomize: %w - installed = %s, expected = %s", ErrWrongToolVersion, systemKustomizeVersion, k.version)
 	}
 
 	return nil

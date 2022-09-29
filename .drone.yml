@@ -61,10 +61,21 @@ steps:
     depends_on:
       - prepare
     commands:
-      - echo $${NETRC_FILE} > /root/.netrc
-      - git clone --depth 1 --branch v1.8.0 https://github.com/bats-core/bats-core.git
-      - ./bats-core/install.sh /usr/local
       - make test-integration
+    environment:
+      CGO_ENABLED: 0
+      GOCACHE: /drone/src/.go/cache
+      GOMODCACHE: /drone/src/.go/modcache
+      GOTMPDIR: /drone/src/.go/tmp
+      NETRC_FILE:
+        from_secret: NETRC_FILE
+
+  - name: test-e2e
+    image: quay.io/sighup/golang:1.19.0
+    depends_on:
+      - prepare
+    commands:
+      - make test-e2e
     environment:
       CGO_ENABLED: 0
       GOCACHE: /drone/src/.go/cache

@@ -87,7 +87,7 @@ func (k *Kubectl) CheckBinVersion(binPath string) error {
 	)
 
 	if systemKubectlVersion != k.version {
-		return fmt.Errorf("%w: installed = %s, expected = %s", ErrWrongToolVersion, systemKubectlVersion, k.version)
+		return fmt.Errorf("kubectl: %w - installed = %s, expected = %s", ErrWrongToolVersion, systemKubectlVersion, k.version)
 	}
 
 	return nil
