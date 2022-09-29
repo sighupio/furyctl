@@ -6,6 +6,7 @@ package eks
 
 import (
 	"errors"
+
 	tfjson "github.com/hashicorp/terraform-json"
 
 	"github.com/sighupio/fury-distribution/pkg/config"

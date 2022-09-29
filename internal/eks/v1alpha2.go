@@ -195,7 +195,7 @@ func (v *V1alpha2) Kubernetes(dryRun bool) error {
 }
 
 func (v *V1alpha2) Distribution(dryRun bool) error {
-	//timestamp := time.Now().Unix()
+	// timestamp := time.Now().Unix()
 
 	distro, err := NewDistribution()
 	if err != nil {
@@ -334,7 +334,7 @@ func (v *V1alpha2) CreateInfraTfVars(infraPath string) error {
 	return os.WriteFile(targetTfVars, buffer.Bytes(), 0o600)
 }
 
-func (v *V1alpha2) CreateKubernetesTfVars(kubePath string, infraOutPath string) error {
+func (v *V1alpha2) CreateKubernetesTfVars(kubePath, infraOutPath string) error {
 	var buffer bytes.Buffer
 
 	subnetIdsSource := v.FuryFile.Spec.Kubernetes.SubnetIds

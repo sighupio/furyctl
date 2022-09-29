@@ -6,11 +6,12 @@ package eks
 
 import (
 	"fmt"
-	"github.com/sighupio/furyctl/internal/template"
-	"github.com/sighupio/furyctl/internal/yaml"
 	"os"
 	"path"
 	"path/filepath"
+
+	"github.com/sighupio/furyctl/internal/template"
+	"github.com/sighupio/furyctl/internal/yaml"
 )
 
 type Base struct {
