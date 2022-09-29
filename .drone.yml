@@ -61,6 +61,7 @@ steps:
     depends_on:
       - prepare
     commands:
+      - echo $${NETRC_FILE} > /root/.netrc
       - make test-integration
     environment:
       CGO_ENABLED: 0
@@ -75,6 +76,7 @@ steps:
     depends_on:
       - prepare
     commands:
+      - echo $${NETRC_FILE} > /root/.netrc
       - make test-e2e
     environment:
       CGO_ENABLED: 0
