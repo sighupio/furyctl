@@ -103,6 +103,7 @@ func (i *Infrastructure) TerraformPlan(timestamp int64) error {
 	return os.WriteFile(path.Join(i.base.PlanPath, logFilePath), planBuffer.Bytes(), 0o600)
 }
 
+//nolint:dupl // it will be refactored
 func (i *Infrastructure) TerraformApply(timestamp int64) (OutputJson, error) {
 	var applyBuffer bytes.Buffer
 	var applyLogOut OutputJson

@@ -334,6 +334,7 @@ func (v *V1alpha2) CreateInfraTfVars(infraPath string) error {
 	return os.WriteFile(targetTfVars, buffer.Bytes(), 0o600)
 }
 
+//nolint:gocyclo,maintidx // it will be refactored
 func (v *V1alpha2) CreateKubernetesTfVars(kubePath, infraOutPath string) error {
 	var buffer bytes.Buffer
 
