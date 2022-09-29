@@ -59,6 +59,29 @@ var (
 		}
 	}
 
+	BackupEnvVars = func(vars ...string) func() {
+		backup := make(map[string]string)
+		remove := make([]string, 0)
+
+		for _, v := range vars {
+			if val, ok := os.LookupEnv(v); ok {
+				backup[v] = val
+			} else {
+				remove = append(remove, v)
+			}
+		}
+
+		return func() {
+			for k, v := range backup {
+				os.Setenv(k, v)
+			}
+
+			for _, v := range remove {
+				os.Unsetenv(v)
+			}
+		}
+	}
+
 	_ = BeforeSuite(func() {
 		tmpdir := MkdirTemp("furyctl-e2e")
 
@@ -181,15 +204,12 @@ var (
 			})
 
 			It("should exit without errors when dependencies are correct", func() {
+				RestoreEnvVars := BackupEnvVars("AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY", "AWS_DEFAULT_REGION")
+				defer RestoreEnvVars()
+
 				os.Setenv("AWS_ACCESS_KEY_ID", "test")
 				os.Setenv("AWS_SECRET_ACCESS_KEY", "test")
 				os.Setenv("AWS_DEFAULT_REGION", "test")
-
-				defer func() {
-					os.Unsetenv("AWS_ACCESS_KEY_ID")
-					os.Unsetenv("AWS_SECRET_ACCESS_KEY")
-					os.Unsetenv("AWS_DEFAULT_REGION")
-				}()
 
 				out, err := FuryctlValidateDependencies(
 					"../data/e2e/validate/dependencies/correct",
@@ -266,7 +286,7 @@ var (
 				return bp
 			}
 
-			It("no distribution yaml", func() {
+			It("fails if no distribution yaml is found", func() {
 				bp := Setup("no-distribution-yaml")
 
 				out, err := FuryctlDumpTemplate(bp, false)
@@ -275,7 +295,7 @@ var (
 				Expect(string(out)).To(ContainSubstring("distribution.yaml: no such file or directory"))
 			})
 
-			It("no furyctl.yaml file", func() {
+			It("fails if no furyctl.yaml file is found", func() {
 				bp := Setup("no-furyctl-yaml")
 
 				out, err := FuryctlDumpTemplate(bp, false)
@@ -284,7 +304,7 @@ var (
 				Expect(string(out)).To(ContainSubstring("furyctl.yaml: no such file or directory"))
 			})
 
-			It("no data property in distribution.yaml file", func() {
+			It("fails if no data properties are found in distribution.yaml file", func() {
 				bp := Setup("distribution-yaml-no-data-property")
 
 				out, err := FuryctlDumpTemplate(bp, false)
@@ -293,7 +313,7 @@ var (
 				Expect(string(out)).To(ContainSubstring("incorrect base file, cannot access key data on map"))
 			})
 
-			It("empty template", func() {
+			It("fails if given an empty template", func() {
 				bp := Setup("empty")
 
 				_, err := FuryctlDumpTemplate(bp, false)
@@ -302,7 +322,7 @@ var (
 				Expect(bp + "/target/file.txt").To(Not(BeAnExistingFile()))
 			})
 
-			It("simple template dry-run", func() {
+			It("succeeds when given a simple template on dry-run", func() {
 				bp := Setup("simple-dry-run")
 
 				_, err := FuryctlDumpTemplate(bp, true)
@@ -311,7 +331,7 @@ var (
 				Expect(FileContent(bp + "/target/file.txt")).To(ContainSubstring("testValue"))
 			})
 
-			It("simple template", func() {
+			It("succeeds when given a simple template", func() {
 				bp := Setup("simple")
 
 				_, err := FuryctlDumpTemplate(bp, false)
@@ -320,7 +340,7 @@ var (
 				Expect(FileContent(bp + "/target/file.txt")).To(ContainSubstring("testValue"))
 			})
 
-			It("complex template dry-run", func() {
+			It("succeeds when given a complex template on dry-run", func() {
 				bp := Setup("complex-dry-run")
 
 				_, err := FuryctlDumpTemplate(bp, true)
@@ -333,7 +353,7 @@ var (
 					To(Equal(FileContent(bp + "/data/expected-kustomization.yaml")))
 			})
 
-			It("complex template", func() {
+			It("succeeds when given a complex template", func() {
 				bp := Setup("complex")
 
 				_, err := FuryctlDumpTemplate(bp, false)
@@ -344,6 +364,36 @@ var (
 				Expect(FileContent(bp + "/target/config/example.yaml")).To(ContainSubstring("configdata: example"))
 				Expect(FileContent(bp + "/target/kustomization.yaml")).
 					To(Equal(FileContent(bp + "/data/expected-kustomization.yaml")))
+			})
+		})
+
+		Context("create config", func() {
+			basepath := "../data/e2e/create/config"
+			FuryctlCreateConfig := func(workdir string) ([]byte, error) {
+				return exec.Command(
+					furyctl, "create", "config",
+					"--config", workdir+"/target/furyctl.yaml",
+					"--debug",
+				).CombinedOutput()
+			}
+			Setup := func(folder string) string {
+				bp := filepath.Join(basepath, folder)
+				tp := filepath.Join(bp, "target")
+
+				RemoveAll(tp)
+
+				return bp
+			}
+
+			It("scaffolds a new furyctl.yaml file", func() {
+				bp := Setup("default")
+
+				_, err := FuryctlCreateConfig(bp)
+
+				Expect(err).To(Not(HaveOccurred()))
+				Expect(bp + "/target/furyctl.yaml").To(BeAnExistingFile())
+				Expect(FileContent(bp + "/target/furyctl.yaml")).
+					To(Equal(FileContent(bp + "/data/expected-furyctl.yaml")))
 			})
 		})
 	})

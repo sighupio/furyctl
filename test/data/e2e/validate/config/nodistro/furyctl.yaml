@@ -9,7 +9,7 @@ metadata:
   name: awesome-cluster-staging
 spec:
   # with this version we will download the kfd.yaml file from the distribution to gather all the other components versions
-  distributionVersion: "v1.23.3"
+  distributionVersion: v1.23.3
   # Under the hood, furyctl uses other tools like terraform, kustomize, etc
   toolsConfiguration:
     terraform:
@@ -190,7 +190,7 @@ spec:
             # can be route53 or http01 , if http01 we need to extrapolate the ingress type. If single the class will be nginx, if dual the class will be external
             type: http01
             # if auth type is route53, should be taken automatically from the role generation using module.ingress.dns.public settings
-        # this key will manage the creation of the AWS zones and the iam roles needed for ingress module, eg: certManager and externalDns 
+        # this key will manage the creation of the AWS zones and the iam roles needed for ingress module, eg: certManager and externalDns
         dns:
           public:
             enabled: true
