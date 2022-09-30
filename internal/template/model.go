@@ -128,6 +128,10 @@ func (tm *Model) applyTemplates(
 		return err
 	}
 
+	if info == nil {
+		return err
+	}
+
 	if info.IsDir() {
 		return err
 	}
