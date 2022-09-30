@@ -24,14 +24,14 @@ import (
 )
 
 var (
+	wg sync.WaitGroup
+
 	version   = "unknown"
 	gitCommit = "unknown"
 	buildTime = "unknown"
 	goVersion = "unknown"
 	osArch    = "unknown"
 )
-
-var wg sync.WaitGroup
 
 func main() {
 	versions := map[string]string{
