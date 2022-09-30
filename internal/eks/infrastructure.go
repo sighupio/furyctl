@@ -8,7 +8,9 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"github.com/sighupio/furyctl/configs"
 	"io"
+	"io/fs"
 	"os"
 	"os/exec"
 	"path"
@@ -56,7 +58,23 @@ func (i *Infrastructure) OutputsPath() string {
 func (i *Infrastructure) CopyFromTemplate(kfdManifest config.KFD) error {
 	var cfg template.Config
 
-	sourceTfDir := path.Join("configs", "provisioners", "bootstrap", "aws")
+	tmpFolder, err := os.MkdirTemp("", "furyctl-infra-configs-")
+	if err != nil {
+		return err
+	}
+
+	defer os.RemoveAll(tmpFolder)
+
+	subFS, err := fs.Sub(configs.Tpl, path.Join("provisioners", "bootstrap", "aws"))
+	if err != nil {
+		return err
+	}
+
+	err = CopyFromFsToDir(subFS, tmpFolder)
+	if err != nil {
+		return err
+	}
+
 	targetTfDir := path.Join(i.base.Path, "terraform")
 	prefix := "infra"
 
@@ -71,7 +89,7 @@ func (i *Infrastructure) CopyFromTemplate(kfdManifest config.KFD) error {
 	return i.base.CopyFromTemplate(
 		cfg,
 		prefix,
-		sourceTfDir,
+		tmpFolder,
 		targetTfDir,
 	)
 }
