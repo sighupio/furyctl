@@ -22,7 +22,6 @@ steps:
       - clone
     pull: always
     commands:
-      - go install github.com/google/addlicense@v1.0.0
       - make license-check
     environment:
       CGO_ENABLED: 0
