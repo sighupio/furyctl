@@ -14,7 +14,13 @@ import (
 
 	"github.com/sighupio/furyctl/internal/template"
 	"github.com/sighupio/furyctl/internal/yaml"
+
+	tfjson "github.com/hashicorp/terraform-json"
 )
+
+type OutputJson struct {
+	Outputs map[string]*tfjson.StateOutput `json:"outputs"`
+}
 
 type Base struct {
 	Path          string
