@@ -5,25 +5,21 @@
 package create
 
 import (
-	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
 
 	"github.com/spf13/cobra"
 
+	"github.com/sighupio/furyctl/internal/cluster"
 	"github.com/sighupio/furyctl/internal/cobrax"
 	"github.com/sighupio/furyctl/internal/config"
 	"github.com/sighupio/furyctl/internal/dependencies"
 	"github.com/sighupio/furyctl/internal/distribution"
-	"github.com/sighupio/furyctl/internal/eks"
 	"github.com/sighupio/furyctl/internal/execx"
 	"github.com/sighupio/furyctl/internal/netx"
-)
 
-var (
-	ErrClusterCreationFailed       = errors.New("cluster creation failed")
-	ErrUnsupportedDistributionKind = errors.New("unsupported distribution kind")
+	_ "github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/eks"
 )
 
 func NewClusterCmd(version string) *cobra.Command {
@@ -79,28 +75,24 @@ func NewClusterCmd(version string) *cobra.Command {
 			}
 
 			// Create the cluster
-			if res.MinimalConf.Kind == "EKSCluster" {
-				eksCluster, err := eks.NewClusterCreator(
-					res.MinimalConf.ApiVersion,
-					phase,
-					res.DistroManifest,
-					furyctlPath,
-					vpnAutoConnect,
-				)
-				if err != nil {
-					return err
-				}
-
-				if err := eksCluster.Create(dryRun); err != nil {
-					return err
-				}
-
-				fmt.Println("cluster creation succeeded")
-
-				return nil
+			clusterCreator, err := cluster.NewCreator(
+				res.MinimalConf,
+				res.DistroManifest,
+				furyctlPath,
+				phase,
+				vpnAutoConnect,
+			)
+			if err != nil {
+				return err
 			}
 
-			return ErrUnsupportedDistributionKind
+			if err := clusterCreator.Create(dryRun); err != nil {
+				return err
+			}
+
+			fmt.Println("cluster creation succeeded")
+
+			return nil
 		},
 	}
 
