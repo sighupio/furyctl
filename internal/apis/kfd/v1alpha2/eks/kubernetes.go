@@ -8,7 +8,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"github.com/sighupio/furyctl/configs"
 	"io"
 	"io/fs"
 	"os"
@@ -18,6 +17,7 @@ import (
 	"regexp"
 
 	"github.com/sighupio/fury-distribution/pkg/config"
+	"github.com/sighupio/furyctl/configs"
 	"github.com/sighupio/furyctl/internal/template"
 )
 

@@ -31,13 +31,13 @@ type ClusterCreator struct {
 	VpnAutoConnect bool
 }
 
-func (v *ClusterCreator) SetOptions(opts []cluster.CreatorOption[any]) {
+func (v *ClusterCreator) SetOptions(opts []cluster.CreatorOption) {
 	for _, opt := range opts {
 		v.SetOption(opt)
 	}
 }
 
-func (v *ClusterCreator) SetOption(opt cluster.CreatorOption[any]) {
+func (v *ClusterCreator) SetOption(opt cluster.CreatorOption) {
 	lcName := strings.ToLower(opt.Name)
 
 	switch lcName {
