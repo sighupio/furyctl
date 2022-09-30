@@ -6,6 +6,8 @@ package eks
 
 import (
 	"fmt"
+	io2 "github.com/sighupio/furyctl/internal/io"
+	"io/fs"
 	"os"
 	"path"
 	"path/filepath"
@@ -105,4 +107,44 @@ func (b *Base) CopyFromTemplate(config template.Config, prefix, sourcePath, targ
 	}
 
 	return templateModel.Generate()
+}
+
+func CopyFromFsToDir(src fs.FS, dest string) error {
+	stuff, err := fs.ReadDir(src, ".")
+	if err != nil {
+		return err
+	}
+
+	for _, file := range stuff {
+		if file.IsDir() {
+			sub, err := fs.Sub(src, file.Name())
+			if err != nil {
+				return err
+			}
+
+			err = CopyFromFsToDir(sub, path.Join(dest, file.Name()))
+			if err != nil {
+				return err
+			}
+
+			continue
+		}
+
+		fileContent, err := fs.ReadFile(src, file.Name())
+		if err != nil {
+			return err
+		}
+
+		err = io2.EnsureDir(path.Join(dest, file.Name()))
+		if err != nil {
+			return err
+		}
+
+		err = os.WriteFile(path.Join(dest, file.Name()), fileContent, 0o600)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }

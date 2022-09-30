@@ -8,7 +8,9 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"github.com/sighupio/furyctl/configs"
 	"io"
+	"io/fs"
 	"os"
 	"os/exec"
 	"path"
@@ -49,7 +51,23 @@ func (k *Kubernetes) Path() string {
 func (k *Kubernetes) CopyFromTemplate(kfdManifest config.KFD) error {
 	var cfg template.Config
 
-	sourceTfDir := path.Join("configs", "provisioners", "cluster", "eks")
+	tmpFolder, err := os.MkdirTemp("", "furyctl-kube-configs-")
+	if err != nil {
+		return err
+	}
+
+	defer os.RemoveAll(tmpFolder)
+
+	subFS, err := fs.Sub(configs.Tpl, path.Join("provisioners", "cluster", "eks"))
+	if err != nil {
+		return err
+	}
+
+	err = CopyFromFsToDir(subFS, tmpFolder)
+	if err != nil {
+		return err
+	}
+
 	targetTfDir := path.Join(k.base.Path, "terraform")
 	prefix := "kube"
 	tfConfVars := map[string]map[any]any{
@@ -63,7 +81,7 @@ func (k *Kubernetes) CopyFromTemplate(kfdManifest config.KFD) error {
 	return k.base.CopyFromTemplate(
 		cfg,
 		prefix,
-		sourceTfDir,
+		tmpFolder,
 		targetTfDir,
 	)
 }
