@@ -13,16 +13,16 @@ import (
 
 var factories = make(map[string]map[string]CreatorFactory)
 
-type CreatorFactory func(opts []CreatorOption[any]) Creator
+type CreatorFactory func(opts []CreatorOption) Creator
 
-type CreatorOption[T any] struct {
+type CreatorOption struct {
 	Name  string
-	Value T
+	Value any
 }
 
 type Creator interface {
-	SetOptions(opt []CreatorOption[any])
-	SetOption(opt CreatorOption[any])
+	SetOptions(opt []CreatorOption)
+	SetOption(opt CreatorOption)
 	Create(dryRun bool) error
 	Infrastructure(dryRun bool) error
 	Kubernetes(dryRun bool) error
@@ -40,7 +40,7 @@ func NewCreator(
 	lcResourceType := strings.ToLower(minimalConf.Kind)
 
 	if factoryFn, ok := factories[lcApiVersion][lcResourceType]; ok {
-		return factoryFn([]CreatorOption[any]{
+		return factoryFn([]CreatorOption{
 			{
 				Name:  "kfdManifest",
 				Value: kfdManifest,
@@ -63,7 +63,7 @@ func NewCreator(
 	return nil, fmt.Errorf("resource type '%s' with api version '%s' is not supported", lcResourceType, lcApiVersion)
 }
 
-func RegisterCreatorFactory(apiVersion string, kind string, factory func(opts []CreatorOption[any]) Creator) {
+func RegisterCreatorFactory(apiVersion, kind string, factory func(opts []CreatorOption) Creator) {
 	if _, ok := factories[apiVersion]; !ok {
 		factories[apiVersion] = make(map[string]CreatorFactory)
 	}

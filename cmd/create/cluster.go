@@ -11,6 +11,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	_ "github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/eks"
 	"github.com/sighupio/furyctl/internal/cluster"
 	"github.com/sighupio/furyctl/internal/cobrax"
 	"github.com/sighupio/furyctl/internal/config"
@@ -18,8 +19,6 @@ import (
 	"github.com/sighupio/furyctl/internal/distribution"
 	"github.com/sighupio/furyctl/internal/execx"
 	"github.com/sighupio/furyctl/internal/netx"
-
-	_ "github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/eks"
 )
 
 func NewClusterCmd(version string) *cobra.Command {

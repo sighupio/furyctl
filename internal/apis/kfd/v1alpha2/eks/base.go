@@ -6,16 +6,16 @@ package eks
 
 import (
 	"fmt"
-	io2 "github.com/sighupio/furyctl/internal/io"
 	"io/fs"
 	"os"
 	"path"
 	"path/filepath"
 
+	tfjson "github.com/hashicorp/terraform-json"
+
+	io2 "github.com/sighupio/furyctl/internal/io"
 	"github.com/sighupio/furyctl/internal/template"
 	"github.com/sighupio/furyctl/internal/yaml"
-
-	tfjson "github.com/hashicorp/terraform-json"
 )
 
 type OutputJson struct {
