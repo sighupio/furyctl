@@ -4,17 +4,15 @@
 
 package eks
 
-import "github.com/sighupio/furyctl/internal/cluster"
+import (
+	"github.com/sighupio/fury-distribution/pkg/schema"
+	"github.com/sighupio/furyctl/internal/cluster"
+)
 
 func init() {
 	cluster.RegisterCreatorFactory(
 		"kfd.sighup.io/v1alpha2",
-		"ekscluster",
-		func(opts []cluster.CreatorOption) cluster.Creator {
-			cc := &ClusterCreator{}
-			cc.SetOptions(opts)
-
-			return cc
-		},
+		"EKSCluster",
+		cluster.NewCreatorFactory[*ClusterCreator, schema.EksclusterKfdV1Alpha2](),
 	)
 }
