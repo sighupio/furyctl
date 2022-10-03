@@ -9,20 +9,21 @@ import (
 	"strings"
 
 	"github.com/sighupio/fury-distribution/pkg/config"
+	"github.com/sighupio/furyctl/internal/yaml"
 )
 
 var factories = make(map[string]map[string]CreatorFactory)
 
-type CreatorFactory func(opts []CreatorOption) Creator
+type CreatorFactory func(configPath string, props []CreatorProperty) (Creator, error)
 
-type CreatorOption struct {
+type CreatorProperty struct {
 	Name  string
 	Value any
 }
 
 type Creator interface {
-	SetOptions(opt []CreatorOption)
-	SetOption(opt CreatorOption)
+	SetProperties(props []CreatorProperty)
+	SetProperty(name string, value any)
 	Create(dryRun bool) error
 	Infrastructure(dryRun bool) error
 	Kubernetes(dryRun bool) error
@@ -40,14 +41,10 @@ func NewCreator(
 	lcResourceType := strings.ToLower(minimalConf.Kind)
 
 	if factoryFn, ok := factories[lcApiVersion][lcResourceType]; ok {
-		return factoryFn([]CreatorOption{
+		return factoryFn(configPath, []CreatorProperty{
 			{
 				Name:  "kfdManifest",
 				Value: kfdManifest,
-			},
-			{
-				Name:  "configPath",
-				Value: configPath,
 			},
 			{
 				Name:  "phase",
@@ -57,16 +54,36 @@ func NewCreator(
 				Name:  "vpnAutoConnect",
 				Value: vpnAutoConnect,
 			},
-		}), nil
+		})
 	}
 
 	return nil, fmt.Errorf("resource type '%s' with api version '%s' is not supported", lcResourceType, lcApiVersion)
 }
 
-func RegisterCreatorFactory(apiVersion, kind string, factory func(opts []CreatorOption) Creator) {
-	if _, ok := factories[apiVersion]; !ok {
-		factories[apiVersion] = make(map[string]CreatorFactory)
+func RegisterCreatorFactory(apiVersion, kind string, factory CreatorFactory) {
+	lcApiVersion := strings.ToLower(apiVersion)
+	lcKind := strings.ToLower(kind)
+
+	if _, ok := factories[lcApiVersion]; !ok {
+		factories[lcApiVersion] = make(map[string]CreatorFactory)
 	}
 
-	factories[apiVersion][kind] = factory
+	factories[lcApiVersion][lcKind] = factory
+}
+
+func NewCreatorFactory[T Creator, S any]() CreatorFactory {
+	return func(configPath string, props []CreatorProperty) (Creator, error) {
+		var cc T
+
+		furyctlConf, err := yaml.FromFileV3[S](configPath)
+		if err != nil {
+			return nil, err
+		}
+
+		cc.SetProperty("configPath", configPath)
+		cc.SetProperty("furyctlConf", furyctlConf)
+		cc.SetProperties(props)
+
+		return cc, nil
+	}
 }
