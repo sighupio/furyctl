@@ -11,19 +11,12 @@ import (
 )
 
 func Test_Update_FetchLastRelease(t *testing.T) {
-	type fields struct {
-		FuryctlBinVersion string
-	}
 	tests := []struct {
-		name   string
-		fields fields
-		want   app.Release
+		name string
+		want app.Release
 	}{
 		{
 			name: "test",
-			fields: fields{
-				FuryctlBinVersion: "unknown",
-			},
 			want: app.Release{
 				URL:     "https://github.com/sighupio/furyctl/releases/tag/v0.8.0",
 				Version: "v0.8.0",
@@ -33,10 +26,7 @@ func Test_Update_FetchLastRelease(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			u := &app.Update{
-				FuryctlBinVersion: tt.fields.FuryctlBinVersion,
-			}
-			got, err := u.FetchLastRelease()
+			got, err := app.GetLatestRelease()
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -44,7 +34,7 @@ func Test_Update_FetchLastRelease(t *testing.T) {
 			t.Log(got)
 
 			if got.Version != tt.want.Version {
-				t.Errorf("Update.FetchLastRelease() = %v, want %v", got, tt.want)
+				t.Errorf("FetchLastRelease() = %v, want %v", got, tt.want)
 			}
 		})
 	}

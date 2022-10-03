@@ -10,22 +10,12 @@ import (
 	"net/http"
 )
 
-type Update struct {
-	FuryctlBinVersion string
-}
-
 type Release struct {
 	URL     string `json:"html_url"`
 	Version string `json:"name"`
 }
 
-func NewUpdate(furyctlBinVersion string) *Update {
-	return &Update{
-		FuryctlBinVersion: furyctlBinVersion,
-	}
-}
-
-func (u *Update) FetchLastRelease() (Release, error) {
+func GetLatestRelease() (Release, error) {
 	var release Release
 
 	ctx := context.Background()
