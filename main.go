@@ -15,18 +15,13 @@
 package main
 
 import (
-	"sync"
-
 	"github.com/sirupsen/logrus"
 
 	"github.com/sighupio/furyctl/cmd"
-	"github.com/sighupio/furyctl/internal/app"
 )
 
 var (
-	wg sync.WaitGroup
-
-	version   = "unknown"
+	version   = "0.2.0"
 	gitCommit = "unknown"
 	buildTime = "unknown"
 	goVersion = "unknown"
@@ -42,30 +37,7 @@ func main() {
 		"osArch":    osArch,
 	}
 
-	wg.Add(1)
-	go checkUpdates(versions["version"])
-
 	if err := cmd.NewRootCommand(versions).Execute(); err != nil {
 		logrus.Fatal(err)
-	}
-
-	wg.Wait()
-}
-
-func checkUpdates(version string) {
-	defer wg.Done()
-
-	if version == "unknown" {
-		return
-	}
-
-	u := app.NewUpdate(version)
-	r, err := u.FetchLastRelease()
-	if err != nil {
-		logrus.Debugf("Error fetching last release: %s", err)
-	}
-
-	if r.Version != version {
-		logrus.Infof("New furyctl version available: %s --> %s", version, r.Version)
 	}
 }
