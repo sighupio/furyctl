@@ -12,6 +12,14 @@ import (
 	"github.com/sighupio/furyctl/internal/yaml"
 )
 
+const (
+	CreatorPropertyConfigPath     = "configpath"
+	CreatorPropertyFuryctlConf    = "furyctlconf"
+	CreatorPropertyKfdManifest    = "kfdmanifest"
+	CreatorPropertyPhase          = "phase"
+	CreatorPropertyVpnAutoConnect = "vpnautoconnect"
+)
+
 var factories = make(map[string]map[string]CreatorFactory)
 
 type CreatorFactory func(configPath string, props []CreatorProperty) (Creator, error)
@@ -25,9 +33,6 @@ type Creator interface {
 	SetProperties(props []CreatorProperty)
 	SetProperty(name string, value any)
 	Create(dryRun bool) error
-	Infrastructure(dryRun bool) error
-	Kubernetes(dryRun bool) error
-	Distribution(dryRun bool) error
 }
 
 func NewCreator(
@@ -43,15 +48,15 @@ func NewCreator(
 	if factoryFn, ok := factories[lcApiVersion][lcResourceType]; ok {
 		return factoryFn(configPath, []CreatorProperty{
 			{
-				Name:  "kfdManifest",
+				Name:  CreatorPropertyKfdManifest,
 				Value: kfdManifest,
 			},
 			{
-				Name:  "phase",
+				Name:  CreatorPropertyPhase,
 				Value: phase,
 			},
 			{
-				Name:  "vpnAutoConnect",
+				Name:  CreatorPropertyVpnAutoConnect,
 				Value: vpnAutoConnect,
 			},
 		})
@@ -80,8 +85,8 @@ func NewCreatorFactory[T Creator, S any]() CreatorFactory {
 			return nil, err
 		}
 
-		cc.SetProperty("configPath", configPath)
-		cc.SetProperty("furyctlConf", furyctlConf)
+		cc.SetProperty(CreatorPropertyConfigPath, configPath)
+		cc.SetProperty(CreatorPropertyFuryctlConf, furyctlConf)
 		cc.SetProperties(props)
 
 		return cc, nil
