@@ -24,40 +24,40 @@ import (
 var ErrUnsupportedPhase = fmt.Errorf("unsupported phase")
 
 type ClusterCreator struct {
-	ConfigPath     string
-	FuryctlConf    schema.EksclusterKfdV1Alpha2
-	KfdManifest    config.KFD
-	Phase          string
-	VpnAutoConnect bool
+	configPath     string
+	furyctlConf    schema.EksclusterKfdV1Alpha2
+	kfdManifest    config.KFD
+	phase          string
+	vpnAutoConnect bool
 }
 
-func (v *ClusterCreator) SetOptions(opts []cluster.CreatorOption) {
-	for _, opt := range opts {
-		v.SetOption(opt)
+func (v *ClusterCreator) SetProperties(props []cluster.CreatorProperty) {
+	for _, prop := range props {
+		v.SetProperty(prop.Name, prop.Value)
 	}
 }
 
-func (v *ClusterCreator) SetOption(opt cluster.CreatorOption) {
-	lcName := strings.ToLower(opt.Name)
+func (v *ClusterCreator) SetProperty(name string, value any) {
+	lcName := strings.ToLower(name)
 
 	switch lcName {
 	case "configpath":
-		v.ConfigPath = opt.Value.(string)
+		v.configPath = value.(string)
 	case "furyctlconf":
-		v.FuryctlConf = opt.Value.(schema.EksclusterKfdV1Alpha2)
+		v.furyctlConf = value.(schema.EksclusterKfdV1Alpha2)
 	case "kfdmanifest":
-		v.KfdManifest = opt.Value.(config.KFD)
+		v.kfdManifest = value.(config.KFD)
 	case "phase":
-		v.Phase = opt.Value.(string)
+		v.phase = value.(string)
 	case "vpnautoconnect":
-		v.VpnAutoConnect = opt.Value.(bool)
+		v.vpnAutoConnect = value.(bool)
 	}
 }
 
 func (v *ClusterCreator) Create(dryRun bool) error {
-	logrus.Infof("Running phase: %s", v.Phase)
+	logrus.Infof("Running phase: %s", v.phase)
 
-	switch v.Phase {
+	switch v.phase {
 	case "infrastructure":
 		return v.Infrastructure(dryRun)
 	case "kubernetes":
@@ -65,7 +65,7 @@ func (v *ClusterCreator) Create(dryRun bool) error {
 	case "distribution":
 		return v.Distribution(dryRun)
 	case "":
-		if v.FuryctlConf.Spec.Distribution != nil {
+		if v.furyctlConf.Spec.Distribution != nil {
 			err := v.Infrastructure(dryRun)
 			if err != nil {
 				return err
@@ -95,7 +95,7 @@ func (v *ClusterCreator) Infrastructure(dryRun bool) error {
 		return err
 	}
 
-	err = infra.CopyFromTemplate(v.KfdManifest)
+	err = infra.CopyFromTemplate(v.kfdManifest)
 	if err != nil {
 		return err
 	}
@@ -126,8 +126,8 @@ func (v *ClusterCreator) Infrastructure(dryRun bool) error {
 			return err
 		}
 
-		if v.FuryctlConf.Spec.Infrastructure.Vpc.Vpn != nil && v.FuryctlConf.Spec.Infrastructure.Vpc.Vpn.Instances > 0 {
-			clientName := v.FuryctlConf.Metadata.Name
+		if v.furyctlConf.Spec.Infrastructure.Vpc.Vpn != nil && v.furyctlConf.Spec.Infrastructure.Vpc.Vpn.Instances > 0 {
+			clientName := v.furyctlConf.Metadata.Name
 
 			whoamiResp, err := exec.Command("whoami").Output()
 			if err != nil {
@@ -142,7 +142,7 @@ func (v *ClusterCreator) Infrastructure(dryRun bool) error {
 				return err
 			}
 
-			if v.VpnAutoConnect {
+			if v.vpnAutoConnect {
 				err = infra.CreateOvpnConnection(clientName)
 				if err != nil {
 					return err
@@ -172,7 +172,7 @@ func (v *ClusterCreator) Kubernetes(dryRun bool) error {
 		return err
 	}
 
-	err = kube.CopyFromTemplate(v.KfdManifest)
+	err = kube.CopyFromTemplate(v.kfdManifest)
 	if err != nil {
 		return err
 	}
@@ -229,21 +229,21 @@ func (v *ClusterCreator) Distribution(dryRun bool) error {
 func (v *ClusterCreator) createInfraTfVars(infraPath string) error {
 	var buffer bytes.Buffer
 
-	buffer.WriteString(fmt.Sprintf("name = \"%v\"\n", v.FuryctlConf.Metadata.Name))
+	buffer.WriteString(fmt.Sprintf("name = \"%v\"\n", v.furyctlConf.Metadata.Name))
 	buffer.WriteString(fmt.Sprintf(
 		"network_cidr = \"%v\"\n",
-		v.FuryctlConf.Spec.Infrastructure.Vpc.Network.Cidr,
+		v.furyctlConf.Spec.Infrastructure.Vpc.Network.Cidr,
 	))
 
-	publicSubnetworkCidrs := make([]string, len(v.FuryctlConf.Spec.Infrastructure.Vpc.Network.SubnetsCidrs.Public))
+	publicSubnetworkCidrs := make([]string, len(v.furyctlConf.Spec.Infrastructure.Vpc.Network.SubnetsCidrs.Public))
 
-	for i, cidr := range v.FuryctlConf.Spec.Infrastructure.Vpc.Network.SubnetsCidrs.Public {
+	for i, cidr := range v.furyctlConf.Spec.Infrastructure.Vpc.Network.SubnetsCidrs.Public {
 		publicSubnetworkCidrs[i] = fmt.Sprintf("\"%v\"", cidr)
 	}
 
-	privateSubnetworkCidrs := make([]string, len(v.FuryctlConf.Spec.Infrastructure.Vpc.Network.SubnetsCidrs.Private))
+	privateSubnetworkCidrs := make([]string, len(v.furyctlConf.Spec.Infrastructure.Vpc.Network.SubnetsCidrs.Private))
 
-	for i, cidr := range v.FuryctlConf.Spec.Infrastructure.Vpc.Network.SubnetsCidrs.Private {
+	for i, cidr := range v.furyctlConf.Spec.Infrastructure.Vpc.Network.SubnetsCidrs.Private {
 		privateSubnetworkCidrs[i] = fmt.Sprintf("\"%v\"", cidr)
 	}
 
@@ -255,69 +255,69 @@ func (v *ClusterCreator) createInfraTfVars(infraPath string) error {
 		"private_subnetwork_cidrs = [%v]\n",
 		strings.Join(privateSubnetworkCidrs, ",")))
 
-	if v.FuryctlConf.Spec.Infrastructure.Vpc.Vpn != nil {
+	if v.furyctlConf.Spec.Infrastructure.Vpc.Vpn != nil {
 		buffer.WriteString(
 			fmt.Sprintf(
 				"vpn_subnetwork_cidr = \"%v\"\n",
-				v.FuryctlConf.Spec.Infrastructure.Vpc.Vpn.VpnClientsSubnetCidr,
+				v.furyctlConf.Spec.Infrastructure.Vpc.Vpn.VpnClientsSubnetCidr,
 			),
 		)
 		buffer.WriteString(
 			fmt.Sprintf(
 				"vpn_instances = %v\n",
-				v.FuryctlConf.Spec.Infrastructure.Vpc.Vpn.Instances,
+				v.furyctlConf.Spec.Infrastructure.Vpc.Vpn.Instances,
 			),
 		)
 
-		if v.FuryctlConf.Spec.Infrastructure.Vpc.Vpn.Port != 0 {
+		if v.furyctlConf.Spec.Infrastructure.Vpc.Vpn.Port != 0 {
 			buffer.WriteString(
 				fmt.Sprintf(
 					"vpn_port = %v\n",
-					v.FuryctlConf.Spec.Infrastructure.Vpc.Vpn.Port,
+					v.furyctlConf.Spec.Infrastructure.Vpc.Vpn.Port,
 				),
 			)
 		}
 
-		if v.FuryctlConf.Spec.Infrastructure.Vpc.Vpn.InstanceType != "" {
+		if v.furyctlConf.Spec.Infrastructure.Vpc.Vpn.InstanceType != "" {
 			buffer.WriteString(
 				fmt.Sprintf(
 					"vpn_instance_type = \"%v\"\n",
-					v.FuryctlConf.Spec.Infrastructure.Vpc.Vpn.InstanceType,
+					v.furyctlConf.Spec.Infrastructure.Vpc.Vpn.InstanceType,
 				),
 			)
 		}
 
-		if v.FuryctlConf.Spec.Infrastructure.Vpc.Vpn.DiskSize != 0 {
+		if v.furyctlConf.Spec.Infrastructure.Vpc.Vpn.DiskSize != 0 {
 			buffer.WriteString(
 				fmt.Sprintf(
 					"vpn_instance_disk_size = %v\n",
-					v.FuryctlConf.Spec.Infrastructure.Vpc.Vpn.DiskSize,
+					v.furyctlConf.Spec.Infrastructure.Vpc.Vpn.DiskSize,
 				),
 			)
 		}
 
-		if v.FuryctlConf.Spec.Infrastructure.Vpc.Vpn.OperatorName != "" {
+		if v.furyctlConf.Spec.Infrastructure.Vpc.Vpn.OperatorName != "" {
 			buffer.WriteString(
 				fmt.Sprintf(
 					"vpn_operator_name = \"%v\"\n",
-					v.FuryctlConf.Spec.Infrastructure.Vpc.Vpn.OperatorName,
+					v.furyctlConf.Spec.Infrastructure.Vpc.Vpn.OperatorName,
 				),
 			)
 		}
 
-		if v.FuryctlConf.Spec.Infrastructure.Vpc.Vpn.DhParamsBits != 0 {
+		if v.furyctlConf.Spec.Infrastructure.Vpc.Vpn.DhParamsBits != 0 {
 			buffer.WriteString(
 				fmt.Sprintf(
 					"vpn_dhparams_bits = %v\n",
-					v.FuryctlConf.Spec.Infrastructure.Vpc.Vpn.DhParamsBits,
+					v.furyctlConf.Spec.Infrastructure.Vpc.Vpn.DhParamsBits,
 				),
 			)
 		}
 
-		if len(v.FuryctlConf.Spec.Infrastructure.Vpc.Vpn.Ssh.AllowedFromCidrs) != 0 {
-			allowedCidrs := make([]string, len(v.FuryctlConf.Spec.Infrastructure.Vpc.Vpn.Ssh.AllowedFromCidrs))
+		if len(v.furyctlConf.Spec.Infrastructure.Vpc.Vpn.Ssh.AllowedFromCidrs) != 0 {
+			allowedCidrs := make([]string, len(v.furyctlConf.Spec.Infrastructure.Vpc.Vpn.Ssh.AllowedFromCidrs))
 
-			for i, cidr := range v.FuryctlConf.Spec.Infrastructure.Vpc.Vpn.Ssh.AllowedFromCidrs {
+			for i, cidr := range v.furyctlConf.Spec.Infrastructure.Vpc.Vpn.Ssh.AllowedFromCidrs {
 				allowedCidrs[i] = fmt.Sprintf("\"%v\"", cidr)
 			}
 
@@ -329,10 +329,10 @@ func (v *ClusterCreator) createInfraTfVars(infraPath string) error {
 			)
 		}
 
-		if len(v.FuryctlConf.Spec.Infrastructure.Vpc.Vpn.Ssh.GithubUsersName) != 0 {
-			githubUsers := make([]string, len(v.FuryctlConf.Spec.Infrastructure.Vpc.Vpn.Ssh.GithubUsersName))
+		if len(v.furyctlConf.Spec.Infrastructure.Vpc.Vpn.Ssh.GithubUsersName) != 0 {
+			githubUsers := make([]string, len(v.furyctlConf.Spec.Infrastructure.Vpc.Vpn.Ssh.GithubUsersName))
 
-			for i, gu := range v.FuryctlConf.Spec.Infrastructure.Vpc.Vpn.Ssh.GithubUsersName {
+			for i, gu := range v.furyctlConf.Spec.Infrastructure.Vpc.Vpn.Ssh.GithubUsersName {
 				githubUsers[i] = fmt.Sprintf("\"%v\"", gu)
 			}
 
@@ -354,9 +354,9 @@ func (v *ClusterCreator) createInfraTfVars(infraPath string) error {
 func (v *ClusterCreator) createKubernetesTfVars(kubePath, infraOutPath string) error {
 	var buffer bytes.Buffer
 
-	subnetIdsSource := v.FuryctlConf.Spec.Kubernetes.SubnetIds
-	vpcIdSource := v.FuryctlConf.Spec.Kubernetes.VpcId
-	allowedCidrsSource := v.FuryctlConf.Spec.Kubernetes.ApiServerEndpointAccess.AllowedCidrs
+	subnetIdsSource := v.furyctlConf.Spec.Kubernetes.SubnetIds
+	vpcIdSource := v.furyctlConf.Spec.Kubernetes.VpcId
+	allowedCidrsSource := v.furyctlConf.Spec.Kubernetes.ApiServerEndpointAccess.AllowedCidrs
 
 	if infraOutJson, err := os.ReadFile(path.Join(infraOutPath, "output.json")); err == nil {
 		var infraOut OutputJson
@@ -405,8 +405,8 @@ func (v *ClusterCreator) createKubernetesTfVars(kubePath, infraOutPath string) e
 		}
 	}
 
-	buffer.WriteString(fmt.Sprintf("cluster_name = \"%v\"\n", v.FuryctlConf.Metadata.Name))
-	buffer.WriteString(fmt.Sprintf("cluster_version = \"%v\"\n", v.KfdManifest.Kubernetes.Eks.Version))
+	buffer.WriteString(fmt.Sprintf("cluster_name = \"%v\"\n", v.furyctlConf.Metadata.Name))
+	buffer.WriteString(fmt.Sprintf("cluster_version = \"%v\"\n", v.kfdManifest.Kubernetes.Eks.Version))
 	buffer.WriteString(fmt.Sprintf("network = \"%v\"\n", vpcIdSource))
 
 	subnetIds := make([]string, len(subnetIdsSource))
@@ -424,28 +424,28 @@ func (v *ClusterCreator) createKubernetesTfVars(kubePath, infraOutPath string) e
 	}
 
 	buffer.WriteString(fmt.Sprintf("dmz_cidr_range = [%v]\n", strings.Join(dmzCidrRange, ",")))
-	buffer.WriteString(fmt.Sprintf("ssh_public_key = \"%v\"\n", v.FuryctlConf.Spec.Kubernetes.NodeAllowedSshPublicKey))
-	if v.FuryctlConf.Spec.Tags != nil && len(v.FuryctlConf.Spec.Tags) > 0 {
+	buffer.WriteString(fmt.Sprintf("ssh_public_key = \"%v\"\n", v.furyctlConf.Spec.Kubernetes.NodeAllowedSshPublicKey))
+	if v.furyctlConf.Spec.Tags != nil && len(v.furyctlConf.Spec.Tags) > 0 {
 		var tags []byte
-		tags, err := json.Marshal(v.FuryctlConf.Spec.Tags)
+		tags, err := json.Marshal(v.furyctlConf.Spec.Tags)
 		if err != nil {
 			return err
 		}
 		buffer.WriteString(fmt.Sprintf("tags = %v\n", string(tags)))
 	}
 
-	if len(v.FuryctlConf.Spec.Kubernetes.AwsAuth.AdditionalAccounts) > 0 {
+	if len(v.furyctlConf.Spec.Kubernetes.AwsAuth.AdditionalAccounts) > 0 {
 		buffer.WriteString(
 			fmt.Sprintf(
 				"eks_map_accounts = [\"%v\"]\n",
-				strings.Join(v.FuryctlConf.Spec.Kubernetes.AwsAuth.AdditionalAccounts, "\",\""),
+				strings.Join(v.furyctlConf.Spec.Kubernetes.AwsAuth.AdditionalAccounts, "\",\""),
 			),
 		)
 	}
 
-	if len(v.FuryctlConf.Spec.Kubernetes.AwsAuth.Users) > 0 {
+	if len(v.furyctlConf.Spec.Kubernetes.AwsAuth.Users) > 0 {
 		buffer.WriteString("eks_map_users = [\n")
-		for _, account := range v.FuryctlConf.Spec.Kubernetes.AwsAuth.Users {
+		for _, account := range v.furyctlConf.Spec.Kubernetes.AwsAuth.Users {
 			buffer.WriteString(
 				fmt.Sprintf(
 					`{
@@ -461,9 +461,9 @@ func (v *ClusterCreator) createKubernetesTfVars(kubePath, infraOutPath string) e
 
 	}
 
-	if len(v.FuryctlConf.Spec.Kubernetes.AwsAuth.Roles) > 0 {
+	if len(v.furyctlConf.Spec.Kubernetes.AwsAuth.Roles) > 0 {
 		buffer.WriteString("eks_map_roles = [\n")
-		for _, account := range v.FuryctlConf.Spec.Kubernetes.AwsAuth.Roles {
+		for _, account := range v.furyctlConf.Spec.Kubernetes.AwsAuth.Roles {
 			buffer.WriteString(
 				fmt.Sprintf(
 					`{
@@ -478,9 +478,9 @@ func (v *ClusterCreator) createKubernetesTfVars(kubePath, infraOutPath string) e
 		buffer.WriteString("]\n")
 	}
 
-	if len(v.FuryctlConf.Spec.Kubernetes.NodePools) > 0 {
+	if len(v.furyctlConf.Spec.Kubernetes.NodePools) > 0 {
 		buffer.WriteString("node_pools = [\n")
-		for _, np := range v.FuryctlConf.Spec.Kubernetes.NodePools {
+		for _, np := range v.furyctlConf.Spec.Kubernetes.NodePools {
 			buffer.WriteString("{\n")
 			buffer.WriteString(fmt.Sprintf("name = \"%v\"\n", np.Name))
 			buffer.WriteString("version = null\n")
