@@ -11,20 +11,15 @@ import (
 	"path"
 	"path/filepath"
 
-	tfjson "github.com/hashicorp/terraform-json"
-
 	io2 "github.com/sighupio/furyctl/internal/io"
 	"github.com/sighupio/furyctl/internal/template"
 	"github.com/sighupio/furyctl/internal/yaml"
 )
 
-type OutputJson struct {
-	Outputs map[string]*tfjson.StateOutput `json:"outputs"`
-}
-
 type Base struct {
 	Path          string
 	TerraformPath string
+	KustomizePath string
 	PlanPath      string
 	LogsPath      string
 	OutputsPath   string
@@ -40,6 +35,7 @@ func NewBase(folder string) (*Base, error) {
 		return &Base{}, err
 	}
 
+	kustomizePath := path.Join(vendorPath, "bin", "kustomize")
 	terraformPath := path.Join(vendorPath, "bin", "terraform")
 
 	planPath := path.Join(basePath, "terraform", "plan")
@@ -50,6 +46,7 @@ func NewBase(folder string) (*Base, error) {
 	return &Base{
 		Path:          basePath,
 		TerraformPath: terraformPath,
+		KustomizePath: kustomizePath,
 		PlanPath:      planPath,
 		LogsPath:      logsPath,
 		OutputsPath:   outputsPath,
