@@ -7,12 +7,10 @@
 package expensive_test
 
 import (
-	"fmt"
 	"os"
 	"os/exec"
 	"path"
 	"path/filepath"
-	"strings"
 	"testing"
 	"time"
 
@@ -28,25 +26,6 @@ func TestExpensive(t *testing.T) {
 
 var (
 	furyctl string
-
-	FindFileStartingWith = func(pt, prefix string) (string, error) {
-		files, err := os.ReadDir(pt)
-		if err != nil {
-			return "", err
-		}
-
-		for _, f := range files {
-			if f.IsDir() {
-				continue
-			}
-
-			if strings.HasPrefix(f.Name(), prefix) {
-				return path.Join(pt, f.Name()), nil
-			}
-		}
-
-		return "", fmt.Errorf("file not found in dir %s starting with name %s", pt, prefix)
-	}
 
 	_ = BeforeSuite(func() {
 		tmpdir, err := os.MkdirTemp("", "furyctl-expensive")
@@ -79,9 +58,9 @@ var (
 
 				Expect(w).To(BeADirectory())
 
-				//DeferCleanup(func() error {
-				//	return os.RemoveAll(w)
-				//})
+				DeferCleanup(func() error {
+					return os.RemoveAll(w)
+				})
 			})
 
 			FuryctlCreateCluster := func(cfgPath, distroPath, phase string, dryRun bool) *exec.Cmd {
@@ -117,7 +96,7 @@ var (
 			}
 
 			TerraformDestroy := func(workDir string) (*gexec.Session, error) {
-				tfBinPath := path.Join(workDir, "vendor", "bin", "terraform")
+				tfBinPath := path.Join(w, "vendor", "bin", "terraform")
 				cmd := exec.Command(tfBinPath, "destroy", "-auto-approve")
 				cmd.Dir = workDir
 
@@ -127,11 +106,11 @@ var (
 			ClusterTeardown := func() error {
 				kubeDestroy, err := TerraformDestroy(path.Join(w, ".kubernetes", "terraform"))
 				Expect(err).To(Not(HaveOccurred()))
-				Eventually(kubeDestroy, 15*time.Minute).Should(gexec.Exit(0))
+				Eventually(kubeDestroy, 10*time.Minute).Should(gexec.Exit(0))
 
 				infraDestroy, err := TerraformDestroy(path.Join(w, ".infrastructure", "terraform"))
 				Expect(err).To(Not(HaveOccurred()))
-				Eventually(infraDestroy, 15*time.Minute).Should(gexec.Exit(0))
+				Eventually(infraDestroy, 10*time.Minute).Should(gexec.Exit(0))
 
 				pkillSession, err := KillOpenVPN()
 				Expect(err).To(Not(HaveOccurred()))
@@ -140,44 +119,11 @@ var (
 				return nil
 			}
 
-			It("create cluster phase infrastructure on dry-run", func() {
-				furyctlYamlPath := path.Join(absBasePath, "data/furyctl.yaml")
-				distroPath := path.Join(absBasePath, "data")
-				tfPath := path.Join(w, ".infrastructure", "terraform")
-
-				createInfraCmd := FuryctlCreateCluster(furyctlYamlPath, distroPath, "infrastructure", true)
-				session, err := gexec.Start(createInfraCmd, GinkgoWriter, GinkgoWriter)
-				Expect(err).To(Not(HaveOccurred()))
-				Expect(path.Join(tfPath, "plan")).To(BeADirectory())
-
-				_, err = FindFileStartingWith(path.Join(tfPath, "plan"), "plan-")
-
-				Expect(err).To(Not(HaveOccurred()))
-				Expect(path.Join(tfPath, "plan", "terraform.plan")).To(BeAnExistingFile())
-				Expect(session).To(gexec.Exit(0))
-			})
-
-			It("create cluster phase kubernetes on dry-run", func() {
-				furyctlYamlPath := path.Join(absBasePath, "data/furyctl.yaml")
-				distroPath := path.Join(absBasePath, "data")
-				tfPath := path.Join(w, ".kubernetes", "terraform")
-
-				createKubeCmd := FuryctlCreateCluster(furyctlYamlPath, distroPath, "kubernetes", true)
-				session, err := gexec.Start(createKubeCmd, GinkgoWriter, GinkgoWriter)
-				Expect(err).To(Not(HaveOccurred()))
-				Expect(path.Join(tfPath, "plan")).To(BeADirectory())
-
-				_, err = FindFileStartingWith(path.Join(tfPath, "plan"), "plan-")
-
-				Expect(err).To(Not(HaveOccurred()))
-				Expect(path.Join(tfPath, "plan", "terraform.plan")).To(BeAnExistingFile())
-				Expect(session).To(gexec.Exit(0))
-			})
-
-			FIt("create a complete cluster", func() {
+			It("create a complete cluster", func() {
 				furyctlYamlPath := path.Join(absBasePath, "data/furyctl.yaml")
 				distroPath := path.Join(absBasePath, "data")
 				kubeBinPath := path.Join(w, "vendor", "bin", "kubectl")
+				tfInfraPath := path.Join(w, ".infrastructure", "terraform")
 				kcfgPath := path.Join(w, ".kubernetes", "terraform", "secrets", "kubeconfig")
 
 				defer ClusterTeardown()
@@ -185,17 +131,18 @@ var (
 				createClusterCmd := FuryctlCreateCluster(furyctlYamlPath, distroPath, "", false)
 
 				session, err := gexec.Start(createClusterCmd, GinkgoWriter, GinkgoWriter)
-
 				Expect(err).To(Not(HaveOccurred()))
-				Eventually(kcfgPath, 40*time.Minute).Should(BeAnExistingFile())
-				Eventually(session, 20*time.Minute).Should(gexec.Exit(0))
+				Consistently(session, 3*time.Minute).ShouldNot(gexec.Exit())
+				Expect(path.Join(tfInfraPath, "plan", "terraform.plan")).To(BeAnExistingFile())
+				Eventually(kcfgPath, 30*time.Minute).Should(BeAnExistingFile())
+				Eventually(session, 1*time.Minute).Should(gexec.Exit(0))
 
 				kubeCmd := exec.Command(kubeBinPath, "--kubeconfig", kcfgPath, "get", "nodes")
 
 				kubeSession, err := gexec.Start(kubeCmd, GinkgoWriter, GinkgoWriter)
 
 				Expect(err).To(Not(HaveOccurred()))
-				Eventually(kubeSession, 5*time.Minute).Should(gexec.Exit(0))
+				Eventually(kubeSession, 2*time.Minute).Should(gexec.Exit(0))
 			})
 		})
 	})

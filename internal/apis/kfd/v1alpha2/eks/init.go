@@ -13,6 +13,6 @@ func init() {
 	cluster.RegisterCreatorFactory(
 		"kfd.sighup.io/v1alpha2",
 		"EKSCluster",
-		cluster.NewCreatorFactory[*ClusterCreator, schema.EksclusterKfdV1Alpha2](),
+		cluster.NewCreatorFactory[*ClusterCreator, schema.EksclusterKfdV1Alpha2](&ClusterCreator{}),
 	)
 }
