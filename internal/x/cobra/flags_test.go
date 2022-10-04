@@ -11,7 +11,7 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/sighupio/furyctl/internal/cobrax"
+	cobrax "github.com/sighupio/furyctl/internal/x/cobra"
 )
 
 func Test_Flag_Bool(t *testing.T) {

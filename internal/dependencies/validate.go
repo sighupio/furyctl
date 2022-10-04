@@ -10,7 +10,7 @@ import (
 	"github.com/sighupio/furyctl/internal/dependencies/envvars"
 	"github.com/sighupio/furyctl/internal/dependencies/tools"
 	"github.com/sighupio/furyctl/internal/distribution"
-	"github.com/sighupio/furyctl/internal/execx"
+	execx "github.com/sighupio/furyctl/internal/x/exec"
 )
 
 func NewValidator(executor execx.Executor, binPath string) *Validator {

@@ -10,7 +10,7 @@ import (
 	"strings"
 
 	"github.com/sighupio/fury-distribution/pkg/config"
-	"github.com/sighupio/furyctl/internal/execx"
+	execx "github.com/sighupio/furyctl/internal/x/exec"
 )
 
 var (

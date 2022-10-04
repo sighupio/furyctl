@@ -9,7 +9,7 @@ import (
 	"strings"
 
 	"github.com/sighupio/fury-distribution/pkg/config"
-	"github.com/sighupio/furyctl/internal/yaml"
+	yamlx "github.com/sighupio/furyctl/internal/x/yaml"
 )
 
 const (
@@ -80,7 +80,7 @@ func NewCreatorFactory[T Creator, S any]() CreatorFactory {
 	return func(configPath string, props []CreatorProperty) (Creator, error) {
 		var cc T
 
-		furyctlConf, err := yaml.FromFileV3[S](configPath)
+		furyctlConf, err := yamlx.FromFileV3[S](configPath)
 		if err != nil {
 			return nil, err
 		}

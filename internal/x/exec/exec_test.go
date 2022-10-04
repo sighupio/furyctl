@@ -9,7 +9,7 @@ package execx_test
 import (
 	"testing"
 
-	"github.com/sighupio/furyctl/internal/execx"
+	execx "github.com/sighupio/furyctl/internal/x/exec"
 )
 
 func Test_StdExecutor_Command(t *testing.T) {

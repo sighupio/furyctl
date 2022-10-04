@@ -11,9 +11,9 @@ import (
 	"path"
 	"path/filepath"
 
-	"github.com/sighupio/furyctl/internal/iox"
 	"github.com/sighupio/furyctl/internal/template"
-	"github.com/sighupio/furyctl/internal/yaml"
+	iox "github.com/sighupio/furyctl/internal/x/io"
+	yamlx "github.com/sighupio/furyctl/internal/x/yaml"
 )
 
 type base struct {
@@ -83,7 +83,7 @@ func (b *base) copyFromTemplate(config template.Config, prefix, sourcePath, targ
 
 	tfConfigPath := path.Join(outDirPath, "tf-config.yaml")
 
-	tfConfig, err := yaml.MarshalV2(config)
+	tfConfig, err := yamlx.MarshalV2(config)
 	if err != nil {
 		return err
 	}

@@ -11,7 +11,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/sighupio/furyctl/internal/netx"
+	netx "github.com/sighupio/furyctl/internal/x/net"
 )
 
 func Test_GoGetterClient_Download(t *testing.T) {

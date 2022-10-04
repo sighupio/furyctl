@@ -14,8 +14,8 @@ import (
 	"testing"
 
 	"github.com/sighupio/furyctl/internal/dependencies/tools"
-	"github.com/sighupio/furyctl/internal/execx"
 	"github.com/sighupio/furyctl/internal/tool/kubectl"
+	execx "github.com/sighupio/furyctl/internal/x/exec"
 )
 
 func Test_Kubectl_SrcPath(t *testing.T) {
