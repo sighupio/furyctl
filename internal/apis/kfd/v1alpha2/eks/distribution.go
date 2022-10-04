@@ -10,13 +10,13 @@ import (
 )
 
 type Distribution struct {
-	base        *Base
+	*base
 	furyctlConf schema.EksclusterKfdV1Alpha2
 	kfdManifest config.KFD
 }
 
 func NewDistribution(furyctlConf schema.EksclusterKfdV1Alpha2, kfdManifest config.KFD) (*Distribution, error) {
-	base, err := NewBase(".distribution")
+	base, err := newBase(".distribution")
 	if err != nil {
 		return nil, err
 	}
@@ -29,5 +29,5 @@ func NewDistribution(furyctlConf schema.EksclusterKfdV1Alpha2, kfdManifest confi
 }
 
 func (d *Distribution) Exec(dryRun bool) error {
-	return d.base.CreateFolder()
+	return d.base.createFolder()
 }

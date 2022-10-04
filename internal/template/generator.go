@@ -15,7 +15,7 @@ import (
 
 	"github.com/sirupsen/logrus"
 
-	"github.com/sighupio/furyctl/internal/io"
+	"github.com/sighupio/furyctl/internal/iox"
 )
 
 var ErrProcessTemplate = errors.New("error processing template")
@@ -140,7 +140,7 @@ func (g *generator) WriteMissingKeysToFile(
 
 	outLog := fmt.Sprintf("[%s]\n%s\n", tmplPath, strings.Join(missingKeys, "\n"))
 
-	return io.AppendBufferToFile(*bytes.NewBufferString(outLog), debugFilePath)
+	return iox.AppendBufferToFile(*bytes.NewBufferString(outLog), debugFilePath)
 }
 
 func (g *generator) getContextValueFromPath(path string) any {

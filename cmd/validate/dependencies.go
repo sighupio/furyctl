@@ -37,11 +37,11 @@ func NewDependenciesCmd(furyctlBinVersion string) *cobra.Command {
 				return err
 			}
 
-			toolsValidator := tools.NewValidator(execx.NewStdExecutor())
+			toolsValidator := tools.NewValidator(execx.NewStdExecutor(), binPath)
 			envVarsValidator := envvars.NewValidator()
 			errs := make([]error, 0)
 
-			errs = append(errs, toolsValidator.Validate(dres.DistroManifest, binPath)...)
+			errs = append(errs, toolsValidator.Validate(dres.DistroManifest)...)
 			errs = append(errs, envVarsValidator.Validate(dres.MinimalConf.Kind)...)
 
 			if len(errs) > 0 {

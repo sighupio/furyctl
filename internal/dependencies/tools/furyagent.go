@@ -12,32 +12,33 @@ import (
 	"runtime"
 	"strings"
 
-	"github.com/sighupio/furyctl/internal/execx"
 	"github.com/sighupio/furyctl/internal/semver"
+	"github.com/sighupio/furyctl/internal/tool/furyagent"
 )
 
-const furyAgentVersionRegexString = "version (\\S*)"
-
-var furyAgentVersionRegex = regexp.MustCompile(furyAgentVersionRegexString)
-
-func NewFuryagent(version string) *Furyagent {
+func NewFuryagent(runner *furyagent.Runner, version string) *Furyagent {
 	return &Furyagent{
-		executor: execx.NewStdExecutor(),
-		version:  version,
-		os:       runtime.GOOS,
-		arch:     "amd64",
+		arch:    "amd64",
+		os:      runtime.GOOS,
+		version: version,
+		checker: &checker{
+			regex:  regexp.MustCompile("version (\\S*)"),
+			runner: runner,
+			trimFn: func(tokens []string) string {
+				return tokens[len(tokens)-1]
+			},
+			splitFn: func(version string) []string {
+				return strings.Split(version, " ")
+			},
+		},
 	}
 }
 
 type Furyagent struct {
-	executor execx.Executor
-	version  string
-	os       string
-	arch     string
-}
-
-func (f *Furyagent) SetExecutor(executor execx.Executor) {
-	f.executor = executor
+	arch    string
+	checker *checker
+	os      string
+	version string
 }
 
 func (f *Furyagent) SupportsDownload() bool {
@@ -60,35 +61,9 @@ func (f *Furyagent) Rename(basePath string) error {
 	return os.Rename(filepath.Join(basePath, oldName), filepath.Join(basePath, newName))
 }
 
-func (f *Furyagent) CheckBinVersion(binPath string) error {
-	if f.version == "" {
-		return fmt.Errorf("furyagent: %w", ErrEmptyToolVersion)
-	}
-
-	path := filepath.Join(binPath, "furyagent")
-	out, err := f.executor.Command(path, "version").Output()
-	if err != nil {
-		return fmt.Errorf("error running %s: %w", path, err)
-	}
-
-	s := string(out)
-
-	versionStringIndex := furyAgentVersionRegex.FindStringIndex(s)
-	if versionStringIndex == nil {
-		return fmt.Errorf("can't get furyagent version from system")
-	}
-
-	versionString := s[versionStringIndex[0]:versionStringIndex[1]]
-
-	versionStringTokens := strings.Split(versionString, " ")
-	if len(versionStringTokens) == 0 {
-		return fmt.Errorf("can't get furyagent version from system")
-	}
-
-	systemFuryagentVersion := versionStringTokens[len(versionStringTokens)-1]
-
-	if systemFuryagentVersion != f.version {
-		return fmt.Errorf("furyagent: %w - installed = %s, expected = %s", ErrWrongToolVersion, systemFuryagentVersion, f.version)
+func (f *Furyagent) CheckBinVersion() error {
+	if err := f.checker.version(f.version); err != nil {
+		return fmt.Errorf("furyagent: %w", err)
 	}
 
 	return nil

@@ -11,12 +11,12 @@ import (
 	"path"
 	"path/filepath"
 
-	io2 "github.com/sighupio/furyctl/internal/io"
+	"github.com/sighupio/furyctl/internal/iox"
 	"github.com/sighupio/furyctl/internal/template"
 	"github.com/sighupio/furyctl/internal/yaml"
 )
 
-type Base struct {
+type base struct {
 	Path          string
 	TerraformPath string
 	KustomizePath string
@@ -27,12 +27,12 @@ type Base struct {
 	VendorPath    string
 }
 
-func NewBase(folder string) (*Base, error) {
+func newBase(folder string) (*base, error) {
 	basePath := path.Join(folder)
 
 	vendorPath, err := filepath.Abs("./vendor")
 	if err != nil {
-		return &Base{}, err
+		return &base{}, err
 	}
 
 	kustomizePath := path.Join(vendorPath, "bin", "kustomize")
@@ -43,7 +43,7 @@ func NewBase(folder string) (*Base, error) {
 	outputsPath := path.Join(basePath, "terraform", "outputs")
 	secretsPath := path.Join(basePath, "terraform", "secrets")
 
-	return &Base{
+	return &base{
 		Path:          basePath,
 		TerraformPath: terraformPath,
 		KustomizePath: kustomizePath,
@@ -55,30 +55,27 @@ func NewBase(folder string) (*Base, error) {
 	}, nil
 }
 
-func (b *Base) CreateFolder() error {
+func (b *base) createFolder() error {
 	return os.Mkdir(b.Path, 0o755)
 }
 
-func (b *Base) CreateFolderStructure() error {
-	err := os.Mkdir(b.PlanPath, 0o755)
-	if err != nil {
+func (b *base) createFolderStructure() error {
+	if err := os.Mkdir(b.PlanPath, 0o755); err != nil {
 		return err
 	}
 
-	err = os.Mkdir(b.LogsPath, 0o755)
-	if err != nil {
+	if err := os.Mkdir(b.LogsPath, 0o755); err != nil {
 		return err
 	}
 
-	err = os.Mkdir(b.SecretsPath, 0o755)
-	if err != nil {
+	if err := os.Mkdir(b.SecretsPath, 0o755); err != nil {
 		return err
 	}
 
 	return os.Mkdir(b.OutputsPath, 0o755)
 }
 
-func (b *Base) CopyFromTemplate(config template.Config, prefix, sourcePath, targetPath string) error {
+func (b *base) copyFromTemplate(config template.Config, prefix, sourcePath, targetPath string) error {
 	outDirPath, err := os.MkdirTemp("", fmt.Sprintf("furyctl-%s-", prefix))
 	if err != nil {
 		return err
@@ -91,8 +88,7 @@ func (b *Base) CopyFromTemplate(config template.Config, prefix, sourcePath, targ
 		return err
 	}
 
-	err = os.WriteFile(tfConfigPath, tfConfig, 0o644)
-	if err != nil {
+	if err = os.WriteFile(tfConfigPath, tfConfig, 0o644); err != nil {
 		return err
 	}
 
@@ -112,7 +108,7 @@ func (b *Base) CopyFromTemplate(config template.Config, prefix, sourcePath, targ
 	return templateModel.Generate()
 }
 
-func CopyFromFsToDir(src fs.FS, dest string) error {
+func copyFromFsToDir(src fs.FS, dest string) error {
 	stuff, err := fs.ReadDir(src, ".")
 	if err != nil {
 		return err
@@ -125,8 +121,7 @@ func CopyFromFsToDir(src fs.FS, dest string) error {
 				return err
 			}
 
-			err = CopyFromFsToDir(sub, path.Join(dest, file.Name()))
-			if err != nil {
+			if err := copyFromFsToDir(sub, path.Join(dest, file.Name())); err != nil {
 				return err
 			}
 
@@ -138,13 +133,11 @@ func CopyFromFsToDir(src fs.FS, dest string) error {
 			return err
 		}
 
-		err = io2.EnsureDir(path.Join(dest, file.Name()))
-		if err != nil {
+		if err := iox.EnsureDir(path.Join(dest, file.Name())); err != nil {
 			return err
 		}
 
-		err = os.WriteFile(path.Join(dest, file.Name()), fileContent, 0o600)
-		if err != nil {
+		if err := os.WriteFile(path.Join(dest, file.Name()), fileContent, 0o600); err != nil {
 			return err
 		}
 	}

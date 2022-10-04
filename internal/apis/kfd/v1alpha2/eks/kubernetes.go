@@ -18,12 +18,13 @@ import (
 	"github.com/sighupio/fury-distribution/pkg/config"
 	"github.com/sighupio/fury-distribution/pkg/schema"
 	"github.com/sighupio/furyctl/configs"
+	"github.com/sighupio/furyctl/internal/execx"
 	"github.com/sighupio/furyctl/internal/template"
-	"github.com/sighupio/furyctl/internal/terraform"
+	"github.com/sighupio/furyctl/internal/tool/terraform"
 )
 
 type Kubernetes struct {
-	base             *Base
+	*base
 	furyctlConf      schema.EksclusterKfdV1Alpha2
 	kfdManifest      config.KFD
 	infraOutputsPath string
@@ -35,7 +36,7 @@ func NewKubernetes(
 	kfdManifest config.KFD,
 	infraOutputsPath string,
 ) (*Kubernetes, error) {
-	base, err := NewBase(".kubernetes")
+	base, err := newBase(".kubernetes")
 	if err != nil {
 		return nil, err
 	}
@@ -45,20 +46,23 @@ func NewKubernetes(
 		furyctlConf:      furyctlConf,
 		kfdManifest:      kfdManifest,
 		infraOutputsPath: infraOutputsPath,
-		tfRunner: terraform.NewRunner(terraform.Paths{
-			Logs:      base.LogsPath,
-			Outputs:   base.OutputsPath,
-			Base:      base.Path,
-			Plan:      base.PlanPath,
-			Terraform: base.TerraformPath,
-		}),
+		tfRunner: terraform.NewRunner(
+			execx.NewStdExecutor(),
+			terraform.Paths{
+				Logs:      base.LogsPath,
+				Outputs:   base.OutputsPath,
+				WorkDir:   base.Path,
+				Plan:      base.PlanPath,
+				Terraform: base.TerraformPath,
+			},
+		),
 	}, nil
 }
 
 func (k *Kubernetes) Exec(dryRun bool) error {
 	timestamp := time.Now().Unix()
 
-	if err := k.base.CreateFolder(); err != nil {
+	if err := k.createFolder(); err != nil {
 		return err
 	}
 
@@ -66,7 +70,7 @@ func (k *Kubernetes) Exec(dryRun bool) error {
 		return err
 	}
 
-	if err := k.base.CreateFolderStructure(); err != nil {
+	if err := k.createFolderStructure(); err != nil {
 		return err
 	}
 
@@ -113,12 +117,12 @@ func (k *Kubernetes) copyFromTemplate() error {
 		return err
 	}
 
-	err = CopyFromFsToDir(subFS, tmpFolder)
+	err = copyFromFsToDir(subFS, tmpFolder)
 	if err != nil {
 		return err
 	}
 
-	targetTfDir := path.Join(k.base.Path, "terraform")
+	targetTfDir := path.Join(k.Path, "terraform")
 	prefix := "kube"
 	tfConfVars := map[string]map[any]any{
 		"kubernetes": {
@@ -128,7 +132,7 @@ func (k *Kubernetes) copyFromTemplate() error {
 
 	cfg.Data = tfConfVars
 
-	return k.base.CopyFromTemplate(
+	return k.base.copyFromTemplate(
 		cfg,
 		prefix,
 		tmpFolder,
@@ -146,11 +150,11 @@ func (k *Kubernetes) createKubeconfig(o terraform.OutputJson) error {
 		return fmt.Errorf("can't get kubeconfig from terraform apply logs")
 	}
 
-	return os.WriteFile(path.Join(k.base.SecretsPath, "kubeconfig"), []byte(kubeString), 0o600)
+	return os.WriteFile(path.Join(k.SecretsPath, "kubeconfig"), []byte(kubeString), 0o600)
 }
 
 func (k *Kubernetes) setKubeconfigEnv() error {
-	kubePath, err := filepath.Abs(path.Join(k.base.SecretsPath, "kubeconfig"))
+	kubePath, err := filepath.Abs(path.Join(k.SecretsPath, "kubeconfig"))
 	if err != nil {
 		return err
 	}
@@ -394,7 +398,7 @@ func (k *Kubernetes) createTfVars() error {
 		buffer.WriteString("]\n")
 	}
 
-	targetTfVars := path.Join(k.base.Path, "terraform", "main.auto.tfvars")
+	targetTfVars := path.Join(k.Path, "terraform", "main.auto.tfvars")
 
 	return os.WriteFile(targetTfVars, buffer.Bytes(), 0o600)
 }

@@ -14,6 +14,8 @@ import (
 	"testing"
 
 	"github.com/sighupio/furyctl/internal/dependencies/tools"
+	"github.com/sighupio/furyctl/internal/execx"
+	"github.com/sighupio/furyctl/internal/tool/terraform"
 )
 
 func Test_Terraform_SrcPath(t *testing.T) {
@@ -37,7 +39,7 @@ func Test_Terraform_SrcPath(t *testing.T) {
 	}
 	for _, tC := range testCases {
 		t.Run(tC.desc, func(t *testing.T) {
-			fa := tools.NewTerraform(tC.version)
+			fa := tools.NewTerraform(newTerraformRunner(), tC.version)
 			if fa.SrcPath() != wantSrcPath {
 				t.Errorf("Wrong terraform src path: want = %s, got = %s", wantSrcPath, fa.SrcPath())
 			}
@@ -55,7 +57,7 @@ func Test_Terraform_Rename(t *testing.T) {
 		t.Fatalf("error creating temp file: %v", err)
 	}
 
-	fa := tools.NewTerraform("1.2.9")
+	fa := tools.NewTerraform(newTerraformRunner(), "1.2.9")
 
 	if err := fa.Rename(tmpDir); err != nil {
 		t.Fatalf("Error renaming terraform binary: %v", err)
@@ -69,4 +71,10 @@ func Test_Terraform_Rename(t *testing.T) {
 	if info.IsDir() {
 		t.Errorf("terraform binary is a directory")
 	}
+}
+
+func newTerraformRunner() *terraform.Runner {
+	return terraform.NewRunner(execx.NewFakeExecutor(), terraform.Paths{
+		Terraform: "terraform",
+	})
 }
