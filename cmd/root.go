@@ -17,7 +17,7 @@ import (
 	"github.com/sighupio/furyctl/internal/analytics"
 	"github.com/sighupio/furyctl/internal/app"
 	"github.com/sighupio/furyctl/internal/cobrax"
-	"github.com/sighupio/furyctl/internal/io"
+	"github.com/sighupio/furyctl/internal/iox"
 	"github.com/sighupio/furyctl/internal/semver"
 )
 
@@ -59,7 +59,7 @@ Furyctl is a simple CLI tool to:
 				// Configure the spinner
 				w := logrus.StandardLogger().Out
 				if cobrax.Flag[bool](cmd, "no-tty").(bool) {
-					w = io.NewNullWriter()
+					w = iox.NewNullWriter()
 					f := new(logrus.TextFormatter)
 					f.DisableColors = true
 					logrus.SetFormatter(f)

@@ -14,7 +14,7 @@ import (
 
 	"gopkg.in/yaml.v2"
 
-	"github.com/sighupio/furyctl/internal/io"
+	"github.com/sighupio/furyctl/internal/iox"
 	"github.com/sighupio/furyctl/internal/template/mapper"
 	yaml2 "github.com/sighupio/furyctl/internal/yaml"
 )
@@ -63,7 +63,7 @@ func NewTemplateModel(
 	}
 
 	if stopIfNotEmpty {
-		err := io.CheckDirIsEmpty(target)
+		err := iox.CheckDirIsEmpty(target)
 		if err != nil {
 			return nil, err
 		}
@@ -190,10 +190,10 @@ func (tm *Model) applyTemplates(
 			return fmt.Errorf("%+v filePath: %s", cErr, relSource)
 		}
 
-		return io.CopyBufferToFile(content, relSource, realTarget)
+		return iox.CopyBufferToFile(content, relSource, realTarget)
 	}
 
-	_, err = io.CopyFromSourceToTarget(relSource, realTarget)
+	_, err = iox.CopyFromSourceToTarget(relSource, realTarget)
 
 	return err
 }

@@ -56,7 +56,7 @@ func (v *ClusterCreator) Create(dryRun bool) error {
 		return err
 	}
 
-	kube, err := NewKubernetes(v.furyctlConf, v.kfdManifest, infra.OutputsPath())
+	kube, err := NewKubernetes(v.furyctlConf, v.kfdManifest, infra.OutputsPath)
 	if err != nil {
 		return err
 	}
@@ -66,18 +66,18 @@ func (v *ClusterCreator) Create(dryRun bool) error {
 		return err
 	}
 
-	infraOpts := []cluster.PhaseOption{
-		{Name: cluster.PhaseOptionVPNAutoConnect, Value: v.vpnAutoConnect},
+	infraOpts := []cluster.CreationPhaseOption{
+		{Name: cluster.CreationPhaseOptionVPNAutoConnect, Value: v.vpnAutoConnect},
 	}
 
 	switch v.phase {
-	case cluster.PhaseInfrastructure:
+	case cluster.CreationPhaseInfrastructure:
 		return infra.Exec(dryRun, infraOpts)
-	case cluster.PhaseKubernetes:
+	case cluster.CreationPhaseKubernetes:
 		return kube.Exec(dryRun)
-	case cluster.PhaseDistribution:
+	case cluster.CreationPhaseDistribution:
 		return distro.Exec(dryRun)
-	case cluster.PhaseAll:
+	case cluster.CreationPhaseAll:
 		if v.furyctlConf.Spec.Infrastructure != nil {
 			if err := infra.Exec(dryRun, infraOpts); err != nil {
 				return err

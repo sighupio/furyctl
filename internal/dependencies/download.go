@@ -15,6 +15,7 @@ import (
 	"github.com/sighupio/fury-distribution/pkg/config"
 	"github.com/sighupio/furyctl/internal/dependencies/tools"
 	"github.com/sighupio/furyctl/internal/distribution"
+	"github.com/sighupio/furyctl/internal/execx"
 	"github.com/sighupio/furyctl/internal/netx"
 )
 
@@ -28,12 +29,15 @@ func NewDownloader(client netx.Client, basePath string) *Downloader {
 	return &Downloader{
 		client:   client,
 		basePath: basePath,
+		toolFactory: tools.NewFactory(execx.NewStdExecutor(), tools.FactoryPaths{
+			Bin: filepath.Join(basePath, "vendor", "bin"),
+		}),
 	}
 }
 
 type Downloader struct {
 	client      netx.Client
-	toolFactory tools.Factory
+	toolFactory *tools.Factory
 	basePath    string
 }
 

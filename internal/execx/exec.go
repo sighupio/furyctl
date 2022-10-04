@@ -5,6 +5,7 @@
 package execx
 
 import (
+	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -35,4 +36,34 @@ func (e *FakeExecutor) Command(name string, arg ...string) *exec.Cmd {
 	cs = append(cs, arg...)
 
 	return exec.Command(os.Args[0], cs...)
+}
+
+type CmdOptions struct {
+	Out      io.Writer
+	Err      io.Writer
+	Executor Executor
+	WorkDir  string
+	Args     []string
+}
+
+func NewCmd(name string, opts CmdOptions) *exec.Cmd {
+	if opts.Executor == nil {
+		opts.Executor = NewStdExecutor()
+	}
+
+	cmd := opts.Executor.Command(name, opts.Args...)
+	cmd.Stdout = opts.Out
+	cmd.Stderr = opts.Err
+	cmd.Dir = opts.WorkDir
+
+	return cmd
+}
+
+func CombinedOutput(cmd *exec.Cmd) (string, error) {
+	out, err := cmd.Output()
+	if err != nil {
+		return "", err
+	}
+
+	return string(out), nil
 }

@@ -10,11 +10,12 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"os/exec"
 	"path"
 	"regexp"
 
 	tfjson "github.com/hashicorp/terraform-json"
+
+	"github.com/sighupio/furyctl/internal/execx"
 )
 
 type OutputJson struct {
@@ -24,52 +25,57 @@ type OutputJson struct {
 type Paths struct {
 	Logs      string
 	Outputs   string
-	Base      string
 	Plan      string
 	Terraform string
+	WorkDir   string
 }
 
 type Runner struct {
-	paths Paths
+	executor execx.Executor
+	paths    Paths
 }
 
-func NewRunner(paths Paths) *Runner {
+func NewRunner(executor execx.Executor, paths Paths) *Runner {
 	return &Runner{
-		paths: paths,
+		executor: executor,
+		paths:    paths,
 	}
 }
 
-func (r *Runner) newCmd(stdOut io.Writer, args ...string) *exec.Cmd {
-	cmd := exec.Command(r.paths.Terraform, args...)
-	cmd.Stdout = stdOut
-	cmd.Stderr = os.Stderr
-	cmd.Dir = path.Join(r.paths.Base, "terraform")
-
-	return cmd
-}
-
 func (r *Runner) Init() error {
-	return r.newCmd(os.Stdout, "init").Run()
+	return execx.NewCmd(r.paths.Terraform, execx.CmdOptions{
+		Args:     []string{"init"},
+		Executor: r.executor,
+		WorkDir:  r.paths.WorkDir,
+	}).Run()
 }
 
 func (r *Runner) Plan(timestamp int64) error {
 	var planBuffer bytes.Buffer
 
-	cmd := r.newCmd(io.MultiWriter(os.Stdout, &planBuffer), "plan", "--out=plan/terraform.plan", "-no-color")
+	cmd := execx.NewCmd(r.paths.Terraform, execx.CmdOptions{
+		Args:     []string{"plan", "--out=plan/terraform.plan", "-no-color"},
+		Out:      io.MultiWriter(os.Stdout, &planBuffer),
+		Executor: r.executor,
+		WorkDir:  r.paths.WorkDir,
+	})
 	if err := cmd.Run(); err != nil {
 		return err
 	}
 
-	logFilePath := fmt.Sprintf("plan-%d.log", timestamp)
-
-	return os.WriteFile(path.Join(r.paths.Plan, logFilePath), planBuffer.Bytes(), 0o600)
+	return os.WriteFile(path.Join(r.paths.Plan, fmt.Sprintf("plan-%d.log", timestamp)), planBuffer.Bytes(), 0o600)
 }
 
 func (r *Runner) Apply(timestamp int64) (OutputJson, error) {
 	var applyBuffer bytes.Buffer
 	var applyLogOut OutputJson
 
-	cmd := r.newCmd(io.MultiWriter(os.Stdout, &applyBuffer), "apply", "-no-color", "-json", "plan/terraform.plan")
+	cmd := execx.NewCmd(r.paths.Terraform, execx.CmdOptions{
+		Args:     []string{"apply", "-no-color", "-json", "plan/terraform.plan"},
+		Out:      io.MultiWriter(os.Stdout, &applyBuffer),
+		Executor: r.executor,
+		WorkDir:  r.paths.WorkDir,
+	})
 	if err := cmd.Run(); err != nil {
 		return applyLogOut, err
 	}
@@ -100,4 +106,12 @@ func (r *Runner) Apply(timestamp int64) (OutputJson, error) {
 	}
 
 	return applyLogOut, os.WriteFile(path.Join(r.paths.Outputs, "output.json"), []byte(outputsString), 0o600)
+}
+
+func (r *Runner) Version() (string, error) {
+	return execx.CombinedOutput(execx.NewCmd(r.paths.Terraform, execx.CmdOptions{
+		Args:     []string{"--version"},
+		Executor: r.executor,
+		WorkDir:  r.paths.WorkDir,
+	}))
 }

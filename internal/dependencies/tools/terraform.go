@@ -2,41 +2,42 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
+//nolint:dupl // false positive
 package tools
 
 import (
 	"fmt"
-	"path/filepath"
 	"regexp"
 	"runtime"
 	"strings"
 
-	"github.com/sighupio/furyctl/internal/execx"
 	"github.com/sighupio/furyctl/internal/semver"
+	"github.com/sighupio/furyctl/internal/tool/terraform"
 )
 
-const terraformVersionRegexString = "Terraform .*"
-
-var terraformVersionRegex = regexp.MustCompile(terraformVersionRegexString)
-
-func NewTerraform(version string) *Terraform {
+func NewTerraform(runner *terraform.Runner, version string) *Terraform {
 	return &Terraform{
-		executor: execx.NewStdExecutor(),
-		version:  version,
-		os:       runtime.GOOS,
-		arch:     "amd64",
+		arch:    "amd64",
+		os:      runtime.GOOS,
+		version: version,
+		checker: &checker{
+			regex:  regexp.MustCompile("Terraform .*"),
+			runner: runner,
+			trimFn: func(tokens []string) string {
+				return strings.TrimLeft(tokens[len(tokens)-1], "v")
+			},
+			splitFn: func(version string) []string {
+				return strings.Split(version, " ")
+			},
+		},
 	}
 }
 
 type Terraform struct {
-	executor execx.Executor
-	version  string
-	os       string
-	arch     string
-}
-
-func (t *Terraform) SetExecutor(executor execx.Executor) {
-	t.executor = executor
+	arch    string
+	checker *checker
+	os      string
+	version string
 }
 
 func (t *Terraform) SupportsDownload() bool {
@@ -57,36 +58,9 @@ func (t *Terraform) Rename(basePath string) error {
 	return nil
 }
 
-//nolint:dupl // it will be refactored
-func (t *Terraform) CheckBinVersion(binPath string) error {
-	if t.version == "" {
-		return fmt.Errorf("terraform: %w", ErrEmptyToolVersion)
-	}
-
-	path := filepath.Join(binPath, "terraform")
-	out, err := t.executor.Command(path, "--version").Output()
-	if err != nil {
-		return fmt.Errorf("error running %s: %w", path, err)
-	}
-
-	s := string(out)
-
-	versionStringIndex := terraformVersionRegex.FindStringIndex(s)
-	if versionStringIndex == nil {
-		return fmt.Errorf("can't get terraform version from system")
-	}
-
-	versionString := s[versionStringIndex[0]:versionStringIndex[1]]
-
-	versionStringTokens := strings.Split(versionString, " ")
-	if len(versionStringTokens) == 0 {
-		return fmt.Errorf("can't get terraform version from system")
-	}
-
-	systemTerraformVersion := strings.TrimLeft(versionStringTokens[len(versionStringTokens)-1], "v")
-
-	if systemTerraformVersion != t.version {
-		return fmt.Errorf("terraform: %w - installed = %s, expected = %s", ErrWrongToolVersion, systemTerraformVersion, t.version)
+func (t *Terraform) CheckBinVersion() error {
+	if err := t.checker.version(t.version); err != nil {
+		return fmt.Errorf("terraform: %w", err)
 	}
 
 	return nil

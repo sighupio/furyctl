@@ -85,16 +85,7 @@ var (
 	RunCmd = func(cmd string, args ...string) (string, error) {
 		out, err := exec.Command(cmd, args...).CombinedOutput()
 
-		DebugIfErr(out, err)
-
 		return string(out), err
-	}
-
-	DebugIfErr = func(out []byte, err error) {
-		if err != nil {
-			fmt.Println("Command output:")
-			fmt.Println(string(out))
-		}
 	}
 
 	_ = BeforeSuite(func() {

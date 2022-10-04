@@ -6,7 +6,6 @@ package dependencies
 
 import (
 	"fmt"
-	"path/filepath"
 
 	"github.com/sighupio/furyctl/internal/dependencies/envvars"
 	"github.com/sighupio/furyctl/internal/dependencies/tools"
@@ -14,9 +13,9 @@ import (
 	"github.com/sighupio/furyctl/internal/execx"
 )
 
-func NewValidator(executor execx.Executor) *Validator {
+func NewValidator(executor execx.Executor, binPath string) *Validator {
 	return &Validator{
-		toolsValidator:   tools.NewValidator(executor),
+		toolsValidator:   tools.NewValidator(executor, binPath),
 		envVarsValidator: envvars.NewValidator(),
 	}
 }
@@ -26,10 +25,8 @@ type Validator struct {
 	envVarsValidator *envvars.Validator
 }
 
-func (v *Validator) Validate(res distribution.DownloadResult, vendorPath string) error {
-	binPath := filepath.Join(vendorPath, "bin")
-
-	if errs := v.toolsValidator.Validate(res.DistroManifest, binPath); len(errs) > 0 {
+func (v *Validator) Validate(res distribution.DownloadResult) error {
+	if errs := v.toolsValidator.Validate(res.DistroManifest); len(errs) > 0 {
 		return fmt.Errorf("errors validating tools: %v", errs)
 	}
 
