@@ -117,6 +117,9 @@ test-integration:
 test-e2e:
 	@ginkgo run -v --covermode=atomic --coverprofile=coverage.out --tags=e2e --timeout 120s -p test/e2e
 
+test-expensive:
+	@ginkgo run -v --covermode=atomic --coverprofile=coverage.out --tags=expensive --timeout 3600s -p test/expensive
+
 .PHONY: clean build release
 
 clean: deps
