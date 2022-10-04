@@ -11,11 +11,15 @@ import (
 	"io/ioutil"
 	"os"
 	"os/exec"
+	"path"
 	"path/filepath"
+	"strings"
 	"testing"
+	"time"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"github.com/onsi/gomega/gexec"
 )
 
 func TestE2e(t *testing.T) {
@@ -42,6 +46,25 @@ var (
 		}
 
 		return string(content)
+	}
+
+	FindFileStartingWith = func(pt, prefix string) (string, error) {
+		files, err := os.ReadDir(pt)
+		if err != nil {
+			return "", err
+		}
+
+		for _, f := range files {
+			if f.IsDir() {
+				continue
+			}
+
+			if strings.HasPrefix(f.Name(), prefix) {
+				return path.Join(pt, f.Name()), nil
+			}
+		}
+
+		return "", fmt.Errorf("file not found in dir %s starting with name %s", pt, prefix)
 	}
 
 	MkdirTemp = func(pattern string) string {
@@ -404,6 +427,88 @@ var (
 				Expect(bp + "/target/furyctl.yaml").To(BeAnExistingFile())
 				Expect(FileContent(bp + "/target/furyctl.yaml")).
 					To(Equal(FileContent(bp + "/data/expected-furyctl.yaml")))
+			})
+		})
+		Context("create cluster dry run", func() {
+			var w string
+			var absBasePath string
+
+			basepath := "../data/e2e/create/cluster"
+
+			FuryctlCreateCluster := func(cfgPath, distroPath, phase string, dryRun bool) *exec.Cmd {
+				args := []string{
+					"create",
+					"cluster",
+					"--config",
+					cfgPath,
+					"--distro-location",
+					distroPath,
+					"--debug",
+					"--workdir",
+					w,
+				}
+
+				if phase != "" {
+					args = append(args, "--phase", phase)
+				} else {
+					args = append(args, "--vpn-auto-connect")
+				}
+
+				if dryRun {
+					args = append(args, "--dry-run")
+				}
+
+				return exec.Command(furyctl, args...)
+			}
+
+			BeforeEach(func() {
+				var err error
+
+				absBasePath, err = filepath.Abs(basepath)
+				Expect(err).To(Not(HaveOccurred()))
+
+				w, err = os.MkdirTemp("", "create-cluster-test-")
+				Expect(err).To(Not(HaveOccurred()))
+
+				Expect(w).To(BeADirectory())
+
+				DeferCleanup(func() error {
+					return os.RemoveAll(w)
+				})
+			})
+
+			It("create cluster phase infrastructure on dry-run", func() {
+				furyctlYamlPath := path.Join(absBasePath, "data/furyctl.yaml")
+				distroPath := path.Join(absBasePath, "data")
+				tfPath := path.Join(w, ".infrastructure", "terraform")
+
+				createInfraCmd := FuryctlCreateCluster(furyctlYamlPath, distroPath, "infrastructure", true)
+				session, err := gexec.Start(createInfraCmd, GinkgoWriter, GinkgoWriter)
+				Expect(err).To(Not(HaveOccurred()))
+
+				Eventually(path.Join(tfPath, "plan", "terraform.plan"), 120*time.Second).Should(BeAnExistingFile())
+
+				Eventually(session).Should(gexec.Exit(0))
+
+				_, err = FindFileStartingWith(path.Join(tfPath, "plan"), "plan-")
+				Expect(err).To(Not(HaveOccurred()))
+			})
+
+			It("create cluster phase kubernetes on dry-run", func() {
+				furyctlYamlPath := path.Join(absBasePath, "data/furyctl.yaml")
+				distroPath := path.Join(absBasePath, "data")
+				tfPath := path.Join(w, ".kubernetes", "terraform")
+
+				createKubeCmd := FuryctlCreateCluster(furyctlYamlPath, distroPath, "kubernetes", true)
+				session, err := gexec.Start(createKubeCmd, GinkgoWriter, GinkgoWriter)
+				Expect(err).To(Not(HaveOccurred()))
+
+				Eventually(path.Join(tfPath, "plan", "terraform.plan"), 120*time.Second).Should(BeAnExistingFile())
+
+				Eventually(session).Should(gexec.Exit(0))
+
+				_, err = FindFileStartingWith(path.Join(tfPath, "plan"), "plan-")
+				Expect(err).To(Not(HaveOccurred()))
 			})
 		})
 	})
