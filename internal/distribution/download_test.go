@@ -12,7 +12,7 @@ import (
 	"testing"
 
 	"github.com/sighupio/furyctl/internal/distribution"
-	"github.com/sighupio/furyctl/internal/netx"
+	netx "github.com/sighupio/furyctl/internal/x/net"
 )
 
 func Test_Downloader_Download(t *testing.T) {

@@ -18,11 +18,11 @@ import (
 	"github.com/sighupio/fury-distribution/pkg/schema"
 	"github.com/sighupio/furyctl/configs"
 	"github.com/sighupio/furyctl/internal/cluster"
-	"github.com/sighupio/furyctl/internal/execx"
 	"github.com/sighupio/furyctl/internal/template"
 	"github.com/sighupio/furyctl/internal/tool/furyagent"
 	"github.com/sighupio/furyctl/internal/tool/openvpn"
 	"github.com/sighupio/furyctl/internal/tool/terraform"
+	execx "github.com/sighupio/furyctl/internal/x/exec"
 )
 
 type Infrastructure struct {

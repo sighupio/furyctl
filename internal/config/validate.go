@@ -12,9 +12,9 @@ import (
 	"github.com/sighupio/fury-distribution/pkg/config"
 	"github.com/sighupio/furyctl/internal/distribution"
 	"github.com/sighupio/furyctl/internal/merge"
-	"github.com/sighupio/furyctl/internal/osx"
 	"github.com/sighupio/furyctl/internal/schema/santhosh"
-	"github.com/sighupio/furyctl/internal/yaml"
+	osx "github.com/sighupio/furyctl/internal/x/os"
+	yamlx "github.com/sighupio/furyctl/internal/x/yaml"
 )
 
 // Validate the furyctl.yaml file
@@ -43,7 +43,7 @@ func Validate(path, repoPath string) error {
 		return err
 	}
 
-	conf, err := yaml.FromFileV3[any](defaultedFuryctlConfPath)
+	conf, err := yamlx.FromFileV3[any](defaultedFuryctlConfPath)
 	if err != nil {
 		return err
 	}
@@ -52,7 +52,7 @@ func Validate(path, repoPath string) error {
 }
 
 func loadFromFile(path string) (config.Furyctl, error) {
-	conf, err := yaml.FromFileV3[config.Furyctl](path)
+	conf, err := yamlx.FromFileV3[config.Furyctl](path)
 	if err != nil {
 		return config.Furyctl{}, err
 	}
@@ -65,12 +65,12 @@ func loadFromFile(path string) (config.Furyctl, error) {
 }
 
 func mergeWithDefaults(furyctlConfPath, defaultsConfPath string) (string, error) {
-	defaultsFile, err := yaml.FromFileV2[map[any]any](defaultsConfPath)
+	defaultsFile, err := yamlx.FromFileV2[map[any]any](defaultsConfPath)
 	if err != nil {
 		return "", fmt.Errorf("%w: %v", distribution.ErrYamlUnmarshalFile, err)
 	}
 
-	furyctlFile, err := yaml.FromFileV2[map[any]any](furyctlConfPath)
+	furyctlFile, err := yamlx.FromFileV2[map[any]any](furyctlConfPath)
 	if err != nil {
 		return "", fmt.Errorf("%w: %v", distribution.ErrYamlUnmarshalFile, err)
 	}
@@ -95,7 +95,7 @@ func mergeWithDefaults(furyctlConfPath, defaultsConfPath string) (string, error)
 		return "", fmt.Errorf("%w: %v", distribution.ErrMergeCompleteConfig, err)
 	}
 
-	outYaml, err := yaml.MarshalV2(defaultedFuryctl)
+	outYaml, err := yamlx.MarshalV2(defaultedFuryctl)
 	if err != nil {
 		return "", fmt.Errorf("%w: %v", distribution.ErrYamlMarshalFile, err)
 	}

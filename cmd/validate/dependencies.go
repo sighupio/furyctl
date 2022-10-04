@@ -10,12 +10,12 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 
-	"github.com/sighupio/furyctl/internal/cobrax"
 	"github.com/sighupio/furyctl/internal/dependencies/envvars"
 	"github.com/sighupio/furyctl/internal/dependencies/tools"
 	"github.com/sighupio/furyctl/internal/distribution"
-	"github.com/sighupio/furyctl/internal/execx"
-	"github.com/sighupio/furyctl/internal/netx"
+	cobrax "github.com/sighupio/furyctl/internal/x/cobra"
+	execx "github.com/sighupio/furyctl/internal/x/exec"
+	netx "github.com/sighupio/furyctl/internal/x/net"
 )
 
 var ErrDependencies = fmt.Errorf("dependencies are not satisfied")

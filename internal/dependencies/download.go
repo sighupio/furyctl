@@ -15,8 +15,8 @@ import (
 	"github.com/sighupio/fury-distribution/pkg/config"
 	"github.com/sighupio/furyctl/internal/dependencies/tools"
 	"github.com/sighupio/furyctl/internal/distribution"
-	"github.com/sighupio/furyctl/internal/execx"
-	"github.com/sighupio/furyctl/internal/netx"
+	execx "github.com/sighupio/furyctl/internal/x/exec"
+	netx "github.com/sighupio/furyctl/internal/x/net"
 )
 
 var (

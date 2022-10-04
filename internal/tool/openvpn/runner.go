@@ -7,7 +7,7 @@ package openvpn
 import (
 	"fmt"
 
-	"github.com/sighupio/furyctl/internal/execx"
+	execx "github.com/sighupio/furyctl/internal/x/exec"
 )
 
 type Paths struct {

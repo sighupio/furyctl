@@ -14,10 +14,10 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/sighupio/fury-distribution/pkg/config"
-	"github.com/sighupio/furyctl/internal/netx"
-	"github.com/sighupio/furyctl/internal/osx"
 	"github.com/sighupio/furyctl/internal/semver"
-	"github.com/sighupio/furyctl/internal/yaml"
+	netx "github.com/sighupio/furyctl/internal/x/net"
+	osx "github.com/sighupio/furyctl/internal/x/os"
+	yamlx "github.com/sighupio/furyctl/internal/x/yaml"
 )
 
 const DefaultBaseUrl = "https://git@github.com/sighupio/fury-distribution?ref=%s"
@@ -57,7 +57,7 @@ func (d *Downloader) Download(
 	distroLocation string,
 	furyctlConfPath string,
 ) (DownloadResult, error) {
-	minimalConf, err := yaml.FromFileV3[config.Furyctl](furyctlConfPath)
+	minimalConf, err := yamlx.FromFileV3[config.Furyctl](furyctlConfPath)
 	if err != nil {
 		return DownloadResult{}, err
 	}
@@ -100,7 +100,7 @@ func (d *Downloader) Download(
 	}
 
 	kfdPath := filepath.Join(dst, "kfd.yaml")
-	kfdManifest, err := yaml.FromFileV3[config.KFD](kfdPath)
+	kfdManifest, err := yamlx.FromFileV3[config.KFD](kfdPath)
 	if err != nil {
 		return DownloadResult{}, err
 	}

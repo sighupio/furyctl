@@ -7,13 +7,13 @@ package tool
 import (
 	"path/filepath"
 
-	"github.com/sighupio/furyctl/internal/execx"
 	"github.com/sighupio/furyctl/internal/tool/ansible"
 	"github.com/sighupio/furyctl/internal/tool/furyagent"
 	"github.com/sighupio/furyctl/internal/tool/kubectl"
 	"github.com/sighupio/furyctl/internal/tool/kustomize"
 	"github.com/sighupio/furyctl/internal/tool/openvpn"
 	"github.com/sighupio/furyctl/internal/tool/terraform"
+	execx "github.com/sighupio/furyctl/internal/x/exec"
 )
 
 const (
