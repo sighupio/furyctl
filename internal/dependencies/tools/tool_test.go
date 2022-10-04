@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/sighupio/furyctl/internal/dependencies/tools"
+	"github.com/sighupio/furyctl/internal/execx"
 )
 
 func Test_Factory_Create(t *testing.T) {
@@ -39,7 +40,9 @@ func Test_Factory_Create(t *testing.T) {
 		},
 	}
 	for _, tC := range testCases {
-		f := tools.NewFactory()
+		f := tools.NewFactory(execx.NewStdExecutor(), tools.FactoryPaths{
+			Bin: "",
+		})
 		t.Run(tC.desc, func(t *testing.T) {
 			tool := f.Create(tC.desc, "0.0.0")
 			if tool == nil && tC.wantTool {

@@ -18,14 +18,15 @@ import (
 	"github.com/sighupio/fury-distribution/pkg/schema"
 	"github.com/sighupio/furyctl/configs"
 	"github.com/sighupio/furyctl/internal/cluster"
-	"github.com/sighupio/furyctl/internal/furyagent"
-	"github.com/sighupio/furyctl/internal/openvpn"
+	"github.com/sighupio/furyctl/internal/execx"
 	"github.com/sighupio/furyctl/internal/template"
-	"github.com/sighupio/furyctl/internal/terraform"
+	"github.com/sighupio/furyctl/internal/tool/furyagent"
+	"github.com/sighupio/furyctl/internal/tool/openvpn"
+	"github.com/sighupio/furyctl/internal/tool/terraform"
 )
 
 type Infrastructure struct {
-	base        *Base
+	*base
 	furyctlConf schema.EksclusterKfdV1Alpha2
 	kfdManifest config.KFD
 	tfRunner    *terraform.Runner
@@ -34,36 +35,41 @@ type Infrastructure struct {
 }
 
 func NewInfrastructure(furyctlConf schema.EksclusterKfdV1Alpha2, kfdManifest config.KFD) (*Infrastructure, error) {
-	base, err := NewBase(".infrastructure")
+	base, err := newBase(".infrastructure")
 	if err != nil {
 		return nil, err
 	}
+
+	executor := execx.NewStdExecutor()
 
 	return &Infrastructure{
 		base:        base,
 		furyctlConf: furyctlConf,
 		kfdManifest: kfdManifest,
-		tfRunner: terraform.NewRunner(terraform.Paths{
-			Logs:      base.LogsPath,
-			Outputs:   base.OutputsPath,
-			Base:      base.Path,
-			Plan:      base.PlanPath,
-			Terraform: base.TerraformPath,
+		tfRunner: terraform.NewRunner(
+			executor,
+			terraform.Paths{
+				Logs:      base.LogsPath,
+				Outputs:   base.OutputsPath,
+				WorkDir:   base.Path,
+				Plan:      base.PlanPath,
+				Terraform: base.TerraformPath,
+			},
+		),
+		faRunner: furyagent.NewRunner(executor, furyagent.Paths{
+			Furyagent: path.Join(base.VendorPath, "bin", "furyagent"),
+			WorkDir:   base.SecretsPath,
 		}),
-		faRunner: furyagent.NewRunner(furyagent.Paths{
-			Bin:     path.Join(base.VendorPath, "bin", "furyagent"),
-			Secrets: base.SecretsPath,
-		}),
-		ovRunner: openvpn.NewRunner(openvpn.Paths{
-			Secrets: base.SecretsPath,
+		ovRunner: openvpn.NewRunner(executor, openvpn.Paths{
+			WorkDir: base.SecretsPath,
 		}),
 	}, nil
 }
 
-func (i *Infrastructure) Exec(dryRun bool, opts []cluster.PhaseOption) error {
+func (i *Infrastructure) Exec(dryRun bool, opts []cluster.CreationPhaseOption) error {
 	timestamp := time.Now().Unix()
 
-	if err := i.base.CreateFolder(); err != nil {
+	if err := i.createFolder(); err != nil {
 		return err
 	}
 
@@ -71,7 +77,7 @@ func (i *Infrastructure) Exec(dryRun bool, opts []cluster.PhaseOption) error {
 		return err
 	}
 
-	if err := i.base.CreateFolderStructure(); err != nil {
+	if err := i.createFolderStructure(); err != nil {
 		return err
 	}
 
@@ -107,7 +113,7 @@ func (i *Infrastructure) Exec(dryRun bool, opts []cluster.PhaseOption) error {
 
 		for _, opt := range opts {
 			switch strings.ToLower(opt.Name) {
-			case cluster.PhaseOptionVPNAutoConnect:
+			case cluster.CreationPhaseOptionVPNAutoConnect:
 				if err := i.ovRunner.Connect(clientName); err != nil {
 					return err
 				}
@@ -116,10 +122,6 @@ func (i *Infrastructure) Exec(dryRun bool, opts []cluster.PhaseOption) error {
 	}
 
 	return nil
-}
-
-func (i *Infrastructure) OutputsPath() string {
-	return i.base.OutputsPath
 }
 
 func (i *Infrastructure) isVpnConfigured() bool {
@@ -152,23 +154,20 @@ func (i *Infrastructure) copyFromTemplate(kfdManifest config.KFD) error {
 		return err
 	}
 
-	err = CopyFromFsToDir(subFS, tmpFolder)
-	if err != nil {
+	if err = copyFromFsToDir(subFS, tmpFolder); err != nil {
 		return err
 	}
 
-	targetTfDir := path.Join(i.base.Path, "terraform")
+	targetTfDir := path.Join(i.Path, "terraform")
 	prefix := "infra"
 
-	tfConfVars := map[string]map[any]any{
+	cfg.Data = map[string]map[any]any{
 		"kubernetes": {
 			"eks": kfdManifest.Kubernetes.Eks,
 		},
 	}
 
-	cfg.Data = tfConfVars
-
-	return i.base.CopyFromTemplate(
+	return i.base.copyFromTemplate(
 		cfg,
 		prefix,
 		tmpFolder,
@@ -295,7 +294,7 @@ func (i *Infrastructure) createTfVars() error {
 		}
 	}
 
-	targetTfVars := path.Join(i.base.Path, "terraform", "main.auto.tfvars")
+	targetTfVars := path.Join(i.Path, "terraform", "main.auto.tfvars")
 
 	return os.WriteFile(targetTfVars, buffer.Bytes(), 0o600)
 }

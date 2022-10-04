@@ -41,14 +41,14 @@ func NewClusterCmd(version string) *cobra.Command {
 				return err
 			}
 
-			vendorPath := filepath.Join(basePath, "vendor")
+			binPath := filepath.Join(basePath, "vendor", "bin")
 
 			// Init collaborators
 			client := netx.NewGoGetterClient()
 			executor := execx.NewStdExecutor()
 			distrodl := distribution.NewDownloader(client, debug)
 			depsdl := dependencies.NewDownloader(client, basePath)
-			depsvl := dependencies.NewValidator(executor)
+			depsvl := dependencies.NewValidator(executor, binPath)
 
 			// Download the distribution
 			res, err := distrodl.Download(version, distroLocation, furyctlPath)
@@ -69,7 +69,7 @@ func NewClusterCmd(version string) *cobra.Command {
 			}
 
 			// Validate the dependencies
-			if err := depsvl.Validate(res, vendorPath); err != nil {
+			if err := depsvl.Validate(res); err != nil {
 				return err
 			}
 

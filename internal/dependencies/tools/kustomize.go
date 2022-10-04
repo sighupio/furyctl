@@ -2,41 +2,42 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
+//nolint:dupl // false positive
 package tools
 
 import (
 	"fmt"
-	"path/filepath"
 	"regexp"
 	"runtime"
 	"strings"
 
-	"github.com/sighupio/furyctl/internal/execx"
 	"github.com/sighupio/furyctl/internal/semver"
+	"github.com/sighupio/furyctl/internal/tool/kustomize"
 )
 
-const kustomizeVersionRegexString = "kustomize/v(\\S*)"
-
-var kustomizeVersionRegex = regexp.MustCompile(kustomizeVersionRegexString)
-
-func NewKustomize(version string) *Kustomize {
+func NewKustomize(runner *kustomize.Runner, version string) *Kustomize {
 	return &Kustomize{
-		executor: execx.NewStdExecutor(),
-		version:  version,
-		os:       runtime.GOOS,
-		arch:     "amd64",
+		arch:    "amd64",
+		os:      runtime.GOOS,
+		version: version,
+		checker: &checker{
+			regex:  regexp.MustCompile("kustomize/v(\\S*)"),
+			runner: runner,
+			trimFn: func(tokens []string) string {
+				return strings.TrimLeft(tokens[len(tokens)-1], "v")
+			},
+			splitFn: func(version string) []string {
+				return strings.Split(version, "/")
+			},
+		},
 	}
 }
 
 type Kustomize struct {
-	executor execx.Executor
-	version  string
-	os       string
-	arch     string
-}
-
-func (k *Kustomize) SetExecutor(executor execx.Executor) {
-	k.executor = executor
+	arch    string
+	checker *checker
+	os      string
+	version string
 }
 
 func (k *Kustomize) SupportsDownload() bool {
@@ -57,35 +58,9 @@ func (k *Kustomize) Rename(basePath string) error {
 	return nil
 }
 
-func (k *Kustomize) CheckBinVersion(binPath string) error {
-	if k.version == "" {
-		return fmt.Errorf("kustomize: %w", ErrEmptyToolVersion)
-	}
-
-	path := filepath.Join(binPath, "kustomize")
-	out, err := k.executor.Command(path, "version", "--short").Output()
-	if err != nil {
-		return fmt.Errorf("error running %s: %w", path, err)
-	}
-
-	s := string(out)
-
-	versionStringIndex := kustomizeVersionRegex.FindStringIndex(s)
-	if versionStringIndex == nil {
-		return fmt.Errorf("can't get kustomize version from system")
-	}
-
-	versionString := s[versionStringIndex[0]:versionStringIndex[1]]
-
-	versionStringTokens := strings.Split(versionString, "/")
-	if len(versionStringTokens) == 0 {
-		return fmt.Errorf("can't get kustomize version from system")
-	}
-
-	systemKustomizeVersion := strings.TrimLeft(versionStringTokens[len(versionStringTokens)-1], "v")
-
-	if systemKustomizeVersion != k.version {
-		return fmt.Errorf("kustomize: %w - installed = %s, expected = %s", ErrWrongToolVersion, systemKustomizeVersion, k.version)
+func (k *Kustomize) CheckBinVersion() error {
+	if err := k.checker.version(k.version); err != nil {
+		return fmt.Errorf("kustomize: %w", err)
 	}
 
 	return nil

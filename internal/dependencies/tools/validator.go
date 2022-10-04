@@ -18,24 +18,25 @@ var (
 	ErrWrongToolVersion = errors.New("wrong tool version")
 )
 
-func NewValidator(executor execx.Executor) *Validator {
+func NewValidator(executor execx.Executor, binPath string) *Validator {
 	return &Validator{
 		executor: executor,
+		toolFactory: NewFactory(execx.NewStdExecutor(), FactoryPaths{
+			Bin: binPath,
+		}),
 	}
 }
 
 type Validator struct {
 	executor    execx.Executor
-	toolFactory Factory
+	toolFactory *Factory
 }
 
-func (tv *Validator) Validate(kfdManifest config.KFD, binPath string) []error {
+func (tv *Validator) Validate(kfdManifest config.KFD) []error {
 	var errs []error
 
 	tls := reflect.ValueOf(kfdManifest.Tools)
 	for i := 0; i < tls.NumField(); i++ {
-		var err error
-
 		name := strings.ToLower(tls.Type().Field(i).Name)
 		version := tls.Field(i).Interface().(string)
 
@@ -44,15 +45,8 @@ func (tv *Validator) Validate(kfdManifest config.KFD, binPath string) []error {
 		}
 
 		tool := tv.toolFactory.Create(name, version)
-		tool.SetExecutor(tv.executor)
 
-		if tool.SupportsDownload() {
-			err = tool.CheckBinVersion(binPath)
-		} else {
-			err = tool.CheckBinVersion("")
-		}
-
-		if err != nil {
+		if err := tool.CheckBinVersion(); err != nil {
 			errs = append(errs, err)
 		}
 	}

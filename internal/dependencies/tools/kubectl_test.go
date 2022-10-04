@@ -14,6 +14,8 @@ import (
 	"testing"
 
 	"github.com/sighupio/furyctl/internal/dependencies/tools"
+	"github.com/sighupio/furyctl/internal/execx"
+	"github.com/sighupio/furyctl/internal/tool/kubectl"
 )
 
 func Test_Kubectl_SrcPath(t *testing.T) {
@@ -34,7 +36,7 @@ func Test_Kubectl_SrcPath(t *testing.T) {
 	}
 	for _, tC := range testCases {
 		t.Run(tC.desc, func(t *testing.T) {
-			fa := tools.NewKubectl(tC.version)
+			fa := tools.NewKubectl(newKubectlRunner(), tC.version)
 			if fa.SrcPath() != wantSrcPath {
 				t.Errorf("Wrong kubectl src path: want = %s, got = %s", wantSrcPath, fa.SrcPath())
 			}
@@ -52,7 +54,7 @@ func Test_Kubectl_Rename(t *testing.T) {
 		t.Fatalf("error creating temp file: %v", err)
 	}
 
-	fa := tools.NewKubectl("1.23.10")
+	fa := tools.NewKubectl(newKubectlRunner(), "1.23.10")
 
 	if err := fa.Rename(tmpDir); err != nil {
 		t.Fatalf("Error renaming kubectl binary: %v", err)
@@ -66,4 +68,10 @@ func Test_Kubectl_Rename(t *testing.T) {
 	if info.IsDir() {
 		t.Errorf("kubectl binary is a directory")
 	}
+}
+
+func newKubectlRunner() *kubectl.Runner {
+	return kubectl.NewRunner(execx.NewFakeExecutor(), kubectl.Paths{
+		Kubectl: "kubectl",
+	})
 }

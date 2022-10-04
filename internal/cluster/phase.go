@@ -5,19 +5,19 @@
 package cluster
 
 const (
-	PhaseInfrastructure = "infrastructure"
-	PhaseKubernetes     = "kubernetes"
-	PhaseDistribution   = "distribution"
-	PhaseAll            = ""
+	CreationPhaseInfrastructure = "infrastructure"
+	CreationPhaseKubernetes     = "kubernetes"
+	CreationPhaseDistribution   = "distribution"
+	CreationPhaseAll            = ""
 
-	PhaseOptionVPNAutoConnect = "vpnautoconnect"
+	CreationPhaseOptionVPNAutoConnect = "vpnautoconnect"
 )
 
-type PhaseOption struct {
+type CreationPhaseOption struct {
 	Name  string
 	Value any
 }
 
-type Phase interface {
-	Exec(dryRun bool, opts []PhaseOption)
+type CreationPhase interface {
+	Exec(dryRun bool, opts []CreationPhaseOption)
 }

@@ -14,6 +14,8 @@ import (
 	"testing"
 
 	"github.com/sighupio/furyctl/internal/dependencies/tools"
+	"github.com/sighupio/furyctl/internal/execx"
+	"github.com/sighupio/furyctl/internal/tool/kustomize"
 )
 
 func Test_Kustomize_SrcPath(t *testing.T) {
@@ -37,7 +39,7 @@ func Test_Kustomize_SrcPath(t *testing.T) {
 	}
 	for _, tC := range testCases {
 		t.Run(tC.desc, func(t *testing.T) {
-			fa := tools.NewKustomize(tC.version)
+			fa := tools.NewKustomize(newKustomizeRunner(), tC.version)
 			if fa.SrcPath() != wantSrcPath {
 				t.Errorf("Wrong kustomize src path: want = %s, got = %s", wantSrcPath, fa.SrcPath())
 			}
@@ -55,7 +57,7 @@ func Test_Kustomize_Rename(t *testing.T) {
 		t.Fatalf("error creating temp file: %v", err)
 	}
 
-	fa := tools.NewKustomize("3.10.0")
+	fa := tools.NewKustomize(newKustomizeRunner(), "3.10.0")
 
 	if err := fa.Rename(tmpDir); err != nil {
 		t.Fatalf("Error renaming kustomize binary: %v", err)
@@ -69,4 +71,10 @@ func Test_Kustomize_Rename(t *testing.T) {
 	if info.IsDir() {
 		t.Errorf("kustomize binary is a directory")
 	}
+}
+
+func newKustomizeRunner() *kustomize.Runner {
+	return kustomize.NewRunner(execx.NewFakeExecutor(), kustomize.Paths{
+		Kustomize: "kustomize",
+	})
 }
