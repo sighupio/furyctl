@@ -8,7 +8,9 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"io/fs"
 	"os"
+	"path"
 	"path/filepath"
 	"strings"
 
@@ -68,7 +70,7 @@ func CopyBufferToFile(b bytes.Buffer, source, target string) error {
 	return nil
 }
 
-func CopyFromSourceToTarget(src, dst string) (int64, error) {
+func CopyFile(src, dst string) (int64, error) {
 	sourceFileStat, err := os.Stat(src)
 	if err != nil {
 		return 0, err
@@ -93,6 +95,43 @@ func CopyFromSourceToTarget(src, dst string) (int64, error) {
 	defer destination.Close()
 
 	return io.Copy(destination, source)
+}
+
+func CopyRecursive(src fs.FS, dest string) error {
+	stuff, err := fs.ReadDir(src, ".")
+	if err != nil {
+		return err
+	}
+
+	for _, file := range stuff {
+		if file.IsDir() {
+			sub, err := fs.Sub(src, file.Name())
+			if err != nil {
+				return err
+			}
+
+			if err := CopyRecursive(sub, path.Join(dest, file.Name())); err != nil {
+				return err
+			}
+
+			continue
+		}
+
+		fileContent, err := fs.ReadFile(src, file.Name())
+		if err != nil {
+			return err
+		}
+
+		if err := EnsureDir(path.Join(dest, file.Name())); err != nil {
+			return err
+		}
+
+		if err := os.WriteFile(path.Join(dest, file.Name()), fileContent, 0o600); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 // EnsureDir creates the directories to host the file.

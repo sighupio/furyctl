@@ -23,10 +23,11 @@ import (
 	"github.com/sighupio/furyctl/internal/tool/openvpn"
 	"github.com/sighupio/furyctl/internal/tool/terraform"
 	execx "github.com/sighupio/furyctl/internal/x/exec"
+	iox "github.com/sighupio/furyctl/internal/x/io"
 )
 
 type Infrastructure struct {
-	*base
+	*cluster.CreationPhase
 	furyctlConf schema.EksclusterKfdV1Alpha2
 	kfdManifest config.KFD
 	tfRunner    *terraform.Runner
@@ -35,7 +36,7 @@ type Infrastructure struct {
 }
 
 func NewInfrastructure(furyctlConf schema.EksclusterKfdV1Alpha2, kfdManifest config.KFD) (*Infrastructure, error) {
-	base, err := newBase(".infrastructure")
+	phase, err := cluster.NewCreationPhase(".infrastructure")
 	if err != nil {
 		return nil, err
 	}
@@ -43,25 +44,25 @@ func NewInfrastructure(furyctlConf schema.EksclusterKfdV1Alpha2, kfdManifest con
 	executor := execx.NewStdExecutor()
 
 	return &Infrastructure{
-		base:        base,
-		furyctlConf: furyctlConf,
-		kfdManifest: kfdManifest,
+		CreationPhase: phase,
+		furyctlConf:   furyctlConf,
+		kfdManifest:   kfdManifest,
 		tfRunner: terraform.NewRunner(
 			executor,
 			terraform.Paths{
-				Logs:      base.LogsPath,
-				Outputs:   base.OutputsPath,
-				WorkDir:   base.Path,
-				Plan:      base.PlanPath,
-				Terraform: base.TerraformPath,
+				Logs:      phase.LogsPath,
+				Outputs:   phase.OutputsPath,
+				WorkDir:   phase.Path,
+				Plan:      phase.PlanPath,
+				Terraform: phase.TerraformPath,
 			},
 		),
 		faRunner: furyagent.NewRunner(executor, furyagent.Paths{
-			Furyagent: path.Join(base.VendorPath, "bin", "furyagent"),
-			WorkDir:   base.SecretsPath,
+			Furyagent: path.Join(phase.VendorPath, "bin", "furyagent"),
+			WorkDir:   phase.SecretsPath,
 		}),
 		ovRunner: openvpn.NewRunner(executor, openvpn.Paths{
-			WorkDir: base.SecretsPath,
+			WorkDir: phase.SecretsPath,
 		}),
 	}, nil
 }
@@ -69,7 +70,7 @@ func NewInfrastructure(furyctlConf schema.EksclusterKfdV1Alpha2, kfdManifest con
 func (i *Infrastructure) Exec(dryRun bool, opts []cluster.CreationPhaseOption) error {
 	timestamp := time.Now().Unix()
 
-	if err := i.createFolder(); err != nil {
+	if err := i.CreateFolder(); err != nil {
 		return err
 	}
 
@@ -77,7 +78,7 @@ func (i *Infrastructure) Exec(dryRun bool, opts []cluster.CreationPhaseOption) e
 		return err
 	}
 
-	if err := i.createFolderStructure(); err != nil {
+	if err := i.CreateFolderStructure(); err != nil {
 		return err
 	}
 
@@ -154,7 +155,7 @@ func (i *Infrastructure) copyFromTemplate(kfdManifest config.KFD) error {
 		return err
 	}
 
-	if err = copyFromFsToDir(subFS, tmpFolder); err != nil {
+	if err = iox.CopyRecursive(subFS, tmpFolder); err != nil {
 		return err
 	}
 
@@ -167,7 +168,7 @@ func (i *Infrastructure) copyFromTemplate(kfdManifest config.KFD) error {
 		},
 	}
 
-	return i.base.copyFromTemplate(
+	return i.CreationPhase.CopyFromTemplate(
 		cfg,
 		prefix,
 		tmpFolder,
