@@ -28,8 +28,8 @@ func NewRunner(executor execx.Executor, paths Paths) *Runner {
 }
 
 func (r *Runner) Connect(name string) error {
-	return execx.NewCmd(r.paths.Openvpn, execx.CmdOptions{
-		Args:     []string{"--config", fmt.Sprintf("%s.ovpn", name), "--daemon"},
+	return execx.NewCmd("sudo", execx.CmdOptions{
+		Args:     []string{r.paths.Openvpn, "--config", fmt.Sprintf("%s.ovpn", name), "--daemon"},
 		Executor: r.executor,
 		WorkDir:  r.paths.WorkDir,
 	}).Run()

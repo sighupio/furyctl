@@ -76,10 +76,8 @@ func RegisterCreatorFactory(apiVersion, kind string, factory CreatorFactory) {
 	factories[lcApiVersion][lcKind] = factory
 }
 
-func NewCreatorFactory[T Creator, S any]() CreatorFactory {
+func NewCreatorFactory[T Creator, S any](cc T) CreatorFactory {
 	return func(configPath string, props []CreatorProperty) (Creator, error) {
-		var cc T
-
 		furyctlConf, err := yamlx.FromFileV3[S](configPath)
 		if err != nil {
 			return nil, err

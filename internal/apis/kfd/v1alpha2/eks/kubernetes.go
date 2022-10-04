@@ -53,7 +53,7 @@ func NewKubernetes(
 			terraform.Paths{
 				Logs:      phase.LogsPath,
 				Outputs:   phase.OutputsPath,
-				WorkDir:   phase.Path,
+				WorkDir:   path.Join(phase.Path, "terraform"),
 				Plan:      phase.PlanPath,
 				Terraform: phase.TerraformPath,
 			},

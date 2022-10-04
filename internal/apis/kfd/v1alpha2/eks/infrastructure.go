@@ -52,7 +52,7 @@ func NewInfrastructure(furyctlConf schema.EksclusterKfdV1Alpha2, kfdManifest con
 			terraform.Paths{
 				Logs:      phase.LogsPath,
 				Outputs:   phase.OutputsPath,
-				WorkDir:   phase.Path,
+				WorkDir:   path.Join(phase.Path, "terraform"),
 				Plan:      phase.PlanPath,
 				Terraform: phase.TerraformPath,
 			},
@@ -63,6 +63,7 @@ func NewInfrastructure(furyctlConf schema.EksclusterKfdV1Alpha2, kfdManifest con
 		}),
 		ovRunner: openvpn.NewRunner(executor, openvpn.Paths{
 			WorkDir: phase.SecretsPath,
+			Openvpn: "openvpn",
 		}),
 	}, nil
 }
