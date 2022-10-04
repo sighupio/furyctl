@@ -193,7 +193,7 @@ func (tm *Model) applyTemplates(
 		return iox.CopyBufferToFile(content, relSource, realTarget)
 	}
 
-	_, err = iox.CopyFromSourceToTarget(relSource, realTarget)
+	_, err = iox.CopyFile(relSource, realTarget)
 
 	return err
 }

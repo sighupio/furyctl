@@ -18,13 +18,15 @@ import (
 	"github.com/sighupio/fury-distribution/pkg/config"
 	"github.com/sighupio/fury-distribution/pkg/schema"
 	"github.com/sighupio/furyctl/configs"
+	"github.com/sighupio/furyctl/internal/cluster"
 	"github.com/sighupio/furyctl/internal/template"
 	"github.com/sighupio/furyctl/internal/tool/terraform"
 	execx "github.com/sighupio/furyctl/internal/x/exec"
+	iox "github.com/sighupio/furyctl/internal/x/io"
 )
 
 type Kubernetes struct {
-	*base
+	*cluster.CreationPhase
 	furyctlConf      schema.EksclusterKfdV1Alpha2
 	kfdManifest      config.KFD
 	infraOutputsPath string
@@ -36,24 +38,24 @@ func NewKubernetes(
 	kfdManifest config.KFD,
 	infraOutputsPath string,
 ) (*Kubernetes, error) {
-	base, err := newBase(".kubernetes")
+	phase, err := cluster.NewCreationPhase(".kubernetes")
 	if err != nil {
 		return nil, err
 	}
 
 	return &Kubernetes{
-		base:             base,
+		CreationPhase:    phase,
 		furyctlConf:      furyctlConf,
 		kfdManifest:      kfdManifest,
 		infraOutputsPath: infraOutputsPath,
 		tfRunner: terraform.NewRunner(
 			execx.NewStdExecutor(),
 			terraform.Paths{
-				Logs:      base.LogsPath,
-				Outputs:   base.OutputsPath,
-				WorkDir:   base.Path,
-				Plan:      base.PlanPath,
-				Terraform: base.TerraformPath,
+				Logs:      phase.LogsPath,
+				Outputs:   phase.OutputsPath,
+				WorkDir:   phase.Path,
+				Plan:      phase.PlanPath,
+				Terraform: phase.TerraformPath,
 			},
 		),
 	}, nil
@@ -62,7 +64,7 @@ func NewKubernetes(
 func (k *Kubernetes) Exec(dryRun bool) error {
 	timestamp := time.Now().Unix()
 
-	if err := k.createFolder(); err != nil {
+	if err := k.CreateFolder(); err != nil {
 		return err
 	}
 
@@ -70,7 +72,7 @@ func (k *Kubernetes) Exec(dryRun bool) error {
 		return err
 	}
 
-	if err := k.createFolderStructure(); err != nil {
+	if err := k.CreateFolderStructure(); err != nil {
 		return err
 	}
 
@@ -117,7 +119,7 @@ func (k *Kubernetes) copyFromTemplate() error {
 		return err
 	}
 
-	err = copyFromFsToDir(subFS, tmpFolder)
+	err = iox.CopyRecursive(subFS, tmpFolder)
 	if err != nil {
 		return err
 	}
@@ -132,7 +134,7 @@ func (k *Kubernetes) copyFromTemplate() error {
 
 	cfg.Data = tfConfVars
 
-	return k.base.copyFromTemplate(
+	return k.CreationPhase.CopyFromTemplate(
 		cfg,
 		prefix,
 		tmpFolder,
