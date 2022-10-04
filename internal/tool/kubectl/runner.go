@@ -5,7 +5,7 @@
 package kubectl
 
 import (
-	"github.com/sighupio/furyctl/internal/execx"
+	execx "github.com/sighupio/furyctl/internal/x/exec"
 )
 
 type Paths struct {

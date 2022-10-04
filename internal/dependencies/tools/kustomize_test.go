@@ -14,8 +14,8 @@ import (
 	"testing"
 
 	"github.com/sighupio/furyctl/internal/dependencies/tools"
-	"github.com/sighupio/furyctl/internal/execx"
 	"github.com/sighupio/furyctl/internal/tool/kustomize"
+	execx "github.com/sighupio/furyctl/internal/x/exec"
 )
 
 func Test_Kustomize_SrcPath(t *testing.T) {

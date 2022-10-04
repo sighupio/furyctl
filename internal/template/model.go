@@ -14,9 +14,9 @@ import (
 
 	"gopkg.in/yaml.v2"
 
-	"github.com/sighupio/furyctl/internal/iox"
 	"github.com/sighupio/furyctl/internal/template/mapper"
-	yaml2 "github.com/sighupio/furyctl/internal/yaml"
+	iox "github.com/sighupio/furyctl/internal/x/io"
+	yamlx "github.com/sighupio/furyctl/internal/x/yaml"
 )
 
 type Model struct {
@@ -212,7 +212,7 @@ func (tm *Model) generateContext() (map[string]map[any]any, error) {
 			cPath = v
 		}
 
-		yamlConfig, err := yaml2.FromFileV2[map[any]any](cPath)
+		yamlConfig, err := yamlx.FromFileV2[map[any]any](cPath)
 		if err != nil {
 			return nil, err
 		}

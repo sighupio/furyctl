@@ -10,10 +10,10 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 
-	"github.com/sighupio/furyctl/internal/cobrax"
 	"github.com/sighupio/furyctl/internal/config"
 	"github.com/sighupio/furyctl/internal/distribution"
-	"github.com/sighupio/furyctl/internal/netx"
+	cobrax "github.com/sighupio/furyctl/internal/x/cobra"
+	netx "github.com/sighupio/furyctl/internal/x/net"
 )
 
 var ErrValidationFailed = fmt.Errorf("config validation failed")

@@ -15,7 +15,7 @@ import (
 
 	"github.com/sirupsen/logrus"
 
-	"github.com/sighupio/furyctl/internal/iox"
+	iox "github.com/sighupio/furyctl/internal/x/io"
 )
 
 var ErrProcessTemplate = errors.New("error processing template")

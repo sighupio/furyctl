@@ -4,7 +4,7 @@
 
 //go:build unit
 
-package yaml_test
+package yamlx_test
 
 import (
 	"os"
@@ -13,7 +13,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	yaml2 "gopkg.in/yaml.v2"
 
-	yaml "github.com/sighupio/furyctl/internal/yaml"
+	yamlx "github.com/sighupio/furyctl/internal/x/yaml"
 )
 
 type TestYaml struct {
@@ -43,7 +43,7 @@ func TestFromFileV2(t *testing.T) {
 
 	defer os.RemoveAll(path)
 
-	testRes, err := yaml.FromFileV2[TestYaml](path + "/test.yaml")
+	testRes, err := yamlx.FromFileV2[TestYaml](path + "/test.yaml")
 
 	assert.NoError(t, err)
 

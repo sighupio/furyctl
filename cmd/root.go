@@ -16,9 +16,9 @@ import (
 
 	"github.com/sighupio/furyctl/internal/analytics"
 	"github.com/sighupio/furyctl/internal/app"
-	"github.com/sighupio/furyctl/internal/cobrax"
-	"github.com/sighupio/furyctl/internal/iox"
 	"github.com/sighupio/furyctl/internal/semver"
+	cobrax "github.com/sighupio/furyctl/internal/x/cobra"
+	iox "github.com/sighupio/furyctl/internal/x/io"
 )
 
 type rootConfig struct {

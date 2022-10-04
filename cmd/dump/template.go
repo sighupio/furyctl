@@ -14,7 +14,7 @@ import (
 
 	"github.com/sighupio/furyctl/internal/merge"
 	"github.com/sighupio/furyctl/internal/template"
-	"github.com/sighupio/furyctl/internal/yaml"
+	yamlx "github.com/sighupio/furyctl/internal/x/yaml"
 )
 
 type templateConfig struct {
@@ -39,12 +39,12 @@ The generated folder will be created starting from a provided template and the p
 			distributionFilePath := "distribution.yaml"
 			furyctlFilePath := "furyctl.yaml"
 
-			distributionFile, err := yaml.FromFileV2[map[any]any](distributionFilePath)
+			distributionFile, err := yamlx.FromFileV2[map[any]any](distributionFilePath)
 			if err != nil {
 				return fmt.Errorf("%s - %w", distributionFilePath, err)
 			}
 
-			furyctlFile, err := yaml.FromFileV2[map[any]any](furyctlFilePath)
+			furyctlFile, err := yamlx.FromFileV2[map[any]any](furyctlFilePath)
 			if err != nil {
 				return fmt.Errorf("%s - %w", furyctlFilePath, err)
 			}
@@ -63,7 +63,7 @@ The generated folder will be created starting from a provided template and the p
 				return err
 			}
 
-			outYaml, err := yaml.MarshalV2(mergedDistribution)
+			outYaml, err := yamlx.MarshalV2(mergedDistribution)
 			if err != nil {
 				return err
 			}

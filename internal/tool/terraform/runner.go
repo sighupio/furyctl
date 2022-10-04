@@ -15,7 +15,7 @@ import (
 
 	tfjson "github.com/hashicorp/terraform-json"
 
-	"github.com/sighupio/furyctl/internal/execx"
+	execx "github.com/sighupio/furyctl/internal/x/exec"
 )
 
 type OutputJson struct {
