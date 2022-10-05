@@ -39,3 +39,45 @@ func Test_Update_FetchLastRelease(t *testing.T) {
 		})
 	}
 }
+
+func Test_Update_MustUpdate(t *testing.T) {
+	tests := []struct {
+		name           string
+		want           bool
+		currentVersion string
+		latestVersion  string
+	}{
+		{
+			name:           "Versions are equal, no update",
+			currentVersion: "v0.8.0",
+			latestVersion:  "v0.8.0",
+			want:           false,
+		},
+		{
+			name:           "Current version is higher than latest, no update",
+			currentVersion: "v0.10.0",
+			latestVersion:  "v0.8.0",
+			want:           false,
+		},
+		{
+			name:           "Current version's lenght is higher than latest, no update",
+			currentVersion: "v0.0.0.1",
+			latestVersion:  "v0.0.0",
+			want:           false,
+		},
+		{
+			name:           "Current version is lower than latest, update",
+			currentVersion: "v0.7.0",
+			latestVersion:  "v0.8.0",
+			want:           true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := app.ShouldUpdate(tt.currentVersion, tt.latestVersion); got != tt.want {
+				t.Errorf("%s = got %v, want %v", tt.name, got, tt.want)
+			}
+		})
+	}
+}
