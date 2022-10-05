@@ -77,7 +77,7 @@ Furyctl is a simple CLI tool to:
 				// Show update message if available at the end of the command
 				select {
 				case release := <-r:
-					if release.Version != versions["version"] {
+					if app.ShouldUpdate(versions["version"], release.Version) {
 						logrus.Infof("New furyctl version available: %s => %s", versions["version"], release.Version)
 					}
 				case err := <-e:
@@ -106,6 +106,8 @@ Furyctl is a simple CLI tool to:
 
 func checkUpdates(version string, rc chan app.Release, e chan error) {
 	if version == "unknown" {
+		rc <- app.Release{Version: version}
+		close(rc)
 		return
 	}
 
