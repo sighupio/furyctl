@@ -21,7 +21,7 @@ import (
 )
 
 var (
-	version   = "0.2.0"
+	version   = "unknown"
 	gitCommit = "unknown"
 	buildTime = "unknown"
 	goVersion = "unknown"
