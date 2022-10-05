@@ -122,15 +122,18 @@ test-integration:
 test-e2e:
 	@ginkgo run -v --covermode=count  --tags=e2e --timeout 120s -p test/e2e
 
-test-all:
+test-expensive:
+	@ginkgo run -v --covermode=count --tags=expensive --timeout 3600s -p test/expensive
+
+test-most:
 	@go test -v -covermode=count -coverprofile=coverage.out -tags=unit,integration,e2e ./...
+
+test-all:
+	@go test -v -covermode=count -coverprofile=coverage.out -tags=unit,integration,e2e,expensive ./...
 
 show-coverage:
 	@go tool cover -html=coverage.out -o coverage.html && ${_BIN_OPEN} coverage.html
 	@go-cover-treemap -coverprofile coverage.out > coverage.svg && ${_BIN_OPEN} coverage.svg
-
-test-expensive:
-	@ginkgo run -v --covermode=atomic --coverprofile=coverage.out --tags=expensive --timeout 3600s -p test/expensive
 
 .PHONY: clean build release
 
