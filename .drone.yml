@@ -86,7 +86,7 @@ steps:
         from_secret: AWS_ACCESS_KEY_ID
       AWS_SECRET_ACCESS_KEY:
         from_secret: AWS_SECRET_ACCESS_KEY
-      AWS_REGION:
+      AWS_DEFAULT_REGION:
         from_secret: AWS_REGION
       NETRC_FILE:
         from_secret: NETRC_FILE
