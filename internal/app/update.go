@@ -44,7 +44,7 @@ func GetLatestRelease() (Release, error) {
 	return release, nil
 }
 
-// ShouldUpdate checks if the current version is lower than the latest version
+// ShouldUpdate checks if the current version is outdated
 func ShouldUpdate(currentVersion, latestVersion string) bool {
 	// normalize the versions
 	nc := strings.TrimPrefix(currentVersion, "v")
