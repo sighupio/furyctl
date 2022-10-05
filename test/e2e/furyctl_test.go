@@ -192,6 +192,13 @@ var (
 			}
 
 			It("should report an error when dependencies are missing", func() {
+				RestoreEnvVars := BackupEnvVars("PATH", "AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY", "AWS_DEFAULT_REGION")
+				defer RestoreEnvVars()
+
+				os.Unsetenv("AWS_ACCESS_KEY_ID")
+				os.Unsetenv("AWS_SECRET_ACCESS_KEY")
+				os.Unsetenv("AWS_DEFAULT_REGION")
+
 				out, err := FuryctlValidateDependencies("../data/e2e/validate/dependencies/missing", "/tmp")
 
 				Expect(err).To(HaveOccurred())
@@ -206,12 +213,15 @@ var (
 			})
 
 			It("should report an error when dependencies are wrong", Serial, func() {
-				RestoreEnvVars := BackupEnvVars("PATH")
+				RestoreEnvVars := BackupEnvVars("PATH", "AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY", "AWS_DEFAULT_REGION")
 				defer RestoreEnvVars()
 
 				bp := Abs("../data/e2e/validate/dependencies/wrong")
 
 				os.Setenv("PATH", bp+":"+os.Getenv("PATH"))
+				os.Unsetenv("AWS_ACCESS_KEY_ID")
+				os.Unsetenv("AWS_SECRET_ACCESS_KEY")
+				os.Unsetenv("AWS_DEFAULT_REGION")
 
 				out, err := FuryctlValidateDependencies(bp, bp)
 
