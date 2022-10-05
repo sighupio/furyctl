@@ -40,7 +40,7 @@ func Test_Update_FetchLastRelease(t *testing.T) {
 	}
 }
 
-func Test_Update_MustUpdate(t *testing.T) {
+func Test_Update_ShouldUpdate(t *testing.T) {
 	tests := []struct {
 		name           string
 		want           bool
