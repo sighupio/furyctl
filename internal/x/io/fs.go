@@ -6,6 +6,7 @@ package iox
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"io"
 	"io/fs"
@@ -13,25 +14,29 @@ import (
 	"path"
 	"path/filepath"
 	"strings"
-
-	"github.com/sirupsen/logrus"
 )
+
+var ErrEmptyFile = errors.New("trimming buffer resulted in an empty file")
 
 func CheckDirIsEmpty(target string) error {
 	if _, err := os.Stat(target); os.IsNotExist(err) {
 		return nil
 	}
 
-	return filepath.Walk(target, func(path string, info os.FileInfo, err error) error {
+	return filepath.Walk(target, func(path string, _ os.FileInfo, err error) error {
 		if err != nil {
 			return fmt.Errorf("the target directory is not empty, error while checking %s: %w", path, err)
+		}
+
+		if target == path {
+			return nil
 		}
 
 		return fmt.Errorf("the target directory is not empty: %s", path)
 	})
 }
 
-func AppendBufferToFile(b bytes.Buffer, target string) error {
+func AppendToFile(s, target string) error {
 	destination, err := os.OpenFile(target, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644)
 	if err != nil {
 		return err
@@ -39,21 +44,15 @@ func AppendBufferToFile(b bytes.Buffer, target string) error {
 
 	defer destination.Close()
 
-	_, err = b.WriteTo(destination)
-	if err != nil {
-		return err
-	}
+	_, err = destination.Write([]byte(s))
 
-	return nil
+	return err
 }
 
-func CopyBufferToFile(b bytes.Buffer, source, target string) error {
+func CopyBufferToFile(b bytes.Buffer, target string) error {
 	if strings.TrimSpace(b.String()) == "" {
-		logrus.Printf("%s --> resulted in an empty file (%d bytes). Skipping.\n", source, b.Len())
 		return nil
 	}
-
-	logrus.Printf("%s --> %s\n", source, target)
 
 	destination, err := os.Create(target)
 	if err != nil {
@@ -63,38 +62,37 @@ func CopyBufferToFile(b bytes.Buffer, source, target string) error {
 	defer destination.Close()
 
 	_, err = b.WriteTo(destination)
+
+	return err
+}
+
+func CopyFile(src, dst string) error {
+	sourceFileStat, err := os.Stat(src)
 	if err != nil {
 		return err
 	}
 
-	return nil
-}
-
-func CopyFile(src, dst string) (int64, error) {
-	sourceFileStat, err := os.Stat(src)
-	if err != nil {
-		return 0, err
-	}
-
 	if !sourceFileStat.Mode().IsRegular() {
-		return 0, fmt.Errorf("%s is not a regular file", src)
+		return fmt.Errorf("%s is not a regular file", src)
 	}
 
 	source, err := os.Open(src)
 	if err != nil {
-		return 0, err
+		return err
 	}
 
 	defer source.Close()
 
 	destination, err := os.Create(dst)
 	if err != nil {
-		return 0, err
+		return err
 	}
 
 	defer destination.Close()
 
-	return io.Copy(destination, source)
+	_, err = io.Copy(destination, source)
+
+	return err
 }
 
 func CopyRecursive(src fs.FS, dest string) error {
@@ -107,6 +105,10 @@ func CopyRecursive(src fs.FS, dest string) error {
 		if file.IsDir() {
 			sub, err := fs.Sub(src, file.Name())
 			if err != nil {
+				return err
+			}
+
+			if err := os.Mkdir(path.Join(dest, file.Name()), 0o755); err != nil && !os.IsExist(err) {
 				return err
 			}
 
@@ -139,8 +141,11 @@ func CopyRecursive(src fs.FS, dest string) error {
 func EnsureDir(fileName string) (err error) {
 	dirName := filepath.Dir(fileName)
 	if _, serr := os.Stat(dirName); serr != nil {
-		err := os.MkdirAll(dirName, os.ModePerm)
-		if err != nil {
+		if !os.IsNotExist(serr) {
+			return serr
+		}
+
+		if err := os.MkdirAll(dirName, os.ModePerm); err != nil {
 			return err
 		}
 	}

@@ -190,12 +190,10 @@ func (tm *Model) applyTemplates(
 			return fmt.Errorf("%+v filePath: %s", cErr, relSource)
 		}
 
-		return iox.CopyBufferToFile(content, relSource, realTarget)
+		return iox.CopyBufferToFile(content, realTarget)
 	}
 
-	_, err = iox.CopyFile(relSource, realTarget)
-
-	return err
+	return iox.CopyFile(relSource, realTarget)
 }
 
 func (tm *Model) generateContext() (map[string]map[any]any, error) {

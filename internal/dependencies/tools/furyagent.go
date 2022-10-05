@@ -48,7 +48,7 @@ func (f *Furyagent) SupportsDownload() bool {
 func (f *Furyagent) SrcPath() string {
 	return fmt.Sprintf(
 		"https://github.com/sighupio/furyagent/releases/download/%s/furyagent-%s-%s",
-		semver.EnsurePrefix(f.version, "v"),
+		semver.EnsurePrefix(f.version),
 		f.os,
 		f.arch,
 	)

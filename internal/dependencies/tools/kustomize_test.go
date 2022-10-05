@@ -11,12 +11,21 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"strings"
 	"testing"
 
 	"github.com/sighupio/furyctl/internal/dependencies/tools"
 	"github.com/sighupio/furyctl/internal/tool/kustomize"
 	execx "github.com/sighupio/furyctl/internal/x/exec"
 )
+
+func Test_Kustomize_SupportsDownload(t *testing.T) {
+	a := tools.NewKustomize(newKustomizeRunner(), "3.10.0")
+
+	if a.SupportsDownload() != true {
+		t.Errorf("kustomize download must be supported")
+	}
+}
 
 func Test_Kustomize_SrcPath(t *testing.T) {
 	wantSrcPath := fmt.Sprintf(
@@ -70,6 +79,51 @@ func Test_Kustomize_Rename(t *testing.T) {
 
 	if info.IsDir() {
 		t.Errorf("kustomize binary is a directory")
+	}
+}
+
+func Test_Kustomize_CheckBinVersion(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		desc        string
+		wantVersion string
+		wantErr     bool
+		wantErrMsg  string
+	}{
+		{
+			desc:        "correct version installed",
+			wantVersion: "3.9.4",
+		},
+		{
+			desc:        "wrong version installed",
+			wantVersion: "3.10.0",
+			wantErr:     true,
+			wantErrMsg:  "installed = 3.9.4, expected = 3.10.0",
+		},
+	}
+	for _, tC := range testCases {
+		tC := tC
+
+		t.Run(tC.desc, func(t *testing.T) {
+			t.Parallel()
+
+			fa := tools.NewKustomize(newKustomizeRunner(), tC.wantVersion)
+
+			err := fa.CheckBinVersion()
+
+			if tC.wantErr && err == nil {
+				t.Errorf("expected error, got nil")
+			}
+
+			if !tC.wantErr && err != nil {
+				t.Errorf("expected no error, got %v", err)
+			}
+
+			if tC.wantErr && err != nil && !strings.Contains(err.Error(), tC.wantErrMsg) {
+				t.Errorf("expected error message '%s' to contain '%s'", err.Error(), tC.wantErrMsg)
+			}
+		})
 	}
 }
 

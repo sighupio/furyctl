@@ -11,12 +11,21 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"strings"
 	"testing"
 
 	"github.com/sighupio/furyctl/internal/dependencies/tools"
 	"github.com/sighupio/furyctl/internal/tool/kubectl"
 	execx "github.com/sighupio/furyctl/internal/x/exec"
 )
+
+func Test_Kubectl_SupportsDownload(t *testing.T) {
+	a := tools.NewKubectl(newKubectlRunner(), "1.23.10")
+
+	if a.SupportsDownload() != true {
+		t.Errorf("kubectl download must be supported")
+	}
+}
 
 func Test_Kubectl_SrcPath(t *testing.T) {
 	wantSrcPath := fmt.Sprintf("https://dl.k8s.io/release/v1.23.10/bin/%s/amd64/kubectl", runtime.GOOS)
@@ -67,6 +76,51 @@ func Test_Kubectl_Rename(t *testing.T) {
 
 	if info.IsDir() {
 		t.Errorf("kubectl binary is a directory")
+	}
+}
+
+func Test_Kubectl_CheckBinVersion(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		desc        string
+		wantVersion string
+		wantErr     bool
+		wantErrMsg  string
+	}{
+		{
+			desc:        "correct version installed",
+			wantVersion: "1.21.1",
+		},
+		{
+			desc:        "wrong version installed",
+			wantVersion: "1.22.0",
+			wantErr:     true,
+			wantErrMsg:  "installed = 1.21.1, expected = 1.22.0",
+		},
+	}
+	for _, tC := range testCases {
+		tC := tC
+
+		t.Run(tC.desc, func(t *testing.T) {
+			t.Parallel()
+
+			fa := tools.NewKubectl(newKubectlRunner(), tC.wantVersion)
+
+			err := fa.CheckBinVersion()
+
+			if tC.wantErr && err == nil {
+				t.Errorf("expected error, got nil")
+			}
+
+			if !tC.wantErr && err != nil {
+				t.Errorf("expected no error, got %v", err)
+			}
+
+			if tC.wantErr && err != nil && !strings.Contains(err.Error(), tC.wantErrMsg) {
+				t.Errorf("expected error message '%s' to contain '%s'", err.Error(), tC.wantErrMsg)
+			}
+		})
 	}
 }
 

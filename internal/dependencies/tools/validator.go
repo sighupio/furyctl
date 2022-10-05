@@ -21,7 +21,7 @@ var (
 func NewValidator(executor execx.Executor, binPath string) *Validator {
 	return &Validator{
 		executor: executor,
-		toolFactory: NewFactory(execx.NewStdExecutor(), FactoryPaths{
+		toolFactory: NewFactory(executor, FactoryPaths{
 			Bin: binPath,
 		}),
 	}

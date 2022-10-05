@@ -11,12 +11,21 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"strings"
 	"testing"
 
 	"github.com/sighupio/furyctl/internal/dependencies/tools"
 	"github.com/sighupio/furyctl/internal/tool/terraform"
 	execx "github.com/sighupio/furyctl/internal/x/exec"
 )
+
+func Test_Terraform_SupportsDownload(t *testing.T) {
+	a := tools.NewTerraform(newTerraformRunner(), "3.10.0")
+
+	if a.SupportsDownload() != true {
+		t.Errorf("terraform download must be supported")
+	}
+}
 
 func Test_Terraform_SrcPath(t *testing.T) {
 	wantSrcPath := fmt.Sprintf(
@@ -70,6 +79,51 @@ func Test_Terraform_Rename(t *testing.T) {
 
 	if info.IsDir() {
 		t.Errorf("terraform binary is a directory")
+	}
+}
+
+func Test_Terraform_CheckBinVersion(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		desc        string
+		wantVersion string
+		wantErr     bool
+		wantErrMsg  string
+	}{
+		{
+			desc:        "correct version installed",
+			wantVersion: "0.15.4",
+		},
+		{
+			desc:        "wrong version installed",
+			wantVersion: "1.3.0",
+			wantErr:     true,
+			wantErrMsg:  "installed = 0.15.4, expected = 1.3.0",
+		},
+	}
+	for _, tC := range testCases {
+		tC := tC
+
+		t.Run(tC.desc, func(t *testing.T) {
+			t.Parallel()
+
+			fa := tools.NewTerraform(newTerraformRunner(), tC.wantVersion)
+
+			err := fa.CheckBinVersion()
+
+			if tC.wantErr && err == nil {
+				t.Errorf("expected error, got nil")
+			}
+
+			if !tC.wantErr && err != nil {
+				t.Errorf("expected no error, got %v", err)
+			}
+
+			if tC.wantErr && err != nil && !strings.Contains(err.Error(), tC.wantErrMsg) {
+				t.Errorf("expected error message '%s' to contain '%s'", err.Error(), tC.wantErrMsg)
+			}
+		})
 	}
 }
 

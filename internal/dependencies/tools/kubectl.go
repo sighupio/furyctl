@@ -49,7 +49,7 @@ func (k *Kubectl) SupportsDownload() bool {
 func (k *Kubectl) SrcPath() string {
 	return fmt.Sprintf(
 		"https://dl.k8s.io/release/%s/bin/%s/%s/kubectl",
-		semver.EnsurePrefix(k.version, "v"),
+		semver.EnsurePrefix(k.version),
 		k.os,
 		k.arch,
 	)
