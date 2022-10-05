@@ -478,6 +478,14 @@ var (
 			})
 
 			It("create cluster phase infrastructure on dry-run", func() {
+				RestoreEnvVars := BackupEnvVars("PATH")
+				defer RestoreEnvVars()
+
+				bp := Abs("../data/e2e/create/cluster/bin_mock")
+
+				err := os.Setenv("PATH", bp+":"+os.Getenv("PATH"))
+				Expect(err).To(Not(HaveOccurred()))
+
 				furyctlYamlPath := path.Join(absBasePath, "data/furyctl.yaml")
 				distroPath := path.Join(absBasePath, "data")
 				tfPath := path.Join(w, ".infrastructure", "terraform")
@@ -495,6 +503,14 @@ var (
 			})
 
 			It("create cluster phase kubernetes on dry-run", func() {
+				RestoreEnvVars := BackupEnvVars("PATH")
+				defer RestoreEnvVars()
+
+				bp := Abs("../data/e2e/create/cluster/bin_mock")
+
+				err := os.Setenv("PATH", bp+":"+os.Getenv("PATH"))
+				Expect(err).To(Not(HaveOccurred()))
+
 				furyctlYamlPath := path.Join(absBasePath, "data/furyctl.yaml")
 				distroPath := path.Join(absBasePath, "data")
 				tfPath := path.Join(w, ".kubernetes", "terraform")
