@@ -439,7 +439,8 @@ var (
 					To(Equal(FileContent(bp + "/data/expected-furyctl.yaml")))
 			})
 		})
-		Context("create cluster dry run", func() {
+
+		Context("create cluster dry run", Label("slow"), func() {
 			var w string
 			var absBasePath string
 

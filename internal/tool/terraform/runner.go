@@ -110,7 +110,7 @@ func (r *Runner) Apply(timestamp int64) (OutputJson, error) {
 
 func (r *Runner) Version() (string, error) {
 	return execx.CombinedOutput(execx.NewCmd(r.paths.Terraform, execx.CmdOptions{
-		Args:     []string{"--version"},
+		Args:     []string{"version"},
 		Executor: r.executor,
 		WorkDir:  r.paths.WorkDir,
 	}))

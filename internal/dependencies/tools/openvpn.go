@@ -25,7 +25,7 @@ func NewOpenvpn(runner *openvpn.Runner, version string) *Openvpn {
 				return tokens[len(tokens)-1]
 			},
 			splitFn: func(version string) []string {
-				return strings.Split(version, ".")
+				return strings.Split(version, " ")
 			},
 		},
 	}
@@ -38,20 +38,20 @@ type Openvpn struct {
 	version string
 }
 
-func (k *Openvpn) SupportsDownload() bool {
+func (o *Openvpn) SupportsDownload() bool {
 	return false
 }
 
-func (k *Openvpn) SrcPath() string {
+func (o *Openvpn) SrcPath() string {
 	return ""
 }
 
-func (k *Openvpn) Rename(basePath string) error {
+func (o *Openvpn) Rename(basePath string) error {
 	return nil
 }
 
-func (k *Openvpn) CheckBinVersion() error {
-	if err := k.checker.version(k.version); err != nil {
+func (o *Openvpn) CheckBinVersion() error {
+	if err := o.checker.version(o.version); err != nil {
 		return fmt.Errorf("openvpn: %w", err)
 	}
 
