@@ -46,16 +46,11 @@ env:
 	@grep -v '^#' .env | sed 's/^/export /'
 
 tools:
-	@go install -tags 'mongodb' github.com/golang-migrate/migrate/v4/cmd/migrate@latest
-	@go install github.com/go-delve/delve/cmd/dlv@latest
 	@go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
 	@go install github.com/google/addlicense@latest
-	@go install github.com/magefile/mage@latest
 	@go install github.com/nikolaydubina/go-cover-treemap@latest
 	@go install github.com/onsi/ginkgo/v2/ginkgo@latest
-	@go install github.com/roblaszczak/go-cleanarch@latest
 	@go install golang.org/x/tools/cmd/goimports@latest
-	@go install gotest.tools/gotestsum@latest
 	@go install mvdan.cc/gofumpt@latest
 
 .PHONY: mod-download mod-tidy mod-verify
