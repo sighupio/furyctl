@@ -82,6 +82,12 @@ steps:
       GOCACHE: /drone/src/.go/cache
       GOMODCACHE: /drone/src/.go/modcache
       GOTMPDIR: /drone/src/.go/tmp
+      AWS_ACCESS_KEY_ID:
+        from_secret: AWS_ACCESS_KEY_ID
+      AWS_SECRET_ACCESS_KEY:
+        from_secret: AWS_SECRET_ACCESS_KEY
+      AWS_REGION:
+        from_secret: AWS_REGION
       NETRC_FILE:
         from_secret: NETRC_FILE
 
