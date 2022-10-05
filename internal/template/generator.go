@@ -140,7 +140,7 @@ func (g *generator) WriteMissingKeysToFile(
 
 	outLog := fmt.Sprintf("[%s]\n%s\n", tmplPath, strings.Join(missingKeys, "\n"))
 
-	return iox.AppendBufferToFile(*bytes.NewBufferString(outLog), debugFilePath)
+	return iox.AppendToFile(outLog, debugFilePath)
 }
 
 func (g *generator) getContextValueFromPath(path string) any {

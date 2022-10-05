@@ -11,12 +11,21 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"strings"
 	"testing"
 
 	"github.com/sighupio/furyctl/internal/dependencies/tools"
 	"github.com/sighupio/furyctl/internal/tool/furyagent"
 	execx "github.com/sighupio/furyctl/internal/x/exec"
 )
+
+func Test_FuryAgent_SupportsDownload(t *testing.T) {
+	a := tools.NewFuryagent(newFuryagentRunner(), "0.3.0")
+
+	if a.SupportsDownload() != true {
+		t.Errorf("Furyagent download must be supported")
+	}
+}
 
 func Test_FuryAgent_SrcPath(t *testing.T) {
 	wantSrcPath := fmt.Sprintf(
@@ -70,6 +79,51 @@ func Test_FuryAgent_Rename(t *testing.T) {
 
 	if info.IsDir() {
 		t.Errorf("furyagent binary is a directory")
+	}
+}
+
+func Test_Furyagent_CheckBinVersion(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		desc        string
+		wantVersion string
+		wantErr     bool
+		wantErrMsg  string
+	}{
+		{
+			desc:        "correct version installed",
+			wantVersion: "0.3.0",
+		},
+		{
+			desc:        "wrong version installed",
+			wantVersion: "0.4.0",
+			wantErr:     true,
+			wantErrMsg:  "installed = 0.3.0, expected = 0.4.0",
+		},
+	}
+	for _, tC := range testCases {
+		tC := tC
+
+		t.Run(tC.desc, func(t *testing.T) {
+			t.Parallel()
+
+			fa := tools.NewFuryagent(newFuryagentRunner(), tC.wantVersion)
+
+			err := fa.CheckBinVersion()
+
+			if tC.wantErr && err == nil {
+				t.Errorf("expected error, got nil")
+			}
+
+			if !tC.wantErr && err != nil {
+				t.Errorf("expected no error, got %v", err)
+			}
+
+			if tC.wantErr && err != nil && !strings.Contains(err.Error(), tC.wantErrMsg) {
+				t.Errorf("expected error message '%s' to contain '%s'", err.Error(), tC.wantErrMsg)
+			}
+		})
 	}
 }
 

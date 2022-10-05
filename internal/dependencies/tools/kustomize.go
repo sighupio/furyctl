@@ -47,8 +47,8 @@ func (k *Kustomize) SupportsDownload() bool {
 func (k *Kustomize) SrcPath() string {
 	return fmt.Sprintf(
 		"https://github.com/kubernetes-sigs/kustomize/releases/download/kustomize/%s/kustomize_%s_%s_%s.tar.gz",
-		semver.EnsurePrefix(k.version, "v"),
-		semver.EnsurePrefix(k.version, "v"),
+		semver.EnsurePrefix(k.version),
+		semver.EnsurePrefix(k.version),
 		k.os,
 		k.arch,
 	)

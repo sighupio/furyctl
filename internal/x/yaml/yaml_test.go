@@ -11,7 +11,6 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	yaml2 "gopkg.in/yaml.v2"
 
 	yamlx "github.com/sighupio/furyctl/internal/x/yaml"
 )
@@ -33,7 +32,7 @@ func TestFromFileV2(t *testing.T) {
 
 	assert.NoError(t, err)
 
-	testBytes, err := yaml2.Marshal(test)
+	testBytes, err := yamlx.MarshalV2(test)
 
 	assert.NoError(t, err)
 
@@ -44,6 +43,36 @@ func TestFromFileV2(t *testing.T) {
 	defer os.RemoveAll(path)
 
 	testRes, err := yamlx.FromFileV2[TestYaml](path + "/test.yaml")
+
+	assert.NoError(t, err)
+
+	assert.Equal(t, test, testRes)
+}
+
+func TestFromFileV3(t *testing.T) {
+	test := TestYaml{
+		"test",
+	}
+
+	path, err := os.MkdirTemp("", "test")
+
+	assert.NoError(t, err)
+
+	file, err := os.Create(path + "/test.yaml")
+
+	assert.NoError(t, err)
+
+	testBytes, err := yamlx.MarshalV3(test)
+
+	assert.NoError(t, err)
+
+	_, err = file.Write(testBytes)
+
+	assert.NoError(t, err)
+
+	defer os.RemoveAll(path)
+
+	testRes, err := yamlx.FromFileV3[TestYaml](path + "/test.yaml")
 
 	assert.NoError(t, err)
 

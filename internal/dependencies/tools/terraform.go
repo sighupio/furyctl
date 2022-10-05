@@ -47,8 +47,8 @@ func (t *Terraform) SupportsDownload() bool {
 func (t *Terraform) SrcPath() string {
 	return fmt.Sprintf(
 		"https://releases.hashicorp.com/terraform/%s/terraform_%s_%s_%s.zip",
-		semver.EnsureNoPrefix(t.version, "v"),
-		semver.EnsureNoPrefix(t.version, "v"),
+		semver.EnsureNoPrefix(t.version),
+		semver.EnsureNoPrefix(t.version),
 		t.os,
 		t.arch,
 	)
