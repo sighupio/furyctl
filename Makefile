@@ -27,6 +27,17 @@ define run-docker
 		$(1) $(2)
 endef
 
+#1: message
+define yes-or-no
+	@while true; do \
+		read -r -p ${1}" [y/n]: " yn ; \
+		case "$${yn}" in \
+			[Yy]) break ;; \
+			[Nn]) echo "Aborted, exiting..."; exit 1 ;; \
+		esac \
+	done
+endef
+
 .PHONY: env
 
 env:
@@ -123,12 +134,14 @@ test-e2e:
 	@ginkgo run -v --covermode=count  --tags=e2e --timeout 120s -p test/e2e
 
 test-expensive:
+	$(call yes-or-no, "WARNING: This test will create a cluster on AWS. Are you sure you want to continue?")
 	@ginkgo run -v --covermode=count --tags=expensive --timeout 3600s -p test/expensive
 
 test-most:
 	@go test -v -covermode=count -coverprofile=coverage.out -tags=unit,integration,e2e ./...
 
 test-all:
+	$(call yes-or-no, "WARNING: This test will create a cluster on AWS. Are you sure you want to continue?")
 	@go test -v -covermode=count -coverprofile=coverage.out -tags=unit,integration,e2e,expensive ./...
 
 show-coverage:
