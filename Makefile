@@ -2,8 +2,13 @@ _PROJECT_DIRECTORY = $(dir $(realpath $(firstword $(MAKEFILE_LIST))))
 _GOLANG_IMAGE = golang:1.19.1
 _PROJECTNAME = furyctl
 _GOARCH = "amd64"
+_BIN_OPEN = "open"
 
 NETRC_FILE ?= ~/.netrc
+
+ifeq ("$(shell uname -s)", "Linux")
+	_BIN_OPEN = "xdg-open"
+endif
 
 ifeq ("$(shell uname -m)", "arm64")
 	_GOARCH = "arm64"
@@ -106,16 +111,23 @@ lint: lint-go
 lint-go:
 	@golangci-lint -v run --color=always --config=${_PROJECT_DIRECTORY}/.rules/.golangci.yml ./...
 
-.PHONY: test-unit test-integration test-e2e
+.PHONY: test-unit test-integration test-e2e test-all show-coverage
 
 test-unit:
-	@go test -v -covermode=atomic -coverprofile=coverage.out -tags=unit ./...
+	@go test -v -covermode=count -tags=unit ./...
 
 test-integration:
-	@go test -v -covermode=atomic -coverprofile=coverage.out -tags=integration -timeout 120s ./...
+	@go test -v -covermode=count -tags=integration -timeout 120s ./...
 
 test-e2e:
-	@ginkgo run -v --covermode=atomic --coverprofile=coverage.out --tags=e2e --timeout 120s -p test/e2e
+	@ginkgo run -v --covermode=count  --tags=e2e --timeout 120s -p test/e2e
+
+test-all:
+	@go test -v -covermode=count -coverprofile=coverage.out -tags=unit,integration,e2e ./...
+
+show-coverage:
+	@go tool cover -html=coverage.out -o coverage.html && ${_BIN_OPEN} coverage.html
+	@go-cover-treemap -coverprofile coverage.out > coverage.svg && ${_BIN_OPEN} coverage.svg
 
 test-expensive:
 	@ginkgo run -v --covermode=atomic --coverprofile=coverage.out --tags=expensive --timeout 3600s -p test/expensive
