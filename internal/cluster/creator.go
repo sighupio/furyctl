@@ -16,6 +16,7 @@ const (
 	CreatorPropertyConfigPath     = "configpath"
 	CreatorPropertyFuryctlConf    = "furyctlconf"
 	CreatorPropertyKfdManifest    = "kfdmanifest"
+	CreatorPropertyDistroPath     = "distropath"
 	CreatorPropertyPhase          = "phase"
 	CreatorPropertyVpnAutoConnect = "vpnautoconnect"
 )
@@ -38,6 +39,7 @@ type Creator interface {
 func NewCreator(
 	minimalConf config.Furyctl,
 	kfdManifest config.KFD,
+	distroPath string,
 	configPath string,
 	phase string,
 	vpnAutoConnect bool,
@@ -58,6 +60,10 @@ func NewCreator(
 			{
 				Name:  CreatorPropertyVpnAutoConnect,
 				Value: vpnAutoConnect,
+			},
+			{
+				Name:  CreatorPropertyDistroPath,
+				Value: distroPath,
 			},
 		})
 	}
