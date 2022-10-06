@@ -29,7 +29,7 @@ func NewDefaultModel(content map[any]any, path string) *DefaultModel {
 	}
 }
 
-func FromStruct(content any, path string) *DefaultModel {
+func NewDefaultModelFromStruct(content any, path string) *DefaultModel {
 	c := convertStructToMap(content, "json")
 
 	return NewDefaultModel(c, path)
