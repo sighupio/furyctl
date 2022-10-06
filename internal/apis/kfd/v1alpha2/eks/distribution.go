@@ -86,7 +86,7 @@ func (d *Distribution) copyFromTemplate(dryRun bool) error {
 
 	merger := merge.NewMerger(
 		merge.NewDefaultModel(defaultsFile, ".data"),
-		merge.FromStruct(d.furyctlConf, ".spec.distribution"),
+		merge.NewDefaultModelFromStruct(d.furyctlConf, ".spec.distribution"),
 	)
 
 	mergedDistribution, err := merger.Merge()
