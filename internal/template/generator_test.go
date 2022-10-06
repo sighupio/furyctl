@@ -185,6 +185,7 @@ func Test_Generator_GetMissingKeys(t *testing.T) {
 
 	tg := template.NewGenerator(
 		path+"/source",
+		path+"/source",
 		path+"/target",
 		map[string]map[any]any{},
 		funcMap,

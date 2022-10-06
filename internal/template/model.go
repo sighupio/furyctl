@@ -144,6 +144,7 @@ func (tm *Model) applyTemplates(
 	currentTarget := filepath.Join(tm.TargetPath, rel)
 
 	gen := NewGenerator(
+		tm.SourcePath,
 		relSource,
 		currentTarget,
 		tm.Context,
