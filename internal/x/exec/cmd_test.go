@@ -12,8 +12,9 @@ import (
 	"os"
 	"testing"
 
-	execx "github.com/sighupio/furyctl/internal/x/exec"
 	"golang.org/x/exp/slices"
+
+	execx "github.com/sighupio/furyctl/internal/x/exec"
 )
 
 func TestNewErrCmdFailed(t *testing.T) {
