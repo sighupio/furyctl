@@ -50,6 +50,9 @@ func NewClusterCmd(version string) *cobra.Command {
 			depsdl := dependencies.NewDownloader(client, basePath)
 			depsvl := dependencies.NewValidator(executor, binPath)
 
+			// Init packages
+			execx.Debug = debug
+
 			// Download the distribution
 			res, err := distrodl.Download(version, distroLocation, furyctlPath)
 			if err != nil {
