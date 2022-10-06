@@ -21,6 +21,7 @@ import (
 var ErrProcessTemplate = errors.New("error processing template")
 
 type generator struct {
+	rootSrc string
 	source  string
 	target  string
 	context map[string]map[any]any
@@ -29,6 +30,7 @@ type generator struct {
 }
 
 func NewGenerator(
+	rootSrc,
 	source,
 	target string,
 	context map[string]map[any]any,
@@ -36,6 +38,7 @@ func NewGenerator(
 	dryRun bool,
 ) *generator {
 	return &generator{
+		rootSrc: rootSrc,
 		source:  source,
 		target:  target,
 		context: context,
@@ -45,7 +48,7 @@ func NewGenerator(
 }
 
 func (g *generator) ProcessTemplate() (*template.Template, error) {
-	const helpersPath = "source/_helpers.tpl"
+	helpersPath := filepath.Join(g.rootSrc, "_helpers.tpl")
 
 	_, err := os.Stat(helpersPath)
 
