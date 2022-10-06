@@ -6,16 +6,18 @@ package eks
 
 import (
 	"fmt"
+	"os"
+	"path"
+	"path/filepath"
+
+	"github.com/sirupsen/logrus"
+
 	"github.com/sighupio/fury-distribution/pkg/config"
 	"github.com/sighupio/fury-distribution/pkg/schema"
 	"github.com/sighupio/furyctl/internal/cluster"
 	"github.com/sighupio/furyctl/internal/merge"
 	"github.com/sighupio/furyctl/internal/template"
 	yamlx "github.com/sighupio/furyctl/internal/x/yaml"
-	"github.com/sirupsen/logrus"
-	"os"
-	"path"
-	"path/filepath"
 )
 
 type Distribution struct {
