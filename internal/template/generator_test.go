@@ -9,6 +9,7 @@ package template_test
 import (
 	"os"
 	"testing"
+	gotemplate "text/template"
 
 	"github.com/stretchr/testify/assert"
 	"gopkg.in/yaml.v2"
@@ -170,4 +171,31 @@ func TestTemplateModel_Will_Generate_Dynamic_Values_From_File(t *testing.T) {
 	expectedRes := "A nice day at Tymlate! It's a nice day!"
 
 	assert.Equal(t, expectedRes, string(result))
+}
+
+func Test_Generator_GetMissingKeys(t *testing.T) {
+	path, err := os.MkdirTemp("", "test")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	funcMap := template.NewFuncMap()
+	funcMap.Add("toYaml", template.ToYAML)
+	funcMap.Add("fromYaml", template.FromYAML)
+
+	tg := template.NewGenerator(
+		path+"/source",
+		path+"/target",
+		map[string]map[any]any{},
+		funcMap,
+		true,
+	)
+
+	tpl := gotemplate.New("test")
+	tpl.Parse("{{.meta.name}}")
+
+	missingKeys := tg.GetMissingKeys(tpl)
+
+	assert.Equal(t, 1, len(missingKeys))
+	assert.Equal(t, ".meta.name", missingKeys[0])
 }

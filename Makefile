@@ -129,29 +129,29 @@ gci:
 lint: lint-go
 
 lint-go:
-	@golangci-lint -v run --color=always --config=${_PROJECT_DIRECTORY}/.rules/.golangci.yml ./...
+	@GOFLAGS=-mod=mod golangci-lint -v run --color=always --config=${_PROJECT_DIRECTORY}/.rules/.golangci.yml ./...
 
 .PHONY: test-unit test-integration test-e2e test-all show-coverage
 
 test-unit:
-	@go test -v -tags=unit ./...
+	@GOFLAGS=-mod=mod go test -v -tags=unit ./...
 
 test-integration:
-	@go test -v -tags=integration -timeout 120s ./...
+	@GOFLAGS=-mod=mod go test -v -tags=integration -timeout 120s ./...
 
 test-e2e:
-	@ginkgo run -v -tags=e2e -timeout 300s -p test/e2e
+	@GOFLAGS=-mod=mod ginkgo run -v -tags=e2e -timeout 300s -p test/e2e
 
 test-expensive:
 	$(call yes-or-no, "WARNING: This test will create a cluster on AWS. Are you sure you want to continue?")
-	@ginkgo run -v --covermode=count -tags=expensive -timeout 3600s -p test/expensive
+	@GOFLAGS=-mod=mod ginkgo run -v -tags=expensive -timeout 3600s -p test/expensive
 
 test-most:
-	@ginkgo run -v -covermode=count -coverprofile=coverage.out -tags=unit,integration,e2e -timeout 300s -p ./...
+	@GOFLAGS=-mod=mod ginkgo run -v -covermode=count -coverprofile=coverage.out -tags=unit,integration,e2e,expensive --skip-package=expensive -timeout 300s -p ./...
 
 test-all:
 	$(call yes-or-no, "WARNING: This test will create a cluster on AWS. Are you sure you want to continue?")
-	@ginkgo run -v -covermode=count -coverprofile=coverage.out -tags=unit,integration,e2e,expensive -timeout 300s -p ./...
+	@GOFLAGS=-mod=mod ginkgo run -v -covermode=count -coverprofile=coverage.out -tags=unit,integration,e2e,expensive -timeout 300s -p ./...
 
 show-coverage:
 	@go tool cover -html=coverage.out -o coverage.html && ${_BIN_OPEN} coverage.html

@@ -5,9 +5,7 @@
 package furyagent
 
 import (
-	"bytes"
 	"fmt"
-	"io"
 	"os"
 	"path"
 
@@ -32,11 +30,8 @@ func NewRunner(executor execx.Executor, paths Paths) *Runner {
 }
 
 func (r *Runner) ConfigOpenvpnClient(name string) error {
-	var outBuffer bytes.Buffer
-
 	cmd := execx.NewCmd(r.paths.Furyagent, execx.CmdOptions{
 		Args:     []string{"configure", "openvpn-client", fmt.Sprintf("--client-name=%s", name), "--config=furyagent.yml"},
-		Out:      io.MultiWriter(os.Stdout, &outBuffer),
 		Executor: r.executor,
 		WorkDir:  r.paths.WorkDir,
 	})
@@ -45,7 +40,7 @@ func (r *Runner) ConfigOpenvpnClient(name string) error {
 		return err
 	}
 
-	return os.WriteFile(path.Join(r.paths.WorkDir, fmt.Sprintf("%s.ovpn", name)), outBuffer.Bytes(), 0o600)
+	return os.WriteFile(path.Join(r.paths.WorkDir, fmt.Sprintf("%s.ovpn", name)), cmd.Log.Out.Bytes(), 0o600)
 }
 
 func (r *Runner) Version() (string, error) {

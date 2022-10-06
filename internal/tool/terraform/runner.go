@@ -5,10 +5,8 @@
 package terraform
 
 import (
-	"bytes"
 	"encoding/json"
 	"fmt"
-	"io"
 	"os"
 	"path"
 	"regexp"
@@ -51,11 +49,8 @@ func (r *Runner) Init() error {
 }
 
 func (r *Runner) Plan(timestamp int64) error {
-	var planBuffer bytes.Buffer
-
 	cmd := execx.NewCmd(r.paths.Terraform, execx.CmdOptions{
 		Args:     []string{"plan", "--out=plan/terraform.plan", "-no-color"},
-		Out:      io.MultiWriter(os.Stdout, &planBuffer),
 		Executor: r.executor,
 		WorkDir:  r.paths.WorkDir,
 	})
@@ -63,31 +58,29 @@ func (r *Runner) Plan(timestamp int64) error {
 		return err
 	}
 
-	return os.WriteFile(path.Join(r.paths.Plan, fmt.Sprintf("plan-%d.log", timestamp)), planBuffer.Bytes(), 0o600)
+	return os.WriteFile(path.Join(r.paths.Plan, fmt.Sprintf("plan-%d.log", timestamp)), cmd.Log.Out.Bytes(), 0o600)
 }
 
 func (r *Runner) Apply(timestamp int64) (OutputJson, error) {
-	var applyBuffer bytes.Buffer
-	var applyLogOut OutputJson
+	var oj OutputJson
 
 	cmd := execx.NewCmd(r.paths.Terraform, execx.CmdOptions{
 		Args:     []string{"apply", "-no-color", "-json", "plan/terraform.plan"},
-		Out:      io.MultiWriter(os.Stdout, &applyBuffer),
 		Executor: r.executor,
 		WorkDir:  r.paths.WorkDir,
 	})
 	if err := cmd.Run(); err != nil {
-		return applyLogOut, err
+		return oj, err
 	}
 
-	err := os.WriteFile(path.Join(r.paths.Logs, fmt.Sprintf("%d.log", timestamp)), applyBuffer.Bytes(), 0o600)
+	err := os.WriteFile(path.Join(r.paths.Logs, fmt.Sprintf("%d.log", timestamp)), cmd.Log.Out.Bytes(), 0o600)
 	if err != nil {
-		return applyLogOut, err
+		return oj, err
 	}
 
 	parsedApplyLog, err := os.ReadFile(path.Join(r.paths.Logs, fmt.Sprintf("%d.log", timestamp)))
 	if err != nil {
-		return applyLogOut, err
+		return oj, err
 	}
 
 	applyLog := string(parsedApplyLog)
@@ -96,16 +89,16 @@ func (r *Runner) Apply(timestamp int64) (OutputJson, error) {
 
 	outputsStringIndex := pattern.FindStringIndex(applyLog)
 	if outputsStringIndex == nil {
-		return applyLogOut, fmt.Errorf("can't get outputs from terraform apply logs")
+		return oj, fmt.Errorf("can't get outputs from terraform apply logs")
 	}
 
 	outputsString := fmt.Sprintf("{%s}", applyLog[outputsStringIndex[0]:outputsStringIndex[1]])
 
-	if err := json.Unmarshal([]byte(outputsString), &applyLogOut); err != nil {
-		return applyLogOut, err
+	if err := json.Unmarshal([]byte(outputsString), &oj); err != nil {
+		return oj, err
 	}
 
-	return applyLogOut, os.WriteFile(path.Join(r.paths.Outputs, "output.json"), []byte(outputsString), 0o600)
+	return oj, os.WriteFile(path.Join(r.paths.Outputs, "output.json"), []byte(outputsString), 0o600)
 }
 
 func (r *Runner) Version() (string, error) {

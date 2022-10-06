@@ -65,6 +65,10 @@ func (g *generator) ProcessTemplate() (*template.Template, error) {
 func (g *generator) GetMissingKeys(tpl *template.Template) []string {
 	var missingKeys []string
 
+	if tpl == nil || tpl.Tree == nil || tpl.Tree.Root == nil {
+		return missingKeys
+	}
+
 	node := NewNode()
 	node.FromNodeList(tpl.Tree.Root.Nodes)
 

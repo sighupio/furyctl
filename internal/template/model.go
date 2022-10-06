@@ -70,8 +70,8 @@ func NewTemplateModel(
 	}
 
 	funcMap := NewFuncMap()
-	funcMap.Add("toYaml", toYAML)
-	funcMap.Add("fromYaml", fromYAML)
+	funcMap.Add("toYaml", ToYAML)
+	funcMap.Add("fromYaml", FromYAML)
 
 	return &Model{
 		SourcePath:           source,
