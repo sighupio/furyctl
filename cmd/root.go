@@ -16,6 +16,7 @@ import (
 	"github.com/sighupio/furyctl/internal/app"
 	"github.com/sighupio/furyctl/internal/cobrax"
 	"github.com/sighupio/furyctl/internal/io"
+	"github.com/sighupio/furyctl/internal/semver"
 )
 
 type rootConfig struct {
@@ -73,14 +74,11 @@ Furyctl is a simple CLI tool to:
 				analytics.Version(versions["version"])
 				analytics.Disable(cobrax.Flag[bool](cmd, "disable-analytics").(bool))
 			},
-			PersistentPostRun: func(cmd *cobra.Command, _ []string) {
+			PersistentPostRun: func(_ *cobra.Command, _ []string) {
 				// Show update message if available at the end of the command
 				select {
 				case release := <-r:
-					if release.Version == "unknown" {
-						return
-					}
-					if release.Version != versions["version"] {
+					if shouldUpgrade(release.Version, versions["version"]) {
 						logrus.Infof("New furyctl version available: %s => %s", versions["version"], release.Version)
 					}
 				case err := <-e:
@@ -107,10 +105,20 @@ Furyctl is a simple CLI tool to:
 	return rootCmd
 }
 
+func shouldUpgrade(releaseVersion, currentVersion string) bool {
+	if releaseVersion == "unknown" {
+		return false
+	}
+
+	return semver.Gt(releaseVersion, currentVersion)
+}
+
 func checkUpdates(version string, rc chan app.Release, e chan error) {
+	defer close(rc)
+	defer close(e)
+
 	if version == "unknown" {
 		rc <- app.Release{Version: version}
-		close(rc)
 		return
 	}
 
@@ -121,6 +129,4 @@ func checkUpdates(version string, rc chan app.Release, e chan error) {
 	}
 
 	rc <- r
-
-	close(rc)
 }

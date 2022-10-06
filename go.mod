@@ -30,7 +30,10 @@ require (
 	gopkg.in/yaml.v2 v2.4.0
 )
 
-require gopkg.in/yaml.v3 v3.0.1
+require (
+	github.com/google/go-cmp v0.5.8
+	gopkg.in/yaml.v3 v3.0.1
+)
 
 require (
 	cloud.google.com/go v0.81.0 // indirect
@@ -46,7 +49,6 @@ require (
 	github.com/gobuffalo/packd v1.0.2 // indirect
 	github.com/golang/groupcache v0.0.0-20200121045136-8c9f03a8e57e // indirect
 	github.com/golang/protobuf v1.5.2 // indirect
-	github.com/google/go-cmp v0.5.8 // indirect
 	github.com/google/uuid v1.1.2 // indirect
 	github.com/googleapis/gax-go/v2 v2.0.5 // indirect
 	github.com/hashicorp/go-cleanhttp v0.5.2 // indirect
