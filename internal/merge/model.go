@@ -6,6 +6,7 @@ package merge
 
 import (
 	"fmt"
+	"reflect"
 	"strings"
 )
 
@@ -26,6 +27,12 @@ func NewDefaultModel(content map[any]any, path string) *DefaultModel {
 		content: content,
 		path:    path,
 	}
+}
+
+func FromStruct(content any, path string) *DefaultModel {
+	c := convertStructToMap(content, "json")
+
+	return NewDefaultModel(c, path)
 }
 
 func (b *DefaultModel) Content() map[any]any {
@@ -76,4 +83,52 @@ func (b *DefaultModel) Walk(mergedSection map[any]any) error {
 	ret[fields[len(fields)-1]] = mergedSection
 
 	return nil
+}
+
+func convertStructToMap(s any, tagType string) map[any]any {
+	out := make(map[any]any)
+
+	sType := reflect.TypeOf(s)
+
+	if sType.Kind() != reflect.Struct {
+		return nil
+	}
+
+	sVal := reflect.ValueOf(s)
+
+	for i := 0; i < sVal.NumField(); i++ {
+		if !sVal.Field(i).CanInterface() {
+			continue
+		}
+
+		fieldName := sType.Field(i).Name
+
+		if tagType != "" {
+			tag, ok := sType.Field(i).Tag.Lookup(tagType)
+			if ok {
+				tag = strings.Split(tag, ",")[0]
+				fieldName = tag
+			}
+		}
+
+		val := sVal.Field(i)
+
+		if val.Kind() == reflect.Ptr {
+			val = reflect.Indirect(val)
+		}
+
+		if !val.IsValid() {
+			out[fieldName] = nil
+			continue
+		}
+
+		if val.Kind() != reflect.Struct {
+			out[fieldName] = val.Interface()
+			continue
+		}
+
+		out[fieldName] = convertStructToMap(val.Interface(), tagType)
+	}
+
+	return out
 }

@@ -80,6 +80,7 @@ func NewClusterCmd(version string) *cobra.Command {
 			clusterCreator, err := cluster.NewCreator(
 				res.MinimalConf,
 				res.DistroManifest,
+				res.RepoPath,
 				furyctlPath,
 				phase,
 				vpnAutoConnect,

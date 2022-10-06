@@ -21,6 +21,7 @@ type ClusterCreator struct {
 	configPath     string
 	furyctlConf    schema.EksclusterKfdV1Alpha2
 	kfdManifest    config.KFD
+	distroPath     string
 	phase          string
 	vpnAutoConnect bool
 }
@@ -45,6 +46,8 @@ func (v *ClusterCreator) SetProperty(name string, value any) {
 		v.phase = value.(string)
 	case cluster.CreatorPropertyVpnAutoConnect:
 		v.vpnAutoConnect = value.(bool)
+	case cluster.CreatorPropertyDistroPath:
+		v.distroPath = value.(string)
 	}
 }
 
@@ -61,7 +64,7 @@ func (v *ClusterCreator) Create(dryRun bool) error {
 		return err
 	}
 
-	distro, err := NewDistribution(v.furyctlConf, v.kfdManifest)
+	distro, err := NewDistribution(v.furyctlConf, v.kfdManifest, v.distroPath)
 	if err != nil {
 		return err
 	}
