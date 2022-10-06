@@ -21,7 +21,6 @@ require (
 require (
 	github.com/google/go-cmp v0.5.8
 	github.com/go-playground/validator/v10 v10.11.1
-	github.com/gobuffalo/packr/v2 v2.8.3
 	github.com/google/go-cmp v0.5.8
 	github.com/hashicorp/terraform-json v0.10.0
 	github.com/onsi/ginkgo/v2 v2.1.6
@@ -43,8 +42,6 @@ require (
 	github.com/fsnotify/fsnotify v1.4.9 // indirect
 	github.com/go-playground/locales v0.14.0 // indirect
 	github.com/go-playground/universal-translator v0.18.0 // indirect
-	github.com/gobuffalo/logger v1.0.6 // indirect
-	github.com/gobuffalo/packd v1.0.1 // indirect
 	github.com/golang/groupcache v0.0.0-20200121045136-8c9f03a8e57e // indirect
 	github.com/golang/protobuf v1.5.2 // indirect
 	github.com/google/uuid v1.1.2 // indirect
@@ -57,13 +54,9 @@ require (
 	github.com/inconshreveable/mousetrap v1.0.1 // indirect
 	github.com/jmespath/go-jmespath v0.0.0-20180206201540-c2b33e8439af // indirect
 	github.com/jstemmer/go-junit-report v0.9.1 // indirect
-	github.com/karrick/godirwalk v1.16.1 // indirect
 	github.com/klauspost/compress v1.11.2 // indirect
 	github.com/leodido/go-urn v1.2.1 // indirect
 	github.com/magiconair/properties v1.8.5 // indirect
-	github.com/markbates/errx v1.1.0 // indirect
-	github.com/markbates/oncer v1.0.0 // indirect
-	github.com/markbates/safe v1.0.1 // indirect
 	github.com/mattn/go-colorable v0.1.8 // indirect
 	github.com/mattn/go-isatty v0.0.12 // indirect
 	github.com/mitchellh/copystructure v1.0.0 // indirect
@@ -88,7 +81,6 @@ require (
 	golang.org/x/net v0.0.0-20220722155237-a158d28d115b // indirect
 	golang.org/x/oauth2 v0.0.0-20210402161424-2e8d93401602 // indirect
 	golang.org/x/sys v0.0.0-20220915200043-7b5979e65e41 // indirect
-	golang.org/x/term v0.0.0-20210927222741-03fcf44c2211 // indirect
 	golang.org/x/text v0.3.7 // indirect
 	golang.org/x/tools v0.1.12 // indirect
 	google.golang.org/api v0.44.0 // indirect
