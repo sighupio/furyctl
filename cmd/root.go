@@ -80,7 +80,7 @@ Furyctl is a simple CLI tool to:
 					if release.Version == "unknown" {
 						return
 					}
-					if app.ShouldUpdate(versions["version"], release.Version) {
+					if release.Version != versions["version"] {
 						logrus.Infof("New furyctl version available: %s => %s", versions["version"], release.Version)
 					}
 				case err := <-e:
