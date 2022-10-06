@@ -46,6 +46,7 @@ env:
 	@grep -v '^#' .env | sed 's/^/export /'
 
 tools:
+	@go install github.com/daixiang0/gci@latest
 	@go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
 	@go install github.com/google/addlicense@latest
 	@go install github.com/nikolaydubina/go-cover-treemap@latest
@@ -133,24 +134,24 @@ lint-go:
 .PHONY: test-unit test-integration test-e2e test-all show-coverage
 
 test-unit:
-	@go test -v -covermode=count -tags=unit ./...
+	@go test -v -tags=unit ./...
 
 test-integration:
-	@go test -v -covermode=count -tags=integration -timeout 120s ./...
+	@go test -v -tags=integration -timeout 120s ./...
 
 test-e2e:
-	@ginkgo run -v --covermode=count  -tags=e2e -timeout 300s -p test/e2e
+	@ginkgo run -v -tags=e2e -timeout 300s -p test/e2e
 
 test-expensive:
 	$(call yes-or-no, "WARNING: This test will create a cluster on AWS. Are you sure you want to continue?")
 	@ginkgo run -v --covermode=count -tags=expensive -timeout 3600s -p test/expensive
 
 test-most:
-	@go test -v -covermode=count -coverprofile=coverage.out -tags=unit,integration,e2e ./...
+	@ginkgo run -v -covermode=count -coverprofile=coverage.out -tags=unit,integration,e2e -timeout 300s -p ./...
 
 test-all:
 	$(call yes-or-no, "WARNING: This test will create a cluster on AWS. Are you sure you want to continue?")
-	@go test -v -covermode=count -coverprofile=coverage.out -tags=unit,integration,e2e,expensive ./...
+	@ginkgo run -v -covermode=count -coverprofile=coverage.out -tags=unit,integration,e2e,expensive -timeout 300s -p ./...
 
 show-coverage:
 	@go tool cover -html=coverage.out -o coverage.html && ${_BIN_OPEN} coverage.html
