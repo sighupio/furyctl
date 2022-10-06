@@ -7,6 +7,7 @@ package semver
 import (
 	"fmt"
 	"regexp"
+	"strconv"
 	"strings"
 )
 
@@ -37,13 +38,10 @@ func SamePatch(a, b Version) bool {
 		return true
 	}
 
-	ap := strings.Split(a.String(), ".")
-	ma := fmt.Sprintf("%s.%s.%s", ap[0], ap[1], ap[2])
+	aMajor, aMinor, aPatch, _ := Parts(a.String())
+	bMajor, bMinor, bPatch, _ := Parts(b.String())
 
-	bp := strings.Split(b.String(), ".")
-	mb := fmt.Sprintf("%s.%s.%s", bp[0], bp[1], bp[2])
-
-	return ma == mb
+	return aMajor == bMajor && aMinor == bMinor && aPatch == bPatch
 }
 
 // SameMinor takes two versions and tell if they are part of the same minor
@@ -52,13 +50,76 @@ func SameMinor(a, b Version) bool {
 		return true
 	}
 
-	ap := strings.Split(a.String(), ".")
-	ma := fmt.Sprintf("%s.%s", ap[0], ap[1])
+	aMajor, aMinor, _, _ := Parts(a.String())
+	bMajor, bMinor, _, _ := Parts(b.String())
 
-	bp := strings.Split(b.String(), ".")
-	mb := fmt.Sprintf("%s.%s", bp[0], bp[1])
+	return aMajor == bMajor && aMinor == bMinor
+}
 
-	return ma == mb
+// Gt returns true if a is greater than b
+func Gt(va, vb string) bool {
+	if va == vb {
+		return false
+	}
+
+	aMajor, aMinor, aPatch, _ := Parts(va)
+	bMajor, bMinor, bPatch, _ := Parts(vb)
+
+	if aMajor > bMajor {
+		return true
+	}
+
+	if aMajor < bMajor {
+		return false
+	}
+
+	if aMinor > bMinor {
+		return true
+	}
+
+	if aMinor < bMinor {
+		return false
+	}
+
+	if aPatch > bPatch {
+		return true
+	}
+
+	if aPatch < bPatch {
+		return false
+	}
+
+	return false
+}
+
+// Parts returns the major, minor, patch and buil+prerelease parts of a version
+func Parts(v string) (int, int, int, string) {
+	pv := EnsurePrefix(v, "v")
+
+	if !isValid(pv) {
+		return 0, 0, 0, ""
+	}
+
+	parts := strings.Split(EnsureNoPrefix(v, "v"), ".")
+
+	ch := "-"
+	m := strings.Index(v, "-")
+	p := strings.Index(v, "+")
+	if (m == -1 && p > -1) || (m > -1 && p > -1 && p < m) {
+		ch = "+"
+	}
+
+	patchParts := strings.Split(strings.Join(parts[2:], "."), ch)
+
+	major, _ := strconv.Atoi(parts[0])
+	minor, _ := strconv.Atoi(parts[1])
+	patch, _ := strconv.Atoi(patchParts[0])
+
+	if len(patchParts) > 1 {
+		return major, minor, patch, strings.Join(patchParts[1:], ch)
+	}
+
+	return major, minor, patch, ""
 }
 
 func isValid(v string) bool {

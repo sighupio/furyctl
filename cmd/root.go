@@ -13,8 +13,10 @@ import (
 	"github.com/spf13/viper"
 
 	"github.com/sighupio/furyctl/internal/analytics"
+	"github.com/sighupio/furyctl/internal/app"
 	"github.com/sighupio/furyctl/internal/cobrax"
 	"github.com/sighupio/furyctl/internal/io"
+	"github.com/sighupio/furyctl/internal/semver"
 )
 
 type rootConfig struct {
@@ -30,6 +32,10 @@ type RootCommand struct {
 }
 
 func NewRootCommand(versions map[string]string) *RootCommand {
+	// Update channels
+	r := make(chan app.Release, 1)
+	e := make(chan error, 1)
+
 	cfg := &rootConfig{}
 	rootCmd := &RootCommand{
 		Command: &cobra.Command{
@@ -45,6 +51,8 @@ Furyctl is a simple CLI tool to:
 			SilenceUsage:  true,
 			SilenceErrors: true,
 			PersistentPreRun: func(cmd *cobra.Command, _ []string) {
+				// Async check for updates
+				go checkUpdates(versions["version"], r, e)
 				// Configure the spinner
 				w := logrus.StandardLogger().Out
 				if cobrax.Flag[bool](cmd, "no-tty").(bool) {
@@ -66,6 +74,17 @@ Furyctl is a simple CLI tool to:
 				analytics.Version(versions["version"])
 				analytics.Disable(cobrax.Flag[bool](cmd, "disable-analytics").(bool))
 			},
+			PersistentPostRun: func(_ *cobra.Command, _ []string) {
+				// Show update message if available at the end of the command
+				select {
+				case release := <-r:
+					if shouldUpgrade(release.Version, versions["version"]) {
+						logrus.Infof("New furyctl version available: %s => %s", versions["version"], release.Version)
+					}
+				case err := <-e:
+					logrus.Debugf("Error checking for updates: %s", err)
+				}
+			},
 		},
 		config: cfg,
 	}
@@ -84,4 +103,30 @@ Furyctl is a simple CLI tool to:
 	rootCmd.AddCommand(NewVersionCmd(versions))
 
 	return rootCmd
+}
+
+func shouldUpgrade(releaseVersion, currentVersion string) bool {
+	if releaseVersion == "unknown" {
+		return false
+	}
+
+	return semver.Gt(releaseVersion, currentVersion)
+}
+
+func checkUpdates(version string, rc chan app.Release, e chan error) {
+	defer close(rc)
+	defer close(e)
+
+	if version == "unknown" {
+		rc <- app.Release{Version: version}
+		return
+	}
+
+	r, err := app.GetLatestRelease()
+	if err != nil {
+		e <- err
+		return
+	}
+
+	rc <- r
 }
