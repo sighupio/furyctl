@@ -154,7 +154,7 @@ test-all:
 	@GOFLAGS=-mod=mod ginkgo run -v -covermode=count -coverprofile=coverage.out -tags=unit,integration,e2e,expensive -timeout 300s -p ./...
 
 show-coverage:
-	@go tool cover -html=coverage.out -o coverage.html && ${_BIN_OPEN} coverage.html
+	@go tool cover -html=coverage.out -o coverage.html
 	@go-cover-treemap -coverprofile coverage.out > coverage.svg && ${_BIN_OPEN} coverage.svg
 
 .PHONY: clean build release
