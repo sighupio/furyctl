@@ -75,3 +75,41 @@ func TestEnsureNoPrefix(t *testing.T) {
 		})
 	}
 }
+
+func TestEnsureNoBuild(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		desc    string
+		version string
+		want    string
+	}{
+		{
+			desc:    "has build using plus",
+			version: "v1.2.3+b1",
+			want:    "v1.2.3",
+		},
+		{
+			desc:    "has build using dash",
+			version: "v1.2.3-1",
+			want:    "v1.2.3",
+		},
+		{
+			desc:    "has no build",
+			version: "1.2.3",
+			want:    "1.2.3",
+		},
+	}
+	for _, tC := range testCases {
+		tC := tC
+
+		t.Run(tC.desc, func(t *testing.T) {
+			t.Parallel()
+
+			got := semver.EnsureNoBuild(tC.version)
+			if tC.want != got {
+				t.Errorf("want %q, got %q", tC.want, got)
+			}
+		})
+	}
+}

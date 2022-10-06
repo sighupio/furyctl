@@ -23,3 +23,9 @@ func EnsureNoPrefix(version string) string {
 
 	return version
 }
+
+func EnsureNoBuild(version string) string {
+	v := strings.Split(version, "+")[0]
+
+	return strings.Split(v, "-")[0]
+}

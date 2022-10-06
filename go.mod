@@ -22,6 +22,7 @@ require (
 	github.com/google/go-cmp v0.5.8
 	github.com/go-playground/validator/v10 v10.11.1
 	github.com/gobuffalo/packr/v2 v2.8.3
+	github.com/google/go-cmp v0.5.8
 	github.com/hashicorp/terraform-json v0.10.0
 	github.com/onsi/ginkgo/v2 v2.1.6
 	github.com/onsi/gomega v1.20.2

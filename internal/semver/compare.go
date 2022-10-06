@@ -105,13 +105,13 @@ func Gt(va, vb string) bool {
 
 // Parts returns the major, minor, patch and buil+prerelease parts of a version
 func Parts(v string) (int, int, int, string) {
-	pv := EnsurePrefix(v, "v")
+	pv := EnsurePrefix(v)
 
 	if !isValid(pv) {
 		return 0, 0, 0, ""
 	}
 
-	parts := strings.Split(EnsureNoPrefix(v, "v"), ".")
+	parts := strings.Split(EnsureNoPrefix(v), ".")
 
 	ch := "-"
 	m := strings.Index(v, "-")
