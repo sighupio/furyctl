@@ -94,6 +94,8 @@ func (d *Distribution) copyFromTemplate(dryRun bool) error {
 		return err
 	}
 
+	d.injectMetadata(mergedDistribution)
+
 	outYaml, err := yamlx.MarshalV2(mergedDistribution)
 	if err != nil {
 		return err
@@ -126,4 +128,16 @@ func (d *Distribution) copyFromTemplate(dryRun bool) error {
 	}
 
 	return templateModel.Generate()
+}
+
+func (d *Distribution) injectMetadata(cfgYaml map[any]any) {
+	data, ok := cfgYaml["data"]
+	if ok {
+		dataMap, ok := data.(map[any]any)
+		if ok {
+			dataMap["metadata"] = map[any]any{
+				"distributionVersion": d.furyctlConf.Spec.DistributionVersion,
+			}
+		}
+	}
 }
