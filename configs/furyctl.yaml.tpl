@@ -15,6 +15,7 @@ spec:
           bucketName: example-bucket
           keyPrefix: example-cluster/
           region: eu-west-1
+  region: eu-west-1
   tags:
     env: "example"
     k8s: "example2"
@@ -120,8 +121,8 @@ spec:
     modules:
       ingress:
         overrides:
-          nodeSelector: {}
-          tolerations: []
+          nodeSelector: null
+          tolerations: null
           ingresses:
             forecastle:
               disableAuth: false
@@ -151,8 +152,8 @@ spec:
             vpcId: "vpc-0123456789abcdef0"
       logging:
         overrides:
-          nodeSelector: {}
-          tolerations: []
+          nodeSelector: null
+          tolerations: null
           ingresses:
             opensearch-dashboards:
               disableAuth: false
@@ -171,11 +172,11 @@ spec:
             limits:
               cpu: ""
               memory: ""
-          storage_request: ""
+          storageSize: ""
       monitoring:
         overrides:
-          nodeSelector: {}
-          tolerations: []
+          nodeSelector: null
+          tolerations: null
           ingresses:
             prometheus:
               disableAuth: false
@@ -203,8 +204,8 @@ spec:
               memory: ""
       policy:
         overrides:
-          nodeSelector: {}
-          tolerations: []
+          nodeSelector: null
+          tolerations: null
           ingresses:
             gpm:
               disableAuth: false
@@ -214,11 +215,11 @@ spec:
           additionalExcludedNamespaces: []
       dr:
         overrides:
-          nodeSelector: {}
-          tolerations: []
+          nodeSelector: null
+          tolerations: null
       auth:
         overrides:
-          nodeSelector: {}
+          nodeSelector: null
           ingresses:
             pomerium:
               host: ""
@@ -226,7 +227,7 @@ spec:
             dex:
               host: ""
               ingressClass: ""
-          tolerations: []
+          tolerations: null
         provider:
           type: none
           basicAuth:
