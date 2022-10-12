@@ -6,6 +6,7 @@ package eks
 
 import (
 	"fmt"
+	mapx "github.com/sighupio/furyctl/internal/x/map"
 	"os"
 	"path"
 	"path/filepath"
@@ -50,11 +51,11 @@ func (d *Distribution) Exec(dryRun bool) error {
 		return err
 	}
 
-	if err := d.createFolderStructure(); err != nil {
+	if err := d.copyFromTemplate(dryRun); err != nil {
 		return err
 	}
 
-	if err := d.copyFromTemplate(dryRun); err != nil {
+	if err := d.createFolderStructure(); err != nil {
 		return err
 	}
 
@@ -63,20 +64,22 @@ func (d *Distribution) Exec(dryRun bool) error {
 
 func (d *Distribution) createFolderStructure() error {
 	manifestsPath := path.Join(d.Path, "manifests")
-	terraformPath := path.Join(d.Path, "terraform")
+	//terraformPath := path.Join(d.Path, "terraform")
 
 	if err := os.Mkdir(manifestsPath, 0o755); err != nil {
 		return err
 	}
 
-	if err := os.Mkdir(terraformPath, 0o755); err != nil {
-		return err
-	}
+	//if err := os.Mkdir(terraformPath, 0o755); err != nil {
+	//	return err
+	//}
 
 	return d.CreateFolderStructure()
 }
 
 func (d *Distribution) copyFromTemplate(dryRun bool) error {
+	var cfg template.Config
+
 	defaultsFilePath := path.Join(d.distroPath, "furyctl-defaults.yaml")
 
 	defaultsFile, err := yamlx.FromFileV2[map[any]any](defaultsFilePath)
@@ -84,9 +87,11 @@ func (d *Distribution) copyFromTemplate(dryRun bool) error {
 		return fmt.Errorf("%s - %w", defaultsFilePath, err)
 	}
 
+	furyctlConfMergeModel := merge.NewDefaultModelFromStruct(d.furyctlConf, ".spec.distribution")
+
 	merger := merge.NewMerger(
 		merge.NewDefaultModel(defaultsFile, ".data"),
-		merge.NewDefaultModelFromStruct(d.furyctlConf, ".spec.distribution"),
+		furyctlConfMergeModel,
 	)
 
 	mergedDistribution, err := merger.Merge()
@@ -94,9 +99,38 @@ func (d *Distribution) copyFromTemplate(dryRun bool) error {
 		return err
 	}
 
-	d.injectMetadata(mergedDistribution)
+	mergedTmpl, ok := mergedDistribution["templates"]
+	if !ok {
+		return fmt.Errorf("templates not found in merged distribution")
+	}
 
-	outYaml, err := yamlx.MarshalV2(mergedDistribution)
+	mergedData, ok := mergedDistribution["data"]
+	if !ok {
+		return fmt.Errorf("data not found in merged distribution")
+	}
+
+	mergedDataMap, ok := mergedData.(map[any]any)
+	if !ok {
+		return fmt.Errorf("data in merged distribution is not a map")
+	}
+
+	tmpl, err := template.NewTemplatesFromMap(mergedTmpl)
+	if err != nil {
+		return err
+	}
+
+	tmpl.Excludes = []string{"source/manifests", ".gitignore"}
+
+	err = furyctlConfMergeModel.Walk(mergedDataMap)
+	if err != nil {
+		return err
+	}
+
+	cfg.Templates = *tmpl
+	cfg.Data = mapx.ToMapStringAny(furyctlConfMergeModel.Content())
+	cfg.Include = nil
+
+	outYaml, err := yamlx.MarshalV2(cfg)
 	if err != nil {
 		return err
 	}
@@ -116,7 +150,7 @@ func (d *Distribution) copyFromTemplate(dryRun bool) error {
 
 	templateModel, err := template.NewTemplateModel(
 		path.Join(d.distroPath, "source"),
-		path.Join(d.Path, "manifests"),
+		path.Join(d.Path),
 		confPath,
 		outDirPath,
 		".tpl",
@@ -128,16 +162,4 @@ func (d *Distribution) copyFromTemplate(dryRun bool) error {
 	}
 
 	return templateModel.Generate()
-}
-
-func (d *Distribution) injectMetadata(cfgYaml map[any]any) {
-	data, ok := cfgYaml["data"]
-	if ok {
-		dataMap, ok := data.(map[any]any)
-		if ok {
-			dataMap["metadata"] = map[any]any{
-				"distributionVersion": d.furyctlConf.Spec.DistributionVersion,
-			}
-		}
-	}
 }
