@@ -6,7 +6,6 @@ package merge
 
 import (
 	"fmt"
-	mapx "github.com/sighupio/furyctl/internal/x/map"
 	"strings"
 )
 
@@ -27,12 +26,6 @@ func NewDefaultModel(content map[any]any, path string) *DefaultModel {
 		content: content,
 		path:    path,
 	}
-}
-
-func NewDefaultModelFromStruct(content any, path string) *DefaultModel {
-	c := mapx.FromStruct(content, "json")
-
-	return NewDefaultModel(c, path)
 }
 
 func (b *DefaultModel) Content() map[any]any {

@@ -6,7 +6,6 @@ package eks
 
 import (
 	"fmt"
-	mapx "github.com/sighupio/furyctl/internal/x/map"
 	"os"
 	"path"
 	"path/filepath"
@@ -18,6 +17,7 @@ import (
 	"github.com/sighupio/furyctl/internal/cluster"
 	"github.com/sighupio/furyctl/internal/merge"
 	"github.com/sighupio/furyctl/internal/template"
+	mapx "github.com/sighupio/furyctl/internal/x/map"
 	yamlx "github.com/sighupio/furyctl/internal/x/yaml"
 )
 
