@@ -23,12 +23,14 @@ import (
 
 type Distribution struct {
 	*cluster.CreationPhase
-	furyctlConf schema.EksclusterKfdV1Alpha2
-	kfdManifest config.KFD
-	distroPath  string
+	furyctlConfPath string
+	furyctlConf     schema.EksclusterKfdV1Alpha2
+	kfdManifest     config.KFD
+	distroPath      string
 }
 
 func NewDistribution(
+	furyctlConfPath string,
 	furyctlConf schema.EksclusterKfdV1Alpha2,
 	kfdManifest config.KFD,
 	distroPath string,
@@ -39,10 +41,11 @@ func NewDistribution(
 	}
 
 	return &Distribution{
-		CreationPhase: phase,
-		furyctlConf:   furyctlConf,
-		kfdManifest:   kfdManifest,
-		distroPath:    distroPath,
+		CreationPhase:   phase,
+		furyctlConf:     furyctlConf,
+		kfdManifest:     kfdManifest,
+		distroPath:      distroPath,
+		furyctlConfPath: furyctlConfPath,
 	}, nil
 }
 
@@ -55,26 +58,11 @@ func (d *Distribution) Exec(dryRun bool) error {
 		return err
 	}
 
-	if err := d.createFolderStructure(); err != nil {
+	if err := d.CreateFolderStructure(); err != nil {
 		return err
 	}
 
 	return nil
-}
-
-func (d *Distribution) createFolderStructure() error {
-	manifestsPath := path.Join(d.Path, "manifests")
-	//terraformPath := path.Join(d.Path, "terraform")
-
-	if err := os.Mkdir(manifestsPath, 0o755); err != nil {
-		return err
-	}
-
-	//if err := os.Mkdir(terraformPath, 0o755); err != nil {
-	//	return err
-	//}
-
-	return d.CreateFolderStructure()
 }
 
 func (d *Distribution) copyFromTemplate(dryRun bool) error {
@@ -87,7 +75,12 @@ func (d *Distribution) copyFromTemplate(dryRun bool) error {
 		return fmt.Errorf("%s - %w", defaultsFilePath, err)
 	}
 
-	furyctlConfMergeModel := merge.NewDefaultModelFromStruct(d.furyctlConf, ".spec.distribution")
+	furyctlConf, err := yamlx.FromFileV2[map[any]any](d.furyctlConfPath)
+	if err != nil {
+		return fmt.Errorf("%s - %w", d.furyctlConfPath, err)
+	}
+
+	furyctlConfMergeModel := merge.NewDefaultModel(furyctlConf, ".spec.distribution")
 
 	merger := merge.NewMerger(
 		merge.NewDefaultModel(defaultsFile, ".data"),
