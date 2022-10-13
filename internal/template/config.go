@@ -6,6 +6,7 @@ package template
 
 import (
 	"fmt"
+
 	mapx "github.com/sighupio/furyctl/internal/x/map"
 )
 
