@@ -6,9 +6,12 @@ package eks
 
 import (
 	"fmt"
+	"github.com/sighupio/furyctl/internal/tool/terraform"
+	execx "github.com/sighupio/furyctl/internal/x/exec"
 	"os"
 	"path"
 	"path/filepath"
+	"time"
 
 	"github.com/sirupsen/logrus"
 
@@ -27,6 +30,7 @@ type Distribution struct {
 	furyctlConf     schema.EksclusterKfdV1Alpha2
 	kfdManifest     config.KFD
 	distroPath      string
+	tfRunner        *terraform.Runner
 }
 
 func NewDistribution(
@@ -46,10 +50,22 @@ func NewDistribution(
 		kfdManifest:     kfdManifest,
 		distroPath:      distroPath,
 		furyctlConfPath: furyctlConfPath,
+		tfRunner: terraform.NewRunner(
+			execx.NewStdExecutor(),
+			terraform.Paths{
+				Logs:      phase.LogsPath,
+				Outputs:   phase.OutputsPath,
+				WorkDir:   path.Join(phase.Path, "terraform"),
+				Plan:      phase.PlanPath,
+				Terraform: phase.TerraformPath,
+			},
+		),
 	}, nil
 }
 
 func (d *Distribution) Exec(dryRun bool) error {
+	timestamp := time.Now().Unix()
+
 	if err := d.CreateFolder(); err != nil {
 		return err
 	}
@@ -60,6 +76,18 @@ func (d *Distribution) Exec(dryRun bool) error {
 
 	if err := d.CreateFolderStructure(); err != nil {
 		return err
+	}
+
+	if err := d.tfRunner.Init(); err != nil {
+		return err
+	}
+
+	if err := d.tfRunner.Plan(timestamp); err != nil {
+		return err
+	}
+
+	if dryRun {
+		return nil
 	}
 
 	return nil
