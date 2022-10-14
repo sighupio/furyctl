@@ -1,8 +1,8 @@
 <!-- markdownlint-disable MD033 -->
 <h1 align="center">
-  <img src="docs/assets/furyctl-logo.svg" width="200px" alt="furyctl logo" style="margin-top: 20px" />
+  <img src="docs/assets/furyctl-logo.svg" width="200px" alt="furyctl logo" />
 
-<p>The multi-purpose command line tool for the Kubernetes Fury Distribution.</p>
+<p>The multi-purpose command line tool<br/>for the Kubernetes Fury Distribution</p>
 
 [![Build Status](https://ci.sighup.io/api/badges/sighupio/furyctl/status.svg)](https://ci.sighup.io/sighupio/furyctl)
 ![Release](https://img.shields.io/github/v/release/sighupio/furyctl?label=Furyctl)
@@ -14,14 +14,16 @@
 
 <!-- <KFD-DOCS> -->
 
-Furyctl is a simple CLI tool to:
+Furyctl is a command line interface tool to:
 
-- download and manage the Kubernetes Fury Distribution (KFD) modules
 - create and manage Fury clusters on AWS
+- download and manage the Kubernetes Fury Distribution (KFD) modules
 
 <br/>
 
 ![Furyctl usage](docs/assets/furyctl.gif)
+
+> 💡 Learn more about the Kubernetes Fury Distribution in the [official site](https://kubernetesfury.com).
 
 ## Installation
 
