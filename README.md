@@ -1,15 +1,16 @@
 <!-- markdownlint-disable MD033 -->
 <h1 align="center">
-  <img src="docs/assets/furyctl-logo.svg" width="200px" alt="furyctl logo" margin-top="30px" />
-</h1>
+  <img src="docs/assets/furyctl-logo.svg" width="200px" alt="furyctl logo" style="margin-top: 20px" />
 
-<p align="center">The multi-purpose command line tool for the Kubernetes Fury Distribution.</p>
-<!-- markdownlint-eable MD033 -->
+<p>The multi-purpose command line tool for the Kubernetes Fury Distribution.</p>
 
 [![Build Status](https://ci.sighup.io/api/badges/sighupio/furyctl/status.svg)](https://ci.sighup.io/sighupio/furyctl)
 ![Release](https://img.shields.io/github/v/release/sighupio/furyctl?label=Furyctl)
 ![Slack](https://img.shields.io/badge/slack-@kubernetes/fury-yellow.svg?logo=slack)
 ![License](https://img.shields.io/github/license/sighupio/furyctl)
+
+</h1>
+<!-- markdownlint-eable MD033 -->
 
 <!-- <KFD-DOCS> -->
 
