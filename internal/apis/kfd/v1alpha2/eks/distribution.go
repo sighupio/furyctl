@@ -70,7 +70,7 @@ func (d *Distribution) Exec(dryRun bool) error {
 		return err
 	}
 
-	if err := d.copyFromTemplate(dryRun); err != nil {
+	if err := d.copyTfFromTemplate(dryRun); err != nil {
 		return err
 	}
 
@@ -93,7 +93,7 @@ func (d *Distribution) Exec(dryRun bool) error {
 	return nil
 }
 
-func (d *Distribution) copyFromTemplate(dryRun bool) error {
+func (d *Distribution) copyTfFromTemplate(dryRun bool) error {
 	var cfg template.Config
 
 	defaultsFilePath := path.Join(d.distroPath, "furyctl-defaults.yaml")
@@ -110,6 +110,26 @@ func (d *Distribution) copyFromTemplate(dryRun bool) error {
 
 	furyctlConfMergeModel := merge.NewDefaultModel(furyctlConf, ".spec.distribution")
 
+	type injectType struct {
+		Data schema.SpecDistribution `json:"data"`
+	}
+
+	toInjectDistConfData := injectType{
+		Data: schema.SpecDistribution{
+			Modules: schema.SpecDistributionModules{
+				Ingress: schema.SpecDistributionModulesIngress{
+					Dns: schema.SpecDistributionModulesIngressDNS{
+						Private: schema.SpecDistributionModulesIngressDNSPrivate{
+							VpcId: "vpc-1234567890",
+						},
+					},
+				},
+			},
+		},
+	}
+
+	injectDistConfDataModel := merge.NewDefaultModelFromStruct(toInjectDistConfData, ".data", true)
+
 	merger := merge.NewMerger(
 		merge.NewDefaultModel(defaultsFile, ".data"),
 		furyctlConfMergeModel,
@@ -125,6 +145,13 @@ func (d *Distribution) copyFromTemplate(dryRun bool) error {
 		return fmt.Errorf("templates not found in merged distribution")
 	}
 
+	tmpl, err := template.NewTemplatesFromMap(mergedTmpl)
+	if err != nil {
+		return err
+	}
+
+	tmpl.Excludes = []string{"source/manifests", ".gitignore"}
+
 	mergedData, ok := mergedDistribution["data"]
 	if !ok {
 		return fmt.Errorf("data not found in merged distribution")
@@ -135,14 +162,32 @@ func (d *Distribution) copyFromTemplate(dryRun bool) error {
 		return fmt.Errorf("data in merged distribution is not a map")
 	}
 
-	tmpl, err := template.NewTemplatesFromMap(mergedTmpl)
+	err = furyctlConfMergeModel.Walk(mergedDataMap)
 	if err != nil {
 		return err
 	}
 
-	tmpl.Excludes = []string{"source/manifests", ".gitignore"}
+	injectorMerger := merge.NewMerger(
+		injectDistConfDataModel,
+		furyctlConfMergeModel,
+	)
 
-	err = furyctlConfMergeModel.Walk(mergedDataMap)
+	mergedInjector, err := injectorMerger.Merge()
+	if err != nil {
+		return err
+	}
+
+	mergedInjectorData, ok := mergedInjector["data"]
+	if !ok {
+		return fmt.Errorf("data not found in merged injector")
+	}
+
+	mergedInjectorDataMap, ok := mergedInjectorData.(map[any]any)
+	if !ok {
+		return fmt.Errorf("data in merged injector is not a map")
+	}
+
+	err = furyctlConfMergeModel.Walk(mergedInjectorDataMap)
 	if err != nil {
 		return err
 	}
