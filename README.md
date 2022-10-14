@@ -1,7 +1,6 @@
 <!-- markdownlint-disable MD033 -->
 <h1 align="center">
-  <img src="docs/assets/furyctl-logo.png" width="200px"/><br/>
-  Furyctl
+  <img src="docs/assets/furyctl-logo.svg" width="200px" alt="furyctl logo" />
 </h1>
 
 <p align="center">The multi-purpose command line tool for the Kubernetes Fury Distribution.</p>
