@@ -36,6 +36,9 @@ data:
             ingressClass: ""
 
       baseDomain: example.dev
+      externalDns:
+        privateIamRoleArn: arn:aws:iam::123456789012:role/external-dns-private
+        publicIamRoleArn: arn:aws:iam::123456789012:role/external-dns-public
       # common configuration for nginx ingress controller
       nginx:
         # can be single or dual
