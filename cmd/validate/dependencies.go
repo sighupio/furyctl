@@ -25,10 +25,22 @@ func NewDependenciesCmd(furyctlBinVersion string) *cobra.Command {
 		Use:   "dependencies",
 		Short: "Validate furyctl.yaml file",
 		RunE: func(cmd *cobra.Command, _ []string) error {
-			debug := cobrax.Flag[bool](cmd, "debug").(bool)
-			binPath := cobrax.Flag[string](cmd, "bin-path").(string)
-			furyctlPath := cobrax.Flag[string](cmd, "config").(string)
-			distroLocation := cobrax.Flag[string](cmd, "distro-location").(string)
+			debug, ok := cobrax.Flag[bool](cmd, "debug").(bool)
+			if !ok {
+				return fmt.Errorf("debug flag not provided")
+			}
+			binPath, ok := cobrax.Flag[string](cmd, "bin-path").(string)
+			if !ok {
+				return fmt.Errorf("bin-path flag not provided")
+			}
+			furyctlPath, ok := cobrax.Flag[string](cmd, "config").(string)
+			if !ok {
+				return fmt.Errorf("config flag not provided")
+			}
+			distroLocation, ok := cobrax.Flag[string](cmd, "distro-location").(string)
+			if !ok {
+				return fmt.Errorf("distro-location flag not provided")
+			}
 
 			dloader := distribution.NewDownloader(netx.NewGoGetterClient(), debug)
 

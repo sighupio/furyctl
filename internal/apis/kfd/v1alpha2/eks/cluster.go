@@ -37,17 +37,34 @@ func (v *ClusterCreator) SetProperty(name string, value any) {
 
 	switch lcName {
 	case cluster.CreatorPropertyConfigPath:
-		v.configPath = value.(string)
+		if s, ok := value.(string); ok {
+			v.configPath = s
+		}
+
 	case cluster.CreatorPropertyFuryctlConf:
-		v.furyctlConf = value.(schema.EksclusterKfdV1Alpha2)
+		if s, ok := value.(schema.EksclusterKfdV1Alpha2); ok {
+			v.furyctlConf = s
+		}
+
 	case cluster.CreatorPropertyKfdManifest:
-		v.kfdManifest = value.(config.KFD)
+		if s, ok := value.(config.KFD); ok {
+			v.kfdManifest = s
+		}
+
 	case cluster.CreatorPropertyPhase:
-		v.phase = value.(string)
+		if s, ok := value.(string); ok {
+			v.phase = s
+		}
+
 	case cluster.CreatorPropertyVpnAutoConnect:
-		v.vpnAutoConnect = value.(bool)
+		if b, ok := value.(bool); ok {
+			v.vpnAutoConnect = b
+		}
+
 	case cluster.CreatorPropertyDistroPath:
-		v.distroPath = value.(string)
+		if s, ok := value.(string); ok {
+			v.distroPath = s
+		}
 	}
 }
 
@@ -76,10 +93,13 @@ func (v *ClusterCreator) Create(dryRun bool) error {
 	switch v.phase {
 	case cluster.CreationPhaseInfrastructure:
 		return infra.Exec(dryRun, infraOpts)
+
 	case cluster.CreationPhaseKubernetes:
 		return kube.Exec(dryRun)
+
 	case cluster.CreationPhaseDistribution:
 		return distro.Exec(dryRun)
+
 	case cluster.CreationPhaseAll:
 		if v.furyctlConf.Spec.Infrastructure != nil {
 			if err := infra.Exec(dryRun, infraOpts); err != nil {
@@ -92,6 +112,7 @@ func (v *ClusterCreator) Create(dryRun bool) error {
 		}
 
 		return distro.Exec(dryRun)
+
 	default:
 		return ErrUnsupportedPhase
 	}

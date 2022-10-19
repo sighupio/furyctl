@@ -60,6 +60,7 @@ func FromStruct(s any, tagType string, skipEmpty bool) map[any]any {
 
 		if val.Kind() != reflect.Struct {
 			out[fieldName] = val.Interface()
+
 			continue
 		}
 

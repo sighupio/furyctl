@@ -67,7 +67,7 @@ func TestUrlHasForcedProtocol(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := netx.UrlHasForcedProtocol(tt.url); got != tt.want {
+			if got := netx.NewGoGetterClient().UrlHasForcedProtocol(tt.url); got != tt.want {
 				t.Errorf("urlHasForcedProtocol() = %v, want %v", got, tt.want)
 			}
 		})

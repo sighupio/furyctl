@@ -31,12 +31,12 @@ func (m *Merger) GetCustom() *Mergeable {
 func (m *Merger) Merge() (map[any]any, error) {
 	preparedBase, err := m.base.Get()
 	if err != nil {
-		return nil, fmt.Errorf("incorrect base file, %s", err.Error())
+		return nil, fmt.Errorf("incorrect base file, %w", err)
 	}
 
 	preparedCustom, err := m.custom.Get()
 	if err != nil {
-		return preparedBase, nil
+		return nil, err
 	}
 
 	mergedSection := deepCopy(preparedBase, preparedCustom)
@@ -51,16 +51,20 @@ func deepCopy(a, b map[any]any) map[any]any {
 	for k, v := range a {
 		out[k] = v
 	}
+
 	for k, v := range b {
 		if v, ok := v.(map[any]any); ok {
 			if bv, ok := out[k]; ok {
 				if bv, ok := bv.(map[any]any); ok {
 					out[k] = deepCopy(bv, v)
+
 					continue
 				}
 			}
 		}
+
 		out[k] = v
 	}
+
 	return out
 }

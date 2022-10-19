@@ -34,8 +34,10 @@ type RootCommand struct {
 	config *rootConfig
 }
 
+const timeout = 100 * time.Millisecond
+
 func NewRootCommand(versions map[string]string) *RootCommand {
-	// Update channels
+	// Update channels.
 	r := make(chan app.Release, 1)
 	e := make(chan error, 1)
 
@@ -54,32 +56,38 @@ Furyctl is a simple CLI tool to:
 			SilenceUsage:  true,
 			SilenceErrors: true,
 			PersistentPreRun: func(cmd *cobra.Command, _ []string) {
-				// Async check for updates
+				// Async check for updates.
 				go checkUpdates(versions["version"], r, e)
-				// Configure the spinner
+				// Configure the spinner.
 				w := logrus.StandardLogger().Out
-				if cobrax.Flag[bool](cmd, "no-tty").(bool) {
+
+				cflag, ok := cobrax.Flag[bool](cmd, "no-tty").(bool)
+				if ok && cflag {
 					w = iox.NewNullWriter()
 					f := new(logrus.TextFormatter)
 					f.DisableColors = true
 					logrus.SetFormatter(f)
 				}
-				cfg.Spinner = spinner.New(spinner.CharSets[11], 100*time.Millisecond, spinner.WithWriter(w))
 
-				// Set log level
-				if cobrax.Flag[bool](cmd, "debug").(bool) {
+				cfg.Spinner = spinner.New(spinner.CharSets[11], timeout, spinner.WithWriter(w))
+
+				// Set log level.
+				dflag, ok := cobrax.Flag[bool](cmd, "debug").(bool)
+				if ok && dflag {
 					logrus.SetLevel(logrus.DebugLevel)
 				} else {
 					logrus.SetLevel(logrus.InfoLevel)
 				}
 
-				// Configure analytics
-				analytics.Version(versions["version"])
-				analytics.Disable(cobrax.Flag[bool](cmd, "disable-analytics").(bool))
-
-				// Change working directory if it is specified
-				if workdir := cobrax.Flag[string](cmd, "workdir").(string); workdir != "" {
-					// get absolute path of workdir
+				// Configure analytics.
+				a := analytics.New(true, versions["version"])
+				aflag, ok := cobrax.Flag[bool](cmd, "disable-analytics").(bool)
+				if ok && aflag {
+					a.Disable(aflag)
+				}
+				// Change working directory if it is specified.
+				if workdir, ok := cobrax.Flag[string](cmd, "workdir").(string); workdir != "" && ok {
+					// Get absolute path of workdir.
 					absWorkdir, err := filepath.Abs(workdir)
 					if err != nil {
 						logrus.Fatalf("Error getting absolute path of workdir: %v", err)
@@ -93,7 +101,7 @@ Furyctl is a simple CLI tool to:
 				}
 			},
 			PersistentPostRun: func(_ *cobra.Command, _ []string) {
-				// Show update message if available at the end of the command
+				// Show update message if available at the end of the command.
 				select {
 				case release := <-r:
 					if shouldUpgrade(release.Version, versions["version"]) {
@@ -140,12 +148,14 @@ func checkUpdates(version string, rc chan app.Release, e chan error) {
 
 	if version == "unknown" {
 		rc <- app.Release{Version: version}
+		
 		return
 	}
 
 	r, err := app.GetLatestRelease()
 	if err != nil {
 		e <- err
+		
 		return
 	}
 

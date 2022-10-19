@@ -22,7 +22,7 @@ func NewFuryagent(runner *furyagent.Runner, version string) *Furyagent {
 		os:      runtime.GOOS,
 		version: version,
 		checker: &checker{
-			regex:  regexp.MustCompile("version (\\S*)"),
+			regex:  regexp.MustCompile(`version (\\S*)`),
 			runner: runner,
 			trimFn: func(tokens []string) string {
 				return tokens[len(tokens)-1]

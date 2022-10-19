@@ -114,8 +114,7 @@ func (i *Infrastructure) Exec(dryRun bool, opts []cluster.CreationPhaseOption) e
 		}
 
 		for _, opt := range opts {
-			switch strings.ToLower(opt.Name) {
-			case cluster.CreationPhaseOptionVPNAutoConnect:
+			if strings.ToLower(opt.Name) == cluster.CreationPhaseOptionVPNAutoConnect {
 				if err := i.ovRunner.Connect(clientName); err != nil {
 					return err
 				}
@@ -298,5 +297,5 @@ func (i *Infrastructure) createTfVars() error {
 
 	targetTfVars := path.Join(i.Path, "terraform", "main.auto.tfvars")
 
-	return os.WriteFile(targetTfVars, buffer.Bytes(), 0o600)
+	return os.WriteFile(targetTfVars, buffer.Bytes(), iox.FullRWPermAccess)
 }

@@ -49,23 +49,59 @@ func (f *Factory) Create(name, version string) Tool {
 	t := f.runnerFactory.Create(name, "")
 
 	if name == tool.Ansible {
-		return NewAnsible(t.(*ansible.Runner), version)
+		a, ok := t.(*ansible.Runner)
+		if !ok {
+			panic(fmt.Sprintf("expected ansible.Runner, got %T", t))
+		}
+
+		return NewAnsible(a, version)
 	}
+	
 	if name == tool.Furyagent {
-		return NewFuryagent(t.(*furyagent.Runner), version)
+		fa, ok := t.(*furyagent.Runner)
+		if !ok {
+			panic(fmt.Sprintf("expected furyagent.Runner, got %T", t))
+		}
+
+		return NewFuryagent(fa, version)
 	}
+	
 	if name == tool.Kubectl {
-		return NewKubectl(t.(*kubectl.Runner), version)
+		k, ok := t.(*kubectl.Runner)
+		if !ok {
+			panic(fmt.Sprintf("expected kubectl.Runner, got %T", t))
+		}
+
+		return NewKubectl(k, version)
 	}
+	
 	if name == tool.Kustomize {
-		return NewKustomize(t.(*kustomize.Runner), version)
+		k, ok := t.(*kustomize.Runner)
+		if !ok {
+			panic(fmt.Sprintf("expected kustomize.Runner, got %T", t))
+		}
+
+		return NewKustomize(k, version)
 	}
+	
 	if name == tool.Openvpn {
-		return NewOpenvpn(t.(*openvpn.Runner), version)
+		o, ok := t.(*openvpn.Runner)
+		if !ok {
+			panic(fmt.Sprintf("expected openvpn.Runner, got %T", t))
+		}
+
+		return NewOpenvpn(o, version)
 	}
+	
 	if name == tool.Terraform {
-		return NewTerraform(t.(*terraform.Runner), version)
+		tf, ok := t.(*terraform.Runner)
+		if !ok {
+			panic(fmt.Sprintf("expected terraform.Runner, got %T", t))
+		}
+
+		return NewTerraform(tf, version)
 	}
+	
 	return nil
 }
 

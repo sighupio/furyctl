@@ -14,9 +14,10 @@ import (
 	tfjson "github.com/hashicorp/terraform-json"
 
 	execx "github.com/sighupio/furyctl/internal/x/exec"
+	iox "github.com/sighupio/furyctl/internal/x/io"
 )
 
-type OutputJson struct {
+type OutputJSON struct {
 	Outputs map[string]*tfjson.StateOutput `json:"outputs"`
 }
 
@@ -58,11 +59,14 @@ func (r *Runner) Plan(timestamp int64) error {
 		return err
 	}
 
-	return os.WriteFile(path.Join(r.paths.Plan, fmt.Sprintf("plan-%d.log", timestamp)), cmd.Log.Out.Bytes(), 0o600)
+	return os.WriteFile(path.Join(r.paths.Plan,
+		fmt.Sprintf("plan-%d.log", timestamp)),
+		cmd.Log.Out.Bytes(),
+		iox.FullRWPermAccess)
 }
 
-func (r *Runner) Apply(timestamp int64) (OutputJson, error) {
-	var oj OutputJson
+func (r *Runner) Apply(timestamp int64) (OutputJSON, error) {
+	var oj OutputJSON
 
 	cmd := execx.NewCmd(r.paths.Terraform, execx.CmdOptions{
 		Args:     []string{"apply", "-no-color", "-json", "plan/terraform.plan"},
@@ -73,7 +77,10 @@ func (r *Runner) Apply(timestamp int64) (OutputJson, error) {
 		return oj, err
 	}
 
-	err := os.WriteFile(path.Join(r.paths.Logs, fmt.Sprintf("%d.log", timestamp)), cmd.Log.Out.Bytes(), 0o600)
+	err := os.WriteFile(path.Join(r.paths.Logs,
+		fmt.Sprintf("%d.log", timestamp)),
+		cmd.Log.Out.Bytes(),
+		iox.FullRWPermAccess)
 	if err != nil {
 		return oj, err
 	}
@@ -98,7 +105,7 @@ func (r *Runner) Apply(timestamp int64) (OutputJson, error) {
 		return oj, err
 	}
 
-	return oj, os.WriteFile(path.Join(r.paths.Outputs, "output.json"), []byte(outputsString), 0o600)
+	return oj, os.WriteFile(path.Join(r.paths.Outputs, "output.json"), []byte(outputsString), iox.FullRWPermAccess)
 }
 
 func (r *Runner) Version() (string, error) {

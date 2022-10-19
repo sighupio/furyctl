@@ -10,18 +10,6 @@ import (
 	"text/template/parse"
 )
 
-// MapParseNodeToAlias is a map of parse.Node to its alias.
-var MapParseNodeToAlias = map[parse.NodeType]interface{}{
-	parse.NodeList:     &ListNode{},
-	parse.NodeRange:    &RangeNode{},
-	parse.NodePipe:     &PipeNode{},
-	parse.NodeTemplate: &TemplateNode{},
-	parse.NodeIf:       &IfNode{},
-	parse.NodeAction:   &ActionNode{},
-	parse.NodeField:    &FieldNode{},
-	parse.NodeVariable: &VariableNode{},
-}
-
 type Node struct {
 	Fields []string
 }
@@ -48,6 +36,18 @@ func (f *Node) FromNodeList(nodes []parse.Node) []string {
 }
 
 func mapToAliasInterface(n parse.Node) interface{} {
+	// MapParseNodeToAlias is a map of parse.Node to its alias.
+	MapParseNodeToAlias := map[parse.NodeType]interface{}{
+		parse.NodeList:     &ListNode{},
+		parse.NodeRange:    &RangeNode{},
+		parse.NodePipe:     &PipeNode{},
+		parse.NodeTemplate: &TemplateNode{},
+		parse.NodeIf:       &IfNode{},
+		parse.NodeAction:   &ActionNode{},
+		parse.NodeField:    &FieldNode{},
+		parse.NodeVariable: &VariableNode{},
+	}
+
 	t := MapParseNodeToAlias[n.Type()]
 
 	if t == nil {
@@ -141,9 +141,11 @@ func (v *VariableNode) Set(n *Node) {
 
 func stringsToPath(s []string) string {
 	var sb strings.Builder
+
 	for _, s := range s {
 		sb.WriteByte('.')
 		sb.WriteString(s)
 	}
+	
 	return sb.String()
 }

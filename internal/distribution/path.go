@@ -12,10 +12,12 @@ import (
 	"github.com/sighupio/fury-distribution/pkg/config"
 )
 
+const ValidLength = 2
+
 func GetSchemaPath(basePath string, conf config.Furyctl) (string, error) {
 	avp := strings.Split(conf.APIVersion, "/")
 
-	if len(avp) < 2 {
+	if len(avp) < ValidLength {
 		return "", fmt.Errorf("invalid apiVersion: %s", conf.APIVersion)
 	}
 

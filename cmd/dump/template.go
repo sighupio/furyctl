@@ -17,6 +17,15 @@ import (
 	yamlx "github.com/sighupio/furyctl/internal/x/yaml"
 )
 
+var (
+	ErrSourceDirDoesNotExist = fmt.Errorf("source directory does not exist")
+
+	ErrDebugFlagNotSet          = fmt.Errorf("debug flag not set")
+	ErrConfigFlagNotSet         = fmt.Errorf("config flag not set")
+	ErrDistroLocationFlagNotSet = fmt.Errorf("distro-location flag not set")
+	ErrBinPathFlagNotSet        = fmt.Errorf("bin-path flag not set")
+)
+
 type templateConfig struct {
 	DryRun      bool
 	NoOverwrite bool
@@ -32,7 +41,6 @@ The generated folder will be created starting from a provided template and the p
 		SilenceUsage:  true,
 		SilenceErrors: true,
 		RunE: func(_ *cobra.Command, _ []string) error {
-			// TODO(rm-2470): To be reworked in redmine task - Define template command flags.
 			source := "source"
 			target := "target"
 			suffix := ".tpl"

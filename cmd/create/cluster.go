@@ -5,6 +5,7 @@
 package create
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -21,21 +22,54 @@ import (
 	netx "github.com/sighupio/furyctl/internal/x/net"
 )
 
+var (
+	ErrDebugFlagNotSet          = errors.New("debug flag not set")
+	ErrFuryctlFlagNotSet        = errors.New("furyctl flag not set")
+	ErrDistroFlagNotSet         = errors.New("distro flag not set")
+	ErrPhaseFlagNotSet          = errors.New("phase flag not set")
+	ErrVpnAutoConnectFlagNotSet = errors.New("vpn-auto-connect flag not set")
+	ErrDryRunFlagNotSet         = errors.New("dry-run flag not set")
+	ErrSkipDownloadFlagNotSet   = errors.New("skip-download flag not set")
+
+	ErrDownloadDependenciesFailed = errors.New("download dependencies failed")
+)
+
 func NewClusterCmd(version string) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "cluster",
 		Short: "Creates a battle-tested Kubernetes cluster",
 		RunE: func(cmd *cobra.Command, _ []string) error {
-			// Get flags
-			debug := cobrax.Flag[bool](cmd, "debug").(bool)
-			furyctlPath := cobrax.Flag[string](cmd, "config").(string)
-			distroLocation := cobrax.Flag[string](cmd, "distro-location").(string)
-			phase := cobrax.Flag[string](cmd, "phase").(string)
-			vpnAutoConnect := cobrax.Flag[bool](cmd, "vpn-auto-connect").(bool)
-			dryRun := cobrax.Flag[bool](cmd, "dry-run").(bool)
-			skipDownload := cobrax.Flag[bool](cmd, "skip-download").(bool)
+			// Get flags.
+			debug, ok := cobrax.Flag[bool](cmd, "debug").(bool)
+			if !ok {
+				return ErrDebugFlagNotSet
+			}
+			furyctlPath, ok := cobrax.Flag[string](cmd, "config").(string)
+			if !ok {
+				return ErrFuryctlFlagNotSet
+			}
+			distroLocation, ok := cobrax.Flag[string](cmd, "distro-location").(string)
+			if !ok {
+				return ErrDistroFlagNotSet
+			}
+			phase, ok := cobrax.Flag[string](cmd, "phase").(string)
+			if !ok {
+				return ErrPhaseFlagNotSet
+			}
+			vpnAutoConnect, ok := cobrax.Flag[bool](cmd, "vpn-auto-connect").(bool)
+			if !ok {
+				return ErrVpnAutoConnectFlagNotSet
+			}
+			dryRun, ok := cobrax.Flag[bool](cmd, "dry-run").(bool)
+			if !ok {
+				return ErrDryRunFlagNotSet
+			}
+			skipDownload, ok := cobrax.Flag[bool](cmd, "skip-download").(bool)
+			if !ok {
+				return ErrSkipDownloadFlagNotSet
+			}
 
-			// Init paths
+			// Init paths.
 			basePath, err := os.Getwd()
 			if err != nil {
 				return err
@@ -43,40 +77,40 @@ func NewClusterCmd(version string) *cobra.Command {
 
 			binPath := filepath.Join(basePath, "vendor", "bin")
 
-			// Init collaborators
+			// Init collaborators.
 			client := netx.NewGoGetterClient()
 			executor := execx.NewStdExecutor()
 			distrodl := distribution.NewDownloader(client, debug)
 			depsdl := dependencies.NewDownloader(client, basePath)
 			depsvl := dependencies.NewValidator(executor, binPath)
 
-			// Init packages
+			// Init packages.
 			execx.Debug = debug
 
-			// Download the distribution
+			// Download the distribution.
 			res, err := distrodl.Download(version, distroLocation, furyctlPath)
 			if err != nil {
 				return err
 			}
 
-			// Validate the furyctl.yaml file
+			// Validate the furyctl.yaml file.
 			if err := config.Validate(furyctlPath, res.RepoPath); err != nil {
 				return err
 			}
 
-			// Download the dependencies
+			// Download the dependencies.
 			if !skipDownload {
 				if errs, _ := depsdl.DownloadAll(res.DistroManifest); len(errs) > 0 {
-					return fmt.Errorf("errors downloading dependencies: %v", errs)
+					return fmt.Errorf("%w: %v", ErrDownloadDependenciesFailed, errs)
 				}
 			}
 
-			// Validate the dependencies
+			// Validate the dependencies.
 			if err := depsvl.Validate(res); err != nil {
 				return err
 			}
 
-			// Create the cluster
+			// Create the cluster.
 			clusterCreator, err := cluster.NewCreator(
 				res.MinimalConf,
 				res.DistroManifest,

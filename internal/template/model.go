@@ -6,7 +6,6 @@ package template
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -52,7 +51,7 @@ func NewTemplateModel(
 	}
 
 	if len(configPath) > 0 {
-		readFile, err := ioutil.ReadFile(configPath)
+		readFile, err := os.ReadFile(configPath)
 		if err != nil {
 			return nil, err
 		}
@@ -94,6 +93,7 @@ func (tm *Model) isExcluded(source string) bool {
 			return true
 		}
 	}
+
 	return false
 }
 
@@ -154,7 +154,7 @@ func (tm *Model) applyTemplates(
 	)
 
 	realTarget, fErr := gen.ProcessFilename(tm)
-	if fErr != nil { // maybe we should fail back to real name instead?
+	if fErr != nil { // Maybe we should fail back to real name instead?
 		return fErr
 	}
 
@@ -189,7 +189,7 @@ func (tm *Model) applyTemplates(
 
 		content, cErr := gen.ProcessFile(tmpl)
 		if cErr != nil {
-			return fmt.Errorf("%+v filePath: %s", cErr, relSource)
+			return fmt.Errorf("%w filePath: %s", cErr, relSource)
 		}
 
 		return iox.CopyBufferToFile(content, realTarget)

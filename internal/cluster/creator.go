@@ -21,8 +21,6 @@ const (
 	CreatorPropertyVpnAutoConnect = "vpnautoconnect"
 )
 
-var factories = make(map[string]map[string]CreatorFactory)
-
 type CreatorFactory func(configPath string, props []CreatorProperty) (Creator, error)
 
 type CreatorProperty struct {
@@ -44,10 +42,12 @@ func NewCreator(
 	phase string,
 	vpnAutoConnect bool,
 ) (Creator, error) {
-	lcApiVersion := strings.ToLower(minimalConf.APIVersion)
+	factories := make(map[string]map[string]CreatorFactory)
+
+	lcAPIVersion := strings.ToLower(minimalConf.APIVersion)
 	lcResourceType := strings.ToLower(minimalConf.Kind)
 
-	if factoryFn, ok := factories[lcApiVersion][lcResourceType]; ok {
+	if factoryFn, ok := factories[lcAPIVersion][lcResourceType]; ok {
 		return factoryFn(configPath, []CreatorProperty{
 			{
 				Name:  CreatorPropertyKfdManifest,
@@ -68,18 +68,20 @@ func NewCreator(
 		})
 	}
 
-	return nil, fmt.Errorf("resource type '%s' with api version '%s' is not supported", lcResourceType, lcApiVersion)
+	return nil, fmt.Errorf("resource type '%s' with api version '%s' is not supported", lcResourceType, lcAPIVersion)
 }
 
 func RegisterCreatorFactory(apiVersion, kind string, factory CreatorFactory) {
-	lcApiVersion := strings.ToLower(apiVersion)
+	factories := make(map[string]map[string]CreatorFactory)
+
+	lcAPIVersion := strings.ToLower(apiVersion)
 	lcKind := strings.ToLower(kind)
 
-	if _, ok := factories[lcApiVersion]; !ok {
-		factories[lcApiVersion] = make(map[string]CreatorFactory)
+	if _, ok := factories[lcAPIVersion]; !ok {
+		factories[lcAPIVersion] = make(map[string]CreatorFactory)
 	}
 
-	factories[lcApiVersion][lcKind] = factory
+	factories[lcAPIVersion][lcKind] = factory
 }
 
 func NewCreatorFactory[T Creator, S any](cc T) CreatorFactory {

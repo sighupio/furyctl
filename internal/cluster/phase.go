@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 
 	"github.com/sighupio/furyctl/internal/template"
+	iox "github.com/sighupio/furyctl/internal/x/io"
 	yamlx "github.com/sighupio/furyctl/internal/x/yaml"
 )
 
@@ -71,23 +72,23 @@ type CreationPhase struct {
 }
 
 func (cp *CreationPhase) CreateFolder() error {
-	return os.Mkdir(cp.Path, 0o755)
+	return os.Mkdir(cp.Path, iox.FullPermAccess)
 }
 
 func (cp *CreationPhase) CreateFolderStructure() error {
-	if err := os.Mkdir(cp.PlanPath, 0o755); err != nil {
+	if err := os.Mkdir(cp.PlanPath, iox.FullPermAccess); err != nil {
 		return err
 	}
 
-	if err := os.Mkdir(cp.LogsPath, 0o755); err != nil {
+	if err := os.Mkdir(cp.LogsPath, iox.FullPermAccess); err != nil {
 		return err
 	}
 
-	if err := os.Mkdir(cp.SecretsPath, 0o755); err != nil {
+	if err := os.Mkdir(cp.SecretsPath, iox.FullPermAccess); err != nil {
 		return err
 	}
 
-	return os.Mkdir(cp.OutputsPath, 0o755)
+	return os.Mkdir(cp.OutputsPath, iox.FullPermAccess)
 }
 
 func (cp *CreationPhase) CopyFromTemplate(config template.Config, prefix, sourcePath, targetPath string) error {
@@ -103,7 +104,7 @@ func (cp *CreationPhase) CopyFromTemplate(config template.Config, prefix, source
 		return err
 	}
 
-	if err = os.WriteFile(tfConfigPath, tfConfig, 0o644); err != nil {
+	if err = os.WriteFile(tfConfigPath, tfConfig, iox.RWPermAccess); err != nil {
 		return err
 	}
 

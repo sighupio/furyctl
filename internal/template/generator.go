@@ -51,7 +51,6 @@ func (g *generator) ProcessTemplate() (*template.Template, error) {
 	helpersPath := filepath.Join(g.rootSrc, "_helpers.tpl")
 
 	_, err := os.Stat(helpersPath)
-
 	if err == nil {
 		return template.New(filepath.Base(g.source)).Funcs(g.funcMap.FuncMap).ParseFiles(g.source, helpersPath)
 	}
@@ -102,7 +101,7 @@ func (g *generator) ProcessFilename(
 ) (string, error) {
 	var realTarget string
 
-	if tm.Config.Templates.ProcessFilename { // try to process filename as template
+	if tm.Config.Templates.ProcessFilename { // Try to process filename as template.
 		tpl := template.Must(
 			template.New("currentTarget").Funcs(g.funcMap.FuncMap).Parse(g.target))
 
@@ -111,6 +110,7 @@ func (g *generator) ProcessFilename(
 		if err := tpl.Execute(destination, g.context); err != nil {
 			return "", err
 		}
+		
 		realTarget = destination.String()
 	} else {
 		realTarget = g.target
@@ -118,7 +118,7 @@ func (g *generator) ProcessFilename(
 
 	suf := tm.Suffix
 	if strings.HasSuffix(realTarget, suf) {
-		realTarget = realTarget[:len(realTarget)-len(tm.Suffix)] // cut off extension (.tmpl) from the end
+		realTarget = realTarget[:len(realTarget)-len(tm.Suffix)] // Cut off extension (.tmpl) from the end.
 	}
 
 	return realTarget, nil

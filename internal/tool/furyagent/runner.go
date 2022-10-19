@@ -10,6 +10,7 @@ import (
 	"path"
 
 	execx "github.com/sighupio/furyctl/internal/x/exec"
+	iox "github.com/sighupio/furyctl/internal/x/io"
 )
 
 type Paths struct {
@@ -40,7 +41,9 @@ func (r *Runner) ConfigOpenvpnClient(name string) error {
 		return err
 	}
 
-	return os.WriteFile(path.Join(r.paths.WorkDir, fmt.Sprintf("%s.ovpn", name)), cmd.Log.Out.Bytes(), 0o600)
+	return os.WriteFile(path.Join(r.paths.WorkDir,
+		fmt.Sprintf("%s.ovpn", name)),
+		cmd.Log.Out.Bytes(), iox.FullRWPermAccess)
 }
 
 func (r *Runner) Version() (string, error) {

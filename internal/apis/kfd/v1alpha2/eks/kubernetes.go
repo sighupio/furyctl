@@ -142,7 +142,7 @@ func (k *Kubernetes) copyFromTemplate() error {
 	)
 }
 
-func (k *Kubernetes) createKubeconfig(o terraform.OutputJson) error {
+func (k *Kubernetes) createKubeconfig(o terraform.OutputJSON) error {
 	if o.Outputs["kubeconfig"] == nil {
 		return fmt.Errorf("can't get kubeconfig from terraform apply logs")
 	}
@@ -152,7 +152,7 @@ func (k *Kubernetes) createKubeconfig(o terraform.OutputJson) error {
 		return fmt.Errorf("can't get kubeconfig from terraform apply logs")
 	}
 
-	return os.WriteFile(path.Join(k.SecretsPath, "kubeconfig"), []byte(kubeString), 0o600)
+	return os.WriteFile(path.Join(k.SecretsPath, "kubeconfig"), []byte(kubeString), iox.FullRWPermAccess)
 }
 
 func (k *Kubernetes) setKubeconfigEnv() error {
@@ -169,13 +169,13 @@ func (k *Kubernetes) createTfVars() error {
 	var buffer bytes.Buffer
 
 	subnetIdsSource := k.furyctlConf.Spec.Kubernetes.SubnetIds
-	vpcIdSource := k.furyctlConf.Spec.Kubernetes.VpcId
+	vpcIDSource := k.furyctlConf.Spec.Kubernetes.VpcId
 	allowedCidrsSource := k.furyctlConf.Spec.Kubernetes.ApiServerEndpointAccess.AllowedCidrs
 
-	if infraOutJson, err := os.ReadFile(path.Join(k.infraOutputsPath, "output.json")); err == nil {
-		var infraOut terraform.OutputJson
+	if infraOutJSON, err := os.ReadFile(path.Join(k.infraOutputsPath, "output.json")); err == nil {
+		var infraOut terraform.OutputJSON
 
-		if err := json.Unmarshal(infraOutJson, &infraOut); err == nil {
+		if err := json.Unmarshal(infraOutJSON, &infraOut); err == nil {
 			if infraOut.Outputs["private_subnets"] == nil {
 				return fmt.Errorf("private_subnets not found in infra output")
 			}
@@ -204,6 +204,7 @@ func (k *Kubernetes) createTfVars() error {
 			}
 
 			subs := make([]schema.TypesAwsSubnetId, len(s))
+
 			for i, sub := range s {
 				ss, ok := sub.(string)
 				if !ok {
@@ -214,19 +215,19 @@ func (k *Kubernetes) createTfVars() error {
 			}
 
 			subnetIdsSource = subs
-			vpcIdSource = schema.TypesAwsVpcId(v)
+			vpcIDSource = schema.TypesAwsVpcId(v)
 			allowedCidrsSource = []schema.TypesCidr{schema.TypesCidr(c)}
 		}
 	}
 
 	buffer.WriteString(fmt.Sprintf("cluster_name = \"%v\"\n", k.furyctlConf.Metadata.Name))
 	buffer.WriteString(fmt.Sprintf("cluster_version = \"%v\"\n", k.kfdManifest.Kubernetes.Eks.Version))
-	buffer.WriteString(fmt.Sprintf("network = \"%v\"\n", vpcIdSource))
+	buffer.WriteString(fmt.Sprintf("network = \"%v\"\n", vpcIDSource))
 
 	subnetIds := make([]string, len(subnetIdsSource))
 
-	for i, subnetId := range subnetIdsSource {
-		subnetIds[i] = fmt.Sprintf("\"%v\"", subnetId)
+	for i, subnetID := range subnetIdsSource {
+		subnetIds[i] = fmt.Sprintf("\"%v\"", subnetID)
 	}
 
 	buffer.WriteString(fmt.Sprintf("subnetworks = [%v]\n", strings.Join(subnetIds, ",")))
@@ -239,12 +240,15 @@ func (k *Kubernetes) createTfVars() error {
 
 	buffer.WriteString(fmt.Sprintf("dmz_cidr_range = [%v]\n", strings.Join(dmzCidrRange, ",")))
 	buffer.WriteString(fmt.Sprintf("ssh_public_key = \"%v\"\n", k.furyctlConf.Spec.Kubernetes.NodeAllowedSshPublicKey))
+
 	if k.furyctlConf.Spec.Tags != nil && len(k.furyctlConf.Spec.Tags) > 0 {
 		var tags []byte
+
 		tags, err := json.Marshal(k.furyctlConf.Spec.Tags)
 		if err != nil {
 			return err
 		}
+
 		buffer.WriteString(fmt.Sprintf("tags = %v\n", string(tags)))
 	}
 
@@ -259,6 +263,7 @@ func (k *Kubernetes) createTfVars() error {
 
 	if len(k.furyctlConf.Spec.Kubernetes.AwsAuth.Users) > 0 {
 		buffer.WriteString("eks_map_users = [\n")
+
 		for _, account := range k.furyctlConf.Spec.Kubernetes.AwsAuth.Users {
 			buffer.WriteString(
 				fmt.Sprintf(
@@ -271,12 +276,13 @@ func (k *Kubernetes) createTfVars() error {
 				),
 			)
 		}
-		buffer.WriteString("]\n")
 
+		buffer.WriteString("]\n")
 	}
 
 	if len(k.furyctlConf.Spec.Kubernetes.AwsAuth.Roles) > 0 {
 		buffer.WriteString("eks_map_roles = [\n")
+
 		for _, account := range k.furyctlConf.Spec.Kubernetes.AwsAuth.Roles {
 			buffer.WriteString(
 				fmt.Sprintf(
@@ -289,11 +295,13 @@ func (k *Kubernetes) createTfVars() error {
 				),
 			)
 		}
+
 		buffer.WriteString("]\n")
 	}
 
 	if len(k.furyctlConf.Spec.Kubernetes.NodePools) > 0 {
 		buffer.WriteString("node_pools = [\n")
+
 		for _, np := range k.furyctlConf.Spec.Kubernetes.NodePools {
 			buffer.WriteString("{\n")
 			buffer.WriteString(fmt.Sprintf("name = \"%v\"\n", np.Name))
@@ -321,14 +329,18 @@ func (k *Kubernetes) createTfVars() error {
 
 			if len(np.AdditionalFirewallRules) > 0 {
 				buffer.WriteString("additional_firewall_rules = [\n")
+
 				for _, fwRule := range np.AdditionalFirewallRules {
 					fwRuleTags := "{}"
+
 					if len(fwRule.Tags) > 0 {
 						var tags []byte
+
 						tags, err := json.Marshal(fwRule.Tags)
 						if err != nil {
 							return err
 						}
+
 						fwRuleTags = string(tags)
 					}
 
@@ -351,6 +363,7 @@ func (k *Kubernetes) createTfVars() error {
 						),
 					)
 				}
+
 				buffer.WriteString("]\n")
 			} else {
 				buffer.WriteString("additional_firewall_rules = []\n")
@@ -359,20 +372,23 @@ func (k *Kubernetes) createTfVars() error {
 			if len(np.SubnetIds) > 0 {
 				npSubNetIds := make([]string, len(np.SubnetIds))
 
-				for i, subnetId := range np.SubnetIds {
-					npSubNetIds[i] = fmt.Sprintf("\"%v\"", subnetId)
+				for i, subnetID := range np.SubnetIds {
+					npSubNetIds[i] = fmt.Sprintf("\"%v\"", subnetID)
 				}
 
 				buffer.WriteString(fmt.Sprintf("subnetworks = [%v]\n", strings.Join(npSubNetIds, ",")))
 			} else {
 				buffer.WriteString("subnetworks = null\n")
 			}
+
 			if len(np.Labels) > 0 {
 				var labels []byte
+
 				labels, err := json.Marshal(np.Labels)
 				if err != nil {
 					return err
 				}
+
 				buffer.WriteString(fmt.Sprintf("labels = %v\n", string(labels)))
 			} else {
 				buffer.WriteString("labels = {}\n")
@@ -386,10 +402,12 @@ func (k *Kubernetes) createTfVars() error {
 
 			if len(np.Tags) > 0 {
 				var tags []byte
+
 				tags, err := json.Marshal(np.Tags)
 				if err != nil {
 					return err
 				}
+
 				buffer.WriteString(fmt.Sprintf("tags = %v\n", string(tags)))
 			} else {
 				buffer.WriteString("tags = {}\n")
@@ -397,10 +415,11 @@ func (k *Kubernetes) createTfVars() error {
 
 			buffer.WriteString("},\n")
 		}
+
 		buffer.WriteString("]\n")
 	}
 
 	targetTfVars := path.Join(k.Path, "terraform", "main.auto.tfvars")
 
-	return os.WriteFile(targetTfVars, buffer.Bytes(), 0o600)
+	return os.WriteFile(targetTfVars, buffer.Bytes(), iox.FullRWPermAccess)
 }

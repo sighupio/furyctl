@@ -24,43 +24,11 @@ linters:
   # https://golangci-lint.run/usage/linters/#disabled-by-default-linters--e--enable
   disable:
     # todo
-    - cyclop
-    - errcheck
-    - errorlint
-    - forcetypeassert
-    - funlen
-    - gochecknoglobals
-    - gochecknoinits
-    - gocognit
-    - goconst
-    - gocritic
-    - godot
-    - godox
     - goerr113
-    - gomnd
-    - gosec
-    - gosimple
-    - govet
-    - ineffassign
-    - interfacebloat
     - ireturn
-    - lll
-    - misspell
-    - nestif
-    - nilerr
-    - nlreturn
-    - nonamedreturns
-    - paralleltest
     - revive
-    - staticcheck
-    - stylecheck
-    - tagliatelle
-    - tenv
-    - testpackage
     - varnamelen
-    - whitespace
     - wrapcheck
-    - wsl
     # unsupported
     - rowserrcheck
     - sqlclosecheck
@@ -101,6 +69,13 @@ linters-settings:
       - prefix(github.com/sighupio) # Custom section: groups all imports with the specified Prefix.
     skip-generated: true
     custom-order: true
+  cyclop:
+    max-complexity: 40
+  funlen:
+    lines: 280
+    statements: 113
+  gocognit:
+    min-complexity: 110
   godot:
     scope: all
     exclude:
@@ -113,8 +88,12 @@ linters-settings:
     extra-rules: true
   goimports:
     local-prefixes: github.com/sighupio
+  gosec:
+    excludes:
+      - G204
+      - G101
   govet:
-    check-shadowing: true
+    check-shadowing: false
   grouper:
     const-require-single-const: true
     const-require-grouping: false
@@ -122,6 +101,8 @@ linters-settings:
     import-require-grouping: false
     var-require-single-var: true
     var-require-grouping: false
+  nestif:
+    min-complexity: 21
   nolintlint:
     require-explanation: true
     require-specific: true
@@ -364,10 +345,10 @@ linters-settings:
         severity: warning
         disabled: false
         arguments:
-          - - 'core.WriteError[1].Message'
-            - '/^([^A-Z]|$)/'
+          - - "core.WriteError[1].Message"
+            - "/^([^A-Z]|$)/"
             - must not start with a capital letter
-          - - 'fmt.Errorf[0]'
+          - - "fmt.Errorf[0]"
             - '/(^|[^\.!?])$/'
             - must not end in punctuation
           - - panic
@@ -448,7 +429,7 @@ linters-settings:
   varnamelen:
     check-receiver: true
     check-return: true
-    check-type-param: true
+    check-type-param: false
     ignore-type-assert-ok: true
     ignore-map-index-ok: true
     ignore-chan-recv-ok: true
@@ -498,7 +479,9 @@ issues:
     - path: main\.go
       linters:
         - gochecknoglobals
-
+    - path: cmd
+      linters:
+        - lll
   # Independently of option `exclude` we use default exclude patterns,
   # it can be disabled by this option.
   # To list all excluded by default patterns execute `golangci-lint run --help`.
@@ -566,5 +549,5 @@ severity:
   # Default: []
   rules:
     - linters:
-      - dupl
+        - dupl
       severity: info

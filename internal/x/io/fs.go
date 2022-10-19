@@ -16,6 +16,12 @@ import (
 	"strings"
 )
 
+const (
+	FullPermAccess   = 0o755
+	FullRWPermAccess = 0o600
+	RWPermAccess     = 0o644
+)
+
 var ErrEmptyFile = errors.New("trimming buffer resulted in an empty file")
 
 func CheckDirIsEmpty(target string) error {
@@ -37,7 +43,7 @@ func CheckDirIsEmpty(target string) error {
 }
 
 func AppendToFile(s, target string) error {
-	destination, err := os.OpenFile(target, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644)
+	destination, err := os.OpenFile(target, os.O_APPEND|os.O_CREATE|os.O_WRONLY, RWPermAccess)
 	if err != nil {
 		return err
 	}
@@ -108,7 +114,7 @@ func CopyRecursive(src fs.FS, dest string) error {
 				return err
 			}
 
-			if err := os.Mkdir(path.Join(dest, file.Name()), 0o755); err != nil && !os.IsExist(err) {
+			if err := os.Mkdir(path.Join(dest, file.Name()), FullPermAccess); err != nil && !os.IsExist(err) {
 				return err
 			}
 
@@ -128,7 +134,7 @@ func CopyRecursive(src fs.FS, dest string) error {
 			return err
 		}
 
-		if err := os.WriteFile(path.Join(dest, file.Name()), fileContent, 0o600); err != nil {
+		if err := os.WriteFile(path.Join(dest, file.Name()), fileContent, RWPermAccess); err != nil {
 			return err
 		}
 	}
@@ -138,7 +144,7 @@ func CopyRecursive(src fs.FS, dest string) error {
 
 // EnsureDir creates the directories to host the file.
 // Example: hello/world.md will create the hello dir if it does not exists.
-func EnsureDir(fileName string) (err error) {
+func EnsureDir(fileName string) error {
 	dirName := filepath.Dir(fileName)
 	if _, serr := os.Stat(dirName); serr != nil {
 		if !os.IsNotExist(serr) {
@@ -149,5 +155,6 @@ func EnsureDir(fileName string) (err error) {
 			return err
 		}
 	}
+
 	return nil
 }

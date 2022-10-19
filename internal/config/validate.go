@@ -17,7 +17,7 @@ import (
 	yamlx "github.com/sighupio/furyctl/internal/x/yaml"
 )
 
-// Validate the furyctl.yaml file
+// Validate the furyctl.yaml file.
 func Validate(path, repoPath string) error {
 	defaultsPath := distribution.GetDefaultsPath(repoPath)
 
@@ -26,7 +26,7 @@ func Validate(path, repoPath string) error {
 		return err
 	}
 
-	defer osx.CleanupTempDir(filepath.Base(defaultedFuryctlConfPath))
+	defer checkError(osx.CleanupTempDir(filepath.Base(defaultedFuryctlConfPath)))
 
 	miniConf, err := loadFromFile(path)
 	if err != nil {
@@ -111,4 +111,10 @@ func mergeWithDefaults(furyctlConfPath, defaultsConfPath string) (string, error)
 	}
 
 	return confPath, nil
+}
+
+func checkError(err error) {
+	if err != nil {
+		panic(err)
+	}
 }

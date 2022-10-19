@@ -16,11 +16,10 @@ import (
 	"github.com/sighupio/fury-distribution/pkg/config"
 	"github.com/sighupio/furyctl/internal/semver"
 	netx "github.com/sighupio/furyctl/internal/x/net"
-	osx "github.com/sighupio/furyctl/internal/x/os"
 	yamlx "github.com/sighupio/furyctl/internal/x/yaml"
 )
 
-const DefaultBaseUrl = "https://git@github.com/sighupio/fury-distribution?ref=%s"
+const DefaultBaseURL = "https://git@github.com/sighupio/fury-distribution?ref=%s"
 
 var (
 	ErrCreatingTempDir     = errors.New("error creating temp dir")
@@ -79,13 +78,14 @@ func (d *Downloader) Download(
 	}
 
 	if distroLocation == "" {
-		distroLocation = fmt.Sprintf(DefaultBaseUrl, furyctlConfVersion)
+		distroLocation = fmt.Sprintf(DefaultBaseURL, furyctlConfVersion)
 	}
 
 	baseDst, err := os.MkdirTemp("", "furyctl-")
 	if err != nil {
 		return DownloadResult{}, fmt.Errorf("%w: %v", ErrCreatingTempDir, err)
 	}
+	
 	src := distroLocation
 	dst := filepath.Join(baseDst, "data")
 
@@ -95,11 +95,8 @@ func (d *Downloader) Download(
 		return DownloadResult{}, fmt.Errorf("%w '%s': %v", ErrDownloadingFolder, src, err)
 	}
 
-	if !d.debug {
-		defer osx.CleanupTempDir(filepath.Base(dst))
-	}
-
 	kfdPath := filepath.Join(dst, "kfd.yaml")
+
 	kfdManifest, err := yamlx.FromFileV3[config.KFD](kfdPath)
 	if err != nil {
 		return DownloadResult{}, err
