@@ -44,7 +44,7 @@ func NewCreator(
 	phase string,
 	vpnAutoConnect bool,
 ) (Creator, error) {
-	lcApiVersion := strings.ToLower(minimalConf.ApiVersion)
+	lcApiVersion := strings.ToLower(minimalConf.APIVersion)
 	lcResourceType := strings.ToLower(minimalConf.Kind)
 
 	if factoryFn, ok := factories[lcApiVersion][lcResourceType]; ok {
