@@ -24,7 +24,7 @@ require (
 	github.com/hashicorp/terraform-json v0.10.0
 	github.com/onsi/ginkgo/v2 v2.1.6
 	github.com/onsi/gomega v1.20.2
-	github.com/sighupio/fury-distribution v1.23.3-0.20221018153345-9ff1158f0a4d
+	github.com/sighupio/fury-distribution v1.23.3-0.20221020170841-02657139ace5
 	golang.org/x/exp v0.0.0-20220927162542-c76eaa363f9d
 	gopkg.in/yaml.v3 v3.0.1
 )

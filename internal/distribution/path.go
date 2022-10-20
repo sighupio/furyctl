@@ -13,10 +13,10 @@ import (
 )
 
 func GetSchemaPath(basePath string, conf config.Furyctl) (string, error) {
-	avp := strings.Split(conf.ApiVersion, "/")
+	avp := strings.Split(conf.APIVersion, "/")
 
 	if len(avp) < 2 {
-		return "", fmt.Errorf("invalid apiVersion: %s", conf.ApiVersion)
+		return "", fmt.Errorf("invalid apiVersion: %s", conf.APIVersion)
 	}
 
 	ns := strings.Replace(avp[0], ".sighup.io", "", 1)
