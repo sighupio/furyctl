@@ -103,7 +103,7 @@ func (dd *Downloader) DownloadInstallers(installers config.KFDKubernetes) error 
 		name := strings.ToLower(insts.Type().Field(i).Name)
 		version := insts.Field(i).Interface().(config.KFDProvider).Installer
 
-		src := fmt.Sprintf("git::https://github.com/sighupio/fury-%s-installer?ref=%s", name, version)
+		src := fmt.Sprintf("git::git@github.com:sighupio/fury-%s-installer?ref=%s", name, version)
 
 		if err := dd.client.Download(src, filepath.Join(dd.basePath, "vendor", "installers", name)); err != nil {
 			return err

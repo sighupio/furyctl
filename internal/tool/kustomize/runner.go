@@ -33,14 +33,8 @@ func (r *Runner) Version() (string, error) {
 	}))
 }
 
-func (r *Runner) Build(path string) (string, error) {
-	args := []string{"build", "--load_restrictor", "none"}
-
-	if path != "" {
-		args = append(args, path)
-	} else {
-		args = append(args, ".")
-	}
+func (r *Runner) Build() (string, error) {
+	args := []string{"build", "--load_restrictor", "none", "."}
 
 	return execx.CombinedOutput(execx.NewCmd(r.paths.Kustomize, execx.CmdOptions{
 		Args:     args,

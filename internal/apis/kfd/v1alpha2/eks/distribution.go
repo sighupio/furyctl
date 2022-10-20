@@ -136,26 +136,9 @@ func (d *Distribution) Exec(dryRun bool) error {
 		return err
 	}
 
-	for m := range mapx.FromStruct(d.kfdManifest.Modules, "yaml", true) {
-		modName, ok := m.(string)
-		if !ok {
-			return fmt.Errorf("module name: \"%v\" is not a string", m)
-		}
-
-		logrus.Debugf("Module: %s", modName)
-
-		_, err := os.Stat(filepath.Join(d.Path, "manifests", modName, "kustomization.yaml"))
-		if err != nil {
-			logrus.Warnf("module %s does not have a kustomization.yaml file", modName)
-			continue
-		}
-
-		kOut, err := d.kRunner.Build(modName)
-		if err != nil {
-			return err
-		}
-
-		os.WriteFile(path.Join(d.Path, fmt.Sprintf("kustomize-%s.yaml", modName)), []byte(kOut), 0644)
+	_, err = d.kRunner.Build()
+	if err != nil {
+		return err
 	}
 
 	return nil
