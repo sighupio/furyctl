@@ -32,3 +32,19 @@ func (r *Runner) Version() (string, error) {
 		WorkDir:  r.paths.WorkDir,
 	}))
 }
+
+func (r *Runner) Build(path string) (string, error) {
+	args := []string{"build", "--load_restrictor", "none"}
+
+	if path != "" {
+		args = append(args, path)
+	} else {
+		args = append(args, ".")
+	}
+
+	return execx.CombinedOutput(execx.NewCmd(r.paths.Kustomize, execx.CmdOptions{
+		Args:     args,
+		Executor: r.executor,
+		WorkDir:  r.paths.WorkDir,
+	}))
+}
