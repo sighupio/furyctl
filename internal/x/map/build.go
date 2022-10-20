@@ -43,7 +43,10 @@ func FromStruct(s any, tagType string, skipEmpty bool) map[any]any {
 		}
 
 		if !val.IsValid() {
-			out[fieldName] = nil
+			if !skipEmpty {
+				out[fieldName] = nil
+			}
+
 			continue
 		}
 

@@ -64,7 +64,7 @@ func (v *ClusterCreator) Create(dryRun bool) error {
 		return err
 	}
 
-	distro, err := NewDistribution(v.configPath, v.furyctlConf, v.kfdManifest, v.distroPath)
+	distro, err := NewDistribution(v.configPath, v.furyctlConf, v.kfdManifest, v.distroPath, infra.OutputsPath)
 	if err != nil {
 		return err
 	}

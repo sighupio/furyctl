@@ -5,15 +5,15 @@
 package eks
 
 import (
+	"encoding/json"
 	"fmt"
+	"github.com/sighupio/furyctl/internal/tool/kustomize"
 	"github.com/sighupio/furyctl/internal/tool/terraform"
 	execx "github.com/sighupio/furyctl/internal/x/exec"
+	"github.com/sirupsen/logrus"
 	"os"
 	"path"
 	"path/filepath"
-	"time"
-
-	"github.com/sirupsen/logrus"
 
 	"github.com/sighupio/fury-distribution/pkg/config"
 	"github.com/sighupio/fury-distribution/pkg/schema"
@@ -26,11 +26,17 @@ import (
 
 type Distribution struct {
 	*cluster.CreationPhase
-	furyctlConfPath string
-	furyctlConf     schema.EksclusterKfdV1Alpha2
-	kfdManifest     config.KFD
-	distroPath      string
-	tfRunner        *terraform.Runner
+	furyctlConfPath  string
+	furyctlConf      schema.EksclusterKfdV1Alpha2
+	kfdManifest      config.KFD
+	infraOutputsPath string
+	distroPath       string
+	tfRunner         *terraform.Runner
+	kRunner          *kustomize.Runner
+}
+
+type injectType struct {
+	Data schema.SpecDistribution `json:"data"`
 }
 
 func NewDistribution(
@@ -38,6 +44,7 @@ func NewDistribution(
 	furyctlConf schema.EksclusterKfdV1Alpha2,
 	kfdManifest config.KFD,
 	distroPath string,
+	infraOutputsPath string,
 ) (*Distribution, error) {
 	phase, err := cluster.NewCreationPhase(".distribution")
 	if err != nil {
@@ -45,11 +52,12 @@ func NewDistribution(
 	}
 
 	return &Distribution{
-		CreationPhase:   phase,
-		furyctlConf:     furyctlConf,
-		kfdManifest:     kfdManifest,
-		distroPath:      distroPath,
-		furyctlConfPath: furyctlConfPath,
+		CreationPhase:    phase,
+		furyctlConf:      furyctlConf,
+		kfdManifest:      kfdManifest,
+		infraOutputsPath: infraOutputsPath,
+		distroPath:       distroPath,
+		furyctlConfPath:  furyctlConfPath,
 		tfRunner: terraform.NewRunner(
 			execx.NewStdExecutor(),
 			terraform.Paths{
@@ -60,17 +68,39 @@ func NewDistribution(
 				Terraform: phase.TerraformPath,
 			},
 		),
+		kRunner: kustomize.NewRunner(
+			execx.NewStdExecutor(),
+			kustomize.Paths{
+				Kustomize: phase.KustomizePath,
+				WorkDir:   path.Join(phase.Path, "manifests"),
+			},
+		),
 	}, nil
 }
 
 func (d *Distribution) Exec(dryRun bool) error {
-	timestamp := time.Now().Unix()
+	//timestamp := time.Now().Unix()
 
 	if err := d.CreateFolder(); err != nil {
 		return err
 	}
 
-	if err := d.copyTfFromTemplate(dryRun); err != nil {
+	furyctlMerger, err := d.createFuryctlMerger()
+	if err != nil {
+		return err
+	}
+
+	injectMerger, err := d.injectDataPreTf(furyctlMerger)
+	if err != nil {
+		return err
+	}
+
+	tfCfg, err := d.createConfig(furyctlMerger, injectMerger, []string{"source/manifests", ".gitignore"})
+	if err != nil {
+		return err
+	}
+
+	if err := d.copyFromTemplate(tfCfg, dryRun); err != nil {
 		return err
 	}
 
@@ -78,49 +108,129 @@ func (d *Distribution) Exec(dryRun bool) error {
 		return err
 	}
 
-	if err := d.tfRunner.Init(); err != nil {
+	//if err := d.tfRunner.Init(); err != nil {
+	//	return err
+	//}
+	//
+	//if err := d.tfRunner.Plan(timestamp); err != nil {
+	//	return err
+	//}
+	//
+	//if dryRun {
+	//	return nil
+	//}
+
+	//_, err = d.tfRunner.Apply(timestamp)
+	//if err != nil {
+	//	return err
+	//}
+
+	postTfMerger, err := d.injectDataPostTf(injectMerger)
+	if err != nil {
 		return err
 	}
 
-	if err := d.tfRunner.Plan(timestamp); err != nil {
+	mCfg, err := d.createConfig(furyctlMerger, postTfMerger, []string{"source/terraform", ".gitignore"})
+
+	if err := d.copyFromTemplate(mCfg, dryRun); err != nil {
 		return err
 	}
 
-	if dryRun {
-		return nil
+	for m := range mapx.FromStruct(d.kfdManifest.Modules, "yaml", true) {
+		modName, ok := m.(string)
+		if !ok {
+			return fmt.Errorf("module name: \"%v\" is not a string", m)
+		}
+
+		logrus.Debugf("Module: %s", modName)
+
+		_, err := os.Stat(filepath.Join(d.Path, "manifests", modName, "kustomization.yaml"))
+		if err != nil {
+			logrus.Warnf("module %s does not have a kustomization.yaml file", modName)
+			continue
+		}
+
+		kOut, err := d.kRunner.Build(modName)
+		if err != nil {
+			return err
+		}
+
+		os.WriteFile(path.Join(d.Path, fmt.Sprintf("kustomize-%s.yaml", modName)), []byte(kOut), 0644)
 	}
 
 	return nil
 }
 
-func (d *Distribution) copyTfFromTemplate(dryRun bool) error {
-	var cfg template.Config
-
+func (d *Distribution) createFuryctlMerger() (*merge.Merger, error) {
 	defaultsFilePath := path.Join(d.distroPath, "furyctl-defaults.yaml")
 
 	defaultsFile, err := yamlx.FromFileV2[map[any]any](defaultsFilePath)
 	if err != nil {
-		return fmt.Errorf("%s - %w", defaultsFilePath, err)
+		return &merge.Merger{}, fmt.Errorf("%s - %w", defaultsFilePath, err)
 	}
 
 	furyctlConf, err := yamlx.FromFileV2[map[any]any](d.furyctlConfPath)
 	if err != nil {
-		return fmt.Errorf("%s - %w", d.furyctlConfPath, err)
+		return &merge.Merger{}, fmt.Errorf("%s - %w", d.furyctlConfPath, err)
 	}
 
 	furyctlConfMergeModel := merge.NewDefaultModel(furyctlConf, ".spec.distribution")
 
-	type injectType struct {
-		Data schema.SpecDistribution `json:"data"`
+	merger := merge.NewMerger(
+		merge.NewDefaultModel(defaultsFile, ".data"),
+		furyctlConfMergeModel,
+	)
+
+	_, err = merger.Merge()
+	if err != nil {
+		return nil, err
 	}
 
-	toInjectDistConfData := injectType{
+	reverseMerger := merge.NewMerger(
+		*merger.GetCustom(),
+		*merger.GetBase(),
+	)
+
+	_, err = reverseMerger.Merge()
+	if err != nil {
+		return nil, err
+	}
+
+	return reverseMerger, nil
+}
+
+func (d *Distribution) injectDataPostTf(fMerger *merge.Merger) (*merge.Merger, error) {
+	injectData := injectType{
 		Data: schema.SpecDistribution{
 			Modules: schema.SpecDistributionModules{
+				Aws: &schema.SpecDistributionModulesAws{
+					EbsCsiDriver: &schema.SpecDistributionModulesAwsEbsCsiDriver{
+						IamRoleArn: "",
+					},
+					LoadBalancerController: &schema.SpecDistributionModulesAwsLoadBalancerController{
+						IamRoleArn: "",
+					},
+					ClusterAutoscaler: &schema.SpecDistributionModulesAwsClusterAutoScaler{
+						IamRoleArn: "",
+					},
+				},
 				Ingress: schema.SpecDistributionModulesIngress{
-					Dns: schema.SpecDistributionModulesIngressDNS{
-						Private: schema.SpecDistributionModulesIngressDNSPrivate{
-							VpcId: "vpc-1234567890",
+					ExternalDns: schema.SpecDistributionModulesIngressExternalDNS{
+						PrivateIamRoleArn: "",
+						PublicIamRoleArn:  "",
+					},
+					CertManager: schema.SpecDistributionModulesIngressCERTManager{
+						ClusterIssuer: schema.SpecDistributionModulesIngressClusterIssuer{
+							Route53: &schema.SpecDistributionModulesIngressClusterIssuerRoute53{
+								IamRoleArn: "",
+							},
+						},
+					},
+				},
+				Dr: schema.SpecDistributionModulesDr{
+					Velero: &schema.SpecDistributionModulesDrVelero{
+						Eks: &schema.SpecDistributionModulesDrVeleroEks{
+							IamRoleArn: "",
 						},
 					},
 				},
@@ -128,74 +238,98 @@ func (d *Distribution) copyTfFromTemplate(dryRun bool) error {
 		},
 	}
 
-	injectDistConfDataModel := merge.NewDefaultModelFromStruct(toInjectDistConfData, ".data", true)
+	injectDataModel := merge.NewDefaultModelFromStruct(injectData, ".data", true)
 
 	merger := merge.NewMerger(
-		merge.NewDefaultModel(defaultsFile, ".data"),
-		furyctlConfMergeModel,
+		*fMerger.GetBase(),
+		injectDataModel,
 	)
 
-	mergedDistribution, err := merger.Merge()
+	_, err := merger.Merge()
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	mergedTmpl, ok := mergedDistribution["templates"]
-	if !ok {
-		return fmt.Errorf("templates not found in merged distribution")
-	}
+	return merger, nil
+}
 
-	tmpl, err := template.NewTemplatesFromMap(mergedTmpl)
+func (d *Distribution) injectDataPreTf(fMerger *merge.Merger) (*merge.Merger, error) {
+	vpcId, err := d.extractVpcIDFromPrevPhases(fMerger)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	tmpl.Excludes = []string{"source/manifests", ".gitignore"}
-
-	mergedData, ok := mergedDistribution["data"]
-	if !ok {
-		return fmt.Errorf("data not found in merged distribution")
+	if vpcId == "" {
+		return fMerger, nil
 	}
 
-	mergedDataMap, ok := mergedData.(map[any]any)
-	if !ok {
-		return fmt.Errorf("data in merged distribution is not a map")
+	injectData := injectType{
+		Data: schema.SpecDistribution{
+			Modules: schema.SpecDistributionModules{
+				Ingress: schema.SpecDistributionModulesIngress{
+					Dns: schema.SpecDistributionModulesIngressDNS{
+						Private: schema.SpecDistributionModulesIngressDNSPrivate{
+							VpcId: vpcId,
+						},
+					},
+				},
+			},
+		},
 	}
 
-	err = furyctlConfMergeModel.Walk(mergedDataMap)
-	if err != nil {
-		return err
-	}
+	injectDataModel := merge.NewDefaultModelFromStruct(injectData, ".data", true)
 
-	injectorMerger := merge.NewMerger(
-		injectDistConfDataModel,
-		furyctlConfMergeModel,
+	merger := merge.NewMerger(
+		*fMerger.GetBase(),
+		injectDataModel,
 	)
 
-	mergedInjector, err := injectorMerger.Merge()
+	_, err = merger.Merge()
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	mergedInjectorData, ok := mergedInjector["data"]
-	if !ok {
-		return fmt.Errorf("data not found in merged injector")
+	return merger, nil
+}
+
+func (d *Distribution) extractVpcIDFromPrevPhases(fMerger *merge.Merger) (string, error) {
+	vpcId := ""
+
+	if infraOutJson, err := os.ReadFile(path.Join(d.infraOutputsPath, "output.json")); err == nil {
+		var infraOut terraform.OutputJson
+
+		if err := json.Unmarshal(infraOutJson, &infraOut); err == nil {
+			if infraOut.Outputs["vpc_id"] == nil {
+				return vpcId, fmt.Errorf("vpc_id not found in infra output")
+			}
+
+			vpcIdOut, ok := infraOut.Outputs["vpc_id"].Value.(string)
+			if !ok {
+				return vpcId, fmt.Errorf("error casting vpc_id output to string")
+			}
+
+			vpcId = vpcIdOut
+		}
+	} else {
+		fModel := merge.NewDefaultModel((*fMerger.GetBase()).Content(), ".spec.kubernetes")
+
+		kubeFromFuryctlConf, err := fModel.Get()
+		if err != nil {
+			return vpcId, err
+		}
+
+		vpcFromFuryctlConf, ok := kubeFromFuryctlConf["vpcId"].(string)
+		if !ok {
+			return vpcId, fmt.Errorf("vpcId is not a string")
+		}
+
+		vpcId = vpcFromFuryctlConf
 	}
 
-	mergedInjectorDataMap, ok := mergedInjectorData.(map[any]any)
-	if !ok {
-		return fmt.Errorf("data in merged injector is not a map")
-	}
+	return vpcId, nil
+}
 
-	err = furyctlConfMergeModel.Walk(mergedInjectorDataMap)
-	if err != nil {
-		return err
-	}
-
-	cfg.Templates = *tmpl
-	cfg.Data = mapx.ToMapStringAny(furyctlConfMergeModel.Content())
-	cfg.Include = nil
-
+func (d *Distribution) copyFromTemplate(cfg template.Config, dryRun bool) error {
 	outYaml, err := yamlx.MarshalV2(cfg)
 	if err != nil {
 		return err
@@ -228,4 +362,26 @@ func (d *Distribution) copyTfFromTemplate(dryRun bool) error {
 	}
 
 	return templateModel.Generate()
+}
+
+func (d *Distribution) createConfig(fMerger, injMerger *merge.Merger, excluded []string) (template.Config, error) {
+	var cfg template.Config
+
+	mergedTmpl, ok := (*fMerger.GetCustom()).Content()["templates"]
+	if !ok {
+		return template.Config{}, fmt.Errorf("templates not found in merged distribution")
+	}
+
+	tmpl, err := template.NewTemplatesFromMap(mergedTmpl)
+	if err != nil {
+		return template.Config{}, err
+	}
+
+	tmpl.Excludes = excluded
+
+	cfg.Templates = *tmpl
+	cfg.Data = mapx.ToMapStringAny((*injMerger.GetBase()).Content())
+	cfg.Include = nil
+
+	return cfg, nil
 }

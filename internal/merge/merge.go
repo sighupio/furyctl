@@ -20,6 +20,14 @@ func NewMerger(b, c Mergeable) *Merger {
 	}
 }
 
+func (m *Merger) GetBase() *Mergeable {
+	return &m.base
+}
+
+func (m *Merger) GetCustom() *Mergeable {
+	return &m.custom
+}
+
 func (m *Merger) Merge() (map[any]any, error) {
 	preparedBase, err := m.base.Get()
 	if err != nil {
