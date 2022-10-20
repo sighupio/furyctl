@@ -58,8 +58,8 @@ func (dd *Downloader) DownloadAll(kfd config.KFD) ([]error, []string) {
 }
 
 func (dd *Downloader) DownloadModules(modules config.KFDModules) error {
-	newPrefix := "https://github.com/sighupio/kubernetes-fury"
-	oldPrefix := "https://github.com/sighupio/fury-kubernetes"
+	newPrefix := "git@github.com:sighupio/kubernetes-fury"
+	oldPrefix := "git@github.com:sighupio/fury-kubernetes"
 
 	mods := reflect.ValueOf(modules)
 

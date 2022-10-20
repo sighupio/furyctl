@@ -109,14 +109,6 @@ func (d *Downloader) Download(
 		return DownloadResult{}, err
 	}
 
-	if !semver.SamePatchStr(furyctlConfVersion, kfdManifest.Version) {
-		return DownloadResult{}, fmt.Errorf(
-			"versions mismatch: furyctl.yaml = '%s', furyctl binary = '%s'",
-			furyctlConfVersion,
-			kfdManifest.Version,
-		)
-	}
-
 	return DownloadResult{
 		RepoPath:       dst,
 		MinimalConf:    minimalConf,
