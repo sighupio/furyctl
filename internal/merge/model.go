@@ -6,8 +6,9 @@ package merge
 
 import (
 	"fmt"
-	mapx "github.com/sighupio/furyctl/internal/x/map"
 	"strings"
+
+	mapx "github.com/sighupio/furyctl/internal/x/map"
 )
 
 type Mergeable interface {

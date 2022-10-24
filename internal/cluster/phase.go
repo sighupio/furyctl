@@ -38,6 +38,7 @@ func NewCreationPhase(folder string) (*CreationPhase, error) {
 
 	kustomizePath := path.Join(vendorPath, "bin", "kustomize")
 	terraformPath := path.Join(vendorPath, "bin", "terraform")
+	kubectlPath := path.Join(vendorPath, "bin", "kubectl")
 
 	planPath := path.Join(basePath, "terraform", "plan")
 	logsPath := path.Join(basePath, "terraform", "logs")
@@ -48,6 +49,7 @@ func NewCreationPhase(folder string) (*CreationPhase, error) {
 		Path:          basePath,
 		TerraformPath: terraformPath,
 		KustomizePath: kustomizePath,
+		KubectlPath:   kubectlPath,
 		PlanPath:      planPath,
 		LogsPath:      logsPath,
 		OutputsPath:   outputsPath,
@@ -60,6 +62,7 @@ type CreationPhase struct {
 	Path          string
 	TerraformPath string
 	KustomizePath string
+	KubectlPath   string
 	PlanPath      string
 	LogsPath      string
 	OutputsPath   string

@@ -11,6 +11,10 @@ import (
 )
 
 func FromStruct(s any, tagType string, skipEmpty bool) map[any]any {
+	if s == nil {
+		return nil
+	}
+
 	out := make(map[any]any)
 
 	sType := reflect.TypeOf(s)
@@ -78,41 +82,4 @@ func ToMapStringAny(t map[any]any) map[string]map[any]any {
 	}
 
 	return out
-}
-
-func ToTypeSlice[T any](t any) ([]T, error) {
-	if t == nil {
-		return nil, nil
-	}
-
-	s, ok := t.([]any)
-	if !ok {
-		return nil, fmt.Errorf("error while converting to slice")
-	}
-
-	ret := make([]T, len(s))
-
-	for i, v := range s {
-		ret[i], ok = v.(T)
-		if !ok {
-			return nil, fmt.Errorf("error while converting to %s slice", reflect.TypeOf(ret[i]))
-		}
-	}
-
-	return ret, nil
-}
-
-func ToType[T any](t any) (T, error) {
-	var s T
-
-	if t == nil {
-		return s, nil
-	}
-
-	s, ok := t.(T)
-	if !ok {
-		return s, fmt.Errorf("error while converting to %s", reflect.TypeOf(s))
-	}
-
-	return s, nil
 }
