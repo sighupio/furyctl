@@ -25,6 +25,24 @@ func NewRunner(executor execx.Executor, paths Paths) *Runner {
 	}
 }
 
+func (r *Runner) Apply(manifestPath string, serverSide bool) error {
+	args := []string{"apply", "-f"}
+
+	if serverSide {
+		args = append(args, "--server-side")
+	}
+
+	args = append(args, manifestPath)
+
+	_, err := execx.CombinedOutput(execx.NewCmd(r.paths.Kubectl, execx.CmdOptions{
+		Args:     []string{"apply", "-f", manifestPath},
+		Executor: r.executor,
+		WorkDir:  r.paths.WorkDir,
+	}))
+
+	return err
+}
+
 func (r *Runner) Version() (string, error) {
 	return execx.CombinedOutput(execx.NewCmd(r.paths.Kubectl, execx.CmdOptions{
 		Args:     []string{"version", "--client"},
