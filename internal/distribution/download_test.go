@@ -70,8 +70,8 @@ func Test_Downloader_Download(t *testing.T) {
 				t.Errorf("expected RepoPath, got empty string")
 			}
 
-			if res.MinimalConf.ApiVersion != tC.wantApiVer {
-				t.Errorf("ApiVersion: want = %s, got = %s", tC.wantApiVer, res.MinimalConf.ApiVersion)
+			if res.MinimalConf.APIVersion != tC.wantApiVer {
+				t.Errorf("ApiVersion: want = %s, got = %s", tC.wantApiVer, res.MinimalConf.APIVersion)
 			}
 			if res.MinimalConf.Kind != tC.wantKind {
 				t.Errorf("Kind: want = %s, got = %s", tC.wantKind, res.MinimalConf.Kind)
