@@ -16,10 +16,12 @@ package main
 
 import (
 	"os"
+	"runtime"
 
 	"github.com/sirupsen/logrus"
 
 	"github.com/sighupio/furyctl/cmd"
+	"github.com/sighupio/furyctl/internal/analytics"
 )
 
 var (
@@ -28,6 +30,8 @@ var (
 	buildTime = "unknown"
 	goVersion = "unknown"
 	osArch    = "unknown"
+
+	mixpanelToken = os.Getenv("FURYCTL_MIXPANEL_TOKEN")
 )
 
 func main() {
@@ -43,8 +47,21 @@ func main() {
 
 	rootCmd := cmd.NewRootCommand(versions, logFile)
 
-	defer logFile.Close()
+	defer logW.Close()
 
+	h, _ := os.Hostname()
+	a := analytics.New(mixpanelToken, versions[version], osArch, runtime.GOOS, "SIGHUP", h)
+
+	r := cmd.NewRootCommand(versions, logW, a)
+	if err := r.Execute(); err != nil {
+		if err := a.Track(analytics.NewCommandEvent(r.Name(), err.Error(), 1, nil)); err != nil {
+			logrus.Debug(err)
+		}
+
+		logrus.Fatal(err)
+	}
+
+	rootCmd := cmd.NewRootCommand(versions, logW, a)
 	if err := rootCmd.Execute(); err != nil {
 		logrus.Fatal(err)
 	}

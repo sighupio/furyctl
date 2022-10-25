@@ -13,6 +13,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 
+	"github.com/sighupio/furyctl/internal/analytics"
 	"github.com/sighupio/furyctl/internal/dependencies"
 	"github.com/sighupio/furyctl/internal/distribution"
 	cobrax "github.com/sighupio/furyctl/internal/x/cobra"
@@ -24,7 +25,9 @@ var (
 	ErrDownloadFailed = errors.New("dependencies download failed")
 )
 
-func NewDependenciesCmd(furyctlBinVersion string) *cobra.Command {
+func NewDependenciesCmd(furyctlBinVersion string, eventCh chan analytics.Event) *cobra.Command {
+	var cmdEvent analytics.Event
+
 	cmd := &cobra.Command{
 		Use:   "dependencies",
 		Short: "Download dependencies",
@@ -78,9 +81,17 @@ func NewDependenciesCmd(furyctlBinVersion string) *cobra.Command {
 				return ErrDownloadFailed
 			}
 
+			cmdEvent = analytics.NewCommandEvent(cmd.Name(), "", 0, &analytics.DistroDetails{
+				Version:  dres.DistroManifest.Version,
+				Provider: "eks",
+			})
+
 			logrus.Info("Dependencies download succeeded")
 
 			return nil
+		},
+		PostRun: func(cmd *cobra.Command, args []string) {
+			cmdEvent.Send(eventCh)
 		},
 	}
 
