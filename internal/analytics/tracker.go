@@ -71,12 +71,8 @@ func (a *Tracker) IsEnabled() bool {
 	return a.enable
 }
 
-func (a *Tracker) Enable() {
-	a.enable = true
-}
-
-func (a *Tracker) Disable() {
-	a.enable = false
+func (a *Tracker) Disable(enable bool) {
+	a.enable = enable
 }
 
 func getTrackID(token string) string {
