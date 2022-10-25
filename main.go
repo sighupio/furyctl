@@ -49,7 +49,13 @@ func main() {
 
 	defer logW.Close()
 
-	h, _ := os.Hostname()
+	h, err := os.Hostname()
+	if err != nil {
+		logrus.Debug(err)
+
+		h = "unknown"
+	}
+
 	a := analytics.New(mixpanelToken, versions[version], osArch, runtime.GOOS, "SIGHUP", h)
 
 	r := cmd.NewRootCommand(versions, logW, a)

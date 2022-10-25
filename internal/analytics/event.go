@@ -1,16 +1,20 @@
+// Copyright (c) 2017-present SIGHUP s.r.l All rights reserved.
+// Use of this source code is governed by a BSD-style
+// license that can be found in the LICENSE file.
+
 package analytics
 
 type Event interface {
-	Send(ch chan Event) error
+	Send(ch chan Event)
 	Properties() map[string]interface{}
 	Name() string
 }
 
 func NewCommandEvent(name, errorMessage string, exitStatus int, details *ClusterDetails) Event {
 	props := map[string]interface{}{
-		"exitStatus":   exitStatus,
-		"errorMessage": errorMessage,
-		"details":      details,
+		"exitStatus":     exitStatus,
+		"errorMessage":   errorMessage,
+		"clusterDetails": details,
 	}
 
 	return CommandEvent{
@@ -19,10 +23,8 @@ func NewCommandEvent(name, errorMessage string, exitStatus int, details *Cluster
 	}
 }
 
-func (c CommandEvent) Send(ch chan Event) error {
+func (c CommandEvent) Send(ch chan Event) {
 	ch <- c
-
-	return nil
 }
 
 func (c CommandEvent) Properties() map[string]interface{} {
