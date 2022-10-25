@@ -63,17 +63,31 @@ func NewConfig(tplSource, data *merge.Merger, excluded []string) (Config, error)
 }
 
 func newTemplatesFromMap(t any) (*Templates, error) {
+	var exc []string
+	var inc []string
+	var err error
+
 	m, ok := t.(map[any]any)
 	if !ok {
 		return nil, fmt.Errorf("cannot convert %v to map", t)
 	}
 
-	inc, err := toTypeSlice[string](m["includes"])
+	incS, ok := m["includes"].([]any)
+	if !ok {
+		incS = nil
+	}
+
+	inc, err = toTypeSlice[string](incS)
 	if err != nil {
 		return nil, err
 	}
 
-	exc, err := toTypeSlice[string](m["excludes"])
+	excS, ok := m["excludes"].([]any)
+	if !ok {
+		excS = nil
+	}
+
+	exc, err = toTypeSlice[string](excS)
 	if err != nil {
 		return nil, err
 	}
@@ -96,26 +110,23 @@ func newTemplatesFromMap(t any) (*Templates, error) {
 	}, nil
 }
 
-func toTypeSlice[T any](t any) ([]T, error) {
+func toTypeSlice[T any](t []any) ([]T, error) {
+	s := make([]T, len(t))
+
 	if t == nil {
-		return nil, nil
+		return s, nil
 	}
 
-	s, ok := t.([]any)
-	if !ok {
-		return nil, fmt.Errorf("error while converting to slice")
-	}
-
-	ret := make([]T, len(s))
-
-	for i, v := range s {
-		ret[i], ok = v.(T)
-		if !ok {
-			return nil, fmt.Errorf("error while converting to %s slice", reflect.TypeOf(ret[i]))
+	for i, v := range t {
+		sV, err := toType[T](v)
+		if err != nil {
+			return s, err
 		}
+
+		s[i] = sV
 	}
 
-	return ret, nil
+	return s, nil
 }
 
 func toType[T any](t any) (T, error) {

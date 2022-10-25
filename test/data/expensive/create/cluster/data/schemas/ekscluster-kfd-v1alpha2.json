@@ -46,6 +46,9 @@
         "distributionVersion": {
           "$ref": "#/$defs/Types.SemVer"
         },
+        "region": {
+          "$ref": "#/$defs/Types.AwsRegion"
+        },
         "tags": {
           "$ref": "#/$defs/Types.AwsTags"
         },
@@ -56,8 +59,7 @@
           "$ref": "#/$defs/Spec.Infrastructure"
         },
         "kubernetes": {
-          "type": "object",
-          "additionalProperties": true
+          "$ref": "#/$defs/Spec.Kubernetes"
         },
         "distribution": {
           "$ref": "#/$defs/Spec.Distribution"
@@ -65,7 +67,7 @@
       },
       "required": [
         "distributionVersion",
-        "infrastructure",
+        "region",
         "kubernetes",
         "toolsConfiguration"
       ]
@@ -135,10 +137,7 @@
         "vpc": {
           "$ref": "#/$defs/Spec.Infrastructure.Vpc"
         }
-      },
-      "required": [
-        "vpc"
-      ]
+      }
     },
     "Spec.Infrastructure.Vpc": {
       "type": "object",
@@ -370,6 +369,12 @@
         "tags": {
           "$ref": "#/$defs/Types.AwsTags"
         },
+        "subnetIds": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Types.AwsSubnetId"
+          }
+        },
         "additionalFirewallRules": {
           "type": "array",
           "items": {
@@ -386,6 +391,7 @@
         "name",
         "size",
         "tags",
+        "subnetIds",
         "taints"
       ]
     },
@@ -451,7 +457,11 @@
           "type": "string"
         },
         "type": {
-          "type": "string"
+          "type": "string",
+          "enum": ["ingress", "egress"]
+        },
+        "tags": {
+          "$ref": "#/$defs/Types.AwsTags"
         },
         "cidrBlocks": {
           "type": "array",
@@ -471,7 +481,8 @@
         "name",
         "ports",
         "protocol",
-        "type"
+        "type",
+        "tags"
       ]
     },
     "Spec.Kubernetes.NodePool.AdditionalFirewallRule.Ports": {
@@ -671,6 +682,9 @@
         },
         "dns": {
           "$ref": "#/$defs/Spec.Distribution.Modules.Ingress.DNS"
+        },
+        "externalDns": {
+          "$ref": "#/$defs/Spec.Distribution.Modules.Ingress.ExternalDNS"
         }
       },
       "required": [
@@ -678,7 +692,8 @@
         "certManager",
         "dns",
         "nginx",
-        "overrides"
+        "overrides",
+        "externalDns"
       ]
     },
     "Spec.Distribution.Modules.Ingress.Overrides.Ingresses": {
@@ -686,7 +701,7 @@
       "additionalProperties": false,
       "properties": {
         "forecastle": {
-          "$ref": "#/$defs/Types.FuryModuleOverridesIngresses"
+          "$ref": "#/$defs/Types.FuryModuleOverridesIngress"
         }
       }
     },
@@ -744,6 +759,22 @@
         "key"
       ]
     },
+    "Spec.Distribution.Modules.Ingress.ExternalDNS": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "privateIamRoleArn": {
+          "$ref": "#/$defs/Types.AwsArn"
+        },
+        "publicIamRoleArn": {
+          "$ref": "#/$defs/Types.AwsArn"
+        }
+      },
+      "required": [
+        "privateIamRoleArn",
+        "publicIamRoleArn"
+      ]
+    },
     "Spec.Distribution.Modules.Ingress.CERTManager": {
       "type": "object",
       "additionalProperties": false,
@@ -763,6 +794,10 @@
         "name": {
           "type": "string"
         },
+        "email": {
+          "type": "string",
+          "format": "email"
+        },
         "type": {
           "type": "string",
           "enum": ["dns01", "http01"]
@@ -773,7 +808,8 @@
       },
       "required": [
         "name",
-        "type"
+        "type",
+        "email"
       ]
     },
     "Spec.Distribution.Modules.Ingress.ClusterIssuer.Route53": {
@@ -816,9 +852,6 @@
       "type": "object",
       "additionalProperties": false,
       "properties": {
-        "enabled": {
-          "type": "boolean"
-        },
         "name": {
           "type": "string"
         },
@@ -827,7 +860,6 @@
         }
       },
       "required": [
-        "enabled",
         "name",
         "create"
       ]
@@ -836,19 +868,19 @@
       "type": "object",
       "additionalProperties": false,
       "properties": {
-        "enabled": {
-          "type": "boolean"
-        },
         "name": {
           "type": "string"
+        },
+        "create": {
+          "type": "boolean"
         },
         "vpcId": {
           "type": "string"
         }
       },
       "required": [
-        "enabled",
         "name",
+        "create",
         "vpcId"
       ]
     },
@@ -875,7 +907,7 @@
         "resources": {
           "$ref": "#/$defs/Types.KubeResources"
         },
-        "storage_request": {
+        "storageSize": {
           "type": "string"
         }
       },
@@ -892,6 +924,9 @@
         },
         "prometheus": {
           "$ref": "#/$defs/Spec.Distribution.Modules.Monitoring.Prometheus"
+        },
+        "alertmanager": {
+          "$ref": "#/$defs/Spec.Distribution.Modules.Monitoring.AlertManager"
         }
       }
     },
@@ -901,6 +936,27 @@
       "properties": {
         "resources": {
           "$ref": "#/$defs/Types.KubeResources"
+        },
+        "retentionTime": {
+          "type": "string"
+        },
+        "retentionSize": {
+          "type": "string"
+        },
+        "storageSize": {
+          "type": "string"
+        }
+      }
+    },
+    "Spec.Distribution.Modules.Monitoring.AlertManager": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "deadManSwitchWebhookUrl": {
+          "type": "string"
+        },
+        "slackWebhookUrl": {
+          "type": "string"
         }
       }
     },
@@ -962,7 +1018,12 @@
         "bucket": {
           "type": "string"
         }
-      }
+      },
+      "required": [
+        "iamRoleArn",
+        "region",
+        "bucket"
+      ]
     },
     "Spec.Distribution.Modules.Auth": {
       "type": "object",
@@ -991,7 +1052,7 @@
           "$ref": "#/$defs/Types.KubeNodeSelector"
         },
         "tolerations": {
-          "type": "array",
+          "type": ["array", "null"],
           "items": {
             "$ref": "#/$defs/Types.KubeToleration"
           }
@@ -999,12 +1060,12 @@
         "ingresses": {
           "type": "object",
           "additionalProperties": {
-            "$ref": "#/$defs/Spec.Distribution.Modules.Auth.Overrides.Ingresses"
+            "$ref": "#/$defs/Spec.Distribution.Modules.Auth.Overrides.Ingress"
           }
         }
       }
     },
-    "Spec.Distribution.Modules.Auth.Overrides.Ingresses": {
+    "Spec.Distribution.Modules.Auth.Overrides.Ingress": {
       "type": "object",
       "additionalProperties": false,
       "properties": {
@@ -1058,10 +1119,14 @@
       "properties": {
         "secrets": {
           "$ref": "#/$defs/Spec.Distribution.Modules.Auth.Pomerium.Secrets"
+        },
+        "policy": {
+          "type": "string"
         }
       },
       "required": [
-        "secrets"
+        "secrets",
+        "policy"
       ]
     },
     "Spec.Distribution.Modules.Auth.Pomerium.Secrets": {
@@ -1102,6 +1167,30 @@
         },
         "clusterAutoscaler": {
           "$ref": "#/$defs/Spec.Distribution.Modules.Aws.ClusterAutoScaler"
+        },
+        "ebsCsiDriver": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "iamRoleArn": {
+              "$ref": "#/$defs/Types.AwsArn"
+            }
+          },
+          "required": [
+            "iamRoleArn"
+          ]
+        },
+        "loadBalancerController": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "iamRoleArn": {
+              "$ref": "#/$defs/Types.AwsArn"
+            }
+          },
+          "required": [
+            "iamRoleArn"
+          ]
         }
       }
     },
@@ -1109,16 +1198,16 @@
       "type": "object",
       "additionalProperties": false,
       "properties": {
-        "nodeGroupAutoDiscovery": {
-          "type": "string"
-        },
         "iamRoleArn": {
           "$ref": "#/$defs/Types.AwsArn"
+        },
+        "region": {
+          "$ref": "#/$defs/Types.AwsRegion"
         }
       },
       "required": [
         "iamRoleArn",
-        "nodeGroupAutoDiscovery"
+        "region"
       ]
     },
 
@@ -1189,11 +1278,11 @@
     },
     "Types.AwsVpcId": {
       "type": "string",
-      "pattern": "^vpc\\-([0-9a-f]{8}|[0-9a-f]{16})$"
+      "pattern": "^vpc\\-([0-9a-f]{8}|[0-9a-f]{17})$"
     },
     "Types.AwsSubnetId": {
       "type": "string",
-      "pattern": "^subnet\\-[0-9a-f]{16}$"
+      "pattern": "^subnet\\-[0-9a-f]{17}$"
     },
     "Types.AwsTags": {
       "type": "object",
@@ -1201,7 +1290,8 @@
     },
     "Types.AwsIpProtocol": {
       "type": "string",
-      "enum": ["tcp", "udp", "icmp", "icmpv6", "-1"]
+      "pattern": "^(?i)(tcp|udp|icmp|icmpv6|-1)$",
+      "$comment": "this value should be lowercase, but we rely on terraform to do the conversion to make it a bit more user friendly"
     },
     "Types.KubeLabels": {
       "type": "object",
@@ -1215,7 +1305,7 @@
       }
     },
     "Types.KubeNodeSelector": {
-      "type": "object",
+      "type": ["object", "null"],
       "additionalProperties": { "type": "string" }
     },
     "Types.KubeToleration": {
@@ -1277,7 +1367,7 @@
           "$ref": "#/$defs/Types.KubeNodeSelector"
         },
         "tolerations": {
-          "type": "array",
+          "type": ["array", "null"],
           "items": {
             "$ref": "#/$defs/Types.KubeToleration"
           }
@@ -1285,12 +1375,12 @@
         "ingresses": {
           "type": "object",
           "additionalProperties": {
-            "$ref": "#/$defs/Types.FuryModuleOverridesIngresses"
+            "$ref": "#/$defs/Types.FuryModuleOverridesIngress"
           }
         }
       }
     },
-    "Types.FuryModuleOverridesIngresses": {
+    "Types.FuryModuleOverridesIngress": {
       "type": "object",
       "additionalProperties": false,
       "properties": {

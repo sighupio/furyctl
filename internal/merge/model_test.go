@@ -77,7 +77,7 @@ func TestNewDefaultModelFromStruct(t *testing.T) {
 
 	path := ".data"
 
-	model := merge.NewDefaultModelFromStruct(content, path, true)
+	model := merge.NewDefaultModelFromStruct(content, path, false)
 
 	assert.Equal(t, expectedRes, model.Content())
 }

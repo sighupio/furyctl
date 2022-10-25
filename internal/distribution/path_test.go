@@ -27,7 +27,7 @@ func TestGetSchemaPath(t *testing.T) {
 			name:     "test with base path",
 			basePath: "testpath",
 			conf: config.Furyctl{
-				ApiVersion: "kfd.sighup.io/v1alpha2",
+				APIVersion: "kfd.sighup.io/v1alpha2",
 				Kind:       "EKSCluster",
 				Spec:       config.FuryctlSpec{},
 			},
@@ -42,7 +42,7 @@ func TestGetSchemaPath(t *testing.T) {
 			name:     "test without base path",
 			basePath: "",
 			conf: config.Furyctl{
-				ApiVersion: "kfd.sighup.io/v1alpha2",
+				APIVersion: "kfd.sighup.io/v1alpha2",
 				Kind:       "EKSCluster",
 				Spec:       config.FuryctlSpec{},
 			},
@@ -53,7 +53,7 @@ func TestGetSchemaPath(t *testing.T) {
 			name:     "test with invalid apiVersion",
 			basePath: "",
 			conf: config.Furyctl{
-				ApiVersion: "",
+				APIVersion: "",
 				Kind:       "EKSCluster",
 				Spec:       config.FuryctlSpec{},
 			},
@@ -64,7 +64,7 @@ func TestGetSchemaPath(t *testing.T) {
 			name:     "test with invalid kind",
 			basePath: "",
 			conf: config.Furyctl{
-				ApiVersion: "kfd.sighup.io/v1alpha2",
+				APIVersion: "kfd.sighup.io/v1alpha2",
 				Kind:       "",
 				Spec:       config.FuryctlSpec{},
 			},

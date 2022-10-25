@@ -124,6 +124,7 @@ func TestNewConfig(t *testing.T) {
 			excluded: []string{"baz", "ar"},
 			want: template.Config{
 				Templates: template.Templates{
+					Includes: []string{},
 					Excludes: []string{"foo", "bar", "baz", "ar"},
 				},
 				Include: nil,
