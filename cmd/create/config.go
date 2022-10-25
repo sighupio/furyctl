@@ -70,8 +70,8 @@ func NewConfigCmd(eventCh chan analytics.Event) *cobra.Command {
 
 			logrus.Infof("Config file created successfully at: %s", out.Name())
 
-			cmdEvent = analytics.NewCommandEvent(cmd.Name(), "", 0, &analytics.DistroDetails{
-				Version: version,
+			cmdEvent = analytics.NewCommandEvent(cmd.Name(), "", 0, &analytics.ClusterDetails{
+				KFDVersion: version,
 			})
 
 			return nil

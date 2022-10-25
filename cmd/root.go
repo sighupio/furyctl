@@ -147,7 +147,7 @@ Furyctl is a simple CLI tool to:
 					aflag, ok := cobrax.Flag[bool](cmd, "disable-analytics").(bool)
 					if ok && aflag {
 						if err := tracker.Track(event); err != nil {
-							logrus.Error(err)
+							logrus.Debug(err)
 						}
 					}
 				}
