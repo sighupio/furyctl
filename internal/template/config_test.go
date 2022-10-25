@@ -34,31 +34,6 @@ func TestNewConfig(t *testing.T) {
 			err:       template.ErrTemplateSourceCustomIsNil,
 		},
 		{
-			desc: "should return an error if templates are not found in tplSource custom",
-			tplSource: merge.NewMerger(
-				merge.NewDefaultModel(map[any]any{
-					"data": map[any]any{
-						"foo": "bar",
-					},
-				}, ".data"),
-				merge.NewDefaultModel(map[any]any{
-					"data": map[any]any{
-						"include": map[any]any{
-							"foo": "bar",
-						},
-					},
-				}, ".data"),
-			),
-			data: merge.NewMerger(
-				merge.NewDefaultModel(nil, ".data"),
-				merge.NewDefaultModel(nil, ".data"),
-			),
-			excluded: []string{},
-			want:     template.Config{},
-			wantErr:  true,
-			err:      template.ErrTemplatesNotFound,
-		},
-		{
 			desc: "should return an error if data source base is nil",
 			tplSource: merge.NewMerger(
 				merge.NewDefaultModel(map[any]any{

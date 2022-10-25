@@ -15,6 +15,7 @@ spec:
           bucketName: furyctl-0-10-dev
           keyPrefix: furyctl/
           region: eu-west-1
+  region: eu-west-1
   tags:
     env: "test"
     k8s: "awesome"
@@ -138,11 +139,9 @@ spec:
             type: http01
         dns:
           public:
-            enabled: true
             name: "fury-demo.sighup.io"
             create: false
           private:
-            enabled: true
             name: "internal.fury-demo.sighup.io"
             vpcId: "vpc123123123123"
       logging:
@@ -167,7 +166,7 @@ spec:
             limits:
               cpu: ""
               memory: ""
-          storage_request: ""
+          storageSize: "150Gi"
       monitoring:
         overrides:
           nodeSelector: {}

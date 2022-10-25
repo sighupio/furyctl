@@ -2,25 +2,25 @@
 # Use of this source code is governed by a BSD-style
 # license that can be found in the LICENSE file.
 
-{{ if .modules.ingress }}
+{{ if .spec.distribution.modules.ingress }}
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
 resources:
-  - {{ .common.relativeVendorPath }}/katalog/ingress/cert-manager
-{{- if eq .modules.ingress.nginx.type "dual" }}
-  - {{ .common.relativeVendorPath }}/katalog/ingress/dual-nginx
+  - {{ .spec.distribution.common.relativeVendorPath }}/katalog/ingress/cert-manager
+{{- if eq .spec.distribution.modules.ingress.nginx.type "dual" }}
+  - {{ .spec.distribution.common.relativeVendorPath }}/katalog/ingress/dual-nginx
 {{- end }}
-{{- if eq .modules.ingress.nginx.type "single" }}
-  - {{ .common.relativeVendorPath }}/katalog/ingress/nginx
+{{- if eq .spec.distribution.modules.ingress.nginx.type "single" }}
+  - {{ .spec.distribution.common.relativeVendorPath }}/katalog/ingress/nginx
 {{- end }}
-  - {{ .common.relativeVendorPath }}/katalog/ingress/forecastle
-{{- if .modules.ingress.certManager.clusterIssuer.notExistingProperty }}
+  - {{ .spec.distribution.common.relativeVendorPath }}/katalog/ingress/forecastle
+{{- if .spec.distribution.modules.ingress.certManager.clusterIssuer.notExistingProperty }}
   - resources/cert-manager-clusterissuer.yml
 {{- end }}
 
 patchesStrategicMerge:
-{{- if .modules.ingress.certManager.clusterIssuer.notExistingProperty }}
+{{- if .spec.distribution.modules.ingress.certManager.clusterIssuer.notExistingProperty }}
   - patches/cert-manager.yml
 {{- end }}
   - patches/infra-nodes.yml
