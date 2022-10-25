@@ -42,11 +42,13 @@ func New(token, version, arch, os, org, hostname string) *Tracker {
 
 	return &Tracker{
 		client:       mixpanel.NewFromClient(c, token, APIEndpoint),
+		enable:       false,
 		trackingInfo: t,
 	}
 }
 
 type Tracker struct {
+	enable bool
 	trackingInfo
 	client mixpanel.Mixpanel
 }
@@ -63,6 +65,18 @@ func (a *Tracker) Track(event Event) error {
 	}
 
 	return nil
+}
+
+func (a *Tracker) IsEnabled() bool {
+	return a.enable
+}
+
+func (a *Tracker) Enable() {
+	a.enable = true
+}
+
+func (a *Tracker) Disable() {
+	a.enable = false
 }
 
 func getTrackID(token string) string {
