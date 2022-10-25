@@ -62,8 +62,10 @@ func main() {
 	a := analytics.New(mixpanelToken, versions[version], osArch, runtime.GOOS, "SIGHUP", h)
 
 	if executedCmd, err := cmd.NewRootCommand(versions, logW, a).ExecuteC(); err != nil {
-		if err := a.Track(analytics.NewCommandEvent(getCmdFullname(executedCmd), err.Error(), 1, nil)); err != nil {
-			logrus.Debug(err)
+		if a.IsEnabled() {
+			if err := a.Track(analytics.NewCommandEvent(getCmdFullname(executedCmd), err.Error(), 1, nil)); err != nil {
+				logrus.Debug(err)
+			}
 		}
 
 		logrus.Fatal(err)

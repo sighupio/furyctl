@@ -115,6 +115,12 @@ Furyctl is a simple CLI tool to:
 					tracker.Disable(aflag)
 				}
 
+				// Configure analytics.
+				aflag, ok := cobrax.Flag[bool](cmd, "disable-analytics").(bool)
+				if ok && aflag {
+					tracker.Enable()
+				}
+
 				// Change working directory if it is specified.
 				if workdir, ok := cobrax.Flag[string](cmd, "workdir").(string); workdir != "" && ok {
 					// Get absolute path of workdir.
@@ -143,10 +149,8 @@ Furyctl is a simple CLI tool to:
 					}
 				}
 				// Track analytics events.
-				aflag, ok := cobrax.Flag[bool](cmd, "disable-analytics").(bool)
-				if ok && aflag {
-					event := <-eventCh
-					if err := tracker.Track(event); err != nil {
+				if tracker.IsEnabled() {
+					if err := tracker.Track(<-eventCh); err != nil {
 						logrus.Debug(err)
 					}
 				}
