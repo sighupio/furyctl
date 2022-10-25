@@ -193,12 +193,10 @@ spec:
         # this key will manage the creation of the AWS zones and the iam roles needed for ingress module, eg: certManager and externalDns
         dns:
           public:
-            enabled: true
             name: "fury-demo.sighup.io"
             # if create is false, a data source will be used to get the public DNS, otherwise a public zone will be created
             create: false
           private:
-            enabled: true
             name: "internal.fury-demo.sighup.io"
             # optional, if vpc is enabled: false
             vpcId: "vpc123123123123"
@@ -228,7 +226,7 @@ spec:
               cpu: ""
               memory: ""
           # if set, it will override the volumeClaimTemplates in the opensearch statefulSet
-          storage_request: ""
+          storageSize: "150Gi"
         # override ingresses parameters
       # monitoring module configuration
       monitoring:

@@ -59,7 +59,7 @@ spec:
           # ssh public keys enabled to access the vpn instances, NOT YET IMPLEMENTED, proposal
           publicKeys:
             - "ssh-ed56778 XYX"
-            - {file://relative/path/to/ssh.pub}
+#            - {file://relative/path/to/ssh.pub}
           # Github users to get ssh keys from
           githubUsersName:
             - lnovara
@@ -225,7 +225,7 @@ spec:
               cpu: ""
               memory: ""
           # if set, it will override the volumeClaimTemplates in the opensearch statefulSet
-          storage_request: ""
+          storageSize: "150Gi"
         # override ingresses parameters
       # monitoring module configuration
       monitoring:

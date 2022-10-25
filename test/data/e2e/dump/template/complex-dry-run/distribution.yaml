@@ -88,7 +88,7 @@ data:
             cpu: ""
             memory: ""
         # if set, it will override the volumeClaimTemplates in the opensearch statefulSet
-        storage_request: ""
+        storageSize: "150Gi"
       # override ingresses parameters
     # monitoring module configuration
     monitoring:
