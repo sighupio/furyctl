@@ -58,12 +58,27 @@ The generated folder will be created starting from a provided template and the p
 				merge.NewDefaultModel(furyctlFile, ".spec.distribution"),
 			)
 
-			mergedDistribution, err := merger.Merge()
+			_, err = merger.Merge()
 			if err != nil {
 				return err
 			}
 
-			outYaml, err := yamlx.MarshalV2(mergedDistribution)
+			reverseMerger := merge.NewMerger(
+				*merger.GetCustom(),
+				*merger.GetBase(),
+			)
+
+			_, err = reverseMerger.Merge()
+			if err != nil {
+				return err
+			}
+
+			tmplCfg, err := template.NewConfig(reverseMerger, reverseMerger, []string{})
+			if err != nil {
+				return err
+			}
+
+			outYaml, err := yamlx.MarshalV2(tmplCfg)
 			if err != nil {
 				return err
 			}
