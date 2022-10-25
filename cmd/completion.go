@@ -13,10 +13,10 @@ import (
 )
 
 var (
-	ErrBashCompletion       = errors.New("Error generating bash completion")
-	ErrZshCompletion        = errors.New("Error generating zsh completion")
-	ErrFishCompletion       = errors.New("Error generating fish completion")
-	ErrPowershellCompletion = errors.New("Error generating powershell completion")
+	ErrBashCompletion       = errors.New("error generating bash completion")
+	ErrZshCompletion        = errors.New("error generating zsh completion")
+	ErrFishCompletion       = errors.New("error generating fish completion")
+	ErrPowershellCompletion = errors.New("error generating powershell completion")
 )
 
 func NewCompletionCmd(a chan analytics.Event) *cobra.Command {
