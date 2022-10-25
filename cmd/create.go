@@ -8,16 +8,17 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/sighupio/furyctl/cmd/create"
+	"github.com/sighupio/furyctl/internal/analytics"
 )
 
-func NewCreateCommand(version string) *cobra.Command {
+func NewCreateCommand(version string, eventCh chan analytics.Event) *cobra.Command {
 	createCmd := &cobra.Command{
 		Use:   "create",
 		Short: "Create a cluster or a config file",
 	}
 
-	createCmd.AddCommand(create.NewClusterCmd(version))
-	createCmd.AddCommand(create.NewConfigCmd())
+	createCmd.AddCommand(create.NewClusterCmd(version, eventCh))
+	createCmd.AddCommand(create.NewConfigCmd(eventCh))
 
 	return createCmd
 }
