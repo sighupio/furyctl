@@ -1,1 +1,1 @@
-{{.test.hello}}
+{{.spec.distribution.test.hello}}

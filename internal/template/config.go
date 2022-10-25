@@ -43,19 +43,21 @@ func NewConfig(tplSource, data *merge.Merger, excluded []string) (Config, error)
 		return cfg, ErrDataSourceBaseIsNil
 	}
 
-	mergedTmpl, ok := (*tplSource.GetCustom()).Content()["templates"]
-	if !ok {
-		return cfg, ErrTemplatesNotFound
-	}
+	tmpl := Templates{}
 
-	tmpl, err := newTemplatesFromMap(mergedTmpl)
-	if err != nil {
-		return cfg, err
+	mergedTmpl, ok := (*tplSource.GetCustom()).Content()["templates"]
+	if ok {
+		tmplMap, err := newTemplatesFromMap(mergedTmpl)
+		if err != nil {
+			return cfg, err
+		}
+
+		tmpl = *tmplMap
 	}
 
 	tmpl.Excludes = append(tmpl.Excludes, excluded...)
 
-	cfg.Templates = *tmpl
+	cfg.Templates = tmpl
 	cfg.Data = mapx.ToMapStringAny((*data.GetBase()).Content())
 	cfg.Include = nil
 

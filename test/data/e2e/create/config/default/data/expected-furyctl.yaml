@@ -143,11 +143,9 @@ spec:
             type: http01
         dns:
           public:
-            enabled: true
             name: "example.dev"
             create: false
           private:
-            enabled: true
             name: "internal.example.dev"
             vpcId: "vpc-0123456789abcdef0"
       logging:
@@ -172,7 +170,7 @@ spec:
             limits:
               cpu: ""
               memory: ""
-          storageSize: ""
+          storageSize: "150Gi"
       monitoring:
         overrides:
           nodeSelector: null
