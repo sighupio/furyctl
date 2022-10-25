@@ -124,7 +124,7 @@ The generated folder will be created starting from a provided template and the p
 				return fmt.Errorf("error generating from template: %w", err)
 			}
 
-			cmdEvent = analytics.NewCommandEvent(cmd.Name(), "", 0, &analytics.DistroDetails{
+			cmdEvent = analytics.NewCommandEvent(cmd.Name(), "", 0, &analytics.ClusterDetails{
 				Provider: "eks",
 			})
 

@@ -146,10 +146,10 @@ func NewClusterCmd(version string, eventCh chan analytics.Event) *cobra.Command 
 				logrus.Infof("Phase %s executed successfully!", phase)
 			}
 
-			cmdEvent = analytics.NewCommandEvent(cmd.Name(), "", 0, &analytics.DistroDetails{
-				Phase:    phase,
-				Provider: res.DistroManifest.Kubernetes.Eks.Version,
-				Version:  res.DistroManifest.Version,
+			cmdEvent = analytics.NewCommandEvent(cmd.Name(), "", 0, &analytics.ClusterDetails{
+				Phase:      phase,
+				Provider:   res.DistroManifest.Kubernetes.Eks.Version,
+				KFDVersion: res.DistroManifest.Version,
 			})
 
 			fmt.Println("cluster creation succeeded")

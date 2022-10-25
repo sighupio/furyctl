@@ -81,9 +81,9 @@ func NewDependenciesCmd(furyctlBinVersion string, eventCh chan analytics.Event) 
 				return ErrDownloadFailed
 			}
 
-			cmdEvent = analytics.NewCommandEvent(cmd.Name(), "", 0, &analytics.DistroDetails{
-				Version:  dres.DistroManifest.Version,
-				Provider: "eks",
+			cmdEvent = analytics.NewCommandEvent(cmd.Name(), "", 0, &analytics.ClusterDetails{
+				KFDVersion: dres.DistroManifest.Version,
+				Provider:   "eks",
 			})
 
 			logrus.Info("Dependencies download succeeded")

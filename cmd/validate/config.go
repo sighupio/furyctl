@@ -54,9 +54,9 @@ func NewConfigCmd(furyctlBinVersion string, eventCh chan analytics.Event) *cobra
 				return ErrValidationFailed
 			}
 
-			cmdEvent = analytics.NewCommandEvent(cmd.Name(), "", 0, &analytics.DistroDetails{
-				Version:  res.DistroManifest.Version,
-				Provider: "eks",
+			cmdEvent = analytics.NewCommandEvent(cmd.Name(), "", 0, &analytics.ClusterDetails{
+				KFDVersion: res.DistroManifest.Version,
+				Provider:   "eks",
 			})
 
 			logrus.Info("config validation succeeded")
