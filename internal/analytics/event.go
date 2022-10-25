@@ -6,7 +6,7 @@ type Event interface {
 	Name() string
 }
 
-func NewCommandEvent(name, errorMessage string, exitStatus int, details *DistroDetails) Event {
+func NewCommandEvent(name, errorMessage string, exitStatus int, details *ClusterDetails) Event {
 	props := map[string]interface{}{
 		"exitStatus":   exitStatus,
 		"errorMessage": errorMessage,
@@ -40,8 +40,8 @@ type CommandEvent struct {
 
 type properties map[string]interface{}
 
-type DistroDetails struct {
-	Phase    string
-	Provider string
-	Version  string
+type ClusterDetails struct {
+	Phase      string
+	Provider   string
+	KFDVersion string
 }
