@@ -47,6 +47,7 @@ func NewRootCommand(versions map[string]string, logFile *os.File, tracker *analy
 	// Update channels.
 	r := make(chan app.Release, 1)
 	e := make(chan error, 1)
+	// Analytics event channel.
 	eventCh := make(chan analytics.Event, 1)
 
 	cfg := &rootConfig{}
@@ -141,14 +142,12 @@ Furyctl is a simple CLI tool to:
 						logrus.Debugf("Error checking for updates: %s", err)
 					}
 				}
-				// Track analytics events
-				select {
-				case event := <-eventCh:
-					aflag, ok := cobrax.Flag[bool](cmd, "disable-analytics").(bool)
-					if ok && aflag {
-						if err := tracker.Track(event); err != nil {
-							logrus.Debug(err)
-						}
+				// Track analytics events.
+				aflag, ok := cobrax.Flag[bool](cmd, "disable-analytics").(bool)
+				if ok && aflag {
+					event := <-eventCh
+					if err := tracker.Track(event); err != nil {
+						logrus.Debug(err)
 					}
 				}
 			},

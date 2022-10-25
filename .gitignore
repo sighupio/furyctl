@@ -10,3 +10,5 @@ dist/
 .kubernetes
 .distribution
 test/data/e2e/**/target
+
+.vscode/launch.json
