@@ -13,7 +13,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 
-	// Running init to register the EKSCluster kind.
+	"github.com/sighupio/furyctl/internal/analytics"
 	_ "github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/eks"
 	"github.com/sighupio/furyctl/internal/cluster"
 	"github.com/sighupio/furyctl/internal/config"
@@ -29,7 +29,9 @@ var (
 	ErrDownloadDependenciesFailed = errors.New("download dependencies failed")
 )
 
-func NewClusterCmd(version string) *cobra.Command {
+func NewClusterCmd(version string, eventCh chan analytics.Event) *cobra.Command {
+	var cmdEvent analytics.Event
+
 	cmd := &cobra.Command{
 		Use:   "cluster",
 		Short: "Creates a battle-tested Kubernetes cluster",
@@ -144,7 +146,18 @@ func NewClusterCmd(version string) *cobra.Command {
 				logrus.Infof("Phase %s executed successfully!", phase)
 			}
 
+			cmdEvent = analytics.NewCommandEvent(cmd.Name(), "", 0, &analytics.DistroDetails{
+				Phase:    phase,
+				Provider: res.DistroManifest.Kubernetes.Eks.Version,
+				Version:  res.DistroManifest.Version,
+			})
+
+			fmt.Println("cluster creation succeeded")
+
 			return nil
+		},
+		PostRun: func(_ *cobra.Command, _ []string) {
+			cmdEvent.Send(eventCh)
 		},
 	}
 

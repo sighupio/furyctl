@@ -43,10 +43,11 @@ const (
 	spinnerStyle = 11
 )
 
-func NewRootCommand(versions map[string]string, logFile *os.File) *RootCommand {
+func NewRootCommand(versions map[string]string, logFile *os.File, tracker *analytics.Tracker) *RootCommand {
 	// Update channels.
 	r := make(chan app.Release, 1)
 	e := make(chan error, 1)
+	eventCh := make(chan analytics.Event, 1)
 
 	cfg := &rootConfig{}
 	rootCmd := &RootCommand{
@@ -108,11 +109,11 @@ Furyctl is a simple CLI tool to:
 				logrus.Debugf("logging to: %s", logPath)
 
 				// Configure analytics.
-				a := analytics.New(true, versions["version"])
 				aflag, ok := cobrax.Flag[bool](cmd, "disable-analytics").(bool)
 				if ok && aflag {
-					a.Disable(aflag)
+					tracker.Disable(aflag)
 				}
+
 				// Change working directory if it is specified.
 				if workdir, ok := cobrax.Flag[string](cmd, "workdir").(string); workdir != "" && ok {
 					// Get absolute path of workdir.
@@ -128,7 +129,7 @@ Furyctl is a simple CLI tool to:
 					logrus.Debugf("Changed working directory to %s", absWorkdir)
 				}
 			},
-			PersistentPostRun: func(_ *cobra.Command, _ []string) {
+			PersistentPostRun: func(cmd *cobra.Command, _ []string) {
 				// Show update message if available at the end of the command.
 				select {
 				case release := <-r:
@@ -140,6 +141,16 @@ Furyctl is a simple CLI tool to:
 						logrus.Debugf("Error checking for updates: %s", err)
 					}
 				}
+				// Track analytics events
+				select {
+				case event := <-eventCh:
+					aflag, ok := cobrax.Flag[bool](cmd, "disable-analytics").(bool)
+					if ok && aflag {
+						if err := tracker.Track(event); err != nil {
+							logrus.Error(err)
+						}
+					}
+				}
 			},
 		},
 		config: cfg,
@@ -149,18 +160,18 @@ Furyctl is a simple CLI tool to:
 	viper.SetEnvPrefix("furyctl")
 
 	rootCmd.PersistentFlags().BoolVarP(&rootCmd.config.Debug, "debug", "D", false, "Enables furyctl debug output")
-	rootCmd.PersistentFlags().BoolVarP(&rootCmd.config.DisableAnalytics, "disable", "d", false, "Disable analytics")
+	rootCmd.PersistentFlags().BoolVarP(&rootCmd.config.DisableAnalytics, "disable-analytics", "d", false, "Disable analytics")
 	rootCmd.PersistentFlags().BoolVarP(&rootCmd.config.DisableTty, "no-tty", "T", false, "Disable TTY")
 	rootCmd.PersistentFlags().StringVarP(&rootCmd.config.Workdir, "workdir", "w", "", "Switch to a different working directory before executing the given subcommand.")
 	rootCmd.PersistentFlags().StringVarP(&rootCmd.config.Log, "log", "l", "", "Path to the log file or stdout to log to standard output")
 
-	rootCmd.AddCommand(NewCompletionCmd())
-	rootCmd.AddCommand(NewCreateCommand(versions["version"]))
-	rootCmd.AddCommand(NewDownloadCmd(versions["version"]))
-	rootCmd.AddCommand(NewDumpCmd())
-	rootCmd.AddCommand(NewValidateCommand(versions["version"]))
-	rootCmd.AddCommand(NewVersionCmd(versions))
-	rootCmd.AddCommand(NewDeleteCommand(versions["version"]))
+	rootCmd.AddCommand(NewCompletionCmd(eventCh))
+	rootCmd.AddCommand(NewCreateCommand(versions["version"], eventCh))
+	rootCmd.AddCommand(NewDownloadCmd(versions["version"], eventCh))
+	rootCmd.AddCommand(NewDumpCmd(eventCh))
+	rootCmd.AddCommand(NewValidateCommand(versions["version"], eventCh))
+	rootCmd.AddCommand(NewVersionCmd(versions, eventCh))
+	rootCmd.AddCommand(NewDeleteCommand(versions["version"])) // TODO: add tracking
 
 	return rootCmd
 }

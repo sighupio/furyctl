@@ -12,6 +12,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 
+	"github.com/sighupio/furyctl/internal/analytics"
 	"github.com/sighupio/furyctl/internal/merge"
 	"github.com/sighupio/furyctl/internal/template"
 	yamlx "github.com/sighupio/furyctl/internal/x/yaml"
@@ -24,7 +25,9 @@ type templateConfig struct {
 	NoOverwrite bool
 }
 
-func NewTemplateCmd() *cobra.Command {
+func NewTemplateCmd(eventCh chan analytics.Event) *cobra.Command {
+	var cmdEvent analytics.Event
+
 	cfg := templateConfig{}
 	templateCmd := &cobra.Command{
 		Use:   "template",
@@ -33,7 +36,7 @@ func NewTemplateCmd() *cobra.Command {
 The generated folder will be created starting from a provided template and the parameters set in a configuration file that is merged with default values.`,
 		SilenceUsage:  true,
 		SilenceErrors: true,
-		RunE: func(_ *cobra.Command, _ []string) error {
+		RunE: func(cmd *cobra.Command, _ []string) error {
 			source := "source"
 			target := "target"
 			suffix := ".tpl"
@@ -121,7 +124,14 @@ The generated folder will be created starting from a provided template and the p
 				return fmt.Errorf("error generating from template: %w", err)
 			}
 
+			cmdEvent = analytics.NewCommandEvent(cmd.Name(), "", 0, &analytics.DistroDetails{
+				Provider: "eks",
+			})
+
 			return nil
+		},
+		PostRun: func(cmd *cobra.Command, _ []string) {
+			cmdEvent.Send(eventCh)
 		},
 	}
 

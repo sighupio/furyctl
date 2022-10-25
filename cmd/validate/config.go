@@ -11,6 +11,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 
+	"github.com/sighupio/furyctl/internal/analytics"
 	"github.com/sighupio/furyctl/internal/config"
 	"github.com/sighupio/furyctl/internal/distribution"
 	cobrax "github.com/sighupio/furyctl/internal/x/cobra"
@@ -22,7 +23,9 @@ var (
 	ErrParsingFlag      = errors.New("error while parsing flag")
 )
 
-func NewConfigCmd(furyctlBinVersion string) *cobra.Command {
+func NewConfigCmd(furyctlBinVersion string, eventCh chan analytics.Event) *cobra.Command {
+	var cmdEvent analytics.Event
+
 	cmd := &cobra.Command{
 		Use:   "config",
 		Short: "Validate furyctl.yaml file",
@@ -51,9 +54,17 @@ func NewConfigCmd(furyctlBinVersion string) *cobra.Command {
 				return ErrValidationFailed
 			}
 
+			cmdEvent = analytics.NewCommandEvent(cmd.Name(), "", 0, &analytics.DistroDetails{
+				Version:  res.DistroManifest.Version,
+				Provider: "eks",
+			})
+
 			logrus.Info("config validation succeeded")
 
 			return nil
+		},
+		PostRun: func(cmd *cobra.Command, args []string) {
+			cmdEvent.Send(eventCh)
 		},
 	}
 

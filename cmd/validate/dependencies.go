@@ -12,6 +12,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 
+	"github.com/sighupio/furyctl/internal/analytics"
 	"github.com/sighupio/furyctl/internal/dependencies/envvars"
 	"github.com/sighupio/furyctl/internal/dependencies/tools"
 	"github.com/sighupio/furyctl/internal/distribution"
@@ -22,7 +23,9 @@ import (
 
 var ErrDependencies = fmt.Errorf("dependencies are not satisfied")
 
-func NewDependenciesCmd(furyctlBinVersion string) *cobra.Command {
+func NewDependenciesCmd(furyctlBinVersion string, eventCh chan analytics.Event) *cobra.Command {
+	var cmdEvent analytics.Event
+
 	cmd := &cobra.Command{
 		Use:   "dependencies",
 		Short: "Validate furyctl.yaml file",
@@ -70,9 +73,17 @@ func NewDependenciesCmd(furyctlBinVersion string) *cobra.Command {
 				return ErrDependencies
 			}
 
+			cmdEvent = analytics.NewCommandEvent(cmd.Name(), "", 0, &analytics.DistroDetails{
+				Version:  dres.DistroManifest.Version,
+				Provider: "eks",
+			})
+
 			logrus.Info("Dependencies validation succeeded")
 
 			return nil
+		},
+		PostRun: func(cmd *cobra.Command, args []string) {
+			cmdEvent.Send(eventCh)
 		},
 	}
 

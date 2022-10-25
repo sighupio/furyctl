@@ -14,13 +14,16 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/sighupio/furyctl/configs"
+	"github.com/sighupio/furyctl/internal/analytics"
 	cobrax "github.com/sighupio/furyctl/internal/x/cobra"
 	iox "github.com/sighupio/furyctl/internal/x/io"
 )
 
 var ErrConfigCreationFailed = fmt.Errorf("config creation failed")
 
-func NewConfigCmd() *cobra.Command {
+func NewConfigCmd(eventCh chan analytics.Event) *cobra.Command {
+	var cmdEvent analytics.Event
+
 	cmd := &cobra.Command{
 		Use:   "config",
 		Short: "scaffolds a new furyctl config file",
@@ -67,7 +70,14 @@ func NewConfigCmd() *cobra.Command {
 
 			logrus.Infof("Config file created successfully at: %s", out.Name())
 
+			cmdEvent = analytics.NewCommandEvent(cmd.Name(), "", 0, &analytics.DistroDetails{
+				Version: version,
+			})
+
 			return nil
+		},
+		PostRun: func(cmd *cobra.Command, _ []string) {
+			cmdEvent.Send(eventCh)
 		},
 	}
 
