@@ -110,7 +110,7 @@ func (g *generator) ProcessFilename(
 		if err := tpl.Execute(destination, g.context); err != nil {
 			return "", err
 		}
-		
+
 		realTarget = destination.String()
 	} else {
 		realTarget = g.target

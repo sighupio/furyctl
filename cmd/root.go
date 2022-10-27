@@ -148,14 +148,14 @@ func checkUpdates(version string, rc chan app.Release, e chan error) {
 
 	if version == "unknown" {
 		rc <- app.Release{Version: version}
-		
+
 		return
 	}
 
 	r, err := app.GetLatestRelease()
 	if err != nil {
 		e <- err
-		
+
 		return
 	}
 

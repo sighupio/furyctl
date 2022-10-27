@@ -19,7 +19,7 @@ func NewAnsible(runner *ansible.Runner, version string) *Ansible {
 		os:      runtime.GOOS,
 		version: version,
 		checker: &checker{
-			regex:  regexp.MustCompile(`ansible \\[.*]`),
+			regex:  regexp.MustCompile(`ansible \[.*]`),
 			runner: runner,
 			splitFn: func(version string) []string {
 				return strings.Split(version, " ")

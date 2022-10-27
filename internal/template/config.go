@@ -66,7 +66,9 @@ func NewConfig(tplSource, data *merge.Merger, excluded []string) (Config, error)
 
 func newTemplatesFromMap(t any) (*Templates, error) {
 	var exc []string
+
 	var inc []string
+
 	var err error
 
 	m, ok := t.(map[any]any)

@@ -85,7 +85,7 @@ func (d *Downloader) Download(
 	if err != nil {
 		return DownloadResult{}, fmt.Errorf("%w: %v", ErrCreatingTempDir, err)
 	}
-	
+
 	src := distroLocation
 	dst := filepath.Join(baseDst, "data")
 

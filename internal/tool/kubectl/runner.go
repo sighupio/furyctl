@@ -35,7 +35,7 @@ func (r *Runner) Apply(manifestPath string, serverSide bool) error {
 	args = append(args, manifestPath)
 
 	_, err := execx.CombinedOutput(execx.NewCmd(r.paths.Kubectl, execx.CmdOptions{
-		Args:     []string{"apply", "-f", manifestPath},
+		Args:     args,
 		Executor: r.executor,
 		WorkDir:  r.paths.WorkDir,
 	}))

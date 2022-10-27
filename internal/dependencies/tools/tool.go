@@ -56,7 +56,7 @@ func (f *Factory) Create(name, version string) Tool {
 
 		return NewAnsible(a, version)
 	}
-	
+
 	if name == tool.Furyagent {
 		fa, ok := t.(*furyagent.Runner)
 		if !ok {
@@ -65,7 +65,7 @@ func (f *Factory) Create(name, version string) Tool {
 
 		return NewFuryagent(fa, version)
 	}
-	
+
 	if name == tool.Kubectl {
 		k, ok := t.(*kubectl.Runner)
 		if !ok {
@@ -74,7 +74,7 @@ func (f *Factory) Create(name, version string) Tool {
 
 		return NewKubectl(k, version)
 	}
-	
+
 	if name == tool.Kustomize {
 		k, ok := t.(*kustomize.Runner)
 		if !ok {
@@ -83,7 +83,7 @@ func (f *Factory) Create(name, version string) Tool {
 
 		return NewKustomize(k, version)
 	}
-	
+
 	if name == tool.Openvpn {
 		o, ok := t.(*openvpn.Runner)
 		if !ok {
@@ -92,7 +92,7 @@ func (f *Factory) Create(name, version string) Tool {
 
 		return NewOpenvpn(o, version)
 	}
-	
+
 	if name == tool.Terraform {
 		tf, ok := t.(*terraform.Runner)
 		if !ok {
@@ -101,7 +101,7 @@ func (f *Factory) Create(name, version string) Tool {
 
 		return NewTerraform(tf, version)
 	}
-	
+
 	return nil
 }
 

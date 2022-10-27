@@ -146,6 +146,6 @@ func stringsToPath(s []string) string {
 		sb.WriteByte('.')
 		sb.WriteString(s)
 	}
-	
+
 	return sb.String()
 }

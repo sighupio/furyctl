@@ -12,6 +12,8 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/sirupsen/logrus"
+
 	"github.com/sighupio/fury-distribution/pkg/config"
 	"github.com/sighupio/fury-distribution/pkg/schema"
 	"github.com/sighupio/furyctl/internal/cluster"
@@ -22,7 +24,6 @@ import (
 	"github.com/sighupio/furyctl/internal/tool/terraform"
 	execx "github.com/sighupio/furyctl/internal/x/exec"
 	yamlx "github.com/sighupio/furyctl/internal/x/yaml"
-	"github.com/sirupsen/logrus"
 )
 
 type Distribution struct {
@@ -140,6 +141,9 @@ func (d *Distribution) Exec(dryRun bool) error {
 	}
 
 	mCfg, err := template.NewConfig(furyctlMerger, postTfMerger, []string{"source/terraform", ".gitignore"})
+	if err != nil {
+		return err
+	}
 
 	if err := d.copyFromTemplate(mCfg, dryRun); err != nil {
 		return err
@@ -196,12 +200,12 @@ func (d *Distribution) createFuryctlMerger() (*merge.Merger, error) {
 }
 
 func (d *Distribution) injectDataPreTf(fMerger *merge.Merger) (*merge.Merger, error) {
-	vpcId, err := d.extractVpcIDFromPrevPhases(fMerger)
+	vpcID, err := d.extractVpcIDFromPrevPhases(fMerger)
 	if err != nil {
 		return nil, err
 	}
 
-	if vpcId == "" {
+	if vpcID == "" {
 		return fMerger, nil
 	}
 
@@ -211,7 +215,7 @@ func (d *Distribution) injectDataPreTf(fMerger *merge.Merger) (*merge.Merger, er
 				Ingress: schema.SpecDistributionModulesIngress{
 					Dns: schema.SpecDistributionModulesIngressDNS{
 						Private: schema.SpecDistributionModulesIngressDNSPrivate{
-							VpcId: vpcId,
+							VpcId: vpcID,
 						},
 					},
 				},
@@ -235,40 +239,40 @@ func (d *Distribution) injectDataPreTf(fMerger *merge.Merger) (*merge.Merger, er
 }
 
 func (d *Distribution) extractVpcIDFromPrevPhases(fMerger *merge.Merger) (string, error) {
-	vpcId := ""
+	vpcID := ""
 
-	if infraOutJson, err := os.ReadFile(path.Join(d.infraOutputsPath, "output.json")); err == nil {
-		var infraOut terraform.OutputJson
+	if infraOutJSON, err := os.ReadFile(path.Join(d.infraOutputsPath, "output.json")); err == nil {
+		var infraOut terraform.OutputJSON
 
-		if err := json.Unmarshal(infraOutJson, &infraOut); err == nil {
+		if err := json.Unmarshal(infraOutJSON, &infraOut); err == nil {
 			if infraOut.Outputs["vpc_id"] == nil {
-				return vpcId, fmt.Errorf("vpc_id not found in infra output")
+				return vpcID, fmt.Errorf("vpc_id not found in infra output")
 			}
 
-			vpcIdOut, ok := infraOut.Outputs["vpc_id"].Value.(string)
+			vpcIDOut, ok := infraOut.Outputs["vpc_id"].Value.(string)
 			if !ok {
-				return vpcId, fmt.Errorf("error casting vpc_id output to string")
+				return vpcID, fmt.Errorf("error casting vpc_id output to string")
 			}
 
-			vpcId = vpcIdOut
+			vpcID = vpcIDOut
 		}
 	} else {
 		fModel := merge.NewDefaultModel((*fMerger.GetBase()).Content(), ".spec.kubernetes")
 
 		kubeFromFuryctlConf, err := fModel.Get()
 		if err != nil {
-			return vpcId, err
+			return vpcID, err
 		}
 
 		vpcFromFuryctlConf, ok := kubeFromFuryctlConf["vpcId"].(string)
 		if !ok {
-			return vpcId, fmt.Errorf("vpcId is not a string")
+			return vpcID, fmt.Errorf("vpcId is not a string")
 		}
 
-		vpcId = vpcFromFuryctlConf
+		vpcID = vpcFromFuryctlConf
 	}
 
-	return vpcId, nil
+	return vpcID, nil
 }
 
 func (d *Distribution) injectDataPostTf(fMerger *merge.Merger) (*merge.Merger, error) {
@@ -331,52 +335,73 @@ func (d *Distribution) injectDataPostTf(fMerger *merge.Merger) (*merge.Merger, e
 }
 
 func (d *Distribution) extractARNsFromTfOut() (map[string]string, error) {
-	var distroOut terraform.OutputJson
+	var distroOut terraform.OutputJSON
 
 	arns := map[string]string{}
 
-	distroOutJson, err := os.ReadFile(path.Join(d.OutputsPath, "output.json"))
+	distroOutJSON, err := os.ReadFile(path.Join(d.OutputsPath, "output.json"))
 	if err != nil {
 		return nil, err
 	}
 
-	if err := json.Unmarshal(distroOutJson, &distroOut); err != nil {
+	if err := json.Unmarshal(distroOutJSON, &distroOut); err != nil {
 		return nil, err
 	}
 
 	ebsCsiDriverArn, ok := distroOut.Outputs["ebs_csi_driver_iam_role_arn"]
 	if ok {
-		arns["ebs_csi_driver_iam_role_arn"] = ebsCsiDriverArn.Value.(string)
+		arns["ebs_csi_driver_iam_role_arn"], ok = ebsCsiDriverArn.Value.(string)
+		if !ok {
+			return nil, fmt.Errorf("error casting ebs_csi_driver_iam_role_arn output to string")
+		}
 	}
 
 	loadBalancerControllerArn, ok := distroOut.Outputs["load_balancer_controller_iam_role_arn"]
 	if ok {
-		arns["load_balancer_controller_iam_role_arn"] = loadBalancerControllerArn.Value.(string)
+		arns["load_balancer_controller_iam_role_arn"], ok = loadBalancerControllerArn.Value.(string)
+		if !ok {
+			return nil, fmt.Errorf("error casting load_balancer_controller_iam_role_arn output to string")
+		}
 	}
 
 	clusterAutoscalerArn, ok := distroOut.Outputs["cluster_autoscaler_iam_role_arn"]
 	if ok {
-		arns["cluster_autoscaler_iam_role_arn"] = clusterAutoscalerArn.Value.(string)
+		arns["cluster_autoscaler_iam_role_arn"], ok = clusterAutoscalerArn.Value.(string)
+		if !ok {
+			return nil, fmt.Errorf("error casting cluster_autoscaler_iam_role_arn output to string")
+		}
 	}
 
-	externalDnsPrivateArn, ok := distroOut.Outputs["external_dns_private_iam_role_arn"]
+	externalDNSPrivateArn, ok := distroOut.Outputs["external_dns_private_iam_role_arn"]
 	if ok {
-		arns["external_dns_private_iam_role_arn"] = externalDnsPrivateArn.Value.(string)
+		arns["external_dns_private_iam_role_arn"], ok = externalDNSPrivateArn.Value.(string)
+		if !ok {
+			return nil, fmt.Errorf("error casting external_dns_private_iam_role_arn output to string")
+		}
 	}
 
-	externalDnsPublicArn, ok := distroOut.Outputs["external_dns_public_iam_role_arn"]
+	externalDNSPublicArn, ok := distroOut.Outputs["external_dns_public_iam_role_arn"]
 	if ok {
-		arns["external_dns_public_iam_role_arn"] = externalDnsPublicArn.Value.(string)
+		arns["external_dns_public_iam_role_arn"], ok = externalDNSPublicArn.Value.(string)
+		if !ok {
+			return nil, fmt.Errorf("error casting external_dns_public_iam_role_arn output to string")
+		}
 	}
 
 	certManagerArn, ok := distroOut.Outputs["cert_manager_iam_role_arn"]
 	if ok {
-		arns["cert_manager_iam_role_arn"] = certManagerArn.Value.(string)
+		arns["cert_manager_iam_role_arn"], ok = certManagerArn.Value.(string)
+		if !ok {
+			return nil, fmt.Errorf("error casting cert_manager_iam_role_arn output to string")
+		}
 	}
 
 	veleroArn, ok := distroOut.Outputs["velero_iam_role_arn"]
 	if ok {
-		arns["velero_iam_role_arn"] = veleroArn.Value.(string)
+		arns["velero_iam_role_arn"], ok = veleroArn.Value.(string)
+		if !ok {
+			return nil, fmt.Errorf("error casting velero_iam_role_arn output to string")
+		}
 	}
 
 	return arns, nil

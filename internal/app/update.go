@@ -12,7 +12,7 @@ import (
 )
 
 type Release struct {
-	//nolint:tagliatelle // Github response's field has snake case. 
+	//nolint:tagliatelle // Github response's field has snake case.
 	URL     string `json:"html_url"`
 	Version string `json:"name"`
 }
