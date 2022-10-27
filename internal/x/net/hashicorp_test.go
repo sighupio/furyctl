@@ -15,6 +15,8 @@ import (
 )
 
 func Test_GoGetterClient_Download(t *testing.T) {
+	t.Parallel()
+
 	tmpDir, err := os.MkdirTemp("", "furyctl-clientget-test-")
 	if err != nil {
 		t.Fatalf("error creating temp dir: %v", err)
@@ -34,6 +36,7 @@ func Test_GoGetterClient_Download(t *testing.T) {
 
 	defer func() {
 		src.Close()
+
 		_ = os.RemoveAll(tmpDir)
 	}()
 
@@ -49,6 +52,8 @@ func Test_GoGetterClient_Download(t *testing.T) {
 }
 
 func TestUrlHasForcedProtocol(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		name string
 		url  string
@@ -65,9 +70,14 @@ func TestUrlHasForcedProtocol(t *testing.T) {
 			want: false,
 		},
 	}
+
 	for _, tt := range tests {
+		tt := tt
+
 		t.Run(tt.name, func(t *testing.T) {
-			if got := netx.NewGoGetterClient().UrlHasForcedProtocol(tt.url); got != tt.want {
+			t.Parallel()
+
+			if got := netx.NewGoGetterClient().URLHasForcedProtocol(tt.url); got != tt.want {
 				t.Errorf("urlHasForcedProtocol() = %v, want %v", got, tt.want)
 			}
 		})
