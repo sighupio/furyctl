@@ -21,6 +21,9 @@ const (
 	CreatorPropertyVpnAutoConnect = "vpnautoconnect"
 )
 
+var factories = make(map[string]map[string]CreatorFactory) //nolint:gochecknoglobals // This patterns requires factories
+//  as global to work with init function.
+
 type CreatorFactory func(configPath string, props []CreatorProperty) (Creator, error)
 
 type CreatorProperty struct {
@@ -42,8 +45,6 @@ func NewCreator(
 	phase string,
 	vpnAutoConnect bool,
 ) (Creator, error) {
-	factories := make(map[string]map[string]CreatorFactory)
-
 	lcAPIVersion := strings.ToLower(minimalConf.APIVersion)
 	lcResourceType := strings.ToLower(minimalConf.Kind)
 
@@ -72,8 +73,6 @@ func NewCreator(
 }
 
 func RegisterCreatorFactory(apiVersion, kind string, factory CreatorFactory) {
-	factories := make(map[string]map[string]CreatorFactory)
-
 	lcAPIVersion := strings.ToLower(apiVersion)
 	lcKind := strings.ToLower(kind)
 

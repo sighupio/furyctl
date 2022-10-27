@@ -15,7 +15,7 @@ import (
 )
 
 var (
-	Debug        = false
+	Debug        = false //nolint:gochecknoglobals // This variable is shared between all the command instances.
 	ErrCmdFailed = errors.New("command failed")
 )
 
