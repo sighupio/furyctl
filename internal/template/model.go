@@ -5,6 +5,7 @@
 package template
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -16,6 +17,12 @@ import (
 	"github.com/sighupio/furyctl/internal/template/mapper"
 	iox "github.com/sighupio/furyctl/internal/x/io"
 	yamlx "github.com/sighupio/furyctl/internal/x/yaml"
+)
+
+var (
+	errSourceMustbeSet  = errors.New("source must be set")
+	errTargetMustbeSet  = errors.New("target must be set")
+	errTemplateNotFound = errors.New("no template found")
 )
 
 type Model struct {
@@ -43,11 +50,11 @@ func NewTemplateModel(
 	var model Config
 
 	if len(source) < 1 {
-		return nil, fmt.Errorf("source must be set")
+		return nil, errSourceMustbeSet
 	}
 
 	if len(target) < 1 {
-		return nil, fmt.Errorf("target must be set")
+		return nil, errTargetMustbeSet
 	}
 
 	if len(configPath) > 0 {
@@ -180,7 +187,7 @@ func (tm *Model) applyTemplates(
 		}
 
 		if tmpl == nil {
-			return fmt.Errorf("no template found for %s", relSource)
+			return fmt.Errorf("%w for %s", errTemplateNotFound, relSource)
 		}
 
 		if tm.DryRun {

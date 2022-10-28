@@ -24,7 +24,6 @@ linters:
   # https://golangci-lint.run/usage/linters/#disabled-by-default-linters--e--enable
   disable:
     # todo
-    - goerr113
     # unsupported
     - rowserrcheck
     - sqlclosecheck

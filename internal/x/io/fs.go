@@ -22,7 +22,11 @@ const (
 	RWPermAccess     = 0o644
 )
 
-var ErrEmptyFile = errors.New("trimming buffer resulted in an empty file")
+var (
+	ErrEmptyFile         = errors.New("trimming buffer resulted in an empty file")
+	errTargetDirNotEmpty = errors.New("the target directory is not empty")
+	errNotRegularFile    = errors.New("is not a regular file")
+)
 
 func CheckDirIsEmpty(target string) error {
 	if _, err := os.Stat(target); os.IsNotExist(err) {
@@ -38,7 +42,7 @@ func CheckDirIsEmpty(target string) error {
 			return nil
 		}
 
-		return fmt.Errorf("the target directory is not empty: %s", path)
+		return fmt.Errorf("%w: %s", errTargetDirNotEmpty, path)
 	})
 	if err != nil {
 		return fmt.Errorf("error while checking path %s: %w", target, err)
@@ -90,7 +94,7 @@ func CopyFile(src, dst string) error {
 	}
 
 	if !sourceFileStat.Mode().IsRegular() {
-		return fmt.Errorf("%s is not a regular file", src)
+		return fmt.Errorf("%s %w", src, errNotRegularFile)
 	}
 
 	source, err := os.Open(src)

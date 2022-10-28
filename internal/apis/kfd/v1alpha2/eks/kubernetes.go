@@ -7,6 +7,7 @@ package eks
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io/fs"
 	"os"
@@ -23,6 +24,14 @@ import (
 	"github.com/sighupio/furyctl/internal/tool/terraform"
 	execx "github.com/sighupio/furyctl/internal/x/exec"
 	iox "github.com/sighupio/furyctl/internal/x/io"
+)
+
+var (
+	errKubeconfigFromLogs = errors.New("can't get kubeconfig from terraform apply logs")
+	errPvtSubnetNotFound  = errors.New("private_subnets not found in infra output")
+	errPvtSubnetFromOut   = errors.New("cannot read private_subnets from infrastructure's output.json")
+	errVpcCIDRFromOut     = errors.New("cannot read vpc_cidr_block from infrastructure's output.json")
+	errVpcCIDRNotFound    = errors.New("vpc_cidr_block not found in infra output")
 )
 
 type Kubernetes struct {
@@ -149,12 +158,12 @@ func (k *Kubernetes) copyFromTemplate() error {
 
 func (k *Kubernetes) createKubeconfig(o terraform.OutputJSON) error {
 	if o.Outputs["kubeconfig"] == nil {
-		return fmt.Errorf("can't get kubeconfig from terraform apply logs")
+		return errKubeconfigFromLogs
 	}
 
 	kubeString, ok := o.Outputs["kubeconfig"].Value.(string)
 	if !ok {
-		return fmt.Errorf("can't get kubeconfig from terraform apply logs")
+		return errKubeconfigFromLogs
 	}
 
 	err := os.WriteFile(path.Join(k.SecretsPath, "kubeconfig"), []byte(kubeString), iox.FullRWPermAccess)
@@ -192,30 +201,30 @@ func (k *Kubernetes) createTfVars() error {
 
 		if err := json.Unmarshal(infraOutJSON, &infraOut); err == nil {
 			if infraOut.Outputs["private_subnets"] == nil {
-				return fmt.Errorf("private_subnets not found in infra output")
+				return errPvtSubnetNotFound
 			}
 
 			s, ok := infraOut.Outputs["private_subnets"].Value.([]interface{})
 			if !ok {
-				return fmt.Errorf("cannot read private_subnets from infrastructure's output.json")
+				return errPvtSubnetFromOut
 			}
 
 			if infraOut.Outputs["vpc_id"] == nil {
-				return fmt.Errorf("vpc_id not found in infra output")
+				return ErrVpcIDNotFound
 			}
 
 			v, ok := infraOut.Outputs["vpc_id"].Value.(string)
 			if !ok {
-				return fmt.Errorf("cannot read vpc_id from infrastructure's output.json")
+				return ErrVpcIDFromOut
 			}
 
 			if infraOut.Outputs["vpc_cidr_block"] == nil {
-				return fmt.Errorf("vpc_cidr_block not found in infra output")
+				return errVpcCIDRNotFound
 			}
 
 			c, ok := infraOut.Outputs["vpc_cidr_block"].Value.(string)
 			if !ok {
-				return fmt.Errorf("cannot read vpc_cidr_block from infrastructure's output.json")
+				return errVpcCIDRFromOut
 			}
 
 			subs := make([]schema.TypesAwsSubnetId, len(s))
@@ -223,7 +232,7 @@ func (k *Kubernetes) createTfVars() error {
 			for i, sub := range s {
 				ss, ok := sub.(string)
 				if !ok {
-					return fmt.Errorf("cannot read private_subnets from infrastructure's output.json")
+					return errPvtSubnetFromOut
 				}
 
 				subs[i] = schema.TypesAwsSubnetId(ss)

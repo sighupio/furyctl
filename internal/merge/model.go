@@ -5,10 +5,16 @@
 package merge
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 
 	mapx "github.com/sighupio/furyctl/internal/x/map"
+)
+
+var (
+	errCannotAccessKey = errors.New("cannot access key")
+	errInvalidData     = errors.New("data structure is invalid on key")
 )
 
 type Mergeable interface {
@@ -52,12 +58,12 @@ func (b *DefaultModel) Get() (map[any]any, error) {
 	for _, f := range fields {
 		mapAtKey, ok := ret[f]
 		if !ok {
-			return nil, fmt.Errorf("cannot access key %s on map", f)
+			return nil, fmt.Errorf("%w %s on map", errCannotAccessKey, f)
 		}
 
 		ret, ok = mapAtKey.(map[any]any)
 		if !ok {
-			return nil, fmt.Errorf("data structure is invalid on key %s", f)
+			return nil, fmt.Errorf("%w %s", errInvalidData, f)
 		}
 	}
 
@@ -72,12 +78,12 @@ func (b *DefaultModel) Walk(mergedSection map[any]any) error {
 	for _, f := range fields[:len(fields)-1] {
 		_, ok := ret[f]
 		if !ok {
-			return fmt.Errorf("cannot access key %s on map", f)
+			return fmt.Errorf("%w %s on map", errCannotAccessKey, f)
 		}
 
 		ret, ok = ret[f].(map[any]any)
 		if !ok {
-			return fmt.Errorf("data structure is invalid on key %s", f)
+			return fmt.Errorf("%w %s", errInvalidData, f)
 		}
 	}
 

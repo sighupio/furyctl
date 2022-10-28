@@ -6,6 +6,7 @@ package terraform
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"path"
@@ -16,6 +17,8 @@ import (
 	execx "github.com/sighupio/furyctl/internal/x/exec"
 	iox "github.com/sighupio/furyctl/internal/x/io"
 )
+
+var errOutputFromApply = errors.New("can't get outputs from terraform apply logs")
 
 type OutputJSON struct {
 	Outputs map[string]*tfjson.StateOutput `json:"outputs"`
@@ -106,7 +109,7 @@ func (r *Runner) Apply(timestamp int64) (OutputJSON, error) {
 
 	outputsStringIndex := pattern.FindStringIndex(applyLog)
 	if outputsStringIndex == nil {
-		return oj, fmt.Errorf("can't get outputs from terraform apply logs")
+		return oj, errOutputFromApply
 	}
 
 	outputsString := fmt.Sprintf("{%s}", applyLog[outputsStringIndex[0]:outputsStringIndex[1]])

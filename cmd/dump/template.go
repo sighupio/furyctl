@@ -58,7 +58,7 @@ The generated folder will be created starting from a provided template and the p
 			}
 
 			if _, err := os.Stat(source); os.IsNotExist(err) {
-				return fmt.Errorf("source directory does not exist")
+				return ErrSourceDirDoesNotExist
 			}
 
 			merger := merge.NewMerger(

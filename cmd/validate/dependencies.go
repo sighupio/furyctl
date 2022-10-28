@@ -18,7 +18,10 @@ import (
 	netx "github.com/sighupio/furyctl/internal/x/net"
 )
 
-var ErrDependencies = fmt.Errorf("dependencies are not satisfied")
+var (
+	ErrDependencies           = fmt.Errorf("dependencies are not satisfied")
+	ErrBinPathFlagNotProvided = fmt.Errorf("bin-path flag not provided")
+)
 
 func NewDependenciesCmd(furyctlBinVersion string) *cobra.Command {
 	cmd := &cobra.Command{
@@ -27,19 +30,19 @@ func NewDependenciesCmd(furyctlBinVersion string) *cobra.Command {
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			debug, ok := cobrax.Flag[bool](cmd, "debug").(bool)
 			if !ok {
-				return fmt.Errorf("debug flag not provided")
+				return ErrDebugFlagNotProvided
 			}
 			binPath, ok := cobrax.Flag[string](cmd, "bin-path").(string)
 			if !ok {
-				return fmt.Errorf("bin-path flag not provided")
+				return ErrBinPathFlagNotProvided
 			}
 			furyctlPath, ok := cobrax.Flag[string](cmd, "config").(string)
 			if !ok {
-				return fmt.Errorf("config flag not provided")
+				return ErrConfigFlagNotProvided
 			}
 			distroLocation, ok := cobrax.Flag[string](cmd, "distro-location").(string)
 			if !ok {
-				return fmt.Errorf("distro-location flag not provided")
+				return ErrDistroFlagNotProvided
 			}
 
 			dloader := distribution.NewDownloader(netx.NewGoGetterClient(), debug)

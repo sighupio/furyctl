@@ -5,6 +5,7 @@
 package validate
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/sirupsen/logrus"
@@ -16,7 +17,12 @@ import (
 	netx "github.com/sighupio/furyctl/internal/x/net"
 )
 
-var ErrValidationFailed = fmt.Errorf("config validation failed")
+var (
+	ErrValidationFailed      = fmt.Errorf("config validation failed")
+	ErrDebugFlagNotProvided  = errors.New("debug flag not provided")
+	ErrConfigFlagNotProvided = errors.New("config flag not provided")
+	ErrDistroFlagNotProvided = errors.New("distro-location flag not provided")
+)
 
 func NewConfigCmd(furyctlBinVersion string) *cobra.Command {
 	cmd := &cobra.Command{
@@ -25,15 +31,15 @@ func NewConfigCmd(furyctlBinVersion string) *cobra.Command {
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			debug, ok := cobrax.Flag[bool](cmd, "debug").(bool)
 			if !ok {
-				return fmt.Errorf("debug flag not provided")
+				return ErrDebugFlagNotProvided
 			}
 			furyctlPath, ok := cobrax.Flag[string](cmd, "config").(string)
 			if !ok {
-				return fmt.Errorf("config flag not provided")
+				return ErrConfigFlagNotProvided
 			}
 			distroLocation, ok := cobrax.Flag[string](cmd, "distro-location").(string)
 			if !ok {
-				return fmt.Errorf("distro-location flag not provided")
+				return ErrDistroFlagNotProvided
 			}
 
 			dloader := distribution.NewDownloader(netx.NewGoGetterClient(), debug)

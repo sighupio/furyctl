@@ -5,6 +5,7 @@
 package mapper
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"strings"
@@ -14,6 +15,8 @@ const (
 	Env  = "env"
 	File = "file"
 )
+
+var errKeyIsNotAString = errors.New("key is not a string")
 
 type Mapper struct {
 	context map[string]map[any]any
@@ -57,7 +60,7 @@ func injectDynamicRes(
 	for k, v := range m {
 		key, ok := k.(string)
 		if !ok {
-			return nil, fmt.Errorf("key %v is not a string", k)
+			return nil, fmt.Errorf("%v %w", k, errKeyIsNotAString)
 		}
 
 		spl := strings.Split(key, "://")

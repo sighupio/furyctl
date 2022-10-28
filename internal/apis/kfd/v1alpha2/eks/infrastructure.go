@@ -6,6 +6,7 @@ package eks
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"io/fs"
 	"os"
@@ -24,6 +25,11 @@ import (
 	"github.com/sighupio/furyctl/internal/tool/terraform"
 	execx "github.com/sighupio/furyctl/internal/x/exec"
 	iox "github.com/sighupio/furyctl/internal/x/io"
+)
+
+var (
+	ErrVpcIDNotFound = errors.New("vpc_id not found in infra output")
+	ErrVpcIDFromOut  = errors.New("cannot read vpc_id from infrastructure's output.json")
 )
 
 type Infrastructure struct {

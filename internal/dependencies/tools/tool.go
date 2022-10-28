@@ -5,6 +5,7 @@
 package tools
 
 import (
+	"errors"
 	"fmt"
 	"regexp"
 
@@ -16,6 +17,13 @@ import (
 	"github.com/sighupio/furyctl/internal/tool/openvpn"
 	"github.com/sighupio/furyctl/internal/tool/terraform"
 	execx "github.com/sighupio/furyctl/internal/x/exec"
+)
+
+var (
+	errRegexNil             = errors.New("regex cannot be nil")
+	errVersionEmpty         = errors.New("version cannot be empty")
+	errCannotParseWithRegex = errors.New("can't parse system tool version using regex")
+	errCannotParse          = errors.New("can't parse system tool version")
 )
 
 type Tool interface {
@@ -114,11 +122,11 @@ type checker struct {
 
 func (vc *checker) version(want string) error {
 	if vc.regex == nil {
-		return fmt.Errorf("regex cannot be nil")
+		return errRegexNil
 	}
 
 	if want == "" {
-		return fmt.Errorf("version cannot be empty")
+		return errVersionEmpty
 	}
 
 	installed, err := vc.runner.Version()
@@ -128,14 +136,14 @@ func (vc *checker) version(want string) error {
 
 	versionStringIndex := vc.regex.FindStringIndex(installed)
 	if versionStringIndex == nil {
-		return fmt.Errorf("can't parse system tool version using regex '%s'", vc.regex.String())
+		return fmt.Errorf("%w '%s'", errCannotParseWithRegex, vc.regex.String())
 	}
 
 	versionString := installed[versionStringIndex[0]:versionStringIndex[1]]
 
 	versionStringTokens := vc.splitFn(versionString)
 	if len(versionStringTokens) == 0 {
-		return fmt.Errorf("can't parse system tool version")
+		return errCannotParse
 	}
 
 	systemVersion := vc.trimFn(versionStringTokens)

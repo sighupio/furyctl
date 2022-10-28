@@ -17,6 +17,7 @@ var (
 	ErrTemplatesNotFound         = errors.New("templates key not found in template source custom")
 	ErrTemplateSourceCustomIsNil = errors.New("template source custom is nil")
 	ErrDataSourceBaseIsNil       = errors.New("data source base is nil")
+	errCannotConvert             = errors.New("error while converting")
 )
 
 type Templates struct {
@@ -73,7 +74,7 @@ func newTemplatesFromMap(t any) (*Templates, error) {
 
 	m, ok := t.(map[any]any)
 	if !ok {
-		return nil, fmt.Errorf("cannot convert %v to map", t)
+		return nil, fmt.Errorf("%w %v to map", errCannotConvert, t)
 	}
 
 	incS, ok := m["includes"].([]any)
@@ -142,7 +143,7 @@ func toType[T any](t any) (T, error) {
 
 	s, ok := t.(T)
 	if !ok {
-		return s, fmt.Errorf("error while converting to %s", reflect.TypeOf(s))
+		return s, fmt.Errorf("%w to %s", errCannotConvert, reflect.TypeOf(s))
 	}
 
 	return s, nil

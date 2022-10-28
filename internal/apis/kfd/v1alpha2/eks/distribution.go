@@ -6,6 +6,7 @@ package eks
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"path"
@@ -24,6 +25,17 @@ import (
 	"github.com/sighupio/furyctl/internal/tool/terraform"
 	execx "github.com/sighupio/furyctl/internal/x/exec"
 	yamlx "github.com/sighupio/furyctl/internal/x/yaml"
+)
+
+var (
+	errCastingVpcIDToStr     = errors.New("error casting vpc_id output to string")
+	errCastingEbsIamToStr    = errors.New("error casting ebs_csi_driver_iam_role_arn output to string")
+	errCastingLbIamToStr     = errors.New("error casting load_balancer_controller_iam_role_arn output to string")
+	errCastingClsAsIamToStr  = errors.New("error casting cluster_autoscaler_iam_role_arn output to string")
+	errCastingDNSPvtIamToStr = errors.New("error casting external_dns_private_iam_role_arn output to string")
+	errCastingDNSPubIamToStr = errors.New("error casting external_dns_public_iam_role_arn output to string")
+	errCastingCertIamToStr   = errors.New("error casting cert_manager_iam_role_arn output to string")
+	errCastingVelIamToStr    = errors.New("error casting velero_iam_role_arn output to string")
 )
 
 type Distribution struct {
@@ -246,12 +258,12 @@ func (d *Distribution) extractVpcIDFromPrevPhases(fMerger *merge.Merger) (string
 
 		if err := json.Unmarshal(infraOutJSON, &infraOut); err == nil {
 			if infraOut.Outputs["vpc_id"] == nil {
-				return vpcID, fmt.Errorf("vpc_id not found in infra output")
+				return vpcID, ErrVpcIDNotFound
 			}
 
 			vpcIDOut, ok := infraOut.Outputs["vpc_id"].Value.(string)
 			if !ok {
-				return vpcID, fmt.Errorf("error casting vpc_id output to string")
+				return vpcID, errCastingVpcIDToStr
 			}
 
 			vpcID = vpcIDOut
@@ -266,7 +278,7 @@ func (d *Distribution) extractVpcIDFromPrevPhases(fMerger *merge.Merger) (string
 
 		vpcFromFuryctlConf, ok := kubeFromFuryctlConf["vpcId"].(string)
 		if !ok {
-			return vpcID, fmt.Errorf("vpcId is not a string")
+			return vpcID, errCastingVpcIDToStr
 		}
 
 		vpcID = vpcFromFuryctlConf
@@ -352,7 +364,7 @@ func (d *Distribution) extractARNsFromTfOut() (map[string]string, error) {
 	if ok {
 		arns["ebs_csi_driver_iam_role_arn"], ok = ebsCsiDriverArn.Value.(string)
 		if !ok {
-			return nil, fmt.Errorf("error casting ebs_csi_driver_iam_role_arn output to string")
+			return nil, errCastingEbsIamToStr
 		}
 	}
 
@@ -360,7 +372,7 @@ func (d *Distribution) extractARNsFromTfOut() (map[string]string, error) {
 	if ok {
 		arns["load_balancer_controller_iam_role_arn"], ok = loadBalancerControllerArn.Value.(string)
 		if !ok {
-			return nil, fmt.Errorf("error casting load_balancer_controller_iam_role_arn output to string")
+			return nil, errCastingLbIamToStr
 		}
 	}
 
@@ -368,7 +380,7 @@ func (d *Distribution) extractARNsFromTfOut() (map[string]string, error) {
 	if ok {
 		arns["cluster_autoscaler_iam_role_arn"], ok = clusterAutoscalerArn.Value.(string)
 		if !ok {
-			return nil, fmt.Errorf("error casting cluster_autoscaler_iam_role_arn output to string")
+			return nil, errCastingClsAsIamToStr
 		}
 	}
 
@@ -376,7 +388,7 @@ func (d *Distribution) extractARNsFromTfOut() (map[string]string, error) {
 	if ok {
 		arns["external_dns_private_iam_role_arn"], ok = externalDNSPrivateArn.Value.(string)
 		if !ok {
-			return nil, fmt.Errorf("error casting external_dns_private_iam_role_arn output to string")
+			return nil, errCastingDNSPvtIamToStr
 		}
 	}
 
@@ -384,7 +396,7 @@ func (d *Distribution) extractARNsFromTfOut() (map[string]string, error) {
 	if ok {
 		arns["external_dns_public_iam_role_arn"], ok = externalDNSPublicArn.Value.(string)
 		if !ok {
-			return nil, fmt.Errorf("error casting external_dns_public_iam_role_arn output to string")
+			return nil, errCastingDNSPubIamToStr
 		}
 	}
 
@@ -392,7 +404,7 @@ func (d *Distribution) extractARNsFromTfOut() (map[string]string, error) {
 	if ok {
 		arns["cert_manager_iam_role_arn"], ok = certManagerArn.Value.(string)
 		if !ok {
-			return nil, fmt.Errorf("error casting cert_manager_iam_role_arn output to string")
+			return nil, errCastingCertIamToStr
 		}
 	}
 
@@ -400,7 +412,7 @@ func (d *Distribution) extractARNsFromTfOut() (map[string]string, error) {
 	if ok {
 		arns["velero_iam_role_arn"], ok = veleroArn.Value.(string)
 		if !ok {
-			return nil, fmt.Errorf("error casting velero_iam_role_arn output to string")
+			return nil, errCastingVelIamToStr
 		}
 	}
 

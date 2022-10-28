@@ -5,6 +5,7 @@
 package cluster
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 
@@ -21,8 +22,11 @@ const (
 	CreatorPropertyVpnAutoConnect = "vpnautoconnect"
 )
 
-var factories = make(map[string]map[string]CreatorFactory) //nolint:gochecknoglobals // This patterns requires factories
-//  as global to work with init function.
+var (
+	factories = make(map[string]map[string]CreatorFactory) //nolint:gochecknoglobals // This patterns requires factories
+	//  as global to work with init function.
+	errResourceNotSupported = errors.New("resource is not supported")
+)
 
 type CreatorFactory func(configPath string, props []CreatorProperty) (Creator, error)
 
@@ -69,7 +73,7 @@ func NewCreator(
 		})
 	}
 
-	return nil, fmt.Errorf("resource type '%s' with api version '%s' is not supported", lcResourceType, lcAPIVersion)
+	return nil, fmt.Errorf("%w -  type '%s' api version '%s'", errResourceNotSupported, lcResourceType, lcAPIVersion)
 }
 
 func RegisterCreatorFactory(apiVersion, kind string, factory CreatorFactory) {
