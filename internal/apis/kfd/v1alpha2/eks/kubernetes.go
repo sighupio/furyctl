@@ -40,7 +40,7 @@ func NewKubernetes(
 ) (*Kubernetes, error) {
 	phase, err := cluster.NewCreationPhase(".kubernetes")
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error creating kubernetes phase: %w", err)
 	}
 
 	return &Kubernetes{
@@ -65,7 +65,7 @@ func (k *Kubernetes) Exec(dryRun bool) error {
 	timestamp := time.Now().Unix()
 
 	if err := k.CreateFolder(); err != nil {
-		return err
+		return fmt.Errorf("error creating kubernetes phase folder: %w", err)
 	}
 
 	if err := k.copyFromTemplate(); err != nil {
@@ -73,7 +73,7 @@ func (k *Kubernetes) Exec(dryRun bool) error {
 	}
 
 	if err := k.CreateFolderStructure(); err != nil {
-		return err
+		return fmt.Errorf("error creating kubernetes phase folder structure: %w", err)
 	}
 
 	if err := k.createTfVars(); err != nil {
@@ -81,11 +81,11 @@ func (k *Kubernetes) Exec(dryRun bool) error {
 	}
 
 	if err := k.tfRunner.Init(); err != nil {
-		return err
+		return fmt.Errorf("error running terraform init: %w", err)
 	}
 
 	if err := k.tfRunner.Plan(timestamp); err != nil {
-		return err
+		return fmt.Errorf("error running terraform plan: %w", err)
 	}
 
 	if dryRun {
@@ -94,7 +94,7 @@ func (k *Kubernetes) Exec(dryRun bool) error {
 
 	out, err := k.tfRunner.Apply(timestamp)
 	if err != nil {
-		return err
+		return fmt.Errorf("error running terraform apply: %w", err)
 	}
 
 	if err := k.createKubeconfig(out); err != nil {
@@ -109,19 +109,19 @@ func (k *Kubernetes) copyFromTemplate() error {
 
 	tmpFolder, err := os.MkdirTemp("", "furyctl-kube-configs-")
 	if err != nil {
-		return err
+		return fmt.Errorf("error creating temp folder: %w", err)
 	}
 
 	defer os.RemoveAll(tmpFolder)
 
 	subFS, err := fs.Sub(configs.Tpl, path.Join("provisioners", "cluster", "eks"))
 	if err != nil {
-		return err
+		return fmt.Errorf("error getting subfs: %w", err)
 	}
 
 	err = iox.CopyRecursive(subFS, tmpFolder)
 	if err != nil {
-		return err
+		return fmt.Errorf("error copying template files: %w", err)
 	}
 
 	targetTfDir := path.Join(k.Path, "terraform")
@@ -134,12 +134,17 @@ func (k *Kubernetes) copyFromTemplate() error {
 
 	cfg.Data = tfConfVars
 
-	return k.CreationPhase.CopyFromTemplate(
+	err = k.CreationPhase.CopyFromTemplate(
 		cfg,
 		prefix,
 		tmpFolder,
 		targetTfDir,
 	)
+	if err != nil {
+		return fmt.Errorf("error generating from template files: %w", err)
+	}
+
+	return nil
 }
 
 func (k *Kubernetes) createKubeconfig(o terraform.OutputJSON) error {
@@ -152,16 +157,26 @@ func (k *Kubernetes) createKubeconfig(o terraform.OutputJSON) error {
 		return fmt.Errorf("can't get kubeconfig from terraform apply logs")
 	}
 
-	return os.WriteFile(path.Join(k.SecretsPath, "kubeconfig"), []byte(kubeString), iox.FullRWPermAccess)
+	err := os.WriteFile(path.Join(k.SecretsPath, "kubeconfig"), []byte(kubeString), iox.FullRWPermAccess)
+	if err != nil {
+		return fmt.Errorf("error writing kubeconfig file: %w", err)
+	}
+
+	return nil
 }
 
 func (k *Kubernetes) setKubeconfigEnv() error {
 	kubePath, err := filepath.Abs(path.Join(k.SecretsPath, "kubeconfig"))
 	if err != nil {
-		return err
+		return fmt.Errorf("error getting kubeconfig absolute path: %w", err)
 	}
 
-	return os.Setenv("KUBECONFIG", kubePath)
+	err = os.Setenv("KUBECONFIG", kubePath)
+	if err != nil {
+		return fmt.Errorf("error setting kubeconfig env: %w", err)
+	}
+
+	return nil
 }
 
 //nolint:gocyclo,maintidx // it will be refactored
@@ -246,7 +261,7 @@ func (k *Kubernetes) createTfVars() error {
 
 		tags, err := json.Marshal(k.furyctlConf.Spec.Tags)
 		if err != nil {
-			return err
+			return fmt.Errorf("error marshaling tags: %w", err)
 		}
 
 		buffer.WriteString(fmt.Sprintf("tags = %v\n", string(tags)))
@@ -338,7 +353,7 @@ func (k *Kubernetes) createTfVars() error {
 
 						tags, err := json.Marshal(fwRule.Tags)
 						if err != nil {
-							return err
+							return fmt.Errorf("error marshaling firewall rules tags: %w", err)
 						}
 
 						fwRuleTags = string(tags)
@@ -386,7 +401,7 @@ func (k *Kubernetes) createTfVars() error {
 
 				labels, err := json.Marshal(np.Labels)
 				if err != nil {
-					return err
+					return fmt.Errorf("error marshaling node pool labels: %w", err)
 				}
 
 				buffer.WriteString(fmt.Sprintf("labels = %v\n", string(labels)))
@@ -405,7 +420,7 @@ func (k *Kubernetes) createTfVars() error {
 
 				tags, err := json.Marshal(np.Tags)
 				if err != nil {
-					return err
+					return fmt.Errorf("error marshaling node pool tags: %w", err)
 				}
 
 				buffer.WriteString(fmt.Sprintf("tags = %v\n", string(tags)))
@@ -421,5 +436,10 @@ func (k *Kubernetes) createTfVars() error {
 
 	targetTfVars := path.Join(k.Path, "terraform", "main.auto.tfvars")
 
-	return os.WriteFile(targetTfVars, buffer.Bytes(), iox.FullRWPermAccess)
+	err := os.WriteFile(targetTfVars, buffer.Bytes(), iox.FullRWPermAccess)
+	if err != nil {
+		return fmt.Errorf("error writing terraform vars file: %w", err)
+	}
+
+	return nil
 }

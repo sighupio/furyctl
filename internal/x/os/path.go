@@ -6,13 +6,14 @@ package osx
 
 import (
 	"errors"
+	"fmt"
 	"os"
 )
 
 func CleanupTempDir(dir string) error {
 	if err := os.RemoveAll(dir); err != nil {
 		if !errors.Is(err, os.ErrNotExist) {
-			return err
+			return fmt.Errorf("error removing dir: %w", err)
 		}
 	}
 

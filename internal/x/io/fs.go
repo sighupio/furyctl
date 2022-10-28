@@ -29,7 +29,7 @@ func CheckDirIsEmpty(target string) error {
 		return nil
 	}
 
-	return filepath.Walk(target, func(path string, _ os.FileInfo, err error) error {
+	err := filepath.Walk(target, func(path string, _ os.FileInfo, err error) error {
 		if err != nil {
 			return fmt.Errorf("the target directory is not empty, error while checking %s: %w", path, err)
 		}
@@ -40,19 +40,27 @@ func CheckDirIsEmpty(target string) error {
 
 		return fmt.Errorf("the target directory is not empty: %s", path)
 	})
+	if err != nil {
+		return fmt.Errorf("error while checking path %s: %w", target, err)
+	}
+
+	return nil
 }
 
 func AppendToFile(s, target string) error {
 	destination, err := os.OpenFile(target, os.O_APPEND|os.O_CREATE|os.O_WRONLY, RWPermAccess)
 	if err != nil {
-		return err
+		return fmt.Errorf("error while opening file %s: %w", target, err)
 	}
 
 	defer destination.Close()
 
 	_, err = destination.Write([]byte(s))
+	if err != nil {
+		return fmt.Errorf("error while writing to file %s: %w", target, err)
+	}
 
-	return err
+	return nil
 }
 
 func CopyBufferToFile(b bytes.Buffer, target string) error {
@@ -62,20 +70,23 @@ func CopyBufferToFile(b bytes.Buffer, target string) error {
 
 	destination, err := os.Create(target)
 	if err != nil {
-		return err
+		return fmt.Errorf("error while creating file %s: %w", target, err)
 	}
 
 	defer destination.Close()
 
 	_, err = b.WriteTo(destination)
+	if err != nil {
+		return fmt.Errorf("error while writing to file %s: %w", target, err)
+	}
 
-	return err
+	return nil
 }
 
 func CopyFile(src, dst string) error {
 	sourceFileStat, err := os.Stat(src)
 	if err != nil {
-		return err
+		return fmt.Errorf("error while getting file info %s: %w", src, err)
 	}
 
 	if !sourceFileStat.Mode().IsRegular() {
@@ -84,38 +95,41 @@ func CopyFile(src, dst string) error {
 
 	source, err := os.Open(src)
 	if err != nil {
-		return err
+		return fmt.Errorf("error while opening file %s: %w", src, err)
 	}
 
 	defer source.Close()
 
 	destination, err := os.Create(dst)
 	if err != nil {
-		return err
+		return fmt.Errorf("error while creating file %s: %w", dst, err)
 	}
 
 	defer destination.Close()
 
 	_, err = io.Copy(destination, source)
+	if err != nil {
+		return fmt.Errorf("error while copying file %s to %s: %w", src, dst, err)
+	}
 
-	return err
+	return nil
 }
 
 func CopyRecursive(src fs.FS, dest string) error {
 	stuff, err := fs.ReadDir(src, ".")
 	if err != nil {
-		return err
+		return fmt.Errorf("error while reading directory %s: %w", src, err)
 	}
 
 	for _, file := range stuff {
 		if file.IsDir() {
 			sub, err := fs.Sub(src, file.Name())
 			if err != nil {
-				return err
+				return fmt.Errorf("error while converting sub directory %s to fs.FS: %w", file.Name(), err)
 			}
 
 			if err := os.Mkdir(path.Join(dest, file.Name()), FullPermAccess); err != nil && !os.IsExist(err) {
-				return err
+				return fmt.Errorf("error while creating directory %s: %w", file.Name(), err)
 			}
 
 			if err := CopyRecursive(sub, path.Join(dest, file.Name())); err != nil {
@@ -127,7 +141,7 @@ func CopyRecursive(src fs.FS, dest string) error {
 
 		fileContent, err := fs.ReadFile(src, file.Name())
 		if err != nil {
-			return err
+			return fmt.Errorf("error while reading file %s: %w", file.Name(), err)
 		}
 
 		if err := EnsureDir(path.Join(dest, file.Name())); err != nil {
@@ -135,7 +149,7 @@ func CopyRecursive(src fs.FS, dest string) error {
 		}
 
 		if err := os.WriteFile(path.Join(dest, file.Name()), fileContent, RWPermAccess); err != nil {
-			return err
+			return fmt.Errorf("error while writing file %s: %w", file.Name(), err)
 		}
 	}
 
@@ -143,16 +157,16 @@ func CopyRecursive(src fs.FS, dest string) error {
 }
 
 // EnsureDir creates the directories to host the file.
-// Example: hello/world.md will create the hello dir if it does not exists.
+// Example: hello/world.md will create the hello dir if it does not exist.
 func EnsureDir(fileName string) error {
 	dirName := filepath.Dir(fileName)
 	if _, serr := os.Stat(dirName); serr != nil {
 		if !os.IsNotExist(serr) {
-			return serr
+			return fmt.Errorf("error while checking if directory %s exists: %w", dirName, serr)
 		}
 
 		if err := os.MkdirAll(dirName, os.ModePerm); err != nil {
-			return err
+			return fmt.Errorf("error while creating directory %s: %w", dirName, err)
 		}
 	}
 

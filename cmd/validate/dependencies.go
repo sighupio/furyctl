@@ -46,7 +46,7 @@ func NewDependenciesCmd(furyctlBinVersion string) *cobra.Command {
 
 			dres, err := dloader.Download(furyctlBinVersion, distroLocation, furyctlPath)
 			if err != nil {
-				return err
+				return fmt.Errorf("failed to download distribution: %w", err)
 			}
 
 			toolsValidator := tools.NewValidator(execx.NewStdExecutor(), binPath)

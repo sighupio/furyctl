@@ -22,13 +22,16 @@ import (
 const DefaultBaseURL = "https://git@github.com/sighupio/fury-distribution?ref=%s"
 
 var (
-	ErrCreatingTempDir     = errors.New("error creating temp dir")
-	ErrDownloadingFolder   = errors.New("error downloading folder")
-	ErrMergeCompleteConfig = errors.New("error merging complete config")
-	ErrMergeDistroConfig   = errors.New("error merging distribution config")
-	ErrWriteFile           = errors.New("error writing file")
-	ErrYamlMarshalFile     = errors.New("error marshaling yaml file")
-	ErrYamlUnmarshalFile   = errors.New("error unmarshaling yaml file")
+	ErrCreatingTempDir         = errors.New("error creating temp dir")
+	ErrValidateConfig          = errors.New("error validating config")
+	ErrDownloadingFolder       = errors.New("error downloading folder")
+	ErrRenamingFile            = errors.New("error renaming file")
+	ErrMergeCompleteConfig     = errors.New("error merging complete config")
+	ErrMergeDistroConfig       = errors.New("error merging distribution config")
+	ErrWriteFile               = errors.New("error writing file")
+	ErrYamlMarshalFile         = errors.New("error marshaling yaml file")
+	ErrYamlUnmarshalFile       = errors.New("error unmarshaling yaml file")
+	ErrChangingFilePermissions = errors.New("error changing file permissions")
 )
 
 type DownloadResult struct {
@@ -58,11 +61,11 @@ func (d *Downloader) Download(
 ) (DownloadResult, error) {
 	minimalConf, err := yamlx.FromFileV3[config.Furyctl](furyctlConfPath)
 	if err != nil {
-		return DownloadResult{}, err
+		return DownloadResult{}, fmt.Errorf("%w: %s", ErrYamlUnmarshalFile, err)
 	}
 
 	if err := d.validate.Struct(minimalConf); err != nil {
-		return DownloadResult{}, err
+		return DownloadResult{}, fmt.Errorf("invalid furyctl config: %w", err)
 	}
 
 	furyctlConfVersion := minimalConf.Spec.DistributionVersion
@@ -103,7 +106,7 @@ func (d *Downloader) Download(
 	}
 
 	if err := d.validate.Struct(kfdManifest); err != nil {
-		return DownloadResult{}, err
+		return DownloadResult{}, fmt.Errorf("invalid kfd config: %w", err)
 	}
 
 	return DownloadResult{

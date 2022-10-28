@@ -118,7 +118,7 @@ func (dd *Downloader) DownloadInstallers(installers config.KFDKubernetes) error 
 		src := fmt.Sprintf("git::git@github.com:sighupio/fury-%s-installer?ref=%s", name, version)
 
 		if err := dd.client.Download(src, filepath.Join(dd.basePath, "vendor", "installers", name)); err != nil {
-			return err
+			return fmt.Errorf("%w '%s': %v", distribution.ErrDownloadingFolder, src, err)
 		}
 	}
 
@@ -148,16 +148,16 @@ func (dd *Downloader) DownloadTools(tools config.KFDTools) ([]string, error) {
 		dst := filepath.Join(dd.basePath, "vendor", "bin")
 
 		if err := dd.client.Download(tool.SrcPath(), dst); err != nil {
-			return unsupportedTools, err
+			return unsupportedTools, fmt.Errorf("%w '%s': %v", distribution.ErrDownloadingFolder, tool.SrcPath(), err)
 		}
 
 		if err := tool.Rename(dst); err != nil {
-			return unsupportedTools, err
+			return unsupportedTools, fmt.Errorf("%w '%s': %v", distribution.ErrRenamingFile, tool.SrcPath(), err)
 		}
 
 		err := os.Chmod(filepath.Join(dst, name), iox.FullPermAccess)
 		if err != nil {
-			return unsupportedTools, err
+			return unsupportedTools, fmt.Errorf("%w '%s': %v", distribution.ErrChangingFilePermissions, tool.SrcPath(), err)
 		}
 	}
 

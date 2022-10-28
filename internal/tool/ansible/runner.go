@@ -5,6 +5,8 @@
 package ansible
 
 import (
+	"fmt"
+
 	execx "github.com/sighupio/furyctl/internal/x/exec"
 )
 
@@ -26,9 +28,14 @@ func NewRunner(executor execx.Executor, paths Paths) *Runner {
 }
 
 func (r *Runner) Version() (string, error) {
-	return execx.CombinedOutput(execx.NewCmd(r.paths.Ansible, execx.CmdOptions{
+	out, err := execx.CombinedOutput(execx.NewCmd(r.paths.Ansible, execx.CmdOptions{
 		Args:     []string{"--version"},
 		Executor: r.executor,
 		WorkDir:  r.paths.WorkDir,
 	}))
+	if err != nil {
+		return "", fmt.Errorf("error getting ansible version: %w", err)
+	}
+
+	return out, nil
 }

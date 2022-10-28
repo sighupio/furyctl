@@ -7,12 +7,13 @@ package app
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"time"
 )
 
 type Release struct {
-	//nolint:tagliatelle // Github response's field has snake case.
+	//nolint:tagliatelle // GitHub response's field has snake case.
 	URL     string `json:"html_url"`
 	Version string `json:"name"`
 }
@@ -31,18 +32,18 @@ func GetLatestRelease() (Release, error) {
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, latestSource, nil)
 	if err != nil {
-		return release, err
+		return release, fmt.Errorf("error creating request: %w", err)
 	}
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
-		return release, err
+		return release, fmt.Errorf("error performing request: %w", err)
 	}
 
 	defer resp.Body.Close()
 
 	if err := json.NewDecoder(resp.Body).Decode(&release); err != nil {
-		return release, err
+		return release, fmt.Errorf("error decoding response: %w", err)
 	}
 
 	return release, nil

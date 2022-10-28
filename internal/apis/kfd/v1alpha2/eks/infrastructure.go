@@ -38,7 +38,7 @@ type Infrastructure struct {
 func NewInfrastructure(furyctlConf schema.EksclusterKfdV1Alpha2, kfdManifest config.KFD) (*Infrastructure, error) {
 	phase, err := cluster.NewCreationPhase(".infrastructure")
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error creating infrastructure phase: %w", err)
 	}
 
 	executor := execx.NewStdExecutor()
@@ -72,7 +72,7 @@ func (i *Infrastructure) Exec(dryRun bool, opts []cluster.CreationPhaseOption) e
 	timestamp := time.Now().Unix()
 
 	if err := i.CreateFolder(); err != nil {
-		return err
+		return fmt.Errorf("error creating infrastructure folder: %w", err)
 	}
 
 	if err := i.copyFromTemplate(i.kfdManifest); err != nil {
@@ -80,7 +80,7 @@ func (i *Infrastructure) Exec(dryRun bool, opts []cluster.CreationPhaseOption) e
 	}
 
 	if err := i.CreateFolderStructure(); err != nil {
-		return err
+		return fmt.Errorf("error creating infrastructure folder structure: %w", err)
 	}
 
 	if err := i.createTfVars(); err != nil {
@@ -88,11 +88,11 @@ func (i *Infrastructure) Exec(dryRun bool, opts []cluster.CreationPhaseOption) e
 	}
 
 	if err := i.tfRunner.Init(); err != nil {
-		return err
+		return fmt.Errorf("error running terraform init: %w", err)
 	}
 
 	if err := i.tfRunner.Plan(timestamp); err != nil {
-		return err
+		return fmt.Errorf("error running terraform plan: %w", err)
 	}
 
 	if dryRun {
@@ -100,7 +100,7 @@ func (i *Infrastructure) Exec(dryRun bool, opts []cluster.CreationPhaseOption) e
 	}
 
 	if _, err := i.tfRunner.Apply(timestamp); err != nil {
-		return err
+		return fmt.Errorf("error running terraform apply: %w", err)
 	}
 
 	if i.isVpnConfigured() {
@@ -110,13 +110,13 @@ func (i *Infrastructure) Exec(dryRun bool, opts []cluster.CreationPhaseOption) e
 		}
 
 		if err := i.faRunner.ConfigOpenvpnClient(clientName); err != nil {
-			return err
+			return fmt.Errorf("error configuring openvpn client: %w", err)
 		}
 
 		for _, opt := range opts {
 			if strings.ToLower(opt.Name) == cluster.CreationPhaseOptionVPNAutoConnect {
 				if err := i.ovRunner.Connect(clientName); err != nil {
-					return err
+					return fmt.Errorf("error connecting to vpn: %w", err)
 				}
 			}
 		}
@@ -132,7 +132,7 @@ func (i *Infrastructure) isVpnConfigured() bool {
 func (i *Infrastructure) generateClientName() (string, error) {
 	whoamiResp, err := exec.Command("whoami").Output()
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("error getting current user: %w", err)
 	}
 
 	whoami := strings.TrimSpace(string(whoamiResp))
@@ -145,18 +145,18 @@ func (i *Infrastructure) copyFromTemplate(kfdManifest config.KFD) error {
 
 	tmpFolder, err := os.MkdirTemp("", "furyctl-infra-configs-")
 	if err != nil {
-		return err
+		return fmt.Errorf("error creating temp folder: %w", err)
 	}
 
 	defer os.RemoveAll(tmpFolder)
 
 	subFS, err := fs.Sub(configs.Tpl, path.Join("provisioners", "bootstrap", "aws"))
 	if err != nil {
-		return err
+		return fmt.Errorf("error getting subfs: %w", err)
 	}
 
 	if err = iox.CopyRecursive(subFS, tmpFolder); err != nil {
-		return err
+		return fmt.Errorf("error copying template files: %w", err)
 	}
 
 	targetTfDir := path.Join(i.Path, "terraform")
@@ -168,12 +168,17 @@ func (i *Infrastructure) copyFromTemplate(kfdManifest config.KFD) error {
 		},
 	}
 
-	return i.CreationPhase.CopyFromTemplate(
+	err = i.CreationPhase.CopyFromTemplate(
 		cfg,
 		prefix,
 		tmpFolder,
 		targetTfDir,
 	)
+	if err != nil {
+		return fmt.Errorf("error generating from template files: %w", err)
+	}
+
+	return nil
 }
 
 func (i *Infrastructure) createTfVars() error {
@@ -297,5 +302,10 @@ func (i *Infrastructure) createTfVars() error {
 
 	targetTfVars := path.Join(i.Path, "terraform", "main.auto.tfvars")
 
-	return os.WriteFile(targetTfVars, buffer.Bytes(), iox.FullRWPermAccess)
+	err := os.WriteFile(targetTfVars, buffer.Bytes(), iox.FullRWPermAccess)
+	if err != nil {
+		return fmt.Errorf("error writing terraform vars: %w", err)
+	}
+
+	return nil
 }

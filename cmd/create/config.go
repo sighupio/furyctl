@@ -53,12 +53,12 @@ func NewConfigCmd() *cobra.Command {
 
 			data, err := configs.Tpl.ReadFile("furyctl.yaml.tpl")
 			if err != nil {
-				return err
+				return fmt.Errorf("error reading furyctl yaml template: %w", err)
 			}
 
 			tmpl, err := template.New("furyctl.yaml").Parse(string(data))
 			if err != nil {
-				return err
+				return fmt.Errorf("error parsing furyctl yaml template: %w", err)
 			}
 
 			out, err := createNewEmptyConfigFile(config)
@@ -71,7 +71,7 @@ func NewConfigCmd() *cobra.Command {
 				"Name":                name,
 				"DistributionVersion": version,
 			}); err != nil {
-				return err
+				return fmt.Errorf("error executing furyctl yaml template: %w", err)
 			}
 
 			logrus.Infof("Config file created successfully at: %s", out.Name())
@@ -114,7 +114,7 @@ func NewConfigCmd() *cobra.Command {
 func createNewEmptyConfigFile(path string) (*os.File, error) {
 	absPath, err := filepath.Abs(path)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error getting absolute path: %w", err)
 	}
 
 	if _, err := os.Stat(absPath); err == nil {
@@ -127,8 +127,13 @@ func createNewEmptyConfigFile(path string) (*os.File, error) {
 	}
 
 	if err := os.MkdirAll(filepath.Dir(absPath), iox.FullPermAccess); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error creating directory: %w", err)
 	}
 
-	return os.Create(absPath)
+	out, err := os.Create(absPath)
+	if err != nil {
+		return nil, fmt.Errorf("error creating file: %w", err)
+	}
+
+	return out, nil
 }

@@ -18,8 +18,6 @@ import (
 	iox "github.com/sighupio/furyctl/internal/x/io"
 )
 
-var ErrProcessTemplate = errors.New("error processing template")
-
 type generator struct {
 	rootSrc string
 	source  string
@@ -52,16 +50,26 @@ func (g *generator) ProcessTemplate() (*template.Template, error) {
 
 	_, err := os.Stat(helpersPath)
 	if err == nil {
-		return template.New(filepath.Base(g.source)).Funcs(g.funcMap.FuncMap).ParseFiles(g.source, helpersPath)
+		tpl, err := template.New(filepath.Base(g.source)).Funcs(g.funcMap.FuncMap).ParseFiles(g.source, helpersPath)
+		if err != nil {
+			return nil, fmt.Errorf("error processing template: %w", err)
+		}
+
+		return tpl, nil
 	}
 
 	if errors.Is(err, os.ErrNotExist) {
 		logrus.Warnf("template helpers file '%s' not found\n", helpersPath)
 
-		return template.New(filepath.Base(g.source)).Funcs(g.funcMap.FuncMap).ParseFiles(g.source)
+		tpl, err := template.New(filepath.Base(g.source)).Funcs(g.funcMap.FuncMap).ParseFiles(g.source)
+		if err != nil {
+			return nil, fmt.Errorf("error processing template: %w", err)
+		}
+
+		return tpl, nil
 	}
 
-	return nil, fmt.Errorf("%w using helper '%s': %v", ErrProcessTemplate, helpersPath, err)
+	return nil, fmt.Errorf("error processing template using helper '%s': %w", helpersPath, err)
 }
 
 func (g *generator) GetMissingKeys(tpl *template.Template) []string {
@@ -92,8 +100,11 @@ func (g *generator) ProcessFile(tpl *template.Template) (bytes.Buffer, error) {
 	}
 
 	err := tpl.Execute(&generatedContent, g.context)
+	if err != nil {
+		return generatedContent, fmt.Errorf("error processing template: %w", err)
+	}
 
-	return generatedContent, err
+	return generatedContent, nil
 }
 
 func (g *generator) ProcessFilename(
@@ -108,7 +119,7 @@ func (g *generator) ProcessFilename(
 		destination := bytes.NewBufferString("")
 
 		if err := tpl.Execute(destination, g.context); err != nil {
-			return "", err
+			return "", fmt.Errorf("error processing filename: %w", err)
 		}
 
 		realTarget = destination.String()
@@ -147,7 +158,12 @@ func (g *generator) WriteMissingKeysToFile(
 
 	outLog := fmt.Sprintf("[%s]\n%s\n", tmplPath, strings.Join(missingKeys, "\n"))
 
-	return iox.AppendToFile(outLog, debugFilePath)
+	err := iox.AppendToFile(outLog, debugFilePath)
+	if err != nil {
+		return fmt.Errorf("error writing missing keys to log file: %w", err)
+	}
+
+	return nil
 }
 
 func (g *generator) getContextValueFromPath(path string) any {

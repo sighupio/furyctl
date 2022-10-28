@@ -25,14 +25,14 @@ linters:
   disable:
     # todo
     - goerr113
-    - ireturn
-    - revive
-    - varnamelen
-    - wrapcheck
+#    - wrapcheck
     # unsupported
     - rowserrcheck
     - sqlclosecheck
     - wastedassign
+    - ireturn # not working with generics https://github.com/butuzov/ireturn/issues/37
+    - revive
+    - varnamelen # not useful
     # deprecated
     - deadcode
     - exhaustivestruct
@@ -73,7 +73,7 @@ linters-settings:
     max-complexity: 40
   funlen:
     lines: 280
-    statements: 113
+    statements: 115
   gocognit:
     min-complexity: 110
   godot:

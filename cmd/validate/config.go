@@ -40,7 +40,7 @@ func NewConfigCmd(furyctlBinVersion string) *cobra.Command {
 
 			res, err := dloader.Download(furyctlBinVersion, distroLocation, furyctlPath)
 			if err != nil {
-				return err
+				return fmt.Errorf("failed to download distribution: %w", err)
 			}
 
 			if err := config.Validate(furyctlPath, res.RepoPath); err != nil {

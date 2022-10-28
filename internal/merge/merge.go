@@ -36,7 +36,7 @@ func (m *Merger) Merge() (map[any]any, error) {
 
 	preparedCustom, err := m.custom.Get()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("incorrect custom file, %w", err)
 	}
 
 	mergedSection := deepCopy(preparedBase, preparedCustom)

@@ -72,7 +72,7 @@ func NewClusterCmd(version string) *cobra.Command {
 			// Init paths.
 			basePath, err := os.Getwd()
 			if err != nil {
-				return err
+				return fmt.Errorf("error while getting current working directory: %w", err)
 			}
 
 			binPath := filepath.Join(basePath, "vendor", "bin")
@@ -90,12 +90,12 @@ func NewClusterCmd(version string) *cobra.Command {
 			// Download the distribution.
 			res, err := distrodl.Download(version, distroLocation, furyctlPath)
 			if err != nil {
-				return err
+				return fmt.Errorf("error while downloading distribution: %w", err)
 			}
 
 			// Validate the furyctl.yaml file.
 			if err := config.Validate(furyctlPath, res.RepoPath); err != nil {
-				return err
+				return fmt.Errorf("error while validating furyctl.yaml file: %w", err)
 			}
 
 			// Download the dependencies.
@@ -107,7 +107,7 @@ func NewClusterCmd(version string) *cobra.Command {
 
 			// Validate the dependencies.
 			if err := depsvl.Validate(res); err != nil {
-				return err
+				return fmt.Errorf("error while validating dependencies: %w", err)
 			}
 
 			// Create the cluster.
@@ -120,11 +120,11 @@ func NewClusterCmd(version string) *cobra.Command {
 				vpnAutoConnect,
 			)
 			if err != nil {
-				return err
+				return fmt.Errorf("error while initializing cluster creation: %w", err)
 			}
 
 			if err := clusterCreator.Create(dryRun); err != nil {
-				return err
+				return fmt.Errorf("error while creating cluster: %w", err)
 			}
 
 			fmt.Println("cluster creation succeeded")

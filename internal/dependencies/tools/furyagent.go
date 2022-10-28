@@ -58,7 +58,12 @@ func (f *Furyagent) Rename(basePath string) error {
 	oldName := fmt.Sprintf("furyagent-%s-%s", f.os, f.arch)
 	newName := "furyagent"
 
-	return os.Rename(filepath.Join(basePath, oldName), filepath.Join(basePath, newName))
+	err := os.Rename(filepath.Join(basePath, oldName), filepath.Join(basePath, newName))
+	if err != nil {
+		return fmt.Errorf("error while renaming furyagent: %w", err)
+	}
+
+	return nil
 }
 
 func (f *Furyagent) CheckBinVersion() error {

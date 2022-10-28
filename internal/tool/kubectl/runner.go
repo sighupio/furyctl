@@ -5,6 +5,8 @@
 package kubectl
 
 import (
+	"fmt"
+
 	execx "github.com/sighupio/furyctl/internal/x/exec"
 )
 
@@ -39,14 +41,22 @@ func (r *Runner) Apply(manifestPath string, serverSide bool) error {
 		Executor: r.executor,
 		WorkDir:  r.paths.WorkDir,
 	}))
+	if err != nil {
+		return fmt.Errorf("error applying manifest: %w", err)
+	}
 
-	return err
+	return nil
 }
 
 func (r *Runner) Version() (string, error) {
-	return execx.CombinedOutput(execx.NewCmd(r.paths.Kubectl, execx.CmdOptions{
+	out, err := execx.CombinedOutput(execx.NewCmd(r.paths.Kubectl, execx.CmdOptions{
 		Args:     []string{"version", "--client"},
 		Executor: r.executor,
 		WorkDir:  r.paths.WorkDir,
 	}))
+	if err != nil {
+		return "", fmt.Errorf("error getting kubectl version: %w", err)
+	}
+
+	return out, nil
 }

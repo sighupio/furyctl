@@ -46,7 +46,7 @@ func NewDependenciesCmd(furyctlBinVersion string) *cobra.Command {
 
 			basePath, err := os.Getwd()
 			if err != nil {
-				return err
+				return fmt.Errorf("failed to get current working directory: %w", err)
 			}
 
 			client := netx.NewGoGetterClient()
@@ -55,7 +55,7 @@ func NewDependenciesCmd(furyctlBinVersion string) *cobra.Command {
 
 			dres, err := distrodl.Download(furyctlBinVersion, distroLocation, furyctlPath)
 			if err != nil {
-				return err
+				return fmt.Errorf("failed to download distribution: %w", err)
 			}
 
 			depsdl := dependencies.NewDownloader(client, basePath)

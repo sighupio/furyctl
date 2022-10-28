@@ -5,6 +5,7 @@
 package yamlx
 
 import (
+	"fmt"
 	"os"
 
 	v2 "gopkg.in/yaml.v2"
@@ -16,18 +17,23 @@ func FromFileV2[T any](path string) (T, error) {
 
 	res, err := os.ReadFile(path)
 	if err != nil {
-		return data, err
+		return data, fmt.Errorf("error while reading file from %s :%w", path, err)
 	}
 
 	if err := v2.Unmarshal(res, &data); err != nil {
-		return data, err
+		return data, fmt.Errorf("error while unmarshalling file from %s :%w", path, err)
 	}
 
 	return data, nil
 }
 
 func MarshalV2(in any) ([]byte, error) {
-	return v2.Marshal(in)
+	out, err := v2.Marshal(in)
+	if err != nil {
+		return nil, fmt.Errorf("error while marshalling yaml: %w", err)
+	}
+
+	return out, nil
 }
 
 func FromFileV3[T any](file string) (T, error) {
@@ -35,16 +41,21 @@ func FromFileV3[T any](file string) (T, error) {
 
 	res, err := os.ReadFile(file)
 	if err != nil {
-		return data, err
+		return data, fmt.Errorf("error while reading file from %s :%w", file, err)
 	}
 
 	if err := v3.Unmarshal(res, &data); err != nil {
-		return data, err
+		return data, fmt.Errorf("error while unmarshalling file from %s :%w", file, err)
 	}
 
 	return data, nil
 }
 
 func MarshalV3(in any) ([]byte, error) {
-	return v3.Marshal(in)
+	out, err := v3.Marshal(in)
+	if err != nil {
+		return nil, fmt.Errorf("error while marshalling yaml: %w", err)
+	}
+
+	return out, nil
 }

@@ -53,18 +53,18 @@ func NewTemplateModel(
 	if len(configPath) > 0 {
 		readFile, err := os.ReadFile(configPath)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("error reading config file: %w", err)
 		}
 
 		if err = yaml.Unmarshal(readFile, &model); err != nil {
-			return nil, err
+			return nil, fmt.Errorf("error parsing config file: %w", err)
 		}
 	}
 
 	if stopIfNotEmpty {
 		err := iox.CheckDirIsEmpty(target)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("target directory is not empty: %w", err)
 		}
 	}
 
@@ -100,7 +100,7 @@ func (tm *Model) isExcluded(source string) bool {
 func (tm *Model) Generate() error {
 	osErr := os.MkdirAll(tm.TargetPath, os.ModePerm)
 	if osErr != nil {
-		return osErr
+		return fmt.Errorf("error creating target directory: %w", osErr)
 	}
 
 	context, cErr := tm.generateContext()
@@ -112,12 +112,17 @@ func (tm *Model) Generate() error {
 
 	context, err := ctxMapper.MapDynamicValues()
 	if err != nil {
-		return err
+		return fmt.Errorf("error mapping dynamic values: %w", err)
 	}
 
 	tm.Context = context
 
-	return filepath.Walk(tm.SourcePath, tm.applyTemplates)
+	err = filepath.Walk(tm.SourcePath, tm.applyTemplates)
+	if err != nil {
+		return fmt.Errorf("error applying templates: %w", err)
+	}
+
+	return nil
 }
 
 func (tm *Model) applyTemplates(
@@ -139,7 +144,7 @@ func (tm *Model) applyTemplates(
 
 	rel, err := filepath.Rel(tm.SourcePath, relSource)
 	if err != nil {
-		return err
+		return fmt.Errorf("error getting relative path: %w", err)
 	}
 
 	currentTarget := filepath.Join(tm.TargetPath, rel)
@@ -164,7 +169,7 @@ func (tm *Model) applyTemplates(
 
 	if _, err := os.Stat(currentTargetDir); os.IsNotExist(err) {
 		if err := os.MkdirAll(currentTargetDir, os.ModePerm); err != nil {
-			return err
+			return fmt.Errorf("error creating target directory: %w", err)
 		}
 	}
 
@@ -192,10 +197,20 @@ func (tm *Model) applyTemplates(
 			return fmt.Errorf("%w filePath: %s", cErr, relSource)
 		}
 
-		return iox.CopyBufferToFile(content, realTarget)
+		err = iox.CopyBufferToFile(content, realTarget)
+		if err != nil {
+			return fmt.Errorf("error writing file: %w", err)
+		}
+
+		return nil
 	}
 
-	return iox.CopyFile(relSource, realTarget)
+	err = iox.CopyFile(relSource, realTarget)
+	if err != nil {
+		return fmt.Errorf("error copying file: %w", err)
+	}
+
+	return nil
 }
 
 func (tm *Model) generateContext() (map[string]map[any]any, error) {
