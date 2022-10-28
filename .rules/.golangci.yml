@@ -25,7 +25,6 @@ linters:
   disable:
     # todo
     - goerr113
-#    - wrapcheck
     # unsupported
     - rowserrcheck
     - sqlclosecheck
