@@ -5,6 +5,7 @@
 package download
 
 import (
+	"errors"
 	"fmt"
 	"os"
 
@@ -17,20 +18,35 @@ import (
 	netx "github.com/sighupio/furyctl/internal/x/net"
 )
 
-var ErrDownloadFailed = fmt.Errorf("dependencies download failed")
+var (
+	ErrDebugFlagNotSet      = errors.New("debug flag not set")
+	ErrFuryctlPathNotSet    = errors.New("furyctl path not set")
+	ErrDistroLocationNotSet = errors.New("distro location not set")
+
+	ErrDownloadFailed = errors.New("dependencies download failed")
+)
 
 func NewDependenciesCmd(furyctlBinVersion string) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "dependencies",
 		Short: "Download dependencies",
 		RunE: func(cmd *cobra.Command, _ []string) error {
-			debug := cobrax.Flag[bool](cmd, "debug").(bool)
-			furyctlPath := cobrax.Flag[string](cmd, "config").(string)
-			distroLocation := cobrax.Flag[string](cmd, "distro-location").(string)
+			debug, ok := cobrax.Flag[bool](cmd, "debug").(bool)
+			if !ok {
+				return ErrDebugFlagNotSet
+			}
+			furyctlPath, ok := cobrax.Flag[string](cmd, "config").(string)
+			if !ok {
+				return ErrFuryctlPathNotSet
+			}
+			distroLocation, ok := cobrax.Flag[string](cmd, "distro-location").(string)
+			if !ok {
+				return ErrDistroLocationNotSet
+			}
 
 			basePath, err := os.Getwd()
 			if err != nil {
-				return err
+				return fmt.Errorf("failed to get current working directory: %w", err)
 			}
 
 			client := netx.NewGoGetterClient()
@@ -39,7 +55,7 @@ func NewDependenciesCmd(furyctlBinVersion string) *cobra.Command {
 
 			dres, err := distrodl.Download(furyctlBinVersion, distroLocation, furyctlPath)
 			if err != nil {
-				return err
+				return fmt.Errorf("failed to download distribution: %w", err)
 			}
 
 			depsdl := dependencies.NewDownloader(client, basePath)

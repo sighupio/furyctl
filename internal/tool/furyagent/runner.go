@@ -10,6 +10,7 @@ import (
 	"path"
 
 	execx "github.com/sighupio/furyctl/internal/x/exec"
+	iox "github.com/sighupio/furyctl/internal/x/io"
 )
 
 type Paths struct {
@@ -37,16 +38,28 @@ func (r *Runner) ConfigOpenvpnClient(name string) error {
 	})
 
 	if err := cmd.Run(); err != nil {
-		return err
+		return fmt.Errorf("error while running furyagent configure openvpn-client: %w", err)
 	}
 
-	return os.WriteFile(path.Join(r.paths.WorkDir, fmt.Sprintf("%s.ovpn", name)), cmd.Log.Out.Bytes(), 0o600)
+	err := os.WriteFile(path.Join(r.paths.WorkDir,
+		fmt.Sprintf("%s.ovpn", name)),
+		cmd.Log.Out.Bytes(), iox.FullRWPermAccess)
+	if err != nil {
+		return fmt.Errorf("error writing openvpn client config: %w", err)
+	}
+
+	return nil
 }
 
 func (r *Runner) Version() (string, error) {
-	return execx.CombinedOutput(execx.NewCmd(r.paths.Furyagent, execx.CmdOptions{
+	out, err := execx.CombinedOutput(execx.NewCmd(r.paths.Furyagent, execx.CmdOptions{
 		Args:     []string{"version"},
 		Executor: r.executor,
 		WorkDir:  r.paths.WorkDir,
 	}))
+	if err != nil {
+		return "", fmt.Errorf("error getting furyagent version: %w", err)
+	}
+
+	return out, nil
 }

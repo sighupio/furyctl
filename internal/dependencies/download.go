@@ -16,6 +16,7 @@ import (
 	"github.com/sighupio/furyctl/internal/dependencies/tools"
 	"github.com/sighupio/furyctl/internal/distribution"
 	execx "github.com/sighupio/furyctl/internal/x/exec"
+	iox "github.com/sighupio/furyctl/internal/x/io"
 	netx "github.com/sighupio/furyctl/internal/x/net"
 )
 
@@ -46,9 +47,11 @@ func (dd *Downloader) DownloadAll(kfd config.KFD) ([]error, []string) {
 	if err := dd.DownloadModules(kfd.Modules); err != nil {
 		errs = append(errs, err)
 	}
+
 	if err := dd.DownloadInstallers(kfd.Kubernetes); err != nil {
 		errs = append(errs, err)
 	}
+
 	ut, err := dd.DownloadTools(kfd.Tools)
 	if err != nil {
 		errs = append(errs, err)
@@ -65,31 +68,34 @@ func (dd *Downloader) DownloadModules(modules config.KFDModules) error {
 
 	for i := 0; i < mods.NumField(); i++ {
 		name := strings.ToLower(mods.Type().Field(i).Name)
-		version := mods.Field(i).Interface().(string)
+		version, ok := mods.Field(i).Interface().(string)
+
+		if !ok {
+			return fmt.Errorf("%s: %w", name, ErrModuleHasNoVersion)
+		}
 
 		if name == "" {
 			return ErrModuleHasNoName
 		}
 
-		if version == "" {
-			return fmt.Errorf("%s: %w", name, ErrModuleHasNoVersion)
-		}
+		errs := []error{}
 
-		errors := []error{}
 		for _, prefix := range []string{oldPrefix, newPrefix} {
 			src := fmt.Sprintf("git::%s-%s.git?ref=%s", prefix, name, version)
 
 			if err := dd.client.Download(src, filepath.Join(dd.basePath, "vendor", "modules", name)); err != nil {
-				errors = append(errors, fmt.Errorf("%w '%s': %v", distribution.ErrDownloadingFolder, src, err))
+				errs = append(errs, fmt.Errorf("%w '%s': %v", distribution.ErrDownloadingFolder, src, err))
+
 				continue
 			}
 
-			errors = []error{}
+			errs = []error{}
+
 			break
 		}
 
-		if len(errors) > 0 {
-			return fmt.Errorf("%w '%s': %v", ErrDownloadingModule, name, errors)
+		if len(errs) > 0 {
+			return fmt.Errorf("%w '%s': %v", ErrDownloadingModule, name, errs)
 		}
 	}
 
@@ -101,45 +107,57 @@ func (dd *Downloader) DownloadInstallers(installers config.KFDKubernetes) error 
 
 	for i := 0; i < insts.NumField(); i++ {
 		name := strings.ToLower(insts.Type().Field(i).Name)
-		version := insts.Field(i).Interface().(config.KFDProvider).Installer
+
+		v, ok := insts.Field(i).Interface().(config.KFDProvider)
+		if !ok {
+			return fmt.Errorf("%s: %w", name, ErrModuleHasNoVersion)
+		}
+
+		version := v.Installer
 
 		src := fmt.Sprintf("git::git@github.com:sighupio/fury-%s-installer?ref=%s", name, version)
 
 		if err := dd.client.Download(src, filepath.Join(dd.basePath, "vendor", "installers", name)); err != nil {
-			return err
+			return fmt.Errorf("%w '%s': %v", distribution.ErrDownloadingFolder, src, err)
 		}
 	}
 
 	return nil
 }
 
-func (dd *Downloader) DownloadTools(tools config.KFDTools) ([]string, error) {
-	tls := reflect.ValueOf(tools)
+func (dd *Downloader) DownloadTools(kfdTools config.KFDTools) ([]string, error) {
+	tls := reflect.ValueOf(kfdTools)
 
 	unsupportedTools := []string{}
+
 	for i := 0; i < tls.NumField(); i++ {
 		name := strings.ToLower(tls.Type().Field(i).Name)
-		version := tls.Field(i).Interface().(string)
+
+		version, ok := tls.Field(i).Interface().(string)
+		if !ok {
+			return unsupportedTools, fmt.Errorf("%s: %w", name, ErrModuleHasNoVersion)
+		}
 
 		tool := dd.toolFactory.Create(name, version)
 		if tool == nil || !tool.SupportsDownload() {
 			unsupportedTools = append(unsupportedTools, name)
+
 			continue
 		}
 
 		dst := filepath.Join(dd.basePath, "vendor", "bin")
 
 		if err := dd.client.Download(tool.SrcPath(), dst); err != nil {
-			return unsupportedTools, err
+			return unsupportedTools, fmt.Errorf("%w '%s': %v", distribution.ErrDownloadingFolder, tool.SrcPath(), err)
 		}
 
 		if err := tool.Rename(dst); err != nil {
-			return unsupportedTools, err
+			return unsupportedTools, fmt.Errorf("%w '%s': %v", distribution.ErrRenamingFile, tool.SrcPath(), err)
 		}
 
-		err := os.Chmod(filepath.Join(dst, name), 0o755)
+		err := os.Chmod(filepath.Join(dst, name), iox.FullPermAccess)
 		if err != nil {
-			return unsupportedTools, err
+			return unsupportedTools, fmt.Errorf("%w '%s': %v", distribution.ErrChangingFilePermissions, tool.SrcPath(), err)
 		}
 	}
 

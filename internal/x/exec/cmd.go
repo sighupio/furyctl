@@ -15,7 +15,7 @@ import (
 )
 
 var (
-	Debug        = false
+	Debug        = false //nolint:gochecknoglobals // This variable is shared between all the command instances.
 	ErrCmdFailed = errors.New("command failed")
 )
 
@@ -33,12 +33,15 @@ func NewCmd(name string, opts CmdOptions) *Cmd {
 	if opts.Executor == nil {
 		opts.Executor = NewStdExecutor()
 	}
+
 	if opts.Out != nil {
 		outWriters = append(outWriters, opts.Out)
 	}
+
 	if opts.Err != nil {
 		errWriters = append(errWriters, opts.Err)
 	}
+
 	if Debug {
 		outWriters = append(outWriters, os.Stdout)
 		errWriters = append(errWriters, os.Stderr)

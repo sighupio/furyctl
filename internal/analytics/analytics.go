@@ -24,50 +24,57 @@ const (
 	clusterInitEvent      = "ClusterInit"
 	clusterApplyEvent     = "ClusterApply"
 	clusterDestroyEvent   = "ClusterDestroy"
+
+	timeout = time.Second * 5
 )
 
-var (
-	mixpanelClient mixpanel.Mixpanel
-	disable        bool
-	version        string
-)
-
-func init() {
+func New(enable bool, version string) *Analytics {
 	c := &http.Client{
-		Timeout: time.Second * 5,
+		Timeout: timeout,
 		Transport: &http.Transport{
 			Dial: (&net.Dialer{
-				Timeout: 5 * time.Second,
+				Timeout: timeout,
 			}).Dial,
-			TLSHandshakeTimeout: 5 * time.Second,
+			TLSHandshakeTimeout: timeout,
 		},
 	}
 
-	mixpanelClient = mixpanel.NewFromClient(c, mixpanelToken, "https://api-eu.mixpanel.com")
+	mixpanelClient := mixpanel.NewFromClient(c, mixpanelToken, "https://api-eu.mixpanel.com")
+
+	return &Analytics{
+		client:  mixpanelClient,
+		enable:  enable,
+		version: version,
+	}
 }
 
-func enabled() bool {
-	return !disable
+type Analytics struct {
+	enable  bool
+	version string
+	client  mixpanel.Mixpanel
 }
 
-// Version will set the version of the CLI
-func Version(v string) {
-	version = v
+// Version will set the version of the CLI.
+func (a *Analytics) Version(v string) {
+	a.version = v
 }
 
-// Disable will disable analytics
-func Disable(d bool) {
-	disable = d
+// Disable will disable analytics.
+func (a *Analytics) Disable(d bool) {
+	a.enable = d
 }
 
-func track(event string, success bool, token string, props map[string]interface{}) {
-	if enabled() {
+func (a *Analytics) track(event string, success bool, token string, props map[string]interface{}) {
+	if a.enable {
 		mpOS := ""
+
 		switch runtime.GOOS {
 		case "darwin":
 			mpOS = "Mac OS X"
+
 		case "windows":
 			mpOS = "Windows"
+
 		case "linux":
 			mpOS = "Linux"
 		}
@@ -79,13 +86,14 @@ func track(event string, success bool, token string, props map[string]interface{
 		}
 
 		props["$os"] = mpOS
-		props["version"] = version
+		props["version"] = a.version
 		props["origin"] = origin
 		props["success"] = success
 
 		e := &mixpanel.Event{Properties: props}
 		trackID := getTrackID(token)
-		if err := mixpanelClient.Track(trackID, event, e); err != nil {
+
+		if err := a.client.Track(trackID, event, e); err != nil {
 			logrus.WithError(err).Debugf("Failed to send analytics: %s", err)
 		}
 	} else {
@@ -97,6 +105,7 @@ func getTrackID(token string) string {
 	if token != "" {
 		return token
 	}
+
 	return generateMachineID()
 }
 
@@ -104,64 +113,65 @@ func generateMachineID() string {
 	mid, err := machineid.ProtectedID("furyctl")
 	if err != nil {
 		logrus.WithError(err).Debug("failed to generate a machine id")
+
 		mid = "na"
 	}
 
 	return mid
 }
 
-// TrackBootstrapInit sends a tracking event to mixpanel when the user uses the bootstrap init command
-func TrackBootstrapInit(token string, success bool, provisioner string) {
+// TrackBootstrapInit sends a tracking event to mixpanel when the user uses the bootstrap init command.
+func (a *Analytics) TrackBootstrapInit(token string, success bool, provisioner string) {
 	props := map[string]interface{}{
 		"provisioner": provisioner,
 		"githubToken": token,
 	}
-	track(bootstrapInitEvent, success, token, props)
+	a.track(bootstrapInitEvent, success, token, props)
 }
 
-// TrackBootstrapApply sends a tracking event to mixpanel when the user uses the bootstrap update command
-func TrackBootstrapApply(token string, success bool, provisioner string, dryRun bool) {
+// TrackBootstrapApply sends a tracking event to mixpanel when the user uses the bootstrap update command.
+func (a *Analytics) TrackBootstrapApply(token string, success bool, provisioner string, dryRun bool) {
 	props := map[string]interface{}{
 		"provisioner": provisioner,
 		"dryRun":      dryRun,
 		"githubToken": token,
 	}
-	track(bootstrapApplyEvent, success, token, props)
+	a.track(bootstrapApplyEvent, success, token, props)
 }
 
-// TrackBootstrapDestroy sends a tracking event to mixpanel when the user uses the bootstrap destroy command
-func TrackBootstrapDestroy(token string, success bool, provisioner string) {
+// TrackBootstrapDestroy sends a tracking event to mixpanel when the user uses the bootstrap destroy command.
+func (a *Analytics) TrackBootstrapDestroy(token string, success bool, provisioner string) {
 	props := map[string]interface{}{
 		"provisioner": provisioner,
 		"githubToken": token,
 	}
-	track(bootstrapDestroyEvent, success, token, props)
+	a.track(bootstrapDestroyEvent, success, token, props)
 }
 
-// TrackClusterInit sends a tracking event to mixpanel when the user uses the cluster init command
-func TrackClusterInit(token string, success bool, provisioner string) {
+// TrackClusterInit sends a tracking event to mixpanel when the user uses the cluster init command.
+func (a *Analytics) TrackClusterInit(token string, success bool, provisioner string) {
 	props := map[string]interface{}{
 		"provisioner": provisioner,
 		"githubToken": token,
 	}
-	track(clusterInitEvent, success, token, props)
+	a.track(clusterInitEvent, success, token, props)
 }
 
-// TrackClusterApply sends a tracking event to mixpanel when the user uses the cluster update command
-func TrackClusterApply(token string, success bool, provisioner string, dryRun bool) {
+// TrackClusterApply sends a tracking event to mixpanel when the user uses the cluster update command.
+func (a *Analytics) TrackClusterApply(token string, success bool, provisioner string, dryRun bool) {
 	props := map[string]interface{}{
 		"provisioner": provisioner,
 		"dryRun":      dryRun,
 		"githubToken": token,
 	}
-	track(clusterApplyEvent, success, token, props)
+	a.track(clusterApplyEvent, success, token, props)
 }
 
-// TrackClusterDestroy sends a tracking event to mixpanel when the user uses the cluster destroy command
-func TrackClusterDestroy(token string, success bool, provisioner string) {
+// TrackClusterDestroy sends a tracking event to mixpanel when the user uses the cluster destroy command.
+func (a *Analytics) TrackClusterDestroy(token string, success bool, provisioner string) {
 	props := map[string]interface{}{
 		"provisioner": provisioner,
 		"githubToken": token,
 	}
-	track(clusterDestroyEvent, success, token, props)
+	a.track(clusterDestroyEvent, success, token, props)
 }

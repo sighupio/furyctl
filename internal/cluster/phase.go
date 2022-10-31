@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 
 	"github.com/sighupio/furyctl/internal/template"
+	iox "github.com/sighupio/furyctl/internal/x/io"
 	yamlx "github.com/sighupio/furyctl/internal/x/yaml"
 )
 
@@ -33,7 +34,7 @@ func NewCreationPhase(folder string) (*CreationPhase, error) {
 
 	vendorPath, err := filepath.Abs("./vendor")
 	if err != nil {
-		return &CreationPhase{}, err
+		return &CreationPhase{}, fmt.Errorf("error getting absolute path for vendor folder: %w", err)
 	}
 
 	kustomizePath := path.Join(vendorPath, "bin", "kustomize")
@@ -71,40 +72,49 @@ type CreationPhase struct {
 }
 
 func (cp *CreationPhase) CreateFolder() error {
-	return os.Mkdir(cp.Path, 0o755)
+	err := os.Mkdir(cp.Path, iox.FullPermAccess)
+	if err != nil {
+		return fmt.Errorf("error creating folder %s: %w", cp.Path, err)
+	}
+
+	return nil
 }
 
 func (cp *CreationPhase) CreateFolderStructure() error {
-	if err := os.Mkdir(cp.PlanPath, 0o755); err != nil {
-		return err
+	if err := os.Mkdir(cp.PlanPath, iox.FullPermAccess); err != nil {
+		return fmt.Errorf("error creating folder %s: %w", cp.PlanPath, err)
 	}
 
-	if err := os.Mkdir(cp.LogsPath, 0o755); err != nil {
-		return err
+	if err := os.Mkdir(cp.LogsPath, iox.FullPermAccess); err != nil {
+		return fmt.Errorf("error creating folder %s: %w", cp.LogsPath, err)
 	}
 
-	if err := os.Mkdir(cp.SecretsPath, 0o755); err != nil {
-		return err
+	if err := os.Mkdir(cp.SecretsPath, iox.FullPermAccess); err != nil {
+		return fmt.Errorf("error creating folder %s: %w", cp.SecretsPath, err)
 	}
 
-	return os.Mkdir(cp.OutputsPath, 0o755)
+	if err := os.Mkdir(cp.OutputsPath, iox.FullPermAccess); err != nil {
+		return fmt.Errorf("error creating folder %s: %w", cp.OutputsPath, err)
+	}
+
+	return nil
 }
 
-func (cp *CreationPhase) CopyFromTemplate(config template.Config, prefix, sourcePath, targetPath string) error {
+func (*CreationPhase) CopyFromTemplate(config template.Config, prefix, sourcePath, targetPath string) error {
 	outDirPath, err := os.MkdirTemp("", fmt.Sprintf("furyctl-%s-", prefix))
 	if err != nil {
-		return err
+		return fmt.Errorf("error creating temp folder: %w", err)
 	}
 
 	tfConfigPath := path.Join(outDirPath, "tf-config.yaml")
 
 	tfConfig, err := yamlx.MarshalV2(config)
 	if err != nil {
-		return err
+		return fmt.Errorf("error marshaling tf-config: %w", err)
 	}
 
-	if err = os.WriteFile(tfConfigPath, tfConfig, 0o644); err != nil {
-		return err
+	if err = os.WriteFile(tfConfigPath, tfConfig, iox.RWPermAccess); err != nil {
+		return fmt.Errorf("error writing tf-config: %w", err)
 	}
 
 	templateModel, err := template.NewTemplateModel(
@@ -117,8 +127,13 @@ func (cp *CreationPhase) CopyFromTemplate(config template.Config, prefix, source
 		false,
 	)
 	if err != nil {
-		return err
+		return fmt.Errorf("error creating template model: %w", err)
 	}
 
-	return templateModel.Generate()
+	err = templateModel.Generate()
+	if err != nil {
+		return fmt.Errorf("error generating from template: %w", err)
+	}
+
+	return nil
 }

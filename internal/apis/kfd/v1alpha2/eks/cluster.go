@@ -5,7 +5,7 @@
 package eks
 
 import (
-	"fmt"
+	"errors"
 	"strings"
 
 	"github.com/sirupsen/logrus"
@@ -15,7 +15,12 @@ import (
 	"github.com/sighupio/furyctl/internal/cluster"
 )
 
-var ErrUnsupportedPhase = fmt.Errorf("unsupported phase")
+const SErrWrapWithStr = "%w: %s"
+
+var (
+	ErrUnsupportedPhase = errors.New("unsupported phase")
+	ErrWritingTfVars    = errors.New("error writing terraform variables file")
+)
 
 type ClusterCreator struct {
 	configPath     string
@@ -37,34 +42,51 @@ func (v *ClusterCreator) SetProperty(name string, value any) {
 
 	switch lcName {
 	case cluster.CreatorPropertyConfigPath:
-		v.configPath = value.(string)
+		if s, ok := value.(string); ok {
+			v.configPath = s
+		}
+
 	case cluster.CreatorPropertyFuryctlConf:
-		v.furyctlConf = value.(schema.EksclusterKfdV1Alpha2)
+		if s, ok := value.(schema.EksclusterKfdV1Alpha2); ok {
+			v.furyctlConf = s
+		}
+
 	case cluster.CreatorPropertyKfdManifest:
-		v.kfdManifest = value.(config.KFD)
+		if s, ok := value.(config.KFD); ok {
+			v.kfdManifest = s
+		}
+
 	case cluster.CreatorPropertyPhase:
-		v.phase = value.(string)
+		if s, ok := value.(string); ok {
+			v.phase = s
+		}
+
 	case cluster.CreatorPropertyVpnAutoConnect:
-		v.vpnAutoConnect = value.(bool)
+		if b, ok := value.(bool); ok {
+			v.vpnAutoConnect = b
+		}
+
 	case cluster.CreatorPropertyDistroPath:
-		v.distroPath = value.(string)
+		if s, ok := value.(string); ok {
+			v.distroPath = s
+		}
 	}
 }
 
 func (v *ClusterCreator) Create(dryRun bool) error {
 	logrus.Infof("Running phase: %s", v.phase)
 
-	infra, err := NewInfrastructure(v.furyctlConf, v.kfdManifest)
+	infra, err := NewInfrastructure(v.furyctlConf, v.kfdManifest, dryRun)
 	if err != nil {
 		return err
 	}
 
-	kube, err := NewKubernetes(v.furyctlConf, v.kfdManifest, infra.OutputsPath)
+	kube, err := NewKubernetes(v.furyctlConf, v.kfdManifest, infra.OutputsPath, dryRun)
 	if err != nil {
 		return err
 	}
 
-	distro, err := NewDistribution(v.configPath, v.furyctlConf, v.kfdManifest, v.distroPath, infra.OutputsPath)
+	distro, err := NewDistribution(v.configPath, v.furyctlConf, v.kfdManifest, v.distroPath, infra.OutputsPath, dryRun)
 	if err != nil {
 		return err
 	}
@@ -75,23 +97,27 @@ func (v *ClusterCreator) Create(dryRun bool) error {
 
 	switch v.phase {
 	case cluster.CreationPhaseInfrastructure:
-		return infra.Exec(dryRun, infraOpts)
+		return infra.Exec(infraOpts)
+
 	case cluster.CreationPhaseKubernetes:
-		return kube.Exec(dryRun)
+		return kube.Exec()
+
 	case cluster.CreationPhaseDistribution:
-		return distro.Exec(dryRun)
+		return distro.Exec()
+
 	case cluster.CreationPhaseAll:
 		if v.furyctlConf.Spec.Infrastructure != nil {
-			if err := infra.Exec(dryRun, infraOpts); err != nil {
+			if err := infra.Exec(infraOpts); err != nil {
 				return err
 			}
 		}
 
-		if err := kube.Exec(dryRun); err != nil {
+		if err := kube.Exec(); err != nil {
 			return err
 		}
 
-		return distro.Exec(dryRun)
+		return distro.Exec()
+
 	default:
 		return ErrUnsupportedPhase
 	}

@@ -38,16 +38,17 @@ func (tv *Validator) Validate(kfdManifest config.KFD) []error {
 	tls := reflect.ValueOf(kfdManifest.Tools)
 	for i := 0; i < tls.NumField(); i++ {
 		name := strings.ToLower(tls.Type().Field(i).Name)
-		version := tls.Field(i).Interface().(string)
 
-		if version == "" {
-			continue
-		}
+		if version, ok := tls.Field(i).Interface().(string); ok {
+			if version == "" {
+				continue
+			}
 
-		tool := tv.toolFactory.Create(name, version)
+			tool := tv.toolFactory.Create(name, version)
 
-		if err := tool.CheckBinVersion(); err != nil {
-			errs = append(errs, err)
+			if err := tool.CheckBinVersion(); err != nil {
+				errs = append(errs, err)
+			}
 		}
 	}
 

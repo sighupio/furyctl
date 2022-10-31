@@ -13,22 +13,22 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-var (
-	downloadProtocols = []string{"", "git::", "file::", "http::", "s3::", "gcs::", "mercurial::"}
-
-	errDownloadOptionsExausted = errors.New("downloading options exausted")
-)
+var errDownloadOptionsExausted = errors.New("downloading options exausted")
 
 func NewGoGetterClient() *GoGetterClient {
-	return &GoGetterClient{}
+	return &GoGetterClient{
+		protocols: []string{"", "git::", "file::", "http::", "s3::", "gcs::", "mercurial::"},
+	}
 }
 
-type GoGetterClient struct{}
+type GoGetterClient struct {
+	protocols []string
+}
 
 func (g *GoGetterClient) Download(src, dst string) error {
 	protocols := []string{""}
-	if !UrlHasForcedProtocol(src) {
-		protocols = downloadProtocols
+	if !g.URLHasForcedProtocol(src) {
+		protocols = g.protocols
 	}
 
 	for _, protocol := range protocols {
@@ -53,9 +53,9 @@ func (g *GoGetterClient) Download(src, dst string) error {
 	return errDownloadOptionsExausted
 }
 
-// UrlHasForcedProtocol checks if the url has a forced protocol as described in hashicorp/go-getter.
-func UrlHasForcedProtocol(url string) bool {
-	for _, dp := range downloadProtocols {
+// URLHasForcedProtocol checks if the url has a forced protocol as described in hashicorp/go-getter.
+func (g *GoGetterClient) URLHasForcedProtocol(url string) bool {
+	for _, dp := range g.protocols {
 		if dp != "" && strings.HasPrefix(url, dp) {
 			return true
 		}

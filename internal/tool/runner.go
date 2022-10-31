@@ -52,35 +52,42 @@ func (rf *RunnerFactory) Create(name, workDir string) Runner {
 			WorkDir: workDir,
 		})
 	}
+
 	if name == Furyagent {
 		return furyagent.NewRunner(rf.executor, furyagent.Paths{
 			Furyagent: filepath.Join(rf.paths.Bin, name),
 			WorkDir:   workDir,
 		})
 	}
+
 	if name == Kubectl {
 		return kubectl.NewRunner(rf.executor, kubectl.Paths{
 			Kubectl: filepath.Join(rf.paths.Bin, name),
 			WorkDir: workDir,
-		})
+		},
+			true)
 	}
+
 	if name == Kustomize {
 		return kustomize.NewRunner(rf.executor, kustomize.Paths{
 			Kustomize: filepath.Join(rf.paths.Bin, name),
 			WorkDir:   workDir,
 		})
 	}
+
 	if name == Openvpn {
 		return openvpn.NewRunner(rf.executor, openvpn.Paths{
 			Openvpn: filepath.Join(rf.paths.Bin, name),
 			WorkDir: workDir,
 		})
 	}
+
 	if name == Terraform {
 		return terraform.NewRunner(rf.executor, terraform.Paths{
 			Terraform: filepath.Join(rf.paths.Bin, name),
 			WorkDir:   workDir,
 		})
 	}
+
 	return nil
 }

@@ -16,6 +16,8 @@ import (
 )
 
 func Test_Openvpn_SupportsDownload(t *testing.T) {
+	t.Parallel()
+
 	a := tools.NewOpenvpn(newOpenvpnRunner(), "2.5.7")
 
 	if a.SupportsDownload() != false {
@@ -24,6 +26,8 @@ func Test_Openvpn_SupportsDownload(t *testing.T) {
 }
 
 func Test_Openvpn_SrcPath(t *testing.T) {
+	t.Parallel()
+
 	a := tools.NewOpenvpn(newOpenvpnRunner(), "2.5.7")
 
 	if a.SrcPath() != "" {
@@ -32,6 +36,8 @@ func Test_Openvpn_SrcPath(t *testing.T) {
 }
 
 func Test_Openvpn_Rename(t *testing.T) {
+	t.Parallel()
+
 	a := tools.NewOpenvpn(newOpenvpnRunner(), "2.5.7")
 
 	if a.Rename("") != nil {
