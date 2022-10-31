@@ -16,20 +16,22 @@ import (
 	"github.com/sighupio/fury-distribution/pkg/config"
 	"github.com/sighupio/furyctl/internal/semver"
 	netx "github.com/sighupio/furyctl/internal/x/net"
-	osx "github.com/sighupio/furyctl/internal/x/os"
 	yamlx "github.com/sighupio/furyctl/internal/x/yaml"
 )
 
-const DefaultBaseUrl = "https://git@github.com/sighupio/fury-distribution?ref=%s"
+const DefaultBaseURL = "https://git@github.com/sighupio/fury-distribution?ref=%s"
 
 var (
-	ErrCreatingTempDir     = errors.New("error creating temp dir")
-	ErrDownloadingFolder   = errors.New("error downloading folder")
-	ErrMergeCompleteConfig = errors.New("error merging complete config")
-	ErrMergeDistroConfig   = errors.New("error merging distribution config")
-	ErrWriteFile           = errors.New("error writing file")
-	ErrYamlMarshalFile     = errors.New("error marshaling yaml file")
-	ErrYamlUnmarshalFile   = errors.New("error unmarshaling yaml file")
+	ErrCreatingTempDir         = errors.New("error creating temp dir")
+	ErrValidateConfig          = errors.New("error validating config")
+	ErrDownloadingFolder       = errors.New("error downloading folder")
+	ErrRenamingFile            = errors.New("error renaming file")
+	ErrMergeCompleteConfig     = errors.New("error merging complete config")
+	ErrMergeDistroConfig       = errors.New("error merging distribution config")
+	ErrWriteFile               = errors.New("error writing file")
+	ErrYamlMarshalFile         = errors.New("error marshaling yaml file")
+	ErrYamlUnmarshalFile       = errors.New("error unmarshaling yaml file")
+	ErrChangingFilePermissions = errors.New("error changing file permissions")
 )
 
 type DownloadResult struct {
@@ -59,11 +61,11 @@ func (d *Downloader) Download(
 ) (DownloadResult, error) {
 	minimalConf, err := yamlx.FromFileV3[config.Furyctl](furyctlConfPath)
 	if err != nil {
-		return DownloadResult{}, err
+		return DownloadResult{}, fmt.Errorf("%w: %s", ErrYamlUnmarshalFile, err)
 	}
 
 	if err := d.validate.Struct(minimalConf); err != nil {
-		return DownloadResult{}, err
+		return DownloadResult{}, fmt.Errorf("invalid furyctl config: %w", err)
 	}
 
 	furyctlConfVersion := minimalConf.Spec.DistributionVersion
@@ -79,13 +81,14 @@ func (d *Downloader) Download(
 	}
 
 	if distroLocation == "" {
-		distroLocation = fmt.Sprintf(DefaultBaseUrl, furyctlConfVersion)
+		distroLocation = fmt.Sprintf(DefaultBaseURL, furyctlConfVersion)
 	}
 
 	baseDst, err := os.MkdirTemp("", "furyctl-")
 	if err != nil {
 		return DownloadResult{}, fmt.Errorf("%w: %v", ErrCreatingTempDir, err)
 	}
+
 	src := distroLocation
 	dst := filepath.Join(baseDst, "data")
 
@@ -95,18 +98,15 @@ func (d *Downloader) Download(
 		return DownloadResult{}, fmt.Errorf("%w '%s': %v", ErrDownloadingFolder, src, err)
 	}
 
-	if !d.debug {
-		defer osx.CleanupTempDir(filepath.Base(dst))
-	}
-
 	kfdPath := filepath.Join(dst, "kfd.yaml")
+
 	kfdManifest, err := yamlx.FromFileV3[config.KFD](kfdPath)
 	if err != nil {
 		return DownloadResult{}, err
 	}
 
 	if err := d.validate.Struct(kfdManifest); err != nil {
-		return DownloadResult{}, err
+		return DownloadResult{}, fmt.Errorf("invalid kfd config: %w", err)
 	}
 
 	return DownloadResult{

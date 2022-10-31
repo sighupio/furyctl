@@ -17,7 +17,7 @@ import (
 	yamlx "github.com/sighupio/furyctl/internal/x/yaml"
 )
 
-// Validate the furyctl.yaml file
+// Validate the furyctl.yaml file.
 func Validate(path, repoPath string) error {
 	defaultsPath := distribution.GetDefaultsPath(repoPath)
 
@@ -26,7 +26,7 @@ func Validate(path, repoPath string) error {
 		return err
 	}
 
-	defer osx.CleanupTempDir(filepath.Base(defaultedFuryctlConfPath))
+	defer checkError(osx.CleanupTempDir(filepath.Base(defaultedFuryctlConfPath)))
 
 	miniConf, err := loadFromFile(path)
 	if err != nil {
@@ -35,12 +35,12 @@ func Validate(path, repoPath string) error {
 
 	schemaPath, err := distribution.GetSchemaPath(repoPath, miniConf)
 	if err != nil {
-		return err
+		return fmt.Errorf("error getting schema path: %w", err)
 	}
 
 	schema, err := santhosh.LoadSchema(schemaPath)
 	if err != nil {
-		return err
+		return fmt.Errorf("error loading schema: %w", err)
 	}
 
 	conf, err := yamlx.FromFileV3[any](defaultedFuryctlConfPath)
@@ -48,7 +48,12 @@ func Validate(path, repoPath string) error {
 		return err
 	}
 
-	return schema.ValidateInterface(conf)
+	err = schema.ValidateInterface(conf)
+	if err != nil {
+		return fmt.Errorf("error while validating: %w", err)
+	}
+
+	return nil
 }
 
 func loadFromFile(path string) (config.Furyctl, error) {
@@ -58,7 +63,7 @@ func loadFromFile(path string) (config.Furyctl, error) {
 	}
 
 	if err := config.NewValidator().Struct(conf); err != nil {
-		return config.Furyctl{}, err
+		return config.Furyctl{}, fmt.Errorf("%w: %v", distribution.ErrValidateConfig, err)
 	}
 
 	return conf, err
@@ -111,4 +116,10 @@ func mergeWithDefaults(furyctlConfPath, defaultsConfPath string) (string, error)
 	}
 
 	return confPath, nil
+}
+
+func checkError(err error) {
+	if err != nil {
+		panic(err)
+	}
 }

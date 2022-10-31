@@ -5,6 +5,7 @@
 package cluster
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 
@@ -21,7 +22,11 @@ const (
 	CreatorPropertyVpnAutoConnect = "vpnautoconnect"
 )
 
-var factories = make(map[string]map[string]CreatorFactory)
+var (
+	factories = make(map[string]map[string]CreatorFactory) //nolint:gochecknoglobals // This patterns requires factories
+	//  as global to work with init function.
+	errResourceNotSupported = errors.New("resource is not supported")
+)
 
 type CreatorFactory func(configPath string, props []CreatorProperty) (Creator, error)
 
@@ -44,10 +49,10 @@ func NewCreator(
 	phase string,
 	vpnAutoConnect bool,
 ) (Creator, error) {
-	lcApiVersion := strings.ToLower(minimalConf.APIVersion)
+	lcAPIVersion := strings.ToLower(minimalConf.APIVersion)
 	lcResourceType := strings.ToLower(minimalConf.Kind)
 
-	if factoryFn, ok := factories[lcApiVersion][lcResourceType]; ok {
+	if factoryFn, ok := factories[lcAPIVersion][lcResourceType]; ok {
 		return factoryFn(configPath, []CreatorProperty{
 			{
 				Name:  CreatorPropertyKfdManifest,
@@ -68,18 +73,18 @@ func NewCreator(
 		})
 	}
 
-	return nil, fmt.Errorf("resource type '%s' with api version '%s' is not supported", lcResourceType, lcApiVersion)
+	return nil, fmt.Errorf("%w -  type '%s' api version '%s'", errResourceNotSupported, lcResourceType, lcAPIVersion)
 }
 
 func RegisterCreatorFactory(apiVersion, kind string, factory CreatorFactory) {
-	lcApiVersion := strings.ToLower(apiVersion)
+	lcAPIVersion := strings.ToLower(apiVersion)
 	lcKind := strings.ToLower(kind)
 
-	if _, ok := factories[lcApiVersion]; !ok {
-		factories[lcApiVersion] = make(map[string]CreatorFactory)
+	if _, ok := factories[lcAPIVersion]; !ok {
+		factories[lcAPIVersion] = make(map[string]CreatorFactory)
 	}
 
-	factories[lcApiVersion][lcKind] = factory
+	factories[lcAPIVersion][lcKind] = factory
 }
 
 func NewCreatorFactory[T Creator, S any](cc T) CreatorFactory {

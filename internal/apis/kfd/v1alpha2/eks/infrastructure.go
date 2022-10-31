@@ -6,6 +6,7 @@ package eks
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"io/fs"
 	"os"
@@ -26,6 +27,11 @@ import (
 	iox "github.com/sighupio/furyctl/internal/x/io"
 )
 
+var (
+	ErrVpcIDNotFound = errors.New("vpc_id not found in infra output")
+	ErrVpcIDFromOut  = errors.New("cannot read vpc_id from infrastructure's output.json")
+)
+
 type Infrastructure struct {
 	*cluster.CreationPhase
 	furyctlConf schema.EksclusterKfdV1Alpha2
@@ -33,12 +39,17 @@ type Infrastructure struct {
 	tfRunner    *terraform.Runner
 	faRunner    *furyagent.Runner
 	ovRunner    *openvpn.Runner
+	dryRun      bool
 }
 
-func NewInfrastructure(furyctlConf schema.EksclusterKfdV1Alpha2, kfdManifest config.KFD) (*Infrastructure, error) {
+func NewInfrastructure(
+	furyctlConf schema.EksclusterKfdV1Alpha2,
+	kfdManifest config.KFD,
+	dryRun bool,
+) (*Infrastructure, error) {
 	phase, err := cluster.NewCreationPhase(".infrastructure")
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error creating infrastructure phase: %w", err)
 	}
 
 	executor := execx.NewStdExecutor()
@@ -65,14 +76,15 @@ func NewInfrastructure(furyctlConf schema.EksclusterKfdV1Alpha2, kfdManifest con
 			WorkDir: phase.SecretsPath,
 			Openvpn: "openvpn",
 		}),
+		dryRun: dryRun,
 	}, nil
 }
 
-func (i *Infrastructure) Exec(dryRun bool, opts []cluster.CreationPhaseOption) error {
+func (i *Infrastructure) Exec(opts []cluster.CreationPhaseOption) error {
 	timestamp := time.Now().Unix()
 
 	if err := i.CreateFolder(); err != nil {
-		return err
+		return fmt.Errorf("error creating infrastructure folder: %w", err)
 	}
 
 	if err := i.copyFromTemplate(i.kfdManifest); err != nil {
@@ -80,7 +92,7 @@ func (i *Infrastructure) Exec(dryRun bool, opts []cluster.CreationPhaseOption) e
 	}
 
 	if err := i.CreateFolderStructure(); err != nil {
-		return err
+		return fmt.Errorf("error creating infrastructure folder structure: %w", err)
 	}
 
 	if err := i.createTfVars(); err != nil {
@@ -88,19 +100,19 @@ func (i *Infrastructure) Exec(dryRun bool, opts []cluster.CreationPhaseOption) e
 	}
 
 	if err := i.tfRunner.Init(); err != nil {
-		return err
+		return fmt.Errorf("error running terraform init: %w", err)
 	}
 
 	if err := i.tfRunner.Plan(timestamp); err != nil {
-		return err
+		return fmt.Errorf("error running terraform plan: %w", err)
 	}
 
-	if dryRun {
+	if i.dryRun {
 		return nil
 	}
 
 	if _, err := i.tfRunner.Apply(timestamp); err != nil {
-		return err
+		return fmt.Errorf("error running terraform apply: %w", err)
 	}
 
 	if i.isVpnConfigured() {
@@ -110,14 +122,13 @@ func (i *Infrastructure) Exec(dryRun bool, opts []cluster.CreationPhaseOption) e
 		}
 
 		if err := i.faRunner.ConfigOpenvpnClient(clientName); err != nil {
-			return err
+			return fmt.Errorf("error configuring openvpn client: %w", err)
 		}
 
 		for _, opt := range opts {
-			switch strings.ToLower(opt.Name) {
-			case cluster.CreationPhaseOptionVPNAutoConnect:
+			if strings.ToLower(opt.Name) == cluster.CreationPhaseOptionVPNAutoConnect {
 				if err := i.ovRunner.Connect(clientName); err != nil {
-					return err
+					return fmt.Errorf("error connecting to vpn: %w", err)
 				}
 			}
 		}
@@ -133,7 +144,7 @@ func (i *Infrastructure) isVpnConfigured() bool {
 func (i *Infrastructure) generateClientName() (string, error) {
 	whoamiResp, err := exec.Command("whoami").Output()
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("error getting current user: %w", err)
 	}
 
 	whoami := strings.TrimSpace(string(whoamiResp))
@@ -146,18 +157,18 @@ func (i *Infrastructure) copyFromTemplate(kfdManifest config.KFD) error {
 
 	tmpFolder, err := os.MkdirTemp("", "furyctl-infra-configs-")
 	if err != nil {
-		return err
+		return fmt.Errorf("error creating temp folder: %w", err)
 	}
 
 	defer os.RemoveAll(tmpFolder)
 
 	subFS, err := fs.Sub(configs.Tpl, path.Join("provisioners", "bootstrap", "aws"))
 	if err != nil {
-		return err
+		return fmt.Errorf("error getting subfs: %w", err)
 	}
 
 	if err = iox.CopyRecursive(subFS, tmpFolder); err != nil {
-		return err
+		return fmt.Errorf("error copying template files: %w", err)
 	}
 
 	targetTfDir := path.Join(i.Path, "terraform")
@@ -169,22 +180,34 @@ func (i *Infrastructure) copyFromTemplate(kfdManifest config.KFD) error {
 		},
 	}
 
-	return i.CreationPhase.CopyFromTemplate(
+	err = i.CreationPhase.CopyFromTemplate(
 		cfg,
 		prefix,
 		tmpFolder,
 		targetTfDir,
 	)
+	if err != nil {
+		return fmt.Errorf("error generating from template files: %w", err)
+	}
+
+	return nil
 }
 
 func (i *Infrastructure) createTfVars() error {
 	var buffer bytes.Buffer
 
-	buffer.WriteString(fmt.Sprintf("name = \"%v\"\n", i.furyctlConf.Metadata.Name))
-	buffer.WriteString(fmt.Sprintf(
+	_, err := buffer.WriteString(fmt.Sprintf("name = \"%v\"\n", i.furyctlConf.Metadata.Name))
+	if err != nil {
+		return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
+	}
+
+	_, err = buffer.WriteString(fmt.Sprintf(
 		"network_cidr = \"%v\"\n",
 		i.furyctlConf.Spec.Infrastructure.Vpc.Network.Cidr,
 	))
+	if err != nil {
+		return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
+	}
 
 	publicSubnetworkCidrs := make([]string, len(i.furyctlConf.Spec.Infrastructure.Vpc.Network.SubnetsCidrs.Public))
 
@@ -198,71 +221,99 @@ func (i *Infrastructure) createTfVars() error {
 		privateSubnetworkCidrs[i] = fmt.Sprintf("\"%v\"", cidr)
 	}
 
-	buffer.WriteString(fmt.Sprintf(
+	_, err = buffer.WriteString(fmt.Sprintf(
 		"public_subnetwork_cidrs = [%v]\n",
 		strings.Join(publicSubnetworkCidrs, ",")))
+	if err != nil {
+		return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
+	}
 
-	buffer.WriteString(fmt.Sprintf(
+	_, err = buffer.WriteString(fmt.Sprintf(
 		"private_subnetwork_cidrs = [%v]\n",
 		strings.Join(privateSubnetworkCidrs, ",")))
+	if err != nil {
+		return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
+	}
 
 	if i.furyctlConf.Spec.Infrastructure.Vpc.Vpn != nil {
-		buffer.WriteString(
+		_, err = buffer.WriteString(
 			fmt.Sprintf(
 				"vpn_subnetwork_cidr = \"%v\"\n",
 				i.furyctlConf.Spec.Infrastructure.Vpc.Vpn.VpnClientsSubnetCidr,
 			),
 		)
-		buffer.WriteString(
+		if err != nil {
+			return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
+		}
+
+		_, err = buffer.WriteString(
 			fmt.Sprintf(
 				"vpn_instances = %v\n",
 				i.furyctlConf.Spec.Infrastructure.Vpc.Vpn.Instances,
 			),
 		)
+		if err != nil {
+			return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
+		}
 
 		if i.furyctlConf.Spec.Infrastructure.Vpc.Vpn.Port != 0 {
-			buffer.WriteString(
+			_, err = buffer.WriteString(
 				fmt.Sprintf(
 					"vpn_port = %v\n",
 					i.furyctlConf.Spec.Infrastructure.Vpc.Vpn.Port,
 				),
 			)
+			if err != nil {
+				return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
+			}
 		}
 
 		if i.furyctlConf.Spec.Infrastructure.Vpc.Vpn.InstanceType != "" {
-			buffer.WriteString(
+			_, err = buffer.WriteString(
 				fmt.Sprintf(
 					"vpn_instance_type = \"%v\"\n",
 					i.furyctlConf.Spec.Infrastructure.Vpc.Vpn.InstanceType,
 				),
 			)
+			if err != nil {
+				return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
+			}
 		}
 
 		if i.furyctlConf.Spec.Infrastructure.Vpc.Vpn.DiskSize != 0 {
-			buffer.WriteString(
+			_, err = buffer.WriteString(
 				fmt.Sprintf(
 					"vpn_instance_disk_size = %v\n",
 					i.furyctlConf.Spec.Infrastructure.Vpc.Vpn.DiskSize,
 				),
 			)
+			if err != nil {
+				return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
+			}
 		}
 
 		if i.furyctlConf.Spec.Infrastructure.Vpc.Vpn.OperatorName != "" {
-			buffer.WriteString(
+			_, err = buffer.WriteString(
 				fmt.Sprintf(
 					"vpn_operator_name = \"%v\"\n",
 					i.furyctlConf.Spec.Infrastructure.Vpc.Vpn.OperatorName,
 				),
 			)
+			if err != nil {
+				return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
+			}
 		}
 
 		if i.furyctlConf.Spec.Infrastructure.Vpc.Vpn.DhParamsBits != 0 {
-			buffer.WriteString(
+			_, err = buffer.WriteString(
 				fmt.Sprintf(
 					"vpn_dhparams_bits = %v\n",
 					i.furyctlConf.Spec.Infrastructure.Vpc.Vpn.DhParamsBits,
 				),
 			)
+			if err != nil {
+				return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
+			}
 		}
 
 		if len(i.furyctlConf.Spec.Infrastructure.Vpc.Vpn.Ssh.AllowedFromCidrs) != 0 {
@@ -272,12 +323,15 @@ func (i *Infrastructure) createTfVars() error {
 				allowedCidrs[i] = fmt.Sprintf("\"%v\"", cidr)
 			}
 
-			buffer.WriteString(
+			_, err = buffer.WriteString(
 				fmt.Sprintf(
 					"vpn_operator_cidrs = [%v]\n",
 					strings.Join(allowedCidrs, ","),
 				),
 			)
+			if err != nil {
+				return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
+			}
 		}
 
 		if len(i.furyctlConf.Spec.Infrastructure.Vpc.Vpn.Ssh.GithubUsersName) != 0 {
@@ -287,16 +341,24 @@ func (i *Infrastructure) createTfVars() error {
 				githubUsers[i] = fmt.Sprintf("\"%v\"", gu)
 			}
 
-			buffer.WriteString(
+			_, err = buffer.WriteString(
 				fmt.Sprintf(
 					"vpn_ssh_users = [%v]\n",
 					strings.Join(githubUsers, ","),
 				),
 			)
+			if err != nil {
+				return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
+			}
 		}
 	}
 
 	targetTfVars := path.Join(i.Path, "terraform", "main.auto.tfvars")
 
-	return os.WriteFile(targetTfVars, buffer.Bytes(), 0o600)
+	err = os.WriteFile(targetTfVars, buffer.Bytes(), iox.FullRWPermAccess)
+	if err != nil {
+		return fmt.Errorf("error writing terraform vars: %w", err)
+	}
+
+	return nil
 }

@@ -29,6 +29,7 @@ func (f *FuncMap) Delete(name string) {
 }
 
 func ToYAML(v any) string {
+	//nolint:errcheck // we don't care about the error here because we recover from it
 	defer func() {
 		_ = recover()
 	}()
@@ -38,6 +39,7 @@ func ToYAML(v any) string {
 		// Swallow errors inside of a template.
 		return ""
 	}
+
 	return strings.TrimSuffix(string(data), "\n")
 }
 
@@ -47,6 +49,7 @@ func FromYAML(str string) map[string]any {
 	if err := yaml.Unmarshal([]byte(str), &m); err != nil {
 		m["Error"] = err.Error()
 	}
+
 	return m
 }
 

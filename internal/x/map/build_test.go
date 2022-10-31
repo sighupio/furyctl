@@ -92,7 +92,9 @@ func TestFromStruct(t *testing.T) {
 		t.Run(tc.desc, func(t *testing.T) {
 			t.Parallel()
 
-			got := mapx.FromStruct(tc.sIn, tc.tag, tc.skipEmpty)
+			builder := mapx.NewBuilder(tc.skipEmpty)
+
+			got := builder.FromStruct(tc.sIn, tc.tag)
 
 			if !reflect.DeepEqual(got, tc.want) {
 				t.Errorf("expected %v, got %v", tc.want, got)
@@ -143,7 +145,9 @@ func TestToMapStringAny(t *testing.T) {
 		t.Run(tc.desc, func(t *testing.T) {
 			t.Parallel()
 
-			got := mapx.ToMapStringAny(tc.sIn)
+			builder := mapx.NewBuilder(false)
+
+			got := builder.ToMapStringAny(tc.sIn)
 
 			if !reflect.DeepEqual(got, tc.want) {
 				t.Errorf("expected %v, got %v", tc.want, got)

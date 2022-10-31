@@ -21,7 +21,7 @@ func NewKustomize(runner *kustomize.Runner, version string) *Kustomize {
 		os:      runtime.GOOS,
 		version: version,
 		checker: &checker{
-			regex:  regexp.MustCompile("kustomize/v(\\S*)"),
+			regex:  regexp.MustCompile(`kustomize/v(\S*)`),
 			runner: runner,
 			trimFn: func(tokens []string) string {
 				return strings.TrimLeft(tokens[len(tokens)-1], "v")
@@ -40,7 +40,7 @@ type Kustomize struct {
 	version string
 }
 
-func (k *Kustomize) SupportsDownload() bool {
+func (*Kustomize) SupportsDownload() bool {
 	return true
 }
 
@@ -54,7 +54,7 @@ func (k *Kustomize) SrcPath() string {
 	)
 }
 
-func (k *Kustomize) Rename(basePath string) error {
+func (*Kustomize) Rename(_ string) error {
 	return nil
 }
 

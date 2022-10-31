@@ -10,7 +10,17 @@ import (
 	"strings"
 )
 
-func FromStruct(s any, tagType string, skipEmpty bool) map[any]any {
+type Builder struct {
+	skipEmpty bool
+}
+
+func NewBuilder(skipEmpty bool) *Builder {
+	return &Builder{
+		skipEmpty: skipEmpty,
+	}
+}
+
+func (b *Builder) FromStruct(s any, tagType string) map[any]any {
 	if s == nil {
 		return nil
 	}
@@ -47,29 +57,30 @@ func FromStruct(s any, tagType string, skipEmpty bool) map[any]any {
 		}
 
 		if !val.IsValid() {
-			if !skipEmpty {
+			if !b.skipEmpty {
 				out[fieldName] = nil
 			}
 
 			continue
 		}
 
-		if skipEmpty && val.IsZero() {
+		if b.skipEmpty && val.IsZero() {
 			continue
 		}
 
 		if val.Kind() != reflect.Struct {
 			out[fieldName] = val.Interface()
+
 			continue
 		}
 
-		out[fieldName] = FromStruct(val.Interface(), tagType, skipEmpty)
+		out[fieldName] = b.FromStruct(val.Interface(), tagType)
 	}
 
 	return out
 }
 
-func ToMapStringAny(t map[any]any) map[string]map[any]any {
+func (*Builder) ToMapStringAny(t map[any]any) map[string]map[any]any {
 	out := make(map[string]map[any]any)
 
 	for k, v := range t {

@@ -28,17 +28,27 @@ func NewRunner(executor execx.Executor, paths Paths) *Runner {
 }
 
 func (r *Runner) Connect(name string) error {
-	return execx.NewCmd("sudo", execx.CmdOptions{
+	err := execx.NewCmd("sudo", execx.CmdOptions{
 		Args:     []string{r.paths.Openvpn, "--config", fmt.Sprintf("%s.ovpn", name), "--daemon"},
 		Executor: r.executor,
 		WorkDir:  r.paths.WorkDir,
 	}).Run()
+	if err != nil {
+		return fmt.Errorf("error while running openvpn: %w", err)
+	}
+
+	return nil
 }
 
 func (r *Runner) Version() (string, error) {
-	return execx.CombinedOutput(execx.NewCmd(r.paths.Openvpn, execx.CmdOptions{
+	out, err := execx.CombinedOutput(execx.NewCmd(r.paths.Openvpn, execx.CmdOptions{
 		Args:     []string{"--version"},
 		Executor: r.executor,
 		WorkDir:  r.paths.WorkDir,
 	}))
+	if err != nil {
+		return "", fmt.Errorf("error getting openvpn version: %w", err)
+	}
+
+	return out, nil
 }

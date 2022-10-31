@@ -9,6 +9,7 @@ import (
 	"github.com/sighupio/furyctl/internal/cluster"
 )
 
+//nolint:gochecknoinits // this pattern requires init function to work.
 func init() {
 	cluster.RegisterCreatorFactory(
 		"kfd.sighup.io/v1alpha2",

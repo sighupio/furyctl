@@ -349,7 +349,7 @@ func TestTemplateNode_Set(t *testing.T) {
 		},
 	}
 
-	tmplTemplateNode := reflect.ValueOf(templateNode).Convert(reflect.TypeOf(&template2.TemplateNode{})).Interface()
+	tmplTemplateNode := reflect.ValueOf(templateNode).Convert(reflect.TypeOf(&template2.TplNode{})).Interface()
 
 	assert.NotNil(t, tmplTemplateNode)
 
