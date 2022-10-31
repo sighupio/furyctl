@@ -78,24 +78,24 @@ func (dd *Downloader) DownloadModules(modules config.KFDModules) error {
 			return ErrModuleHasNoName
 		}
 
-		errors := []error{}
+		errs := []error{}
 
 		for _, prefix := range []string{oldPrefix, newPrefix} {
 			src := fmt.Sprintf("git::%s-%s.git?ref=%s", prefix, name, version)
 
 			if err := dd.client.Download(src, filepath.Join(dd.basePath, "vendor", "modules", name)); err != nil {
-				errors = append(errors, fmt.Errorf("%w '%s': %v", distribution.ErrDownloadingFolder, src, err))
+				errs = append(errs, fmt.Errorf("%w '%s': %v", distribution.ErrDownloadingFolder, src, err))
 
 				continue
 			}
 
-			errors = []error{}
+			errs = []error{}
 
 			break
 		}
 
-		if len(errors) > 0 {
-			return fmt.Errorf("%w '%s': %v", ErrDownloadingModule, name, errors)
+		if len(errs) > 0 {
+			return fmt.Errorf("%w '%s': %v", ErrDownloadingModule, name, errs)
 		}
 	}
 
@@ -125,8 +125,8 @@ func (dd *Downloader) DownloadInstallers(installers config.KFDKubernetes) error 
 	return nil
 }
 
-func (dd *Downloader) DownloadTools(tools config.KFDTools) ([]string, error) {
-	tls := reflect.ValueOf(tools)
+func (dd *Downloader) DownloadTools(kfdTools config.KFDTools) ([]string, error) {
+	tls := reflect.ValueOf(kfdTools)
 
 	unsupportedTools := []string{}
 

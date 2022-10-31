@@ -68,13 +68,6 @@ func NewTemplateModel(
 		}
 	}
 
-	if stopIfNotEmpty {
-		err := iox.CheckDirIsEmpty(target)
-		if err != nil {
-			return nil, fmt.Errorf("target directory is not empty: %w", err)
-		}
-	}
-
 	funcMap := NewFuncMap()
 	funcMap.Add("toYaml", ToYAML)
 	funcMap.Add("fromYaml", FromYAML)
@@ -105,6 +98,13 @@ func (tm *Model) isExcluded(source string) bool {
 }
 
 func (tm *Model) Generate() error {
+	if tm.StopIfTargetNotEmpty {
+		err := iox.CheckDirIsEmpty(tm.TargetPath)
+		if err != nil {
+			return fmt.Errorf("target directory is not empty: %w", err)
+		}
+	}
+
 	osErr := os.MkdirAll(tm.TargetPath, os.ModePerm)
 	if osErr != nil {
 		return fmt.Errorf("error creating target directory: %w", osErr)

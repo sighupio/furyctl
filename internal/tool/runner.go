@@ -64,7 +64,8 @@ func (rf *RunnerFactory) Create(name, workDir string) Runner {
 		return kubectl.NewRunner(rf.executor, kubectl.Paths{
 			Kubectl: filepath.Join(rf.paths.Bin, name),
 			WorkDir: workDir,
-		})
+		},
+			true)
 	}
 
 	if name == Kustomize {

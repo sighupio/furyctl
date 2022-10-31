@@ -34,7 +34,10 @@ type RootCommand struct {
 	config *rootConfig
 }
 
-const timeout = 100 * time.Millisecond
+const (
+	timeout      = 100 * time.Millisecond
+	spinnerStyle = 11
+)
 
 func NewRootCommand(versions map[string]string) *RootCommand {
 	// Update channels.
@@ -69,7 +72,7 @@ Furyctl is a simple CLI tool to:
 					logrus.SetFormatter(f)
 				}
 
-				cfg.Spinner = spinner.New(spinner.CharSets[11], timeout, spinner.WithWriter(w))
+				cfg.Spinner = spinner.New(spinner.CharSets[spinnerStyle], timeout, spinner.WithWriter(w))
 
 				// Set log level.
 				dflag, ok := cobrax.Flag[bool](cmd, "debug").(bool)

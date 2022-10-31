@@ -40,7 +40,7 @@ type Kustomize struct {
 	version string
 }
 
-func (k *Kustomize) SupportsDownload() bool {
+func (*Kustomize) SupportsDownload() bool {
 	return true
 }
 
@@ -54,7 +54,7 @@ func (k *Kustomize) SrcPath() string {
 	)
 }
 
-func (k *Kustomize) Rename(basePath string) error {
+func (*Kustomize) Rename(_ string) error {
 	return nil
 }
 

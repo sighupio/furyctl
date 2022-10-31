@@ -37,18 +37,18 @@ func (f *Node) FromNodeList(nodes []parse.Node) []string {
 
 func mapToAliasInterface(n parse.Node) interface{} {
 	// MapParseNodeToAlias is a map of parse.Node to its alias.
-	MapParseNodeToAlias := map[parse.NodeType]interface{}{
+	mapParseNodeToAlias := map[parse.NodeType]interface{}{
 		parse.NodeList:     &ListNode{},
 		parse.NodeRange:    &RangeNode{},
 		parse.NodePipe:     &PipeNode{},
-		parse.NodeTemplate: &TemplateNode{},
+		parse.NodeTemplate: &TplNode{},
 		parse.NodeIf:       &IfNode{},
 		parse.NodeAction:   &ActionNode{},
 		parse.NodeField:    &FieldNode{},
 		parse.NodeVariable: &VariableNode{},
 	}
 
-	t := MapParseNodeToAlias[n.Type()]
+	t := mapParseNodeToAlias[n.Type()]
 
 	if t == nil {
 		return nil
@@ -93,9 +93,9 @@ func (p *PipeNode) Set(n *Node) {
 	}
 }
 
-type TemplateNode parse.TemplateNode
+type TplNode parse.TemplateNode
 
-func (t *TemplateNode) Set(n *Node) {
+func (t *TplNode) Set(n *Node) {
 	if t.Pipe != nil {
 		for _, cmd := range t.Pipe.Cmds {
 			n.Set(n.FromNodeList(cmd.Args))
@@ -140,12 +140,9 @@ func (v *VariableNode) Set(n *Node) {
 }
 
 func stringsToPath(s []string) string {
-	var sb strings.Builder
-
-	for _, s := range s {
-		sb.WriteByte('.')
-		sb.WriteString(s)
+	if len(s) == 0 {
+		return ""
 	}
 
-	return sb.String()
+	return "." + strings.Join(s, ".")
 }

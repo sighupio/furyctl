@@ -40,12 +40,14 @@ type Kubernetes struct {
 	kfdManifest      config.KFD
 	infraOutputsPath string
 	tfRunner         *terraform.Runner
+	dryRun           bool
 }
 
 func NewKubernetes(
 	furyctlConf schema.EksclusterKfdV1Alpha2,
 	kfdManifest config.KFD,
 	infraOutputsPath string,
+	dryRun bool,
 ) (*Kubernetes, error) {
 	phase, err := cluster.NewCreationPhase(".kubernetes")
 	if err != nil {
@@ -67,10 +69,11 @@ func NewKubernetes(
 				Terraform: phase.TerraformPath,
 			},
 		),
+		dryRun: dryRun,
 	}, nil
 }
 
-func (k *Kubernetes) Exec(dryRun bool) error {
+func (k *Kubernetes) Exec() error {
 	timestamp := time.Now().Unix()
 
 	if err := k.CreateFolder(); err != nil {
@@ -97,7 +100,7 @@ func (k *Kubernetes) Exec(dryRun bool) error {
 		return fmt.Errorf("error running terraform plan: %w", err)
 	}
 
-	if dryRun {
+	if k.dryRun {
 		return nil
 	}
 
@@ -244,9 +247,20 @@ func (k *Kubernetes) createTfVars() error {
 		}
 	}
 
-	buffer.WriteString(fmt.Sprintf("cluster_name = \"%v\"\n", k.furyctlConf.Metadata.Name))
-	buffer.WriteString(fmt.Sprintf("cluster_version = \"%v\"\n", k.kfdManifest.Kubernetes.Eks.Version))
-	buffer.WriteString(fmt.Sprintf("network = \"%v\"\n", vpcIDSource))
+	_, err := buffer.WriteString(fmt.Sprintf("cluster_name = \"%v\"\n", k.furyctlConf.Metadata.Name))
+	if err != nil {
+		return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
+	}
+
+	_, err = buffer.WriteString(fmt.Sprintf("cluster_version = \"%v\"\n", k.kfdManifest.Kubernetes.Eks.Version))
+	if err != nil {
+		return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
+	}
+
+	_, err = buffer.WriteString(fmt.Sprintf("network = \"%v\"\n", vpcIDSource))
+	if err != nil {
+		return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
+	}
 
 	subnetIds := make([]string, len(subnetIdsSource))
 
@@ -254,7 +268,10 @@ func (k *Kubernetes) createTfVars() error {
 		subnetIds[i] = fmt.Sprintf("\"%v\"", subnetID)
 	}
 
-	buffer.WriteString(fmt.Sprintf("subnetworks = [%v]\n", strings.Join(subnetIds, ",")))
+	_, err = buffer.WriteString(fmt.Sprintf("subnetworks = [%v]\n", strings.Join(subnetIds, ",")))
+	if err != nil {
+		return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
+	}
 
 	dmzCidrRange := make([]string, len(allowedCidrsSource))
 
@@ -262,34 +279,52 @@ func (k *Kubernetes) createTfVars() error {
 		dmzCidrRange[i] = fmt.Sprintf("\"%v\"", cidr)
 	}
 
-	buffer.WriteString(fmt.Sprintf("dmz_cidr_range = [%v]\n", strings.Join(dmzCidrRange, ",")))
-	buffer.WriteString(fmt.Sprintf("ssh_public_key = \"%v\"\n", k.furyctlConf.Spec.Kubernetes.NodeAllowedSshPublicKey))
+	_, err = buffer.WriteString(fmt.Sprintf("dmz_cidr_range = [%v]\n", strings.Join(dmzCidrRange, ",")))
+	if err != nil {
+		return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
+	}
+
+	_, err = buffer.WriteString(
+		fmt.Sprintf("ssh_public_key = \"%v\"\n", k.furyctlConf.Spec.Kubernetes.NodeAllowedSshPublicKey),
+	)
+	if err != nil {
+		return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
+	}
 
 	if k.furyctlConf.Spec.Tags != nil && len(k.furyctlConf.Spec.Tags) > 0 {
 		var tags []byte
 
 		tags, err := json.Marshal(k.furyctlConf.Spec.Tags)
 		if err != nil {
-			return fmt.Errorf("error marshaling tags: %w", err)
+			return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
 		}
 
-		buffer.WriteString(fmt.Sprintf("tags = %v\n", string(tags)))
+		_, err = buffer.WriteString(fmt.Sprintf("tags = %v\n", string(tags)))
+		if err != nil {
+			return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
+		}
 	}
 
 	if len(k.furyctlConf.Spec.Kubernetes.AwsAuth.AdditionalAccounts) > 0 {
-		buffer.WriteString(
+		_, err = buffer.WriteString(
 			fmt.Sprintf(
 				"eks_map_accounts = [\"%v\"]\n",
 				strings.Join(k.furyctlConf.Spec.Kubernetes.AwsAuth.AdditionalAccounts, "\",\""),
 			),
 		)
+		if err != nil {
+			return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
+		}
 	}
 
 	if len(k.furyctlConf.Spec.Kubernetes.AwsAuth.Users) > 0 {
-		buffer.WriteString("eks_map_users = [\n")
+		_, err = buffer.WriteString("eks_map_users = [\n")
+		if err != nil {
+			return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
+		}
 
 		for _, account := range k.furyctlConf.Spec.Kubernetes.AwsAuth.Users {
-			buffer.WriteString(
+			_, err = buffer.WriteString(
 				fmt.Sprintf(
 					`{
 						groups = ["%v"]
@@ -299,16 +334,25 @@ func (k *Kubernetes) createTfVars() error {
 					strings.Join(account.Groups, "\",\""), account.Username, account.Userarn,
 				),
 			)
+			if err != nil {
+				return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
+			}
 		}
 
-		buffer.WriteString("]\n")
+		_, err = buffer.WriteString("]\n")
+		if err != nil {
+			return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
+		}
 	}
 
 	if len(k.furyctlConf.Spec.Kubernetes.AwsAuth.Roles) > 0 {
-		buffer.WriteString("eks_map_roles = [\n")
+		_, err = buffer.WriteString("eks_map_roles = [\n")
+		if err != nil {
+			return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
+		}
 
 		for _, account := range k.furyctlConf.Spec.Kubernetes.AwsAuth.Roles {
-			buffer.WriteString(
+			_, err = buffer.WriteString(
 				fmt.Sprintf(
 					`{
 						groups = ["%v"]
@@ -318,22 +362,58 @@ func (k *Kubernetes) createTfVars() error {
 					strings.Join(account.Groups, "\",\""), account.Username, account.Rolearn,
 				),
 			)
+			if err != nil {
+				return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
+			}
 		}
 
-		buffer.WriteString("]\n")
+		_, err = buffer.WriteString("]\n")
+		if err != nil {
+			return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
+		}
 	}
 
 	if len(k.furyctlConf.Spec.Kubernetes.NodePools) > 0 {
-		buffer.WriteString("node_pools = [\n")
+		_, err = buffer.WriteString("node_pools = [\n")
+		if err != nil {
+			return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
+		}
 
 		for _, np := range k.furyctlConf.Spec.Kubernetes.NodePools {
-			buffer.WriteString("{\n")
-			buffer.WriteString(fmt.Sprintf("name = \"%v\"\n", np.Name))
-			buffer.WriteString("version = null\n")
-			buffer.WriteString(fmt.Sprintf("spot_instance = %v\n", np.Instance.Spot))
-			buffer.WriteString(fmt.Sprintf("min_size = %v\n", np.Size.Min))
-			buffer.WriteString(fmt.Sprintf("max_size = %v\n", np.Size.Max))
-			buffer.WriteString(fmt.Sprintf("instance_type = \"%v\"\n", np.Instance.Type))
+			_, err = buffer.WriteString("{\n")
+			if err != nil {
+				return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
+			}
+
+			_, err = buffer.WriteString(fmt.Sprintf("name = \"%v\"\n", np.Name))
+			if err != nil {
+				return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
+			}
+
+			_, err = buffer.WriteString("version = null\n")
+			if err != nil {
+				return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
+			}
+
+			_, err = buffer.WriteString(fmt.Sprintf("spot_instance = %v\n", np.Instance.Spot))
+			if err != nil {
+				return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
+			}
+
+			_, err = buffer.WriteString(fmt.Sprintf("min_size = %v\n", np.Size.Min))
+			if err != nil {
+				return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
+			}
+
+			_, err = buffer.WriteString(fmt.Sprintf("max_size = %v\n", np.Size.Max))
+			if err != nil {
+				return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
+			}
+
+			_, err = buffer.WriteString(fmt.Sprintf("instance_type = \"%v\"\n", np.Instance.Type))
+			if err != nil {
+				return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
+			}
 
 			if len(np.AttachedTargetGroups) > 0 {
 				attachedTargetGroups := make([]string, len(np.AttachedTargetGroups))
@@ -342,17 +422,26 @@ func (k *Kubernetes) createTfVars() error {
 					attachedTargetGroups[i] = fmt.Sprintf("\"%v\"", tg)
 				}
 
-				buffer.WriteString(
+				_, err = buffer.WriteString(
 					fmt.Sprintf(
 						"eks_target_group_arns = [%v]\n",
 						strings.Join(attachedTargetGroups, ","),
 					))
+				if err != nil {
+					return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
+				}
 			}
 
-			buffer.WriteString(fmt.Sprintf("volume_size = %v\n", np.Instance.VolumeSize))
+			_, err = buffer.WriteString(fmt.Sprintf("volume_size = %v\n", np.Instance.VolumeSize))
+			if err != nil {
+				return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
+			}
 
 			if len(np.AdditionalFirewallRules) > 0 {
-				buffer.WriteString("additional_firewall_rules = [\n")
+				_, err = buffer.WriteString("additional_firewall_rules = [\n")
+				if err != nil {
+					return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
+				}
 
 				for _, fwRule := range np.AdditionalFirewallRules {
 					fwRuleTags := "{}"
@@ -362,13 +451,13 @@ func (k *Kubernetes) createTfVars() error {
 
 						tags, err := json.Marshal(fwRule.Tags)
 						if err != nil {
-							return fmt.Errorf("error marshaling firewall rules tags: %w", err)
+							return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
 						}
 
 						fwRuleTags = string(tags)
 					}
 
-					buffer.WriteString(
+					_, err = buffer.WriteString(
 						fmt.Sprintf(
 							`{
 								name = "%v"
@@ -386,11 +475,20 @@ func (k *Kubernetes) createTfVars() error {
 							fwRuleTags,
 						),
 					)
+					if err != nil {
+						return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
+					}
 				}
 
-				buffer.WriteString("]\n")
+				_, err = buffer.WriteString("]\n")
+				if err != nil {
+					return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
+				}
 			} else {
-				buffer.WriteString("additional_firewall_rules = []\n")
+				_, err = buffer.WriteString("additional_firewall_rules = []\n")
+				if err != nil {
+					return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
+				}
 			}
 
 			if len(np.SubnetIds) > 0 {
@@ -400,9 +498,15 @@ func (k *Kubernetes) createTfVars() error {
 					npSubNetIds[i] = fmt.Sprintf("\"%v\"", subnetID)
 				}
 
-				buffer.WriteString(fmt.Sprintf("subnetworks = [%v]\n", strings.Join(npSubNetIds, ",")))
+				_, err = buffer.WriteString(fmt.Sprintf("subnetworks = [%v]\n", strings.Join(npSubNetIds, ",")))
+				if err != nil {
+					return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
+				}
 			} else {
-				buffer.WriteString("subnetworks = null\n")
+				_, err = buffer.WriteString("subnetworks = null\n")
+				if err != nil {
+					return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
+				}
 			}
 
 			if len(np.Labels) > 0 {
@@ -410,18 +514,30 @@ func (k *Kubernetes) createTfVars() error {
 
 				labels, err := json.Marshal(np.Labels)
 				if err != nil {
-					return fmt.Errorf("error marshaling node pool labels: %w", err)
+					return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
 				}
 
-				buffer.WriteString(fmt.Sprintf("labels = %v\n", string(labels)))
+				_, err = buffer.WriteString(fmt.Sprintf("labels = %v\n", string(labels)))
+				if err != nil {
+					return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
+				}
 			} else {
-				buffer.WriteString("labels = {}\n")
+				_, err = buffer.WriteString("labels = {}\n")
+				if err != nil {
+					return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
+				}
 			}
 
 			if len(np.Taints) > 0 {
-				buffer.WriteString(fmt.Sprintf("taints = [\"%v\"]\n", strings.Join(np.Taints, "\",\"")))
+				_, err = buffer.WriteString(fmt.Sprintf("taints = [\"%v\"]\n", strings.Join(np.Taints, "\",\"")))
+				if err != nil {
+					return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
+				}
 			} else {
-				buffer.WriteString("taints = []\n")
+				_, err = buffer.WriteString("taints = []\n")
+				if err != nil {
+					return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
+				}
 			}
 
 			if len(np.Tags) > 0 {
@@ -429,23 +545,35 @@ func (k *Kubernetes) createTfVars() error {
 
 				tags, err := json.Marshal(np.Tags)
 				if err != nil {
-					return fmt.Errorf("error marshaling node pool tags: %w", err)
+					return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
 				}
 
-				buffer.WriteString(fmt.Sprintf("tags = %v\n", string(tags)))
+				_, err = buffer.WriteString(fmt.Sprintf("tags = %v\n", string(tags)))
+				if err != nil {
+					return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
+				}
 			} else {
-				buffer.WriteString("tags = {}\n")
+				_, err = buffer.WriteString("tags = {}\n")
+				if err != nil {
+					return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
+				}
 			}
 
-			buffer.WriteString("},\n")
+			_, err = buffer.WriteString("},\n")
+			if err != nil {
+				return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
+			}
 		}
 
-		buffer.WriteString("]\n")
+		_, err = buffer.WriteString("]\n")
+		if err != nil {
+			return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
+		}
 	}
 
 	targetTfVars := path.Join(k.Path, "terraform", "main.auto.tfvars")
 
-	err := os.WriteFile(targetTfVars, buffer.Bytes(), iox.FullRWPermAccess)
+	err = os.WriteFile(targetTfVars, buffer.Bytes(), iox.FullRWPermAccess)
 	if err != nil {
 		return fmt.Errorf("error writing terraform vars file: %w", err)
 	}

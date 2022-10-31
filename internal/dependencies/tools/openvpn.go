@@ -38,15 +38,15 @@ type Openvpn struct {
 	version string
 }
 
-func (o *Openvpn) SupportsDownload() bool {
+func (*Openvpn) SupportsDownload() bool {
 	return false
 }
 
-func (o *Openvpn) SrcPath() string {
+func (*Openvpn) SrcPath() string {
 	return ""
 }
 
-func (o *Openvpn) Rename(basePath string) error {
+func (*Openvpn) Rename(_ string) error {
 	return nil
 }
 

@@ -12,6 +12,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	// Running init to register the EKSCluster kind.
 	_ "github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/eks"
 	"github.com/sighupio/furyctl/internal/cluster"
 	"github.com/sighupio/furyctl/internal/config"
@@ -127,7 +128,10 @@ func NewClusterCmd(version string) *cobra.Command {
 				return fmt.Errorf("error while creating cluster: %w", err)
 			}
 
-			fmt.Println("cluster creation succeeded")
+			_, err = fmt.Println("cluster creation succeeded")
+			if err != nil {
+				return fmt.Errorf("error while printing success message: %w", err)
+			}
 
 			return nil
 		},

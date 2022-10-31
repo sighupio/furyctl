@@ -39,9 +39,14 @@ type Infrastructure struct {
 	tfRunner    *terraform.Runner
 	faRunner    *furyagent.Runner
 	ovRunner    *openvpn.Runner
+	dryRun      bool
 }
 
-func NewInfrastructure(furyctlConf schema.EksclusterKfdV1Alpha2, kfdManifest config.KFD) (*Infrastructure, error) {
+func NewInfrastructure(
+	furyctlConf schema.EksclusterKfdV1Alpha2,
+	kfdManifest config.KFD,
+	dryRun bool,
+) (*Infrastructure, error) {
 	phase, err := cluster.NewCreationPhase(".infrastructure")
 	if err != nil {
 		return nil, fmt.Errorf("error creating infrastructure phase: %w", err)
@@ -71,10 +76,11 @@ func NewInfrastructure(furyctlConf schema.EksclusterKfdV1Alpha2, kfdManifest con
 			WorkDir: phase.SecretsPath,
 			Openvpn: "openvpn",
 		}),
+		dryRun: dryRun,
 	}, nil
 }
 
-func (i *Infrastructure) Exec(dryRun bool, opts []cluster.CreationPhaseOption) error {
+func (i *Infrastructure) Exec(opts []cluster.CreationPhaseOption) error {
 	timestamp := time.Now().Unix()
 
 	if err := i.CreateFolder(); err != nil {
@@ -101,7 +107,7 @@ func (i *Infrastructure) Exec(dryRun bool, opts []cluster.CreationPhaseOption) e
 		return fmt.Errorf("error running terraform plan: %w", err)
 	}
 
-	if dryRun {
+	if i.dryRun {
 		return nil
 	}
 
@@ -190,11 +196,18 @@ func (i *Infrastructure) copyFromTemplate(kfdManifest config.KFD) error {
 func (i *Infrastructure) createTfVars() error {
 	var buffer bytes.Buffer
 
-	buffer.WriteString(fmt.Sprintf("name = \"%v\"\n", i.furyctlConf.Metadata.Name))
-	buffer.WriteString(fmt.Sprintf(
+	_, err := buffer.WriteString(fmt.Sprintf("name = \"%v\"\n", i.furyctlConf.Metadata.Name))
+	if err != nil {
+		return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
+	}
+
+	_, err = buffer.WriteString(fmt.Sprintf(
 		"network_cidr = \"%v\"\n",
 		i.furyctlConf.Spec.Infrastructure.Vpc.Network.Cidr,
 	))
+	if err != nil {
+		return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
+	}
 
 	publicSubnetworkCidrs := make([]string, len(i.furyctlConf.Spec.Infrastructure.Vpc.Network.SubnetsCidrs.Public))
 
@@ -208,71 +221,99 @@ func (i *Infrastructure) createTfVars() error {
 		privateSubnetworkCidrs[i] = fmt.Sprintf("\"%v\"", cidr)
 	}
 
-	buffer.WriteString(fmt.Sprintf(
+	_, err = buffer.WriteString(fmt.Sprintf(
 		"public_subnetwork_cidrs = [%v]\n",
 		strings.Join(publicSubnetworkCidrs, ",")))
+	if err != nil {
+		return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
+	}
 
-	buffer.WriteString(fmt.Sprintf(
+	_, err = buffer.WriteString(fmt.Sprintf(
 		"private_subnetwork_cidrs = [%v]\n",
 		strings.Join(privateSubnetworkCidrs, ",")))
+	if err != nil {
+		return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
+	}
 
 	if i.furyctlConf.Spec.Infrastructure.Vpc.Vpn != nil {
-		buffer.WriteString(
+		_, err = buffer.WriteString(
 			fmt.Sprintf(
 				"vpn_subnetwork_cidr = \"%v\"\n",
 				i.furyctlConf.Spec.Infrastructure.Vpc.Vpn.VpnClientsSubnetCidr,
 			),
 		)
-		buffer.WriteString(
+		if err != nil {
+			return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
+		}
+
+		_, err = buffer.WriteString(
 			fmt.Sprintf(
 				"vpn_instances = %v\n",
 				i.furyctlConf.Spec.Infrastructure.Vpc.Vpn.Instances,
 			),
 		)
+		if err != nil {
+			return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
+		}
 
 		if i.furyctlConf.Spec.Infrastructure.Vpc.Vpn.Port != 0 {
-			buffer.WriteString(
+			_, err = buffer.WriteString(
 				fmt.Sprintf(
 					"vpn_port = %v\n",
 					i.furyctlConf.Spec.Infrastructure.Vpc.Vpn.Port,
 				),
 			)
+			if err != nil {
+				return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
+			}
 		}
 
 		if i.furyctlConf.Spec.Infrastructure.Vpc.Vpn.InstanceType != "" {
-			buffer.WriteString(
+			_, err = buffer.WriteString(
 				fmt.Sprintf(
 					"vpn_instance_type = \"%v\"\n",
 					i.furyctlConf.Spec.Infrastructure.Vpc.Vpn.InstanceType,
 				),
 			)
+			if err != nil {
+				return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
+			}
 		}
 
 		if i.furyctlConf.Spec.Infrastructure.Vpc.Vpn.DiskSize != 0 {
-			buffer.WriteString(
+			_, err = buffer.WriteString(
 				fmt.Sprintf(
 					"vpn_instance_disk_size = %v\n",
 					i.furyctlConf.Spec.Infrastructure.Vpc.Vpn.DiskSize,
 				),
 			)
+			if err != nil {
+				return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
+			}
 		}
 
 		if i.furyctlConf.Spec.Infrastructure.Vpc.Vpn.OperatorName != "" {
-			buffer.WriteString(
+			_, err = buffer.WriteString(
 				fmt.Sprintf(
 					"vpn_operator_name = \"%v\"\n",
 					i.furyctlConf.Spec.Infrastructure.Vpc.Vpn.OperatorName,
 				),
 			)
+			if err != nil {
+				return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
+			}
 		}
 
 		if i.furyctlConf.Spec.Infrastructure.Vpc.Vpn.DhParamsBits != 0 {
-			buffer.WriteString(
+			_, err = buffer.WriteString(
 				fmt.Sprintf(
 					"vpn_dhparams_bits = %v\n",
 					i.furyctlConf.Spec.Infrastructure.Vpc.Vpn.DhParamsBits,
 				),
 			)
+			if err != nil {
+				return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
+			}
 		}
 
 		if len(i.furyctlConf.Spec.Infrastructure.Vpc.Vpn.Ssh.AllowedFromCidrs) != 0 {
@@ -282,12 +323,15 @@ func (i *Infrastructure) createTfVars() error {
 				allowedCidrs[i] = fmt.Sprintf("\"%v\"", cidr)
 			}
 
-			buffer.WriteString(
+			_, err = buffer.WriteString(
 				fmt.Sprintf(
 					"vpn_operator_cidrs = [%v]\n",
 					strings.Join(allowedCidrs, ","),
 				),
 			)
+			if err != nil {
+				return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
+			}
 		}
 
 		if len(i.furyctlConf.Spec.Infrastructure.Vpc.Vpn.Ssh.GithubUsersName) != 0 {
@@ -297,18 +341,21 @@ func (i *Infrastructure) createTfVars() error {
 				githubUsers[i] = fmt.Sprintf("\"%v\"", gu)
 			}
 
-			buffer.WriteString(
+			_, err = buffer.WriteString(
 				fmt.Sprintf(
 					"vpn_ssh_users = [%v]\n",
 					strings.Join(githubUsers, ","),
 				),
 			)
+			if err != nil {
+				return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
+			}
 		}
 	}
 
 	targetTfVars := path.Join(i.Path, "terraform", "main.auto.tfvars")
 
-	err := os.WriteFile(targetTfVars, buffer.Bytes(), iox.FullRWPermAccess)
+	err = os.WriteFile(targetTfVars, buffer.Bytes(), iox.FullRWPermAccess)
 	if err != nil {
 		return fmt.Errorf("error writing terraform vars: %w", err)
 	}

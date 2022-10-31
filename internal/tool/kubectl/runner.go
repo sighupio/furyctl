@@ -16,21 +16,23 @@ type Paths struct {
 }
 
 type Runner struct {
-	executor execx.Executor
-	paths    Paths
+	executor   execx.Executor
+	paths      Paths
+	serverSide bool
 }
 
-func NewRunner(executor execx.Executor, paths Paths) *Runner {
+func NewRunner(executor execx.Executor, paths Paths, serverSide bool) *Runner {
 	return &Runner{
-		executor: executor,
-		paths:    paths,
+		executor:   executor,
+		paths:      paths,
+		serverSide: serverSide,
 	}
 }
 
-func (r *Runner) Apply(manifestPath string, serverSide bool) error {
+func (r *Runner) Apply(manifestPath string) error {
 	args := []string{"apply", "-f"}
 
-	if serverSide {
+	if r.serverSide {
 		args = append(args, "--server-side")
 	}
 

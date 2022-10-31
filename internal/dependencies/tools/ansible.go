@@ -38,15 +38,15 @@ type Ansible struct {
 	version string
 }
 
-func (a *Ansible) SupportsDownload() bool {
+func (*Ansible) SupportsDownload() bool {
 	return false
 }
 
-func (a *Ansible) SrcPath() string {
+func (*Ansible) SrcPath() string {
 	return ""
 }
 
-func (a *Ansible) Rename(basePath string) error {
+func (*Ansible) Rename(_ string) error {
 	return nil
 }
 

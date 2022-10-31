@@ -41,7 +41,7 @@ type Furyagent struct {
 	version string
 }
 
-func (f *Furyagent) SupportsDownload() bool {
+func (*Furyagent) SupportsDownload() bool {
 	return true
 }
 

@@ -37,7 +37,9 @@ func NewDefaultModel(content map[any]any, path string) *DefaultModel {
 }
 
 func NewDefaultModelFromStruct(content any, path string, skipEmpty bool) *DefaultModel {
-	c := mapx.FromStruct(content, "json", skipEmpty)
+	builder := mapx.NewBuilder(skipEmpty)
+
+	c := builder.FromStruct(content, "json")
 
 	return NewDefaultModel(c, path)
 }

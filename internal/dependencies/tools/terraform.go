@@ -40,7 +40,7 @@ type Terraform struct {
 	version string
 }
 
-func (t *Terraform) SupportsDownload() bool {
+func (*Terraform) SupportsDownload() bool {
 	return true
 }
 
@@ -54,7 +54,7 @@ func (t *Terraform) SrcPath() string {
 	)
 }
 
-func (t *Terraform) Rename(basePath string) error {
+func (*Terraform) Rename(_ string) error {
 	return nil
 }
 

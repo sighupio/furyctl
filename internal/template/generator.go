@@ -18,7 +18,7 @@ import (
 	iox "github.com/sighupio/furyctl/internal/x/io"
 )
 
-type generator struct {
+type Generator struct {
 	rootSrc string
 	source  string
 	target  string
@@ -34,8 +34,8 @@ func NewGenerator(
 	context map[string]map[any]any,
 	funcMap FuncMap,
 	dryRun bool,
-) *generator {
-	return &generator{
+) *Generator {
+	return &Generator{
 		rootSrc: rootSrc,
 		source:  source,
 		target:  target,
@@ -45,7 +45,7 @@ func NewGenerator(
 	}
 }
 
-func (g *generator) ProcessTemplate() (*template.Template, error) {
+func (g *Generator) ProcessTemplate() (*template.Template, error) {
 	helpersPath := filepath.Join(g.rootSrc, "_helpers.tpl")
 
 	_, err := os.Stat(helpersPath)
@@ -72,7 +72,7 @@ func (g *generator) ProcessTemplate() (*template.Template, error) {
 	return nil, fmt.Errorf("error processing template using helper '%s': %w", helpersPath, err)
 }
 
-func (g *generator) GetMissingKeys(tpl *template.Template) []string {
+func (g *Generator) GetMissingKeys(tpl *template.Template) []string {
 	var missingKeys []string
 
 	if tpl == nil || tpl.Tree == nil || tpl.Tree.Root == nil {
@@ -92,7 +92,7 @@ func (g *generator) GetMissingKeys(tpl *template.Template) []string {
 	return missingKeys
 }
 
-func (g *generator) ProcessFile(tpl *template.Template) (bytes.Buffer, error) {
+func (g *Generator) ProcessFile(tpl *template.Template) (bytes.Buffer, error) {
 	var generatedContent bytes.Buffer
 
 	if !g.dryRun {
@@ -107,7 +107,7 @@ func (g *generator) ProcessFile(tpl *template.Template) (bytes.Buffer, error) {
 	return generatedContent, nil
 }
 
-func (g *generator) ProcessFilename(
+func (g *Generator) ProcessFilename(
 	tm *Model,
 ) (string, error) {
 	var realTarget string
@@ -135,11 +135,11 @@ func (g *generator) ProcessFilename(
 	return realTarget, nil
 }
 
-func (g *generator) UpdateTarget(newTarget string) {
+func (g *Generator) UpdateTarget(newTarget string) {
 	g.target = newTarget
 }
 
-func (g *generator) WriteMissingKeysToFile(
+func (*Generator) WriteMissingKeysToFile(
 	missingKeys []string,
 	tmplPath,
 	outputPath string,
@@ -166,7 +166,7 @@ func (g *generator) WriteMissingKeysToFile(
 	return nil
 }
 
-func (g *generator) getContextValueFromPath(path string) any {
+func (g *Generator) getContextValueFromPath(path string) any {
 	paths := strings.Split(path[1:], ".")
 
 	if len(paths) == 0 {

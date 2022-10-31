@@ -23,13 +23,11 @@ linters:
   # Disable specific linter
   # https://golangci-lint.run/usage/linters/#disabled-by-default-linters--e--enable
   disable:
-    # todo
     # unsupported
     - rowserrcheck
     - sqlclosecheck
     - wastedassign
     - ireturn # not working with generics https://github.com/butuzov/ireturn/issues/37
-    - revive
     - varnamelen # not useful
     # deprecated
     - deadcode
@@ -68,12 +66,12 @@ linters-settings:
     skip-generated: true
     custom-order: true
   cyclop:
-    max-complexity: 40
+    max-complexity: 80
   funlen:
-    lines: 280
-    statements: 115
+    lines: 400
+    statements: 182
   gocognit:
-    min-complexity: 110
+    min-complexity: 210
   godot:
     scope: all
     exclude:
@@ -100,7 +98,7 @@ linters-settings:
     var-require-single-var: true
     var-require-grouping: false
   nestif:
-    min-complexity: 21
+    min-complexity: 60
   nolintlint:
     require-explanation: true
     require-specific: true
@@ -112,7 +110,7 @@ linters-settings:
         severity: warning
         disabled: false
         arguments:
-          - maxLitCount: "3"
+          - maxLitCount: "15"
             allowStrs: '""'
             allowInts: "0,1,2"
             allowFloats: "0.0,0.,1.0,1.,2.0,2."
@@ -120,7 +118,7 @@ linters-settings:
       - name: argument-limit
         severity: warning
         disabled: false
-        arguments: [4]
+        arguments: [7]
       # https://github.com/mgechev/revive/blob/master/RULES_DESCRIPTIONS.md#atomic
       - name: atomic
         severity: warning
@@ -150,7 +148,7 @@ linters-settings:
       - name: cognitive-complexity
         severity: warning
         disabled: false
-        arguments: [7]
+        arguments: [210]
       # https://github.com/mgechev/revive/blob/master/RULES_DESCRIPTIONS.md#confusing-naming
       - name: confusing-naming
         severity: warning
@@ -158,7 +156,7 @@ linters-settings:
       # https://github.com/mgechev/revive/blob/master/RULES_DESCRIPTIONS.md#confusing-results
       - name: confusing-results
         severity: warning
-        disabled: false
+        disabled: true
       # https://github.com/mgechev/revive/blob/master/RULES_DESCRIPTIONS.md#constant-logical-expr
       - name: constant-logical-expr
         severity: warning
@@ -175,7 +173,7 @@ linters-settings:
       - name: cyclomatic
         severity: warning
         disabled: false
-        arguments: [3]
+        arguments: [80]
       # https://github.com/mgechev/revive/blob/master/RULES_DESCRIPTIONS.md#datarace
       - name: datarace
         severity: warning
@@ -236,7 +234,7 @@ linters-settings:
       # https://github.com/mgechev/revive/blob/master/RULES_DESCRIPTIONS.md#file-header
       - name: file-header
         severity: warning
-        disabled: false
+        disabled: true
         arguments:
           - This is the text that must appear at the top of source files.
       # https://github.com/mgechev/revive/blob/master/RULES_DESCRIPTIONS.md#flag-parameter
@@ -247,12 +245,12 @@ linters-settings:
       - name: function-result-limit
         severity: warning
         disabled: false
-        arguments: [2]
+        arguments: [4]
       # https://github.com/mgechev/revive/blob/master/RULES_DESCRIPTIONS.md#function-length
       - name: function-length
         severity: warning
         disabled: false
-        arguments: [10, 0]
+        arguments: [200, 0]
       # https://github.com/mgechev/revive/blob/master/RULES_DESCRIPTIONS.md#get-return
       - name: get-return
         severity: warning
@@ -287,13 +285,13 @@ linters-settings:
       # https://github.com/mgechev/revive/blob/master/RULES_DESCRIPTIONS.md#line-length-limit
       - name: line-length-limit
         severity: warning
-        disabled: false
-        arguments: [120]
+        disabled: true
+        arguments: [140]
       # https://github.com/mgechev/revive/blob/master/RULES_DESCRIPTIONS.md#max-public-structs
       - name: max-public-structs
         severity: warning
         disabled: false
-        arguments: [3]
+        arguments: [10]
       # https://github.com/mgechev/revive/blob/master/RULES_DESCRIPTIONS.md#modifies-parameter
       - name: modifies-parameter
         severity: warning
@@ -474,6 +472,7 @@ issues:
         - gosec
         - lll
         - maintidx
+        - revive
     - path: main\.go
       linters:
         - gochecknoglobals

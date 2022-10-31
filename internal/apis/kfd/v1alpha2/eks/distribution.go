@@ -27,6 +27,8 @@ import (
 	yamlx "github.com/sighupio/furyctl/internal/x/yaml"
 )
 
+const KubectlMaxRetry = 3
+
 var (
 	errCastingVpcIDToStr     = errors.New("error casting vpc_id output to string")
 	errCastingEbsIamToStr    = errors.New("error casting ebs_csi_driver_iam_role_arn output to string")
@@ -46,8 +48,9 @@ type Distribution struct {
 	infraOutputsPath string
 	distroPath       string
 	tfRunner         *terraform.Runner
-	kRunner          *kustomize.Runner
+	kzRunner         *kustomize.Runner
 	kubeRunner       *kubectl.Runner
+	dryRun           bool
 }
 
 type injectType struct {
@@ -60,6 +63,7 @@ func NewDistribution(
 	kfdManifest config.KFD,
 	distroPath string,
 	infraOutputsPath string,
+	dryRun bool,
 ) (*Distribution, error) {
 	phase, err := cluster.NewCreationPhase(".distribution")
 	if err != nil {
@@ -83,7 +87,7 @@ func NewDistribution(
 				Terraform: phase.TerraformPath,
 			},
 		),
-		kRunner: kustomize.NewRunner(
+		kzRunner: kustomize.NewRunner(
 			execx.NewStdExecutor(),
 			kustomize.Paths{
 				Kustomize: phase.KustomizePath,
@@ -96,11 +100,13 @@ func NewDistribution(
 				Kubectl: phase.KubectlPath,
 				WorkDir: path.Join(phase.Path, "manifests"),
 			},
+			true,
 		),
+		dryRun: dryRun,
 	}, nil
 }
 
-func (d *Distribution) Exec(dryRun bool) error {
+func (d *Distribution) Exec() error {
 	timestamp := time.Now().Unix()
 
 	if err := d.CreateFolder(); err != nil {
@@ -122,7 +128,7 @@ func (d *Distribution) Exec(dryRun bool) error {
 		return fmt.Errorf("error creating template config: %w", err)
 	}
 
-	if err := d.copyFromTemplate(tfCfg, dryRun); err != nil {
+	if err := d.copyFromTemplate(tfCfg); err != nil {
 		return err
 	}
 
@@ -138,7 +144,7 @@ func (d *Distribution) Exec(dryRun bool) error {
 		return fmt.Errorf("error running terraform plan: %w", err)
 	}
 
-	if dryRun {
+	if d.dryRun {
 		return nil
 	}
 
@@ -157,7 +163,7 @@ func (d *Distribution) Exec(dryRun bool) error {
 		return fmt.Errorf("error creating template config: %w", err)
 	}
 
-	if err := d.copyFromTemplate(mCfg, dryRun); err != nil {
+	if err := d.copyFromTemplate(mCfg); err != nil {
 		return err
 	}
 
@@ -419,7 +425,7 @@ func (d *Distribution) extractARNsFromTfOut() (map[string]string, error) {
 	return arns, nil
 }
 
-func (d *Distribution) copyFromTemplate(cfg template.Config, dryRun bool) error {
+func (d *Distribution) copyFromTemplate(cfg template.Config) error {
 	outYaml, err := yamlx.MarshalV2(cfg)
 	if err != nil {
 		return fmt.Errorf("error marshaling template config: %w", err)
@@ -445,7 +451,7 @@ func (d *Distribution) copyFromTemplate(cfg template.Config, dryRun bool) error 
 		outDirPath,
 		".tpl",
 		false,
-		dryRun,
+		d.dryRun,
 	)
 	if err != nil {
 		return fmt.Errorf("error creating template model: %w", err)
@@ -460,7 +466,7 @@ func (d *Distribution) copyFromTemplate(cfg template.Config, dryRun bool) error 
 }
 
 func (d *Distribution) buildManifests() (string, error) {
-	kOut, err := d.kRunner.Build()
+	kzOut, err := d.kzRunner.Build()
 	if err != nil {
 		return "", fmt.Errorf("error building manifests: %w", err)
 	}
@@ -474,20 +480,18 @@ func (d *Distribution) buildManifests() (string, error) {
 
 	logrus.Debugf("built manifests = %s", manifestsOutPath)
 
-	if err = os.WriteFile(manifestsOutPath, []byte(kOut), os.ModePerm); err != nil {
+	if err = os.WriteFile(manifestsOutPath, []byte(kzOut), os.ModePerm); err != nil {
 		return "", fmt.Errorf("error writing built manifests: %w", err)
 	}
 
 	return manifestsOutPath, nil
 }
 
-func (d *Distribution) applyManifests(path string) error {
+func (d *Distribution) applyManifests(mPath string) error {
 	var err error
 
-	maxRetry := 3
-
-	for i := 0; i < maxRetry; i++ {
-		err = d.kubeRunner.Apply(path, true)
+	for i := 0; i < KubectlMaxRetry; i++ {
+		err = d.kubeRunner.Apply(mPath)
 	}
 
 	if err != nil {
