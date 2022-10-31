@@ -30,13 +30,13 @@ func NewRunner(executor execx.Executor, paths Paths, serverSide bool) *Runner {
 }
 
 func (r *Runner) Apply(manifestPath string) error {
-	args := []string{"apply", "-f"}
+	args := []string{"apply"}
 
 	if r.serverSide {
 		args = append(args, "--server-side")
 	}
 
-	args = append(args, manifestPath)
+	args = append(args, "-f", manifestPath)
 
 	_, err := execx.CombinedOutput(execx.NewCmd(r.paths.Kubectl, execx.CmdOptions{
 		Args:     args,
