@@ -26,7 +26,7 @@ func (ev *Validator) Validate(kind string) []error {
 	return nil
 }
 
-func (ev *Validator) checkEKSCluster() []error {
+func (*Validator) checkEKSCluster() []error {
 	errs := make([]error, 0)
 
 	if os.Getenv("AWS_ACCESS_KEY_ID") == "" {

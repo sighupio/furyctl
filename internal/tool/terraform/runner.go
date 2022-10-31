@@ -6,6 +6,7 @@ package terraform
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"path"
@@ -14,9 +15,12 @@ import (
 	tfjson "github.com/hashicorp/terraform-json"
 
 	execx "github.com/sighupio/furyctl/internal/x/exec"
+	iox "github.com/sighupio/furyctl/internal/x/io"
 )
 
-type OutputJson struct {
+var errOutputFromApply = errors.New("can't get outputs from terraform apply logs")
+
+type OutputJSON struct {
 	Outputs map[string]*tfjson.StateOutput `json:"outputs"`
 }
 
@@ -41,11 +45,16 @@ func NewRunner(executor execx.Executor, paths Paths) *Runner {
 }
 
 func (r *Runner) Init() error {
-	return execx.NewCmd(r.paths.Terraform, execx.CmdOptions{
+	err := execx.NewCmd(r.paths.Terraform, execx.CmdOptions{
 		Args:     []string{"init"},
 		Executor: r.executor,
 		WorkDir:  r.paths.WorkDir,
 	}).Run()
+	if err != nil {
+		return fmt.Errorf("error running terraform init: %w", err)
+	}
+
+	return nil
 }
 
 func (r *Runner) Plan(timestamp int64) error {
@@ -55,14 +64,22 @@ func (r *Runner) Plan(timestamp int64) error {
 		WorkDir:  r.paths.WorkDir,
 	})
 	if err := cmd.Run(); err != nil {
-		return err
+		return fmt.Errorf("error running terraform plan: %w", err)
 	}
 
-	return os.WriteFile(path.Join(r.paths.Plan, fmt.Sprintf("plan-%d.log", timestamp)), cmd.Log.Out.Bytes(), 0o600)
+	err := os.WriteFile(path.Join(r.paths.Plan,
+		fmt.Sprintf("plan-%d.log", timestamp)),
+		cmd.Log.Out.Bytes(),
+		iox.FullRWPermAccess)
+	if err != nil {
+		return fmt.Errorf("error writing terraform plan log: %w", err)
+	}
+
+	return nil
 }
 
-func (r *Runner) Apply(timestamp int64) (OutputJson, error) {
-	var oj OutputJson
+func (r *Runner) Apply(timestamp int64) (OutputJSON, error) {
+	var oj OutputJSON
 
 	cmd := execx.NewCmd(r.paths.Terraform, execx.CmdOptions{
 		Args:     []string{"apply", "-no-color", "-json", "plan/terraform.plan"},
@@ -70,17 +87,20 @@ func (r *Runner) Apply(timestamp int64) (OutputJson, error) {
 		WorkDir:  r.paths.WorkDir,
 	})
 	if err := cmd.Run(); err != nil {
-		return oj, err
+		return oj, fmt.Errorf("error running terraform apply: %w", err)
 	}
 
-	err := os.WriteFile(path.Join(r.paths.Logs, fmt.Sprintf("%d.log", timestamp)), cmd.Log.Out.Bytes(), 0o600)
+	err := os.WriteFile(path.Join(r.paths.Logs,
+		fmt.Sprintf("%d.log", timestamp)),
+		cmd.Log.Out.Bytes(),
+		iox.FullRWPermAccess)
 	if err != nil {
-		return oj, err
+		return oj, fmt.Errorf("error writing terraform apply log: %w", err)
 	}
 
 	parsedApplyLog, err := os.ReadFile(path.Join(r.paths.Logs, fmt.Sprintf("%d.log", timestamp)))
 	if err != nil {
-		return oj, err
+		return oj, fmt.Errorf("error reading terraform apply log: %w", err)
 	}
 
 	applyLog := string(parsedApplyLog)
@@ -89,22 +109,32 @@ func (r *Runner) Apply(timestamp int64) (OutputJson, error) {
 
 	outputsStringIndex := pattern.FindStringIndex(applyLog)
 	if outputsStringIndex == nil {
-		return oj, fmt.Errorf("can't get outputs from terraform apply logs")
+		return oj, errOutputFromApply
 	}
 
 	outputsString := fmt.Sprintf("{%s}", applyLog[outputsStringIndex[0]:outputsStringIndex[1]])
 
 	if err := json.Unmarshal([]byte(outputsString), &oj); err != nil {
-		return oj, err
+		return oj, fmt.Errorf("error unmarshalling terraform apply outputs: %w", err)
 	}
 
-	return oj, os.WriteFile(path.Join(r.paths.Outputs, "output.json"), []byte(outputsString), 0o600)
+	err = os.WriteFile(path.Join(r.paths.Outputs, "output.json"), []byte(outputsString), iox.FullRWPermAccess)
+	if err != nil {
+		return oj, fmt.Errorf("error writing terraform apply outputs: %w", err)
+	}
+
+	return oj, nil
 }
 
 func (r *Runner) Version() (string, error) {
-	return execx.CombinedOutput(execx.NewCmd(r.paths.Terraform, execx.CmdOptions{
+	log, err := execx.CombinedOutput(execx.NewCmd(r.paths.Terraform, execx.CmdOptions{
 		Args:     []string{"version"},
 		Executor: r.executor,
 		WorkDir:  r.paths.WorkDir,
 	}))
+	if err != nil {
+		return "", fmt.Errorf("error running terraform version: %w", err)
+	}
+
+	return log, nil
 }

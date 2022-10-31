@@ -19,7 +19,7 @@ func NewOpenvpn(runner *openvpn.Runner, version string) *Openvpn {
 		os:      runtime.GOOS,
 		version: version,
 		checker: &checker{
-			regex:  regexp.MustCompile("^OpenVPN\\ (\\d+.\\d+.\\d+)"),
+			regex:  regexp.MustCompile(`^OpenVPN (\d+.\d+.\d+)`),
 			runner: runner,
 			trimFn: func(tokens []string) string {
 				return tokens[len(tokens)-1]
@@ -38,15 +38,15 @@ type Openvpn struct {
 	version string
 }
 
-func (o *Openvpn) SupportsDownload() bool {
+func (*Openvpn) SupportsDownload() bool {
 	return false
 }
 
-func (o *Openvpn) SrcPath() string {
+func (*Openvpn) SrcPath() string {
 	return ""
 }
 
-func (o *Openvpn) Rename(basePath string) error {
+func (*Openvpn) Rename(_ string) error {
 	return nil
 }
 

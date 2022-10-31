@@ -5,6 +5,7 @@
 package distribution
 
 import (
+	"errors"
 	"fmt"
 	"path/filepath"
 	"strings"
@@ -12,18 +13,25 @@ import (
 	"github.com/sighupio/fury-distribution/pkg/config"
 )
 
+const ValidLength = 2
+
+var (
+	errKindIsEmpty       = errors.New("kind is empty")
+	errInvalidAPIVersion = errors.New("invalid apiVersion")
+)
+
 func GetSchemaPath(basePath string, conf config.Furyctl) (string, error) {
 	avp := strings.Split(conf.APIVersion, "/")
 
-	if len(avp) < 2 {
-		return "", fmt.Errorf("invalid apiVersion: %s", conf.APIVersion)
+	if len(avp) < ValidLength {
+		return "", fmt.Errorf("%w: %s", errInvalidAPIVersion, conf.APIVersion)
 	}
 
 	ns := strings.Replace(avp[0], ".sighup.io", "", 1)
 	ver := avp[1]
 
 	if conf.Kind == "" {
-		return "", fmt.Errorf("kind is empty")
+		return "", errKindIsEmpty
 	}
 
 	filename := fmt.Sprintf("%s-%s-%s.json", strings.ToLower(conf.Kind), ns, ver)

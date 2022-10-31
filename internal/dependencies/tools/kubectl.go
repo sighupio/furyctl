@@ -42,7 +42,7 @@ type Kubectl struct {
 	version string
 }
 
-func (k *Kubectl) SupportsDownload() bool {
+func (*Kubectl) SupportsDownload() bool {
 	return true
 }
 
@@ -55,7 +55,7 @@ func (k *Kubectl) SrcPath() string {
 	)
 }
 
-func (k *Kubectl) Rename(basePath string) error {
+func (*Kubectl) Rename(_ string) error {
 	return nil
 }
 

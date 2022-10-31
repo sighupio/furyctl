@@ -7,36 +7,43 @@ package app
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"time"
 )
 
 type Release struct {
+	//nolint:tagliatelle // GitHub response's field has snake case.
 	URL     string `json:"html_url"`
 	Version string `json:"name"`
 }
 
-// GetLatestRelease fetches the latest release from the GitHub API
+const (
+	latestSource = "https://api.github.com/repos/sighupio/furyctl/releases/latest"
+	timeout      = 30 * time.Second
+)
+
+// GetLatestRelease fetches the latest release from the GitHub API.
 func GetLatestRelease() (Release, error) {
 	var release Release
 
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, "https://api.github.com/repos/sighupio/furyctl/releases/latest", nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, latestSource, nil)
 	if err != nil {
-		return release, err
+		return release, fmt.Errorf("error creating request: %w", err)
 	}
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
-		return release, err
+		return release, fmt.Errorf("error performing request: %w", err)
 	}
 
 	defer resp.Body.Close()
 
 	if err := json.NewDecoder(resp.Body).Decode(&release); err != nil {
-		return release, err
+		return release, fmt.Errorf("error decoding response: %w", err)
 	}
 
 	return release, nil

@@ -19,7 +19,7 @@ func NewAnsible(runner *ansible.Runner, version string) *Ansible {
 		os:      runtime.GOOS,
 		version: version,
 		checker: &checker{
-			regex:  regexp.MustCompile("ansible \\[.*]"),
+			regex:  regexp.MustCompile(`ansible \[.*]`),
 			runner: runner,
 			splitFn: func(version string) []string {
 				return strings.Split(version, " ")
@@ -38,15 +38,15 @@ type Ansible struct {
 	version string
 }
 
-func (a *Ansible) SupportsDownload() bool {
+func (*Ansible) SupportsDownload() bool {
 	return false
 }
 
-func (a *Ansible) SrcPath() string {
+func (*Ansible) SrcPath() string {
 	return ""
 }
 
-func (a *Ansible) Rename(basePath string) error {
+func (*Ansible) Rename(_ string) error {
 	return nil
 }
 

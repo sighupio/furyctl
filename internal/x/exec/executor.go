@@ -20,7 +20,7 @@ func NewStdExecutor() *StdExecutor {
 
 type StdExecutor struct{}
 
-func (e *StdExecutor) Command(name string, arg ...string) *exec.Cmd {
+func (*StdExecutor) Command(name string, arg ...string) *exec.Cmd {
 	return exec.Command(name, arg...)
 }
 
@@ -30,7 +30,7 @@ func NewFakeExecutor() *FakeExecutor {
 
 type FakeExecutor struct{}
 
-func (e *FakeExecutor) Command(name string, arg ...string) *exec.Cmd {
+func (*FakeExecutor) Command(name string, arg ...string) *exec.Cmd {
 	cs := []string{"-test.run=TestHelperProcess", "--", filepath.Base(name)}
 	cs = append(cs, arg...)
 

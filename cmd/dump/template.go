@@ -17,6 +17,15 @@ import (
 	yamlx "github.com/sighupio/furyctl/internal/x/yaml"
 )
 
+var (
+	ErrSourceDirDoesNotExist = fmt.Errorf("source directory does not exist")
+
+	ErrDebugFlagNotSet          = fmt.Errorf("debug flag not set")
+	ErrConfigFlagNotSet         = fmt.Errorf("config flag not set")
+	ErrDistroLocationFlagNotSet = fmt.Errorf("distro-location flag not set")
+	ErrBinPathFlagNotSet        = fmt.Errorf("bin-path flag not set")
+)
+
 type templateConfig struct {
 	DryRun      bool
 	NoOverwrite bool
@@ -32,7 +41,6 @@ The generated folder will be created starting from a provided template and the p
 		SilenceUsage:  true,
 		SilenceErrors: true,
 		RunE: func(_ *cobra.Command, _ []string) error {
-			// TODO(rm-2470): To be reworked in redmine task - Define template command flags.
 			source := "source"
 			target := "target"
 			suffix := ".tpl"
@@ -50,7 +58,7 @@ The generated folder will be created starting from a provided template and the p
 			}
 
 			if _, err := os.Stat(source); os.IsNotExist(err) {
-				return fmt.Errorf("source directory does not exist")
+				return ErrSourceDirDoesNotExist
 			}
 
 			merger := merge.NewMerger(
@@ -60,7 +68,7 @@ The generated folder will be created starting from a provided template and the p
 
 			_, err = merger.Merge()
 			if err != nil {
-				return err
+				return fmt.Errorf("error merging files: %w", err)
 			}
 
 			reverseMerger := merge.NewMerger(
@@ -70,22 +78,22 @@ The generated folder will be created starting from a provided template and the p
 
 			_, err = reverseMerger.Merge()
 			if err != nil {
-				return err
+				return fmt.Errorf("error merging files: %w", err)
 			}
 
 			tmplCfg, err := template.NewConfig(reverseMerger, reverseMerger, []string{})
 			if err != nil {
-				return err
+				return fmt.Errorf("error creating template config: %w", err)
 			}
 
 			outYaml, err := yamlx.MarshalV2(tmplCfg)
 			if err != nil {
-				return err
+				return fmt.Errorf("error marshaling template config: %w", err)
 			}
 
 			outDirPath, err := os.MkdirTemp("", "furyctl-dist-")
 			if err != nil {
-				return err
+				return fmt.Errorf("error creating temporary directory: %w", err)
 			}
 
 			confPath := filepath.Join(outDirPath, "config.yaml")
@@ -93,12 +101,12 @@ The generated folder will be created starting from a provided template and the p
 			logrus.Debugf("config path = %s", confPath)
 
 			if err = os.WriteFile(confPath, outYaml, os.ModePerm); err != nil {
-				return err
+				return fmt.Errorf("error writing config file: %w", err)
 			}
 
 			if !cfg.NoOverwrite {
 				if err = os.RemoveAll(target); err != nil {
-					return err
+					return fmt.Errorf("error removing target directory: %w", err)
 				}
 			}
 
@@ -112,10 +120,15 @@ The generated folder will be created starting from a provided template and the p
 				cfg.DryRun,
 			)
 			if err != nil {
-				return err
+				return fmt.Errorf("error creating template model: %w", err)
 			}
 
-			return templateModel.Generate()
+			err = templateModel.Generate()
+			if err != nil {
+				return fmt.Errorf("error generating from template: %w", err)
+			}
+
+			return nil
 		},
 	}
 

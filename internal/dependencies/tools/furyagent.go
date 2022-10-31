@@ -22,7 +22,7 @@ func NewFuryagent(runner *furyagent.Runner, version string) *Furyagent {
 		os:      runtime.GOOS,
 		version: version,
 		checker: &checker{
-			regex:  regexp.MustCompile("version (\\S*)"),
+			regex:  regexp.MustCompile(`version (\S*)`),
 			runner: runner,
 			trimFn: func(tokens []string) string {
 				return tokens[len(tokens)-1]
@@ -41,7 +41,7 @@ type Furyagent struct {
 	version string
 }
 
-func (f *Furyagent) SupportsDownload() bool {
+func (*Furyagent) SupportsDownload() bool {
 	return true
 }
 
@@ -58,7 +58,12 @@ func (f *Furyagent) Rename(basePath string) error {
 	oldName := fmt.Sprintf("furyagent-%s-%s", f.os, f.arch)
 	newName := "furyagent"
 
-	return os.Rename(filepath.Join(basePath, oldName), filepath.Join(basePath, newName))
+	err := os.Rename(filepath.Join(basePath, oldName), filepath.Join(basePath, newName))
+	if err != nil {
+		return fmt.Errorf("error while renaming furyagent: %w", err)
+	}
+
+	return nil
 }
 
 func (f *Furyagent) CheckBinVersion() error {

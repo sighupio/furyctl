@@ -5,6 +5,7 @@
 package create
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -16,28 +17,48 @@ import (
 
 	"github.com/sighupio/furyctl/configs"
 	cobrax "github.com/sighupio/furyctl/internal/x/cobra"
+	iox "github.com/sighupio/furyctl/internal/x/io"
 )
 
-var ErrConfigCreationFailed = fmt.Errorf("config creation failed")
+var (
+	ErrConfigFlagNotSet  = errors.New("config flag not set")
+	ErrVersionFlagNotSet = errors.New("version flag not set")
+	ErrKindFlagNotSet    = errors.New("kind flag not set")
+	ErrNameFlagNotSet    = errors.New("name flag not set")
+
+	ErrConfigCreationFailed = fmt.Errorf("config creation failed")
+)
 
 func NewConfigCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "config",
 		Short: "scaffolds a new furyctl config file",
 		RunE: func(cmd *cobra.Command, _ []string) error {
-			config := cobrax.Flag[string](cmd, "config").(string)
-			version := cobrax.Flag[string](cmd, "version").(string)
-			kind := cobrax.Flag[string](cmd, "kind").(string)
-			name := cobrax.Flag[string](cmd, "name").(string)
+			config, ok := cobrax.Flag[string](cmd, "config").(string)
+			if !ok {
+				return ErrConfigFlagNotSet
+			}
+			version, ok := cobrax.Flag[string](cmd, "version").(string)
+			if !ok {
+				return ErrVersionFlagNotSet
+			}
+			kind, ok := cobrax.Flag[string](cmd, "kind").(string)
+			if !ok {
+				return ErrKindFlagNotSet
+			}
+			name, ok := cobrax.Flag[string](cmd, "name").(string)
+			if !ok {
+				return ErrNameFlagNotSet
+			}
 
 			data, err := configs.Tpl.ReadFile("furyctl.yaml.tpl")
 			if err != nil {
-				return err
+				return fmt.Errorf("error reading furyctl yaml template: %w", err)
 			}
 
 			tmpl, err := template.New("furyctl.yaml").Parse(string(data))
 			if err != nil {
-				return err
+				return fmt.Errorf("error parsing furyctl yaml template: %w", err)
 			}
 
 			out, err := createNewEmptyConfigFile(config)
@@ -50,7 +71,7 @@ func NewConfigCmd() *cobra.Command {
 				"Name":                name,
 				"DistributionVersion": version,
 			}); err != nil {
-				return err
+				return fmt.Errorf("error executing furyctl yaml template: %w", err)
 			}
 
 			logrus.Infof("Config file created successfully at: %s", out.Name())
@@ -93,7 +114,7 @@ func NewConfigCmd() *cobra.Command {
 func createNewEmptyConfigFile(path string) (*os.File, error) {
 	absPath, err := filepath.Abs(path)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error getting absolute path: %w", err)
 	}
 
 	if _, err := os.Stat(absPath); err == nil {
@@ -105,9 +126,14 @@ func createNewEmptyConfigFile(path string) (*os.File, error) {
 		absPath = fmt.Sprintf("%s.%d%s", trimAbsPath, now, ext)
 	}
 
-	if err := os.MkdirAll(filepath.Dir(absPath), 0o755); err != nil {
-		return nil, err
+	if err := os.MkdirAll(filepath.Dir(absPath), iox.FullPermAccess); err != nil {
+		return nil, fmt.Errorf("error creating directory: %w", err)
 	}
 
-	return os.Create(absPath)
+	out, err := os.Create(absPath)
+	if err != nil {
+		return nil, fmt.Errorf("error creating file: %w", err)
+	}
+
+	return out, nil
 }

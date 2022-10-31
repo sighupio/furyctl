@@ -17,6 +17,7 @@ var (
 	ErrTemplatesNotFound         = errors.New("templates key not found in template source custom")
 	ErrTemplateSourceCustomIsNil = errors.New("template source custom is nil")
 	ErrDataSourceBaseIsNil       = errors.New("data source base is nil")
+	errCannotConvert             = errors.New("error while converting")
 )
 
 type Templates struct {
@@ -57,8 +58,10 @@ func NewConfig(tplSource, data *merge.Merger, excluded []string) (Config, error)
 
 	tmpl.Excludes = append(tmpl.Excludes, excluded...)
 
+	builder := mapx.NewBuilder(false)
+
 	cfg.Templates = tmpl
-	cfg.Data = mapx.ToMapStringAny((*data.GetBase()).Content())
+	cfg.Data = builder.ToMapStringAny((*data.GetBase()).Content())
 	cfg.Include = nil
 
 	return cfg, nil
@@ -66,12 +69,14 @@ func NewConfig(tplSource, data *merge.Merger, excluded []string) (Config, error)
 
 func newTemplatesFromMap(t any) (*Templates, error) {
 	var exc []string
+
 	var inc []string
+
 	var err error
 
 	m, ok := t.(map[any]any)
 	if !ok {
-		return nil, fmt.Errorf("cannot convert %v to map", t)
+		return nil, fmt.Errorf("%w %v to map", errCannotConvert, t)
 	}
 
 	incS, ok := m["includes"].([]any)
@@ -140,7 +145,7 @@ func toType[T any](t any) (T, error) {
 
 	s, ok := t.(T)
 	if !ok {
-		return s, fmt.Errorf("error while converting to %s", reflect.TypeOf(s))
+		return s, fmt.Errorf("%w to %s", errCannotConvert, reflect.TypeOf(s))
 	}
 
 	return s, nil

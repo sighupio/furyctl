@@ -6,6 +6,7 @@ package eks
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"path"
@@ -26,6 +27,19 @@ import (
 	yamlx "github.com/sighupio/furyctl/internal/x/yaml"
 )
 
+const KubectlMaxRetry = 3
+
+var (
+	errCastingVpcIDToStr     = errors.New("error casting vpc_id output to string")
+	errCastingEbsIamToStr    = errors.New("error casting ebs_csi_driver_iam_role_arn output to string")
+	errCastingLbIamToStr     = errors.New("error casting load_balancer_controller_iam_role_arn output to string")
+	errCastingClsAsIamToStr  = errors.New("error casting cluster_autoscaler_iam_role_arn output to string")
+	errCastingDNSPvtIamToStr = errors.New("error casting external_dns_private_iam_role_arn output to string")
+	errCastingDNSPubIamToStr = errors.New("error casting external_dns_public_iam_role_arn output to string")
+	errCastingCertIamToStr   = errors.New("error casting cert_manager_iam_role_arn output to string")
+	errCastingVelIamToStr    = errors.New("error casting velero_iam_role_arn output to string")
+)
+
 type Distribution struct {
 	*cluster.CreationPhase
 	furyctlConfPath  string
@@ -34,8 +48,9 @@ type Distribution struct {
 	infraOutputsPath string
 	distroPath       string
 	tfRunner         *terraform.Runner
-	kRunner          *kustomize.Runner
+	kzRunner         *kustomize.Runner
 	kubeRunner       *kubectl.Runner
+	dryRun           bool
 }
 
 type injectType struct {
@@ -48,10 +63,11 @@ func NewDistribution(
 	kfdManifest config.KFD,
 	distroPath string,
 	infraOutputsPath string,
+	dryRun bool,
 ) (*Distribution, error) {
 	phase, err := cluster.NewCreationPhase(".distribution")
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error creating distribution phase: %w", err)
 	}
 
 	return &Distribution{
@@ -71,7 +87,7 @@ func NewDistribution(
 				Terraform: phase.TerraformPath,
 			},
 		),
-		kRunner: kustomize.NewRunner(
+		kzRunner: kustomize.NewRunner(
 			execx.NewStdExecutor(),
 			kustomize.Paths{
 				Kustomize: phase.KustomizePath,
@@ -84,15 +100,17 @@ func NewDistribution(
 				Kubectl: phase.KubectlPath,
 				WorkDir: path.Join(phase.Path, "manifests"),
 			},
+			true,
 		),
+		dryRun: dryRun,
 	}, nil
 }
 
-func (d *Distribution) Exec(dryRun bool) error {
+func (d *Distribution) Exec() error {
 	timestamp := time.Now().Unix()
 
 	if err := d.CreateFolder(); err != nil {
-		return err
+		return fmt.Errorf("error creating distribution phase folder: %w", err)
 	}
 
 	furyctlMerger, err := d.createFuryctlMerger()
@@ -107,32 +125,32 @@ func (d *Distribution) Exec(dryRun bool) error {
 
 	tfCfg, err := template.NewConfig(furyctlMerger, preTfMerger, []string{"source/manifests", ".gitignore"})
 	if err != nil {
-		return err
+		return fmt.Errorf("error creating template config: %w", err)
 	}
 
-	if err := d.copyFromTemplate(tfCfg, dryRun); err != nil {
+	if err := d.copyFromTemplate(tfCfg); err != nil {
 		return err
 	}
 
 	if err := d.CreateFolderStructure(); err != nil {
-		return err
+		return fmt.Errorf("error creating distribution phase folder structure: %w", err)
 	}
 
 	if err := d.tfRunner.Init(); err != nil {
-		return err
+		return fmt.Errorf("error running terraform init: %w", err)
 	}
 
 	if err := d.tfRunner.Plan(timestamp); err != nil {
-		return err
+		return fmt.Errorf("error running terraform plan: %w", err)
 	}
 
-	if dryRun {
+	if d.dryRun {
 		return nil
 	}
 
 	_, err = d.tfRunner.Apply(timestamp)
 	if err != nil {
-		return err
+		return fmt.Errorf("error running terraform apply: %w", err)
 	}
 
 	postTfMerger, err := d.injectDataPostTf(preTfMerger)
@@ -141,8 +159,11 @@ func (d *Distribution) Exec(dryRun bool) error {
 	}
 
 	mCfg, err := template.NewConfig(furyctlMerger, postTfMerger, []string{"source/terraform", ".gitignore"})
+	if err != nil {
+		return fmt.Errorf("error creating template config: %w", err)
+	}
 
-	if err := d.copyFromTemplate(mCfg, dryRun); err != nil {
+	if err := d.copyFromTemplate(mCfg); err != nil {
 		return err
 	}
 
@@ -180,7 +201,7 @@ func (d *Distribution) createFuryctlMerger() (*merge.Merger, error) {
 
 	_, err = merger.Merge()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error merging furyctl config: %w", err)
 	}
 
 	reverseMerger := merge.NewMerger(
@@ -190,19 +211,19 @@ func (d *Distribution) createFuryctlMerger() (*merge.Merger, error) {
 
 	_, err = reverseMerger.Merge()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error merging furyctl config: %w", err)
 	}
 
 	return reverseMerger, nil
 }
 
 func (d *Distribution) injectDataPreTf(fMerger *merge.Merger) (*merge.Merger, error) {
-	vpcId, err := d.extractVpcIDFromPrevPhases(fMerger)
+	vpcID, err := d.extractVpcIDFromPrevPhases(fMerger)
 	if err != nil {
 		return nil, err
 	}
 
-	if vpcId == "" {
+	if vpcID == "" {
 		return fMerger, nil
 	}
 
@@ -212,7 +233,7 @@ func (d *Distribution) injectDataPreTf(fMerger *merge.Merger) (*merge.Merger, er
 				Ingress: schema.SpecDistributionModulesIngress{
 					Dns: schema.SpecDistributionModulesIngressDNS{
 						Private: schema.SpecDistributionModulesIngressDNSPrivate{
-							VpcId: vpcId,
+							VpcId: vpcID,
 						},
 					},
 				},
@@ -229,47 +250,47 @@ func (d *Distribution) injectDataPreTf(fMerger *merge.Merger) (*merge.Merger, er
 
 	_, err = merger.Merge()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error merging furyctl config: %w", err)
 	}
 
 	return merger, nil
 }
 
 func (d *Distribution) extractVpcIDFromPrevPhases(fMerger *merge.Merger) (string, error) {
-	vpcId := ""
+	vpcID := ""
 
-	if infraOutJson, err := os.ReadFile(path.Join(d.infraOutputsPath, "output.json")); err == nil {
-		var infraOut terraform.OutputJson
+	if infraOutJSON, err := os.ReadFile(path.Join(d.infraOutputsPath, "output.json")); err == nil {
+		var infraOut terraform.OutputJSON
 
-		if err := json.Unmarshal(infraOutJson, &infraOut); err == nil {
+		if err := json.Unmarshal(infraOutJSON, &infraOut); err == nil {
 			if infraOut.Outputs["vpc_id"] == nil {
-				return vpcId, fmt.Errorf("vpc_id not found in infra output")
+				return vpcID, ErrVpcIDNotFound
 			}
 
-			vpcIdOut, ok := infraOut.Outputs["vpc_id"].Value.(string)
+			vpcIDOut, ok := infraOut.Outputs["vpc_id"].Value.(string)
 			if !ok {
-				return vpcId, fmt.Errorf("error casting vpc_id output to string")
+				return vpcID, errCastingVpcIDToStr
 			}
 
-			vpcId = vpcIdOut
+			vpcID = vpcIDOut
 		}
 	} else {
 		fModel := merge.NewDefaultModel((*fMerger.GetBase()).Content(), ".spec.kubernetes")
 
 		kubeFromFuryctlConf, err := fModel.Get()
 		if err != nil {
-			return vpcId, err
+			return vpcID, fmt.Errorf("error getting kubernetes from furyctl config: %w", err)
 		}
 
 		vpcFromFuryctlConf, ok := kubeFromFuryctlConf["vpcId"].(string)
 		if !ok {
-			return vpcId, fmt.Errorf("vpcId is not a string")
+			return vpcID, errCastingVpcIDToStr
 		}
 
-		vpcId = vpcFromFuryctlConf
+		vpcID = vpcFromFuryctlConf
 	}
 
-	return vpcId, nil
+	return vpcID, nil
 }
 
 func (d *Distribution) injectDataPostTf(fMerger *merge.Merger) (*merge.Merger, error) {
@@ -325,73 +346,94 @@ func (d *Distribution) injectDataPostTf(fMerger *merge.Merger) (*merge.Merger, e
 
 	_, err = merger.Merge()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error merging furyctl config: %w", err)
 	}
 
 	return merger, nil
 }
 
 func (d *Distribution) extractARNsFromTfOut() (map[string]string, error) {
-	var distroOut terraform.OutputJson
+	var distroOut terraform.OutputJSON
 
 	arns := map[string]string{}
 
-	distroOutJson, err := os.ReadFile(path.Join(d.OutputsPath, "output.json"))
+	distroOutJSON, err := os.ReadFile(path.Join(d.OutputsPath, "output.json"))
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error reading distribution output: %w", err)
 	}
 
-	if err := json.Unmarshal(distroOutJson, &distroOut); err != nil {
-		return nil, err
+	if err := json.Unmarshal(distroOutJSON, &distroOut); err != nil {
+		return nil, fmt.Errorf("error unmarshaling distribution output: %w", err)
 	}
 
 	ebsCsiDriverArn, ok := distroOut.Outputs["ebs_csi_driver_iam_role_arn"]
 	if ok {
-		arns["ebs_csi_driver_iam_role_arn"] = ebsCsiDriverArn.Value.(string)
+		arns["ebs_csi_driver_iam_role_arn"], ok = ebsCsiDriverArn.Value.(string)
+		if !ok {
+			return nil, errCastingEbsIamToStr
+		}
 	}
 
 	loadBalancerControllerArn, ok := distroOut.Outputs["load_balancer_controller_iam_role_arn"]
 	if ok {
-		arns["load_balancer_controller_iam_role_arn"] = loadBalancerControllerArn.Value.(string)
+		arns["load_balancer_controller_iam_role_arn"], ok = loadBalancerControllerArn.Value.(string)
+		if !ok {
+			return nil, errCastingLbIamToStr
+		}
 	}
 
 	clusterAutoscalerArn, ok := distroOut.Outputs["cluster_autoscaler_iam_role_arn"]
 	if ok {
-		arns["cluster_autoscaler_iam_role_arn"] = clusterAutoscalerArn.Value.(string)
+		arns["cluster_autoscaler_iam_role_arn"], ok = clusterAutoscalerArn.Value.(string)
+		if !ok {
+			return nil, errCastingClsAsIamToStr
+		}
 	}
 
-	externalDnsPrivateArn, ok := distroOut.Outputs["external_dns_private_iam_role_arn"]
+	externalDNSPrivateArn, ok := distroOut.Outputs["external_dns_private_iam_role_arn"]
 	if ok {
-		arns["external_dns_private_iam_role_arn"] = externalDnsPrivateArn.Value.(string)
+		arns["external_dns_private_iam_role_arn"], ok = externalDNSPrivateArn.Value.(string)
+		if !ok {
+			return nil, errCastingDNSPvtIamToStr
+		}
 	}
 
-	externalDnsPublicArn, ok := distroOut.Outputs["external_dns_public_iam_role_arn"]
+	externalDNSPublicArn, ok := distroOut.Outputs["external_dns_public_iam_role_arn"]
 	if ok {
-		arns["external_dns_public_iam_role_arn"] = externalDnsPublicArn.Value.(string)
+		arns["external_dns_public_iam_role_arn"], ok = externalDNSPublicArn.Value.(string)
+		if !ok {
+			return nil, errCastingDNSPubIamToStr
+		}
 	}
 
 	certManagerArn, ok := distroOut.Outputs["cert_manager_iam_role_arn"]
 	if ok {
-		arns["cert_manager_iam_role_arn"] = certManagerArn.Value.(string)
+		arns["cert_manager_iam_role_arn"], ok = certManagerArn.Value.(string)
+		if !ok {
+			return nil, errCastingCertIamToStr
+		}
 	}
 
 	veleroArn, ok := distroOut.Outputs["velero_iam_role_arn"]
 	if ok {
-		arns["velero_iam_role_arn"] = veleroArn.Value.(string)
+		arns["velero_iam_role_arn"], ok = veleroArn.Value.(string)
+		if !ok {
+			return nil, errCastingVelIamToStr
+		}
 	}
 
 	return arns, nil
 }
 
-func (d *Distribution) copyFromTemplate(cfg template.Config, dryRun bool) error {
+func (d *Distribution) copyFromTemplate(cfg template.Config) error {
 	outYaml, err := yamlx.MarshalV2(cfg)
 	if err != nil {
-		return err
+		return fmt.Errorf("error marshaling template config: %w", err)
 	}
 
 	outDirPath, err := os.MkdirTemp("", "furyctl-dist-")
 	if err != nil {
-		return err
+		return fmt.Errorf("error creating temp dir: %w", err)
 	}
 
 	confPath := filepath.Join(outDirPath, "config.yaml")
@@ -399,7 +441,7 @@ func (d *Distribution) copyFromTemplate(cfg template.Config, dryRun bool) error 
 	logrus.Debugf("config path = %s", confPath)
 
 	if err = os.WriteFile(confPath, outYaml, os.ModePerm); err != nil {
-		return err
+		return fmt.Errorf("error writing config file: %w", err)
 	}
 
 	templateModel, err := template.NewTemplateModel(
@@ -409,45 +451,52 @@ func (d *Distribution) copyFromTemplate(cfg template.Config, dryRun bool) error 
 		outDirPath,
 		".tpl",
 		false,
-		dryRun,
+		d.dryRun,
 	)
 	if err != nil {
-		return err
+		return fmt.Errorf("error creating template model: %w", err)
 	}
 
-	return templateModel.Generate()
+	err = templateModel.Generate()
+	if err != nil {
+		return fmt.Errorf("error generating from template files: %w", err)
+	}
+
+	return nil
 }
 
 func (d *Distribution) buildManifests() (string, error) {
-	kOut, err := d.kRunner.Build()
+	kzOut, err := d.kzRunner.Build()
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("error building manifests: %w", err)
 	}
 
 	outDirPath, err := os.MkdirTemp("", "furyctl-dist-manifests-")
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("error creating temp dir: %w", err)
 	}
 
 	manifestsOutPath := filepath.Join(outDirPath, "out.yaml")
 
 	logrus.Debugf("built manifests = %s", manifestsOutPath)
 
-	if err = os.WriteFile(manifestsOutPath, []byte(kOut), os.ModePerm); err != nil {
-		return "", err
+	if err = os.WriteFile(manifestsOutPath, []byte(kzOut), os.ModePerm); err != nil {
+		return "", fmt.Errorf("error writing built manifests: %w", err)
 	}
 
 	return manifestsOutPath, nil
 }
 
-func (d *Distribution) applyManifests(path string) error {
+func (d *Distribution) applyManifests(mPath string) error {
 	var err error
 
-	maxRetry := 3
-
-	for i := 0; i < maxRetry; i++ {
-		err = d.kubeRunner.Apply(path, true)
+	for i := 0; i < KubectlMaxRetry; i++ {
+		err = d.kubeRunner.Apply(mPath)
 	}
 
-	return err
+	if err != nil {
+		return fmt.Errorf("error applying manifests: %w", err)
+	}
+
+	return nil
 }

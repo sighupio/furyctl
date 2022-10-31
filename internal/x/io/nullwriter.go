@@ -10,6 +10,6 @@ func NewNullWriter() *NullWriter {
 
 type NullWriter struct{}
 
-func (nw *NullWriter) Write(p []byte) (n int, err error) {
+func (*NullWriter) Write(_ []byte) (int, error) {
 	return 0, nil
 }

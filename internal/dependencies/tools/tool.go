@@ -5,6 +5,7 @@
 package tools
 
 import (
+	"errors"
 	"fmt"
 	"regexp"
 
@@ -16,6 +17,13 @@ import (
 	"github.com/sighupio/furyctl/internal/tool/openvpn"
 	"github.com/sighupio/furyctl/internal/tool/terraform"
 	execx "github.com/sighupio/furyctl/internal/x/exec"
+)
+
+var (
+	errRegexNil             = errors.New("regex cannot be nil")
+	errVersionEmpty         = errors.New("version cannot be empty")
+	errCannotParseWithRegex = errors.New("can't parse system tool version using regex")
+	errCannotParse          = errors.New("can't parse system tool version")
 )
 
 type Tool interface {
@@ -49,23 +57,59 @@ func (f *Factory) Create(name, version string) Tool {
 	t := f.runnerFactory.Create(name, "")
 
 	if name == tool.Ansible {
-		return NewAnsible(t.(*ansible.Runner), version)
+		a, ok := t.(*ansible.Runner)
+		if !ok {
+			panic(fmt.Sprintf("expected ansible.Runner, got %T", t))
+		}
+
+		return NewAnsible(a, version)
 	}
+
 	if name == tool.Furyagent {
-		return NewFuryagent(t.(*furyagent.Runner), version)
+		fa, ok := t.(*furyagent.Runner)
+		if !ok {
+			panic(fmt.Sprintf("expected furyagent.Runner, got %T", t))
+		}
+
+		return NewFuryagent(fa, version)
 	}
+
 	if name == tool.Kubectl {
-		return NewKubectl(t.(*kubectl.Runner), version)
+		k, ok := t.(*kubectl.Runner)
+		if !ok {
+			panic(fmt.Sprintf("expected kubectl.Runner, got %T", t))
+		}
+
+		return NewKubectl(k, version)
 	}
+
 	if name == tool.Kustomize {
-		return NewKustomize(t.(*kustomize.Runner), version)
+		k, ok := t.(*kustomize.Runner)
+		if !ok {
+			panic(fmt.Sprintf("expected kustomize.Runner, got %T", t))
+		}
+
+		return NewKustomize(k, version)
 	}
+
 	if name == tool.Openvpn {
-		return NewOpenvpn(t.(*openvpn.Runner), version)
+		o, ok := t.(*openvpn.Runner)
+		if !ok {
+			panic(fmt.Sprintf("expected openvpn.Runner, got %T", t))
+		}
+
+		return NewOpenvpn(o, version)
 	}
+
 	if name == tool.Terraform {
-		return NewTerraform(t.(*terraform.Runner), version)
+		tf, ok := t.(*terraform.Runner)
+		if !ok {
+			panic(fmt.Sprintf("expected terraform.Runner, got %T", t))
+		}
+
+		return NewTerraform(tf, version)
 	}
+
 	return nil
 }
 
@@ -78,11 +122,11 @@ type checker struct {
 
 func (vc *checker) version(want string) error {
 	if vc.regex == nil {
-		return fmt.Errorf("regex cannot be nil")
+		return errRegexNil
 	}
 
 	if want == "" {
-		return fmt.Errorf("version cannot be empty")
+		return errVersionEmpty
 	}
 
 	installed, err := vc.runner.Version()
@@ -92,14 +136,14 @@ func (vc *checker) version(want string) error {
 
 	versionStringIndex := vc.regex.FindStringIndex(installed)
 	if versionStringIndex == nil {
-		return fmt.Errorf("can't parse system tool version using regex '%s'", vc.regex.String())
+		return fmt.Errorf("%w '%s'", errCannotParseWithRegex, vc.regex.String())
 	}
 
 	versionString := installed[versionStringIndex[0]:versionStringIndex[1]]
 
 	versionStringTokens := vc.splitFn(versionString)
 	if len(versionStringTokens) == 0 {
-		return fmt.Errorf("can't parse system tool version")
+		return errCannotParse
 	}
 
 	systemVersion := vc.trimFn(versionStringTokens)

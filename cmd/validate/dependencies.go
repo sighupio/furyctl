@@ -18,23 +18,38 @@ import (
 	netx "github.com/sighupio/furyctl/internal/x/net"
 )
 
-var ErrDependencies = fmt.Errorf("dependencies are not satisfied")
+var (
+	ErrDependencies           = fmt.Errorf("dependencies are not satisfied")
+	ErrBinPathFlagNotProvided = fmt.Errorf("bin-path flag not provided")
+)
 
 func NewDependenciesCmd(furyctlBinVersion string) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "dependencies",
 		Short: "Validate furyctl.yaml file",
 		RunE: func(cmd *cobra.Command, _ []string) error {
-			debug := cobrax.Flag[bool](cmd, "debug").(bool)
-			binPath := cobrax.Flag[string](cmd, "bin-path").(string)
-			furyctlPath := cobrax.Flag[string](cmd, "config").(string)
-			distroLocation := cobrax.Flag[string](cmd, "distro-location").(string)
+			debug, ok := cobrax.Flag[bool](cmd, "debug").(bool)
+			if !ok {
+				return ErrDebugFlagNotProvided
+			}
+			binPath, ok := cobrax.Flag[string](cmd, "bin-path").(string)
+			if !ok {
+				return ErrBinPathFlagNotProvided
+			}
+			furyctlPath, ok := cobrax.Flag[string](cmd, "config").(string)
+			if !ok {
+				return ErrConfigFlagNotProvided
+			}
+			distroLocation, ok := cobrax.Flag[string](cmd, "distro-location").(string)
+			if !ok {
+				return ErrDistroFlagNotProvided
+			}
 
 			dloader := distribution.NewDownloader(netx.NewGoGetterClient(), debug)
 
 			dres, err := dloader.Download(furyctlBinVersion, distroLocation, furyctlPath)
 			if err != nil {
-				return err
+				return fmt.Errorf("failed to download distribution: %w", err)
 			}
 
 			toolsValidator := tools.NewValidator(execx.NewStdExecutor(), binPath)
