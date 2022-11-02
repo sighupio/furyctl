@@ -152,7 +152,10 @@ func NewClusterCmd(version string, eventCh chan analytics.Event) *cobra.Command 
 				KFDVersion: res.DistroManifest.Version,
 			})
 
-			fmt.Println("cluster creation succeeded")
+			_, err = fmt.Println("cluster creation succeeded")
+			if err != nil {
+				return fmt.Errorf("error while printing success message: %w", err)
+			}
 
 			return nil
 		},

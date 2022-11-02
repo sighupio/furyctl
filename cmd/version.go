@@ -7,10 +7,11 @@ package cmd
 import (
 	"fmt"
 
-	"github.com/sighupio/furyctl/internal/analytics"
 	"github.com/spf13/cobra"
 	"golang.org/x/exp/maps"
 	"golang.org/x/exp/slices"
+
+	"github.com/sighupio/furyctl/internal/analytics"
 )
 
 func NewVersionCmd(versions map[string]string, eventCh chan analytics.Event) *cobra.Command {

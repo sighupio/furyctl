@@ -8,8 +8,9 @@ import (
 	"errors"
 	"os"
 
-	"github.com/sighupio/furyctl/internal/analytics"
 	"github.com/spf13/cobra"
+
+	"github.com/sighupio/furyctl/internal/analytics"
 )
 
 var (
