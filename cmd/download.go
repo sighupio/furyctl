@@ -7,6 +7,7 @@ package cmd
 import (
 	"errors"
 	"fmt"
+	"net/http"
 	"os"
 	"path"
 	"strings"
@@ -211,6 +212,15 @@ func get(src, dest string, mode getter.ClientMode, cleanGitFolder bool) error {
 
 	if err := os.RemoveAll(client.Dst); err != nil {
 		return err
+	}
+
+	resp, err := http.Get("https://" + h)
+	if err != nil {
+		return err
+	}
+
+	if resp.StatusCode == 404 {
+		return fmt.Errorf("Module's Repository not found: %s", h)
 	}
 
 	if err := client.Get(); err != nil {
