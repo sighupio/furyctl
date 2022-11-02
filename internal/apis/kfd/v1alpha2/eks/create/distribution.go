@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-package eks
+package create
 
 import (
 	"encoding/json"
@@ -41,7 +41,7 @@ var (
 )
 
 type Distribution struct {
-	*cluster.CreationPhase
+	*cluster.OperationPhase
 	furyctlConfPath  string
 	furyctlConf      schema.EksclusterKfdV1Alpha2
 	kfdManifest      config.KFD
@@ -65,13 +65,13 @@ func NewDistribution(
 	infraOutputsPath string,
 	dryRun bool,
 ) (*Distribution, error) {
-	phase, err := cluster.NewCreationPhase(".distribution")
+	phase, err := cluster.NewOperationPhase(".distribution")
 	if err != nil {
 		return nil, fmt.Errorf("error creating distribution phase: %w", err)
 	}
 
 	return &Distribution{
-		CreationPhase:    phase,
+		OperationPhase:   phase,
 		furyctlConf:      furyctlConf,
 		kfdManifest:      kfdManifest,
 		infraOutputsPath: infraOutputsPath,

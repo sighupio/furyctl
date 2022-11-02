@@ -16,25 +16,37 @@ import (
 )
 
 const (
-	CreationPhaseInfrastructure = "infrastructure"
-	CreationPhaseKubernetes     = "kubernetes"
-	CreationPhaseDistribution   = "distribution"
-	CreationPhaseAll            = ""
+	OperationPhaseInfrastructure = "infrastructure"
+	OperationPhaseKubernetes     = "kubernetes"
+	OperationPhaseDistribution   = "distribution"
+	OperationPhaseAll            = ""
 
-	CreationPhaseOptionVPNAutoConnect = "vpnautoconnect"
+	OperationPhaseOptionVPNAutoConnect = "vpnautoconnect"
 )
 
-type CreationPhaseOption struct {
+type OperationPhase struct {
+	Path          string
+	TerraformPath string
+	KustomizePath string
+	KubectlPath   string
+	PlanPath      string
+	LogsPath      string
+	OutputsPath   string
+	SecretsPath   string
+	VendorPath    string
+}
+
+type OperationPhaseOption struct {
 	Name  string
 	Value any
 }
 
-func NewCreationPhase(folder string) (*CreationPhase, error) {
+func NewOperationPhase(folder string) (*OperationPhase, error) {
 	basePath := path.Join(folder)
 
 	vendorPath, err := filepath.Abs("./vendor")
 	if err != nil {
-		return &CreationPhase{}, fmt.Errorf("error getting absolute path for vendor folder: %w", err)
+		return &OperationPhase{}, fmt.Errorf("error getting absolute path for vendor folder: %w", err)
 	}
 
 	kustomizePath := path.Join(vendorPath, "bin", "kustomize")
@@ -46,7 +58,7 @@ func NewCreationPhase(folder string) (*CreationPhase, error) {
 	outputsPath := path.Join(basePath, "terraform", "outputs")
 	secretsPath := path.Join(basePath, "terraform", "secrets")
 
-	return &CreationPhase{
+	return &OperationPhase{
 		Path:          basePath,
 		TerraformPath: terraformPath,
 		KustomizePath: kustomizePath,
@@ -59,19 +71,7 @@ func NewCreationPhase(folder string) (*CreationPhase, error) {
 	}, nil
 }
 
-type CreationPhase struct {
-	Path          string
-	TerraformPath string
-	KustomizePath string
-	KubectlPath   string
-	PlanPath      string
-	LogsPath      string
-	OutputsPath   string
-	SecretsPath   string
-	VendorPath    string
-}
-
-func (cp *CreationPhase) CreateFolder() error {
+func (cp *OperationPhase) CreateFolder() error {
 	err := os.Mkdir(cp.Path, iox.FullPermAccess)
 	if err != nil {
 		return fmt.Errorf("error creating folder %s: %w", cp.Path, err)
@@ -80,7 +80,7 @@ func (cp *CreationPhase) CreateFolder() error {
 	return nil
 }
 
-func (cp *CreationPhase) CreateFolderStructure() error {
+func (cp *OperationPhase) CreateFolderStructure() error {
 	if err := os.Mkdir(cp.PlanPath, iox.FullPermAccess); err != nil {
 		return fmt.Errorf("error creating folder %s: %w", cp.PlanPath, err)
 	}
@@ -100,7 +100,7 @@ func (cp *CreationPhase) CreateFolderStructure() error {
 	return nil
 }
 
-func (*CreationPhase) CopyFromTemplate(config template.Config, prefix, sourcePath, targetPath string) error {
+func (*OperationPhase) CopyFromTemplate(config template.Config, prefix, sourcePath, targetPath string) error {
 	outDirPath, err := os.MkdirTemp("", fmt.Sprintf("furyctl-%s-", prefix))
 	if err != nil {
 		return fmt.Errorf("error creating temp folder: %w", err)

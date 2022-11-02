@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-package eks
+package create
 
 import (
 	"bytes"
@@ -35,7 +35,7 @@ var (
 )
 
 type Kubernetes struct {
-	*cluster.CreationPhase
+	*cluster.OperationPhase
 	furyctlConf      schema.EksclusterKfdV1Alpha2
 	kfdManifest      config.KFD
 	infraOutputsPath string
@@ -49,13 +49,13 @@ func NewKubernetes(
 	infraOutputsPath string,
 	dryRun bool,
 ) (*Kubernetes, error) {
-	phase, err := cluster.NewCreationPhase(".kubernetes")
+	phase, err := cluster.NewOperationPhase(".kubernetes")
 	if err != nil {
 		return nil, fmt.Errorf("error creating kubernetes phase: %w", err)
 	}
 
 	return &Kubernetes{
-		CreationPhase:    phase,
+		OperationPhase:   phase,
 		furyctlConf:      furyctlConf,
 		kfdManifest:      kfdManifest,
 		infraOutputsPath: infraOutputsPath,
@@ -146,7 +146,7 @@ func (k *Kubernetes) copyFromTemplate() error {
 
 	cfg.Data = tfConfVars
 
-	err = k.CreationPhase.CopyFromTemplate(
+	err = k.OperationPhase.CopyFromTemplate(
 		cfg,
 		prefix,
 		tmpFolder,

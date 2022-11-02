@@ -24,14 +24,13 @@ import (
 )
 
 var (
-	ErrDebugFlagNotSet          = errors.New("debug flag not set")
-	ErrFuryctlFlagNotSet        = errors.New("furyctl flag not set")
-	ErrDistroFlagNotSet         = errors.New("distro flag not set")
-	ErrPhaseFlagNotSet          = errors.New("phase flag not set")
-	ErrVpnAutoConnectFlagNotSet = errors.New("vpn-auto-connect flag not set")
-	ErrDryRunFlagNotSet         = errors.New("dry-run flag not set")
-	ErrSkipDownloadFlagNotSet   = errors.New("skip-download flag not set")
-
+	ErrDebugFlagNotSet            = errors.New("debug flag not set")
+	ErrFuryctlFlagNotSet          = errors.New("furyctl flag not set")
+	ErrDistroFlagNotSet           = errors.New("distro flag not set")
+	ErrPhaseFlagNotSet            = errors.New("phase flag not set")
+	ErrVpnAutoConnectFlagNotSet   = errors.New("vpn-auto-connect flag not set")
+	ErrDryRunFlagNotSet           = errors.New("dry-run flag not set")
+	ErrSkipDownloadFlagNotSet     = errors.New("skip-download flag not set")
 	ErrDownloadDependenciesFailed = errors.New("download dependencies failed")
 )
 

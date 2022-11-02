@@ -6,21 +6,18 @@ package eks
 
 import (
 	"errors"
+	"fmt"
 	"strings"
 
 	"github.com/sirupsen/logrus"
 
 	"github.com/sighupio/fury-distribution/pkg/config"
 	"github.com/sighupio/fury-distribution/pkg/schema"
+	"github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/eks/create"
 	"github.com/sighupio/furyctl/internal/cluster"
 )
 
-const SErrWrapWithStr = "%w: %s"
-
-var (
-	ErrUnsupportedPhase = errors.New("unsupported phase")
-	ErrWritingTfVars    = errors.New("error writing terraform variables file")
-)
+var ErrUnsupportedPhase = errors.New("unsupported phase")
 
 type ClusterCreator struct {
 	configPath     string
@@ -76,47 +73,70 @@ func (v *ClusterCreator) SetProperty(name string, value any) {
 func (v *ClusterCreator) Create(dryRun bool) error {
 	logrus.Infof("Running phase: %s", v.phase)
 
-	infra, err := NewInfrastructure(v.furyctlConf, v.kfdManifest, dryRun)
+	infra, err := create.NewInfrastructure(v.furyctlConf, v.kfdManifest, dryRun)
 	if err != nil {
-		return err
+		return fmt.Errorf("error while initiating infrastructure phase: %w", err)
 	}
 
-	kube, err := NewKubernetes(v.furyctlConf, v.kfdManifest, infra.OutputsPath, dryRun)
+	kube, err := create.NewKubernetes(v.furyctlConf, v.kfdManifest, infra.OutputsPath, dryRun)
 	if err != nil {
-		return err
+		return fmt.Errorf("error while initiating kubernetes phase: %w", err)
 	}
 
-	distro, err := NewDistribution(v.configPath, v.furyctlConf, v.kfdManifest, v.distroPath, infra.OutputsPath, dryRun)
+	distro, err := create.NewDistribution(
+		v.configPath,
+		v.furyctlConf,
+		v.kfdManifest,
+		v.distroPath,
+		infra.OutputsPath,
+		dryRun,
+	)
 	if err != nil {
-		return err
+		return fmt.Errorf("error while initiating distribution phase: %w", err)
 	}
 
-	infraOpts := []cluster.CreationPhaseOption{
-		{Name: cluster.CreationPhaseOptionVPNAutoConnect, Value: v.vpnAutoConnect},
+	infraOpts := []cluster.OperationPhaseOption{
+		{Name: cluster.OperationPhaseOptionVPNAutoConnect, Value: v.vpnAutoConnect},
 	}
 
 	switch v.phase {
-	case cluster.CreationPhaseInfrastructure:
-		return infra.Exec(infraOpts)
+	case cluster.OperationPhaseInfrastructure:
+		if err = infra.Exec(infraOpts); err != nil {
+			return fmt.Errorf("error while executing infrastructure phase: %w", err)
+		}
 
-	case cluster.CreationPhaseKubernetes:
-		return kube.Exec()
+		return nil
 
-	case cluster.CreationPhaseDistribution:
-		return distro.Exec()
+	case cluster.OperationPhaseKubernetes:
+		if err = kube.Exec(); err != nil {
+			return fmt.Errorf("error while executing kubernetes phase: %w", err)
+		}
 
-	case cluster.CreationPhaseAll:
+		return nil
+
+	case cluster.OperationPhaseDistribution:
+		if err = distro.Exec(); err != nil {
+			return fmt.Errorf("error while executing distribution phase: %w", err)
+		}
+
+		return nil
+
+	case cluster.OperationPhaseAll:
 		if v.furyctlConf.Spec.Infrastructure != nil {
 			if err := infra.Exec(infraOpts); err != nil {
-				return err
+				return fmt.Errorf("error while executing infrastructure phase: %w", err)
 			}
 		}
 
 		if err := kube.Exec(); err != nil {
-			return err
+			return fmt.Errorf("error while executing kubernetes phase: %w", err)
 		}
 
-		return distro.Exec()
+		if err = distro.Exec(); err != nil {
+			return fmt.Errorf("error while executing distribution phase: %w", err)
+		}
+
+		return nil
 
 	default:
 		return ErrUnsupportedPhase

@@ -133,6 +133,7 @@ Furyctl is a simple CLI tool to:
 	rootCmd.AddCommand(NewValidateCommand(versions["version"]))
 	rootCmd.AddCommand(NewVersionCmd(versions))
 	rootCmd.AddCommand(NewCreateCommand(versions["version"]))
+	rootCmd.AddCommand(NewDeleteCommand())
 
 	return rootCmd
 }
