@@ -95,10 +95,10 @@ func logFile() (*os.File, error) {
 }
 
 // getCmdFullname returns the full name of the command.
-func getCmdFullname(cmd *cobra.Command) string {
-	if cmd.Parent() == nil || cmd.Parent().Name() == "furyctl" {
-		return cmd.Name()
+func getCmdFullname(c *cobra.Command) string {
+	if c.Parent() == nil || c.Parent().Name() == "furyctl" {
+		return c.Name()
 	}
 
-	return fmt.Sprintf("%s %s", getCmdFullname(cmd.Parent()), cmd.Name())
+	return fmt.Sprintf("%s %s", getCmdFullname(c.Parent()), c.Name())
 }
