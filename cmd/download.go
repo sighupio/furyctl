@@ -17,7 +17,7 @@ func NewDownloadCmd(furyctlBinVersion string, eventCh chan analytics.Event) *cob
 		Short: "Dowload fury files",
 	}
 
-	dumpCmd.AddCommand(download.NewDependenciesCmd(furyctlBinVersion,eventCh))
+	dumpCmd.AddCommand(download.NewDependenciesCmd(furyctlBinVersion, eventCh))
 
 	return dumpCmd
 }

@@ -5,6 +5,7 @@
 package analytics
 
 import (
+	"fmt"
 	"net"
 	"net/http"
 	"time"
@@ -61,7 +62,7 @@ func (a *Tracker) Track(event Event) error {
 
 	e := &mixpanel.Event{Properties: p}
 	if err := a.client.Track(a.trackingInfo["trackID"], event.Name(), e); err != nil {
-		return err
+		return fmt.Errorf("failed to track event: %w", err)
 	}
 
 	return nil
