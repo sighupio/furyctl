@@ -126,7 +126,7 @@ func downloadProcess(wg *sync.WaitGroup, opts DownloadOpts, data Package, errCha
 			pU.Prefix = fallbackSshRepoPrefix
 		}
 
-		logrus.Warningf("error downloading %s, falling back to %s", o, humanReadableSource(pU.getConsumableURL()))
+		logrus.Infof("error downloading %s, falling back to %s", o, humanReadableSource(pU.getConsumableURL()))
 
 		downloadErr = get(pU.getConsumableURL(), data.Dir, getter.ClientModeDir, true)
 		if downloadErr != nil {
