@@ -5,9 +5,13 @@
 package cmd
 
 import (
+	"errors"
+	"os"
+
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
+	"golang.org/x/sys/unix"
 )
 
 func init() {
@@ -61,6 +65,15 @@ var vendorCmd = &cobra.Command{
 			} else {
 				logrus.Infof("using %v for package %s", p.Version, p.Name)
 			}
+		}
+
+		pwd, err := os.Getwd()
+		if err != nil {
+			return err
+		}
+
+		if err := unix.Access(pwd, unix.W_OK); err != nil {
+			return errors.New("You don't have write permissions on the current directory.")
 		}
 
 		return Download(list, conf.DownloadOpts)
