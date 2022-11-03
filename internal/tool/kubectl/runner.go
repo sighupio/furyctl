@@ -16,16 +16,18 @@ type Paths struct {
 }
 
 type Runner struct {
-	executor   execx.Executor
-	paths      Paths
-	serverSide bool
+	executor     execx.Executor
+	paths        Paths
+	serverSide   bool
+	skipNotFound bool
 }
 
-func NewRunner(executor execx.Executor, paths Paths, serverSide bool) *Runner {
+func NewRunner(executor execx.Executor, paths Paths, serverSide, skipNotFound bool) *Runner {
 	return &Runner{
-		executor:   executor,
-		paths:      paths,
-		serverSide: serverSide,
+		executor:     executor,
+		paths:        paths,
+		serverSide:   serverSide,
+		skipNotFound: skipNotFound,
 	}
 }
 
@@ -45,6 +47,27 @@ func (r *Runner) Apply(manifestPath string) error {
 	}))
 	if err != nil {
 		return fmt.Errorf("error applying manifest: %w", err)
+	}
+
+	return nil
+}
+
+func (r *Runner) Delete(manifestPath string) error {
+	args := []string{"delete"}
+
+	if r.skipNotFound {
+		args = append(args, "--ignore-not-found=true")
+	}
+
+	args = append(args, "-f", manifestPath)
+
+	_, err := execx.CombinedOutput(execx.NewCmd(r.paths.Kubectl, execx.CmdOptions{
+		Args:     args,
+		Executor: r.executor,
+		WorkDir:  r.paths.WorkDir,
+	}))
+	if err != nil {
+		return fmt.Errorf("error deleting manifest: %w", err)
 	}
 
 	return nil

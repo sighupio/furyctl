@@ -70,5 +70,18 @@ func NewClusterCmd() *cobra.Command {
 		},
 	}
 
+	cmd.Flags().StringP(
+		"config",
+		"c",
+		"furyctl.yaml",
+		"Path to the furyctl.yaml file",
+	)
+
+	cmd.Flags().Bool(
+		"force",
+		false,
+		"Force deletion of the cluster",
+	)
+
 	return cmd
 }

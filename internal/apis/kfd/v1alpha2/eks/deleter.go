@@ -38,22 +38,22 @@ func (*ClusterDeleter) Delete() error {
 		return fmt.Errorf("error while creating distribution phase: %w", err)
 	}
 
-	if err := distro.Exec(); err != nil {
-		return fmt.Errorf("error while deleting distribution phase: %w", err)
-	}
-
 	kube, err := del.NewKubernetes()
 	if err != nil {
 		return fmt.Errorf("error while creating kubernetes phase: %w", err)
 	}
 
-	if err := kube.Exec(); err != nil {
-		return fmt.Errorf("error while deleting kubernetes phase: %w", err)
-	}
-
 	infra, err := del.NewInfrastructure()
 	if err != nil {
 		return fmt.Errorf("error while creating infrastructure phase: %w", err)
+	}
+
+	if err := distro.Exec(); err != nil {
+		return fmt.Errorf("error while deleting distribution phase: %w", err)
+	}
+
+	if err := kube.Exec(); err != nil {
+		return fmt.Errorf("error while deleting kubernetes phase: %w", err)
 	}
 
 	if err := infra.Exec(); err != nil {

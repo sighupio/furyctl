@@ -2,18 +2,23 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
+//nolint:dupl // better readability
 package del
 
 import (
 	"fmt"
 	"path"
 
+	"github.com/sirupsen/logrus"
+
 	"github.com/sighupio/furyctl/internal/cluster"
 	"github.com/sighupio/furyctl/internal/tool/terraform"
 	execx "github.com/sighupio/furyctl/internal/x/exec"
+	iox "github.com/sighupio/furyctl/internal/x/io"
 )
 
 type Infrastructure struct {
+	*cluster.OperationPhase
 	tfRunner *terraform.Runner
 }
 
@@ -24,6 +29,7 @@ func NewInfrastructure() (*Infrastructure, error) {
 	}
 
 	return &Infrastructure{
+		OperationPhase: phase,
 		tfRunner: terraform.NewRunner(
 			execx.NewStdExecutor(),
 			terraform.Paths{
@@ -37,6 +43,18 @@ func NewInfrastructure() (*Infrastructure, error) {
 	}, nil
 }
 
-func (*Infrastructure) Exec() error {
+func (i *Infrastructure) Exec() error {
+	err := iox.CheckDirIsEmpty(i.OperationPhase.Path)
+	if err == nil {
+		logrus.Infof("infrastructure phase already executed, skipping")
+
+		return nil
+	}
+
+	err = i.tfRunner.Destroy()
+	if err != nil {
+		return fmt.Errorf("error running terraform destroy: %w", err)
+	}
+
 	return nil
 }

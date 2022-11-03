@@ -127,5 +127,5 @@ func Test_Kubectl_CheckBinVersion(t *testing.T) {
 func newKubectlRunner() *kubectl.Runner {
 	return kubectl.NewRunner(execx.NewFakeExecutor(), kubectl.Paths{
 		Kubectl: "kubectl",
-	}, true)
+	}, true, true)
 }

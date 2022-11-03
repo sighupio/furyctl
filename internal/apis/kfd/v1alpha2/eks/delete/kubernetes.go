@@ -2,18 +2,23 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
+//nolint:dupl // better readability
 package del
 
 import (
 	"fmt"
 	"path"
 
+	"github.com/sirupsen/logrus"
+
 	"github.com/sighupio/furyctl/internal/cluster"
 	"github.com/sighupio/furyctl/internal/tool/terraform"
 	execx "github.com/sighupio/furyctl/internal/x/exec"
+	iox "github.com/sighupio/furyctl/internal/x/io"
 )
 
 type Kubernetes struct {
+	*cluster.OperationPhase
 	tfRunner *terraform.Runner
 }
 
@@ -24,6 +29,7 @@ func NewKubernetes() (*Kubernetes, error) {
 	}
 
 	return &Kubernetes{
+		OperationPhase: phase,
 		tfRunner: terraform.NewRunner(
 			execx.NewStdExecutor(),
 			terraform.Paths{
@@ -37,6 +43,18 @@ func NewKubernetes() (*Kubernetes, error) {
 	}, nil
 }
 
-func (*Kubernetes) Exec() error {
+func (k *Kubernetes) Exec() error {
+	err := iox.CheckDirIsEmpty(k.OperationPhase.Path)
+	if err == nil {
+		logrus.Infof("kubernetes phase already executed, skipping")
+
+		return nil
+	}
+
+	err = k.tfRunner.Destroy()
+	if err != nil {
+		return fmt.Errorf("error running terraform destroy: %w", err)
+	}
+
 	return nil
 }

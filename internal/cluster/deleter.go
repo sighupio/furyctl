@@ -54,14 +54,14 @@ func RegisterDeleterFactory(apiVersion, kind string, factory DeleterFactory) {
 	lcAPIVersion := strings.ToLower(apiVersion)
 	lcKind := strings.ToLower(kind)
 
-	if _, ok := crFactories[lcAPIVersion]; !ok {
+	if _, ok := delFactories[lcAPIVersion]; !ok {
 		delFactories[lcAPIVersion] = make(map[string]DeleterFactory)
 	}
 
 	delFactories[lcAPIVersion][lcKind] = factory
 }
 
-func NewDeleterFactory[T Deleter, S any](dd T) DeleterFactory {
+func NewDeleterFactory[T Deleter](dd T) DeleterFactory {
 	return func(props []DeleterProperty) (Deleter, error) {
 		dd.SetProperties(props)
 

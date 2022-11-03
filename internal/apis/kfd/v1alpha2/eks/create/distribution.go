@@ -101,6 +101,7 @@ func NewDistribution(
 				WorkDir: path.Join(phase.Path, "manifests"),
 			},
 			true,
+			true,
 		),
 		dryRun: dryRun,
 	}, nil
