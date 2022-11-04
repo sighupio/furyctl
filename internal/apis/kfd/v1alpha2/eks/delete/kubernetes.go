@@ -20,9 +20,10 @@ import (
 type Kubernetes struct {
 	*cluster.OperationPhase
 	tfRunner *terraform.Runner
+	dryRun   bool
 }
 
-func NewKubernetes() (*Kubernetes, error) {
+func NewKubernetes(dryRun bool) (*Kubernetes, error) {
 	phase, err := cluster.NewOperationPhase(".kubernetes")
 	if err != nil {
 		return nil, fmt.Errorf("error creating kubernetes phase: %w", err)
@@ -40,6 +41,7 @@ func NewKubernetes() (*Kubernetes, error) {
 				Terraform: phase.TerraformPath,
 			},
 		),
+		dryRun: dryRun,
 	}, nil
 }
 

@@ -20,9 +20,10 @@ import (
 type Infrastructure struct {
 	*cluster.OperationPhase
 	tfRunner *terraform.Runner
+	dryRun   bool
 }
 
-func NewInfrastructure() (*Infrastructure, error) {
+func NewInfrastructure(dryRun bool) (*Infrastructure, error) {
 	phase, err := cluster.NewOperationPhase(".infrastructure")
 	if err != nil {
 		return nil, fmt.Errorf("error creating infrastructure phase: %w", err)
@@ -40,6 +41,7 @@ func NewInfrastructure() (*Infrastructure, error) {
 				Terraform: phase.TerraformPath,
 			},
 		),
+		dryRun: dryRun,
 	}, nil
 }
 

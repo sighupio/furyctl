@@ -12,7 +12,7 @@ import (
 )
 
 const (
-	DeleterPropertyForce = "force"
+	DeleterPropertyPhase = "phase"
 )
 
 var delFactories = make(map[string]map[string]DeleterFactory) //nolint:gochecknoglobals, lll // This patterns requires factories
@@ -28,12 +28,12 @@ type DeleterProperty struct {
 type Deleter interface {
 	SetProperties(props []DeleterProperty)
 	SetProperty(name string, value any)
-	Delete() error
+	Delete(dryRun bool) error
 }
 
 func NewDeleter(
 	minimalConf config.Furyctl,
-	force bool,
+	phase string,
 ) (Deleter, error) {
 	lcAPIVersion := strings.ToLower(minimalConf.APIVersion)
 	lcResourceType := strings.ToLower(minimalConf.Kind)
@@ -41,8 +41,8 @@ func NewDeleter(
 	if factoryFn, ok := delFactories[lcAPIVersion][lcResourceType]; ok {
 		return factoryFn([]DeleterProperty{
 			{
-				Name:  DeleterPropertyForce,
-				Value: force,
+				Name:  DeleterPropertyPhase,
+				Value: phase,
 			},
 		})
 	}

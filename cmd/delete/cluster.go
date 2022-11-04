@@ -5,8 +5,11 @@
 package del
 
 import (
+	"bufio"
 	"errors"
 	"fmt"
+	"os"
+	"strings"
 
 	"github.com/spf13/cobra"
 
@@ -21,6 +24,8 @@ var (
 	ErrYamlUnmarshalFile = errors.New("error unmarshaling yaml file")
 	ErrDebugFlagNotSet   = errors.New("debug flag not set")
 	ErrFuryctlFlagNotSet = errors.New("furyctl flag not set")
+	ErrPhaseFlagNotSet   = errors.New("phase flag not set")
+	ErrDryRunFlagNotSet  = errors.New("dry-run flag not set")
 	ErrForceFlagNotSet   = errors.New("force flag not set")
 )
 
@@ -39,6 +44,16 @@ func NewClusterCmd() *cobra.Command {
 				return ErrFuryctlFlagNotSet
 			}
 
+			phase, ok := cobrax.Flag[string](cmd, "phase").(string)
+			if !ok {
+				return ErrPhaseFlagNotSet
+			}
+
+			dryRun, ok := cobrax.Flag[bool](cmd, "dry-run").(bool)
+			if !ok {
+				return ErrDryRunFlagNotSet
+			}
+
 			force, ok := cobrax.Flag[bool](cmd, "force").(bool)
 			if !ok {
 				return ErrForceFlagNotSet
@@ -51,12 +66,28 @@ func NewClusterCmd() *cobra.Command {
 				return fmt.Errorf("%w: %s", ErrYamlUnmarshalFile, err)
 			}
 
-			clusterDeleter, err := cluster.NewDeleter(minimalConf, force)
+			clusterDeleter, err := cluster.NewDeleter(minimalConf, phase)
 			if err != nil {
 				return fmt.Errorf("error while initializing cluster deleter: %w", err)
 			}
 
-			err = clusterDeleter.Delete()
+			if !force {
+				_, err = fmt.Println("WARNING: You are about to delete a cluster. This action is irreversible.")
+				if err != nil {
+					return fmt.Errorf("error while printing to stdout: %w", err)
+				}
+
+				_, err = fmt.Println("Are you sure you want to continue? Only 'yes' will be accepted to confirm.")
+				if err != nil {
+					return fmt.Errorf("error while printing to stdout: %w", err)
+				}
+
+				if !askForConfirmation() {
+					return nil
+				}
+			}
+
+			err = clusterDeleter.Delete(dryRun)
 			if err != nil {
 				return fmt.Errorf("error while deleting cluster: %w", err)
 			}
@@ -77,6 +108,19 @@ func NewClusterCmd() *cobra.Command {
 		"Path to the furyctl.yaml file",
 	)
 
+	cmd.Flags().StringP(
+		"phase",
+		"p",
+		"",
+		"Phase to execute",
+	)
+
+	cmd.Flags().Bool(
+		"dry-run",
+		false,
+		"Allows to inspect what resources will be deleted",
+	)
+
 	cmd.Flags().Bool(
 		"force",
 		false,
@@ -84,4 +128,17 @@ func NewClusterCmd() *cobra.Command {
 	)
 
 	return cmd
+}
+
+func askForConfirmation() bool {
+	reader := bufio.NewReader(os.Stdin)
+
+	response, err := reader.ReadString('\n')
+	if err != nil {
+		return false
+	}
+
+	response = strings.TrimSuffix(response, "\n")
+
+	return strings.Compare(response, "yes") == 0
 }

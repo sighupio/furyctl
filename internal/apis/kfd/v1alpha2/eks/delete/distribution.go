@@ -25,9 +25,10 @@ type Distribution struct {
 	tfRunner   *terraform.Runner
 	kzRunner   *kustomize.Runner
 	kubeRunner *kubectl.Runner
+	dryRun     bool
 }
 
-func NewDistribution() (*Distribution, error) {
+func NewDistribution(dryRun bool) (*Distribution, error) {
 	phase, err := cluster.NewOperationPhase(".distribution")
 	if err != nil {
 		return nil, fmt.Errorf("error creating distribution phase: %w", err)
@@ -61,6 +62,7 @@ func NewDistribution() (*Distribution, error) {
 			true,
 			true,
 		),
+		dryRun: dryRun,
 	}, nil
 }
 

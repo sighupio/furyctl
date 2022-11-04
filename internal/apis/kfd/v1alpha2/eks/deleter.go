@@ -13,52 +13,79 @@ import (
 )
 
 type ClusterDeleter struct {
-	force bool
+	phase string
 }
 
-func (v *ClusterDeleter) SetProperties(props []cluster.DeleterProperty) {
+func (d *ClusterDeleter) SetProperties(props []cluster.DeleterProperty) {
 	for _, prop := range props {
-		v.SetProperty(prop.Name, prop.Value)
+		d.SetProperty(prop.Name, prop.Value)
 	}
 }
 
-func (v *ClusterDeleter) SetProperty(name string, value any) {
+func (d *ClusterDeleter) SetProperty(name string, value any) {
 	lcName := strings.ToLower(name)
 
-	if lcName == cluster.DeleterPropertyForce {
-		if b, ok := value.(bool); ok {
-			v.force = b
+	if lcName == cluster.CreatorPropertyPhase {
+		if s, ok := value.(string); ok {
+			d.phase = s
 		}
 	}
 }
 
-func (*ClusterDeleter) Delete() error {
-	distro, err := del.NewDistribution()
+func (d *ClusterDeleter) Delete(dryRun bool) error {
+	distro, err := del.NewDistribution(dryRun)
 	if err != nil {
 		return fmt.Errorf("error while creating distribution phase: %w", err)
 	}
 
-	kube, err := del.NewKubernetes()
+	kube, err := del.NewKubernetes(dryRun)
 	if err != nil {
 		return fmt.Errorf("error while creating kubernetes phase: %w", err)
 	}
 
-	infra, err := del.NewInfrastructure()
+	infra, err := del.NewInfrastructure(dryRun)
 	if err != nil {
 		return fmt.Errorf("error while creating infrastructure phase: %w", err)
 	}
 
-	if err := distro.Exec(); err != nil {
-		return fmt.Errorf("error while deleting distribution phase: %w", err)
-	}
+	switch d.phase {
+	case cluster.OperationPhaseInfrastructure:
+		if err := infra.Exec(); err != nil {
+			return fmt.Errorf("error while deleting infrastructure phase: %w", err)
+		}
 
-	if err := kube.Exec(); err != nil {
-		return fmt.Errorf("error while deleting kubernetes phase: %w", err)
-	}
+		return nil
 
-	if err := infra.Exec(); err != nil {
-		return fmt.Errorf("error while deleting infrastructure phase: %w", err)
-	}
+	case cluster.OperationPhaseKubernetes:
+		if err := kube.Exec(); err != nil {
+			return fmt.Errorf("error while deleting kubernetes phase: %w", err)
+		}
 
-	return nil
+		return nil
+
+	case cluster.OperationPhaseDistribution:
+		if err := distro.Exec(); err != nil {
+			return fmt.Errorf("error while deleting distribution phase: %w", err)
+		}
+
+		return nil
+
+	case cluster.OperationPhaseAll:
+		if err := distro.Exec(); err != nil {
+			return fmt.Errorf("error while deleting distribution phase: %w", err)
+		}
+
+		if err := kube.Exec(); err != nil {
+			return fmt.Errorf("error while deleting kubernetes phase: %w", err)
+		}
+
+		if err := infra.Exec(); err != nil {
+			return fmt.Errorf("error while deleting infrastructure phase: %w", err)
+		}
+
+		return nil
+
+	default:
+		return ErrUnsupportedPhase
+	}
 }
