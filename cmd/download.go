@@ -115,10 +115,18 @@ func downloadProcess(wg *sync.WaitGroup, opts DownloadOpts, data Package, errCha
 
 	u := pU.getConsumableURL()
 
-	downloadErr := get(u, data.Dir, getter.ClientModeDir, true)
+	resp, err := http.Get(fromSshToHttps(u))
+	if err != nil {
+		errChan <- err
+		return
+	}
 
-	// Checking if repository was found otherwise fallback to the old prefix, if fallback fails sends error to the error channel
-	if downloadErr != nil && strings.Contains(downloadErr.Error(), "Repository not found") {
+	if opts.Https {
+		p = httpsRepoPrefix
+	}
+
+	if resp.StatusCode == 404 {
+		// Checking if repository was found otherwise fallback to the old prefix, if fallback fails sends error to tehe error channel
 		o := humanReadableSource(pU.getConsumableURL())
 
 		if opts.Https {
@@ -129,14 +137,17 @@ func downloadProcess(wg *sync.WaitGroup, opts DownloadOpts, data Package, errCha
 
 		logrus.Infof("error downloading %s, falling back to %s", o, humanReadableSource(pU.getConsumableURL()))
 
-		downloadErr = get(pU.getConsumableURL(), data.Dir, getter.ClientModeDir, true)
-		if downloadErr != nil {
-			if err := os.RemoveAll(data.Dir); err != nil {
-				logrus.Errorf("error removing directory %s: %s", data.Dir, err.Error())
-			}
-			errChan <- downloadErr
+		if resp, err := http.Get(fromSshToHttps(o)); err != nil || resp.StatusCode == 404 {
+			errChan <- fmt.Errorf("Unable to download %s. Please check repository exists or if your credentials are correctlly configured", o)
+			return
 		}
-	} else if downloadErr != nil {
+	}
+
+	downloadErr := get(pU.getConsumableURL(), data.Dir, getter.ClientModeDir, true)
+	if downloadErr != nil {
+		if err := os.RemoveAll(data.Dir); err != nil {
+			logrus.Errorf("error removing directory %s: %s", data.Dir, err.Error())
+		}
 		errChan <- downloadErr
 	}
 }
@@ -214,15 +225,6 @@ func get(src, dest string, mode getter.ClientMode, cleanGitFolder bool) error {
 		return err
 	}
 
-	resp, err := http.Get("https://" + h)
-	if err != nil {
-		return err
-	}
-
-	if resp.StatusCode == 404 {
-		return fmt.Errorf("Module's Repository not found: %s", h)
-	}
-
 	if err := client.Get(); err != nil {
 		return err
 	}
@@ -273,4 +275,14 @@ func renameDir(src string, dest string) error {
 	}
 
 	return os.Rename(src, dest)
+}
+
+func fromSshToHttps(src string) string {
+	s := strings.Replace(src, "git@github.com:", "https://github.com/", 1)
+
+	if strings.Contains(s, "git::") {
+		_, s, _ = strings.Cut(s, "git::")
+	}
+
+	return s
 }
