@@ -27,7 +27,10 @@ import (
 	yamlx "github.com/sighupio/furyctl/internal/x/yaml"
 )
 
-const KubectlMaxRetry = 3
+const (
+	kubectlNoDelayMaxRetry = 3
+	kubectlDelayMaxRetry   = 7
+)
 
 var (
 	errCastingVpcIDToStr     = errors.New("error casting vpc_id output to string")
@@ -489,15 +492,51 @@ func (d *Distribution) buildManifests() (string, error) {
 }
 
 func (d *Distribution) applyManifests(mPath string) error {
+	err := d.delayedApplyRetries(mPath, 0, kubectlNoDelayMaxRetry)
+	if err == nil {
+		return nil
+	}
+
+	err = d.delayedApplyRetries(mPath, time.Minute, kubectlDelayMaxRetry)
+	if err == nil {
+		return nil
+	}
+
+	return err
+}
+
+func (d *Distribution) delayedApplyRetries(mPath string, delay time.Duration, maxRetries int) error {
 	var err error
 
-	for i := 0; i < KubectlMaxRetry; i++ {
-		err = d.kubeRunner.Apply(mPath)
+	retries := 0
+
+	if maxRetries == 0 {
+		return nil
 	}
 
-	if err != nil {
-		return fmt.Errorf("error applying manifests: %w", err)
+	err = d.kubeRunner.Apply(mPath)
+	if err == nil {
+		return nil
 	}
 
-	return nil
+	retries++
+
+	for retries < maxRetries {
+		t := time.NewTimer(delay)
+
+		if <-t.C; true {
+			logrus.Info("retrying kubectl apply after delay")
+
+			err = d.kubeRunner.Apply(mPath)
+			if err == nil {
+				return nil
+			}
+		}
+
+		retries++
+
+		t.Stop()
+	}
+
+	return fmt.Errorf("error applying manifests: %w", err)
 }

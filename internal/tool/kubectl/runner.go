@@ -46,10 +46,33 @@ func (r *Runner) Apply(manifestPath string) error {
 		WorkDir:  r.paths.WorkDir,
 	}))
 	if err != nil {
-		return fmt.Errorf("error applying manifest: %w", err)
+		return fmt.Errorf("error applying manifests: %w", err)
 	}
 
 	return nil
+}
+
+func (r *Runner) Get(ns string, params ...string) (string, error) {
+	args := []string{"get"}
+
+	if ns != "all" {
+		args = append(args, "-n", ns)
+	} else {
+		args = append(args, "-A")
+	}
+
+	args = append(args, params...)
+
+	out, err := execx.CombinedOutput(execx.NewCmd(r.paths.Kubectl, execx.CmdOptions{
+		Args:     args,
+		Executor: r.executor,
+		WorkDir:  r.paths.WorkDir,
+	}))
+	if err != nil {
+		return out, fmt.Errorf("error while getting resources: %w", err)
+	}
+
+	return out, nil
 }
 
 func (r *Runner) Delete(manifestPath string) error {
@@ -67,7 +90,7 @@ func (r *Runner) Delete(manifestPath string) error {
 		WorkDir:  r.paths.WorkDir,
 	}))
 	if err != nil {
-		return fmt.Errorf("error deleting manifest: %w", err)
+		return fmt.Errorf("error deleting resources: %w", err)
 	}
 
 	return nil

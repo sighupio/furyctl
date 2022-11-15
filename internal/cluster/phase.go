@@ -72,6 +72,10 @@ func NewOperationPhase(folder string) (*OperationPhase, error) {
 }
 
 func (cp *OperationPhase) CreateFolder() error {
+	if _, err := os.Stat(cp.Path); !os.IsNotExist(err) {
+		return nil
+	}
+
 	err := os.Mkdir(cp.Path, iox.FullPermAccess)
 	if err != nil {
 		return fmt.Errorf("error creating folder %s: %w", cp.Path, err)
@@ -81,20 +85,28 @@ func (cp *OperationPhase) CreateFolder() error {
 }
 
 func (cp *OperationPhase) CreateFolderStructure() error {
-	if err := os.Mkdir(cp.PlanPath, iox.FullPermAccess); err != nil {
-		return fmt.Errorf("error creating folder %s: %w", cp.PlanPath, err)
+	if _, err := os.Stat(cp.PlanPath); os.IsNotExist(err) {
+		if err := os.Mkdir(cp.PlanPath, iox.FullPermAccess); err != nil {
+			return fmt.Errorf("error creating folder %s: %w", cp.PlanPath, err)
+		}
 	}
 
-	if err := os.Mkdir(cp.LogsPath, iox.FullPermAccess); err != nil {
-		return fmt.Errorf("error creating folder %s: %w", cp.LogsPath, err)
+	if _, err := os.Stat(cp.LogsPath); os.IsNotExist(err) {
+		if err := os.Mkdir(cp.LogsPath, iox.FullPermAccess); err != nil {
+			return fmt.Errorf("error creating folder %s: %w", cp.LogsPath, err)
+		}
 	}
 
-	if err := os.Mkdir(cp.SecretsPath, iox.FullPermAccess); err != nil {
-		return fmt.Errorf("error creating folder %s: %w", cp.SecretsPath, err)
+	if _, err := os.Stat(cp.SecretsPath); os.IsNotExist(err) {
+		if err := os.Mkdir(cp.SecretsPath, iox.FullPermAccess); err != nil {
+			return fmt.Errorf("error creating folder %s: %w", cp.SecretsPath, err)
+		}
 	}
 
-	if err := os.Mkdir(cp.OutputsPath, iox.FullPermAccess); err != nil {
-		return fmt.Errorf("error creating folder %s: %w", cp.OutputsPath, err)
+	if _, err := os.Stat(cp.OutputsPath); os.IsNotExist(err) {
+		if err := os.Mkdir(cp.OutputsPath, iox.FullPermAccess); err != nil {
+			return fmt.Errorf("error creating folder %s: %w", cp.OutputsPath, err)
+		}
 	}
 
 	return nil
@@ -123,7 +135,7 @@ func (*OperationPhase) CopyFromTemplate(config template.Config, prefix, sourcePa
 		tfConfigPath,
 		outDirPath,
 		".tpl",
-		true,
+		false,
 		false,
 	)
 	if err != nil {

@@ -5,10 +5,14 @@
 package del
 
 import (
+	"errors"
 	"fmt"
+	iox "github.com/sighupio/furyctl/internal/x/io"
 	"os"
 	"path"
 	"path/filepath"
+	"regexp"
+	"time"
 
 	"github.com/sirupsen/logrus"
 
@@ -17,7 +21,11 @@ import (
 	"github.com/sighupio/furyctl/internal/tool/kustomize"
 	"github.com/sighupio/furyctl/internal/tool/terraform"
 	execx "github.com/sighupio/furyctl/internal/x/exec"
-	iox "github.com/sighupio/furyctl/internal/x/io"
+)
+
+var (
+	errCheckPendingResources = errors.New("error while checking pending resources")
+	errPendingResources      = errors.New("pending resources: ")
 )
 
 type Distribution struct {
@@ -85,8 +93,17 @@ func (d *Distribution) Exec() error {
 
 	err = d.kubeRunner.Delete(manifestsOutPath)
 	if err != nil {
-		logrus.Errorf("error deleting manifests: %v", err)
+		logrus.Errorf("error while deleting resources: %v", err)
 	}
+
+	logrus.Info("Checking pending resources")
+
+	err = d.checkPendingResource()
+	if err != nil {
+		return err
+	}
+
+	logrus.Info("Deleting terraform resources")
 
 	err = d.tfRunner.Destroy()
 	if err != nil {
@@ -116,4 +133,81 @@ func (d *Distribution) buildManifests() (string, error) {
 	}
 
 	return manifestsOutPath, nil
+}
+
+func (d *Distribution) checkPendingResource() error {
+	var errSvc, errPv error
+
+	dur := time.Second * 20
+
+	maxRetries := 5
+
+	retries := 0
+
+	for retries < maxRetries {
+		p := time.NewTicker(dur)
+
+		if <-p.C; true {
+			errSvc = d.getLoadBalancers()
+
+			errPv = d.getPersistentVolumes()
+
+			if errSvc == nil && errPv == nil {
+				return nil
+			}
+		}
+
+		retries++
+
+		p.Stop()
+	}
+
+	return fmt.Errorf("%w:\n%v\n%v", errCheckPendingResources, errSvc, errPv)
+}
+
+func (d *Distribution) getLoadBalancers() error {
+	log, err := d.kubeRunner.Get("all", "svc", "-o",
+		"jsonpath='{.items[?(@.spec.type==\"LoadBalancer\")].metadata.name}'")
+	if err != nil {
+		return fmt.Errorf("error while reading resources from cluster: %w", err)
+	}
+
+	reg := regexp.MustCompile(`'(.*?)'\n`)
+
+	logStringIndex := reg.FindStringIndex(log)
+
+	if len(logStringIndex) == 0 {
+		return fmt.Errorf("%w: error while parsing kubectl get response", errPendingResources)
+	}
+
+	logString := log[logStringIndex[0] : logStringIndex[1]-1]
+
+	if logString != "''" {
+		return fmt.Errorf("%w: %s", errPendingResources, logString)
+	}
+
+	return nil
+}
+
+func (d *Distribution) getPersistentVolumes() error {
+	log, err := d.kubeRunner.Get("all", "pv", "-o", "jsonpath='{.items[*].metadata.name}'")
+	if err != nil {
+		return fmt.Errorf("error while reading resources from cluster: %w", err)
+	}
+
+	reg := regexp.MustCompile(`'(.*?)'\n`)
+
+	logStringIndex := reg.FindStringIndex(log)
+
+	if len(logStringIndex) == 0 {
+		return fmt.Errorf("%w: error while parsing kubectl get response", errPendingResources)
+	}
+
+	logString := log[logStringIndex[0] : logStringIndex[1]-1]
+
+	if logString != "''" {
+		return fmt.Errorf("%w: %s", errPendingResources, logString)
+	}
+
+	return nil
 }

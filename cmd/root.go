@@ -111,7 +111,9 @@ Furyctl is a simple CLI tool to:
 						logrus.Infof("New furyctl version available: %s => %s", versions["version"], release.Version)
 					}
 				case err := <-e:
-					logrus.Debugf("Error checking for updates: %s", err)
+					if err != nil {
+						logrus.Debugf("Error checking for updates: %s", err)
+					}
 				}
 			},
 		},
