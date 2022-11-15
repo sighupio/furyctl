@@ -99,10 +99,6 @@ func downloadProcess(wg *sync.WaitGroup, opts DownloadOpts, data Package, errCha
 	// Checking git clone protocol
 	p := sshRepoPrefix
 
-	if opts.Https {
-		p = httpsRepoPrefix
-	}
-
 	// Create the package URL from the data received to download the package
 	pU := newPackageURL(
 		p,
@@ -113,16 +109,17 @@ func downloadProcess(wg *sync.WaitGroup, opts DownloadOpts, data Package, errCha
 		data.ProviderOpt,
 		data.ProviderKind)
 
-	u := pU.getConsumableURL()
-
-	resp, err := http.Get(fromSshToHttps(u))
-	if err != nil {
-		errChan <- err
-		return
-	}
+	url := normalizeURL(pU.getConsumableURL())
 
 	if opts.Https {
 		p = httpsRepoPrefix
+		url = normalizeURL(pU.getConsumableURL())
+	}
+
+	resp, err := http.Get(url)
+	if err != nil {
+		errChan <- err
+		return
 	}
 
 	if resp.StatusCode == 404 {
@@ -131,14 +128,16 @@ func downloadProcess(wg *sync.WaitGroup, opts DownloadOpts, data Package, errCha
 
 		if opts.Https {
 			pU.Prefix = fallbackHttpsRepoPrefix
-		} else {
-			pU.Prefix = fallbackSshRepoPrefix
+			url = normalizeURL(pU.getConsumableURL())
 		}
+
+		pU.Prefix = fallbackSshRepoPrefix
+		url = normalizeURL(pU.getConsumableURL())
 
 		logrus.Infof("error downloading %s, falling back to %s", o, humanReadableSource(pU.getConsumableURL()))
 
-		if resp, err := http.Get(fromSshToHttps(o)); err != nil || resp.StatusCode == 404 {
-			errChan <- fmt.Errorf("Unable to download %s. Please check repository exists or if your credentials are correctlly configured", o)
+		if resp, err := http.Get(url); err != nil || resp.StatusCode == 404 {
+			errChan <- fmt.Errorf("Unable to download %s. Please check repository exists or if your credentials are correctlly configured", url)
 			return
 		}
 	}
@@ -277,12 +276,17 @@ func renameDir(src string, dest string) error {
 	return os.Rename(src, dest)
 }
 
-func fromSshToHttps(src string) string {
-	s := strings.Replace(src, "git@github.com:", "https://github.com/", 1)
+func normalizeURL(src string) string {
+	var s string
 
-	if strings.Contains(s, "git::") {
-		_, s, _ = strings.Cut(s, "git::")
+	if strings.HasPrefix(src, "git@") {
+		s = strings.Split(src, "//")[0]
+		s = strings.Replace(s, "git@github.com:", "https://github.com/", 1)
 	}
 
-	return s
+	if strings.HasPrefix(src, "git::") {
+		_, s, _ = strings.Cut(src, "git::")
+	}
+
+	return strings.Split(s, ".git")[0]
 }
