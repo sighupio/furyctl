@@ -7,7 +7,6 @@ package del
 import (
 	"errors"
 	"fmt"
-	iox "github.com/sighupio/furyctl/internal/x/io"
 	"os"
 	"path"
 	"path/filepath"
@@ -21,6 +20,12 @@ import (
 	"github.com/sighupio/furyctl/internal/tool/kustomize"
 	"github.com/sighupio/furyctl/internal/tool/terraform"
 	execx "github.com/sighupio/furyctl/internal/x/exec"
+	iox "github.com/sighupio/furyctl/internal/x/io"
+)
+
+const (
+	checkPendingResourcesDelay      = 20
+	checkPendingResourcesMaxRetries = 5
 )
 
 var (
@@ -138,9 +143,9 @@ func (d *Distribution) buildManifests() (string, error) {
 func (d *Distribution) checkPendingResource() error {
 	var errSvc, errPv error
 
-	dur := time.Second * 20
+	dur := time.Second * checkPendingResourcesDelay
 
-	maxRetries := 5
+	maxRetries := checkPendingResourcesMaxRetries
 
 	retries := 0
 
