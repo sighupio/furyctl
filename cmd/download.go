@@ -129,9 +129,10 @@ func downloadProcess(wg *sync.WaitGroup, opts DownloadOpts, data Package, errCha
 		if opts.Https {
 			pU.Prefix = fallbackHttpsRepoPrefix
 			url = normalizeURL(pU.getConsumableURL())
+		} else {
+			pU.Prefix = fallbackSshRepoPrefix
 		}
 
-		pU.Prefix = fallbackSshRepoPrefix
 		url = normalizeURL(pU.getConsumableURL())
 
 		logrus.Infof("error downloading %s, falling back to %s", o, humanReadableSource(pU.getConsumableURL()))
