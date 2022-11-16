@@ -16,6 +16,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/sirupsen/logrus"
+
 	"github.com/sighupio/fury-distribution/pkg/config"
 	"github.com/sighupio/fury-distribution/pkg/schema"
 	"github.com/sighupio/furyctl/configs"
@@ -74,6 +76,8 @@ func NewKubernetes(
 }
 
 func (k *Kubernetes) Exec() error {
+	logrus.Info("Running kubernetes phase")
+
 	timestamp := time.Now().Unix()
 
 	if err := k.CreateFolder(); err != nil {

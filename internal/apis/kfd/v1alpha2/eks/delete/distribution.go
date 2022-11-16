@@ -80,6 +80,8 @@ func NewDistribution(dryRun bool) (*Distribution, error) {
 }
 
 func (d *Distribution) Exec() error {
+	logrus.Info("Deleting distribution phase")
+
 	err := iox.CheckDirIsEmpty(d.OperationPhase.Path)
 	if err == nil {
 		logrus.Infof("distribution phase already executed, skipping")

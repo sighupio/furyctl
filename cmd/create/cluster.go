@@ -10,6 +10,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 
 	// Running init to register the EKSCluster kind.
@@ -88,24 +89,28 @@ func NewClusterCmd(version string) *cobra.Command {
 			execx.Debug = debug
 
 			// Download the distribution.
+			logrus.Info("Downloading distribution...")
 			res, err := distrodl.Download(version, distroLocation, furyctlPath)
 			if err != nil {
 				return fmt.Errorf("error while downloading distribution: %w", err)
 			}
 
 			// Validate the furyctl.yaml file.
+			logrus.Info("Validating furyctl.yaml file...")
 			if err := config.Validate(furyctlPath, res.RepoPath); err != nil {
 				return fmt.Errorf("error while validating furyctl.yaml file: %w", err)
 			}
 
 			// Download the dependencies.
 			if !skipDownload {
+				logrus.Info("Downloading dependencies...")
 				if errs, _ := depsdl.DownloadAll(res.DistroManifest); len(errs) > 0 {
 					return fmt.Errorf("%w: %v", ErrDownloadDependenciesFailed, errs)
 				}
 			}
 
 			// Validate the dependencies.
+			logrus.Info("Validating dependencies...")
 			if err := depsvl.Validate(res); err != nil {
 				return fmt.Errorf("error while validating dependencies: %w", err)
 			}
@@ -123,6 +128,7 @@ func NewClusterCmd(version string) *cobra.Command {
 				return fmt.Errorf("error while initializing cluster creation: %w", err)
 			}
 
+			logrus.Info("Creating cluster...")
 			if err := clusterCreator.Create(dryRun); err != nil {
 				return fmt.Errorf("error while creating cluster: %w", err)
 			}

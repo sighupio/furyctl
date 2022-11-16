@@ -46,6 +46,8 @@ func NewInfrastructure(dryRun bool) (*Infrastructure, error) {
 }
 
 func (i *Infrastructure) Exec() error {
+	logrus.Info("Deleting infrastructure phase")
+
 	err := iox.CheckDirIsEmpty(i.OperationPhase.Path)
 	if err == nil {
 		logrus.Infof("infrastructure phase already executed, skipping")

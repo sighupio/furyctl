@@ -15,6 +15,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/sirupsen/logrus"
+
 	"github.com/sighupio/fury-distribution/pkg/config"
 	"github.com/sighupio/fury-distribution/pkg/schema"
 	"github.com/sighupio/furyctl/configs"
@@ -84,6 +86,8 @@ func NewInfrastructure(
 }
 
 func (i *Infrastructure) Exec(opts []cluster.OperationPhaseOption) error {
+	logrus.Info("Running infrastructure phase")
+
 	timestamp := time.Now().Unix()
 
 	if err := i.CreateFolder(); err != nil {

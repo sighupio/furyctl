@@ -46,6 +46,8 @@ func NewKubernetes(dryRun bool) (*Kubernetes, error) {
 }
 
 func (k *Kubernetes) Exec() error {
+	logrus.Info("Deleting kubernetes phase")
+
 	err := iox.CheckDirIsEmpty(k.OperationPhase.Path)
 	if err == nil {
 		logrus.Infof("kubernetes phase already executed, skipping")

@@ -111,6 +111,8 @@ func NewDistribution(
 }
 
 func (d *Distribution) Exec() error {
+	logrus.Info("Running distribution phase")
+
 	timestamp := time.Now().Unix()
 
 	if err := d.CreateFolder(); err != nil {

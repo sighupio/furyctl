@@ -9,8 +9,6 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/sirupsen/logrus"
-
 	"github.com/sighupio/fury-distribution/pkg/config"
 	"github.com/sighupio/fury-distribution/pkg/schema"
 	"github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/eks/create"
@@ -71,8 +69,6 @@ func (v *ClusterCreator) SetProperty(name string, value any) {
 }
 
 func (v *ClusterCreator) Create(dryRun bool) error {
-	logrus.Infof("Running phase: %s", v.phase)
-
 	infra, err := create.NewInfrastructure(v.furyctlConf, v.kfdManifest, dryRun)
 	if err != nil {
 		return fmt.Errorf("error while initiating infrastructure phase: %w", err)
