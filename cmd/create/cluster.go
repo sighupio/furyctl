@@ -133,9 +133,12 @@ func NewClusterCmd(version string) *cobra.Command {
 				return fmt.Errorf("error while creating cluster: %w", err)
 			}
 
-			_, err = fmt.Println("cluster creation succeeded")
-			if err != nil {
-				return fmt.Errorf("error while printing success message: %w", err)
+			if !dryRun && phase == "" {
+				logrus.Info("Cluster created successfully!")
+			}
+
+			if phase != "" {
+				logrus.Infof("Phase %s executed successfully!", phase)
 			}
 
 			return nil

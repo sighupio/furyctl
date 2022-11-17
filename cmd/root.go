@@ -5,6 +5,8 @@
 package cmd
 
 import (
+	execx "github.com/sighupio/furyctl/internal/x/exec"
+	logrusx "github.com/sighupio/furyctl/internal/x/logrus"
 	"os"
 	"path/filepath"
 	"time"
@@ -39,7 +41,7 @@ const (
 	spinnerStyle = 11
 )
 
-func NewRootCommand(versions map[string]string) *RootCommand {
+func NewRootCommand(versions map[string]string, logFile *os.File) *RootCommand {
 	// Update channels.
 	r := make(chan app.Release, 1)
 	e := make(chan error, 1)
@@ -76,11 +78,11 @@ Furyctl is a simple CLI tool to:
 
 				// Set log level.
 				dflag, ok := cobrax.Flag[bool](cmd, "debug").(bool)
-				if ok && dflag {
-					logrus.SetLevel(logrus.DebugLevel)
-				} else {
-					logrus.SetLevel(logrus.InfoLevel)
+				if ok {
+					logrusx.InitLog(logFile, dflag)
 				}
+
+				execx.LogFile = logFile
 
 				// Configure analytics.
 				a := analytics.New(true, versions["version"])
@@ -134,7 +136,6 @@ Furyctl is a simple CLI tool to:
 	rootCmd.AddCommand(NewDumpCmd())
 	rootCmd.AddCommand(NewValidateCommand(versions["version"]))
 	rootCmd.AddCommand(NewVersionCmd(versions))
-	rootCmd.AddCommand(NewCreateCommand(versions["version"]))
 	rootCmd.AddCommand(NewDeleteCommand())
 
 	return rootCmd

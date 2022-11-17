@@ -15,7 +15,8 @@ import (
 )
 
 var (
-	Debug        = false //nolint:gochecknoglobals // This variable is shared between all the command instances.
+	Debug        = false  //nolint:gochecknoglobals // This variable is shared between all the command instances.
+	LogFile      *os.File //nolint:gochecknoglobals // This variable is shared between all the command instances.
 	ErrCmdFailed = errors.New("command failed")
 )
 
@@ -27,8 +28,8 @@ func NewCmd(name string, opts CmdOptions) *Cmd {
 	outLog := bytes.NewBufferString("")
 	errLog := bytes.NewBufferString("")
 
-	outWriters := []io.Writer{outLog}
-	errWriters := []io.Writer{errLog}
+	outWriters := []io.Writer{outLog, LogFile}
+	errWriters := []io.Writer{errLog, LogFile}
 
 	if opts.Executor == nil {
 		opts.Executor = NewStdExecutor()

@@ -108,6 +108,8 @@ func (k *Kubernetes) Exec() error {
 		return nil
 	}
 
+	logrus.Info("Running terraform apply...")
+
 	out, err := k.tfRunner.Apply(timestamp)
 	if err != nil {
 		return fmt.Errorf("error running terraform apply: %w", err)

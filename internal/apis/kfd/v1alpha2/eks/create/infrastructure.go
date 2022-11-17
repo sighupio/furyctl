@@ -118,6 +118,8 @@ func (i *Infrastructure) Exec(opts []cluster.OperationPhaseOption) error {
 		return nil
 	}
 
+	logrus.Info("Running terraform apply...")
+
 	if _, err := i.tfRunner.Apply(timestamp); err != nil {
 		return fmt.Errorf("error running terraform apply: %w", err)
 	}
@@ -134,6 +136,8 @@ func (i *Infrastructure) Exec(opts []cluster.OperationPhaseOption) error {
 
 		for _, opt := range opts {
 			if strings.ToLower(opt.Name) == cluster.OperationPhaseOptionVPNAutoConnect {
+				logrus.Info("Connecting to VPN")
+
 				if err := i.ovRunner.Connect(clientName); err != nil {
 					return fmt.Errorf("error connecting to vpn: %w", err)
 				}

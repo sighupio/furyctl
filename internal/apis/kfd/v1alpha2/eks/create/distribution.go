@@ -28,8 +28,8 @@ import (
 )
 
 const (
-	kubectlNoDelayMaxRetry = 3
-	kubectlDelayMaxRetry   = 7
+	kubectlDelayMaxRetry   = 3
+	kubectlNoDelayMaxRetry = 7
 )
 
 var (
@@ -154,6 +154,8 @@ func (d *Distribution) Exec() error {
 		return nil
 	}
 
+	logrus.Info("Running terraform apply...")
+
 	_, err = d.tfRunner.Apply(timestamp)
 	if err != nil {
 		return fmt.Errorf("error running terraform apply: %w", err)
@@ -173,14 +175,14 @@ func (d *Distribution) Exec() error {
 		return err
 	}
 
-	logrus.Info("Building manifests")
+	logrus.Info("Building manifests...")
 
 	manifestsOutPath, err := d.buildManifests()
 	if err != nil {
 		return err
 	}
 
-	logrus.Info("Applying manifests")
+	logrus.Info("Applying manifests...")
 
 	return d.applyManifests(manifestsOutPath)
 }
@@ -494,12 +496,12 @@ func (d *Distribution) buildManifests() (string, error) {
 }
 
 func (d *Distribution) applyManifests(mPath string) error {
-	err := d.delayedApplyRetries(mPath, 0, kubectlNoDelayMaxRetry)
+	err := d.delayedApplyRetries(mPath, time.Minute, kubectlDelayMaxRetry)
 	if err == nil {
 		return nil
 	}
 
-	err = d.delayedApplyRetries(mPath, time.Minute, kubectlDelayMaxRetry)
+	err = d.delayedApplyRetries(mPath, 0, kubectlNoDelayMaxRetry)
 	if err == nil {
 		return nil
 	}
