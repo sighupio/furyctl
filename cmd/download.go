@@ -116,9 +116,14 @@ func downloadProcess(wg *sync.WaitGroup, opts DownloadOpts, data Package, errCha
 		url = normalizeURL(pU.getConsumableURL())
 	}
 
-	resp, err := http.Get(url)
+	resp, err := checkRepository(url)
 	if err != nil {
 		errChan <- err
+		return
+	}
+
+	if resp.StatusCode == 401 {
+		errChan <- fmt.Errorf("Unable to download %s. Please, setup your credentials correctly.", url)
 		return
 	}
 
@@ -131,16 +136,27 @@ func downloadProcess(wg *sync.WaitGroup, opts DownloadOpts, data Package, errCha
 			url = normalizeURL(pU.getConsumableURL())
 		} else {
 			pU.Prefix = fallbackSshRepoPrefix
+			url = normalizeURL(pU.getConsumableURL())
 		}
-
-		url = normalizeURL(pU.getConsumableURL())
 
 		logrus.Infof("error downloading %s, falling back to %s", o, humanReadableSource(pU.getConsumableURL()))
 
-		if resp, err := http.Get(url); err != nil || resp.StatusCode == 404 {
-			errChan <- fmt.Errorf("Unable to download %s. Please check repository exists or if your credentials are correctlly configured", url)
+		resp, err = checkRepository(url)
+		if err != nil {
+			errChan <- err
 			return
 		}
+
+		if resp.StatusCode == 404 {
+			errChan <- fmt.Errorf("Unable to download %s. Repository doesn't exist.", url)
+			return
+		}
+
+		if resp.StatusCode == 401 {
+			errChan <- fmt.Errorf("Unable to download %s. Please, setup your credentials correctly.", url)
+			return
+		}
+
 	}
 
 	downloadErr := get(pU.getConsumableURL(), data.Dir, getter.ClientModeDir, true)
@@ -282,12 +298,30 @@ func normalizeURL(src string) string {
 
 	if strings.HasPrefix(src, "git@") {
 		s = strings.Split(src, "//")[0]
-		s = strings.Replace(s, "git@github.com:", "https://github.com/", 1)
+		s = strings.Replace(s, "git@github.com:", "https://api.github.com/repos/", 1)
 	}
 
 	if strings.HasPrefix(src, "git::") {
-		_, s, _ = strings.Cut(src, "git::")
+		logrus.Warn(src)
+		s = strings.Replace(src, "git::https://github.com/", "https://api.github.com/repos/", 1)
 	}
 
-	return strings.Split(s, ".git")[0]
+	return strings.Split(s, ".git/")[0]
+}
+
+func checkRepository(url string) (*http.Response, error) {
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Set("Accept", "application/vnd.github.v3+json")
+	req.Header.Set("Authorization", "Bearer "+os.Getenv("GITHUB_TOKEN"))
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+
+	return resp, nil
 }
