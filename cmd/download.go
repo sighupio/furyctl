@@ -99,6 +99,10 @@ func downloadProcess(wg *sync.WaitGroup, opts DownloadOpts, data Package, errCha
 	// Checking git clone protocol
 	p := sshRepoPrefix
 
+	if opts.Https {
+		p = httpsRepoPrefix
+	}
+
 	// Create the package URL from the data received to download the package
 	pU := newPackageURL(
 		p,
@@ -109,57 +113,37 @@ func downloadProcess(wg *sync.WaitGroup, opts DownloadOpts, data Package, errCha
 		data.ProviderOpt,
 		data.ProviderKind)
 
-	url := normalizeURL(pU.getConsumableURL())
-
-	if opts.Https {
-		p = httpsRepoPrefix
-		url = normalizeURL(pU.getConsumableURL())
-	}
-
-	resp, err := checkRepository(url)
+	resp, err := checkRepository(pU)
 	if err != nil {
 		errChan <- err
 		return
 	}
 
-	if resp.StatusCode == 401 {
-		errChan <- fmt.Errorf("Unable to download %s. Please, setup your credentials correctly.", url)
-		return
-	}
-
-	if resp.StatusCode == 404 {
+	if resp.StatusCode == http.StatusUnauthorized || resp.StatusCode == http.StatusNotFound {
 		// Checking if repository was found otherwise fallback to the old prefix, if fallback fails sends error to tehe error channel
 		o := humanReadableSource(pU.getConsumableURL())
 
 		if opts.Https {
 			pU.Prefix = fallbackHttpsRepoPrefix
-			url = normalizeURL(pU.getConsumableURL())
 		} else {
 			pU.Prefix = fallbackSshRepoPrefix
-			url = normalizeURL(pU.getConsumableURL())
 		}
 
 		logrus.Infof("error downloading %s, falling back to %s", o, humanReadableSource(pU.getConsumableURL()))
 
-		resp, err = checkRepository(url)
-		if err != nil {
-			errChan <- err
-			return
-		}
-
-		if resp.StatusCode == 404 {
-			errChan <- fmt.Errorf("Unable to download %s. Repository doesn't exist.", url)
-			return
-		}
-
-		if resp.StatusCode == 401 {
-			errChan <- fmt.Errorf("Unable to download %s. Please, setup your credentials correctly.", url)
+		if resp, err := checkRepository(pU); err != nil || resp.StatusCode == http.StatusUnauthorized || resp.StatusCode == http.StatusNotFound {
+			errChan <- fmt.Errorf("Unable to download %s. Please check repository exists or if your credentials are correctlly configured", humanReadableSource(pU.getConsumableURL()))
 			return
 		}
 
 	}
 
-	downloadErr := get(pU.getConsumableURL(), data.Dir, getter.ClientModeDir, true)
+	url := pU.getConsumableURL()
+	if token := os.Getenv("GITHUB_TOKEN"); token != "" && opts.Https {
+		url = normalizeURLWithToken(pU.getConsumableURL())
+	}
+
+	downloadErr := get(url, data.Dir, getter.ClientModeDir, true)
 	if downloadErr != nil {
 		if err := os.RemoveAll(data.Dir); err != nil {
 			logrus.Errorf("error removing directory %s: %s", data.Dir, err.Error())
@@ -298,18 +282,49 @@ func normalizeURL(src string) string {
 
 	if strings.HasPrefix(src, "git@") {
 		s = strings.Split(src, "//")[0]
+		s = strings.Replace(s, "git@github.com:", "https://github.com/", 1)
+	}
+
+	if strings.HasPrefix(src, "git::") {
+		_, s, _ = strings.Cut(src, "git::")
+	}
+
+	return strings.Split(s, ".git/")[0]
+}
+
+func normalizeURLWithAPI(src string) string {
+	var s string
+
+	if strings.HasPrefix(src, "git@") {
+		s = strings.Split(src, "//")[0]
 		s = strings.Replace(s, "git@github.com:", "https://api.github.com/repos/", 1)
 	}
 
 	if strings.HasPrefix(src, "git::") {
-		logrus.Warn(src)
 		s = strings.Replace(src, "git::https://github.com/", "https://api.github.com/repos/", 1)
 	}
 
 	return strings.Split(s, ".git/")[0]
 }
 
-func checkRepository(url string) (*http.Response, error) {
+func normalizeURLWithToken(src string) string {
+	var s string
+
+	s = strings.Replace(src, "git::https://", "git::https://oauth2:"+os.Getenv("GITHUB_TOKEN")+"@", 1)
+
+	return s
+}
+
+func checkRepository(pu *PackageURL) (*http.Response, error) {
+	var url string
+
+	token := os.Getenv("GITHUB_TOKEN")
+	if token != "" {
+		url = normalizeURLWithAPI(pu.getConsumableURL())
+	} else {
+		url = normalizeURL(pu.getConsumableURL())
+	}
+
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		return nil, err
@@ -321,6 +336,17 @@ func checkRepository(url string) (*http.Response, error) {
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return nil, err
+	}
+
+	// Maybe the repository is public but token is wrong, so we try again without token
+	if resp.StatusCode == http.StatusUnauthorized {
+		url = normalizeURL(pu.getConsumableURL())
+		req, err := http.NewRequest("GET", url, nil)
+		if err != nil {
+			return nil, err
+		}
+
+		return http.DefaultClient.Do(req)
 	}
 
 	return resp, nil
