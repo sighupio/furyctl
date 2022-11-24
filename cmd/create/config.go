@@ -123,6 +123,8 @@ func createNewEmptyConfigFile(path string) (*os.File, error) {
 
 		trimAbsPath := absPath[:len(absPath)-len(ext)]
 
+		logrus.Warnf("Config file already exists, renaming to: %s.%d%s", trimAbsPath, now, ext)
+
 		absPath = fmt.Sprintf("%s.%d%s", trimAbsPath, now, ext)
 	}
 

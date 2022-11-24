@@ -16,4 +16,10 @@ func init() {
 		"EKSCluster",
 		cluster.NewCreatorFactory[*ClusterCreator, schema.EksclusterKfdV1Alpha2](&ClusterCreator{}),
 	)
+
+	cluster.RegisterDeleterFactory(
+		"kfd.sighup.io/v1alpha2",
+		"EKSCluster",
+		cluster.NewDeleterFactory[*ClusterDeleter](&ClusterDeleter{}),
+	)
 }
