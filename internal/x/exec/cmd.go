@@ -31,8 +31,13 @@ func NewCmd(name string, opts CmdOptions) *Cmd {
 	outLog := bytes.NewBufferString("")
 	errLog := bytes.NewBufferString("")
 
-	outWriters := []io.Writer{outLog, LogFile}
-	errWriters := []io.Writer{errLog, LogFile}
+	outWriters := []io.Writer{outLog}
+	errWriters := []io.Writer{errLog}
+
+	if LogFile != nil {
+		outWriters = append(outWriters, LogFile)
+		errWriters = append(errWriters, LogFile)
+	}
 
 	if opts.Executor == nil {
 		opts.Executor = NewStdExecutor()

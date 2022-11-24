@@ -5,8 +5,6 @@
 package cmd
 
 import (
-	execx "github.com/sighupio/furyctl/internal/x/exec"
-	logrusx "github.com/sighupio/furyctl/internal/x/logrus"
 	"os"
 	"path/filepath"
 	"time"
@@ -20,7 +18,9 @@ import (
 	"github.com/sighupio/furyctl/internal/app"
 	"github.com/sighupio/furyctl/internal/semver"
 	cobrax "github.com/sighupio/furyctl/internal/x/cobra"
+	execx "github.com/sighupio/furyctl/internal/x/exec"
 	iox "github.com/sighupio/furyctl/internal/x/io"
+	logrusx "github.com/sighupio/furyctl/internal/x/logrus"
 )
 
 type rootConfig struct {
