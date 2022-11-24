@@ -23,7 +23,7 @@ const (
 )
 
 var (
-	factories = make(map[string]map[string]CreatorFactory) //nolint:gochecknoglobals // This patterns requires factories
+	crFactories = make(map[string]map[string]CreatorFactory) //nolint:gochecknoglobals, lll // This patterns requires crFactories
 	//  as global to work with init function.
 	errResourceNotSupported = errors.New("resource is not supported")
 )
@@ -52,7 +52,7 @@ func NewCreator(
 	lcAPIVersion := strings.ToLower(minimalConf.APIVersion)
 	lcResourceType := strings.ToLower(minimalConf.Kind)
 
-	if factoryFn, ok := factories[lcAPIVersion][lcResourceType]; ok {
+	if factoryFn, ok := crFactories[lcAPIVersion][lcResourceType]; ok {
 		return factoryFn(configPath, []CreatorProperty{
 			{
 				Name:  CreatorPropertyKfdManifest,
@@ -80,11 +80,11 @@ func RegisterCreatorFactory(apiVersion, kind string, factory CreatorFactory) {
 	lcAPIVersion := strings.ToLower(apiVersion)
 	lcKind := strings.ToLower(kind)
 
-	if _, ok := factories[lcAPIVersion]; !ok {
-		factories[lcAPIVersion] = make(map[string]CreatorFactory)
+	if _, ok := crFactories[lcAPIVersion]; !ok {
+		crFactories[lcAPIVersion] = make(map[string]CreatorFactory)
 	}
 
-	factories[lcAPIVersion][lcKind] = factory
+	crFactories[lcAPIVersion][lcKind] = factory
 }
 
 func NewCreatorFactory[T Creator, S any](cc T) CreatorFactory {

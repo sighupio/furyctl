@@ -126,6 +126,19 @@ func (r *Runner) Apply(timestamp int64) (OutputJSON, error) {
 	return oj, nil
 }
 
+func (r *Runner) Destroy() error {
+	err := execx.NewCmd(r.paths.Terraform, execx.CmdOptions{
+		Args:     []string{"destroy", "-auto-approve"},
+		Executor: r.executor,
+		WorkDir:  r.paths.WorkDir,
+	}).Run()
+	if err != nil {
+		return fmt.Errorf("error running terraform destroy: %w", err)
+	}
+
+	return nil
+}
+
 func (r *Runner) Version() (string, error) {
 	log, err := execx.CombinedOutput(execx.NewCmd(r.paths.Terraform, execx.CmdOptions{
 		Args:     []string{"version"},

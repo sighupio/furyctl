@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-package eks
+package create
 
 import (
 	"bytes"
@@ -14,6 +14,8 @@ import (
 	"path"
 	"strings"
 	"time"
+
+	"github.com/sirupsen/logrus"
 
 	"github.com/sighupio/fury-distribution/pkg/config"
 	"github.com/sighupio/fury-distribution/pkg/schema"
@@ -27,13 +29,16 @@ import (
 	iox "github.com/sighupio/furyctl/internal/x/io"
 )
 
+const SErrWrapWithStr = "%w: %s"
+
 var (
 	ErrVpcIDNotFound = errors.New("vpc_id not found in infra output")
 	ErrVpcIDFromOut  = errors.New("cannot read vpc_id from infrastructure's output.json")
+	ErrWritingTfVars = errors.New("error writing terraform variables file")
 )
 
 type Infrastructure struct {
-	*cluster.CreationPhase
+	*cluster.OperationPhase
 	furyctlConf schema.EksclusterKfdV1Alpha2
 	kfdManifest config.KFD
 	tfRunner    *terraform.Runner
@@ -47,7 +52,7 @@ func NewInfrastructure(
 	kfdManifest config.KFD,
 	dryRun bool,
 ) (*Infrastructure, error) {
-	phase, err := cluster.NewCreationPhase(".infrastructure")
+	phase, err := cluster.NewOperationPhase(".infrastructure")
 	if err != nil {
 		return nil, fmt.Errorf("error creating infrastructure phase: %w", err)
 	}
@@ -55,9 +60,9 @@ func NewInfrastructure(
 	executor := execx.NewStdExecutor()
 
 	return &Infrastructure{
-		CreationPhase: phase,
-		furyctlConf:   furyctlConf,
-		kfdManifest:   kfdManifest,
+		OperationPhase: phase,
+		furyctlConf:    furyctlConf,
+		kfdManifest:    kfdManifest,
 		tfRunner: terraform.NewRunner(
 			executor,
 			terraform.Paths{
@@ -80,7 +85,9 @@ func NewInfrastructure(
 	}, nil
 }
 
-func (i *Infrastructure) Exec(opts []cluster.CreationPhaseOption) error {
+func (i *Infrastructure) Exec(opts []cluster.OperationPhaseOption) error {
+	logrus.Info("Running infrastructure phase")
+
 	timestamp := time.Now().Unix()
 
 	if err := i.CreateFolder(); err != nil {
@@ -111,6 +118,8 @@ func (i *Infrastructure) Exec(opts []cluster.CreationPhaseOption) error {
 		return nil
 	}
 
+	logrus.Info("Running terraform apply...")
+
 	if _, err := i.tfRunner.Apply(timestamp); err != nil {
 		return fmt.Errorf("error running terraform apply: %w", err)
 	}
@@ -126,7 +135,9 @@ func (i *Infrastructure) Exec(opts []cluster.CreationPhaseOption) error {
 		}
 
 		for _, opt := range opts {
-			if strings.ToLower(opt.Name) == cluster.CreationPhaseOptionVPNAutoConnect {
+			if strings.ToLower(opt.Name) == cluster.OperationPhaseOptionVPNAutoConnect {
+				logrus.Info("Connecting to VPN")
+
 				if err := i.ovRunner.Connect(clientName); err != nil {
 					return fmt.Errorf("error connecting to vpn: %w", err)
 				}
@@ -180,7 +191,7 @@ func (i *Infrastructure) copyFromTemplate(kfdManifest config.KFD) error {
 		},
 	}
 
-	err = i.CreationPhase.CopyFromTemplate(
+	err = i.OperationPhase.CopyFromTemplate(
 		cfg,
 		prefix,
 		tmpFolder,

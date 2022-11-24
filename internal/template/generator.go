@@ -59,8 +59,6 @@ func (g *Generator) ProcessTemplate() (*template.Template, error) {
 	}
 
 	if errors.Is(err, os.ErrNotExist) {
-		logrus.Warnf("template helpers file '%s' not found\n", helpersPath)
-
 		tpl, err := template.New(filepath.Base(g.source)).Funcs(g.funcMap.FuncMap).ParseFiles(g.source)
 		if err != nil {
 			return nil, fmt.Errorf("error processing template: %w", err)
