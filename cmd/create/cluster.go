@@ -71,9 +71,9 @@ func NewClusterCmd(version string) *cobra.Command {
 			}
 
 			// Init paths.
-			basePath, err := os.Getwd()
+			basePath, err := os.UserHomeDir()
 			if err != nil {
-				return fmt.Errorf("error while getting current working directory: %w", err)
+				return fmt.Errorf("error while getting user home directory: %w", err)
 			}
 
 			binPath := filepath.Join(basePath, "vendor", "bin")

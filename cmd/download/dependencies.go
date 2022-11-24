@@ -44,9 +44,9 @@ func NewDependenciesCmd(furyctlBinVersion string) *cobra.Command {
 				return ErrDistroLocationNotSet
 			}
 
-			basePath, err := os.Getwd()
+			basePath, err := os.UserHomeDir()
 			if err != nil {
-				return fmt.Errorf("failed to get current working directory: %w", err)
+				return fmt.Errorf("failed to get current user home directory: %w", err)
 			}
 
 			client := netx.NewGoGetterClient()
