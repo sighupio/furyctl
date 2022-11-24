@@ -6,18 +6,21 @@ package execx
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"fmt"
 	"io"
 	"os"
 	"os/exec"
 	"strings"
+	"time"
 )
 
 var (
-	Debug        = false  //nolint:gochecknoglobals // This variable is shared between all the command instances.
-	LogFile      *os.File //nolint:gochecknoglobals // This variable is shared between all the command instances.
-	ErrCmdFailed = errors.New("command failed")
+	Debug         = false  //nolint:gochecknoglobals // This variable is shared between all the command instances.
+	LogFile       *os.File //nolint:gochecknoglobals // This variable is shared between all the command instances.
+	ErrCmdFailed  = errors.New("command failed")
+	ErrCmdTimeout = errors.New("command timed out")
 )
 
 func NewErrCmdFailed(name string, args []string, err error, res *CmdLog) error {
@@ -75,6 +78,40 @@ func (c *Cmd) Run() error {
 	return nil
 }
 
+func (c *Cmd) RunWithTimeout(timeout time.Duration) error {
+	var cmdCtx *exec.Cmd
+
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+
+	defer cancel()
+
+	if len(c.Cmd.Args) == 1 {
+		cmdCtx = exec.CommandContext(ctx, c.Cmd.Path)
+	} else {
+		args := c.Cmd.Args[1:]
+
+		cmdCtx = exec.CommandContext(ctx, c.Cmd.Path, args...)
+	}
+
+	cmdCtx.Dir = c.Cmd.Dir
+	cmdCtx.Stdout = c.Cmd.Stdout
+	cmdCtx.Stderr = c.Cmd.Stderr
+
+	err := cmdCtx.Run()
+
+	if errors.Is(ctx.Err(), context.DeadlineExceeded) {
+		return fmt.Errorf(
+			"%w after %s: %s %s", ErrCmdTimeout, timeout, c.Cmd.Path, strings.Join(c.Cmd.Args, " "),
+		)
+	}
+
+	if err != nil {
+		return NewErrCmdFailed(c.Cmd.Path, c.Cmd.Args, err, c.Log)
+	}
+
+	return nil
+}
+
 type CmdOptions struct {
 	Args     []string
 	Err      io.Writer
@@ -94,6 +131,15 @@ func (c CmdLog) String() string {
 
 func CombinedOutput(cmd *Cmd) (string, error) {
 	err := cmd.Run()
+
+	trimOut := strings.Trim(cmd.Log.Out.String(), "\n")
+	trimErr := strings.Trim(cmd.Log.Err.String(), "\n")
+
+	return strings.Trim(trimOut+"\n"+trimErr, "\n"), err
+}
+
+func CombinedOutputWithTimeout(cmd *Cmd, timeout time.Duration) (string, error) {
+	err := cmd.RunWithTimeout(timeout)
 
 	trimOut := strings.Trim(cmd.Log.Out.String(), "\n")
 	trimErr := strings.Trim(cmd.Log.Err.String(), "\n")

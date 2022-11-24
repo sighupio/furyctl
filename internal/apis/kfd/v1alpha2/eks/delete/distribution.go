@@ -24,6 +24,7 @@ import (
 )
 
 const (
+	ingressAfterDeleteDelay         = 2
 	checkPendingResourcesDelay      = 20
 	checkPendingResourcesMaxRetries = 5
 )
@@ -89,6 +90,12 @@ func (d *Distribution) Exec() error {
 		return nil
 	}
 
+	logrus.Info("Deleting ingresses")
+
+	if err = d.deleteIngresses(); err != nil {
+		return err
+	}
+
 	logrus.Info("Building manifests")
 
 	manifestsOutPath, err := d.buildManifests()
@@ -143,7 +150,7 @@ func (d *Distribution) buildManifests() (string, error) {
 }
 
 func (d *Distribution) checkPendingResource() error {
-	var errSvc, errPv error
+	var errSvc, errPv, errIgrs error
 
 	dur := time.Second * checkPendingResourcesDelay
 
@@ -159,7 +166,9 @@ func (d *Distribution) checkPendingResource() error {
 
 			errPv = d.getPersistentVolumes()
 
-			if errSvc == nil && errPv == nil {
+			errIgrs = d.getIngresses()
+
+			if errSvc == nil && errPv == nil && errIgrs == nil {
 				return nil
 			}
 		}
@@ -169,7 +178,20 @@ func (d *Distribution) checkPendingResource() error {
 		p.Stop()
 	}
 
-	return fmt.Errorf("%w:\n%v\n%v", errCheckPendingResources, errSvc, errPv)
+	return fmt.Errorf("%w:\n%v\n%v\n%v", errCheckPendingResources, errSvc, errPv, errIgrs)
+}
+
+func (d *Distribution) deleteIngresses() error {
+	dur := time.Minute * ingressAfterDeleteDelay
+
+	_, err := d.kubeRunner.DeleteAllResources("ingress", "all")
+	if err != nil {
+		return fmt.Errorf("error deleting ingresses: %w", err)
+	}
+
+	time.Sleep(dur)
+
+	return nil
 }
 
 func (d *Distribution) getLoadBalancers() error {
@@ -179,7 +201,7 @@ func (d *Distribution) getLoadBalancers() error {
 		return fmt.Errorf("error while reading resources from cluster: %w", err)
 	}
 
-	reg := regexp.MustCompile(`'(.*?)'\n`)
+	reg := regexp.MustCompile(`'(.*?)'`)
 
 	logStringIndex := reg.FindStringIndex(log)
 
@@ -187,7 +209,30 @@ func (d *Distribution) getLoadBalancers() error {
 		return fmt.Errorf("%w: error while parsing kubectl get response", errPendingResources)
 	}
 
-	logString := log[logStringIndex[0] : logStringIndex[1]-1]
+	logString := log[logStringIndex[0]:logStringIndex[1]]
+
+	if logString != "''" {
+		return fmt.Errorf("%w: %s", errPendingResources, logString)
+	}
+
+	return nil
+}
+
+func (d *Distribution) getIngresses() error {
+	log, err := d.kubeRunner.Get("all", "ingress", "-o", "jsonpath='{.items[*].metadata.name}'")
+	if err != nil {
+		return fmt.Errorf("error while reading resources from cluster: %w", err)
+	}
+
+	reg := regexp.MustCompile(`'(.*?)'`)
+
+	logStringIndex := reg.FindStringIndex(log)
+
+	if len(logStringIndex) == 0 {
+		return fmt.Errorf("%w: error while parsing kubectl get response", errPendingResources)
+	}
+
+	logString := log[logStringIndex[0]:logStringIndex[1]]
 
 	if logString != "''" {
 		return fmt.Errorf("%w: %s", errPendingResources, logString)
@@ -202,7 +247,7 @@ func (d *Distribution) getPersistentVolumes() error {
 		return fmt.Errorf("error while reading resources from cluster: %w", err)
 	}
 
-	reg := regexp.MustCompile(`'(.*?)'\n`)
+	reg := regexp.MustCompile(`'(.*?)'`)
 
 	logStringIndex := reg.FindStringIndex(log)
 
@@ -210,7 +255,7 @@ func (d *Distribution) getPersistentVolumes() error {
 		return fmt.Errorf("%w: error while parsing kubectl get response", errPendingResources)
 	}
 
-	logString := log[logStringIndex[0] : logStringIndex[1]-1]
+	logString := log[logStringIndex[0]:logStringIndex[1]]
 
 	if logString != "''" {
 		return fmt.Errorf("%w: %s", errPendingResources, logString)

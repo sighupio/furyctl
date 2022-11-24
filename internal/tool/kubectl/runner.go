@@ -6,8 +6,13 @@ package kubectl
 
 import (
 	"fmt"
+	"time"
 
 	execx "github.com/sighupio/furyctl/internal/x/exec"
+)
+
+const (
+	kubectlDeleteTimeout = 5 * time.Minute
 )
 
 type Paths struct {
@@ -75,6 +80,27 @@ func (r *Runner) Get(ns string, params ...string) (string, error) {
 	return out, nil
 }
 
+func (r *Runner) DeleteAllResources(res, ns string) (string, error) {
+	args := []string{"delete", res, "--all"}
+
+	if ns != "all" {
+		args = append(args, "-n", ns)
+	} else {
+		args = append(args, "-A")
+	}
+
+	out, err := execx.CombinedOutput(execx.NewCmd(r.paths.Kubectl, execx.CmdOptions{
+		Args:     args,
+		Executor: r.executor,
+		WorkDir:  r.paths.WorkDir,
+	}))
+	if err != nil {
+		return out, fmt.Errorf("error deleting all resources: %w", err)
+	}
+
+	return out, nil
+}
+
 func (r *Runner) Delete(manifestPath string) error {
 	args := []string{"delete"}
 
@@ -84,11 +110,11 @@ func (r *Runner) Delete(manifestPath string) error {
 
 	args = append(args, "-f", manifestPath)
 
-	_, err := execx.CombinedOutput(execx.NewCmd(r.paths.Kubectl, execx.CmdOptions{
+	_, err := execx.CombinedOutputWithTimeout(execx.NewCmd(r.paths.Kubectl, execx.CmdOptions{
 		Args:     args,
 		Executor: r.executor,
 		WorkDir:  r.paths.WorkDir,
-	}))
+	}), kubectlDeleteTimeout)
 	if err != nil {
 		return fmt.Errorf("error deleting resources: %w", err)
 	}

@@ -8,6 +8,7 @@ import (
 	"bufio"
 	"errors"
 	"fmt"
+	"github.com/sirupsen/logrus"
 	"os"
 	"strings"
 
@@ -92,10 +93,7 @@ func NewClusterCmd() *cobra.Command {
 				return fmt.Errorf("error while deleting cluster: %w", err)
 			}
 
-			_, err = fmt.Println("cluster deleted")
-			if err != nil {
-				return fmt.Errorf("error while printing success message: %w", err)
-			}
+			logrus.Info("Cluster deleted successfully!")
 
 			return nil
 		},
