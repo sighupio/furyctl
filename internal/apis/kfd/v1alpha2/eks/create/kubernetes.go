@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-package eks
+package create
 
 import (
 	"bytes"
@@ -15,6 +15,8 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
+
+	"github.com/sirupsen/logrus"
 
 	"github.com/sighupio/fury-distribution/pkg/config"
 	"github.com/sighupio/fury-distribution/pkg/schema"
@@ -35,7 +37,7 @@ var (
 )
 
 type Kubernetes struct {
-	*cluster.CreationPhase
+	*cluster.OperationPhase
 	furyctlConf      schema.EksclusterKfdV1Alpha2
 	kfdManifest      config.KFD
 	infraOutputsPath string
@@ -49,13 +51,13 @@ func NewKubernetes(
 	infraOutputsPath string,
 	dryRun bool,
 ) (*Kubernetes, error) {
-	phase, err := cluster.NewCreationPhase(".kubernetes")
+	phase, err := cluster.NewOperationPhase(".kubernetes")
 	if err != nil {
 		return nil, fmt.Errorf("error creating kubernetes phase: %w", err)
 	}
 
 	return &Kubernetes{
-		CreationPhase:    phase,
+		OperationPhase:   phase,
 		furyctlConf:      furyctlConf,
 		kfdManifest:      kfdManifest,
 		infraOutputsPath: infraOutputsPath,
@@ -74,6 +76,8 @@ func NewKubernetes(
 }
 
 func (k *Kubernetes) Exec() error {
+	logrus.Info("Running kubernetes phase")
+
 	timestamp := time.Now().Unix()
 
 	if err := k.CreateFolder(); err != nil {
@@ -103,6 +107,8 @@ func (k *Kubernetes) Exec() error {
 	if k.dryRun {
 		return nil
 	}
+
+	logrus.Info("Running terraform apply...")
 
 	out, err := k.tfRunner.Apply(timestamp)
 	if err != nil {
@@ -146,7 +152,7 @@ func (k *Kubernetes) copyFromTemplate() error {
 
 	cfg.Data = tfConfVars
 
-	err = k.CreationPhase.CopyFromTemplate(
+	err = k.OperationPhase.CopyFromTemplate(
 		cfg,
 		prefix,
 		tmpFolder,

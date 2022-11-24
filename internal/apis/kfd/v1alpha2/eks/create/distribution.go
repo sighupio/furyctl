@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-package eks
+package create
 
 import (
 	"encoding/json"
@@ -27,7 +27,10 @@ import (
 	yamlx "github.com/sighupio/furyctl/internal/x/yaml"
 )
 
-const KubectlMaxRetry = 3
+const (
+	kubectlDelayMaxRetry   = 3
+	kubectlNoDelayMaxRetry = 7
+)
 
 var (
 	errCastingVpcIDToStr     = errors.New("error casting vpc_id output to string")
@@ -41,7 +44,7 @@ var (
 )
 
 type Distribution struct {
-	*cluster.CreationPhase
+	*cluster.OperationPhase
 	furyctlConfPath  string
 	furyctlConf      schema.EksclusterKfdV1Alpha2
 	kfdManifest      config.KFD
@@ -65,13 +68,13 @@ func NewDistribution(
 	infraOutputsPath string,
 	dryRun bool,
 ) (*Distribution, error) {
-	phase, err := cluster.NewCreationPhase(".distribution")
+	phase, err := cluster.NewOperationPhase(".distribution")
 	if err != nil {
 		return nil, fmt.Errorf("error creating distribution phase: %w", err)
 	}
 
 	return &Distribution{
-		CreationPhase:    phase,
+		OperationPhase:   phase,
 		furyctlConf:      furyctlConf,
 		kfdManifest:      kfdManifest,
 		infraOutputsPath: infraOutputsPath,
@@ -101,12 +104,15 @@ func NewDistribution(
 				WorkDir: path.Join(phase.Path, "manifests"),
 			},
 			true,
+			true,
 		),
 		dryRun: dryRun,
 	}, nil
 }
 
 func (d *Distribution) Exec() error {
+	logrus.Info("Running distribution phase")
+
 	timestamp := time.Now().Unix()
 
 	if err := d.CreateFolder(); err != nil {
@@ -148,6 +154,8 @@ func (d *Distribution) Exec() error {
 		return nil
 	}
 
+	logrus.Info("Running terraform apply...")
+
 	_, err = d.tfRunner.Apply(timestamp)
 	if err != nil {
 		return fmt.Errorf("error running terraform apply: %w", err)
@@ -167,14 +175,14 @@ func (d *Distribution) Exec() error {
 		return err
 	}
 
-	logrus.Info("Building manifests")
+	logrus.Info("Building manifests...")
 
 	manifestsOutPath, err := d.buildManifests()
 	if err != nil {
 		return err
 	}
 
-	logrus.Info("Applying manifests")
+	logrus.Info("Applying manifests...")
 
 	return d.applyManifests(manifestsOutPath)
 }
@@ -488,15 +496,51 @@ func (d *Distribution) buildManifests() (string, error) {
 }
 
 func (d *Distribution) applyManifests(mPath string) error {
+	err := d.delayedApplyRetries(mPath, time.Minute, kubectlDelayMaxRetry)
+	if err == nil {
+		return nil
+	}
+
+	err = d.delayedApplyRetries(mPath, 0, kubectlNoDelayMaxRetry)
+	if err == nil {
+		return nil
+	}
+
+	return err
+}
+
+func (d *Distribution) delayedApplyRetries(mPath string, delay time.Duration, maxRetries int) error {
 	var err error
 
-	for i := 0; i < KubectlMaxRetry; i++ {
-		err = d.kubeRunner.Apply(mPath)
+	retries := 0
+
+	if maxRetries == 0 {
+		return nil
 	}
 
-	if err != nil {
-		return fmt.Errorf("error applying manifests: %w", err)
+	err = d.kubeRunner.Apply(mPath)
+	if err == nil {
+		return nil
 	}
 
-	return nil
+	retries++
+
+	for retries < maxRetries {
+		t := time.NewTimer(delay)
+
+		if <-t.C; true {
+			logrus.Info("retrying kubectl apply after delay")
+
+			err = d.kubeRunner.Apply(mPath)
+			if err == nil {
+				return nil
+			}
+		}
+
+		retries++
+
+		t.Stop()
+	}
+
+	return fmt.Errorf("error applying manifests: %w", err)
 }
