@@ -280,12 +280,16 @@ var (
 
 			It("should download all dependencies for v1.23.3", func() {
 				bp := basepath + "/v1.23.3"
-				vp := bp + "/vendor"
+
+				homeDir, err := os.UserHomeDir()
+				Expect(err).To(Not(HaveOccurred()))
+
+				vp := path.Join(homeDir, ".furyctl", "awesome-cluster-staging", "vendor")
 
 				RemoveAll(vp)
 				defer RemoveAll(vp)
 
-				_, err := FuryctlDownloadDependencies(bp)
+				_, err = FuryctlDownloadDependencies(bp)
 
 				Expect(err).To(Not(HaveOccurred()))
 				Expect(vp + "/bin/furyagent").To(BeAnExistingFile())
@@ -440,7 +444,7 @@ var (
 			})
 		})
 
-		Context("create cluster dry run", Label("slow"), func() {
+		Context("create cluster dry run", Ordered, Label("slow"), func() {
 			var w string
 			var absBasePath string
 
@@ -499,7 +503,11 @@ var (
 
 				furyctlYamlPath := path.Join(absBasePath, "data/furyctl.yaml")
 				distroPath := path.Join(absBasePath, "data")
-				tfPath := path.Join(w, ".infrastructure", "terraform")
+
+				homeDir, err := os.UserHomeDir()
+				Expect(err).To(Not(HaveOccurred()))
+
+				tfPath := path.Join(homeDir, ".furyctl", "furyctl-dev-aws", ".infrastructure", "terraform")
 
 				createInfraCmd := FuryctlCreateCluster(furyctlYamlPath, distroPath, "infrastructure", true)
 				session, err := gexec.Start(createInfraCmd, GinkgoWriter, GinkgoWriter)
@@ -524,7 +532,11 @@ var (
 
 				furyctlYamlPath := path.Join(absBasePath, "data/furyctl.yaml")
 				distroPath := path.Join(absBasePath, "data")
-				tfPath := path.Join(w, ".kubernetes", "terraform")
+
+				homeDir, err := os.UserHomeDir()
+				Expect(err).To(Not(HaveOccurred()))
+
+				tfPath := path.Join(homeDir, ".furyctl", "furyctl-dev-aws", ".kubernetes", "terraform")
 
 				createKubeCmd := FuryctlCreateCluster(furyctlYamlPath, distroPath, "kubernetes", true)
 				session, err := gexec.Start(createKubeCmd, GinkgoWriter, GinkgoWriter)
