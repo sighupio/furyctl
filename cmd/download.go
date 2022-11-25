@@ -18,10 +18,10 @@ import (
 )
 
 var (
-	fallbackHttpsRepoPrefix = "git::https://github.com/sighupio/fury-kubernetes"
-	fallbackSshRepoPrefix   = "git@github.com:sighupio/fury-kubernetes"
-	httpsRepoPrefix         = "git::https://github.com/sighupio/kubernetes-fury"
-	sshRepoPrefix           = "git@github.com:sighupio/kubernetes-fury"
+	httpsRepoPrefix         = "git::https://github.com/sighupio/fury-kubernetes"
+	sshRepoPrefix           = "git@github.com:sighupio/fury-kubernetes"
+	fallbackHttpsRepoPrefix = "git::https://github.com/sighupio/kubernetes-fury"
+	fallbackSshRepoPrefix   = "git@github.com:sighupio/kubernetes-fury"
 )
 
 type DownloadOpts struct {
@@ -91,56 +91,78 @@ func (n *PackageURL) getURLFromCompanyRepos() string {
 }
 
 func downloadProcess(wg *sync.WaitGroup, opts DownloadOpts, data Package, errChan chan<- error, i int) {
+	var pU *PackageURL
+	var url string
 	// deferring the worker to be done
 	defer wg.Done()
 
 	logrus.Debugf("%d : received data %v", i, data)
 
-	// Checking git clone protocol
-	p := sshRepoPrefix
-
 	if opts.Https {
-		p = httpsRepoPrefix
-	}
+		// Create the package URL from the data received to download the package
+		pU = newPackageURL(
+			httpsRepoPrefix,
+			strings.Split(data.Name, "/"),
+			data.Kind,
+			data.Version,
+			data.Registry,
+			data.ProviderOpt,
+			data.ProviderKind)
 
-	// Create the package URL from the data received to download the package
-	pU := newPackageURL(
-		p,
-		strings.Split(data.Name, "/"),
-		data.Kind,
-		data.Version,
-		data.Registry,
-		data.ProviderOpt,
-		data.ProviderKind)
-
-	resp, err := checkRepository(pU)
-	if err != nil {
-		errChan <- err
-		return
-	}
-
-	if resp.StatusCode == http.StatusUnauthorized || resp.StatusCode == http.StatusNotFound {
-		// Checking if repository was found otherwise fallback to the old prefix, if fallback fails sends error to tehe error channel
-		o := humanReadableSource(pU.getConsumableURL())
-
-		if opts.Https {
-			pU.Prefix = fallbackHttpsRepoPrefix
-		} else {
-			pU.Prefix = fallbackSshRepoPrefix
-		}
-
-		logrus.Infof("error downloading %s, falling back to %s", o, humanReadableSource(pU.getConsumableURL()))
-
-		if resp, err := checkRepository(pU); err != nil || resp.StatusCode == http.StatusUnauthorized || resp.StatusCode == http.StatusNotFound {
-			errChan <- fmt.Errorf("Unable to download %s. Please check repository exists or if your credentials are correctlly configured", humanReadableSource(pU.getConsumableURL()))
+		resp, err := checkRepository(pU)
+		if err != nil {
+			errChan <- err
 			return
 		}
 
+		if resp.StatusCode == http.StatusUnauthorized || resp.StatusCode == http.StatusNotFound {
+			// Checking if repository was found otherwise fallback to the old prefix, if fallback fails sends error to tehe error channel
+			pU.Prefix = fallbackHttpsRepoPrefix
+
+			o := humanReadableSource(pU.getConsumableURL())
+
+			logrus.Infof("error downloading %s, falling back to %s", o, humanReadableSource(pU.getConsumableURL()))
+
+			if resp, err := checkRepository(pU); err != nil || resp.StatusCode == http.StatusUnauthorized || resp.StatusCode == http.StatusNotFound {
+				errChan <- fmt.Errorf("Unable to download %s. Please check repository exists or if your credentials are correctlly configured", humanReadableSource(pU.getConsumableURL()))
+				return
+			}
+
+		}
+
+		url = pU.getConsumableURL()
+		if token := os.Getenv("GITHUB_TOKEN"); token != "" && opts.Https {
+			url = normalizeURLWithToken(pU.getConsumableURL())
+		}
 	}
 
-	url := pU.getConsumableURL()
-	if token := os.Getenv("GITHUB_TOKEN"); token != "" && opts.Https {
-		url = normalizeURLWithToken(pU.getConsumableURL())
+	if !opts.Https {
+		pU = newPackageURL(
+			sshRepoPrefix,
+			strings.Split(data.Name, "/"),
+			data.Kind,
+			data.Version,
+			data.Registry,
+			data.ProviderOpt,
+			data.ProviderKind)
+
+		url = pU.getConsumableURL()
+
+		if err := get(url, data.Dir, getter.ClientModeDir, true); err != nil {
+			// Checking if repository was found otherwise fallback to the old prefix, if fallback fails sends error to tehe error channel
+			pU.Prefix = fallbackSshRepoPrefix
+
+			o := humanReadableSource(pU.getConsumableURL())
+
+			logrus.Infof("error downloading %s, falling back to %s", o, humanReadableSource(pU.getConsumableURL()))
+
+			url = pU.getConsumableURL()
+
+			if err := get(url, data.Dir, getter.ClientModeDir, true); err != nil {
+				errChan <- fmt.Errorf("Unable to download %s. Please check repository exists or if your credentials are correctlly configured", humanReadableSource(pU.getConsumableURL()))
+				return
+			}
+		}
 	}
 
 	downloadErr := get(url, data.Dir, getter.ClientModeDir, true)
