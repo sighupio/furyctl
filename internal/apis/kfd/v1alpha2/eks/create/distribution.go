@@ -64,11 +64,14 @@ func NewDistribution(
 	furyctlConfPath string,
 	furyctlConf schema.EksclusterKfdV1Alpha2,
 	kfdManifest config.KFD,
+	workDir string,
 	distroPath string,
 	infraOutputsPath string,
 	dryRun bool,
 ) (*Distribution, error) {
-	phase, err := cluster.NewOperationPhase(".distribution")
+	distroDir := path.Join(workDir, ".distribution")
+
+	phase, err := cluster.NewOperationPhase(distroDir)
 	if err != nil {
 		return nil, fmt.Errorf("error creating distribution phase: %w", err)
 	}

@@ -42,9 +42,9 @@ type OperationPhaseOption struct {
 }
 
 func NewOperationPhase(folder string) (*OperationPhase, error) {
-	basePath := path.Join(folder)
+	basePath := folder
 
-	vendorPath, err := filepath.Abs("./vendor")
+	vendorPath, err := filepath.Abs(path.Join(basePath, "../", "vendor"))
 	if err != nil {
 		return &OperationPhase{}, fmt.Errorf("error getting absolute path for vendor folder: %w", err)
 	}

@@ -71,19 +71,15 @@ func NewClusterCmd(version string) *cobra.Command {
 			}
 
 			// Init paths.
-			basePath, err := os.UserHomeDir()
+			homeDir, err := os.UserHomeDir()
 			if err != nil {
 				return fmt.Errorf("error while getting user home directory: %w", err)
 			}
 
-			binPath := filepath.Join(basePath, "vendor", "bin")
-
-			// Init collaborators.
+			// Init first half of collaborators.
 			client := netx.NewGoGetterClient()
 			executor := execx.NewStdExecutor()
 			distrodl := distribution.NewDownloader(client, debug)
-			depsdl := dependencies.NewDownloader(client, basePath)
-			depsvl := dependencies.NewValidator(executor, binPath)
 
 			// Init packages.
 			execx.Debug = debug
@@ -94,6 +90,14 @@ func NewClusterCmd(version string) *cobra.Command {
 			if err != nil {
 				return fmt.Errorf("error while downloading distribution: %w", err)
 			}
+
+			basePath := filepath.Join(homeDir, ".furyctl", res.MinimalConf.Metadata.Name)
+
+			binPath := filepath.Join(basePath, "vendor", "bin")
+
+			// Init second half of collaborators.
+			depsdl := dependencies.NewDownloader(client, basePath)
+			depsvl := dependencies.NewValidator(executor, binPath)
 
 			// Validate the furyctl.yaml file.
 			logrus.Info("Validating furyctl.yaml file...")
@@ -119,6 +123,7 @@ func NewClusterCmd(version string) *cobra.Command {
 			clusterCreator, err := cluster.NewCreator(
 				res.MinimalConf,
 				res.DistroManifest,
+				basePath,
 				res.RepoPath,
 				furyctlPath,
 				phase,

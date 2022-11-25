@@ -50,9 +50,12 @@ type Infrastructure struct {
 func NewInfrastructure(
 	furyctlConf schema.EksclusterKfdV1Alpha2,
 	kfdManifest config.KFD,
+	workDir string,
 	dryRun bool,
 ) (*Infrastructure, error) {
-	phase, err := cluster.NewOperationPhase(".infrastructure")
+	infraDir := path.Join(workDir, ".infrastructure")
+
+	phase, err := cluster.NewOperationPhase(infraDir)
 	if err != nil {
 		return nil, fmt.Errorf("error creating infrastructure phase: %w", err)
 	}

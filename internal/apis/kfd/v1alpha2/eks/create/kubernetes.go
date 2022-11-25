@@ -48,10 +48,13 @@ type Kubernetes struct {
 func NewKubernetes(
 	furyctlConf schema.EksclusterKfdV1Alpha2,
 	kfdManifest config.KFD,
+	workDir string,
 	infraOutputsPath string,
 	dryRun bool,
 ) (*Kubernetes, error) {
-	phase, err := cluster.NewOperationPhase(".kubernetes")
+	kubeDir := path.Join(workDir, ".kubernetes")
+
+	phase, err := cluster.NewOperationPhase(kubeDir)
 	if err != nil {
 		return nil, fmt.Errorf("error creating kubernetes phase: %w", err)
 	}
