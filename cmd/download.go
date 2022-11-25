@@ -116,10 +116,10 @@ func downloadProcess(wg *sync.WaitGroup, opts DownloadOpts, data Package, errCha
 		}
 
 		if resp.StatusCode == http.StatusUnauthorized || resp.StatusCode == http.StatusNotFound {
+			o := humanReadableSource(pU.getConsumableURL())
+
 			// Checking if repository was found otherwise fallback to the old prefix, if fallback fails sends error to tehe error channel
 			pU.Prefix = fallbackHttpsRepoPrefix
-
-			o := humanReadableSource(pU.getConsumableURL())
 
 			logrus.Infof("error downloading %s, falling back to %s", o, humanReadableSource(pU.getConsumableURL()))
 
@@ -149,10 +149,10 @@ func downloadProcess(wg *sync.WaitGroup, opts DownloadOpts, data Package, errCha
 		url = pU.getConsumableURL()
 
 		if err := get(url, data.Dir, getter.ClientModeDir, true); err != nil {
+			o := humanReadableSource(pU.getConsumableURL())
+
 			// Checking if repository was found otherwise fallback to the old prefix, if fallback fails sends error to tehe error channel
 			pU.Prefix = fallbackSshRepoPrefix
-
-			o := humanReadableSource(pU.getConsumableURL())
 
 			logrus.Infof("error downloading %s, falling back to %s", o, humanReadableSource(pU.getConsumableURL()))
 
