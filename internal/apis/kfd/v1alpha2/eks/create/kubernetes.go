@@ -122,7 +122,11 @@ func (k *Kubernetes) Exec() error {
 		return err
 	}
 
-	return k.setKubeconfigEnv()
+	if err := k.setKubeconfigEnv(); err != nil {
+		return err
+	}
+
+	return k.copyKubeconfigToWorkDir()
 }
 
 func (k *Kubernetes) copyFromTemplate() error {
@@ -195,6 +199,30 @@ func (k *Kubernetes) setKubeconfigEnv() error {
 	err = os.Setenv("KUBECONFIG", kubePath)
 	if err != nil {
 		return fmt.Errorf("error setting kubeconfig env: %w", err)
+	}
+
+	return nil
+}
+
+func (k *Kubernetes) copyKubeconfigToWorkDir() error {
+	currentDir, err := os.Getwd()
+	if err != nil {
+		return fmt.Errorf("error getting current dir: %w", err)
+	}
+
+	kubePath, err := filepath.Abs(path.Join(k.SecretsPath, "kubeconfig"))
+	if err != nil {
+		return fmt.Errorf("error getting kubeconfig absolute path: %w", err)
+	}
+
+	kubeconfig, err := os.ReadFile(kubePath)
+	if err != nil {
+		return fmt.Errorf("error reading kubeconfig file: %w", err)
+	}
+
+	err = os.WriteFile(path.Join(currentDir, "kubeconfig"), kubeconfig, iox.FullRWPermAccess)
+	if err != nil {
+		return fmt.Errorf("error writing kubeconfig file: %w", err)
 	}
 
 	return nil
