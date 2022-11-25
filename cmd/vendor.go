@@ -1,4 +1,4 @@
-// Copyright (c) 2022 SIGHUP s.r.l All rights reserved.
+// Copyright (c) 2017-present SIGHUP s.r.l All rights reserved.
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
@@ -11,8 +11,8 @@ import (
 )
 
 func init() {
-	vendorCmd.PersistentFlags().BoolVarP(&conf.DownloadOpts.Https, "https", "H", false, "if true downloads using https instead of ssh")
-	vendorCmd.PersistentFlags().StringVarP(&conf.Prefix, "prefix", "P", "", "Add filtering on download with prefix, to reduce update scope")
+	vendorCmd.PersistentFlags().BoolVarP(&conf.DownloadOpts.Https, "https", "H", false, "download using HTTPS instead of SSH protocol. Use when SSH traffic is being blocked or when SSH client has not been configured\nset the GITHUB_TOKEN environment variable with your token to use authentication while downloading")
+	vendorCmd.PersistentFlags().StringVarP(&conf.Prefix, "prefix", "P", "", "download modules that start with prefix only to reduce download scope. Example:\nfuryctl vendor -P mon\nwill download all modules that start with 'mon', like 'monitoring', and ignore the rest")
 	rootCmd.AddCommand(vendorCmd)
 }
 
@@ -27,8 +27,8 @@ type Config struct {
 // vendorCmd represents the vendor command
 var vendorCmd = &cobra.Command{
 	Use:           "vendor",
-	Short:         "Download dependencies specified in Furyfile.yml",
-	Long:          "Download dependencies specified in Furyfile.yml",
+	Short:         "download KFD modules and dependencies specified in Furyfile.yml",
+	Long:          "download KFD modules and dependencies specified in Furyfile.yml",
 	SilenceUsage:  true,
 	SilenceErrors: true,
 	RunE: func(cmd *cobra.Command, args []string) error {
@@ -57,9 +57,9 @@ var vendorCmd = &cobra.Command{
 
 		for _, p := range list {
 			if p.Version == "" {
-				logrus.Warnf("package %s has no version specified. Using default branch from remote.", p.Name)
+				logrus.Warnf("package '%s' has no version specified. Will download the default git branch", p.Name)
 			} else {
-				logrus.Infof("using %v for package %s", p.Version, p.Name)
+				logrus.Infof("using version '%v' for package '%s'", p.Version, p.Name)
 			}
 		}
 

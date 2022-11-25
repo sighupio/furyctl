@@ -1,4 +1,4 @@
-// Copyright (c) 2022 SIGHUP s.r.l All rights reserved.
+// Copyright (c) 2017-present SIGHUP s.r.l All rights reserved.
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
@@ -27,28 +27,30 @@ type Furyconf struct {
 }
 
 // ProviderPattern is the abstraction of the following structure:
-//provider:
-//   modules:
-//     aws
-//      - uri: https://github.com/terraform-aws-modules
-//        label: official-modules
+// provider:
+//
+//	modules:
+//	  aws
+//	   - uri: https://github.com/terraform-aws-modules
+//	     label: official-modules
 type ProviderPattern map[string]ProviderKind
 
 // ProviderKind is the abstraction of the following structure:
 //
 // modules:
-//   aws
-//    - uri: https://github.com/terraform-aws-modules
-//      label: official-modules
+//
+//	aws
+//	 - uri: https://github.com/terraform-aws-modules
+//	   label: official-modules
 type ProviderKind map[string][]RegistrySpec
 
-//RegistrySpec contains the couple uri/label to identify each tf new repo declared
+// RegistrySpec contains the couple uri/label to identify each tf new repo declared
 type RegistrySpec struct {
 	BaseURI string `mapstructure:"url"`
 	Label   string `mapstructure:"label"`
 }
 
-//VersionPattern Map from glob pattern to version associated (e.g. {"aws/*" : "v1.15.4-1"}
+// VersionPattern Map from glob pattern to version associated (e.g. {"aws/*" : "v1.15.4-1"}
 type VersionPattern map[string]string
 
 // Package is the type to contain the definition of a single package
@@ -79,24 +81,36 @@ func (f *Furyconf) Validate() error {
 
 // Parse reads the furyconf structs and created a list of packaged to be downloaded
 func (f *Furyconf) Parse(prefix string) ([]Package, error) {
-	pkgs := make([]Package, 0, 0)
+	pkgs := make([]Package, 0)
+	if prefix != "" {
+		logrus.Infof("prefix is set to '%s', downloading only matching modules", prefix)
+	}
 	// First we aggregate all packages in one single list
 	for _, v := range f.Roles {
 		v.Kind = "roles"
 		if strings.HasPrefix(v.Name, prefix) {
+			logrus.Debugf("role '%s' matches prefix, adding it to the download list", v.Name)
 			pkgs = append(pkgs, v)
+		} else {
+			logrus.Debugf("role '%s' does not match prefix, skipping it", v.Name)
 		}
 	}
 	for _, v := range f.Modules {
 		v.Kind = "modules"
 		if strings.HasPrefix(v.Name, prefix) {
+			logrus.Debugf("module '%s' matches prefix, adding it to the download list", v.Name)
 			pkgs = append(pkgs, v)
+		} else {
+			logrus.Debugf("module '%s' does not match prefix, skipping it", v.Name)
 		}
 	}
 	for _, v := range f.Bases {
 		v.Kind = "katalog"
 		if strings.HasPrefix(v.Name, prefix) {
+			logrus.Debugf("katalog '%s' matches prefix, adding it to the download list", v.Name)
 			pkgs = append(pkgs, v)
+		} else {
+			logrus.Debugf("katalog '%s' does not match prefix, skipping it", v.Name)
 		}
 	}
 
