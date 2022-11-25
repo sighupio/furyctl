@@ -1,4 +1,4 @@
-// Copyright (c) 2022 SIGHUP s.r.l All rights reserved.
+// Copyright (c) 2017-present SIGHUP s.r.l All rights reserved.
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
@@ -7,6 +7,7 @@ package cmd
 import (
 	"errors"
 	"fmt"
+	"net/http"
 	"os"
 	"path"
 	"strings"
@@ -17,10 +18,10 @@ import (
 )
 
 var (
-	fallbackHttpsRepoPrefix = "git::https://github.com/sighupio/fury-kubernetes"
-	fallbackSshRepoPrefix   = "git@github.com:sighupio/fury-kubernetes"
-	httpsRepoPrefix         = "git::https://github.com/sighupio/kubernetes-fury"
-	sshRepoPrefix           = "git@github.com:sighupio/kubernetes-fury"
+	httpsRepoPrefix         = "git::https://github.com/sighupio/fury-kubernetes"
+	sshRepoPrefix           = "git@github.com:sighupio/fury-kubernetes"
+	fallbackHttpsRepoPrefix = "git::https://github.com/sighupio/kubernetes-fury"
+	fallbackSshRepoPrefix   = "git@github.com:sighupio/kubernetes-fury"
 )
 
 type DownloadOpts struct {
@@ -90,52 +91,85 @@ func (n *PackageURL) getURLFromCompanyRepos() string {
 }
 
 func downloadProcess(wg *sync.WaitGroup, opts DownloadOpts, data Package, errChan chan<- error, i int) {
+	var pU *PackageURL
+	var url string
 	// deferring the worker to be done
 	defer wg.Done()
 
-	logrus.Debugf("%d : received data %v", i, data)
-
-	// Checking git clone protocol
-	p := sshRepoPrefix
+	logrus.Debugf("worker %d : received data %v", i, data)
 
 	if opts.Https {
-		p = httpsRepoPrefix
+		// Create the package URL from the data received to download the package
+		pU = newPackageURL(
+			httpsRepoPrefix,
+			strings.Split(data.Name, "/"),
+			data.Kind,
+			data.Version,
+			data.Registry,
+			data.ProviderOpt,
+			data.ProviderKind)
+
+		resp, err := checkRepository(pU)
+		if err != nil {
+			errChan <- err
+			return
+		}
+
+		if resp.StatusCode == http.StatusUnauthorized || resp.StatusCode == http.StatusNotFound {
+			o := humanReadableSource(pU.getConsumableURL())
+
+			// Checking if repository was found otherwise fallback to the old prefix, if fallback fails sends error to tehe error channel
+			pU.Prefix = fallbackHttpsRepoPrefix
+
+			logrus.Infof("downloading '%s' failed, falling back to '%s' and retrying", o, humanReadableSource(pU.getConsumableURL()))
+
+			if resp, err := checkRepository(pU); err != nil || resp.StatusCode == http.StatusUnauthorized || resp.StatusCode == http.StatusNotFound {
+				errChan <- fmt.Errorf("error downloading %s for '%s' version '%s'. Both urls '%s' and '%s' have failed. Please check that the repository exists and that your credentials are correctlly configured. You might want to try using the -H flag", data.Kind, data.Name, data.Version, o, humanReadableSource(pU.getConsumableURL()))
+				return
+			}
+
+		}
+
+		url = pU.getConsumableURL()
+		if token := os.Getenv("GITHUB_TOKEN"); token != "" && opts.Https {
+			url = normalizeURLWithToken(pU.getConsumableURL())
+		}
 	}
 
-	// Create the package URL from the data received to download the package
-	pU := newPackageURL(
-		p,
-		strings.Split(data.Name, "/"),
-		data.Kind,
-		data.Version,
-		data.Registry,
-		data.ProviderOpt,
-		data.ProviderKind)
+	if !opts.Https {
+		pU = newPackageURL(
+			sshRepoPrefix,
+			strings.Split(data.Name, "/"),
+			data.Kind,
+			data.Version,
+			data.Registry,
+			data.ProviderOpt,
+			data.ProviderKind)
 
-	u := pU.getConsumableURL()
+		url = pU.getConsumableURL()
 
-	downloadErr := get(u, data.Dir, getter.ClientModeDir, true)
+		if err := get(url, data.Dir, getter.ClientModeDir, true); err != nil {
+			o := humanReadableSource(pU.getConsumableURL())
 
-	// Checking if repository was found otherwise fallback to the old prefix, if fallback fails sends error to the error channel
-	if downloadErr != nil && strings.Contains(downloadErr.Error(), "Repository not found") {
-		o := humanReadableSource(pU.getConsumableURL())
-
-		if opts.Https {
-			pU.Prefix = fallbackHttpsRepoPrefix
-		} else {
+			// Checking if repository was found otherwise fallback to the old prefix, if fallback fails sends error to tehe error channel
 			pU.Prefix = fallbackSshRepoPrefix
-		}
 
-		logrus.Infof("error downloading %s, falling back to %s", o, humanReadableSource(pU.getConsumableURL()))
+			logrus.Infof("downloading '%s' failed, falling back to %s and retrying", o, humanReadableSource(pU.getConsumableURL()))
 
-		downloadErr = get(pU.getConsumableURL(), data.Dir, getter.ClientModeDir, true)
-		if downloadErr != nil {
-			if err := os.RemoveAll(data.Dir); err != nil {
-				logrus.Errorf("error removing directory %s: %s", data.Dir, err.Error())
+			url = pU.getConsumableURL()
+
+			if err := get(url, data.Dir, getter.ClientModeDir, true); err != nil {
+				errChan <- fmt.Errorf("error downloading %s for '%s' version '%s'. Both urls '%s' and '%s' have failed. Please check that the repository exists and that your credentials are correctlly configured. You might want to try using the -H flag", data.Kind, data.Name, data.Version, o, humanReadableSource(pU.getConsumableURL()))
+				return
 			}
-			errChan <- downloadErr
 		}
-	} else if downloadErr != nil {
+	}
+
+	downloadErr := get(url, data.Dir, getter.ClientModeDir, true)
+	if downloadErr != nil {
+		if err := os.RemoveAll(data.Dir); err != nil {
+			logrus.Errorf("error removing directory '%s': %s", data.Dir, err.Error())
+		}
 		errChan <- downloadErr
 	}
 }
@@ -182,14 +216,14 @@ func Download(packages []Package, opts DownloadOpts) error {
 			}
 		}
 
-		return errors.New("download failed. See the logs")
+		return errors.New("some downloads have failed. Please check the logs")
 	}
 
 	return nil
 }
 
 func get(src, dest string, mode getter.ClientMode, cleanGitFolder bool) error {
-	logrus.Debugf("starting download process: %s -> %s", src, dest)
+	logrus.Debugf("starting download process for '%s' into '%s'", src, dest)
 
 	pwd, err := os.Getwd()
 	if err != nil {
@@ -203,11 +237,11 @@ func get(src, dest string, mode getter.ClientMode, cleanGitFolder bool) error {
 		Mode: mode,
 	}
 
-	logrus.Debugf("downloading temporary file: %s -> %s", client.Src, client.Dst)
+	logrus.Debugf("downloading temporary file '%s' into '%s'", client.Src, client.Dst)
 
 	h := humanReadableSource(src)
 
-	logrus.Infof("downloading: %s -> %s", h, dest)
+	logrus.Infof("downloading '%s' into '%s'", h, dest)
 
 	if err := os.RemoveAll(client.Dst); err != nil {
 		return err
@@ -223,7 +257,7 @@ func get(src, dest string, mode getter.ClientMode, cleanGitFolder bool) error {
 
 	if cleanGitFolder {
 		gitFolder := fmt.Sprintf("%s/.git", dest)
-		logrus.Infof("cleaning git subfolder: %s", gitFolder)
+		logrus.Infof("removing git subfolder: %s", gitFolder)
 		if err = os.RemoveAll(gitFolder); err != nil {
 			return err
 		}
@@ -254,7 +288,7 @@ func humanReadableSource(src string) (humanReadableSrc string) {
 
 func renameDir(src string, dest string) error {
 	if _, err := os.Stat(dest); !os.IsNotExist(err) {
-		logrus.Infof("removing target path: %s", dest)
+		logrus.Infof("removing existing folder: %s", dest)
 		err = os.RemoveAll(dest)
 		if err != nil {
 			logrus.Error(err)
@@ -263,4 +297,80 @@ func renameDir(src string, dest string) error {
 	}
 
 	return os.Rename(src, dest)
+}
+
+func normalizeURL(src string) string {
+	var s string
+
+	if strings.HasPrefix(src, "git@") {
+		s = strings.Split(src, "//")[0]
+		s = strings.Replace(s, "git@github.com:", "https://github.com/", 1)
+	}
+
+	if strings.HasPrefix(src, "git::") {
+		_, s, _ = strings.Cut(src, "git::")
+	}
+
+	return strings.Split(s, ".git/")[0]
+}
+
+func normalizeURLWithAPI(src string) string {
+	var s string
+
+	if strings.HasPrefix(src, "git@") {
+		s = strings.Split(src, "//")[0]
+		s = strings.Replace(s, "git@github.com:", "https://api.github.com/repos/", 1)
+	}
+
+	if strings.HasPrefix(src, "git::") {
+		s = strings.Replace(src, "git::https://github.com/", "https://api.github.com/repos/", 1)
+	}
+
+	return strings.Split(s, ".git/")[0]
+}
+
+func normalizeURLWithToken(src string) string {
+
+	s := strings.Replace(src, "git::https://", "git::https://oauth2:"+os.Getenv("GITHUB_TOKEN")+"@", 1)
+
+	return s
+}
+
+func checkRepository(pu *PackageURL) (*http.Response, error) {
+	var url string
+
+	token := os.Getenv("GITHUB_TOKEN")
+	if token != "" {
+		url = normalizeURLWithAPI(pu.getConsumableURL())
+	} else {
+		url = normalizeURL(pu.getConsumableURL())
+	}
+
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Set("Accept", "application/vnd.github.v3+json")
+	gh_token := os.Getenv("GITHUB_TOKEN")
+	if gh_token != "" {
+		req.Header.Set("Authorization", "Bearer "+gh_token)
+	}
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+
+	// Maybe the repository is public but token is wrong, so we try again without token
+	if resp.StatusCode == http.StatusUnauthorized {
+		url = normalizeURL(pu.getConsumableURL())
+		req, err := http.NewRequest("GET", url, nil)
+		if err != nil {
+			return nil, err
+		}
+
+		return http.DefaultClient.Do(req)
+	}
+
+	return resp, nil
 }
