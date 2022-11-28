@@ -54,7 +54,7 @@ type Factory struct {
 }
 
 func (f *Factory) Create(name, version string) Tool {
-	t := f.runnerFactory.Create(name, "")
+	t := f.runnerFactory.Create(name, version, "")
 
 	if name == tool.Ansible {
 		a, ok := t.(*ansible.Runner)

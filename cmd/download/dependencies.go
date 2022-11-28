@@ -61,7 +61,9 @@ func NewDependenciesCmd(furyctlBinVersion string) *cobra.Command {
 
 			basePath := filepath.Join(homeDir, ".furyctl", dres.MinimalConf.Metadata.Name)
 
-			depsdl := dependencies.NewDownloader(client, basePath)
+			binPath := filepath.Join(homeDir, ".furyctl", "bin")
+
+			depsdl := dependencies.NewDownloader(client, basePath, binPath)
 
 			errs, uts := depsdl.DownloadAll(dres.DistroManifest)
 

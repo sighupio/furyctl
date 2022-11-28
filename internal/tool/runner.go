@@ -45,7 +45,7 @@ type RunnerFactory struct {
 	paths    RunnerFactoryPaths
 }
 
-func (rf *RunnerFactory) Create(name, workDir string) Runner {
+func (rf *RunnerFactory) Create(name, version, workDir string) Runner {
 	if name == Ansible {
 		return ansible.NewRunner(rf.executor, ansible.Paths{
 			Ansible: name,
@@ -55,14 +55,14 @@ func (rf *RunnerFactory) Create(name, workDir string) Runner {
 
 	if name == Furyagent {
 		return furyagent.NewRunner(rf.executor, furyagent.Paths{
-			Furyagent: filepath.Join(rf.paths.Bin, name),
+			Furyagent: filepath.Join(rf.paths.Bin, name, version, name),
 			WorkDir:   workDir,
 		})
 	}
 
 	if name == Kubectl {
 		return kubectl.NewRunner(rf.executor, kubectl.Paths{
-			Kubectl: filepath.Join(rf.paths.Bin, name),
+			Kubectl: filepath.Join(rf.paths.Bin, name, version, name),
 			WorkDir: workDir,
 		},
 			true, true)
@@ -70,21 +70,21 @@ func (rf *RunnerFactory) Create(name, workDir string) Runner {
 
 	if name == Kustomize {
 		return kustomize.NewRunner(rf.executor, kustomize.Paths{
-			Kustomize: filepath.Join(rf.paths.Bin, name),
+			Kustomize: filepath.Join(rf.paths.Bin, name, version, name),
 			WorkDir:   workDir,
 		})
 	}
 
 	if name == Openvpn {
 		return openvpn.NewRunner(rf.executor, openvpn.Paths{
-			Openvpn: filepath.Join(rf.paths.Bin, name),
+			Openvpn: filepath.Join(rf.paths.Bin, name, version, name),
 			WorkDir: workDir,
 		})
 	}
 
 	if name == Terraform {
 		return terraform.NewRunner(rf.executor, terraform.Paths{
-			Terraform: filepath.Join(rf.paths.Bin, name),
+			Terraform: filepath.Join(rf.paths.Bin, name, version, name),
 			WorkDir:   workDir,
 		})
 	}

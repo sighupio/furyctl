@@ -93,10 +93,10 @@ func NewClusterCmd(version string) *cobra.Command {
 
 			basePath := filepath.Join(homeDir, ".furyctl", res.MinimalConf.Metadata.Name)
 
-			binPath := filepath.Join(basePath, "vendor", "bin")
+			binPath := filepath.Join(homeDir, ".furyctl", "bin")
 
 			// Init second half of collaborators.
-			depsdl := dependencies.NewDownloader(client, basePath)
+			depsdl := dependencies.NewDownloader(client, basePath, binPath)
 			depsvl := dependencies.NewValidator(executor, binPath)
 
 			// Validate the furyctl.yaml file.
