@@ -15,23 +15,24 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 
-	"github.com/sighupio/fury-distribution/pkg/config"
 	"github.com/sighupio/furyctl/internal/cluster"
+	"github.com/sighupio/furyctl/internal/dependencies"
+	"github.com/sighupio/furyctl/internal/distribution"
 	cobrax "github.com/sighupio/furyctl/internal/x/cobra"
 	execx "github.com/sighupio/furyctl/internal/x/exec"
-	yamlx "github.com/sighupio/furyctl/internal/x/yaml"
+	netx "github.com/sighupio/furyctl/internal/x/net"
 )
 
 var (
-	ErrYamlUnmarshalFile = errors.New("error unmarshaling yaml file")
 	ErrDebugFlagNotSet   = errors.New("debug flag not set")
 	ErrFuryctlFlagNotSet = errors.New("furyctl flag not set")
 	ErrPhaseFlagNotSet   = errors.New("phase flag not set")
 	ErrDryRunFlagNotSet  = errors.New("dry-run flag not set")
 	ErrForceFlagNotSet   = errors.New("force flag not set")
+	ErrDistroFlagNotSet  = errors.New("distro flag not set")
 )
 
-func NewClusterCmd() *cobra.Command {
+func NewClusterCmd(version string) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "cluster",
 		Short: "Deletes a cluster",
@@ -44,6 +45,11 @@ func NewClusterCmd() *cobra.Command {
 			furyctlPath, ok := cobrax.Flag[string](cmd, "config").(string)
 			if !ok {
 				return ErrFuryctlFlagNotSet
+			}
+
+			distroLocation, ok := cobrax.Flag[string](cmd, "distro-location").(string)
+			if !ok {
+				return ErrDistroFlagNotSet
 			}
 
 			phase, ok := cobrax.Flag[string](cmd, "phase").(string)
@@ -61,22 +67,40 @@ func NewClusterCmd() *cobra.Command {
 				return ErrForceFlagNotSet
 			}
 
-			execx.Debug = debug
-
 			// Init paths.
 			homeDir, err := os.UserHomeDir()
 			if err != nil {
 				return fmt.Errorf("error while getting user home directory: %w", err)
 			}
 
-			minimalConf, err := yamlx.FromFileV3[config.Furyctl](furyctlPath)
+			// Init first half of collaborators.
+			client := netx.NewGoGetterClient()
+			executor := execx.NewStdExecutor()
+			distrodl := distribution.NewDownloader(client, debug)
+
+			execx.Debug = debug
+
+			// Download the distribution.
+			logrus.Info("Downloading distribution...")
+			res, err := distrodl.Download(version, distroLocation, furyctlPath)
 			if err != nil {
-				return fmt.Errorf("%w: %s", ErrYamlUnmarshalFile, err)
+				return fmt.Errorf("error while downloading distribution: %w", err)
 			}
 
-			basePath := filepath.Join(homeDir, ".furyctl", minimalConf.Metadata.Name)
+			basePath := filepath.Join(homeDir, ".furyctl", res.MinimalConf.Metadata.Name)
 
-			clusterDeleter, err := cluster.NewDeleter(minimalConf, phase, basePath)
+			binPath := filepath.Join(homeDir, ".furyctl", "bin")
+
+			// Init second half of collaborators.
+			depsvl := dependencies.NewValidator(executor, binPath)
+
+			// Validate the dependencies.
+			logrus.Info("Validating dependencies...")
+			if err := depsvl.Validate(res); err != nil {
+				return fmt.Errorf("error while validating dependencies: %w", err)
+			}
+
+			clusterDeleter, err := cluster.NewDeleter(res.MinimalConf, res.DistroManifest, phase, basePath)
 			if err != nil {
 				return fmt.Errorf("error while initializing cluster deleter: %w", err)
 			}
@@ -113,6 +137,16 @@ func NewClusterCmd() *cobra.Command {
 		"c",
 		"furyctl.yaml",
 		"Path to the furyctl.yaml file",
+	)
+
+	cmd.Flags().StringP(
+		"distro-location",
+		"",
+		"",
+		"Base URL used to download schemas, defaults and the distribution manifest. "+
+			"It can either be a local path(eg: /path/to/fury/distribution) or "+
+			"a remote URL(eg: https://git@github.com/sighupio/fury-distribution?ref=BRANCH_NAME)."+
+			"Any format supported by hashicorp/go-getter can be used.",
 	)
 
 	cmd.Flags().StringP(

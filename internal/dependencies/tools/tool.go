@@ -7,6 +7,8 @@ package tools
 import (
 	"errors"
 	"fmt"
+	"os"
+	"path/filepath"
 	"regexp"
 
 	"github.com/sighupio/furyctl/internal/tool"
@@ -127,6 +129,17 @@ func (vc *checker) version(want string) error {
 
 	if want == "" {
 		return errVersionEmpty
+	}
+
+	cmdDir := filepath.Dir(vc.runner.CmdPath())
+
+	_, err := os.Stat(cmdDir)
+	if err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			return fmt.Errorf("version %s not installed: %w", want, err)
+		}
+
+		return fmt.Errorf("error getting version: %w", err)
 	}
 
 	installed, err := vc.runner.Version()

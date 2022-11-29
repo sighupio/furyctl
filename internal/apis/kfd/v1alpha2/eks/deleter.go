@@ -8,13 +8,15 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/sighupio/fury-distribution/pkg/config"
 	del "github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/eks/delete"
 	"github.com/sighupio/furyctl/internal/cluster"
 )
 
 type ClusterDeleter struct {
-	phase   string
-	workDir string
+	kfdManifest config.KFD
+	phase       string
+	workDir     string
 }
 
 func (d *ClusterDeleter) SetProperties(props []cluster.DeleterProperty) {
@@ -27,6 +29,11 @@ func (d *ClusterDeleter) SetProperty(name string, value any) {
 	lcName := strings.ToLower(name)
 
 	switch lcName {
+	case cluster.DeleterPropertyKfdManifest:
+		if kfdManifest, ok := value.(config.KFD); ok {
+			d.kfdManifest = kfdManifest
+		}
+
 	case cluster.DeleterPropertyPhase:
 		if s, ok := value.(string); ok {
 			d.phase = s
@@ -40,17 +47,17 @@ func (d *ClusterDeleter) SetProperty(name string, value any) {
 }
 
 func (d *ClusterDeleter) Delete(dryRun bool) error {
-	distro, err := del.NewDistribution(dryRun, d.workDir)
+	distro, err := del.NewDistribution(dryRun, d.workDir, d.kfdManifest)
 	if err != nil {
 		return fmt.Errorf("error while creating distribution phase: %w", err)
 	}
 
-	kube, err := del.NewKubernetes(dryRun, d.workDir)
+	kube, err := del.NewKubernetes(dryRun, d.workDir, d.kfdManifest)
 	if err != nil {
 		return fmt.Errorf("error while creating kubernetes phase: %w", err)
 	}
 
-	infra, err := del.NewInfrastructure(dryRun, d.workDir)
+	infra, err := del.NewInfrastructure(dryRun, d.workDir, d.kfdManifest)
 	if err != nil {
 		return fmt.Errorf("error while creating infrastructure phase: %w", err)
 	}

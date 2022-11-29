@@ -27,6 +27,10 @@ func NewRunner(executor execx.Executor, paths Paths) *Runner {
 	}
 }
 
+func (r *Runner) CmdPath() string {
+	return r.paths.Ansible
+}
+
 func (r *Runner) Version() (string, error) {
 	out, err := execx.CombinedOutput(execx.NewCmd(r.paths.Ansible, execx.CmdOptions{
 		Args:     []string{"--version"},

@@ -27,6 +27,10 @@ func NewRunner(executor execx.Executor, paths Paths) *Runner {
 	}
 }
 
+func (r *Runner) CmdPath() string {
+	return r.paths.Openvpn
+}
+
 func (r *Runner) Connect(name string) error {
 	err := execx.NewCmd("sudo", execx.CmdOptions{
 		Args:     []string{r.paths.Openvpn, "--config", fmt.Sprintf("%s.ovpn", name), "--daemon"},

@@ -71,7 +71,7 @@ func NewDistribution(
 ) (*Distribution, error) {
 	distroDir := path.Join(workDir, "distribution")
 
-	phase, err := cluster.NewOperationPhase(distroDir)
+	phase, err := cluster.NewOperationPhase(distroDir, kfdManifest.Tools)
 	if err != nil {
 		return nil, fmt.Errorf("error creating distribution phase: %w", err)
 	}

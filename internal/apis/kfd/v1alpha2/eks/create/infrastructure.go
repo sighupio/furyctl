@@ -56,7 +56,7 @@ func NewInfrastructure(
 ) (*Infrastructure, error) {
 	infraDir := path.Join(workDir, "infrastructure")
 
-	phase, err := cluster.NewOperationPhase(infraDir)
+	phase, err := cluster.NewOperationPhase(infraDir, kfdManifest.Tools)
 	if err != nil {
 		return nil, fmt.Errorf("error creating infrastructure phase: %w", err)
 	}
@@ -78,7 +78,7 @@ func NewInfrastructure(
 			},
 		),
 		faRunner: furyagent.NewRunner(executor, furyagent.Paths{
-			Furyagent: path.Join(phase.VendorPath, "bin", "furyagent"),
+			Furyagent: path.Join(phase.VendorPath, "furyagent", kfdManifest.Tools.Furyagent, "furyagent"),
 			WorkDir:   phase.SecretsPath,
 		}),
 		ovRunner: openvpn.NewRunner(executor, openvpn.Paths{

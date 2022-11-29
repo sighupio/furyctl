@@ -54,7 +54,7 @@ func NewKubernetes(
 ) (*Kubernetes, error) {
 	kubeDir := path.Join(workDir, "kubernetes")
 
-	phase, err := cluster.NewOperationPhase(kubeDir)
+	phase, err := cluster.NewOperationPhase(kubeDir, kfdManifest.Tools)
 	if err != nil {
 		return nil, fmt.Errorf("error creating kubernetes phase: %w", err)
 	}

@@ -10,6 +10,7 @@ import (
 	"path"
 	"path/filepath"
 
+	"github.com/sighupio/fury-distribution/pkg/config"
 	"github.com/sighupio/furyctl/internal/template"
 	iox "github.com/sighupio/furyctl/internal/x/io"
 	yamlx "github.com/sighupio/furyctl/internal/x/yaml"
@@ -41,17 +42,17 @@ type OperationPhaseOption struct {
 	Value any
 }
 
-func NewOperationPhase(folder string) (*OperationPhase, error) {
+func NewOperationPhase(folder string, kfdTools config.KFDTools) (*OperationPhase, error) {
 	basePath := folder
 
-	vendorPath, err := filepath.Abs(path.Join(basePath, "../", "vendor"))
+	vendorPath, err := filepath.Abs(path.Join(basePath, "../../", "bin"))
 	if err != nil {
-		return &OperationPhase{}, fmt.Errorf("error getting absolute path for vendor folder: %w", err)
+		return &OperationPhase{}, fmt.Errorf("error getting absolute path for tools bin folder: %w", err)
 	}
 
-	kustomizePath := path.Join(vendorPath, "bin", "kustomize")
-	terraformPath := path.Join(vendorPath, "bin", "terraform")
-	kubectlPath := path.Join(vendorPath, "bin", "kubectl")
+	kustomizePath := path.Join(vendorPath, "kustomize", kfdTools.Kustomize, "kustomize")
+	terraformPath := path.Join(vendorPath, "terraform", kfdTools.Terraform, "terraform")
+	kubectlPath := path.Join(vendorPath, "kubectl", kfdTools.Kubectl, "kubectl")
 
 	planPath := path.Join(basePath, "terraform", "plan")
 	logsPath := path.Join(basePath, "terraform", "logs")
@@ -112,7 +113,7 @@ func (cp *OperationPhase) CreateFolderStructure() error {
 	return nil
 }
 
-func (*OperationPhase) CopyFromTemplate(config template.Config, prefix, sourcePath, targetPath string) error {
+func (*OperationPhase) CopyFromTemplate(cfg template.Config, prefix, sourcePath, targetPath string) error {
 	outDirPath, err := os.MkdirTemp("", fmt.Sprintf("furyctl-%s-", prefix))
 	if err != nil {
 		return fmt.Errorf("error creating temp folder: %w", err)
@@ -120,7 +121,7 @@ func (*OperationPhase) CopyFromTemplate(config template.Config, prefix, sourcePa
 
 	tfConfigPath := path.Join(outDirPath, "tf-config.yaml")
 
-	tfConfig, err := yamlx.MarshalV2(config)
+	tfConfig, err := yamlx.MarshalV2(cfg)
 	if err != nil {
 		return fmt.Errorf("error marshaling tf-config: %w", err)
 	}
