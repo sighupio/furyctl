@@ -12,12 +12,18 @@ import (
 	"golang.org/x/exp/slices"
 
 	"github.com/sighupio/furyctl/internal/analytics"
+	cobrax "github.com/sighupio/furyctl/internal/x/cobra"
 )
 
-func NewVersionCmd(versions map[string]string, eventCh chan analytics.Event) *cobra.Command {
+func NewVersionCmd(versions map[string]string, tracker *analytics.Tracker) *cobra.Command {
+	var cmdEvent analytics.Event
+
 	return &cobra.Command{
 		Use:   "version",
 		Short: "Print the version number of furyctl",
+		PreRun: func(cmd *cobra.Command, args []string) {
+			cmdEvent = analytics.NewCommandEvent(cobrax.GetFullname(cmd))
+		},
 		Run: func(_ *cobra.Command, _ []string) {
 			keys := maps.Keys(versions)
 
@@ -26,10 +32,9 @@ func NewVersionCmd(versions map[string]string, eventCh chan analytics.Event) *co
 			for _, k := range keys {
 				fmt.Printf("%s: %s\n", k, versions[k])
 			}
-		},
-		PostRun: func(cmd *cobra.Command, args []string) {
-			cmdEvent := analytics.NewCommandEvent(cmd.Name(), "", 0, nil)
-			cmdEvent.Send(eventCh)
+
+			cmdEvent.AddSuccessMessage("version command executed successfully")
+			tracker.Track(cmdEvent)
 		},
 	}
 }

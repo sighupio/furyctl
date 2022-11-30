@@ -21,7 +21,6 @@ import (
 	"runtime"
 
 	"github.com/sirupsen/logrus"
-	"github.com/spf13/cobra"
 
 	"github.com/sighupio/furyctl/cmd"
 	"github.com/sighupio/furyctl/internal/analytics"
@@ -33,8 +32,6 @@ var (
 	buildTime = "unknown"
 	goVersion = "unknown"
 	osArch    = "unknown"
-
-	mixpanelToken = os.Getenv("FURYCTL_MIXPANEL_TOKEN")
 )
 
 func main() {
@@ -59,20 +56,19 @@ func main() {
 		h = "unknown"
 	}
 
-	a := analytics.New(mixpanelToken, versions[version], osArch, runtime.GOOS, "SIGHUP", h)
-
-	if executedCmd, err := cmd.NewRootCommand(versions, logW, a).ExecuteC(); err != nil {
-		if a.IsEnabled() {
-			if err := a.Track(analytics.NewCommandEvent(getCmdFullname(executedCmd), err.Error(), 1, nil)); err != nil {
-				logrus.Debug(err)
-			}
-		}
-
-		logrus.Fatal(err)
+	// Create the analytics tracker.
+	t := os.Getenv("FURYCTL_MIXPANEL_TOKEN")
+	if t == "" {
+		panic("FURYCTL_MIXPANEL_TOKEN environment variable not set")
 	}
 
-	rootCmd := cmd.NewRootCommand(versions, logW, a)
-	if err := rootCmd.Execute(); err != nil {
+	a := analytics.NewTracker(t, versions[version], osArch, runtime.GOOS, "SIGHUP", h)
+
+	defer a.Flush()
+
+	if _, err := cmd.NewRootCommand(versions, logW, a).ExecuteC(); err != nil {
+		a.Flush()
+
 		logrus.Fatal(err)
 	}
 }
@@ -92,13 +88,4 @@ func logFile() (*os.File, error) {
 
 	// Create the combined writer.
 	return logFile, nil
-}
-
-// getCmdFullname returns the full name of the command.
-func getCmdFullname(c *cobra.Command) string {
-	if c.Parent() == nil || c.Parent().Name() == "furyctl" {
-		return c.Name()
-	}
-
-	return fmt.Sprintf("%s %s", getCmdFullname(c.Parent()), c.Name())
 }

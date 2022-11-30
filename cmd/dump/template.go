@@ -15,6 +15,7 @@ import (
 	"github.com/sighupio/furyctl/internal/analytics"
 	"github.com/sighupio/furyctl/internal/merge"
 	"github.com/sighupio/furyctl/internal/template"
+	cobrax "github.com/sighupio/furyctl/internal/x/cobra"
 	yamlx "github.com/sighupio/furyctl/internal/x/yaml"
 )
 
@@ -25,7 +26,7 @@ type templateConfig struct {
 	NoOverwrite bool
 }
 
-func NewTemplateCmd(eventCh chan analytics.Event) *cobra.Command {
+func NewTemplateCmd(tracker *analytics.Tracker) *cobra.Command {
 	var cmdEvent analytics.Event
 
 	cfg := templateConfig{}
@@ -36,6 +37,9 @@ func NewTemplateCmd(eventCh chan analytics.Event) *cobra.Command {
 The generated folder will be created starting from a provided template and the parameters set in a configuration file that is merged with default values.`,
 		SilenceUsage:  true,
 		SilenceErrors: true,
+		PreRun: func(cmd *cobra.Command, args []string) {
+			cmdEvent = analytics.NewCommandEvent(cobrax.GetFullname(cmd))
+		},
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			source := "source"
 			target := "target"
@@ -45,15 +49,24 @@ The generated folder will be created starting from a provided template and the p
 
 			distributionFile, err := yamlx.FromFileV2[map[any]any](distributionFilePath)
 			if err != nil {
+				cmdEvent.AddErrorMessage(err)
+				tracker.Track(cmdEvent)
+
 				return fmt.Errorf("%s - %w", distributionFilePath, err)
 			}
 
 			furyctlFile, err := yamlx.FromFileV2[map[any]any](furyctlFilePath)
 			if err != nil {
+				cmdEvent.AddErrorMessage(err)
+				tracker.Track(cmdEvent)
+
 				return fmt.Errorf("%s - %w", furyctlFilePath, err)
 			}
 
 			if _, err := os.Stat(source); os.IsNotExist(err) {
+				cmdEvent.AddErrorMessage(ErrSourceDirDoesNotExist)
+				tracker.Track(cmdEvent)
+
 				return ErrSourceDirDoesNotExist
 			}
 
@@ -64,6 +77,9 @@ The generated folder will be created starting from a provided template and the p
 
 			_, err = merger.Merge()
 			if err != nil {
+				cmdEvent.AddErrorMessage(err)
+				tracker.Track(cmdEvent)
+
 				return fmt.Errorf("error merging files: %w", err)
 			}
 
@@ -74,21 +90,33 @@ The generated folder will be created starting from a provided template and the p
 
 			_, err = reverseMerger.Merge()
 			if err != nil {
+				cmdEvent.AddErrorMessage(err)
+				tracker.Track(cmdEvent)
+
 				return fmt.Errorf("error merging files: %w", err)
 			}
 
 			tmplCfg, err := template.NewConfig(reverseMerger, reverseMerger, []string{})
 			if err != nil {
+				cmdEvent.AddErrorMessage(err)
+				tracker.Track(cmdEvent)
+
 				return fmt.Errorf("error creating template config: %w", err)
 			}
 
 			outYaml, err := yamlx.MarshalV2(tmplCfg)
 			if err != nil {
+				cmdEvent.AddErrorMessage(err)
+				tracker.Track(cmdEvent)
+
 				return fmt.Errorf("error marshaling template config: %w", err)
 			}
 
 			outDirPath, err := os.MkdirTemp("", "furyctl-dist-")
 			if err != nil {
+				cmdEvent.AddErrorMessage(err)
+				tracker.Track(cmdEvent)
+
 				return fmt.Errorf("error creating temporary directory: %w", err)
 			}
 
@@ -97,11 +125,17 @@ The generated folder will be created starting from a provided template and the p
 			logrus.Debugf("config path = %s", confPath)
 
 			if err = os.WriteFile(confPath, outYaml, os.ModePerm); err != nil {
+				cmdEvent.AddErrorMessage(err)
+				tracker.Track(cmdEvent)
+
 				return fmt.Errorf("error writing config file: %w", err)
 			}
 
 			if !cfg.NoOverwrite {
 				if err = os.RemoveAll(target); err != nil {
+					cmdEvent.AddErrorMessage(err)
+					tracker.Track(cmdEvent)
+
 					return fmt.Errorf("error removing target directory: %w", err)
 				}
 			}
@@ -116,22 +150,24 @@ The generated folder will be created starting from a provided template and the p
 				cfg.DryRun,
 			)
 			if err != nil {
+				cmdEvent.AddErrorMessage(err)
+				tracker.Track(cmdEvent)
+
 				return fmt.Errorf("error creating template model: %w", err)
 			}
 
 			err = templateModel.Generate()
 			if err != nil {
+				cmdEvent.AddErrorMessage(err)
+				tracker.Track(cmdEvent)
+
 				return fmt.Errorf("error generating from template: %w", err)
 			}
 
-			cmdEvent = analytics.NewCommandEvent(cmd.Name(), "", 0, &analytics.ClusterDetails{
-				Provider: "eks",
-			})
+			cmdEvent.AddSuccessMessage("Distribution template generated successfully")
+			tracker.Track(cmdEvent)
 
 			return nil
-		},
-		PostRun: func(cmd *cobra.Command, _ []string) {
-			cmdEvent.Send(eventCh)
 		},
 	}
 

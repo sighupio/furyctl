@@ -15,49 +15,87 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 
+	"github.com/sighupio/fury-distribution/pkg/config"
+	"github.com/sighupio/furyctl/internal/analytics"
 	"github.com/sighupio/furyctl/internal/cluster"
 	"github.com/sighupio/furyctl/internal/dependencies"
 	"github.com/sighupio/furyctl/internal/distribution"
 	cobrax "github.com/sighupio/furyctl/internal/x/cobra"
 	execx "github.com/sighupio/furyctl/internal/x/exec"
 	netx "github.com/sighupio/furyctl/internal/x/net"
+	yamlx "github.com/sighupio/furyctl/internal/x/yaml"
 )
 
 var ErrParsingFlag = errors.New("error while parsing flag")
 
-func NewClusterCmd(version string) *cobra.Command {
+func NewClusterCmd(version string, tracker *analytics.Tracker) *cobra.Command {
+	var cmdEvent analytics.Event
+
 	cmd := &cobra.Command{
 		Use:   "cluster",
 		Short: "Deletes a cluster",
+		PreRun: func(cmd *cobra.Command, args []string) {
+			cmdEvent = analytics.NewCommandEvent(cobrax.GetFullname(cmd))
+		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			debug, ok := cobrax.Flag[bool](cmd, "debug").(bool)
 			if !ok {
-				return fmt.Errorf("%w: debug", ErrParsingFlag)
+				err := fmt.Errorf("%w: debug", ErrParsingFlag)
+
+				cmdEvent.AddErrorMessage(err)
+				tracker.Track(cmdEvent)
+
+				return err
 			}
 
 			furyctlPath, ok := cobrax.Flag[string](cmd, "config").(string)
 			if !ok {
-				return fmt.Errorf("%w: config", ErrParsingFlag)
+				err := fmt.Errorf("%w: config", ErrParsingFlag)
+
+				cmdEvent.AddErrorMessage(err)
+				tracker.Track(cmdEvent)
+
+				return err
 			}
 
 			distroLocation, ok := cobrax.Flag[string](cmd, "distro-location").(string)
 			if !ok {
-				return fmt.Errorf("%w: distro-location", ErrParsingFlag)
+				err := fmt.Errorf("%w: distro-location", ErrParsingFlag)
+
+				cmdEvent.AddErrorMessage(err)
+				tracker.Track(cmdEvent)
+
+				return err
 			}
 
 			phase, ok := cobrax.Flag[string](cmd, "phase").(string)
 			if !ok {
-				return fmt.Errorf("%w: phase", ErrParsingFlag)
+				err := fmt.Errorf("%w: phase", ErrParsingFlag)
+
+				cmdEvent.AddErrorMessage(err)
+				tracker.Track(cmdEvent)
+
+				return err
 			}
 			binPath := cobrax.Flag[string](cmd, "bin-path").(string) //nolint:errcheck,forcetypeassert // optional flag
 			dryRun, ok := cobrax.Flag[bool](cmd, "dry-run").(bool)
 			if !ok {
-				return fmt.Errorf("%w: dry-run", ErrParsingFlag)
+				err := fmt.Errorf("%w: dry-run", ErrParsingFlag)
+
+				cmdEvent.AddErrorMessage(err)
+				tracker.Track(cmdEvent)
+
+				return err
 			}
 
 			force, ok := cobrax.Flag[bool](cmd, "force").(bool)
 			if !ok {
-				return fmt.Errorf("%w: debug", ErrParsingFlag)
+				err := fmt.Errorf("%w: force", ErrParsingFlag)
+
+				cmdEvent.AddErrorMessage(err)
+				tracker.Track(cmdEvent)
+
+				return err
 			}
 
 			// Init paths.
@@ -75,6 +113,21 @@ func NewClusterCmd(version string) *cobra.Command {
 			executor := execx.NewStdExecutor()
 			distrodl := distribution.NewDownloader(client)
 
+			// TODO: Find a way to deduplicate minimalConf parse between here and distrodl.Download. 
+			minimalConf, err := yamlx.FromFileV3[config.Furyctl](furyctlPath)
+			if err != nil {
+				cmdEvent.AddErrorMessage(distribution.ErrYamlUnmarshalFile)
+				tracker.Track(cmdEvent)
+
+				return fmt.Errorf("%w: %s", distribution.ErrYamlUnmarshalFile, err)
+			}
+
+			cmdEvent.AddClusterDetails(analytics.ClusterDetails{
+				Phase:      phase,
+				Provider:   "eks",
+				KFDVersion: minimalConf.Spec.DistributionVersion,
+			})
+
 			execx.Debug = debug
 
 			// Download the distribution.
@@ -84,7 +137,7 @@ func NewClusterCmd(version string) *cobra.Command {
 				return fmt.Errorf("error while downloading distribution: %w", err)
 			}
 
-			basePath := filepath.Join(homeDir, ".furyctl", res.MinimalConf.Metadata.Name)
+			basePath := filepath.Join(homeDir, ".furyctl", minimalConf.Metadata.Name)
 
 			// Init second half of collaborators.
 			depsvl := dependencies.NewValidator(executor, binPath)
@@ -97,17 +150,26 @@ func NewClusterCmd(version string) *cobra.Command {
 
 			clusterDeleter, err := cluster.NewDeleter(res.MinimalConf, res.DistroManifest, phase, basePath, binPath)
 			if err != nil {
+				cmdEvent.AddErrorMessage(err)
+				tracker.Track(cmdEvent)
+
 				return fmt.Errorf("error while initializing cluster deleter: %w", err)
 			}
 
 			if !force {
 				_, err = fmt.Println("WARNING: You are about to delete a cluster. This action is irreversible.")
 				if err != nil {
+					cmdEvent.AddErrorMessage(err)
+					tracker.Track(cmdEvent)
+
 					return fmt.Errorf("error while printing to stdout: %w", err)
 				}
 
 				_, err = fmt.Println("Are you sure you want to continue? Only 'yes' will be accepted to confirm.")
 				if err != nil {
+					cmdEvent.AddErrorMessage(err)
+					tracker.Track(cmdEvent)
+
 					return fmt.Errorf("error while printing to stdout: %w", err)
 				}
 
@@ -118,10 +180,16 @@ func NewClusterCmd(version string) *cobra.Command {
 
 			err = clusterDeleter.Delete(dryRun)
 			if err != nil {
+				cmdEvent.AddErrorMessage(err)
+				tracker.Track(cmdEvent)
+
 				return fmt.Errorf("error while deleting cluster: %w", err)
 			}
 
 			logrus.Info("Cluster deleted successfully!")
+
+			cmdEvent.AddSuccessMessage("Cluster deleted successfully!")
+			tracker.Track(cmdEvent)
 
 			return nil
 		},
