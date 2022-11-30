@@ -6,6 +6,7 @@ package cmd
 
 import (
 	"errors"
+	"fmt"
 	"os"
 
 	"github.com/spf13/cobra"
@@ -80,28 +81,28 @@ func NewCompletionCmd(tracker *analytics.Tracker) *cobra.Command {
 					cmdEvent.AddErrorMessage(ErrBashCompletion)
 					tracker.Track(cmdEvent)
 
-					return ErrBashCompletion
+					return fmt.Errorf("error generating bash completion: %w", err)
 				}
 			case "zsh":
 				if err := cmd.Root().GenZshCompletion(os.Stdout); err != nil {
 					cmdEvent.AddErrorMessage(ErrZshCompletion)
 					tracker.Track(cmdEvent)
 
-					return ErrZshCompletion
+					return fmt.Errorf("error generating zsh completion: %w", err)
 				}
 			case "fish":
 				if err := cmd.Root().GenFishCompletion(os.Stdout, true); err != nil {
 					cmdEvent.AddErrorMessage(ErrFishCompletion)
 					tracker.Track(cmdEvent)
 
-					return ErrFishCompletion
+					return fmt.Errorf("error generating fish completion: %w", err)
 				}
 			case "powershell":
 				if err := cmd.Root().GenPowerShellCompletion(os.Stdout); err != nil {
 					cmdEvent.AddErrorMessage(ErrPowershellCompletion)
 					tracker.Track(cmdEvent)
 
-					return ErrPowershellCompletion
+					return fmt.Errorf("error generating powershell completion: %w", err)
 				}
 			}
 

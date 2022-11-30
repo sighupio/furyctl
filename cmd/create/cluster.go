@@ -212,8 +212,7 @@ func NewClusterCmd(version string, tracker *analytics.Tracker) *cobra.Command {
 				logrus.Infof("Phase %s executed successfully!", phase)
 			}
 
-			_, err = fmt.Println("cluster creation succeeded")
-			if err != nil {
+			if _, err := fmt.Println("cluster creation succeeded"); err != nil {
 				cmdEvent.AddErrorMessage(err)
 				tracker.Track(cmdEvent)
 
