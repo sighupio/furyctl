@@ -55,10 +55,10 @@ func NewTracker(token, version, arch, os, org, hostname string) *Tracker {
 }
 
 type Tracker struct {
-	enable bool
 	trackingInfo
 	client mixpanel.Mixpanel
 	events chan Event
+	enable bool
 }
 
 type trackingInfo map[string]string
@@ -67,7 +67,9 @@ type trackingInfo map[string]string
 func (a *Tracker) Track(event Event) {
 	// // add a channel to send events to a goroutine that will send them to mixpanel
 	// // this will allow us to send events in a non-blocking way.
-	a.events <- event
+	if a.enable {
+		a.events <- event
+	}
 }
 
 // Flush flushes the events queue, guaranteeing that all events are sent to mixpanel.
@@ -82,19 +84,27 @@ func (a *Tracker) Flush() {
 
 	a.processEvents()
 
-	close(a.events)
+	logrus.Debug("Flushed events queue")
 }
 
 // processEvents is the event processor: it will listen for new events and send them to mixpanel.
 // This method will stop when a GuardEvent is received.
 func (a *Tracker) processEvents() {
 	for {
-		e := <-a.events
+		e, ok := <-a.events
+		if !ok {
+			logrus.Debug("Event processor stopped")
+
+			break
+		}
 
 		logrus.Debug("Processing event: ", e.Name())
 
 		switch e.(type) {
 		case GuardEvent:
+			logrus.Debug("Guard event received, stopping event processor")
+			a.close()
+
 			return
 
 		case CommandEvent:
@@ -103,6 +113,8 @@ func (a *Tracker) processEvents() {
 			if err := a.sendEvent(e); err != nil {
 				logrus.WithError(err).Error("failed to send event")
 			}
+
+			logrus.Debug("Event sent: ", e.Name())
 		}
 	}
 }
@@ -120,14 +132,16 @@ func (a *Tracker) sendEvent(event Event) error {
 	return nil
 }
 
-// Enable returns true if the tracker is enabled.
-func (a *Tracker) Enabled() bool {
-	return a.enable
-}
-
 // Disable disables the tracker.
 func (a *Tracker) Disable() {
 	a.enable = false
+
+	a.close()
+}
+
+// close closes the tracker's event chan.
+func (a *Tracker) close() {
+	close(a.events)
 }
 
 func getTrackID(token string) string {

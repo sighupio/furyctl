@@ -56,12 +56,12 @@ func main() {
 		h = "unknown"
 	}
 
-	// Create the analytics tracker.
 	t := os.Getenv("FURYCTL_MIXPANEL_TOKEN")
 	if t == "" {
 		panic("FURYCTL_MIXPANEL_TOKEN environment variable not set")
 	}
 
+	// Create the analytics tracker.
 	a := analytics.NewTracker(t, versions[version], osArch, runtime.GOOS, "SIGHUP", h)
 
 	defer a.Flush()
