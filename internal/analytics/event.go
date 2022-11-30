@@ -5,26 +5,37 @@
 package analytics
 
 type Event interface {
-	Send(ch chan Event)
 	Properties() map[string]interface{}
+	AddErrorMessage(error)
+	AddSuccessMessage(string)
+	AddClusterDetails(c ClusterDetails)
+	AddExitCode(int)
 	Name() string
 }
 
-func NewCommandEvent(name, errorMessage string, exitStatus int, details *ClusterDetails) Event {
-	props := map[string]interface{}{
-		"exitStatus":     exitStatus,
-		"errorMessage":   errorMessage,
-		"clusterDetails": details,
-	}
-
+func NewCommandEvent(name string) Event {
 	return CommandEvent{
 		name:       name,
-		properties: props,
+		properties: make(map[string]interface{}),
 	}
 }
 
-func (c CommandEvent) Send(ch chan Event) {
-	ch <- c
+func (c CommandEvent) AddErrorMessage(e error) {
+	c.properties["errorMessage"] = e.Error()
+	c.properties["success"] = false
+}
+
+func (c CommandEvent) AddSuccessMessage(msg string) {
+	c.properties["successMessage"] = msg
+	c.properties["success"] = true
+}
+
+func (c CommandEvent) AddClusterDetails(d ClusterDetails) {
+	c.properties["clusterDetails"] = d
+}
+
+func (c CommandEvent) AddExitCode(e int) {
+	c.properties["exitCode"] = e
 }
 
 func (c CommandEvent) Properties() map[string]interface{} {
@@ -33,6 +44,44 @@ func (c CommandEvent) Properties() map[string]interface{} {
 
 func (c CommandEvent) Name() string {
 	return c.name
+}
+
+// NewGuardEvent creates a new GuardEvent. GuardEvent is a special type of event used to close the events processing.
+func NewGuardEvent() Event {
+	return GuardEvent{
+		name:       "guard",
+		properties: make(map[string]interface{}),
+	}
+}
+
+func (g GuardEvent) AddErrorMessage(e error) {
+	g.properties["errorMessage"] = e.Error()
+}
+
+func (g GuardEvent) AddSuccessMessage(msg string) {
+	g.properties["successMessage"] = msg
+}
+
+func (g GuardEvent) AddClusterDetails(d ClusterDetails) {
+	g.properties["clusterDetails"] = d
+}
+
+func (g GuardEvent) AddExitCode(e int) {
+	g.properties["exitCode"] = e
+}
+
+func (g GuardEvent) Properties() map[string]interface{} {
+	return g.properties
+}
+
+func (g GuardEvent) Name() string {
+	return g.name
+}
+
+// GuardEvent is a special event used to close the events processing.
+type GuardEvent struct {
+	name       string
+	properties map[string]interface{}
 }
 
 type CommandEvent struct {

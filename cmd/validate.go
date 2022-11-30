@@ -11,14 +11,14 @@ import (
 	"github.com/sighupio/furyctl/internal/analytics"
 )
 
-func NewValidateCommand(furyctlBinVersion string, eventCh chan analytics.Event) *cobra.Command {
+func NewValidateCommand(furyctlBinVersion string, tracker *analytics.Tracker) *cobra.Command {
 	validateCmd := &cobra.Command{
 		Use:   "validate",
 		Short: "Validate fury config files and dependencies",
 	}
 
-	validateCmd.AddCommand(validate.NewConfigCmd(furyctlBinVersion, eventCh))
-	validateCmd.AddCommand(validate.NewDependenciesCmd(furyctlBinVersion, eventCh))
+	validateCmd.AddCommand(validate.NewConfigCmd(furyctlBinVersion, tracker))
+	validateCmd.AddCommand(validate.NewDependenciesCmd(furyctlBinVersion, tracker))
 
 	return validateCmd
 }

@@ -11,13 +11,13 @@ import (
 	"github.com/sighupio/furyctl/internal/analytics"
 )
 
-func NewDownloadCmd(furyctlBinVersion string, eventCh chan analytics.Event) *cobra.Command {
+func NewDownloadCmd(furyctlBinVersion string, tracker *analytics.Tracker) *cobra.Command {
 	dumpCmd := &cobra.Command{
 		Use:   "download",
 		Short: "Dowload fury files",
 	}
 
-	dumpCmd.AddCommand(download.NewDependenciesCmd(furyctlBinVersion, eventCh))
+	dumpCmd.AddCommand(download.NewDependenciesCmd(furyctlBinVersion, tracker))
 
 	return dumpCmd
 }

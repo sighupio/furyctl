@@ -25,19 +25,28 @@ var (
 	ErrDownloadFailed = errors.New("dependencies download failed")
 )
 
-func NewDependenciesCmd(furyctlBinVersion string, eventCh chan analytics.Event) *cobra.Command {
+func NewDependenciesCmd(furyctlBinVersion string, tracker *analytics.Tracker) *cobra.Command {
 	var cmdEvent analytics.Event
 
 	cmd := &cobra.Command{
 		Use:   "dependencies",
 		Short: "Download dependencies",
+		PreRun: func(cmd *cobra.Command, args []string) {
+			cmdEvent = analytics.NewCommandEvent(cobrax.GetFullname(cmd))
+		},
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			furyctlPath, ok := cobrax.Flag[string](cmd, "config").(string)
 			if !ok {
+				cmdEvent.AddErrorMessage(fmt.Errorf("%w: config", ErrParsingFlag))
+				tracker.Track(cmdEvent)
+
 				return fmt.Errorf("%w: config", ErrParsingFlag)
 			}
 			distroLocation, ok := cobrax.Flag[string](cmd, "distro-location").(string)
 			if !ok {
+				cmdEvent.AddErrorMessage(fmt.Errorf("%w: distro-location", ErrParsingFlag))
+				tracker.Track(cmdEvent)
+
 				return fmt.Errorf("%w: distro-location", ErrParsingFlag)
 			}
 
@@ -45,7 +54,10 @@ func NewDependenciesCmd(furyctlBinVersion string, eventCh chan analytics.Event) 
 
 			homeDir, err := os.UserHomeDir()
 			if err != nil {
-				return fmt.Errorf("failed to get current user home directory: %w", err)
+				cmdEvent.AddErrorMessage(err)
+				tracker.Track(cmdEvent)
+
+				return fmt.Errorf("failed to get current working directory: %w", err)
 			}
 
 			if binPath == "" {
@@ -57,7 +69,14 @@ func NewDependenciesCmd(furyctlBinVersion string, eventCh chan analytics.Event) 
 			distrodl := distribution.NewDownloader(client)
 
 			dres, err := distrodl.Download(furyctlBinVersion, distroLocation, furyctlPath)
+			cmdEvent.AddClusterDetails(analytics.ClusterDetails{
+				KFDVersion: dres.DistroManifest.Version,
+			})
+
 			if err != nil {
+				cmdEvent.AddErrorMessage(err)
+				tracker.Track(cmdEvent)
+
 				return fmt.Errorf("failed to download distribution: %w", err)
 			}
 
@@ -78,20 +97,18 @@ func NewDependenciesCmd(furyctlBinVersion string, eventCh chan analytics.Event) 
 					logrus.Error(err)
 				}
 
+				cmdEvent.AddErrorMessage(ErrDownloadFailed)
+				tracker.Track(cmdEvent)
+
 				return ErrDownloadFailed
 			}
 
-			cmdEvent = analytics.NewCommandEvent(cmd.Name(), "", 0, &analytics.ClusterDetails{
-				KFDVersion: dres.DistroManifest.Version,
-				Provider:   "eks",
-			})
-
 			logrus.Info("Dependencies download succeeded")
 
+			cmdEvent.AddSuccessMessage("Dependencies download succeeded")
+			tracker.Track(cmdEvent)
+
 			return nil
-		},
-		PostRun: func(cmd *cobra.Command, args []string) {
-			cmdEvent.Send(eventCh)
 		},
 	}
 

@@ -11,6 +11,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/sighupio/furyctl/internal/analytics"
+	cobrax "github.com/sighupio/furyctl/internal/x/cobra"
 )
 
 var (
@@ -20,7 +21,9 @@ var (
 	ErrPowershellCompletion = errors.New("error generating powershell completion")
 )
 
-func NewCompletionCmd(a chan analytics.Event) *cobra.Command {
+func NewCompletionCmd(tracker *analytics.Tracker) *cobra.Command {
+	var cmdEvent analytics.Event
+
 	return &cobra.Command{
 		Use:   "completion [bash|zsh|fish|powershell]",
 		Short: "Generate completion script",
@@ -66,31 +69,46 @@ func NewCompletionCmd(a chan analytics.Event) *cobra.Command {
 		DisableFlagsInUseLine: true,
 		ValidArgs:             []string{"bash", "zsh", "fish", "powershell"},
 		Args:                  cobra.ExactValidArgs(1),
+		PreRun: func(cmd *cobra.Command, args []string) {
+			cmdEvent = analytics.NewCommandEvent(cobrax.GetFullname(cmd))
+		},
+
 		RunE: func(cmd *cobra.Command, args []string) error {
 			switch args[0] {
 			case "bash":
 				if err := cmd.Root().GenBashCompletion(os.Stdout); err != nil {
+					cmdEvent.AddErrorMessage(ErrBashCompletion)
+					tracker.Track(cmdEvent)
+
 					return ErrBashCompletion
 				}
 			case "zsh":
 				if err := cmd.Root().GenZshCompletion(os.Stdout); err != nil {
+					cmdEvent.AddErrorMessage(ErrZshCompletion)
+					tracker.Track(cmdEvent)
+
 					return ErrZshCompletion
 				}
 			case "fish":
 				if err := cmd.Root().GenFishCompletion(os.Stdout, true); err != nil {
+					cmdEvent.AddErrorMessage(ErrFishCompletion)
+					tracker.Track(cmdEvent)
+
 					return ErrFishCompletion
 				}
 			case "powershell":
 				if err := cmd.Root().GenPowerShellCompletion(os.Stdout); err != nil {
+					cmdEvent.AddErrorMessage(ErrPowershellCompletion)
+					tracker.Track(cmdEvent)
+
 					return ErrPowershellCompletion
 				}
 			}
 
+			cmdEvent.AddSuccessMessage("completion generated for " + args[0])
+			tracker.Track(cmdEvent)
+
 			return nil
-		},
-		PostRun: func(cmd *cobra.Command, args []string) {
-			cmdEvent := analytics.NewCommandEvent(cmd.Name(), "", 0, nil)
-			cmdEvent.Send(a)
 		},
 	}
 }
