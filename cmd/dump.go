@@ -11,13 +11,13 @@ import (
 	"github.com/sighupio/furyctl/internal/analytics"
 )
 
-func NewDumpCmd(eventCh chan analytics.Event) *cobra.Command {
+func NewDumpCmd(tracker *analytics.Tracker) *cobra.Command {
 	dumpCmd := &cobra.Command{
 		Use:   "dump",
 		Short: "Dump templates and other useful fury objects",
 	}
 
-	dumpCmd.AddCommand(dump.NewTemplateCmd(eventCh))
+	dumpCmd.AddCommand(dump.NewTemplateCmd(tracker))
 
 	return dumpCmd
 }

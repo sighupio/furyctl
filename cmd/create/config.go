@@ -21,42 +21,78 @@ import (
 
 var ErrConfigCreationFailed = fmt.Errorf("config creation failed")
 
-func NewConfigCmd(eventCh chan analytics.Event) *cobra.Command {
+func NewConfigCmd(tracker *analytics.Tracker) *cobra.Command {
 	var cmdEvent analytics.Event
 
 	cmd := &cobra.Command{
 		Use:   "config",
 		Short: "scaffolds a new furyctl config file",
+		PreRun: func(cmd *cobra.Command, args []string) {
+			cmdEvent = analytics.NewCommandEvent(cobrax.GetFullname(cmd))
+		},
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			config, ok := cobrax.Flag[string](cmd, "config").(string)
 			if !ok {
-				return fmt.Errorf("%w: config", ErrParsingFlag)
+				err := fmt.Errorf("%w: config", ErrParsingFlag)
+
+				cmdEvent.AddErrorMessage(err)
+				tracker.Track(cmdEvent)
+
+				return err
 			}
 			version, ok := cobrax.Flag[string](cmd, "version").(string)
 			if !ok {
-				return fmt.Errorf("%w: version", ErrParsingFlag)
+				err := fmt.Errorf("%w: version", ErrParsingFlag)
+
+				cmdEvent.AddErrorMessage(err)
+				tracker.Track(cmdEvent)
+
+				return err
 			}
 			kind, ok := cobrax.Flag[string](cmd, "kind").(string)
 			if !ok {
-				return fmt.Errorf("%w: kind", ErrParsingFlag)
+				err := fmt.Errorf("%w: kind", ErrParsingFlag)
+
+				cmdEvent.AddErrorMessage(err)
+				tracker.Track(cmdEvent)
+
+				return err
 			}
 			name, ok := cobrax.Flag[string](cmd, "name").(string)
 			if !ok {
-				return fmt.Errorf("%w: name", ErrParsingFlag)
+				err := fmt.Errorf("%w: name", ErrParsingFlag)
+
+				cmdEvent.AddErrorMessage(err)
+				tracker.Track(cmdEvent)
+
+				return err
 			}
+
+			cmdEvent.AddClusterDetails(analytics.ClusterDetails{
+				KFDVersion: version,
+			})
 
 			data, err := configs.Tpl.ReadFile("furyctl.yaml.tpl")
 			if err != nil {
+				cmdEvent.AddErrorMessage(err)
+				tracker.Track(cmdEvent)
+
 				return fmt.Errorf("error reading furyctl yaml template: %w", err)
 			}
 
 			tmpl, err := template.New("furyctl.yaml").Parse(string(data))
 			if err != nil {
+				cmdEvent.AddErrorMessage(err)
+				tracker.Track(cmdEvent)
+
 				return fmt.Errorf("error parsing furyctl yaml template: %w", err)
 			}
 
 			out, err := createNewEmptyConfigFile(config)
 			if err != nil {
+				cmdEvent.AddErrorMessage(err)
+				tracker.Track(cmdEvent)
+
 				return err
 			}
 
@@ -65,19 +101,18 @@ func NewConfigCmd(eventCh chan analytics.Event) *cobra.Command {
 				"Name":                name,
 				"DistributionVersion": version,
 			}); err != nil {
+				cmdEvent.AddErrorMessage(err)
+				tracker.Track(cmdEvent)
+
 				return fmt.Errorf("error executing furyctl yaml template: %w", err)
 			}
 
 			logrus.Infof("Config file created successfully at: %s", out.Name())
 
-			cmdEvent = analytics.NewCommandEvent(cmd.Name(), "", 0, &analytics.ClusterDetails{
-				KFDVersion: version,
-			})
+			cmdEvent.AddSuccessMessage(fmt.Sprintf("Config file created successfully at: %s", out.Name()))
+			tracker.Track(cmdEvent)
 
 			return nil
-		},
-		PostRun: func(cmd *cobra.Command, _ []string) {
-			cmdEvent.Send(eventCh)
 		},
 	}
 

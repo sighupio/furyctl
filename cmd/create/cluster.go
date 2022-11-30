@@ -29,48 +29,89 @@ var (
 	ErrDownloadDependenciesFailed = errors.New("download dependencies failed")
 )
 
-func NewClusterCmd(version string, eventCh chan analytics.Event) *cobra.Command {
+func NewClusterCmd(version string, tracker *analytics.Tracker) *cobra.Command {
 	var cmdEvent analytics.Event
 
 	cmd := &cobra.Command{
 		Use:   "cluster",
 		Short: "Creates a battle-tested Kubernetes cluster",
+		PreRun: func(cmd *cobra.Command, args []string) {
+			cmdEvent = analytics.NewCommandEvent(cobrax.GetFullname(cmd))
+		},
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			// Get flags.
 			debug, ok := cobrax.Flag[bool](cmd, "debug").(bool)
 			if !ok {
-				return fmt.Errorf("%w: debug", ErrParsingFlag)
+				err := fmt.Errorf("%w: debug", ErrParsingFlag)
+
+				cmdEvent.AddErrorMessage(err)
+				tracker.Track(cmdEvent)
+
+				return err
 			}
 			furyctlPath, ok := cobrax.Flag[string](cmd, "config").(string)
 			if !ok {
-				return fmt.Errorf("%w: config", ErrParsingFlag)
+				err := fmt.Errorf("%w: config", ErrParsingFlag)
+
+				cmdEvent.AddErrorMessage(err)
+				tracker.Track(cmdEvent)
+
+				return err
 			}
 			distroLocation, ok := cobrax.Flag[string](cmd, "distro-location").(string)
 			if !ok {
-				return fmt.Errorf("%w: distro-location", ErrParsingFlag)
+				err := fmt.Errorf("%w: distro-location", ErrParsingFlag)
+
+				cmdEvent.AddErrorMessage(err)
+				tracker.Track(cmdEvent)
+
+				return err
 			}
 			phase, ok := cobrax.Flag[string](cmd, "phase").(string)
 			if !ok {
-				return fmt.Errorf("%w: phase", ErrParsingFlag)
+				err := fmt.Errorf("%w: phase", ErrParsingFlag)
+
+				cmdEvent.AddErrorMessage(err)
+				tracker.Track(cmdEvent)
+
+				return err
 			}
 			binPath := cobrax.Flag[string](cmd, "bin-path").(string) //nolint:errcheck,forcetypeassert // optional flag
 			vpnAutoConnect, ok := cobrax.Flag[bool](cmd, "vpn-auto-connect").(bool)
 			if !ok {
-				return fmt.Errorf("%w: vpn-auto-connect", ErrParsingFlag)
+				err := fmt.Errorf("%w: vpn-auto-connect", ErrParsingFlag)
+
+				cmdEvent.AddErrorMessage(err)
+				tracker.Track(cmdEvent)
+
+				return err
 			}
 			dryRun, ok := cobrax.Flag[bool](cmd, "dry-run").(bool)
 			if !ok {
-				return fmt.Errorf("%w: dry-run", ErrParsingFlag)
+				err := fmt.Errorf("%w: dry-run", ErrParsingFlag)
+
+				cmdEvent.AddErrorMessage(err)
+				tracker.Track(cmdEvent)
+
+				return err
 			}
 			skipDownload, ok := cobrax.Flag[bool](cmd, "skip-download").(bool)
 			if !ok {
-				return fmt.Errorf("%w: skip-download", ErrParsingFlag)
+				err := fmt.Errorf("%w: skip-download", ErrParsingFlag)
+
+				cmdEvent.AddErrorMessage(err)
+				tracker.Track(cmdEvent)
+
+				return err
 			}
 
 			// Init paths.
 			homeDir, err := os.UserHomeDir()
 			if err != nil {
-				return fmt.Errorf("error while getting user home directory: %w", err)
+				cmdEvent.AddErrorMessage(err)
+				tracker.Track(cmdEvent)
+
+				return fmt.Errorf("error while getting current working directory: %w", err)
 			}
 
 			if binPath == "" {
@@ -88,7 +129,17 @@ func NewClusterCmd(version string, eventCh chan analytics.Event) *cobra.Command 
 			// Download the distribution.
 			logrus.Info("Downloading distribution...")
 			res, err := distrodl.Download(version, distroLocation, furyctlPath)
+
+			cmdEvent.AddClusterDetails(analytics.ClusterDetails{
+				Provider:   res.DistroManifest.Kubernetes.Eks.Version,
+				KFDVersion: res.DistroManifest.Version,
+				Phase:      phase,
+			})
+
 			if err != nil {
+				cmdEvent.AddErrorMessage(err)
+				tracker.Track(cmdEvent)
+
 				return fmt.Errorf("error while downloading distribution: %w", err)
 			}
 
@@ -101,6 +152,9 @@ func NewClusterCmd(version string, eventCh chan analytics.Event) *cobra.Command 
 			// Validate the furyctl.yaml file.
 			logrus.Info("Validating furyctl.yaml file...")
 			if err := config.Validate(furyctlPath, res.RepoPath); err != nil {
+				cmdEvent.AddErrorMessage(err)
+				tracker.Track(cmdEvent)
+
 				return fmt.Errorf("error while validating furyctl.yaml file: %w", err)
 			}
 
@@ -108,6 +162,9 @@ func NewClusterCmd(version string, eventCh chan analytics.Event) *cobra.Command 
 			if !skipDownload {
 				logrus.Info("Downloading dependencies...")
 				if errs, _ := depsdl.DownloadAll(res.DistroManifest); len(errs) > 0 {
+					cmdEvent.AddErrorMessage(ErrDownloadDependenciesFailed)
+					tracker.Track(cmdEvent)
+
 					return fmt.Errorf("%w: %v", ErrDownloadDependenciesFailed, errs)
 				}
 			}
@@ -115,6 +172,9 @@ func NewClusterCmd(version string, eventCh chan analytics.Event) *cobra.Command 
 			// Validate the dependencies.
 			logrus.Info("Validating dependencies...")
 			if err := depsvl.Validate(res); err != nil {
+				cmdEvent.AddErrorMessage(err)
+				tracker.Track(cmdEvent)
+
 				return fmt.Errorf("error while validating dependencies: %w", err)
 			}
 
@@ -130,11 +190,17 @@ func NewClusterCmd(version string, eventCh chan analytics.Event) *cobra.Command 
 				vpnAutoConnect,
 			)
 			if err != nil {
+				cmdEvent.AddErrorMessage(err)
+				tracker.Track(cmdEvent)
+
 				return fmt.Errorf("error while initializing cluster creation: %w", err)
 			}
 
 			logrus.Info("Creating cluster...")
 			if err := clusterCreator.Create(dryRun); err != nil {
+				cmdEvent.AddErrorMessage(err)
+				tracker.Track(cmdEvent)
+
 				return fmt.Errorf("error while creating cluster: %w", err)
 			}
 
@@ -146,21 +212,18 @@ func NewClusterCmd(version string, eventCh chan analytics.Event) *cobra.Command 
 				logrus.Infof("Phase %s executed successfully!", phase)
 			}
 
-			cmdEvent = analytics.NewCommandEvent(cmd.Name(), "", 0, &analytics.ClusterDetails{
-				Phase:      phase,
-				Provider:   res.DistroManifest.Kubernetes.Eks.Version,
-				KFDVersion: res.DistroManifest.Version,
-			})
-
 			_, err = fmt.Println("cluster creation succeeded")
 			if err != nil {
+				cmdEvent.AddErrorMessage(err)
+				tracker.Track(cmdEvent)
+
 				return fmt.Errorf("error while printing success message: %w", err)
 			}
 
+			cmdEvent.AddSuccessMessage("cluster creation succeeded")
+			tracker.Track(cmdEvent)
+
 			return nil
-		},
-		PostRun: func(_ *cobra.Command, _ []string) {
-			cmdEvent.Send(eventCh)
 		},
 	}
 

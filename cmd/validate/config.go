@@ -23,48 +23,66 @@ var (
 	ErrParsingFlag      = errors.New("error while parsing flag")
 )
 
-func NewConfigCmd(furyctlBinVersion string, eventCh chan analytics.Event) *cobra.Command {
+func NewConfigCmd(furyctlBinVersion string, tracker *analytics.Tracker) *cobra.Command {
 	var cmdEvent analytics.Event
 
 	cmd := &cobra.Command{
 		Use:   "config",
 		Short: "Validate furyctl.yaml file",
+		PreRun: func(cmd *cobra.Command, args []string) {
+			cmdEvent = analytics.NewCommandEvent(cobrax.GetFullname(cmd))
+		},
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			furyctlPath, ok := cobrax.Flag[string](cmd, "config").(string)
 			if !ok {
-				return fmt.Errorf("%w: config", ErrParsingFlag)
+				err := fmt.Errorf("%w: config", ErrParsingFlag)
+
+				cmdEvent.AddErrorMessage(err)
+				tracker.Track(cmdEvent)
+
+				return err
 			}
 			distroLocation, ok := cobrax.Flag[string](cmd, "distro-location").(string)
 			if !ok {
-				return fmt.Errorf("%w: distro-location", ErrParsingFlag)
+				err := fmt.Errorf("%w: distro-location", ErrParsingFlag)
+
+				cmdEvent.AddErrorMessage(err)
+				tracker.Track(cmdEvent)
+
+				return err
 			}
 
 			dloader := distribution.NewDownloader(netx.NewGoGetterClient())
 
 			res, err := dloader.Download(furyctlBinVersion, distroLocation, furyctlPath)
 			if err != nil {
+				cmdEvent.AddErrorMessage(err)
+				tracker.Track(cmdEvent)
+
 				return fmt.Errorf("failed to download distribution: %w", err)
 			}
+
+			cmdEvent.AddClusterDetails(analytics.ClusterDetails{
+				KFDVersion: res.DistroManifest.Version,
+			})
 
 			if err := config.Validate(furyctlPath, res.RepoPath); err != nil {
 				logrus.Debugf("Repository path: %s", res.RepoPath)
 
 				logrus.Error(err)
 
+				cmdEvent.AddErrorMessage(ErrValidationFailed)
+				tracker.Track(cmdEvent)
+
 				return ErrValidationFailed
 			}
 
-			cmdEvent = analytics.NewCommandEvent(cmd.Name(), "", 0, &analytics.ClusterDetails{
-				KFDVersion: res.DistroManifest.Version,
-				Provider:   "eks",
-			})
-
 			logrus.Info("config validation succeeded")
 
+			cmdEvent.AddSuccessMessage("config validation succeeded")
+			tracker.Track(cmdEvent)
+
 			return nil
-		},
-		PostRun: func(cmd *cobra.Command, args []string) {
-			cmdEvent.Send(eventCh)
 		},
 	}
 

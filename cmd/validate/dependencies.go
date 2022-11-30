@@ -23,30 +23,50 @@ import (
 
 var ErrDependencies = fmt.Errorf("dependencies are not satisfied")
 
-func NewDependenciesCmd(furyctlBinVersion string, eventCh chan analytics.Event) *cobra.Command {
+func NewDependenciesCmd(furyctlBinVersion string, tracker *analytics.Tracker) *cobra.Command {
 	var cmdEvent analytics.Event
 
 	cmd := &cobra.Command{
 		Use:   "dependencies",
 		Short: "Validate furyctl.yaml file",
+		PreRun: func(cmd *cobra.Command, args []string) {
+			cmdEvent = analytics.NewCommandEvent(cobrax.GetFullname(cmd))
+		},
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			furyctlPath, ok := cobrax.Flag[string](cmd, "config").(string)
 			if !ok {
-				return fmt.Errorf("%w: config", ErrParsingFlag)
+				err := fmt.Errorf("%w: config", ErrParsingFlag)
+
+				cmdEvent.AddErrorMessage(err)
+				tracker.Track(cmdEvent)
+
+				return err
 			}
 			distroLocation, ok := cobrax.Flag[string](cmd, "distro-location").(string)
 			if !ok {
-				return fmt.Errorf("%w: distro-location", ErrParsingFlag)
+				err := fmt.Errorf("%w: distro-location", ErrParsingFlag)
+
+				cmdEvent.AddErrorMessage(err)
+				tracker.Track(cmdEvent)
+
+				return err
 			}
-			binPath := cobrax.Flag[string](cmd, "bin-path").(string) //nolint:errcheck,forcetypeassert // optional flag
 
 			dloader := distribution.NewDownloader(netx.NewGoGetterClient())
 
 			dres, err := dloader.Download(furyctlBinVersion, distroLocation, furyctlPath)
 			if err != nil {
+				cmdEvent.AddErrorMessage(err)
+				tracker.Track(cmdEvent)
+
 				return fmt.Errorf("failed to download distribution: %w", err)
 			}
 
+			cmdEvent.AddClusterDetails(analytics.ClusterDetails{
+				KFDVersion: dres.DistroManifest.Version,
+			})
+
+			binPath := cobrax.Flag[string](cmd, "bin-path").(string) //nolint:errcheck,forcetypeassert // optional flag
 			if binPath == "" {
 				homeDir, err := os.UserHomeDir()
 				if err != nil {
@@ -70,20 +90,18 @@ func NewDependenciesCmd(furyctlBinVersion string, eventCh chan analytics.Event) 
 					logrus.Error(err)
 				}
 
+				cmdEvent.AddErrorMessage(ErrDependencies)
+				tracker.Track(cmdEvent)
+
 				return ErrDependencies
 			}
 
-			cmdEvent = analytics.NewCommandEvent(cmd.Name(), "", 0, &analytics.ClusterDetails{
-				KFDVersion: dres.DistroManifest.Version,
-				Provider:   "eks",
-			})
-
 			logrus.Info("Dependencies validation succeeded")
 
+			cmdEvent.AddSuccessMessage("Dependencies validation succeeded")
+			tracker.Track(cmdEvent)
+
 			return nil
-		},
-		PostRun: func(cmd *cobra.Command, args []string) {
-			cmdEvent.Send(eventCh)
 		},
 	}
 

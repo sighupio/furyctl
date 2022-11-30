@@ -48,7 +48,6 @@ func NewRootCommand(versions map[string]string, logFile *os.File, tracker *analy
 	r := make(chan app.Release, 1)
 	e := make(chan error, 1)
 	// Analytics event channel.
-	eventCh := make(chan analytics.Event, 1)
 
 	cfg := &rootConfig{}
 	rootCmd := &RootCommand{
@@ -112,7 +111,7 @@ Furyctl is a simple CLI tool to:
 				// Configure analytics.
 				aflag, ok := cobrax.Flag[bool](cmd, "disable-analytics").(bool)
 				if ok && aflag {
-					tracker.Disable(aflag)
+					tracker.Disable()
 				}
 
 				// Change working directory if it is specified.
@@ -142,12 +141,6 @@ Furyctl is a simple CLI tool to:
 						logrus.Debugf("Error checking for updates: %s", err)
 					}
 				}
-				// Track analytics events.
-				if tracker.IsEnabled() {
-					if err := tracker.Track(<-eventCh); err != nil {
-						logrus.Debug(err)
-					}
-				}
 			},
 		},
 		config: cfg,
@@ -162,13 +155,13 @@ Furyctl is a simple CLI tool to:
 	rootCmd.PersistentFlags().StringVarP(&rootCmd.config.Workdir, "workdir", "w", "", "Switch to a different working directory before executing the given subcommand.")
 	rootCmd.PersistentFlags().StringVarP(&rootCmd.config.Log, "log", "l", "", "Path to the log file or stdout to log to standard output")
 
-	rootCmd.AddCommand(NewCompletionCmd(eventCh))
-	rootCmd.AddCommand(NewCreateCommand(versions["version"], eventCh))
-	rootCmd.AddCommand(NewDownloadCmd(versions["version"], eventCh))
-	rootCmd.AddCommand(NewDumpCmd(eventCh))
-	rootCmd.AddCommand(NewValidateCommand(versions["version"], eventCh))
-	rootCmd.AddCommand(NewVersionCmd(versions, eventCh))
-	rootCmd.AddCommand(NewDeleteCommand(versions["version"])) // TODO: add tracking
+	rootCmd.AddCommand(NewCompletionCmd(tracker))
+	rootCmd.AddCommand(NewCreateCommand(versions["version"], tracker))
+	rootCmd.AddCommand(NewDownloadCmd(versions["version"], tracker))
+	rootCmd.AddCommand(NewDumpCmd(tracker))
+	rootCmd.AddCommand(NewValidateCommand(versions["version"], tracker))
+	rootCmd.AddCommand(NewVersionCmd(versions, tracker))
+	rootCmd.AddCommand(NewDeleteCommand(versions["version"], tracker))
 
 	return rootCmd
 }
