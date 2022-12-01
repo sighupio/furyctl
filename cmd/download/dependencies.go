@@ -20,10 +20,7 @@ import (
 )
 
 var (
-	ErrDebugFlagNotSet      = errors.New("debug flag not set")
-	ErrFuryctlPathNotSet    = errors.New("furyctl path not set")
-	ErrDistroLocationNotSet = errors.New("distro location not set")
-
+	ErrParsingFlag    = errors.New("error while parsing flag")
 	ErrDownloadFailed = errors.New("dependencies download failed")
 )
 
@@ -34,15 +31,15 @@ func NewDependenciesCmd(furyctlBinVersion string) *cobra.Command {
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			debug, ok := cobrax.Flag[bool](cmd, "debug").(bool)
 			if !ok {
-				return ErrDebugFlagNotSet
+				return fmt.Errorf("%w: debug", ErrParsingFlag)
 			}
 			furyctlPath, ok := cobrax.Flag[string](cmd, "config").(string)
 			if !ok {
-				return ErrFuryctlPathNotSet
+				return fmt.Errorf("%w: config", ErrParsingFlag)
 			}
 			distroLocation, ok := cobrax.Flag[string](cmd, "distro-location").(string)
 			if !ok {
-				return ErrDistroLocationNotSet
+				return fmt.Errorf("%w: distro-location", ErrParsingFlag)
 			}
 
 			homeDir, err := os.UserHomeDir()

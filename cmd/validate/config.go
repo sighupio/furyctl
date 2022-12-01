@@ -18,10 +18,8 @@ import (
 )
 
 var (
-	ErrValidationFailed      = fmt.Errorf("config validation failed")
-	ErrDebugFlagNotProvided  = errors.New("debug flag not provided")
-	ErrConfigFlagNotProvided = errors.New("config flag not provided")
-	ErrDistroFlagNotProvided = errors.New("distro-location flag not provided")
+	ErrValidationFailed = fmt.Errorf("config validation failed")
+	ErrParsingFlag      = errors.New("error while parsing flag")
 )
 
 func NewConfigCmd(furyctlBinVersion string) *cobra.Command {
@@ -31,15 +29,15 @@ func NewConfigCmd(furyctlBinVersion string) *cobra.Command {
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			debug, ok := cobrax.Flag[bool](cmd, "debug").(bool)
 			if !ok {
-				return ErrDebugFlagNotProvided
+				return fmt.Errorf("%w: debug", ErrParsingFlag)
 			}
 			furyctlPath, ok := cobrax.Flag[string](cmd, "config").(string)
 			if !ok {
-				return ErrConfigFlagNotProvided
+				return fmt.Errorf("%w: config", ErrParsingFlag)
 			}
 			distroLocation, ok := cobrax.Flag[string](cmd, "distro-location").(string)
 			if !ok {
-				return ErrDistroFlagNotProvided
+				return fmt.Errorf("%w: distro-location", ErrParsingFlag)
 			}
 
 			dloader := distribution.NewDownloader(netx.NewGoGetterClient(), debug)

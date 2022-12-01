@@ -29,15 +29,15 @@ func NewDependenciesCmd(furyctlBinVersion string) *cobra.Command {
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			debug, ok := cobrax.Flag[bool](cmd, "debug").(bool)
 			if !ok {
-				return ErrDebugFlagNotProvided
+				return fmt.Errorf("%w: debug", ErrParsingFlag)
 			}
 			furyctlPath, ok := cobrax.Flag[string](cmd, "config").(string)
 			if !ok {
-				return ErrConfigFlagNotProvided
+				return fmt.Errorf("%w: config", ErrParsingFlag)
 			}
 			distroLocation, ok := cobrax.Flag[string](cmd, "distro-location").(string)
 			if !ok {
-				return ErrDistroFlagNotProvided
+				return fmt.Errorf("%w: distro-location", ErrParsingFlag)
 			}
 			binPath := cobrax.Flag[string](cmd, "bin-path").(string) //nolint:errcheck,forcetypeassert // optional flag
 

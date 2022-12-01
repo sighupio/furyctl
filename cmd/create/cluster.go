@@ -25,13 +25,7 @@ import (
 )
 
 var (
-	ErrDebugFlagNotSet            = errors.New("debug flag not set")
-	ErrFuryctlFlagNotSet          = errors.New("furyctl flag not set")
-	ErrDistroFlagNotSet           = errors.New("distro flag not set")
-	ErrPhaseFlagNotSet            = errors.New("phase flag not set")
-	ErrVpnAutoConnectFlagNotSet   = errors.New("vpn-auto-connect flag not set")
-	ErrDryRunFlagNotSet           = errors.New("dry-run flag not set")
-	ErrSkipDownloadFlagNotSet     = errors.New("skip-download flag not set")
+	ErrParsingFlag                = errors.New("error while parsing flag")
 	ErrDownloadDependenciesFailed = errors.New("download dependencies failed")
 )
 
@@ -43,31 +37,31 @@ func NewClusterCmd(version string) *cobra.Command {
 			// Get flags.
 			debug, ok := cobrax.Flag[bool](cmd, "debug").(bool)
 			if !ok {
-				return ErrDebugFlagNotSet
+				return fmt.Errorf("%w: debug", ErrParsingFlag)
 			}
 			furyctlPath, ok := cobrax.Flag[string](cmd, "config").(string)
 			if !ok {
-				return ErrFuryctlFlagNotSet
+				return fmt.Errorf("%w: config", ErrParsingFlag)
 			}
 			distroLocation, ok := cobrax.Flag[string](cmd, "distro-location").(string)
 			if !ok {
-				return ErrDistroFlagNotSet
+				return fmt.Errorf("%w: distro-location", ErrParsingFlag)
 			}
 			phase, ok := cobrax.Flag[string](cmd, "phase").(string)
 			if !ok {
-				return ErrPhaseFlagNotSet
+				return fmt.Errorf("%w: phase", ErrParsingFlag)
 			}
 			vpnAutoConnect, ok := cobrax.Flag[bool](cmd, "vpn-auto-connect").(bool)
 			if !ok {
-				return ErrVpnAutoConnectFlagNotSet
+				return fmt.Errorf("%w: vpn-auto-connect", ErrParsingFlag)
 			}
 			dryRun, ok := cobrax.Flag[bool](cmd, "dry-run").(bool)
 			if !ok {
-				return ErrDryRunFlagNotSet
+				return fmt.Errorf("%w: dry-run", ErrParsingFlag)
 			}
 			skipDownload, ok := cobrax.Flag[bool](cmd, "skip-download").(bool)
 			if !ok {
-				return ErrSkipDownloadFlagNotSet
+				return fmt.Errorf("%w: skip-download", ErrParsingFlag)
 			}
 
 			// Init paths.

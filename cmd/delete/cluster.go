@@ -23,14 +23,7 @@ import (
 	netx "github.com/sighupio/furyctl/internal/x/net"
 )
 
-var (
-	ErrDebugFlagNotSet   = errors.New("debug flag not set")
-	ErrFuryctlFlagNotSet = errors.New("furyctl flag not set")
-	ErrPhaseFlagNotSet   = errors.New("phase flag not set")
-	ErrDryRunFlagNotSet  = errors.New("dry-run flag not set")
-	ErrForceFlagNotSet   = errors.New("force flag not set")
-	ErrDistroFlagNotSet  = errors.New("distro flag not set")
-)
+var ErrParsingFlag = errors.New("error while parsing flag")
 
 func NewClusterCmd(version string) *cobra.Command {
 	cmd := &cobra.Command{
@@ -39,32 +32,32 @@ func NewClusterCmd(version string) *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			debug, ok := cobrax.Flag[bool](cmd, "debug").(bool)
 			if !ok {
-				return ErrDebugFlagNotSet
+				return fmt.Errorf("%w: debug", ErrParsingFlag)
 			}
 
 			furyctlPath, ok := cobrax.Flag[string](cmd, "config").(string)
 			if !ok {
-				return ErrFuryctlFlagNotSet
+				return fmt.Errorf("%w: config", ErrParsingFlag)
 			}
 
 			distroLocation, ok := cobrax.Flag[string](cmd, "distro-location").(string)
 			if !ok {
-				return ErrDistroFlagNotSet
+				return fmt.Errorf("%w: distro-location", ErrParsingFlag)
 			}
 
 			phase, ok := cobrax.Flag[string](cmd, "phase").(string)
 			if !ok {
-				return ErrPhaseFlagNotSet
+				return fmt.Errorf("%w: phase", ErrParsingFlag)
 			}
 
 			dryRun, ok := cobrax.Flag[bool](cmd, "dry-run").(bool)
 			if !ok {
-				return ErrDryRunFlagNotSet
+				return fmt.Errorf("%w: dry-run", ErrParsingFlag)
 			}
 
 			force, ok := cobrax.Flag[bool](cmd, "force").(bool)
 			if !ok {
-				return ErrForceFlagNotSet
+				return fmt.Errorf("%w: debug", ErrParsingFlag)
 			}
 
 			// Init paths.

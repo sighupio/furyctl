@@ -17,14 +17,7 @@ import (
 	yamlx "github.com/sighupio/furyctl/internal/x/yaml"
 )
 
-var (
-	ErrSourceDirDoesNotExist = fmt.Errorf("source directory does not exist")
-
-	ErrDebugFlagNotSet          = fmt.Errorf("debug flag not set")
-	ErrConfigFlagNotSet         = fmt.Errorf("config flag not set")
-	ErrDistroLocationFlagNotSet = fmt.Errorf("distro-location flag not set")
-	ErrBinPathFlagNotSet        = fmt.Errorf("bin-path flag not set")
-)
+var ErrSourceDirDoesNotExist = fmt.Errorf("source directory does not exist")
 
 type templateConfig struct {
 	DryRun      bool
