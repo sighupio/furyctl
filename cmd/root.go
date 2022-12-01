@@ -192,7 +192,11 @@ func checkUpdates(version string, rc chan app.Release, e chan error) {
 }
 
 func createLogFile(path string) (*os.File, error) {
-	// Create the log file.
+	// Create the log directory if it doesn't exist.
+	if err := os.MkdirAll(filepath.Dir(path), iox.RWPermAccess); err != nil {
+		return nil, fmt.Errorf("error while creating log file: %w", err)
+	}
+
 	logFile, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_APPEND, iox.RWPermAccess)
 	if err != nil {
 		return nil, fmt.Errorf("error while creating log file: %w", err)
