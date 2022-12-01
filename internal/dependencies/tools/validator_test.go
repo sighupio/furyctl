@@ -17,8 +17,6 @@ import (
 )
 
 func Test_Validator_Validate(t *testing.T) {
-	t.Parallel()
-
 	testCases := []struct {
 		desc     string
 		manifest config.KFD
@@ -62,9 +60,7 @@ func Test_Validator_Validate(t *testing.T) {
 		tC := tC
 
 		t.Run(tC.desc, func(t *testing.T) {
-			t.Parallel()
-
-			v := tools.NewValidator(execx.NewFakeExecutor(), "")
+			v := tools.NewValidator(execx.NewFakeExecutor(), "test_data")
 
 			errs := v.Validate(tC.manifest)
 
@@ -77,6 +73,7 @@ func Test_Validator_Validate(t *testing.T) {
 				for _, wantErr := range tC.wantErrs {
 					if strings.Trim(err.Error(), "\n") == strings.Trim(wantErr.Error(), "\n") {
 						found = true
+
 						break
 					}
 				}
