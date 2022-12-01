@@ -133,8 +133,7 @@ func (vc *checker) version(want string) error {
 
 	cmdDir := filepath.Dir(vc.runner.CmdPath())
 
-	_, err := os.Stat(cmdDir)
-	if err != nil {
+	if _, err := os.Stat(cmdDir); err != nil {
 		if errors.Is(err, os.ErrNotExist) {
 			return fmt.Errorf("version %s not installed: %w", want, err)
 		}

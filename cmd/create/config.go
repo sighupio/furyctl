@@ -18,6 +18,8 @@ import (
 	iox "github.com/sighupio/furyctl/internal/x/io"
 )
 
+var ErrConfigCreationFailed = fmt.Errorf("config creation failed")
+
 func NewConfigCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "config",
