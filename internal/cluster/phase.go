@@ -45,14 +45,14 @@ type OperationPhaseOption struct {
 func NewOperationPhase(folder string, kfdTools config.KFDTools) (*OperationPhase, error) {
 	basePath := folder
 
-	vendorPath, err := filepath.Abs(path.Join(basePath, "../../", "bin"))
+	binPath, err := filepath.Abs(path.Join(basePath, "../../", "bin"))
 	if err != nil {
 		return &OperationPhase{}, fmt.Errorf("error getting absolute path for tools bin folder: %w", err)
 	}
 
-	kustomizePath := path.Join(vendorPath, "kustomize", kfdTools.Kustomize, "kustomize")
-	terraformPath := path.Join(vendorPath, "terraform", kfdTools.Terraform, "terraform")
-	kubectlPath := path.Join(vendorPath, "kubectl", kfdTools.Kubectl, "kubectl")
+	kustomizePath := path.Join(binPath, "kustomize", kfdTools.Kustomize, "kustomize")
+	terraformPath := path.Join(binPath, "terraform", kfdTools.Terraform, "terraform")
+	kubectlPath := path.Join(binPath, "kubectl", kfdTools.Kubectl, "kubectl")
 
 	planPath := path.Join(basePath, "terraform", "plan")
 	logsPath := path.Join(basePath, "terraform", "logs")
