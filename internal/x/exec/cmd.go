@@ -51,7 +51,7 @@ func NewCmd(name string, opts CmdOptions) *Cmd {
 		errWriters = append(errWriters, opts.Err)
 	}
 
-	if Debug {
+	if Debug || LogFile == nil {
 		outWriters = append(outWriters, os.Stdout)
 		errWriters = append(errWriters, os.Stderr)
 	}

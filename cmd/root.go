@@ -5,6 +5,8 @@
 package cmd
 
 import (
+	"fmt"
+	execx "github.com/sighupio/furyctl/internal/x/exec"
 	"os"
 	"path/filepath"
 	"time"
@@ -18,7 +20,6 @@ import (
 	"github.com/sighupio/furyctl/internal/app"
 	"github.com/sighupio/furyctl/internal/semver"
 	cobrax "github.com/sighupio/furyctl/internal/x/cobra"
-	execx "github.com/sighupio/furyctl/internal/x/exec"
 	iox "github.com/sighupio/furyctl/internal/x/io"
 	logrusx "github.com/sighupio/furyctl/internal/x/logrus"
 )
@@ -29,6 +30,7 @@ type rootConfig struct {
 	DisableAnalytics bool
 	DisableTty       bool
 	Workdir          string
+	Log              string
 }
 
 type RootCommand struct {
@@ -61,6 +63,8 @@ Furyctl is a simple CLI tool to:
 			SilenceUsage:  true,
 			SilenceErrors: true,
 			PersistentPreRun: func(cmd *cobra.Command, _ []string) {
+				var err error
+
 				// Async check for updates.
 				go checkUpdates(versions["version"], r, e)
 				// Configure the spinner.
@@ -76,13 +80,30 @@ Furyctl is a simple CLI tool to:
 
 				cfg.Spinner = spinner.New(spinner.CharSets[spinnerStyle], timeout, spinner.WithWriter(w))
 
+				logPath, ok := cobrax.Flag[string](cmd, "log").(string)
+				if ok && logPath != "stdout" {
+					if logPath == "" {
+						homeDir, err := os.UserHomeDir()
+						if err != nil {
+							logrus.Fatalf("error while getting user home directory: %v", err)
+						}
+
+						logPath = filepath.Join(homeDir, ".furyctl", "furyctl.log")
+					}
+
+					logFile, err = createLogFile(logPath)
+					if err != nil {
+						logrus.Fatalf("%v", err)
+					}
+
+					execx.LogFile = logFile
+				}
+
 				// Set log level.
 				dflag, ok := cobrax.Flag[bool](cmd, "debug").(bool)
 				if ok {
 					logrusx.InitLog(logFile, dflag)
 				}
-
-				execx.LogFile = logFile
 
 				// Configure analytics.
 				a := analytics.New(true, versions["version"])
@@ -129,6 +150,7 @@ Furyctl is a simple CLI tool to:
 	rootCmd.PersistentFlags().BoolVarP(&rootCmd.config.DisableAnalytics, "disable", "d", false, "Disable analytics")
 	rootCmd.PersistentFlags().BoolVarP(&rootCmd.config.DisableTty, "no-tty", "T", false, "Disable TTY")
 	rootCmd.PersistentFlags().StringVarP(&rootCmd.config.Workdir, "workdir", "w", "", "Switch to a different working directory before executing the given subcommand.")
+	rootCmd.PersistentFlags().StringVarP(&rootCmd.config.Log, "log", "l", "", "Path to the log file")
 
 	rootCmd.AddCommand(NewCompletionCmd())
 	rootCmd.AddCommand(NewCreateCommand(versions["version"]))
@@ -167,4 +189,14 @@ func checkUpdates(version string, rc chan app.Release, e chan error) {
 	}
 
 	rc <- r
+}
+
+func createLogFile(path string) (*os.File, error) {
+	// Create the log file.
+	logFile, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_APPEND, iox.RWPermAccess)
+	if err != nil {
+		return nil, fmt.Errorf("error while creating log file: %w", err)
+	}
+
+	return logFile, nil
 }
