@@ -27,10 +27,6 @@ func NewDependenciesCmd(furyctlBinVersion string) *cobra.Command {
 		Use:   "dependencies",
 		Short: "Validate furyctl.yaml file",
 		RunE: func(cmd *cobra.Command, _ []string) error {
-			debug, ok := cobrax.Flag[bool](cmd, "debug").(bool)
-			if !ok {
-				return fmt.Errorf("%w: debug", ErrParsingFlag)
-			}
 			furyctlPath, ok := cobrax.Flag[string](cmd, "config").(string)
 			if !ok {
 				return fmt.Errorf("%w: config", ErrParsingFlag)
@@ -41,7 +37,7 @@ func NewDependenciesCmd(furyctlBinVersion string) *cobra.Command {
 			}
 			binPath := cobrax.Flag[string](cmd, "bin-path").(string) //nolint:errcheck,forcetypeassert // optional flag
 
-			dloader := distribution.NewDownloader(netx.NewGoGetterClient(), debug)
+			dloader := distribution.NewDownloader(netx.NewGoGetterClient())
 
 			dres, err := dloader.Download(furyctlBinVersion, distroLocation, furyctlPath)
 			if err != nil {

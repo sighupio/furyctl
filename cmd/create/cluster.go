@@ -73,7 +73,7 @@ func NewClusterCmd(version string) *cobra.Command {
 			// Init first half of collaborators.
 			client := netx.NewGoGetterClient()
 			executor := execx.NewStdExecutor()
-			distrodl := distribution.NewDownloader(client, debug)
+			distrodl := distribution.NewDownloader(client)
 
 			// Init packages.
 			execx.Debug = debug

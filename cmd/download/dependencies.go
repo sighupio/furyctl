@@ -29,10 +29,6 @@ func NewDependenciesCmd(furyctlBinVersion string) *cobra.Command {
 		Use:   "dependencies",
 		Short: "Download dependencies",
 		RunE: func(cmd *cobra.Command, _ []string) error {
-			debug, ok := cobrax.Flag[bool](cmd, "debug").(bool)
-			if !ok {
-				return fmt.Errorf("%w: debug", ErrParsingFlag)
-			}
 			furyctlPath, ok := cobrax.Flag[string](cmd, "config").(string)
 			if !ok {
 				return fmt.Errorf("%w: config", ErrParsingFlag)
@@ -49,7 +45,7 @@ func NewDependenciesCmd(furyctlBinVersion string) *cobra.Command {
 
 			client := netx.NewGoGetterClient()
 
-			distrodl := distribution.NewDownloader(client, debug)
+			distrodl := distribution.NewDownloader(client)
 
 			dres, err := distrodl.Download(furyctlBinVersion, distroLocation, furyctlPath)
 			if err != nil {

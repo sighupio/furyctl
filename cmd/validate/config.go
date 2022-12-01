@@ -27,10 +27,6 @@ func NewConfigCmd(furyctlBinVersion string) *cobra.Command {
 		Use:   "config",
 		Short: "Validate furyctl.yaml file",
 		RunE: func(cmd *cobra.Command, _ []string) error {
-			debug, ok := cobrax.Flag[bool](cmd, "debug").(bool)
-			if !ok {
-				return fmt.Errorf("%w: debug", ErrParsingFlag)
-			}
 			furyctlPath, ok := cobrax.Flag[string](cmd, "config").(string)
 			if !ok {
 				return fmt.Errorf("%w: config", ErrParsingFlag)
@@ -40,7 +36,7 @@ func NewConfigCmd(furyctlBinVersion string) *cobra.Command {
 				return fmt.Errorf("%w: distro-location", ErrParsingFlag)
 			}
 
-			dloader := distribution.NewDownloader(netx.NewGoGetterClient(), debug)
+			dloader := distribution.NewDownloader(netx.NewGoGetterClient())
 
 			res, err := dloader.Download(furyctlBinVersion, distroLocation, furyctlPath)
 			if err != nil {
