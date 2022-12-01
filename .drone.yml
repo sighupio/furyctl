@@ -95,6 +95,8 @@ steps:
         from_secret: AWS_SECRET_ACCESS_KEY
       AWS_DEFAULT_REGION:
         from_secret: AWS_REGION
+      FURYCTL_MIXPANEL_TOKEN:
+        from_secret: FURYCTL_MIXPANEL_TOKEN
       NETRC_FILE:
         from_secret: NETRC_FILE
       GITHUB_SSH:
@@ -118,6 +120,8 @@ steps:
       GOCACHE: /drone/src/.go/cache
       GOMODCACHE: /drone/src/.go/modcache
       GOTMPDIR: /drone/src/.go/tmp
+      FURYCTL_MIXPANEL_TOKEN:
+        from_secret: FURYCTL_MIXPANEL_TOKEN
       GITHUB_TOKEN:
         from_secret: GITHUB_TOKEN
 
@@ -141,6 +145,8 @@ steps:
       GOCACHE: /drone/src/.go/cache
       GOMODCACHE: /drone/src/.go/modcache
       GOTMPDIR: /drone/src/.go/tmp
+      FURYCTL_MIXPANEL_TOKEN:
+        from_secret: FURYCTL_MIXPANEL_TOKEN
       GITHUB_TOKEN:
         from_secret: GITHUB_TOKEN
 
