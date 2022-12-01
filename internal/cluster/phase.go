@@ -68,7 +68,7 @@ func NewOperationPhase(folder string, kfdTools config.KFDTools) (*OperationPhase
 		LogsPath:      logsPath,
 		OutputsPath:   outputsPath,
 		SecretsPath:   secretsPath,
-		VendorPath:    vendorPath,
+		VendorPath:    binPath,
 	}, nil
 }
 
