@@ -105,6 +105,8 @@ Furyctl is a simple CLI tool to:
 					logrusx.InitLog(logFile, dflag)
 				}
 
+				logrus.Debugf("logging to: %s", logPath)
+
 				// Configure analytics.
 				a := analytics.New(true, versions["version"])
 				aflag, ok := cobrax.Flag[bool](cmd, "disable-analytics").(bool)
@@ -150,7 +152,7 @@ Furyctl is a simple CLI tool to:
 	rootCmd.PersistentFlags().BoolVarP(&rootCmd.config.DisableAnalytics, "disable", "d", false, "Disable analytics")
 	rootCmd.PersistentFlags().BoolVarP(&rootCmd.config.DisableTty, "no-tty", "T", false, "Disable TTY")
 	rootCmd.PersistentFlags().StringVarP(&rootCmd.config.Workdir, "workdir", "w", "", "Switch to a different working directory before executing the given subcommand.")
-	rootCmd.PersistentFlags().StringVarP(&rootCmd.config.Log, "log", "l", "", "Path to the log file")
+	rootCmd.PersistentFlags().StringVarP(&rootCmd.config.Log, "log", "l", "", "Path to the log file or stdout to log to standard output")
 
 	rootCmd.AddCommand(NewCompletionCmd())
 	rootCmd.AddCommand(NewCreateCommand(versions["version"]))
@@ -193,7 +195,7 @@ func checkUpdates(version string, rc chan app.Release, e chan error) {
 
 func createLogFile(path string) (*os.File, error) {
 	// Create the log directory if it doesn't exist.
-	if err := os.MkdirAll(filepath.Dir(path), iox.RWPermAccess); err != nil {
+	if err := os.MkdirAll(filepath.Dir(path), iox.UserGroupPerm); err != nil {
 		return nil, fmt.Errorf("error while creating log file: %w", err)
 	}
 
