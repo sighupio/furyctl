@@ -3,16 +3,15 @@
 # license that can be found in the LICENSE file.
 
 versions:
-  aws: v1.15.4
-  monitoring: master
+  dr: v1.10.1
+  monitoring: v2.0.1
+  on-premises: v1.24.7
 
 roles:
-  - name: aws/etcd
-  - name: aws/kube-control-plane
+  - name: on-premises
 
 modules:
-  - name: aws/aws-vpc
-  - name: aws/aws-kubernetes
+  - name: dr/aws-velero
   - name: terraform-aws-acm
     version: v2.5.0
     provider:
@@ -41,13 +40,10 @@ modules:
 bases:
   - name: monitoring
   - name: logging
-    version: master
+    version: main
   - name: dr/velero/velero-base
-    version: feature/deprecate-and-update
   - name: dr/velero/velero-aws
-    version: feature/deprecate-and-update
   - name: dr/velero/velero-restic
-    version: feature/deprecate-and-update
 
 provider:
   roles: {}
