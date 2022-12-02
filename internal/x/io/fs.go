@@ -18,6 +18,7 @@ import (
 
 const (
 	FullPermAccess   = 0o755
+	UserGroupPerm    = 0o750
 	FullRWPermAccess = 0o600
 	RWPermAccess     = 0o644
 )
