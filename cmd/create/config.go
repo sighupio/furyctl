@@ -10,7 +10,6 @@ import (
 	"os"
 	"path/filepath"
 	"text/template"
-	"time"
 
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -118,14 +117,9 @@ func createNewEmptyConfigFile(path string) (*os.File, error) {
 	}
 
 	if _, err := os.Stat(absPath); err == nil {
-		ext := filepath.Ext(absPath)
-		now := time.Now().Unix()
+		p := filepath.Dir(absPath)
 
-		trimAbsPath := absPath[:len(absPath)-len(ext)]
-
-		logrus.Warnf("Config file already exists, renaming to: %s.%d%s", trimAbsPath, now, ext)
-
-		absPath = fmt.Sprintf("%s.%d%s", trimAbsPath, now, ext)
+		return nil, fmt.Errorf("%w: a furyctl.yaml configuration file already exists in %s, please remove it and try again", ErrConfigCreationFailed, p)
 	}
 
 	if err := os.MkdirAll(filepath.Dir(absPath), iox.FullPermAccess); err != nil {
