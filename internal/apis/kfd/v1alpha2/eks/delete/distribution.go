@@ -43,10 +43,10 @@ type Distribution struct {
 	dryRun     bool
 }
 
-func NewDistribution(dryRun bool, workDir string, kfdManifest config.KFD) (*Distribution, error) {
+func NewDistribution(dryRun bool, workDir, binPath string, kfdManifest config.KFD) (*Distribution, error) {
 	distroDir := path.Join(workDir, "distribution")
 
-	phase, err := cluster.NewOperationPhase(distroDir, kfdManifest.Tools)
+	phase, err := cluster.NewOperationPhase(distroDir, kfdManifest.Tools, binPath)
 	if err != nil {
 		return nil, fmt.Errorf("error creating distribution phase: %w", err)
 	}

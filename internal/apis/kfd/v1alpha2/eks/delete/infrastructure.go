@@ -24,10 +24,10 @@ type Infrastructure struct {
 	dryRun   bool
 }
 
-func NewInfrastructure(dryRun bool, workDir string, kfdManifest config.KFD) (*Infrastructure, error) {
+func NewInfrastructure(dryRun bool, workDir, binPath string, kfdManifest config.KFD) (*Infrastructure, error) {
 	infraDir := path.Join(workDir, "infrastructure")
 
-	phase, err := cluster.NewOperationPhase(infraDir, kfdManifest.Tools)
+	phase, err := cluster.NewOperationPhase(infraDir, kfdManifest.Tools, binPath)
 	if err != nil {
 		return nil, fmt.Errorf("error creating infrastructure phase: %w", err)
 	}

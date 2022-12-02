@@ -23,6 +23,7 @@ type ClusterCreator struct {
 	furyctlConf    schema.EksclusterKfdV1Alpha2
 	kfdManifest    config.KFD
 	distroPath     string
+	binPath        string
 	phase          string
 	vpnAutoConnect bool
 }
@@ -71,16 +72,21 @@ func (v *ClusterCreator) SetProperty(name string, value any) {
 		if s, ok := value.(string); ok {
 			v.workDir = s
 		}
+
+	case cluster.CreatorPropertyBinPath:
+		if s, ok := value.(string); ok {
+			v.binPath = s
+		}
 	}
 }
 
 func (v *ClusterCreator) Create(dryRun bool) error {
-	infra, err := create.NewInfrastructure(v.furyctlConf, v.kfdManifest, v.workDir, dryRun)
+	infra, err := create.NewInfrastructure(v.furyctlConf, v.kfdManifest, v.workDir, v.binPath, dryRun)
 	if err != nil {
 		return fmt.Errorf("error while initiating infrastructure phase: %w", err)
 	}
 
-	kube, err := create.NewKubernetes(v.furyctlConf, v.kfdManifest, v.workDir, infra.OutputsPath, dryRun)
+	kube, err := create.NewKubernetes(v.furyctlConf, v.kfdManifest, v.workDir, infra.OutputsPath, v.binPath, dryRun)
 	if err != nil {
 		return fmt.Errorf("error while initiating kubernetes phase: %w", err)
 	}
@@ -92,6 +98,7 @@ func (v *ClusterCreator) Create(dryRun bool) error {
 		v.workDir,
 		v.distroPath,
 		infra.OutputsPath,
+		v.binPath,
 		dryRun,
 	)
 	if err != nil {

@@ -38,9 +38,15 @@ func NewDependenciesCmd(furyctlBinVersion string) *cobra.Command {
 				return fmt.Errorf("%w: distro-location", ErrParsingFlag)
 			}
 
+			binPath := cobrax.Flag[string](cmd, "bin-path").(string) //nolint:errcheck,forcetypeassert // optional flag
+
 			homeDir, err := os.UserHomeDir()
 			if err != nil {
 				return fmt.Errorf("failed to get current user home directory: %w", err)
+			}
+
+			if binPath == "" {
+				binPath = filepath.Join(homeDir, ".furyctl", "bin")
 			}
 
 			client := netx.NewGoGetterClient()
@@ -53,8 +59,6 @@ func NewDependenciesCmd(furyctlBinVersion string) *cobra.Command {
 			}
 
 			basePath := filepath.Join(homeDir, ".furyctl", dres.MinimalConf.Metadata.Name)
-
-			binPath := filepath.Join(homeDir, ".furyctl", "bin")
 
 			depsdl := dependencies.NewDownloader(client, basePath, binPath)
 
@@ -79,6 +83,13 @@ func NewDependenciesCmd(furyctlBinVersion string) *cobra.Command {
 			return nil
 		},
 	}
+
+	cmd.Flags().StringP(
+		"bin-path",
+		"b",
+		"",
+		"Path to the bin folder where all dependencies are installed",
+	)
 
 	cmd.Flags().StringP(
 		"config",

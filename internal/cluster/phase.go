@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"os"
 	"path"
-	"path/filepath"
 
 	"github.com/sighupio/fury-distribution/pkg/config"
 	"github.com/sighupio/furyctl/internal/template"
@@ -34,7 +33,7 @@ type OperationPhase struct {
 	LogsPath      string
 	OutputsPath   string
 	SecretsPath   string
-	VendorPath    string
+	binPath       string
 }
 
 type OperationPhaseOption struct {
@@ -42,13 +41,8 @@ type OperationPhaseOption struct {
 	Value any
 }
 
-func NewOperationPhase(folder string, kfdTools config.KFDTools) (*OperationPhase, error) {
+func NewOperationPhase(folder string, kfdTools config.KFDTools, binPath string) (*OperationPhase, error) {
 	basePath := folder
-
-	binPath, err := filepath.Abs(path.Join(basePath, "../../", "bin"))
-	if err != nil {
-		return &OperationPhase{}, fmt.Errorf("error getting absolute path for tools bin folder: %w", err)
-	}
 
 	kustomizePath := path.Join(binPath, "kustomize", kfdTools.Kustomize, "kustomize")
 	terraformPath := path.Join(binPath, "terraform", kfdTools.Terraform, "terraform")
@@ -68,7 +62,7 @@ func NewOperationPhase(folder string, kfdTools config.KFDTools) (*OperationPhase
 		LogsPath:      logsPath,
 		OutputsPath:   outputsPath,
 		SecretsPath:   secretsPath,
-		VendorPath:    binPath,
+		binPath:       binPath,
 	}, nil
 }
 

@@ -49,7 +49,7 @@ func NewClusterCmd(version string) *cobra.Command {
 			if !ok {
 				return fmt.Errorf("%w: phase", ErrParsingFlag)
 			}
-
+			binPath := cobrax.Flag[string](cmd, "bin-path").(string) //nolint:errcheck,forcetypeassert // optional flag
 			dryRun, ok := cobrax.Flag[bool](cmd, "dry-run").(bool)
 			if !ok {
 				return fmt.Errorf("%w: dry-run", ErrParsingFlag)
@@ -64,6 +64,10 @@ func NewClusterCmd(version string) *cobra.Command {
 			homeDir, err := os.UserHomeDir()
 			if err != nil {
 				return fmt.Errorf("error while getting user home directory: %w", err)
+			}
+
+			if binPath == "" {
+				binPath = filepath.Join(homeDir, ".furyctl", "bin")
 			}
 
 			// Init first half of collaborators.
@@ -82,8 +86,6 @@ func NewClusterCmd(version string) *cobra.Command {
 
 			basePath := filepath.Join(homeDir, ".furyctl", res.MinimalConf.Metadata.Name)
 
-			binPath := filepath.Join(homeDir, ".furyctl", "bin")
-
 			// Init second half of collaborators.
 			depsvl := dependencies.NewValidator(executor, binPath)
 
@@ -93,7 +95,7 @@ func NewClusterCmd(version string) *cobra.Command {
 				return fmt.Errorf("error while validating dependencies: %w", err)
 			}
 
-			clusterDeleter, err := cluster.NewDeleter(res.MinimalConf, res.DistroManifest, phase, basePath)
+			clusterDeleter, err := cluster.NewDeleter(res.MinimalConf, res.DistroManifest, phase, basePath, binPath)
 			if err != nil {
 				return fmt.Errorf("error while initializing cluster deleter: %w", err)
 			}
@@ -140,6 +142,13 @@ func NewClusterCmd(version string) *cobra.Command {
 			"It can either be a local path(eg: /path/to/fury/distribution) or "+
 			"a remote URL(eg: https://git@github.com/sighupio/fury-distribution?ref=BRANCH_NAME)."+
 			"Any format supported by hashicorp/go-getter can be used.",
+	)
+
+	cmd.Flags().StringP(
+		"bin-path",
+		"b",
+		"",
+		"Path to the bin folder where all dependencies are installed",
 	)
 
 	cmd.Flags().StringP(

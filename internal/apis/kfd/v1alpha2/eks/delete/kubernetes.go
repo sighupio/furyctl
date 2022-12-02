@@ -24,10 +24,10 @@ type Kubernetes struct {
 	dryRun   bool
 }
 
-func NewKubernetes(dryRun bool, workDir string, kfdManifest config.KFD) (*Kubernetes, error) {
+func NewKubernetes(dryRun bool, workDir, binPath string, kfdManifest config.KFD) (*Kubernetes, error) {
 	kubeDir := path.Join(workDir, "kubernetes")
 
-	phase, err := cluster.NewOperationPhase(kubeDir, kfdManifest.Tools)
+	phase, err := cluster.NewOperationPhase(kubeDir, kfdManifest.Tools, binPath)
 	if err != nil {
 		return nil, fmt.Errorf("error creating kubernetes phase: %w", err)
 	}
