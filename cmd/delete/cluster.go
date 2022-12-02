@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/sirupsen/logrus"
@@ -62,12 +63,20 @@ func NewClusterCmd() *cobra.Command {
 
 			execx.Debug = debug
 
+			// Init paths.
+			homeDir, err := os.UserHomeDir()
+			if err != nil {
+				return fmt.Errorf("error while getting user home directory: %w", err)
+			}
+
 			minimalConf, err := yamlx.FromFileV3[config.Furyctl](furyctlPath)
 			if err != nil {
 				return fmt.Errorf("%w: %s", ErrYamlUnmarshalFile, err)
 			}
 
-			clusterDeleter, err := cluster.NewDeleter(minimalConf, phase)
+			basePath := filepath.Join(homeDir, ".furyctl", minimalConf.Metadata.Name)
+
+			clusterDeleter, err := cluster.NewDeleter(minimalConf, phase, basePath)
 			if err != nil {
 				return fmt.Errorf("error while initializing cluster deleter: %w", err)
 			}

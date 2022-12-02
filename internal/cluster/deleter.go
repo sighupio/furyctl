@@ -12,7 +12,8 @@ import (
 )
 
 const (
-	DeleterPropertyPhase = "phase"
+	DeleterPropertyPhase   = "phase"
+	DeleterPropertyWorkDir = "workdir"
 )
 
 var delFactories = make(map[string]map[string]DeleterFactory) //nolint:gochecknoglobals, lll // This patterns requires factories
@@ -33,7 +34,8 @@ type Deleter interface {
 
 func NewDeleter(
 	minimalConf config.Furyctl,
-	phase string,
+	phase,
+	workDir string,
 ) (Deleter, error) {
 	lcAPIVersion := strings.ToLower(minimalConf.APIVersion)
 	lcResourceType := strings.ToLower(minimalConf.Kind)
@@ -43,6 +45,10 @@ func NewDeleter(
 			{
 				Name:  DeleterPropertyPhase,
 				Value: phase,
+			},
+			{
+				Name:  DeleterPropertyWorkDir,
+				Value: workDir,
 			},
 		})
 	}
