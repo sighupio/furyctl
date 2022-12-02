@@ -104,11 +104,11 @@ var (
 			}
 
 			ClusterTeardown := func() error {
-				kubeDestroy, err := TerraformDestroy(path.Join(w, ".kubernetes", "terraform"))
+				kubeDestroy, err := TerraformDestroy(path.Join(w, "kubernetes", "terraform"))
 				Expect(err).To(Not(HaveOccurred()))
 				Eventually(kubeDestroy, 10*time.Minute).Should(gexec.Exit(0))
 
-				infraDestroy, err := TerraformDestroy(path.Join(w, ".infrastructure", "terraform"))
+				infraDestroy, err := TerraformDestroy(path.Join(w, "infrastructure", "terraform"))
 				Expect(err).To(Not(HaveOccurred()))
 				Eventually(infraDestroy, 10*time.Minute).Should(gexec.Exit(0))
 
@@ -123,8 +123,8 @@ var (
 				furyctlYamlPath := path.Join(absBasePath, "data/furyctl.yaml")
 				distroPath := path.Join(absBasePath, "data")
 				kubeBinPath := path.Join(w, "vendor", "bin", "kubectl")
-				tfInfraPath := path.Join(w, ".infrastructure", "terraform")
-				kcfgPath := path.Join(w, ".kubernetes", "terraform", "secrets", "kubeconfig")
+				tfInfraPath := path.Join(w, "infrastructure", "terraform")
+				kcfgPath := path.Join(w, "kubernetes", "terraform", "secrets", "kubeconfig")
 
 				defer ClusterTeardown()
 

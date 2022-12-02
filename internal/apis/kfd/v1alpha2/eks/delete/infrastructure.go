@@ -23,8 +23,10 @@ type Infrastructure struct {
 	dryRun   bool
 }
 
-func NewInfrastructure(dryRun bool) (*Infrastructure, error) {
-	phase, err := cluster.NewOperationPhase(".infrastructure")
+func NewInfrastructure(dryRun bool, workDir string) (*Infrastructure, error) {
+	infraDir := path.Join(workDir, "infrastructure")
+
+	phase, err := cluster.NewOperationPhase(infraDir)
 	if err != nil {
 		return nil, fmt.Errorf("error creating infrastructure phase: %w", err)
 	}

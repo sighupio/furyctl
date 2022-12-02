@@ -13,7 +13,8 @@ import (
 )
 
 type ClusterDeleter struct {
-	phase string
+	phase   string
+	workDir string
 }
 
 func (d *ClusterDeleter) SetProperties(props []cluster.DeleterProperty) {
@@ -25,25 +26,31 @@ func (d *ClusterDeleter) SetProperties(props []cluster.DeleterProperty) {
 func (d *ClusterDeleter) SetProperty(name string, value any) {
 	lcName := strings.ToLower(name)
 
-	if lcName == cluster.CreatorPropertyPhase {
+	switch lcName {
+	case cluster.DeleterPropertyPhase:
 		if s, ok := value.(string); ok {
 			d.phase = s
+		}
+
+	case cluster.DeleterPropertyWorkDir:
+		if s, ok := value.(string); ok {
+			d.workDir = s
 		}
 	}
 }
 
 func (d *ClusterDeleter) Delete(dryRun bool) error {
-	distro, err := del.NewDistribution(dryRun)
+	distro, err := del.NewDistribution(dryRun, d.workDir)
 	if err != nil {
 		return fmt.Errorf("error while creating distribution phase: %w", err)
 	}
 
-	kube, err := del.NewKubernetes(dryRun)
+	kube, err := del.NewKubernetes(dryRun, d.workDir)
 	if err != nil {
 		return fmt.Errorf("error while creating kubernetes phase: %w", err)
 	}
 
-	infra, err := del.NewInfrastructure(dryRun)
+	infra, err := del.NewInfrastructure(dryRun, d.workDir)
 	if err != nil {
 		return fmt.Errorf("error while creating infrastructure phase: %w", err)
 	}

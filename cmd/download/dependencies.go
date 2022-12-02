@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
 
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -44,9 +45,9 @@ func NewDependenciesCmd(furyctlBinVersion string) *cobra.Command {
 				return ErrDistroLocationNotSet
 			}
 
-			basePath, err := os.Getwd()
+			homeDir, err := os.UserHomeDir()
 			if err != nil {
-				return fmt.Errorf("failed to get current working directory: %w", err)
+				return fmt.Errorf("failed to get current user home directory: %w", err)
 			}
 
 			client := netx.NewGoGetterClient()
@@ -57,6 +58,8 @@ func NewDependenciesCmd(furyctlBinVersion string) *cobra.Command {
 			if err != nil {
 				return fmt.Errorf("failed to download distribution: %w", err)
 			}
+
+			basePath := filepath.Join(homeDir, ".furyctl", dres.MinimalConf.Metadata.Name)
 
 			depsdl := dependencies.NewDownloader(client, basePath)
 

@@ -42,8 +42,10 @@ type Distribution struct {
 	dryRun     bool
 }
 
-func NewDistribution(dryRun bool) (*Distribution, error) {
-	phase, err := cluster.NewOperationPhase(".distribution")
+func NewDistribution(dryRun bool, workDir string) (*Distribution, error) {
+	distroDir := path.Join(workDir, "distribution")
+
+	phase, err := cluster.NewOperationPhase(distroDir)
 	if err != nil {
 		return nil, fmt.Errorf("error creating distribution phase: %w", err)
 	}

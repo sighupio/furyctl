@@ -48,10 +48,13 @@ type Kubernetes struct {
 func NewKubernetes(
 	furyctlConf schema.EksclusterKfdV1Alpha2,
 	kfdManifest config.KFD,
+	workDir string,
 	infraOutputsPath string,
 	dryRun bool,
 ) (*Kubernetes, error) {
-	phase, err := cluster.NewOperationPhase(".kubernetes")
+	kubeDir := path.Join(workDir, "kubernetes")
+
+	phase, err := cluster.NewOperationPhase(kubeDir)
 	if err != nil {
 		return nil, fmt.Errorf("error creating kubernetes phase: %w", err)
 	}
@@ -119,7 +122,11 @@ func (k *Kubernetes) Exec() error {
 		return err
 	}
 
-	return k.setKubeconfigEnv()
+	if err := k.setKubeconfigEnv(); err != nil {
+		return err
+	}
+
+	return k.copyKubeconfigToWorkDir()
 }
 
 func (k *Kubernetes) copyFromTemplate() error {
@@ -192,6 +199,30 @@ func (k *Kubernetes) setKubeconfigEnv() error {
 	err = os.Setenv("KUBECONFIG", kubePath)
 	if err != nil {
 		return fmt.Errorf("error setting kubeconfig env: %w", err)
+	}
+
+	return nil
+}
+
+func (k *Kubernetes) copyKubeconfigToWorkDir() error {
+	currentDir, err := os.Getwd()
+	if err != nil {
+		return fmt.Errorf("error getting current dir: %w", err)
+	}
+
+	kubePath, err := filepath.Abs(path.Join(k.SecretsPath, "kubeconfig"))
+	if err != nil {
+		return fmt.Errorf("error getting kubeconfig absolute path: %w", err)
+	}
+
+	kubeconfig, err := os.ReadFile(kubePath)
+	if err != nil {
+		return fmt.Errorf("error reading kubeconfig file: %w", err)
+	}
+
+	err = os.WriteFile(path.Join(currentDir, "kubeconfig"), kubeconfig, iox.FullRWPermAccess)
+	if err != nil {
+		return fmt.Errorf("error writing kubeconfig file: %w", err)
 	}
 
 	return nil
