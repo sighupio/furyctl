@@ -19,6 +19,7 @@ var ErrUnsupportedPhase = errors.New("unsupported phase")
 
 type ClusterCreator struct {
 	configPath     string
+	workDir        string
 	furyctlConf    schema.EksclusterKfdV1Alpha2
 	kfdManifest    config.KFD
 	distroPath     string
@@ -65,16 +66,21 @@ func (v *ClusterCreator) SetProperty(name string, value any) {
 		if s, ok := value.(string); ok {
 			v.distroPath = s
 		}
+
+	case cluster.CreatorPropertyWorkDir:
+		if s, ok := value.(string); ok {
+			v.workDir = s
+		}
 	}
 }
 
 func (v *ClusterCreator) Create(dryRun bool) error {
-	infra, err := create.NewInfrastructure(v.furyctlConf, v.kfdManifest, dryRun)
+	infra, err := create.NewInfrastructure(v.furyctlConf, v.kfdManifest, v.workDir, dryRun)
 	if err != nil {
 		return fmt.Errorf("error while initiating infrastructure phase: %w", err)
 	}
 
-	kube, err := create.NewKubernetes(v.furyctlConf, v.kfdManifest, infra.OutputsPath, dryRun)
+	kube, err := create.NewKubernetes(v.furyctlConf, v.kfdManifest, v.workDir, infra.OutputsPath, dryRun)
 	if err != nil {
 		return fmt.Errorf("error while initiating kubernetes phase: %w", err)
 	}
@@ -83,6 +89,7 @@ func (v *ClusterCreator) Create(dryRun bool) error {
 		v.configPath,
 		v.furyctlConf,
 		v.kfdManifest,
+		v.workDir,
 		v.distroPath,
 		infra.OutputsPath,
 		dryRun,

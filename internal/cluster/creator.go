@@ -15,6 +15,7 @@ import (
 
 const (
 	CreatorPropertyConfigPath     = "configpath"
+	CreatorPropertyWorkDir        = "workdir"
 	CreatorPropertyFuryctlConf    = "furyctlconf"
 	CreatorPropertyKfdManifest    = "kfdmanifest"
 	CreatorPropertyDistroPath     = "distropath"
@@ -44,6 +45,7 @@ type Creator interface {
 func NewCreator(
 	minimalConf config.Furyctl,
 	kfdManifest config.KFD,
+	workDir string,
 	distroPath string,
 	configPath string,
 	phase string,
@@ -69,6 +71,10 @@ func NewCreator(
 			{
 				Name:  CreatorPropertyDistroPath,
 				Value: distroPath,
+			},
+			{
+				Name:  CreatorPropertyWorkDir,
+				Value: workDir,
 			},
 		})
 	}
