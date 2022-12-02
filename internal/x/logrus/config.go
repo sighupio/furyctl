@@ -57,16 +57,23 @@ func InitLog(logFile *os.File, debug bool) { //nolint:revive // debug is a boole
 
 	if debug {
 		stdLevels = append(stdLevels, logrus.DebugLevel)
+		logrus.SetLevel(logrus.DebugLevel)
 	}
 
-	stdOutHook := newFormatterHook(os.Stdout, &logrus.TextFormatter{
-		DisableTimestamp: true,
-		ForceColors:      true,
-	}, stdLevels)
+	outLog := os.Stdout
 
-	logFileHook := newFormatterHook(logFile, &logrus.JSONFormatter{}, logrus.AllLevels)
+	if logFile != nil {
+		outLog = logFile
 
-	logrus.AddHook(stdOutHook)
+		stdOutHook := newFormatterHook(os.Stdout, &logrus.TextFormatter{
+			DisableTimestamp: true,
+			ForceColors:      true,
+		}, stdLevels)
+
+		logrus.AddHook(stdOutHook)
+	}
+
+	logFileHook := newFormatterHook(outLog, &logrus.JSONFormatter{}, logrus.AllLevels)
 
 	logrus.AddHook(logFileHook)
 }

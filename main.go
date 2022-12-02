@@ -15,14 +15,11 @@
 package main
 
 import (
-	"fmt"
 	"os"
-	"path/filepath"
 
 	"github.com/sirupsen/logrus"
 
 	"github.com/sighupio/furyctl/cmd"
-	iox "github.com/sighupio/furyctl/internal/x/io"
 )
 
 var (
@@ -34,6 +31,8 @@ var (
 )
 
 func main() {
+	var logFile *os.File
+
 	versions := map[string]string{
 		"version":   version,
 		"gitCommit": gitCommit,
@@ -42,33 +41,11 @@ func main() {
 		"osArch":    osArch,
 	}
 
-	logW, err := logFile()
-	if err != nil {
-		logrus.Fatal(err)
-	}
+	rootCmd := cmd.NewRootCommand(versions, logFile)
 
-	defer logW.Close()
-
-	rootCmd := cmd.NewRootCommand(versions, logW)
+	defer logFile.Close()
 
 	if err := rootCmd.Execute(); err != nil {
 		logrus.Fatal(err)
 	}
-}
-
-func logFile() (*os.File, error) {
-	// Get the current working directory.
-	cwd, err := os.Getwd()
-	if err != nil {
-		return nil, fmt.Errorf("error while getting current working directory: %w", err)
-	}
-
-	// Create the log file.
-	logFile, err := os.OpenFile(filepath.Join(cwd, "furyctl.log"), os.O_WRONLY|os.O_CREATE|os.O_APPEND, iox.RWPermAccess)
-	if err != nil {
-		return nil, fmt.Errorf("error while creating log file: %w", err)
-	}
-
-	// Create the combined writer.
-	return logFile, nil
 }
