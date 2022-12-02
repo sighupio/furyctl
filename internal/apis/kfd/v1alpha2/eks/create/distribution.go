@@ -69,7 +69,7 @@ func NewDistribution(
 	infraOutputsPath string,
 	dryRun bool,
 ) (*Distribution, error) {
-	distroDir := path.Join(workDir, ".distribution")
+	distroDir := path.Join(workDir, "distribution")
 
 	phase, err := cluster.NewOperationPhase(distroDir)
 	if err != nil {

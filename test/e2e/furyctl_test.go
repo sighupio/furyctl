@@ -507,7 +507,7 @@ var (
 				homeDir, err := os.UserHomeDir()
 				Expect(err).To(Not(HaveOccurred()))
 
-				tfPath := path.Join(homeDir, ".furyctl", "furyctl-dev-aws", ".infrastructure", "terraform")
+				tfPath := path.Join(homeDir, ".furyctl", "furyctl-dev-aws", "infrastructure", "terraform")
 
 				createInfraCmd := FuryctlCreateCluster(furyctlYamlPath, distroPath, "infrastructure", true)
 				session, err := gexec.Start(createInfraCmd, GinkgoWriter, GinkgoWriter)
@@ -536,7 +536,7 @@ var (
 				homeDir, err := os.UserHomeDir()
 				Expect(err).To(Not(HaveOccurred()))
 
-				tfPath := path.Join(homeDir, ".furyctl", "furyctl-dev-aws", ".kubernetes", "terraform")
+				tfPath := path.Join(homeDir, ".furyctl", "furyctl-dev-aws", "kubernetes", "terraform")
 
 				createKubeCmd := FuryctlCreateCluster(furyctlYamlPath, distroPath, "kubernetes", true)
 				session, err := gexec.Start(createKubeCmd, GinkgoWriter, GinkgoWriter)

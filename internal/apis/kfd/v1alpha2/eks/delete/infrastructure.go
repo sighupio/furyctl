@@ -24,7 +24,7 @@ type Infrastructure struct {
 }
 
 func NewInfrastructure(dryRun bool, workDir string) (*Infrastructure, error) {
-	infraDir := path.Join(workDir, ".infrastructure")
+	infraDir := path.Join(workDir, "infrastructure")
 
 	phase, err := cluster.NewOperationPhase(infraDir)
 	if err != nil {

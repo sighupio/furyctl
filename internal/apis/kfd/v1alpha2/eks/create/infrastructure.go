@@ -12,6 +12,7 @@ import (
 	"os"
 	"os/exec"
 	"path"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -53,7 +54,7 @@ func NewInfrastructure(
 	workDir string,
 	dryRun bool,
 ) (*Infrastructure, error) {
-	infraDir := path.Join(workDir, ".infrastructure")
+	infraDir := path.Join(workDir, "infrastructure")
 
 	phase, err := cluster.NewOperationPhase(infraDir)
 	if err != nil {
@@ -146,6 +147,10 @@ func (i *Infrastructure) Exec(opts []cluster.OperationPhaseOption) error {
 				}
 			}
 		}
+
+		if err := i.copyOpenvpnToWorkDir(); err != nil {
+			return fmt.Errorf("error copying openvpn file to workdir: %w", err)
+		}
 	}
 
 	return nil
@@ -202,6 +207,37 @@ func (i *Infrastructure) copyFromTemplate(kfdManifest config.KFD) error {
 	)
 	if err != nil {
 		return fmt.Errorf("error generating from template files: %w", err)
+	}
+
+	return nil
+}
+
+func (i *Infrastructure) copyOpenvpnToWorkDir() error {
+	currentDir, err := os.Getwd()
+	if err != nil {
+		return fmt.Errorf("error getting current dir: %w", err)
+	}
+
+	ovpnFileName, err := i.generateClientName()
+	if err != nil {
+		return err
+	}
+
+	ovpnFileName = fmt.Sprintf("%s.ovpn", ovpnFileName)
+
+	ovpnPath, err := filepath.Abs(path.Join(i.SecretsPath, ovpnFileName))
+	if err != nil {
+		return fmt.Errorf("error getting ovpn absolute path: %w", err)
+	}
+
+	ovpnFile, err := os.ReadFile(ovpnPath)
+	if err != nil {
+		return fmt.Errorf("error reading ovpn file: %w", err)
+	}
+
+	err = os.WriteFile(path.Join(currentDir, ovpnFileName), ovpnFile, iox.FullRWPermAccess)
+	if err != nil {
+		return fmt.Errorf("error writing ovpn file: %w", err)
 	}
 
 	return nil

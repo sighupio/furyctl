@@ -52,7 +52,7 @@ func NewKubernetes(
 	infraOutputsPath string,
 	dryRun bool,
 ) (*Kubernetes, error) {
-	kubeDir := path.Join(workDir, ".kubernetes")
+	kubeDir := path.Join(workDir, "kubernetes")
 
 	phase, err := cluster.NewOperationPhase(kubeDir)
 	if err != nil {

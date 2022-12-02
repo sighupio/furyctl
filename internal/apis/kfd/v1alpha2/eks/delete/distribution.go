@@ -43,7 +43,7 @@ type Distribution struct {
 }
 
 func NewDistribution(dryRun bool, workDir string) (*Distribution, error) {
-	distroDir := path.Join(workDir, ".distribution")
+	distroDir := path.Join(workDir, "distribution")
 
 	phase, err := cluster.NewOperationPhase(distroDir)
 	if err != nil {

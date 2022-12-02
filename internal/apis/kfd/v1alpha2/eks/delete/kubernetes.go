@@ -24,7 +24,7 @@ type Kubernetes struct {
 }
 
 func NewKubernetes(dryRun bool, workDir string) (*Kubernetes, error) {
-	kubeDir := path.Join(workDir, ".kubernetes")
+	kubeDir := path.Join(workDir, "kubernetes")
 
 	phase, err := cluster.NewOperationPhase(kubeDir)
 	if err != nil {
