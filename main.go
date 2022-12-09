@@ -24,6 +24,7 @@ import (
 
 	"github.com/sighupio/furyctl/cmd"
 	"github.com/sighupio/furyctl/internal/analytics"
+	iox "github.com/sighupio/furyctl/internal/x/io"
 )
 
 var (
@@ -35,8 +36,6 @@ var (
 )
 
 func main() {
-	var logFile *os.File
-
 	versions := map[string]string{
 		"version":   version,
 		"gitCommit": gitCommit,
@@ -45,7 +44,10 @@ func main() {
 		"osArch":    osArch,
 	}
 
-	rootCmd := cmd.NewRootCommand(versions, logFile)
+	logW, err := logFile()
+	if err != nil {
+		logrus.Fatal(err)
+	}
 
 	defer logW.Close()
 
