@@ -16,6 +16,7 @@ executor:
 provisioner: eks
 spec:
   version: "1.18"
+  logRetentionDays: 30
   network: "vpc-1"
   subnetworks: 
     - "subnet-1"

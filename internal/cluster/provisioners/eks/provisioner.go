@@ -107,6 +107,9 @@ func (e EKS) createVarFile() (err error) {
 	spec := e.config.Spec.(cfg.EKS)
 	buffer.WriteString(fmt.Sprintf("cluster_name = \"%v\"\n", e.config.Metadata.Name))
 	buffer.WriteString(fmt.Sprintf("cluster_version = \"%v\"\n", spec.Version))
+	if spec.LogRetentionDays != 0 {
+		buffer.WriteString(fmt.Sprintf("cluster_log_retention_in_days = %v\n", spec.LogRetentionDays))
+	}
 	buffer.WriteString(fmt.Sprintf("network = \"%v\"\n", spec.Network))
 	buffer.WriteString(fmt.Sprintf("subnetworks = [\"%v\"]\n", strings.Join(spec.SubNetworks, "\",\"")))
 	buffer.WriteString(fmt.Sprintf("dmz_cidr_range = [\"%v\"]\n", strings.Join(spec.DMZCIDRRange.Values, "\",\"")))
