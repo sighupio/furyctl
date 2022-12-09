@@ -111,7 +111,7 @@ func NewClusterCmd(version string, tracker *analytics.Tracker) *cobra.Command {
 				cmdEvent.AddErrorMessage(err)
 				tracker.Track(cmdEvent)
 
-				return fmt.Errorf("error while getting current working directory: %w", err)
+				return fmt.Errorf("error while getting user home directory: %w", err)
 			}
 
 			if binPath == "" {
