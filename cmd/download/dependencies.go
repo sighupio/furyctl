@@ -57,7 +57,7 @@ func NewDependenciesCmd(furyctlBinVersion string, tracker *analytics.Tracker) *c
 				cmdEvent.AddErrorMessage(err)
 				tracker.Track(cmdEvent)
 
-				return fmt.Errorf("failed to get current working directory: %w", err)
+				return fmt.Errorf("error while getting user home directory: %w", err)
 			}
 
 			if binPath == "" {
