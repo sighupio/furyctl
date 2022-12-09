@@ -124,7 +124,7 @@ var (
 	_ = Describe("furyctl", func() {
 		Context("version", func() {
 			It("should print its version information", func() {
-				out, err := RunCmd(furyctl, "version")
+				out, err := RunCmd(furyctl, "version", "--disable-analytics", "true")
 
 				Expect(err).To(Not(HaveOccurred()))
 				Expect(out).To(ContainSubstring(
@@ -146,6 +146,7 @@ var (
 					"--config", filepath.Join(absBasepath, "furyctl.yaml"),
 					"--distro-location", absBasepath,
 					"--debug",
+					"--disable-analytics", "true",
 				)
 			}
 
@@ -188,6 +189,7 @@ var (
 					"--distro-location", absBasepath,
 					"--bin-path", binpath,
 					"--debug",
+					"--disable-analytics", "true",
 				)
 			}
 
@@ -275,6 +277,7 @@ var (
 					"--distro-location", absBasepath+"/distro",
 					"--workdir", absBasepath,
 					"--debug",
+					"--disable-analytics", "true",
 				)
 			}
 
@@ -318,7 +321,7 @@ var (
 		Context("dump template", func() {
 			basepath := "../data/e2e/dump/template"
 			FuryctlDumpTemplate := func(workdir string, dryRun bool) (string, error) {
-				args := []string{"dump", "template", "--debug", "--workdir", workdir}
+				args := []string{"dump", "template", "--debug", "--workdir", workdir, "--disable-analytics", "true"}
 				if dryRun {
 					args = append(args, "--dry-run")
 				}
@@ -422,6 +425,7 @@ var (
 					furyctl, "create", "config",
 					"--config", workdir+"/target/furyctl.yaml",
 					"--debug",
+					"--disable-analytics", "true",
 				)
 			}
 			Setup := func(folder string) string {
@@ -462,6 +466,8 @@ var (
 					"--debug",
 					"--workdir",
 					w,
+					"--disable-analytics",
+					"true",
 				}
 
 				if phase != "" {

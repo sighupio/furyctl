@@ -12,3 +12,4 @@ dist/
 test/data/e2e/**/target
 
 .vscode
+*.log
