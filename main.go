@@ -69,7 +69,7 @@ func main() {
 	defer a.Flush()
 
 	if _, err := cmd.NewRootCommand(versions, logW, a).ExecuteC(); err != nil {
-		logrus.Error(err)
+		panic(err)
 	}
 }
 
