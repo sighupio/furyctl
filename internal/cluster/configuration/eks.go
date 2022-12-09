@@ -6,14 +6,15 @@ package configuration
 
 // EKS represents the configuration spec of a EKS Cluster
 type EKS struct {
-	Version      string            `yaml:"version"`
-	Network      string            `yaml:"network"`
-	SubNetworks  []string          `yaml:"subnetworks"`
-	DMZCIDRRange DMZCIDRRange      `yaml:"dmzCIDRRange"`
-	SSHPublicKey string            `yaml:"sshPublicKey"`
-	NodePools    []EKSNodePool     `yaml:"nodePools"`
-	Tags         map[string]string `yaml:"tags"`
-	Auth         EKSAuth           `yaml:"auth"`
+	Version          string            `yaml:"version"`
+	Network          string            `yaml:"network"`
+	SubNetworks      []string          `yaml:"subnetworks"`
+	DMZCIDRRange     DMZCIDRRange      `yaml:"dmzCIDRRange"`
+	SSHPublicKey     string            `yaml:"sshPublicKey"`
+	NodePools        []EKSNodePool     `yaml:"nodePools"`
+	Tags             map[string]string `yaml:"tags"`
+	Auth             EKSAuth           `yaml:"auth"`
+	LogRetentionDays int               `yaml:"logRetentionDays"`
 }
 
 // EKSAuth represent a auth structure

@@ -121,11 +121,12 @@ func clusterTemplate(config *Configuration) error {
 	switch {
 	case config.Provisioner == "eks":
 		spec := clustercfg.EKS{
-			Version:      "1.20 # EKS Control plane version",
-			Network:      "vpc-id1 # Identificator of the VPC",
-			SubNetworks:  []string{"subnet-id1 # Identificator of the subnets"},
-			DMZCIDRRange: clustercfg.DMZCIDRRange{Values: []string{"10.0.0.0/8", "Required. Network CIDR range from where cluster control plane will be accessible"}},
-			SSHPublicKey: "sha-rsa 190jd0132w. Required. Cluster administrator public ssh key. Used to access cluster nodes.",
+			Version:          "1.20 # EKS Control plane version",
+			Network:          "vpc-id1 # Identificator of the VPC",
+			LogRetentionDays: 30,
+			SubNetworks:      []string{"subnet-id1 # Identificator of the subnets"},
+			DMZCIDRRange:     clustercfg.DMZCIDRRange{Values: []string{"10.0.0.0/8", "Required. Network CIDR range from where cluster control plane will be accessible"}},
+			SSHPublicKey:     "sha-rsa 190jd0132w. Required. Cluster administrator public ssh key. Used to access cluster nodes.",
 			Tags: map[string]string{
 				"myTag": "MyValue # Use this tags to annotate all resources. Optional",
 			},
