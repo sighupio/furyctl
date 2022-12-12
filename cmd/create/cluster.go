@@ -16,6 +16,7 @@ import (
 	"github.com/sighupio/furyctl/internal/analytics"
 	_ "github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/eks"
 	"github.com/sighupio/furyctl/internal/cluster"
+	"github.com/sighupio/furyctl/internal/cmd/cmdutil"
 	"github.com/sighupio/furyctl/internal/config"
 	"github.com/sighupio/furyctl/internal/dependencies"
 	"github.com/sighupio/furyctl/internal/distribution"
@@ -40,69 +41,41 @@ func NewClusterCmd(version string, tracker *analytics.Tracker) *cobra.Command {
 		},
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			// Get flags.
-			debug, ok := cobrax.Flag[bool](cmd, "debug").(bool)
-			if !ok {
-				err := fmt.Errorf("%w: debug", ErrParsingFlag)
-
-				cmdEvent.AddErrorMessage(err)
-				tracker.Track(cmdEvent)
-
-				return err
+			debug, err := cmdutil.BoolFlag(cmd, "debug", tracker, cmdEvent)
+			if err != nil {
+				return fmt.Errorf("%w: %s", ErrParsingFlag, "debug")
 			}
-			furyctlPath, ok := cobrax.Flag[string](cmd, "config").(string)
-			if !ok {
-				err := fmt.Errorf("%w: config", ErrParsingFlag)
 
-				cmdEvent.AddErrorMessage(err)
-				tracker.Track(cmdEvent)
-
-				return err
+			furyctlPath, err := cmdutil.StringFlag(cmd, "config", tracker, cmdEvent)
+			if err != nil {
+				return fmt.Errorf("%w: %s", ErrParsingFlag, "config")
 			}
-			distroLocation, ok := cobrax.Flag[string](cmd, "distro-location").(string)
-			if !ok {
-				err := fmt.Errorf("%w: distro-location", ErrParsingFlag)
 
-				cmdEvent.AddErrorMessage(err)
-				tracker.Track(cmdEvent)
-
-				return err
+			distroLocation, err := cmdutil.StringFlag(cmd, "distro-location", tracker, cmdEvent)
+			if err != nil {
+				return fmt.Errorf("%w: %s", ErrParsingFlag, "distro-location")
 			}
-			phase, ok := cobrax.Flag[string](cmd, "phase").(string)
-			if !ok {
-				err := fmt.Errorf("%w: phase", ErrParsingFlag)
 
-				cmdEvent.AddErrorMessage(err)
-				tracker.Track(cmdEvent)
-
-				return err
+			phase, err := cmdutil.StringFlag(cmd, "phase", tracker, cmdEvent)
+			if err != nil {
+				return fmt.Errorf("%w: %s", ErrParsingFlag, "phase")
 			}
-			binPath := cobrax.Flag[string](cmd, "bin-path").(string) //nolint:errcheck,forcetypeassert // optional flag
-			vpnAutoConnect, ok := cobrax.Flag[bool](cmd, "vpn-auto-connect").(bool)
-			if !ok {
-				err := fmt.Errorf("%w: vpn-auto-connect", ErrParsingFlag)
 
-				cmdEvent.AddErrorMessage(err)
-				tracker.Track(cmdEvent)
+			binPath := cmdutil.StringFlagOptional(cmd, "bin-path")
 
-				return err
+			vpnAutoConnect, err := cmdutil.BoolFlag(cmd, "vpn-auto-connect", tracker, cmdEvent)
+			if err != nil {
+				return fmt.Errorf("%w: %s", ErrParsingFlag, "vpn-auto-connect")
 			}
-			dryRun, ok := cobrax.Flag[bool](cmd, "dry-run").(bool)
-			if !ok {
-				err := fmt.Errorf("%w: dry-run", ErrParsingFlag)
 
-				cmdEvent.AddErrorMessage(err)
-				tracker.Track(cmdEvent)
-
-				return err
+			dryRun, err := cmdutil.BoolFlag(cmd, "dry-run", tracker, cmdEvent)
+			if err != nil {
+				return fmt.Errorf("%w: %s", ErrParsingFlag, "dry-run")
 			}
-			skipDownload, ok := cobrax.Flag[bool](cmd, "skip-download").(bool)
-			if !ok {
-				err := fmt.Errorf("%w: skip-download", ErrParsingFlag)
 
-				cmdEvent.AddErrorMessage(err)
-				tracker.Track(cmdEvent)
-
-				return err
+			skipDownload, err := cmdutil.BoolFlag(cmd, "skip-download", tracker, cmdEvent)
+			if err != nil {
+				return fmt.Errorf("%w: %s", ErrParsingFlag, "skip-download")
 			}
 
 			// Init paths.
@@ -111,7 +84,7 @@ func NewClusterCmd(version string, tracker *analytics.Tracker) *cobra.Command {
 				cmdEvent.AddErrorMessage(err)
 				tracker.Track(cmdEvent)
 
-				return fmt.Errorf("error while getting user home directory: %w", err)
+				return fmt.Errorf("error while getting current working directory: %w", err)
 			}
 
 			if binPath == "" {

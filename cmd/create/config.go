@@ -15,6 +15,7 @@ import (
 
 	"github.com/sighupio/furyctl/configs"
 	"github.com/sighupio/furyctl/internal/analytics"
+	"github.com/sighupio/furyctl/internal/cmd/cmdutil"
 	cobrax "github.com/sighupio/furyctl/internal/x/cobra"
 	iox "github.com/sighupio/furyctl/internal/x/io"
 )
@@ -31,41 +32,24 @@ func NewConfigCmd(tracker *analytics.Tracker) *cobra.Command {
 			cmdEvent = analytics.NewCommandEvent(cobrax.GetFullname(cmd))
 		},
 		RunE: func(cmd *cobra.Command, _ []string) error {
-			config, ok := cobrax.Flag[string](cmd, "config").(string)
-			if !ok {
-				err := fmt.Errorf("%w: config", ErrParsingFlag)
-
-				cmdEvent.AddErrorMessage(err)
-				tracker.Track(cmdEvent)
-
-				return err
+			config, err := cmdutil.StringFlag(cmd, "config", tracker, cmdEvent)
+			if err != nil {
+				return fmt.Errorf("%w: config", ErrParsingFlag)
 			}
-			version, ok := cobrax.Flag[string](cmd, "version").(string)
-			if !ok {
-				err := fmt.Errorf("%w: version", ErrParsingFlag)
 
-				cmdEvent.AddErrorMessage(err)
-				tracker.Track(cmdEvent)
-
-				return err
+			version, err := cmdutil.StringFlag(cmd, "version", tracker, cmdEvent)
+			if err != nil {
+				return fmt.Errorf("%w: version", ErrParsingFlag)
 			}
-			kind, ok := cobrax.Flag[string](cmd, "kind").(string)
-			if !ok {
-				err := fmt.Errorf("%w: kind", ErrParsingFlag)
 
-				cmdEvent.AddErrorMessage(err)
-				tracker.Track(cmdEvent)
-
-				return err
+			kind, err := cmdutil.StringFlag(cmd, "kind", tracker, cmdEvent)
+			if err != nil {
+				return fmt.Errorf("%w: kind", ErrParsingFlag)
 			}
-			name, ok := cobrax.Flag[string](cmd, "name").(string)
-			if !ok {
-				err := fmt.Errorf("%w: name", ErrParsingFlag)
 
-				cmdEvent.AddErrorMessage(err)
-				tracker.Track(cmdEvent)
-
-				return err
+			name, err := cmdutil.StringFlag(cmd, "name", tracker, cmdEvent)
+			if err != nil {
+				return fmt.Errorf("%w: name", ErrParsingFlag)
 			}
 
 			cmdEvent.AddClusterDetails(analytics.ClusterDetails{
