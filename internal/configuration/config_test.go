@@ -54,11 +54,11 @@ func init() {
 	}
 	sampleEKSConfig.Provisioner = "eks"
 	sampleEKSConfig.Spec = clustercfg.EKS{
-		Version:      "1.23",
-		Network:      "vpc-1",
-		SubNetworks:  []string{"subnet-1", "subnet-2", "subnet-3"},
-		DMZCIDRRange: clustercfg.DMZCIDRRange{Values: []string{"0.0.0.0/0"}},
-		SSHPublicKey: "123",
+		Version:          "1.23",
+		Network:          "vpc-1",
+		SubNetworks:      []string{"subnet-1", "subnet-2", "subnet-3"},
+		DMZCIDRRange:     clustercfg.DMZCIDRRange{Values: []string{"0.0.0.0/0"}},
+		SSHPublicKey:     "123",
 		LogRetentionDays: 30,
 		NodePools: []clustercfg.EKSNodePool{
 			{
