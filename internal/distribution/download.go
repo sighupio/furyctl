@@ -40,18 +40,16 @@ type DownloadResult struct {
 	DistroManifest config.KFD
 }
 
-func NewDownloader(client netx.Client, debug bool) *Downloader {
+func NewDownloader(client netx.Client) *Downloader {
 	return &Downloader{
 		client:   client,
 		validate: config.NewValidator(),
-		debug:    debug,
 	}
 }
 
 type Downloader struct {
 	client   netx.Client
 	validate *validator.Validate
-	debug    bool
 }
 
 func (d *Downloader) Download(

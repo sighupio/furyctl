@@ -11,6 +11,7 @@ import (
 
 	"github.com/sirupsen/logrus"
 
+	"github.com/sighupio/fury-distribution/pkg/config"
 	"github.com/sighupio/furyctl/internal/cluster"
 	"github.com/sighupio/furyctl/internal/tool/terraform"
 	execx "github.com/sighupio/furyctl/internal/x/exec"
@@ -23,10 +24,10 @@ type Kubernetes struct {
 	dryRun   bool
 }
 
-func NewKubernetes(dryRun bool, workDir string) (*Kubernetes, error) {
+func NewKubernetes(dryRun bool, workDir, binPath string, kfdManifest config.KFD) (*Kubernetes, error) {
 	kubeDir := path.Join(workDir, "kubernetes")
 
-	phase, err := cluster.NewOperationPhase(kubeDir)
+	phase, err := cluster.NewOperationPhase(kubeDir, kfdManifest.Tools, binPath)
 	if err != nil {
 		return nil, fmt.Errorf("error creating kubernetes phase: %w", err)
 	}

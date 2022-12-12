@@ -30,6 +30,10 @@ func NewRunner(executor execx.Executor, paths Paths) *Runner {
 	}
 }
 
+func (r *Runner) CmdPath() string {
+	return r.paths.Furyagent
+}
+
 func (r *Runner) ConfigOpenvpnClient(name string) error {
 	cmd := execx.NewCmd(r.paths.Furyagent, execx.CmdOptions{
 		Args:     []string{"configure", "openvpn-client", fmt.Sprintf("--client-name=%s", name), "--config=furyagent.yml"},

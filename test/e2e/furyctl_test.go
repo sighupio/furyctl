@@ -285,6 +285,7 @@ var (
 				Expect(err).To(Not(HaveOccurred()))
 
 				vp := path.Join(homeDir, ".furyctl", "awesome-cluster-staging", "vendor")
+				binP := path.Join(homeDir, ".furyctl", "bin")
 
 				RemoveAll(vp)
 				defer RemoveAll(vp)
@@ -292,10 +293,10 @@ var (
 				_, err = FuryctlDownloadDependencies(bp)
 
 				Expect(err).To(Not(HaveOccurred()))
-				Expect(vp + "/bin/furyagent").To(BeAnExistingFile())
-				Expect(vp + "/bin/kubectl").To(BeAnExistingFile())
-				Expect(vp + "/bin/kustomize").To(BeAnExistingFile())
-				Expect(vp + "/bin/terraform").To(BeAnExistingFile())
+				Expect(binP + "/furyagent/0.3.0/furyagent").To(BeAnExistingFile())
+				Expect(binP + "/kubectl/1.23.10/kubectl").To(BeAnExistingFile())
+				Expect(binP + "/kustomize/3.10.0/kustomize").To(BeAnExistingFile())
+				Expect(binP + "/terraform/0.15.4/terraform").To(BeAnExistingFile())
 				Expect(vp + "/installers/eks/README.md").To(BeAnExistingFile())
 				Expect(vp + "/installers/eks/modules/eks/main.tf").To(BeAnExistingFile())
 				Expect(vp + "/installers/eks/modules/vpc-and-vpn/main.tf").To(BeAnExistingFile())
@@ -444,7 +445,7 @@ var (
 			})
 		})
 
-		Context("create cluster dry run", Ordered, Label("slow"), func() {
+		Context("create cluster dry run", Ordered, Serial, Label("slow"), func() {
 			var w string
 			var absBasePath string
 

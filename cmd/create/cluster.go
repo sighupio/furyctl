@@ -25,13 +25,7 @@ import (
 )
 
 var (
-	ErrDebugFlagNotSet            = errors.New("debug flag not set")
-	ErrFuryctlFlagNotSet          = errors.New("furyctl flag not set")
-	ErrDistroFlagNotSet           = errors.New("distro flag not set")
-	ErrPhaseFlagNotSet            = errors.New("phase flag not set")
-	ErrVpnAutoConnectFlagNotSet   = errors.New("vpn-auto-connect flag not set")
-	ErrDryRunFlagNotSet           = errors.New("dry-run flag not set")
-	ErrSkipDownloadFlagNotSet     = errors.New("skip-download flag not set")
+	ErrParsingFlag                = errors.New("error while parsing flag")
 	ErrDownloadDependenciesFailed = errors.New("download dependencies failed")
 )
 
@@ -43,31 +37,32 @@ func NewClusterCmd(version string) *cobra.Command {
 			// Get flags.
 			debug, ok := cobrax.Flag[bool](cmd, "debug").(bool)
 			if !ok {
-				return ErrDebugFlagNotSet
+				return fmt.Errorf("%w: debug", ErrParsingFlag)
 			}
 			furyctlPath, ok := cobrax.Flag[string](cmd, "config").(string)
 			if !ok {
-				return ErrFuryctlFlagNotSet
+				return fmt.Errorf("%w: config", ErrParsingFlag)
 			}
 			distroLocation, ok := cobrax.Flag[string](cmd, "distro-location").(string)
 			if !ok {
-				return ErrDistroFlagNotSet
+				return fmt.Errorf("%w: distro-location", ErrParsingFlag)
 			}
 			phase, ok := cobrax.Flag[string](cmd, "phase").(string)
 			if !ok {
-				return ErrPhaseFlagNotSet
+				return fmt.Errorf("%w: phase", ErrParsingFlag)
 			}
+			binPath := cobrax.Flag[string](cmd, "bin-path").(string) //nolint:errcheck,forcetypeassert // optional flag
 			vpnAutoConnect, ok := cobrax.Flag[bool](cmd, "vpn-auto-connect").(bool)
 			if !ok {
-				return ErrVpnAutoConnectFlagNotSet
+				return fmt.Errorf("%w: vpn-auto-connect", ErrParsingFlag)
 			}
 			dryRun, ok := cobrax.Flag[bool](cmd, "dry-run").(bool)
 			if !ok {
-				return ErrDryRunFlagNotSet
+				return fmt.Errorf("%w: dry-run", ErrParsingFlag)
 			}
 			skipDownload, ok := cobrax.Flag[bool](cmd, "skip-download").(bool)
 			if !ok {
-				return ErrSkipDownloadFlagNotSet
+				return fmt.Errorf("%w: skip-download", ErrParsingFlag)
 			}
 
 			// Init paths.
@@ -76,10 +71,14 @@ func NewClusterCmd(version string) *cobra.Command {
 				return fmt.Errorf("error while getting user home directory: %w", err)
 			}
 
+			if binPath == "" {
+				binPath = filepath.Join(homeDir, ".furyctl", "bin")
+			}
+
 			// Init first half of collaborators.
 			client := netx.NewGoGetterClient()
 			executor := execx.NewStdExecutor()
-			distrodl := distribution.NewDownloader(client, debug)
+			distrodl := distribution.NewDownloader(client)
 
 			// Init packages.
 			execx.Debug = debug
@@ -93,10 +92,8 @@ func NewClusterCmd(version string) *cobra.Command {
 
 			basePath := filepath.Join(homeDir, ".furyctl", res.MinimalConf.Metadata.Name)
 
-			binPath := filepath.Join(basePath, "vendor", "bin")
-
 			// Init second half of collaborators.
-			depsdl := dependencies.NewDownloader(client, basePath)
+			depsdl := dependencies.NewDownloader(client, basePath, binPath)
 			depsvl := dependencies.NewValidator(executor, binPath)
 
 			// Validate the furyctl.yaml file.
@@ -125,6 +122,7 @@ func NewClusterCmd(version string) *cobra.Command {
 				res.DistroManifest,
 				basePath,
 				res.RepoPath,
+				binPath,
 				furyctlPath,
 				phase,
 				vpnAutoConnect,
@@ -172,6 +170,13 @@ func NewClusterCmd(version string) *cobra.Command {
 			"It can either be a local path(eg: /path/to/fury/distribution) or "+
 			"a remote URL(eg: https://git@github.com/sighupio/fury-distribution?ref=BRANCH_NAME)."+
 			"Any format supported by hashicorp/go-getter can be used.",
+	)
+
+	cmd.Flags().StringP(
+		"bin-path",
+		"b",
+		"",
+		"Path to the bin folder where all dependencies are installed",
 	)
 
 	cmd.Flags().Bool(

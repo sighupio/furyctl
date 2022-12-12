@@ -26,10 +26,11 @@ var (
 	ErrModuleHasNoName    = errors.New("module has no name")
 )
 
-func NewDownloader(client netx.Client, basePath string) *Downloader {
+func NewDownloader(client netx.Client, basePath, binPath string) *Downloader {
 	return &Downloader{
 		client:   client,
 		basePath: basePath,
+		binPath:  binPath,
 		toolFactory: tools.NewFactory(execx.NewStdExecutor(), tools.FactoryPaths{
 			Bin: filepath.Join(basePath, "vendor", "bin"),
 		}),
@@ -40,6 +41,7 @@ type Downloader struct {
 	client      netx.Client
 	toolFactory *tools.Factory
 	basePath    string
+	binPath     string
 }
 
 func (dd *Downloader) DownloadAll(kfd config.KFD) ([]error, []string) {
@@ -145,7 +147,7 @@ func (dd *Downloader) DownloadTools(kfdTools config.KFDTools) ([]string, error) 
 			continue
 		}
 
-		dst := filepath.Join(dd.basePath, "vendor", "bin")
+		dst := filepath.Join(dd.binPath, name, version)
 
 		if err := dd.client.Download(tool.SrcPath(), dst); err != nil {
 			return unsupportedTools, fmt.Errorf("%w '%s': %v", distribution.ErrDownloadingFolder, tool.SrcPath(), err)

@@ -19,6 +19,7 @@ const (
 	CreatorPropertyFuryctlConf    = "furyctlconf"
 	CreatorPropertyKfdManifest    = "kfdmanifest"
 	CreatorPropertyDistroPath     = "distropath"
+	CreatorPropertyBinPath        = "binpath"
 	CreatorPropertyPhase          = "phase"
 	CreatorPropertyVpnAutoConnect = "vpnautoconnect"
 )
@@ -47,6 +48,7 @@ func NewCreator(
 	kfdManifest config.KFD,
 	workDir string,
 	distroPath string,
+	binPath string,
 	configPath string,
 	phase string,
 	vpnAutoConnect bool,
@@ -71,6 +73,10 @@ func NewCreator(
 			{
 				Name:  CreatorPropertyDistroPath,
 				Value: distroPath,
+			},
+			{
+				Name:  CreatorPropertyBinPath,
+				Value: binPath,
 			},
 			{
 				Name:  CreatorPropertyWorkDir,

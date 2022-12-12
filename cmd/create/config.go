@@ -5,7 +5,6 @@
 package create
 
 import (
-	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -19,14 +18,7 @@ import (
 	iox "github.com/sighupio/furyctl/internal/x/io"
 )
 
-var (
-	ErrConfigFlagNotSet  = errors.New("config flag not set")
-	ErrVersionFlagNotSet = errors.New("version flag not set")
-	ErrKindFlagNotSet    = errors.New("kind flag not set")
-	ErrNameFlagNotSet    = errors.New("name flag not set")
-
-	ErrConfigCreationFailed = fmt.Errorf("config creation failed")
-)
+var ErrConfigCreationFailed = fmt.Errorf("config creation failed")
 
 func NewConfigCmd() *cobra.Command {
 	cmd := &cobra.Command{
@@ -35,19 +27,19 @@ func NewConfigCmd() *cobra.Command {
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			config, ok := cobrax.Flag[string](cmd, "config").(string)
 			if !ok {
-				return ErrConfigFlagNotSet
+				return fmt.Errorf("%w: config", ErrParsingFlag)
 			}
 			version, ok := cobrax.Flag[string](cmd, "version").(string)
 			if !ok {
-				return ErrVersionFlagNotSet
+				return fmt.Errorf("%w: version", ErrParsingFlag)
 			}
 			kind, ok := cobrax.Flag[string](cmd, "kind").(string)
 			if !ok {
-				return ErrKindFlagNotSet
+				return fmt.Errorf("%w: kind", ErrParsingFlag)
 			}
 			name, ok := cobrax.Flag[string](cmd, "name").(string)
 			if !ok {
-				return ErrNameFlagNotSet
+				return fmt.Errorf("%w: name", ErrParsingFlag)
 			}
 
 			data, err := configs.Tpl.ReadFile("furyctl.yaml.tpl")

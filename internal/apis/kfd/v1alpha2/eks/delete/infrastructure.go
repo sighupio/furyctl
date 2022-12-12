@@ -11,6 +11,7 @@ import (
 
 	"github.com/sirupsen/logrus"
 
+	"github.com/sighupio/fury-distribution/pkg/config"
 	"github.com/sighupio/furyctl/internal/cluster"
 	"github.com/sighupio/furyctl/internal/tool/terraform"
 	execx "github.com/sighupio/furyctl/internal/x/exec"
@@ -23,10 +24,10 @@ type Infrastructure struct {
 	dryRun   bool
 }
 
-func NewInfrastructure(dryRun bool, workDir string) (*Infrastructure, error) {
+func NewInfrastructure(dryRun bool, workDir, binPath string, kfdManifest config.KFD) (*Infrastructure, error) {
 	infraDir := path.Join(workDir, "infrastructure")
 
-	phase, err := cluster.NewOperationPhase(infraDir)
+	phase, err := cluster.NewOperationPhase(infraDir, kfdManifest.Tools, binPath)
 	if err != nil {
 		return nil, fmt.Errorf("error creating infrastructure phase: %w", err)
 	}

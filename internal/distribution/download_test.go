@@ -55,7 +55,7 @@ func Test_Downloader_Download(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			d := distribution.NewDownloader(netx.NewGoGetterClient(), true)
+			d := distribution.NewDownloader(netx.NewGoGetterClient())
 
 			res, err := d.Download(
 				tC.furyctlBinVer,
