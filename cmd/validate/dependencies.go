@@ -13,6 +13,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/sighupio/furyctl/internal/analytics"
+	"github.com/sighupio/furyctl/internal/cmd/cmdutil"
 	"github.com/sighupio/furyctl/internal/dependencies/envvars"
 	"github.com/sighupio/furyctl/internal/dependencies/tools"
 	"github.com/sighupio/furyctl/internal/distribution"
@@ -33,22 +34,13 @@ func NewDependenciesCmd(furyctlBinVersion string, tracker *analytics.Tracker) *c
 			cmdEvent = analytics.NewCommandEvent(cobrax.GetFullname(cmd))
 		},
 		RunE: func(cmd *cobra.Command, _ []string) error {
-			furyctlPath, ok := cobrax.Flag[string](cmd, "config").(string)
-			if !ok {
-				err := fmt.Errorf("%w: config", ErrParsingFlag)
-
-				cmdEvent.AddErrorMessage(err)
-				tracker.Track(cmdEvent)
-
+			furyctlPath, err := cmdutil.StringFlag(cmd, "furyctl-path", tracker, cmdEvent)
+			if err != nil {
 				return err
 			}
-			distroLocation, ok := cobrax.Flag[string](cmd, "distro-location").(string)
-			if !ok {
-				err := fmt.Errorf("%w: distro-location", ErrParsingFlag)
 
-				cmdEvent.AddErrorMessage(err)
-				tracker.Track(cmdEvent)
-
+			distroLocation, err := cmdutil.StringFlag(cmd, "distro-location", tracker, cmdEvent)
+			if err != nil {
 				return err
 			}
 

@@ -12,6 +12,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/sighupio/furyctl/internal/analytics"
+	"github.com/sighupio/furyctl/internal/cmd/cmdutil"
 	"github.com/sighupio/furyctl/internal/config"
 	"github.com/sighupio/furyctl/internal/distribution"
 	cobrax "github.com/sighupio/furyctl/internal/x/cobra"
@@ -33,23 +34,14 @@ func NewConfigCmd(furyctlBinVersion string, tracker *analytics.Tracker) *cobra.C
 			cmdEvent = analytics.NewCommandEvent(cobrax.GetFullname(cmd))
 		},
 		RunE: func(cmd *cobra.Command, _ []string) error {
-			furyctlPath, ok := cobrax.Flag[string](cmd, "config").(string)
-			if !ok {
-				err := fmt.Errorf("%w: config", ErrParsingFlag)
-
-				cmdEvent.AddErrorMessage(err)
-				tracker.Track(cmdEvent)
-
-				return err
+			furyctlPath, err := cmdutil.StringFlag(cmd, "furyctl-path", tracker, cmdEvent)
+			if err != nil {
+				return fmt.Errorf("%w: furyctl-path", ErrParsingFlag)
 			}
-			distroLocation, ok := cobrax.Flag[string](cmd, "distro-location").(string)
-			if !ok {
-				err := fmt.Errorf("%w: distro-location", ErrParsingFlag)
 
-				cmdEvent.AddErrorMessage(err)
-				tracker.Track(cmdEvent)
-
-				return err
+			distroLocation, err := cmdutil.StringFlag(cmd, "distro-location", tracker, cmdEvent)
+			if err != nil {
+				return fmt.Errorf("%w: distro-location", ErrParsingFlag)
 			}
 
 			dloader := distribution.NewDownloader(netx.NewGoGetterClient())

@@ -15,7 +15,6 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 
-	"github.com/sighupio/fury-distribution/pkg/config"
 	"github.com/sighupio/furyctl/internal/analytics"
 	"github.com/sighupio/furyctl/internal/cluster"
 	"github.com/sighupio/furyctl/internal/dependencies"
@@ -23,7 +22,6 @@ import (
 	cobrax "github.com/sighupio/furyctl/internal/x/cobra"
 	execx "github.com/sighupio/furyctl/internal/x/exec"
 	netx "github.com/sighupio/furyctl/internal/x/net"
-	yamlx "github.com/sighupio/furyctl/internal/x/yaml"
 )
 
 var ErrParsingFlag = errors.New("error while parsing flag")
@@ -113,31 +111,21 @@ func NewClusterCmd(version string, tracker *analytics.Tracker) *cobra.Command {
 			executor := execx.NewStdExecutor()
 			distrodl := distribution.NewDownloader(client)
 
-			// TODO: Find a way to deduplicate minimalConf parse between here and distrodl.Download. 
-			minimalConf, err := yamlx.FromFileV3[config.Furyctl](furyctlPath)
-			if err != nil {
-				cmdEvent.AddErrorMessage(distribution.ErrYamlUnmarshalFile)
-				tracker.Track(cmdEvent)
-
-				return fmt.Errorf("%w: %s", distribution.ErrYamlUnmarshalFile, err)
-			}
-
-			cmdEvent.AddClusterDetails(analytics.ClusterDetails{
-				Phase:      phase,
-				Provider:   "eks",
-				KFDVersion: minimalConf.Spec.DistributionVersion,
-			})
-
 			execx.Debug = debug
 
 			// Download the distribution.
 			logrus.Info("Downloading distribution...")
 			res, err := distrodl.Download(version, distroLocation, furyctlPath)
 			if err != nil {
-				return fmt.Errorf("error while downloading distribution: %w", err)
+				err = fmt.Errorf("error while downloading distribution: %w", err)
+
+				cmdEvent.AddErrorMessage(err)
+				tracker.Track(cmdEvent)
+
+				return err
 			}
 
-			basePath := filepath.Join(homeDir, ".furyctl", minimalConf.Metadata.Name)
+			basePath := filepath.Join(homeDir, ".furyctl", res.MinimalConf.Metadata.Name)
 
 			// Init second half of collaborators.
 			depsvl := dependencies.NewValidator(executor, binPath)
