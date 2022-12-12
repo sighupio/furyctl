@@ -46,7 +46,8 @@ func main() {
 
 	logW, err := logFile()
 	if err != nil {
-		logrus.Fatal(err)
+		logrus.Error(err)
+		os.Exit(1)
 	}
 
 	defer logW.Close()
