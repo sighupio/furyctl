@@ -36,12 +36,12 @@ func NewDependenciesCmd(furyctlBinVersion string, tracker *analytics.Tracker) *c
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			furyctlPath, err := cmdutil.StringFlag(cmd, "furyctl-path", tracker, cmdEvent)
 			if err != nil {
-				return err
+				return fmt.Errorf("%w: furyctl-path", ErrParsingFlag)
 			}
 
 			distroLocation, err := cmdutil.StringFlag(cmd, "distro-location", tracker, cmdEvent)
 			if err != nil {
-				return err
+				return fmt.Errorf("%w: distro-location", ErrParsingFlag)
 			}
 
 			dloader := distribution.NewDownloader(netx.NewGoGetterClient())
