@@ -52,7 +52,7 @@ func (*Openvpn) Rename(_ string) error {
 
 func (o *Openvpn) CheckBinVersion() error {
 	if err := o.checker.version(o.version); err != nil {
-		return fmt.Errorf("openvpn: %w", err)
+		return fmt.Errorf("openvpn: %w", errMissingBin)
 	}
 
 	return nil

@@ -68,7 +68,7 @@ func (f *Furyagent) Rename(basePath string) error {
 
 func (f *Furyagent) CheckBinVersion() error {
 	if err := f.checker.version(f.version); err != nil {
-		return fmt.Errorf("furyagent: %w", err)
+		return fmt.Errorf("furyagent: %w", errMissingBin)
 	}
 
 	return nil
