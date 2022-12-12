@@ -36,9 +36,9 @@ func NewDependenciesCmd(furyctlBinVersion string, tracker *analytics.Tracker) *c
 			cmdEvent = analytics.NewCommandEvent(cobrax.GetFullname(cmd))
 		},
 		RunE: func(cmd *cobra.Command, _ []string) error {
-			furyctlPath, err := cmdutil.StringFlag(cmd, "furyctl-path", tracker, cmdEvent)
+			furyctlPath, err := cmdutil.StringFlag(cmd, "config", tracker, cmdEvent)
 			if err != nil {
-				return fmt.Errorf("%w: furyctl-path", ErrParsingFlag)
+				return fmt.Errorf("%w: config", ErrParsingFlag)
 			}
 
 			distroLocation, err := cmdutil.StringFlag(cmd, "distro-location", tracker, cmdEvent)

@@ -17,6 +17,7 @@ import (
 
 	"github.com/sighupio/furyctl/internal/analytics"
 	"github.com/sighupio/furyctl/internal/cluster"
+	"github.com/sighupio/furyctl/internal/cmd/cmdutil"
 	"github.com/sighupio/furyctl/internal/dependencies"
 	"github.com/sighupio/furyctl/internal/distribution"
 	cobrax "github.com/sighupio/furyctl/internal/x/cobra"
@@ -36,64 +37,35 @@ func NewClusterCmd(version string, tracker *analytics.Tracker) *cobra.Command {
 			cmdEvent = analytics.NewCommandEvent(cobrax.GetFullname(cmd))
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
-			debug, ok := cobrax.Flag[bool](cmd, "debug").(bool)
-			if !ok {
-				err := fmt.Errorf("%w: debug", ErrParsingFlag)
-
-				cmdEvent.AddErrorMessage(err)
-				tracker.Track(cmdEvent)
-
-				return err
+			debug, err := cmdutil.BoolFlag(cmd, "debug", tracker, cmdEvent)
+			if err != nil {
+				return fmt.Errorf("%w: debug", ErrParsingFlag)
 			}
 
-			furyctlPath, ok := cobrax.Flag[string](cmd, "config").(string)
-			if !ok {
-				err := fmt.Errorf("%w: config", ErrParsingFlag)
-
-				cmdEvent.AddErrorMessage(err)
-				tracker.Track(cmdEvent)
-
-				return err
+			furyctlPath, err := cmdutil.StringFlag(cmd, "config", tracker, cmdEvent)
+			if err != nil {
+				return fmt.Errorf("%w: config", ErrParsingFlag)
 			}
 
-			distroLocation, ok := cobrax.Flag[string](cmd, "distro-location").(string)
-			if !ok {
-				err := fmt.Errorf("%w: distro-location", ErrParsingFlag)
-
-				cmdEvent.AddErrorMessage(err)
-				tracker.Track(cmdEvent)
-
-				return err
+			distroLocation, err := cmdutil.StringFlag(cmd, "distro-location", tracker, cmdEvent)
+			if err != nil {
+				return fmt.Errorf("%w: distro-location", ErrParsingFlag)
 			}
 
-			phase, ok := cobrax.Flag[string](cmd, "phase").(string)
-			if !ok {
-				err := fmt.Errorf("%w: phase", ErrParsingFlag)
-
-				cmdEvent.AddErrorMessage(err)
-				tracker.Track(cmdEvent)
-
-				return err
+			phase, err := cmdutil.StringFlag(cmd, "phase", tracker, cmdEvent)
+			if err != nil {
+				return fmt.Errorf("%w: phase", ErrParsingFlag)
 			}
+
 			binPath := cobrax.Flag[string](cmd, "bin-path").(string) //nolint:errcheck,forcetypeassert // optional flag
-			dryRun, ok := cobrax.Flag[bool](cmd, "dry-run").(bool)
-			if !ok {
-				err := fmt.Errorf("%w: dry-run", ErrParsingFlag)
-
-				cmdEvent.AddErrorMessage(err)
-				tracker.Track(cmdEvent)
-
-				return err
+			dryRun, err := cmdutil.BoolFlag(cmd, "dry-run", tracker, cmdEvent)
+			if err != nil {
+				return fmt.Errorf("%w: dry-run", ErrParsingFlag)
 			}
 
-			force, ok := cobrax.Flag[bool](cmd, "force").(bool)
-			if !ok {
-				err := fmt.Errorf("%w: force", ErrParsingFlag)
-
-				cmdEvent.AddErrorMessage(err)
-				tracker.Track(cmdEvent)
-
-				return err
+			force, err := cmdutil.BoolFlag(cmd, "force", tracker, cmdEvent)
+			if err != nil {
+				return fmt.Errorf("%w: force", ErrParsingFlag)
 			}
 
 			// Init paths.
