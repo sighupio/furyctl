@@ -60,7 +60,7 @@ func (*Kustomize) Rename(_ string) error {
 
 func (k *Kustomize) CheckBinVersion() error {
 	if err := k.checker.version(k.version); err != nil {
-		return fmt.Errorf("kustomize: %w", err)
+		return fmt.Errorf("kustomize: %w", errMissingBin)
 	}
 
 	return nil

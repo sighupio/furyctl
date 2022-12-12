@@ -26,6 +26,7 @@ var (
 	errVersionEmpty         = errors.New("version cannot be empty")
 	errCannotParseWithRegex = errors.New("can't parse system tool version using regex")
 	errCannotParse          = errors.New("can't parse system tool version")
+	errMissingBin           = errors.New("missing binary from vendor folder")
 )
 
 type Tool interface {
