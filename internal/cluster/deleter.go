@@ -12,8 +12,10 @@ import (
 )
 
 const (
-	DeleterPropertyPhase   = "phase"
-	DeleterPropertyWorkDir = "workdir"
+	DeleterPropertyPhase       = "phase"
+	DeleterPropertyWorkDir     = "workdir"
+	DeleterPropertyKfdManifest = "kfdmanifest"
+	DeleterPropertyBinPath     = "binpath"
 )
 
 var delFactories = make(map[string]map[string]DeleterFactory) //nolint:gochecknoglobals, lll // This patterns requires factories
@@ -34,8 +36,10 @@ type Deleter interface {
 
 func NewDeleter(
 	minimalConf config.Furyctl,
+	kfdManifest config.KFD,
 	phase,
-	workDir string,
+	workDir,
+	binPath string,
 ) (Deleter, error) {
 	lcAPIVersion := strings.ToLower(minimalConf.APIVersion)
 	lcResourceType := strings.ToLower(minimalConf.Kind)
@@ -43,12 +47,20 @@ func NewDeleter(
 	if factoryFn, ok := delFactories[lcAPIVersion][lcResourceType]; ok {
 		return factoryFn([]DeleterProperty{
 			{
+				Name:  DeleterPropertyKfdManifest,
+				Value: kfdManifest,
+			},
+			{
 				Name:  DeleterPropertyPhase,
 				Value: phase,
 			},
 			{
 				Name:  DeleterPropertyWorkDir,
 				Value: workDir,
+			},
+			{
+				Name:  DeleterPropertyBinPath,
+				Value: binPath,
 			},
 		})
 	}

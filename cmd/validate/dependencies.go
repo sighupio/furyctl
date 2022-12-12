@@ -6,6 +6,8 @@ package validate
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
 
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -18,38 +20,37 @@ import (
 	netx "github.com/sighupio/furyctl/internal/x/net"
 )
 
-var (
-	ErrDependencies           = fmt.Errorf("dependencies are not satisfied")
-	ErrBinPathFlagNotProvided = fmt.Errorf("bin-path flag not provided")
-)
+var ErrDependencies = fmt.Errorf("dependencies are not satisfied")
 
 func NewDependenciesCmd(furyctlBinVersion string) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "dependencies",
 		Short: "Validate furyctl.yaml file",
 		RunE: func(cmd *cobra.Command, _ []string) error {
-			debug, ok := cobrax.Flag[bool](cmd, "debug").(bool)
-			if !ok {
-				return ErrDebugFlagNotProvided
-			}
-			binPath, ok := cobrax.Flag[string](cmd, "bin-path").(string)
-			if !ok {
-				return ErrBinPathFlagNotProvided
-			}
 			furyctlPath, ok := cobrax.Flag[string](cmd, "config").(string)
 			if !ok {
-				return ErrConfigFlagNotProvided
+				return fmt.Errorf("%w: config", ErrParsingFlag)
 			}
 			distroLocation, ok := cobrax.Flag[string](cmd, "distro-location").(string)
 			if !ok {
-				return ErrDistroFlagNotProvided
+				return fmt.Errorf("%w: distro-location", ErrParsingFlag)
 			}
+			binPath := cobrax.Flag[string](cmd, "bin-path").(string) //nolint:errcheck,forcetypeassert // optional flag
 
-			dloader := distribution.NewDownloader(netx.NewGoGetterClient(), debug)
+			dloader := distribution.NewDownloader(netx.NewGoGetterClient())
 
 			dres, err := dloader.Download(furyctlBinVersion, distroLocation, furyctlPath)
 			if err != nil {
 				return fmt.Errorf("failed to download distribution: %w", err)
+			}
+
+			if binPath == "" {
+				homeDir, err := os.UserHomeDir()
+				if err != nil {
+					return fmt.Errorf("error while getting user home directory: %w", err)
+				}
+
+				binPath = filepath.Join(homeDir, ".furyctl", "bin")
 			}
 
 			toolsValidator := tools.NewValidator(execx.NewStdExecutor(), binPath)

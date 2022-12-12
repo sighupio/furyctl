@@ -27,6 +27,10 @@ func NewRunner(executor execx.Executor, paths Paths) *Runner {
 	}
 }
 
+func (r *Runner) CmdPath() string {
+	return r.paths.Kustomize
+}
+
 func (r *Runner) Version() (string, error) {
 	out, err := execx.CombinedOutput(execx.NewCmd(r.paths.Kustomize, execx.CmdOptions{
 		Args:     []string{"version", "--short"},

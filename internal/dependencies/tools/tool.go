@@ -7,6 +7,8 @@ package tools
 import (
 	"errors"
 	"fmt"
+	"os"
+	"path/filepath"
 	"regexp"
 
 	"github.com/sighupio/furyctl/internal/tool"
@@ -54,7 +56,7 @@ type Factory struct {
 }
 
 func (f *Factory) Create(name, version string) Tool {
-	t := f.runnerFactory.Create(name, "")
+	t := f.runnerFactory.Create(name, version, "")
 
 	if name == tool.Ansible {
 		a, ok := t.(*ansible.Runner)
@@ -127,6 +129,16 @@ func (vc *checker) version(want string) error {
 
 	if want == "" {
 		return errVersionEmpty
+	}
+
+	cmdDir := filepath.Dir(vc.runner.CmdPath())
+
+	if _, err := os.Stat(cmdDir); err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			return fmt.Errorf("version %s not installed: %w", want, err)
+		}
+
+		return fmt.Errorf("error getting version: %w", err)
 	}
 
 	installed, err := vc.runner.Version()

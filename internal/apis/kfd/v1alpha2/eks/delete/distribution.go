@@ -15,6 +15,7 @@ import (
 
 	"github.com/sirupsen/logrus"
 
+	"github.com/sighupio/fury-distribution/pkg/config"
 	"github.com/sighupio/furyctl/internal/cluster"
 	"github.com/sighupio/furyctl/internal/tool/kubectl"
 	"github.com/sighupio/furyctl/internal/tool/kustomize"
@@ -42,10 +43,10 @@ type Distribution struct {
 	dryRun     bool
 }
 
-func NewDistribution(dryRun bool, workDir string) (*Distribution, error) {
+func NewDistribution(dryRun bool, workDir, binPath string, kfdManifest config.KFD) (*Distribution, error) {
 	distroDir := path.Join(workDir, "distribution")
 
-	phase, err := cluster.NewOperationPhase(distroDir)
+	phase, err := cluster.NewOperationPhase(distroDir, kfdManifest.Tools, binPath)
 	if err != nil {
 		return nil, fmt.Errorf("error creating distribution phase: %w", err)
 	}

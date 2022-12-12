@@ -36,6 +36,10 @@ func NewRunner(executor execx.Executor, paths Paths, serverSide, skipNotFound bo
 	}
 }
 
+func (r *Runner) CmdPath() string {
+	return r.paths.Kubectl
+}
+
 func (r *Runner) Apply(manifestPath string) error {
 	args := []string{"apply"}
 

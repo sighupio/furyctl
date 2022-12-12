@@ -44,6 +44,10 @@ func NewRunner(executor execx.Executor, paths Paths) *Runner {
 	}
 }
 
+func (r *Runner) CmdPath() string {
+	return r.paths.Terraform
+}
+
 func (r *Runner) Init() error {
 	err := execx.NewCmd(r.paths.Terraform, execx.CmdOptions{
 		Args:     []string{"init"},
