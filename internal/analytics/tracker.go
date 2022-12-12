@@ -79,7 +79,7 @@ func (a *Tracker) Flush() {
 
 	go func() {
 		time.Sleep(timeout)
-		a.events <- NewGuardEvent()
+		a.events <- NewStopEvent()
 	}()
 
 	a.processEvents()
@@ -88,7 +88,7 @@ func (a *Tracker) Flush() {
 }
 
 // processEvents is the event processor: it will listen for new events and send them to mixpanel.
-// This method will stop when a GuardEvent is received.
+// This method will stop when a Stop event is received.
 func (a *Tracker) processEvents() {
 	for {
 		e, ok := <-a.events
@@ -101,8 +101,8 @@ func (a *Tracker) processEvents() {
 		logrus.Debug("Processing event: ", e.Name())
 
 		switch e.(type) {
-		case GuardEvent:
-			logrus.Debug("Guard event received, stopping event processor")
+		case StopEvent:
+			logrus.Debug("Stop event received, stopping event processor")
 			a.close()
 
 			return

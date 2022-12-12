@@ -46,40 +46,40 @@ func (c CommandEvent) Name() string {
 	return c.name
 }
 
-// NewGuardEvent creates a new GuardEvent. GuardEvent is a special type of event used to close the events processing.
-func NewGuardEvent() Event {
-	return GuardEvent{
-		name:       "guard",
+// NewStopEvent creates a new StopEvent. StopEvent is a special type of event used to close the events processing.
+func NewStopEvent() Event {
+	return StopEvent{
+		name:       "stop",
 		properties: make(map[string]interface{}),
 	}
 }
 
-func (g GuardEvent) AddErrorMessage(e error) {
+func (g StopEvent) AddErrorMessage(e error) {
 	g.properties["errorMessage"] = e.Error()
 }
 
-func (g GuardEvent) AddSuccessMessage(msg string) {
+func (g StopEvent) AddSuccessMessage(msg string) {
 	g.properties["successMessage"] = msg
 }
 
-func (g GuardEvent) AddClusterDetails(d ClusterDetails) {
+func (g StopEvent) AddClusterDetails(d ClusterDetails) {
 	g.properties["clusterDetails"] = d
 }
 
-func (g GuardEvent) AddExitCode(e int) {
+func (g StopEvent) AddExitCode(e int) {
 	g.properties["exitCode"] = e
 }
 
-func (g GuardEvent) Properties() map[string]interface{} {
+func (g StopEvent) Properties() map[string]interface{} {
 	return g.properties
 }
 
-func (g GuardEvent) Name() string {
+func (g StopEvent) Name() string {
 	return g.name
 }
 
-// GuardEvent is a special event used to close the events processing.
-type GuardEvent struct {
+// StopEvent is a special event used to close the events processing.
+type StopEvent struct {
 	name       string
 	properties map[string]interface{}
 }
