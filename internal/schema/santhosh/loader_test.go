@@ -33,7 +33,7 @@ func TestLoadSchema(t *testing.T) {
 			desc:       "broken schema",
 			schemaPath: "../../../test/data/integration/schema/santhosh/test-cluster-broken.json",
 			wantErr:    true,
-			wantErrMsg: "parsing \"../../../test/data/integration/schema/santhosh/test-cluster-broken.json\" failed",
+			wantErrMsg: "jsonschema: invalid json ../../../test/data/integration/schema/santhosh/test-cluster-broken.json: unexpected EOF",
 		},
 		{
 			desc:       "wrong schema",
