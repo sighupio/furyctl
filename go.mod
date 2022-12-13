@@ -10,7 +10,6 @@ require (
 	github.com/hashicorp/go-getter v1.6.2
 	github.com/hashicorp/go-version v1.3.0 // indirect
 	github.com/rogpeppe/go-internal v1.9.0 // indirect
-	github.com/santhosh-tekuri/jsonschema v1.2.4
 	github.com/sirupsen/logrus v1.9.0
 	github.com/spf13/cobra v1.5.0
 	github.com/spf13/viper v1.8.1
@@ -24,6 +23,7 @@ require (
 	github.com/hashicorp/terraform-json v0.10.0
 	github.com/onsi/ginkgo/v2 v2.4.0
 	github.com/onsi/gomega v1.22.1
+	github.com/santhosh-tekuri/jsonschema/v5 v5.1.1
 	github.com/sighupio/fury-distribution v1.23.3-0.20221125105833-c51b71f35ebe
 	golang.org/x/exp v0.0.0-20220927162542-c76eaa363f9d
 	gopkg.in/yaml.v3 v3.0.1

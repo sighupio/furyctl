@@ -48,7 +48,7 @@ func Validate(path, repoPath string) error {
 		return err
 	}
 
-	err = schema.ValidateInterface(conf)
+	err = schema.Validate(conf)
 	if err != nil {
 		return fmt.Errorf("error while validating: %w", err)
 	}
