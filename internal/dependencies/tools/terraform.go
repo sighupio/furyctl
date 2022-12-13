@@ -60,7 +60,7 @@ func (*Terraform) Rename(_ string) error {
 
 func (t *Terraform) CheckBinVersion() error {
 	if err := t.checker.version(t.version); err != nil {
-		return fmt.Errorf("terraform: %w", errMissingBin)
+		return fmt.Errorf("terraform: %w", err)
 	}
 
 	return nil

@@ -61,7 +61,7 @@ func (*Kubectl) Rename(_ string) error {
 
 func (k *Kubectl) CheckBinVersion() error {
 	if err := k.checker.version(k.version); err != nil {
-		return fmt.Errorf("kubectl: %w", errMissingBin)
+		return fmt.Errorf("kubectl: %w", err)
 	}
 
 	return nil
