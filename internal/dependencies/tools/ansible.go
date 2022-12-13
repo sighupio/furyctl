@@ -52,7 +52,7 @@ func (*Ansible) Rename(_ string) error {
 
 func (a *Ansible) CheckBinVersion() error {
 	if err := a.checker.version(a.version); err != nil {
-		return fmt.Errorf("ansible: %w", errMissingBin)
+		return fmt.Errorf("ansible: %w", err)
 	}
 
 	return nil
