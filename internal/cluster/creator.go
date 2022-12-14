@@ -40,7 +40,7 @@ type CreatorProperty struct {
 type Creator interface {
 	SetProperties(props []CreatorProperty)
 	SetProperty(name string, value any)
-	Create(dryRun bool) error
+	Create(dryRun bool, skipPhase string) error
 }
 
 func NewCreator(
