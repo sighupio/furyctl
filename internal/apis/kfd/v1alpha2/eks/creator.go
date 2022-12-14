@@ -80,7 +80,7 @@ func (v *ClusterCreator) SetProperty(name string, value any) {
 	}
 }
 
-func (v *ClusterCreator) Create(dryRun bool) error {
+func (v *ClusterCreator) Create(dryRun bool, skipPhase string) error {
 	infra, err := create.NewInfrastructure(v.furyctlConf, v.kfdManifest, v.workDir, v.binPath, dryRun)
 	if err != nil {
 		return fmt.Errorf("error while initiating infrastructure phase: %w", err)
@@ -132,18 +132,23 @@ func (v *ClusterCreator) Create(dryRun bool) error {
 		return nil
 
 	case cluster.OperationPhaseAll:
-		if v.furyctlConf.Spec.Infrastructure != nil {
+		if v.furyctlConf.Spec.Infrastructure != nil &&
+			skipPhase == "" {
 			if err := infra.Exec(infraOpts); err != nil {
 				return fmt.Errorf("error while executing infrastructure phase: %w", err)
 			}
 		}
 
-		if err := kube.Exec(); err != nil {
-			return fmt.Errorf("error while executing kubernetes phase: %w", err)
+		if skipPhase != cluster.OperationPhaseKubernetes {
+			if err := kube.Exec(); err != nil {
+				return fmt.Errorf("error while executing kubernetes phase: %w", err)
+			}
 		}
 
-		if err = distro.Exec(); err != nil {
-			return fmt.Errorf("error while executing distribution phase: %w", err)
+		if skipPhase != cluster.OperationPhaseDistribution {
+			if err = distro.Exec(); err != nil {
+				return fmt.Errorf("error while executing distribution phase: %w", err)
+			}
 		}
 
 		return nil

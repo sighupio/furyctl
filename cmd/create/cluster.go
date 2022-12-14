@@ -61,6 +61,11 @@ func NewClusterCmd(version string, tracker *analytics.Tracker) *cobra.Command {
 				return fmt.Errorf("%w: %s", ErrParsingFlag, "phase")
 			}
 
+			skipPhase, err := cmdutil.StringFlag(cmd, "skip-phase", tracker, cmdEvent)
+			if err != nil {
+				return fmt.Errorf("%w: %s", ErrParsingFlag, "skip-phase")
+			}
+
 			binPath := cmdutil.StringFlagOptional(cmd, "bin-path")
 
 			vpnAutoConnect, err := cmdutil.BoolFlag(cmd, "vpn-auto-connect", tracker, cmdEvent)
@@ -170,7 +175,7 @@ func NewClusterCmd(version string, tracker *analytics.Tracker) *cobra.Command {
 			}
 
 			logrus.Info("Creating cluster...")
-			if err := clusterCreator.Create(dryRun); err != nil {
+			if err := clusterCreator.Create(dryRun, skipPhase); err != nil {
 				cmdEvent.AddErrorMessage(err)
 				tracker.Track(cmdEvent)
 
@@ -211,6 +216,12 @@ func NewClusterCmd(version string, tracker *analytics.Tracker) *cobra.Command {
 		"p",
 		"",
 		"Phase to execute",
+	)
+
+	cmd.Flags().String(
+		"skip-phase",
+		"",
+		"Phase to skip",
 	)
 
 	cmd.Flags().StringP(
