@@ -6,9 +6,9 @@
 
 terraform {
   backend "s3" {
-    bucket = "{{ .spec.toolsConfiguration.terraform.state.s3.bucketName }}"
-    key    = "{{ .spec.toolsConfiguration.terraform.state.s3.keyPrefix }}/infrastructure.json"
-    region = "{{ .spec.toolsConfiguration.terraform.state.s3.region }}"
+    bucket = "{{ .terraform.backend.s3.bucketName }}"
+    key    = "{{ .terraform.backend.s3.keyPrefix }}/infrastructure.json"
+    region = "{{ .terraform.backend.s3.region }}"
   }
 }
 

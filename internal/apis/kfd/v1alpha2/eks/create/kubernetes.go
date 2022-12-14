@@ -156,6 +156,15 @@ func (k *Kubernetes) copyFromTemplate() error {
 		"kubernetes": {
 			"eks": k.kfdManifest.Kubernetes.Eks,
 		},
+		"terraform": {
+			"backend": map[string]any{
+				"s3": map[string]any{
+					"bucketName": k.furyctlConf.Spec.ToolsConfiguration.Terraform.State.S3.BucketName,
+					"keyPrefix":  k.furyctlConf.Spec.ToolsConfiguration.Terraform.State.S3.KeyPrefix,
+					"region":     k.furyctlConf.Spec.ToolsConfiguration.Terraform.State.S3.Region,
+				},
+			},
+		},
 	}
 
 	cfg.Data = tfConfVars
