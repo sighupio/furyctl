@@ -421,11 +421,14 @@ var (
 		Context("create config", func() {
 			basepath := "../data/e2e/create/config"
 			FuryctlCreateConfig := func(workdir string) (string, error) {
+				absBasepath := Abs(basepath)
+
 				return RunCmd(
 					furyctl, "create", "config",
 					"--config", workdir+"/target/furyctl.yaml",
 					"--debug",
 					"--disable-analytics", "true",
+					"--distro-location", absBasepath+"/distro",
 				)
 			}
 			Setup := func(folder string) string {

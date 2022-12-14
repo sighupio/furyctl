@@ -33,7 +33,7 @@ func TestGetTemplatePath(t *testing.T) {
 			},
 			want: fmt.Sprintf("%s", filepath.Join(
 				"testpath",
-				"templates",
+				"templates/config",
 				"ekscluster-kfd-v1alpha2.yaml.tpl",
 			)),
 			wantErr: nil,
@@ -46,7 +46,7 @@ func TestGetTemplatePath(t *testing.T) {
 				Kind:       "EKSCluster",
 				Spec:       config.FuryctlSpec{},
 			},
-			want:    fmt.Sprintf("%s", filepath.Join("templates", "ekscluster-kfd-v1alpha2.yaml.tpl")),
+			want:    fmt.Sprintf("%s", filepath.Join("templates/config", "ekscluster-kfd-v1alpha2.yaml.tpl")),
 			wantErr: nil,
 		},
 		{
@@ -74,7 +74,7 @@ func TestGetTemplatePath(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := distribution.GetTemplatePath(tt.basePath, tt.conf)
+			got, err := distribution.GetConfigTemplatePath(tt.basePath, tt.conf)
 			if err != nil {
 				if err.Error() != tt.wantErr.Error() {
 					t.Errorf("distribution.GetTemplatePath() error = %v, wantErr %v", err, tt.wantErr)

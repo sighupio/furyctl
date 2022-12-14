@@ -29,7 +29,7 @@ func Create(
 	tracker *analytics.Tracker,
 	data map[string]string,
 ) (*os.File, error) {
-	tplPath, err := distribution.GetTemplatePath(res.RepoPath, res.MinimalConf)
+	tplPath, err := distribution.GetConfigTemplatePath(res.RepoPath, res.MinimalConf)
 	if err != nil {
 		return nil, fmt.Errorf("error getting schema path: %w", err)
 	}

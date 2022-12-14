@@ -20,8 +20,8 @@ var (
 	errInvalidAPIVersion = errors.New("invalid apiVersion")
 )
 
-func GetTemplatePath(basePath string, conf config.Furyctl) (string, error) {
-	return getPath(basePath, conf, "%s-%s-%s.yaml.tpl", "templates")
+func GetConfigTemplatePath(basePath string, conf config.Furyctl) (string, error) {
+	return getPath(basePath, conf, "%s-%s-%s.yaml.tpl", "templates/config")
 }
 
 func GetSchemaPath(basePath string, conf config.Furyctl) (string, error) {
