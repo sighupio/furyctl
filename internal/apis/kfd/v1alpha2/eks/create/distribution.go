@@ -533,7 +533,7 @@ func (d *Distribution) delayedApplyRetries(mPath string, delay time.Duration, ma
 		t := time.NewTimer(delay)
 
 		if <-t.C; true {
-			logrus.Info("retrying kubectl apply after delay")
+			logrus.Debug("applying manifests again... to ensure all resources are created.")
 
 			err = d.kubeRunner.Apply(mPath)
 			if err == nil {
