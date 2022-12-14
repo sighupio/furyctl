@@ -24,7 +24,7 @@ spec:
       network:
         cidr: 10.0.0.0/16
         subnetsCidrs:
-          private: 
+          private:
             - 10.0.182.0/24
             - 10.0.172.0/24
             - 10.0.162.0/24
