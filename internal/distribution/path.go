@@ -20,7 +20,19 @@ var (
 	errInvalidAPIVersion = errors.New("invalid apiVersion")
 )
 
+func GetTemplatePath(basePath string, conf config.Furyctl) (string, error) {
+	return getPath(basePath, conf, "%s-%s-%s.yaml.tpl", "templates")
+}
+
 func GetSchemaPath(basePath string, conf config.Furyctl) (string, error) {
+	return getPath(basePath, conf, "%s-%s-%s.json", "schemas")
+}
+
+func GetDefaultsPath(basePath string) string {
+	return filepath.Join(basePath, "furyctl-defaults.yaml")
+}
+
+func getPath(basePath string, conf config.Furyctl, fnameTpl, subDir string) (string, error) {
 	avp := strings.Split(conf.APIVersion, "/")
 
 	if len(avp) < ValidLength {
@@ -34,11 +46,7 @@ func GetSchemaPath(basePath string, conf config.Furyctl) (string, error) {
 		return "", errKindIsEmpty
 	}
 
-	filename := fmt.Sprintf("%s-%s-%s.json", strings.ToLower(conf.Kind), ns, ver)
+	filename := fmt.Sprintf(fnameTpl, strings.ToLower(conf.Kind), ns, ver)
 
-	return filepath.Join(basePath, "schemas", filename), nil
-}
-
-func GetDefaultsPath(basePath string) string {
-	return filepath.Join(basePath, "furyctl-defaults.yaml")
+	return filepath.Join(basePath, subDir, filename), nil
 }

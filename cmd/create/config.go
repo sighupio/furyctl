@@ -6,35 +6,44 @@ package create
 
 import (
 	"fmt"
-	"os"
-	"path/filepath"
-	"text/template"
 
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 
-	"github.com/sighupio/furyctl/configs"
+	distroConfig "github.com/sighupio/fury-distribution/pkg/config"
 	"github.com/sighupio/furyctl/internal/analytics"
 	"github.com/sighupio/furyctl/internal/cmd/cmdutil"
+	"github.com/sighupio/furyctl/internal/config"
+	"github.com/sighupio/furyctl/internal/distribution"
 	cobrax "github.com/sighupio/furyctl/internal/x/cobra"
-	iox "github.com/sighupio/furyctl/internal/x/io"
+	execx "github.com/sighupio/furyctl/internal/x/exec"
+	netx "github.com/sighupio/furyctl/internal/x/net"
 )
 
-var ErrConfigCreationFailed = fmt.Errorf("config creation failed")
-
-func NewConfigCmd(tracker *analytics.Tracker) *cobra.Command {
+func NewConfigCmd(furyctlBinVersion string, tracker *analytics.Tracker) *cobra.Command {
 	var cmdEvent analytics.Event
 
 	cmd := &cobra.Command{
 		Use:   "config",
 		Short: "scaffolds a new furyctl config file",
-		PreRun: func(cmd *cobra.Command, args []string) {
+		PreRun: func(cmd *cobra.Command, _ []string) {
 			cmdEvent = analytics.NewCommandEvent(cobrax.GetFullname(cmd))
 		},
 		RunE: func(cmd *cobra.Command, _ []string) error {
-			config, err := cmdutil.StringFlag(cmd, "config", tracker, cmdEvent)
+			// Get flags.
+			debug, err := cmdutil.BoolFlag(cmd, "debug", tracker, cmdEvent)
+			if err != nil {
+				return fmt.Errorf("%w: %s", ErrParsingFlag, "debug")
+			}
+
+			furyctlPath, err := cmdutil.StringFlag(cmd, "config", tracker, cmdEvent)
 			if err != nil {
 				return fmt.Errorf("%w: config", ErrParsingFlag)
+			}
+
+			distroLocation, err := cmdutil.StringFlag(cmd, "distro-location", tracker, cmdEvent)
+			if err != nil {
+				return fmt.Errorf("%w: %s", ErrParsingFlag, "distro-location")
 			}
 
 			version, err := cmdutil.StringFlag(cmd, "version", tracker, cmdEvent)
@@ -47,48 +56,59 @@ func NewConfigCmd(tracker *analytics.Tracker) *cobra.Command {
 				return fmt.Errorf("%w: kind", ErrParsingFlag)
 			}
 
+			apiVersion, err := cmdutil.StringFlag(cmd, "api-version", tracker, cmdEvent)
+			if err != nil {
+				return fmt.Errorf("%w: kind", ErrParsingFlag)
+			}
+
 			name, err := cmdutil.StringFlag(cmd, "name", tracker, cmdEvent)
 			if err != nil {
 				return fmt.Errorf("%w: name", ErrParsingFlag)
 			}
 
+			minimalConf := distroConfig.Furyctl{
+				APIVersion: apiVersion,
+				Kind:       kind,
+				Metadata: distroConfig.FuryctlMeta{
+					Name: name,
+				},
+				Spec: distroConfig.FuryctlSpec{
+					DistributionVersion: version,
+				},
+			}
+
+			// Init collaborators.
+			distrodl := distribution.NewDownloader(netx.NewGoGetterClient())
+
+			// Init packages.
+			execx.Debug = debug
+
+			// Download the distribution.
+			logrus.Info("Downloading distribution...")
+			res, err := distrodl.DoDownload(furyctlBinVersion, distroLocation, minimalConf)
+			if err != nil {
+				cmdEvent.AddErrorMessage(err)
+				tracker.Track(cmdEvent)
+
+				return fmt.Errorf("failed to download distribution: %w", err)
+			}
+
 			cmdEvent.AddClusterDetails(analytics.ClusterDetails{
-				KFDVersion: version,
+				KFDVersion: res.DistroManifest.Version,
 			})
 
-			data, err := configs.Tpl.ReadFile("furyctl.yaml.tpl")
-			if err != nil {
-				cmdEvent.AddErrorMessage(err)
-				tracker.Track(cmdEvent)
-
-				return fmt.Errorf("error reading furyctl yaml template: %w", err)
-			}
-
-			tmpl, err := template.New("furyctl.yaml").Parse(string(data))
-			if err != nil {
-				cmdEvent.AddErrorMessage(err)
-				tracker.Track(cmdEvent)
-
-				return fmt.Errorf("error parsing furyctl yaml template: %w", err)
-			}
-
-			out, err := createNewEmptyConfigFile(config)
-			if err != nil {
-				cmdEvent.AddErrorMessage(err)
-				tracker.Track(cmdEvent)
-
-				return err
-			}
-
-			if err := tmpl.Execute(out, map[string]string{
+			data := map[string]string{
 				"Kind":                kind,
 				"Name":                name,
 				"DistributionVersion": version,
-			}); err != nil {
+			}
+
+			out, err := config.Create(res, furyctlPath, cmdEvent, tracker, data)
+			if err != nil {
 				cmdEvent.AddErrorMessage(err)
 				tracker.Track(cmdEvent)
 
-				return fmt.Errorf("error executing furyctl yaml template: %w", err)
+				return fmt.Errorf("failed to create config file: %w", err)
 			}
 
 			logrus.Infof("Config file created successfully at: %s", out.Name())
@@ -108,17 +128,34 @@ func NewConfigCmd(tracker *analytics.Tracker) *cobra.Command {
 	)
 
 	cmd.Flags().StringP(
+		"distro-location",
+		"",
+		"",
+		"Base URL used to download schemas, defaults and the distribution manifest. "+
+			"It can either be a local path(eg: /path/to/fury/distribution) or "+
+			"a remote URL(eg: https://git@github.com/sighupio/fury-distribution?ref=BRANCH_NAME)."+
+			"Any format supported by hashicorp/go-getter can be used.",
+	)
+
+	cmd.Flags().StringP(
 		"version",
 		"v",
 		"v1.23.3",
-		"distribution version to use",
+		"distribution version to use (eg: v1.23.3)",
 	)
 
 	cmd.Flags().StringP(
 		"kind",
 		"k",
 		"EKSCluster",
-		"type of cluster to create",
+		"type of cluster to create (eg: EKSCluster)",
+	)
+
+	cmd.Flags().StringP(
+		"api-version",
+		"a",
+		"kfd.sighup.io/v1alpha2",
+		"version of the api to use for the selected kind (eg: kfd.sighup.io/v1alpha2)",
 	)
 
 	cmd.Flags().StringP(
@@ -129,28 +166,4 @@ func NewConfigCmd(tracker *analytics.Tracker) *cobra.Command {
 	)
 
 	return cmd
-}
-
-func createNewEmptyConfigFile(path string) (*os.File, error) {
-	absPath, err := filepath.Abs(path)
-	if err != nil {
-		return nil, fmt.Errorf("error getting absolute path: %w", err)
-	}
-
-	if _, err := os.Stat(absPath); err == nil {
-		p := filepath.Dir(absPath)
-
-		return nil, fmt.Errorf("%w: a furyctl.yaml configuration file already exists in %s, please remove it and try again", ErrConfigCreationFailed, p)
-	}
-
-	if err := os.MkdirAll(filepath.Dir(absPath), iox.FullPermAccess); err != nil {
-		return nil, fmt.Errorf("error creating directory: %w", err)
-	}
-
-	out, err := os.Create(absPath)
-	if err != nil {
-		return nil, fmt.Errorf("error creating file: %w", err)
-	}
-
-	return out, nil
 }
