@@ -13,6 +13,7 @@ import (
 
 	"github.com/sighupio/furyctl/internal/tool"
 	"github.com/sighupio/furyctl/internal/tool/ansible"
+	"github.com/sighupio/furyctl/internal/tool/awscli"
 	"github.com/sighupio/furyctl/internal/tool/furyagent"
 	"github.com/sighupio/furyctl/internal/tool/kubectl"
 	"github.com/sighupio/furyctl/internal/tool/kustomize"
@@ -67,6 +68,15 @@ func (f *Factory) Create(name, version string) Tool {
 		}
 
 		return NewAnsible(a, version)
+	}
+
+	if name == tool.Awscli {
+		a, ok := t.(*awscli.Runner)
+		if !ok {
+			panic(fmt.Sprintf("expected awscli.Runner, got %T", t))
+		}
+
+		return NewAwscli(a, version)
 	}
 
 	if name == tool.Furyagent {

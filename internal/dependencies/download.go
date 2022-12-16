@@ -133,35 +133,40 @@ func (dd *Downloader) DownloadTools(kfdTools config.KFDTools) ([]string, error) 
 	unsupportedTools := []string{}
 
 	for i := 0; i < tls.NumField(); i++ {
-		name := strings.ToLower(tls.Type().Field(i).Name)
+		for j := 0; j < tls.Field(i).NumField(); j++ {
+			name := strings.ToLower(tls.Field(i).Type().Field(j).Name)
 
-		version, ok := tls.Field(i).Interface().(string)
-		if !ok {
-			return unsupportedTools, fmt.Errorf("%s: %w", name, ErrModuleHasNoVersion)
-		}
+			version, ok := tls.Field(i).Field(j).Interface().(config.Version)
 
-		tool := dd.toolFactory.Create(name, version)
-		if tool == nil || !tool.SupportsDownload() {
-			unsupportedTools = append(unsupportedTools, name)
+			if !ok {
+				return unsupportedTools, fmt.Errorf("%s: %w", name, ErrModuleHasNoVersion)
+			}
 
-			continue
-		}
+			tool := dd.toolFactory.Create(name, version.String())
+			if tool == nil || !tool.SupportsDownload() {
+				unsupportedTools = append(unsupportedTools, name)
 
-		dst := filepath.Join(dd.binPath, name, version)
+				continue
+			}
 
-		if err := dd.client.Download(tool.SrcPath(), dst); err != nil {
-			return unsupportedTools, fmt.Errorf("%w '%s': %v", distribution.ErrDownloadingFolder, tool.SrcPath(), err)
-		}
+			dst := filepath.Join(dd.binPath, name, version.String())
 
-		if err := tool.Rename(dst); err != nil {
-			return unsupportedTools, fmt.Errorf("%w '%s': %v", distribution.ErrRenamingFile, tool.SrcPath(), err)
-		}
+			if err := dd.client.Download(tool.SrcPath(), dst); err != nil {
+				return unsupportedTools, fmt.Errorf("%w '%s': %v", distribution.ErrDownloadingFolder, tool.SrcPath(), err)
+			}
 
-		err := os.Chmod(filepath.Join(dst, name), iox.FullPermAccess)
-		if err != nil {
-			return unsupportedTools, fmt.Errorf("%w '%s': %v", distribution.ErrChangingFilePermissions, tool.SrcPath(), err)
+			if err := tool.Rename(dst); err != nil {
+				return unsupportedTools, fmt.Errorf("%w '%s': %v", distribution.ErrRenamingFile, tool.SrcPath(), err)
+			}
+
+			err := os.Chmod(filepath.Join(dst, name), iox.FullPermAccess)
+			if err != nil {
+				return unsupportedTools, fmt.Errorf("%w '%s': %v", distribution.ErrChangingFilePermissions, tool.SrcPath(), err)
+			}
 		}
 	}
 
 	return unsupportedTools, nil
 }
+
+func getTools() {}
