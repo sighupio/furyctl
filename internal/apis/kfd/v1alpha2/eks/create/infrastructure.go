@@ -79,7 +79,7 @@ func NewInfrastructure(
 			},
 		),
 		faRunner: furyagent.NewRunner(executor, furyagent.Paths{
-			Furyagent: path.Join(binPath, "furyagent", kfdManifest.Tools.Furyagent, "furyagent"),
+			Furyagent: path.Join(binPath, "furyagent", kfdManifest.Tools.Common.Furyagent.Version, "furyagent"),
 			WorkDir:   phase.SecretsPath,
 		}),
 		ovRunner: openvpn.NewRunner(executor, openvpn.Paths{
@@ -94,6 +94,10 @@ func (i *Infrastructure) Exec(opts []cluster.OperationPhaseOption) error {
 	logrus.Info("Running infrastructure phase")
 
 	timestamp := time.Now().Unix()
+
+	if _, err := i.ovRunner.Version(); err != nil {
+		return fmt.Errorf("error getting openvpn version: %w", err)
+	}
 
 	if err := i.CreateFolder(); err != nil {
 		return fmt.Errorf("error creating infrastructure folder: %w", err)
