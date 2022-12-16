@@ -133,7 +133,7 @@ func (v *ClusterCreator) Create(dryRun bool, skipPhase string) error {
 
 	case cluster.OperationPhaseAll:
 		if v.furyctlConf.Spec.Infrastructure != nil &&
-			skipPhase == "" {
+			(skipPhase == "" || skipPhase == cluster.OperationPhaseDistribution) {
 			if err := infra.Exec(infraOpts); err != nil {
 				return fmt.Errorf("error while executing infrastructure phase: %w", err)
 			}

@@ -30,7 +30,7 @@ var (
 	ErrDownloadDependenciesFailed = errors.New("download dependencies failed")
 )
 
-func NewClusterCmd(version string, tracker *analytics.Tracker) *cobra.Command {
+func NewClusterCmd(version string, tracker *analytics.Tracker) *cobra.Command { //nolint:maintidx // complexity from flags
 	var cmdEvent analytics.Event
 
 	cmd := &cobra.Command{
@@ -154,6 +154,10 @@ func NewClusterCmd(version string, tracker *analytics.Tracker) *cobra.Command {
 				tracker.Track(cmdEvent)
 
 				return fmt.Errorf("error while validating dependencies: %w", err)
+			}
+
+			if phase == "" || skipPhase == "distribution" {
+				vpnAutoConnect = true
 			}
 
 			// Create the cluster.
