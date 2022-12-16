@@ -26,12 +26,12 @@ func Test_Validator_Validate(t *testing.T) {
 			desc: "all tools are installed in their correct version",
 			manifest: config.KFD{
 				Tools: config.KFDTools{
-					Kubectl:   "1.21.1",
-					Kustomize: "3.9.4",
-					Ansible:   "2.9.27",
-					// Openvpn:   "2.5.7",
-					Terraform: "0.15.4",
-					Furyagent: "0.3.0",
+					Common: config.Common{
+						Kubectl:   config.Version{Version: "1.22.0"},
+						Kustomize: config.Version{Version: "3.9.4"},
+						Terraform: config.Version{Version: "0.15.4"},
+						Furyagent: config.Version{Version: "0.3.0"},
+					},
 				},
 			},
 		},
@@ -39,12 +39,12 @@ func Test_Validator_Validate(t *testing.T) {
 			desc: "all tools are installed in their wrong version",
 			manifest: config.KFD{
 				Tools: config.KFDTools{
-					Kubectl:   "1.22.0",
-					Kustomize: "3.10.0",
-					Ansible:   "2.10.0",
-					// Openvpn:   "2.4.9",
-					Terraform: "1.3.0",
-					Furyagent: "0.4.0",
+					Common: config.Common{
+						Kubectl:   config.Version{Version: "1.21.1"},
+						Kustomize: config.Version{Version: "3.10.0"},
+						Terraform: config.Version{Version: "1.3.0"},
+						Furyagent: config.Version{Version: "0.4.0"},
+					},
 				},
 			},
 			wantErrs: []error{

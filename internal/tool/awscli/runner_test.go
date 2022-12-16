@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
+//go:build unit
+
 package awscli_test
 
 import (
@@ -15,7 +17,7 @@ import (
 
 func Test_Runner_Version(t *testing.T) {
 	r := awscli.NewRunner(execx.NewFakeExecutor(), awscli.Paths{
-		Aws:  "aws",
+		Awscli:  "aws",
 		WorkDir: os.TempDir(),
 	})
 
