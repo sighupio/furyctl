@@ -136,7 +136,7 @@ func (dd *Downloader) DownloadTools(kfdTools config.KFDTools) ([]string, error) 
 		for j := 0; j < tls.Field(i).NumField(); j++ {
 			name := strings.ToLower(tls.Field(i).Type().Field(j).Name)
 
-			version, ok := tls.Field(i).Field(j).Interface().(config.Version)
+			version, ok := tls.Field(i).Field(j).Interface().(config.Tool)
 
 			if !ok {
 				return unsupportedTools, fmt.Errorf("%s: %w", name, ErrModuleHasNoVersion)

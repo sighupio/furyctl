@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-//go:build unit
-
 package tools_test
 
 import (
@@ -27,10 +25,10 @@ func Test_Validator_Validate(t *testing.T) {
 			manifest: config.KFD{
 				Tools: config.KFDTools{
 					Common: config.Common{
-						Kubectl:   config.Version{Version: "1.22.0"},
-						Kustomize: config.Version{Version: "3.9.4"},
-						Terraform: config.Version{Version: "0.15.4"},
-						Furyagent: config.Version{Version: "0.3.0"},
+						Kubectl:   config.Tool{Version: "1.22.0"},
+						Kustomize: config.Tool{Version: "3.9.4"},
+						Terraform: config.Tool{Version: "0.15.4"},
+						Furyagent: config.Tool{Version: "0.3.0"},
 					},
 				},
 			},
@@ -40,10 +38,10 @@ func Test_Validator_Validate(t *testing.T) {
 			manifest: config.KFD{
 				Tools: config.KFDTools{
 					Common: config.Common{
-						Kubectl:   config.Version{Version: "1.21.1"},
-						Kustomize: config.Version{Version: "3.10.0"},
-						Terraform: config.Version{Version: "1.3.0"},
-						Furyagent: config.Version{Version: "0.4.0"},
+						Kubectl:   config.Tool{Version: "1.21.1"},
+						Kustomize: config.Tool{Version: "3.10.0"},
+						Terraform: config.Tool{Version: "1.3.0"},
+						Furyagent: config.Tool{Version: "0.4.0"},
 					},
 				},
 			},

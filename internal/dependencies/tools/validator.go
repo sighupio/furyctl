@@ -40,7 +40,7 @@ func (tv *Validator) Validate(kfdManifest config.KFD) []error {
 		for j := 0; j < tls.Field(i).NumField(); j++ {
 			name := strings.ToLower(tls.Field(i).Type().Field(j).Name)
 
-			if version, ok := tls.Field(i).Field(j).Interface().(config.Version); ok {
+			if version, ok := tls.Field(i).Field(j).Interface().(config.Tool); ok {
 				if version.String() == "" {
 					continue
 				}
