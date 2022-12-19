@@ -129,7 +129,7 @@ Furyctl is a simple CLI tool to:
 					logrus.Debugf("Changed working directory to %s", absWorkdir)
 				}
 			},
-			PersistentPostRun: func(cmd *cobra.Command, _ []string) {
+			PersistentPostRun: func(_ *cobra.Command, _ []string) {
 				// Show update message if available at the end of the command.
 				select {
 				case release := <-r:

@@ -206,7 +206,6 @@ var (
 				out, err := FuryctlValidateDependencies("../data/e2e/validate/dependencies/missing", "/tmp")
 
 				Expect(err).To(HaveOccurred())
-				Expect(out).To(ContainSubstring("ansible:"))
 				Expect(out).To(ContainSubstring("terraform:"))
 				Expect(out).To(ContainSubstring("kubectl:"))
 				Expect(out).To(ContainSubstring("kustomize:"))
@@ -217,7 +216,13 @@ var (
 			})
 
 			It("should report an error when dependencies are wrong", Serial, func() {
-				RestoreEnvVars := BackupEnvVars("PATH", "AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY", "AWS_DEFAULT_REGION")
+				RestoreEnvVars := BackupEnvVars(
+					"PATH",
+					"AWS_ACCESS_KEY_ID",
+					"AWS_SECRET_ACCESS_KEY",
+					"AWS_DEFAULT_REGION",
+					"FURYCTL_MIXPANEL_TOKEN",
+				)
 				defer RestoreEnvVars()
 
 				bp := Abs("../data/e2e/validate/dependencies/wrong")
@@ -226,18 +231,16 @@ var (
 				os.Unsetenv("AWS_ACCESS_KEY_ID")
 				os.Unsetenv("AWS_SECRET_ACCESS_KEY")
 				os.Unsetenv("AWS_DEFAULT_REGION")
+				os.Unsetenv("FURYCTL_MIXPANEL_TOKEN")
 
 				out, err := FuryctlValidateDependencies(bp, bp)
 
 				Expect(err).To(HaveOccurred())
 				Expect(out).To(
-					ContainSubstring("ansible: wrong tool version - installed = 2.11.1, expected = 2.11.2"),
-				)
-				Expect(out).To(
 					ContainSubstring("furyagent: wrong tool version - installed = 0.2.4, expected = 0.3.0"),
 				)
 				Expect(out).To(
-					ContainSubstring("kubectl: wrong tool version - installed = 1.23.6, expected = 1.23.7"),
+					ContainSubstring("kubectl: wrong tool version - installed = 1.23.7, expected = 1.23.10"),
 				)
 				Expect(out).To(
 					ContainSubstring("kustomize: wrong tool version - installed = 3.9.0, expected = 3.10.0"),
@@ -251,7 +254,13 @@ var (
 			})
 
 			It("should exit without errors when dependencies are correct", Serial, func() {
-				RestoreEnvVars := BackupEnvVars("PATH", "AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY", "AWS_DEFAULT_REGION")
+				RestoreEnvVars := BackupEnvVars(
+					"PATH",
+					"AWS_ACCESS_KEY_ID",
+					"AWS_SECRET_ACCESS_KEY",
+					"AWS_DEFAULT_REGION",
+					"FURYCTL_MIXPANEL_TOKEN",
+				)
 				defer RestoreEnvVars()
 
 				bp := Abs("../data/e2e/validate/dependencies/correct")
@@ -260,6 +269,7 @@ var (
 				os.Setenv("AWS_ACCESS_KEY_ID", "test")
 				os.Setenv("AWS_SECRET_ACCESS_KEY", "test")
 				os.Setenv("AWS_DEFAULT_REGION", "test")
+				os.Setenv("FURYCTL_MIXPANEL_TOKEN", "test")
 
 				out, err := FuryctlValidateDependencies(bp, bp)
 
@@ -506,7 +516,7 @@ var (
 				})
 			})
 
-			It("should execute a dry run of the cluster creation's infrastructure phase", func() {
+			FIt("should execute a dry run of the cluster creation's infrastructure phase", func() {
 				RestoreEnvVars := BackupEnvVars("PATH")
 				defer RestoreEnvVars()
 

@@ -13,7 +13,7 @@ spec:
       state:
         s3:
           bucketName: furyctl-test
-          keyPrefix: furyctl/
+          keyPrefix: furyctl-1671460360-5577006791947779410/
           region: eu-west-1
   region: eu-west-1
   tags:

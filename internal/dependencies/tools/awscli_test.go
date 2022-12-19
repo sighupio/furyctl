@@ -7,10 +7,6 @@
 package tools_test
 
 import (
-	"fmt"
-	"os"
-	"path/filepath"
-	"runtime"
 	"strings"
 	"testing"
 
@@ -20,7 +16,7 @@ import (
 )
 
 func Test_Awscli_SupportsDownload(t *testing.T) {
-	a := tools.NewAwscli(newAwscliRunner(), "0.3.0")
+	a := tools.NewAwscli(newAwscliRunner(), "2.8.12")
 
 	if a.SupportsDownload() != false {
 		t.Errorf("Awscli download must not be supported")

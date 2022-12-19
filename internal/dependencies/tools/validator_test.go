@@ -27,7 +27,7 @@ func Test_Validator_Validate(t *testing.T) {
 			manifest: config.KFD{
 				Tools: config.KFDTools{
 					Common: config.Common{
-						Kubectl:   config.Tool{Version: "1.22.0"},
+						Kubectl:   config.Tool{Version: "1.21.1"},
 						Kustomize: config.Tool{Version: "3.9.4"},
 						Terraform: config.Tool{Version: "0.15.4"},
 						Furyagent: config.Tool{Version: "0.3.0"},
@@ -40,7 +40,7 @@ func Test_Validator_Validate(t *testing.T) {
 			manifest: config.KFD{
 				Tools: config.KFDTools{
 					Common: config.Common{
-						Kubectl:   config.Tool{Version: "1.21.1"},
+						Kubectl:   config.Tool{Version: "1.22.0"},
 						Kustomize: config.Tool{Version: "3.10.0"},
 						Terraform: config.Tool{Version: "1.3.0"},
 						Furyagent: config.Tool{Version: "0.4.0"},
@@ -48,7 +48,6 @@ func Test_Validator_Validate(t *testing.T) {
 				},
 			},
 			wantErrs: []error{
-				errors.New("ansible: wrong tool version - installed = 2.9.27, expected = 2.10.0"),
 				errors.New("furyagent: wrong tool version - installed = 0.3.0, expected = 0.4.0"),
 				errors.New("kubectl: wrong tool version - installed = 1.21.1, expected = 1.22.0"),
 				errors.New("kustomize: wrong tool version - installed = 3.9.4, expected = 3.10.0"),

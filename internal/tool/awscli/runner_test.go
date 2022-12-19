@@ -43,9 +43,9 @@ func TestHelperProcess(t *testing.T) {
 	cmd, subcmd := args[3], args[4]
 
 	switch cmd {
-	case "awscli":
+	case "aws":
 		switch subcmd {
-		case "version":
+		case "--version":
 			fmt.Fprintf(os.Stdout, "v1.2.3")
 		default:
 			fmt.Fprintf(os.Stdout, "subcommand '%s' not found", subcmd)

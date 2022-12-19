@@ -54,7 +54,7 @@ func main() {
 
 	t := os.Getenv("FURYCTL_MIXPANEL_TOKEN")
 	if t == "" {
-		panic("FURYCTL_MIXPANEL_TOKEN environment variable not set")
+		logrus.Debug("FURYCTL_MIXPANEL_TOKEN is not set")
 	}
 
 	// Create the analytics tracker.
