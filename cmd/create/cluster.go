@@ -30,13 +30,13 @@ var (
 	ErrDownloadDependenciesFailed = errors.New("download dependencies failed")
 )
 
-func NewClusterCmd(version string, tracker *analytics.Tracker) *cobra.Command { //nolint:maintidx // complexity from flags
+func NewClusterCmd(version string, tracker *analytics.Tracker) *cobra.Command {
 	var cmdEvent analytics.Event
 
 	cmd := &cobra.Command{
 		Use:   "cluster",
 		Short: "Creates a battle-tested Kubernetes cluster",
-		PreRun: func(cmd *cobra.Command, args []string) {
+		PreRun: func(cmd *cobra.Command, _ []string) {
 			cmdEvent = analytics.NewCommandEvent(cobrax.GetFullname(cmd))
 		},
 		RunE: func(cmd *cobra.Command, _ []string) error {
@@ -201,6 +201,12 @@ func NewClusterCmd(version string, tracker *analytics.Tracker) *cobra.Command { 
 		},
 	}
 
+	setupClusterCmdFlags(cmd)
+
+	return cmd
+}
+
+func setupClusterCmdFlags(cmd *cobra.Command) {
 	cmd.Flags().StringP(
 		"config",
 		"c",
@@ -255,6 +261,4 @@ func NewClusterCmd(version string, tracker *analytics.Tracker) *cobra.Command { 
 		false,
 		"Automatically connect to the VPN after the infrastructure phase",
 	)
-
-	return cmd
 }
