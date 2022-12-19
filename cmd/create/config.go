@@ -58,7 +58,7 @@ func NewConfigCmd(furyctlBinVersion string, tracker *analytics.Tracker) *cobra.C
 
 			apiVersion, err := cmdutil.StringFlag(cmd, "api-version", tracker, cmdEvent)
 			if err != nil {
-				return fmt.Errorf("%w: kind", ErrParsingFlag)
+				return fmt.Errorf("%w: api-version", ErrParsingFlag)
 			}
 
 			name, err := cmdutil.StringFlag(cmd, "name", tracker, cmdEvent)
