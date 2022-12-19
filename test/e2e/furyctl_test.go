@@ -7,8 +7,10 @@
 package e2e_test
 
 import (
+	"bytes"
 	"fmt"
 	"io/ioutil"
+	"math/rand"
 	"os"
 	"os/exec"
 	"path"
@@ -421,11 +423,14 @@ var (
 		Context("create config", func() {
 			basepath := "../data/e2e/create/config"
 			FuryctlCreateConfig := func(workdir string) (string, error) {
+				absBasepath := Abs(basepath)
+
 				return RunCmd(
 					furyctl, "create", "config",
 					"--config", workdir+"/target/furyctl.yaml",
 					"--debug",
 					"--disable-analytics", "true",
+					"--distro-location", absBasepath+"/distro",
 				)
 			}
 			Setup := func(folder string) string {
@@ -479,6 +484,8 @@ var (
 				if dryRun {
 					args = append(args, "--dry-run")
 				}
+
+				patchFuryctlYaml(cfgPath)
 
 				return exec.Command(furyctl, args...)
 			}
@@ -559,3 +566,18 @@ var (
 		})
 	})
 )
+
+// patch the furyctl.yaml's "spec.toolsConfiguration.terraform.state.s3.keyPrefix" key to add a timestamp and random int
+// to avoid collisions in s3 when running tests in parallel, and also because the bucket is a super global resource.
+func patchFuryctlYaml(furyctlYamlPath string) error {
+	furyctlYaml, err := ioutil.ReadFile(furyctlYamlPath)
+	if err != nil {
+		return err
+	}
+
+	newKeyPrefix := fmt.Sprintf("keyPrefix: furyctl-%d-%d/", time.Now().UTC().Unix(), rand.Int())
+
+	furyctlYaml = bytes.ReplaceAll(furyctlYaml, []byte("keyPrefix: furyctl/"), []byte(newKeyPrefix))
+
+	return ioutil.WriteFile(furyctlYamlPath, furyctlYaml, 0644)
+}

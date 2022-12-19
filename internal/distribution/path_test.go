@@ -15,6 +15,81 @@ import (
 	"github.com/sighupio/furyctl/internal/distribution"
 )
 
+func TestGetTemplatePath(t *testing.T) {
+	tests := []struct {
+		name     string
+		basePath string
+		conf     config.Furyctl
+		want     string
+		wantErr  error
+	}{
+		{
+			name:     "test with base path",
+			basePath: "testpath",
+			conf: config.Furyctl{
+				APIVersion: "kfd.sighup.io/v1alpha2",
+				Kind:       "EKSCluster",
+				Spec:       config.FuryctlSpec{},
+			},
+			want: fmt.Sprintf("%s", filepath.Join(
+				"testpath",
+				"templates/config",
+				"ekscluster-kfd-v1alpha2.yaml.tpl",
+			)),
+			wantErr: nil,
+		},
+		{
+			name:     "test without base path",
+			basePath: "",
+			conf: config.Furyctl{
+				APIVersion: "kfd.sighup.io/v1alpha2",
+				Kind:       "EKSCluster",
+				Spec:       config.FuryctlSpec{},
+			},
+			want:    fmt.Sprintf("%s", filepath.Join("templates/config", "ekscluster-kfd-v1alpha2.yaml.tpl")),
+			wantErr: nil,
+		},
+		{
+			name:     "test with invalid apiVersion",
+			basePath: "",
+			conf: config.Furyctl{
+				APIVersion: "",
+				Kind:       "EKSCluster",
+				Spec:       config.FuryctlSpec{},
+			},
+			want:    "",
+			wantErr: fmt.Errorf("invalid apiVersion: "),
+		},
+		{
+			name:     "test with invalid kind",
+			basePath: "",
+			conf: config.Furyctl{
+				APIVersion: "kfd.sighup.io/v1alpha2",
+				Kind:       "",
+				Spec:       config.FuryctlSpec{},
+			},
+			want:    "",
+			wantErr: fmt.Errorf("kind is empty"),
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := distribution.GetConfigTemplatePath(tt.basePath, tt.conf)
+			if err != nil {
+				if err.Error() != tt.wantErr.Error() {
+					t.Errorf("distribution.GetTemplatePath() error = %v, wantErr %v", err, tt.wantErr)
+				}
+
+				return
+			}
+
+			if got != tt.want {
+				t.Errorf("distribution.GetTemplatePath() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
 func TestGetSchemaPath(t *testing.T) {
 	tests := []struct {
 		name     string

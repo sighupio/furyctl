@@ -37,10 +37,10 @@ func NewTemplateCmd(tracker *analytics.Tracker) *cobra.Command {
 The generated folder will be created starting from a provided template and the parameters set in a configuration file that is merged with default values.`,
 		SilenceUsage:  true,
 		SilenceErrors: true,
-		PreRun: func(cmd *cobra.Command, args []string) {
+		PreRun: func(cmd *cobra.Command, _ []string) {
 			cmdEvent = analytics.NewCommandEvent(cobrax.GetFullname(cmd))
 		},
-		RunE: func(cmd *cobra.Command, _ []string) error {
+		RunE: func(_ *cobra.Command, _ []string) error {
 			source := "source"
 			target := "target"
 			suffix := ".tpl"

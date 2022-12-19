@@ -3,7 +3,7 @@
 # license that can be found in the LICENSE file.
 
 apiVersion: kfd.sighup.io/v1alpha2
-kind: {{.Kind}}
+kind: EKSCluster
 metadata:
   name: {{.Name}}
 spec:

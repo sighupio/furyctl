@@ -6,5 +6,5 @@ package configs
 
 import "embed"
 
-//go:embed furyctl.yaml.tpl provisioners
+//go:embed provisioners
 var Tpl embed.FS

@@ -30,7 +30,7 @@ func NewConfigCmd(furyctlBinVersion string, tracker *analytics.Tracker) *cobra.C
 	cmd := &cobra.Command{
 		Use:   "config",
 		Short: "Validate furyctl.yaml file",
-		PreRun: func(cmd *cobra.Command, args []string) {
+		PreRun: func(cmd *cobra.Command, _ []string) {
 			cmdEvent = analytics.NewCommandEvent(cobrax.GetFullname(cmd))
 		},
 		RunE: func(cmd *cobra.Command, _ []string) error {
@@ -46,6 +46,8 @@ func NewConfigCmd(furyctlBinVersion string, tracker *analytics.Tracker) *cobra.C
 
 			dloader := distribution.NewDownloader(netx.NewGoGetterClient())
 
+			// Download the distribution.
+			logrus.Info("Downloading distribution...")
 			res, err := dloader.Download(furyctlBinVersion, distroLocation, furyctlPath)
 			if err != nil {
 				cmdEvent.AddErrorMessage(err)

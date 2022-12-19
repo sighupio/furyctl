@@ -6,6 +6,12 @@
 
 terraform {
   experiments     = [module_variable_optional_attrs]
+
+  backend "s3" {
+    bucket = "{{ .terraform.backend.s3.bucketName }}"
+    key    = "{{ .terraform.backend.s3.keyPrefix }}/cluster.json"
+    region = "{{ .terraform.backend.s3.region }}"
+  }
 }
 
 module "fury" {

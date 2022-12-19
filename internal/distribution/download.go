@@ -62,24 +62,22 @@ func (d *Downloader) Download(
 		return DownloadResult{}, fmt.Errorf("%w: %s", ErrYamlUnmarshalFile, err)
 	}
 
+	return d.DoDownload(furyctlBinVersion, distroLocation, minimalConf)
+}
+
+func (d *Downloader) DoDownload(
+	furyctlBinVersion string,
+	distroLocation string,
+	minimalConf config.Furyctl,
+) (DownloadResult, error) {
 	if err := d.validate.Struct(minimalConf); err != nil {
 		return DownloadResult{}, fmt.Errorf("invalid furyctl config: %w", err)
 	}
 
-	furyctlConfVersion := minimalConf.Spec.DistributionVersion
-
-	if furyctlBinVersion != "unknown" {
-		if !semver.SameMinorStr(furyctlConfVersion, furyctlBinVersion) {
-			logrus.Warnf(
-				"this version of furyctl ('%s') does not support distribution version '%s', results may be inaccurate",
-				furyctlBinVersion,
-				furyctlConfVersion,
-			)
-		}
-	}
+	checkFuryctlBinVersion(furyctlBinVersion, minimalConf)
 
 	if distroLocation == "" {
-		distroLocation = fmt.Sprintf(DefaultBaseURL, furyctlConfVersion)
+		distroLocation = fmt.Sprintf(DefaultBaseURL, minimalConf.Spec.DistributionVersion)
 	}
 
 	baseDst, err := os.MkdirTemp("", "furyctl-")
@@ -112,4 +110,20 @@ func (d *Downloader) Download(
 		MinimalConf:    minimalConf,
 		DistroManifest: kfdManifest,
 	}, nil
+}
+
+func checkFuryctlBinVersion(furyctlBinVersion string, minimalConf config.Furyctl) {
+	furyctlConfVersion := minimalConf.Spec.DistributionVersion
+
+	if furyctlBinVersion == "unknown" {
+		return
+	}
+
+	if !semver.SameMinorStr(furyctlConfVersion, furyctlBinVersion) {
+		logrus.Warnf(
+			"this version of furyctl ('%s') does not support distribution version '%s', results may be inaccurate",
+			furyctlBinVersion,
+			furyctlConfVersion,
+		)
+	}
 }

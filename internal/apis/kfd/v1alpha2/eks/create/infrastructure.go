@@ -99,7 +99,7 @@ func (i *Infrastructure) Exec(opts []cluster.OperationPhaseOption) error {
 		return fmt.Errorf("error creating infrastructure folder: %w", err)
 	}
 
-	if err := i.copyFromTemplate(i.kfdManifest); err != nil {
+	if err := i.copyFromTemplate(); err != nil {
 		return err
 	}
 
@@ -172,7 +172,7 @@ func (i *Infrastructure) generateClientName() (string, error) {
 	return fmt.Sprintf("%s-%s", i.furyctlConf.Metadata.Name, whoami), nil
 }
 
-func (i *Infrastructure) copyFromTemplate(kfdManifest config.KFD) error {
+func (i *Infrastructure) copyFromTemplate() error {
 	var cfg template.Config
 
 	tmpFolder, err := os.MkdirTemp("", "furyctl-infra-configs-")
@@ -196,7 +196,16 @@ func (i *Infrastructure) copyFromTemplate(kfdManifest config.KFD) error {
 
 	cfg.Data = map[string]map[any]any{
 		"kubernetes": {
-			"eks": kfdManifest.Kubernetes.Eks,
+			"eks": i.kfdManifest.Kubernetes.Eks,
+		},
+		"terraform": {
+			"backend": map[string]any{
+				"s3": map[string]any{
+					"bucketName": i.furyctlConf.Spec.ToolsConfiguration.Terraform.State.S3.BucketName,
+					"keyPrefix":  i.furyctlConf.Spec.ToolsConfiguration.Terraform.State.S3.KeyPrefix,
+					"region":     i.furyctlConf.Spec.ToolsConfiguration.Terraform.State.S3.Region,
+				},
+			},
 		},
 	}
 

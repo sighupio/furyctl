@@ -10,6 +10,7 @@ dist/
 .kubernetes
 .distribution
 test/data/e2e/**/target
+test/e2e/e2e.test
 
 .vscode
 *.log

@@ -18,7 +18,7 @@ func NewCreateCommand(version string, tracker *analytics.Tracker) *cobra.Command
 	}
 
 	createCmd.AddCommand(create.NewClusterCmd(version, tracker))
-	createCmd.AddCommand(create.NewConfigCmd(tracker))
+	createCmd.AddCommand(create.NewConfigCmd(version, tracker))
 
 	return createCmd
 }

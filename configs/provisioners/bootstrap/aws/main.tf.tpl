@@ -4,6 +4,14 @@
  * license that can be found in the LICENSE file.
  */
 
+terraform {
+  backend "s3" {
+    bucket = "{{ .terraform.backend.s3.bucketName }}"
+    key    = "{{ .terraform.backend.s3.keyPrefix }}/infrastructure.json"
+    region = "{{ .terraform.backend.s3.region }}"
+  }
+}
+
 module "vpc-and-vpn" {
   source = "github.com/sighupio/fury-eks-installer//modules/vpc-and-vpn?ref={{ .kubernetes.eks.installer }}"
 
