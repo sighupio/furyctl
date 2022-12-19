@@ -287,6 +287,8 @@ github.com/shopspring/decimal v1.3.1 h1:2Usl1nmF/WZucqkFZhnfFYxxxu8LG21F6nPQBE5g
 github.com/shopspring/decimal v1.3.1/go.mod h1:DKyhrW/HYNuLGql+MJL6WCR6knT2jwCFRcu2hWCYk4o=
 github.com/sighupio/fury-distribution v1.23.3-0.20221125105833-c51b71f35ebe h1:5Y3Qo/ChucM/dcJfAfcq3Nbyi2xRIs6MAOYI8agRZN0=
 github.com/sighupio/fury-distribution v1.23.3-0.20221125105833-c51b71f35ebe/go.mod h1:MpW/zGMlwJIQoBgZ6xWwL6RN6j7N5bCEX8949p3Pfik=
+github.com/sighupio/fury-distribution v1.24.1-0.20221219164332-e7ce6f736c91 h1:FPphscQ9q74TDNQVgzET1cg51F3/NuHwpR1kqc/iK5k=
+github.com/sighupio/fury-distribution v1.24.1-0.20221219164332-e7ce6f736c91/go.mod h1:MpW/zGMlwJIQoBgZ6xWwL6RN6j7N5bCEX8949p3Pfik=
 github.com/sirupsen/logrus v1.9.0 h1:trlNQbNUG3OdDrDil03MCb1H2o9nJ1x4/5LYw7byDE0=
 github.com/sirupsen/logrus v1.9.0/go.mod h1:naHLuLoDiP4jHNo9R0sCBMtWGeIprob74mVsIT4qYEQ=
 github.com/spf13/afero v1.9.3 h1:41FoI0fD7OR7mGcKE/aOiLkGreyf8ifIOQmJANWogMk=
