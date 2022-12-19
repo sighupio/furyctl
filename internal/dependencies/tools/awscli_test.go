@@ -71,6 +71,7 @@ func Test_Awscli_CheckBinVersion(t *testing.T) {
 		})
 	}
 }
+
 func newAwscliRunner() *awscli.Runner {
 	return awscli.NewRunner(execx.NewFakeExecutor(), awscli.Paths{
 		Awscli: "aws",

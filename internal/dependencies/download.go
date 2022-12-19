@@ -168,5 +168,3 @@ func (dd *Downloader) DownloadTools(kfdTools config.KFDTools) ([]string, error) 
 
 	return unsupportedTools, nil
 }
-
-func getTools() {}

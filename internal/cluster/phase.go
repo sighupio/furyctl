@@ -10,7 +10,6 @@ import (
 	"path"
 
 	"github.com/sighupio/fury-distribution/pkg/config"
-
 	"github.com/sighupio/furyctl/internal/template"
 	iox "github.com/sighupio/furyctl/internal/x/io"
 	yamlx "github.com/sighupio/furyctl/internal/x/yaml"

@@ -42,18 +42,18 @@ func (*Awscli) SupportsDownload() bool {
 	return false
 }
 
-func (f *Awscli) SrcPath() string {
-	// Not used for this tool because it's not downloaded
+func (*Awscli) SrcPath() string {
+	// Not used for this tool because it's not downloaded.
 	return ""
 }
 
-func (f *Awscli) Rename(basePath string) error {
-	// Not used for this tool because it's not downloaded
+func (*Awscli) Rename(_ string) error {
+	// Not used for this tool because it's not downloaded.
 	return nil
 }
 
-func (f *Awscli) CheckBinVersion() error {
-	if err := f.checker.version(f.version); err != nil {
+func (a *Awscli) CheckBinVersion() error {
+	if err := a.checker.version(a.version); err != nil {
 		return fmt.Errorf("aws-cli: %w", err)
 	}
 
