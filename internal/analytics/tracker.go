@@ -49,7 +49,7 @@ func NewTracker(token, version, arch, os, org, hostname string) *Tracker {
 	}
 
 	if token == "" {
-		tracker.Disable()
+		tracker.enable = false
 	}
 
 	// Start the event processor, this will listen for new tracked events and send them to mixpanel.
