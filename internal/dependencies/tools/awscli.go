@@ -6,13 +6,10 @@ package tools
 
 import (
 	"fmt"
-	"os"
-	"path/filepath"
 	"regexp"
 	"runtime"
 	"strings"
 
-	"github.com/sighupio/furyctl/internal/semver"
 	"github.com/sighupio/furyctl/internal/tool/awscli"
 )
 
@@ -46,34 +43,12 @@ func (*Awscli) SupportsDownload() bool {
 }
 
 func (f *Awscli) SrcPath() string {
-	if f.os == "darwin" {
-		return fmt.Sprintf(
-			"https://awscli.amazonaws.com/AWSCLIV2-%s.pkg",
-			semver.EnsureNoPrefix(f.version),
-		)
-	}
-
-	if f.os == "linux" {
-		return fmt.Sprintf(
-			"https://awscli.amazonaws.com/awscli-exe-linux-%s-%s-%s.zip",
-			semver.EnsurePrefix(f.version),
-			f.os,
-			f.arch,
-		)
-	}
-
+	// Not used for this tool because it's not downloaded
 	return ""
 }
 
 func (f *Awscli) Rename(basePath string) error {
-	oldName := fmt.Sprintf("awscli-%s-%s", f.os, f.arch)
-	newName := "aws-cli"
-
-	err := os.Rename(filepath.Join(basePath, oldName), filepath.Join(basePath, newName))
-	if err != nil {
-		return fmt.Errorf("error while renaming aws-cli: %w", err)
-	}
-
+	// Not used for this tool because it's not downloaded
 	return nil
 }
 
@@ -83,24 +58,4 @@ func (f *Awscli) CheckBinVersion() error {
 	}
 
 	return nil
-}
-
-func getSrcPath(os, arch, version string) string {
-	if os == "darwin" {
-		return fmt.Sprintf(
-			"https://awscli.amazonaws.com/AWSCLIV2-%s-%s.pkg",
-			semver.EnsurePrefix(version),
-			arch,
-		)
-	}
-
-	if os == "linux" {
-		return fmt.Sprintf(
-			"https://awscli.amazonaws.com/awscli-exe-linux-%s-%s.zip",
-			semver.EnsurePrefix(version),
-			arch,
-		)
-	}
-
-	return ""
 }
