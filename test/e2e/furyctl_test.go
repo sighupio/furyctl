@@ -124,7 +124,7 @@ var (
 	})
 
 	_ = Describe("furyctl", func() {
-		Context("version", func() {
+		Context("version display", func() {
 			It("should print its version information", func() {
 				out, err := RunCmd(furyctl, "version", "--disable-analytics", "true")
 
@@ -139,7 +139,7 @@ var (
 			})
 		})
 
-		Context("validate config", func() {
+		Context("config validation", func() {
 			FuryctlValidateConfig := func(basepath string) (string, error) {
 				absBasepath := Abs(basepath)
 
@@ -181,7 +181,7 @@ var (
 			})
 		})
 
-		Context("validate dependencies", func() {
+		Context("dependencies validation", func() {
 			FuryctlValidateDependencies := func(basepath, binpath string) (string, error) {
 				absBasepath := Abs(basepath)
 
@@ -268,7 +268,7 @@ var (
 			})
 		})
 
-		Context("download dependencies", Label("slow"), func() {
+		Context("dependencies download", Label("slow"), func() {
 			basepath := "../data/e2e/download/dependencies"
 			FuryctlDownloadDependencies := func(basepath string) (string, error) {
 				absBasepath := Abs(basepath)
@@ -320,7 +320,7 @@ var (
 			})
 		})
 
-		Context("dump template", func() {
+		Context("template dump", func() {
 			basepath := "../data/e2e/dump/template"
 			FuryctlDumpTemplate := func(workdir string, dryRun bool) (string, error) {
 				args := []string{"dump", "template", "--debug", "--workdir", workdir, "--disable-analytics", "true"}
@@ -454,7 +454,7 @@ var (
 			})
 		})
 
-		Context("create cluster dry run", Ordered, Serial, Label("slow"), func() {
+		Context("cluster creation, dry run", Ordered, Serial, Label("slow"), func() {
 			var w string
 			var absBasePath string
 
@@ -506,7 +506,7 @@ var (
 				})
 			})
 
-			It("create cluster phase infrastructure on dry-run", func() {
+			It("should execute a dry run of the cluster creation's infrastructure phase", func() {
 				RestoreEnvVars := BackupEnvVars("PATH")
 				defer RestoreEnvVars()
 
@@ -535,7 +535,7 @@ var (
 				Expect(err).To(Not(HaveOccurred()))
 			})
 
-			It("create cluster phase kubernetes on dry-run", func() {
+			It("should execute a dry run of the cluster creation's kubernetes phase", func() {
 				RestoreEnvVars := BackupEnvVars("PATH")
 				defer RestoreEnvVars()
 

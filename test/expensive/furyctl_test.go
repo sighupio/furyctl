@@ -128,10 +128,10 @@ var (
 			}
 		})
 
-		Context("create cluster and cleanup", Ordered, Serial, Label("slow"), func() {
+		Context("cluster creation and cleanup", Ordered, Serial, Label("slow"), func() {
 			absWorkDirPath, absCommonPath, w := CreatePaths("create-complete")
 
-			It("create a complete cluster", Serial, func() {
+			It("should create a complete cluster", Serial, func() {
 				furyctlYamlPath := path.Join(absWorkDirPath, "data/furyctl.yaml")
 				distroPath := path.Join(absCommonPath, "data")
 
@@ -159,7 +159,7 @@ var (
 				Eventually(kubeSession, 2*time.Minute).Should(gexec.Exit(0))
 			})
 
-			It("destroy a cluster", Serial, func() {
+			It("should destroy a cluster", Serial, func() {
 				furyctlYamlPath := path.Join(absWorkDirPath, "data/furyctl.yaml")
 				distroPath := path.Join(absCommonPath, "data")
 
@@ -188,10 +188,10 @@ var (
 			})
 		})
 
-		Context("create cluster with skip-phase infra and cleanup", Ordered, Serial, Label("slow"), func() {
+		Context("cluster creation skipping infra phase, and cleanup", Ordered, Serial, Label("slow"), func() {
 			absWorkDirPath, absCommonPath, w := CreatePaths("create-skip-infra")
 
-			It("create a cluster skipping infra", Serial, func() {
+			It("should create a cluster, skipping the infrastructure phase", Serial, func() {
 				furyctlYamlPath := path.Join(absWorkDirPath, "data/furyctl.yaml")
 				distroPath := path.Join(absCommonPath, "data")
 
@@ -224,7 +224,7 @@ var (
 				Eventually(kubeSession, 2*time.Minute).Should(gexec.Exit(0))
 			})
 
-			It("destroy a cluster", Serial, func() {
+			It("should destroy a cluster", Serial, func() {
 				furyctlYamlPath := path.Join(absWorkDirPath, "data/furyctl.yaml")
 				distroPath := path.Join(absCommonPath, "data")
 
@@ -253,10 +253,10 @@ var (
 			})
 		})
 
-		Context("create cluster with skip-phase kubernetes and cleanup", Ordered, Serial, Label("slow"), func() {
+		Context("cluster creation skipping kubernetes phase, and cleanup", Ordered, Serial, Label("slow"), func() {
 			absWorkDirPath, absCommonPath, w := CreatePaths("create-skip-kube")
 
-			It("create a cluster skipping kubernetes", Serial, func() {
+			It("should create a cluster, skipping the kubernetes phase", Serial, func() {
 				furyctlYamlPath := path.Join(absWorkDirPath, "data/furyctl.yaml")
 				distroPath := path.Join(absCommonPath, "data")
 
@@ -291,7 +291,7 @@ var (
 				Eventually(kubectlSession, 2*time.Minute).Should(gexec.Exit(0))
 			})
 
-			It("destroy a cluster", Serial, func() {
+			It("should destroy a cluster", Serial, func() {
 				furyctlYamlPath := path.Join(absWorkDirPath, "data/furyctl.yaml")
 				distroPath := path.Join(absCommonPath, "data")
 
