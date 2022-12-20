@@ -252,7 +252,7 @@ var (
 				Expect(out).To(ContainSubstring("missing environment variable: AWS_DEFAULT_REGION"))
 			})
 
-			FIt("should exit without errors when dependencies are correct", Serial, func() {
+			It("should exit without errors when dependencies are correct", Serial, func() {
 				RestoreEnvVars := BackupEnvVars(
 					"PATH",
 					"AWS_ACCESS_KEY_ID",

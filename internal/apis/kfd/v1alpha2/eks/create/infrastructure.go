@@ -95,10 +95,6 @@ func (i *Infrastructure) Exec(opts []cluster.OperationPhaseOption) error {
 
 	timestamp := time.Now().Unix()
 
-	if _, err := i.ovRunner.Version(); err != nil {
-		return fmt.Errorf("can't get tool version: %w", err)
-	}
-
 	if err := i.CreateFolder(); err != nil {
 		return fmt.Errorf("error creating infrastructure folder: %w", err)
 	}
@@ -109,6 +105,10 @@ func (i *Infrastructure) Exec(opts []cluster.OperationPhaseOption) error {
 
 	if err := i.CreateFolderStructure(); err != nil {
 		return fmt.Errorf("error creating infrastructure folder structure: %w", err)
+	}
+
+	if _, err := i.ovRunner.Version(); err != nil {
+		return fmt.Errorf("can't get tool version: %w", err)
 	}
 
 	if err := i.createTfVars(); err != nil {
