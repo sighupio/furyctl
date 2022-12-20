@@ -470,11 +470,16 @@ var (
 			basepath := "../data/e2e/create/cluster"
 
 			FuryctlCreateCluster := func(cfgPath, distroPath, phase string, dryRun bool) *exec.Cmd {
+				patchedCfgPath, err := patchFuryctlYaml(cfgPath)
+				if err != nil {
+					panic(err)
+				}
+
 				args := []string{
 					"create",
 					"cluster",
 					"--config",
-					cfgPath,
+					patchedCfgPath,
 					"--distro-location",
 					distroPath,
 					"--debug",
@@ -492,10 +497,6 @@ var (
 
 				if dryRun {
 					args = append(args, "--dry-run")
-				}
-
-				if err := patchFuryctlYaml(cfgPath); err != nil {
-					panic(err)
 				}
 
 				return exec.Command(furyctl, args...)
@@ -580,15 +581,23 @@ var (
 
 // patch the furyctl.yaml's "spec.toolsConfiguration.terraform.state.s3.keyPrefix" key to add a timestamp and random int
 // to avoid collisions in s3 when running tests in parallel, and also because the bucket is a super global resource.
-func patchFuryctlYaml(furyctlYamlPath string) error {
+func patchFuryctlYaml(furyctlYamlPath string) (string, error) {
 	furyctlYaml, err := os.ReadFile(furyctlYamlPath)
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	newKeyPrefix := fmt.Sprintf("keyPrefix: furyctl-%d-%d/", time.Now().UTC().Unix(), rand.Int())
 
 	furyctlYaml = bytes.ReplaceAll(furyctlYaml, []byte("keyPrefix: furyctl/"), []byte(newKeyPrefix))
 
-	return os.WriteFile(furyctlYamlPath, furyctlYaml, 0o644)
+	// create a temporary file to write the patched furyctl.yaml
+	tmpFile, err := os.CreateTemp("", "furyctl.yaml")
+	if err != nil {
+		return "", err
+	}
+
+	_, err = tmpFile.Write(furyctlYaml)
+
+	return tmpFile.Name(), err
 }
