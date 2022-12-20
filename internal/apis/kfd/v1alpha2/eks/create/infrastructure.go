@@ -80,7 +80,7 @@ func NewInfrastructure(
 		),
 		faRunner: furyagent.NewRunner(executor, furyagent.Paths{
 			Furyagent: path.Join(binPath, "furyagent", kfdManifest.Tools.Common.Furyagent.Version, "furyagent"),
-			WorkDir:   phase.SecretsPath,
+			WorkDir:   phase.Path,
 		}),
 		ovRunner: openvpn.NewRunner(executor, openvpn.Paths{
 			WorkDir: phase.SecretsPath,
