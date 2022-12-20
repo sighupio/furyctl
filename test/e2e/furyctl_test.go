@@ -579,5 +579,5 @@ func patchFuryctlYaml(furyctlYamlPath string) error {
 
 	furyctlYaml = bytes.ReplaceAll(furyctlYaml, []byte("keyPrefix: furyctl/"), []byte(newKeyPrefix))
 
-	return ioutil.WriteFile(furyctlYamlPath, furyctlYaml, 0644)
+	return ioutil.WriteFile(furyctlYamlPath, furyctlYaml, 0o644)
 }
