@@ -273,7 +273,6 @@ func (e EKS) createVarFile() (err error) {
 	// The switch from launch configurations to launch templates for the Node Pools requires some manual intervention.
 	// We could automate this away though.
 	if spec.NodePoolsLaunchKind == "" {
-		// I know, sorry for the length 
 		log.Fatalf(".spec.nodePoolsKind is not set in the cluster configuration file. Please set it explicitly to `launch_configurations`, `launch_templates` or `both` to avoid unwanted node pools rollouts. For new clusters you can use `launch_templates`, for existing clusters please check the Fury EKS Installer docs: https://github.com/sighupio/fury-eks-installer/blob/master/docs/upgrades/v1.9-to-v1.10.0.md")
 	} else {
 		buffer.WriteString(fmt.Sprintf("node_pools_launch_kind = \"%v\"\n", spec.NodePoolsLaunchKind))
