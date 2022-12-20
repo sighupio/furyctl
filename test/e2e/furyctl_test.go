@@ -516,7 +516,7 @@ var (
 				})
 			})
 
-			FIt("should execute a dry run of the cluster creation's infrastructure phase", func() {
+			It("should execute a dry run of the cluster creation's infrastructure phase", func() {
 				RestoreEnvVars := BackupEnvVars("PATH")
 				defer RestoreEnvVars()
 
