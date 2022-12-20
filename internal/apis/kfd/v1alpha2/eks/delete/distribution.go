@@ -25,7 +25,7 @@ import (
 )
 
 const (
-	ingressAfterDeleteDelay         = 2
+	ingressAfterDeleteDelay         = 4
 	checkPendingResourcesDelay      = 20
 	checkPendingResourcesMaxRetries = 5
 )
@@ -99,6 +99,12 @@ func (d *Distribution) Exec() error {
 		return err
 	}
 
+	logrus.Info("Deleting blocking resources")
+
+	if err = d.deleteBlockingResources(); err != nil {
+		return err
+	}
+
 	logrus.Info("Building manifests")
 
 	manifestsOutPath, err := d.buildManifests()
@@ -115,7 +121,7 @@ func (d *Distribution) Exec() error {
 
 	logrus.Info("Checking pending resources")
 
-	err = d.checkPendingResource()
+	err = d.checkPendingResources()
 	if err != nil {
 		return err
 	}
@@ -152,7 +158,7 @@ func (d *Distribution) buildManifests() (string, error) {
 	return manifestsOutPath, nil
 }
 
-func (d *Distribution) checkPendingResource() error {
+func (d *Distribution) checkPendingResources() error {
 	var errSvc, errPv, errIgrs error
 
 	dur := time.Second * checkPendingResourcesDelay
@@ -190,6 +196,44 @@ func (d *Distribution) deleteIngresses() error {
 	_, err := d.kubeRunner.DeleteAllResources("ingress", "all")
 	if err != nil {
 		return fmt.Errorf("error deleting ingresses: %w", err)
+	}
+
+	time.Sleep(dur)
+
+	return nil
+}
+
+func (d *Distribution) deleteBlockingResources() error {
+	dur := time.Minute * ingressAfterDeleteDelay
+
+	_, err := d.kubeRunner.DeleteAllResources("prometheus", "monitoring")
+	if err != nil {
+		return fmt.Errorf("error deleting prometheus resources: %w", err)
+	}
+
+	_, err = d.kubeRunner.DeleteAllResources("pvc", "monitoring")
+	if err != nil {
+		return fmt.Errorf("error deleting pvc in namespace 'monitoring': %w", err)
+	}
+
+	_, err = d.kubeRunner.DeleteAllResources("logging", "logging")
+	if err != nil {
+		return fmt.Errorf("error deleting logging resources: %w", err)
+	}
+
+	_, err = d.kubeRunner.DeleteAllResources("sts", "logging")
+	if err != nil {
+		return fmt.Errorf("error deleting sts in namespace 'logging': %w", err)
+	}
+
+	_, err = d.kubeRunner.DeleteAllResources("pvc", "logging")
+	if err != nil {
+		return fmt.Errorf("error deleting pvc in namespace 'logging': %w", err)
+	}
+
+	_, err = d.kubeRunner.DeleteAllResources("svc", "ingress-nginx")
+	if err != nil {
+		return fmt.Errorf("error deleting svc in namespace 'ingress-nginx': %w", err)
 	}
 
 	time.Sleep(dur)

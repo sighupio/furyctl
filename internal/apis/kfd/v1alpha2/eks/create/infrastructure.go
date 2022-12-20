@@ -141,10 +141,13 @@ func (i *Infrastructure) Exec(opts []cluster.OperationPhaseOption) error {
 
 		for _, opt := range opts {
 			if strings.ToLower(opt.Name) == cluster.OperationPhaseOptionVPNAutoConnect {
-				logrus.Info("Connecting to VPN")
+				autoConnect, ok := opt.Value.(bool)
+				if autoConnect && ok {
+					logrus.Info("Connecting to VPN")
 
-				if err := i.ovRunner.Connect(clientName); err != nil {
-					return fmt.Errorf("error connecting to vpn: %w", err)
+					if err := i.ovRunner.Connect(clientName); err != nil {
+						return fmt.Errorf("error connecting to vpn: %w", err)
+					}
 				}
 			}
 		}

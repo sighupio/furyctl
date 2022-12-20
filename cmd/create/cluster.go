@@ -36,7 +36,7 @@ func NewClusterCmd(version string, tracker *analytics.Tracker) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "cluster",
 		Short: "Creates a battle-tested Kubernetes cluster",
-		PreRun: func(cmd *cobra.Command, args []string) {
+		PreRun: func(cmd *cobra.Command, _ []string) {
 			cmdEvent = analytics.NewCommandEvent(cobrax.GetFullname(cmd))
 		},
 		RunE: func(cmd *cobra.Command, _ []string) error {
@@ -59,6 +59,11 @@ func NewClusterCmd(version string, tracker *analytics.Tracker) *cobra.Command {
 			phase, err := cmdutil.StringFlag(cmd, "phase", tracker, cmdEvent)
 			if err != nil {
 				return fmt.Errorf("%w: %s", ErrParsingFlag, "phase")
+			}
+
+			skipPhase, err := cmdutil.StringFlag(cmd, "skip-phase", tracker, cmdEvent)
+			if err != nil {
+				return fmt.Errorf("%w: %s", ErrParsingFlag, "skip-phase")
 			}
 
 			binPath := cmdutil.StringFlagOptional(cmd, "bin-path")
@@ -151,6 +156,10 @@ func NewClusterCmd(version string, tracker *analytics.Tracker) *cobra.Command {
 				return fmt.Errorf("error while validating dependencies: %w", err)
 			}
 
+			if phase == "" || skipPhase == "distribution" {
+				vpnAutoConnect = true
+			}
+
 			// Create the cluster.
 			clusterCreator, err := cluster.NewCreator(
 				res.MinimalConf,
@@ -170,7 +179,7 @@ func NewClusterCmd(version string, tracker *analytics.Tracker) *cobra.Command {
 			}
 
 			logrus.Info("Creating cluster...")
-			if err := clusterCreator.Create(dryRun); err != nil {
+			if err := clusterCreator.Create(dryRun, skipPhase); err != nil {
 				cmdEvent.AddErrorMessage(err)
 				tracker.Track(cmdEvent)
 
@@ -185,13 +194,6 @@ func NewClusterCmd(version string, tracker *analytics.Tracker) *cobra.Command {
 				logrus.Infof("Phase %s executed successfully!", phase)
 			}
 
-			if _, err := fmt.Println("cluster creation succeeded"); err != nil {
-				cmdEvent.AddErrorMessage(err)
-				tracker.Track(cmdEvent)
-
-				return fmt.Errorf("error while printing success message: %w", err)
-			}
-
 			cmdEvent.AddSuccessMessage("cluster creation succeeded")
 			tracker.Track(cmdEvent)
 
@@ -199,6 +201,12 @@ func NewClusterCmd(version string, tracker *analytics.Tracker) *cobra.Command {
 		},
 	}
 
+	setupClusterCmdFlags(cmd)
+
+	return cmd
+}
+
+func setupClusterCmdFlags(cmd *cobra.Command) {
 	cmd.Flags().StringP(
 		"config",
 		"c",
@@ -211,6 +219,12 @@ func NewClusterCmd(version string, tracker *analytics.Tracker) *cobra.Command {
 		"p",
 		"",
 		"Phase to execute",
+	)
+
+	cmd.Flags().String(
+		"skip-phase",
+		"",
+		"Phase to skip",
 	)
 
 	cmd.Flags().StringP(
@@ -247,6 +261,4 @@ func NewClusterCmd(version string, tracker *analytics.Tracker) *cobra.Command {
 		false,
 		"Automatically connect to the VPN after the infrastructure phase",
 	)
-
-	return cmd
 }
