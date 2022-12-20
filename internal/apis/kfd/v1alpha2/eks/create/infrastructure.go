@@ -83,7 +83,7 @@ func NewInfrastructure(
 			WorkDir:   phase.SecretsPath,
 		}),
 		ovRunner: openvpn.NewRunner(executor, openvpn.Paths{
-			WorkDir: phase.Path,
+			WorkDir: phase.SecretsPath,
 			Openvpn: "openvpn",
 		}),
 		dryRun: dryRun,
