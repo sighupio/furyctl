@@ -9,7 +9,6 @@ package e2e_test
 import (
 	"bytes"
 	"fmt"
-	"io/ioutil"
 	"math/rand"
 	"os"
 	"os/exec"
@@ -42,7 +41,7 @@ var (
 	}
 
 	FileContent = func(path string) string {
-		content, ferr := ioutil.ReadFile(path)
+		content, ferr := os.ReadFile(path)
 		if ferr != nil {
 			Fail(ferr.Error())
 		}
@@ -253,7 +252,7 @@ var (
 				Expect(out).To(ContainSubstring("missing environment variable: AWS_DEFAULT_REGION"))
 			})
 
-			It("should exit without errors when dependencies are correct", Serial, func() {
+			FIt("should exit without errors when dependencies are correct", Serial, func() {
 				RestoreEnvVars := BackupEnvVars(
 					"PATH",
 					"AWS_ACCESS_KEY_ID",
@@ -495,7 +494,9 @@ var (
 					args = append(args, "--dry-run")
 				}
 
-				patchFuryctlYaml(cfgPath)
+				if err := patchFuryctlYaml(cfgPath); err != nil {
+					panic(err)
+				}
 
 				return exec.Command(furyctl, args...)
 			}
@@ -580,7 +581,7 @@ var (
 // patch the furyctl.yaml's "spec.toolsConfiguration.terraform.state.s3.keyPrefix" key to add a timestamp and random int
 // to avoid collisions in s3 when running tests in parallel, and also because the bucket is a super global resource.
 func patchFuryctlYaml(furyctlYamlPath string) error {
-	furyctlYaml, err := ioutil.ReadFile(furyctlYamlPath)
+	furyctlYaml, err := os.ReadFile(furyctlYamlPath)
 	if err != nil {
 		return err
 	}
@@ -589,5 +590,5 @@ func patchFuryctlYaml(furyctlYamlPath string) error {
 
 	furyctlYaml = bytes.ReplaceAll(furyctlYaml, []byte("keyPrefix: furyctl/"), []byte(newKeyPrefix))
 
-	return ioutil.WriteFile(furyctlYamlPath, furyctlYaml, 0o644)
+	return os.WriteFile(furyctlYamlPath, furyctlYaml, 0o644)
 }
