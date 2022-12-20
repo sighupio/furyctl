@@ -21,8 +21,8 @@ require (
 	github.com/go-playground/validator/v10 v10.11.1
 	github.com/google/go-cmp v0.5.9
 	github.com/hashicorp/terraform-json v0.14.0
-	github.com/onsi/ginkgo/v2 v2.4.0
-	github.com/onsi/gomega v1.22.1
+	github.com/onsi/ginkgo/v2 v2.6.1
+	github.com/onsi/gomega v1.24.2
 	github.com/santhosh-tekuri/jsonschema/v5 v5.1.1
 	github.com/sighupio/fury-distribution v1.24.1-0.20221219164332-e7ce6f736c91
 	golang.org/x/exp v0.0.0-20221217163422-3c43f8badb15
