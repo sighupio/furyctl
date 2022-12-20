@@ -96,7 +96,7 @@ func (i *Infrastructure) Exec(opts []cluster.OperationPhaseOption) error {
 	timestamp := time.Now().Unix()
 
 	if _, err := i.ovRunner.Version(); err != nil {
-		return err
+		return fmt.Errorf("can't get tool version: %w", err)
 	}
 
 	if err := i.CreateFolder(); err != nil {

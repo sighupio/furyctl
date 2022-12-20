@@ -28,7 +28,7 @@ var (
 	errCannotParseWithRegex = errors.New("can't parse system tool version using regex")
 	errCannotParse          = errors.New("can't parse system tool version")
 	errMissingBin           = errors.New("missing binary from vendor folder")
-	errGetVersion           = errors.New("can't get version")
+	errGetVersion           = errors.New("can't get tool version")
 )
 
 type Tool interface {
@@ -150,12 +150,12 @@ func (vc *checker) version(want string) error {
 			return errMissingBin
 		}
 
-		return errGetVersion
+		return fmt.Errorf("%w: %v", errGetVersion, err)
 	}
 
 	installed, err := vc.runner.Version()
 	if err != nil {
-		return errGetVersion
+		return fmt.Errorf("%w: %v", errGetVersion, err)
 	}
 
 	versionStringIndex := vc.regex.FindStringIndex(installed)

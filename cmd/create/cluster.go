@@ -152,8 +152,8 @@ func NewClusterCmd(version string, tracker *analytics.Tracker) *cobra.Command {
 				}
 			}
 
-			// Validate the dependencies, unless explicitely told to skip it.
-			if skipDepsValidation == false {
+			// Validate the dependencies, unless explicitly told to skip it.
+			if !skipDepsValidation {
 				logrus.Info("Validating dependencies...")
 				if err := depsvl.Validate(res); err != nil {
 					cmdEvent.AddErrorMessage(err)
