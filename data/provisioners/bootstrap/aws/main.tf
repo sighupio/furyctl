@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2020 SIGHUP s.r.l All rights reserved.
+ * Copyright (c) 2017-present SIGHUP s.r.l All rights reserved.
  * Use of this source code is governed by a BSD-style
  * license that can be found in the LICENSE file.
  */
@@ -15,7 +15,7 @@ terraform {
 }
 
 module "vpc-and-vpn" {
-  source = "github.com/sighupio/fury-eks-installer//modules/vpc-and-vpn?ref=v1.9.1"
+  source = "github.com/sighupio/fury-eks-installer//modules/vpc-and-vpn?ref=v1.10.0"
 
   name                     = var.name
   network_cidr             = var.network_cidr
