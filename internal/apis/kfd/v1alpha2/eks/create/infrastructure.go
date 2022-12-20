@@ -83,7 +83,7 @@ func NewInfrastructure(
 			WorkDir:   phase.SecretsPath,
 		}),
 		ovRunner: openvpn.NewRunner(executor, openvpn.Paths{
-			WorkDir: phase.SecretsPath,
+			WorkDir: phase.Path,
 			Openvpn: "openvpn",
 		}),
 		dryRun: dryRun,
@@ -96,7 +96,7 @@ func (i *Infrastructure) Exec(opts []cluster.OperationPhaseOption) error {
 	timestamp := time.Now().Unix()
 
 	if _, err := i.ovRunner.Version(); err != nil {
-		return fmt.Errorf("error getting openvpn version: %w", err)
+		return err
 	}
 
 	if err := i.CreateFolder(); err != nil {
