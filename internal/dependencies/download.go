@@ -5,6 +5,7 @@
 package dependencies
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"net/http"
@@ -52,16 +53,16 @@ func (dd *Downloader) DownloadAll(kfd config.KFD) ([]error, []string) {
 		errs = append(errs, err)
 	}
 
-	// if err := dd.DownloadInstallers(kfd.Kubernetes); err != nil {
-	// 	errs = append(errs, err)
-	// }
+	if err := dd.DownloadInstallers(kfd.Kubernetes); err != nil {
+		errs = append(errs, err)
+	}
 
-	// ut, err := dd.DownloadTools(kfd.Tools)
-	// if err != nil {
-	// 	errs = append(errs, err)
-	// }
+	ut, err := dd.DownloadTools(kfd.Tools)
+	if err != nil {
+		errs = append(errs, err)
+	}
 
-	return errs, []string{}
+	return errs, ut
 }
 
 func (dd *Downloader) DownloadModules(modules config.KFDModules) error {
@@ -86,22 +87,29 @@ func (dd *Downloader) DownloadModules(modules config.KFDModules) error {
 		retries := map[string]int{}
 
 		for _, prefix := range []string{oldPrefix, newPrefix} {
-			retries[name] += 1
 			src := fmt.Sprintf("git@github.com:sighupio/git::%s-%s.git?ref=%s", prefix, name, version)
 
-			req, err := http.NewRequest("GET", createUrl(prefix, name, version), nil)
+			req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, createURL(prefix, name, version), nil)
 			if err != nil {
-				return err
+				return fmt.Errorf("%w '%s': %v", ErrDownloadingModule, name, err)
 			}
 
 			resp, err := http.DefaultClient.Do(req)
 			if err != nil {
-				return err
+				if err := resp.Body.Close(); err != nil {
+					return fmt.Errorf("%w '%s': %v", ErrDownloadingModule, name, err)
+				}
+
+				return fmt.Errorf("%w '%s': %v", ErrDownloadingModule, name, err)
 			}
 
+			retries[name]++
+
+			threshold := 2
 			if resp.StatusCode != http.StatusOK {
-				if retries[name] >= 2 {
-					errs = append(errs, fmt.Errorf("%w '%s': please check if module exists or credentials are correctly configured", ErrModuleNotFound, name))
+				if retries[name] >= threshold {
+					errs = append(errs, fmt.Errorf("%w '%s': please check if module exists or credentials are correctly configured",
+						ErrModuleNotFound, name))
 				}
 
 				continue
@@ -191,7 +199,7 @@ func (dd *Downloader) DownloadTools(kfdTools config.KFDTools) ([]string, error) 
 	return unsupportedTools, nil
 }
 
-func createUrl(prefix, name, version string) string {
+func createURL(prefix, name, version string) string {
 	if token := os.Getenv("GITHUB_TOKEN"); token != "" {
 		return fmt.Sprintf("https://oauth2:%s@github.com/sighupio/%s-%s/releases/tag/%s", token, prefix, name, version)
 	}
