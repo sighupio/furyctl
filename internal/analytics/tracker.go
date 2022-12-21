@@ -48,6 +48,10 @@ func NewTracker(token, version, arch, os, org, hostname string) *Tracker {
 		events:       make(chan Event),
 	}
 
+	if token == "" {
+		tracker.enable = false
+	}
+
 	// Start the event processor, this will listen for new tracked events and send them to mixpanel.
 	go tracker.processEvents()
 

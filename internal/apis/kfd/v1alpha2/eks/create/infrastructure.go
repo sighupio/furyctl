@@ -79,7 +79,7 @@ func NewInfrastructure(
 			},
 		),
 		faRunner: furyagent.NewRunner(executor, furyagent.Paths{
-			Furyagent: path.Join(binPath, "furyagent", kfdManifest.Tools.Furyagent, "furyagent"),
+			Furyagent: path.Join(binPath, "furyagent", kfdManifest.Tools.Common.Furyagent.Version, "furyagent"),
 			WorkDir:   phase.SecretsPath,
 		}),
 		ovRunner: openvpn.NewRunner(executor, openvpn.Paths{
@@ -91,7 +91,7 @@ func NewInfrastructure(
 }
 
 func (i *Infrastructure) Exec(opts []cluster.OperationPhaseOption) error {
-	logrus.Info("Running infrastructure phase")
+	logrus.Info("Running infrastructure phase...")
 
 	timestamp := time.Now().Unix()
 
@@ -105,6 +105,10 @@ func (i *Infrastructure) Exec(opts []cluster.OperationPhaseOption) error {
 
 	if err := i.CreateFolderStructure(); err != nil {
 		return fmt.Errorf("error creating infrastructure folder structure: %w", err)
+	}
+
+	if _, err := i.ovRunner.Version(); err != nil {
+		return fmt.Errorf("can't get tool version: %w", err)
 	}
 
 	if err := i.createTfVars(); err != nil {

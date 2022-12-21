@@ -84,6 +84,11 @@ func TestHelperProcess(t *testing.T) {
 				"jinja version = 3.1.2\n"+
 				"libyaml = True\n")
 		}
+	case "aws":
+		switch subcmd {
+		case "--version":
+			fmt.Fprintf(os.Stdout, "aws-cli/2.8.12 Python/3.11.0 Darwin/21.6.0 source/arm64 prompt/off\n")
+		}
 	case "furyagent":
 		switch subcmd {
 		case "version":

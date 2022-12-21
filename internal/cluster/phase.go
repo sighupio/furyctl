@@ -44,9 +44,9 @@ type OperationPhaseOption struct {
 func NewOperationPhase(folder string, kfdTools config.KFDTools, binPath string) (*OperationPhase, error) {
 	basePath := folder
 
-	kustomizePath := path.Join(binPath, "kustomize", kfdTools.Kustomize, "kustomize")
-	terraformPath := path.Join(binPath, "terraform", kfdTools.Terraform, "terraform")
-	kubectlPath := path.Join(binPath, "kubectl", kfdTools.Kubectl, "kubectl")
+	kustomizePath := path.Join(binPath, "kustomize", kfdTools.Common.Kustomize.Version, "kustomize")
+	terraformPath := path.Join(binPath, "terraform", kfdTools.Common.Terraform.Version, "terraform")
+	kubectlPath := path.Join(binPath, "kubectl", kfdTools.Common.Kubectl.Version, "kubectl")
 
 	planPath := path.Join(basePath, "terraform", "plan")
 	logsPath := path.Join(basePath, "terraform", "logs")

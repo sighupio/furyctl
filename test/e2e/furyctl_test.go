@@ -9,7 +9,6 @@ package e2e_test
 import (
 	"bytes"
 	"fmt"
-	"io/ioutil"
 	"math/rand"
 	"os"
 	"os/exec"
@@ -42,7 +41,7 @@ var (
 	}
 
 	FileContent = func(path string) string {
-		content, ferr := ioutil.ReadFile(path)
+		content, ferr := os.ReadFile(path)
 		if ferr != nil {
 			Fail(ferr.Error())
 		}
@@ -206,7 +205,6 @@ var (
 				out, err := FuryctlValidateDependencies("../data/e2e/validate/dependencies/missing", "/tmp")
 
 				Expect(err).To(HaveOccurred())
-				Expect(out).To(ContainSubstring("ansible:"))
 				Expect(out).To(ContainSubstring("terraform:"))
 				Expect(out).To(ContainSubstring("kubectl:"))
 				Expect(out).To(ContainSubstring("kustomize:"))
@@ -217,7 +215,13 @@ var (
 			})
 
 			It("should report an error when dependencies are wrong", Serial, func() {
-				RestoreEnvVars := BackupEnvVars("PATH", "AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY", "AWS_DEFAULT_REGION")
+				RestoreEnvVars := BackupEnvVars(
+					"PATH",
+					"AWS_ACCESS_KEY_ID",
+					"AWS_SECRET_ACCESS_KEY",
+					"AWS_DEFAULT_REGION",
+					"FURYCTL_MIXPANEL_TOKEN",
+				)
 				defer RestoreEnvVars()
 
 				bp := Abs("../data/e2e/validate/dependencies/wrong")
@@ -226,18 +230,16 @@ var (
 				os.Unsetenv("AWS_ACCESS_KEY_ID")
 				os.Unsetenv("AWS_SECRET_ACCESS_KEY")
 				os.Unsetenv("AWS_DEFAULT_REGION")
+				os.Unsetenv("FURYCTL_MIXPANEL_TOKEN")
 
 				out, err := FuryctlValidateDependencies(bp, bp)
 
 				Expect(err).To(HaveOccurred())
 				Expect(out).To(
-					ContainSubstring("ansible: wrong tool version - installed = 2.11.1, expected = 2.11.2"),
-				)
-				Expect(out).To(
 					ContainSubstring("furyagent: wrong tool version - installed = 0.2.4, expected = 0.3.0"),
 				)
 				Expect(out).To(
-					ContainSubstring("kubectl: wrong tool version - installed = 1.23.6, expected = 1.23.7"),
+					ContainSubstring("kubectl: wrong tool version - installed = 1.23.7, expected = 1.23.10"),
 				)
 				Expect(out).To(
 					ContainSubstring("kustomize: wrong tool version - installed = 3.9.0, expected = 3.10.0"),
@@ -251,7 +253,13 @@ var (
 			})
 
 			It("should exit without errors when dependencies are correct", Serial, func() {
-				RestoreEnvVars := BackupEnvVars("PATH", "AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY", "AWS_DEFAULT_REGION")
+				RestoreEnvVars := BackupEnvVars(
+					"PATH",
+					"AWS_ACCESS_KEY_ID",
+					"AWS_SECRET_ACCESS_KEY",
+					"AWS_DEFAULT_REGION",
+					"FURYCTL_MIXPANEL_TOKEN",
+				)
 				defer RestoreEnvVars()
 
 				bp := Abs("../data/e2e/validate/dependencies/correct")
@@ -260,6 +268,7 @@ var (
 				os.Setenv("AWS_ACCESS_KEY_ID", "test")
 				os.Setenv("AWS_SECRET_ACCESS_KEY", "test")
 				os.Setenv("AWS_DEFAULT_REGION", "test")
+				os.Setenv("FURYCTL_MIXPANEL_TOKEN", "test")
 
 				out, err := FuryctlValidateDependencies(bp, bp)
 
@@ -461,11 +470,16 @@ var (
 			basepath := "../data/e2e/create/cluster"
 
 			FuryctlCreateCluster := func(cfgPath, distroPath, phase string, dryRun bool) *exec.Cmd {
+				patchedCfgPath, err := patchFuryctlYaml(cfgPath)
+				if err != nil {
+					panic(err)
+				}
+
 				args := []string{
 					"create",
 					"cluster",
 					"--config",
-					cfgPath,
+					patchedCfgPath,
 					"--distro-location",
 					distroPath,
 					"--debug",
@@ -484,8 +498,6 @@ var (
 				if dryRun {
 					args = append(args, "--dry-run")
 				}
-
-				patchFuryctlYaml(cfgPath)
 
 				return exec.Command(furyctl, args...)
 			}
@@ -569,15 +581,23 @@ var (
 
 // patch the furyctl.yaml's "spec.toolsConfiguration.terraform.state.s3.keyPrefix" key to add a timestamp and random int
 // to avoid collisions in s3 when running tests in parallel, and also because the bucket is a super global resource.
-func patchFuryctlYaml(furyctlYamlPath string) error {
-	furyctlYaml, err := ioutil.ReadFile(furyctlYamlPath)
+func patchFuryctlYaml(furyctlYamlPath string) (string, error) {
+	furyctlYaml, err := os.ReadFile(furyctlYamlPath)
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	newKeyPrefix := fmt.Sprintf("keyPrefix: furyctl-%d-%d/", time.Now().UTC().Unix(), rand.Int())
 
 	furyctlYaml = bytes.ReplaceAll(furyctlYaml, []byte("keyPrefix: furyctl/"), []byte(newKeyPrefix))
 
-	return ioutil.WriteFile(furyctlYamlPath, furyctlYaml, 0o644)
+	// create a temporary file to write the patched furyctl.yaml
+	tmpFile, err := os.CreateTemp("", "furyctl.yaml")
+	if err != nil {
+		return "", err
+	}
+
+	_, err = tmpFile.Write(furyctlYaml)
+
+	return tmpFile.Name(), err
 }

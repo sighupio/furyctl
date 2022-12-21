@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 
 	"github.com/sighupio/furyctl/internal/tool/ansible"
+	"github.com/sighupio/furyctl/internal/tool/awscli"
 	"github.com/sighupio/furyctl/internal/tool/furyagent"
 	"github.com/sighupio/furyctl/internal/tool/kubectl"
 	"github.com/sighupio/furyctl/internal/tool/kustomize"
@@ -18,6 +19,7 @@ import (
 
 const (
 	Ansible   = "ansible"
+	Awscli    = "awscli"
 	Furyagent = "furyagent"
 	Kubectl   = "kubectl"
 	Kustomize = "kustomize"
@@ -50,6 +52,13 @@ func (rf *RunnerFactory) Create(name, version, workDir string) Runner {
 	if name == Ansible {
 		return ansible.NewRunner(rf.executor, ansible.Paths{
 			Ansible: name,
+			WorkDir: workDir,
+		})
+	}
+
+	if name == Awscli {
+		return awscli.NewRunner(rf.executor, awscli.Paths{
+			Awscli:  "aws",
 			WorkDir: workDir,
 		})
 	}

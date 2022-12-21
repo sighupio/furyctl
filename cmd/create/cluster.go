@@ -78,9 +78,14 @@ func NewClusterCmd(version string, tracker *analytics.Tracker) *cobra.Command {
 				return fmt.Errorf("%w: %s", ErrParsingFlag, "dry-run")
 			}
 
-			skipDownload, err := cmdutil.BoolFlag(cmd, "skip-download", tracker, cmdEvent)
+			skipDepsDownload, err := cmdutil.BoolFlag(cmd, "skip-deps-download", tracker, cmdEvent)
 			if err != nil {
-				return fmt.Errorf("%w: %s", ErrParsingFlag, "skip-download")
+				return fmt.Errorf("%w: %s", ErrParsingFlag, "skip-deps-download")
+			}
+
+			skipDepsValidation, err := cmdutil.BoolFlag(cmd, "skip-deps-validation", tracker, cmdEvent)
+			if err != nil {
+				return fmt.Errorf("%w: %s", ErrParsingFlag, "skip-deps-validation")
 			}
 
 			// Init paths.
@@ -137,7 +142,7 @@ func NewClusterCmd(version string, tracker *analytics.Tracker) *cobra.Command {
 			}
 
 			// Download the dependencies.
-			if !skipDownload {
+			if !skipDepsDownload {
 				logrus.Info("Downloading dependencies...")
 				if errs, _ := depsdl.DownloadAll(res.DistroManifest); len(errs) > 0 {
 					cmdEvent.AddErrorMessage(ErrDownloadDependenciesFailed)
@@ -147,13 +152,15 @@ func NewClusterCmd(version string, tracker *analytics.Tracker) *cobra.Command {
 				}
 			}
 
-			// Validate the dependencies.
-			logrus.Info("Validating dependencies...")
-			if err := depsvl.Validate(res); err != nil {
-				cmdEvent.AddErrorMessage(err)
-				tracker.Track(cmdEvent)
+			// Validate the dependencies, unless explicitly told to skip it.
+			if !skipDepsValidation {
+				logrus.Info("Validating dependencies...")
+				if err := depsvl.Validate(res); err != nil {
+					cmdEvent.AddErrorMessage(err)
+					tracker.Track(cmdEvent)
 
-				return fmt.Errorf("error while validating dependencies: %w", err)
+					return fmt.Errorf("error while validating dependencies: %w", err)
+				}
 			}
 
 			if phase == "" || skipPhase == "distribution" {
@@ -245,9 +252,15 @@ func setupClusterCmdFlags(cmd *cobra.Command) {
 	)
 
 	cmd.Flags().Bool(
-		"skip-download",
+		"skip-deps-download",
 		false,
 		"Skip downloading the distribution modules, installers and binaries",
+	)
+
+	cmd.Flags().Bool(
+		"skip-deps-validation",
+		false,
+		"Skip validating dependencies",
 	)
 
 	cmd.Flags().Bool(

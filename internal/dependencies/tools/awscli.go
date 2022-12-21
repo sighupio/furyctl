@@ -11,49 +11,51 @@ import (
 	"runtime"
 	"strings"
 
-	"github.com/sighupio/furyctl/internal/tool/openvpn"
+	"github.com/sighupio/furyctl/internal/tool/awscli"
 )
 
-func NewOpenvpn(runner *openvpn.Runner, version string) *Openvpn {
-	return &Openvpn{
-		arch:    "amd64",
+func NewAwscli(runner *awscli.Runner, version string) *Awscli {
+	return &Awscli{
+		arch:    "x86_64",
 		os:      runtime.GOOS,
 		version: version,
 		checker: &checker{
-			regex:  regexp.MustCompile(`^OpenVPN (\d+.\d+.\d+)`),
+			regex:  regexp.MustCompile(`aws-cli/(\S*)`),
 			runner: runner,
 			trimFn: func(tokens []string) string {
 				return tokens[len(tokens)-1]
 			},
 			splitFn: func(version string) []string {
-				return strings.Split(version, " ")
+				return strings.Split(version, "/")
 			},
 		},
 	}
 }
 
-type Openvpn struct {
+type Awscli struct {
 	arch    string
 	checker *checker
 	os      string
 	version string
 }
 
-func (*Openvpn) SupportsDownload() bool {
+func (*Awscli) SupportsDownload() bool {
 	return false
 }
 
-func (*Openvpn) SrcPath() string {
+func (*Awscli) SrcPath() string {
+	// Not used for this tool because it's not downloaded.
 	return ""
 }
 
-func (*Openvpn) Rename(_ string) error {
+func (*Awscli) Rename(_ string) error {
+	// Not used for this tool because it's not downloaded.
 	return nil
 }
 
-func (o *Openvpn) CheckBinVersion() error {
-	if err := o.checker.version(o.version); err != nil {
-		return fmt.Errorf("openvpn: %w", err)
+func (a *Awscli) CheckBinVersion() error {
+	if err := a.checker.version(a.version); err != nil {
+		return fmt.Errorf("aws-cli: %w", err)
 	}
 
 	return nil

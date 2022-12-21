@@ -13,6 +13,7 @@ import (
 
 	"github.com/sighupio/furyctl/internal/tool"
 	"github.com/sighupio/furyctl/internal/tool/ansible"
+	"github.com/sighupio/furyctl/internal/tool/awscli"
 	"github.com/sighupio/furyctl/internal/tool/furyagent"
 	"github.com/sighupio/furyctl/internal/tool/kubectl"
 	"github.com/sighupio/furyctl/internal/tool/kustomize"
@@ -27,7 +28,7 @@ var (
 	errCannotParseWithRegex = errors.New("can't parse system tool version using regex")
 	errCannotParse          = errors.New("can't parse system tool version")
 	errMissingBin           = errors.New("missing binary from vendor folder")
-	errGetVersion           = errors.New("can't get version")
+	errGetVersion           = errors.New("can't get tool version")
 )
 
 type Tool interface {
@@ -67,6 +68,15 @@ func (f *Factory) Create(name, version string) Tool {
 		}
 
 		return NewAnsible(a, version)
+	}
+
+	if name == tool.Awscli {
+		a, ok := t.(*awscli.Runner)
+		if !ok {
+			panic(fmt.Sprintf("expected awscli.Runner, got %T", t))
+		}
+
+		return NewAwscli(a, version)
 	}
 
 	if name == tool.Furyagent {
@@ -140,12 +150,12 @@ func (vc *checker) version(want string) error {
 			return errMissingBin
 		}
 
-		return errGetVersion
+		return fmt.Errorf("%w: %v", errGetVersion, err)
 	}
 
 	installed, err := vc.runner.Version()
 	if err != nil {
-		return errGetVersion
+		return fmt.Errorf("%w: %v", errGetVersion, err)
 	}
 
 	versionStringIndex := vc.regex.FindStringIndex(installed)

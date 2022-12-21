@@ -30,7 +30,7 @@ func NewDependenciesCmd(furyctlBinVersion string, tracker *analytics.Tracker) *c
 	cmd := &cobra.Command{
 		Use:   "dependencies",
 		Short: "Validate furyctl.yaml file",
-		PreRun: func(cmd *cobra.Command, args []string) {
+		PreRun: func(cmd *cobra.Command, _ []string) {
 			cmdEvent = analytics.NewCommandEvent(cobrax.GetFullname(cmd))
 		},
 		RunE: func(cmd *cobra.Command, _ []string) error {

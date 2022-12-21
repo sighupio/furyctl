@@ -26,12 +26,12 @@ func Test_Validator_Validate(t *testing.T) {
 			desc: "all tools are installed in their correct version",
 			manifest: config.KFD{
 				Tools: config.KFDTools{
-					Kubectl:   "1.21.1",
-					Kustomize: "3.9.4",
-					Ansible:   "2.9.27",
-					// Openvpn:   "2.5.7",
-					Terraform: "0.15.4",
-					Furyagent: "0.3.0",
+					Common: config.Common{
+						Kubectl:   config.Tool{Version: "1.21.1"},
+						Kustomize: config.Tool{Version: "3.9.4"},
+						Terraform: config.Tool{Version: "0.15.4"},
+						Furyagent: config.Tool{Version: "0.3.0"},
+					},
 				},
 			},
 		},
@@ -39,16 +39,15 @@ func Test_Validator_Validate(t *testing.T) {
 			desc: "all tools are installed in their wrong version",
 			manifest: config.KFD{
 				Tools: config.KFDTools{
-					Kubectl:   "1.22.0",
-					Kustomize: "3.10.0",
-					Ansible:   "2.10.0",
-					// Openvpn:   "2.4.9",
-					Terraform: "1.3.0",
-					Furyagent: "0.4.0",
+					Common: config.Common{
+						Kubectl:   config.Tool{Version: "1.22.0"},
+						Kustomize: config.Tool{Version: "3.10.0"},
+						Terraform: config.Tool{Version: "1.3.0"},
+						Furyagent: config.Tool{Version: "0.4.0"},
+					},
 				},
 			},
 			wantErrs: []error{
-				errors.New("ansible: wrong tool version - installed = 2.9.27, expected = 2.10.0"),
 				errors.New("furyagent: wrong tool version - installed = 0.3.0, expected = 0.4.0"),
 				errors.New("kubectl: wrong tool version - installed = 1.21.1, expected = 1.22.0"),
 				errors.New("kustomize: wrong tool version - installed = 3.9.4, expected = 3.10.0"),
