@@ -25,7 +25,7 @@ var (
 	ErrDownloadingModule  = errors.New("error downloading module")
 	ErrModuleHasNoVersion = errors.New("module has no version")
 	ErrModuleHasNoName    = errors.New("module has no name")
-	ErrModuleRepoNotFound = errors.New("module repo not found")
+	ErrModuleNotFound     = errors.New("module not found")
 )
 
 func NewDownloader(client netx.Client, basePath, binPath string) *Downloader {
@@ -83,8 +83,10 @@ func (dd *Downloader) DownloadModules(modules config.KFDModules) error {
 		}
 
 		errs := []error{}
+		retries := map[string]int{}
 
 		for _, prefix := range []string{oldPrefix, newPrefix} {
+			retries[name] += 1
 			src := fmt.Sprintf("git@github.com:sighupio/git::%s-%s.git?ref=%s", prefix, name, version)
 
 			req, err := http.NewRequest("GET", createUrl(prefix, name, version), nil)
@@ -97,8 +99,10 @@ func (dd *Downloader) DownloadModules(modules config.KFDModules) error {
 				return err
 			}
 
-			if resp.StatusCode == http.StatusNotFound {
-				errs = append(errs, fmt.Errorf("%w '%s'", ErrModuleRepoNotFound, name))
+			if resp.StatusCode != http.StatusOK {
+				if retries[name] >= 2 {
+					errs = append(errs, fmt.Errorf("%w '%s': please check if module exists or credentials are correctly configured", ErrModuleNotFound, name))
+				}
 
 				continue
 			}
