@@ -33,6 +33,10 @@ var (
 )
 
 func main() {
+	os.Exit(exec())
+}
+
+func exec() int {
 	var logFile *os.File
 
 	versions := map[string]string{
@@ -64,6 +68,9 @@ func main() {
 
 	if _, err := cmd.NewRootCommand(versions, logFile, a).ExecuteC(); err != nil {
 		logrus.Error(err)
-		os.Exit(1)
+
+		return 1
 	}
+
+	return 0
 }
