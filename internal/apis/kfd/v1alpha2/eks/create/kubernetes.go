@@ -277,7 +277,8 @@ func (k *Kubernetes) createTfVars() error {
 			}
 
 			subnetIdsSource = subs
-			vpcIDSource = schema.TypesAwsVpcId(v)
+			vpcID := schema.TypesAwsVpcId(v)
+			vpcIDSource = &vpcID
 		}
 	}
 
@@ -291,7 +292,7 @@ func (k *Kubernetes) createTfVars() error {
 		return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
 	}
 
-	_, err = buffer.WriteString(fmt.Sprintf("network = \"%v\"\n", vpcIDSource))
+	_, err = buffer.WriteString(fmt.Sprintf("network = \"%v\"\n", *vpcIDSource))
 	if err != nil {
 		return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
 	}

@@ -326,12 +326,12 @@ func (d *Distribution) injectDataPostTf(fMerger *merge.Merger) (*merge.Merger, e
 					},
 				},
 				Ingress: schema.SpecDistributionModulesIngress{
-					ExternalDns: schema.SpecDistributionModulesIngressExternalDNS{
+					ExternalDns: &schema.SpecDistributionModulesIngressExternalDNS{
 						PrivateIamRoleArn: schema.TypesAwsArn(arns["external_dns_private_iam_role_arn"]),
 						PublicIamRoleArn:  schema.TypesAwsArn(arns["external_dns_public_iam_role_arn"]),
 					},
-					CertManager: schema.SpecDistributionModulesIngressCERTManager{
-						ClusterIssuer: schema.SpecDistributionModulesIngressClusterIssuer{
+					CertManager: &schema.SpecDistributionModulesIngressCertManager{
+						ClusterIssuer: schema.SpecDistributionModulesIngressCertManagerClusterIssuer{
 							Route53: &schema.SpecDistributionModulesIngressClusterIssuerRoute53{
 								IamRoleArn: schema.TypesAwsArn(arns["cert_manager_iam_role_arn"]),
 							},
@@ -339,8 +339,8 @@ func (d *Distribution) injectDataPostTf(fMerger *merge.Merger) (*merge.Merger, e
 					},
 				},
 				Dr: schema.SpecDistributionModulesDr{
-					Velero: &schema.SpecDistributionModulesDrVelero{
-						Eks: &schema.SpecDistributionModulesDrVeleroEks{
+					Velero: schema.SpecDistributionModulesDrVelero{
+						Eks: schema.SpecDistributionModulesDrVeleroEks{
 							IamRoleArn: schema.TypesAwsArn(arns["velero_iam_role_arn"]),
 						},
 					},

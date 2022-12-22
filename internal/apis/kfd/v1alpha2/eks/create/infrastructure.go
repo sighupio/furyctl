@@ -165,7 +165,17 @@ func (i *Infrastructure) Exec(opts []cluster.OperationPhaseOption) error {
 }
 
 func (i *Infrastructure) isVpnConfigured() bool {
-	return i.furyctlConf.Spec.Infrastructure.Vpc.Vpn != nil && i.furyctlConf.Spec.Infrastructure.Vpc.Vpn.Instances > 0
+	vpn := i.furyctlConf.Spec.Infrastructure.Vpc.Vpn
+	if vpn == nil {
+		return false
+	}
+
+	instances := i.furyctlConf.Spec.Infrastructure.Vpc.Vpn.Instances
+	if instances == nil {
+		return false
+	}
+
+	return *instances > 0
 }
 
 func (i *Infrastructure) generateClientName() (string, error) {
@@ -303,126 +313,143 @@ func (i *Infrastructure) createTfVars() error {
 	}
 
 	if i.furyctlConf.Spec.Infrastructure.Vpc.Vpn != nil {
-		_, err = buffer.WriteString(
-			fmt.Sprintf(
-				"vpn_subnetwork_cidr = \"%v\"\n",
-				i.furyctlConf.Spec.Infrastructure.Vpc.Vpn.VpnClientsSubnetCidr,
-			),
-		)
+		err = i.addVpnDataToTfVars(&buffer)
 		if err != nil {
 			return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
-		}
-
-		_, err = buffer.WriteString(
-			fmt.Sprintf(
-				"vpn_instances = %v\n",
-				i.furyctlConf.Spec.Infrastructure.Vpc.Vpn.Instances,
-			),
-		)
-		if err != nil {
-			return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
-		}
-
-		if i.furyctlConf.Spec.Infrastructure.Vpc.Vpn.Port != 0 {
-			_, err = buffer.WriteString(
-				fmt.Sprintf(
-					"vpn_port = %v\n",
-					i.furyctlConf.Spec.Infrastructure.Vpc.Vpn.Port,
-				),
-			)
-			if err != nil {
-				return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
-			}
-		}
-
-		if i.furyctlConf.Spec.Infrastructure.Vpc.Vpn.InstanceType != "" {
-			_, err = buffer.WriteString(
-				fmt.Sprintf(
-					"vpn_instance_type = \"%v\"\n",
-					i.furyctlConf.Spec.Infrastructure.Vpc.Vpn.InstanceType,
-				),
-			)
-			if err != nil {
-				return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
-			}
-		}
-
-		if i.furyctlConf.Spec.Infrastructure.Vpc.Vpn.DiskSize != 0 {
-			_, err = buffer.WriteString(
-				fmt.Sprintf(
-					"vpn_instance_disk_size = %v\n",
-					i.furyctlConf.Spec.Infrastructure.Vpc.Vpn.DiskSize,
-				),
-			)
-			if err != nil {
-				return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
-			}
-		}
-
-		if i.furyctlConf.Spec.Infrastructure.Vpc.Vpn.OperatorName != "" {
-			_, err = buffer.WriteString(
-				fmt.Sprintf(
-					"vpn_operator_name = \"%v\"\n",
-					i.furyctlConf.Spec.Infrastructure.Vpc.Vpn.OperatorName,
-				),
-			)
-			if err != nil {
-				return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
-			}
-		}
-
-		if i.furyctlConf.Spec.Infrastructure.Vpc.Vpn.DhParamsBits != 0 {
-			_, err = buffer.WriteString(
-				fmt.Sprintf(
-					"vpn_dhparams_bits = %v\n",
-					i.furyctlConf.Spec.Infrastructure.Vpc.Vpn.DhParamsBits,
-				),
-			)
-			if err != nil {
-				return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
-			}
-		}
-
-		if len(i.furyctlConf.Spec.Infrastructure.Vpc.Vpn.Ssh.AllowedFromCidrs) != 0 {
-			allowedCidrs := make([]string, len(i.furyctlConf.Spec.Infrastructure.Vpc.Vpn.Ssh.AllowedFromCidrs))
-
-			for i, cidr := range i.furyctlConf.Spec.Infrastructure.Vpc.Vpn.Ssh.AllowedFromCidrs {
-				allowedCidrs[i] = fmt.Sprintf("\"%v\"", cidr)
-			}
-
-			_, err = buffer.WriteString(
-				fmt.Sprintf(
-					"vpn_operator_cidrs = [%v]\n",
-					strings.Join(allowedCidrs, ","),
-				),
-			)
-			if err != nil {
-				return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
-			}
-		}
-
-		if len(i.furyctlConf.Spec.Infrastructure.Vpc.Vpn.Ssh.GithubUsersName) != 0 {
-			githubUsers := make([]string, len(i.furyctlConf.Spec.Infrastructure.Vpc.Vpn.Ssh.GithubUsersName))
-
-			for i, gu := range i.furyctlConf.Spec.Infrastructure.Vpc.Vpn.Ssh.GithubUsersName {
-				githubUsers[i] = fmt.Sprintf("\"%v\"", gu)
-			}
-
-			_, err = buffer.WriteString(
-				fmt.Sprintf(
-					"vpn_ssh_users = [%v]\n",
-					strings.Join(githubUsers, ","),
-				),
-			)
-			if err != nil {
-				return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
-			}
 		}
 	}
 
+	return i.writeTfVars(buffer)
+}
+
+func (i *Infrastructure) addVpnDataToTfVars(buffer *bytes.Buffer) error {
+	_, err := buffer.WriteString(
+		fmt.Sprintf(
+			"vpn_subnetwork_cidr = \"%v\"\n",
+			i.furyctlConf.Spec.Infrastructure.Vpc.Vpn.VpnClientsSubnetCidr,
+		),
+	)
+	if err != nil {
+		return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
+	}
+
+	_, err = buffer.WriteString(
+		fmt.Sprintf(
+			"vpn_instances = %v\n",
+			*i.furyctlConf.Spec.Infrastructure.Vpc.Vpn.Instances,
+		),
+	)
+	if err != nil {
+		return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
+	}
+
+	if i.furyctlConf.Spec.Infrastructure.Vpc.Vpn.Port != nil && *i.furyctlConf.Spec.Infrastructure.Vpc.Vpn.Port != 0 {
+		_, err = buffer.WriteString(
+			fmt.Sprintf(
+				"vpn_port = %v\n",
+				*i.furyctlConf.Spec.Infrastructure.Vpc.Vpn.Port,
+			),
+		)
+		if err != nil {
+			return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
+		}
+	}
+
+	if i.furyctlConf.Spec.Infrastructure.Vpc.Vpn.InstanceType != nil &&
+		*i.furyctlConf.Spec.Infrastructure.Vpc.Vpn.InstanceType != "" {
+		_, err = buffer.WriteString(
+			fmt.Sprintf(
+				"vpn_instance_type = \"%v\"\n",
+				*i.furyctlConf.Spec.Infrastructure.Vpc.Vpn.InstanceType,
+			),
+		)
+		if err != nil {
+			return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
+		}
+	}
+
+	if i.furyctlConf.Spec.Infrastructure.Vpc.Vpn.DiskSize != nil &&
+		*i.furyctlConf.Spec.Infrastructure.Vpc.Vpn.DiskSize != 0 {
+		_, err = buffer.WriteString(
+			fmt.Sprintf(
+				"vpn_instance_disk_size = %v\n",
+				*i.furyctlConf.Spec.Infrastructure.Vpc.Vpn.DiskSize,
+			),
+		)
+		if err != nil {
+			return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
+		}
+	}
+
+	if i.furyctlConf.Spec.Infrastructure.Vpc.Vpn.OperatorName != nil &&
+		*i.furyctlConf.Spec.Infrastructure.Vpc.Vpn.OperatorName != "" {
+		_, err = buffer.WriteString(
+			fmt.Sprintf(
+				"vpn_operator_name = \"%v\"\n",
+				*i.furyctlConf.Spec.Infrastructure.Vpc.Vpn.OperatorName,
+			),
+		)
+		if err != nil {
+			return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
+		}
+	}
+
+	if i.furyctlConf.Spec.Infrastructure.Vpc.Vpn.DhParamsBits != nil &&
+		*i.furyctlConf.Spec.Infrastructure.Vpc.Vpn.DhParamsBits != 0 {
+		_, err = buffer.WriteString(
+			fmt.Sprintf(
+				"vpn_dhparams_bits = %v\n",
+				*i.furyctlConf.Spec.Infrastructure.Vpc.Vpn.DhParamsBits,
+			),
+		)
+		if err != nil {
+			return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
+		}
+	}
+
+	if len(i.furyctlConf.Spec.Infrastructure.Vpc.Vpn.Ssh.AllowedFromCidrs) != 0 {
+		allowedCidrs := make([]string, len(i.furyctlConf.Spec.Infrastructure.Vpc.Vpn.Ssh.AllowedFromCidrs))
+
+		for i, cidr := range i.furyctlConf.Spec.Infrastructure.Vpc.Vpn.Ssh.AllowedFromCidrs {
+			allowedCidrs[i] = fmt.Sprintf("\"%v\"", cidr)
+		}
+
+		_, err = buffer.WriteString(
+			fmt.Sprintf(
+				"vpn_operator_cidrs = [%v]\n",
+				strings.Join(allowedCidrs, ","),
+			),
+		)
+		if err != nil {
+			return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
+		}
+	}
+
+	if len(i.furyctlConf.Spec.Infrastructure.Vpc.Vpn.Ssh.GithubUsersName) != 0 {
+		githubUsers := make([]string, len(i.furyctlConf.Spec.Infrastructure.Vpc.Vpn.Ssh.GithubUsersName))
+
+		for i, gu := range i.furyctlConf.Spec.Infrastructure.Vpc.Vpn.Ssh.GithubUsersName {
+			githubUsers[i] = fmt.Sprintf("\"%v\"", gu)
+		}
+
+		_, err = buffer.WriteString(
+			fmt.Sprintf(
+				"vpn_ssh_users = [%v]\n",
+				strings.Join(githubUsers, ","),
+			),
+		)
+		if err != nil {
+			return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
+		}
+	}
+
+	return nil
+}
+
+func (i *Infrastructure) writeTfVars(buffer bytes.Buffer) error {
 	targetTfVars := path.Join(i.Path, "terraform", "main.auto.tfvars")
 
-	err = os.WriteFile(targetTfVars, buffer.Bytes(), iox.FullRWPermAccess)
+	err := os.WriteFile(targetTfVars, buffer.Bytes(), iox.FullRWPermAccess)
 	if err != nil {
 		return fmt.Errorf("error writing terraform vars: %w", err)
 	}

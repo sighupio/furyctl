@@ -16,7 +16,6 @@ import (
 	"github.com/sighupio/furyctl/internal/merge"
 	"github.com/sighupio/furyctl/internal/schema/santhosh"
 	iox "github.com/sighupio/furyctl/internal/x/io"
-	osx "github.com/sighupio/furyctl/internal/x/os"
 	yamlx "github.com/sighupio/furyctl/internal/x/yaml"
 )
 
@@ -98,15 +97,6 @@ func createNewEmptyConfigFile(path string) (*os.File, error) {
 
 // Validate the furyctl.yaml file.
 func Validate(path, repoPath string) error {
-	defaultsPath := distribution.GetDefaultsPath(repoPath)
-
-	defaultedFuryctlConfPath, err := mergeWithDefaults(path, defaultsPath)
-	if err != nil {
-		return err
-	}
-
-	defer checkError(osx.CleanupTempDir(filepath.Base(defaultedFuryctlConfPath)))
-
 	miniConf, err := loadFromFile(path)
 	if err != nil {
 		return err
@@ -122,7 +112,7 @@ func Validate(path, repoPath string) error {
 		return fmt.Errorf("error loading schema: %w", err)
 	}
 
-	conf, err := yamlx.FromFileV3[any](defaultedFuryctlConfPath)
+	conf, err := yamlx.FromFileV3[any](path)
 	if err != nil {
 		return err
 	}
