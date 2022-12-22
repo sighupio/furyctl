@@ -147,6 +147,7 @@ func clusterTemplate(config *Configuration) error {
 					},
 				},
 			},
+			NodePoolsLaunchKind: "# either `launch_configurations`, `launch_templates` or `both`. For new clusters use `launch_templates`, for existing cluster you'll need to migrate from `launch_configurations` to `launch_templates` using `both` as interim.",
 			NodePools: []clustercfg.EKSNodePool{
 				{
 					Name:         "my-node-pool. Required. Name of the node pool",

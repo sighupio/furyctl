@@ -32,7 +32,7 @@ You can find `furyctl` binaries on the [Releases page](https://github.com/sighup
 To download the latest release, run:
 
 ```bash
-wget -q "https://github.com/sighupio/furyctl/releases/download/v0.8.0/furyctl-$(uname -s)-amd64" -O /tmp/furyctl
+wget -q "https://github.com/sighupio/furyctl/releases/download/v0.9.0/furyctl-$(uname -s)-amd64" -O /tmp/furyctl
 chmod +x /tmp/furyctl
 sudo mv /tmp/furyctl /usr/local/bin/furyctl
 ```
@@ -60,14 +60,13 @@ Check that everything is working correctly with `furyctl version`:
 
 ```bash
 furyctl version
-INFO[0000] Furyctl version 0.8.0
-INFO[0000] built 2022-09-13T16:52:19Z from commit b3c9df89803ed7a4fe4a05d6c3eb859cc00276b6
+INFO[0000] Furyctl version 0.9.0
 ```
 
 > 💡 **TIP**
 >
-> Enable autocompletion for `furyctl` cli on your shell (currently autocompletion is supported for `bash`, `zsh`, `fish`).
-> To see the instruction to enable it, run `furyctl completion -h`
+> Enable autocompletion for `furyctl` CLI on your shell (currently autocompletion is provided for `bash`, `zsh`, `fish`).
+> To see the instruction on how to enable it, run `furyctl completion -h`
 
 ## Usage
 
@@ -290,7 +289,7 @@ Before contributing, please read first the [Contributing Guidelines](docs/CONTRI
 
 ### Reporting Issues
 
-In case you experience any problem with the module, please [open a new issue](https://github.com/sighupio/furyctl/issues/new/choose).
+In case you experience any problems, please [open a new issue](https://github.com/sighupio/furyctl/issues/new/choose).
 
 ## License
 

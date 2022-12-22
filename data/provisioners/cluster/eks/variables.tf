@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2020 SIGHUP s.r.l All rights reserved.
+ * Copyright (c) 2017-present SIGHUP s.r.l All rights reserved.
  * Use of this source code is governed by a BSD-style
  * license that can be found in the LICENSE file.
  */
@@ -14,6 +14,10 @@ variable "cluster_version" {
   description = "Kubernetes Cluster Version. Look at the cloud providers documentation to discover available versions. EKS example -> 1.16, GKE example -> 1.16.8-gke.9"
 }
 
+variable "cluster_log_retention_days" {
+  type = number
+  default = 90
+}
 variable "network" {
   type        = string
   description = "Network where the Kubernetes cluster will be hosted"
@@ -60,6 +64,11 @@ variable "node_pools" {
     }))
   }))
   default = []
+}
+
+variable "node_pools_launch_kind" {
+  type = string
+  description = "Choose if the node pools will use launch_configurations, launch_templates or both"
 }
 
 variable "tags" {

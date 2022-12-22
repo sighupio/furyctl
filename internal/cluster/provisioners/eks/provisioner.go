@@ -1,4 +1,4 @@
-// Copyright (c) 2022 SIGHUP s.r.l All rights reserved.
+// Copyright (c) 2017-present SIGHUP s.r.l All rights reserved.
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
@@ -22,12 +22,12 @@ import (
 
 // InitMessage return a custom provisioner message the user will see once the cluster is ready to be updated
 func (e *EKS) InitMessage() string {
-	return `[EKS] Fury
+	return `Kubernetes Fury EKS
 
-This provisioner creates a battle-tested AWS EKS Kubernetes Cluster
-with a private and production-grade setup.
+This provisioner creates a battle-tested Kubernetes Fury Cluster based on AWS EKS
+with a private control plane and a production-grade setup.
 
-Requires to connect to a VPN server to deploy the cluster from this computer.
+Requires network connectivity to the target VPC (like a VPN connection) to deploy the cluster.
 Use a bastion host (inside the EKS VPC) as an alternative method to deploy the cluster.
 
 The provisioner requires the following software installed:
@@ -55,22 +55,24 @@ func (e *EKS) UpdateMessage() string {
 		log.Error("Can not get `operator_ssh_user` value")
 	}
 	return fmt.Sprintf(
-		`[EKS] Fury
+		`Kubernetes Fury EKS
 
 All the cluster components are up to date.
-EKS Kubernetes cluster ready.
+
+Kubernetes Fury EKS cluster is ready.
 
 EKS Cluster Endpoint: %v
 SSH Operator Name: %v
 
 Use the ssh %v username to access the EKS instances with the configured SSH key.
+
 Discover the instances by running
 
 $ kubectl get nodes
 
-Then access by running:
+Then access them by running:
 
-$ ssh %v@node-name-reported-by-kubectl-get-nodes
+$ ssh %v@<node-name-reported-by-kubectl-get-nodes>
 
 `, clusterEndpoint, clusterOperatorName, clusterOperatorName, clusterOperatorName,
 	)
@@ -78,11 +80,13 @@ $ ssh %v@node-name-reported-by-kubectl-get-nodes
 
 // DestroyMessage return a custom provisioner message the user will see once the cluster is destroyed
 func (e *EKS) DestroyMessage() string {
-	return `[EKS] Fury
+	return `Kubernetes Fury EKS
+
 All cluster components were destroyed.
+
 EKS control plane and workers went away.
 
-Had problems, contact us at sales@sighup.io.
+If you faced any problems, please contact support if you have a subscription or write us to sales@sighup.io.
 `
 }
 
@@ -108,7 +112,7 @@ func (e EKS) createVarFile() (err error) {
 	buffer.WriteString(fmt.Sprintf("cluster_name = \"%v\"\n", e.config.Metadata.Name))
 	buffer.WriteString(fmt.Sprintf("cluster_version = \"%v\"\n", spec.Version))
 	if spec.LogRetentionDays != 0 {
-		buffer.WriteString(fmt.Sprintf("cluster_log_retention_in_days = %v\n", spec.LogRetentionDays))
+		buffer.WriteString(fmt.Sprintf("cluster_log_retention_days = %v\n", spec.LogRetentionDays))
 	}
 	buffer.WriteString(fmt.Sprintf("network = \"%v\"\n", spec.Network))
 	buffer.WriteString(fmt.Sprintf("subnetworks = [\"%v\"]\n", strings.Join(spec.SubNetworks, "\",\"")))
@@ -265,6 +269,14 @@ func (e EKS) createVarFile() (err error) {
 		}
 		buffer.WriteString("]\n")
 	}
+	// For this version we will check for this field value to be present, otherwise we could trigger an unwanted rollout of the node pools for existing clusters.
+	// The switch from launch configurations to launch templates for the Node Pools requires some manual intervention.
+	// We could automate this away though.
+	if spec.NodePoolsLaunchKind == "" {
+		log.Fatalf(".spec.nodePoolsKind is not set in the cluster configuration file. Please set it explicitly to `launch_configurations`, `launch_templates` or `both` to avoid unwanted node pools rollouts. For new clusters you can use `launch_templates`, for existing clusters please check the Fury EKS Installer docs: https://github.com/sighupio/fury-eks-installer/blob/master/docs/upgrades/v1.9-to-v1.10.0.md")
+	} else {
+		buffer.WriteString(fmt.Sprintf("node_pools_launch_kind = \"%v\"\n", spec.NodePoolsLaunchKind))
+	}
 	err = ioutil.WriteFile(fmt.Sprintf("%v/eks.tfvars", e.terraform.WorkingDir()), buffer.Bytes(), 0600)
 	if err != nil {
 		return err
@@ -331,11 +343,11 @@ func (e EKS) Plan() (err error) {
 		tfexec.VarFile(fmt.Sprintf("%v/eks.tfvars", e.terraform.WorkingDir())),
 	)
 	if err != nil {
-		log.Fatalf("[DRYRUN] Something went wrong while updating eks. %v", err)
+		log.Fatalf("[DRYRUN] Got error while updating EKS: %v", err)
 		return err
 	}
 	if changes {
-		log.Warn("[DRYRUN] Something changed along the time. Remove dryrun option to apply the desired state")
+		log.Warn("[DRYRUN] Something has changed in the mean time. Remove --dry-run flag to apply the desired state")
 	} else {
 		log.Info("[DRYRUN] Everything is up to date")
 	}
@@ -356,7 +368,7 @@ func (e EKS) Update() (string, error) {
 		tfexec.VarFile(fmt.Sprintf("%v/eks.tfvars", e.terraform.WorkingDir())),
 	)
 	if err != nil {
-		log.Fatalf("Something went wrong while updating eks. %v", err)
+		log.Fatalf("Got error while updating EKS: %v", err)
 		return "", err
 	}
 
@@ -376,7 +388,7 @@ func (e EKS) Destroy() (err error) {
 		tfexec.VarFile(fmt.Sprintf("%v/eks.tfvars", e.terraform.WorkingDir())),
 	)
 	if err != nil {
-		log.Fatalf("Something went wrong while destroying EKS cluster project. %v", err)
+		log.Fatalf("Got error while destroying EKS cluster project: %v", err)
 		return err
 	}
 	log.Info("EKS destroyed")

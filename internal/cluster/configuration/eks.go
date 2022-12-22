@@ -1,4 +1,4 @@
-// Copyright (c) 2022 SIGHUP s.r.l All rights reserved.
+// Copyright (c) 2017-present SIGHUP s.r.l All rights reserved.
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
@@ -6,15 +6,16 @@ package configuration
 
 // EKS represents the configuration spec of a EKS Cluster
 type EKS struct {
-	Version          string            `yaml:"version"`
-	Network          string            `yaml:"network"`
-	SubNetworks      []string          `yaml:"subnetworks"`
-	DMZCIDRRange     DMZCIDRRange      `yaml:"dmzCIDRRange"`
-	SSHPublicKey     string            `yaml:"sshPublicKey"`
-	NodePools        []EKSNodePool     `yaml:"nodePools"`
-	Tags             map[string]string `yaml:"tags"`
-	Auth             EKSAuth           `yaml:"auth"`
-	LogRetentionDays int               `yaml:"logRetentionDays"`
+	Version             string            `yaml:"version"`
+	Network             string            `yaml:"network"`
+	SubNetworks         []string          `yaml:"subnetworks"`
+	DMZCIDRRange        DMZCIDRRange      `yaml:"dmzCIDRRange"`
+	SSHPublicKey        string            `yaml:"sshPublicKey"`
+	NodePools           []EKSNodePool     `yaml:"nodePools"`
+	NodePoolsLaunchKind string            `yaml:"nodePoolsLaunchKind"`
+	Tags                map[string]string `yaml:"tags"`
+	Auth                EKSAuth           `yaml:"auth"`
+	LogRetentionDays    int               `yaml:"logRetentionDays"`
 }
 
 // EKSAuth represent a auth structure
