@@ -32,8 +32,6 @@ var (
 	errKubeconfigFromLogs = errors.New("can't get kubeconfig from terraform apply logs")
 	errPvtSubnetNotFound  = errors.New("private_subnets not found in infra output")
 	errPvtSubnetFromOut   = errors.New("cannot read private_subnets from infrastructure's output.json")
-	errVpcCIDRFromOut     = errors.New("cannot read vpc_cidr_block from infrastructure's output.json")
-	errVpcCIDRNotFound    = errors.New("vpc_cidr_block not found in infra output")
 )
 
 type Kubernetes struct {
@@ -244,7 +242,6 @@ func (k *Kubernetes) createTfVars() error {
 
 	subnetIdsSource := k.furyctlConf.Spec.Kubernetes.SubnetIds
 	vpcIDSource := k.furyctlConf.Spec.Kubernetes.VpcId
-	allowedCidrsSource := k.furyctlConf.Spec.Kubernetes.ApiServerEndpointAccess.AllowedCidrs
 
 	if infraOutJSON, err := os.ReadFile(path.Join(k.infraOutputsPath, "output.json")); err == nil {
 		var infraOut terraform.OutputJSON
@@ -268,15 +265,6 @@ func (k *Kubernetes) createTfVars() error {
 				return ErrVpcIDFromOut
 			}
 
-			if infraOut.Outputs["vpc_cidr_block"] == nil {
-				return errVpcCIDRNotFound
-			}
-
-			c, ok := infraOut.Outputs["vpc_cidr_block"].Value.(string)
-			if !ok {
-				return errVpcCIDRFromOut
-			}
-
 			subs := make([]schema.TypesAwsSubnetId, len(s))
 
 			for i, sub := range s {
@@ -290,7 +278,6 @@ func (k *Kubernetes) createTfVars() error {
 
 			subnetIdsSource = subs
 			vpcIDSource = schema.TypesAwsVpcId(v)
-			allowedCidrsSource = []schema.TypesCidr{schema.TypesCidr(c)}
 		}
 	}
 
@@ -316,17 +303,6 @@ func (k *Kubernetes) createTfVars() error {
 	}
 
 	_, err = buffer.WriteString(fmt.Sprintf("subnetworks = [%v]\n", strings.Join(subnetIds, ",")))
-	if err != nil {
-		return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
-	}
-
-	dmzCidrRange := make([]string, len(allowedCidrsSource))
-
-	for i, cidr := range allowedCidrsSource {
-		dmzCidrRange[i] = fmt.Sprintf("\"%v\"", cidr)
-	}
-
-	_, err = buffer.WriteString(fmt.Sprintf("dmz_cidr_range = [%v]\n", strings.Join(dmzCidrRange, ",")))
 	if err != nil {
 		return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
 	}
