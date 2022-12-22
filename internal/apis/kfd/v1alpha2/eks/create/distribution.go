@@ -457,7 +457,7 @@ func (d *Distribution) copyFromTemplate(cfg template.Config) error {
 	}
 
 	templateModel, err := template.NewTemplateModel(
-		path.Join(d.distroPath, "source"),
+		path.Join(d.distroPath, "templates", "distribution"),
 		path.Join(d.Path),
 		confPath,
 		outDirPath,
