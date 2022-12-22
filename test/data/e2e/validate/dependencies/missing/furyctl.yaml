@@ -78,7 +78,7 @@ spec:
     apiServerEndpointAccess:
       type: private
       allowedCidrs:
-        - 10.0.0.3/16
+        - 10.0.0.0/16
     nodeAllowedSshPublicKey: "ssh-ed25519 XYZ"
     nodePools:
       - name: worker
