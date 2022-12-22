@@ -75,71 +75,65 @@ spec:
       - subnet-0ab84702287e38ccb
       - subnet-0ae4e9199d9192226
       - subnet-01787e8da51e4f070
-    apiServerEndpointAccess:
-     # by default all clusters are created with a private control plane - (needs to be added to the installer's options)
-     type: "private"
-     # cidr allowed to talk with the apiServer
-     allowedCidrs:
-       - 10.1.0.0/16
-     nodeAllowedSshPublicKey: "ssh-ed25519 XYZ"
-     nodePools:
-       - name: worker
-         # optional, was OS, and version was removed
-         ami:
-           id: null
-           owner: null
-         # sizing, with a more hierarchical structure
-         size:
-           min: 1
-           max: 3
-         instance:
-           type: t3.micro
-           # optional, this enable spot instances on the ASG
-           spot: false
-           volumeSize: 50
-         # optional, this parameter is used when external target groups are attached to the ASG, otherwise everytime furyctl executes the target groups will be removed
-         attachedTargetGroups:
-           - arn:aws:elasticloadbalancing:eu-west-1:026908869948:targetgroup/adv-staging-external-nginx/6294703cfe87d756
-           - arn:aws:elasticloadbalancing:eu-west-1:026908869948:targetgroup/adv-staging-internal-nginx/81625fbe0462e332
-         # labels that are added to the nodes
-         labels:
-           nodepool: worker
-           node.kubernetes.io/role: worker
-         # optional, taints added to the nodes
-         taints:
-           - node.kubernetes.io/role=worker:NoSchedule
-         # tags added to the ASG
-         tags:
-           k8s.io/cluster-autoscaler/node-template/label/nodepool: "worker"
-           k8s.io/cluster-autoscaler/node-template/label/node.kubernetes.io/role: "worker"
-         # additional rules added to the ASG nodes security group
-         additionalFirewallRules:
-           - name: traffic_80_from_172_31_0_0_16
-             type: ingress
-             cidrBlocks:
-               - 172.31.0.0/16
-             protocol: TCP
-             ports:
-               from: 80
-               to: 80
-     # aws-auth configmap definiton
-     awsAuth:
-       # Additional AWS account id to add to the aws-auth configmap, optional
-       additionalAccounts:
-         - "777777777777"
-         - "88888888888"
-       # Additional users to add to the aws-auth configmap, optional
-       users:
-         - username: "samuele"
-           groups:
-             - system:masters
-           userarn: "arn:aws:iam::363601582189:user/samuele"
-       # Additional roles to add to the aws-auth configmap, optional
-       roles:
-         - username: "sighup-support"
-           groups:
-             - sighup-support:masters
-           rolearn: "arn:aws:iam::363601582189:role/k8s-sighup-support-role"
+    nodeAllowedSshPublicKey: "ssh-ed25519 XYZ"
+    nodePools:
+      - name: worker
+        # optional, was OS, and version was removed
+        ami:
+          id: null
+          owner: null
+        # sizing, with a more hierarchical structure
+        size:
+          min: 1
+          max: 3
+        instance:
+          type: t3.micro
+          # optional, this enable spot instances on the ASG
+          spot: false
+          volumeSize: 50
+        # optional, this parameter is used when external target groups are attached to the ASG, otherwise everytime furyctl executes the target groups will be removed
+        attachedTargetGroups:
+          - arn:aws:elasticloadbalancing:eu-west-1:026908869948:targetgroup/adv-staging-external-nginx/6294703cfe87d756
+          - arn:aws:elasticloadbalancing:eu-west-1:026908869948:targetgroup/adv-staging-internal-nginx/81625fbe0462e332
+        # labels that are added to the nodes
+        labels:
+          nodepool: worker
+          node.kubernetes.io/role: worker
+        # optional, taints added to the nodes
+        taints:
+          - node.kubernetes.io/role=worker:NoSchedule
+        # tags added to the ASG
+        tags:
+          k8s.io/cluster-autoscaler/node-template/label/nodepool: "worker"
+          k8s.io/cluster-autoscaler/node-template/label/node.kubernetes.io/role: "worker"
+        # additional rules added to the ASG nodes security group
+        additionalFirewallRules:
+          - name: traffic_80_from_172_31_0_0_16
+            type: ingress
+            cidrBlocks:
+              - 172.31.0.0/16
+            protocol: TCP
+            ports:
+              from: 80
+              to: 80
+    # aws-auth configmap definiton
+    awsAuth:
+      # Additional AWS account id to add to the aws-auth configmap, optional
+      additionalAccounts:
+        - "777777777777"
+        - "88888888888"
+      # Additional users to add to the aws-auth configmap, optional
+      users:
+        - username: "samuele"
+          groups:
+            - system:masters
+          userarn: "arn:aws:iam::363601582189:user/samuele"
+      # Additional roles to add to the aws-auth configmap, optional
+      roles:
+        - username: "sighup-support"
+          groups:
+            - sighup-support:masters
+          rolearn: "arn:aws:iam::363601582189:role/k8s-sighup-support-role"
   # distribution configuration, a subset of the `furyctl-defaults.yaml` file and some additional configurations for prerequisites
   # in this phase we are managing the kustomize project AND the terraform prerequisites for the distro modules
   distribution:

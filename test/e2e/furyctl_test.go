@@ -125,7 +125,7 @@ var (
 	_ = Describe("furyctl", func() {
 		Context("version display", func() {
 			It("should print its version information", func() {
-				out, err := RunCmd(furyctl, "version", "--disable-analytics", "true")
+				out, err := RunCmd(furyctl, "version", "--disable-analytics", "--log", "stdout")
 
 				Expect(err).To(Not(HaveOccurred()))
 				Expect(out).To(ContainSubstring(
@@ -191,6 +191,7 @@ var (
 					"--bin-path", binpath,
 					"--debug",
 					"--disable-analytics", "true",
+					"--log", "stdout",
 				)
 			}
 
@@ -288,7 +289,8 @@ var (
 					"--distro-location", absBasepath+"/distro",
 					"--workdir", absBasepath,
 					"--debug",
-					"--disable-analytics", "true",
+					"--disable-analytics",
+					"--log", "stdout",
 				)
 			}
 
@@ -332,7 +334,13 @@ var (
 		Context("template dump", func() {
 			basepath := "../data/e2e/dump/template"
 			FuryctlDumpTemplate := func(workdir string, dryRun bool) (string, error) {
-				args := []string{"dump", "template", "--debug", "--workdir", workdir, "--disable-analytics", "true"}
+				args := []string{
+					"dump", "template",
+					"--debug",
+					"--workdir", workdir,
+					"--disable-analytics",
+					"--log", "stdout",
+				}
 				if dryRun {
 					args = append(args, "--dry-run")
 				}
@@ -441,6 +449,7 @@ var (
 					"--disable-analytics", "true",
 					"--distro-location", absBasepath+"/distro",
 					"--version", "1.24.1",
+					"--log", "stdout",
 				)
 			}
 			Setup := func(folder string) string {
@@ -590,9 +599,10 @@ func patchFuryctlYaml(furyctlYamlPath string) (string, error) {
 		return "", err
 	}
 
-	newKeyPrefix := fmt.Sprintf("keyPrefix: furyctl-%d-%d/", time.Now().UTC().Unix(), rand.Int())
+	// we need to cap the string to 36 chars due to the s3 key prefix limit
+	newKeyPrefix := fmt.Sprintf("furyctl-%d-%d", time.Now().UTC().Unix(), rand.Int())[0:36]
 
-	furyctlYaml = bytes.ReplaceAll(furyctlYaml, []byte("keyPrefix: furyctl/"), []byte(newKeyPrefix))
+	furyctlYaml = bytes.ReplaceAll(furyctlYaml, []byte("keyPrefix: furyctl/"), []byte("keyPrefix: "+newKeyPrefix+"/"))
 
 	// create a temporary file to write the patched furyctl.yaml
 	tmpFile, err := os.CreateTemp("", "furyctl.yaml")
