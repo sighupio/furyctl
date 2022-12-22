@@ -172,7 +172,7 @@ func (i *Infrastructure) isVpnConfigured() bool {
 
 	instances := i.furyctlConf.Spec.Infrastructure.Vpc.Vpn.Instances
 	if instances == nil {
-		return false
+		return true
 	}
 
 	return *instances > 0

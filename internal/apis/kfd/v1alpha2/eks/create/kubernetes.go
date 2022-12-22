@@ -35,6 +35,9 @@ var (
 	errPvtSubnetFromOut   = errors.New("cannot read private_subnets from infrastructure's output.json")
 	errVpcCIDRFromOut     = errors.New("cannot read vpc_cidr_block from infrastructure's output.json")
 	errVpcCIDRNotFound    = errors.New("vpc_cidr_block not found in infra output")
+	errVpcIDNotFound      = errors.New(
+		"vpc_id not found in kubernetes spec or something went wrong in infrastructure phase",
+	)
 )
 
 const (
@@ -243,7 +246,7 @@ func (k *Kubernetes) copyKubeconfigToWorkDir() error {
 	return nil
 }
 
-//nolint:gocyclo,maintidx,gocognit // it will be refactored
+//nolint:gocyclo,maintidx,gocognit,funlen,revive // it will be refactored
 func (k *Kubernetes) createTfVars() error {
 	var buffer bytes.Buffer
 
@@ -312,7 +315,7 @@ func (k *Kubernetes) createTfVars() error {
 
 	if vpcIDSource == nil {
 		if !k.dryRun {
-			return fmt.Errorf("vpc id not found, something went wrong")
+			return errVpcIDNotFound
 		}
 
 		vpcIDSource = new(schema.TypesAwsVpcId)
