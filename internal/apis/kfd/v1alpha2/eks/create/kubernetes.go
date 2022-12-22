@@ -292,6 +292,14 @@ func (k *Kubernetes) createTfVars() error {
 		return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
 	}
 
+	if vpcIDSource == nil {
+		if !k.dryRun {
+			return fmt.Errorf("vpc id not found, something went wrong")
+		}
+
+		vpcIDSource = new(schema.TypesAwsVpcId)
+	}
+
 	_, err = buffer.WriteString(fmt.Sprintf("network = \"%v\"\n", *vpcIDSource))
 	if err != nil {
 		return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
