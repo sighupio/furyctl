@@ -76,6 +76,10 @@ spec:
       - subnet-0ab84702287e38ccb
       - subnet-0ae4e9199d9192226
       - subnet-01787e8da51e4f070
+    apiServerEndpointAccess:
+      type: private
+      allowedCidrs:
+        - 10.0.0.3/16
     nodeAllowedSshPublicKey: "ssh-ed25519 XYZ"
     nodePools:
       - name: worker
