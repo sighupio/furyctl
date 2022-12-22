@@ -87,7 +87,7 @@ func (dd *Downloader) DownloadModules(modules config.KFDModules) error {
 		retries := map[string]int{}
 
 		for _, prefix := range []string{oldPrefix, newPrefix} {
-			src := fmt.Sprintf("git@github.com:sighupio/git::%s-%s.git?ref=%s", prefix, name, version)
+			src := fmt.Sprintf("git::git@github.com:sighupio/%s-%s.git?ref=%s", prefix, name, version)
 
 			req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, createURL(prefix, name, version), nil)
 			if err != nil {
