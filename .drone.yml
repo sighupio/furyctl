@@ -71,7 +71,7 @@ steps:
 
   - &integration
     name: integration-gcp-gke
-    image: quay.io/sighup/e2e-furyctl:v1.2.1_v0.2.2_v1.20.1_20.04
+    image: quay.io/sighup/e2e-furyctl:v1.2.1_v0.3.0_v1.24.9_20.04
     depends_on:
       - build
     environment:
@@ -97,7 +97,7 @@ steps:
 
   - &e2e
     name: e2e-gcp
-    image: quay.io/sighup/e2e-furyctl:v1.2.1_v0.2.2_v1.20.1_20.04
+    image: quay.io/sighup/e2e-furyctl:v1.2.1_v0.3.0_v1.24.9_20.04
     pull: always
     privileged: true # Required to connect to the VPN
     depends_on:
