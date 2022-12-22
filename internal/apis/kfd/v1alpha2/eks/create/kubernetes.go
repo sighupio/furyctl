@@ -13,6 +13,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 
@@ -32,6 +33,10 @@ var (
 	errKubeconfigFromLogs = errors.New("can't get kubeconfig from terraform apply logs")
 	errPvtSubnetNotFound  = errors.New("private_subnets not found in infra output")
 	errPvtSubnetFromOut   = errors.New("cannot read private_subnets from infrastructure's output.json")
+)
+
+const (
+	nodePoolDefaultVolumeSize = 100
 )
 
 type Kubernetes struct {
@@ -236,7 +241,7 @@ func (k *Kubernetes) copyKubeconfigToWorkDir() error {
 	return nil
 }
 
-//nolint:gocyclo,maintidx // it will be refactored
+//nolint:gocyclo,maintidx,gocognit // it will be refactored
 func (k *Kubernetes) createTfVars() error {
 	var buffer bytes.Buffer
 
@@ -337,71 +342,73 @@ func (k *Kubernetes) createTfVars() error {
 		}
 	}
 
-	if len(k.furyctlConf.Spec.Kubernetes.AwsAuth.AdditionalAccounts) > 0 {
-		_, err = buffer.WriteString(
-			fmt.Sprintf(
-				"eks_map_accounts = [\"%v\"]\n",
-				strings.Join(k.furyctlConf.Spec.Kubernetes.AwsAuth.AdditionalAccounts, "\",\""),
-			),
-		)
-		if err != nil {
-			return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
-		}
-	}
-
-	if len(k.furyctlConf.Spec.Kubernetes.AwsAuth.Users) > 0 {
-		_, err = buffer.WriteString("eks_map_users = [\n")
-		if err != nil {
-			return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
-		}
-
-		for _, account := range k.furyctlConf.Spec.Kubernetes.AwsAuth.Users {
+	if k.furyctlConf.Spec.Kubernetes.AwsAuth != nil {
+		if len(k.furyctlConf.Spec.Kubernetes.AwsAuth.AdditionalAccounts) > 0 {
 			_, err = buffer.WriteString(
 				fmt.Sprintf(
-					`{
+					"eks_map_accounts = [\"%v\"]\n",
+					strings.Join(k.furyctlConf.Spec.Kubernetes.AwsAuth.AdditionalAccounts, "\",\""),
+				),
+			)
+			if err != nil {
+				return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
+			}
+		}
+
+		if len(k.furyctlConf.Spec.Kubernetes.AwsAuth.Users) > 0 {
+			_, err = buffer.WriteString("eks_map_users = [\n")
+			if err != nil {
+				return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
+			}
+
+			for _, account := range k.furyctlConf.Spec.Kubernetes.AwsAuth.Users {
+				_, err = buffer.WriteString(
+					fmt.Sprintf(
+						`{
 						groups = ["%v"]
 						username = "%v"
 						userarn = "%v"
 					},`,
-					strings.Join(account.Groups, "\",\""), account.Username, account.Userarn,
-				),
-			)
+						strings.Join(account.Groups, "\",\""), account.Username, account.Userarn,
+					),
+				)
+				if err != nil {
+					return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
+				}
+			}
+
+			_, err = buffer.WriteString("]\n")
 			if err != nil {
 				return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
 			}
 		}
 
-		_, err = buffer.WriteString("]\n")
-		if err != nil {
-			return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
-		}
-	}
+		if len(k.furyctlConf.Spec.Kubernetes.AwsAuth.Roles) > 0 {
+			_, err = buffer.WriteString("eks_map_roles = [\n")
+			if err != nil {
+				return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
+			}
 
-	if len(k.furyctlConf.Spec.Kubernetes.AwsAuth.Roles) > 0 {
-		_, err = buffer.WriteString("eks_map_roles = [\n")
-		if err != nil {
-			return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
-		}
-
-		for _, account := range k.furyctlConf.Spec.Kubernetes.AwsAuth.Roles {
-			_, err = buffer.WriteString(
-				fmt.Sprintf(
-					`{
+			for _, account := range k.furyctlConf.Spec.Kubernetes.AwsAuth.Roles {
+				_, err = buffer.WriteString(
+					fmt.Sprintf(
+						`{
 						groups = ["%v"]
 						username = "%v"
 						rolearn = "%v"
 					},`,
-					strings.Join(account.Groups, "\",\""), account.Username, account.Rolearn,
-				),
-			)
+						strings.Join(account.Groups, "\",\""), account.Username, account.Rolearn,
+					),
+				)
+				if err != nil {
+					return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
+				}
+			}
+
+			_, err = buffer.WriteString("]\n")
 			if err != nil {
 				return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
 			}
-		}
-
-		_, err = buffer.WriteString("]\n")
-		if err != nil {
-			return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
 		}
 	}
 
@@ -427,7 +434,13 @@ func (k *Kubernetes) createTfVars() error {
 				return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
 			}
 
-			_, err = buffer.WriteString(fmt.Sprintf("spot_instance = %v\n", np.Instance.Spot))
+			spot := "null"
+
+			if np.Instance.Spot != nil {
+				spot = strconv.FormatBool(*np.Instance.Spot)
+			}
+
+			_, err = buffer.WriteString(fmt.Sprintf("spot_instance = %v\n", spot))
 			if err != nil {
 				return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
 			}
@@ -464,7 +477,13 @@ func (k *Kubernetes) createTfVars() error {
 				}
 			}
 
-			_, err = buffer.WriteString(fmt.Sprintf("volume_size = %v\n", np.Instance.VolumeSize))
+			volumeSize := nodePoolDefaultVolumeSize
+
+			if np.Instance.VolumeSize != nil {
+				volumeSize = *np.Instance.VolumeSize
+			}
+
+			_, err = buffer.WriteString(fmt.Sprintf("volume_size = %v\n", volumeSize))
 			if err != nil {
 				return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
 			}

@@ -333,14 +333,16 @@ func (i *Infrastructure) addVpnDataToTfVars(buffer *bytes.Buffer) error {
 		return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
 	}
 
-	_, err = buffer.WriteString(
-		fmt.Sprintf(
-			"vpn_instances = %v\n",
-			*i.furyctlConf.Spec.Infrastructure.Vpc.Vpn.Instances,
-		),
-	)
-	if err != nil {
-		return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
+	if i.furyctlConf.Spec.Infrastructure.Vpc.Vpn.Instances != nil {
+		_, err = buffer.WriteString(
+			fmt.Sprintf(
+				"vpn_instances = %v\n",
+				*i.furyctlConf.Spec.Infrastructure.Vpc.Vpn.Instances,
+			),
+		)
+		if err != nil {
+			return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
+		}
 	}
 
 	if i.furyctlConf.Spec.Infrastructure.Vpc.Vpn.Port != nil && *i.furyctlConf.Spec.Infrastructure.Vpc.Vpn.Port != 0 {
