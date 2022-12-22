@@ -20,7 +20,7 @@ import (
 )
 
 func Test_Kubectl_SupportsDownload(t *testing.T) {
-	a := tools.NewKubectl(newKubectlRunner(), "1.23.10")
+	a := tools.NewKubectl(newKubectlRunner(), "1.24.9")
 
 	if a.SupportsDownload() != true {
 		t.Errorf("kubectl download must be supported")
@@ -28,19 +28,19 @@ func Test_Kubectl_SupportsDownload(t *testing.T) {
 }
 
 func Test_Kubectl_SrcPath(t *testing.T) {
-	wantSrcPath := fmt.Sprintf("https://dl.k8s.io/release/v1.23.10/bin/%s/amd64/kubectl", runtime.GOOS)
+	wantSrcPath := fmt.Sprintf("https://dl.k8s.io/release/v1.24.9/bin/%s/amd64/kubectl", runtime.GOOS)
 
 	testCases := []struct {
 		desc    string
 		version string
 	}{
 		{
-			desc:    "1.23.10",
-			version: "1.23.10",
+			desc:    "1.24.9",
+			version: "1.24.9",
 		},
 		{
-			desc:    "v1.23.10",
-			version: "v1.23.10",
+			desc:    "v1.24.9",
+			version: "v1.24.9",
 		},
 	}
 	for _, tC := range testCases {
@@ -63,7 +63,7 @@ func Test_Kubectl_Rename(t *testing.T) {
 		t.Fatalf("error creating temp file: %v", err)
 	}
 
-	fa := tools.NewKubectl(newKubectlRunner(), "1.23.10")
+	fa := tools.NewKubectl(newKubectlRunner(), "1.24.9")
 
 	if err := fa.Rename(tmpDir); err != nil {
 		t.Fatalf("Error renaming kubectl binary: %v", err)

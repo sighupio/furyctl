@@ -41,10 +41,10 @@ The generated folder will be created starting from a provided template and the p
 			cmdEvent = analytics.NewCommandEvent(cobrax.GetFullname(cmd))
 		},
 		RunE: func(_ *cobra.Command, _ []string) error {
-			source := "source"
+			source := "templates/distribution"
 			target := "target"
 			suffix := ".tpl"
-			distributionFilePath := "distribution.yaml"
+			distributionFilePath := "furyctl-defaults.yaml"
 			furyctlFilePath := "furyctl.yaml"
 
 			distributionFile, err := yamlx.FromFileV2[map[any]any](distributionFilePath)

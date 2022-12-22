@@ -41,7 +41,7 @@ func Test_Validator_Validate(t *testing.T) {
 				Tools: config.KFDTools{
 					Common: config.Common{
 						Kubectl:   config.Tool{Version: "1.22.0"},
-						Kustomize: config.Tool{Version: "3.10.0"},
+						Kustomize: config.Tool{Version: "3.5.3"},
 						Terraform: config.Tool{Version: "1.3.0"},
 						Furyagent: config.Tool{Version: "0.4.0"},
 					},
@@ -50,7 +50,7 @@ func Test_Validator_Validate(t *testing.T) {
 			wantErrs: []error{
 				errors.New("furyagent: wrong tool version - installed = 0.3.0, expected = 0.4.0"),
 				errors.New("kubectl: wrong tool version - installed = 1.21.1, expected = 1.22.0"),
-				errors.New("kustomize: wrong tool version - installed = 3.9.4, expected = 3.10.0"),
+				errors.New("kustomize: wrong tool version - installed = 3.9.4, expected = 3.5.3"),
 				errors.New("terraform: wrong tool version - installed = 0.15.4, expected = 1.3.0"),
 			},
 		},

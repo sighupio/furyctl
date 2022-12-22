@@ -9,7 +9,7 @@ metadata:
   name: awesome-cluster-staging
 spec:
   # with this version we will download the kfd.yaml file from the distribution to gather all the other components versions
-  distributionVersion: v1.23.3
+  distributionVersion: v1.24.1
   # Under the hood, furyctl uses other tools like terraform, kustomize, etc
   toolsConfiguration:
     terraform:
@@ -140,7 +140,7 @@ spec:
            groups:
              - sighup-support:masters
            rolearn: "arn:aws:iam::363601582189:role/k8s-sighup-support-role"
-  # distribution configuration, a subset of the `distribution.yaml` file and some additional configurations for prerequisites
+  # distribution configuration, a subset of the `furyctl-defaults.yaml` file and some additional configurations for prerequisites
   # in this phase we are managing the kustomize project AND the terraform prerequisites for the distro modules
   distribution:
     common:

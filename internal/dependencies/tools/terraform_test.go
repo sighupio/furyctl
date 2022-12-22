@@ -20,7 +20,7 @@ import (
 )
 
 func Test_Terraform_SupportsDownload(t *testing.T) {
-	a := tools.NewTerraform(newTerraformRunner(), "3.10.0")
+	a := tools.NewTerraform(newTerraformRunner(), "1.2.9")
 
 	if a.SupportsDownload() != true {
 		t.Errorf("terraform download must be supported")

@@ -239,10 +239,10 @@ var (
 					ContainSubstring("furyagent: wrong tool version - installed = 0.2.4, expected = 0.3.0"),
 				)
 				Expect(out).To(
-					ContainSubstring("kubectl: wrong tool version - installed = 1.23.7, expected = 1.23.10"),
+					ContainSubstring("kubectl: wrong tool version - installed = 1.24.7, expected = 1.24.9"),
 				)
 				Expect(out).To(
-					ContainSubstring("kustomize: wrong tool version - installed = 3.9.0, expected = 3.10.0"),
+					ContainSubstring("kustomize: wrong tool version - installed = 3.5.0, expected = 3.5.3"),
 				)
 				Expect(out).To(
 					ContainSubstring("terraform: wrong tool version - installed = 0.15.3, expected = 0.15.4"),
@@ -292,8 +292,8 @@ var (
 				)
 			}
 
-			It("should download all dependencies for v1.23.3", func() {
-				bp := basepath + "/v1.23.3"
+			It("should download all dependencies for v1.24.1", func() {
+				bp := basepath + "/v1.24.1"
 
 				homeDir, err := os.UserHomeDir()
 				Expect(err).To(Not(HaveOccurred()))
@@ -308,8 +308,8 @@ var (
 
 				Expect(err).To(Not(HaveOccurred()))
 				Expect(binP + "/furyagent/0.3.0/furyagent").To(BeAnExistingFile())
-				Expect(binP + "/kubectl/1.23.10/kubectl").To(BeAnExistingFile())
-				Expect(binP + "/kustomize/3.10.0/kustomize").To(BeAnExistingFile())
+				Expect(binP + "/kubectl/1.24.9/kubectl").To(BeAnExistingFile())
+				Expect(binP + "/kustomize/3.5.3/kustomize").To(BeAnExistingFile())
 				Expect(binP + "/terraform/0.15.4/terraform").To(BeAnExistingFile())
 				Expect(vp + "/installers/eks/README.md").To(BeAnExistingFile())
 				Expect(vp + "/installers/eks/modules/eks/main.tf").To(BeAnExistingFile())
@@ -354,7 +354,7 @@ var (
 				out, err := FuryctlDumpTemplate(bp, false)
 
 				Expect(err).To(HaveOccurred())
-				Expect(out).To(ContainSubstring("distribution.yaml: no such file or directory"))
+				Expect(out).To(ContainSubstring("furyctl-defaults.yaml: no such file or directory"))
 			})
 
 			It("fails if no furyctl.yaml file is found", func() {
@@ -366,7 +366,7 @@ var (
 				Expect(out).To(ContainSubstring("furyctl.yaml: no such file or directory"))
 			})
 
-			It("fails if no data properties are found in distribution.yaml file", func() {
+			It("fails if no data properties are found in furyctl-defaults.yaml file", func() {
 				bp := Setup("distribution-yaml-no-data-property")
 
 				out, err := FuryctlDumpTemplate(bp, false)
@@ -440,6 +440,7 @@ var (
 					"--debug",
 					"--disable-analytics", "true",
 					"--distro-location", absBasepath+"/distro",
+					"--version", "1.24.1",
 				)
 			}
 			Setup := func(folder string) string {
@@ -454,7 +455,9 @@ var (
 			It("scaffolds a new furyctl.yaml file", func() {
 				bp := Setup("default")
 
-				_, err := FuryctlCreateConfig(bp)
+				out, err := FuryctlCreateConfig(bp)
+
+				fmt.Println(out)
 
 				Expect(err).To(Not(HaveOccurred()))
 				Expect(bp + "/target/furyctl.yaml").To(BeAnExistingFile())

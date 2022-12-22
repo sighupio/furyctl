@@ -137,7 +137,7 @@ spec:
           groups:
             - sighup-support:masters
           rolearn: "arn:aws:iam::363601582189:role/k8s-sighup-support-role"
-  # distribution configuration, a subset of the `distribution.yaml` file and some additional configurations for prerequisites
+  # distribution configuration, a subset of the `furyctl-defaults.yaml` file and some additional configurations for prerequisites
   # in this phase we are managing the kustomize project AND the terraform prerequisites for the distro modules
   distribution:
     common:

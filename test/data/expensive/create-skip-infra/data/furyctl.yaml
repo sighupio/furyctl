@@ -7,7 +7,7 @@ kind: EKSCluster
 metadata:
   name: furyctl-test-aws-si
 spec:
-  distributionVersion: "v1.23.3"
+  distributionVersion: "v1.24.1"
   toolsConfiguration:
     terraform:
       state:

@@ -1,5 +1,0 @@
-#!/bin/sh
-
-cat <<EOF
-{Version:kustomize/v3.10.0 GitCommit:602ad8aa98e2e17f6c9119e027a09757e63c8bec BuildDate:2021-02-10T00:00:50Z GoOs:darwin GoArch:amd64}
-EOF

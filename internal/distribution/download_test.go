@@ -28,21 +28,21 @@ func Test_Downloader_Download(t *testing.T) {
 			furyctlBinVer: "unknown",
 			wantApiVer:    "kfd.sighup.io/v1alpha2",
 			wantKind:      "EKSCluster",
-			wantDistroVer: "v1.23.3",
+			wantDistroVer: "v1.24.1",
 		},
 		{
 			desc:          "compatible furyctl version",
-			furyctlBinVer: "1.23.0",
+			furyctlBinVer: "1.24.0",
 			wantApiVer:    "kfd.sighup.io/v1alpha2",
 			wantKind:      "EKSCluster",
-			wantDistroVer: "v1.23.3",
+			wantDistroVer: "v1.24.1",
 		},
 		{
 			desc:          "older furyctl version",
 			furyctlBinVer: "1.20.0",
 			wantApiVer:    "kfd.sighup.io/v1alpha2",
 			wantKind:      "EKSCluster",
-			wantDistroVer: "v1.23.3",
+			wantDistroVer: "v1.24.1",
 		},
 	}
 	for _, tC := range testCases {

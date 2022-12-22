@@ -20,7 +20,7 @@ import (
 )
 
 func Test_Kustomize_SupportsDownload(t *testing.T) {
-	a := tools.NewKustomize(newKustomizeRunner(), "3.10.0")
+	a := tools.NewKustomize(newKustomizeRunner(), "3.5.3")
 
 	if a.SupportsDownload() != true {
 		t.Errorf("kustomize download must be supported")
@@ -29,7 +29,7 @@ func Test_Kustomize_SupportsDownload(t *testing.T) {
 
 func Test_Kustomize_SrcPath(t *testing.T) {
 	wantSrcPath := fmt.Sprintf(
-		"https://github.com/kubernetes-sigs/kustomize/releases/download/kustomize/v3.10.0/kustomize_v3.10.0_%s_amd64.tar.gz",
+		"https://github.com/kubernetes-sigs/kustomize/releases/download/kustomize/v3.5.3/kustomize_v3.5.3_%s_amd64.tar.gz",
 		runtime.GOOS,
 	)
 
@@ -38,12 +38,12 @@ func Test_Kustomize_SrcPath(t *testing.T) {
 		version string
 	}{
 		{
-			desc:    "3.10.0",
-			version: "3.10.0",
+			desc:    "3.5.3",
+			version: "3.5.3",
 		},
 		{
-			desc:    "v3.10.0",
-			version: "v3.10.0",
+			desc:    "v3.5.3",
+			version: "v3.5.3",
 		},
 	}
 	for _, tC := range testCases {
@@ -66,7 +66,7 @@ func Test_Kustomize_Rename(t *testing.T) {
 		t.Fatalf("error creating temp file: %v", err)
 	}
 
-	fa := tools.NewKustomize(newKustomizeRunner(), "3.10.0")
+	fa := tools.NewKustomize(newKustomizeRunner(), "3.5.3")
 
 	if err := fa.Rename(tmpDir); err != nil {
 		t.Fatalf("Error renaming kustomize binary: %v", err)
@@ -97,9 +97,9 @@ func Test_Kustomize_CheckBinVersion(t *testing.T) {
 		},
 		{
 			desc:        "wrong version installed",
-			wantVersion: "3.10.0",
+			wantVersion: "3.5.3",
 			wantErr:     true,
-			wantErrMsg:  "installed = 3.9.4, expected = 3.10.0",
+			wantErrMsg:  "installed = 3.9.4, expected = 3.5.3",
 		},
 	}
 	for _, tC := range testCases {

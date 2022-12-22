@@ -7,7 +7,7 @@ kind: EKSCluster
 metadata:
   name: awesome-cluster-staging
 spec:
-  distributionVersion: v1.23.3
+  distributionVersion: v1.24.1
   toolsConfiguration:
     terraform:
       state:

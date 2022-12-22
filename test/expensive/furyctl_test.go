@@ -138,7 +138,7 @@ var (
 				homeDir, err := os.UserHomeDir()
 				Expect(err).To(Not(HaveOccurred()))
 
-				kubeBinPath := path.Join(homeDir, ".furyctl", "bin", "kubectl", "1.23.7", "kubectl")
+				kubeBinPath := path.Join(homeDir, ".furyctl", "bin", "kubectl", "1.24.7", "kubectl")
 				tfInfraPath := path.Join(homeDir, ".furyctl", "furyctl-test-aws", "infrastructure", "terraform")
 				kcfgPath := path.Join(homeDir, ".furyctl", "furyctl-test-aws", "kubernetes", "terraform", "secrets", "kubeconfig")
 
@@ -198,7 +198,7 @@ var (
 				homeDir, err := os.UserHomeDir()
 				Expect(err).To(Not(HaveOccurred()))
 
-				kubeBinPath := path.Join(homeDir, ".furyctl", "bin", "kubectl", "1.23.7", "kubectl")
+				kubeBinPath := path.Join(homeDir, ".furyctl", "bin", "kubectl", "1.24.7", "kubectl")
 				kcfgPath := path.Join(homeDir, ".furyctl", "furyctl-test-aws-si", "kubernetes", "terraform", "secrets", "kubeconfig")
 
 				createClusterInfraCmd := FuryctlCreateCluster(furyctlYamlPath, distroPath, "infrastructure", "", false, w)
@@ -263,7 +263,7 @@ var (
 				homeDir, err := os.UserHomeDir()
 				Expect(err).To(Not(HaveOccurred()))
 
-				kubeBinPath := path.Join(homeDir, ".furyctl", "bin", "kubectl", "1.23.7", "kubectl")
+				kubeBinPath := path.Join(homeDir, ".furyctl", "bin", "kubectl", "1.24.7", "kubectl")
 				kcfgPath := path.Join(homeDir, ".furyctl", "furyctl-test-aws-sk", "kubernetes", "terraform", "secrets", "kubeconfig")
 
 				createClusterKubeCmd := FuryctlCreateCluster(furyctlYamlPath, distroPath, "", "distribution", false, w)

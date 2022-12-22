@@ -5,6 +5,7 @@
 package create
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/sirupsen/logrus"
@@ -15,10 +16,13 @@ import (
 	"github.com/sighupio/furyctl/internal/cmd/cmdutil"
 	"github.com/sighupio/furyctl/internal/config"
 	"github.com/sighupio/furyctl/internal/distribution"
+	"github.com/sighupio/furyctl/internal/semver"
 	cobrax "github.com/sighupio/furyctl/internal/x/cobra"
 	execx "github.com/sighupio/furyctl/internal/x/exec"
 	netx "github.com/sighupio/furyctl/internal/x/net"
 )
+
+var ErrMandatoryFlag = errors.New("flag must be specified")
 
 func NewConfigCmd(furyctlBinVersion string, tracker *analytics.Tracker) *cobra.Command {
 	var cmdEvent analytics.Event
@@ -50,6 +54,9 @@ func NewConfigCmd(furyctlBinVersion string, tracker *analytics.Tracker) *cobra.C
 			if err != nil {
 				return fmt.Errorf("%w: version", ErrParsingFlag)
 			}
+			if version == "" {
+				return fmt.Errorf("%w: version", ErrMandatoryFlag)
+			}
 
 			kind, err := cmdutil.StringFlag(cmd, "kind", tracker, cmdEvent)
 			if err != nil {
@@ -73,7 +80,7 @@ func NewConfigCmd(furyctlBinVersion string, tracker *analytics.Tracker) *cobra.C
 					Name: name,
 				},
 				Spec: distroConfig.FuryctlSpec{
-					DistributionVersion: version,
+					DistributionVersion: semver.EnsurePrefix(version),
 				},
 			}
 
@@ -100,7 +107,7 @@ func NewConfigCmd(furyctlBinVersion string, tracker *analytics.Tracker) *cobra.C
 			data := map[string]string{
 				"Kind":                kind,
 				"Name":                name,
-				"DistributionVersion": version,
+				"DistributionVersion": semver.EnsurePrefix(version),
 			}
 
 			out, err := config.Create(res, furyctlPath, cmdEvent, tracker, data)
@@ -140,8 +147,8 @@ func NewConfigCmd(furyctlBinVersion string, tracker *analytics.Tracker) *cobra.C
 	cmd.Flags().StringP(
 		"version",
 		"v",
-		"v1.23.3",
-		"distribution version to use (eg: v1.23.3)",
+		"",
+		"distribution version to use (eg: v1.24.1)",
 	)
 
 	cmd.Flags().StringP(
