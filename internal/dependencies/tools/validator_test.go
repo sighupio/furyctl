@@ -20,6 +20,7 @@ func Test_Validator_Validate(t *testing.T) {
 	testCases := []struct {
 		desc     string
 		manifest config.KFD
+		wantOks  []string
 		wantErrs []error
 	}{
 		{
@@ -33,6 +34,12 @@ func Test_Validator_Validate(t *testing.T) {
 						Furyagent: config.Tool{Version: "0.3.0"},
 					},
 				},
+			},
+			wantOks: []string{
+				"kubectl",
+				"kustomize",
+				"terraform",
+				"furyagent",
 			},
 		},
 		{
@@ -53,6 +60,7 @@ func Test_Validator_Validate(t *testing.T) {
 				errors.New("kustomize: wrong tool version - installed = 3.9.4, expected = 3.5.3"),
 				errors.New("terraform: wrong tool version - installed = 0.15.4, expected = 1.3.0"),
 			},
+			wantOks: []string{},
 		},
 	}
 	for _, tC := range testCases {
@@ -61,10 +69,29 @@ func Test_Validator_Validate(t *testing.T) {
 		t.Run(tC.desc, func(t *testing.T) {
 			v := tools.NewValidator(execx.NewFakeExecutor(), "test_data")
 
-			errs := v.Validate(tC.manifest)
+			oks, errs := v.Validate(tC.manifest)
+
+			if len(oks) != len(tC.wantOks) {
+				t.Errorf("Expected %d oks, got %d - %v", len(tC.wantOks), len(oks), oks)
+			}
 
 			if len(errs) != len(tC.wantErrs) {
 				t.Errorf("Expected %d errors, got %d - %v", len(tC.wantErrs), len(errs), errs)
+			}
+
+			for _, ok := range oks {
+				found := false
+				for _, wantOk := range tC.wantOks {
+					if ok == wantOk {
+						found = true
+
+						break
+					}
+				}
+
+				if !found {
+					t.Errorf("Unexpected ok: %s", ok)
+				}
 			}
 
 			for _, err := range errs {

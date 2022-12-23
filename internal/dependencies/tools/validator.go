@@ -33,8 +33,10 @@ type Validator struct {
 }
 
 func (tv *Validator) Validate(kfdManifest config.KFD) ([]string, []error) {
-	var oks []string
-	var errs []error
+	var (
+		oks  []string
+		errs []error
+	)
 
 	tls := reflect.ValueOf(kfdManifest.Tools)
 	for i := 0; i < tls.NumField(); i++ {
