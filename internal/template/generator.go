@@ -14,7 +14,6 @@ import (
 	"text/template"
 
 	"github.com/sirupsen/logrus"
-	"golang.org/x/exp/slices"
 
 	iox "github.com/sighupio/furyctl/internal/x/io"
 )
@@ -82,16 +81,6 @@ func (g *Generator) GetMissingKeys(tpl *template.Template) []string {
 	node.FromNodeList(tpl.Tree.Root.Nodes)
 
 	for _, f := range node.Fields {
-		// test
-
-		if slices.ContainsFunc(node.DeclIdents, func(s string) bool {
-			tf := strings.TrimLeft(f, ".")
-
-			return strings.HasPrefix(tf, s)
-		}) {
-			continue
-		}
-
 		val := g.getContextValueFromPath(f)
 		if val == nil {
 			missingKeys = append(missingKeys, f)

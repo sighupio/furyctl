@@ -8,17 +8,17 @@ import (
 	"reflect"
 	"strings"
 	"text/template/parse"
+
+	"github.com/sighupio/furyctl/internal/x/slices"
 )
 
 type Node struct {
-	Fields     []string
-	DeclIdents []string
+	Fields []string
 }
 
 func NewNode() *Node {
 	return &Node{
-		Fields:     []string{},
-		DeclIdents: []string{},
+		Fields: []string{},
 	}
 }
 
@@ -34,7 +34,7 @@ func (f *Node) FromNodeList(nodes []parse.Node) []string {
 		}
 	}
 
-	return f.Fields
+	return slices.Uniq(f.Fields)
 }
 
 func mapToAliasInterface(n parse.Node) interface{} {
@@ -127,10 +127,6 @@ func (a *ActionNode) Set(n *Node) {
 	for _, cmd := range a.Pipe.Cmds {
 		n.Set(n.FromNodeList(cmd.Args))
 	}
-
-	for _, v := range a.Pipe.Decl {
-		n.DeclIdents = append(n.DeclIdents, v.Ident...)
-	}
 }
 
 type FieldNode parse.FieldNode
@@ -141,8 +137,9 @@ func (f *FieldNode) Set(n *Node) {
 
 type VariableNode parse.VariableNode
 
-func (v *VariableNode) Set(n *Node) {
-	n.Set(append(n.Fields, stringsToPath(v.Ident)))
+// Set Skips VariableNodes because they are not fields.
+func (*VariableNode) Set(_ *Node) {
+	// Do nothing.
 }
 
 func stringsToPath(s []string) string {
