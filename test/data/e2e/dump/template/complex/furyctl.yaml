@@ -8,15 +8,15 @@ metadata:
   # the name will be used as a prefix/suffix for all the managed resources
   name: awesome-cluster-staging
 spec:
+  region: eu-west-1
   # with this version we will download the kfd.yaml file from the distribution to gather all the other components versions
   distributionVersion: v1.24.7
   # Under the hood, furyctl uses other tools like terraform, kustomize, etc
   toolsConfiguration:
     terraform:
       state:
-        backend: s3
-        config:
-          bucket: awesome-bucket-created-outside-furyctl
+        s3:
+          bucketName: awesome-bucket-created-outside-furyctl
           # changed from key, because each terraform project state will be placed in the directory defined by the prefix
           keyPrefix: furyctl/
           region: eu-west-1
@@ -66,15 +66,7 @@ spec:
           # the CIDRs that are allowed for the ssh connection
           allowedFromCidrs:
             - 0.0.0.0/0
-  cluster:
-    # vpcID and subnetIDs are optional, needed only if you did not create vpc with bootstrap phase
-    # and will be automatically gathered from the output of the bootstrap phase
-    vpcId: vpc-0f92da9b4a2089963
-    # optional, see the above comment
-    subnetIds:
-      - subnet-0ab84702287e38ccb
-      - subnet-0ae4e9199d9192226
-      - subnet-01787e8da51e4f070
+  kubernetes:
     # cidr allowed to talk with the apiServer
     apiServerAllowedCidrs:
       - 10.1.0.0/16
