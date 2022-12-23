@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/go-playground/validator/v10"
 	"github.com/sirupsen/logrus"
@@ -22,16 +23,17 @@ import (
 const DefaultBaseURL = "https://git@github.com/sighupio/fury-distribution?ref=%s"
 
 var (
+	ErrChangingFilePermissions = errors.New("error changing file permissions")
 	ErrCreatingTempDir         = errors.New("error creating temp dir")
-	ErrValidateConfig          = errors.New("error validating config")
 	ErrDownloadingFolder       = errors.New("error downloading folder")
-	ErrRenamingFile            = errors.New("error renaming file")
 	ErrMergeCompleteConfig     = errors.New("error merging complete config")
 	ErrMergeDistroConfig       = errors.New("error merging distribution config")
+	ErrRenamingFile            = errors.New("error renaming file")
+	ErrResolvingAbsPath        = errors.New("error resolving absolute path")
+	ErrValidateConfig          = errors.New("error validating config")
 	ErrWriteFile               = errors.New("error writing file")
 	ErrYamlMarshalFile         = errors.New("error marshaling yaml file")
 	ErrYamlUnmarshalFile       = errors.New("error unmarshaling yaml file")
-	ErrChangingFilePermissions = errors.New("error changing file permissions")
 )
 
 type DownloadResult struct {
@@ -78,6 +80,13 @@ func (d *Downloader) DoDownload(
 
 	if distroLocation == "" {
 		distroLocation = fmt.Sprintf(DefaultBaseURL, minimalConf.Spec.DistributionVersion)
+	}
+
+	if strings.HasPrefix(distroLocation, ".") {
+		var err error
+		if distroLocation, err = filepath.Abs(distroLocation); err != nil {
+			return DownloadResult{}, fmt.Errorf("%w: %v", ErrResolvingAbsPath, err)
+		}
 	}
 
 	baseDst, err := os.MkdirTemp("", "furyctl-")
