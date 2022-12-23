@@ -55,7 +55,7 @@ func (r *Runner) Init() error {
 		WorkDir:  r.paths.WorkDir,
 	}).Run()
 	if err != nil {
-		return fmt.Errorf("error running terraform init: %w", err)
+		return fmt.Errorf("command execution failed: %w", err)
 	}
 
 	return nil
@@ -91,7 +91,7 @@ func (r *Runner) Apply(timestamp int64) (OutputJSON, error) {
 		WorkDir:  r.paths.WorkDir,
 	})
 	if err := cmd.Run(); err != nil {
-		return oj, fmt.Errorf("error running terraform apply: %w", err)
+		return oj, fmt.Errorf("cannot create cloud resources: %w", err)
 	}
 
 	err := os.WriteFile(path.Join(r.paths.Logs,

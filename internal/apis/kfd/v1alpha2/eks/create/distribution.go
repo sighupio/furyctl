@@ -158,11 +158,11 @@ func (d *Distribution) Exec() error {
 		return nil
 	}
 
-	logrus.Info("Running terraform apply...")
+	logrus.Info("Creating cloud resources, this could take a while...")
 
 	_, err = d.tfRunner.Apply(timestamp)
 	if err != nil {
-		return fmt.Errorf("error running terraform apply: %w", err)
+		return fmt.Errorf("cannot create cloud resources: %w", err)
 	}
 
 	postTfMerger, err := d.injectDataPostTf(preTfMerger)

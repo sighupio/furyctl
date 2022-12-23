@@ -33,10 +33,10 @@ func NewClusterCmd(version string, tracker *analytics.Tracker) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "cluster",
 		Short: "Deletes a cluster",
-		PreRun: func(cmd *cobra.Command, args []string) {
+		PreRun: func(cmd *cobra.Command, _ []string) {
 			cmdEvent = analytics.NewCommandEvent(cobrax.GetFullname(cmd))
 		},
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(cmd *cobra.Command, _ []string) error {
 			debug, err := cmdutil.BoolFlag(cmd, "debug", tracker, cmdEvent)
 			if err != nil {
 				return fmt.Errorf("%w: debug", ErrParsingFlag)

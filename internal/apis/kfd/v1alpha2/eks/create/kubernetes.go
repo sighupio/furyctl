@@ -30,7 +30,7 @@ import (
 )
 
 var (
-	errKubeconfigFromLogs = errors.New("can't get kubeconfig from terraform apply logs")
+	errKubeconfigFromLogs = errors.New("can't get kubeconfig from logs")
 	errPvtSubnetNotFound  = errors.New("private_subnets not found in infra output")
 	errPvtSubnetFromOut   = errors.New("cannot read private_subnets from infrastructure's output.json")
 	errVpcCIDRFromOut     = errors.New("cannot read vpc_cidr_block from infrastructure's output.json")
@@ -86,7 +86,7 @@ func NewKubernetes(
 }
 
 func (k *Kubernetes) Exec() error {
-	logrus.Info("Running kubernetes phase")
+	logrus.Info("Running kubernetes phase...")
 
 	timestamp := time.Now().Unix()
 
@@ -118,11 +118,11 @@ func (k *Kubernetes) Exec() error {
 		return nil
 	}
 
-	logrus.Info("Running terraform apply...")
+	logrus.Info("Creating cloud resources, this could take a while...")
 
 	out, err := k.tfRunner.Apply(timestamp)
 	if err != nil {
-		return fmt.Errorf("error running terraform apply: %w", err)
+		return fmt.Errorf("cannot create cloud resources: %w", err)
 	}
 
 	if err := k.createKubeconfig(out); err != nil {
