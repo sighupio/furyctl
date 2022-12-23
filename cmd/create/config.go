@@ -148,7 +148,7 @@ func NewConfigCmd(furyctlBinVersion string, tracker *analytics.Tracker) *cobra.C
 		"version",
 		"v",
 		"",
-		"distribution version to use (eg: v1.24.1)",
+		"fury version to use (eg: v1.24.1)",
 	)
 
 	cmd.Flags().StringP(
