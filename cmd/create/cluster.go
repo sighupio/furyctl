@@ -35,7 +35,7 @@ func NewClusterCmd(version string, tracker *analytics.Tracker) *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "cluster",
-		Short: "Creates a battle-tested Kubernetes cluster",
+		Short: "Creates a battle-tested Kubernetes Fury cluster",
 		PreRun: func(cmd *cobra.Command, _ []string) {
 			cmdEvent = analytics.NewCommandEvent(cobrax.GetFullname(cmd))
 		},
@@ -238,9 +238,9 @@ func setupClusterCmdFlags(cmd *cobra.Command) {
 		"distro-location",
 		"",
 		"",
-		"Base URL used to download schemas, defaults and the distribution manifest. "+
+		"Location where to download schemas, defaults and the distribution manifest. "+
 			"It can either be a local path(eg: /path/to/fury/distribution) or "+
-			"a remote URL(eg: https://git@github.com/sighupio/fury-distribution?ref=BRANCH_NAME)."+
+			"a remote URL(eg: https://git@github.com/sighupio/fury-distribution?ref=BRANCH_NAME). "+
 			"Any format supported by hashicorp/go-getter can be used.",
 	)
 
