@@ -149,11 +149,41 @@ Furyctl is a simple CLI tool to:
 	viper.AutomaticEnv()
 	viper.SetEnvPrefix("furyctl")
 
-	rootCmd.PersistentFlags().BoolVarP(&rootCmd.config.Debug, "debug", "D", false, "Enables furyctl debug output")
-	rootCmd.PersistentFlags().BoolVarP(&rootCmd.config.DisableAnalytics, "disable-analytics", "d", false, "Disable analytics")
-	rootCmd.PersistentFlags().BoolVarP(&rootCmd.config.DisableTty, "no-tty", "T", false, "Disable TTY")
-	rootCmd.PersistentFlags().StringVarP(&rootCmd.config.Workdir, "workdir", "w", "", "Switch to a different working directory before executing the given subcommand.")
-	rootCmd.PersistentFlags().StringVarP(&rootCmd.config.Log, "log", "l", "", "Path to the log file or stdout to log to standard output")
+	rootCmd.PersistentFlags().BoolVarP(
+		&rootCmd.config.Debug,
+		"debug",
+		"D",
+		false,
+		"Enables furyctl debug output",
+	)
+	rootCmd.PersistentFlags().BoolVarP(
+		&rootCmd.config.DisableAnalytics,
+		"disable-analytics",
+		"d",
+		false,
+		"Disable analytics",
+	)
+	rootCmd.PersistentFlags().BoolVarP(
+		&rootCmd.config.DisableTty,
+		"no-tty",
+		"T",
+		false,
+		"Disable TTY",
+	)
+	rootCmd.PersistentFlags().StringVarP(
+		&rootCmd.config.Workdir,
+		"workdir",
+		"w",
+		"",
+		"Switch to a different working directory before executing the given subcommand.",
+	)
+	rootCmd.PersistentFlags().StringVarP(
+		&rootCmd.config.Log,
+		"log",
+		"l",
+		"",
+		"Path to the log file or stdout to log to standard output (default: ~/.furyctl/furyctl.log)",
+	)
 
 	rootCmd.AddCommand(NewCompletionCmd(tracker))
 	rootCmd.AddCommand(NewCreateCommand(versions["version"], tracker))
