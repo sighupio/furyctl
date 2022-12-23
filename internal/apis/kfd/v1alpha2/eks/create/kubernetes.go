@@ -39,7 +39,7 @@ var (
 )
 
 const (
-	nodePoolDefaultVolumeSize = 100
+	nodePoolDefaultVolumeSize = 35
 )
 
 type Kubernetes struct {
@@ -244,13 +244,18 @@ func (k *Kubernetes) copyKubeconfigToWorkDir() error {
 	return nil
 }
 
-//nolint:gocyclo,maintidx,gocognit,funlen,revive // it will be refactored
+//nolint:gocyclo,maintidx,gocognit,funlen,revive,cyclop // it will be refactored
 func (k *Kubernetes) createTfVars() error {
 	var buffer bytes.Buffer
 
+	var allowedCidrsSource []schema.TypesCidr
+
 	subnetIdsSource := k.furyctlConf.Spec.Kubernetes.SubnetIds
 	vpcIDSource := k.furyctlConf.Spec.Kubernetes.VpcId
-	allowedCidrsSource := k.furyctlConf.Spec.Kubernetes.ApiServerEndpointAccess.AllowedCidrs
+
+	if k.furyctlConf.Spec.Kubernetes.ApiServerEndpointAccess != nil {
+		allowedCidrsSource = k.furyctlConf.Spec.Kubernetes.ApiServerEndpointAccess.AllowedCidrs
+	}
 
 	if infraOutJSON, err := os.ReadFile(path.Join(k.infraOutputsPath, "output.json")); err == nil {
 		var infraOut terraform.OutputJSON
