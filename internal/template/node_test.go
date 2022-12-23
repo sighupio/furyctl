@@ -216,7 +216,7 @@ func TestVariableNode_Set(t *testing.T) {
 
 	variableNodeSetter.Set(node)
 
-	assert.Equal(t, []string{".variable1"}, node.Fields)
+	assert.Equal(t, []string{}, node.Fields)
 }
 
 func TestRangeNode_Set(t *testing.T) {
