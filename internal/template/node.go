@@ -11,12 +11,14 @@ import (
 )
 
 type Node struct {
-	Fields []string
+	Fields     []string
+	DeclIdents []string
 }
 
 func NewNode() *Node {
 	return &Node{
-		Fields: []string{},
+		Fields:     []string{},
+		DeclIdents: []string{},
 	}
 }
 
@@ -124,6 +126,10 @@ type ActionNode parse.ActionNode
 func (a *ActionNode) Set(n *Node) {
 	for _, cmd := range a.Pipe.Cmds {
 		n.Set(n.FromNodeList(cmd.Args))
+	}
+
+	for _, v := range a.Pipe.Decl {
+		n.DeclIdents = append(n.DeclIdents, v.Ident...)
 	}
 }
 
