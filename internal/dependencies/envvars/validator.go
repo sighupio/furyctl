@@ -39,13 +39,13 @@ func (*Validator) checkEKSCluster() ([]string, []error) {
 	if os.Getenv("AWS_SECRET_ACCESS_KEY") == "" {
 		errs = append(errs, fmt.Errorf("AWS_SECRET_ACCESS_KEY: %w", ErrMissingEnvVar))
 	} else {
-		oks = append(oks, "AWS_ACCESS_KEY_ID")
+		oks = append(oks, "AWS_SECRET_ACCESS_KEY")
 	}
 
 	if os.Getenv("AWS_DEFAULT_REGION") == "" {
 		errs = append(errs, fmt.Errorf("AWS_DEFAULT_REGION: %w", ErrMissingEnvVar))
 	} else {
-		oks = append(oks, "AWS_ACCESS_KEY_ID")
+		oks = append(oks, "AWS_DEFAULT_REGION")
 	}
 
 	return oks, errs
