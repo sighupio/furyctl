@@ -48,10 +48,6 @@ spec:
           allowedFromCidrs:
             - 0.0.0.0/0
   kubernetes:
-    apiServerEndpointAccess:
-      type: private
-      allowedCidrs:
-        - 10.0.0.0/16
     nodeAllowedSshPublicKey: "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGxA+4CXYSmsN1m5DSsRzVRTegbvCh1gh7YObg0drj4+ alessio.pragliola@sighup.io"
     nodePools:
       - name: worker
