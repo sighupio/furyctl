@@ -72,8 +72,19 @@ func NewDependenciesCmd(furyctlBinVersion string, tracker *analytics.Tracker) *c
 			envVarsValidator := envvars.NewValidator()
 			errs := make([]error, 0)
 
-			errs = append(errs, toolsValidator.Validate(dres.DistroManifest)...)
-			errs = append(errs, envVarsValidator.Validate(dres.MinimalConf.Kind)...)
+			toks, terrs := toolsValidator.Validate(dres.DistroManifest)
+			eoks, eerrs := envVarsValidator.Validate(dres.MinimalConf.Kind)
+
+			errs = append(errs, terrs...)
+			errs = append(errs, eerrs...)
+
+			for _, tok := range toks {
+				logrus.Infof("%s: binary found in vendor folder", tok)
+			}
+
+			for _, eok := range eoks {
+				logrus.Infof("%s: environment variable found", eok)
+			}
 
 			if len(errs) > 0 {
 				logrus.Debugf("Repository path: %s", dres.RepoPath)
@@ -84,6 +95,11 @@ func NewDependenciesCmd(furyctlBinVersion string, tracker *analytics.Tracker) *c
 
 				cmdEvent.AddErrorMessage(ErrDependencies)
 				tracker.Track(cmdEvent)
+
+				logrus.Info(
+					"You can use the 'furyctl download dependencies' command to download most dependencies, " +
+						"and a package manager such as 'asdf' to install the other ones.",
+				)
 
 				return ErrDependencies
 			}

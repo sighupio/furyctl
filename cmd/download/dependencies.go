@@ -32,7 +32,7 @@ func NewDependenciesCmd(furyctlBinVersion string, tracker *analytics.Tracker) *c
 	cmd := &cobra.Command{
 		Use:   "dependencies",
 		Short: "Download dependencies",
-		PreRun: func(cmd *cobra.Command, args []string) {
+		PreRun: func(cmd *cobra.Command, _ []string) {
 			cmdEvent = analytics.NewCommandEvent(cobrax.GetFullname(cmd))
 		},
 		RunE: func(cmd *cobra.Command, _ []string) error {
@@ -60,6 +60,8 @@ func NewDependenciesCmd(furyctlBinVersion string, tracker *analytics.Tracker) *c
 				binPath = filepath.Join(homeDir, ".furyctl", "bin")
 			}
 
+			logrus.Info("Downloading dependencies...")
+
 			client := netx.NewGoGetterClient()
 
 			distrodl := distribution.NewDownloader(client)
@@ -83,7 +85,7 @@ func NewDependenciesCmd(furyctlBinVersion string, tracker *analytics.Tracker) *c
 			errs, uts := depsdl.DownloadAll(dres.DistroManifest)
 
 			for _, ut := range uts {
-				logrus.Warn(fmt.Sprintf("'%s' download is not supported", ut))
+				logrus.Warn(fmt.Sprintf("'%s' download is not supported, please install it manually", ut))
 			}
 
 			if len(errs) > 0 {

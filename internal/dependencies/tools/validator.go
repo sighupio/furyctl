@@ -32,7 +32,8 @@ type Validator struct {
 	toolFactory *Factory
 }
 
-func (tv *Validator) Validate(kfdManifest config.KFD) []error {
+func (tv *Validator) Validate(kfdManifest config.KFD) ([]string, []error) {
+	var oks []string
 	var errs []error
 
 	tls := reflect.ValueOf(kfdManifest.Tools)
@@ -48,10 +49,12 @@ func (tv *Validator) Validate(kfdManifest config.KFD) []error {
 				tool := tv.toolFactory.Create(name, version.String())
 				if err := tool.CheckBinVersion(); err != nil {
 					errs = append(errs, err)
+				} else {
+					oks = append(oks, name)
 				}
 			}
 		}
 	}
 
-	return errs
+	return oks, errs
 }

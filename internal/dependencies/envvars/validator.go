@@ -18,28 +18,35 @@ func NewValidator() *Validator {
 
 type Validator struct{}
 
-func (ev *Validator) Validate(kind string) []error {
+func (ev *Validator) Validate(kind string) ([]string, []error) {
 	if kind == "EKSCluster" {
 		return ev.checkEKSCluster()
 	}
 
-	return nil
+	return nil, nil
 }
 
-func (*Validator) checkEKSCluster() []error {
+func (*Validator) checkEKSCluster() ([]string, []error) {
+	oks := make([]string, 0)
 	errs := make([]error, 0)
 
 	if os.Getenv("AWS_ACCESS_KEY_ID") == "" {
-		errs = append(errs, fmt.Errorf("%w: AWS_ACCESS_KEY_ID", ErrMissingEnvVar))
+		errs = append(errs, fmt.Errorf("AWS_ACCESS_KEY_ID: %w", ErrMissingEnvVar))
+	} else {
+		oks = append(oks, "AWS_ACCESS_KEY_ID")
 	}
 
 	if os.Getenv("AWS_SECRET_ACCESS_KEY") == "" {
-		errs = append(errs, fmt.Errorf("%w: AWS_SECRET_ACCESS_KEY", ErrMissingEnvVar))
+		errs = append(errs, fmt.Errorf("AWS_SECRET_ACCESS_KEY: %w", ErrMissingEnvVar))
+	} else {
+		oks = append(oks, "AWS_ACCESS_KEY_ID")
 	}
 
 	if os.Getenv("AWS_DEFAULT_REGION") == "" {
-		errs = append(errs, fmt.Errorf("%w: AWS_DEFAULT_REGION", ErrMissingEnvVar))
+		errs = append(errs, fmt.Errorf("AWS_DEFAULT_REGION: %w", ErrMissingEnvVar))
+	} else {
+		oks = append(oks, "AWS_ACCESS_KEY_ID")
 	}
 
-	return errs
+	return oks, errs
 }

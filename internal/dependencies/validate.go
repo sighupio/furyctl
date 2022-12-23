@@ -32,11 +32,11 @@ type Validator struct {
 }
 
 func (v *Validator) Validate(res distribution.DownloadResult) error {
-	if errs := v.toolsValidator.Validate(res.DistroManifest); len(errs) > 0 {
+	if _, errs := v.toolsValidator.Validate(res.DistroManifest); len(errs) > 0 {
 		return fmt.Errorf("%w: %v", errValidatingTools, errs)
 	}
 
-	if errs := v.envVarsValidator.Validate(res.MinimalConf.Kind); len(errs) > 0 {
+	if _, errs := v.envVarsValidator.Validate(res.MinimalConf.Kind); len(errs) > 0 {
 		return fmt.Errorf("%w: %v", errValidatingEnv, errs)
 	}
 
