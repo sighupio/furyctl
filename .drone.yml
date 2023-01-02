@@ -81,7 +81,7 @@ steps:
       - curl -sLO https://github.com/sgerrand/alpine-pkg-glibc/releases/download/$${GLIBC_VER}/glibc-$${GLIBC_VER}.apk
       - curl -sLO https://github.com/sgerrand/alpine-pkg-glibc/releases/download/$${GLIBC_VER}/glibc-bin-$${GLIBC_VER}.apk
       - curl -sLO https://github.com/sgerrand/alpine-pkg-glibc/releases/download/$${GLIBC_VER}/glibc-i18n-$${GLIBC_VER}.apk
-      - apk add --virtual --force-overwrite .glibc glibc-$${GLIBC_VER}.apk glibc-bin-$${GLIBC_VER}.apk glibc-i18n-$${GLIBC_VER}.apk
+      - apk add --force-overwrite --virtual .glibc glibc-$${GLIBC_VER}.apk glibc-bin-$${GLIBC_VER}.apk glibc-i18n-$${GLIBC_VER}.apk
       - /usr/glibc-compat/bin/localedef -i en_US -f UTF-8 en_US.UTF-8
       - curl -sL https://awscli.amazonaws.com/awscli-exe-linux-x86_64-$${AWSCLI_VERSION}.zip -o awscliv2.zip
       - unzip awscliv2.zip
