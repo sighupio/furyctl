@@ -173,17 +173,22 @@ func NewClusterCmd(version string, tracker *analytics.Tracker) *cobra.Command {
 				vpnAutoConnect = true
 			}
 
+			// Define cluster creation paths.
+			paths := cluster.CreatorPaths{
+				ConfigPath: furyctlPath,
+				WorkDir:    basePath,
+				DistroPath: res.RepoPath,
+				BinPath:    binPath,
+				Kubeconfig: kubeconfig,
+			}
+
 			// Create the cluster.
 			clusterCreator, err := cluster.NewCreator(
 				res.MinimalConf,
 				res.DistroManifest,
-				basePath,
-				res.RepoPath,
-				binPath,
-				furyctlPath,
+				paths,
 				phase,
 				vpnAutoConnect,
-				kubeconfig,
 			)
 			if err != nil {
 				cmdEvent.AddErrorMessage(err)

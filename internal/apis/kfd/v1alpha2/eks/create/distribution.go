@@ -61,19 +61,15 @@ type injectType struct {
 }
 
 func NewDistribution(
-	furyctlConfPath string,
+	paths cluster.CreatorPaths,
 	furyctlConf schema.EksclusterKfdV1Alpha2,
 	kfdManifest config.KFD,
-	workDir,
-	distroPath,
-	infraOutputsPath,
-	binPath string,
+	infraOutputsPath string,
 	dryRun bool,
-	kubeconfig string,
 ) (*Distribution, error) {
-	distroDir := path.Join(workDir, "distribution")
+	distroDir := path.Join(paths.WorkDir, "distribution")
 
-	phase, err := cluster.NewOperationPhase(distroDir, kfdManifest.Tools, binPath)
+	phase, err := cluster.NewOperationPhase(distroDir, kfdManifest.Tools, paths.BinPath)
 	if err != nil {
 		return nil, fmt.Errorf("error creating distribution phase: %w", err)
 	}
@@ -83,8 +79,8 @@ func NewDistribution(
 		furyctlConf:      furyctlConf,
 		kfdManifest:      kfdManifest,
 		infraOutputsPath: infraOutputsPath,
-		distroPath:       distroPath,
-		furyctlConfPath:  furyctlConfPath,
+		distroPath:       paths.DistroPath,
+		furyctlConfPath:  paths.ConfigPath,
 		tfRunner: terraform.NewRunner(
 			execx.NewStdExecutor(),
 			terraform.Paths{
@@ -107,7 +103,7 @@ func NewDistribution(
 			kubectl.Paths{
 				Kubectl:    phase.KubectlPath,
 				WorkDir:    path.Join(phase.Path, "manifests"),
-				Kubeconfig: kubeconfig,
+				Kubeconfig: paths.Kubeconfig,
 			},
 			true,
 			true,
