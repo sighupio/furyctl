@@ -51,13 +51,12 @@ type Infrastructure struct {
 func NewInfrastructure(
 	furyctlConf schema.EksclusterKfdV1Alpha2,
 	kfdManifest config.KFD,
-	workDir,
-	binPath string,
+	paths cluster.CreatorPaths,
 	dryRun bool,
 ) (*Infrastructure, error) {
-	infraDir := path.Join(workDir, "infrastructure")
+	infraDir := path.Join(paths.WorkDir, "infrastructure")
 
-	phase, err := cluster.NewOperationPhase(infraDir, kfdManifest.Tools, binPath)
+	phase, err := cluster.NewOperationPhase(infraDir, kfdManifest.Tools, paths.BinPath)
 	if err != nil {
 		return nil, fmt.Errorf("error creating infrastructure phase: %w", err)
 	}
@@ -79,7 +78,7 @@ func NewInfrastructure(
 			},
 		),
 		faRunner: furyagent.NewRunner(executor, furyagent.Paths{
-			Furyagent: path.Join(binPath, "furyagent", kfdManifest.Tools.Common.Furyagent.Version, "furyagent"),
+			Furyagent: path.Join(paths.BinPath, "furyagent", kfdManifest.Tools.Common.Furyagent.Version, "furyagent"),
 			WorkDir:   phase.SecretsPath,
 		}),
 		ovRunner: openvpn.NewRunner(executor, openvpn.Paths{

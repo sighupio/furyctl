@@ -83,7 +83,7 @@ func (v *ClusterCreator) SetProperty(name string, value any) {
 }
 
 func (v *ClusterCreator) Create(dryRun bool, skipPhase string) error {
-	infra, err := create.NewInfrastructure(v.furyctlConf, v.kfdManifest, v.paths.WorkDir, v.paths.BinPath, dryRun)
+	infra, err := create.NewInfrastructure(v.furyctlConf, v.kfdManifest, v.paths, dryRun)
 	if err != nil {
 		return fmt.Errorf("error while initiating infrastructure phase: %w", err)
 	}
@@ -91,9 +91,8 @@ func (v *ClusterCreator) Create(dryRun bool, skipPhase string) error {
 	kube, err := create.NewKubernetes(
 		v.furyctlConf,
 		v.kfdManifest,
-		v.paths.WorkDir,
 		infra.OutputsPath,
-		v.paths.BinPath,
+		v.paths,
 		dryRun,
 	)
 	if err != nil {
