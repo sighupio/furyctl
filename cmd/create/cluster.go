@@ -28,7 +28,22 @@ import (
 var (
 	ErrParsingFlag                = errors.New("error while parsing flag")
 	ErrDownloadDependenciesFailed = errors.New("download dependencies failed")
+	ErrKubeconfigReq              = errors.New("$KUBECONFIG is not set, so --kubeconfig is required when doing distribution phase alone")
 )
+
+type ClusterCmdFlags struct {
+	Debug              bool
+	FuryctlPath        string
+	DistroLocation     string
+	Phase              string
+	SkipPhase          string
+	BinPath            string
+	VpnAutoConnect     bool
+	DryRun             bool
+	SkipDepsDownload   bool
+	SkipDepsValidation bool
+	Kubeconfig         string
+}
 
 func NewClusterCmd(version string, tracker *analytics.Tracker) *cobra.Command {
 	var cmdEvent analytics.Event
@@ -41,56 +56,9 @@ func NewClusterCmd(version string, tracker *analytics.Tracker) *cobra.Command {
 		},
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			// Get flags.
-			debug, err := cmdutil.BoolFlag(cmd, "debug", tracker, cmdEvent)
+			flags, err := getCmdFlags(cmd, tracker, cmdEvent)
 			if err != nil {
-				return fmt.Errorf("%w: %s", ErrParsingFlag, "debug")
-			}
-
-			furyctlPath, err := cmdutil.StringFlag(cmd, "config", tracker, cmdEvent)
-			if err != nil {
-				return fmt.Errorf("%w: %s", ErrParsingFlag, "config")
-			}
-
-			distroLocation, err := cmdutil.StringFlag(cmd, "distro-location", tracker, cmdEvent)
-			if err != nil {
-				return fmt.Errorf("%w: %s", ErrParsingFlag, "distro-location")
-			}
-
-			phase, err := cmdutil.StringFlag(cmd, "phase", tracker, cmdEvent)
-			if err != nil {
-				return fmt.Errorf("%w: %s", ErrParsingFlag, "phase")
-			}
-
-			skipPhase, err := cmdutil.StringFlag(cmd, "skip-phase", tracker, cmdEvent)
-			if err != nil {
-				return fmt.Errorf("%w: %s", ErrParsingFlag, "skip-phase")
-			}
-
-			binPath := cmdutil.StringFlagOptional(cmd, "bin-path")
-
-			vpnAutoConnect, err := cmdutil.BoolFlag(cmd, "vpn-auto-connect", tracker, cmdEvent)
-			if err != nil {
-				return fmt.Errorf("%w: %s", ErrParsingFlag, "vpn-auto-connect")
-			}
-
-			dryRun, err := cmdutil.BoolFlag(cmd, "dry-run", tracker, cmdEvent)
-			if err != nil {
-				return fmt.Errorf("%w: %s", ErrParsingFlag, "dry-run")
-			}
-
-			skipDepsDownload, err := cmdutil.BoolFlag(cmd, "skip-deps-download", tracker, cmdEvent)
-			if err != nil {
-				return fmt.Errorf("%w: %s", ErrParsingFlag, "skip-deps-download")
-			}
-
-			skipDepsValidation, err := cmdutil.BoolFlag(cmd, "skip-deps-validation", tracker, cmdEvent)
-			if err != nil {
-				return fmt.Errorf("%w: %s", ErrParsingFlag, "skip-deps-validation")
-			}
-
-			kubeconfig, err := cmdutil.StringFlag(cmd, "kubeconfig", tracker, cmdEvent)
-			if err != nil {
-				return fmt.Errorf("%w: %s", ErrParsingFlag, "kubeconfig")
+				return err
 			}
 
 			// Init paths.
@@ -102,8 +70,8 @@ func NewClusterCmd(version string, tracker *analytics.Tracker) *cobra.Command {
 				return fmt.Errorf("error while getting current working directory: %w", err)
 			}
 
-			if binPath == "" {
-				binPath = filepath.Join(homeDir, ".furyctl", "bin")
+			if flags.BinPath == "" {
+				flags.BinPath = filepath.Join(homeDir, ".furyctl", "bin")
 			}
 
 			// Init first half of collaborators.
@@ -112,16 +80,16 @@ func NewClusterCmd(version string, tracker *analytics.Tracker) *cobra.Command {
 			distrodl := distribution.NewDownloader(client)
 
 			// Init packages.
-			execx.Debug = debug
+			execx.Debug = flags.Debug
 
 			// Download the distribution.
 			logrus.Info("Downloading distribution...")
-			res, err := distrodl.Download(version, distroLocation, furyctlPath)
+			res, err := distrodl.Download(version, flags.DistroLocation, flags.FuryctlPath)
 
 			cmdEvent.AddClusterDetails(analytics.ClusterDetails{
 				Provider:   res.DistroManifest.Kubernetes.Eks.Version,
 				KFDVersion: res.DistroManifest.Version,
-				Phase:      phase,
+				Phase:      flags.Phase,
 			})
 
 			if err != nil {
@@ -134,12 +102,12 @@ func NewClusterCmd(version string, tracker *analytics.Tracker) *cobra.Command {
 			basePath := filepath.Join(homeDir, ".furyctl", res.MinimalConf.Metadata.Name)
 
 			// Init second half of collaborators.
-			depsdl := dependencies.NewDownloader(client, basePath, binPath)
-			depsvl := dependencies.NewValidator(executor, binPath)
+			depsdl := dependencies.NewDownloader(client, basePath, flags.BinPath)
+			depsvl := dependencies.NewValidator(executor, flags.BinPath)
 
 			// Validate the furyctl.yaml file.
 			logrus.Info("Validating furyctl.yaml file...")
-			if err := config.Validate(furyctlPath, res.RepoPath); err != nil {
+			if err := config.Validate(flags.FuryctlPath, res.RepoPath); err != nil {
 				cmdEvent.AddErrorMessage(err)
 				tracker.Track(cmdEvent)
 
@@ -147,7 +115,7 @@ func NewClusterCmd(version string, tracker *analytics.Tracker) *cobra.Command {
 			}
 
 			// Download the dependencies.
-			if !skipDepsDownload {
+			if !flags.SkipDepsDownload {
 				logrus.Info("Downloading dependencies...")
 				if errs, _ := depsdl.DownloadAll(res.DistroManifest); len(errs) > 0 {
 					cmdEvent.AddErrorMessage(ErrDownloadDependenciesFailed)
@@ -158,7 +126,7 @@ func NewClusterCmd(version string, tracker *analytics.Tracker) *cobra.Command {
 			}
 
 			// Validate the dependencies, unless explicitly told to skip it.
-			if !skipDepsValidation {
+			if !flags.SkipDepsValidation {
 				logrus.Info("Validating dependencies...")
 				if err := depsvl.Validate(res); err != nil {
 					cmdEvent.AddErrorMessage(err)
@@ -169,17 +137,30 @@ func NewClusterCmd(version string, tracker *analytics.Tracker) *cobra.Command {
 			}
 
 			// Auto connect to the VPN if doing complete cluster creation or skipping distribution phase.
-			if phase == "" || skipPhase == "distribution" {
-				vpnAutoConnect = true
+			if flags.Phase == "" || flags.SkipPhase == "distribution" {
+				flags.VpnAutoConnect = true
+			}
+
+			// Check if kubeconfig is needed.
+			if flags.Phase == "distribution" || flags.SkipPhase == "kubernetes" {
+				if flags.Kubeconfig == "" {
+					kubeconfigFromEnv := os.Getenv("KUBECONFIG")
+
+					if kubeconfigFromEnv == "" {
+						return ErrKubeconfigReq
+					}
+
+					logrus.Warnf("Missing --kubeconfig flag, fallback to KUBECONFIG from environment: %s", kubeconfigFromEnv)
+				}
 			}
 
 			// Define cluster creation paths.
 			paths := cluster.CreatorPaths{
-				ConfigPath: furyctlPath,
+				ConfigPath: flags.FuryctlPath,
 				WorkDir:    basePath,
 				DistroPath: res.RepoPath,
-				BinPath:    binPath,
-				Kubeconfig: kubeconfig,
+				BinPath:    flags.BinPath,
+				Kubeconfig: flags.Kubeconfig,
 			}
 
 			// Create the cluster.
@@ -187,8 +168,8 @@ func NewClusterCmd(version string, tracker *analytics.Tracker) *cobra.Command {
 				res.MinimalConf,
 				res.DistroManifest,
 				paths,
-				phase,
-				vpnAutoConnect,
+				flags.Phase,
+				flags.VpnAutoConnect,
 			)
 			if err != nil {
 				cmdEvent.AddErrorMessage(err)
@@ -198,19 +179,19 @@ func NewClusterCmd(version string, tracker *analytics.Tracker) *cobra.Command {
 			}
 
 			logrus.Info("Creating cluster...")
-			if err := clusterCreator.Create(dryRun, skipPhase); err != nil {
+			if err := clusterCreator.Create(flags.DryRun, flags.SkipPhase); err != nil {
 				cmdEvent.AddErrorMessage(err)
 				tracker.Track(cmdEvent)
 
 				return fmt.Errorf("error while creating cluster: %w", err)
 			}
 
-			if !dryRun && phase == "" {
+			if !flags.DryRun && flags.Phase == "" {
 				logrus.Info("Cluster created successfully!")
 			}
 
-			if phase != "" {
-				logrus.Infof("Phase %s executed successfully!", phase)
+			if flags.Phase != "" {
+				logrus.Infof("Phase %s executed successfully!", flags.Phase)
 			}
 
 			cmdEvent.AddSuccessMessage("cluster creation succeeded")
@@ -223,6 +204,74 @@ func NewClusterCmd(version string, tracker *analytics.Tracker) *cobra.Command {
 	setupClusterCmdFlags(cmd)
 
 	return cmd
+}
+
+func getCmdFlags(cmd *cobra.Command, tracker *analytics.Tracker, cmdEvent analytics.Event) (ClusterCmdFlags, error) {
+	debug, err := cmdutil.BoolFlag(cmd, "debug", tracker, cmdEvent)
+	if err != nil {
+		return ClusterCmdFlags{}, fmt.Errorf("%w: %s", ErrParsingFlag, "debug")
+	}
+
+	furyctlPath, err := cmdutil.StringFlag(cmd, "config", tracker, cmdEvent)
+	if err != nil {
+		return ClusterCmdFlags{}, fmt.Errorf("%w: %s", ErrParsingFlag, "config")
+	}
+
+	distroLocation, err := cmdutil.StringFlag(cmd, "distro-location", tracker, cmdEvent)
+	if err != nil {
+		return ClusterCmdFlags{}, fmt.Errorf("%w: %s", ErrParsingFlag, "distro-location")
+	}
+
+	phase, err := cmdutil.StringFlag(cmd, "phase", tracker, cmdEvent)
+	if err != nil {
+		return ClusterCmdFlags{}, fmt.Errorf("%w: %s", ErrParsingFlag, "phase")
+	}
+
+	skipPhase, err := cmdutil.StringFlag(cmd, "skip-phase", tracker, cmdEvent)
+	if err != nil {
+		return ClusterCmdFlags{}, fmt.Errorf("%w: %s", ErrParsingFlag, "skip-phase")
+	}
+
+	binPath := cmdutil.StringFlagOptional(cmd, "bin-path")
+
+	vpnAutoConnect, err := cmdutil.BoolFlag(cmd, "vpn-auto-connect", tracker, cmdEvent)
+	if err != nil {
+		return ClusterCmdFlags{}, fmt.Errorf("%w: %s", ErrParsingFlag, "vpn-auto-connect")
+	}
+
+	dryRun, err := cmdutil.BoolFlag(cmd, "dry-run", tracker, cmdEvent)
+	if err != nil {
+		return ClusterCmdFlags{}, fmt.Errorf("%w: %s", ErrParsingFlag, "dry-run")
+	}
+
+	skipDepsDownload, err := cmdutil.BoolFlag(cmd, "skip-deps-download", tracker, cmdEvent)
+	if err != nil {
+		return ClusterCmdFlags{}, fmt.Errorf("%w: %s", ErrParsingFlag, "skip-deps-download")
+	}
+
+	skipDepsValidation, err := cmdutil.BoolFlag(cmd, "skip-deps-validation", tracker, cmdEvent)
+	if err != nil {
+		return ClusterCmdFlags{}, fmt.Errorf("%w: %s", ErrParsingFlag, "skip-deps-validation")
+	}
+
+	kubeconfig, err := cmdutil.StringFlag(cmd, "kubeconfig", tracker, cmdEvent)
+	if err != nil {
+		return ClusterCmdFlags{}, fmt.Errorf("%w: %s", ErrParsingFlag, "kubeconfig")
+	}
+
+	return ClusterCmdFlags{
+		Debug:              debug,
+		FuryctlPath:        furyctlPath,
+		DistroLocation:     distroLocation,
+		Phase:              phase,
+		SkipPhase:          skipPhase,
+		BinPath:            binPath,
+		VpnAutoConnect:     vpnAutoConnect,
+		DryRun:             dryRun,
+		SkipDepsDownload:   skipDepsDownload,
+		SkipDepsValidation: skipDepsValidation,
+		Kubeconfig:         kubeconfig,
+	}, nil
 }
 
 func setupClusterCmdFlags(cmd *cobra.Command) {
@@ -293,6 +342,6 @@ func setupClusterCmdFlags(cmd *cobra.Command) {
 	cmd.Flags().String(
 		"kubeconfig",
 		"",
-		"Path to the kubeconfig file",
+		"Path to the kubeconfig file, mandatory if you want to run the distribution phase and $KUBECONFIG is not set",
 	)
 }
