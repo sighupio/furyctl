@@ -210,9 +210,9 @@ var (
 				Expect(out).To(ContainSubstring("kubectl:"))
 				Expect(out).To(ContainSubstring("kustomize:"))
 				Expect(out).To(ContainSubstring("furyagent:"))
-				Expect(out).To(ContainSubstring("missing environment variable: AWS_ACCESS_KEY_ID"))
-				Expect(out).To(ContainSubstring("missing environment variable: AWS_SECRET_ACCESS_KEY"))
-				Expect(out).To(ContainSubstring("missing environment variable: AWS_DEFAULT_REGION"))
+				Expect(out).To(ContainSubstring("AWS_ACCESS_KEY_ID:"))
+				Expect(out).To(ContainSubstring("AWS_SECRET_ACCESS_KEY:"))
+				Expect(out).To(ContainSubstring("AWS_DEFAULT_REGION:"))
 			})
 
 			It("should report an error when dependencies are wrong", Serial, func() {
@@ -248,9 +248,9 @@ var (
 				Expect(out).To(
 					ContainSubstring("terraform: wrong tool version - installed = 0.15.3, expected = 0.15.4"),
 				)
-				Expect(out).To(ContainSubstring("missing environment variable: AWS_ACCESS_KEY_ID"))
-				Expect(out).To(ContainSubstring("missing environment variable: AWS_SECRET_ACCESS_KEY"))
-				Expect(out).To(ContainSubstring("missing environment variable: AWS_DEFAULT_REGION"))
+				Expect(out).To(ContainSubstring("AWS_ACCESS_KEY_ID: missing environment variable"))
+				Expect(out).To(ContainSubstring("AWS_SECRET_ACCESS_KEY: missing environment variable"))
+				Expect(out).To(ContainSubstring("AWS_DEFAULT_REGION: missing environment variable"))
 			})
 
 			It("should exit without errors when dependencies are correct", Serial, func() {
