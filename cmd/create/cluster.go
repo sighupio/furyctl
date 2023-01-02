@@ -88,6 +88,11 @@ func NewClusterCmd(version string, tracker *analytics.Tracker) *cobra.Command {
 				return fmt.Errorf("%w: %s", ErrParsingFlag, "skip-deps-validation")
 			}
 
+			kubeconfig, err := cmdutil.StringFlag(cmd, "kubeconfig", tracker, cmdEvent)
+			if err != nil {
+				return fmt.Errorf("%w: %s", ErrParsingFlag, "kubeconfig")
+			}
+
 			// Init paths.
 			homeDir, err := os.UserHomeDir()
 			if err != nil {
@@ -163,6 +168,7 @@ func NewClusterCmd(version string, tracker *analytics.Tracker) *cobra.Command {
 				}
 			}
 
+			// Auto connect to the VPN if doing complete cluster creation or skipping distribution phase.
 			if phase == "" || skipPhase == "distribution" {
 				vpnAutoConnect = true
 			}
@@ -177,6 +183,7 @@ func NewClusterCmd(version string, tracker *analytics.Tracker) *cobra.Command {
 				furyctlPath,
 				phase,
 				vpnAutoConnect,
+				kubeconfig,
 			)
 			if err != nil {
 				cmdEvent.AddErrorMessage(err)
@@ -276,5 +283,11 @@ func setupClusterCmdFlags(cmd *cobra.Command) {
 		"vpn-auto-connect",
 		false,
 		"Automatically connect to the VPN after the infrastructure phase",
+	)
+
+	cmd.Flags().String(
+		"kubeconfig",
+		"",
+		"Path to the kubeconfig file",
 	)
 }

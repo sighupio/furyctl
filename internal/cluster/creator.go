@@ -22,6 +22,7 @@ const (
 	CreatorPropertyBinPath        = "binpath"
 	CreatorPropertyPhase          = "phase"
 	CreatorPropertyVpnAutoConnect = "vpnautoconnect"
+	CreatorPropertyKubeconfig     = "kubeconfig"
 )
 
 var (
@@ -52,6 +53,7 @@ func NewCreator(
 	configPath string,
 	phase string,
 	vpnAutoConnect bool,
+	kubeconfig string,
 ) (Creator, error) {
 	lcAPIVersion := strings.ToLower(minimalConf.APIVersion)
 	lcResourceType := strings.ToLower(minimalConf.Kind)
@@ -81,6 +83,10 @@ func NewCreator(
 			{
 				Name:  CreatorPropertyWorkDir,
 				Value: workDir,
+			},
+			{
+				Name:  CreatorPropertyKubeconfig,
+				Value: kubeconfig,
 			},
 		})
 	}

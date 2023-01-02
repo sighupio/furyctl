@@ -69,6 +69,7 @@ func NewDistribution(
 	infraOutputsPath,
 	binPath string,
 	dryRun bool,
+	kubeconfig string,
 ) (*Distribution, error) {
 	distroDir := path.Join(workDir, "distribution")
 
@@ -104,8 +105,9 @@ func NewDistribution(
 		kubeRunner: kubectl.NewRunner(
 			execx.NewStdExecutor(),
 			kubectl.Paths{
-				Kubectl: phase.KubectlPath,
-				WorkDir: path.Join(phase.Path, "manifests"),
+				Kubectl:    phase.KubectlPath,
+				WorkDir:    path.Join(phase.Path, "manifests"),
+				Kubeconfig: kubeconfig,
 			},
 			true,
 			true,

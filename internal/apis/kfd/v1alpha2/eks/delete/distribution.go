@@ -43,7 +43,13 @@ type Distribution struct {
 	dryRun     bool
 }
 
-func NewDistribution(dryRun bool, workDir, binPath string, kfdManifest config.KFD) (*Distribution, error) {
+func NewDistribution(
+	dryRun bool,
+	workDir,
+	binPath string,
+	kfdManifest config.KFD,
+	kubeconfig string,
+) (*Distribution, error) {
 	distroDir := path.Join(workDir, "distribution")
 
 	phase, err := cluster.NewOperationPhase(distroDir, kfdManifest.Tools, binPath)
@@ -73,8 +79,9 @@ func NewDistribution(dryRun bool, workDir, binPath string, kfdManifest config.KF
 		kubeRunner: kubectl.NewRunner(
 			execx.NewStdExecutor(),
 			kubectl.Paths{
-				Kubectl: phase.KubectlPath,
-				WorkDir: path.Join(phase.Path, "manifests"),
+				Kubectl:    phase.KubectlPath,
+				WorkDir:    path.Join(phase.Path, "manifests"),
+				Kubeconfig: kubeconfig,
 			},
 			true,
 			true,

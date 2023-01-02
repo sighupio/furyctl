@@ -68,6 +68,11 @@ func NewClusterCmd(version string, tracker *analytics.Tracker) *cobra.Command {
 				return fmt.Errorf("%w: force", ErrParsingFlag)
 			}
 
+			kubeconfig, err := cmdutil.StringFlag(cmd, "kubeconfig", tracker, cmdEvent)
+			if err != nil {
+				return fmt.Errorf("%w: %s", ErrParsingFlag, "kubeconfig")
+			}
+
 			// Init paths.
 			homeDir, err := os.UserHomeDir()
 			if err != nil {
@@ -108,7 +113,14 @@ func NewClusterCmd(version string, tracker *analytics.Tracker) *cobra.Command {
 				return fmt.Errorf("error while validating dependencies: %w", err)
 			}
 
-			clusterDeleter, err := cluster.NewDeleter(res.MinimalConf, res.DistroManifest, phase, basePath, binPath)
+			clusterDeleter, err := cluster.NewDeleter(
+				res.MinimalConf,
+				res.DistroManifest,
+				phase,
+				basePath,
+				binPath,
+				kubeconfig,
+			)
 			if err != nil {
 				cmdEvent.AddErrorMessage(err)
 				tracker.Track(cmdEvent)
@@ -196,6 +208,12 @@ func NewClusterCmd(version string, tracker *analytics.Tracker) *cobra.Command {
 		"force",
 		false,
 		"Force deletion of the cluster",
+	)
+
+	cmd.Flags().String(
+		"kubeconfig",
+		"",
+		"Path to the kubeconfig file",
 	)
 
 	return cmd

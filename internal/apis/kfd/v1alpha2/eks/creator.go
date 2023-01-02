@@ -26,6 +26,7 @@ type ClusterCreator struct {
 	binPath        string
 	phase          string
 	vpnAutoConnect bool
+	kubeconfig     string
 }
 
 func (v *ClusterCreator) SetProperties(props []cluster.CreatorProperty) {
@@ -77,6 +78,11 @@ func (v *ClusterCreator) SetProperty(name string, value any) {
 		if s, ok := value.(string); ok {
 			v.binPath = s
 		}
+
+	case cluster.CreatorPropertyKubeconfig:
+		if s, ok := value.(string); ok {
+			v.kubeconfig = s
+		}
 	}
 }
 
@@ -100,6 +106,7 @@ func (v *ClusterCreator) Create(dryRun bool, skipPhase string) error {
 		infra.OutputsPath,
 		v.binPath,
 		dryRun,
+		v.kubeconfig,
 	)
 	if err != nil {
 		return fmt.Errorf("error while initiating distribution phase: %w", err)
