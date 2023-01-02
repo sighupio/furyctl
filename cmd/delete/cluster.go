@@ -25,7 +25,10 @@ import (
 	netx "github.com/sighupio/furyctl/internal/x/net"
 )
 
-var ErrParsingFlag = errors.New("error while parsing flag")
+var (
+	ErrParsingFlag   = errors.New("error while parsing flag")
+	ErrKubeconfigReq = errors.New("$KUBECONFIG is not set, so --kubeconfig is required when doing distribution phase alone")
+)
 
 func NewClusterCmd(version string, tracker *analytics.Tracker) *cobra.Command {
 	var cmdEvent analytics.Event
@@ -150,6 +153,19 @@ func NewClusterCmd(version string, tracker *analytics.Tracker) *cobra.Command {
 				}
 			}
 
+			// Check if kubeconfig is needed.
+			if phase == "distribution" || phase == "" {
+				if kubeconfig == "" {
+					kubeconfigFromEnv := os.Getenv("KUBECONFIG")
+
+					if kubeconfigFromEnv == "" {
+						return ErrKubeconfigReq
+					}
+
+					logrus.Warnf("Missing --kubeconfig flag, fallback to KUBECONFIG from environment: %s", kubeconfigFromEnv)
+				}
+			}
+
 			err = clusterDeleter.Delete(dryRun)
 			if err != nil {
 				cmdEvent.AddErrorMessage(err)
@@ -213,7 +229,8 @@ func NewClusterCmd(version string, tracker *analytics.Tracker) *cobra.Command {
 	cmd.Flags().String(
 		"kubeconfig",
 		"",
-		"Path to the kubeconfig file",
+		"Path to the kubeconfig file, mandatory if you want to run the distribution phase alone or "+
+			"if you want to delete a cluster and $KUBECONFIG is not set",
 	)
 
 	return cmd
