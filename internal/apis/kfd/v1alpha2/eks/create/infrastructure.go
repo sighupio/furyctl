@@ -147,10 +147,10 @@ func (i *Infrastructure) Exec(opts []cluster.OperationPhaseOption) error {
 			if strings.ToLower(opt.Name) == cluster.OperationPhaseOptionVPNAutoConnect {
 				autoConnect, ok := opt.Value.(bool)
 				if autoConnect && ok {
-					logrus.Info("Connecting to VPN...")
+					logrus.Info("Connecting to VPN, you will be asked for your SUDO password...")
 
 					if err := i.ovRunner.Connect(clientName); err != nil {
-						return fmt.Errorf("error connecting to vpn: %w", err)
+						return fmt.Errorf("error connecting to VPN: %w", err)
 					}
 				}
 			}
