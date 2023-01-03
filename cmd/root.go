@@ -186,12 +186,12 @@ Furyctl is a simple CLI tool to:
 	)
 
 	rootCmd.AddCommand(NewCompletionCmd(tracker))
-	rootCmd.AddCommand(NewCreateCommand(versions["version"], tracker))
-	rootCmd.AddCommand(NewDownloadCmd(versions["version"], tracker))
+	rootCmd.AddCommand(NewCreateCommand(tracker))
+	rootCmd.AddCommand(NewDownloadCmd(tracker))
 	rootCmd.AddCommand(NewDumpCmd(tracker))
-	rootCmd.AddCommand(NewValidateCommand(versions["version"], tracker))
+	rootCmd.AddCommand(NewValidateCommand(tracker))
 	rootCmd.AddCommand(NewVersionCmd(versions, tracker))
-	rootCmd.AddCommand(NewDeleteCommand(versions["version"], tracker))
+	rootCmd.AddCommand(NewDeleteCommand(tracker))
 
 	return rootCmd
 }

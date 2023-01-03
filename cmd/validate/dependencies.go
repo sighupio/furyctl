@@ -24,7 +24,7 @@ import (
 
 var ErrDependencies = fmt.Errorf("dependencies are not satisfied")
 
-func NewDependenciesCmd(furyctlBinVersion string, tracker *analytics.Tracker) *cobra.Command {
+func NewDependenciesCmd(tracker *analytics.Tracker) *cobra.Command {
 	var cmdEvent analytics.Event
 
 	cmd := &cobra.Command{
@@ -46,7 +46,7 @@ func NewDependenciesCmd(furyctlBinVersion string, tracker *analytics.Tracker) *c
 
 			dloader := distribution.NewDownloader(netx.NewGoGetterClient())
 
-			dres, err := dloader.Download(furyctlBinVersion, distroLocation, furyctlPath)
+			dres, err := dloader.Download(distroLocation, furyctlPath)
 			if err != nil {
 				cmdEvent.AddErrorMessage(err)
 				tracker.Track(cmdEvent)

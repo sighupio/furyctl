@@ -24,7 +24,7 @@ import (
 
 var ErrMandatoryFlag = errors.New("flag must be specified")
 
-func NewConfigCmd(furyctlBinVersion string, tracker *analytics.Tracker) *cobra.Command {
+func NewConfigCmd(tracker *analytics.Tracker) *cobra.Command {
 	var cmdEvent analytics.Event
 
 	cmd := &cobra.Command{
@@ -92,7 +92,7 @@ func NewConfigCmd(furyctlBinVersion string, tracker *analytics.Tracker) *cobra.C
 
 			// Download the distribution.
 			logrus.Info("Downloading distribution...")
-			res, err := distrodl.DoDownload(furyctlBinVersion, distroLocation, minimalConf)
+			res, err := distrodl.DoDownload(distroLocation, minimalConf)
 			if err != nil {
 				cmdEvent.AddErrorMessage(err)
 				tracker.Track(cmdEvent)

@@ -18,28 +18,24 @@ import (
 func Test_Downloader_Download(t *testing.T) {
 	testCases := []struct {
 		desc          string
-		furyctlBinVer string
 		wantApiVer    string
 		wantKind      string
 		wantDistroVer string
 	}{
 		{
 			desc:          "unknown furyctl version",
-			furyctlBinVer: "unknown",
 			wantApiVer:    "kfd.sighup.io/v1alpha2",
 			wantKind:      "EKSCluster",
 			wantDistroVer: "v1.24.1",
 		},
 		{
 			desc:          "compatible furyctl version",
-			furyctlBinVer: "1.24.0",
 			wantApiVer:    "kfd.sighup.io/v1alpha2",
 			wantKind:      "EKSCluster",
 			wantDistroVer: "v1.24.1",
 		},
 		{
 			desc:          "older furyctl version",
-			furyctlBinVer: "1.20.0",
 			wantApiVer:    "kfd.sighup.io/v1alpha2",
 			wantKind:      "EKSCluster",
 			wantDistroVer: "v1.24.1",
@@ -58,7 +54,6 @@ func Test_Downloader_Download(t *testing.T) {
 			d := distribution.NewDownloader(netx.NewGoGetterClient())
 
 			res, err := d.Download(
-				tC.furyctlBinVer,
 				absDistroPath,
 				fmt.Sprintf("../../test/data/integration/%s/furyctl.yaml", tC.wantDistroVer),
 			)

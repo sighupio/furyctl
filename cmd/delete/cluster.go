@@ -30,7 +30,7 @@ var (
 	ErrKubeconfigReq = errors.New("when running distribution phase, either the KUBECONFIG environment variable or the --kubeconfig flag should be set")
 )
 
-func NewClusterCmd(version string, tracker *analytics.Tracker) *cobra.Command {
+func NewClusterCmd(tracker *analytics.Tracker) *cobra.Command {
 	var cmdEvent analytics.Event
 
 	cmd := &cobra.Command{
@@ -108,7 +108,7 @@ func NewClusterCmd(version string, tracker *analytics.Tracker) *cobra.Command {
 
 			// Download the distribution.
 			logrus.Info("Downloading distribution...")
-			res, err := distrodl.Download(version, distroLocation, furyctlPath)
+			res, err := distrodl.Download(distroLocation, furyctlPath)
 			if err != nil {
 				err = fmt.Errorf("error while downloading distribution: %w", err)
 
