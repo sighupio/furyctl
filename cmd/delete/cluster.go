@@ -27,7 +27,7 @@ import (
 
 var (
 	ErrParsingFlag   = errors.New("error while parsing flag")
-	ErrKubeconfigReq = errors.New("$KUBECONFIG is not set, so --kubeconfig is required when doing distribution phase alone")
+	ErrKubeconfigReq = errors.New("$KUBECONFIG is not set, so --kubeconfig is required when doing distribution phase")
 )
 
 func NewClusterCmd(version string, tracker *analytics.Tracker) *cobra.Command {
@@ -80,6 +80,19 @@ func NewClusterCmd(version string, tracker *analytics.Tracker) *cobra.Command {
 			homeDir, err := os.UserHomeDir()
 			if err != nil {
 				return fmt.Errorf("error while getting user home directory: %w", err)
+			}
+
+			// Check if kubeconfig is needed.
+			if phase == "distribution" || phase == "" {
+				if kubeconfig == "" {
+					kubeconfigFromEnv := os.Getenv("KUBECONFIG")
+
+					if kubeconfigFromEnv == "" {
+						return ErrKubeconfigReq
+					}
+
+					logrus.Warnf("Missing --kubeconfig flag, fallback to KUBECONFIG from environment: %s", kubeconfigFromEnv)
+				}
 			}
 
 			if binPath == "" {
@@ -150,19 +163,6 @@ func NewClusterCmd(version string, tracker *analytics.Tracker) *cobra.Command {
 
 				if !askForConfirmation() {
 					return nil
-				}
-			}
-
-			// Check if kubeconfig is needed.
-			if phase == "distribution" || phase == "" {
-				if kubeconfig == "" {
-					kubeconfigFromEnv := os.Getenv("KUBECONFIG")
-
-					if kubeconfigFromEnv == "" {
-						return ErrKubeconfigReq
-					}
-
-					logrus.Warnf("Missing --kubeconfig flag, fallback to KUBECONFIG from environment: %s", kubeconfigFromEnv)
 				}
 			}
 

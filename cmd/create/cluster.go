@@ -70,6 +70,19 @@ func NewClusterCmd(version string, tracker *analytics.Tracker) *cobra.Command {
 				return fmt.Errorf("error while getting current working directory: %w", err)
 			}
 
+			// Check if kubeconfig is needed.
+			if flags.Phase == "distribution" || flags.SkipPhase == "kubernetes" {
+				if flags.Kubeconfig == "" {
+					kubeconfigFromEnv := os.Getenv("KUBECONFIG")
+
+					if kubeconfigFromEnv == "" {
+						return ErrKubeconfigReq
+					}
+
+					logrus.Warnf("Missing --kubeconfig flag, fallback to KUBECONFIG from environment: %s", kubeconfigFromEnv)
+				}
+			}
+
 			if flags.BinPath == "" {
 				flags.BinPath = filepath.Join(homeDir, ".furyctl", "bin")
 			}
@@ -139,19 +152,6 @@ func NewClusterCmd(version string, tracker *analytics.Tracker) *cobra.Command {
 			// Auto connect to the VPN if doing complete cluster creation or skipping distribution phase.
 			if flags.Phase == "" || flags.SkipPhase == "distribution" {
 				flags.VpnAutoConnect = true
-			}
-
-			// Check if kubeconfig is needed.
-			if flags.Phase == "distribution" || flags.SkipPhase == "kubernetes" {
-				if flags.Kubeconfig == "" {
-					kubeconfigFromEnv := os.Getenv("KUBECONFIG")
-
-					if kubeconfigFromEnv == "" {
-						return ErrKubeconfigReq
-					}
-
-					logrus.Warnf("Missing --kubeconfig flag, fallback to KUBECONFIG from environment: %s", kubeconfigFromEnv)
-				}
 			}
 
 			// Define cluster creation paths.
