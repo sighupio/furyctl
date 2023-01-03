@@ -147,7 +147,7 @@ data:
         eks:
           iamRoleArn: arn:aws:iam::123456789123:role/clustename-velero-velero-role
           region: eu-west-1
-          bucket: velero-bucket
+          bucketName: velero-bucket
     # auth module configuration
     auth:
       overrides:
