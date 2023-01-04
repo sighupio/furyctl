@@ -79,7 +79,7 @@ func NewClusterCmd(version string, tracker *analytics.Tracker) *cobra.Command {
 						return ErrKubeconfigReq
 					}
 
-					logrus.Infof("Missing --kubeconfig flag, fallback to KUBECONFIG from environment: %s", kubeconfigFromEnv)
+					logrus.Warnf("Missing --kubeconfig flag, falling back to KUBECONFIG from environment: %s", kubeconfigFromEnv)
 				}
 			}
 
