@@ -230,7 +230,7 @@ func NewClusterCmd(version string, tracker *analytics.Tracker) *cobra.Command {
 		"kubeconfig",
 		"",
 		"Path to the kubeconfig file, mandatory if you want to run the distribution phase alone or "+
-			"if you want to delete a cluster and $KUBECONFIG is not set",
+			"if you want to delete a cluster and the KUBECONFIG environment variable is not set",
 	)
 
 	return cmd

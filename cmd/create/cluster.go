@@ -27,8 +27,8 @@ import (
 
 var (
 	ErrParsingFlag                = errors.New("error while parsing flag")
-	ErrDownloadDependenciesFailed = errors.New("download dependencies failed")
-	ErrKubeconfigReq              = errors.New("$KUBECONFIG is not set, so --kubeconfig is required when doing distribution phase alone")
+	ErrDownloadDependenciesFailed = errors.New("dependencies download failed")
+	ErrKubeconfigReq              = errors.New("when running distribution phase alone, either the KUBECONFIG environment variable or the --kubeconfig flag should be set")
 )
 
 type ClusterCmdFlags struct {
@@ -79,7 +79,7 @@ func NewClusterCmd(version string, tracker *analytics.Tracker) *cobra.Command {
 						return ErrKubeconfigReq
 					}
 
-					logrus.Warnf("Missing --kubeconfig flag, fallback to KUBECONFIG from environment: %s", kubeconfigFromEnv)
+					logrus.Infof("Missing --kubeconfig flag, fallback to KUBECONFIG from environment: %s", kubeconfigFromEnv)
 				}
 			}
 
@@ -336,12 +336,12 @@ func setupClusterCmdFlags(cmd *cobra.Command) {
 	cmd.Flags().Bool(
 		"vpn-auto-connect",
 		false,
-		"Automatically connect to the VPN after the infrastructure phase",
+		"When set will automatically connect to the created VPN in the infrastructure phase",
 	)
 
 	cmd.Flags().String(
 		"kubeconfig",
 		"",
-		"Path to the kubeconfig file, mandatory if you want to run the distribution phase and $KUBECONFIG is not set",
+		"Path to the kubeconfig file, mandatory if you want to run the distribution phase and the KUBECONFIG environment variable is not set",
 	)
 }
