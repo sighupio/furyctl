@@ -24,7 +24,7 @@ type Infrastructure struct {
 }
 
 func NewInfrastructure(dryRun bool, workDir, binPath string, kfdManifest config.KFD) (*Infrastructure, error) {
-	infraDir := path.Join(workDir, "infrastructure")
+	infraDir := path.Join(workDir, cluster.OperationPhaseInfrastructure)
 
 	phase, err := cluster.NewOperationPhase(infraDir, kfdManifest.Tools, binPath)
 	if err != nil {

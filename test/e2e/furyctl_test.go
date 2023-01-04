@@ -21,6 +21,8 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gexec"
+
+	"github.com/sighupio/furyctl/internal/cluster"
 )
 
 func TestE2e(t *testing.T) {
@@ -545,9 +547,9 @@ var (
 				homeDir, err := os.UserHomeDir()
 				Expect(err).To(Not(HaveOccurred()))
 
-				tfPath := path.Join(homeDir, ".furyctl", "furyctl-dev-aws", "infrastructure", "terraform")
+				tfPath := path.Join(homeDir, ".furyctl", "furyctl-dev-aws", cluster.OperationPhaseInfrastructure, "terraform")
 
-				createInfraCmd := FuryctlCreateCluster(furyctlYamlPath, distroPath, "infrastructure", true)
+				createInfraCmd := FuryctlCreateCluster(furyctlYamlPath, distroPath, cluster.OperationPhaseInfrastructure, true)
 				session, err := gexec.Start(createInfraCmd, GinkgoWriter, GinkgoWriter)
 				Expect(err).To(Not(HaveOccurred()))
 
@@ -574,9 +576,9 @@ var (
 				homeDir, err := os.UserHomeDir()
 				Expect(err).To(Not(HaveOccurred()))
 
-				tfPath := path.Join(homeDir, ".furyctl", "furyctl-dev-aws", "kubernetes", "terraform")
+				tfPath := path.Join(homeDir, ".furyctl", "furyctl-dev-aws", cluster.OperationPhaseKubernetes, "terraform")
 
-				createKubeCmd := FuryctlCreateCluster(furyctlYamlPath, distroPath, "kubernetes", true)
+				createKubeCmd := FuryctlCreateCluster(furyctlYamlPath, distroPath, cluster.OperationPhaseKubernetes, true)
 				session, err := gexec.Start(createKubeCmd, GinkgoWriter, GinkgoWriter)
 				Expect(err).To(Not(HaveOccurred()))
 

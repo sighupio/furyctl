@@ -67,7 +67,7 @@ func NewDistribution(
 	infraOutputsPath string,
 	dryRun bool,
 ) (*Distribution, error) {
-	distroDir := path.Join(paths.WorkDir, "distribution")
+	distroDir := path.Join(paths.WorkDir, cluster.OperationPhaseDistribution)
 
 	phase, err := cluster.NewOperationPhase(distroDir, kfdManifest.Tools, paths.BinPath)
 	if err != nil {
@@ -455,7 +455,7 @@ func (d *Distribution) copyFromTemplate(cfg template.Config) error {
 	}
 
 	templateModel, err := template.NewTemplateModel(
-		path.Join(d.distroPath, "templates", "distribution"),
+		path.Join(d.distroPath, "templates", cluster.OperationPhaseDistribution),
 		path.Join(d.Path),
 		confPath,
 		outDirPath,
