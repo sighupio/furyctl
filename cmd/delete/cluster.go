@@ -27,7 +27,7 @@ import (
 
 var (
 	ErrParsingFlag   = errors.New("error while parsing flag")
-	ErrKubeconfigReq = errors.New("$KUBECONFIG is not set, so --kubeconfig is required when doing distribution phase")
+	ErrKubeconfigReq = errors.New("when running distribution phase, either the KUBECONFIG environment variable or the --kubeconfig flag should be set")
 )
 
 func NewClusterCmd(version string, tracker *analytics.Tracker) *cobra.Command {
