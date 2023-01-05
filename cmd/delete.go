@@ -11,13 +11,13 @@ import (
 	"github.com/sighupio/furyctl/internal/analytics"
 )
 
-func NewDeleteCommand(version string, tracker *analytics.Tracker) *cobra.Command {
+func NewDeleteCommand(tracker *analytics.Tracker) *cobra.Command {
 	deleteCmd := &cobra.Command{
 		Use:   "delete",
 		Short: "Delete a cluster",
 	}
 
-	deleteCmd.AddCommand(del.NewClusterCmd(version, tracker))
+	deleteCmd.AddCommand(del.NewClusterCmd(tracker))
 
 	return deleteCmd
 }

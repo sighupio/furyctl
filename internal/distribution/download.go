@@ -15,7 +15,6 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/sighupio/fury-distribution/pkg/config"
-	"github.com/sighupio/furyctl/internal/semver"
 	netx "github.com/sighupio/furyctl/internal/x/net"
 	yamlx "github.com/sighupio/furyctl/internal/x/yaml"
 )
@@ -55,7 +54,6 @@ type Downloader struct {
 }
 
 func (d *Downloader) Download(
-	furyctlBinVersion string,
 	distroLocation string,
 	furyctlConfPath string,
 ) (DownloadResult, error) {
@@ -64,19 +62,16 @@ func (d *Downloader) Download(
 		return DownloadResult{}, fmt.Errorf("%w: %s", ErrYamlUnmarshalFile, err)
 	}
 
-	return d.DoDownload(furyctlBinVersion, distroLocation, minimalConf)
+	return d.DoDownload(distroLocation, minimalConf)
 }
 
 func (d *Downloader) DoDownload(
-	furyctlBinVersion string,
 	distroLocation string,
 	minimalConf config.Furyctl,
 ) (DownloadResult, error) {
 	if err := d.validate.Struct(minimalConf); err != nil {
 		return DownloadResult{}, fmt.Errorf("invalid furyctl config: %w", err)
 	}
-
-	checkFuryctlBinVersion(furyctlBinVersion, minimalConf)
 
 	if distroLocation == "" {
 		distroLocation = fmt.Sprintf(DefaultBaseURL, minimalConf.Spec.DistributionVersion)
@@ -119,20 +114,4 @@ func (d *Downloader) DoDownload(
 		MinimalConf:    minimalConf,
 		DistroManifest: kfdManifest,
 	}, nil
-}
-
-func checkFuryctlBinVersion(furyctlBinVersion string, minimalConf config.Furyctl) {
-	furyctlConfVersion := minimalConf.Spec.DistributionVersion
-
-	if furyctlBinVersion == "unknown" {
-		return
-	}
-
-	if !semver.SameMinorStr(furyctlConfVersion, furyctlBinVersion) {
-		logrus.Warnf(
-			"this version of furyctl ('%s') does not support distribution version '%s', results may be inaccurate",
-			furyctlBinVersion,
-			furyctlConfVersion,
-		)
-	}
 }

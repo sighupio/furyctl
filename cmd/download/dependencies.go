@@ -26,7 +26,7 @@ var (
 	ErrDownloadFailed = errors.New("dependencies download failed")
 )
 
-func NewDependenciesCmd(furyctlBinVersion string, tracker *analytics.Tracker) *cobra.Command {
+func NewDependenciesCmd(tracker *analytics.Tracker) *cobra.Command {
 	var cmdEvent analytics.Event
 
 	cmd := &cobra.Command{
@@ -66,7 +66,7 @@ func NewDependenciesCmd(furyctlBinVersion string, tracker *analytics.Tracker) *c
 
 			distrodl := distribution.NewDownloader(client)
 
-			dres, err := distrodl.Download(furyctlBinVersion, distroLocation, furyctlPath)
+			dres, err := distrodl.Download(distroLocation, furyctlPath)
 			cmdEvent.AddClusterDetails(analytics.ClusterDetails{
 				KFDVersion: dres.DistroManifest.Version,
 			})

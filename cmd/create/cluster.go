@@ -45,7 +45,7 @@ type ClusterCmdFlags struct {
 	Kubeconfig         string
 }
 
-func NewClusterCmd(version string, tracker *analytics.Tracker) *cobra.Command {
+func NewClusterCmd(tracker *analytics.Tracker) *cobra.Command {
 	var cmdEvent analytics.Event
 
 	cmd := &cobra.Command{
@@ -97,7 +97,7 @@ func NewClusterCmd(version string, tracker *analytics.Tracker) *cobra.Command {
 
 			// Download the distribution.
 			logrus.Info("Downloading distribution...")
-			res, err := distrodl.Download(version, flags.DistroLocation, flags.FuryctlPath)
+			res, err := distrodl.Download(flags.DistroLocation, flags.FuryctlPath)
 
 			cmdEvent.AddClusterDetails(analytics.ClusterDetails{
 				Provider:   res.DistroManifest.Kubernetes.Eks.Version,
