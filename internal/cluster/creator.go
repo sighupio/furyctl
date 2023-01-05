@@ -22,6 +22,7 @@ const (
 	CreatorPropertyBinPath        = "binpath"
 	CreatorPropertyPhase          = "phase"
 	CreatorPropertyVpnAutoConnect = "vpnautoconnect"
+	CreatorPropertyKubeconfig     = "kubeconfig"
 )
 
 var (
@@ -29,6 +30,14 @@ var (
 	//  as global to work with init function.
 	errResourceNotSupported = errors.New("resource is not supported")
 )
+
+type CreatorPaths struct {
+	ConfigPath string
+	WorkDir    string
+	DistroPath string
+	BinPath    string
+	Kubeconfig string
+}
 
 type CreatorFactory func(configPath string, props []CreatorProperty) (Creator, error)
 
@@ -46,10 +55,7 @@ type Creator interface {
 func NewCreator(
 	minimalConf config.Furyctl,
 	kfdManifest config.KFD,
-	workDir string,
-	distroPath string,
-	binPath string,
-	configPath string,
+	paths CreatorPaths,
 	phase string,
 	vpnAutoConnect bool,
 ) (Creator, error) {
@@ -57,7 +63,7 @@ func NewCreator(
 	lcResourceType := strings.ToLower(minimalConf.Kind)
 
 	if factoryFn, ok := crFactories[lcAPIVersion][lcResourceType]; ok {
-		return factoryFn(configPath, []CreatorProperty{
+		return factoryFn(paths.ConfigPath, []CreatorProperty{
 			{
 				Name:  CreatorPropertyKfdManifest,
 				Value: kfdManifest,
@@ -72,15 +78,19 @@ func NewCreator(
 			},
 			{
 				Name:  CreatorPropertyDistroPath,
-				Value: distroPath,
+				Value: paths.DistroPath,
 			},
 			{
 				Name:  CreatorPropertyBinPath,
-				Value: binPath,
+				Value: paths.BinPath,
 			},
 			{
 				Name:  CreatorPropertyWorkDir,
-				Value: workDir,
+				Value: paths.WorkDir,
+			},
+			{
+				Name:  CreatorPropertyKubeconfig,
+				Value: paths.Kubeconfig,
 			},
 		})
 	}

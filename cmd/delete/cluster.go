@@ -25,7 +25,10 @@ import (
 	netx "github.com/sighupio/furyctl/internal/x/net"
 )
 
-var ErrParsingFlag = errors.New("error while parsing flag")
+var (
+	ErrParsingFlag   = errors.New("error while parsing flag")
+	ErrKubeconfigReq = errors.New("when running distribution phase, either the KUBECONFIG environment variable or the --kubeconfig flag should be set")
+)
 
 func NewClusterCmd(version string, tracker *analytics.Tracker) *cobra.Command {
 	var cmdEvent analytics.Event
@@ -68,10 +71,28 @@ func NewClusterCmd(version string, tracker *analytics.Tracker) *cobra.Command {
 				return fmt.Errorf("%w: force", ErrParsingFlag)
 			}
 
+			kubeconfig, err := cmdutil.StringFlag(cmd, "kubeconfig", tracker, cmdEvent)
+			if err != nil {
+				return fmt.Errorf("%w: %s", ErrParsingFlag, "kubeconfig")
+			}
+
 			// Init paths.
 			homeDir, err := os.UserHomeDir()
 			if err != nil {
 				return fmt.Errorf("error while getting user home directory: %w", err)
+			}
+
+			// Check if kubeconfig is needed.
+			if phase == "distribution" || phase == "" {
+				if kubeconfig == "" {
+					kubeconfigFromEnv := os.Getenv("KUBECONFIG")
+
+					if kubeconfigFromEnv == "" {
+						return ErrKubeconfigReq
+					}
+
+					logrus.Warnf("Missing --kubeconfig flag, falling back to KUBECONFIG from environment: %s", kubeconfigFromEnv)
+				}
 			}
 
 			if binPath == "" {
@@ -108,7 +129,14 @@ func NewClusterCmd(version string, tracker *analytics.Tracker) *cobra.Command {
 				return fmt.Errorf("error while validating dependencies: %w", err)
 			}
 
-			clusterDeleter, err := cluster.NewDeleter(res.MinimalConf, res.DistroManifest, phase, basePath, binPath)
+			clusterDeleter, err := cluster.NewDeleter(
+				res.MinimalConf,
+				res.DistroManifest,
+				phase,
+				basePath,
+				binPath,
+				kubeconfig,
+			)
 			if err != nil {
 				cmdEvent.AddErrorMessage(err)
 				tracker.Track(cmdEvent)
@@ -196,6 +224,13 @@ func NewClusterCmd(version string, tracker *analytics.Tracker) *cobra.Command {
 		"force",
 		false,
 		"Force deletion of the cluster",
+	)
+
+	cmd.Flags().String(
+		"kubeconfig",
+		"",
+		"Path to the kubeconfig file, mandatory if you want to run the distribution phase alone or "+
+			"if you want to delete a cluster and the KUBECONFIG environment variable is not set",
 	)
 
 	return cmd

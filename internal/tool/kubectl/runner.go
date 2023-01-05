@@ -16,8 +16,9 @@ const (
 )
 
 type Paths struct {
-	Kubectl string
-	WorkDir string
+	Kubectl    string
+	WorkDir    string
+	Kubeconfig string
 }
 
 type Runner struct {
@@ -43,6 +44,10 @@ func (r *Runner) CmdPath() string {
 func (r *Runner) Apply(manifestPath string) error {
 	args := []string{"apply"}
 
+	if r.paths.Kubeconfig != "" {
+		args = append(args, "--kubeconfig", r.paths.Kubeconfig)
+	}
+
 	if r.serverSide {
 		args = append(args, "--server-side")
 	}
@@ -63,6 +68,10 @@ func (r *Runner) Apply(manifestPath string) error {
 
 func (r *Runner) Get(ns string, params ...string) (string, error) {
 	args := []string{"get"}
+
+	if r.paths.Kubeconfig != "" {
+		args = append(args, "--kubeconfig", r.paths.Kubeconfig)
+	}
 
 	if ns != "all" {
 		args = append(args, "-n", ns)
@@ -93,6 +102,10 @@ func (r *Runner) DeleteAllResources(res, ns string) (string, error) {
 		args = append(args, "-A")
 	}
 
+	if r.paths.Kubeconfig != "" {
+		args = append(args, "--kubeconfig", r.paths.Kubeconfig)
+	}
+
 	out, err := execx.CombinedOutput(execx.NewCmd(r.paths.Kubectl, execx.CmdOptions{
 		Args:     args,
 		Executor: r.executor,
@@ -107,6 +120,10 @@ func (r *Runner) DeleteAllResources(res, ns string) (string, error) {
 
 func (r *Runner) Delete(manifestPath string) error {
 	args := []string{"delete"}
+
+	if r.paths.Kubeconfig != "" {
+		args = append(args, "--kubeconfig", r.paths.Kubeconfig)
+	}
 
 	if r.skipNotFound {
 		args = append(args, "--ignore-not-found=true")

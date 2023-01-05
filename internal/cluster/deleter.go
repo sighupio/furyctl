@@ -16,6 +16,7 @@ const (
 	DeleterPropertyWorkDir     = "workdir"
 	DeleterPropertyKfdManifest = "kfdmanifest"
 	DeleterPropertyBinPath     = "binpath"
+	DeleterPropertyKubeconfig  = "kubeconfig"
 )
 
 var delFactories = make(map[string]map[string]DeleterFactory) //nolint:gochecknoglobals, lll // This patterns requires factories
@@ -39,7 +40,8 @@ func NewDeleter(
 	kfdManifest config.KFD,
 	phase,
 	workDir,
-	binPath string,
+	binPath,
+	kubeconfig string,
 ) (Deleter, error) {
 	lcAPIVersion := strings.ToLower(minimalConf.APIVersion)
 	lcResourceType := strings.ToLower(minimalConf.Kind)
@@ -61,6 +63,10 @@ func NewDeleter(
 			{
 				Name:  DeleterPropertyBinPath,
 				Value: binPath,
+			},
+			{
+				Name:  DeleterPropertyKubeconfig,
+				Value: kubeconfig,
 			},
 		})
 	}

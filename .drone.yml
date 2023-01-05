@@ -8,7 +8,7 @@ name: main
 
 steps:
   - name: prepare
-    image: quay.io/sighup/golang:1.19.1
+    image: quay.io/sighup/golang:1.19.4
     depends_on:
       - clone
     pull: always
@@ -17,7 +17,7 @@ steps:
       - go mod download
 
   - name: license
-    image: quay.io/sighup/golang:1.19.1
+    image: quay.io/sighup/golang:1.19.4
     depends_on:
       - clone
     pull: always
@@ -30,7 +30,7 @@ steps:
       GOTMPDIR: /drone/src/.go/tmp
 
   - name: lint
-    image: quay.io/sighup/golang:1.19.1
+    image: quay.io/sighup/golang:1.19.4
     depends_on:
       - prepare
     pull: always
@@ -43,7 +43,7 @@ steps:
       GOTMPDIR: /drone/src/.go/tmp
 
   - name: test-unit
-    image: quay.io/sighup/golang:1.19.1
+    image: quay.io/sighup/golang:1.19.4
     depends_on:
       - prepare
     pull: always
@@ -56,7 +56,7 @@ steps:
       GOTMPDIR: /drone/src/.go/tmp
 
   - name: test-integration
-    image: quay.io/sighup/golang:1.19.1
+    image: quay.io/sighup/golang:1.19.4
     depends_on:
       - prepare
     commands:
@@ -71,7 +71,7 @@ steps:
         from_secret: NETRC_FILE
 
   - name: test-e2e
-    image: quay.io/sighup/golang:1.19.1
+    image: quay.io/sighup/golang:1.19.4
     depends_on:
       - prepare
     commands:
@@ -81,7 +81,7 @@ steps:
       - curl -sLO https://github.com/sgerrand/alpine-pkg-glibc/releases/download/$${GLIBC_VER}/glibc-$${GLIBC_VER}.apk
       - curl -sLO https://github.com/sgerrand/alpine-pkg-glibc/releases/download/$${GLIBC_VER}/glibc-bin-$${GLIBC_VER}.apk
       - curl -sLO https://github.com/sgerrand/alpine-pkg-glibc/releases/download/$${GLIBC_VER}/glibc-i18n-$${GLIBC_VER}.apk
-      - apk add --virtual .glibc glibc-$${GLIBC_VER}.apk glibc-bin-$${GLIBC_VER}.apk glibc-i18n-$${GLIBC_VER}.apk
+      - apk add --force-overwrite --virtual .glibc glibc-$${GLIBC_VER}.apk glibc-bin-$${GLIBC_VER}.apk glibc-i18n-$${GLIBC_VER}.apk
       - /usr/glibc-compat/bin/localedef -i en_US -f UTF-8 en_US.UTF-8
       - curl -sL https://awscli.amazonaws.com/awscli-exe-linux-x86_64-$${AWSCLI_VERSION}.zip -o awscliv2.zip
       - unzip awscliv2.zip

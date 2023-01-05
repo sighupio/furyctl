@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-//nolint:dupl // better readability
 package del
 
 import (
@@ -49,18 +48,18 @@ func NewKubernetes(dryRun bool, workDir, binPath string, kfdManifest config.KFD)
 }
 
 func (k *Kubernetes) Exec() error {
-	logrus.Info("Deleting kubernetes phase")
+	logrus.Info("Deleting kubernetes phase...")
 
 	err := iox.CheckDirIsEmpty(k.OperationPhase.Path)
 	if err == nil {
-		logrus.Infof("kubernetes phase already executed, skipping")
+		logrus.Infof("kubernetes phase already executed, skipping...")
 
 		return nil
 	}
 
 	err = k.tfRunner.Destroy()
 	if err != nil {
-		return fmt.Errorf("error running terraform destroy: %w", err)
+		return fmt.Errorf("error while deleting kubernetes phase: %w", err)
 	}
 
 	return nil

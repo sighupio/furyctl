@@ -18,12 +18,9 @@ import (
 var ErrUnsupportedPhase = errors.New("unsupported phase")
 
 type ClusterCreator struct {
-	configPath     string
-	workDir        string
+	paths          cluster.CreatorPaths
 	furyctlConf    schema.EksclusterKfdV1Alpha2
 	kfdManifest    config.KFD
-	distroPath     string
-	binPath        string
 	phase          string
 	vpnAutoConnect bool
 }
@@ -40,7 +37,7 @@ func (v *ClusterCreator) SetProperty(name string, value any) {
 	switch lcName {
 	case cluster.CreatorPropertyConfigPath:
 		if s, ok := value.(string); ok {
-			v.configPath = s
+			v.paths.ConfigPath = s
 		}
 
 	case cluster.CreatorPropertyFuryctlConf:
@@ -65,40 +62,48 @@ func (v *ClusterCreator) SetProperty(name string, value any) {
 
 	case cluster.CreatorPropertyDistroPath:
 		if s, ok := value.(string); ok {
-			v.distroPath = s
+			v.paths.DistroPath = s
 		}
 
 	case cluster.CreatorPropertyWorkDir:
 		if s, ok := value.(string); ok {
-			v.workDir = s
+			v.paths.WorkDir = s
 		}
 
 	case cluster.CreatorPropertyBinPath:
 		if s, ok := value.(string); ok {
-			v.binPath = s
+			v.paths.BinPath = s
+		}
+
+	case cluster.CreatorPropertyKubeconfig:
+		if s, ok := value.(string); ok {
+			v.paths.Kubeconfig = s
 		}
 	}
 }
 
 func (v *ClusterCreator) Create(dryRun bool, skipPhase string) error {
-	infra, err := create.NewInfrastructure(v.furyctlConf, v.kfdManifest, v.workDir, v.binPath, dryRun)
+	infra, err := create.NewInfrastructure(v.furyctlConf, v.kfdManifest, v.paths, dryRun)
 	if err != nil {
 		return fmt.Errorf("error while initiating infrastructure phase: %w", err)
 	}
 
-	kube, err := create.NewKubernetes(v.furyctlConf, v.kfdManifest, v.workDir, infra.OutputsPath, v.binPath, dryRun)
+	kube, err := create.NewKubernetes(
+		v.furyctlConf,
+		v.kfdManifest,
+		infra.OutputsPath,
+		v.paths,
+		dryRun,
+	)
 	if err != nil {
 		return fmt.Errorf("error while initiating kubernetes phase: %w", err)
 	}
 
 	distro, err := create.NewDistribution(
-		v.configPath,
+		v.paths,
 		v.furyctlConf,
 		v.kfdManifest,
-		v.workDir,
-		v.distroPath,
 		infra.OutputsPath,
-		v.binPath,
 		dryRun,
 	)
 	if err != nil {

@@ -43,7 +43,13 @@ type Distribution struct {
 	dryRun     bool
 }
 
-func NewDistribution(dryRun bool, workDir, binPath string, kfdManifest config.KFD) (*Distribution, error) {
+func NewDistribution(
+	dryRun bool,
+	workDir,
+	binPath string,
+	kfdManifest config.KFD,
+	kubeconfig string,
+) (*Distribution, error) {
 	distroDir := path.Join(workDir, "distribution")
 
 	phase, err := cluster.NewOperationPhase(distroDir, kfdManifest.Tools, binPath)
@@ -73,8 +79,9 @@ func NewDistribution(dryRun bool, workDir, binPath string, kfdManifest config.KF
 		kubeRunner: kubectl.NewRunner(
 			execx.NewStdExecutor(),
 			kubectl.Paths{
-				Kubectl: phase.KubectlPath,
-				WorkDir: path.Join(phase.Path, "manifests"),
+				Kubectl:    phase.KubectlPath,
+				WorkDir:    path.Join(phase.Path, "manifests"),
+				Kubeconfig: kubeconfig,
 			},
 			true,
 			true,
@@ -84,7 +91,7 @@ func NewDistribution(dryRun bool, workDir, binPath string, kfdManifest config.KF
 }
 
 func (d *Distribution) Exec() error {
-	logrus.Info("Deleting distribution phase")
+	logrus.Info("Deleting distribution phase...")
 
 	err := iox.CheckDirIsEmpty(d.OperationPhase.Path)
 	if err == nil {
@@ -93,44 +100,44 @@ func (d *Distribution) Exec() error {
 		return nil
 	}
 
-	logrus.Info("Deleting ingresses")
+	logrus.Info("Deleting ingresses...")
 
 	if err = d.deleteIngresses(); err != nil {
 		return err
 	}
 
-	logrus.Info("Deleting blocking resources")
+	logrus.Info("Deleting blocking resources...")
 
 	if err = d.deleteBlockingResources(); err != nil {
 		return err
 	}
 
-	logrus.Info("Building manifests")
+	logrus.Info("Building manifests...")
 
 	manifestsOutPath, err := d.buildManifests()
 	if err != nil {
 		return err
 	}
 
-	logrus.Info("Deleting manifests")
+	logrus.Info("Deleting manifests...")
 
 	err = d.kubeRunner.Delete(manifestsOutPath)
 	if err != nil {
 		logrus.Errorf("error while deleting resources: %v", err)
 	}
 
-	logrus.Info("Checking pending resources")
+	logrus.Info("Checking pending resources...")
 
 	err = d.checkPendingResources()
 	if err != nil {
 		return err
 	}
 
-	logrus.Info("Deleting terraform resources")
+	logrus.Info("Deleting infra resources...")
 
 	err = d.tfRunner.Destroy()
 	if err != nil {
-		return fmt.Errorf("error running terraform destroy: %w", err)
+		return fmt.Errorf("error while deleting infra resources: %w", err)
 	}
 
 	return nil
@@ -198,6 +205,7 @@ func (d *Distribution) deleteIngresses() error {
 		return fmt.Errorf("error deleting ingresses: %w", err)
 	}
 
+	logrus.Debugf("waiting for records to be deleted...")
 	time.Sleep(dur)
 
 	return nil
@@ -236,6 +244,7 @@ func (d *Distribution) deleteBlockingResources() error {
 		return fmt.Errorf("error deleting svc in namespace 'ingress-nginx': %w", err)
 	}
 
+	logrus.Debugf("waiting for resources to be deleted...")
 	time.Sleep(dur)
 
 	return nil

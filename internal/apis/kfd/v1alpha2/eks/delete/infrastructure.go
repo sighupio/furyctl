@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-//nolint:dupl // better readability
 package del
 
 import (
@@ -49,19 +48,22 @@ func NewInfrastructure(dryRun bool, workDir, binPath string, kfdManifest config.
 }
 
 func (i *Infrastructure) Exec() error {
-	logrus.Info("Deleting infrastructure phase")
+	logrus.Info("Deleting infrastructure phase...")
 
 	err := iox.CheckDirIsEmpty(i.OperationPhase.Path)
 	if err == nil {
-		logrus.Infof("infrastructure phase already executed, skipping")
+		logrus.Infof("infrastructure phase already executed, skipping...")
 
 		return nil
 	}
 
 	err = i.tfRunner.Destroy()
 	if err != nil {
-		return fmt.Errorf("error running terraform destroy: %w", err)
+		return fmt.Errorf("error while deleting infrastructure: %w", err)
 	}
+
+	logrus.Warnf("Please, remember to kill the OpenVPN process if" +
+		" you have chosen to create it in the infrastructure phase")
 
 	return nil
 }
