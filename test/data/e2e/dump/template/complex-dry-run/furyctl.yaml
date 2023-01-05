@@ -272,7 +272,7 @@ spec:
           tolerations: {}
         velero: # required.
           eks: # required.
-            bucket: example-velero # required.
+            bucketName: example-velero # required.
             iamRoleArn: arn:aws:iam::123456789012:role/example-velero # private.
             region: eu-west-1 # required.
       # auth module configuration
