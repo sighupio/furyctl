@@ -60,6 +60,11 @@ func NewClusterCmd(tracker *analytics.Tracker) *cobra.Command {
 				return fmt.Errorf("%w: phase", ErrParsingFlag)
 			}
 
+			err = cluster.CheckPhase(phase)
+			if err != nil {
+				return fmt.Errorf("%w: %s: %s", ErrParsingFlag, "phase", err.Error())
+			}
+
 			binPath := cobrax.Flag[string](cmd, "bin-path").(string) //nolint:errcheck,forcetypeassert // optional flag
 			dryRun, err := cmdutil.BoolFlag(cmd, "dry-run", tracker, cmdEvent)
 			if err != nil {
@@ -83,7 +88,7 @@ func NewClusterCmd(tracker *analytics.Tracker) *cobra.Command {
 			}
 
 			// Check if kubeconfig is needed.
-			if phase == "distribution" || phase == "" {
+			if phase == cluster.OperationPhaseDistribution || phase == cluster.OperationPhaseAll {
 				if kubeconfig == "" {
 					kubeconfigFromEnv := os.Getenv("KUBECONFIG")
 

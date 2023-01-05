@@ -17,6 +17,8 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gexec"
+
+	"github.com/sighupio/furyctl/internal/cluster"
 )
 
 func TestExpensive(t *testing.T) {
@@ -72,7 +74,7 @@ var (
 			w,
 		}
 
-		if phase != "" {
+		if phase != cluster.OperationPhaseAll {
 			args = append(args, "--phase", phase)
 		}
 
@@ -96,11 +98,11 @@ var (
 			w,
 		}
 
-		if phase != "" {
+		if phase != cluster.OperationPhaseAll {
 			args = append(args, "--phase", phase)
 		}
 
-		if phase == "infrastructure" {
+		if phase == cluster.OperationPhaseInfrastructure {
 			args = append(args, "--vpn-auto-connect")
 		}
 
@@ -139,10 +141,10 @@ var (
 				Expect(err).To(Not(HaveOccurred()))
 
 				kubeBinPath := path.Join(homeDir, ".furyctl", "bin", "kubectl", "1.24.7", "kubectl")
-				tfInfraPath := path.Join(homeDir, ".furyctl", "furyctl-test-aws", "infrastructure", "terraform")
-				kcfgPath := path.Join(homeDir, ".furyctl", "furyctl-test-aws", "kubernetes", "terraform", "secrets", "kubeconfig")
+				tfInfraPath := path.Join(homeDir, ".furyctl", "furyctl-test-aws", cluster.OperationPhaseInfrastructure, "terraform")
+				kcfgPath := path.Join(homeDir, ".furyctl", "furyctl-test-aws", cluster.OperationPhaseKubernetes, "terraform", "secrets", "kubeconfig")
 
-				createClusterCmd := FuryctlCreateCluster(furyctlYamlPath, distroPath, "", "", false, w)
+				createClusterCmd := FuryctlCreateCluster(furyctlYamlPath, distroPath, cluster.OperationPhaseAll, "", false, w)
 
 				session, err := gexec.Start(createClusterCmd, GinkgoWriter, GinkgoWriter)
 				Expect(err).To(Not(HaveOccurred()))
@@ -166,7 +168,7 @@ var (
 				homeDir, err := os.UserHomeDir()
 				Expect(err).To(Not(HaveOccurred()))
 
-				kcfgPath := path.Join(homeDir, ".furyctl", "furyctl-test-aws", "kubernetes", "terraform", "secrets", "kubeconfig")
+				kcfgPath := path.Join(homeDir, ".furyctl", "furyctl-test-aws", cluster.OperationPhaseKubernetes, "terraform", "secrets", "kubeconfig")
 
 				err = os.Setenv("KUBECONFIG", kcfgPath)
 				Expect(err).To(Not(HaveOccurred()))
@@ -179,7 +181,7 @@ var (
 					Eventually(pkillSession, 10*time.Second).Should(gexec.Exit(0))
 				})
 
-				deleteClusterCmd := FuryctlDeleteCluster(furyctlYamlPath, distroPath, "", false, w)
+				deleteClusterCmd := FuryctlDeleteCluster(furyctlYamlPath, distroPath, cluster.OperationPhaseAll, false, w)
 
 				session, err := gexec.Start(deleteClusterCmd, GinkgoWriter, GinkgoWriter)
 				Expect(err).To(Not(HaveOccurred()))
@@ -199,16 +201,16 @@ var (
 				Expect(err).To(Not(HaveOccurred()))
 
 				kubeBinPath := path.Join(homeDir, ".furyctl", "bin", "kubectl", "1.24.7", "kubectl")
-				kcfgPath := path.Join(homeDir, ".furyctl", "furyctl-test-aws-si", "kubernetes", "terraform", "secrets", "kubeconfig")
+				kcfgPath := path.Join(homeDir, ".furyctl", "furyctl-test-aws-si", cluster.OperationPhaseKubernetes, "terraform", "secrets", "kubeconfig")
 
-				createClusterInfraCmd := FuryctlCreateCluster(furyctlYamlPath, distroPath, "infrastructure", "", false, w)
+				createClusterInfraCmd := FuryctlCreateCluster(furyctlYamlPath, distroPath, cluster.OperationPhaseInfrastructure, "", false, w)
 
 				infraSession, err := gexec.Start(createClusterInfraCmd, GinkgoWriter, GinkgoWriter)
 				Expect(err).To(Not(HaveOccurred()))
 
 				Eventually(infraSession, 20*time.Minute).Should(gexec.Exit(0))
 
-				createClusterCmd := FuryctlCreateCluster(furyctlYamlPath, distroPath, "", "infrastructure", false, w)
+				createClusterCmd := FuryctlCreateCluster(furyctlYamlPath, distroPath, cluster.OperationPhaseAll, cluster.OperationPhaseInfrastructure, false, w)
 
 				session, err := gexec.Start(createClusterCmd, GinkgoWriter, GinkgoWriter)
 				Expect(err).To(Not(HaveOccurred()))
@@ -231,7 +233,7 @@ var (
 				homeDir, err := os.UserHomeDir()
 				Expect(err).To(Not(HaveOccurred()))
 
-				kcfgPath := path.Join(homeDir, ".furyctl", "furyctl-test-aws-si", "kubernetes", "terraform", "secrets", "kubeconfig")
+				kcfgPath := path.Join(homeDir, ".furyctl", "furyctl-test-aws-si", cluster.OperationPhaseKubernetes, "terraform", "secrets", "kubeconfig")
 
 				err = os.Setenv("KUBECONFIG", kcfgPath)
 				Expect(err).To(Not(HaveOccurred()))
@@ -244,7 +246,7 @@ var (
 					Eventually(pkillSession, 10*time.Second).Should(gexec.Exit(0))
 				})
 
-				deleteClusterCmd := FuryctlDeleteCluster(furyctlYamlPath, distroPath, "", false, w)
+				deleteClusterCmd := FuryctlDeleteCluster(furyctlYamlPath, distroPath, cluster.OperationPhaseAll, false, w)
 
 				session, err := gexec.Start(deleteClusterCmd, GinkgoWriter, GinkgoWriter)
 				Expect(err).To(Not(HaveOccurred()))
@@ -264,9 +266,9 @@ var (
 				Expect(err).To(Not(HaveOccurred()))
 
 				kubeBinPath := path.Join(homeDir, ".furyctl", "bin", "kubectl", "1.24.7", "kubectl")
-				kcfgPath := path.Join(homeDir, ".furyctl", "furyctl-test-aws-sk", "kubernetes", "terraform", "secrets", "kubeconfig")
+				kcfgPath := path.Join(homeDir, ".furyctl", "furyctl-test-aws-sk", cluster.OperationPhaseKubernetes, "terraform", "secrets", "kubeconfig")
 
-				createClusterKubeCmd := FuryctlCreateCluster(furyctlYamlPath, distroPath, "", "distribution", false, w)
+				createClusterKubeCmd := FuryctlCreateCluster(furyctlYamlPath, distroPath, cluster.OperationPhaseAll, cluster.OperationPhaseDistribution, false, w)
 
 				kubeSession, err := gexec.Start(createClusterKubeCmd, GinkgoWriter, GinkgoWriter)
 				Expect(err).To(Not(HaveOccurred()))
@@ -276,7 +278,7 @@ var (
 				err = os.Setenv("KUBECONFIG", kcfgPath)
 				Expect(err).To(Not(HaveOccurred()))
 
-				createClusterCmd := FuryctlCreateCluster(furyctlYamlPath, distroPath, "", "kubernetes", false, w)
+				createClusterCmd := FuryctlCreateCluster(furyctlYamlPath, distroPath, cluster.OperationPhaseAll, cluster.OperationPhaseKubernetes, false, w)
 
 				session, err := gexec.Start(createClusterCmd, GinkgoWriter, GinkgoWriter)
 				Expect(err).To(Not(HaveOccurred()))
@@ -298,7 +300,7 @@ var (
 				homeDir, err := os.UserHomeDir()
 				Expect(err).To(Not(HaveOccurred()))
 
-				kcfgPath := path.Join(homeDir, ".furyctl", "furyctl-test-aws-sk", "kubernetes", "terraform", "secrets", "kubeconfig")
+				kcfgPath := path.Join(homeDir, ".furyctl", "furyctl-test-aws-sk", cluster.OperationPhaseKubernetes, "terraform", "secrets", "kubeconfig")
 
 				err = os.Setenv("KUBECONFIG", kcfgPath)
 				Expect(err).To(Not(HaveOccurred()))
@@ -311,7 +313,7 @@ var (
 					Eventually(pkillSession, 10*time.Second).Should(gexec.Exit(0))
 				})
 
-				deleteClusterCmd := FuryctlDeleteCluster(furyctlYamlPath, distroPath, "", false, w)
+				deleteClusterCmd := FuryctlDeleteCluster(furyctlYamlPath, distroPath, cluster.OperationPhaseAll, false, w)
 
 				session, err := gexec.Start(deleteClusterCmd, GinkgoWriter, GinkgoWriter)
 				Expect(err).To(Not(HaveOccurred()))

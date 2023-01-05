@@ -5,6 +5,7 @@
 package cluster
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path"
@@ -23,6 +24,25 @@ const (
 
 	OperationPhaseOptionVPNAutoConnect = "vpnautoconnect"
 )
+
+var errUnsupportedPhase = errors.New("unsupported phase, options are: infrastructure, kubernetes, distribution")
+
+func CheckPhase(phase string) error {
+	switch phase {
+	case OperationPhaseInfrastructure:
+	case OperationPhaseKubernetes:
+	case OperationPhaseDistribution:
+	case OperationPhaseAll:
+		{
+			break
+		}
+
+	default:
+		return errUnsupportedPhase
+	}
+
+	return nil
+}
 
 type OperationPhase struct {
 	Path          string

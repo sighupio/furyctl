@@ -54,7 +54,7 @@ func NewInfrastructure(
 	paths cluster.CreatorPaths,
 	dryRun bool,
 ) (*Infrastructure, error) {
-	infraDir := path.Join(paths.WorkDir, "infrastructure")
+	infraDir := path.Join(paths.WorkDir, cluster.OperationPhaseInfrastructure)
 
 	phase, err := cluster.NewOperationPhase(infraDir, kfdManifest.Tools, paths.BinPath)
 	if err != nil {

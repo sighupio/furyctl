@@ -71,7 +71,7 @@ func NewClusterCmd(tracker *analytics.Tracker) *cobra.Command {
 			}
 
 			// Check if kubeconfig is needed.
-			if flags.Phase == "distribution" || flags.SkipPhase == "kubernetes" {
+			if flags.Phase == cluster.OperationPhaseDistribution || flags.SkipPhase == cluster.OperationPhaseKubernetes {
 				if flags.Kubeconfig == "" {
 					kubeconfigFromEnv := os.Getenv("KUBECONFIG")
 
@@ -150,7 +150,7 @@ func NewClusterCmd(tracker *analytics.Tracker) *cobra.Command {
 			}
 
 			// Auto connect to the VPN if doing complete cluster creation or skipping distribution phase.
-			if flags.Phase == "" || flags.SkipPhase == "distribution" {
+			if flags.Phase == cluster.OperationPhaseAll || flags.SkipPhase == cluster.OperationPhaseDistribution {
 				flags.VpnAutoConnect = true
 			}
 
@@ -186,11 +186,11 @@ func NewClusterCmd(tracker *analytics.Tracker) *cobra.Command {
 				return fmt.Errorf("error while creating cluster: %w", err)
 			}
 
-			if !flags.DryRun && flags.Phase == "" {
+			if !flags.DryRun && flags.Phase == cluster.OperationPhaseAll {
 				logrus.Info("Cluster created successfully!")
 			}
 
-			if flags.Phase != "" {
+			if flags.Phase != cluster.OperationPhaseAll {
 				logrus.Infof("Phase %s executed successfully!", flags.Phase)
 			}
 
@@ -227,9 +227,27 @@ func getCmdFlags(cmd *cobra.Command, tracker *analytics.Tracker, cmdEvent analyt
 		return ClusterCmdFlags{}, fmt.Errorf("%w: %s", ErrParsingFlag, "phase")
 	}
 
+	err = cluster.CheckPhase(phase)
+	if err != nil {
+		return ClusterCmdFlags{}, fmt.Errorf("%w: %s: %s", ErrParsingFlag, "phase", err.Error())
+	}
+
 	skipPhase, err := cmdutil.StringFlag(cmd, "skip-phase", tracker, cmdEvent)
 	if err != nil {
 		return ClusterCmdFlags{}, fmt.Errorf("%w: %s", ErrParsingFlag, "skip-phase")
+	}
+
+	if phase != cluster.OperationPhaseAll && skipPhase != "" {
+		return ClusterCmdFlags{}, fmt.Errorf(
+			"%w: %s: cannot use together with phase flag",
+			ErrParsingFlag,
+			"skip-phase",
+		)
+	}
+
+	err = cluster.CheckPhase(skipPhase)
+	if err != nil {
+		return ClusterCmdFlags{}, fmt.Errorf("%w: %s: %s", ErrParsingFlag, "skip-phase", err.Error())
 	}
 
 	binPath := cmdutil.StringFlagOptional(cmd, "bin-path")

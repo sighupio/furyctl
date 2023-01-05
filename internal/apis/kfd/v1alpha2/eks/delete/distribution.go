@@ -50,7 +50,7 @@ func NewDistribution(
 	kfdManifest config.KFD,
 	kubeconfig string,
 ) (*Distribution, error) {
-	distroDir := path.Join(workDir, "distribution")
+	distroDir := path.Join(workDir, cluster.OperationPhaseDistribution)
 
 	phase, err := cluster.NewOperationPhase(distroDir, kfdManifest.Tools, binPath)
 	if err != nil {
