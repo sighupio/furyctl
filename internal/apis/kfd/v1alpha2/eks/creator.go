@@ -16,6 +16,7 @@ import (
 	"github.com/sighupio/furyctl/internal/cluster"
 	kubex "github.com/sighupio/furyctl/internal/x/kube"
 	yamlx "github.com/sighupio/furyctl/internal/x/yaml"
+	"github.com/sirupsen/logrus"
 )
 
 var ErrUnsupportedPhase = errors.New("unsupported phase")
@@ -197,6 +198,8 @@ func (v *ClusterCreator) storeClusterConfig() error {
 	if err != nil {
 		return fmt.Errorf("error while marshaling config: %w", err)
 	}
+
+	logrus.Info("Storing cluster config...")
 
 	return client.StoreDataAsSecret(x, "furyctl-config", "kube-system")
 }
