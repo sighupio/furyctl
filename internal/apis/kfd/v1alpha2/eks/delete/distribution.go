@@ -100,6 +100,39 @@ func (d *Distribution) Exec() error {
 		return nil
 	}
 
+	if d.dryRun {
+		timestamp := time.Now().Unix()
+
+		if err := d.tfRunner.Init(); err != nil {
+			return fmt.Errorf("error running terraform init: %w", err)
+		}
+
+		if err := d.tfRunner.Plan(timestamp, "-destroy"); err != nil {
+			return fmt.Errorf("error running terraform plan: %w", err)
+		}
+
+		manifestsOutPath, err := d.buildManifests()
+		if err != nil {
+			return err
+		}
+
+		err = d.kubeRunner.Delete(manifestsOutPath, "--dry-run=client")
+		if err != nil {
+			logrus.Errorf("error while deleting resources: %v", err)
+		}
+
+		logrus.Info("The following resources, regardless of the built manifests, are going to be deleted:")
+		logrus.Info("Ingresses from every namespace")
+		logrus.Info("Prometheus resources from 'monitoring' namespace")
+		logrus.Info("PersistentVolumeClaims from 'monitoring' namespace")
+		logrus.Info("PersistentVolumeClaims from 'logging' namespace")
+		logrus.Info("StorageSets from 'logging' namespace")
+		logrus.Info("Logging resources from 'logging' namespace")
+		logrus.Info("Services from 'ingress-nginx' namespace")
+
+		return nil
+	}
+
 	logrus.Info("Deleting ingresses...")
 
 	if err = d.deleteIngresses(); err != nil {

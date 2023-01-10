@@ -118,7 +118,7 @@ func (r *Runner) DeleteAllResources(res, ns string) (string, error) {
 	return out, nil
 }
 
-func (r *Runner) Delete(manifestPath string) error {
+func (r *Runner) Delete(manifestPath string, params ...string) error {
 	args := []string{"delete"}
 
 	if r.paths.Kubeconfig != "" {
@@ -127,6 +127,10 @@ func (r *Runner) Delete(manifestPath string) error {
 
 	if r.skipNotFound {
 		args = append(args, "--ignore-not-found=true")
+	}
+
+	if len(params) > 0 {
+		args = append(args, params...)
 	}
 
 	args = append(args, "-f", manifestPath)
