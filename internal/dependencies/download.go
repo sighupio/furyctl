@@ -8,6 +8,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/sighupio/furyctl/internal/semver"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -200,9 +201,18 @@ func (dd *Downloader) DownloadTools(kfdTools config.KFDTools) ([]string, error) 
 }
 
 func createURL(prefix, name, version string) string {
-	if token := os.Getenv("GITHUB_TOKEN"); token != "" {
-		return fmt.Sprintf("https://oauth2:%s@github.com/sighupio/%s-%s/releases/tag/%s", token, prefix, name, version)
+	ver := semver.EnsurePrefix(version)
+
+	kindPrefix := "releases/tag"
+
+	_, err := semver.NewVersion(ver)
+	if err != nil {
+		kindPrefix = "tree"
 	}
 
-	return fmt.Sprintf("https://github.com/sighupio/%s-%s/releases/tag/%s", prefix, name, version)
+	if token := os.Getenv("GITHUB_TOKEN"); token != "" {
+		return fmt.Sprintf("https://oauth2:%s@github.com/sighupio/%s-%s/%s/%s", token, prefix, name, kindPrefix, version)
+	}
+
+	return fmt.Sprintf("https://github.com/sighupio/%s-%s/%s/%s", prefix, name, kindPrefix, version)
 }
