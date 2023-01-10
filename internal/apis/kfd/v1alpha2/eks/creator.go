@@ -184,7 +184,7 @@ func (v *ClusterCreator) Create(dryRun bool, skipPhase string) error {
 }
 
 func (v *ClusterCreator) storeClusterConfig() error {
-	c, err := kubex.GetConfigFromWorkdir(v.paths.WorkDir + "/kubeconfig")
+	c, err := kubex.GetConfigFromFile(v.paths.Kubeconfig)
 	if err != nil {
 		return fmt.Errorf("error while getting kubeconfig: %w", err)
 	}

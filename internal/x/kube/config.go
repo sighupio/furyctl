@@ -63,7 +63,7 @@ func CopyConfigToWorkDir(p string) error {
 	return nil
 }
 
-func GetConfigFromWorkdir(kubeConfigPath string) (*rest.Config, error) {
+func GetConfigFromFile(kubeConfigPath string) (*rest.Config, error) {
 	kubeConfigContent, err := ioutil.ReadFile(kubeConfigPath)
 	if err != nil {
 		return nil, err
