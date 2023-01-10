@@ -12,7 +12,6 @@ import (
 	"io/fs"
 	"os"
 	"path"
-	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -27,6 +26,7 @@ import (
 	"github.com/sighupio/furyctl/internal/tool/terraform"
 	execx "github.com/sighupio/furyctl/internal/x/exec"
 	iox "github.com/sighupio/furyctl/internal/x/io"
+	"github.com/sighupio/furyctl/internal/x/kube"
 )
 
 var (
@@ -106,11 +106,15 @@ func (k *Kubernetes) Exec() error {
 	}
 
 	if err := k.tfRunner.Init(); err != nil {
-		return fmt.Errorf("error running terraform init: %w", err)
+		logrus.Debugf("error running terraform init: %w", err)
+
+		return fmt.Errorf("an error occurred while running kubernetes phase, see the logs")
 	}
 
 	if err := k.tfRunner.Plan(timestamp); err != nil {
-		return fmt.Errorf("error running terraform plan: %w", err)
+		logrus.Debugf("error running terraform plan: %w", err)
+
+		return fmt.Errorf("an error occurred while running kubernetes phase, see the logs")
 	}
 
 	if k.dryRun {
@@ -124,15 +128,25 @@ func (k *Kubernetes) Exec() error {
 		return fmt.Errorf("cannot create cloud resources: %w", err)
 	}
 
-	if err := k.createKubeconfig(out); err != nil {
+	if out.Outputs["kubeconfig"] == nil {
+		return errKubeconfigFromLogs
+	}
+
+	kubeString, ok := out.Outputs["kubeconfig"].Value.([]byte)
+	if !ok {
+		return errKubeconfigFromLogs
+	}
+
+	p, err := kube.CreateConfig(kubeString, k.SecretsPath)
+	if err != nil {
 		return err
 	}
 
-	if err := k.setKubeconfigEnv(); err != nil {
+	if err := kube.SetConfigEnv(p); err != nil {
 		return err
 	}
 
-	return k.copyKubeconfigToWorkDir()
+	return kube.CopyConfigToWorkDir(p)
 }
 
 func (k *Kubernetes) copyFromTemplate() error {
@@ -182,62 +196,6 @@ func (k *Kubernetes) copyFromTemplate() error {
 	)
 	if err != nil {
 		return fmt.Errorf("error generating from template files: %w", err)
-	}
-
-	return nil
-}
-
-func (k *Kubernetes) createKubeconfig(o terraform.OutputJSON) error {
-	if o.Outputs["kubeconfig"] == nil {
-		return errKubeconfigFromLogs
-	}
-
-	kubeString, ok := o.Outputs["kubeconfig"].Value.(string)
-	if !ok {
-		return errKubeconfigFromLogs
-	}
-
-	err := os.WriteFile(path.Join(k.SecretsPath, "kubeconfig"), []byte(kubeString), iox.FullRWPermAccess)
-	if err != nil {
-		return fmt.Errorf("error writing kubeconfig file: %w", err)
-	}
-
-	return nil
-}
-
-func (k *Kubernetes) setKubeconfigEnv() error {
-	kubePath, err := filepath.Abs(path.Join(k.SecretsPath, "kubeconfig"))
-	if err != nil {
-		return fmt.Errorf("error getting kubeconfig absolute path: %w", err)
-	}
-
-	err = os.Setenv("KUBECONFIG", kubePath)
-	if err != nil {
-		return fmt.Errorf("error setting kubeconfig env: %w", err)
-	}
-
-	return nil
-}
-
-func (k *Kubernetes) copyKubeconfigToWorkDir() error {
-	currentDir, err := os.Getwd()
-	if err != nil {
-		return fmt.Errorf("error getting current dir: %w", err)
-	}
-
-	kubePath, err := filepath.Abs(path.Join(k.SecretsPath, "kubeconfig"))
-	if err != nil {
-		return fmt.Errorf("error getting kubeconfig absolute path: %w", err)
-	}
-
-	kubeconfig, err := os.ReadFile(kubePath)
-	if err != nil {
-		return fmt.Errorf("error reading kubeconfig file: %w", err)
-	}
-
-	err = os.WriteFile(path.Join(currentDir, "kubeconfig"), kubeconfig, iox.FullRWPermAccess)
-	if err != nil {
-		return fmt.Errorf("error writing kubeconfig file: %w", err)
 	}
 
 	return nil
