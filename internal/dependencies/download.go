@@ -106,7 +106,9 @@ func (dd *Downloader) DownloadModules(modules config.KFDModules) error {
 
 			retries[name]++
 
+			// Threshold to retry with the new prefix according to the fallback mechanism.
 			threshold := 2
+
 			if resp.StatusCode != http.StatusOK {
 				if retries[name] >= threshold {
 					errs = append(errs, fmt.Errorf("%w '%s': please check if module exists or credentials are correctly configured",

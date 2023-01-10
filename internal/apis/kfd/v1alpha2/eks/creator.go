@@ -7,12 +7,15 @@ package eks
 import (
 	"errors"
 	"fmt"
+	"path"
 	"strings"
 
 	"github.com/sighupio/fury-distribution/pkg/config"
 	"github.com/sighupio/fury-distribution/pkg/schema"
 	"github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/eks/create"
 	"github.com/sighupio/furyctl/internal/cluster"
+	kubex "github.com/sighupio/furyctl/internal/x/kube"
+	yamlx "github.com/sighupio/furyctl/internal/x/yaml"
 )
 
 var ErrUnsupportedPhase = errors.New("unsupported phase")
@@ -127,11 +130,19 @@ func (v *ClusterCreator) Create(dryRun bool, skipPhase string) error {
 			return fmt.Errorf("error while executing kubernetes phase: %w", err)
 		}
 
+		if err := v.storeClusterConfig(); err != nil {
+			return fmt.Errorf("error while storing cluster config: %w", err)
+		}
+
 		return nil
 
 	case cluster.OperationPhaseDistribution:
 		if err = distro.Exec(); err != nil {
 			return fmt.Errorf("error while executing distribution phase: %w", err)
+		}
+
+		if err := v.storeClusterConfig(); err != nil {
+			return fmt.Errorf("error while storing cluster config: %w", err)
 		}
 
 		return nil
@@ -148,11 +159,19 @@ func (v *ClusterCreator) Create(dryRun bool, skipPhase string) error {
 			if err := kube.Exec(); err != nil {
 				return fmt.Errorf("error while executing kubernetes phase: %w", err)
 			}
+
+			if err := v.storeClusterConfig(); err != nil {
+				return fmt.Errorf("error while storing cluster config: %w", err)
+			}
 		}
 
 		if skipPhase != cluster.OperationPhaseDistribution {
 			if err = distro.Exec(); err != nil {
 				return fmt.Errorf("error while executing distribution phase: %w", err)
+			}
+
+			if err := v.storeClusterConfig(); err != nil {
+				return fmt.Errorf("error while storing cluster config: %w", err)
 			}
 		}
 
@@ -161,4 +180,23 @@ func (v *ClusterCreator) Create(dryRun bool, skipPhase string) error {
 	default:
 		return ErrUnsupportedPhase
 	}
+}
+
+func (v *ClusterCreator) storeClusterConfig() error {
+	c, err := kubex.GetConfigFromWorkdir(v.paths.WorkDir + "/kubeconfig")
+	if err != nil {
+		return fmt.Errorf("error while getting kubeconfig: %w", err)
+	}
+
+	client, err := kubex.NewClient(c)
+	if err != nil {
+		return fmt.Errorf("error while creating kubernetes client: %w", err)
+	}
+
+	x, err := yamlx.FromFileV3[[]byte](path.Join(v.paths.ConfigPath, "furyctl.yaml"))
+	if err != nil {
+		return fmt.Errorf("error while marshaling config: %w", err)
+	}
+
+	return client.StoreDataAsSecret(x, "furyctl-config", "kube-system")
 }
