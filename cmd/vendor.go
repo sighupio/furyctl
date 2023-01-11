@@ -59,7 +59,7 @@ var vendorCmd = &cobra.Command{
 		}
 
 		if token := os.Getenv("GITHUB_TOKEN"); token != "" && strings.Contains(token, " ") {
-			logrus.Warn("GITHUB_TOKEN seems to be malformed. Vendoring modules may fail. Please double check its content.\n")
+			logrus.Warn("GITHUB_TOKEN contains a space character. As a result, vendoring modules may fail. If it's intended, you can ignore this warning.\n")
 		}
 
 		for _, p := range list {
