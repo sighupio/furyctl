@@ -5,13 +5,16 @@
 package cmd
 
 import (
+	"os"
+	"strings"
+
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
 
 func init() {
-	vendorCmd.PersistentFlags().BoolVarP(&conf.DownloadOpts.Https, "https", "H", false, "download using HTTPS instead of SSH protocol. Use when SSH traffic is being blocked or when SSH client has not been configured\nset the GITHUB_TOKEN environment variable with your token to use authentication while downloading")
+	vendorCmd.PersistentFlags().BoolVarP(&conf.DownloadOpts.Https, "https", "H", false, "download using HTTPS instead of SSH protocol. Use when SSH traffic is being blocked or when SSH client has not been configured\nset the GITHUB_TOKEN environment variable with your token to use authentication while downloading, for example for private repositories")
 	vendorCmd.PersistentFlags().StringVarP(&conf.Prefix, "prefix", "P", "", "download modules that start with prefix only to reduce download scope. Example:\nfuryctl vendor -P mon\nwill download all modules that start with 'mon', like 'monitoring', and ignore the rest")
 	rootCmd.AddCommand(vendorCmd)
 }
@@ -53,6 +56,10 @@ var vendorCmd = &cobra.Command{
 
 		if err != nil {
 			return err
+		}
+
+		if token := os.Getenv("GITHUB_TOKEN"); token != "" && strings.Contains(token, " ") {
+			logrus.Warn("GITHUB_TOKEN seems to be malformed. Vendoring modules may fail. Please double check its content.\n")
 		}
 
 		for _, p := range list {
