@@ -52,6 +52,14 @@ func CheckDirIsEmpty(target string) error {
 	return nil
 }
 
+func WriteFile(target string, data []byte) error {
+	if err := os.WriteFile(target, data, FullRWPermAccess); err != nil {
+		return fmt.Errorf("error while writing file %s: %w", target, err)
+	}
+
+	return nil
+}
+
 func AppendToFile(s, target string) error {
 	destination, err := os.OpenFile(target, os.O_APPEND|os.O_CREATE|os.O_WRONLY, RWPermAccess)
 	if err != nil {

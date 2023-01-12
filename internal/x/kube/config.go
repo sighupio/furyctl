@@ -6,14 +6,14 @@ package kube
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path"
 	"path/filepath"
 
-	iox "github.com/sighupio/furyctl/internal/x/io"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
+
+	iox "github.com/sighupio/furyctl/internal/x/io"
 )
 
 func CreateConfig(data []byte, p string) (string, error) {
@@ -64,9 +64,9 @@ func CopyConfigToWorkDir(p string) error {
 }
 
 func GetConfigFromFile(kubeConfigPath string) (*rest.Config, error) {
-	kubeConfigContent, err := ioutil.ReadFile(kubeConfigPath)
+	kubeConfigContent, err := os.ReadFile(kubeConfigPath)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error reading kubeconfig file: %w", err)
 	}
 
 	c, err := clientcmd.RESTConfigFromKubeConfig(kubeConfigContent)
