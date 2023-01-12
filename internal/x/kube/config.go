@@ -10,14 +10,11 @@ import (
 	"path"
 	"path/filepath"
 
-	"k8s.io/client-go/rest"
-	"k8s.io/client-go/tools/clientcmd"
-
 	iox "github.com/sighupio/furyctl/internal/x/io"
 )
 
 func CreateConfig(data []byte, p string) (string, error) {
-	err := os.WriteFile(path.Join(p, "kubeconfig"), data, iox.FullRWPermAccess)
+	err := iox.WriteFile(path.Join(p, "kubeconfig"), data)
 	if err != nil {
 		return "", fmt.Errorf("error writing kubeconfig file: %w", err)
 	}
@@ -55,24 +52,10 @@ func CopyConfigToWorkDir(p string) error {
 		return fmt.Errorf("error reading kubeconfig file: %w", err)
 	}
 
-	err = os.WriteFile(path.Join(currentDir, "kubeconfig"), kubeconfig, iox.FullRWPermAccess)
+	err = iox.WriteFile(path.Join(currentDir, "kubeconfig"), kubeconfig)
 	if err != nil {
 		return fmt.Errorf("error writing kubeconfig file: %w", err)
 	}
 
 	return nil
-}
-
-func GetConfigFromFile(kubeConfigPath string) (*rest.Config, error) {
-	kubeConfigContent, err := os.ReadFile(kubeConfigPath)
-	if err != nil {
-		return nil, fmt.Errorf("error reading kubeconfig file: %w", err)
-	}
-
-	c, err := clientcmd.RESTConfigFromKubeConfig(kubeConfigContent)
-	if err != nil {
-		return nil, fmt.Errorf("unexpected error while getting config from file: %w", err)
-	}
-
-	return c, nil
 }
