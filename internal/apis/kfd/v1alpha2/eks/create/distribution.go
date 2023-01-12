@@ -172,8 +172,6 @@ func (d *Distribution) Exec() error {
 			return err
 		}
 
-		logrus.Info("Building manifests...")
-
 		manifestsOutPath, err := d.buildManifests()
 		if err != nil {
 			return err
