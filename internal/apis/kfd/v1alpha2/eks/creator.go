@@ -189,7 +189,7 @@ func (v *ClusterCreator) Create(dryRun bool, skipPhase string) error {
 }
 
 func (v *ClusterCreator) storeClusterConfig() error {
-	x, err := yamlx.FromFileV3[[]byte](path.Join(v.paths.ConfigPath, "furyctl.yaml"))
+	x, err := yamlx.FromFileV3[[]byte](v.paths.ConfigPath)
 	if err != nil {
 		return fmt.Errorf("error while marshaling config: %w", err)
 	}
@@ -201,16 +201,16 @@ func (v *ClusterCreator) storeClusterConfig() error {
 		return fmt.Errorf("error while marshaling secret: %w", err)
 	}
 
-	if err := iox.WriteFile(path.Join(v.paths.ConfigPath, "secret.yaml"), sYaml); err != nil {
+	if err := iox.WriteFile(path.Join(v.paths.WorkDir, "secret.yaml"), sYaml); err != nil {
 		return fmt.Errorf("error while writing secret: %w", err)
 	}
 
-	defer os.Remove(path.Join(v.paths.ConfigPath, "secret.yaml"))
+	defer os.Remove(path.Join(v.paths.WorkDir, "secret.yaml"))
 
 	runner := kubectl.NewRunner(execx.NewStdExecutor(), kubectl.Paths{
 		Kubectl:    path.Join(v.paths.BinPath, "kubectl"),
-		WorkDir:    path.Join(v.paths.WorkDir, "manifests"),
-		Kubeconfig: path.Join(v.paths.ConfigPath, "secret.yaml"),
+		WorkDir:    v.paths.WorkDir,
+		Kubeconfig: path.Join(v.paths.WorkDir, "secret.yaml"),
 	}, true, true)
 
 	logrus.Info("Storing cluster config...")
