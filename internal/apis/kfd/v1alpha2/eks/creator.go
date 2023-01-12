@@ -7,6 +7,7 @@ package eks
 import (
 	"errors"
 	"fmt"
+	"os"
 	"path"
 	"strings"
 
@@ -14,6 +15,8 @@ import (
 	"github.com/sighupio/fury-distribution/pkg/schema"
 	"github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/eks/create"
 	"github.com/sighupio/furyctl/internal/cluster"
+	"github.com/sighupio/furyctl/internal/tool/kubectl"
+	execx "github.com/sighupio/furyctl/internal/x/exec"
 	kubex "github.com/sighupio/furyctl/internal/x/kube"
 	yamlx "github.com/sighupio/furyctl/internal/x/yaml"
 	"github.com/sirupsen/logrus"
@@ -184,22 +187,33 @@ func (v *ClusterCreator) Create(dryRun bool, skipPhase string) error {
 }
 
 func (v *ClusterCreator) storeClusterConfig() error {
-	c, err := kubex.GetConfigFromFile(v.paths.Kubeconfig)
-	if err != nil {
-		return fmt.Errorf("error while getting kubeconfig: %w", err)
-	}
-
-	client, err := kubex.NewClient(c)
-	if err != nil {
-		return fmt.Errorf("error while creating kubernetes client: %w", err)
-	}
-
 	x, err := yamlx.FromFileV3[[]byte](path.Join(v.paths.ConfigPath, "furyctl.yaml"))
 	if err != nil {
 		return fmt.Errorf("error while marshaling config: %w", err)
 	}
 
+	secret := kubex.CreateSecret(x, "furyctl-config", "kube-system")
+
+	sYaml, err := yamlx.MarshalV2(secret)
+	if err != nil {
+		return fmt.Errorf("error while marshaling secret: %w", err)
+	}
+
+	os.WriteFile(path.Join(v.paths.ConfigPath, "secret.yaml"), sYaml, 0644)
+
+	defer os.Remove(path.Join(v.paths.ConfigPath, "secret.yaml"))
+
+	runner := kubectl.NewRunner(execx.NewStdExecutor(), kubectl.Paths{
+		Kubectl:    path.Join(v.paths.BinPath, "kubectl"),
+		WorkDir:    path.Join(v.paths.WorkDir, "manifests"),
+		Kubeconfig: path.Join(v.paths.ConfigPath, "secret.yaml"),
+	}, true, true)
+
 	logrus.Info("Storing cluster config...")
 
-	return client.StoreDataAsSecret(x, "furyctl-config", "kube-system")
+	if err := runner.Apply(secret); err != nil {
+		return fmt.Errorf("error while storing cluster config: %w", err)
+	}
+
+	return nil
 }
