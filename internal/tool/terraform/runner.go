@@ -61,9 +61,17 @@ func (r *Runner) Init() error {
 	return nil
 }
 
-func (r *Runner) Plan(timestamp int64) error {
+func (r *Runner) Plan(timestamp int64, params ...string) error {
+	args := []string{"plan"}
+
+	if len(params) > 0 {
+		args = append(args, params...)
+	}
+
+	args = append(args, "-no-color", "-out", "plan/terraform.plan")
+
 	cmd := execx.NewCmd(r.paths.Terraform, execx.CmdOptions{
-		Args:     []string{"plan", "--out=plan/terraform.plan", "-no-color"},
+		Args:     args,
 		Executor: r.executor,
 		WorkDir:  r.paths.WorkDir,
 	})

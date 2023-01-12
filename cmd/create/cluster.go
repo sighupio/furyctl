@@ -87,13 +87,17 @@ func NewClusterCmd(tracker *analytics.Tracker) *cobra.Command {
 				flags.BinPath = filepath.Join(homeDir, ".furyctl", "bin")
 			}
 
+			if flags.DryRun {
+				logrus.Info("Dry run mode enabled, no changes will be applied")
+			}
+
 			// Init first half of collaborators.
 			client := netx.NewGoGetterClient()
 			executor := execx.NewStdExecutor()
 			distrodl := distribution.NewDownloader(client)
 
 			// Init packages.
-			execx.Debug = flags.Debug
+			execx.Debug = flags.Debug || flags.DryRun
 
 			// Download the distribution.
 			logrus.Info("Downloading distribution...")

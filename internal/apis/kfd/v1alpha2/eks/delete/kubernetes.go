@@ -7,6 +7,7 @@ package del
 import (
 	"fmt"
 	"path"
+	"time"
 
 	"github.com/sirupsen/logrus"
 
@@ -50,10 +51,24 @@ func NewKubernetes(dryRun bool, workDir, binPath string, kfdManifest config.KFD)
 func (k *Kubernetes) Exec() error {
 	logrus.Info("Deleting kubernetes phase...")
 
+	timestamp := time.Now().Unix()
+
 	err := iox.CheckDirIsEmpty(k.OperationPhase.Path)
 	if err == nil {
 		logrus.Infof("kubernetes phase already executed, skipping...")
 
+		return nil
+	}
+
+	if err := k.tfRunner.Init(); err != nil {
+		return fmt.Errorf("error running terraform init: %w", err)
+	}
+
+	if err := k.tfRunner.Plan(timestamp, "-destroy"); err != nil {
+		return fmt.Errorf("error running terraform plan: %w", err)
+	}
+
+	if k.dryRun {
 		return nil
 	}
 

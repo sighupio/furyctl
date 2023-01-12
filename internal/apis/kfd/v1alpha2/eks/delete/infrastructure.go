@@ -7,6 +7,7 @@ package del
 import (
 	"fmt"
 	"path"
+	"time"
 
 	"github.com/sirupsen/logrus"
 
@@ -50,10 +51,20 @@ func NewInfrastructure(dryRun bool, workDir, binPath string, kfdManifest config.
 func (i *Infrastructure) Exec() error {
 	logrus.Info("Deleting infrastructure phase...")
 
+	timestamp := time.Now().Unix()
+
 	err := iox.CheckDirIsEmpty(i.OperationPhase.Path)
 	if err == nil {
 		logrus.Infof("infrastructure phase already executed, skipping...")
 
+		return nil
+	}
+
+	if err := i.tfRunner.Plan(timestamp, "-destroy"); err != nil {
+		return fmt.Errorf("error running terraform plan: %w", err)
+	}
+
+	if i.dryRun {
 		return nil
 	}
 

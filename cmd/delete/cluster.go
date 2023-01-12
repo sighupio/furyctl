@@ -109,7 +109,7 @@ func NewClusterCmd(tracker *analytics.Tracker) *cobra.Command {
 			executor := execx.NewStdExecutor()
 			distrodl := distribution.NewDownloader(client)
 
-			execx.Debug = debug
+			execx.Debug = debug || dryRun
 
 			// Download the distribution.
 			logrus.Info("Downloading distribution...")
@@ -179,7 +179,9 @@ func NewClusterCmd(tracker *analytics.Tracker) *cobra.Command {
 				return fmt.Errorf("error while deleting cluster: %w", err)
 			}
 
-			logrus.Info("Cluster deleted successfully!")
+			if !dryRun && phase == cluster.OperationPhaseAll {
+				logrus.Info("Cluster deleted successfully!")
+			}
 
 			cmdEvent.AddSuccessMessage("Cluster deleted successfully!")
 			tracker.Track(cmdEvent)
