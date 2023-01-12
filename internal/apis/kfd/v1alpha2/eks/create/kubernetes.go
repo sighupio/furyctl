@@ -36,6 +36,7 @@ var (
 	errVpcCIDRFromOut     = errors.New("cannot read vpc_cidr_block from infrastructure's output.json")
 	errVpcCIDRNotFound    = errors.New("vpc_cidr_block not found in infra output")
 	errVpcIDNotFound      = errors.New("vpc id not found: you forgot to specify one or the infrastructure phase failed")
+	errPhase              = errors.New("an error occurred while running kubernetes phase, see the logs")
 )
 
 const (
@@ -108,13 +109,13 @@ func (k *Kubernetes) Exec() error {
 	if err := k.tfRunner.Init(); err != nil {
 		logrus.Debugf("error running terraform init: %s", err)
 
-		return fmt.Errorf("an error occurred while running kubernetes phase, see the logs")
+		return errPhase
 	}
 
 	if err := k.tfRunner.Plan(timestamp); err != nil {
 		logrus.Debugf("error running terraform plan: %s", err)
 
-		return fmt.Errorf("an error occurred while running kubernetes phase, see the logs")
+		return errPhase
 	}
 
 	if k.dryRun {
@@ -139,14 +140,18 @@ func (k *Kubernetes) Exec() error {
 
 	p, err := kube.CreateConfig(kubeString, k.SecretsPath)
 	if err != nil {
-		return err
+		return fmt.Errorf("error creating kubeconfig: %w", err)
 	}
 
 	if err := kube.SetConfigEnv(p); err != nil {
-		return err
+		return fmt.Errorf("error setting kubeconfig env: %w", err)
 	}
 
-	return kube.CopyConfigToWorkDir(p)
+	if err := kube.CopyConfigToWorkDir(p); err != nil {
+		return fmt.Errorf("error copying kubeconfig: %w", err)
+	}
+
+	return nil
 }
 
 func (k *Kubernetes) copyFromTemplate() error {

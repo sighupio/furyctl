@@ -11,15 +11,17 @@ import (
 	"path"
 	"strings"
 
+	"github.com/sirupsen/logrus"
+
 	"github.com/sighupio/fury-distribution/pkg/config"
 	"github.com/sighupio/fury-distribution/pkg/schema"
 	"github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/eks/create"
 	"github.com/sighupio/furyctl/internal/cluster"
 	"github.com/sighupio/furyctl/internal/tool/kubectl"
 	execx "github.com/sighupio/furyctl/internal/x/exec"
+	iox "github.com/sighupio/furyctl/internal/x/io"
 	kubex "github.com/sighupio/furyctl/internal/x/kube"
 	yamlx "github.com/sighupio/furyctl/internal/x/yaml"
-	"github.com/sirupsen/logrus"
 )
 
 var ErrUnsupportedPhase = errors.New("unsupported phase")
@@ -199,7 +201,9 @@ func (v *ClusterCreator) storeClusterConfig() error {
 		return fmt.Errorf("error while marshaling secret: %w", err)
 	}
 
-	os.WriteFile(path.Join(v.paths.ConfigPath, "secret.yaml"), sYaml, 0644)
+	if err := iox.WriteFile(path.Join(v.paths.ConfigPath, "secret.yaml"), sYaml); err != nil {
+		return fmt.Errorf("error while writing secret: %w", err)
+	}
 
 	defer os.Remove(path.Join(v.paths.ConfigPath, "secret.yaml"))
 

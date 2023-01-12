@@ -9,7 +9,7 @@ import (
 	"fmt"
 )
 
-func CreateSecret(data []byte, name string, namespace string) string {
+func CreateSecret(data []byte, name, namespace string) string {
 	secret := fmt.Sprintf(`{ 
 		"apiVersion": "v1",
 		"kind": "Secret",
