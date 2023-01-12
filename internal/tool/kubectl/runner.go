@@ -41,7 +41,7 @@ func (r *Runner) CmdPath() string {
 	return r.paths.Kubectl
 }
 
-func (r *Runner) Apply(manifestPath string) error {
+func (r *Runner) Apply(manifestPath string, params ...string) error {
 	args := []string{"apply"}
 
 	if r.paths.Kubeconfig != "" {
@@ -50,6 +50,10 @@ func (r *Runner) Apply(manifestPath string) error {
 
 	if r.serverSide {
 		args = append(args, "--server-side")
+	}
+
+	if len(params) > 0 {
+		args = append(args, params...)
 	}
 
 	args = append(args, "-f", manifestPath)

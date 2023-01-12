@@ -24,6 +24,7 @@ import (
 	"github.com/sighupio/furyctl/internal/tool/kustomize"
 	"github.com/sighupio/furyctl/internal/tool/terraform"
 	execx "github.com/sighupio/furyctl/internal/x/exec"
+	iox "github.com/sighupio/furyctl/internal/x/io"
 	yamlx "github.com/sighupio/furyctl/internal/x/yaml"
 )
 
@@ -153,6 +154,36 @@ func (d *Distribution) Exec() error {
 	}
 
 	if d.dryRun {
+		if err := d.createDummyOutput(); err != nil {
+			return fmt.Errorf("error creating dummy output: %w", err)
+		}
+
+		postTfMerger, err := d.injectDataPostTf(preTfMerger)
+		if err != nil {
+			return err
+		}
+
+		mCfg, err := template.NewConfig(furyctlMerger, postTfMerger, []string{"source/terraform", ".gitignore"})
+		if err != nil {
+			return fmt.Errorf("error creating template config: %w", err)
+		}
+
+		if err := d.copyFromTemplate(mCfg); err != nil {
+			return err
+		}
+
+		logrus.Info("Building manifests...")
+
+		manifestsOutPath, err := d.buildManifests()
+		if err != nil {
+			return err
+		}
+
+		err = d.kubeRunner.Apply(manifestsOutPath, "--dry-run=server")
+		if err != nil {
+			logrus.Debugf("error running kubectl apply: %s", err)
+		}
+
 		return nil
 	}
 
@@ -360,6 +391,39 @@ func (d *Distribution) injectDataPostTf(fMerger *merge.Merger) (*merge.Merger, e
 	}
 
 	return merger, nil
+}
+
+func (d *Distribution) createDummyOutput() error {
+	arns := map[string]string{
+		"ebs_csi_driver_iam_role_arn":           "arn:aws:iam::123456789012:role/dummy",
+		"load_balancer_controller_iam_role_arn": "arn:aws:iam::123456789012:role/dummy",
+		"cluster_autoscaler_iam_role_arn":       "arn:aws:iam::123456789012:role/dummy",
+		"external_dns_private_iam_role_arn":     "arn:aws:iam::123456789012:role/dummy",
+		"external_dns_public_iam_role_arn":      "arn:aws:iam::123456789012:role/dummy",
+		"cert_manager_iam_role_arn":             "arn:aws:iam::123456789012:role/dummy",
+		"velero_iam_role_arn":                   "arn:aws:iam::123456789012:role/dummy",
+	}
+
+	outputFilePath := path.Join(d.OutputsPath, "output.json")
+
+	if _, err := os.Stat(outputFilePath); err == nil {
+		return nil
+	}
+
+	if err := os.MkdirAll(d.OutputsPath, iox.FullPermAccess); err != nil {
+		return fmt.Errorf("error while creating outputs folder: %w", err)
+	}
+
+	arnsJSON, err := json.Marshal(arns)
+	if err != nil {
+		return fmt.Errorf("error while marshaling arns: %w", err)
+	}
+
+	if err := os.WriteFile(outputFilePath, arnsJSON, iox.RWPermAccess); err != nil {
+		return fmt.Errorf("error while creating dummy output.json: %w", err)
+	}
+
+	return nil
 }
 
 func (d *Distribution) extractARNsFromTfOut() (map[string]string, error) {
