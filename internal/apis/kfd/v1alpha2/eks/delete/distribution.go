@@ -122,13 +122,41 @@ func (d *Distribution) Exec() error {
 		}
 
 		logrus.Info("The following resources, regardless of the built manifests, are going to be deleted:")
-		logrus.Info("Ingresses from every namespace")
-		logrus.Info("Prometheus resources from 'monitoring' namespace")
-		logrus.Info("PersistentVolumeClaims from 'monitoring' namespace")
-		logrus.Info("PersistentVolumeClaims from 'logging' namespace")
-		logrus.Info("StorageSets from 'logging' namespace")
-		logrus.Info("Logging resources from 'logging' namespace")
-		logrus.Info("Services from 'ingress-nginx' namespace")
+
+		err = d.getListOfResourcesNs("all", "ingress")
+		if err != nil {
+			logrus.Errorf("error while getting list of ingress resources: %v", err)
+		}
+
+		err = d.getListOfResourcesNs("monitoring", "prometheus")
+		if err != nil {
+			logrus.Errorf("error while getting list of prometheus resources: %v", err)
+		}
+
+		err = d.getListOfResourcesNs("monitoring", "persistentvolumeclaim")
+		if err != nil {
+			logrus.Errorf("error while getting list of persistentvolumeclaim resources: %v", err)
+		}
+
+		err = d.getListOfResourcesNs("logging", "persistentvolumeclaim")
+		if err != nil {
+			logrus.Errorf("error while getting list of persistentvolumeclaim resources: %v", err)
+		}
+
+		err = d.getListOfResourcesNs("logging", "statefulset")
+		if err != nil {
+			logrus.Errorf("error while getting list of statefulset resources: %v", err)
+		}
+
+		err = d.getListOfResourcesNs("logging", "logging")
+		if err != nil {
+			logrus.Errorf("error while getting list of logging resources: %v", err)
+		}
+
+		err = d.getListOfResourcesNs("ingress-nginx", "service")
+		if err != nil {
+			logrus.Errorf("error while getting list of service resources: %v", err)
+		}
 
 		return nil
 	}
@@ -302,6 +330,16 @@ func (d *Distribution) getLoadBalancers() error {
 
 	if logString != "''" {
 		return fmt.Errorf("%w: %s", errPendingResources, logString)
+	}
+
+	return nil
+}
+
+func (d *Distribution) getListOfResourcesNs(ns, resName string) error {
+	_, err := d.kubeRunner.Get(ns, resName, "-o",
+		"jsonpath={range .items[*]}{\""+resName+" \"}\"{.metadata.name}\"{\" deleted (dry run)\"}{\"\\n\"}{end}")
+	if err != nil {
+		return fmt.Errorf("error while reading resources from cluster: %w", err)
 	}
 
 	return nil
