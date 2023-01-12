@@ -49,16 +49,26 @@ func exec() int {
 
 	defer logFile.Close()
 
+	log := &logrus.Logger{
+		Out: os.Stdout,
+		Formatter: &logrus.TextFormatter{
+			ForceColors:      true,
+			DisableTimestamp: true,
+		},
+	}
+
+	log.SetLevel(logrus.InfoLevel)
+
 	h, err := os.Hostname()
 	if err != nil {
-		logrus.Debug(err)
+		log.Debug(err)
 
 		h = "unknown"
 	}
 
 	t := os.Getenv("FURYCTL_MIXPANEL_TOKEN")
 	if t == "" {
-		logrus.Debug("FURYCTL_MIXPANEL_TOKEN is not set")
+		log.Debug("FURYCTL_MIXPANEL_TOKEN is not set")
 	}
 
 	// Create the analytics tracker.
@@ -67,7 +77,7 @@ func exec() int {
 	defer a.Flush()
 
 	if _, err := cmd.NewRootCommand(versions, logFile, a).ExecuteC(); err != nil {
-		logrus.Error(err)
+		log.Error(err)
 
 		return 1
 	}
