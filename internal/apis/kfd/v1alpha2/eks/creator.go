@@ -21,7 +21,6 @@ import (
 	execx "github.com/sighupio/furyctl/internal/x/exec"
 	iox "github.com/sighupio/furyctl/internal/x/io"
 	kubex "github.com/sighupio/furyctl/internal/x/kube"
-	yamlx "github.com/sighupio/furyctl/internal/x/yaml"
 )
 
 var ErrUnsupportedPhase = errors.New("unsupported phase")
@@ -204,28 +203,28 @@ func (v *ClusterCreator) storeClusterConfig() error {
 		return fmt.Errorf("error while reading config file: %w", err)
 	}
 
-	secret := kubex.CreateSecret(x, "furyctl-config", "kube-system")
-
-	sYaml, err := yamlx.MarshalV2(secret)
+	secret, err := kubex.CreateSecret(x, "furyctl-config", "kube-system")
 	if err != nil {
-		return fmt.Errorf("error while marshaling secret: %w", err)
+		return fmt.Errorf("error while creating secret: %w", err)
 	}
 
-	if err := iox.WriteFile(path.Join(v.paths.WorkDir, "secret.yaml"), sYaml); err != nil {
+	secretPath := path.Join(v.paths.WorkDir, "secrets.yaml")
+
+	if err := iox.WriteFile(secretPath, secret); err != nil {
 		return fmt.Errorf("error while writing secret: %w", err)
 	}
 
-	defer os.Remove(path.Join(v.paths.WorkDir, "secret.yaml"))
+	defer os.Remove(secretPath)
 
 	runner := kubectl.NewRunner(execx.NewStdExecutor(), kubectl.Paths{
-		Kubectl:    path.Join(v.paths.BinPath, "kubectl"),
+		Kubectl:    path.Join(v.paths.BinPath, "kubectl", v.kfdManifest.Tools.Common.Kubectl.Version, "kubectl"),
 		WorkDir:    v.paths.WorkDir,
-		Kubeconfig: path.Join(v.paths.WorkDir, "secret.yaml"),
+		Kubeconfig: v.paths.Kubeconfig,
 	}, true, true)
 
 	logrus.Info("Storing cluster config...")
 
-	if err := runner.Apply(secret); err != nil {
+	if err := runner.Apply(secretPath); err != nil {
 		return fmt.Errorf("error while storing cluster config: %w", err)
 	}
 
