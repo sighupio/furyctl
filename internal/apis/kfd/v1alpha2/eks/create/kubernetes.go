@@ -107,15 +107,11 @@ func (k *Kubernetes) Exec() error {
 	}
 
 	if err := k.tfRunner.Init(); err != nil {
-		logrus.Debugf("error running terraform init: %s", err)
-
-		return errPhase
+		return fmt.Errorf("error running terraform init: %w", err)
 	}
 
 	if err := k.tfRunner.Plan(timestamp); err != nil {
-		logrus.Debugf("error running terraform plan: %s", err)
-
-		return errPhase
+		return fmt.Errorf("error running terraform plan: %w", err)
 	}
 
 	if k.dryRun {
