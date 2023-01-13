@@ -124,7 +124,7 @@ func downloadProcess(wg *sync.WaitGroup, opts DownloadOpts, data Package, errCha
 			logrus.Infof("downloading '%s' failed, falling back to '%s' and retrying", o, humanReadableSource(pU.getConsumableURL()))
 
 			if resp, err := checkRepository(pU); err != nil || resp.StatusCode == http.StatusUnauthorized || resp.StatusCode == http.StatusNotFound {
-				errChan <- fmt.Errorf("error downloading %s for '%s' version '%s'. Both urls '%s' and '%s' have failed. Please check that the repository exists and that your credentials are correctlly configured. You might want to try using the -H flag", data.Kind, data.Name, data.Version, o, humanReadableSource(pU.getConsumableURL()))
+				errChan <- fmt.Errorf("error downloading %s for '%s' version '%s'. Both urls '%s' and '%s' have failed. Please check that the repository exists and that your credentials are correctlly configured.", data.Kind, data.Name, data.Version, o, humanReadableSource(pU.getConsumableURL()))
 				return
 			}
 
