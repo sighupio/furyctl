@@ -136,8 +136,10 @@ func (v *ClusterCreator) Create(dryRun bool, skipPhase string) error {
 			return fmt.Errorf("error while executing kubernetes phase: %w", err)
 		}
 
-		if err := v.storeClusterConfig(); err != nil {
-			return fmt.Errorf("error while storing cluster config: %w", err)
+		if !dryRun {
+			if err := v.storeClusterConfig(); err != nil {
+				return fmt.Errorf("error while storing cluster config: %w", err)
+			}
 		}
 
 		return nil
@@ -147,8 +149,10 @@ func (v *ClusterCreator) Create(dryRun bool, skipPhase string) error {
 			return fmt.Errorf("error while executing distribution phase: %w", err)
 		}
 
-		if err := v.storeClusterConfig(); err != nil {
-			return fmt.Errorf("error while storing cluster config: %w", err)
+		if !dryRun {
+			if err := v.storeClusterConfig(); err != nil {
+				return fmt.Errorf("error while storing cluster config: %w", err)
+			}
 		}
 
 		return nil
@@ -189,9 +193,9 @@ func (v *ClusterCreator) Create(dryRun bool, skipPhase string) error {
 }
 
 func (v *ClusterCreator) storeClusterConfig() error {
-	x, err := yamlx.FromFileV3[[]byte](v.paths.ConfigPath)
+	x, err := os.ReadFile(v.paths.ConfigPath)
 	if err != nil {
-		return fmt.Errorf("error while marshaling config: %w", err)
+		return fmt.Errorf("error while reading config file: %w", err)
 	}
 
 	secret := kubex.CreateSecret(x, "furyctl-config", "kube-system")
