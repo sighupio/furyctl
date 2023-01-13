@@ -174,6 +174,7 @@ func NewClusterCmd(tracker *analytics.Tracker) *cobra.Command {
 				paths,
 				flags.Phase,
 				flags.VpnAutoConnect,
+				flags.DryRun,
 			)
 			if err != nil {
 				cmdEvent.AddErrorMessage(err)
@@ -183,7 +184,7 @@ func NewClusterCmd(tracker *analytics.Tracker) *cobra.Command {
 			}
 
 			logrus.Info("Creating cluster...")
-			if err := clusterCreator.Create(flags.DryRun, flags.SkipPhase); err != nil {
+			if err := clusterCreator.Create(flags.SkipPhase); err != nil {
 				cmdEvent.AddErrorMessage(err)
 				tracker.Track(cmdEvent)
 

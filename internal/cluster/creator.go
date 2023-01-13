@@ -23,6 +23,7 @@ const (
 	CreatorPropertyPhase          = "phase"
 	CreatorPropertyVpnAutoConnect = "vpnautoconnect"
 	CreatorPropertyKubeconfig     = "kubeconfig"
+	CreatorPropertyDryRun         = "dryrun"
 )
 
 var (
@@ -49,7 +50,7 @@ type CreatorProperty struct {
 type Creator interface {
 	SetProperties(props []CreatorProperty)
 	SetProperty(name string, value any)
-	Create(dryRun bool, skipPhase string) error
+	Create(skipPhase string) error
 }
 
 func NewCreator(
@@ -58,6 +59,7 @@ func NewCreator(
 	paths CreatorPaths,
 	phase string,
 	vpnAutoConnect bool,
+	dryRun bool,
 ) (Creator, error) {
 	lcAPIVersion := strings.ToLower(minimalConf.APIVersion)
 	lcResourceType := strings.ToLower(minimalConf.Kind)
@@ -91,6 +93,10 @@ func NewCreator(
 			{
 				Name:  CreatorPropertyKubeconfig,
 				Value: paths.Kubeconfig,
+			},
+			{
+				Name:  CreatorPropertyDryRun,
+				Value: dryRun,
 			},
 		})
 	}
