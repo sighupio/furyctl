@@ -36,7 +36,6 @@ var (
 	errVpcCIDRFromOut     = errors.New("cannot read vpc_cidr_block from infrastructure's output.json")
 	errVpcCIDRNotFound    = errors.New("vpc_cidr_block not found in infra output")
 	errVpcIDNotFound      = errors.New("vpc id not found: you forgot to specify one or the infrastructure phase failed")
-	errPhase              = errors.New("an error occurred while running kubernetes phase, see the logs")
 )
 
 const (

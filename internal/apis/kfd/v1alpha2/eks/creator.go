@@ -32,6 +32,7 @@ type ClusterCreator struct {
 	kfdManifest    config.KFD
 	phase          string
 	vpnAutoConnect bool
+	dryRun         bool
 }
 
 func (v *ClusterCreator) SetProperties(props []cluster.CreatorProperty) {
@@ -88,11 +89,16 @@ func (v *ClusterCreator) SetProperty(name string, value any) {
 		if s, ok := value.(string); ok {
 			v.paths.Kubeconfig = s
 		}
+
+	case cluster.CreatorPropertyDryRun:
+		if b, ok := value.(bool); ok {
+			v.dryRun = b
+		}
 	}
 }
 
-func (v *ClusterCreator) Create(dryRun bool, skipPhase string) error {
-	infra, err := create.NewInfrastructure(v.furyctlConf, v.kfdManifest, v.paths, dryRun)
+func (v *ClusterCreator) Create(skipPhase string) error {
+	infra, err := create.NewInfrastructure(v.furyctlConf, v.kfdManifest, v.paths, v.dryRun)
 	if err != nil {
 		return fmt.Errorf("error while initiating infrastructure phase: %w", err)
 	}
@@ -102,7 +108,7 @@ func (v *ClusterCreator) Create(dryRun bool, skipPhase string) error {
 		v.kfdManifest,
 		infra.OutputsPath,
 		v.paths,
-		dryRun,
+		v.dryRun,
 	)
 	if err != nil {
 		return fmt.Errorf("error while initiating kubernetes phase: %w", err)
@@ -113,7 +119,7 @@ func (v *ClusterCreator) Create(dryRun bool, skipPhase string) error {
 		v.furyctlConf,
 		v.kfdManifest,
 		infra.OutputsPath,
-		dryRun,
+		v.dryRun,
 	)
 	if err != nil {
 		return fmt.Errorf("error while initiating distribution phase: %w", err)
@@ -136,7 +142,7 @@ func (v *ClusterCreator) Create(dryRun bool, skipPhase string) error {
 			return fmt.Errorf("error while executing kubernetes phase: %w", err)
 		}
 
-		if !dryRun {
+		if !v.dryRun {
 			if err := v.storeClusterConfig(); err != nil {
 				return fmt.Errorf("error while storing cluster config: %w", err)
 			}
@@ -149,7 +155,7 @@ func (v *ClusterCreator) Create(dryRun bool, skipPhase string) error {
 			return fmt.Errorf("error while executing distribution phase: %w", err)
 		}
 
-		if !dryRun {
+		if !v.dryRun {
 			if err := v.storeClusterConfig(); err != nil {
 				return fmt.Errorf("error while storing cluster config: %w", err)
 			}
