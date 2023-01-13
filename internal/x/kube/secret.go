@@ -7,20 +7,34 @@ package kube
 import (
 	"encoding/base64"
 	"fmt"
+
+	yamlx "github.com/sighupio/furyctl/internal/x/yaml"
 )
 
-func CreateSecret(data []byte, name, namespace string) string {
-	secret := fmt.Sprintf(`{ 
-		"apiVersion": "v1",
-		"kind": "Secret",
-		"metadata": {
-			"name": "%s",
-			"namespace": "%s"
+func CreateSecret(data []byte, name, namespace string) ([]byte, error) {
+	secret := struct {
+		APIVersion string                 `yaml:"apiVersion"`
+		Kind       string                 `yaml:"kind"`
+		Metadata   map[string]interface{} `yaml:"metadata"`
+		Type       string                 `yaml:"type"`
+		Data       map[string]string      `yaml:"data"`
+	}{
+		APIVersion: "v1",
+		Kind:       "Secret",
+		Metadata: map[string]interface{}{
+			"name":      name,
+			"namespace": namespace,
 		},
-		"data": {
-			"config": "%s"
-		}
-	}`, name, namespace, base64.StdEncoding.EncodeToString(data))
+		Type: "Opaque",
+		Data: map[string]string{
+			"config": base64.StdEncoding.EncodeToString(data),
+		},
+	}
 
-	return secret
+	data, err := yamlx.MarshalV3(secret)
+	if err != nil {
+		return []byte{}, fmt.Errorf("%w", err)
+	}
+
+	return data, nil
 }

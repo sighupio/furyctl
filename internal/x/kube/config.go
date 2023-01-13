@@ -23,7 +23,7 @@ func CreateConfig(data []byte, p string) (string, error) {
 }
 
 func SetConfigEnv(p string) error {
-	kubePath, err := filepath.Abs(path.Join(p, "kubeconfig"))
+	kubePath, err := filepath.Abs(p)
 	if err != nil {
 		return fmt.Errorf("error getting kubeconfig absolute path: %w", err)
 	}
@@ -42,7 +42,7 @@ func CopyConfigToWorkDir(p string) error {
 		return fmt.Errorf("error getting current dir: %w", err)
 	}
 
-	kubePath, err := filepath.Abs(path.Join(p, "kubeconfig"))
+	kubePath, err := filepath.Abs(p)
 	if err != nil {
 		return fmt.Errorf("error getting kubeconfig absolute path: %w", err)
 	}

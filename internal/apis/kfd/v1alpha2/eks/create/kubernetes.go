@@ -128,12 +128,12 @@ func (k *Kubernetes) Exec() error {
 		return errKubeconfigFromLogs
 	}
 
-	kubeString, ok := out.Outputs["kubeconfig"].Value.([]byte)
+	kubeString, ok := out.Outputs["kubeconfig"].Value.(string)
 	if !ok {
 		return errKubeconfigFromLogs
 	}
 
-	p, err := kube.CreateConfig(kubeString, k.SecretsPath)
+	p, err := kube.CreateConfig([]byte(kubeString), k.SecretsPath)
 	if err != nil {
 		return fmt.Errorf("error creating kubeconfig: %w", err)
 	}
