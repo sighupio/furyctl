@@ -172,14 +172,9 @@ func (d *Distribution) Exec() error {
 			return err
 		}
 
-		manifestsOutPath, err := d.buildManifests()
+		_, err = d.buildManifests()
 		if err != nil {
 			return err
-		}
-
-		err = d.kubeRunner.Apply(manifestsOutPath, "--dry-run=server")
-		if err != nil {
-			logrus.Debugf("error running kubectl apply: %s", err)
 		}
 
 		return nil
