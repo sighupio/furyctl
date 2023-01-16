@@ -55,9 +55,8 @@ func exec() int {
 			ForceColors:      true,
 			DisableTimestamp: true,
 		},
+		Level: logrus.DebugLevel,
 	}
-
-	log.SetLevel(logrus.InfoLevel)
 
 	h, err := os.Hostname()
 	if err != nil {
