@@ -2,16 +2,22 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-package kubex
+package kubex_test
 
 import (
-	"encoding/base64"
-	"fmt"
+	"testing"
 
+	kubex "github.com/sighupio/furyctl/internal/x/kube"
 	yamlx "github.com/sighupio/furyctl/internal/x/yaml"
 )
 
-func CreateSecret(data []byte, name, namespace string) ([]byte, error) {
+func TestCreateSecret(t *testing.T) {
+	t.Parallel()
+
+	name := "test"
+	namespace := "test"
+	config := "dGVzdA=="
+
 	secret := struct {
 		APIVersion string                 `yaml:"apiVersion"`
 		Kind       string                 `yaml:"kind"`
@@ -27,14 +33,21 @@ func CreateSecret(data []byte, name, namespace string) ([]byte, error) {
 		},
 		Type: "Opaque",
 		Data: map[string]string{
-			"config": base64.StdEncoding.EncodeToString(data),
+			"config": config,
 		},
 	}
 
-	data, err := yamlx.MarshalV3(secret)
+	want, err := yamlx.MarshalV3(secret)
 	if err != nil {
-		return []byte{}, fmt.Errorf("%w", err)
+		t.Fatal(err)
 	}
 
-	return data, nil
+	got, err := kubex.CreateSecret([]byte("test"), name, namespace)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if string(got) != string(want) {
+		t.Fatalf("got %s, want %s", string(got), string(want))
+	}
 }

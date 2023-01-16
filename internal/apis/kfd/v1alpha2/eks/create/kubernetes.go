@@ -26,7 +26,7 @@ import (
 	"github.com/sighupio/furyctl/internal/tool/terraform"
 	execx "github.com/sighupio/furyctl/internal/x/exec"
 	iox "github.com/sighupio/furyctl/internal/x/io"
-	"github.com/sighupio/furyctl/internal/x/kube"
+	kubex "github.com/sighupio/furyctl/internal/x/kube"
 )
 
 var (
@@ -133,16 +133,16 @@ func (k *Kubernetes) Exec() error {
 		return errKubeconfigFromLogs
 	}
 
-	p, err := kube.CreateConfig([]byte(kubeString), k.SecretsPath)
+	p, err := kubex.CreateConfig([]byte(kubeString), k.SecretsPath)
 	if err != nil {
 		return fmt.Errorf("error creating kubeconfig: %w", err)
 	}
 
-	if err := kube.SetConfigEnv(p); err != nil {
+	if err := kubex.SetConfigEnv(p); err != nil {
 		return fmt.Errorf("error setting kubeconfig env: %w", err)
 	}
 
-	if err := kube.CopyConfigToWorkDir(p); err != nil {
+	if err := kubex.CopyConfigToWorkDir(p); err != nil {
 		return fmt.Errorf("error copying kubeconfig: %w", err)
 	}
 
