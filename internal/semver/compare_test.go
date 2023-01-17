@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
+//go:build unit
+
 package semver_test
 
 import (
@@ -240,6 +242,114 @@ func TestParts(t *testing.T) {
 
 			if !cmp.Equal(parts, tC.want) {
 				t.Errorf("parts mismatch (-want +got):\n%s", cmp.Diff(tC.want, parts))
+			}
+		})
+	}
+}
+
+func TestSamePatchStr(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		desc string
+		a    string
+		b    string
+		want bool
+	}{
+		{
+			desc: "same patch, different build using dash",
+			a:    "v1.2.3-1",
+			b:    "v1.2.3-2",
+			want: true,
+		},
+		{
+			desc: "same patch, different build using plus",
+			a:    "v1.2.3+b1",
+			b:    "v1.2.3+b2",
+			want: true,
+		},
+		{
+			desc: "same patch",
+			a:    "v1.2.3",
+			b:    "v1.2.3",
+			want: true,
+		},
+		{
+			desc: "same minor",
+			a:    "v1.2.3",
+			b:    "v1.2.4",
+			want: false,
+		},
+		{
+			desc: "same major",
+			a:    "v1.2.3",
+			b:    "v1.3.4",
+			want: false,
+		},
+	}
+	for _, tC := range testCases {
+		tC := tC
+
+		t.Run(tC.desc, func(t *testing.T) {
+			t.Parallel()
+
+			got := semver.SamePatchStr(tC.a, tC.b)
+			if got != tC.want {
+				t.Errorf("want = %t, got = %t", tC.want, got)
+			}
+		})
+	}
+}
+
+func TesSameMinorStr(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		desc string
+		a    string
+		b    string
+		want bool
+	}{
+		{
+			desc: "same patch, different build using dash",
+			a:    "v1.2.3-1",
+			b:    "v1.2.3-2",
+			want: true,
+		},
+		{
+			desc: "same patch, different build using plus",
+			a:    "v1.2.3+b1",
+			b:    "v1.2.3+b2",
+			want: true,
+		},
+		{
+			desc: "same patch",
+			a:    "v1.2.3",
+			b:    "v1.2.3",
+			want: true,
+		},
+		{
+			desc: "same minor",
+			a:    "v1.2.3",
+			b:    "v1.2.4",
+			want: true,
+		},
+		{
+			desc: "same major",
+			a:    "v1.2.3",
+			b:    "v1.3.4",
+			want: false,
+		},
+	}
+	for _, tC := range testCases {
+		tC := tC
+
+		t.Run(tC.desc, func(t *testing.T) {
+			t.Parallel()
+
+			got := semver.SameMinorStr(tC.a, tC.b)
+			if got != tC.want {
+				t.Errorf("want = %t, got = %t", tC.want, got)
 			}
 		})
 	}

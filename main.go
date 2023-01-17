@@ -15,9 +15,13 @@
 package main
 
 import (
+	"os"
+	"runtime"
+
 	"github.com/sirupsen/logrus"
 
 	"github.com/sighupio/furyctl/cmd"
+	"github.com/sighupio/furyctl/internal/analytics"
 )
 
 var (
@@ -29,6 +33,12 @@ var (
 )
 
 func main() {
+	os.Exit(exec())
+}
+
+func exec() int {
+	var logFile *os.File
+
 	versions := map[string]string{
 		"version":   version,
 		"gitCommit": gitCommit,
@@ -37,7 +47,39 @@ func main() {
 		"osArch":    osArch,
 	}
 
-	if err := cmd.NewRootCommand(versions).Execute(); err != nil {
-		logrus.Fatal(err)
+	defer logFile.Close()
+
+	log := &logrus.Logger{
+		Out: os.Stdout,
+		Formatter: &logrus.TextFormatter{
+			ForceColors:      true,
+			DisableTimestamp: true,
+		},
+		Level: logrus.DebugLevel,
 	}
+
+	h, err := os.Hostname()
+	if err != nil {
+		log.Debug(err)
+
+		h = "unknown"
+	}
+
+	t := os.Getenv("FURYCTL_MIXPANEL_TOKEN")
+	if t == "" {
+		log.Debug("FURYCTL_MIXPANEL_TOKEN is not set")
+	}
+
+	// Create the analytics tracker.
+	a := analytics.NewTracker(t, versions[version], osArch, runtime.GOOS, "SIGHUP", h)
+
+	defer a.Flush()
+
+	if _, err := cmd.NewRootCommand(versions, logFile, a).ExecuteC(); err != nil {
+		log.Error(err)
+
+		return 1
+	}
+
+	return 0
 }

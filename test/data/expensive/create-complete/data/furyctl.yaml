@@ -1,0 +1,129 @@
+# Copyright (c) 2017-present SIGHUP s.r.l All rights reserved.
+# Use of this source code is governed by a BSD-style
+# license that can be found in the LICENSE file.
+
+apiVersion: kfd.sighup.io/v1alpha2
+kind: EKSCluster
+metadata:
+  name: furyctl-test-aws
+spec:
+  distributionVersion: "v1.24.1"
+  toolsConfiguration:
+    terraform:
+      state:
+        s3:
+          bucketName: furyctl-test-ci
+          keyPrefix: furyctl/
+          region: eu-west-1
+  region: eu-west-1
+  tags:
+    env: "test"
+    k8s: "awesome"
+  infrastructure:
+    vpc:
+      network:
+        cidr: 10.0.0.0/16
+        subnetsCidrs:
+          private:
+            - 10.0.182.0/24
+            - 10.0.172.0/24
+            - 10.0.162.0/24
+          public:
+            - 10.0.20.0/24
+            - 10.0.30.0/24
+            - 10.0.40.0/24
+      vpn:
+        instances: 1
+        port: 1194
+        instanceType: t3.micro
+        diskSize: 50
+        operatorName: sighup
+        dhParamsBits: 2048
+        vpnClientsSubnetCidr: 192.168.200.0/24
+        ssh:
+          publicKeys:
+            - "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGxA+4CXYSmsN1m5DSsRzVRTegbvCh1gh7YObg0drj4+ alessio.pragliola@sighup.io"
+          githubUsersName:
+            - Al-Pragliola
+          allowedFromCidrs:
+            - 0.0.0.0/0
+  kubernetes:
+    nodeAllowedSshPublicKey: "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGxA+4CXYSmsN1m5DSsRzVRTegbvCh1gh7YObg0drj4+ alessio.pragliola@sighup.io"
+    nodePools:
+      - name: worker-eks
+        ami:
+          id: ami-0ab303329574a0338
+          owner: "363601582189"
+        size:
+          min: 2
+          max: 3
+        subnetIds: []
+        instance:
+          type: t3.large
+          spot: false
+          volumeSize: 50
+        attachedTargetGroups: []
+        labels:
+          nodepool: worker
+          node.kubernetes.io/role: worker
+        taints: []
+        tags:
+          k8s.io/cluster-autoscaler/node-template/label/nodepool: "worker"
+          k8s.io/cluster-autoscaler/node-template/label/node.kubernetes.io/role: "worker"
+        additionalFirewallRules: []
+      - name: infra
+        ami:
+          id: ami-0ab303329574a0338
+          owner: "363601582189"
+        size:
+          min: 3
+          max: 3
+        subnetIds: []
+        instance:
+          type: t3.xlarge
+          spot: false
+          volumeSize: 50
+        attachedTargetGroups: []
+        labels:
+          nodepool: infra
+          node.kubernetes.io/role: infra
+        taints:
+          - node.kubernetes.io/role=infra:NoSchedule
+        tags:
+          k8s.io/cluster-autoscaler/node-template/label/nodepool: "infra"
+          k8s.io/cluster-autoscaler/node-template/label/node.kubernetes.io/role: "infra"
+          k8s.io/cluster-autoscaler/node-template/taint/node.kubernetes.io/role: "infra:NoSchedule"
+        additionalFirewallRules: []
+    awsAuth:
+      additionalAccounts: []
+      users: []
+      roles: []
+  distribution:
+    modules:
+      ingress:
+        baseDomain: furyctl-demo.sighup.io
+        nginx:
+          type: single
+          tls:
+            provider: certManager
+        certManager:
+          clusterIssuer:
+            name: letsencrypt-fury
+            type: http01
+        dns:
+          public:
+            name: "furyctl-demo.sighup.io"
+            create: true
+          private:
+            create: true
+            name: "internal.furyctl-demo.sighup.io"
+      logging:
+        opensearch:
+          type: single
+          resources:
+            limits:
+              cpu: 2000m
+              memory: 4G
+            requests:
+              cpu: 300m
+              memory: 1G

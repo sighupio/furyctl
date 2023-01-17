@@ -10,7 +10,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/santhosh-tekuri/jsonschema"
+	"github.com/santhosh-tekuri/jsonschema/v5"
 )
 
 var ErrCannotLoadSchema = errors.New("failed to load schema file")

@@ -5,8 +5,8 @@
 package template
 
 import (
+	"errors"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -14,9 +14,15 @@ import (
 
 	"gopkg.in/yaml.v2"
 
-	"github.com/sighupio/furyctl/internal/io"
 	"github.com/sighupio/furyctl/internal/template/mapper"
-	yaml2 "github.com/sighupio/furyctl/internal/yaml"
+	iox "github.com/sighupio/furyctl/internal/x/io"
+	yamlx "github.com/sighupio/furyctl/internal/x/yaml"
+)
+
+var (
+	errSourceMustbeSet  = errors.New("source must be set")
+	errTargetMustbeSet  = errors.New("target must be set")
+	errTemplateNotFound = errors.New("no template found")
 )
 
 type Model struct {
@@ -44,34 +50,28 @@ func NewTemplateModel(
 	var model Config
 
 	if len(source) < 1 {
-		return nil, fmt.Errorf("source must be set")
+		return nil, errSourceMustbeSet
 	}
 
 	if len(target) < 1 {
-		return nil, fmt.Errorf("target must be set")
+		return nil, errTargetMustbeSet
 	}
 
 	if len(configPath) > 0 {
-		readFile, err := ioutil.ReadFile(configPath)
+		readFile, err := os.ReadFile(configPath)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("error reading config file: %w", err)
 		}
 
 		if err = yaml.Unmarshal(readFile, &model); err != nil {
-			return nil, err
-		}
-	}
-
-	if stopIfNotEmpty {
-		err := io.CheckDirIsEmpty(target)
-		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("error parsing config file: %w", err)
 		}
 	}
 
 	funcMap := NewFuncMap()
-	funcMap.Add("toYaml", toYAML)
-	funcMap.Add("fromYaml", fromYAML)
+	funcMap.Add("toYaml", ToYAML)
+	funcMap.Add("fromYaml", FromYAML)
+	funcMap.Add("hasKeyAny", HasKeyAny)
 
 	return &Model{
 		SourcePath:           source,
@@ -93,13 +93,21 @@ func (tm *Model) isExcluded(source string) bool {
 			return true
 		}
 	}
+
 	return false
 }
 
 func (tm *Model) Generate() error {
+	if tm.StopIfTargetNotEmpty {
+		err := iox.CheckDirIsEmpty(tm.TargetPath)
+		if err != nil {
+			return fmt.Errorf("target directory is not empty: %w", err)
+		}
+	}
+
 	osErr := os.MkdirAll(tm.TargetPath, os.ModePerm)
 	if osErr != nil {
-		return osErr
+		return fmt.Errorf("error creating target directory: %w", osErr)
 	}
 
 	context, cErr := tm.generateContext()
@@ -111,12 +119,17 @@ func (tm *Model) Generate() error {
 
 	context, err := ctxMapper.MapDynamicValues()
 	if err != nil {
-		return err
+		return fmt.Errorf("error mapping dynamic values: %w", err)
 	}
 
 	tm.Context = context
 
-	return filepath.Walk(tm.SourcePath, tm.applyTemplates)
+	err = filepath.Walk(tm.SourcePath, tm.applyTemplates)
+	if err != nil {
+		return fmt.Errorf("error applying templates: %w", err)
+	}
+
+	return nil
 }
 
 func (tm *Model) applyTemplates(
@@ -128,18 +141,23 @@ func (tm *Model) applyTemplates(
 		return err
 	}
 
+	if info == nil {
+		return err
+	}
+
 	if info.IsDir() {
 		return err
 	}
 
 	rel, err := filepath.Rel(tm.SourcePath, relSource)
 	if err != nil {
-		return err
+		return fmt.Errorf("error getting relative path: %w", err)
 	}
 
 	currentTarget := filepath.Join(tm.TargetPath, rel)
 
 	gen := NewGenerator(
+		tm.SourcePath,
 		relSource,
 		currentTarget,
 		tm.Context,
@@ -148,7 +166,7 @@ func (tm *Model) applyTemplates(
 	)
 
 	realTarget, fErr := gen.ProcessFilename(tm)
-	if fErr != nil { // maybe we should fail back to real name instead?
+	if fErr != nil { // Maybe we should fail back to real name instead?
 		return fErr
 	}
 
@@ -158,7 +176,7 @@ func (tm *Model) applyTemplates(
 
 	if _, err := os.Stat(currentTargetDir); os.IsNotExist(err) {
 		if err := os.MkdirAll(currentTargetDir, os.ModePerm); err != nil {
-			return err
+			return fmt.Errorf("error creating target directory: %w", err)
 		}
 	}
 
@@ -169,7 +187,7 @@ func (tm *Model) applyTemplates(
 		}
 
 		if tmpl == nil {
-			return fmt.Errorf("no template found for %s", relSource)
+			return fmt.Errorf("%w for %s", errTemplateNotFound, relSource)
 		}
 
 		if tm.DryRun {
@@ -183,15 +201,23 @@ func (tm *Model) applyTemplates(
 
 		content, cErr := gen.ProcessFile(tmpl)
 		if cErr != nil {
-			return fmt.Errorf("%+v filePath: %s", cErr, relSource)
+			return fmt.Errorf("%w filePath: %s", cErr, relSource)
 		}
 
-		return io.CopyBufferToFile(content, relSource, realTarget)
+		err = iox.CopyBufferToFile(content, realTarget)
+		if err != nil {
+			return fmt.Errorf("error writing file: %w", err)
+		}
+
+		return nil
 	}
 
-	_, err = io.CopyFromSourceToTarget(relSource, realTarget)
+	err = iox.CopyFile(relSource, realTarget)
+	if err != nil {
+		return fmt.Errorf("error copying file: %w", err)
+	}
 
-	return err
+	return nil
 }
 
 func (tm *Model) generateContext() (map[string]map[any]any, error) {
@@ -208,7 +234,7 @@ func (tm *Model) generateContext() (map[string]map[any]any, error) {
 			cPath = v
 		}
 
-		yamlConfig, err := yaml2.FromFileV2[map[any]any](cPath)
+		yamlConfig, err := yamlx.FromFileV2[map[any]any](cPath)
 		if err != nil {
 			return nil, err
 		}

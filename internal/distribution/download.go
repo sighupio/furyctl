@@ -11,132 +11,107 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/go-playground/validator/v10"
 	"github.com/sirupsen/logrus"
 
-	"github.com/sighupio/furyctl/internal/netx"
-	"github.com/sighupio/furyctl/internal/osx"
-	"github.com/sighupio/furyctl/internal/semver"
-	"github.com/sighupio/furyctl/internal/yaml"
+	"github.com/sighupio/fury-distribution/pkg/config"
+	netx "github.com/sighupio/furyctl/internal/x/net"
+	yamlx "github.com/sighupio/furyctl/internal/x/yaml"
 )
 
-const DefaultBaseUrl = "https://git@github.com/sighupio/fury-distribution?ref=%s"
+const DefaultBaseURL = "https://git@github.com/sighupio/fury-distribution?ref=%s"
 
 var (
-	ErrCreatingTempDir     = errors.New("error creating temp dir")
-	ErrDownloadingFolder   = errors.New("error downloading folder")
-	ErrMergeCompleteConfig = errors.New("error merging complete config")
-	ErrMergeDistroConfig   = errors.New("error merging distribution config")
-	ErrWriteFile           = errors.New("error writing file")
-	ErrYamlMarshalFile     = errors.New("error marshaling yaml file")
-	ErrYamlUnmarshalFile   = errors.New("error unmarshaling yaml file")
+	ErrChangingFilePermissions = errors.New("error changing file permissions")
+	ErrCreatingTempDir         = errors.New("error creating temp dir")
+	ErrDownloadingFolder       = errors.New("error downloading folder")
+	ErrMergeCompleteConfig     = errors.New("error merging complete config")
+	ErrMergeDistroConfig       = errors.New("error merging distribution config")
+	ErrRenamingFile            = errors.New("error renaming file")
+	ErrResolvingAbsPath        = errors.New("error resolving absolute path")
+	ErrValidateConfig          = errors.New("error validating config")
+	ErrWriteFile               = errors.New("error writing file")
+	ErrYamlMarshalFile         = errors.New("error marshaling yaml file")
+	ErrYamlUnmarshalFile       = errors.New("error unmarshaling yaml file")
 )
 
-type downloadResult struct {
+type DownloadResult struct {
 	RepoPath       string
-	MinimalConf    FuryctlConfig
-	DistroManifest Manifest
+	MinimalConf    config.Furyctl
+	DistroManifest config.KFD
 }
 
-func NewDownloader(client netx.Client, debug bool) *Downloader {
+func NewDownloader(client netx.Client) *Downloader {
 	return &Downloader{
-		client: client,
-		debug:  debug,
+		client:   client,
+		validate: config.NewValidator(),
 	}
 }
 
 type Downloader struct {
-	client netx.Client
-	debug  bool
+	client   netx.Client
+	validate *validator.Validate
 }
 
 func (d *Downloader) Download(
-	furyctlBinVersion string,
 	distroLocation string,
 	furyctlConfPath string,
-) (downloadResult, error) {
-	minimalConf, err := yaml.FromFileV3[FuryctlConfig](furyctlConfPath)
+) (DownloadResult, error) {
+	minimalConf, err := yamlx.FromFileV3[config.Furyctl](furyctlConfPath)
 	if err != nil {
-		return downloadResult{}, err
+		return DownloadResult{}, fmt.Errorf("%w: %s", ErrYamlUnmarshalFile, err)
 	}
 
-	furyctlConfSemVer := minimalConf.Spec.DistributionVersion
+	return d.DoDownload(distroLocation, minimalConf)
+}
 
-	if furyctlBinVersion != "unknown" {
-		furyctlBinSemVer, err := semver.NewVersion(fmt.Sprintf("v%s", furyctlBinVersion))
-		if err != nil {
-			return downloadResult{}, err
-		}
-
-		if !semver.SameMinor(furyctlConfSemVer, furyctlBinSemVer) {
-			logrus.Warnf(
-				"this version of furyctl ('%s') does not support distribution version '%s', results may be inaccurate",
-				furyctlBinVersion,
-				furyctlConfSemVer,
-			)
-		}
+func (d *Downloader) DoDownload(
+	distroLocation string,
+	minimalConf config.Furyctl,
+) (DownloadResult, error) {
+	if err := d.validate.Struct(minimalConf); err != nil {
+		return DownloadResult{}, fmt.Errorf("invalid furyctl config: %w", err)
 	}
 
 	if distroLocation == "" {
-		distroLocation = fmt.Sprintf(DefaultBaseUrl, furyctlConfSemVer.String())
+		distroLocation = fmt.Sprintf(DefaultBaseURL, minimalConf.Spec.DistributionVersion)
+	}
+
+	if strings.HasPrefix(distroLocation, ".") {
+		var err error
+		if distroLocation, err = filepath.Abs(distroLocation); err != nil {
+			return DownloadResult{}, fmt.Errorf("%w: %v", ErrResolvingAbsPath, err)
+		}
 	}
 
 	baseDst, err := os.MkdirTemp("", "furyctl-")
 	if err != nil {
-		return downloadResult{}, fmt.Errorf("%w: %v", ErrCreatingTempDir, err)
+		return DownloadResult{}, fmt.Errorf("%w: %v", ErrCreatingTempDir, err)
 	}
+
 	src := distroLocation
 	dst := filepath.Join(baseDst, "data")
 
 	logrus.Debugf("Downloading '%s' in '%s'", src, dst)
 
 	if err := netx.NewGoGetterClient().Download(src, dst); err != nil {
-		return downloadResult{}, fmt.Errorf("%w '%s': %v", ErrDownloadingFolder, src, err)
-	}
-
-	if !d.debug {
-		defer osx.CleanupTempDir(filepath.Base(dst))
+		return DownloadResult{}, fmt.Errorf("%w '%s': %v", ErrDownloadingFolder, src, err)
 	}
 
 	kfdPath := filepath.Join(dst, "kfd.yaml")
-	kfdManifest, err := yaml.FromFileV3[Manifest](kfdPath)
+
+	kfdManifest, err := yamlx.FromFileV3[config.KFD](kfdPath)
 	if err != nil {
-		return downloadResult{}, err
+		return DownloadResult{}, err
 	}
 
-	if !semver.SamePatch(furyctlConfSemVer, kfdManifest.Version) {
-		return downloadResult{}, fmt.Errorf(
-			"versions mismatch: furyctl.yaml = '%s', furyctl binary = '%s'",
-			furyctlConfSemVer.String(),
-			kfdManifest.Version.String(),
-		)
+	if err := d.validate.Struct(kfdManifest); err != nil {
+		return DownloadResult{}, fmt.Errorf("invalid kfd config: %w", err)
 	}
 
-	return downloadResult{
+	return DownloadResult{
 		RepoPath:       dst,
 		MinimalConf:    minimalConf,
 		DistroManifest: kfdManifest,
 	}, nil
-}
-
-func GetSchemaPath(basePath string, conf FuryctlConfig) (string, error) {
-	avp := strings.Split(conf.ApiVersion, "/")
-
-	if len(avp) < 2 {
-		return "", fmt.Errorf("invalid apiVersion: %s", conf.ApiVersion)
-	}
-
-	ns := strings.Replace(avp[0], ".sighup.io", "", 1)
-	ver := avp[1]
-
-	if conf.Kind == "" {
-		return "", fmt.Errorf("kind is empty")
-	}
-
-	filename := fmt.Sprintf("%s-%s-%s.json", strings.ToLower(conf.Kind.String()), ns, ver)
-
-	return filepath.Join(basePath, "schemas", filename), nil
-}
-
-func GetDefaultPath(basePath string) string {
-	return filepath.Join(basePath, "furyctl-defaults.yaml")
 }

@@ -5,64 +5,117 @@
 package download
 
 import (
+	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
 
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 
-	"github.com/sighupio/furyctl/internal/app"
-	"github.com/sighupio/furyctl/internal/cobrax"
-	"github.com/sighupio/furyctl/internal/netx"
+	"github.com/sighupio/furyctl/internal/analytics"
+	"github.com/sighupio/furyctl/internal/cmd/cmdutil"
+	"github.com/sighupio/furyctl/internal/dependencies"
+	"github.com/sighupio/furyctl/internal/distribution"
+	cobrax "github.com/sighupio/furyctl/internal/x/cobra"
+	netx "github.com/sighupio/furyctl/internal/x/net"
 )
 
-var ErrDownloadFailed = fmt.Errorf("dependencies download failed")
+var (
+	ErrParsingFlag    = errors.New("error while parsing flag")
+	ErrDownloadFailed = errors.New("dependencies download failed")
+)
 
-func NewDependenciesCmd(furyctlBinVersion string) *cobra.Command {
+func NewDependenciesCmd(tracker *analytics.Tracker) *cobra.Command {
+	var cmdEvent analytics.Event
+
 	cmd := &cobra.Command{
 		Use:   "dependencies",
 		Short: "Download dependencies",
+		PreRun: func(cmd *cobra.Command, _ []string) {
+			cmdEvent = analytics.NewCommandEvent(cobrax.GetFullname(cmd))
+		},
 		RunE: func(cmd *cobra.Command, _ []string) error {
-			debug := cobrax.Flag[bool](cmd, "debug").(bool)
-			furyctlPath := cobrax.Flag[string](cmd, "config").(string)
-			distroLocation := cobrax.Flag[string](cmd, "distro-location").(string)
-
-			basePath, err := os.Getwd()
+			furyctlPath, err := cmdutil.StringFlag(cmd, "config", tracker, cmdEvent)
 			if err != nil {
-				return err
+				return fmt.Errorf("%w: config", ErrParsingFlag)
 			}
 
-			dd := app.NewDownloadDependencies(netx.NewGoGetterClient(), basePath)
+			distroLocation, err := cmdutil.StringFlag(cmd, "distro-location", tracker, cmdEvent)
+			if err != nil {
+				return fmt.Errorf("%w: distro-location", ErrParsingFlag)
+			}
 
-			res, err := dd.Execute(app.DownloadDependenciesRequest{
-				FuryctlBinVersion: furyctlBinVersion,
-				DistroLocation:    distroLocation,
-				FuryctlConfPath:   furyctlPath,
-				Debug:             debug,
+			binPath := cmdutil.StringFlagOptional(cmd, "bin-path")
+
+			homeDir, err := os.UserHomeDir()
+			if err != nil {
+				cmdEvent.AddErrorMessage(err)
+				tracker.Track(cmdEvent)
+
+				return fmt.Errorf("error while getting user home directory: %w", err)
+			}
+
+			if binPath == "" {
+				binPath = filepath.Join(homeDir, ".furyctl", "bin")
+			}
+
+			logrus.Info("Downloading dependencies...")
+
+			client := netx.NewGoGetterClient()
+
+			distrodl := distribution.NewDownloader(client)
+
+			dres, err := distrodl.Download(distroLocation, furyctlPath)
+			cmdEvent.AddClusterDetails(analytics.ClusterDetails{
+				KFDVersion: dres.DistroManifest.Version,
 			})
+
 			if err != nil {
-				return err
+				cmdEvent.AddErrorMessage(err)
+				tracker.Track(cmdEvent)
+
+				return fmt.Errorf("failed to download distribution: %w", err)
 			}
 
-			for _, ut := range res.UnsupTools {
-				logrus.Warn(fmt.Sprintf("'%s' download is not supported", ut))
+			basePath := filepath.Join(homeDir, ".furyctl", dres.MinimalConf.Metadata.Name)
+
+			depsdl := dependencies.NewDownloader(client, basePath, binPath)
+
+			errs, uts := depsdl.DownloadAll(dres.DistroManifest)
+
+			for _, ut := range uts {
+				logrus.Warn(fmt.Sprintf("'%s' download is not supported, please install it manually", ut))
 			}
 
-			if res.HasErrors() {
-				logrus.Debugf("Repository path: %s", res.RepoPath)
+			if len(errs) > 0 {
+				logrus.Debugf("Repository path: %s", dres.RepoPath)
 
-				for _, err := range res.DepsErrors {
+				for _, err := range errs {
 					logrus.Error(err)
 				}
+
+				cmdEvent.AddErrorMessage(ErrDownloadFailed)
+				tracker.Track(cmdEvent)
 
 				return ErrDownloadFailed
 			}
 
 			logrus.Info("Dependencies download succeeded")
 
+			cmdEvent.AddSuccessMessage("Dependencies download succeeded")
+			tracker.Track(cmdEvent)
+
 			return nil
 		},
 	}
+
+	cmd.Flags().StringP(
+		"bin-path",
+		"b",
+		"",
+		"Path to the bin folder where all dependencies are installed",
+	)
 
 	cmd.Flags().StringP(
 		"config",
@@ -77,7 +130,7 @@ func NewDependenciesCmd(furyctlBinVersion string) *cobra.Command {
 		"",
 		"Base URL used to download schemas, defaults and the distribution manifest. "+
 			"It can either be a local path(eg: /path/to/fury/distribution) or "+
-			"a remote URL(eg: https://git@github.com/sighupio/fury-distribution?ref=BRANCH_NAME)."+
+			"a remote URL(eg: git::git@github.com:sighupio/fury-distribution?ref=BRANCH_NAME)."+
 			"Any format supported by hashicorp/go-getter can be used.",
 	)
 
