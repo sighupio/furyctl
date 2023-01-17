@@ -56,7 +56,7 @@ func NewClusterCmd(tracker *analytics.Tracker) *cobra.Command {
 		},
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			// Get flags.
-			flags, err := getCmdFlags(cmd, tracker, cmdEvent)
+			flags, err := getCreateClusterCmdFlags(cmd, tracker, cmdEvent)
 			if err != nil {
 				return err
 			}
@@ -206,12 +206,12 @@ func NewClusterCmd(tracker *analytics.Tracker) *cobra.Command {
 		},
 	}
 
-	setupClusterCmdFlags(cmd)
+	setupCreateClusterCmdFlags(cmd)
 
 	return cmd
 }
 
-func getCmdFlags(cmd *cobra.Command, tracker *analytics.Tracker, cmdEvent analytics.Event) (ClusterCmdFlags, error) {
+func getCreateClusterCmdFlags(cmd *cobra.Command, tracker *analytics.Tracker, cmdEvent analytics.Event) (ClusterCmdFlags, error) {
 	debug, err := cmdutil.BoolFlag(cmd, "debug", tracker, cmdEvent)
 	if err != nil {
 		return ClusterCmdFlags{}, fmt.Errorf("%w: %s", ErrParsingFlag, "debug")
@@ -297,7 +297,7 @@ func getCmdFlags(cmd *cobra.Command, tracker *analytics.Tracker, cmdEvent analyt
 	}, nil
 }
 
-func setupClusterCmdFlags(cmd *cobra.Command) {
+func setupCreateClusterCmdFlags(cmd *cobra.Command) {
 	cmd.Flags().StringP(
 		"config",
 		"c",
