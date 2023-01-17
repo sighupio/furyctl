@@ -31,7 +31,7 @@ func NewDependenciesCmd(tracker *analytics.Tracker) *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "dependencies",
-		Short: "Download dependencies",
+		Short: "Download all dependencies from the Fury Distribution specified in the config file",
 		PreRun: func(cmd *cobra.Command, _ []string) {
 			cmdEvent = analytics.NewCommandEvent(cobrax.GetFullname(cmd))
 		},
