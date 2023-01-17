@@ -8,15 +8,16 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/sighupio/furyctl/cmd/download"
+	"github.com/sighupio/furyctl/internal/analytics"
 )
 
-func NewDownloadCmd(furyctlBinVersion string) *cobra.Command {
+func NewDownloadCmd(tracker *analytics.Tracker) *cobra.Command {
 	dumpCmd := &cobra.Command{
 		Use:   "download",
 		Short: "Dowload fury files",
 	}
 
-	dumpCmd.AddCommand(download.NewDependenciesCmd(furyctlBinVersion))
+	dumpCmd.AddCommand(download.NewDependenciesCmd(tracker))
 
 	return dumpCmd
 }

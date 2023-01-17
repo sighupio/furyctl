@@ -1,0 +1,5 @@
+#!/bin/sh
+
+cat <<EOF
+Client Version: version.Info{Major:"1", Minor:"24", GitVersion:"v1.24.9", GitCommit:"42c05a547468804b2053ecf60a3bd15560362fc2", GitTreeState:"clean", BuildDate:"2022-05-24T12:30:55Z", GoVersion:"go1.17.10", Compiler:"gc", Platform:"darwin/arm64"}
+EOF

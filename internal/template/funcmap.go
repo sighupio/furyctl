@@ -28,20 +28,45 @@ func (f *FuncMap) Delete(name string) {
 	delete(f.FuncMap, name)
 }
 
-func toYAML(v any) string {
+func ToYAML(v any) string {
+	//nolint:errcheck // we don't care about the error here because we recover from it
+	defer func() {
+		_ = recover()
+	}()
+
 	data, err := yaml.Marshal(v)
 	if err != nil {
 		// Swallow errors inside of a template.
 		return ""
 	}
+
 	return strings.TrimSuffix(string(data), "\n")
 }
 
-func fromYAML(str string) map[string]any {
+func FromYAML(str string) map[string]any {
 	m := map[string]any{}
 
 	if err := yaml.Unmarshal([]byte(str), &m); err != nil {
 		m["Error"] = err.Error()
 	}
+
 	return m
+}
+
+func HasKeyAny(m map[any]any, key any) bool {
+	v, ok := m[key]
+	if !ok {
+		return false
+	}
+
+	if v == nil {
+		return false
+	}
+
+	val, ok := v.(map[any]any)
+	if ok {
+		return len(val) > 0
+	}
+
+	return true
 }

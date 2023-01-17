@@ -5,6 +5,8 @@
 package mapper
 
 import (
+	"errors"
+	"fmt"
 	"os"
 	"strings"
 )
@@ -13,6 +15,8 @@ const (
 	Env  = "env"
 	File = "file"
 )
+
+var errKeyIsNotAString = errors.New("key is not a string")
 
 type Mapper struct {
 	context map[string]map[any]any
@@ -37,7 +41,7 @@ func (m *Mapper) MapDynamicValues() (map[string]map[any]any, error) {
 	return mappedCtx, nil
 }
 
-func (m *Mapper) MapEnvironmentVars() map[any]any {
+func (*Mapper) MapEnvironmentVars() map[any]any {
 	envMap := make(map[any]any)
 
 	for _, v := range os.Environ() {
@@ -54,10 +58,14 @@ func injectDynamicRes(
 	parentKey string,
 ) (map[any]any, error) {
 	for k, v := range m {
-		spl := strings.Split(k.(string), "://")
+		key, ok := k.(string)
+		if !ok {
+			return nil, fmt.Errorf("%v %w", k, errKeyIsNotAString)
+		}
+
+		spl := strings.Split(key, "://")
 
 		if len(spl) > 1 {
-
 			source := spl[0]
 			sourceValue := spl[1]
 
@@ -65,11 +73,13 @@ func injectDynamicRes(
 			case Env:
 				envVar := os.Getenv(sourceValue)
 				parent[parentKey] = envVar
+
 			case File:
 				content, err := readValueFromFile(sourceValue)
 				if err != nil {
 					return nil, err
 				}
+
 				parent[parentKey] = content
 			}
 
