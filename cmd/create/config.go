@@ -29,7 +29,7 @@ func NewConfigCmd(tracker *analytics.Tracker) *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "config",
-		Short: "scaffolds a new furyctl config file",
+		Short: "Scaffolds a new furyctl config file",
 		PreRun: func(cmd *cobra.Command, _ []string) {
 			cmdEvent = analytics.NewCommandEvent(cobrax.GetFullname(cmd))
 		},
@@ -148,28 +148,28 @@ func NewConfigCmd(tracker *analytics.Tracker) *cobra.Command {
 		"version",
 		"v",
 		"",
-		"fury version to use (eg: v1.24.1)",
+		"Kubernetes Fury Distribution version to use (eg: v1.24.1)",
 	)
 
 	cmd.Flags().StringP(
 		"kind",
 		"k",
 		"EKSCluster",
-		"type of cluster to create (eg: EKSCluster)",
+		"Type of cluster to create (eg: EKSCluster)",
 	)
 
 	cmd.Flags().StringP(
 		"api-version",
 		"a",
 		"kfd.sighup.io/v1alpha2",
-		"version of the api to use for the selected kind (eg: kfd.sighup.io/v1alpha2)",
+		"Version of the api to use for the selected kind (eg: kfd.sighup.io/v1alpha2)",
 	)
 
 	cmd.Flags().StringP(
 		"name",
 		"n",
 		"example",
-		"name of cluster to create",
+		"Name of cluster to create",
 	)
 
 	return cmd

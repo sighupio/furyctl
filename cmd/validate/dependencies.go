@@ -29,7 +29,7 @@ func NewDependenciesCmd(tracker *analytics.Tracker) *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "dependencies",
-		Short: "Validate furyctl.yaml file",
+		Short: "Validate dependencies from the Kubernetes Fury Distribution specified in the config file",
 		PreRun: func(cmd *cobra.Command, _ []string) {
 			cmdEvent = analytics.NewCommandEvent(cobrax.GetFullname(cmd))
 		},
