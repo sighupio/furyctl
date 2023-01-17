@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
+//go:build unit
+
 package template_test
 
 import (
@@ -214,7 +216,7 @@ func TestVariableNode_Set(t *testing.T) {
 
 	variableNodeSetter.Set(node)
 
-	assert.Equal(t, []string{".variable1"}, node.Fields)
+	assert.Equal(t, []string{}, node.Fields)
 }
 
 func TestRangeNode_Set(t *testing.T) {
@@ -347,7 +349,7 @@ func TestTemplateNode_Set(t *testing.T) {
 		},
 	}
 
-	tmplTemplateNode := reflect.ValueOf(templateNode).Convert(reflect.TypeOf(&template2.TemplateNode{})).Interface()
+	tmplTemplateNode := reflect.ValueOf(templateNode).Convert(reflect.TypeOf(&template2.TplNode{})).Interface()
 
 	assert.NotNil(t, tmplTemplateNode)
 

@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
+//go:build unit
+
 package merge_test
 
 import (
@@ -31,6 +33,53 @@ func TestNewDefaultModel(t *testing.T) {
 	assert.NotEmpty(t, model)
 	assert.Equal(t, content, model.Content())
 	assert.Equal(t, path, model.Path())
+}
+
+func TestNewDefaultModelFromStruct(t *testing.T) {
+	type TestSubStruct struct {
+		TestOptInt         *int `json:"testOptInt,omitempty"`
+		testUnexposed      string
+		TestUntaggedString string
+	}
+
+	type TestStruct struct {
+		TestString      string         `json:"testString"`
+		TestOptionalSub *TestSubStruct `json:"testOptionalSub"`
+		TestSub         TestSubStruct  `json:"testSub"`
+	}
+
+	type TestContent struct {
+		Data TestStruct `json:"data"`
+	}
+
+	content := TestContent{
+		Data: TestStruct{
+			TestString: "lorem ipsum",
+			TestSub: TestSubStruct{
+				TestOptInt:         nil,
+				testUnexposed:      "unexposed",
+				TestUntaggedString: "untagged",
+			},
+			TestOptionalSub: nil,
+		},
+	}
+
+	expectedRes := map[any]any{
+		"data": map[any]any{
+			"testString": "lorem ipsum",
+			"testSub": map[any]any{
+				"testOptInt":         nil,
+				"TestUntaggedString": "untagged",
+			},
+			"testOptionalSub": nil,
+		},
+	}
+
+	path := ".data"
+
+	model := merge.NewDefaultModelFromStruct(content, path, false)
+
+	assert.Equal(t, expectedRes, model.Content())
 }
 
 func TestDefaultModel_Content(t *testing.T) {

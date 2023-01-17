@@ -1,0 +1,31 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "$id": "https://schema.sighup.io/kfd/test-cluster.json",
+    "description": "A Fury Cluster",
+    "type": "object",
+    "properties": {
+        "apiVersion": {
+            "type": "string",
+            "pattern": "^kfd\\.sighup\\.io/v\\d+((alpha|beta)\\d+)?$"
+        },
+        "kind": {
+            "type": "string",
+            "enum": ["TestCluster"]
+        },
+        "metadata": {
+            "type": "object",
+            "additionalProperties": true
+        },
+        "spec": {
+            "type": "object",
+            "additionalProperties": true
+        }
+    },
+    "additionalProperties": false,
+    "required": [
+        "apiVersion",
+        "kind",
+        "metadata",
+        "spec"
+    ]
+}

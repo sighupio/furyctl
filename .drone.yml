@@ -8,7 +8,7 @@ name: main
 
 steps:
   - name: prepare
-    image: quay.io/sighup/golang:1.19.0
+    image: quay.io/sighup/golang:1.19.4
     depends_on:
       - clone
     pull: always
@@ -17,12 +17,11 @@ steps:
       - go mod download
 
   - name: license
-    image: quay.io/sighup/golang:1.19.0
+    image: quay.io/sighup/golang:1.19.4
     depends_on:
       - clone
     pull: always
     commands:
-      - go install github.com/google/addlicense@v1.0.0
       - make license-check
     environment:
       CGO_ENABLED: 0
@@ -31,7 +30,7 @@ steps:
       GOTMPDIR: /drone/src/.go/tmp
 
   - name: lint
-    image: quay.io/sighup/golang:1.19.0
+    image: quay.io/sighup/golang:1.19.4
     depends_on:
       - prepare
     pull: always
@@ -44,7 +43,7 @@ steps:
       GOTMPDIR: /drone/src/.go/tmp
 
   - name: test-unit
-    image: quay.io/sighup/golang:1.19.0
+    image: quay.io/sighup/golang:1.19.4
     depends_on:
       - prepare
     pull: always
@@ -57,13 +56,11 @@ steps:
       GOTMPDIR: /drone/src/.go/tmp
 
   - name: test-integration
-    image: quay.io/sighup/golang:1.19.0
+    image: quay.io/sighup/golang:1.19.4
     depends_on:
       - prepare
     commands:
       - echo $${NETRC_FILE} > /root/.netrc
-      - git clone --depth 1 --branch v1.8.0 https://github.com/bats-core/bats-core.git
-      - ./bats-core/install.sh /usr/local
       - make test-integration
     environment:
       CGO_ENABLED: 0
@@ -73,13 +70,59 @@ steps:
       NETRC_FILE:
         from_secret: NETRC_FILE
 
+  - name: test-e2e
+    image: quay.io/sighup/golang:1.19.4
+    depends_on:
+      - prepare
+    commands:
+      - apk add --update binutils curl groff openssh-client
+      # Install aws-cli
+      - curl -sL https://alpine-pkgs.sgerrand.com/sgerrand.rsa.pub -o /etc/apk/keys/sgerrand.rsa.pub
+      - curl -sLO https://github.com/sgerrand/alpine-pkg-glibc/releases/download/$${GLIBC_VER}/glibc-$${GLIBC_VER}.apk
+      - curl -sLO https://github.com/sgerrand/alpine-pkg-glibc/releases/download/$${GLIBC_VER}/glibc-bin-$${GLIBC_VER}.apk
+      - curl -sLO https://github.com/sgerrand/alpine-pkg-glibc/releases/download/$${GLIBC_VER}/glibc-i18n-$${GLIBC_VER}.apk
+      - apk add --force-overwrite --virtual .glibc glibc-$${GLIBC_VER}.apk glibc-bin-$${GLIBC_VER}.apk glibc-i18n-$${GLIBC_VER}.apk
+      - /usr/glibc-compat/bin/localedef -i en_US -f UTF-8 en_US.UTF-8
+      - curl -sL https://awscli.amazonaws.com/awscli-exe-linux-x86_64-$${AWSCLI_VERSION}.zip -o awscliv2.zip
+      - unzip awscliv2.zip
+      - aws/install
+      - apk add gcompat || true
+      # Setup SSH
+      - mkdir /root/.ssh
+      - echo "$${GITHUB_SSH}" | tr -d '\r' | sed -e '$a\' > /root/.ssh/id_rsa
+      - echo $${NETRC_FILE} > /root/.netrc
+      - chmod 600 /root/.ssh/id_rsa
+      - touch /root/.ssh/known_hosts
+      - chmod 600 /root/.ssh/known_hosts
+      - ssh-keyscan -H github.com > /etc/ssh/ssh_known_hosts 2> /dev/null
+      # Run tests
+      - make test-e2e
+    environment:
+      CGO_ENABLED: 0
+      GOCACHE: /drone/src/.go/cache
+      GOMODCACHE: /drone/src/.go/modcache
+      GOTMPDIR: /drone/src/.go/tmp
+      AWSCLI_VERSION: 2.8.12
+      GLIBC_VER: 2.35-r0
+      AWS_ACCESS_KEY_ID:
+        from_secret: AWS_ACCESS_KEY_ID
+      AWS_SECRET_ACCESS_KEY:
+        from_secret: AWS_SECRET_ACCESS_KEY
+      AWS_DEFAULT_REGION:
+        from_secret: AWS_REGION
+      FURYCTL_MIXPANEL_TOKEN:
+        from_secret: FURYCTL_MIXPANEL_TOKEN
+      NETRC_FILE:
+        from_secret: NETRC_FILE
+      GITHUB_SSH:
+        from_secret: GITHUB_SSH
+
   - name: build
     image: ghcr.io/goreleaser/goreleaser:v1.11.4
     depends_on:
       - prepare
     pull: always
     commands:
-      - go install github.com/gobuffalo/packr/v2/packr2@v2.8.3
       - git reset --hard
       - git fetch --tags
       - make build
@@ -92,6 +135,8 @@ steps:
       GOCACHE: /drone/src/.go/cache
       GOMODCACHE: /drone/src/.go/modcache
       GOTMPDIR: /drone/src/.go/tmp
+      FURYCTL_MIXPANEL_TOKEN:
+        from_secret: FURYCTL_MIXPANEL_TOKEN
       GITHUB_TOKEN:
         from_secret: GITHUB_TOKEN
 
@@ -103,7 +148,6 @@ steps:
       - test-unit
       - test-integration
     commands:
-      - go install github.com/gobuffalo/packr/v2/packr2@v2.8.3
       - git reset --hard
       - git fetch --tags
       - make release
@@ -116,6 +160,8 @@ steps:
       GOCACHE: /drone/src/.go/cache
       GOMODCACHE: /drone/src/.go/modcache
       GOTMPDIR: /drone/src/.go/tmp
+      FURYCTL_MIXPANEL_TOKEN:
+        from_secret: FURYCTL_MIXPANEL_TOKEN
       GITHUB_TOKEN:
         from_secret: GITHUB_TOKEN
 

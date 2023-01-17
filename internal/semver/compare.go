@@ -13,11 +13,13 @@ import (
 
 var (
 	// Link: https://regex101.com/r/Ly7O1x/3/
+	//nolint:lll //We can't wrap regex
 	regex = regexp.MustCompile(`^(?P<major>0|[1-9]\d*)\.(?P<minor>0|[1-9]\d*)\.(?P<patch>0|[1-9]\d*)(?:-(?P<prerelease>(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\+(?P<buildmetadata>[0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?$`)
 
 	ErrInvalidSemver = fmt.Errorf("invalid semantic version")
 )
 
+// NewVersion takes a string and returns a Version.
 func NewVersion(v string) (Version, error) {
 	if !isValid(v) {
 		return "", fmt.Errorf("%w: %s", ErrInvalidSemver, v)
@@ -32,7 +34,12 @@ func (s Version) String() string {
 	return string(s)
 }
 
-// SamePatch takes two versions and tell if they are part of the same patch
+// SamePatchStr takes two version strings and tell if they match down to patch level.
+func SamePatchStr(a, b string) bool {
+	return SamePatch(Version(a), Version(b))
+}
+
+// SamePatch takes two versions and tell if they are part of the same patch.
 func SamePatch(a, b Version) bool {
 	if a == b {
 		return true
@@ -44,7 +51,12 @@ func SamePatch(a, b Version) bool {
 	return aMajor == bMajor && aMinor == bMinor && aPatch == bPatch
 }
 
-// SameMinor takes two versions and tell if they are part of the same minor
+// SameMinorStr takes two version strings and tell if they match down to minor level.
+func SameMinorStr(a, b string) bool {
+	return SameMinor(Version(a), Version(b))
+}
+
+// SameMinor takes two versions and tell if they are part of the same minor.
 func SameMinor(a, b Version) bool {
 	if a == b {
 		return true
@@ -56,7 +68,7 @@ func SameMinor(a, b Version) bool {
 	return aMajor == bMajor && aMinor == bMinor
 }
 
-// Gt returns true if a is greater than b
+// Gt returns true if a is greater than b.
 func Gt(va, vb string) bool {
 	if va == vb {
 		return false
@@ -92,28 +104,40 @@ func Gt(va, vb string) bool {
 	return false
 }
 
-// Parts returns the major, minor, patch and buil+prerelease parts of a version
+// Parts returns the major, minor, patch and buil+prerelease parts of a version.
 func Parts(v string) (int, int, int, string) {
-	pv := EnsurePrefix(v, "v")
+	pv := EnsurePrefix(v)
 
 	if !isValid(pv) {
 		return 0, 0, 0, ""
 	}
 
-	parts := strings.Split(EnsureNoPrefix(v, "v"), ".")
+	parts := strings.Split(EnsureNoPrefix(v), ".")
 
 	ch := "-"
 	m := strings.Index(v, "-")
 	p := strings.Index(v, "+")
+
 	if (m == -1 && p > -1) || (m > -1 && p > -1 && p < m) {
 		ch = "+"
 	}
 
 	patchParts := strings.Split(strings.Join(parts[2:], "."), ch)
 
-	major, _ := strconv.Atoi(parts[0])
-	minor, _ := strconv.Atoi(parts[1])
-	patch, _ := strconv.Atoi(patchParts[0])
+	major, err := strconv.Atoi(parts[0])
+	if err != nil {
+		return 0, 0, 0, ""
+	}
+
+	minor, err := strconv.Atoi(parts[1])
+	if err != nil {
+		return 0, 0, 0, ""
+	}
+
+	patch, err := strconv.Atoi(patchParts[0])
+	if err != nil {
+		return 0, 0, 0, ""
+	}
 
 	if len(patchParts) > 1 {
 		return major, minor, patch, strings.Join(patchParts[1:], ch)

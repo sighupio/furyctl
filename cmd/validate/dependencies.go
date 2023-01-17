@@ -6,52 +6,108 @@ package validate
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
 
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 
-	"github.com/sighupio/furyctl/internal/app"
-	"github.com/sighupio/furyctl/internal/cobrax"
-	"github.com/sighupio/furyctl/internal/execx"
-	"github.com/sighupio/furyctl/internal/netx"
+	"github.com/sighupio/furyctl/internal/analytics"
+	"github.com/sighupio/furyctl/internal/cmd/cmdutil"
+	"github.com/sighupio/furyctl/internal/dependencies/envvars"
+	"github.com/sighupio/furyctl/internal/dependencies/tools"
+	"github.com/sighupio/furyctl/internal/distribution"
+	cobrax "github.com/sighupio/furyctl/internal/x/cobra"
+	execx "github.com/sighupio/furyctl/internal/x/exec"
+	netx "github.com/sighupio/furyctl/internal/x/net"
 )
 
 var ErrDependencies = fmt.Errorf("dependencies are not satisfied")
 
-func NewDependenciesCmd(furyctlBinVersion string) *cobra.Command {
+func NewDependenciesCmd(tracker *analytics.Tracker) *cobra.Command {
+	var cmdEvent analytics.Event
+
 	cmd := &cobra.Command{
 		Use:   "dependencies",
 		Short: "Validate furyctl.yaml file",
+		PreRun: func(cmd *cobra.Command, _ []string) {
+			cmdEvent = analytics.NewCommandEvent(cobrax.GetFullname(cmd))
+		},
 		RunE: func(cmd *cobra.Command, _ []string) error {
-			debug := cobrax.Flag[bool](cmd, "debug").(bool)
-			binPath := cobrax.Flag[string](cmd, "bin-path").(string)
-			furyctlPath := cobrax.Flag[string](cmd, "config").(string)
-			distroLocation := cobrax.Flag[string](cmd, "distro-location").(string)
-
-			vd := app.NewValidateDependencies(netx.NewGoGetterClient(), execx.NewStdExecutor())
-
-			res, err := vd.Execute(app.ValidateDependenciesRequest{
-				BinPath:           binPath,
-				FuryctlBinVersion: furyctlBinVersion,
-				DistroLocation:    distroLocation,
-				FuryctlConfPath:   furyctlPath,
-				Debug:             debug,
-			})
+			furyctlPath, err := cmdutil.StringFlag(cmd, "config", tracker, cmdEvent)
 			if err != nil {
-				return err
+				return fmt.Errorf("%w: config", ErrParsingFlag)
 			}
 
-			if res.HasErrors() {
-				logrus.Debugf("Repository path: %s", res.RepoPath)
+			distroLocation, err := cmdutil.StringFlag(cmd, "distro-location", tracker, cmdEvent)
+			if err != nil {
+				return fmt.Errorf("%w: distro-location", ErrParsingFlag)
+			}
 
-				for _, err := range res.Errors {
+			dloader := distribution.NewDownloader(netx.NewGoGetterClient())
+
+			dres, err := dloader.Download(distroLocation, furyctlPath)
+			if err != nil {
+				cmdEvent.AddErrorMessage(err)
+				tracker.Track(cmdEvent)
+
+				return fmt.Errorf("failed to download distribution: %w", err)
+			}
+
+			cmdEvent.AddClusterDetails(analytics.ClusterDetails{
+				KFDVersion: dres.DistroManifest.Version,
+			})
+
+			binPath := cobrax.Flag[string](cmd, "bin-path").(string) //nolint:errcheck,forcetypeassert // optional flag
+			if binPath == "" {
+				homeDir, err := os.UserHomeDir()
+				if err != nil {
+					return fmt.Errorf("error while getting user home directory: %w", err)
+				}
+
+				binPath = filepath.Join(homeDir, ".furyctl", "bin")
+			}
+
+			toolsValidator := tools.NewValidator(execx.NewStdExecutor(), binPath)
+			envVarsValidator := envvars.NewValidator()
+			errs := make([]error, 0)
+
+			toks, terrs := toolsValidator.Validate(dres.DistroManifest)
+			eoks, eerrs := envVarsValidator.Validate(dres.MinimalConf.Kind)
+
+			errs = append(errs, terrs...)
+			errs = append(errs, eerrs...)
+
+			for _, tok := range toks {
+				logrus.Infof("%s: binary found in vendor folder", tok)
+			}
+
+			for _, eok := range eoks {
+				logrus.Infof("%s: environment variable found", eok)
+			}
+
+			if len(errs) > 0 {
+				logrus.Debugf("Repository path: %s", dres.RepoPath)
+
+				for _, err := range errs {
 					logrus.Error(err)
 				}
+
+				cmdEvent.AddErrorMessage(ErrDependencies)
+				tracker.Track(cmdEvent)
+
+				logrus.Info(
+					"You can use the 'furyctl download dependencies' command to download most dependencies, " +
+						"and a package manager such as 'asdf' to install the other ones.",
+				)
 
 				return ErrDependencies
 			}
 
 			logrus.Info("Dependencies validation succeeded")
+
+			cmdEvent.AddSuccessMessage("Dependencies validation succeeded")
+			tracker.Track(cmdEvent)
 
 			return nil
 		},
@@ -77,7 +133,7 @@ func NewDependenciesCmd(furyctlBinVersion string) *cobra.Command {
 		"",
 		"Base URL used to download schemas, defaults and the distribution manifest. "+
 			"It can either be a local path(eg: /path/to/fury/distribution) or "+
-			"a remote URL(eg: https://git@github.com/sighupio/fury-distribution?ref=BRANCH_NAME)."+
+			"a remote URL(eg: git::git@github.com:sighupio/fury-distribution?ref=BRANCH_NAME)."+
 			"Any format supported by hashicorp/go-getter can be used.",
 	)
 
