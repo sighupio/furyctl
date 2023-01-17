@@ -11,7 +11,7 @@ variable "cluster_name" {
 
 variable "cluster_version" {
   type        = string
-  description = "Kubernetes Cluster Version. Look at the cloud providers documentation to discover available versions. EKS example -> 1.23"
+  description = "Kubernetes Cluster Version. Look at the cloud providers documentation to discover available versions. EKS example -> 1.24"
 }
 
 variable "cluster_log_retention_days" {

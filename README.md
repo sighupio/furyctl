@@ -282,6 +282,22 @@ The available `cluster` provisioners are:
 
 Before contributing, please read first the [Contributing Guidelines](docs/CONTRIBUTING.md).
 
+## Test classes
+
+There are four kind of tests: unit, integration, e2e, and expensive.
+
+Each of them covers specific use cases depending on the speed, cost, and dependencies at play in a given scenario.
+Anything that uses i/o should be marked as integration, with the only expection of local files and folders: any test
+that uses the local filesystem and nothing more can be marked as 'unit'. This is made for convenience and it's open to
+change in the future should we decide to refactor the code to better isolate that kind of i/o from the logic of the tool.
+
+That said, here's a little summary of the used tags:
+
+- unit: tests that exercise a single component or function in isolation. Tests using local files and dirs are permitted here.
+- integration: tests that require external services, such as github. Test using only local files and dirs should not be marked as integration.
+- e2e: tests that exercise furyctl binary, invoking it as a cli tool and checking its output
+- expensive: e2e tests that incur in some monetary cost, like running an EKS instance on AWS
+
 ### Reporting Issues
 
 In case you experience any problems, please [open a new issue](https://github.com/sighupio/furyctl/issues/new/choose).
