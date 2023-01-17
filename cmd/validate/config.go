@@ -5,48 +5,76 @@
 package validate
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 
-	"github.com/sighupio/furyctl/internal/app"
-	"github.com/sighupio/furyctl/internal/cobrax"
-	"github.com/sighupio/furyctl/internal/netx"
+	"github.com/sighupio/furyctl/internal/analytics"
+	"github.com/sighupio/furyctl/internal/cmd/cmdutil"
+	"github.com/sighupio/furyctl/internal/config"
+	"github.com/sighupio/furyctl/internal/distribution"
+	cobrax "github.com/sighupio/furyctl/internal/x/cobra"
+	netx "github.com/sighupio/furyctl/internal/x/net"
 )
 
-var ErrValidationFailed = fmt.Errorf("validation failed")
+var (
+	ErrValidationFailed = fmt.Errorf("config validation failed")
+	ErrParsingFlag      = errors.New("error while parsing flag")
+)
 
-func NewConfigCmd(furyctlBinVersion string) *cobra.Command {
+func NewConfigCmd(tracker *analytics.Tracker) *cobra.Command {
+	var cmdEvent analytics.Event
+
 	cmd := &cobra.Command{
 		Use:   "config",
 		Short: "Validate furyctl.yaml file",
+		PreRun: func(cmd *cobra.Command, _ []string) {
+			cmdEvent = analytics.NewCommandEvent(cobrax.GetFullname(cmd))
+		},
 		RunE: func(cmd *cobra.Command, _ []string) error {
-			debug := cobrax.Flag[bool](cmd, "debug").(bool)
-			furyctlPath := cobrax.Flag[string](cmd, "config").(string)
-			distroLocation := cobrax.Flag[string](cmd, "distro-location").(string)
-
-			vc := app.NewValidateConfig(netx.NewGoGetterClient())
-
-			res, err := vc.Execute(app.ValidateConfigRequest{
-				FuryctlBinVersion: furyctlBinVersion,
-				DistroLocation:    distroLocation,
-				FuryctlConfPath:   furyctlPath,
-				Debug:             debug,
-			})
+			furyctlPath, err := cmdutil.StringFlag(cmd, "config", tracker, cmdEvent)
 			if err != nil {
-				return err
+				return fmt.Errorf("%w: config", ErrParsingFlag)
 			}
 
-			if res.HasErrors() {
+			distroLocation, err := cmdutil.StringFlag(cmd, "distro-location", tracker, cmdEvent)
+			if err != nil {
+				return fmt.Errorf("%w: distro-location", ErrParsingFlag)
+			}
+
+			dloader := distribution.NewDownloader(netx.NewGoGetterClient())
+
+			// Download the distribution.
+			logrus.Info("Downloading distribution...")
+			res, err := dloader.Download(distroLocation, furyctlPath)
+			if err != nil {
+				cmdEvent.AddErrorMessage(err)
+				tracker.Track(cmdEvent)
+
+				return fmt.Errorf("failed to download distribution: %w", err)
+			}
+
+			cmdEvent.AddClusterDetails(analytics.ClusterDetails{
+				KFDVersion: res.DistroManifest.Version,
+			})
+
+			if err := config.Validate(furyctlPath, res.RepoPath); err != nil {
 				logrus.Debugf("Repository path: %s", res.RepoPath)
 
-				logrus.Error(res.Error)
+				logrus.Error(err)
+
+				cmdEvent.AddErrorMessage(ErrValidationFailed)
+				tracker.Track(cmdEvent)
 
 				return ErrValidationFailed
 			}
 
-			logrus.Info("Config validation succeeded")
+			logrus.Info("config validation succeeded")
+
+			cmdEvent.AddSuccessMessage("config validation succeeded")
+			tracker.Track(cmdEvent)
 
 			return nil
 		},
@@ -65,7 +93,7 @@ func NewConfigCmd(furyctlBinVersion string) *cobra.Command {
 		"",
 		"Base URL used to download schemas, defaults and the distribution manifest. "+
 			"It can either be a local path(eg: /path/to/fury/distribution) or "+
-			"a remote URL(eg: https://git@github.com/sighupio/fury-distribution?ref=BRANCH_NAME)."+
+			"a remote URL(eg: git::git@github.com:sighupio/fury-distribution?ref=BRANCH_NAME)."+
 			"Any format supported by hashicorp/go-getter can be used.",
 	)
 
