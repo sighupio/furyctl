@@ -172,8 +172,9 @@ The following steps will guide you through the process of creating a Kubernetes 
 
 1. Follow the previous steps to generate a `furyctl.yaml` and download the modules.
 2. Edit the `furyctl.yaml` to customize the cluster configuration by filling the sections `infrastructure`, `kubernetes` and `distribution`.
-3. Run `furyctl create cluster` to create the cluster.
-4. (Optional) Watch the logs of the cluster creation process with `tail -f ~/.furyctl/furyctl.log`.
+3. Check that the configuration file is valid by running `furyctl validate config`.
+4. Run `furyctl create cluster` to create the cluster.
+5. (Optional) Watch the logs of the cluster creation process with `tail -f ~/.furyctl/furyctl.log`.
 
 > 💡 **Alpha ONLY**
 >
@@ -181,8 +182,39 @@ The following steps will guide you through the process of creating a Kubernetes 
 
 ### Deploy a cluster from an already existing infrastructure
 
-Same as the previous section, but you can skip the `infrastructure` by not filling the section `infrastructure` in the `furyctl.yaml` file and
+Same as the previous section, but you can skip the infrastructure creation phase
+by not filling the section `infrastructure` in the `furyctl.yaml` file and
 running `furyctl create cluster --skip-phase infrastructure`.
+
+### Deploy a cluster step by step
+
+The cluster creation process can be split into three phases:
+
+- Infrastructure
+- Kubernetes
+- Distribution
+
+The `furyctl create cluster` command will execute all the phases by default,
+but you can limit the execution to a specific phase by using the flag `--phase`.
+
+So in order to create a cluster step by step, you can run the following commands:
+
+```bash
+furyctl create cluster --phase infrastructure
+```
+
+If you choose to create a VPN in the infrastructure phase, you can automatically connect to it by using the flag `--vpn-auto-connect`.
+
+```bash
+furyctl create cluster --phase kubernetes
+```
+
+After running the command, remember to export the `KUBECONFIG` environment variable to point to the generated kubeconfig file or
+to use the flag `--kubeconfig` in the following command.
+
+```bash
+furyctl create cluster --phase distribution
+```
 
 #### Infrastructure
 
