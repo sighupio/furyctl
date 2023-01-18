@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"os"
 	"path"
+	"strings"
 
 	execx "github.com/sighupio/furyctl/internal/x/exec"
 	iox "github.com/sighupio/furyctl/internal/x/io"
@@ -42,7 +43,9 @@ func (r *Runner) ConfigOpenvpnClient(name string) error {
 	})
 
 	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("error while running furyagent configure openvpn-client: %w", err)
+		if !strings.Contains(err.Error(), "already exists") {
+			return fmt.Errorf("error while running furyagent configure openvpn-client: %w", err)
+		}
 	}
 
 	err := os.WriteFile(path.Join(r.paths.WorkDir,
