@@ -167,7 +167,7 @@ func (d *Distribution) Exec() error {
 		return err
 	}
 
-	logrus.Info("Deleting blocking resources...")
+	logrus.Info("Deleting blocking resources...[PersistentVolumeClaims, StatefulSets, Logging, Prometheus]")
 
 	if err = d.deleteBlockingResources(); err != nil {
 		return err
@@ -266,7 +266,8 @@ func (d *Distribution) deleteIngresses() error {
 		return fmt.Errorf("error deleting ingresses: %w", err)
 	}
 
-	logrus.Debugf("waiting for records to be deleted...")
+	logrus.Debugf("waiting for DNS records to be deleted...[ETA: 4 minutes]")
+
 	time.Sleep(dur)
 
 	return nil
