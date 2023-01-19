@@ -223,7 +223,7 @@ func (v *ClusterCreator) storeClusterConfig() error {
 		Kubectl:    path.Join(v.paths.BinPath, "kubectl", v.kfdManifest.Tools.Common.Kubectl.Version, "kubectl"),
 		WorkDir:    v.paths.WorkDir,
 		Kubeconfig: v.paths.Kubeconfig,
-	}, true, true)
+	}, true, true, false)
 
 	logrus.Info("Storing cluster config...")
 
