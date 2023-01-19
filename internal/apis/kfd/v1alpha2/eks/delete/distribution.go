@@ -33,6 +33,7 @@ const (
 var (
 	errCheckPendingResources = errors.New("error while checking pending resources")
 	errPendingResources      = errors.New("pending resources: ")
+	errClusterConnect        = errors.New("error connecting to cluster")
 )
 
 type Distribution struct {
@@ -160,6 +161,12 @@ func (d *Distribution) Exec() error {
 		}
 
 		return nil
+	}
+
+	logrus.Info("Checking cluster connectivity...")
+
+	if _, err := d.kubeRunner.Version(); err != nil {
+		return errClusterConnect
 	}
 
 	logrus.Info("Deleting ingresses...")
