@@ -22,18 +22,20 @@ type Paths struct {
 }
 
 type Runner struct {
-	executor     execx.Executor
-	paths        Paths
-	serverSide   bool
-	skipNotFound bool
+	executor      execx.Executor
+	paths         Paths
+	serverSide    bool
+	skipNotFound  bool
+	clientVersion bool
 }
 
-func NewRunner(executor execx.Executor, paths Paths, serverSide, skipNotFound bool) *Runner {
+func NewRunner(executor execx.Executor, paths Paths, serverSide, skipNotFound, clientVersion bool) *Runner {
 	return &Runner{
-		executor:     executor,
-		paths:        paths,
-		serverSide:   serverSide,
-		skipNotFound: skipNotFound,
+		executor:      executor,
+		paths:         paths,
+		serverSide:    serverSide,
+		skipNotFound:  skipNotFound,
+		clientVersion: clientVersion,
 	}
 }
 
@@ -158,7 +160,7 @@ func (r *Runner) Version() (string, error) {
 		args = append(args, "--kubeconfig", r.paths.Kubeconfig)
 	}
 
-	if !r.serverSide {
+	if r.clientVersion {
 		args = append(args, "--client")
 	}
 
