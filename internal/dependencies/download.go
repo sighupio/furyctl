@@ -87,6 +87,15 @@ func (dd *Downloader) DownloadModules(modules config.KFDModules) error {
 		errs := []error{}
 		retries := map[string]int{}
 
+		dst := filepath.Join(dd.basePath, "vendor", "modules", name)
+
+		if err := iox.CheckDirIsEmpty(dst); err != nil {
+			err = os.RemoveAll(dst)
+			if err != nil {
+				return fmt.Errorf("error removing folder: %w", err)
+			}
+		}
+
 		for _, prefix := range []string{oldPrefix, newPrefix} {
 			src := fmt.Sprintf("git::git@github.com:sighupio/%s-%s.git?ref=%s", prefix, name, version)
 
@@ -118,7 +127,7 @@ func (dd *Downloader) DownloadModules(modules config.KFDModules) error {
 				continue
 			}
 
-			if err := dd.client.Download(src, filepath.Join(dd.basePath, "vendor", "modules", name)); err != nil {
+			if err := dd.client.Download(src, dst); err != nil {
 				errs = append(errs, fmt.Errorf("%w '%s': %v", distribution.ErrDownloadingFolder, src, err))
 
 				continue
@@ -132,6 +141,11 @@ func (dd *Downloader) DownloadModules(modules config.KFDModules) error {
 		if len(errs) > 0 {
 			return fmt.Errorf("%w '%s': %v", ErrDownloadingModule, name, errs)
 		}
+
+		err := os.RemoveAll(filepath.Join(dst, ".git"))
+		if err != nil {
+			return fmt.Errorf("error removing .git subfolder: %w", err)
+		}
 	}
 
 	return nil
@@ -143,17 +157,31 @@ func (dd *Downloader) DownloadInstallers(installers config.KFDKubernetes) error 
 	for i := 0; i < insts.NumField(); i++ {
 		name := strings.ToLower(insts.Type().Field(i).Name)
 
+		dst := filepath.Join(dd.basePath, "vendor", "installers", name)
+
 		v, ok := insts.Field(i).Interface().(config.KFDProvider)
 		if !ok {
 			return fmt.Errorf("%s: %w", name, ErrModuleHasNoVersion)
+		}
+
+		if err := iox.CheckDirIsEmpty(dst); err != nil {
+			err = os.RemoveAll(dst)
+			if err != nil {
+				return fmt.Errorf("error removing folder: %w", err)
+			}
 		}
 
 		version := v.Installer
 
 		src := fmt.Sprintf("git::git@github.com:sighupio/fury-%s-installer?ref=%s", name, version)
 
-		if err := dd.client.Download(src, filepath.Join(dd.basePath, "vendor", "installers", name)); err != nil {
+		if err := dd.client.Download(src, dst); err != nil {
 			return fmt.Errorf("%w '%s': %v", distribution.ErrDownloadingFolder, src, err)
+		}
+
+		err := os.RemoveAll(filepath.Join(dst, ".git"))
+		if err != nil {
+			return fmt.Errorf("error removing .git subfolder: %w", err)
 		}
 	}
 
