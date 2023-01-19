@@ -109,6 +109,7 @@ func NewDistribution(
 			},
 			true,
 			true,
+			false,
 		),
 		dryRun: dryRun,
 	}, nil
