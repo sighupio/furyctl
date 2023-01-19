@@ -42,6 +42,7 @@ var (
 	errCastingDNSPubIamToStr = errors.New("error casting external_dns_public_iam_role_arn output to string")
 	errCastingCertIamToStr   = errors.New("error casting cert_manager_iam_role_arn output to string")
 	errCastingVelIamToStr    = errors.New("error casting velero_iam_role_arn output to string")
+	errClusterConnect        = errors.New("error connecting to cluster")
 )
 
 type Distribution struct {
@@ -199,6 +200,12 @@ func (d *Distribution) Exec() error {
 
 	if err := d.copyFromTemplate(mCfg); err != nil {
 		return err
+	}
+
+	logrus.Info("Checking cluster connectivity...")
+
+	if _, err := d.kubeRunner.Version(); err != nil {
+		return errClusterConnect
 	}
 
 	logrus.Info("Building manifests...")
