@@ -148,6 +148,8 @@ func (v *ClusterCreator) Create(skipPhase string) error {
 			if err := v.storeClusterConfig(); err != nil {
 				return fmt.Errorf("error while storing cluster config: %w", err)
 			}
+
+			v.logKubeconfig()
 		}
 
 		return nil
@@ -193,11 +195,23 @@ func (v *ClusterCreator) Create(skipPhase string) error {
 			}
 		}
 
+		v.logKubeconfig()
+
 		return nil
 
 	default:
 		return ErrUnsupportedPhase
 	}
+}
+
+func (v *ClusterCreator) logKubeconfig() {
+	kubeconfigPath := os.Getenv("KUBECONFIG")
+
+	if v.paths.Kubeconfig != "" {
+		kubeconfigPath = v.paths.Kubeconfig
+	}
+
+	logrus.Infof("Export KUBECONFIG=%s in order to use kubectl/furyctl to interact with the cluster", kubeconfigPath)
 }
 
 func (v *ClusterCreator) storeClusterConfig() error {
