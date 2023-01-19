@@ -114,14 +114,11 @@ func readValueFromFile(path string) (string, error) {
 func ParseDynamicValue(val any) (string, error) {
 	strVal := fmt.Sprintf("%v", val)
 
-	strVal = strings.TrimPrefix(strVal, "{")
-	strVal = strings.TrimSuffix(strVal, "}")
-
 	spl := strings.Split(strVal, "://")
 
 	if len(spl) > 1 {
-		source := spl[0]
-		sourceValue := spl[1]
+		source := strings.TrimPrefix(spl[0], "{")
+		sourceValue := strings.TrimSuffix(spl[1], "}")
 
 		switch source {
 		case Env:

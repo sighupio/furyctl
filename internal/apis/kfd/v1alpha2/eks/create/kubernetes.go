@@ -202,7 +202,7 @@ func (k *Kubernetes) copyFromTemplate() error {
 	return nil
 }
 
-//nolint:gocyclo,maintidx,gocognit,funlen,revive,cyclop // it will be refactored
+//nolint:gocyclo,maintidx,funlen // it will be refactored
 func (k *Kubernetes) createTfVars() error {
 	var buffer bytes.Buffer
 
@@ -372,20 +372,21 @@ func (k *Kubernetes) createTfVars() error {
 			err = bytesx.SafeWriteToBuffer(
 				&buffer,
 				"eks_map_users = [\n",
-				"",
 			)
 			if err != nil {
 				return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
 			}
 
-			for _, account := range k.furyctlConf.Spec.Kubernetes.AwsAuth.Users {
+			for i, account := range k.furyctlConf.Spec.Kubernetes.AwsAuth.Users {
+				content := "{\ngroups = [\"%v\"]\nusername = \"%v\"\nuserarn = \"%v\"}"
+
+				if i < len(k.furyctlConf.Spec.Kubernetes.AwsAuth.Users)-1 {
+					content += ","
+				}
+
 				err = bytesx.SafeWriteToBuffer(
 					&buffer,
-					`{
-						groups = ["%v"]
-						username = "%v"
-						userarn = "%v"
-					},`,
+					content,
 					strings.Join(account.Groups, "\",\""),
 					account.Username,
 					account.Userarn,
@@ -413,14 +414,16 @@ func (k *Kubernetes) createTfVars() error {
 				return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
 			}
 
-			for _, account := range k.furyctlConf.Spec.Kubernetes.AwsAuth.Roles {
+			for i, account := range k.furyctlConf.Spec.Kubernetes.AwsAuth.Roles {
+				content := "{\ngroups = [\"%v\"]\nusername = \"%v\"\nrolearn = \"%v\"}"
+
+				if i < len(k.furyctlConf.Spec.Kubernetes.AwsAuth.Roles)-1 {
+					content += ","
+				}
+
 				err = bytesx.SafeWriteToBuffer(
 					&buffer,
-					`{
-						groups = ["%v"]
-						username = "%v"
-						rolearn = "%v"
-					},`,
+					content,
 					strings.Join(account.Groups, "\",\""),
 					account.Username,
 					account.Rolearn,
@@ -549,66 +552,9 @@ func (k *Kubernetes) createTfVars() error {
 				return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
 			}
 
-			if len(np.AdditionalFirewallRules) > 0 {
-				err = bytesx.SafeWriteToBuffer(
-					&buffer,
-					"additional_firewall_rules = [\n",
-				)
-				if err != nil {
-					return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
-				}
-
-				for _, fwRule := range np.AdditionalFirewallRules {
-					fwRuleTags := "{}"
-
-					if len(fwRule.Tags) > 0 {
-						var tags []byte
-
-						tags, err := json.Marshal(fwRule.Tags)
-						if err != nil {
-							return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
-						}
-
-						fwRuleTags = string(tags)
-					}
-
-					err = bytesx.SafeWriteToBuffer(
-						&buffer,
-						`{
-								name = "%v"
-								direction = "%v"
-								cidr_block = "%v"
-								protocol = "%v"
-								ports = "%v"
-								tags = %v
-							},`,
-						fwRule.Name,
-						fwRule.Type,
-						fwRule.CidrBlocks,
-						fwRule.Protocol,
-						fwRule.Ports,
-						fwRuleTags,
-					)
-					if err != nil {
-						return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
-					}
-				}
-
-				err = bytesx.SafeWriteToBuffer(
-					&buffer,
-					"]\n",
-				)
-				if err != nil {
-					return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
-				}
-			} else {
-				err = bytesx.SafeWriteToBuffer(
-					&buffer,
-					"additional_firewall_rules = []\n",
-				)
-				if err != nil {
-					return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
-				}
+			err = k.addFirewallRulesToNodePool(&buffer, np)
+			if err != nil {
+				return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
 			}
 
 			if len(np.SubnetIds) > 0 {
@@ -730,6 +676,84 @@ func (k *Kubernetes) createTfVars() error {
 	err = os.WriteFile(targetTfVars, buffer.Bytes(), iox.FullRWPermAccess)
 	if err != nil {
 		return fmt.Errorf("error writing terraform vars file: %w", err)
+	}
+
+	return nil
+}
+
+func (*Kubernetes) addFirewallRulesToNodePool(buffer *bytes.Buffer, np schema.SpecKubernetesNodePool) error {
+	if len(np.AdditionalFirewallRules) > 0 {
+		err := bytesx.SafeWriteToBuffer(
+			buffer,
+			"additional_firewall_rules = [\n",
+		)
+		if err != nil {
+			return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
+		}
+
+		for i, fwRule := range np.AdditionalFirewallRules {
+			fwRuleTags := "{}"
+
+			if len(fwRule.Tags) > 0 {
+				var tags []byte
+
+				tags, err := json.Marshal(fwRule.Tags)
+				if err != nil {
+					return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
+				}
+
+				fwRuleTags = string(tags)
+			}
+
+			content := "{\nname = \"%v\"\ndirection = \"%v\"\ncidr_block = %v\nprotocol = \"%v\"\n" +
+				"ports = \"%v\"\ntags = %v\n}"
+
+			if i < len(np.AdditionalFirewallRules)-1 {
+				content += ","
+			}
+
+			dmzCidrRanges := make([]string, len(fwRule.CidrBlocks))
+
+			for i, cidr := range fwRule.CidrBlocks {
+				dmzCidrRanges[i] = fmt.Sprintf("\"%v\"", cidr)
+			}
+
+			cidrRange := ""
+
+			if len(dmzCidrRanges) > 0 {
+				cidrRange = dmzCidrRanges[0]
+			}
+
+			err = bytesx.SafeWriteToBuffer(
+				buffer,
+				content,
+				fwRule.Name,
+				fwRule.Type,
+				cidrRange,
+				fwRule.Protocol,
+				fmt.Sprintf("%v-%v", fwRule.Ports.From, fwRule.Ports.To),
+				fwRuleTags,
+			)
+			if err != nil {
+				return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
+			}
+		}
+
+		err = bytesx.SafeWriteToBuffer(
+			buffer,
+			"]\n",
+		)
+		if err != nil {
+			return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
+		}
+	} else {
+		err := bytesx.SafeWriteToBuffer(
+			buffer,
+			"additional_firewall_rules = []\n",
+		)
+		if err != nil {
+			return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
+		}
 	}
 
 	return nil
