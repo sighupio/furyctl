@@ -152,8 +152,18 @@ func (r *Runner) Delete(manifestPath string, params ...string) error {
 }
 
 func (r *Runner) Version() (string, error) {
+	args := []string{"version"}
+
+	if r.paths.Kubeconfig != "" {
+		args = append(args, "--kubeconfig", r.paths.Kubeconfig)
+	}
+
+	if !r.serverSide {
+		args = append(args, "--client")
+	}
+
 	out, err := execx.CombinedOutput(execx.NewCmd(r.paths.Kubectl, execx.CmdOptions{
-		Args:     []string{"version", "--client"},
+		Args:     args,
 		Executor: r.executor,
 		WorkDir:  r.paths.WorkDir,
 	}))
