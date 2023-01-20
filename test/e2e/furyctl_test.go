@@ -164,7 +164,7 @@ var (
 				out, err := FuryctlValidateConfig("../data/e2e/validate/config/nodistro")
 
 				Expect(err).To(HaveOccurred())
-				Expect(out).To(ContainSubstring("kfd.yaml: no such file or directory"))
+				Expect(out).To(ContainSubstring("unsupported KFD version"))
 			})
 
 			It("should report an error when config validation fails", func() {
