@@ -69,7 +69,7 @@ func injectDynamicRes(
 		spl := strings.Split(key, "://")
 
 		if len(spl) > 1 {
-			val, err := ParseDynamicValue(v)
+			val, err := ParseDynamicValue(k)
 			if err != nil {
 				return nil, err
 			}
