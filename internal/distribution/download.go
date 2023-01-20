@@ -19,7 +19,7 @@ import (
 	yamlx "github.com/sighupio/furyctl/internal/x/yaml"
 )
 
-const DefaultBaseURL = "https://git@github.com/sighupio/fury-distribution?ref=%s"
+const DefaultBaseURL = "git::git@github.com:sighupio/fury-distribution?ref=%s"
 
 var (
 	ErrChangingFilePermissions = errors.New("error changing file permissions")
@@ -98,6 +98,22 @@ func (d *Downloader) DoDownload(
 	logrus.Debugf("Downloading '%s' in '%s'", src, dst)
 
 	if err := netx.NewGoGetterClient().Download(src, dst); err != nil {
+		if errors.Is(err, netx.ErrDownloadOptionsExhausted) {
+			if distroLocation == "" {
+				return DownloadResult{}, fmt.Errorf("%w: seems like the specified version "+
+					"%s does not exist, try another version from the official repository",
+					ErrUnsupportedVersion,
+					minimalConf.Spec.DistributionVersion,
+				)
+			}
+
+			return DownloadResult{}, fmt.Errorf("%w: seems like the specified location %s"+
+				" does not exist, try another version from the official repository",
+				ErrUnsupportedVersion,
+				url,
+			)
+		}
+
 		return DownloadResult{}, fmt.Errorf("%w '%s': %v", ErrDownloadingFolder, src, err)
 	}
 
