@@ -93,7 +93,7 @@ func NewConfigCmd(tracker *analytics.Tracker) *cobra.Command {
 		"",
 		"Base URL used to download schemas, defaults and the distribution manifest. "+
 			"It can either be a local path(eg: /path/to/fury/distribution) or "+
-			"a remote URL(eg: git::git@github.com:sighupio/fury-distribution?ref=BRANCH_NAME)."+
+			"a remote URL(eg: git::git@github.com:sighupio/fury-distribution?ref=BRANCH_NAME&depth=1)."+
 			"Any format supported by hashicorp/go-getter can be used.",
 	)
 
