@@ -106,7 +106,7 @@ func (dd *Downloader) DownloadModules(modules config.KFDModules) error {
 		dst := filepath.Join(dd.basePath, "vendor", "modules", name)
 
 		for _, prefix := range []string{oldPrefix, newPrefix} {
-			src := fmt.Sprintf("git::git@github.com:sighupio/%s-%s.git?ref=%s&depth=1", prefix, name, version)
+			src := fmt.Sprintf("git::git@github.com:sighupio/%s-%s?ref=%s&depth=1", prefix, name, version)
 
 			req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, createURL(prefix, name, version), nil)
 			if err != nil {
