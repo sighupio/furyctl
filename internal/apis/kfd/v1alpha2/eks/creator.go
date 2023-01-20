@@ -137,6 +137,9 @@ func (v *ClusterCreator) Create(skipPhase string) error {
 		return nil
 
 	case cluster.OperationPhaseKubernetes:
+		logrus.Warn("Please make sure that the Kubernetes API is reachable before continuing" +
+			" (e.g. check VPN connection is active`), otherwise the installation will fail.")
+
 		if err = kube.Exec(); err != nil {
 			return fmt.Errorf("error while executing kubernetes phase: %w", err)
 		}
