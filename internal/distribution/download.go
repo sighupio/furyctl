@@ -19,7 +19,7 @@ import (
 	yamlx "github.com/sighupio/furyctl/internal/x/yaml"
 )
 
-const DefaultBaseURL = "git::git@github.com:sighupio/fury-distribution?ref=%s"
+const DefaultBaseURL = "git::git@github.com:sighupio/fury-distribution?ref=%s&depth=1"
 
 var (
 	ErrChangingFilePermissions = errors.New("error changing file permissions")
