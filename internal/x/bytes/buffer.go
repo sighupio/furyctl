@@ -12,15 +12,28 @@ import (
 )
 
 func SafeWriteToBuffer(buffer *bytes.Buffer, content string, values ...any) error {
-	vs := make([]interface{}, len(values))
+	vs := make([]interface{}, 0)
 
-	for i, sv := range values {
+	for _, sv := range values {
+		if sv == nil {
+			continue
+		}
+
 		v, err := mapper.ParseDynamicValue(sv)
 		if err != nil {
 			return fmt.Errorf("error parsing dynamic value: %w", err)
 		}
 
-		vs[i] = fmt.Sprintf("%v", v)
+		vs = append(vs, fmt.Sprintf("%v", v))
+	}
+
+	if len(vs) == 0 {
+		_, err := buffer.WriteString(content)
+		if err != nil {
+			return fmt.Errorf("error writing to buffer: %w", err)
+		}
+
+		return nil
 	}
 
 	_, err := buffer.WriteString(fmt.Sprintf(content, vs...))
