@@ -24,7 +24,7 @@ require (
 	github.com/onsi/ginkgo/v2 v2.6.1
 	github.com/onsi/gomega v1.24.2
 	github.com/santhosh-tekuri/jsonschema/v5 v5.1.1
-	github.com/sighupio/fury-distribution v1.24.1-0.20230103153037-ad0c881984b3
+	github.com/sighupio/fury-distribution v1.24.1-0.20230120102009-e22304ea046f
 	golang.org/x/exp v0.0.0-20221217163422-3c43f8badb15
 	gopkg.in/yaml.v3 v3.0.1
 )
