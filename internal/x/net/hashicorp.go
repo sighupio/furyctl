@@ -13,7 +13,7 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-var errDownloadOptionsExausted = errors.New("downloading options exausted")
+var ErrDownloadOptionsExhausted = errors.New("downloading options exhausted")
 
 func NewGoGetterClient() *GoGetterClient {
 	return &GoGetterClient{
@@ -50,7 +50,7 @@ func (g *GoGetterClient) Download(src, dst string) error {
 		logrus.Debug(err)
 	}
 
-	return errDownloadOptionsExausted
+	return ErrDownloadOptionsExhausted
 }
 
 // URLHasForcedProtocol checks if the url has a forced protocol as described in hashicorp/go-getter.
