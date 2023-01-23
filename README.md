@@ -18,13 +18,12 @@
 
 `furyctl` is the command line companion for the Kubernetes Fury Distribution to manage the **full lifecycle** of your Kubernetes Fury clusters.
 <br/>
-
-> **:warning:**
-> you are viewing the readme for furyctl next generation (`ng` for short). This version is in `alpha` status.
->
-> `furyctl-ng` supports EKS-based clusters only in the first alpha.
 <!-- line left blank -->
 > 💡 Learn more about the Kubernetes Fury Distribution in the [official site](https://kubernetesfury.com).
+<!-- line left blank -->
+> **Warning**
+> You are viewing the readme for furyctl next generation (`furyctl-ng` for short). This version is in `alpha` status.
+> `furyctl-ng` supports EKS-based clusters in the first alpha.
 
 ## Installation
 
@@ -191,9 +190,9 @@ furyctl validate dependencies
 
 Finally, to launch the creation of the resources defined in the configuration file, run the following command:
 
-> **:warning:** you are about to create cloud resources that could have billing impact.
+> **Warning** you are about to create cloud resources that could have billing impact.
 <!-- line left blank -->
-> **:info:** the creation process you are about to launch can take a while.
+> **Info** the creation process you are about to launch can take a while.
 
 ```console
 furyctl create cluster
@@ -206,7 +205,7 @@ furyctl create cluster
 Destroying a cluster can be thought as running the creation phases in reverse order. `furyctl` automates this operation for you.
 To destroy a cluster created using `furyctl` and all its related resources, run the following command:
 
-> **:warning:** you are about to run a destructive operation.
+> **Warning** you are about to run a destructive operation.
 
 ```console
 furyctl delete cluster --dry-run
