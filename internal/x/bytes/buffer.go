@@ -12,7 +12,7 @@ import (
 )
 
 func SafeWriteToBuffer(buffer *bytes.Buffer, content string, values ...any) error {
-	vs := make([]interface{}, 0)
+	vs := make([]any, 0)
 
 	for _, sv := range values {
 		if sv == nil {
