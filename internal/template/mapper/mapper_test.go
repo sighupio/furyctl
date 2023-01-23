@@ -9,7 +9,9 @@ package mapper_test
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 
@@ -74,6 +76,55 @@ func TestMapper_MapDynamicValues(t *testing.T) {
 			"meta": map[any]any{
 				"name":  map[any]any{"env://TEST_MAPPER_DYNAMIC_VALUE": ""},
 				"value": map[any]any{fmt.Sprintf("file://%s/test_file.txt", path): ""},
+			},
+		},
+	}
+
+	m := mapper.NewMapper(dummyContext)
+
+	err = os.Setenv("TEST_MAPPER_DYNAMIC_VALUE", "test")
+
+	assert.NoError(t, err)
+
+	defer os.Setenv("TEST_MAPPER_DYNAMIC_VALUE", "")
+
+	filledContext, err := m.MapDynamicValues()
+
+	assert.NoError(t, err)
+
+	meta := filledContext["data"]["meta"]
+
+	mapMeta, ok := meta.(map[any]any)
+
+	assert.True(t, ok)
+
+	assert.Equal(t, "test", mapMeta["name"])
+
+	assert.Equal(t, exampleStr, mapMeta["value"])
+}
+
+func TestMapper_MapDynamicValues_RelativePath(t *testing.T) {
+	path := "../.."
+
+	timestamp := time.Now().Unix()
+
+	fileName := fmt.Sprintf("test_file-%v.txt", timestamp)
+
+	filePath := filepath.Join(path, fileName)
+
+	exampleStr := "test!"
+
+	err := os.WriteFile(filePath, []byte(exampleStr), os.ModePerm)
+
+	defer os.RemoveAll(filePath)
+
+	assert.NoError(t, err)
+
+	dummyContext := map[string]map[any]any{
+		"data": {
+			"meta": map[any]any{
+				"name":  map[any]any{"env://TEST_MAPPER_DYNAMIC_VALUE": ""},
+				"value": map[any]any{fmt.Sprintf("file://%s", filePath): ""},
 			},
 		},
 	}

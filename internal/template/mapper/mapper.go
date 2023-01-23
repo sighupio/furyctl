@@ -16,7 +16,10 @@ const (
 	File = "file"
 )
 
-var errKeyIsNotAString = errors.New("key is not a string")
+var (
+	errKeyIsNotAString = errors.New("key is not a string")
+	errUnknownKey      = errors.New("unknown key")
+)
 
 type Mapper struct {
 	context map[string]map[any]any
@@ -66,22 +69,12 @@ func injectDynamicRes(
 		spl := strings.Split(key, "://")
 
 		if len(spl) > 1 {
-			source := spl[0]
-			sourceValue := spl[1]
-
-			switch source {
-			case Env:
-				envVar := os.Getenv(sourceValue)
-				parent[parentKey] = envVar
-
-			case File:
-				content, err := readValueFromFile(sourceValue)
-				if err != nil {
-					return nil, err
-				}
-
-				parent[parentKey] = content
+			val, err := ParseDynamicValue(k)
+			if err != nil {
+				return nil, err
 			}
+
+			parent[parentKey] = val
 
 			continue
 		}
@@ -116,4 +109,39 @@ func readValueFromFile(path string) (string, error) {
 	val, err := os.ReadFile(path)
 
 	return string(val), err
+}
+
+func ParseDynamicValue(val any) (string, error) {
+	strVal := fmt.Sprintf("%v", val)
+
+	spl := strings.Split(strVal, "://")
+
+	if len(spl) > 1 {
+		source := strings.TrimPrefix(spl[0], "{")
+		sourceValue := strings.TrimSuffix(spl[1], "}")
+
+		switch source {
+		case Env:
+			envVar := os.Getenv(sourceValue)
+
+			envVar = strings.TrimRight(envVar, "\n")
+
+			return envVar, nil
+
+		case File:
+			content, err := readValueFromFile(sourceValue)
+			if err != nil {
+				return "", fmt.Errorf("%w", err)
+			}
+
+			content = strings.TrimRight(content, "\n")
+
+			return content, nil
+
+		default:
+			return "", fmt.Errorf("%w %s", errUnknownKey, source)
+		}
+	}
+
+	return strVal, nil
 }
