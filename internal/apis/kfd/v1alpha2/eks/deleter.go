@@ -8,6 +8,8 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/sirupsen/logrus"
+
 	"github.com/sighupio/fury-distribution/pkg/config"
 	del "github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/eks/delete"
 	"github.com/sighupio/furyctl/internal/cluster"
@@ -19,6 +21,7 @@ type ClusterDeleter struct {
 	workDir     string
 	binPath     string
 	kubeconfig  string
+	dryRun      bool
 }
 
 func (d *ClusterDeleter) SetProperties(props []cluster.DeleterProperty) {
@@ -55,21 +58,26 @@ func (d *ClusterDeleter) SetProperty(name string, value any) {
 		if s, ok := value.(string); ok {
 			d.kubeconfig = s
 		}
+
+	case cluster.DeleterPropertyDryRun:
+		if b, ok := value.(bool); ok {
+			d.dryRun = b
+		}
 	}
 }
 
-func (d *ClusterDeleter) Delete(dryRun bool) error {
-	distro, err := del.NewDistribution(dryRun, d.workDir, d.binPath, d.kfdManifest, d.kubeconfig)
+func (d *ClusterDeleter) Delete() error {
+	distro, err := del.NewDistribution(d.dryRun, d.workDir, d.binPath, d.kfdManifest, d.kubeconfig)
 	if err != nil {
 		return fmt.Errorf("error while creating distribution phase: %w", err)
 	}
 
-	kube, err := del.NewKubernetes(dryRun, d.workDir, d.binPath, d.kfdManifest)
+	kube, err := del.NewKubernetes(d.dryRun, d.workDir, d.binPath, d.kfdManifest)
 	if err != nil {
 		return fmt.Errorf("error while creating kubernetes phase: %w", err)
 	}
 
-	infra, err := del.NewInfrastructure(dryRun, d.workDir, d.binPath, d.kfdManifest)
+	infra, err := del.NewInfrastructure(d.dryRun, d.workDir, d.binPath, d.kfdManifest)
 	if err != nil {
 		return fmt.Errorf("error while creating infrastructure phase: %w", err)
 	}
@@ -97,6 +105,11 @@ func (d *ClusterDeleter) Delete(dryRun bool) error {
 		return nil
 
 	case cluster.OperationPhaseAll:
+		if d.dryRun {
+			logrus.Info("furcytl will try its best to calculate what would have changed. " +
+				"Sometimes this is not possible, for better results limit the scope with the --phase flag.")
+		}
+
 		if err := distro.Exec(); err != nil {
 			return fmt.Errorf("error while deleting distribution phase: %w", err)
 		}
