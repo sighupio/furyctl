@@ -116,9 +116,21 @@ func NewDistribution(
 }
 
 func (d *Distribution) Exec() error {
+	timestamp := time.Now().Unix()
+
 	logrus.Info("Running distribution phase")
 
-	timestamp := time.Now().Unix()
+	logrus.Info("Checking cluster connectivity...")
+
+	if _, err := d.kubeRunner.Version(); err != nil {
+
+		if !d.dryRun {
+			return errClusterConnect
+		}
+
+		logrus.Warnf("Cluster is unreachable, make sure to check connectivity before " +
+			"running the command without --dry-run")
+	}
 
 	if err := d.CreateFolder(); err != nil {
 		return fmt.Errorf("error creating distribution phase folder: %w", err)
@@ -201,12 +213,6 @@ func (d *Distribution) Exec() error {
 
 	if err := d.copyFromTemplate(mCfg); err != nil {
 		return err
-	}
-
-	logrus.Info("Checking cluster connectivity...")
-
-	if _, err := d.kubeRunner.Version(); err != nil {
-		return errClusterConnect
 	}
 
 	logrus.Info("Building manifests...")
