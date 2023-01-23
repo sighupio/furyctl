@@ -29,6 +29,12 @@
 
 > 💡 Learn more about the Kubernetes Fury Distribution in the [official site](https://kubernetesfury.com).
 
+<!-- line left blank -->
+
+> **Warning**
+> You are viewing the readme for furyctl next generation (`furyctl-ng` for short). This version is in `alpha` status.
+> `furyctl-ng` supports EKS-based clusters in the first alpha.
+
 ## Installation
 
 ### Installation from source
@@ -207,7 +213,7 @@ furyctl create cluster
 Destroying a cluster can be thought as running the creation phases in reverse order. `furyctl` automates this operation for you.
 To destroy a cluster created using `furyctl` and all its related resources, run the following command:
 
-> **:warning:** you are about to run a destructive operation.
+> **Warning** you are about to run a destructive operation.
 
 ```console
 furyctl delete cluster --dry-run
