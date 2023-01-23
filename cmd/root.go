@@ -149,11 +149,11 @@ furyctl is a command line interface tool to manage the full lifecycle of a Kuber
 				select {
 				case release := <-r:
 					if shouldUpgrade(release.Version, versions["version"]) {
-						logrus.Infof("New furyctl version available: %s => %s", versions["version"], release.Version)
+						logrus.Infof("A newer version of furyctl is available: %s => %s", versions["version"], release.Version)
 					}
 				case err := <-e:
 					if err != nil {
-						logrus.Debugf("Error checking for updates: %s", err)
+						logrus.Debugf("Error checking for updates to furyctl: %s", err)
 					}
 				}
 			},
