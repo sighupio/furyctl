@@ -23,6 +23,7 @@
 <!-- line left blank -->
 > **Warning**
 > You are viewing the readme for furyctl next generation (`furyctl-ng` for short). This version is in `alpha` status.
+>
 > `furyctl-ng` supports EKS-based clusters in the first alpha.
 
 ## Installation
@@ -126,20 +127,21 @@ version: 0.9.0
 > 💡 **TIP**
 >
 > Enable command tab autocompletion for `furyctl` on your shell (`bash`, `zsh`, `fish` are supported).
-> To see the instruction to enable it, run `furyctl completion -h`
+> See the instruction on how to enable it with `furyctl completion --help`
 
 See all the available commands with `furyctl help`.
 
-> ⚠️ **alpha only**
+> **Warning**
+> furyctl-ng alpha only
 >
 > `furyctl-ng` is compatible with KFD versions 1.22.1, 1.23.3 and 1.24.0, but you will need to use the flag `--distro-location git::git@github.com:sighupio/fury-distribution.git?ref=feature/furyctl-next`
 > in *every command* until the next release of the KFD.
 
 ### Basic Usage
 
-Basic usage of `fuyrctl` for a new project consists on:
+Basic usage of `fuyrctl` for a new project consists on the following steps:
 
-1. Creating a configuration file defining the prequired infrastructure, Kubernetes cluster details and KFD modules configuration.
+1. Creating a configuration file defining the prequired infrastructure, Kubernetes cluster details, and KFD modules configuration.
 2. Creating a cluster as defined in the configuration file.
 3. Destroying the cluster and its related resources.
 
@@ -152,21 +154,26 @@ To create a sample configuration file as a starting point use the following comm
 furyctl create config --version <KFD version> 
 ```
 
-> 💡 **TIP** you can pass some additional flags, like the kind of cluster or the configuration file name. See `furyctl create config --help` for more details.
+> 💡 **TIP**
+>
+> You can pass some additional flags, like the kind of cluster or the configuration file name.
+>
+> See `furyctl create config --help` for more details.
 
 Open the generated configuration file and edit it according to your needs. You can follow the instructions included as comments in the file.
 
-furyctl's configuration files have a kind, that specifies what type of cluster will be created, for example the `EKSCluster` kind has all the parameters needed to create a cluster using the EKS managed clusters from AWS.
+furyctl's configuration files have a kind, that specifies what type of cluster will be created, for example the `EKSCluster` kind has all the parameters needed to create a KFD cluster using the EKS managed clusters from AWS.
 
 Additionaly, the schema of the file is versioned with the `apiVersion` field, so when new features are introduced you can switch to a newer version of the configuration file structure.
 
-Once you have completed your configuration file, you can check that it is valid by running the following comand:
+Once you have filled your configuration file, you can check that it's content is valid by running the following comand:
 
 ```console
 furyctl validate config --config <path to your config file>
 ```
 
-> the `--config` flag is optional, set it if your configuration file is not named `furyctl.yaml`
+> **Note**
+> The `--config` flag is optional, set it if your configuration file is not named `furyctl.yaml`
 
 #### 2. Create a cluster
 
@@ -178,7 +185,7 @@ furcytl has divided the cluster creation in three phases: `infrastructure`, `kub
 - The second phase, `kubernetes`, creates the actual Kubernetes clusters. For example, the EKS cluster with its node pools.
 - The third phase, `distribution`, deploys KFD modules to the Kubernetes cluster.
 
-You may find these phases familiar from editing the configuration file.
+> 💡 You may find these phases familiar from editing the configuration file.
 
 Just like you can validate that your configuration file is well formed. `furyctl` let's you check that you have all the needed dependencies (environment variables, binaries, etc.) before starting a cluster creation process.
 
@@ -192,13 +199,13 @@ Finally, to launch the creation of the resources defined in the configuration fi
 
 > **Warning** you are about to create cloud resources that could have billing impact.
 <!-- line left blank -->
-> **Info** the creation process you are about to launch can take a while.
+> **Note** the creation process you are about to launch can take a while.
 
 ```console
 furyctl create cluster
 ```
 
-🎉 Congratulations! You have created your production-grade Kubernetes Fury Cluster from scratch and its ready to go into battle.
+🎉 Congratulations! You have created your production-grade Kubernetes Fury Cluster from scratch and it's ready to go into battle.
 
 #### 3. Destroy a cluster
 
@@ -211,9 +218,11 @@ To destroy a cluster created using `furyctl` and all its related resources, run 
 furyctl delete cluster --dry-run
 ```
 
-> 💡 **TIP** notice the `--dry-run` flag, used to first check what the command would do. This flag is available for other commands too.
+> 💡 **TIP**
+>
+> Notice the `--dry-run` flag, used to first check what the command would do. This flag is available for other commands too.
 
-check that the dry-run output is what you expected and then run the command again without the `--dry-run` flag.
+check that the dry-run output is what you expected and then run the command again without the `--dry-run` flag to actually delete all the resources.
 
 ### Advanced Usage
 
