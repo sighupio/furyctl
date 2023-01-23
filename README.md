@@ -43,8 +43,8 @@
 Prerequisites:
 
 - `make`
-- `go >= 1.19`
-- `goreleaser >= 1.11.4`
+- `go == v1.19`
+- `goreleaser == v1.11.4`
 
 To build `furyctl` from source, follow the next steps:
 
