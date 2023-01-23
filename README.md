@@ -2,10 +2,12 @@
 <h1 align="center">
   <img src="docs/assets/furyctl-logo.svg" width="200px" alt="furyctl logo" />
 
-<p>The multi-purpose command line tool<br/>for the Kubernetes Fury Distribution</p>
+<p>The Swiss Army Knife<br/>for the Kubernetes Fury Distribution</p>
 
-[![Build Status](https://ci.sighup.io/api/badges/sighupio/furyctl/status.svg)](https://ci.sighup.io/sighupio/furyctl)
-![Release](https://img.shields.io/github/v/release/sighupio/furyctl?label=Furyctl)
+<!-- FIXME: UPDATE THE BUILD BADGE WITH THE RIGHT BRANCH -->
+
+[![Build Status](https://ci.sighup.io/api/badges/sighupio/furyctl/status.svg?ref=refs/heads/furyctl-ng-alpha1)](https://ci.sighup.io/sighupio/furyctl)
+![Release](https://img.shields.io/badge/Furyctl%20Next%20Generation-alpha1-blue)
 ![Slack](https://img.shields.io/badge/slack-@kubernetes/fury-yellow.svg?logo=slack)
 ![License](https://img.shields.io/github/license/sighupio/furyctl)
 [![Go Report Card](https://goreportcard.com/badge/github.com/sighupio/furyctl)](https://goreportcard.com/report/github.com/sighupio/furyctl)
@@ -15,20 +17,73 @@
 
 <!-- <KFD-DOCS> -->
 
-Furyctl is a command line interface tool to:
-
-- create and manage Fury clusters on AWS
-- download and manage the Kubernetes Fury Distribution (KFD) modules
-
+`furyctl` is the command line companion for the Kubernetes Fury Distribution to manage the **full lifecycle** of your Kubernetes Fury clusters.
 <br/>
 
-![Furyctl usage](docs/assets/furyctl.gif)
+> **:warning:**
+> you are viewing the readme for furyctl next generation (`ng` for short). This version is in `alpha` status.
+>
+> `furyctl-ng` supports EKS-based clusters only in the first alpha.
+
+<!-- line left blank -->
 
 > 💡 Learn more about the Kubernetes Fury Distribution in the [official site](https://kubernetesfury.com).
 
 ## Installation
 
-### Installation from binaries
+### Installation from source
+
+Prerequisites:
+
+- `make`
+- `go>=1.19`
+- `goreleaser>=1.11.4`
+
+To build `furyctl` from source, follow the next steps:
+
+1. clone the repository:
+
+```console
+git clone git@github.com:sighupio/furyctl.git
+# cd into the cloned repository
+cd furyctl
+# Switch to the branch for the `furyctl-ng-alpha1` version
+git switch furyctl-ng-alpha1
+```
+
+2. build the binaries by running the following command:
+
+```console
+make build
+```
+
+3. you will find the binaries for Linux, Darwin (macOS) and Windows for your current architecture in the `dist` folder:
+
+```console
+$ tree dist/furyctl_*/
+dist/furyctl_darwin_amd64_v1
+└── furyctl
+dist/furyctl_linux_amd64_v1
+└── furyctl
+dist/furyctl_windows_amd64_v1
+└── furyctl.exe
+```
+
+4. check that the binary is working as expected:
+
+```console
+# replace darwin with your OS and amd64 with your architecture
+./dist/furyctl_darwin_amd64_v1/furyctl version
+```
+
+5. (optional) copy the binary to your `bin` folder:
+
+```console
+# replace darwin with your OS and amd64 with your architecture
+sudo mv ./dist/furyctl_darwin_amd64_v1/furyctl /usr/local/bin/furyctl
+```
+
+### Installation from binaries (not available yet for `furyctl-ng`)
 
 You can find `furyctl` binaries on the [Releases page](https://github.com/sighupio/furyctl/releases).
 
@@ -44,18 +99,18 @@ Alternatively, you can install `furyctl` using a brew tap or via an asdf plugin.
 
 > ⚠️ M1 users: please download `darwin/amd64` binaries instead of using homebrew or asdf. Even though furyctl can be build for `arm64`, some of its dependendecies are not available yet for this architecture.
 
-### Installation with [Homebrew](https://brew.sh/)
+### Installation with [Homebrew](https://brew.sh/) (not available yet for `furyctl-ng`)
 
-```bash
+```console
 brew tap sighupio/furyctl
 brew install furyctl
 ```
 
-### Installation with [asdf](https://github.com/asdf-vm/asdf)
+### Installation with [asdf](https://github.com/asdf-vm/asdf) (not available yet for `furyctl-ng`)
 
 Add furyctl asdf plugin:
 
-```bash
+```console
 asdf plugin add furyctl
 ```
 
@@ -66,52 +121,108 @@ furyctl version
 INFO[0000] Furyctl version 0.10.0
 ```
 
-> 💡 **TIP**
->
-> Enable autocompletion for `furyctl` CLI on your shell (currently autocompletion is provided for `bash`, `zsh`, `fish`).
-> To see the instruction on how to enable it, run `furyctl completion -h`
-
 ## Usage
 
-See the available commands with `furyctl --help`:
+> 💡 **TIP**
+>
+> Enable command tab autocompletion for `furyctl` on your shell (`bash`, `zsh`, `fish` are supported).
+> To see the instruction to enable it, run `furyctl completion -h`
 
-```bash
-furyctl --help
+See all the available commands with `furyctl help`.
 
-The multi-purpose command line tool for the Kubernetes Fury Distribution.
+> ⚠️ **alpha only**
+>
+> `furyctl-ng` is compatible with KFD versions 1.22.1, 1.23.3 and 1.24.0, but you will need to use the flag `--distro-location git::git@github.com:sighupio/fury-distribution.git?ref=feature/furyctl-next`
+> in _every command_ until the next release of the KFD.
 
-Furyctl is a simple CLI tool to:
+### Basic Usage
 
-- download and manage the Kubernetes Fury Distribution (KFD) modules
-- create and manage Kubernetes Fury clusters
+Basic usage of `fuyrctl` for a new project consists on:
 
-Usage:
-  furyctl [command]
+1. Creating a configuration file defining the prequired infrastructure, Kubernetes cluster details and KFD modules configuration.
+2. Creating a cluster as defined in the configuration file.
+3. Destroying the cluster and its related resources.
 
-Available Commands:
-  completion  Generate completion script
-  create      Create a cluster or a config file
-  delete      Delete a cluster
-  download    Download all dependencies from the Kubernetes Fury Distribution specified in the config file
-  dump        Dump templates and other useful fury objects
-  help        Help about any command
-  validate    Validate the config file and the dependencies relative to the Kubernetes Fury Distribution specified in it
-  version     Print the version number of furyctl
+#### 1. Create a configuration file
 
-Flags:
-  -D, --debug               Enables furyctl debug output
-  -d, --disable-analytics   Disable analytics
-  -h, --help                help for furyctl
-  -l, --log string          Path to the log file or stdout to log to standard output (default: ~/.furyctl/furyctl.log)
-  -T, --no-tty              Disable TTY
-  -w, --workdir string      Switch to a different working directory before executing the given subcommand.
+`furyctl` provides a command that outputs a sample configuration file (by default called `furyctl.yaml`) with all the possible fields commented.
+To create a sample configuration file as a starting point use the following command:
 
-Use "furyctl [command] --help" for more information about a command.
+```console
+furyctl create config --version <KFD version>
 ```
 
-## Download and manage KFD modules
+> 💡 **TIP** you can pass some additional flags, like the kind of cluster or the configuration file name. See `furyctl create config --help` for more details.
 
-`furyctl` can be used as a package manager for the KFD.
+Open the generated configuration file and edit it according to your needs. You can follow the instructions included as comments in the file.
+
+furyctl's configuration files have a kind, that specifies what type of cluster will be created, for example the `EKSCluster` kind has all the parameters needed to create a cluster using the EKS managed clusters from AWS.
+
+Additionaly, the schema of the file is versioned with the `apiVersion` field, so when new features are introduced you can switch to a newer version of the configuration file structure.
+
+Once you have completed your configuration file, you can check that it is valid by running the following comand:
+
+```console
+furyctl validate config --config <path to your config file>
+```
+
+> the `--config` flag is optional, set it if your configuration file is not named `furyctl.yaml`
+
+#### 2. Create a cluster
+
+In the previous step, you have created and validated a configuration file that defines the cluster and its sorroundings, you can now proceed to actually creating the resources.
+
+furcytl has divided the cluster creation in three phases: `infrastructure`, `kubernetes` and `distribution`.
+
+- The first phase, `infrastructure`, creates all the prerequisites needed to be able to create a cluster. For example, the VPC and its networks.
+- The second phase, `kubernetes`, creates the actual Kubernetes clusters. For example, the EKS cluster with its node pools.
+- The third phase, `distribution`, deploys KFD modules to the Kubernetes cluster.
+
+You may find these phases familiar from editing the configuration file.
+
+Just like you can validate that your configuration file is well formed. `furyctl` let's you check that you have all the needed dependencies (environment variables, binaries, etc.) before starting a cluster creation process.
+
+To validate that you have all the dependencies needed to create the cluster defined in your configuration file, run the following command:
+
+```console
+furyctl validate dependencies
+```
+
+Finally, to launch the creation of the resources defined in the configuration file, run the following command:
+
+> **:warning:** you are about to create cloud resources that could have billing impact.
+
+<!-- line left blank -->
+
+> **:info:** the creation process you are about to launch can take a while.
+
+```console
+furyctl create cluster
+```
+
+🎉 Congratulations! You have created your production-grade Kubernetes Fury Cluster from scratch and its ready to go into battle.
+
+#### 3. Destroy a cluster
+
+Destroying a cluster can be thought as running the creation phases in reverse order. `furyctl` automates this operation for you.
+To destroy a cluster created using `furyctl` and all its related resources, run the following command:
+
+> **:warning:** you are about to run a destructive operation.
+
+```console
+furyctl delete cluster --dry-run
+```
+
+> 💡 **TIP** notice the `--dry-run` flag, used to first check what the command would do. This flag is available for other commands too.
+
+check that the dry-run output is what you expected and then run the command again without the `--dry-run` flag.
+
+### Advanced Usage
+
+#### Download and manage KFD modules
+
+`furyctl` can be used as a package manager for KFD.
+
 It provides a simple way to download all the desired modules of the KFD by reading a single `furyctl.yaml`.
 
 The process requires the following steps:
@@ -120,13 +231,13 @@ The process requires the following steps:
    with the flag `--version`.
 2. Run `furyctl download dependencies` to download all the dependencies including the modules of the KFD.
 
-### 1. Customize the `furyctl.yaml`
+##### 1. Customize the `furyctl.yaml`
 
 A `furyctl.yaml` is a YAML formatted file that contains all the information needed to create a Kubernetes Fury cluster.
 
 Modules are located in the `distribution` section of the `furyctl.yaml` file and can be configured to better fit your needs.
 
-### 2. Download the modules
+##### 2. Download the modules
 
 Run `furyctl download dependencies` (within the same directory where your `furyctl.yaml` is located) to download the modules and all the dependencies
 needed to create a Kubernetes Fury cluster.
@@ -136,37 +247,7 @@ needed to create a Kubernetes Fury cluster.
 > Using the command `furyctl dump template` with the flag `-w` pointing to the local location of the repository `fury-distribution`,
 > will run the template engine on the modules and generate the final manifests that will be applied to the cluster.
 
-## Cluster creation
-
-The Cluster creation feature is available via the command `furyctl create cluster`.
-
-The subcommand accept the following options:
-
-```bash
--b, --bin-path string      Path to the bin folder where all dependencies are installed
--c, --config string        Path to the furyctl.yaml file (default "furyctl.yaml")
---distro-location string   Location where to download schemas, defaults and the distribution manifest. It can either be a local path(eg: /path/to/fury/distribution) or a remote URL(eg: git::git@github.com:sighupio/fury-distribution?ref=BRANCH_NAME). Any format supported by hashicorp/go-getter can be used.
---dry-run                  Allows to inspect what resources will be created before applying them
--h, --help                 help for cluster
---kubeconfig string        Path to the kubeconfig file, mandatory if you want to run the distribution phase and the KUBECONFIG environment variable is not set
--p, --phase string         Limit the execution to a specific phase. options are: infrastructure, kubernetes, distribution
---skip-deps-download       Skip downloading the distribution modules, installers and binaries
---skip-deps-validation     Skip validating dependencies
---skip-phase string        Avoid executing a unwanted phase. options are: infrastructure, kubernetes, distribution. More specifically:
-                           - skipping infrastructure will execute kubernetes and distribution
-                           - skipping kubernetes will only execute distribution
-                           - skipping distribution will execute infrastructure and kubernetes
---vpn-auto-connect         When set will automatically connect to the created VPN in the infrastructure phase
-
-Global Flags:
--D, --debug               Enables furyctl debug output
--d, --disable-analytics   Disable analytics
--l, --log string          Path to the log file or stdout to log to standard output (default: ~/.furyctl/furyctl.log)
--T, --no-tty              Disable TTY
--w, --workdir string      Switch to a different working directory before executing the given subcommand.
-```
-
-### Deploy a cluster from zero
+#### Cluster creation
 
 The following steps will guide you through the process of creating a Kubernetes Fury cluster from zero.
 
@@ -197,7 +278,7 @@ The cluster creation process can be split into three phases:
 The `furyctl create cluster` command will execute all the phases by default,
 but you can limit the execution to a specific phase by using the flag `--phase`.
 
-So in order to create a cluster step by step, you can run the following commands:
+To create a cluster step by step, you can run the following command:
 
 ```bash
 furyctl create cluster --phase infrastructure
@@ -239,7 +320,7 @@ The available `kubernetes` provisioners are:
 
 Before contributing, please read first the [Contributing Guidelines](docs/CONTRIBUTING.md).
 
-## Test classes
+### Test classes
 
 There are four kind of tests: unit, integration, e2e, and expensive.
 
@@ -257,10 +338,10 @@ That said, here's a little summary of the used tags:
 
 ### Reporting Issues
 
-In case you experience any problems, please [open a new issue](https://github.com/sighupio/furyctl/issues/new/choose).
+In case you experience any problems with `furyctl`, please [open a new issue](https://github.com/sighupio/furyctl/issues/new/choose) in GitHub.
 
 ## License
 
-This module is open-source and it's released under the following [LICENSE](LICENSE)
+This software is open-source and it's released under the following [LICENSE](LICENSE).
 
 <!-- </FOOTER> -->
