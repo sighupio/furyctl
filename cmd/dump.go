@@ -14,7 +14,7 @@ import (
 func NewDumpCmd(tracker *analytics.Tracker) *cobra.Command {
 	dumpCmd := &cobra.Command{
 		Use:   "dump",
-		Short: "Dump templates and other useful fury objects",
+		Short: "Dump manifests templates and other useful KFD objects",
 	}
 
 	dumpCmd.AddCommand(dump.NewTemplateCmd(tracker))
