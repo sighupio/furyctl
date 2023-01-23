@@ -183,7 +183,7 @@ furyctl is a command line interface tool to manage the full lifecycle of a Kuber
 		"no-tty",
 		"T",
 		false,
-		"Disable TTY",
+		"Disable TTY making furyctl's output more friendly to non-interactive shells by disabling animations and colors",
 	)
 	rootCmd.PersistentFlags().StringVarP(
 		&rootCmd.config.Workdir,
