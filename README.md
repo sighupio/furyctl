@@ -32,8 +32,8 @@
 Prerequisites:
 
 - `make`
-- `go >= 1.19`
-- `goreleaser >= 1.11.4`
+- `go == v1.19`
+- `goreleaser == v1.11.4`
 
 To build `furyctl` from source, follow the next steps:
 
@@ -136,7 +136,7 @@ See all the available commands and their usage by running `furyctl help`.
 > **Warning**
 > furyctl-ng alpha only
 >
-> `furyctl-ng` is compatible with KFD versions 1.22.1, 1.23.3 and 1.24.0, but you will need to use the flag `--distro-location git::git@github.com:sighupio/fury-distribution.git?ref=feature/furyctl-next`
+> `furyctl-ng` is compatible with KFD versions 1.22.1, 1.23.3 and 1.24.0, but you will need to use the flag `--distro-location 'git::git@github.com:sighupio/fury-distribution.git?depth=1&ref=feature/furyctl-next'`
 > in *every command* until the next release of the KFD.
 
 ### Basic Usage
