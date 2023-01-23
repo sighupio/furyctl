@@ -24,6 +24,7 @@ import (
 	"github.com/sighupio/furyctl/internal/cluster"
 	"github.com/sighupio/furyctl/internal/template"
 	"github.com/sighupio/furyctl/internal/tool/terraform"
+	bytesx "github.com/sighupio/furyctl/internal/x/bytes"
 	execx "github.com/sighupio/furyctl/internal/x/exec"
 	iox "github.com/sighupio/furyctl/internal/x/io"
 	kubex "github.com/sighupio/furyctl/internal/x/kube"
@@ -201,7 +202,7 @@ func (k *Kubernetes) copyFromTemplate() error {
 	return nil
 }
 
-//nolint:gocyclo,maintidx,gocognit,funlen,revive,cyclop // it will be refactored
+//nolint:gocyclo,maintidx,funlen // it will be refactored
 func (k *Kubernetes) createTfVars() error {
 	var buffer bytes.Buffer
 
@@ -263,12 +264,20 @@ func (k *Kubernetes) createTfVars() error {
 		}
 	}
 
-	_, err := buffer.WriteString(fmt.Sprintf("cluster_name = \"%v\"\n", k.furyctlConf.Metadata.Name))
+	err := bytesx.SafeWriteToBuffer(
+		&buffer,
+		"cluster_name = \"%v\"\n",
+		k.furyctlConf.Metadata.Name,
+	)
 	if err != nil {
 		return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
 	}
 
-	_, err = buffer.WriteString(fmt.Sprintf("cluster_version = \"%v\"\n", k.kfdManifest.Kubernetes.Eks.Version))
+	err = bytesx.SafeWriteToBuffer(
+		&buffer,
+		"cluster_version = \"%v\"\n",
+		k.kfdManifest.Kubernetes.Eks.Version,
+	)
 	if err != nil {
 		return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
 	}
@@ -281,7 +290,11 @@ func (k *Kubernetes) createTfVars() error {
 		vpcIDSource = new(schema.TypesAwsVpcId)
 	}
 
-	_, err = buffer.WriteString(fmt.Sprintf("network = \"%v\"\n", *vpcIDSource))
+	err = bytesx.SafeWriteToBuffer(
+		&buffer,
+		"network = \"%v\"\n",
+		*vpcIDSource,
+	)
 	if err != nil {
 		return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
 	}
@@ -292,7 +305,11 @@ func (k *Kubernetes) createTfVars() error {
 		subnetIds[i] = fmt.Sprintf("\"%v\"", subnetID)
 	}
 
-	_, err = buffer.WriteString(fmt.Sprintf("subnetworks = [%v]\n", strings.Join(subnetIds, ",")))
+	err = bytesx.SafeWriteToBuffer(
+		&buffer,
+		"subnetworks = [%v]\n",
+		strings.Join(subnetIds, ","),
+	)
 	if err != nil {
 		return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
 	}
@@ -303,13 +320,19 @@ func (k *Kubernetes) createTfVars() error {
 		dmzCidrRange[i] = fmt.Sprintf("\"%v\"", cidr)
 	}
 
-	_, err = buffer.WriteString(fmt.Sprintf("dmz_cidr_range = [%v]\n", strings.Join(dmzCidrRange, ",")))
+	err = bytesx.SafeWriteToBuffer(
+		&buffer,
+		"dmz_cidr_range = [%v]\n",
+		strings.Join(dmzCidrRange, ","),
+	)
 	if err != nil {
 		return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
 	}
 
-	_, err = buffer.WriteString(
-		fmt.Sprintf("ssh_public_key = \"%v\"\n", k.furyctlConf.Spec.Kubernetes.NodeAllowedSshPublicKey),
+	err = bytesx.SafeWriteToBuffer(
+		&buffer,
+		"ssh_public_key = \"%v\"\n",
+		k.furyctlConf.Spec.Kubernetes.NodeAllowedSshPublicKey,
 	)
 	if err != nil {
 		return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
@@ -323,7 +346,11 @@ func (k *Kubernetes) createTfVars() error {
 			return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
 		}
 
-		_, err = buffer.WriteString(fmt.Sprintf("tags = %v\n", string(tags)))
+		err = bytesx.SafeWriteToBuffer(
+			&buffer,
+			"tags = %v\n",
+			string(tags),
+		)
 		if err != nil {
 			return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
 		}
@@ -331,11 +358,10 @@ func (k *Kubernetes) createTfVars() error {
 
 	if k.furyctlConf.Spec.Kubernetes.AwsAuth != nil {
 		if len(k.furyctlConf.Spec.Kubernetes.AwsAuth.AdditionalAccounts) > 0 {
-			_, err = buffer.WriteString(
-				fmt.Sprintf(
-					"eks_map_accounts = [\"%v\"]\n",
-					strings.Join(k.furyctlConf.Spec.Kubernetes.AwsAuth.AdditionalAccounts, "\",\""),
-				),
+			err = bytesx.SafeWriteToBuffer(
+				&buffer,
+				"eks_map_accounts = [\"%v\"]\n",
+				strings.Join(k.furyctlConf.Spec.Kubernetes.AwsAuth.AdditionalAccounts, "\",\""),
 			)
 			if err != nil {
 				return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
@@ -343,56 +369,74 @@ func (k *Kubernetes) createTfVars() error {
 		}
 
 		if len(k.furyctlConf.Spec.Kubernetes.AwsAuth.Users) > 0 {
-			_, err = buffer.WriteString("eks_map_users = [\n")
+			err = bytesx.SafeWriteToBuffer(
+				&buffer,
+				"eks_map_users = [\n",
+			)
 			if err != nil {
 				return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
 			}
 
-			for _, account := range k.furyctlConf.Spec.Kubernetes.AwsAuth.Users {
-				_, err = buffer.WriteString(
-					fmt.Sprintf(
-						`{
-						groups = ["%v"]
-						username = "%v"
-						userarn = "%v"
-					},`,
-						strings.Join(account.Groups, "\",\""), account.Username, account.Userarn,
-					),
+			for i, account := range k.furyctlConf.Spec.Kubernetes.AwsAuth.Users {
+				content := "{\ngroups = [\"%v\"]\nusername = \"%v\"\nuserarn = \"%v\"}"
+
+				if i < len(k.furyctlConf.Spec.Kubernetes.AwsAuth.Users)-1 {
+					content += ","
+				}
+
+				err = bytesx.SafeWriteToBuffer(
+					&buffer,
+					content,
+					strings.Join(account.Groups, "\",\""),
+					account.Username,
+					account.Userarn,
 				)
 				if err != nil {
 					return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
 				}
 			}
 
-			_, err = buffer.WriteString("]\n")
+			err = bytesx.SafeWriteToBuffer(
+				&buffer,
+				"]\n",
+			)
 			if err != nil {
 				return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
 			}
 		}
 
 		if len(k.furyctlConf.Spec.Kubernetes.AwsAuth.Roles) > 0 {
-			_, err = buffer.WriteString("eks_map_roles = [\n")
+			err = bytesx.SafeWriteToBuffer(
+				&buffer,
+				"eks_map_roles = [\n",
+			)
 			if err != nil {
 				return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
 			}
 
-			for _, account := range k.furyctlConf.Spec.Kubernetes.AwsAuth.Roles {
-				_, err = buffer.WriteString(
-					fmt.Sprintf(
-						`{
-						groups = ["%v"]
-						username = "%v"
-						rolearn = "%v"
-					},`,
-						strings.Join(account.Groups, "\",\""), account.Username, account.Rolearn,
-					),
+			for i, account := range k.furyctlConf.Spec.Kubernetes.AwsAuth.Roles {
+				content := "{\ngroups = [\"%v\"]\nusername = \"%v\"\nrolearn = \"%v\"}"
+
+				if i < len(k.furyctlConf.Spec.Kubernetes.AwsAuth.Roles)-1 {
+					content += ","
+				}
+
+				err = bytesx.SafeWriteToBuffer(
+					&buffer,
+					content,
+					strings.Join(account.Groups, "\",\""),
+					account.Username,
+					account.Rolearn,
 				)
 				if err != nil {
 					return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
 				}
 			}
 
-			_, err = buffer.WriteString("]\n")
+			err = bytesx.SafeWriteToBuffer(
+				&buffer,
+				"]\n",
+			)
 			if err != nil {
 				return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
 			}
@@ -400,23 +444,36 @@ func (k *Kubernetes) createTfVars() error {
 	}
 
 	if len(k.furyctlConf.Spec.Kubernetes.NodePools) > 0 {
-		_, err = buffer.WriteString("node_pools = [\n")
+		err = bytesx.SafeWriteToBuffer(
+			&buffer,
+			"node_pools = [\n",
+		)
 		if err != nil {
 			return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
 		}
 
 		for _, np := range k.furyctlConf.Spec.Kubernetes.NodePools {
-			_, err = buffer.WriteString("{\n")
+			err = bytesx.SafeWriteToBuffer(
+				&buffer,
+				"{\n",
+			)
 			if err != nil {
 				return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
 			}
 
-			_, err = buffer.WriteString(fmt.Sprintf("name = \"%v\"\n", np.Name))
+			err = bytesx.SafeWriteToBuffer(
+				&buffer,
+				"name = \"%v\"\n",
+				np.Name,
+			)
 			if err != nil {
 				return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
 			}
 
-			_, err = buffer.WriteString("version = null\n")
+			err = bytesx.SafeWriteToBuffer(
+				&buffer,
+				"version = null\n",
+			)
 			if err != nil {
 				return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
 			}
@@ -427,22 +484,38 @@ func (k *Kubernetes) createTfVars() error {
 				spot = strconv.FormatBool(*np.Instance.Spot)
 			}
 
-			_, err = buffer.WriteString(fmt.Sprintf("spot_instance = %v\n", spot))
+			err = bytesx.SafeWriteToBuffer(
+				&buffer,
+				"spot_instance = %v\n",
+				spot,
+			)
 			if err != nil {
 				return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
 			}
 
-			_, err = buffer.WriteString(fmt.Sprintf("min_size = %v\n", np.Size.Min))
+			err = bytesx.SafeWriteToBuffer(
+				&buffer,
+				"min_size = %v\n",
+				np.Size.Min,
+			)
 			if err != nil {
 				return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
 			}
 
-			_, err = buffer.WriteString(fmt.Sprintf("max_size = %v\n", np.Size.Max))
+			err = bytesx.SafeWriteToBuffer(
+				&buffer,
+				"max_size = %v\n",
+				np.Size.Max,
+			)
 			if err != nil {
 				return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
 			}
 
-			_, err = buffer.WriteString(fmt.Sprintf("instance_type = \"%v\"\n", np.Instance.Type))
+			err = bytesx.SafeWriteToBuffer(
+				&buffer,
+				"instance_type = \"%v\"\n",
+				np.Instance.Type,
+			)
 			if err != nil {
 				return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
 			}
@@ -454,11 +527,11 @@ func (k *Kubernetes) createTfVars() error {
 					attachedTargetGroups[i] = fmt.Sprintf("\"%v\"", tg)
 				}
 
-				_, err = buffer.WriteString(
-					fmt.Sprintf(
-						"eks_target_group_arns = [%v]\n",
-						strings.Join(attachedTargetGroups, ","),
-					))
+				err = bytesx.SafeWriteToBuffer(
+					&buffer,
+					"eks_target_group_arns = [%v]\n",
+					strings.Join(attachedTargetGroups, ","),
+				)
 				if err != nil {
 					return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
 				}
@@ -470,63 +543,18 @@ func (k *Kubernetes) createTfVars() error {
 				volumeSize = *np.Instance.VolumeSize
 			}
 
-			_, err = buffer.WriteString(fmt.Sprintf("volume_size = %v\n", volumeSize))
+			err = bytesx.SafeWriteToBuffer(
+				&buffer,
+				"volume_size = %v\n",
+				volumeSize,
+			)
 			if err != nil {
 				return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
 			}
 
-			if len(np.AdditionalFirewallRules) > 0 {
-				_, err = buffer.WriteString("additional_firewall_rules = [\n")
-				if err != nil {
-					return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
-				}
-
-				for _, fwRule := range np.AdditionalFirewallRules {
-					fwRuleTags := "{}"
-
-					if len(fwRule.Tags) > 0 {
-						var tags []byte
-
-						tags, err := json.Marshal(fwRule.Tags)
-						if err != nil {
-							return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
-						}
-
-						fwRuleTags = string(tags)
-					}
-
-					_, err = buffer.WriteString(
-						fmt.Sprintf(
-							`{
-								name = "%v"
-								direction = "%v"
-								cidr_block = "%v"
-								protocol = "%v"
-								ports = "%v"
-								tags = %v
-							},`,
-							fwRule.Name,
-							fwRule.Type,
-							fwRule.CidrBlocks,
-							fwRule.Protocol,
-							fwRule.Ports,
-							fwRuleTags,
-						),
-					)
-					if err != nil {
-						return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
-					}
-				}
-
-				_, err = buffer.WriteString("]\n")
-				if err != nil {
-					return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
-				}
-			} else {
-				_, err = buffer.WriteString("additional_firewall_rules = []\n")
-				if err != nil {
-					return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
-				}
+			err = k.addFirewallRulesToNodePool(&buffer, np)
+			if err != nil {
+				return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
 			}
 
 			if len(np.SubnetIds) > 0 {
@@ -536,12 +564,19 @@ func (k *Kubernetes) createTfVars() error {
 					npSubNetIds[i] = fmt.Sprintf("\"%v\"", subnetID)
 				}
 
-				_, err = buffer.WriteString(fmt.Sprintf("subnetworks = [%v]\n", strings.Join(npSubNetIds, ",")))
+				err = bytesx.SafeWriteToBuffer(
+					&buffer,
+					"subnetworks = [%v]\n",
+					strings.Join(npSubNetIds, ","),
+				)
 				if err != nil {
 					return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
 				}
 			} else {
-				_, err = buffer.WriteString("subnetworks = null\n")
+				err = bytesx.SafeWriteToBuffer(
+					&buffer,
+					"subnetworks = null\n",
+				)
 				if err != nil {
 					return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
 				}
@@ -555,24 +590,38 @@ func (k *Kubernetes) createTfVars() error {
 					return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
 				}
 
-				_, err = buffer.WriteString(fmt.Sprintf("labels = %v\n", string(labels)))
+				err = bytesx.SafeWriteToBuffer(
+					&buffer,
+					"labels = %v\n",
+					string(labels),
+				)
 				if err != nil {
 					return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
 				}
 			} else {
-				_, err = buffer.WriteString("labels = {}\n")
+				err = bytesx.SafeWriteToBuffer(
+					&buffer,
+					"labels = {}\n",
+				)
 				if err != nil {
 					return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
 				}
 			}
 
 			if len(np.Taints) > 0 {
-				_, err = buffer.WriteString(fmt.Sprintf("taints = [\"%v\"]\n", strings.Join(np.Taints, "\",\"")))
+				err = bytesx.SafeWriteToBuffer(
+					&buffer,
+					"taints = [\"%v\"]\n",
+					strings.Join(np.Taints, "\",\""),
+				)
 				if err != nil {
 					return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
 				}
 			} else {
-				_, err = buffer.WriteString("taints = []\n")
+				err = bytesx.SafeWriteToBuffer(
+					&buffer,
+					"taints = []\n",
+				)
 				if err != nil {
 					return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
 				}
@@ -586,24 +635,37 @@ func (k *Kubernetes) createTfVars() error {
 					return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
 				}
 
-				_, err = buffer.WriteString(fmt.Sprintf("tags = %v\n", string(tags)))
+				err = bytesx.SafeWriteToBuffer(
+					&buffer,
+					"tags = %v\n",
+					string(tags),
+				)
 				if err != nil {
 					return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
 				}
 			} else {
-				_, err = buffer.WriteString("tags = {}\n")
+				err = bytesx.SafeWriteToBuffer(
+					&buffer,
+					"tags = {}\n",
+				)
 				if err != nil {
 					return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
 				}
 			}
 
-			_, err = buffer.WriteString("},\n")
+			err = bytesx.SafeWriteToBuffer(
+				&buffer,
+				"},\n",
+			)
 			if err != nil {
 				return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
 			}
 		}
 
-		_, err = buffer.WriteString("]\n")
+		err = bytesx.SafeWriteToBuffer(
+			&buffer,
+			"]\n",
+		)
 		if err != nil {
 			return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
 		}
@@ -614,6 +676,84 @@ func (k *Kubernetes) createTfVars() error {
 	err = os.WriteFile(targetTfVars, buffer.Bytes(), iox.FullRWPermAccess)
 	if err != nil {
 		return fmt.Errorf("error writing terraform vars file: %w", err)
+	}
+
+	return nil
+}
+
+func (*Kubernetes) addFirewallRulesToNodePool(buffer *bytes.Buffer, np schema.SpecKubernetesNodePool) error {
+	if len(np.AdditionalFirewallRules) > 0 {
+		err := bytesx.SafeWriteToBuffer(
+			buffer,
+			"additional_firewall_rules = [\n",
+		)
+		if err != nil {
+			return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
+		}
+
+		for i, fwRule := range np.AdditionalFirewallRules {
+			fwRuleTags := "{}"
+
+			if len(fwRule.Tags) > 0 {
+				var tags []byte
+
+				tags, err := json.Marshal(fwRule.Tags)
+				if err != nil {
+					return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
+				}
+
+				fwRuleTags = string(tags)
+			}
+
+			content := "{\nname = \"%v\"\ndirection = \"%v\"\ncidr_block = %v\nprotocol = \"%v\"\n" +
+				"ports = \"%v\"\ntags = %v\n}"
+
+			if i < len(np.AdditionalFirewallRules)-1 {
+				content += ","
+			}
+
+			dmzCidrRanges := make([]string, len(fwRule.CidrBlocks))
+
+			for i, cidr := range fwRule.CidrBlocks {
+				dmzCidrRanges[i] = fmt.Sprintf("\"%v\"", cidr)
+			}
+
+			cidrRange := ""
+
+			if len(dmzCidrRanges) > 0 {
+				cidrRange = dmzCidrRanges[0]
+			}
+
+			err = bytesx.SafeWriteToBuffer(
+				buffer,
+				content,
+				fwRule.Name,
+				fwRule.Type,
+				cidrRange,
+				fwRule.Protocol,
+				fmt.Sprintf("%v-%v", fwRule.Ports.From, fwRule.Ports.To),
+				fwRuleTags,
+			)
+			if err != nil {
+				return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
+			}
+		}
+
+		err = bytesx.SafeWriteToBuffer(
+			buffer,
+			"]\n",
+		)
+		if err != nil {
+			return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
+		}
+	} else {
+		err := bytesx.SafeWriteToBuffer(
+			buffer,
+			"additional_firewall_rules = []\n",
+		)
+		if err != nil {
+			return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
+		}
 	}
 
 	return nil
