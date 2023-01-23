@@ -58,13 +58,10 @@ func NewRootCommand(
 	rootCmd := &RootCommand{
 		Command: &cobra.Command{
 			Use:   "furyctl",
-			Short: "The multi-purpose command line tool for the Kubernetes Fury Distribution",
+			Short: "The Swiss Army knife for the Kubernetes Fury Distribution",
 			Long: `The multi-purpose command line tool for the Kubernetes Fury Distribution.
 
-Furyctl is a simple CLI tool to:
-
-- download and manage the Kubernetes Fury Distribution (KFD) modules
-- create and manage Kubernetes Fury clusters
+furyctl is a command line interface tool to manage the full lifecycle of a Kubernetes Fury Cluster.
 `,
 			SilenceUsage:  true,
 			SilenceErrors: true,
@@ -193,14 +190,14 @@ Furyctl is a simple CLI tool to:
 		"workdir",
 		"w",
 		"",
-		"Switch to a different working directory before executing the given subcommand.",
+		"Switch to a different working directory before executing the given subcommand",
 	)
 	rootCmd.PersistentFlags().StringVarP(
 		&rootCmd.config.Log,
 		"log",
 		"l",
 		"",
-		"Path to the log file or stdout to log to standard output (default: ~/.furyctl/furyctl.log)",
+		"Path to the log file or set to 'stdout' to log to standard output (default: ~/.furyctl/furyctl.log)",
 	)
 
 	rootCmd.AddCommand(NewCompletionCmd(tracker))

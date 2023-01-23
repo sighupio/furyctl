@@ -14,7 +14,7 @@ import (
 func NewDeleteCommand(tracker *analytics.Tracker) *cobra.Command {
 	deleteCmd := &cobra.Command{
 		Use:   "delete",
-		Short: "Delete a cluster",
+		Short: "Delete a cluster and its related infrastructure",
 	}
 
 	deleteCmd.AddCommand(del.NewClusterCmd(tracker))
