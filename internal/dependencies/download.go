@@ -14,6 +14,8 @@ import (
 	"reflect"
 	"strings"
 
+	"github.com/sirupsen/logrus"
+
 	"github.com/sighupio/fury-distribution/pkg/config"
 	"github.com/sighupio/furyctl/internal/dependencies/tools"
 	"github.com/sighupio/furyctl/internal/distribution"
@@ -50,6 +52,20 @@ type Downloader struct {
 
 func (dd *Downloader) DownloadAll(kfd config.KFD) ([]error, []string) {
 	errs := []error{}
+
+	vendorFolder := filepath.Join(dd.basePath, "vendor")
+
+	logrus.Debug("Cleaning vendor folder")
+
+	if err := iox.CheckDirIsEmpty(vendorFolder); err != nil {
+		err = os.RemoveAll(vendorFolder)
+		if err != nil {
+			logrus.Debugf("Error while cleaning vendor folder: %v", err)
+
+			return []error{fmt.Errorf("error removing folder: %w", err)}, nil
+		}
+	}
+
 	if err := dd.DownloadModules(kfd.Modules); err != nil {
 		errs = append(errs, err)
 	}
@@ -88,13 +104,6 @@ func (dd *Downloader) DownloadModules(modules config.KFDModules) error {
 		retries := map[string]int{}
 
 		dst := filepath.Join(dd.basePath, "vendor", "modules", name)
-
-		if err := iox.CheckDirIsEmpty(dst); err != nil {
-			err = os.RemoveAll(dst)
-			if err != nil {
-				return fmt.Errorf("error removing folder: %w", err)
-			}
-		}
 
 		for _, prefix := range []string{oldPrefix, newPrefix} {
 			src := fmt.Sprintf("git::git@github.com:sighupio/%s-%s.git?ref=%s", prefix, name, version)
@@ -162,13 +171,6 @@ func (dd *Downloader) DownloadInstallers(installers config.KFDKubernetes) error 
 		v, ok := insts.Field(i).Interface().(config.KFDProvider)
 		if !ok {
 			return fmt.Errorf("%s: %w", name, ErrModuleHasNoVersion)
-		}
-
-		if err := iox.CheckDirIsEmpty(dst); err != nil {
-			err = os.RemoveAll(dst)
-			if err != nil {
-				return fmt.Errorf("error removing folder: %w", err)
-			}
 		}
 
 		version := v.Installer
