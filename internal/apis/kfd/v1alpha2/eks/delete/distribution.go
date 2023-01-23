@@ -102,6 +102,12 @@ func (d *Distribution) Exec() error {
 		return nil
 	}
 
+	logrus.Info("Checking cluster connectivity...")
+
+	if _, err := d.kubeRunner.Version(); err != nil {
+		return errClusterConnect
+	}
+
 	if d.dryRun {
 		timestamp := time.Now().Unix()
 
@@ -161,12 +167,6 @@ func (d *Distribution) Exec() error {
 		}
 
 		return nil
-	}
-
-	logrus.Info("Checking cluster connectivity...")
-
-	if _, err := d.kubeRunner.Version(); err != nil {
-		return errClusterConnect
 	}
 
 	logrus.Info("Deleting ingresses...")
