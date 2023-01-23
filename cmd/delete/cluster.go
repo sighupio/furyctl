@@ -119,6 +119,7 @@ func NewClusterCmd(tracker *analytics.Tracker) *cobra.Command {
 				basePath,
 				flags.BinPath,
 				flags.Kubeconfig,
+				flags.DryRun,
 			)
 			if err != nil {
 				cmdEvent.AddErrorMessage(err)
@@ -149,7 +150,7 @@ func NewClusterCmd(tracker *analytics.Tracker) *cobra.Command {
 				}
 			}
 
-			err = clusterDeleter.Delete(flags.DryRun)
+			err = clusterDeleter.Delete()
 			if err != nil {
 				cmdEvent.AddErrorMessage(err)
 				tracker.Track(cmdEvent)
