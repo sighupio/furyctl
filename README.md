@@ -7,7 +7,7 @@
 <!-- FIXME: UPDATE THE BUILD BADGE WITH THE RIGHT BRANCH -->
 
 [![Build Status](https://ci.sighup.io/api/badges/sighupio/furyctl/status.svg?ref=refs/heads/furyctl-ng-alpha1)](https://ci.sighup.io/sighupio/furyctl)
-![Release](https://img.shields.io/badge/Furyctl%20Next%20Generation-alpha1-blue)
+![Release](https://img.shields.io/badge/furyctl%20Next%20Generation-alpha1-blue)
 ![Slack](https://img.shields.io/badge/slack-@kubernetes/fury-yellow.svg?logo=slack)
 ![License](https://img.shields.io/github/license/sighupio/furyctl)
 [![Go Report Card](https://goreportcard.com/badge/github.com/sighupio/furyctl)](https://goreportcard.com/report/github.com/sighupio/furyctl)
@@ -34,7 +34,7 @@
 > **Warning**
 > You are viewing the readme for furyctl next generation (`furyctl-ng` for short). This version is in `alpha` status.
 >
-> `furyctl-ng` supports EKS-based clusters in the first alpha.
+> `furyctl-ng` currently has support for EKS-based clusters only.
 
 ## Installation
 
@@ -43,12 +43,14 @@
 Prerequisites:
 
 - `make`
-- `go>=1.19`
-- `goreleaser>=1.11.4`
+- `go >= 1.19`
+- `goreleaser >= 1.11.4`
 
 To build `furyctl` from source, follow the next steps:
 
 1. clone the repository:
+
+<!-- FIXME: remove the branch swithing in the future -->
 
 ```console
 git clone git@github.com:sighupio/furyctl.git
@@ -130,12 +132,14 @@ INFO[0000] Furyctl version 0.10.0
 
 ## Usage
 
+See all the available commands and their usage by running `furyctl help`.
+
 > 💡 **TIP**
 >
 > Enable command tab autocompletion for `furyctl` on your shell (`bash`, `zsh`, `fish` are supported).
 > See the instruction on how to enable it with `furyctl completion --help`
 
-See all the available commands with `furyctl help`.
+<!-- line left blank as spacer -->
 
 > **Warning**
 > furyctl-ng alpha only
@@ -178,8 +182,7 @@ Once you have filled your configuration file, you can check that it's content is
 furyctl validate config --config <path to your config file>
 ```
 
-> **Note**
-> The `--config` flag is optional, set it if your configuration file is not named `furyctl.yaml`
+> **Note** the `--config` flag is optional, set it if your configuration file is not named `furyctl.yaml`
 
 #### 2. Create a cluster
 
@@ -213,6 +216,8 @@ Finally, to launch the creation of the resources defined in the configuration fi
 furyctl create cluster
 ```
 
+> **Note** the creation process can take a while.
+
 🎉 Congratulations! You have created your production-grade Kubernetes Fury Cluster from scratch and it's ready to go into battle.
 
 #### 3. Destroy a cluster
@@ -226,11 +231,11 @@ To destroy a cluster created using `furyctl` and all its related resources, run 
 furyctl delete cluster --dry-run
 ```
 
+check that the dry-run output is what you expected and then run the command again without the `--dry-run` flag to actually delete all the resources.
+
 > 💡 **TIP**
 >
 > Notice the `--dry-run` flag, used to first check what the command would do. This flag is available for other commands too.
-
-check that the dry-run output is what you expected and then run the command again without the `--dry-run` flag to actually delete all the resources.
 
 ### Advanced Usage
 
@@ -282,7 +287,7 @@ Same as the previous section, but you can skip the infrastructure creation phase
 by not filling the section `infrastructure` in the `furyctl.yaml` file and
 running `furyctl create cluster --skip-phase infrastructure`.
 
-### Deploy a cluster step by step
+#### Deploy a cluster step by step
 
 The cluster creation process can be split into three phases:
 
@@ -312,7 +317,7 @@ to use the flag `--kubeconfig` in the following command.
 furyctl create cluster --phase distribution
 ```
 
-#### Infrastructure
+##### Infrastructure
 
 The available `infrastructure` provisioners are:
 
@@ -320,7 +325,7 @@ The available `infrastructure` provisioners are:
 | ----------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `aws`       | It creates a VPC with all the requirements to deploy a Kubernetes Cluster. It also includes a VPN instance easily manageable by using `furyagent`. |
 
-#### Kubernetes
+##### Kubernetes
 
 The available `kubernetes` provisioners are:
 
