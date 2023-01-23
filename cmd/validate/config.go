@@ -20,7 +20,7 @@ import (
 )
 
 var (
-	ErrValidationFailed = fmt.Errorf("config validation failed")
+	ErrValidationFailed = fmt.Errorf("configuration file validation failed")
 	ErrParsingFlag      = errors.New("error while parsing flag")
 )
 
@@ -29,7 +29,7 @@ func NewConfigCmd(tracker *analytics.Tracker) *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "config",
-		Short: "Validate furyctl.yaml file",
+		Short: "Validate configuration file",
 		PreRun: func(cmd *cobra.Command, _ []string) {
 			cmdEvent = analytics.NewCommandEvent(cobrax.GetFullname(cmd))
 		},
@@ -71,9 +71,9 @@ func NewConfigCmd(tracker *analytics.Tracker) *cobra.Command {
 				return ErrValidationFailed
 			}
 
-			logrus.Info("config validation succeeded")
+			logrus.Info("configuration file validation succeeded")
 
-			cmdEvent.AddSuccessMessage("config validation succeeded")
+			cmdEvent.AddSuccessMessage("configuration file validation succeeded")
 			tracker.Track(cmdEvent)
 
 			return nil
@@ -84,7 +84,7 @@ func NewConfigCmd(tracker *analytics.Tracker) *cobra.Command {
 		"config",
 		"c",
 		"furyctl.yaml",
-		"Path to the furyctl.yaml file",
+		"Path to the configuration file",
 	)
 
 	cmd.Flags().StringP(
@@ -93,7 +93,7 @@ func NewConfigCmd(tracker *analytics.Tracker) *cobra.Command {
 		"",
 		"Base URL used to download schemas, defaults and the distribution manifest. "+
 			"It can either be a local path(eg: /path/to/fury/distribution) or "+
-			"a remote URL(eg: git::git@github.com:sighupio/fury-distribution?ref=BRANCH_NAME&depth=1)."+
+			"a remote URL(eg: git::git@github.com:sighupio/fury-distribution?depth=1&ref=BRANCH_NAME)."+
 			"Any format supported by hashicorp/go-getter can be used.",
 	)
 

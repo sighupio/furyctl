@@ -29,7 +29,7 @@ func NewConfigCmd(tracker *analytics.Tracker) *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "config",
-		Short: "Scaffolds a new furyctl config file",
+		Short: "Scaffolds a new furyctl configuration file",
 		PreRun: func(cmd *cobra.Command, _ []string) {
 			cmdEvent = analytics.NewCommandEvent(cobrax.GetFullname(cmd))
 		},
@@ -115,12 +115,12 @@ func NewConfigCmd(tracker *analytics.Tracker) *cobra.Command {
 				cmdEvent.AddErrorMessage(err)
 				tracker.Track(cmdEvent)
 
-				return fmt.Errorf("failed to create config file: %w", err)
+				return fmt.Errorf("failed to create configuration file: %w", err)
 			}
 
-			logrus.Infof("Config file created successfully at: %s", out.Name())
+			logrus.Infof("Configuration file created successfully at: %s", out.Name())
 
-			cmdEvent.AddSuccessMessage(fmt.Sprintf("Config file created successfully at: %s", out.Name()))
+			cmdEvent.AddSuccessMessage(fmt.Sprintf("Configuration file created successfully at: %s", out.Name()))
 			tracker.Track(cmdEvent)
 
 			return nil
@@ -131,7 +131,7 @@ func NewConfigCmd(tracker *analytics.Tracker) *cobra.Command {
 		"config",
 		"c",
 		"furyctl.yaml",
-		"Path to the furyctl.yaml file",
+		"Path to the configuration file",
 	)
 
 	cmd.Flags().StringP(
@@ -140,7 +140,7 @@ func NewConfigCmd(tracker *analytics.Tracker) *cobra.Command {
 		"",
 		"Base URL used to download schemas, defaults and the distribution manifest. "+
 			"It can either be a local path(eg: /path/to/fury/distribution) or "+
-			"a remote URL(eg: git::git@github.com:sighupio/fury-distribution?ref=BRANCH_NAME&depth=1)."+
+			"a remote URL(eg: git::git@github.com:sighupio/fury-distribution?depth=1&ref=BRANCH_NAME)."+
 			"Any format supported by hashicorp/go-getter can be used.",
 	)
 
@@ -162,7 +162,7 @@ func NewConfigCmd(tracker *analytics.Tracker) *cobra.Command {
 		"api-version",
 		"a",
 		"kfd.sighup.io/v1alpha2",
-		"Version of the api to use for the selected kind (eg: kfd.sighup.io/v1alpha2)",
+		"Version of the API to use for the selected kind (eg: kfd.sighup.io/v1alpha2)",
 	)
 
 	cmd.Flags().StringP(
