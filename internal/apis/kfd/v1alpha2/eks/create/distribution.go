@@ -123,7 +123,6 @@ func (d *Distribution) Exec() error {
 	logrus.Info("Checking cluster connectivity...")
 
 	if _, err := d.kubeRunner.Version(); err != nil {
-
 		if !d.dryRun {
 			return errClusterConnect
 		}
