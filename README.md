@@ -35,7 +35,11 @@ Prerequisites:
 - `go == v1.19`
 - `goreleaser == v1.11.4`
 
-> You can install `goreleaser` with the following command once you have Go in your system: `go install github.com/goreleaser/goreleaser@v1.11.4`
+> You can install `goreleaser` with the following command once you have Go in your system: 
+>
+> ```console
+> go install github.com/goreleaser/goreleaser@v1.11.4
+> ```
 
 To install `furyctl` from source, follow the next steps:
 
@@ -70,13 +74,13 @@ dist/furyctl_windows_amd64_v1
 
 4. Check that the binary is working as expected:
 
-> **Note** replace darwin with your OS and amd64 with your architecture in the following commands.
+> **Note** replace `darwin` with your OS and `amd64` with your architecture in the following commands.
 
 ```console
 ./dist/furyctl_darwin_amd64_v1/furyctl version
 ```
 
-5. (optional) copy the binary to your `bin` folder:
+5. (optional) move the binary to your `bin` folder, in macOS:
 
 ```console
 sudo mv ./dist/furyctl_darwin_amd64_v1/furyctl /usr/local/bin/furyctl
@@ -169,7 +173,7 @@ furyctl create config --version <KFD version> --kind "EKSCluster"
 >
 > See `furyctl create config --help` for more details.
 
-Open the generated configuration file with your editor of choice (`vi`) and edit it according to your needs. You can follow the instructions included as comments in the file.
+Open the generated configuration file with your editor of choice and edit it according to your needs. You can follow the instructions included as comments in the file.
 
 Once you have filled your configuration file, you can check that it's content is valid by running the following comand:
 
@@ -227,7 +231,7 @@ check that the dry-run output is what you expected and then run the command agai
 
 > 💡 **TIP**
 >
-> Notice the `--dry-run` flag, used to first check what the command would do. This flag is available for other commands too.
+> Notice the `--dry-run` flag, used to check what the command would do. This flag is available for other commands too.
 
 ### Advanced Usage
 
