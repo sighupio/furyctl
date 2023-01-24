@@ -120,14 +120,15 @@ func (d *Distribution) Exec() error {
 
 	logrus.Info("Running distribution phase")
 
-	logrus.Info("Checking cluster connectivity...")
+	logrus.Info("Checking that the cluster is reachable...")
 
 	if _, err := d.kubeRunner.Version(); err != nil {
 		if !d.dryRun {
 			return errClusterConnect
 		}
+		logrus.Debugf("Got error while running cluster reachability check: %s", err)
 
-		logrus.Warnf("Cluster is unreachable, make sure to check connectivity before " +
+		logrus.Warnf("Cluster is unreachable, make sure it is reachable before " +
 			"running the command without --dry-run")
 	}
 
