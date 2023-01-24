@@ -20,9 +20,9 @@
 <!-- line left blank -->
 > 💡 Learn more about the Kubernetes Fury Distribution in the [official site](https://kubernetesfury.com).
 <!-- line left blank -->
-> **Warning** you are viewing the readme for furyctl next generation (`furyctl-ng` for short). This version is in `alpha` status.
+> **Warning** you are viewing the readme for furyctl next generation (`furyctl-ng` for short).
 >
-> `furyctl-ng` currently has support for EKS-based clusters only.
+> `furyctl-ng` is in `alpha` status and currently supports EKS-based clusters only.
 
 ## Installation
 
@@ -34,9 +34,11 @@ Prerequisites:
 - `go == v1.19`
 - `goreleaser == v1.11.4`
 
-To build `furyctl` from source, follow the next steps:
+> You can install `goreleaser` with the following command once you have Go in your system: `go install github.com/goreleaser/goreleaser@v1.11.4`
 
-1. clone the repository:
+To install `furyctl` from source, follow the next steps:
+
+1. Clone the repository:
 
 <!-- FIXME: remove the branch swithing in the future -->
 ```console
@@ -47,13 +49,13 @@ cd furyctl
 git switch furyctl-ng-alpha1
 ```
 
-2. build the binaries by running the following command:
+2. Build the binaries by running the following command:
 
 ```console
 make build
 ```
 
-3. you will find the binaries for Linux, Darwin (macOS) and Windows for your current architecture in the `dist` folder:
+3. You will find the binaries for Linux, Darwin (macOS) and Windows for your current architecture inside the `dist` folder:
 
 ```console
 $ tree dist/furyctl_*/
@@ -65,17 +67,17 @@ dist/furyctl_windows_amd64_v1
 └── furyctl.exe
 ```
 
-4. check that the binary is working as expected:
+4. Check that the binary is working as expected:
+
+> **Note** replace darwin with your OS and amd64 with your architecture in the following commands.
 
 ```console
-# replace darwin with your OS and amd64 with your architecture
 ./dist/furyctl_darwin_amd64_v1/furyctl version
 ```
 
 5. (optional) copy the binary to your `bin` folder:
 
 ```console
-# replace darwin with your OS and amd64 with your architecture
 sudo mv ./dist/furyctl_darwin_amd64_v1/furyctl /usr/local/bin/furyctl
 ```
 
@@ -133,14 +135,14 @@ See all the available commands and their usage by running `furyctl help`.
 <!-- line left blank as spacer -->
 
 > **Warning**
-> furyctl-ng alpha only
+> (furyctl-ng alpha version only)
 >
 > `furyctl-ng` is compatible with KFD versions 1.22.1, 1.23.3 and 1.24.0, but you will need to use the flag `--distro-location 'git::git@github.com:sighupio/fury-distribution.git?depth=1&ref=feature/furyctl-next'`
 > in *every command* until the next release of the KFD.
 
 ### Basic Usage
 
-Basic usage of `fuyrctl` for a new project consists on the following steps:
+Basic usage of `furyctl` for a new project consists on the following steps:
 
 1. Creating a configuration file defining the prequired infrastructure, Kubernetes cluster details, and KFD modules configuration.
 2. Creating a cluster as defined in the configuration file.
@@ -148,24 +150,25 @@ Basic usage of `fuyrctl` for a new project consists on the following steps:
 
 #### 1. Create a configuration file
 
-`furyctl` provides a command that outputs a sample configuration file (by default called `furyctl.yaml`) with all the possible fields commented.
+`furyctl` provides a command that outputs a sample configuration file (by default called `furyctl.yaml`) with all the possible fields explained in comments.
+
+furyctl configuration files have a kind, that specifies what type of cluster will be created, for example the `EKSCluster` kind has all the parameters needed to create a KFD cluster using the EKS managed clusters from AWS.
+
+Additionaly, the schema of the file is versioned with the `apiVersion` field, so when new features are introduced you can switch to a newer version of the configuration file structure.
+
 To create a sample configuration file as a starting point use the following command:
 
 ```console
-furyctl create config --version <KFD version> 
+furyctl create config --version <KFD version> --kind "EKSCluster"
 ```
 
 > 💡 **TIP**
 >
-> You can pass some additional flags, like the kind of cluster or the configuration file name.
+> You can pass some additional flags, like the schema (API) version of the configuration file or a different configuration file name.
 >
 > See `furyctl create config --help` for more details.
 
-Open the generated configuration file and edit it according to your needs. You can follow the instructions included as comments in the file.
-
-furyctl's configuration files have a kind, that specifies what type of cluster will be created, for example the `EKSCluster` kind has all the parameters needed to create a KFD cluster using the EKS managed clusters from AWS.
-
-Additionaly, the schema of the file is versioned with the `apiVersion` field, so when new features are introduced you can switch to a newer version of the configuration file structure.
+Open the generated configuration file with your editor of choice (`vi`) and edit it according to your needs. You can follow the instructions included as comments in the file.
 
 Once you have filled your configuration file, you can check that it's content is valid by running the following comand:
 
@@ -177,19 +180,19 @@ furyctl validate config --config <path to your config file>
 
 #### 2. Create a cluster
 
-In the previous step, you have created and validated a configuration file that defines the cluster and its sorroundings, you can now proceed to actually creating the resources.
+In the previous step, you have created and validated a configuration file that defines the Kubernetes cluster and its sorroundings, you can now proceed to actually creating the resources.
 
-furcytl has divided the cluster creation in three phases: `infrastructure`, `kubernetes` and `distribution`.
+furyctl has divided the cluster creation in three phases: `infrastructure`, `kubernetes` and `distribution`.
 
-- The first phase, `infrastructure`, creates all the prerequisites needed to be able to create a cluster. For example, the VPC and its networks.
-- The second phase, `kubernetes`, creates the actual Kubernetes clusters. For example, the EKS cluster with its node pools.
-- The third phase, `distribution`, deploys KFD modules to the Kubernetes cluster.
+1. The first phase, `infrastructure`, creates all the prerequisites needed to be able to create a cluster. For example, the VPC and its networks.
+2. The second phase, `kubernetes`, creates the actual Kubernetes clusters. For example, the EKS cluster and its node pools.
+3. The third phase, `distribution`, deploys KFD modules to the Kubernetes cluster.
 
 > 💡 You may find these phases familiar from editing the configuration file.
 
-Just like you can validate that your configuration file is well formed. `furyctl` let's you check that you have all the needed dependencies (environment variables, binaries, etc.) before starting a cluster creation process.
+Just like you can validate that your configuration file is well formed, `furyctl` let's you check that you have all the needed dependencies (environment variables, binaries, etc.) before starting a cluster creation process.
 
-To validate that you have all the dependencies needed to create the cluster defined in your configuration file, run the following command:
+To validate that your system has all the dependencies needed to create the cluster defined in your configuration file, run the following command:
 
 ```console
 furyctl validate dependencies
@@ -210,6 +213,7 @@ furyctl create cluster
 #### 3. Destroy a cluster
 
 Destroying a cluster can be thought as running the creation phases in reverse order. `furyctl` automates this operation for you.
+
 To destroy a cluster created using `furyctl` and all its related resources, run the following command:
 
 > **Warning** you are about to run a destructive operation.
@@ -249,7 +253,7 @@ Modules are located in the `distribution` section of the `furyctl.yaml` file and
 Run `furyctl download dependencies` (within the same directory where your `furyctl.yaml` is located) to download the modules and all the dependencies
 needed to create a Kubernetes Fury cluster.
 
-> 🔥 **Advanced User**
+> 🔥 **Advanced Tip**
 >
 > Using the command `furyctl dump template` with the flag `-w` pointing to the local location of the repository `fury-distribution`,
 > will run the template engine on the modules and generate the final manifests that will be applied to the cluster.
@@ -274,9 +278,9 @@ running `furyctl create cluster --skip-phase infrastructure`.
 
 The cluster creation process can be split into three phases:
 
-- Infrastructure
-- Kubernetes
-- Distribution
+1. Infrastructure
+2. Kubernetes
+3. Distribution
 
 The `furyctl create cluster` command will execute all the phases by default,
 but you can limit the execution to a specific phase by using the `--phase` flag.
