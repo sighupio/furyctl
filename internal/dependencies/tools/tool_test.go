@@ -97,10 +97,19 @@ func TestHelperProcess(t *testing.T) {
 	case "kubectl":
 		switch subcmd {
 		case "version":
-			fmt.Fprintf(os.Stdout, "Client Version: version.Info{Major:\"1\", "+
-				"Minor:\"21\", GitVersion:\"v1.21.1\", GitCommit:\"xxxxx\", "+
-				"GitTreeState:\"clean\", BuildDate:\"2021-05-12T14:00:00Z\", "+
-				"GoVersion:\"go1.16.4\", Compiler:\"gc\", Platform:\"darwin/amd64\"}\n")
+			fmt.Fprintf(os.Stdout, "{\n"+
+				"\"clientVersion\": {\n"+
+				"\"major\": \"1\",\n"+
+				"\"minor\": \"21\",\n"+
+				"\"gitVersion\": \"v1.21.1\",\n"+
+				"\"gitCommit\": \"xxxxx\",\n"+
+				"\"gitTreeState\": \"clean\",\n"+
+				"\"buildDate\": \"2021-05-12T14:00:00Z\",\n"+
+				"\"goVersion\": \"go1.16.4\",\n"+
+				"\"compiler\": \"gc\",\n"+
+				"\"platform\": \"darwin/amd64\"\n"+
+				"}\n"+
+				"}\n")
 		}
 	case "kustomize":
 		switch subcmd {
