@@ -20,11 +20,11 @@ func NewKubectl(runner *kubectl.Runner, version string) *Kubectl {
 		os:      runtime.GOOS,
 		version: version,
 		checker: &checker{
-			regex:  regexp.MustCompile("GitVersion:\"([^\"]*)\""),
+			regex:  regexp.MustCompile("\"gitVersion\": \"v([^\"]*)\""),
 			runner: runner,
 			trimFn: func(tokens []string) string {
 				return strings.TrimRight(
-					strings.TrimLeft(tokens[len(tokens)-1], "\"v"),
+					strings.TrimLeft(tokens[len(tokens)-1], " \"v"),
 					"\"",
 				)
 			},
