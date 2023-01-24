@@ -72,11 +72,11 @@ Furyctl is a simple CLI tool to:
 				var err error
 
 				if cmd.Name() == "__complete" {
-					old := cmd.PreRun
+					oldPreRunFunc := cmd.PreRun
 
 					cmd.PreRun = func(cmd *cobra.Command, args []string) {
-						if old != nil {
-							old(cmd, args)
+						if oldPreRunFunc != nil {
+							oldPreRunFunc(cmd, args)
 						}
 
 						logrus.SetLevel(logrus.FatalLevel)
