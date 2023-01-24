@@ -14,6 +14,8 @@ import (
 	"reflect"
 	"strings"
 
+	"github.com/sirupsen/logrus"
+
 	"github.com/sighupio/fury-distribution/pkg/config"
 	"github.com/sighupio/furyctl/internal/dependencies/tools"
 	"github.com/sighupio/furyctl/internal/distribution"
@@ -50,6 +52,20 @@ type Downloader struct {
 
 func (dd *Downloader) DownloadAll(kfd config.KFD) ([]error, []string) {
 	errs := []error{}
+
+	vendorFolder := filepath.Join(dd.basePath, "vendor")
+
+	logrus.Debug("Cleaning vendor folder")
+
+	if err := iox.CheckDirIsEmpty(vendorFolder); err != nil {
+		err = os.RemoveAll(vendorFolder)
+		if err != nil {
+			logrus.Debugf("Error while cleaning vendor folder: %v", err)
+
+			return []error{fmt.Errorf("error removing folder: %w", err)}, nil
+		}
+	}
+
 	if err := dd.DownloadModules(kfd.Modules); err != nil {
 		errs = append(errs, err)
 	}
@@ -87,6 +103,8 @@ func (dd *Downloader) DownloadModules(modules config.KFDModules) error {
 		errs := []error{}
 		retries := map[string]int{}
 
+		dst := filepath.Join(dd.basePath, "vendor", "modules", name)
+
 		for _, prefix := range []string{oldPrefix, newPrefix} {
 			src := fmt.Sprintf("git::git@github.com:sighupio/%s-%s.git?ref=%s", prefix, name, version)
 
@@ -118,7 +136,7 @@ func (dd *Downloader) DownloadModules(modules config.KFDModules) error {
 				continue
 			}
 
-			if err := dd.client.Download(src, filepath.Join(dd.basePath, "vendor", "modules", name)); err != nil {
+			if err := dd.client.Download(src, dst); err != nil {
 				errs = append(errs, fmt.Errorf("%w '%s': %v", distribution.ErrDownloadingFolder, src, err))
 
 				continue
@@ -132,6 +150,11 @@ func (dd *Downloader) DownloadModules(modules config.KFDModules) error {
 		if len(errs) > 0 {
 			return fmt.Errorf("%w '%s': %v", ErrDownloadingModule, name, errs)
 		}
+
+		err := os.RemoveAll(filepath.Join(dst, ".git"))
+		if err != nil {
+			return fmt.Errorf("error removing .git subfolder: %w", err)
+		}
 	}
 
 	return nil
@@ -143,6 +166,8 @@ func (dd *Downloader) DownloadInstallers(installers config.KFDKubernetes) error 
 	for i := 0; i < insts.NumField(); i++ {
 		name := strings.ToLower(insts.Type().Field(i).Name)
 
+		dst := filepath.Join(dd.basePath, "vendor", "installers", name)
+
 		v, ok := insts.Field(i).Interface().(config.KFDProvider)
 		if !ok {
 			return fmt.Errorf("%s: %w", name, ErrModuleHasNoVersion)
@@ -152,8 +177,13 @@ func (dd *Downloader) DownloadInstallers(installers config.KFDKubernetes) error 
 
 		src := fmt.Sprintf("git::git@github.com:sighupio/fury-%s-installer?ref=%s", name, version)
 
-		if err := dd.client.Download(src, filepath.Join(dd.basePath, "vendor", "installers", name)); err != nil {
+		if err := dd.client.Download(src, dst); err != nil {
 			return fmt.Errorf("%w '%s': %v", distribution.ErrDownloadingFolder, src, err)
+		}
+
+		err := os.RemoveAll(filepath.Join(dst, ".git"))
+		if err != nil {
+			return fmt.Errorf("error removing .git subfolder: %w", err)
 		}
 	}
 
