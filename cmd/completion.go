@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 
 	"github.com/sighupio/furyctl/internal/analytics"
@@ -72,6 +73,7 @@ func NewCompletionCmd(tracker *analytics.Tracker) *cobra.Command {
 		Args:                  cobra.MatchAll(cobra.ExactArgs(1), cobra.OnlyValidArgs),
 		PreRun: func(cmd *cobra.Command, _ []string) {
 			cmdEvent = analytics.NewCommandEvent(cobrax.GetFullname(cmd))
+			logrus.SetLevel(logrus.FatalLevel)
 		},
 
 		RunE: func(cmd *cobra.Command, args []string) error {

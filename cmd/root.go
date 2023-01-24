@@ -43,7 +43,12 @@ const (
 	spinnerStyle = 11
 )
 
-func NewRootCommand(versions map[string]string, logFile *os.File, tracker *analytics.Tracker) *RootCommand {
+func NewRootCommand(
+	versions map[string]string,
+	logFile *os.File,
+	tracker *analytics.Tracker,
+	token string,
+) *RootCommand {
 	// Update channels.
 	r := make(chan app.Release, 1)
 	e := make(chan error, 1)
@@ -65,6 +70,18 @@ Furyctl is a simple CLI tool to:
 			SilenceErrors: true,
 			PersistentPreRun: func(cmd *cobra.Command, _ []string) {
 				var err error
+
+				if cmd.Name() == "__complete" {
+					oldPreRunFunc := cmd.PreRun
+
+					cmd.PreRun = func(cmd *cobra.Command, args []string) {
+						if oldPreRunFunc != nil {
+							oldPreRunFunc(cmd, args)
+						}
+
+						logrus.SetLevel(logrus.FatalLevel)
+					}
+				}
 
 				// Async check for updates.
 				go checkUpdates(versions["version"], r, e)
@@ -127,6 +144,10 @@ Furyctl is a simple CLI tool to:
 					}
 
 					logrus.Debugf("Changed working directory to %s", absWorkdir)
+				}
+
+				if token == "" {
+					logrus.Debug("FURYCTL_MIXPANEL_TOKEN is not set")
 				}
 			},
 			PersistentPostRun: func(_ *cobra.Command, _ []string) {
