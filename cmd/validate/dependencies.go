@@ -46,6 +46,8 @@ func NewDependenciesCmd(tracker *analytics.Tracker) *cobra.Command {
 
 			dloader := distribution.NewDownloader(netx.NewGoGetterClient())
 
+			// Download the distribution.
+			logrus.Info("Downloading distribution...")
 			dres, err := dloader.Download(distroLocation, furyctlPath)
 			if err != nil {
 				cmdEvent.AddErrorMessage(err)
@@ -69,10 +71,17 @@ func NewDependenciesCmd(tracker *analytics.Tracker) *cobra.Command {
 			}
 
 			toolsValidator := tools.NewValidator(execx.NewStdExecutor(), binPath)
+
 			envVarsValidator := envvars.NewValidator()
+
 			errs := make([]error, 0)
 
+			logrus.Info("Validating tools...")
+
 			toks, terrs := toolsValidator.Validate(dres.DistroManifest)
+
+			logrus.Info("Validating environment variables...")
+
 			eoks, eerrs := envVarsValidator.Validate(dres.MinimalConf.Kind)
 
 			errs = append(errs, terrs...)

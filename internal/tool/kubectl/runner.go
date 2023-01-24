@@ -164,6 +164,8 @@ func (r *Runner) Version() (string, error) {
 		args = append(args, "--client")
 	}
 
+	args = append(args, "-o", "json")
+
 	out, err := execx.CombinedOutput(execx.NewCmd(r.paths.Kubectl, execx.CmdOptions{
 		Args:     args,
 		Executor: r.executor,
