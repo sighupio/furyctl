@@ -125,12 +125,12 @@ func NewClusterCmd(tracker *analytics.Tracker) *cobra.Command {
 			depsvl := dependencies.NewValidator(executor, flags.BinPath)
 
 			// Validate the furyctl.yaml file.
-			logrus.Info("Validating furyctl.yaml file...")
+			logrus.Info("Validating configuration file...")
 			if err := config.Validate(flags.FuryctlPath, res.RepoPath); err != nil {
 				cmdEvent.AddErrorMessage(err)
 				tracker.Track(cmdEvent)
 
-				return fmt.Errorf("error while validating furyctl.yaml file: %w", err)
+				return fmt.Errorf("error while validating configuration file: %w", err)
 			}
 
 			// Download the dependencies.
@@ -310,7 +310,7 @@ func setupCreateClusterCmdFlags(cmd *cobra.Command) {
 		"config",
 		"c",
 		"furyctl.yaml",
-		"Path to the furyctl.yaml file",
+		"Path to the configuration file",
 	)
 
 	cmd.Flags().StringP(
