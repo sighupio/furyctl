@@ -19,7 +19,7 @@ func Test_Runner_Version(t *testing.T) {
 	r := kubectl.NewRunner(execx.NewFakeExecutor(), kubectl.Paths{
 		Kubectl: "kubectl",
 		WorkDir: os.TempDir(),
-	}, true, true)
+	}, true, true, true)
 
 	got, err := r.Version()
 	if err != nil {

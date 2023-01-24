@@ -42,6 +42,7 @@ var (
 	errCastingDNSPubIamToStr = errors.New("error casting external_dns_public_iam_role_arn output to string")
 	errCastingCertIamToStr   = errors.New("error casting cert_manager_iam_role_arn output to string")
 	errCastingVelIamToStr    = errors.New("error casting velero_iam_role_arn output to string")
+	errClusterConnect        = errors.New("error connecting to cluster")
 )
 
 type Distribution struct {
@@ -108,15 +109,29 @@ func NewDistribution(
 			},
 			true,
 			true,
+			false,
 		),
 		dryRun: dryRun,
 	}, nil
 }
 
 func (d *Distribution) Exec() error {
+	timestamp := time.Now().Unix()
+
 	logrus.Info("Running distribution phase")
 
-	timestamp := time.Now().Unix()
+	logrus.Info("Checking that the cluster is reachable...")
+
+	if _, err := d.kubeRunner.Version(); err != nil {
+		logrus.Debugf("Got error while running cluster reachability check: %s", err)
+
+		if !d.dryRun {
+			return errClusterConnect
+		}
+
+		logrus.Warnf("Cluster is unreachable, make sure it is reachable before " +
+			"running the command without --dry-run")
+	}
 
 	if err := d.CreateFolder(); err != nil {
 		return fmt.Errorf("error creating distribution phase folder: %w", err)

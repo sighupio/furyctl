@@ -22,18 +22,20 @@ type Paths struct {
 }
 
 type Runner struct {
-	executor     execx.Executor
-	paths        Paths
-	serverSide   bool
-	skipNotFound bool
+	executor      execx.Executor
+	paths         Paths
+	serverSide    bool
+	skipNotFound  bool
+	clientVersion bool
 }
 
-func NewRunner(executor execx.Executor, paths Paths, serverSide, skipNotFound bool) *Runner {
+func NewRunner(executor execx.Executor, paths Paths, serverSide, skipNotFound, clientVersion bool) *Runner {
 	return &Runner{
-		executor:     executor,
-		paths:        paths,
-		serverSide:   serverSide,
-		skipNotFound: skipNotFound,
+		executor:      executor,
+		paths:         paths,
+		serverSide:    serverSide,
+		skipNotFound:  skipNotFound,
+		clientVersion: clientVersion,
 	}
 }
 
@@ -152,10 +154,19 @@ func (r *Runner) Delete(manifestPath string, params ...string) error {
 }
 
 func (r *Runner) Version() (string, error) {
+	args := []string{"version"}
+
+	if r.paths.Kubeconfig != "" {
+		args = append(args, "--kubeconfig", r.paths.Kubeconfig)
+	}
+
+	if r.clientVersion {
+		args = append(args, "--client")
+	}
+
 	out, err := execx.CombinedOutput(execx.NewCmd(r.paths.Kubectl, execx.CmdOptions{
-		Args:     []string{"version", "--client"},
+		Args:     args,
 		Executor: r.executor,
-		WorkDir:  r.paths.WorkDir,
 	}))
 	if err != nil {
 		return "", fmt.Errorf("error getting kubectl version: %w", err)

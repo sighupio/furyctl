@@ -33,6 +33,7 @@ const (
 var (
 	errCheckPendingResources = errors.New("error while checking pending resources")
 	errPendingResources      = errors.New("pending resources: ")
+	errClusterConnect        = errors.New("error connecting to cluster")
 )
 
 type Distribution struct {
@@ -85,6 +86,7 @@ func NewDistribution(
 			},
 			true,
 			true,
+			false,
 		),
 		dryRun: dryRun,
 	}, nil
@@ -98,6 +100,12 @@ func (d *Distribution) Exec() error {
 		logrus.Infof("distribution phase already executed, skipping")
 
 		return nil
+	}
+
+	logrus.Info("Checking cluster connectivity...")
+
+	if _, err := d.kubeRunner.Version(); err != nil {
+		return errClusterConnect
 	}
 
 	if d.dryRun {

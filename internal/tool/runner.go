@@ -75,7 +75,7 @@ func (rf *RunnerFactory) Create(name, version, workDir string) Runner {
 			Kubectl: filepath.Join(rf.paths.Bin, name, version, name),
 			WorkDir: workDir,
 		},
-			true, true)
+			false, true, true)
 	}
 
 	if name == Kustomize {
