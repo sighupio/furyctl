@@ -66,16 +66,13 @@ func exec() int {
 	}
 
 	t := os.Getenv("FURYCTL_MIXPANEL_TOKEN")
-	if t == "" {
-		log.Debug("FURYCTL_MIXPANEL_TOKEN is not set")
-	}
 
 	// Create the analytics tracker.
 	a := analytics.NewTracker(t, versions[version], osArch, runtime.GOOS, "SIGHUP", h)
 
 	defer a.Flush()
 
-	if _, err := cmd.NewRootCommand(versions, logFile, a).ExecuteC(); err != nil {
+	if _, err := cmd.NewRootCommand(versions, logFile, a, t).ExecuteC(); err != nil {
 		log.Error(err)
 
 		return 1
