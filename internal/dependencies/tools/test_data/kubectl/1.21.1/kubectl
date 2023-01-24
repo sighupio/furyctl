@@ -1,5 +1,17 @@
 #!/bin/sh
 
 cat <<EOF
-Client Version: version.Info{Major:"1", Minor:"21", GitVersion:"v1.21.1", GitCommit:"42c05a547468804b2053ecf60a3bd15560362fc2", GitTreeState:"clean", BuildDate:"2022-05-24T12:30:55Z", GoVersion:"go1.17.10", Compiler:"gc", Platform:"darwin/arm64"}
+{\n
+  "clientVersion": {\n
+    "major": "1",\n
+    "minor": "21",\n
+    "gitVersion": "v1.21.1",\n
+    "gitCommit": "42c05a547468804b2053ecf60a3bd15560362fc2",\n
+    "gitTreeState": "clean",\n
+    "buildDate": "2022-05-24T12:30:55Z",\n
+    "goVersion": "go1.17.10",\n
+    "compiler": "gc",\n
+    "platform": "darwin/amd64"\n
+  }\n
+}\n
 EOF
