@@ -167,7 +167,6 @@ func (r *Runner) Version() (string, error) {
 	out, err := execx.CombinedOutput(execx.NewCmd(r.paths.Kubectl, execx.CmdOptions{
 		Args:     args,
 		Executor: r.executor,
-		WorkDir:  r.paths.WorkDir,
 	}))
 	if err != nil {
 		return "", fmt.Errorf("error getting kubectl version: %w", err)
