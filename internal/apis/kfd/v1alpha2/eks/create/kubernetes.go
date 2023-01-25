@@ -378,7 +378,7 @@ func (k *Kubernetes) createTfVars() error {
 
 	err = k.addAwsAuthToTfVars(&buffer)
 	if err != nil {
-		return fmt.Errorf("error writing terraform aws auth to vars file: %w", err)
+		return fmt.Errorf("error writing AWS Auth to Terraform vars file: %w", err)
 	}
 
 	if len(k.furyctlConf.Spec.Kubernetes.NodePools) > 0 {
