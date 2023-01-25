@@ -59,6 +59,7 @@ spec:
       allowedCidrs:
         - 10.0.0.0/16
     nodeAllowedSshPublicKey: "ssh-ed25519 XYZ"
+    nodePoolsLaunchKind: "launch_templates"
     nodePools:
       - name: worker
         ami:

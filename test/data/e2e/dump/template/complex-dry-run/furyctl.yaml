@@ -71,6 +71,7 @@ spec:
     apiServerAllowedCidrs:
       - 10.1.0.0/16
     nodeAllowedSshPublicKey: "ssh-ed25519 XYZ"
+    nodePoolsLaunchKind: "launch_templates"
     nodePools:
       - name: worker
         # optional, was OS, and version was removed
