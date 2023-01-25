@@ -49,6 +49,7 @@ spec:
             - 0.0.0.0/0
   kubernetes:
     nodeAllowedSshPublicKey: "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGxA+4CXYSmsN1m5DSsRzVRTegbvCh1gh7YObg0drj4+ alessio.pragliola@sighup.io"
+    nodePoolsLaunchKind: "launch_templates"
     nodePools:
       - name: worker
         ami:

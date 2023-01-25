@@ -355,6 +355,17 @@
                         }
                     ]
                 },
+                "nodePoolsLaunchKind": {
+                    "type": "string",
+                    "enum": [
+                        "launch_configurations",
+                        "launch_templates",
+                        "both"
+                    ]
+                },
+                "logRetentionDays": {
+                    "type": "integer"
+                },
                 "nodePools": {
                     "type": "array",
                     "items": {
@@ -367,7 +378,8 @@
             },
             "required": [
                 "nodeAllowedSshPublicKey",
-                "nodePools"
+                "nodePools",
+                "nodePoolsLaunchKind"
             ]
         },
         "Spec.Kubernetes.APIServerEndpointAccess": {
@@ -440,7 +452,6 @@
                 }
             },
             "required": [
-                "ami",
                 "instance",
                 "name",
                 "size"
@@ -516,7 +527,8 @@
                     "type": "array",
                     "items": {
                         "$ref": "#/$defs/Types.Cidr"
-                    }
+                    },
+                    "minItems": 1
                 },
                 "protocol": {
                     "$ref": "#/$defs/Types.AwsIpProtocol"
@@ -1137,6 +1149,9 @@
                 "provider": {
                     "$ref": "#/$defs/Spec.Distribution.Modules.Auth.Provider"
                 },
+                "baseDomain": {
+                    "type": "string"
+                },
                 "pomerium": {
                     "$ref": "#/$defs/Spec.Distribution.Modules.Auth.Pomerium"
                 },
@@ -1161,7 +1176,7 @@
                     "then": {
                         "properties": {
                             "auth": {
-                                "required": ["dex", "pomerium"]
+                                "required": ["dex", "pomerium", "baseDomain"]
                             }
                         }
                     },
@@ -1365,14 +1380,10 @@
             "properties": {
                 "iamRoleArn": {
                     "$ref": "#/$defs/Types.AwsArn"
-                },
-                "region": {
-                    "$ref": "#/$defs/Types.AwsRegion"
                 }
             },
             "required": [
-                "iamRoleArn",
-                "region"
+                "iamRoleArn"
             ]
         },
 
