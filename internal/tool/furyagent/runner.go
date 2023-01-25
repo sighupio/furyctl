@@ -46,6 +46,8 @@ func (r *Runner) ConfigOpenvpnClient(name string) error {
 		if !strings.Contains(err.Error(), "already exists") {
 			return fmt.Errorf("error while running furyagent configure openvpn-client: %w", err)
 		}
+
+		return nil
 	}
 
 	err := os.WriteFile(path.Join(r.paths.WorkDir,
