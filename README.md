@@ -46,7 +46,7 @@ Prerequisites:
 - `go == v1.19`
 - `goreleaser == v1.11.4`
 
-> You can install `goreleaser` with the following command once you have Go in your system: 
+> You can install `goreleaser` with the following command once you have Go in your system:
 >
 > ```console
 > go install github.com/goreleaser/goreleaser@v1.11.4
@@ -186,7 +186,7 @@ Open the generated configuration file with your editor of choice and edit it acc
 Once you have filled your configuration file, you can check that it's content is valid by running the following comand:
 
 ```console
-furyctl validate config --config <path to your config file>
+furyctl validate config --config <path to your config file> --distro-location 'git::git@github.com:sighupio/fury-distribution.git?depth=1&ref=feature/furyctl-next'
 ```
 
 > **Note** the `--config` flag is optional, set it if your configuration file is not named `furyctl.yaml`
@@ -208,7 +208,7 @@ Just like you can validate that your configuration file is well formed, `furyctl
 To validate that your system has all the dependencies needed to create the cluster defined in your configuration file, run the following command:
 
 ```console
-furyctl validate dependencies
+furyctl validate dependencies --distro-location 'git::git@github.com:sighupio/fury-distribution.git?depth=1&ref=feature/furyctl-next'
 ```
 
 Finally, to launch the creation of the resources defined in the configuration file, run the following command:
@@ -220,7 +220,7 @@ Finally, to launch the creation of the resources defined in the configuration fi
 > **:info:** the creation process you are about to launch can take a while.
 
 ```console
-furyctl create cluster
+furyctl create cluster --distro-location 'git::git@github.com:sighupio/fury-distribution.git?depth=1&ref=feature/furyctl-next'
 ```
 
 > **Note** the creation process can take a while.
@@ -236,7 +236,7 @@ To destroy a cluster created using `furyctl` and all its related resources, run 
 > **Warning** you are about to run a destructive operation.
 
 ```console
-furyctl delete cluster --dry-run
+furyctl delete cluster --distro-location 'git::git@github.com:sighupio/fury-distribution.git?depth=1&ref=feature/furyctl-next' --dry-run
 ```
 
 check that the dry-run output is what you expected and then run the command again without the `--dry-run` flag to actually delete all the resources.
@@ -309,37 +309,21 @@ but you can limit the execution to a specific phase by using the flag `--phase`.
 To create a cluster step by step, you can run the following command:
 
 ```bash
-furyctl create cluster --phase infrastructure
+furyctl create cluster --phase infrastructure --distro-location 'git::git@github.com:sighupio/fury-distribution.git?depth=1&ref=feature/furyctl-next'
 ```
 
 If you choose to create a VPN in the infrastructure phase, you can automatically connect to it by using the flag `--vpn-auto-connect`.
 
 ```bash
-furyctl create cluster --phase kubernetes
+furyctl create cluster --phase kubernetes --distro-location 'git::git@github.com:sighupio/fury-distribution.git?depth=1&ref=feature/furyctl-next'
 ```
 
 After running the command, remember to export the `KUBECONFIG` environment variable to point to the generated kubeconfig file or
 to use the flag `--kubeconfig` in the following command.
 
 ```bash
-furyctl create cluster --phase distribution
+furyctl create cluster --phase distribution --distro-location 'git::git@github.com:sighupio/fury-distribution.git?depth=1&ref=feature/furyctl-next'
 ```
-
-##### Infrastructure
-
-The available `infrastructure` provisioners are:
-
-| Provisioner | Description                                                                                                                                        |
-| ----------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `aws`       | It creates a VPC with all the requirements to deploy a Kubernetes Cluster. It also includes a VPN instance easily manageable by using `furyagent`. |
-
-##### Kubernetes
-
-The available `kubernetes` provisioners are:
-
-| Provisioner | Description                                                                                                                         |
-| ----------- | ----------------------------------------------------------------------------------------------------------------------------------- |
-| `eks`       | Creates an EKS cluster on an already existing VPC. It uses the [fury-eks-installer](https://github.com/sighupio/fury-eks-installer) |
 
 <!-- </KFD-DOCS> -->
 <!-- <FOOTER> -->
