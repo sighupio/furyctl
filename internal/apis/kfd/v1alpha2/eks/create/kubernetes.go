@@ -282,6 +282,26 @@ func (k *Kubernetes) createTfVars() error {
 		return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
 	}
 
+	err = bytesx.SafeWriteToBuffer(
+		&buffer,
+		"node_pools_launch_kind = \"%v\"\n",
+		k.furyctlConf.Spec.Kubernetes.NodePoolsLaunchKind,
+	)
+	if err != nil {
+		return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
+	}
+
+	if k.furyctlConf.Spec.Kubernetes.LogRetentionDays != nil {
+		err = bytesx.SafeWriteToBuffer(
+			&buffer,
+			"cluster_log_retention_days = %v\n",
+			*k.furyctlConf.Spec.Kubernetes.LogRetentionDays,
+		)
+		if err != nil {
+			return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
+		}
+	}
+
 	if vpcIDSource == nil {
 		if !k.dryRun {
 			return errVpcIDNotFound
@@ -356,91 +376,9 @@ func (k *Kubernetes) createTfVars() error {
 		}
 	}
 
-	if k.furyctlConf.Spec.Kubernetes.AwsAuth != nil {
-		if len(k.furyctlConf.Spec.Kubernetes.AwsAuth.AdditionalAccounts) > 0 {
-			err = bytesx.SafeWriteToBuffer(
-				&buffer,
-				"eks_map_accounts = [\"%v\"]\n",
-				strings.Join(k.furyctlConf.Spec.Kubernetes.AwsAuth.AdditionalAccounts, "\",\""),
-			)
-			if err != nil {
-				return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
-			}
-		}
-
-		if len(k.furyctlConf.Spec.Kubernetes.AwsAuth.Users) > 0 {
-			err = bytesx.SafeWriteToBuffer(
-				&buffer,
-				"eks_map_users = [\n",
-			)
-			if err != nil {
-				return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
-			}
-
-			for i, account := range k.furyctlConf.Spec.Kubernetes.AwsAuth.Users {
-				content := "{\ngroups = [\"%v\"]\nusername = \"%v\"\nuserarn = \"%v\"}"
-
-				if i < len(k.furyctlConf.Spec.Kubernetes.AwsAuth.Users)-1 {
-					content += ","
-				}
-
-				err = bytesx.SafeWriteToBuffer(
-					&buffer,
-					content,
-					strings.Join(account.Groups, "\",\""),
-					account.Username,
-					account.Userarn,
-				)
-				if err != nil {
-					return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
-				}
-			}
-
-			err = bytesx.SafeWriteToBuffer(
-				&buffer,
-				"]\n",
-			)
-			if err != nil {
-				return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
-			}
-		}
-
-		if len(k.furyctlConf.Spec.Kubernetes.AwsAuth.Roles) > 0 {
-			err = bytesx.SafeWriteToBuffer(
-				&buffer,
-				"eks_map_roles = [\n",
-			)
-			if err != nil {
-				return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
-			}
-
-			for i, account := range k.furyctlConf.Spec.Kubernetes.AwsAuth.Roles {
-				content := "{\ngroups = [\"%v\"]\nusername = \"%v\"\nrolearn = \"%v\"}"
-
-				if i < len(k.furyctlConf.Spec.Kubernetes.AwsAuth.Roles)-1 {
-					content += ","
-				}
-
-				err = bytesx.SafeWriteToBuffer(
-					&buffer,
-					content,
-					strings.Join(account.Groups, "\",\""),
-					account.Username,
-					account.Rolearn,
-				)
-				if err != nil {
-					return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
-				}
-			}
-
-			err = bytesx.SafeWriteToBuffer(
-				&buffer,
-				"]\n",
-			)
-			if err != nil {
-				return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
-			}
-		}
+	err = k.addAwsAuthToTfVars(&buffer)
+	if err != nil {
+		return fmt.Errorf("error writing AWS Auth to Terraform vars file: %w", err)
 	}
 
 	if len(k.furyctlConf.Spec.Kubernetes.NodePools) > 0 {
@@ -676,6 +614,99 @@ func (k *Kubernetes) createTfVars() error {
 	err = os.WriteFile(targetTfVars, buffer.Bytes(), iox.FullRWPermAccess)
 	if err != nil {
 		return fmt.Errorf("error writing terraform vars file: %w", err)
+	}
+
+	return nil
+}
+
+func (k *Kubernetes) addAwsAuthToTfVars(buffer *bytes.Buffer) error {
+	var err error
+
+	if k.furyctlConf.Spec.Kubernetes.AwsAuth != nil {
+		if len(k.furyctlConf.Spec.Kubernetes.AwsAuth.AdditionalAccounts) > 0 {
+			err = bytesx.SafeWriteToBuffer(
+				buffer,
+				"eks_map_accounts = [\"%v\"]\n",
+				strings.Join(k.furyctlConf.Spec.Kubernetes.AwsAuth.AdditionalAccounts, "\",\""),
+			)
+			if err != nil {
+				return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
+			}
+		}
+
+		if len(k.furyctlConf.Spec.Kubernetes.AwsAuth.Users) > 0 {
+			err = bytesx.SafeWriteToBuffer(
+				buffer,
+				"eks_map_users = [\n",
+			)
+			if err != nil {
+				return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
+			}
+
+			for i, account := range k.furyctlConf.Spec.Kubernetes.AwsAuth.Users {
+				content := "{\ngroups = [\"%v\"]\nusername = \"%v\"\nuserarn = \"%v\"}"
+
+				if i < len(k.furyctlConf.Spec.Kubernetes.AwsAuth.Users)-1 {
+					content += ","
+				}
+
+				err = bytesx.SafeWriteToBuffer(
+					buffer,
+					content,
+					strings.Join(account.Groups, "\",\""),
+					account.Username,
+					account.Userarn,
+				)
+				if err != nil {
+					return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
+				}
+			}
+
+			err = bytesx.SafeWriteToBuffer(
+				buffer,
+				"]\n",
+			)
+			if err != nil {
+				return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
+			}
+		}
+
+		if len(k.furyctlConf.Spec.Kubernetes.AwsAuth.Roles) > 0 {
+			err = bytesx.SafeWriteToBuffer(
+				buffer,
+				"eks_map_roles = [\n",
+			)
+			if err != nil {
+				return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
+			}
+
+			for i, account := range k.furyctlConf.Spec.Kubernetes.AwsAuth.Roles {
+				content := "{\ngroups = [\"%v\"]\nusername = \"%v\"\nrolearn = \"%v\"}"
+
+				if i < len(k.furyctlConf.Spec.Kubernetes.AwsAuth.Roles)-1 {
+					content += ","
+				}
+
+				err = bytesx.SafeWriteToBuffer(
+					buffer,
+					content,
+					strings.Join(account.Groups, "\",\""),
+					account.Username,
+					account.Rolearn,
+				)
+				if err != nil {
+					return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
+				}
+			}
+
+			err = bytesx.SafeWriteToBuffer(
+				buffer,
+				"]\n",
+			)
+			if err != nil {
+				return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
+			}
+		}
 	}
 
 	return nil
