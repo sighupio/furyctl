@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"os"
 	"path"
+	"path/filepath"
 	"strings"
 
 	"github.com/sirupsen/logrus"
@@ -149,7 +150,10 @@ func (v *ClusterCreator) Create(skipPhase string) error {
 				return fmt.Errorf("error while storing cluster config: %w", err)
 			}
 
-			v.logKubeconfig()
+			err = v.logKubeconfig()
+			if err != nil {
+				return fmt.Errorf("error while logging kubeconfig path: %w", err)
+			}
 		}
 
 		return nil
@@ -195,7 +199,10 @@ func (v *ClusterCreator) Create(skipPhase string) error {
 			}
 		}
 
-		v.logKubeconfig()
+		err = v.logKubeconfig()
+		if err != nil {
+			return fmt.Errorf("error while logging kubeconfig path: %w", err)
+		}
 
 		return nil
 
@@ -204,14 +211,19 @@ func (v *ClusterCreator) Create(skipPhase string) error {
 	}
 }
 
-func (v *ClusterCreator) logKubeconfig() {
-	kubeconfigPath := os.Getenv("KUBECONFIG")
-
-	if v.paths.Kubeconfig != "" {
-		kubeconfigPath = v.paths.Kubeconfig
+func (*ClusterCreator) logKubeconfig() error {
+	currentDir, err := os.Getwd()
+	if err != nil {
+		return fmt.Errorf("error getting current dir: %w", err)
 	}
 
-	logrus.Infof("Export KUBECONFIG=%s in order to use kubectl/furyctl to interact with the cluster", kubeconfigPath)
+	kubeconfigPath := filepath.Join(currentDir, "kubeconfig")
+
+	logrus.Infof("Add to your environment variables the path to the kubeconfig by running "+
+		"'export KUBECONFIG=%s' to use kubectl/furyctl to interact with the cluster,"+
+		" or add the flag '--kubeconfig=%s' to every further tool usage", kubeconfigPath, kubeconfigPath)
+
+	return nil
 }
 
 func (v *ClusterCreator) storeClusterConfig() error {
