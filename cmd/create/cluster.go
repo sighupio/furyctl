@@ -183,20 +183,11 @@ func NewClusterCmd(tracker *analytics.Tracker) *cobra.Command {
 				return fmt.Errorf("error while initializing cluster creation: %w", err)
 			}
 
-			logrus.Info("Creating cluster...")
 			if err := clusterCreator.Create(flags.SkipPhase); err != nil {
 				cmdEvent.AddErrorMessage(err)
 				tracker.Track(cmdEvent)
 
 				return fmt.Errorf("error while creating cluster: %w", err)
-			}
-
-			if !flags.DryRun && flags.Phase == cluster.OperationPhaseAll {
-				logrus.Info("Cluster created successfully!")
-			}
-
-			if flags.Phase != cluster.OperationPhaseAll {
-				logrus.Infof("Phase %s executed successfully!", flags.Phase)
 			}
 
 			cmdEvent.AddSuccessMessage("cluster creation succeeded")
