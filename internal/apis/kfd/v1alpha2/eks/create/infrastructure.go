@@ -91,7 +91,9 @@ func NewInfrastructure(
 }
 
 func (i *Infrastructure) Exec(opts []cluster.OperationPhaseOption) error {
-	logrus.Info("Running infrastructure phase...")
+	logrus.Info("Creating infrastructure...")
+
+	logrus.Debug("Running infrastructure phase...")
 
 	timestamp := time.Now().Unix()
 

@@ -86,7 +86,9 @@ func NewKubernetes(
 }
 
 func (k *Kubernetes) Exec() error {
-	logrus.Info("Running kubernetes phase...")
+	logrus.Info("Creating Kubernetes Fury cluster...")
+
+	logrus.Debug("Running kubernetes phase...")
 
 	timestamp := time.Now().Unix()
 

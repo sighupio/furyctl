@@ -118,7 +118,9 @@ func NewDistribution(
 func (d *Distribution) Exec() error {
 	timestamp := time.Now().Unix()
 
-	logrus.Info("Running distribution phase")
+	logrus.Info("Installing Kubernetes Fury Distribution...")
+
+	logrus.Debug("Running distribution phase")
 
 	logrus.Info("Checking that the cluster is reachable...")
 
