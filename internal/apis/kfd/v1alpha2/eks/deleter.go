@@ -6,8 +6,9 @@ package eks
 
 import (
 	"fmt"
-	"github.com/sirupsen/logrus"
 	"strings"
+
+	"github.com/sirupsen/logrus"
 
 	"github.com/sighupio/fury-distribution/pkg/config"
 	del "github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/eks/delete"
