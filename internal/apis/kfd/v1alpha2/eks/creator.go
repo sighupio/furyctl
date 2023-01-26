@@ -221,7 +221,7 @@ func (v *ClusterCreator) Create(skipPhase string) error {
 			}
 		}
 
-		logrus.Info("Kubernetes Fury cluster created successfully!")
+		logrus.Info("Kubernetes Fury cluster created successfully")
 
 		err = v.logKubeconfig()
 		if err != nil {

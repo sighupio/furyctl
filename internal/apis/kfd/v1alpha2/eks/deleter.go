@@ -6,6 +6,7 @@ package eks
 
 import (
 	"fmt"
+	"github.com/sirupsen/logrus"
 	"strings"
 
 	"github.com/sighupio/fury-distribution/pkg/config"
@@ -80,6 +81,8 @@ func (d *ClusterDeleter) Delete(dryRun bool) error {
 			return fmt.Errorf("error while deleting infrastructure phase: %w", err)
 		}
 
+		logrus.Info("Infrastructure deleted successfully")
+
 		return nil
 
 	case cluster.OperationPhaseKubernetes:
@@ -87,12 +90,16 @@ func (d *ClusterDeleter) Delete(dryRun bool) error {
 			return fmt.Errorf("error while deleting kubernetes phase: %w", err)
 		}
 
+		logrus.Info("Kubernetes cluster deleted successfully")
+
 		return nil
 
 	case cluster.OperationPhaseDistribution:
 		if err := distro.Exec(); err != nil {
 			return fmt.Errorf("error while deleting distribution phase: %w", err)
 		}
+
+		logrus.Info("Kubernetes Fury Distribution deleted successfully")
 
 		return nil
 
@@ -108,6 +115,8 @@ func (d *ClusterDeleter) Delete(dryRun bool) error {
 		if err := infra.Exec(); err != nil {
 			return fmt.Errorf("error while deleting infrastructure phase: %w", err)
 		}
+
+		logrus.Info("Kubernetes Fury cluster deleted successfully")
 
 		return nil
 
