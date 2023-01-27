@@ -171,14 +171,14 @@ var (
 				out, err := FuryctlValidateConfig("../data/e2e/validate/config/wrong")
 
 				Expect(err).To(HaveOccurred())
-				Expect(out).To(ContainSubstring("config validation failed"))
+				Expect(out).To(ContainSubstring("configuration file validation failed"))
 			})
 
 			It("should exit without errors when config validation succeeds", func() {
 				out, err := FuryctlValidateConfig("../data/e2e/validate/config/correct")
 
 				Expect(err).To(Not(HaveOccurred()))
-				Expect(out).To(ContainSubstring("config validation succeeded"))
+				Expect(out).To(ContainSubstring("configuration file validation succeeded"))
 			})
 		})
 

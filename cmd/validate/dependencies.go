@@ -29,7 +29,7 @@ func NewDependenciesCmd(tracker *analytics.Tracker) *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "dependencies",
-		Short: "Validate furyctl.yaml file",
+		Short: "Validate dependencies for the Kubernetes Fury Distribution specified in the configuration file",
 		PreRun: func(cmd *cobra.Command, _ []string) {
 			cmdEvent = analytics.NewCommandEvent(cobrax.GetFullname(cmd))
 		},
@@ -107,7 +107,7 @@ func NewDependenciesCmd(tracker *analytics.Tracker) *cobra.Command {
 
 				logrus.Info(
 					"You can use the 'furyctl download dependencies' command to download most dependencies, " +
-						"and a package manager such as 'asdf' to install the other ones.",
+						"and a package manager such as 'asdf' to install the remaining ones.",
 				)
 
 				return ErrDependencies
@@ -133,7 +133,7 @@ func NewDependenciesCmd(tracker *analytics.Tracker) *cobra.Command {
 		"config",
 		"c",
 		"furyctl.yaml",
-		"Path to the furyctl.yaml file",
+		"Path to the configuration file",
 	)
 
 	cmd.Flags().StringP(
@@ -142,7 +142,7 @@ func NewDependenciesCmd(tracker *analytics.Tracker) *cobra.Command {
 		"",
 		"Base URL used to download schemas, defaults and the distribution manifest. "+
 			"It can either be a local path(eg: /path/to/fury/distribution) or "+
-			"a remote URL(eg: git::git@github.com:sighupio/fury-distribution?ref=BRANCH_NAME&depth=1)."+
+			"a remote URL(eg: git::git@github.com:sighupio/fury-distribution?depth=1&ref=BRANCH_NAME)."+
 			"Any format supported by hashicorp/go-getter can be used.",
 	)
 

@@ -58,13 +58,10 @@ func NewRootCommand(
 	rootCmd := &RootCommand{
 		Command: &cobra.Command{
 			Use:   "furyctl",
-			Short: "The multi-purpose command line tool for the Kubernetes Fury Distribution",
+			Short: "The Swiss Army knife for the Kubernetes Fury Distribution",
 			Long: `The multi-purpose command line tool for the Kubernetes Fury Distribution.
 
-Furyctl is a simple CLI tool to:
-
-- download and manage the Kubernetes Fury Distribution (KFD) modules
-- create and manage Kubernetes Fury clusters
+furyctl is a command line interface tool to manage the full lifecycle of a Kubernetes Fury Cluster.
 `,
 			SilenceUsage:  true,
 			SilenceErrors: true,
@@ -152,11 +149,11 @@ Furyctl is a simple CLI tool to:
 				select {
 				case release := <-r:
 					if shouldUpgrade(release.Version, versions["version"]) {
-						logrus.Infof("New furyctl version available: %s => %s", versions["version"], release.Version)
+						logrus.Infof("A newer version of furyctl is available: %s => %s", versions["version"], release.Version)
 					}
 				case err := <-e:
 					if err != nil {
-						logrus.Debugf("Error checking for updates: %s", err)
+						logrus.Debugf("Error checking for updates to furyctl: %s", err)
 					}
 				}
 			},
@@ -186,21 +183,21 @@ Furyctl is a simple CLI tool to:
 		"no-tty",
 		"T",
 		false,
-		"Disable TTY",
+		"Disable TTY making furyctl's output more friendly to non-interactive shells by disabling animations and colors",
 	)
 	rootCmd.PersistentFlags().StringVarP(
 		&rootCmd.config.Workdir,
 		"workdir",
 		"w",
 		"",
-		"Switch to a different working directory before executing the given subcommand.",
+		"Switch to a different working directory before executing the given subcommand",
 	)
 	rootCmd.PersistentFlags().StringVarP(
 		&rootCmd.config.Log,
 		"log",
 		"l",
 		"",
-		"Path to the log file or stdout to log to standard output (default: ~/.furyctl/furyctl.log)",
+		"Path to the log file or set to 'stdout' to log to standard output (default: ~/.furyctl/furyctl.log)",
 	)
 
 	rootCmd.AddCommand(NewCompletionCmd(tracker))

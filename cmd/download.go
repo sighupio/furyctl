@@ -14,7 +14,7 @@ import (
 func NewDownloadCmd(tracker *analytics.Tracker) *cobra.Command {
 	dumpCmd := &cobra.Command{
 		Use:   "download",
-		Short: "Dowload fury files",
+		Short: "Download all dependencies for the Kubernetes Fury Distribution specified in the configuration file",
 	}
 
 	dumpCmd.AddCommand(download.NewDependenciesCmd(tracker))

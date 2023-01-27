@@ -28,7 +28,7 @@ archives:
 checksum:
   name_template: 'checksums.txt'
 snapshot:
-  name_template: "{{ incpatch .Version }}-next"
+  name_template: "{{ incpatch .Version }}-ng"
 changelog:
   sort: asc
   filters:
@@ -49,7 +49,7 @@ brews:
     skip_upload: auto
     folder: Formula
     homepage: 'https://gihub.com/sighupio/furyctl'
-    description: 'Furyctl binary'
+    description: 'furyctl binary'
     conflicts:
       - furyctl
     test: |

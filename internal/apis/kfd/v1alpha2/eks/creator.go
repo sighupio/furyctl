@@ -166,6 +166,11 @@ func (v *ClusterCreator) Create(skipPhase string) error {
 		return nil
 
 	case cluster.OperationPhaseAll:
+		if v.dryRun {
+			logrus.Info("furcytl will try its best to calculate what would have changed. " +
+				"Sometimes this is not possible, for better results limit the scope with the --phase flag.")
+		}
+
 		if v.furyctlConf.Spec.Infrastructure != nil &&
 			(skipPhase == "" || skipPhase == cluster.OperationPhaseDistribution) {
 			if err := infra.Exec(infraOpts); err != nil {
@@ -178,8 +183,10 @@ func (v *ClusterCreator) Create(skipPhase string) error {
 				return fmt.Errorf("error while executing kubernetes phase: %w", err)
 			}
 
-			if err := v.storeClusterConfig(); err != nil {
-				return fmt.Errorf("error while storing cluster config: %w", err)
+			if !v.dryRun {
+				if err := v.storeClusterConfig(); err != nil {
+					return fmt.Errorf("error while storing cluster config: %w", err)
+				}
 			}
 		}
 
@@ -188,8 +195,10 @@ func (v *ClusterCreator) Create(skipPhase string) error {
 				return fmt.Errorf("error while executing distribution phase: %w", err)
 			}
 
-			if err := v.storeClusterConfig(); err != nil {
-				return fmt.Errorf("error while storing cluster config: %w", err)
+			if !v.dryRun {
+				if err := v.storeClusterConfig(); err != nil {
+					return fmt.Errorf("error while storing cluster config: %w", err)
+				}
 			}
 		}
 

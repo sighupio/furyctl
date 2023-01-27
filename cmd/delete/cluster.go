@@ -119,6 +119,7 @@ func NewClusterCmd(tracker *analytics.Tracker) *cobra.Command {
 				basePath,
 				flags.BinPath,
 				flags.Kubeconfig,
+				flags.DryRun,
 			)
 			if err != nil {
 				cmdEvent.AddErrorMessage(err)
@@ -149,7 +150,7 @@ func NewClusterCmd(tracker *analytics.Tracker) *cobra.Command {
 				}
 			}
 
-			err = clusterDeleter.Delete(flags.DryRun)
+			err = clusterDeleter.Delete()
 			if err != nil {
 				cmdEvent.AddErrorMessage(err)
 				tracker.Track(cmdEvent)
@@ -172,7 +173,7 @@ func NewClusterCmd(tracker *analytics.Tracker) *cobra.Command {
 		"config",
 		"c",
 		"furyctl.yaml",
-		"Path to the furyctl.yaml file",
+		"Path to the configuration file",
 	)
 
 	cmd.Flags().StringP(
@@ -181,7 +182,7 @@ func NewClusterCmd(tracker *analytics.Tracker) *cobra.Command {
 		"",
 		"Base URL used to download schemas, defaults and the distribution manifest. "+
 			"It can either be a local path(eg: /path/to/fury/distribution) or "+
-			"a remote URL(eg: git::git@github.com:sighupio/fury-distribution?ref=BRANCH_NAME&depth=1)."+
+			"a remote URL(eg: git::git@github.com:sighupio/fury-distribution?depth=1&ref=BRANCH_NAME)."+
 			"Any format supported by hashicorp/go-getter can be used.",
 	)
 
@@ -196,19 +197,19 @@ func NewClusterCmd(tracker *analytics.Tracker) *cobra.Command {
 		"phase",
 		"p",
 		"",
-		"Phase to execute",
+		"Limit execution to the specified phase",
 	)
 
 	cmd.Flags().Bool(
 		"dry-run",
 		false,
-		"Allows to inspect what resources will be deleted",
+		"when set furyctl won't delete any resources. Allows to inspect what resources will be deleted",
 	)
 
 	cmd.Flags().Bool(
 		"force",
 		false,
-		"Force deletion of the cluster",
+		"WARNING: furyctl won't ask for confirmation and will force delete the cluster and it resources.",
 	)
 
 	cmd.Flags().String(
