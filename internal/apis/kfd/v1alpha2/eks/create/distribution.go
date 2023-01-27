@@ -120,7 +120,7 @@ func (d *Distribution) Exec() error {
 
 	logrus.Info("Installing Kubernetes Fury Distribution...")
 
-	logrus.Debug("Running distribution phase")
+	logrus.Debug("Create: running distribution phase...")
 
 	logrus.Info("Checking that the cluster is reachable...")
 

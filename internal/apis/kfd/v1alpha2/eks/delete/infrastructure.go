@@ -51,7 +51,7 @@ func NewInfrastructure(dryRun bool, workDir, binPath string, kfdManifest config.
 func (i *Infrastructure) Exec() error {
 	logrus.Info("Deleting infrastructure...")
 
-	logrus.Debug("Deleting infrastructure phase...")
+	logrus.Debug("Delete: running infrastructure phase...")
 
 	timestamp := time.Now().Unix()
 

@@ -51,7 +51,7 @@ func NewKubernetes(dryRun bool, workDir, binPath string, kfdManifest config.KFD)
 func (k *Kubernetes) Exec() error {
 	logrus.Info("Deleting Kubernetes Fury cluster...")
 
-	logrus.Debug("Deleting kubernetes phase...")
+	logrus.Debug("Delete: running kubernetes phase...")
 
 	timestamp := time.Now().Unix()
 

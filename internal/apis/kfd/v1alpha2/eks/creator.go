@@ -160,7 +160,7 @@ func (v *ClusterCreator) Create(skipPhase string) error {
 		}
 
 		if err := v.storeClusterConfig(); err != nil {
-			return fmt.Errorf("error while storing cluster config: %w", err)
+			return fmt.Errorf("error while creating secret with the cluster configuration: %w", err)
 		}
 
 		logrus.Info("Kubernetes cluster created successfully")
@@ -174,7 +174,7 @@ func (v *ClusterCreator) Create(skipPhase string) error {
 
 	case cluster.OperationPhaseDistribution:
 		if err = distro.Exec(); err != nil {
-			return fmt.Errorf("error while executing distribution phase: %w", err)
+			return fmt.Errorf("error while installing Kubernetes Fury Distribution: %w", err)
 		}
 
 		if v.dryRun {
@@ -184,7 +184,7 @@ func (v *ClusterCreator) Create(skipPhase string) error {
 		}
 
 		if err := v.storeClusterConfig(); err != nil {
-			return fmt.Errorf("error while storing cluster config: %w", err)
+			return fmt.Errorf("error while creating secret with the cluster configuration: %w", err)
 		}
 
 		logrus.Info("Kubernetes Fury Distribution installed successfully")

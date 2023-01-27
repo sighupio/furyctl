@@ -95,13 +95,13 @@ func NewDistribution(
 func (d *Distribution) Exec() error {
 	logrus.Info("Deleting Kubernetes Fury Distribution...")
 
-	logrus.Debug("Deleting distribution phase...")
+	logrus.Debug("Delete: running distribution phase...")
 
 	err := iox.CheckDirIsEmpty(d.OperationPhase.Path)
 	if err == nil {
-		logrus.Info("Kubernetes Fury Distribution already deleted, skipping")
+		logrus.Info("Kubernetes Fury Distribution already deleted, skipping...")
 
-		logrus.Debug("Distribution phase already executed, skipping")
+		logrus.Debug("Distribution phase already executed, skipping...")
 
 		return nil
 	}
