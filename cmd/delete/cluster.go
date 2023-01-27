@@ -158,10 +158,6 @@ func NewClusterCmd(tracker *analytics.Tracker) *cobra.Command {
 				return fmt.Errorf("error while deleting cluster: %w", err)
 			}
 
-			if !flags.DryRun && flags.Phase == cluster.OperationPhaseAll {
-				logrus.Info("Cluster deleted successfully!")
-			}
-
 			cmdEvent.AddSuccessMessage("Cluster deleted successfully!")
 			tracker.Track(cmdEvent)
 
