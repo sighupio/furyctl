@@ -30,6 +30,18 @@ var (
 	ErrKubeconfigReq = errors.New("when running distribution phase, either the KUBECONFIG environment variable or the --kubeconfig flag should be set")
 )
 
+type ClusterCmdFlags struct {
+	Debug          bool
+	FuryctlPath    string
+	DistroLocation string
+	Phase          string
+	BinPath        string
+	Force          bool
+	DryRun         bool
+	NoTTY          bool
+	Kubeconfig     string
+}
+
 func NewClusterCmd(tracker *analytics.Tracker) *cobra.Command {
 	var cmdEvent analytics.Event
 
@@ -40,45 +52,10 @@ func NewClusterCmd(tracker *analytics.Tracker) *cobra.Command {
 			cmdEvent = analytics.NewCommandEvent(cobrax.GetFullname(cmd))
 		},
 		RunE: func(cmd *cobra.Command, _ []string) error {
-			debug, err := cmdutil.BoolFlag(cmd, "debug", tracker, cmdEvent)
+			// Get flags.
+			flags, err := getDeleteClusterCmdFlags(cmd, tracker, cmdEvent)
 			if err != nil {
-				return fmt.Errorf("%w: debug", ErrParsingFlag)
-			}
-
-			furyctlPath, err := cmdutil.StringFlag(cmd, "config", tracker, cmdEvent)
-			if err != nil {
-				return fmt.Errorf("%w: config", ErrParsingFlag)
-			}
-
-			distroLocation, err := cmdutil.StringFlag(cmd, "distro-location", tracker, cmdEvent)
-			if err != nil {
-				return fmt.Errorf("%w: distro-location", ErrParsingFlag)
-			}
-
-			phase, err := cmdutil.StringFlag(cmd, "phase", tracker, cmdEvent)
-			if err != nil {
-				return fmt.Errorf("%w: phase", ErrParsingFlag)
-			}
-
-			err = cluster.CheckPhase(phase)
-			if err != nil {
-				return fmt.Errorf("%w: %s: %s", ErrParsingFlag, "phase", err.Error())
-			}
-
-			binPath := cobrax.Flag[string](cmd, "bin-path").(string) //nolint:errcheck,forcetypeassert // optional flag
-			dryRun, err := cmdutil.BoolFlag(cmd, "dry-run", tracker, cmdEvent)
-			if err != nil {
-				return fmt.Errorf("%w: dry-run", ErrParsingFlag)
-			}
-
-			force, err := cmdutil.BoolFlag(cmd, "force", tracker, cmdEvent)
-			if err != nil {
-				return fmt.Errorf("%w: force", ErrParsingFlag)
-			}
-
-			kubeconfig, err := cmdutil.StringFlag(cmd, "kubeconfig", tracker, cmdEvent)
-			if err != nil {
-				return fmt.Errorf("%w: %s", ErrParsingFlag, "kubeconfig")
+				return err
 			}
 
 			// Init paths.
@@ -88,8 +65,8 @@ func NewClusterCmd(tracker *analytics.Tracker) *cobra.Command {
 			}
 
 			// Check if kubeconfig is needed.
-			if phase == cluster.OperationPhaseDistribution || phase == cluster.OperationPhaseAll {
-				if kubeconfig == "" {
+			if flags.Phase == cluster.OperationPhaseDistribution || flags.Phase == cluster.OperationPhaseAll {
+				if flags.Kubeconfig == "" {
 					kubeconfigFromEnv := os.Getenv("KUBECONFIG")
 
 					if kubeconfigFromEnv == "" {
@@ -100,8 +77,8 @@ func NewClusterCmd(tracker *analytics.Tracker) *cobra.Command {
 				}
 			}
 
-			if binPath == "" {
-				binPath = filepath.Join(homeDir, ".furyctl", "bin")
+			if flags.BinPath == "" {
+				flags.BinPath = filepath.Join(homeDir, ".furyctl", "bin")
 			}
 
 			// Init first half of collaborators.
@@ -109,11 +86,12 @@ func NewClusterCmd(tracker *analytics.Tracker) *cobra.Command {
 			executor := execx.NewStdExecutor()
 			distrodl := distribution.NewDownloader(client)
 
-			execx.Debug = debug || dryRun
+			execx.Debug = flags.Debug || flags.DryRun
+			execx.NoTTY = flags.NoTTY
 
 			// Download the distribution.
 			logrus.Info("Downloading distribution...")
-			res, err := distrodl.Download(distroLocation, furyctlPath)
+			res, err := distrodl.Download(flags.DistroLocation, flags.FuryctlPath)
 			if err != nil {
 				err = fmt.Errorf("error while downloading distribution: %w", err)
 
@@ -126,7 +104,7 @@ func NewClusterCmd(tracker *analytics.Tracker) *cobra.Command {
 			basePath := filepath.Join(homeDir, ".furyctl", res.MinimalConf.Metadata.Name)
 
 			// Init second half of collaborators.
-			depsvl := dependencies.NewValidator(executor, binPath)
+			depsvl := dependencies.NewValidator(executor, flags.BinPath)
 
 			// Validate the dependencies.
 			logrus.Info("Validating dependencies...")
@@ -137,10 +115,10 @@ func NewClusterCmd(tracker *analytics.Tracker) *cobra.Command {
 			clusterDeleter, err := cluster.NewDeleter(
 				res.MinimalConf,
 				res.DistroManifest,
-				phase,
+				flags.Phase,
 				basePath,
-				binPath,
-				kubeconfig,
+				flags.BinPath,
+				flags.Kubeconfig,
 			)
 			if err != nil {
 				cmdEvent.AddErrorMessage(err)
@@ -149,7 +127,7 @@ func NewClusterCmd(tracker *analytics.Tracker) *cobra.Command {
 				return fmt.Errorf("error while initializing cluster deleter: %w", err)
 			}
 
-			if !force {
+			if !flags.Force {
 				_, err = fmt.Println("WARNING: You are about to delete a cluster. This action is irreversible.")
 				if err != nil {
 					cmdEvent.AddErrorMessage(err)
@@ -171,7 +149,7 @@ func NewClusterCmd(tracker *analytics.Tracker) *cobra.Command {
 				}
 			}
 
-			err = clusterDeleter.Delete(dryRun)
+			err = clusterDeleter.Delete(flags.DryRun)
 			if err != nil {
 				cmdEvent.AddErrorMessage(err)
 				tracker.Track(cmdEvent)
@@ -179,7 +157,7 @@ func NewClusterCmd(tracker *analytics.Tracker) *cobra.Command {
 				return fmt.Errorf("error while deleting cluster: %w", err)
 			}
 
-			if !dryRun && phase == cluster.OperationPhaseAll {
+			if !flags.DryRun && flags.Phase == cluster.OperationPhaseAll {
 				logrus.Info("Cluster deleted successfully!")
 			}
 
@@ -241,6 +219,67 @@ func NewClusterCmd(tracker *analytics.Tracker) *cobra.Command {
 	)
 
 	return cmd
+}
+
+func getDeleteClusterCmdFlags(cmd *cobra.Command, tracker *analytics.Tracker, cmdEvent analytics.Event) (ClusterCmdFlags, error) {
+	debug, err := cmdutil.BoolFlag(cmd, "debug", tracker, cmdEvent)
+	if err != nil {
+		return ClusterCmdFlags{}, fmt.Errorf("%w: %s", ErrParsingFlag, "debug")
+	}
+
+	furyctlPath, err := cmdutil.StringFlag(cmd, "config", tracker, cmdEvent)
+	if err != nil {
+		return ClusterCmdFlags{}, fmt.Errorf("%w: %s", ErrParsingFlag, "config")
+	}
+
+	distroLocation, err := cmdutil.StringFlag(cmd, "distro-location", tracker, cmdEvent)
+	if err != nil {
+		return ClusterCmdFlags{}, fmt.Errorf("%w: %s", ErrParsingFlag, "distro-location")
+	}
+
+	phase, err := cmdutil.StringFlag(cmd, "phase", tracker, cmdEvent)
+	if err != nil {
+		return ClusterCmdFlags{}, fmt.Errorf("%w: %s", ErrParsingFlag, "phase")
+	}
+
+	err = cluster.CheckPhase(phase)
+	if err != nil {
+		return ClusterCmdFlags{}, fmt.Errorf("%w: %s: %s", ErrParsingFlag, "phase", err.Error())
+	}
+
+	binPath := cmdutil.StringFlagOptional(cmd, "bin-path")
+
+	dryRun, err := cmdutil.BoolFlag(cmd, "dry-run", tracker, cmdEvent)
+	if err != nil {
+		return ClusterCmdFlags{}, fmt.Errorf("%w: %s", ErrParsingFlag, "dry-run")
+	}
+
+	noTTY, err := cmdutil.BoolFlag(cmd, "no-tty", tracker, cmdEvent)
+	if err != nil {
+		return ClusterCmdFlags{}, fmt.Errorf("%w: %s", ErrParsingFlag, "no-tty")
+	}
+
+	kubeconfig, err := cmdutil.StringFlag(cmd, "kubeconfig", tracker, cmdEvent)
+	if err != nil {
+		return ClusterCmdFlags{}, fmt.Errorf("%w: %s", ErrParsingFlag, "kubeconfig")
+	}
+
+	force, err := cmdutil.BoolFlag(cmd, "force", tracker, cmdEvent)
+	if err != nil {
+		return ClusterCmdFlags{}, fmt.Errorf("%w: force", ErrParsingFlag)
+	}
+
+	return ClusterCmdFlags{
+		Debug:          debug,
+		FuryctlPath:    furyctlPath,
+		DistroLocation: distroLocation,
+		Phase:          phase,
+		BinPath:        binPath,
+		DryRun:         dryRun,
+		Force:          force,
+		NoTTY:          noTTY,
+		Kubeconfig:     kubeconfig,
+	}, nil
 }
 
 func askForConfirmation() bool {
