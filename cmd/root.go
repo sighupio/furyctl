@@ -89,11 +89,8 @@ Furyctl is a simple CLI tool to:
 				w := logrus.StandardLogger().Out
 
 				cflag, ok := cobrax.Flag[bool](cmd, "no-tty").(bool)
-				if ok && cflag {
-					w = iox.NewNullWriter()
-					f := new(logrus.TextFormatter)
-					f.DisableColors = true
-					logrus.SetFormatter(f)
+				if !ok {
+					logrus.Fatalf("error while getting no-tty flag")
 				}
 
 				cfg.Spinner = spinner.New(spinner.CharSets[spinnerStyle], timeout, spinner.WithWriter(w))
@@ -120,7 +117,7 @@ Furyctl is a simple CLI tool to:
 				// Set log level.
 				dflag, ok := cobrax.Flag[bool](cmd, "debug").(bool)
 				if ok {
-					logrusx.InitLog(logFile, dflag)
+					logrusx.InitLog(logFile, dflag, cflag)
 				}
 
 				logrus.Debugf("logging to: %s", logPath)

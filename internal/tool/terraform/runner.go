@@ -49,8 +49,14 @@ func (r *Runner) CmdPath() string {
 }
 
 func (r *Runner) Init() error {
+	args := []string{"init"}
+
+	if execx.NoTTY {
+		args = append(args, "-no-color")
+	}
+
 	err := execx.NewCmd(r.paths.Terraform, execx.CmdOptions{
-		Args:     []string{"init"},
+		Args:     args,
 		Executor: r.executor,
 		WorkDir:  r.paths.WorkDir,
 	}).Run()
@@ -139,8 +145,14 @@ func (r *Runner) Apply(timestamp int64) (OutputJSON, error) {
 }
 
 func (r *Runner) Destroy() error {
+	args := []string{"destroy", "-auto-approve"}
+
+	if execx.NoTTY {
+		args = append(args, "-no-color")
+	}
+
 	err := execx.NewCmd(r.paths.Terraform, execx.CmdOptions{
-		Args:     []string{"destroy", "-auto-approve"},
+		Args:     args,
 		Executor: r.executor,
 		WorkDir:  r.paths.WorkDir,
 	}).Run()
