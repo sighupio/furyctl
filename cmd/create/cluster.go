@@ -42,6 +42,7 @@ type ClusterCmdFlags struct {
 	DryRun             bool
 	SkipDepsDownload   bool
 	SkipDepsValidation bool
+	NoTTY              bool
 	Kubeconfig         string
 }
 
@@ -98,6 +99,7 @@ func NewClusterCmd(tracker *analytics.Tracker) *cobra.Command {
 
 			// Init packages.
 			execx.Debug = flags.Debug || flags.DryRun
+			execx.NoTTY = flags.NoTTY
 
 			// Download the distribution.
 			logrus.Info("Downloading distribution...")
@@ -267,6 +269,11 @@ func getCreateClusterCmdFlags(cmd *cobra.Command, tracker *analytics.Tracker, cm
 		return ClusterCmdFlags{}, fmt.Errorf("%w: %s", ErrParsingFlag, "dry-run")
 	}
 
+	noTTY, err := cmdutil.BoolFlag(cmd, "no-tty", tracker, cmdEvent)
+	if err != nil {
+		return ClusterCmdFlags{}, fmt.Errorf("%w: %s", ErrParsingFlag, "no-tty")
+	}
+
 	skipDepsDownload, err := cmdutil.BoolFlag(cmd, "skip-deps-download", tracker, cmdEvent)
 	if err != nil {
 		return ClusterCmdFlags{}, fmt.Errorf("%w: %s", ErrParsingFlag, "skip-deps-download")
@@ -293,6 +300,7 @@ func getCreateClusterCmdFlags(cmd *cobra.Command, tracker *analytics.Tracker, cm
 		DryRun:             dryRun,
 		SkipDepsDownload:   skipDepsDownload,
 		SkipDepsValidation: skipDepsValidation,
+		NoTTY:              noTTY,
 		Kubeconfig:         kubeconfig,
 	}, nil
 }
