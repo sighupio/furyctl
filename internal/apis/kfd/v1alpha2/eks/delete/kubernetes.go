@@ -49,13 +49,17 @@ func NewKubernetes(dryRun bool, workDir, binPath string, kfdManifest config.KFD)
 }
 
 func (k *Kubernetes) Exec() error {
-	logrus.Info("Deleting kubernetes phase...")
+	logrus.Info("Deleting Kubernetes Fury cluster...")
+
+	logrus.Debug("Delete: running kubernetes phase...")
 
 	timestamp := time.Now().Unix()
 
 	err := iox.CheckDirIsEmpty(k.OperationPhase.Path)
 	if err == nil {
-		logrus.Infof("kubernetes phase already executed, skipping...")
+		logrus.Info("Kubernetes Fury cluster already deleted, skipping...")
+
+		logrus.Debug("Kubernetes phase already executed, skipping...")
 
 		return nil
 	}
