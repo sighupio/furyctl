@@ -44,7 +44,7 @@ func newFormatterHook(writer io.Writer, formatter logrus.Formatter, logLevels []
 	}
 }
 
-func InitLog(logFile *os.File, debug bool) { //nolint:revive // debug is a boolean flag
+func InitLog(logFile *os.File, debug, disableColors bool) { //nolint:revive // debug is a boolean flag
 	logrus.SetOutput(io.Discard)
 
 	stdLevels := []logrus.Level{
@@ -67,7 +67,8 @@ func InitLog(logFile *os.File, debug bool) { //nolint:revive // debug is a boole
 
 		stdOutHook := newFormatterHook(os.Stdout, &logrus.TextFormatter{
 			DisableTimestamp: true,
-			ForceColors:      true,
+			ForceColors:      !disableColors,
+			DisableColors:    disableColors,
 		}, stdLevels)
 
 		logrus.AddHook(stdOutHook)
