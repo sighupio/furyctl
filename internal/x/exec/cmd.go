@@ -19,6 +19,7 @@ import (
 var (
 	Debug         = false  //nolint:gochecknoglobals // This variable is shared between all the command instances.
 	LogFile       *os.File //nolint:gochecknoglobals // This variable is shared between all the command instances.
+	NoTTY         = false  //nolint:gochecknoglobals // This variable is shared between all the command instances.
 	ErrCmdFailed  = errors.New("command failed")
 	ErrCmdTimeout = errors.New("command timed out")
 )
