@@ -49,13 +49,17 @@ func NewInfrastructure(dryRun bool, workDir, binPath string, kfdManifest config.
 }
 
 func (i *Infrastructure) Exec() error {
-	logrus.Info("Deleting infrastructure phase...")
+	logrus.Info("Deleting infrastructure...")
+
+	logrus.Debug("Delete: running infrastructure phase...")
 
 	timestamp := time.Now().Unix()
 
 	err := iox.CheckDirIsEmpty(i.OperationPhase.Path)
 	if err == nil {
-		logrus.Infof("infrastructure phase already executed, skipping...")
+		logrus.Info("Infrastructure already deleted, skipping...")
+
+		logrus.Debug("Infrastructure phase already executed, skipping...")
 
 		return nil
 	}
