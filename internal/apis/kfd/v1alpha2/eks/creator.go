@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"os"
 	"path"
+	"path/filepath"
 	"strings"
 
 	"github.com/sirupsen/logrus"
@@ -134,6 +135,14 @@ func (v *ClusterCreator) Create(skipPhase string) error {
 			return fmt.Errorf("error while executing infrastructure phase: %w", err)
 		}
 
+		if v.dryRun {
+			logrus.Info("Infrastructure created successfully (dry-run mode)")
+
+			return nil
+		}
+
+		logrus.Info("Infrastructure created successfully")
+
 		return nil
 
 	case cluster.OperationPhaseKubernetes:
@@ -144,24 +153,41 @@ func (v *ClusterCreator) Create(skipPhase string) error {
 			return fmt.Errorf("error while executing kubernetes phase: %w", err)
 		}
 
-		if !v.dryRun {
-			if err := v.storeClusterConfig(); err != nil {
-				return fmt.Errorf("error while storing cluster config: %w", err)
-			}
+		if v.dryRun {
+			logrus.Info("Kubernetes cluster created successfully (dry-run mode)")
+
+			return nil
+		}
+
+		if err := v.storeClusterConfig(); err != nil {
+			return fmt.Errorf("error while creating secret with the cluster configuration: %w", err)
+		}
+
+		logrus.Info("Kubernetes cluster created successfully")
+
+		err = v.logKubeconfig()
+		if err != nil {
+			return fmt.Errorf("error while logging kubeconfig path: %w", err)
 		}
 
 		return nil
 
 	case cluster.OperationPhaseDistribution:
 		if err = distro.Exec(); err != nil {
-			return fmt.Errorf("error while executing distribution phase: %w", err)
+			return fmt.Errorf("error while installing Kubernetes Fury Distribution: %w", err)
 		}
 
-		if !v.dryRun {
-			if err := v.storeClusterConfig(); err != nil {
-				return fmt.Errorf("error while storing cluster config: %w", err)
-			}
+		if v.dryRun {
+			logrus.Info("Kubernetes Fury Distribution installed successfully (dry-run mode)")
+
+			return nil
 		}
+
+		if err := v.storeClusterConfig(); err != nil {
+			return fmt.Errorf("error while creating secret with the cluster configuration: %w", err)
+		}
+
+		logrus.Info("Kubernetes Fury Distribution installed successfully")
 
 		return nil
 
@@ -170,6 +196,8 @@ func (v *ClusterCreator) Create(skipPhase string) error {
 			logrus.Info("furcytl will try its best to calculate what would have changed. " +
 				"Sometimes this is not possible, for better results limit the scope with the --phase flag.")
 		}
+
+		logrus.Info("Creating cluster...")
 
 		if v.furyctlConf.Spec.Infrastructure != nil &&
 			(skipPhase == "" || skipPhase == cluster.OperationPhaseDistribution) {
@@ -202,11 +230,32 @@ func (v *ClusterCreator) Create(skipPhase string) error {
 			}
 		}
 
+		logrus.Info("Kubernetes Fury cluster created successfully")
+
+		err = v.logKubeconfig()
+		if err != nil {
+			return fmt.Errorf("error while logging kubeconfig path: %w", err)
+		}
+
 		return nil
 
 	default:
 		return ErrUnsupportedPhase
 	}
+}
+
+func (*ClusterCreator) logKubeconfig() error {
+	currentDir, err := os.Getwd()
+	if err != nil {
+		return fmt.Errorf("error getting current dir: %w", err)
+	}
+
+	kubeconfigPath := filepath.Join(currentDir, "kubeconfig")
+
+	logrus.Infof("To connect to the cluster, set the path to your kubeconfig with 'export KUBECONFIG=%s'"+
+		" or use the '--kubeconfig %s' flag in following executions", kubeconfigPath, kubeconfigPath)
+
+	return nil
 }
 
 func (v *ClusterCreator) storeClusterConfig() error {
