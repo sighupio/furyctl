@@ -98,31 +98,9 @@ func (v *ClusterCreator) SetProperty(name string, value any) {
 }
 
 func (v *ClusterCreator) Create(skipPhase string) error {
-	infra, err := create.NewInfrastructure(v.furyctlConf, v.kfdManifest, v.paths, v.dryRun)
+	infra, kube, distro, err := v.setupPhases()
 	if err != nil {
-		return fmt.Errorf("error while initiating infrastructure phase: %w", err)
-	}
-
-	kube, err := create.NewKubernetes(
-		v.furyctlConf,
-		v.kfdManifest,
-		infra.OutputsPath,
-		v.paths,
-		v.dryRun,
-	)
-	if err != nil {
-		return fmt.Errorf("error while initiating kubernetes phase: %w", err)
-	}
-
-	distro, err := create.NewDistribution(
-		v.paths,
-		v.furyctlConf,
-		v.kfdManifest,
-		infra.OutputsPath,
-		v.dryRun,
-	)
-	if err != nil {
-		return fmt.Errorf("error while initiating distribution phase: %w", err)
+		return err
 	}
 
 	infraOpts := []cluster.OperationPhaseOption{
@@ -242,6 +220,37 @@ func (v *ClusterCreator) Create(skipPhase string) error {
 	default:
 		return ErrUnsupportedPhase
 	}
+}
+
+func (v *ClusterCreator) setupPhases() (*create.Infrastructure, *create.Kubernetes, *create.Distribution, error) {
+	infra, err := create.NewInfrastructure(v.furyctlConf, v.kfdManifest, v.paths, v.dryRun)
+	if err != nil {
+		return nil, nil, nil, fmt.Errorf("error while initiating infrastructure phase: %w", err)
+	}
+
+	kube, err := create.NewKubernetes(
+		v.furyctlConf,
+		v.kfdManifest,
+		infra.OutputsPath,
+		v.paths,
+		v.dryRun,
+	)
+	if err != nil {
+		return nil, nil, nil, fmt.Errorf("error while initiating kubernetes phase: %w", err)
+	}
+
+	distro, err := create.NewDistribution(
+		v.paths,
+		v.furyctlConf,
+		v.kfdManifest,
+		infra.OutputsPath,
+		v.dryRun,
+	)
+	if err != nil {
+		return nil, nil, nil, fmt.Errorf("error while initiating distribution phase: %w", err)
+	}
+
+	return infra, kube, distro, nil
 }
 
 func (*ClusterCreator) logKubeconfig() error {
