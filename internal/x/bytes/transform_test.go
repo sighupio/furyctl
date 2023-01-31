@@ -68,24 +68,22 @@ func TestToJSONLogFormat(t *testing.T) {
 
 	testCases := []struct {
 		desc    string
-		setup   func() (string, string, *string)
+		setup   func() (string, string, string)
 		wantStr string
 		wantErr bool
 	}{
 		{
 			"empty string",
-			func() (string, string, *string) {
-				action := "test"
-
-				return "", "debug", &action
+			func() (string, string, string) {
+				return "", "debug", "test"
 			},
 			"\"level\":\"debug\",\"action\":\"test\",\"msg\":\"\"",
 			false,
 		},
 		{
 			"nil action",
-			func() (string, string, *string) {
-				return "", "debug", nil
+			func() (string, string, string) {
+				return "", "debug", ""
 			},
 			"\"level\":\"debug\",\"msg\":\"\"",
 			false,

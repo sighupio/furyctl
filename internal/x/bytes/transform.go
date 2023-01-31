@@ -25,11 +25,12 @@ type TransformFunc func([]byte) ([]byte, error)
 
 const ansi = "[\u001B\u009B][[\\]()#;?]*(?:(?:(?:[a-zA-Z\\d]*(?:;[a-zA-Z\\d]*)*)?\u0007)|(?:(?:\\d{1,4}(?:;\\d{0,4})*)?[\\dA-PRZcf-ntqry=><~]))" //nolint:lll // Cannot split regex in multiple lines.
 
-var ErrJSONTransform = errors.New("error while transform to json")
+var (
+	ErrJSONTransform = errors.New("error while transform to json")
+	reg              = regexp.MustCompile(ansi)
+)
 
 func StripColor(p []byte) ([]byte, error) {
-	reg := regexp.MustCompile(ansi)
-
 	s := string(p)
 
 	strippedS := reg.ReplaceAllString(s, "")
@@ -37,15 +38,21 @@ func StripColor(p []byte) ([]byte, error) {
 	return []byte(strippedS), nil
 }
 
-func ToJSONLogFormat(level string, action *string) TransformFunc {
+func ToJSONLogFormat(level, action string) TransformFunc {
 	timestamp := time.Now().Format(time.RFC3339)
 
 	return func(p []byte) ([]byte, error) {
+		var a *string
+
 		msg := string(p)
+
+		if action != "" {
+			a = &action
+		}
 
 		lf := logrusx.LogFormat{
 			Level:  level,
-			Action: action,
+			Action: a,
 			Msg:    msg,
 			Time:   timestamp,
 		}

@@ -48,7 +48,7 @@ func NewCmd(name string, opts CmdOptions) *Cmd {
 			W: LogFile,
 			Transforms: []bytesx.TransformFunc{
 				bytesx.StripColor,
-				bytesx.ToJSONLogFormat("debug", &action),
+				bytesx.ToJSONLogFormat("debug", action),
 			},
 		}
 
