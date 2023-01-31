@@ -32,8 +32,21 @@ func (r *Runner) CmdPath() string {
 }
 
 func (r *Runner) Connect(name string) error {
-	err := execx.NewCmd("sudo", execx.CmdOptions{
-		Args:     []string{r.paths.Openvpn, "--config", fmt.Sprintf("%s.ovpn", name), "--daemon"},
+	path := "sudo"
+	args := []string{r.paths.Openvpn, "--config", fmt.Sprintf("%s.ovpn", name), "--daemon"}
+
+	userIsRoot, err := execx.IsRoot()
+	if err != nil {
+		return fmt.Errorf("error while checking if user is root: %w", err)
+	}
+
+	if userIsRoot {
+		path = r.paths.Openvpn
+		args = args[1:]
+	}
+
+	err = execx.NewCmd(path, execx.CmdOptions{
+		Args:     args,
 		Executor: r.executor,
 		WorkDir:  r.paths.WorkDir,
 	}).Run()
