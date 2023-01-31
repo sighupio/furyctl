@@ -66,6 +66,10 @@ func ToJSONLogFormat(level, action string) TransformFunc {
 	}
 }
 
+func AppendNewLine(p []byte) ([]byte, error) {
+	return append(p, '\n'), nil
+}
+
 func Identity(b []byte) ([]byte, error) {
 	return b, nil
 }

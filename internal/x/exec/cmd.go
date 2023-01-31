@@ -49,6 +49,7 @@ func NewCmd(name string, opts CmdOptions) *Cmd {
 			Transforms: []bytesx.TransformFunc{
 				bytesx.StripColor,
 				bytesx.ToJSONLogFormat("debug", action),
+				bytesx.AppendNewLine,
 			},
 		}
 

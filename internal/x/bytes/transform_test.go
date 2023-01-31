@@ -113,6 +113,53 @@ func TestToJSONLogFormat(t *testing.T) {
 	}
 }
 
+func TestAppendNewLine(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		desc    string
+		input   string
+		wantStr string
+		wantErr bool
+	}{
+		{
+			"empty string",
+			"",
+			"\n",
+			false,
+		},
+		{
+			"simple string",
+			"test",
+			"test\n",
+			false,
+		},
+	}
+
+	for _, tc := range testCases {
+		tc := tc
+
+		t.Run(tc.desc, func(t *testing.T) {
+			t.Parallel()
+
+			input := []byte(tc.input)
+
+			gotStr, err := bytesx.AppendNewLine(input)
+			if err != nil && !tc.wantErr {
+				t.Fatalf("expected to not get an error: %v", err)
+			}
+
+			if err == nil && tc.wantErr {
+				t.Fatalf("expected to get an error")
+			}
+
+			if string(gotStr) != tc.wantStr {
+				t.Errorf("want = %s, got = %s", tc.wantStr, gotStr)
+			}
+		})
+	}
+}
+
 func TestIdentity(t *testing.T) {
 	t.Parallel()
 
