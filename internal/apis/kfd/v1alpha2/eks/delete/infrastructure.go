@@ -6,7 +6,6 @@ package del
 
 import (
 	"fmt"
-	osx "github.com/sighupio/furyctl/internal/x/os"
 	"path"
 	"time"
 
@@ -17,6 +16,7 @@ import (
 	"github.com/sighupio/furyctl/internal/tool/terraform"
 	execx "github.com/sighupio/furyctl/internal/x/exec"
 	iox "github.com/sighupio/furyctl/internal/x/io"
+	osx "github.com/sighupio/furyctl/internal/x/os"
 )
 
 type Infrastructure struct {

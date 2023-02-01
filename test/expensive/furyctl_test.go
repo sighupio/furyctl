@@ -7,7 +7,6 @@
 package expensive_test
 
 import (
-	osx "github.com/sighupio/furyctl/internal/x/os"
 	"os"
 	"os/exec"
 	"path"
@@ -20,6 +19,7 @@ import (
 	"github.com/onsi/gomega/gexec"
 
 	"github.com/sighupio/furyctl/internal/cluster"
+	osx "github.com/sighupio/furyctl/internal/x/os"
 )
 
 func TestExpensive(t *testing.T) {

@@ -8,7 +8,6 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	osx "github.com/sighupio/furyctl/internal/x/os"
 	"io/fs"
 	"os"
 	"os/exec"
@@ -30,6 +29,7 @@ import (
 	bytesx "github.com/sighupio/furyctl/internal/x/bytes"
 	execx "github.com/sighupio/furyctl/internal/x/exec"
 	iox "github.com/sighupio/furyctl/internal/x/io"
+	osx "github.com/sighupio/furyctl/internal/x/os"
 )
 
 const SErrWrapWithStr = "%w: %s"
