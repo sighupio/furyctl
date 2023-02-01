@@ -7,6 +7,7 @@
 package expensive_test
 
 import (
+	osx "github.com/sighupio/furyctl/internal/x/os"
 	"os"
 	"os/exec"
 	"path"
@@ -19,7 +20,6 @@ import (
 	"github.com/onsi/gomega/gexec"
 
 	"github.com/sighupio/furyctl/internal/cluster"
-	execx "github.com/sighupio/furyctl/internal/x/exec"
 )
 
 func TestExpensive(t *testing.T) {
@@ -121,7 +121,7 @@ var (
 	KillOpenVPN = func() (*gexec.Session, error) {
 		var cmd *exec.Cmd
 
-		isRoot, err := execx.IsRoot()
+		isRoot, err := osx.IsRoot()
 		if err != nil {
 			return nil, err
 		}

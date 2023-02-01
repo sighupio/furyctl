@@ -6,6 +6,7 @@ package openvpn
 
 import (
 	"fmt"
+	osx "github.com/sighupio/furyctl/internal/x/os"
 
 	execx "github.com/sighupio/furyctl/internal/x/exec"
 )
@@ -35,7 +36,7 @@ func (r *Runner) Connect(name string) error {
 	path := "sudo"
 	args := []string{r.paths.Openvpn, "--config", fmt.Sprintf("%s.ovpn", name), "--daemon"}
 
-	userIsRoot, err := execx.IsRoot()
+	userIsRoot, err := osx.IsRoot()
 	if err != nil {
 		return fmt.Errorf("error while checking if user is root: %w", err)
 	}

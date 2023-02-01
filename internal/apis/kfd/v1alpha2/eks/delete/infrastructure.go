@@ -6,6 +6,7 @@ package del
 
 import (
 	"fmt"
+	osx "github.com/sighupio/furyctl/internal/x/os"
 	"path"
 	"time"
 
@@ -77,8 +78,20 @@ func (i *Infrastructure) Exec() error {
 		return fmt.Errorf("error while deleting infrastructure: %w", err)
 	}
 
-	logrus.Warnf("Please, remember to kill the OpenVPN process if" +
+	killMsg := "killall openvpn"
+
+	isRoot, err := osx.IsRoot()
+	if err != nil {
+		return fmt.Errorf("error while checking if user is root: %w", err)
+	}
+
+	if !isRoot {
+		killMsg = fmt.Sprintf("sudo %s", killMsg)
+	}
+
+	logrus.Warn("Please, remember to kill the OpenVPN process if" +
 		" you have chosen to create it in the infrastructure phase")
+	logrus.Warnf("You can do it with the following command: %s", killMsg)
 
 	return nil
 }
