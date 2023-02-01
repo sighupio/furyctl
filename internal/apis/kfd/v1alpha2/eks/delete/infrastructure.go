@@ -91,7 +91,7 @@ func (i *Infrastructure) Exec() error {
 
 	logrus.Warn("Please, remember to kill the OpenVPN process if" +
 		" you have chosen to create it in the infrastructure phase")
-	logrus.Warnf("You can do it with the following command: %s", killMsg)
+	logrus.Warnf("You can do it with the following command: '%s'", killMsg)
 
 	return nil
 }
