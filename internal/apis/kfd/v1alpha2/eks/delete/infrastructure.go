@@ -12,6 +12,7 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/sighupio/fury-distribution/pkg/config"
+	"github.com/sighupio/fury-distribution/pkg/schema"
 	"github.com/sighupio/furyctl/internal/cluster"
 	"github.com/sighupio/furyctl/internal/tool/terraform"
 	execx "github.com/sighupio/furyctl/internal/x/exec"
@@ -21,11 +22,18 @@ import (
 
 type Infrastructure struct {
 	*cluster.OperationPhase
-	tfRunner *terraform.Runner
-	dryRun   bool
+	furyctlConf schema.EksclusterKfdV1Alpha2
+	tfRunner    *terraform.Runner
+	dryRun      bool
 }
 
-func NewInfrastructure(dryRun bool, workDir, binPath string, kfdManifest config.KFD) (*Infrastructure, error) {
+func NewInfrastructure(
+	furyctlConf schema.EksclusterKfdV1Alpha2,
+	dryRun bool,
+	workDir,
+	binPath string,
+	kfdManifest config.KFD,
+) (*Infrastructure, error) {
 	infraDir := path.Join(workDir, cluster.OperationPhaseInfrastructure)
 
 	phase, err := cluster.NewOperationPhase(infraDir, kfdManifest.Tools, binPath)
@@ -35,6 +43,7 @@ func NewInfrastructure(dryRun bool, workDir, binPath string, kfdManifest config.
 
 	return &Infrastructure{
 		OperationPhase: phase,
+		furyctlConf:    furyctlConf,
 		tfRunner: terraform.NewRunner(
 			execx.NewStdExecutor(),
 			terraform.Paths{
@@ -78,20 +87,35 @@ func (i *Infrastructure) Exec() error {
 		return fmt.Errorf("error while deleting infrastructure: %w", err)
 	}
 
-	killMsg := "killall openvpn"
+	if i.isVpnConfigured() {
+		killMsg := "killall openvpn"
 
-	isRoot, err := osx.IsRoot()
-	if err != nil {
-		return fmt.Errorf("error while checking if user is root: %w", err)
+		isRoot, err := osx.IsRoot()
+		if err != nil {
+			return fmt.Errorf("error while checking if user is root: %w", err)
+		}
+
+		if !isRoot {
+			killMsg = fmt.Sprintf("sudo %s", killMsg)
+		}
+
+		logrus.Warnf("Please, remember to kill the OpenVPN process, "+
+			"you can do it with the following command: '%s'", killMsg)
 	}
-
-	if !isRoot {
-		killMsg = fmt.Sprintf("sudo %s", killMsg)
-	}
-
-	logrus.Warn("Please, remember to kill the OpenVPN process if" +
-		" you have chosen to create it in the infrastructure phase")
-	logrus.Warnf("You can do it with the following command: '%s'", killMsg)
 
 	return nil
+}
+
+func (i *Infrastructure) isVpnConfigured() bool {
+	vpn := i.furyctlConf.Spec.Infrastructure.Vpc.Vpn
+	if vpn == nil {
+		return false
+	}
+
+	instances := i.furyctlConf.Spec.Infrastructure.Vpc.Vpn.Instances
+	if instances == nil {
+		return true
+	}
+
+	return *instances > 0
 }
