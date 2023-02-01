@@ -96,12 +96,6 @@ func (k *Kubernetes) Exec() error {
 
 	logrus.Debug("Create: running kubernetes phase...")
 
-	logrus.Info("Checking connection to the VPC...")
-
-	if err := k.checkVPCConnection(); err != nil {
-		return fmt.Errorf("error checking vpc connection: %w", err)
-	}
-
 	if err := k.CreateFolder(); err != nil {
 		return fmt.Errorf("error creating kubernetes phase folder: %w", err)
 	}
@@ -128,6 +122,12 @@ func (k *Kubernetes) Exec() error {
 
 	if k.dryRun {
 		return nil
+	}
+
+	logrus.Info("Checking connection to the VPC...")
+
+	if err := k.checkVPCConnection(); err != nil {
+		return fmt.Errorf("error checking vpc connection: %w", err)
 	}
 
 	logrus.Info("Creating cloud resources, this could take a while...")
