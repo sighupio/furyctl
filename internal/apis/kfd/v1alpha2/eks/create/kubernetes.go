@@ -9,7 +9,9 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	netx "github.com/sighupio/furyctl/internal/x/net"
 	"io/fs"
+	"net"
 	"os"
 	"path"
 	"strconv"
@@ -37,6 +39,8 @@ var (
 	errVpcCIDRFromOut     = errors.New("cannot read vpc_cidr_block from infrastructure's output.json")
 	errVpcCIDRNotFound    = errors.New("vpc_cidr_block not found in infra output")
 	errVpcIDNotFound      = errors.New("vpc id not found: you forgot to specify one or the infrastructure phase failed")
+	errParsingCIDR        = errors.New("error parsing cidr")
+	errResolvingDNS       = errors.New("error resolving dns")
 )
 
 const (
@@ -86,11 +90,17 @@ func NewKubernetes(
 }
 
 func (k *Kubernetes) Exec() error {
+	timestamp := time.Now().Unix()
+
 	logrus.Info("Creating Kubernetes Fury cluster...")
 
 	logrus.Debug("Create: running kubernetes phase...")
 
-	timestamp := time.Now().Unix()
+	logrus.Info("Checking connection to the VPC...")
+
+	if err := k.checkVPCConnection(); err != nil {
+		return fmt.Errorf("error checking vpc connection: %w", err)
+	}
 
 	if err := k.CreateFolder(); err != nil {
 		return fmt.Errorf("error creating kubernetes phase folder: %w", err)
@@ -787,6 +797,33 @@ func (*Kubernetes) addFirewallRulesToNodePool(buffer *bytes.Buffer, np schema.Sp
 		if err != nil {
 			return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
 		}
+	}
+
+	return nil
+}
+
+func (k *Kubernetes) checkVPCConnection() error {
+	if k.furyctlConf.Spec.Infrastructure != nil {
+
+		cidr := k.furyctlConf.Spec.Infrastructure.Vpc.Network.Cidr
+
+		_, ipNet, err := net.ParseCIDR(string(cidr))
+		if err != nil {
+			return fmt.Errorf(SErrWrapWithStr, errParsingCIDR, err)
+		}
+
+		offIPNet := netx.AddOffsetToIpNet(ipNet, 2)
+
+		if offIPNet == nil {
+			return fmt.Errorf(SErrWrapWithStr, errParsingCIDR, err)
+		}
+
+		_, err = net.LookupAddr(offIPNet.String())
+		if err != nil {
+			return fmt.Errorf(SErrWrapWithStr, errResolvingDNS, err)
+		}
+
+		return nil
 	}
 
 	return nil
