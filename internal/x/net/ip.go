@@ -1,3 +1,7 @@
+// Copyright (c) 2017-present SIGHUP s.r.l All rights reserved.
+// Use of this source code is governed by a BSD-style
+// license that can be found in the LICENSE file.
+
 package netx
 
 import (
@@ -5,7 +9,7 @@ import (
 	"net"
 )
 
-func AddOffsetToIpNet(ipNet *net.IPNet, offset int) *net.IPNet {
+func AddOffsetToIPNet(ipNet *net.IPNet, offset int) *net.IPNet {
 	if ipNet == nil {
 		return nil
 	}

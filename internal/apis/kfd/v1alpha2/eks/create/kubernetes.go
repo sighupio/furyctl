@@ -9,7 +9,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	netx "github.com/sighupio/furyctl/internal/x/net"
 	"io/fs"
 	"net"
 	"os"
@@ -30,6 +29,7 @@ import (
 	execx "github.com/sighupio/furyctl/internal/x/exec"
 	iox "github.com/sighupio/furyctl/internal/x/io"
 	kubex "github.com/sighupio/furyctl/internal/x/kube"
+	netx "github.com/sighupio/furyctl/internal/x/net"
 )
 
 var (
@@ -45,6 +45,7 @@ var (
 
 const (
 	nodePoolDefaultVolumeSize = 35
+	awsDNSServerIPOffset      = 2
 )
 
 type Kubernetes struct {
@@ -804,7 +805,6 @@ func (*Kubernetes) addFirewallRulesToNodePool(buffer *bytes.Buffer, np schema.Sp
 
 func (k *Kubernetes) checkVPCConnection() error {
 	if k.furyctlConf.Spec.Infrastructure != nil {
-
 		cidr := k.furyctlConf.Spec.Infrastructure.Vpc.Network.Cidr
 
 		_, ipNet, err := net.ParseCIDR(string(cidr))
@@ -812,13 +812,13 @@ func (k *Kubernetes) checkVPCConnection() error {
 			return fmt.Errorf(SErrWrapWithStr, errParsingCIDR, err)
 		}
 
-		offIPNet := netx.AddOffsetToIpNet(ipNet, 2)
+		offIPNet := netx.AddOffsetToIPNet(ipNet, awsDNSServerIPOffset)
 
 		if offIPNet == nil {
 			return fmt.Errorf(SErrWrapWithStr, errParsingCIDR, err)
 		}
 
-		_, err = net.LookupAddr(offIPNet.String())
+		err = netx.DNSQuery(offIPNet.IP.String(), "google.com.")
 		if err != nil {
 			return fmt.Errorf(SErrWrapWithStr, errResolvingDNS, err)
 		}
