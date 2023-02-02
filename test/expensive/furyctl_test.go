@@ -19,6 +19,7 @@ import (
 	"github.com/onsi/gomega/gexec"
 
 	"github.com/sighupio/furyctl/internal/cluster"
+	osx "github.com/sighupio/furyctl/internal/x/os"
 )
 
 func TestExpensive(t *testing.T) {
@@ -118,7 +119,18 @@ var (
 	}
 
 	KillOpenVPN = func() (*gexec.Session, error) {
-		cmd := exec.Command("sudo", "pkill", "openvpn")
+		var cmd *exec.Cmd
+
+		isRoot, err := osx.IsRoot()
+		if err != nil {
+			return nil, err
+		}
+
+		if isRoot {
+			cmd = exec.Command("pkill", "openvpn")
+		} else {
+			cmd = exec.Command("sudo", "pkill", "openvpn")
+		}
 
 		return gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
 	}
