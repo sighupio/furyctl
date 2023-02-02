@@ -121,6 +121,12 @@ func (v *ClusterCreator) Create(skipPhase string) error {
 
 		logrus.Info("Infrastructure created successfully")
 
+		if v.furyctlConf.Spec.Infrastructure != nil {
+			if v.furyctlConf.Spec.Infrastructure.Vpc.Vpn != nil && v.vpnAutoConnect {
+				logrus.Info("Please remember to kill the VPN connection when you finish doing operations on the cluster")
+			}
+		}
+
 		return nil
 
 	case cluster.OperationPhaseKubernetes:
@@ -170,56 +176,72 @@ func (v *ClusterCreator) Create(skipPhase string) error {
 		return nil
 
 	case cluster.OperationPhaseAll:
-		if v.dryRun {
-			logrus.Info("furcytl will try its best to calculate what would have changed. " +
-				"Sometimes this is not possible, for better results limit the scope with the --phase flag.")
-		}
-
-		logrus.Info("Creating cluster...")
-
-		if v.furyctlConf.Spec.Infrastructure != nil &&
-			(skipPhase == "" || skipPhase == cluster.OperationPhaseDistribution) {
-			if err := infra.Exec(infraOpts); err != nil {
-				return fmt.Errorf("error while executing infrastructure phase: %w", err)
-			}
-		}
-
-		if skipPhase != cluster.OperationPhaseKubernetes {
-			if err := kube.Exec(); err != nil {
-				return fmt.Errorf("error while executing kubernetes phase: %w", err)
-			}
-
-			if !v.dryRun {
-				if err := v.storeClusterConfig(); err != nil {
-					return fmt.Errorf("error while storing cluster config: %w", err)
-				}
-			}
-		}
-
-		if skipPhase != cluster.OperationPhaseDistribution {
-			if err = distro.Exec(); err != nil {
-				return fmt.Errorf("error while executing distribution phase: %w", err)
-			}
-
-			if !v.dryRun {
-				if err := v.storeClusterConfig(); err != nil {
-					return fmt.Errorf("error while storing cluster config: %w", err)
-				}
-			}
-		}
-
-		logrus.Info("Kubernetes Fury cluster created successfully")
-
-		err = v.logKubeconfig()
-		if err != nil {
-			return fmt.Errorf("error while logging kubeconfig path: %w", err)
-		}
-
-		return nil
+		return v.allPhases(skipPhase, infraOpts, infra, kube, distro)
 
 	default:
 		return ErrUnsupportedPhase
 	}
+}
+
+func (v *ClusterCreator) allPhases(
+	skipPhase string,
+	infraOpts []cluster.OperationPhaseOption,
+	infra *create.Infrastructure,
+	kube *create.Kubernetes,
+	distro *create.Distribution,
+) error {
+	if v.dryRun {
+		logrus.Info("furcytl will try its best to calculate what would have changed. " +
+			"Sometimes this is not possible, for better results limit the scope with the --phase flag.")
+	}
+
+	logrus.Info("Creating cluster...")
+
+	if v.furyctlConf.Spec.Infrastructure != nil &&
+		(skipPhase == "" || skipPhase == cluster.OperationPhaseDistribution) {
+		if err := infra.Exec(infraOpts); err != nil {
+			return fmt.Errorf("error while executing infrastructure phase: %w", err)
+		}
+	}
+
+	if skipPhase != cluster.OperationPhaseKubernetes {
+		if err := kube.Exec(); err != nil {
+			return fmt.Errorf("error while executing kubernetes phase: %w", err)
+		}
+
+		if !v.dryRun {
+			if err := v.storeClusterConfig(); err != nil {
+				return fmt.Errorf("error while storing cluster config: %w", err)
+			}
+		}
+	}
+
+	if skipPhase != cluster.OperationPhaseDistribution {
+		if err := distro.Exec(); err != nil {
+			return fmt.Errorf("error while executing distribution phase: %w", err)
+		}
+
+		if !v.dryRun {
+			if err := v.storeClusterConfig(); err != nil {
+				return fmt.Errorf("error while storing cluster config: %w", err)
+			}
+		}
+	}
+
+	logrus.Info("Kubernetes Fury cluster created successfully")
+
+	if v.furyctlConf.Spec.Infrastructure != nil {
+		if v.furyctlConf.Spec.Infrastructure.Vpc.Vpn != nil {
+			logrus.Info("Please remember to kill the VPN connection when you finish doing operations on the cluster")
+		}
+	}
+
+	err := v.logKubeconfig()
+	if err != nil {
+		return fmt.Errorf("error while logging kubeconfig path: %w", err)
+	}
+
+	return nil
 }
 
 func (v *ClusterCreator) setupPhases() (*create.Infrastructure, *create.Kubernetes, *create.Distribution, error) {
