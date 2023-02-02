@@ -100,6 +100,9 @@ func (d *ClusterDeleter) Delete() error {
 		return nil
 
 	case cluster.OperationPhaseKubernetes:
+		logrus.Warn("Please make sure that the Kubernetes API is reachable before continuing" +
+			" (e.g. check VPN connection is active`), otherwise the deletion will fail.")
+
 		if err := kube.Exec(); err != nil {
 			return fmt.Errorf("error while deleting kubernetes phase: %w", err)
 		}

@@ -24,6 +24,7 @@ import (
 	"github.com/sighupio/furyctl/configs"
 	"github.com/sighupio/furyctl/internal/cluster"
 	"github.com/sighupio/furyctl/internal/template"
+	"github.com/sighupio/furyctl/internal/tool/awscli"
 	"github.com/sighupio/furyctl/internal/tool/terraform"
 	bytesx "github.com/sighupio/furyctl/internal/x/bytes"
 	execx "github.com/sighupio/furyctl/internal/x/exec"
@@ -41,11 +42,15 @@ var (
 	errVpcIDNotFound      = errors.New("vpc id not found: you forgot to specify one or the infrastructure phase failed")
 	errParsingCIDR        = errors.New("error parsing cidr")
 	errResolvingDNS       = errors.New("error resolving dns")
+	errVpcIDNotProvided   = errors.New("vpc_id not provided")
+	errCIDRBlockFromVpc   = errors.New("error getting cidr block from vpc")
+	errKubeAPIUnreachable = errors.New("kubernetes API is not reachable")
 )
 
 const (
 	nodePoolDefaultVolumeSize = 35
-	awsDNSServerIPOffset      = 2
+	// https://docs.aws.amazon.com/vpc/latest/userguide/vpc-dns.html.
+	awsDNSServerIPOffset = 2
 )
 
 type Kubernetes struct {
@@ -54,6 +59,7 @@ type Kubernetes struct {
 	kfdManifest      config.KFD
 	infraOutputsPath string
 	tfRunner         *terraform.Runner
+	awsRunner        *awscli.Runner
 	dryRun           bool
 }
 
@@ -84,6 +90,13 @@ func NewKubernetes(
 				WorkDir:   path.Join(phase.Path, "terraform"),
 				Plan:      phase.PlanPath,
 				Terraform: phase.TerraformPath,
+			},
+		),
+		awsRunner: awscli.NewRunner(
+			execx.NewStdExecutor(),
+			awscli.Paths{
+				Awscli:  "aws",
+				WorkDir: phase.Path,
 			},
 		),
 		dryRun: dryRun,
@@ -128,7 +141,15 @@ func (k *Kubernetes) Exec() error {
 	logrus.Info("Checking connection to the VPC...")
 
 	if err := k.checkVPCConnection(); err != nil {
-		return fmt.Errorf("error checking vpc connection: %w", err)
+		logrus.Debugf("error checking vpc connection: %v", err)
+
+		if k.furyctlConf.Spec.Infrastructure != nil {
+			if k.furyctlConf.Spec.Infrastructure.Vpc.Vpn != nil {
+				return fmt.Errorf("%w please check your VPN connection and try again", errKubeAPIUnreachable)
+			}
+		}
+
+		return fmt.Errorf("%w please check your VPC configuration and try again", errKubeAPIUnreachable)
 	}
 
 	logrus.Info("Creating cloud resources, this could take a while...")
@@ -804,26 +825,55 @@ func (*Kubernetes) addFirewallRulesToNodePool(buffer *bytes.Buffer, np schema.Sp
 }
 
 func (k *Kubernetes) checkVPCConnection() error {
+	var cidr string
+
+	var err error
+
 	if k.furyctlConf.Spec.Infrastructure != nil {
-		cidr := k.furyctlConf.Spec.Infrastructure.Vpc.Network.Cidr
+		cidr = string(k.furyctlConf.Spec.Infrastructure.Vpc.Network.Cidr)
+	} else {
+		vpcID := k.furyctlConf.Spec.Kubernetes.VpcId
+		if vpcID == nil {
+			return errVpcIDNotProvided
+		}
 
-		_, ipNet, err := net.ParseCIDR(string(cidr))
+		cidr, err = k.awsRunner.Ec2(
+			"describe-vpcs",
+			"--vpc-ids",
+			string(*vpcID),
+			"--query",
+			"Vpcs[0].CidrBlock",
+			"--output",
+			"text",
+		)
 		if err != nil {
-			return fmt.Errorf(SErrWrapWithStr, errParsingCIDR, err)
+			return fmt.Errorf(SErrWrapWithStr, errCIDRBlockFromVpc, err)
 		}
+	}
 
-		offIPNet := netx.AddOffsetToIPNet(ipNet, awsDNSServerIPOffset)
+	err = k.queryAWSDNSServer(cidr)
+	if err != nil {
+		return err
+	}
 
-		if offIPNet == nil {
-			return fmt.Errorf(SErrWrapWithStr, errParsingCIDR, err)
-		}
+	return nil
+}
 
-		err = netx.DNSQuery(offIPNet.IP.String(), "google.com.")
-		if err != nil {
-			return fmt.Errorf(SErrWrapWithStr, errResolvingDNS, err)
-		}
+func (*Kubernetes) queryAWSDNSServer(cidr string) error {
+	_, ipNet, err := net.ParseCIDR(cidr)
+	if err != nil {
+		return fmt.Errorf(SErrWrapWithStr, errParsingCIDR, err)
+	}
 
-		return nil
+	offIPNet := netx.AddOffsetToIPNet(ipNet, awsDNSServerIPOffset)
+
+	if offIPNet == nil {
+		return fmt.Errorf(SErrWrapWithStr, errParsingCIDR, err)
+	}
+
+	err = netx.DNSQuery(offIPNet.IP.String(), "google.com.")
+	if err != nil {
+		return fmt.Errorf(SErrWrapWithStr, errResolvingDNS, err)
 	}
 
 	return nil

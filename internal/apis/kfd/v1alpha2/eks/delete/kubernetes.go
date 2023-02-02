@@ -76,6 +76,20 @@ func (k *Kubernetes) Exec() error {
 		return nil
 	}
 
+	logrus.Info("Checking connection to the VPC...")
+
+	//if err := k.checkVPCConnection(); err != nil {
+	//	logrus.Debugf("error checking vpc connection: %v", err)
+	//
+	//	if k.furyctlConf.Spec.Infrastructure != nil {
+	//		if k.furyctlConf.Spec.Infrastructure.Vpc.Vpn != nil {
+	//			return fmt.Errorf("%w please check your VPN connection and try again", errKubeAPIUnreachable)
+	//		}
+	//	}
+	//
+	//	return fmt.Errorf("%w please check your VPC configuration and try again", errKubeAPIUnreachable)
+	//}
+
 	err = k.tfRunner.Destroy()
 	if err != nil {
 		return fmt.Errorf("error while deleting kubernetes phase: %w", err)
@@ -83,3 +97,58 @@ func (k *Kubernetes) Exec() error {
 
 	return nil
 }
+
+//func (k *Kubernetes) checkVPCConnection() error {
+//	var cidr string
+//
+//	var err error
+//
+//	if k.furyctlConf.Spec.Infrastructure != nil {
+//		cidr = string(k.furyctlConf.Spec.Infrastructure.Vpc.Network.Cidr)
+//	} else {
+//		vpcID := k.furyctlConf.Spec.Kubernetes.VpcId
+//		if vpcID == nil {
+//			return errVpcIDNotProvided
+//		}
+//
+//		cidr, err = k.awsRunner.Ec2(
+//			"describe-vpcs",
+//			"--vpc-ids",
+//			string(*vpcID),
+//			"--query",
+//			"Vpcs[0].CidrBlock",
+//			"--output",
+//			"text",
+//		)
+//		if err != nil {
+//			return fmt.Errorf(SErrWrapWithStr, errCIDRBlockFromVpc, err)
+//		}
+//	}
+//
+//	err = k.queryAWSDNSServer(cidr)
+//	if err != nil {
+//		return err
+//	}
+//
+//	return nil
+//}
+//
+//func (*Kubernetes) queryAWSDNSServer(cidr string) error {
+//	_, ipNet, err := net.ParseCIDR(cidr)
+//	if err != nil {
+//		return fmt.Errorf(SErrWrapWithStr, errParsingCIDR, err)
+//	}
+//
+//	offIPNet := netx.AddOffsetToIPNet(ipNet, awsDNSServerIPOffset)
+//
+//	if offIPNet == nil {
+//		return fmt.Errorf(SErrWrapWithStr, errParsingCIDR, err)
+//	}
+//
+//	err = netx.DNSQuery(offIPNet.IP.String(), "google.com.")
+//	if err != nil {
+//		return fmt.Errorf(SErrWrapWithStr, errResolvingDNS, err)
+//	}
+//
+//	return nil
+//}
