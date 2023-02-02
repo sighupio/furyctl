@@ -134,8 +134,10 @@ func (d *ClusterDeleter) Delete() error {
 			return fmt.Errorf("error while deleting kubernetes phase: %w", err)
 		}
 
-		if err := infra.Exec(); err != nil {
-			return fmt.Errorf("error while deleting infrastructure phase: %w", err)
+		if d.furyctlConf.Spec.Infrastructure != nil {
+			if err := infra.Exec(); err != nil {
+				return fmt.Errorf("error while deleting infrastructure phase: %w", err)
+			}
 		}
 
 		logrus.Info("Kubernetes Fury cluster deleted successfully")
