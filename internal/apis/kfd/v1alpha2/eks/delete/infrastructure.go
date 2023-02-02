@@ -107,6 +107,10 @@ func (i *Infrastructure) Exec() error {
 }
 
 func (i *Infrastructure) isVpnConfigured() bool {
+	if i.furyctlConf.Spec.Infrastructure == nil {
+		return false
+	}
+
 	vpn := i.furyctlConf.Spec.Infrastructure.Vpc.Vpn
 	if vpn == nil {
 		return false
