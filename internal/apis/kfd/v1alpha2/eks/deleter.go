@@ -79,7 +79,7 @@ func (d *ClusterDeleter) Delete() error {
 		return fmt.Errorf("error while creating distribution phase: %w", err)
 	}
 
-	kube, err := del.NewKubernetes(d.dryRun, d.workDir, d.binPath, d.kfdManifest)
+	kube, err := del.NewKubernetes(d.furyctlConf, d.dryRun, d.workDir, d.binPath, d.kfdManifest)
 	if err != nil {
 		return fmt.Errorf("error while creating kubernetes phase: %w", err)
 	}
