@@ -101,7 +101,7 @@ func (k *Kubernetes) Exec() error {
 	logrus.Info("Checking connection to the VPC...")
 
 	if err := k.checkVPCConnection(); err != nil {
-		logrus.Debugf("error checking vpc connection: %v", err)
+		logrus.Debugf("error checking VPC connection: %v", err)
 
 		if k.furyctlConf.Spec.Infrastructure != nil {
 			if k.furyctlConf.Spec.Infrastructure.Vpc.Vpn != nil {
