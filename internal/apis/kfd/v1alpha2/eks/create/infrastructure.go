@@ -29,6 +29,7 @@ import (
 	bytesx "github.com/sighupio/furyctl/internal/x/bytes"
 	execx "github.com/sighupio/furyctl/internal/x/exec"
 	iox "github.com/sighupio/furyctl/internal/x/io"
+	osx "github.com/sighupio/furyctl/internal/x/os"
 )
 
 const SErrWrapWithStr = "%w: %s"
@@ -149,7 +150,18 @@ func (i *Infrastructure) Exec(opts []cluster.OperationPhaseOption) error {
 			if strings.ToLower(opt.Name) == cluster.OperationPhaseOptionVPNAutoConnect {
 				autoConnect, ok := opt.Value.(bool)
 				if autoConnect && ok {
-					logrus.Info("Connecting to VPN, you will be asked for your SUDO password...")
+					connectMsg := "Connecting to VPN"
+
+					isRoot, err := osx.IsRoot()
+					if err != nil {
+						return fmt.Errorf("error while checking if user is root: %w", err)
+					}
+
+					if !isRoot {
+						connectMsg = fmt.Sprintf("%s, you will be asked for your SUDO password", connectMsg)
+					}
+
+					logrus.Infof("%s...", connectMsg)
 
 					if err := i.ovRunner.Connect(clientName); err != nil {
 						return fmt.Errorf("error connecting to VPN: %w", err)
