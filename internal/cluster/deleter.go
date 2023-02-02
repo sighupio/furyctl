@@ -9,9 +9,11 @@ import (
 	"strings"
 
 	"github.com/sighupio/fury-distribution/pkg/config"
+	yamlx "github.com/sighupio/furyctl/internal/x/yaml"
 )
 
 const (
+	DeleterPropertyFuryctlConf = "furyctlconf"
 	DeleterPropertyPhase       = "phase"
 	DeleterPropertyWorkDir     = "workdir"
 	DeleterPropertyKfdManifest = "kfdmanifest"
@@ -23,7 +25,7 @@ const (
 var delFactories = make(map[string]map[string]DeleterFactory) //nolint:gochecknoglobals, lll // This patterns requires factories
 //  as global to work with init function.
 
-type DeleterFactory func(props []DeleterProperty) (Deleter, error)
+type DeleterFactory func(configPath string, props []DeleterProperty) (Deleter, error)
 
 type DeleterProperty struct {
 	Name  string
@@ -39,6 +41,7 @@ type Deleter interface {
 func NewDeleter(
 	minimalConf config.Furyctl,
 	kfdManifest config.KFD,
+	configPath,
 	phase,
 	workDir,
 	binPath,
@@ -49,7 +52,7 @@ func NewDeleter(
 	lcResourceType := strings.ToLower(minimalConf.Kind)
 
 	if factoryFn, ok := delFactories[lcAPIVersion][lcResourceType]; ok {
-		return factoryFn([]DeleterProperty{
+		return factoryFn(configPath, []DeleterProperty{
 			{
 				Name:  DeleterPropertyKfdManifest,
 				Value: kfdManifest,
@@ -91,8 +94,14 @@ func RegisterDeleterFactory(apiVersion, kind string, factory DeleterFactory) {
 	delFactories[lcAPIVersion][lcKind] = factory
 }
 
-func NewDeleterFactory[T Deleter](dd T) DeleterFactory {
-	return func(props []DeleterProperty) (Deleter, error) {
+func NewDeleterFactory[T Deleter, S any](dd T) DeleterFactory {
+	return func(configPath string, props []DeleterProperty) (Deleter, error) {
+		furyctlConf, err := yamlx.FromFileV3[S](configPath)
+		if err != nil {
+			return nil, err
+		}
+
+		dd.SetProperty(DeleterPropertyFuryctlConf, furyctlConf)
 		dd.SetProperties(props)
 
 		return dd, nil

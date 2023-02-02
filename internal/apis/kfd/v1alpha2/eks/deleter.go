@@ -11,12 +11,14 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/sighupio/fury-distribution/pkg/config"
+	"github.com/sighupio/fury-distribution/pkg/schema"
 	del "github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/eks/delete"
 	"github.com/sighupio/furyctl/internal/cluster"
 )
 
 type ClusterDeleter struct {
 	kfdManifest config.KFD
+	furyctlConf schema.EksclusterKfdV1Alpha2
 	phase       string
 	workDir     string
 	binPath     string
@@ -37,6 +39,11 @@ func (d *ClusterDeleter) SetProperty(name string, value any) {
 	case cluster.DeleterPropertyKfdManifest:
 		if kfdManifest, ok := value.(config.KFD); ok {
 			d.kfdManifest = kfdManifest
+		}
+
+	case cluster.DeleterPropertyFuryctlConf:
+		if s, ok := value.(schema.EksclusterKfdV1Alpha2); ok {
+			d.furyctlConf = s
 		}
 
 	case cluster.DeleterPropertyPhase:
@@ -77,7 +84,7 @@ func (d *ClusterDeleter) Delete() error {
 		return fmt.Errorf("error while creating kubernetes phase: %w", err)
 	}
 
-	infra, err := del.NewInfrastructure(d.dryRun, d.workDir, d.binPath, d.kfdManifest)
+	infra, err := del.NewInfrastructure(d.furyctlConf, d.dryRun, d.workDir, d.binPath, d.kfdManifest)
 	if err != nil {
 		return fmt.Errorf("error while creating infrastructure phase: %w", err)
 	}
