@@ -98,18 +98,6 @@ func (k *Kubernetes) Exec() error {
 		return nil
 	}
 
-	if err := k.tfRunner.Init(); err != nil {
-		return fmt.Errorf("error running terraform init: %w", err)
-	}
-
-	if err := k.tfRunner.Plan(timestamp, "-destroy"); err != nil {
-		return fmt.Errorf("error running terraform plan: %w", err)
-	}
-
-	if k.dryRun {
-		return nil
-	}
-
 	logrus.Info("Checking connection to the VPC...")
 
 	if err := k.checkVPCConnection(); err != nil {
@@ -123,6 +111,20 @@ func (k *Kubernetes) Exec() error {
 
 		return fmt.Errorf("%w please check your VPC configuration and try again", errKubeAPIUnreachable)
 	}
+
+	if err := k.tfRunner.Init(); err != nil {
+		return fmt.Errorf("error running terraform init: %w", err)
+	}
+
+	if err := k.tfRunner.Plan(timestamp, "-destroy"); err != nil {
+		return fmt.Errorf("error running terraform plan: %w", err)
+	}
+
+	if k.dryRun {
+		return nil
+	}
+
+	logrus.Info("Deleting cloud resources, this could take a while...")
 
 	err = k.tfRunner.Destroy()
 	if err != nil {
