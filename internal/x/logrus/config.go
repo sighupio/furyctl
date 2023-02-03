@@ -12,6 +12,13 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+type LogFormat struct {
+	Level  string  `json:"level"`
+	Action *string `json:"action,omitempty"`
+	Msg    string  `json:"msg"`
+	Time   string  `json:"time"`
+}
+
 type formatterHook struct {
 	Writer    io.Writer
 	LogLevels []logrus.Level
