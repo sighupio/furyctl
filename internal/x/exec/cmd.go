@@ -14,6 +14,9 @@ import (
 	"os/exec"
 	"strings"
 	"time"
+
+	bytesx "github.com/sighupio/furyctl/internal/x/bytes"
+	iox "github.com/sighupio/furyctl/internal/x/io"
 )
 
 var (
@@ -32,12 +35,26 @@ func NewCmd(name string, opts CmdOptions) *Cmd {
 	outLog := bytes.NewBufferString("")
 	errLog := bytes.NewBufferString("")
 
-	outWriters := []io.Writer{outLog}
-	errWriters := []io.Writer{errLog}
+	outWriters := []iox.WriterTransform{{W: outLog}}
+	errWriters := []iox.WriterTransform{{W: errLog}}
 
 	if LogFile != nil {
-		outWriters = append(outWriters, LogFile)
-		errWriters = append(errWriters, LogFile)
+		cmd := strings.Split(name, "/")
+		cmdArgs := strings.Join(opts.Args, " ")
+
+		action := cmd[len(cmd)-1] + " " + cmdArgs
+
+		stripColor := iox.WriterTransform{
+			W: LogFile,
+			Transforms: []bytesx.TransformFunc{
+				bytesx.StripColor,
+				bytesx.ToJSONLogFormat("debug", action),
+				bytesx.AppendNewLine,
+			},
+		}
+
+		outWriters = append(outWriters, stripColor)
+		errWriters = append(errWriters, stripColor)
 	}
 
 	if opts.Executor == nil {
@@ -45,21 +62,21 @@ func NewCmd(name string, opts CmdOptions) *Cmd {
 	}
 
 	if opts.Out != nil {
-		outWriters = append(outWriters, opts.Out)
+		outWriters = append(outWriters, iox.WriterTransform{W: opts.Out})
 	}
 
 	if opts.Err != nil {
-		errWriters = append(errWriters, opts.Err)
+		errWriters = append(errWriters, iox.WriterTransform{W: opts.Err})
 	}
 
 	if Debug || LogFile == nil {
-		outWriters = append(outWriters, os.Stdout)
-		errWriters = append(errWriters, os.Stderr)
+		outWriters = append(outWriters, iox.WriterTransform{W: os.Stdout})
+		errWriters = append(errWriters, iox.WriterTransform{W: os.Stderr})
 	}
 
 	coreCmd := opts.Executor.Command(name, opts.Args...)
-	coreCmd.Stdout = io.MultiWriter(outWriters...)
-	coreCmd.Stderr = io.MultiWriter(errWriters...)
+	coreCmd.Stdout = iox.MultiWriterTransform(outWriters...)
+	coreCmd.Stderr = iox.MultiWriterTransform(errWriters...)
 	coreCmd.Dir = opts.WorkDir
 
 	return &Cmd{
