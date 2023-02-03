@@ -34,22 +34,23 @@ import (
 )
 
 var (
-	errKubeconfigFromLogs = errors.New("can't get kubeconfig from logs")
-	errPvtSubnetNotFound  = errors.New("private_subnets not found in infra output")
-	errPvtSubnetFromOut   = errors.New("cannot read private_subnets from infrastructure's output.json")
-	errVpcCIDRFromOut     = errors.New("cannot read vpc_cidr_block from infrastructure's output.json")
-	errVpcCIDRNotFound    = errors.New("vpc_cidr_block not found in infra output")
-	errVpcIDNotFound      = errors.New("vpc id not found: you forgot to specify one or the infrastructure phase failed")
-	errParsingCIDR        = errors.New("error parsing cidr")
-	errResolvingDNS       = errors.New("error resolving dns")
-	errVpcIDNotProvided   = errors.New("vpc_id not provided")
-	errCIDRBlockFromVpc   = errors.New("error getting cidr block from vpc")
-	errKubeAPIUnreachable = errors.New("kubernetes API is not reachable")
+	errKubeconfigFromLogs  = errors.New("can't get kubeconfig from logs")
+	errPvtSubnetNotFound   = errors.New("private_subnets not found in infra output")
+	errPvtSubnetFromOut    = errors.New("cannot read private_subnets from infrastructure's output.json")
+	errVpcCIDRFromOut      = errors.New("cannot read vpc_cidr_block from infrastructure's output.json")
+	errVpcCIDRNotFound     = errors.New("vpc_cidr_block not found in infra output")
+	errVpcIDNotFound       = errors.New("vpc id not found: you forgot to specify one or the infrastructure phase failed")
+	errParsingCIDR         = errors.New("error parsing cidr")
+	errResolvingDNS        = errors.New("error resolving dns")
+	errVpcIDNotProvided    = errors.New("vpc_id not provided")
+	errCIDRBlockFromVpc    = errors.New("error getting cidr block from vpc")
+	errKubeAPIUnreachable  = errors.New("kubernetes API is not reachable")
+	errAddingOffsetToIPNet = errors.New("error adding offset to ipnet")
 )
 
 const (
 	nodePoolDefaultVolumeSize = 35
-	// https://docs.aws.amazon.com/vpc/latest/userguide/vpc-dns.html.
+	// https://docs.aws.amazon.com/vpc/latest/userguide/vpc-dns.html
 	awsDNSServerIPOffset = 2
 )
 
@@ -825,9 +826,10 @@ func (*Kubernetes) addFirewallRulesToNodePool(buffer *bytes.Buffer, np schema.Sp
 }
 
 func (k *Kubernetes) checkVPCConnection() error {
-	var cidr string
-
-	var err error
+	var (
+		cidr string
+		err  error
+	)
 
 	if k.furyctlConf.Spec.Infrastructure != nil {
 		cidr = string(k.furyctlConf.Spec.Infrastructure.Vpc.Network.Cidr)
@@ -851,12 +853,7 @@ func (k *Kubernetes) checkVPCConnection() error {
 		}
 	}
 
-	err = k.queryAWSDNSServer(cidr)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return k.queryAWSDNSServer(cidr)
 }
 
 func (*Kubernetes) queryAWSDNSServer(cidr string) error {
@@ -865,10 +862,9 @@ func (*Kubernetes) queryAWSDNSServer(cidr string) error {
 		return fmt.Errorf(SErrWrapWithStr, errParsingCIDR, err)
 	}
 
-	offIPNet := netx.AddOffsetToIPNet(ipNet, awsDNSServerIPOffset)
-
-	if offIPNet == nil {
-		return fmt.Errorf(SErrWrapWithStr, errParsingCIDR, err)
+	offIPNet, err := netx.AddOffsetToIPNet(ipNet, awsDNSServerIPOffset)
+	if err != nil {
+		return fmt.Errorf(SErrWrapWithStr, errAddingOffsetToIPNet, err)
 	}
 
 	err = netx.DNSQuery(offIPNet.IP.String(), "google.com.")

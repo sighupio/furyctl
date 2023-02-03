@@ -24,16 +24,18 @@ import (
 )
 
 const (
-	SErrWrapWithStr      = "%w: %s"
+	SErrWrapWithStr = "%w: %s"
+	// https://docs.aws.amazon.com/vpc/latest/userguide/vpc-dns.html
 	awsDNSServerIPOffset = 2
 )
 
 var (
-	errParsingCIDR        = errors.New("error parsing cidr")
-	errResolvingDNS       = errors.New("error resolving dns")
-	errVpcIDNotProvided   = errors.New("vpc_id not provided")
-	errCIDRBlockFromVpc   = errors.New("error getting cidr block from vpc")
-	errKubeAPIUnreachable = errors.New("kubernetes API is not reachable")
+	errParsingCIDR         = errors.New("error parsing cidr")
+	errResolvingDNS        = errors.New("error resolving dns")
+	errVpcIDNotProvided    = errors.New("vpc_id not provided")
+	errCIDRBlockFromVpc    = errors.New("error getting cidr block from vpc")
+	errKubeAPIUnreachable  = errors.New("kubernetes API is not reachable")
+	errAddingOffsetToIPNet = errors.New("error adding offset to ipnet")
 )
 
 type Kubernetes struct {
@@ -161,12 +163,7 @@ func (k *Kubernetes) checkVPCConnection() error {
 		}
 	}
 
-	err = k.queryAWSDNSServer(cidr)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return k.queryAWSDNSServer(cidr)
 }
 
 func (*Kubernetes) queryAWSDNSServer(cidr string) error {
@@ -175,10 +172,9 @@ func (*Kubernetes) queryAWSDNSServer(cidr string) error {
 		return fmt.Errorf(SErrWrapWithStr, errParsingCIDR, err)
 	}
 
-	offIPNet := netx.AddOffsetToIPNet(ipNet, awsDNSServerIPOffset)
-
-	if offIPNet == nil {
-		return fmt.Errorf(SErrWrapWithStr, errParsingCIDR, err)
+	offIPNet, err := netx.AddOffsetToIPNet(ipNet, awsDNSServerIPOffset)
+	if err != nil {
+		return fmt.Errorf(SErrWrapWithStr, errAddingOffsetToIPNet, err)
 	}
 
 	err = netx.DNSQuery(offIPNet.IP.String(), "google.com.")

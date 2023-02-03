@@ -5,28 +5,36 @@
 package netx
 
 import (
-	"encoding/binary"
+	"fmt"
+	"math"
 	"net"
+	"net/netip"
 )
 
-func AddOffsetToIPNet(ipNet *net.IPNet, offset int) *net.IPNet {
+var (
+	ErrInvalidIP  = fmt.Errorf("invalid ip")
+	ErrIPNetIsNil = fmt.Errorf("ipnet is nil")
+)
+
+func AddOffsetToIPNet(ipNet *net.IPNet, offset int) (*net.IPNet, error) {
 	if ipNet == nil {
-		return nil
+		return nil, ErrIPNetIsNil
 	}
 
-	var networkAddress uint32
-
-	if len(ipNet.IP) == net.IPv6len {
-		networkAddress = binary.BigEndian.Uint32(ipNet.IP[(net.IPv6len - net.IPv4len):net.IPv6len])
-	} else {
-		networkAddress = binary.BigEndian.Uint32(ipNet.IP)
+	newIP, err := netip.ParseAddr(ipNet.IP.String())
+	if err != nil {
+		return nil, fmt.Errorf("%w: %v", ErrInvalidIP, err)
 	}
 
-	networkAddress += uint32(offset)
+	for i := 0; i < int(math.Abs(float64(offset))); i++ {
+		if offset > 0 {
+			newIP = newIP.Next()
 
-	newIP := make(net.IP, net.IPv4len)
+			continue
+		}
 
-	binary.BigEndian.PutUint32(newIP, networkAddress)
+		newIP = newIP.Prev()
+	}
 
-	return &net.IPNet{IP: newIP, Mask: ipNet.Mask}
+	return &net.IPNet{IP: newIP.AsSlice(), Mask: ipNet.Mask}, nil
 }
