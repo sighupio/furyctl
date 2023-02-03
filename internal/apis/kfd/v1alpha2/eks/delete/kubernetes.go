@@ -30,10 +30,10 @@ const (
 )
 
 var (
-	errParsingCIDR         = errors.New("error parsing cidr")
-	errResolvingDNS        = errors.New("error resolving dns")
+	errParsingCIDR         = errors.New("error parsing CIDR")
+	errResolvingDNS        = errors.New("error resolving DNS record")
 	errVpcIDNotProvided    = errors.New("vpc_id not provided")
-	errCIDRBlockFromVpc    = errors.New("error getting cidr block from vpc")
+	errCIDRBlockFromVpc    = errors.New("error getting CIDR block from VPC")
 	errKubeAPIUnreachable  = errors.New("kubernetes API is not reachable")
 	errAddingOffsetToIPNet = errors.New("error adding offset to ipnet")
 )
