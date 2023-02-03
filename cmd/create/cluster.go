@@ -98,7 +98,6 @@ func NewClusterCmd(tracker *analytics.Tracker) *cobra.Command {
 			distrodl := distribution.NewDownloader(client)
 
 			// Init packages.
-			execx.Debug = flags.Debug || flags.DryRun
 			execx.NoTTY = flags.NoTTY
 
 			// Download the distribution.
@@ -168,6 +167,9 @@ func NewClusterCmd(tracker *analytics.Tracker) *cobra.Command {
 				BinPath:    flags.BinPath,
 				Kubeconfig: flags.Kubeconfig,
 			}
+
+			// Set debug mode.
+			execx.Debug = flags.Debug || flags.DryRun
 
 			// Create the cluster.
 			clusterCreator, err := cluster.NewCreator(
