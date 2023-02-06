@@ -35,14 +35,14 @@ import (
 
 var (
 	errKubeconfigFromLogs  = errors.New("can't get kubeconfig from logs")
-	errPvtSubnetNotFound   = errors.New("private_subnets not found in infra output")
+	errPvtSubnetNotFound   = errors.New("private_subnets not found in infrastructure phase's output")
 	errPvtSubnetFromOut    = errors.New("cannot read private_subnets from infrastructure's output.json")
 	errVpcCIDRFromOut      = errors.New("cannot read vpc_cidr_block from infrastructure's output.json")
 	errVpcCIDRNotFound     = errors.New("vpc_cidr_block not found in infra output")
-	errVpcIDNotFound       = errors.New("vpc id not found: you forgot to specify one or the infrastructure phase failed")
+	errVpcIDNotFound       = errors.New("vpcId not found: you forgot to specify one in the configuration file or the infrastructure phase failed")
 	errParsingCIDR         = errors.New("error parsing CIDR")
 	errResolvingDNS        = errors.New("error resolving DNS record")
-	errVpcIDNotProvided    = errors.New("vpc_id not provided")
+	errVpcIDNotProvided    = errors.New("vpcId not provided")
 	errCIDRBlockFromVpc    = errors.New("error getting CIDR block from VPC")
 	errKubeAPIUnreachable  = errors.New("kubernetes API is not reachable")
 	errAddingOffsetToIPNet = errors.New("error adding offset to ipnet")
