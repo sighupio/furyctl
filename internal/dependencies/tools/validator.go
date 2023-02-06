@@ -6,6 +6,7 @@ package tools
 
 import (
 	"errors"
+	tool2 "github.com/sighupio/furyctl/internal/tool"
 	"reflect"
 	"strings"
 
@@ -32,7 +33,7 @@ type Validator struct {
 	toolFactory *Factory
 }
 
-func (tv *Validator) Validate(kfdManifest config.KFD) ([]string, []error) {
+func (tv *Validator) Validate(kfdManifest config.KFD, tfState config.State) ([]string, []error) {
 	var (
 		oks  []string
 		errs []error
@@ -55,6 +56,15 @@ func (tv *Validator) Validate(kfdManifest config.KFD) ([]string, []error) {
 					oks = append(oks, name)
 				}
 			}
+		}
+	}
+
+	if tfState.S3.BucketName != "" {
+		tool := tv.toolFactory.Create(tool2.Awscli, "*")
+		if err := tool.CheckBinVersion(); err != nil {
+			errs = append(errs, err)
+		} else {
+			oks = append(oks, "aws")
 		}
 	}
 

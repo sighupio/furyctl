@@ -12,12 +12,111 @@ import (
 )
 
 var (
-	// Link: https://regex101.com/r/Ly7O1x/3/
+	// Link: https://regex101.com/r/WrEwCK/1
 	//nolint:lll //We can't wrap regex
-	regex = regexp.MustCompile(`^(?P<major>0|[1-9]\d*)\.(?P<minor>0|[1-9]\d*)\.(?P<patch>0|[1-9]\d*)(?:-(?P<prerelease>(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\+(?P<buildmetadata>[0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?$`)
-
-	ErrInvalidSemver = fmt.Errorf("invalid semantic version")
+	regex                = regexp.MustCompile(`^(\*)$|^((~|\^|<=|<|>|>=)?(?P<major>0|[1-9]\d*)\.(?P<minor>0|[1-9]\d*)\.(?P<patch>0|[1-9]\d*)(?:-(?P<prerelease>(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\+(?P<buildmetadata>[0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?)$`)
+	comparatorsRegex     = regexp.MustCompile(`^(~|\^|<=|>=|<|>|\*)`)
+	ErrInvalidSemver     = fmt.Errorf("invalid semantic version")
+	ErrInvalidComparator = fmt.Errorf("invalid comparator")
 )
+
+type Comparer interface {
+	Compare(a, b Version) bool
+}
+
+func NewComparer(c string) (Comparer, error) {
+	switch c {
+	case "~":
+		return CompatibleUp{}, nil
+
+	case "^":
+		return Compatible{}, nil
+
+	case "<=":
+		return LessOrEqual{}, nil
+
+	case "<":
+		return Less{}, nil
+
+	case ">=":
+		return GreaterOrEqual{}, nil
+
+	case ">":
+		return Greater{}, nil
+
+	case "*":
+		return Always{}, nil
+
+	case "":
+		return Equal{}, nil
+
+	default:
+		return nil, fmt.Errorf("%w: %s", ErrInvalidComparator, c)
+	}
+}
+
+type Always struct{}
+
+func (Always) Compare(_, _ Version) bool {
+	return true
+}
+
+type LessOrEqual struct{}
+
+func (LessOrEqual) Compare(a, b Version) bool {
+	gt := Gt(b.String(), a.String())
+
+	if gt {
+		return true
+	}
+
+	return a.String() == b.String()
+}
+
+type Less struct{}
+
+func (Less) Compare(a, b Version) bool {
+	return Gt(b.String(), a.String())
+}
+
+type GreaterOrEqual struct{}
+
+func (GreaterOrEqual) Compare(a, b Version) bool {
+	gt := Gt(a.String(), b.String())
+
+	if gt {
+		return true
+	}
+
+	return a.String() == b.String()
+}
+
+type Equal struct{}
+
+func (Equal) Compare(a, b Version) bool {
+	return a.String() == b.String()
+}
+
+type Greater struct{}
+
+func (Greater) Compare(a, b Version) bool {
+	return Gt(a.String(), b.String())
+}
+
+type Compatible struct{}
+
+func (Compatible) Compare(a, b Version) bool {
+	aParts := Parts(a.String())
+	bParts := Parts(b.String())
+
+	return aParts.Major == bParts.Major
+}
+
+type CompatibleUp struct{}
+
+func (CompatibleUp) Compare(a, b Version) bool {
+	return SameMinor(a, b)
+}
 
 // NewVersion takes a string and returns a Version.
 func NewVersion(v string) (Version, error) {
@@ -26,6 +125,30 @@ func NewVersion(v string) (Version, error) {
 	}
 
 	return Version(v), nil
+}
+
+type VersionParts struct {
+	Comparator Comparer
+	Major      int
+	Minor      int
+	Patch      int
+	Suffix     string
+}
+
+func (v VersionParts) String() string {
+	if v.Suffix != "" {
+		return fmt.Sprintf("%d.%d.%d-%s", v.Major, v.Minor, v.Patch, v.Suffix)
+	}
+
+	return fmt.Sprintf("%d.%d.%d", v.Major, v.Minor, v.Patch)
+}
+
+func (v VersionParts) CheckCompatibility(b VersionParts) bool {
+	if v.Comparator == nil {
+		return v.String() == b.String()
+	}
+
+	return v.Comparator.Compare(Version(b.String()), Version(v.String()))
 }
 
 type Version string
@@ -45,10 +168,10 @@ func SamePatch(a, b Version) bool {
 		return true
 	}
 
-	aMajor, aMinor, aPatch, _ := Parts(a.String())
-	bMajor, bMinor, bPatch, _ := Parts(b.String())
+	aParts := Parts(a.String())
+	bParts := Parts(b.String())
 
-	return aMajor == bMajor && aMinor == bMinor && aPatch == bPatch
+	return aParts.Major == bParts.Major && aParts.Minor == bParts.Minor && aParts.Patch == bParts.Patch
 }
 
 // SameMinorStr takes two version strings and tell if they match down to minor level.
@@ -62,10 +185,10 @@ func SameMinor(a, b Version) bool {
 		return true
 	}
 
-	aMajor, aMinor, _, _ := Parts(a.String())
-	bMajor, bMinor, _, _ := Parts(b.String())
+	aParts := Parts(a.String())
+	bParts := Parts(b.String())
 
-	return aMajor == bMajor && aMinor == bMinor
+	return aParts.Major == bParts.Major && aParts.Minor == bParts.Minor
 }
 
 // Gt returns true if a is greater than b.
@@ -74,49 +197,85 @@ func Gt(va, vb string) bool {
 		return false
 	}
 
-	aMajor, aMinor, aPatch, _ := Parts(va)
-	bMajor, bMinor, bPatch, _ := Parts(vb)
+	aParts := Parts(va)
+	bParts := Parts(vb)
 
-	if aMajor > bMajor {
+	if aParts.Major > bParts.Major {
 		return true
 	}
 
-	if aMajor < bMajor {
+	if aParts.Major < bParts.Major {
 		return false
 	}
 
-	if aMinor > bMinor {
+	if aParts.Minor > bParts.Minor {
 		return true
 	}
 
-	if aMinor < bMinor {
+	if aParts.Minor < bParts.Minor {
 		return false
 	}
 
-	if aPatch > bPatch {
+	if aParts.Patch > bParts.Patch {
 		return true
 	}
 
-	if aPatch < bPatch {
+	if aParts.Patch < bParts.Patch {
 		return false
 	}
 
 	return false
 }
 
-// Parts returns the major, minor, patch and buil+prerelease parts of a version.
-func Parts(v string) (int, int, int, string) {
+// Parts return the comparer, major, minor, patch and build+prerelease parts of a version.
+func Parts(v string) VersionParts {
 	pv := EnsurePrefix(v)
 
 	if !isValid(pv) {
-		return 0, 0, 0, ""
+		return VersionParts{
+			Comparator: nil,
+			Major:      0,
+			Minor:      0,
+			Patch:      0,
+			Suffix:     "",
+		}
 	}
 
-	parts := strings.Split(EnsureNoPrefix(v), ".")
+	cmpStrIndex := comparatorsRegex.FindStringIndex(v)
+	cmpStr := ""
+	vStr := v
+
+	if len(cmpStrIndex) > 0 {
+		cmpStr = v[cmpStrIndex[0]:cmpStrIndex[1]]
+		vStr = v[cmpStrIndex[1]:]
+	}
+
+	cmp, err := NewComparer(cmpStr)
+	if err != nil {
+		return VersionParts{
+			Comparator: nil,
+			Major:      0,
+			Minor:      0,
+			Patch:      0,
+			Suffix:     "",
+		}
+	}
+
+	if len(vStr) == 0 {
+		return VersionParts{
+			Comparator: cmp,
+			Major:      0,
+			Minor:      0,
+			Patch:      0,
+			Suffix:     "",
+		}
+	}
+
+	parts := strings.Split(EnsureNoPrefix(vStr), ".")
 
 	ch := "-"
-	m := strings.Index(v, "-")
-	p := strings.Index(v, "+")
+	m := strings.Index(vStr, "-")
+	p := strings.Index(vStr, "+")
 
 	if (m == -1 && p > -1) || (m > -1 && p > -1 && p < m) {
 		ch = "+"
@@ -126,24 +285,54 @@ func Parts(v string) (int, int, int, string) {
 
 	major, err := strconv.Atoi(parts[0])
 	if err != nil {
-		return 0, 0, 0, ""
+		return VersionParts{
+			Comparator: nil,
+			Major:      0,
+			Minor:      0,
+			Patch:      0,
+			Suffix:     "",
+		}
 	}
 
 	minor, err := strconv.Atoi(parts[1])
 	if err != nil {
-		return 0, 0, 0, ""
+		return VersionParts{
+			Comparator: nil,
+			Major:      0,
+			Minor:      0,
+			Patch:      0,
+			Suffix:     "",
+		}
 	}
 
 	patch, err := strconv.Atoi(patchParts[0])
 	if err != nil {
-		return 0, 0, 0, ""
+		return VersionParts{
+			Comparator: nil,
+			Major:      0,
+			Minor:      0,
+			Patch:      0,
+			Suffix:     "",
+		}
 	}
 
 	if len(patchParts) > 1 {
-		return major, minor, patch, strings.Join(patchParts[1:], ch)
+		return VersionParts{
+			Comparator: cmp,
+			Major:      major,
+			Minor:      minor,
+			Patch:      patch,
+			Suffix:     strings.Join(patchParts[1:], ch),
+		}
 	}
 
-	return major, minor, patch, ""
+	return VersionParts{
+		Comparator: cmp,
+		Major:      major,
+		Minor:      minor,
+		Patch:      patch,
+		Suffix:     "",
+	}
 }
 
 func isValid(v string) bool {
