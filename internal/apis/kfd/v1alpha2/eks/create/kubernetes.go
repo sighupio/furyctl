@@ -34,7 +34,7 @@ import (
 )
 
 var (
-	errKubeconfigFromLogs = errors.New("can't get kubeconfig from logs")
+	errKubeconfigFromLogs = errors.New("cannot get kubeconfig file after cluster creation")
 	errPvtSubnetNotFound  = errors.New("private_subnets not found in infrastructure phase's output")
 	errPvtSubnetFromOut   = errors.New("cannot read private_subnets from infrastructure's output.json")
 	errVpcCIDRFromOut     = errors.New("cannot read vpc_cidr_block from infrastructure's output.json")
