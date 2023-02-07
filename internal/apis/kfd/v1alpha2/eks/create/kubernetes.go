@@ -178,6 +178,7 @@ func (k *Kubernetes) copyFromTemplate() error {
 	tfConfVars := map[string]map[any]any{
 		"kubernetes": {
 			"installerPath": eksInstallerPath,
+			"tfVersion":     k.kfdManifest.Tools.Common.Terraform.Version,
 		},
 		"terraform": {
 			"backend": map[string]any{

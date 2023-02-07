@@ -4,7 +4,13 @@
  * license that can be found in the LICENSE file.
  */
 
+{{- $deprecateOptionalTfVer := semver "1.3.0" }}
+
 terraform {
+  {{ if eq ($deprecateOptionalTfVer | (semver .kubernetes.tfVersion).Compare) -1 -}}
+  experiments = [module_variable_optional_attrs]
+  {{ end -}}
+
   backend "s3" {
     bucket = "{{ .terraform.backend.s3.bucketName }}"
     key    = "{{ .terraform.backend.s3.keyPrefix }}/cluster.json"
