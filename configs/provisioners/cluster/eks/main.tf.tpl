@@ -4,8 +4,12 @@
  * license that can be found in the LICENSE file.
  */
 
+{{- $deprecateOptionalTfVer := semver "1.3.0" }}
+
 terraform {
-  experiments     = [module_variable_optional_attrs]
+  {{ if eq ($deprecateOptionalTfVer | (semver .kubernetes.tfVersion).Compare) -1 -}}
+  experiments = [module_variable_optional_attrs]
+  {{ end -}}
 
   backend "s3" {
     bucket = "{{ .terraform.backend.s3.bucketName }}"
@@ -15,7 +19,7 @@ terraform {
 }
 
 module "fury" {
-  source = "github.com/sighupio/fury-eks-installer//modules/eks?ref={{ .kubernetes.eks.installer }}"
+  source = "{{ .kubernetes.installerPath }}"
 
   cluster_name    = var.cluster_name
   cluster_version = var.cluster_version
