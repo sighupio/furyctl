@@ -13,7 +13,7 @@ terraform {
 }
 
 module "vpc-and-vpn" {
-  source = "github.com/sighupio/fury-eks-installer//modules/vpc-and-vpn?ref={{ .kubernetes.eks.installer }}"
+  source = "{{ .kubernetes.installerPath }}"
 
   name                     = var.name
   network_cidr             = var.network_cidr
