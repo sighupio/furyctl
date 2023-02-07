@@ -172,9 +172,12 @@ func (k *Kubernetes) copyFromTemplate() error {
 
 	targetTfDir := path.Join(k.Path, "terraform")
 	prefix := "kube"
+
+	eksInstallerPath := path.Join(k.Path, "..", "vendor", "installers", "eks", "modules", "eks")
+
 	tfConfVars := map[string]map[any]any{
 		"kubernetes": {
-			"eks": k.kfdManifest.Kubernetes.Eks,
+			"installerPath": eksInstallerPath,
 		},
 		"terraform": {
 			"backend": map[string]any{

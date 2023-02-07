@@ -5,8 +5,6 @@
  */
 
 terraform {
-  experiments     = [module_variable_optional_attrs]
-
   backend "s3" {
     bucket = "{{ .terraform.backend.s3.bucketName }}"
     key    = "{{ .terraform.backend.s3.keyPrefix }}/cluster.json"
@@ -15,7 +13,7 @@ terraform {
 }
 
 module "fury" {
-  source = "github.com/sighupio/fury-eks-installer//modules/eks?ref={{ .kubernetes.eks.installer }}"
+  source = "{{ .kubernetes.installerPath }}"
 
   cluster_name    = var.cluster_name
   cluster_version = var.cluster_version
