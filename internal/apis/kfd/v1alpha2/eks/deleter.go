@@ -79,7 +79,7 @@ func (d *ClusterDeleter) Delete() error {
 		return fmt.Errorf("error while creating distribution phase: %w", err)
 	}
 
-	kube, err := del.NewKubernetes(d.dryRun, d.workDir, d.binPath, d.kfdManifest)
+	kube, err := del.NewKubernetes(d.furyctlConf, d.dryRun, d.workDir, d.binPath, d.kfdManifest)
 	if err != nil {
 		return fmt.Errorf("error while creating kubernetes phase: %w", err)
 	}
@@ -100,6 +100,9 @@ func (d *ClusterDeleter) Delete() error {
 		return nil
 
 	case cluster.OperationPhaseKubernetes:
+		logrus.Warn("Please make sure that the Kubernetes API is reachable before continuing" +
+			" (e.g. check VPN connection is active`), otherwise the deletion will fail.")
+
 		if err := kube.Exec(); err != nil {
 			return fmt.Errorf("error while deleting kubernetes phase: %w", err)
 		}
@@ -131,8 +134,10 @@ func (d *ClusterDeleter) Delete() error {
 			return fmt.Errorf("error while deleting kubernetes phase: %w", err)
 		}
 
-		if err := infra.Exec(); err != nil {
-			return fmt.Errorf("error while deleting infrastructure phase: %w", err)
+		if d.furyctlConf.Spec.Infrastructure != nil {
+			if err := infra.Exec(); err != nil {
+				return fmt.Errorf("error while deleting infrastructure phase: %w", err)
+			}
 		}
 
 		logrus.Info("Kubernetes Fury cluster deleted successfully")
