@@ -17,7 +17,7 @@ import (
 
 func NewKustomize(runner *kustomize.Runner, version string) *Kustomize {
 	return &Kustomize{
-		arch:    "amd64",
+		arch:    runtime.GOARCH,
 		os:      runtime.GOOS,
 		version: version,
 		checker: &checker{
