@@ -31,6 +31,25 @@ func (r *Runner) CmdPath() string {
 	return r.paths.Awscli
 }
 
+func (r *Runner) Ec2(sub string, params ...string) (string, error) {
+	args := []string{"ec2", sub}
+
+	if len(params) > 0 {
+		args = append(args, params...)
+	}
+
+	out, err := execx.CombinedOutput(execx.NewCmd(r.paths.Awscli, execx.CmdOptions{
+		Args:     args,
+		Executor: r.executor,
+		WorkDir:  r.paths.WorkDir,
+	}))
+	if err != nil {
+		return "", fmt.Errorf("error running awscli ec2 %s: %w", sub, err)
+	}
+
+	return out, nil
+}
+
 func (r *Runner) Version() (string, error) {
 	out, err := execx.CombinedOutput(execx.NewCmd(r.paths.Awscli, execx.CmdOptions{
 		Args:     []string{"--version"},
