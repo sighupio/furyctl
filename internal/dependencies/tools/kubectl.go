@@ -16,7 +16,7 @@ import (
 
 func NewKubectl(runner *kubectl.Runner, version string) *Kubectl {
 	return &Kubectl{
-		arch:    "amd64",
+		arch:    runtime.GOARCH,
 		os:      runtime.GOOS,
 		version: version,
 		checker: &checker{
