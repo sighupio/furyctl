@@ -16,7 +16,7 @@ import (
 
 func NewOpenvpn(runner *openvpn.Runner, version string) *Openvpn {
 	return &Openvpn{
-		arch:    "amd64",
+		arch:    runtime.GOARCH,
 		os:      runtime.GOOS,
 		version: version,
 		checker: &checker{

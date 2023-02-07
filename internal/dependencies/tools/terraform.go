@@ -17,7 +17,7 @@ import (
 
 func NewTerraform(runner *terraform.Runner, version string) *Terraform {
 	return &Terraform{
-		arch:    "amd64",
+		arch:    runtime.GOARCH,
 		os:      runtime.GOOS,
 		version: version,
 		checker: &checker{
