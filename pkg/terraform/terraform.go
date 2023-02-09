@@ -21,6 +21,7 @@ type Options struct {
 	Backend            string
 	BackendConfig      map[string]string
 	ReconfigureBackend bool
+	UpgradeDeps        bool
 
 	WorkingDir string
 	ConfigDir  string

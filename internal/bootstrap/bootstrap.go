@@ -258,7 +258,7 @@ func (c *Bootstrap) Update(dryrun bool) (err error) {
 	c.s.Suffix = " Re-Initializing terraform project"
 	c.s.Start()
 
-	err = tf.Init(context.Background(), tfexec.Reconfigure(c.options.TerraformOpts.ReconfigureBackend))
+	err = tf.Init(context.Background(), tfexec.Reconfigure(c.options.TerraformOpts.ReconfigureBackend), tfexec.Upgrade(c.options.TerraformOpts.UpgradeDeps))
 	if err != nil {
 		log.Errorf("error while running terraform init in the project dir: %v", err)
 		return err
