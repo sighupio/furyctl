@@ -181,6 +181,9 @@ func (e EKS) createVarFile() (err error) {
 			} else {
 				buffer.WriteString("version = null\n")
 			}
+			if np.ContainerRuntime != "" {
+				buffer.WriteString(fmt.Sprintf("container_runtime = \"%v\"\n", np.ContainerRuntime))
+			}
 			buffer.WriteString(fmt.Sprintf("spot_instance = %v\n", np.SpotInstance))
 			buffer.WriteString(fmt.Sprintf("min_size = %v\n", np.MinSize))
 			buffer.WriteString(fmt.Sprintf("max_size = %v\n", np.MaxSize))
