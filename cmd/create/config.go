@@ -90,8 +90,8 @@ func NewConfigCmd(tracker *analytics.Tracker) *cobra.Command {
 						Terraform: distroConfig.Terraform{
 							State: distroConfig.State{
 								S3: distroConfig.S3{
-									BucketName: "dummy-bucket",
-									KeyPrefix:  "dummy-key-prefix",
+									BucketName: "bucket-name",
+									KeyPrefix:  "key-prefix",
 									Region:     "eu-west-1",
 								},
 							},

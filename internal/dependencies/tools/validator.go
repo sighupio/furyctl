@@ -6,11 +6,11 @@ package tools
 
 import (
 	"errors"
-	tool2 "github.com/sighupio/furyctl/internal/tool"
 	"reflect"
 	"strings"
 
 	"github.com/sighupio/fury-distribution/pkg/config"
+	tool2 "github.com/sighupio/furyctl/internal/tool"
 	execx "github.com/sighupio/furyctl/internal/x/exec"
 )
 

@@ -172,10 +172,18 @@ func (vc *checker) version(want string) error {
 	}
 
 	systemVersion := vc.trimFn(versionStringTokens)
-	sysVerParts := semver.Parts(systemVersion)
-	wantVerParts := semver.Parts(want)
 
-	if !wantVerParts.CheckCompatibility(sysVerParts) {
+	sysVer, err := semver.GetVersion(systemVersion)
+	if err != nil {
+		return fmt.Errorf("%w: %v", errGetVersion, err)
+	}
+
+	wantVer, err := semver.GetConstraint(want)
+	if err != nil {
+		return fmt.Errorf("%w: %v", errGetVersion, err)
+	}
+
+	if !wantVer.Check(sysVer) {
 		return fmt.Errorf("%w - installed = %s, expected = %s", ErrWrongToolVersion, systemVersion, want)
 	}
 

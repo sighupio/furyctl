@@ -46,6 +46,7 @@ func Test_Validator_Validate(t *testing.T) {
 				"kustomize",
 				"terraform",
 				"furyagent",
+				"aws",
 			},
 		},
 		{
@@ -71,7 +72,7 @@ func Test_Validator_Validate(t *testing.T) {
 				errors.New("kustomize: wrong tool version - installed = 3.9.4, expected = 3.5.3"),
 				errors.New("terraform: wrong tool version - installed = 0.15.4, expected = 1.3.0"),
 			},
-			wantOks: []string{},
+			wantOks: []string{"aws"},
 		},
 	}
 	for _, tC := range testCases {
