@@ -1,6 +1,8 @@
 <!-- markdownlint-disable MD033 -->
 <h1 align="center">
-  <img src="docs/assets/furyctl-logo.svg" width="200px" alt="furyctl logo" />
+  <!-- Using a temporary PNG until we get the updated SVG -->
+  <!-- <img src="docs/assets/furyctl-logo.svg" width="200px" alt="furyctl logo" /> -->
+  <img src="docs/assets/furyctl-temporary.png" width="200px" alt="furyctl logo" />
 
 <p>The Swiss Army Knife<br/>for the Kubernetes Fury Distribution</p>
 
