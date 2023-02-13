@@ -77,6 +77,7 @@ func bPre(cmd *cobra.Command, args []string) (err error) {
 			WorkingDir:         workingDirFullPath,
 			Debug:              debug,
 			ReconfigureBackend: bReconfigure,
+			UpgradeDeps:        bUpgradeDeps,
 		},
 	}
 	boot, err = bootstrap.New(bootstrapOpts)
@@ -98,6 +99,7 @@ var (
 	bReconfigure         bool
 	bDryRun              bool
 	bForce               bool
+	bUpgradeDeps         bool
 
 	bootstrapCmd = &cobra.Command{
 		Use:   "bootstrap",
@@ -204,6 +206,8 @@ func init() {
 	bootstrapInitCmd.PersistentFlags().BoolVar(&bReconfigure, "reconfigure", false, "Reconfigure the backend, ignoring any saved configuration")
 	bootstrapApplyCmd.PersistentFlags().BoolVar(&bReconfigure, "reconfigure", false, "Reconfigure the backend, ignoring any saved configuration")
 	bootstrapDestroyCmd.PersistentFlags().BoolVar(&bReconfigure, "reconfigure", false, "Reconfigure the backend, ignoring any saved configuration")
+
+	bootstrapApplyCmd.PersistentFlags().BoolVar(&bUpgradeDeps, "upgrade-deps", false, "Ignore previously-downloaded objects and install the latest version allowed within configured constraints")
 
 	bootstrapInitCmd.PersistentFlags().BoolVar(&bReset, "reset", false, "Forces the re-initialization of the project. It deletes the content of the workdir recreating everything")
 

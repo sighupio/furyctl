@@ -76,6 +76,7 @@ func cPre(cmd *cobra.Command, args []string) (err error) {
 			WorkingDir:         workingDirFullPath,
 			Debug:              cDryRun,
 			ReconfigureBackend: cReconfigure,
+			UpgradeDeps:        cUpgradeDeps,
 		},
 	}
 	clu, err = cluster.New(clusterOpts)
@@ -97,6 +98,7 @@ var (
 	cReset               bool
 	cReconfigure         bool
 	cForce               bool
+	cUpgradeDeps         bool
 
 	clusterCmd = &cobra.Command{
 		Use:   "cluster",
@@ -207,6 +209,8 @@ func init() {
 	clusterDestroyCmd.PersistentFlags().BoolVar(&cReconfigure, "reconfigure", false, "Reconfigure the backend, ignoring any saved configuration")
 
 	clusterInitCmd.PersistentFlags().BoolVar(&cReset, "reset", false, "Forces the re-initialization of the project. It deletes the content of the workdir recreating everything")
+
+	clusterApplyCmd.PersistentFlags().BoolVar(&cUpgradeDeps, "upgrade-deps", false, "Ignore previously-downloaded objects and install the latest version allowed within configured constraints")
 
 	clusterDestroyCmd.PersistentFlags().BoolVar(&cForce, "force", false, "Forces the destroy of the project. Doesn't ask for confirmation")
 
