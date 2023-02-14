@@ -1,7 +1,7 @@
 module github.com/sighupio/furyctl
 
 require (
-	github.com/aws/aws-sdk-go v1.27.0 // indirect
+	github.com/aws/aws-sdk-go v1.34.0 // indirect
 	github.com/briandowns/spinner v1.12.0
 	github.com/denisbrodbeck/machineid v1.0.1
 	github.com/dukex/mixpanel v0.0.0-20180925151559-f8d5594f958e
