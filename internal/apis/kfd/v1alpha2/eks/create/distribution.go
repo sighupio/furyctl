@@ -332,7 +332,7 @@ func (d *Distribution) extractVpcIDFromPrevPhases(fMerger *merge.Merger) (string
 		}
 
 		vpcFromFuryctlConf, ok := kubeFromFuryctlConf["vpcId"].(string)
-		if !ok {
+		if !ok && !d.dryRun {
 			return vpcID, errCastingVpcIDToStr
 		}
 
