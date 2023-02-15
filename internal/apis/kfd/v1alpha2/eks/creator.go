@@ -24,7 +24,10 @@ import (
 	kubex "github.com/sighupio/furyctl/internal/x/kube"
 )
 
-var ErrUnsupportedPhase = errors.New("unsupported phase")
+var (
+	ErrUnsupportedPhase = errors.New("unsupported phase")
+	ErrInfraNotPresent  = errors.New("cluster configuration does not contain infrastructure section")
+)
 
 type ClusterCreator struct {
 	paths          cluster.CreatorPaths
@@ -109,6 +112,10 @@ func (v *ClusterCreator) Create(skipPhase string) error {
 
 	switch v.phase {
 	case cluster.OperationPhaseInfrastructure:
+		if v.furyctlConf.Spec.Infrastructure == nil {
+			return ErrInfraNotPresent
+		}
+
 		if err = infra.Exec(infraOpts); err != nil {
 			return fmt.Errorf("error while executing infrastructure phase: %w", err)
 		}
