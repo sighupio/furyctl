@@ -96,7 +96,7 @@ steps:
       - chmod 600 /root/.ssh/known_hosts
       - ssh-keyscan -H github.com > /etc/ssh/ssh_known_hosts 2> /dev/null
       # Create required s3 bucket if it doesn't exist
-      - aws s3 ls s3://furyctl-e2e-deps-test || aws s3 mb s3://furyctl-e2e-deps-test --region eu-west-1
+      - (test ! $(aws s3api get-bucket-location --bucket furyctl-e2e-deps-test --output text --no-cli-pager 2>/dev/null | grep "$${AWS_DEFAULT_REGION}")) && aws s3 mb s3://furyctl-e2e-deps-test --region $${AWS_DEFAULT_REGION}
       # Run tests
       - make test-e2e
     environment:
