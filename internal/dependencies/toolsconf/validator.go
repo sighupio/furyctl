@@ -15,7 +15,10 @@ import (
 	execx "github.com/sighupio/furyctl/internal/x/exec"
 )
 
-var ErrAWSS3BucketNotFound = errors.New("AWS S3 Bucket not found, please create it before running furyctl")
+var (
+	ErrAWSS3BucketNotFound       = errors.New("AWS S3 Bucket not found, please create it before running furyctl")
+	ErrAWSS3BucketRegionMismatch = errors.New("AWS S3 Bucket region mismatch")
+)
 
 func NewValidator(executor execx.Executor) *Validator {
 	return &Validator{
@@ -41,14 +44,28 @@ func (v *Validator) checkAWSS3Bucket(bucketName, region string) ([]string, []err
 	oks := make([]string, 0)
 	errs := make([]error, 0)
 
-	_, err := v.awsCliRunner.S3("ls", "s3://"+bucketName, "--region", region)
+	r, err := v.awsCliRunner.S3Api("get-bucket-location", "--bucket", bucketName, "--output", "text")
 	if err != nil {
 		logrus.Debug(fmt.Errorf("error checking AWS S3 Bucket: %w", err))
 
 		errs = append(errs, ErrAWSS3BucketNotFound)
-	} else {
-		oks = append(oks, "AWS S3 Bucket")
+
+		return oks, errs
 	}
+
+	// AWS S3 Bucket in us-east-1 region returns None as LocationConstraint
+	// https://awscli.amazonaws.com/v2/documentation/api/latest/reference/s3api/get-bucket-location.html#output
+	if r == "None" {
+		r = "us-east-1"
+	}
+
+	if r != region {
+		errs = append(errs, fmt.Errorf("%w, expected %s, got %s", ErrAWSS3BucketRegionMismatch, region, r))
+
+		return oks, errs
+	}
+
+	oks = append(oks, "AWS S3 Bucket")
 
 	return oks, errs
 }

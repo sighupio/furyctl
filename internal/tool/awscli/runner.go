@@ -50,8 +50,8 @@ func (r *Runner) Ec2(sub string, params ...string) (string, error) {
 	return out, nil
 }
 
-func (r *Runner) S3(params ...string) (string, error) {
-	args := []string{"s3"}
+func (r *Runner) S3Api(params ...string) (string, error) {
+	args := []string{"s3api"}
 	args = append(args, params...)
 
 	out, err := execx.CombinedOutput(execx.NewCmd(r.paths.Awscli, execx.CmdOptions{
@@ -60,7 +60,7 @@ func (r *Runner) S3(params ...string) (string, error) {
 		WorkDir:  r.paths.WorkDir,
 	}))
 	if err != nil {
-		return "", fmt.Errorf("error executing awscli s3: %w", err)
+		return "", fmt.Errorf("error executing awscli s3api: %w", err)
 	}
 
 	return out, nil
