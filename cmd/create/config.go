@@ -105,7 +105,7 @@ func NewConfigCmd(tracker *analytics.Tracker) *cobra.Command {
 				p := filepath.Dir(absPath)
 
 				return fmt.Errorf(
-					"%w: a furyctl.yaml configuration file already exists in %s, please remove it and try again",
+					"%w: a configuration file already exists in %s, please remove it and try again",
 					ErrConfigCreationFailed,
 					p,
 				)
