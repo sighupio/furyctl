@@ -169,7 +169,7 @@ func NewClusterCmd(tracker *analytics.Tracker) *cobra.Command {
 			}
 
 			// Set debug mode.
-			execx.Debug = flags.Debug || flags.DryRun
+			execx.Debug = flags.Debug
 
 			// Create the cluster.
 			clusterCreator, err := cluster.NewCreator(
