@@ -18,8 +18,6 @@ import (
 	yamlx "github.com/sighupio/furyctl/internal/x/yaml"
 )
 
-var ErrConfigCreationFailed = fmt.Errorf("config creation failed")
-
 func Create(
 	res distribution.DownloadResult,
 	furyctlPath string,
@@ -70,16 +68,6 @@ func createNewEmptyConfigFile(path string) (*os.File, error) {
 	absPath, err := filepath.Abs(path)
 	if err != nil {
 		return nil, fmt.Errorf("error getting absolute path: %w", err)
-	}
-
-	if _, err := os.Stat(absPath); err == nil {
-		p := filepath.Dir(absPath)
-
-		return nil, fmt.Errorf(
-			"%w: a furyctl.yaml configuration file already exists in %s, please remove it and try again",
-			ErrConfigCreationFailed,
-			p,
-		)
 	}
 
 	if err := os.MkdirAll(filepath.Dir(absPath), iox.FullPermAccess); err != nil {
