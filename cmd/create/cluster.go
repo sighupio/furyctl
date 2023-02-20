@@ -29,6 +29,7 @@ var (
 	ErrParsingFlag                = errors.New("error while parsing flag")
 	ErrDownloadDependenciesFailed = errors.New("dependencies download failed")
 	ErrKubeconfigReq              = errors.New("when running distribution phase alone, either the KUBECONFIG environment variable or the --kubeconfig flag should be set")
+	ErrKubeconfigNotFound         = errors.New("kubeconfig file not found")
 )
 
 type ClusterCmdFlags struct {
@@ -71,6 +72,8 @@ func NewClusterCmd(tracker *analytics.Tracker) *cobra.Command {
 				return fmt.Errorf("error while getting current working directory: %w", err)
 			}
 
+			kubeconfigPath := flags.Kubeconfig
+
 			// Check if kubeconfig is needed.
 			if flags.Phase == cluster.OperationPhaseDistribution || flags.SkipPhase == cluster.OperationPhaseKubernetes {
 				if flags.Kubeconfig == "" {
@@ -80,7 +83,19 @@ func NewClusterCmd(tracker *analytics.Tracker) *cobra.Command {
 						return ErrKubeconfigReq
 					}
 
+					kubeconfigPath = kubeconfigFromEnv
+
 					logrus.Warnf("Missing --kubeconfig flag, falling back to KUBECONFIG from environment: %s", kubeconfigFromEnv)
+				}
+
+				// Check the kubeconfig file exists.
+				if _, err := os.Stat(kubeconfigPath); os.IsNotExist(err) {
+					kubeAbsPath, err := filepath.Abs(kubeconfigPath)
+					if err != nil {
+						return fmt.Errorf("error while getting absolute path of kubeconfig: %w", err)
+					}
+
+					return fmt.Errorf("%w in %s", ErrKubeconfigNotFound, kubeAbsPath)
 				}
 			}
 
