@@ -26,7 +26,7 @@ import (
 
 var (
 	ErrUnsupportedPhase = errors.New("unsupported phase")
-	ErrInfraNotPresent  = errors.New("cluster configuration does not contain infrastructure section")
+	ErrInfraNotPresent  = errors.New("the configuration file does not contain an infrastructure section")
 )
 
 type ClusterCreator struct {
@@ -113,7 +113,14 @@ func (v *ClusterCreator) Create(skipPhase string) error {
 	switch v.phase {
 	case cluster.OperationPhaseInfrastructure:
 		if v.furyctlConf.Spec.Infrastructure == nil {
-			return ErrInfraNotPresent
+			absPath, err := filepath.Abs(v.paths.ConfigPath)
+			if err != nil {
+				logrus.Debugf("error while getting absolute path of %s: %v", v.paths.ConfigPath, err)
+
+				return fmt.Errorf("%w: at %s", ErrInfraNotPresent, v.paths.ConfigPath)
+			}
+
+			return fmt.Errorf("%w: check at %s", ErrInfraNotPresent, absPath)
 		}
 
 		if err = infra.Exec(infraOpts); err != nil {
