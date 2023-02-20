@@ -86,7 +86,7 @@ func NewClusterCmd(tracker *analytics.Tracker) *cobra.Command {
 			executor := execx.NewStdExecutor()
 			distrodl := distribution.NewDownloader(client)
 
-			execx.Debug = flags.Debug || flags.DryRun
+			execx.Debug = flags.Debug
 			execx.NoTTY = flags.NoTTY
 
 			// Download the distribution.
