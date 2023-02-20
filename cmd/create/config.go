@@ -7,6 +7,8 @@ package create
 import (
 	"errors"
 	"fmt"
+	"os"
+	"path/filepath"
 
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -22,7 +24,10 @@ import (
 	netx "github.com/sighupio/furyctl/internal/x/net"
 )
 
-var ErrMandatoryFlag = errors.New("flag must be specified")
+var (
+	ErrMandatoryFlag        = errors.New("flag must be specified")
+	ErrConfigCreationFailed = fmt.Errorf("config creation failed")
+)
 
 func NewConfigCmd(tracker *analytics.Tracker) *cobra.Command {
 	var cmdEvent analytics.Event
@@ -89,6 +94,22 @@ func NewConfigCmd(tracker *analytics.Tracker) *cobra.Command {
 
 			// Init packages.
 			execx.Debug = debug
+
+			// Validate path.
+			if _, err := os.Stat(furyctlPath); err == nil {
+				absPath, err := filepath.Abs(furyctlPath)
+				if err != nil {
+					return fmt.Errorf("%w: error while getting absolute path %v", ErrConfigCreationFailed, err)
+				}
+
+				p := filepath.Dir(absPath)
+
+				return fmt.Errorf(
+					"%w: a configuration file already exists in %s, please remove it and try again",
+					ErrConfigCreationFailed,
+					p,
+				)
+			}
 
 			// Download the distribution.
 			logrus.Info("Downloading distribution...")
