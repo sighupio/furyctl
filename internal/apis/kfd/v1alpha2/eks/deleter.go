@@ -11,14 +11,14 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/sighupio/fury-distribution/pkg/config"
-	"github.com/sighupio/fury-distribution/pkg/schema"
+	"github.com/sighupio/fury-distribution/pkg/schema/private"
 	del "github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/eks/delete"
 	"github.com/sighupio/furyctl/internal/cluster"
 )
 
 type ClusterDeleter struct {
 	kfdManifest config.KFD
-	furyctlConf schema.EksclusterKfdV1Alpha2
+	furyctlConf private.EksclusterKfdV1Alpha2
 	phase       string
 	workDir     string
 	binPath     string
@@ -42,7 +42,7 @@ func (d *ClusterDeleter) SetProperty(name string, value any) {
 		}
 
 	case cluster.DeleterPropertyFuryctlConf:
-		if s, ok := value.(schema.EksclusterKfdV1Alpha2); ok {
+		if s, ok := value.(private.EksclusterKfdV1Alpha2); ok {
 			d.furyctlConf = s
 		}
 

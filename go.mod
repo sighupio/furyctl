@@ -3,12 +3,12 @@ module github.com/sighupio/furyctl
 go 1.19
 
 require (
-	github.com/Al-Pragliola/go-version v1.6.2
 	github.com/Masterminds/sprig/v3 v3.2.3
 	github.com/briandowns/spinner v1.19.0
 	github.com/denisbrodbeck/machineid v1.0.1
 	github.com/dukex/mixpanel v1.0.1
 	github.com/hashicorp/go-getter v1.6.2
+	github.com/hashicorp/go-version v1.6.0 // indirect
 	github.com/rogpeppe/go-internal v1.9.0 // indirect
 	github.com/sirupsen/logrus v1.9.0
 	github.com/spf13/cobra v1.6.1
@@ -25,7 +25,7 @@ require (
 	github.com/onsi/ginkgo/v2 v2.6.1
 	github.com/onsi/gomega v1.24.2
 	github.com/santhosh-tekuri/jsonschema/v5 v5.1.1
-	github.com/sighupio/fury-distribution v1.24.1-0.20230213153056-faa332a9b3a8
+	github.com/sighupio/fury-distribution v1.24.1-0.20230221155837-99cbb28cf061
 	golang.org/x/exp v0.0.0-20221217163422-3c43f8badb15
 	gopkg.in/yaml.v3 v3.0.1
 )
@@ -36,6 +36,7 @@ require (
 	cloud.google.com/go/compute/metadata v0.2.3 // indirect
 	cloud.google.com/go/iam v0.9.0 // indirect
 	cloud.google.com/go/storage v1.28.1 // indirect
+	github.com/Al-Pragliola/go-version v1.6.2 // indirect
 	github.com/Masterminds/goutils v1.1.1 // indirect
 	github.com/Masterminds/semver/v3 v3.2.0 // indirect
 	github.com/aws/aws-sdk-go v1.44.163 // indirect
@@ -53,7 +54,6 @@ require (
 	github.com/googleapis/gax-go/v2 v2.7.0 // indirect
 	github.com/hashicorp/go-cleanhttp v0.5.2 // indirect
 	github.com/hashicorp/go-safetemp v1.0.0 // indirect
-	github.com/hashicorp/go-version v1.5.0 // indirect
 	github.com/hashicorp/hcl v1.0.0 // indirect
 	github.com/huandu/xstrings v1.4.0 // indirect
 	github.com/imdario/mergo v0.3.13 // indirect
