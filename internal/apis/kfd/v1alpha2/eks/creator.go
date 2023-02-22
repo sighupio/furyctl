@@ -242,6 +242,12 @@ func (v *ClusterCreator) allPhases(
 		}
 	}
 
+	if v.dryRun {
+		logrus.Info("Kubernetes Fury cluster created successfully (dry-run mode)")
+
+		return nil
+	}
+
 	logrus.Info("Kubernetes Fury cluster created successfully")
 
 	if v.furyctlConf.Spec.Infrastructure != nil {
@@ -281,6 +287,7 @@ func (v *ClusterCreator) setupPhases() (*create.Infrastructure, *create.Kubernet
 		v.kfdManifest,
 		infra.OutputsPath,
 		v.dryRun,
+		v.phase,
 	)
 	if err != nil {
 		return nil, nil, nil, fmt.Errorf("error while initiating distribution phase: %w", err)
