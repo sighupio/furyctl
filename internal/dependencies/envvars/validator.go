@@ -8,9 +8,13 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"strings"
 )
 
-var ErrMissingEnvVar = errors.New("missing environment variable")
+var (
+	ErrMissingEnvVars        = errors.New("missing environment variables")
+	ErrMissingRequiredEnvVar = errors.New("missing required environment variable")
+)
 
 func NewValidator() *Validator {
 	return &Validator{}
@@ -30,22 +34,37 @@ func (*Validator) checkEKSCluster() ([]string, []error) {
 	oks := make([]string, 0)
 	errs := make([]error, 0)
 
+	var missingAwsVars []string
+
+	if os.Getenv("AWS_DEFAULT_REGION") == "" {
+		errs = append(errs, fmt.Errorf("%w: AWS_DEFAULT_REGION", ErrMissingRequiredEnvVar))
+	} else {
+		oks = append(oks, "AWS_DEFAULT_REGION")
+	}
+
+	if os.Getenv("AWS_PROFILE") != "" {
+		oks = append(oks, "AWS_PROFILE")
+
+		return oks, errs
+	}
+
 	if os.Getenv("AWS_ACCESS_KEY_ID") == "" {
-		errs = append(errs, fmt.Errorf("AWS_ACCESS_KEY_ID: %w", ErrMissingEnvVar))
+		missingAwsVars = append(missingAwsVars, "AWS_ACCESS_KEY_ID")
 	} else {
 		oks = append(oks, "AWS_ACCESS_KEY_ID")
 	}
 
 	if os.Getenv("AWS_SECRET_ACCESS_KEY") == "" {
-		errs = append(errs, fmt.Errorf("AWS_SECRET_ACCESS_KEY: %w", ErrMissingEnvVar))
+		missingAwsVars = append(missingAwsVars, "AWS_SECRET_ACCESS_KEY")
 	} else {
 		oks = append(oks, "AWS_SECRET_ACCESS_KEY")
 	}
 
-	if os.Getenv("AWS_DEFAULT_REGION") == "" {
-		errs = append(errs, fmt.Errorf("AWS_DEFAULT_REGION: %w", ErrMissingEnvVar))
-	} else {
-		oks = append(oks, "AWS_DEFAULT_REGION")
+	if len(missingAwsVars) > 0 {
+		errs = append(errs, fmt.Errorf("%w, either AWS_PROFILE or the following environment variables must be set: %s",
+			ErrMissingEnvVars, strings.Join(missingAwsVars, ", ")))
+
+		return oks, errs
 	}
 
 	return oks, errs
