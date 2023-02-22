@@ -237,7 +237,7 @@ func createURL(prefix, name, version string) string {
 
 	kindPrefix := "releases/tag"
 
-	_, err := semver.GetVersion(ver)
+	_, err := semver.NewVersion(ver)
 	if err != nil {
 		kindPrefix = "tree"
 	}

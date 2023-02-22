@@ -68,7 +68,7 @@ func TestGetVersion(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			_, err := semver.GetVersion(tt.version)
+			_, err := semver.NewVersion(tt.version)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("NewVersion() error = %v, wantErr %v", err, tt.wantErr)
 
@@ -129,7 +129,7 @@ func TestGetConstraint(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			_, err := semver.GetConstraint(tt.constraint)
+			_, err := semver.NewConstraint(tt.constraint)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("NewConstraint() error = %v, wantErr %v", err, tt.wantErr)
 

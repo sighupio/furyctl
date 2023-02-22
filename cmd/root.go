@@ -216,14 +216,14 @@ func shouldUpgrade(releaseVersion, currentVersion string) bool {
 		return false
 	}
 
-	relV, err := semver.GetVersion(releaseVersion)
+	relV, err := semver.NewVersion(releaseVersion)
 	if err != nil {
 		logrus.Debugf("Error parsing release version: %s", err)
 
 		return false
 	}
 
-	curV, err := semver.GetVersion(currentVersion)
+	curV, err := semver.NewVersion(currentVersion)
 	if err != nil {
 		logrus.Debugf("Error parsing current version: %s", err)
 

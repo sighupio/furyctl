@@ -173,12 +173,12 @@ func (vc *checker) version(want string) error {
 
 	systemVersion := vc.trimFn(versionStringTokens)
 
-	sysVer, err := semver.GetVersion(systemVersion)
+	sysVer, err := semver.NewVersion(systemVersion)
 	if err != nil {
 		return fmt.Errorf("%w: %v", errGetVersion, err)
 	}
 
-	wantVer, err := semver.GetConstraint(want)
+	wantVer, err := semver.NewConstraint(want)
 	if err != nil {
 		return fmt.Errorf("%w: %v", errGetVersion, err)
 	}

@@ -17,7 +17,7 @@ var (
 	ErrInvalidConstraint = fmt.Errorf("invalid constraint")
 )
 
-func GetVersion(v string) (*version.Version, error) {
+func NewVersion(v string) (*version.Version, error) {
 	vStr := v
 
 	if v[0] == 'v' {
@@ -32,7 +32,7 @@ func GetVersion(v string) (*version.Version, error) {
 	return ver, nil
 }
 
-func GetConstraint(c string) (version.Constraints, error) {
+func NewConstraint(c string) (version.Constraints, error) {
 	cStr := c
 
 	if c[0] == 'v' {
