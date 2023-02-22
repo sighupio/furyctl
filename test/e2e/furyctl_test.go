@@ -252,7 +252,7 @@ var (
 				)
 				Expect(out).To(ContainSubstring("missing required environment variable: AWS_DEFAULT_REGION"))
 				Expect(out).To(ContainSubstring("missing environment variables, either AWS_PROFILE or the " +
-					"following vars must be set:  AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY"))
+					"following vars must be set: AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY"))
 			})
 
 			It("should exit without errors when dependencies are correct", Serial, func() {
