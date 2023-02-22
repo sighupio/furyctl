@@ -56,6 +56,7 @@ type Distribution struct {
 	kzRunner         *kustomize.Runner
 	kubeRunner       *kubectl.Runner
 	dryRun           bool
+	phase            string
 }
 
 type injectType struct {
@@ -68,16 +69,17 @@ func NewDistribution(
 	kfdManifest config.KFD,
 	infraOutputsPath string,
 	dryRun bool,
+	phase string,
 ) (*Distribution, error) {
 	distroDir := path.Join(paths.WorkDir, cluster.OperationPhaseDistribution)
 
-	phase, err := cluster.NewOperationPhase(distroDir, kfdManifest.Tools, paths.BinPath)
+	phaseOp, err := cluster.NewOperationPhase(distroDir, kfdManifest.Tools, paths.BinPath)
 	if err != nil {
 		return nil, fmt.Errorf("error creating distribution phase: %w", err)
 	}
 
 	return &Distribution{
-		OperationPhase:   phase,
+		OperationPhase:   phaseOp,
 		furyctlConf:      furyctlConf,
 		kfdManifest:      kfdManifest,
 		infraOutputsPath: infraOutputsPath,
@@ -86,25 +88,25 @@ func NewDistribution(
 		tfRunner: terraform.NewRunner(
 			execx.NewStdExecutor(),
 			terraform.Paths{
-				Logs:      phase.LogsPath,
-				Outputs:   phase.OutputsPath,
-				WorkDir:   path.Join(phase.Path, "terraform"),
-				Plan:      phase.PlanPath,
-				Terraform: phase.TerraformPath,
+				Logs:      phaseOp.LogsPath,
+				Outputs:   phaseOp.OutputsPath,
+				WorkDir:   path.Join(phaseOp.Path, "terraform"),
+				Plan:      phaseOp.PlanPath,
+				Terraform: phaseOp.TerraformPath,
 			},
 		),
 		kzRunner: kustomize.NewRunner(
 			execx.NewStdExecutor(),
 			kustomize.Paths{
-				Kustomize: phase.KustomizePath,
-				WorkDir:   path.Join(phase.Path, "manifests"),
+				Kustomize: phaseOp.KustomizePath,
+				WorkDir:   path.Join(phaseOp.Path, "manifests"),
 			},
 		),
 		kubeRunner: kubectl.NewRunner(
 			execx.NewStdExecutor(),
 			kubectl.Paths{
-				Kubectl:    phase.KubectlPath,
-				WorkDir:    path.Join(phase.Path, "manifests"),
+				Kubectl:    phaseOp.KubectlPath,
+				WorkDir:    path.Join(phaseOp.Path, "manifests"),
 				Kubeconfig: paths.Kubeconfig,
 			},
 			true,
@@ -112,6 +114,7 @@ func NewDistribution(
 			false,
 		),
 		dryRun: dryRun,
+		phase:  phase,
 	}, nil
 }
 
@@ -131,8 +134,10 @@ func (d *Distribution) Exec() error {
 			return errClusterConnect
 		}
 
-		logrus.Warnf("Cluster is unreachable, make sure it is reachable before " +
-			"running the command without --dry-run")
+		if d.phase == cluster.OperationPhaseDistribution {
+			logrus.Warnf("Cluster is unreachable, make sure it is reachable before " +
+				"running the command without --dry-run")
+		}
 	}
 
 	if err := d.CreateFolder(); err != nil {
@@ -166,7 +171,7 @@ func (d *Distribution) Exec() error {
 		return fmt.Errorf("error running terraform init: %w", err)
 	}
 
-	if err := d.tfRunner.Plan(timestamp); err != nil {
+	if err := d.tfRunner.Plan(timestamp); err != nil && !d.dryRun {
 		return fmt.Errorf("error running terraform plan: %w", err)
 	}
 
