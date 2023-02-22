@@ -10,7 +10,7 @@ import (
 	"strings"
 
 	"github.com/sighupio/fury-distribution/pkg/config"
-	tool2 "github.com/sighupio/furyctl/internal/tool"
+	itool "github.com/sighupio/furyctl/internal/tool"
 	execx "github.com/sighupio/furyctl/internal/x/exec"
 )
 
@@ -60,7 +60,7 @@ func (tv *Validator) Validate(kfdManifest config.KFD, tfState config.State) ([]s
 	}
 
 	if tfState.S3.BucketName != "" {
-		tool := tv.toolFactory.Create(tool2.Awscli, "*")
+		tool := tv.toolFactory.Create(itool.Awscli, "*")
 		if err := tool.CheckBinVersion(); err != nil {
 			errs = append(errs, err)
 		} else {
