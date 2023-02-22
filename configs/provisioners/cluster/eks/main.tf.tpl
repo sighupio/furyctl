@@ -21,14 +21,16 @@ terraform {
 module "fury" {
   source = "{{ .kubernetes.installerPath }}"
 
-  cluster_name    = var.cluster_name
-  cluster_version = var.cluster_version
-  network         = var.network
-  subnetworks     = var.subnetworks
-  dmz_cidr_range  = var.dmz_cidr_range
-  ssh_public_key  = var.ssh_public_key
-  node_pools      = var.node_pools
-  tags            = var.tags
+  cluster_name               = var.cluster_name
+  cluster_version            = var.cluster_version
+  cluster_log_retention_days = var.cluster_log_retention_days
+  network                    = var.network
+  subnetworks                = var.subnetworks
+  dmz_cidr_range             = var.dmz_cidr_range
+  ssh_public_key             = var.ssh_public_key
+  node_pools                 = var.node_pools
+  node_pools_launch_kind     = var.node_pools_launch_kind
+  tags                       = var.tags
 
   # Specific AWS variables.
   # Enables managing auth using these variables
