@@ -61,7 +61,7 @@ func (*Validator) checkEKSCluster() ([]string, []error) {
 	}
 
 	if len(missingAwsVars) > 0 {
-		errs = append(errs, fmt.Errorf("%w, either AWS_PROFILE or the following vars must be set: %s",
+		errs = append(errs, fmt.Errorf("%w, either AWS_PROFILE or the following environment variables must be set: %s",
 			ErrMissingEnvVars, strings.Join(missingAwsVars, ", ")))
 
 		return oks, errs
