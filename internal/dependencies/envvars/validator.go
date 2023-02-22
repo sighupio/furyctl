@@ -34,10 +34,10 @@ func (*Validator) checkEKSCluster() ([]string, []error) {
 	oks := make([]string, 0)
 	errs := make([]error, 0)
 
-	var otherAwsVars []string
+	var missingAwsVars []string
 
 	if os.Getenv("AWS_DEFAULT_REGION") == "" {
-		errs = append(errs, fmt.Errorf("%w AWS_DEFAULT_REGION", ErrMissingRequiredEnvVar))
+		errs = append(errs, fmt.Errorf("%w: AWS_DEFAULT_REGION", ErrMissingRequiredEnvVar))
 	} else {
 		oks = append(oks, "AWS_DEFAULT_REGION")
 	}
@@ -49,20 +49,20 @@ func (*Validator) checkEKSCluster() ([]string, []error) {
 	}
 
 	if os.Getenv("AWS_ACCESS_KEY_ID") == "" {
-		otherAwsVars = append(otherAwsVars, "AWS_ACCESS_KEY_ID")
+		missingAwsVars = append(missingAwsVars, "AWS_ACCESS_KEY_ID")
 	} else {
 		oks = append(oks, "AWS_ACCESS_KEY_ID")
 	}
 
 	if os.Getenv("AWS_SECRET_ACCESS_KEY") == "" {
-		otherAwsVars = append(otherAwsVars, "AWS_SECRET_ACCESS_KEY")
+		missingAwsVars = append(missingAwsVars, "AWS_SECRET_ACCESS_KEY")
 	} else {
 		oks = append(oks, "AWS_SECRET_ACCESS_KEY")
 	}
 
-	if len(otherAwsVars) > 0 {
-		errs = append(errs, fmt.Errorf("%w, either AWS_Profile or the following: %s",
-			ErrMissingEnvVars, strings.Join(otherAwsVars, ", ")))
+	if len(missingAwsVars) > 0 {
+		errs = append(errs, fmt.Errorf("%w, either AWS_PROFILE or the following vars must be set: %s",
+			ErrMissingEnvVars, strings.Join(missingAwsVars, ", ")))
 
 		return oks, errs
 	}
