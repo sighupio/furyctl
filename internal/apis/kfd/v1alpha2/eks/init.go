@@ -5,7 +5,7 @@
 package eks
 
 import (
-	"github.com/sighupio/fury-distribution/pkg/schema"
+	"github.com/sighupio/fury-distribution/pkg/schema/private"
 	"github.com/sighupio/furyctl/internal/cluster"
 )
 
@@ -14,12 +14,12 @@ func init() {
 	cluster.RegisterCreatorFactory(
 		"kfd.sighup.io/v1alpha2",
 		"EKSCluster",
-		cluster.NewCreatorFactory[*ClusterCreator, schema.EksclusterKfdV1Alpha2](&ClusterCreator{}),
+		cluster.NewCreatorFactory[*ClusterCreator, private.EksclusterKfdV1Alpha2](&ClusterCreator{}),
 	)
 
 	cluster.RegisterDeleterFactory(
 		"kfd.sighup.io/v1alpha2",
 		"EKSCluster",
-		cluster.NewDeleterFactory[*ClusterDeleter, schema.EksclusterKfdV1Alpha2](&ClusterDeleter{}),
+		cluster.NewDeleterFactory[*ClusterDeleter, private.EksclusterKfdV1Alpha2](&ClusterDeleter{}),
 	)
 }

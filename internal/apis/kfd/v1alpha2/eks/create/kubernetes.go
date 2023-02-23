@@ -20,7 +20,7 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/sighupio/fury-distribution/pkg/config"
-	"github.com/sighupio/fury-distribution/pkg/schema"
+	"github.com/sighupio/fury-distribution/pkg/schema/private"
 	"github.com/sighupio/furyctl/configs"
 	"github.com/sighupio/furyctl/internal/cluster"
 	"github.com/sighupio/furyctl/internal/template"
@@ -57,7 +57,7 @@ const (
 
 type Kubernetes struct {
 	*cluster.OperationPhase
-	furyctlConf      schema.EksclusterKfdV1Alpha2
+	furyctlConf      private.EksclusterKfdV1Alpha2
 	kfdManifest      config.KFD
 	infraOutputsPath string
 	tfRunner         *terraform.Runner
@@ -66,7 +66,7 @@ type Kubernetes struct {
 }
 
 func NewKubernetes(
-	furyctlConf schema.EksclusterKfdV1Alpha2,
+	furyctlConf private.EksclusterKfdV1Alpha2,
 	kfdManifest config.KFD,
 	infraOutputsPath string,
 	paths cluster.CreatorPaths,
@@ -246,7 +246,7 @@ func (k *Kubernetes) copyFromTemplate() error {
 func (k *Kubernetes) createTfVars() error {
 	var buffer bytes.Buffer
 
-	var allowedCidrsSource []schema.TypesCidr
+	var allowedCidrsSource []private.TypesCidr
 
 	subnetIdsSource := k.furyctlConf.Spec.Kubernetes.SubnetIds
 	vpcIDSource := k.furyctlConf.Spec.Kubernetes.VpcId
@@ -286,7 +286,7 @@ func (k *Kubernetes) createTfVars() error {
 				return errVpcCIDRFromOut
 			}
 
-			subs := make([]schema.TypesAwsSubnetId, len(s))
+			subs := make([]private.TypesAwsSubnetId, len(s))
 
 			for i, sub := range s {
 				ss, ok := sub.(string)
@@ -294,13 +294,13 @@ func (k *Kubernetes) createTfVars() error {
 					return errPvtSubnetFromOut
 				}
 
-				subs[i] = schema.TypesAwsSubnetId(ss)
+				subs[i] = private.TypesAwsSubnetId(ss)
 			}
 
 			subnetIdsSource = subs
-			vpcID := schema.TypesAwsVpcId(v)
+			vpcID := private.TypesAwsVpcId(v)
 			vpcIDSource = &vpcID
-			allowedCidrsSource = []schema.TypesCidr{schema.TypesCidr(c)}
+			allowedCidrsSource = []private.TypesCidr{private.TypesCidr(c)}
 		}
 	}
 
@@ -347,7 +347,7 @@ func (k *Kubernetes) createTfVars() error {
 			return errVpcIDNotFound
 		}
 
-		vpcIDSource = new(schema.TypesAwsVpcId)
+		vpcIDSource = new(private.TypesAwsVpcId)
 	}
 
 	err = bytesx.SafeWriteToBuffer(
@@ -763,7 +763,7 @@ func (k *Kubernetes) addAwsAuthToTfVars(buffer *bytes.Buffer) error {
 	return nil
 }
 
-func (*Kubernetes) addFirewallRulesToNodePool(buffer *bytes.Buffer, np schema.SpecKubernetesNodePool) error {
+func (*Kubernetes) addFirewallRulesToNodePool(buffer *bytes.Buffer, np private.SpecKubernetesNodePool) error {
 	if len(np.AdditionalFirewallRules) > 0 {
 		err := bytesx.SafeWriteToBuffer(
 			buffer,
