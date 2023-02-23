@@ -14,7 +14,7 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/sighupio/fury-distribution/pkg/config"
-	"github.com/sighupio/fury-distribution/pkg/schema"
+	"github.com/sighupio/fury-distribution/pkg/schema/private"
 	"github.com/sighupio/furyctl/internal/cluster"
 	"github.com/sighupio/furyctl/internal/tool/awscli"
 	"github.com/sighupio/furyctl/internal/tool/terraform"
@@ -40,14 +40,14 @@ var (
 
 type Kubernetes struct {
 	*cluster.OperationPhase
-	furyctlConf schema.EksclusterKfdV1Alpha2
+	furyctlConf private.EksclusterKfdV1Alpha2
 	tfRunner    *terraform.Runner
 	awsRunner   *awscli.Runner
 	dryRun      bool
 }
 
 func NewKubernetes(
-	furyctlConf schema.EksclusterKfdV1Alpha2,
+	furyctlConf private.EksclusterKfdV1Alpha2,
 	dryRun bool,
 	workDir,
 	binPath string,

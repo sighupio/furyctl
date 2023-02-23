@@ -24,8 +24,12 @@ func GetConfigTemplatePath(basePath string, conf config.Furyctl) (string, error)
 	return getPath(basePath, conf, "%s-%s-%s.yaml.tpl", "templates/config")
 }
 
-func GetSchemaPath(basePath string, conf config.Furyctl) (string, error) {
-	return getPath(basePath, conf, "%s-%s-%s.json", "schemas")
+func GetPublicSchemaPath(basePath string, conf config.Furyctl) (string, error) {
+	return getPath(basePath, conf, "%s-%s-%s.json", "schemas/public")
+}
+
+func GetPrivateSchemaPath(basePath string, conf config.Furyctl) (string, error) {
+	return getPath(basePath, conf, "%s-%s-%s.json", "schemas/private")
 }
 
 func GetDefaultsPath(basePath string) string {

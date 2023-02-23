@@ -19,7 +19,7 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/sighupio/fury-distribution/pkg/config"
-	"github.com/sighupio/fury-distribution/pkg/schema"
+	"github.com/sighupio/fury-distribution/pkg/schema/private"
 	"github.com/sighupio/furyctl/configs"
 	"github.com/sighupio/furyctl/internal/cluster"
 	"github.com/sighupio/furyctl/internal/template"
@@ -42,7 +42,7 @@ var (
 
 type Infrastructure struct {
 	*cluster.OperationPhase
-	furyctlConf schema.EksclusterKfdV1Alpha2
+	furyctlConf private.EksclusterKfdV1Alpha2
 	kfdManifest config.KFD
 	tfRunner    *terraform.Runner
 	faRunner    *furyagent.Runner
@@ -51,7 +51,7 @@ type Infrastructure struct {
 }
 
 func NewInfrastructure(
-	furyctlConf schema.EksclusterKfdV1Alpha2,
+	furyctlConf private.EksclusterKfdV1Alpha2,
 	kfdManifest config.KFD,
 	paths cluster.CreatorPaths,
 	dryRun bool,
