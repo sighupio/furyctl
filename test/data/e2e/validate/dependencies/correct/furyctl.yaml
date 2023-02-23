@@ -15,7 +15,7 @@ spec:
     terraform:
       state:
         s3:
-          bucketName: awesome-bucket-created-outside-furyctl
+          bucketName: furyctl-e2e-deps-test
           # changed from key, because each terraform project state will be placed in the directory defined by the prefix
           keyPrefix: furyctl/
           region: eu-west-1

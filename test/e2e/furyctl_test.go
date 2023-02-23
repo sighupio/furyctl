@@ -84,7 +84,6 @@ var (
 			Fail(err.Error())
 		}
 	}
-
 	BackupEnvVars = func(vars ...string) func() {
 		backup := make(map[string]string)
 		remove := make([]string, 0)
@@ -268,9 +267,7 @@ var (
 				bp := Abs("../data/e2e/validate/dependencies/correct")
 
 				os.Setenv("PATH", bp+":"+os.Getenv("PATH"))
-				os.Setenv("AWS_ACCESS_KEY_ID", "test")
-				os.Setenv("AWS_SECRET_ACCESS_KEY", "test")
-				os.Setenv("AWS_DEFAULT_REGION", "test")
+				os.Setenv("AWS_DEFAULT_REGION", "eu-west-1")
 				os.Setenv("FURYCTL_MIXPANEL_TOKEN", "test")
 
 				out, err := FuryctlValidateDependencies(bp, bp)
