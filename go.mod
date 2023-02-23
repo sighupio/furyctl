@@ -18,6 +18,7 @@ require (
 )
 
 require (
+	github.com/Al-Pragliola/go-version v1.6.2
 	github.com/go-playground/validator/v10 v10.11.1
 	github.com/google/go-cmp v0.5.9
 	github.com/hashicorp/terraform-json v0.14.0
@@ -36,7 +37,6 @@ require (
 	cloud.google.com/go/compute/metadata v0.2.3 // indirect
 	cloud.google.com/go/iam v0.9.0 // indirect
 	cloud.google.com/go/storage v1.28.1 // indirect
-	github.com/Al-Pragliola/go-version v1.6.2 // indirect
 	github.com/Masterminds/goutils v1.1.1 // indirect
 	github.com/Masterminds/semver/v3 v3.2.0 // indirect
 	github.com/aws/aws-sdk-go v1.44.163 // indirect
