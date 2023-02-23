@@ -456,6 +456,17 @@ func (k *Kubernetes) createTfVars() error {
 				return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
 			}
 
+			if np.Ami != nil {
+				err = bytesx.SafeWriteToBuffer(
+					&buffer,
+					"os = \"%v\"\n",
+					np.Ami.Id,
+				)
+				if err != nil {
+					return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
+				}
+			}
+
 			spot := "false"
 
 			if np.Instance.Spot != nil {
