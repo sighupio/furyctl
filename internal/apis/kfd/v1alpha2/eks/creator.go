@@ -15,7 +15,7 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/sighupio/fury-distribution/pkg/config"
-	"github.com/sighupio/fury-distribution/pkg/schema"
+	"github.com/sighupio/fury-distribution/pkg/schema/private"
 	"github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/eks/create"
 	"github.com/sighupio/furyctl/internal/cluster"
 	"github.com/sighupio/furyctl/internal/tool/kubectl"
@@ -31,7 +31,7 @@ var (
 
 type ClusterCreator struct {
 	paths          cluster.CreatorPaths
-	furyctlConf    schema.EksclusterKfdV1Alpha2
+	furyctlConf    private.EksclusterKfdV1Alpha2
 	kfdManifest    config.KFD
 	phase          string
 	vpnAutoConnect bool
@@ -54,7 +54,7 @@ func (v *ClusterCreator) SetProperty(name string, value any) {
 		}
 
 	case cluster.CreatorPropertyFuryctlConf:
-		if s, ok := value.(schema.EksclusterKfdV1Alpha2); ok {
+		if s, ok := value.(private.EksclusterKfdV1Alpha2); ok {
 			v.furyctlConf = s
 		}
 

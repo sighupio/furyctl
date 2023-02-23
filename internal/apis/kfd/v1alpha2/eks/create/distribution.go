@@ -16,7 +16,7 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/sighupio/fury-distribution/pkg/config"
-	"github.com/sighupio/fury-distribution/pkg/schema"
+	"github.com/sighupio/fury-distribution/pkg/schema/private"
 	"github.com/sighupio/furyctl/internal/cluster"
 	"github.com/sighupio/furyctl/internal/merge"
 	"github.com/sighupio/furyctl/internal/template"
@@ -48,7 +48,7 @@ var (
 type Distribution struct {
 	*cluster.OperationPhase
 	furyctlConfPath  string
-	furyctlConf      schema.EksclusterKfdV1Alpha2
+	furyctlConf      private.EksclusterKfdV1Alpha2
 	kfdManifest      config.KFD
 	infraOutputsPath string
 	distroPath       string
@@ -60,12 +60,12 @@ type Distribution struct {
 }
 
 type injectType struct {
-	Data schema.SpecDistribution `json:"data"`
+	Data private.SpecDistribution `json:"data"`
 }
 
 func NewDistribution(
 	paths cluster.CreatorPaths,
-	furyctlConf schema.EksclusterKfdV1Alpha2,
+	furyctlConf private.EksclusterKfdV1Alpha2,
 	kfdManifest config.KFD,
 	infraOutputsPath string,
 	dryRun bool,
@@ -284,11 +284,11 @@ func (d *Distribution) injectDataPreTf(fMerger *merge.Merger) (*merge.Merger, er
 	}
 
 	injectData := injectType{
-		Data: schema.SpecDistribution{
-			Modules: schema.SpecDistributionModules{
-				Ingress: schema.SpecDistributionModulesIngress{
-					Dns: schema.SpecDistributionModulesIngressDNS{
-						Private: schema.SpecDistributionModulesIngressDNSPrivate{
+		Data: private.SpecDistribution{
+			Modules: private.SpecDistributionModules{
+				Ingress: private.SpecDistributionModulesIngress{
+					Dns: private.SpecDistributionModulesIngressDNS{
+						Private: private.SpecDistributionModulesIngressDNSPrivate{
 							VpcId: vpcID,
 						},
 					},
@@ -356,36 +356,36 @@ func (d *Distribution) injectDataPostTf(fMerger *merge.Merger) (*merge.Merger, e
 	}
 
 	injectData := injectType{
-		Data: schema.SpecDistribution{
-			Modules: schema.SpecDistributionModules{
-				Aws: &schema.SpecDistributionModulesAws{
-					EbsCsiDriver: &schema.SpecDistributionModulesAwsEbsCsiDriver{
-						IamRoleArn: schema.TypesAwsArn(arns["ebs_csi_driver_iam_role_arn"]),
+		Data: private.SpecDistribution{
+			Modules: private.SpecDistributionModules{
+				Aws: &private.SpecDistributionModulesAws{
+					EbsCsiDriver: &private.SpecDistributionModulesAwsEbsCsiDriver{
+						IamRoleArn: private.TypesAwsArn(arns["ebs_csi_driver_iam_role_arn"]),
 					},
-					LoadBalancerController: &schema.SpecDistributionModulesAwsLoadBalancerController{
-						IamRoleArn: schema.TypesAwsArn(arns["load_balancer_controller_iam_role_arn"]),
+					LoadBalancerController: &private.SpecDistributionModulesAwsLoadBalancerController{
+						IamRoleArn: private.TypesAwsArn(arns["load_balancer_controller_iam_role_arn"]),
 					},
-					ClusterAutoscaler: &schema.SpecDistributionModulesAwsClusterAutoScaler{
-						IamRoleArn: schema.TypesAwsArn(arns["cluster_autoscaler_iam_role_arn"]),
+					ClusterAutoscaler: &private.SpecDistributionModulesAwsClusterAutoScaler{
+						IamRoleArn: private.TypesAwsArn(arns["cluster_autoscaler_iam_role_arn"]),
 					},
 				},
-				Ingress: schema.SpecDistributionModulesIngress{
-					ExternalDns: &schema.SpecDistributionModulesIngressExternalDNS{
-						PrivateIamRoleArn: schema.TypesAwsArn(arns["external_dns_private_iam_role_arn"]),
-						PublicIamRoleArn:  schema.TypesAwsArn(arns["external_dns_public_iam_role_arn"]),
+				Ingress: private.SpecDistributionModulesIngress{
+					ExternalDns: &private.SpecDistributionModulesIngressExternalDNS{
+						PrivateIamRoleArn: private.TypesAwsArn(arns["external_dns_private_iam_role_arn"]),
+						PublicIamRoleArn:  private.TypesAwsArn(arns["external_dns_public_iam_role_arn"]),
 					},
-					CertManager: &schema.SpecDistributionModulesIngressCertManager{
-						ClusterIssuer: schema.SpecDistributionModulesIngressCertManagerClusterIssuer{
-							Route53: &schema.SpecDistributionModulesIngressClusterIssuerRoute53{
-								IamRoleArn: schema.TypesAwsArn(arns["cert_manager_iam_role_arn"]),
+					CertManager: &private.SpecDistributionModulesIngressCertManager{
+						ClusterIssuer: private.SpecDistributionModulesIngressCertManagerClusterIssuer{
+							Route53: &private.SpecDistributionModulesIngressClusterIssuerRoute53{
+								IamRoleArn: private.TypesAwsArn(arns["cert_manager_iam_role_arn"]),
 							},
 						},
 					},
 				},
-				Dr: schema.SpecDistributionModulesDr{
-					Velero: schema.SpecDistributionModulesDrVelero{
-						Eks: schema.SpecDistributionModulesDrVeleroEks{
-							IamRoleArn: schema.TypesAwsArn(arns["velero_iam_role_arn"]),
+				Dr: private.SpecDistributionModulesDr{
+					Velero: private.SpecDistributionModulesDrVelero{
+						Eks: private.SpecDistributionModulesDrVeleroEks{
+							IamRoleArn: private.TypesAwsArn(arns["velero_iam_role_arn"]),
 						},
 					},
 				},

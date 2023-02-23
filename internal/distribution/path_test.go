@@ -90,7 +90,21 @@ func TestGetTemplatePath(t *testing.T) {
 	}
 }
 
-func TestGetSchemaPath(t *testing.T) {
+func TestGetSchemaPaths(t *testing.T) {
+	verifyPaths := func(t *testing.T, fname, got, want string, err, wantErr error) {
+		if err != nil {
+			if err.Error() != wantErr.Error() {
+				t.Errorf("distribution.%s() error = %v, wantErr %v", fname, err, wantErr)
+			}
+
+			return
+		}
+
+		if got != want {
+			t.Errorf("distribution.%s() = %v, want %v", fname, got, want)
+		}
+	}
+
 	tests := []struct {
 		name     string
 		basePath string
@@ -106,11 +120,12 @@ func TestGetSchemaPath(t *testing.T) {
 				Kind:       "EKSCluster",
 				Spec:       config.FuryctlSpec{},
 			},
-			want: fmt.Sprintf("%s", filepath.Join(
+			want: filepath.Join(
 				"testpath",
 				"schemas",
+				"%s",
 				"ekscluster-kfd-v1alpha2.json",
-			)),
+			),
 			wantErr: nil,
 		},
 		{
@@ -121,7 +136,11 @@ func TestGetSchemaPath(t *testing.T) {
 				Kind:       "EKSCluster",
 				Spec:       config.FuryctlSpec{},
 			},
-			want:    fmt.Sprintf("%s", filepath.Join("schemas", "ekscluster-kfd-v1alpha2.json")),
+			want: filepath.Join(
+				"schemas",
+				"%s",
+				"ekscluster-kfd-v1alpha2.json",
+			),
 			wantErr: nil,
 		},
 		{
@@ -149,18 +168,11 @@ func TestGetSchemaPath(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := distribution.GetSchemaPath(tt.basePath, tt.conf)
-			if err != nil {
-				if err.Error() != tt.wantErr.Error() {
-					t.Errorf("distribution.GetSchemaPath() error = %v, wantErr %v", err, tt.wantErr)
-				}
+			egot, eerr := distribution.GetPublicSchemaPath(tt.basePath, tt.conf)
+			verifyPaths(t, "GetPublicSchemaPath", egot, fmt.Sprintf(tt.want, "public"), eerr, tt.wantErr)
 
-				return
-			}
-
-			if got != tt.want {
-				t.Errorf("distribution.GetSchemaPath() = %v, want %v", got, tt.want)
-			}
+			igot, ierr := distribution.GetPrivateSchemaPath(tt.basePath, tt.conf)
+			verifyPaths(t, "GetPrivateSchemaPath", igot, fmt.Sprintf(tt.want, "private"), ierr, tt.wantErr)
 		})
 	}
 }
