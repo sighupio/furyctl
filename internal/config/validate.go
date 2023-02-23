@@ -89,7 +89,7 @@ func Validate(path, repoPath string) error {
 		return err
 	}
 
-	schemaPath, err := distribution.GetSchemaPath(repoPath, miniConf)
+	schemaPath, err := distribution.GetPublicSchemaPath(repoPath, miniConf)
 	if err != nil {
 		return fmt.Errorf("error getting schema path: %w", err)
 	}

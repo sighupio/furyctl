@@ -12,7 +12,7 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/sighupio/fury-distribution/pkg/config"
-	"github.com/sighupio/fury-distribution/pkg/schema"
+	"github.com/sighupio/fury-distribution/pkg/schema/private"
 	"github.com/sighupio/furyctl/internal/cluster"
 	"github.com/sighupio/furyctl/internal/tool/terraform"
 	execx "github.com/sighupio/furyctl/internal/x/exec"
@@ -22,13 +22,13 @@ import (
 
 type Infrastructure struct {
 	*cluster.OperationPhase
-	furyctlConf schema.EksclusterKfdV1Alpha2
+	furyctlConf private.EksclusterKfdV1Alpha2
 	tfRunner    *terraform.Runner
 	dryRun      bool
 }
 
 func NewInfrastructure(
-	furyctlConf schema.EksclusterKfdV1Alpha2,
+	furyctlConf private.EksclusterKfdV1Alpha2,
 	dryRun bool,
 	workDir,
 	binPath string,

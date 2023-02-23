@@ -72,10 +72,6 @@ func (d *Downloader) DoDownload(
 ) (DownloadResult, error) {
 	url := distroLocation
 
-	if err := d.validate.Struct(minimalConf); err != nil {
-		return DownloadResult{}, fmt.Errorf("invalid furyctl config: %w", err)
-	}
-
 	if distroLocation == "" {
 		url = fmt.Sprintf(DefaultBaseURL, minimalConf.Spec.DistributionVersion)
 	}
