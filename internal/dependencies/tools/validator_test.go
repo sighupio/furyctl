@@ -20,6 +20,7 @@ func Test_Validator_Validate(t *testing.T) {
 	testCases := []struct {
 		desc     string
 		manifest config.KFD
+		state    config.State
 		wantOks  []string
 		wantErrs []error
 	}{
@@ -35,11 +36,17 @@ func Test_Validator_Validate(t *testing.T) {
 					},
 				},
 			},
+			state: config.State{
+				S3: config.S3{
+					BucketName: "test",
+				},
+			},
 			wantOks: []string{
 				"kubectl",
 				"kustomize",
 				"terraform",
 				"furyagent",
+				"aws",
 			},
 		},
 		{
@@ -54,13 +61,18 @@ func Test_Validator_Validate(t *testing.T) {
 					},
 				},
 			},
+			state: config.State{
+				S3: config.S3{
+					BucketName: "test",
+				},
+			},
 			wantErrs: []error{
 				errors.New("furyagent: wrong tool version - installed = 0.3.0, expected = 0.4.0"),
 				errors.New("kubectl: wrong tool version - installed = 1.21.1, expected = 1.22.0"),
 				errors.New("kustomize: wrong tool version - installed = 3.9.4, expected = 3.5.3"),
 				errors.New("terraform: wrong tool version - installed = 0.15.4, expected = 1.3.0"),
 			},
-			wantOks: []string{},
+			wantOks: []string{"aws"},
 		},
 	}
 	for _, tC := range testCases {
@@ -69,7 +81,7 @@ func Test_Validator_Validate(t *testing.T) {
 		t.Run(tC.desc, func(t *testing.T) {
 			v := tools.NewValidator(execx.NewFakeExecutor(), "test_data")
 
-			oks, errs := v.Validate(tC.manifest)
+			oks, errs := v.Validate(tC.manifest, tC.state)
 
 			if len(oks) != len(tC.wantOks) {
 				t.Errorf("Expected %d oks, got %d - %v", len(tC.wantOks), len(oks), oks)
