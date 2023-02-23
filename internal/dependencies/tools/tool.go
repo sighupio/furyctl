@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"regexp"
 
+	"github.com/sighupio/furyctl/internal/semver"
 	"github.com/sighupio/furyctl/internal/tool"
 	"github.com/sighupio/furyctl/internal/tool/ansible"
 	"github.com/sighupio/furyctl/internal/tool/awscli"
@@ -172,7 +173,17 @@ func (vc *checker) version(want string) error {
 
 	systemVersion := vc.trimFn(versionStringTokens)
 
-	if systemVersion != want {
+	sysVer, err := semver.NewVersion(systemVersion)
+	if err != nil {
+		return fmt.Errorf("%w: %v", errGetVersion, err)
+	}
+
+	wantVer, err := semver.NewConstraint(want)
+	if err != nil {
+		return fmt.Errorf("%w: %v", errGetVersion, err)
+	}
+
+	if !wantVer.Check(sysVer) {
 		return fmt.Errorf("%w - installed = %s, expected = %s", ErrWrongToolVersion, systemVersion, want)
 	}
 

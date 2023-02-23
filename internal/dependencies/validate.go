@@ -10,34 +10,47 @@ import (
 
 	"github.com/sighupio/furyctl/internal/dependencies/envvars"
 	"github.com/sighupio/furyctl/internal/dependencies/tools"
+	"github.com/sighupio/furyctl/internal/dependencies/toolsconf"
 	"github.com/sighupio/furyctl/internal/distribution"
 	execx "github.com/sighupio/furyctl/internal/x/exec"
 )
 
 var (
-	errValidatingTools = errors.New("errors validating tools")
-	errValidatingEnv   = errors.New("errors validating env vars")
+	errValidatingTools     = errors.New("errors validating tools")
+	errValidatingEnv       = errors.New("errors validating env vars")
+	errValidatingToolsConf = errors.New("errors validating tools configuration")
 )
 
 func NewValidator(executor execx.Executor, binPath string) *Validator {
 	return &Validator{
 		toolsValidator:   tools.NewValidator(executor, binPath),
 		envVarsValidator: envvars.NewValidator(),
+		infraValidator:   toolsconf.NewValidator(executor),
 	}
 }
 
 type Validator struct {
 	toolsValidator   *tools.Validator
 	envVarsValidator *envvars.Validator
+	infraValidator   *toolsconf.Validator
 }
 
 func (v *Validator) Validate(res distribution.DownloadResult) error {
-	if _, errs := v.toolsValidator.Validate(res.DistroManifest); len(errs) > 0 {
+	if _, errs := v.toolsValidator.Validate(
+		res.DistroManifest,
+		res.MinimalConf.Spec.ToolsConfiguration.Terraform.State,
+	); len(errs) > 0 {
 		return fmt.Errorf("%w: %v", errValidatingTools, errs)
 	}
 
 	if _, errs := v.envVarsValidator.Validate(res.MinimalConf.Kind); len(errs) > 0 {
 		return fmt.Errorf("%w: %v", errValidatingEnv, errs)
+	}
+
+	if _, errs := v.infraValidator.Validate(
+		res.MinimalConf.Spec.ToolsConfiguration.Terraform.State.S3,
+	); len(errs) > 0 {
+		return fmt.Errorf("%w: %v", errValidatingToolsConf, errs)
 	}
 
 	return nil
