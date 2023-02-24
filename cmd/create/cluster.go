@@ -76,7 +76,7 @@ func NewClusterCmd(tracker *analytics.Tracker) *cobra.Command {
 
 			// Check if kubeconfig is needed.
 			if flags.Phase == cluster.OperationPhaseDistribution || flags.SkipPhase == cluster.OperationPhaseKubernetes {
-				if flags.Kubeconfig == "" {
+				if kubeconfigPath == "" {
 					kubeconfigFromEnv := os.Getenv("KUBECONFIG")
 
 					if kubeconfigFromEnv == "" {
@@ -88,14 +88,16 @@ func NewClusterCmd(tracker *analytics.Tracker) *cobra.Command {
 					logrus.Warnf("Missing --kubeconfig flag, falling back to KUBECONFIG from environment: %s", kubeconfigFromEnv)
 				}
 
+				kubeAbsPath, err := filepath.Abs(kubeconfigPath)
+				if err != nil {
+					return fmt.Errorf("error while getting absolute path of kubeconfig: %w", err)
+				}
+
+				kubeconfigPath = kubeAbsPath
+
 				// Check the kubeconfig file exists.
 				if _, err := os.Stat(kubeconfigPath); os.IsNotExist(err) {
-					kubeAbsPath, err := filepath.Abs(kubeconfigPath)
-					if err != nil {
-						return fmt.Errorf("error while getting absolute path of kubeconfig: %w", err)
-					}
-
-					return fmt.Errorf("%w in %s", ErrKubeconfigNotFound, kubeAbsPath)
+					return fmt.Errorf("%w in %s", ErrKubeconfigNotFound, kubeconfigPath)
 				}
 			}
 
@@ -180,7 +182,7 @@ func NewClusterCmd(tracker *analytics.Tracker) *cobra.Command {
 				WorkDir:    basePath,
 				DistroPath: res.RepoPath,
 				BinPath:    flags.BinPath,
-				Kubeconfig: flags.Kubeconfig,
+				Kubeconfig: kubeconfigPath,
 			}
 
 			// Set debug mode.
