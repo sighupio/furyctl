@@ -337,8 +337,11 @@ var (
 					"dump", "template",
 					"--debug",
 					"--workdir", workdir,
+					"--distro-location", ".",
+					"--out-dir", "target",
 					"--disable-analytics",
 					"--log", "stdout",
+					"--skip-validation",
 				}
 				if dryRun {
 					args = append(args, "--dry-run")
@@ -361,7 +364,7 @@ var (
 				out, err := FuryctlDumpTemplate(bp, false)
 
 				Expect(err).To(HaveOccurred())
-				Expect(out).To(ContainSubstring("furyctl-defaults.yaml: no such file or directory"))
+				Expect(out).To(ContainSubstring("unsupported KFD version"))
 			})
 
 			It("fails if no furyctl.yaml file is found", func() {

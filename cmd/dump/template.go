@@ -5,184 +5,194 @@
 package dump
 
 import (
+	"errors"
 	"fmt"
-	"os"
-	"path/filepath"
 
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 
 	"github.com/sighupio/furyctl/internal/analytics"
-	"github.com/sighupio/furyctl/internal/merge"
-	"github.com/sighupio/furyctl/internal/template"
+	"github.com/sighupio/furyctl/internal/cmd/cmdutil"
+	"github.com/sighupio/furyctl/internal/config"
+	"github.com/sighupio/furyctl/internal/distribution"
 	cobrax "github.com/sighupio/furyctl/internal/x/cobra"
+	netx "github.com/sighupio/furyctl/internal/x/net"
 	yamlx "github.com/sighupio/furyctl/internal/x/yaml"
 )
 
-var ErrSourceDirDoesNotExist = fmt.Errorf("source directory does not exist")
+var ErrParsingFlag = errors.New("error while parsing flag")
 
-type templateConfig struct {
-	DryRun      bool
-	NoOverwrite bool
+type TemplateCmdFlags struct {
+	DryRun         bool
+	NoOverwrite    bool
+	SkipValidation bool
+	OutDir         string
+	FuryctlPath    string
+	DistroLocation string
 }
 
 func NewTemplateCmd(tracker *analytics.Tracker) *cobra.Command {
 	var cmdEvent analytics.Event
 
-	cfg := templateConfig{}
-	templateCmd := &cobra.Command{
+	cmd := &cobra.Command{
 		Use:   "template",
-		Short: "Renders the distribution's manifests from a template and a configuration file",
-		Long: `Generates a folder with the Kustomization project for deploying Kubernetes Fury Distribution into a cluster.
-The generated folder will be created starting from a provided template and the parameters set in a configuration file that is merged with default values.`,
+		Short: "Renders the distribution's infrastructure code from template files and a configuration file",
+		Long: `Generates a folder with the Terraform and Kustomization code for deploying the Kubernetes Fury Distribution into a cluster.
+The generated folder will be created starting from a provided templates folder and the parameters set in a configuration file that is merged with default values.`,
 		SilenceUsage:  true,
 		SilenceErrors: true,
 		PreRun: func(cmd *cobra.Command, _ []string) {
 			cmdEvent = analytics.NewCommandEvent(cobrax.GetFullname(cmd))
 		},
-		RunE: func(_ *cobra.Command, _ []string) error {
-			source := "templates/distribution"
-			target := "target"
-			suffix := ".tpl"
-			distributionFilePath := "furyctl-defaults.yaml"
-			furyctlFilePath := "furyctl.yaml"
+		RunE: func(cmd *cobra.Command, _ []string) error {
+			// Get flags.
+			flags, err := getDumpTemplateCmdFlags(cmd, tracker, cmdEvent)
+			if err != nil {
+				return err
+			}
 
-			distributionFile, err := yamlx.FromFileV2[map[any]any](distributionFilePath)
+			// Init collaborators.
+			client := netx.NewGoGetterClient()
+			distrodl := distribution.NewDownloader(client)
+
+			// Download the distribution.
+			logrus.Info("Downloading distribution...")
+			res, err := distrodl.Download(flags.DistroLocation, flags.FuryctlPath)
 			if err != nil {
 				cmdEvent.AddErrorMessage(err)
 				tracker.Track(cmdEvent)
 
-				return fmt.Errorf("%s - %w", distributionFilePath, err)
+				return fmt.Errorf("error downloading distribution: %w", err)
 			}
 
-			furyctlFile, err := yamlx.FromFileV2[map[any]any](furyctlFilePath)
-			if err != nil {
-				cmdEvent.AddErrorMessage(err)
-				tracker.Track(cmdEvent)
-
-				return fmt.Errorf("%s - %w", furyctlFilePath, err)
-			}
-
-			if _, err := os.Stat(source); os.IsNotExist(err) {
-				cmdEvent.AddErrorMessage(ErrSourceDirDoesNotExist)
-				tracker.Track(cmdEvent)
-
-				return ErrSourceDirDoesNotExist
-			}
-
-			merger := merge.NewMerger(
-				merge.NewDefaultModel(distributionFile, ".data"),
-				merge.NewDefaultModel(furyctlFile, ".spec.distribution"),
-			)
-
-			_, err = merger.Merge()
-			if err != nil {
-				cmdEvent.AddErrorMessage(err)
-				tracker.Track(cmdEvent)
-
-				return fmt.Errorf("error merging files: %w", err)
-			}
-
-			reverseMerger := merge.NewMerger(
-				*merger.GetCustom(),
-				*merger.GetBase(),
-			)
-
-			_, err = reverseMerger.Merge()
-			if err != nil {
-				cmdEvent.AddErrorMessage(err)
-				tracker.Track(cmdEvent)
-
-				return fmt.Errorf("error merging files: %w", err)
-			}
-
-			tmplCfg, err := template.NewConfig(reverseMerger, reverseMerger, []string{})
-			if err != nil {
-				cmdEvent.AddErrorMessage(err)
-				tracker.Track(cmdEvent)
-
-				return fmt.Errorf("error creating template config: %w", err)
-			}
-
-			outYaml, err := yamlx.MarshalV2(tmplCfg)
-			if err != nil {
-				cmdEvent.AddErrorMessage(err)
-				tracker.Track(cmdEvent)
-
-				return fmt.Errorf("error marshaling template config: %w", err)
-			}
-
-			outDirPath, err := os.MkdirTemp("", "furyctl-dist-")
-			if err != nil {
-				cmdEvent.AddErrorMessage(err)
-				tracker.Track(cmdEvent)
-
-				return fmt.Errorf("error creating temporary directory: %w", err)
-			}
-
-			confPath := filepath.Join(outDirPath, "config.yaml")
-
-			logrus.Debugf("config path = %s", confPath)
-
-			if err = os.WriteFile(confPath, outYaml, os.ModePerm); err != nil {
-				cmdEvent.AddErrorMessage(err)
-				tracker.Track(cmdEvent)
-
-				return fmt.Errorf("error writing config file: %w", err)
-			}
-
-			if !cfg.NoOverwrite {
-				if err = os.RemoveAll(target); err != nil {
+			if !flags.SkipValidation {
+				// Validate the furyctl.yaml file.
+				logrus.Info("Validating configuration file...")
+				if err := config.Validate(flags.FuryctlPath, res.RepoPath); err != nil {
 					cmdEvent.AddErrorMessage(err)
 					tracker.Track(cmdEvent)
 
-					return fmt.Errorf("error removing target directory: %w", err)
+					return fmt.Errorf("error while validating configuration file: %w", err)
 				}
 			}
 
-			templateModel, err := template.NewTemplateModel(
-				source,
-				target,
-				confPath,
-				outDirPath,
-				suffix,
-				cfg.NoOverwrite,
-				cfg.DryRun,
+			furyctlFile, err := yamlx.FromFileV2[map[any]any](flags.FuryctlPath)
+			if err != nil {
+				cmdEvent.AddErrorMessage(err)
+				tracker.Track(cmdEvent)
+
+				return fmt.Errorf("%s - %w", flags.FuryctlPath, err)
+			}
+
+			logrus.Info("Generating distribution manifests...")
+
+			distroManBuilder := distribution.NewIACBuilder(
+				furyctlFile,
+				res.RepoPath,
+				flags.OutDir,
+				flags.NoOverwrite,
+				flags.DryRun,
 			)
-			if err != nil {
+
+			if err := distroManBuilder.Build(); err != nil {
 				cmdEvent.AddErrorMessage(err)
 				tracker.Track(cmdEvent)
 
-				return fmt.Errorf("error creating template model: %w", err)
+				return fmt.Errorf("error while generating distribution manifests: %w", err)
 			}
 
-			err = templateModel.Generate()
-			if err != nil {
-				cmdEvent.AddErrorMessage(err)
-				tracker.Track(cmdEvent)
+			logrus.Info("Distribution manifests generated successfully")
 
-				return fmt.Errorf("error generating from template: %w", err)
-			}
-
-			cmdEvent.AddSuccessMessage("Distribution template generated successfully")
+			cmdEvent.AddSuccessMessage("Distribution manifests generated successfully")
 			tracker.Track(cmdEvent)
 
 			return nil
 		},
 	}
 
-	templateCmd.Flags().BoolVar(
-		&cfg.DryRun,
+	cmd.Flags().Bool(
 		"dry-run",
 		false,
 		"Furyctl will try its best to generate the manifests despite the errors",
 	)
-	templateCmd.Flags().BoolVar(
-		&cfg.NoOverwrite,
+
+	cmd.Flags().Bool(
 		"no-overwrite",
 		false,
 		"Stop if target directory is not empty",
 	)
 
-	return templateCmd
+	cmd.Flags().StringP(
+		"out-dir",
+		"o",
+		"distribution",
+		"Location where to generate the distribution template. Defaults to distribution folder in the current "+
+			"directory.",
+	)
+
+	cmd.Flags().StringP(
+		"distro-location",
+		"",
+		"",
+		"Location where to download schemas, defaults and the distribution manifest. "+
+			"It can either be a local path(eg: /path/to/fury/distribution) or "+
+			"a remote URL(eg: git::git@github.com:sighupio/fury-distribution?ref=BRANCH_NAME&depth=1). "+
+			"Any format supported by hashicorp/go-getter can be used.",
+	)
+
+	cmd.Flags().StringP(
+		"config",
+		"c",
+		"furyctl.yaml",
+		"Path to the configuration file",
+	)
+
+	cmd.Flags().Bool(
+		"skip-validation",
+		false,
+		"Skip validation of the configuration file",
+	)
+
+	return cmd
+}
+
+func getDumpTemplateCmdFlags(cmd *cobra.Command, tracker *analytics.Tracker, cmdEvent analytics.Event) (TemplateCmdFlags, error) {
+	dryRun, err := cmdutil.BoolFlag(cmd, "dry-run", tracker, cmdEvent)
+	if err != nil {
+		return TemplateCmdFlags{}, fmt.Errorf("%w: %s", ErrParsingFlag, "dry-run")
+	}
+
+	noOverwrite, err := cmdutil.BoolFlag(cmd, "no-overwrite", tracker, cmdEvent)
+	if err != nil {
+		return TemplateCmdFlags{}, fmt.Errorf("%w: %s", ErrParsingFlag, "no-overwrite")
+	}
+
+	skipValidation, err := cmdutil.BoolFlag(cmd, "skip-validation", tracker, cmdEvent)
+	if err != nil {
+		return TemplateCmdFlags{}, fmt.Errorf("%w: %s", ErrParsingFlag, "skip-validation")
+	}
+
+	outDir, err := cmdutil.StringFlag(cmd, "out-dir", tracker, cmdEvent)
+	if err != nil {
+		return TemplateCmdFlags{}, fmt.Errorf("%w: %s", ErrParsingFlag, "out-dir")
+	}
+
+	distroLocation, err := cmdutil.StringFlag(cmd, "distro-location", tracker, cmdEvent)
+	if err != nil {
+		return TemplateCmdFlags{}, fmt.Errorf("%w: %s", ErrParsingFlag, "distro-location")
+	}
+
+	furyctlPath, err := cmdutil.StringFlag(cmd, "config", tracker, cmdEvent)
+	if err != nil {
+		return TemplateCmdFlags{}, fmt.Errorf("%w: %s", ErrParsingFlag, "config")
+	}
+
+	return TemplateCmdFlags{
+		DryRun:         dryRun,
+		NoOverwrite:    noOverwrite,
+		SkipValidation: skipValidation,
+		OutDir:         outDir,
+		DistroLocation: distroLocation,
+		FuryctlPath:    furyctlPath,
+	}, nil
 }
