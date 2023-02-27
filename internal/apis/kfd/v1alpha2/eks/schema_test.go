@@ -40,7 +40,7 @@ func Test_ExtraSchemaValidator_Validate(t *testing.T) {
 			confPath: "test/schema/invalid.yaml",
 			wantErr:  true,
 			wantErrMsg: "error while unmarshalling file from test/schema/invalid.yaml" +
-				" :yaml: line 4	: did not find expected ',' or '}'",
+				" :yaml: line 4: did not find expected ',' or '}'",
 		},
 	}
 
