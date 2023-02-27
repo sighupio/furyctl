@@ -1,5 +1,5 @@
 _PROJECT_DIRECTORY = $(dir $(realpath $(firstword $(MAKEFILE_LIST))))
-_GOLANG_IMAGE = golang:1.19.4
+_GOLANG_IMAGE = golang:1.19.6
 _PROJECTNAME = furyctl
 _GOARCH = "amd64"
 _BIN_OPEN = "open"
@@ -73,7 +73,7 @@ mod-check-upgrades:
 mod-upgrade:
 	@go get -u ./... && go mod tidy
 
-.PHONY: generate license-add license-check
+.PHONY: license-add license-check
 
 license-add:
 	@addlicense -c "SIGHUP s.r.l" -y 2017-present -v -l bsd \
@@ -167,12 +167,12 @@ clean: deps
 build:
 	@export GO_VERSION=$$(go version | cut -d ' ' -f 3) && \
 	goreleaser check && \
-	goreleaser release --debug --snapshot --rm-dist
+	goreleaser release --debug --snapshot --clean
 
 release:
 	@export GO_VERSION=$$(go version | cut -d ' ' -f 3) && \
 	goreleaser check && \
-	goreleaser --debug release --rm-dist
+	goreleaser release --debug --clean
 
 # Helpers
 
