@@ -8,7 +8,7 @@ name: main
 
 steps:
   - name: prepare
-    image: quay.io/sighup/golang:1.19.4
+    image: quay.io/sighup/golang:1.19.6
     depends_on:
       - clone
     pull: always
@@ -17,7 +17,7 @@ steps:
       - go mod download
 
   - name: license
-    image: quay.io/sighup/golang:1.19.4
+    image: quay.io/sighup/golang:1.19.6
     depends_on:
       - clone
     pull: always
@@ -30,7 +30,7 @@ steps:
       GOTMPDIR: /drone/src/.go/tmp
 
   - name: lint
-    image: quay.io/sighup/golang:1.19.4
+    image: quay.io/sighup/golang:1.19.6
     depends_on:
       - prepare
     pull: always
@@ -43,7 +43,7 @@ steps:
       GOTMPDIR: /drone/src/.go/tmp
 
   - name: test-unit
-    image: quay.io/sighup/golang:1.19.4
+    image: quay.io/sighup/golang:1.19.6
     depends_on:
       - prepare
     pull: always
@@ -56,7 +56,7 @@ steps:
       GOTMPDIR: /drone/src/.go/tmp
 
   - name: test-integration
-    image: quay.io/sighup/golang:1.19.4
+    image: quay.io/sighup/golang:1.19.6
     depends_on:
       - prepare
     commands:
@@ -71,7 +71,7 @@ steps:
         from_secret: NETRC_FILE
 
   - name: test-e2e
-    image: quay.io/sighup/golang:1.19.4
+    image: quay.io/sighup/golang:1.19.6
     depends_on:
       - prepare
     commands:
@@ -120,7 +120,7 @@ steps:
         from_secret: GITHUB_SSH
 
   - name: build
-    image: ghcr.io/goreleaser/goreleaser:v1.11.4
+    image: ghcr.io/goreleaser/goreleaser:v1.15.2
     depends_on:
       - prepare
     pull: always
@@ -143,7 +143,7 @@ steps:
         from_secret: GITHUB_TOKEN
 
   - name: build-release
-    image: ghcr.io/goreleaser/goreleaser:v1.11.4
+    image: ghcr.io/goreleaser/goreleaser:v1.15.2
     pull: always
     depends_on:
       - lint

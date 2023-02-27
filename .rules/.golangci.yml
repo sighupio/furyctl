@@ -55,6 +55,11 @@ linters-settings:
   errchkjson:
     check-error-free-encoding: false
     report-no-exported: true
+  errorlint:
+    errorf: false
+    errorf-multi: true
+    asserts: true
+    comparison: true
   exhaustive:
     check-generated: true
     default-signifies-exhaustive: true
