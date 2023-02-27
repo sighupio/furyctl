@@ -60,7 +60,7 @@ func (d *Downloader) Download(
 ) (DownloadResult, error) {
 	minimalConf, err := yamlx.FromFileV3[config.Furyctl](furyctlConfPath)
 	if err != nil {
-		return DownloadResult{}, fmt.Errorf("%w: %s", ErrYamlUnmarshalFile, err)
+		return DownloadResult{}, fmt.Errorf("%w: %v", ErrYamlUnmarshalFile, err)
 	}
 
 	return d.DoDownload(distroLocation, minimalConf)

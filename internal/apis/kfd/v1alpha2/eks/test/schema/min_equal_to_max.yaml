@@ -1,0 +1,6 @@
+spec:
+  kubernetes:
+    nodePools:
+      - size:
+          min: 2
+          max: 2
