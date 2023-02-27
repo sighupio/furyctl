@@ -7,13 +7,13 @@ package dump
 import (
 	"errors"
 	"fmt"
-	"github.com/sighupio/furyctl/internal/config"
 
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 
 	"github.com/sighupio/furyctl/internal/analytics"
 	"github.com/sighupio/furyctl/internal/cmd/cmdutil"
+	"github.com/sighupio/furyctl/internal/config"
 	"github.com/sighupio/furyctl/internal/distribution"
 	cobrax "github.com/sighupio/furyctl/internal/x/cobra"
 	netx "github.com/sighupio/furyctl/internal/x/net"
