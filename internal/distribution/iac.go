@@ -25,7 +25,7 @@ const (
 
 var ErrSourceDirDoesNotExist = errors.New("source directory does not exist")
 
-type ManifestBuilder struct {
+type IACBuilder struct {
 	furyctlFile map[any]any
 	distroPath  string
 	outDir      string
@@ -33,14 +33,14 @@ type ManifestBuilder struct {
 	dryRun      bool
 }
 
-func NewManifestBuilder(
+func NewIACBuilder(
 	furyctlFile map[any]any,
 	distroPath,
 	outDir string,
 	noOverwrite,
 	dryRun bool,
-) *ManifestBuilder {
-	return &ManifestBuilder{
+) *IACBuilder {
+	return &IACBuilder{
 		furyctlFile: furyctlFile,
 		distroPath:  distroPath,
 		outDir:      outDir,
@@ -49,7 +49,7 @@ func NewManifestBuilder(
 	}
 }
 
-func (m *ManifestBuilder) Build() error {
+func (m *IACBuilder) Build() error {
 	defaultsFile, err := m.defaultsFile()
 	if err != nil {
 		return fmt.Errorf("error getting defaults file: %w", err)
@@ -130,7 +130,7 @@ func (m *ManifestBuilder) Build() error {
 	return nil
 }
 
-func (m *ManifestBuilder) defaultsFile() (map[any]any, error) {
+func (m *IACBuilder) defaultsFile() (map[any]any, error) {
 	defaultsFilePath := filepath.Join(m.distroPath, defaultsFileName)
 
 	defaultsFile, err := yamlx.FromFileV2[map[any]any](defaultsFilePath)
@@ -141,7 +141,7 @@ func (m *ManifestBuilder) defaultsFile() (map[any]any, error) {
 	return defaultsFile, nil
 }
 
-func (m *ManifestBuilder) sourcePath() (string, error) {
+func (m *IACBuilder) sourcePath() (string, error) {
 	sourcePath := filepath.Join(m.distroPath, source)
 
 	if _, err := os.Stat(sourcePath); os.IsNotExist(err) {
