@@ -337,6 +337,7 @@ var (
 					"dump", "template",
 					"--debug",
 					"--workdir", workdir,
+					"--distro-location", workdir,
 					"--disable-analytics",
 					"--log", "stdout",
 				}
