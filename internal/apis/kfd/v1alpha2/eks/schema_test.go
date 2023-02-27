@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
+//go:build unit
+
 package eks_test
 
 import (
@@ -38,7 +40,7 @@ func Test_ExtraSchemaValidator_Validate(t *testing.T) {
 			confPath: "test/schema/invalid.yaml",
 			wantErr:  true,
 			wantErrMsg: "error while unmarshalling file from test/schema/invalid.yaml" +
-				" :yaml: line 1: did not find expected ',' or '}'",
+				" :yaml: line 4	: did not find expected ',' or '}'",
 		},
 	}
 
