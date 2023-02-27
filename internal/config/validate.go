@@ -11,8 +11,8 @@ import (
 	"path/filepath"
 
 	"github.com/sighupio/fury-distribution/pkg/config"
-	"github.com/sighupio/fury-distribution/pkg/schema/private"
 	"github.com/sighupio/furyctl/internal/analytics"
+	"github.com/sighupio/furyctl/internal/apis"
 	"github.com/sighupio/furyctl/internal/distribution"
 	"github.com/sighupio/furyctl/internal/schema/santhosh"
 	iox "github.com/sighupio/furyctl/internal/x/io"
@@ -105,34 +105,13 @@ func Validate(path, repoPath string) error {
 		return err
 	}
 
-	err = schema.Validate(conf)
-	if err != nil {
+	if err = schema.Validate(conf); err != nil {
 		return fmt.Errorf("error while validating against schema: %w", err)
 	}
 
-	err = validateSchemaExtraRules(path)
-	if err != nil {
-		return fmt.Errorf("error while validating against schema rules: %w", err)
-	}
-
-	return nil
-}
-
-func validateSchemaExtraRules(confPath string) error {
-	furyctlConf, err := yamlx.FromFileV3[private.EksclusterKfdV1Alpha2](confPath)
-	if err != nil {
-		return err
-	}
-
-	for i, nodePool := range furyctlConf.Spec.Kubernetes.NodePools {
-		if nodePool.Size.Max < nodePool.Size.Min {
-			return fmt.Errorf(
-				"spec.kubernetes.nodePools[%d].size's max(%d) must be greater than or equal to min(%d)",
-				i,
-				nodePool.Size.Max,
-				nodePool.Size.Min,
-			)
-		}
+	esv := apis.NewExtraSchemaValidatorFactory(miniConf.APIVersion, miniConf.Kind)
+	if err = esv.Validate(path); err != nil {
+		return fmt.Errorf("error while validating against extra schema rules: %w", err)
 	}
 
 	return nil
