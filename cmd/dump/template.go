@@ -7,13 +7,13 @@ package dump
 import (
 	"errors"
 	"fmt"
+	"github.com/sighupio/furyctl/internal/config"
 
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 
 	"github.com/sighupio/furyctl/internal/analytics"
 	"github.com/sighupio/furyctl/internal/cmd/cmdutil"
-	"github.com/sighupio/furyctl/internal/config"
 	"github.com/sighupio/furyctl/internal/distribution"
 	cobrax "github.com/sighupio/furyctl/internal/x/cobra"
 	netx "github.com/sighupio/furyctl/internal/x/net"
@@ -25,6 +25,7 @@ var ErrParsingFlag = errors.New("error while parsing flag")
 type TemplateCmdFlags struct {
 	DryRun         bool
 	NoOverwrite    bool
+	SkipValidation bool
 	OutDir         string
 	FuryctlPath    string
 	DistroLocation string
@@ -64,13 +65,15 @@ The generated folder will be created starting from a provided template and the p
 				return fmt.Errorf("error downloading distribution: %w", err)
 			}
 
-			// Validate the furyctl.yaml file.
-			logrus.Info("Validating configuration file...")
-			if err := config.Validate(flags.FuryctlPath, res.RepoPath); err != nil {
-				cmdEvent.AddErrorMessage(err)
-				tracker.Track(cmdEvent)
+			if !flags.SkipValidation {
+				// Validate the furyctl.yaml file.
+				logrus.Info("Validating configuration file...")
+				if err := config.Validate(flags.FuryctlPath, res.RepoPath); err != nil {
+					cmdEvent.AddErrorMessage(err)
+					tracker.Track(cmdEvent)
 
-				return fmt.Errorf("error while validating configuration file: %w", err)
+					return fmt.Errorf("error while validating configuration file: %w", err)
+				}
 			}
 
 			furyctlFile, err := yamlx.FromFileV2[map[any]any](flags.FuryctlPath)
@@ -144,6 +147,12 @@ The generated folder will be created starting from a provided template and the p
 		"Path to the configuration file",
 	)
 
+	cmd.Flags().Bool(
+		"skip-validation",
+		false,
+		"Skip validation of the configuration file",
+	)
+
 	return cmd
 }
 
@@ -156,6 +165,11 @@ func getDumpTemplateCmdFlags(cmd *cobra.Command, tracker *analytics.Tracker, cmd
 	noOverwrite, err := cmdutil.BoolFlag(cmd, "no-overwrite", tracker, cmdEvent)
 	if err != nil {
 		return TemplateCmdFlags{}, fmt.Errorf("%w: %s", ErrParsingFlag, "no-overwrite")
+	}
+
+	skipValidation, err := cmdutil.BoolFlag(cmd, "skip-validation", tracker, cmdEvent)
+	if err != nil {
+		return TemplateCmdFlags{}, fmt.Errorf("%w: %s", ErrParsingFlag, "skip-validation")
 	}
 
 	outDir, err := cmdutil.StringFlag(cmd, "out-dir", tracker, cmdEvent)
@@ -176,6 +190,7 @@ func getDumpTemplateCmdFlags(cmd *cobra.Command, tracker *analytics.Tracker, cmd
 	return TemplateCmdFlags{
 		DryRun:         dryRun,
 		NoOverwrite:    noOverwrite,
+		SkipValidation: skipValidation,
 		OutDir:         outDir,
 		DistroLocation: distroLocation,
 		FuryctlPath:    furyctlPath,
