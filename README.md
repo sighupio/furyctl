@@ -265,7 +265,7 @@ needed to create a Kubernetes Fury cluster.
 
 > 🔥 **Advanced Tip**
 >
-> Using the command `furyctl dump template` with the flag `-w` pointing to the local location of the repository `fury-distribution`,
+> Using the command `furyctl dump template` with the flag `--distro-location` pointing to the local location of the repository `fury-distribution`,
 > will run the template engine on the modules and generate the final manifests that will be applied to the cluster.
 
 #### Cluster creation
