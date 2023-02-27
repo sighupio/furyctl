@@ -36,9 +36,9 @@ func NewTemplateCmd(tracker *analytics.Tracker) *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "template",
-		Short: "Renders the distribution's manifests from a template and a configuration file",
-		Long: `Generates a folder with the Kustomization project for deploying Kubernetes Fury Distribution into a cluster.
-The generated folder will be created starting from a provided template and the parameters set in a configuration file that is merged with default values.`,
+		Short: "Renders the distribution's infrastructure code from template files and a configuration file",
+		Long: `Generates a folder with the Terraform and Kustomization code for deploying the Kubernetes Fury Distribution into a cluster.
+The generated folder will be created starting from a provided templates folder and the parameters set in a configuration file that is merged with default values.`,
 		SilenceUsage:  true,
 		SilenceErrors: true,
 		PreRun: func(cmd *cobra.Command, _ []string) {
@@ -86,7 +86,7 @@ The generated folder will be created starting from a provided template and the p
 
 			logrus.Info("Generating distribution manifests...")
 
-			distroManBuilder := distribution.NewManifestBuilder(
+			distroManBuilder := distribution.NewIACBuilder(
 				furyctlFile,
 				res.RepoPath,
 				flags.OutDir,
