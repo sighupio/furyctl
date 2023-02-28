@@ -15,7 +15,7 @@ variable "cluster_version" {
 }
 
 variable "cluster_log_retention_days" {
-  type = number
+  type    = number
   default = 90
 }
 variable "network" {
@@ -67,7 +67,7 @@ variable "node_pools" {
 }
 
 variable "node_pools_launch_kind" {
-  type = string
+  type        = string
   description = "Choose if the node pools will use launch_configurations, launch_templates or both"
 }
 
