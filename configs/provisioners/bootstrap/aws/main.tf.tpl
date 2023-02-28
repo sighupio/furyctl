@@ -19,10 +19,12 @@ terraform {
 }
 
 provider "aws" {
-  region = "{{ .global.region }}"
-  default_tags = {
+  region = "{{ .spec.region }}"
+  default_tags {
     tags = {
-      {{range $k, $v := .global.tags}}$k = $v{{end}}
+      {{- range $k, $v := .spec.tags }}
+      {{ $k }} = "{{ $v }}"
+      {{- end}}
     }
   }
 }

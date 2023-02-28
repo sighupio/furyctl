@@ -228,6 +228,10 @@ func (i *Infrastructure) copyFromTemplate() error {
 	eksInstallerPath := path.Join(i.Path, "..", "vendor", "installers", "eks", "modules", "vpc-and-vpn")
 
 	cfg.Data = map[string]map[any]any{
+		"spec": {
+			"region": i.furyctlConf.Spec.Region,
+			"tags":   i.furyctlConf.Spec.Tags,
+		},
 		"kubernetes": {
 			"installerPath": eksInstallerPath,
 		},
