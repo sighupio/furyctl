@@ -212,6 +212,10 @@ func (k *Kubernetes) copyFromTemplate() error {
 	eksInstallerPath := path.Join(k.Path, "..", "vendor", "installers", "eks", "modules", "eks")
 
 	tfConfVars := map[string]map[any]any{
+		"spec": {
+			"region": k.furyctlConf.Spec.Region,
+			"tags":   k.furyctlConf.Spec.Tags,
+		},
 		"kubernetes": {
 			"installerPath": eksInstallerPath,
 			"tfVersion":     k.kfdManifest.Tools.Common.Terraform.Version,
