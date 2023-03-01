@@ -5,10 +5,10 @@
 package envvars
 
 import (
-	"errors"
-	"fmt"
-	"os"
-	"strings"
+  "errors"
+  "fmt"
+  "os"
+  "strings"
 )
 
 var (
@@ -35,12 +35,6 @@ func (*Validator) checkEKSCluster() ([]string, []error) {
 	errs := make([]error, 0)
 
 	var missingAwsVars []string
-
-	if os.Getenv("AWS_DEFAULT_REGION") == "" {
-		errs = append(errs, fmt.Errorf("%w: AWS_DEFAULT_REGION", ErrMissingRequiredEnvVar))
-	} else {
-		oks = append(oks, "AWS_DEFAULT_REGION")
-	}
 
 	if os.Getenv("AWS_PROFILE") != "" {
 		oks = append(oks, "AWS_PROFILE")
