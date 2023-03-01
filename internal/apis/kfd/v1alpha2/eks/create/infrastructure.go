@@ -10,9 +10,7 @@ import (
 	"fmt"
 	"io/fs"
 	"os"
-	"os/exec"
 	"path"
-	"path/filepath"
 	"strings"
 	"time"
 
@@ -23,13 +21,11 @@ import (
 	"github.com/sighupio/furyctl/configs"
 	"github.com/sighupio/furyctl/internal/cluster"
 	"github.com/sighupio/furyctl/internal/template"
-	"github.com/sighupio/furyctl/internal/tool/furyagent"
 	"github.com/sighupio/furyctl/internal/tool/openvpn"
 	"github.com/sighupio/furyctl/internal/tool/terraform"
 	bytesx "github.com/sighupio/furyctl/internal/x/bytes"
 	execx "github.com/sighupio/furyctl/internal/x/exec"
 	iox "github.com/sighupio/furyctl/internal/x/io"
-	osx "github.com/sighupio/furyctl/internal/x/os"
 )
 
 const SErrWrapWithStr = "%w: %s"
@@ -45,7 +41,6 @@ type Infrastructure struct {
 	furyctlConf private.EksclusterKfdV1Alpha2
 	kfdManifest config.KFD
 	tfRunner    *terraform.Runner
-	faRunner    *furyagent.Runner
 	ovRunner    *openvpn.Runner
 	dryRun      bool
 }
@@ -79,10 +74,6 @@ func NewInfrastructure(
 				Terraform: phase.TerraformPath,
 			},
 		),
-		faRunner: furyagent.NewRunner(executor, furyagent.Paths{
-			Furyagent: path.Join(paths.BinPath, "furyagent", kfdManifest.Tools.Common.Furyagent.Version, "furyagent"),
-			WorkDir:   phase.SecretsPath,
-		}),
 		ovRunner: openvpn.NewRunner(executor, openvpn.Paths{
 			WorkDir: phase.SecretsPath,
 			Openvpn: "openvpn",
@@ -91,7 +82,7 @@ func NewInfrastructure(
 	}, nil
 }
 
-func (i *Infrastructure) Exec(opts []cluster.OperationPhaseOption) error {
+func (i *Infrastructure) Exec() error {
 	logrus.Info("Creating infrastructure...")
 
 	logrus.Debug("Create: running infrastructure phase...")
@@ -136,71 +127,7 @@ func (i *Infrastructure) Exec(opts []cluster.OperationPhaseOption) error {
 		return fmt.Errorf("cannot create cloud resources: %w", err)
 	}
 
-	if i.isVpnConfigured() {
-		clientName, err := i.generateClientName()
-		if err != nil {
-			return err
-		}
-
-		if err := i.faRunner.ConfigOpenvpnClient(clientName); err != nil {
-			return fmt.Errorf("error configuring openvpn client: %w", err)
-		}
-
-		for _, opt := range opts {
-			if strings.ToLower(opt.Name) == cluster.OperationPhaseOptionVPNAutoConnect {
-				autoConnect, ok := opt.Value.(bool)
-				if autoConnect && ok {
-					connectMsg := "Connecting to VPN"
-
-					isRoot, err := osx.IsRoot()
-					if err != nil {
-						return fmt.Errorf("error while checking if user is root: %w", err)
-					}
-
-					if !isRoot {
-						connectMsg = fmt.Sprintf("%s, you will be asked for your SUDO password", connectMsg)
-					}
-
-					logrus.Infof("%s...", connectMsg)
-
-					if err := i.ovRunner.Connect(clientName); err != nil {
-						return fmt.Errorf("error connecting to VPN: %w", err)
-					}
-				}
-			}
-		}
-
-		if err := i.copyOpenvpnToWorkDir(); err != nil {
-			return fmt.Errorf("error copying openvpn file to workdir: %w", err)
-		}
-	}
-
 	return nil
-}
-
-func (i *Infrastructure) isVpnConfigured() bool {
-	vpn := i.furyctlConf.Spec.Infrastructure.Vpc.Vpn
-	if vpn == nil {
-		return false
-	}
-
-	instances := i.furyctlConf.Spec.Infrastructure.Vpc.Vpn.Instances
-	if instances == nil {
-		return true
-	}
-
-	return *instances > 0
-}
-
-func (i *Infrastructure) generateClientName() (string, error) {
-	whoamiResp, err := exec.Command("whoami").Output()
-	if err != nil {
-		return "", fmt.Errorf("error getting current user: %w", err)
-	}
-
-	whoami := strings.TrimSpace(string(whoamiResp))
-
-	return fmt.Sprintf("%s-%s", i.furyctlConf.Metadata.Name, whoami), nil
 }
 
 func (i *Infrastructure) copyFromTemplate() error {
@@ -250,37 +177,6 @@ func (i *Infrastructure) copyFromTemplate() error {
 	)
 	if err != nil {
 		return fmt.Errorf("error generating from template files: %w", err)
-	}
-
-	return nil
-}
-
-func (i *Infrastructure) copyOpenvpnToWorkDir() error {
-	currentDir, err := os.Getwd()
-	if err != nil {
-		return fmt.Errorf("error getting current dir: %w", err)
-	}
-
-	ovpnFileName, err := i.generateClientName()
-	if err != nil {
-		return err
-	}
-
-	ovpnFileName = fmt.Sprintf("%s.ovpn", ovpnFileName)
-
-	ovpnPath, err := filepath.Abs(path.Join(i.SecretsPath, ovpnFileName))
-	if err != nil {
-		return fmt.Errorf("error getting ovpn absolute path: %w", err)
-	}
-
-	ovpnFile, err := os.ReadFile(ovpnPath)
-	if err != nil {
-		return fmt.Errorf("error reading ovpn file: %w", err)
-	}
-
-	err = os.WriteFile(path.Join(currentDir, ovpnFileName), ovpnFile, iox.FullRWPermAccess)
-	if err != nil {
-		return fmt.Errorf("error writing ovpn file: %w", err)
 	}
 
 	return nil
