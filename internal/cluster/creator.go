@@ -21,6 +21,7 @@ const (
 	CreatorPropertyDistroPath     = "distropath"
 	CreatorPropertyBinPath        = "binpath"
 	CreatorPropertyPhase          = "phase"
+	CreatorPropertySkipVpn        = "skipvpn"
 	CreatorPropertyVpnAutoConnect = "vpnautoconnect"
 	CreatorPropertyKubeconfig     = "kubeconfig"
 	CreatorPropertyDryRun         = "dryrun"
@@ -58,7 +59,8 @@ func NewCreator(
 	kfdManifest config.KFD,
 	paths CreatorPaths,
 	phase string,
-	vpnAutoConnect bool,
+	skipVpn,
+	vpnAutoConnect,
 	dryRun bool,
 ) (Creator, error) {
 	lcAPIVersion := strings.ToLower(minimalConf.APIVersion)
@@ -73,6 +75,10 @@ func NewCreator(
 			{
 				Name:  CreatorPropertyPhase,
 				Value: phase,
+			},
+			{
+				Name:  CreatorPropertySkipVpn,
+				Value: skipVpn,
 			},
 			{
 				Name:  CreatorPropertyVpnAutoConnect,
