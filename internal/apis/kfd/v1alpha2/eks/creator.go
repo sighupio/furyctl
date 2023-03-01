@@ -34,6 +34,7 @@ type ClusterCreator struct {
 	furyctlConf    private.EksclusterKfdV1Alpha2
 	kfdManifest    config.KFD
 	phase          string
+	skipVpn        bool
 	vpnAutoConnect bool
 	dryRun         bool
 }
@@ -66,6 +67,11 @@ func (v *ClusterCreator) SetProperty(name string, value any) {
 	case cluster.CreatorPropertyPhase:
 		if s, ok := value.(string); ok {
 			v.phase = s
+		}
+
+	case cluster.CreatorPropertySkipVpn:
+		if b, ok := value.(bool); ok {
+			v.skipVpn = b
 		}
 
 	case cluster.CreatorPropertyVpnAutoConnect:
@@ -106,9 +112,15 @@ func (v *ClusterCreator) Create(skipPhase string) error {
 		return err
 	}
 
-	infraOpts := []cluster.OperationPhaseOption{
-		{Name: cluster.OperationPhaseOptionVPNAutoConnect, Value: v.vpnAutoConnect},
-	}
+	vpnConnector := NewVpnConnector(
+		v.furyctlConf.Metadata.Name,
+		infra.SecretsPath,
+		v.paths.BinPath,
+		v.kfdManifest.Tools.Common.Furyagent.Version,
+		v.vpnAutoConnect,
+		v.skipVpn,
+		v.furyctlConf.Spec.Infrastructure.Vpc.Vpn,
+	)
 
 	switch v.phase {
 	case cluster.OperationPhaseInfrastructure:
@@ -123,7 +135,7 @@ func (v *ClusterCreator) Create(skipPhase string) error {
 			return fmt.Errorf("%w: check at %s", ErrInfraNotPresent, absPath)
 		}
 
-		if err = infra.Exec(infraOpts); err != nil {
+		if err = infra.Exec(); err != nil {
 			return fmt.Errorf("error while executing infrastructure phase: %w", err)
 		}
 
@@ -135,15 +147,22 @@ func (v *ClusterCreator) Create(skipPhase string) error {
 
 		logrus.Info("Infrastructure created successfully")
 
-		if v.furyctlConf.Spec.Infrastructure != nil {
-			if v.furyctlConf.Spec.Infrastructure.Vpc.Vpn != nil && v.vpnAutoConnect {
-				logrus.Info("Please remember to kill the VPN connection when you finish doing operations on the cluster")
+		if vpnConnector.IsConfigured() {
+			if err = vpnConnector.GenerateCertificates(); err != nil {
+				return fmt.Errorf("error while generating vpn certificates: %w", err)
 			}
 		}
 
 		return nil
 
 	case cluster.OperationPhaseKubernetes:
+		if v.furyctlConf.Spec.Kubernetes.ApiServerEndpointAccess.Type ==
+			private.SpecKubernetesAPIServerEndpointAccessTypePrivate {
+			if err = vpnConnector.Connect(); err != nil {
+				return fmt.Errorf("error while connecting to the vpn: %w", err)
+			}
+		}
+
 		logrus.Warn("Please make sure that the Kubernetes API is reachable before continuing" +
 			" (e.g. check VPN connection is active`), otherwise the installation will fail.")
 
@@ -171,6 +190,13 @@ func (v *ClusterCreator) Create(skipPhase string) error {
 		return nil
 
 	case cluster.OperationPhaseDistribution:
+		if v.furyctlConf.Spec.Kubernetes.ApiServerEndpointAccess.Type ==
+			private.SpecKubernetesAPIServerEndpointAccessTypePrivate {
+			if err = vpnConnector.Connect(); err != nil {
+				return fmt.Errorf("error while connecting to the vpn: %w", err)
+			}
+		}
+
 		if err = distro.Exec(); err != nil {
 			return fmt.Errorf("error while installing Kubernetes Fury Distribution: %w", err)
 		}
@@ -190,7 +216,7 @@ func (v *ClusterCreator) Create(skipPhase string) error {
 		return nil
 
 	case cluster.OperationPhaseAll:
-		return v.allPhases(skipPhase, infraOpts, infra, kube, distro)
+		return v.allPhases(skipPhase, infra, kube, distro, vpnConnector)
 
 	default:
 		return ErrUnsupportedPhase
@@ -199,10 +225,10 @@ func (v *ClusterCreator) Create(skipPhase string) error {
 
 func (v *ClusterCreator) allPhases(
 	skipPhase string,
-	infraOpts []cluster.OperationPhaseOption,
 	infra *create.Infrastructure,
 	kube *create.Kubernetes,
 	distro *create.Distribution,
+	vpnConnector *VpnConnector,
 ) error {
 	if v.dryRun {
 		logrus.Info("furcytl will try its best to calculate what would have changed. " +
@@ -213,8 +239,22 @@ func (v *ClusterCreator) allPhases(
 
 	if v.furyctlConf.Spec.Infrastructure != nil &&
 		(skipPhase == "" || skipPhase == cluster.OperationPhaseDistribution) {
-		if err := infra.Exec(infraOpts); err != nil {
+		if err := infra.Exec(); err != nil {
 			return fmt.Errorf("error while executing infrastructure phase: %w", err)
+		}
+
+		if !v.dryRun && vpnConnector.IsConfigured() {
+			if err := vpnConnector.GenerateCertificates(); err != nil {
+				return fmt.Errorf("error while generating vpn certificates: %w", err)
+			}
+		}
+	}
+
+	if v.furyctlConf.Spec.Kubernetes.ApiServerEndpointAccess.Type ==
+		private.SpecKubernetesAPIServerEndpointAccessTypePrivate &&
+		!v.dryRun {
+		if err := vpnConnector.Connect(); err != nil {
+			return fmt.Errorf("error while connecting to the vpn: %w", err)
 		}
 	}
 
@@ -250,10 +290,8 @@ func (v *ClusterCreator) allPhases(
 
 	logrus.Info("Kubernetes Fury cluster created successfully")
 
-	if v.furyctlConf.Spec.Infrastructure != nil {
-		if v.furyctlConf.Spec.Infrastructure.Vpc.Vpn != nil {
-			logrus.Info("Please remember to kill the VPN connection when you finish doing operations on the cluster")
-		}
+	if vpnConnector.IsConfigured() {
+		logrus.Info("Please remember to kill the VPN connection when you finish doing operations on the cluster")
 	}
 
 	err := v.logKubeconfig()
