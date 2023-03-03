@@ -122,7 +122,8 @@ func (d *ClusterDeleter) Delete() error {
 	case cluster.OperationPhaseKubernetes:
 		if d.furyctlConf.Spec.Kubernetes.ApiServerEndpointAccess == nil ||
 			d.furyctlConf.Spec.Kubernetes.ApiServerEndpointAccess.Type ==
-				private.SpecKubernetesAPIServerEndpointAccessTypePrivate {
+				private.SpecKubernetesAPIServerEndpointAccessTypePrivate &&
+				!d.dryRun {
 			if err = vpnConnector.Connect(); err != nil {
 				return fmt.Errorf("error while connecting to the vpn: %w", err)
 			}
@@ -142,7 +143,8 @@ func (d *ClusterDeleter) Delete() error {
 	case cluster.OperationPhaseDistribution:
 		if d.furyctlConf.Spec.Kubernetes.ApiServerEndpointAccess == nil ||
 			d.furyctlConf.Spec.Kubernetes.ApiServerEndpointAccess.Type ==
-				private.SpecKubernetesAPIServerEndpointAccessTypePrivate {
+				private.SpecKubernetesAPIServerEndpointAccessTypePrivate &&
+				!d.dryRun {
 			if err = vpnConnector.Connect(); err != nil {
 				return fmt.Errorf("error while connecting to the vpn: %w", err)
 			}
