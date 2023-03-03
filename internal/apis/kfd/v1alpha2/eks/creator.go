@@ -156,8 +156,9 @@ func (v *ClusterCreator) Create(skipPhase string) error {
 		return nil
 
 	case cluster.OperationPhaseKubernetes:
-		if v.furyctlConf.Spec.Kubernetes.ApiServerEndpointAccess.Type ==
-			private.SpecKubernetesAPIServerEndpointAccessTypePrivate {
+		if v.furyctlConf.Spec.Kubernetes.ApiServerEndpointAccess == nil ||
+			v.furyctlConf.Spec.Kubernetes.ApiServerEndpointAccess.Type ==
+				private.SpecKubernetesAPIServerEndpointAccessTypePrivate {
 			if err = vpnConnector.Connect(); err != nil {
 				return fmt.Errorf("error while connecting to the vpn: %w", err)
 			}
@@ -182,16 +183,20 @@ func (v *ClusterCreator) Create(skipPhase string) error {
 
 		logrus.Info("Kubernetes cluster created successfully")
 
-		err = v.logKubeconfig()
-		if err != nil {
+		if err := v.logKubeconfig(); err != nil {
 			return fmt.Errorf("error while logging kubeconfig path: %w", err)
+		}
+
+		if err := v.logVPNKill(vpnConnector); err != nil {
+			return fmt.Errorf("error while logging vpn kill message: %w", err)
 		}
 
 		return nil
 
 	case cluster.OperationPhaseDistribution:
-		if v.furyctlConf.Spec.Kubernetes.ApiServerEndpointAccess.Type ==
-			private.SpecKubernetesAPIServerEndpointAccessTypePrivate {
+		if v.furyctlConf.Spec.Kubernetes.ApiServerEndpointAccess == nil ||
+			v.furyctlConf.Spec.Kubernetes.ApiServerEndpointAccess.Type ==
+				private.SpecKubernetesAPIServerEndpointAccessTypePrivate {
 			if err = vpnConnector.Connect(); err != nil {
 				return fmt.Errorf("error while connecting to the vpn: %w", err)
 			}
@@ -212,6 +217,10 @@ func (v *ClusterCreator) Create(skipPhase string) error {
 		}
 
 		logrus.Info("Kubernetes Fury Distribution installed successfully")
+
+		if err := v.logVPNKill(vpnConnector); err != nil {
+			return fmt.Errorf("error while logging vpn kill message: %w", err)
+		}
 
 		return nil
 
@@ -250,9 +259,10 @@ func (v *ClusterCreator) allPhases(
 		}
 	}
 
-	if v.furyctlConf.Spec.Kubernetes.ApiServerEndpointAccess.Type ==
-		private.SpecKubernetesAPIServerEndpointAccessTypePrivate &&
-		!v.dryRun {
+	if v.furyctlConf.Spec.Kubernetes.ApiServerEndpointAccess == nil ||
+		v.furyctlConf.Spec.Kubernetes.ApiServerEndpointAccess.Type ==
+			private.SpecKubernetesAPIServerEndpointAccessTypePrivate &&
+			!v.dryRun {
 		if err := vpnConnector.Connect(); err != nil {
 			return fmt.Errorf("error while connecting to the vpn: %w", err)
 		}
@@ -290,12 +300,11 @@ func (v *ClusterCreator) allPhases(
 
 	logrus.Info("Kubernetes Fury cluster created successfully")
 
-	if vpnConnector.IsConfigured() {
-		logrus.Info("Please remember to kill the VPN connection when you finish doing operations on the cluster")
+	if err := v.logVPNKill(vpnConnector); err != nil {
+		return fmt.Errorf("error while logging vpn kill message: %w", err)
 	}
 
-	err := v.logKubeconfig()
-	if err != nil {
+	if err := v.logKubeconfig(); err != nil {
 		return fmt.Errorf("error while logging kubeconfig path: %w", err)
 	}
 
@@ -344,6 +353,19 @@ func (*ClusterCreator) logKubeconfig() error {
 
 	logrus.Infof("To connect to the cluster, set the path to your kubeconfig with 'export KUBECONFIG=%s'"+
 		" or use the '--kubeconfig %s' flag in following executions", kubeconfigPath, kubeconfigPath)
+
+	return nil
+}
+
+func (*ClusterCreator) logVPNKill(vpnConnector *VpnConnector) error {
+	if vpnConnector.IsConfigured() {
+		killVpnMsg, err := vpnConnector.GetKillMessage()
+		if err != nil {
+			return err
+		}
+
+		logrus.Info(killVpnMsg)
+	}
 
 	return nil
 }

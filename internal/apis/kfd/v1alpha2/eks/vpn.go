@@ -14,6 +14,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/shirou/gopsutil/v3/process"
 	"github.com/sirupsen/logrus"
 
 	"github.com/sighupio/fury-distribution/pkg/schema/private"
@@ -27,6 +28,7 @@ import (
 var (
 	ErrAutoConnectWithoutVpn = errors.New("autoconnect is not supported without a VPN configuration")
 	ErrReadStdin             = errors.New("error reading from stdin")
+	ErrOpenvpnRunning        = errors.New("an openvpn process is already running, please kill it and try again")
 )
 
 type VpnConnector struct {
@@ -71,6 +73,10 @@ func (v *VpnConnector) Connect() error {
 	if v.autoconnect {
 		if !v.IsConfigured() {
 			return ErrAutoConnectWithoutVpn
+		}
+
+		if err := v.checkExistingOpenVPN(); err != nil {
+			return err
 		}
 
 		return v.startOpenVPN()
@@ -125,6 +131,27 @@ func (v *VpnConnector) ClientName() (string, error) {
 	return fmt.Sprintf("%s-%s", v.clusterName, whoami), nil
 }
 
+func (v *VpnConnector) GetKillMessage() (string, error) {
+	endVpnMsg := "Please remember to kill the VPN connection when you finish doing operations on the cluster"
+
+	if !v.autoconnect {
+		return endVpnMsg, nil
+	}
+
+	killMsg := "killall openvpn"
+
+	isRoot, err := osx.IsRoot()
+	if err != nil {
+		return "", fmt.Errorf("error while checking if user is root: %w", err)
+	}
+
+	if !isRoot {
+		killMsg = fmt.Sprintf("sudo %s", killMsg)
+	}
+
+	return fmt.Sprintf("%s, you can do it with the following command: '%s'", endVpnMsg, killMsg), nil
+}
+
 func (v *VpnConnector) copyOpenvpnToWorkDir(clientName string) error {
 	currentDir, err := os.Getwd()
 	if err != nil {
@@ -146,6 +173,23 @@ func (v *VpnConnector) copyOpenvpnToWorkDir(clientName string) error {
 	err = os.WriteFile(path.Join(currentDir, ovpnFileName), ovpnFile, iox.FullRWPermAccess)
 	if err != nil {
 		return fmt.Errorf("error writing ovpn file: %w", err)
+	}
+
+	return nil
+}
+
+func (*VpnConnector) checkExistingOpenVPN() error {
+	processes, err := process.Processes()
+	if err != nil {
+		return fmt.Errorf("error getting processes: %w", err)
+	}
+
+	for _, p := range processes {
+		name, _ := p.Name() //nolint:errcheck // we don't care about the error here
+
+		if name == "openvpn" {
+			return ErrOpenvpnRunning
+		}
 	}
 
 	return nil
@@ -185,19 +229,32 @@ func (v *VpnConnector) prompt() error {
 		return fmt.Errorf("error getting client name: %w", err)
 	}
 
-	certPath := filepath.Join(v.certDir, clientName)
+	certPath := filepath.Join(v.certDir, fmt.Sprintf("%s.ovpn", clientName))
 
 	if v.IsConfigured() {
+		isRoot, err := osx.IsRoot()
+		if err != nil {
+			return fmt.Errorf("error while checking if user is root: %w", err)
+		}
+
+		vpnConnectCmd := fmt.Sprintf("openvpn --config %s --daemon", certPath)
+
+		if !isRoot {
+			vpnConnectCmd = fmt.Sprintf("sudo %s", vpnConnectCmd)
+		}
+
 		connectMsg = fmt.Sprintf(
-			"%s, you can find the configuration file in %s.\nPress enter to continue",
+			"%s, you can find the configuration file in %s and connect to the VPN by running the command "+
+				"'%s' or using your VPN client of choice.",
 			connectMsg,
 			certPath,
+			vpnConnectCmd,
 		)
 	}
 
 	logrus.Info(connectMsg)
 
-	logrus.Info("Press enter to continue...")
+	logrus.Info("Press enter when you are ready to continue...")
 
 	if _, err := bufio.NewReader(os.Stdin).ReadBytes('\n'); err != nil {
 		return fmt.Errorf("%w: %v", ErrReadStdin, err)
