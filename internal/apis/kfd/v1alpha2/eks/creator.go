@@ -158,7 +158,8 @@ func (v *ClusterCreator) Create(skipPhase string) error {
 	case cluster.OperationPhaseKubernetes:
 		if v.furyctlConf.Spec.Kubernetes.ApiServerEndpointAccess == nil ||
 			v.furyctlConf.Spec.Kubernetes.ApiServerEndpointAccess.Type ==
-				private.SpecKubernetesAPIServerEndpointAccessTypePrivate {
+				private.SpecKubernetesAPIServerEndpointAccessTypePrivate &&
+				!v.dryRun {
 			if err = vpnConnector.Connect(); err != nil {
 				return fmt.Errorf("error while connecting to the vpn: %w", err)
 			}
@@ -196,7 +197,8 @@ func (v *ClusterCreator) Create(skipPhase string) error {
 	case cluster.OperationPhaseDistribution:
 		if v.furyctlConf.Spec.Kubernetes.ApiServerEndpointAccess == nil ||
 			v.furyctlConf.Spec.Kubernetes.ApiServerEndpointAccess.Type ==
-				private.SpecKubernetesAPIServerEndpointAccessTypePrivate {
+				private.SpecKubernetesAPIServerEndpointAccessTypePrivate &&
+				!v.dryRun {
 			if err = vpnConnector.Connect(); err != nil {
 				return fmt.Errorf("error while connecting to the vpn: %w", err)
 			}
