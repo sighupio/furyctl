@@ -13,17 +13,26 @@ import (
 )
 
 const (
-	DeleterPropertyFuryctlConf = "furyctlconf"
-	DeleterPropertyPhase       = "phase"
-	DeleterPropertyWorkDir     = "workdir"
-	DeleterPropertyKfdManifest = "kfdmanifest"
-	DeleterPropertyBinPath     = "binpath"
-	DeleterPropertyKubeconfig  = "kubeconfig"
-	DeleterPropertyDryRun      = "dryrun"
+	DeleterPropertyFuryctlConf    = "furyctlconf"
+	DeleterPropertyPhase          = "phase"
+	DeleterPropertyWorkDir        = "workdir"
+	DeleterPropertyKfdManifest    = "kfdmanifest"
+	DeleterPropertyBinPath        = "binpath"
+	DeleterPropertySkipVpn        = "skipvpn"
+	DeleterPropertyVpnAutoConnect = "vpnautoconnect"
+	DeleterPropertyKubeconfig     = "kubeconfig"
+	DeleterPropertyDryRun         = "dryrun"
 )
 
 var delFactories = make(map[string]map[string]DeleterFactory) //nolint:gochecknoglobals, lll // This patterns requires factories
 //  as global to work with init function.
+
+type DeleterPaths struct {
+	ConfigPath string
+	WorkDir    string
+	BinPath    string
+	Kubeconfig string
+}
 
 type DeleterFactory func(configPath string, props []DeleterProperty) (Deleter, error)
 
@@ -41,18 +50,17 @@ type Deleter interface {
 func NewDeleter(
 	minimalConf config.Furyctl,
 	kfdManifest config.KFD,
-	configPath,
-	phase,
-	workDir,
-	binPath,
-	kubeconfig string,
+	paths DeleterPaths,
+	phase string,
+	skipVpn,
+	vpnAutoConnect,
 	dryRun bool,
 ) (Deleter, error) {
 	lcAPIVersion := strings.ToLower(minimalConf.APIVersion)
 	lcResourceType := strings.ToLower(minimalConf.Kind)
 
 	if factoryFn, ok := delFactories[lcAPIVersion][lcResourceType]; ok {
-		return factoryFn(configPath, []DeleterProperty{
+		return factoryFn(paths.ConfigPath, []DeleterProperty{
 			{
 				Name:  DeleterPropertyKfdManifest,
 				Value: kfdManifest,
@@ -63,15 +71,23 @@ func NewDeleter(
 			},
 			{
 				Name:  DeleterPropertyWorkDir,
-				Value: workDir,
+				Value: paths.WorkDir,
 			},
 			{
 				Name:  DeleterPropertyBinPath,
-				Value: binPath,
+				Value: paths.BinPath,
 			},
 			{
 				Name:  DeleterPropertyKubeconfig,
-				Value: kubeconfig,
+				Value: paths.Kubeconfig,
+			},
+			{
+				Name:  DeleterPropertySkipVpn,
+				Value: skipVpn,
+			},
+			{
+				Name:  DeleterPropertyVpnAutoConnect,
+				Value: vpnAutoConnect,
 			},
 			{
 				Name:  DeleterPropertyDryRun,

@@ -17,13 +17,13 @@ import (
 )
 
 type ClusterDeleter struct {
-	kfdManifest config.KFD
-	furyctlConf private.EksclusterKfdV1Alpha2
-	phase       string
-	workDir     string
-	binPath     string
-	kubeconfig  string
-	dryRun      bool
+	paths          cluster.DeleterPaths
+	kfdManifest    config.KFD
+	furyctlConf    private.EksclusterKfdV1Alpha2
+	phase          string
+	skipVpn        bool
+	vpnAutoConnect bool
+	dryRun         bool
 }
 
 func (d *ClusterDeleter) SetProperties(props []cluster.DeleterProperty) {
@@ -51,19 +51,29 @@ func (d *ClusterDeleter) SetProperty(name string, value any) {
 			d.phase = s
 		}
 
+	case cluster.DeleterPropertySkipVpn:
+		if b, ok := value.(bool); ok {
+			d.skipVpn = b
+		}
+
+	case cluster.DeleterPropertyVpnAutoConnect:
+		if b, ok := value.(bool); ok {
+			d.vpnAutoConnect = b
+		}
+
 	case cluster.DeleterPropertyWorkDir:
 		if s, ok := value.(string); ok {
-			d.workDir = s
+			d.paths.WorkDir = s
 		}
 
 	case cluster.DeleterPropertyBinPath:
 		if s, ok := value.(string); ok {
-			d.binPath = s
+			d.paths.BinPath = s
 		}
 
 	case cluster.DeleterPropertyKubeconfig:
 		if s, ok := value.(string); ok {
-			d.kubeconfig = s
+			d.paths.Kubeconfig = s
 		}
 
 	case cluster.DeleterPropertyDryRun:
@@ -74,20 +84,30 @@ func (d *ClusterDeleter) SetProperty(name string, value any) {
 }
 
 func (d *ClusterDeleter) Delete() error {
-	distro, err := del.NewDistribution(d.dryRun, d.workDir, d.binPath, d.kfdManifest, d.kubeconfig)
+	distro, err := del.NewDistribution(d.dryRun, d.paths.WorkDir, d.paths.BinPath, d.kfdManifest, d.paths.Kubeconfig)
 	if err != nil {
 		return fmt.Errorf("error while creating distribution phase: %w", err)
 	}
 
-	kube, err := del.NewKubernetes(d.furyctlConf, d.dryRun, d.workDir, d.binPath, d.kfdManifest)
+	kube, err := del.NewKubernetes(d.furyctlConf, d.dryRun, d.paths.WorkDir, d.paths.BinPath, d.kfdManifest)
 	if err != nil {
 		return fmt.Errorf("error while creating kubernetes phase: %w", err)
 	}
 
-	infra, err := del.NewInfrastructure(d.furyctlConf, d.dryRun, d.workDir, d.binPath, d.kfdManifest)
+	infra, err := del.NewInfrastructure(d.furyctlConf, d.dryRun, d.paths.WorkDir, d.paths.BinPath, d.kfdManifest)
 	if err != nil {
 		return fmt.Errorf("error while creating infrastructure phase: %w", err)
 	}
+
+	vpnConnector := NewVpnConnector(
+		d.furyctlConf.Metadata.Name,
+		infra.SecretsPath,
+		d.paths.BinPath,
+		d.kfdManifest.Tools.Common.Furyagent.Version,
+		d.vpnAutoConnect,
+		d.skipVpn,
+		d.furyctlConf.Spec.Infrastructure.Vpc.Vpn,
+	)
 
 	switch d.phase {
 	case cluster.OperationPhaseInfrastructure:
@@ -100,6 +120,14 @@ func (d *ClusterDeleter) Delete() error {
 		return nil
 
 	case cluster.OperationPhaseKubernetes:
+		if d.furyctlConf.Spec.Kubernetes.ApiServerEndpointAccess == nil ||
+			d.furyctlConf.Spec.Kubernetes.ApiServerEndpointAccess.Type ==
+				private.SpecKubernetesAPIServerEndpointAccessTypePrivate {
+			if err = vpnConnector.Connect(); err != nil {
+				return fmt.Errorf("error while connecting to the vpn: %w", err)
+			}
+		}
+
 		logrus.Warn("Please make sure that the Kubernetes API is reachable before continuing" +
 			" (e.g. check VPN connection is active`), otherwise the deletion will fail.")
 
@@ -112,6 +140,14 @@ func (d *ClusterDeleter) Delete() error {
 		return nil
 
 	case cluster.OperationPhaseDistribution:
+		if d.furyctlConf.Spec.Kubernetes.ApiServerEndpointAccess == nil ||
+			d.furyctlConf.Spec.Kubernetes.ApiServerEndpointAccess.Type ==
+				private.SpecKubernetesAPIServerEndpointAccessTypePrivate {
+			if err = vpnConnector.Connect(); err != nil {
+				return fmt.Errorf("error while connecting to the vpn: %w", err)
+			}
+		}
+
 		if err := distro.Exec(); err != nil {
 			return fmt.Errorf("error while deleting distribution phase: %w", err)
 		}
@@ -124,6 +160,15 @@ func (d *ClusterDeleter) Delete() error {
 		if d.dryRun {
 			logrus.Info("furcytl will try its best to calculate what would have changed. " +
 				"Sometimes this is not possible, for better results limit the scope with the --phase flag.")
+		}
+
+		if d.furyctlConf.Spec.Kubernetes.ApiServerEndpointAccess == nil ||
+			d.furyctlConf.Spec.Kubernetes.ApiServerEndpointAccess.Type ==
+				private.SpecKubernetesAPIServerEndpointAccessTypePrivate &&
+				!d.dryRun {
+			if err := vpnConnector.Connect(); err != nil {
+				return fmt.Errorf("error while connecting to the vpn: %w", err)
+			}
 		}
 
 		if err := distro.Exec(); err != nil {
