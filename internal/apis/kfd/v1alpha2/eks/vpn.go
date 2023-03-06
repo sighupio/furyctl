@@ -9,7 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"os/exec"
+	"os/user"
 	"path"
 	"path/filepath"
 	"strings"
@@ -121,12 +121,12 @@ func (v *VpnConnector) IsConfigured() bool {
 }
 
 func (v *VpnConnector) ClientName() (string, error) {
-	whoamiResp, err := exec.Command("whoami").Output()
+	u, err := user.Current()
 	if err != nil {
 		return "", fmt.Errorf("error getting current user: %w", err)
 	}
 
-	whoami := strings.TrimSpace(string(whoamiResp))
+	whoami := strings.TrimSpace(u.Username)
 
 	return fmt.Sprintf("%s-%s", v.clusterName, whoami), nil
 }
