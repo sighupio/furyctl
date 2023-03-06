@@ -266,9 +266,9 @@ func getCreateClusterCmdFlags(cmd *cobra.Command, tracker *analytics.Tracker, cm
 
 	binPath := cmdutil.StringFlagOptional(cmd, "bin-path")
 
-	skipVpn, err := cmdutil.BoolFlag(cmd, "skip-vpn", tracker, cmdEvent)
+	skipVpn, err := cmdutil.BoolFlag(cmd, "vpn-skip", tracker, cmdEvent)
 	if err != nil {
-		return ClusterCmdFlags{}, fmt.Errorf("%w: %s", ErrParsingFlag, "skip-vpn")
+		return ClusterCmdFlags{}, fmt.Errorf("%w: %s", ErrParsingFlag, "vpn-skip")
 	}
 
 	vpnAutoConnect, err := cmdutil.BoolFlag(cmd, "vpn-auto-connect", tracker, cmdEvent)
@@ -392,7 +392,7 @@ func setupCreateClusterCmdFlags(cmd *cobra.Command) {
 	)
 
 	cmd.Flags().Bool(
-		"skip-vpn",
+		"vpn-skip",
 		false,
 		"When set will not wait for user confirmation to connect to the VPN",
 	)
