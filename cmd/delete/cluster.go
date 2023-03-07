@@ -121,7 +121,7 @@ func NewClusterCmd(tracker *analytics.Tracker) *cobra.Command {
 			basePath := filepath.Join(homeDir, ".furyctl", res.MinimalConf.Metadata.Name)
 
 			// Init second half of collaborators.
-			depsvl := dependencies.NewValidator(executor, flags.BinPath)
+			depsvl := dependencies.NewValidator(executor, flags.BinPath, flags.FuryctlPath)
 
 			// Validate the dependencies.
 			logrus.Info("Validating dependencies...")

@@ -4,18 +4,21 @@
 
 package apis
 
-import "github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/eks"
+import (
+	"github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/eks"
+	execx "github.com/sighupio/furyctl/internal/x/exec"
+)
 
 type ExtraToolsValidator interface {
-	Validate(confPath string) error
+	Validate(confPath string) ([]string, []error)
 }
 
-func NewExtraToolsValidatorFactory(apiVersion, kind string) ExtraToolsValidator {
+func NewExtraToolsValidatorFactory(executor execx.Executor, apiVersion, kind string) ExtraToolsValidator {
 	switch apiVersion {
 	case "kfd.sighup.io/v1alpha2":
 		switch kind {
 		case "EKSCluster":
-			return &eks.ExtraToolsValidator{}
+			return eks.NewExtraToolsValidator(executor)
 
 		default:
 			return nil
