@@ -197,12 +197,13 @@ var (
 			}
 
 			It("should report an error when dependencies are missing", func() {
-				RestoreEnvVars := BackupEnvVars("PATH", "AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY", "AWS_DEFAULT_REGION")
+				RestoreEnvVars := BackupEnvVars("PATH", "AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY")
 				defer RestoreEnvVars()
 
 				os.Unsetenv("AWS_ACCESS_KEY_ID")
 				os.Unsetenv("AWS_SECRET_ACCESS_KEY")
 				os.Unsetenv("AWS_DEFAULT_REGION")
+				os.Unsetenv("AWS_REGION")
 
 				out, err := FuryctlValidateDependencies("../data/e2e/validate/dependencies/missing", "/tmp")
 
@@ -211,7 +212,6 @@ var (
 				Expect(out).To(ContainSubstring("kubectl:"))
 				Expect(out).To(ContainSubstring("kustomize:"))
 				Expect(out).To(ContainSubstring("furyagent:"))
-				Expect(out).To(ContainSubstring("missing required environment variable: AWS_DEFAULT_REGION"))
 				Expect(out).To(ContainSubstring("missing environment variables, either AWS_PROFILE or the " +
 					"following environment variables must be set: AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY"))
 			})
@@ -221,7 +221,6 @@ var (
 					"PATH",
 					"AWS_ACCESS_KEY_ID",
 					"AWS_SECRET_ACCESS_KEY",
-					"AWS_DEFAULT_REGION",
 					"FURYCTL_MIXPANEL_TOKEN",
 				)
 				defer RestoreEnvVars()
@@ -232,6 +231,7 @@ var (
 				os.Unsetenv("AWS_ACCESS_KEY_ID")
 				os.Unsetenv("AWS_SECRET_ACCESS_KEY")
 				os.Unsetenv("AWS_DEFAULT_REGION")
+				os.Unsetenv("AWS_REGION")
 				os.Unsetenv("FURYCTL_MIXPANEL_TOKEN")
 
 				out, err := FuryctlValidateDependencies(bp, bp)
@@ -249,7 +249,6 @@ var (
 				Expect(out).To(
 					ContainSubstring("terraform: wrong tool version - installed = 0.15.3, expected = 0.15.4"),
 				)
-				Expect(out).To(ContainSubstring("missing required environment variable: AWS_DEFAULT_REGION"))
 				Expect(out).To(ContainSubstring("missing environment variables, either AWS_PROFILE or the " +
 					"following environment variables must be set: AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY"))
 			})
@@ -259,7 +258,6 @@ var (
 					"PATH",
 					"AWS_ACCESS_KEY_ID",
 					"AWS_SECRET_ACCESS_KEY",
-					"AWS_DEFAULT_REGION",
 					"FURYCTL_MIXPANEL_TOKEN",
 				)
 				defer RestoreEnvVars()
@@ -267,7 +265,6 @@ var (
 				bp := Abs("../data/e2e/validate/dependencies/correct")
 
 				os.Setenv("PATH", bp+":"+os.Getenv("PATH"))
-				os.Setenv("AWS_DEFAULT_REGION", "eu-west-1")
 				os.Setenv("FURYCTL_MIXPANEL_TOKEN", "test")
 
 				out, err := FuryctlValidateDependencies(bp, bp)
