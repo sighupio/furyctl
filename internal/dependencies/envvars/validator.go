@@ -5,10 +5,10 @@
 package envvars
 
 import (
-  "errors"
-  "fmt"
-  "os"
-  "strings"
+	"errors"
+	"fmt"
+	"os"
+	"strings"
 )
 
 var (
