@@ -8,6 +8,7 @@ package tools_test
 
 import (
 	"errors"
+	"path"
 	"strings"
 	"testing"
 
@@ -20,7 +21,7 @@ func Test_Validator_Validate(t *testing.T) {
 	testCases := []struct {
 		desc     string
 		manifest config.KFD
-		state    config.State
+		state    config.Furyctl
 		wantOks  []string
 		wantErrs []error
 	}{
@@ -36,9 +37,17 @@ func Test_Validator_Validate(t *testing.T) {
 					},
 				},
 			},
-			state: config.State{
-				S3: config.S3{
-					BucketName: "test",
+			state: config.Furyctl{
+				Spec: config.FuryctlSpec{
+					ToolsConfiguration: config.ToolsConfiguration{
+						Terraform: config.Terraform{
+							State: config.State{
+								S3: config.S3{
+									BucketName: "test",
+								},
+							},
+						},
+					},
 				},
 			},
 			wantOks: []string{
@@ -61,9 +70,17 @@ func Test_Validator_Validate(t *testing.T) {
 					},
 				},
 			},
-			state: config.State{
-				S3: config.S3{
-					BucketName: "test",
+			state: config.Furyctl{
+				Spec: config.FuryctlSpec{
+					ToolsConfiguration: config.ToolsConfiguration{
+						Terraform: config.Terraform{
+							State: config.State{
+								S3: config.S3{
+									BucketName: "test",
+								},
+							},
+						},
+					},
 				},
 			},
 			wantErrs: []error{
@@ -74,12 +91,50 @@ func Test_Validator_Validate(t *testing.T) {
 			},
 			wantOks: []string{"aws"},
 		},
+		{
+			desc: "openvpn is installed",
+			manifest: config.KFD{
+				Tools: config.KFDTools{
+					Common: config.Common{
+						Kubectl:   config.Tool{Version: "1.21.1"},
+						Kustomize: config.Tool{Version: "3.9.4"},
+						Terraform: config.Tool{Version: "0.15.4"},
+						Furyagent: config.Tool{Version: "0.3.0"},
+					},
+				},
+			},
+			state: config.Furyctl{
+				APIVersion: "kfd.sighup.io/v1alpha2",
+				Kind:       "EKSCluster",
+				Spec: config.FuryctlSpec{
+					ToolsConfiguration: config.ToolsConfiguration{
+						Terraform: config.Terraform{
+							State: config.State{
+								S3: config.S3{
+									BucketName: "test",
+								},
+							},
+						},
+					},
+				},
+			},
+			wantOks: []string{
+				"kubectl",
+				"kustomize",
+				"terraform",
+				"furyagent",
+				"aws",
+				"openvpn",
+			},
+		},
 	}
 	for _, tC := range testCases {
 		tC := tC
 
 		t.Run(tC.desc, func(t *testing.T) {
-			v := tools.NewValidator(execx.NewFakeExecutor(), "test_data")
+			furyctlPath := path.Join("test_data", "furyctl.yaml")
+
+			v := tools.NewValidator(execx.NewFakeExecutor(), "test_data", furyctlPath)
 
 			oks, errs := v.Validate(tC.manifest, tC.state)
 
