@@ -93,21 +93,6 @@
                                 }
                             }
                         }
-                    },
-                    {
-                        "properties": {
-                            "infrastructure": {
-                                "properties": {
-                                    "vpc": {
-                                        "properties": {
-                                            "vpn": {
-                                                "type": "null"
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
                     }
                 ]
             },
