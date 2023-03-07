@@ -71,7 +71,7 @@ func NewDependenciesCmd(tracker *analytics.Tracker) *cobra.Command {
 				binPath = filepath.Join(homeDir, ".furyctl", "bin")
 			}
 
-			toolsValidator := tools.NewValidator(execx.NewStdExecutor(), binPath)
+			toolsValidator := tools.NewValidator(execx.NewStdExecutor(), binPath, furyctlPath)
 
 			envVarsValidator := envvars.NewValidator()
 
@@ -83,7 +83,7 @@ func NewDependenciesCmd(tracker *analytics.Tracker) *cobra.Command {
 
 			toks, terrs := toolsValidator.Validate(
 				dres.DistroManifest,
-				dres.MinimalConf.Spec.ToolsConfiguration.Terraform.State,
+				dres.MinimalConf,
 			)
 
 			logrus.Info("Validating environment variables...")
