@@ -114,11 +114,6 @@ func Validate(path, repoPath string) error {
 		return fmt.Errorf("error while validating against extra schema rules: %w", err)
 	}
 
-	etv := apis.NewExtraToolsValidatorFactory(miniConf.APIVersion, miniConf.Kind)
-	if err = etv.Validate(path); err != nil {
-		return fmt.Errorf("error while validating against extra tools rules: %w", err)
-	}
-
 	return nil
 }
 

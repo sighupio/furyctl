@@ -138,7 +138,7 @@ func NewClusterCmd(tracker *analytics.Tracker) *cobra.Command {
 
 			// Init second half of collaborators.
 			depsdl := dependencies.NewDownloader(client, basePath, flags.BinPath)
-			depsvl := dependencies.NewValidator(executor, flags.BinPath)
+			depsvl := dependencies.NewValidator(executor, flags.BinPath, flags.FuryctlPath)
 
 			// Validate the furyctl.yaml file.
 			logrus.Info("Validating configuration file...")
