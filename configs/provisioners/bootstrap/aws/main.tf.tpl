@@ -10,6 +10,23 @@ terraform {
     key    = "{{ .terraform.backend.s3.keyPrefix }}/infrastructure.json"
     region = "{{ .terraform.backend.s3.region }}"
   }
+
+  required_providers {
+    aws = {
+      source = "hashicorp/aws"
+    }
+  }
+}
+
+provider "aws" {
+  region = "{{ .spec.region }}"
+  default_tags {
+    tags = {
+      {{- range $k, $v := .spec.tags }}
+      {{ $k }} = "{{ $v }}"
+      {{- end}}
+    }
+  }
 }
 
 module "vpc-and-vpn" {

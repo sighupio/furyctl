@@ -36,12 +36,6 @@ func (*Validator) checkEKSCluster() ([]string, []error) {
 
 	var missingAwsVars []string
 
-	if os.Getenv("AWS_DEFAULT_REGION") == "" {
-		errs = append(errs, fmt.Errorf("%w: AWS_DEFAULT_REGION", ErrMissingRequiredEnvVar))
-	} else {
-		oks = append(oks, "AWS_DEFAULT_REGION")
-	}
-
 	if os.Getenv("AWS_PROFILE") != "" {
 		oks = append(oks, "AWS_PROFILE")
 
