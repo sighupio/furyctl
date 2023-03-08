@@ -187,6 +187,11 @@ furyctl validate config --config <path to your config file> --distro-location 'g
 
 #### 2. Create a cluster
 
+Requirements (EKSCluster):
+
+- AWS CLI
+- OpenVPN (when filling the `vpn` field in the configuration file)
+
 In the previous step, you have created and validated a configuration file that defines the Kubernetes cluster and its sorroundings, you can now proceed to actually creating the resources.
 
 furyctl has divided the cluster creation in three phases: `infrastructure`, `kubernetes` and `distribution`.
