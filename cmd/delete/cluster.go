@@ -38,6 +38,8 @@ type ClusterCmdFlags struct {
 	Phase          string
 	BinPath        string
 	Force          bool
+	SkipVpn        bool
+	VpnAutoConnect bool
 	DryRun         bool
 	NoTTY          bool
 	Kubeconfig     string
@@ -129,14 +131,21 @@ func NewClusterCmd(tracker *analytics.Tracker) *cobra.Command {
 				return fmt.Errorf("error while validating dependencies: %w", err)
 			}
 
+			// Define cluster deletion paths.
+			paths := cluster.DeleterPaths{
+				ConfigPath: flags.FuryctlPath,
+				WorkDir:    basePath,
+				BinPath:    flags.BinPath,
+				Kubeconfig: kubeconfigPath,
+			}
+
 			clusterDeleter, err := cluster.NewDeleter(
 				res.MinimalConf,
 				res.DistroManifest,
-				flags.FuryctlPath,
+				paths,
 				flags.Phase,
-				basePath,
-				flags.BinPath,
-				kubeconfigPath,
+				flags.SkipVpn,
+				flags.VpnAutoConnect,
 				flags.DryRun,
 			)
 			if err != nil {
@@ -221,6 +230,18 @@ func NewClusterCmd(tracker *analytics.Tracker) *cobra.Command {
 	)
 
 	cmd.Flags().Bool(
+		"vpn-auto-connect",
+		false,
+		"When set will automatically connect to the created VPN in the infrastructure phase",
+	)
+
+	cmd.Flags().Bool(
+		"vpn-skip",
+		false,
+		"When set will not wait for user confirmation to connect to the VPN",
+	)
+
+	cmd.Flags().Bool(
 		"force",
 		false,
 		"WARNING: furyctl won't ask for confirmation and will force delete the cluster and it resources.",
@@ -264,6 +285,24 @@ func getDeleteClusterCmdFlags(cmd *cobra.Command, tracker *analytics.Tracker, cm
 
 	binPath := cmdutil.StringFlagOptional(cmd, "bin-path")
 
+	skipVpn, err := cmdutil.BoolFlag(cmd, "vpn-skip", tracker, cmdEvent)
+	if err != nil {
+		return ClusterCmdFlags{}, fmt.Errorf("%w: %s", ErrParsingFlag, "vpn-skip")
+	}
+
+	vpnAutoConnect, err := cmdutil.BoolFlag(cmd, "vpn-auto-connect", tracker, cmdEvent)
+	if err != nil {
+		return ClusterCmdFlags{}, fmt.Errorf("%w: %s", ErrParsingFlag, "vpn-auto-connect")
+	}
+
+	if skipVpn && vpnAutoConnect {
+		return ClusterCmdFlags{}, fmt.Errorf(
+			"%w: %s: cannot use together with skip-vpn flag",
+			ErrParsingFlag,
+			"vpn-auto-connect",
+		)
+	}
+
 	dryRun, err := cmdutil.BoolFlag(cmd, "dry-run", tracker, cmdEvent)
 	if err != nil {
 		return ClusterCmdFlags{}, fmt.Errorf("%w: %s", ErrParsingFlag, "dry-run")
@@ -290,6 +329,8 @@ func getDeleteClusterCmdFlags(cmd *cobra.Command, tracker *analytics.Tracker, cm
 		DistroLocation: distroLocation,
 		Phase:          phase,
 		BinPath:        binPath,
+		SkipVpn:        skipVpn,
+		VpnAutoConnect: vpnAutoConnect,
 		DryRun:         dryRun,
 		Force:          force,
 		NoTTY:          noTTY,

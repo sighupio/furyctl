@@ -39,6 +39,7 @@ type ClusterCmdFlags struct {
 	Phase              string
 	SkipPhase          string
 	BinPath            string
+	SkipVpn            bool
 	VpnAutoConnect     bool
 	DryRun             bool
 	SkipDepsDownload   bool
@@ -171,11 +172,6 @@ func NewClusterCmd(tracker *analytics.Tracker) *cobra.Command {
 				}
 			}
 
-			// Auto connect to the VPN if doing complete cluster creation or skipping distribution phase.
-			if flags.Phase == cluster.OperationPhaseAll || flags.SkipPhase == cluster.OperationPhaseDistribution {
-				flags.VpnAutoConnect = true
-			}
-
 			// Define cluster creation paths.
 			paths := cluster.CreatorPaths{
 				ConfigPath: flags.FuryctlPath,
@@ -194,6 +190,7 @@ func NewClusterCmd(tracker *analytics.Tracker) *cobra.Command {
 				res.DistroManifest,
 				paths,
 				flags.Phase,
+				flags.SkipVpn,
 				flags.VpnAutoConnect,
 				flags.DryRun,
 			)
@@ -269,9 +266,22 @@ func getCreateClusterCmdFlags(cmd *cobra.Command, tracker *analytics.Tracker, cm
 
 	binPath := cmdutil.StringFlagOptional(cmd, "bin-path")
 
+	skipVpn, err := cmdutil.BoolFlag(cmd, "vpn-skip", tracker, cmdEvent)
+	if err != nil {
+		return ClusterCmdFlags{}, fmt.Errorf("%w: %s", ErrParsingFlag, "vpn-skip")
+	}
+
 	vpnAutoConnect, err := cmdutil.BoolFlag(cmd, "vpn-auto-connect", tracker, cmdEvent)
 	if err != nil {
 		return ClusterCmdFlags{}, fmt.Errorf("%w: %s", ErrParsingFlag, "vpn-auto-connect")
+	}
+
+	if skipVpn && vpnAutoConnect {
+		return ClusterCmdFlags{}, fmt.Errorf(
+			"%w: %s: cannot use together with skip-vpn flag",
+			ErrParsingFlag,
+			"vpn-auto-connect",
+		)
 	}
 
 	dryRun, err := cmdutil.BoolFlag(cmd, "dry-run", tracker, cmdEvent)
@@ -306,6 +316,7 @@ func getCreateClusterCmdFlags(cmd *cobra.Command, tracker *analytics.Tracker, cm
 		Phase:              phase,
 		SkipPhase:          skipPhase,
 		BinPath:            binPath,
+		SkipVpn:            skipVpn,
 		VpnAutoConnect:     vpnAutoConnect,
 		DryRun:             dryRun,
 		SkipDepsDownload:   skipDepsDownload,
@@ -378,6 +389,12 @@ func setupCreateClusterCmdFlags(cmd *cobra.Command) {
 		"vpn-auto-connect",
 		false,
 		"When set will automatically connect to the created VPN in the infrastructure phase",
+	)
+
+	cmd.Flags().Bool(
+		"vpn-skip",
+		false,
+		"When set will not wait for user confirmation to connect to the VPN",
 	)
 
 	cmd.Flags().String(
