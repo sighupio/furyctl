@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/sighupio/fury-distribution/pkg/config"
+	"github.com/sighupio/furyctl/internal/apis"
 	itool "github.com/sighupio/furyctl/internal/tool"
 	execx "github.com/sighupio/furyctl/internal/x/exec"
 )
@@ -19,21 +20,23 @@ var (
 	ErrWrongToolVersion = errors.New("wrong tool version")
 )
 
-func NewValidator(executor execx.Executor, binPath string) *Validator {
+func NewValidator(executor execx.Executor, binPath, furyctlPath string) *Validator {
 	return &Validator{
 		executor: executor,
 		toolFactory: NewFactory(executor, FactoryPaths{
 			Bin: binPath,
 		}),
+		furyctlPath: furyctlPath,
 	}
 }
 
 type Validator struct {
 	executor    execx.Executor
 	toolFactory *Factory
+	furyctlPath string
 }
 
-func (tv *Validator) Validate(kfdManifest config.KFD, tfState config.State) ([]string, []error) {
+func (tv *Validator) Validate(kfdManifest config.KFD, miniConf config.Furyctl) ([]string, []error) {
 	var (
 		oks  []string
 		errs []error
@@ -59,13 +62,25 @@ func (tv *Validator) Validate(kfdManifest config.KFD, tfState config.State) ([]s
 		}
 	}
 
-	if tfState.S3.BucketName != "" {
+	if miniConf.Spec.ToolsConfiguration.Terraform.State.S3.BucketName != "" {
 		tool := tv.toolFactory.Create(itool.Awscli, "*")
 		if err := tool.CheckBinVersion(); err != nil {
 			errs = append(errs, err)
 		} else {
 			oks = append(oks, "aws")
 		}
+	}
+
+	etv := apis.NewExtraToolsValidatorFactory(tv.executor, miniConf.APIVersion, miniConf.Kind)
+
+	if etv == nil {
+		return oks, errs
+	}
+
+	if xoks, xerrs := etv.Validate(tv.furyctlPath); len(xerrs) > 0 {
+		errs = append(errs, xerrs...)
+	} else {
+		oks = append(oks, xoks...)
 	}
 
 	return oks, errs

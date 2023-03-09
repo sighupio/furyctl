@@ -21,9 +21,9 @@ var (
 	errValidatingToolsConf = errors.New("errors validating tools configuration")
 )
 
-func NewValidator(executor execx.Executor, binPath string) *Validator {
+func NewValidator(executor execx.Executor, binPath, furyctlPath string) *Validator {
 	return &Validator{
-		toolsValidator:   tools.NewValidator(executor, binPath),
+		toolsValidator:   tools.NewValidator(executor, binPath, furyctlPath),
 		envVarsValidator: envvars.NewValidator(),
 		infraValidator:   toolsconf.NewValidator(executor),
 	}
@@ -38,7 +38,7 @@ type Validator struct {
 func (v *Validator) Validate(res distribution.DownloadResult) error {
 	if _, errs := v.toolsValidator.Validate(
 		res.DistroManifest,
-		res.MinimalConf.Spec.ToolsConfiguration.Terraform.State,
+		res.MinimalConf,
 	); len(errs) > 0 {
 		return fmt.Errorf("%w: %v", errValidatingTools, errs)
 	}

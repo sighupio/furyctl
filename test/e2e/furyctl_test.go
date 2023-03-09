@@ -110,6 +110,8 @@ var (
 	RunCmd = func(cmd string, args ...string) (string, error) {
 		out, err := exec.Command(cmd, args...).CombinedOutput()
 
+		GinkgoWriter.Println(string(out))
+
 		return string(out), err
 	}
 
