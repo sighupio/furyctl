@@ -49,6 +49,7 @@ func (d *GCP) UpdateMessage() string {
 	type subnets map[string]string
 
 	var additionalClusterSubnet []subnets
+
 	err = json.Unmarshal(output["vpn_ip"].Value, &vpnInstanceIPs)
 	if err != nil {
 		log.Error("Can not get `vpn_ip` value")
@@ -155,6 +156,9 @@ const (
 func (d GCP) createVarFile() (err error) {
 	var buffer bytes.Buffer
 	spec := d.config.Spec.(cfg.GCP)
+
+	buffer.WriteString(fmt.Sprintf("provider_region = \"%v\"\n", spec.Region))
+	buffer.WriteString(fmt.Sprintf("provider_project = \"%v\"\n", spec.Project))
 
 	buffer.WriteString(fmt.Sprintf("name = \"%v\"\n", d.config.Metadata.Name))
 	buffer.WriteString(fmt.Sprintf("public_subnetwork_cidrs = [\"%v\"]\n", strings.Join(spec.PublicSubnetsCIDRs, "\",\"")))
