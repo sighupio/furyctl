@@ -20,7 +20,7 @@ func NewFuncMap() FuncMap {
 	return FuncMap{FuncMap: sprig.TxtFuncMap()}
 }
 
-func (f *FuncMap) Add(name string, fn interface{}) {
+func (f *FuncMap) Add(name string, fn any) {
 	f.FuncMap[name] = fn
 }
 
