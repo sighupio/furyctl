@@ -129,6 +129,11 @@ data:
       alertmanager:
         deadManSwitchWebhookUrl: ""
         slackWebhookUrl: ""
+    # networking module configuration
+    networking:
+      overrides:
+        nodeSelector: null
+        tolerations: null
     # policy module configuration
     policy:
       overrides:
@@ -189,17 +194,7 @@ data:
       dex:
         # see dex documentation for more information
         connectors: []
-    aws:
-      overrides:
-        nodeSelector: null
-        tolerations: null
-      ebsCsiDriver:
-        iamRoleArn: arn:aws:iam::123456789012:role/ebs-csi-controller-role
-      loadBalancerController:
-        iamRoleArn: arn:aws:iam::123456789012:role/example-load-balancer-controller
-      clusterAutoscaler:
-        region: eu-west-1
-        iamRoleArn: arn:aws:iam::123456789012:role/example-cluster-autoscaler
+
 templates:
   includes:
     - ".*\\.yaml"
