@@ -7,6 +7,7 @@ package distribution
 import (
 	"errors"
 	"fmt"
+	"log"
 	"os"
 	"path/filepath"
 
@@ -40,10 +41,17 @@ func NewIACBuilder(
 	noOverwrite,
 	dryRun bool,
 ) *IACBuilder {
+	absOutDir, err := filepath.Abs(outDir)
+	if err != nil {
+		log.Fatalf("error getting absolute path for %s: %v", outDir, err)
+
+		return nil
+	}
+
 	return &IACBuilder{
 		furyctlFile: furyctlFile,
 		distroPath:  distroPath,
-		outDir:      outDir,
+		outDir:      absOutDir,
 		noOverwrite: noOverwrite,
 		dryRun:      dryRun,
 	}
@@ -108,6 +116,8 @@ func (m *IACBuilder) Build() error {
 			return fmt.Errorf("error removing target directory: %w", err)
 		}
 	}
+
+	logrus.Debugf("output directory = %s", m.outDir)
 
 	templateModel, err := template.NewTemplateModel(
 		sourcePath,
