@@ -86,13 +86,19 @@ The generated folder will be created starting from a provided templates folder a
 
 			logrus.Info("Generating distribution manifests...")
 
-			distroManBuilder := distribution.NewIACBuilder(
+			distroManBuilder, err := distribution.NewIACBuilder(
 				furyctlFile,
 				res.RepoPath,
 				flags.OutDir,
 				flags.NoOverwrite,
 				flags.DryRun,
 			)
+			if err != nil {
+				cmdEvent.AddErrorMessage(err)
+				tracker.Track(cmdEvent)
+
+				return fmt.Errorf("error while creating distribution manifest builder: %w", err)
+			}
 
 			if err := distroManBuilder.Build(); err != nil {
 				cmdEvent.AddErrorMessage(err)

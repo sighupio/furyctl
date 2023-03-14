@@ -7,7 +7,6 @@ package distribution
 import (
 	"errors"
 	"fmt"
-	"log"
 	"os"
 	"path/filepath"
 
@@ -40,12 +39,10 @@ func NewIACBuilder(
 	outDir string,
 	noOverwrite,
 	dryRun bool,
-) *IACBuilder {
+) (*IACBuilder, error) {
 	absOutDir, err := filepath.Abs(outDir)
 	if err != nil {
-		log.Fatalf("error getting absolute path for %s: %v", outDir, err)
-
-		return nil
+		return nil, fmt.Errorf("error getting absolute path for %s: %w", outDir, err)
 	}
 
 	return &IACBuilder{
@@ -54,7 +51,7 @@ func NewIACBuilder(
 		outDir:      absOutDir,
 		noOverwrite: noOverwrite,
 		dryRun:      dryRun,
-	}
+	}, nil
 }
 
 func (m *IACBuilder) Build() error {
