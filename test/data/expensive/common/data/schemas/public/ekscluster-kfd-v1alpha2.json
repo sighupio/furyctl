@@ -1,6 +1,6 @@
 {
     "$schema": "http://json-schema.org/draft-07/schema#",
-    "$id": "https://schema.sighup.io/kfd/ekscluster-kfd-v1alpha2.json",
+    "$id": "https://schema.sighup.io/kfd/ekscluster-kfd-v1alpha2-public.json",
     "description": "A Fury Cluster deployed through AWS's Elastic Kubernetes Service",
     "type": "object",
     "properties": {
@@ -93,21 +93,6 @@
                                 }
                             }
                         }
-                    },
-                    {
-                        "properties": {
-                            "infrastructure": {
-                                "properties": {
-                                    "vpc": {
-                                        "properties": {
-                                            "vpn": {
-                                                "type": "null"
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
                     }
                 ]
             },
@@ -179,11 +164,10 @@
             "additionalProperties": false,
             "properties": {
                 "bucketName": {
-                    "type": "string"
+                    "$ref": "#/$defs/Types.AwsS3BucketName"
                 },
                 "keyPrefix": {
-                    "type": "string",
-                    "maxLength": 37
+                    "$ref": "#/$defs/Types.AwsS3KeyPrefix"
                 },
                 "region": {
                     "$ref": "#/$defs/Types.AwsRegion"
@@ -313,7 +297,8 @@
                     "type": "array",
                     "items": {
                         "type": "string"
-                    }
+                    },
+                    "minItems": 1
                 },
                 "allowedFromCidrs": {
                     "type": "array",
@@ -348,12 +333,23 @@
                 "nodeAllowedSshPublicKey": {
                     "anyOf": [
                         {
-                            "$ref": "#/$defs/Types.SshPubKey"
+                            "$ref": "#/$defs/Types.AwsSshPubKey"
                         },
                         {
                             "$ref": "#/$defs/Types.FileRef"
                         }
                     ]
+                },
+                "nodePoolsLaunchKind": {
+                    "type": "string",
+                    "enum": [
+                        "launch_configurations",
+                        "launch_templates",
+                        "both"
+                    ]
+                },
+                "logRetentionDays": {
+                    "type": "integer"
                 },
                 "nodePools": {
                     "type": "array",
@@ -367,7 +363,8 @@
             },
             "required": [
                 "nodeAllowedSshPublicKey",
-                "nodePools"
+                "nodePools",
+                "nodePoolsLaunchKind"
             ]
         },
         "Spec.Kubernetes.APIServerEndpointAccess": {
@@ -440,7 +437,6 @@
                 }
             },
             "required": [
-                "ami",
                 "instance",
                 "name",
                 "size"
@@ -516,7 +512,8 @@
                     "type": "array",
                     "items": {
                         "$ref": "#/$defs/Types.Cidr"
-                    }
+                    },
+                    "minItems": 1
                 },
                 "protocol": {
                     "$ref": "#/$defs/Types.AwsIpProtocol"
@@ -748,6 +745,9 @@
                 "monitoring": {
                     "$ref": "#/$defs/Spec.Distribution.Modules.Monitoring"
                 },
+                "networking": {
+                    "$ref": "#/$defs/Spec.Distribution.Modules.Networking"
+                },
                 "policy": {
                     "$ref": "#/$defs/Spec.Distribution.Modules.Policy"
                 }
@@ -763,7 +763,7 @@
             "additionalProperties": false,
             "properties": {
                 "overrides": {
-                    "$ref": "#/$defs/Types.FuryModuleOverrides"
+                    "$ref": "#/$defs/Spec.Distribution.Modules.Ingress.Overrides"
                 },
                 "baseDomain": {
                     "type": "string"
@@ -777,8 +777,8 @@
                 "dns": {
                     "$ref": "#/$defs/Spec.Distribution.Modules.Ingress.DNS"
                 },
-                "externalDns": {
-                    "$ref": "#/$defs/Spec.Distribution.Modules.Ingress.ExternalDNS"
+                "forecastle": {
+                    "$ref": "#/$defs/Spec.Distribution.Modules.Ingress.Forecastle"
                 }
             },
             "required": [
@@ -787,12 +787,39 @@
                 "nginx"
             ]
         },
+        "Spec.Distribution.Modules.Ingress.Overrides": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+                "ingresses": {
+                    "$ref": "#/$defs/Spec.Distribution.Modules.Ingress.Overrides.Ingresses"
+                },
+                "nodeSelector": {
+                    "$ref": "#/$defs/Types.KubeNodeSelector"
+                },
+                "tolerations": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/$defs/Types.KubeToleration"
+                    }
+                }
+            }
+        },
         "Spec.Distribution.Modules.Ingress.Overrides.Ingresses": {
             "type": "object",
             "additionalProperties": false,
             "properties": {
                 "forecastle": {
                     "$ref": "#/$defs/Types.FuryModuleOverridesIngress"
+                }
+            }
+        },
+        "Spec.Distribution.Modules.Ingress.Forecastle": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+                "overrides": {
+                    "$ref": "#/$defs/Types.FuryModuleComponentOverrides"
                 }
             }
         },
@@ -806,6 +833,9 @@
                 },
                 "tls": {
                     "$ref": "#/$defs/Spec.Distribution.Modules.Ingress.Nginx.TLS"
+                },
+                "overrides": {
+                    "$ref": "#/$defs/Types.FuryModuleComponentOverrides"
                 }
             },
             "required": [
@@ -864,6 +894,9 @@
             "properties": {
                 "clusterIssuer": {
                     "$ref": "#/$defs/Spec.Distribution.Modules.Ingress.CertManager.ClusterIssuer"
+                },
+                "overrides": {
+                    "$ref": "#/$defs/Types.FuryModuleComponentOverrides"
                 }
             },
             "required": [
@@ -884,51 +917,12 @@
                 "type": {
                     "type": "string",
                     "enum": ["dns01", "http01"]
-                },
-                "route53": {
-                    "$ref": "#/$defs/Spec.Distribution.Modules.Ingress.ClusterIssuer.Route53"
                 }
             },
             "required": [
                 "name",
                 "type",
                 "email"
-            ]
-        },
-        "Spec.Distribution.Modules.Ingress.ClusterIssuer.Route53": {
-            "type": "object",
-            "additionalProperties": false,
-            "properties": {
-                "iamRoleArn": {
-                    "$ref": "#/$defs/Types.AwsArn"
-                },
-                "region": {
-                    "$ref": "#/$defs/Types.AwsRegion"
-                },
-                "hostedZoneId": {
-                    "type": "string"
-                }
-            },
-            "required": [
-                "hostedZoneId",
-                "iamRoleArn",
-                "region"
-            ]
-        },
-        "Spec.Distribution.Modules.Ingress.ExternalDNS": {
-            "type": "object",
-            "additionalProperties": false,
-            "properties": {
-                "privateIamRoleArn": {
-                    "$ref": "#/$defs/Types.AwsArn"
-                },
-                "publicIamRoleArn": {
-                    "$ref": "#/$defs/Types.AwsArn"
-                }
-            },
-            "required": [
-                "privateIamRoleArn",
-                "publicIamRoleArn"
             ]
         },
         "Spec.Distribution.Modules.Ingress.DNS": {
@@ -940,6 +934,9 @@
                 },
                 "private": {
                     "$ref": "#/$defs/Spec.Distribution.Modules.Ingress.DNS.Private"
+                },
+                "overrides": {
+                    "$ref": "#/$defs/Types.FuryModuleComponentOverrides"
                 }
             },
             "required": [
@@ -972,15 +969,11 @@
                 },
                 "create": {
                     "type": "boolean"
-                },
-                "vpcId": {
-                    "type": "string"
                 }
             },
             "required": [
                 "name",
-                "create",
-                "vpcId"
+                "create"
             ]
         },
         "Spec.Distribution.Modules.Logging": {
@@ -992,6 +985,15 @@
                 },
                 "opensearch": {
                     "$ref": "#/$defs/Spec.Distribution.Modules.Logging.Opensearch"
+                },
+                "cerebro": {
+                    "$ref": "#/$defs/Spec.Distribution.Modules.Logging.Cerebro"
+                },
+                "minio": {
+                    "$ref": "#/$defs/Spec.Distribution.Modules.Logging.Minio"
+                },
+                "operator": {
+                    "$ref": "#/$defs/Spec.Distribution.Modules.Logging.Operator"
                 }
             },
             "required": ["opensearch"]
@@ -1009,11 +1011,41 @@
                 },
                 "storageSize": {
                     "type": "string"
+                },
+                "overrides": {
+                    "$ref": "#/$defs/Types.FuryModuleComponentOverrides"
                 }
             },
             "required": [
                 "type"
             ]
+        },
+        "Spec.Distribution.Modules.Logging.Cerebro": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+                "overrides": {
+                    "$ref": "#/$defs/Types.FuryModuleComponentOverrides"
+                }
+            }
+        },
+        "Spec.Distribution.Modules.Logging.Minio": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+                "overrides": {
+                    "$ref": "#/$defs/Types.FuryModuleComponentOverrides"
+                }
+            }
+        },
+        "Spec.Distribution.Modules.Logging.Operator": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+                "overrides": {
+                    "$ref": "#/$defs/Types.FuryModuleComponentOverrides"
+                }
+            }
         },
         "Spec.Distribution.Modules.Monitoring": {
             "type": "object",
@@ -1027,6 +1059,18 @@
                 },
                 "alertmanager": {
                     "$ref": "#/$defs/Spec.Distribution.Modules.Monitoring.AlertManager"
+                },
+                "grafana": {
+                    "$ref": "#/$defs/Spec.Distribution.Modules.Monitoring.Grafana"
+                },
+                "blackboxExporter": {
+                    "$ref": "#/$defs/Spec.Distribution.Modules.Monitoring.BlackboxExporter"
+                },
+                "kubeStateMetrics": {
+                    "$ref": "#/$defs/Spec.Distribution.Modules.Monitoring.KubeStateMetrics"
+                },
+                "x509Exporter": {
+                    "$ref": "#/$defs/Spec.Distribution.Modules.Monitoring.X509Exporter"
                 }
             }
         },
@@ -1060,6 +1104,63 @@
                 }
             }
         },
+        "Spec.Distribution.Modules.Monitoring.Grafana": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+                "overrides": {
+                    "$ref": "#/$defs/Types.FuryModuleComponentOverrides"
+                }
+            }
+        },
+        "Spec.Distribution.Modules.Monitoring.BlackboxExporter": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+                "overrides": {
+                    "$ref": "#/$defs/Types.FuryModuleComponentOverrides"
+                }
+            }
+        },
+        "Spec.Distribution.Modules.Monitoring.KubeStateMetrics": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+                "overrides": {
+                    "$ref": "#/$defs/Types.FuryModuleComponentOverrides"
+                }
+            }
+        },
+        "Spec.Distribution.Modules.Monitoring.X509Exporter": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+                "overrides": {
+                    "$ref": "#/$defs/Types.FuryModuleComponentOverrides"
+                }
+            }
+        },
+        "Spec.Distribution.Modules.Networking": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+                "overrides": {
+                    "$ref": "#/$defs/Types.FuryModuleComponentOverrides"
+                },
+                "tigeraOperator": {
+                    "$ref": "#/$defs/Spec.Distribution.Modules.Networking.TigeraOperator"
+                }
+            }
+        },
+        "Spec.Distribution.Modules.Networking.TigeraOperator": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+                "overrides": {
+                    "$ref": "#/$defs/Types.FuryModuleComponentOverrides"
+                }
+            }
+        },
         "Spec.Distribution.Modules.Policy": {
             "type": "object",
             "additionalProperties": false,
@@ -1081,6 +1182,9 @@
                     "items": {
                         "type": "string"
                     }
+                },
+                "overrides": {
+                    "$ref": "#/$defs/Types.FuryModuleComponentOverrides"
                 }
             }
         },
@@ -1103,6 +1207,9 @@
             "properties": {
                 "eks": {
                     "$ref": "#/$defs/Spec.Distribution.Modules.Dr.Velero.Eks"
+                },
+                "overrides": {
+                    "$ref": "#/$defs/Types.FuryModuleComponentOverrides"
                 }
             },
             "required": ["eks"]
@@ -1115,16 +1222,13 @@
                     "$ref": "#/$defs/Types.AwsRegion"
                 },
                 "bucketName": {
-                    "type": "string"
-                },
-                "iamRoleArn": {
-                    "$ref": "#/$defs/Types.AwsArn"
+                    "$ref": "#/$defs/Types.AwsS3BucketName",
+                    "maxLength": 49
                 }
             },
             "required": [
                 "region",
-                "bucketName",
-                "iamRoleArn"
+                "bucketName"
             ]
         },
         "Spec.Distribution.Modules.Auth": {
@@ -1136,6 +1240,9 @@
                 },
                 "provider": {
                     "$ref": "#/$defs/Spec.Distribution.Modules.Auth.Provider"
+                },
+                "baseDomain": {
+                    "type": "string"
                 },
                 "pomerium": {
                     "$ref": "#/$defs/Spec.Distribution.Modules.Auth.Pomerium"
@@ -1159,11 +1266,7 @@
                         }
                     },
                     "then": {
-                        "properties": {
-                            "auth": {
-                                "required": ["dex", "pomerium"]
-                            }
-                        }
+                        "required": ["dex", "pomerium", "baseDomain"]
                     },
                     "else": {
                         "properties": {
@@ -1285,6 +1388,9 @@
                 },
                 "policy": {
                     "type": "string"
+                },
+                "overrides": {
+                    "$ref": "#/$defs/Types.FuryModuleComponentOverrides"
                 }
             },
             "required": [
@@ -1318,6 +1424,9 @@
             "properties": {
                 "connectors": {
                     "type": "array"
+                },
+                "overrides": {
+                    "$ref": "#/$defs/Types.FuryModuleComponentOverrides"
                 }
             },
             "required": ["connectors"]
@@ -1326,54 +1435,46 @@
             "type": "object",
             "additionalProperties": false,
             "properties": {
-                "overrides": {
-                    "$ref": "#/$defs/Types.FuryModuleOverrides"
-                },
                 "clusterAutoscaler": {
-                    "$ref": "#/$defs/Spec.Distribution.Modules.Aws.ClusterAutoScaler"
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                        "overrides": {
+                            "$ref": "#/$defs/Types.FuryModuleComponentOverrides"
+                        }
+                    }
                 },
                 "ebsCsiDriver": {
                     "type": "object",
                     "additionalProperties": false,
                     "properties": {
-                        "iamRoleArn": {
-                            "$ref": "#/$defs/Types.AwsArn"
+                        "overrides": {
+                            "$ref": "#/$defs/Types.FuryModuleComponentOverrides"
                         }
-                    },
-                    "required": [
-                        "iamRoleArn"
-                    ]
+                    }
                 },
                 "loadBalancerController": {
                     "type": "object",
                     "additionalProperties": false,
                     "properties": {
-                        "iamRoleArn": {
-                            "$ref": "#/$defs/Types.AwsArn"
+                        "overrides": {
+                            "$ref": "#/$defs/Types.FuryModuleComponentOverrides"
                         }
-                    },
-                    "required": [
-                        "iamRoleArn"
-                    ]
+                    }
+                },
+                "ebsSnapshotController": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                        "overrides": {
+                            "$ref": "#/$defs/Types.FuryModuleComponentOverrides"
+                        }
+                    }
+                },
+                "overrides": {
+                    "$ref": "#/$defs/Types.FuryModuleOverrides"
                 }
             }
-        },
-
-        "Spec.Distribution.Modules.Aws.ClusterAutoScaler": {
-            "type": "object",
-            "additionalProperties": false,
-            "properties": {
-                "iamRoleArn": {
-                    "$ref": "#/$defs/Types.AwsArn"
-                },
-                "region": {
-                    "$ref": "#/$defs/Types.AwsRegion"
-                }
-            },
-            "required": [
-                "iamRoleArn",
-                "region"
-            ]
         },
 
         "Types.SemVer": {
@@ -1445,6 +1546,10 @@
             "type": "string",
             "pattern": "^vpc\\-([0-9a-f]{8}|[0-9a-f]{17})$"
         },
+        "Types.AwsSshPubKey": {
+            "type": "string",
+            "pattern": "^ssh\\-(ed25519|rsa)\\s+"
+        },
         "Types.AwsSubnetId": {
             "type": "string",
             "pattern": "^subnet\\-[0-9a-f]{17}$"
@@ -1457,6 +1562,24 @@
             "type": "string",
             "pattern": "^(?i)(tcp|udp|icmp|icmpv6|-1)$",
             "$comment": "this value should be lowercase, but we rely on terraform to do the conversion to make it a bit more user friendly"
+        },
+        "Types.AwsS3BucketName": {
+            "type": "string",
+            "allOf": [
+                {
+                    "pattern": "^[a-z0-9][a-z0-9-.]{1,61}[a-z0-9]$"
+                },
+                {
+                    "not": {
+                        "pattern": "^xn--|-s3alias$"
+                    }
+                }
+            ]
+        },
+        "Types.AwsS3KeyPrefix": {
+            "type": "string",
+            "pattern": "^[A-z0-9][A-z0-9!-_.*'()]+$",
+            "maxLength": 960
         },
         "Types.KubeLabels": {
             "type": "object",
@@ -1541,6 +1664,21 @@
                     "type": "object",
                     "additionalProperties": {
                         "$ref": "#/$defs/Types.FuryModuleOverridesIngress"
+                    }
+                }
+            }
+        },
+        "Types.FuryModuleComponentOverrides": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+                "nodeSelector": {
+                    "$ref": "#/$defs/Types.KubeNodeSelector"
+                },
+                "tolerations": {
+                    "type": ["array", "null"],
+                    "items": {
+                        "$ref": "#/$defs/Types.KubeToleration"
                     }
                 }
             }
