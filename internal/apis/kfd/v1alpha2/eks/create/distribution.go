@@ -154,7 +154,7 @@ func (d *Distribution) Exec() error {
 		return err
 	}
 
-	tfCfg, err := template.NewConfig(furyctlMerger, preTfMerger, []string{"source/manifests", ".gitignore"})
+	tfCfg, err := template.NewConfig(furyctlMerger, preTfMerger, []string{"manifests", ".gitignore"})
 	if err != nil {
 		return fmt.Errorf("error creating template config: %w", err)
 	}
@@ -185,7 +185,7 @@ func (d *Distribution) Exec() error {
 			return err
 		}
 
-		mCfg, err := template.NewConfig(furyctlMerger, postTfMerger, []string{"source/terraform", ".gitignore"})
+		mCfg, err := template.NewConfig(furyctlMerger, postTfMerger, []string{"terraform", ".gitignore"})
 		if err != nil {
 			return fmt.Errorf("error creating template config: %w", err)
 		}
@@ -214,7 +214,7 @@ func (d *Distribution) Exec() error {
 		return err
 	}
 
-	mCfg, err := template.NewConfig(furyctlMerger, postTfMerger, []string{"source/terraform", ".gitignore"})
+	mCfg, err := template.NewConfig(furyctlMerger, postTfMerger, []string{"terraform", ".gitignore"})
 	if err != nil {
 		return fmt.Errorf("error creating template config: %w", err)
 	}
