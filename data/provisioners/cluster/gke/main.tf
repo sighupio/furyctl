@@ -17,8 +17,13 @@ terraform {
   }
 }
 
+provider "google" {
+  project     = var.provider_project
+  region      = var.provider_region
+}
+
 module "fury" {
-  source = "github.com/sighupio/fury-gke-installer//modules/gke?ref=v1.9.0"
+  source = "github.com/sighupio/fury-gke-installer//modules/gke?ref=v1.10.0"
 
   cluster_name    = var.cluster_name
   cluster_version = var.cluster_version

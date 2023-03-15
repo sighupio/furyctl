@@ -6,9 +6,9 @@ kind: Bootstrap
 metadata:
   name: e2e-${CI_BUILD_NUMBER}
 spec:
-  publicSubnetsCIDRs:  
+  publicSubnetsCIDRs:
     - 10.0.1.0/24
-  privateSubnetsCIDRs: 
+  privateSubnetsCIDRs:
     - 10.0.101.0/24
   clusterNetwork:
     subnetworkCIDR: 10.1.0.0/16
@@ -18,6 +18,8 @@ spec:
     subnetCIDR: 192.168.200.0/24
     sshUsers:
       - jnardiello
+  region: europe-west1
+  project: sighup-main
 provisioner: gcp
 executor:
   state:

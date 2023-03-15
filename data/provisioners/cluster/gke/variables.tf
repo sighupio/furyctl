@@ -4,6 +4,16 @@
  * license that can be found in the LICENSE file.
  */
 
+variable "provider_project" {
+  description = "Name of the Provider's project"
+  type        = string
+}
+
+variable "provider_region" {
+  description = "Name of the Provider's region"
+  type        = string
+}
+
 variable "cluster_name" {
   type        = string
   description = "Unique cluster name. Used in multiple resources to identify your cluster resources"

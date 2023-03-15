@@ -20,6 +20,8 @@ type GKE struct {
 	SSHPublicKey string            `yaml:"sshPublicKey"`
 	NodePools    []GKENodePool     `yaml:"nodePools"`
 	Tags         map[string]string `yaml:"tags"`
+	Region       string            `yaml:"region"`
+	Project      string            `yaml:"project"`
 }
 
 // GKENodePool represent a node pool configuration

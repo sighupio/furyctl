@@ -105,6 +105,10 @@ const (
 func (e GKE) createVarFile() (err error) {
 	var buffer bytes.Buffer
 	spec := e.config.Spec.(cfg.GKE)
+
+	buffer.WriteString(fmt.Sprintf("provider_region = \"%v\"\n", spec.Region))
+	buffer.WriteString(fmt.Sprintf("provider_project = \"%v\"\n", spec.Project))
+
 	buffer.WriteString(fmt.Sprintf("cluster_name = \"%v\"\n", e.config.Metadata.Name))
 	buffer.WriteString(fmt.Sprintf("cluster_version = \"%v\"\n", spec.Version))
 	buffer.WriteString(fmt.Sprintf("network = \"%v\"\n", spec.Network))

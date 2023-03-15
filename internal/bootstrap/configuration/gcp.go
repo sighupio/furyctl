@@ -11,6 +11,8 @@ type GCP struct {
 	ClusterNetwork      GCPClusterNetwork `yaml:"clusterNetwork"`
 	VPN                 GCPVPN            `yaml:"vpn"`
 	Tags                map[string]string `yaml:"tags"`
+	Region              string            `yaml:"region"`
+	Project             string            `yaml:"project"`
 }
 
 // GCPClusterNetwork represents the cluster network configuration
