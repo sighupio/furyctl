@@ -21,7 +21,7 @@ variable "tags" {
 }
 
 variable "vpc_enabled" {
-  description = "Enable VPC"
+  description = "Enable VPC creation"
   type = bool
   default = true
 }
@@ -57,7 +57,7 @@ variable "vpn_public_subnets" {
 }
 
 variable "vpn_subnetwork_cidr" {
-  description = "VPN Subnet CIDR, should be different from the network_cidr"
+  description = "CIDR used to assign VPN clients IP addresses, should be different from the network_cidr"
   type        = string
   default     = "192.168.200.0/24"
 }
@@ -105,7 +105,7 @@ variable "vpn_operator_cidrs" {
 }
 
 variable "vpn_ssh_users" {
-  description = "GitHub users to sync public rsa keys"
+  description = "GitHub users to sync public keys for SSH access"
   type        = list(string)
   default     = []
 }
