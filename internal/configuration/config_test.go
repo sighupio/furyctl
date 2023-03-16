@@ -23,9 +23,12 @@ func init() {
 	}
 	sampleAWSBootstrap.Provisioner = "aws"
 	sampleAWSBootstrap.Spec = bootstrapcfg.AWS{
-		NetworkCIDR:         "10.0.0.0/16",
-		PublicSubnetsCIDRs:  []string{"10.0.1.0/24", "10.0.2.0/24", "10.0.3.0/24"},
-		PrivateSubnetsCIDRs: []string{"10.0.101.0/24", "10.0.102.0/24", "10.0.103.0/24"},
+		NetworkCIDR: "10.0.0.0/16",
+		VPC: bootstrapcfg.AWSVPC{
+			Enabled:             true,
+			PublicSubnetsCIDRs:  []string{"10.0.1.0/24", "10.0.2.0/24", "10.0.3.0/24"},
+			PrivateSubnetsCIDRs: []string{"10.0.101.0/24", "10.0.102.0/24", "10.0.103.0/24"},
+		},
 		VPN: bootstrapcfg.AWSVPN{
 			Instances:     1,
 			InstanceType:  "t3.large",
@@ -33,7 +36,7 @@ func init() {
 			DiskSize:      50,
 			DHParamsBits:  2048,
 			SubnetCIDR:    "192.168.100.0/24",
-			SSHUsers:      []string{"angelbarrera92"},
+			SSHUsers:      []string{"jnardiello"},
 			OperatorName:  "sighup",
 			OperatorCIDRs: []string{"1.2.3.4/32"},
 		},

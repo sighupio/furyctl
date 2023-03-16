@@ -25,12 +25,11 @@ func (d *AWS) InitMessage() string {
 	return `[AWS] - VPC and VPN
 
 This provisioner creates a battle-tested AWS VPC with all the requirements
-set to run a production-grade private EKS cluster.
+set to run a production-grade EKS cluster.
 
-It creates a VPN server enables deploying the cluster from this computer
-once connected to the VPN server.
-
-Then, use furyagent to manage VPN profiles.
+If you opt to create a private cluster, the provisioner will create a VPN Server that will
+allow you to access the cluster from your local machine.
+You can then use furyagent to manage credentials and access to the private network.
 `
 }
 
@@ -135,9 +134,56 @@ func (d AWS) createVarFile() (err error) {
 
 	buffer.WriteString(fmt.Sprintf("name = \"%v\"\n", d.config.Metadata.Name))
 	buffer.WriteString(fmt.Sprintf("network_cidr = \"%v\"\n", spec.NetworkCIDR))
-	buffer.WriteString(fmt.Sprintf("public_subnetwork_cidrs = [\"%v\"]\n", strings.Join(spec.PublicSubnetsCIDRs, "\",\"")))
-	buffer.WriteString(fmt.Sprintf("private_subnetwork_cidrs = [\"%v\"]\n", strings.Join(spec.PrivateSubnetsCIDRs, "\",\"")))
-	buffer.WriteString(fmt.Sprintf("vpn_subnetwork_cidr = \"%v\"\n", spec.VPN.SubnetCIDR))
+	buffer.WriteString(fmt.Sprintf("vpc_enabled = %v\n", spec.VPC.Enabled))
+	buffer.WriteString(fmt.Sprintf("vpn_enabled = %v\n", spec.VPN.Enabled))
+
+	if spec.VPC.Enabled {
+		pubCIDRs := spec.VPCPublicSubnetsCIDRs
+		if len(spec.VPC.PublicSubnetsCIDRs) > 0 {
+			pubCIDRs = spec.VPC.PublicSubnetsCIDRs
+		}
+
+		priCIDRs := spec.VPCPrivateSubnetsCIDRs
+		if len(spec.VPC.PrivateSubnetsCIDRs) > 0 {
+			priCIDRs = spec.VPC.PrivateSubnetsCIDRs
+		}
+
+		buffer.WriteString(fmt.Sprintf("vpc_public_subnetwork_cidrs = [\"%v\"]\n", strings.Join(pubCIDRs, "\",\"")))
+		buffer.WriteString(fmt.Sprintf("vpc_private_subnetwork_cidrs = [\"%v\"]\n", strings.Join(priCIDRs, "\",\"")))
+	}
+
+	if spec.VPN.Enabled {
+		buffer.WriteString(fmt.Sprintf("vpn_vpc_id = \"%v\"\n", spec.VPN.VpcID))
+		buffer.WriteString(fmt.Sprintf("vpn_public_subnets = [\"%v\"]\n", strings.Join(spec.VPN.PublicSubnets, "\",\"")))
+
+		if spec.VPN.SubnetCIDR != "" {
+			buffer.WriteString(fmt.Sprintf("vpn_subnetwork_cidr = \"%v\"\n", spec.VPN.SubnetCIDR))
+		}
+
+		buffer.WriteString(fmt.Sprintf("vpn_instances = %v\n", spec.VPN.Instances))
+		if spec.VPN.Port != 0 {
+			buffer.WriteString(fmt.Sprintf("vpn_port = %v\n", spec.VPN.Port))
+		}
+		if spec.VPN.InstanceType != "" {
+			buffer.WriteString(fmt.Sprintf("vpn_instance_type = \"%v\"\n", spec.VPN.InstanceType))
+		}
+		if spec.VPN.DiskSize != 0 {
+			buffer.WriteString(fmt.Sprintf("vpn_instance_disk_size = %v\n", spec.VPN.DiskSize))
+		}
+		if spec.VPN.OperatorName != "" {
+			buffer.WriteString(fmt.Sprintf("vpn_operator_name = \"%v\"\n", spec.VPN.OperatorName))
+		}
+		if spec.VPN.DHParamsBits != 0 {
+			buffer.WriteString(fmt.Sprintf("vpn_dhparams_bits = %v\n", spec.VPN.DHParamsBits))
+		}
+		if len(spec.VPN.OperatorCIDRs) != 0 {
+			buffer.WriteString(fmt.Sprintf("vpn_operator_cidrs = [\"%v\"]\n", strings.Join(spec.VPN.OperatorCIDRs, "\",\"")))
+		}
+		if len(spec.VPN.SSHUsers) != 0 {
+			buffer.WriteString(fmt.Sprintf("vpn_ssh_users = [\"%v\"]\n", strings.Join(spec.VPN.SSHUsers, "\",\"")))
+		}
+	}
+
 	if len(spec.Tags) > 0 {
 		var tags []byte
 		tags, err = json.Marshal(spec.Tags)
@@ -146,37 +192,17 @@ func (d AWS) createVarFile() (err error) {
 		}
 		buffer.WriteString(fmt.Sprintf("tags = %v\n", string(tags)))
 	}
-	buffer.WriteString(fmt.Sprintf("vpn_instances = %v\n", spec.VPN.Instances))
-	if spec.VPN.Port != 0 {
-		buffer.WriteString(fmt.Sprintf("vpn_port = %v\n", spec.VPN.Port))
-	}
-	if spec.VPN.InstanceType != "" {
-		buffer.WriteString(fmt.Sprintf("vpn_instance_type = \"%v\"\n", spec.VPN.InstanceType))
-	}
-	if spec.VPN.DiskSize != 0 {
-		buffer.WriteString(fmt.Sprintf("vpn_instance_disk_size = %v\n", spec.VPN.DiskSize))
-	}
-	if spec.VPN.OperatorName != "" {
-		buffer.WriteString(fmt.Sprintf("vpn_operator_name = \"%v\"\n", spec.VPN.OperatorName))
-	}
-	if spec.VPN.DHParamsBits != 0 {
-		buffer.WriteString(fmt.Sprintf("vpn_dhparams_bits = %v\n", spec.VPN.DHParamsBits))
-	}
-	if len(spec.VPN.OperatorCIDRs) != 0 {
-		buffer.WriteString(fmt.Sprintf("vpn_operator_cidrs = [\"%v\"]\n", strings.Join(spec.VPN.OperatorCIDRs, "\",\"")))
-	}
-	if len(spec.VPN.SSHUsers) != 0 {
-		buffer.WriteString(fmt.Sprintf("vpn_ssh_users = [\"%v\"]\n", strings.Join(spec.VPN.SSHUsers, "\",\"")))
+
+	tfVarsPath := fmt.Sprintf("%v/aws.tfvars", d.terraform.WorkingDir())
+
+	if err := ioutil.WriteFile(tfVarsPath, buffer.Bytes(), 0600); err != nil {
+		return err
 	}
 
-	err = ioutil.WriteFile(fmt.Sprintf("%v/aws.tfvars", d.terraform.WorkingDir()), buffer.Bytes(), 0600)
-	if err != nil {
+	if err := d.terraform.FormatWrite(context.Background(), tfexec.Dir(tfVarsPath)); err != nil {
 		return err
 	}
-	err = d.terraform.FormatWrite(context.Background(), tfexec.Dir(fmt.Sprintf("%v/aws.tfvars", d.terraform.WorkingDir())))
-	if err != nil {
-		return err
-	}
+
 	return nil
 }
 

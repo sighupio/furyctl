@@ -6,15 +6,26 @@ package configuration
 
 // AWS represents the configuration spec of a AWS bootstrap project including VPC and VPN
 type AWS struct {
-	NetworkCIDR         string            `yaml:"networkCIDR"`
-	PublicSubnetsCIDRs  []string          `yaml:"publicSubnetsCIDRs"`
-	PrivateSubnetsCIDRs []string          `yaml:"privateSubnetsCIDRs"`
-	VPN                 AWSVPN            `yaml:"vpn"`
-	Tags                map[string]string `yaml:"tags"`
+	VPCPublicSubnetsCIDRs  []string          `yaml:"publicSubnetsCIDRs"`  // deprecated
+	VPCPrivateSubnetsCIDRs []string          `yaml:"privateSubnetsCIDRs"` // deprecated
+	VPC                    AWSVPC            `yaml:"vpc"`
+	VPN                    AWSVPN            `yaml:"vpn"`
+	NetworkCIDR            string            `yaml:"networkCIDR"`
+	Tags                   map[string]string `yaml:"tags"`
+}
+
+// AWSVPC represents a VPC configuration
+type AWSVPC struct {
+	Enabled             bool     `yaml:"enabled"`
+	PublicSubnetsCIDRs  []string `yaml:"publicSubnetsCIDRs"`
+	PrivateSubnetsCIDRs []string `yaml:"privateSubnetsCIDRs"`
 }
 
 // AWSVPN represents an VPN configuration
 type AWSVPN struct {
+	Enabled       bool     `yaml:"enabled"`
+	VpcID         string   `yaml:"vpcID"`
+	PublicSubnets []string `yaml:"publicSubnets"`
 	Instances     int      `yaml:"instances"`
 	Port          int      `yaml:"port"`
 	InstanceType  string   `yaml:"instanceType"`

@@ -92,7 +92,7 @@ variable "vpn_operator_name" {
 }
 
 variable "vpn_dhparams_bits" {
-  description = "Diffie–Hellman (D-H) key size in bytes"
+  description = "Diffie-Hellman (D-H) key size in bytes"
   type        = number
   default     = 2048
 }

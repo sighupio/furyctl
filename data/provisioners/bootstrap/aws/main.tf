@@ -9,26 +9,43 @@ terraform {
   required_providers {
     local    = "2.0.0"
     null     = "3.0.0"
-    aws      = "3.37.0"
+    aws      = "3.56.0"
     external = "2.0.0"
   }
 }
 
-module "vpc-and-vpn" {
-  source = "github.com/sighupio/fury-eks-installer//modules/vpc-and-vpn?ref=v1.10.0"
+module "vpc" {
+  source = "github.com/sighupio/fury-eks-installer//modules/vpc?ref=v2.0.0"
 
-  name                     = var.name
-  network_cidr             = var.network_cidr
-  public_subnetwork_cidrs  = var.public_subnetwork_cidrs
-  private_subnetwork_cidrs = var.private_subnetwork_cidrs
-  vpn_subnetwork_cidr      = var.vpn_subnetwork_cidr
-  vpn_port                 = var.vpn_port
-  vpn_instances            = var.vpn_instances
-  vpn_instance_type        = var.vpn_instance_type
-  vpn_instance_disk_size   = var.vpn_instance_disk_size
-  vpn_operator_name        = var.vpn_operator_name
-  vpn_dhparams_bits        = var.vpn_dhparams_bits
-  vpn_operator_cidrs       = var.vpn_operator_cidrs
-  vpn_ssh_users            = var.vpn_ssh_users
-  tags                     = var.tags
+  count = var.vpc_enabled ? 1 : 0
+
+  name         = var.name
+  network_cidr = var.network_cidr
+  tags         = var.tags
+
+  private_subnetwork_cidrs = var.vpc_private_subnetwork_cidrs
+  public_subnetwork_cidrs  = var.vpc_public_subnetwork_cidrs
+}
+
+module "vpn" {
+  source = "github.com/sighupio/fury-eks-installer//modules/vpn?ref=v2.0.0"
+
+  count = var.vpn_enabled ? 1 : 0
+
+  name         = var.name
+  network_cidr = var.network_cidr
+  tags         = var.tags
+
+  vpc_id         = var.vpc_enabled ? one(module.vpc[*].vpc_id) : var.vpn_vpc_id
+  public_subnets = var.vpc_enabled ? one(module.vpc[*].public_subnets) : var.vpn_public_subnets
+
+  vpn_subnetwork_cidr    = var.vpn_subnetwork_cidr
+  vpn_port               = var.vpn_port
+  vpn_instances          = var.vpn_instances
+  vpn_instance_type      = var.vpn_instance_type
+  vpn_instance_disk_size = var.vpn_instance_disk_size
+  vpn_operator_name      = var.vpn_operator_name
+  vpn_dhparams_bits      = var.vpn_dhparams_bits
+  vpn_operator_cidrs     = var.vpn_operator_cidrs
+  vpn_ssh_users          = var.vpn_ssh_users
 }
