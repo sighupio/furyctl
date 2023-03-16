@@ -18,6 +18,17 @@ variable "cluster_log_retention_days" {
   type = number
   default = 90
 }
+
+variable "cluster_endpoint_public_access" {
+  type = bool
+  default = false
+}
+
+variable "cluster_endpoint_public_access_cidrs" {
+  type = list(string)
+  default = ["0.0.0.0/0"]
+}
+
 variable "network" {
   type        = string
   description = "Network where the Kubernetes cluster will be hosted"
