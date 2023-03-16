@@ -15,7 +15,7 @@ terraform {
 }
 
 module "vpc-and-vpn" {
-  source = "github.com/sighupio/fury-eks-installer//modules/vpc-and-vpn?ref=v1.10.0"
+  source = "github.com/sighupio/fury-eks-installer//modules/vpc-and-vpn?ref=v1.10.1"
 
   name                     = var.name
   network_cidr             = var.network_cidr
