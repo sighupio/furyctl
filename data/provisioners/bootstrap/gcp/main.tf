@@ -16,8 +16,8 @@ terraform {
 }
 
 provider "google" {
-  project     = var.provider_project
-  region      = var.provider_region
+  project = var.provider_project
+  region  = var.provider_region
 }
 
 module "vpc-and-vpn" {

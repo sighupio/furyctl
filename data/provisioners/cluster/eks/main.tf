@@ -6,9 +6,9 @@
 
 terraform {
   experiments      = [module_variable_optional_attrs]
-  required_version = "0.15.4"
+  required_version = ">= 0.15.4"
   required_providers {
-    aws        = "= 3.37.0"
+    aws        = "= 3.56.0"
     kubernetes = "= 1.13.3"
     local      = "= 1.4.0"
     null       = "= 2.1.0"
@@ -18,7 +18,7 @@ terraform {
 }
 
 module "fury" {
-  source = "github.com/sighupio/fury-eks-installer//modules/eks?ref=v1.10.0"
+  source = "github.com/sighupio/fury-eks-installer//modules/eks?ref=v1.11.0"
 
   cluster_name               = var.cluster_name
   cluster_version            = var.cluster_version
