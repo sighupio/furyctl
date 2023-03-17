@@ -18,11 +18,16 @@ spec:
   version: "1.18"
   logRetentionDays: 30
   network: "vpc-1"
-  subnetworks: 
+  subnetworks:
     - "subnet-1"
     - "subnet-2"
     - "subnet-3"
-  dmzCIDRRange: "0.0.0.0/0"
+  clusterEndpointPrivateAccess: true
+  clusterEndpointPrivateAccessCidrs:
+    - "10.0.0.0/16"
+  clusterEndpointPublicAccess: true
+  clusterEndpointPublicAccessCidrs:
+    - "0.0.0.0/0"
   sshPublicKey: "123"
   nodePoolsLaunchKind: "launch_template"
   nodePools:

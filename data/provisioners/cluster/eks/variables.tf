@@ -19,6 +19,16 @@ variable "cluster_log_retention_days" {
   default = 90
 }
 
+variable "cluster_endpoint_private_access" {
+  type = bool
+  default = false
+}
+
+variable "cluster_endpoint_private_access_cidrs" {
+  type = list(string)
+  default = ["0.0.0.0/0"]
+}
+
 variable "cluster_endpoint_public_access" {
   type = bool
   default = false
@@ -37,10 +47,6 @@ variable "network" {
 variable "subnetworks" {
   type        = list(any)
   description = "List of subnets where the cluster will be hosted"
-}
-
-variable "dmz_cidr_range" {
-  description = "Network CIDR range from where cluster control plane will be accessible"
 }
 
 variable "ssh_public_key" {

@@ -6,18 +6,20 @@ package configuration
 
 // EKS represents the configuration spec of a EKS Cluster
 type EKS struct {
-	Version                          string            `yaml:"version"`
-	Network                          string            `yaml:"network"`
-	SubNetworks                      []string          `yaml:"subnetworks"`
-	DMZCIDRRange                     DMZCIDRRange      `yaml:"dmzCIDRRange"`
-	SSHPublicKey                     string            `yaml:"sshPublicKey"`
-	NodePools                        []EKSNodePool     `yaml:"nodePools"`
-	NodePoolsLaunchKind              string            `yaml:"nodePoolsLaunchKind"`
-	Tags                             map[string]string `yaml:"tags"`
-	Auth                             EKSAuth           `yaml:"auth"`
-	LogRetentionDays                 int               `yaml:"logRetentionDays"`
-	ClusterEndpointPublicAccess      bool              `yaml:"clusterEndpointPublicAccess"`
-	ClusterEndpointPublicAccessCidrs []string          `yaml:"clusterEndpointPublicAccessCidrs"`
+	Version                           string            `yaml:"version"`
+	Network                           string            `yaml:"network"`
+	SubNetworks                       []string          `yaml:"subnetworks"`
+	SSHPublicKey                      string            `yaml:"sshPublicKey"`
+	NodePools                         []EKSNodePool     `yaml:"nodePools"`
+	NodePoolsLaunchKind               string            `yaml:"nodePoolsLaunchKind"`
+	Tags                              map[string]string `yaml:"tags"`
+	Auth                              EKSAuth           `yaml:"auth"`
+	LogRetentionDays                  int               `yaml:"logRetentionDays"`
+	DMZCIDRRange                      DMZCIDRRange      `yaml:"dmzCIDRRange"` // DEPRECATED
+	ClusterEndpointPrivateAccess      bool              `yaml:"clusterEndpointPrivateAccess"`
+	ClusterEndpointPrivateAccessCidrs []string          `yaml:"clusterEndpointPrivateAccessCidrs"`
+	ClusterEndpointPublicAccess       bool              `yaml:"clusterEndpointPublicAccess"`
+	ClusterEndpointPublicAccessCidrs  []string          `yaml:"clusterEndpointPublicAccessCidrs"`
 }
 
 // EKSAuth represent a auth structure

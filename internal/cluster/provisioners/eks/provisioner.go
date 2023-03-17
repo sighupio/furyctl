@@ -112,6 +112,19 @@ func (e EKS) createVarFile() (err error) {
 	buffer.WriteString(fmt.Sprintf("cluster_name = \"%v\"\n", e.config.Metadata.Name))
 	buffer.WriteString(fmt.Sprintf("cluster_version = \"%v\"\n", spec.Version))
 
+	if len(spec.DMZCIDRRange.Values) > 0 && len(spec.ClusterEndpointPrivateAccessCidrs) > 0 {
+		return fmt.Errorf("dmzCIDRRange(deprecated) and clusterEndpointPrivateAccessCidrs are mutually exclusive")
+	}
+
+	buffer.WriteString(fmt.Sprintf("cluster_endpoint_private_access = %v\n", spec.ClusterEndpointPrivateAccess))
+	if len(spec.DMZCIDRRange.Values) > 0 && len(spec.ClusterEndpointPrivateAccessCidrs) == 0 {
+		buffer.WriteString(fmt.Sprintf("cluster_endpoint_private_access_cidrs = [\"%v\"]\n", strings.Join(spec.DMZCIDRRange.Values, "\",\"")))
+	}
+
+	if len(spec.DMZCIDRRange.Values) == 0 && len(spec.ClusterEndpointPrivateAccessCidrs) > 0 {
+		buffer.WriteString(fmt.Sprintf("cluster_endpoint_private_access_cidrs = [\"%v\"]\n", strings.Join(spec.ClusterEndpointPrivateAccessCidrs, "\",\"")))
+	}
+
 	buffer.WriteString(fmt.Sprintf("cluster_endpoint_public_access = %v\n", spec.ClusterEndpointPublicAccess))
 	buffer.WriteString(fmt.Sprintf("cluster_endpoint_public_access_cidrs = [\"%v\"]\n", strings.Join(spec.ClusterEndpointPublicAccessCidrs, "\",\"")))
 
@@ -120,7 +133,6 @@ func (e EKS) createVarFile() (err error) {
 	}
 	buffer.WriteString(fmt.Sprintf("network = \"%v\"\n", spec.Network))
 	buffer.WriteString(fmt.Sprintf("subnetworks = [\"%v\"]\n", strings.Join(spec.SubNetworks, "\",\"")))
-	buffer.WriteString(fmt.Sprintf("dmz_cidr_range = [\"%v\"]\n", strings.Join(spec.DMZCIDRRange.Values, "\",\"")))
 	buffer.WriteString(fmt.Sprintf("ssh_public_key = \"%v\"\n", spec.SSHPublicKey))
 	if len(spec.Tags) > 0 {
 		var tags []byte
