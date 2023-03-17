@@ -13,22 +13,25 @@ executor:
 provisioner: aws
 spec:
   networkCIDR: "10.0.0.0/16"
-  publicSubnetsCIDRs:  
-    - "10.0.1.0/24"
-    - "10.0.2.0/24"
-    - "10.0.3.0/24"
-  privateSubnetsCIDRs: 
-    - "10.0.101.0/24"
-    - "10.0.102.0/24"
-    - "10.0.103.0/24"
+  vpc:
+    enabled: true
+    publicSubnetsCIDRs:
+      - "10.0.1.0/24"
+      - "10.0.2.0/24"
+      - "10.0.3.0/24"
+    privateSubnetsCIDRs:
+      - "10.0.101.0/24"
+      - "10.0.102.0/24"
+      - "10.0.103.0/24"
   vpn:
+    enabled: true
     instanceType: t3.large # Default
     port: 1194 # Default
     diskSize: 50 # Default
     dhParamsBits: 2048 # Default
     subnetCIDR: 192.168.100.0/24
     sshUsers:
-      - angelbarrera92
+      - jnardiello
     operatorName: sighup # Default
-    operatorCIDRs: 
+    operatorCIDRs:
       - 1.2.3.4/32 # Default

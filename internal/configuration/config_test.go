@@ -16,7 +16,6 @@ var sampleEKSConfig Configuration
 var sampleAWSBootstrap Configuration
 
 func init() {
-
 	sampleAWSBootstrap.Kind = "Bootstrap"
 	sampleAWSBootstrap.Metadata = Metadata{
 		Name: "my-aws-poc",
@@ -30,6 +29,7 @@ func init() {
 			PrivateSubnetsCIDRs: []string{"10.0.101.0/24", "10.0.102.0/24", "10.0.103.0/24"},
 		},
 		VPN: bootstrapcfg.AWSVPN{
+			Enabled:       true,
 			Instances:     1,
 			InstanceType:  "t3.large",
 			Port:          1194,
@@ -61,9 +61,9 @@ func init() {
 		LogRetentionDays:                  30,
 		SubNetworks:                       []string{"subnet-1", "subnet-2", "subnet-3"},
 		ClusterEndpointPrivateAccess:      true,
-		ClusterEndpointPrivateAccessCidrs: []string{"0.0.0.0/0"},
-		ClusterEndpointPublicAccess:       false,
-		ClusterEndpointPublicAccessCidrs:  nil,
+		ClusterEndpointPrivateAccessCidrs: []string{"10.0.0.0/16"},
+		ClusterEndpointPublicAccess:       true,
+		ClusterEndpointPublicAccessCidrs:  []string{"0.0.0.0/0"},
 		SSHPublicKey:                      "123",
 		NodePoolsLaunchKind:               "launch_template",
 		NodePools: []clustercfg.EKSNodePool{
@@ -90,7 +90,6 @@ func init() {
 }
 
 func TestParseClusterConfigurationFile(t *testing.T) {
-
 	sampleAWSBootstrapLocalState := sampleAWSBootstrap
 	sampleAWSBootstrapLocalState.Executor.StateConfiguration.Backend = "local"
 	sampleAWSBootstrapLocalState.Executor.StateConfiguration.Config = map[string]string{
