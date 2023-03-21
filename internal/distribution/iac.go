@@ -85,7 +85,7 @@ func (m *IACBuilder) Build() error {
 		return fmt.Errorf("error merging files: %w", err)
 	}
 
-	tmplCfg, err := template.NewConfig(reverseMerger, reverseMerger, []string{"source/terraform", ".gitignore"})
+	tmplCfg, err := template.NewConfig(reverseMerger, reverseMerger, []string{"terraform", ".gitignore"})
 	if err != nil {
 		return fmt.Errorf("error creating template config: %w", err)
 	}
