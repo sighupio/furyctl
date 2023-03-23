@@ -23,8 +23,8 @@ const (
 type VersionPattern map[string]string
 
 type ProviderOptSpec struct {
-	Name  string `mapstructure:"name"`
-	Label string `mapstructure:"label"`
+	Name  string `yaml:"name"`
+	Label string `yaml:"label"`
 }
 
 type Package struct {
@@ -33,14 +33,14 @@ type Package struct {
 	URL          string          `yaml:"url"`
 	Dir          string          `yaml:"dir"`
 	Kind         string          `yaml:"kind"`
-	ProviderOpt  ProviderOptSpec `mapstructure:"provider"`
-	ProviderKind ProviderKind    `mapstructure:"providerKind"`
-	Registry     bool            `mapstructure:"registry"`
+	ProviderOpt  ProviderOptSpec `yaml:"provider"`
+	ProviderKind ProviderKind    `yaml:"providerKind"`
+	Registry     bool            `yaml:"registry"`
 }
 
 type RegistrySpec struct {
-	BaseURI string `mapstructure:"url"`
-	Label   string `mapstructure:"label"`
+	BaseURI string `yaml:"url"`
+	Label   string `yaml:"label"`
 }
 
 type ProviderPattern map[string]ProviderKind
@@ -51,7 +51,7 @@ type FuryFile struct {
 	Roles            []Package       `yaml:"roles"`
 	Modules          []Package       `yaml:"modules"`
 	Bases            []Package       `yaml:"bases"`
-	Provider         ProviderPattern `mapstructure:"provider"`
+	Provider         ProviderPattern `yaml:"provider"`
 }
 
 func NewFuryFile(path string) (*FuryFile, error) {
