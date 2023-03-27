@@ -82,7 +82,7 @@ func (r *Runner) Plan(timestamp int64, params ...string) error {
 		WorkDir:  r.paths.WorkDir,
 	})
 	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("error running terraform plan: %w", err)
+		return fmt.Errorf("command execution failed: %w", err)
 	}
 
 	err := os.WriteFile(path.Join(r.paths.Plan,
