@@ -2,6 +2,8 @@ module github.com/sighupio/furyctl
 
 go 1.19
 
+replace "github.com/sighupio/fury-distribution" => "../../distribution"
+
 require (
 	github.com/Al-Pragliola/go-version v1.6.2
 	github.com/Masterminds/sprig/v3 v3.2.3

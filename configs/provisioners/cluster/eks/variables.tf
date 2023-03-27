@@ -11,13 +11,34 @@ variable "cluster_name" {
 
 variable "cluster_version" {
   type        = string
-  description = "Kubernetes Cluster Version. Look at the cloud providers documentation to discover available versions. EKS example -> 1.24"
+  description = "Kubernetes Cluster Version. Look at the cloud providers documentation to discover available versions."
 }
 
 variable "cluster_log_retention_days" {
-  type    = number
+  type = number
   default = 90
 }
+
+variable "cluster_endpoint_private_access" {
+  type = bool
+  default = false
+}
+
+variable "cluster_endpoint_private_access_cidrs" {
+  type = list(string)
+  default = ["0.0.0.0/0"]
+}
+
+variable "cluster_endpoint_public_access" {
+  type = bool
+  default = false
+}
+
+variable "cluster_endpoint_public_access_cidrs" {
+  type = list(string)
+  default = ["0.0.0.0/0"]
+}
+
 variable "network" {
   type        = string
   description = "Network where the Kubernetes cluster will be hosted"
@@ -26,10 +47,6 @@ variable "network" {
 variable "subnetworks" {
   type        = list(any)
   description = "List of subnets where the cluster will be hosted"
-}
-
-variable "dmz_cidr_range" {
-  description = "Network CIDR range from where cluster control plane will be accessible"
 }
 
 variable "ssh_public_key" {
@@ -68,7 +85,7 @@ variable "node_pools" {
 }
 
 variable "node_pools_launch_kind" {
-  type        = string
+  type = string
   description = "Choose if the node pools will use launch_configurations, launch_templates or both"
 }
 
@@ -76,12 +93,6 @@ variable "tags" {
   type        = map(any)
   description = "The tags to apply to all resources"
   default     = {}
-}
-
-variable "resource_group_name" {
-  type        = string
-  description = "Resource group name where every resource will be placed. Required only in AKS installer (*)"
-  default     = ""
 }
 
 variable "eks_map_accounts" {

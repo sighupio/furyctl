@@ -14,25 +14,52 @@ variable "network_cidr" {
   type        = string
 }
 
-variable "public_subnetwork_cidrs" {
-  description = "Public subnet CIDRs"
-  type        = list(string)
-}
-
-variable "private_subnetwork_cidrs" {
-  description = "Private subnet CIDRs"
-  type        = list(string)
-}
-
 variable "tags" {
   description = "A map of tags to add to all resources"
   type        = map(string)
   default     = {}
 }
 
+variable "vpc_enabled" {
+  description = "Enable VPC creation"
+  type = bool
+  default = true
+}
+
+variable "vpc_public_subnetwork_cidrs" {
+  description = "Public subnet CIDRs"
+  type        = list(string)
+  default     = []
+}
+
+variable "vpc_private_subnetwork_cidrs" {
+  description = "Private subnet CIDRs"
+  type        = list(string)
+  default     = []
+}
+
+variable "vpn_enabled" {
+  description = "Enable VPN"
+  type = bool
+  default = true
+}
+
+variable "vpn_vpc_id" {
+  description = "ID of the VPC"
+  type = string
+  default = ""
+}
+
+variable "vpn_public_subnets" {
+  description = "Enable VPC"
+  type = list(string)
+  default = []
+}
+
 variable "vpn_subnetwork_cidr" {
-  description = "VPN Subnet CIDR, should be different from the network_cidr"
+  description = "CIDR used to assign VPN clients IP addresses, should be different from the network_cidr"
   type        = string
+  default     = "192.168.200.0/24"
 }
 
 variable "vpn_instances" {
@@ -66,7 +93,7 @@ variable "vpn_operator_name" {
 }
 
 variable "vpn_dhparams_bits" {
-  description = "Diffie–Hellman (D-H) key size in bytes"
+  description = "Diffie-Hellman (D-H) key size in bytes"
   type        = number
   default     = 2048
 }
@@ -78,6 +105,7 @@ variable "vpn_operator_cidrs" {
 }
 
 variable "vpn_ssh_users" {
-  description = "GitHub users id to sync public rsa keys. Example angelbarrera92"
+  description = "GitHub users to sync public keys for SSH access"
   type        = list(string)
+  default     = []
 }
