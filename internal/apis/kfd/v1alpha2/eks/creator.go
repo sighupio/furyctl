@@ -397,10 +397,10 @@ func (v *ClusterCreator) storeClusterConfig() error {
 		Kubeconfig: v.paths.Kubeconfig,
 	}, true, true, false)
 
-	logrus.Info("Storing cluster config...")
+	logrus.Info("Applying secret...")
 
 	if err := runner.Apply(secretPath); err != nil {
-		return fmt.Errorf("error while storing cluster config: %w", err)
+		return fmt.Errorf("error while applying secret: %w", err)
 	}
 
 	return nil
