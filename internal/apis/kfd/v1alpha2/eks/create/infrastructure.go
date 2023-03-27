@@ -152,7 +152,8 @@ func (i *Infrastructure) copyFromTemplate() error {
 	targetTfDir := path.Join(i.Path, "terraform")
 	prefix := "infra"
 
-	eksInstallerPath := path.Join(i.Path, "..", "vendor", "installers", "eks", "modules", "vpc-and-vpn")
+	vpcInstallerPath := path.Join(i.Path, "..", "vendor", "installers", "eks", "modules", "vpc")
+	vpnInstallerPath := path.Join(i.Path, "..", "vendor", "installers", "eks", "modules", "vpn")
 
 	cfg.Data = map[string]map[any]any{
 		"spec": {
@@ -160,7 +161,8 @@ func (i *Infrastructure) copyFromTemplate() error {
 			"tags":   i.furyctlConf.Spec.Tags,
 		},
 		"kubernetes": {
-			"installerPath": eksInstallerPath,
+			"vpcInstallerPath": vpcInstallerPath,
+			"vpnInstallerPath": vpnInstallerPath,
 		},
 		"terraform": {
 			"backend": map[string]any{
@@ -215,19 +217,24 @@ func (i *Infrastructure) createTfVars() error {
 		privateSubnetworkCidrs[i] = fmt.Sprintf("\"%v\"", cidr)
 	}
 
-	err = bytesx.SafeWriteToBuffer(&buffer,
-		"public_subnetwork_cidrs = [%v]\n",
-		strings.Join(publicSubnetworkCidrs, ","),
-	)
-	if err != nil {
+	if err := bytesx.SafeWriteToBuffer(&buffer,
+		"vpc_enabled = %v\n",
+		i.furyctlConf.Spec.Infrastructure.Vpc != nil,
+	); err != nil {
 		return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
 	}
 
-	err = bytesx.SafeWriteToBuffer(&buffer,
-		"private_subnetwork_cidrs = [%v]\n",
+	if err = bytesx.SafeWriteToBuffer(&buffer,
+		"vpc_public_subnetwork_cidrs = [%v]\n",
+		strings.Join(publicSubnetworkCidrs, ","),
+	); err != nil {
+		return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
+	}
+
+	if err := bytesx.SafeWriteToBuffer(&buffer,
+		"vpc_private_subnetwork_cidrs = [%v]\n",
 		strings.Join(privateSubnetworkCidrs, ","),
-	)
-	if err != nil {
+	); err != nil {
 		return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
 	}
 
@@ -242,17 +249,24 @@ func (i *Infrastructure) createTfVars() error {
 }
 
 func (i *Infrastructure) addVpnDataToTfVars(buffer *bytes.Buffer) error {
-	err := bytesx.SafeWriteToBuffer(
+	vpnEnabled := (i.furyctlConf.Spec.Infrastructure.Vpc.Vpn != nil) &&
+		(i.furyctlConf.Spec.Infrastructure.Vpc.Vpn.Instances != nil) &&
+		(*i.furyctlConf.Spec.Infrastructure.Vpc.Vpn.Instances > 0)
+
+	if err := bytesx.SafeWriteToBuffer(buffer, "vpn_enabled = %v\n", vpnEnabled); err != nil {
+		return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
+	}
+
+	if err := bytesx.SafeWriteToBuffer(
 		buffer,
 		"vpn_subnetwork_cidr = \"%v\"\n",
 		i.furyctlConf.Spec.Infrastructure.Vpc.Vpn.VpnClientsSubnetCidr,
-	)
-	if err != nil {
+	); err != nil {
 		return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
 	}
 
 	if i.furyctlConf.Spec.Infrastructure.Vpc.Vpn.Instances != nil {
-		err = bytesx.SafeWriteToBuffer(
+		err := bytesx.SafeWriteToBuffer(
 			buffer,
 			"vpn_instances = %v\n",
 			*i.furyctlConf.Spec.Infrastructure.Vpc.Vpn.Instances,
@@ -263,7 +277,7 @@ func (i *Infrastructure) addVpnDataToTfVars(buffer *bytes.Buffer) error {
 	}
 
 	if i.furyctlConf.Spec.Infrastructure.Vpc.Vpn.Port != nil && *i.furyctlConf.Spec.Infrastructure.Vpc.Vpn.Port != 0 {
-		err = bytesx.SafeWriteToBuffer(
+		err := bytesx.SafeWriteToBuffer(
 			buffer,
 			"vpn_port = %v\n",
 			*i.furyctlConf.Spec.Infrastructure.Vpc.Vpn.Port,
@@ -275,7 +289,7 @@ func (i *Infrastructure) addVpnDataToTfVars(buffer *bytes.Buffer) error {
 
 	if i.furyctlConf.Spec.Infrastructure.Vpc.Vpn.InstanceType != nil &&
 		*i.furyctlConf.Spec.Infrastructure.Vpc.Vpn.InstanceType != "" {
-		err = bytesx.SafeWriteToBuffer(
+		err := bytesx.SafeWriteToBuffer(
 			buffer,
 			"vpn_instance_type = \"%v\"\n",
 			*i.furyctlConf.Spec.Infrastructure.Vpc.Vpn.InstanceType,
@@ -287,7 +301,7 @@ func (i *Infrastructure) addVpnDataToTfVars(buffer *bytes.Buffer) error {
 
 	if i.furyctlConf.Spec.Infrastructure.Vpc.Vpn.DiskSize != nil &&
 		*i.furyctlConf.Spec.Infrastructure.Vpc.Vpn.DiskSize != 0 {
-		err = bytesx.SafeWriteToBuffer(
+		err := bytesx.SafeWriteToBuffer(
 			buffer,
 			"vpn_instance_disk_size = %v\n",
 			*i.furyctlConf.Spec.Infrastructure.Vpc.Vpn.DiskSize,
@@ -299,7 +313,7 @@ func (i *Infrastructure) addVpnDataToTfVars(buffer *bytes.Buffer) error {
 
 	if i.furyctlConf.Spec.Infrastructure.Vpc.Vpn.OperatorName != nil &&
 		*i.furyctlConf.Spec.Infrastructure.Vpc.Vpn.OperatorName != "" {
-		err = bytesx.SafeWriteToBuffer(
+		err := bytesx.SafeWriteToBuffer(
 			buffer,
 			"vpn_operator_name = \"%v\"\n",
 			*i.furyctlConf.Spec.Infrastructure.Vpc.Vpn.OperatorName,
@@ -311,7 +325,7 @@ func (i *Infrastructure) addVpnDataToTfVars(buffer *bytes.Buffer) error {
 
 	if i.furyctlConf.Spec.Infrastructure.Vpc.Vpn.DhParamsBits != nil &&
 		*i.furyctlConf.Spec.Infrastructure.Vpc.Vpn.DhParamsBits != 0 {
-		err = bytesx.SafeWriteToBuffer(
+		err := bytesx.SafeWriteToBuffer(
 			buffer,
 			"vpn_dhparams_bits = %v\n",
 			*i.furyctlConf.Spec.Infrastructure.Vpc.Vpn.DhParamsBits,
@@ -328,7 +342,7 @@ func (i *Infrastructure) addVpnDataToTfVars(buffer *bytes.Buffer) error {
 			allowedCidrs[i] = fmt.Sprintf("\"%v\"", cidr)
 		}
 
-		err = bytesx.SafeWriteToBuffer(
+		err := bytesx.SafeWriteToBuffer(
 			buffer,
 			"vpn_operator_cidrs = [%v]\n",
 			strings.Join(allowedCidrs, ","),
@@ -345,7 +359,7 @@ func (i *Infrastructure) addVpnDataToTfVars(buffer *bytes.Buffer) error {
 			githubUsers[i] = fmt.Sprintf("\"%v\"", gu)
 		}
 
-		err = bytesx.SafeWriteToBuffer(
+		err := bytesx.SafeWriteToBuffer(
 			buffer,
 			"vpn_ssh_users = [%v]\n",
 			strings.Join(githubUsers, ","),

@@ -250,14 +250,11 @@ func (k *Kubernetes) copyFromTemplate() error {
 func (k *Kubernetes) createTfVars() error {
 	var buffer bytes.Buffer
 
-	var allowedCidrsSource []private.TypesCidr
-
 	subnetIdsSource := k.furyctlConf.Spec.Kubernetes.SubnetIds
 	vpcIDSource := k.furyctlConf.Spec.Kubernetes.VpcId
 
-	if k.furyctlConf.Spec.Kubernetes.ApiServerEndpointAccess != nil {
-		allowedCidrsSource = k.furyctlConf.Spec.Kubernetes.ApiServerEndpointAccess.AllowedCidrs
-	}
+	allowedClusterEndpointPrivateAccessCIDRs := k.furyctlConf.Spec.Kubernetes.ApiServer.PrivateAccessCidrs
+	allowedClusterEndpointPublicAccessCIDRs := k.furyctlConf.Spec.Kubernetes.ApiServer.PublicAccessCidrs
 
 	if infraOutJSON, err := os.ReadFile(path.Join(k.infraOutputsPath, "output.json")); err == nil {
 		var infraOut terraform.OutputJSON
@@ -304,7 +301,7 @@ func (k *Kubernetes) createTfVars() error {
 			subnetIdsSource = subs
 			vpcID := private.TypesAwsVpcId(v)
 			vpcIDSource = &vpcID
-			allowedCidrsSource = []private.TypesCidr{private.TypesCidr(c)}
+			allowedClusterEndpointPrivateAccessCIDRs = append(allowedClusterEndpointPrivateAccessCIDRs, private.TypesCidr(c))
 		}
 	}
 
@@ -321,6 +318,54 @@ func (k *Kubernetes) createTfVars() error {
 		&buffer,
 		"cluster_version = \"%v\"\n",
 		k.kfdManifest.Kubernetes.Eks.Version,
+	)
+	if err != nil {
+		return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
+	}
+
+	err = bytesx.SafeWriteToBuffer(
+		&buffer,
+		"cluster_endpoint_private_access = %v\n",
+		k.furyctlConf.Spec.Kubernetes.ApiServer.PrivateAccess,
+	)
+	if err != nil {
+		return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
+	}
+
+	clusterEndpointPrivateAccessCidrs := make([]string, len(allowedClusterEndpointPrivateAccessCIDRs))
+
+	for i, cidr := range allowedClusterEndpointPrivateAccessCIDRs {
+		clusterEndpointPrivateAccessCidrs[i] = fmt.Sprintf("\"%v\"", cidr)
+	}
+
+	err = bytesx.SafeWriteToBuffer(
+		&buffer,
+		"cluster_endpoint_private_access_cidrs = [%v]\n",
+		strings.Join(clusterEndpointPrivateAccessCidrs, ","),
+	)
+	if err != nil {
+		return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
+	}
+
+	err = bytesx.SafeWriteToBuffer(
+		&buffer,
+		"cluster_endpoint_public_access = %v\n",
+		k.furyctlConf.Spec.Kubernetes.ApiServer.PublicAccess,
+	)
+	if err != nil {
+		return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
+	}
+
+	clusterEndpointPublicAccessCidrs := make([]string, len(allowedClusterEndpointPublicAccessCIDRs))
+
+	for i, cidr := range allowedClusterEndpointPublicAccessCIDRs {
+		clusterEndpointPublicAccessCidrs[i] = fmt.Sprintf("\"%v\"", cidr)
+	}
+
+	err = bytesx.SafeWriteToBuffer(
+		&buffer,
+		"cluster_endpoint_public_access_cidrs = [%v]\n",
+		strings.Join(clusterEndpointPublicAccessCidrs, ","),
 	)
 	if err != nil {
 		return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
@@ -378,21 +423,6 @@ func (k *Kubernetes) createTfVars() error {
 		return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
 	}
 
-	dmzCidrRange := make([]string, len(allowedCidrsSource))
-
-	for i, cidr := range allowedCidrsSource {
-		dmzCidrRange[i] = fmt.Sprintf("\"%v\"", cidr)
-	}
-
-	err = bytesx.SafeWriteToBuffer(
-		&buffer,
-		"dmz_cidr_range = [%v]\n",
-		strings.Join(dmzCidrRange, ","),
-	)
-	if err != nil {
-		return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
-	}
-
 	err = bytesx.SafeWriteToBuffer(
 		&buffer,
 		"ssh_public_key = \"%v\"\n",
@@ -400,24 +430,6 @@ func (k *Kubernetes) createTfVars() error {
 	)
 	if err != nil {
 		return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
-	}
-
-	if k.furyctlConf.Spec.Tags != nil && len(k.furyctlConf.Spec.Tags) > 0 {
-		var tags []byte
-
-		tags, err := json.Marshal(k.furyctlConf.Spec.Tags)
-		if err != nil {
-			return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
-		}
-
-		err = bytesx.SafeWriteToBuffer(
-			&buffer,
-			"tags = %v\n",
-			string(tags),
-		)
-		if err != nil {
-			return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
-		}
 	}
 
 	err = k.addAwsAuthToTfVars(&buffer)
