@@ -5,7 +5,6 @@
 package create
 
 import (
-	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -24,7 +23,6 @@ import (
 	"github.com/sighupio/furyctl/internal/tool/kubectl"
 	"github.com/sighupio/furyctl/internal/tool/kustomize"
 	"github.com/sighupio/furyctl/internal/tool/terraform"
-	bytesx "github.com/sighupio/furyctl/internal/x/bytes"
 	execx "github.com/sighupio/furyctl/internal/x/exec"
 	iox "github.com/sighupio/furyctl/internal/x/io"
 	yamlx "github.com/sighupio/furyctl/internal/x/yaml"
@@ -162,10 +160,6 @@ func (d *Distribution) Exec() error {
 	}
 
 	if err := d.copyFromTemplate(tfCfg); err != nil {
-		return err
-	}
-
-	if err := d.createTfVars(); err != nil {
 		return err
 	}
 
@@ -316,28 +310,6 @@ func (d *Distribution) injectDataPreTf(fMerger *merge.Merger) (*merge.Merger, er
 	}
 
 	return merger, nil
-}
-
-func (d *Distribution) createTfVars() error {
-	var buffer bytes.Buffer
-
-	err := bytesx.SafeWriteToBuffer(
-		&buffer,
-		"kubectl_path = \"%s\"\n",
-		d.KubectlPath,
-	)
-	if err != nil {
-		return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
-	}
-
-	targetTfVars := path.Join(d.Path, "terraform", "main.auto.tfvars")
-
-	err = os.WriteFile(targetTfVars, buffer.Bytes(), iox.FullRWPermAccess)
-	if err != nil {
-		return fmt.Errorf("error writing terraform vars file: %w", err)
-	}
-
-	return nil
 }
 
 func (d *Distribution) extractVpcIDFromPrevPhases(fMerger *merge.Merger) (string, error) {

@@ -23,6 +23,7 @@ import (
 	"github.com/sighupio/fury-distribution/pkg/schema/private"
 	"github.com/sighupio/furyctl/configs"
 	"github.com/sighupio/furyctl/internal/cluster"
+	"github.com/sighupio/furyctl/internal/merge"
 	"github.com/sighupio/furyctl/internal/template"
 	"github.com/sighupio/furyctl/internal/tool/awscli"
 	"github.com/sighupio/furyctl/internal/tool/terraform"
@@ -31,6 +32,7 @@ import (
 	iox "github.com/sighupio/furyctl/internal/x/io"
 	kubex "github.com/sighupio/furyctl/internal/x/kube"
 	netx "github.com/sighupio/furyctl/internal/x/net"
+	yamlx "github.com/sighupio/furyctl/internal/x/yaml"
 )
 
 var (
@@ -60,6 +62,8 @@ type Kubernetes struct {
 	furyctlConf      private.EksclusterKfdV1Alpha2
 	kfdManifest      config.KFD
 	infraOutputsPath string
+	distroPath       string
+	furyctlConfPath  string
 	tfRunner         *terraform.Runner
 	awsRunner        *awscli.Runner
 	dryRun           bool
@@ -84,6 +88,8 @@ func NewKubernetes(
 		furyctlConf:      furyctlConf,
 		kfdManifest:      kfdManifest,
 		infraOutputsPath: infraOutputsPath,
+		distroPath:       paths.DistroPath,
+		furyctlConfPath:  paths.ConfigPath,
 		tfRunner: terraform.NewRunner(
 			execx.NewStdExecutor(),
 			terraform.Paths{
@@ -116,7 +122,12 @@ func (k *Kubernetes) Exec() error {
 		return fmt.Errorf("error creating kubernetes phase folder: %w", err)
 	}
 
-	if err := k.copyFromTemplate(); err != nil {
+	cfg, err := k.mergeConfig()
+	if err != nil {
+		return fmt.Errorf("error merging furyctl configuration: %w", err)
+	}
+
+	if err := k.copyFromTemplate(cfg); err != nil {
 		return err
 	}
 
@@ -186,7 +197,38 @@ func (k *Kubernetes) Exec() error {
 	return nil
 }
 
-func (k *Kubernetes) copyFromTemplate() error {
+func (*Kubernetes) getCommonDataFromDistribution(furyctlCfg template.Config) (map[any]any, []any, error) {
+	var nodeSelector map[any]any
+
+	var tolerations []any
+
+	var ok bool
+
+	model := merge.NewDefaultModel(furyctlCfg.Data["spec"], ".distribution.common")
+
+	commonData, err := model.Get()
+	if err != nil {
+		return nodeSelector, tolerations, fmt.Errorf("error getting common data from distribution: %w", err)
+	}
+
+	if commonData["nodeSelector"] != nil {
+		nodeSelector, ok = commonData["nodeSelector"].(map[any]any)
+		if !ok {
+			return nodeSelector, tolerations, fmt.Errorf("error getting nodeSelector from distribution: %w", err)
+		}
+	}
+
+	if commonData["tolerations"] != nil {
+		tolerations, ok = commonData["tolerations"].([]any)
+		if !ok {
+			return nodeSelector, tolerations, fmt.Errorf("error getting tolerations from distribution: %w", err)
+		}
+	}
+
+	return nodeSelector, tolerations, nil
+}
+
+func (k *Kubernetes) copyFromTemplate(furyctlCfg template.Config) error {
 	var cfg template.Config
 
 	tmpFolder, err := os.MkdirTemp("", "furyctl-kube-configs-")
@@ -211,6 +253,11 @@ func (k *Kubernetes) copyFromTemplate() error {
 
 	eksInstallerPath := path.Join(k.Path, "..", "vendor", "installers", "eks", "modules", "eks")
 
+	nodeSelector, tolerations, err := k.getCommonDataFromDistribution(furyctlCfg)
+	if err != nil {
+		return err
+	}
+
 	tfConfVars := map[string]map[any]any{
 		"spec": {
 			"region": k.furyctlConf.Spec.Region,
@@ -219,6 +266,10 @@ func (k *Kubernetes) copyFromTemplate() error {
 		"kubernetes": {
 			"installerPath": eksInstallerPath,
 			"tfVersion":     k.kfdManifest.Tools.Common.Terraform.Version,
+		},
+		"distribution": {
+			"nodeSelector": nodeSelector,
+			"tolerations":  tolerations,
 		},
 		"terraform": {
 			"backend": map[string]any{
@@ -244,6 +295,49 @@ func (k *Kubernetes) copyFromTemplate() error {
 	}
 
 	return nil
+}
+
+func (k *Kubernetes) mergeConfig() (template.Config, error) {
+	var cfg template.Config
+
+	defaultsFilePath := path.Join(k.distroPath, "furyctl-defaults.yaml")
+
+	defaultsFile, err := yamlx.FromFileV2[map[any]any](defaultsFilePath)
+	if err != nil {
+		return cfg, fmt.Errorf("%s - %w", defaultsFilePath, err)
+	}
+
+	furyctlConf, err := yamlx.FromFileV2[map[any]any](k.furyctlConfPath)
+	if err != nil {
+		return cfg, fmt.Errorf("%s - %w", k.furyctlConfPath, err)
+	}
+
+	merger := merge.NewMerger(
+		merge.NewDefaultModel(defaultsFile, ".data"),
+		merge.NewDefaultModel(furyctlConf, ".spec.distribution"),
+	)
+
+	_, err = merger.Merge()
+	if err != nil {
+		return cfg, fmt.Errorf("error merging files: %w", err)
+	}
+
+	reverseMerger := merge.NewMerger(
+		*merger.GetCustom(),
+		*merger.GetBase(),
+	)
+
+	_, err = reverseMerger.Merge()
+	if err != nil {
+		return cfg, fmt.Errorf("error merging files: %w", err)
+	}
+
+	cfg, err = template.NewConfig(reverseMerger, reverseMerger, []string{"terraform", ".gitignore"})
+	if err != nil {
+		return cfg, fmt.Errorf("error creating template config: %w", err)
+	}
+
+	return cfg, nil
 }
 
 //nolint:gocyclo,maintidx,funlen // it will be refactored
@@ -312,6 +406,15 @@ func (k *Kubernetes) createTfVars() error {
 		&buffer,
 		"cluster_name = \"%v\"\n",
 		k.furyctlConf.Metadata.Name,
+	)
+	if err != nil {
+		return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
+	}
+
+	err = bytesx.SafeWriteToBuffer(
+		&buffer,
+		"kubectl_path = \"%s\"\n",
+		k.KubectlPath,
 	)
 	if err != nil {
 		return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
