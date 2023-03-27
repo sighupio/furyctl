@@ -3,11 +3,14 @@ locals {
     spec = {
       template = {
         spec = {
-          nodeSelector = {{ if hasKeyAny .distribution "nodeSelector" }}{
+          nodeSelector =
+          {{- if hasKeyAny .distribution "nodeSelector" }} {
             {{- range $key, $value := .distribution.nodeSelector }}
             "{{ $key }}" = "{{ $value }}"
             {{- end }}
-          } {{ else }} null {{ end }}
+          }
+          {{- else }} null
+          {{- end }}
           tolerations = [
             {{- range $key, $value := .distribution.tolerations }}
             {
