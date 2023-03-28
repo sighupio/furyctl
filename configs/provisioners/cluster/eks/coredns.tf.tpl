@@ -24,23 +24,16 @@ locals {
       }
     }
   }
- coredns_scheduling_patch_as_json = jsonencode(local.coredns_scheduling_patch)
+  coredns_scheduling_patch_as_json = jsonencode(local.coredns_scheduling_patch)
 }
 
 resource "local_file" "cluster_ca" {
-   depends_on = [
-     module.fury
-   ]
 
   content = base64decode(data.aws_eks_cluster.fury.certificate_authority.0.data)
-  filename = "${path.module}/secrets/ca.crt"
+  filename = "${path.module}/secrets/${data.aws_eks_cluster.fury.name}-ca.crt"
 }
 
 resource "null_resource" "patch_coredns" {
-  depends_on = [
-    module.fury,
-    local_file.cluster_ca
-  ]
 
   triggers = {
     run_once = local.coredns_scheduling_patch_as_json
@@ -51,7 +44,7 @@ resource "null_resource" "patch_coredns" {
       ${var.kubectl_path} patch deployment/coredns -n kube-system -p '${local.coredns_scheduling_patch_as_json}' \
       --server=${data.aws_eks_cluster.fury.endpoint} \
       --token=${data.aws_eks_cluster_auth.fury.token} \
-      --certificate-authority=${path.module}/secrets/ca.crt \
-      EOT
+      --certificate-authority=${local_file.cluster_ca.filename} \
+    EOT
   }
 }
