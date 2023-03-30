@@ -202,11 +202,13 @@ func (d *Distribution) Exec() error {
 		return err
 	}
 
-	logrus.Info("Waiting for DNS records to be deleted...")
+	if len(ingressHosts) > 0 {
+		logrus.Info("Waiting for DNS records to be deleted...")
 
-	err = d.checkPendingDNSRecords(ingressHosts, hostedZones)
-	if err != nil {
-		return err
+		err = d.checkPendingDNSRecords(ingressHosts, hostedZones)
+		if err != nil {
+			return err
+		}
 	}
 
 	logrus.Info("Deleting blocking resources...[PersistentVolumeClaims, StatefulSets, Logging, Prometheus]")
@@ -399,6 +401,10 @@ func (d *Distribution) getHostedZones() (map[string]string, error) {
 }
 
 func (d *Distribution) checkPendingDNSRecords(hosts []string, hostedZones map[string]string) error {
+	if len(hosts) == 0 {
+		return nil
+	}
+
 	queue := make([]string, 0, len(hostedZones))
 
 	for zone := range hostedZones {
