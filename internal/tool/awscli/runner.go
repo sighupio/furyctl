@@ -66,6 +66,25 @@ func (r *Runner) S3Api(params ...string) (string, error) {
 	return out, nil
 }
 
+func (r *Runner) Route53(sub string, params ...string) (string, error) {
+	args := []string{"route53", sub}
+
+	if len(params) > 0 {
+		args = append(args, params...)
+	}
+
+	out, err := execx.CombinedOutput(execx.NewCmd(r.paths.Awscli, execx.CmdOptions{
+		Args:     args,
+		Executor: r.executor,
+		WorkDir:  r.paths.WorkDir,
+	}))
+	if err != nil {
+		return "", fmt.Errorf("error running awscli ec2 %s: %w", sub, err)
+	}
+
+	return out, nil
+}
+
 func (r *Runner) Version() (string, error) {
 	out, err := execx.CombinedOutput(execx.NewCmd(r.paths.Awscli, execx.CmdOptions{
 		Args:     []string{"--version"},
