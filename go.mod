@@ -2,6 +2,8 @@ module github.com/sighupio/furyctl
 
 go 1.19
 
+replace github.com/sighupio/fury-distribution => ../../distribution
+
 require (
 	github.com/Masterminds/sprig/v3 v3.2.3
 	github.com/briandowns/spinner v1.19.0
@@ -27,7 +29,7 @@ require (
 	github.com/onsi/gomega v1.24.2
 	github.com/santhosh-tekuri/jsonschema/v5 v5.1.1
 	github.com/shirou/gopsutil/v3 v3.23.2
-	github.com/sighupio/fury-distribution v1.24.1-0.20230221155837-99cbb28cf061
+	github.com/sighupio/fury-distribution v1.25.0
 	golang.org/x/exp v0.0.0-20221217163422-3c43f8badb15
 	gopkg.in/yaml.v3 v3.0.1
 )
