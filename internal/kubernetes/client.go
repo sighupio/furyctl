@@ -53,7 +53,7 @@ func (c *Client) GetIngresses() ([]Ingress, error) {
 
 	logStringIndex := reg.FindStringIndex(log)
 
-	if len(logStringIndex) == 0 {
+	if logStringIndex == nil {
 		return result, nil
 	}
 
@@ -70,24 +70,20 @@ func (c *Client) GetIngresses() ([]Ingress, error) {
 }
 
 func (c *Client) GetPersistentVolumes() ([]string, error) {
-	var result []string
-
 	log, err := c.kubeRunner.Get("all", "pv", "-o", "jsonpath='{.items[*].metadata.name}'")
 	if err != nil {
-		return result, fmt.Errorf("error while reading resources from cluster: %w", err)
+		return []string{}, fmt.Errorf("error while reading resources from cluster: %w", err)
 	}
 
 	reg := regexp.MustCompile(`'(.*?)'`)
 
 	logStringIndex := reg.FindStringIndex(log)
 
-	if len(logStringIndex) == 0 {
-		return result, nil
+	if logStringIndex == nil {
+		return []string{}, nil
 	}
 
-	result = strings.Split(log[logStringIndex[0]+1:logStringIndex[1]-1], " ")
-
-	return result, nil
+	return cleanStringsSlice(strings.Split(log[logStringIndex[0]+1:logStringIndex[1]-1], " ")), nil
 }
 
 func (c *Client) GetListOfResourcesNs(ns, resName string) error {
@@ -101,25 +97,21 @@ func (c *Client) GetListOfResourcesNs(ns, resName string) error {
 }
 
 func (c *Client) GetLoadBalancers() ([]string, error) {
-	var result []string
-
 	log, err := c.kubeRunner.Get("all", "svc", "-o",
 		"jsonpath='{.items[?(@.spec.type==\"LoadBalancer\")].metadata.name}'")
 	if err != nil {
-		return result, fmt.Errorf("error while reading resources from cluster: %w", err)
+		return []string{}, fmt.Errorf("error while reading resources from cluster: %w", err)
 	}
 
 	reg := regexp.MustCompile(`'(.*?)'`)
 
 	logStringIndex := reg.FindStringIndex(log)
 
-	if len(logStringIndex) == 0 {
-		return result, nil
+	if logStringIndex == nil {
+		return []string{}, nil
 	}
 
-	result = strings.Split(log[logStringIndex[0]+1:logStringIndex[1]-1], " ")
-
-	return result, nil
+	return cleanStringsSlice(strings.Split(log[logStringIndex[0]+1:logStringIndex[1]-1], " ")), nil
 }
 
 func (c *Client) DeleteAllResources(res, ns string) (string, error) {
@@ -147,4 +139,16 @@ func (c *Client) ToolVersion() (string, error) {
 	}
 
 	return version, nil
+}
+
+func cleanStringsSlice(slice []string) []string {
+	var result []string
+
+	for _, v := range slice {
+		if v != "" {
+			result = append(result, v)
+		}
+	}
+
+	return result
 }
