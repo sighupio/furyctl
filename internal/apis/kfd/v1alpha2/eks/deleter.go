@@ -120,7 +120,7 @@ func (d *ClusterDeleter) Delete() error {
 		return nil
 
 	case cluster.OperationPhaseKubernetes:
-		if d.furyctlConf.Spec.Kubernetes.ApiServer.PrivateAccess == true && !d.dryRun {
+		if d.furyctlConf.Spec.Kubernetes.ApiServer.PrivateAccess && !d.dryRun {
 			if err = vpnConnector.Connect(); err != nil {
 				return fmt.Errorf("error while connecting to the vpn: %w", err)
 			}
@@ -138,7 +138,7 @@ func (d *ClusterDeleter) Delete() error {
 		return nil
 
 	case cluster.OperationPhaseDistribution:
-		if d.furyctlConf.Spec.Kubernetes.ApiServer.PrivateAccess == true && !d.dryRun {
+		if d.furyctlConf.Spec.Kubernetes.ApiServer.PrivateAccess && !d.dryRun {
 			if err = vpnConnector.Connect(); err != nil {
 				return fmt.Errorf("error while connecting to the vpn: %w", err)
 			}
@@ -158,7 +158,7 @@ func (d *ClusterDeleter) Delete() error {
 				"Sometimes this is not possible, for better results limit the scope with the --phase flag.")
 		}
 
-		if d.furyctlConf.Spec.Kubernetes.ApiServer.PrivateAccess == true && !d.dryRun {
+		if d.furyctlConf.Spec.Kubernetes.ApiServer.PrivateAccess && !d.dryRun {
 			if err := vpnConnector.Connect(); err != nil {
 				return fmt.Errorf("error while connecting to the vpn: %w", err)
 			}

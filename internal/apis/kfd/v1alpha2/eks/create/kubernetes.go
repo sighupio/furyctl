@@ -301,7 +301,11 @@ func (k *Kubernetes) createTfVars() error {
 			subnetIdsSource = subs
 			vpcID := private.TypesAwsVpcId(v)
 			vpcIDSource = &vpcID
-			allowedClusterEndpointPrivateAccessCIDRs = append(allowedClusterEndpointPrivateAccessCIDRs, private.TypesCidr(c))
+
+			allowedClusterEndpointPrivateAccessCIDRs = append(
+				allowedClusterEndpointPrivateAccessCIDRs,
+				private.TypesCidr(c),
+			)
 		}
 	}
 
