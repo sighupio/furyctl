@@ -359,24 +359,24 @@ func (d *Distribution) injectDataPostTf(fMerger *merge.Merger) (*merge.Merger, e
 		Data: private.SpecDistribution{
 			Modules: private.SpecDistributionModules{
 				Aws: &private.SpecDistributionModulesAws{
-					EbsCsiDriver: &private.SpecDistributionModulesAwsEbsCsiDriver{
+					EbsCsiDriver: private.SpecDistributionModulesAwsEbsCsiDriver{
 						IamRoleArn: private.TypesAwsArn(arns["ebs_csi_driver_iam_role_arn"]),
 					},
-					LoadBalancerController: &private.SpecDistributionModulesAwsLoadBalancerController{
+					LoadBalancerController: private.SpecDistributionModulesAwsLoadBalancerController{
 						IamRoleArn: private.TypesAwsArn(arns["load_balancer_controller_iam_role_arn"]),
 					},
-					ClusterAutoscaler: &private.SpecDistributionModulesAwsClusterAutoScaler{
+					ClusterAutoscaler: private.SpecDistributionModulesAwsClusterAutoscaler{
 						IamRoleArn: private.TypesAwsArn(arns["cluster_autoscaler_iam_role_arn"]),
 					},
 				},
 				Ingress: private.SpecDistributionModulesIngress{
-					ExternalDns: &private.SpecDistributionModulesIngressExternalDNS{
+					ExternalDns: private.SpecDistributionModulesIngressExternalDNS{
 						PrivateIamRoleArn: private.TypesAwsArn(arns["external_dns_private_iam_role_arn"]),
 						PublicIamRoleArn:  private.TypesAwsArn(arns["external_dns_public_iam_role_arn"]),
 					},
-					CertManager: &private.SpecDistributionModulesIngressCertManager{
+					CertManager: private.SpecDistributionModulesIngressCertManager{
 						ClusterIssuer: private.SpecDistributionModulesIngressCertManagerClusterIssuer{
-							Route53: &private.SpecDistributionModulesIngressClusterIssuerRoute53{
+							Route53: private.SpecDistributionModulesIngressClusterIssuerRoute53{
 								IamRoleArn: private.TypesAwsArn(arns["cert_manager_iam_role_arn"]),
 							},
 						},
