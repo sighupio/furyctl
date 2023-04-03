@@ -12,7 +12,10 @@ import (
 
 	"github.com/sighupio/furyctl/internal/tool/kubectl"
 	execx "github.com/sighupio/furyctl/internal/x/exec"
+	"github.com/sighupio/furyctl/internal/x/slices"
 )
+
+var logRegex = regexp.MustCompile(`'(.*?)'`)
 
 type Ingress struct {
 	Name string
@@ -23,10 +26,18 @@ type Client struct {
 	kubeRunner *kubectl.Runner
 }
 
-func NewClient(binPath, workDir, kubeconfig string, serverSide, skipNotFound, clientVersion bool) *Client {
+func NewClient(
+	binPath,
+	workDir,
+	kubeconfig string,
+	serverSide,
+	skipNotFound,
+	clientVersion bool,
+	executor execx.Executor,
+) *Client {
 	return &Client{
 		kubeRunner: kubectl.NewRunner(
-			execx.NewStdExecutor(),
+			executor,
 			kubectl.Paths{
 				Kubectl:    binPath,
 				WorkDir:    workDir,
@@ -49,9 +60,7 @@ func (c *Client) GetIngresses() ([]Ingress, error) {
 		return result, fmt.Errorf("error while reading resources from cluster: %w", err)
 	}
 
-	reg := regexp.MustCompile(`'(.*?)'`)
-
-	logStringIndex := reg.FindStringIndex(log)
+	logStringIndex := logRegex.FindStringIndex(log)
 
 	if logStringIndex == nil {
 		return result, nil
@@ -75,15 +84,13 @@ func (c *Client) GetPersistentVolumes() ([]string, error) {
 		return []string{}, fmt.Errorf("error while reading resources from cluster: %w", err)
 	}
 
-	reg := regexp.MustCompile(`'(.*?)'`)
-
-	logStringIndex := reg.FindStringIndex(log)
+	logStringIndex := logRegex.FindStringIndex(log)
 
 	if logStringIndex == nil {
 		return []string{}, nil
 	}
 
-	return cleanStringsSlice(strings.Split(log[logStringIndex[0]+1:logStringIndex[1]-1], " ")), nil
+	return slices.Clean(strings.Split(log[logStringIndex[0]+1:logStringIndex[1]-1], " ")), nil
 }
 
 func (c *Client) GetListOfResourcesNs(ns, resName string) error {
@@ -103,15 +110,13 @@ func (c *Client) GetLoadBalancers() ([]string, error) {
 		return []string{}, fmt.Errorf("error while reading resources from cluster: %w", err)
 	}
 
-	reg := regexp.MustCompile(`'(.*?)'`)
-
-	logStringIndex := reg.FindStringIndex(log)
+	logStringIndex := logRegex.FindStringIndex(log)
 
 	if logStringIndex == nil {
 		return []string{}, nil
 	}
 
-	return cleanStringsSlice(strings.Split(log[logStringIndex[0]+1:logStringIndex[1]-1], " ")), nil
+	return slices.Clean(strings.Split(log[logStringIndex[0]+1:logStringIndex[1]-1], " ")), nil
 }
 
 func (c *Client) DeleteAllResources(res, ns string) (string, error) {
@@ -139,16 +144,4 @@ func (c *Client) ToolVersion() (string, error) {
 	}
 
 	return version, nil
-}
-
-func cleanStringsSlice(slice []string) []string {
-	var result []string
-
-	for _, v := range slice {
-		if v != "" {
-			result = append(result, v)
-		}
-	}
-
-	return result
 }
