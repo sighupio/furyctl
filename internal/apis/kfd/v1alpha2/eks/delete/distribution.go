@@ -37,6 +37,8 @@ var (
 	errCheckPendingResources = errors.New("error while checking pending resources")
 	errPendingResources      = errors.New("pending resources: ")
 	errClusterConnect        = errors.New("error connecting to cluster")
+	hostedZoneRegex          = regexp.MustCompile(`/hostedzone/(\S+)\t(\S+)\.`)
+	recordSetsRegex          = regexp.MustCompile(`(\S+)\.`)
 )
 
 type Ingress struct {
@@ -100,6 +102,7 @@ func NewDistribution(
 			true,
 			true,
 			false,
+			execx.NewStdExecutor(),
 		),
 		dryRun: dryRun,
 	}, nil
@@ -110,8 +113,7 @@ func (d *Distribution) Exec() error {
 
 	logrus.Debug("Delete: running distribution phase...")
 
-	err := iox.CheckDirIsEmpty(d.OperationPhase.Path)
-	if err == nil {
+	if err := iox.CheckDirIsEmpty(d.OperationPhase.Path); err == nil {
 		logrus.Info("Kubernetes Fury Distribution already deleted, skipping...")
 
 		logrus.Debug("Distribution phase already executed, skipping...")
@@ -141,45 +143,37 @@ func (d *Distribution) Exec() error {
 			return err
 		}
 
-		_, err = d.kubeClient.DeleteFromPath(manifestsOutPath, "--dry-run=client")
-		if err != nil {
+		if _, err = d.kubeClient.DeleteFromPath(manifestsOutPath, "--dry-run=client"); err != nil {
 			logrus.Errorf("error while deleting resources: %v", err)
 		}
 
 		logrus.Info("The following resources, regardless of the built manifests, are going to be deleted:")
 
-		err = d.kubeClient.GetListOfResourcesNs("all", "ingress")
-		if err != nil {
+		if err = d.kubeClient.GetListOfResourcesNs("all", "ingress"); err != nil {
 			logrus.Errorf("error while getting list of ingress resources: %v", err)
 		}
 
-		err = d.kubeClient.GetListOfResourcesNs("monitoring", "prometheus")
-		if err != nil {
+		if err = d.kubeClient.GetListOfResourcesNs("monitoring", "prometheus"); err != nil {
 			logrus.Errorf("error while getting list of prometheus resources: %v", err)
 		}
 
-		err = d.kubeClient.GetListOfResourcesNs("monitoring", "persistentvolumeclaim")
-		if err != nil {
+		if err = d.kubeClient.GetListOfResourcesNs("monitoring", "persistentvolumeclaim"); err != nil {
 			logrus.Errorf("error while getting list of persistentvolumeclaim resources: %v", err)
 		}
 
-		err = d.kubeClient.GetListOfResourcesNs("logging", "persistentvolumeclaim")
-		if err != nil {
+		if err = d.kubeClient.GetListOfResourcesNs("logging", "persistentvolumeclaim"); err != nil {
 			logrus.Errorf("error while getting list of persistentvolumeclaim resources: %v", err)
 		}
 
-		err = d.kubeClient.GetListOfResourcesNs("logging", "statefulset")
-		if err != nil {
+		if err = d.kubeClient.GetListOfResourcesNs("logging", "statefulset"); err != nil {
 			logrus.Errorf("error while getting list of statefulset resources: %v", err)
 		}
 
-		err = d.kubeClient.GetListOfResourcesNs("logging", "logging")
-		if err != nil {
+		if err = d.kubeClient.GetListOfResourcesNs("logging", "logging"); err != nil {
 			logrus.Errorf("error while getting list of logging resources: %v", err)
 		}
 
-		err = d.kubeClient.GetListOfResourcesNs("ingress-nginx", "service")
-		if err != nil {
+		if err = d.kubeClient.GetListOfResourcesNs("ingress-nginx", "service"); err != nil {
 			logrus.Errorf("error while getting list of service resources: %v", err)
 		}
 
@@ -205,8 +199,7 @@ func (d *Distribution) Exec() error {
 	if len(ingressHosts) > 0 {
 		logrus.Info("Waiting for DNS records to be deleted...")
 
-		err = d.checkPendingDNSRecords(ingressHosts, hostedZones)
-		if err != nil {
+		if err = d.assertEmptyDNSRecords(ingressHosts, hostedZones); err != nil {
 			return err
 		}
 	}
@@ -233,15 +226,13 @@ func (d *Distribution) Exec() error {
 
 	logrus.Info("Checking pending resources...")
 
-	err = d.checkPendingResources()
-	if err != nil {
+	if err = d.checkPendingResources(); err != nil {
 		return err
 	}
 
 	logrus.Info("Deleting infra resources...")
 
-	err = d.tfRunner.Destroy()
-	if err != nil {
+	if err = d.tfRunner.Destroy(); err != nil {
 		return fmt.Errorf("error while deleting infra resources: %w", err)
 	}
 
@@ -389,9 +380,7 @@ func (d *Distribution) getHostedZones() (map[string]string, error) {
 		return zones, fmt.Errorf("error getting hosted zones: %w", err)
 	}
 
-	re := regexp.MustCompile(`/hostedzone/(\S+)\t(\S+)\.`)
-
-	matches := re.FindAllStringSubmatch(route53, -1)
+	matches := hostedZoneRegex.FindAllStringSubmatch(route53, -1)
 
 	for _, match := range matches {
 		zones[match[1]] = match[2]
@@ -400,7 +389,7 @@ func (d *Distribution) getHostedZones() (map[string]string, error) {
 	return zones, nil
 }
 
-func (d *Distribution) checkPendingDNSRecords(hosts []string, hostedZones map[string]string) error {
+func (d *Distribution) assertEmptyDNSRecords(hosts []string, hostedZones map[string]string) error {
 	if len(hosts) == 0 {
 		return nil
 	}
@@ -432,8 +421,7 @@ func (d *Distribution) checkPendingDNSRecords(hosts []string, hostedZones map[st
 					return fmt.Errorf("error getting hosted zone records: %w", err)
 				}
 
-				re := regexp.MustCompile(`(\S+)\.`)
-				matches := re.FindAllString(domains, -1)
+				matches := recordSetsRegex.FindAllString(domains, -1)
 
 				if slices.DisjointTransform(
 					hosts,
