@@ -11,6 +11,7 @@
 ![Release](https://img.shields.io/github/v/release/sighupio/furyctl?label=Furyctl)
 ![Slack](https://img.shields.io/badge/slack-@kubernetes/fury-yellow.svg?logo=slack)
 ![License](https://img.shields.io/github/license/sighupio/furyctl)
+[![Go Report Card](https://goreportcard.com/badge/github.com/sighupio/furyctl)](https://goreportcard.com/report/github.com/sighupio/furyctl)
 
 <!-- <KFD-DOCS> -->
 
