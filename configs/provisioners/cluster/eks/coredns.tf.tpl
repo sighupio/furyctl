@@ -28,13 +28,11 @@ locals {
 }
 
 resource "local_file" "cluster_ca" {
-
   content = base64decode(data.aws_eks_cluster.fury.certificate_authority.0.data)
   filename = "${path.module}/secrets/${data.aws_eks_cluster.fury.name}-ca.crt"
 }
 
 resource "null_resource" "patch_coredns" {
-
   triggers = {
     run_once = local.coredns_scheduling_patch_as_json
   }
