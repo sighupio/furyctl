@@ -59,7 +59,7 @@ spec:
           # ssh public keys enabled to access the vpn instances, NOT YET IMPLEMENTED, proposal
           publicKeys:
             - "ssh-ed56778 XYX"
-#            - {file://relative/path/to/ssh.pub}
+#            - "{file://relative/path/to/ssh.pub}"
           # Github users to get ssh keys from
           githubUsersName:
             - lnovara
@@ -169,9 +169,9 @@ spec:
             # can be certManager, secret or none
             provider: certManager # it uses the configuration below as default when certManager is chosen
             # secret: #if we want to use custom certificates, the template should create a secret and set it as default certificate in NGINX, so patch nginx deployment accordingly
-            #   cert: {file://ssl.crt}
-            #   key: {file://ssl.key}
-            #   ca: {file://ssl.ca}
+            #   cert: "{file://ssl.crt}"
+            #   key: "{file://ssl.key}"
+            #   ca: "{file://ssl.ca}"
         # the standard configuration for cert-manager on the ingress module
         certManager:
           # to create the clusterIssuer, this is an additional clusterIssuer than the two provided by cert-manager, for simplicity
@@ -295,16 +295,16 @@ spec:
           type: none
           basicAuth:
             username: admin
-            password: {env://KFD_BASIC_AUTH_PASSWORD}
+            password: "{env://KFD_BASIC_AUTH_PASSWORD}"
         pomerium:
           secrets:
             # override environment variables here
             ##COOKIE_SECRET is obtained with  `head -c32 /dev/urandom | base64` see https://www.pomerium.io/reference/#cookie-secret
-            COOKIE_SECRET: {env://KFD_AUTH_POMERIUM_COOKIE_SECRET}
+            COOKIE_SECRET: "{env://KFD_AUTH_POMERIUM_COOKIE_SECRET}"
             ##IDP_CLIENT_SECRET is the secret configured in the pomerium Dex static client
-            IDP_CLIENT_SECRET: {env://KFD_AUTH_POMERIUM_IDP_CLIENT_SECRET}
+            IDP_CLIENT_SECRET: "{env://KFD_AUTH_POMERIUM_IDP_CLIENT_SECRET}"
             ##SHARED_SECRET is obtained with  `head -c32 /dev/urandom | base64` see https://www.pomerium.io/reference/#shared-secret
-            SHARED_SECRET: {env://KFD_AUTH_POMERIUM_SHARED_SECRET}
+            SHARED_SECRET: "{env://KFD_AUTH_POMERIUM_SHARED_SECRET}"
         dex:
           # see dex documentation for more information
           connectors:
@@ -315,8 +315,8 @@ spec:
               name: GitHub
               config:
                 # Credentials can be string literals or pulled from the environment.
-                clientID: {env://KFD_AUTH_DEX_CONNECTORS_GITHUB_CLIENT_ID}
-                clientSecret: {env://KFD_AUTH_DEX_CONNECTORS_GITHUB_CLIENT_SECRET}
+                clientID: "{env://KFD_AUTH_DEX_CONNECTORS_GITHUB_CLIENT_ID}"
+                clientSecret: "{env://KFD_AUTH_DEX_CONNECTORS_GITHUB_CLIENT_SECRET}"
                 redirectURI: https://login.fury-demo.sighup.io/callback
                 loadAllGroups: false
                 teamNameField: slug

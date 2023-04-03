@@ -7,6 +7,7 @@
 package template_test
 
 import (
+	"fmt"
 	"os"
 	"testing"
 	gotemplate "text/template"
@@ -18,7 +19,7 @@ import (
 )
 
 type Meta struct {
-	Name map[string]any `yaml:"name,flow"`
+	Name string `yaml:"name,flow"`
 }
 
 func TestTemplateModel_Will_Generate_UserHello(t *testing.T) {
@@ -73,7 +74,7 @@ func TestTemplateModel_Will_Generate_Dynamic_Values_From_Env(t *testing.T) {
 	conf := map[string]any{
 		"data": map[string]any{
 			"meta": Meta{
-				Name: map[string]any{"env://TEST_USER_TYMLATE": ""},
+				Name: "{env://TEST_USER_TYMLATE}",
 			},
 		},
 	}
@@ -127,7 +128,7 @@ func TestTemplateModel_Will_Generate_Dynamic_Values_From_File(t *testing.T) {
 	conf := map[string]any{
 		"data": map[string]any{
 			"meta": Meta{
-				Name: map[string]any{"file://" + path + "/tymlate_test_file.txt": ""},
+				Name: fmt.Sprintf("{file://%s/tymlate_test_file.txt}", path),
 			},
 		},
 	}

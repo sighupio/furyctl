@@ -16,10 +16,7 @@ const (
 	File = "file"
 )
 
-var (
-	errKeyIsNotAString = errors.New("key is not a string")
-	errUnknownKey      = errors.New("unknown key")
-)
+var errUnknownKey = errors.New("unknown key")
 
 type Mapper struct {
 	context map[string]map[any]any
@@ -33,7 +30,7 @@ func (m *Mapper) MapDynamicValues() (map[string]map[any]any, error) {
 	mappedCtx := make(map[string]map[any]any, len(m.context))
 
 	for k, c := range m.context {
-		res, err := injectDynamicRes(c, c, k)
+		res, err := injectDynamicRes(c)
 		mappedCtx[k] = res
 
 		if err != nil {
@@ -57,31 +54,11 @@ func (*Mapper) MapEnvironmentVars() map[any]any {
 
 func injectDynamicRes(
 	m map[any]any,
-	parent map[any]any,
-	parentKey string,
 ) (map[any]any, error) {
 	for k, v := range m {
-		key, ok := k.(string)
-		if !ok {
-			return nil, fmt.Errorf("%v %w", k, errKeyIsNotAString)
-		}
-
-		spl := strings.Split(key, "://")
-
-		if len(spl) > 1 {
-			val, err := ParseDynamicValue(k)
-			if err != nil {
-				return nil, err
-			}
-
-			parent[parentKey] = val
-
-			continue
-		}
-
 		vMap, checkMap := v.(map[any]any)
 		if checkMap {
-			if _, err := injectDynamicRes(vMap, m, k.(string)); err != nil {
+			if _, err := injectDynamicRes(vMap); err != nil {
 				return nil, err
 			}
 
@@ -92,11 +69,29 @@ func injectDynamicRes(
 		if checkArr {
 			for _, j := range vArr {
 				if j, ok := j.(map[any]any); ok {
-					if _, err := injectDynamicRes(j, m, k.(string)); err != nil {
+					if _, err := injectDynamicRes(j); err != nil {
 						return nil, err
 					}
 				}
 			}
+
+			continue
+		}
+
+		val, ok := v.(string)
+		if !ok {
+			continue
+		}
+
+		spl := strings.Split(val, "://")
+
+		if len(spl) > 1 {
+			val, err := ParseDynamicValue(val)
+			if err != nil {
+				return nil, err
+			}
+
+			m[k] = val
 
 			continue
 		}

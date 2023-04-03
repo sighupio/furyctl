@@ -74,8 +74,8 @@ func TestMapper_MapDynamicValues(t *testing.T) {
 	dummyContext := map[string]map[any]any{
 		"data": {
 			"meta": map[any]any{
-				"name":  map[any]any{"env://TEST_MAPPER_DYNAMIC_VALUE": ""},
-				"value": map[any]any{fmt.Sprintf("file://%s/test_file.txt", path): ""},
+				"name":  "{env://TEST_MAPPER_DYNAMIC_VALUE}",
+				"value": fmt.Sprintf("{file://%s/test_file.txt}", path),
 			},
 		},
 	}
@@ -123,8 +123,8 @@ func TestMapper_MapDynamicValues_RelativePath(t *testing.T) {
 	dummyContext := map[string]map[any]any{
 		"data": {
 			"meta": map[any]any{
-				"name":  map[any]any{"env://TEST_MAPPER_DYNAMIC_VALUE": ""},
-				"value": map[any]any{fmt.Sprintf("file://%s", filePath): ""},
+				"name":  "{env://TEST_MAPPER_DYNAMIC_VALUE}",
+				"value": fmt.Sprintf("{file://%s}", filePath),
 			},
 		},
 	}
