@@ -191,7 +191,7 @@ func (*VpnConnector) checkExistingOpenVPN() (bool, int32, error) {
 
 	processes, err := process.Processes()
 	if err != nil {
-		return false, pid, fmt.Errorf("error getting processes: %w", err)
+		return found, pid, fmt.Errorf("error getting processes: %w", err)
 	}
 
 	for _, p := range processes {
@@ -237,7 +237,7 @@ func (v *VpnConnector) startOpenVPN() error {
 
 func (*VpnConnector) promptAutoConnect(pid int32) error {
 	logrus.Warnf("There is already a VPN connection process running with PID %d,"+
-		" please check it before you continue.\n", pid)
+		" please confirm it is intended to be up before you continue.\n", pid)
 
 	logrus.Info("Press enter to continue or CTRL-C to abort...")
 
