@@ -5,7 +5,6 @@
 package mapper
 
 import (
-	"errors"
 	"fmt"
 	"os"
 	"strings"
@@ -15,8 +14,6 @@ const (
 	Env  = "env"
 	File = "file"
 )
-
-var errUnknownKey = errors.New("unknown key")
 
 type Mapper struct {
 	context map[string]map[any]any
@@ -134,7 +131,7 @@ func ParseDynamicValue(val any) (string, error) {
 			return content, nil
 
 		default:
-			return "", fmt.Errorf("%w %s", errUnknownKey, source)
+			return strVal, nil
 		}
 	}
 
