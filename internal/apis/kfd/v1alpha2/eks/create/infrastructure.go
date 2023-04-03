@@ -250,8 +250,9 @@ func (i *Infrastructure) createTfVars() error {
 
 func (i *Infrastructure) addVpnDataToTfVars(buffer *bytes.Buffer) error {
 	vpnEnabled := (i.furyctlConf.Spec.Infrastructure.Vpc.Vpn != nil) &&
+		(i.furyctlConf.Spec.Infrastructure.Vpc.Vpn.Instances == nil) ||
 		(i.furyctlConf.Spec.Infrastructure.Vpc.Vpn.Instances != nil) &&
-		(*i.furyctlConf.Spec.Infrastructure.Vpc.Vpn.Instances > 0)
+			(*i.furyctlConf.Spec.Infrastructure.Vpc.Vpn.Instances > 0)
 
 	if err := bytesx.SafeWriteToBuffer(buffer, "vpn_enabled = %v\n", vpnEnabled); err != nil {
 		return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
