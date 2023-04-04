@@ -15,7 +15,8 @@ import (
 	"github.com/sighupio/furyctl/internal/x/slices"
 )
 
-var logRegex = regexp.MustCompile(`'(.*?)'`)
+// cmdOutRegex is a regexp used to extract the output of the kubectl command, which is wrapped in single quotes.
+var cmdOutRegex = regexp.MustCompile(`'(.*?)'`)
 
 type Ingress struct {
 	Name string
@@ -50,23 +51,25 @@ func NewClient(
 	}
 }
 
+// GetIngresses returns a list of ingresses in the cluster, this is done by using the jsonpath format option
+// of kubectl to get a valid json output to be unmarshalled.
 func (c *Client) GetIngresses() ([]Ingress, error) {
 	var result []Ingress
 
-	log, err := c.kubeRunner.Get("all", "ingress", "-o",
+	cmdOut, err := c.kubeRunner.Get("all", "ingress", "-o",
 		"jsonpath='[{range .items[*]}{\"{\"}\"Name\": \"{.metadata.name}\", "+
 			"\"Host\": [{range .spec.rules[*]}\"{.host}\",{end}]{\"}\"},{end}]'")
 	if err != nil {
 		return result, fmt.Errorf("error while reading resources from cluster: %w", err)
 	}
 
-	logStringIndex := logRegex.FindStringIndex(log)
+	logStringIndex := cmdOutRegex.FindStringIndex(cmdOut)
 
 	if logStringIndex == nil {
 		return result, nil
 	}
 
-	out := log[logStringIndex[0]+1 : logStringIndex[1]-1]
+	out := cmdOut[logStringIndex[0]+1 : logStringIndex[1]-1]
 
 	out = strings.ReplaceAll(out, ",]", "]")
 
@@ -79,18 +82,18 @@ func (c *Client) GetIngresses() ([]Ingress, error) {
 }
 
 func (c *Client) GetPersistentVolumes() ([]string, error) {
-	log, err := c.kubeRunner.Get("all", "pv", "-o", "jsonpath='{.items[*].metadata.name}'")
+	cmdOut, err := c.kubeRunner.Get("all", "pv", "-o", "jsonpath='{.items[*].metadata.name}'")
 	if err != nil {
 		return []string{}, fmt.Errorf("error while reading resources from cluster: %w", err)
 	}
 
-	logStringIndex := logRegex.FindStringIndex(log)
+	logStringIndex := cmdOutRegex.FindStringIndex(cmdOut)
 
 	if logStringIndex == nil {
 		return []string{}, nil
 	}
 
-	return slices.Clean(strings.Split(log[logStringIndex[0]+1:logStringIndex[1]-1], " ")), nil
+	return slices.Clean(strings.Split(cmdOut[logStringIndex[0]+1:logStringIndex[1]-1], " ")), nil
 }
 
 func (c *Client) GetListOfResourcesNs(ns, resName string) error {
@@ -104,44 +107,44 @@ func (c *Client) GetListOfResourcesNs(ns, resName string) error {
 }
 
 func (c *Client) GetLoadBalancers() ([]string, error) {
-	log, err := c.kubeRunner.Get("all", "svc", "-o",
+	cmdOut, err := c.kubeRunner.Get("all", "svc", "-o",
 		"jsonpath='{.items[?(@.spec.type==\"LoadBalancer\")].metadata.name}'")
 	if err != nil {
 		return []string{}, fmt.Errorf("error while reading resources from cluster: %w", err)
 	}
 
-	logStringIndex := logRegex.FindStringIndex(log)
+	logStringIndex := cmdOutRegex.FindStringIndex(cmdOut)
 
 	if logStringIndex == nil {
 		return []string{}, nil
 	}
 
-	return slices.Clean(strings.Split(log[logStringIndex[0]+1:logStringIndex[1]-1], " ")), nil
+	return slices.Clean(strings.Split(cmdOut[logStringIndex[0]+1:logStringIndex[1]-1], " ")), nil
 }
 
 func (c *Client) DeleteAllResources(res, ns string) (string, error) {
-	result, err := c.kubeRunner.DeleteAllResources(res, ns)
+	cmdOut, err := c.kubeRunner.DeleteAllResources(res, ns)
 	if err != nil {
-		return result, fmt.Errorf("error while deleting resources from cluster: %w", err)
+		return cmdOut, fmt.Errorf("error while deleting resources from cluster: %w", err)
 	}
 
-	return result, nil
+	return cmdOut, nil
 }
 
 func (c *Client) DeleteFromPath(path string, params ...string) (string, error) {
-	result, err := c.kubeRunner.Delete(path, params...)
+	cmdOut, err := c.kubeRunner.Delete(path, params...)
 	if err != nil {
-		return result, fmt.Errorf("error while deleting resources from cluster: %w", err)
+		return cmdOut, fmt.Errorf("error while deleting resources from cluster: %w", err)
 	}
 
-	return result, nil
+	return cmdOut, nil
 }
 
 func (c *Client) ToolVersion() (string, error) {
-	version, err := c.kubeRunner.Version()
+	cmdOut, err := c.kubeRunner.Version()
 	if err != nil {
 		return "", fmt.Errorf("error while getting tool version: %w", err)
 	}
 
-	return version, nil
+	return cmdOut, nil
 }
