@@ -28,7 +28,6 @@ import (
 var (
 	ErrAutoConnectWithoutVpn = errors.New("autoconnect is not supported without a VPN configuration")
 	ErrReadStdin             = errors.New("error reading from stdin")
-	ErrOpenvpnRunning        = errors.New("an openvpn process is already running, please kill it and try again")
 )
 
 type VpnConnector struct {
@@ -75,8 +74,15 @@ func (v *VpnConnector) Connect() error {
 			return ErrAutoConnectWithoutVpn
 		}
 
-		if err := v.checkExistingOpenVPN(); err != nil {
+		vpn, pid, err := v.checkExistingOpenVPN()
+		if err != nil {
 			return err
+		}
+
+		if vpn {
+			if err := v.promptAutoConnect(pid); err != nil {
+				return err
+			}
 		}
 
 		return v.startOpenVPN()
@@ -178,21 +184,26 @@ func (v *VpnConnector) copyOpenvpnToWorkDir(clientName string) error {
 	return nil
 }
 
-func (*VpnConnector) checkExistingOpenVPN() error {
+func (*VpnConnector) checkExistingOpenVPN() (bool, int32, error) {
 	processes, err := process.Processes()
 	if err != nil {
-		return fmt.Errorf("error getting processes: %w", err)
+		return false, 0, fmt.Errorf("error getting processes: %w", err)
 	}
 
 	for _, p := range processes {
-		name, _ := p.Name() //nolint:errcheck // we don't care about the error here
+		name, err := p.Name()
+		if err != nil {
+			logrus.Warning(err)
+
+			continue
+		}
 
 		if name == "openvpn" {
-			return ErrOpenvpnRunning
+			return true, p.Pid, nil
 		}
 	}
 
-	return nil
+	return false, 0, nil
 }
 
 func (v *VpnConnector) startOpenVPN() error {
@@ -216,6 +227,19 @@ func (v *VpnConnector) startOpenVPN() error {
 
 	if err := v.ovRunner.Connect(clientName); err != nil {
 		return fmt.Errorf("error connecting to VPN: %w", err)
+	}
+
+	return nil
+}
+
+func (*VpnConnector) promptAutoConnect(pid int32) error {
+	logrus.Warnf("There is already a VPN connection process running with PID %d,"+
+		" please confirm it is intended to be up before you continue.\n", pid)
+
+	logrus.Info("Press enter to continue or CTRL-C to abort...")
+
+	if _, err := bufio.NewReader(os.Stdin).ReadBytes('\n'); err != nil {
+		return fmt.Errorf("%w: %v", ErrReadStdin, err)
 	}
 
 	return nil
