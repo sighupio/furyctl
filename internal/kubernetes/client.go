@@ -18,6 +18,11 @@ import (
 // cmdOutRegex is a regexp used to extract the output of the kubectl command, which is wrapped in single quotes.
 var cmdOutRegex = regexp.MustCompile(`'(.*?)'`)
 
+type Resource struct {
+	Name string
+	Kind string
+}
+
 type Ingress struct {
 	Name string
 	Host []string
@@ -96,14 +101,29 @@ func (c *Client) GetPersistentVolumes() ([]string, error) {
 	return slices.Clean(strings.Split(cmdOut[logStringIndex[0]+1:logStringIndex[1]-1], " ")), nil
 }
 
-func (c *Client) GetListOfResourcesNs(ns, resName string) error {
-	_, err := c.kubeRunner.Get(ns, resName, "-o",
-		"jsonpath={range .items[*]}{\""+resName+" \"}\"{.metadata.name}\"{\" deleted (dry run)\"}{\"\\n\"}{end}")
+func (c *Client) ListNamespaceResources(resName, ns string) ([]Resource, error) {
+	var result []Resource
+
+	cmdOut, err := c.kubeRunner.Get(ns, resName, "-o",
+		`jsonpath='[{range .items[*]}{"{"}"Name": "{.metadata.name}", "Kind": "{.kind}"{"}"},{end}]'`)
 	if err != nil {
-		return fmt.Errorf("error while reading resources from cluster: %w", err)
+		return result, fmt.Errorf("error while reading resources from cluster: %w", err)
 	}
 
-	return nil
+	logStringIndex := cmdOutRegex.FindStringIndex(cmdOut)
+	if logStringIndex == nil {
+		return result, nil
+	}
+
+	out := cmdOut[logStringIndex[0]+1 : logStringIndex[1]-1]
+
+	out = strings.ReplaceAll(out, ",]", "]")
+
+	if err := json.Unmarshal([]byte(out), &result); err != nil {
+		return result, fmt.Errorf("error while unmarshaling json: %w", err)
+	}
+
+	return result, nil
 }
 
 func (c *Client) GetLoadBalancers() ([]string, error) {
@@ -123,7 +143,7 @@ func (c *Client) GetLoadBalancers() ([]string, error) {
 }
 
 func (c *Client) DeleteAllResources(res, ns string) (string, error) {
-	cmdOut, err := c.kubeRunner.DeleteAllResources(res, ns)
+	cmdOut, err := c.kubeRunner.DeleteAllResources(ns, res)
 	if err != nil {
 		return cmdOut, fmt.Errorf("error while deleting resources from cluster: %w", err)
 	}

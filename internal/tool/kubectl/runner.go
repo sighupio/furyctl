@@ -99,7 +99,7 @@ func (r *Runner) Get(ns string, params ...string) (string, error) {
 	return out, nil
 }
 
-func (r *Runner) DeleteAllResources(res, ns string) (string, error) {
+func (r *Runner) DeleteAllResources(ns, res string) (string, error) {
 	args := []string{"delete", res, "--all"}
 
 	if ns != "all" {
