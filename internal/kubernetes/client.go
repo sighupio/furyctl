@@ -68,13 +68,12 @@ func (c *Client) GetIngresses() ([]Ingress, error) {
 		return result, fmt.Errorf("error while reading resources from cluster: %w", err)
 	}
 
-	logStringIndex := cmdOutRegex.FindStringIndex(cmdOut)
-
-	if logStringIndex == nil {
+	idx := cmdOutRegex.FindStringIndex(cmdOut)
+	if idx == nil {
 		return result, nil
 	}
 
-	out := cmdOut[logStringIndex[0]+1 : logStringIndex[1]-1]
+	out := cmdOut[idx[0]+1 : idx[1]-1]
 
 	out = strings.ReplaceAll(out, ",]", "]")
 
@@ -92,13 +91,12 @@ func (c *Client) GetPersistentVolumes() ([]string, error) {
 		return []string{}, fmt.Errorf("error while reading resources from cluster: %w", err)
 	}
 
-	logStringIndex := cmdOutRegex.FindStringIndex(cmdOut)
-
-	if logStringIndex == nil {
+	idx := cmdOutRegex.FindStringIndex(cmdOut)
+	if idx == nil {
 		return []string{}, nil
 	}
 
-	return slices.Clean(strings.Split(cmdOut[logStringIndex[0]+1:logStringIndex[1]-1], " ")), nil
+	return slices.Clean(strings.Split(cmdOut[idx[0]+1:idx[1]-1], " ")), nil
 }
 
 func (c *Client) ListNamespaceResources(resName, ns string) ([]Resource, error) {
@@ -110,12 +108,12 @@ func (c *Client) ListNamespaceResources(resName, ns string) ([]Resource, error) 
 		return result, fmt.Errorf("error while reading resources from cluster: %w", err)
 	}
 
-	logStringIndex := cmdOutRegex.FindStringIndex(cmdOut)
-	if logStringIndex == nil {
+	idx := cmdOutRegex.FindStringIndex(cmdOut)
+	if idx == nil {
 		return result, nil
 	}
 
-	out := cmdOut[logStringIndex[0]+1 : logStringIndex[1]-1]
+	out := cmdOut[idx[0]+1 : idx[1]-1]
 
 	out = strings.ReplaceAll(out, ",]", "]")
 
@@ -133,13 +131,12 @@ func (c *Client) GetLoadBalancers() ([]string, error) {
 		return []string{}, fmt.Errorf("error while reading resources from cluster: %w", err)
 	}
 
-	logStringIndex := cmdOutRegex.FindStringIndex(cmdOut)
-
-	if logStringIndex == nil {
+	idx := cmdOutRegex.FindStringIndex(cmdOut)
+	if idx == nil {
 		return []string{}, nil
 	}
 
-	return slices.Clean(strings.Split(cmdOut[logStringIndex[0]+1:logStringIndex[1]-1], " ")), nil
+	return slices.Clean(strings.Split(cmdOut[idx[0]+1:idx[1]-1], " ")), nil
 }
 
 func (c *Client) DeleteAllResources(res, ns string) (string, error) {
