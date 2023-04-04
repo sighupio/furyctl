@@ -9,9 +9,30 @@ import (
 	"os"
 	"testing"
 
+	"github.com/google/go-cmp/cmp"
 	"github.com/sighupio/furyctl/internal/kubernetes"
 	execx "github.com/sighupio/furyctl/internal/x/exec"
 )
+
+func TestClient_GetIngresses(t *testing.T) {
+	t.Parallel()
+
+	client := FakeClient(t)
+
+	ingresses, err := client.GetIngresses()
+	if err != nil {
+		t.Errorf("expected no error, got %v", err)
+	}
+
+	wantedIngresses := []kubernetes.Ingress{
+		{"ingress-1", []string{"host-1"}},
+		{"ingress-2", []string{"host-2"}},
+		{"ingress-3", []string{"host-3"}},
+	}
+	if !cmp.Equal(ingresses, wantedIngresses) {
+		t.Errorf("expected ingresses to be %v, got: %v", wantedIngresses, ingresses)
+	}
+}
 
 func TestClient_GetPersistentVolumes(t *testing.T) {
 	t.Parallel()
@@ -26,6 +47,31 @@ func TestClient_GetPersistentVolumes(t *testing.T) {
 	if len(pvs) == 0 {
 		t.Errorf("expected pvs to be not empty")
 	}
+
+	wantPvs := []string{"pv-1", "pv-2", "pv-3"}
+	if !cmp.Equal(pvs, wantPvs) {
+		t.Errorf("expected pvs to be %v, got: %v", wantPvs, pvs)
+	}
+}
+
+func TestClient_ListNamespaceResources(t *testing.T) {
+	t.Parallel()
+
+	client := FakeClient(t)
+
+	resources, err := client.ListNamespaceResources("pod", "default")
+	if err != nil {
+		t.Errorf("expected no error, got %v", err)
+	}
+
+	wantedResources := []kubernetes.Resource{
+		{Kind: "Pod", Name: "pod-1"},
+		{Kind: "Pod", Name: "pod-2"},
+		{Kind: "Pod", Name: "pod-3"},
+	}
+	if !cmp.Equal(resources, wantedResources) {
+		t.Errorf("expected resources to be %v, got: %v", wantedResources, resources)
+	}
 }
 
 func TestClient_GetLoadBalancers(t *testing.T) {
@@ -33,54 +79,14 @@ func TestClient_GetLoadBalancers(t *testing.T) {
 
 	client := FakeClient(t)
 
-	lbs, err := client.GetLoadBalancers()
+	svcs, err := client.GetLoadBalancers()
 	if err != nil {
 		t.Errorf("expected no error, got %v", err)
 	}
 
-	if len(lbs) == 0 {
-		t.Errorf("expected lbs to be not empty")
-	}
-}
-
-func TestClient_GetListOfResourcesNs(t *testing.T) {
-	t.Parallel()
-
-	client := FakeClient(t)
-
-	err := client.GetListOfResourcesNs("pod", "default")
-	if err != nil {
-		t.Errorf("expected no error, got %v", err)
-	}
-}
-
-func TestClient_GetIngresses(t *testing.T) {
-	t.Parallel()
-
-	client := FakeClient(t)
-
-	ingresses, err := client.GetIngresses()
-	if err != nil {
-		t.Errorf("expected no error, got %v", err)
-	}
-
-	if len(ingresses) == 0 {
-		t.Errorf("expected ingresses to be not empty")
-	}
-}
-
-func TestClient_DeleteFromPath(t *testing.T) {
-	t.Parallel()
-
-	client := FakeClient(t)
-
-	log, err := client.DeleteFromPath("test")
-	if err != nil {
-		t.Errorf("expected no error, got %v", err)
-	}
-
-	if len(log) == 0 {
-		t.Errorf("expected log to be not empty")
+	wantSvcs := []string{"svc-1", "svc-2", "svc-3"}
+	if !cmp.Equal(svcs, wantSvcs) {
+		t.Errorf("expected svcs to be %v, got: %v", wantSvcs, svcs)
 	}
 }
 
@@ -89,13 +95,30 @@ func TestClient_DeleteAllResources(t *testing.T) {
 
 	client := FakeClient(t)
 
-	log, err := client.DeleteAllResources("pod", "default")
+	out, err := client.DeleteAllResources("pod", "default")
 	if err != nil {
 		t.Errorf("expected no error, got %v", err)
 	}
 
-	if len(log) == 0 {
-		t.Errorf("expected log to be not empty")
+	wantOut := `res "res-1" deleted`
+	if out != wantOut {
+		t.Errorf("expected output to be '%s', got: '%s'", wantOut, out)
+	}
+}
+
+func TestClient_DeleteFromPath(t *testing.T) {
+	t.Parallel()
+
+	client := FakeClient(t)
+
+	out, err := client.DeleteFromPath("test")
+	if err != nil {
+		t.Errorf("expected no error, got %v", err)
+	}
+
+	wantOut := `res "res-1" deleted`
+	if out != wantOut {
+		t.Errorf("expected output to be '%s', got: '%s'", wantOut, out)
 	}
 }
 
@@ -146,7 +169,11 @@ func TestHelperProcess(t *testing.T) {
 				"}\n")
 
 		case "get":
-			resType := args[6]
+			resType := args[7]
+			if args[5] == "-A" {
+				resType = args[6]
+			}
+
 			switch resType {
 			case "pv":
 				fmt.Fprintf(os.Stdout, "'pv-1 pv-2 pv-3'")
@@ -155,14 +182,16 @@ func TestHelperProcess(t *testing.T) {
 				fmt.Fprintf(os.Stdout, "'svc-1 svc-2 svc-3'")
 
 			case "ingress":
-				fmt.Fprintf(os.Stdout, "'[{\"Name\": \"ingress-1\", \"Host\": [\"host-1\"]},"+
-					"{\"Name\": \"ingress-2\", \"Host\": [\"host-2\"]},"+
-					"{\"Name\": \"ingress-3\", \"Host\": [\"host-3\"]}]'")
+				fmt.Fprintf(os.Stdout,
+					"'[{\"Name\": \"ingress-1\", \"Host\": [\"host-1\"]},"+
+						"{\"Name\": \"ingress-2\", \"Host\": [\"host-2\"]},"+
+						"{\"Name\": \"ingress-3\", \"Host\": [\"host-3\"]}]'")
 
 			case "pod":
-				fmt.Fprintf(os.Stdout, "\"pod\" \"pod-1\" deleted (dry run)\n"+
-					"\"pod\" \"pod-2\" deleted (dry run)\n"+
-					"\"pod\" \"pod-3\" deleted (dry run)\n")
+				fmt.Fprintf(os.Stdout,
+					"'[{\"Name\": \"pod-1\", \"Kind\": \"Pod\"},"+
+						"{\"Name\": \"pod-2\", \"Kind\": \"Pod\"},"+
+						"{\"Name\": \"pod-3\", \"Kind\": \"Pod\"}]'")
 			}
 
 		case "delete":

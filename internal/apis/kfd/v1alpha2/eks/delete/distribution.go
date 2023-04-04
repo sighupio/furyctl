@@ -149,31 +149,31 @@ func (d *Distribution) Exec() error {
 
 		logrus.Info("The following resources, regardless of the built manifests, are going to be deleted:")
 
-		if err = d.kubeClient.GetListOfResourcesNs("all", "ingress"); err != nil {
+		if _, err := d.kubeClient.ListNamespaceResources("ingress", "all"); err != nil {
 			logrus.Errorf("error while getting list of ingress resources: %v", err)
 		}
 
-		if err = d.kubeClient.GetListOfResourcesNs("monitoring", "prometheus"); err != nil {
+		if _, err := d.kubeClient.ListNamespaceResources("prometheus", "monitoring"); err != nil {
 			logrus.Errorf("error while getting list of prometheus resources: %v", err)
 		}
 
-		if err = d.kubeClient.GetListOfResourcesNs("monitoring", "persistentvolumeclaim"); err != nil {
+		if _, err := d.kubeClient.ListNamespaceResources("persistentvolumeclaim", "monitoring"); err != nil {
 			logrus.Errorf("error while getting list of persistentvolumeclaim resources: %v", err)
 		}
 
-		if err = d.kubeClient.GetListOfResourcesNs("logging", "persistentvolumeclaim"); err != nil {
+		if _, err := d.kubeClient.ListNamespaceResources("persistentvolumeclaim", "logging"); err != nil {
 			logrus.Errorf("error while getting list of persistentvolumeclaim resources: %v", err)
 		}
 
-		if err = d.kubeClient.GetListOfResourcesNs("logging", "statefulset"); err != nil {
+		if _, err := d.kubeClient.ListNamespaceResources("statefulset", "logging"); err != nil {
 			logrus.Errorf("error while getting list of statefulset resources: %v", err)
 		}
 
-		if err = d.kubeClient.GetListOfResourcesNs("logging", "logging"); err != nil {
+		if _, err := d.kubeClient.ListNamespaceResources("logging", "logging"); err != nil {
 			logrus.Errorf("error while getting list of logging resources: %v", err)
 		}
 
-		if err = d.kubeClient.GetListOfResourcesNs("ingress-nginx", "service"); err != nil {
+		if _, err := d.kubeClient.ListNamespaceResources("service", "ingress-nginx"); err != nil {
 			logrus.Errorf("error while getting list of service resources: %v", err)
 		}
 
