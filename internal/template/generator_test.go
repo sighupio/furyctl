@@ -34,7 +34,7 @@ func TestTemplateModel_Will_Generate_UserHello(t *testing.T) {
 
 	confYaml, err := yaml.Marshal(conf)
 	if err != nil {
-		panic(err)
+		t.Fatal(err)
 	}
 
 	path, err := os.MkdirTemp("", "test")
@@ -61,7 +61,7 @@ func TestTemplateModel_Will_Generate_UserHello(t *testing.T) {
 
 	result, err := os.ReadFile(path + "/target/test.md")
 	if err != nil {
-		panic(err)
+		t.Fatal(err)
 	}
 
 	expectedRes := "A nice day at tes"
@@ -82,7 +82,7 @@ func TestTemplateModel_Will_Generate_Dynamic_Values_From_Env(t *testing.T) {
 
 	confYaml, err := yaml.Marshal(conf)
 	if err != nil {
-		panic(err)
+		t.Fatal(err)
 	}
 
 	path, err := os.MkdirTemp("", "test")
@@ -113,7 +113,7 @@ func TestTemplateModel_Will_Generate_Dynamic_Values_From_Env(t *testing.T) {
 
 	result, err := os.ReadFile(path + "/target/test.md")
 	if err != nil {
-		panic(err)
+		t.Fatal(err)
 	}
 
 	expectedRes := "A nice day at Tym"
@@ -136,7 +136,7 @@ func TestTemplateModel_Will_Generate_Dynamic_Values_From_File(t *testing.T) {
 
 	confYaml, err := yaml.Marshal(conf)
 	if err != nil {
-		panic(err)
+		t.Fatal(err)
 	}
 
 	err = os.Mkdir(path+"/source", os.ModePerm)
@@ -165,7 +165,7 @@ func TestTemplateModel_Will_Generate_Dynamic_Values_From_File(t *testing.T) {
 
 	result, err := os.ReadFile(path + "/target/test.md")
 	if err != nil {
-		panic(err)
+		t.Fatal(err)
 	}
 
 	expectedRes := "A nice day at Tymlate! It's a nice day!"

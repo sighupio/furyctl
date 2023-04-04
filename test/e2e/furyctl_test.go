@@ -84,6 +84,7 @@ var (
 			Fail(err.Error())
 		}
 	}
+
 	BackupEnvVars = func(vars ...string) func() {
 		backup := make(map[string]string)
 		remove := make([]string, 0)
