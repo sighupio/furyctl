@@ -29,7 +29,7 @@ func TestNewTemplateModel(t *testing.T) {
 
 	confYaml, err := yaml.Marshal(conf)
 	if err != nil {
-		panic(err)
+		t.Fatal(err)
 	}
 
 	path, err := os.MkdirTemp("", "test")
