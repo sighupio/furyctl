@@ -122,7 +122,7 @@ gci:
 	@find . -name "*.go" -type f -not -path '*/vendor/*' \
 	| sed 's/^\.\///g' \
 	| xargs -I {} sh -c 'echo "formatting imports for {}.." && \
-	gci write --skip-generated -s standard,default,"prefix(github.com/sighupio)" {}'
+	gci write --skip-generated  -s standard -s default -s "Prefix(github.com/sighupio)" {}'
 
 .PHONY: lint lint-go
 
