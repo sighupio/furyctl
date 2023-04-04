@@ -16,7 +16,7 @@ const (
 	defaultVendorFolderName = "vendor"
 )
 
-// Furyconf is reponsible for the structure of the Furyfile
+// Furyconf is responsible for the structure of the Furyfile
 type Furyconf struct {
 	VendorFolderName string          `yaml:"vendorFolderName"`
 	Versions         VersionPattern  `yaml:"versions"`

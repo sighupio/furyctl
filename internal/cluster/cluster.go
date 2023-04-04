@@ -46,7 +46,7 @@ func New(opts *Options) (c *Cluster, err error) {
 	// Grab the right provisioner
 	p, err := provisioners.Get(*opts.ProvisionerConfiguration)
 	if err != nil {
-		log.Errorf("error creating the cluster instance while adquiring the right provisioner: %v", err)
+		log.Errorf("error creating the cluster instance while acquiring the right provisioner: %v", err)
 		return nil, err
 	}
 	if p.Enterprise() && opts.TerraformOpts.GitHubToken == "" {
@@ -302,14 +302,14 @@ func (c *Cluster) Update(dryrun bool) (err error) {
 		proj := *c.project
 		err = proj.WriteFile("output/output.json", output)
 		if err != nil {
-			log.Errorf("Error while writting the output.json to the project directory: %v", err)
+			log.Errorf("Error while writing the output.json to the project directory: %v", err)
 			return err
 		}
 		c.s.Stop()
 
 		err = proj.WriteFile("secrets/kubeconfig", []byte(kubeconfig))
 		if err != nil {
-			log.Errorf("Error while writting the kubeconfig to the project directory: %v", err)
+			log.Errorf("Error while writing the kubeconfig to the project directory: %v", err)
 			return err
 		}
 		c.s.Stop()

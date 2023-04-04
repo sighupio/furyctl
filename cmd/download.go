@@ -180,7 +180,7 @@ func Download(packages []Package, opts DownloadOpts) error {
 	errChan := make(chan error, len(packages))
 	jobs := make(chan Package, len(packages))
 
-	// Populating the job channel with all the packages to downlaod
+	// Populating the job channel with all the packages to download
 	for _, p := range packages {
 		jobs <- p
 	}
