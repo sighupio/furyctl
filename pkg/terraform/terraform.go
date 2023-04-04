@@ -130,7 +130,7 @@ password %v
 	return ioutil.WriteFile(fmt.Sprintf("%v/%v/.netrc", path, configDir), []byte(netrc), os.FileMode(0644))
 }
 
-// CreateBackendFile creates the backend.tf terraform file with the backend configuration choosen
+// CreateBackendFile creates the backend.tf terraform file with the backend configuration chosen
 func createBackendFile(path string, backend string, backendConfig map[string]string) (err error) {
 	var backendFilebuffer bytes.Buffer
 	backendFilebuffer.WriteString(fmt.Sprintf(`terraform {
