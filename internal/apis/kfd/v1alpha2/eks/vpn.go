@@ -74,12 +74,12 @@ func (v *VpnConnector) Connect() error {
 			return ErrAutoConnectWithoutVpn
 		}
 
-		olVPN, pid, err := v.checkExistingOpenVPN()
+		vpn, pid, err := v.checkExistingOpenVPN()
 		if err != nil {
 			return err
 		}
 
-		if olVPN {
+		if vpn {
 			if err := v.promptAutoConnect(pid); err != nil {
 				return err
 			}
