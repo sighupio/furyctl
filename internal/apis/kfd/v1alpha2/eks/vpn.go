@@ -185,28 +185,25 @@ func (v *VpnConnector) copyOpenvpnToWorkDir(clientName string) error {
 }
 
 func (*VpnConnector) checkExistingOpenVPN() (bool, int32, error) {
-	pid := int32(0)
-
-	found := false
-
 	processes, err := process.Processes()
 	if err != nil {
-		return found, pid, fmt.Errorf("error getting processes: %w", err)
+		return false, 0, fmt.Errorf("error getting processes: %w", err)
 	}
 
 	for _, p := range processes {
-		name, _ := p.Name() //nolint:errcheck // we don't care about the error here
+		name, err := p.Name()
+		if err != nil {
+			logrus.Warning(err)
 
-		pid = p.Pid
+			continue
+		}
 
 		if name == "openvpn" {
-			found = true
-
-			break
+			return true, p.Pid, nil
 		}
 	}
 
-	return found, pid, nil
+	return false, 0, nil
 }
 
 func (v *VpnConnector) startOpenVPN() error {
