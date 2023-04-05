@@ -36,12 +36,12 @@ func enabled() bool {
 	return !disable
 }
 
-//Version will set the version of the CLI
+// Version will set the version of the CLI
 func Version(v string) {
 	version = v
 }
 
-//Disable will disable analytics
+// Disable will disable analytics
 func Disable(d bool) {
 	disable = d
 }

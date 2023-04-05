@@ -40,6 +40,7 @@ type EKSNodePool struct {
 	MinSize                 int                 `yaml:"minSize"`
 	MaxSize                 int                 `yaml:"maxSize"`
 	InstanceType            string              `yaml:"instanceType"`
+	ContainerRuntime        string              `yaml:"containerRuntime"`
 	OS                      string              `yaml:"os"`
 	TargetGroups            []string            `yaml:"targetGroups"`
 	MaxPods                 int                 `yaml:"maxPods"`
