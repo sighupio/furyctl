@@ -5,19 +5,19 @@
  */
 
 terraform {
-  required_version = "0.15.4"
+  required_version = "~> 0.15.4"
   required_providers {
-    local    = "= 2.0.0"
-    null     = "= 3.0.0"
-    external = "= 2.0.0"
-    random   = "3.0.1"
-    google   = "3.55.0"
+    external = "~> 2.0.0"
+    google   = "~> 3.55.0"
+    local    = "~> 2.0.0"
+    null     = "~> 3.0.0"
+    random   = "~> 3.0.1"
   }
 }
 
 provider "google" {
-  project     = var.provider_project
-  region      = var.provider_region
+  project = var.provider_project
+  region  = var.provider_region
 }
 
 module "vpc-and-vpn" {
