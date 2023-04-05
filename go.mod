@@ -3,24 +3,14 @@ module github.com/sighupio/furyctl
 go 1.19
 
 require (
+	github.com/Al-Pragliola/go-version v1.6.2
 	github.com/Masterminds/sprig/v3 v3.2.3
 	github.com/briandowns/spinner v1.19.0
 	github.com/denisbrodbeck/machineid v1.0.1
 	github.com/dukex/mixpanel v1.0.1
-	github.com/hashicorp/go-getter v1.6.2
-	github.com/hashicorp/go-version v1.6.0 // indirect
-	github.com/rogpeppe/go-internal v1.9.0 // indirect
-	github.com/sirupsen/logrus v1.9.0
-	github.com/spf13/cobra v1.6.1
-	github.com/spf13/viper v1.14.0
-	github.com/stretchr/testify v1.8.2
-	gopkg.in/yaml.v2 v2.4.0
-)
-
-require (
-	github.com/Al-Pragliola/go-version v1.6.2
 	github.com/go-playground/validator/v10 v10.11.1
 	github.com/google/go-cmp v0.5.9
+	github.com/hashicorp/go-getter v1.6.2
 	github.com/hashicorp/terraform-json v0.14.0
 	github.com/miekg/dns v1.1.50
 	github.com/onsi/ginkgo/v2 v2.6.1
@@ -28,7 +18,12 @@ require (
 	github.com/santhosh-tekuri/jsonschema/v5 v5.1.1
 	github.com/shirou/gopsutil/v3 v3.23.2
 	github.com/sighupio/fury-distribution v1.25.1-0.20230331155315-fe60f05a2af4
+	github.com/sirupsen/logrus v1.9.0
+	github.com/spf13/cobra v1.6.1
+	github.com/spf13/viper v1.14.0
+	github.com/stretchr/testify v1.8.2
 	golang.org/x/exp v0.0.0-20221217163422-3c43f8badb15
+	gopkg.in/yaml.v2 v2.4.0
 	gopkg.in/yaml.v3 v3.0.1
 )
 
@@ -56,6 +51,7 @@ require (
 	github.com/googleapis/gax-go/v2 v2.7.0 // indirect
 	github.com/hashicorp/go-cleanhttp v0.5.2 // indirect
 	github.com/hashicorp/go-safetemp v1.0.0 // indirect
+	github.com/hashicorp/go-version v1.5.0 // indirect
 	github.com/hashicorp/hcl v1.0.0 // indirect
 	github.com/huandu/xstrings v1.4.0 // indirect
 	github.com/imdario/mergo v0.3.13 // indirect
