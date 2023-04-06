@@ -5,15 +5,9 @@
  */
 
 data "aws_eks_cluster" "fury" {
-  name = var.cluster_name
-  depends_on = [
-    module.fury
-  ]
+  name = module.fury.cluster_id
 }
 
 data "aws_eks_cluster_auth" "fury" {
-  name = var.cluster_name
-  depends_on = [
-    module.fury
-  ]
+  name = module.fury.cluster_id
 }
