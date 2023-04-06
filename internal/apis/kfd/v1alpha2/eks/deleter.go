@@ -106,7 +106,7 @@ func (d *ClusterDeleter) Delete() error {
 		d.kfdManifest.Tools.Common.Furyagent.Version,
 		d.vpnAutoConnect,
 		d.skipVpn,
-		d.furyctlConf.Spec.Infrastructure.Vpc.Vpn,
+		d.furyctlConf.Spec.Infrastructure.Vpn,
 	)
 
 	switch d.phase {

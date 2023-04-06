@@ -35,7 +35,7 @@ type VpnConnector struct {
 	certDir     string
 	autoconnect bool
 	skip        bool
-	config      *private.SpecInfrastructureVpcVpn
+	config      *private.SpecInfrastructureVpn
 	ovRunner    *openvpn.Runner
 	faRunner    *furyagent.Runner
 }
@@ -47,7 +47,7 @@ func NewVpnConnector(
 	faVersion string,
 	autoconnect,
 	skip bool,
-	config *private.SpecInfrastructureVpcVpn,
+	config *private.SpecInfrastructureVpn,
 ) *VpnConnector {
 	executor := execx.NewStdExecutor()
 
