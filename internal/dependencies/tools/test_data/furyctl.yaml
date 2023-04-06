@@ -32,15 +32,15 @@ spec:
             - 10.0.20.0/24
             - 10.0.30.0/24
             - 10.0.40.0/24
-      vpn:
-        vpnClientsSubnetCidr: 192.168.200.0/24
-        ssh:
-          publicKeys:
-            - "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGxA+4CXYSmsN1m5DSsRzVRTegbvCh1gh7YObg0drj4+ alessio.pragliola@sighup.io"
-          githubUsersName:
-            - Al-Pragliola
-          allowedFromCidrs:
-            - 0.0.0.0/0
+    vpn:
+      vpnClientsSubnetCidr: 192.168.200.0/24
+      ssh:
+        publicKeys:
+          - "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGxA+4CXYSmsN1m5DSsRzVRTegbvCh1gh7YObg0drj4+ alessio.pragliola@sighup.io"
+        githubUsersName:
+          - Al-Pragliola
+        allowedFromCidrs:
+          - 0.0.0.0/0
   kubernetes:
     nodeAllowedSshPublicKey: "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGxA+4CXYSmsN1m5DSsRzVRTegbvCh1gh7YObg0drj4+ alessio.pragliola@sighup.io"
     nodePoolsLaunchKind: "launch_templates"
