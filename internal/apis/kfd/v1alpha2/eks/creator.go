@@ -119,7 +119,7 @@ func (v *ClusterCreator) Create(skipPhase string) error {
 		v.kfdManifest.Tools.Common.Furyagent.Version,
 		v.vpnAutoConnect,
 		v.skipVpn,
-		v.furyctlConf.Spec.Infrastructure.Vpc.Vpn,
+		v.furyctlConf.Spec.Infrastructure.Vpn,
 	)
 
 	switch v.phase {
