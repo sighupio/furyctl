@@ -9,8 +9,8 @@ variable "name" {
   type        = string
 }
 
-variable "network_cidr" {
-  description = "VPC Network CIDR"
+variable "cidr" {
+  description = "The CIDR block for the VPC. Default value is a valid CIDR, but not acceptable by AWS and should be overridden"
   type        = string
 }
 
@@ -22,8 +22,8 @@ variable "tags" {
 
 variable "vpc_enabled" {
   description = "Enable VPC creation"
-  type = bool
-  default = true
+  type        = bool
+  default     = true
 }
 
 variable "vpc_public_subnetwork_cidrs" {
@@ -40,20 +40,20 @@ variable "vpc_private_subnetwork_cidrs" {
 
 variable "vpn_enabled" {
   description = "Enable VPN"
-  type = bool
-  default = true
+  type        = bool
+  default     = true
 }
 
 variable "vpn_vpc_id" {
   description = "ID of the VPC"
-  type = string
-  default = ""
+  type        = string
+  default     = ""
 }
 
 variable "vpn_public_subnets" {
   description = "Enable VPC"
-  type = list(string)
-  default = []
+  type        = list(string)
+  default     = []
 }
 
 variable "vpn_subnetwork_cidr" {
