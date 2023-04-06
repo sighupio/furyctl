@@ -388,6 +388,14 @@ github.com/sighupio/fury-distribution v1.25.2-0.20230406072728-3ea4811ce798 h1:T
 github.com/sighupio/fury-distribution v1.25.2-0.20230406072728-3ea4811ce798/go.mod h1:YoK8hAXlril/Ow4WXgDQVjUI2r1SGzvIluR8rvVI/r4=
 github.com/sighupio/fury-distribution v1.25.2-0.20230406085729-b30ac61de947 h1:vzKL1O8tXjLaEJqWYgj7ZS1FKFtt0Whj5odqMtU2F/w=
 github.com/sighupio/fury-distribution v1.25.2-0.20230406085729-b30ac61de947/go.mod h1:YoK8hAXlril/Ow4WXgDQVjUI2r1SGzvIluR8rvVI/r4=
+github.com/sighupio/fury-distribution v1.25.2-0.20230406132837-a88691e36d0c h1:pYTEMTIdn7B68RHJ1Ik2fe6GDL2KGoIBbpX9ZKObcV8=
+github.com/sighupio/fury-distribution v1.25.2-0.20230406132837-a88691e36d0c/go.mod h1:YoK8hAXlril/Ow4WXgDQVjUI2r1SGzvIluR8rvVI/r4=
+github.com/sighupio/fury-distribution v1.25.2-0.20230406141838-891019be97a1 h1:5MfbCOGD6oApCtwSOlJlwgFUhp57qvepskcIZe2z0w0=
+github.com/sighupio/fury-distribution v1.25.2-0.20230406141838-891019be97a1/go.mod h1:YoK8hAXlril/Ow4WXgDQVjUI2r1SGzvIluR8rvVI/r4=
+github.com/sighupio/fury-distribution v1.25.2-0.20230406142217-71f83c049095 h1:rwG9tEnN4Js32HtH42wcBPdgmi2sLlM/OF+km+kenmU=
+github.com/sighupio/fury-distribution v1.25.2-0.20230406142217-71f83c049095/go.mod h1:YoK8hAXlril/Ow4WXgDQVjUI2r1SGzvIluR8rvVI/r4=
+github.com/sighupio/fury-distribution v1.25.2-0.20230406145107-e49f11bd25f2 h1:492Mhsm4NiBoPbPjw/dhj+QZnzrI/Qy1nlbsp+AqbIk=
+github.com/sighupio/fury-distribution v1.25.2-0.20230406145107-e49f11bd25f2/go.mod h1:YoK8hAXlril/Ow4WXgDQVjUI2r1SGzvIluR8rvVI/r4=
 github.com/sirupsen/logrus v1.8.1/go.mod h1:yWOB1SBYBC5VeMP7gHvWumXLIWorT60ONWic61uBYv0=
 github.com/sirupsen/logrus v1.9.0 h1:trlNQbNUG3OdDrDil03MCb1H2o9nJ1x4/5LYw7byDE0=
 github.com/sirupsen/logrus v1.9.0/go.mod h1:naHLuLoDiP4jHNo9R0sCBMtWGeIprob74mVsIT4qYEQ=
