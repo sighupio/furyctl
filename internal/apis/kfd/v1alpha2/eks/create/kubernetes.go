@@ -157,7 +157,7 @@ func (k *Kubernetes) Exec() error {
 		logrus.Debugf("error checking VPC connection: %v", err)
 
 		if k.furyctlConf.Spec.Infrastructure != nil {
-			if k.furyctlConf.Spec.Infrastructure.Vpc.Vpn != nil {
+			if k.furyctlConf.Spec.Infrastructure.Vpn != nil {
 				return fmt.Errorf("%w please check your VPN connection and try again", errKubeAPIUnreachable)
 			}
 		}
