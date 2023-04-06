@@ -129,7 +129,6 @@ spec:
           private:
             create: true
             name: "internal.fury-demo.sighup.io"
-            vpcId: "vpc123123123123"
       logging:
         overrides:
           nodeSelector: {}
