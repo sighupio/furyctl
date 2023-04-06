@@ -191,17 +191,40 @@ func (i *Infrastructure) copyFromTemplate() error {
 func (i *Infrastructure) createTfVars() error {
 	var buffer bytes.Buffer
 
-	err := bytesx.SafeWriteToBuffer(&buffer, "name = \"%v\"\n", i.furyctlConf.Metadata.Name)
-	if err != nil {
+	if i.furyctlConf.Spec.Infrastructure.Vpc != nil {
+		if err := i.addVpcDataToTfVars(&buffer); err != nil {
+			return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
+		}
+	}
+
+	if i.furyctlConf.Spec.Infrastructure.Vpn != nil {
+		if err := i.addVpnDataToTfVars(&buffer); err != nil {
+			return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
+		}
+	}
+
+	return i.writeTfVars(buffer)
+}
+
+func (i *Infrastructure) addVpcDataToTfVars(buffer *bytes.Buffer) error {
+	vpcEnabled := i.furyctlConf.Spec.Infrastructure.Vpc != nil
+
+	if err := bytesx.SafeWriteToBuffer(buffer,
+		"vpc_enabled = %v\n",
+		vpcEnabled,
+	); err != nil {
 		return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
 	}
 
-	err = bytesx.SafeWriteToBuffer(
-		&buffer,
-		"network_cidr = \"%v\"\n",
+	if err := bytesx.SafeWriteToBuffer(buffer, "name = \"%v\"\n", i.furyctlConf.Metadata.Name); err != nil {
+		return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
+	}
+
+	if err := bytesx.SafeWriteToBuffer(
+		buffer,
+		"cidr = \"%v\"\n",
 		i.furyctlConf.Spec.Infrastructure.Vpc.Network.Cidr,
-	)
-	if err != nil {
+	); err != nil {
 		return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
 	}
 
@@ -217,35 +240,21 @@ func (i *Infrastructure) createTfVars() error {
 		privateSubnetworkCidrs[i] = fmt.Sprintf("\"%v\"", cidr)
 	}
 
-	if err := bytesx.SafeWriteToBuffer(&buffer,
-		"vpc_enabled = %v\n",
-		i.furyctlConf.Spec.Infrastructure.Vpc != nil,
-	); err != nil {
-		return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
-	}
-
-	if err = bytesx.SafeWriteToBuffer(&buffer,
+	if err := bytesx.SafeWriteToBuffer(buffer,
 		"vpc_public_subnetwork_cidrs = [%v]\n",
 		strings.Join(publicSubnetworkCidrs, ","),
 	); err != nil {
 		return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
 	}
 
-	if err := bytesx.SafeWriteToBuffer(&buffer,
+	if err := bytesx.SafeWriteToBuffer(buffer,
 		"vpc_private_subnetwork_cidrs = [%v]\n",
 		strings.Join(privateSubnetworkCidrs, ","),
 	); err != nil {
 		return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
 	}
 
-	if i.furyctlConf.Spec.Infrastructure.Vpn != nil {
-		err = i.addVpnDataToTfVars(&buffer)
-		if err != nil {
-			return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
-		}
-	}
-
-	return i.writeTfVars(buffer)
+	return nil
 }
 
 func (i *Infrastructure) addVpnDataToTfVars(buffer *bytes.Buffer) error {
