@@ -34,10 +34,10 @@ module "vpc" {
 
   count = var.vpc_enabled ? 1 : 0
 
-  name         = var.name
-  network_cidr = var.network_cidr
-  tags         = var.tags
+  name = var.name
+  tags = var.tags
 
+  cidr                     = var.cidr
   private_subnetwork_cidrs = var.vpc_private_subnetwork_cidrs
   public_subnetwork_cidrs  = var.vpc_public_subnetwork_cidrs
 }
@@ -47,9 +47,8 @@ module "vpn" {
 
   count = var.vpn_enabled ? 1 : 0
 
-  name         = var.name
-  network_cidr = var.network_cidr
-  tags         = var.tags
+  name = var.name
+  tags = var.tags
 
   vpc_id         = var.vpc_enabled ? one(module.vpc[*].vpc_id) : var.vpn_vpc_id
   public_subnets = var.vpc_enabled ? one(module.vpc[*].public_subnets) : var.vpn_public_subnets
