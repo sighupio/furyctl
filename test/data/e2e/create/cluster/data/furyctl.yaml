@@ -197,7 +197,6 @@ spec:
         velero:
           eks:
             bucketName: example-velero
-            iamRoleArn: arn:aws:iam::123456789012:role/example-velero # private.
             region: eu-west-1
       auth:
         provider:
