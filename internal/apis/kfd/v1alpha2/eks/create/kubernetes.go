@@ -910,21 +910,63 @@ func (k *Kubernetes) addFirewallRulesToNodePool(buffer *bytes.Buffer, np private
 		}
 
 		if len(np.AdditionalFirewallRules.CidrBlocks) > 0 {
+			if err := bytesx.SafeWriteToBuffer(
+				buffer,
+				"cidr_blocks = [\n",
+			); err != nil {
+				return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
+			}
+
 			if err = k.addCidrBlocksFirewallRules(buffer, np.AdditionalFirewallRules.CidrBlocks); err != nil {
+				return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
+			}
+
+			if err = bytesx.SafeWriteToBuffer(
+				buffer,
+				"]\n",
+			); err != nil {
 				return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
 			}
 		}
 
 		if len(np.AdditionalFirewallRules.SourceSecurityGroupId) > 0 {
+			if err := bytesx.SafeWriteToBuffer(
+				buffer,
+				"source_security_group_id = [\n",
+			); err != nil {
+				return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
+			}
+
 			if err = k.addSourceSecurityGroupIDFirewallRules(
 				buffer, np.AdditionalFirewallRules.SourceSecurityGroupId,
+			); err != nil {
+				return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
+			}
+
+			if err = bytesx.SafeWriteToBuffer(
+				buffer,
+				"]\n",
 			); err != nil {
 				return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
 			}
 		}
 
 		if len(np.AdditionalFirewallRules.Self) > 0 {
+			if err := bytesx.SafeWriteToBuffer(
+				buffer,
+				"self = [\n",
+			); err != nil {
+				return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
+			}
+
 			if err = k.addSelfFirewallRules(buffer, np.AdditionalFirewallRules.Self); err != nil {
+				return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
+			}
+
+			if err = bytesx.SafeWriteToBuffer(
+				buffer,
+				"]\n",
+			); err != nil {
 				return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
 			}
 		}
@@ -980,18 +1022,12 @@ func (*Kubernetes) addCidrBlocksFirewallRules(
 			dmzCidrRanges[i] = fmt.Sprintf("\"%v\"", cidr)
 		}
 
-		cidrRange := ""
-
-		if len(dmzCidrRanges) > 0 {
-			cidrRange = dmzCidrRanges[0]
-		}
-
 		if err := bytesx.SafeWriteToBuffer(
 			buffer,
 			content,
 			fwRule.Name,
 			fwRule.Type,
-			cidrRange,
+			fmt.Sprintf("[%v]", strings.Join(dmzCidrRanges, ",")),
 			fwRule.Protocol,
 			fwRule.Ports.From,
 			fwRule.Ports.To,
