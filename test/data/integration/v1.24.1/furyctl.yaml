@@ -31,22 +31,22 @@ spec:
             - 10.1.48.0/24
             - 10.1.49.0/24
             - 10.1.50.0/24
-      vpn:
-        instances: 2
-        port: 1194
-        instanceType: t3.micro
-        diskSize: 50
-        operatorName: sighup
-        dhParamsBits: 2048
-        vpnClientsSubnetCidr: 172.16.0.0/16
-        ssh:
-          publicKeys:
-            - "ssh-ed25519 XYX"
-            - "{file://relative/path/to/ssh.pub}"
-          githubUsersName:
-            - lnovara
-          allowedFromCidrs:
-            - 0.0.0.0/0
+    vpn:
+      instances: 2
+      port: 1194
+      instanceType: t3.micro
+      diskSize: 50
+      operatorName: sighup
+      dhParamsBits: 2048
+      vpnClientsSubnetCidr: 172.16.0.0/16
+      ssh:
+        publicKeys:
+          - "ssh-ed25519 XYX"
+          - "{file://relative/path/to/ssh.pub}"
+        githubUsersName:
+          - lnovara
+        allowedFromCidrs:
+          - 0.0.0.0/0
   kubernetes:
     vpcId: vpc-0f92da9b4a2089963
     subnetIds:
