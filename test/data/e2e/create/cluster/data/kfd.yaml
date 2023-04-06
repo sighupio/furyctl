@@ -14,8 +14,8 @@ modules:
   networking: v1.10.0
 kubernetes:
   eks:
-    version: 1.24
-    installer: feat/137-support-public-cluster
+    version: 1.25
+    installer: develop
 furyctlSchemas:
   eks:
     - apiVersion: kfd.sighup.io/v1alpha2
