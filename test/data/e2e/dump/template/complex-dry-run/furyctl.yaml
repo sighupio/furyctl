@@ -41,31 +41,31 @@ spec:
             - 10.1.48.0/24
             - 10.1.49.0/24
             - 10.1.50.0/24
-      vpn:
-        # the vpn creation can be optional
-        enabled: true
-        instances: 2
-        port: 1194
-        instanceType: t3.micro
-        diskSize: 50
-        # is it really customizable? what is this?
-        operatorName: sighup
-        # should be optional?
-        dhParamsBits: 2048
-        # Which IP address will be given to VPN users
-        vpnClientsSubnetCidr: 172.16.0.0/16
-        # new ssh configuration, with a more hierarchical structure
-        ssh:
-          # ssh public keys enabled to access the vpn instances, NOT YET IMPLEMENTED, proposal
-          publicKeys:
-            - "ssh-ed56778 XYX"
+    vpn:
+      # the vpn creation can be optional
+      enabled: true
+      instances: 2
+      port: 1194
+      instanceType: t3.micro
+      diskSize: 50
+      # is it really customizable? what is this?
+      operatorName: sighup
+      # should be optional?
+      dhParamsBits: 2048
+      # Which IP address will be given to VPN users
+      vpnClientsSubnetCidr: 172.16.0.0/16
+      # new ssh configuration, with a more hierarchical structure
+      ssh:
+        # ssh public keys enabled to access the vpn instances, NOT YET IMPLEMENTED, proposal
+        publicKeys:
+          - "ssh-ed56778 XYX"
 #            - "{file://relative/path/to/ssh.pub}"
-          # Github users to get ssh keys from
-          githubUsersName:
-            - lnovara
-          # the CIDRs that are allowed for the ssh connection
-          allowedFromCidrs:
-            - 0.0.0.0/0
+        # Github users to get ssh keys from
+        githubUsersName:
+          - lnovara
+        # the CIDRs that are allowed for the ssh connection
+        allowedFromCidrs:
+          - 0.0.0.0/0
   kubernetes:
     # cidr allowed to talk with the apiServer
     apiServerAllowedCidrs:
