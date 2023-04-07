@@ -55,8 +55,8 @@ module "fury" {
   cluster_endpoint_public_access_cidrs  = var.cluster_endpoint_public_access_cidrs
   cluster_endpoint_private_access       = var.cluster_endpoint_private_access
   cluster_endpoint_private_access_cidrs = var.cluster_endpoint_private_access_cidrs
-  network                               = var.network
-  subnetworks                           = var.subnetworks
+  vpc_id                                = var.vpc_id
+  subnets                               = var.subnets
   ssh_public_key                        = var.ssh_public_key
   node_pools                            = var.node_pools
   node_pools_launch_kind                = var.node_pools_launch_kind
