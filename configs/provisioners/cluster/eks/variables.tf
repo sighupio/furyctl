@@ -15,36 +15,36 @@ variable "cluster_version" {
 }
 
 variable "cluster_log_retention_days" {
-  type = number
+  type    = number
   default = 90
 }
 
 variable "cluster_endpoint_private_access" {
-  type = bool
+  type    = bool
   default = false
 }
 
 variable "cluster_endpoint_private_access_cidrs" {
-  type = list(string)
+  type    = list(string)
   default = ["0.0.0.0/0"]
 }
 
 variable "cluster_endpoint_public_access" {
-  type = bool
+  type    = bool
   default = false
 }
 
 variable "cluster_endpoint_public_access_cidrs" {
-  type = list(string)
+  type    = list(string)
   default = ["0.0.0.0/0"]
 }
 
-variable "network" {
+variable "vpc_id" {
   type        = string
-  description = "Network where the Kubernetes cluster will be hosted"
+  description = "VPC ID where the Kubernetes cluster will be hosted"
 }
 
-variable "subnetworks" {
+variable "subnets" {
   type        = list(any)
   description = "List of subnets where the cluster will be hosted"
 }
@@ -57,35 +57,70 @@ variable "ssh_public_key" {
 variable "node_pools" {
   description = "An object list defining node pools configurations"
   type = list(object({
-    name                  = string
-    version               = string # null to use cluster_version
-    min_size              = number
-    max_size              = number
-    instance_type         = string
-    spot_instance         = bool
-    container_runtime     = optional(string)
-    os                    = optional(string)
-    max_pods              = optional(number) # null to use default upstream configuration
-    volume_size           = number
-    subnetworks           = list(string) # null to use default upstream configuration
-    labels                = map(string)
-    taints                = list(string)
-    tags                  = map(string)
-    eks_target_group_arns = optional(list(string))
-    additional_firewall_rules = list(object({
-      name       = string
-      direction  = string
-      cidr_block = string
-      protocol   = string
-      ports      = string
-      tags       = map(string)
-    }))
+    name              = string
+    ami_id            = optional(string)
+    version           = optional(string) # null to use cluster_version
+    min_size          = number
+    max_size          = number
+    instance_type     = string
+    container_runtime = optional(string)
+    spot_instance     = optional(bool)
+    max_pods          = optional(number) # null to use default upstream configuration
+    volume_size       = number
+    subnets           = optional(list(string)) # null to use default upstream configuration
+    labels            = optional(map(string))
+    taints            = optional(list(string))
+    tags              = optional(map(string))
+    target_group_arns = optional(list(string))
+    additional_firewall_rules = optional(
+      object({
+        cidr_blocks = optional(
+          list(
+            object({
+              description = optional(string)
+              type        = string
+              cidr_blocks = list(string)
+              protocol    = string
+              from_port   = number
+              to_port     = number
+              tags        = map(string)
+            })
+          )
+        )
+        source_security_group_id = optional(
+          list(
+            object({
+              description              = optional(string)
+              type                     = string
+              source_security_group_id = string
+              protocol                 = string
+              from_port                = number
+              to_port                  = number
+              tags                     = map(string)
+            })
+          )
+        )
+        self = optional(
+          list(
+            object({
+              description = optional(string)
+              type        = string
+              self        = bool
+              protocol    = string
+              from_port   = number
+              to_port     = number
+              tags        = map(string)
+            })
+          )
+        )
+      })
+    )
   }))
   default = []
 }
 
 variable "node_pools_launch_kind" {
-  type = string
+  type        = string
   description = "Choose if the node pools will use launch_configurations, launch_templates or both"
 }
 
