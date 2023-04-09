@@ -100,18 +100,20 @@ func (k *Kubernetes) Exec() error {
 		return nil
 	}
 
-	logrus.Info("Checking connection to the VPC...")
+	if k.furyctlConf.Spec.Kubernetes.ApiServer.PrivateAccess {
+		logrus.Info("Checking connection to the VPC...")
 
-	if err := k.checkVPCConnection(); err != nil {
-		logrus.Debugf("error checking VPC connection: %v", err)
+		if err := k.checkVPCConnection(); err != nil {
+			logrus.Debugf("error checking VPC connection: %v", err)
 
-		if k.furyctlConf.Spec.Infrastructure != nil {
-			if k.furyctlConf.Spec.Infrastructure.Vpn != nil {
-				return fmt.Errorf("%w please check your VPN connection and try again", errKubeAPIUnreachable)
+			if k.furyctlConf.Spec.Infrastructure != nil {
+				if k.furyctlConf.Spec.Infrastructure.Vpn != nil {
+					return fmt.Errorf("%w please check your VPN connection and try again", errKubeAPIUnreachable)
+				}
 			}
-		}
 
-		return fmt.Errorf("%w please check your VPC configuration and try again", errKubeAPIUnreachable)
+			return fmt.Errorf("%w please check your VPC configuration and try again", errKubeAPIUnreachable)
+		}
 	}
 
 	if err := k.tfRunner.Init(); err != nil {
