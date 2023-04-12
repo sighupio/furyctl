@@ -150,7 +150,11 @@ steps:
       - export GOOGLE_APPLICATION_CREDENTIALS=$${GCP_CREDENTIALS_PATH}
       - bats -t ./automated-tests/e2e-tests/gcp-gke/tests.sh
     when:
+      branch:
+        - main
+        - fix/*
       event:
+        - push
         - tag
 
   - <<: *e2e
