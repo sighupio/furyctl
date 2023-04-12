@@ -100,7 +100,8 @@ func (k *Kubernetes) Exec() error {
 		return nil
 	}
 
-	if k.furyctlConf.Spec.Kubernetes.ApiServer.PrivateAccess {
+	if k.furyctlConf.Spec.Kubernetes.ApiServer.PrivateAccess &&
+		!k.furyctlConf.Spec.Kubernetes.ApiServer.PublicAccess {
 		logrus.Info("Checking connection to the VPC...")
 
 		if err := k.checkVPCConnection(); err != nil {
