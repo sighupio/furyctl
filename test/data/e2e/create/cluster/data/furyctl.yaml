@@ -7,7 +7,7 @@ kind: EKSCluster
 metadata:
   name: furyctl-dev-aws
 spec:
-  distributionVersion: "v1.24.1"
+  distributionVersion: "v1.25.1"
   toolsConfiguration:
     terraform:
       state:
@@ -50,20 +50,18 @@ spec:
   kubernetes:
     nodeAllowedSshPublicKey: "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGxA+4CXYSmsN1m5DSsRzVRTegbvCh1gh7YObg0drj4+ alessio.pragliola@sighup.io"
     nodePoolsLaunchKind: "launch_templates"
+    apiServer:
+      privateAccess: true
+      publicAccess: false
+      privateAccessCidrs: [ '0.0.0.0/0' ]
+      publicAccessCidrs: [ '0.0.0.0/0' ]
     nodePools:
       - name: worker
-        ami:
-          id: ami-0ab303329574a0338
-          owner: "363601582189"
         size:
           min: 1
           max: 3
-        subnetIds: []
         instance:
           type: t3.micro
-          spot: false
-          volumeSize: 50
-        attachedTargetGroups: []
         labels:
           nodepool: worker
           node.kubernetes.io/role: worker
@@ -72,20 +70,12 @@ spec:
         tags:
           k8s.io/cluster-autoscaler/node-template/label/nodepool: "worker"
           k8s.io/cluster-autoscaler/node-template/label/node.kubernetes.io/role: "worker"
-        additionalFirewallRules: []
       - name: worker-eks
-        ami:
-          id: ami-0ab303329574a0338
-          owner: "363601582189"
         size:
           min: 1
           max: 3
-        subnetIds: []
         instance:
           type: t3.micro
-          spot: false
-          volumeSize: 50
-        attachedTargetGroups: []
         labels:
           nodepool: worker
           node.kubernetes.io/role: worker
@@ -93,19 +83,7 @@ spec:
         tags:
           k8s.io/cluster-autoscaler/node-template/label/nodepool: "worker"
           k8s.io/cluster-autoscaler/node-template/label/node.kubernetes.io/role: "worker"
-        additionalFirewallRules: []
-    awsAuth:
-      additionalAccounts: []
-      users: []
-      roles: []
   distribution:
-    common:
-      nodeSelector:
-        node.kubernetes.io/role: infra
-      tolerations:
-        - effect: NoSchedule
-          key: node.kubernetes.io/role
-          value: infra
     modules:
       ingress:
         baseDomain: internal.fury-demo.sighup.io

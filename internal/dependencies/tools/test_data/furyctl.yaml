@@ -66,7 +66,6 @@ spec:
         tags:
           k8s.io/cluster-autoscaler/node-template/label/nodepool: "worker"
           k8s.io/cluster-autoscaler/node-template/label/node.kubernetes.io/role: "worker"
-        additionalFirewallRules: []
       - name: worker-eks
         ami:
           id: ami-0ab303329574a0338
@@ -87,7 +86,6 @@ spec:
         tags:
           k8s.io/cluster-autoscaler/node-template/label/nodepool: "worker"
           k8s.io/cluster-autoscaler/node-template/label/node.kubernetes.io/role: "worker"
-        additionalFirewallRules: []
     awsAuth:
       additionalAccounts: []
       users: []
