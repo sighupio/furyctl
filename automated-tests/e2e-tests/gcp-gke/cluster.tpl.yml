@@ -6,6 +6,8 @@ kind: Cluster
 metadata:
   name: e2e-${CI_BUILD_NUMBER}
 spec:
+  region: ${GOOGLE_REGION}
+  project: ${GOOGLE_PROJECT}
   version: 1.25
   network: e2e-${CI_BUILD_NUMBER}
   subnetworks:
