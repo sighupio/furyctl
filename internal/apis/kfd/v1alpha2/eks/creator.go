@@ -397,10 +397,10 @@ func (v *ClusterCreator) storeClusterConfig() error {
 		Kubeconfig: v.paths.Kubeconfig,
 	}, true, true, false)
 
-	logrus.Info("Applying secret...")
+	logrus.Info("Saving furyctl configuration file in the cluster...")
 
 	if err := runner.Apply(secretPath); err != nil {
-		return fmt.Errorf("error while applying secret: %w", err)
+		return fmt.Errorf("error while saving furyctl configuration file in the cluster: %w", err)
 	}
 
 	return nil
