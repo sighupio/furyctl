@@ -71,7 +71,6 @@ spec:
         tags:
           k8s.io/cluster-autoscaler/node-template/label/nodepool: "worker"
           k8s.io/cluster-autoscaler/node-template/label/node.kubernetes.io/role: "worker"
-        additionalFirewallRules: []
       - name: infra
         ami:
           id: ami-0ab303329574a0338
@@ -94,7 +93,6 @@ spec:
           k8s.io/cluster-autoscaler/node-template/label/nodepool: "infra"
           k8s.io/cluster-autoscaler/node-template/label/node.kubernetes.io/role: "infra"
           k8s.io/cluster-autoscaler/node-template/taint/node.kubernetes.io/role: "infra:NoSchedule"
-        additionalFirewallRules: []
     awsAuth:
       additionalAccounts: []
       users: []

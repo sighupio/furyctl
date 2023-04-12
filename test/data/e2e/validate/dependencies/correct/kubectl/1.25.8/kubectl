@@ -4,8 +4,8 @@ cat <<EOF
 {\n
   "clientVersion": {\n
     "major": "1",\n
-    "minor": "24",\n
-    "gitVersion": "v1.24.9",\n
+    "minor": "25",\n
+    "gitVersion": "v1.25.8",\n
     "gitCommit": "42c05a547468804b2053ecf60a3bd15560362fc2",\n
     "gitTreeState": "clean",\n
     "buildDate": "2022-05-24T12:30:55Z",\n

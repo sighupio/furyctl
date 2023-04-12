@@ -26,19 +26,19 @@ func Test_Downloader_Download(t *testing.T) {
 			desc:          "unknown furyctl version",
 			wantApiVer:    "kfd.sighup.io/v1alpha2",
 			wantKind:      "EKSCluster",
-			wantDistroVer: "v1.24.1",
+			wantDistroVer: "v1.25.1",
 		},
 		{
 			desc:          "compatible furyctl version",
 			wantApiVer:    "kfd.sighup.io/v1alpha2",
 			wantKind:      "EKSCluster",
-			wantDistroVer: "v1.24.1",
+			wantDistroVer: "v1.25.1",
 		},
 		{
 			desc:          "older furyctl version",
 			wantApiVer:    "kfd.sighup.io/v1alpha2",
 			wantKind:      "EKSCluster",
-			wantDistroVer: "v1.24.1",
+			wantDistroVer: "v1.25.1",
 		},
 	}
 	for _, tC := range testCases {

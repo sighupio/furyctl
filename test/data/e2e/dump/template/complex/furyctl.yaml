@@ -104,14 +104,15 @@ spec:
           k8s.io/cluster-autoscaler/node-template/label/node.kubernetes.io/role: "worker"
         # additional rules added to the ASG nodes security group
         additionalFirewallRules:
-          - name: traffic_80_from_172_31_0_0_16
-            type: ingress
-            cidrBlocks:
-              - 172.31.0.0/16
-            protocol: TCP
-            ports:
-              from: 80
-              to: 80
+          cidrBlocks:
+            - name: traffic_80_from_172_31_0_0_16
+              type: ingress
+              cidrBlocks:
+                - 172.31.0.0/16
+              protocol: TCP
+              ports:
+                from: 80
+                to: 80
     # aws-auth configmap definiton
     awsAuth:
       # Additional AWS account id to add to the aws-auth configmap, optional

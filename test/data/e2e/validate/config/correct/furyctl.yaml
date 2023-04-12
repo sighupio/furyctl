@@ -50,6 +50,11 @@ spec:
   kubernetes:
     nodeAllowedSshPublicKey: "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGxA+4CXYSmsN1m5DSsRzVRTegbvCh1gh7YObg0drj4+ alessio.pragliola@sighup.io"
     nodePoolsLaunchKind: "launch_templates"
+    apiServer:
+      privateAccess: true
+      publicAccess: false
+      privateAccessCidrs: [ '0.0.0.0/0' ]
+      publicAccessCidrs: [ '0.0.0.0/0' ]
     nodePools:
       - name: worker
         ami:
@@ -72,7 +77,6 @@ spec:
         tags:
           k8s.io/cluster-autoscaler/node-template/label/nodepool: "worker"
           k8s.io/cluster-autoscaler/node-template/label/node.kubernetes.io/role: "worker"
-        additionalFirewallRules: []
       - name: worker-eks
         ami:
           id: ami-0ab303329574a0338
@@ -93,7 +97,6 @@ spec:
         tags:
           k8s.io/cluster-autoscaler/node-template/label/nodepool: "worker"
           k8s.io/cluster-autoscaler/node-template/label/node.kubernetes.io/role: "worker"
-        additionalFirewallRules: []
     awsAuth:
       additionalAccounts: []
       users: []
