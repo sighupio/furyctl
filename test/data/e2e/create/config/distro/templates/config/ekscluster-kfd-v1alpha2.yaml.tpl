@@ -81,6 +81,13 @@ spec:
     nodePoolsLaunchKind: "launch_templates"
     # Optional Kubernetes Cluster log retention in days. Defaults to 90 days.
     # logRetentionDays: 90
+    # This map defines the access to the Kubernetes API server
+    apiServer:
+      privateAccess: true
+      publicAccess: false
+      privateAccessCidrs: ['0.0.0.0/0']
+      publicAccessCidrs: ['0.0.0.0/0']
+    # logRetentionDays: 90
     # This array contains the definition of the nodepools in the cluster
     nodePools:
         # This is the name of the nodepool
@@ -149,7 +156,7 @@ spec:
     #        - example:masters
     #      rolearn: "arn:aws:iam::123456789012:role/k8s-example-role"
     # Optional. Use when spec.infrastructure is left empty and the VPC is not managed by furyctl
-    vpcId: "vpc-123456780"
+    # vpcId: "vpc-123456780"
   # This section describes how the KFD distribution will be installed
   distribution:
     # This common configuration will be applied to all the packages that will be installed in the cluster
@@ -192,13 +199,13 @@ spec:
             # provider can be certManager, secret
             provider: certManager
             # if provider is set as secret, this key will be used to create the certificate in the cluster
-            secret:
+            # secret:
               # the certificate file content or you can use the file notation to get the content from a file
-              cert: "{file://relative/path/to/ssl.crt}"
+              # cert: "{file://relative/path/to/ssl.crt}"
               # the key file, a file notation can be used to get the content from a file
-              key: "{file://relative/path/to/ssl.key}"
+              # key: "{file://relative/path/to/ssl.key}"
               # the ca file, a file notation can be used to get the content from a file
-              ca: "{file://relative/path/to/ssl.ca}"
+              # ca: "{file://relative/path/to/ssl.ca}"
         # configuration for the cert-manager package
         certManager:
           # the configuration for the clusterIssuer that will be created
@@ -223,8 +230,6 @@ spec:
             name: "internal.example.dev"
             # defines if we need to create the zone, or if it already exists and we only need to adopt/use it
             create: false
-            # This field is ignored, but needed. TBD better validation
-            vpcId: "dummyvalue"
       # This section contains all the configurations for the logging module
       logging:
         # This optional key is used to override automatic parameters
@@ -249,6 +254,15 @@ spec:
         #      host: ""
         #      # the ingressClass can be overridden if needed
         #      ingressClass: ""
+        #    minio:
+        #      # if authentication is globally enabled, it can be disabled for this ingress.
+        #      disableAuth: false
+        #      # the host can be overridden, by default is minio.{.spec.distribution.modules.ingress.baseDomain}
+        #      host: ""
+        #      # the ingressClass can be overridden if needed
+        #      ingressClass: ""
+        # can be opensearch or loki
+        type: opensearch
         # configurations for the opensearch package
         opensearch:
           # the type of opensearch to install, can be single or triple
@@ -263,6 +277,20 @@ spec:
           #    memory: ""
           # the PVC size used by opensearch, for each pod
           storageSize: "150Gi"
+        # configurations for the minio-ha package
+        minio:
+          # the PVC size for each minio disk, 6 disks total
+          storageSize: "20Gi"
+        # configurations for the loki package
+        # loki:
+          ## optional settings to override requests and limits, common for each component
+          #resources:
+          #  requests:
+          #    cpu: ""
+          #    memory: ""
+          #  limits:
+          #    cpu: ""
+          #    memory: ""
       # This section contains all the configurations for the monitoring module
       monitoring:
         # This optional key is used to override automatic parameters
@@ -339,8 +367,6 @@ spec:
           eks:
             # The S3 bucket that will be created to store the backups
             bucketName: example-velero
-            # This field is ignored, but needed. TBD better validation
-            iamRoleArn: arn:aws:iam::123456789012:role/dummy-value
             # The region where the bucket will be created (can be different from the overall region defined in .spec.region)
             region: eu-west-1
         # This optional key is used to override automatic parameters
@@ -406,3 +432,37 @@ spec:
         #        loadAllGroups: false
         #        teamNameField: slug
         #        useLoginAsID: false
+    # Custom Patches to add or override fields in the generated manifests
+    #customPatches:
+    #  configMapGenerator:
+    #  - name: a-configmap
+    #    files:
+    #      - /path/to/config.example
+    #  - name: b-configmap
+    #    envs:
+    #      - /path/to/envs.env
+    #  patches:
+    #  - target:
+    #      group: ""
+    #      version: v1
+    #      kind: Service
+    #      name: cluster-autoscaler
+    #      namespace: kube-system
+    #    path: /path/to/patch.yaml
+    #  patchesStrategicMerge:
+    #  - |
+    #    ---
+    #    apiVersion: v1
+    #    kind: Service
+    #    metadata:
+    #      labels:
+    #        label1: value1
+    #      name: cluster-autoscaler
+    #      namespace: kube-system
+    #  secretGenerator:
+    #  - name: a-secret
+    #    files:
+    #      - /path/to/config.example
+    #  - name: b-secret
+    #    envs:
+    #      -  /path/to/envs.env
