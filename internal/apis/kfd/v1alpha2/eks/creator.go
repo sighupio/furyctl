@@ -112,6 +112,12 @@ func (v *ClusterCreator) Create(skipPhase string) error {
 		return err
 	}
 
+	var vpnConfig *private.SpecInfrastructureVpn
+
+	if v.furyctlConf.Spec.Infrastructure != nil {
+		vpnConfig = v.furyctlConf.Spec.Infrastructure.Vpn
+	}
+
 	vpnConnector := NewVpnConnector(
 		v.furyctlConf.Metadata.Name,
 		infra.SecretsPath,
@@ -119,7 +125,7 @@ func (v *ClusterCreator) Create(skipPhase string) error {
 		v.kfdManifest.Tools.Common.Furyagent.Version,
 		v.vpnAutoConnect,
 		v.skipVpn,
-		v.furyctlConf.Spec.Infrastructure.Vpn,
+		vpnConfig,
 	)
 
 	switch v.phase {

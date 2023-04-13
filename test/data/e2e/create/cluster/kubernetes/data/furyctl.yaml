@@ -1,0 +1,160 @@
+# Copyright (c) 2017-present SIGHUP s.r.l All rights reserved.
+# Use of this source code is governed by a BSD-style
+# license that can be found in the LICENSE file.
+
+apiVersion: kfd.sighup.io/v1alpha2
+kind: EKSCluster
+metadata:
+  name: furyctl-dev-aws
+spec:
+  distributionVersion: "v1.25.1"
+  toolsConfiguration:
+    terraform:
+      state:
+        s3:
+          bucketName: furyctl-test
+          keyPrefix: furyctl/
+          region: eu-west-1
+  region: eu-west-1
+  tags:
+    env: "test"
+    k8s: "awesome"
+  kubernetes:
+    nodeAllowedSshPublicKey: "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGxA+4CXYSmsN1m5DSsRzVRTegbvCh1gh7YObg0drj4+ alessio.pragliola@sighup.io"
+    nodePoolsLaunchKind: "launch_templates"
+    vpcId: "vpc-0040e94dde71882f8"
+    subnetIds:
+      - "subnet-08ebb79bd8ef8e08e"
+      - "subnet-014ca0081b369daf7"
+      - "subnet-0071d41306f6e810a"
+    apiServer:
+      privateAccess: true
+      publicAccess: false
+      privateAccessCidrs: [ '0.0.0.0/0' ]
+      publicAccessCidrs: [ '0.0.0.0/0' ]
+    nodePools:
+      - name: worker
+        size:
+          min: 1
+          max: 3
+        instance:
+          type: t3.micro
+        labels:
+          nodepool: worker
+          node.kubernetes.io/role: worker
+        taints:
+          - node.kubernetes.io/role=worker:NoSchedule
+        tags:
+          k8s.io/cluster-autoscaler/node-template/label/nodepool: "worker"
+          k8s.io/cluster-autoscaler/node-template/label/node.kubernetes.io/role: "worker"
+      - name: worker-eks
+        size:
+          min: 1
+          max: 3
+        instance:
+          type: t3.micro
+        labels:
+          nodepool: worker
+          node.kubernetes.io/role: worker
+        taints: []
+        tags:
+          k8s.io/cluster-autoscaler/node-template/label/nodepool: "worker"
+          k8s.io/cluster-autoscaler/node-template/label/node.kubernetes.io/role: "worker"
+  distribution:
+    modules:
+      ingress:
+        baseDomain: internal.fury-demo.sighup.io
+        nginx:
+          type: single
+          tls:
+            provider: certManager
+            secret:
+              cert: "{file://relative/path/to/ssl.crt}"
+              key: "{file://relative/path/to/ssl.key}"
+              ca: "{file://relative/path/to/ssl.ca}"
+        certManager:
+          clusterIssuer:
+            name: letsencrypt-fury
+            email: engineering+fury-distribution@sighup.io
+            type: http01
+        dns:
+          public:
+            name: "fury-demo.sighup.io"
+            create: false
+          private:
+            create: true
+            name: "internal.fury-demo.sighup.io"
+      logging:
+        overrides:
+          nodeSelector: {}
+          tolerations: []
+          ingresses:
+            opensearch-dashboards:
+              disableAuth: false
+              host: ""
+              ingressClass: ""
+            cerebro:
+              disableAuth: false
+              host: ""
+              ingressClass: ""
+        opensearch:
+          type: single
+          resources:
+            requests:
+              cpu: ""
+              memory: ""
+            limits:
+              cpu: ""
+              memory: ""
+          storageSize: "150Gi"
+      monitoring:
+        overrides:
+          nodeSelector: {}
+          tolerations: []
+          ingresses:
+            prometheus:
+              disableAuth: false
+              host: ""
+              ingressClass: ""
+            alertmanager:
+              disableAuth: false
+              host: ""
+              ingressClass: ""
+            grafana:
+              disableAuth: false
+              host: ""
+              ingressClass: ""
+            goldpinger:
+              disableAuth: false
+              host: ""
+              ingressClass: ""
+        prometheus:
+          resources:
+            requests:
+              cpu: ""
+              memory: ""
+            limits:
+              cpu: ""
+              memory: ""
+      policy:
+        overrides:
+          nodeSelector: {}
+          tolerations: []
+          ingresses:
+            gpm:
+              disableAuth: false
+              host: ""
+              ingressClass: ""
+        gatekeeper:
+          additionalExcludedNamespaces: []
+      dr:
+        velero:
+          eks:
+            bucketName: example-velero
+            region: eu-west-1
+      auth:
+        provider:
+          type: none
+          basicAuth:
+            username: admin
+            password: "{env://KFD_BASIC_AUTH_PASSWORD}"

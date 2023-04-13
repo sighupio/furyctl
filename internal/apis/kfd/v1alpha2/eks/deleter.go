@@ -99,6 +99,12 @@ func (d *ClusterDeleter) Delete() error {
 		return fmt.Errorf("error while creating infrastructure phase: %w", err)
 	}
 
+	var vpnConfig *private.SpecInfrastructureVpn
+
+	if d.furyctlConf.Spec.Infrastructure != nil {
+		vpnConfig = d.furyctlConf.Spec.Infrastructure.Vpn
+	}
+
 	vpnConnector := NewVpnConnector(
 		d.furyctlConf.Metadata.Name,
 		infra.SecretsPath,
@@ -106,7 +112,7 @@ func (d *ClusterDeleter) Delete() error {
 		d.kfdManifest.Tools.Common.Furyagent.Version,
 		d.vpnAutoConnect,
 		d.skipVpn,
-		d.furyctlConf.Spec.Infrastructure.Vpn,
+		vpnConfig,
 	)
 
 	switch d.phase {

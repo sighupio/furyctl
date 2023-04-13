@@ -353,7 +353,8 @@ func (k *Kubernetes) createTfVars() error {
 	allowedClusterEndpointPrivateAccessCIDRs := k.furyctlConf.Spec.Kubernetes.ApiServer.PrivateAccessCidrs
 	allowedClusterEndpointPublicAccessCIDRs := k.furyctlConf.Spec.Kubernetes.ApiServer.PublicAccessCidrs
 
-	if k.furyctlConf.Spec.Infrastructure.Vpc != nil {
+	if k.furyctlConf.Spec.Infrastructure != nil &&
+		k.furyctlConf.Spec.Infrastructure.Vpc != nil {
 		if infraOutJSON, err := os.ReadFile(path.Join(k.infraOutputsPath, "output.json")); err == nil {
 			var infraOut terraform.OutputJSON
 
