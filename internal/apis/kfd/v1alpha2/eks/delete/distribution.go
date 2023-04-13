@@ -339,6 +339,18 @@ func (d *Distribution) deleteBlockingResources() error {
 		return fmt.Errorf("error deleting logging resources: %w", err)
 	}
 
+	logrus.Info("Deleting Deployments in the namespace 'logging'...")
+
+	_, err = d.kubeClient.DeleteResource("loki-distributed-distributor", "deployment", "logging")
+	if err != nil {
+		return fmt.Errorf("error deleting deployment 'loki-distributed-distributor' in logging namespace: %w", err)
+	}
+
+	_, err = d.kubeClient.DeleteResource("loki-distributed-compactor", "deployment", "logging")
+	if err != nil {
+		return fmt.Errorf("error deleting deployment 'loki-distributed-compactor' in logging namespace: %w", err)
+	}
+
 	logrus.Info("Deleting StafultSets in the namespace 'logging'...")
 
 	_, err = d.kubeClient.DeleteAllResources("sts", "logging")
@@ -361,6 +373,7 @@ func (d *Distribution) deleteBlockingResources() error {
 	}
 
 	logrus.Debugf("waiting for resources to be deleted...")
+
 	time.Sleep(dur)
 
 	return nil
