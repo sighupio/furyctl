@@ -319,36 +319,42 @@ func (d *Distribution) deleteBlockingResources() error {
 	dur := time.Minute * ingressAfterDeleteDelay
 
 	logrus.Info("Deleting prometheus resources...")
+
 	_, err := d.kubeClient.DeleteAllResources("prometheus", "monitoring")
 	if err != nil {
 		return fmt.Errorf("error deleting prometheus resources: %w", err)
 	}
 
 	logrus.Info("Deleting PersistentVolumeClaims in the namespace 'monitoring'...")
+
 	_, err = d.kubeClient.DeleteAllResources("pvc", "monitoring")
 	if err != nil {
 		return fmt.Errorf("error deleting pvc in namespace 'monitoring': %w", err)
 	}
 
 	logrus.Info("Deleting logging resources...")
+
 	_, err = d.kubeClient.DeleteAllResources("logging", "logging")
 	if err != nil {
 		return fmt.Errorf("error deleting logging resources: %w", err)
 	}
 
 	logrus.Info("Deleting StafultSets in the namespace 'logging'...")
+
 	_, err = d.kubeClient.DeleteAllResources("sts", "logging")
 	if err != nil {
 		return fmt.Errorf("error deleting sts in namespace 'logging': %w", err)
 	}
 
 	logrus.Info("Deleting PersistentVolumeClaims in the namespace 'logging'...")
+
 	_, err = d.kubeClient.DeleteAllResources("pvc", "logging")
 	if err != nil {
 		return fmt.Errorf("error deleting pvc in namespace 'logging': %w", err)
 	}
 
 	logrus.Info("Deleting Services in the namespace 'ingress-nginx'...")
+
 	_, err = d.kubeClient.DeleteAllResources("svc", "ingress-nginx")
 	if err != nil {
 		return fmt.Errorf("error deleting svc in namespace 'ingress-nginx': %w", err)
