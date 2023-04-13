@@ -99,14 +99,8 @@ func (r *Runner) Get(ns string, params ...string) (string, error) {
 	return out, nil
 }
 
-func (r *Runner) DeleteAllResources(ns, res string) (string, error) {
-	args := []string{"delete", res, "--all"}
-
-	if ns != "all" {
-		args = append(args, "-n", ns)
-	} else {
-		args = append(args, "-A")
-	}
+func (r *Runner) DeleteResource(ns, res, name string) (string, error) {
+	args := []string{"delete", res, "-n", ns, name}
 
 	if r.paths.Kubeconfig != "" {
 		args = append(args, "--kubeconfig", r.paths.Kubeconfig)
@@ -118,10 +112,14 @@ func (r *Runner) DeleteAllResources(ns, res string) (string, error) {
 		WorkDir:  r.paths.WorkDir,
 	}))
 	if err != nil {
-		return out, fmt.Errorf("error deleting all resources: %w", err)
+		return out, fmt.Errorf("error deleting resource(s): %w", err)
 	}
 
 	return out, nil
+}
+
+func (r *Runner) DeleteAllResources(ns, res string) (string, error) {
+	return r.DeleteResource(ns, res, "--all")
 }
 
 func (r *Runner) Delete(manifestPath string, params ...string) (string, error) {
