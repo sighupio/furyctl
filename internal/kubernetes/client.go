@@ -148,6 +148,15 @@ func (c *Client) DeleteAllResources(res, ns string) (string, error) {
 	return cmdOut, nil
 }
 
+func (c *Client) DeleteResource(name, res, ns string) (string, error) {
+	cmdOut, err := c.kubeRunner.DeleteResource(ns, res, name)
+	if err != nil {
+		return cmdOut, fmt.Errorf("error while deleting resource from cluster: %w", err)
+	}
+
+	return cmdOut, nil
+}
+
 func (c *Client) DeleteFromPath(path string, params ...string) (string, error) {
 	cmdOut, err := c.kubeRunner.Delete(path, params...)
 	if err != nil {
