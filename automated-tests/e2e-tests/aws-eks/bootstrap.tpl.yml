@@ -7,11 +7,11 @@ metadata:
   name: e2e-${CI_BUILD_NUMBER}
 spec:
   networkCIDR: 10.0.0.0/16
-  publicSubnetsCIDRs:  
+  publicSubnetsCIDRs:
     - 10.0.20.0/24
     - 10.0.30.0/24
     - 10.0.40.0/24
-  privateSubnetsCIDRs: 
+  privateSubnetsCIDRs:
     - 10.0.182.0/24
     - 10.0.172.0/24
     - 10.0.162.0/24
@@ -26,4 +26,4 @@ executor:
     config:
       bucket: ${TERRAFORM_TF_STATES_BUCKET_NAME}
       key: ${CI_REPO}/${DRONE_BRANCH}/${CI_BUILD_NUMBER}/bootstrap/aws.state
-      region: ${AWS_DEFAULT_REGION}
+      region: ${AWS_REGION}

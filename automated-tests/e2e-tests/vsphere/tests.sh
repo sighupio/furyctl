@@ -82,6 +82,8 @@ CPUARCH="amd64_v1"
         echo "$output" >&3
         echo "  TERRAFORM LOGS:" >&3
         cat ./automated-tests/e2e-tests/vsphere/cluster/logs/terraform.logs >&3
+        echo "  ANSIBLE LOGS:" >&3
+        cat ./automated-tests/e2e-tests/vsphere/cluster/logs/ansible.log >&3
     fi
     [ "$status" -eq 0 ]
 }
@@ -99,6 +101,8 @@ CPUARCH="amd64_v1"
         echo "$output" >&3
         echo "  TERRAFORM LOGS:" >&3
         cat ./automated-tests/e2e-tests/vsphere/cluster/logs/terraform.logs >&3
+        echo "  ANSIBLE LOGS:" >&3
+        cat ./automated-tests/e2e-tests/vsphere/cluster/logs/ansible.log >&3
     fi
     [ "$status" -eq 0 ]
 }

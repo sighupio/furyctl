@@ -6,6 +6,8 @@ kind: Cluster
 metadata:
   name: e2e-${CI_BUILD_NUMBER}
 spec:
+  region: ${GOOGLE_REGION}
+  project: ${GOOGLE_PROJECT}
   version: 1.25
   network: e2e-${CI_BUILD_NUMBER}
   subnetworks:
@@ -43,4 +45,4 @@ executor:
     config:
       bucket: ${TERRAFORM_TF_STATES_BUCKET_NAME}
       key: ${CI_REPO}/${DRONE_BRANCH}/${CI_BUILD_NUMBER}/cluster/gke.state
-      region: ${AWS_DEFAULT_REGION}
+      region: ${AWS_REGION}
