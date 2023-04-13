@@ -536,9 +536,12 @@ var (
 				RestoreEnvVars := BackupEnvVars("PATH")
 				defer RestoreEnvVars()
 
-				bp := Abs("../data/e2e/create/cluster/bin_mock")
+				absBasePath, err := filepath.Abs(filepath.Join(absBasePath, "infrastructure"))
+				Expect(err).To(Not(HaveOccurred()))
 
-				err := os.Setenv("PATH", bp+":"+os.Getenv("PATH"))
+				bp := Abs("../data/e2e/create/cluster/infrastructure/bin_mock")
+
+				err = os.Setenv("PATH", bp+":"+os.Getenv("PATH"))
 				Expect(err).To(Not(HaveOccurred()))
 
 				furyctlYamlPath := path.Join(absBasePath, "data/furyctl.yaml")
@@ -565,9 +568,12 @@ var (
 				RestoreEnvVars := BackupEnvVars("PATH")
 				defer RestoreEnvVars()
 
-				bp := Abs("../data/e2e/create/cluster/bin_mock")
+				absBasePath, err := filepath.Abs(filepath.Join(absBasePath, "kubernetes"))
+				Expect(err).To(Not(HaveOccurred()))
 
-				err := os.Setenv("PATH", bp+":"+os.Getenv("PATH"))
+				bp := Abs("../data/e2e/create/cluster/kubernetes/bin_mock")
+
+				err = os.Setenv("PATH", bp+":"+os.Getenv("PATH"))
 				Expect(err).To(Not(HaveOccurred()))
 
 				furyctlYamlPath := path.Join(absBasePath, "data/furyctl.yaml")
