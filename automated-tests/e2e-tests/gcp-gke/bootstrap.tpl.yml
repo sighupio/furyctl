@@ -27,4 +27,4 @@ executor:
     config:
       bucket: ${TERRAFORM_TF_STATES_BUCKET_NAME}
       key: ${CI_REPO}/${DRONE_BRANCH}/${CI_BUILD_NUMBER}/bootstrap/gcp.state
-      region: ${AWS_DEFAULT_REGION}
+      region: ${AWS_REGION}
