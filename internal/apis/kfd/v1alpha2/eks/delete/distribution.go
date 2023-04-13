@@ -204,7 +204,7 @@ func (d *Distribution) Exec() error {
 		}
 	}
 
-	logrus.Info("Deleting blocking resources...")
+	logrus.Warn("Deleting blocking resources, this operation will take a few minutes!")
 
 	if err = d.deleteBlockingResources(); err != nil {
 		return err
