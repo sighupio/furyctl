@@ -8,7 +8,7 @@ package slices
 func Clean[T comparable](slice []T) []T {
 	result := make([]T, 0)
 
-	zeroValue := *new(T)
+	var zeroValue T
 
 	for _, v := range slice {
 		if v != zeroValue {
