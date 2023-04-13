@@ -99,7 +99,7 @@ func (r *Runner) Get(ns string, params ...string) (string, error) {
 	return out, nil
 }
 
-func (r *Runner) DeleteAllResources(res, ns string) (string, error) {
+func (r *Runner) DeleteAllResources(ns, res string) (string, error) {
 	args := []string{"delete", res, "--all"}
 
 	if ns != "all" {
@@ -124,7 +124,7 @@ func (r *Runner) DeleteAllResources(res, ns string) (string, error) {
 	return out, nil
 }
 
-func (r *Runner) Delete(manifestPath string, params ...string) error {
+func (r *Runner) Delete(manifestPath string, params ...string) (string, error) {
 	args := []string{"delete"}
 
 	if r.paths.Kubeconfig != "" {
@@ -141,16 +141,16 @@ func (r *Runner) Delete(manifestPath string, params ...string) error {
 
 	args = append(args, "-f", manifestPath)
 
-	_, err := execx.CombinedOutputWithTimeout(execx.NewCmd(r.paths.Kubectl, execx.CmdOptions{
+	res, err := execx.CombinedOutputWithTimeout(execx.NewCmd(r.paths.Kubectl, execx.CmdOptions{
 		Args:     args,
 		Executor: r.executor,
 		WorkDir:  r.paths.WorkDir,
 	}), kubectlDeleteTimeout)
 	if err != nil {
-		return fmt.Errorf("error deleting resources: %w", err)
+		return res, fmt.Errorf("error deleting resources: %w", err)
 	}
 
-	return nil
+	return res, nil
 }
 
 func (r *Runner) Version() (string, error) {

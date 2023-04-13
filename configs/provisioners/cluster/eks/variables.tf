@@ -11,25 +11,42 @@ variable "cluster_name" {
 
 variable "cluster_version" {
   type        = string
-  description = "Kubernetes Cluster Version. Look at the cloud providers documentation to discover available versions. EKS example -> 1.24"
+  description = "Kubernetes Cluster Version. Look at the cloud providers documentation to discover available versions."
 }
 
 variable "cluster_log_retention_days" {
   type    = number
   default = 90
 }
-variable "network" {
-  type        = string
-  description = "Network where the Kubernetes cluster will be hosted"
+
+variable "cluster_endpoint_private_access" {
+  type    = bool
+  default = false
 }
 
-variable "subnetworks" {
+variable "cluster_endpoint_private_access_cidrs" {
+  type    = list(string)
+  default = ["0.0.0.0/0"]
+}
+
+variable "cluster_endpoint_public_access" {
+  type    = bool
+  default = false
+}
+
+variable "cluster_endpoint_public_access_cidrs" {
+  type    = list(string)
+  default = ["0.0.0.0/0"]
+}
+
+variable "vpc_id" {
+  type        = string
+  description = "VPC ID where the Kubernetes cluster will be hosted"
+}
+
+variable "subnets" {
   type        = list(any)
   description = "List of subnets where the cluster will be hosted"
-}
-
-variable "dmz_cidr_range" {
-  description = "Network CIDR range from where cluster control plane will be accessible"
 }
 
 variable "ssh_public_key" {
@@ -40,28 +57,64 @@ variable "ssh_public_key" {
 variable "node_pools" {
   description = "An object list defining node pools configurations"
   type = list(object({
-    name                  = string
-    version               = string # null to use cluster_version
-    min_size              = number
-    max_size              = number
-    instance_type         = string
-    spot_instance         = bool
-    os                    = optional(string)
-    max_pods              = optional(number) # null to use default upstream configuration
-    volume_size           = number
-    subnetworks           = list(string) # null to use default upstream configuration
-    labels                = map(string)
-    taints                = list(string)
-    tags                  = map(string)
-    eks_target_group_arns = optional(list(string))
-    additional_firewall_rules = list(object({
-      name       = string
-      direction  = string
-      cidr_block = string
-      protocol   = string
-      ports      = string
-      tags       = map(string)
-    }))
+    name              = string
+    ami_id            = optional(string)
+    version           = optional(string) # null to use cluster_version
+    min_size          = number
+    max_size          = number
+    instance_type     = string
+    container_runtime = optional(string)
+    spot_instance     = optional(bool)
+    max_pods          = optional(number) # null to use default upstream configuration
+    volume_size       = number
+    subnets           = optional(list(string)) # null to use default upstream configuration
+    labels            = optional(map(string))
+    taints            = optional(list(string))
+    tags              = optional(map(string))
+    target_group_arns = optional(list(string))
+    additional_firewall_rules = optional(
+      object({
+        cidr_blocks = optional(
+          list(
+            object({
+              description = optional(string)
+              type        = string
+              cidr_blocks = list(string)
+              protocol    = string
+              from_port   = number
+              to_port     = number
+              tags        = map(string)
+            })
+          )
+        )
+        source_security_group_id = optional(
+          list(
+            object({
+              description              = optional(string)
+              type                     = string
+              source_security_group_id = string
+              protocol                 = string
+              from_port                = number
+              to_port                  = number
+              tags                     = map(string)
+            })
+          )
+        )
+        self = optional(
+          list(
+            object({
+              description = optional(string)
+              type        = string
+              self        = bool
+              protocol    = string
+              from_port   = number
+              to_port     = number
+              tags        = map(string)
+            })
+          )
+        )
+      })
+    )
   }))
   default = []
 }
@@ -75,12 +128,6 @@ variable "tags" {
   type        = map(any)
   description = "The tags to apply to all resources"
   default     = {}
-}
-
-variable "resource_group_name" {
-  type        = string
-  description = "Resource group name where every resource will be placed. Required only in AKS installer (*)"
-  default     = ""
 }
 
 variable "eks_map_accounts" {

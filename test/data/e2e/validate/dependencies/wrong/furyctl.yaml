@@ -9,7 +9,7 @@ metadata:
   name: awesome-cluster-staging
 spec:
   # with this version we will download the kfd.yaml file from the distribution to gather all the other components versions
-  distributionVersion: v1.24.1
+  distributionVersion: v1.25.1
   # Under the hood, furyctl uses other tools like terraform, kustomize, etc
   toolsConfiguration:
     terraform:
@@ -75,15 +75,14 @@ spec:
       - subnet-0ab84702287e38ccb
       - subnet-0ae4e9199d9192226
       - subnet-01787e8da51e4f070
-    apiServerEndpointAccess:
-     # by default all clusters are created with a private control plane - (needs to be added to the installer's options)
-     type: "private"
-     # cidr allowed to talk with the apiServer
-     allowedCidrs:
-       - 10.1.0.0/16
-     nodeAllowedSshPublicKey: "ssh-ed25519 XYZ"
-     nodePoolsLaunchKind: "launch_templates"
-     nodePools:
+    apiServer:
+      privateAccess: true
+      publicAccess: false
+      privateAccessCidrs: ['0.0.0.0/0']
+      publicAccessCidrs: ['0.0.0.0/0']
+    nodeAllowedSshPublicKey: "ssh-ed25519 XYZ"
+    nodePoolsLaunchKind: "launch_templates"
+    nodePools:
        - name: worker
          # optional, was OS, and version was removed
          ami:
@@ -115,6 +114,7 @@ spec:
            k8s.io/cluster-autoscaler/node-template/label/node.kubernetes.io/role: "worker"
          # additional rules added to the ASG nodes security group
          additionalFirewallRules:
+          cidrBlocks:
            - name: traffic_80_from_172_31_0_0_16
              type: ingress
              cidrBlocks:
@@ -124,7 +124,7 @@ spec:
                from: 80
                to: 80
      # aws-auth configmap definiton
-     awsAuth:
+    awsAuth:
        # Additional AWS account id to add to the aws-auth configmap, optional
        additionalAccounts:
          - "777777777777"

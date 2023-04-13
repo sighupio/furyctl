@@ -112,6 +112,12 @@ func (v *ClusterCreator) Create(skipPhase string) error {
 		return err
 	}
 
+	var vpnConfig *private.SpecInfrastructureVpn
+
+	if v.furyctlConf.Spec.Infrastructure != nil {
+		vpnConfig = v.furyctlConf.Spec.Infrastructure.Vpn
+	}
+
 	vpnConnector := NewVpnConnector(
 		v.furyctlConf.Metadata.Name,
 		infra.SecretsPath,
@@ -119,7 +125,7 @@ func (v *ClusterCreator) Create(skipPhase string) error {
 		v.kfdManifest.Tools.Common.Furyagent.Version,
 		v.vpnAutoConnect,
 		v.skipVpn,
-		v.furyctlConf.Spec.Infrastructure.Vpn,
+		vpnConfig,
 	)
 
 	switch v.phase {
@@ -156,10 +162,7 @@ func (v *ClusterCreator) Create(skipPhase string) error {
 		return nil
 
 	case cluster.OperationPhaseKubernetes:
-		if (v.furyctlConf.Spec.Kubernetes.ApiServerEndpointAccess == nil ||
-			v.furyctlConf.Spec.Kubernetes.ApiServerEndpointAccess.Type ==
-				private.SpecKubernetesAPIServerEndpointAccessTypePrivate) &&
-			!v.dryRun {
+		if v.furyctlConf.Spec.Kubernetes.ApiServer.PrivateAccess && !v.dryRun {
 			if err = vpnConnector.Connect(); err != nil {
 				return fmt.Errorf("error while connecting to the vpn: %w", err)
 			}
@@ -195,10 +198,7 @@ func (v *ClusterCreator) Create(skipPhase string) error {
 		return nil
 
 	case cluster.OperationPhaseDistribution:
-		if (v.furyctlConf.Spec.Kubernetes.ApiServerEndpointAccess == nil ||
-			v.furyctlConf.Spec.Kubernetes.ApiServerEndpointAccess.Type ==
-				private.SpecKubernetesAPIServerEndpointAccessTypePrivate) &&
-			!v.dryRun {
+		if v.furyctlConf.Spec.Kubernetes.ApiServer.PrivateAccess && !v.dryRun {
 			if err = vpnConnector.Connect(); err != nil {
 				return fmt.Errorf("error while connecting to the vpn: %w", err)
 			}
@@ -261,10 +261,7 @@ func (v *ClusterCreator) allPhases(
 		}
 	}
 
-	if (v.furyctlConf.Spec.Kubernetes.ApiServerEndpointAccess == nil ||
-		v.furyctlConf.Spec.Kubernetes.ApiServerEndpointAccess.Type ==
-			private.SpecKubernetesAPIServerEndpointAccessTypePrivate) &&
-		!v.dryRun {
+	if v.furyctlConf.Spec.Kubernetes.ApiServer.PrivateAccess && !v.dryRun {
 		if err := vpnConnector.Connect(); err != nil {
 			return fmt.Errorf("error while connecting to the vpn: %w", err)
 		}

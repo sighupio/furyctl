@@ -244,7 +244,7 @@ var (
 					ContainSubstring("furyagent: wrong tool version - installed = 0.2.4, expected = 0.3.0"),
 				)
 				Expect(out).To(
-					ContainSubstring("kubectl: wrong tool version - installed = 1.24.7, expected = 1.24.9"),
+					ContainSubstring("kubectl: wrong tool version - installed = 1.24.7, expected = 1.25.8"),
 				)
 				Expect(out).To(
 					ContainSubstring("kustomize: wrong tool version - installed = 3.5.0, expected = 3.5.3"),
@@ -293,8 +293,8 @@ var (
 				)
 			}
 
-			It("should download all dependencies for v1.24.1", func() {
-				bp := basepath + "/v1.24.1"
+			It("should download all dependencies for v1.25.1", func() {
+				bp := basepath + "/v1.25.1"
 
 				homeDir, err := os.UserHomeDir()
 				Expect(err).To(Not(HaveOccurred()))
@@ -309,12 +309,12 @@ var (
 
 				Expect(err).To(Not(HaveOccurred()))
 				Expect(binP + "/furyagent/0.3.0/furyagent").To(BeAnExistingFile())
-				Expect(binP + "/kubectl/1.24.9/kubectl").To(BeAnExistingFile())
+				Expect(binP + "/kubectl/1.25.8/kubectl").To(BeAnExistingFile())
 				Expect(binP + "/kustomize/3.5.3/kustomize").To(BeAnExistingFile())
 				Expect(binP + "/terraform/0.15.4/terraform").To(BeAnExistingFile())
 				Expect(vp + "/installers/eks/README.md").To(BeAnExistingFile())
 				Expect(vp + "/installers/eks/modules/eks/main.tf").To(BeAnExistingFile())
-				Expect(vp + "/installers/eks/modules/vpc-and-vpn/main.tf").To(BeAnExistingFile())
+				Expect(vp + "/installers/eks/modules/vpc/main.tf").To(BeAnExistingFile())
 				Expect(vp + "/modules/auth/README.md").To(BeAnExistingFile())
 				Expect(vp + "/modules/auth/katalog/gangway/kustomization.yaml").To(BeAnExistingFile())
 				Expect(vp + "/modules/dr/README.md").To(BeAnExistingFile())
@@ -450,7 +450,7 @@ var (
 					"--debug",
 					"--disable-analytics", "true",
 					"--distro-location", absBasepath+"/distro",
-					"--version", "1.24.1",
+					"--version", "1.25.1",
 					"--log", "stdout",
 				)
 			}
@@ -536,9 +536,12 @@ var (
 				RestoreEnvVars := BackupEnvVars("PATH")
 				defer RestoreEnvVars()
 
-				bp := Abs("../data/e2e/create/cluster/bin_mock")
+				absBasePath, err := filepath.Abs(filepath.Join(absBasePath, "infrastructure"))
+				Expect(err).To(Not(HaveOccurred()))
 
-				err := os.Setenv("PATH", bp+":"+os.Getenv("PATH"))
+				bp := Abs("../data/e2e/create/cluster/infrastructure/bin_mock")
+
+				err = os.Setenv("PATH", bp+":"+os.Getenv("PATH"))
 				Expect(err).To(Not(HaveOccurred()))
 
 				furyctlYamlPath := path.Join(absBasePath, "data/furyctl.yaml")
@@ -565,9 +568,12 @@ var (
 				RestoreEnvVars := BackupEnvVars("PATH")
 				defer RestoreEnvVars()
 
-				bp := Abs("../data/e2e/create/cluster/bin_mock")
+				absBasePath, err := filepath.Abs(filepath.Join(absBasePath, "kubernetes"))
+				Expect(err).To(Not(HaveOccurred()))
 
-				err := os.Setenv("PATH", bp+":"+os.Getenv("PATH"))
+				bp := Abs("../data/e2e/create/cluster/kubernetes/bin_mock")
+
+				err = os.Setenv("PATH", bp+":"+os.Getenv("PATH"))
 				Expect(err).To(Not(HaveOccurred()))
 
 				furyctlYamlPath := path.Join(absBasePath, "data/furyctl.yaml")

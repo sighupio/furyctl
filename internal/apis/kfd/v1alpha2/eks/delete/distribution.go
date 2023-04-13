@@ -11,17 +11,20 @@ import (
 	"path"
 	"path/filepath"
 	"regexp"
+	"strings"
 	"time"
 
 	"github.com/sirupsen/logrus"
 
 	"github.com/sighupio/fury-distribution/pkg/config"
 	"github.com/sighupio/furyctl/internal/cluster"
-	"github.com/sighupio/furyctl/internal/tool/kubectl"
+	"github.com/sighupio/furyctl/internal/kubernetes"
+	"github.com/sighupio/furyctl/internal/tool/awscli"
 	"github.com/sighupio/furyctl/internal/tool/kustomize"
 	"github.com/sighupio/furyctl/internal/tool/terraform"
 	execx "github.com/sighupio/furyctl/internal/x/exec"
 	iox "github.com/sighupio/furyctl/internal/x/io"
+	"github.com/sighupio/furyctl/internal/x/slices"
 )
 
 const (
@@ -34,13 +37,21 @@ var (
 	errCheckPendingResources = errors.New("error while checking pending resources")
 	errPendingResources      = errors.New("pending resources: ")
 	errClusterConnect        = errors.New("error connecting to cluster")
+	hostedZoneRegex          = regexp.MustCompile(`/hostedzone/(\S+)\t(\S+)\.`)
+	recordSetsRegex          = regexp.MustCompile(`(\S+)\.`)
 )
+
+type Ingress struct {
+	Name string
+	Host []string
+}
 
 type Distribution struct {
 	*cluster.OperationPhase
 	tfRunner   *terraform.Runner
 	kzRunner   *kustomize.Runner
-	kubeRunner *kubectl.Runner
+	awsRunner  *awscli.Runner
+	kubeClient *kubernetes.Client
 	dryRun     bool
 }
 
@@ -77,16 +88,21 @@ func NewDistribution(
 				WorkDir:   path.Join(phase.Path, "manifests"),
 			},
 		),
-		kubeRunner: kubectl.NewRunner(
+		awsRunner: awscli.NewRunner(
 			execx.NewStdExecutor(),
-			kubectl.Paths{
-				Kubectl:    phase.KubectlPath,
-				WorkDir:    path.Join(phase.Path, "manifests"),
-				Kubeconfig: kubeconfig,
+			awscli.Paths{
+				Awscli:  "aws",
+				WorkDir: phase.Path,
 			},
+		),
+		kubeClient: kubernetes.NewClient(
+			phase.KubectlPath,
+			path.Join(phase.Path, "manifests"),
+			kubeconfig,
 			true,
 			true,
 			false,
+			execx.NewStdExecutor(),
 		),
 		dryRun: dryRun,
 	}, nil
@@ -97,8 +113,7 @@ func (d *Distribution) Exec() error {
 
 	logrus.Debug("Delete: running distribution phase...")
 
-	err := iox.CheckDirIsEmpty(d.OperationPhase.Path)
-	if err == nil {
+	if err := iox.CheckDirIsEmpty(d.OperationPhase.Path); err == nil {
 		logrus.Info("Kubernetes Fury Distribution already deleted, skipping...")
 
 		logrus.Debug("Distribution phase already executed, skipping...")
@@ -108,7 +123,7 @@ func (d *Distribution) Exec() error {
 
 	logrus.Info("Checking cluster connectivity...")
 
-	if _, err := d.kubeRunner.Version(); err != nil {
+	if _, err := d.kubeClient.ToolVersion(); err != nil {
 		return errClusterConnect
 	}
 
@@ -128,55 +143,65 @@ func (d *Distribution) Exec() error {
 			return err
 		}
 
-		err = d.kubeRunner.Delete(manifestsOutPath, "--dry-run=client")
-		if err != nil {
+		if _, err = d.kubeClient.DeleteFromPath(manifestsOutPath, "--dry-run=client"); err != nil {
 			logrus.Errorf("error while deleting resources: %v", err)
 		}
 
 		logrus.Info("The following resources, regardless of the built manifests, are going to be deleted:")
 
-		err = d.getListOfResourcesNs("all", "ingress")
-		if err != nil {
+		if _, err := d.kubeClient.ListNamespaceResources("ingress", "all"); err != nil {
 			logrus.Errorf("error while getting list of ingress resources: %v", err)
 		}
 
-		err = d.getListOfResourcesNs("monitoring", "prometheus")
-		if err != nil {
+		if _, err := d.kubeClient.ListNamespaceResources("prometheus", "monitoring"); err != nil {
 			logrus.Errorf("error while getting list of prometheus resources: %v", err)
 		}
 
-		err = d.getListOfResourcesNs("monitoring", "persistentvolumeclaim")
-		if err != nil {
+		if _, err := d.kubeClient.ListNamespaceResources("persistentvolumeclaim", "monitoring"); err != nil {
 			logrus.Errorf("error while getting list of persistentvolumeclaim resources: %v", err)
 		}
 
-		err = d.getListOfResourcesNs("logging", "persistentvolumeclaim")
-		if err != nil {
+		if _, err := d.kubeClient.ListNamespaceResources("persistentvolumeclaim", "logging"); err != nil {
 			logrus.Errorf("error while getting list of persistentvolumeclaim resources: %v", err)
 		}
 
-		err = d.getListOfResourcesNs("logging", "statefulset")
-		if err != nil {
+		if _, err := d.kubeClient.ListNamespaceResources("statefulset", "logging"); err != nil {
 			logrus.Errorf("error while getting list of statefulset resources: %v", err)
 		}
 
-		err = d.getListOfResourcesNs("logging", "logging")
-		if err != nil {
+		if _, err := d.kubeClient.ListNamespaceResources("logging", "logging"); err != nil {
 			logrus.Errorf("error while getting list of logging resources: %v", err)
 		}
 
-		err = d.getListOfResourcesNs("ingress-nginx", "service")
-		if err != nil {
+		if _, err := d.kubeClient.ListNamespaceResources("service", "ingress-nginx"); err != nil {
 			logrus.Errorf("error while getting list of service resources: %v", err)
 		}
 
 		return nil
 	}
 
+	ingressHosts, err := d.getIngressHosts()
+	if err != nil {
+		return err
+	}
+
+	hostedZones, err := d.getHostedZones()
+	if err != nil {
+		return err
+	}
+
 	logrus.Info("Deleting ingresses...")
 
 	if err = d.deleteIngresses(); err != nil {
 		return err
+	}
+
+	if len(ingressHosts) > 0 {
+		logrus.Info("Waiting for DNS records to be deleted...")
+
+		if err = d.assertEmptyDNSRecords(ingressHosts, hostedZones); err != nil {
+			return err
+		}
 	}
 
 	logrus.Info("Deleting blocking resources...[PersistentVolumeClaims, StatefulSets, Logging, Prometheus]")
@@ -194,22 +219,20 @@ func (d *Distribution) Exec() error {
 
 	logrus.Info("Deleting manifests...")
 
-	err = d.kubeRunner.Delete(manifestsOutPath)
+	_, err = d.kubeClient.DeleteFromPath(manifestsOutPath)
 	if err != nil {
 		logrus.Errorf("error while deleting resources: %v", err)
 	}
 
 	logrus.Info("Checking pending resources...")
 
-	err = d.checkPendingResources()
-	if err != nil {
+	if err = d.checkPendingResources(); err != nil {
 		return err
 	}
 
 	logrus.Info("Deleting infra resources...")
 
-	err = d.tfRunner.Destroy()
-	if err != nil {
+	if err = d.tfRunner.Destroy(); err != nil {
 		return fmt.Errorf("error while deleting infra resources: %w", err)
 	}
 
@@ -241,6 +264,10 @@ func (d *Distribution) buildManifests() (string, error) {
 func (d *Distribution) checkPendingResources() error {
 	var errSvc, errPv, errIgrs error
 
+	var ingrs []kubernetes.Ingress
+
+	var lbs, pvs []string
+
 	dur := time.Second * checkPendingResourcesDelay
 
 	maxRetries := checkPendingResourcesMaxRetries
@@ -251,11 +278,20 @@ func (d *Distribution) checkPendingResources() error {
 		p := time.NewTicker(dur)
 
 		if <-p.C; true {
-			errSvc = d.getLoadBalancers()
+			lbs, errSvc = d.kubeClient.GetLoadBalancers()
+			if errSvc == nil && len(lbs) > 0 {
+				errSvc = fmt.Errorf("%w: %v", errPendingResources, lbs)
+			}
 
-			errPv = d.getPersistentVolumes()
+			pvs, errPv = d.kubeClient.GetPersistentVolumes()
+			if errPv == nil && len(pvs) > 0 {
+				errPv = fmt.Errorf("%w: %v", errPendingResources, pvs)
+			}
 
-			errIgrs = d.getIngresses()
+			ingrs, errIgrs = d.kubeClient.GetIngresses()
+			if errIgrs == nil && len(ingrs) > 0 {
+				errIgrs = fmt.Errorf("%w: %v", errPendingResources, ingrs)
+			}
 
 			if errSvc == nil && errPv == nil && errIgrs == nil {
 				return nil
@@ -271,16 +307,10 @@ func (d *Distribution) checkPendingResources() error {
 }
 
 func (d *Distribution) deleteIngresses() error {
-	dur := time.Minute * ingressAfterDeleteDelay
-
-	_, err := d.kubeRunner.DeleteAllResources("ingress", "all")
+	_, err := d.kubeClient.DeleteAllResources("ingress", "all")
 	if err != nil {
 		return fmt.Errorf("error deleting ingresses: %w", err)
 	}
-
-	logrus.Debugf("waiting for DNS records to be deleted...[ETA: 4 minutes]")
-
-	time.Sleep(dur)
 
 	return nil
 }
@@ -288,32 +318,32 @@ func (d *Distribution) deleteIngresses() error {
 func (d *Distribution) deleteBlockingResources() error {
 	dur := time.Minute * ingressAfterDeleteDelay
 
-	_, err := d.kubeRunner.DeleteAllResources("prometheus", "monitoring")
+	_, err := d.kubeClient.DeleteAllResources("prometheus", "monitoring")
 	if err != nil {
 		return fmt.Errorf("error deleting prometheus resources: %w", err)
 	}
 
-	_, err = d.kubeRunner.DeleteAllResources("pvc", "monitoring")
+	_, err = d.kubeClient.DeleteAllResources("pvc", "monitoring")
 	if err != nil {
 		return fmt.Errorf("error deleting pvc in namespace 'monitoring': %w", err)
 	}
 
-	_, err = d.kubeRunner.DeleteAllResources("logging", "logging")
+	_, err = d.kubeClient.DeleteAllResources("logging", "logging")
 	if err != nil {
 		return fmt.Errorf("error deleting logging resources: %w", err)
 	}
 
-	_, err = d.kubeRunner.DeleteAllResources("sts", "logging")
+	_, err = d.kubeClient.DeleteAllResources("sts", "logging")
 	if err != nil {
 		return fmt.Errorf("error deleting sts in namespace 'logging': %w", err)
 	}
 
-	_, err = d.kubeRunner.DeleteAllResources("pvc", "logging")
+	_, err = d.kubeClient.DeleteAllResources("pvc", "logging")
 	if err != nil {
 		return fmt.Errorf("error deleting pvc in namespace 'logging': %w", err)
 	}
 
-	_, err = d.kubeRunner.DeleteAllResources("svc", "ingress-nginx")
+	_, err = d.kubeClient.DeleteAllResources("svc", "ingress-nginx")
 	if err != nil {
 		return fmt.Errorf("error deleting svc in namespace 'ingress-nginx': %w", err)
 	}
@@ -324,82 +354,94 @@ func (d *Distribution) deleteBlockingResources() error {
 	return nil
 }
 
-func (d *Distribution) getLoadBalancers() error {
-	log, err := d.kubeRunner.Get("all", "svc", "-o",
-		"jsonpath='{.items[?(@.spec.type==\"LoadBalancer\")].metadata.name}'")
+func (d *Distribution) getIngressHosts() ([]string, error) {
+	ingrs, err := d.kubeClient.GetIngresses()
 	if err != nil {
-		return fmt.Errorf("error while reading resources from cluster: %w", err)
+		return nil, fmt.Errorf("error getting ingresses: %w", err)
 	}
 
-	reg := regexp.MustCompile(`'(.*?)'`)
+	var hosts []string
 
-	logStringIndex := reg.FindStringIndex(log)
-
-	if len(logStringIndex) == 0 {
-		return fmt.Errorf("%w: error while parsing kubectl get response", errPendingResources)
+	for _, ingress := range ingrs {
+		hosts = append(hosts, ingress.Host...)
 	}
 
-	logString := log[logStringIndex[0]:logStringIndex[1]]
+	hosts = slices.Uniq(hosts)
 
-	if logString != "''" {
-		return fmt.Errorf("%w: %s", errPendingResources, logString)
-	}
-
-	return nil
+	return hosts, nil
 }
 
-func (d *Distribution) getListOfResourcesNs(ns, resName string) error {
-	_, err := d.kubeRunner.Get(ns, resName, "-o",
-		"jsonpath={range .items[*]}{\""+resName+" \"}\"{.metadata.name}\"{\" deleted (dry run)\"}{\"\\n\"}{end}")
+func (d *Distribution) getHostedZones() (map[string]string, error) {
+	zones := make(map[string]string)
+
+	route53, err := d.awsRunner.Route53("list-hosted-zones", "--query", "HostedZones[*].[Id,Name]",
+		"--output", "text")
 	if err != nil {
-		return fmt.Errorf("error while reading resources from cluster: %w", err)
+		return zones, fmt.Errorf("error getting hosted zones: %w", err)
 	}
 
-	return nil
+	matches := hostedZoneRegex.FindAllStringSubmatch(route53, -1)
+
+	for _, match := range matches {
+		zones[match[1]] = match[2]
+	}
+
+	return zones, nil
 }
 
-func (d *Distribution) getIngresses() error {
-	log, err := d.kubeRunner.Get("all", "ingress", "-o", "jsonpath='{.items[*].metadata.name}'")
-	if err != nil {
-		return fmt.Errorf("error while reading resources from cluster: %w", err)
+func (d *Distribution) assertEmptyDNSRecords(hosts []string, hostedZones map[string]string) error {
+	if len(hosts) == 0 {
+		return nil
 	}
 
-	reg := regexp.MustCompile(`'(.*?)'`)
+	queue := make([]string, 0, len(hostedZones))
 
-	logStringIndex := reg.FindStringIndex(log)
-
-	if len(logStringIndex) == 0 {
-		return fmt.Errorf("%w: error while parsing kubectl get response", errPendingResources)
+	for zone := range hostedZones {
+		queue = append(queue, zone)
 	}
 
-	logString := log[logStringIndex[0]:logStringIndex[1]]
-
-	if logString != "''" {
-		return fmt.Errorf("%w: %s", errPendingResources, logString)
+	trimSuffix := func(a string) string {
+		return strings.TrimSuffix(a, ".")
 	}
 
-	return nil
-}
+	dur := time.Second * checkPendingResourcesDelay
 
-func (d *Distribution) getPersistentVolumes() error {
-	log, err := d.kubeRunner.Get("all", "pv", "-o", "jsonpath='{.items[*].metadata.name}'")
-	if err != nil {
-		return fmt.Errorf("error while reading resources from cluster: %w", err)
+	maxRetries := checkPendingResourcesMaxRetries * len(hosts)
+
+	retries := 0
+
+	for retries < maxRetries {
+		p := time.NewTicker(dur)
+
+		if <-p.C; true {
+			for _, zone := range queue {
+				domains, err := d.awsRunner.Route53("list-resource-record-sets", "--hosted-zone-id", zone,
+					"--query", "ResourceRecordSets[*].Name", "--output", "text")
+				if err != nil {
+					return fmt.Errorf("error getting hosted zone records: %w", err)
+				}
+
+				matches := recordSetsRegex.FindAllString(domains, -1)
+
+				if slices.DisjointTransform(
+					hosts,
+					matches,
+					nil,
+					trimSuffix,
+				) {
+					queue = queue[1:]
+				}
+			}
+
+			if len(queue) == 0 {
+				return nil
+			}
+		}
+
+		retries++
+
+		p.Stop()
 	}
 
-	reg := regexp.MustCompile(`'(.*?)'`)
-
-	logStringIndex := reg.FindStringIndex(log)
-
-	if len(logStringIndex) == 0 {
-		return fmt.Errorf("%w: error while parsing kubectl get response", errPendingResources)
-	}
-
-	logString := log[logStringIndex[0]:logStringIndex[1]]
-
-	if logString != "''" {
-		return fmt.Errorf("%w: %s", errPendingResources, logString)
-	}
-
-	return nil
+	return fmt.Errorf("%w: hostedzones %v", errCheckPendingResources, queue)
 }
