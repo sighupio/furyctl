@@ -123,7 +123,7 @@ func NewClusterCmd(tracker *analytics.Tracker) *cobra.Command {
 			basePath := filepath.Join(homeDir, ".furyctl", res.MinimalConf.Metadata.Name)
 
 			// Init second half of collaborators.
-			depsvl := dependencies.NewValidator(executor, flags.BinPath, flags.FuryctlPath)
+			depsvl := dependencies.NewValidator(executor, flags.BinPath, flags.FuryctlPath, flags.VpnAutoConnect)
 
 			// Validate the dependencies.
 			logrus.Info("Validating dependencies...")
@@ -232,7 +232,8 @@ func NewClusterCmd(tracker *analytics.Tracker) *cobra.Command {
 	cmd.Flags().Bool(
 		"vpn-auto-connect",
 		false,
-		"When set will automatically connect to the created VPN in the infrastructure phase",
+		"When set will automatically connect to the created VPN in the infrastructure phase, "+
+			"please note that this will require OpenVPN to be installed in your system",
 	)
 
 	cmd.Flags().Bool(

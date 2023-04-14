@@ -13,12 +13,17 @@ type ExtraToolsValidator interface {
 	Validate(confPath string) ([]string, []error)
 }
 
-func NewExtraToolsValidatorFactory(executor execx.Executor, apiVersion, kind string) ExtraToolsValidator {
+func NewExtraToolsValidatorFactory(
+	executor execx.Executor,
+	apiVersion,
+	kind string,
+	autoConnect bool,
+) ExtraToolsValidator {
 	switch apiVersion {
 	case "kfd.sighup.io/v1alpha2":
 		switch kind {
 		case "EKSCluster":
-			return eks.NewExtraToolsValidator(executor)
+			return eks.NewExtraToolsValidator(executor, autoConnect)
 
 		default:
 			return nil

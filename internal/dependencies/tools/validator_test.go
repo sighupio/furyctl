@@ -134,7 +134,7 @@ func Test_Validator_Validate(t *testing.T) {
 		t.Run(tC.desc, func(t *testing.T) {
 			furyctlPath := path.Join("test_data", "furyctl.yaml")
 
-			v := tools.NewValidator(execx.NewFakeExecutor(), "test_data", furyctlPath)
+			v := tools.NewValidator(execx.NewFakeExecutor(), "test_data", furyctlPath, false)
 
 			oks, errs := v.Validate(tC.manifest, tC.state)
 
