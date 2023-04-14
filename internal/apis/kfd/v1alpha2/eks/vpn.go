@@ -115,18 +115,22 @@ func (v *VpnConnector) GenerateCertificates() error {
 		return err
 	}
 
-	if err := v.assertOldCertificateExists(bucketName, clientName); err == nil {
-		if err := v.removeOldCertificate(bucketName, clientName); err != nil {
-			return err
+	opvnCertPath := filepath.Join(v.certDir, fmt.Sprintf("%s.ovpn", clientName))
+
+	if _, err := os.Stat(opvnCertPath); os.IsNotExist(err) {
+		if err := v.assertOldCertificateExists(bucketName, clientName); err == nil {
+			if err := v.removeOldCertificate(bucketName, clientName); err != nil {
+				return err
+			}
 		}
-	}
 
-	if err := v.faRunner.ConfigOpenvpnClient(clientName); err != nil {
-		return fmt.Errorf("error configuring openvpn client: %w", err)
-	}
+		if err := v.faRunner.ConfigOpenvpnClient(clientName); err != nil {
+			return fmt.Errorf("error configuring openvpn client: %w", err)
+		}
 
-	if err := v.copyOpenvpnToWorkDir(clientName); err != nil {
-		return fmt.Errorf("error copying openvpn file to workdir: %w", err)
+		if err := v.copyOpenvpnToWorkDir(clientName); err != nil {
+			return fmt.Errorf("error copying openvpn file to workdir: %w", err)
+		}
 	}
 
 	return nil
