@@ -40,6 +40,7 @@ type VpnConnector struct {
 	ovRunner    *openvpn.Runner
 	faRunner    *furyagent.Runner
 	awsRunner   *awscli.Runner
+	workDir     string
 }
 
 func NewVpnConnector(
@@ -50,8 +51,13 @@ func NewVpnConnector(
 	autoconnect,
 	skip bool,
 	config *private.SpecInfrastructureVpn,
-) *VpnConnector {
+) (*VpnConnector, error) {
 	executor := execx.NewStdExecutor()
+
+	wd, err := os.Getwd()
+	if err != nil {
+		return nil, fmt.Errorf("error getting current working directory: %w", err)
+	}
 
 	return &VpnConnector{
 		clusterName: clusterName,
@@ -60,7 +66,7 @@ func NewVpnConnector(
 		skip:        skip,
 		config:      config,
 		ovRunner: openvpn.NewRunner(executor, openvpn.Paths{
-			WorkDir: certDir,
+			WorkDir: wd,
 			Openvpn: "openvpn",
 		}),
 		faRunner: furyagent.NewRunner(executor, furyagent.Paths{
@@ -74,7 +80,8 @@ func NewVpnConnector(
 				WorkDir: certDir,
 			},
 		),
-	}
+		workDir: wd,
+	}, nil
 }
 
 func (v *VpnConnector) Connect() error {
@@ -117,11 +124,14 @@ func (v *VpnConnector) GenerateCertificates() error {
 
 	opvnCertPath := filepath.Join(v.certDir, fmt.Sprintf("%s.ovpn", clientName))
 
+	wdCertPath := filepath.Join(v.workDir, fmt.Sprintf("%s.ovpn", clientName))
+
 	if _, err := os.Stat(opvnCertPath); os.IsNotExist(err) {
 		if err := v.assertOldCertificateExists(bucketName, clientName); err == nil {
-			if err := v.removeOldCertificate(bucketName, clientName); err != nil {
-				return err
-			}
+			logrus.Infof("Skipping certificate generation, there is already a certificate for %s, you can use "+
+				"the certificate from %s", clientName, wdCertPath)
+
+			return nil
 		}
 
 		if err := v.faRunner.ConfigOpenvpnClient(clientName); err != nil {
@@ -148,14 +158,6 @@ func (v *VpnConnector) getFuryAgentBucketName() (string, error) {
 func (v *VpnConnector) assertOldCertificateExists(bucketName, certName string) error {
 	if _, err := v.awsRunner.S3("ls", fmt.Sprintf("s3://%s/pki/vpn-client/%s.crt", bucketName, certName)); err != nil {
 		return fmt.Errorf("error checking if old certificate exists: %w", err)
-	}
-
-	return nil
-}
-
-func (v *VpnConnector) removeOldCertificate(bucketName, certName string) error {
-	if _, err := v.awsRunner.S3("rm", fmt.Sprintf("s3://%s/pki/vpn-client/%s.crt", bucketName, certName)); err != nil {
-		return fmt.Errorf("error removing old certificate: %w", err)
 	}
 
 	return nil
@@ -302,7 +304,7 @@ func (v *VpnConnector) prompt() error {
 		return fmt.Errorf("error getting client name: %w", err)
 	}
 
-	certPath := filepath.Join(v.certDir, fmt.Sprintf("%s.ovpn", clientName))
+	certPath := filepath.Join(v.workDir, fmt.Sprintf("%s.ovpn", clientName))
 
 	if v.IsConfigured() {
 		isRoot, err := osx.IsRoot()
