@@ -149,7 +149,7 @@ func (c *Client) DeleteAllResources(res, ns string) (string, error) {
 }
 
 func (c *Client) ResourceExists(name, res, ns string) (bool, error) {
-	cmdOut, err := c.kubeRunner.Get(ns, res, name, "-o", "jsonpath='{.metadata.name}'")
+	cmdOut, err := c.kubeRunner.Get(ns, res, name, "--ignore-not-found", "true", "-o", "jsonpath='{.metadata.name}'")
 	if err != nil {
 		return false, fmt.Errorf("error while reading resources from cluster: %w", err)
 	}
