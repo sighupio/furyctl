@@ -105,7 +105,7 @@ func (d *ClusterDeleter) Delete() error {
 		vpnConfig = d.furyctlConf.Spec.Infrastructure.Vpn
 	}
 
-	vpnConnector := NewVpnConnector(
+	vpnConnector, err := NewVpnConnector(
 		d.furyctlConf.Metadata.Name,
 		infra.SecretsPath,
 		d.paths.BinPath,
@@ -114,6 +114,9 @@ func (d *ClusterDeleter) Delete() error {
 		d.skipVpn,
 		vpnConfig,
 	)
+	if err != nil {
+		return fmt.Errorf("error while creating vpn connector: %w", err)
+	}
 
 	switch d.phase {
 	case cluster.OperationPhaseInfrastructure:
