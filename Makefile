@@ -147,11 +147,11 @@ test-expensive:
 	@GOFLAGS=-mod=mod ginkgo run -vv --trace -tags=expensive -timeout 36000s -p test/expensive
 
 test-most:
-	@GOFLAGS=-mod=mod ginkgo run -vv --trace -covermode=count -coverprofile=coverage.out -tags=unit,integration,e2e,expensive --skip-package=expensive -timeout 300s -p ./...
+	@GOFLAGS=-mod=mod ginkgo run -vv --trace -coverpkg=./... -covermode=count -coverprofile=coverage.out -tags=unit,integration,e2e,expensive --skip-package=expensive -timeout 300s -p ./...
 
 test-all:
 	$(call yes-or-no, "WARNING: This test will create a cluster on AWS. Are you sure you want to continue?")
-	@GOFLAGS=-mod=mod ginkgo run -vv --trace -covermode=count -coverprofile=coverage.out -tags=unit,integration,e2e,expensive -timeout 300s -p ./...
+	@GOFLAGS=-mod=mod ginkgo run -vv --trace -coverpkg=./... -covermode=count -coverprofile=coverage.out -tags=unit,integration,e2e,expensive -timeout 300s -p ./...
 
 show-coverage:
 	@go tool cover -html=coverage.out -o coverage.html
