@@ -148,6 +148,17 @@ func (c *Client) DeleteAllResources(res, ns string) (string, error) {
 	return cmdOut, nil
 }
 
+func (c *Client) ResourceExists(name, res, ns string) (bool, error) {
+	cmdOut, err := c.kubeRunner.Get(ns, res, name, "-o", "jsonpath='{.metadata.name}'")
+	if err != nil {
+		return false, fmt.Errorf("error while reading resources from cluster: %w", err)
+	}
+
+	idx := cmdOutRegex.FindStringIndex(cmdOut)
+
+	return idx != nil, nil
+}
+
 func (c *Client) DeleteResource(name, res, ns string) (string, error) {
 	cmdOut, err := c.kubeRunner.DeleteResource(ns, res, name)
 	if err != nil {
