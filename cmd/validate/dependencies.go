@@ -71,7 +71,7 @@ func NewDependenciesCmd(tracker *analytics.Tracker) *cobra.Command {
 				binPath = filepath.Join(homeDir, ".furyctl", "bin")
 			}
 
-			toolsValidator := tools.NewValidator(execx.NewStdExecutor(), binPath, furyctlPath)
+			toolsValidator := tools.NewValidator(execx.NewStdExecutor(), binPath, furyctlPath, false)
 
 			envVarsValidator := envvars.NewValidator()
 

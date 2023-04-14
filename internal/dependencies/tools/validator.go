@@ -20,13 +20,14 @@ var (
 	ErrWrongToolVersion = errors.New("wrong tool version")
 )
 
-func NewValidator(executor execx.Executor, binPath, furyctlPath string) *Validator {
+func NewValidator(executor execx.Executor, binPath, furyctlPath string, autoConnect bool) *Validator {
 	return &Validator{
 		executor: executor,
 		toolFactory: NewFactory(executor, FactoryPaths{
 			Bin: binPath,
 		}),
 		furyctlPath: furyctlPath,
+		autoConnect: autoConnect,
 	}
 }
 
@@ -34,6 +35,7 @@ type Validator struct {
 	executor    execx.Executor
 	toolFactory *Factory
 	furyctlPath string
+	autoConnect bool
 }
 
 func (tv *Validator) Validate(kfdManifest config.KFD, miniConf config.Furyctl) ([]string, []error) {
@@ -71,7 +73,7 @@ func (tv *Validator) Validate(kfdManifest config.KFD, miniConf config.Furyctl) (
 		}
 	}
 
-	etv := apis.NewExtraToolsValidatorFactory(tv.executor, miniConf.APIVersion, miniConf.Kind)
+	etv := apis.NewExtraToolsValidatorFactory(tv.executor, miniConf.APIVersion, miniConf.Kind, tv.autoConnect)
 
 	if etv == nil {
 		return oks, errs
