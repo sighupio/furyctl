@@ -21,7 +21,6 @@ import (
 	"github.com/sighupio/furyctl/configs"
 	"github.com/sighupio/furyctl/internal/cluster"
 	"github.com/sighupio/furyctl/internal/template"
-	"github.com/sighupio/furyctl/internal/tool/openvpn"
 	"github.com/sighupio/furyctl/internal/tool/terraform"
 	bytesx "github.com/sighupio/furyctl/internal/x/bytes"
 	execx "github.com/sighupio/furyctl/internal/x/exec"
@@ -41,7 +40,6 @@ type Infrastructure struct {
 	furyctlConf private.EksclusterKfdV1Alpha2
 	kfdManifest config.KFD
 	tfRunner    *terraform.Runner
-	ovRunner    *openvpn.Runner
 	dryRun      bool
 }
 
@@ -74,10 +72,6 @@ func NewInfrastructure(
 				Terraform: phase.TerraformPath,
 			},
 		),
-		ovRunner: openvpn.NewRunner(executor, openvpn.Paths{
-			WorkDir: phase.SecretsPath,
-			Openvpn: "openvpn",
-		}),
 		dryRun: dryRun,
 	}, nil
 }
@@ -99,10 +93,6 @@ func (i *Infrastructure) Exec() error {
 
 	if err := i.CreateFolderStructure(); err != nil {
 		return fmt.Errorf("error creating infrastructure folder structure: %w", err)
-	}
-
-	if _, err := i.ovRunner.Version(); err != nil {
-		return fmt.Errorf("can't get tool version: %w", err)
 	}
 
 	if err := i.createTfVars(); err != nil {

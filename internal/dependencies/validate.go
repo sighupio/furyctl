@@ -21,9 +21,9 @@ var (
 	errValidatingToolsConf = errors.New("errors validating tools configuration")
 )
 
-func NewValidator(executor execx.Executor, binPath, furyctlPath string) *Validator {
+func NewValidator(executor execx.Executor, binPath, furyctlPath string, autoConnect bool) *Validator {
 	return &Validator{
-		toolsValidator:   tools.NewValidator(executor, binPath, furyctlPath),
+		toolsValidator:   tools.NewValidator(executor, binPath, furyctlPath, autoConnect),
 		envVarsValidator: envvars.NewValidator(),
 		infraValidator:   toolsconf.NewValidator(executor),
 	}
