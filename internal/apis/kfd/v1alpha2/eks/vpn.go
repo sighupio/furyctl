@@ -14,6 +14,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/google/uuid"
 	"github.com/shirou/gopsutil/v3/process"
 	"github.com/sirupsen/logrus"
 
@@ -124,18 +125,25 @@ func (v *VpnConnector) GenerateCertificates() error {
 
 	opvnCertPath := filepath.Join(v.certDir, fmt.Sprintf("%s.ovpn", clientName))
 
-	wdCertPath := filepath.Join(v.workDir, fmt.Sprintf("%s.ovpn", clientName))
-
 	if _, err := os.Stat(opvnCertPath); os.IsNotExist(err) {
-		if err := v.assertOldCertificateExists(bucketName, clientName); err == nil {
-			logrus.Infof("Skipping certificate generation, there is already a certificate for %s, you can use "+
-				"the certificate from %s", clientName, wdCertPath)
+		if err := v.assertOldClientCertificateExists(bucketName, clientName); err == nil {
+			c, err := v.backupOldClientCertificate(bucketName, clientName)
+			if err != nil {
+				return err
+			}
 
-			return nil
+			if _, err := v.faRunner.ConfigOpenvpnClient(c, "--revoke"); err != nil {
+				return fmt.Errorf("error configuring openvpn client: %w", err)
+			}
 		}
 
-		if err := v.faRunner.ConfigOpenvpnClient(clientName); err != nil {
+		out, err := v.faRunner.ConfigOpenvpnClient(clientName)
+		if err != nil {
 			return fmt.Errorf("error configuring openvpn client: %w", err)
+		}
+
+		if err := v.writeOVPNFileToDisk(clientName, out.Bytes()); err != nil {
+			return err
 		}
 
 		if err := v.copyOpenvpnToWorkDir(clientName); err != nil {
@@ -155,9 +163,39 @@ func (v *VpnConnector) getFuryAgentBucketName() (string, error) {
 	return faCfg.Storage.BucketName, nil
 }
 
-func (v *VpnConnector) assertOldCertificateExists(bucketName, certName string) error {
+func (v *VpnConnector) assertOldClientCertificateExists(bucketName, certName string) error {
 	if _, err := v.awsRunner.S3("ls", fmt.Sprintf("s3://%s/pki/vpn-client/%s.crt", bucketName, certName)); err != nil {
 		return fmt.Errorf("error checking if old certificate exists: %w", err)
+	}
+
+	return nil
+}
+
+func (v *VpnConnector) backupOldClientCertificate(bucketName, certName string) (string, error) {
+	u := uuid.New()
+
+	newCertName := fmt.Sprintf("%s-%s-backup", certName, u.String())
+
+	if _, err := v.awsRunner.S3(
+		"mv",
+		fmt.Sprintf("s3://%s/pki/vpn-client/%s.crt", bucketName, certName),
+		fmt.Sprintf("s3://%s/pki/vpn-client/%s.crt", bucketName, newCertName)); err != nil {
+		return newCertName, fmt.Errorf("error backing up old certificate: %w", err)
+	}
+
+	return newCertName, nil
+}
+
+func (v *VpnConnector) writeOVPNFileToDisk(certName string, cert []byte) error {
+	err := os.WriteFile(
+		filepath.Join(v.faRunner.CmdPath(),
+			v.certDir,
+			fmt.Sprintf("%s.ovpn", certName)),
+		cert,
+		iox.FullRWPermAccess,
+	)
+	if err != nil {
+		return fmt.Errorf("error writing openvpn file to disk: %w", err)
 	}
 
 	return nil

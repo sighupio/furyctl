@@ -9,7 +9,6 @@ package furyagent_test
 import (
 	"fmt"
 	"os"
-	"path/filepath"
 	"testing"
 
 	"github.com/sighupio/furyctl/internal/tool/furyagent"
@@ -43,15 +42,6 @@ func Test_Runner_ConfigOpenvpnClient(t *testing.T) {
 	err := r.ConfigOpenvpnClient("furyctltest")
 	if err != nil {
 		t.Fatal(err)
-	}
-
-	info, err := os.Stat(filepath.Join(os.TempDir(), "furyctltest.ovpn"))
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if info.Size() == 0 {
-		t.Error("expected file to be not empty")
 	}
 }
 
