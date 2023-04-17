@@ -158,26 +158,6 @@ func (r *Runner) DeleteResources(ns, res string) (string, error) {
 	return out, nil
 }
 
-// // DeleteAllResources deletes all resources in the specified namepsace
-// func (r *Runner) DeleteAllResources(ns string) (string, error) {
-// 	args := []string{"delete", "--namespace", ns, "--all"}
-
-// 	if r.paths.Kubeconfig != "" {
-// 		args = append(args, "--kubeconfig", r.paths.Kubeconfig)
-// 	}
-
-// 	out, err := execx.CombinedOutput(execx.NewCmd(r.paths.Kubectl, execx.CmdOptions{
-// 		Args:     args,
-// 		Executor: r.executor,
-// 		WorkDir:  r.paths.WorkDir,
-// 	}))
-// 	if err != nil {
-// 		return out, fmt.Errorf("error deleting all resources in namespace \"%s\": %w", ns, err)
-// 	}
-
-// 	return out, nil
-// }
-
 // DeleteResourcesInAllNamespaces deletes the specified resources in all namespaces
 func (r *Runner) DeleteResourcesInAllNamespaces(res string) (string, error) {
 	args := []string{"delete", "--all-namespaces", res}
