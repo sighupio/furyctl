@@ -139,7 +139,7 @@ func (c *Client) GetLoadBalancers() ([]string, error) {
 	return slices.Clean(strings.Split(cmdOut[idx[0]+1:idx[1]-1], " ")), nil
 }
 
-// DeleteResources deletes the specified resources in the specified namespace
+// DeleteResources deletes the specified resources in the specified namespace.
 func (c *Client) DeleteResources(res, ns string) (string, error) {
 	cmdOut, err := c.kubeRunner.DeleteResources(ns, res)
 	if err != nil {
@@ -149,7 +149,7 @@ func (c *Client) DeleteResources(res, ns string) (string, error) {
 	return cmdOut, nil
 }
 
-// DeleteResourcesInAllNamespaces deletes the specified resources in all namespaces
+// DeleteResourcesInAllNamespaces deletes the specified resources in all namespaces.
 func (c *Client) DeleteResourcesInAllNamespaces(res string) (string, error) {
 	cmdOut, err := c.kubeRunner.DeleteResourcesInAllNamespaces(res)
 	if err != nil {
@@ -170,7 +170,7 @@ func (c *Client) ResourceExists(name, res, ns string) (bool, error) {
 	return idx != nil, nil
 }
 
-// DeleteResource deletes the specified resource in the specified namespace
+// DeleteResource deletes the specified resource in the specified namespace.
 func (c *Client) DeleteResource(name, res, ns string) (string, error) {
 	cmdOut, err := c.kubeRunner.DeleteResource(ns, res, name)
 	if err != nil {
