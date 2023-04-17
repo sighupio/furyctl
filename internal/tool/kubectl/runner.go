@@ -160,7 +160,7 @@ func (r *Runner) DeleteResources(ns, res string) (string, error) {
 
 // DeleteResourcesInAllNamespaces deletes the specified resources in all namespaces.
 func (r *Runner) DeleteResourcesInAllNamespaces(res string) (string, error) {
-	args := []string{"delete", "--all-namespaces", res}
+	args := []string{"delete", "--all-namespaces", "--all", res}
 
 	if r.paths.Kubeconfig != "" {
 		args = append(args, "--kubeconfig", r.paths.Kubeconfig)
