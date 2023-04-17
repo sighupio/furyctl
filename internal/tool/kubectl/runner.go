@@ -118,7 +118,7 @@ func (r *Runner) GetResource(ns, res, name string) (string, error) {
 	return out, nil
 }
 
-// DeleteResource deletes the specified resource in the specified namespace
+// DeleteResource deletes the specified resource in the specified namespace.
 func (r *Runner) DeleteResource(ns, res, name string) (string, error) {
 	args := []string{"delete", "--namespace", ns, res, name}
 
@@ -138,7 +138,7 @@ func (r *Runner) DeleteResource(ns, res, name string) (string, error) {
 	return out, nil
 }
 
-// DeleteResources deletes the specified resources in the specified namespace
+// DeleteResources deletes the specified resources in the specified namespace.
 func (r *Runner) DeleteResources(ns, res string) (string, error) {
 	args := []string{"delete", "--namespace", ns, "--all", res}
 
@@ -158,7 +158,7 @@ func (r *Runner) DeleteResources(ns, res string) (string, error) {
 	return out, nil
 }
 
-// DeleteResourcesInAllNamespaces deletes the specified resources in all namespaces
+// DeleteResourcesInAllNamespaces deletes the specified resources in all namespaces.
 func (r *Runner) DeleteResourcesInAllNamespaces(res string) (string, error) {
 	args := []string{"delete", "--all-namespaces", res}
 
