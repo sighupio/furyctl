@@ -118,14 +118,9 @@ func (r *Runner) GetResource(ns, res, name string) (string, error) {
 	return out, nil
 }
 
+// DeleteResource deletes the specified resource in the specified namespace
 func (r *Runner) DeleteResource(ns, res, name string) (string, error) {
-	args := []string{"delete", res}
-
-	if ns != "all" {
-		args = append(args, "-n", ns)
-	}
-
-	args = append(args, name)
+	args := []string{"delete", "--namespace", ns, res, name}
 
 	if r.paths.Kubeconfig != "" {
 		args = append(args, "--kubeconfig", r.paths.Kubeconfig)
@@ -137,14 +132,70 @@ func (r *Runner) DeleteResource(ns, res, name string) (string, error) {
 		WorkDir:  r.paths.WorkDir,
 	}))
 	if err != nil {
-		return out, fmt.Errorf("error deleting resource(s): %w", err)
+		return out, fmt.Errorf("error deleting resource(s) \"%s/%s/%s\": %w", ns, res, name, err)
 	}
 
 	return out, nil
 }
 
-func (r *Runner) DeleteAllResources(ns, res string) (string, error) {
-	return r.DeleteResource(ns, res, "--all")
+// DeleteResources deletes the specified resources in the specified namespace
+func (r *Runner) DeleteResources(ns, res string) (string, error) {
+	args := []string{"delete", "--namespace", ns, "--all", res}
+
+	if r.paths.Kubeconfig != "" {
+		args = append(args, "--kubeconfig", r.paths.Kubeconfig)
+	}
+
+	out, err := execx.CombinedOutput(execx.NewCmd(r.paths.Kubectl, execx.CmdOptions{
+		Args:     args,
+		Executor: r.executor,
+		WorkDir:  r.paths.WorkDir,
+	}))
+	if err != nil {
+		return out, fmt.Errorf("error deleting resource(s) \"%s/%s\": %w", ns, res, err)
+	}
+
+	return out, nil
+}
+
+// // DeleteAllResources deletes all resources in the specified namepsace
+// func (r *Runner) DeleteAllResources(ns string) (string, error) {
+// 	args := []string{"delete", "--namespace", ns, "--all"}
+
+// 	if r.paths.Kubeconfig != "" {
+// 		args = append(args, "--kubeconfig", r.paths.Kubeconfig)
+// 	}
+
+// 	out, err := execx.CombinedOutput(execx.NewCmd(r.paths.Kubectl, execx.CmdOptions{
+// 		Args:     args,
+// 		Executor: r.executor,
+// 		WorkDir:  r.paths.WorkDir,
+// 	}))
+// 	if err != nil {
+// 		return out, fmt.Errorf("error deleting all resources in namespace \"%s\": %w", ns, err)
+// 	}
+
+// 	return out, nil
+// }
+
+// DeleteResourcesInAllNamespaces deletes the specified resources in all namespaces
+func (r *Runner) DeleteResourcesInAllNamespaces(res string) (string, error) {
+	args := []string{"delete", "--all-namespaces", res}
+
+	if r.paths.Kubeconfig != "" {
+		args = append(args, "--kubeconfig", r.paths.Kubeconfig)
+	}
+
+	out, err := execx.CombinedOutput(execx.NewCmd(r.paths.Kubectl, execx.CmdOptions{
+		Args:     args,
+		Executor: r.executor,
+		WorkDir:  r.paths.WorkDir,
+	}))
+	if err != nil {
+		return out, fmt.Errorf("error deleting all \"%s\" resources in all namespaces: %w", res, err)
+	}
+
+	return out, nil
 }
 
 func (r *Runner) Delete(manifestPath string, params ...string) (string, error) {

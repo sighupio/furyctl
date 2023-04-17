@@ -91,12 +91,28 @@ func TestClient_GetLoadBalancers(t *testing.T) {
 	}
 }
 
-func TestClient_DeleteAllResources(t *testing.T) {
+func TestClient_DeleteResourcesInAllNamespaces(t *testing.T) {
 	t.Parallel()
 
 	client := FakeClient(t)
 
-	out, err := client.DeleteAllResources("pod", "default")
+	out, err := client.DeleteResourcesInAllNamespaces("pod")
+	if err != nil {
+		t.Errorf("expected no error, got %v", err)
+	}
+
+	wantOut := `res "res-1" deleted`
+	if out != wantOut {
+		t.Errorf("expected output to be '%s', got: '%s'", wantOut, out)
+	}
+}
+
+func TestClient_DeleteResources(t *testing.T) {
+	t.Parallel()
+
+	client := FakeClient(t)
+
+	out, err := client.DeleteResources("pod", "default")
 	if err != nil {
 		t.Errorf("expected no error, got %v", err)
 	}
