@@ -39,7 +39,7 @@ func Test_Runner_ConfigOpenvpnClient(t *testing.T) {
 		WorkDir:   os.TempDir(),
 	})
 
-	err := r.ConfigOpenvpnClient("furyctltest")
+	_, err := r.ConfigOpenvpnClient("furyctltest")
 	if err != nil {
 		t.Fatal(err)
 	}
