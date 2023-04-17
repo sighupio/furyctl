@@ -127,15 +127,21 @@ func (v *VpnConnector) GenerateCertificates() error {
 
 	if _, err := os.Stat(opvnCertPath); os.IsNotExist(err) {
 		if err := v.assertOldClientCertificateExists(bucketName, clientName); err == nil {
+			logrus.Info("Old VPN client certificate found. Backing up...")
+
 			c, err := v.backupOldClientCertificate(bucketName, clientName)
 			if err != nil {
 				return err
 			}
 
+			logrus.Info("Revoking old VPN client certificate...")
+
 			if _, err := v.faRunner.ConfigOpenvpnClient(c, "--revoke"); err != nil {
 				return fmt.Errorf("error configuring openvpn client: %w", err)
 			}
 		}
+
+		logrus.Info("Generating new VPN client certificate...")
 
 		out, err := v.faRunner.ConfigOpenvpnClient(clientName)
 		if err != nil {
