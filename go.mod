@@ -10,6 +10,7 @@ require (
 	github.com/dukex/mixpanel v1.0.1
 	github.com/go-playground/validator/v10 v10.11.1
 	github.com/google/go-cmp v0.5.9
+	github.com/google/uuid v1.3.0
 	github.com/hashicorp/go-getter v1.6.2
 	github.com/hashicorp/terraform-json v0.14.0
 	github.com/miekg/dns v1.1.50
@@ -46,7 +47,6 @@ require (
 	github.com/go-playground/universal-translator v0.18.0 // indirect
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
 	github.com/golang/protobuf v1.5.2 // indirect
-	github.com/google/uuid v1.3.0 // indirect
 	github.com/googleapis/enterprise-certificate-proxy v0.2.1 // indirect
 	github.com/googleapis/gax-go/v2 v2.7.0 // indirect
 	github.com/hashicorp/go-cleanhttp v0.5.2 // indirect
