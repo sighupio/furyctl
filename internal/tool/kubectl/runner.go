@@ -119,7 +119,13 @@ func (r *Runner) GetResource(ns, res, name string) (string, error) {
 }
 
 func (r *Runner) DeleteResource(ns, res, name string) (string, error) {
-	args := []string{"delete", res, "-n", ns, name}
+	args := []string{"delete", res}
+
+	if ns != "all" {
+		args = append(args, "-n", ns)
+	}
+
+	args = append(args, name)
 
 	if r.paths.Kubeconfig != "" {
 		args = append(args, "--kubeconfig", r.paths.Kubeconfig)
