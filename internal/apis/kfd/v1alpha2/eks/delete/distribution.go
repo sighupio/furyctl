@@ -341,14 +341,28 @@ func (d *Distribution) deleteBlockingResources() error {
 
 	logrus.Info("Deleting Deployments in the namespace 'logging'...")
 
-	_, err = d.kubeClient.DeleteResource("loki-distributed-distributor", "deployment", "logging")
+	resExists, err := d.kubeClient.ResourceExists("loki-distributed-distributor", "deployment", "logging")
 	if err != nil {
-		return fmt.Errorf("error deleting deployment 'loki-distributed-distributor' in logging namespace: %w", err)
+		return fmt.Errorf("error checking if resource 'loki-distributed-distributor' exists in logging namespace: %w", err)
 	}
 
-	_, err = d.kubeClient.DeleteResource("loki-distributed-compactor", "deployment", "logging")
+	if resExists {
+		_, err = d.kubeClient.DeleteResource("loki-distributed-distributor", "deployment", "logging")
+		if err != nil {
+			return fmt.Errorf("error deleting deployment 'loki-distributed-distributor' in logging namespace: %w", err)
+		}
+	}
+
+	resExists, err = d.kubeClient.ResourceExists("loki-distributed-compactor", "deployment", "logging")
 	if err != nil {
-		return fmt.Errorf("error deleting deployment 'loki-distributed-compactor' in logging namespace: %w", err)
+		return fmt.Errorf("error checking if resource 'loki-distributed-distributor' exists in logging namespace: %w", err)
+	}
+
+	if resExists {
+		_, err = d.kubeClient.DeleteResource("loki-distributed-compactor", "deployment", "logging")
+		if err != nil {
+			return fmt.Errorf("error deleting deployment 'loki-distributed-compactor' in logging namespace: %w", err)
+		}
 	}
 
 	logrus.Info("Deleting StafultSets in the namespace 'logging'...")
