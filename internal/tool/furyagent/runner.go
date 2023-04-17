@@ -5,13 +5,10 @@
 package furyagent
 
 import (
+	"bytes"
 	"fmt"
-	"os"
-	"path"
-	"strings"
 
 	execx "github.com/sighupio/furyctl/internal/x/exec"
-	iox "github.com/sighupio/furyctl/internal/x/io"
 )
 
 type Paths struct {
@@ -35,29 +32,27 @@ func (r *Runner) CmdPath() string {
 	return r.paths.Furyagent
 }
 
-func (r *Runner) ConfigOpenvpnClient(name string) error {
+func (r *Runner) ConfigOpenvpnClient(name string, params ...string) (*bytes.Buffer, error) {
+	args := []string{
+		"configure",
+		"openvpn-client",
+		fmt.Sprintf("--client-name=%s", name),
+		"--config=furyagent.yml",
+	}
+
+	args = append(args, params...)
+
 	cmd := execx.NewCmd(r.paths.Furyagent, execx.CmdOptions{
-		Args:     []string{"configure", "openvpn-client", fmt.Sprintf("--client-name=%s", name), "--config=furyagent.yml"},
+		Args:     args,
 		Executor: r.executor,
 		WorkDir:  r.paths.WorkDir,
 	})
 
 	if err := cmd.Run(); err != nil {
-		if !strings.Contains(err.Error(), "already exists") {
-			return fmt.Errorf("error while running furyagent configure openvpn-client: %w", err)
-		}
-
-		return nil
+		return nil, fmt.Errorf("error while running furyagent configure openvpn-client: %w", err)
 	}
 
-	err := os.WriteFile(path.Join(r.paths.WorkDir,
-		fmt.Sprintf("%s.ovpn", name)),
-		cmd.Log.Out.Bytes(), iox.FullRWPermAccess)
-	if err != nil {
-		return fmt.Errorf("error writing openvpn client config: %w", err)
-	}
-
-	return nil
+	return cmd.Log.Out, nil
 }
 
 func (r *Runner) Version() (string, error) {

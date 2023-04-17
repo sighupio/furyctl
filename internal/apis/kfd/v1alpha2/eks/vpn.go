@@ -14,10 +14,12 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/google/uuid"
 	"github.com/shirou/gopsutil/v3/process"
 	"github.com/sirupsen/logrus"
 
 	"github.com/sighupio/fury-distribution/pkg/schema/private"
+	"github.com/sighupio/furyctl/internal/tool/awscli"
 	"github.com/sighupio/furyctl/internal/tool/furyagent"
 	"github.com/sighupio/furyctl/internal/tool/openvpn"
 	execx "github.com/sighupio/furyctl/internal/x/exec"
@@ -38,6 +40,8 @@ type VpnConnector struct {
 	config      *private.SpecInfrastructureVpn
 	ovRunner    *openvpn.Runner
 	faRunner    *furyagent.Runner
+	awsRunner   *awscli.Runner
+	workDir     string
 }
 
 func NewVpnConnector(
@@ -48,8 +52,13 @@ func NewVpnConnector(
 	autoconnect,
 	skip bool,
 	config *private.SpecInfrastructureVpn,
-) *VpnConnector {
+) (*VpnConnector, error) {
 	executor := execx.NewStdExecutor()
+
+	wd, err := os.Getwd()
+	if err != nil {
+		return nil, fmt.Errorf("error getting current working directory: %w", err)
+	}
 
 	return &VpnConnector{
 		clusterName: clusterName,
@@ -58,14 +67,22 @@ func NewVpnConnector(
 		skip:        skip,
 		config:      config,
 		ovRunner: openvpn.NewRunner(executor, openvpn.Paths{
-			WorkDir: certDir,
+			WorkDir: wd,
 			Openvpn: "openvpn",
 		}),
 		faRunner: furyagent.NewRunner(executor, furyagent.Paths{
 			Furyagent: path.Join(binPath, "furyagent", faVersion, "furyagent"),
 			WorkDir:   certDir,
 		}),
-	}
+		awsRunner: awscli.NewRunner(
+			execx.NewStdExecutor(),
+			awscli.Paths{
+				Awscli:  "aws",
+				WorkDir: certDir,
+			},
+		),
+		workDir: wd,
+	}, nil
 }
 
 func (v *VpnConnector) Connect() error {
@@ -101,12 +118,90 @@ func (v *VpnConnector) GenerateCertificates() error {
 		return err
 	}
 
-	if err := v.faRunner.ConfigOpenvpnClient(clientName); err != nil {
-		return fmt.Errorf("error configuring openvpn client: %w", err)
+	bucketName, err := v.getFuryAgentBucketName()
+	if err != nil {
+		return err
 	}
 
-	if err := v.copyOpenvpnToWorkDir(clientName); err != nil {
-		return fmt.Errorf("error copying openvpn file to workdir: %w", err)
+	opvnCertPath := filepath.Join(v.certDir, fmt.Sprintf("%s.ovpn", clientName))
+
+	if _, err := os.Stat(opvnCertPath); os.IsNotExist(err) {
+		if err := v.assertOldClientCertificateExists(bucketName, clientName); err == nil {
+			logrus.Info("Old VPN client certificate found. Backing up...")
+
+			c, err := v.backupOldClientCertificate(bucketName, clientName)
+			if err != nil {
+				return err
+			}
+
+			logrus.Info("Revoking old VPN client certificate...")
+
+			if _, err := v.faRunner.ConfigOpenvpnClient(c, "--revoke"); err != nil {
+				return fmt.Errorf("error configuring openvpn client: %w", err)
+			}
+		}
+
+		logrus.Info("Generating new VPN client certificate...")
+
+		out, err := v.faRunner.ConfigOpenvpnClient(clientName)
+		if err != nil {
+			return fmt.Errorf("error configuring openvpn client: %w", err)
+		}
+
+		if err := v.writeOVPNFileToDisk(clientName, out.Bytes()); err != nil {
+			return err
+		}
+
+		if err := v.copyOpenvpnToWorkDir(clientName); err != nil {
+			return fmt.Errorf("error copying openvpn file to workdir: %w", err)
+		}
+	}
+
+	return nil
+}
+
+func (v *VpnConnector) getFuryAgentBucketName() (string, error) {
+	faCfg, err := furyagent.ParseConfig(filepath.Join(v.certDir, "furyagent.yml"))
+	if err != nil {
+		return "", fmt.Errorf("error parsing furyagent config: %w", err)
+	}
+
+	return faCfg.Storage.BucketName, nil
+}
+
+func (v *VpnConnector) assertOldClientCertificateExists(bucketName, certName string) error {
+	if _, err := v.awsRunner.S3("ls", fmt.Sprintf("s3://%s/pki/vpn-client/%s.crt", bucketName, certName)); err != nil {
+		return fmt.Errorf("error checking if old certificate exists: %w", err)
+	}
+
+	return nil
+}
+
+func (v *VpnConnector) backupOldClientCertificate(bucketName, certName string) (string, error) {
+	u := uuid.New()
+
+	newCertName := fmt.Sprintf("%s-%s-backup", certName, u.String())
+
+	if _, err := v.awsRunner.S3(
+		"mv",
+		fmt.Sprintf("s3://%s/pki/vpn-client/%s.crt", bucketName, certName),
+		fmt.Sprintf("s3://%s/pki/vpn-client/%s.crt", bucketName, newCertName)); err != nil {
+		return newCertName, fmt.Errorf("error backing up old certificate: %w", err)
+	}
+
+	return newCertName, nil
+}
+
+func (v *VpnConnector) writeOVPNFileToDisk(certName string, cert []byte) error {
+	err := os.WriteFile(
+		filepath.Join(v.faRunner.CmdPath(),
+			v.certDir,
+			fmt.Sprintf("%s.ovpn", certName)),
+		cert,
+		iox.FullRWPermAccess,
+	)
+	if err != nil {
+		return fmt.Errorf("error writing openvpn file to disk: %w", err)
 	}
 
 	return nil
@@ -253,7 +348,7 @@ func (v *VpnConnector) prompt() error {
 		return fmt.Errorf("error getting client name: %w", err)
 	}
 
-	certPath := filepath.Join(v.certDir, fmt.Sprintf("%s.ovpn", clientName))
+	certPath := filepath.Join(v.workDir, fmt.Sprintf("%s.ovpn", clientName))
 
 	if v.IsConfigured() {
 		isRoot, err := osx.IsRoot()
