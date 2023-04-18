@@ -316,79 +316,79 @@ func (d *Distribution) deleteIngresses() error {
 }
 
 func (d *Distribution) deleteBlockingResources() error {
-	dur := time.Minute * ingressAfterDeleteDelay
-
-	logrus.Info("Deleting prometheus resources...")
-
-	_, err := d.kubeClient.DeleteResources("prometheus", "monitoring")
-	if err != nil {
-		return fmt.Errorf("error deleting prometheus resources: %w", err)
+	if err := d.deleteResource("deployment", "logging", "loki-distributed-distributor"); err != nil {
+		return err
 	}
 
-	logrus.Info("Deleting PersistentVolumeClaims in the namespace 'monitoring'...")
-
-	_, err = d.kubeClient.DeleteResources("pvc", "monitoring")
-	if err != nil {
-		return fmt.Errorf("error deleting pvc in namespace 'monitoring': %w", err)
+	if err := d.deleteResource("deployment", "logging", "loki-distributed-compactor"); err != nil {
+		return err
 	}
 
-	logrus.Info("Deleting logging resources...")
-
-	_, err = d.kubeClient.DeleteResources("logging", "logging")
-	if err != nil {
-		return fmt.Errorf("error deleting logging resources: %w", err)
+	if err := d.deleteResources("prometheus", "monitoring"); err != nil {
+		return err
 	}
 
-	logrus.Info("Deleting Deployments in the namespace 'logging'...")
-
-	resExists, err := d.kubeClient.ResourceExists("loki-distributed-distributor", "deployment", "logging")
-	if err != nil {
-		return fmt.Errorf("error checking if resource 'loki-distributed-distributor' exists in logging namespace: %w", err)
+	if err := d.deleteResources("pvc", "monitoring"); err != nil {
+		return err
 	}
 
-	if resExists {
-		_, err = d.kubeClient.DeleteResource("loki-distributed-distributor", "deployment", "logging")
-		if err != nil {
-			return fmt.Errorf("error deleting deployment 'loki-distributed-distributor' in logging namespace: %w", err)
-		}
+	if err := d.deleteResources("logging", "logging"); err != nil {
+		return err
 	}
 
-	resExists, err = d.kubeClient.ResourceExists("loki-distributed-compactor", "deployment", "logging")
-	if err != nil {
-		return fmt.Errorf("error checking if resource 'loki-distributed-distributor' exists in logging namespace: %w", err)
+	if err := d.deleteResources("sts", "logging"); err != nil {
+		return err
 	}
 
-	if resExists {
-		_, err = d.kubeClient.DeleteResource("loki-distributed-compactor", "deployment", "logging")
-		if err != nil {
-			return fmt.Errorf("error deleting deployment 'loki-distributed-compactor' in logging namespace: %w", err)
-		}
+	if err := d.deleteResources("pvc", "logging"); err != nil {
+		return err
 	}
 
-	logrus.Info("Deleting StafultSets in the namespace 'logging'...")
-
-	_, err = d.kubeClient.DeleteResources("sts", "logging")
-	if err != nil {
-		return fmt.Errorf("error deleting sts in namespace 'logging': %w", err)
-	}
-
-	logrus.Info("Deleting PersistentVolumeClaims in the namespace 'logging'...")
-
-	_, err = d.kubeClient.DeleteResources("pvc", "logging")
-	if err != nil {
-		return fmt.Errorf("error deleting pvc in namespace 'logging': %w", err)
-	}
-
-	logrus.Info("Deleting Services in the namespace 'ingress-nginx'...")
-
-	_, err = d.kubeClient.DeleteResources("svc", "ingress-nginx")
-	if err != nil {
-		return fmt.Errorf("error deleting svc in namespace 'ingress-nginx': %w", err)
+	if err := d.deleteResources("svc", "ingress-nginx"); err != nil {
+		return err
 	}
 
 	logrus.Debugf("waiting for resources to be deleted...")
 
-	time.Sleep(dur)
+	time.Sleep(time.Minute * ingressAfterDeleteDelay)
+
+	return nil
+}
+
+func (d *Distribution) deleteResource(typ, ns, name string) error {
+	logrus.Infof("Deleting %ss '%s' in namespace '%s'...\n", typ, name, ns)
+
+	resExists, err := d.kubeClient.ResourceExists(name, typ, ns)
+	if err != nil {
+		return fmt.Errorf("error checking if %s '%s' exists in '%s' namespace: %w", typ, name, ns, err)
+	}
+
+	if resExists {
+		_, err = d.kubeClient.DeleteResource(name, typ, ns)
+		if err != nil {
+			return fmt.Errorf("error deleting %s '%s' in '%s' namespace: %w", typ, name, ns, err)
+		}
+	}
+
+	return nil
+}
+
+func (d *Distribution) deleteResources(typ, ns string) error {
+	logrus.Infof("Deleting %ss in namespace '%s'...\n", typ, ns)
+
+	hasResTyp, err := d.kubeClient.HasResourceType(typ)
+	if err != nil {
+		return fmt.Errorf("error checking '%s' resources type: %w", typ, err)
+	}
+
+	if !hasResTyp {
+		return nil
+	}
+
+	_, err = d.kubeClient.DeleteResources(typ, ns)
+	if err != nil {
+		return fmt.Errorf("error deleting '%s' in namespace '%s': %w", typ, ns, err)
+	}
 
 	return nil
 }
