@@ -87,7 +87,9 @@ func (i *Infrastructure) Exec() error {
 		return fmt.Errorf("error while deleting infrastructure: %w", err)
 	}
 
-	if i.isVpnConfigured() {
+	if i.isVpnConfigured() &&
+		i.furyctlConf.Spec.Kubernetes.ApiServer.PrivateAccess &&
+		!i.furyctlConf.Spec.Kubernetes.ApiServer.PublicAccess {
 		killMsg := "killall openvpn"
 
 		isRoot, err := osx.IsRoot()
