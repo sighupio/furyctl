@@ -49,10 +49,9 @@ func NewRootCommand(
 	tracker *analytics.Tracker,
 	token string,
 ) *RootCommand {
-	// Update channels.
-	r := make(chan app.Release, 1)
-	e := make(chan error, 1)
-	// Analytics event channel.
+	// // Update channels.
+	// r := make(chan app.Release, 1)
+	// e := make(chan error, 1)
 
 	cfg := &rootConfig{}
 	rootCmd := &RootCommand{
@@ -80,8 +79,8 @@ furyctl is a command line interface tool to manage the full lifecycle of a Kuber
 					}
 				}
 
-				// Async check for updates.
-				go checkUpdates(versions["version"], r, e)
+				// // Async check for updates.
+				// go checkUpdates(versions["version"], r, e)
 				// Configure the spinner.
 				w := logrus.StandardLogger().Out
 
@@ -144,19 +143,19 @@ furyctl is a command line interface tool to manage the full lifecycle of a Kuber
 					logrus.Debug("FURYCTL_MIXPANEL_TOKEN is not set")
 				}
 			},
-			PersistentPostRun: func(_ *cobra.Command, _ []string) {
-				// Show update message if available at the end of the command.
-				select {
-				case release := <-r:
-					if shouldUpgrade(release.Version, versions["version"]) {
-						logrus.Infof("A newer version of furyctl is available: %s => %s", versions["version"], release.Version)
-					}
-				case err := <-e:
-					if err != nil {
-						logrus.Debugf("Error checking for updates to furyctl: %s", err)
-					}
-				}
-			},
+			// PersistentPostRun: func(_ *cobra.Command, _ []string) {
+			// 	// Show update message if available at the end of the command.
+			// 	select {
+			// 	case release := <-r:
+			// 		if shouldUpgrade(release.Version, versions["version"]) {
+			// 			logrus.Infof("A newer version of furyctl is available: %s => %s", versions["version"], release.Version)
+			// 		}
+			// 	case err := <-e:
+			// 		if err != nil {
+			// 			logrus.Debugf("Error checking for updates to furyctl: %s", err)
+			// 		}
+			// 	}
+			// },
 		},
 		config: cfg,
 	}
