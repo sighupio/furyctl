@@ -10,6 +10,8 @@ import (
 	"regexp"
 	"strings"
 
+	goslices "golang.org/x/exp/slices"
+
 	"github.com/sighupio/furyctl/internal/tool/kubectl"
 	execx "github.com/sighupio/furyctl/internal/x/exec"
 	"github.com/sighupio/furyctl/internal/x/slices"
@@ -54,6 +56,17 @@ func NewClient(
 			clientVersion,
 		),
 	}
+}
+
+func (c *Client) HasResourceType(typ string) (bool, error) {
+	cmdOut, err := c.kubeRunner.APIResources("--sort-by", "name", "-o", "name")
+	if err != nil {
+		return false, fmt.Errorf("error while listing cluster resource types: %w", err)
+	}
+
+	results := strings.Split(cmdOut, "\n")
+
+	return goslices.Index(results, typ) != -1, nil
 }
 
 // GetIngresses returns a list of ingresses in the cluster, this is done by using the jsonpath format option
