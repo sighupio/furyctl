@@ -159,6 +159,8 @@ func (k *Kubernetes) checkVPCConnection() error {
 			string(*vpcID),
 			"--query",
 			"Vpcs[0].CidrBlock",
+			"--region",
+			string(k.furyctlConf.Spec.Region),
 			"--output",
 			"text",
 		)
