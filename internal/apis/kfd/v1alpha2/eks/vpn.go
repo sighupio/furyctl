@@ -194,7 +194,7 @@ func (v *VpnConnector) backupOldClientCertificate(bucketName, certName string) (
 
 func (v *VpnConnector) writeOVPNFileToDisk(certName string, cert []byte) error {
 	err := os.WriteFile(
-		filepath.Join(v.faRunner.CmdPath(),
+		filepath.Join(
 			v.certDir,
 			fmt.Sprintf("%s.ovpn", certName)),
 		cert,
