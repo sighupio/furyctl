@@ -167,7 +167,9 @@ func (d *ClusterDeleter) Delete() error {
 				"Sometimes this is not possible, for better results limit the scope with the --phase flag.")
 		}
 
-		if d.furyctlConf.Spec.Kubernetes.ApiServer.PrivateAccess && !d.dryRun {
+		if d.furyctlConf.Spec.Kubernetes.ApiServer.PrivateAccess &&
+			!d.furyctlConf.Spec.Kubernetes.ApiServer.PublicAccess &&
+			!d.dryRun {
 			if err := vpnConnector.Connect(); err != nil {
 				return fmt.Errorf("error while connecting to the vpn: %w", err)
 			}
