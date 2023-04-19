@@ -340,7 +340,7 @@ func (d *Distribution) deleteBlockingResources() error {
 		return err
 	}
 
-	if err := d.deleteResources("statefulsets", "logging"); err != nil {
+	if err := d.deleteResources("statefulsets.apps", "logging"); err != nil {
 		return err
 	}
 
