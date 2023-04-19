@@ -12,9 +12,9 @@ import (
 	"time"
 
 	"github.com/sirupsen/logrus"
-
 	"github.com/sighupio/fury-distribution/pkg/config"
 	"github.com/sighupio/fury-distribution/pkg/schema/private"
+
 	"github.com/sighupio/furyctl/internal/cluster"
 	"github.com/sighupio/furyctl/internal/tool/awscli"
 	"github.com/sighupio/furyctl/internal/tool/terraform"
@@ -129,7 +129,7 @@ func (k *Kubernetes) Exec() error {
 		return nil
 	}
 
-	logrus.Info("Deleting cloud resources, this could take a while...")
+	logrus.Warn("Deleting cloud resources, this could take a while...")
 
 	err = k.tfRunner.Destroy()
 	if err != nil {

@@ -15,9 +15,9 @@ import (
 	"time"
 
 	"github.com/sirupsen/logrus"
-
 	"github.com/sighupio/fury-distribution/pkg/config"
 	"github.com/sighupio/fury-distribution/pkg/schema/private"
+
 	"github.com/sighupio/furyctl/configs"
 	"github.com/sighupio/furyctl/internal/cluster"
 	"github.com/sighupio/furyctl/internal/template"
@@ -111,7 +111,7 @@ func (i *Infrastructure) Exec() error {
 		return nil
 	}
 
-	logrus.Info("Creating cloud resources, this could take a while...")
+	logrus.Warn("Creating cloud resources, this could take a while...")
 
 	if _, err := i.tfRunner.Apply(timestamp); err != nil {
 		return fmt.Errorf("cannot create cloud resources: %w", err)
