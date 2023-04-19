@@ -15,8 +15,8 @@ import (
 	"time"
 
 	"github.com/sirupsen/logrus"
-	"github.com/sighupio/fury-distribution/pkg/config"
 
+	"github.com/sighupio/fury-distribution/pkg/config"
 	"github.com/sighupio/furyctl/internal/cluster"
 	"github.com/sighupio/furyctl/internal/kubernetes"
 	"github.com/sighupio/furyctl/internal/tool/awscli"
