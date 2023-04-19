@@ -324,27 +324,31 @@ func (d *Distribution) deleteBlockingResources() error {
 		return err
 	}
 
-	if err := d.deleteResources("prometheus", "monitoring"); err != nil {
+	if err := d.deleteResources("prometheuses.monitoring.coreos.com", "monitoring"); err != nil {
 		return err
 	}
 
-	if err := d.deleteResources("pvc", "monitoring"); err != nil {
+	if err := d.deleteResources("prometheusrules.monitoring.coreos.com", "monitoring"); err != nil {
 		return err
 	}
 
-	if err := d.deleteResources("logging", "logging"); err != nil {
+	if err := d.deleteResources("persistentvolumeclaims", "monitoring"); err != nil {
 		return err
 	}
 
-	if err := d.deleteResources("sts", "logging"); err != nil {
+	if err := d.deleteResources("loggings.logging.banzaicloud.io", "logging"); err != nil {
 		return err
 	}
 
-	if err := d.deleteResources("pvc", "logging"); err != nil {
+	if err := d.deleteResources("statefulsets", "logging"); err != nil {
 		return err
 	}
 
-	if err := d.deleteResources("svc", "ingress-nginx"); err != nil {
+	if err := d.deleteResources("persistentvolumeclaims", "logging"); err != nil {
+		return err
+	}
+
+	if err := d.deleteResources("services", "ingress-nginx"); err != nil {
 		return err
 	}
 
