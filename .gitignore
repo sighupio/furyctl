@@ -3,6 +3,7 @@ coverprofile.out
 vendor
 bin
 .idea
+.go/
 furyctl
 demo
 dist/

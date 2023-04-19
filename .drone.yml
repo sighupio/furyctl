@@ -150,7 +150,6 @@ steps:
 
   - name: build-release
     image: ghcr.io/goreleaser/goreleaser:v1.15.2
-    pull: always
     depends_on:
       - lint
       - test-unit
