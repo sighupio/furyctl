@@ -16,8 +16,6 @@ import (
 	"github.com/spf13/viper"
 
 	"github.com/sighupio/furyctl/internal/analytics"
-	"github.com/sighupio/furyctl/internal/app"
-	"github.com/sighupio/furyctl/internal/semver"
 	cobrax "github.com/sighupio/furyctl/internal/x/cobra"
 	execx "github.com/sighupio/furyctl/internal/x/exec"
 	iox "github.com/sighupio/furyctl/internal/x/io"
@@ -49,10 +47,6 @@ func NewRootCommand(
 	tracker *analytics.Tracker,
 	token string,
 ) *RootCommand {
-	// // Update channels.
-	// r := make(chan app.Release, 1)
-	// e := make(chan error, 1)
-
 	cfg := &rootConfig{}
 	rootCmd := &RootCommand{
 		Command: &cobra.Command{
@@ -79,8 +73,6 @@ furyctl is a command line interface tool to manage the full lifecycle of a Kuber
 					}
 				}
 
-				// // Async check for updates.
-				// go checkUpdates(versions["version"], r, e)
 				// Configure the spinner.
 				w := logrus.StandardLogger().Out
 
@@ -143,19 +135,6 @@ furyctl is a command line interface tool to manage the full lifecycle of a Kuber
 					logrus.Debug("FURYCTL_MIXPANEL_TOKEN is not set")
 				}
 			},
-			// PersistentPostRun: func(_ *cobra.Command, _ []string) {
-			// 	// Show update message if available at the end of the command.
-			// 	select {
-			// 	case release := <-r:
-			// 		if shouldUpgrade(release.Version, versions["version"]) {
-			// 			logrus.Infof("A newer version of furyctl is available: %s => %s", versions["version"], release.Version)
-			// 		}
-			// 	case err := <-e:
-			// 		if err != nil {
-			// 			logrus.Debugf("Error checking for updates to furyctl: %s", err)
-			// 		}
-			// 	}
-			// },
 		},
 		config: cfg,
 	}
@@ -209,48 +188,6 @@ furyctl is a command line interface tool to manage the full lifecycle of a Kuber
 	rootCmd.AddCommand(NewLegacyCommand(tracker))
 
 	return rootCmd
-}
-
-func shouldUpgrade(releaseVersion, currentVersion string) bool {
-	if releaseVersion == "unknown" {
-		return false
-	}
-
-	relV, err := semver.NewVersion(releaseVersion)
-	if err != nil {
-		logrus.Debugf("Error parsing release version: %s", err)
-
-		return false
-	}
-
-	curV, err := semver.NewVersion(currentVersion)
-	if err != nil {
-		logrus.Debugf("Error parsing current version: %s", err)
-
-		return false
-	}
-
-	return relV.GreaterThan(curV)
-}
-
-func checkUpdates(version string, rc chan app.Release, e chan error) {
-	defer close(rc)
-	defer close(e)
-
-	if version == "unknown" {
-		rc <- app.Release{Version: version}
-
-		return
-	}
-
-	r, err := app.GetLatestRelease()
-	if err != nil {
-		e <- err
-
-		return
-	}
-
-	rc <- r
 }
 
 func createLogFile(path string) (*os.File, error) {
