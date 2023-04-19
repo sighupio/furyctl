@@ -100,7 +100,7 @@ steps:
       # Run tests
       - make test-e2e
       # Cleanup
-      - rm -rf .go/ aws/
+      - rm -rf aws/
       - rm awscliv2.zip glibc-$${GLIBC_VER}.apk glibc-bin-$${GLIBC_VER}.apk glibc-i18n-$${GLIBC_VER}.apk
     environment:
       CGO_ENABLED: 0
