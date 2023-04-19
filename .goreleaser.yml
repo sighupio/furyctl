@@ -1,62 +1,35 @@
-# Copyright (c) 2020 SIGHUP s.r.l All rights reserved.
+# Copyright (c) 2017-present SIGHUP s.r.l All rights reserved.
 # Use of this source code is governed by a BSD-style
 # license that can be found in the LICENSE file.
 
 ---
+project_name: furyctl
 before:
   hooks:
-    - packr2 build
-project_name: furyctl
+    - go mod tidy
 builds:
-  - binary: 'furyctl'
-    id: furyctl-darwin
-    goarch:
-      - amd64
-    goos:
-      - darwin
-    env:
+  - env:
       - CGO_ENABLED=0
-    ldflags:
-      - -s -w -X github.com/sighupio/furyctl/cmd.version={{.Version}} -X github.com/sighupio/furyctl/cmd.commit={{.Commit}} -X github.com/sighupio/furyctl/cmd.date={{.Date}}
-  - binary: 'furyctl'
-    id: furyctl-linux
-    goarch:
-      - amd64
     goos:
       - linux
-    env:
-      - CGO_ENABLED=0
+      - windows
+      - darwin
+    goarch:
+      - amd64
+      - arm64
     ldflags:
-      - -s -w -X github.com/sighupio/furyctl/cmd.version={{.Version}} -X github.com/sighupio/furyctl/cmd.commit={{.Commit}} -X github.com/sighupio/furyctl/cmd.date={{.Date}}
+      - -s -w -X main.version={{.Version}} -X main.gitCommit={{.Commit}} -X main.buildTime={{.Date}} -X main.goVersion={{.Env.GO_VERSION}} -X main.osArch={{.Arch}}
 archives:
-  - format: tar.gz
-    id: furyctl-darwin-tgz
-    wrap_in_directory: false
-    name_template: '{{ .ProjectName }}-{{ .Os }}-{{ .Arch }}'
-    builds:
-      - furyctl-darwin
-  - format: tar.gz
-    id: furyctl-linux-tgz
-    wrap_in_directory: false
-    name_template: '{{ .ProjectName }}-{{ .Os }}-{{ .Arch }}'
-    builds:
-      - furyctl-linux
-  - format: binary
-    id: furyctl-darwin-bin
-    wrap_in_directory: false
-    name_template: '{{ .ProjectName }}-{{ .Os }}-{{ .Arch }}'
-    builds:
-      - furyctl-darwin
-  - format: binary
-    id: furyctl-linux-bin
-    wrap_in_directory: false
-    name_template: '{{ .ProjectName }}-{{ .Os }}-{{ .Arch }}'
-    builds:
-      - furyctl-linux
+  - name_template: >-
+      {{ .ProjectName }}_
+      {{- title .Os }}_
+      {{- if eq .Arch "amd64" }}x86_64
+      {{- else if eq .Arch "386" }}i386
+      {{- else }}{{ .Arch }}{{ end }}
 checksum:
-  name_template: 'sha256sum.txt'
+  name_template: 'checksums.txt'
 snapshot:
-  name_template: '{{ .Tag }}'
+  name_template: "{{ incpatch .Version }}-ng"
 changelog:
   sort: asc
   filters:
@@ -64,11 +37,6 @@ changelog:
       - '^docs:'
       - '^test:'
 release:
-  ids:
-    - furyctl-linux-tgz
-    - furyctl-linux-bin
-    - furyctl-darwin-tgz
-    - furyctl-darwin-bin
   github:
     owner: sighupio
     name: furyctl
@@ -82,13 +50,10 @@ brews:
     skip_upload: auto
     folder: Formula
     homepage: 'https://gihub.com/sighupio/furyctl'
-    description: 'Furyctl binary'
+    description: 'furyctl binary'
     conflicts:
       - furyctl
     test: |
       system "#{bin}/furyctl"
     install: |
       bin.install 'furyctl'
-    ids:
-      - furyctl-darwin-tgz
-      - furyctl-linux-tgz
