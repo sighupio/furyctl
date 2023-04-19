@@ -18,9 +18,9 @@ import (
 	"time"
 
 	"github.com/sirupsen/logrus"
-
 	"github.com/sighupio/fury-distribution/pkg/config"
 	"github.com/sighupio/fury-distribution/pkg/schema/private"
+
 	"github.com/sighupio/furyctl/configs"
 	"github.com/sighupio/furyctl/internal/cluster"
 	"github.com/sighupio/furyctl/internal/merge"
@@ -168,7 +168,7 @@ func (k *Kubernetes) Exec() error {
 		}
 	}
 
-	logrus.Info("Creating cloud resources, this could take a while...")
+	logrus.Warn("Creating cloud resources, this could take a while...")
 
 	out, err := k.tfRunner.Apply(timestamp)
 	if err != nil {

@@ -15,8 +15,8 @@ import (
 	"time"
 
 	"github.com/sirupsen/logrus"
-
 	"github.com/sighupio/fury-distribution/pkg/config"
+
 	"github.com/sighupio/furyctl/internal/cluster"
 	"github.com/sighupio/furyctl/internal/kubernetes"
 	"github.com/sighupio/furyctl/internal/tool/awscli"
@@ -217,7 +217,7 @@ func (d *Distribution) Exec() error {
 		return err
 	}
 
-	logrus.Info("Deleting manifests...")
+	logrus.Info("Deleting kubernetes resources...")
 
 	_, err = d.kubeClient.DeleteFromPath(manifestsOutPath)
 	if err != nil {

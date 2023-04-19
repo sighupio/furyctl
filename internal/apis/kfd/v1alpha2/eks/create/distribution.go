@@ -14,9 +14,9 @@ import (
 	"time"
 
 	"github.com/sirupsen/logrus"
-
 	"github.com/sighupio/fury-distribution/pkg/config"
 	"github.com/sighupio/fury-distribution/pkg/schema/private"
+
 	"github.com/sighupio/furyctl/internal/cluster"
 	"github.com/sighupio/furyctl/internal/merge"
 	"github.com/sighupio/furyctl/internal/template"
@@ -202,7 +202,7 @@ func (d *Distribution) Exec() error {
 		return nil
 	}
 
-	logrus.Info("Creating cloud resources, this could take a while...")
+	logrus.Warn("Creating cloud resources, this could take a while...")
 
 	_, err = d.tfRunner.Apply(timestamp)
 	if err != nil {
