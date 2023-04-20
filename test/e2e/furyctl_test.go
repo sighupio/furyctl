@@ -299,7 +299,7 @@ var (
 				homeDir, err := os.UserHomeDir()
 				Expect(err).To(Not(HaveOccurred()))
 
-				vp := path.Join(homeDir, ".furyctl", "awesome-cluster-staging", "vendor")
+				vp := path.Join(homeDir, ".furyctl", "clusters", "awesome-cluster-staging-cgjebt06lnn67g4fkq4g", "vendor")
 				binP := path.Join(homeDir, ".furyctl", "bin")
 
 				RemoveAll(vp)
@@ -550,7 +550,7 @@ var (
 				homeDir, err := os.UserHomeDir()
 				Expect(err).To(Not(HaveOccurred()))
 
-				tfPath := path.Join(homeDir, ".furyctl", "furyctl-dev-aws", cluster.OperationPhaseInfrastructure, "terraform")
+				tfPath := path.Join(homeDir, ".furyctl", "clusters", "furyctl-dev-aws-cgjebt06lnn67g4fkq4g", cluster.OperationPhaseInfrastructure, "terraform")
 
 				createInfraCmd := FuryctlCreateCluster(furyctlYamlPath, distroPath, cluster.OperationPhaseInfrastructure, true)
 				session, err := gexec.Start(createInfraCmd, GinkgoWriter, GinkgoWriter)
@@ -582,7 +582,7 @@ var (
 				homeDir, err := os.UserHomeDir()
 				Expect(err).To(Not(HaveOccurred()))
 
-				tfPath := path.Join(homeDir, ".furyctl", "furyctl-dev-aws", cluster.OperationPhaseKubernetes, "terraform")
+				tfPath := path.Join(homeDir, ".furyctl", "clusters", "furyctl-dev-aws-cgjebt06lnn67g4fkq4g", cluster.OperationPhaseKubernetes, "terraform")
 
 				createKubeCmd := FuryctlCreateCluster(furyctlYamlPath, distroPath, cluster.OperationPhaseKubernetes, true)
 				session, err := gexec.Start(createKubeCmd, GinkgoWriter, GinkgoWriter)

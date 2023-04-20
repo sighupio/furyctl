@@ -17,6 +17,7 @@ import (
 	"github.com/sighupio/furyctl/internal/cmd/cmdutil"
 	"github.com/sighupio/furyctl/internal/dependencies"
 	"github.com/sighupio/furyctl/internal/distribution"
+	"github.com/sighupio/furyctl/internal/state"
 	cobrax "github.com/sighupio/furyctl/internal/x/cobra"
 	execx "github.com/sighupio/furyctl/internal/x/exec"
 	netx "github.com/sighupio/furyctl/internal/x/net"
@@ -91,7 +92,16 @@ func NewDependenciesCmd(tracker *analytics.Tracker) *cobra.Command {
 				return fmt.Errorf("failed to download distribution: %w", err)
 			}
 
-			basePath := filepath.Join(homeDir, ".furyctl", dres.MinimalConf.Metadata.Name)
+			fctlstatePath := filepath.Join(filepath.Dir(furyctlPath), ".fctlstate")
+			fctlstate, err := state.ReadOrCreate(fctlstatePath)
+			if err != nil {
+				cmdEvent.AddErrorMessage(err)
+				tracker.Track(cmdEvent)
+
+				return fmt.Errorf("error while loading state: %w", err)
+			}
+
+			basePath := filepath.Join(homeDir, ".furyctl", "clusters", fmt.Sprintf("%s-%s", dres.MinimalConf.Metadata.Name, fctlstate.ID))
 
 			depsdl := dependencies.NewDownloader(client, basePath, binPath, https)
 
