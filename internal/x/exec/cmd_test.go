@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-//go:build unit
-
 package execx_test
 
 import (
@@ -126,6 +124,41 @@ func Test_Cmd_Run(t *testing.T) {
 	}
 }
 
+func Test_Cmd_Stop(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		desc    string
+		cmd     *execx.Cmd
+		wantErr bool
+	}{
+		{
+			desc: "succesful stop",
+			cmd: execx.NewCmd("long process", execx.CmdOptions{
+				Args:     []string{"sleep", "60"},
+				Executor: execx.NewFakeExecutor(),
+			}),
+			wantErr: false,
+		},
+	}
+	for _, tC := range testCases {
+		tC := tC
+
+		t.Run(tC.desc, func(t *testing.T) {
+			t.Parallel()
+
+			err := tC.cmd.Stop()
+
+			if (err != nil) != tC.wantErr {
+				t.Errorf("Cmd.Stop() error = %v, wantErr = %v", err, tC.wantErr)
+			}
+
+			if tC.wantErr && !errors.Is(err, execx.ErrCmdFailed) {
+				t.Errorf("Cmd.Err = %v, want = %v", tC.cmd.Err, execx.ErrCmdFailed)
+			}
+		})
+	}
+}
 func Test_CmdLog_String(t *testing.T) {
 	cmdLog := &execx.CmdLog{
 		Out: bytes.NewBufferString("foo"),
