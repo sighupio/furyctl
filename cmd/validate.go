@@ -14,7 +14,7 @@ import (
 func NewValidateCommand(tracker *analytics.Tracker) *cobra.Command {
 	validateCmd := &cobra.Command{
 		Use:   "validate",
-		Short: "Validate a configuration file and the dependencies relative to the Kubernetes Fury Distribution specified in it",
+		Short: "Validate a configuration file and the dependencies relative to the Kubernetes Fury Distribution version specified in it",
 	}
 
 	validateCmd.AddCommand(validate.NewConfigCmd(tracker))

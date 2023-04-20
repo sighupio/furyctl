@@ -275,9 +275,9 @@ func getCreateClusterCmdFlags(cmd *cobra.Command, tracker *analytics.Tracker, cm
 
 	binPath := cmdutil.StringFlagOptional(cmd, "bin-path")
 
-	skipVpn, err := cmdutil.BoolFlag(cmd, "vpn-skip", tracker, cmdEvent)
+	skipVpn, err := cmdutil.BoolFlag(cmd, "skip-vpn-confirmation", tracker, cmdEvent)
 	if err != nil {
-		return ClusterCmdFlags{}, fmt.Errorf("%w: %s", ErrParsingFlag, "vpn-skip")
+		return ClusterCmdFlags{}, fmt.Errorf("%w: %s", ErrParsingFlag, "skip-vpn-confirmation")
 	}
 
 	vpnAutoConnect, err := cmdutil.BoolFlag(cmd, "vpn-auto-connect", tracker, cmdEvent)
@@ -347,13 +347,13 @@ func setupCreateClusterCmdFlags(cmd *cobra.Command) {
 		"phase",
 		"p",
 		"",
-		"Limit the execution to a specific phase. options are: infrastructure, kubernetes, distribution",
+		"Limit the execution to a specific phase. Options are: infrastructure, kubernetes, distribution",
 	)
 
 	cmd.Flags().String(
 		"skip-phase",
 		"",
-		"Avoid executing a unwanted phase. options are: infrastructure, kubernetes, distribution. More specifically:\n"+
+		"Avoid executing unwanted phases. Options are: infrastructure, kubernetes, distribution. More specifically:\n"+
 			"- skipping infrastructure will execute kubernetes and distribution\n"+
 			"- skipping kubernetes will only execute distribution\n"+
 			"- skipping distribution will execute infrastructure and kubernetes\n",
@@ -363,9 +363,9 @@ func setupCreateClusterCmdFlags(cmd *cobra.Command) {
 		"distro-location",
 		"",
 		"",
-		"Location where to download schemas, defaults and the distribution manifest. "+
-			"It can either be a local path(eg: /path/to/fury/distribution) or "+
-			"a remote URL(eg: git::git@github.com:sighupio/fury-distribution?ref=BRANCH_NAME&depth=1). "+
+		"Location where to download schemas, defaults and the distribution manifests from. "+
+			"It can either be a local path (eg: /path/to/fury/distribution) or "+
+			"a remote URL (eg: git::git@github.com:sighupio/fury-distribution?depth=1&ref=BRANCH_NAME). "+
 			"Any format supported by hashicorp/go-getter can be used.",
 	)
 
@@ -373,7 +373,7 @@ func setupCreateClusterCmdFlags(cmd *cobra.Command) {
 		"bin-path",
 		"b",
 		"",
-		"Path to the bin folder where all dependencies are installed",
+		"Path to the folder where all the dependencies' binaries are installed",
 	)
 
 	cmd.Flags().Bool(
@@ -397,19 +397,19 @@ func setupCreateClusterCmdFlags(cmd *cobra.Command) {
 	cmd.Flags().Bool(
 		"vpn-auto-connect",
 		false,
-		"When set will automatically connect to the created VPN in the infrastructure phase, "+
-			"please note that this will require OpenVPN to be installed in your system",
+		"When set will automatically connect to the created VPN by the infrastructure phase "+
+			"(requires OpenVPN installed in the system)",
 	)
 
 	cmd.Flags().Bool(
-		"vpn-skip",
+		"skip-vpn-confirmation",
 		false,
-		"When set will not wait for user confirmation to connect to the VPN",
+		"When set will not wait for user confirmation that the VPN is connected",
 	)
 
 	cmd.Flags().String(
 		"kubeconfig",
 		"",
-		"Path to the kubeconfig file, mandatory if you want to run the distribution phase and the KUBECONFIG environment variable is not set",
+		"Path to the kubeconfig file, mandatory if you want to run the distribution phase alone and the KUBECONFIG environment variable is not set",
 	)
 }

@@ -302,7 +302,7 @@ func (*VpnConnector) checkExistingOpenVPN() (bool, int32, error) {
 }
 
 func (v *VpnConnector) startOpenVPN() error {
-	connectMsg := "Connecting to VPN"
+	connectMsg := "Connecting to the VPN"
 
 	isRoot, err := osx.IsRoot()
 	if err != nil {
@@ -328,10 +328,10 @@ func (v *VpnConnector) startOpenVPN() error {
 }
 
 func (*VpnConnector) promptAutoConnect(pid int32) error {
-	logrus.Warnf("There is already a VPN connection process running with PID %d,"+
-		" please confirm it is intended to be up before you continue.\n", pid)
+	logrus.Warnf("Found an openvpn process running with PID %d,"+
+		" continuing will start another openvpn process and VPN connection in consequence.\n", pid)
 
-	logrus.Info("Press enter to continue or CTRL-C to abort...")
+	logrus.Info("Press ENTER to continue or CTRL-C to abort...")
 
 	if _, err := bufio.NewReader(os.Stdin).ReadBytes('\n'); err != nil {
 		return fmt.Errorf("%w: %v", ErrReadStdin, err)
@@ -373,7 +373,7 @@ func (v *VpnConnector) prompt() error {
 
 	logrus.Info(connectMsg)
 
-	logrus.Info("Press enter when you are ready to continue...")
+	logrus.Info("Press ENTER when you are ready to continue...")
 
 	if _, err := bufio.NewReader(os.Stdin).ReadBytes('\n'); err != nil {
 		return fmt.Errorf("%w: %v", ErrReadStdin, err)
