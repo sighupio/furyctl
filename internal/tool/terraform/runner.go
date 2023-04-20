@@ -18,7 +18,10 @@ import (
 	iox "github.com/sighupio/furyctl/internal/x/io"
 )
 
-var errOutputFromApply = errors.New("can't get outputs from terraform apply logs")
+var (
+	errOutputFromApply = errors.New("can't get outputs from terraform apply logs")
+	errAlreadyRunning  = errors.New("already running")
+)
 
 type OutputJSON struct {
 	Outputs map[string]*tfjson.StateOutput `json:"outputs"`
@@ -35,6 +38,7 @@ type Paths struct {
 type Runner struct {
 	executor execx.Executor
 	paths    Paths
+	cmd      *execx.Cmd
 }
 
 func NewRunner(executor execx.Executor, paths Paths) *Runner {
@@ -49,25 +53,32 @@ func (r *Runner) CmdPath() string {
 }
 
 func (r *Runner) Init() error {
+	if r.cmd != nil {
+		return errAlreadyRunning
+	}
+
 	args := []string{"init"}
 
 	if execx.NoTTY {
 		args = append(args, "-no-color")
 	}
 
-	err := execx.NewCmd(r.paths.Terraform, execx.CmdOptions{
-		Args:     args,
-		Executor: r.executor,
-		WorkDir:  r.paths.WorkDir,
-	}).Run()
-	if err != nil {
+	r.cmd = r.initCmd(args)
+
+	if err := r.cmd.Run(); err != nil {
 		return fmt.Errorf("command execution failed: %w", err)
 	}
+
+	r.cmd = nil
 
 	return nil
 }
 
 func (r *Runner) Plan(timestamp int64, params ...string) error {
+	if r.cmd != nil {
+		return errAlreadyRunning
+	}
+
 	args := []string{"plan"}
 
 	if len(params) > 0 {
@@ -76,22 +87,21 @@ func (r *Runner) Plan(timestamp int64, params ...string) error {
 
 	args = append(args, "-no-color", "-out", "plan/terraform.plan")
 
-	cmd := execx.NewCmd(r.paths.Terraform, execx.CmdOptions{
-		Args:     args,
-		Executor: r.executor,
-		WorkDir:  r.paths.WorkDir,
-	})
-	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("command execution failed: %w", err)
+	r.cmd = r.initCmd(args)
+
+	if err := r.cmd.Run(); err != nil {
+		return fmt.Errorf("error running terraform plan: %w", err)
 	}
 
 	err := os.WriteFile(path.Join(r.paths.Plan,
 		fmt.Sprintf("plan-%d.log", timestamp)),
-		cmd.Log.Out.Bytes(),
+		r.cmd.Log.Out.Bytes(),
 		iox.FullRWPermAccess)
 	if err != nil {
 		return fmt.Errorf("error writing terraform plan log: %w", err)
 	}
+
+	r.cmd = nil
 
 	return nil
 }
@@ -99,18 +109,21 @@ func (r *Runner) Plan(timestamp int64, params ...string) error {
 func (r *Runner) Apply(timestamp int64) (OutputJSON, error) {
 	var oj OutputJSON
 
-	cmd := execx.NewCmd(r.paths.Terraform, execx.CmdOptions{
-		Args:     []string{"apply", "-no-color", "-json", "plan/terraform.plan"},
-		Executor: r.executor,
-		WorkDir:  r.paths.WorkDir,
-	})
-	if err := cmd.Run(); err != nil {
+	if r.cmd != nil {
+		return oj, errAlreadyRunning
+	}
+
+	args := []string{"apply", "-no-color", "-json", "plan/terraform.plan"}
+
+	r.cmd = r.initCmd(args)
+
+	if err := r.cmd.Run(); err != nil {
 		return oj, fmt.Errorf("cannot create cloud resources: %w", err)
 	}
 
 	err := os.WriteFile(path.Join(r.paths.Logs,
 		fmt.Sprintf("%d.log", timestamp)),
-		cmd.Log.Out.Bytes(),
+		r.cmd.Log.Out.Bytes(),
 		iox.FullRWPermAccess)
 	if err != nil {
 		return oj, fmt.Errorf("error writing terraform apply log: %w", err)
@@ -141,37 +154,69 @@ func (r *Runner) Apply(timestamp int64) (OutputJSON, error) {
 		return oj, fmt.Errorf("error writing terraform apply outputs: %w", err)
 	}
 
+	r.cmd = nil
+
 	return oj, nil
 }
 
 func (r *Runner) Destroy() error {
+	if r.cmd != nil {
+		return errAlreadyRunning
+	}
+
 	args := []string{"destroy", "-auto-approve"}
 
 	if execx.NoTTY {
 		args = append(args, "-no-color")
 	}
 
-	err := execx.NewCmd(r.paths.Terraform, execx.CmdOptions{
-		Args:     args,
-		Executor: r.executor,
-		WorkDir:  r.paths.WorkDir,
-	}).Run()
-	if err != nil {
+	r.cmd = r.initCmd(args)
+
+	if err := r.cmd.Run(); err != nil {
 		return fmt.Errorf("error running terraform destroy: %w", err)
 	}
+
+	r.cmd = nil
 
 	return nil
 }
 
 func (r *Runner) Version() (string, error) {
-	log, err := execx.CombinedOutput(execx.NewCmd(r.paths.Terraform, execx.CmdOptions{
-		Args:     []string{"version"},
-		Executor: r.executor,
-		WorkDir:  r.paths.WorkDir,
-	}))
+	if r.cmd != nil {
+		return "", errAlreadyRunning
+	}
+
+	args := []string{"version"}
+
+	r.cmd = r.initCmd(args)
+
+	log, err := execx.CombinedOutput(r.cmd)
 	if err != nil {
 		return "", fmt.Errorf("error running terraform version: %w", err)
 	}
 
+	r.cmd = nil
+
 	return log, nil
+}
+
+func (r *Runner) Stop() error {
+	if r.cmd == nil {
+		return nil
+	}
+
+	if err := r.cmd.Stop(); err != nil {
+		fmt.Println("Error stopping terraform runner")
+		return fmt.Errorf("error stopping terraform runner: %w", err)
+	}
+
+	return nil
+}
+
+func (r *Runner) initCmd(args []string) *execx.Cmd {
+	return execx.NewCmd(r.paths.Terraform, execx.CmdOptions{
+		Executor: r.executor,
+		WorkDir:  r.paths.WorkDir,
+		Args:     args,
+	})
 }

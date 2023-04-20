@@ -46,6 +46,7 @@ type ClusterCmdFlags struct {
 	SkipDepsValidation bool
 	NoTTY              bool
 	Kubeconfig         string
+	Timeout            int
 }
 
 func NewClusterCmd(tracker *analytics.Tracker) *cobra.Command {
@@ -210,7 +211,7 @@ func NewClusterCmd(tracker *analytics.Tracker) *cobra.Command {
 				return fmt.Errorf("error while initializing cluster creation: %w", err)
 			}
 
-			if err := clusterCreator.Create(flags.SkipPhase); err != nil {
+			if err := clusterCreator.Create(flags.SkipPhase, flags.Timeout); err != nil {
 				cmdEvent.AddErrorMessage(err)
 				tracker.Track(cmdEvent)
 
@@ -318,6 +319,11 @@ func getCreateClusterCmdFlags(cmd *cobra.Command, tracker *analytics.Tracker, cm
 		return ClusterCmdFlags{}, fmt.Errorf("%w: %s", ErrParsingFlag, "kubeconfig")
 	}
 
+	timeout, err := cmdutil.IntFlag(cmd, "timeout", tracker, cmdEvent)
+	if err != nil {
+		return ClusterCmdFlags{}, fmt.Errorf("%w: %s", ErrParsingFlag, "timeout")
+	}
+
 	return ClusterCmdFlags{
 		Debug:              debug,
 		FuryctlPath:        furyctlPath,
@@ -332,6 +338,7 @@ func getCreateClusterCmdFlags(cmd *cobra.Command, tracker *analytics.Tracker, cm
 		SkipDepsValidation: skipDepsValidation,
 		NoTTY:              noTTY,
 		Kubeconfig:         kubeconfig,
+		Timeout:            timeout,
 	}, nil
 }
 
@@ -411,5 +418,11 @@ func setupCreateClusterCmdFlags(cmd *cobra.Command) {
 		"kubeconfig",
 		"",
 		"Path to the kubeconfig file, mandatory if you want to run the distribution phase and the KUBECONFIG environment variable is not set",
+	)
+
+	cmd.Flags().Int(
+		"timeout",
+		60,
+		"Timeout in seconds for the whole cluster creation process. Expressed in seconds",
 	)
 }
