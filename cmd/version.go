@@ -20,7 +20,7 @@ func NewVersionCmd(versions map[string]string, tracker *analytics.Tracker) *cobr
 
 	return &cobra.Command{
 		Use:   "version",
-		Short: "Print the version number an build information of furyctl",
+		Short: "Print the version number and build information of furyctl",
 		PreRun: func(cmd *cobra.Command, _ []string) {
 			cmdEvent = analytics.NewCommandEvent(cobrax.GetFullname(cmd))
 		},
