@@ -91,9 +91,9 @@ func NewConfigCmd(tracker *analytics.Tracker) *cobra.Command {
 		"distro-location",
 		"",
 		"",
-		"Base URL used to download schemas, defaults and the distribution manifest. "+
-			"It can either be a local path(eg: /path/to/fury/distribution) or "+
-			"a remote URL(eg: git::git@github.com:sighupio/fury-distribution?depth=1&ref=BRANCH_NAME)."+
+		"Location where to download schemas, defaults and the distribution manifests from. "+
+			"It can either be a local path (eg: /path/to/fury/distribution) or "+
+			"a remote URL (eg: git::git@github.com:sighupio/fury-distribution?depth=1&ref=BRANCH_NAME). "+
 			"Any format supported by hashicorp/go-getter can be used.",
 	)
 

@@ -30,7 +30,7 @@ func NewDependenciesCmd(tracker *analytics.Tracker) *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "dependencies",
-		Short: "Validate dependencies for the Kubernetes Fury Distribution specified in the configuration file",
+		Short: "Validate dependencies for the Kubernetes Fury Distribution version specified in the configuration file",
 		PreRun: func(cmd *cobra.Command, _ []string) {
 			cmdEvent = analytics.NewCommandEvent(cobrax.GetFullname(cmd))
 		},
@@ -141,7 +141,7 @@ func NewDependenciesCmd(tracker *analytics.Tracker) *cobra.Command {
 		"bin-path",
 		"b",
 		"",
-		"Path to the bin folder where all dependencies are installed",
+		"Path to the folder where all the dependencies' binaries are installed",
 	)
 
 	cmd.Flags().StringP(
@@ -155,9 +155,9 @@ func NewDependenciesCmd(tracker *analytics.Tracker) *cobra.Command {
 		"distro-location",
 		"",
 		"",
-		"Base URL used to download schemas, defaults and the distribution manifest. "+
-			"It can either be a local path(eg: /path/to/fury/distribution) or "+
-			"a remote URL(eg: git::git@github.com:sighupio/fury-distribution?depth=1&ref=BRANCH_NAME)."+
+		"Location where to download schemas, defaults and the distribution manifests from. "+
+			"It can either be a local path (eg: /path/to/fury/distribution) or "+
+			"a remote URL (eg: git::git@github.com:sighupio/fury-distribution?depth=1&ref=BRANCH_NAME). "+
 			"Any format supported by hashicorp/go-getter can be used.",
 	)
 
