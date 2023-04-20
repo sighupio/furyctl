@@ -11,6 +11,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"sync"
 	"time"
 
 	"github.com/sirupsen/logrus"
@@ -233,6 +234,47 @@ func (d *Distribution) Exec() error {
 	logrus.Info("Applying manifests...")
 
 	return d.applyManifests(manifestsOutPath)
+}
+
+func (d *Distribution) Stop() []error {
+	// use gorooutines to stop all the tools
+	var wg sync.WaitGroup
+	errChan := make(chan error, 1)
+
+	wg.Add(3)
+
+	go func() {
+		defer wg.Done()
+		if err := d.tfRunner.Stop(); err != nil {
+			errChan <- err
+		}
+	}()
+
+	go func() {
+		defer wg.Done()
+		if err := d.kzRunner.Stop(); err != nil {
+			errChan <- err
+		}
+	}()
+
+	go func() {
+		defer wg.Done()
+		if err := d.kubeRunner.Stop(); err != nil {
+			errChan <- err
+		}
+	}()
+
+	wg.Wait()
+
+	close(errChan)
+
+	errs := make([]error, 0)
+
+	for err := range errChan {
+		errs = append(errs, err)
+	}
+
+	return errs
 }
 
 func (d *Distribution) createFuryctlMerger() (*merge.Merger, error) {

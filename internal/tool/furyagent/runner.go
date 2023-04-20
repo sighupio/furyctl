@@ -19,12 +19,17 @@ type Paths struct {
 type Runner struct {
 	executor execx.Executor
 	paths    Paths
+	cmd      *execx.Cmd
 }
 
 func NewRunner(executor execx.Executor, paths Paths) *Runner {
 	return &Runner{
 		executor: executor,
 		paths:    paths,
+		cmd: execx.NewCmd(paths.Furyagent, execx.CmdOptions{
+			Executor: executor,
+			WorkDir:  paths.WorkDir,
+		}),
 	}
 }
 
@@ -34,36 +39,39 @@ func (r *Runner) CmdPath() string {
 
 func (r *Runner) ConfigOpenvpnClient(name string, params ...string) (*bytes.Buffer, error) {
 	args := []string{
+		r.paths.Furyagent,
 		"configure",
 		"openvpn-client",
 		fmt.Sprintf("--client-name=%s", name),
 		"--config=furyagent.yml",
 	}
 
-	args = append(args, params...)
+	r.cmd.Args = args
 
-	cmd := execx.NewCmd(r.paths.Furyagent, execx.CmdOptions{
-		Args:     args,
-		Executor: r.executor,
-		WorkDir:  r.paths.WorkDir,
-	})
-
-	if err := cmd.Run(); err != nil {
+	if err := r.cmd.Run(); err != nil {
 		return nil, fmt.Errorf("error while running furyagent configure openvpn-client: %w", err)
 	}
 
-	return cmd.Log.Out, nil
+	return r.cmd.Log.Out, nil
 }
 
 func (r *Runner) Version() (string, error) {
-	out, err := execx.CombinedOutput(execx.NewCmd(r.paths.Furyagent, execx.CmdOptions{
-		Args:     []string{"version"},
-		Executor: r.executor,
-		WorkDir:  r.paths.WorkDir,
-	}))
+	args := []string{r.paths.Furyagent, "version"}
+
+	r.cmd.Args = args
+
+	out, err := execx.CombinedOutput(r.cmd)
 	if err != nil {
 		return "", fmt.Errorf("error getting furyagent version: %w", err)
 	}
 
 	return out, nil
+}
+
+func (r *Runner) Stop() error {
+	if err := r.cmd.Stop(); err != nil {
+		return fmt.Errorf("error stopping furyagent runner: %w", err)
+	}
+
+	return nil
 }

@@ -11,6 +11,8 @@ import (
 	"path"
 	"path/filepath"
 	"strings"
+	"sync"
+	"time"
 
 	"github.com/sirupsen/logrus"
 
@@ -27,6 +29,8 @@ import (
 var (
 	ErrUnsupportedPhase = errors.New("unsupported phase")
 	ErrInfraNotPresent  = errors.New("the configuration file does not contain an infrastructure section")
+	ErrClusterCreation  = errors.New("cluster creation failed")
+	ErrTimeout          = errors.New("timeout reached")
 )
 
 type ClusterCreator struct {
@@ -106,7 +110,7 @@ func (v *ClusterCreator) SetProperty(name string, value any) {
 	}
 }
 
-func (v *ClusterCreator) Create(skipPhase string) error {
+func (v *ClusterCreator) Create(skipPhase string, timeout int) error {
 	infra, kube, distro, err := v.setupPhases()
 	if err != nil {
 		return err
@@ -131,27 +135,171 @@ func (v *ClusterCreator) Create(skipPhase string) error {
 		return fmt.Errorf("error while creating vpn connector: %w", err)
 	}
 
-	switch v.phase {
-	case cluster.OperationPhaseInfrastructure:
-		if err := v.infraPhase(infra, vpnConnector); err != nil {
-			return err
+	errCh := make(chan error)
+	execCloseCh := make(chan bool)
+	var wg sync.WaitGroup
+
+	wg.Add(1)
+
+	go func(closeCh chan bool, errChan chan error) {
+		defer func() {
+			closeCh <- true
+		}()
+
+		switch v.phase {
+		case cluster.OperationPhaseInfrastructure:
+			if v.furyctlConf.Spec.Infrastructure == nil {
+				absPath, err := filepath.Abs(v.paths.ConfigPath)
+				if err != nil {
+					logrus.Debugf("error while getting absolute path of %s: %v", v.paths.ConfigPath, err)
+
+					errCh <- fmt.Errorf("%w: at %s", ErrInfraNotPresent, v.paths.ConfigPath)
+
+					return
+				}
+
+				errCh <- fmt.Errorf("%w: check at %s", ErrInfraNotPresent, absPath)
+
+				return
+			}
+
+			if err = infra.Exec(infraOpts); err != nil {
+				errCh <- fmt.Errorf("error while executing infrastructure phase: %w", err)
+
+				return
+			}
+
+			if v.dryRun {
+				logrus.Info("Infrastructure created successfully (dry-run mode)")
+			}
+
+			logrus.Info("Infrastructure created successfully")
+
+			if v.furyctlConf.Spec.Infrastructure != nil {
+				if v.furyctlConf.Spec.Infrastructure.Vpc.Vpn != nil && v.vpnAutoConnect {
+					logrus.Info("Please remember to kill the VPN connection when you finish doing operations on the cluster")
+				}
+			}
+
+			break
+
+		case cluster.OperationPhaseKubernetes:
+			logrus.Warn("Please make sure that the Kubernetes API is reachable before continuing" +
+				" (e.g. check VPN connection is active`), otherwise the installation will fail.")
+
+			if err = kube.Exec(); err != nil {
+				errCh <- fmt.Errorf("error while executing kubernetes phase: %w", err)
+
+				return
+			}
+
+			if v.dryRun {
+				logrus.Info("Kubernetes cluster created successfully (dry-run mode)")
+
+				return
+			}
+
+			if err := v.storeClusterConfig(); err != nil {
+				errCh <- fmt.Errorf("error while creating secret with the cluster configuration: %w", err)
+
+				return
+			}
+
+			logrus.Info("Kubernetes cluster created successfully")
+
+			err = v.logKubeconfig()
+			if err != nil {
+				errCh <- fmt.Errorf("error while logging kubeconfig path: %w", err)
+
+				return
+			}
+
+			break
+
+		case cluster.OperationPhaseDistribution:
+			if err = distro.Exec(); err != nil {
+				errCh <- fmt.Errorf("error while installing Kubernetes Fury Distribution: %w", err)
+
+				return
+			}
+
+			if v.dryRun {
+				logrus.Info("Kubernetes Fury Distribution installed successfully (dry-run mode)")
+
+				return
+			}
+
+			if err := v.storeClusterConfig(); err != nil {
+				errCh <- fmt.Errorf("error while creating secret with the cluster configuration: %w", err)
+
+				return
+			}
+
+			logrus.Info("Kubernetes Fury Distribution installed successfully")
+
+			break
+
+		case cluster.OperationPhaseAll:
+			errCh <- v.allPhases(skipPhase, infraOpts, infra, kube, distro)
+
+			return
+
+		default:
+			errCh <- ErrUnsupportedPhase
 		}
 
-	case cluster.OperationPhaseKubernetes:
-		if err := v.kubernetesPhase(kube, vpnConnector); err != nil {
-			return err
+	}(execCloseCh, errCh)
+
+	strBuilder := strings.Builder{}
+
+	for {
+		select {
+		case <-time.After(time.Duration(timeout) * time.Second):
+			fmt.Println("I'm select: timeout reached")
+
+			fmt.Println("I'm select: stopping execChan")
+			wg.Done()
+			fmt.Println("I'm select: stopping errChan")
+			close(errCh)
+
+			errs := make([]error, 0)
+			errs = append(errs, ErrTimeout)
+
+			fmt.Println("I'm select: Waiting for all processes to stop...")
+
+			if infra != nil {
+				errs = append(errs, infra.Stop()...)
+			}
+
+			if kube != nil {
+				errs = append(errs, kube.Stop()...)
+			}
+
+			if distro != nil {
+				errs = append(errs, distro.Stop()...)
+			}
+
+			fmt.Println("I'm select: returning error")
+
+			for _, err := range errs {
+				strBuilder.WriteString(err.Error())
+				strBuilder.WriteString(" - ")
+			}
+
+			return fmt.Errorf(strBuilder.String())
+
+		case r := <-execCloseCh:
+			if r {
+				close(execCloseCh)
+				close(errCh)
+
+				return fmt.Errorf(strBuilder.String())
+			}
+
+		case err := <-errCh:
+			strBuilder.WriteString(err.Error())
+			strBuilder.WriteString(" - ")
 		}
-
-	case cluster.OperationPhaseDistribution:
-		if err := v.distributionPhase(distro, vpnConnector); err != nil {
-			return err
-		}
-
-	case cluster.OperationPhaseAll:
-		return v.allPhases(skipPhase, infra, kube, distro, vpnConnector)
-
-	default:
-		return ErrUnsupportedPhase
 	}
 
 	return nil

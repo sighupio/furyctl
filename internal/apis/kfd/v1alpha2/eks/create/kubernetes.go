@@ -16,6 +16,7 @@ import (
 	"path"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/sirupsen/logrus"
@@ -259,6 +260,42 @@ func (*Kubernetes) getCommonDataFromDistribution(furyctlCfg template.Config) (ma
 	}
 
 	return nodeSelector, tolerations, nil
+}
+
+func (k *Kubernetes) Stop() []error {
+	// use goroutines to stop runners
+	var wg sync.WaitGroup
+	errChan := make(chan error, 1)
+
+	wg.Add(2)
+
+	go func() {
+		defer wg.Done()
+
+		if err := k.tfRunner.Stop(); err != nil {
+			errChan <- err
+		}
+	}()
+
+	go func() {
+		defer wg.Done()
+
+		if err := k.awsRunner.Stop(); err != nil {
+			errChan <- err
+		}
+	}()
+
+	wg.Wait()
+
+	close(errChan)
+
+	errs := make([]error, 0)
+
+	for err := range errChan {
+		errs = append(errs, err)
+	}
+
+	return errs
 }
 
 func (k *Kubernetes) copyFromTemplate(furyctlCfg template.Config) error {
