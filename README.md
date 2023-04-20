@@ -23,9 +23,9 @@
 
 `furyctl` is the command line companion for the Kubernetes Fury Distribution to manage the **full lifecycle** of your Kubernetes Fury clusters.
 <br/>
-<!-- line left blank -->
+
 > 💡 Learn more about the Kubernetes Fury Distribution in the [official site](https://kubernetesfury.com).
-<!-- line left blank -->
+
 
 If you're looking for the old documentation, you can find it [here](https://github.com/sighupio/furyctl/blob/main/README.md).
 
