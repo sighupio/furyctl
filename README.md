@@ -7,7 +7,7 @@
 <p>The Swiss Army Knife<br/>for the Kubernetes Fury Distribution</p>
 
 <!-- FIXME: UPDATE THE BUILD BADGE WITH THE RIGHT BRANCH -->
-[![Build Status](https://ci.sighup.io/api/badges/sighupio/furyctl/status.svg?ref=refs/heads/furyctl-ng-alpha1)](https://ci.sighup.io/sighupio/furyctl)
+[![Build Status](https://ci.sighup.io/api/badges/sighupio/furyctl/status.svg?ref=refs/heads/develop)](https://ci.sighup.io/sighupio/furyctl)
 ![Release](https://img.shields.io/badge/furyctl-v0.10.0-blue)
 ![Release](https://img.shields.io/badge/furyctl%20next-v0.25.0&dash;alpha.1-blue)
 ![Slack](https://img.shields.io/badge/slack-@kubernetes/fury-yellow.svg?logo=slack)
