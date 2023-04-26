@@ -14,8 +14,10 @@ import (
 	"github.com/sighupio/furyctl/internal/analytics"
 	"github.com/sighupio/furyctl/internal/cmd/cmdutil"
 	"github.com/sighupio/furyctl/internal/config"
+	"github.com/sighupio/furyctl/internal/dependencies"
 	"github.com/sighupio/furyctl/internal/distribution"
 	cobrax "github.com/sighupio/furyctl/internal/x/cobra"
+	execx "github.com/sighupio/furyctl/internal/x/exec"
 	netx "github.com/sighupio/furyctl/internal/x/net"
 )
 
@@ -44,7 +46,17 @@ func NewConfigCmd(tracker *analytics.Tracker) *cobra.Command {
 				return fmt.Errorf("%w: distro-location", ErrParsingFlag)
 			}
 
+			executor := execx.NewStdExecutor()
+			depsvl := dependencies.NewValidator(executor, "", furyctlPath, false)
 			dloader := distribution.NewDownloader(netx.NewGoGetterClient())
+
+			// Validate base requirements.
+			if err := depsvl.ValidateBaseReqs(); err != nil {
+				cmdEvent.AddErrorMessage(err)
+				tracker.Track(cmdEvent)
+
+				return fmt.Errorf("error while validating requirements: %w", err)
+			}
 
 			// Download the distribution.
 			logrus.Info("Downloading distribution...")

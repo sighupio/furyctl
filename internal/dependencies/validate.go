@@ -35,6 +35,14 @@ type Validator struct {
 	infraValidator   *toolsconf.Validator
 }
 
+func (v *Validator) ValidateBaseReqs() error {
+	if _, errs := v.toolsValidator.ValidateBaseReqs(); len(errs) > 0 {
+		return fmt.Errorf("%w: %v", errValidatingTools, errs)
+	}
+
+	return nil
+}
+
 func (v *Validator) Validate(res distribution.DownloadResult) error {
 	if _, errs := v.toolsValidator.Validate(
 		res.DistroManifest,
