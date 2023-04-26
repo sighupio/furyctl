@@ -94,6 +94,11 @@ func TestHelperProcess(t *testing.T) {
 		case "version":
 			fmt.Fprintf(os.Stdout, "Furyagent version 0.3.0 - md5: b7d2b3dc7398ac6ce120a17d4fd439f2 - /opt/homebrew/bin/furyagent")
 		}
+	case "git":
+		switch subcmd {
+		case "version":
+			fmt.Fprintf(os.Stdout, "git version 2.39.0\n")
+		}
 	case "kubectl":
 		switch subcmd {
 		case "version":
