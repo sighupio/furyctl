@@ -10,6 +10,7 @@ import (
 	"github.com/sighupio/furyctl/internal/tool/ansible"
 	"github.com/sighupio/furyctl/internal/tool/awscli"
 	"github.com/sighupio/furyctl/internal/tool/furyagent"
+	"github.com/sighupio/furyctl/internal/tool/git"
 	"github.com/sighupio/furyctl/internal/tool/kubectl"
 	"github.com/sighupio/furyctl/internal/tool/kustomize"
 	"github.com/sighupio/furyctl/internal/tool/openvpn"
@@ -21,6 +22,7 @@ const (
 	Ansible   = "ansible"
 	Awscli    = "awscli"
 	Furyagent = "furyagent"
+	Git       = "git"
 	Kubectl   = "kubectl"
 	Kustomize = "kustomize"
 	Openvpn   = "openvpn"
@@ -67,6 +69,13 @@ func (rf *RunnerFactory) Create(name, version, workDir string) Runner {
 		return furyagent.NewRunner(rf.executor, furyagent.Paths{
 			Furyagent: filepath.Join(rf.paths.Bin, name, version, name),
 			WorkDir:   workDir,
+		})
+	}
+
+	if name == Git {
+		return git.NewRunner(rf.executor, git.Paths{
+			Git:     "git",
+			WorkDir: workDir,
 		})
 	}
 
