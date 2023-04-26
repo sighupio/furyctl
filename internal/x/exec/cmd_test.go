@@ -159,6 +159,7 @@ func Test_Cmd_Stop(t *testing.T) {
 		})
 	}
 }
+
 func Test_CmdLog_String(t *testing.T) {
 	cmdLog := &execx.CmdLog{
 		Out: bytes.NewBufferString("foo"),
