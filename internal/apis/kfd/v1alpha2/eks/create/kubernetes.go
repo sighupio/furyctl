@@ -263,7 +263,6 @@ func (*Kubernetes) getCommonDataFromDistribution(furyctlCfg template.Config) (ma
 }
 
 func (k *Kubernetes) Stop() []error {
-	// use goroutines to stop runners
 	var wg sync.WaitGroup
 	errChan := make(chan error, 1)
 
@@ -272,16 +271,20 @@ func (k *Kubernetes) Stop() []error {
 	go func() {
 		defer wg.Done()
 
+		logrus.Debug("Stopping terraform...")
+
 		if err := k.tfRunner.Stop(); err != nil {
-			errChan <- err
+			errChan <- fmt.Errorf("error stopping terraform: %w", err)
 		}
 	}()
 
 	go func() {
 		defer wg.Done()
 
+		logrus.Debug("Stopping awscli...")
+
 		if err := k.awsRunner.Stop(); err != nil {
-			errChan <- err
+			errChan <- fmt.Errorf("error stopping awscli: %w", err)
 		}
 	}()
 
@@ -290,7 +293,6 @@ func (k *Kubernetes) Stop() []error {
 	close(errChan)
 
 	errs := make([]error, 0)
-
 	for err := range errChan {
 		errs = append(errs, err)
 	}
