@@ -247,7 +247,6 @@ func (v *ClusterCreator) Create(skipPhase string, timeout int) error {
 		default:
 			errCh <- ErrUnsupportedPhase
 		}
-
 	}(execCloseCh, errCh)
 
 	strBuilder := strings.Builder{}

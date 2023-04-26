@@ -237,7 +237,6 @@ func (d *Distribution) Exec() error {
 }
 
 func (d *Distribution) Stop() []error {
-	// use gorooutines to stop all the tools
 	var wg sync.WaitGroup
 	errChan := make(chan error, 1)
 
@@ -245,22 +244,31 @@ func (d *Distribution) Stop() []error {
 
 	go func() {
 		defer wg.Done()
+
+		logrus.Debug("Stopping terraform...")
+
 		if err := d.tfRunner.Stop(); err != nil {
-			errChan <- err
+			errChan <- fmt.Errorf("error stopping terraform: %w", err)
 		}
 	}()
 
 	go func() {
 		defer wg.Done()
+
+		logrus.Debug("Stopping kustomize...")
+
 		if err := d.kzRunner.Stop(); err != nil {
-			errChan <- err
+			errChan <- fmt.Errorf("error stopping kustomize: %w", err)
 		}
 	}()
 
 	go func() {
 		defer wg.Done()
+
+		logrus.Debug("Stopping kubectl...")
+
 		if err := d.kubeRunner.Stop(); err != nil {
-			errChan <- err
+			errChan <- fmt.Errorf("error stopping kubectl: %w", err)
 		}
 	}()
 
@@ -269,7 +277,6 @@ func (d *Distribution) Stop() []error {
 	close(errChan)
 
 	errs := make([]error, 0)
-
 	for err := range errChan {
 		errs = append(errs, err)
 	}

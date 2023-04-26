@@ -10,7 +10,6 @@ import (
 	"fmt"
 	"io/fs"
 	"os"
-	"os/exec"
 	"path"
 	"strings"
 	"sync"
@@ -129,31 +128,37 @@ func (i *Infrastructure) Stop() []error {
 	wg.Add(3)
 
 	if i.ovRunner != nil {
-		fmt.Println("Stopping openvpn...")
 		go func() {
 			defer wg.Done()
+
+			logrus.Debug("Stopping openvpn...")
+
 			if err := i.ovRunner.Stop(); err != nil {
-				errChan <- fmt.Errorf("error stopping openvpn: %v", err)
+				errChan <- fmt.Errorf("error stopping openvpn: %w", err)
 			}
 		}()
 	}
 
 	if i.faRunner != nil {
-		fmt.Println("Stopping furyagent...")
 		go func() {
 			defer wg.Done()
+
+			logrus.Debug("Stopping furyagent...")
+
 			if err := i.faRunner.Stop(); err != nil {
-				errChan <- fmt.Errorf("error stopping furyagent: %v", err)
+				errChan <- fmt.Errorf("error stopping furyagent: %w", err)
 			}
 		}()
 	}
 
 	if i.tfRunner != nil {
-		fmt.Println("Stopping terraform...")
 		go func() {
 			defer wg.Done()
+
+			logrus.Debug("Stopping terraform...")
+
 			if err := i.tfRunner.Stop(); err != nil {
-				errChan <- fmt.Errorf("error stopping terraform: %v", err)
+				errChan <- fmt.Errorf("error stopping terraform: %w", err)
 			}
 		}()
 	}
@@ -163,37 +168,11 @@ func (i *Infrastructure) Stop() []error {
 	close(errChan)
 
 	errs := make([]error, 0)
-
 	for err := range errChan {
 		errs = append(errs, err)
 	}
 
 	return errs
-}
-
-func (i *Infrastructure) isVpnConfigured() bool {
-	vpn := i.furyctlConf.Spec.Infrastructure.Vpc.Vpn
-	if vpn == nil {
-		return false
-	}
-
-	instances := i.furyctlConf.Spec.Infrastructure.Vpc.Vpn.Instances
-	if instances == nil {
-		return true
-	}
-
-	return *instances > 0
-}
-
-func (i *Infrastructure) generateClientName() (string, error) {
-	whoamiResp, err := exec.Command("whoami").Output()
-	if err != nil {
-		return "", fmt.Errorf("error getting current user: %w", err)
-	}
-
-	whoami := strings.TrimSpace(string(whoamiResp))
-
-	return fmt.Sprintf("%s-%s", i.furyctlConf.Metadata.Name, whoami), nil
 }
 
 func (i *Infrastructure) copyFromTemplate() error {
