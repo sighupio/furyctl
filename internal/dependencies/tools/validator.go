@@ -35,6 +35,22 @@ type Validator struct {
 	autoConnect bool
 }
 
+func (tv *Validator) ValidateBaseReqs() ([]string, []error) {
+	var (
+		oks  []string
+		errs []error
+	)
+
+	git := tv.toolFactory.Create(itool.Git, "*")
+	if err := git.CheckBinVersion(); err != nil {
+		errs = append(errs, err)
+	} else {
+		oks = append(oks, "git")
+	}
+
+	return oks, errs
+}
+
 func (tv *Validator) Validate(kfdManifest config.KFD, miniConf config.Furyctl) ([]string, []error) {
 	var (
 		oks  []string
@@ -68,13 +84,6 @@ func (tv *Validator) Validate(kfdManifest config.KFD, miniConf config.Furyctl) (
 		} else {
 			oks = append(oks, "aws")
 		}
-	}
-
-	git := tv.toolFactory.Create(itool.Git, "*")
-	if err := git.CheckBinVersion(); err != nil {
-		errs = append(errs, err)
-	} else {
-		oks = append(oks, "git")
 	}
 
 	etv := apis.NewExtraToolsValidatorFactory(tv.executor, miniConf.APIVersion, miniConf.Kind, tv.autoConnect)

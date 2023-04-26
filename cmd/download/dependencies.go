@@ -18,6 +18,7 @@ import (
 	"github.com/sighupio/furyctl/internal/dependencies"
 	"github.com/sighupio/furyctl/internal/distribution"
 	cobrax "github.com/sighupio/furyctl/internal/x/cobra"
+	execx "github.com/sighupio/furyctl/internal/x/exec"
 	netx "github.com/sighupio/furyctl/internal/x/net"
 )
 
@@ -63,8 +64,17 @@ func NewDependenciesCmd(tracker *analytics.Tracker) *cobra.Command {
 			logrus.Info("Downloading dependencies...")
 
 			client := netx.NewGoGetterClient()
-
+			executor := execx.NewStdExecutor()
+			depsvl := dependencies.NewValidator(executor, binPath, furyctlPath, false)
 			distrodl := distribution.NewDownloader(client)
+
+			// Validate base requirements.
+			if err := depsvl.ValidateBaseReqs(); err != nil {
+				cmdEvent.AddErrorMessage(err)
+				tracker.Track(cmdEvent)
+
+				return fmt.Errorf("error while validating requirements: %w", err)
+			}
 
 			dres, err := distrodl.Download(distroLocation, furyctlPath)
 			cmdEvent.AddClusterDetails(analytics.ClusterDetails{

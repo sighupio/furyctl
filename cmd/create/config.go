@@ -17,6 +17,7 @@ import (
 	"github.com/sighupio/furyctl/internal/analytics"
 	"github.com/sighupio/furyctl/internal/cmd/cmdutil"
 	"github.com/sighupio/furyctl/internal/config"
+	"github.com/sighupio/furyctl/internal/dependencies"
 	"github.com/sighupio/furyctl/internal/distribution"
 	"github.com/sighupio/furyctl/internal/semver"
 	cobrax "github.com/sighupio/furyctl/internal/x/cobra"
@@ -102,6 +103,8 @@ func NewConfigCmd(tracker *analytics.Tracker) *cobra.Command {
 
 			// Init collaborators.
 			distrodl := distribution.NewDownloader(netx.NewGoGetterClient())
+			executor := execx.NewStdExecutor()
+			depsvl := dependencies.NewValidator(executor, "", "", false)
 
 			// Init packages.
 			execx.Debug = debug
@@ -120,6 +123,14 @@ func NewConfigCmd(tracker *analytics.Tracker) *cobra.Command {
 					ErrConfigCreationFailed,
 					p,
 				)
+			}
+
+			// Validate base requirements.
+			if err := depsvl.ValidateBaseReqs(); err != nil {
+				cmdEvent.AddErrorMessage(err)
+				tracker.Track(cmdEvent)
+
+				return fmt.Errorf("error while validating requirements: %w", err)
 			}
 
 			// Download the distribution.

@@ -14,6 +14,7 @@ import (
 
 	"github.com/sighupio/furyctl/internal/analytics"
 	"github.com/sighupio/furyctl/internal/cmd/cmdutil"
+	"github.com/sighupio/furyctl/internal/dependencies"
 	"github.com/sighupio/furyctl/internal/dependencies/envvars"
 	"github.com/sighupio/furyctl/internal/dependencies/tools"
 	"github.com/sighupio/furyctl/internal/dependencies/toolsconf"
@@ -45,7 +46,27 @@ func NewDependenciesCmd(tracker *analytics.Tracker) *cobra.Command {
 				return fmt.Errorf("%w: distro-location", ErrParsingFlag)
 			}
 
+			binPath := cobrax.Flag[string](cmd, "bin-path").(string) //nolint:errcheck,forcetypeassert // optional flag
+			if binPath == "" {
+				homeDir, err := os.UserHomeDir()
+				if err != nil {
+					return fmt.Errorf("error while getting user home directory: %w", err)
+				}
+
+				binPath = filepath.Join(homeDir, ".furyctl", "bin")
+			}
+
 			dloader := distribution.NewDownloader(netx.NewGoGetterClient())
+			executor := execx.NewStdExecutor()
+			depsvl := dependencies.NewValidator(executor, "", furyctlPath, false)
+
+			// Validate base requirements.
+			if err := depsvl.ValidateBaseReqs(); err != nil {
+				cmdEvent.AddErrorMessage(err)
+				tracker.Track(cmdEvent)
+
+				return fmt.Errorf("error while validating requirements: %w", err)
+			}
 
 			// Download the distribution.
 			logrus.Info("Downloading distribution...")
@@ -61,21 +82,11 @@ func NewDependenciesCmd(tracker *analytics.Tracker) *cobra.Command {
 				KFDVersion: dres.DistroManifest.Version,
 			})
 
-			binPath := cobrax.Flag[string](cmd, "bin-path").(string) //nolint:errcheck,forcetypeassert // optional flag
-			if binPath == "" {
-				homeDir, err := os.UserHomeDir()
-				if err != nil {
-					return fmt.Errorf("error while getting user home directory: %w", err)
-				}
-
-				binPath = filepath.Join(homeDir, ".furyctl", "bin")
-			}
-
-			toolsValidator := tools.NewValidator(execx.NewStdExecutor(), binPath, furyctlPath, false)
+			toolsValidator := tools.NewValidator(executor, binPath, furyctlPath, false)
 
 			envVarsValidator := envvars.NewValidator()
 
-			toolsConfigValidator := toolsconf.NewValidator(execx.NewStdExecutor())
+			toolsConfigValidator := toolsconf.NewValidator(executor)
 
 			errs := make([]error, 0)
 

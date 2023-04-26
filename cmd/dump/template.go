@@ -14,8 +14,10 @@ import (
 	"github.com/sighupio/furyctl/internal/analytics"
 	"github.com/sighupio/furyctl/internal/cmd/cmdutil"
 	"github.com/sighupio/furyctl/internal/config"
+	"github.com/sighupio/furyctl/internal/dependencies"
 	"github.com/sighupio/furyctl/internal/distribution"
 	cobrax "github.com/sighupio/furyctl/internal/x/cobra"
+	execx "github.com/sighupio/furyctl/internal/x/exec"
 	netx "github.com/sighupio/furyctl/internal/x/net"
 	yamlx "github.com/sighupio/furyctl/internal/x/yaml"
 )
@@ -53,7 +55,17 @@ The generated folder will be created starting from a provided templates folder a
 
 			// Init collaborators.
 			client := netx.NewGoGetterClient()
+			executor := execx.NewStdExecutor()
+			depsvl := dependencies.NewValidator(executor, "", flags.FuryctlPath, false)
 			distrodl := distribution.NewDownloader(client)
+
+			// Validate base requirements.
+			if err := depsvl.ValidateBaseReqs(); err != nil {
+				cmdEvent.AddErrorMessage(err)
+				tracker.Track(cmdEvent)
+
+				return fmt.Errorf("error while validating requirements: %w", err)
+			}
 
 			// Download the distribution.
 			logrus.Info("Downloading distribution...")
