@@ -12,7 +12,6 @@ import (
 	"os"
 	"path"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/sirupsen/logrus"
@@ -41,7 +40,9 @@ type Infrastructure struct {
 	furyctlConf private.EksclusterKfdV1Alpha2
 	kfdManifest config.KFD
 	tfRunner    *terraform.Runner
-	dryRun      bool
+	// ovRunner    *openvpn.Runner
+	// faRunner    *furyagent.Runner
+	dryRun bool
 }
 
 func NewInfrastructure(
@@ -73,6 +74,19 @@ func NewInfrastructure(
 				Terraform: phase.TerraformPath,
 			},
 		),
+		// ovRunner: openvpn.NewRunner(
+		// 	executor,
+		// 	openvpn.Paths{
+		// 		WorkDir:   path.Join(phase.Path, "terraform"),
+		// 		Openvpn: paths.,
+		// 	},
+		// ),
+		// faRunner: furyagent.NewRunner(
+		// 	executor,
+		// 	furyagent.Paths{
+		// 		WorkDir: path.Join(phase.Path, "terraform"),
+		// 	},
+		// ),
 		dryRun: dryRun,
 	}, nil
 }
@@ -121,58 +135,12 @@ func (i *Infrastructure) Exec() error {
 	return nil
 }
 
-func (i *Infrastructure) Stop() []error {
-	var wg sync.WaitGroup
-	errChan := make(chan error, 1)
-
-	wg.Add(3)
-
-	if i.ovRunner != nil {
-		go func() {
-			defer wg.Done()
-
-			logrus.Debug("Stopping openvpn...")
-
-			if err := i.ovRunner.Stop(); err != nil {
-				errChan <- fmt.Errorf("error stopping openvpn: %w", err)
-			}
-		}()
+func (i *Infrastructure) Stop() error {
+	if err := i.tfRunner.Stop(); err != nil {
+		return fmt.Errorf("error stopping terraform: %w", err)
 	}
 
-	if i.faRunner != nil {
-		go func() {
-			defer wg.Done()
-
-			logrus.Debug("Stopping furyagent...")
-
-			if err := i.faRunner.Stop(); err != nil {
-				errChan <- fmt.Errorf("error stopping furyagent: %w", err)
-			}
-		}()
-	}
-
-	if i.tfRunner != nil {
-		go func() {
-			defer wg.Done()
-
-			logrus.Debug("Stopping terraform...")
-
-			if err := i.tfRunner.Stop(); err != nil {
-				errChan <- fmt.Errorf("error stopping terraform: %w", err)
-			}
-		}()
-	}
-
-	wg.Wait()
-
-	close(errChan)
-
-	errs := make([]error, 0)
-	for err := range errChan {
-		errs = append(errs, err)
-	}
-
-	return errs
+	return nil
 }
 
 func (i *Infrastructure) copyFromTemplate() error {

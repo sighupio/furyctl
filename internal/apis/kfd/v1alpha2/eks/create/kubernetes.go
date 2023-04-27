@@ -232,42 +232,47 @@ func (*Kubernetes) getCommonDataFromDistribution(furyctlCfg template.Config) (ma
 	return nodeSelector, tolerations, nil
 }
 
-func (k *Kubernetes) Stop() []error {
-	var wg sync.WaitGroup
-	errChan := make(chan error, 1)
+func (k *Kubernetes) Stop() error {
+	errCh := make(chan error)
+	doneCh := make(chan bool)
 
+	var wg sync.WaitGroup
 	wg.Add(2)
 
 	go func() {
-		defer wg.Done()
-
 		logrus.Debug("Stopping terraform...")
 
 		if err := k.tfRunner.Stop(); err != nil {
-			errChan <- fmt.Errorf("error stopping terraform: %w", err)
+			errCh <- fmt.Errorf("error stopping terraform: %w", err)
 		}
+
+		wg.Done()
 	}()
 
 	go func() {
-		defer wg.Done()
-
 		logrus.Debug("Stopping awscli...")
 
 		if err := k.awsRunner.Stop(); err != nil {
-			errChan <- fmt.Errorf("error stopping awscli: %w", err)
+			errCh <- fmt.Errorf("error stopping awscli: %w", err)
 		}
+
+		wg.Done()
 	}()
 
-	wg.Wait()
+	go func() {
+		wg.Wait()
+		close(doneCh)
+	}()
 
-	close(errChan)
-
-	errs := make([]error, 0)
-	for err := range errChan {
-		errs = append(errs, err)
+	select {
+	case <-doneCh:
+		break
+	case err := <-errCh:
+		close(errCh)
+		return err
 	}
 
-	return errs
+	return nil
 }
 
 func (k *Kubernetes) copyFromTemplate(furyctlCfg template.Config) error {

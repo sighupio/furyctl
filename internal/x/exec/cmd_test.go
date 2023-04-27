@@ -141,6 +141,7 @@ func Test_Cmd_Stop(t *testing.T) {
 			wantErr: false,
 		},
 	}
+
 	for _, tC := range testCases {
 		tC := tC
 
