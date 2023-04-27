@@ -42,6 +42,7 @@ type ClusterCmdFlags struct {
 	VpnAutoConnect bool
 	DryRun         bool
 	NoTTY          bool
+	HTTPS          bool
 	Kubeconfig     string
 }
 
@@ -103,7 +104,7 @@ func NewClusterCmd(tracker *analytics.Tracker) *cobra.Command {
 			// Init first half of collaborators.
 			client := netx.NewGoGetterClient()
 			executor := execx.NewStdExecutor()
-			distrodl := distribution.NewDownloader(client)
+			distrodl := distribution.NewDownloader(client, flags.HTTPS)
 			depsvl := dependencies.NewValidator(executor, flags.BinPath, flags.FuryctlPath, flags.VpnAutoConnect)
 
 			execx.Debug = flags.Debug
@@ -330,6 +331,11 @@ func getDeleteClusterCmdFlags(cmd *cobra.Command, tracker *analytics.Tracker, cm
 		return ClusterCmdFlags{}, fmt.Errorf("%w: force", ErrParsingFlag)
 	}
 
+	https, err := cmdutil.BoolFlag(cmd, "https", tracker, cmdEvent)
+	if err != nil {
+		return ClusterCmdFlags{}, fmt.Errorf("%w: %s", ErrParsingFlag, "https")
+	}
+
 	return ClusterCmdFlags{
 		Debug:          debug,
 		FuryctlPath:    furyctlPath,
@@ -342,6 +348,7 @@ func getDeleteClusterCmdFlags(cmd *cobra.Command, tracker *analytics.Tracker, cm
 		Force:          force,
 		NoTTY:          noTTY,
 		Kubeconfig:     kubeconfig,
+		HTTPS:          https,
 	}, nil
 }
 

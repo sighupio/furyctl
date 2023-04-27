@@ -94,15 +94,6 @@ func NewVendorCmd(tracker *analytics.Tracker) *cobra.Command {
 		"Path to the Furyfile.yml file",
 	)
 
-	cmd.Flags().BoolP(
-		"https",
-		"H",
-		false,
-		"download using HTTPS instead of SSH protocol. Use when SSH traffic is being blocked or when SSH "+
-			"client has not been configured\nset the GITHUB_TOKEN environment variable with your token to use "+
-			"authentication while downloading, for example for private repositories",
-	)
-
 	cmd.Flags().StringP(
 		"prefix",
 		"P",

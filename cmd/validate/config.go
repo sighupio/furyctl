@@ -46,9 +46,14 @@ func NewConfigCmd(tracker *analytics.Tracker) *cobra.Command {
 				return fmt.Errorf("%w: distro-location", ErrParsingFlag)
 			}
 
+			https, err := cmdutil.BoolFlag(cmd, "https", tracker, cmdEvent)
+			if err != nil {
+				return fmt.Errorf("%w: https", ErrParsingFlag)
+			}
+
 			executor := execx.NewStdExecutor()
 			depsvl := dependencies.NewValidator(executor, "", furyctlPath, false)
-			dloader := distribution.NewDownloader(netx.NewGoGetterClient())
+			dloader := distribution.NewDownloader(netx.NewGoGetterClient(), https)
 
 			// Validate base requirements.
 			if err := depsvl.ValidateBaseReqs(); err != nil {

@@ -45,6 +45,7 @@ type ClusterCmdFlags struct {
 	SkipDepsDownload   bool
 	SkipDepsValidation bool
 	NoTTY              bool
+	HTTPS              bool
 	Kubeconfig         string
 }
 
@@ -122,7 +123,7 @@ func NewClusterCmd(tracker *analytics.Tracker) *cobra.Command {
 			// Init first half of collaborators.
 			client := netx.NewGoGetterClient()
 			executor := execx.NewStdExecutor()
-			distrodl := distribution.NewDownloader(client)
+			distrodl := distribution.NewDownloader(client, flags.HTTPS)
 			depsvl := dependencies.NewValidator(executor, flags.BinPath, flags.FuryctlPath, flags.VpnAutoConnect)
 
 			// Init packages.
@@ -156,7 +157,7 @@ func NewClusterCmd(tracker *analytics.Tracker) *cobra.Command {
 			basePath := filepath.Join(homeDir, ".furyctl", res.MinimalConf.Metadata.Name)
 
 			// Init second half of collaborators.
-			depsdl := dependencies.NewDownloader(client, basePath, flags.BinPath)
+			depsdl := dependencies.NewDownloader(client, basePath, flags.BinPath, flags.HTTPS)
 
 			// Validate the furyctl.yaml file.
 			logrus.Info("Validating configuration file...")
@@ -326,6 +327,11 @@ func getCreateClusterCmdFlags(cmd *cobra.Command, tracker *analytics.Tracker, cm
 		return ClusterCmdFlags{}, fmt.Errorf("%w: %s", ErrParsingFlag, "kubeconfig")
 	}
 
+	https, err := cmdutil.BoolFlag(cmd, "https", tracker, cmdEvent)
+	if err != nil {
+		return ClusterCmdFlags{}, fmt.Errorf("%w: %s", ErrParsingFlag, "https")
+	}
+
 	return ClusterCmdFlags{
 		Debug:              debug,
 		FuryctlPath:        furyctlPath,
@@ -340,6 +346,7 @@ func getCreateClusterCmdFlags(cmd *cobra.Command, tracker *analytics.Tracker, cm
 		SkipDepsValidation: skipDepsValidation,
 		NoTTY:              noTTY,
 		Kubeconfig:         kubeconfig,
+		HTTPS:              https,
 	}, nil
 }
 

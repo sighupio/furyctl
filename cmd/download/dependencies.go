@@ -47,6 +47,11 @@ func NewDependenciesCmd(tracker *analytics.Tracker) *cobra.Command {
 				return fmt.Errorf("%w: distro-location", ErrParsingFlag)
 			}
 
+			https, err := cmdutil.BoolFlag(cmd, "https", tracker, cmdEvent)
+			if err != nil {
+				return fmt.Errorf("%w: https", ErrParsingFlag)
+			}
+
 			binPath := cmdutil.StringFlagOptional(cmd, "bin-path")
 
 			homeDir, err := os.UserHomeDir()
@@ -61,12 +66,10 @@ func NewDependenciesCmd(tracker *analytics.Tracker) *cobra.Command {
 				binPath = filepath.Join(homeDir, ".furyctl", "bin")
 			}
 
-			logrus.Info("Downloading dependencies...")
-
 			client := netx.NewGoGetterClient()
 			executor := execx.NewStdExecutor()
 			depsvl := dependencies.NewValidator(executor, binPath, furyctlPath, false)
-			distrodl := distribution.NewDownloader(client)
+			distrodl := distribution.NewDownloader(client, https)
 
 			// Validate base requirements.
 			if err := depsvl.ValidateBaseReqs(); err != nil {
@@ -90,7 +93,9 @@ func NewDependenciesCmd(tracker *analytics.Tracker) *cobra.Command {
 
 			basePath := filepath.Join(homeDir, ".furyctl", dres.MinimalConf.Metadata.Name)
 
-			depsdl := dependencies.NewDownloader(client, basePath, binPath)
+			depsdl := dependencies.NewDownloader(client, basePath, binPath, https)
+
+			logrus.Info("Downloading dependencies...")
 
 			errs, uts := depsdl.DownloadAll(dres.DistroManifest)
 
