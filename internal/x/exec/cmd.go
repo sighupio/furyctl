@@ -106,14 +106,14 @@ func (c *Cmd) Stop() error {
 		return nil
 	}
 
-	// check if process is already exited
 	if c.ProcessState != nil && c.ProcessState.Exited() {
 		return nil
 	}
 
 	if err := c.Process.Signal(os.Interrupt); err != nil {
-		return fmt.Errorf("failed to kill process: %w", err)
+		return fmt.Errorf("failed to interrupt process: %w", err)
 	}
+
 	return nil
 }
 

@@ -236,52 +236,57 @@ func (d *Distribution) Exec() error {
 	return d.applyManifests(manifestsOutPath)
 }
 
-func (d *Distribution) Stop() []error {
-	var wg sync.WaitGroup
-	errChan := make(chan error, 1)
+func (d *Distribution) Stop() error {
+	errCh := make(chan error)
+	doneCh := make(chan bool)
 
+	var wg sync.WaitGroup
 	wg.Add(3)
 
 	go func() {
-		defer wg.Done()
-
 		logrus.Debug("Stopping terraform...")
 
 		if err := d.tfRunner.Stop(); err != nil {
-			errChan <- fmt.Errorf("error stopping terraform: %w", err)
+			errCh <- fmt.Errorf("error stopping terraform: %w", err)
 		}
+
+		wg.Done()
 	}()
 
 	go func() {
-		defer wg.Done()
-
 		logrus.Debug("Stopping kustomize...")
 
 		if err := d.kzRunner.Stop(); err != nil {
-			errChan <- fmt.Errorf("error stopping kustomize: %w", err)
+			errCh <- fmt.Errorf("error stopping kustomize: %w", err)
 		}
+
+		wg.Done()
 	}()
 
 	go func() {
-		defer wg.Done()
-
 		logrus.Debug("Stopping kubectl...")
 
 		if err := d.kubeRunner.Stop(); err != nil {
-			errChan <- fmt.Errorf("error stopping kubectl: %w", err)
+			errCh <- fmt.Errorf("error stopping kubectl: %w", err)
 		}
+
+		wg.Done()
 	}()
 
-	wg.Wait()
+	go func() {
+		wg.Wait()
+		close(doneCh)
+	}()
 
-	close(errChan)
-
-	errs := make([]error, 0)
-	for err := range errChan {
-		errs = append(errs, err)
+	select {
+	case <-doneCh:
+		break
+	case err := <-errCh:
+		close(errCh)
+		return err
 	}
 
-	return errs
+	return nil
 }
 
 func (d *Distribution) createFuryctlMerger() (*merge.Merger, error) {
