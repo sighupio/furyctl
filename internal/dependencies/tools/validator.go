@@ -15,10 +15,7 @@ import (
 	execx "github.com/sighupio/furyctl/internal/x/exec"
 )
 
-var (
-	ErrEmptyToolVersion = errors.New("empty tool version")
-	ErrWrongToolVersion = errors.New("wrong tool version")
-)
+var ErrWrongToolVersion = errors.New("wrong tool version")
 
 func NewValidator(executor execx.Executor, binPath, furyctlPath string, autoConnect bool) *Validator {
 	return &Validator{
@@ -36,6 +33,22 @@ type Validator struct {
 	toolFactory *Factory
 	furyctlPath string
 	autoConnect bool
+}
+
+func (tv *Validator) ValidateBaseReqs() ([]string, []error) {
+	var (
+		oks  []string
+		errs []error
+	)
+
+	git := tv.toolFactory.Create(itool.Git, "*")
+	if err := git.CheckBinVersion(); err != nil {
+		errs = append(errs, err)
+	} else {
+		oks = append(oks, "git")
+	}
+
+	return oks, errs
 }
 
 func (tv *Validator) Validate(kfdManifest config.KFD, miniConf config.Furyctl) ([]string, []error) {

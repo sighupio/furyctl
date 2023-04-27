@@ -16,6 +16,7 @@ import (
 	"github.com/sighupio/furyctl/internal/tool/ansible"
 	"github.com/sighupio/furyctl/internal/tool/awscli"
 	"github.com/sighupio/furyctl/internal/tool/furyagent"
+	"github.com/sighupio/furyctl/internal/tool/git"
 	"github.com/sighupio/furyctl/internal/tool/kubectl"
 	"github.com/sighupio/furyctl/internal/tool/kustomize"
 	"github.com/sighupio/furyctl/internal/tool/openvpn"
@@ -87,6 +88,15 @@ func (f *Factory) Create(name, version string) Tool {
 		}
 
 		return NewFuryagent(fa, version)
+	}
+
+	if name == tool.Git {
+		g, ok := t.(*git.Runner)
+		if !ok {
+			panic(fmt.Sprintf("expected git.Runner, got %T", t))
+		}
+
+		return NewGit(g, version)
 	}
 
 	if name == tool.Kubectl {

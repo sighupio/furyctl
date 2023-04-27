@@ -123,9 +123,18 @@ func NewClusterCmd(tracker *analytics.Tracker) *cobra.Command {
 			client := netx.NewGoGetterClient()
 			executor := execx.NewStdExecutor()
 			distrodl := distribution.NewDownloader(client)
+			depsvl := dependencies.NewValidator(executor, flags.BinPath, flags.FuryctlPath, flags.VpnAutoConnect)
 
 			// Init packages.
 			execx.NoTTY = flags.NoTTY
+
+			// Validate base requirements.
+			if err := depsvl.ValidateBaseReqs(); err != nil {
+				cmdEvent.AddErrorMessage(err)
+				tracker.Track(cmdEvent)
+
+				return fmt.Errorf("error while validating requirements: %w", err)
+			}
 
 			// Download the distribution.
 			logrus.Info("Downloading distribution...")
@@ -148,7 +157,6 @@ func NewClusterCmd(tracker *analytics.Tracker) *cobra.Command {
 
 			// Init second half of collaborators.
 			depsdl := dependencies.NewDownloader(client, basePath, flags.BinPath)
-			depsvl := dependencies.NewValidator(executor, flags.BinPath, flags.FuryctlPath, flags.VpnAutoConnect)
 
 			// Validate the furyctl.yaml file.
 			logrus.Info("Validating configuration file...")

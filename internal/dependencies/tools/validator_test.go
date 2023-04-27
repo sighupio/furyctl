@@ -178,3 +178,68 @@ func Test_Validator_Validate(t *testing.T) {
 		})
 	}
 }
+
+func TestValidator_ValidateBaseReqs(t *testing.T) {
+	testCases := []struct {
+		desc     string
+		wantOks  []string
+		wantErrs []error
+	}{
+		{
+			desc: "all base requirements are met",
+			wantOks: []string{
+				"git",
+			},
+		},
+	}
+
+	for _, tC := range testCases {
+		tC := tC
+
+		t.Run(tC.desc, func(t *testing.T) {
+			furyctlPath := path.Join("test_data", "furyctl.yaml")
+
+			v := tools.NewValidator(execx.NewFakeExecutor(), "test_data", furyctlPath, false)
+
+			oks, errs := v.ValidateBaseReqs()
+
+			if len(oks) != len(tC.wantOks) {
+				t.Errorf("Expected %d oks, got %d - %v", len(tC.wantOks), len(oks), oks)
+			}
+
+			if len(errs) != len(tC.wantErrs) {
+				t.Errorf("Expected %d errors, got %d - %v", len(tC.wantErrs), len(errs), errs)
+			}
+
+			for _, ok := range oks {
+				found := false
+				for _, wantOk := range tC.wantOks {
+					if ok == wantOk {
+						found = true
+
+						break
+					}
+				}
+
+				if !found {
+					t.Errorf("Unexpected ok: %s", ok)
+				}
+			}
+
+			for _, err := range errs {
+				found := false
+				for _, wantErr := range tC.wantErrs {
+					if strings.Trim(err.Error(), "\n") == strings.Trim(wantErr.Error(), "\n") {
+						found = true
+
+						break
+					}
+				}
+
+				if !found {
+					t.Errorf("Unexpected error: %s", err)
+				}
+			}
+		})
+	}
+}
