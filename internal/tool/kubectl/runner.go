@@ -39,6 +39,7 @@ func NewRunner(executor execx.Executor, paths Paths, serverSide, skipNotFound, c
 		serverSide:    serverSide,
 		skipNotFound:  skipNotFound,
 		clientVersion: clientVersion,
+		cmds:          make(map[string]*execx.Cmd),
 	}
 }
 
