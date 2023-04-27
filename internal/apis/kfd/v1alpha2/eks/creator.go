@@ -142,26 +142,31 @@ func (v *ClusterCreator) Create(skipPhase string, timeout int) error {
 			if err := v.infraPhase(infra, vpnConnector); err != nil {
 				errCh <- err
 			}
+
 			close(doneCh)
 
 		case cluster.OperationPhaseKubernetes:
 			if err := v.kubernetesPhase(kube, vpnConnector); err != nil {
 				errCh <- err
 			}
+
 			close(doneCh)
 
 		case cluster.OperationPhaseDistribution:
 			if err := v.distributionPhase(distro, vpnConnector); err != nil {
 				errCh <- err
 			}
+
 			close(doneCh)
 
 		case cluster.OperationPhaseAll:
 			errCh <- v.allPhases(skipPhase, infra, kube, distro, vpnConnector)
+
 			close(doneCh)
 
 		default:
 			errCh <- ErrUnsupportedPhase
+
 			close(doneCh)
 		}
 	}()
@@ -171,39 +176,40 @@ func (v *ClusterCreator) Create(skipPhase string, timeout int) error {
 		switch v.phase {
 		case cluster.OperationPhaseInfrastructure:
 			if err := infra.Stop(); err != nil {
-				return err
+				return fmt.Errorf("error stopping infrastructure phase: %w", err)
 			}
 
 		case cluster.OperationPhaseKubernetes:
 			if err := kube.Stop(); err != nil {
-				return err
+				return fmt.Errorf("error stopping kubernetes phase: %w", err)
 			}
 
 		case cluster.OperationPhaseDistribution:
 			if err := distro.Stop(); err != nil {
-				return err
+				return fmt.Errorf("error stopping distribution phase: %w", err)
 			}
 
 		case cluster.OperationPhaseAll:
 			if err := infra.Stop(); err != nil {
-				return err
-			}
-			if err := kube.Stop(); err != nil {
-				return err
-			}
-			if err := distro.Stop(); err != nil {
-				return err
+				return fmt.Errorf("error stopping infrastructure phase: %w", err)
 			}
 
+			if err := kube.Stop(); err != nil {
+				return fmt.Errorf("error stopping kubernetes phase: %w", err)
+			}
+
+			if err := distro.Stop(); err != nil {
+				return fmt.Errorf("error stopping distribution phase: %w", err)
+			}
 		}
 
 		return ErrTimeout
 
 	case <-doneCh:
-		break
 
 	case err := <-errCh:
 		close(errCh)
+
 		return err
 	}
 

@@ -241,6 +241,8 @@ func (d *Distribution) Stop() error {
 	doneCh := make(chan bool)
 
 	var wg sync.WaitGroup
+
+	//nolint:gomnd,revive // ignore magic number linters
 	wg.Add(3)
 
 	go func() {
@@ -280,9 +282,10 @@ func (d *Distribution) Stop() error {
 
 	select {
 	case <-doneCh:
-		break
+
 	case err := <-errCh:
 		close(errCh)
+
 		return err
 	}
 

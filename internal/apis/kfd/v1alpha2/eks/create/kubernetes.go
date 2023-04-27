@@ -267,6 +267,8 @@ func (k *Kubernetes) Stop() error {
 	doneCh := make(chan bool)
 
 	var wg sync.WaitGroup
+
+	//nolint:gomnd // ignore magic number linters
 	wg.Add(2)
 
 	go func() {
@@ -296,9 +298,10 @@ func (k *Kubernetes) Stop() error {
 
 	select {
 	case <-doneCh:
-		break
+
 	case err := <-errCh:
 		close(errCh)
+
 		return err
 	}
 
