@@ -25,6 +25,11 @@ import (
 	netx "github.com/sighupio/furyctl/internal/x/net"
 )
 
+const (
+	GithubSSHRepoPrefix   = "git@github.com:sighupio"
+	GithubHTTPSRepoPrefix = "https://github.com/sighupio"
+)
+
 var (
 	ErrDownloadingModule  = errors.New("error downloading module")
 	ErrModuleHasNoVersion = errors.New("module has no version")
@@ -32,7 +37,7 @@ var (
 	ErrModuleNotFound     = errors.New("module not found")
 )
 
-func NewDownloader(client netx.Client, basePath, binPath string) *Downloader {
+func NewDownloader(client netx.Client, basePath, binPath string, https bool) *Downloader {
 	return &Downloader{
 		client:   client,
 		basePath: basePath,
@@ -40,6 +45,7 @@ func NewDownloader(client netx.Client, basePath, binPath string) *Downloader {
 		toolFactory: tools.NewFactory(execx.NewStdExecutor(), tools.FactoryPaths{
 			Bin: filepath.Join(basePath, "vendor", "bin"),
 		}),
+		HTTPS: https,
 	}
 }
 
@@ -48,6 +54,7 @@ type Downloader struct {
 	toolFactory *tools.Factory
 	basePath    string
 	binPath     string
+	HTTPS       bool
 }
 
 func (dd *Downloader) DownloadAll(kfd config.KFD) ([]error, []string) {
@@ -66,11 +73,17 @@ func (dd *Downloader) DownloadAll(kfd config.KFD) ([]error, []string) {
 		}
 	}
 
-	if err := dd.DownloadModules(kfd.Modules); err != nil {
+	gitPrefix := GithubSSHRepoPrefix
+
+	if dd.HTTPS {
+		gitPrefix = GithubHTTPSRepoPrefix
+	}
+
+	if err := dd.DownloadModules(kfd.Modules, gitPrefix); err != nil {
 		errs = append(errs, err)
 	}
 
-	if err := dd.DownloadInstallers(kfd.Kubernetes); err != nil {
+	if err := dd.DownloadInstallers(kfd.Kubernetes, gitPrefix); err != nil {
 		errs = append(errs, err)
 	}
 
@@ -82,7 +95,7 @@ func (dd *Downloader) DownloadAll(kfd config.KFD) ([]error, []string) {
 	return errs, ut
 }
 
-func (dd *Downloader) DownloadModules(modules config.KFDModules) error {
+func (dd *Downloader) DownloadModules(modules config.KFDModules, gitPrefix string) error {
 	oldPrefix := "kubernetes-fury"
 	newPrefix := "fury-kubernetes"
 
@@ -106,7 +119,7 @@ func (dd *Downloader) DownloadModules(modules config.KFDModules) error {
 		dst := filepath.Join(dd.basePath, "vendor", "modules", name)
 
 		for _, prefix := range []string{oldPrefix, newPrefix} {
-			src := fmt.Sprintf("git::git@github.com:sighupio/%s-%s?ref=%s&depth=1", prefix, name, version)
+			src := fmt.Sprintf("git::%s/%s-%s?ref=%s&depth=1", gitPrefix, prefix, name, version)
 
 			req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, createURL(prefix, name, version), nil)
 			if err != nil {
@@ -160,7 +173,7 @@ func (dd *Downloader) DownloadModules(modules config.KFDModules) error {
 	return nil
 }
 
-func (dd *Downloader) DownloadInstallers(installers config.KFDKubernetes) error {
+func (dd *Downloader) DownloadInstallers(installers config.KFDKubernetes, gitPrefix string) error {
 	insts := reflect.ValueOf(installers)
 
 	for i := 0; i < insts.NumField(); i++ {
@@ -175,7 +188,7 @@ func (dd *Downloader) DownloadInstallers(installers config.KFDKubernetes) error 
 
 		version := v.Installer
 
-		src := fmt.Sprintf("git::git@github.com:sighupio/fury-%s-installer?ref=%s&depth=1", name, version)
+		src := fmt.Sprintf("git::%s/fury-%s-installer?ref=%s&depth=1", gitPrefix, name, version)
 
 		if err := dd.client.Download(src, dst); err != nil {
 			return fmt.Errorf("%w '%s': %v", distribution.ErrDownloadingFolder, src, err)

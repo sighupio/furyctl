@@ -28,6 +28,7 @@ type TemplateCmdFlags struct {
 	DryRun         bool
 	NoOverwrite    bool
 	SkipValidation bool
+	HTTPS          bool
 	OutDir         string
 	FuryctlPath    string
 	DistroLocation string
@@ -57,7 +58,7 @@ The generated folder will be created starting from a provided templates folder a
 			client := netx.NewGoGetterClient()
 			executor := execx.NewStdExecutor()
 			depsvl := dependencies.NewValidator(executor, "", flags.FuryctlPath, false)
-			distrodl := distribution.NewDownloader(client)
+			distrodl := distribution.NewDownloader(client, flags.HTTPS)
 
 			// Validate base requirements.
 			if err := depsvl.ValidateBaseReqs(); err != nil {
@@ -205,6 +206,11 @@ func getDumpTemplateCmdFlags(cmd *cobra.Command, tracker *analytics.Tracker, cmd
 		return TemplateCmdFlags{}, fmt.Errorf("%w: %s", ErrParsingFlag, "config")
 	}
 
+	https, err := cmdutil.BoolFlag(cmd, "https", tracker, cmdEvent)
+	if err != nil {
+		return TemplateCmdFlags{}, fmt.Errorf("%w: %s", ErrParsingFlag, "https")
+	}
+
 	return TemplateCmdFlags{
 		DryRun:         dryRun,
 		NoOverwrite:    noOverwrite,
@@ -212,5 +218,6 @@ func getDumpTemplateCmdFlags(cmd *cobra.Command, tracker *analytics.Tracker, cmd
 		OutDir:         outDir,
 		DistroLocation: distroLocation,
 		FuryctlPath:    furyctlPath,
+		HTTPS:          https,
 	}, nil
 }

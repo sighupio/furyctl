@@ -79,6 +79,11 @@ func NewConfigCmd(tracker *analytics.Tracker) *cobra.Command {
 				return fmt.Errorf("%w: name", ErrParsingFlag)
 			}
 
+			https, err := cmdutil.BoolFlag(cmd, "https", tracker, cmdEvent)
+			if err != nil {
+				return fmt.Errorf("%w: https", ErrParsingFlag)
+			}
+
 			minimalConf := distroConfig.Furyctl{
 				APIVersion: apiVersion,
 				Kind:       kind,
@@ -102,7 +107,7 @@ func NewConfigCmd(tracker *analytics.Tracker) *cobra.Command {
 			}
 
 			// Init collaborators.
-			distrodl := distribution.NewDownloader(netx.NewGoGetterClient())
+			distrodl := distribution.NewDownloader(netx.NewGoGetterClient(), https)
 			executor := execx.NewStdExecutor()
 			depsvl := dependencies.NewValidator(executor, "", "", false)
 
