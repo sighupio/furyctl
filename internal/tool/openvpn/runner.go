@@ -28,6 +28,7 @@ func NewRunner(executor execx.Executor, paths Paths) *Runner {
 	return &Runner{
 		executor: executor,
 		paths:    paths,
+		cmds:     make(map[string]*execx.Cmd),
 	}
 }
 
