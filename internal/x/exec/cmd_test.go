@@ -16,8 +16,9 @@ import (
 )
 
 func TestNewErrCmdFailed(t *testing.T) {
-	err := execx.NewErrCmdFailed("foo", []string{"bar", "baz"}, errors.New("test error"), nil)
+	t.Parallel()
 
+	err := execx.NewErrCmdFailed("foo", []string{"bar", "baz"}, errors.New("test error"), nil)
 	if err == nil {
 		t.Error("error is nil")
 	}
@@ -100,7 +101,7 @@ func Test_Cmd_Run(t *testing.T) {
 			wantErr: true,
 		},
 		{
-			desc:    "succesful run",
+			desc:    "successful run",
 			cmd:     execx.NewCmd("true", execx.CmdOptions{}),
 			wantErr: false,
 		},
@@ -133,7 +134,7 @@ func Test_Cmd_Stop(t *testing.T) {
 		wantErr bool
 	}{
 		{
-			desc: "succesful stop",
+			desc: "successful stop",
 			cmd: execx.NewCmd("long process", execx.CmdOptions{
 				Args:     []string{"sleep", "60"},
 				Executor: execx.NewFakeExecutor(),
@@ -162,6 +163,8 @@ func Test_Cmd_Stop(t *testing.T) {
 }
 
 func Test_CmdLog_String(t *testing.T) {
+	t.Parallel()
+
 	cmdLog := &execx.CmdLog{
 		Out: bytes.NewBufferString("foo"),
 		Err: bytes.NewBufferString("bar"),
@@ -233,8 +236,8 @@ func TestCombinedOutput(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			if string(ret) != tC.want {
-				t.Errorf("want = %s, got = %s", tC.want, string(ret))
+			if ret != tC.want {
+				t.Errorf("want = %s, got = %s", tC.want, ret)
 			}
 		})
 	}
