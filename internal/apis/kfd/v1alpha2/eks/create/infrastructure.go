@@ -40,9 +40,7 @@ type Infrastructure struct {
 	furyctlConf private.EksclusterKfdV1Alpha2
 	kfdManifest config.KFD
 	tfRunner    *terraform.Runner
-	// ovRunner    *openvpn.Runner
-	// faRunner    *furyagent.Runner
-	dryRun bool
+	dryRun      bool
 }
 
 func NewInfrastructure(
@@ -74,19 +72,6 @@ func NewInfrastructure(
 				Terraform: phase.TerraformPath,
 			},
 		),
-		// ovRunner: openvpn.NewRunner(
-		// 	executor,
-		// 	openvpn.Paths{
-		// 		WorkDir:   path.Join(phase.Path, "terraform"),
-		// 		Openvpn: paths.,
-		// 	},
-		// ),
-		// faRunner: furyagent.NewRunner(
-		// 	executor,
-		// 	furyagent.Paths{
-		// 		WorkDir: path.Join(phase.Path, "terraform"),
-		// 	},
-		// ),
 		dryRun: dryRun,
 	}, nil
 }
