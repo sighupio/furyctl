@@ -178,6 +178,15 @@ furyctl is a command line interface tool to manage the full lifecycle of a Kuber
 		"Path to the log file or set to 'stdout' to log to standard output (default: ~/.furyctl/furyctl.log)",
 	)
 
+	rootCmd.PersistentFlags().BoolP(
+		"https",
+		"H",
+		false,
+		"download using HTTPS instead of SSH protocol. Use when SSH traffic is being blocked or when SSH "+
+			"client has not been configured\nset the GITHUB_TOKEN environment variable with your token to use "+
+			"authentication while downloading, for example for private repositories",
+	)
+
 	rootCmd.AddCommand(NewCompletionCmd(tracker))
 	rootCmd.AddCommand(NewCreateCommand(tracker))
 	rootCmd.AddCommand(NewDownloadCmd(tracker))

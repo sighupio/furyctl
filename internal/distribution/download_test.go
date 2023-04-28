@@ -51,7 +51,7 @@ func Test_Downloader_Download(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			d := distribution.NewDownloader(netx.NewGoGetterClient())
+			d := distribution.NewDownloader(netx.NewGoGetterClient(), false)
 
 			res, err := d.Download(
 				absDistroPath,

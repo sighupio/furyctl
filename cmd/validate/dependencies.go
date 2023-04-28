@@ -56,7 +56,12 @@ func NewDependenciesCmd(tracker *analytics.Tracker) *cobra.Command {
 				binPath = filepath.Join(homeDir, ".furyctl", "bin")
 			}
 
-			dloader := distribution.NewDownloader(netx.NewGoGetterClient())
+			https, err := cmdutil.BoolFlag(cmd, "https", tracker, cmdEvent)
+			if err != nil {
+				return fmt.Errorf("%w: https", ErrParsingFlag)
+			}
+
+			dloader := distribution.NewDownloader(netx.NewGoGetterClient(), https)
 			executor := execx.NewStdExecutor()
 			depsvl := dependencies.NewValidator(executor, "", furyctlPath, false)
 
