@@ -39,7 +39,7 @@ func Test_Runner_Plan(t *testing.T) {
 
 	r := terraform.NewRunner(execx.NewFakeExecutor(), paths)
 
-	if err := r.Plan(42); err != nil {
+	if _, err := r.Plan(42); err != nil {
 		t.Fatal(err)
 	}
 

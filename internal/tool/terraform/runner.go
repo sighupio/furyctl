@@ -67,8 +67,9 @@ func (r *Runner) Init() error {
 	return nil
 }
 
-func (r *Runner) Plan(timestamp int64, params ...string) error {
+func (r *Runner) Plan(timestamp int64, params ...string) (string, error) {
 	args := []string{"plan"}
+	out := ""
 
 	if len(params) > 0 {
 		args = append(args, params...)
@@ -82,7 +83,7 @@ func (r *Runner) Plan(timestamp int64, params ...string) error {
 		WorkDir:  r.paths.WorkDir,
 	})
 	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("command execution failed: %w", err)
+		return out, fmt.Errorf("command execution failed: %w", err)
 	}
 
 	err := os.WriteFile(path.Join(r.paths.Plan,
@@ -90,10 +91,12 @@ func (r *Runner) Plan(timestamp int64, params ...string) error {
 		cmd.Log.Out.Bytes(),
 		iox.FullRWPermAccess)
 	if err != nil {
-		return fmt.Errorf("error writing terraform plan log: %w", err)
+		return out, fmt.Errorf("error writing terraform plan log: %w", err)
 	}
 
-	return nil
+	out = cmd.Log.Out.String()
+
+	return out, nil
 }
 
 func (r *Runner) Apply(timestamp int64) (OutputJSON, error) {

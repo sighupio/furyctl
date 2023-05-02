@@ -10,7 +10,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
 
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -22,6 +21,7 @@ import (
 	"github.com/sighupio/furyctl/internal/distribution"
 	cobrax "github.com/sighupio/furyctl/internal/x/cobra"
 	execx "github.com/sighupio/furyctl/internal/x/exec"
+	iox "github.com/sighupio/furyctl/internal/x/io"
 	netx "github.com/sighupio/furyctl/internal/x/net"
 )
 
@@ -179,7 +179,9 @@ func NewClusterCmd(tracker *analytics.Tracker) *cobra.Command {
 					return fmt.Errorf("error while printing to stdout: %w", err)
 				}
 
-				if !askForConfirmation() {
+				prompter := iox.NewPrompter(bufio.NewReader(os.Stdin))
+
+				if !prompter.Ask("yes") {
 					return nil
 				}
 			}
@@ -350,17 +352,4 @@ func getDeleteClusterCmdFlags(cmd *cobra.Command, tracker *analytics.Tracker, cm
 		Kubeconfig:     kubeconfig,
 		HTTPS:          https,
 	}, nil
-}
-
-func askForConfirmation() bool {
-	reader := bufio.NewReader(os.Stdin)
-
-	response, err := reader.ReadString('\n')
-	if err != nil {
-		return false
-	}
-
-	response = strings.TrimSuffix(response, "\n")
-
-	return strings.Compare(response, "yes") == 0
 }

@@ -121,7 +121,7 @@ func (k *Kubernetes) Exec() error {
 		return fmt.Errorf("error running terraform init: %w", err)
 	}
 
-	if err := k.tfRunner.Plan(timestamp, "-destroy"); err != nil {
+	if _, err := k.tfRunner.Plan(timestamp, "-destroy"); err != nil {
 		return fmt.Errorf("error running terraform plan: %w", err)
 	}
 
