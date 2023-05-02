@@ -21,7 +21,8 @@ import (
 )
 
 var (
-	ErrParsingFlag = errors.New("error while parsing flag")
+	ErrParsingFlag         = errors.New("error while parsing flag")
+	ErrProfileFlagRequired = errors.New("profile flag is required")
 )
 
 type OpenVPNCmdFlags struct {
@@ -39,57 +40,37 @@ func NewOpenVPNCmd(tracker *analytics.Tracker) *cobra.Command {
 			cmdEvent = analytics.NewCommandEvent(cobrax.GetFullname(cmd))
 		},
 		RunE: func(cmd *cobra.Command, _ []string) error {
-			// check if user is root
-			// userIsRoot, err := osx.IsRoot()
-			// if err != nil {
-			// 	return fmt.Errorf("error while checking if user is root: %w", err)
-			// }
-			// if !userIsRoot {
-			// 	return errors.New("please run this command as root (with 'sudo')")
-			// }
-
-			// parse flags
+			// Parse flags.
 			flags, err := getOpenVPNCmdFlags(cmd, tracker, cmdEvent)
 			if err != nil {
 				return err
 			}
+
 			if flags.Profile == "" {
-				return errors.New("profile flag is required")
+				return ErrProfileFlagRequired
 			}
 
-			// get home dir
+			// Get home dir.
 			homeDir, err := os.UserHomeDir()
 			if err != nil {
 				cmdEvent.AddErrorMessage(err)
 				tracker.Track(cmdEvent)
+
 				return fmt.Errorf("error while getting current working directory: %w", err)
 			}
 
-			// parse furyctl.yaml config
+			// Parse furyctl.yaml config.
 			furyctlConf, err := yamlx.FromFileV3[config.Furyctl](flags.FuryctlPath)
 			if err != nil {
 				cmdEvent.AddErrorMessage(err)
 				tracker.Track(cmdEvent)
+
 				return err
 			}
 
-			// set common paths
+			// Set common paths.
 			basePath := filepath.Join(homeDir, ".furyctl", furyctlConf.Metadata.Name)
 			openVPNWorkDir := filepath.Join(basePath, "infrastructure", "terraform", "secrets")
-			// openVPNPidFile := filepath.Join(basePath, "openvpn.pid")
-
-			// check if openvpn.pid file exist
-			// _, err = os.Stat(openVPNPidFile)
-			// if err == nil {
-			// 	return errors.New("openvpn seems to be already connected, please use 'disconnect' command to disconnect and terminate the openvpn process")
-			// }
-			// if err != nil {
-			// 	if !errors.Is(err, os.ErrNotExist) {
-			// 		cmdEvent.AddErrorMessage(err)
-			// 		tracker.Track(cmdEvent)
-			// 		return err
-			// 	}
-			// }
 
 			executor := execx.NewStdExecutor()
 			openVPNCmd := execx.NewCmd("sudo", execx.CmdOptions{
@@ -98,21 +79,14 @@ func NewOpenVPNCmd(tracker *analytics.Tracker) *cobra.Command {
 				WorkDir:  openVPNWorkDir,
 			})
 
-			// start openvpn process
+			// Start openvpn process.
 			if err := openVPNCmd.Run(); err != nil {
 				err = fmt.Errorf("error while running openvpn: %w", err)
 				cmdEvent.AddErrorMessage(err)
 				tracker.Track(cmdEvent)
+
 				return err
 			}
-
-			// save process pid to openvpn.pid
-			// if err := iox.WriteFile(openVPNPidFile, []byte(strconv.Itoa(openVPNCmd.Process.Pid))); err != nil {
-			// 	return fmt.Errorf("error while writing pid file: %w", err)
-			// }
-
-			// cmdEvent.AddSuccessMessage("connect openvpn succeeded")
-			// tracker.Track(cmdEvent)
 
 			return nil
 		},
