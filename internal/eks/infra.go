@@ -5,15 +5,15 @@
 package eks
 
 type Infra struct {
-	criticalTFResources []string
+	criticalTFResourceTypes []string
 }
 
 func NewInfra() *Infra {
 	return &Infra{
-		criticalTFResources: []string{"aws_vpc", "aws_subnet"},
+		criticalTFResourceTypes: []string{"aws_vpc", "aws_subnet"},
 	}
 }
 
-func (i *Infra) GetCriticalTFResources() []string {
-	return i.criticalTFResources
+func (i *Infra) GetCriticalTFResourceTypes() []string {
+	return i.criticalTFResourceTypes
 }

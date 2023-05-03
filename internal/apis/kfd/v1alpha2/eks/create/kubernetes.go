@@ -162,12 +162,12 @@ func (k *Kubernetes) Exec() error {
 
 	eksKube := eks.NewKubernetes()
 
-	criticalResources := slices.Intersection(eksKube.GetCriticalTFResources(), parsedPlan.Destroy)
+	criticalResources := slices.Intersection(eksKube.GetCriticalTFResourceTypes(), parsedPlan.Destroy)
 
 	if len(criticalResources) > 0 {
-		logrus.Warnf("A deletion of critical resources has been detected: %s. Please check the plan carefully.",
+		logrus.Warnf("Deletion of the following critical resources has been detected: %s. See the logs for more details.",
 			strings.Join(criticalResources, ", "))
-		logrus.Warn("When you are ready to proceed, write 'yes' to continue or anything else to abort: ")
+		logrus.Warn("Do you want to proceed? write 'yes' to continue or anything else to abort: ")
 
 		prompter := iox.NewPrompter(bufio.NewReader(os.Stdin))
 

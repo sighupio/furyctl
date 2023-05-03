@@ -19,5 +19,5 @@ func Intersection[T comparable](a, b []T) []T {
 		}
 	}
 
-	return intersection
+	return Uniq(intersection)
 }

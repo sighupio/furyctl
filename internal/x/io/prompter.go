@@ -26,6 +26,10 @@ func (p *Prompter) Ask(w string) bool {
 	}
 
 	response = strings.TrimSuffix(response, "\n")
+	response = strings.Trim(response, " ")
 
-	return strings.Compare(response, w) == 0
+	return strings.Compare(
+		strings.ToLower(response),
+		strings.ToLower(w),
+	) == 0
 }

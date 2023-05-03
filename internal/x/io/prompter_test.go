@@ -15,7 +15,7 @@ import (
 func TestPrompter_Ask(t *testing.T) {
 	t.Parallel()
 
-	testCases := []struct {
+        testCases := []struct {
 		name       string
 		input      string
 		promptWord string
@@ -28,10 +28,28 @@ func TestPrompter_Ask(t *testing.T) {
 			expected:   true,
 		},
 		{
+			name:       "user writes correct prompt input with multiple endline",
+			input:      "yes\n\n\n",
+			promptWord: "yes",
+			expected:   true,
+		},
+		{
 			name:       "user writes wrong prompt input",
 			input:      "yessh\n",
 			promptWord: "yes",
 			expected:   false,
+		},
+		{
+			name:       "user writes correct uppercase prompt input",
+			input:      "YES\n\n\n",
+			promptWord: "yes",
+			expected:   true,
+		},
+		{
+			name:       "user writes correct prompt input with whitespace",
+			input:      "   yes   \n\n\n",
+			promptWord: "yes",
+			expected:   true,
 		},
 	}
 

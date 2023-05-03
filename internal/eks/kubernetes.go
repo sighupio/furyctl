@@ -5,15 +5,15 @@
 package eks
 
 type Kubernetes struct {
-	criticalTFResources []string
+	criticalTFResourceTypes []string
 }
 
 func NewKubernetes() *Kubernetes {
 	return &Kubernetes{
-		criticalTFResources: []string{"aws_eks_cluster"},
+		criticalTFResourceTypes: []string{"aws_eks_cluster"},
 	}
 }
 
-func (k *Kubernetes) GetCriticalTFResources() []string {
-	return k.criticalTFResources
+func (k *Kubernetes) GetCriticalTFResourceTypes() []string {
+	return k.criticalTFResourceTypes
 }

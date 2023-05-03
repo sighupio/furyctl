@@ -39,9 +39,21 @@ func TestIntersection(t *testing.T) {
 			want: []string{"a"},
 		},
 		{
+			name: "one element replicated not disjoint",
+			a:    []string{"a"},
+			b:    []string{"a", "a"},
+			want: []string{"a"},
+		},
+		{
 			name: "not disjoint",
 			a:    []string{"a", "b", "c"},
 			b:    []string{"a", "d", "e"},
+			want: []string{"a"},
+		},
+		{
+			name: "not disjoint with multiple element duplicated and different length",
+			a:    []string{"a", "b", "c", "a"},
+			b:    []string{"a", "d", "e", "e", "a"},
 			want: []string{"a"},
 		},
 	}
