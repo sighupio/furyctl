@@ -61,6 +61,10 @@ func (p *TfPlanParser) Parse() *TfPlan {
 		case "-/+":
 			pl.Destroy = append(pl.Destroy, resourceName)
 			pl.Add = append(pl.Add, resourceName)
+
+		case "+/-":
+			pl.Add = append(pl.Add, resourceName)
+			pl.Destroy = append(pl.Destroy, resourceName)
 		}
 	}
 
