@@ -44,7 +44,7 @@ locals {
 }
 
 module "fury" {
-  source = "https://github.com/sighupio/furyctl-provisioners/archive/refs/tags/v0.7.0-rc.0.zip//furyctl-provisioners-0.7.0-rc.0/modules/cluster/vsphere"
+  source = "https://github.com/sighupio/furyctl-provisioners/archive/refs/tags/v0.7.0.zip//furyctl-provisioners-0.7.0/modules/cluster/vsphere"
 
   name                        = var.name
   kube_version                = var.kube_version
