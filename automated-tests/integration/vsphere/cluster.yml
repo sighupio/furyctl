@@ -22,7 +22,6 @@ spec:
     - 1.1.1.1
     - 8.8.8.8
     domain: localdomain
-  boundary: true
   lbNode:
     count: 1
     template: TEMPLATES-NODE02/sighup-oraclelinux7.9-template-v20210413

@@ -128,12 +128,6 @@ variable "ip_offset" {
   description = "Number to sum at every IP calculation. Enable deploying multiple clusters in the same network"
 }
 
-variable "enable_boundary_targets" {
-  description = "Enable boundary on all the nodes"
-  type        = bool
-  default     = false
-}
-
 variable "os_user" {
   type        = string
   default     = "sighup"

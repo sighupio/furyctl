@@ -110,8 +110,14 @@ func bootstrapTemplate(config *Configuration) error {
 		}
 		config.Spec = spec
 	default:
-		log.Errorf("Error creating a template configuration file. Parser not found for %v provisioner", config.Provisioner)
-		return fmt.Errorf("error creating a template configuration file. Parser not found for %v provisioner", config.Provisioner)
+		log.Errorf(
+			"Error creating a template configuration file. Parser not found for %v provisioner",
+			config.Provisioner,
+		)
+		return fmt.Errorf(
+			"error creating a template configuration file. Parser not found for %v provisioner",
+			config.Provisioner,
+		)
 	}
 	createBase(config)
 	return nil
@@ -270,7 +276,6 @@ func clusterTemplate(config *Configuration) error {
 				Domain:      "localdomain",
 				IPOffset:    0,
 			},
-			Boundary: true,
 			LoadBalancerNode: clustercfg.VSphereKubeLoadBalancer{
 				Count:            1,
 				Template:         "ubuntu-20.04 # The name of the base image to use for the VMs",
@@ -321,8 +326,14 @@ func clusterTemplate(config *Configuration) error {
 		}
 		config.Spec = spec
 	default:
-		log.Errorf("error creating a template configuration file. Parser not found for %v provisioner", config.Provisioner)
-		return fmt.Errorf("error creating a template configuration file. Parser not found for %v provisioner", config.Provisioner)
+		log.Errorf(
+			"error creating a template configuration file. Parser not found for %v provisioner",
+			config.Provisioner,
+		)
+		return fmt.Errorf(
+			"error creating a template configuration file. Parser not found for %v provisioner",
+			config.Provisioner,
+		)
 	}
 	createBase(config)
 	return nil

@@ -44,7 +44,7 @@ locals {
 }
 
 module "fury" {
-  source = "https://github.com/sighupio/furyctl-provisioners/archive/refs/tags/v0.6.3.zip//furyctl-provisioners-0.6.3/modules/cluster/vsphere"
+  source = "https://github.com/sighupio/furyctl-provisioners/archive/refs/tags/v0.7.0.zip//furyctl-provisioners-0.7.0/modules/cluster/vsphere"
 
   name                        = var.name
   kube_version                = var.kube_version
@@ -70,7 +70,6 @@ module "fury" {
   net_domain      = var.net_domain
   ip_offset       = var.ip_offset
 
-  enable_boundary_targets = var.enable_boundary_targets
   os_user                 = var.os_user
   ssh_public_keys         = local.ssh_public_keys
 
