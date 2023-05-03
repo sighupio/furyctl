@@ -15,7 +15,7 @@ import (
 func TestPrompter_Ask(t *testing.T) {
 	t.Parallel()
 
-        testCases := []struct {
+	testCases := []struct {
 		name       string
 		input      string
 		promptWord string

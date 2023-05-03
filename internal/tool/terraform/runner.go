@@ -67,9 +67,9 @@ func (r *Runner) Init() error {
 	return nil
 }
 
-func (r *Runner) Plan(timestamp int64, params ...string) (string, error) {
+func (r *Runner) Plan(timestamp int64, params ...string) ([]byte, error) {
 	args := []string{"plan"}
-	out := ""
+	out := []byte{}
 
 	if len(params) > 0 {
 		args = append(args, params...)
@@ -94,7 +94,7 @@ func (r *Runner) Plan(timestamp int64, params ...string) (string, error) {
 		return out, fmt.Errorf("error writing terraform plan log: %w", err)
 	}
 
-	out = cmd.Log.Out.String()
+	out = cmd.Log.Out.Bytes()
 
 	return out, nil
 }

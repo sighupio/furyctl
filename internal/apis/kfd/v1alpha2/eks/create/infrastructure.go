@@ -117,7 +117,7 @@ func (i *Infrastructure) Exec() error {
 		return nil
 	}
 
-	tfParser := parser.NewTfPlanParser(plan)
+	tfParser := parser.NewTfPlanParser(string(plan))
 
 	parsedPlan := tfParser.Parse()
 
