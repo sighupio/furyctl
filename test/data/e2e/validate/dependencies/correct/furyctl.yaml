@@ -15,7 +15,7 @@ spec:
     terraform:
       state:
         s3:
-          bucketName: furyctl-e2e-deps-test
+          bucketName: TERRAFORM_TF_STATES_BUCKET_NAME
           # changed from key, because each terraform project state will be placed in the directory defined by the prefix
           keyPrefix: furyctl/
           region: eu-west-1
