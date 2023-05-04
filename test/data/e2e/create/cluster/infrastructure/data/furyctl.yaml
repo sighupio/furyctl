@@ -13,7 +13,7 @@ spec:
       state:
         s3:
           bucketName: TERRAFORM_TF_STATES_BUCKET_NAME
-          keyPrefix: furyctl/
+          keyPrefix: furyctl-next-create-cluster/
           region: eu-west-1
   region: eu-west-1
   tags:

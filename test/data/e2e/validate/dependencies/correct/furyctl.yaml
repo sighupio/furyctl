@@ -17,7 +17,7 @@ spec:
         s3:
           bucketName: TERRAFORM_TF_STATES_BUCKET_NAME
           # changed from key, because each terraform project state will be placed in the directory defined by the prefix
-          keyPrefix: furyctl/
+          keyPrefix: furyctl-next-deps/
           region: eu-west-1
       # gcs:
       # bucketName:
