@@ -12,7 +12,7 @@ spec:
     terraform:
       state:
         s3:
-          bucketName: furyctl-e2e-deps-test-ci
+          bucketName: TERRAFORM_TF_STATES_BUCKET_NAME
           keyPrefix: furyctl/
           region: eu-west-1
   region: eu-west-1
