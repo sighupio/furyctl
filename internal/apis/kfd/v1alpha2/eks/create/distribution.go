@@ -171,7 +171,7 @@ func (d *Distribution) Exec() error {
 		return fmt.Errorf("error running terraform init: %w", err)
 	}
 
-	if err := d.tfRunner.Plan(timestamp); err != nil && !d.dryRun {
+	if _, err := d.tfRunner.Plan(timestamp); err != nil && !d.dryRun {
 		return fmt.Errorf("error running terraform plan: %w", err)
 	}
 

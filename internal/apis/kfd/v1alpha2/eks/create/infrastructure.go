@@ -5,6 +5,7 @@
 package create
 
 import (
+	"bufio"
 	"bytes"
 	"errors"
 	"fmt"
@@ -20,11 +21,14 @@ import (
 	"github.com/sighupio/fury-distribution/pkg/schema/private"
 	"github.com/sighupio/furyctl/configs"
 	"github.com/sighupio/furyctl/internal/cluster"
+	"github.com/sighupio/furyctl/internal/eks"
+	"github.com/sighupio/furyctl/internal/parser"
 	"github.com/sighupio/furyctl/internal/template"
 	"github.com/sighupio/furyctl/internal/tool/terraform"
 	bytesx "github.com/sighupio/furyctl/internal/x/bytes"
 	execx "github.com/sighupio/furyctl/internal/x/exec"
 	iox "github.com/sighupio/furyctl/internal/x/io"
+	"github.com/sighupio/furyctl/internal/x/slices"
 )
 
 const SErrWrapWithStr = "%w: %s"
@@ -33,6 +37,7 @@ var (
 	ErrVpcIDNotFound = errors.New("vpc_id not found in infra output")
 	ErrVpcIDFromOut  = errors.New("cannot read vpc_id from infrastructure's output.json")
 	ErrWritingTfVars = errors.New("error writing terraform variables file")
+	ErrAbortedByUser = errors.New("aborted by user")
 )
 
 type Infrastructure struct {
@@ -103,12 +108,38 @@ func (i *Infrastructure) Exec() error {
 		return fmt.Errorf("error running terraform init: %w", err)
 	}
 
-	if err := i.tfRunner.Plan(timestamp); err != nil {
+	plan, err := i.tfRunner.Plan(timestamp)
+	if err != nil {
 		return fmt.Errorf("error running terraform plan: %w", err)
 	}
 
 	if i.dryRun {
 		return nil
+	}
+
+	tfParser := parser.NewTfPlanParser(string(plan))
+
+	parsedPlan := tfParser.Parse()
+
+	eksInf := eks.NewInfra()
+
+	criticalResources := slices.Intersection(eksInf.GetCriticalTFResourceTypes(), parsedPlan.Destroy)
+
+	if len(criticalResources) > 0 {
+		logrus.Warnf("Deletion of the following critical resources has been detected: %s. See the logs for more details.",
+			strings.Join(criticalResources, ", "))
+		logrus.Warn("Do you want to proceed? write 'yes' to continue or anything else to abort: ")
+
+		prompter := iox.NewPrompter(bufio.NewReader(os.Stdin))
+
+		prompt, err := prompter.Ask("yes")
+		if err != nil {
+			return fmt.Errorf("error reading user input: %w", err)
+		}
+
+		if !prompt {
+			return ErrAbortedByUser
+		}
 	}
 
 	logrus.Warn("Creating cloud resources, this could take a while...")

@@ -5,6 +5,7 @@
 package create
 
 import (
+	"bufio"
 	"bytes"
 	"encoding/json"
 	"errors"
@@ -23,7 +24,9 @@ import (
 	"github.com/sighupio/fury-distribution/pkg/schema/private"
 	"github.com/sighupio/furyctl/configs"
 	"github.com/sighupio/furyctl/internal/cluster"
+	"github.com/sighupio/furyctl/internal/eks"
 	"github.com/sighupio/furyctl/internal/merge"
+	"github.com/sighupio/furyctl/internal/parser"
 	"github.com/sighupio/furyctl/internal/template"
 	"github.com/sighupio/furyctl/internal/tool/awscli"
 	"github.com/sighupio/furyctl/internal/tool/terraform"
@@ -32,6 +35,7 @@ import (
 	iox "github.com/sighupio/furyctl/internal/x/io"
 	kubex "github.com/sighupio/furyctl/internal/x/kube"
 	netx "github.com/sighupio/furyctl/internal/x/net"
+	"github.com/sighupio/furyctl/internal/x/slices"
 	yamlx "github.com/sighupio/furyctl/internal/x/yaml"
 )
 
@@ -143,12 +147,38 @@ func (k *Kubernetes) Exec() error {
 		return fmt.Errorf("error running terraform init: %w", err)
 	}
 
-	if err := k.tfRunner.Plan(timestamp); err != nil {
+	plan, err := k.tfRunner.Plan(timestamp)
+	if err != nil {
 		return fmt.Errorf("error running terraform plan: %w", err)
 	}
 
 	if k.dryRun {
 		return nil
+	}
+
+	tfParser := parser.NewTfPlanParser(string(plan))
+
+	parsedPlan := tfParser.Parse()
+
+	eksKube := eks.NewKubernetes()
+
+	criticalResources := slices.Intersection(eksKube.GetCriticalTFResourceTypes(), parsedPlan.Destroy)
+
+	if len(criticalResources) > 0 {
+		logrus.Warnf("Deletion of the following critical resources has been detected: %s. See the logs for more details.",
+			strings.Join(criticalResources, ", "))
+		logrus.Warn("Do you want to proceed? write 'yes' to continue or anything else to abort: ")
+
+		prompter := iox.NewPrompter(bufio.NewReader(os.Stdin))
+
+		prompt, err := prompter.Ask("yes")
+		if err != nil {
+			return fmt.Errorf("error reading user input: %w", err)
+		}
+
+		if !prompt {
+			return ErrAbortedByUser
+		}
 	}
 
 	if k.furyctlConf.Spec.Kubernetes.ApiServer.PrivateAccess &&

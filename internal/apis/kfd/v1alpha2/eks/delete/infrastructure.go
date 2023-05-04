@@ -74,7 +74,7 @@ func (i *Infrastructure) Exec() error {
 		return nil
 	}
 
-	if err := i.tfRunner.Plan(timestamp, "-destroy"); err != nil {
+	if _, err := i.tfRunner.Plan(timestamp, "-destroy"); err != nil {
 		return fmt.Errorf("error running terraform plan: %w", err)
 	}
 
