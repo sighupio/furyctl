@@ -61,7 +61,12 @@ func TestPrompter_Ask(t *testing.T) {
 
 			prompter := iox.NewPrompter(bufio.NewReader(strings.NewReader(tc.input)))
 
-			if prompter.Ask(tc.promptWord) != tc.expected {
+			prompt, err := prompter.Ask(tc.promptWord)
+			if err != nil {
+				t.Errorf("unexpected error: %v", err)
+			}
+
+			if prompt != tc.expected {
 				t.Errorf("expected %v, got %v", tc.expected, !tc.expected)
 			}
 		})

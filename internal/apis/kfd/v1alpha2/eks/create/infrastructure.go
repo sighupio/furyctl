@@ -132,7 +132,12 @@ func (i *Infrastructure) Exec() error {
 
 		prompter := iox.NewPrompter(bufio.NewReader(os.Stdin))
 
-		if !prompter.Ask("yes") {
+		prompt, err := prompter.Ask("yes")
+		if err != nil {
+			return fmt.Errorf("error reading user input: %w", err)
+		}
+
+		if !prompt {
 			return ErrAbortedByUser
 		}
 	}

@@ -6,6 +6,7 @@ package iox
 
 import (
 	"bufio"
+	"fmt"
 	"strings"
 )
 
@@ -19,10 +20,10 @@ func NewPrompter(r *bufio.Reader) *Prompter {
 	}
 }
 
-func (p *Prompter) Ask(w string) bool {
+func (p *Prompter) Ask(w string) (bool, error) {
 	response, err := p.Reader.ReadString('\n')
 	if err != nil {
-		return false
+		return false, fmt.Errorf("error reading from stdin: %w", err)
 	}
 
 	response = strings.TrimSuffix(response, "\n")
@@ -31,5 +32,5 @@ func (p *Prompter) Ask(w string) bool {
 	return strings.Compare(
 		strings.ToLower(response),
 		strings.ToLower(w),
-	) == 0
+	) == 0, nil
 }
