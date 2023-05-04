@@ -85,7 +85,7 @@ linters-settings:
     capital: true
     period: true
   gofumpt:
-    lang-version: "1.19"
+    lang-version: "1.20"
     extra-rules: true
   goimports:
     local-prefixes: github.com/sighupio
@@ -154,6 +154,11 @@ linters-settings:
         severity: warning
         disabled: false
         arguments: [210]
+      # https://github.com/mgechev/revive/blob/master/RULES_DESCRIPTIONS.md#comment-spacings
+      - name: comment-spacings
+        severity: warning
+        disabled: false
+        arguments: ["nolint"]
       # https://github.com/mgechev/revive/blob/master/RULES_DESCRIPTIONS.md#confusing-naming
       - name: confusing-naming
         severity: warning

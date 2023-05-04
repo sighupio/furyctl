@@ -167,7 +167,7 @@ func generateMachineID() string {
 	return mid
 }
 
-func appendMachineInfo(src map[string]string, dst map[string]interface{}) map[string]interface{} {
+func appendMachineInfo(src map[string]string, dst map[string]any) map[string]any {
 	for k, v := range src {
 		dst[k] = v
 	}

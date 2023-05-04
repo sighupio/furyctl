@@ -188,9 +188,16 @@ var (
 			FuryctlValidateDependencies := func(basepath, binpath string) (string, error) {
 				absBasepath := Abs(basepath)
 
+				cfgPath := filepath.Join(absBasepath, "furyctl.yaml")
+
+				patchedCfgPath, err := patchFuryctlYaml(cfgPath)
+				if err != nil {
+					panic(err)
+				}
+
 				return RunCmd(
 					furyctl, "validate", "dependencies",
-					"--config", filepath.Join(absBasepath, "furyctl.yaml"),
+					"--config", patchedCfgPath,
 					"--distro-location", absBasepath,
 					"--bin-path", binpath,
 					"--debug",
@@ -600,7 +607,8 @@ var (
 )
 
 // patch the furyctl.yaml's "spec.toolsConfiguration.terraform.state.s3.keyPrefix" key to add a timestamp and random int
-// to avoid collisions in s3 when running tests in parallel, and also because the bucket is a super global resource.
+// to avoid collisions in s3 when running tests in parallel, and also because the bucket is a super global resource,
+// we also replace the "TERRAFORM_TF_STATES_BUCKET_NAME" with the actual bucket name from the env vars
 func patchFuryctlYaml(furyctlYamlPath string) (string, error) {
 	furyctlYaml, err := os.ReadFile(furyctlYamlPath)
 	if err != nil {
@@ -610,7 +618,11 @@ func patchFuryctlYaml(furyctlYamlPath string) (string, error) {
 	// we need to cap the string to 36 chars due to the s3 key prefix limit
 	newKeyPrefix := fmt.Sprintf("furyctl-%d-%d", time.Now().UTC().Unix(), rand.Int())[0:36]
 
+	tfBucketName := os.Getenv("TERRAFORM_TF_STATES_BUCKET_NAME")
+
 	furyctlYaml = bytes.ReplaceAll(furyctlYaml, []byte("keyPrefix: furyctl/"), []byte("keyPrefix: "+newKeyPrefix+"/"))
+
+	furyctlYaml = bytes.ReplaceAll(furyctlYaml, []byte("TERRAFORM_TF_STATES_BUCKET_NAME"), []byte(tfBucketName))
 
 	// create a temporary file to write the patched furyctl.yaml
 	tmpFile, err := os.CreateTemp("", "furyctl.yaml")
