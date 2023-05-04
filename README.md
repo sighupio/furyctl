@@ -83,7 +83,7 @@ Check that everything is working correctly with `furyctl version`:
 $ furyctl version
 buildTime: 2023-01-13T09:50:15Z
 gitCommit: 349c14a06dd6163b308e4e8baa47ec9cc59712e1
-goVersion: go1.19
+goVersion: go1.20
 osArch: amd64
 version: 0.25.0-alpha.1
 ``` -->
@@ -93,7 +93,7 @@ version: 0.25.0-alpha.1
 Prerequisites:
 
 - `make >= 4.1`
-- `go >= 1.19`
+- `go >= 1.20`
 - `goreleaser >= v1.15`
 
 > You can install `goreleaser` with the following command once you have Go in your system:
