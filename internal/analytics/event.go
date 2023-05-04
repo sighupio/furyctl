@@ -5,7 +5,7 @@
 package analytics
 
 type Event interface {
-	Properties() map[string]interface{}
+	Properties() map[string]any
 	AddErrorMessage(error)
 	AddSuccessMessage(string)
 	AddClusterDetails(c ClusterDetails)
@@ -16,7 +16,7 @@ type Event interface {
 func NewCommandEvent(name string) Event {
 	return CommandEvent{
 		name:       name,
-		properties: make(map[string]interface{}),
+		properties: make(map[string]any),
 	}
 }
 
@@ -38,7 +38,7 @@ func (c CommandEvent) AddExitCode(e int) {
 	c.properties["exitCode"] = e
 }
 
-func (c CommandEvent) Properties() map[string]interface{} {
+func (c CommandEvent) Properties() map[string]any {
 	return c.properties
 }
 
@@ -50,7 +50,7 @@ func (c CommandEvent) Name() string {
 func NewStopEvent() Event {
 	return StopEvent{
 		name:       "stop",
-		properties: make(map[string]interface{}),
+		properties: make(map[string]any),
 	}
 }
 
@@ -70,7 +70,7 @@ func (g StopEvent) AddExitCode(e int) {
 	g.properties["exitCode"] = e
 }
 
-func (g StopEvent) Properties() map[string]interface{} {
+func (g StopEvent) Properties() map[string]any {
 	return g.properties
 }
 
@@ -81,7 +81,7 @@ func (g StopEvent) Name() string {
 // StopEvent is a special event used to close the events processing.
 type StopEvent struct {
 	name       string
-	properties map[string]interface{}
+	properties map[string]any
 }
 
 type CommandEvent struct {
@@ -89,7 +89,7 @@ type CommandEvent struct {
 	properties
 }
 
-type properties map[string]interface{}
+type properties map[string]any
 
 type ClusterDetails struct {
 	Phase      string

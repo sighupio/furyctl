@@ -12,7 +12,7 @@ spec:
     terraform:
       state:
         s3:
-          bucketName: furyctl-test
+          bucketName: furyctl-e2e-deps-test-ci
           keyPrefix: furyctl/
           region: eu-west-1
   region: eu-west-1
@@ -22,11 +22,11 @@ spec:
   kubernetes:
     nodeAllowedSshPublicKey: "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGxA+4CXYSmsN1m5DSsRzVRTegbvCh1gh7YObg0drj4+ alessio.pragliola@sighup.io"
     nodePoolsLaunchKind: "launch_templates"
-    vpcId: "vpc-0040e94dde71882f8"
+    vpcId: "vpc-04a74eb4c1eab8b2d"
     subnetIds:
-      - "subnet-08ebb79bd8ef8e08e"
-      - "subnet-014ca0081b369daf7"
-      - "subnet-0071d41306f6e810a"
+      - "subnet-00699eaca4b61fb9c"
+      - "subnet-02e860f39b603c4ff"
+      - "subnet-0cdc8ec151dc56188"
     apiServer:
       privateAccess: true
       publicAccess: false

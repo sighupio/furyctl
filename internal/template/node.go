@@ -37,9 +37,9 @@ func (f *Node) FromNodeList(nodes []parse.Node) []string {
 	return slices.Uniq(f.Fields)
 }
 
-func mapToAliasInterface(n parse.Node) interface{} {
+func mapToAliasInterface(n parse.Node) any {
 	// MapParseNodeToAlias is a map of parse.Node to its alias.
-	mapParseNodeToAlias := map[parse.NodeType]interface{}{
+	mapParseNodeToAlias := map[parse.NodeType]any{
 		parse.NodeList:     &ListNode{},
 		parse.NodeRange:    &RangeNode{},
 		parse.NodePipe:     &PipeNode{},
