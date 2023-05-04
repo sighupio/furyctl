@@ -17,8 +17,8 @@ import (
 )
 
 func TestNewTemplateModel(t *testing.T) {
-	conf := map[string]interface{}{
-		"data": map[string]interface{}{
+	conf := map[string]any{
+		"data": map[string]any{
 			"meta": map[string]string{
 				"name": "test",
 			},

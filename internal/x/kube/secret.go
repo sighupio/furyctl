@@ -13,15 +13,15 @@ import (
 
 func CreateSecret(data []byte, name, namespace string) ([]byte, error) {
 	secret := struct {
-		APIVersion string                 `yaml:"apiVersion"`
-		Kind       string                 `yaml:"kind"`
-		Metadata   map[string]interface{} `yaml:"metadata"`
-		Type       string                 `yaml:"type"`
-		Data       map[string]string      `yaml:"data"`
+		APIVersion string            `yaml:"apiVersion"`
+		Kind       string            `yaml:"kind"`
+		Metadata   map[string]any    `yaml:"metadata"`
+		Type       string            `yaml:"type"`
+		Data       map[string]string `yaml:"data"`
 	}{
 		APIVersion: "v1",
 		Kind:       "Secret",
-		Metadata: map[string]interface{}{
+		Metadata: map[string]any{
 			"name":      name,
 			"namespace": namespace,
 		},

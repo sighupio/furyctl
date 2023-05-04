@@ -363,7 +363,7 @@ func (k *Kubernetes) createTfVars() error {
 					return errPvtSubnetNotFound
 				}
 
-				s, ok := infraOut.Outputs["private_subnets"].Value.([]interface{})
+				s, ok := infraOut.Outputs["private_subnets"].Value.([]any)
 				if !ok {
 					return errPvtSubnetFromOut
 				}
