@@ -193,6 +193,7 @@ func (v *ClusterCreator) Create(skipPhase string, timeout int) error {
 		case cluster.OperationPhaseAll:
 			var stopWg sync.WaitGroup
 
+			//nolint:gomnd,revive // ignore magic number linters
 			stopWg.Add(3)
 
 			go func() {
