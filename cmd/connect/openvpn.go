@@ -21,8 +21,10 @@ import (
 )
 
 var (
-	ErrParsingFlag         = errors.New("error while parsing flag")
+	ErrParsingFlag         = errors.New("cannot parse command-line flag")
 	ErrProfileFlagRequired = errors.New("profile flag is required")
+	ErrRunningOpenVPN      = errors.New("cannot run openvpn")
+	ErrCannotGetHomeDir    = errors.New("cannot get current working directory")
 )
 
 type OpenVPNCmdFlags struct {
@@ -56,7 +58,7 @@ func NewOpenVPNCmd(tracker *analytics.Tracker) *cobra.Command {
 				cmdEvent.AddErrorMessage(err)
 				tracker.Track(cmdEvent)
 
-				return fmt.Errorf("error while getting current working directory: %w", err)
+				return fmt.Errorf("%s: %w", ErrCannotGetHomeDir, err)
 			}
 
 			// Parse furyctl.yaml config.
@@ -81,7 +83,7 @@ func NewOpenVPNCmd(tracker *analytics.Tracker) *cobra.Command {
 
 			// Start openvpn process.
 			if err := openVPNCmd.Run(); err != nil {
-				err = fmt.Errorf("error while running openvpn: %w", err)
+				err = fmt.Errorf("%w: %w", ErrRunningOpenVPN, err)
 				cmdEvent.AddErrorMessage(err)
 				tracker.Track(cmdEvent)
 
