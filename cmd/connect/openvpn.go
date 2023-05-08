@@ -58,7 +58,7 @@ func NewOpenVPNCmd(tracker *analytics.Tracker) *cobra.Command {
 				cmdEvent.AddErrorMessage(err)
 				tracker.Track(cmdEvent)
 
-				return fmt.Errorf("%w: %s", ErrCannotGetHomeDir, err)
+				return fmt.Errorf("%w: %w", ErrCannotGetHomeDir, err)
 			}
 
 			// Parse furyctl.yaml config.
@@ -83,7 +83,7 @@ func NewOpenVPNCmd(tracker *analytics.Tracker) *cobra.Command {
 
 			// Start openvpn process.
 			if err := openVPNCmd.Run(); err != nil {
-				err = fmt.Errorf("%w: %s", ErrRunningOpenVPN, err)
+				err = fmt.Errorf("%w: %w", ErrRunningOpenVPN, err)
 				cmdEvent.AddErrorMessage(err)
 				tracker.Track(cmdEvent)
 
