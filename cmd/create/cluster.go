@@ -438,7 +438,7 @@ func setupCreateClusterCmdFlags(cmd *cobra.Command) {
 	//nolint:gomnd,revive // ignore magic number linters
 	cmd.Flags().Int(
 		"timeout",
-		60,
+		3600,
 		"Timeout in seconds for the whole cluster creation process. Expressed in seconds",
 	)
 }
