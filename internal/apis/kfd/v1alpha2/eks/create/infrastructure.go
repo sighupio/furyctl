@@ -151,6 +151,16 @@ func (i *Infrastructure) Exec() error {
 	return nil
 }
 
+func (i *Infrastructure) Stop() error {
+	logrus.Debug("Stopping terraform...")
+
+	if err := i.tfRunner.Stop(); err != nil {
+		return fmt.Errorf("error stopping terraform: %w", err)
+	}
+
+	return nil
+}
+
 func (i *Infrastructure) copyFromTemplate() error {
 	var cfg template.Config
 

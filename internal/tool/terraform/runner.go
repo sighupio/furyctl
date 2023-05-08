@@ -12,6 +12,7 @@ import (
 	"path"
 	"regexp"
 
+	"github.com/google/uuid"
 	tfjson "github.com/hashicorp/terraform-json"
 
 	execx "github.com/sighupio/furyctl/internal/x/exec"
@@ -35,17 +36,36 @@ type Paths struct {
 type Runner struct {
 	executor execx.Executor
 	paths    Paths
+	cmds     map[string]*execx.Cmd
 }
 
 func NewRunner(executor execx.Executor, paths Paths) *Runner {
 	return &Runner{
 		executor: executor,
 		paths:    paths,
+		cmds:     make(map[string]*execx.Cmd),
 	}
 }
 
 func (r *Runner) CmdPath() string {
 	return r.paths.Terraform
+}
+
+func (r *Runner) newCmd(args []string) (*execx.Cmd, string) {
+	cmd := execx.NewCmd(r.paths.Terraform, execx.CmdOptions{
+		Args:     args,
+		Executor: r.executor,
+		WorkDir:  r.paths.WorkDir,
+	})
+
+	id := uuid.NewString()
+	r.cmds[id] = cmd
+
+	return cmd, id
+}
+
+func (r *Runner) deleteCmd(id string) {
+	delete(r.cmds, id)
 }
 
 func (r *Runner) Init() error {
@@ -55,12 +75,10 @@ func (r *Runner) Init() error {
 		args = append(args, "-no-color")
 	}
 
-	err := execx.NewCmd(r.paths.Terraform, execx.CmdOptions{
-		Args:     args,
-		Executor: r.executor,
-		WorkDir:  r.paths.WorkDir,
-	}).Run()
-	if err != nil {
+	cmd, id := r.newCmd(args)
+	defer r.deleteCmd(id)
+
+	if err := cmd.Run(); err != nil {
 		return fmt.Errorf("command execution failed: %w", err)
 	}
 
@@ -77,11 +95,9 @@ func (r *Runner) Plan(timestamp int64, params ...string) ([]byte, error) {
 
 	args = append(args, "-no-color", "-out", "plan/terraform.plan")
 
-	cmd := execx.NewCmd(r.paths.Terraform, execx.CmdOptions{
-		Args:     args,
-		Executor: r.executor,
-		WorkDir:  r.paths.WorkDir,
-	})
+	cmd, id := r.newCmd(args)
+	defer r.deleteCmd(id)
+
 	if err := cmd.Run(); err != nil {
 		return out, fmt.Errorf("command execution failed: %w", err)
 	}
@@ -102,11 +118,11 @@ func (r *Runner) Plan(timestamp int64, params ...string) ([]byte, error) {
 func (r *Runner) Apply(timestamp int64) (OutputJSON, error) {
 	var oj OutputJSON
 
-	cmd := execx.NewCmd(r.paths.Terraform, execx.CmdOptions{
-		Args:     []string{"apply", "-no-color", "-json", "plan/terraform.plan"},
-		Executor: r.executor,
-		WorkDir:  r.paths.WorkDir,
-	})
+	args := []string{"apply", "-no-color", "-json", "plan/terraform.plan"}
+
+	cmd, id := r.newCmd(args)
+	defer r.deleteCmd(id)
+
 	if err := cmd.Run(); err != nil {
 		return oj, fmt.Errorf("cannot create cloud resources: %w", err)
 	}
@@ -154,12 +170,10 @@ func (r *Runner) Destroy() error {
 		args = append(args, "-no-color")
 	}
 
-	err := execx.NewCmd(r.paths.Terraform, execx.CmdOptions{
-		Args:     args,
-		Executor: r.executor,
-		WorkDir:  r.paths.WorkDir,
-	}).Run()
-	if err != nil {
+	cmd, id := r.newCmd(args)
+	defer r.deleteCmd(id)
+
+	if err := cmd.Run(); err != nil {
 		return fmt.Errorf("error running terraform destroy: %w", err)
 	}
 
@@ -167,14 +181,25 @@ func (r *Runner) Destroy() error {
 }
 
 func (r *Runner) Version() (string, error) {
-	log, err := execx.CombinedOutput(execx.NewCmd(r.paths.Terraform, execx.CmdOptions{
-		Args:     []string{"version"},
-		Executor: r.executor,
-		WorkDir:  r.paths.WorkDir,
-	}))
+	args := []string{"version"}
+
+	cmd, id := r.newCmd(args)
+	defer r.deleteCmd(id)
+
+	log, err := execx.CombinedOutput(cmd)
 	if err != nil {
 		return "", fmt.Errorf("error running terraform version: %w", err)
 	}
 
 	return log, nil
+}
+
+func (r *Runner) Stop() error {
+	for _, cmd := range r.cmds {
+		if err := cmd.Stop(); err != nil {
+			return fmt.Errorf("error stopping terraform runner: %w", err)
+		}
+	}
+
+	return nil
 }

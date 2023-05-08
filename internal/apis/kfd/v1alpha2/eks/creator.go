@@ -11,6 +11,8 @@ import (
 	"path"
 	"path/filepath"
 	"strings"
+	"sync"
+	"time"
 
 	"github.com/sirupsen/logrus"
 
@@ -27,6 +29,7 @@ import (
 var (
 	ErrUnsupportedPhase = errors.New("unsupported phase")
 	ErrInfraNotPresent  = errors.New("the configuration file does not contain an infrastructure section")
+	ErrTimeout          = errors.New("timeout reached")
 )
 
 type ClusterCreator struct {
@@ -106,7 +109,7 @@ func (v *ClusterCreator) SetProperty(name string, value any) {
 	}
 }
 
-func (v *ClusterCreator) Create(skipPhase string) error {
+func (v *ClusterCreator) Create(skipPhase string, timeout int) error {
 	infra, kube, distro, err := v.setupPhases()
 	if err != nil {
 		return err
@@ -131,27 +134,103 @@ func (v *ClusterCreator) Create(skipPhase string) error {
 		return fmt.Errorf("error while creating vpn connector: %w", err)
 	}
 
-	switch v.phase {
-	case cluster.OperationPhaseInfrastructure:
-		if err := v.infraPhase(infra, vpnConnector); err != nil {
-			return err
+	errCh := make(chan error)
+	doneCh := make(chan bool)
+
+	go func() {
+		switch v.phase {
+		case cluster.OperationPhaseInfrastructure:
+			if err := v.infraPhase(infra, vpnConnector); err != nil {
+				errCh <- err
+			}
+
+			close(doneCh)
+
+		case cluster.OperationPhaseKubernetes:
+			if err := v.kubernetesPhase(kube, vpnConnector); err != nil {
+				errCh <- err
+			}
+
+			close(doneCh)
+
+		case cluster.OperationPhaseDistribution:
+			if err := v.distributionPhase(distro, vpnConnector); err != nil {
+				errCh <- err
+			}
+
+			close(doneCh)
+
+		case cluster.OperationPhaseAll:
+			errCh <- v.allPhases(skipPhase, infra, kube, distro, vpnConnector)
+
+			close(doneCh)
+
+		default:
+			errCh <- ErrUnsupportedPhase
+
+			close(doneCh)
+		}
+	}()
+
+	select {
+	case <-time.After(time.Duration(timeout) * time.Second):
+		switch v.phase {
+		case cluster.OperationPhaseInfrastructure:
+			if err := infra.Stop(); err != nil {
+				return fmt.Errorf("error stopping infrastructure phase: %w", err)
+			}
+
+		case cluster.OperationPhaseKubernetes:
+			if err := kube.Stop(); err != nil {
+				return fmt.Errorf("error stopping kubernetes phase: %w", err)
+			}
+
+		case cluster.OperationPhaseDistribution:
+			if err := distro.Stop(); err != nil {
+				return fmt.Errorf("error stopping distribution phase: %w", err)
+			}
+
+		case cluster.OperationPhaseAll:
+			var stopWg sync.WaitGroup
+
+			//nolint:gomnd,revive // ignore magic number linters
+			stopWg.Add(3)
+
+			go func() {
+				if err := infra.Stop(); err != nil {
+					logrus.Error(err)
+				}
+
+				stopWg.Done()
+			}()
+
+			go func() {
+				if err := kube.Stop(); err != nil {
+					logrus.Error(err)
+				}
+
+				stopWg.Done()
+			}()
+
+			go func() {
+				if err := distro.Stop(); err != nil {
+					logrus.Error(err)
+				}
+
+				stopWg.Done()
+			}()
+
+			stopWg.Wait()
 		}
 
-	case cluster.OperationPhaseKubernetes:
-		if err := v.kubernetesPhase(kube, vpnConnector); err != nil {
-			return err
-		}
+		return ErrTimeout
 
-	case cluster.OperationPhaseDistribution:
-		if err := v.distributionPhase(distro, vpnConnector); err != nil {
-			return err
-		}
+	case <-doneCh:
 
-	case cluster.OperationPhaseAll:
-		return v.allPhases(skipPhase, infra, kube, distro, vpnConnector)
+	case err := <-errCh:
+		close(errCh)
 
-	default:
-		return ErrUnsupportedPhase
+		return err
 	}
 
 	return nil

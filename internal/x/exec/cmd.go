@@ -101,6 +101,22 @@ func (c *Cmd) Run() error {
 	return nil
 }
 
+func (c *Cmd) Stop() error {
+	if c.Process == nil {
+		return nil
+	}
+
+	if c.ProcessState != nil && c.ProcessState.Exited() {
+		return nil
+	}
+
+	if err := c.Process.Signal(os.Interrupt); err != nil {
+		return fmt.Errorf("failed to interrupt process: %w", err)
+	}
+
+	return nil
+}
+
 func (c *Cmd) RunWithTimeout(timeout time.Duration) error {
 	var cmdCtx *exec.Cmd
 

@@ -32,6 +32,7 @@ const (
 type Runner interface {
 	Version() (string, error)
 	CmdPath() string
+	Stop() error
 }
 
 type RunnerFactoryPaths struct {

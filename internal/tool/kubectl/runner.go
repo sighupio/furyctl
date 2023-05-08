@@ -8,6 +8,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/google/uuid"
+
 	execx "github.com/sighupio/furyctl/internal/x/exec"
 )
 
@@ -27,6 +29,7 @@ type Runner struct {
 	serverSide    bool
 	skipNotFound  bool
 	clientVersion bool
+	cmds          map[string]*execx.Cmd
 }
 
 func NewRunner(executor execx.Executor, paths Paths, serverSide, skipNotFound, clientVersion bool) *Runner {
@@ -36,11 +39,29 @@ func NewRunner(executor execx.Executor, paths Paths, serverSide, skipNotFound, c
 		serverSide:    serverSide,
 		skipNotFound:  skipNotFound,
 		clientVersion: clientVersion,
+		cmds:          make(map[string]*execx.Cmd),
 	}
 }
 
 func (r *Runner) CmdPath() string {
 	return r.paths.Kubectl
+}
+
+func (r *Runner) newCmd(args []string) (*execx.Cmd, string) {
+	cmd := execx.NewCmd(r.paths.Kubectl, execx.CmdOptions{
+		Args:     args,
+		Executor: r.executor,
+		WorkDir:  r.paths.WorkDir,
+	})
+
+	id := uuid.NewString()
+	r.cmds[id] = cmd
+
+	return cmd, id
+}
+
+func (r *Runner) deleteCmd(id string) {
+	delete(r.cmds, id)
 }
 
 func (r *Runner) Apply(manifestPath string, params ...string) error {
@@ -60,12 +81,10 @@ func (r *Runner) Apply(manifestPath string, params ...string) error {
 
 	args = append(args, "-f", manifestPath)
 
-	_, err := execx.CombinedOutput(execx.NewCmd(r.paths.Kubectl, execx.CmdOptions{
-		Args:     args,
-		Executor: r.executor,
-		WorkDir:  r.paths.WorkDir,
-	}))
-	if err != nil {
+	cmd, id := r.newCmd(args)
+	defer r.deleteCmd(id)
+
+	if _, err := execx.CombinedOutput(cmd); err != nil {
 		return fmt.Errorf("error applying manifests: %w", err)
 	}
 
@@ -87,11 +106,10 @@ func (r *Runner) Get(ns string, params ...string) (string, error) {
 
 	args = append(args, params...)
 
-	out, err := execx.CombinedOutput(execx.NewCmd(r.paths.Kubectl, execx.CmdOptions{
-		Args:     args,
-		Executor: r.executor,
-		WorkDir:  r.paths.WorkDir,
-	}))
+	cmd, id := r.newCmd(args)
+	defer r.deleteCmd(id)
+
+	out, err := execx.CombinedOutput(cmd)
 	if err != nil {
 		return out, fmt.Errorf("error while getting resources: %w", err)
 	}
@@ -108,11 +126,10 @@ func (r *Runner) APIResources(params ...string) (string, error) {
 
 	args = append(args, params...)
 
-	out, err := execx.CombinedOutput(execx.NewCmd(r.paths.Kubectl, execx.CmdOptions{
-		Args:     args,
-		Executor: r.executor,
-		WorkDir:  r.paths.WorkDir,
-	}))
+	cmd, id := r.newCmd(args)
+	defer r.deleteCmd(id)
+
+	out, err := execx.CombinedOutput(cmd)
 	if err != nil {
 		return out, fmt.Errorf("error while listing api resources: %w", err)
 	}
@@ -127,11 +144,10 @@ func (r *Runner) GetResource(ns, res, name string) (string, error) {
 		args = append(args, "--kubeconfig", r.paths.Kubeconfig)
 	}
 
-	out, err := execx.CombinedOutput(execx.NewCmd(r.paths.Kubectl, execx.CmdOptions{
-		Args:     args,
-		Executor: r.executor,
-		WorkDir:  r.paths.WorkDir,
-	}))
+	cmd, id := r.newCmd(args)
+	defer r.deleteCmd(id)
+
+	out, err := execx.CombinedOutput(cmd)
 	if err != nil {
 		return out, fmt.Errorf("error while getting resources: %w", err)
 	}
@@ -147,11 +163,10 @@ func (r *Runner) DeleteResource(ns, res, name string) (string, error) {
 		args = append(args, "--kubeconfig", r.paths.Kubeconfig)
 	}
 
-	out, err := execx.CombinedOutput(execx.NewCmd(r.paths.Kubectl, execx.CmdOptions{
-		Args:     args,
-		Executor: r.executor,
-		WorkDir:  r.paths.WorkDir,
-	}))
+	cmd, id := r.newCmd(args)
+	defer r.deleteCmd(id)
+
+	out, err := execx.CombinedOutput(cmd)
 	if err != nil {
 		return out, fmt.Errorf("error deleting resource(s) \"%s/%s/%s\": %w", ns, res, name, err)
 	}
@@ -167,11 +182,10 @@ func (r *Runner) DeleteResources(ns, res string) (string, error) {
 		args = append(args, "--kubeconfig", r.paths.Kubeconfig)
 	}
 
-	out, err := execx.CombinedOutput(execx.NewCmd(r.paths.Kubectl, execx.CmdOptions{
-		Args:     args,
-		Executor: r.executor,
-		WorkDir:  r.paths.WorkDir,
-	}))
+	cmd, id := r.newCmd(args)
+	defer r.deleteCmd(id)
+
+	out, err := execx.CombinedOutput(cmd)
 	if err != nil {
 		return out, fmt.Errorf("error deleting resource(s) \"%s/%s\": %w", ns, res, err)
 	}
@@ -187,11 +201,10 @@ func (r *Runner) DeleteResourcesInAllNamespaces(res string) (string, error) {
 		args = append(args, "--kubeconfig", r.paths.Kubeconfig)
 	}
 
-	out, err := execx.CombinedOutput(execx.NewCmd(r.paths.Kubectl, execx.CmdOptions{
-		Args:     args,
-		Executor: r.executor,
-		WorkDir:  r.paths.WorkDir,
-	}))
+	cmd, id := r.newCmd(args)
+	defer r.deleteCmd(id)
+
+	out, err := execx.CombinedOutput(cmd)
 	if err != nil {
 		return out, fmt.Errorf("error deleting all \"%s\" resources in all namespaces: %w", res, err)
 	}
@@ -216,16 +229,15 @@ func (r *Runner) Delete(manifestPath string, params ...string) (string, error) {
 
 	args = append(args, "-f", manifestPath)
 
-	res, err := execx.CombinedOutputWithTimeout(execx.NewCmd(r.paths.Kubectl, execx.CmdOptions{
-		Args:     args,
-		Executor: r.executor,
-		WorkDir:  r.paths.WorkDir,
-	}), kubectlDeleteTimeout)
+	cmd, id := r.newCmd(args)
+	defer r.deleteCmd(id)
+
+	out, err := execx.CombinedOutputWithTimeout(cmd, kubectlDeleteTimeout)
 	if err != nil {
-		return res, fmt.Errorf("error deleting resources: %w", err)
+		return out, fmt.Errorf("error deleting resources: %w", err)
 	}
 
-	return res, nil
+	return out, nil
 }
 
 func (r *Runner) Version() (string, error) {
@@ -241,13 +253,23 @@ func (r *Runner) Version() (string, error) {
 
 	args = append(args, "-o", "json")
 
-	out, err := execx.CombinedOutput(execx.NewCmd(r.paths.Kubectl, execx.CmdOptions{
-		Args:     args,
-		Executor: r.executor,
-	}))
+	cmd, id := r.newCmd(args)
+	defer r.deleteCmd(id)
+
+	out, err := execx.CombinedOutput(cmd)
 	if err != nil {
 		return "", fmt.Errorf("error getting kubectl version: %w", err)
 	}
 
 	return out, nil
+}
+
+func (r *Runner) Stop() error {
+	for _, cmd := range r.cmds {
+		if err := cmd.Stop(); err != nil {
+			return fmt.Errorf("error stopping kubectl runner: %w", err)
+		}
+	}
+
+	return nil
 }

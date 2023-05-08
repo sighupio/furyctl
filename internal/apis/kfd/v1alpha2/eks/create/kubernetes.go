@@ -16,6 +16,7 @@ import (
 	"path"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/sirupsen/logrus"
@@ -259,6 +260,52 @@ func (*Kubernetes) getCommonDataFromDistribution(furyctlCfg template.Config) (ma
 	}
 
 	return nodeSelector, tolerations, nil
+}
+
+func (k *Kubernetes) Stop() error {
+	errCh := make(chan error)
+	doneCh := make(chan bool)
+
+	var wg sync.WaitGroup
+
+	//nolint:gomnd // ignore magic number linters
+	wg.Add(2)
+
+	go func() {
+		logrus.Debug("Stopping terraform...")
+
+		if err := k.tfRunner.Stop(); err != nil {
+			errCh <- fmt.Errorf("error stopping terraform: %w", err)
+		}
+
+		wg.Done()
+	}()
+
+	go func() {
+		logrus.Debug("Stopping awscli...")
+
+		if err := k.awsRunner.Stop(); err != nil {
+			errCh <- fmt.Errorf("error stopping awscli: %w", err)
+		}
+
+		wg.Done()
+	}()
+
+	go func() {
+		wg.Wait()
+		close(doneCh)
+	}()
+
+	select {
+	case <-doneCh:
+
+	case err := <-errCh:
+		close(errCh)
+
+		return err
+	}
+
+	return nil
 }
 
 func (k *Kubernetes) copyFromTemplate(furyctlCfg template.Config) error {

@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-//go:build unit
-
 package execx_test
 
 import (
@@ -18,8 +16,9 @@ import (
 )
 
 func TestNewErrCmdFailed(t *testing.T) {
-	err := execx.NewErrCmdFailed("foo", []string{"bar", "baz"}, errors.New("test error"), nil)
+	t.Parallel()
 
+	err := execx.NewErrCmdFailed("foo", []string{"bar", "baz"}, errors.New("test error"), nil)
 	if err == nil {
 		t.Error("error is nil")
 	}
@@ -102,7 +101,7 @@ func Test_Cmd_Run(t *testing.T) {
 			wantErr: true,
 		},
 		{
-			desc:    "succesful run",
+			desc:    "successful run",
 			cmd:     execx.NewCmd("true", execx.CmdOptions{}),
 			wantErr: false,
 		},
@@ -126,7 +125,46 @@ func Test_Cmd_Run(t *testing.T) {
 	}
 }
 
+func Test_Cmd_Stop(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		desc    string
+		cmd     *execx.Cmd
+		wantErr bool
+	}{
+		{
+			desc: "successful stop",
+			cmd: execx.NewCmd("long process", execx.CmdOptions{
+				Args:     []string{"sleep", "60"},
+				Executor: execx.NewFakeExecutor(),
+			}),
+			wantErr: false,
+		},
+	}
+
+	for _, tC := range testCases {
+		tC := tC
+
+		t.Run(tC.desc, func(t *testing.T) {
+			t.Parallel()
+
+			err := tC.cmd.Stop()
+
+			if (err != nil) != tC.wantErr {
+				t.Errorf("Cmd.Stop() error = %v, wantErr = %v", err, tC.wantErr)
+			}
+
+			if tC.wantErr && !errors.Is(err, execx.ErrCmdFailed) {
+				t.Errorf("Cmd.Err = %v, want = %v", tC.cmd.Err, execx.ErrCmdFailed)
+			}
+		})
+	}
+}
+
 func Test_CmdLog_String(t *testing.T) {
+	t.Parallel()
+
 	cmdLog := &execx.CmdLog{
 		Out: bytes.NewBufferString("foo"),
 		Err: bytes.NewBufferString("bar"),
@@ -198,8 +236,8 @@ func TestCombinedOutput(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			if string(ret) != tC.want {
-				t.Errorf("want = %s, got = %s", tC.want, string(ret))
+			if ret != tC.want {
+				t.Errorf("want = %s, got = %s", tC.want, ret)
 			}
 		})
 	}

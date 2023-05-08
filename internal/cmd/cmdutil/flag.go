@@ -27,6 +27,18 @@ func BoolFlag(cmd *cobra.Command, flagName string, tracker *analytics.Tracker, e
 	return value, nil
 }
 
+func IntFlag(cmd *cobra.Command, flagName string, tracker *analytics.Tracker, event analytics.Event) (int, error) {
+	value, err := cmd.Flags().GetInt(flagName)
+	if err != nil {
+		event.AddErrorMessage(fmt.Errorf("%w: %s", ErrParsingFlag, flagName))
+		tracker.Track(event)
+
+		return 0, fmt.Errorf("%w: %s", ErrParsingFlag, flagName)
+	}
+
+	return value, nil
+}
+
 func StringFlag(cmd *cobra.Command, flagName string, tracker *analytics.Tracker, event analytics.Event) (string, error) {
 	value, err := cmd.Flags().GetString(flagName)
 	if err != nil {

@@ -11,6 +11,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"sync"
 	"time"
 
 	"github.com/sirupsen/logrus"
@@ -233,6 +234,62 @@ func (d *Distribution) Exec() error {
 	logrus.Info("Applying manifests...")
 
 	return d.applyManifests(manifestsOutPath)
+}
+
+func (d *Distribution) Stop() error {
+	errCh := make(chan error)
+	doneCh := make(chan bool)
+
+	var wg sync.WaitGroup
+
+	//nolint:gomnd,revive // ignore magic number linters
+	wg.Add(3)
+
+	go func() {
+		logrus.Debug("Stopping terraform...")
+
+		if err := d.tfRunner.Stop(); err != nil {
+			errCh <- fmt.Errorf("error stopping terraform: %w", err)
+		}
+
+		wg.Done()
+	}()
+
+	go func() {
+		logrus.Debug("Stopping kustomize...")
+
+		if err := d.kzRunner.Stop(); err != nil {
+			errCh <- fmt.Errorf("error stopping kustomize: %w", err)
+		}
+
+		wg.Done()
+	}()
+
+	go func() {
+		logrus.Debug("Stopping kubectl...")
+
+		if err := d.kubeRunner.Stop(); err != nil {
+			errCh <- fmt.Errorf("error stopping kubectl: %w", err)
+		}
+
+		wg.Done()
+	}()
+
+	go func() {
+		wg.Wait()
+		close(doneCh)
+	}()
+
+	select {
+	case <-doneCh:
+
+	case err := <-errCh:
+		close(errCh)
+
+		return err
+	}
+
+	return nil
 }
 
 func (d *Distribution) createFuryctlMerger() (*merge.Merger, error) {
