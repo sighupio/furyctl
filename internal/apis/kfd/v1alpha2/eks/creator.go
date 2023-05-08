@@ -11,6 +11,7 @@ import (
 	"path"
 	"path/filepath"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/sirupsen/logrus"
@@ -190,17 +191,35 @@ func (v *ClusterCreator) Create(skipPhase string, timeout int) error {
 			}
 
 		case cluster.OperationPhaseAll:
-			if err := infra.Stop(); err != nil {
-				return fmt.Errorf("error stopping infrastructure phase: %w", err)
-			}
+			var stopWg sync.WaitGroup
 
-			if err := kube.Stop(); err != nil {
-				return fmt.Errorf("error stopping kubernetes phase: %w", err)
-			}
+			stopWg.Add(3)
 
-			if err := distro.Stop(); err != nil {
-				return fmt.Errorf("error stopping distribution phase: %w", err)
-			}
+			go func() {
+				if err := infra.Stop(); err != nil {
+					logrus.Error(err)
+				}
+
+				stopWg.Done()
+			}()
+
+			go func() {
+				if err := kube.Stop(); err != nil {
+					logrus.Error(err)
+				}
+
+				stopWg.Done()
+			}()
+
+			go func() {
+				if err := distro.Stop(); err != nil {
+					logrus.Error(err)
+				}
+
+				stopWg.Done()
+			}()
+
+			stopWg.Wait()
 		}
 
 		return ErrTimeout
