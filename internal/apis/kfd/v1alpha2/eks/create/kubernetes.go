@@ -206,11 +206,11 @@ func (k *Kubernetes) Exec() error {
 		return fmt.Errorf("cannot create cloud resources: %w", err)
 	}
 
-	if out.Outputs["kubeconfig"] == nil {
+	if out["kubeconfig"] == nil {
 		return errKubeconfigFromLogs
 	}
 
-	kubeString, ok := out.Outputs["kubeconfig"].Value.(string)
+	kubeString, ok := out["kubeconfig"].Value.(string)
 	if !ok {
 		return errKubeconfigFromLogs
 	}
@@ -436,29 +436,29 @@ func (k *Kubernetes) createTfVars() error {
 			var infraOut terraform.OutputJSON
 
 			if err := json.Unmarshal(infraOutJSON, &infraOut); err == nil {
-				if infraOut.Outputs["private_subnets"] == nil {
+				if infraOut["private_subnets"] == nil {
 					return errPvtSubnetNotFound
 				}
 
-				s, ok := infraOut.Outputs["private_subnets"].Value.([]any)
+				s, ok := infraOut["private_subnets"].Value.([]any)
 				if !ok {
 					return errPvtSubnetFromOut
 				}
 
-				if infraOut.Outputs["vpc_id"] == nil {
+				if infraOut["vpc_id"] == nil {
 					return ErrVpcIDNotFound
 				}
 
-				v, ok := infraOut.Outputs["vpc_id"].Value.(string)
+				v, ok := infraOut["vpc_id"].Value.(string)
 				if !ok {
 					return ErrVpcIDFromOut
 				}
 
-				if infraOut.Outputs["vpc_cidr_block"] == nil {
+				if infraOut["vpc_cidr_block"] == nil {
 					return errVpcCIDRNotFound
 				}
 
-				c, ok := infraOut.Outputs["vpc_cidr_block"].Value.(string)
+				c, ok := infraOut["vpc_cidr_block"].Value.(string)
 				if !ok {
 					return errVpcCIDRFromOut
 				}
