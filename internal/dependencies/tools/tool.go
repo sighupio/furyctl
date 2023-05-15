@@ -63,7 +63,7 @@ type Factory struct {
 	runnerFactory *tool.RunnerFactory
 }
 
-func (f *Factory) Create(name tool.ToolName, version string) Tool {
+func (f *Factory) Create(name tool.Name, version string) Tool {
 	t := f.runnerFactory.Create(name, version, "")
 
 	switch name {

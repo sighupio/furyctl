@@ -11,7 +11,6 @@ import (
 
 	"github.com/sighupio/fury-distribution/pkg/config"
 	"github.com/sighupio/furyctl/internal/apis"
-	"github.com/sighupio/furyctl/internal/tool"
 	itool "github.com/sighupio/furyctl/internal/tool"
 	execx "github.com/sighupio/furyctl/internal/x/exec"
 )
@@ -68,7 +67,7 @@ func (tv *Validator) Validate(kfdManifest config.KFD, miniConf config.Furyctl) (
 
 				name := strings.ToLower(tls.Field(i).Type().Field(j).Name)
 
-				tool := tv.toolFactory.Create(tool.ToolName(name), version.String())
+				tool := tv.toolFactory.Create(itool.Name(name), version.String())
 				if err := tool.CheckBinVersion(); err != nil {
 					errs = append(errs, err)
 				} else {
