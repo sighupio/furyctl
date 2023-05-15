@@ -12,6 +12,7 @@ import (
 	"testing"
 
 	"github.com/sighupio/furyctl/internal/dependencies/tools"
+	"github.com/sighupio/furyctl/internal/tool"
 	execx "github.com/sighupio/furyctl/internal/x/exec"
 )
 
@@ -50,7 +51,7 @@ func Test_Factory_Create(t *testing.T) {
 			Bin: "",
 		})
 		t.Run(tC.desc, func(t *testing.T) {
-			tool := f.Create(tC.desc, "0.0.0")
+			tool := f.Create(tool.Name(tC.desc), "0.0.0")
 			if tool == nil && tC.wantTool {
 				t.Errorf("Expected tool %s, got nil", tC.desc)
 			}
