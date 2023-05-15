@@ -66,3 +66,15 @@ func (k *Kubectl) CheckBinVersion() error {
 
 	return nil
 }
+
+func (k *Kubectl) CmdPath() string {
+	return k.checker.runner.CmdPath()
+}
+
+func (k *Kubectl) OS() string {
+	return k.os
+}
+
+func (k *Kubectl) Arch() string {
+	return k.arch
+}

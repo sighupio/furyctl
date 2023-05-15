@@ -18,15 +18,17 @@ import (
 	execx "github.com/sighupio/furyctl/internal/x/exec"
 )
 
+type ToolName string
+
 const (
-	Ansible   = "ansible"
-	Awscli    = "awscli"
-	Furyagent = "furyagent"
-	Git       = "git"
-	Kubectl   = "kubectl"
-	Kustomize = "kustomize"
-	Openvpn   = "openvpn"
-	Terraform = "terraform"
+	Ansible   ToolName = "ansible"
+	Awscli    ToolName = "awscli"
+	Furyagent ToolName = "furyagent"
+	Git       ToolName = "git"
+	Kubectl   ToolName = "kubectl"
+	Kustomize ToolName = "kustomize"
+	Openvpn   ToolName = "openvpn"
+	Terraform ToolName = "terraform"
 )
 
 type Runner interface {
@@ -51,63 +53,57 @@ type RunnerFactory struct {
 	paths    RunnerFactoryPaths
 }
 
-func (rf *RunnerFactory) Create(name, version, workDir string) Runner {
-	if name == Ansible {
+func (rf *RunnerFactory) Create(name ToolName, version, workDir string) Runner {
+	switch name {
+	case Ansible:
 		return ansible.NewRunner(rf.executor, ansible.Paths{
-			Ansible: name,
+			Ansible: string(name),
 			WorkDir: workDir,
 		})
-	}
 
-	if name == Awscli {
+	case Awscli:
 		return awscli.NewRunner(rf.executor, awscli.Paths{
 			Awscli:  "aws",
 			WorkDir: workDir,
 		})
-	}
 
-	if name == Furyagent {
+	case Furyagent:
 		return furyagent.NewRunner(rf.executor, furyagent.Paths{
-			Furyagent: filepath.Join(rf.paths.Bin, name, version, name),
+			Furyagent: filepath.Join(rf.paths.Bin, string(name), version, string(name)),
 			WorkDir:   workDir,
 		})
-	}
 
-	if name == Git {
+	case Git:
 		return git.NewRunner(rf.executor, git.Paths{
 			Git:     "git",
 			WorkDir: workDir,
 		})
-	}
 
-	if name == Kubectl {
+	case Kubectl:
 		return kubectl.NewRunner(rf.executor, kubectl.Paths{
-			Kubectl: filepath.Join(rf.paths.Bin, name, version, name),
+			Kubectl: filepath.Join(rf.paths.Bin, string(name), version, string(name)),
 			WorkDir: workDir,
-		},
-			false, true, true)
-	}
+		}, false, true, true)
 
-	if name == Kustomize {
+	case Kustomize:
 		return kustomize.NewRunner(rf.executor, kustomize.Paths{
-			Kustomize: filepath.Join(rf.paths.Bin, name, version, name),
+			Kustomize: filepath.Join(rf.paths.Bin, string(name), version, string(name)),
 			WorkDir:   workDir,
 		})
-	}
 
-	if name == Openvpn {
+	case Openvpn:
 		return openvpn.NewRunner(rf.executor, openvpn.Paths{
-			Openvpn: filepath.Join(rf.paths.Bin, name, version, name),
+			Openvpn: filepath.Join(rf.paths.Bin, string(name), version, string(name)),
 			WorkDir: workDir,
 		})
-	}
 
-	if name == Terraform {
+	case Terraform:
 		return terraform.NewRunner(rf.executor, terraform.Paths{
-			Terraform: filepath.Join(rf.paths.Bin, name, version, name),
+			Terraform: filepath.Join(rf.paths.Bin, string(name), version, string(name)),
 			WorkDir:   workDir,
 		})
-	}
 
-	return nil
+	default:
+		return nil
+	}
 }

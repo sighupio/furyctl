@@ -57,3 +57,15 @@ func (a *Ansible) CheckBinVersion() error {
 
 	return nil
 }
+
+func (a *Ansible) CmdPath() string {
+	return a.checker.runner.CmdPath()
+}
+
+func (a *Ansible) OS() string {
+	return a.os
+}
+
+func (a *Ansible) Arch() string {
+	return a.arch
+}

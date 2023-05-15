@@ -14,12 +14,11 @@ import (
 	"reflect"
 	"strings"
 
-	"github.com/sirupsen/logrus"
-
 	"github.com/sighupio/fury-distribution/pkg/config"
 	"github.com/sighupio/furyctl/internal/dependencies/tools"
 	"github.com/sighupio/furyctl/internal/distribution"
 	"github.com/sighupio/furyctl/internal/semver"
+	"github.com/sighupio/furyctl/internal/tool"
 	execx "github.com/sighupio/furyctl/internal/x/exec"
 	iox "github.com/sighupio/furyctl/internal/x/io"
 	netx "github.com/sighupio/furyctl/internal/x/net"
@@ -43,7 +42,7 @@ func NewDownloader(client netx.Client, basePath, binPath string, https bool) *Do
 		basePath: basePath,
 		binPath:  binPath,
 		toolFactory: tools.NewFactory(execx.NewStdExecutor(), tools.FactoryPaths{
-			Bin: filepath.Join(basePath, "vendor", "bin"),
+			Bin: binPath,
 		}),
 		HTTPS: https,
 	}
@@ -59,19 +58,6 @@ type Downloader struct {
 
 func (dd *Downloader) DownloadAll(kfd config.KFD) ([]error, []string) {
 	errs := []error{}
-
-	vendorFolder := filepath.Join(dd.basePath, "vendor")
-
-	logrus.Debug("Cleaning vendor folder")
-
-	if err := iox.CheckDirIsEmpty(vendorFolder); err != nil {
-		err = os.RemoveAll(vendorFolder)
-		if err != nil {
-			logrus.Debugf("Error while cleaning vendor folder: %v", err)
-
-			return []error{fmt.Errorf("error removing folder: %w", err)}, nil
-		}
-	}
 
 	gitPrefix := GithubSSHRepoPrefix
 
@@ -117,6 +103,13 @@ func (dd *Downloader) DownloadModules(modules config.KFDModules, gitPrefix strin
 		retries := map[string]int{}
 
 		dst := filepath.Join(dd.basePath, "vendor", "modules", name)
+
+		if err := iox.CheckDirIsEmpty(dst); err != nil {
+			err = os.RemoveAll(dst)
+			if err != nil {
+				return fmt.Errorf("error removing module folder: %w", err)
+			}
+		}
 
 		for _, prefix := range []string{oldPrefix, newPrefix} {
 			src := fmt.Sprintf("git::%s/%s-%s?ref=%s&depth=1", gitPrefix, prefix, name, version)
@@ -181,6 +174,13 @@ func (dd *Downloader) DownloadInstallers(installers config.KFDKubernetes, gitPre
 
 		dst := filepath.Join(dd.basePath, "vendor", "installers", name)
 
+		if err := iox.CheckDirIsEmpty(dst); err != nil {
+			err = os.RemoveAll(dst)
+			if err != nil {
+				return fmt.Errorf("error removing installer folder: %w", err)
+			}
+		}
+
 		v, ok := insts.Field(i).Interface().(config.KFDProvider)
 		if !ok {
 			return fmt.Errorf("%s: %w", name, ErrModuleHasNoVersion)
@@ -212,32 +212,42 @@ func (dd *Downloader) DownloadTools(kfdTools config.KFDTools) ([]string, error) 
 		for j := 0; j < tls.Field(i).NumField(); j++ {
 			name := strings.ToLower(tls.Field(i).Type().Field(j).Name)
 
-			version, ok := tls.Field(i).Field(j).Interface().(config.Tool)
-
+			tlcfg, ok := tls.Field(i).Field(j).Interface().(config.Tool)
 			if !ok {
 				return unsupportedTools, fmt.Errorf("%s: %w", name, ErrModuleHasNoVersion)
 			}
 
-			tool := dd.toolFactory.Create(name, version.String())
-			if tool == nil || !tool.SupportsDownload() {
+			tl := dd.toolFactory.Create(tool.ToolName(name), tlcfg.Version)
+			if tl == nil || !tl.SupportsDownload() {
 				unsupportedTools = append(unsupportedTools, name)
 
 				continue
 			}
 
-			dst := filepath.Join(dd.binPath, name, version.String())
+			dst := filepath.Join(dd.binPath, name, tlcfg.Version)
 
-			if err := dd.client.Download(tool.SrcPath(), dst); err != nil {
-				return unsupportedTools, fmt.Errorf("%w '%s': %v", distribution.ErrDownloadingFolder, tool.SrcPath(), err)
+			if err := tools.ValidateChecksum(tl, tlcfg.Checksums); err == nil {
+				continue
 			}
 
-			if err := tool.Rename(dst); err != nil {
-				return unsupportedTools, fmt.Errorf("%w '%s': %v", distribution.ErrRenamingFile, tool.SrcPath(), err)
+			if err := iox.CheckDirIsEmpty(dst); err != nil {
+				err = os.RemoveAll(dst)
+				if err != nil {
+					return unsupportedTools, fmt.Errorf("error removing tool folder: %w", err)
+				}
+			}
+
+			if err := dd.client.Download(tl.SrcPath(), dst); err != nil {
+				return unsupportedTools, fmt.Errorf("%w '%s': %v", distribution.ErrDownloadingFolder, tl.SrcPath(), err)
+			}
+
+			if err := tl.Rename(dst); err != nil {
+				return unsupportedTools, fmt.Errorf("%w '%s': %v", distribution.ErrRenamingFile, tl.SrcPath(), err)
 			}
 
 			err := os.Chmod(filepath.Join(dst, name), iox.FullPermAccess)
 			if err != nil {
-				return unsupportedTools, fmt.Errorf("%w '%s': %v", distribution.ErrChangingFilePermissions, tool.SrcPath(), err)
+				return unsupportedTools, fmt.Errorf("%w '%s': %v", distribution.ErrChangingFilePermissions, tl.SrcPath(), err)
 			}
 		}
 	}

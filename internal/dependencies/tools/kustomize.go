@@ -65,3 +65,15 @@ func (k *Kustomize) CheckBinVersion() error {
 
 	return nil
 }
+
+func (k *Kustomize) CmdPath() string {
+	return k.checker.runner.CmdPath()
+}
+
+func (k *Kustomize) OS() string {
+	return k.os
+}
+
+func (k *Kustomize) Arch() string {
+	return k.arch
+}

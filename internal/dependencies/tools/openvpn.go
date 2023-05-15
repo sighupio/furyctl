@@ -58,3 +58,15 @@ func (o *Openvpn) CheckBinVersion() error {
 
 	return nil
 }
+
+func (o *Openvpn) CmdPath() string {
+	return o.checker.runner.CmdPath()
+}
+
+func (o *Openvpn) OS() string {
+	return o.os
+}
+
+func (o *Openvpn) Arch() string {
+	return o.arch
+}

@@ -50,10 +50,22 @@ func (*Git) Rename(_ string) error {
 	return nil
 }
 
-func (a *Git) CheckBinVersion() error {
-	if err := a.checker.version(a.version); err != nil {
+func (g *Git) CheckBinVersion() error {
+	if err := g.checker.version(g.version); err != nil {
 		return fmt.Errorf("git: %w", err)
 	}
 
 	return nil
+}
+
+func (g *Git) CmdPath() string {
+	return g.checker.runner.CmdPath()
+}
+
+func (g *Git) OS() string {
+	return g.os
+}
+
+func (g *Git) Arch() string {
+	return g.arch
 }

@@ -65,3 +65,15 @@ func (t *Terraform) CheckBinVersion() error {
 
 	return nil
 }
+
+func (t *Terraform) CmdPath() string {
+	return t.checker.runner.CmdPath()
+}
+
+func (t *Terraform) OS() string {
+	return t.os
+}
+
+func (t *Terraform) Arch() string {
+	return t.arch
+}

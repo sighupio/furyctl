@@ -60,3 +60,15 @@ func (a *Awscli) CheckBinVersion() error {
 
 	return nil
 }
+
+func (a *Awscli) CmdPath() string {
+	return a.checker.runner.CmdPath()
+}
+
+func (a *Awscli) OS() string {
+	return a.os
+}
+
+func (a *Awscli) Arch() string {
+	return a.arch
+}

@@ -73,3 +73,15 @@ func (f *Furyagent) CheckBinVersion() error {
 
 	return nil
 }
+
+func (f *Furyagent) CmdPath() string {
+	return f.checker.runner.CmdPath()
+}
+
+func (f *Furyagent) OS() string {
+	return f.os
+}
+
+func (f *Furyagent) Arch() string {
+	return f.arch
+}
