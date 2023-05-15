@@ -136,6 +136,8 @@ func TestHelperProcess(t *testing.T) {
 			fmt.Fprintf(os.Stdout, `{"outputs":{"foo":{"sensitive":false,"value":"bar"}}}`)
 		case "version":
 			fmt.Fprintf(os.Stdout, "v1.2.3")
+		case "output":
+			fmt.Fprintf(os.Stdout, `{"outputs":{"foo":{"sensitive":false,"value":"bar"}}}`)
 		default:
 			fmt.Fprintf(os.Stdout, "subcommand '%s' not found", subcmd)
 		}
