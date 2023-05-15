@@ -126,21 +126,6 @@ func (d *Distribution) Exec() error {
 
 	logrus.Debug("Create: running distribution phase...")
 
-	logrus.Info("Checking that the cluster is reachable...")
-
-	if _, err := d.kubeRunner.Version(); err != nil {
-		logrus.Debugf("Got error while running cluster reachability check: %s", err)
-
-		if !d.dryRun {
-			return errClusterConnect
-		}
-
-		if d.phase == cluster.OperationPhaseDistribution {
-			logrus.Warnf("Cluster is unreachable, make sure it is reachable before " +
-				"running the command without --dry-run")
-		}
-	}
-
 	if err := d.CreateFolder(); err != nil {
 		return fmt.Errorf("error creating distribution phase folder: %w", err)
 	}
@@ -205,8 +190,7 @@ func (d *Distribution) Exec() error {
 
 	logrus.Warn("Creating cloud resources, this could take a while...")
 
-	_, err = d.tfRunner.Apply(timestamp)
-	if err != nil {
+	if err := d.tfRunner.Apply(timestamp); err != nil {
 		return fmt.Errorf("cannot create cloud resources: %w", err)
 	}
 
@@ -229,6 +213,21 @@ func (d *Distribution) Exec() error {
 	manifestsOutPath, err := d.buildManifests()
 	if err != nil {
 		return err
+	}
+
+	logrus.Info("Checking that the cluster is reachable...")
+
+	if _, err := d.kubeRunner.Version(); err != nil {
+		logrus.Debugf("Got error while running cluster reachability check: %s", err)
+
+		if !d.dryRun {
+			return errClusterConnect
+		}
+
+		if d.phase == cluster.OperationPhaseDistribution {
+			logrus.Warnf("Cluster is unreachable, make sure it is reachable before " +
+				"running the command without --dry-run")
+		}
 	}
 
 	logrus.Info("Applying manifests...")
@@ -376,11 +375,11 @@ func (d *Distribution) extractVpcIDFromPrevPhases(fMerger *merge.Merger) (string
 		var infraOut terraform.OutputJSON
 
 		if err := json.Unmarshal(infraOutJSON, &infraOut); err == nil {
-			if infraOut.Outputs["vpc_id"] == nil {
+			if infraOut["vpc_id"] == nil {
 				return vpcID, ErrVpcIDNotFound
 			}
 
-			vpcIDOut, ok := infraOut.Outputs["vpc_id"].Value.(string)
+			vpcIDOut, ok := infraOut["vpc_id"].Value.(string)
 			if !ok {
 				return vpcID, errCastingVpcIDToStr
 			}
@@ -512,7 +511,7 @@ func (d *Distribution) extractARNsFromTfOut() (map[string]string, error) {
 		return nil, fmt.Errorf("error unmarshaling distribution output: %w", err)
 	}
 
-	ebsCsiDriverArn, ok := distroOut.Outputs["ebs_csi_driver_iam_role_arn"]
+	ebsCsiDriverArn, ok := distroOut["ebs_csi_driver_iam_role_arn"]
 	if ok {
 		arns["ebs_csi_driver_iam_role_arn"], ok = ebsCsiDriverArn.Value.(string)
 		if !ok {
@@ -520,7 +519,7 @@ func (d *Distribution) extractARNsFromTfOut() (map[string]string, error) {
 		}
 	}
 
-	loadBalancerControllerArn, ok := distroOut.Outputs["load_balancer_controller_iam_role_arn"]
+	loadBalancerControllerArn, ok := distroOut["load_balancer_controller_iam_role_arn"]
 	if ok {
 		arns["load_balancer_controller_iam_role_arn"], ok = loadBalancerControllerArn.Value.(string)
 		if !ok {
@@ -528,7 +527,7 @@ func (d *Distribution) extractARNsFromTfOut() (map[string]string, error) {
 		}
 	}
 
-	clusterAutoscalerArn, ok := distroOut.Outputs["cluster_autoscaler_iam_role_arn"]
+	clusterAutoscalerArn, ok := distroOut["cluster_autoscaler_iam_role_arn"]
 	if ok {
 		arns["cluster_autoscaler_iam_role_arn"], ok = clusterAutoscalerArn.Value.(string)
 		if !ok {
@@ -536,7 +535,7 @@ func (d *Distribution) extractARNsFromTfOut() (map[string]string, error) {
 		}
 	}
 
-	externalDNSPrivateArn, ok := distroOut.Outputs["external_dns_private_iam_role_arn"]
+	externalDNSPrivateArn, ok := distroOut["external_dns_private_iam_role_arn"]
 	if ok {
 		arns["external_dns_private_iam_role_arn"], ok = externalDNSPrivateArn.Value.(string)
 		if !ok {
@@ -544,7 +543,7 @@ func (d *Distribution) extractARNsFromTfOut() (map[string]string, error) {
 		}
 	}
 
-	externalDNSPublicArn, ok := distroOut.Outputs["external_dns_public_iam_role_arn"]
+	externalDNSPublicArn, ok := distroOut["external_dns_public_iam_role_arn"]
 	if ok {
 		arns["external_dns_public_iam_role_arn"], ok = externalDNSPublicArn.Value.(string)
 		if !ok {
@@ -552,7 +551,7 @@ func (d *Distribution) extractARNsFromTfOut() (map[string]string, error) {
 		}
 	}
 
-	certManagerArn, ok := distroOut.Outputs["cert_manager_iam_role_arn"]
+	certManagerArn, ok := distroOut["cert_manager_iam_role_arn"]
 	if ok {
 		arns["cert_manager_iam_role_arn"], ok = certManagerArn.Value.(string)
 		if !ok {
@@ -560,7 +559,7 @@ func (d *Distribution) extractARNsFromTfOut() (map[string]string, error) {
 		}
 	}
 
-	veleroArn, ok := distroOut.Outputs["velero_iam_role_arn"]
+	veleroArn, ok := distroOut["velero_iam_role_arn"]
 	if ok {
 		arns["velero_iam_role_arn"], ok = veleroArn.Value.(string)
 		if !ok {

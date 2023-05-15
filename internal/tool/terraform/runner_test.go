@@ -64,7 +64,7 @@ func Test_Runner_Apply(t *testing.T) {
 
 	r := terraform.NewRunner(execx.NewFakeExecutor(), paths)
 
-	if _, err := r.Apply(42); err != nil {
+	if err := r.Apply(42); err != nil {
 		t.Fatal(err)
 	}
 
@@ -75,6 +75,22 @@ func Test_Runner_Apply(t *testing.T) {
 
 	if info1.Size() == 0 {
 		t.Error("expected '42.log' file to be not empty")
+	}
+}
+
+func Test_Runner_Output(t *testing.T) {
+	paths := terraform.Paths{
+		Terraform: "terraform",
+		WorkDir:   test.MkdirTemp(t),
+		Logs:      test.MkdirTemp(t),
+		Outputs:   test.MkdirTemp(t),
+		Plan:      test.MkdirTemp(t),
+	}
+
+	r := terraform.NewRunner(execx.NewFakeExecutor(), paths)
+
+	if _, err := r.Output(); err != nil {
+		t.Fatal(err)
 	}
 
 	info2, err := os.Stat(filepath.Join(paths.Outputs, "output.json"))
@@ -136,6 +152,8 @@ func TestHelperProcess(t *testing.T) {
 			fmt.Fprintf(os.Stdout, `{"outputs":{"foo":{"sensitive":false,"value":"bar"}}}`)
 		case "version":
 			fmt.Fprintf(os.Stdout, "v1.2.3")
+		case "output":
+			fmt.Fprintf(os.Stdout, `{"outputs":{"foo":{"sensitive":false,"value":"bar"}}}`)
 		default:
 			fmt.Fprintf(os.Stdout, "subcommand '%s' not found", subcmd)
 		}

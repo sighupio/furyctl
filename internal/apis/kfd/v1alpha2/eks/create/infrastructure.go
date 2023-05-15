@@ -144,7 +144,7 @@ func (i *Infrastructure) Exec() error {
 
 	logrus.Warn("Creating cloud resources, this could take a while...")
 
-	if _, err := i.tfRunner.Apply(timestamp); err != nil {
+	if err := i.tfRunner.Apply(timestamp); err != nil {
 		return fmt.Errorf("cannot create cloud resources: %w", err)
 	}
 
