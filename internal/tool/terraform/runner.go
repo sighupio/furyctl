@@ -6,7 +6,6 @@ package terraform
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"os"
 	"path"
@@ -17,8 +16,6 @@ import (
 	execx "github.com/sighupio/furyctl/internal/x/exec"
 	iox "github.com/sighupio/furyctl/internal/x/io"
 )
-
-var errOutputFromApply = errors.New("can't get outputs from terraform apply logs")
 
 type OutputJSON map[string]*tfjson.StateOutput
 
@@ -115,8 +112,8 @@ func (r *Runner) Plan(timestamp int64, params ...string) ([]byte, error) {
 func (r *Runner) Apply(timestamp int64) (OutputJSON, error) {
 	var oj OutputJSON
 
-	cmd, applyId := r.newCmd([]string{"apply", "-no-color", "-json", "plan/terraform.plan"})
-	defer r.deleteCmd(applyId)
+	cmd, applyID := r.newCmd([]string{"apply", "-no-color", "-json", "plan/terraform.plan"})
+	defer r.deleteCmd(applyID)
 
 	if err := cmd.Run(); err != nil {
 		return oj, fmt.Errorf("cannot create cloud resources: %w", err)
@@ -130,8 +127,8 @@ func (r *Runner) Apply(timestamp int64) (OutputJSON, error) {
 		return oj, fmt.Errorf("error writing terraform apply log: %w", err)
 	}
 
-	cmd, outputId := r.newCmd([]string{"output", "-json"})
-	defer r.deleteCmd(outputId)
+	cmd, outputID := r.newCmd([]string{"output", "-json"})
+	defer r.deleteCmd(outputID)
 
 	if err := cmd.Run(); err != nil {
 		return oj, fmt.Errorf("cannot access terraform apply output: %w", err)
