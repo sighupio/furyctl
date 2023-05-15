@@ -10,6 +10,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 
 	"github.com/sighupio/fury-distribution/pkg/config"
@@ -42,7 +43,10 @@ func NewOpenVPNCmd(tracker *analytics.Tracker) *cobra.Command {
 			cmdEvent = analytics.NewCommandEvent(cobrax.GetFullname(cmd))
 		},
 		RunE: func(cmd *cobra.Command, _ []string) error {
+			logrus.Info("Connecting to OpenVPN...")
+
 			// Parse flags.
+			logrus.Debug("Parsing VPN Flags...")
 			flags, err := getOpenVPNCmdFlags(cmd, tracker, cmdEvent)
 			if err != nil {
 				return err
@@ -53,6 +57,7 @@ func NewOpenVPNCmd(tracker *analytics.Tracker) *cobra.Command {
 			}
 
 			// Get home dir.
+			logrus.Debug("Getting Home Directory Path...")
 			homeDir, err := os.UserHomeDir()
 			if err != nil {
 				cmdEvent.AddErrorMessage(err)
@@ -62,6 +67,7 @@ func NewOpenVPNCmd(tracker *analytics.Tracker) *cobra.Command {
 			}
 
 			// Parse furyctl.yaml config.
+			logrus.Debug("Parsing furyctl.yaml file...")
 			furyctlConf, err := yamlx.FromFileV3[config.Furyctl](flags.FuryctlPath)
 			if err != nil {
 				cmdEvent.AddErrorMessage(err)
@@ -71,6 +77,7 @@ func NewOpenVPNCmd(tracker *analytics.Tracker) *cobra.Command {
 			}
 
 			// Set common paths.
+			logrus.Debug("Setting common paths...")
 			basePath := filepath.Join(homeDir, ".furyctl", furyctlConf.Metadata.Name)
 			openVPNWorkDir := filepath.Join(basePath, "infrastructure", "terraform", "secrets")
 
@@ -82,6 +89,7 @@ func NewOpenVPNCmd(tracker *analytics.Tracker) *cobra.Command {
 			})
 
 			// Start openvpn process.
+			logrus.Debug("Running OpenVPN...")
 			if err := openVPNCmd.Run(); err != nil {
 				err = fmt.Errorf("%w: %w", ErrRunningOpenVPN, err)
 				cmdEvent.AddErrorMessage(err)
