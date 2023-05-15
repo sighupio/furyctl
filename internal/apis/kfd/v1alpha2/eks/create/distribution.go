@@ -190,8 +190,7 @@ func (d *Distribution) Exec() error {
 
 	logrus.Warn("Creating cloud resources, this could take a while...")
 
-	_, err = d.tfRunner.Apply(timestamp)
-	if err != nil {
+	if err := d.tfRunner.Apply(timestamp); err != nil {
 		return fmt.Errorf("cannot create cloud resources: %w", err)
 	}
 

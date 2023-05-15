@@ -201,9 +201,13 @@ func (k *Kubernetes) Exec() error {
 
 	logrus.Warn("Creating cloud resources, this could take a while...")
 
-	out, err := k.tfRunner.Apply(timestamp)
-	if err != nil {
+	if err := k.tfRunner.Apply(timestamp); err != nil {
 		return fmt.Errorf("cannot create cloud resources: %w", err)
+	}
+
+	out, err := k.tfRunner.Output()
+	if err != nil {
+		return fmt.Errorf("error getting terraform output: %w", err)
 	}
 
 	if out["kubeconfig"] == nil {

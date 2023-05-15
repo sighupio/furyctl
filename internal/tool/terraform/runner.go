@@ -109,14 +109,12 @@ func (r *Runner) Plan(timestamp int64, params ...string) ([]byte, error) {
 	return out, nil
 }
 
-func (r *Runner) Apply(timestamp int64) (OutputJSON, error) {
-	var oj OutputJSON
-
+func (r *Runner) Apply(timestamp int64) error {
 	cmd, applyID := r.newCmd([]string{"apply", "-no-color", "-json", "plan/terraform.plan"})
 	defer r.deleteCmd(applyID)
 
 	if err := cmd.Run(); err != nil {
-		return oj, fmt.Errorf("cannot create cloud resources: %w", err)
+		return fmt.Errorf("cannot create cloud resources: %w", err)
 	}
 
 	if err := os.WriteFile(
@@ -124,8 +122,14 @@ func (r *Runner) Apply(timestamp int64) (OutputJSON, error) {
 		cmd.Log.Out.Bytes(),
 		iox.FullRWPermAccess,
 	); err != nil {
-		return oj, fmt.Errorf("error writing terraform apply log: %w", err)
+		return fmt.Errorf("error writing terraform apply log: %w", err)
 	}
+
+	return nil
+}
+
+func (r *Runner) Output() (OutputJSON, error) {
+	var oj OutputJSON
 
 	cmd, outputID := r.newCmd([]string{"output", "-json"})
 	defer r.deleteCmd(outputID)
