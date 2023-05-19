@@ -15,7 +15,7 @@ import (
 
 func NewAnsible(runner *ansible.Runner, version string) *Ansible {
 	return &Ansible{
-		arch:    "amd64",
+		arch:    runtime.GOARCH,
 		os:      runtime.GOOS,
 		version: version,
 		checker: &checker{

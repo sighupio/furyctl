@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-//nolint:dupl // false positive
 package tools
 
 import (
@@ -17,7 +16,7 @@ import (
 
 func NewTerraform(runner *terraform.Runner, version string) *Terraform {
 	return &Terraform{
-		arch:    "amd64",
+		arch:    runtime.GOARCH,
 		os:      runtime.GOOS,
 		version: version,
 		checker: &checker{

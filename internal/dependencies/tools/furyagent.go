@@ -18,7 +18,7 @@ import (
 
 func NewFuryagent(runner *furyagent.Runner, version string) *Furyagent {
 	return &Furyagent{
-		arch:    "amd64",
+		arch:    runtime.GOARCH,
 		os:      runtime.GOOS,
 		version: version,
 		checker: &checker{
