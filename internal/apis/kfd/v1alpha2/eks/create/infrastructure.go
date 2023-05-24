@@ -148,6 +148,10 @@ func (i *Infrastructure) Exec() error {
 		return fmt.Errorf("cannot create cloud resources: %w", err)
 	}
 
+	if _, err := i.tfRunner.Output(); err != nil {
+		return fmt.Errorf("error getting terraform output: %w", err)
+	}
+
 	return nil
 }
 
