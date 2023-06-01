@@ -88,7 +88,10 @@ func NewConfigWithoutData(tplSource *merge.Merger, excluded []string) (Config, e
 
 	tmpl.Excludes = append(tmpl.Excludes, excluded...)
 
+	builder := mapx.NewBuilder(false)
+
 	cfg.Templates = tmpl
+	cfg.Data = builder.ToMapStringAny((*tplSource.GetBase()).Content())
 	cfg.Include = nil
 
 	return cfg, nil
