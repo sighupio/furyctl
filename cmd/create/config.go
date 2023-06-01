@@ -13,7 +13,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 
-	distroConfig "github.com/sighupio/fury-distribution/pkg/config"
+	distroConfig "github.com/sighupio/fury-distribution/pkg/apis/config"
 	"github.com/sighupio/furyctl/internal/analytics"
 	"github.com/sighupio/furyctl/internal/cmd/cmdutil"
 	"github.com/sighupio/furyctl/internal/config"
@@ -92,10 +92,10 @@ func NewConfigCmd(tracker *analytics.Tracker) *cobra.Command {
 				},
 				Spec: distroConfig.FuryctlSpec{
 					DistributionVersion: semver.EnsurePrefix(version),
-					ToolsConfiguration: distroConfig.ToolsConfiguration{
-						Terraform: distroConfig.Terraform{
-							State: distroConfig.State{
-								S3: distroConfig.S3{
+					ToolsConfiguration: &distroConfig.ToolsConfiguration{
+						Terraform: distroConfig.ToolsConfigurationTerraform{
+							State: distroConfig.ToolsConfigurationTerrraformState{
+								S3: distroConfig.ToolsConfigurationTerrraformStateS3{
 									BucketName: "bucket-name",
 									KeyPrefix:  "key-prefix",
 									Region:     "eu-west-1",
@@ -203,7 +203,7 @@ func NewConfigCmd(tracker *analytics.Tracker) *cobra.Command {
 		"kind",
 		"k",
 		"EKSCluster",
-		"Type of cluster to create (eg: EKSCluster)",
+		"Type of cluster to create (eg: EKSCluster, KFDDistribution)",
 	)
 
 	cmd.Flags().StringP(

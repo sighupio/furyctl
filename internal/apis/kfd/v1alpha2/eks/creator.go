@@ -16,8 +16,8 @@ import (
 
 	"github.com/sirupsen/logrus"
 
-	"github.com/sighupio/fury-distribution/pkg/config"
-	"github.com/sighupio/fury-distribution/pkg/schema/private"
+	"github.com/sighupio/fury-distribution/pkg/apis/config"
+	"github.com/sighupio/fury-distribution/pkg/apis/ekscluster/v1alpha2/private"
 	"github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/eks/create"
 	"github.com/sighupio/furyctl/internal/cluster"
 	"github.com/sighupio/furyctl/internal/tool/kubectl"
@@ -52,11 +52,6 @@ func (v *ClusterCreator) SetProperty(name string, value any) {
 	lcName := strings.ToLower(name)
 
 	switch lcName {
-	case cluster.CreatorPropertyConfigPath:
-		if s, ok := value.(string); ok {
-			v.paths.ConfigPath = s
-		}
-
 	case cluster.CreatorPropertyFuryctlConf:
 		if s, ok := value.(private.EksclusterKfdV1Alpha2); ok {
 			v.furyctlConf = s
@@ -80,6 +75,11 @@ func (v *ClusterCreator) SetProperty(name string, value any) {
 	case cluster.CreatorPropertyVpnAutoConnect:
 		if b, ok := value.(bool); ok {
 			v.vpnAutoConnect = b
+		}
+
+	case cluster.CreatorPropertyConfigPath:
+		if s, ok := value.(string); ok {
+			v.paths.ConfigPath = s
 		}
 
 	case cluster.CreatorPropertyDistroPath:
