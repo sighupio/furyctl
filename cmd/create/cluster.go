@@ -78,8 +78,7 @@ func NewClusterCmd(tracker *analytics.Tracker) *cobra.Command {
 			kubeconfigPath := flags.Kubeconfig
 
 			if kubeconfigPath != "" &&
-				(flags.Phase != cluster.OperationPhaseDistribution ||
-					flags.SkipPhase != cluster.OperationPhaseKubernetes) {
+				flags.Phase != cluster.OperationPhaseDistribution {
 				return fmt.Errorf(
 					"%w: --kubeconfig flag can only be used when running distribution phase alone",
 					ErrParsingFlag,

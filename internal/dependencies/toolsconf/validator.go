@@ -10,7 +10,7 @@ import (
 
 	"github.com/sirupsen/logrus"
 
-	"github.com/sighupio/fury-distribution/pkg/config"
+	"github.com/sighupio/fury-distribution/pkg/apis/config"
 	"github.com/sighupio/furyctl/internal/tool/awscli"
 	execx "github.com/sighupio/furyctl/internal/x/exec"
 )
@@ -36,7 +36,7 @@ type Validator struct {
 	awsCliRunner *awscli.Runner
 }
 
-func (v *Validator) Validate(s3Conf config.S3) ([]string, []error) {
+func (v *Validator) Validate(s3Conf config.ToolsConfigurationTerrraformStateS3) ([]string, []error) {
 	return v.checkAWSS3Bucket(s3Conf.BucketName, s3Conf.Region)
 }
 

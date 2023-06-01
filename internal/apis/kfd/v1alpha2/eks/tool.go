@@ -7,7 +7,7 @@ package eks
 import (
 	"fmt"
 
-	"github.com/sighupio/fury-distribution/pkg/schema/private"
+	"github.com/sighupio/fury-distribution/pkg/apis/ekscluster/v1alpha2/private"
 	"github.com/sighupio/furyctl/internal/tool/openvpn"
 	execx "github.com/sighupio/furyctl/internal/x/exec"
 	yamlx "github.com/sighupio/furyctl/internal/x/yaml"

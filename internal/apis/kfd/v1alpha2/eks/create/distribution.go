@@ -16,8 +16,8 @@ import (
 
 	"github.com/sirupsen/logrus"
 
-	"github.com/sighupio/fury-distribution/pkg/config"
-	"github.com/sighupio/fury-distribution/pkg/schema/private"
+	"github.com/sighupio/fury-distribution/pkg/apis/config"
+	"github.com/sighupio/fury-distribution/pkg/apis/ekscluster/v1alpha2/private"
 	"github.com/sighupio/furyctl/internal/cluster"
 	"github.com/sighupio/furyctl/internal/merge"
 	"github.com/sighupio/furyctl/internal/template"
@@ -292,7 +292,7 @@ func (d *Distribution) Stop() error {
 }
 
 func (d *Distribution) createFuryctlMerger() (*merge.Merger, error) {
-	defaultsFilePath := path.Join(d.distroPath, "furyctl-defaults.yaml")
+	defaultsFilePath := path.Join(d.distroPath, "defaults", "ekscluster-kfd-v1alpha2.yaml")
 
 	defaultsFile, err := yamlx.FromFileV2[map[any]any](defaultsFilePath)
 	if err != nil {

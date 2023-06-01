@@ -67,6 +67,33 @@ func NewConfig(tplSource, data *merge.Merger, excluded []string) (Config, error)
 	return cfg, nil
 }
 
+func NewConfigWithoutData(tplSource *merge.Merger, excluded []string) (Config, error) {
+	var cfg Config
+
+	if *tplSource.GetCustom() == nil {
+		return cfg, ErrTemplateSourceCustomIsNil
+	}
+
+	tmpl := Templates{}
+
+	mergedTmpl, ok := (*tplSource.GetCustom()).Content()["templates"]
+	if ok {
+		tmplMap, err := newTemplatesFromMap(mergedTmpl)
+		if err != nil {
+			return cfg, err
+		}
+
+		tmpl = *tmplMap
+	}
+
+	tmpl.Excludes = append(tmpl.Excludes, excluded...)
+
+	cfg.Templates = tmpl
+	cfg.Include = nil
+
+	return cfg, nil
+}
+
 func newTemplatesFromMap(t any) (*Templates, error) {
 	var exc []string
 

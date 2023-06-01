@@ -4,7 +4,10 @@
 
 package apis
 
-import "github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/eks"
+import (
+	"github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/distribution"
+	"github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/eks"
+)
 
 type ExtraSchemaValidator interface {
 	Validate(confPath string) error
@@ -16,6 +19,9 @@ func NewExtraSchemaValidatorFactory(apiVersion, kind string) ExtraSchemaValidato
 		switch kind {
 		case "EKSCluster":
 			return &eks.ExtraSchemaValidator{}
+
+		case "KFDDistribution":
+			return &distribution.ExtraSchemaValidator{}
 
 		default:
 			return nil
