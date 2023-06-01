@@ -5,7 +5,7 @@
 package eks
 
 import (
-	"github.com/sighupio/fury-distribution/pkg/schema/private"
+	"github.com/sighupio/fury-distribution/pkg/apis/ekscluster/v1alpha2/private"
 	"github.com/sighupio/furyctl/internal/cluster"
 )
 
