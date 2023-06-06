@@ -30,9 +30,7 @@ const (
 	kubectlNoDelayMaxRetry = 7
 )
 
-var (
-	errClusterConnect = errors.New("error connecting to cluster")
-)
+var errClusterConnect = errors.New("error connecting to cluster")
 
 type Distribution struct {
 	*cluster.OperationPhase
