@@ -96,7 +96,7 @@ steps:
       - chmod 600 /root/.ssh/known_hosts
       - ssh-keyscan -H github.com > /etc/ssh/ssh_known_hosts 2> /dev/null
       # Create required s3 bucket if it doesn't exist
-      - (test ! $(aws s3api get-bucket-location --bucket furyctl-e2e-deps-test --output text --no-cli-pager 2>/dev/null | grep "$${AWS_DEFAULT_REGION}")) && aws s3 mb s3://furyctl-e2e-deps-test --region $${AWS_DEFAULT_REGION}
+      - (test ! $(aws s3api get-bucket-location --bucket $${TERRAFORM_TF_STATES_BUCKET_NAME} --output text --no-cli-pager 2>/dev/null | grep "$${AWS_DEFAULT_REGION}")) && aws s3 mb s3://$${TERRAFORM_TF_STATES_BUCKET_NAME} --region $${AWS_DEFAULT_REGION}
       # Run tests
       - make test-e2e
       # Cleanup
@@ -121,6 +121,8 @@ steps:
         from_secret: NETRC_FILE
       GITHUB_SSH:
         from_secret: GITHUB_SSH
+      TERRAFORM_TF_STATES_BUCKET_NAME:
+        from_secret: TERRAFORM_TF_STATES_BUCKET_NAME
 
   - name: build
     image: ghcr.io/goreleaser/goreleaser:v1.15.2
