@@ -30,7 +30,11 @@ const (
 	kubectlNoDelayMaxRetry = 7
 )
 
-var errClusterConnect = errors.New("error connecting to cluster")
+var (
+	errClusterConnect = errors.New("error connecting to cluster")
+	errNoStorageClass = errors.New("at least one storage class is required")
+	errNodesNotReady  = errors.New("all nodes should be Ready")
+)
 
 type Distribution struct {
 	*cluster.OperationPhase
@@ -102,7 +106,7 @@ func (d *Distribution) Exec() error {
 		return fmt.Errorf("error creating template config: %w", err)
 	}
 
-	// GENERATE MANIFESTS
+	// Generate manifests.
 	outYaml, err := yamlx.MarshalV2(mCfg)
 	if err != nil {
 		return fmt.Errorf("error marshaling template config: %w", err)
@@ -139,7 +143,7 @@ func (d *Distribution) Exec() error {
 		return fmt.Errorf("error generating from template files: %w", err)
 	}
 
-	// BUILD MANIFESTS
+	// Build manifests.
 	logrus.Info("Building manifests...")
 
 	kzOut, err := d.kzRunner.Build()
@@ -160,12 +164,12 @@ func (d *Distribution) Exec() error {
 		return fmt.Errorf("error writing built manifests: %w", err)
 	}
 
-	// STOP IF DRY RUN
+	// Stop if dry run is enabled.
 	if d.dryRun {
 		return nil
 	}
 
-	// CHECK CLUSTER
+	// Check cluster connection and requirements.
 	logrus.Info("Checking that the cluster is reachable...")
 
 	if _, err := d.kubeRunner.Version(); err != nil {
@@ -181,7 +185,27 @@ func (d *Distribution) Exec() error {
 		}
 	}
 
-	// APPLY MANIFESTS
+	logrus.Info("Checking if at least one storage class is available...")
+	getStorageClassesOutput, err := d.kubeRunner.Get("", "storageclasses")
+	if err != nil {
+		return fmt.Errorf("error while checking storage class: %w", err)
+	}
+
+	if getStorageClassesOutput == "No resources found" {
+		return errNoStorageClass
+	}
+
+	logrus.Info("Checking if all nodes are ready...")
+	getNotReadyNodesOutput, err := d.kubeRunner.Get("", "nodes", "--output", "jsonpath=\"{range .items[?(@.status.conditions[-1].type=='NotReady')]}{.metadata.name} {.status.conditions[-1].type}{'\\n'}{end}\"")
+	if err != nil {
+		return fmt.Errorf("error while checking nodes: %w", err)
+	}
+
+	if getNotReadyNodesOutput != "\"\"" {
+		return errNodesNotReady
+	}
+
+	// Apply manifests.
 	logrus.Info("Applying manifests...")
 
 	if err := d.delayedApplyRetries(manifestsOutPath, time.Minute, kubectlDelayMaxRetry); err != nil {
