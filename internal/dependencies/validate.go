@@ -55,10 +55,12 @@ func (v *Validator) Validate(res distribution.DownloadResult) error {
 		return fmt.Errorf("%w: %v", errValidatingEnv, errs)
 	}
 
-	if _, errs := v.infraValidator.Validate(
-		res.MinimalConf.Spec.ToolsConfiguration.Terraform.State.S3,
-	); len(errs) > 0 {
-		return fmt.Errorf("%w: %v", errValidatingToolsConf, errs)
+	if res.MinimalConf.Spec.ToolsConfiguration != nil {
+		if _, errs := v.infraValidator.Validate(
+			res.MinimalConf.Spec.ToolsConfiguration.Terraform.State.S3,
+		); len(errs) > 0 {
+			return fmt.Errorf("%w: %v", errValidatingToolsConf, errs)
+		}
 	}
 
 	return nil
