@@ -203,7 +203,7 @@ func (d *Distribution) Exec() error {
 		"nodes",
 		"--output",
 		//nolint:lll // string needed as is
-		"jsonpath=\"{range .items[?(@.status.conditions[-1].type=='NotReady')]}{.metadata.name} {.status.conditions[-1].type}{'\\n'}{end}\"",
+		"jsonpath=\"{range .items[*]}{.spec.taints[?(@.key==\"node.kubernetes.io/not-ready\")]}{end}\"",
 	)
 	if err != nil {
 		return fmt.Errorf("error while checking nodes: %w", err)
