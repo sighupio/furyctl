@@ -6,6 +6,6 @@ package distribution
 
 type ExtraSchemaValidator struct{}
 
-func (*ExtraSchemaValidator) Validate(confPath string) error {
+func (*ExtraSchemaValidator) Validate(_ string) error {
 	return nil
 }
