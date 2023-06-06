@@ -186,6 +186,7 @@ func (d *Distribution) Exec() error {
 	}
 
 	logrus.Info("Checking if at least one storage class is available...")
+
 	getStorageClassesOutput, err := d.kubeRunner.Get("", "storageclasses")
 	if err != nil {
 		return fmt.Errorf("error while checking storage class: %w", err)
@@ -196,7 +197,14 @@ func (d *Distribution) Exec() error {
 	}
 
 	logrus.Info("Checking if all nodes are ready...")
-	getNotReadyNodesOutput, err := d.kubeRunner.Get("", "nodes", "--output", "jsonpath=\"{range .items[?(@.status.conditions[-1].type=='NotReady')]}{.metadata.name} {.status.conditions[-1].type}{'\\n'}{end}\"")
+
+	getNotReadyNodesOutput, err := d.kubeRunner.Get(
+		"",
+		"nodes",
+		"--output",
+		//nolint:lll // string needed as is
+		"jsonpath=\"{range .items[?(@.status.conditions[-1].type=='NotReady')]}{.metadata.name} {.status.conditions[-1].type}{'\\n'}{end}\"",
+	)
 	if err != nil {
 		return fmt.Errorf("error while checking nodes: %w", err)
 	}
@@ -212,14 +220,10 @@ func (d *Distribution) Exec() error {
 		return err
 	}
 
-	if err = d.delayedApplyRetries(manifestsOutPath, 0, kubectlNoDelayMaxRetry); err != nil {
-		return err
-	}
-
-	return nil
+	return d.delayedApplyRetries(manifestsOutPath, 0, kubectlNoDelayMaxRetry)
 }
 
-func (d *Distribution) Stop() error {
+func (*Distribution) Stop() error {
 	return nil
 }
 

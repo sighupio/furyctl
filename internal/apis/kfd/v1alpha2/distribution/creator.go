@@ -82,7 +82,7 @@ func (v *ClusterCreator) SetProperty(name string, value any) {
 	}
 }
 
-func (v *ClusterCreator) Create(skipPhase string, timeout int) error {
+func (v *ClusterCreator) Create(_ string, _ int) error {
 	if v.phase != "" && v.phase != cluster.OperationPhaseDistribution {
 		return ErrUnsupportedPhase
 	}
