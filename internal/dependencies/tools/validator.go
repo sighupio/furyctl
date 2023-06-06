@@ -77,7 +77,7 @@ func (tv *Validator) Validate(kfdManifest config.KFD, miniConf config.Furyctl) (
 		}
 	}
 
-	if miniConf.Spec.ToolsConfiguration.Terraform.State.S3.BucketName != "" {
+	if miniConf.Spec.ToolsConfiguration != nil && miniConf.Spec.ToolsConfiguration.Terraform.State.S3.BucketName != "" {
 		tool := tv.toolFactory.Create(itool.Awscli, "*")
 		if err := tool.CheckBinVersion(); err != nil {
 			errs = append(errs, err)
