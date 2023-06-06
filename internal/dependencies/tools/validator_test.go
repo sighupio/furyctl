@@ -39,10 +39,10 @@ func Test_Validator_Validate(t *testing.T) {
 			},
 			state: config.Furyctl{
 				Spec: config.FuryctlSpec{
-					ToolsConfiguration: config.ToolsConfiguration{
-						Terraform: config.Terraform{
-							State: config.State{
-								S3: config.S3{
+					ToolsConfiguration: &config.ToolsConfiguration{
+						Terraform: config.ToolsConfigurationTerraform{
+							State: config.ToolsConfigurationTerrraformState{
+								S3: config.ToolsConfigurationTerrraformStateS3{
 									BucketName: "test",
 								},
 							},
@@ -72,10 +72,10 @@ func Test_Validator_Validate(t *testing.T) {
 			},
 			state: config.Furyctl{
 				Spec: config.FuryctlSpec{
-					ToolsConfiguration: config.ToolsConfiguration{
-						Terraform: config.Terraform{
-							State: config.State{
-								S3: config.S3{
+					ToolsConfiguration: &config.ToolsConfiguration{
+						Terraform: config.ToolsConfigurationTerraform{
+							State: config.ToolsConfigurationTerrraformState{
+								S3: config.ToolsConfigurationTerrraformStateS3{
 									BucketName: "test",
 								},
 							},
@@ -107,10 +107,10 @@ func Test_Validator_Validate(t *testing.T) {
 				APIVersion: "kfd.sighup.io/v1alpha2",
 				Kind:       "EKSCluster",
 				Spec: config.FuryctlSpec{
-					ToolsConfiguration: config.ToolsConfiguration{
-						Terraform: config.Terraform{
-							State: config.State{
-								S3: config.S3{
+					ToolsConfiguration: &config.ToolsConfiguration{
+						Terraform: config.ToolsConfigurationTerraform{
+							State: config.ToolsConfigurationTerrraformState{
+								S3: config.ToolsConfigurationTerrraformStateS3{
 									BucketName: "test",
 								},
 							},
