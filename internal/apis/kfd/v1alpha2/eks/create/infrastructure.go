@@ -236,6 +236,10 @@ func (i *Infrastructure) createTfVars() error {
 		if err := i.addVpnDataToTfVars(&buffer); err != nil {
 			return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
 		}
+
+		if err := i.addVpnSSHDataToTfVars(&buffer); err != nil {
+			return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
+		}
 	}
 
 	return i.writeTfVars(buffer)
@@ -392,6 +396,10 @@ func (i *Infrastructure) addVpnDataToTfVars(buffer *bytes.Buffer) error {
 		}
 	}
 
+	return nil
+}
+
+func (i *Infrastructure) addVpnSSHDataToTfVars(buffer *bytes.Buffer) error {
 	if len(i.furyctlConf.Spec.Infrastructure.Vpn.Ssh.AllowedFromCidrs) != 0 {
 		allowedCidrs := make([]string, len(i.furyctlConf.Spec.Infrastructure.Vpn.Ssh.AllowedFromCidrs))
 
