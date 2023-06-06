@@ -9,16 +9,15 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/sirupsen/logrus"
+
 	"github.com/sighupio/fury-distribution/pkg/apis/config"
 	"github.com/sighupio/fury-distribution/pkg/apis/kfddistribution/v1alpha2/public"
 	"github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/distribution/create"
 	"github.com/sighupio/furyctl/internal/cluster"
-	"github.com/sirupsen/logrus"
 )
 
-var (
-	ErrUnsupportedPhase = errors.New("unsupported phase")
-)
+var ErrUnsupportedPhase = errors.New("unsupported phase")
 
 type ClusterCreator struct {
 	paths       cluster.CreatorPaths
