@@ -15,7 +15,7 @@ modules:
 kubernetes:
   eks:
     version: 1.25
-    installer: v2.0.0-alpha.1
+    installer: develop
 furyctlSchemas:
   eks:
     - apiVersion: kfd.sighup.io/v1alpha2
@@ -27,9 +27,9 @@ tools:
     kubectl:
       version: 1.25.8
     kustomize:
-      version: 3.5.3
+      version: 3.10.0
     terraform:
-      version: 0.15.4
+      version: 1.4.6
   eks:
     awscli:
       version: "*"
