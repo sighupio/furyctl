@@ -62,4 +62,5 @@ module "vpn" {
   vpn_dhparams_bits      = var.vpn_dhparams_bits
   vpn_operator_cidrs     = var.vpn_operator_cidrs
   vpn_ssh_users          = var.vpn_ssh_users
+  vpn_bucket_name_prefix = var.vpn_bucket_name_prefix
 }

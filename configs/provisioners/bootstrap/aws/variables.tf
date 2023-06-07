@@ -109,3 +109,9 @@ variable "vpn_ssh_users" {
   type        = list(string)
   default     = []
 }
+
+variable "vpn_bucket_name_prefix" {
+  type        = string
+  description = "Bucket name prefix for VPN configuration files"
+  default     = ""
+}
