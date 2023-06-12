@@ -17,7 +17,6 @@ import (
 	"github.com/sighupio/furyctl/internal/dependencies"
 	"github.com/sighupio/furyctl/internal/dependencies/envvars"
 	"github.com/sighupio/furyctl/internal/dependencies/tools"
-	"github.com/sighupio/furyctl/internal/dependencies/toolsconf"
 	"github.com/sighupio/furyctl/internal/distribution"
 	cobrax "github.com/sighupio/furyctl/internal/x/cobra"
 	execx "github.com/sighupio/furyctl/internal/x/exec"
@@ -88,11 +87,7 @@ func NewDependenciesCmd(tracker *analytics.Tracker) *cobra.Command {
 			})
 
 			toolsValidator := tools.NewValidator(executor, binPath, furyctlPath, false)
-
 			envVarsValidator := envvars.NewValidator()
-
-			toolsConfigValidator := toolsconf.NewValidator(executor)
-
 			errs := make([]error, 0)
 
 			logrus.Info("Validating tools...")
@@ -108,11 +103,8 @@ func NewDependenciesCmd(tracker *analytics.Tracker) *cobra.Command {
 
 			logrus.Info("Validating tools configuration...")
 
-			tcoks, tcerrs := toolsConfigValidator.Validate(dres.MinimalConf.Spec.ToolsConfiguration.Terraform.State.S3)
-
 			errs = append(errs, terrs...)
 			errs = append(errs, eerrs...)
-			errs = append(errs, tcerrs...)
 
 			for _, tok := range toks {
 				logrus.Infof("%s: binary found in vendor folder", tok)
@@ -120,10 +112,6 @@ func NewDependenciesCmd(tracker *analytics.Tracker) *cobra.Command {
 
 			for _, eok := range eoks {
 				logrus.Infof("%s: environment variable found", eok)
-			}
-
-			for _, tcok := range tcoks {
-				logrus.Infof("%s: configured", tcok)
 			}
 
 			if len(errs) > 0 {
