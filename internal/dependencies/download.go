@@ -20,6 +20,7 @@ import (
 	"github.com/sighupio/furyctl/internal/dependencies/tools"
 	"github.com/sighupio/furyctl/internal/distribution"
 	"github.com/sighupio/furyctl/internal/semver"
+	"github.com/sighupio/furyctl/internal/tool"
 	execx "github.com/sighupio/furyctl/internal/x/exec"
 	iox "github.com/sighupio/furyctl/internal/x/io"
 	netx "github.com/sighupio/furyctl/internal/x/net"
@@ -212,20 +213,24 @@ func (dd *Downloader) DownloadTools(kfdTools config.KFDTools) ([]string, error) 
 		for j := 0; j < tls.Field(i).NumField(); j++ {
 			name := strings.ToLower(tls.Field(i).Type().Field(j).Name)
 
-			version, ok := tls.Field(i).Field(j).Interface().(config.Tool)
+			toolCfg, ok := tls.Field(i).Field(j).Interface().(config.KFDTool)
 
 			if !ok {
 				return unsupportedTools, fmt.Errorf("%s: %w", name, ErrModuleHasNoVersion)
 			}
 
-			tool := dd.toolFactory.Create(name, version.String())
+			tool, err := dd.toolFactory.Create(tool.ToolName(name), toolCfg.Version)
+			if err != nil {
+				return unsupportedTools, fmt.Errorf("%s: %w", name, err)
+			}
+
 			if tool == nil || !tool.SupportsDownload() {
 				unsupportedTools = append(unsupportedTools, name)
 
 				continue
 			}
 
-			dst := filepath.Join(dd.binPath, name, version.String())
+			dst := filepath.Join(dd.binPath, name, toolCfg.Version)
 
 			if err := dd.client.Download(tool.SrcPath(), dst); err != nil {
 				return unsupportedTools, fmt.Errorf("%w '%s': %v", distribution.ErrDownloadingFolder, tool.SrcPath(), err)
@@ -235,8 +240,7 @@ func (dd *Downloader) DownloadTools(kfdTools config.KFDTools) ([]string, error) 
 				return unsupportedTools, fmt.Errorf("%w '%s': %v", distribution.ErrRenamingFile, tool.SrcPath(), err)
 			}
 
-			err := os.Chmod(filepath.Join(dst, name), iox.FullPermAccess)
-			if err != nil {
+			if err := os.Chmod(filepath.Join(dst, name), iox.FullPermAccess); err != nil {
 				return unsupportedTools, fmt.Errorf("%w '%s': %v", distribution.ErrChangingFilePermissions, tool.SrcPath(), err)
 			}
 		}
