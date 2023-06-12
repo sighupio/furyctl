@@ -92,17 +92,6 @@ func NewConfigCmd(tracker *analytics.Tracker) *cobra.Command {
 				},
 				Spec: distroConfig.FuryctlSpec{
 					DistributionVersion: semver.EnsurePrefix(version),
-					ToolsConfiguration: &distroConfig.ToolsConfiguration{
-						Terraform: distroConfig.ToolsConfigurationTerraform{
-							State: distroConfig.ToolsConfigurationTerrraformState{
-								S3: distroConfig.ToolsConfigurationTerrraformStateS3{
-									BucketName: "bucket-name",
-									KeyPrefix:  "key-prefix",
-									Region:     "eu-west-1",
-								},
-							},
-						},
-					},
 				},
 			}
 

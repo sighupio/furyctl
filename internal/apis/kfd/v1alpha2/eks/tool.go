@@ -5,15 +5,21 @@
 package eks
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/sighupio/fury-distribution/pkg/apis/ekscluster/v1alpha2/private"
+	"github.com/sighupio/furyctl/internal/tool/awscli"
 	"github.com/sighupio/furyctl/internal/tool/openvpn"
 	execx "github.com/sighupio/furyctl/internal/x/exec"
 	yamlx "github.com/sighupio/furyctl/internal/x/yaml"
 )
 
-var ErrOpenVPNNotInstalled = fmt.Errorf("openvpn is not installed")
+var (
+	ErrOpenVPNNotInstalled       = errors.New("openvpn is not installed")
+	ErrAWSS3BucketNotFound       = errors.New("AWS S3 Bucket not found, please create it before running furyctl")
+	ErrAWSS3BucketRegionMismatch = errors.New("AWS S3 Bucket region mismatch")
+)
 
 type ExtraToolsValidator struct {
 	executor    execx.Executor
@@ -44,6 +50,12 @@ func (x *ExtraToolsValidator) Validate(confPath string) ([]string, []error) {
 		oks = append(oks, "openvpn")
 	}
 
+	if err := x.terraformStateAWSS3Bucket(furyctlConf); err != nil {
+		errs = append(errs, err)
+	} else {
+		oks = append(oks, "terraform state aws s3 bucket")
+	}
+
 	return oks, errs
 }
 
@@ -61,6 +73,33 @@ func (x *ExtraToolsValidator) openVPN(conf private.EksclusterKfdV1Alpha2) error 
 		if _, err := oRunner.Version(); err != nil {
 			return ErrOpenVPNNotInstalled
 		}
+	}
+
+	return nil
+}
+
+func (x *ExtraToolsValidator) terraformStateAWSS3Bucket(conf private.EksclusterKfdV1Alpha2) error {
+	awsCliRunner := awscli.NewRunner(
+		x.executor,
+		awscli.Paths{
+			Awscli:  "aws",
+			WorkDir: "",
+		},
+	)
+
+	r, err := awsCliRunner.S3Api("get-bucket-location", "--bucket", string(conf.Spec.ToolsConfiguration.Terraform.State.S3.BucketName), "--output", "text")
+	if err != nil {
+		return ErrAWSS3BucketNotFound
+	}
+
+	// AWS S3 Bucket in us-east-1 region returns None as LocationConstraint
+	// https://awscli.amazonaws.com/v2/documentation/api/latest/reference/s3api/get-bucket-location.html#output
+	if r == "None" {
+		r = "us-east-1"
+	}
+
+	if r != string(conf.Spec.ToolsConfiguration.Terraform.State.S3.Region) {
+		return fmt.Errorf("%w, expected %s, got %s", ErrAWSS3BucketRegionMismatch, conf.Spec.ToolsConfiguration.Terraform.State.S3.Region, r)
 	}
 
 	return nil

@@ -11,6 +11,7 @@ import (
 
 	"github.com/sighupio/fury-distribution/pkg/apis/config"
 	"github.com/sighupio/furyctl/internal/apis"
+	"github.com/sighupio/furyctl/internal/tool"
 	itool "github.com/sighupio/furyctl/internal/tool"
 	execx "github.com/sighupio/furyctl/internal/x/exec"
 )
@@ -41,7 +42,11 @@ func (tv *Validator) ValidateBaseReqs() ([]string, []error) {
 		errs []error
 	)
 
-	git := tv.toolFactory.Create(itool.Git, "*")
+	git, err := tv.toolFactory.Create(itool.Git, "*")
+	if err != nil {
+		errs = append(errs, err)
+	}
+
 	if err := git.CheckBinVersion(); err != nil {
 		errs = append(errs, err)
 	} else {
@@ -57,33 +62,16 @@ func (tv *Validator) Validate(kfdManifest config.KFD, miniConf config.Furyctl) (
 		errs []error
 	)
 
-	tls := reflect.ValueOf(kfdManifest.Tools)
-	for i := 0; i < tls.NumField(); i++ {
-		for j := 0; j < tls.Field(i).NumField(); j++ {
-			if version, ok := tls.Field(i).Field(j).Interface().(config.Tool); ok {
-				if version.String() == "" {
-					continue
-				}
+	// Validate common tools.
+	cOks, cErrs := tv.validateTools(kfdManifest.Tools.Common)
+	oks = append(oks, cOks...)
+	errs = append(errs, cErrs...)
 
-				name := strings.ToLower(tls.Field(i).Type().Field(j).Name)
-
-				tool := tv.toolFactory.Create(name, version.String())
-				if err := tool.CheckBinVersion(); err != nil {
-					errs = append(errs, err)
-				} else {
-					oks = append(oks, name)
-				}
-			}
-		}
-	}
-
-	if miniConf.Spec.ToolsConfiguration != nil && miniConf.Spec.ToolsConfiguration.Terraform.State.S3.BucketName != "" {
-		tool := tv.toolFactory.Create(itool.Awscli, "*")
-		if err := tool.CheckBinVersion(); err != nil {
-			errs = append(errs, err)
-		} else {
-			oks = append(oks, "aws")
-		}
+	// Validate eks tools only if kind is EKSCluster.
+	if miniConf.Kind == "EKSCluster" {
+		cOks, cErrs := tv.validateTools(kfdManifest.Tools.Eks)
+		oks = append(oks, cOks...)
+		errs = append(errs, cErrs...)
 	}
 
 	etv := apis.NewExtraToolsValidatorFactory(tv.executor, miniConf.APIVersion, miniConf.Kind, tv.autoConnect)
@@ -99,4 +87,31 @@ func (tv *Validator) Validate(kfdManifest config.KFD, miniConf config.Furyctl) (
 	}
 
 	return oks, errs
+}
+
+func (tv *Validator) validateTools(i any) (oks []string, errs []error) {
+	toolCfgs := reflect.ValueOf(i)
+	for i := 0; i < toolCfgs.NumField(); i++ {
+		toolCfg, ok := toolCfgs.Field(i).Interface().(config.KFDTool)
+		if !ok {
+			continue
+		}
+
+		toolName := strings.ToLower(toolCfgs.Type().Field(i).Name)
+
+		tool, err := tv.toolFactory.Create(tool.ToolName(toolName), toolCfg.Version)
+		if err != nil {
+			errs = append(errs, err)
+			continue
+		}
+
+		if err := tool.CheckBinVersion(); err != nil {
+			errs = append(errs, err)
+			continue
+		}
+
+		oks = append(oks, toolName)
+	}
+
+	return
 }
