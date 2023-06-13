@@ -11,7 +11,6 @@ import (
 
 	"github.com/sighupio/fury-distribution/pkg/apis/config"
 	"github.com/sighupio/furyctl/internal/apis"
-	"github.com/sighupio/furyctl/internal/tool"
 	itool "github.com/sighupio/furyctl/internal/tool"
 	execx "github.com/sighupio/furyctl/internal/x/exec"
 )
@@ -89,7 +88,11 @@ func (tv *Validator) Validate(kfdManifest config.KFD, miniConf config.Furyctl) (
 	return oks, errs
 }
 
-func (tv *Validator) validateTools(i any) (oks []string, errs []error) {
+func (tv *Validator) validateTools(i any) ([]string, []error) {
+	var oks []string
+
+	var errs []error
+
 	toolCfgs := reflect.ValueOf(i)
 	for i := 0; i < toolCfgs.NumField(); i++ {
 		toolCfg, ok := toolCfgs.Field(i).Interface().(config.KFDTool)
@@ -99,19 +102,21 @@ func (tv *Validator) validateTools(i any) (oks []string, errs []error) {
 
 		toolName := strings.ToLower(toolCfgs.Type().Field(i).Name)
 
-		tool, err := tv.toolFactory.Create(tool.ToolName(toolName), toolCfg.Version)
+		tool, err := tv.toolFactory.Create(itool.Name(toolName), toolCfg.Version)
 		if err != nil {
 			errs = append(errs, err)
+
 			continue
 		}
 
 		if err := tool.CheckBinVersion(); err != nil {
 			errs = append(errs, err)
+
 			continue
 		}
 
 		oks = append(oks, toolName)
 	}
 
-	return
+	return oks, errs
 }

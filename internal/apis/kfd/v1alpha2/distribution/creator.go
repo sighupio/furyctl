@@ -92,7 +92,6 @@ func (v *ClusterCreator) Create(_ string, _ int) error {
 		v.furyctlConf,
 		v.kfdManifest,
 		v.dryRun,
-		v.phase,
 	)
 	if err != nil {
 		return fmt.Errorf("error while initiating distribution phase: %w", err)
