@@ -87,19 +87,30 @@ func (x *ExtraToolsValidator) terraformStateAWSS3Bucket(conf private.EksclusterK
 		},
 	)
 
-	r, err := awsCliRunner.S3Api("get-bucket-location", "--bucket", string(conf.Spec.ToolsConfiguration.Terraform.State.S3.BucketName), "--output", "text")
+	r, err := awsCliRunner.S3Api(
+		"get-bucket-location",
+		"--bucket",
+		string(conf.Spec.ToolsConfiguration.Terraform.State.S3.BucketName),
+		"--output",
+		"text",
+	)
 	if err != nil {
 		return ErrAWSS3BucketNotFound
 	}
 
 	// AWS S3 Bucket in us-east-1 region returns None as LocationConstraint
-	// https://awscli.amazonaws.com/v2/documentation/api/latest/reference/s3api/get-bucket-location.html#output
+	//nolint:lll // https://awscli.amazonaws.com/v2/documentation/api/latest/reference/s3api/get-bucket-location.html#output
 	if r == "None" {
 		r = "us-east-1"
 	}
 
 	if r != string(conf.Spec.ToolsConfiguration.Terraform.State.S3.Region) {
-		return fmt.Errorf("%w, expected %s, got %s", ErrAWSS3BucketRegionMismatch, conf.Spec.ToolsConfiguration.Terraform.State.S3.Region, r)
+		return fmt.Errorf(
+			"%w, expected %s, got %s",
+			ErrAWSS3BucketRegionMismatch,
+			conf.Spec.ToolsConfiguration.Terraform.State.S3.Region,
+			r,
+		)
 	}
 
 	return nil

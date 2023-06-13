@@ -15,9 +15,8 @@ import (
 )
 
 var (
-	errValidatingTools     = errors.New("errors validating tools")
-	errValidatingEnv       = errors.New("errors validating env vars")
-	errValidatingToolsConf = errors.New("errors validating tools configuration")
+	errValidatingTools = errors.New("errors validating tools")
+	errValidatingEnv   = errors.New("errors validating env vars")
 )
 
 func NewValidator(executor execx.Executor, binPath, furyctlPath string, autoConnect bool) *Validator {

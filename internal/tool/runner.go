@@ -18,17 +18,17 @@ import (
 	execx "github.com/sighupio/furyctl/internal/x/exec"
 )
 
-type ToolName string
+type Name string
 
 const (
-	Ansible   ToolName = "ansible"
-	Awscli    ToolName = "awscli"
-	Furyagent ToolName = "furyagent"
-	Git       ToolName = "git"
-	Kubectl   ToolName = "kubectl"
-	Kustomize ToolName = "kustomize"
-	Openvpn   ToolName = "openvpn"
-	Terraform ToolName = "terraform"
+	Ansible   Name = "ansible"
+	Awscli    Name = "awscli"
+	Furyagent Name = "furyagent"
+	Git       Name = "git"
+	Kubectl   Name = "kubectl"
+	Kustomize Name = "kustomize"
+	Openvpn   Name = "openvpn"
+	Terraform Name = "terraform"
 )
 
 type Runner interface {
@@ -53,7 +53,7 @@ type RunnerFactory struct {
 	paths    RunnerFactoryPaths
 }
 
-func (rf *RunnerFactory) Create(name ToolName, version, workDir string) Runner {
+func (rf *RunnerFactory) Create(name Name, version, workDir string) Runner {
 	switch name {
 	case Ansible:
 		return ansible.NewRunner(rf.executor, ansible.Paths{
