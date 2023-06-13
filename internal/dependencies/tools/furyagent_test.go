@@ -29,8 +29,9 @@ func Test_FuryAgent_SupportsDownload(t *testing.T) {
 
 func Test_FuryAgent_SrcPath(t *testing.T) {
 	wantSrcPath := fmt.Sprintf(
-		"https://github.com/sighupio/furyagent/releases/download/v0.3.0/furyagent-%s-amd64",
+		"https://github.com/sighupio/furyagent/releases/download/v0.3.0/furyagent-%s-%s",
 		runtime.GOOS,
+		runtime.GOARCH,
 	)
 
 	testCases := []struct {
@@ -62,7 +63,11 @@ func Test_FuryAgent_Rename(t *testing.T) {
 		t.Fatalf("error creating temp dir: %v", err)
 	}
 
-	if _, err := os.Create(filepath.Join(tmpDir, fmt.Sprintf("furyagent-%s-amd64", runtime.GOOS))); err != nil {
+	if _, err := os.Create(filepath.Join(tmpDir, fmt.Sprintf(
+		"furyagent-%s-%s",
+		runtime.GOOS,
+		runtime.GOARCH,
+	))); err != nil {
 		t.Fatalf("error creating temp file: %v", err)
 	}
 
