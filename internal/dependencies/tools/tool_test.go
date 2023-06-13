@@ -89,6 +89,8 @@ func TestHelperProcess(t *testing.T) {
 		switch subcmd {
 		case "--version":
 			fmt.Fprintf(os.Stdout, "aws-cli/2.8.12 Python/3.11.0 Darwin/21.6.0 source/arm64 prompt/off\n")
+		case "s3api":
+			fmt.Fprintf(os.Stdout, "eu-west-1\n")
 		}
 	case "furyagent":
 		switch subcmd {

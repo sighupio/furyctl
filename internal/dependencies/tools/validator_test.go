@@ -79,6 +79,9 @@ func Test_Validator_Validate(t *testing.T) {
 						Terraform: config.KFDTool{Version: "0.15.4"},
 						Furyagent: config.KFDTool{Version: "0.3.0"},
 					},
+					Eks: config.KFDToolsEks{
+						Awscli: config.KFDTool{Version: "2.8.12"},
+					},
 				},
 			},
 			state: config.Furyctl{
@@ -92,6 +95,8 @@ func Test_Validator_Validate(t *testing.T) {
 				"terraform",
 				"furyagent",
 				"awscli",
+				"openvpn",
+				"terraform state aws s3 bucket",
 			},
 		},
 	}
