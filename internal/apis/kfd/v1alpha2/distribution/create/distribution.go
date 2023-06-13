@@ -44,7 +44,6 @@ type Distribution struct {
 	kzRunner        *kustomize.Runner
 	kubeRunner      *kubectl.Runner
 	dryRun          bool
-	phase           string
 }
 
 func NewDistribution(
@@ -52,7 +51,6 @@ func NewDistribution(
 	furyctlConf public.KfddistributionKfdV1Alpha2,
 	kfdManifest config.KFD,
 	dryRun bool,
-	phase string,
 ) (*Distribution, error) {
 	distroDir := path.Join(paths.WorkDir, cluster.OperationPhaseDistribution)
 
@@ -85,7 +83,6 @@ func NewDistribution(
 			false,
 		),
 		dryRun: dryRun,
-		phase:  phase,
 	}, nil
 }
 
@@ -179,10 +176,8 @@ func (d *Distribution) Exec() error {
 			return errClusterConnect
 		}
 
-		if d.phase == cluster.OperationPhaseDistribution {
-			logrus.Warnf("Cluster is unreachable, make sure it is reachable before " +
-				"running the command without --dry-run")
-		}
+		logrus.Warnf("Cluster is unreachable, make sure it is reachable before " +
+			"running the command without --dry-run")
 	}
 
 	logrus.Info("Checking if at least one storage class is available...")
@@ -202,7 +197,6 @@ func (d *Distribution) Exec() error {
 		"",
 		"nodes",
 		"--output",
-		//nolint:lll // string needed as is
 		"jsonpath=\"{range .items[*]}{.spec.taints[?(@.key==\"node.kubernetes.io/not-ready\")]}{end}\"",
 	)
 	if err != nil {
