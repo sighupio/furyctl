@@ -12,6 +12,7 @@ import (
 	"testing"
 
 	"github.com/sighupio/furyctl/internal/tool"
+	itool "github.com/sighupio/furyctl/internal/tool"
 	execx "github.com/sighupio/furyctl/internal/x/exec"
 )
 
@@ -76,7 +77,7 @@ func Test_RunnerFactory_Create(t *testing.T) {
 				Bin: os.TempDir(),
 			})
 
-			runner := rf.Create(tC.tool, "", os.TempDir())
+			runner := rf.Create(itool.Name(tC.tool), "", os.TempDir())
 
 			if tC.wantRunner && runner == nil {
 				t.Errorf("expected a runner, got nil")

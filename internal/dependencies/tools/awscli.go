@@ -54,7 +54,7 @@ func (*Awscli) Rename(_ string) error {
 
 func (a *Awscli) CheckBinVersion() error {
 	if err := a.checker.version(a.version); err != nil {
-		return fmt.Errorf("aws-cli: %w", err)
+		return fmt.Errorf("awscli: %w", err)
 	}
 
 	return nil

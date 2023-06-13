@@ -29,8 +29,9 @@ func Test_Terraform_SupportsDownload(t *testing.T) {
 
 func Test_Terraform_SrcPath(t *testing.T) {
 	wantSrcPath := fmt.Sprintf(
-		"https://releases.hashicorp.com/terraform/1.2.9/terraform_1.2.9_%s_amd64.zip",
+		"https://releases.hashicorp.com/terraform/1.2.9/terraform_1.2.9_%s_%s.zip",
 		runtime.GOOS,
+		runtime.GOARCH,
 	)
 
 	testCases := []struct {
