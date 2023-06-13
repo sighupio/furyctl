@@ -16,4 +16,10 @@ func init() {
 		"KFDDistribution",
 		cluster.NewCreatorFactory[*ClusterCreator, public.KfddistributionKfdV1Alpha2](&ClusterCreator{}),
 	)
+
+	cluster.RegisterDeleterFactory(
+		"kfd.sighup.io/v1alpha2",
+		"KFDDistribution",
+		cluster.NewDeleterFactory[*ClusterDeleter, public.KfddistributionKfdV1Alpha2](&ClusterDeleter{}),
+	)
 }

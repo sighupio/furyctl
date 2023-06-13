@@ -219,12 +219,12 @@ func (dd *Downloader) DownloadTools(kfdTools config.KFDTools) ([]string, error) 
 				return unsupportedTools, fmt.Errorf("%s: %w", name, ErrModuleHasNoVersion)
 			}
 
-			tool, err := dd.toolFactory.Create(tool.ToolName(name), toolCfg.Version)
+			tfc, err := dd.toolFactory.Create(tool.Name(name), toolCfg.Version)
 			if err != nil {
 				return unsupportedTools, fmt.Errorf("%s: %w", name, err)
 			}
 
-			if tool == nil || !tool.SupportsDownload() {
+			if tfc == nil || !tfc.SupportsDownload() {
 				unsupportedTools = append(unsupportedTools, name)
 
 				continue
@@ -232,16 +232,16 @@ func (dd *Downloader) DownloadTools(kfdTools config.KFDTools) ([]string, error) 
 
 			dst := filepath.Join(dd.binPath, name, toolCfg.Version)
 
-			if err := dd.client.Download(tool.SrcPath(), dst); err != nil {
-				return unsupportedTools, fmt.Errorf("%w '%s': %v", distribution.ErrDownloadingFolder, tool.SrcPath(), err)
+			if err := dd.client.Download(tfc.SrcPath(), dst); err != nil {
+				return unsupportedTools, fmt.Errorf("%w '%s': %v", distribution.ErrDownloadingFolder, tfc.SrcPath(), err)
 			}
 
-			if err := tool.Rename(dst); err != nil {
-				return unsupportedTools, fmt.Errorf("%w '%s': %v", distribution.ErrRenamingFile, tool.SrcPath(), err)
+			if err := tfc.Rename(dst); err != nil {
+				return unsupportedTools, fmt.Errorf("%w '%s': %v", distribution.ErrRenamingFile, tfc.SrcPath(), err)
 			}
 
 			if err := os.Chmod(filepath.Join(dst, name), iox.FullPermAccess); err != nil {
-				return unsupportedTools, fmt.Errorf("%w '%s': %v", distribution.ErrChangingFilePermissions, tool.SrcPath(), err)
+				return unsupportedTools, fmt.Errorf("%w '%s': %v", distribution.ErrChangingFilePermissions, tfc.SrcPath(), err)
 			}
 		}
 	}
