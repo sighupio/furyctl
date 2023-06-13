@@ -41,11 +41,7 @@ func (tv *Validator) ValidateBaseReqs() ([]string, []error) {
 		errs []error
 	)
 
-	git, err := tv.toolFactory.Create(itool.Git, "*")
-	if err != nil {
-		errs = append(errs, err)
-	}
-
+	git := tv.toolFactory.Create(itool.Git, "*")
 	if err := git.CheckBinVersion(); err != nil {
 		errs = append(errs, err)
 	} else {
@@ -102,13 +98,7 @@ func (tv *Validator) validateTools(i any) ([]string, []error) {
 
 		toolName := strings.ToLower(toolCfgs.Type().Field(i).Name)
 
-		tool, err := tv.toolFactory.Create(itool.Name(toolName), toolCfg.Version)
-		if err != nil {
-			errs = append(errs, err)
-
-			continue
-		}
-
+		tool := tv.toolFactory.Create(itool.Name(toolName), toolCfg.Version)
 		if err := tool.CheckBinVersion(); err != nil {
 			errs = append(errs, err)
 
