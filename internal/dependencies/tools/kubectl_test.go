@@ -28,7 +28,11 @@ func Test_Kubectl_SupportsDownload(t *testing.T) {
 }
 
 func Test_Kubectl_SrcPath(t *testing.T) {
-	wantSrcPath := fmt.Sprintf("https://dl.k8s.io/release/v1.24.9/bin/%s/amd64/kubectl", runtime.GOOS)
+	wantSrcPath := fmt.Sprintf(
+		"https://dl.k8s.io/release/v1.24.9/bin/%s/%s/kubectl",
+		runtime.GOOS,
+		runtime.GOARCH,
+	)
 
 	testCases := []struct {
 		desc    string

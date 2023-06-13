@@ -219,11 +219,7 @@ func (dd *Downloader) DownloadTools(kfdTools config.KFDTools) ([]string, error) 
 				return unsupportedTools, fmt.Errorf("%s: %w", name, ErrModuleHasNoVersion)
 			}
 
-			tfc, err := dd.toolFactory.Create(tool.Name(name), toolCfg.Version)
-			if err != nil {
-				return unsupportedTools, fmt.Errorf("%s: %w", name, err)
-			}
-
+			tfc := dd.toolFactory.Create(tool.Name(name), toolCfg.Version)
 			if tfc == nil || !tfc.SupportsDownload() {
 				unsupportedTools = append(unsupportedTools, name)
 

@@ -31,7 +31,6 @@ var (
 	errCannotParse          = errors.New("can't parse system tool version")
 	errMissingBin           = errors.New("missing binary from vendor folder")
 	errGetVersion           = errors.New("can't get tool version")
-	errUnknowToolName       = errors.New("unknow tool name")
 )
 
 type Tool interface {
@@ -61,7 +60,7 @@ type Factory struct {
 	runnerFactory *tool.RunnerFactory
 }
 
-func (f *Factory) Create(name tool.Name, version string) (Tool, error) {
+func (f *Factory) Create(name tool.Name, version string) Tool {
 	t := f.runnerFactory.Create(name, version, "")
 
 	if name == tool.Ansible {
@@ -70,7 +69,7 @@ func (f *Factory) Create(name tool.Name, version string) (Tool, error) {
 			panic(fmt.Sprintf("expected ansible.Runner, got %T", t))
 		}
 
-		return NewAnsible(a, version), nil
+		return NewAnsible(a, version)
 	}
 
 	if name == tool.Awscli {
@@ -79,7 +78,7 @@ func (f *Factory) Create(name tool.Name, version string) (Tool, error) {
 			panic(fmt.Sprintf("expected awscli.Runner, got %T", t))
 		}
 
-		return NewAwscli(a, version), nil
+		return NewAwscli(a, version)
 	}
 
 	if name == tool.Furyagent {
@@ -88,7 +87,7 @@ func (f *Factory) Create(name tool.Name, version string) (Tool, error) {
 			panic(fmt.Sprintf("expected furyagent.Runner, got %T", t))
 		}
 
-		return NewFuryagent(fa, version), nil
+		return NewFuryagent(fa, version)
 	}
 
 	if name == tool.Git {
@@ -97,7 +96,7 @@ func (f *Factory) Create(name tool.Name, version string) (Tool, error) {
 			panic(fmt.Sprintf("expected git.Runner, got %T", t))
 		}
 
-		return NewGit(g, version), nil
+		return NewGit(g, version)
 	}
 
 	if name == tool.Kubectl {
@@ -106,7 +105,7 @@ func (f *Factory) Create(name tool.Name, version string) (Tool, error) {
 			panic(fmt.Sprintf("expected kubectl.Runner, got %T", t))
 		}
 
-		return NewKubectl(k, version), nil
+		return NewKubectl(k, version)
 	}
 
 	if name == tool.Kustomize {
@@ -115,7 +114,7 @@ func (f *Factory) Create(name tool.Name, version string) (Tool, error) {
 			panic(fmt.Sprintf("expected kustomize.Runner, got %T", t))
 		}
 
-		return NewKustomize(k, version), nil
+		return NewKustomize(k, version)
 	}
 
 	if name == tool.Openvpn {
@@ -124,7 +123,7 @@ func (f *Factory) Create(name tool.Name, version string) (Tool, error) {
 			panic(fmt.Sprintf("expected openvpn.Runner, got %T", t))
 		}
 
-		return NewOpenvpn(o, version), nil
+		return NewOpenvpn(o, version)
 	}
 
 	if name == tool.Terraform {
@@ -133,10 +132,10 @@ func (f *Factory) Create(name tool.Name, version string) (Tool, error) {
 			panic(fmt.Sprintf("expected terraform.Runner, got %T", t))
 		}
 
-		return NewTerraform(tf, version), nil
+		return NewTerraform(tf, version)
 	}
 
-	return nil, errUnknowToolName
+	return nil
 }
 
 type checker struct {
