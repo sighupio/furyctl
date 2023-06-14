@@ -298,10 +298,12 @@ github.com/shirou/gopsutil/v3 v3.23.2/go.mod h1:gv0aQw33GLo3pG8SiWKiQrbDzbRY1K80
 github.com/shopspring/decimal v1.2.0/go.mod h1:DKyhrW/HYNuLGql+MJL6WCR6knT2jwCFRcu2hWCYk4o=
 github.com/shopspring/decimal v1.3.1 h1:2Usl1nmF/WZucqkFZhnfFYxxxu8LG21F6nPQBE5gKV8=
 github.com/shopspring/decimal v1.3.1/go.mod h1:DKyhrW/HYNuLGql+MJL6WCR6knT2jwCFRcu2hWCYk4o=
-github.com/sighupio/fury-distribution v1.25.3-0.20230508164630-9cdab16757aa h1:RRqHUXqeoN7hKOTamxPckpn375tI0vT3mUCBnB5AQ9s=
-github.com/sighupio/fury-distribution v1.25.3-0.20230508164630-9cdab16757aa/go.mod h1:YoK8hAXlril/Ow4WXgDQVjUI2r1SGzvIluR8rvVI/r4=
-github.com/sighupio/fury-distribution v1.25.3-0.20230509161240-41d6d3d46302 h1:P2SPHvn+wdCeNDkFfLmQ0WcEmwIPQ5g6kWp28qTVrqE=
-github.com/sighupio/fury-distribution v1.25.3-0.20230509161240-41d6d3d46302/go.mod h1:cYHT8oRWuVyrf9515sVEGKCo+WrOSKk1IVRSxA3x1l0=
+github.com/sighupio/fury-distribution v1.25.3-0.20230606141031-475b58d95663 h1:qHCISTDMgaeD+I5e9BXw/3LdBYXTbhZc3VXiFBj638E=
+github.com/sighupio/fury-distribution v1.25.3-0.20230606141031-475b58d95663/go.mod h1:r8n2QNkNe58Cjsp/qy2jrbc9GIV16zWYZzYiv5UATZc=
+github.com/sighupio/fury-distribution v1.25.3-0.20230606151107-27574128fbe6 h1:4s1AGw+w9NlBXugrnZ+/A3u1h/R9J5giO3zt7pnHeso=
+github.com/sighupio/fury-distribution v1.25.3-0.20230606151107-27574128fbe6/go.mod h1:r8n2QNkNe58Cjsp/qy2jrbc9GIV16zWYZzYiv5UATZc=
+github.com/sighupio/fury-distribution v1.25.3-0.20230614133947-7a93ddbdad28 h1:+UeK6N3lRfCrOOQLKUKt2Wtnjbb2Rn4TyUt365pBfTg=
+github.com/sighupio/fury-distribution v1.25.3-0.20230614133947-7a93ddbdad28/go.mod h1:GP3AWJD0nw1WSdHDHZoXbKXlpUOTkLAr9zKHIxmsOWM=
 github.com/sirupsen/logrus v1.9.0 h1:trlNQbNUG3OdDrDil03MCb1H2o9nJ1x4/5LYw7byDE0=
 github.com/sirupsen/logrus v1.9.0/go.mod h1:naHLuLoDiP4jHNo9R0sCBMtWGeIprob74mVsIT4qYEQ=
 github.com/spf13/afero v1.9.3 h1:41FoI0fD7OR7mGcKE/aOiLkGreyf8ifIOQmJANWogMk=
