@@ -295,6 +295,10 @@ func (v *ClusterCreator) kubernetesPhase(kube *create.Kubernetes, vpnConnector *
 		return fmt.Errorf("error while creating secret with the cluster configuration: %w", err)
 	}
 
+	if err := v.storeDistributionConfig(); err != nil {
+		return fmt.Errorf("error while creating secret with the distribution configuration: %w", err)
+	}
+
 	logrus.Info("Kubernetes cluster created successfully")
 
 	if err := v.logKubeconfig(); err != nil {
@@ -329,6 +333,10 @@ func (v *ClusterCreator) distributionPhase(distro *create.Distribution, vpnConne
 
 	if err := v.storeClusterConfig(); err != nil {
 		return fmt.Errorf("error while creating secret with the cluster configuration: %w", err)
+	}
+
+	if err := v.storeDistributionConfig(); err != nil {
+		return fmt.Errorf("error while creating secret with the distribution configuration: %w", err)
 	}
 
 	logrus.Info("Kubernetes Fury Distribution installed successfully")
@@ -384,6 +392,10 @@ func (v *ClusterCreator) allPhases(
 			if err := v.storeClusterConfig(); err != nil {
 				return fmt.Errorf("error while storing cluster config: %w", err)
 			}
+
+			if err := v.storeDistributionConfig(); err != nil {
+				return fmt.Errorf("error while creating secret with the distribution configuration: %w", err)
+			}
 		}
 	}
 
@@ -395,6 +407,10 @@ func (v *ClusterCreator) allPhases(
 		if !v.dryRun {
 			if err := v.storeClusterConfig(); err != nil {
 				return fmt.Errorf("error while storing cluster config: %w", err)
+			}
+
+			if err := v.storeDistributionConfig(); err != nil {
+				return fmt.Errorf("error while creating secret with the distribution configuration: %w", err)
 			}
 		}
 	}
@@ -506,6 +522,40 @@ func (v *ClusterCreator) storeClusterConfig() error {
 
 	if err := runner.Apply(secretPath); err != nil {
 		return fmt.Errorf("error while saving furyctl configuration file in the cluster: %w", err)
+	}
+
+	return nil
+}
+
+func (v *ClusterCreator) storeDistributionConfig() error {
+	x, err := os.ReadFile(path.Join(v.paths.DistroPath, "kfd.yaml"))
+	if err != nil {
+		return fmt.Errorf("error while reading config file: %w", err)
+	}
+
+	secret, err := kubex.CreateSecret(x, "furyctl-kfd", "kube-system")
+	if err != nil {
+		return fmt.Errorf("error while creating secret: %w", err)
+	}
+
+	secretPath := path.Join(v.paths.WorkDir, "secrets-kfd.yaml")
+
+	if err := iox.WriteFile(secretPath, secret); err != nil {
+		return fmt.Errorf("error while writing secret: %w", err)
+	}
+
+	defer os.Remove(secretPath)
+
+	runner := kubectl.NewRunner(execx.NewStdExecutor(), kubectl.Paths{
+		Kubectl:    path.Join(v.paths.BinPath, "kubectl", v.kfdManifest.Tools.Common.Kubectl.Version, "kubectl"),
+		WorkDir:    v.paths.WorkDir,
+		Kubeconfig: v.paths.Kubeconfig,
+	}, true, true, false)
+
+	logrus.Info("Saving distribution configuration file in the cluster...")
+
+	if err := runner.Apply(secretPath); err != nil {
+		return fmt.Errorf("error while saving distribution configuration file in the cluster: %w", err)
 	}
 
 	return nil
