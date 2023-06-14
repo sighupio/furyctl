@@ -55,6 +55,7 @@ module "fury" {
   cluster_endpoint_public_access_cidrs  = var.cluster_endpoint_public_access_cidrs
   cluster_endpoint_private_access       = var.cluster_endpoint_private_access
   cluster_endpoint_private_access_cidrs = var.cluster_endpoint_private_access_cidrs
+  cluster_service_ipv4_cidr             = var.cluster_service_ipv4_cidr
   vpc_id                                = var.vpc_id
   subnets                               = var.subnets
   ssh_public_key                        = var.ssh_public_key
@@ -62,9 +63,12 @@ module "fury" {
   node_pools_launch_kind                = var.node_pools_launch_kind
   tags                                  = var.tags
 
-  # Specific AWS variables.
+  # AWS-specific variables.
   # Enables managing auth using these variables
   eks_map_users    = var.eks_map_users
   eks_map_roles    = var.eks_map_roles
   eks_map_accounts = var.eks_map_accounts
+
+  # availability_zone_names = []
+  # ssh_to_nodes_allowed_cidr_blocks = []
 }
