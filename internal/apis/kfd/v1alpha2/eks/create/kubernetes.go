@@ -486,6 +486,15 @@ func (k *Kubernetes) createTfVars() error {
 
 	err = bytesx.SafeWriteToBuffer(
 		&buffer,
+		"cluster_service_ipv4_cidr = \"%v\"\n",
+		k.furyctlConf.Spec.Kubernetes.ServiceIpV4Cidr,
+	)
+	if err != nil {
+		return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
+	}
+
+	err = bytesx.SafeWriteToBuffer(
+		&buffer,
 		"node_pools_launch_kind = \"%v\"\n",
 		k.furyctlConf.Spec.Kubernetes.NodePoolsLaunchKind,
 	)

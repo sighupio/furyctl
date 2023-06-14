@@ -39,6 +39,12 @@ variable "cluster_endpoint_public_access_cidrs" {
   default = ["0.0.0.0/0"]
 }
 
+variable "cluster_service_ipv4_cidr" {
+  type        = string
+  description = "The CIDR block to assign Kubernetes service IP addresses from"
+  default     = null
+}
+
 variable "vpc_id" {
   type        = string
   description = "VPC ID where the Kubernetes cluster will be hosted"

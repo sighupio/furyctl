@@ -40,6 +40,12 @@ module "vpc" {
   cidr                     = var.cidr
   private_subnetwork_cidrs = var.vpc_private_subnetwork_cidrs
   public_subnetwork_cidrs  = var.vpc_public_subnetwork_cidrs
+
+  # extra_ipv4_cidr_blocks = []
+  # availability_zone_names = []
+  # single_nat_gateway = false
+  # one_nat_gateway_per_az = true
+  # names_of_kubernetes_cluster_integrated_with_subnets = []
 }
 
 module "vpn" {
@@ -62,4 +68,6 @@ module "vpn" {
   vpn_dhparams_bits      = var.vpn_dhparams_bits
   vpn_operator_cidrs     = var.vpn_operator_cidrs
   vpn_ssh_users          = var.vpn_ssh_users
+
+  # vpn_routes = []
 }
