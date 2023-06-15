@@ -454,6 +454,7 @@ var (
 				return RunCmd(
 					furyctl, "create", "config",
 					"--config", workdir+"/target/furyctl.yaml",
+					"--kind", "EKSCluster",
 					"--debug",
 					"--disable-analytics", "true",
 					"--distro-location", absBasepath+"/distro",
