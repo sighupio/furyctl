@@ -41,12 +41,13 @@ import (
 )
 
 var (
-	errKubeconfigFromLogs = errors.New("cannot get kubeconfig file after cluster creation")
-	errPvtSubnetNotFound  = errors.New("private_subnets not found in infrastructure phase's output")
-	errPvtSubnetFromOut   = errors.New("cannot read private_subnets from infrastructure's output.json")
-	errVpcCIDRFromOut     = errors.New("cannot read vpc_cidr_block from infrastructure's output.json")
-	errVpcCIDRNotFound    = errors.New("vpc_cidr_block not found in infra output")
-	errVpcIDNotFound      = errors.New("vpcId not found: you forgot to specify one in the configuration file " +
+	errMissingKubeconfig = errors.New("kubeconfig not found in infrastructure phase's logs")
+	errWrongKubeconfig   = errors.New("kubeconfig cannot be parsed from infrastructure phase's logs")
+	errPvtSubnetNotFound = errors.New("private_subnets not found in infrastructure phase's output")
+	errPvtSubnetFromOut  = errors.New("cannot read private_subnets from infrastructure's output.json")
+	errVpcCIDRFromOut    = errors.New("cannot read vpc_cidr_block from infrastructure's output.json")
+	errVpcCIDRNotFound   = errors.New("vpc_cidr_block not found in infra output")
+	errVpcIDNotFound     = errors.New("vpcId not found: you forgot to specify one in the configuration file " +
 		"or the infrastructure phase failed")
 	errParsingCIDR         = errors.New("error parsing CIDR")
 	errResolvingDNS        = errors.New("error resolving DNS record")
@@ -211,12 +212,12 @@ func (k *Kubernetes) Exec() error {
 	}
 
 	if out["kubeconfig"] == nil {
-		return errKubeconfigFromLogs
+		return errMissingKubeconfig
 	}
 
 	kubeString, ok := out["kubeconfig"].Value.(string)
 	if !ok {
-		return errKubeconfigFromLogs
+		return errWrongKubeconfig
 	}
 
 	p, err := kubex.CreateConfig([]byte(kubeString), k.SecretsPath)
