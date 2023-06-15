@@ -122,6 +122,7 @@ func (dd *Downloader) DownloadModules(modules config.KFDModules, gitPrefix strin
 			src := fmt.Sprintf("git::%s/%s-%s?ref=%s&depth=1", gitPrefix, prefix, name, version)
 
 			moduleURL := createURL(prefix, name, version)
+
 			req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, moduleURL, nil)
 			if err != nil {
 				return fmt.Errorf("%w '%s' (url: %s): %v", ErrDownloadingModule, name, moduleURL, err)
