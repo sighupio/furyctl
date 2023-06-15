@@ -109,6 +109,7 @@ func (dd *Downloader) DownloadModules(modules config.KFDModules) error {
 			src := fmt.Sprintf("git::git@github.com:sighupio/%s-%s?ref=%s&depth=1", prefix, name, version)
 
 			moduleURL := createURL(prefix, name, version)
+
 			req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, moduleURL, nil)
 			if err != nil {
 				return fmt.Errorf("%w '%s' (url: %s): %v", ErrDownloadingModule, name, moduleURL, err)
