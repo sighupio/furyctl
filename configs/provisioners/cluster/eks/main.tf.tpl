@@ -15,6 +15,8 @@ terraform {
     bucket = "{{ .terraform.backend.s3.bucketName }}"
     key    = "{{ .terraform.backend.s3.keyPrefix }}/cluster.json"
     region = "{{ .terraform.backend.s3.region }}"
+
+    skip_region_validation = true
   }
 
   required_providers {
