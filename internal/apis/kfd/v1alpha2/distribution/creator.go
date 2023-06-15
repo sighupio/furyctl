@@ -7,6 +7,8 @@ package distribution
 import (
 	"errors"
 	"fmt"
+	"os"
+	"path"
 	"strings"
 
 	"github.com/sirupsen/logrus"
@@ -15,6 +17,10 @@ import (
 	"github.com/sighupio/fury-distribution/pkg/apis/kfddistribution/v1alpha2/public"
 	"github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/distribution/create"
 	"github.com/sighupio/furyctl/internal/cluster"
+	"github.com/sighupio/furyctl/internal/tool/kubectl"
+	execx "github.com/sighupio/furyctl/internal/x/exec"
+	iox "github.com/sighupio/furyctl/internal/x/io"
+	kubex "github.com/sighupio/furyctl/internal/x/kube"
 )
 
 var ErrUnsupportedPhase = errors.New("unsupported phase")
@@ -101,6 +107,12 @@ func (v *ClusterCreator) Create(_ string, _ int) error {
 		return fmt.Errorf("error while installing Kubernetes Fury Distribution: %w", err)
 	}
 
+	if !v.dryRun {
+		if err := v.storeClusterConfig(); err != nil {
+			return fmt.Errorf("error while storing cluster config: %w", err)
+		}
+	}
+
 	if v.dryRun {
 		logrus.Info("Kubernetes Fury Distribution installed successfully (dry-run mode)")
 
@@ -108,6 +120,40 @@ func (v *ClusterCreator) Create(_ string, _ int) error {
 	}
 
 	logrus.Info("Kubernetes Fury Distribution installed successfully")
+
+	return nil
+}
+
+func (v *ClusterCreator) storeClusterConfig() error {
+	x, err := os.ReadFile(v.paths.ConfigPath)
+	if err != nil {
+		return fmt.Errorf("error while reading config file: %w", err)
+	}
+
+	secret, err := kubex.CreateSecret(x, "furyctl-config", "kube-system")
+	if err != nil {
+		return fmt.Errorf("error while creating secret: %w", err)
+	}
+
+	secretPath := path.Join(v.paths.WorkDir, "secrets.yaml")
+
+	if err := iox.WriteFile(secretPath, secret); err != nil {
+		return fmt.Errorf("error while writing secret: %w", err)
+	}
+
+	defer os.Remove(secretPath)
+
+	runner := kubectl.NewRunner(execx.NewStdExecutor(), kubectl.Paths{
+		Kubectl:    path.Join(v.paths.BinPath, "kubectl", v.kfdManifest.Tools.Common.Kubectl.Version, "kubectl"),
+		WorkDir:    v.paths.WorkDir,
+		Kubeconfig: v.paths.Kubeconfig,
+	}, true, true, false)
+
+	logrus.Info("Saving furyctl configuration file in the cluster...")
+
+	if err := runner.Apply(secretPath); err != nil {
+		return fmt.Errorf("error while saving furyctl configuration file in the cluster: %w", err)
+	}
 
 	return nil
 }
