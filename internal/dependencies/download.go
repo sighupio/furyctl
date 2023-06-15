@@ -121,18 +121,19 @@ func (dd *Downloader) DownloadModules(modules config.KFDModules, gitPrefix strin
 		for _, prefix := range []string{oldPrefix, newPrefix} {
 			src := fmt.Sprintf("git::%s/%s-%s?ref=%s&depth=1", gitPrefix, prefix, name, version)
 
-			req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, createURL(prefix, name, version), nil)
+			moduleURL := createURL(prefix, name, version)
+			req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, moduleURL, nil)
 			if err != nil {
-				return fmt.Errorf("%w '%s': %v", ErrDownloadingModule, name, err)
+				return fmt.Errorf("%w '%s' (url: %s): %v", ErrDownloadingModule, name, moduleURL, err)
 			}
 
 			resp, err := http.DefaultClient.Do(req)
 			if err != nil {
 				if err := resp.Body.Close(); err != nil {
-					return fmt.Errorf("%w '%s': %v", ErrDownloadingModule, name, err)
+					return fmt.Errorf("%w '%s' (url: %s): %v", ErrDownloadingModule, name, moduleURL, err)
 				}
 
-				return fmt.Errorf("%w '%s': %v", ErrDownloadingModule, name, err)
+				return fmt.Errorf("%w '%s' (url: %s): %v", ErrDownloadingModule, name, moduleURL, err)
 			}
 
 			retries[name]++
@@ -142,8 +143,15 @@ func (dd *Downloader) DownloadModules(modules config.KFDModules, gitPrefix strin
 
 			if resp.StatusCode != http.StatusOK {
 				if retries[name] >= threshold {
-					errs = append(errs, fmt.Errorf("%w '%s': please check if module exists or credentials are correctly configured",
-						ErrModuleNotFound, name))
+					errs = append(
+						errs,
+						fmt.Errorf(
+							"%w '%s (url: %s)': please check if module exists or credentials are correctly configured",
+							ErrModuleNotFound,
+							name,
+							moduleURL,
+						),
+					)
 				}
 
 				continue
