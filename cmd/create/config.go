@@ -68,6 +68,9 @@ func NewConfigCmd(tracker *analytics.Tracker) *cobra.Command {
 			if err != nil {
 				return fmt.Errorf("%w: kind", ErrParsingFlag)
 			}
+			if kind == "" {
+				return fmt.Errorf("%w: kind", ErrMandatoryFlag)
+			}
 
 			apiVersion, err := cmdutil.StringFlag(cmd, "api-version", tracker, cmdEvent)
 			if err != nil {
@@ -191,7 +194,7 @@ func NewConfigCmd(tracker *analytics.Tracker) *cobra.Command {
 	cmd.Flags().StringP(
 		"kind",
 		"k",
-		"EKSCluster",
+		"",
 		"Type of cluster to create (eg: EKSCluster, KFDDistribution)",
 	)
 
