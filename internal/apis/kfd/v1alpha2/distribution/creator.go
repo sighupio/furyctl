@@ -132,7 +132,7 @@ func (v *ClusterCreator) storeClusterConfig() error {
 		return fmt.Errorf("error while reading config file: %w", err)
 	}
 
-	secret, err := kubex.CreateSecret(x, "furyctl-config", "kube-system")
+	secret, err := kubex.CreateSecret(x, "furyctl-config", "config", "kube-system")
 	if err != nil {
 		return fmt.Errorf("error while creating secret: %w", err)
 	}
@@ -166,7 +166,7 @@ func (v *ClusterCreator) storeDistributionConfig() error {
 		return fmt.Errorf("error while reading config file: %w", err)
 	}
 
-	secret, err := kubex.CreateSecret(x, "furyctl-kfd", "kube-system")
+	secret, err := kubex.CreateSecret(x, "furyctl-kfd", "kfd", "kube-system")
 	if err != nil {
 		return fmt.Errorf("error while creating secret: %w", err)
 	}
