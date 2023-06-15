@@ -34,7 +34,7 @@ func (g *GoGetterClient) Download(src, dst string) error {
 	for _, protocol := range protocols {
 		fullSrc := fmt.Sprintf("%s%s", protocol, src)
 
-		logrus.Debugf("Trying to download from: %s", fullSrc)
+		logrus.Debugf("Downloading from: %s", fullSrc)
 
 		client := &getter.Client{
 			Src:  fullSrc,
