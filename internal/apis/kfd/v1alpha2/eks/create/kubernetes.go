@@ -484,11 +484,18 @@ func (k *Kubernetes) createTfVars() error {
 		return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
 	}
 
-	err = bytesx.SafeWriteToBuffer(
-		&buffer,
-		"cluster_service_ipv4_cidr = \"%v\"\n",
-		k.furyctlConf.Spec.Kubernetes.ServiceIpV4Cidr,
-	)
+	if k.furyctlConf.Spec.Kubernetes.ServiceIpV4Cidr == nil {
+		err = bytesx.SafeWriteToBuffer(
+			&buffer,
+			"cluster_service_ipv4_cidr = null\n",
+		)
+	} else {
+		err = bytesx.SafeWriteToBuffer(
+			&buffer,
+			"cluster_service_ipv4_cidr = \"%v\"\n",
+			k.furyctlConf.Spec.Kubernetes.ServiceIpV4Cidr,
+		)
+	}
 	if err != nil {
 		return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
 	}
