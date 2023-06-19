@@ -9,12 +9,14 @@ import (
 
 	"github.com/sighupio/furyctl/internal/tool/ansible"
 	"github.com/sighupio/furyctl/internal/tool/awscli"
+	"github.com/sighupio/furyctl/internal/tool/bash"
 	"github.com/sighupio/furyctl/internal/tool/furyagent"
 	"github.com/sighupio/furyctl/internal/tool/git"
 	"github.com/sighupio/furyctl/internal/tool/kubectl"
 	"github.com/sighupio/furyctl/internal/tool/kustomize"
 	"github.com/sighupio/furyctl/internal/tool/openvpn"
 	"github.com/sighupio/furyctl/internal/tool/terraform"
+	"github.com/sighupio/furyctl/internal/tool/yq"
 	execx "github.com/sighupio/furyctl/internal/x/exec"
 )
 
@@ -25,10 +27,12 @@ const (
 	Awscli    Name = "awscli"
 	Furyagent Name = "furyagent"
 	Git       Name = "git"
+	Yq        Name = "yq"
 	Kubectl   Name = "kubectl"
 	Kustomize Name = "kustomize"
 	Openvpn   Name = "openvpn"
 	Terraform Name = "terraform"
+	Bash      Name = "bash"
 )
 
 type Runner interface {
@@ -75,7 +79,7 @@ func (rf *RunnerFactory) Create(name Name, version, workDir string) Runner {
 
 	case Git:
 		return git.NewRunner(rf.executor, git.Paths{
-			Git:     "git",
+			Git:     string(name),
 			WorkDir: workDir,
 		})
 
@@ -105,6 +109,18 @@ func (rf *RunnerFactory) Create(name Name, version, workDir string) Runner {
 		return terraform.NewRunner(rf.executor, terraform.Paths{
 			Terraform: filepath.Join(rf.paths.Bin, string(name), version, string(name)),
 			WorkDir:   workDir,
+		})
+
+	case Yq:
+		return yq.NewRunner(rf.executor, yq.Paths{
+			Yq:      filepath.Join(rf.paths.Bin, string(name), version, string(name)),
+			WorkDir: workDir,
+		})
+
+	case Bash:
+		return bash.NewRunner(rf.executor, bash.Paths{
+			Bash:    string(name),
+			WorkDir: workDir,
 		})
 
 	default:
