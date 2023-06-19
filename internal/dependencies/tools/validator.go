@@ -48,6 +48,13 @@ func (tv *Validator) ValidateBaseReqs() ([]string, []error) {
 		oks = append(oks, "git")
 	}
 
+	bash := tv.toolFactory.Create(itool.Bash, "*")
+	if err := bash.CheckBinVersion(); err != nil {
+		errs = append(errs, err)
+	} else {
+		oks = append(oks, "bash")
+	}
+
 	return oks, errs
 }
 

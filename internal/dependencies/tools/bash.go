@@ -10,50 +10,49 @@ import (
 	"runtime"
 	"strings"
 
-	"github.com/sighupio/furyctl/internal/semver"
-	"github.com/sighupio/furyctl/internal/tool/git"
+	"github.com/sighupio/furyctl/internal/tool/bash"
 )
 
-func NewGit(runner *git.Runner, version string) *Git {
-	return &Git{
+func NewBash(runner *bash.Runner, version string) *Bash {
+	return &Bash{
 		arch:    runtime.GOARCH,
 		os:      runtime.GOOS,
 		version: version,
 		checker: &checker{
-			regex:  regexp.MustCompile(fmt.Sprintf("git version %s", semver.Regex)),
+			regex:  regexp.MustCompile(`version (\S*)\(`),
 			runner: runner,
 			splitFn: func(version string) []string {
 				return strings.Split(version, " ")
 			},
 			trimFn: func(tokens []string) string {
-				return tokens[len(tokens)-1]
+				return strings.TrimSuffix(tokens[len(tokens)-1], "(")
 			},
 		},
 	}
 }
 
-type Git struct {
+type Bash struct {
 	arch    string
 	checker *checker
 	os      string
 	version string
 }
 
-func (*Git) SupportsDownload() bool {
+func (*Bash) SupportsDownload() bool {
 	return false
 }
 
-func (*Git) SrcPath() string {
+func (*Bash) SrcPath() string {
 	return ""
 }
 
-func (*Git) Rename(_ string) error {
+func (*Bash) Rename(_ string) error {
 	return nil
 }
 
-func (a *Git) CheckBinVersion() error {
+func (a *Bash) CheckBinVersion() error {
 	if err := a.checker.version(a.version); err != nil {
-		return fmt.Errorf("git: %w", err)
+		return fmt.Errorf("bash: %w", err)
 	}
 
 	return nil
