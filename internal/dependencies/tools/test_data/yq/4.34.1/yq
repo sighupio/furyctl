@@ -1,0 +1,5 @@
+#!/bin/sh
+
+cat <<EOF
+yq (https://github.com/mikefarah/yq/) version v4.34.1
+EOF

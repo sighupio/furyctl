@@ -103,6 +103,12 @@ func (d *Distribution) Exec() error {
 		return fmt.Errorf("error creating template config: %w", err)
 	}
 
+	mCfg.Data["paths"] = map[any]any{
+		"kubectl":   d.OperationPhase.KubectlPath,
+		"kustomize": d.OperationPhase.KustomizePath,
+		"yq":        d.OperationPhase.YqPath,
+	}
+
 	// Generate manifests.
 	outYaml, err := yamlx.MarshalV2(mCfg)
 	if err != nil {

@@ -42,6 +42,14 @@ func Test_Factory_Create(t *testing.T) {
 			wantTool: true,
 		},
 		{
+			desc:     "yq",
+			wantTool: true,
+		},
+		{
+			desc:     "bash",
+			wantTool: true,
+		},
+		{
 			desc:     "unsupported",
 			wantTool: false,
 		},
@@ -138,6 +146,16 @@ func TestHelperProcess(t *testing.T) {
 		switch subcmd {
 		case "version":
 			fmt.Fprintf(os.Stdout, "Terraform v0.15.4\non darwin_amd64")
+		}
+	case "yq":
+		switch subcmd {
+		case "--version":
+			fmt.Fprintf(os.Stdout, "yq (https://github.com/mikefarah/yq/) version v4.34.1")
+		}
+	case "bash":
+		switch subcmd {
+		case "--version":
+			fmt.Fprintf(os.Stdout, "GNU bash, version 3.2.57(1)-release (arm64-apple-darwin22)\nCopyright (C) 2007 Free Software Foundation, Inc.")
 		}
 	default:
 		fmt.Fprintf(os.Stdout, "command not found")
