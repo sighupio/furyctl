@@ -34,6 +34,7 @@ func Test_Validator_Validate(t *testing.T) {
 						Kustomize: config.KFDTool{Version: "3.9.4"},
 						Terraform: config.KFDTool{Version: "0.15.4"},
 						Furyagent: config.KFDTool{Version: "0.3.0"},
+						Yq:        config.KFDTool{Version: "4.34.1"},
 					},
 				},
 			},
@@ -45,6 +46,7 @@ func Test_Validator_Validate(t *testing.T) {
 				"kustomize",
 				"terraform",
 				"furyagent",
+				"yq",
 			},
 		},
 		{
@@ -56,6 +58,7 @@ func Test_Validator_Validate(t *testing.T) {
 						Kustomize: config.KFDTool{Version: "3.5.3"},
 						Terraform: config.KFDTool{Version: "1.3.0"},
 						Furyagent: config.KFDTool{Version: "0.4.0"},
+						Yq:        config.KFDTool{Version: "4.33.0"},
 					},
 				},
 			},
@@ -67,6 +70,7 @@ func Test_Validator_Validate(t *testing.T) {
 				errors.New("kubectl: wrong tool version - installed = 1.21.1, expected = 1.22.0"),
 				errors.New("kustomize: wrong tool version - installed = 3.9.4, expected = 3.5.3"),
 				errors.New("terraform: wrong tool version - installed = 0.15.4, expected = 1.3.0"),
+				errors.New("yq: wrong tool version - installed = 4.34.1, expected = 4.33.0"),
 			},
 		},
 		{
@@ -78,6 +82,7 @@ func Test_Validator_Validate(t *testing.T) {
 						Kustomize: config.KFDTool{Version: "3.9.4"},
 						Terraform: config.KFDTool{Version: "0.15.4"},
 						Furyagent: config.KFDTool{Version: "0.3.0"},
+						Yq:        config.KFDTool{Version: "4.34.1"},
 					},
 					Eks: config.KFDToolsEks{
 						Awscli: config.KFDTool{Version: "2.8.12"},
@@ -94,6 +99,7 @@ func Test_Validator_Validate(t *testing.T) {
 				"kustomize",
 				"terraform",
 				"furyagent",
+				"yq",
 				"awscli",
 				"openvpn",
 				"terraform state aws s3 bucket",
@@ -161,6 +167,7 @@ func TestValidator_ValidateBaseReqs(t *testing.T) {
 			desc: "all base requirements are met",
 			wantOks: []string{
 				"git",
+				"bash",
 			},
 		},
 	}
