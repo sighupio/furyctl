@@ -10,7 +10,6 @@ import (
 	"os"
 	"path"
 	"path/filepath"
-	"time"
 
 	"github.com/sirupsen/logrus"
 
@@ -21,6 +20,7 @@ import (
 	"github.com/sighupio/furyctl/internal/template"
 	"github.com/sighupio/furyctl/internal/tool/kubectl"
 	"github.com/sighupio/furyctl/internal/tool/kustomize"
+	"github.com/sighupio/furyctl/internal/tool/shell"
 	execx "github.com/sighupio/furyctl/internal/x/exec"
 	yamlx "github.com/sighupio/furyctl/internal/x/yaml"
 )
@@ -44,6 +44,7 @@ type Distribution struct {
 	kzRunner        *kustomize.Runner
 	kubeRunner      *kubectl.Runner
 	dryRun          bool
+	shellRunner     *shell.Runner
 }
 
 func NewDistribution(
@@ -81,6 +82,13 @@ func NewDistribution(
 			true,
 			true,
 			false,
+		),
+		shellRunner: shell.NewRunner(
+			execx.NewStdExecutor(),
+			shell.Paths{
+				Shell:   "sh",
+				WorkDir: path.Join(phaseOp.Path, "manifests"),
+			},
 		),
 		dryRun: dryRun,
 	}, nil
@@ -216,11 +224,11 @@ func (d *Distribution) Exec() error {
 	// Apply manifests.
 	logrus.Info("Applying manifests...")
 
-	if err := d.delayedApplyRetries(manifestsOutPath, time.Minute, kubectlDelayMaxRetry); err != nil {
-		return err
+	if _, err := d.shellRunner.Run(path.Join(d.Path, "scripts", "apply.sh")); err != nil {
+		return fmt.Errorf("error applying manifests: %w", err)
 	}
 
-	return d.delayedApplyRetries(manifestsOutPath, 0, kubectlNoDelayMaxRetry)
+	return nil
 }
 
 func (*Distribution) Stop() error {
@@ -263,40 +271,4 @@ func (d *Distribution) createFuryctlMerger() (*merge.Merger, error) {
 	}
 
 	return reverseMerger, nil
-}
-
-func (d *Distribution) delayedApplyRetries(mPath string, delay time.Duration, maxRetries int) error {
-	var err error
-
-	retries := 0
-
-	if maxRetries == 0 {
-		return nil
-	}
-
-	err = d.kubeRunner.Apply(mPath)
-	if err == nil {
-		return nil
-	}
-
-	retries++
-
-	for retries < maxRetries {
-		t := time.NewTimer(delay)
-
-		if <-t.C; true {
-			logrus.Debug("applying manifests again... to ensure all resources are created.")
-
-			err = d.kubeRunner.Apply(mPath)
-			if err == nil {
-				return nil
-			}
-		}
-
-		retries++
-
-		t.Stop()
-	}
-
-	return fmt.Errorf("error applying manifests: %w", err)
 }

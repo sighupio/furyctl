@@ -15,12 +15,12 @@ import (
 	"github.com/sighupio/furyctl/internal/tool"
 	"github.com/sighupio/furyctl/internal/tool/ansible"
 	"github.com/sighupio/furyctl/internal/tool/awscli"
-	"github.com/sighupio/furyctl/internal/tool/bash"
 	"github.com/sighupio/furyctl/internal/tool/furyagent"
 	"github.com/sighupio/furyctl/internal/tool/git"
 	"github.com/sighupio/furyctl/internal/tool/kubectl"
 	"github.com/sighupio/furyctl/internal/tool/kustomize"
 	"github.com/sighupio/furyctl/internal/tool/openvpn"
+	"github.com/sighupio/furyctl/internal/tool/shell"
 	"github.com/sighupio/furyctl/internal/tool/terraform"
 	"github.com/sighupio/furyctl/internal/tool/yq"
 	execx "github.com/sighupio/furyctl/internal/x/exec"
@@ -138,13 +138,13 @@ func (f *Factory) Create(name tool.Name, version string) Tool {
 
 		return NewYq(yqr, version)
 
-	case tool.Bash:
-		bashr, ok := t.(*bash.Runner)
+	case tool.Shell:
+		shellr, ok := t.(*shell.Runner)
 		if !ok {
-			panic(fmt.Sprintf("expected bash.Runner, got %T", t))
+			panic(fmt.Sprintf("expected shell.Runner, got %T", t))
 		}
 
-		return NewBash(bashr, version)
+		return NewShell(shellr, version)
 
 	default:
 		return nil
