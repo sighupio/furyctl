@@ -16,6 +16,7 @@ func TestCreateSecret(t *testing.T) {
 
 	name := "test"
 	namespace := "test"
+	key := "config"
 	config := "dGVzdA=="
 
 	secret := struct {
@@ -42,7 +43,7 @@ func TestCreateSecret(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	got, err := kubex.CreateSecret([]byte("test"), name, namespace)
+	got, err := kubex.CreateSecret([]byte("test"), name, key, namespace)
 	if err != nil {
 		t.Fatal(err)
 	}
