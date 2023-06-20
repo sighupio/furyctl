@@ -46,7 +46,7 @@ func Test_Factory_Create(t *testing.T) {
 			wantTool: true,
 		},
 		{
-			desc:     "bash",
+			desc:     "shell",
 			wantTool: true,
 		},
 		{
@@ -152,7 +152,7 @@ func TestHelperProcess(t *testing.T) {
 		case "--version":
 			fmt.Fprintf(os.Stdout, "yq (https://github.com/mikefarah/yq/) version v4.34.1")
 		}
-	case "bash":
+	case "sh":
 		switch subcmd {
 		case "--version":
 			fmt.Fprintf(os.Stdout, "GNU bash, version 3.2.57(1)-release (arm64-apple-darwin22)\nCopyright (C) 2007 Free Software Foundation, Inc.")
