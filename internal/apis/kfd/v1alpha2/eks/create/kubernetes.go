@@ -359,9 +359,10 @@ func (k *Kubernetes) copyFromTemplate(furyctlCfg template.Config) error {
 		"terraform": {
 			"backend": map[string]any{
 				"s3": map[string]any{
-					"bucketName": k.furyctlConf.Spec.ToolsConfiguration.Terraform.State.S3.BucketName,
-					"keyPrefix":  k.furyctlConf.Spec.ToolsConfiguration.Terraform.State.S3.KeyPrefix,
-					"region":     k.furyctlConf.Spec.ToolsConfiguration.Terraform.State.S3.Region,
+					"bucketName":           k.furyctlConf.Spec.ToolsConfiguration.Terraform.State.S3.BucketName,
+					"keyPrefix":            k.furyctlConf.Spec.ToolsConfiguration.Terraform.State.S3.KeyPrefix,
+					"region":               k.furyctlConf.Spec.ToolsConfiguration.Terraform.State.S3.Region,
+					"skipRegionValidation": k.furyctlConf.Spec.ToolsConfiguration.Terraform.State.S3.SkipRegionValidation,
 				},
 			},
 		},
