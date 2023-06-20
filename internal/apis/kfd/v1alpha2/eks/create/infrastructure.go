@@ -202,9 +202,10 @@ func (i *Infrastructure) copyFromTemplate() error {
 		"terraform": {
 			"backend": map[string]any{
 				"s3": map[string]any{
-					"bucketName": i.furyctlConf.Spec.ToolsConfiguration.Terraform.State.S3.BucketName,
-					"keyPrefix":  i.furyctlConf.Spec.ToolsConfiguration.Terraform.State.S3.KeyPrefix,
-					"region":     i.furyctlConf.Spec.ToolsConfiguration.Terraform.State.S3.Region,
+					"bucketName":           i.furyctlConf.Spec.ToolsConfiguration.Terraform.State.S3.BucketName,
+					"keyPrefix":            i.furyctlConf.Spec.ToolsConfiguration.Terraform.State.S3.KeyPrefix,
+					"region":               i.furyctlConf.Spec.ToolsConfiguration.Terraform.State.S3.Region,
+					"skipRegionValidation": i.furyctlConf.Spec.ToolsConfiguration.Terraform.State.S3.SkipRegionValidation,
 				},
 			},
 		},

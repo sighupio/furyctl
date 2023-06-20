@@ -10,7 +10,7 @@ terraform {
     key    = "{{ .terraform.backend.s3.keyPrefix }}/infrastructure.json"
     region = "{{ .terraform.backend.s3.region }}"
 
-    skip_region_validation = true
+    skip_region_validation = {{ default false .terraform.backend.s3.skipRegionValidation }}
   }
 
   required_providers {

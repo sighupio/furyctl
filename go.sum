@@ -296,8 +296,8 @@ github.com/shirou/gopsutil/v3 v3.23.2/go.mod h1:gv0aQw33GLo3pG8SiWKiQrbDzbRY1K80
 github.com/shopspring/decimal v1.2.0/go.mod h1:DKyhrW/HYNuLGql+MJL6WCR6knT2jwCFRcu2hWCYk4o=
 github.com/shopspring/decimal v1.3.1 h1:2Usl1nmF/WZucqkFZhnfFYxxxu8LG21F6nPQBE5gKV8=
 github.com/shopspring/decimal v1.3.1/go.mod h1:DKyhrW/HYNuLGql+MJL6WCR6knT2jwCFRcu2hWCYk4o=
-github.com/sighupio/fury-distribution v1.25.3-0.20230614133947-7a93ddbdad28 h1:+UeK6N3lRfCrOOQLKUKt2Wtnjbb2Rn4TyUt365pBfTg=
-github.com/sighupio/fury-distribution v1.25.3-0.20230614133947-7a93ddbdad28/go.mod h1:GP3AWJD0nw1WSdHDHZoXbKXlpUOTkLAr9zKHIxmsOWM=
+github.com/sighupio/fury-distribution v1.25.3-0.20230620151552-bf1b6f5ebd2d h1:E2hY/mPZL4rHcYLmf4XwGr1IIspbvoTgZsdkLfQoglE=
+github.com/sighupio/fury-distribution v1.25.3-0.20230620151552-bf1b6f5ebd2d/go.mod h1:GP3AWJD0nw1WSdHDHZoXbKXlpUOTkLAr9zKHIxmsOWM=
 github.com/sirupsen/logrus v1.9.0 h1:trlNQbNUG3OdDrDil03MCb1H2o9nJ1x4/5LYw7byDE0=
 github.com/sirupsen/logrus v1.9.0/go.mod h1:naHLuLoDiP4jHNo9R0sCBMtWGeIprob74mVsIT4qYEQ=
 github.com/spf13/afero v1.9.3 h1:41FoI0fD7OR7mGcKE/aOiLkGreyf8ifIOQmJANWogMk=
