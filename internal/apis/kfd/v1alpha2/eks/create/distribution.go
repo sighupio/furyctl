@@ -498,20 +498,14 @@ func (d *Distribution) createDummyOutput() error {
 }
 
 func (d *Distribution) extractARNsFromTfOut() (map[string]string, error) {
-	var distroOut terraform.OutputJSON
-
 	arns := map[string]string{}
 
-	distroOutJSON, err := os.ReadFile(path.Join(d.OutputsPath, "output.json"))
+	out, err := d.tfRunner.Output()
 	if err != nil {
-		return nil, fmt.Errorf("error reading distribution output: %w", err)
+		return nil, fmt.Errorf("error getting terraform output: %w", err)
 	}
 
-	if err := json.Unmarshal(distroOutJSON, &distroOut); err != nil {
-		return nil, fmt.Errorf("error unmarshaling distribution output: %w", err)
-	}
-
-	ebsCsiDriverArn, ok := distroOut["ebs_csi_driver_iam_role_arn"]
+	ebsCsiDriverArn, ok := out["ebs_csi_driver_iam_role_arn"]
 	if ok {
 		arns["ebs_csi_driver_iam_role_arn"], ok = ebsCsiDriverArn.Value.(string)
 		if !ok {
@@ -519,7 +513,7 @@ func (d *Distribution) extractARNsFromTfOut() (map[string]string, error) {
 		}
 	}
 
-	loadBalancerControllerArn, ok := distroOut["load_balancer_controller_iam_role_arn"]
+	loadBalancerControllerArn, ok := out["load_balancer_controller_iam_role_arn"]
 	if ok {
 		arns["load_balancer_controller_iam_role_arn"], ok = loadBalancerControllerArn.Value.(string)
 		if !ok {
@@ -527,7 +521,7 @@ func (d *Distribution) extractARNsFromTfOut() (map[string]string, error) {
 		}
 	}
 
-	clusterAutoscalerArn, ok := distroOut["cluster_autoscaler_iam_role_arn"]
+	clusterAutoscalerArn, ok := out["cluster_autoscaler_iam_role_arn"]
 	if ok {
 		arns["cluster_autoscaler_iam_role_arn"], ok = clusterAutoscalerArn.Value.(string)
 		if !ok {
@@ -535,7 +529,7 @@ func (d *Distribution) extractARNsFromTfOut() (map[string]string, error) {
 		}
 	}
 
-	externalDNSPrivateArn, ok := distroOut["external_dns_private_iam_role_arn"]
+	externalDNSPrivateArn, ok := out["external_dns_private_iam_role_arn"]
 	if ok {
 		arns["external_dns_private_iam_role_arn"], ok = externalDNSPrivateArn.Value.(string)
 		if !ok {
@@ -543,7 +537,7 @@ func (d *Distribution) extractARNsFromTfOut() (map[string]string, error) {
 		}
 	}
 
-	externalDNSPublicArn, ok := distroOut["external_dns_public_iam_role_arn"]
+	externalDNSPublicArn, ok := out["external_dns_public_iam_role_arn"]
 	if ok {
 		arns["external_dns_public_iam_role_arn"], ok = externalDNSPublicArn.Value.(string)
 		if !ok {
@@ -551,7 +545,7 @@ func (d *Distribution) extractARNsFromTfOut() (map[string]string, error) {
 		}
 	}
 
-	certManagerArn, ok := distroOut["cert_manager_iam_role_arn"]
+	certManagerArn, ok := out["cert_manager_iam_role_arn"]
 	if ok {
 		arns["cert_manager_iam_role_arn"], ok = certManagerArn.Value.(string)
 		if !ok {
@@ -559,7 +553,7 @@ func (d *Distribution) extractARNsFromTfOut() (map[string]string, error) {
 		}
 	}
 
-	veleroArn, ok := distroOut["velero_iam_role_arn"]
+	veleroArn, ok := out["velero_iam_role_arn"]
 	if ok {
 		arns["velero_iam_role_arn"], ok = veleroArn.Value.(string)
 		if !ok {
