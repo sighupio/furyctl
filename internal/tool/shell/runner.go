@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-package bash
+package shell
 
 import (
 	"fmt"
@@ -13,7 +13,7 @@ import (
 )
 
 type Paths struct {
-	Bash    string
+	Shell   string
 	WorkDir string
 }
 
@@ -32,11 +32,11 @@ func NewRunner(executor execx.Executor, paths Paths) *Runner {
 }
 
 func (r *Runner) CmdPath() string {
-	return r.paths.Bash
+	return r.paths.Shell
 }
 
 func (r *Runner) newCmd(args []string) (*execx.Cmd, string) {
-	cmd := execx.NewCmd(r.paths.Bash, execx.CmdOptions{
+	cmd := execx.NewCmd(r.paths.Shell, execx.CmdOptions{
 		Args:     args,
 		Executor: r.executor,
 		WorkDir:  r.paths.WorkDir,
@@ -53,14 +53,16 @@ func (r *Runner) deleteCmd(id string) {
 }
 
 func (r *Runner) Version() (string, error) {
-	args := []string{"--version"}
+	return "", nil
+}
 
+func (r *Runner) Run(args ...string) (string, error) {
 	cmd, id := r.newCmd(args)
 	defer r.deleteCmd(id)
 
 	out, err := execx.CombinedOutput(cmd)
 	if err != nil {
-		return "", fmt.Errorf("error getting bash version: %w", err)
+		return "", fmt.Errorf("error while running shell: %w", err)
 	}
 
 	return out, nil
@@ -69,7 +71,7 @@ func (r *Runner) Version() (string, error) {
 func (r *Runner) Stop() error {
 	for _, cmd := range r.cmds {
 		if err := cmd.Stop(); err != nil {
-			return fmt.Errorf("error stopping bash runner: %w", err)
+			return fmt.Errorf("error stopping shell runner: %w", err)
 		}
 	}
 

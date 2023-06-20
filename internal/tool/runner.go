@@ -9,12 +9,12 @@ import (
 
 	"github.com/sighupio/furyctl/internal/tool/ansible"
 	"github.com/sighupio/furyctl/internal/tool/awscli"
-	"github.com/sighupio/furyctl/internal/tool/bash"
 	"github.com/sighupio/furyctl/internal/tool/furyagent"
 	"github.com/sighupio/furyctl/internal/tool/git"
 	"github.com/sighupio/furyctl/internal/tool/kubectl"
 	"github.com/sighupio/furyctl/internal/tool/kustomize"
 	"github.com/sighupio/furyctl/internal/tool/openvpn"
+	"github.com/sighupio/furyctl/internal/tool/shell"
 	"github.com/sighupio/furyctl/internal/tool/terraform"
 	"github.com/sighupio/furyctl/internal/tool/yq"
 	execx "github.com/sighupio/furyctl/internal/x/exec"
@@ -32,7 +32,7 @@ const (
 	Kustomize Name = "kustomize"
 	Openvpn   Name = "openvpn"
 	Terraform Name = "terraform"
-	Bash      Name = "bash"
+	Shell     Name = "shell"
 )
 
 type Runner interface {
@@ -117,9 +117,9 @@ func (rf *RunnerFactory) Create(name Name, version, workDir string) Runner {
 			WorkDir: workDir,
 		})
 
-	case Bash:
-		return bash.NewRunner(rf.executor, bash.Paths{
-			Bash:    string(name),
+	case Shell:
+		return shell.NewRunner(rf.executor, shell.Paths{
+			Shell:   "sh",
 			WorkDir: workDir,
 		})
 

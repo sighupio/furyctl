@@ -167,7 +167,7 @@ func TestValidator_ValidateBaseReqs(t *testing.T) {
 			desc: "all base requirements are met",
 			wantOks: []string{
 				"git",
-				"bash",
+				"shell",
 			},
 		},
 	}
