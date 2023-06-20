@@ -47,7 +47,7 @@ module "vpc" {
   # availability_zone_names = []
   # single_nat_gateway = false
   # one_nat_gateway_per_az = true
-  # names_of_kubernetes_cluster_integrated_with_subnets = []
+  names_of_kubernetes_cluster_integrated_with_subnets = [var.name]
 }
 
 module "vpn" {
