@@ -11,7 +11,7 @@ import (
 	yamlx "github.com/sighupio/furyctl/internal/x/yaml"
 )
 
-func CreateSecret(data []byte, name, namespace string) ([]byte, error) {
+func CreateSecret(data []byte, name, key, namespace string) ([]byte, error) {
 	secret := struct {
 		APIVersion string            `yaml:"apiVersion"`
 		Kind       string            `yaml:"kind"`
@@ -27,7 +27,7 @@ func CreateSecret(data []byte, name, namespace string) ([]byte, error) {
 		},
 		Type: "Opaque",
 		Data: map[string]string{
-			"config": base64.StdEncoding.EncodeToString(data),
+			key: base64.StdEncoding.EncodeToString(data),
 		},
 	}
 
