@@ -25,11 +25,6 @@ import (
 	yamlx "github.com/sighupio/furyctl/internal/x/yaml"
 )
 
-const (
-	kubectlDelayMaxRetry   = 3
-	kubectlNoDelayMaxRetry = 7
-)
-
 var (
 	errClusterConnect = errors.New("error connecting to cluster")
 	errNoStorageClass = errors.New("at least one storage class is required")

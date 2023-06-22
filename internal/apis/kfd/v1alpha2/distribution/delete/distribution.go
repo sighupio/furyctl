@@ -22,17 +22,7 @@ import (
 	iox "github.com/sighupio/furyctl/internal/x/io"
 )
 
-const (
-	ingressAfterDeleteDelay         = 4
-	checkPendingResourcesDelay      = 20
-	checkPendingResourcesMaxRetries = 5
-)
-
-var (
-	errCheckPendingResources = errors.New("error while checking pending resources")
-	errPendingResources      = errors.New("pending resources: ")
-	errClusterConnect        = errors.New("error connecting to cluster")
-)
+var errClusterConnect = errors.New("error connecting to cluster")
 
 type Ingress struct {
 	Name string

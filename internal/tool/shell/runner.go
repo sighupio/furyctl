@@ -52,7 +52,7 @@ func (r *Runner) deleteCmd(id string) {
 	delete(r.cmds, id)
 }
 
-func (r *Runner) Version() (string, error) {
+func (*Runner) Version() (string, error) {
 	return "", nil
 }
 

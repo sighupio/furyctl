@@ -10,7 +10,7 @@ import (
 	"github.com/sighupio/furyctl/internal/tool/shell"
 )
 
-func NewShell(runner *shell.Runner, version string) *Shell {
+func NewShell(_ *shell.Runner, version string) *Shell {
 	return &Shell{
 		arch:    runtime.GOARCH,
 		os:      runtime.GOOS,
@@ -20,7 +20,6 @@ func NewShell(runner *shell.Runner, version string) *Shell {
 
 type Shell struct {
 	arch    string
-	checker *checker
 	os      string
 	version string
 }
@@ -37,6 +36,6 @@ func (*Shell) Rename(_ string) error {
 	return nil
 }
 
-func (a *Shell) CheckBinVersion() error {
+func (*Shell) CheckBinVersion() error {
 	return nil
 }
