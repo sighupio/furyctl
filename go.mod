@@ -18,7 +18,7 @@ require (
 	github.com/onsi/gomega v1.24.2
 	github.com/santhosh-tekuri/jsonschema/v5 v5.1.1
 	github.com/shirou/gopsutil/v3 v3.23.2
-	github.com/sighupio/fury-distribution v1.25.3-0.20230620151552-bf1b6f5ebd2d
+	github.com/sighupio/fury-distribution v1.25.3-0.20230626092152-6bbd75d9569e
 	github.com/sirupsen/logrus v1.9.0
 	github.com/spf13/cobra v1.6.1
 	github.com/spf13/viper v1.14.0
