@@ -99,6 +99,8 @@ func (d *Distribution) Exec() error {
 		return nil
 	}
 
+	logrus.Info("Deleting kubernetes resources...")
+
 	// Delete manifests.
 	if _, err := d.shellRunner.Run(path.Join(d.Path, "scripts", "delete.sh")); err != nil {
 		return fmt.Errorf("error deleting resources: %w", err)

@@ -10,6 +10,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"sync"
 
 	"github.com/sirupsen/logrus"
 
@@ -142,6 +143,8 @@ func (d *Distribution) Exec() error {
 
 	// Stop if dry run is enabled.
 	if d.dryRun {
+		// TODO: build manifests without applying
+
 		return nil
 	}
 
@@ -191,7 +194,49 @@ func (d *Distribution) Exec() error {
 	return nil
 }
 
-func (*Distribution) Stop() error {
+func (d *Distribution) Stop() error {
+	errCh := make(chan error)
+	doneCh := make(chan bool)
+
+	var wg sync.WaitGroup
+
+	//nolint:gomnd,revive // ignore magic number linters
+	wg.Add(2)
+
+	go func() {
+		logrus.Debug("Stopping shell...")
+
+		if err := d.shellRunner.Stop(); err != nil {
+			errCh <- fmt.Errorf("error stopping shell: %w", err)
+		}
+
+		wg.Done()
+	}()
+
+	go func() {
+		logrus.Debug("Stopping kubectl...")
+
+		if err := d.kubeRunner.Stop(); err != nil {
+			errCh <- fmt.Errorf("error stopping kubectl: %w", err)
+		}
+
+		wg.Done()
+	}()
+
+	go func() {
+		wg.Wait()
+		close(doneCh)
+	}()
+
+	select {
+	case <-doneCh:
+
+	case err := <-errCh:
+		close(errCh)
+
+		return err
+	}
+
 	return nil
 }
 
