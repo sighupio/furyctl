@@ -7,16 +7,13 @@ package del
 import (
 	"errors"
 	"fmt"
-	"os"
 	"path"
-	"path/filepath"
 
 	"github.com/sirupsen/logrus"
 
 	"github.com/sighupio/fury-distribution/pkg/apis/config"
 	"github.com/sighupio/furyctl/internal/cluster"
 	"github.com/sighupio/furyctl/internal/tool/kubectl"
-	"github.com/sighupio/furyctl/internal/tool/kustomize"
 	"github.com/sighupio/furyctl/internal/tool/shell"
 	execx "github.com/sighupio/furyctl/internal/x/exec"
 	iox "github.com/sighupio/furyctl/internal/x/io"
@@ -31,7 +28,6 @@ type Ingress struct {
 
 type Distribution struct {
 	*cluster.OperationPhase
-	kzRunner    *kustomize.Runner
 	kubeRunner  *kubectl.Runner
 	shellRunner *shell.Runner
 	dryRun      bool
@@ -53,13 +49,6 @@ func NewDistribution(
 
 	return &Distribution{
 		OperationPhase: phaseOp,
-		kzRunner: kustomize.NewRunner(
-			execx.NewStdExecutor(),
-			kustomize.Paths{
-				Kustomize: phaseOp.KustomizePath,
-				WorkDir:   path.Join(phaseOp.Path, "manifests"),
-			},
-		),
 		kubeRunner: kubectl.NewRunner(
 			execx.NewStdExecutor(),
 			kubectl.Paths{
@@ -91,27 +80,6 @@ func (d *Distribution) Exec() error {
 		logrus.Debug("Distribution phase already executed, skipping...")
 
 		return nil
-	}
-
-	// Build manifests.
-	logrus.Info("Building manifests...")
-
-	kzOut, err := d.kzRunner.Build()
-	if err != nil {
-		return fmt.Errorf("error building manifests: %w", err)
-	}
-
-	outDirPath, err := os.MkdirTemp("", "furyctl-dist-manifests-")
-	if err != nil {
-		return fmt.Errorf("error creating temp dir: %w", err)
-	}
-
-	manifestsOutPath := filepath.Join(outDirPath, "out.yaml")
-
-	logrus.Debugf("built manifests = %s", manifestsOutPath)
-
-	if err = os.WriteFile(manifestsOutPath, []byte(kzOut), os.ModePerm); err != nil {
-		return fmt.Errorf("error writing built manifests: %w", err)
 	}
 
 	// Check cluster connection and requirements.
