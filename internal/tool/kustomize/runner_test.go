@@ -16,7 +16,7 @@ import (
 )
 
 func Test_Runner_Version(t *testing.T) {
-	r := kustomize.NewRunner(execx.NewFakeExecutor(), kustomize.Paths{
+	r := kustomize.NewRunner(execx.NewFakeExecutor("TestHelperProcess"), kustomize.Paths{
 		Kustomize: "kustomize",
 		WorkDir:   os.TempDir(),
 	})

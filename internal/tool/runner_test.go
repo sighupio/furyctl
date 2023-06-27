@@ -72,7 +72,7 @@ func Test_RunnerFactory_Create(t *testing.T) {
 		t.Run(tC.desc, func(t *testing.T) {
 			t.Parallel()
 
-			rf := tool.NewRunnerFactory(execx.NewFakeExecutor(), tool.RunnerFactoryPaths{
+			rf := tool.NewRunnerFactory(execx.NewFakeExecutor("TestHelperProcess"), tool.RunnerFactoryPaths{
 				Bin: os.TempDir(),
 			})
 

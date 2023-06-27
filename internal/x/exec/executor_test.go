@@ -33,7 +33,7 @@ func Test_StdExecutor_Command(t *testing.T) {
 }
 
 func Test_FakeExecutor_Command(t *testing.T) {
-	e := execx.NewFakeExecutor()
+	e := execx.NewFakeExecutor("TestHelperProcess")
 
 	cmd := e.Command("fakectl", "hello world")
 	if cmd == nil {

@@ -128,7 +128,7 @@ func Test_Terraform_CheckBinVersion(t *testing.T) {
 }
 
 func newTerraformRunner() *terraform.Runner {
-	return terraform.NewRunner(execx.NewFakeExecutor(), terraform.Paths{
+	return terraform.NewRunner(execx.NewFakeExecutor("TestHelperProcess"), terraform.Paths{
 		Terraform: "terraform",
 	})
 }
