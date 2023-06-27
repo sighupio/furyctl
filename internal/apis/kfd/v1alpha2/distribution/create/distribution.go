@@ -205,7 +205,7 @@ func (d *Distribution) Stop() error {
 
 	var wg sync.WaitGroup
 
-	//nolint:gomnd,revive // ignore magic number linters
+	//nolint:gomnd // ignore magic number linters
 	wg.Add(2)
 
 	go func() {

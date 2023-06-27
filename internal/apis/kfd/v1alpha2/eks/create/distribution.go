@@ -29,11 +29,6 @@ import (
 	yamlx "github.com/sighupio/furyctl/internal/x/yaml"
 )
 
-const (
-	kubectlDelayMaxRetry   = 3
-	kubectlNoDelayMaxRetry = 7
-)
-
 var (
 	errCastingVpcIDToStr     = errors.New("error casting vpc_id output to string")
 	errCastingEbsIamToStr    = errors.New("error casting ebs_csi_driver_iam_role_arn output to string")
