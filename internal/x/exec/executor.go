@@ -5,6 +5,7 @@
 package execx
 
 import (
+	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -24,14 +25,22 @@ func (*StdExecutor) Command(name string, arg ...string) *exec.Cmd {
 	return exec.Command(name, arg...)
 }
 
-func NewFakeExecutor() *FakeExecutor {
-	return &FakeExecutor{}
+func NewFakeExecutor(testHelperProcessFn string) *FakeExecutor {
+	if testHelperProcessFn == "" {
+		testHelperProcessFn = "TestHelperProcess"
+	}
+
+	return &FakeExecutor{
+		testHelperProcessFn: testHelperProcessFn,
+	}
 }
 
-type FakeExecutor struct{}
+type FakeExecutor struct {
+	testHelperProcessFn string
+}
 
-func (*FakeExecutor) Command(name string, arg ...string) *exec.Cmd {
-	cs := []string{"-test.run=TestHelperProcess", "--", filepath.Base(name)}
+func (fe *FakeExecutor) Command(name string, arg ...string) *exec.Cmd {
+	cs := []string{fmt.Sprintf("-test.run=%s", fe.testHelperProcessFn), "--", filepath.Base(name)}
 	cs = append(cs, arg...)
 
 	return exec.Command(os.Args[0], cs...)

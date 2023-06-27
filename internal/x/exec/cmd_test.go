@@ -46,7 +46,7 @@ func TestNewCmd(t *testing.T) {
 			opts: execx.CmdOptions{
 				Args:     []string{"foo", "bar"},
 				Err:      bytes.NewBufferString("bar"),
-				Executor: execx.NewFakeExecutor(),
+				Executor: execx.NewFakeExecutor("TestHelperProcess"),
 				Out:      bytes.NewBufferString("foo"),
 				WorkDir:  os.TempDir(),
 			},
@@ -137,7 +137,7 @@ func Test_Cmd_Stop(t *testing.T) {
 			desc: "successful stop",
 			cmd: execx.NewCmd("long process", execx.CmdOptions{
 				Args:     []string{"sleep", "60"},
-				Executor: execx.NewFakeExecutor(),
+				Executor: execx.NewFakeExecutor("TestHelperProcess"),
 			}),
 			wantErr: false,
 		},

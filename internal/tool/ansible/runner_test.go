@@ -16,7 +16,7 @@ import (
 )
 
 func Test_Runner_Version(t *testing.T) {
-	r := ansible.NewRunner(execx.NewFakeExecutor(), ansible.Paths{
+	r := ansible.NewRunner(execx.NewFakeExecutor("TestHelperProcess"), ansible.Paths{
 		Ansible: "ansible",
 		WorkDir: os.TempDir(),
 	})
