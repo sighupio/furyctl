@@ -8,7 +8,6 @@ import (
 	"errors"
 	"fmt"
 	"path"
-	"regexp"
 	"time"
 
 	"github.com/sirupsen/logrus"
@@ -23,19 +22,7 @@ import (
 	iox "github.com/sighupio/furyctl/internal/x/io"
 )
 
-const (
-	ingressAfterDeleteDelay         = 4
-	checkPendingResourcesDelay      = 20
-	checkPendingResourcesMaxRetries = 5
-)
-
-var (
-	errCheckPendingResources = errors.New("error while checking pending resources")
-	errPendingResources      = errors.New("pending resources: ")
-	errClusterConnect        = errors.New("error connecting to cluster")
-	hostedZoneRegex          = regexp.MustCompile(`/hostedzone/(\S+)\t(\S+)\.`)
-	recordSetsRegex          = regexp.MustCompile(`(\S+)\.`)
-)
+var errClusterConnect = errors.New("error connecting to cluster")
 
 type Ingress struct {
 	Name string
