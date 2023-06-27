@@ -58,6 +58,7 @@ type Distribution struct {
 	kubeRunner       *kubectl.Runner
 	dryRun           bool
 	phase            string
+	kubeconfig       string
 }
 
 type injectType struct {
@@ -71,6 +72,7 @@ func NewDistribution(
 	infraOutputsPath string,
 	dryRun bool,
 	phase string,
+	kubeconfig string,
 ) (*Distribution, error) {
 	distroDir := path.Join(paths.WorkDir, cluster.OperationPhaseDistribution)
 
@@ -114,8 +116,9 @@ func NewDistribution(
 			true,
 			false,
 		),
-		dryRun: dryRun,
-		phase:  phase,
+		dryRun:     dryRun,
+		phase:      phase,
+		kubeconfig: kubeconfig,
 	}, nil
 }
 
@@ -186,7 +189,7 @@ func (d *Distribution) Exec() error {
 			return err
 		}
 
-		if _, err := d.shellRunner.Run(path.Join(d.Path, "scripts", "apply.sh"), "--dry-run=true"); err != nil {
+		if _, err := d.shellRunner.Run(path.Join(d.Path, "scripts", "apply.sh"), "true", d.kubeconfig); err != nil {
 			return fmt.Errorf("error applying manifests: %w", err)
 		}
 
@@ -240,7 +243,7 @@ func (d *Distribution) Exec() error {
 
 	logrus.Info("Applying manifests...")
 
-	if _, err := d.shellRunner.Run(path.Join(d.Path, "scripts", "apply.sh")); err != nil {
+	if _, err := d.shellRunner.Run(path.Join(d.Path, "scripts", "apply.sh"), "false", d.kubeconfig); err != nil {
 		return fmt.Errorf("error applying manifests: %w", err)
 	}
 

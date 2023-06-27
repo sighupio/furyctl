@@ -458,6 +458,7 @@ func (v *ClusterCreator) setupPhases() (*create.Infrastructure, *create.Kubernet
 		infra.OutputsPath,
 		v.dryRun,
 		v.phase,
+		v.paths.Kubeconfig,
 	)
 	if err != nil {
 		return nil, nil, nil, fmt.Errorf("error while initiating distribution phase: %w", err)

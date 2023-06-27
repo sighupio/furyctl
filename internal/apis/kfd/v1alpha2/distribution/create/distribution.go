@@ -39,6 +39,7 @@ type Distribution struct {
 	kubeRunner      *kubectl.Runner
 	dryRun          bool
 	shellRunner     *shell.Runner
+	kubeconfig      string
 }
 
 func NewDistribution(
@@ -46,6 +47,7 @@ func NewDistribution(
 	furyctlConf public.KfddistributionKfdV1Alpha2,
 	kfdManifest config.KFD,
 	dryRun bool,
+	kubeconfig string,
 ) (*Distribution, error) {
 	distroDir := path.Join(paths.WorkDir, cluster.OperationPhaseDistribution)
 
@@ -77,7 +79,8 @@ func NewDistribution(
 				WorkDir: path.Join(phaseOp.Path, "manifests"),
 			},
 		),
-		dryRun: dryRun,
+		dryRun:     dryRun,
+		kubeconfig: kubeconfig,
 	}, nil
 }
 
@@ -143,7 +146,7 @@ func (d *Distribution) Exec() error {
 
 	// Stop if dry run is enabled.
 	if d.dryRun {
-		if _, err := d.shellRunner.Run(path.Join(d.Path, "scripts", "apply.sh"), "--dry-run=true"); err != nil {
+		if _, err := d.shellRunner.Run(path.Join(d.Path, "scripts", "apply.sh"), "true", d.kubeconfig); err != nil {
 			return fmt.Errorf("error applying resources: %w", err)
 		}
 
@@ -189,7 +192,7 @@ func (d *Distribution) Exec() error {
 	// Apply manifests.
 	logrus.Info("Applying manifests...")
 
-	if _, err := d.shellRunner.Run(path.Join(d.Path, "scripts", "apply.sh")); err != nil {
+	if _, err := d.shellRunner.Run(path.Join(d.Path, "scripts", "apply.sh"), "false", d.kubeconfig); err != nil {
 		return fmt.Errorf("error applying manifests: %w", err)
 	}
 
