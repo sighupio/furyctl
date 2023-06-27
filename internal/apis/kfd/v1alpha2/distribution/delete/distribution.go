@@ -31,6 +31,7 @@ type Distribution struct {
 	kubeRunner  *kubectl.Runner
 	shellRunner *shell.Runner
 	dryRun      bool
+	kubeconfig  string
 }
 
 func NewDistribution(
@@ -67,7 +68,8 @@ func NewDistribution(
 				WorkDir: path.Join(phaseOp.Path, "manifests"),
 			},
 		),
-		dryRun: dryRun,
+		dryRun:     dryRun,
+		kubeconfig: kubeconfig,
 	}, nil
 }
 
@@ -92,7 +94,7 @@ func (d *Distribution) Exec() error {
 	}
 
 	if d.dryRun {
-		if _, err := d.shellRunner.Run(path.Join(d.Path, "scripts", "delete.sh"), "--dry-run=true"); err != nil {
+		if _, err := d.shellRunner.Run(path.Join(d.Path, "scripts", "delete.sh"), "true", d.kubeconfig); err != nil {
 			return fmt.Errorf("error deleting resources: %w", err)
 		}
 
@@ -102,7 +104,7 @@ func (d *Distribution) Exec() error {
 	logrus.Info("Deleting kubernetes resources...")
 
 	// Delete manifests.
-	if _, err := d.shellRunner.Run(path.Join(d.Path, "scripts", "delete.sh")); err != nil {
+	if _, err := d.shellRunner.Run(path.Join(d.Path, "scripts", "delete.sh"), "false", d.kubeconfig); err != nil {
 		return fmt.Errorf("error deleting resources: %w", err)
 	}
 

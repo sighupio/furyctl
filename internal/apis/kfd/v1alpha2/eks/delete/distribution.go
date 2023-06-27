@@ -49,6 +49,7 @@ type Distribution struct {
 	shellRunner *shell.Runner
 	kubeClient  *kubernetes.Client
 	dryRun      bool
+	kubeconfig  string
 }
 
 func NewDistribution(
@@ -100,7 +101,8 @@ func NewDistribution(
 				WorkDir: path.Join(phase.Path, "manifests"),
 			},
 		),
-		dryRun: dryRun,
+		kubeconfig: kubeconfig,
+		dryRun:     dryRun,
 	}, nil
 }
 
@@ -134,7 +136,7 @@ func (d *Distribution) Exec() error {
 			return fmt.Errorf("error running terraform plan: %w", err)
 		}
 
-		if _, err := d.shellRunner.Run(path.Join(d.Path, "scripts", "delete.sh"), "--dry-run=true"); err != nil {
+		if _, err := d.shellRunner.Run(path.Join(d.Path, "scripts", "delete.sh"), "true", d.kubeconfig); err != nil {
 			return fmt.Errorf("error deleting resources: %w", err)
 		}
 
@@ -173,7 +175,7 @@ func (d *Distribution) Exec() error {
 
 	logrus.Info("Deleting kubernetes resources...")
 
-	if _, err := d.shellRunner.Run(path.Join(d.Path, "scripts", "delete.sh")); err != nil {
+	if _, err := d.shellRunner.Run(path.Join(d.Path, "scripts", "delete.sh"), "false", d.kubeconfig); err != nil {
 		return fmt.Errorf("error deleting resources: %w", err)
 	}
 
