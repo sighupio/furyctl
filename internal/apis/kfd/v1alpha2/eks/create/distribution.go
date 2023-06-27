@@ -140,7 +140,7 @@ func (d *Distribution) Exec() error {
 		return err
 	}
 
-	tfCfg, err := template.NewConfig(furyctlMerger, preTfMerger, []string{"manifests", ".gitignore"})
+	tfCfg, err := template.NewConfig(furyctlMerger, preTfMerger, []string{"manifests", "scripts", ".gitignore"})
 	if err != nil {
 		return fmt.Errorf("error creating template config: %w", err)
 	}
@@ -195,6 +195,10 @@ func (d *Distribution) Exec() error {
 
 	if err := d.tfRunner.Apply(timestamp); err != nil {
 		return fmt.Errorf("cannot create cloud resources: %w", err)
+	}
+
+	if _, err := d.tfRunner.Output(); err != nil {
+		return fmt.Errorf("error running terraform output: %w", err)
 	}
 
 	postTfMerger, err := d.injectDataPostTf(preTfMerger)
