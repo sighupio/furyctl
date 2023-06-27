@@ -462,7 +462,7 @@ func (d *Distribution) injectDataPostTf(fMerger *merge.Merger) (*merge.Merger, e
 				},
 			},
 		}
-	}else{
+	} else {
 		injectData = injectType{
 			Data: private.SpecDistribution{
 				Modules: private.SpecDistributionModules{
@@ -494,7 +494,6 @@ func (d *Distribution) injectDataPostTf(fMerger *merge.Merger) (*merge.Merger, e
 			},
 		}
 	}
-
 
 	injectDataModel := merge.NewDefaultModelFromStruct(injectData, ".data", true)
 
