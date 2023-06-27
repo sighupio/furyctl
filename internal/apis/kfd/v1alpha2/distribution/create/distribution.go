@@ -193,7 +193,6 @@ func (d *Distribution) Exec() error {
 
 	}
 
-
 	// Apply manifests.
 	logrus.Info("Applying manifests...")
 
