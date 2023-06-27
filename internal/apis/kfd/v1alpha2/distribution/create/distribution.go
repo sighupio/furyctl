@@ -173,21 +173,26 @@ func (d *Distribution) Exec() error {
 		return errNoStorageClass
 	}
 
-	logrus.Info("Checking if all nodes are ready...")
+	if d.furyctlConf.Spec.Distribution.Modules.Networking.Type == "none" {
 
-	getNotReadyNodesOutput, err := d.kubeRunner.Get(
-		"",
-		"nodes",
-		"--output",
-		"jsonpath=\"{range .items[*]}{.spec.taints[?(@.key==\"node.kubernetes.io/not-ready\")]}{end}\"",
-	)
-	if err != nil {
-		return fmt.Errorf("error while checking nodes: %w", err)
+		logrus.Info("Checking if all nodes are ready...")
+
+		getNotReadyNodesOutput, err := d.kubeRunner.Get(
+			"",
+			"nodes",
+			"--output",
+			"jsonpath=\"{range .items[*]}{.spec.taints[?(@.key==\"node.kubernetes.io/not-ready\")]}{end}\"",
+		)
+		if err != nil {
+			return fmt.Errorf("error while checking nodes: %w", err)
+		}
+
+		if getNotReadyNodesOutput != "\"\"" {
+			return errNodesNotReady
+		}
+
 	}
 
-	if getNotReadyNodesOutput != "\"\"" {
-		return errNodesNotReady
-	}
 
 	// Apply manifests.
 	logrus.Info("Applying manifests...")
