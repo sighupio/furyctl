@@ -22,7 +22,7 @@ import (
 	"github.com/sighupio/furyctl/internal/merge"
 	"github.com/sighupio/furyctl/internal/template"
 	"github.com/sighupio/furyctl/internal/tool/kubectl"
-	"github.com/sighupio/furyctl/internal/tool/kustomize"
+	"github.com/sighupio/furyctl/internal/tool/shell"
 	"github.com/sighupio/furyctl/internal/tool/terraform"
 	execx "github.com/sighupio/furyctl/internal/x/exec"
 	iox "github.com/sighupio/furyctl/internal/x/io"
@@ -54,7 +54,7 @@ type Distribution struct {
 	infraOutputsPath string
 	distroPath       string
 	tfRunner         *terraform.Runner
-	kzRunner         *kustomize.Runner
+	shellRunner      *shell.Runner
 	kubeRunner       *kubectl.Runner
 	dryRun           bool
 	phase            string
@@ -96,11 +96,11 @@ func NewDistribution(
 				Terraform: phaseOp.TerraformPath,
 			},
 		),
-		kzRunner: kustomize.NewRunner(
+		shellRunner: shell.NewRunner(
 			execx.NewStdExecutor(),
-			kustomize.Paths{
-				Kustomize: phaseOp.KustomizePath,
-				WorkDir:   path.Join(phaseOp.Path, "manifests"),
+			shell.Paths{
+				Shell:   "sh",
+				WorkDir: path.Join(phaseOp.Path, "manifests"),
 			},
 		),
 		kubeRunner: kubectl.NewRunner(
@@ -176,14 +176,17 @@ func (d *Distribution) Exec() error {
 			return fmt.Errorf("error creating template config: %w", err)
 		}
 
+		mCfg.Data["paths"] = map[any]any{
+			"kubectl":   d.OperationPhase.KubectlPath,
+			"kustomize": d.OperationPhase.KustomizePath,
+			"yq":        d.OperationPhase.YqPath,
+		}
+
 		if err := d.copyFromTemplate(mCfg); err != nil {
 			return err
 		}
 
-		_, err = d.buildManifests()
-		if err != nil {
-			return err
-		}
+		// TODO: build manifests without applying
 
 		return nil
 	}
@@ -204,14 +207,13 @@ func (d *Distribution) Exec() error {
 		return fmt.Errorf("error creating template config: %w", err)
 	}
 
-	if err := d.copyFromTemplate(mCfg); err != nil {
-		return err
+	mCfg.Data["paths"] = map[any]any{
+		"kubectl":   d.OperationPhase.KubectlPath,
+		"kustomize": d.OperationPhase.KustomizePath,
+		"yq":        d.OperationPhase.YqPath,
 	}
 
-	logrus.Info("Building manifests...")
-
-	manifestsOutPath, err := d.buildManifests()
-	if err != nil {
+	if err := d.copyFromTemplate(mCfg); err != nil {
 		return err
 	}
 
@@ -232,7 +234,7 @@ func (d *Distribution) Exec() error {
 
 	logrus.Info("Applying manifests...")
 
-	return d.applyManifests(manifestsOutPath)
+	return d.applyManifests()
 }
 
 func (d *Distribution) Stop() error {
@@ -255,10 +257,10 @@ func (d *Distribution) Stop() error {
 	}()
 
 	go func() {
-		logrus.Debug("Stopping kustomize...")
+		logrus.Debug("Stopping shell...")
 
-		if err := d.kzRunner.Stop(); err != nil {
-			errCh <- fmt.Errorf("error stopping kustomize: %w", err)
+		if err := d.shellRunner.Stop(); err != nil {
+			errCh <- fmt.Errorf("error stopping shell: %w", err)
 		}
 
 		wg.Done()
@@ -604,74 +606,10 @@ func (d *Distribution) copyFromTemplate(cfg template.Config) error {
 	return nil
 }
 
-func (d *Distribution) buildManifests() (string, error) {
-	kzOut, err := d.kzRunner.Build()
-	if err != nil {
-		return "", fmt.Errorf("error building manifests: %w", err)
+func (d *Distribution) applyManifests() error {
+	if _, err := d.shellRunner.Run(path.Join(d.Path, "scripts", "apply.sh")); err != nil {
+		return fmt.Errorf("error applying manifests: %w", err)
 	}
 
-	outDirPath, err := os.MkdirTemp("", "furyctl-dist-manifests-")
-	if err != nil {
-		return "", fmt.Errorf("error creating temp dir: %w", err)
-	}
-
-	manifestsOutPath := filepath.Join(outDirPath, "out.yaml")
-
-	logrus.Debugf("built manifests = %s", manifestsOutPath)
-
-	if err = os.WriteFile(manifestsOutPath, []byte(kzOut), os.ModePerm); err != nil {
-		return "", fmt.Errorf("error writing built manifests: %w", err)
-	}
-
-	return manifestsOutPath, nil
-}
-
-func (d *Distribution) applyManifests(mPath string) error {
-	err := d.delayedApplyRetries(mPath, time.Minute, kubectlDelayMaxRetry)
-	if err == nil {
-		return nil
-	}
-
-	err = d.delayedApplyRetries(mPath, 0, kubectlNoDelayMaxRetry)
-	if err == nil {
-		return nil
-	}
-
-	return err
-}
-
-func (d *Distribution) delayedApplyRetries(mPath string, delay time.Duration, maxRetries int) error {
-	var err error
-
-	retries := 0
-
-	if maxRetries == 0 {
-		return nil
-	}
-
-	err = d.kubeRunner.Apply(mPath)
-	if err == nil {
-		return nil
-	}
-
-	retries++
-
-	for retries < maxRetries {
-		t := time.NewTimer(delay)
-
-		if <-t.C; true {
-			logrus.Debug("applying manifests again... to ensure all resources are created.")
-
-			err = d.kubeRunner.Apply(mPath)
-			if err == nil {
-				return nil
-			}
-		}
-
-		retries++
-
-		t.Stop()
-	}
-
-	return fmt.Errorf("error applying manifests: %w", err)
+	return nil
 }
