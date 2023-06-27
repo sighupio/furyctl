@@ -16,7 +16,7 @@ import (
 )
 
 func Test_Runner_Version(t *testing.T) {
-	r := furyagent.NewRunner(execx.NewFakeExecutor(), furyagent.Paths{
+	r := furyagent.NewRunner(execx.NewFakeExecutor("TestHelperProcess"), furyagent.Paths{
 		Furyagent: "furyagent",
 		WorkDir:   os.TempDir(),
 	})
@@ -34,7 +34,7 @@ func Test_Runner_Version(t *testing.T) {
 }
 
 func Test_Runner_ConfigOpenvpnClient(t *testing.T) {
-	r := furyagent.NewRunner(execx.NewFakeExecutor(), furyagent.Paths{
+	r := furyagent.NewRunner(execx.NewFakeExecutor("TestHelperProcess"), furyagent.Paths{
 		Furyagent: "furyagent",
 		WorkDir:   os.TempDir(),
 	})

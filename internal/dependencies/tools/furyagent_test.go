@@ -128,7 +128,7 @@ func Test_Furyagent_CheckBinVersion(t *testing.T) {
 }
 
 func newFuryagentRunner() *furyagent.Runner {
-	return furyagent.NewRunner(execx.NewFakeExecutor(), furyagent.Paths{
+	return furyagent.NewRunner(execx.NewFakeExecutor("TestHelperProcess"), furyagent.Paths{
 		Furyagent: "furyagent",
 	})
 }

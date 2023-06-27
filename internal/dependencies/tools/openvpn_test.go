@@ -89,7 +89,7 @@ func Test_Openvpn_CheckBinVersion(t *testing.T) {
 }
 
 func newOpenvpnRunner() *openvpn.Runner {
-	return openvpn.NewRunner(execx.NewFakeExecutor(), openvpn.Paths{
+	return openvpn.NewRunner(execx.NewFakeExecutor("TestHelperProcess"), openvpn.Paths{
 		Openvpn: "openvpn",
 	})
 }

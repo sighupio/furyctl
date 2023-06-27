@@ -16,7 +16,7 @@ import (
 )
 
 func Test_Runner_Version(t *testing.T) {
-	r := openvpn.NewRunner(execx.NewFakeExecutor(), openvpn.Paths{
+	r := openvpn.NewRunner(execx.NewFakeExecutor("TestHelperProcess"), openvpn.Paths{
 		Openvpn: "openvpn",
 		WorkDir: os.TempDir(),
 	})
@@ -34,7 +34,7 @@ func Test_Runner_Version(t *testing.T) {
 }
 
 func Test_Runner_Connect(t *testing.T) {
-	r := openvpn.NewRunner(execx.NewFakeExecutor(), openvpn.Paths{
+	r := openvpn.NewRunner(execx.NewFakeExecutor("TestHelperProcess"), openvpn.Paths{
 		Openvpn: "openvpn",
 		WorkDir: os.TempDir(),
 	})
