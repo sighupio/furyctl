@@ -186,7 +186,9 @@ func (d *Distribution) Exec() error {
 			return err
 		}
 
-		// TODO: build manifests without applying
+		if _, err := d.shellRunner.Run(path.Join(d.Path, "scripts", "apply.sh"), "--dry-run=true"); err != nil {
+			return fmt.Errorf("error applying manifests: %w", err)
+		}
 
 		return nil
 	}
@@ -238,7 +240,11 @@ func (d *Distribution) Exec() error {
 
 	logrus.Info("Applying manifests...")
 
-	return d.applyManifests()
+	if _, err := d.shellRunner.Run(path.Join(d.Path, "scripts", "apply.sh")); err != nil {
+		return fmt.Errorf("error applying manifests: %w", err)
+	}
+
+	return nil
 }
 
 func (d *Distribution) Stop() error {
@@ -605,14 +611,6 @@ func (d *Distribution) copyFromTemplate(cfg template.Config) error {
 	err = templateModel.Generate()
 	if err != nil {
 		return fmt.Errorf("error generating from template files: %w", err)
-	}
-
-	return nil
-}
-
-func (d *Distribution) applyManifests() error {
-	if _, err := d.shellRunner.Run(path.Join(d.Path, "scripts", "apply.sh")); err != nil {
-		return fmt.Errorf("error applying manifests: %w", err)
 	}
 
 	return nil

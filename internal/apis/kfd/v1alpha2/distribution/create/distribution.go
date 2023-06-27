@@ -143,7 +143,9 @@ func (d *Distribution) Exec() error {
 
 	// Stop if dry run is enabled.
 	if d.dryRun {
-		// TODO: build manifests without applying
+		if _, err := d.shellRunner.Run(path.Join(d.Path, "scripts", "apply.sh"), "--dry-run=true"); err != nil {
+			return fmt.Errorf("error applying resources: %w", err)
+		}
 
 		return nil
 	}
