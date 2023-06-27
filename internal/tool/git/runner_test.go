@@ -16,7 +16,7 @@ import (
 )
 
 func Test_Runner_Version(t *testing.T) {
-	r := git.NewRunner(execx.NewFakeExecutor(), git.Paths{
+	r := git.NewRunner(execx.NewFakeExecutor("TestHelperProcess"), git.Paths{
 		Git:     "git",
 		WorkDir: os.TempDir(),
 	})

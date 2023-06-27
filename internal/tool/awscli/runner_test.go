@@ -16,7 +16,7 @@ import (
 )
 
 func Test_Runner_Version(t *testing.T) {
-	r := awscli.NewRunner(execx.NewFakeExecutor(), awscli.Paths{
+	r := awscli.NewRunner(execx.NewFakeExecutor("TestHelperProcess"), awscli.Paths{
 		Awscli:  "aws",
 		WorkDir: os.TempDir(),
 	})

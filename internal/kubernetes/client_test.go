@@ -248,6 +248,6 @@ func FakeClient(t *testing.T) *kubernetes.Client {
 		true,
 		true,
 		true,
-		execx.NewFakeExecutor(),
+		execx.NewFakeExecutor("TestHelperProcess"),
 	)
 }
