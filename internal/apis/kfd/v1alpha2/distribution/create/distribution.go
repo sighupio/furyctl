@@ -19,7 +19,6 @@ import (
 	"github.com/sighupio/furyctl/internal/merge"
 	"github.com/sighupio/furyctl/internal/template"
 	"github.com/sighupio/furyctl/internal/tool/kubectl"
-	"github.com/sighupio/furyctl/internal/tool/kustomize"
 	"github.com/sighupio/furyctl/internal/tool/shell"
 	execx "github.com/sighupio/furyctl/internal/x/exec"
 	yamlx "github.com/sighupio/furyctl/internal/x/yaml"
@@ -36,7 +35,6 @@ type Distribution struct {
 	furyctlConfPath string
 	furyctlConf     public.KfddistributionKfdV1Alpha2
 	distroPath      string
-	kzRunner        *kustomize.Runner
 	kubeRunner      *kubectl.Runner
 	dryRun          bool
 	shellRunner     *shell.Runner
@@ -60,13 +58,6 @@ func NewDistribution(
 		furyctlConf:     furyctlConf,
 		distroPath:      paths.DistroPath,
 		furyctlConfPath: paths.ConfigPath,
-		kzRunner: kustomize.NewRunner(
-			execx.NewStdExecutor(),
-			kustomize.Paths{
-				Kustomize: phaseOp.KustomizePath,
-				WorkDir:   path.Join(phaseOp.Path, "manifests"),
-			},
-		),
 		kubeRunner: kubectl.NewRunner(
 			execx.NewStdExecutor(),
 			kubectl.Paths{
@@ -147,27 +138,6 @@ func (d *Distribution) Exec() error {
 	err = templateModel.Generate()
 	if err != nil {
 		return fmt.Errorf("error generating from template files: %w", err)
-	}
-
-	// Build manifests.
-	logrus.Info("Building manifests...")
-
-	kzOut, err := d.kzRunner.Build()
-	if err != nil {
-		return fmt.Errorf("error building manifests: %w", err)
-	}
-
-	outDirPath, err := os.MkdirTemp("", "furyctl-dist-manifests-")
-	if err != nil {
-		return fmt.Errorf("error creating temp dir: %w", err)
-	}
-
-	manifestsOutPath := filepath.Join(outDirPath, "out.yaml")
-
-	logrus.Debugf("built manifests = %s", manifestsOutPath)
-
-	if err = os.WriteFile(manifestsOutPath, []byte(kzOut), os.ModePerm); err != nil {
-		return fmt.Errorf("error writing built manifests: %w", err)
 	}
 
 	// Stop if dry run is enabled.
