@@ -174,7 +174,6 @@ func (d *Distribution) Exec() error {
 	}
 
 	if d.furyctlConf.Spec.Distribution.Modules.Networking.Type == "none" {
-
 		logrus.Info("Checking if all nodes are ready...")
 
 		getNotReadyNodesOutput, err := d.kubeRunner.Get(
@@ -190,7 +189,6 @@ func (d *Distribution) Exec() error {
 		if getNotReadyNodesOutput != "\"\"" {
 			return errNodesNotReady
 		}
-
 	}
 
 	// Apply manifests.
