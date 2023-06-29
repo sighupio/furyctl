@@ -16,7 +16,9 @@ terraform {
     key    = "{{ .terraform.backend.s3.keyPrefix }}/cluster.json"
     region = "{{ .terraform.backend.s3.region }}"
 
-    skip_region_validation = {{ default false .terraform.backend.s3.skipRegionValidation }}
+    {{- if index .terraform.backend.s3 "skipRegionValidation" }}
+      skip_region_validation = {{ default false .terraform.backend.s3.skipRegionValidation }}
+    {{- end }}
   }
 
   required_providers {
