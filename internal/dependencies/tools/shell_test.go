@@ -23,7 +23,7 @@ func Test_Shell_SupportsDownload(t *testing.T) {
 }
 
 func newShellRunner() *shell.Runner {
-	return shell.NewRunner(execx.NewFakeExecutor(), shell.Paths{
+	return shell.NewRunner(execx.NewFakeExecutor("TestHelperProcess"), shell.Paths{
 		Shell: "sh",
 	})
 }

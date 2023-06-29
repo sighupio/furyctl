@@ -133,7 +133,7 @@ func Test_Yq_CheckBinVersion(t *testing.T) {
 }
 
 func newYqRunner() *yq.Runner {
-	return yq.NewRunner(execx.NewFakeExecutor(), yq.Paths{
+	return yq.NewRunner(execx.NewFakeExecutor("TestHelperProcess"), yq.Paths{
 		Yq: "yq",
 	})
 }
