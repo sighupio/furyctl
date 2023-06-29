@@ -16,7 +16,7 @@ import (
 )
 
 func Test_Runner_Version(t *testing.T) {
-	r := yq.NewRunner(execx.NewFakeExecutor(), yq.Paths{
+	r := yq.NewRunner(execx.NewFakeExecutor("TestHelperProcess"), yq.Paths{
 		Yq:      "yq",
 		WorkDir: os.TempDir(),
 	})
