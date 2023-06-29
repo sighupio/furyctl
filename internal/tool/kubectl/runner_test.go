@@ -16,7 +16,7 @@ import (
 )
 
 func Test_Runner_Version(t *testing.T) {
-	r := kubectl.NewRunner(execx.NewFakeExecutor(), kubectl.Paths{
+	r := kubectl.NewRunner(execx.NewFakeExecutor("TestHelperProcess"), kubectl.Paths{
 		Kubectl: "kubectl",
 		WorkDir: os.TempDir(),
 	}, true, true, true)

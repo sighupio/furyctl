@@ -85,7 +85,7 @@ func Test_Ansible_CheckBinVersion(t *testing.T) {
 }
 
 func newAnsibleRunner() *ansible.Runner {
-	return ansible.NewRunner(execx.NewFakeExecutor(), ansible.Paths{
+	return ansible.NewRunner(execx.NewFakeExecutor("TestHelperProcess"), ansible.Paths{
 		Ansible: "ansible",
 	})
 }

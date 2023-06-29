@@ -128,7 +128,7 @@ func Test_Kustomize_CheckBinVersion(t *testing.T) {
 }
 
 func newKustomizeRunner() *kustomize.Runner {
-	return kustomize.NewRunner(execx.NewFakeExecutor(), kustomize.Paths{
+	return kustomize.NewRunner(execx.NewFakeExecutor("TestHelperProcess"), kustomize.Paths{
 		Kustomize: "kustomize",
 	})
 }

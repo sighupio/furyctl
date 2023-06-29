@@ -18,7 +18,7 @@ import (
 )
 
 func Test_Runner_Init(t *testing.T) {
-	r := terraform.NewRunner(execx.NewFakeExecutor(), terraform.Paths{
+	r := terraform.NewRunner(execx.NewFakeExecutor("TestHelperProcess"), terraform.Paths{
 		Terraform: "terraform",
 		WorkDir:   test.MkdirTemp(t),
 	})
@@ -37,7 +37,7 @@ func Test_Runner_Plan(t *testing.T) {
 		Plan:      test.MkdirTemp(t),
 	}
 
-	r := terraform.NewRunner(execx.NewFakeExecutor(), paths)
+	r := terraform.NewRunner(execx.NewFakeExecutor("TestHelperProcess"), paths)
 
 	if _, err := r.Plan(42); err != nil {
 		t.Fatal(err)
@@ -62,7 +62,7 @@ func Test_Runner_Apply(t *testing.T) {
 		Plan:      test.MkdirTemp(t),
 	}
 
-	r := terraform.NewRunner(execx.NewFakeExecutor(), paths)
+	r := terraform.NewRunner(execx.NewFakeExecutor("TestHelperProcess"), paths)
 
 	if err := r.Apply(42); err != nil {
 		t.Fatal(err)
@@ -87,7 +87,7 @@ func Test_Runner_Output(t *testing.T) {
 		Plan:      test.MkdirTemp(t),
 	}
 
-	r := terraform.NewRunner(execx.NewFakeExecutor(), paths)
+	r := terraform.NewRunner(execx.NewFakeExecutor("TestHelperProcess"), paths)
 
 	if _, err := r.Output(); err != nil {
 		t.Fatal(err)
@@ -115,7 +115,7 @@ func Test_Runner_Output(t *testing.T) {
 }
 
 func Test_Runner_Version(t *testing.T) {
-	r := terraform.NewRunner(execx.NewFakeExecutor(), terraform.Paths{
+	r := terraform.NewRunner(execx.NewFakeExecutor("TestHelperProcess"), terraform.Paths{
 		Terraform: "terraform",
 		WorkDir:   test.MkdirTemp(t),
 	})
