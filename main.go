@@ -25,11 +25,12 @@ import (
 )
 
 var (
-	version   = "unknown"
-	gitCommit = "unknown"
-	buildTime = "unknown"
-	goVersion = "unknown"
-	osArch    = "unknown"
+	version       = "unknown"
+	gitCommit     = "unknown"
+	buildTime     = "unknown"
+	goVersion     = "unknown"
+	osArch        = "unknown"
+	mixPanelToken = ""
 )
 
 func main() {
@@ -65,14 +66,12 @@ func exec() int {
 		h = "unknown"
 	}
 
-	t := os.Getenv("FURYCTL_MIXPANEL_TOKEN")
-
 	// Create the analytics tracker.
-	a := analytics.NewTracker(t, versions[version], osArch, runtime.GOOS, "SIGHUP", h)
+	a := analytics.NewTracker(mixPanelToken, versions[version], osArch, runtime.GOOS, "SIGHUP", h)
 
 	defer a.Flush()
 
-	if _, err := cmd.NewRootCommand(versions, logFile, a, t).ExecuteC(); err != nil {
+	if _, err := cmd.NewRootCommand(versions, logFile, a, mixPanelToken).ExecuteC(); err != nil {
 		log.Error(err)
 
 		return 1
