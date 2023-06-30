@@ -15,11 +15,16 @@ steps:
     commands:
       - mkdir -p .go/cache .go/modcache .go/tmp
       - go mod download
+    environment:
+      CGO_ENABLED: 0
+      GOCACHE: /drone/src/.go/cache
+      GOMODCACHE: /drone/src/.go/modcache
+      GOTMPDIR: /drone/src/.go/tmp
 
   - name: license
     image: quay.io/sighup/golang:1.20.4
     depends_on:
-      - clone
+      - prepare
     pull: always
     commands:
       - make license-check
