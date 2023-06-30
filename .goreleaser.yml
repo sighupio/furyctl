@@ -18,7 +18,7 @@ builds:
       - amd64
       - arm64
     ldflags:
-      - -s -w -X main.version={{.Version}} -X main.gitCommit={{.Commit}} -X main.buildTime={{.Date}} -X main.goVersion={{.Env.GO_VERSION}} -X main.osArch={{.Arch}}
+      - -s -w -X main.version={{.Version}} -X main.gitCommit={{.Commit}} -X main.buildTime={{.Date}} -X main.goVersion={{.Env.GO_VERSION}} -X main.osArch={{.Arch}} -X main.mixPanelToken={{.Env.FURYCTL_MIXPANEL_TOKEN}}
 archives:
   - name_template: "{{ tolower .ProjectName }}-{{ tolower .Os }}-{{ tolower .Arch }}"
 checksum:
