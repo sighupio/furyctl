@@ -12,7 +12,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/sighupio/fury-distribution/pkg/config"
+	"github.com/sighupio/fury-distribution/pkg/apis/config"
 	"github.com/sighupio/furyctl/internal/dependencies/tools"
 	execx "github.com/sighupio/furyctl/internal/x/exec"
 )
@@ -29,102 +29,80 @@ func Test_Validator_Validate(t *testing.T) {
 			desc: "all tools are installed in their correct version",
 			manifest: config.KFD{
 				Tools: config.KFDTools{
-					Common: config.Common{
-						Kubectl:   config.Tool{Version: "1.21.1"},
-						Kustomize: config.Tool{Version: "3.9.4"},
-						Terraform: config.Tool{Version: "0.15.4"},
-						Furyagent: config.Tool{Version: "0.3.0"},
+					Common: config.KFDToolsCommon{
+						Kubectl:   config.KFDTool{Version: "1.21.1"},
+						Kustomize: config.KFDTool{Version: "3.9.4"},
+						Terraform: config.KFDTool{Version: "0.15.4"},
+						Furyagent: config.KFDTool{Version: "0.3.0"},
+						Yq:        config.KFDTool{Version: "4.34.1"},
 					},
 				},
 			},
 			state: config.Furyctl{
-				Spec: config.FuryctlSpec{
-					ToolsConfiguration: config.ToolsConfiguration{
-						Terraform: config.Terraform{
-							State: config.State{
-								S3: config.S3{
-									BucketName: "test",
-								},
-							},
-						},
-					},
-				},
+				Spec: config.FuryctlSpec{},
 			},
 			wantOks: []string{
 				"kubectl",
 				"kustomize",
 				"terraform",
 				"furyagent",
-				"aws",
+				"yq",
 			},
 		},
 		{
 			desc: "all tools are installed in their wrong version",
 			manifest: config.KFD{
 				Tools: config.KFDTools{
-					Common: config.Common{
-						Kubectl:   config.Tool{Version: "1.22.0"},
-						Kustomize: config.Tool{Version: "3.5.3"},
-						Terraform: config.Tool{Version: "1.3.0"},
-						Furyagent: config.Tool{Version: "0.4.0"},
+					Common: config.KFDToolsCommon{
+						Kubectl:   config.KFDTool{Version: "1.22.0"},
+						Kustomize: config.KFDTool{Version: "3.5.3"},
+						Terraform: config.KFDTool{Version: "1.3.0"},
+						Furyagent: config.KFDTool{Version: "0.4.0"},
+						Yq:        config.KFDTool{Version: "4.33.0"},
 					},
 				},
 			},
 			state: config.Furyctl{
-				Spec: config.FuryctlSpec{
-					ToolsConfiguration: config.ToolsConfiguration{
-						Terraform: config.Terraform{
-							State: config.State{
-								S3: config.S3{
-									BucketName: "test",
-								},
-							},
-						},
-					},
-				},
+				Spec: config.FuryctlSpec{},
 			},
 			wantErrs: []error{
 				errors.New("furyagent: wrong tool version - installed = 0.3.0, expected = 0.4.0"),
 				errors.New("kubectl: wrong tool version - installed = 1.21.1, expected = 1.22.0"),
 				errors.New("kustomize: wrong tool version - installed = 3.9.4, expected = 3.5.3"),
 				errors.New("terraform: wrong tool version - installed = 0.15.4, expected = 1.3.0"),
+				errors.New("yq: wrong tool version - installed = 4.34.1, expected = 4.33.0"),
 			},
-			wantOks: []string{"aws"},
 		},
 		{
-			desc: "openvpn is installed",
+			desc: "all tools for EKSCluster kind are installed",
 			manifest: config.KFD{
 				Tools: config.KFDTools{
-					Common: config.Common{
-						Kubectl:   config.Tool{Version: "1.21.1"},
-						Kustomize: config.Tool{Version: "3.9.4"},
-						Terraform: config.Tool{Version: "0.15.4"},
-						Furyagent: config.Tool{Version: "0.3.0"},
+					Common: config.KFDToolsCommon{
+						Kubectl:   config.KFDTool{Version: "1.21.1"},
+						Kustomize: config.KFDTool{Version: "3.9.4"},
+						Terraform: config.KFDTool{Version: "0.15.4"},
+						Furyagent: config.KFDTool{Version: "0.3.0"},
+						Yq:        config.KFDTool{Version: "4.34.1"},
+					},
+					Eks: config.KFDToolsEks{
+						Awscli: config.KFDTool{Version: "2.8.12"},
 					},
 				},
 			},
 			state: config.Furyctl{
 				APIVersion: "kfd.sighup.io/v1alpha2",
 				Kind:       "EKSCluster",
-				Spec: config.FuryctlSpec{
-					ToolsConfiguration: config.ToolsConfiguration{
-						Terraform: config.Terraform{
-							State: config.State{
-								S3: config.S3{
-									BucketName: "test",
-								},
-							},
-						},
-					},
-				},
+				Spec:       config.FuryctlSpec{},
 			},
 			wantOks: []string{
 				"kubectl",
 				"kustomize",
 				"terraform",
 				"furyagent",
-				"aws",
+				"yq",
+				"awscli",
 				"openvpn",
+				"terraform state aws s3 bucket",
 			},
 		},
 	}
@@ -189,6 +167,7 @@ func TestValidator_ValidateBaseReqs(t *testing.T) {
 			desc: "all base requirements are met",
 			wantOks: []string{
 				"git",
+				"shell",
 			},
 		},
 	}

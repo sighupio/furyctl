@@ -16,7 +16,7 @@ import (
 
 func NewGit(runner *git.Runner, version string) *Git {
 	return &Git{
-		arch:    "amd64",
+		arch:    runtime.GOARCH,
 		os:      runtime.GOOS,
 		version: version,
 		checker: &checker{

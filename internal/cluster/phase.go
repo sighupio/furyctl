@@ -10,7 +10,7 @@ import (
 	"os"
 	"path"
 
-	"github.com/sighupio/fury-distribution/pkg/config"
+	"github.com/sighupio/fury-distribution/pkg/apis/config"
 	"github.com/sighupio/furyctl/internal/template"
 	iox "github.com/sighupio/furyctl/internal/x/io"
 	yamlx "github.com/sighupio/furyctl/internal/x/yaml"
@@ -49,6 +49,7 @@ type OperationPhase struct {
 	TerraformPath string
 	KustomizePath string
 	KubectlPath   string
+	YqPath        string
 	PlanPath      string
 	LogsPath      string
 	OutputsPath   string
@@ -67,6 +68,7 @@ func NewOperationPhase(folder string, kfdTools config.KFDTools, binPath string) 
 	kustomizePath := path.Join(binPath, "kustomize", kfdTools.Common.Kustomize.Version, "kustomize")
 	terraformPath := path.Join(binPath, "terraform", kfdTools.Common.Terraform.Version, "terraform")
 	kubectlPath := path.Join(binPath, "kubectl", kfdTools.Common.Kubectl.Version, "kubectl")
+	yqPath := path.Join(binPath, "yq", kfdTools.Common.Yq.Version, "yq")
 
 	planPath := path.Join(basePath, "terraform", "plan")
 	logsPath := path.Join(basePath, "terraform", "logs")
@@ -83,6 +85,7 @@ func NewOperationPhase(folder string, kfdTools config.KFDTools, binPath string) 
 		OutputsPath:   outputsPath,
 		SecretsPath:   secretsPath,
 		binPath:       binPath,
+		YqPath:        yqPath,
 	}, nil
 }
 

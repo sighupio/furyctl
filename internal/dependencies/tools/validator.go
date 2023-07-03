@@ -9,7 +9,7 @@ import (
 	"reflect"
 	"strings"
 
-	"github.com/sighupio/fury-distribution/pkg/config"
+	"github.com/sighupio/fury-distribution/pkg/apis/config"
 	"github.com/sighupio/furyctl/internal/apis"
 	itool "github.com/sighupio/furyctl/internal/tool"
 	execx "github.com/sighupio/furyctl/internal/x/exec"
@@ -48,6 +48,13 @@ func (tv *Validator) ValidateBaseReqs() ([]string, []error) {
 		oks = append(oks, "git")
 	}
 
+	shell := tv.toolFactory.Create(itool.Shell, "*")
+	if err := shell.CheckBinVersion(); err != nil {
+		errs = append(errs, err)
+	} else {
+		oks = append(oks, "shell")
+	}
+
 	return oks, errs
 }
 
@@ -57,33 +64,16 @@ func (tv *Validator) Validate(kfdManifest config.KFD, miniConf config.Furyctl) (
 		errs []error
 	)
 
-	tls := reflect.ValueOf(kfdManifest.Tools)
-	for i := 0; i < tls.NumField(); i++ {
-		for j := 0; j < tls.Field(i).NumField(); j++ {
-			if version, ok := tls.Field(i).Field(j).Interface().(config.Tool); ok {
-				if version.String() == "" {
-					continue
-				}
+	// Validate common tools.
+	cOks, cErrs := tv.validateTools(kfdManifest.Tools.Common)
+	oks = append(oks, cOks...)
+	errs = append(errs, cErrs...)
 
-				name := strings.ToLower(tls.Field(i).Type().Field(j).Name)
-
-				tool := tv.toolFactory.Create(name, version.String())
-				if err := tool.CheckBinVersion(); err != nil {
-					errs = append(errs, err)
-				} else {
-					oks = append(oks, name)
-				}
-			}
-		}
-	}
-
-	if miniConf.Spec.ToolsConfiguration.Terraform.State.S3.BucketName != "" {
-		tool := tv.toolFactory.Create(itool.Awscli, "*")
-		if err := tool.CheckBinVersion(); err != nil {
-			errs = append(errs, err)
-		} else {
-			oks = append(oks, "aws")
-		}
+	// Validate eks tools only if kind is EKSCluster.
+	if miniConf.Kind == "EKSCluster" {
+		cOks, cErrs := tv.validateTools(kfdManifest.Tools.Eks)
+		oks = append(oks, cOks...)
+		errs = append(errs, cErrs...)
 	}
 
 	etv := apis.NewExtraToolsValidatorFactory(tv.executor, miniConf.APIVersion, miniConf.Kind, tv.autoConnect)
@@ -96,6 +86,33 @@ func (tv *Validator) Validate(kfdManifest config.KFD, miniConf config.Furyctl) (
 		errs = append(errs, xerrs...)
 	} else {
 		oks = append(oks, xoks...)
+	}
+
+	return oks, errs
+}
+
+func (tv *Validator) validateTools(i any) ([]string, []error) {
+	var oks []string
+
+	var errs []error
+
+	toolCfgs := reflect.ValueOf(i)
+	for i := 0; i < toolCfgs.NumField(); i++ {
+		toolCfg, ok := toolCfgs.Field(i).Interface().(config.KFDTool)
+		if !ok {
+			continue
+		}
+
+		toolName := strings.ToLower(toolCfgs.Type().Field(i).Name)
+
+		tool := tv.toolFactory.Create(itool.Name(toolName), toolCfg.Version)
+		if err := tool.CheckBinVersion(); err != nil {
+			errs = append(errs, err)
+
+			continue
+		}
+
+		oks = append(oks, toolName)
 	}
 
 	return oks, errs

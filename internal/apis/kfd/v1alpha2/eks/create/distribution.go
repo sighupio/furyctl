@@ -16,22 +16,17 @@ import (
 
 	"github.com/sirupsen/logrus"
 
-	"github.com/sighupio/fury-distribution/pkg/config"
-	"github.com/sighupio/fury-distribution/pkg/schema/private"
+	"github.com/sighupio/fury-distribution/pkg/apis/config"
+	"github.com/sighupio/fury-distribution/pkg/apis/ekscluster/v1alpha2/private"
 	"github.com/sighupio/furyctl/internal/cluster"
 	"github.com/sighupio/furyctl/internal/merge"
 	"github.com/sighupio/furyctl/internal/template"
 	"github.com/sighupio/furyctl/internal/tool/kubectl"
-	"github.com/sighupio/furyctl/internal/tool/kustomize"
+	"github.com/sighupio/furyctl/internal/tool/shell"
 	"github.com/sighupio/furyctl/internal/tool/terraform"
 	execx "github.com/sighupio/furyctl/internal/x/exec"
 	iox "github.com/sighupio/furyctl/internal/x/io"
 	yamlx "github.com/sighupio/furyctl/internal/x/yaml"
-)
-
-const (
-	kubectlDelayMaxRetry   = 3
-	kubectlNoDelayMaxRetry = 7
 )
 
 var (
@@ -54,10 +49,11 @@ type Distribution struct {
 	infraOutputsPath string
 	distroPath       string
 	tfRunner         *terraform.Runner
-	kzRunner         *kustomize.Runner
+	shellRunner      *shell.Runner
 	kubeRunner       *kubectl.Runner
 	dryRun           bool
 	phase            string
+	kubeconfig       string
 }
 
 type injectType struct {
@@ -71,6 +67,7 @@ func NewDistribution(
 	infraOutputsPath string,
 	dryRun bool,
 	phase string,
+	kubeconfig string,
 ) (*Distribution, error) {
 	distroDir := path.Join(paths.WorkDir, cluster.OperationPhaseDistribution)
 
@@ -96,11 +93,11 @@ func NewDistribution(
 				Terraform: phaseOp.TerraformPath,
 			},
 		),
-		kzRunner: kustomize.NewRunner(
+		shellRunner: shell.NewRunner(
 			execx.NewStdExecutor(),
-			kustomize.Paths{
-				Kustomize: phaseOp.KustomizePath,
-				WorkDir:   path.Join(phaseOp.Path, "manifests"),
+			shell.Paths{
+				Shell:   "sh",
+				WorkDir: path.Join(phaseOp.Path, "manifests"),
 			},
 		),
 		kubeRunner: kubectl.NewRunner(
@@ -114,8 +111,9 @@ func NewDistribution(
 			true,
 			false,
 		),
-		dryRun: dryRun,
-		phase:  phase,
+		dryRun:     dryRun,
+		phase:      phase,
+		kubeconfig: kubeconfig,
 	}, nil
 }
 
@@ -140,7 +138,7 @@ func (d *Distribution) Exec() error {
 		return err
 	}
 
-	tfCfg, err := template.NewConfig(furyctlMerger, preTfMerger, []string{"manifests", ".gitignore"})
+	tfCfg, err := template.NewConfig(furyctlMerger, preTfMerger, []string{"manifests", "scripts", ".gitignore"})
 	if err != nil {
 		return fmt.Errorf("error creating template config: %w", err)
 	}
@@ -176,13 +174,18 @@ func (d *Distribution) Exec() error {
 			return fmt.Errorf("error creating template config: %w", err)
 		}
 
+		mCfg.Data["paths"] = map[any]any{
+			"kubectl":   d.OperationPhase.KubectlPath,
+			"kustomize": d.OperationPhase.KustomizePath,
+			"yq":        d.OperationPhase.YqPath,
+		}
+
 		if err := d.copyFromTemplate(mCfg); err != nil {
 			return err
 		}
 
-		_, err = d.buildManifests()
-		if err != nil {
-			return err
+		if _, err := d.shellRunner.Run(path.Join(d.Path, "scripts", "apply.sh"), "true", d.kubeconfig); err != nil {
+			return fmt.Errorf("error applying manifests: %w", err)
 		}
 
 		return nil
@@ -192,6 +195,10 @@ func (d *Distribution) Exec() error {
 
 	if err := d.tfRunner.Apply(timestamp); err != nil {
 		return fmt.Errorf("cannot create cloud resources: %w", err)
+	}
+
+	if _, err := d.tfRunner.Output(); err != nil {
+		return fmt.Errorf("error running terraform output: %w", err)
 	}
 
 	postTfMerger, err := d.injectDataPostTf(preTfMerger)
@@ -204,14 +211,13 @@ func (d *Distribution) Exec() error {
 		return fmt.Errorf("error creating template config: %w", err)
 	}
 
-	if err := d.copyFromTemplate(mCfg); err != nil {
-		return err
+	mCfg.Data["paths"] = map[any]any{
+		"kubectl":   d.OperationPhase.KubectlPath,
+		"kustomize": d.OperationPhase.KustomizePath,
+		"yq":        d.OperationPhase.YqPath,
 	}
 
-	logrus.Info("Building manifests...")
-
-	manifestsOutPath, err := d.buildManifests()
-	if err != nil {
+	if err := d.copyFromTemplate(mCfg); err != nil {
 		return err
 	}
 
@@ -232,7 +238,11 @@ func (d *Distribution) Exec() error {
 
 	logrus.Info("Applying manifests...")
 
-	return d.applyManifests(manifestsOutPath)
+	if _, err := d.shellRunner.Run(path.Join(d.Path, "scripts", "apply.sh"), "false", d.kubeconfig); err != nil {
+		return fmt.Errorf("error applying manifests: %w", err)
+	}
+
+	return nil
 }
 
 func (d *Distribution) Stop() error {
@@ -255,10 +265,10 @@ func (d *Distribution) Stop() error {
 	}()
 
 	go func() {
-		logrus.Debug("Stopping kustomize...")
+		logrus.Debug("Stopping shell...")
 
-		if err := d.kzRunner.Stop(); err != nil {
-			errCh <- fmt.Errorf("error stopping kustomize: %w", err)
+		if err := d.shellRunner.Stop(); err != nil {
+			errCh <- fmt.Errorf("error stopping shell: %w", err)
 		}
 
 		wg.Done()
@@ -292,7 +302,7 @@ func (d *Distribution) Stop() error {
 }
 
 func (d *Distribution) createFuryctlMerger() (*merge.Merger, error) {
-	defaultsFilePath := path.Join(d.distroPath, "furyctl-defaults.yaml")
+	defaultsFilePath := path.Join(d.distroPath, "defaults", "ekscluster-kfd-v1alpha2.yaml")
 
 	defaultsFile, err := yamlx.FromFileV2[map[any]any](defaultsFilePath)
 	if err != nil {
@@ -438,15 +448,18 @@ func (d *Distribution) injectDataPostTf(fMerger *merge.Merger) (*merge.Merger, e
 						},
 					},
 				},
-				Dr: private.SpecDistributionModulesDr{
-					Velero: private.SpecDistributionModulesDrVelero{
-						Eks: private.SpecDistributionModulesDrVeleroEks{
-							IamRoleArn: private.TypesAwsArn(arns["velero_iam_role_arn"]),
-						},
-					},
-				},
 			},
 		},
+	}
+
+	if d.furyctlConf.Spec.Distribution.Modules.Dr.Type == "eks" {
+		injectData.Data.Modules.Dr = private.SpecDistributionModulesDr{
+			Velero: private.SpecDistributionModulesDrVelero{
+				Eks: private.SpecDistributionModulesDrVeleroEks{
+					IamRoleArn: private.TypesAwsArn(arns["velero_iam_role_arn"]),
+				},
+			},
+		}
 	}
 
 	injectDataModel := merge.NewDefaultModelFromStruct(injectData, ".data", true)
@@ -602,76 +615,4 @@ func (d *Distribution) copyFromTemplate(cfg template.Config) error {
 	}
 
 	return nil
-}
-
-func (d *Distribution) buildManifests() (string, error) {
-	kzOut, err := d.kzRunner.Build()
-	if err != nil {
-		return "", fmt.Errorf("error building manifests: %w", err)
-	}
-
-	outDirPath, err := os.MkdirTemp("", "furyctl-dist-manifests-")
-	if err != nil {
-		return "", fmt.Errorf("error creating temp dir: %w", err)
-	}
-
-	manifestsOutPath := filepath.Join(outDirPath, "out.yaml")
-
-	logrus.Debugf("built manifests = %s", manifestsOutPath)
-
-	if err = os.WriteFile(manifestsOutPath, []byte(kzOut), os.ModePerm); err != nil {
-		return "", fmt.Errorf("error writing built manifests: %w", err)
-	}
-
-	return manifestsOutPath, nil
-}
-
-func (d *Distribution) applyManifests(mPath string) error {
-	err := d.delayedApplyRetries(mPath, time.Minute, kubectlDelayMaxRetry)
-	if err == nil {
-		return nil
-	}
-
-	err = d.delayedApplyRetries(mPath, 0, kubectlNoDelayMaxRetry)
-	if err == nil {
-		return nil
-	}
-
-	return err
-}
-
-func (d *Distribution) delayedApplyRetries(mPath string, delay time.Duration, maxRetries int) error {
-	var err error
-
-	retries := 0
-
-	if maxRetries == 0 {
-		return nil
-	}
-
-	err = d.kubeRunner.Apply(mPath)
-	if err == nil {
-		return nil
-	}
-
-	retries++
-
-	for retries < maxRetries {
-		t := time.NewTimer(delay)
-
-		if <-t.C; true {
-			logrus.Debug("applying manifests again... to ensure all resources are created.")
-
-			err = d.kubeRunner.Apply(mPath)
-			if err == nil {
-				return nil
-			}
-		}
-
-		retries++
-
-		t.Stop()
-	}
-
-	return fmt.Errorf("error applying manifests: %w", err)
 }

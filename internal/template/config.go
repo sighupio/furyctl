@@ -36,7 +36,7 @@ type Config struct {
 func NewConfig(tplSource, data *merge.Merger, excluded []string) (Config, error) {
 	var cfg Config
 
-	if *tplSource.GetCustom() == nil {
+	if tplSource == nil || *tplSource.GetCustom() == nil {
 		return cfg, ErrTemplateSourceCustomIsNil
 	}
 
@@ -62,6 +62,36 @@ func NewConfig(tplSource, data *merge.Merger, excluded []string) (Config, error)
 
 	cfg.Templates = tmpl
 	cfg.Data = builder.ToMapStringAny((*data.GetBase()).Content())
+	cfg.Include = nil
+
+	return cfg, nil
+}
+
+func NewConfigWithoutData(tplSource *merge.Merger, excluded []string) (Config, error) {
+	var cfg Config
+
+	if tplSource == nil || *tplSource.GetCustom() == nil {
+		return cfg, ErrTemplateSourceCustomIsNil
+	}
+
+	tmpl := Templates{}
+
+	mergedTmpl, ok := (*tplSource.GetCustom()).Content()["templates"]
+	if ok {
+		tmplMap, err := newTemplatesFromMap(mergedTmpl)
+		if err != nil {
+			return cfg, err
+		}
+
+		tmpl = *tmplMap
+	}
+
+	tmpl.Excludes = append(tmpl.Excludes, excluded...)
+
+	builder := mapx.NewBuilder(false)
+
+	cfg.Templates = tmpl
+	cfg.Data = builder.ToMapStringAny((*tplSource.GetBase()).Content())
 	cfg.Include = nil
 
 	return cfg, nil

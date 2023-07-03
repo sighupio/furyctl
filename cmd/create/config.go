@@ -13,7 +13,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 
-	distroConfig "github.com/sighupio/fury-distribution/pkg/config"
+	distroConfig "github.com/sighupio/fury-distribution/pkg/apis/config"
 	"github.com/sighupio/furyctl/internal/analytics"
 	"github.com/sighupio/furyctl/internal/cmd/cmdutil"
 	"github.com/sighupio/furyctl/internal/config"
@@ -68,6 +68,9 @@ func NewConfigCmd(tracker *analytics.Tracker) *cobra.Command {
 			if err != nil {
 				return fmt.Errorf("%w: kind", ErrParsingFlag)
 			}
+			if kind == "" {
+				return fmt.Errorf("%w: kind", ErrMandatoryFlag)
+			}
 
 			apiVersion, err := cmdutil.StringFlag(cmd, "api-version", tracker, cmdEvent)
 			if err != nil {
@@ -92,17 +95,6 @@ func NewConfigCmd(tracker *analytics.Tracker) *cobra.Command {
 				},
 				Spec: distroConfig.FuryctlSpec{
 					DistributionVersion: semver.EnsurePrefix(version),
-					ToolsConfiguration: distroConfig.ToolsConfiguration{
-						Terraform: distroConfig.Terraform{
-							State: distroConfig.State{
-								S3: distroConfig.S3{
-									BucketName: "bucket-name",
-									KeyPrefix:  "key-prefix",
-									Region:     "eu-west-1",
-								},
-							},
-						},
-					},
 				},
 			}
 
@@ -202,8 +194,8 @@ func NewConfigCmd(tracker *analytics.Tracker) *cobra.Command {
 	cmd.Flags().StringP(
 		"kind",
 		"k",
-		"EKSCluster",
-		"Type of cluster to create (eg: EKSCluster)",
+		"",
+		"Type of cluster to create (eg: EKSCluster, KFDDistribution)",
 	)
 
 	cmd.Flags().StringP(

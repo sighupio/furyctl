@@ -12,6 +12,7 @@ import (
 	"testing"
 
 	"github.com/sighupio/furyctl/internal/dependencies/tools"
+	itool "github.com/sighupio/furyctl/internal/tool"
 	execx "github.com/sighupio/furyctl/internal/x/exec"
 )
 
@@ -41,6 +42,14 @@ func Test_Factory_Create(t *testing.T) {
 			wantTool: true,
 		},
 		{
+			desc:     "yq",
+			wantTool: true,
+		},
+		{
+			desc:     "shell",
+			wantTool: true,
+		},
+		{
 			desc:     "unsupported",
 			wantTool: false,
 		},
@@ -50,7 +59,7 @@ func Test_Factory_Create(t *testing.T) {
 			Bin: "",
 		})
 		t.Run(tC.desc, func(t *testing.T) {
-			tool := f.Create(tC.desc, "0.0.0")
+			tool := f.Create(itool.Name(tC.desc), "0.0.0")
 			if tool == nil && tC.wantTool {
 				t.Errorf("Expected tool %s, got nil", tC.desc)
 			}
@@ -88,6 +97,8 @@ func TestHelperProcess(t *testing.T) {
 		switch subcmd {
 		case "--version":
 			fmt.Fprintf(os.Stdout, "aws-cli/2.8.12 Python/3.11.0 Darwin/21.6.0 source/arm64 prompt/off\n")
+		case "s3api":
+			fmt.Fprintf(os.Stdout, "eu-west-1\n")
 		}
 	case "furyagent":
 		switch subcmd {
@@ -135,6 +146,16 @@ func TestHelperProcess(t *testing.T) {
 		switch subcmd {
 		case "version":
 			fmt.Fprintf(os.Stdout, "Terraform v0.15.4\non darwin_amd64")
+		}
+	case "yq":
+		switch subcmd {
+		case "--version":
+			fmt.Fprintf(os.Stdout, "yq (https://github.com/mikefarah/yq/) version v4.34.1")
+		}
+	case "sh":
+		switch subcmd {
+		case "--version":
+			fmt.Fprintf(os.Stdout, "GNU bash, version 3.2.57(1)-release (arm64-apple-darwin22)\nCopyright (C) 2007 Free Software Foundation, Inc.")
 		}
 	default:
 		fmt.Fprintf(os.Stdout, "command not found")
