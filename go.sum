@@ -304,6 +304,8 @@ github.com/sighupio/fury-distribution v1.25.3-0.20230630103158-e63ee68f74e3 h1:I
 github.com/sighupio/fury-distribution v1.25.3-0.20230630103158-e63ee68f74e3/go.mod h1:GP3AWJD0nw1WSdHDHZoXbKXlpUOTkLAr9zKHIxmsOWM=
 github.com/sighupio/fury-distribution v1.25.4-0.20230630151509-5fef14d7ef26 h1:kGHZ0NCjijAlDVseu0XJ/WHut9lvcMB9ujLZhWy7fsE=
 github.com/sighupio/fury-distribution v1.25.4-0.20230630151509-5fef14d7ef26/go.mod h1:5gp8s+7qkpyoVeOZNuMRDLhjElYEY1F3X1GmC8QkYc0=
+github.com/sighupio/fury-distribution v1.25.4-0.20230703100332-a87399c2785b h1:vH8RFn/gu5oNOdj1Rc9LnJDCmT+3aaveN4PyBbomTBE=
+github.com/sighupio/fury-distribution v1.25.4-0.20230703100332-a87399c2785b/go.mod h1:5gp8s+7qkpyoVeOZNuMRDLhjElYEY1F3X1GmC8QkYc0=
 github.com/sirupsen/logrus v1.9.0 h1:trlNQbNUG3OdDrDil03MCb1H2o9nJ1x4/5LYw7byDE0=
 github.com/sirupsen/logrus v1.9.0/go.mod h1:naHLuLoDiP4jHNo9R0sCBMtWGeIprob74mVsIT4qYEQ=
 github.com/spf13/afero v1.9.3 h1:41FoI0fD7OR7mGcKE/aOiLkGreyf8ifIOQmJANWogMk=

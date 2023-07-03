@@ -36,7 +36,7 @@ type Config struct {
 func NewConfig(tplSource, data *merge.Merger, excluded []string) (Config, error) {
 	var cfg Config
 
-	if *tplSource.GetCustom() == nil {
+	if tplSource == nil || *tplSource.GetCustom() == nil {
 		return cfg, ErrTemplateSourceCustomIsNil
 	}
 
@@ -70,7 +70,7 @@ func NewConfig(tplSource, data *merge.Merger, excluded []string) (Config, error)
 func NewConfigWithoutData(tplSource *merge.Merger, excluded []string) (Config, error) {
 	var cfg Config
 
-	if *tplSource.GetCustom() == nil {
+	if tplSource == nil || *tplSource.GetCustom() == nil {
 		return cfg, ErrTemplateSourceCustomIsNil
 	}
 
