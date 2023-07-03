@@ -78,6 +78,12 @@ The generated folder will be created starting from a provided templates folder a
 				return fmt.Errorf("error downloading distribution: %w", err)
 			}
 
+			cmdEvent.AddClusterDetails(analytics.ClusterDetails{
+				Provider:   res.MinimalConf.Kind,
+				KFDVersion: res.DistroManifest.Version,
+				DryRun:     flags.DryRun,
+			})
+
 			if !flags.SkipValidation {
 				// Validate the furyctl.yaml file.
 				logrus.Info("Validating configuration file...")

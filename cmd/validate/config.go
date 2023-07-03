@@ -74,6 +74,7 @@ func NewConfigCmd(tracker *analytics.Tracker) *cobra.Command {
 			}
 
 			cmdEvent.AddClusterDetails(analytics.ClusterDetails{
+				Provider:   res.MinimalConf.Kind,
 				KFDVersion: res.DistroManifest.Version,
 			})
 

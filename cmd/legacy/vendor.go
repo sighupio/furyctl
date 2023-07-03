@@ -49,11 +49,17 @@ func NewVendorCmd(tracker *analytics.Tracker) *cobra.Command {
 
 			ff, err := legacy.NewFuryFile(flags.FuryFilePath)
 			if err != nil {
+				cmdEvent.AddErrorMessage(err)
+				tracker.Track(cmdEvent)
+
 				return fmt.Errorf("%w: %v", ErrParsingFuryFile, err)
 			}
 
 			ps, err := ff.BuildPackages(flags.Prefix)
 			if err != nil {
+				cmdEvent.AddErrorMessage(err)
+				tracker.Track(cmdEvent)
+
 				return fmt.Errorf("%w: %v", ErrParsingPackages, err)
 			}
 
@@ -77,6 +83,9 @@ func NewVendorCmd(tracker *analytics.Tracker) *cobra.Command {
 
 			err = downloader.Download(ps)
 			if err != nil {
+				cmdEvent.AddErrorMessage(err)
+				tracker.Track(cmdEvent)
+
 				return fmt.Errorf("%w: %v", ErrDownloading, err)
 			}
 

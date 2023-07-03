@@ -15,10 +15,10 @@
 package main
 
 import (
+	"github.com/sirupsen/logrus"
 	"os"
 	"runtime"
-
-	"github.com/sirupsen/logrus"
+	"strings"
 
 	"github.com/sighupio/furyctl/cmd"
 	"github.com/sighupio/furyctl/internal/analytics"
@@ -66,8 +66,11 @@ func exec() int {
 		h = "unknown"
 	}
 
+	mixPanelToken = strings.ReplaceAll(mixPanelToken, "\"", "")
+	mixPanelToken = strings.ReplaceAll(mixPanelToken, "'", "")
+
 	// Create the analytics tracker.
-	a := analytics.NewTracker(mixPanelToken, versions[version], osArch, runtime.GOOS, "SIGHUP", h)
+	a := analytics.NewTracker(mixPanelToken, versions["version"], osArch, runtime.GOOS, "SIGHUP", h)
 
 	defer a.Flush()
 

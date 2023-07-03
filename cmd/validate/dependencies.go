@@ -83,6 +83,7 @@ func NewDependenciesCmd(tracker *analytics.Tracker) *cobra.Command {
 			}
 
 			cmdEvent.AddClusterDetails(analytics.ClusterDetails{
+				Provider: dres.MinimalConf.Kind,
 				KFDVersion: dres.DistroManifest.Version,
 			})
 

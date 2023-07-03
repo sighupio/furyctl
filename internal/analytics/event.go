@@ -95,4 +95,5 @@ type ClusterDetails struct {
 	Phase      string
 	Provider   string
 	KFDVersion string
+	DryRun bool
 }
