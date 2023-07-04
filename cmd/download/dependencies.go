@@ -80,16 +80,17 @@ func NewDependenciesCmd(tracker *analytics.Tracker) *cobra.Command {
 			}
 
 			dres, err := distrodl.Download(distroLocation, furyctlPath)
-			cmdEvent.AddClusterDetails(analytics.ClusterDetails{
-				KFDVersion: dres.DistroManifest.Version,
-			})
-
 			if err != nil {
 				cmdEvent.AddErrorMessage(err)
 				tracker.Track(cmdEvent)
 
 				return fmt.Errorf("failed to download distribution: %w", err)
 			}
+
+			cmdEvent.AddClusterDetails(analytics.ClusterDetails{
+				Provider:   dres.MinimalConf.Kind,
+				KFDVersion: dres.DistroManifest.Version,
+			})
 
 			basePath := filepath.Join(homeDir, ".furyctl", dres.MinimalConf.Metadata.Name)
 

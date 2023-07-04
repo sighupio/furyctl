@@ -130,6 +130,13 @@ func NewClusterCmd(tracker *analytics.Tracker) *cobra.Command {
 				return err
 			}
 
+			cmdEvent.AddClusterDetails(analytics.ClusterDetails{
+				Provider:   res.MinimalConf.Kind,
+				KFDVersion: res.DistroManifest.Version,
+				Phase:      flags.Phase,
+				DryRun:     flags.DryRun,
+			})
+
 			basePath := filepath.Join(homeDir, ".furyctl", res.MinimalConf.Metadata.Name)
 
 			// Validate the dependencies.

@@ -8,12 +8,15 @@ import (
 	"fmt"
 	"net"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/denisbrodbeck/machineid"
 	"github.com/dukex/mixpanel"
 	"github.com/sirupsen/logrus"
 )
+
+const isNext = true
 
 // NewTracker returns a new Tracker instance.
 func NewTracker(token, version, arch, os, org, hostname string) *Tracker {
@@ -31,6 +34,8 @@ func NewTracker(token, version, arch, os, org, hostname string) *Tracker {
 		},
 	}
 
+	isDevelopBuild := strings.Contains(version, "develop")
+
 	t := map[string]string{
 		"version":      version,
 		"origin":       "furyctl",
@@ -39,6 +44,8 @@ func NewTracker(token, version, arch, os, org, hostname string) *Tracker {
 		"org":          org,
 		"hostname":     hostname,
 		"trackID":      getTrackID(token),
+		"isNext":       fmt.Sprintf("%t", isNext),
+		"development":  fmt.Sprintf("%t", isDevelopBuild),
 	}
 
 	tracker := &Tracker{
@@ -50,6 +57,8 @@ func NewTracker(token, version, arch, os, org, hostname string) *Tracker {
 
 	if token == "" {
 		tracker.enable = false
+
+		return tracker
 	}
 
 	// Start the event processor, this will listen for new tracked events and send them to mixpanel.
@@ -81,14 +90,16 @@ func (a *Tracker) Track(event Event) {
 func (a *Tracker) Flush() {
 	const timeout = time.Millisecond * 500
 
-	go func() {
-		time.Sleep(timeout)
-		a.events <- NewStopEvent()
-	}()
+	if a.enable {
+		go func() {
+			time.Sleep(timeout)
+			a.events <- NewStopEvent()
+		}()
 
-	a.processEvents()
+		a.processEvents()
 
-	logrus.Debug("Flushed events queue")
+		logrus.Debug("Flushed events queue")
+	}
 }
 
 // processEvents is the event processor: it will listen for new events and send them to mixpanel.
