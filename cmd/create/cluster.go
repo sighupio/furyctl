@@ -141,19 +141,19 @@ func NewClusterCmd(tracker *analytics.Tracker) *cobra.Command {
 			// Download the distribution.
 			logrus.Info("Downloading distribution...")
 			res, err := distrodl.Download(flags.DistroLocation, flags.FuryctlPath)
-
-			cmdEvent.AddClusterDetails(analytics.ClusterDetails{
-				Provider:   res.DistroManifest.Kubernetes.Eks.Version,
-				KFDVersion: res.DistroManifest.Version,
-				Phase:      flags.Phase,
-			})
-
 			if err != nil {
 				cmdEvent.AddErrorMessage(err)
 				tracker.Track(cmdEvent)
 
 				return fmt.Errorf("error while downloading distribution: %w", err)
 			}
+
+			cmdEvent.AddClusterDetails(analytics.ClusterDetails{
+				Provider:   res.MinimalConf.Kind,
+				KFDVersion: res.DistroManifest.Version,
+				Phase:      flags.Phase,
+				DryRun:     flags.DryRun,
+			})
 
 			basePath := filepath.Join(homeDir, ".furyctl", res.MinimalConf.Metadata.Name)
 

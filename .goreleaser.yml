@@ -10,6 +10,7 @@ before:
 builds:
   - env:
       - CGO_ENABLED=0
+      - MIX_PANEL_TOKEN={{ if index .Env "FURYCTL_MIXPANEL_TOKEN" }}{{ .Env.FURYCTL_MIXPANEL_TOKEN }}{{ else }}""{{ end }}
     goos:
       - linux
       - windows
@@ -18,13 +19,13 @@ builds:
       - amd64
       - arm64
     ldflags:
-      - -s -w -X main.version={{.Version}} -X main.gitCommit={{.Commit}} -X main.buildTime={{.Date}} -X main.goVersion={{.Env.GO_VERSION}} -X main.osArch={{.Arch}} -X main.mixPanelToken={{.Env.FURYCTL_MIXPANEL_TOKEN}}
+      - -s -w -X main.version={{.Version}} -X main.gitCommit={{.Commit}} -X main.buildTime={{.Date}} -X main.goVersion={{.Env.GO_VERSION}} -X main.osArch={{.Arch}} -X main.mixPanelToken={{.Env.MIX_PANEL_TOKEN}}
 archives:
   - name_template: "{{ tolower .ProjectName }}-{{ tolower .Os }}-{{ tolower .Arch }}"
 checksum:
   name_template: 'checksums.txt'
 snapshot:
-  name_template: "{{ incpatch .Version }}-ng"
+  name_template: "{{ incpatch .Version }}-develop"
 changelog:
   sort: asc
   filters:

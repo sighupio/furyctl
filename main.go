@@ -17,6 +17,7 @@ package main
 import (
 	"os"
 	"runtime"
+	"strings"
 
 	"github.com/sirupsen/logrus"
 
@@ -66,8 +67,11 @@ func exec() int {
 		h = "unknown"
 	}
 
+	mixPanelToken = strings.ReplaceAll(mixPanelToken, "\"", "")
+	mixPanelToken = strings.ReplaceAll(mixPanelToken, "'", "")
+
 	// Create the analytics tracker.
-	a := analytics.NewTracker(mixPanelToken, versions[version], osArch, runtime.GOOS, "SIGHUP", h)
+	a := analytics.NewTracker(mixPanelToken, versions["version"], osArch, runtime.GOOS, "SIGHUP", h)
 
 	defer a.Flush()
 
