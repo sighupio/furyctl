@@ -13,7 +13,6 @@ builds:
       - MIX_PANEL_TOKEN={{ if index .Env "FURYCTL_MIXPANEL_TOKEN" }}{{ .Env.FURYCTL_MIXPANEL_TOKEN }}{{ else }}""{{ end }}
     goos:
       - linux
-      - windows
       - darwin
     goarch:
       - amd64
@@ -23,20 +22,20 @@ builds:
 archives:
   - name_template: "{{ tolower .ProjectName }}-{{ tolower .Os }}-{{ tolower .Arch }}"
 checksum:
-  name_template: 'checksums.txt'
+  name_template: "checksums.txt"
 snapshot:
   name_template: "{{ incpatch .Version }}-develop"
 changelog:
   sort: asc
   filters:
     exclude:
-      - '^docs:'
-      - '^test:'
+      - "^docs:"
+      - "^test:"
 release:
   github:
     owner: sighupio
     name: furyctl
-  name_template: '{{ .Tag }}'
+  name_template: "{{ .Tag }}"
   prerelease: auto
 brews:
   - name: furyctl
@@ -45,8 +44,8 @@ brews:
       name: homebrew-furyctl
     skip_upload: auto
     folder: Formula
-    homepage: 'https://gihub.com/sighupio/furyctl'
-    description: 'furyctl binary'
+    homepage: "https://gihub.com/sighupio/furyctl"
+    description: "furyctl binary"
     conflicts:
       - furyctl
     test: |
