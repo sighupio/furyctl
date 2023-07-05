@@ -20,7 +20,9 @@
 
 <!-- <KFD-DOCS> -->
 
-> The next generation of `furyctl`, called "furyctl next", has been officially released. It is now in a stable state and available starting from version v0.25.0. The previous version, furyctl 0.11, is considered legacy and will only receive bug fixes. It will be maintained under the v0.11 branches.
+> The next generation of `furyctl`, called "furyctl next", has been officially released. It is now in a stable state and available starting from version v0.25.0. The previous version, furyctl 0.11, is considered legacy and will only receive bug fixes. It will be maintained under the v0.11 branch.
+
+## What is Furyctl?
 
 `furyctl` is the command line companion for the Kubernetes Fury Distribution to manage the **full lifecycle** of your Kubernetes Fury clusters.
 <br/>
@@ -40,6 +42,11 @@
 > You are viewing the readme for furyctl next generation (`furyctl-ng` for short). This version is in `alpha` status.
 >
 > `furyctl-ng` is in `alpha` status and currently supports EKS-based clusters only.
+
+### Available providers
+
+* `EKSCluster`: Provides comprehensive lifecycle management for an EKS cluster on AWS. It handles the installation of the VPC, VPN, EKS using the installers, and deploys the Distribution onto the EKS cluster.
+* `KFDDistribution`: Dedicated provider for the distribution, which installs the Distribution (modules only) on an existing Kubernetes cluster.
 
 ## Installation
 
