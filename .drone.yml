@@ -1,202 +1,187 @@
-# Copyright (c) 2020 SIGHUP s.r.l All rights reserved.
+# Copyright (c) 2017-present SIGHUP s.r.l All rights reserved.
 # Use of this source code is governed by a BSD-style
 # license that can be found in the LICENSE file.
 
-name: license
 kind: pipeline
 type: docker
+name: main
 
 steps:
-  - name: check
-    image: golang:1.18.1-alpine
+  - name: prepare
+    image: quay.io/sighup/golang:1.20.4
+    depends_on:
+      - clone
     pull: always
     commands:
-      - go install github.com/google/addlicense@v1.0.0
-      - addlicense -c "SIGHUP s.r.l" -v -l bsd --check .
+      - mkdir -p .go/cache .go/modcache .go/tmp
+      - go mod download
+    environment:
+      CGO_ENABLED: 0
+      GOCACHE: /drone/src/.go/cache
+      GOMODCACHE: /drone/src/.go/modcache
+      GOTMPDIR: /drone/src/.go/tmp
 
----
-name: Build Test and Release
-kind: pipeline
-type: docker
+  - name: license
+    image: quay.io/sighup/golang:1.20.4
+    depends_on:
+      - prepare
+    pull: always
+    commands:
+      - make license-check
+    environment:
+      CGO_ENABLED: 0
+      GOCACHE: /drone/src/.go/cache
+      GOMODCACHE: /drone/src/.go/modcache
+      GOTMPDIR: /drone/src/.go/tmp
 
-node:
-  runner: internal
-
-depends_on:
-  - license
-
-steps:
   - name: lint
-    image: golang:1.18.1-alpine
-    pull: always
-    commands:
-      - test -z $(gofmt -l .)
-    when:
-      event:
-        - push
-        - tag
-
-  - name: test
-    image: golang:1.18.1-alpine
-    pull: always
-    commands:
-      - go test -v ./...
-    environment:
-      CGO_ENABLED: 0
-    when:
-      event:
-        - push
-        - tag
-
-  - name: build
-    image: ghcr.io/goreleaser/goreleaser:v1.9.2
-    pull: always
+    image: quay.io/sighup/golang:1.20.4
     depends_on:
-      - lint
-      - test
-    environment:
-      CGO_ENABLED: 0
-      GITHUB_TOKEN:
-        from_secret: GITHUB_TOKEN
-    commands:
-      - go install github.com/gobuffalo/packr/v2/packr2@v2.8.3
-      - git reset --hard
-      - git fetch --tags
-      - goreleaser check
-      - goreleaser --debug build --skip-validate --rm-dist
-    when:
-      event:
-        - push
-        - tag
-
-  - &integration
-    name: integration-gcp-gke
-    image: quay.io/sighup/e2e-furyctl:v1.2.1_v0.3.0_v1.24.9_20.04
-    depends_on:
-      - build
-    environment:
-      CGO_ENABLED: 0
-      FURYCTL_TOKEN:
-        from_secret: FURYCTL_TOKEN
-    commands:
-      - bats -t ./automated-tests/integration/gcp-gke/tests.sh
-    when:
-      event:
-        - push
-        - tag
-
-  - <<: *integration
-    name: integration-aws-eks
-    commands:
-      - bats -t ./automated-tests/integration/aws-eks/tests.sh
-
-  - <<: *integration
-    name: integration-vsphere
-    commands:
-      - bats -t ./automated-tests/integration/vsphere/tests.sh
-
-  - &e2e
-    name: e2e-gcp
-    image: quay.io/sighup/e2e-furyctl:v1.2.1_v0.3.0_v1.24.9_20.04
+      - prepare
     pull: always
-    privileged: true # Required to connect to the VPN
-    depends_on:
-      - build
+    commands:
+      - make lint
     environment:
       CGO_ENABLED: 0
-      FURYCTL_TOKEN:
-        from_secret: FURYCTL_TOKEN
+      GOCACHE: /drone/src/.go/cache
+      GOMODCACHE: /drone/src/.go/modcache
+      GOTMPDIR: /drone/src/.go/tmp
 
-      TERRAFORM_TF_STATES_BUCKET_NAME:
-        from_secret: TERRAFORM_TF_STATES_BUCKET_NAME
+  - name: test-unit
+    image: quay.io/sighup/golang:1.20.4
+    depends_on:
+      - prepare
+    pull: always
+    commands:
+      - make test-unit
+    environment:
+      CGO_ENABLED: 0
+      GOCACHE: /drone/src/.go/cache
+      GOMODCACHE: /drone/src/.go/modcache
+      GOTMPDIR: /drone/src/.go/tmp
+
+  - name: test-integration
+    image: quay.io/sighup/golang:1.20.4
+    depends_on:
+      - prepare
+    commands:
+      - echo $${NETRC_FILE} > /root/.netrc
+      - make test-integration
+    environment:
+      CGO_ENABLED: 0
+      GOCACHE: /drone/src/.go/cache
+      GOMODCACHE: /drone/src/.go/modcache
+      GOTMPDIR: /drone/src/.go/tmp
+      NETRC_FILE:
+        from_secret: NETRC_FILE
+
+  - name: test-e2e
+    image: quay.io/sighup/golang:1.20.4
+    depends_on:
+      - prepare
+    commands:
+      - apk add --update binutils curl groff openssh-client openvpn
+      # Install aws-cli
+      - curl -sL https://alpine-pkgs.sgerrand.com/sgerrand.rsa.pub -o /etc/apk/keys/sgerrand.rsa.pub
+      - curl -sLO https://github.com/sgerrand/alpine-pkg-glibc/releases/download/$${GLIBC_VER}/glibc-$${GLIBC_VER}.apk
+      - curl -sLO https://github.com/sgerrand/alpine-pkg-glibc/releases/download/$${GLIBC_VER}/glibc-bin-$${GLIBC_VER}.apk
+      - curl -sLO https://github.com/sgerrand/alpine-pkg-glibc/releases/download/$${GLIBC_VER}/glibc-i18n-$${GLIBC_VER}.apk
+      - apk add --force-overwrite --virtual .glibc glibc-$${GLIBC_VER}.apk glibc-bin-$${GLIBC_VER}.apk glibc-i18n-$${GLIBC_VER}.apk
+      - /usr/glibc-compat/bin/localedef -i en_US -f UTF-8 en_US.UTF-8
+      - curl -sL https://awscli.amazonaws.com/awscli-exe-linux-x86_64-$${AWSCLI_VERSION}.zip -o awscliv2.zip
+      - unzip awscliv2.zip
+      - aws/install
+      - apk add gcompat || true
+      # Setup SSH
+      - mkdir /root/.ssh
+      - echo "$${GITHUB_SSH}" | tr -d '\r' | sed -e '$a\' > /root/.ssh/id_rsa
+      - echo $${NETRC_FILE} > /root/.netrc
+      - chmod 600 /root/.ssh/id_rsa
+      - touch /root/.ssh/known_hosts
+      - chmod 600 /root/.ssh/known_hosts
+      - ssh-keyscan -H github.com > /etc/ssh/ssh_known_hosts 2> /dev/null
+      # Create required s3 bucket if it doesn't exist
+      - (test ! $(aws s3api get-bucket-location --bucket $${TERRAFORM_TF_STATES_BUCKET_NAME} --output text --no-cli-pager 2>/dev/null | grep "$${AWS_DEFAULT_REGION}")) && aws s3 mb s3://$${TERRAFORM_TF_STATES_BUCKET_NAME} --region $${AWS_DEFAULT_REGION}
+      # Run tests
+      - make test-e2e
+      # Cleanup
+      - rm -rf aws/
+      - rm awscliv2.zip glibc-$${GLIBC_VER}.apk glibc-bin-$${GLIBC_VER}.apk glibc-i18n-$${GLIBC_VER}.apk
+    environment:
+      CGO_ENABLED: 0
+      GOCACHE: /drone/src/.go/cache
+      GOMODCACHE: /drone/src/.go/modcache
+      GOTMPDIR: /drone/src/.go/tmp
+      AWSCLI_VERSION: 2.8.12
+      GLIBC_VER: 2.35-r0
       AWS_ACCESS_KEY_ID:
         from_secret: AWS_ACCESS_KEY_ID
       AWS_SECRET_ACCESS_KEY:
         from_secret: AWS_SECRET_ACCESS_KEY
-      AWS_REGION:
-        from_secret: AWS_REGION
       AWS_DEFAULT_REGION:
         from_secret: AWS_REGION
+      FURYCTL_MIXPANEL_TOKEN:
+        from_secret: FURYCTL_MIXPANEL_TOKEN
+      NETRC_FILE:
+        from_secret: NETRC_FILE
+      GITHUB_SSH:
+        from_secret: GITHUB_SSH
+      TERRAFORM_TF_STATES_BUCKET_NAME:
+        from_secret: TERRAFORM_TF_STATES_BUCKET_NAME
 
-      GCP_CREDENTIALS:
-        from_secret: GCP_CREDENTIALS
-      GCP_CREDENTIALS_PATH: /tmp/terraform-credentials.json
-
-      GOOGLE_PROJECT:
-        from_secret: GOOGLE_PROJECT
-      CLOUDSDK_CORE_PROJECT:
-        from_secret: GOOGLE_PROJECT
-      GOOGLE_REGION:
-        from_secret: GOOGLE_REGION
-
-      VSPHERE_USER:
-        from_secret: VSPHERE_USER
-      VSPHERE_PASSWORD:
-        from_secret: VSPHERE_PASSWORD
-      VSPHERE_SERVER:
-        from_secret: VSPHERE_SERVER
-      VSPHERE_DATACENTER:
-        from_secret: VSPHERE_DATACENTER
-      VSPHERE_DATASTORE:
-        from_secret: VSPHERE_DATASTORE
-      VSPHERE_HOST:
-        from_secret: VSPHERE_HOST
-      VSPHERE_NET:
-        from_secret: VSPHERE_NET
-      VSPHERE_TEMPLATE_PREFIX:
-        from_secret: VSPHERE_TEMPLATE_PREFIX
-    commands:
-      - echo $${GCP_CREDENTIALS} | base64 -d > $${GCP_CREDENTIALS_PATH}
-      - export GOOGLE_APPLICATION_CREDENTIALS=$${GCP_CREDENTIALS_PATH}
-      - bats -t ./automated-tests/e2e-tests/gcp-gke/tests.sh
-    when:
-      event:
-        - tag
-
-  - <<: *e2e
-    name: e2e-aws
-    commands:
-      - bats -t ./automated-tests/e2e-tests/aws-eks/tests.sh
-
-  - <<: *e2e
-    name: e2e-vsphere
-    commands:
-      - bats -t ./automated-tests/e2e-tests/vsphere/tests.sh
-
-  - <<: *e2e
-    name: e2e-vsphere-destroy
-    depends_on:
-      - e2e-vsphere
-    failure: ignore
-    commands:
-      - echo " Our vsphere environment is not so stable"
-      - echo " The destroy phase fails randomly because of disconnection events between vsphere nodes and the API"
-      - echo " Ignore errors on this step"
-      - bats -t ./automated-tests/e2e-tests/vsphere/tests-destroy.sh
-
-  - name: build-release
-    image: ghcr.io/goreleaser/goreleaser:v1.9.2
-    pull: always
+  - name: build
+    image: ghcr.io/goreleaser/goreleaser:v1.15.2
     depends_on:
       - lint
-      - test
-      - integration-gcp-gke
-      - integration-aws-eks
-      - integration-vsphere
-      - e2e-aws
-      - e2e-gcp
-      - e2e-vsphere
-    environment:
-      CGO_ENABLED: 0
-      GITHUB_TOKEN:
-        from_secret: GITHUB_TOKEN
+      - test-unit
+      - test-integration
+      - test-e2e
+    pull: always
     commands:
-      - go install github.com/gobuffalo/packr/v2/packr2@v2.8.3
       - git reset --hard
       - git fetch --tags
-      - goreleaser check
-      - goreleaser --debug release --rm-dist
+      - make build
+    when:
+      ref:
+        exclude:
+          - refs/tags/v**
+    environment:
+      CGO_ENABLED: 0
+      GOCACHE: /drone/src/.go/cache
+      GOMODCACHE: /drone/src/.go/modcache
+      GOTMPDIR: /drone/src/.go/tmp
+      FURYCTL_MIXPANEL_TOKEN:
+        from_secret: FURYCTL_MIXPANEL_TOKEN
+      GITHUB_TOKEN:
+        from_secret: GITHUB_TOKEN
+
+  - name: build-release
+    image: ghcr.io/goreleaser/goreleaser:v1.15.2
+    depends_on:
+      - lint
+      - test-unit
+      - test-integration
+      - test-e2e
+    commands:
+      - git reset --hard
+      - git fetch --tags
+      - make release
     when:
       ref:
         include:
           - refs/tags/v**
+    environment:
+      CGO_ENABLED: 0
+      GOCACHE: /drone/src/.go/cache
+      GOMODCACHE: /drone/src/.go/modcache
+      GOTMPDIR: /drone/src/.go/tmp
+      FURYCTL_MIXPANEL_TOKEN:
+        from_secret: FURYCTL_MIXPANEL_TOKEN
+      GITHUB_TOKEN:
+        from_secret: GITHUB_TOKEN
+
+trigger:
+  event:
+    exclude:
+      - pull_request
+      - promote

@@ -1,4 +1,4 @@
-// Copyright © 2018 Sighup SRL support@sighup.io
+// Copyright © 2017-present SIGHUP SRL support@sighup.io
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -16,15 +16,70 @@ package main
 
 import (
 	"os"
+	"runtime"
+	"strings"
 
 	"github.com/sirupsen/logrus"
 
 	"github.com/sighupio/furyctl/cmd"
+	"github.com/sighupio/furyctl/internal/analytics"
+)
+
+var (
+	version       = "unknown"
+	gitCommit     = "unknown"
+	buildTime     = "unknown"
+	goVersion     = "unknown"
+	osArch        = "unknown"
+	mixPanelToken = ""
 )
 
 func main() {
-	if err := cmd.Execute(); err != nil {
-		logrus.Error(err)
-		os.Exit(1)
+	os.Exit(exec())
+}
+
+func exec() int {
+	var logFile *os.File
+
+	versions := map[string]string{
+		"version":   version,
+		"gitCommit": gitCommit,
+		"buildTime": buildTime,
+		"goVersion": goVersion,
+		"osArch":    osArch,
 	}
+
+	defer logFile.Close()
+
+	log := &logrus.Logger{
+		Out: os.Stdout,
+		Formatter: &logrus.TextFormatter{
+			ForceColors:      true,
+			DisableTimestamp: true,
+		},
+		Level: logrus.DebugLevel,
+	}
+
+	h, err := os.Hostname()
+	if err != nil {
+		log.Debug(err)
+
+		h = "unknown"
+	}
+
+	mixPanelToken = strings.ReplaceAll(mixPanelToken, "\"", "")
+	mixPanelToken = strings.ReplaceAll(mixPanelToken, "'", "")
+
+	// Create the analytics tracker.
+	a := analytics.NewTracker(mixPanelToken, versions["version"], osArch, runtime.GOOS, "SIGHUP", h)
+
+	defer a.Flush()
+
+	if _, err := cmd.NewRootCommand(versions, logFile, a, mixPanelToken).ExecuteC(); err != nil {
+		log.Error(err)
+
+		return 1
+	}
+
+	return 0
 }

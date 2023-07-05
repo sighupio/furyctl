@@ -1,0 +1,327 @@
+# Copyright (c) 2017-present SIGHUP s.r.l All rights reserved.
+# Use of this source code is governed by a BSD-style
+# license that can be found in the LICENSE file.
+
+apiVersion: kfd.sighup.io/v1alpha2
+kind: EKSCluster
+metadata:
+  # the name will be used as a prefix/suffix for all the managed resources
+  name: awesome-cluster-staging
+spec:
+  # with this version we will download the kfd.yaml file from the distribution to gather all the other components versions
+  distributionVersion: v1.25.1
+  # Under the hood, furyctl uses other tools like terraform, kustomize, etc
+  toolsConfiguration:
+    terraform:
+      state:
+        s3:
+          bucketName: awesome-bucket-created-outside-furyctl
+          # changed from key, because each terraform project state will be placed in the directory defined by the prefix
+          keyPrefix: furyctl/
+          region: eu-west-1
+      # gcs:
+      # bucketName:
+      # ...
+      # terraformCloud:
+      # ...
+  # tags to apply to all resources in AWS
+  tags:
+    env: "staging"
+    k8s: "awesome"
+    # whathever: "something"
+  infrastructure:
+    vpc:
+      # new network configuration, with a more hierarchical structure
+      network:
+        cidr: 10.1.0.0/16
+        subnetsCidrs:
+          private:
+            - 10.1.0.0/20
+            - 10.1.16.0/20
+            - 10.1.32.0/20
+          public:
+            - 10.1.48.0/24
+            - 10.1.49.0/24
+            - 10.1.50.0/24
+    vpn:
+      # the vpn creation can be optional
+      instances: 2
+      port: 1194
+      instanceType: t3.micro
+      diskSize: 50
+      # is it really customizable? what is this?
+      operatorName: sighup
+      # should be optional?
+      dhParamsBits: 2048
+      # Which IP address will be given to VPN users
+      vpnClientsSubnetCidr: 172.16.0.0/16
+      # new ssh configuration, with a more hierarchical structure
+      ssh:
+        # ssh public keys enabled to access the vpn instances, NOT YET IMPLEMENTED, proposal
+        publicKeys:
+          - "ssh-ed25519 XYX"
+        # Github users to get ssh keys from
+        githubUsersName:
+          - lnovara
+        # the CIDRs that are allowed for the ssh connection
+        allowedFromCidrs:
+          - 0.0.0.0/0
+  kubernetes:
+    # vpcID and subnetIDs are optional, needed only if you did not create vpc with bootstrap phase
+    # and will be automatically gathered from the output of the bootstrap phase
+    vpcId: vpc-0f92da9b4a2089963
+    # optional, see the above comment
+    subnetIds:
+      - subnet-0ab84702287e38ccb
+      - subnet-0ae4e9199d9192226
+      - subnet-01787e8da51e4f070
+    apiServer:
+      privateAccess: true
+      publicAccess: false
+      privateAccessCidrs: ['0.0.0.0/0']
+      publicAccessCidrs: ['0.0.0.0/0']
+    nodeAllowedSshPublicKey: "ssh-ed25519 XYZ"
+    nodePoolsLaunchKind: "launch_templates"
+    nodePools:
+      - name: worker
+        # optional, was OS, and version was removed
+        ami:
+          id: null
+          owner: null
+        # sizing, with a more hierarchical structure
+        size:
+          min: 1
+          max: 3
+        instance:
+          type: t3.micro
+          # optional, this enable spot instances on the ASG
+          spot: false
+          volumeSize: 50
+        # optional, this parameter is used when external target groups are attached to the ASG, otherwise everytime furyctl executes the target groups will be removed
+        attachedTargetGroups:
+          - arn:aws:elasticloadbalancing:eu-west-1:026908869948:targetgroup/adv-staging-external-nginx/6294703cfe87d756
+          - arn:aws:elasticloadbalancing:eu-west-1:026908869948:targetgroup/adv-staging-internal-nginx/81625fbe0462e332
+        # labels that are added to the nodes
+        labels:
+          nodepool: worker
+          node.kubernetes.io/role: worker
+        # optional, taints added to the nodes
+        taints:
+          - node.kubernetes.io/role=worker:NoSchedule
+        # tags added to the ASG
+        tags:
+          k8s.io/cluster-autoscaler/node-template/label/nodepool: "worker"
+          k8s.io/cluster-autoscaler/node-template/label/node.kubernetes.io/role: "worker"
+        # additional rules added to the ASG nodes security group
+        additionalFirewallRules:
+          cidrBlocks:
+            - name: traffic_80_from_172_31_0_0_16
+              type: ingress
+              cidrBlocks:
+                - 172.31.0.0/16
+              protocol: TCP
+              ports:
+                from: 80
+                to: 80
+    # aws-auth configmap definiton
+    awsAuth:
+      # Additional AWS account id to add to the aws-auth configmap, optional
+      additionalAccounts:
+        - "777777777777"
+        - "88888888888"
+      # Additional users to add to the aws-auth configmap, optional
+      users:
+        - username: "samuele"
+          groups:
+            - system:masters
+          userarn: "arn:aws:iam::363601582189:user/samuele"
+      # Additional roles to add to the aws-auth configmap, optional
+      roles:
+        - username: "sighup-support"
+          groups:
+            - sighup-support:masters
+          rolearn: "arn:aws:iam::363601582189:role/k8s-sighup-support-role"
+  # distribution configuration, a subset of the `furyctl-defaults.yaml` file and some additional configurations for prerequisites
+  # in this phase we are managing the kustomize project AND the terraform prerequisites for the distro modules
+  distribution:
+    common:
+      # relativeVendorPath: "../../vendor" should be automatically set by furyctl
+      # provider:
+      #   type: eks automatically set by furyctl
+      # nodeSelector and tolerations will be used to select the nodes where the KFD will be installed
+      nodeSelector:
+        node.kubernetes.io/role: infra
+      tolerations:
+        - effect: NoSchedule
+          key: node.kubernetes.io/role
+          value: infra
+    # the module section will be used to fine tune each module behaviour and configuration
+    modules:
+      # ingress module configuration
+      ingress:
+        overrides:
+          nodeSelector: {}
+          tolerations: []
+          # override ingresses parameters
+          ingresses:
+            forecastle:
+              # disable authentication if set globally on auth module
+              disableAuth: false
+              # if empty, will use the default packageName + baseDomain from common configurations
+              host: ""
+              ingressClass: ""
+        # the base ingress domain for all the ingresses in the cluster
+        baseDomain: internal.fury-demo.sighup.io
+        # common configuration for nginx ingress controller
+        nginx:
+          # can be single or dual
+          type: single
+          tls:
+            # can be certManager, secret or none
+            provider: certManager # it uses the configuration below as default when certManager is chosen
+            secret: #if we want to use custom certificates, the template should create a secret and set it as default certificate in NGINX, so patch nginx deployment accordingly
+              cert: test
+              key: test
+              ca: test
+        # the standard configuration for cert-manager on the ingress module
+        certManager:
+          # to create the clusterIssuer, this is an additional clusterIssuer than the two provided by cert-manager, for simplicity
+          clusterIssuer:
+            name: letsencrypt-fury
+            # can be route53 or http01 , if http01 we need to extrapolate the ingress type. If single the class will be nginx, if dual the class will be external
+            type: http01
+            # if auth type is route53, should be taken automatically from the role generation using module.ingress.dns.public settings
+        # this key will manage the creation of the AWS zones and the iam roles needed for ingress module, eg: certManager and externalDns
+        dns:
+          public:
+            name: "fury-demo.sighup.io"
+            # if create is false, a data source will be used to get the public DNS, otherwise a public zone will be created
+            create: false
+          private:
+            name: "internal.fury-demo.sighup.io"
+            # optional, if vpc is enabled: false
+            vpcId: "vpc123123123123"
+      # logging module configuration
+      logging:
+        overrides:
+          nodeSelector: {}
+          tolerations: []
+          ingresses:
+            opensearch-dashboards:
+              disableAuth: false
+              host: ""
+              ingressClass: ""
+            cerebro:
+              disableAuth: false
+              host: ""
+              ingressClass: ""
+        opensearch:
+          # can be single or triple
+          type: single
+          # if not set, no resource patch will be created
+          resources:
+            requests:
+              cpu: ""
+              memory: ""
+            limits:
+              cpu: ""
+              memory: ""
+          # if set, it will override the volumeClaimTemplates in the opensearch statefulSet
+          storageSize: "150Gi"
+        # override ingresses parameters
+      # monitoring module configuration
+      monitoring:
+        overrides:
+          nodeSelector: {}
+          tolerations: []
+          # override ingresses parameters
+          ingresses:
+            prometheus:
+              disableAuth: false
+              host: ""
+              ingressClass: ""
+            alertmanager:
+              disableAuth: false
+              host: ""
+              ingressClass: ""
+            grafana:
+              disableAuth: false
+              host: ""
+              ingressClass: ""
+            goldpinger:
+              disableAuth: false
+              host: ""
+              ingressClass: ""
+        prometheus:
+          resources:
+            requests:
+              cpu: ""
+              memory: ""
+            limits:
+              cpu: ""
+              memory: ""
+      # policy module configuration
+      policy:
+        overrides:
+          nodeSelector: {}
+          tolerations: []
+          # override ingresses parameters
+          ingresses:
+            gpm:
+              disableAuth: false
+              host: ""
+              ingressClass: ""
+        # the standard configuration for gatekeeper on the policy module
+        gatekeeper:
+          # this configuration adds namespaces to the excluded list, actually whitelisting them
+          additionalExcludedNamespaces: []
+      # dr module configuration
+      dr:
+        overrides:
+          nodeSelector: {}
+          tolerations: []
+      # auth module configuration
+      auth:
+        overrides:
+          nodeSelector: {}
+          # override ingresses parameters
+          ingresses:
+            pomerium:
+              # disableAuth: false <- This doesn't make sense here.
+              host: ""
+              ingressClass: ""
+            dex:
+              host: ""
+              ingressClass: ""
+          tolerations: []
+        provider:
+          # can be none, basicAuth or sso. SSO uses pomerium+dex
+          type: none
+          basicAuth:
+            username: admin
+            password: test
+        pomerium:
+          secrets:
+            # override environment variables here
+            ##COOKIE_SECRET is obtained with  `head -c32 /dev/urandom | base64` see https://www.pomerium.io/reference/#cookie-secret
+            COOKIE_SECRET: test
+            ##IDP_CLIENT_SECRET is the secret configured in the pomerium Dex static client
+            IDP_CLIENT_SECRET: test
+            ##SHARED_SECRET is obtained with  `head -c32 /dev/urandom | base64` see https://www.pomerium.io/reference/#shared-secret
+            SHARED_SECRET: test
+        dex:
+          # see dex documentation for more information
+          connectors:
+            - type: github
+              # Required field for connector id.
+              id: github
+              # Required field for connector name.
+              name: GitHub
+              config:
+                # Credentials can be string literals or pulled from the environment.
+                clientID: "{env://KFD_AUTH_DEX_CONNECTORS_GITHUB_CLIENT_ID}"
+                clientSecret: "{env://KFD_AUTH_DEX_CONNECTORS_GITHUB_CLIENT_SECRET}"
+                redirectURI: https://login.fury-demo.sighup.io/callback
+                loadAllGroups: false
+                teamNameField: slug
+                useLoginAsID: false
