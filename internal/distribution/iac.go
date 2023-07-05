@@ -96,6 +96,12 @@ func (m *IACBuilder) Build() error {
 		return fmt.Errorf("error creating template config: %w", err)
 	}
 
+	tmplCfg.Data["paths"] = map[any]any{
+		"kubectl":   "",
+		"kustomize": "",
+		"yq":        "",
+	}
+
 	outYaml, err := yamlx.MarshalV2(tmplCfg)
 	if err != nil {
 		return fmt.Errorf("error marshaling template config: %w", err)
@@ -157,7 +163,7 @@ func (m *IACBuilder) defaultsFile() (map[any]any, error) {
 		return nil, ErrInvalidKind
 	}
 
-	defaultsFilePath := path.Join("defaults", defaultsFileName)
+	defaultsFilePath := path.Join(m.distroPath, "defaults", defaultsFileName)
 
 	defaultsFile, err := yamlx.FromFileV2[map[any]any](defaultsFilePath)
 	if err != nil {
