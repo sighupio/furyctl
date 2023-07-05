@@ -108,6 +108,7 @@ The generated folder will be created starting from a provided templates folder a
 			distroManBuilder, err := distribution.NewIACBuilder(
 				furyctlFile,
 				res.RepoPath,
+				res.MinimalConf.Kind,
 				flags.OutDir,
 				flags.NoOverwrite,
 				flags.DryRun,

@@ -386,7 +386,7 @@ func (k *Kubernetes) copyFromTemplate(furyctlCfg template.Config) error {
 func (k *Kubernetes) mergeConfig() (template.Config, error) {
 	var cfg template.Config
 
-	defaultsFilePath := path.Join(k.distroPath, "furyctl-defaults.yaml")
+	defaultsFilePath := path.Join(k.distroPath, "defaults", "ekscluster-kfd-v1alpha2.yaml")
 
 	defaultsFile, err := yamlx.FromFileV2[map[any]any](defaultsFilePath)
 	if err != nil {

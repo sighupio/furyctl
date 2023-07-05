@@ -32,10 +32,6 @@ func GetPrivateSchemaPath(basePath string, conf config.Furyctl) (string, error) 
 	return getPath(basePath, conf, "%s-%s-%s.json", "schemas/private")
 }
 
-func GetDefaultsPath(basePath string) string {
-	return filepath.Join(basePath, "furyctl-defaults.yaml")
-}
-
 func getPath(basePath string, conf config.Furyctl, fnameTpl, subDir string) (string, error) {
 	avp := strings.Split(conf.APIVersion, "/")
 

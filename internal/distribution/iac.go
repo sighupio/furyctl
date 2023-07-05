@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path"
 	"path/filepath"
 
 	"github.com/sirupsen/logrus"
@@ -18,12 +19,14 @@ import (
 )
 
 const (
-	source           = "templates/distribution"
-	defaultsFileName = "furyctl-defaults.yaml"
-	suffix           = ".tpl"
+	source = "templates/distribution"
+	suffix = ".tpl"
 )
 
-var ErrSourceDirDoesNotExist = errors.New("source directory does not exist")
+var (
+	ErrSourceDirDoesNotExist = errors.New("source directory does not exist")
+	ErrInvalidKind           = errors.New("invalid kind")
+)
 
 type IACBuilder struct {
 	furyctlFile map[any]any
@@ -31,11 +34,13 @@ type IACBuilder struct {
 	outDir      string
 	noOverwrite bool
 	dryRun      bool
+	kind        string
 }
 
 func NewIACBuilder(
 	furyctlFile map[any]any,
 	distroPath,
+	kind,
 	outDir string,
 	noOverwrite,
 	dryRun bool,
@@ -51,6 +56,7 @@ func NewIACBuilder(
 		outDir:      absOutDir,
 		noOverwrite: noOverwrite,
 		dryRun:      dryRun,
+		kind:        kind,
 	}, nil
 }
 
@@ -138,7 +144,20 @@ func (m *IACBuilder) Build() error {
 }
 
 func (m *IACBuilder) defaultsFile() (map[any]any, error) {
-	defaultsFilePath := filepath.Join(m.distroPath, defaultsFileName)
+	var defaultsFileName string
+
+	switch m.kind {
+	case "EKSCluster":
+		defaultsFileName = "ekscluster-kfd-v1alpha2.yaml"
+
+	case "KFDDistribution":
+		defaultsFileName = "kfddistribution-kfd-v1alpha2.yaml"
+
+	default:
+		return nil, ErrInvalidKind
+	}
+
+	defaultsFilePath := path.Join("defaults", defaultsFileName)
 
 	defaultsFile, err := yamlx.FromFileV2[map[any]any](defaultsFilePath)
 	if err != nil {

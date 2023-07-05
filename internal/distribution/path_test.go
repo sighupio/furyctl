@@ -176,11 +176,3 @@ func TestGetSchemaPaths(t *testing.T) {
 		})
 	}
 }
-
-func TestGetDefaultsPath(t *testing.T) {
-	dp := distribution.GetDefaultsPath("/tmp")
-
-	if dp != "/tmp/furyctl-defaults.yaml" {
-		t.Errorf("expected /tmp/furyctl-defaults.yaml, got %s", dp)
-	}
-}
