@@ -8,9 +8,9 @@
 
 <!-- FIXME: UPDATE THE BUILD BADGE WITH THE RIGHT BRANCH -->
 
-[![Build Status](https://ci.sighup.io/api/badges/sighupio/furyctl/status.svg?ref=refs/heads/furyctl-ng-alpha1)](https://ci.sighup.io/sighupio/furyctl)
-![Release](https://img.shields.io/badge/furyctl-v0.10.0-blue)
-![Release](https://img.shields.io/badge/furyctl%20next-v0.25.0‐alpha.1-blue)
+[![Build Status](https://ci.sighup.io/api/badges/sighupio/furyctl/status.svg)](https://ci.sighup.io/sighupio/furyctl)
+![Release](https://img.shields.io/badge/furyctl-v0.25.0-blue)
+![Release](https://img.shields.io/badge/furyctl%20next-v0.25.0-blue)
 ![Slack](https://img.shields.io/badge/slack-@kubernetes/fury-yellow.svg?logo=slack)
 ![License](https://img.shields.io/github/license/sighupio/furyctl)
 [![Go Report Card](https://goreportcard.com/badge/github.com/sighupio/furyctl)](https://goreportcard.com/report/github.com/sighupio/furyctl)
@@ -27,26 +27,14 @@
 `furyctl` is the command line companion for the Kubernetes Fury Distribution to manage the **full lifecycle** of your Kubernetes Fury clusters.
 <br/>
 
-> **:warning:**
-> you are viewing the readme for furyctl next generation (`ng` for short). This version is in `alpha` status.
->
-> `furyctl-ng` supports EKS-based clusters only in the first alpha.
-
-<!-- line left blank -->
-
 > 💡 Learn more about the Kubernetes Fury Distribution in the [official site](https://kubernetesfury.com).
 
-<!-- line left blank -->
-
-> **Warning**
-> You are viewing the readme for furyctl next generation (`furyctl-ng` for short). This version is in `alpha` status.
->
-> `furyctl-ng` is in `alpha` status and currently supports EKS-based clusters only.
+If you're looking for the old documentation, you can find it [here](https://github.com/sighupio/furyctl/blob/release-v0.11/README.md).
 
 ### Available providers
 
-* `EKSCluster`: Provides comprehensive lifecycle management for an EKS cluster on AWS. It handles the installation of the VPC, VPN, EKS using the installers, and deploys the Distribution onto the EKS cluster.
-* `KFDDistribution`: Dedicated provider for the distribution, which installs the Distribution (modules only) on an existing Kubernetes cluster.
+- `EKSCluster`: Provides comprehensive lifecycle management for an EKS cluster on AWS. It handles the installation of the VPC, VPN, EKS using the installers, and deploys the Distribution onto the EKS cluster.
+- `KFDDistribution`: Dedicated provider for the distribution, which installs the Distribution (modules only) on an existing Kubernetes cluster.
 
 ## Installation
 
@@ -109,7 +97,7 @@ Once you've ensured the above dependencies are installed, you can proceed with t
 
 1. Clone the repository:
 
-<!-- FIXME: remove the branch swithing in the future -->
+<!-- FIXME: remove the branch switching in the future -->
 
 ```console
 git clone git@github.com:sighupio/furyctl.git
@@ -149,44 +137,6 @@ dist/furyctl_windows_amd64_v1
 sudo mv ./dist/furyctl_darwin_amd64_v1/furyctl /usr/local/bin/furyctl
 ```
 
-### Installation from binaries (not available yet for `furyctl-ng`)
-
-You can find `furyctl` binaries on the [Releases page](https://github.com/sighupio/furyctl/releases).
-
-To download the latest release, run:
-
-```bash
-wget -q "https://github.com/sighupio/furyctl/releases/download/v0.10.0/furyctl-$(uname -s)-amd64" -O /tmp/furyctl
-chmod +x /tmp/furyctl
-sudo mv /tmp/furyctl /usr/local/bin/furyctl
-```
-
-Alternatively, you can install `furyctl` using a brew tap or via an asdf plugin.
-
-> ⚠️ M1 users: please download `darwin/amd64` binaries instead of using homebrew or asdf. Even though furyctl can be build for `arm64`, some of its dependendecies are not available yet for this architecture.
-
-### Installation with [Homebrew](https://brew.sh/) (not available yet for `furyctl-ng`)
-
-```console
-brew tap sighupio/furyctl
-brew install furyctl
-```
-
-### Installation with [asdf](https://github.com/asdf-vm/asdf) (not available yet for `furyctl-ng`)
-
-Add furyctl asdf plugin:
-
-```console
-asdf plugin add furyctl
-```
-
-Check that everything is working correctly with `furyctl version`:
-
-```bash
-furyctl version
-INFO[0000] Furyctl version 0.10.0
-```
-
 ## Usage
 
 See all the available commands and their usage by running `furyctl help`.
@@ -198,10 +148,7 @@ See all the available commands and their usage by running `furyctl help`.
 
 <!-- line left blank as spacer -->
 
-> ❗️**WARNING**
->
-> `furyctl-ng` is compatible with KFD versions 1.22.1, 1.23.3 and 1.24.0, but you will need to use the flag `--distro-location git::git@github.com:sighupio/fury-distribution.git?ref=feature/furyctl-next`
-> in _every command_ until the next release of the KFD.
+> Check [KFD Compatibility matrix](https://github.com/sighupio/fury-distribution/blob/main/docs/COMPATIBILITY_MATRIX.md) for the Furyctl / KFD versions to use.
 
 ### Basic Usage
 
@@ -224,7 +171,7 @@ Additionaly, the schema of the file is versioned with the `apiVersion` field, so
 To scaffold a configuration file to use as a starter, you use the following command:
 
 ```console
-furyctl create config --version <KFD version>
+furyctl create config --version v1.25.4 --kind "EKSCluster"
 ```
 
 > 💡 **TIP**
@@ -274,11 +221,15 @@ furyctl validate dependencies
 
 Last but not least, you can launch the creation of the resources defined in the configuration file by running the following command:
 
-> **:warning:** you are about to create cloud resources that could have billing impact.
+> ❗️ **WARNING**
+>
+> You are about to create cloud resources that could have billing impact.
 
-<!-- line left blank -->
+<!-- spacer -->
 
-> **:info:** the creation process you are about to launch can take a while.
+> 📖 **NOTE**
+>
+> The cluster creation process, by default, will create a VPN in the `infrastructure` phase and connect your machine to it automatically before proceeding to the `kubernetes` phase.
 
 ```console
 furyctl create cluster --config /path/to/your/furyctl.yaml
@@ -348,11 +299,7 @@ The following steps will guide you through the process of creating a Kubernetes 
 4. Run `furyctl create cluster` to create the cluster.
 5. (Optional) Watch the logs of the cluster creation process with `tail -f ~/.furyctl/furyctl.log`.
 
-> 💡 **Alpha ONLY**
->
-> You may need to use the flag `--distro-location git::git@github.com:sighupio/fury-distribution.git?ref=feature/furyctl-next` until the next release of the KFD.
-
-### Deploy a cluster from an already existing infrastructure
+#### Create a cluster in an already existing infrastructure
 
 Same as the previous section, but you can skip the infrastructure creation phase
 by not filling the section `infrastructure` in the `furyctl.yaml` file and
@@ -367,7 +314,7 @@ The cluster creation process can be split into three phases:
 3. Distribution
 
 The `furyctl create cluster` command will execute all the phases by default,
-but you can limit the execution to a specific phase by using the flag `--phase`.
+but you can limit the execution to a specific phase by using the `--phase` flag.
 
 To create a cluster step by step, you can run the following command:
 
