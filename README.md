@@ -20,7 +20,7 @@
 
 <!-- <KFD-DOCS> -->
 
-> We are in the process of rewriting `furyctl` from the ground up. The new version is called `furyctl-ng` and is currently in `alpha` status, and will be released starting from version `v0.25.0-alpha.1`. The former version of `furyctl` will be enter 'bugfix only' maintenance until the new version is stable enough to replace it, and it will live under the old `v0.1x` branches.
+> The next generation of `furyctl`, called "furyctl next", has been officially released. It is now in a stable state and available starting from version v0.25.0. The previous version, furyctl 0.11, is considered legacy and will only receive bug fixes. It will be maintained under the v0.11 branches.
 
 `furyctl` is the command line companion for the Kubernetes Fury Distribution to manage the **full lifecycle** of your Kubernetes Fury clusters.
 <br/>
@@ -50,16 +50,12 @@ You can find `furyctl` binaries on the [Releases page](https://github.com/sighup
 To download the latest release, run:
 
 ```console
-curl -L "https://github.com/sighupio/furyctl/releases/download/v0.25.0-alpha.1/furyctl_$(uname -s)_x86_64.tar.gz" -o /tmp/furyctl.tar.gz && tar xfz /tmp/furyctl.tar.gz -C /tmp
+curl -L "https://github.com/sighupio/furyctl/releases/download/v0.25.0/furyctl_$(uname -s)_x86_64.tar.gz" -o /tmp/furyctl.tar.gz && tar xfz /tmp/furyctl.tar.gz -C /tmp
 chmod +x /tmp/furyctl
 sudo mv /tmp/furyctl /usr/local/bin/furyctl
 ```
 
-Alternatively, you can install `furyctl` using a brew tap or via an asdf plugin.
-
-> ❗️**WARNING**
->
-> M1 users: please download `darwin/amd64` binaries instead of using homebrew or asdf. Even though furyctl can be built for `arm64`, some of its dependendecies are not available yet for this architecture.
+Alternatively, you can install `furyctl` using the asdf plugin.
 
 <!--
 ### Installing with [Homebrew](https://brew.sh/)
@@ -68,6 +64,7 @@ Alternatively, you can install `furyctl` using a brew tap or via an asdf plugin.
 brew tap sighupio/furyctl
 brew install furyctl
 ```
+-->
 
 ### Installing with [asdf](https://github.com/asdf-vm/asdf)
 
@@ -81,12 +78,11 @@ Check that everything is working correctly with `furyctl version`:
 
 ```console
 $ furyctl version
-buildTime: 2023-01-13T09:50:15Z
-gitCommit: 349c14a06dd6163b308e4e8baa47ec9cc59712e1
+...
 goVersion: go1.20
 osArch: amd64
-version: 0.25.0-alpha.1
-``` -->
+version: 0.25.0
+```
 
 ### Installing from source
 
@@ -112,8 +108,6 @@ Once you've ensured the above dependencies are installed, you can proceed with t
 git clone git@github.com:sighupio/furyctl.git
 # cd into the cloned repository
 cd furyctl
-# Switch to the branch for the `furyctl-ng-alpha1` version
-git switch furyctl-ng-alpha1
 ```
 
 2. Build the binaries by running the following command:
@@ -216,6 +210,8 @@ Basic usage of `furyctl` for a new project consists on the following steps:
 
 Furyctl configuration files have a kind that specifies what type of cluster will be created, for example the `EKSCluster` kind has all the parameters needed to create a KFD cluster using the EKS managed clusters from AWS.
 
+You can also use the `KFDDistribution` kind to install the KFD distribution on top of an existing Kubernetes cluster.
+
 Additionaly, the schema of the file is versioned with the `apiVersion` field, so when new features are introduced you can switch to a newer version of the configuration file structure.
 
 To scaffold a configuration file to use as a starter, you use the following command:
@@ -223,8 +219,6 @@ To scaffold a configuration file to use as a starter, you use the following comm
 ```console
 furyctl create config --version <KFD version>
 ```
-
-Alternatively, you can take a look at the one in the [examples folder](./examples/).
 
 > 💡 **TIP**
 >
@@ -311,6 +305,10 @@ Check that the dry-run output is what you expect and then run the command again 
 
 ### Advanced Usage
 
+<!--
+
+TODO This is not a viable way to manage dependencies without the possibility to change the --workdir instead of using ~/.furyctl
+
 #### KFD modules management
 
 `furyctl` can be used as a package manager for KFD.
@@ -331,6 +329,7 @@ Modules are located in the `distribution` section of the `furyctl.yaml` file and
 ##### 2. Downloading the modules
 
 Run `furyctl download dependencies` (within the same directory where your `furyctl.yaml` is located) to download the modules and all the dependencies that are needed to create a Kubernetes Fury cluster.
+-->
 
 #### Cluster creation
 
@@ -381,6 +380,16 @@ to use the flag `--kubeconfig` in the following command.
 ```bash
 furyctl create cluster --phase distribution'
 ```
+
+#### Legacy download
+
+The new furyctl still embed some of the legacy features, for example the command `furyctl legacy vendor` to download KFD dependencies from a deprecated `Furyfile.yml`.
+
+This can be still used to manually manage all the components of the distribution.
+
+> 💡 **TIP**
+>
+> you can also use `--furyfile` to point to a `Furyfile.yml` in a different folder
 
 ### Advanced Tips
 
