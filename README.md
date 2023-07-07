@@ -61,7 +61,7 @@ Check that everything is working correctly with `furyctl version`:
 
 ```bash
 furyctl version
-INFO[0000] Furyctl version 0.10.0
+INFO[0000] Furyctl version 0.11.1
 ```
 
 > 💡 **TIP**
