@@ -33,7 +33,7 @@ You can find `furyctl` binaries on the [Releases page](https://github.com/sighup
 To download the latest release, run:
 
 ```bash
-wget -q "https://github.com/sighupio/furyctl/releases/download/v0.10.0/furyctl-$(uname -s)-amd64" -O /tmp/furyctl
+wget -q "https://github.com/sighupio/furyctl/releases/download/v0.11.1/furyctl-$(uname -s)-amd64" -O /tmp/furyctl
 chmod +x /tmp/furyctl
 sudo mv /tmp/furyctl /usr/local/bin/furyctl
 ```
