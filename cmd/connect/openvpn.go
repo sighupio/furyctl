@@ -31,6 +31,7 @@ var (
 type OpenVPNCmdFlags struct {
 	Profile     string
 	FuryctlPath string
+	Outdir      string
 }
 
 func NewOpenVPNCmd(tracker *analytics.Tracker) *cobra.Command {
@@ -58,12 +59,17 @@ func NewOpenVPNCmd(tracker *analytics.Tracker) *cobra.Command {
 
 			// Get home dir.
 			logrus.Debug("Getting Home Directory Path...")
+			outDir := flags.Outdir
 			homeDir, err := os.UserHomeDir()
 			if err != nil {
 				cmdEvent.AddErrorMessage(err)
 				tracker.Track(cmdEvent)
 
 				return fmt.Errorf("%w: %w", ErrCannotGetHomeDir, err)
+			}
+
+			if outDir == "" {
+				outDir = homeDir
 			}
 
 			// Parse furyctl.yaml config.
@@ -78,7 +84,7 @@ func NewOpenVPNCmd(tracker *analytics.Tracker) *cobra.Command {
 
 			// Set common paths.
 			logrus.Debug("Setting common paths...")
-			basePath := filepath.Join(homeDir, ".furyctl", furyctlConf.Metadata.Name)
+			basePath := filepath.Join(outDir, ".furyctl", furyctlConf.Metadata.Name)
 			openVPNWorkDir := filepath.Join(basePath, "infrastructure", "terraform", "secrets")
 
 			executor := execx.NewStdExecutor()
@@ -118,9 +124,15 @@ func getOpenVPNCmdFlags(cmd *cobra.Command, tracker *analytics.Tracker, cmdEvent
 		return OpenVPNCmdFlags{}, fmt.Errorf("%w: %s", ErrParsingFlag, "profile")
 	}
 
+	outdir, err := cmdutil.StringFlag(cmd, "outdir", tracker, cmdEvent)
+	if err != nil {
+		return OpenVPNCmdFlags{}, fmt.Errorf("%w: %s", ErrParsingFlag, "outdir")
+	}
+
 	return OpenVPNCmdFlags{
 		Profile:     profile,
 		FuryctlPath: furyctlPath,
+		Outdir:	     outdir,
 	}, nil
 }
 
