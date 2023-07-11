@@ -47,12 +47,25 @@ func NewDependenciesCmd(tracker *analytics.Tracker) *cobra.Command {
 
 			binPath := cobrax.Flag[string](cmd, "bin-path").(string) //nolint:errcheck,forcetypeassert // optional flag
 			if binPath == "" {
+				// Init paths.
+				logrus.Debug("Getting Home Directory Path...")
+				outDir, err := cmdutil.StringFlag(cmd, "outdir", tracker, cmdEvent)
+				if err != nil {
+					return fmt.Errorf("%w: outdir", ErrParsingFlag)
+				}
+				
 				homeDir, err := os.UserHomeDir()
 				if err != nil {
+					cmdEvent.AddErrorMessage(err)
+					tracker.Track(cmdEvent)
 					return fmt.Errorf("error while getting user home directory: %w", err)
 				}
 
-				binPath = filepath.Join(homeDir, ".furyctl", "bin")
+				if outDir == "" {
+					outDir = homeDir
+				}
+
+				binPath = filepath.Join(outDir, ".furyctl", "bin")
 			}
 
 			https, err := cmdutil.BoolFlag(cmd, "https", tracker, cmdEvent)

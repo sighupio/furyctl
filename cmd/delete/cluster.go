@@ -44,6 +44,7 @@ type ClusterCmdFlags struct {
 	NoTTY          bool
 	HTTPS          bool
 	Kubeconfig     string
+	Outdir         string
 }
 
 func NewClusterCmd(tracker *analytics.Tracker) *cobra.Command {
@@ -63,9 +64,17 @@ func NewClusterCmd(tracker *analytics.Tracker) *cobra.Command {
 			}
 
 			// Init paths.
+			logrus.Debug("Getting Home Directory Path...")
+			outDir := flags.Outdir
 			homeDir, err := os.UserHomeDir()
 			if err != nil {
+				cmdEvent.AddErrorMessage(err)
+				tracker.Track(cmdEvent)
 				return fmt.Errorf("error while getting user home directory: %w", err)
+			}
+
+			if outDir == "" {
+				outDir = homeDir
 			}
 
 			kubeconfigPath := flags.Kubeconfig
@@ -98,7 +107,7 @@ func NewClusterCmd(tracker *analytics.Tracker) *cobra.Command {
 			}
 
 			if flags.BinPath == "" {
-				flags.BinPath = filepath.Join(homeDir, ".furyctl", "bin")
+				flags.BinPath = filepath.Join(outDir, ".furyctl", "bin")
 			}
 
 			// Init first half of collaborators.
@@ -137,7 +146,7 @@ func NewClusterCmd(tracker *analytics.Tracker) *cobra.Command {
 				DryRun:     flags.DryRun,
 			})
 
-			basePath := filepath.Join(homeDir, ".furyctl", res.MinimalConf.Metadata.Name)
+			basePath := filepath.Join(outDir, ".furyctl", res.MinimalConf.Metadata.Name)
 
 			// Validate the dependencies.
 			logrus.Info("Validating dependencies...")
@@ -350,6 +359,11 @@ func getDeleteClusterCmdFlags(cmd *cobra.Command, tracker *analytics.Tracker, cm
 		return ClusterCmdFlags{}, fmt.Errorf("%w: %s", ErrParsingFlag, "https")
 	}
 
+	outdir, err := cmdutil.StringFlag(cmd, "outdir", tracker, cmdEvent)
+	if err != nil {
+		return ClusterCmdFlags{}, fmt.Errorf("%w: %s", ErrParsingFlag, "outdir")
+	}
+
 	return ClusterCmdFlags{
 		Debug:          debug,
 		FuryctlPath:    furyctlPath,
@@ -363,5 +377,6 @@ func getDeleteClusterCmdFlags(cmd *cobra.Command, tracker *analytics.Tracker, cm
 		NoTTY:          noTTY,
 		Kubeconfig:     kubeconfig,
 		HTTPS:          https,
+		Outdir:			outdir,
 	}, nil
 }

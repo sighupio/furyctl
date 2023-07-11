@@ -54,16 +54,25 @@ func NewDependenciesCmd(tracker *analytics.Tracker) *cobra.Command {
 
 			binPath := cmdutil.StringFlagOptional(cmd, "bin-path")
 
+			// Init paths.
+			logrus.Debug("Getting Home Directory Path...")
+			outDir, err := cmdutil.StringFlag(cmd, "outdir", tracker, cmdEvent)
+			if err != nil {
+				return fmt.Errorf("%w: outdir", ErrParsingFlag)
+			}
 			homeDir, err := os.UserHomeDir()
 			if err != nil {
 				cmdEvent.AddErrorMessage(err)
 				tracker.Track(cmdEvent)
-
 				return fmt.Errorf("error while getting user home directory: %w", err)
 			}
 
+			if outDir == "" {
+				outDir = homeDir
+			}
+
 			if binPath == "" {
-				binPath = filepath.Join(homeDir, ".furyctl", "bin")
+				binPath = filepath.Join(outDir, ".furyctl", "bin")
 			}
 
 			client := netx.NewGoGetterClient()
@@ -92,7 +101,7 @@ func NewDependenciesCmd(tracker *analytics.Tracker) *cobra.Command {
 				KFDVersion: dres.DistroManifest.Version,
 			})
 
-			basePath := filepath.Join(homeDir, ".furyctl", dres.MinimalConf.Metadata.Name)
+			basePath := filepath.Join(outDir, ".furyctl", dres.MinimalConf.Metadata.Name)
 
 			depsdl := dependencies.NewDownloader(client, basePath, binPath, https)
 
