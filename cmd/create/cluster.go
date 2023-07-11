@@ -70,7 +70,7 @@ func NewClusterCmd(tracker *analytics.Tracker) *cobra.Command {
 			// Get home dir.
 			logrus.Debug("Getting Home Directory Path...")
 			outDir := flags.Outdir
-			
+
 			homeDir, err := os.UserHomeDir()
 			if err != nil {
 				cmdEvent.AddErrorMessage(err)

@@ -70,7 +70,7 @@ func NewClusterCmd(tracker *analytics.Tracker) *cobra.Command {
 			if err != nil {
 				cmdEvent.AddErrorMessage(err)
 				tracker.Track(cmdEvent)
-				
+
 				return fmt.Errorf("error while getting user home directory: %w", err)
 			}
 
