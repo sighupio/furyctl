@@ -199,3 +199,65 @@ func TestMapper_MapDynamicValues_Combined(t *testing.T) {
 
 	assert.Equal(t, "test/test", mapMeta["double"])
 }
+
+func TestMapper_MapDynamicValues_Slice(t *testing.T) {
+	dummyContext := map[string]map[any]any{
+		"data": {
+			"meta": []string{
+				"{env://TEST_MAPPER_DYNAMIC_VALUE}",
+			},
+		},
+	}
+
+	m := mapper.NewMapper(dummyContext)
+
+	err := os.Setenv("TEST_MAPPER_DYNAMIC_VALUE", "test")
+
+	assert.NoError(t, err)
+
+	defer os.Setenv("TEST_MAPPER_DYNAMIC_VALUE", "")
+
+	filledContext, err := m.MapDynamicValues()
+
+	assert.NoError(t, err)
+
+	meta := filledContext["data"]["meta"]
+
+	sliceMeta, ok := meta.([]string)
+
+	assert.True(t, ok)
+
+	assert.Equal(t, "test", sliceMeta[0])
+}
+
+func TestMapper_MapDynamicValues_SliceWithMap(t *testing.T) {
+	dummyContext := map[string]map[any]any{
+		"data": {
+			"meta": []map[any]any{
+				{
+					"name": "{env://TEST_MAPPER_DYNAMIC_VALUE}",
+				},
+			},
+		},
+	}
+
+	m := mapper.NewMapper(dummyContext)
+
+	err := os.Setenv("TEST_MAPPER_DYNAMIC_VALUE", "test")
+
+	assert.NoError(t, err)
+
+	defer os.Setenv("TEST_MAPPER_DYNAMIC_VALUE", "")
+
+	filledContext, err := m.MapDynamicValues()
+
+	assert.NoError(t, err)
+
+	meta := filledContext["data"]["meta"]
+
+	sliceMeta, ok := meta.([]map[any]any)
+
+	assert.True(t, ok)
+
+	assert.Equal(t, "test", sliceMeta[0]["name"])
+}

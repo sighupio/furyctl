@@ -7,6 +7,7 @@ package mapper
 import (
 	"fmt"
 	"os"
+	"reflect"
 	"regexp"
 	"strings"
 )
@@ -54,47 +55,67 @@ func injectDynamicRes(
 	m map[any]any,
 ) (map[any]any, error) {
 	for k, v := range m {
-		vMap, checkMap := v.(map[any]any)
-		if checkMap {
-			if _, err := injectDynamicRes(vMap); err != nil {
-				return nil, err
-			}
-
-			continue
-		}
-
-		vArr, checkArr := v.([]any)
-		if checkArr {
-			for _, j := range vArr {
-				if j, ok := j.(map[any]any); ok {
-					if _, err := injectDynamicRes(j); err != nil {
-						return nil, err
-					}
+		t := reflect.TypeOf(v)
+		switch t.Kind() {
+		case reflect.Map:
+			if mapVal, ok := v.(map[any]any); ok {
+				if _, err := injectDynamicRes(mapVal); err != nil {
+					return nil, err
 				}
 			}
 
-			continue
-		}
+		case reflect.String:
+			if stringVal, ok := v.(string); ok {
+				injectedStringVal, err := injectDynamicResString(stringVal)
+				if err != nil {
+					return nil, err
+				}
 
-		val, ok := v.(string)
-		if !ok {
-			continue
-		}
-
-		dynamicValues := regexp.MustCompile(`{(.*?)}`).FindAllString(val, -1)
-		for _, dynamicValue := range dynamicValues {
-			parsedDynamicValue, err := ParseDynamicValue(dynamicValue)
-			if err != nil {
-				return nil, err
+				m[k] = injectedStringVal
 			}
 
-			val = strings.Replace(val, dynamicValue, parsedDynamicValue, 1)
-		}
+		case reflect.Slice:
+			switch t.Elem().Kind() {
+			case reflect.Map:
+				if arrVal, ok := v.([]map[any]any); ok {
+					for _, arrChildVal := range arrVal {
+						if _, err := injectDynamicRes(arrChildVal); err != nil {
+							return nil, err
+						}
+					}
+				}
 
-		m[k] = val
+			case reflect.String:
+				if arrVal, ok := v.([]string); ok {
+					for arrChildK, arrChildVal := range arrVal {
+						injectedStringVal, err := injectDynamicResString(arrChildVal)
+						if err != nil {
+							return nil, err
+						}
+
+						arrVal[arrChildK] = injectedStringVal
+					}
+				}
+
+			}
+		}
 	}
 
 	return m, nil
+}
+
+func injectDynamicResString(val string) (string, error) {
+	dynamicValues := regexp.MustCompile(`{(.*?)}`).FindAllString(val, -1)
+	for _, dynamicValue := range dynamicValues {
+		parsedDynamicValue, err := ParseDynamicValue(dynamicValue)
+		if err != nil {
+			return "", err
+		}
+
+		val = strings.Replace(val, dynamicValue, parsedDynamicValue, 1)
+	}
+
+	return val, nil
 }
 
 func readValueFromFile(path string) (string, error) {
