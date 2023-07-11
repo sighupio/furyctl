@@ -43,6 +43,7 @@ linters:
     # unused
     - exhaustruct
     - forbidigo
+    - depguard
 
 linters-settings:
   decorder:
