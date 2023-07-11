@@ -29,7 +29,7 @@ type TemplateCmdFlags struct {
 	NoOverwrite    bool
 	SkipValidation bool
 	HTTPS          bool
-	OutDir         string
+	Outdir         string
 	FuryctlPath    string
 	DistroLocation string
 }
@@ -109,7 +109,7 @@ The generated folder will be created starting from a provided templates folder a
 				furyctlFile,
 				res.RepoPath,
 				res.MinimalConf.Kind,
-				flags.OutDir,
+				flags.Outdir,
 				flags.NoOverwrite,
 				flags.DryRun,
 			)
@@ -146,14 +146,6 @@ The generated folder will be created starting from a provided templates folder a
 		"no-overwrite",
 		false,
 		"Stop if target directory is not empty",
-	)
-
-	cmd.Flags().StringP(
-		"out-dir",
-		"o",
-		"distribution",
-		"Location where to generate the distribution template. Defaults to distribution folder in the current "+
-			"directory.",
 	)
 
 	cmd.Flags().StringP(
@@ -198,9 +190,9 @@ func getDumpTemplateCmdFlags(cmd *cobra.Command, tracker *analytics.Tracker, cmd
 		return TemplateCmdFlags{}, fmt.Errorf("%w: %s", ErrParsingFlag, "skip-validation")
 	}
 
-	outDir, err := cmdutil.StringFlag(cmd, "out-dir", tracker, cmdEvent)
+	outdir, err := cmdutil.StringFlag(cmd, "outdir", tracker, cmdEvent)
 	if err != nil {
-		return TemplateCmdFlags{}, fmt.Errorf("%w: %s", ErrParsingFlag, "out-dir")
+		return TemplateCmdFlags{}, fmt.Errorf("%w: %s", ErrParsingFlag, "outdir")
 	}
 
 	distroLocation, err := cmdutil.StringFlag(cmd, "distro-location", tracker, cmdEvent)
@@ -222,7 +214,7 @@ func getDumpTemplateCmdFlags(cmd *cobra.Command, tracker *analytics.Tracker, cmd
 		DryRun:         dryRun,
 		NoOverwrite:    noOverwrite,
 		SkipValidation: skipValidation,
-		OutDir:         outDir,
+		OutDir:         outdir,
 		DistroLocation: distroLocation,
 		FuryctlPath:    furyctlPath,
 		HTTPS:          https,
