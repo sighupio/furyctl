@@ -345,7 +345,7 @@ var (
 					"--debug",
 					"--workdir", workdir,
 					"--distro-location", ".",
-					"--out-dir", "target",
+					"--outdir", "target",
 					"--disable-analytics",
 					"--log", "stdout",
 					"--skip-validation",

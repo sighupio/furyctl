@@ -28,6 +28,7 @@ type rootConfig struct {
 	DisableAnalytics bool
 	DisableTty       bool
 	Workdir          string
+	Outdir           string
 	Log              string
 }
 
@@ -83,15 +84,24 @@ furyctl is a command line interface tool to manage the full lifecycle of a Kuber
 
 				cfg.Spinner = spinner.New(spinner.CharSets[spinnerStyle], timeout, spinner.WithWriter(w))
 
+				outDir, ok := cobrax.Flag[string](cmd, "outdir").(string)
+				if !ok {
+					logrus.Fatalf("error while getting string flag")
+				}
+
+				homeDir, err := os.UserHomeDir()
+				if err != nil {
+					logrus.Fatalf("error while getting user home directory: %v", err)
+				}
+
+				if outDir == "" {
+					outDir = homeDir
+				}
+
 				logPath, ok := cobrax.Flag[string](cmd, "log").(string)
 				if ok && logPath != "stdout" {
 					if logPath == "" {
-						homeDir, err := os.UserHomeDir()
-						if err != nil {
-							logrus.Fatalf("error while getting user home directory: %v", err)
-						}
-
-						logPath = filepath.Join(homeDir, ".furyctl", "furyctl.log")
+						logPath = filepath.Join(outDir, ".furyctl", "furyctl.log")
 					}
 
 					logFile, err = createLogFile(logPath)
@@ -167,6 +177,13 @@ furyctl is a command line interface tool to manage the full lifecycle of a Kuber
 		&rootCmd.config.Workdir,
 		"workdir",
 		"w",
+		"",
+		"Switch to a different working directory before executing the given subcommand",
+	)
+	rootCmd.PersistentFlags().StringVarP(
+		&rootCmd.config.Outdir,
+		"outdir",
+		"o",
 		"",
 		"Switch to a different working directory before executing the given subcommand",
 	)

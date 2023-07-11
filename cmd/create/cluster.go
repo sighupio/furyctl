@@ -48,6 +48,7 @@ type ClusterCmdFlags struct {
 	HTTPS              bool
 	Kubeconfig         string
 	Timeout            int
+	Outdir             string
 }
 
 func NewClusterCmd(tracker *analytics.Tracker) *cobra.Command {
@@ -66,13 +67,20 @@ func NewClusterCmd(tracker *analytics.Tracker) *cobra.Command {
 				return err
 			}
 
-			// Init paths.
+			// Get home dir.
+			logrus.Debug("Getting Home Directory Path...")
+			outDir := flags.Outdir
+
 			homeDir, err := os.UserHomeDir()
 			if err != nil {
 				cmdEvent.AddErrorMessage(err)
 				tracker.Track(cmdEvent)
 
-				return fmt.Errorf("error while getting current working directory: %w", err)
+				return fmt.Errorf("error while getting user home directory: %w", err)
+			}
+
+			if outDir == "" {
+				outDir = homeDir
 			}
 
 			kubeconfigPath := flags.Kubeconfig
@@ -114,7 +122,7 @@ func NewClusterCmd(tracker *analytics.Tracker) *cobra.Command {
 			}
 
 			if flags.BinPath == "" {
-				flags.BinPath = filepath.Join(homeDir, ".furyctl", "bin")
+				flags.BinPath = filepath.Join(outDir, ".furyctl", "bin")
 			}
 
 			if flags.DryRun {
@@ -155,7 +163,7 @@ func NewClusterCmd(tracker *analytics.Tracker) *cobra.Command {
 				DryRun:     flags.DryRun,
 			})
 
-			basePath := filepath.Join(homeDir, ".furyctl", res.MinimalConf.Metadata.Name)
+			basePath := filepath.Join(outDir, ".furyctl", res.MinimalConf.Metadata.Name)
 
 			// Init second half of collaborators.
 			depsdl := dependencies.NewDownloader(client, basePath, flags.BinPath, flags.HTTPS)
@@ -338,6 +346,11 @@ func getCreateClusterCmdFlags(cmd *cobra.Command, tracker *analytics.Tracker, cm
 		return ClusterCmdFlags{}, fmt.Errorf("%w: %s", ErrParsingFlag, "timeout")
 	}
 
+	outdir, err := cmdutil.StringFlag(cmd, "outdir", tracker, cmdEvent)
+	if err != nil {
+		return ClusterCmdFlags{}, fmt.Errorf("%w: %s", ErrParsingFlag, "outdir")
+	}
+
 	return ClusterCmdFlags{
 		Debug:              debug,
 		FuryctlPath:        furyctlPath,
@@ -354,6 +367,7 @@ func getCreateClusterCmdFlags(cmd *cobra.Command, tracker *analytics.Tracker, cm
 		Kubeconfig:         kubeconfig,
 		HTTPS:              https,
 		Timeout:            timeout,
+		Outdir:             outdir,
 	}, nil
 }
 
