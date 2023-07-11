@@ -132,7 +132,7 @@ func getOpenVPNCmdFlags(cmd *cobra.Command, tracker *analytics.Tracker, cmdEvent
 	return OpenVPNCmdFlags{
 		Profile:     profile,
 		FuryctlPath: furyctlPath,
-		Outdir:	     outdir,
+		Outdir:      outdir,
 	}, nil
 }
 

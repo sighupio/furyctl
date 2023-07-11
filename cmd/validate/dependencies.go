@@ -53,11 +53,12 @@ func NewDependenciesCmd(tracker *analytics.Tracker) *cobra.Command {
 				if err != nil {
 					return fmt.Errorf("%w: outdir", ErrParsingFlag)
 				}
-				
+
 				homeDir, err := os.UserHomeDir()
 				if err != nil {
 					cmdEvent.AddErrorMessage(err)
 					tracker.Track(cmdEvent)
+					
 					return fmt.Errorf("error while getting user home directory: %w", err)
 				}
 

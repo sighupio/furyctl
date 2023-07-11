@@ -377,6 +377,6 @@ func getDeleteClusterCmdFlags(cmd *cobra.Command, tracker *analytics.Tracker, cm
 		NoTTY:          noTTY,
 		Kubeconfig:     kubeconfig,
 		HTTPS:          https,
-		Outdir:			outdir,
+		Outdir:         outdir,
 	}, nil
 }

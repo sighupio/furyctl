@@ -28,7 +28,7 @@ type rootConfig struct {
 	DisableAnalytics bool
 	DisableTty       bool
 	Workdir          string
-	Outdir		     string
+	Outdir           string
 	Log              string
 }
 
@@ -83,7 +83,7 @@ furyctl is a command line interface tool to manage the full lifecycle of a Kuber
 				}
 
 				cfg.Spinner = spinner.New(spinner.CharSets[spinnerStyle], timeout, spinner.WithWriter(w))
-				
+
 				outDir, ok := cobrax.Flag[string](cmd, "outdir").(string)
 
 				homeDir, err := os.UserHomeDir()

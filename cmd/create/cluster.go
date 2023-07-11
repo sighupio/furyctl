@@ -48,7 +48,7 @@ type ClusterCmdFlags struct {
 	HTTPS              bool
 	Kubeconfig         string
 	Timeout            int
-	Outdir			   string
+	Outdir             string
 }
 
 func NewClusterCmd(tracker *analytics.Tracker) *cobra.Command {
@@ -70,10 +70,12 @@ func NewClusterCmd(tracker *analytics.Tracker) *cobra.Command {
 			// Get home dir.
 			logrus.Debug("Getting Home Directory Path...")
 			outDir := flags.Outdir
+			
 			homeDir, err := os.UserHomeDir()
 			if err != nil {
 				cmdEvent.AddErrorMessage(err)
 				tracker.Track(cmdEvent)
+
 				return fmt.Errorf("error while getting user home directory: %w", err)
 			}
 
@@ -365,7 +367,7 @@ func getCreateClusterCmdFlags(cmd *cobra.Command, tracker *analytics.Tracker, cm
 		Kubeconfig:         kubeconfig,
 		HTTPS:              https,
 		Timeout:            timeout,
-		Outdir: 			outdir,
+		Outdir:             outdir,
 	}, nil
 }
 
