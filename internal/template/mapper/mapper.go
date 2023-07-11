@@ -7,6 +7,7 @@ package mapper
 import (
 	"fmt"
 	"os"
+	"regexp"
 	"strings"
 )
 
@@ -80,18 +81,19 @@ func injectDynamicRes(
 			continue
 		}
 
-		spl := strings.Split(val, "://")
+		dynamicValueRegexp := regexp.MustCompile(`\{[^}]+://[^}]+\}`)
+		dynamicValues := dynamicValueRegexp.FindAllString(val, -1)
 
-		if len(spl) > 1 {
-			val, err := ParseDynamicValue(val)
+		for _, dynamicValue := range dynamicValues {
+			parsedDynamicValue, err := ParseDynamicValue(dynamicValue)
 			if err != nil {
 				return nil, err
 			}
 
-			m[k] = val
-
-			continue
+			val = strings.Replace(val, dynamicValue, parsedDynamicValue, 1)
 		}
+
+		m[k] = val
 	}
 
 	return m, nil
