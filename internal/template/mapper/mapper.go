@@ -81,7 +81,7 @@ func injectDynamicRes(
 			continue
 		}
 
-		dynamicValues := regexp.MustCompile(`\{[^}]+://[^}]+\}`).FindAllString(val, -1)
+		dynamicValues := regexp.MustCompile(`{(.*?)}`).FindAllString(val, -1)
 		for _, dynamicValue := range dynamicValues {
 			parsedDynamicValue, err := ParseDynamicValue(dynamicValue)
 			if err != nil {
