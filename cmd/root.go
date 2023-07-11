@@ -132,7 +132,7 @@ furyctl is a command line interface tool to manage the full lifecycle of a Kuber
 				}
 
 				if token == "" {
-					logrus.Debug("FURYCTL_MIXPANEL_TOKEN is not set")
+					logrus.Trace("FURYCTL_MIXPANEL_TOKEN is not set")
 				}
 			},
 		},
