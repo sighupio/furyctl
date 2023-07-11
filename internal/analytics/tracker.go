@@ -98,7 +98,7 @@ func (a *Tracker) Flush() {
 
 		a.processEvents()
 
-		logrus.Debug("Flushed events queue")
+		logrus.Trace("Flushed events queue")
 	}
 }
 
@@ -108,28 +108,28 @@ func (a *Tracker) processEvents() {
 	for {
 		e, ok := <-a.events
 		if !ok {
-			logrus.Debug("Event processor stopped")
+			logrus.Trace("Event processor stopped")
 
 			break
 		}
 
-		logrus.Debug("Processing event: ", e.Name())
+		logrus.Trace("Processing event: ", e.Name())
 
 		switch e.(type) {
 		case StopEvent:
-			logrus.Debug("Stop event received, stopping event processor")
+			logrus.Trace("Stop event received, stopping event processor")
 			a.close()
 
 			return
 
 		case CommandEvent:
-			logrus.Debug("Sending event: ", e.Name())
+			logrus.Trace("Sending event: ", e.Name())
 
 			if err := a.sendEvent(e); err != nil {
-				logrus.WithError(err).Error("failed to send event")
+				logrus.Tracef("failed to send event: %v", err)
 			}
 
-			logrus.Debug("Event sent: ", e.Name())
+			logrus.Trace("Event sent: ", e.Name())
 		}
 	}
 }
@@ -170,7 +170,7 @@ func getTrackID(token string) string {
 func generateMachineID() string {
 	mid, err := machineid.ProtectedID("furyctl")
 	if err != nil {
-		logrus.WithError(err).Debug("failed to generate a machine id")
+		logrus.Tracef("failed to generate a machine id: %v", err)
 
 		mid = "na"
 	}
