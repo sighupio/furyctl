@@ -151,3 +151,51 @@ func TestMapper_MapDynamicValues_RelativePath(t *testing.T) {
 
 	assert.Equal(t, exampleStr, mapMeta["value"])
 }
+
+func TestMapper_MapDynamicValues_Combined(t *testing.T) {
+	path, err := os.MkdirTemp("", "test")
+
+	assert.NoError(t, err)
+
+	exampleStr := "test!"
+
+	err = os.WriteFile(path+"/test_file.txt", []byte(exampleStr), os.ModePerm)
+
+	defer os.RemoveAll(path)
+
+	assert.NoError(t, err)
+
+	dummyContext := map[string]map[any]any{
+		"data": {
+			"meta": map[any]any{
+				"name":   fmt.Sprintf("{env://TEST_MAPPER_DYNAMIC_VALUE}/plaintext/{file://%s/test_file.txt}", path),
+				"value":  fmt.Sprintf("{file://%s/test_file.txt}/plaintext/{env://TEST_MAPPER_DYNAMIC_VALUE}", path),
+				"double": "{env://TEST_MAPPER_DYNAMIC_VALUE}/{env://TEST_MAPPER_DYNAMIC_VALUE}",
+			},
+		},
+	}
+
+	m := mapper.NewMapper(dummyContext)
+
+	err = os.Setenv("TEST_MAPPER_DYNAMIC_VALUE", "test")
+
+	assert.NoError(t, err)
+
+	defer os.Setenv("TEST_MAPPER_DYNAMIC_VALUE", "")
+
+	filledContext, err := m.MapDynamicValues()
+
+	assert.NoError(t, err)
+
+	meta := filledContext["data"]["meta"]
+
+	mapMeta, ok := meta.(map[any]any)
+
+	assert.True(t, ok)
+
+	assert.Equal(t, "test/plaintext/test!", mapMeta["name"])
+
+	assert.Equal(t, "test!/plaintext/test", mapMeta["value"])
+
+	assert.Equal(t, "test/test", mapMeta["double"])
+}
