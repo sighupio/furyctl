@@ -214,7 +214,7 @@ func getDumpTemplateCmdFlags(cmd *cobra.Command, tracker *analytics.Tracker, cmd
 		DryRun:         dryRun,
 		NoOverwrite:    noOverwrite,
 		SkipValidation: skipValidation,
-		OutDir:         outdir,
+		Outdir:         outdir,
 		DistroLocation: distroLocation,
 		FuryctlPath:    furyctlPath,
 		HTTPS:          https,
