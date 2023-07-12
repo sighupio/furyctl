@@ -7,6 +7,8 @@ package dump
 import (
 	"errors"
 	"fmt"
+	"os"
+	"path/filepath"
 
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -103,13 +105,29 @@ The generated folder will be created starting from a provided templates folder a
 				return fmt.Errorf("%s - %w", flags.FuryctlPath, err)
 			}
 
+			outDir := flags.Outdir
+
+			currentDir, err := os.Getwd()
+			if err != nil {
+				cmdEvent.AddErrorMessage(err)
+				tracker.Track(cmdEvent)
+
+				return fmt.Errorf("error while getting current directory: %w", err)
+			}
+
+			distroDir := filepath.Join(currentDir, "distribution")
+
+			if outDir == "" {
+				outDir = distroDir
+			}
+
 			logrus.Info("Generating distribution manifests...")
 
 			distroManBuilder, err := distribution.NewIACBuilder(
 				furyctlFile,
 				res.RepoPath,
 				res.MinimalConf.Kind,
-				flags.Outdir,
+				outDir,
 				flags.NoOverwrite,
 				flags.DryRun,
 			)
