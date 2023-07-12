@@ -55,6 +55,10 @@ func injectDynamicRes(
 	m map[any]any,
 ) (map[any]any, error) {
 	for k, v := range m {
+		if v == nil {
+			continue
+		}
+
 		t := reflect.TypeOf(v)
 		switch t.Kind() {
 		case reflect.Map:
