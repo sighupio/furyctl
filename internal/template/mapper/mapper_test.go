@@ -13,9 +13,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/assert"
-
 	"github.com/sighupio/furyctl/internal/template/mapper"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestNewMapper(t *testing.T) {
@@ -200,7 +199,7 @@ func TestMapper_MapDynamicValues_Combined(t *testing.T) {
 	assert.Equal(t, "test/test", mapMeta["double"])
 }
 
-func TestMapper_MapDynamicValues_Slice(t *testing.T) {
+func TestMapper_MapDynamicValues_SliceString(t *testing.T) {
 	dummyContext := map[string]map[any]any{
 		"data": {
 			"meta": []any{
@@ -230,12 +229,12 @@ func TestMapper_MapDynamicValues_Slice(t *testing.T) {
 	assert.Equal(t, "test", sliceMeta[0])
 }
 
-func TestMapper_MapDynamicValues_SliceWithMap(t *testing.T) {
+func TestMapper_MapDynamicValues_SliceMap(t *testing.T) {
 	dummyContext := map[string]map[any]any{
 		"data": {
-			"meta": []map[any]any{
-				{
-					"name": "{env://TEST_MAPPER_DYNAMIC_VALUE}",
+			"meta": []any{
+				map[any]any{
+					"value": "{env://TEST_MAPPER_DYNAMIC_VALUE}",
 				},
 			},
 		},
@@ -255,9 +254,10 @@ func TestMapper_MapDynamicValues_SliceWithMap(t *testing.T) {
 
 	meta := filledContext["data"]["meta"]
 
-	sliceMeta, ok := meta.([]map[any]any)
+	sliceMeta, ok := meta.([]any)
+	sliceMeta0, ok := sliceMeta[0].(map[any]any)
 
 	assert.True(t, ok)
 
-	assert.Equal(t, "test", sliceMeta[0]["name"])
+	assert.Equal(t, "test", sliceMeta0["value"])
 }
