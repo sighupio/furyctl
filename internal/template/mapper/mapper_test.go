@@ -203,7 +203,7 @@ func TestMapper_MapDynamicValues_Combined(t *testing.T) {
 func TestMapper_MapDynamicValues_Slice(t *testing.T) {
 	dummyContext := map[string]map[any]any{
 		"data": {
-			"meta": []string{
+			"meta": []any{
 				"{env://TEST_MAPPER_DYNAMIC_VALUE}",
 			},
 		},
@@ -223,7 +223,7 @@ func TestMapper_MapDynamicValues_Slice(t *testing.T) {
 
 	meta := filledContext["data"]["meta"]
 
-	sliceMeta, ok := meta.([]string)
+	sliceMeta, ok := meta.([]any)
 
 	assert.True(t, ok)
 
