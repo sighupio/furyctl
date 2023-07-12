@@ -89,15 +89,20 @@ func injectDynamicRes(
 					}
 				}
 
-			case reflect.String:
-				if arrVal, ok := v.([]string); ok {
+			case reflect.Interface:
+				if arrVal, ok := v.([]any); ok {
 					for arrChildK, arrChildVal := range arrVal {
-						injectedStringVal, err := injectDynamicResString(arrChildVal)
-						if err != nil {
-							return nil, err
-						}
+						switch reflect.TypeOf(arrChildVal).Kind() {
+						case reflect.String:
+							injectedStringVal, err := injectDynamicResString(arrChildVal.(string))
+							if err != nil {
+								return nil, err
+							}
 
-						arrVal[arrChildK] = injectedStringVal
+							arrVal[arrChildK] = injectedStringVal
+
+						default:
+						}
 					}
 				}
 
