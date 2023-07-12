@@ -59,8 +59,7 @@ func injectDynamicRes(
 			continue
 		}
 
-		t := reflect.TypeOf(v)
-		switch t.Kind() {
+		switch reflect.TypeOf(v).Kind() {
 		case reflect.Map:
 			if mapVal, ok := v.(map[any]any); ok {
 				if _, err := injectDynamicRes(mapVal); err != nil {
@@ -79,34 +78,27 @@ func injectDynamicRes(
 			}
 
 		case reflect.Slice:
-			switch t.Elem().Kind() {
-			case reflect.Map:
-				if arrVal, ok := v.([]map[any]any); ok {
-					for _, arrChildVal := range arrVal {
-						if _, err := injectDynamicRes(arrChildVal); err != nil {
-							return nil, err
-						}
-					}
-				}
-
-			case reflect.Interface:
-				if arrVal, ok := v.([]any); ok {
-					for arrChildK, arrChildVal := range arrVal {
-						switch reflect.TypeOf(arrChildVal).Kind() {
-						case reflect.String:
-							injectedStringVal, err := injectDynamicResString(arrChildVal.(string))
-							if err != nil {
+			if arrVal, ok := v.([]any); ok {
+				for arrChildK, arrChildVal := range arrVal {
+					switch reflect.TypeOf(arrChildVal).Kind() {
+					case reflect.Map:
+						if mapVal, ok := arrChildVal.(map[any]any); ok {
+							if _, err := injectDynamicRes(mapVal); err != nil {
 								return nil, err
 							}
-
-							arrVal[arrChildK] = injectedStringVal
-
-						default:
 						}
+
+					case reflect.String:
+						injectedStringVal, err := injectDynamicResString(arrChildVal.(string))
+						if err != nil {
+							return nil, err
+						}
+
+						arrVal[arrChildK] = injectedStringVal
+
+					default:
 					}
 				}
-
-			default:
 			}
 
 		default:
