@@ -68,7 +68,7 @@ func AppendToFile(s, target string) error {
 
 	defer destination.Close()
 
-	_, err = destination.Write([]byte(s))
+	_, err = destination.WriteString(s)
 	if err != nil {
 		return fmt.Errorf("error while writing to file %s: %w", target, err)
 	}
