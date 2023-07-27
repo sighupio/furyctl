@@ -492,6 +492,8 @@ func (k *Kubernetes) createTfVars() error {
 		}
 	}
 
+	allowedClusterEndpointPrivateAccessCIDRs = slices.Uniq(allowedClusterEndpointPrivateAccessCIDRs)
+
 	err := bytesx.SafeWriteToBuffer(
 		&buffer,
 		"cluster_name = \"%v\"\n",
