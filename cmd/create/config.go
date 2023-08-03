@@ -196,7 +196,7 @@ func NewConfigCmd(tracker *analytics.Tracker) *cobra.Command {
 		"kind",
 		"k",
 		"",
-		"Type of cluster to create (eg: EKSCluster, KFDDistribution)",
+		"Type of cluster to create (eg: EKSCluster, KFDDistribution, OnPremises)",
 	)
 
 	cmd.Flags().StringP(

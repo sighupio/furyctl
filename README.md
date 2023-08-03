@@ -34,6 +34,7 @@ If you're looking for the old documentation, you can find it [here](https://gith
 
 - `EKSCluster`: Provides comprehensive lifecycle management for an EKS cluster on AWS. It handles the installation of the VPC, VPN, EKS using the installers, and deploys the Distribution onto the EKS cluster.
 - `KFDDistribution`: Dedicated provider for the distribution, which installs the Distribution (modules only) on an existing Kubernetes cluster.
+- `OnPremises`: TODO.
 
 ## Installation
 
@@ -161,7 +162,7 @@ Basic usage of `furyctl` for a new project consists on the following steps:
 
 Furyctl configuration files have a kind that specifies what type of cluster will be created, for example the `EKSCluster` kind has all the parameters needed to create a KFD cluster using the EKS managed clusters from AWS.
 
-You can also use the `KFDDistribution` kind to install the KFD distribution on top of an existing Kubernetes cluster.
+You can also use the `KFDDistribution` kind to install the KFD distribution on top of an existing Kubernetes cluster or `OnPremises` kind to TODO.
 
 Additionaly, the schema of the file is versioned with the `apiVersion` field, so when new features are introduced you can switch to a newer version of the configuration file structure.
 

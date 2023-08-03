@@ -7,6 +7,7 @@ package apis
 import (
 	"github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/distribution"
 	"github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/eks"
+	"github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/onpremises"
 )
 
 type ExtraSchemaValidator interface {
@@ -22,6 +23,9 @@ func NewExtraSchemaValidatorFactory(apiVersion, kind string) ExtraSchemaValidato
 
 		case "KFDDistribution":
 			return &distribution.ExtraSchemaValidator{}
+
+		case "OnPremises":
+			return &onpremises.ExtraSchemaValidator{}
 
 		default:
 			return nil
