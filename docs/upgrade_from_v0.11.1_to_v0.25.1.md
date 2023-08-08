@@ -1,11 +1,11 @@
-# Migration steps to migrate from furyctl v0.11.1(aws/eks provisioner) to v0.25.1(EKSCluster) 
+# Migration steps to migrate from furyctl v0.11.1(aws/eks provisioner) to v0.25.2(EKSCluster) 
 
-> WARNING: The following guide is only to move infrastructure and/or kubernetes phase from v0.11.1 to v0.25.1 furyctl version using the old aws/eks provisioner
+> WARNING: The following guide is only to move infrastructure and/or kubernetes phase from v0.11.1 to v0.25.2 furyctl version using the old aws/eks provisioner
 
 > WARNING: only `s3` terraform backend is supported
 
 1. Update EKS cluster to v1.25 using the latest furyctl legacy version v0.11.1
-2. Using furyctl 0.25.1 execute`furyctl create config -v 1.25.5 -k EKSCluster`
+2. Using furyctl 0.25.2 execute`furyctl create config -v 1.25.6 -k EKSCluster`
 3. Copy configuration values from `bootstrap.yml` into `furyctl.yml` using the following mapping:
 
 
@@ -106,7 +106,7 @@ spec:
             region: eu-west-1
 ```
 
-6. Using the furyctl v0.25.1, execute the `--phase infrastructure` in `--dry-run` mode to initialize terraform and create the folders
+6. Using the furyctl v0.25.2, execute the `--phase infrastructure` in `--dry-run` mode to initialize terraform and create the folders
 
 ```shell
 #Ensure your aws credential has been set
