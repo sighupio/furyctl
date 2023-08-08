@@ -111,7 +111,7 @@ cd furyctl
 make build
 ```
 
-3. You will find the binaries for Linux, Darwin (macOS) and Windows for your current architecture inside the `dist` folder:
+3. You will find the binaries for Linux and Darwin (macOS) for your current architecture inside the `dist` folder:
 
 ```console
 $ tree dist/furyctl_*/
@@ -119,8 +119,6 @@ dist/furyctl_darwin_amd64_v1
 └── furyctl
 dist/furyctl_linux_amd64_v1
 └── furyctl
-dist/furyctl_windows_amd64_v1
-└── furyctl.exe
 ```
 
 4. Check that the binary is working as expected:
