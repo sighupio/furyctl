@@ -454,7 +454,7 @@ func (d *Distribution) injectDataPostTf(fMerger *merge.Merger) (*merge.Merger, e
 
 	if d.furyctlConf.Spec.Distribution.Modules.Dr.Type == "eks" {
 		injectData.Data.Modules.Dr = private.SpecDistributionModulesDr{
-			Velero: private.SpecDistributionModulesDrVelero{
+			Velero: &private.SpecDistributionModulesDrVelero{
 				Eks: private.SpecDistributionModulesDrVeleroEks{
 					IamRoleArn: private.TypesAwsArn(arns["velero_iam_role_arn"]),
 				},
