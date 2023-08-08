@@ -492,6 +492,8 @@ func (k *Kubernetes) createTfVars() error {
 		}
 	}
 
+	allowedClusterEndpointPrivateAccessCIDRs = slices.Uniq(allowedClusterEndpointPrivateAccessCIDRs)
+
 	err := bytesx.SafeWriteToBuffer(
 		&buffer,
 		"cluster_name = \"%v\"\n",
@@ -1120,9 +1122,11 @@ func (*Kubernetes) addCidrBlocksFirewallRules(
 			content += ","
 		}
 
-		dmzCidrRanges := make([]string, len(fwRule.CidrBlocks))
+		uniqCidrBlocks := slices.Uniq(fwRule.CidrBlocks)
 
-		for i, cidr := range fwRule.CidrBlocks {
+		dmzCidrRanges := make([]string, len(uniqCidrBlocks))
+
+		for i, cidr := range uniqCidrBlocks {
 			dmzCidrRanges[i] = fmt.Sprintf("\"%v\"", cidr)
 		}
 

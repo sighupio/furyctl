@@ -402,9 +402,11 @@ func (i *Infrastructure) addVpnDataToTfVars(buffer *bytes.Buffer) error {
 
 func (i *Infrastructure) addVpnSSHDataToTfVars(buffer *bytes.Buffer) error {
 	if len(i.furyctlConf.Spec.Infrastructure.Vpn.Ssh.AllowedFromCidrs) != 0 {
-		allowedCidrs := make([]string, len(i.furyctlConf.Spec.Infrastructure.Vpn.Ssh.AllowedFromCidrs))
+		uniqCidrs := slices.Uniq(i.furyctlConf.Spec.Infrastructure.Vpn.Ssh.AllowedFromCidrs)
 
-		for i, cidr := range i.furyctlConf.Spec.Infrastructure.Vpn.Ssh.AllowedFromCidrs {
+		allowedCidrs := make([]string, len(uniqCidrs))
+
+		for i, cidr := range uniqCidrs {
 			allowedCidrs[i] = fmt.Sprintf("\"%v\"", cidr)
 		}
 
