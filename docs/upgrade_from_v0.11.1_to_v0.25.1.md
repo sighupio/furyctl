@@ -1,8 +1,9 @@
-> WARNING: The following guide is only to move infrastructure and/or kubernetes phase from v0.11.1 to v0.25.1 furyctl version
+# Migration steps to migrate from furyctl v0.11.1(aws/eks provisioner) to v0.25.1(EKSCluster) 
+
+> WARNING: The following guide is only to move infrastructure and/or kubernetes phase from v0.11.1 to v0.25.1 furyctl version using the old aws/eks provisioner
 
 > WARNING: only `s3` terraform backend is supported
 
-# Migration steps
 1. Update EKS cluster to v1.25 using the latest furyctl legacy version v0.11.1
 2. Using furyctl 0.25.1 execute`furyctl create config -v 1.25.5 -k EKSCluster`
 3. Copy configuration values from `bootstrap.yml` into `furyctl.yml` using the following mapping:
@@ -65,9 +66,9 @@
 
 > NOTE: in case you have only the `cluster.yml`, set `spec.kubernetes.subnetsIds` on `furyctl.yml`
 
-The following `distribution` fields are the minimum required to be present on `furyctl.yml`. 
+The following `distribution` fields are the minimum required to be present on `furyctl.yml` to pass the valitation.
 
-Adjust value according your environment
+Adjust value according your environment. If you are managing the distribution using a dedicated kustomize and terraform project, **DO NOT** execute `furyctl` without the `--phase` parameter, otherwise the distribution phase will be executed as well.
 
 ```yaml
 spec:
@@ -105,14 +106,23 @@ spec:
             region: eu-west-1
 ```
 
-6. Using the furyctl v0.25.1 
+6. Using the furyctl v0.25.1, execute the `--phase infrastructure` in `--dry-run` mode to initialize terraform and create the folders
+
 ```shell
 #Ensure your aws credential has been set
 furyctl create cluster --dry-run --phase infrastructure -o $(pwd)
+```
 
+7. Move to the `.furyctl` folder where the infrastructure terraform project is:
+
+```shell
 # where METADATA_NAME is the value of `metadata.name` in `furyctl.yml`
 cd .furyctl/METADATA_NAME/infrastructure/terraform
+```
 
+8. And execute the following commands to move the state to the new structure. **Before starting, execute a backup of the terraform state**.
+
+```shell
 export VPC_AND_VPN_MODULE_NAME=vpc-and-vpn
 export VPC_MODULE_NAME='vpc[0]'
 export VPN_MODULE_NAME='vpn[0]'
@@ -161,12 +171,24 @@ echo "../../../bin/terraform/1.4.6/terraform state mv 'module.${VPC_AND_VPN_MODU
 echo "../../../bin/terraform/1.4.6/terraform state mv 'module.${VPC_AND_VPN_MODULE_NAME}.null_resource.init' 'module.${VPN_MODULE_NAME}.null_resource.init'" | sh
 echo "../../../bin/terraform/1.4.6/terraform state mv 'module.${VPC_AND_VPN_MODULE_NAME}.null_resource.ssh_users' 'module.${VPN_MODULE_NAME}.null_resource.ssh_users'" | sh
 
+```
+
+9. Now move back the the folder containing `furyctl.yaml` file and execute the `--phase infrastructure` to migrate to the new furyctl format:
+
+```shell
+
 cd ../../../..
 
 furyctl create cluster --phase infrastructure -o $(pwd)
+```
+
+10. Now, do the same for the `--phase kubernetes`
+
+```shell
+
 furyctl create cluster --dry-run --phase kubernetes -o $(pwd)
 
-# where METADATA_NAME is the value of `metadata.name` in `furyctl.yml`
+# where METADATA_NAME is the value of `metadata.name` in `furyctl.yaml`
 cd .furyctl/METADATA_NAME/kubernetes/terraform
 
 export EKS_MODULE_NAME=fury
@@ -183,5 +205,12 @@ done
 
 echo "../../../bin/terraform/1.4.6/terraform import "module.${EKS_MODULE_NAME}.module.cluster.kubernetes_config_map.aws_auth[0]" 'kube-system/aws-auth'" | sh
 cd ../../../..
+```
+
+11. And finalize the migration
+
+```shell
 furyctl create cluster --phase kubernetes  -o $(pwd) 
 ```
+
+
