@@ -9,8 +9,8 @@
 <!-- FIXME: UPDATE THE BUILD BADGE WITH THE RIGHT BRANCH -->
 
 [![Build Status](https://ci.sighup.io/api/badges/sighupio/furyctl/status.svg)](https://ci.sighup.io/sighupio/furyctl)
-![Release](https://img.shields.io/badge/furyctl-v0.25.1-blue)
-![Release](https://img.shields.io/badge/furyctl%20next-v0.25.1-blue)
+![Release](https://img.shields.io/badge/furyctl-v0.25.2-blue)
+![Release](https://img.shields.io/badge/furyctl%20next-v0.25.2-blue)
 ![Slack](https://img.shields.io/badge/slack-@kubernetes/fury-yellow.svg?logo=slack)
 ![License](https://img.shields.io/github/license/sighupio/furyctl)
 [![Go Report Card](https://goreportcard.com/badge/github.com/sighupio/furyctl)](https://goreportcard.com/report/github.com/sighupio/furyctl)
@@ -45,7 +45,7 @@ You can find `furyctl` binaries on the [Releases page](https://github.com/sighup
 To download the latest release, run:
 
 ```console
-curl -L "https://github.com/sighupio/furyctl/releases/download/v0.25.1/furyctl_$(uname -s)_x86_64.tar.gz" -o /tmp/furyctl.tar.gz && tar xfz /tmp/furyctl.tar.gz -C /tmp
+curl -L "https://github.com/sighupio/furyctl/releases/download/v0.25.2/furyctl_$(uname -s)_x86_64.tar.gz" -o /tmp/furyctl.tar.gz && tar xfz /tmp/furyctl.tar.gz -C /tmp
 chmod +x /tmp/furyctl
 sudo mv /tmp/furyctl /usr/local/bin/furyctl
 ```
@@ -76,7 +76,7 @@ $ furyctl version
 ...
 goVersion: go1.20
 osArch: amd64
-version: 0.25.1
+version: 0.25.2
 ```
 
 ### Installing from source
