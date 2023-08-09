@@ -101,7 +101,9 @@ license-check:
 	-ignore ".go/**/*" \
 	--check .
 
-.PHONY: fmt fumpt imports gci
+.PHONY: format fmt fumpt imports gci
+
+format: fmt fumpt imports gci
 
 fmt:
 	@find . -name "*.go" -type f -not -path '*/vendor/*' \
