@@ -34,22 +34,17 @@ func (k *Kubernetes) Exec() error {
 		return nil
 	}
 
+	if k.dryRun {
+		logrus.Info("Kubernetes cluster deleted successfully (dry-run mode)")
+
+		return nil
+	}
+
 	// Check hosts connection.
 	logrus.Info("Checking that the hosts are reachable...")
 
 	if _, err := k.ansibleRunner.Exec("all", "-m", "ping"); err != nil {
 		return fmt.Errorf("error checking hosts: %w", err)
-	}
-
-	if k.dryRun {
-		logrus.Info("Running ansible playbook with check enabled (dry-run)...")
-
-		// Apply delete playbook with --check.
-		if _, err := k.ansibleRunner.Playbook("delete-playbook.yaml", "--check"); err != nil {
-			return fmt.Errorf("error applying playbook: %w", err)
-		}
-
-		return nil
 	}
 
 	logrus.Info("Running ansible playbook...")
