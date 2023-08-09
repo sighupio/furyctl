@@ -83,17 +83,27 @@ func (c *ClusterDeleter) Delete() error {
 		return fmt.Errorf("error while initiating kubernetes phase: %w", err)
 	}
 
+	distributionPhase, err := delete.NewDistribution(
+		c.furyctlConf,
+		c.kfdManifest,
+		c.paths,
+		c.dryRun,
+	)
+	if err != nil {
+		return fmt.Errorf("error while initiating distribution phase: %w", err)
+	}
+
 	switch c.phase {
 	case cluster.OperationPhaseKubernetes:
 		return kubernetesPhase.Exec()
 
-	// case cluster.OperationPhaseDistribution:
-	// return distributionPhase.Exec()
+	case cluster.OperationPhaseDistribution:
+		return distributionPhase.Exec()
 
 	case cluster.OperationPhaseAll:
-		// if err := distributionPhase.Exec(); err != nil {
-		// 	return err
-		// }
+		if err := distributionPhase.Exec(); err != nil {
+			return err
+		}
 
 		if err := kubernetesPhase.Exec(); err != nil {
 			return err
