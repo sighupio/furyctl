@@ -5,10 +5,12 @@
 package onpremises
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/sighupio/fury-distribution/pkg/apis/config"
 	"github.com/sighupio/fury-distribution/pkg/apis/onpremises/v1alpha2/public"
+	"github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/onpremises/delete"
 	"github.com/sighupio/furyctl/internal/cluster"
 )
 
@@ -71,5 +73,35 @@ func (c *ClusterDeleter) SetProperty(name string, value any) {
 }
 
 func (c *ClusterDeleter) Delete() error {
+	kubernetesPhase, err := delete.NewKubernetes(
+		c.furyctlConf,
+		c.kfdManifest,
+		c.paths,
+		c.dryRun,
+	)
+	if err != nil {
+		return fmt.Errorf("error while initiating kubernetes phase: %w", err)
+	}
+
+	switch c.phase {
+	case cluster.OperationPhaseKubernetes:
+		return kubernetesPhase.Exec()
+
+	// case cluster.OperationPhaseDistribution:
+	// return distributionPhase.Exec()
+
+	case cluster.OperationPhaseAll:
+		// if err := distributionPhase.Exec(); err != nil {
+		// 	return err
+		// }
+
+		if err := kubernetesPhase.Exec(); err != nil {
+			return err
+		}
+
+	default:
+		return ErrUnsupportedPhase
+	}
+
 	return nil
 }

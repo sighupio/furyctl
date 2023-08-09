@@ -124,6 +124,9 @@ func (c *ClusterCreator) Create(_ string, _ int) error {
 		if err := distributionPhase.Exec(); err != nil {
 			return err
 		}
+
+	default:
+		return ErrUnsupportedPhase
 	}
 
 	if c.dryRun {
@@ -142,6 +145,8 @@ func (c *ClusterCreator) Create(_ string, _ int) error {
 }
 
 func (c *ClusterCreator) storeClusterConfig() error {
+	// TODO: this code is duplicated, we should refactor it.
+
 	x, err := os.ReadFile(c.paths.ConfigPath)
 	if err != nil {
 		return fmt.Errorf("error while reading config file: %w", err)
@@ -176,6 +181,8 @@ func (c *ClusterCreator) storeClusterConfig() error {
 }
 
 func (c *ClusterCreator) storeDistributionConfig() error {
+	// TODO: this code is duplicated, we should refactor it.
+
 	x, err := os.ReadFile(path.Join(c.paths.DistroPath, "kfd.yaml"))
 	if err != nil {
 		return fmt.Errorf("error while reading config file: %w", err)
