@@ -59,6 +59,8 @@ func (k *Kubernetes) Exec() error {
 		return fmt.Errorf("error applying playbook: %w", err)
 	}
 
+	logrus.Info("Kubernetes cluster deleted successfully")
+
 	return nil
 }
 
