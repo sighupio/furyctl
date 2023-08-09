@@ -30,7 +30,8 @@ func (x *ExtraToolsValidator) Validate(_ string) ([]string, []error) {
 
 func (x *ExtraToolsValidator) ansible() error {
 	ansibleRunner := ansible.NewRunner(x.executor, ansible.Paths{
-		Ansible: "ansible",
+		Ansible:         "ansible",
+		AnsiblePlaybook: "ansible-playbook",
 	})
 
 	if _, err := ansibleRunner.Version(); err != nil {

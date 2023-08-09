@@ -61,8 +61,9 @@ func (rf *RunnerFactory) Create(name Name, version, workDir string) Runner {
 	switch name {
 	case Ansible:
 		return ansible.NewRunner(rf.executor, ansible.Paths{
-			Ansible: string(name),
-			WorkDir: workDir,
+			Ansible:         string(name),
+			AnsiblePlaybook: "ansible-playbook",
+			WorkDir:         workDir,
 		})
 
 	case Awscli:
