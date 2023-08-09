@@ -5,12 +5,25 @@
 package onpremises
 
 import (
+	"errors"
+	"fmt"
+	"os"
+	"path"
 	"strings"
+
+	"github.com/sirupsen/logrus"
 
 	"github.com/sighupio/fury-distribution/pkg/apis/config"
 	"github.com/sighupio/fury-distribution/pkg/apis/onpremises/v1alpha2/public"
+	"github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/onpremises/create"
 	"github.com/sighupio/furyctl/internal/cluster"
+	"github.com/sighupio/furyctl/internal/tool/kubectl"
+	execx "github.com/sighupio/furyctl/internal/x/exec"
+	iox "github.com/sighupio/furyctl/internal/x/io"
+	kubex "github.com/sighupio/furyctl/internal/x/kube"
 )
+
+var ErrUnsupportedPhase = errors.New("unsupported phase")
 
 type ClusterCreator struct {
 	paths       cluster.CreatorPaths
@@ -76,5 +89,122 @@ func (c *ClusterCreator) SetProperty(name string, value any) {
 }
 
 func (c *ClusterCreator) Create(_ string, _ int) error {
+	kubernetesPhase, err := create.NewKubernetes(
+		c.furyctlConf,
+		c.kfdManifest,
+		c.paths,
+		c.dryRun,
+	)
+	if err != nil {
+		return fmt.Errorf("error while initiating kubernetes phase: %w", err)
+	}
+
+	distributionPhase, err := create.NewDistribution(
+		c.furyctlConf,
+		c.kfdManifest,
+		c.paths,
+		c.dryRun,
+	)
+	if err != nil {
+		return fmt.Errorf("error while initiating distribution phase: %w", err)
+	}
+
+	switch c.phase {
+	case cluster.OperationPhaseKubernetes:
+		return kubernetesPhase.Exec()
+
+	case cluster.OperationPhaseDistribution:
+		return distributionPhase.Exec()
+
+	case cluster.OperationPhaseAll:
+		if err := kubernetesPhase.Exec(); err != nil {
+			return err
+		}
+
+		if err := distributionPhase.Exec(); err != nil {
+			return err
+		}
+	}
+
+	if c.dryRun {
+		return nil
+	}
+
+	if err := c.storeClusterConfig(); err != nil {
+		return fmt.Errorf("error while creating secret with the cluster configuration: %w", err)
+	}
+
+	if err := c.storeDistributionConfig(); err != nil {
+		return fmt.Errorf("error while creating secret with the distribution configuration: %w", err)
+	}
+
+	return nil
+}
+
+func (c *ClusterCreator) storeClusterConfig() error {
+	x, err := os.ReadFile(c.paths.ConfigPath)
+	if err != nil {
+		return fmt.Errorf("error while reading config file: %w", err)
+	}
+
+	secret, err := kubex.CreateSecret(x, "furyctl-config", "config", "kube-system")
+	if err != nil {
+		return fmt.Errorf("error while creating secret: %w", err)
+	}
+
+	secretPath := path.Join(c.paths.WorkDir, "secrets.yaml")
+
+	if err := iox.WriteFile(secretPath, secret); err != nil {
+		return fmt.Errorf("error while writing secret: %w", err)
+	}
+
+	defer os.Remove(secretPath)
+
+	runner := kubectl.NewRunner(execx.NewStdExecutor(), kubectl.Paths{
+		Kubectl:    path.Join(c.paths.BinPath, "kubectl", c.kfdManifest.Tools.Common.Kubectl.Version, "kubectl"),
+		WorkDir:    c.paths.WorkDir,
+		Kubeconfig: c.paths.Kubeconfig,
+	}, true, true, false)
+
+	logrus.Info("Saving furyctl configuration file in the cluster...")
+
+	if err := runner.Apply(secretPath); err != nil {
+		return fmt.Errorf("error while saving furyctl configuration file in the cluster: %w", err)
+	}
+
+	return nil
+}
+
+func (c *ClusterCreator) storeDistributionConfig() error {
+	x, err := os.ReadFile(path.Join(c.paths.DistroPath, "kfd.yaml"))
+	if err != nil {
+		return fmt.Errorf("error while reading config file: %w", err)
+	}
+
+	secret, err := kubex.CreateSecret(x, "furyctl-kfd", "kfd", "kube-system")
+	if err != nil {
+		return fmt.Errorf("error while creating secret: %w", err)
+	}
+
+	secretPath := path.Join(c.paths.WorkDir, "secrets-kfd.yaml")
+
+	if err := iox.WriteFile(secretPath, secret); err != nil {
+		return fmt.Errorf("error while writing secret: %w", err)
+	}
+
+	defer os.Remove(secretPath)
+
+	runner := kubectl.NewRunner(execx.NewStdExecutor(), kubectl.Paths{
+		Kubectl:    path.Join(c.paths.BinPath, "kubectl", c.kfdManifest.Tools.Common.Kubectl.Version, "kubectl"),
+		WorkDir:    c.paths.WorkDir,
+		Kubeconfig: c.paths.Kubeconfig,
+	}, true, true, false)
+
+	logrus.Info("Saving distribution configuration file in the cluster...")
+
+	if err := runner.Apply(secretPath); err != nil {
+		return fmt.Errorf("error while saving distribution configuration file in the cluster: %w", err)
+	}
+
 	return nil
 }
