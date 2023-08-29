@@ -2,13 +2,21 @@ package create
 
 import (
 	"fmt"
+	"os"
 	"path"
+	"path/filepath"
 
 	"github.com/sirupsen/logrus"
 
 	"github.com/sighupio/fury-distribution/pkg/apis/config"
 	"github.com/sighupio/fury-distribution/pkg/apis/onpremises/v1alpha2/public"
 	"github.com/sighupio/furyctl/internal/cluster"
+	"github.com/sighupio/furyctl/internal/merge"
+	"github.com/sighupio/furyctl/internal/template"
+	"github.com/sighupio/furyctl/internal/tool/kubectl"
+	"github.com/sighupio/furyctl/internal/tool/shell"
+	execx "github.com/sighupio/furyctl/internal/x/exec"
+	yamlx "github.com/sighupio/furyctl/internal/x/yaml"
 )
 
 type Distribution struct {
@@ -17,17 +25,135 @@ type Distribution struct {
 	kfdManifest config.KFD
 	paths       cluster.CreatorPaths
 	dryRun      bool
+	shellRunner *shell.Runner
+	kubeRunner  *kubectl.Runner
 }
 
 func (d *Distribution) Exec() error {
 	logrus.Info("Installing Kubernetes Fury Distribution...")
 	logrus.Debug("Create: running distribution phase...")
 
-	logrus.Debug("TODO!")
+	if err := d.CreateFolder(); err != nil {
+		return fmt.Errorf("error creating distribution phase folder: %w", err)
+	}
+
+	furyctlMerger, err := d.createFuryctlMerger()
+	if err != nil {
+		return err
+	}
+
+	mCfg, err := template.NewConfigWithoutData(furyctlMerger, []string{"terraform", ".gitignore", "manifests/aws"})
+	if err != nil {
+		return fmt.Errorf("error creating template config: %w", err)
+	}
+
+	mCfg.Data["paths"] = map[any]any{
+		"kubectl":   d.OperationPhase.KubectlPath,
+		"kustomize": d.OperationPhase.KustomizePath,
+		"yq":        d.OperationPhase.YqPath,
+	}
+
+	// Generate manifests.
+	outYaml, err := yamlx.MarshalV2(mCfg)
+	if err != nil {
+		return fmt.Errorf("error marshaling template config: %w", err)
+	}
+
+	outDirPath1, err := os.MkdirTemp("", "furyctl-dist-")
+	if err != nil {
+		return fmt.Errorf("error creating temp dir: %w", err)
+	}
+
+	confPath := filepath.Join(outDirPath1, "config.yaml")
+
+	logrus.Debugf("config path = %s", confPath)
+
+	if err = os.WriteFile(confPath, outYaml, os.ModePerm); err != nil {
+		return fmt.Errorf("error writing config file: %w", err)
+	}
+
+	templateModel, err := template.NewTemplateModel(
+		path.Join(d.paths.DistroPath, "templates", cluster.OperationPhaseDistribution),
+		path.Join(d.Path),
+		confPath,
+		outDirPath1,
+		".tpl",
+		false,
+		d.dryRun,
+	)
+	if err != nil {
+		return fmt.Errorf("error creating template model: %w", err)
+	}
+
+	err = templateModel.Generate()
+	if err != nil {
+		return fmt.Errorf("error generating from template files: %w", err)
+	}
+
+	// Stop if dry run is enabled.
+	if d.dryRun {
+		logrus.Info("Kubernetes Fury Distribution installed successfully (dry-run mode)")
+
+		return nil
+	}
+
+	// Check cluster connection and requirements.
+	logrus.Info("Checking that the cluster is reachable...")
+
+	if _, err := d.kubeRunner.Version(); err != nil {
+		logrus.Debugf("Got error while running cluster reachability check: %s", err)
+
+		return fmt.Errorf("error connecting to cluster: %w", err)
+	}
+
+	// Apply manifests.
+	logrus.Info("Applying manifests...")
+
+	if _, err := d.shellRunner.Run(path.Join(d.Path, "scripts", "apply.sh"), "false", d.paths.Kubeconfig); err != nil {
+		return fmt.Errorf("error applying manifests: %w", err)
+	}
 
 	logrus.Info("Kubernetes Fury Distribution installed successfully")
 
 	return nil
+}
+
+func (d *Distribution) createFuryctlMerger() (*merge.Merger, error) {
+	defaultsFilePath := path.Join(d.paths.DistroPath, "defaults", "onpremises-kfd-v1alpha2.yaml")
+
+	defaultsFile, err := yamlx.FromFileV2[map[any]any](defaultsFilePath)
+	if err != nil {
+		return &merge.Merger{}, fmt.Errorf("%s - %w", defaultsFilePath, err)
+	}
+
+	furyctlConf, err := yamlx.FromFileV2[map[any]any](d.paths.ConfigPath)
+	if err != nil {
+		return &merge.Merger{}, fmt.Errorf("%s - %w", d.paths.ConfigPath, err)
+	}
+
+	furyctlConfMergeModel := merge.NewDefaultModel(furyctlConf, ".spec.kubernetes")
+
+	merger := merge.NewMerger(
+		merge.NewDefaultModel(defaultsFile, ".data"),
+		furyctlConfMergeModel,
+	)
+
+	_, err = merger.Merge()
+	if err != nil {
+		return nil, fmt.Errorf("error merging furyctl config: %w", err)
+	}
+
+	reverseMerger := merge.NewMerger(
+		*merger.GetCustom(),
+		*merger.GetBase(),
+	)
+
+	_, err = reverseMerger.Merge()
+	if err != nil {
+		return nil, fmt.Errorf("error merging furyctl config: %w", err)
+	}
+
+	return reverseMerger, nil
 }
 
 func NewDistribution(
@@ -49,5 +175,23 @@ func NewDistribution(
 		kfdManifest:    kfdManifest,
 		paths:          paths,
 		dryRun:         dryRun,
+		shellRunner: shell.NewRunner(
+			execx.NewStdExecutor(),
+			shell.Paths{
+				Shell:   "sh",
+				WorkDir: path.Join(phase.Path, "manifests"),
+			},
+		),
+		kubeRunner: kubectl.NewRunner(
+			execx.NewStdExecutor(),
+			kubectl.Paths{
+				Kubectl:    phase.KubectlPath,
+				WorkDir:    path.Join(phase.Path, "manifests"),
+				Kubeconfig: paths.Kubeconfig,
+			},
+			true,
+			true,
+			false,
+		),
 	}, nil
 }
