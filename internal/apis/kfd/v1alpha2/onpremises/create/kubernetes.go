@@ -15,6 +15,7 @@ import (
 	"github.com/sighupio/furyctl/internal/template"
 	"github.com/sighupio/furyctl/internal/tool/ansible"
 	execx "github.com/sighupio/furyctl/internal/x/exec"
+	kubex "github.com/sighupio/furyctl/internal/x/kube"
 	yamlx "github.com/sighupio/furyctl/internal/x/yaml"
 )
 
@@ -104,6 +105,14 @@ func (k *Kubernetes) Exec() error {
 	// Apply create playbook.
 	if _, err := k.ansibleRunner.Playbook("create-playbook.yaml"); err != nil {
 		return fmt.Errorf("error applying playbook: %w", err)
+	}
+
+	if err := kubex.SetConfigEnv(path.Join(k.OperationPhase.Path, "admin.conf")); err != nil {
+		return fmt.Errorf("error setting kubeconfig env: %w", err)
+	}
+
+	if err := kubex.CopyConfigToWorkDir(path.Join(k.OperationPhase.Path, "admin.conf")); err != nil {
+		return fmt.Errorf("error copying kubeconfig: %w", err)
 	}
 
 	logrus.Info("Kubernetes cluster created successfully")
