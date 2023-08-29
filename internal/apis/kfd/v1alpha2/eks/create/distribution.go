@@ -86,10 +86,10 @@ func NewDistribution(
 		tfRunner: terraform.NewRunner(
 			execx.NewStdExecutor(),
 			terraform.Paths{
-				Logs:      phaseOp.LogsPath,
-				Outputs:   phaseOp.OutputsPath,
+				Logs:      phaseOp.TerraformLogsPath,
+				Outputs:   phaseOp.TerraformOutputsPath,
 				WorkDir:   path.Join(phaseOp.Path, "terraform"),
-				Plan:      phaseOp.PlanPath,
+				Plan:      phaseOp.TerraformPlanPath,
 				Terraform: phaseOp.TerraformPath,
 			},
 		),
@@ -488,13 +488,13 @@ func (d *Distribution) createDummyOutput() error {
 		"velero_iam_role_arn":                   "arn:aws:iam::123456789012:role/dummy",
 	}
 
-	outputFilePath := path.Join(d.OutputsPath, "output.json")
+	outputFilePath := path.Join(d.TerraformOutputsPath, "output.json")
 
 	if _, err := os.Stat(outputFilePath); err == nil {
 		return nil
 	}
 
-	if err := os.MkdirAll(d.OutputsPath, iox.FullPermAccess); err != nil {
+	if err := os.MkdirAll(d.TerraformOutputsPath, iox.FullPermAccess); err != nil {
 		return fmt.Errorf("error while creating outputs folder: %w", err)
 	}
 

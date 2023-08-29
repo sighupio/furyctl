@@ -107,7 +107,7 @@ func (d *ClusterDeleter) Delete() error {
 
 	vpnConnector, err := NewVpnConnector(
 		d.furyctlConf.Metadata.Name,
-		infra.SecretsPath,
+		infra.TerraformSecretsPath,
 		d.paths.BinPath,
 		d.kfdManifest.Tools.Common.Furyagent.Version,
 		d.vpnAutoConnect,

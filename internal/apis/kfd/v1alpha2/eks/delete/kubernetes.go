@@ -66,10 +66,10 @@ func NewKubernetes(
 		tfRunner: terraform.NewRunner(
 			execx.NewStdExecutor(),
 			terraform.Paths{
-				Logs:      phase.LogsPath,
-				Outputs:   phase.OutputsPath,
+				Logs:      phase.TerraformLogsPath,
+				Outputs:   phase.TerraformOutputsPath,
 				WorkDir:   path.Join(phase.Path, "terraform"),
-				Plan:      phase.PlanPath,
+				Plan:      phase.TerraformPlanPath,
 				Terraform: phase.TerraformPath,
 			},
 		),

@@ -99,10 +99,10 @@ func NewKubernetes(
 		tfRunner: terraform.NewRunner(
 			execx.NewStdExecutor(),
 			terraform.Paths{
-				Logs:      phase.LogsPath,
-				Outputs:   phase.OutputsPath,
+				Logs:      phase.TerraformLogsPath,
+				Outputs:   phase.TerraformOutputsPath,
 				WorkDir:   path.Join(phase.Path, "terraform"),
-				Plan:      phase.PlanPath,
+				Plan:      phase.TerraformPlanPath,
 				Terraform: phase.TerraformPath,
 			},
 		),
@@ -220,7 +220,7 @@ func (k *Kubernetes) Exec() error {
 		return errWrongKubeconfig
 	}
 
-	p, err := kubex.CreateConfig([]byte(kubeString), k.SecretsPath)
+	p, err := kubex.CreateConfig([]byte(kubeString), k.TerraformSecretsPath)
 	if err != nil {
 		return fmt.Errorf("error creating kubeconfig: %w", err)
 	}
