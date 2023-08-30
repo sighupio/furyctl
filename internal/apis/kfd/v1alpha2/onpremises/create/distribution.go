@@ -57,6 +57,33 @@ func (d *Distribution) Exec() error {
 		"yq":        d.OperationPhase.YqPath,
 	}
 
+	// Check cluster connection and requirements.
+	storageClassAvailable := true
+
+	logrus.Info("Checking that the cluster is reachable...")
+
+	if _, err := d.kubeRunner.Version(); err != nil {
+		logrus.Debugf("Got error while running cluster reachability check: %s", err)
+
+		return fmt.Errorf("error connecting to cluster: %w", err)
+	}
+
+	logrus.Info("Checking storage classes...")
+
+	getStorageClassesOutput, err := d.kubeRunner.Get("", "storageclasses")
+	if err != nil {
+		return fmt.Errorf("error while checking storage class: %w", err)
+	}
+
+	if getStorageClassesOutput == "No resources found" {
+		logrus.Warn("No storage classes found in the cluster. You'll need to install one manually.")
+		storageClassAvailable = false
+	}
+
+	mCfg.Data["checks"] = map[any]any{
+		"storageClassAvailable": storageClassAvailable,
+	}
+
 	// Generate manifests.
 	outYaml, err := yamlx.MarshalV2(mCfg)
 	if err != nil {
@@ -99,26 +126,6 @@ func (d *Distribution) Exec() error {
 		logrus.Info("Kubernetes Fury Distribution installed successfully (dry-run mode)")
 
 		return nil
-	}
-
-	// Check cluster connection and requirements.
-	logrus.Info("Checking that the cluster is reachable...")
-
-	if _, err := d.kubeRunner.Version(); err != nil {
-		logrus.Debugf("Got error while running cluster reachability check: %s", err)
-
-		return fmt.Errorf("error connecting to cluster: %w", err)
-	}
-
-	logrus.Info("Checking storage classes...")
-
-	getStorageClassesOutput, err := d.kubeRunner.Get("", "storageclasses")
-	if err != nil {
-		return fmt.Errorf("error while checking storage class: %w", err)
-	}
-
-	if getStorageClassesOutput == "No resources found" {
-		logrus.Warn("No storage classes found in the cluster. You'll need to install one manually.")
 	}
 
 	// Apply manifests.
