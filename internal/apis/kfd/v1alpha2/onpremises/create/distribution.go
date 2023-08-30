@@ -118,7 +118,7 @@ func (d *Distribution) Exec() error {
 	}
 
 	if getStorageClassesOutput == "No resources found" {
-		logrus.Warn("No storage classes found in the cluster. You may need to install one manually.")
+		logrus.Warn("No storage classes found in the cluster. You'll need to install one manually.")
 	}
 
 	// Apply manifests.
