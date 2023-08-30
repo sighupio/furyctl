@@ -12,6 +12,7 @@ import (
 	"github.com/sighupio/fury-distribution/pkg/apis/onpremises/v1alpha2/public"
 	"github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/onpremises/delete"
 	"github.com/sighupio/furyctl/internal/cluster"
+	"github.com/sirupsen/logrus"
 )
 
 type ClusterDeleter struct {
@@ -73,6 +74,8 @@ func (c *ClusterDeleter) SetProperty(name string, value any) {
 }
 
 func (c *ClusterDeleter) Delete() error {
+	logrus.Warn("This process will only reset the Kubernetes cluster and will not uninstall all the packages installed on the nodes.")
+
 	kubernetesPhase, err := delete.NewKubernetes(
 		c.furyctlConf,
 		c.kfdManifest,
