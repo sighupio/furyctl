@@ -110,6 +110,17 @@ func (d *Distribution) Exec() error {
 		return fmt.Errorf("error connecting to cluster: %w", err)
 	}
 
+	logrus.Info("Checking storage classes...")
+
+	getStorageClassesOutput, err := d.kubeRunner.Get("", "storageclasses")
+	if err != nil {
+		return fmt.Errorf("error while checking storage class: %w", err)
+	}
+
+	if getStorageClassesOutput == "No resources found" {
+		logrus.Warn("No storage classes found in the cluster. You may need to install one manually.")
+	}
+
 	// Apply manifests.
 	logrus.Info("Applying manifests...")
 
