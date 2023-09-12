@@ -118,7 +118,7 @@ func NewDistribution(
 			helmfile.Paths{
 				Helmfile:   phaseOp.HelmfilePath,
 				WorkDir:    path.Join(phaseOp.Path, "plugins"),
-				PluginsDir: path.Join(phaseOp.Path, "helm-plugins"),
+				PluginsDir: path.Join(paths.WorkDir, "helm-plugins"),
 			},
 		),
 		dryRun:     dryRun,
