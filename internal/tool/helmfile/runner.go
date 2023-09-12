@@ -61,8 +61,8 @@ func (r *Runner) deleteCmd(id string) {
 	delete(r.cmds, id)
 }
 
-func (r *Runner) Init() error {
-	args := []string{"init", "--force"}
+func (r *Runner) Init(helmBinary string) error {
+	args := []string{"init", "--force", "--helm-binary", helmBinary}
 
 	cmd, id := r.newCmd(args)
 	defer r.deleteCmd(id)

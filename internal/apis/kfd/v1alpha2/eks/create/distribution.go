@@ -226,10 +226,10 @@ func (d *Distribution) Exec() error {
 	}
 
 	mCfg.Data["paths"] = map[any]any{
-		"kubectl":    d.OperationPhase.KubectlPath,
-		"kustomize":  d.OperationPhase.KustomizePath,
-		"yq":         d.OperationPhase.YqPath,
-		"helm":       d.OperationPhase.HelmPath,
+		"kubectl":    d.KubectlPath,
+		"kustomize":  d.KustomizePath,
+		"yq":         d.YqPath,
+		"helm":       d.HelmPath,
 		"kubeconfig": d.kubeconfig,
 	}
 
@@ -261,7 +261,7 @@ func (d *Distribution) Exec() error {
 	// Applying plugins.
 	logrus.Info("Applying plugins...")
 
-	if err := d.helmfileRunner.Init(); err != nil {
+	if err := d.helmfileRunner.Init(d.HelmPath); err != nil {
 		return fmt.Errorf("error applying plugins: %w", err)
 	}
 
