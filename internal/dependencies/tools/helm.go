@@ -8,7 +8,9 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
 	"runtime"
+	"strings"
 
 	"github.com/sighupio/furyctl/internal/semver"
 	"github.com/sighupio/furyctl/internal/tool/helm"
@@ -20,7 +22,14 @@ func NewHelm(runner *helm.Runner, version string) *Helm {
 		os:      runtime.GOOS,
 		version: version,
 		checker: &checker{
+			regex:  regexp.MustCompile(`.*`),
 			runner: runner,
+			trimFn: func(tokens []string) string {
+				return strings.TrimLeft(tokens[0], "v")
+			},
+			splitFn: func(version string) []string {
+				return strings.Split(version, "+")
+			},
 		},
 	}
 }

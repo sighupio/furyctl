@@ -6,7 +6,9 @@ package tools
 
 import (
 	"fmt"
+	"regexp"
 	"runtime"
+	"strings"
 
 	"github.com/sighupio/furyctl/internal/semver"
 	"github.com/sighupio/furyctl/internal/tool/helmfile"
@@ -18,7 +20,14 @@ func NewHelmfile(runner *helmfile.Runner, version string) *Helmfile {
 		os:      runtime.GOOS,
 		version: version,
 		checker: &checker{
+			regex:  regexp.MustCompile(`.*`),
 			runner: runner,
+			trimFn: func(tokens []string) string {
+				return strings.TrimLeft(tokens[0], "v")
+			},
+			splitFn: func(version string) []string {
+				return []string{version}
+			},
 		},
 	}
 }
