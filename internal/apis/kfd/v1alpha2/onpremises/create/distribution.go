@@ -25,12 +25,13 @@ import (
 
 type Distribution struct {
 	*cluster.OperationPhase
-	furyctlConf public.OnpremisesKfdV1Alpha2
-	kfdManifest config.KFD
-	paths       cluster.CreatorPaths
-	dryRun      bool
-	shellRunner *shell.Runner
-	kubeRunner  *kubectl.Runner
+	furyctlConfPath string
+	furyctlConf     public.OnpremisesKfdV1Alpha2
+	kfdManifest     config.KFD
+	paths           cluster.CreatorPaths
+	dryRun          bool
+	shellRunner     *shell.Runner
+	kubeRunner      *kubectl.Runner
 }
 
 func (d *Distribution) Exec() error {
@@ -112,6 +113,7 @@ func (d *Distribution) Exec() error {
 		path.Join(d.Path),
 		confPath,
 		outDirPath1,
+		d.furyctlConfPath,
 		".tpl",
 		false,
 		d.dryRun,
@@ -196,11 +198,12 @@ func NewDistribution(
 	}
 
 	return &Distribution{
-		OperationPhase: phase,
-		furyctlConf:    furyctlConf,
-		kfdManifest:    kfdManifest,
-		paths:          paths,
-		dryRun:         dryRun,
+		OperationPhase:  phase,
+		furyctlConf:     furyctlConf,
+		kfdManifest:     kfdManifest,
+		paths:           paths,
+		dryRun:          dryRun,
+		furyctlConfPath: paths.ConfigPath,
 		shellRunner: shell.NewRunner(
 			execx.NewStdExecutor(),
 			shell.Paths{

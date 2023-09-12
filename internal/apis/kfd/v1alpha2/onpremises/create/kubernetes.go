@@ -25,11 +25,12 @@ import (
 
 type Kubernetes struct {
 	*cluster.OperationPhase
-	furyctlConf   public.OnpremisesKfdV1Alpha2
-	kfdManifest   config.KFD
-	paths         cluster.CreatorPaths
-	dryRun        bool
-	ansibleRunner *ansible.Runner
+	furyctlConfPath string
+	furyctlConf     public.OnpremisesKfdV1Alpha2
+	kfdManifest     config.KFD
+	paths           cluster.CreatorPaths
+	dryRun          bool
+	ansibleRunner   *ansible.Runner
 }
 
 func (k *Kubernetes) Exec() error {
@@ -78,6 +79,7 @@ func (k *Kubernetes) Exec() error {
 		path.Join(k.Path),
 		confPath,
 		outDirPath1,
+		k.furyctlConfPath,
 		".tpl",
 		false,
 		k.dryRun,
@@ -176,11 +178,12 @@ func NewKubernetes(
 	}
 
 	return &Kubernetes{
-		OperationPhase: phase,
-		furyctlConf:    furyctlConf,
-		kfdManifest:    kfdManifest,
-		paths:          paths,
-		dryRun:         dryRun,
+		OperationPhase:  phase,
+		furyctlConf:     furyctlConf,
+		kfdManifest:     kfdManifest,
+		paths:           paths,
+		dryRun:          dryRun,
+		furyctlConfPath: paths.ConfigPath,
 		ansibleRunner: ansible.NewRunner(
 			execx.NewStdExecutor(),
 			ansible.Paths{
