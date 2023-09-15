@@ -141,10 +141,6 @@ func (p *Plugins) Exec() error {
 	return nil
 }
 
-func (p *Plugins) Stop() error {
-	return nil
-}
-
 func (p *Plugins) createFuryctlMerger() (*merge.Merger, error) {
 	defaultsFilePath := path.Join(p.distroPath, "defaults", fmt.Sprintf("%s-kfd-v1alpha2.yaml", strings.ToLower(p.kind)))
 

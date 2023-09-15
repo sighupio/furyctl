@@ -442,7 +442,14 @@ func (v *ClusterCreator) allPhases(
 	return nil
 }
 
-func (v *ClusterCreator) setupPhases() (*create.Infrastructure, *create.Kubernetes, *create.Distribution, *commcreate.Plugins, error) {
+//nolint:revive // ignore maximum number of return results
+func (v *ClusterCreator) setupPhases() (
+	*create.Infrastructure,
+	*create.Kubernetes,
+	*create.Distribution,
+	*commcreate.Plugins,
+	error,
+) {
 	infra, err := create.NewInfrastructure(v.furyctlConf, v.kfdManifest, v.paths, v.dryRun)
 	if err != nil {
 		return nil, nil, nil, nil, fmt.Errorf("error while initiating infrastructure phase: %w", err)

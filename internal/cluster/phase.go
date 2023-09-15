@@ -26,7 +26,9 @@ const (
 	OperationPhaseOptionVPNAutoConnect = "vpnautoconnect"
 )
 
-var errUnsupportedPhase = errors.New("unsupported phase, options are: infrastructure, kubernetes, distribution, plugins")
+var errUnsupportedPhase = errors.New(
+	"unsupported phase, options are: infrastructure, kubernetes, distribution, plugins",
+)
 
 func CheckPhase(phase string) error {
 	switch phase {
