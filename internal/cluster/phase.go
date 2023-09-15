@@ -20,18 +20,20 @@ const (
 	OperationPhaseInfrastructure = "infrastructure"
 	OperationPhaseKubernetes     = "kubernetes"
 	OperationPhaseDistribution   = "distribution"
+	OperationPhasePlugins        = "plugins"
 	OperationPhaseAll            = ""
 
 	OperationPhaseOptionVPNAutoConnect = "vpnautoconnect"
 )
 
-var errUnsupportedPhase = errors.New("unsupported phase, options are: infrastructure, kubernetes, distribution")
+var errUnsupportedPhase = errors.New("unsupported phase, options are: infrastructure, kubernetes, distribution, plugins")
 
 func CheckPhase(phase string) error {
 	switch phase {
 	case OperationPhaseInfrastructure:
 	case OperationPhaseKubernetes:
 	case OperationPhaseDistribution:
+	case OperationPhasePlugins:
 	case OperationPhaseAll:
 		{
 			break

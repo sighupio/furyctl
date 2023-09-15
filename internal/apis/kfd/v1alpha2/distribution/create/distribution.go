@@ -19,7 +19,6 @@ import (
 	"github.com/sighupio/furyctl/internal/cluster"
 	"github.com/sighupio/furyctl/internal/merge"
 	"github.com/sighupio/furyctl/internal/template"
-	"github.com/sighupio/furyctl/internal/tool/helmfile"
 	"github.com/sighupio/furyctl/internal/tool/kubectl"
 	"github.com/sighupio/furyctl/internal/tool/shell"
 	execx "github.com/sighupio/furyctl/internal/x/exec"
@@ -38,7 +37,6 @@ type Distribution struct {
 	furyctlConf     public.KfddistributionKfdV1Alpha2
 	distroPath      string
 	kubeRunner      *kubectl.Runner
-	helmfileRunner  *helmfile.Runner
 	dryRun          bool
 	shellRunner     *shell.Runner
 	kubeconfig      string
@@ -79,14 +77,6 @@ func NewDistribution(
 			shell.Paths{
 				Shell:   "sh",
 				WorkDir: path.Join(phaseOp.Path, "manifests"),
-			},
-		),
-		helmfileRunner: helmfile.NewRunner(
-			execx.NewStdExecutor(),
-			helmfile.Paths{
-				Helmfile:   phaseOp.HelmfilePath,
-				WorkDir:    path.Join(phaseOp.Path, "plugins"),
-				PluginsDir: path.Join(paths.WorkDir, "helm-plugins"),
 			},
 		),
 		dryRun:     dryRun,
@@ -194,6 +184,8 @@ func (d *Distribution) Exec() error {
 			return fmt.Errorf("error applying resources: %w", err)
 		}
 
+		logrus.Info("Kubernetes Fury Distribution installed successfully (dry-run mode)")
+
 		return nil
 	}
 
@@ -222,16 +214,7 @@ func (d *Distribution) Exec() error {
 		return fmt.Errorf("error applying manifests: %w", err)
 	}
 
-	// Applying plugins.
-	logrus.Info("Applying plugins...")
-
-	if err := d.helmfileRunner.Init(d.HelmPath); err != nil {
-		return fmt.Errorf("error applying plugins: %w", err)
-	}
-
-	if err := d.helmfileRunner.Apply(); err != nil {
-		return fmt.Errorf("error applying plugins: %w", err)
-	}
+	logrus.Info("Kubernetes Fury Distribution installed successfully")
 
 	return nil
 }

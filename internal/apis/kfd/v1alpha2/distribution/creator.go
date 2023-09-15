@@ -15,6 +15,7 @@ import (
 
 	"github.com/sighupio/fury-distribution/pkg/apis/config"
 	"github.com/sighupio/fury-distribution/pkg/apis/kfddistribution/v1alpha2/public"
+	commcreate "github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/common/create"
 	"github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/distribution/create"
 	"github.com/sighupio/furyctl/internal/cluster"
 	"github.com/sighupio/furyctl/internal/tool/kubectl"
@@ -88,46 +89,70 @@ func (v *ClusterCreator) SetProperty(name string, value any) {
 	}
 }
 
-func (v *ClusterCreator) Create(_ string, _ int) error {
-	if v.phase != "" && v.phase != cluster.OperationPhaseDistribution {
-		return ErrUnsupportedPhase
-	}
-
-	distro, err := create.NewDistribution(
-		v.paths,
-		v.furyctlConf,
-		v.kfdManifest,
-		v.dryRun,
-		v.paths.Kubeconfig,
+func (c *ClusterCreator) Create(skipPhase string, _ int) error {
+	distributionPhase, err := create.NewDistribution(
+		c.paths,
+		c.furyctlConf,
+		c.kfdManifest,
+		c.dryRun,
+		c.paths.Kubeconfig,
 	)
 	if err != nil {
 		return fmt.Errorf("error while initiating distribution phase: %w", err)
 	}
 
-	if err := distro.Exec(); err != nil {
-		return fmt.Errorf("error while installing Kubernetes Fury Distribution: %w", err)
+	pluginsPhase, err := commcreate.NewPlugins(
+		c.paths,
+		c.kfdManifest,
+		c.dryRun,
+		c.paths.Kubeconfig,
+	)
+	if err != nil {
+		return fmt.Errorf("error while initiating plugins phase: %w", err)
 	}
 
-	if v.dryRun {
-		logrus.Info("Kubernetes Fury Distribution installed successfully (dry-run mode)")
+	switch c.phase {
+	case cluster.OperationPhaseDistribution:
+		return distributionPhase.Exec()
 
+	case cluster.OperationPhasePlugins:
+		return pluginsPhase.Exec()
+
+	case cluster.OperationPhaseAll:
+		if skipPhase != cluster.OperationPhaseDistribution {
+			if err := distributionPhase.Exec(); err != nil {
+				return err
+			}
+		}
+
+		if skipPhase != cluster.OperationPhasePlugins {
+			if err := pluginsPhase.Exec(); err != nil {
+				return err
+			}
+		}
+
+	default:
+		return ErrUnsupportedPhase
+	}
+
+	if c.dryRun {
 		return nil
 	}
 
-	if err := v.storeClusterConfig(); err != nil {
+	if err := c.storeClusterConfig(); err != nil {
 		return fmt.Errorf("error while storing cluster config: %w", err)
 	}
 
-	if err := v.storeDistributionConfig(); err != nil {
+	if err := c.storeDistributionConfig(); err != nil {
 		return fmt.Errorf("error while storing distribution config: %w", err)
 	}
-
-	logrus.Info("Kubernetes Fury Distribution installed successfully")
 
 	return nil
 }
 
 func (v *ClusterCreator) storeClusterConfig() error {
+	// TODO: this code is duplicated, we should refactor it.
+
 	x, err := os.ReadFile(v.paths.ConfigPath)
 	if err != nil {
 		return fmt.Errorf("error while reading config file: %w", err)
@@ -162,6 +187,8 @@ func (v *ClusterCreator) storeClusterConfig() error {
 }
 
 func (v *ClusterCreator) storeDistributionConfig() error {
+	// TODO: this code is duplicated, we should refactor it.
+
 	x, err := os.ReadFile(path.Join(v.paths.DistroPath, "kfd.yaml"))
 	if err != nil {
 		return fmt.Errorf("error while reading config file: %w", err)

@@ -18,6 +18,7 @@ import (
 
 	"github.com/sighupio/fury-distribution/pkg/apis/config"
 	"github.com/sighupio/fury-distribution/pkg/apis/ekscluster/v1alpha2/private"
+	commcreate "github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/common/create"
 	"github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/eks/create"
 	"github.com/sighupio/furyctl/internal/cluster"
 	"github.com/sighupio/furyctl/internal/tool/kubectl"
@@ -110,7 +111,7 @@ func (v *ClusterCreator) SetProperty(name string, value any) {
 }
 
 func (v *ClusterCreator) Create(skipPhase string, timeout int) error {
-	infra, kube, distro, err := v.setupPhases()
+	infra, kube, distro, plugins, err := v.setupPhases()
 	if err != nil {
 		return err
 	}
@@ -161,7 +162,7 @@ func (v *ClusterCreator) Create(skipPhase string, timeout int) error {
 			close(doneCh)
 
 		case cluster.OperationPhaseAll:
-			errCh <- v.allPhases(skipPhase, infra, kube, distro, vpnConnector)
+			errCh <- v.allPhases(skipPhase, infra, kube, distro, plugins, vpnConnector)
 
 			close(doneCh)
 
@@ -353,6 +354,7 @@ func (v *ClusterCreator) allPhases(
 	infra *create.Infrastructure,
 	kube *create.Kubernetes,
 	distro *create.Distribution,
+	plugins *commcreate.Plugins,
 	vpnConnector *VpnConnector,
 ) error {
 	if v.dryRun {
@@ -415,6 +417,12 @@ func (v *ClusterCreator) allPhases(
 		}
 	}
 
+	if skipPhase != cluster.OperationPhasePlugins {
+		if err := plugins.Exec(); err != nil {
+			return fmt.Errorf("error while executing plugins phase: %w", err)
+		}
+	}
+
 	if v.dryRun {
 		logrus.Info("Kubernetes Fury cluster created successfully (dry-run mode)")
 
@@ -434,10 +442,10 @@ func (v *ClusterCreator) allPhases(
 	return nil
 }
 
-func (v *ClusterCreator) setupPhases() (*create.Infrastructure, *create.Kubernetes, *create.Distribution, error) {
+func (v *ClusterCreator) setupPhases() (*create.Infrastructure, *create.Kubernetes, *create.Distribution, *commcreate.Plugins, error) {
 	infra, err := create.NewInfrastructure(v.furyctlConf, v.kfdManifest, v.paths, v.dryRun)
 	if err != nil {
-		return nil, nil, nil, fmt.Errorf("error while initiating infrastructure phase: %w", err)
+		return nil, nil, nil, nil, fmt.Errorf("error while initiating infrastructure phase: %w", err)
 	}
 
 	kube, err := create.NewKubernetes(
@@ -448,7 +456,7 @@ func (v *ClusterCreator) setupPhases() (*create.Infrastructure, *create.Kubernet
 		v.dryRun,
 	)
 	if err != nil {
-		return nil, nil, nil, fmt.Errorf("error while initiating kubernetes phase: %w", err)
+		return nil, nil, nil, nil, fmt.Errorf("error while initiating kubernetes phase: %w", err)
 	}
 
 	distro, err := create.NewDistribution(
@@ -461,10 +469,20 @@ func (v *ClusterCreator) setupPhases() (*create.Infrastructure, *create.Kubernet
 		v.paths.Kubeconfig,
 	)
 	if err != nil {
-		return nil, nil, nil, fmt.Errorf("error while initiating distribution phase: %w", err)
+		return nil, nil, nil, nil, fmt.Errorf("error while initiating distribution phase: %w", err)
 	}
 
-	return infra, kube, distro, nil
+	plugins, err := commcreate.NewPlugins(
+		v.paths,
+		v.kfdManifest,
+		v.dryRun,
+		v.paths.Kubeconfig,
+	)
+	if err != nil {
+		return nil, nil, nil, nil, fmt.Errorf("error while initiating plugins phase: %w", err)
+	}
+
+	return infra, kube, distro, plugins, nil
 }
 
 func (*ClusterCreator) logKubeconfig() error {
