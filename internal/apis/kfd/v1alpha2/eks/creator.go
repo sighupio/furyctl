@@ -475,6 +475,7 @@ func (v *ClusterCreator) setupPhases() (*create.Infrastructure, *create.Kubernet
 	plugins, err := commcreate.NewPlugins(
 		v.paths,
 		v.kfdManifest,
+		string(v.furyctlConf.Kind),
 		v.dryRun,
 		v.paths.Kubeconfig,
 	)

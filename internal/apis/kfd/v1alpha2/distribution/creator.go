@@ -104,6 +104,7 @@ func (c *ClusterCreator) Create(skipPhase string, _ int) error {
 	pluginsPhase, err := commcreate.NewPlugins(
 		c.paths,
 		c.kfdManifest,
+		string(c.furyctlConf.Kind),
 		c.dryRun,
 		c.paths.Kubeconfig,
 	)

@@ -9,6 +9,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"strings"
 
 	"github.com/sirupsen/logrus"
 
@@ -28,11 +29,13 @@ type Plugins struct {
 	furyctlConfPath string
 	dryRun          bool
 	kubeconfig      string
+	kind            string
 }
 
 func NewPlugins(
 	paths cluster.CreatorPaths,
 	kfdManifest config.KFD,
+	kind string,
 	dryRun bool,
 	kubeconfig string,
 ) (*Plugins, error) {
@@ -47,6 +50,9 @@ func NewPlugins(
 		OperationPhase:  phaseOp,
 		distroPath:      paths.DistroPath,
 		furyctlConfPath: paths.ConfigPath,
+		dryRun:          dryRun,
+		kubeconfig:      kubeconfig,
+		kind:            kind,
 		helmfileRunner: helmfile.NewRunner(
 			execx.NewStdExecutor(),
 			helmfile.Paths{
@@ -55,8 +61,6 @@ func NewPlugins(
 				PluginsDir: path.Join(paths.BinPath, "helm", "plugins"),
 			},
 		),
-		dryRun:     dryRun,
-		kubeconfig: kubeconfig,
 	}, nil
 }
 
@@ -142,7 +146,7 @@ func (p *Plugins) Stop() error {
 }
 
 func (p *Plugins) createFuryctlMerger() (*merge.Merger, error) {
-	defaultsFilePath := path.Join(p.distroPath, "defaults", "kfddistribution-kfd-v1alpha2.yaml")
+	defaultsFilePath := path.Join(p.distroPath, "defaults", fmt.Sprintf("%s-kfd-v1alpha2.yaml", strings.ToLower(p.kind)))
 
 	defaultsFile, err := yamlx.FromFileV2[map[any]any](defaultsFilePath)
 	if err != nil {
