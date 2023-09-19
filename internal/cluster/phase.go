@@ -45,16 +45,16 @@ func CheckPhase(phase string) error {
 }
 
 type OperationPhase struct {
-	Path          string
-	TerraformPath string
-	KustomizePath string
-	KubectlPath   string
-	YqPath        string
-	PlanPath      string
-	LogsPath      string
-	OutputsPath   string
-	SecretsPath   string
-	binPath       string
+	Path                 string
+	TerraformPath        string
+	KustomizePath        string
+	KubectlPath          string
+	YqPath               string
+	TerraformPlanPath    string
+	TerraformLogsPath    string
+	TerraformOutputsPath string
+	TerraformSecretsPath string
+	binPath              string
 }
 
 type OperationPhaseOption struct {
@@ -76,16 +76,16 @@ func NewOperationPhase(folder string, kfdTools config.KFDTools, binPath string) 
 	secretsPath := path.Join(basePath, "terraform", "secrets")
 
 	return &OperationPhase{
-		Path:          basePath,
-		TerraformPath: terraformPath,
-		KustomizePath: kustomizePath,
-		KubectlPath:   kubectlPath,
-		PlanPath:      planPath,
-		LogsPath:      logsPath,
-		OutputsPath:   outputsPath,
-		SecretsPath:   secretsPath,
-		binPath:       binPath,
-		YqPath:        yqPath,
+		Path:                 basePath,
+		TerraformPath:        terraformPath,
+		KustomizePath:        kustomizePath,
+		KubectlPath:          kubectlPath,
+		TerraformPlanPath:    planPath,
+		TerraformLogsPath:    logsPath,
+		TerraformOutputsPath: outputsPath,
+		TerraformSecretsPath: secretsPath,
+		binPath:              binPath,
+		YqPath:               yqPath,
 	}, nil
 }
 
@@ -103,27 +103,27 @@ func (cp *OperationPhase) CreateFolder() error {
 }
 
 func (cp *OperationPhase) CreateFolderStructure() error {
-	if _, err := os.Stat(cp.PlanPath); os.IsNotExist(err) {
-		if err := os.Mkdir(cp.PlanPath, iox.FullPermAccess); err != nil {
-			return fmt.Errorf("error creating folder %s: %w", cp.PlanPath, err)
+	if _, err := os.Stat(cp.TerraformPlanPath); os.IsNotExist(err) {
+		if err := os.Mkdir(cp.TerraformPlanPath, iox.FullPermAccess); err != nil {
+			return fmt.Errorf("error creating folder %s: %w", cp.TerraformPlanPath, err)
 		}
 	}
 
-	if _, err := os.Stat(cp.LogsPath); os.IsNotExist(err) {
-		if err := os.Mkdir(cp.LogsPath, iox.FullPermAccess); err != nil {
-			return fmt.Errorf("error creating folder %s: %w", cp.LogsPath, err)
+	if _, err := os.Stat(cp.TerraformLogsPath); os.IsNotExist(err) {
+		if err := os.Mkdir(cp.TerraformLogsPath, iox.FullPermAccess); err != nil {
+			return fmt.Errorf("error creating folder %s: %w", cp.TerraformLogsPath, err)
 		}
 	}
 
-	if _, err := os.Stat(cp.SecretsPath); os.IsNotExist(err) {
-		if err := os.Mkdir(cp.SecretsPath, iox.FullPermAccess); err != nil {
-			return fmt.Errorf("error creating folder %s: %w", cp.SecretsPath, err)
+	if _, err := os.Stat(cp.TerraformSecretsPath); os.IsNotExist(err) {
+		if err := os.Mkdir(cp.TerraformSecretsPath, iox.FullPermAccess); err != nil {
+			return fmt.Errorf("error creating folder %s: %w", cp.TerraformSecretsPath, err)
 		}
 	}
 
-	if _, err := os.Stat(cp.OutputsPath); os.IsNotExist(err) {
-		if err := os.Mkdir(cp.OutputsPath, iox.FullPermAccess); err != nil {
-			return fmt.Errorf("error creating folder %s: %w", cp.OutputsPath, err)
+	if _, err := os.Stat(cp.TerraformOutputsPath); os.IsNotExist(err) {
+		if err := os.Mkdir(cp.TerraformOutputsPath, iox.FullPermAccess); err != nil {
+			return fmt.Errorf("error creating folder %s: %w", cp.TerraformOutputsPath, err)
 		}
 	}
 
