@@ -117,7 +117,7 @@ func (tm *Model) Generate() error {
 
 	ctxMapper := mapper.NewMapper(context)
 
-	context, err := ctxMapper.MapDynamicValues()
+	context, err := ctxMapper.MapDynamicValuesAndPaths()
 	if err != nil {
 		return fmt.Errorf("error mapping dynamic values: %w", err)
 	}

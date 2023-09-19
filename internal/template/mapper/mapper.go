@@ -7,6 +7,7 @@ package mapper
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 	"reflect"
 	"regexp"
 	"strings"
@@ -25,11 +26,11 @@ func NewMapper(context map[string]map[any]any) *Mapper {
 	return &Mapper{context: context}
 }
 
-func (m *Mapper) MapDynamicValues() (map[string]map[any]any, error) {
+func (m *Mapper) MapDynamicValuesAndPaths() (map[string]map[any]any, error) {
 	mappedCtx := make(map[string]map[any]any, len(m.context))
 
 	for k, c := range m.context {
-		res, err := injectDynamicRes(c)
+		res, err := mapDynamicValuesAndPaths(c)
 		mappedCtx[k] = res
 
 		if err != nil {
@@ -51,7 +52,7 @@ func (*Mapper) MapEnvironmentVars() map[any]any {
 	return envMap
 }
 
-func injectDynamicRes(
+func mapDynamicValuesAndPaths(
 	m map[any]any,
 ) (map[any]any, error) {
 	for k, v := range m {
@@ -62,14 +63,14 @@ func injectDynamicRes(
 		switch reflect.TypeOf(v).Kind() {
 		case reflect.Map:
 			if mapVal, ok := v.(map[any]any); ok {
-				if _, err := injectDynamicRes(mapVal); err != nil {
+				if _, err := mapDynamicValuesAndPaths(mapVal); err != nil {
 					return nil, err
 				}
 			}
 
 		case reflect.String:
 			if stringVal, ok := v.(string); ok {
-				injectedStringVal, err := injectDynamicResString(stringVal)
+				injectedStringVal, err := mapDynamicValuesAndPathsString(stringVal)
 				if err != nil {
 					return nil, err
 				}
@@ -83,13 +84,13 @@ func injectDynamicRes(
 					switch reflect.TypeOf(arrChildVal).Kind() {
 					case reflect.Map:
 						if mapVal, ok := arrChildVal.(map[any]any); ok {
-							if _, err := injectDynamicRes(mapVal); err != nil {
+							if _, err := mapDynamicValuesAndPaths(mapVal); err != nil {
 								return nil, err
 							}
 						}
 
 					case reflect.String:
-						injectedStringVal, err := injectDynamicResString(arrChildVal.(string))
+						injectedStringVal, err := mapDynamicValuesAndPathsString(arrChildVal.(string))
 						if err != nil {
 							return nil, err
 						}
@@ -108,7 +109,8 @@ func injectDynamicRes(
 	return m, nil
 }
 
-func injectDynamicResString(val string) (string, error) {
+func mapDynamicValuesAndPathsString(val string) (string, error) {
+	// If the value contains dynamic values, we need to parse them.
 	dynamicValues := regexp.MustCompile(`{(.*?)}`).FindAllString(val, -1)
 	for _, dynamicValue := range dynamicValues {
 		parsedDynamicValue, err := ParseDynamicValue(dynamicValue)
@@ -117,6 +119,17 @@ func injectDynamicResString(val string) (string, error) {
 		}
 
 		val = strings.Replace(val, dynamicValue, parsedDynamicValue, 1)
+	}
+
+	// If the value is a relative path, we need to convert it to an absolute path.
+	isPath := regexp.MustCompile(`^.\/(.*)$`).MatchString(val)
+	if isPath && !filepath.IsAbs(val) {
+		var err error
+
+		val, err = filepath.Abs(val)
+		if err != nil {
+			return "", fmt.Errorf("error while converting path to absolute: %w", err)
+		}
 	}
 
 	return val, nil

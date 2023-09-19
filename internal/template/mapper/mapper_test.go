@@ -87,7 +87,7 @@ func TestMapper_MapDynamicValues(t *testing.T) {
 
 	defer os.Setenv("TEST_MAPPER_DYNAMIC_VALUE", "")
 
-	filledContext, err := m.MapDynamicValues()
+	filledContext, err := m.MapDynamicValuesAndPaths()
 
 	assert.NoError(t, err)
 
@@ -136,7 +136,7 @@ func TestMapper_MapDynamicValues_RelativePath(t *testing.T) {
 
 	defer os.Setenv("TEST_MAPPER_DYNAMIC_VALUE", "")
 
-	filledContext, err := m.MapDynamicValues()
+	filledContext, err := m.MapDynamicValuesAndPaths()
 
 	assert.NoError(t, err)
 
@@ -182,7 +182,7 @@ func TestMapper_MapDynamicValues_Combined(t *testing.T) {
 
 	defer os.Setenv("TEST_MAPPER_DYNAMIC_VALUE", "")
 
-	filledContext, err := m.MapDynamicValues()
+	filledContext, err := m.MapDynamicValuesAndPaths()
 
 	assert.NoError(t, err)
 
@@ -216,7 +216,7 @@ func TestMapper_MapDynamicValues_SliceString(t *testing.T) {
 
 	defer os.Setenv("TEST_MAPPER_DYNAMIC_VALUE", "")
 
-	filledContext, err := m.MapDynamicValues()
+	filledContext, err := m.MapDynamicValuesAndPaths()
 
 	assert.NoError(t, err)
 
@@ -248,7 +248,7 @@ func TestMapper_MapDynamicValues_SliceMap(t *testing.T) {
 
 	defer os.Setenv("TEST_MAPPER_DYNAMIC_VALUE", "")
 
-	filledContext, err := m.MapDynamicValues()
+	filledContext, err := m.MapDynamicValuesAndPaths()
 
 	assert.NoError(t, err)
 
