@@ -13,8 +13,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/sighupio/furyctl/internal/template/mapper"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/sighupio/furyctl/internal/template/mapper"
 )
 
 func TestNewMapper(t *testing.T) {
@@ -26,7 +27,10 @@ func TestNewMapper(t *testing.T) {
 		},
 	}
 
-	m := mapper.NewMapper(dummyContext)
+	m := mapper.NewMapper(
+		dummyContext,
+		"dummy/furyctlconf/path/furyctl.yaml",
+	)
 
 	assert.NotNil(t, m)
 }
@@ -44,7 +48,10 @@ func TestMapper_MapEnvironmentVars(t *testing.T) {
 		"TEST_MAPPER_ENV": "test",
 	}
 
-	m := mapper.NewMapper(dummyContext)
+	m := mapper.NewMapper(
+		dummyContext,
+		"dummy/furyctlconf/path/furyctl.yaml",
+	)
 
 	err := os.Setenv("TEST_MAPPER_ENV", "test")
 
@@ -57,7 +64,7 @@ func TestMapper_MapEnvironmentVars(t *testing.T) {
 	assert.Equal(t, expectedEnvMap["TEST_MAPPER_ENV"], envMap["TEST_MAPPER_ENV"])
 }
 
-func TestMapper_MapDynamicValues(t *testing.T) {
+func TestMapper_MapDynamicValuesAndPaths(t *testing.T) {
 	path, err := os.MkdirTemp("", "test")
 
 	assert.NoError(t, err)
@@ -79,7 +86,10 @@ func TestMapper_MapDynamicValues(t *testing.T) {
 		},
 	}
 
-	m := mapper.NewMapper(dummyContext)
+	m := mapper.NewMapper(
+		dummyContext,
+		"dummy/furyctlconf/path/furyctl.yaml",
+	)
 
 	err = os.Setenv("TEST_MAPPER_DYNAMIC_VALUE", "test")
 
@@ -87,7 +97,7 @@ func TestMapper_MapDynamicValues(t *testing.T) {
 
 	defer os.Setenv("TEST_MAPPER_DYNAMIC_VALUE", "")
 
-	filledContext, err := m.MapDynamicValues()
+	filledContext, err := m.MapDynamicValuesAndPaths()
 
 	assert.NoError(t, err)
 
@@ -102,7 +112,7 @@ func TestMapper_MapDynamicValues(t *testing.T) {
 	assert.Equal(t, exampleStr, mapMeta["value"])
 }
 
-func TestMapper_MapDynamicValues_RelativePath(t *testing.T) {
+func TestMapper_MapDynamicValuesAndPaths_RelativePath(t *testing.T) {
 	path := "../.."
 
 	timestamp := time.Now().Unix()
@@ -128,7 +138,10 @@ func TestMapper_MapDynamicValues_RelativePath(t *testing.T) {
 		},
 	}
 
-	m := mapper.NewMapper(dummyContext)
+	m := mapper.NewMapper(
+		dummyContext,
+		"dummy/furyctlconf/path/furyctl.yaml",
+	)
 
 	err = os.Setenv("TEST_MAPPER_DYNAMIC_VALUE", "test")
 
@@ -136,7 +149,7 @@ func TestMapper_MapDynamicValues_RelativePath(t *testing.T) {
 
 	defer os.Setenv("TEST_MAPPER_DYNAMIC_VALUE", "")
 
-	filledContext, err := m.MapDynamicValues()
+	filledContext, err := m.MapDynamicValuesAndPaths()
 
 	assert.NoError(t, err)
 
@@ -151,7 +164,7 @@ func TestMapper_MapDynamicValues_RelativePath(t *testing.T) {
 	assert.Equal(t, exampleStr, mapMeta["value"])
 }
 
-func TestMapper_MapDynamicValues_Combined(t *testing.T) {
+func TestMapper_MapDynamicValuesAndPaths_Combined(t *testing.T) {
 	path, err := os.MkdirTemp("", "test")
 
 	assert.NoError(t, err)
@@ -174,7 +187,10 @@ func TestMapper_MapDynamicValues_Combined(t *testing.T) {
 		},
 	}
 
-	m := mapper.NewMapper(dummyContext)
+	m := mapper.NewMapper(
+		dummyContext,
+		"dummy/furyctlconf/path/furyctl.yaml",
+	)
 
 	err = os.Setenv("TEST_MAPPER_DYNAMIC_VALUE", "test")
 
@@ -182,7 +198,7 @@ func TestMapper_MapDynamicValues_Combined(t *testing.T) {
 
 	defer os.Setenv("TEST_MAPPER_DYNAMIC_VALUE", "")
 
-	filledContext, err := m.MapDynamicValues()
+	filledContext, err := m.MapDynamicValuesAndPaths()
 
 	assert.NoError(t, err)
 
@@ -199,7 +215,7 @@ func TestMapper_MapDynamicValues_Combined(t *testing.T) {
 	assert.Equal(t, "test/test", mapMeta["double"])
 }
 
-func TestMapper_MapDynamicValues_SliceString(t *testing.T) {
+func TestMapper_MapDynamicValuesAndPaths_SliceString(t *testing.T) {
 	dummyContext := map[string]map[any]any{
 		"data": {
 			"meta": []any{
@@ -208,7 +224,10 @@ func TestMapper_MapDynamicValues_SliceString(t *testing.T) {
 		},
 	}
 
-	m := mapper.NewMapper(dummyContext)
+	m := mapper.NewMapper(
+		dummyContext,
+		"dummy/furyctlconf/path/furyctl.yaml",
+	)
 
 	err := os.Setenv("TEST_MAPPER_DYNAMIC_VALUE", "test")
 
@@ -216,7 +235,7 @@ func TestMapper_MapDynamicValues_SliceString(t *testing.T) {
 
 	defer os.Setenv("TEST_MAPPER_DYNAMIC_VALUE", "")
 
-	filledContext, err := m.MapDynamicValues()
+	filledContext, err := m.MapDynamicValuesAndPaths()
 
 	assert.NoError(t, err)
 
@@ -229,7 +248,7 @@ func TestMapper_MapDynamicValues_SliceString(t *testing.T) {
 	assert.Equal(t, "test", sliceMeta[0])
 }
 
-func TestMapper_MapDynamicValues_SliceMap(t *testing.T) {
+func TestMapper_MapDynamicValuesAndPaths_SliceMap(t *testing.T) {
 	dummyContext := map[string]map[any]any{
 		"data": {
 			"meta": []any{
@@ -240,7 +259,10 @@ func TestMapper_MapDynamicValues_SliceMap(t *testing.T) {
 		},
 	}
 
-	m := mapper.NewMapper(dummyContext)
+	m := mapper.NewMapper(
+		dummyContext,
+		"dummy/furyctlconf/path/furyctl.yaml",
+	)
 
 	err := os.Setenv("TEST_MAPPER_DYNAMIC_VALUE", "test")
 
@@ -248,7 +270,7 @@ func TestMapper_MapDynamicValues_SliceMap(t *testing.T) {
 
 	defer os.Setenv("TEST_MAPPER_DYNAMIC_VALUE", "")
 
-	filledContext, err := m.MapDynamicValues()
+	filledContext, err := m.MapDynamicValuesAndPaths()
 
 	assert.NoError(t, err)
 
@@ -260,4 +282,35 @@ func TestMapper_MapDynamicValues_SliceMap(t *testing.T) {
 	assert.True(t, ok)
 
 	assert.Equal(t, "test", sliceMeta0["value"])
+}
+
+func TestMapper_MapDynamicValuesAndPaths_RelativePathToFuryctlConf(t *testing.T) {
+	dummyContext := map[string]map[any]any{
+		"data": {
+			"meta": map[any]any{
+				"singleDot":     "./test_file.txt",
+				"doubleDots":    "../test_file.txt",
+				"twoDoubleDots": "../../test_file.txt",
+			},
+		},
+	}
+
+	m := mapper.NewMapper(
+		dummyContext,
+		"dummy/furyctlconf/path/furyctl.yaml",
+	)
+
+	filledContext, err := m.MapDynamicValuesAndPaths()
+
+	assert.NoError(t, err)
+
+	meta := filledContext["data"]["meta"]
+
+	mapMeta, ok := meta.(map[any]any)
+
+	assert.True(t, ok)
+
+	assert.Equal(t, "dummy/furyctlconf/path/test_file.txt", mapMeta["singleDot"])
+	assert.Equal(t, "dummy/furyctlconf/test_file.txt", mapMeta["doubleDots"])
+	assert.Equal(t, "dummy/test_file.txt", mapMeta["twoDoubleDots"])
 }

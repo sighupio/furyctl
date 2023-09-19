@@ -199,9 +199,17 @@ func NewClusterCmd(tracker *analytics.Tracker) *cobra.Command {
 				}
 			}
 
+			absFuryctlPath, err := filepath.Abs(flags.FuryctlPath)
+			if err != nil {
+				cmdEvent.AddErrorMessage(err)
+				tracker.Track(cmdEvent)
+
+				return fmt.Errorf("error while initializing cluster creation: %w", err)
+			}
+
 			// Define cluster creation paths.
 			paths := cluster.CreatorPaths{
-				ConfigPath: flags.FuryctlPath,
+				ConfigPath: absFuryctlPath,
 				WorkDir:    basePath,
 				DistroPath: res.RepoPath,
 				BinPath:    flags.BinPath,

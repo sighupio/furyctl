@@ -29,19 +29,21 @@ var (
 )
 
 type IACBuilder struct {
-	furyctlFile map[any]any
-	distroPath  string
-	outDir      string
-	noOverwrite bool
-	dryRun      bool
-	kind        string
+	furyctlFile     map[any]any
+	distroPath      string
+	outDir          string
+	furyctlConfPath string
+	noOverwrite     bool
+	dryRun          bool
+	kind            string
 }
 
 func NewIACBuilder(
 	furyctlFile map[any]any,
 	distroPath,
 	kind,
-	outDir string,
+	outDir,
+	furyctlConfPath string,
 	noOverwrite,
 	dryRun bool,
 ) (*IACBuilder, error) {
@@ -51,12 +53,13 @@ func NewIACBuilder(
 	}
 
 	return &IACBuilder{
-		furyctlFile: furyctlFile,
-		distroPath:  distroPath,
-		outDir:      absOutDir,
-		noOverwrite: noOverwrite,
-		dryRun:      dryRun,
-		kind:        kind,
+		furyctlFile:     furyctlFile,
+		distroPath:      distroPath,
+		outDir:          absOutDir,
+		furyctlConfPath: furyctlConfPath,
+		noOverwrite:     noOverwrite,
+		dryRun:          dryRun,
+		kind:            kind,
 	}, nil
 }
 
@@ -133,6 +136,7 @@ func (m *IACBuilder) Build() error {
 		m.outDir,
 		confPath,
 		outDirPath,
+		m.furyctlConfPath,
 		suffix,
 		m.noOverwrite,
 		m.dryRun,

@@ -130,7 +130,13 @@ func (cp *OperationPhase) CreateFolderStructure() error {
 	return nil
 }
 
-func (*OperationPhase) CopyFromTemplate(cfg template.Config, prefix, sourcePath, targetPath string) error {
+func (*OperationPhase) CopyFromTemplate(
+	cfg template.Config,
+	prefix,
+	sourcePath,
+	targetPath,
+	furyctlConfPath string,
+) error {
 	outDirPath, err := os.MkdirTemp("", fmt.Sprintf("furyctl-%s-", prefix))
 	if err != nil {
 		return fmt.Errorf("error creating temp folder: %w", err)
@@ -152,6 +158,7 @@ func (*OperationPhase) CopyFromTemplate(cfg template.Config, prefix, sourcePath,
 		targetPath,
 		tfConfigPath,
 		outDirPath,
+		furyctlConfPath,
 		".tpl",
 		false,
 		false,

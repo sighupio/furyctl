@@ -30,6 +30,7 @@ type Model struct {
 	TargetPath           string
 	ConfigPath           string
 	OutputPath           string
+	FuryctlConfPath      string
 	Config               Config
 	Suffix               string
 	Context              map[string]map[any]any
@@ -43,6 +44,7 @@ func NewTemplateModel(
 	target,
 	configPath,
 	outPath,
+	furyctlConfPath,
 	suffix string,
 	stopIfNotEmpty,
 	dryRun bool,
@@ -78,6 +80,7 @@ func NewTemplateModel(
 		TargetPath:           target,
 		ConfigPath:           configPath,
 		OutputPath:           outPath,
+		FuryctlConfPath:      furyctlConfPath,
 		Config:               model,
 		Suffix:               suffix,
 		FuncMap:              funcMap,
@@ -115,9 +118,12 @@ func (tm *Model) Generate() error {
 		return cErr
 	}
 
-	ctxMapper := mapper.NewMapper(context)
+	ctxMapper := mapper.NewMapper(
+		context,
+		tm.FuryctlConfPath,
+	)
 
-	context, err := ctxMapper.MapDynamicValues()
+	context, err := ctxMapper.MapDynamicValuesAndPaths()
 	if err != nil {
 		return fmt.Errorf("error mapping dynamic values: %w", err)
 	}

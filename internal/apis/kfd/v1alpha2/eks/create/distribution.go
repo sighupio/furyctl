@@ -601,6 +601,7 @@ func (d *Distribution) copyFromTemplate(cfg template.Config) error {
 		path.Join(d.Path),
 		confPath,
 		outDirPath,
+		d.furyctlConfPath,
 		".tpl",
 		false,
 		d.dryRun,

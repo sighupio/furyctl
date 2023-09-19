@@ -375,6 +375,7 @@ func (k *Kubernetes) copyFromTemplate(furyctlCfg template.Config) error {
 		prefix,
 		tmpFolder,
 		targetTfDir,
+		k.furyctlConfPath,
 	)
 	if err != nil {
 		return fmt.Errorf("error generating from template files: %w", err)
