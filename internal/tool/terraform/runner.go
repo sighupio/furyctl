@@ -63,7 +63,7 @@ func (r *Runner) deleteCmd(id string) {
 }
 
 func (r *Runner) Init() error {
-	args := []string{"init","-upgrade"}
+	args := []string{"init", "-upgrade"}
 
 	if execx.NoTTY {
 		args = append(args, "-no-color")

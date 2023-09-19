@@ -13,8 +13,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/sighupio/furyctl/internal/template/mapper"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/sighupio/furyctl/internal/template/mapper"
 )
 
 func TestNewMapper(t *testing.T) {
@@ -63,7 +64,7 @@ func TestMapper_MapEnvironmentVars(t *testing.T) {
 	assert.Equal(t, expectedEnvMap["TEST_MAPPER_ENV"], envMap["TEST_MAPPER_ENV"])
 }
 
-func TestMapper_MapDynamicValues(t *testing.T) {
+func TestMapper_MapDynamicValuesAndPaths(t *testing.T) {
 	path, err := os.MkdirTemp("", "test")
 
 	assert.NoError(t, err)
@@ -111,7 +112,7 @@ func TestMapper_MapDynamicValues(t *testing.T) {
 	assert.Equal(t, exampleStr, mapMeta["value"])
 }
 
-func TestMapper_MapDynamicValues_RelativePath(t *testing.T) {
+func TestMapper_MapDynamicValuesAndPaths_RelativePath(t *testing.T) {
 	path := "../.."
 
 	timestamp := time.Now().Unix()
@@ -163,7 +164,7 @@ func TestMapper_MapDynamicValues_RelativePath(t *testing.T) {
 	assert.Equal(t, exampleStr, mapMeta["value"])
 }
 
-func TestMapper_MapDynamicValues_Combined(t *testing.T) {
+func TestMapper_MapDynamicValuesAndPaths_Combined(t *testing.T) {
 	path, err := os.MkdirTemp("", "test")
 
 	assert.NoError(t, err)
@@ -214,7 +215,7 @@ func TestMapper_MapDynamicValues_Combined(t *testing.T) {
 	assert.Equal(t, "test/test", mapMeta["double"])
 }
 
-func TestMapper_MapDynamicValues_SliceString(t *testing.T) {
+func TestMapper_MapDynamicValuesAndPaths_SliceString(t *testing.T) {
 	dummyContext := map[string]map[any]any{
 		"data": {
 			"meta": []any{
@@ -247,7 +248,7 @@ func TestMapper_MapDynamicValues_SliceString(t *testing.T) {
 	assert.Equal(t, "test", sliceMeta[0])
 }
 
-func TestMapper_MapDynamicValues_SliceMap(t *testing.T) {
+func TestMapper_MapDynamicValuesAndPaths_SliceMap(t *testing.T) {
 	dummyContext := map[string]map[any]any{
 		"data": {
 			"meta": []any{

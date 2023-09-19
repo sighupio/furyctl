@@ -43,7 +43,7 @@ func (m *Mapper) MapDynamicValuesAndPaths() (map[string]map[any]any, error) {
 	mappedCtx := make(map[string]map[any]any, len(m.context))
 
 	for k, c := range m.context {
-		res, err := m.mapDynamicValuesAndPaths(c)
+		res, err := m.injectDynamicValuesAndPaths(c)
 		mappedCtx[k] = res
 
 		if err != nil {
@@ -65,7 +65,7 @@ func (*Mapper) MapEnvironmentVars() map[any]any {
 	return envMap
 }
 
-func (m *Mapper) mapDynamicValuesAndPaths(
+func (m *Mapper) injectDynamicValuesAndPaths(
 	context map[any]any,
 ) (map[any]any, error) {
 	for k, v := range context {
@@ -76,19 +76,19 @@ func (m *Mapper) mapDynamicValuesAndPaths(
 		switch reflect.TypeOf(v).Kind() {
 		case reflect.Map:
 			if mapVal, ok := v.(map[any]any); ok {
-				if _, err := m.mapDynamicValuesAndPaths(mapVal); err != nil {
+				if _, err := m.injectDynamicValuesAndPaths(mapVal); err != nil {
 					return nil, err
 				}
 			}
 
 		case reflect.String:
-			if stringVal, ok := v.(string); ok {
-				// If the key is relativeVendorPath, we ignore it.
-				if k == "relativeVendorPath" {
-					break
-				}
+			// If the key is relativeVendorPath, we ignore it.
+			if k == "relativeVendorPath" {
+				break
+			}
 
-				injectedStringVal, err := m.mapDynamicValuesAndPathsString(stringVal)
+			if stringVal, ok := v.(string); ok {
+				injectedStringVal, err := m.injectDynamicValuesAndPathsString(stringVal)
 				if err != nil {
 					return nil, err
 				}
@@ -102,13 +102,13 @@ func (m *Mapper) mapDynamicValuesAndPaths(
 					switch reflect.TypeOf(arrChildVal).Kind() {
 					case reflect.Map:
 						if mapVal, ok := arrChildVal.(map[any]any); ok {
-							if _, err := m.mapDynamicValuesAndPaths(mapVal); err != nil {
+							if _, err := m.injectDynamicValuesAndPaths(mapVal); err != nil {
 								return nil, err
 							}
 						}
 
 					case reflect.String:
-						injectedStringVal, err := m.mapDynamicValuesAndPathsString(arrChildVal.(string))
+						injectedStringVal, err := m.injectDynamicValuesAndPathsString(arrChildVal.(string))
 						if err != nil {
 							return nil, err
 						}
@@ -127,7 +127,7 @@ func (m *Mapper) mapDynamicValuesAndPaths(
 	return context, nil
 }
 
-func (m *Mapper) mapDynamicValuesAndPathsString(value string) (string, error) {
+func (m *Mapper) injectDynamicValuesAndPathsString(value string) (string, error) {
 	// If the value contains dynamic values, we need to parse them.
 	dynamicValues := m.envRegexp.FindAllString(value, -1)
 	for _, dynamicValue := range dynamicValues {
