@@ -42,10 +42,11 @@ var (
 
 type Infrastructure struct {
 	*cluster.OperationPhase
-	furyctlConf private.EksclusterKfdV1Alpha2
-	kfdManifest config.KFD
-	tfRunner    *terraform.Runner
-	dryRun      bool
+	furyctlConf     private.EksclusterKfdV1Alpha2
+	kfdManifest     config.KFD
+	furyctlConfPath string
+	tfRunner        *terraform.Runner
+	dryRun          bool
 }
 
 func NewInfrastructure(
@@ -64,9 +65,10 @@ func NewInfrastructure(
 	executor := execx.NewStdExecutor()
 
 	return &Infrastructure{
-		OperationPhase: phase,
-		furyctlConf:    furyctlConf,
-		kfdManifest:    kfdManifest,
+		OperationPhase:  phase,
+		furyctlConf:     furyctlConf,
+		kfdManifest:     kfdManifest,
+		furyctlConfPath: paths.ConfigPath,
 		tfRunner: terraform.NewRunner(
 			executor,
 			terraform.Paths{
@@ -216,6 +218,7 @@ func (i *Infrastructure) copyFromTemplate() error {
 		prefix,
 		tmpFolder,
 		targetTfDir,
+		i.furyctlConfPath,
 	)
 	if err != nil {
 		return fmt.Errorf("error generating from template files: %w", err)

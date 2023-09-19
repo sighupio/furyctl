@@ -46,6 +46,7 @@ func TestNewTemplateModel(t *testing.T) {
 		path+"/target",
 		path+"/configTest.yaml",
 		path,
+		"dummy/furyctlconf/path/furyctl.yaml",
 		".tpl",
 		false,
 		false,

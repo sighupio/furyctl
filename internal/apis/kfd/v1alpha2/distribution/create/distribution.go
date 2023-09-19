@@ -131,6 +131,7 @@ func (d *Distribution) Exec() error {
 		path.Join(d.Path),
 		confPath,
 		outDirPath1,
+		d.furyctlConfPath,
 		".tpl",
 		false,
 		d.dryRun,

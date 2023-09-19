@@ -56,10 +56,18 @@ The generated folder will be created starting from a provided templates folder a
 				return err
 			}
 
+			absFuryctlPath, err := filepath.Abs(flags.FuryctlPath)
+			if err != nil {
+				cmdEvent.AddErrorMessage(err)
+				tracker.Track(cmdEvent)
+
+				return fmt.Errorf("error: %w", err)
+			}
+
 			// Init collaborators.
 			client := netx.NewGoGetterClient()
 			executor := execx.NewStdExecutor()
-			depsvl := dependencies.NewValidator(executor, "", flags.FuryctlPath, false)
+			depsvl := dependencies.NewValidator(executor, "", absFuryctlPath, false)
 			distrodl := distribution.NewDownloader(client, flags.HTTPS)
 
 			// Validate base requirements.
@@ -72,7 +80,7 @@ The generated folder will be created starting from a provided templates folder a
 
 			// Download the distribution.
 			logrus.Info("Downloading distribution...")
-			res, err := distrodl.Download(flags.DistroLocation, flags.FuryctlPath)
+			res, err := distrodl.Download(flags.DistroLocation, absFuryctlPath)
 			if err != nil {
 				cmdEvent.AddErrorMessage(err)
 				tracker.Track(cmdEvent)
@@ -89,7 +97,7 @@ The generated folder will be created starting from a provided templates folder a
 			if !flags.SkipValidation {
 				// Validate the furyctl.yaml file.
 				logrus.Info("Validating configuration file...")
-				if err := config.Validate(flags.FuryctlPath, res.RepoPath); err != nil {
+				if err := config.Validate(absFuryctlPath, res.RepoPath); err != nil {
 					cmdEvent.AddErrorMessage(err)
 					tracker.Track(cmdEvent)
 
@@ -97,12 +105,12 @@ The generated folder will be created starting from a provided templates folder a
 				}
 			}
 
-			furyctlFile, err := yamlx.FromFileV2[map[any]any](flags.FuryctlPath)
+			furyctlFile, err := yamlx.FromFileV2[map[any]any](absFuryctlPath)
 			if err != nil {
 				cmdEvent.AddErrorMessage(err)
 				tracker.Track(cmdEvent)
 
-				return fmt.Errorf("%s - %w", flags.FuryctlPath, err)
+				return fmt.Errorf("%s - %w", absFuryctlPath, err)
 			}
 
 			outDir := flags.Outdir
@@ -128,6 +136,7 @@ The generated folder will be created starting from a provided templates folder a
 				res.RepoPath,
 				res.MinimalConf.Kind,
 				outDir,
+				absFuryctlPath,
 				flags.NoOverwrite,
 				flags.DryRun,
 			)

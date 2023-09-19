@@ -22,13 +22,20 @@ type Mapper struct {
 	context            map[string]map[any]any
 	envRegexp          *regexp.Regexp
 	relativePathRegexp *regexp.Regexp
+	furyctlConfDir     string
 }
 
-func NewMapper(context map[string]map[any]any) *Mapper {
+func NewMapper(
+	context map[string]map[any]any,
+	furyctlConfPath string,
+) *Mapper {
+	furyctlConfDir := filepath.Dir(furyctlConfPath)
+
 	return &Mapper{
 		context:            context,
 		envRegexp:          regexp.MustCompile(`{(.*?)}`),
-		relativePathRegexp: regexp.MustCompile(`^\.?\.?/`),
+		relativePathRegexp: regexp.MustCompile(`^\.{1,}\/`),
+		furyctlConfDir:     furyctlConfDir,
 	}
 }
 
@@ -59,9 +66,9 @@ func (*Mapper) MapEnvironmentVars() map[any]any {
 }
 
 func (m *Mapper) mapDynamicValuesAndPaths(
-	c map[any]any,
+	context map[any]any,
 ) (map[any]any, error) {
-	for k, v := range c {
+	for k, v := range context {
 		if v == nil {
 			continue
 		}
@@ -76,12 +83,17 @@ func (m *Mapper) mapDynamicValuesAndPaths(
 
 		case reflect.String:
 			if stringVal, ok := v.(string); ok {
+				// If the key is relativeVendorPath, we ignore it.
+				if k == "relativeVendorPath" {
+					break
+				}
+
 				injectedStringVal, err := m.mapDynamicValuesAndPathsString(stringVal)
 				if err != nil {
 					return nil, err
 				}
 
-				c[k] = injectedStringVal
+				context[k] = injectedStringVal
 			}
 
 		case reflect.Slice:
@@ -112,33 +124,29 @@ func (m *Mapper) mapDynamicValuesAndPaths(
 		}
 	}
 
-	return c, nil
+	return context, nil
 }
 
-func (m *Mapper) mapDynamicValuesAndPathsString(val string) (string, error) {
+func (m *Mapper) mapDynamicValuesAndPathsString(value string) (string, error) {
 	// If the value contains dynamic values, we need to parse them.
-	dynamicValues := m.envRegexp.FindAllString(val, -1)
+	dynamicValues := m.envRegexp.FindAllString(value, -1)
 	for _, dynamicValue := range dynamicValues {
 		parsedDynamicValue, err := ParseDynamicValue(dynamicValue)
 		if err != nil {
 			return "", err
 		}
 
-		val = strings.Replace(val, dynamicValue, parsedDynamicValue, 1)
+		value = strings.Replace(value, dynamicValue, parsedDynamicValue, 1)
 	}
 
 	// If the value is a relative path, we need to convert it to an absolute path.
-	isPath := m.relativePathRegexp.MatchString(val)
-	if isPath && !filepath.IsAbs(val) {
-		var err error
-
-		val, err = filepath.Abs(val)
-		if err != nil {
-			return "", fmt.Errorf("error while converting path to absolute: %w", err)
-		}
+	isRelativePath := m.relativePathRegexp.MatchString(value)
+	if isRelativePath {
+		value = filepath.Clean(value)
+		value = filepath.Join(m.furyctlConfDir, value)
 	}
 
-	return val, nil
+	return value, nil
 }
 
 func readValueFromFile(path string) (string, error) {
