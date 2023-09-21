@@ -83,6 +83,7 @@ func (p *Plugins) Exec() error {
 
 	mCfg.Data["paths"] = map[any]any{
 		"helm":       p.HelmPath,
+		"kustomize":  p.KustomizePath,
 		"kubeconfig": p.kubeconfig,
 	}
 
