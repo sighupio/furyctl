@@ -15,6 +15,7 @@ import (
 
 	"github.com/sighupio/fury-distribution/pkg/apis/config"
 	"github.com/sighupio/fury-distribution/pkg/apis/onpremises/v1alpha2/public"
+	commcreate "github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/common/create"
 	"github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/onpremises/create"
 	"github.com/sighupio/furyctl/internal/cluster"
 	"github.com/sighupio/furyctl/internal/tool/kubectl"
@@ -109,6 +110,17 @@ func (c *ClusterCreator) Create(_ string, _ int) error {
 		return fmt.Errorf("error while initiating distribution phase: %w", err)
 	}
 
+	pluginsPhase, err := commcreate.NewPlugins(
+		c.paths,
+		c.kfdManifest,
+		string(c.furyctlConf.Kind),
+		c.dryRun,
+		c.paths.Kubeconfig,
+	)
+	if err != nil {
+		return fmt.Errorf("error while initiating plugins phase: %w", err)
+	}
+
 	switch c.phase {
 	case cluster.OperationPhaseKubernetes:
 		return kubernetesPhase.Exec()
@@ -116,12 +128,19 @@ func (c *ClusterCreator) Create(_ string, _ int) error {
 	case cluster.OperationPhaseDistribution:
 		return distributionPhase.Exec()
 
+	case cluster.OperationPhasePlugins:
+		return pluginsPhase.Exec()
+
 	case cluster.OperationPhaseAll:
 		if err := kubernetesPhase.Exec(); err != nil {
 			return err
 		}
 
 		if err := distributionPhase.Exec(); err != nil {
+			return err
+		}
+
+		if err := pluginsPhase.Exec(); err != nil {
 			return err
 		}
 
