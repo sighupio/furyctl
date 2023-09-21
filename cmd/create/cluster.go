@@ -391,16 +391,17 @@ func setupCreateClusterCmdFlags(cmd *cobra.Command) {
 		"phase",
 		"p",
 		"",
-		"Limit the execution to a specific phase. Options are: infrastructure, kubernetes, distribution",
+		"Limit the execution to a specific phase. Options are: infrastructure, kubernetes, distribution, plugins",
 	)
 
 	cmd.Flags().String(
 		"skip-phase",
 		"",
-		"Avoid executing unwanted phases. Options are: infrastructure, kubernetes, distribution. More specifically:\n"+
-			"- skipping infrastructure will execute kubernetes and distribution\n"+
-			"- skipping kubernetes will only execute distribution\n"+
-			"- skipping distribution will execute infrastructure and kubernetes\n",
+		"Avoid executing unwanted phases. Options are: infrastructure, kubernetes, distribution, plugins. More specifically:\n"+
+			"- skipping infrastructure will execute kubernetes, distribution and plugins\n"+
+			"- skipping kubernetes will only execute distribution and plugins\n"+
+			"- skipping distribution will execute infrastructure, kubernetes and plugins\n"+
+			"- skipping plugins will execute infrastructure, kubernetes and distribution\n",
 	)
 
 	cmd.Flags().StringP(

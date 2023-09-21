@@ -102,9 +102,11 @@ func (d *Distribution) Exec() error {
 	}
 
 	mCfg.Data["paths"] = map[any]any{
-		"kubectl":   d.OperationPhase.KubectlPath,
-		"kustomize": d.OperationPhase.KustomizePath,
-		"yq":        d.OperationPhase.YqPath,
+		"kubectl":    d.KubectlPath,
+		"kustomize":  d.KustomizePath,
+		"yq":         d.YqPath,
+		"helm":       d.HelmPath,
+		"kubeconfig": d.kubeconfig,
 	}
 
 	// Check cluster connection and requirements.
@@ -182,6 +184,8 @@ func (d *Distribution) Exec() error {
 			return fmt.Errorf("error applying resources: %w", err)
 		}
 
+		logrus.Info("Kubernetes Fury Distribution installed successfully (dry-run mode)")
+
 		return nil
 	}
 
@@ -209,6 +213,8 @@ func (d *Distribution) Exec() error {
 	if _, err := d.shellRunner.Run(path.Join(d.Path, "scripts", "apply.sh"), "false", d.kubeconfig); err != nil {
 		return fmt.Errorf("error applying manifests: %w", err)
 	}
+
+	logrus.Info("Kubernetes Fury Distribution installed successfully")
 
 	return nil
 }
