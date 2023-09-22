@@ -6,6 +6,7 @@ package create
 
 import (
 	"fmt"
+	iox "github.com/sighupio/furyctl/internal/x/io"
 	"os"
 	"path"
 	"path/filepath"
@@ -195,6 +196,11 @@ func NewDistribution(
 	phase, err := cluster.NewOperationPhase(kubeDir, kfdManifest.Tools, paths.BinPath)
 	if err != nil {
 		return nil, fmt.Errorf("error creating distribution phase: %w", err)
+	}
+
+	err = os.Mkdir(path.Join(phase.Path, "manifests"), iox.FullPermAccess)
+	if err != nil {
+		return nil, fmt.Errorf("error creating manifests folder: %w", err)
 	}
 
 	return &Distribution{
