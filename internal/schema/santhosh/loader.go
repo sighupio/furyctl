@@ -9,9 +9,13 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
+	"regexp"
 
 	"github.com/santhosh-tekuri/jsonschema/v5"
 )
+
+var filepathRefRegexp = regexp.MustCompile(`\"\$ref":\ *"(\.{1,2}\/.+)"`)
 
 var ErrCannotLoadSchema = errors.New("failed to load schema file")
 
@@ -23,7 +27,10 @@ func LoadSchema(schemaPath string) (*jsonschema.Schema, error) {
 		return nil, fmt.Errorf("%w: %v", berr, err)
 	}
 
+	data = filepathRefRegexp.ReplaceAll(data, []byte(fmt.Sprintf(`"$$ref": "file://%s/$1"`, filepath.Dir(schemaPath))))
+
 	compiler := jsonschema.NewCompiler()
+
 	if err = compiler.AddResource(schemaPath, bytes.NewReader(data)); err != nil {
 		return nil, fmt.Errorf("%w: %v", berr, err)
 	}
