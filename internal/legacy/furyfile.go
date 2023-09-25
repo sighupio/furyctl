@@ -105,6 +105,13 @@ func (f *FuryFile) BuildPackages(prefix string) ([]Package, error) {
 	}
 
 	for i := range pkgs {
+		pkgs[i].ProviderKind = f.Provider[pkgs[i].Kind]
+		pkgs[i].Dir = newDir(f.VendorFolderName, pkgs[i]).getConsumableDirectory()
+
+		if pkgs[i].Version != "" {
+			continue
+		}
+
 		for k, v := range f.Versions {
 			if strings.HasPrefix(pkgs[i].Name, k) {
 				pkgs[i].Version = v
@@ -112,9 +119,6 @@ func (f *FuryFile) BuildPackages(prefix string) ([]Package, error) {
 				break
 			}
 		}
-
-		pkgs[i].ProviderKind = f.Provider[pkgs[i].Kind]
-		pkgs[i].Dir = newDir(f.VendorFolderName, pkgs[i]).getConsumableDirectory()
 	}
 
 	return pkgs, nil
