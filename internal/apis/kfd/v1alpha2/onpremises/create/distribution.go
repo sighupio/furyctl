@@ -43,6 +43,13 @@ func (d *Distribution) Exec() error {
 		return fmt.Errorf("error creating distribution phase folder: %w", err)
 	}
 
+	if _, err := os.Stat(path.Join(d.OperationPhase.Path, "manifests")); os.IsNotExist(err) {
+		err = os.Mkdir(path.Join(d.OperationPhase.Path, "manifests"), iox.FullPermAccess)
+		if err != nil {
+			return fmt.Errorf("error creating manifests folder: %w", err)
+		}
+	}
+
 	furyctlMerger, err := d.createFuryctlMerger()
 	if err != nil {
 		return err
@@ -196,13 +203,6 @@ func NewDistribution(
 	phase, err := cluster.NewOperationPhase(kubeDir, kfdManifest.Tools, paths.BinPath)
 	if err != nil {
 		return nil, fmt.Errorf("error creating distribution phase: %w", err)
-	}
-
-	if _, err = os.Stat(path.Join(phase.Path, "manifests")); os.IsNotExist(err) {
-		err = os.Mkdir(path.Join(phase.Path, "manifests"), iox.FullPermAccess)
-		if err != nil {
-			return nil, fmt.Errorf("error creating manifests folder: %w", err)
-		}
 	}
 
 	return &Distribution{
