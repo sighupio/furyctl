@@ -99,8 +99,8 @@ func NewVendorCmd(tracker *analytics.Tracker) *cobra.Command {
 	cmd.Flags().StringP(
 		"furyfile",
 		"F",
-		"Furyfile.yml",
-		"Path to the Furyfile.yml file",
+		"Furyfile.yaml",
+		"Path to the Furyfile.yaml file",
 	)
 
 	cmd.Flags().StringP(
