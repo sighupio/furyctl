@@ -121,9 +121,11 @@ func (k *Kubernetes) Exec() error {
 		return fmt.Errorf("error copying kubeconfig: %w", err)
 	}
 
-	for _, username := range k.furyctlConf.Spec.Kubernetes.Advanced.Users.Names {
-		if err := kubex.CopyToWorkDir(path.Join(k.OperationPhase.Path, fmt.Sprintf("%s.kubeconfig", username)), fmt.Sprintf("%s.kubeconfig", username)); err != nil {
-			return fmt.Errorf("error copying %s.kubeconfig: %w", username, err)
+	if k.furyctlConf.Spec.Kubernetes.Advanced != nil && k.furyctlConf.Spec.Kubernetes.Advanced.Users != nil {
+		for _, username := range k.furyctlConf.Spec.Kubernetes.Advanced.Users.Names {
+			if err := kubex.CopyToWorkDir(path.Join(k.OperationPhase.Path, fmt.Sprintf("%s.kubeconfig", username)), fmt.Sprintf("%s.kubeconfig", username)); err != nil {
+				return fmt.Errorf("error copying %s.kubeconfig: %w", username, err)
+			}
 		}
 	}
 
