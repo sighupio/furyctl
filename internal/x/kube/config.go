@@ -36,25 +36,25 @@ func SetConfigEnv(p string) error {
 	return nil
 }
 
-func CopyConfigToWorkDir(p string) error {
+func CopyToWorkDir(p string, n string) error {
 	currentDir, err := os.Getwd()
 	if err != nil {
 		return fmt.Errorf("error getting current dir: %w", err)
 	}
 
-	kubePath, err := filepath.Abs(p)
+	absPath, err := filepath.Abs(p)
 	if err != nil {
-		return fmt.Errorf("error getting kubeconfig absolute path: %w", err)
+		return fmt.Errorf("error getting absolute path: %w", err)
 	}
 
-	kubeconfig, err := os.ReadFile(kubePath)
+	fileBytes, err := os.ReadFile(absPath)
 	if err != nil {
-		return fmt.Errorf("error reading kubeconfig file: %w", err)
+		return fmt.Errorf("error reading file: %w", err)
 	}
 
-	err = iox.WriteFile(path.Join(currentDir, "kubeconfig"), kubeconfig)
+	err = iox.WriteFile(path.Join(currentDir, n), fileBytes)
 	if err != nil {
-		return fmt.Errorf("error writing kubeconfig file: %w", err)
+		return fmt.Errorf("error writing file: %w", err)
 	}
 
 	return nil

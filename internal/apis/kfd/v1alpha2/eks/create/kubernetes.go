@@ -229,7 +229,7 @@ func (k *Kubernetes) Exec() error {
 		return fmt.Errorf("error setting kubeconfig env: %w", err)
 	}
 
-	if err := kubex.CopyConfigToWorkDir(p); err != nil {
+	if err := kubex.CopyToWorkDir(p, "kubeconfig"); err != nil {
 		return fmt.Errorf("error copying kubeconfig: %w", err)
 	}
 

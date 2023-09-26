@@ -117,8 +117,14 @@ func (k *Kubernetes) Exec() error {
 		return fmt.Errorf("error setting kubeconfig env: %w", err)
 	}
 
-	if err := kubex.CopyConfigToWorkDir(path.Join(k.OperationPhase.Path, "admin.conf")); err != nil {
+	if err := kubex.CopyToWorkDir(path.Join(k.OperationPhase.Path, "admin.conf"), "kubeconfig"); err != nil {
 		return fmt.Errorf("error copying kubeconfig: %w", err)
+	}
+
+	for _, username := range k.furyctlConf.Spec.Kubernetes.Advanced.Users.Names {
+		if err := kubex.CopyToWorkDir(path.Join(k.OperationPhase.Path, fmt.Sprintf("%s.kubeconfig", username)), fmt.Sprintf("%s.kubeconfig", username)); err != nil {
+			return fmt.Errorf("error copying %s.kubeconfig: %w", username, err)
+		}
 	}
 
 	logrus.Info("Kubernetes cluster created successfully")
