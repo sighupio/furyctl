@@ -21,7 +21,6 @@ import (
 	"github.com/sighupio/furyctl/internal/cluster"
 	"github.com/sighupio/furyctl/internal/merge"
 	"github.com/sighupio/furyctl/internal/template"
-	"github.com/sighupio/furyctl/internal/tool/helmfile"
 	"github.com/sighupio/furyctl/internal/tool/kubectl"
 	"github.com/sighupio/furyctl/internal/tool/shell"
 	"github.com/sighupio/furyctl/internal/tool/terraform"
@@ -52,7 +51,6 @@ type Distribution struct {
 	tfRunner         *terraform.Runner
 	shellRunner      *shell.Runner
 	kubeRunner       *kubectl.Runner
-	helmfileRunner   *helmfile.Runner
 	dryRun           bool
 	phase            string
 	kubeconfig       string
@@ -112,14 +110,6 @@ func NewDistribution(
 			true,
 			true,
 			false,
-		),
-		helmfileRunner: helmfile.NewRunner(
-			execx.NewStdExecutor(),
-			helmfile.Paths{
-				Helmfile:   phaseOp.HelmfilePath,
-				WorkDir:    path.Join(phaseOp.Path, "plugins"),
-				PluginsDir: path.Join(paths.WorkDir, "helm-plugins"),
-			},
 		),
 		dryRun:     dryRun,
 		phase:      phase,
@@ -185,11 +175,9 @@ func (d *Distribution) Exec() error {
 		}
 
 		mCfg.Data["paths"] = map[any]any{
-			"kubectl":    d.OperationPhase.KubectlPath,
-			"kustomize":  d.OperationPhase.KustomizePath,
-			"yq":         d.OperationPhase.YqPath,
-			"helm":       d.HelmPath,
-			"kubeconfig": d.kubeconfig,
+			"kubectl":   d.OperationPhase.KubectlPath,
+			"kustomize": d.OperationPhase.KustomizePath,
+			"yq":        d.OperationPhase.YqPath,
 		}
 
 		mCfg.Data["checks"] = map[any]any{
@@ -262,17 +250,6 @@ func (d *Distribution) Exec() error {
 
 	if _, err := d.shellRunner.Run(path.Join(d.Path, "scripts", "apply.sh"), "false", d.kubeconfig); err != nil {
 		return fmt.Errorf("error applying manifests: %w", err)
-	}
-
-	// Applying plugins.
-	logrus.Info("Applying plugins...")
-
-	if err := d.helmfileRunner.Init(d.HelmPath); err != nil {
-		return fmt.Errorf("error applying plugins: %w", err)
-	}
-
-	if err := d.helmfileRunner.Apply(); err != nil {
-		return fmt.Errorf("error applying plugins: %w", err)
 	}
 
 	return nil

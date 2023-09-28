@@ -102,11 +102,9 @@ func (d *Distribution) Exec() error {
 	}
 
 	mCfg.Data["paths"] = map[any]any{
-		"kubectl":    d.KubectlPath,
-		"kustomize":  d.KustomizePath,
-		"yq":         d.YqPath,
-		"helm":       d.HelmPath,
-		"kubeconfig": d.kubeconfig,
+		"kubectl":   d.KubectlPath,
+		"kustomize": d.KustomizePath,
+		"yq":        d.YqPath,
 	}
 
 	// Check cluster connection and requirements.
