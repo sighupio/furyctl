@@ -161,6 +161,13 @@ func (v *ClusterCreator) Create(skipPhase string, timeout int) error {
 
 			close(doneCh)
 
+		case cluster.OperationPhasePlugins:
+			if err := plugins.Exec(); err != nil {
+				errCh <- err
+			}
+
+			close(doneCh)
+
 		case cluster.OperationPhaseAll:
 			errCh <- v.allPhases(skipPhase, infra, kube, distro, plugins, vpnConnector)
 

@@ -23,7 +23,7 @@ func (x *ExtraToolsValidator) Validate(_ string) ([]string, []error) {
 		errs []error
 	)
 
-	if err := x.ansible(); err != nil {
+	if err := x.validateAnsible(); err != nil {
 		errs = append(errs, err)
 	} else {
 		oks = append(oks, "ansible")
@@ -32,7 +32,7 @@ func (x *ExtraToolsValidator) Validate(_ string) ([]string, []error) {
 	return oks, errs
 }
 
-func (x *ExtraToolsValidator) ansible() error {
+func (x *ExtraToolsValidator) validateAnsible() error {
 	ansibleRunner := ansible.NewRunner(x.executor, ansible.Paths{
 		Ansible:         "ansible",
 		AnsiblePlaybook: "ansible-playbook",

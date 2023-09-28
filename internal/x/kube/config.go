@@ -36,7 +36,7 @@ func SetConfigEnv(p string) error {
 	return nil
 }
 
-func CopyToWorkDir(p string, n string) error {
+func CopyToWorkDir(p, n string) error {
 	currentDir, err := os.Getwd()
 	if err != nil {
 		return fmt.Errorf("error getting current dir: %w", err)

@@ -99,18 +99,22 @@ func (c *ClusterDeleter) Delete() error {
 
 	switch c.phase {
 	case cluster.OperationPhaseKubernetes:
-		return kubernetesPhase.Exec()
+		if err := kubernetesPhase.Exec(); err != nil {
+			return fmt.Errorf("error while deleting kubernetes phase: %w", err)
+		}
 
 	case cluster.OperationPhaseDistribution:
-		return distributionPhase.Exec()
+		if err := distributionPhase.Exec(); err != nil {
+			return fmt.Errorf("error while deleting distribution phase: %w", err)
+		}
 
 	case cluster.OperationPhaseAll:
 		if err := distributionPhase.Exec(); err != nil {
-			return err
+			return fmt.Errorf("error while deleting distribution phase: %w", err)
 		}
 
 		if err := kubernetesPhase.Exec(); err != nil {
-			return err
+			return fmt.Errorf("error while deleting kubernetes phase: %w", err)
 		}
 
 	default:

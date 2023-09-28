@@ -25,11 +25,7 @@ import (
 	yamlx "github.com/sighupio/furyctl/internal/x/yaml"
 )
 
-var (
-	errClusterConnect = errors.New("error connecting to cluster")
-	errNoStorageClass = errors.New("at least one storage class is required")
-	errNodesNotReady  = errors.New("all nodes should be Ready")
-)
+var errNodesNotReady = errors.New("all nodes should be Ready")
 
 type Distribution struct {
 	*cluster.OperationPhase
@@ -131,6 +127,7 @@ func (d *Distribution) Exec() error {
 				"logging module (if enabled), dr module (if enabled) and prometheus-operated package installation will be skipped. " +
 				"You need to install a StorageClass and re-run furyctl to install the missing components.",
 		)
+
 		storageClassAvailable = false
 	}
 

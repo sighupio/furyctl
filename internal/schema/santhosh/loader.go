@@ -15,9 +15,10 @@ import (
 	"github.com/santhosh-tekuri/jsonschema/v5"
 )
 
-var filepathRefRegexp = regexp.MustCompile(`\"\$ref":\ *"(\.{1,2}\/.+)"`)
-
-var ErrCannotLoadSchema = errors.New("failed to load schema file")
+var (
+	filepathRefRegexp   = regexp.MustCompile(`\"\$ref":\ *"(\.{1,2}\/.+)"`)
+	ErrCannotLoadSchema = errors.New("failed to load schema file")
+)
 
 func LoadSchema(schemaPath string) (*jsonschema.Schema, error) {
 	berr := fmt.Errorf("%w '%s'", ErrCannotLoadSchema, schemaPath)

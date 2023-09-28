@@ -82,7 +82,7 @@ func (d *ClusterDeleter) Delete() error {
 	}
 
 	if err := distro.Exec(); err != nil {
-		return fmt.Errorf("error while deleting Kubernetes Fury Distribution: %w", err)
+		return fmt.Errorf("error while deleting distribution: %w", err)
 	}
 
 	logrus.Info("Kubernetes Fury Distribution deleted successfully")

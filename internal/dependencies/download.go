@@ -200,7 +200,7 @@ func (dd *Downloader) DownloadInstallers(installers config.KFDKubernetes, gitPre
 
 		src := fmt.Sprintf("git::%s/fury-%s-installer?ref=%s&depth=1", gitPrefix, name, version)
 
-		// TODO: rename the repository
+		// Rename the repository.
 		if name == "onpremises" {
 			src = fmt.Sprintf("git::%s/fury-kubernetes-on-premises?ref=%s&depth=1", gitPrefix, version)
 		}

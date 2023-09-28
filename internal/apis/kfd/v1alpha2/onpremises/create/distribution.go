@@ -6,7 +6,6 @@ package create
 
 import (
 	"fmt"
-	iox "github.com/sighupio/furyctl/internal/x/io"
 	"os"
 	"path"
 	"path/filepath"
@@ -21,6 +20,7 @@ import (
 	"github.com/sighupio/furyctl/internal/tool/kubectl"
 	"github.com/sighupio/furyctl/internal/tool/shell"
 	execx "github.com/sighupio/furyctl/internal/x/exec"
+	iox "github.com/sighupio/furyctl/internal/x/io"
 	yamlx "github.com/sighupio/furyctl/internal/x/yaml"
 )
 
@@ -90,6 +90,7 @@ func (d *Distribution) Exec() error {
 				"logging module (if enabled), dr module (if enabled) and prometheus-operated package installation will be skipped. " +
 				"You need to install a StorageClass and re-run furyctl to install the missing components.",
 		)
+
 		storageClassAvailable = false
 	}
 

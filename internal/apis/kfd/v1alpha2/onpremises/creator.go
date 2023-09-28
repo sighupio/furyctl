@@ -89,7 +89,7 @@ func (c *ClusterCreator) SetProperty(name string, value any) {
 	}
 }
 
-func (c *ClusterCreator) Create(_ string, _ int) error {
+func (c *ClusterCreator) Create(skipPhase string, _ int) error {
 	kubernetesPhase, err := create.NewKubernetes(
 		c.furyctlConf,
 		c.kfdManifest,
@@ -123,25 +123,37 @@ func (c *ClusterCreator) Create(_ string, _ int) error {
 
 	switch c.phase {
 	case cluster.OperationPhaseKubernetes:
-		return kubernetesPhase.Exec()
+		if err := kubernetesPhase.Exec(); err != nil {
+			return fmt.Errorf("error while executing kubernetes phase: %w", err)
+		}
 
 	case cluster.OperationPhaseDistribution:
-		return distributionPhase.Exec()
+		if err := distributionPhase.Exec(); err != nil {
+			return fmt.Errorf("error while executing distribution phase: %w", err)
+		}
 
 	case cluster.OperationPhasePlugins:
-		return pluginsPhase.Exec()
+		if err := pluginsPhase.Exec(); err != nil {
+			return fmt.Errorf("error while executing plugins phase: %w", err)
+		}
 
 	case cluster.OperationPhaseAll:
-		if err := kubernetesPhase.Exec(); err != nil {
-			return err
+		if skipPhase != cluster.OperationPhaseKubernetes {
+			if err := kubernetesPhase.Exec(); err != nil {
+				return fmt.Errorf("error while executing kubernetes phase: %w", err)
+			}
 		}
 
-		if err := distributionPhase.Exec(); err != nil {
-			return err
+		if skipPhase != cluster.OperationPhaseDistribution {
+			if err := distributionPhase.Exec(); err != nil {
+				return fmt.Errorf("error while executing distribution phase: %w", err)
+			}
 		}
 
-		if err := pluginsPhase.Exec(); err != nil {
-			return err
+		if skipPhase != cluster.OperationPhasePlugins {
+			if err := pluginsPhase.Exec(); err != nil {
+				return fmt.Errorf("error while executing plugins phase: %w", err)
+			}
 		}
 
 	default:
@@ -164,8 +176,7 @@ func (c *ClusterCreator) Create(_ string, _ int) error {
 }
 
 func (c *ClusterCreator) storeClusterConfig() error {
-	// TODO: this code is duplicated, we should refactor it.
-
+	// This code is duplicated, we should refactor it.
 	x, err := os.ReadFile(c.paths.ConfigPath)
 	if err != nil {
 		return fmt.Errorf("error while reading config file: %w", err)
@@ -200,8 +211,7 @@ func (c *ClusterCreator) storeClusterConfig() error {
 }
 
 func (c *ClusterCreator) storeDistributionConfig() error {
-	// TODO: this code is duplicated, we should refactor it.
-
+	// This code is duplicated, we should refactor it.
 	x, err := os.ReadFile(path.Join(c.paths.DistroPath, "kfd.yaml"))
 	if err != nil {
 		return fmt.Errorf("error while reading config file: %w", err)
