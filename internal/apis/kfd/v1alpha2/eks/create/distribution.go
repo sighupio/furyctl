@@ -185,9 +185,11 @@ func (d *Distribution) Exec() error {
 		}
 
 		mCfg.Data["paths"] = map[any]any{
-			"kubectl":   d.OperationPhase.KubectlPath,
-			"kustomize": d.OperationPhase.KustomizePath,
-			"yq":        d.OperationPhase.YqPath,
+			"kubectl":    d.OperationPhase.KubectlPath,
+			"kustomize":  d.OperationPhase.KustomizePath,
+			"yq":         d.OperationPhase.YqPath,
+			"helm":       d.HelmPath,
+			"kubeconfig": d.kubeconfig,
 		}
 
 		mCfg.Data["checks"] = map[any]any{
@@ -231,6 +233,10 @@ func (d *Distribution) Exec() error {
 		"yq":         d.YqPath,
 		"helm":       d.HelmPath,
 		"kubeconfig": d.kubeconfig,
+	}
+
+	mCfg.Data["checks"] = map[any]any{
+		"storageClassAvailable": true,
 	}
 
 	if err := d.copyFromTemplate(mCfg); err != nil {
