@@ -70,6 +70,7 @@ func NewPlugins(
 func (p *Plugins) Exec() error {
 	if !p.hasPlugins {
 		logrus.Warn("Skipping plugins phase as spec.plugins is not defined")
+
 		return nil
 	}
 
