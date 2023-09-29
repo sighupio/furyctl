@@ -30,6 +30,7 @@ type Plugins struct {
 	dryRun          bool
 	kubeconfig      string
 	kind            string
+	hasPlugins      bool
 }
 
 func NewPlugins(
@@ -38,6 +39,7 @@ func NewPlugins(
 	kind string,
 	dryRun bool,
 	kubeconfig string,
+	hasPlugins bool,
 ) (*Plugins, error) {
 	distroDir := path.Join(paths.WorkDir, cluster.OperationPhasePlugins)
 
@@ -61,10 +63,16 @@ func NewPlugins(
 				PluginsDir: path.Join(paths.BinPath, "helm", "plugins"),
 			},
 		),
+		hasPlugins: hasPlugins,
 	}, nil
 }
 
 func (p *Plugins) Exec() error {
+	if !p.hasPlugins {
+		logrus.Warn("Skipping plugins phase as spec.plugins is not defined")
+		return nil
+	}
+
 	logrus.Info("Applying plugins...")
 
 	if err := p.CreateFolder(); err != nil {

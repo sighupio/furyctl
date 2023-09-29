@@ -492,6 +492,7 @@ func (v *ClusterCreator) setupPhases() (
 		string(v.furyctlConf.Kind),
 		v.dryRun,
 		v.paths.Kubeconfig,
+		v.furyctlConf.Spec.Plugins != nil,
 	)
 	if err != nil {
 		return nil, nil, nil, nil, fmt.Errorf("error while initiating plugins phase: %w", err)

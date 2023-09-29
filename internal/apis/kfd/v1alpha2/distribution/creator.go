@@ -107,6 +107,7 @@ func (c *ClusterCreator) Create(skipPhase string, _ int) error {
 		string(c.furyctlConf.Kind),
 		c.dryRun,
 		c.paths.Kubeconfig,
+		c.furyctlConf.Spec.Plugins != nil,
 	)
 	if err != nil {
 		return fmt.Errorf("error while initiating plugins phase: %w", err)
