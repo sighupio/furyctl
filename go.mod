@@ -2,8 +2,6 @@ module github.com/sighupio/furyctl
 
 go 1.20
 
-replace github.com/sighupio/fury-distribution => ../fury-distribution
-
 require (
 	github.com/Al-Pragliola/go-version v1.6.2
 	github.com/Masterminds/sprig/v3 v3.2.3
@@ -20,7 +18,7 @@ require (
 	github.com/onsi/gomega v1.24.2
 	github.com/santhosh-tekuri/jsonschema/v5 v5.1.1
 	github.com/shirou/gopsutil/v3 v3.23.2
-	github.com/sighupio/fury-distribution v1.26.0
+	github.com/sighupio/fury-distribution v1.26.2-rc.0.0.20231002153953-ba874d456773
 	github.com/sirupsen/logrus v1.9.0
 	github.com/spf13/cobra v1.6.1
 	github.com/spf13/viper v1.14.0
