@@ -158,7 +158,7 @@ func (p *Plugins) Exec() error {
 		return fmt.Errorf("error applying plugins with helmfile: %w", err)
 	}
 
-	if _, err := p.shellRunner.Run(path.Join(p.Path, "scripts", "apply.sh"), "true", p.kubeconfig); err != nil {
+	if _, err := p.shellRunner.Run(path.Join(p.Path, "scripts", "apply.sh"), "false", p.kubeconfig); err != nil {
 		return fmt.Errorf("error applying plugins with kustomize: %w", err)
 	}
 
