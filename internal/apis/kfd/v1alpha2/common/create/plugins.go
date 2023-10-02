@@ -150,16 +150,25 @@ func (p *Plugins) Exec() error {
 		return nil
 	}
 
-	if err := p.helmfileRunner.Init(p.HelmPath); err != nil {
-		return fmt.Errorf("error applying plugins with helmfile: %w", err)
+	helmConfig, hasHelm := templateModel.Config.Data["spec"]["plugins"].(map[any]any)["helm"]
+	if hasHelm {
+		helmReleases, _ := helmConfig.(map[any]any)["releases"].([]any)
+		if len(helmReleases) > 0 {
+			if err := p.helmfileRunner.Init(p.HelmPath); err != nil {
+				return fmt.Errorf("error applying plugins with helmfile: %w", err)
+			}
+
+			if err := p.helmfileRunner.Apply(); err != nil {
+				return fmt.Errorf("error applying plugins with helmfile: %w", err)
+			}
+		}
 	}
 
-	if err := p.helmfileRunner.Apply(); err != nil {
-		return fmt.Errorf("error applying plugins with helmfile: %w", err)
-	}
-
-	if _, err := p.shellRunner.Run(path.Join(p.Path, "scripts", "apply.sh"), "false", p.kubeconfig); err != nil {
-		return fmt.Errorf("error applying plugins with kustomize: %w", err)
+	kustomizeConfig, hasKustomize := templateModel.Config.Data["spec"]["plugins"].(map[any]any)["kustomize"].([]any)
+	if hasKustomize && len(kustomizeConfig) > 0 {
+		if _, err := p.shellRunner.Run(path.Join(p.Path, "scripts", "apply.sh"), "false", p.kubeconfig); err != nil {
+			return fmt.Errorf("error applying plugins with kustomize: %w", err)
+		}
 	}
 
 	logrus.Info("Plugins installed successfully")
