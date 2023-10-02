@@ -18,6 +18,7 @@ import (
 	"github.com/sighupio/furyctl/internal/merge"
 	"github.com/sighupio/furyctl/internal/template"
 	"github.com/sighupio/furyctl/internal/tool/helmfile"
+	"github.com/sighupio/furyctl/internal/tool/shell"
 	execx "github.com/sighupio/furyctl/internal/x/exec"
 	yamlx "github.com/sighupio/furyctl/internal/x/yaml"
 )
@@ -25,6 +26,7 @@ import (
 type Plugins struct {
 	*cluster.OperationPhase
 	helmfileRunner  *helmfile.Runner
+	shellRunner     *shell.Runner
 	distroPath      string
 	furyctlConfPath string
 	dryRun          bool
@@ -63,6 +65,13 @@ func NewPlugins(
 				PluginsDir: path.Join(paths.BinPath, "helm", "plugins"),
 			},
 		),
+		shellRunner: shell.NewRunner(
+			execx.NewStdExecutor(),
+			shell.Paths{
+				Shell:   "sh",
+				WorkDir: phaseOp.Path,
+			},
+		),
 		hasPlugins: hasPlugins,
 	}, nil
 }
@@ -94,6 +103,8 @@ func (p *Plugins) Exec() error {
 		"helm":       p.HelmPath,
 		"kustomize":  p.KustomizePath,
 		"kubeconfig": p.kubeconfig,
+		"kubectl":    p.KubectlPath,
+		"yq":         p.YqPath,
 	}
 
 	outYaml, err := yamlx.MarshalV2(mCfg)
@@ -140,11 +151,15 @@ func (p *Plugins) Exec() error {
 	}
 
 	if err := p.helmfileRunner.Init(p.HelmPath); err != nil {
-		return fmt.Errorf("error applying plugins: %w", err)
+		return fmt.Errorf("error applying plugins with helmfile: %w", err)
 	}
 
 	if err := p.helmfileRunner.Apply(); err != nil {
-		return fmt.Errorf("error applying plugins: %w", err)
+		return fmt.Errorf("error applying plugins with helmfile: %w", err)
+	}
+
+	if _, err := p.shellRunner.Run(path.Join(p.Path, "scripts", "apply.sh"), "true", p.kubeconfig); err != nil {
+		return fmt.Errorf("error applying plugins with kustomize: %w", err)
 	}
 
 	logrus.Info("Plugins installed successfully")
