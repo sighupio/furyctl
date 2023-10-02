@@ -147,11 +147,9 @@ func (k *Kubernetes) createFuryctlMerger() (*merge.Merger, error) {
 		return &merge.Merger{}, fmt.Errorf("%s - %w", k.paths.ConfigPath, err)
 	}
 
-	furyctlConfMergeModel := merge.NewDefaultModel(furyctlConf, ".spec.kubernetes")
-
 	merger := merge.NewMerger(
 		merge.NewDefaultModel(defaultsFile, ".data"),
-		furyctlConfMergeModel,
+		merge.NewDefaultModel(furyctlConf, ".spec.distribution"),
 	)
 
 	_, err = merger.Merge()

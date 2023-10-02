@@ -322,11 +322,9 @@ func (d *Distribution) createFuryctlMerger() (*merge.Merger, error) {
 		return &merge.Merger{}, fmt.Errorf("%s - %w", d.furyctlConfPath, err)
 	}
 
-	furyctlConfMergeModel := merge.NewDefaultModel(furyctlConf, ".spec.distribution")
-
 	merger := merge.NewMerger(
 		merge.NewDefaultModel(defaultsFile, ".data"),
-		furyctlConfMergeModel,
+		merge.NewDefaultModel(furyctlConf, ".spec.distribution"),
 	)
 
 	_, err = merger.Merge()

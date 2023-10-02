@@ -14,7 +14,6 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/sighupio/fury-distribution/pkg/apis/config"
-	"github.com/sighupio/fury-distribution/pkg/apis/kfddistribution/v1alpha2/public"
 	"github.com/sighupio/furyctl/internal/cluster"
 	"github.com/sighupio/furyctl/internal/merge"
 	"github.com/sighupio/furyctl/internal/template"
@@ -33,7 +32,6 @@ type Plugins struct {
 	dryRun          bool
 	kubeconfig      string
 	kind            string
-	hasPlugins      bool
 }
 
 func NewPlugins(
@@ -42,7 +40,6 @@ func NewPlugins(
 	kind string,
 	dryRun bool,
 	kubeconfig string,
-	hasPlugins bool,
 ) (*Plugins, error) {
 	distroDir := path.Join(paths.WorkDir, cluster.OperationPhasePlugins)
 
@@ -73,17 +70,10 @@ func NewPlugins(
 				WorkDir: phaseOp.Path,
 			},
 		),
-		hasPlugins: hasPlugins,
 	}, nil
 }
 
 func (p *Plugins) Exec() error {
-	if !p.hasPlugins {
-		logrus.Info("Skipping plugins phase as spec.plugins is not defined")
-
-		return nil
-	}
-
 	logrus.Info("Applying plugins...")
 
 	if err := p.CreateFolder(); err != nil {
@@ -145,18 +135,27 @@ func (p *Plugins) Exec() error {
 		return fmt.Errorf("error generating from template files: %w", err)
 	}
 
+	specPlugins, hasPlugins := templateModel.Config.Data["spec"]["plugins"].(map[any]any)
+	if !hasPlugins {
+		logrus.Info("Skipping plugins phase as spec.plugins is not defined")
+		return nil
+	}
+
+	specPluginsHelmReleases := []any{}
+	specPluginsHelm, hasSpecPluginsHelm := specPlugins["helm"].(map[any]any)
+	if hasSpecPluginsHelm {
+		specPluginsHelmReleases, _ = specPluginsHelm["releases"].([]any)
+	}
+
+	specPluginsKustomize, hasSpecPluginsKustomize := specPlugins["kustomize"].([]any)
+
 	if p.dryRun {
 		logrus.Info("Plugins installed successfully (dry-run mode)")
 
 		return nil
 	}
 
-	specPlugins, ok := templateModel.Config.Data["spec"]["plugins"].(public.SpecPlugins)
-	if !ok {
-		return fmt.Errorf("error while parsing plugins configuration: %w", err)
-	}
-
-	if specPlugins.Helm != nil && len(specPlugins.Helm.Releases) > 0 {
+	if hasSpecPluginsHelm && len(specPluginsHelmReleases) > 0 {
 		if err := p.helmfileRunner.Init(p.HelmPath); err != nil {
 			return fmt.Errorf("error applying plugins with helmfile: %w", err)
 		}
@@ -166,7 +165,7 @@ func (p *Plugins) Exec() error {
 		}
 	}
 
-	if specPlugins.Kustomize != nil && len(specPlugins.Kustomize) > 0 {
+	if hasSpecPluginsKustomize && len(specPluginsKustomize) > 0 {
 		if _, err := p.shellRunner.Run(path.Join(p.Path, "scripts", "apply.sh"), "false", p.kubeconfig); err != nil {
 			return fmt.Errorf("error applying plugins with kustomize: %w", err)
 		}
@@ -190,11 +189,9 @@ func (p *Plugins) createFuryctlMerger() (*merge.Merger, error) {
 		return &merge.Merger{}, fmt.Errorf("%s - %w", p.furyctlConfPath, err)
 	}
 
-	furyctlConfMergeModel := merge.NewDefaultModel(furyctlConf, ".spec.plugins")
-
 	merger := merge.NewMerger(
 		merge.NewDefaultModel(defaultsFile, ".data"),
-		furyctlConfMergeModel,
+		merge.NewDefaultModel(furyctlConf, ".spec.distribution"),
 	)
 
 	_, err = merger.Merge()
