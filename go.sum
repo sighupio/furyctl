@@ -468,6 +468,8 @@ github.com/shirou/gopsutil/v3 v3.23.2/go.mod h1:gv0aQw33GLo3pG8SiWKiQrbDzbRY1K80
 github.com/shopspring/decimal v1.2.0/go.mod h1:DKyhrW/HYNuLGql+MJL6WCR6knT2jwCFRcu2hWCYk4o=
 github.com/shopspring/decimal v1.3.1 h1:2Usl1nmF/WZucqkFZhnfFYxxxu8LG21F6nPQBE5gKV8=
 github.com/shopspring/decimal v1.3.1/go.mod h1:DKyhrW/HYNuLGql+MJL6WCR6knT2jwCFRcu2hWCYk4o=
+github.com/sighupio/fury-distribution v1.26.2-0.20231005063831-a9c74471f13d h1:FAhRtq8XCym8+X5n85Oog52y1XC/WlWhYm/t8O+OrcA=
+github.com/sighupio/fury-distribution v1.26.2-0.20231005063831-a9c74471f13d/go.mod h1:5gp8s+7qkpyoVeOZNuMRDLhjElYEY1F3X1GmC8QkYc0=
 github.com/sighupio/fury-distribution v1.26.2-rc.0.0.20231002153953-ba874d456773 h1:bgUTofK8a1YMTBqrVLwIS0yeDtc2/UwGIE7OppRvd4Y=
 github.com/sighupio/fury-distribution v1.26.2-rc.0.0.20231002153953-ba874d456773/go.mod h1:5gp8s+7qkpyoVeOZNuMRDLhjElYEY1F3X1GmC8QkYc0=
 github.com/sighupio/fury-distribution v1.26.2-rc.0.0.20231004144615-6fd5ed010871 h1:FYLGGIkhd1MWxABYzQP18uwmrMjQaTBkPqUxbcHYrI4=
