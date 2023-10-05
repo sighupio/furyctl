@@ -50,6 +50,14 @@ func Test_Factory_Create(t *testing.T) {
 			wantTool: true,
 		},
 		{
+			desc:     "helm",
+			wantTool: true,
+		},
+		{
+			desc:     "helmfile",
+			wantTool: true,
+		},
+		{
 			desc:     "unsupported",
 			wantTool: false,
 		},
@@ -156,6 +164,16 @@ func TestHelperProcess(t *testing.T) {
 		switch subcmd {
 		case "--version":
 			fmt.Fprintf(os.Stdout, "GNU bash, version 3.2.57(1)-release (arm64-apple-darwin22)\nCopyright (C) 2007 Free Software Foundation, Inc.")
+		}
+	case "helm":
+		switch subcmd {
+		case "version":
+			fmt.Fprintf(os.Stdout, "v3.12.3+g825e86f")
+		}
+	case "helmfile":
+		switch subcmd {
+		case "version":
+			fmt.Fprintf(os.Stdout, "v0.156.0")
 		}
 	default:
 		fmt.Fprintf(os.Stdout, "command not found")
