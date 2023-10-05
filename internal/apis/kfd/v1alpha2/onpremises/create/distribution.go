@@ -87,7 +87,8 @@ func (d *Distribution) Exec() error {
 	if getStorageClassesOutput == "No resources found" {
 		logrus.Warn(
 			"No storage classes found in the cluster. " +
-				"logging module (if enabled), dr module (if enabled) and prometheus-operated package installation will be skipped. " +
+				"logging module (if enabled), dr module (if enabled) " +
+				"and prometheus-operated package installation will be skipped. " +
 				"You need to install a StorageClass and re-run furyctl to install the missing components.",
 		)
 
@@ -155,6 +156,7 @@ func (d *Distribution) Exec() error {
 	return nil
 }
 
+//nolint:dupl // Remove duplicated code in the future.
 func (d *Distribution) createFuryctlMerger() (*merge.Merger, error) {
 	defaultsFilePath := path.Join(d.paths.DistroPath, "defaults", "onpremises-kfd-v1alpha2.yaml")
 

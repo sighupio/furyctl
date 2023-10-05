@@ -123,7 +123,13 @@ func (k *Kubernetes) Exec() error {
 
 	if k.furyctlConf.Spec.Kubernetes.Advanced != nil && k.furyctlConf.Spec.Kubernetes.Advanced.Users != nil {
 		for _, username := range k.furyctlConf.Spec.Kubernetes.Advanced.Users.Names {
-			if err := kubex.CopyToWorkDir(path.Join(k.OperationPhase.Path, fmt.Sprintf("%s.kubeconfig", username)), fmt.Sprintf("%s.kubeconfig", username)); err != nil {
+			if err := kubex.CopyToWorkDir(
+				path.Join(
+					k.OperationPhase.Path,
+					fmt.Sprintf("%s.kubeconfig", username),
+				),
+				fmt.Sprintf("%s.kubeconfig", username),
+			); err != nil {
 				return fmt.Errorf("error copying %s.kubeconfig: %w", username, err)
 			}
 		}
@@ -134,6 +140,7 @@ func (k *Kubernetes) Exec() error {
 	return nil
 }
 
+//nolint:dupl // Remove duplicated code in the future.
 func (k *Kubernetes) createFuryctlMerger() (*merge.Merger, error) {
 	defaultsFilePath := path.Join(k.paths.DistroPath, "defaults", "onpremises-kfd-v1alpha2.yaml")
 

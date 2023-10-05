@@ -138,12 +138,15 @@ func (p *Plugins) Exec() error {
 	specPlugins, hasPlugins := templateModel.Config.Data["spec"]["plugins"].(map[any]any)
 	if !hasPlugins {
 		logrus.Info("Skipping plugins phase as spec.plugins is not defined")
+
 		return nil
 	}
 
 	specPluginsHelmReleases := []any{}
+
 	specPluginsHelm, hasSpecPluginsHelm := specPlugins["helm"].(map[any]any)
 	if hasSpecPluginsHelm {
+		//nolint:errcheck // We don't care about the error here.
 		specPluginsHelmReleases, _ = specPluginsHelm["releases"].([]any)
 	}
 

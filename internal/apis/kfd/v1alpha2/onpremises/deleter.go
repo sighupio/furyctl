@@ -75,7 +75,8 @@ func (c *ClusterDeleter) SetProperty(name string, value any) {
 }
 
 func (c *ClusterDeleter) Delete() error {
-	logrus.Warn("This process will only reset the Kubernetes cluster and will not uninstall all the packages installed on the nodes.")
+	logrus.Warn("This process will only reset the Kubernetes cluster " +
+		"and will not uninstall all the packages installed on the nodes.")
 
 	kubernetesPhase, err := delete.NewKubernetes(
 		c.furyctlConf,
