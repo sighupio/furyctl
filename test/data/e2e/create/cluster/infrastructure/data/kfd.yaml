@@ -16,6 +16,9 @@ kubernetes:
   eks:
     version: 1.25
     installer: v2.0.0
+  onpremises:
+    version: 1.26.7
+    installer: v1.26.7-rev.1
 furyctlSchemas:
   eks:
     - apiVersion: kfd.sighup.io/v1alpha2
@@ -32,6 +35,10 @@ tools:
       version: 1.4.6
     yq:
       version: 4.34.1
+    helm:
+      version: 3.12.3
+    helmfile:
+      version: 0.156.0
   eks:
     awscli:
       version: "*"
