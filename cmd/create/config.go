@@ -26,11 +26,12 @@ import (
 )
 
 var (
+	ErrParsingFlag          = errors.New("error while parsing flag")
 	ErrMandatoryFlag        = errors.New("flag must be specified")
 	ErrConfigCreationFailed = fmt.Errorf("config creation failed")
 )
 
-func NewConfigCmd(tracker *analytics.Tracker) *cobra.Command {
+func NewConfigCommand(tracker *analytics.Tracker) *cobra.Command {
 	var cmdEvent analytics.Event
 
 	cmd := &cobra.Command{
