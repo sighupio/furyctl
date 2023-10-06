@@ -22,6 +22,7 @@ import (
 	"github.com/sighupio/furyctl/internal/tool/kubectl"
 	"github.com/sighupio/furyctl/internal/tool/shell"
 	execx "github.com/sighupio/furyctl/internal/x/exec"
+	iox "github.com/sighupio/furyctl/internal/x/io"
 	yamlx "github.com/sighupio/furyctl/internal/x/yaml"
 )
 
@@ -85,6 +86,13 @@ func (d *Distribution) Exec() error {
 
 	if err := d.CreateFolder(); err != nil {
 		return fmt.Errorf("error creating distribution phase folder: %w", err)
+	}
+
+	if _, err := os.Stat(path.Join(d.OperationPhase.Path, "manifests")); os.IsNotExist(err) {
+		err = os.Mkdir(path.Join(d.OperationPhase.Path, "manifests"), iox.FullPermAccess)
+		if err != nil {
+			return fmt.Errorf("error creating manifests folder: %w", err)
+		}
 	}
 
 	furyctlMerger, err := d.createFuryctlMerger()
