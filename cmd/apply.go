@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-package create
+package cmd
 
 import (
 	"errors"
@@ -51,12 +51,12 @@ type ClusterCmdFlags struct {
 	Outdir             string
 }
 
-func NewClusterCmd(tracker *analytics.Tracker) *cobra.Command {
+func NewApplyCommand(tracker *analytics.Tracker) *cobra.Command {
 	var cmdEvent analytics.Event
 
 	cmd := &cobra.Command{
-		Use:   "cluster",
-		Short: "Creates a battle-tested Kubernetes Fury cluster",
+		Use:   "apply",
+		Short: "Apply the configuration to create or upgrade a battle-tested Kubernetes Fury cluster",
 		PreRun: func(cmd *cobra.Command, _ []string) {
 			cmdEvent = analytics.NewCommandEvent(cobrax.GetFullname(cmd))
 		},

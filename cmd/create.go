@@ -14,11 +14,10 @@ import (
 func NewCreateCommand(tracker *analytics.Tracker) *cobra.Command {
 	createCmd := &cobra.Command{
 		Use:   "create",
-		Short: "Create a cluster or a sample configuration file",
+		Short: "Create a sample configuration file",
 	}
 
-	createCmd.AddCommand(create.NewClusterCmd(tracker))
-	createCmd.AddCommand(create.NewConfigCmd(tracker))
+	createCmd.AddCommand(create.NewConfigCommand(tracker))
 
 	return createCmd
 }
