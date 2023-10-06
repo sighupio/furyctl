@@ -17,6 +17,8 @@ import (
 	"github.com/sighupio/furyctl/internal/tool/awscli"
 	"github.com/sighupio/furyctl/internal/tool/furyagent"
 	"github.com/sighupio/furyctl/internal/tool/git"
+	"github.com/sighupio/furyctl/internal/tool/helm"
+	"github.com/sighupio/furyctl/internal/tool/helmfile"
 	"github.com/sighupio/furyctl/internal/tool/kubectl"
 	"github.com/sighupio/furyctl/internal/tool/kustomize"
 	"github.com/sighupio/furyctl/internal/tool/openvpn"
@@ -145,6 +147,22 @@ func (f *Factory) Create(name tool.Name, version string) Tool {
 		}
 
 		return NewShell(shellr, version)
+
+	case tool.Helm:
+		hr, ok := t.(*helm.Runner)
+		if !ok {
+			panic(fmt.Sprintf("expected helm.Runner, got %T", t))
+		}
+
+		return NewHelm(hr, version)
+
+	case tool.Helmfile:
+		hfr, ok := t.(*helmfile.Runner)
+		if !ok {
+			panic(fmt.Sprintf("expected helmfile.Runner, got %T", t))
+		}
+
+		return NewHelmfile(hfr, version)
 
 	default:
 		return nil

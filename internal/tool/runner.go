@@ -11,6 +11,8 @@ import (
 	"github.com/sighupio/furyctl/internal/tool/awscli"
 	"github.com/sighupio/furyctl/internal/tool/furyagent"
 	"github.com/sighupio/furyctl/internal/tool/git"
+	"github.com/sighupio/furyctl/internal/tool/helm"
+	"github.com/sighupio/furyctl/internal/tool/helmfile"
 	"github.com/sighupio/furyctl/internal/tool/kubectl"
 	"github.com/sighupio/furyctl/internal/tool/kustomize"
 	"github.com/sighupio/furyctl/internal/tool/openvpn"
@@ -33,6 +35,8 @@ const (
 	Openvpn   Name = "openvpn"
 	Terraform Name = "terraform"
 	Shell     Name = "shell"
+	Helm      Name = "helm"
+	Helmfile  Name = "helmfile"
 )
 
 type Runner interface {
@@ -61,8 +65,9 @@ func (rf *RunnerFactory) Create(name Name, version, workDir string) Runner {
 	switch name {
 	case Ansible:
 		return ansible.NewRunner(rf.executor, ansible.Paths{
-			Ansible: string(name),
-			WorkDir: workDir,
+			Ansible:         string(name),
+			AnsiblePlaybook: "ansible-playbook",
+			WorkDir:         workDir,
 		})
 
 	case Awscli:
@@ -121,6 +126,18 @@ func (rf *RunnerFactory) Create(name Name, version, workDir string) Runner {
 		return shell.NewRunner(rf.executor, shell.Paths{
 			Shell:   "sh",
 			WorkDir: workDir,
+		})
+
+	case Helm:
+		return helm.NewRunner(rf.executor, helm.Paths{
+			Helm:    filepath.Join(rf.paths.Bin, string(name), version, string(name)),
+			WorkDir: workDir,
+		})
+
+	case Helmfile:
+		return helmfile.NewRunner(rf.executor, helmfile.Paths{
+			Helmfile: filepath.Join(rf.paths.Bin, string(name), version, string(name)),
+			WorkDir:  workDir,
 		})
 
 	default:

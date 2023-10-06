@@ -1,0 +1,5 @@
+#!/bin/sh
+
+cat <<EOF
+v3.12.3+g825e86f
+EOF

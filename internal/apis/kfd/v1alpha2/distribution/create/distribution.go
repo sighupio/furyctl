@@ -22,14 +22,11 @@ import (
 	"github.com/sighupio/furyctl/internal/tool/kubectl"
 	"github.com/sighupio/furyctl/internal/tool/shell"
 	execx "github.com/sighupio/furyctl/internal/x/exec"
+	iox "github.com/sighupio/furyctl/internal/x/io"
 	yamlx "github.com/sighupio/furyctl/internal/x/yaml"
 )
 
-var (
-	errClusterConnect = errors.New("error connecting to cluster")
-	errNoStorageClass = errors.New("at least one storage class is required")
-	errNodesNotReady  = errors.New("all nodes should be Ready")
-)
+var errNodesNotReady = errors.New("all nodes should be Ready")
 
 type Distribution struct {
 	*cluster.OperationPhase
@@ -91,6 +88,13 @@ func (d *Distribution) Exec() error {
 		return fmt.Errorf("error creating distribution phase folder: %w", err)
 	}
 
+	if _, err := os.Stat(path.Join(d.OperationPhase.Path, "manifests")); os.IsNotExist(err) {
+		err = os.Mkdir(path.Join(d.OperationPhase.Path, "manifests"), iox.FullPermAccess)
+		if err != nil {
+			return fmt.Errorf("error creating manifests folder: %w", err)
+		}
+	}
+
 	furyctlMerger, err := d.createFuryctlMerger()
 	if err != nil {
 		return err
@@ -102,9 +106,42 @@ func (d *Distribution) Exec() error {
 	}
 
 	mCfg.Data["paths"] = map[any]any{
-		"kubectl":   d.OperationPhase.KubectlPath,
-		"kustomize": d.OperationPhase.KustomizePath,
-		"yq":        d.OperationPhase.YqPath,
+		"kubectl":   d.KubectlPath,
+		"kustomize": d.KustomizePath,
+		"yq":        d.YqPath,
+	}
+
+	// Check cluster connection and requirements.
+	storageClassAvailable := true
+
+	logrus.Info("Checking that the cluster is reachable...")
+
+	if _, err := d.kubeRunner.Version(); err != nil {
+		logrus.Debugf("Got error while running cluster reachability check: %s", err)
+
+		return fmt.Errorf("error connecting to cluster: %w", err)
+	}
+
+	logrus.Info("Checking storage classes...")
+
+	getStorageClassesOutput, err := d.kubeRunner.Get("", "storageclasses")
+	if err != nil {
+		return fmt.Errorf("error while checking storage class: %w", err)
+	}
+
+	if getStorageClassesOutput == "No resources found" {
+		logrus.Warn(
+			"No storage classes found in the cluster. " +
+				"logging module (if enabled), dr module (if enabled) " +
+				"and prometheus-operated package installation will be skipped. " +
+				"You need to install a StorageClass and re-run furyctl to install the missing components.",
+		)
+
+		storageClassAvailable = false
+	}
+
+	mCfg.Data["checks"] = map[any]any{
+		"storageClassAvailable": storageClassAvailable,
 	}
 
 	// Generate manifests.
@@ -151,27 +188,9 @@ func (d *Distribution) Exec() error {
 			return fmt.Errorf("error applying resources: %w", err)
 		}
 
+		logrus.Info("Kubernetes Fury Distribution installed successfully (dry-run mode)")
+
 		return nil
-	}
-
-	// Check cluster connection and requirements.
-	logrus.Info("Checking that the cluster is reachable...")
-
-	if _, err := d.kubeRunner.Version(); err != nil {
-		logrus.Debugf("Got error while running cluster reachability check: %s", err)
-
-		return errClusterConnect
-	}
-
-	logrus.Info("Checking if at least one storage class is available...")
-
-	getStorageClassesOutput, err := d.kubeRunner.Get("", "storageclasses")
-	if err != nil {
-		return fmt.Errorf("error while checking storage class: %w", err)
-	}
-
-	if getStorageClassesOutput == "No resources found" {
-		return errNoStorageClass
 	}
 
 	if d.furyctlConf.Spec.Distribution.Modules.Networking.Type == "none" {
@@ -198,6 +217,8 @@ func (d *Distribution) Exec() error {
 	if _, err := d.shellRunner.Run(path.Join(d.Path, "scripts", "apply.sh"), "false", d.kubeconfig); err != nil {
 		return fmt.Errorf("error applying manifests: %w", err)
 	}
+
+	logrus.Info("Kubernetes Fury Distribution installed successfully")
 
 	return nil
 }
@@ -261,11 +282,9 @@ func (d *Distribution) createFuryctlMerger() (*merge.Merger, error) {
 		return &merge.Merger{}, fmt.Errorf("%s - %w", d.furyctlConfPath, err)
 	}
 
-	furyctlConfMergeModel := merge.NewDefaultModel(furyctlConf, ".spec.distribution")
-
 	merger := merge.NewMerger(
 		merge.NewDefaultModel(defaultsFile, ".data"),
-		furyctlConfMergeModel,
+		merge.NewDefaultModel(furyctlConf, ".spec.distribution"),
 	)
 
 	_, err = merger.Merge()

@@ -81,7 +81,7 @@ func TestSetConfigEnv(t *testing.T) {
 	}
 }
 
-func TestCopyConfigToWorkDir(t *testing.T) {
+func TestCopyToWorkDir(t *testing.T) {
 	t.Parallel()
 
 	dirPath, err := os.MkdirTemp("", "test-kube-config-")
@@ -98,7 +98,7 @@ func TestCopyConfigToWorkDir(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	err = kubex.CopyConfigToWorkDir(p)
+	err = kubex.CopyToWorkDir(p, "kubeconfig")
 	if err != nil {
 		t.Fatal(err)
 	}

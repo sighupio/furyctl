@@ -1,0 +1,5 @@
+#!/bin/sh
+
+cat <<EOF
+v0.155.0
+EOF

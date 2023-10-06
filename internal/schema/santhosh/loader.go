@@ -24,6 +24,7 @@ func LoadSchema(schemaPath string) (*jsonschema.Schema, error) {
 	}
 
 	compiler := jsonschema.NewCompiler()
+
 	if err = compiler.AddResource(schemaPath, bytes.NewReader(data)); err != nil {
 		return nil, fmt.Errorf("%w: %v", berr, err)
 	}

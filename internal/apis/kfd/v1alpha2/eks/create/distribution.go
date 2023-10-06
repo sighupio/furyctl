@@ -180,6 +180,10 @@ func (d *Distribution) Exec() error {
 			"yq":        d.OperationPhase.YqPath,
 		}
 
+		mCfg.Data["checks"] = map[any]any{
+			"storageClassAvailable": true,
+		}
+
 		if err := d.copyFromTemplate(mCfg); err != nil {
 			return err
 		}
@@ -212,9 +216,13 @@ func (d *Distribution) Exec() error {
 	}
 
 	mCfg.Data["paths"] = map[any]any{
-		"kubectl":   d.OperationPhase.KubectlPath,
-		"kustomize": d.OperationPhase.KustomizePath,
-		"yq":        d.OperationPhase.YqPath,
+		"kubectl":   d.KubectlPath,
+		"kustomize": d.KustomizePath,
+		"yq":        d.YqPath,
+	}
+
+	mCfg.Data["checks"] = map[any]any{
+		"storageClassAvailable": true,
 	}
 
 	if err := d.copyFromTemplate(mCfg); err != nil {
@@ -314,11 +322,9 @@ func (d *Distribution) createFuryctlMerger() (*merge.Merger, error) {
 		return &merge.Merger{}, fmt.Errorf("%s - %w", d.furyctlConfPath, err)
 	}
 
-	furyctlConfMergeModel := merge.NewDefaultModel(furyctlConf, ".spec.distribution")
-
 	merger := merge.NewMerger(
 		merge.NewDefaultModel(defaultsFile, ".data"),
-		furyctlConfMergeModel,
+		merge.NewDefaultModel(furyctlConf, ".spec.distribution"),
 	)
 
 	_, err = merger.Merge()

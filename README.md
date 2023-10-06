@@ -9,7 +9,7 @@
 <!-- FIXME: UPDATE THE BUILD BADGE WITH THE RIGHT BRANCH -->
 
 [![Build Status](https://ci.sighup.io/api/badges/sighupio/furyctl/status.svg)](https://ci.sighup.io/sighupio/furyctl)
-![Release](https://img.shields.io/badge/furyctl-v0.26.0-blue)
+![Release](https://img.shields.io/badge/furyctl-v0.26.2-blue)
 ![Slack](https://img.shields.io/badge/slack-@kubernetes/fury-yellow.svg?logo=slack)
 ![License](https://img.shields.io/github/license/sighupio/furyctl)
 [![Go Report Card](https://goreportcard.com/badge/github.com/sighupio/furyctl)](https://goreportcard.com/report/github.com/sighupio/furyctl)
@@ -34,6 +34,7 @@ If you're looking for the old documentation, you can find it [here](https://gith
 
 - `EKSCluster`: Provides comprehensive lifecycle management for an EKS cluster on AWS. It handles the installation of the VPC, VPN, EKS using the installers, and deploys the Distribution onto the EKS cluster.
 - `KFDDistribution`: Dedicated provider for the distribution, which installs the Distribution (modules only) on an existing Kubernetes cluster.
+- `OnPremises`: Provider to install a KFD Cluster on VMs.
 
 ## Installation
 
@@ -44,7 +45,7 @@ You can find `furyctl` binaries on the [Releases page](https://github.com/sighup
 To download the latest release, run:
 
 ```console
-curl -L "https://github.com/sighupio/furyctl/releases/download/v0.26.0/furyctl_$(uname -s)_x86_64.tar.gz" -o /tmp/furyctl.tar.gz && tar xfz /tmp/furyctl.tar.gz -C /tmp
+curl -L "https://github.com/sighupio/furyctl/releases/download/v0.26.2/furyctl_$(uname -s)_x86_64.tar.gz" -o /tmp/furyctl.tar.gz && tar xfz /tmp/furyctl.tar.gz -C /tmp
 chmod +x /tmp/furyctl
 sudo mv /tmp/furyctl /usr/local/bin/furyctl
 ```
@@ -75,7 +76,7 @@ $ furyctl version
 ...
 goVersion: go1.20
 osArch: amd64
-version: 0.26.0
+version: 0.26.2
 ```
 
 ### Installing from source
@@ -161,7 +162,7 @@ Basic usage of `furyctl` for a new project consists on the following steps:
 
 Furyctl configuration files have a kind that specifies what type of cluster will be created, for example the `EKSCluster` kind has all the parameters needed to create a KFD cluster using the EKS managed clusters from AWS.
 
-You can also use the `KFDDistribution` kind to install the KFD distribution on top of an existing Kubernetes cluster.
+You can also use the `KFDDistribution` kind to install the KFD distribution on top of an existing Kubernetes cluster or `OnPremises` kind to TODO.
 
 Additionaly, the schema of the file is versioned with the `apiVersion` field, so when new features are introduced you can switch to a newer version of the configuration file structure.
 

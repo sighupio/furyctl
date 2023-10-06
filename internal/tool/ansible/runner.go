@@ -13,8 +13,9 @@ import (
 )
 
 type Paths struct {
-	Ansible string
-	WorkDir string
+	Ansible         string
+	AnsiblePlaybook string
+	WorkDir         string
 }
 
 type Runner struct {
@@ -48,8 +49,61 @@ func (r *Runner) newCmd(args []string) (*execx.Cmd, string) {
 	return cmd, id
 }
 
+func (r *Runner) newPlaybookCmd(args []string) (*execx.Cmd, string) {
+	cmd := execx.NewCmd(r.paths.AnsiblePlaybook, execx.CmdOptions{
+		Args:     args,
+		Executor: r.executor,
+		WorkDir:  r.paths.WorkDir,
+	})
+
+	id := uuid.NewString()
+	r.cmds[id] = cmd
+
+	return cmd, id
+}
+
 func (r *Runner) deleteCmd(id string) {
 	delete(r.cmds, id)
+}
+
+func (r *Runner) Playbook(params ...string) ([]byte, error) {
+	args := []string{}
+	out := []byte{}
+
+	if len(params) > 0 {
+		args = append(args, params...)
+	}
+
+	cmd, id := r.newPlaybookCmd(args)
+	defer r.deleteCmd(id)
+
+	if err := cmd.Run(); err != nil {
+		return out, fmt.Errorf("command execution failed: %w", err)
+	}
+
+	out = cmd.Log.Out.Bytes()
+
+	return out, nil
+}
+
+func (r *Runner) Exec(params ...string) ([]byte, error) {
+	args := []string{}
+	out := []byte{}
+
+	if len(params) > 0 {
+		args = append(args, params...)
+	}
+
+	cmd, id := r.newCmd(args)
+	defer r.deleteCmd(id)
+
+	if err := cmd.Run(); err != nil {
+		return out, fmt.Errorf("command execution failed: %w", err)
+	}
+
+	out = cmd.Log.Out.Bytes()
+
+	return out, nil
 }
 
 func (r *Runner) Version() (string, error) {

@@ -163,6 +163,9 @@ func (m *IACBuilder) defaultsFile() (map[any]any, error) {
 	case "KFDDistribution":
 		defaultsFileName = "kfddistribution-kfd-v1alpha2.yaml"
 
+	case "OnPremises":
+		defaultsFileName = "onpremises-kfd-v1alpha2.yaml"
+
 	default:
 		return nil, ErrInvalidKind
 	}
