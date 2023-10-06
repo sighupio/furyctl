@@ -23,7 +23,7 @@ var (
 	ErrPowershellCompletion = errors.New("error generating powershell completion")
 )
 
-func NewCompletionCmd(tracker *analytics.Tracker) *cobra.Command {
+func NewCompletionCommand(tracker *analytics.Tracker) *cobra.Command {
 	var cmdEvent analytics.Event
 
 	return &cobra.Command{

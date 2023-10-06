@@ -204,15 +204,16 @@ furyctl is a command line interface tool to manage the full lifecycle of a Kuber
 			"authentication while downloading, for example for private repositories",
 	)
 
-	rootCmd.AddCommand(NewCompletionCmd(tracker))
+	rootCmd.AddCommand(NewCompletionCommand(tracker))
 	rootCmd.AddCommand(NewCreateCommand(tracker))
-	rootCmd.AddCommand(NewDownloadCmd(tracker))
-	rootCmd.AddCommand(NewDumpCmd(tracker))
+	rootCmd.AddCommand(NewDownloadCommand(tracker))
+	rootCmd.AddCommand(NewDumpCommand(tracker))
 	rootCmd.AddCommand(NewValidateCommand(tracker))
 	rootCmd.AddCommand(NewVersionCmd(versions, tracker))
 	rootCmd.AddCommand(NewDeleteCommand(tracker))
 	rootCmd.AddCommand(NewLegacyCommand(tracker))
 	rootCmd.AddCommand(NewConnectCommand(tracker))
+	rootCmd.AddCommand(NewApplyCommand(tracker))
 
 	return rootCmd
 }

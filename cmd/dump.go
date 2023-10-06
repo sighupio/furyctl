@@ -11,7 +11,7 @@ import (
 	"github.com/sighupio/furyctl/internal/analytics"
 )
 
-func NewDumpCmd(tracker *analytics.Tracker) *cobra.Command {
+func NewDumpCommand(tracker *analytics.Tracker) *cobra.Command {
 	dumpCmd := &cobra.Command{
 		Use:   "dump",
 		Short: "Dump manifests templates and other useful KFD objects",
