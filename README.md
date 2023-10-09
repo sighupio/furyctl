@@ -199,15 +199,16 @@ Requirements (EKSCluster):
 
 In the previous step, you have created and validated a configuration file that defines the Kubernetes cluster and its sorroundings, you can now proceed to actually creating the resources.
 
-Furyctl divides the cluster creation in three phases: `infrastructure`, `kubernetes` and `distribution`.
+Furyctl divides the cluster creation in four phases: `infrastructure`, `kubernetes`, `distribution` and `plugins`.
 
 1. The first phase, `infrastructure`, creates all the prerequisites needed to be able to create a cluster. For example, the VPC and its networks.
 2. The second phase, `kubernetes`, creates the actual Kubernetes clusters. For example, the EKS cluster and its node pools.
 3. The third phase, `distribution`, deploys KFD modules to the Kubernetes cluster.
+4. The fourth phase, `plugins`, installs Helm and Kustomize plugins into the cluster.
 
 > 📖 **NOTE**
 >
-> You will find these three phases when editing the furyctl.yaml file.
+> You will find these four phases when editing the furyctl.yaml file.
 
 Just like you can validate that your configuration file is well formed, `furyctl` let you check that you have all the needed dependencies (environment variables, binaries, etc.) before starting a cluster creation process.
 
@@ -342,6 +343,53 @@ This can be still used to manually manage all the components of the distribution
 > 💡 **TIP**
 >
 > you can also use `--furyfile` to point to a `Furyfile.yml` in a different folder
+
+#### Plugins
+
+Furyctl supports Helm and Kustomize plugins.
+
+##### Helm plugins
+
+To install an Helm plugin (chart), first you have to add the repository to the `spec.plugins.helm.repositories` section of your `furyctl.yaml` file and then you can add the release to the `spec.plugins.helm.releases` section, specifying the chart name, the namespace, the chart version and the values to override. To override the values you can use the `spec.plugins.helm.releases[].set` or the `spec.plugins.helm.releases[].values` section.
+
+For example to install the Prometheus Helm chart you have to add the following to your `furyctl.yaml`:
+
+```yaml
+...
+spec:
+  ...
+  plugins:
+    helm:
+      repositories:
+        - name: prometheus-community
+          url: https://prometheus-community.github.io/helm-charts
+      releases:
+        - name: prometheus
+          namespace: prometheus
+          chart: prometheus-community/prometheus
+          version: "24.3.0"
+          set:
+            - name: server.replicaCount
+              value: 3
+          values:
+            - path/to/values.yaml
+```
+
+##### Kustomize plugins
+
+To install a Kustomize plugin (project) you have to configure the `spec.plugins.kustomize` section of your `furyctl.yaml` file, specifying a name and the path to the folder.
+
+For example:
+
+```yaml
+...
+spec:
+  ...
+  plugins:
+    kustomize:
+      - name: kustomize-project
+        folder: path/to/kustomize/project
+```
 
 ### Advanced Tips
 
