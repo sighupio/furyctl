@@ -162,14 +162,14 @@ Basic usage of `furyctl` for a new project consists on the following steps:
 
 Furyctl configuration files have a kind that specifies what type of cluster will be created, for example the `EKSCluster` kind has all the parameters needed to create a KFD cluster using the EKS managed clusters from AWS.
 
-You can also use the `KFDDistribution` kind to install the KFD distribution on top of an existing Kubernetes cluster or `OnPremises` kind to TODO.
+You can also use the `KFDDistribution` kind to install the KFD distribution on top of an existing Kubernetes cluster or `OnPremises` kind to install a KFD cluster on VMs.
 
 Additionaly, the schema of the file is versioned with the `apiVersion` field, so when new features are introduced you can switch to a newer version of the configuration file structure.
 
 To scaffold a configuration file to use as a starter, you use the following command:
 
 ```console
-furyctl create config --version v1.26.0 --kind "EKSCluster"
+furyctl create config --version v1.26.2 --kind "EKSCluster"
 ```
 
 > 💡 **TIP**
@@ -318,20 +318,20 @@ but you can limit the execution to a specific phase by using the `--phase` flag.
 To create a cluster step by step, you can run the following command:
 
 ```bash
-furyctl create cluster --phase infrastructure'
+furyctl create cluster --phase infrastructure
 ```
 
 If you choose to create a VPN in the infrastructure phase, you can automatically connect to it by using the flag `--vpn-auto-connect`.
 
 ```bash
-furyctl create cluster --phase kubernetes'
+furyctl create cluster --phase kubernetes
 ```
 
 After running the command, remember to export the `KUBECONFIG` environment variable to point to the generated kubeconfig file or
 to use the flag `--kubeconfig` in the following command.
 
 ```bash
-furyctl create cluster --phase distribution'
+furyctl create cluster --phase distribution
 ```
 
 #### Legacy download
