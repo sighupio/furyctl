@@ -53,12 +53,16 @@ func (r *Runner) deleteCmd(id string) {
 	delete(r.cmds, id)
 }
 
-func (r *Runner) ConfigOpenvpnClient(name string, _ ...string) (*bytes.Buffer, error) {
+func (r *Runner) ConfigOpenvpnClient(name string, params ...string) (*bytes.Buffer, error) {
 	args := []string{
 		"configure",
 		"openvpn-client",
 		fmt.Sprintf("--client-name=%s", name),
 		"--config=furyagent.yml",
+	}
+
+	if len(params) > 0 {
+		args = append(args, params...)
 	}
 
 	cmd, id := r.newCmd(args)
