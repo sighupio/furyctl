@@ -14,7 +14,6 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/google/uuid"
 	"github.com/shirou/gopsutil/v3/process"
 	"github.com/sirupsen/logrus"
 
@@ -118,30 +117,10 @@ func (v *Connector) GenerateCertificates() error {
 		return err
 	}
 
-	bucketName, err := v.getFuryAgentBucketName()
-	if err != nil {
-		return err
-	}
-
 	opvnCertPath := filepath.Join(v.certDir, fmt.Sprintf("%s.ovpn", clientName))
 
 	if _, err := os.Stat(opvnCertPath); os.IsNotExist(err) {
-		if err := v.assertOldClientCertificateExists(bucketName, clientName); err == nil {
-			logrus.Info("Old VPN client certificate found. Backing up...")
-
-			c, err := v.backupOldClientCertificate(bucketName, clientName)
-			if err != nil {
-				return err
-			}
-
-			logrus.Info("Revoking old VPN client certificate...")
-
-			if _, err := v.faRunner.ConfigOpenvpnClient(c, "--revoke"); err != nil {
-				return fmt.Errorf("error configuring openvpn client: %w", err)
-			}
-		}
-
-		logrus.Info("Generating new VPN client certificate...")
+		logrus.Info("Generating VPN client certificate...")
 
 		out, err := v.faRunner.ConfigOpenvpnClient(clientName)
 		if err != nil {
@@ -158,43 +137,6 @@ func (v *Connector) GenerateCertificates() error {
 	}
 
 	return nil
-}
-
-func (v *Connector) getFuryAgentBucketName() (string, error) {
-	faCfg, err := furyagent.ParseConfig(filepath.Join(v.certDir, "furyagent.yml"))
-	if err != nil {
-		return "", fmt.Errorf("error parsing furyagent config: %w", err)
-	}
-
-	return faCfg.Storage.BucketName, nil
-}
-
-func (v *Connector) assertOldClientCertificateExists(bucketName, certName string) error {
-	if _, err := v.awsRunner.S3(
-		false,
-		"ls",
-		fmt.Sprintf("s3://%s/pki/vpn-client/%s.crt", bucketName, certName),
-	); err != nil {
-		return fmt.Errorf("error checking if old certificate exists: %w", err)
-	}
-
-	return nil
-}
-
-func (v *Connector) backupOldClientCertificate(bucketName, certName string) (string, error) {
-	u := uuid.New()
-
-	newCertName := fmt.Sprintf("%s-%s-backup", certName, u.String())
-
-	if _, err := v.awsRunner.S3(
-		false,
-		"mv",
-		fmt.Sprintf("s3://%s/pki/vpn-client/%s.crt", bucketName, certName),
-		fmt.Sprintf("s3://%s/pki/vpn-client/%s.crt", bucketName, newCertName)); err != nil {
-		return newCertName, fmt.Errorf("error backing up old certificate: %w", err)
-	}
-
-	return newCertName, nil
 }
 
 func (v *Connector) writeOVPNFileToDisk(certName string, cert []byte) error {
