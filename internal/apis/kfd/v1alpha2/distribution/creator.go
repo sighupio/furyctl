@@ -7,21 +7,14 @@ package distribution
 import (
 	"errors"
 	"fmt"
-	"os"
-	"path"
 	"strings"
-
-	"github.com/sirupsen/logrus"
 
 	"github.com/sighupio/fury-distribution/pkg/apis/config"
 	"github.com/sighupio/fury-distribution/pkg/apis/kfddistribution/v1alpha2/public"
 	commcreate "github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/common/create"
 	"github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/distribution/create"
 	"github.com/sighupio/furyctl/internal/cluster"
-	"github.com/sighupio/furyctl/internal/tool/kubectl"
-	execx "github.com/sighupio/furyctl/internal/x/exec"
-	iox "github.com/sighupio/furyctl/internal/x/io"
-	kubex "github.com/sighupio/furyctl/internal/x/kube"
+	"github.com/sighupio/furyctl/internal/state"
 )
 
 var ErrUnsupportedPhase = errors.New("unsupported phase")
@@ -29,6 +22,7 @@ var ErrUnsupportedPhase = errors.New("unsupported phase")
 type ClusterCreator struct {
 	paths       cluster.CreatorPaths
 	furyctlConf public.KfddistributionKfdV1Alpha2
+	stateStore  state.Storer
 	kfdManifest config.KFD
 	phase       string
 	dryRun      bool
@@ -38,6 +32,15 @@ func (c *ClusterCreator) SetProperties(props []cluster.CreatorProperty) {
 	for _, prop := range props {
 		c.SetProperty(prop.Name, prop.Value)
 	}
+
+	c.stateStore = state.NewStore(
+		c.paths.DistroPath,
+		c.paths.ConfigPath,
+		c.paths.Kubeconfig,
+		c.paths.WorkDir,
+		c.kfdManifest.Tools.Common.Kubectl.Version,
+		c.paths.BinPath,
+	)
 }
 
 func (c *ClusterCreator) SetProperty(name string, value any) {
@@ -112,6 +115,22 @@ func (c *ClusterCreator) Create(skipPhase string, _ int) error {
 		return fmt.Errorf("error while initiating plugins phase: %w", err)
 	}
 
+	preflight, err := create.NewPreFlight(
+		c.furyctlConf,
+		c.kfdManifest,
+		c.paths,
+		c.dryRun,
+		c.paths.Kubeconfig,
+		c.stateStore,
+	)
+	if err != nil {
+		return fmt.Errorf("error while initiating preflight phase: %w", err)
+	}
+
+	if err := preflight.Exec(); err != nil {
+		return fmt.Errorf("error while executing preflight phase: %w", err)
+	}
+
 	switch c.phase {
 	case cluster.OperationPhaseDistribution:
 		if err := distributionPhase.Exec(); err != nil {
@@ -144,82 +163,12 @@ func (c *ClusterCreator) Create(skipPhase string, _ int) error {
 		return nil
 	}
 
-	if err := c.storeClusterConfig(); err != nil {
+	if err := c.stateStore.StoreConfig(); err != nil {
 		return fmt.Errorf("error while storing cluster config: %w", err)
 	}
 
-	if err := c.storeDistributionConfig(); err != nil {
+	if err := c.stateStore.StoreKFD(); err != nil {
 		return fmt.Errorf("error while storing distribution config: %w", err)
-	}
-
-	return nil
-}
-
-func (c *ClusterCreator) storeClusterConfig() error {
-	// This code is duplicated, we should refactor it.
-	x, err := os.ReadFile(c.paths.ConfigPath)
-	if err != nil {
-		return fmt.Errorf("error while reading config file: %w", err)
-	}
-
-	secret, err := kubex.CreateSecret(x, "furyctl-config", "config", "kube-system")
-	if err != nil {
-		return fmt.Errorf("error while creating secret: %w", err)
-	}
-
-	secretPath := path.Join(c.paths.WorkDir, "secrets.yaml")
-
-	if err := iox.WriteFile(secretPath, secret); err != nil {
-		return fmt.Errorf("error while writing secret: %w", err)
-	}
-
-	defer os.Remove(secretPath)
-
-	runner := kubectl.NewRunner(execx.NewStdExecutor(), kubectl.Paths{
-		Kubectl:    path.Join(c.paths.BinPath, "kubectl", c.kfdManifest.Tools.Common.Kubectl.Version, "kubectl"),
-		WorkDir:    c.paths.WorkDir,
-		Kubeconfig: c.paths.Kubeconfig,
-	}, true, true, false)
-
-	logrus.Info("Saving furyctl configuration file in the cluster...")
-
-	if err := runner.Apply(secretPath); err != nil {
-		return fmt.Errorf("error while saving furyctl configuration file in the cluster: %w", err)
-	}
-
-	return nil
-}
-
-func (c *ClusterCreator) storeDistributionConfig() error {
-	// This code is duplicated, we should refactor it.
-	x, err := os.ReadFile(path.Join(c.paths.DistroPath, "kfd.yaml"))
-	if err != nil {
-		return fmt.Errorf("error while reading config file: %w", err)
-	}
-
-	secret, err := kubex.CreateSecret(x, "furyctl-kfd", "kfd", "kube-system")
-	if err != nil {
-		return fmt.Errorf("error while creating secret: %w", err)
-	}
-
-	secretPath := path.Join(c.paths.WorkDir, "secrets-kfd.yaml")
-
-	if err := iox.WriteFile(secretPath, secret); err != nil {
-		return fmt.Errorf("error while writing secret: %w", err)
-	}
-
-	defer os.Remove(secretPath)
-
-	runner := kubectl.NewRunner(execx.NewStdExecutor(), kubectl.Paths{
-		Kubectl:    path.Join(c.paths.BinPath, "kubectl", c.kfdManifest.Tools.Common.Kubectl.Version, "kubectl"),
-		WorkDir:    c.paths.WorkDir,
-		Kubeconfig: c.paths.Kubeconfig,
-	}, true, true, false)
-
-	logrus.Info("Saving distribution configuration file in the cluster...")
-
-	if err := runner.Apply(secretPath); err != nil {
-		return fmt.Errorf("error while saving distribution configuration file in the cluster: %w", err)
 	}
 
 	return nil

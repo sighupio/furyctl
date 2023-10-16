@@ -88,6 +88,8 @@ require (
 	github.com/tklauser/numcpus v0.6.1 // indirect
 	github.com/ulikunitz/xz v0.5.11 // indirect
 	github.com/yusufpapurcu/wmi v1.2.3 // indirect
+	github.com/vmihailenco/msgpack/v5 v5.3.5 // indirect
+	github.com/vmihailenco/tagparser/v2 v2.0.0 // indirect
 	github.com/zclconf/go-cty v1.12.1 // indirect
 	go.opencensus.io v0.24.0 // indirect
 	go.uber.org/atomic v1.9.0 // indirect
