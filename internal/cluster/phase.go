@@ -17,6 +17,7 @@ import (
 )
 
 const (
+	OperationPhasePreFlight      = "preflight"
 	OperationPhaseInfrastructure = "infrastructure"
 	OperationPhaseKubernetes     = "kubernetes"
 	OperationPhaseDistribution   = "distribution"
@@ -32,6 +33,7 @@ var errUnsupportedPhase = errors.New(
 
 func CheckPhase(phase string) error {
 	switch phase {
+	case OperationPhasePreFlight:
 	case OperationPhaseInfrastructure:
 	case OperationPhaseKubernetes:
 	case OperationPhaseDistribution:
