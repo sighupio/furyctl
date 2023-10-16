@@ -7,7 +7,9 @@ package create
 import (
 	"errors"
 	"fmt"
+	"os"
 	"path"
+	"path/filepath"
 
 	"github.com/sirupsen/logrus"
 
@@ -16,7 +18,10 @@ import (
 	"github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/onpremises/rules"
 	"github.com/sighupio/furyctl/internal/cluster"
 	"github.com/sighupio/furyctl/internal/diff"
+	"github.com/sighupio/furyctl/internal/merge"
 	"github.com/sighupio/furyctl/internal/state"
+	"github.com/sighupio/furyctl/internal/template"
+	"github.com/sighupio/furyctl/internal/tool/ansible"
 	"github.com/sighupio/furyctl/internal/tool/kubectl"
 	execx "github.com/sighupio/furyctl/internal/x/exec"
 	yamlx "github.com/sighupio/furyctl/internal/x/yaml"
@@ -27,11 +32,14 @@ var errImmutable = errors.New("immutable path changed")
 type PreFlight struct {
 	*cluster.OperationPhase
 	furyctlConf     public.OnpremisesKfdV1Alpha2
+	paths           cluster.CreatorPaths
 	stateStore      state.Storer
 	distroPath      string
 	furyctlConfPath string
 	kubeconfig      string
 	kubeRunner      *kubectl.Runner
+	ansibleRunner   *ansible.Runner
+	kfdManifest     config.KFD
 	dryRun          bool
 }
 
@@ -53,9 +61,18 @@ func NewPreFlight(
 	return &PreFlight{
 		OperationPhase:  phase,
 		furyctlConf:     furyctlConf,
+		paths:           paths,
 		stateStore:      stateStore,
 		distroPath:      paths.DistroPath,
 		furyctlConfPath: paths.ConfigPath,
+		ansibleRunner: ansible.NewRunner(
+			execx.NewStdExecutor(),
+			ansible.Paths{
+				Ansible:         "ansible",
+				AnsiblePlaybook: "ansible-playbook",
+				WorkDir:         phase.Path,
+			},
+		),
 		kubeRunner: kubectl.NewRunner(
 			execx.NewStdExecutor(),
 			kubectl.Paths{
@@ -67,15 +84,82 @@ func NewPreFlight(
 			true,
 			false,
 		),
-		kubeconfig: kubeconfig,
-		dryRun:     dryRun,
+		kubeconfig:  kubeconfig,
+		kfdManifest: kfdManifest,
+		dryRun:      dryRun,
 	}, nil
 }
 
 func (p *PreFlight) Exec() error {
 	logrus.Info("Running preflight checks")
 
-	// TODO: Check that cluster exists, ansible needed
+	if err := p.CreateFolder(); err != nil {
+		return fmt.Errorf("error creating kubernetes phase folder: %w", err)
+	}
+
+	furyctlMerger, err := p.createFuryctlMerger()
+	if err != nil {
+		return err
+	}
+
+	mCfg, err := template.NewConfigWithoutData(furyctlMerger, []string{})
+	if err != nil {
+		return fmt.Errorf("error creating template config: %w", err)
+	}
+
+	mCfg.Data["kubernetes"] = map[any]any{
+		"version": p.kfdManifest.Kubernetes.OnPremises.Version,
+	}
+
+	// Generate playbook and hosts file.
+	outYaml, err := yamlx.MarshalV2(mCfg)
+	if err != nil {
+		return fmt.Errorf("error marshaling template config: %w", err)
+	}
+
+	outDirPath1, err := os.MkdirTemp("", "furyctl-dist-")
+	if err != nil {
+		return fmt.Errorf("error creating temp dir: %w", err)
+	}
+
+	confPath := filepath.Join(outDirPath1, "config.yaml")
+
+	logrus.Debugf("config path = %s", confPath)
+
+	if err = os.WriteFile(confPath, outYaml, os.ModePerm); err != nil {
+		return fmt.Errorf("error writing config file: %w", err)
+	}
+
+	templateModel, err := template.NewTemplateModel(
+		path.Join(p.paths.DistroPath, "templates", cluster.OperationPhasePreFlight, "onpremises"),
+		path.Join(p.Path),
+		confPath,
+		outDirPath1,
+		p.furyctlConfPath,
+		".tpl",
+		false,
+		p.dryRun,
+	)
+	if err != nil {
+		return fmt.Errorf("error creating template model: %w", err)
+	}
+
+	err = templateModel.Generate()
+	if err != nil {
+		return fmt.Errorf("error generating from template files: %w", err)
+	}
+
+	if _, err := p.ansibleRunner.Exec("all", "-m", "ping"); err != nil {
+		return fmt.Errorf("error checking hosts: %w", err)
+	}
+
+	if _, err := p.ansibleRunner.Playbook("verify-playbook.yaml"); err != nil {
+		logrus.Debug("Cluster does not exist, skipping state checks")
+
+		logrus.Info("Preflight checks completed successfully")
+
+		return nil //nolint:nilerr // we want to return nil here
+	}
 
 	logrus.Info("Checking that the cluster is reachable...")
 
@@ -85,13 +169,7 @@ func (p *PreFlight) Exec() error {
 
 	storedCfg, err := p.GetStateFromCluster()
 	if err != nil {
-		logrus.Debug("error while getting cluster state: ", err)
-
-		logrus.Info("Cannot find state in cluster, skipping...")
-
-		logrus.Debug("check that the secret exists in the cluster if you want to run preflight checks")
-
-		return nil
+		return fmt.Errorf("error while getting current cluster config: %w", err)
 	}
 
 	if err := p.CheckStateDiffs(storedCfg); err != nil {
@@ -101,6 +179,43 @@ func (p *PreFlight) Exec() error {
 	logrus.Info("Preflight checks completed successfully")
 
 	return nil
+}
+
+//nolint:dupl // Remove duplicated code in the future.
+func (p *PreFlight) createFuryctlMerger() (*merge.Merger, error) {
+	defaultsFilePath := path.Join(p.paths.DistroPath, "defaults", "onpremises-kfd-v1alpha2.yaml")
+
+	defaultsFile, err := yamlx.FromFileV2[map[any]any](defaultsFilePath)
+	if err != nil {
+		return &merge.Merger{}, fmt.Errorf("%s - %w", defaultsFilePath, err)
+	}
+
+	furyctlConf, err := yamlx.FromFileV2[map[any]any](p.paths.ConfigPath)
+	if err != nil {
+		return &merge.Merger{}, fmt.Errorf("%s - %w", p.paths.ConfigPath, err)
+	}
+
+	merger := merge.NewMerger(
+		merge.NewDefaultModel(defaultsFile, ".data"),
+		merge.NewDefaultModel(furyctlConf, ".spec.distribution"),
+	)
+
+	_, err = merger.Merge()
+	if err != nil {
+		return nil, fmt.Errorf("error merging furyctl config: %w", err)
+	}
+
+	reverseMerger := merge.NewMerger(
+		*merger.GetCustom(),
+		*merger.GetBase(),
+	)
+
+	_, err = reverseMerger.Merge()
+	if err != nil {
+		return nil, fmt.Errorf("error merging furyctl config: %w", err)
+	}
+
+	return reverseMerger, nil
 }
 
 func (p *PreFlight) GetStateFromCluster() ([]byte, error) {
