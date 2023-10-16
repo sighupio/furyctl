@@ -153,6 +153,18 @@ func (r *Runner) Output() (OutputJSON, error) {
 	return oj, nil
 }
 
+func (r *Runner) State(params ...string) (string, error) {
+	cmd, outputID := r.newCmd(append([]string{"state"}, params...))
+
+	defer r.deleteCmd(outputID)
+
+	if err := cmd.Run(); err != nil {
+		return "", fmt.Errorf("cannot access terraform state: %w", err)
+	}
+
+	return cmd.Log.Out.String(), nil
+}
+
 func (r *Runner) Destroy() error {
 	args := []string{"destroy", "-auto-approve"}
 
