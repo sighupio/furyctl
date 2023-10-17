@@ -24,6 +24,7 @@ import (
 	"github.com/sighupio/furyctl/internal/tool/ansible"
 	"github.com/sighupio/furyctl/internal/tool/kubectl"
 	execx "github.com/sighupio/furyctl/internal/x/exec"
+	kubex "github.com/sighupio/furyctl/internal/x/kube"
 	yamlx "github.com/sighupio/furyctl/internal/x/yaml"
 )
 
@@ -159,6 +160,10 @@ func (p *PreFlight) Exec() error {
 		logrus.Info("Preflight checks completed successfully")
 
 		return nil //nolint:nilerr // we want to return nil here
+	}
+
+	if err := kubex.SetConfigEnv(path.Join(p.OperationPhase.Path, "admin.conf")); err != nil {
+		return fmt.Errorf("error setting kubeconfig env: %w", err)
 	}
 
 	logrus.Info("Checking that the cluster is reachable...")
