@@ -9,10 +9,8 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"os/user"
 	"path"
 	"path/filepath"
-	"strings"
 
 	"github.com/shirou/gopsutil/v3/process"
 	"github.com/sirupsen/logrus"
@@ -112,26 +110,21 @@ func (v *Connector) Connect() error {
 }
 
 func (v *Connector) GenerateCertificates() error {
-	clientName, err := v.ClientName()
-	if err != nil {
-		return err
-	}
-
-	opvnCertPath := filepath.Join(v.certDir, fmt.Sprintf("%s.ovpn", clientName))
+	opvnCertPath := filepath.Join(v.certDir, fmt.Sprintf("%s.ovpn", v.clusterName))
 
 	if _, err := os.Stat(opvnCertPath); os.IsNotExist(err) {
 		logrus.Info("Generating VPN client certificate...")
 
-		out, err := v.faRunner.ConfigOpenvpnClient(clientName)
+		out, err := v.faRunner.ConfigOpenvpnClient(v.clusterName)
 		if err != nil {
 			return fmt.Errorf("error configuring openvpn client: %w", err)
 		}
 
-		if err := v.writeOVPNFileToDisk(clientName, out.Bytes()); err != nil {
+		if err := v.writeOVPNFileToDisk(v.clusterName, out.Bytes()); err != nil {
 			return err
 		}
 
-		if err := v.copyOpenvpnToWorkDir(clientName); err != nil {
+		if err := v.copyOpenvpnToWorkDir(v.clusterName); err != nil {
 			return fmt.Errorf("error copying openvpn file to workdir: %w", err)
 		}
 	}
@@ -166,17 +159,6 @@ func (v *Connector) IsConfigured() bool {
 	}
 
 	return *instances > 0
-}
-
-func (v *Connector) ClientName() (string, error) {
-	u, err := user.Current()
-	if err != nil {
-		return "", fmt.Errorf("error getting current user: %w", err)
-	}
-
-	whoami := strings.TrimSpace(u.Username)
-
-	return fmt.Sprintf("%s-%s", v.clusterName, whoami), nil
 }
 
 func (v *Connector) GetKillMessage() (string, error) {
@@ -256,18 +238,13 @@ func (v *Connector) startOpenVPN() error {
 		return fmt.Errorf("error while checking if user is root: %w", err)
 	}
 
-	clientName, err := v.ClientName()
-	if err != nil {
-		return fmt.Errorf("error getting client name: %w", err)
-	}
-
 	if !isRoot {
 		connectMsg = fmt.Sprintf("%s, you will be asked for your SUDO password", connectMsg)
 	}
 
 	logrus.Infof("%s...", connectMsg)
 
-	if err := v.ovRunner.Connect(clientName); err != nil {
+	if err := v.ovRunner.Connect(v.clusterName); err != nil {
 		return fmt.Errorf("error connecting to VPN: %w", err)
 	}
 
@@ -290,12 +267,7 @@ func (*Connector) promptAutoConnect(pid int32) error {
 func (v *Connector) prompt() error {
 	connectMsg := "Please connect to the VPN before continuing"
 
-	clientName, err := v.ClientName()
-	if err != nil {
-		return fmt.Errorf("error getting client name: %w", err)
-	}
-
-	certPath := filepath.Join(v.workDir, fmt.Sprintf("%s.ovpn", clientName))
+	certPath := filepath.Join(v.workDir, fmt.Sprintf("%s.ovpn", v.clusterName))
 
 	if v.IsConfigured() {
 		isRoot, err := osx.IsRoot()
