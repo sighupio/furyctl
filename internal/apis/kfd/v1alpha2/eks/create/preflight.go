@@ -7,6 +7,7 @@ package create
 import (
 	"errors"
 	"fmt"
+	"github.com/sighupio/furyctl/internal/tool/awscli"
 	"io/fs"
 	"os"
 	"path"
@@ -39,6 +40,7 @@ type PreFlight struct {
 	kubeconfig      string
 	tfRunner        *terraform.Runner
 	kubeRunner      *kubectl.Runner
+	awsRunner       *awscli.Runner
 	dryRun          bool
 }
 
@@ -47,7 +49,6 @@ func NewPreFlight(
 	kfdManifest config.KFD,
 	paths cluster.CreatorPaths,
 	dryRun bool,
-	kubeconfig string,
 	stateStore state.Storer,
 ) (*PreFlight, error) {
 	preFlightDir := path.Join(paths.WorkDir, cluster.OperationPhasePreFlight)
@@ -56,6 +57,8 @@ func NewPreFlight(
 	if err != nil {
 		return nil, fmt.Errorf("error creating preflight phase: %w", err)
 	}
+
+	kubeconfig := path.Join(phase.Path, "kubeconfig")
 
 	return &PreFlight{
 		OperationPhase:  phase,
@@ -78,11 +81,18 @@ func NewPreFlight(
 			kubectl.Paths{
 				Kubectl:    phase.KubectlPath,
 				WorkDir:    phase.Path,
-				Kubeconfig: paths.Kubeconfig,
+				Kubeconfig: kubeconfig,
 			},
 			true,
 			true,
 			false,
+		),
+		awsRunner: awscli.NewRunner(
+			execx.NewStdExecutor(),
+			awscli.Paths{
+				Awscli:  "aws",
+				WorkDir: paths.WorkDir,
+			},
 		),
 		kubeconfig: kubeconfig,
 		dryRun:     dryRun,
@@ -114,6 +124,20 @@ func (p *PreFlight) Exec() error {
 		logrus.Info("Preflight checks completed successfully")
 
 		return nil //nolint:nilerr // we want to return nil here
+	}
+
+	logrus.Info("Updating kubeconfig...")
+
+	if _, err := p.awsRunner.Eks(
+		"update-kubeconfig",
+		"--name",
+		p.furyctlConf.Metadata.Name,
+		"--kubeconfig",
+		p.kubeconfig,
+		"--region",
+		string(p.furyctlConf.Spec.Region),
+	); err != nil {
+		return fmt.Errorf("error updating kubeconfig: %w", err)
 	}
 
 	logrus.Info("Checking that the cluster is reachable...")
@@ -214,7 +238,13 @@ func (p *PreFlight) CheckStateDiffs() error {
 
 	r, err := rules.NewEKSClusterRulesBuilder(p.distroPath)
 	if err != nil {
-		return fmt.Errorf("error while creating rules builder: %w", err)
+		if !errors.Is(err, rules.ErrReadingRulesFile) {
+			return fmt.Errorf("error while creating rules builder: %w", err)
+		}
+
+		logrus.Warn("No rules file found, skipping immutable checks")
+
+		return nil
 	}
 
 	errs = append(errs, diffChecker.AssertImmutableViolations(diffs, r.GetImmutables("infrastructure"))...)

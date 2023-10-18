@@ -12,7 +12,7 @@ import (
 	yamlx "github.com/sighupio/furyctl/internal/x/yaml"
 )
 
-var errReadingRulesFile = errors.New("error while reading rules file")
+var ErrReadingRulesFile = errors.New("error while reading rules file")
 
 type EKSRulesSpec struct {
 	Infrastructure []Rule `yaml:"infrastructure"`
@@ -34,16 +34,18 @@ type EKSBuilder struct {
 }
 
 func NewEKSClusterRulesBuilder(distributionPath string) (*EKSBuilder, error) {
+	builder := EKSBuilder{}
+
 	rulesPath := filepath.Join(distributionPath, "rules", "ekscluster-kfd-v1alpha2.yaml")
 
 	spec, err := yamlx.FromFileV3[EKSRulesSpec](rulesPath)
 	if err != nil {
-		return nil, fmt.Errorf("%w: %s", errReadingRulesFile, err)
+		return &builder, fmt.Errorf("%w: %s", ErrReadingRulesFile, err)
 	}
 
-	return &EKSBuilder{
-		Spec: spec,
-	}, nil
+	builder.Spec = spec
+
+	return &builder, nil
 }
 
 func (r *EKSBuilder) GetImmutables(phase string) []string {
