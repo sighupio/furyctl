@@ -7,7 +7,6 @@ package create
 import (
 	"errors"
 	"fmt"
-	"github.com/sighupio/furyctl/internal/tool/awscli"
 	"io/fs"
 	"os"
 	"path"
@@ -22,6 +21,7 @@ import (
 	"github.com/sighupio/furyctl/internal/diff"
 	"github.com/sighupio/furyctl/internal/state"
 	"github.com/sighupio/furyctl/internal/template"
+	"github.com/sighupio/furyctl/internal/tool/awscli"
 	"github.com/sighupio/furyctl/internal/tool/kubectl"
 	"github.com/sighupio/furyctl/internal/tool/terraform"
 	execx "github.com/sighupio/furyctl/internal/x/exec"
