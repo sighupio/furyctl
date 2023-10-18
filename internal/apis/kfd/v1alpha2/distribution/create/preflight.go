@@ -135,7 +135,13 @@ func (p *PreFlight) CheckStateDiffs(storedCfgStr []byte) error {
 
 	r, err := rules.NewDistroClusterRulesBuilder(p.distroPath)
 	if err != nil {
-		return fmt.Errorf("error while creating rules builder: %w", err)
+		if !errors.Is(err, rules.ErrReadingRulesFile) {
+			return fmt.Errorf("error while creating rules builder: %w", err)
+		}
+
+		logrus.Warn("No rules file found, skipping immutable checks")
+
+		return nil
 	}
 
 	errs = append(errs, diffChecker.AssertImmutableViolations(diffs, r.GetImmutables("distribution"))...)
