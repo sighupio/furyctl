@@ -100,6 +100,21 @@ func (r *Runner) S3Api(params ...string) (string, error) {
 	return out, nil
 }
 
+func (r *Runner) Eks(params ...string) (string, error) {
+	args := []string{"eks"}
+	args = append(args, params...)
+
+	cmd, id := r.newCmd(args)
+	defer r.deleteCmd(id)
+
+	out, err := execx.CombinedOutput(cmd)
+	if err != nil {
+		return "", fmt.Errorf("error executing awscli eks: %w", err)
+	}
+
+	return out, nil
+}
+
 func (r *Runner) Route53(sub string, params ...string) (string, error) {
 	args := []string{"route53", sub}
 
