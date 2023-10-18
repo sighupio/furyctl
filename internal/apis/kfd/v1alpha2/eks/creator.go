@@ -149,6 +149,8 @@ func (v *ClusterCreator) Create(skipPhase string, timeout int) error {
 			errCh <- fmt.Errorf("error while executing preflight phase: %w", err)
 
 			close(doneCh)
+
+			return
 		}
 
 		switch v.phase {
@@ -515,7 +517,6 @@ func (v *ClusterCreator) setupPhases() (
 		v.kfdManifest,
 		v.paths,
 		v.dryRun,
-		v.paths.Kubeconfig,
 		v.stateStore,
 	)
 	if err != nil {

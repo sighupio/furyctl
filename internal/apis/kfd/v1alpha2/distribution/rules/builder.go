@@ -12,7 +12,7 @@ import (
 	yamlx "github.com/sighupio/furyctl/internal/x/yaml"
 )
 
-var errReadingRulesFile = errors.New("error while reading rules file")
+var ErrReadingRulesFile = errors.New("error while reading rules file")
 
 type DistroRulesSpec struct {
 	Distribution []Rule `yaml:"distribution"`
@@ -32,16 +32,18 @@ type DistroBuilder struct {
 }
 
 func NewDistroClusterRulesBuilder(distributionPath string) (*DistroBuilder, error) {
+	builder := DistroBuilder{}
+
 	rulesPath := filepath.Join(distributionPath, "rules", "kfddistribution-kfd-v1alpha2.yaml")
 
 	spec, err := yamlx.FromFileV3[DistroRulesSpec](rulesPath)
 	if err != nil {
-		return nil, fmt.Errorf("%w: %s", errReadingRulesFile, err)
+		return &builder, fmt.Errorf("%w: %s", ErrReadingRulesFile, err)
 	}
 
-	return &DistroBuilder{
-		Spec: spec,
-	}, nil
+	builder.Spec = spec
+
+	return &builder, nil
 }
 
 func (r *DistroBuilder) GetImmutables(phase string) []string {
