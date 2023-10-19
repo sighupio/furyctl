@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-package diff
+package diffs
 
 import (
 	"errors"
@@ -21,27 +21,40 @@ var (
 type Checker interface {
 	AssertImmutableViolations(diffs diffx.Changelog, immutablePaths []string) []error
 	GenerateDiff() (diffx.Changelog, error)
+	DiffToString(diffs diffx.Changelog) string
 }
 
 type BaseChecker struct {
-	currentConfig map[string]any
-	newConfig     map[string]any
+	CurrentConfig map[string]any
+	NewConfig     map[string]any
 }
 
 func NewBaseChecker(currentConfig, newConfig map[string]any) *BaseChecker {
 	return &BaseChecker{
-		currentConfig: currentConfig,
-		newConfig:     newConfig,
+		CurrentConfig: currentConfig,
+		NewConfig:     newConfig,
 	}
 }
 
 func (v *BaseChecker) GenerateDiff() (diffx.Changelog, error) {
-	changelog, err := diffx.Diff(v.currentConfig, v.newConfig)
+	changelog, err := diffx.Diff(v.CurrentConfig, v.NewConfig)
 	if err != nil {
 		return nil, fmt.Errorf("error while diffing configs: %w", err)
 	}
 
 	return changelog, nil
+}
+
+func (*BaseChecker) DiffToString(diffs diffx.Changelog) string {
+	var str string
+
+	for _, diff := range diffs {
+		joinedPath := "." + strings.Join(diff.Path, ".")
+
+		str += fmt.Sprintf("%s: %v -> %v\n", joinedPath, diff.From, diff.To)
+	}
+
+	return str
 }
 
 func (*BaseChecker) AssertImmutableViolations(diffs diffx.Changelog, immutablePaths []string) []error {

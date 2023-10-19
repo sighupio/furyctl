@@ -4,7 +4,7 @@
 
 //go:build unit
 
-package diff_test
+package diffs_test
 
 import (
 	"fmt"
@@ -13,7 +13,7 @@ import (
 
 	diffx "github.com/r3labs/diff/v3"
 
-	"github.com/sighupio/furyctl/internal/diff"
+	"github.com/sighupio/furyctl/internal/diffs"
 )
 
 func TestBaseChecker_GenerateDiff(t *testing.T) {
@@ -101,7 +101,7 @@ func TestBaseChecker_GenerateDiff(t *testing.T) {
 		t.Run(tC.desc, func(t *testing.T) {
 			t.Parallel()
 
-			checker := diff.NewBaseChecker(tC.currentCfg, tC.newCfg)
+			checker := diffs.NewBaseChecker(tC.currentCfg, tC.newCfg)
 
 			diffs, err := checker.GenerateDiff()
 			if tC.wantErr && err == nil {
@@ -180,7 +180,7 @@ func TestBaseChecker_AssertImmutableViolations(t *testing.T) {
 		t.Run(tC.desc, func(t *testing.T) {
 			t.Parallel()
 
-			checker := diff.NewBaseChecker(nil, nil)
+			checker := diffs.NewBaseChecker(nil, nil)
 
 			errs := checker.AssertImmutableViolations(tC.diffs, tC.immutablePaths)
 
