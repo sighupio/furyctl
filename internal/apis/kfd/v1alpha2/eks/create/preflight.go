@@ -11,7 +11,7 @@ import (
 	"os"
 	"path"
 
-	diffx "github.com/r3labs/diff/v3"
+	r3diff "github.com/r3labs/diff/v3"
 	"github.com/sirupsen/logrus"
 
 	"github.com/sighupio/fury-distribution/pkg/apis/config"
@@ -247,7 +247,7 @@ func (p *PreFlight) CreateDiffChecker() (diffs.Checker, error) {
 	return diffs.NewBaseChecker(storedCfg, newCfg), nil
 }
 
-func (*PreFlight) GenerateDiffs(diffChecker diffs.Checker) (diffx.Changelog, error) {
+func (*PreFlight) GenerateDiffs(diffChecker diffs.Checker) (r3diff.Changelog, error) {
 	d, err := diffChecker.GenerateDiff()
 	if err != nil {
 		return nil, fmt.Errorf("error while diffing configs: %w", err)
@@ -256,7 +256,7 @@ func (*PreFlight) GenerateDiffs(diffChecker diffs.Checker) (diffx.Changelog, err
 	return d, nil
 }
 
-func (p *PreFlight) CheckStateDiffs(d diffx.Changelog, diffChecker diffs.Checker) error {
+func (p *PreFlight) CheckStateDiffs(d r3diff.Changelog, diffChecker diffs.Checker) error {
 	var errs []error
 
 	r, err := rules.NewEKSClusterRulesExtractor(p.distroPath)
