@@ -14,10 +14,24 @@ import (
 func NewCreateCommand(tracker *analytics.Tracker) *cobra.Command {
 	createCmd := &cobra.Command{
 		Use:   "create",
-		Short: "Create a sample configuration file",
+		Short: "Create a cluster or a sample configuration file",
 	}
 
 	createCmd.AddCommand(create.NewConfigCommand(tracker))
+
+	// Configure create cluster command as alias of apply command.
+	applyCmd := NewApplyCommand(tracker)
+
+	clusterCmd := &cobra.Command{
+		Use:    "cluster",
+		Short:  "Apply the configuration to create or upgrade a battle-tested Kubernetes Fury cluster",
+		PreRun: applyCmd.PreRun,
+		RunE:   applyCmd.RunE,
+	}
+
+	clusterCmd.Flags().AddFlagSet(applyCmd.Flags())
+
+	createCmd.AddCommand(clusterCmd)
 
 	return createCmd
 }
