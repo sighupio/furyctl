@@ -98,20 +98,20 @@ func (p *PreFlight) Exec() error {
 		return fmt.Errorf("error creating diff checker: %w", err)
 	}
 
-	diffs, err := p.GenerateDiffs(diffChecker)
+	d, err := diffChecker.GenerateDiff()
 	if err != nil {
-		return fmt.Errorf("error generating diffs: %w", err)
+		return fmt.Errorf("error while generating diff: %w", err)
 	}
 
-	if len(diffs) > 0 {
+	if len(d) > 0 {
 		logrus.Infof(
 			"Differences found from previous cluster configuration:\n%s",
-			diffChecker.DiffToString(diffs),
+			diffChecker.DiffToString(d),
 		)
 
 		logrus.Warn("Cluster configuration has changed, checking for immutable violations...")
 
-		if err := p.CheckStateDiffs(diffs, diffChecker); err != nil {
+		if err := p.CheckStateDiffs(d, diffChecker); err != nil {
 			return fmt.Errorf("error checking state diffs: %w", err)
 		}
 	}
@@ -145,16 +145,7 @@ func (p *PreFlight) CreateDiffChecker(storedCfgStr []byte) (diffs.Checker, error
 	return diffs.NewBaseChecker(storedCfg, newCfg), nil
 }
 
-func (*PreFlight) GenerateDiffs(diffChecker diffs.Checker) (diffx.Changelog, error) {
-	diffs, err := diffChecker.GenerateDiff()
-	if err != nil {
-		return nil, fmt.Errorf("error while diffing configs: %w", err)
-	}
-
-	return diffs, nil
-}
-
-func (p *PreFlight) CheckStateDiffs(diffs diffx.Changelog, diffChecker diffs.Checker) error {
+func (p *PreFlight) CheckStateDiffs(d diffx.Changelog, diffChecker diffs.Checker) error {
 	var errs []error
 
 	r, err := rules.NewDistroClusterRulesBuilder(p.distroPath)
@@ -168,7 +159,7 @@ func (p *PreFlight) CheckStateDiffs(diffs diffx.Changelog, diffChecker diffs.Che
 		return nil
 	}
 
-	errs = append(errs, diffChecker.AssertImmutableViolations(diffs, r.GetImmutables("distribution"))...)
+	errs = append(errs, diffChecker.AssertImmutableViolations(d, r.GetImmutables("distribution"))...)
 
 	if len(errs) > 0 {
 		return fmt.Errorf("%w: %s", errImmutable, errs)
