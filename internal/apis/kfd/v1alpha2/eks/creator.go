@@ -145,10 +145,10 @@ func (v *ClusterCreator) Create(skipPhase string, timeout int) error {
 	doneCh := make(chan bool)
 
 	go func() {
+		defer close(doneCh)
+
 		if err := preflight.Exec(); err != nil {
 			errCh <- fmt.Errorf("error while executing preflight phase: %w", err)
-
-			close(doneCh)
 
 			return
 		}
@@ -159,38 +159,26 @@ func (v *ClusterCreator) Create(skipPhase string, timeout int) error {
 				errCh <- err
 			}
 
-			close(doneCh)
-
 		case cluster.OperationPhaseKubernetes:
 			if err := v.kubernetesPhase(kube, vpnConnector); err != nil {
 				errCh <- err
 			}
-
-			close(doneCh)
 
 		case cluster.OperationPhaseDistribution:
 			if err := v.distributionPhase(distro, vpnConnector); err != nil {
 				errCh <- err
 			}
 
-			close(doneCh)
-
 		case cluster.OperationPhasePlugins:
 			if err := plugins.Exec(); err != nil {
 				errCh <- err
 			}
 
-			close(doneCh)
-
 		case cluster.OperationPhaseAll:
 			errCh <- v.allPhases(skipPhase, infra, kube, distro, plugins, vpnConnector)
 
-			close(doneCh)
-
 		default:
 			errCh <- ErrUnsupportedPhase
-
-			close(doneCh)
 		}
 	}()
 
