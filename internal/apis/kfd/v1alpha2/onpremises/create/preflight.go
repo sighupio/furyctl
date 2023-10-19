@@ -11,7 +11,7 @@ import (
 	"path"
 	"path/filepath"
 
-	diffx "github.com/r3labs/diff/v3"
+	r3diff "github.com/r3labs/diff/v3"
 	"github.com/sirupsen/logrus"
 
 	"github.com/sighupio/fury-distribution/pkg/apis/config"
@@ -267,7 +267,7 @@ func (p *PreFlight) CreateDiffChecker(storedCfgStr []byte) (diffs.Checker, error
 	return diffs.NewBaseChecker(storedCfg, newCfg), nil
 }
 
-func (p *PreFlight) CheckStateDiffs(d diffx.Changelog, diffChecker diffs.Checker) error {
+func (p *PreFlight) CheckStateDiffs(d r3diff.Changelog, diffChecker diffs.Checker) error {
 	var errs []error
 
 	r, err := rules.NewOnPremClusterRulesExtractor(p.distroPath)
