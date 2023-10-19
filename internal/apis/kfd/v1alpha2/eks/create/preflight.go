@@ -259,7 +259,7 @@ func (*PreFlight) GenerateDiffs(diffChecker diffs.Checker) (diffx.Changelog, err
 func (p *PreFlight) CheckStateDiffs(d diffx.Changelog, diffChecker diffs.Checker) error {
 	var errs []error
 
-	r, err := rules.NewEKSClusterRulesBuilder(p.distroPath)
+	r, err := rules.NewEKSClusterRulesExtractor(p.distroPath)
 	if err != nil {
 		if !errors.Is(err, rules.ErrReadingRulesFile) {
 			return fmt.Errorf("error while creating rules builder: %w", err)

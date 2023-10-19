@@ -23,16 +23,16 @@ type Rule struct {
 	Immutable bool   `yaml:"immutable"`
 }
 
-type Builder interface {
+type Extractor interface {
 	GetImmutables(phase string) []string
 }
 
-type DistroBuilder struct {
+type DistroExtractor struct {
 	Spec DistroRulesSpec
 }
 
-func NewDistroClusterRulesBuilder(distributionPath string) (*DistroBuilder, error) {
-	builder := DistroBuilder{}
+func NewDistroClusterRulesExtractor(distributionPath string) (*DistroExtractor, error) {
+	builder := DistroExtractor{}
 
 	rulesPath := filepath.Join(distributionPath, "rules", "kfddistribution-kfd-v1alpha2.yaml")
 
@@ -46,7 +46,7 @@ func NewDistroClusterRulesBuilder(distributionPath string) (*DistroBuilder, erro
 	return &builder, nil
 }
 
-func (r *DistroBuilder) GetImmutables(phase string) []string {
+func (r *DistroExtractor) GetImmutables(phase string) []string {
 	switch phase {
 	case "distribution":
 		return r.extractImmutablesFromRules(r.Spec.Distribution)
@@ -56,7 +56,7 @@ func (r *DistroBuilder) GetImmutables(phase string) []string {
 	}
 }
 
-func (*DistroBuilder) extractImmutablesFromRules(rules []Rule) []string {
+func (*DistroExtractor) extractImmutablesFromRules(rules []Rule) []string {
 	var immutables []string
 
 	for _, rule := range rules {

@@ -76,7 +76,7 @@ func TestEKSBuilder_GetImmutables(t *testing.T) {
 		t.Run(tC.desc, func(t *testing.T) {
 			t.Parallel()
 
-			builder := rules.OnPremBuilder{
+			builder := rules.OnPremExtractor{
 				Spec: *tC.onPremRulesSpec,
 			}
 
