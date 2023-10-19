@@ -99,7 +99,7 @@ func TestEKSBuilder_GetImmutables(t *testing.T) {
 		t.Run(tC.desc, func(t *testing.T) {
 			t.Parallel()
 
-			builder := rules.EKSBuilder{
+			builder := rules.EKSExtractor{
 				Spec: *tC.eksRulesSpec,
 			}
 

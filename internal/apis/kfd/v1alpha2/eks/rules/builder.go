@@ -25,16 +25,16 @@ type Rule struct {
 	Immutable bool   `yaml:"immutable"`
 }
 
-type Builder interface {
+type Extractor interface {
 	GetImmutables(phase string) []string
 }
 
-type EKSBuilder struct {
+type EKSExtractor struct {
 	Spec EKSRulesSpec
 }
 
-func NewEKSClusterRulesBuilder(distributionPath string) (*EKSBuilder, error) {
-	builder := EKSBuilder{}
+func NewEKSClusterRulesExtractor(distributionPath string) (*EKSExtractor, error) {
+	builder := EKSExtractor{}
 
 	rulesPath := filepath.Join(distributionPath, "rules", "ekscluster-kfd-v1alpha2.yaml")
 
@@ -48,7 +48,7 @@ func NewEKSClusterRulesBuilder(distributionPath string) (*EKSBuilder, error) {
 	return &builder, nil
 }
 
-func (r *EKSBuilder) GetImmutables(phase string) []string {
+func (r *EKSExtractor) GetImmutables(phase string) []string {
 	switch phase {
 	case "infrastructure":
 		return r.extractImmutablesFromRules(r.Spec.Infrastructure)
@@ -64,7 +64,7 @@ func (r *EKSBuilder) GetImmutables(phase string) []string {
 	}
 }
 
-func (*EKSBuilder) extractImmutablesFromRules(rules []Rule) []string {
+func (*EKSExtractor) extractImmutablesFromRules(rules []Rule) []string {
 	var immutables []string
 
 	for _, rule := range rules {

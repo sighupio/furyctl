@@ -53,7 +53,7 @@ func TestEKSBuilder_GetImmutables(t *testing.T) {
 		t.Run(tC.desc, func(t *testing.T) {
 			t.Parallel()
 
-			builder := rules.DistroBuilder{
+			builder := rules.DistroExtractor{
 				Spec: *tC.distroRulesSpec,
 			}
 
