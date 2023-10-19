@@ -148,7 +148,7 @@ func (p *PreFlight) CreateDiffChecker(storedCfgStr []byte) (diffs.Checker, error
 func (p *PreFlight) CheckStateDiffs(d diffx.Changelog, diffChecker diffs.Checker) error {
 	var errs []error
 
-	r, err := rules.NewDistroClusterRulesBuilder(p.distroPath)
+	r, err := rules.NewDistroClusterRulesExtractor(p.distroPath)
 	if err != nil {
 		if !errors.Is(err, rules.ErrReadingRulesFile) {
 			return fmt.Errorf("error while creating rules builder: %w", err)

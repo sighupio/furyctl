@@ -24,16 +24,16 @@ type Rule struct {
 	Immutable bool   `yaml:"immutable"`
 }
 
-type Builder interface {
+type Extractor interface {
 	GetImmutables(phase string) []string
 }
 
-type OnPremBuilder struct {
+type OnPremExtractor struct {
 	Spec OnPremRulesSpec
 }
 
-func NewOnPremClusterRulesBuilder(distributionPath string) (*OnPremBuilder, error) {
-	builder := OnPremBuilder{}
+func NewOnPremClusterRulesExtractor(distributionPath string) (*OnPremExtractor, error) {
+	builder := OnPremExtractor{}
 
 	rulesPath := filepath.Join(distributionPath, "rules", "onpremises-kfd-v1alpha2.yaml")
 
@@ -47,7 +47,7 @@ func NewOnPremClusterRulesBuilder(distributionPath string) (*OnPremBuilder, erro
 	return &builder, nil
 }
 
-func (r *OnPremBuilder) GetImmutables(phase string) []string {
+func (r *OnPremExtractor) GetImmutables(phase string) []string {
 	switch phase {
 	case "kubernetes":
 		return r.extractImmutablesFromRules(r.Spec.Kubernetes)
@@ -60,7 +60,7 @@ func (r *OnPremBuilder) GetImmutables(phase string) []string {
 	}
 }
 
-func (*OnPremBuilder) extractImmutablesFromRules(rules []Rule) []string {
+func (*OnPremExtractor) extractImmutablesFromRules(rules []Rule) []string {
 	var immutables []string
 
 	for _, rule := range rules {
