@@ -10,7 +10,7 @@ import (
 	"regexp"
 	"strings"
 
-	diffx "github.com/r3labs/diff/v3"
+	r3diff "github.com/r3labs/diff/v3"
 )
 
 var (
@@ -19,9 +19,9 @@ var (
 )
 
 type Checker interface {
-	AssertImmutableViolations(diffs diffx.Changelog, immutablePaths []string) []error
-	GenerateDiff() (diffx.Changelog, error)
-	DiffToString(diffs diffx.Changelog) string
+	AssertImmutableViolations(diffs r3diff.Changelog, immutablePaths []string) []error
+	GenerateDiff() (r3diff.Changelog, error)
+	DiffToString(diffs r3diff.Changelog) string
 }
 
 type BaseChecker struct {
@@ -36,8 +36,8 @@ func NewBaseChecker(currentConfig, newConfig map[string]any) *BaseChecker {
 	}
 }
 
-func (v *BaseChecker) GenerateDiff() (diffx.Changelog, error) {
-	changelog, err := diffx.Diff(v.CurrentConfig, v.NewConfig)
+func (v *BaseChecker) GenerateDiff() (r3diff.Changelog, error) {
+	changelog, err := r3diff.Diff(v.CurrentConfig, v.NewConfig)
 	if err != nil {
 		return nil, fmt.Errorf("error while diffing configs: %w", err)
 	}
@@ -45,7 +45,7 @@ func (v *BaseChecker) GenerateDiff() (diffx.Changelog, error) {
 	return changelog, nil
 }
 
-func (*BaseChecker) DiffToString(diffs diffx.Changelog) string {
+func (*BaseChecker) DiffToString(diffs r3diff.Changelog) string {
 	var str string
 
 	for _, diff := range diffs {
@@ -57,7 +57,7 @@ func (*BaseChecker) DiffToString(diffs diffx.Changelog) string {
 	return str
 }
 
-func (*BaseChecker) AssertImmutableViolations(diffs diffx.Changelog, immutablePaths []string) []error {
+func (*BaseChecker) AssertImmutableViolations(diffs r3diff.Changelog, immutablePaths []string) []error {
 	var errs []error
 
 	if len(diffs) == 0 {
@@ -65,7 +65,7 @@ func (*BaseChecker) AssertImmutableViolations(diffs diffx.Changelog, immutablePa
 	}
 
 	for _, diff := range diffs {
-		if immutableHelper(diff, immutablePaths) {
+		if isImmutablePathChanged(diff, immutablePaths) {
 			errs = append(
 				errs,
 				fmt.Errorf(
@@ -82,7 +82,7 @@ func (*BaseChecker) AssertImmutableViolations(diffs diffx.Changelog, immutablePa
 	return errs
 }
 
-func immutableHelper(change diffx.Change, immutables []string) bool {
+func isImmutablePathChanged(change r3diff.Change, immutables []string) bool {
 	joinedPath := "." + strings.Join(change.Path, ".")
 	changePath := numbersToWildcardRegex.ReplaceAllString(joinedPath, ".*")
 
