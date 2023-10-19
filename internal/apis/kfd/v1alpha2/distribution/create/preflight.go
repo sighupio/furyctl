@@ -9,13 +9,14 @@ import (
 	"fmt"
 	"path"
 
+	diffx "github.com/r3labs/diff/v3"
 	"github.com/sirupsen/logrus"
 
 	"github.com/sighupio/fury-distribution/pkg/apis/config"
 	"github.com/sighupio/fury-distribution/pkg/apis/kfddistribution/v1alpha2/public"
 	"github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/distribution/rules"
 	"github.com/sighupio/furyctl/internal/cluster"
-	"github.com/sighupio/furyctl/internal/diff"
+	"github.com/sighupio/furyctl/internal/diffs"
 	"github.com/sighupio/furyctl/internal/state"
 	"github.com/sighupio/furyctl/internal/tool/kubectl"
 	execx "github.com/sighupio/furyctl/internal/x/exec"
@@ -92,8 +93,27 @@ func (p *PreFlight) Exec() error {
 		return nil
 	}
 
-	if err := p.CheckStateDiffs(storedCfg); err != nil {
-		return fmt.Errorf("error checking state diffs: %w", err)
+	diffChecker, err := p.CreateDiffChecker(storedCfg)
+	if err != nil {
+		return fmt.Errorf("error creating diff checker: %w", err)
+	}
+
+	diffs, err := p.GenerateDiffs(diffChecker)
+	if err != nil {
+		return fmt.Errorf("error generating diffs: %w", err)
+	}
+
+	if len(diffs) > 0 {
+		logrus.Infof(
+			"Differences found from previous cluster configuration:\n%s",
+			diffChecker.DiffToString(diffs),
+		)
+
+		logrus.Warn("Cluster configuration has changed, checking for immutable violations...")
+
+		if err := p.CheckStateDiffs(diffs, diffChecker); err != nil {
+			return fmt.Errorf("error checking state diffs: %w", err)
+		}
 	}
 
 	logrus.Info("Preflight checks completed successfully")
@@ -110,28 +130,32 @@ func (p *PreFlight) GetStateFromCluster() ([]byte, error) {
 	return storedCfgStr, nil
 }
 
-func (p *PreFlight) CheckStateDiffs(storedCfgStr []byte) error {
-	var errs []error
-
+func (p *PreFlight) CreateDiffChecker(storedCfgStr []byte) (diffs.Checker, error) {
 	storedCfg := map[string]any{}
 
 	if err := yamlx.UnmarshalV3(storedCfgStr, &storedCfg); err != nil {
-		return fmt.Errorf("error while unmarshalling config file: %w", err)
+		return nil, fmt.Errorf("error while unmarshalling config file: %w", err)
 	}
 
 	newCfg, err := yamlx.FromFileV3[map[string]any](p.furyctlConfPath)
 	if err != nil {
-		return fmt.Errorf("error while reading config file: %w", err)
+		return nil, fmt.Errorf("error while reading config file: %w", err)
 	}
 
-	diffChecker := diff.NewBaseChecker(storedCfg, newCfg)
+	return diffs.NewBaseChecker(storedCfg, newCfg), nil
+}
 
+func (*PreFlight) GenerateDiffs(diffChecker diffs.Checker) (diffx.Changelog, error) {
 	diffs, err := diffChecker.GenerateDiff()
 	if err != nil {
-		return fmt.Errorf("error while diffing configs: %w", err)
+		return nil, fmt.Errorf("error while diffing configs: %w", err)
 	}
 
-	logrus.Debug("Diff: ", diffs)
+	return diffs, nil
+}
+
+func (p *PreFlight) CheckStateDiffs(diffs diffx.Changelog, diffChecker diffs.Checker) error {
+	var errs []error
 
 	r, err := rules.NewDistroClusterRulesBuilder(p.distroPath)
 	if err != nil {
