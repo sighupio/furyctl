@@ -13,6 +13,7 @@ import (
 	"github.com/sighupio/fury-distribution/pkg/apis/config"
 	"github.com/sighupio/fury-distribution/pkg/apis/ekscluster/v1alpha2/private"
 	del "github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/eks/delete"
+	"github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/eks/vpn"
 	"github.com/sighupio/furyctl/internal/cluster"
 )
 
@@ -105,7 +106,7 @@ func (d *ClusterDeleter) Delete() error {
 		vpnConfig = d.furyctlConf.Spec.Infrastructure.Vpn
 	}
 
-	vpnConnector, err := NewVpnConnector(
+	vpnConnector, err := vpn.NewConnector(
 		d.furyctlConf.Metadata.Name,
 		infra.TerraformSecretsPath,
 		d.paths.BinPath,

@@ -106,7 +106,7 @@ func (s *Store) StoreConfig() error {
 func (s *Store) GetConfig() ([]byte, error) {
 	secret := map[string]any{}
 
-	out, err := s.KubectlRunner.Get("kube-system", "secret", "furyctl-config", "-o", "yaml")
+	out, err := s.KubectlRunner.Get(true, "kube-system", "secret", "furyctl-config", "-o", "yaml")
 	if err != nil {
 		return nil, fmt.Errorf("error while getting current cluster config: %w", err)
 	}

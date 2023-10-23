@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-package eks
+package vpn
 
 import (
 	"bufio"
@@ -32,7 +32,7 @@ var (
 	ErrReadStdin             = errors.New("error reading from stdin")
 )
 
-type VpnConnector struct {
+type Connector struct {
 	clusterName string
 	certDir     string
 	autoconnect bool
@@ -44,7 +44,7 @@ type VpnConnector struct {
 	workDir     string
 }
 
-func NewVpnConnector(
+func NewConnector(
 	clusterName,
 	certDir,
 	binPath,
@@ -52,7 +52,7 @@ func NewVpnConnector(
 	autoconnect,
 	skip bool,
 	config *private.SpecInfrastructureVpn,
-) (*VpnConnector, error) {
+) (*Connector, error) {
 	executor := execx.NewStdExecutor()
 
 	wd, err := os.Getwd()
@@ -60,7 +60,7 @@ func NewVpnConnector(
 		return nil, fmt.Errorf("error getting current working directory: %w", err)
 	}
 
-	return &VpnConnector{
+	return &Connector{
 		clusterName: clusterName,
 		certDir:     certDir,
 		autoconnect: autoconnect,
@@ -85,7 +85,7 @@ func NewVpnConnector(
 	}, nil
 }
 
-func (v *VpnConnector) Connect() error {
+func (v *Connector) Connect() error {
 	if v.autoconnect {
 		if !v.IsConfigured() {
 			return ErrAutoConnectWithoutVpn
@@ -112,7 +112,7 @@ func (v *VpnConnector) Connect() error {
 	return nil
 }
 
-func (v *VpnConnector) GenerateCertificates() error {
+func (v *Connector) GenerateCertificates() error {
 	clientName, err := v.ClientName()
 	if err != nil {
 		return err
@@ -160,7 +160,7 @@ func (v *VpnConnector) GenerateCertificates() error {
 	return nil
 }
 
-func (v *VpnConnector) getFuryAgentBucketName() (string, error) {
+func (v *Connector) getFuryAgentBucketName() (string, error) {
 	faCfg, err := furyagent.ParseConfig(filepath.Join(v.certDir, "furyagent.yml"))
 	if err != nil {
 		return "", fmt.Errorf("error parsing furyagent config: %w", err)
@@ -169,20 +169,25 @@ func (v *VpnConnector) getFuryAgentBucketName() (string, error) {
 	return faCfg.Storage.BucketName, nil
 }
 
-func (v *VpnConnector) assertOldClientCertificateExists(bucketName, certName string) error {
-	if _, err := v.awsRunner.S3("ls", fmt.Sprintf("s3://%s/pki/vpn-client/%s.crt", bucketName, certName)); err != nil {
+func (v *Connector) assertOldClientCertificateExists(bucketName, certName string) error {
+	if _, err := v.awsRunner.S3(
+		false,
+		"ls",
+		fmt.Sprintf("s3://%s/pki/vpn-client/%s.crt", bucketName, certName),
+	); err != nil {
 		return fmt.Errorf("error checking if old certificate exists: %w", err)
 	}
 
 	return nil
 }
 
-func (v *VpnConnector) backupOldClientCertificate(bucketName, certName string) (string, error) {
+func (v *Connector) backupOldClientCertificate(bucketName, certName string) (string, error) {
 	u := uuid.New()
 
 	newCertName := fmt.Sprintf("%s-%s-backup", certName, u.String())
 
 	if _, err := v.awsRunner.S3(
+		false,
 		"mv",
 		fmt.Sprintf("s3://%s/pki/vpn-client/%s.crt", bucketName, certName),
 		fmt.Sprintf("s3://%s/pki/vpn-client/%s.crt", bucketName, newCertName)); err != nil {
@@ -192,7 +197,7 @@ func (v *VpnConnector) backupOldClientCertificate(bucketName, certName string) (
 	return newCertName, nil
 }
 
-func (v *VpnConnector) writeOVPNFileToDisk(certName string, cert []byte) error {
+func (v *Connector) writeOVPNFileToDisk(certName string, cert []byte) error {
 	err := os.WriteFile(
 		filepath.Join(
 			v.certDir,
@@ -207,7 +212,7 @@ func (v *VpnConnector) writeOVPNFileToDisk(certName string, cert []byte) error {
 	return nil
 }
 
-func (v *VpnConnector) IsConfigured() bool {
+func (v *Connector) IsConfigured() bool {
 	vpn := v.config
 	if vpn == nil {
 		return false
@@ -221,7 +226,7 @@ func (v *VpnConnector) IsConfigured() bool {
 	return *instances > 0
 }
 
-func (v *VpnConnector) ClientName() (string, error) {
+func (v *Connector) ClientName() (string, error) {
 	u, err := user.Current()
 	if err != nil {
 		return "", fmt.Errorf("error getting current user: %w", err)
@@ -232,7 +237,7 @@ func (v *VpnConnector) ClientName() (string, error) {
 	return fmt.Sprintf("%s-%s", v.clusterName, whoami), nil
 }
 
-func (v *VpnConnector) GetKillMessage() (string, error) {
+func (v *Connector) GetKillMessage() (string, error) {
 	endVpnMsg := "Please remember to kill the VPN connection when you finish doing operations on the cluster"
 
 	if !v.autoconnect {
@@ -253,7 +258,7 @@ func (v *VpnConnector) GetKillMessage() (string, error) {
 	return fmt.Sprintf("%s, you can do it with the following command: '%s'", endVpnMsg, killMsg), nil
 }
 
-func (v *VpnConnector) copyOpenvpnToWorkDir(clientName string) error {
+func (v *Connector) copyOpenvpnToWorkDir(clientName string) error {
 	currentDir, err := os.Getwd()
 	if err != nil {
 		return fmt.Errorf("error getting current dir: %w", err)
@@ -279,7 +284,7 @@ func (v *VpnConnector) copyOpenvpnToWorkDir(clientName string) error {
 	return nil
 }
 
-func (*VpnConnector) checkExistingOpenVPN() (bool, int32, error) {
+func (*Connector) checkExistingOpenVPN() (bool, int32, error) {
 	processes, err := process.Processes()
 	if err != nil {
 		return false, 0, fmt.Errorf("error getting processes: %w", err)
@@ -301,7 +306,7 @@ func (*VpnConnector) checkExistingOpenVPN() (bool, int32, error) {
 	return false, 0, nil
 }
 
-func (v *VpnConnector) startOpenVPN() error {
+func (v *Connector) startOpenVPN() error {
 	connectMsg := "Connecting to the VPN"
 
 	isRoot, err := osx.IsRoot()
@@ -327,7 +332,7 @@ func (v *VpnConnector) startOpenVPN() error {
 	return nil
 }
 
-func (*VpnConnector) promptAutoConnect(pid int32) error {
+func (*Connector) promptAutoConnect(pid int32) error {
 	logrus.Warnf("Found an openvpn process running with PID %d,"+
 		" continuing will start another openvpn process and VPN connection in consequence.\n", pid)
 
@@ -340,7 +345,7 @@ func (*VpnConnector) promptAutoConnect(pid int32) error {
 	return nil
 }
 
-func (v *VpnConnector) prompt() error {
+func (v *Connector) prompt() error {
 	connectMsg := "Please connect to the VPN before continuing"
 
 	clientName, err := v.ClientName()

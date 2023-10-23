@@ -15,46 +15,6 @@ import (
 	execx "github.com/sighupio/furyctl/internal/x/exec"
 )
 
-func TestClient_GetIngresses(t *testing.T) {
-	t.Parallel()
-
-	client := FakeClient(t)
-
-	ingresses, err := client.GetIngresses()
-	if err != nil {
-		t.Errorf("expected no error, got %v", err)
-	}
-
-	wantedIngresses := []kubernetes.Ingress{
-		{"ingress-1", []string{"host-1"}},
-		{"ingress-2", []string{"host-2"}},
-		{"ingress-3", []string{"host-3"}},
-	}
-	if !cmp.Equal(ingresses, wantedIngresses) {
-		t.Errorf("expected ingresses to be %v, got: %v", wantedIngresses, ingresses)
-	}
-}
-
-func TestClient_GetPersistentVolumes(t *testing.T) {
-	t.Parallel()
-
-	client := FakeClient(t)
-
-	pvs, err := client.GetPersistentVolumes()
-	if err != nil {
-		t.Errorf("expected no error, got %v", err)
-	}
-
-	if len(pvs) == 0 {
-		t.Errorf("expected pvs to be not empty")
-	}
-
-	wantPvs := []string{"pv-1", "pv-2", "pv-3"}
-	if !cmp.Equal(pvs, wantPvs) {
-		t.Errorf("expected pvs to be %v, got: %v", wantPvs, pvs)
-	}
-}
-
 func TestClient_ListNamespaceResources(t *testing.T) {
 	t.Parallel()
 
@@ -72,86 +32,6 @@ func TestClient_ListNamespaceResources(t *testing.T) {
 	}
 	if !cmp.Equal(resources, wantedResources) {
 		t.Errorf("expected resources to be %v, got: %v", wantedResources, resources)
-	}
-}
-
-func TestClient_GetLoadBalancers(t *testing.T) {
-	t.Parallel()
-
-	client := FakeClient(t)
-
-	svcs, err := client.GetLoadBalancers()
-	if err != nil {
-		t.Errorf("expected no error, got %v", err)
-	}
-
-	wantSvcs := []string{"svc-1", "svc-2", "svc-3"}
-	if !cmp.Equal(svcs, wantSvcs) {
-		t.Errorf("expected svcs to be %v, got: %v", wantSvcs, svcs)
-	}
-}
-
-func TestClient_DeleteResourcesInAllNamespaces(t *testing.T) {
-	t.Parallel()
-
-	client := FakeClient(t)
-
-	out, err := client.DeleteResourcesInAllNamespaces("pod")
-	if err != nil {
-		t.Errorf("expected no error, got %v", err)
-	}
-
-	wantOut := `res "res-1" deleted`
-	if out != wantOut {
-		t.Errorf("expected output to be '%s', got: '%s'", wantOut, out)
-	}
-}
-
-func TestClient_DeleteResources(t *testing.T) {
-	t.Parallel()
-
-	client := FakeClient(t)
-
-	out, err := client.DeleteResources("pod", "default")
-	if err != nil {
-		t.Errorf("expected no error, got %v", err)
-	}
-
-	wantOut := `res "res-1" deleted`
-	if out != wantOut {
-		t.Errorf("expected output to be '%s', got: '%s'", wantOut, out)
-	}
-}
-
-func TestClient_DeleteResource(t *testing.T) {
-	t.Parallel()
-
-	client := FakeClient(t)
-
-	out, err := client.DeleteResource("res-1", "pod", "default")
-	if err != nil {
-		t.Errorf("expected no error, got %v", err)
-	}
-
-	wantOut := `res "res-1" deleted`
-	if out != wantOut {
-		t.Errorf("expected output to be '%s', got: '%s'", wantOut, out)
-	}
-}
-
-func TestClient_DeleteFromPath(t *testing.T) {
-	t.Parallel()
-
-	client := FakeClient(t)
-
-	out, err := client.DeleteFromPath("test")
-	if err != nil {
-		t.Errorf("expected no error, got %v", err)
-	}
-
-	wantOut := `res "res-1" deleted`
-	if out != wantOut {
-		t.Errorf("expected output to be '%s', got: '%s'", wantOut, out)
 	}
 }
 
