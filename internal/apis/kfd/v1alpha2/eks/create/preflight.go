@@ -78,12 +78,6 @@ func NewPreFlight(
 		return nil, fmt.Errorf("error creating preflight phase: %w", err)
 	}
 
-	if _, err := os.Stat(path.Join(phase.Path, "secrets")); os.IsNotExist(err) {
-		if err := os.Mkdir(path.Join(phase.Path, "secrets"), iox.FullPermAccess); err != nil {
-			return nil, fmt.Errorf("error creating secrets folder: %w", err)
-		}
-	}
-
 	kubeconfig := path.Join(phase.Path, "secrets", "kubeconfig")
 
 	vpnConnector, err := vpn.NewConnector(
@@ -163,6 +157,12 @@ func (p *PreFlight) Exec() error {
 
 	if err := p.CreateFolderStructure(); err != nil {
 		return fmt.Errorf("error creating preflight phase folder structure: %w", err)
+	}
+
+	if _, err := os.Stat(path.Join(p.Path, "secrets")); os.IsNotExist(err) {
+		if err := os.Mkdir(path.Join(p.Path, "secrets"), iox.FullPermAccess); err != nil {
+			return fmt.Errorf("error creating secrets folder: %w", err)
+		}
 	}
 
 	if err := p.tfRunnerKube.Init(); err != nil {
