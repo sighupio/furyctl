@@ -88,6 +88,7 @@ func (x *ExtraToolsValidator) terraformStateAWSS3Bucket(conf private.EksclusterK
 	)
 
 	r, err := awsCliRunner.S3Api(
+		false,
 		"get-bucket-location",
 		"--bucket",
 		string(conf.Spec.ToolsConfiguration.Terraform.State.S3.BucketName),

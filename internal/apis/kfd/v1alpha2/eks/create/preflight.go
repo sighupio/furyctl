@@ -10,6 +10,8 @@ import (
 	"io/fs"
 	"os"
 	"path"
+	"path/filepath"
+	"regexp"
 
 	r3diff "github.com/r3labs/diff/v3"
 	"github.com/sirupsen/logrus"
@@ -18,11 +20,13 @@ import (
 	"github.com/sighupio/fury-distribution/pkg/apis/ekscluster/v1alpha2/private"
 	"github.com/sighupio/furyctl/configs"
 	"github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/eks/rules"
+	"github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/eks/vpn"
 	"github.com/sighupio/furyctl/internal/cluster"
 	"github.com/sighupio/furyctl/internal/diffs"
 	"github.com/sighupio/furyctl/internal/state"
 	"github.com/sighupio/furyctl/internal/template"
 	"github.com/sighupio/furyctl/internal/tool/awscli"
+	"github.com/sighupio/furyctl/internal/tool/furyagent"
 	"github.com/sighupio/furyctl/internal/tool/kubectl"
 	"github.com/sighupio/furyctl/internal/tool/terraform"
 	execx "github.com/sighupio/furyctl/internal/x/exec"
@@ -30,7 +34,13 @@ import (
 	yamlx "github.com/sighupio/furyctl/internal/x/yaml"
 )
 
-var errImmutable = errors.New("immutable path changed")
+const vpnDefaultPort = 1194
+
+var (
+	errImmutable  = errors.New("immutable path changed")
+	bucketRegex   = regexp.MustCompile("(?m)bucket\\s*=\\s*\"([^\"]+)\"")
+	serverIPRegex = regexp.MustCompile("(?m)public_ip\\s*=\\s*\"([^\"]+)\"")
+)
 
 type PreFlight struct {
 	*cluster.OperationPhase
@@ -39,7 +49,9 @@ type PreFlight struct {
 	distroPath      string
 	furyctlConfPath string
 	kubeconfig      string
-	tfRunner        *terraform.Runner
+	tfRunnerKube    *terraform.Runner
+	tfRunnerInfra   *terraform.Runner
+	vpnConnector    *vpn.Connector
 	kubeRunner      *kubectl.Runner
 	awsRunner       *awscli.Runner
 	dryRun          bool
@@ -50,8 +62,15 @@ func NewPreFlight(
 	kfdManifest config.KFD,
 	paths cluster.CreatorPaths,
 	dryRun bool,
-	stateStore state.Storer,
+	vpnAutoConnect bool,
+	skipVpn bool,
 ) (*PreFlight, error) {
+	var vpnConfig *private.SpecInfrastructureVpn
+
+	if furyctlConf.Spec.Infrastructure != nil {
+		vpnConfig = furyctlConf.Spec.Infrastructure.Vpn
+	}
+
 	preFlightDir := path.Join(paths.WorkDir, cluster.OperationPhasePreFlight)
 
 	phase, err := cluster.NewOperationPhase(preFlightDir, kfdManifest.Tools, paths.BinPath)
@@ -59,21 +78,51 @@ func NewPreFlight(
 		return nil, fmt.Errorf("error creating preflight phase: %w", err)
 	}
 
-	kubeconfig := path.Join(phase.Path, "kubeconfig")
+	if _, err := os.Stat(path.Join(phase.Path, "secrets")); os.IsNotExist(err) {
+		if err := os.Mkdir(path.Join(phase.Path, "secrets"), iox.FullPermAccess); err != nil {
+			return nil, fmt.Errorf("error creating secrets folder: %w", err)
+		}
+	}
+
+	kubeconfig := path.Join(phase.Path, "secrets", "kubeconfig")
+
+	vpnConnector, err := vpn.NewConnector(
+		furyctlConf.Metadata.Name,
+		path.Join(phase.Path, "secrets"),
+		paths.BinPath,
+		kfdManifest.Tools.Common.Furyagent.Version,
+		vpnAutoConnect,
+		skipVpn,
+		vpnConfig,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("error while creating vpn connector: %w", err)
+	}
 
 	return &PreFlight{
-		OperationPhase:  phase,
-		furyctlConf:     furyctlConf,
-		stateStore:      stateStore,
+		OperationPhase: phase,
+		furyctlConf:    furyctlConf,
+		stateStore: state.NewStore(
+			paths.DistroPath,
+			paths.ConfigPath,
+			kubeconfig,
+			paths.WorkDir,
+			kfdManifest.Tools.Common.Kubectl.Version,
+			paths.BinPath,
+		),
 		distroPath:      paths.DistroPath,
 		furyctlConfPath: paths.ConfigPath,
-		tfRunner: terraform.NewRunner(
+		tfRunnerKube: terraform.NewRunner(
 			execx.NewStdExecutor(),
 			terraform.Paths{
-				Logs:      phase.TerraformLogsPath,
-				Outputs:   phase.TerraformOutputsPath,
-				WorkDir:   path.Join(phase.Path, "terraform"),
-				Plan:      phase.TerraformPlanPath,
+				WorkDir:   path.Join(phase.Path, "terraform", "kubernetes"),
+				Terraform: phase.TerraformPath,
+			},
+		),
+		tfRunnerInfra: terraform.NewRunner(
+			execx.NewStdExecutor(),
+			terraform.Paths{
+				WorkDir:   path.Join(phase.Path, "terraform", "infrastructure"),
 				Terraform: phase.TerraformPath,
 			},
 		),
@@ -95,8 +144,9 @@ func NewPreFlight(
 				WorkDir: paths.WorkDir,
 			},
 		),
-		kubeconfig: kubeconfig,
-		dryRun:     dryRun,
+		vpnConnector: vpnConnector,
+		kubeconfig:   kubeconfig,
+		dryRun:       dryRun,
 	}, nil
 }
 
@@ -115,11 +165,11 @@ func (p *PreFlight) Exec() error {
 		return fmt.Errorf("error creating preflight phase folder structure: %w", err)
 	}
 
-	if err := p.tfRunner.Init(); err != nil {
+	if err := p.tfRunnerKube.Init(); err != nil {
 		return fmt.Errorf("error running terraform init: %w", err)
 	}
 
-	if _, err := p.tfRunner.State("show", "data.aws_eks_cluster.fury"); err != nil {
+	if _, err := p.tfRunnerKube.State("show", "data.aws_eks_cluster.fury"); err != nil {
 		logrus.Debug("Cluster does not exist, skipping state checks")
 
 		logrus.Info("Preflight checks completed successfully")
@@ -130,6 +180,7 @@ func (p *PreFlight) Exec() error {
 	logrus.Info("Updating kubeconfig...")
 
 	if _, err := p.awsRunner.Eks(
+		false,
 		"update-kubeconfig",
 		"--name",
 		p.furyctlConf.Metadata.Name,
@@ -139,6 +190,12 @@ func (p *PreFlight) Exec() error {
 		string(p.furyctlConf.Spec.Region),
 	); err != nil {
 		return fmt.Errorf("error updating kubeconfig: %w", err)
+	}
+
+	if p.isVPNRequired() {
+		if err := p.handleVPN(); err != nil {
+			return fmt.Errorf("error handling vpn: %w", err)
+		}
 	}
 
 	logrus.Info("Checking that the cluster is reachable...")
@@ -225,6 +282,147 @@ func (p *PreFlight) copyFromTemplate() error {
 	}
 
 	return nil
+}
+
+func (p *PreFlight) handleVPN() error {
+	logrus.Info("VPN required, checking if configuration file exists...")
+
+	wd, err := os.Getwd()
+	if err != nil {
+		return fmt.Errorf("error getting current dir: %w", err)
+	}
+
+	ovpnFileName := fmt.Sprintf("%s.ovpn", p.furyctlConf.Metadata.Name)
+
+	ovpnPath, err := filepath.Abs(path.Join(wd, ovpnFileName))
+	if err != nil {
+		return fmt.Errorf("error getting ovpn absolute path: %w", err)
+	}
+
+	if _, err := os.Stat(ovpnPath); err != nil {
+		logrus.Info("No ovpn file found, generating it...")
+
+		if err := p.regenVPNCerts(); err != nil {
+			return fmt.Errorf("error regenerating vpn certs: %w", err)
+		}
+	}
+
+	if err := p.vpnConnector.Connect(); err != nil {
+		return fmt.Errorf("error connecting to vpn: %w", err)
+	}
+
+	return nil
+}
+
+func (p *PreFlight) getVPNBucketName() (string, error) {
+	out, err := p.tfRunnerInfra.State("show", "module.vpn[0].aws_s3_bucket.furyagent", "-no-color")
+	if err != nil {
+		return "", fmt.Errorf("error getting vpn bucket name: %w", err)
+	}
+
+	bucket := bucketRegex.FindStringSubmatch(out)
+
+	if len(bucket) < 2 { //nolint:gomnd // we want to check the length of the regex match
+		return "", fmt.Errorf("error getting vpn bucket name: %w", err)
+	}
+
+	return bucket[1], nil
+}
+
+func (p *PreFlight) getVPNServers() ([]string, error) {
+	servers := []string{}
+	port := vpnDefaultPort
+
+	if p.furyctlConf.Spec.Infrastructure.Vpn.Port != nil {
+		p := *p.furyctlConf.Spec.Infrastructure.Vpn.Port
+
+		port = int(p)
+	}
+
+	for i := 0; i < *p.furyctlConf.Spec.Infrastructure.Vpn.Instances; i++ {
+		out, err := p.tfRunnerInfra.State("show", fmt.Sprintf("module.vpn[0].aws_eip.vpn[%d]", i), "-no-color")
+		if err != nil {
+			return servers, fmt.Errorf("error getting vpn instance: %w", err)
+		}
+
+		servers = append(servers, serverIPRegex.FindStringSubmatch(out)[1]+":"+fmt.Sprintf("%d", port))
+	}
+
+	return servers, nil
+}
+
+func (p *PreFlight) regenVPNCerts() error {
+	if err := p.tfRunnerInfra.Init(); err != nil {
+		return fmt.Errorf("error running terraform init: %w", err)
+	}
+
+	bucketName, err := p.getVPNBucketName()
+	if err != nil {
+		return fmt.Errorf("error getting vpn bucket name: %w", err)
+	}
+
+	servers, err := p.getVPNServers()
+	if err != nil {
+		return fmt.Errorf("error getting vpn servers: %w", err)
+	}
+
+	accessKey, err := p.awsRunner.Configure(true, "get", "aws_access_key_id")
+	if err != nil {
+		return fmt.Errorf("error getting aws access key: %w", err)
+	}
+
+	secretKey, err := p.awsRunner.Configure(true, "get", "aws_secret_access_key")
+	if err != nil {
+		return fmt.Errorf("error getting aws secret key: %w", err)
+	}
+
+	furyAgentCfg := furyagent.AgentConfig{
+		Storage: furyagent.Storage{
+			Provider:     "s3",
+			Region:       string(p.furyctlConf.Spec.Region),
+			BucketName:   bucketName,
+			AwsAccessKey: accessKey,
+			AwsSecretKey: secretKey,
+		},
+		ClusterComponent: furyagent.ClusterComponent{
+			OpenVPN: furyagent.OpenVPN{
+				CertDir: "/etc/openvpn/pki",
+				Servers: servers,
+			},
+			SSHKeys: furyagent.SSHKeys{
+				TempDir:         "/var/lib/SIGHUP/tmp",
+				LocalDirConfigs: ".",
+				Adapter: furyagent.Adapter{
+					Name: "github",
+				},
+			},
+		},
+	}
+
+	furyAgentFile, err := yamlx.MarshalV3(furyAgentCfg)
+	if err != nil {
+		return fmt.Errorf("error marshalling furyagent config: %w", err)
+	}
+
+	if err := iox.WriteFile(path.Join(p.Path, "secrets", "furyagent.yml"), furyAgentFile); err != nil {
+		return fmt.Errorf("error writing furyagent config: %w", err)
+	}
+
+	if err := p.vpnConnector.GenerateCertificates(); err != nil {
+		return fmt.Errorf("error generating certificates: %w", err)
+	}
+
+	return nil
+}
+
+func (p *PreFlight) isVPNRequired() bool {
+	return p.furyctlConf.Spec.Infrastructure != nil &&
+		p.furyctlConf.Spec.Infrastructure.Vpn != nil &&
+		(p.furyctlConf.Spec.Infrastructure.Vpn.Instances == nil ||
+			p.furyctlConf.Spec.Infrastructure.Vpn.Instances != nil &&
+				*p.furyctlConf.Spec.Infrastructure.Vpn.Instances > 0) &&
+		p.furyctlConf.Spec.Kubernetes.ApiServer.PrivateAccess &&
+		!p.furyctlConf.Spec.Kubernetes.ApiServer.PublicAccess
 }
 
 func (p *PreFlight) CreateDiffChecker() (diffs.Checker, error) {

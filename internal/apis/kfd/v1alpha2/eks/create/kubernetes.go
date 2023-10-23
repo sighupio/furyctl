@@ -1250,6 +1250,7 @@ func (k *Kubernetes) checkVPCConnection() error {
 		}
 
 		cidr, err = k.awsRunner.Ec2(
+			false,
 			"describe-vpcs",
 			"--vpc-ids",
 			string(*vpcID),
