@@ -19,6 +19,7 @@ import (
 	"github.com/sighupio/fury-distribution/pkg/apis/ekscluster/v1alpha2/private"
 	commcreate "github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/common/create"
 	"github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/eks/create"
+	"github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/eks/vpn"
 	"github.com/sighupio/furyctl/internal/cluster"
 	"github.com/sighupio/furyctl/internal/state"
 )
@@ -128,7 +129,7 @@ func (v *ClusterCreator) Create(skipPhase string, timeout int) error {
 		vpnConfig = v.furyctlConf.Spec.Infrastructure.Vpn
 	}
 
-	vpnConnector, err := NewVpnConnector(
+	vpnConnector, err := vpn.NewConnector(
 		v.furyctlConf.Metadata.Name,
 		infra.TerraformSecretsPath,
 		v.paths.BinPath,
@@ -246,7 +247,7 @@ func (v *ClusterCreator) Create(skipPhase string, timeout int) error {
 	return nil
 }
 
-func (v *ClusterCreator) infraPhase(infra *create.Infrastructure, vpnConnector *VpnConnector) error {
+func (v *ClusterCreator) infraPhase(infra *create.Infrastructure, vpnConnector *vpn.Connector) error {
 	if v.furyctlConf.Spec.Infrastructure == nil {
 		absPath, err := filepath.Abs(v.paths.ConfigPath)
 		if err != nil {
@@ -279,7 +280,7 @@ func (v *ClusterCreator) infraPhase(infra *create.Infrastructure, vpnConnector *
 	return nil
 }
 
-func (v *ClusterCreator) kubernetesPhase(kube *create.Kubernetes, vpnConnector *VpnConnector) error {
+func (v *ClusterCreator) kubernetesPhase(kube *create.Kubernetes, vpnConnector *vpn.Connector) error {
 	if v.furyctlConf.Spec.Kubernetes.ApiServer.PrivateAccess &&
 		!v.furyctlConf.Spec.Kubernetes.ApiServer.PublicAccess &&
 		!v.dryRun {
@@ -322,7 +323,7 @@ func (v *ClusterCreator) kubernetesPhase(kube *create.Kubernetes, vpnConnector *
 	return nil
 }
 
-func (v *ClusterCreator) distributionPhase(distro *create.Distribution, vpnConnector *VpnConnector) error {
+func (v *ClusterCreator) distributionPhase(distro *create.Distribution, vpnConnector *vpn.Connector) error {
 	if v.furyctlConf.Spec.Kubernetes.ApiServer.PrivateAccess &&
 		!v.furyctlConf.Spec.Kubernetes.ApiServer.PublicAccess &&
 		!v.dryRun {
@@ -364,7 +365,7 @@ func (v *ClusterCreator) allPhases(
 	kube *create.Kubernetes,
 	distro *create.Distribution,
 	plugins *commcreate.Plugins,
-	vpnConnector *VpnConnector,
+	vpnConnector *vpn.Connector,
 ) error {
 	if v.dryRun {
 		logrus.Info("furcytl will try its best to calculate what would have changed. " +
@@ -505,7 +506,8 @@ func (v *ClusterCreator) setupPhases() (
 		v.kfdManifest,
 		v.paths,
 		v.dryRun,
-		v.stateStore,
+		v.vpnAutoConnect,
+		v.skipVpn,
 	)
 	if err != nil {
 		return nil, nil, nil, nil, nil, fmt.Errorf("error while initiating preflight phase: %w", err)
@@ -528,11 +530,11 @@ func (*ClusterCreator) logKubeconfig() error {
 	return nil
 }
 
-func (*ClusterCreator) logVPNKill(vpnConnector *VpnConnector) error {
+func (*ClusterCreator) logVPNKill(vpnConnector *vpn.Connector) error {
 	if vpnConnector.IsConfigured() {
 		killVpnMsg, err := vpnConnector.GetKillMessage()
 		if err != nil {
-			return err
+			return fmt.Errorf("error while getting vpn kill message: %w", err)
 		}
 
 		logrus.Info(killVpnMsg)

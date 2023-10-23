@@ -79,7 +79,7 @@ func (d *Distribution) Exec() error {
 
 	logrus.Info("Checking storage classes...")
 
-	getStorageClassesOutput, err := d.kubeRunner.Get("", "storageclasses")
+	getStorageClassesOutput, err := d.kubeRunner.Get(false, "", "storageclasses")
 	if err != nil {
 		return fmt.Errorf("error while checking storage class: %w", err)
 	}
