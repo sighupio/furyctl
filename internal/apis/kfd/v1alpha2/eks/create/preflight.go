@@ -351,6 +351,16 @@ func (p *PreFlight) getVPNServers() ([]string, error) {
 	return servers, nil
 }
 
+func (p *PreFlight) getOperatorName() string {
+	operatorName := "sighup"
+
+	if p.furyctlConf.Spec.Infrastructure.Vpn.OperatorName != nil {
+		operatorName = *p.furyctlConf.Spec.Infrastructure.Vpn.OperatorName
+	}
+
+	return operatorName
+}
+
 func (p *PreFlight) regenVPNCerts() error {
 	if err := p.tfRunnerInfra.Init(); err != nil {
 		return fmt.Errorf("error running terraform init: %w", err)
@@ -376,6 +386,8 @@ func (p *PreFlight) regenVPNCerts() error {
 		return fmt.Errorf("error getting aws secret key: %w", err)
 	}
 
+	operatorName := p.getOperatorName()
+
 	furyAgentCfg := furyagent.AgentConfig{
 		Storage: furyagent.Storage{
 			Provider:     "s3",
@@ -390,6 +402,7 @@ func (p *PreFlight) regenVPNCerts() error {
 				Servers: servers,
 			},
 			SSHKeys: furyagent.SSHKeys{
+				User:            operatorName,
 				TempDir:         "/var/lib/SIGHUP/tmp",
 				LocalDirConfigs: ".",
 				Adapter: furyagent.Adapter{
