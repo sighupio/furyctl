@@ -10,9 +10,11 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/r3labs/diff/v3"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 
+	"github.com/sighupio/fury-distribution/pkg/apis/config"
 	"github.com/sighupio/furyctl/internal/analytics"
 	"github.com/sighupio/furyctl/internal/cluster"
 	"github.com/sighupio/furyctl/internal/cmd/cmdutil"
@@ -58,6 +60,8 @@ func NewDiffCommand(tracker *analytics.Tracker) *cobra.Command {
 				return err
 			}
 
+			execx.Debug = flags.Debug
+
 			kubeconfigPath := flags.Kubeconfig
 
 			if kubeconfigPath == "" {
@@ -79,12 +83,10 @@ func NewDiffCommand(tracker *analytics.Tracker) *cobra.Command {
 
 			kubeconfigPath = kubeAbsPath
 
-			// Check the kubeconfig file exists.
 			if _, err := os.Stat(kubeconfigPath); os.IsNotExist(err) {
 				return fmt.Errorf("%w in %s", ErrKubeconfigNotFound, kubeconfigPath)
 			}
 
-			// Get home dir.
 			logrus.Debug("Getting Home Directory Path...")
 			outDir := flags.Outdir
 
@@ -107,7 +109,6 @@ func NewDiffCommand(tracker *analytics.Tracker) *cobra.Command {
 			client := netx.NewGoGetterClient()
 			distrodl := distribution.NewDownloader(client, flags.HTTPS)
 
-			// Download the distribution.
 			logrus.Info("Downloading distribution...")
 			res, err := distrodl.Download(flags.DistroLocation, flags.FuryctlPath)
 			if err != nil {
@@ -128,44 +129,24 @@ func NewDiffCommand(tracker *analytics.Tracker) *cobra.Command {
 				flags.BinPath,
 			)
 
-			absFuryctlPath, err := filepath.Abs(flags.FuryctlPath)
+			diffChecker, err := createDiffChecker(stateStore, flags.FuryctlPath)
 			if err != nil {
 				cmdEvent.AddErrorMessage(err)
 				tracker.Track(cmdEvent)
 
-				return fmt.Errorf("error while initializing cluster creation: %w", err)
+				return fmt.Errorf("error while creating diff checker: %w", err)
 			}
 
-			// Define cluster creation paths.
-			paths := cluster.CreatorPaths{
-				ConfigPath: absFuryctlPath,
-				WorkDir:    basePath,
-				DistroPath: res.RepoPath,
-				BinPath:    flags.BinPath,
-				Kubeconfig: kubeconfigPath,
-			}
-
-			// Set debug mode.
-			execx.Debug = flags.Debug
-
-			// Create the cluster.
-			clusterCreator, err := cluster.NewCreator(
+			phasePath, err := getPhasePath(
+				flags.FuryctlPath,
+				basePath,
+				res.RepoPath,
+				flags.BinPath,
+				kubeconfigPath,
+				flags.Phase,
 				res.MinimalConf,
 				res.DistroManifest,
-				paths,
-				flags.Phase,
-				true,
-				false,
-				true,
 			)
-			if err != nil {
-				cmdEvent.AddErrorMessage(err)
-				tracker.Track(cmdEvent)
-
-				return fmt.Errorf("error while initializing cluster creator: %w", err)
-			}
-
-			phasePath, err := clusterCreator.GetPhasePath(flags.Phase)
 			if err != nil {
 				cmdEvent.AddErrorMessage(err)
 				tracker.Track(cmdEvent)
@@ -173,30 +154,13 @@ func NewDiffCommand(tracker *analytics.Tracker) *cobra.Command {
 				return fmt.Errorf("error while getting phase path: %w", err)
 			}
 
-			storedCfgStr, err := stateStore.GetConfig()
+			d, err := getDiffs(diffChecker, phasePath)
 			if err != nil {
-				return fmt.Errorf("error while getting current cluster config: %w", err)
+				cmdEvent.AddErrorMessage(err)
+				tracker.Track(cmdEvent)
+
+				return fmt.Errorf("error while getting diffs: %w", err)
 			}
-
-			storedCfg := map[string]any{}
-
-			if err := yamlx.UnmarshalV3(storedCfgStr, &storedCfg); err != nil {
-				return fmt.Errorf("error while unmarshalling config file: %w", err)
-			}
-
-			newCfg, err := yamlx.FromFileV3[map[string]any](flags.FuryctlPath)
-			if err != nil {
-				return fmt.Errorf("error while reading config file: %w", err)
-			}
-
-			diffChecker := diffs.NewBaseChecker(storedCfg, newCfg)
-
-			d, err := diffChecker.GenerateDiff()
-			if err != nil {
-				return fmt.Errorf("error while generating diff: %w", err)
-			}
-
-			d = diffChecker.FilterDiffFromPhase(d, phasePath)
 
 			if len(d) > 0 {
 				logrus.Infof(
@@ -252,6 +216,81 @@ func NewDiffCommand(tracker *analytics.Tracker) *cobra.Command {
 	)
 
 	return cmd
+}
+
+func getPhasePath(
+	furyctlPath string,
+	workDir string,
+	distroPath string,
+	binPath string,
+	kubeconfigPath string,
+	phase string,
+	minimalConf config.Furyctl,
+	distroManifest config.KFD,
+) (string, error) {
+	absFuryctlPath, err := filepath.Abs(furyctlPath)
+	if err != nil {
+		return "", fmt.Errorf("error while initializing cluster creation: %w", err)
+	}
+
+	paths := cluster.CreatorPaths{
+		ConfigPath: absFuryctlPath,
+		WorkDir:    workDir,
+		DistroPath: distroPath,
+		BinPath:    binPath,
+		Kubeconfig: kubeconfigPath,
+	}
+
+	clusterCreator, err := cluster.NewCreator(
+		minimalConf,
+		distroManifest,
+		paths,
+		phase,
+		true,
+		false,
+		true,
+	)
+	if err != nil {
+		return "", fmt.Errorf("error while initializing cluster creator: %w", err)
+	}
+
+	phasePath, err := clusterCreator.GetPhasePath(phase)
+	if err != nil {
+		return "", fmt.Errorf("error while getting phase path: %w", err)
+	}
+
+	return phasePath, nil
+}
+
+func createDiffChecker(stateStore state.Storer, furyctlPath string) (diffs.Checker, error) {
+	var diffChecker diffs.Checker
+
+	storedCfg := map[string]any{}
+
+	storedCfgStr, err := stateStore.GetConfig()
+	if err != nil {
+		return diffChecker, fmt.Errorf("error while getting current cluster config: %w", err)
+	}
+
+	if err := yamlx.UnmarshalV3(storedCfgStr, &storedCfg); err != nil {
+		return diffChecker, fmt.Errorf("error while unmarshalling config file: %w", err)
+	}
+
+	newCfg, err := yamlx.FromFileV3[map[string]any](furyctlPath)
+	if err != nil {
+		return diffChecker, fmt.Errorf("error while reading config file: %w", err)
+	}
+
+	return diffs.NewBaseChecker(storedCfg, newCfg), nil
+}
+
+func getDiffs(diffChecker diffs.Checker, phasePath string) (diff.Changelog, error) {
+	changeLog, err := diffChecker.GenerateDiff()
+	if err != nil {
+		return changeLog, fmt.Errorf("error while generating diff: %w", err)
+	}
+
+	return diffChecker.FilterDiffFromPhase(changeLog, phasePath), nil
 }
 
 func getDiffCommandFlags(

@@ -22,6 +22,7 @@ type Checker interface {
 	AssertImmutableViolations(diffs r3diff.Changelog, immutablePaths []string) []error
 	GenerateDiff() (r3diff.Changelog, error)
 	DiffToString(diffs r3diff.Changelog) string
+	FilterDiffFromPhase(changelog r3diff.Changelog, phasePath string) r3diff.Changelog
 }
 
 type BaseChecker struct {
