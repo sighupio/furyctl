@@ -214,6 +214,7 @@ furyctl is a command line interface tool to manage the full lifecycle of a Kuber
 	rootCmd.AddCommand(NewLegacyCommand(tracker))
 	rootCmd.AddCommand(NewConnectCommand(tracker))
 	rootCmd.AddCommand(NewApplyCommand(tracker))
+	rootCmd.AddCommand(NewDiffCommand(tracker))
 
 	return rootCmd
 }

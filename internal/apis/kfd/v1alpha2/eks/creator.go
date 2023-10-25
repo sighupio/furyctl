@@ -24,6 +24,14 @@ import (
 	"github.com/sighupio/furyctl/internal/state"
 )
 
+const (
+	InfrastructurePhaseSchemaPath = ".spec.infrastructure"
+	KubernetesPhaseSchemaPath     = ".spec.kubernetes"
+	DistributionPhaseSchemaPath   = ".spec.distribution"
+	PluginsPhaseSchemaPath        = ".spec.plugins"
+	AllPhaseSchemaPath            = ""
+)
+
 var (
 	ErrUnsupportedPhase = errors.New("unsupported phase")
 	ErrInfraNotPresent  = errors.New("the configuration file does not contain an infrastructure section")
@@ -114,6 +122,28 @@ func (v *ClusterCreator) SetProperty(name string, value any) {
 		if b, ok := value.(bool); ok {
 			v.dryRun = b
 		}
+	}
+}
+
+func (*ClusterCreator) GetPhasePath(phase string) (string, error) {
+	switch phase {
+	case cluster.OperationPhaseInfrastructure:
+		return InfrastructurePhaseSchemaPath, nil
+
+	case cluster.OperationPhaseKubernetes:
+		return KubernetesPhaseSchemaPath, nil
+
+	case cluster.OperationPhaseDistribution:
+		return DistributionPhaseSchemaPath, nil
+
+	case cluster.OperationPhasePlugins:
+		return PluginsPhaseSchemaPath, nil
+
+	case cluster.OperationPhaseAll:
+		return AllPhaseSchemaPath, nil
+
+	default:
+		return "", ErrUnsupportedPhase
 	}
 }
 
