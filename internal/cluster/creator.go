@@ -52,6 +52,7 @@ type Creator interface {
 	SetProperties(props []CreatorProperty)
 	SetProperty(name string, value any)
 	Create(skipPhase string, timeout int) error
+	GetPhasePath(phase string) (string, error)
 }
 
 func NewCreator(
