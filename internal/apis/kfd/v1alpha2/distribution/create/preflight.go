@@ -76,6 +76,10 @@ func NewPreFlight(
 func (p *PreFlight) Exec() error {
 	logrus.Info("Running preflight checks")
 
+	if err := p.CreateFolder(); err != nil {
+		return fmt.Errorf("error creating preflight phase folder: %w", err)
+	}
+
 	logrus.Info("Checking that the cluster is reachable...")
 
 	if _, err := p.kubeRunner.Version(); err != nil {
