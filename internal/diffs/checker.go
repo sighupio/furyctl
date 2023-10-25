@@ -45,6 +45,20 @@ func (v *BaseChecker) GenerateDiff() (r3diff.Changelog, error) {
 	return changelog, nil
 }
 
+func (*BaseChecker) FilterDiffFromPhase(changelog r3diff.Changelog, phasePath string) r3diff.Changelog {
+	var filteredChangelog r3diff.Changelog
+
+	for _, diff := range changelog {
+		joinedPath := "." + strings.Join(diff.Path, ".")
+
+		if strings.HasPrefix(joinedPath, phasePath) {
+			filteredChangelog = append(filteredChangelog, diff)
+		}
+	}
+
+	return filteredChangelog
+}
+
 func (*BaseChecker) DiffToString(diffs r3diff.Changelog) string {
 	var str string
 

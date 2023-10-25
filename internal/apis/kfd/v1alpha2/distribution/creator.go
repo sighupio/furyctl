@@ -17,6 +17,12 @@ import (
 	"github.com/sighupio/furyctl/internal/state"
 )
 
+const (
+	DistributionPhaseSchemaPath = ".spec.distribution"
+	PluginsPhaseSchemaPath      = ".spec.plugins"
+	AllPhaseSchemaPath          = ""
+)
+
 var ErrUnsupportedPhase = errors.New("unsupported phase")
 
 type ClusterCreator struct {
@@ -89,6 +95,22 @@ func (c *ClusterCreator) SetProperty(name string, value any) {
 		if b, ok := value.(bool); ok {
 			c.dryRun = b
 		}
+	}
+}
+
+func (*ClusterCreator) GetPhasePath(phase string) (string, error) {
+	switch phase {
+	case cluster.OperationPhaseDistribution:
+		return DistributionPhaseSchemaPath, nil
+
+	case cluster.OperationPhasePlugins:
+		return PluginsPhaseSchemaPath, nil
+
+	case cluster.OperationPhaseAll:
+		return AllPhaseSchemaPath, nil
+
+	default:
+		return "", ErrUnsupportedPhase
 	}
 }
 
