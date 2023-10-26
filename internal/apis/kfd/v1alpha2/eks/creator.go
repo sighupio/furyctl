@@ -143,7 +143,7 @@ func (*ClusterCreator) GetPhasePath(phase string) (string, error) {
 		return AllPhaseSchemaPath, nil
 
 	default:
-		return "", ErrUnsupportedPhase
+		return "", fmt.Errorf("%w: %s", ErrUnsupportedPhase, phase)
 	}
 }
 
@@ -209,7 +209,7 @@ func (v *ClusterCreator) Create(skipPhase string, timeout int) error {
 			errCh <- v.allPhases(skipPhase, infra, kube, distro, plugins, vpnConnector)
 
 		default:
-			errCh <- ErrUnsupportedPhase
+			errCh <- fmt.Errorf("%w: %s", ErrUnsupportedPhase, v.phase)
 		}
 	}()
 
