@@ -163,7 +163,7 @@ func NewDiffCommand(tracker *analytics.Tracker) *cobra.Command {
 			}
 
 			if len(d) > 0 {
-				logrus.Infof(
+				fmt.Printf(
 					"Differences found from previous cluster configuration:\n%s",
 					diffChecker.DiffToString(d),
 				)
