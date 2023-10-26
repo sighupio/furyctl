@@ -110,7 +110,7 @@ func (*ClusterCreator) GetPhasePath(phase string) (string, error) {
 		return AllPhaseSchemaPath, nil
 
 	default:
-		return "", ErrUnsupportedPhase
+		return "", fmt.Errorf("%w: %s", ErrUnsupportedPhase, phase)
 	}
 }
 
@@ -178,7 +178,7 @@ func (c *ClusterCreator) Create(skipPhase string, _ int) error {
 		}
 
 	default:
-		return ErrUnsupportedPhase
+		return fmt.Errorf("%w: %s", ErrUnsupportedPhase, c.phase)
 	}
 
 	if c.dryRun {
