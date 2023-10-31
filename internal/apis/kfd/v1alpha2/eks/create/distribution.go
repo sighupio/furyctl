@@ -18,8 +18,10 @@ import (
 
 	"github.com/sighupio/fury-distribution/pkg/apis/config"
 	"github.com/sighupio/fury-distribution/pkg/apis/ekscluster/v1alpha2/private"
+	"github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2"
 	"github.com/sighupio/furyctl/internal/cluster"
 	"github.com/sighupio/furyctl/internal/merge"
+	"github.com/sighupio/furyctl/internal/state"
 	"github.com/sighupio/furyctl/internal/template"
 	"github.com/sighupio/furyctl/internal/tool/kubectl"
 	"github.com/sighupio/furyctl/internal/tool/shell"
@@ -27,6 +29,13 @@ import (
 	execx "github.com/sighupio/furyctl/internal/x/exec"
 	iox "github.com/sighupio/furyctl/internal/x/io"
 	yamlx "github.com/sighupio/furyctl/internal/x/yaml"
+)
+
+const (
+	LifecyclePreTf     = "pre-tf"
+	LifecyclePostTf    = "post-tf"
+	LifecyclePreApply  = "pre-apply"
+	LifecyclePostApply = "post-apply"
 )
 
 var (
@@ -48,6 +57,7 @@ type Distribution struct {
 	kfdManifest      config.KFD
 	infraOutputsPath string
 	distroPath       string
+	stateStore       state.Storer
 	tfRunner         *terraform.Runner
 	shellRunner      *shell.Runner
 	kubeRunner       *kubectl.Runner
@@ -83,6 +93,14 @@ func NewDistribution(
 		infraOutputsPath: infraOutputsPath,
 		distroPath:       paths.DistroPath,
 		furyctlConfPath:  paths.ConfigPath,
+		stateStore: state.NewStore(
+			paths.DistroPath,
+			paths.ConfigPath,
+			kubeconfig,
+			paths.WorkDir,
+			kfdManifest.Tools.Common.Kubectl.Version,
+			paths.BinPath,
+		),
 		tfRunner: terraform.NewRunner(
 			execx.NewStdExecutor(),
 			terraform.Paths{
@@ -117,7 +135,17 @@ func NewDistribution(
 	}, nil
 }
 
-func (d *Distribution) Exec() error {
+func (*Distribution) SupportsLifecycle(lifecycle string) bool {
+	switch lifecycle {
+	case LifecyclePreTf, LifecyclePostTf, LifecyclePreApply, LifecyclePostApply:
+		return true
+
+	default:
+		return false
+	}
+}
+
+func (d *Distribution) Exec(reducers v1alpha2.Reducers) error {
 	timestamp := time.Now().Unix()
 
 	logrus.Info("Installing Kubernetes Fury Distribution...")
@@ -149,6 +177,15 @@ func (d *Distribution) Exec() error {
 
 	if err := d.CreateFolderStructure(); err != nil {
 		return fmt.Errorf("error creating distribution phase folder structure: %w", err)
+	}
+
+	tfCfg, err = d.injectStoredConfig(tfCfg)
+	if err != nil {
+		return fmt.Errorf("error injecting stored config: %w", err)
+	}
+
+	if err := d.runReducers(reducers, tfCfg, LifecyclePreTf, []string{"manifests", ".gitignore"}); err != nil {
+		return fmt.Errorf("error running pre-tf reducers: %w", err)
 	}
 
 	if err := d.tfRunner.Init(); err != nil {
@@ -216,21 +253,53 @@ func (d *Distribution) Exec() error {
 	}
 
 	mCfg.Data["paths"] = map[any]any{
-		"kubectl":   d.KubectlPath,
-		"kustomize": d.KustomizePath,
-		"yq":        d.YqPath,
+		"kubectl":    d.KubectlPath,
+		"kustomize":  d.KustomizePath,
+		"yq":         d.YqPath,
+		"vendorPath": path.Join(d.Path, "..", "vendor"),
 	}
 
 	mCfg.Data["checks"] = map[any]any{
 		"storageClassAvailable": true,
 	}
 
+	mCfg, err = d.injectStoredConfig(mCfg)
+	if err != nil {
+		return fmt.Errorf("error injecting stored config: %w", err)
+	}
+
 	if err := d.copyFromTemplate(mCfg); err != nil {
 		return err
 	}
 
+	if err := d.runReducers(reducers, mCfg, LifecyclePostTf, []string{"manifests", ".gitignore"}); err != nil {
+		return fmt.Errorf("error running pre-tf reducers: %w", err)
+	}
+
 	logrus.Info("Checking that the cluster is reachable...")
 
+	if err := d.checkKubeVersion(); err != nil {
+		return fmt.Errorf("error checking cluster reachability: %w", err)
+	}
+
+	if err := d.runReducers(reducers, mCfg, LifecyclePreApply, []string{"manifests", ".gitignore"}); err != nil {
+		return fmt.Errorf("error running pre-tf reducers: %w", err)
+	}
+
+	logrus.Info("Applying manifests...")
+
+	if _, err := d.shellRunner.Run(path.Join(d.Path, "scripts", "apply.sh"), "false", d.kubeconfig); err != nil {
+		return fmt.Errorf("error applying manifests: %w", err)
+	}
+
+	if err := d.runReducers(reducers, mCfg, LifecyclePostApply, []string{"manifests", ".gitignore"}); err != nil {
+		return fmt.Errorf("error running pre-tf reducers: %w", err)
+	}
+
+	return nil
+}
+
+func (d *Distribution) checkKubeVersion() error {
 	if _, err := d.kubeRunner.Version(); err != nil {
 		logrus.Debugf("Got error while running cluster reachability check: %s", err)
 
@@ -244,10 +313,50 @@ func (d *Distribution) Exec() error {
 		}
 	}
 
-	logrus.Info("Applying manifests...")
+	return nil
+}
 
-	if _, err := d.shellRunner.Run(path.Join(d.Path, "scripts", "apply.sh"), "false", d.kubeconfig); err != nil {
-		return fmt.Errorf("error applying manifests: %w", err)
+func (d *Distribution) injectStoredConfig(cfg template.Config) (template.Config, error) {
+	storedCfg := map[any]any{}
+
+	storedCfgStr, err := d.stateStore.GetConfig()
+	if err != nil {
+		return cfg, fmt.Errorf("error while getting current cluster config: %w", err)
+	}
+
+	if err = yamlx.UnmarshalV3(storedCfgStr, &storedCfg); err != nil {
+		return cfg, fmt.Errorf("error while unmarshalling config file: %w", err)
+	}
+
+	cfg.Data["storedCfg"] = storedCfg
+
+	return cfg, nil
+}
+
+func (d *Distribution) runReducers(
+	reducers v1alpha2.Reducers,
+	cfg template.Config,
+	lifecycle string,
+	excludes []string,
+) error {
+	r := reducers.ByLifecycle(lifecycle)
+
+	if len(r) > 0 {
+		preTfReducersCfg := cfg
+		preTfReducersCfg.Data = r.Combine(cfg.Data, "reducers")
+		preTfReducersCfg.Templates.Excludes = excludes
+
+		if err := d.copyFromTemplate(preTfReducersCfg); err != nil {
+			return err
+		}
+
+		if _, err := d.shellRunner.Run(
+			path.Join(d.Path, "scripts", fmt.Sprintf("%s.sh", lifecycle)),
+			"true",
+			d.kubeconfig,
+		); err != nil {
+			return fmt.Errorf("error applying manifests: %w", err)
+		}
 	}
 
 	return nil

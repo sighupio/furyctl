@@ -43,6 +43,11 @@ var (
 	serverIPRegex = regexp.MustCompile("(?m)public_ip\\s*=\\s*\"([^\"]+)\"")
 )
 
+type Status struct {
+	Diffs   r3diff.Changelog
+	Success bool
+}
+
 type PreFlight struct {
 	*cluster.OperationPhase
 	furyctlConf     private.EksclusterKfdV1Alpha2
@@ -145,29 +150,34 @@ func NewPreFlight(
 	}, nil
 }
 
-func (p *PreFlight) Exec() error {
+func (p *PreFlight) Exec() (Status, error) {
+	status := Status{
+		Diffs:   r3diff.Changelog{},
+		Success: false,
+	}
+
 	logrus.Info("Running preflight checks")
 
 	if err := p.CreateFolder(); err != nil {
-		return fmt.Errorf("error creating preflight phase folder: %w", err)
+		return status, fmt.Errorf("error creating preflight phase folder: %w", err)
 	}
 
 	if err := p.copyFromTemplate(); err != nil {
-		return err
+		return status, err
 	}
 
 	if err := p.CreateFolderStructure(); err != nil {
-		return fmt.Errorf("error creating preflight phase folder structure: %w", err)
+		return status, fmt.Errorf("error creating preflight phase folder structure: %w", err)
 	}
 
 	if _, err := os.Stat(path.Join(p.Path, "secrets")); os.IsNotExist(err) {
 		if err := os.Mkdir(path.Join(p.Path, "secrets"), iox.FullPermAccess); err != nil {
-			return fmt.Errorf("error creating secrets folder: %w", err)
+			return status, fmt.Errorf("error creating secrets folder: %w", err)
 		}
 	}
 
 	if err := p.tfRunnerKube.Init(); err != nil {
-		return fmt.Errorf("error running terraform init: %w", err)
+		return status, fmt.Errorf("error running terraform init: %w", err)
 	}
 
 	if _, err := p.tfRunnerKube.State("show", "data.aws_eks_cluster.fury"); err != nil {
@@ -175,7 +185,9 @@ func (p *PreFlight) Exec() error {
 
 		logrus.Info("Preflight checks completed successfully")
 
-		return nil //nolint:nilerr // we want to return nil here
+		status.Success = true
+
+		return status, nil //nolint:nilerr // we want to return nil here
 	}
 
 	logrus.Info("Updating kubeconfig...")
@@ -190,30 +202,32 @@ func (p *PreFlight) Exec() error {
 		"--region",
 		string(p.furyctlConf.Spec.Region),
 	); err != nil {
-		return fmt.Errorf("error updating kubeconfig: %w", err)
+		return status, fmt.Errorf("error updating kubeconfig: %w", err)
 	}
 
 	if p.isVPNRequired() {
 		if err := p.handleVPN(); err != nil {
-			return fmt.Errorf("error handling vpn: %w", err)
+			return status, fmt.Errorf("error handling vpn: %w", err)
 		}
 	}
 
 	logrus.Info("Checking that the cluster is reachable...")
 
 	if _, err := p.kubeRunner.Version(); err != nil {
-		return fmt.Errorf("cluster is unreachable, make sure you have access to the cluster: %w", err)
+		return status, fmt.Errorf("cluster is unreachable, make sure you have access to the cluster: %w", err)
 	}
 
 	diffChecker, err := p.CreateDiffChecker()
 	if err != nil {
-		return fmt.Errorf("error creating diff checker: %w", err)
+		return status, fmt.Errorf("error creating diff checker: %w", err)
 	}
 
 	d, err := diffChecker.GenerateDiff()
 	if err != nil {
-		return fmt.Errorf("error while generating diff: %w", err)
+		return status, fmt.Errorf("error while generating diff: %w", err)
 	}
+
+	status.Diffs = d
 
 	if len(d) > 0 {
 		logrus.Infof(
@@ -224,13 +238,15 @@ func (p *PreFlight) Exec() error {
 		logrus.Warn("Cluster configuration has changed, checking for immutable violations...")
 
 		if err := p.CheckStateDiffs(d, diffChecker); err != nil {
-			return fmt.Errorf("error checking state diffs: %w", err)
+			return status, fmt.Errorf("error checking state diffs: %w", err)
 		}
 	}
 
 	logrus.Info("Preflight checks completed successfully")
 
-	return nil
+	status.Success = true
+
+	return status, nil
 }
 
 func (p *PreFlight) copyFromTemplate() error {
