@@ -5,7 +5,6 @@
 package cmd
 
 import (
-	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -25,12 +24,6 @@ import (
 	execx "github.com/sighupio/furyctl/internal/x/exec"
 	netx "github.com/sighupio/furyctl/internal/x/net"
 	yamlx "github.com/sighupio/furyctl/internal/x/yaml"
-)
-
-var (
-	ErrParsingFlag        = errors.New("error while parsing flag")
-	ErrKubeconfigReq      = errors.New("either the KUBECONFIG environment variable or the --kubeconfig flag should be set")
-	ErrKubeconfigNotFound = errors.New("kubeconfig file not found")
 )
 
 type DiffCommandFlags struct {

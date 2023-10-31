@@ -25,12 +25,7 @@ import (
 	netx "github.com/sighupio/furyctl/internal/x/net"
 )
 
-var (
-	ErrParsingFlag                = errors.New("error while parsing flag")
-	ErrDownloadDependenciesFailed = errors.New("dependencies download failed")
-	ErrKubeconfigReq              = errors.New("when running distribution phase alone, either the KUBECONFIG environment variable or the --kubeconfig flag should be set")
-	ErrKubeconfigNotFound         = errors.New("kubeconfig file not found")
-)
+var ErrDownloadDependenciesFailed = errors.New("dependencies download failed")
 
 type ClusterCmdFlags struct {
 	Debug              bool
