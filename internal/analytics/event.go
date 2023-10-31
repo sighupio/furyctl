@@ -6,10 +6,10 @@ package analytics
 
 type Event interface {
 	Properties() map[string]any
-	AddErrorMessage(error)
-	AddSuccessMessage(string)
+	AddErrorMessage(e error)
+	AddSuccessMessage(msg string)
 	AddClusterDetails(c ClusterDetails)
-	AddExitCode(int)
+	AddExitCode(e int)
 	Name() string
 }
 

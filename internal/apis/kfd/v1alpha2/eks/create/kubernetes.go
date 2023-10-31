@@ -1117,7 +1117,7 @@ func (*Kubernetes) addCidrBlocksFirewallRules(
 		}
 
 		content := "{\ndescription = \"%v\"\ntype = \"%v\"\ncidr_blocks = %v\nprotocol = \"%v\"\n" +
-			"from_port = \"%v\"\nto_port = \"%v\"\ntags = %v\n}"
+			"from_port = \"%v\"\nto_port = \"%v\"\ntags = %v\n}" //nolint:goconst // repetita iuvant
 
 		if i < len(cb)-1 {
 			content += ","

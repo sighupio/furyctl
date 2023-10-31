@@ -24,7 +24,7 @@ func SafeWriteToBuffer(buffer *bytes.Buffer, content string, values ...any) erro
 			return fmt.Errorf("error parsing dynamic value: %w", err)
 		}
 
-		vs = append(vs, fmt.Sprintf("%v", v))
+		vs = append(vs, v)
 	}
 
 	if len(vs) == 0 {

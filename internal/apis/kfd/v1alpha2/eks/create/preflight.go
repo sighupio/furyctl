@@ -12,6 +12,7 @@ import (
 	"path"
 	"path/filepath"
 	"regexp"
+	"strconv"
 
 	r3diff "github.com/r3labs/diff/v3"
 	"github.com/sirupsen/logrus"
@@ -345,7 +346,7 @@ func (p *PreFlight) getVPNServers() ([]string, error) {
 			return servers, fmt.Errorf("error getting vpn instance: %w", err)
 		}
 
-		servers = append(servers, serverIPRegex.FindStringSubmatch(out)[1]+":"+fmt.Sprintf("%d", port))
+		servers = append(servers, serverIPRegex.FindStringSubmatch(out)[1]+":"+strconv.Itoa(port))
 	}
 
 	return servers, nil
