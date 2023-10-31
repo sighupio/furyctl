@@ -17,8 +17,10 @@ import (
 
 	"github.com/sighupio/fury-distribution/pkg/apis/config"
 	"github.com/sighupio/fury-distribution/pkg/apis/ekscluster/v1alpha2/private"
+	"github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2"
 	commcreate "github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/common/create"
 	"github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/eks/create"
+	"github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/eks/rules"
 	"github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/eks/vpn"
 	"github.com/sighupio/furyctl/internal/cluster"
 	"github.com/sighupio/furyctl/internal/state"
@@ -47,6 +49,14 @@ type ClusterCreator struct {
 	skipVpn        bool
 	vpnAutoConnect bool
 	dryRun         bool
+}
+
+type Phases struct {
+	*create.PreFlight
+	*create.Infrastructure
+	*create.Kubernetes
+	*create.Distribution
+	*commcreate.Plugins
 }
 
 func (v *ClusterCreator) SetProperties(props []cluster.CreatorProperty) {
@@ -175,43 +185,19 @@ func (v *ClusterCreator) Create(skipPhase string, timeout int) error {
 	errCh := make(chan error)
 	doneCh := make(chan bool)
 
-	go func() {
-		defer close(doneCh)
-
-		if err := preflight.Exec(); err != nil {
-			errCh <- fmt.Errorf("error while executing preflight phase: %w", err)
-
-			return
-		}
-
-		switch v.phase {
-		case cluster.OperationPhaseInfrastructure:
-			if err := v.infraPhase(infra, vpnConnector); err != nil {
-				errCh <- err
-			}
-
-		case cluster.OperationPhaseKubernetes:
-			if err := v.kubernetesPhase(kube, vpnConnector); err != nil {
-				errCh <- err
-			}
-
-		case cluster.OperationPhaseDistribution:
-			if err := v.distributionPhase(distro, vpnConnector); err != nil {
-				errCh <- err
-			}
-
-		case cluster.OperationPhasePlugins:
-			if err := plugins.Exec(); err != nil {
-				errCh <- err
-			}
-
-		case cluster.OperationPhaseAll:
-			errCh <- v.allPhases(skipPhase, infra, kube, distro, plugins, vpnConnector)
-
-		default:
-			errCh <- fmt.Errorf("%w: %s", ErrUnsupportedPhase, v.phase)
-		}
-	}()
+	go v.CreateAsync(
+		&Phases{
+			PreFlight:      preflight,
+			Infrastructure: infra,
+			Kubernetes:     kube,
+			Distribution:   distro,
+			Plugins:        plugins,
+		},
+		skipPhase,
+		vpnConnector,
+		errCh,
+		doneCh,
+	)
 
 	select {
 	case <-time.After(time.Duration(timeout) * time.Second):
@@ -275,6 +261,115 @@ func (v *ClusterCreator) Create(skipPhase string, timeout int) error {
 	}
 
 	return nil
+}
+
+func (v *ClusterCreator) CreateAsync(
+	phases *Phases,
+	skipPhase string,
+	vpnConnector *vpn.Connector,
+	errCh chan error,
+	doneCh chan bool,
+) {
+	defer close(doneCh)
+
+	status, err := phases.PreFlight.Exec()
+	if err != nil {
+		errCh <- fmt.Errorf("error while executing preflight phase: %w", err)
+
+		return
+	}
+
+	r, err := rules.NewEKSClusterRulesExtractor(v.paths.DistroPath)
+	if err != nil {
+		if !errors.Is(err, rules.ErrReadingRulesFile) {
+			errCh <- fmt.Errorf("error while creating rules builder: %w", err)
+		}
+	}
+
+	switch v.phase {
+	case cluster.OperationPhaseInfrastructure:
+		if err := v.infraPhase(phases.Infrastructure, vpnConnector); err != nil {
+			errCh <- err
+		}
+
+	case cluster.OperationPhaseKubernetes:
+		if err := v.kubernetesPhase(phases.Kubernetes, vpnConnector); err != nil {
+			errCh <- err
+		}
+
+	case cluster.OperationPhaseDistribution:
+		reducersRules := r.GetReducers("distribution")
+
+		filteredReducers := r.ReducerRulesByDiffs(reducersRules, status.Diffs)
+
+		reducers := make(v1alpha2.Reducers, len(filteredReducers))
+
+		if len(filteredReducers) > 0 {
+			for _, reducer := range filteredReducers {
+				if reducer.Reducers != nil {
+					if reducer.Description != nil {
+						logrus.Infof("%s", *reducer.Description)
+					}
+
+					for _, red := range *reducer.Reducers {
+						reducers = append(reducers, v1alpha2.NewBaseReducer(
+							red.Key,
+							red.From,
+							red.To,
+							red.Lifecycle,
+						),
+						)
+					}
+				}
+			}
+		}
+
+		if err := v.distributionPhase(phases.Distribution, vpnConnector, reducers); err != nil {
+			errCh <- err
+		}
+
+	case cluster.OperationPhasePlugins:
+		if err := phases.Plugins.Exec(); err != nil {
+			errCh <- err
+		}
+
+	case cluster.OperationPhaseAll:
+		reducersRules := r.GetReducers("distribution")
+
+		filteredReducers := r.ReducerRulesByDiffs(reducersRules, status.Diffs)
+
+		reducers := make(v1alpha2.Reducers, len(filteredReducers))
+
+		if len(filteredReducers) > 0 {
+			for _, reducer := range filteredReducers {
+				if reducer.Reducers != nil {
+					if reducer.Description != nil {
+						logrus.Infof("%s", *reducer.Description)
+					}
+
+					for _, red := range *reducer.Reducers {
+						reducers = append(reducers, v1alpha2.NewBaseReducer(
+							red.Key,
+							red.From,
+							red.To,
+							red.Lifecycle,
+						),
+						)
+					}
+				}
+			}
+		}
+
+		errCh <- v.allPhases(
+			skipPhase,
+			phases,
+			vpnConnector,
+			reducers,
+		)
+
+	default:
+		errCh <- fmt.Errorf("%w: %s", ErrUnsupportedPhase, v.phase)
+	}
 }
 
 func (v *ClusterCreator) infraPhase(infra *create.Infrastructure, vpnConnector *vpn.Connector) error {
@@ -353,7 +448,11 @@ func (v *ClusterCreator) kubernetesPhase(kube *create.Kubernetes, vpnConnector *
 	return nil
 }
 
-func (v *ClusterCreator) distributionPhase(distro *create.Distribution, vpnConnector *vpn.Connector) error {
+func (v *ClusterCreator) distributionPhase(
+	distro *create.Distribution,
+	vpnConnector *vpn.Connector,
+	reducers v1alpha2.Reducers,
+) error {
 	if v.furyctlConf.Spec.Kubernetes.ApiServer.PrivateAccess &&
 		!v.furyctlConf.Spec.Kubernetes.ApiServer.PublicAccess &&
 		!v.dryRun {
@@ -362,7 +461,7 @@ func (v *ClusterCreator) distributionPhase(distro *create.Distribution, vpnConne
 		}
 	}
 
-	if err := distro.Exec(); err != nil {
+	if err := distro.Exec(reducers); err != nil {
 		return fmt.Errorf("error while installing Kubernetes Fury Distribution: %w", err)
 	}
 
@@ -391,11 +490,9 @@ func (v *ClusterCreator) distributionPhase(distro *create.Distribution, vpnConne
 
 func (v *ClusterCreator) allPhases(
 	skipPhase string,
-	infra *create.Infrastructure,
-	kube *create.Kubernetes,
-	distro *create.Distribution,
-	plugins *commcreate.Plugins,
+	phases *Phases,
 	vpnConnector *vpn.Connector,
+	reducers v1alpha2.Reducers,
 ) error {
 	if v.dryRun {
 		logrus.Info("furcytl will try its best to calculate what would have changed. " +
@@ -406,7 +503,7 @@ func (v *ClusterCreator) allPhases(
 
 	if v.furyctlConf.Spec.Infrastructure != nil &&
 		(skipPhase == "" || skipPhase == cluster.OperationPhaseDistribution) {
-		if err := infra.Exec(); err != nil {
+		if err := phases.Infrastructure.Exec(); err != nil {
 			return fmt.Errorf("error while executing infrastructure phase: %w", err)
 		}
 
@@ -426,7 +523,7 @@ func (v *ClusterCreator) allPhases(
 	}
 
 	if skipPhase != cluster.OperationPhaseKubernetes {
-		if err := kube.Exec(); err != nil {
+		if err := phases.Kubernetes.Exec(); err != nil {
 			return fmt.Errorf("error while executing kubernetes phase: %w", err)
 		}
 
@@ -442,7 +539,7 @@ func (v *ClusterCreator) allPhases(
 	}
 
 	if skipPhase != cluster.OperationPhaseDistribution {
-		if err := distro.Exec(); err != nil {
+		if err := phases.Distribution.Exec(reducers); err != nil {
 			return fmt.Errorf("error while executing distribution phase: %w", err)
 		}
 
@@ -458,7 +555,7 @@ func (v *ClusterCreator) allPhases(
 	}
 
 	if skipPhase != cluster.OperationPhasePlugins {
-		if err := plugins.Exec(); err != nil {
+		if err := phases.Plugins.Exec(); err != nil {
 			return fmt.Errorf("error while executing plugins phase: %w", err)
 		}
 	}

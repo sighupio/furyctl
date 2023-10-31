@@ -14,7 +14,7 @@ import (
 )
 
 var (
-	numbersToWildcardRegex = regexp.MustCompile(`\.\d+\b`)
+	NumbersToWildcardRegex = regexp.MustCompile(`\.\d+\b`)
 	errImmutable           = errors.New("immutable value changed")
 )
 
@@ -99,7 +99,7 @@ func (*BaseChecker) AssertImmutableViolations(diffs r3diff.Changelog, immutableP
 
 func isImmutablePathChanged(change r3diff.Change, immutables []string) bool {
 	joinedPath := "." + strings.Join(change.Path, ".")
-	changePath := numbersToWildcardRegex.ReplaceAllString(joinedPath, ".*")
+	changePath := NumbersToWildcardRegex.ReplaceAllString(joinedPath, ".*")
 
 	for _, immutable := range immutables {
 		if changePath == immutable {
