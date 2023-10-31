@@ -1,5 +1,5 @@
 _PROJECT_DIRECTORY = $(dir $(realpath $(firstword $(MAKEFILE_LIST))))
-_GOLANG_IMAGE = golang:1.20.4
+_GOLANG_IMAGE = golang:1.21.3
 _PROJECTNAME = furyctl
 _GOARCH = "amd64"
 _BIN_OPEN = "open"
