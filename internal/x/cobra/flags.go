@@ -10,8 +10,9 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func Flag[T bool | int | string](cmd *cobra.Command, name string) any {
+func Flag[T bool | int | string](cmd *cobra.Command, name string) T {
 	var f T
+	var g any
 
 	if cmd == nil {
 		return f
@@ -21,18 +22,21 @@ func Flag[T bool | int | string](cmd *cobra.Command, name string) any {
 		return f
 	}
 
-	v := cmd.Flag(name).Value.String()
+	sv := cmd.Flag(name).Value.String()
 
-	if v == "true" {
-		return true
+	if sv == "true" {
+		g = true
+	} else if sv == "false" {
+		g = false
+	} else if iv, err := strconv.Atoi(sv); err == nil {
+		g = iv
+	} else {
+		g = sv
 	}
 
-	if v == "false" {
-		return false
-	}
-
-	if vv, err := strconv.Atoi(v); err == nil {
-		return vv
+	v, ok := g.(T)
+	if !ok {
+		return f
 	}
 
 	return v
