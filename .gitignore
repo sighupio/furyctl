@@ -4,6 +4,7 @@ vendor
 bin
 .idea
 .go/
+.envrc
 furyctl
 demo
 dist/
