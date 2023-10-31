@@ -77,17 +77,11 @@ furyctl is a command line interface tool to manage the full lifecycle of a Kuber
 				// Configure the spinner.
 				w := logrus.StandardLogger().Out
 
-				cflag, ok := cobrax.Flag[bool](cmd, "no-tty").(bool)
-				if !ok {
-					logrus.Fatalf("error while getting no-tty flag")
-				}
+				cflag := cobrax.Flag[bool](cmd, "no-tty")
 
 				cfg.Spinner = spinner.New(spinner.CharSets[spinnerStyle], timeout, spinner.WithWriter(w))
 
-				outDir, ok := cobrax.Flag[string](cmd, "outdir").(string)
-				if !ok {
-					logrus.Fatalf("error while getting string flag")
-				}
+				outDir := cobrax.Flag[string](cmd, "outdir")
 
 				homeDir, err := os.UserHomeDir()
 				if err != nil {
@@ -98,8 +92,8 @@ furyctl is a command line interface tool to manage the full lifecycle of a Kuber
 					outDir = homeDir
 				}
 
-				logPath, ok := cobrax.Flag[string](cmd, "log").(string)
-				if ok && logPath != "stdout" {
+				logPath := cobrax.Flag[string](cmd, "log")
+				if logPath != "stdout" {
 					if logPath == "" {
 						logPath = filepath.Join(outDir, ".furyctl", "furyctl.log")
 					}
@@ -113,21 +107,19 @@ furyctl is a command line interface tool to manage the full lifecycle of a Kuber
 				}
 
 				// Set log level.
-				dflag, ok := cobrax.Flag[bool](cmd, "debug").(bool)
-				if ok {
-					logrusx.InitLog(logFile, dflag, cflag)
-				}
+				dflag := cobrax.Flag[bool](cmd, "debug")
+				logrusx.InitLog(logFile, dflag, cflag)
 
 				logrus.Debugf("logging to: %s", logPath)
 
 				// Configure analytics.
-				aflag, ok := cobrax.Flag[bool](cmd, "disable-analytics").(bool)
-				if ok && aflag {
+				aflag := cobrax.Flag[bool](cmd, "disable-analytics")
+				if aflag {
 					tracker.Disable()
 				}
 
 				// Change working directory if it is specified.
-				if workdir, ok := cobrax.Flag[string](cmd, "workdir").(string); workdir != "" && ok {
+				if workdir := cobrax.Flag[string](cmd, "workdir"); workdir != "" {
 					// Get absolute path of workdir.
 					absWorkdir, err := filepath.Abs(workdir)
 					if err != nil {
