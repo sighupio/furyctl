@@ -131,7 +131,7 @@ steps:
         from_secret: TERRAFORM_TF_STATES_BUCKET_NAME
 
   - name: build
-    image: ghcr.io/goreleaser/goreleaser:v1.15.2
+    image: ghcr.io/goreleaser/goreleaser:v1.21.2
     depends_on:
       - lint
       - test-unit
@@ -157,7 +157,7 @@ steps:
         from_secret: GITHUB_TOKEN
 
   - name: build-release
-    image: ghcr.io/goreleaser/goreleaser:v1.15.2
+    image: ghcr.io/goreleaser/goreleaser:v1.21.2
     depends_on:
       - lint
       - test-unit
