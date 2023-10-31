@@ -36,6 +36,14 @@ func MarshalV2(in any) ([]byte, error) {
 	return out, nil
 }
 
+func UnmarshalV2(in []byte, out any) error {
+	if err := v2.Unmarshal(in, out); err != nil {
+		return fmt.Errorf("error while unmarshalling yaml: %w", err)
+	}
+
+	return nil
+}
+
 func FromFileV3[T any](file string) (T, error) {
 	var data T
 
@@ -58,4 +66,12 @@ func MarshalV3(in any) ([]byte, error) {
 	}
 
 	return out, nil
+}
+
+func UnmarshalV3(in []byte, out any) error {
+	if err := v3.Unmarshal(in, out); err != nil {
+		return fmt.Errorf("error while unmarshalling yaml: %w", err)
+	}
+
+	return nil
 }

@@ -33,28 +33,17 @@ spec:
             - 10.0.30.0/24
             - 10.0.40.0/24
     vpn:
-      instances: 1
-      port: 1194
-      instanceType: t3.micro
-      diskSize: 50
-      operatorName: sighup
-      dhParamsBits: 2048
       vpnClientsSubnetCidr: 192.168.200.0/24
       ssh:
         publicKeys:
           - "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIAQt/UN/edbCpeWU6M17UqCUqTXs96b7DDWUcbdBrATP"
         githubUsersName:
-          - Al-Pragliola
+          - SIGHUP-C-3PO
         allowedFromCidrs:
           - 0.0.0.0/0
   kubernetes:
     nodeAllowedSshPublicKey: "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIAQt/UN/edbCpeWU6M17UqCUqTXs96b7DDWUcbdBrATP"
     nodePoolsLaunchKind: "launch_templates"
-    apiServer:
-      privateAccess: true
-      publicAccess: false
-      privateAccessCidrs: [ '0.0.0.0/0' ]
-      publicAccessCidrs: [ '0.0.0.0/0' ]
     nodePools:
       - name: worker
         ami:
@@ -132,6 +121,7 @@ spec:
           private:
             create: true
             name: "internal.fury-demo.sighup.io"
+            vpcId: "vpc123123123123"
       logging:
         overrides:
           nodeSelector: {}
@@ -199,6 +189,7 @@ spec:
         velero:
           eks:
             bucketName: example-velero
+            iamRoleArn: arn:aws:iam::123456789012:role/example-velero # private.
             region: eu-west-1
       auth:
         provider:

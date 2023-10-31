@@ -35,11 +35,12 @@ func (r *Runner) CmdPath() string {
 	return r.paths.Awscli
 }
 
-func (r *Runner) newCmd(args []string) (*execx.Cmd, string) {
+func (r *Runner) newCmd(args []string, sensitive bool) (*execx.Cmd, string) {
 	cmd := execx.NewCmd(r.paths.Awscli, execx.CmdOptions{
-		Args:     args,
-		Executor: r.executor,
-		WorkDir:  r.paths.WorkDir,
+		Args:      args,
+		Executor:  r.executor,
+		WorkDir:   r.paths.WorkDir,
+		Sensitive: sensitive,
 	})
 
 	id := uuid.NewString()
@@ -52,14 +53,14 @@ func (r *Runner) deleteCmd(id string) {
 	delete(r.cmds, id)
 }
 
-func (r *Runner) Ec2(sub string, params ...string) (string, error) {
+func (r *Runner) Ec2(sensitive bool, sub string, params ...string) (string, error) {
 	args := []string{"ec2", sub}
 
 	if len(params) > 0 {
 		args = append(args, params...)
 	}
 
-	cmd, id := r.newCmd(args)
+	cmd, id := r.newCmd(args, sensitive)
 	defer r.deleteCmd(id)
 
 	out, err := execx.CombinedOutput(cmd)
@@ -70,11 +71,11 @@ func (r *Runner) Ec2(sub string, params ...string) (string, error) {
 	return out, nil
 }
 
-func (r *Runner) S3(params ...string) (string, error) {
+func (r *Runner) S3(sensitive bool, params ...string) (string, error) {
 	args := []string{"s3"}
 	args = append(args, params...)
 
-	cmd, id := r.newCmd(args)
+	cmd, id := r.newCmd(args, sensitive)
 	defer r.deleteCmd(id)
 
 	out, err := execx.CombinedOutput(cmd)
@@ -85,11 +86,11 @@ func (r *Runner) S3(params ...string) (string, error) {
 	return out, nil
 }
 
-func (r *Runner) S3Api(params ...string) (string, error) {
+func (r *Runner) S3Api(sensitive bool, params ...string) (string, error) {
 	args := []string{"s3api"}
 	args = append(args, params...)
 
-	cmd, id := r.newCmd(args)
+	cmd, id := r.newCmd(args, sensitive)
 	defer r.deleteCmd(id)
 
 	out, err := execx.CombinedOutput(cmd)
@@ -100,19 +101,31 @@ func (r *Runner) S3Api(params ...string) (string, error) {
 	return out, nil
 }
 
-func (r *Runner) Route53(sub string, params ...string) (string, error) {
-	args := []string{"route53", sub}
+func (r *Runner) Eks(sensitive bool, params ...string) (string, error) {
+	args := []string{"eks"}
+	args = append(args, params...)
 
-	if len(params) > 0 {
-		args = append(args, params...)
-	}
-
-	cmd, id := r.newCmd(args)
+	cmd, id := r.newCmd(args, sensitive)
 	defer r.deleteCmd(id)
 
 	out, err := execx.CombinedOutput(cmd)
 	if err != nil {
-		return "", fmt.Errorf("error running awscli ec2 %s: %w", sub, err)
+		return "", fmt.Errorf("error executing awscli eks: %w", err)
+	}
+
+	return out, nil
+}
+
+func (r *Runner) Configure(sensitive bool, params ...string) (string, error) {
+	args := []string{"configure"}
+	args = append(args, params...)
+
+	cmd, id := r.newCmd(args, sensitive)
+	defer r.deleteCmd(id)
+
+	out, err := execx.CombinedOutput(cmd)
+	if err != nil {
+		return "", fmt.Errorf("error executing awscli configure: %w", err)
 	}
 
 	return out, nil
@@ -121,7 +134,7 @@ func (r *Runner) Route53(sub string, params ...string) (string, error) {
 func (r *Runner) Version() (string, error) {
 	args := []string{"--version"}
 
-	cmd, id := r.newCmd(args)
+	cmd, id := r.newCmd(args, false)
 	defer r.deleteCmd(id)
 
 	out, err := execx.CombinedOutput(cmd)

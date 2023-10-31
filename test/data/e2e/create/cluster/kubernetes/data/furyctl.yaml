@@ -20,7 +20,7 @@ spec:
     env: "test"
     k8s: "awesome"
   kubernetes:
-    nodeAllowedSshPublicKey: "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGxA+4CXYSmsN1m5DSsRzVRTegbvCh1gh7YObg0drj4+ alessio.pragliola@sighup.io"
+    nodeAllowedSshPublicKey: "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIAQt/UN/edbCpeWU6M17UqCUqTXs96b7DDWUcbdBrATP"
     nodePoolsLaunchKind: "launch_templates"
     vpcId: "vpc-04a74eb4c1eab8b2d"
     subnetIds:

@@ -6,15 +6,10 @@ package kubectl
 
 import (
 	"fmt"
-	"time"
 
 	"github.com/google/uuid"
 
 	execx "github.com/sighupio/furyctl/internal/x/exec"
-)
-
-const (
-	kubectlDeleteTimeout = 5 * time.Minute
 )
 
 type Paths struct {
@@ -47,11 +42,12 @@ func (r *Runner) CmdPath() string {
 	return r.paths.Kubectl
 }
 
-func (r *Runner) newCmd(args []string) (*execx.Cmd, string) {
+func (r *Runner) newCmd(args []string, sensitive bool) (*execx.Cmd, string) {
 	cmd := execx.NewCmd(r.paths.Kubectl, execx.CmdOptions{
-		Args:     args,
-		Executor: r.executor,
-		WorkDir:  r.paths.WorkDir,
+		Args:      args,
+		Executor:  r.executor,
+		WorkDir:   r.paths.WorkDir,
+		Sensitive: sensitive,
 	})
 
 	id := uuid.NewString()
@@ -81,7 +77,7 @@ func (r *Runner) Apply(manifestPath string, params ...string) error {
 
 	args = append(args, "-f", manifestPath)
 
-	cmd, id := r.newCmd(args)
+	cmd, id := r.newCmd(args, false)
 	defer r.deleteCmd(id)
 
 	if _, err := execx.CombinedOutput(cmd); err != nil {
@@ -91,7 +87,7 @@ func (r *Runner) Apply(manifestPath string, params ...string) error {
 	return nil
 }
 
-func (r *Runner) Get(ns string, params ...string) (string, error) {
+func (r *Runner) Get(sensitive bool, ns string, params ...string) (string, error) {
 	args := []string{"get"}
 
 	if r.paths.Kubeconfig != "" {
@@ -106,135 +102,12 @@ func (r *Runner) Get(ns string, params ...string) (string, error) {
 
 	args = append(args, params...)
 
-	cmd, id := r.newCmd(args)
+	cmd, id := r.newCmd(args, sensitive)
 	defer r.deleteCmd(id)
 
 	out, err := execx.CombinedOutput(cmd)
 	if err != nil {
 		return out, fmt.Errorf("error while getting resources: %w", err)
-	}
-
-	return out, nil
-}
-
-func (r *Runner) APIResources(params ...string) (string, error) {
-	args := []string{"api-resources"}
-
-	if r.paths.Kubeconfig != "" {
-		args = append(args, "--kubeconfig", r.paths.Kubeconfig)
-	}
-
-	args = append(args, params...)
-
-	cmd, id := r.newCmd(args)
-	defer r.deleteCmd(id)
-
-	out, err := execx.CombinedOutput(cmd)
-	if err != nil {
-		return out, fmt.Errorf("error while listing api resources: %w", err)
-	}
-
-	return out, nil
-}
-
-func (r *Runner) GetResource(ns, res, name string) (string, error) {
-	args := []string{"get", res, "-n", ns, name}
-
-	if r.paths.Kubeconfig != "" {
-		args = append(args, "--kubeconfig", r.paths.Kubeconfig)
-	}
-
-	cmd, id := r.newCmd(args)
-	defer r.deleteCmd(id)
-
-	out, err := execx.CombinedOutput(cmd)
-	if err != nil {
-		return out, fmt.Errorf("error while getting resources: %w", err)
-	}
-
-	return out, nil
-}
-
-// DeleteResource deletes the specified resource in the specified namespace.
-func (r *Runner) DeleteResource(ns, res, name string) (string, error) {
-	args := []string{"delete", "--namespace", ns, res, name}
-
-	if r.paths.Kubeconfig != "" {
-		args = append(args, "--kubeconfig", r.paths.Kubeconfig)
-	}
-
-	cmd, id := r.newCmd(args)
-	defer r.deleteCmd(id)
-
-	out, err := execx.CombinedOutput(cmd)
-	if err != nil {
-		return out, fmt.Errorf("error deleting resource(s) \"%s/%s/%s\": %w", ns, res, name, err)
-	}
-
-	return out, nil
-}
-
-// DeleteResources deletes the specified resources in the specified namespace.
-func (r *Runner) DeleteResources(ns, res string) (string, error) {
-	args := []string{"delete", "--namespace", ns, "--all", res}
-
-	if r.paths.Kubeconfig != "" {
-		args = append(args, "--kubeconfig", r.paths.Kubeconfig)
-	}
-
-	cmd, id := r.newCmd(args)
-	defer r.deleteCmd(id)
-
-	out, err := execx.CombinedOutput(cmd)
-	if err != nil {
-		return out, fmt.Errorf("error deleting resource(s) \"%s/%s\": %w", ns, res, err)
-	}
-
-	return out, nil
-}
-
-// DeleteResourcesInAllNamespaces deletes the specified resources in all namespaces.
-func (r *Runner) DeleteResourcesInAllNamespaces(res string) (string, error) {
-	args := []string{"delete", "--all-namespaces", "--all", res}
-
-	if r.paths.Kubeconfig != "" {
-		args = append(args, "--kubeconfig", r.paths.Kubeconfig)
-	}
-
-	cmd, id := r.newCmd(args)
-	defer r.deleteCmd(id)
-
-	out, err := execx.CombinedOutput(cmd)
-	if err != nil {
-		return out, fmt.Errorf("error deleting all \"%s\" resources in all namespaces: %w", res, err)
-	}
-
-	return out, nil
-}
-
-func (r *Runner) Delete(manifestPath string, params ...string) (string, error) {
-	args := []string{"delete"}
-
-	if r.paths.Kubeconfig != "" {
-		args = append(args, "--kubeconfig", r.paths.Kubeconfig)
-	}
-
-	if r.skipNotFound {
-		args = append(args, "--ignore-not-found=true")
-	}
-
-	if len(params) > 0 {
-		args = append(args, params...)
-	}
-
-	args = append(args, "-f", manifestPath)
-
-	cmd, id := r.newCmd(args)
-	defer r.deleteCmd(id)
-
-	out, err := execx.CombinedOutputWithTimeout(cmd, kubectlDeleteTimeout)
-	if err != nil {
-		return out, fmt.Errorf("error deleting resources: %w", err)
 	}
 
 	return out, nil
@@ -253,7 +126,7 @@ func (r *Runner) Version() (string, error) {
 
 	args = append(args, "-o", "json")
 
-	cmd, id := r.newCmd(args)
+	cmd, id := r.newCmd(args, false)
 	defer r.deleteCmd(id)
 
 	out, err := execx.CombinedOutput(cmd)

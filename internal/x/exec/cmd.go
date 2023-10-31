@@ -20,11 +20,12 @@ import (
 )
 
 var (
-	Debug         = false  //nolint:gochecknoglobals // This variable is shared between all the command instances.
-	LogFile       *os.File //nolint:gochecknoglobals // This variable is shared between all the command instances.
-	NoTTY         = false  //nolint:gochecknoglobals // This variable is shared between all the command instances.
-	ErrCmdFailed  = errors.New("command failed")
-	ErrCmdTimeout = errors.New("command timed out")
+	Debug              = false  //nolint:gochecknoglobals // This variable is shared between all the command instances.
+	LogFile            *os.File //nolint:gochecknoglobals // This variable is shared between all the command instances.
+	NoTTY              = false  //nolint:gochecknoglobals // This variable is shared between all the command instances.
+	ErrCmdFailed       = errors.New("command failed")
+	ErrCmdTimeout      = errors.New("command timed out")
+	ErrCastingToBuffer = errors.New("error casting stdout to bytes.Buffer")
 )
 
 func NewErrCmdFailed(name string, args []string, err error, res *CmdLog) error {
@@ -79,18 +80,25 @@ func NewCmd(name string, opts CmdOptions) *Cmd {
 	coreCmd.Stderr = iox.MultiWriterTransform(errWriters...)
 	coreCmd.Dir = opts.WorkDir
 
+	if opts.Sensitive {
+		coreCmd.Stdout = bytes.NewBufferString("")
+		coreCmd.Stderr = bytes.NewBufferString("")
+	}
+
 	return &Cmd{
 		Cmd: coreCmd,
 		Log: &CmdLog{
 			Out: outLog,
 			Err: errLog,
 		},
+		Sensitive: opts.Sensitive,
 	}
 }
 
 type Cmd struct {
 	*exec.Cmd
-	Log *CmdLog
+	Log       *CmdLog
+	Sensitive bool
 }
 
 func (c *Cmd) Run() error {
@@ -152,11 +160,12 @@ func (c *Cmd) RunWithTimeout(timeout time.Duration) error {
 }
 
 type CmdOptions struct {
-	Args     []string
-	Err      io.Writer
-	Executor Executor
-	Out      io.Writer
-	WorkDir  string
+	Args      []string
+	Err       io.Writer
+	Executor  Executor
+	Out       io.Writer
+	Sensitive bool
+	WorkDir   string
 }
 
 type CmdLog struct {
@@ -171,17 +180,26 @@ func (c CmdLog) String() string {
 func CombinedOutput(cmd *Cmd) (string, error) {
 	err := cmd.Run()
 
-	trimOut := strings.Trim(cmd.Log.Out.String(), "\n")
-	trimErr := strings.Trim(cmd.Log.Err.String(), "\n")
+	out := cmd.Log.Out.String()
+	errOut := cmd.Log.Err.String()
 
-	return strings.Trim(trimOut+"\n"+trimErr, "\n"), err
-}
+	if cmd.Sensitive {
+		outB, ok := cmd.Cmd.Stdout.(*bytes.Buffer)
+		if !ok {
+			return "", ErrCastingToBuffer
+		}
 
-func CombinedOutputWithTimeout(cmd *Cmd, timeout time.Duration) (string, error) {
-	err := cmd.RunWithTimeout(timeout)
+		errOutB, ok := cmd.Cmd.Stderr.(*bytes.Buffer)
+		if !ok {
+			return "", ErrCastingToBuffer
+		}
 
-	trimOut := strings.Trim(cmd.Log.Out.String(), "\n")
-	trimErr := strings.Trim(cmd.Log.Err.String(), "\n")
+		out = outB.String()
+		errOut = errOutB.String()
+	}
+
+	trimOut := strings.Trim(out, "\n")
+	trimErr := strings.Trim(errOut, "\n")
 
 	return strings.Trim(trimOut+"\n"+trimErr, "\n"), err
 }
