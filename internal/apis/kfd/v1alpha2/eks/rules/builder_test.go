@@ -26,19 +26,19 @@ func TestEKSBuilder_GetImmutables(t *testing.T) {
 			desc:         "infrastructure - empty",
 			eksRulesSpec: &rules.EKSRulesSpec{},
 			phase:        "infrastructure",
-			want:         nil,
+			want:         []string{},
 		},
 		{
 			desc:         "kubernetes - empty",
 			eksRulesSpec: &rules.EKSRulesSpec{},
 			phase:        "kubernetes",
-			want:         nil,
+			want:         []string{},
 		},
 		{
 			desc:         "distribution - empty",
 			eksRulesSpec: &rules.EKSRulesSpec{},
 			phase:        "distribution",
-			want:         nil,
+			want:         []string{},
 		},
 		{
 			desc: "infrastructure - not empty",
