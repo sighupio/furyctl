@@ -74,7 +74,7 @@ Check that everything is working correctly with `furyctl version`:
 ```console
 $ furyctl version
 ...
-goVersion: go1.20
+goVersion: go1.21
 osArch: amd64
 version: 0.26.2
 ```
@@ -84,7 +84,7 @@ version: 0.26.2
 Prerequisites:
 
 - `make >= 4.1`
-- `go >= 1.20`
+- `go >= 1.21`
 - `goreleaser >= v1.15`
 
 > You can install `goreleaser` with the following command once you have Go in your system:
