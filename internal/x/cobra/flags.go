@@ -11,8 +11,10 @@ import (
 )
 
 func Flag[T bool | int | string](cmd *cobra.Command, name string) T {
-	var f T
-	var g any
+	var (
+		f T
+		g any
+	)
 
 	if cmd == nil {
 		return f
