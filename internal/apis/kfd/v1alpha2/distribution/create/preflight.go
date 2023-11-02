@@ -25,6 +25,11 @@ import (
 
 var errImmutable = errors.New("immutable path changed")
 
+type Status struct {
+	Diffs   r3diff.Changelog
+	Success bool
+}
+
 type PreFlight struct {
 	*cluster.OperationPhase
 	furyctlConf     public.KfddistributionKfdV1Alpha2
@@ -73,17 +78,22 @@ func NewPreFlight(
 	}, nil
 }
 
-func (p *PreFlight) Exec() error {
+func (p *PreFlight) Exec() (Status, error) {
+	status := Status{
+		Diffs:   r3diff.Changelog{},
+		Success: false,
+	}
+
 	logrus.Info("Running preflight checks")
 
 	if err := p.CreateFolder(); err != nil {
-		return fmt.Errorf("error creating preflight phase folder: %w", err)
+		return status, fmt.Errorf("error creating preflight phase folder: %w", err)
 	}
 
 	logrus.Info("Checking that the cluster is reachable...")
 
 	if _, err := p.kubeRunner.Version(); err != nil {
-		return fmt.Errorf("cluster is unreachable, make sure you have access to the cluster: %w", err)
+		return status, fmt.Errorf("cluster is unreachable, make sure you have access to the cluster: %w", err)
 	}
 
 	storedCfg, err := p.GetStateFromCluster()
@@ -94,18 +104,20 @@ func (p *PreFlight) Exec() error {
 
 		logrus.Debug("check that the secret exists in the cluster if you want to run preflight checks")
 
-		return nil
+		return status, nil
 	}
 
 	diffChecker, err := p.CreateDiffChecker(storedCfg)
 	if err != nil {
-		return fmt.Errorf("error creating diff checker: %w", err)
+		return status, fmt.Errorf("error creating diff checker: %w", err)
 	}
 
 	d, err := diffChecker.GenerateDiff()
 	if err != nil {
-		return fmt.Errorf("error while generating diff: %w", err)
+		return status, fmt.Errorf("error while generating diff: %w", err)
 	}
+
+	status.Diffs = d
 
 	if len(d) > 0 {
 		logrus.Infof(
@@ -116,13 +128,15 @@ func (p *PreFlight) Exec() error {
 		logrus.Warn("Cluster configuration has changed, checking for immutable violations...")
 
 		if err := p.CheckStateDiffs(d, diffChecker); err != nil {
-			return fmt.Errorf("error checking state diffs: %w", err)
+			return status, fmt.Errorf("error checking state diffs: %w", err)
 		}
 	}
 
+	status.Success = true
+
 	logrus.Info("Preflight checks completed successfully")
 
-	return nil
+	return status, nil
 }
 
 func (p *PreFlight) GetStateFromCluster() ([]byte, error) {

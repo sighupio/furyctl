@@ -14,8 +14,10 @@ import (
 
 	"github.com/sighupio/fury-distribution/pkg/apis/config"
 	"github.com/sighupio/fury-distribution/pkg/apis/onpremises/v1alpha2/public"
+	"github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2"
 	"github.com/sighupio/furyctl/internal/cluster"
 	"github.com/sighupio/furyctl/internal/merge"
+	"github.com/sighupio/furyctl/internal/state"
 	"github.com/sighupio/furyctl/internal/template"
 	"github.com/sighupio/furyctl/internal/tool/kubectl"
 	"github.com/sighupio/furyctl/internal/tool/shell"
@@ -24,18 +26,24 @@ import (
 	yamlx "github.com/sighupio/furyctl/internal/x/yaml"
 )
 
+const (
+	LifecyclePreApply  = "pre-apply"
+	LifecyclePostApply = "post-apply"
+)
+
 type Distribution struct {
 	*cluster.OperationPhase
 	furyctlConfPath string
 	furyctlConf     public.OnpremisesKfdV1Alpha2
 	kfdManifest     config.KFD
 	paths           cluster.CreatorPaths
+	stateStore      state.Storer
 	dryRun          bool
 	shellRunner     *shell.Runner
 	kubeRunner      *kubectl.Runner
 }
 
-func (d *Distribution) Exec() error {
+func (d *Distribution) Exec(reducers v1alpha2.Reducers) error {
 	logrus.Info("Installing Kubernetes Fury Distribution...")
 	logrus.Debug("Create: running distribution phase...")
 
@@ -99,41 +107,13 @@ func (d *Distribution) Exec() error {
 		"storageClassAvailable": storageClassAvailable,
 	}
 
+	mCfg, err = d.injectStoredConfig(mCfg)
+	if err != nil {
+		return fmt.Errorf("error injecting stored config: %w", err)
+	}
+
 	// Generate manifests.
-	outYaml, err := yamlx.MarshalV2(mCfg)
-	if err != nil {
-		return fmt.Errorf("error marshaling template config: %w", err)
-	}
-
-	outDirPath1, err := os.MkdirTemp("", "furyctl-dist-")
-	if err != nil {
-		return fmt.Errorf("error creating temp dir: %w", err)
-	}
-
-	confPath := filepath.Join(outDirPath1, "config.yaml")
-
-	logrus.Debugf("config path = %s", confPath)
-
-	if err = os.WriteFile(confPath, outYaml, os.ModePerm); err != nil {
-		return fmt.Errorf("error writing config file: %w", err)
-	}
-
-	templateModel, err := template.NewTemplateModel(
-		path.Join(d.paths.DistroPath, "templates", cluster.OperationPhaseDistribution),
-		path.Join(d.Path),
-		confPath,
-		outDirPath1,
-		d.furyctlConfPath,
-		".tpl",
-		false,
-		d.dryRun,
-	)
-	if err != nil {
-		return fmt.Errorf("error creating template model: %w", err)
-	}
-
-	err = templateModel.Generate()
-	if err != nil {
+	if err := d.copyFromTemplate(mCfg); err != nil {
 		return fmt.Errorf("error generating from template files: %w", err)
 	}
 
@@ -144,6 +124,15 @@ func (d *Distribution) Exec() error {
 		return nil
 	}
 
+	if err := d.runReducers(
+		reducers,
+		mCfg,
+		LifecyclePreApply,
+		[]string{"manifests", ".gitignore"},
+	); err != nil {
+		return fmt.Errorf("error running pre-tf reducers: %w", err)
+	}
+
 	// Apply manifests.
 	logrus.Info("Applying manifests...")
 
@@ -151,9 +140,64 @@ func (d *Distribution) Exec() error {
 		return fmt.Errorf("error applying manifests: %w", err)
 	}
 
+	if err := d.runReducers(
+		reducers,
+		mCfg,
+		LifecyclePostApply,
+		[]string{"manifests", ".gitignore"},
+	); err != nil {
+		return fmt.Errorf("error running pre-tf reducers: %w", err)
+	}
+
 	logrus.Info("Kubernetes Fury Distribution installed successfully")
 
 	return nil
+}
+
+func (d *Distribution) runReducers(
+	reducers v1alpha2.Reducers,
+	cfg template.Config,
+	lifecycle string,
+	excludes []string,
+) error {
+	r := reducers.ByLifecycle(lifecycle)
+
+	if len(r) > 0 {
+		preTfReducersCfg := cfg
+		preTfReducersCfg.Data = r.Combine(cfg.Data, "reducers")
+		preTfReducersCfg.Templates.Excludes = excludes
+
+		if err := d.copyFromTemplate(preTfReducersCfg); err != nil {
+			return err
+		}
+
+		if _, err := d.shellRunner.Run(
+			path.Join(d.Path, "scripts", fmt.Sprintf("%s.sh", lifecycle)),
+			"true",
+			d.paths.Kubeconfig,
+		); err != nil {
+			return fmt.Errorf("error applying manifests: %w", err)
+		}
+	}
+
+	return nil
+}
+
+func (d *Distribution) injectStoredConfig(cfg template.Config) (template.Config, error) {
+	storedCfg := map[any]any{}
+
+	storedCfgStr, err := d.stateStore.GetConfig()
+	if err != nil {
+		return cfg, fmt.Errorf("error while getting current cluster config: %w", err)
+	}
+
+	if err = yamlx.UnmarshalV3(storedCfgStr, &storedCfg); err != nil {
+		return cfg, fmt.Errorf("error while unmarshalling config file: %w", err)
+	}
+
+	cfg.Data["storedCfg"] = storedCfg
+
+	return cfg, nil
 }
 
 //nolint:dupl // Remove duplicated code in the future.
@@ -193,6 +237,47 @@ func (d *Distribution) createFuryctlMerger() (*merge.Merger, error) {
 	return reverseMerger, nil
 }
 
+func (d *Distribution) copyFromTemplate(cfg template.Config) error {
+	outYaml, err := yamlx.MarshalV2(cfg)
+	if err != nil {
+		return fmt.Errorf("error marshaling template config: %w", err)
+	}
+
+	outDirPath, err := os.MkdirTemp("", "furyctl-dist-")
+	if err != nil {
+		return fmt.Errorf("error creating temp dir: %w", err)
+	}
+
+	confPath := filepath.Join(outDirPath, "config.yaml")
+
+	logrus.Debugf("config path = %s", confPath)
+
+	if err = os.WriteFile(confPath, outYaml, os.ModePerm); err != nil {
+		return fmt.Errorf("error writing config file: %w", err)
+	}
+
+	templateModel, err := template.NewTemplateModel(
+		path.Join(d.paths.DistroPath, "templates", cluster.OperationPhaseDistribution),
+		path.Join(d.Path),
+		confPath,
+		outDirPath,
+		d.furyctlConfPath,
+		".tpl",
+		false,
+		d.dryRun,
+	)
+	if err != nil {
+		return fmt.Errorf("error creating template model: %w", err)
+	}
+
+	err = templateModel.Generate()
+	if err != nil {
+		return fmt.Errorf("error generating from template files: %w", err)
+	}
+
+	return nil
+}
+
 func NewDistribution(
 	furyctlConf public.OnpremisesKfdV1Alpha2,
 	kfdManifest config.KFD,
@@ -213,6 +298,14 @@ func NewDistribution(
 		paths:           paths,
 		dryRun:          dryRun,
 		furyctlConfPath: paths.ConfigPath,
+		stateStore: state.NewStore(
+			paths.DistroPath,
+			paths.ConfigPath,
+			paths.Kubeconfig,
+			paths.WorkDir,
+			kfdManifest.Tools.Common.Kubectl.Version,
+			paths.BinPath,
+		),
 		shellRunner: shell.NewRunner(
 			execx.NewStdExecutor(),
 			shell.Paths{

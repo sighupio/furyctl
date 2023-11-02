@@ -16,14 +16,21 @@ import (
 
 	"github.com/sighupio/fury-distribution/pkg/apis/config"
 	"github.com/sighupio/fury-distribution/pkg/apis/kfddistribution/v1alpha2/public"
+	"github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2"
 	"github.com/sighupio/furyctl/internal/cluster"
 	"github.com/sighupio/furyctl/internal/merge"
+	"github.com/sighupio/furyctl/internal/state"
 	"github.com/sighupio/furyctl/internal/template"
 	"github.com/sighupio/furyctl/internal/tool/kubectl"
 	"github.com/sighupio/furyctl/internal/tool/shell"
 	execx "github.com/sighupio/furyctl/internal/x/exec"
 	iox "github.com/sighupio/furyctl/internal/x/io"
 	yamlx "github.com/sighupio/furyctl/internal/x/yaml"
+)
+
+const (
+	LifecyclePreApply  = "pre-apply"
+	LifecyclePostApply = "post-apply"
 )
 
 var errNodesNotReady = errors.New("all nodes should be Ready")
@@ -33,6 +40,7 @@ type Distribution struct {
 	furyctlConfPath string
 	furyctlConf     public.KfddistributionKfdV1Alpha2
 	distroPath      string
+	stateStore      state.Storer
 	kubeRunner      *kubectl.Runner
 	dryRun          bool
 	shellRunner     *shell.Runner
@@ -58,6 +66,14 @@ func NewDistribution(
 		furyctlConf:     furyctlConf,
 		distroPath:      paths.DistroPath,
 		furyctlConfPath: paths.ConfigPath,
+		stateStore: state.NewStore(
+			paths.DistroPath,
+			paths.ConfigPath,
+			paths.Kubeconfig,
+			paths.WorkDir,
+			kfdManifest.Tools.Common.Kubectl.Version,
+			paths.BinPath,
+		),
 		kubeRunner: kubectl.NewRunner(
 			execx.NewStdExecutor(),
 			kubectl.Paths{
@@ -81,7 +97,17 @@ func NewDistribution(
 	}, nil
 }
 
-func (d *Distribution) Exec() error {
+func (*Distribution) SupportsLifecycle(lifecycle string) bool {
+	switch lifecycle {
+	case LifecyclePreApply, LifecyclePostApply:
+		return true
+
+	default:
+		return false
+	}
+}
+
+func (d *Distribution) Exec(reducers v1alpha2.Reducers) error {
 	logrus.Info("Installing Kubernetes Fury Distribution...")
 
 	if err := d.CreateFolder(); err != nil {
@@ -144,42 +170,14 @@ func (d *Distribution) Exec() error {
 		"storageClassAvailable": storageClassAvailable,
 	}
 
+	mCfg, err = d.injectStoredConfig(mCfg)
+	if err != nil {
+		return fmt.Errorf("error injecting stored config: %w", err)
+	}
+
 	// Generate manifests.
-	outYaml, err := yamlx.MarshalV2(mCfg)
-	if err != nil {
-		return fmt.Errorf("error marshaling template config: %w", err)
-	}
-
-	outDirPath1, err := os.MkdirTemp("", "furyctl-dist-")
-	if err != nil {
-		return fmt.Errorf("error creating temp dir: %w", err)
-	}
-
-	confPath := filepath.Join(outDirPath1, "config.yaml")
-
-	logrus.Debugf("config path = %s", confPath)
-
-	if err = os.WriteFile(confPath, outYaml, os.ModePerm); err != nil {
-		return fmt.Errorf("error writing config file: %w", err)
-	}
-
-	templateModel, err := template.NewTemplateModel(
-		path.Join(d.distroPath, "templates", cluster.OperationPhaseDistribution),
-		path.Join(d.Path),
-		confPath,
-		outDirPath1,
-		d.furyctlConfPath,
-		".tpl",
-		false,
-		d.dryRun,
-	)
-	if err != nil {
-		return fmt.Errorf("error creating template model: %w", err)
-	}
-
-	err = templateModel.Generate()
-	if err != nil {
-		return fmt.Errorf("error generating from template files: %w", err)
+	if err := d.copyFromTemplate(mCfg); err != nil {
+		return fmt.Errorf("error copying from template: %w", err)
 	}
 
 	// Stop if dry run is enabled.
@@ -212,11 +210,29 @@ func (d *Distribution) Exec() error {
 		}
 	}
 
+	if err := d.runReducers(
+		reducers,
+		mCfg,
+		LifecyclePreApply,
+		[]string{"manifests", ".gitignore"},
+	); err != nil {
+		return fmt.Errorf("error running pre-tf reducers: %w", err)
+	}
+
 	// Apply manifests.
 	logrus.Info("Applying manifests...")
 
 	if _, err := d.shellRunner.Run(path.Join(d.Path, "scripts", "apply.sh"), "false", d.kubeconfig); err != nil {
 		return fmt.Errorf("error applying manifests: %w", err)
+	}
+
+	if err := d.runReducers(
+		reducers,
+		mCfg,
+		LifecyclePostApply,
+		[]string{"manifests", ".gitignore"},
+	); err != nil {
+		return fmt.Errorf("error running pre-tf reducers: %w", err)
 	}
 
 	logrus.Info("Kubernetes Fury Distribution installed successfully")
@@ -270,6 +286,52 @@ func (d *Distribution) Stop() error {
 	return nil
 }
 
+func (d *Distribution) runReducers(
+	reducers v1alpha2.Reducers,
+	cfg template.Config,
+	lifecycle string,
+	excludes []string,
+) error {
+	r := reducers.ByLifecycle(lifecycle)
+
+	if len(r) > 0 {
+		preTfReducersCfg := cfg
+		preTfReducersCfg.Data = r.Combine(cfg.Data, "reducers")
+		preTfReducersCfg.Templates.Excludes = excludes
+
+		if err := d.copyFromTemplate(preTfReducersCfg); err != nil {
+			return err
+		}
+
+		if _, err := d.shellRunner.Run(
+			path.Join(d.Path, "scripts", fmt.Sprintf("%s.sh", lifecycle)),
+			"true",
+			d.kubeconfig,
+		); err != nil {
+			return fmt.Errorf("error applying manifests: %w", err)
+		}
+	}
+
+	return nil
+}
+
+func (d *Distribution) injectStoredConfig(cfg template.Config) (template.Config, error) {
+	storedCfg := map[any]any{}
+
+	storedCfgStr, err := d.stateStore.GetConfig()
+	if err != nil {
+		return cfg, fmt.Errorf("error while getting current cluster config: %w", err)
+	}
+
+	if err = yamlx.UnmarshalV3(storedCfgStr, &storedCfg); err != nil {
+		return cfg, fmt.Errorf("error while unmarshalling config file: %w", err)
+	}
+
+	cfg.Data["storedCfg"] = storedCfg
+
+	return cfg, nil
+}
+
 func (d *Distribution) createFuryctlMerger() (*merge.Merger, error) {
 	defaultsFilePath := path.Join(d.distroPath, "defaults", "kfddistribution-kfd-v1alpha2.yaml")
 
@@ -304,4 +366,45 @@ func (d *Distribution) createFuryctlMerger() (*merge.Merger, error) {
 	}
 
 	return reverseMerger, nil
+}
+
+func (d *Distribution) copyFromTemplate(cfg template.Config) error {
+	outYaml, err := yamlx.MarshalV2(cfg)
+	if err != nil {
+		return fmt.Errorf("error marshaling template config: %w", err)
+	}
+
+	outDirPath, err := os.MkdirTemp("", "furyctl-dist-")
+	if err != nil {
+		return fmt.Errorf("error creating temp dir: %w", err)
+	}
+
+	confPath := filepath.Join(outDirPath, "config.yaml")
+
+	logrus.Debugf("config path = %s", confPath)
+
+	if err = os.WriteFile(confPath, outYaml, os.ModePerm); err != nil {
+		return fmt.Errorf("error writing config file: %w", err)
+	}
+
+	templateModel, err := template.NewTemplateModel(
+		path.Join(d.distroPath, "templates", cluster.OperationPhaseDistribution),
+		path.Join(d.Path),
+		confPath,
+		outDirPath,
+		d.furyctlConfPath,
+		".tpl",
+		false,
+		d.dryRun,
+	)
+	if err != nil {
+		return fmt.Errorf("error creating template model: %w", err)
+	}
+
+	err = templateModel.Generate()
+	if err != nil {
+		return fmt.Errorf("error generating from template files: %w", err)
+	}
+
+	return nil
 }
