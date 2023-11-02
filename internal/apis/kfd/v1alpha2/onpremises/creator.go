@@ -9,10 +9,15 @@ import (
 	"fmt"
 	"strings"
 
+	r3diff "github.com/r3labs/diff/v3"
+	"github.com/sirupsen/logrus"
+
 	"github.com/sighupio/fury-distribution/pkg/apis/config"
 	"github.com/sighupio/fury-distribution/pkg/apis/onpremises/v1alpha2/public"
+	"github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2"
 	commcreate "github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/common/create"
 	"github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/onpremises/create"
+	"github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/onpremises/rules"
 	"github.com/sighupio/furyctl/internal/cluster"
 	"github.com/sighupio/furyctl/internal/state"
 )
@@ -162,8 +167,16 @@ func (c *ClusterCreator) Create(skipPhase string, _ int) error {
 		return fmt.Errorf("error while initiating preflight phase: %w", err)
 	}
 
-	if err := preflight.Exec(); err != nil {
+	status, err := preflight.Exec()
+	if err != nil {
 		return fmt.Errorf("error while executing preflight phase: %w", err)
+	}
+
+	r, err := rules.NewOnPremClusterRulesExtractor(c.paths.DistroPath)
+	if err != nil {
+		if !errors.Is(err, rules.ErrReadingRulesFile) {
+			return fmt.Errorf("error while creating rules builder: %w", err)
+		}
 	}
 
 	switch c.phase {
@@ -173,7 +186,13 @@ func (c *ClusterCreator) Create(skipPhase string, _ int) error {
 		}
 
 	case cluster.OperationPhaseDistribution:
-		if err := distributionPhase.Exec(); err != nil {
+		reducers := c.buildReducers(
+			status.Diffs,
+			r,
+			cluster.OperationPhaseDistribution,
+		)
+
+		if err := distributionPhase.Exec(reducers); err != nil {
 			return fmt.Errorf("error while executing distribution phase: %w", err)
 		}
 
@@ -190,7 +209,13 @@ func (c *ClusterCreator) Create(skipPhase string, _ int) error {
 		}
 
 		if skipPhase != cluster.OperationPhaseDistribution {
-			if err := distributionPhase.Exec(); err != nil {
+			reducers := c.buildReducers(
+				status.Diffs,
+				r,
+				cluster.OperationPhaseDistribution,
+			)
+
+			if err := distributionPhase.Exec(reducers); err != nil {
 				return fmt.Errorf("error while executing distribution phase: %w", err)
 			}
 		}
@@ -218,4 +243,38 @@ func (c *ClusterCreator) Create(skipPhase string, _ int) error {
 	}
 
 	return nil
+}
+
+func (*ClusterCreator) buildReducers(
+	statusDiffs r3diff.Changelog,
+	rulesExtractor rules.Extractor,
+	phase string,
+) v1alpha2.Reducers {
+	reducersRules := rulesExtractor.GetReducers(phase)
+
+	filteredReducers := rulesExtractor.ReducerRulesByDiffs(reducersRules, statusDiffs)
+
+	reducers := make(v1alpha2.Reducers, len(filteredReducers))
+
+	if len(filteredReducers) > 0 {
+		for _, reducer := range filteredReducers {
+			if reducer.Reducers != nil {
+				if reducer.Description != nil {
+					logrus.Infof("%s", *reducer.Description)
+				}
+
+				for _, red := range *reducer.Reducers {
+					reducers = append(reducers, v1alpha2.NewBaseReducer(
+						red.Key,
+						red.From,
+						red.To,
+						red.Lifecycle,
+					),
+					)
+				}
+			}
+		}
+	}
+
+	return reducers
 }

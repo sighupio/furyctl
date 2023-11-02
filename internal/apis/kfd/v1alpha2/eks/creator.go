@@ -13,6 +13,7 @@ import (
 	"sync"
 	"time"
 
+	r3diff "github.com/r3labs/diff/v3"
 	"github.com/sirupsen/logrus"
 
 	"github.com/sighupio/fury-distribution/pkg/apis/config"
@@ -298,31 +299,7 @@ func (v *ClusterCreator) CreateAsync(
 		}
 
 	case cluster.OperationPhaseDistribution:
-		reducersRules := r.GetReducers("distribution")
-
-		filteredReducers := r.ReducerRulesByDiffs(reducersRules, status.Diffs)
-
-		reducers := make(v1alpha2.Reducers, len(filteredReducers))
-
-		if len(filteredReducers) > 0 {
-			for _, reducer := range filteredReducers {
-				if reducer.Reducers != nil {
-					if reducer.Description != nil {
-						logrus.Infof("%s", *reducer.Description)
-					}
-
-					for _, red := range *reducer.Reducers {
-						reducers = append(reducers, v1alpha2.NewBaseReducer(
-							red.Key,
-							red.From,
-							red.To,
-							red.Lifecycle,
-						),
-						)
-					}
-				}
-			}
-		}
+		reducers := v.buildReducers(status.Diffs, r, cluster.OperationPhaseDistribution)
 
 		if err := v.distributionPhase(phases.Distribution, vpnConnector, reducers); err != nil {
 			errCh <- err
@@ -334,31 +311,7 @@ func (v *ClusterCreator) CreateAsync(
 		}
 
 	case cluster.OperationPhaseAll:
-		reducersRules := r.GetReducers("distribution")
-
-		filteredReducers := r.ReducerRulesByDiffs(reducersRules, status.Diffs)
-
-		reducers := make(v1alpha2.Reducers, len(filteredReducers))
-
-		if len(filteredReducers) > 0 {
-			for _, reducer := range filteredReducers {
-				if reducer.Reducers != nil {
-					if reducer.Description != nil {
-						logrus.Infof("%s", *reducer.Description)
-					}
-
-					for _, red := range *reducer.Reducers {
-						reducers = append(reducers, v1alpha2.NewBaseReducer(
-							red.Key,
-							red.From,
-							red.To,
-							red.Lifecycle,
-						),
-						)
-					}
-				}
-			}
-		}
+		reducers := v.buildReducers(status.Diffs, r, cluster.OperationPhaseDistribution)
 
 		errCh <- v.allPhases(
 			skipPhase,
@@ -577,6 +530,40 @@ func (v *ClusterCreator) allPhases(
 	}
 
 	return nil
+}
+
+func (*ClusterCreator) buildReducers(
+	statusDiffs r3diff.Changelog,
+	rulesExtractor rules.Extractor,
+	phase string,
+) v1alpha2.Reducers {
+	reducersRules := rulesExtractor.GetReducers(phase)
+
+	filteredReducers := rulesExtractor.ReducerRulesByDiffs(reducersRules, statusDiffs)
+
+	reducers := make(v1alpha2.Reducers, len(filteredReducers))
+
+	if len(filteredReducers) > 0 {
+		for _, reducer := range filteredReducers {
+			if reducer.Reducers != nil {
+				if reducer.Description != nil {
+					logrus.Infof("%s", *reducer.Description)
+				}
+
+				for _, red := range *reducer.Reducers {
+					reducers = append(reducers, v1alpha2.NewBaseReducer(
+						red.Key,
+						red.From,
+						red.To,
+						red.Lifecycle,
+					),
+					)
+				}
+			}
+		}
+	}
+
+	return reducers
 }
 
 //nolint:revive // ignore maximum number of return results
