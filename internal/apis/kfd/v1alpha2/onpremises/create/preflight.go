@@ -31,6 +31,11 @@ import (
 
 var errImmutable = errors.New("immutable path changed")
 
+type Status struct {
+	Diffs   r3diff.Changelog
+	Success bool
+}
+
 type PreFlight struct {
 	*cluster.OperationPhase
 	furyctlConf     public.OnpremisesKfdV1Alpha2
@@ -92,21 +97,26 @@ func NewPreFlight(
 	}, nil
 }
 
-func (p *PreFlight) Exec() error {
+func (p *PreFlight) Exec() (Status, error) {
+	status := Status{
+		Diffs:   r3diff.Changelog{},
+		Success: false,
+	}
+
 	logrus.Info("Running preflight checks")
 
 	if err := p.CreateFolder(); err != nil {
-		return fmt.Errorf("error creating kubernetes phase folder: %w", err)
+		return status, fmt.Errorf("error creating kubernetes phase folder: %w", err)
 	}
 
 	furyctlMerger, err := p.createFuryctlMerger()
 	if err != nil {
-		return err
+		return status, err
 	}
 
 	mCfg, err := template.NewConfigWithoutData(furyctlMerger, []string{})
 	if err != nil {
-		return fmt.Errorf("error creating template config: %w", err)
+		return status, fmt.Errorf("error creating template config: %w", err)
 	}
 
 	mCfg.Data["kubernetes"] = map[any]any{
@@ -116,12 +126,12 @@ func (p *PreFlight) Exec() error {
 	// Generate playbook and hosts file.
 	outYaml, err := yamlx.MarshalV2(mCfg)
 	if err != nil {
-		return fmt.Errorf("error marshaling template config: %w", err)
+		return status, fmt.Errorf("error marshaling template config: %w", err)
 	}
 
 	outDirPath1, err := os.MkdirTemp("", "furyctl-dist-")
 	if err != nil {
-		return fmt.Errorf("error creating temp dir: %w", err)
+		return status, fmt.Errorf("error creating temp dir: %w", err)
 	}
 
 	confPath := filepath.Join(outDirPath1, "config.yaml")
@@ -129,7 +139,7 @@ func (p *PreFlight) Exec() error {
 	logrus.Debugf("config path = %s", confPath)
 
 	if err = os.WriteFile(confPath, outYaml, os.ModePerm); err != nil {
-		return fmt.Errorf("error writing config file: %w", err)
+		return status, fmt.Errorf("error writing config file: %w", err)
 	}
 
 	templateModel, err := template.NewTemplateModel(
@@ -143,50 +153,54 @@ func (p *PreFlight) Exec() error {
 		p.dryRun,
 	)
 	if err != nil {
-		return fmt.Errorf("error creating template model: %w", err)
+		return status, fmt.Errorf("error creating template model: %w", err)
 	}
 
 	err = templateModel.Generate()
 	if err != nil {
-		return fmt.Errorf("error generating from template files: %w", err)
+		return status, fmt.Errorf("error generating from template files: %w", err)
 	}
 
 	if _, err := p.ansibleRunner.Exec("all", "-m", "ping"); err != nil {
-		return fmt.Errorf("error checking hosts: %w", err)
+		return status, fmt.Errorf("error checking hosts: %w", err)
 	}
 
 	if _, err := p.ansibleRunner.Playbook("verify-playbook.yaml"); err != nil {
+		status.Success = true
+
 		logrus.Debug("Cluster does not exist, skipping state checks")
 
 		logrus.Info("Preflight checks completed successfully")
 
-		return nil //nolint:nilerr // we want to return nil here
+		return status, nil //nolint:nilerr // we want to return nil here
 	}
 
 	if err := kubex.SetConfigEnv(path.Join(p.OperationPhase.Path, "admin.conf")); err != nil {
-		return fmt.Errorf("error setting kubeconfig env: %w", err)
+		return status, fmt.Errorf("error setting kubeconfig env: %w", err)
 	}
 
 	logrus.Info("Checking that the cluster is reachable...")
 
 	if _, err := p.kubeRunner.Version(); err != nil {
-		return fmt.Errorf("cluster is unreachable, make sure you have access to the cluster: %w", err)
+		return status, fmt.Errorf("cluster is unreachable, make sure you have access to the cluster: %w", err)
 	}
 
 	storedCfg, err := p.GetStateFromCluster()
 	if err != nil {
-		return fmt.Errorf("error while getting current cluster config: %w", err)
+		return status, fmt.Errorf("error while getting current cluster config: %w", err)
 	}
 
 	diffChecker, err := p.CreateDiffChecker(storedCfg)
 	if err != nil {
-		return fmt.Errorf("error creating diff checker: %w", err)
+		return status, fmt.Errorf("error creating diff checker: %w", err)
 	}
 
 	d, err := diffChecker.GenerateDiff()
 	if err != nil {
-		return fmt.Errorf("error while generating diff: %w", err)
+		return status, fmt.Errorf("error while generating diff: %w", err)
 	}
+
+	status.Diffs = d
 
 	if len(d) > 0 {
 		logrus.Infof(
@@ -197,13 +211,15 @@ func (p *PreFlight) Exec() error {
 		logrus.Warn("Cluster configuration has changed, checking for immutable violations...")
 
 		if err := p.CheckStateDiffs(d, diffChecker); err != nil {
-			return fmt.Errorf("error checking state diffs: %w", err)
+			return status, fmt.Errorf("error checking state diffs: %w", err)
 		}
 	}
 
+	status.Success = true
+
 	logrus.Info("Preflight checks completed successfully")
 
-	return nil
+	return status, nil
 }
 
 //nolint:dupl // Remove duplicated code in the future.
