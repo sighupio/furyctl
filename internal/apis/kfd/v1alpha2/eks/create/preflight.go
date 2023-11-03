@@ -38,9 +38,10 @@ import (
 const vpnDefaultPort = 1194
 
 var (
-	errImmutable  = errors.New("immutable path changed")
-	bucketRegex   = regexp.MustCompile("(?m)bucket\\s*=\\s*\"([^\"]+)\"")
-	serverIPRegex = regexp.MustCompile("(?m)public_ip\\s*=\\s*\"([^\"]+)\"")
+	errImmutable   = errors.New("immutable path changed")
+	errUnsupported = errors.New("unsupported reducer values detected")
+	bucketRegex    = regexp.MustCompile("(?m)bucket\\s*=\\s*\"([^\"]+)\"")
+	serverIPRegex  = regexp.MustCompile("(?m)public_ip\\s*=\\s*\"([^\"]+)\"")
 )
 
 type Status struct {
@@ -235,10 +236,16 @@ func (p *PreFlight) Exec() (Status, error) {
 			diffChecker.DiffToString(d),
 		)
 
-		logrus.Warn("Cluster configuration has changed, checking for immutable violations...")
+		logrus.Info("Cluster configuration has changed, checking for immutable violations...")
 
 		if err := p.CheckStateDiffs(d, diffChecker); err != nil {
 			return status, fmt.Errorf("error checking state diffs: %w", err)
+		}
+
+		logrus.Info("Cluster configuration has changed, checking for unsupported reducers violations...")
+
+		if err := p.CheckReducerDiffs(d, diffChecker); err != nil {
+			return status, fmt.Errorf("error checking reducer diffs: %w", err)
 		}
 	}
 
@@ -504,6 +511,40 @@ func (p *PreFlight) CheckStateDiffs(d r3diff.Changelog, diffChecker diffs.Checke
 
 	if len(errs) > 0 {
 		return fmt.Errorf("%w: %s", errImmutable, errs)
+	}
+
+	return nil
+}
+
+func (p *PreFlight) CheckReducerDiffs(d r3diff.Changelog, diffChecker diffs.Checker) error {
+	var errs []error
+
+	r, err := rules.NewEKSClusterRulesExtractor(p.distroPath)
+	if err != nil {
+		if !errors.Is(err, rules.ErrReadingRulesFile) {
+			return fmt.Errorf("error while creating rules builder: %w", err)
+		}
+
+		logrus.Warn("No rules file found, skipping reducer checks")
+
+		return nil
+	}
+
+	errs = append(errs, diffChecker.AssertReducerUnsupportedViolations(
+		d,
+		r.UnsupportedReducerRulesByDiffs(r.GetReducers("infrastructure"), d),
+	)...)
+	errs = append(errs, diffChecker.AssertReducerUnsupportedViolations(
+		d,
+		r.UnsupportedReducerRulesByDiffs(r.GetReducers("kubernetes"), d),
+	)...)
+	errs = append(errs, diffChecker.AssertReducerUnsupportedViolations(
+		d,
+		r.UnsupportedReducerRulesByDiffs(r.GetReducers("distribution"), d),
+	)...)
+
+	if len(errs) > 0 {
+		return fmt.Errorf("%w: %s", errUnsupported, errs)
 	}
 
 	return nil
