@@ -555,6 +555,13 @@ func (k *Kubernetes) createTfVars() error {
 		return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
 	}
 
+	if k.furyctlConf.Spec.Kubernetes.ApiServer.PublicAccess && len(allowedClusterEndpointPublicAccessCIDRs) == 0 {
+		allowedClusterEndpointPublicAccessCIDRs = append(
+			allowedClusterEndpointPublicAccessCIDRs,
+			private.TypesCidr("0.0.0.0/0"),
+		)
+	}
+
 	clusterEndpointPublicAccessCidrs := make([]string, len(allowedClusterEndpointPublicAccessCIDRs))
 
 	for i, cidr := range allowedClusterEndpointPublicAccessCIDRs {

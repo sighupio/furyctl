@@ -230,20 +230,12 @@ func (i *Infrastructure) copyFromTemplate() error {
 func (i *Infrastructure) createTfVars() error {
 	var buffer bytes.Buffer
 
-	if i.furyctlConf.Spec.Infrastructure.Vpc != nil {
-		if err := i.addVpcDataToTfVars(&buffer); err != nil {
-			return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
-		}
+	if err := i.addVpcDataToTfVars(&buffer); err != nil {
+		return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
 	}
 
-	if i.furyctlConf.Spec.Infrastructure.Vpn != nil {
-		if err := i.addVpnDataToTfVars(&buffer); err != nil {
-			return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
-		}
-
-		if err := i.addVpnSSHDataToTfVars(&buffer); err != nil {
-			return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
-		}
+	if err := i.addVpnDataToTfVars(&buffer); err != nil {
+		return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
 	}
 
 	return i.writeTfVars(buffer)
@@ -252,11 +244,12 @@ func (i *Infrastructure) createTfVars() error {
 func (i *Infrastructure) addVpcDataToTfVars(buffer *bytes.Buffer) error {
 	vpcEnabled := i.furyctlConf.Spec.Infrastructure.Vpc != nil
 
-	if err := bytesx.SafeWriteToBuffer(buffer,
-		"vpc_enabled = %v\n",
-		vpcEnabled,
-	); err != nil {
+	if err := bytesx.SafeWriteToBuffer(buffer, "vpc_enabled = %v\n", vpcEnabled); err != nil {
 		return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
+	}
+
+	if !vpcEnabled {
+		return nil
 	}
 
 	if err := bytesx.SafeWriteToBuffer(buffer, "name = \"%v\"\n", i.furyctlConf.Metadata.Name); err != nil {
@@ -301,13 +294,17 @@ func (i *Infrastructure) addVpcDataToTfVars(buffer *bytes.Buffer) error {
 }
 
 func (i *Infrastructure) addVpnDataToTfVars(buffer *bytes.Buffer) error {
-	vpnEnabled := (i.furyctlConf.Spec.Infrastructure.Vpn != nil) &&
-		(i.furyctlConf.Spec.Infrastructure.Vpn.Instances == nil) ||
-		(i.furyctlConf.Spec.Infrastructure.Vpn.Instances != nil) &&
-			(*i.furyctlConf.Spec.Infrastructure.Vpn.Instances > 0)
+	vpnEnabled := i.furyctlConf.Spec.Infrastructure.Vpn != nil &&
+		(i.furyctlConf.Spec.Infrastructure.Vpn.Instances == nil ||
+			(i.furyctlConf.Spec.Infrastructure.Vpn.Instances != nil &&
+				*i.furyctlConf.Spec.Infrastructure.Vpn.Instances > 0))
 
 	if err := bytesx.SafeWriteToBuffer(buffer, "vpn_enabled = %v\n", vpnEnabled); err != nil {
 		return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
+	}
+
+	if !vpnEnabled {
+		return nil
 	}
 
 	if err := bytesx.SafeWriteToBuffer(
@@ -398,6 +395,10 @@ func (i *Infrastructure) addVpnDataToTfVars(buffer *bytes.Buffer) error {
 		if err != nil {
 			return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
 		}
+	}
+
+	if err := i.addVpnSSHDataToTfVars(buffer); err != nil {
+		return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
 	}
 
 	return nil
