@@ -101,9 +101,9 @@ license-check:
 	-ignore ".go/**/*" \
 	--check .
 
-.PHONY: format fmt fumpt imports gci
+.PHONY: format-go fmt fumpt imports gci formattag
 
-format: fmt fumpt imports gci
+format-go: fmt fumpt imports gci formattag
 
 fmt:
 	@find . -name "*.go" -type f -not -path '*/vendor/*' \
@@ -125,6 +125,11 @@ gci:
 	| sed 's/^\.\///g' \
 	| xargs -I {} sh -c 'echo "formatting imports for {}.." && \
 	gci write --skip-generated  -s standard -s default -s "Prefix(github.com/sighupio)" {}'
+
+formattag:
+	@find . -name "*.go" -type f -not -path '*/vendor/*' \
+	| sed 's/^\.\///g' \
+	| xargs -I {} sh -c 'formattag -file {}'
 
 .PHONY: lint lint-go
 
