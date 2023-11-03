@@ -17,8 +17,9 @@ import (
 	"github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2"
 	commcreate "github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/common/create"
 	"github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/distribution/create"
-	"github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/distribution/rules"
+	distrorules "github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/distribution/rules"
 	"github.com/sighupio/furyctl/internal/cluster"
+	"github.com/sighupio/furyctl/internal/rules"
 	"github.com/sighupio/furyctl/internal/state"
 )
 
@@ -159,9 +160,9 @@ func (c *ClusterCreator) Create(skipPhase string, _ int) error {
 		return fmt.Errorf("error while executing preflight phase: %w", err)
 	}
 
-	r, err := rules.NewDistroClusterRulesExtractor(c.paths.DistroPath)
+	r, err := distrorules.NewDistroClusterRulesExtractor(c.paths.DistroPath)
 	if err != nil {
-		if !errors.Is(err, rules.ErrReadingRulesFile) {
+		if !errors.Is(err, distrorules.ErrReadingRulesFile) {
 			return fmt.Errorf("error while creating rules builder: %w", err)
 		}
 	}
