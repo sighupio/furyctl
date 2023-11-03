@@ -10,7 +10,8 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/eks/rules"
+	eksrules "github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/eks/rules"
+	"github.com/sighupio/furyctl/internal/rules"
 )
 
 func TestEKSBuilder_GetImmutables(t *testing.T) {
@@ -18,32 +19,32 @@ func TestEKSBuilder_GetImmutables(t *testing.T) {
 
 	testCases := []struct {
 		desc         string
-		eksRulesSpec *rules.EKSRulesSpec
+		eksRulesSpec *rules.Spec
 		phase        string
 		want         []string
 	}{
 		{
 			desc:         "infrastructure - empty",
-			eksRulesSpec: &rules.EKSRulesSpec{},
+			eksRulesSpec: &rules.Spec{},
 			phase:        "infrastructure",
 			want:         []string{},
 		},
 		{
 			desc:         "kubernetes - empty",
-			eksRulesSpec: &rules.EKSRulesSpec{},
+			eksRulesSpec: &rules.Spec{},
 			phase:        "kubernetes",
 			want:         []string{},
 		},
 		{
 			desc:         "distribution - empty",
-			eksRulesSpec: &rules.EKSRulesSpec{},
+			eksRulesSpec: &rules.Spec{},
 			phase:        "distribution",
 			want:         []string{},
 		},
 		{
 			desc: "infrastructure - not empty",
-			eksRulesSpec: &rules.EKSRulesSpec{
-				Infrastructure: []rules.Rule{
+			eksRulesSpec: &rules.Spec{
+				Infrastructure: &[]rules.Rule{
 					{
 						Path:      "foo",
 						Immutable: true,
@@ -59,8 +60,8 @@ func TestEKSBuilder_GetImmutables(t *testing.T) {
 		},
 		{
 			desc: "kubernetes - not empty",
-			eksRulesSpec: &rules.EKSRulesSpec{
-				Kubernetes: []rules.Rule{
+			eksRulesSpec: &rules.Spec{
+				Kubernetes: &[]rules.Rule{
 					{
 						Path:      "foo",
 						Immutable: true,
@@ -76,8 +77,8 @@ func TestEKSBuilder_GetImmutables(t *testing.T) {
 		},
 		{
 			desc: "distribution - not empty",
-			eksRulesSpec: &rules.EKSRulesSpec{
-				Distribution: []rules.Rule{
+			eksRulesSpec: &rules.Spec{
+				Distribution: &[]rules.Rule{
 					{
 						Path:      "foo",
 						Immutable: true,
@@ -99,7 +100,7 @@ func TestEKSBuilder_GetImmutables(t *testing.T) {
 		t.Run(tC.desc, func(t *testing.T) {
 			t.Parallel()
 
-			builder := rules.EKSExtractor{
+			builder := eksrules.EKSExtractor{
 				Spec: *tC.eksRulesSpec,
 			}
 

@@ -11,15 +11,19 @@ import (
 	"strings"
 
 	r3diff "github.com/r3labs/diff/v3"
+
+	"github.com/sighupio/furyctl/internal/rules"
 )
 
 var (
-	NumbersToWildcardRegex = regexp.MustCompile(`\.\d+\b`)
+	numbersToWildcardRegex = regexp.MustCompile(`\.\d+\b`)
 	errImmutable           = errors.New("immutable value changed")
+	errUnsupported         = errors.New("unsupported value changed")
 )
 
 type Checker interface {
 	AssertImmutableViolations(diffs r3diff.Changelog, immutablePaths []string) []error
+	AssertReducerUnsupportedViolations(diffs r3diff.Changelog, reducerRules []rules.Rule) []error
 	GenerateDiff() (r3diff.Changelog, error)
 	DiffToString(diffs r3diff.Changelog) string
 	FilterDiffFromPhase(changelog r3diff.Changelog, phasePath string) r3diff.Changelog
@@ -97,9 +101,62 @@ func (*BaseChecker) AssertImmutableViolations(diffs r3diff.Changelog, immutableP
 	return errs
 }
 
+func (*BaseChecker) AssertReducerUnsupportedViolations(diffs r3diff.Changelog, reducerRules []rules.Rule) []error {
+	var errs []error
+
+	if len(diffs) == 0 || len(reducerRules) == 0 {
+		return nil
+	}
+
+	for _, diff := range diffs {
+		for _, rule := range reducerRules {
+			joinedPath := "." + strings.Join(diff.Path, ".")
+			changePath := numbersToWildcardRegex.ReplaceAllString(joinedPath, ".*")
+
+			if rule.Path == changePath {
+				if rule.Unsupported != nil && len(*rule.Unsupported) > 0 {
+					if reason, unsupported := isDiffUnsupported(diff, *rule.Unsupported); unsupported {
+						unsupportedGenericErrMsg := fmt.Sprintf(
+							"changing %s from %v to %v is not supported",
+							changePath,
+							diff.From,
+							diff.To,
+						)
+
+						if reason != "" {
+							unsupportedGenericErrMsg = reason
+						}
+
+						errs = append(errs, fmt.Errorf("%w: %s", errUnsupported, unsupportedGenericErrMsg))
+					}
+				}
+			}
+		}
+	}
+
+	return errs
+}
+
+func isDiffUnsupported(diff r3diff.Change, conditions []rules.Unsupported) (string, bool) {
+	reason := ""
+
+	for _, condition := range conditions {
+		if (condition.From == nil || (condition.From != nil && diff.From == *condition.From)) &&
+			(condition.To == nil || (condition.To != nil && diff.To == *condition.To)) {
+			if condition.Reason != nil {
+				reason = *condition.Reason
+			}
+
+			return reason, true
+		}
+	}
+
+	return reason, false
+}
+
 func isImmutablePathChanged(change r3diff.Change, immutables []string) bool {
 	joinedPath := "." + strings.Join(change.Path, ".")
-	changePath := NumbersToWildcardRegex.ReplaceAllString(joinedPath, ".*")
+	changePath := numbersToWildcardRegex.ReplaceAllString(joinedPath, ".*")
 
 	for _, immutable := range immutables {
 		if changePath == immutable {
