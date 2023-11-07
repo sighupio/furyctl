@@ -10,28 +10,29 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/distribution/rules"
+	distrorules "github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/distribution/rules"
+	"github.com/sighupio/furyctl/internal/rules"
 )
 
 func TestEKSBuilder_GetImmutables(t *testing.T) {
 	t.Parallel()
 
 	testCases := []struct {
-		desc            string
-		distroRulesSpec *rules.DistroRulesSpec
-		phase           string
-		want            []string
+		desc  string
+		Spec  *rules.Spec
+		phase string
+		want  []string
 	}{
 		{
-			desc:            "distribution - empty",
-			distroRulesSpec: &rules.DistroRulesSpec{},
-			phase:           "distribution",
-			want:            nil,
+			desc:  "distribution - empty",
+			Spec:  &rules.Spec{},
+			phase: "distribution",
+			want:  nil,
 		},
 		{
 			desc: "distribution - not empty",
-			distroRulesSpec: &rules.DistroRulesSpec{
-				Distribution: []rules.Rule{
+			Spec: &rules.Spec{
+				Distribution: &[]rules.Rule{
 					{
 						Path:      "foo",
 						Immutable: true,
@@ -53,8 +54,8 @@ func TestEKSBuilder_GetImmutables(t *testing.T) {
 		t.Run(tC.desc, func(t *testing.T) {
 			t.Parallel()
 
-			builder := rules.DistroExtractor{
-				Spec: *tC.distroRulesSpec,
+			builder := distrorules.DistroExtractor{
+				Spec: *tC.Spec,
 			}
 
 			got := builder.GetImmutables(tC.phase)

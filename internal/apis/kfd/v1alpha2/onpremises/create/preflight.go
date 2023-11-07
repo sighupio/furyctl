@@ -29,7 +29,10 @@ import (
 	yamlx "github.com/sighupio/furyctl/internal/x/yaml"
 )
 
-var errImmutable = errors.New("immutable path changed")
+var (
+	errImmutable   = errors.New("immutable path changed")
+	errUnsupported = errors.New("unsupported reducer values detected")
+)
 
 type Status struct {
 	Diffs   r3diff.Changelog
@@ -213,6 +216,12 @@ func (p *PreFlight) Exec() (Status, error) {
 		if err := p.CheckStateDiffs(d, diffChecker); err != nil {
 			return status, fmt.Errorf("error checking state diffs: %w", err)
 		}
+
+		logrus.Info("Cluster configuration has changed, checking for unsupported reducers violations...")
+
+		if err := p.CheckReducerDiffs(d, diffChecker); err != nil {
+			return status, fmt.Errorf("error checking reducer diffs: %w", err)
+		}
 	}
 
 	status.Success = true
@@ -302,6 +311,36 @@ func (p *PreFlight) CheckStateDiffs(d r3diff.Changelog, diffChecker diffs.Checke
 
 	if len(errs) > 0 {
 		return fmt.Errorf("%w: %s", errImmutable, errs)
+	}
+
+	return nil
+}
+
+func (p *PreFlight) CheckReducerDiffs(d r3diff.Changelog, diffChecker diffs.Checker) error {
+	var errs []error
+
+	r, err := rules.NewOnPremClusterRulesExtractor(p.distroPath)
+	if err != nil {
+		if !errors.Is(err, rules.ErrReadingRulesFile) {
+			return fmt.Errorf("error while creating rules builder: %w", err)
+		}
+
+		logrus.Warn("No rules file found, skipping reducer checks")
+
+		return nil
+	}
+
+	errs = append(errs, diffChecker.AssertReducerUnsupportedViolations(
+		d,
+		r.UnsupportedReducerRulesByDiffs(r.GetReducers("kubernetes"), d),
+	)...)
+	errs = append(errs, diffChecker.AssertReducerUnsupportedViolations(
+		d,
+		r.UnsupportedReducerRulesByDiffs(r.GetReducers("distribution"), d),
+	)...)
+
+	if len(errs) > 0 {
+		return fmt.Errorf("%w: %s", errUnsupported, errs)
 	}
 
 	return nil
