@@ -321,7 +321,9 @@ func (d *Distribution) injectStoredConfig(cfg template.Config) (template.Config,
 
 	storedCfgStr, err := d.stateStore.GetConfig()
 	if err != nil {
-		return cfg, fmt.Errorf("error while getting current cluster config: %w", err)
+		logrus.Debugf("error while getting current config, skipping stored config injection: %s", err)
+
+		return cfg, nil
 	}
 
 	if err = yamlx.UnmarshalV3(storedCfgStr, &storedCfg); err != nil {

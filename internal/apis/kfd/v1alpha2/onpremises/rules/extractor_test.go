@@ -10,7 +10,8 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/onpremises/rules"
+	onpremrules "github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/onpremises/rules"
+	"github.com/sighupio/furyctl/internal/rules"
 )
 
 func TestEKSBuilder_GetImmutables(t *testing.T) {
@@ -18,26 +19,26 @@ func TestEKSBuilder_GetImmutables(t *testing.T) {
 
 	testCases := []struct {
 		desc            string
-		onPremRulesSpec *rules.OnPremRulesSpec
+		onPremRulesSpec *rules.Spec
 		phase           string
 		want            []string
 	}{
 		{
 			desc:            "kubernetes - empty",
-			onPremRulesSpec: &rules.OnPremRulesSpec{},
+			onPremRulesSpec: &rules.Spec{},
 			phase:           "kubernetes",
 			want:            nil,
 		},
 		{
 			desc:            "distribution - empty",
-			onPremRulesSpec: &rules.OnPremRulesSpec{},
+			onPremRulesSpec: &rules.Spec{},
 			phase:           "distribution",
 			want:            nil,
 		},
 		{
 			desc: "kubernetes - not empty",
-			onPremRulesSpec: &rules.OnPremRulesSpec{
-				Kubernetes: []rules.Rule{
+			onPremRulesSpec: &rules.Spec{
+				Kubernetes: &[]rules.Rule{
 					{
 						Path:      "foo",
 						Immutable: true,
@@ -53,8 +54,8 @@ func TestEKSBuilder_GetImmutables(t *testing.T) {
 		},
 		{
 			desc: "distribution - not empty",
-			onPremRulesSpec: &rules.OnPremRulesSpec{
-				Distribution: []rules.Rule{
+			onPremRulesSpec: &rules.Spec{
+				Distribution: &[]rules.Rule{
 					{
 						Path:      "foo",
 						Immutable: true,
@@ -76,7 +77,7 @@ func TestEKSBuilder_GetImmutables(t *testing.T) {
 		t.Run(tC.desc, func(t *testing.T) {
 			t.Parallel()
 
-			builder := rules.OnPremExtractor{
+			builder := onpremrules.OnPremExtractor{
 				Spec: *tC.onPremRulesSpec,
 			}
 
