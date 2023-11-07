@@ -69,9 +69,10 @@ func (d *Distribution) Exec(reducers v1alpha2.Reducers) error {
 	}
 
 	mCfg.Data["paths"] = map[any]any{
-		"kubectl":   d.OperationPhase.KubectlPath,
-		"kustomize": d.OperationPhase.KustomizePath,
-		"yq":        d.OperationPhase.YqPath,
+		"kubectl":    d.OperationPhase.KubectlPath,
+		"kustomize":  d.OperationPhase.KustomizePath,
+		"yq":         d.OperationPhase.YqPath,
+		"vendorPath": path.Join(d.Path, "..", "vendor"),
 	}
 
 	// Check cluster connection and requirements.
@@ -188,7 +189,9 @@ func (d *Distribution) injectStoredConfig(cfg template.Config) (template.Config,
 
 	storedCfgStr, err := d.stateStore.GetConfig()
 	if err != nil {
-		return cfg, fmt.Errorf("error while getting current cluster config: %w", err)
+		logrus.Debugf("error while getting current config, skipping stored config injection: %s", err)
+
+		return cfg, nil
 	}
 
 	if err = yamlx.UnmarshalV3(storedCfgStr, &storedCfg); err != nil {
