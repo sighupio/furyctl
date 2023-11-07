@@ -40,9 +40,17 @@ func NewOnPremClusterRulesExtractor(distributionPath string) (*OnPremExtractor, 
 func (r *OnPremExtractor) GetImmutables(phase string) []string {
 	switch phase {
 	case "kubernetes":
+		if r.Spec.Kubernetes == nil {
+			return []string{}
+		}
+
 		return r.BaseExtractor.ExtractImmutablesFromRules(*r.Spec.Kubernetes)
 
 	case "distribution":
+		if r.Spec.Distribution == nil {
+			return []string{}
+		}
+
 		return r.BaseExtractor.ExtractImmutablesFromRules(*r.Spec.Distribution)
 
 	default:
@@ -53,9 +61,17 @@ func (r *OnPremExtractor) GetImmutables(phase string) []string {
 func (r *OnPremExtractor) GetReducers(phase string) []rules.Rule {
 	switch phase {
 	case "kubernetes":
+		if r.Spec.Kubernetes == nil {
+			return []rules.Rule{}
+		}
+
 		return r.BaseExtractor.ExtractReducerRules(*r.Spec.Kubernetes)
 
 	case "distribution":
+		if r.Spec.Distribution == nil {
+			return []rules.Rule{}
+		}
+
 		return r.BaseExtractor.ExtractReducerRules(*r.Spec.Distribution)
 
 	default:
