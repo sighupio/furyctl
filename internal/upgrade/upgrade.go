@@ -40,6 +40,8 @@ func (u *Upgrade) Exec(phase *cluster.OperationPhase) error {
 
 	from := semver.EnsureNoPrefix(u.From)
 	to := semver.EnsureNoPrefix(u.To)
+
+	// Compose the path to the upgrade script.
 	upgradePath := path.Join(phase.Path, "upgrade", fmt.Sprintf("%s-%s", from, to), strings.ToLower(u.kind))
 
 	if _, err := os.Stat(upgradePath); err != nil {
