@@ -119,7 +119,7 @@ func (b *BaseExtractor) GetReducers(_ string) []Rule {
 }
 
 func (*BaseExtractor) ReducerRulesByDiffs(rules []Rule, ds diff.Changelog) []Rule {
-	filteredReducers := make([]Rule, 0)
+	filteredRules := make([]Rule, 0)
 
 	for _, rule := range rules {
 		for _, d := range ds {
@@ -146,16 +146,16 @@ func (*BaseExtractor) ReducerRulesByDiffs(rules []Rule, ds diff.Changelog) []Rul
 					(*rule.Reducers)[i].From = fromStr
 				}
 
-				filteredReducers = append(filteredReducers, rule)
+				filteredRules = append(filteredRules, rule)
 			}
 		}
 	}
 
-	return filteredReducers
+	return filteredRules
 }
 
 func (b *BaseExtractor) UnsupportedReducerRulesByDiffs(rules []Rule, ds diff.Changelog) []Rule {
-	filteredReducers := make([]Rule, 0)
+	filteredRules := make([]Rule, 0)
 
 	for _, rule := range b.ReducerRulesByDiffs(rules, ds) {
 		if rule.Unsupported == nil {
@@ -166,10 +166,10 @@ func (b *BaseExtractor) UnsupportedReducerRulesByDiffs(rules []Rule, ds diff.Cha
 			continue
 		}
 
-		filteredReducers = append(filteredReducers, rule)
+		filteredRules = append(filteredRules, rule)
 	}
 
-	return filteredReducers
+	return filteredRules
 }
 
 func (*BaseExtractor) ExtractImmutablesFromRules(rls []Rule) []string {
