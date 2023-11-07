@@ -27,6 +27,7 @@ import (
 	"github.com/sighupio/furyctl/internal/cluster"
 	"github.com/sighupio/furyctl/internal/rules"
 	"github.com/sighupio/furyctl/internal/state"
+	"github.com/sighupio/furyctl/internal/upgrade"
 	iox "github.com/sighupio/furyctl/internal/x/io"
 )
 
@@ -55,6 +56,7 @@ type ClusterCreator struct {
 	vpnAutoConnect bool
 	dryRun         bool
 	force          bool
+	upgrade        bool
 }
 
 type Phases struct {
@@ -142,6 +144,11 @@ func (v *ClusterCreator) SetProperty(name string, value any) {
 	case cluster.CreatorPropertyForce:
 		if f, ok := value.(bool); ok {
 			v.force = f
+		}
+
+	case cluster.CreatorPropertyUpgrade:
+		if b, ok := value.(bool); ok {
+			v.upgrade = b
 		}
 	}
 }
@@ -607,6 +614,8 @@ func (v *ClusterCreator) setupPhases() (
 	*create.PreFlight,
 	error,
 ) {
+	upgr := upgrade.New(v.paths, string(v.furyctlConf.Kind))
+
 	infra, err := create.NewInfrastructure(v.furyctlConf, v.kfdManifest, v.paths, v.dryRun)
 	if err != nil {
 		return nil, nil, nil, nil, nil, fmt.Errorf("error while initiating infrastructure phase: %w", err)
@@ -654,6 +663,8 @@ func (v *ClusterCreator) setupPhases() (
 		v.dryRun,
 		v.vpnAutoConnect,
 		v.skipVpn,
+		v.upgrade,
+		upgr,
 	)
 	if err != nil {
 		return nil, nil, nil, nil, nil, fmt.Errorf("error while initiating preflight phase: %w", err)
