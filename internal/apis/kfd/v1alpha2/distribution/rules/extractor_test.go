@@ -27,7 +27,7 @@ func TestEKSBuilder_GetImmutables(t *testing.T) {
 			desc:  "distribution - empty",
 			Spec:  &rules.Spec{},
 			phase: "distribution",
-			want:  nil,
+			want:  []string{},
 		},
 		{
 			desc: "distribution - not empty",
