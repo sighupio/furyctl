@@ -23,6 +23,7 @@ import (
 	"github.com/sighupio/furyctl/internal/template"
 	"github.com/sighupio/furyctl/internal/tool/kubectl"
 	"github.com/sighupio/furyctl/internal/tool/shell"
+	"github.com/sighupio/furyctl/internal/upgrade"
 	execx "github.com/sighupio/furyctl/internal/x/exec"
 	iox "github.com/sighupio/furyctl/internal/x/io"
 	yamlx "github.com/sighupio/furyctl/internal/x/yaml"
@@ -45,6 +46,7 @@ type Distribution struct {
 	dryRun          bool
 	shellRunner     *shell.Runner
 	kubeconfig      string
+	upgrade         *upgrade.Upgrade
 }
 
 func NewDistribution(
@@ -53,6 +55,7 @@ func NewDistribution(
 	kfdManifest config.KFD,
 	dryRun bool,
 	kubeconfig string,
+	upgr *upgrade.Upgrade,
 ) (*Distribution, error) {
 	distroDir := path.Join(paths.WorkDir, cluster.OperationPhaseDistribution)
 
@@ -94,6 +97,7 @@ func NewDistribution(
 		),
 		dryRun:     dryRun,
 		kubeconfig: kubeconfig,
+		upgrade:    upgr,
 	}, nil
 }
 
@@ -183,10 +187,6 @@ func (d *Distribution) Exec(reducers v1alpha2.Reducers) error {
 
 	// Stop if dry run is enabled.
 	if d.dryRun {
-		if _, err := d.shellRunner.Run(path.Join(d.Path, "scripts", "apply.sh"), "true", d.kubeconfig); err != nil {
-			return fmt.Errorf("error applying resources: %w", err)
-		}
-
 		logrus.Info("Kubernetes Fury Distribution installed successfully (dry-run mode)")
 
 		return nil
@@ -218,6 +218,11 @@ func (d *Distribution) Exec(reducers v1alpha2.Reducers) error {
 		[]string{"manifests", "terraform", ".gitignore"},
 	); err != nil {
 		return fmt.Errorf("error running pre-apply reducers: %w", err)
+	}
+
+	// Run upgrade scripts if needed.
+	if err := d.upgrade.Exec(d.OperationPhase); err != nil {
+		return fmt.Errorf("error running upgrade: %w", err)
 	}
 
 	// Apply manifests.

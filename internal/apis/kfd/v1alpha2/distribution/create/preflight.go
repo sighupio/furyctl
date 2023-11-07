@@ -5,8 +5,10 @@
 package create
 
 import (
+	"bufio"
 	"errors"
 	"fmt"
+	"os"
 	"path"
 
 	r3diff "github.com/r3labs/diff/v3"
@@ -19,13 +21,17 @@ import (
 	"github.com/sighupio/furyctl/internal/diffs"
 	"github.com/sighupio/furyctl/internal/state"
 	"github.com/sighupio/furyctl/internal/tool/kubectl"
+	"github.com/sighupio/furyctl/internal/upgrade"
 	execx "github.com/sighupio/furyctl/internal/x/exec"
+	iox "github.com/sighupio/furyctl/internal/x/io"
 	yamlx "github.com/sighupio/furyctl/internal/x/yaml"
 )
 
 var (
-	errImmutable   = errors.New("immutable path changed")
-	errUnsupported = errors.New("unsupported reducer values detected")
+	errImmutable         = errors.New("immutable path changed")
+	errUnsupported       = errors.New("unsupported reducer values detected")
+	errUpgradeCanceled   = errors.New("upgrade canceled by user")
+	errUpgradeFlagNotSet = errors.New("upgrade flag not set by user")
 )
 
 type Status struct {
@@ -42,6 +48,8 @@ type PreFlight struct {
 	kubeconfig      string
 	kubeRunner      *kubectl.Runner
 	dryRun          bool
+	upgradeFlag     bool
+	upgrade         *upgrade.Upgrade
 }
 
 func NewPreFlight(
@@ -51,6 +59,8 @@ func NewPreFlight(
 	dryRun bool,
 	kubeconfig string,
 	stateStore state.Storer,
+	upgradeFlag bool,
+	upgr *upgrade.Upgrade,
 ) (*PreFlight, error) {
 	preFlightDir := path.Join(paths.WorkDir, cluster.OperationPhasePreFlight)
 
@@ -76,8 +86,10 @@ func NewPreFlight(
 			true,
 			false,
 		),
-		kubeconfig: kubeconfig,
-		dryRun:     dryRun,
+		kubeconfig:  kubeconfig,
+		dryRun:      dryRun,
+		upgradeFlag: upgradeFlag,
+		upgrade:     upgr,
 	}, nil
 }
 
@@ -138,6 +150,39 @@ func (p *PreFlight) Exec() (Status, error) {
 
 		if err := p.CheckReducerDiffs(d, diffChecker); err != nil {
 			return status, fmt.Errorf("error checking reducer diffs: %w", err)
+		}
+
+		distributionVersionChanges := d.Filter([]string{"spec", "distributionVersion"})
+		if len(distributionVersionChanges) > 0 {
+			distributionVersionChange := distributionVersionChanges[0]
+
+			p.upgrade.From = distributionVersionChange.From.(string)
+			p.upgrade.To = distributionVersionChange.To.(string)
+
+			fmt.Printf(
+				"WARNING: Distribution version changed from %s to %s, you are about to upgrade the cluster.\n",
+				p.upgrade.From,
+				p.upgrade.To,
+			)
+
+			if !p.upgradeFlag {
+				return status, errUpgradeFlagNotSet
+			}
+
+			fmt.Println("Are you sure you want to continue? Only 'yes' will be accepted to confirm.")
+
+			prompter := iox.NewPrompter(bufio.NewReader(os.Stdin))
+
+			prompt, err := prompter.Ask("yes")
+			if err != nil {
+				return status, fmt.Errorf("error reading user input: %w", err)
+			}
+
+			if !prompt {
+				return status, errUpgradeCanceled
+			}
+
+			p.upgrade.Enabled = true
 		}
 	}
 

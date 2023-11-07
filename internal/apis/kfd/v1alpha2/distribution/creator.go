@@ -23,6 +23,7 @@ import (
 	"github.com/sighupio/furyctl/internal/cluster"
 	"github.com/sighupio/furyctl/internal/rules"
 	"github.com/sighupio/furyctl/internal/state"
+	"github.com/sighupio/furyctl/internal/upgrade"
 	iox "github.com/sighupio/furyctl/internal/x/io"
 )
 
@@ -45,6 +46,7 @@ type ClusterCreator struct {
 	phase       string
 	dryRun      bool
 	force       bool
+	upgrade     bool
 }
 
 func (c *ClusterCreator) SetProperties(props []cluster.CreatorProperty) {
@@ -113,6 +115,11 @@ func (c *ClusterCreator) SetProperty(name string, value any) {
 		if b, ok := value.(bool); ok {
 			c.force = b
 		}
+
+	case cluster.CreatorPropertyUpgrade:
+		if b, ok := value.(bool); ok {
+			c.upgrade = b
+		}
 	}
 }
 
@@ -133,12 +140,15 @@ func (*ClusterCreator) GetPhasePath(phase string) (string, error) {
 }
 
 func (c *ClusterCreator) Create(skipPhase string, _ int) error {
+	upgr := upgrade.New(c.paths, string(c.furyctlConf.Kind))
+
 	distributionPhase, err := create.NewDistribution(
 		c.paths,
 		c.furyctlConf,
 		c.kfdManifest,
 		c.dryRun,
 		c.paths.Kubeconfig,
+		upgr,
 	)
 	if err != nil {
 		return fmt.Errorf("error while initiating distribution phase: %w", err)
@@ -162,6 +172,8 @@ func (c *ClusterCreator) Create(skipPhase string, _ int) error {
 		c.dryRun,
 		c.paths.Kubeconfig,
 		c.stateStore,
+		c.upgrade,
+		upgr,
 	)
 	if err != nil {
 		return fmt.Errorf("error while initiating preflight phase: %w", err)
