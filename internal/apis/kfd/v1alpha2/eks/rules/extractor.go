@@ -41,12 +41,24 @@ func NewEKSClusterRulesExtractor(distributionPath string) (*EKSExtractor, error)
 func (r *EKSExtractor) GetImmutables(phase string) []string {
 	switch phase {
 	case "infrastructure":
+		if r.Spec.Infrastructure == nil {
+			return []string{}
+		}
+
 		return r.BaseExtractor.ExtractImmutablesFromRules(*r.Spec.Infrastructure)
 
 	case "kubernetes":
+		if r.Spec.Kubernetes == nil {
+			return []string{}
+		}
+
 		return r.BaseExtractor.ExtractImmutablesFromRules(*r.Spec.Kubernetes)
 
 	case "distribution":
+		if r.Spec.Distribution == nil {
+			return []string{}
+		}
+
 		return r.BaseExtractor.ExtractImmutablesFromRules(*r.Spec.Distribution)
 
 	default:
@@ -57,12 +69,24 @@ func (r *EKSExtractor) GetImmutables(phase string) []string {
 func (r *EKSExtractor) GetReducers(phase string) []rules.Rule {
 	switch phase {
 	case "infrastructure":
+		if r.Spec.Infrastructure == nil {
+			return []rules.Rule{}
+		}
+
 		return r.BaseExtractor.ExtractReducerRules(*r.Spec.Infrastructure)
 
 	case "kubernetes":
+		if r.Spec.Kubernetes == nil {
+			return []rules.Rule{}
+		}
+
 		return r.BaseExtractor.ExtractReducerRules(*r.Spec.Kubernetes)
 
 	case "distribution":
+		if r.Spec.Distribution == nil {
+			return []rules.Rule{}
+		}
+
 		return r.BaseExtractor.ExtractReducerRules(*r.Spec.Distribution)
 
 	default:
