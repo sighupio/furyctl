@@ -47,6 +47,7 @@ type ClusterCmdFlags struct {
 	Kubeconfig         string
 	Timeout            int
 	Outdir             string
+	Upgrade            bool
 }
 
 func NewApplyCommand(tracker *analytics.Tracker) *cobra.Command {
@@ -227,6 +228,7 @@ func NewApplyCommand(tracker *analytics.Tracker) *cobra.Command {
 				flags.VpnAutoConnect,
 				flags.DryRun,
 				flags.Force,
+				flags.Upgrade,
 			)
 			if err != nil {
 				cmdEvent.AddErrorMessage(err)
@@ -363,6 +365,11 @@ func getCreateClusterCmdFlags(cmd *cobra.Command, tracker *analytics.Tracker, cm
 		return ClusterCmdFlags{}, fmt.Errorf(WrappedErrMessage, ErrParsingFlag, "outdir")
 	}
 
+	upgrade, err := cmdutil.BoolFlag(cmd, "upgrade", tracker, cmdEvent)
+	if err != nil {
+		return ClusterCmdFlags{}, fmt.Errorf("%w: %s", ErrParsingFlag, "upgrade")
+	}
+
 	return ClusterCmdFlags{
 		Debug:              debug,
 		FuryctlPath:        furyctlPath,
@@ -381,6 +388,7 @@ func getCreateClusterCmdFlags(cmd *cobra.Command, tracker *analytics.Tracker, cm
 		HTTPS:              https,
 		Timeout:            timeout,
 		Outdir:             outdir,
+		Upgrade:            upgrade,
 	}, nil
 }
 
@@ -474,5 +482,11 @@ func setupCreateClusterCmdFlags(cmd *cobra.Command) {
 		"timeout",
 		3600,
 		"Timeout in seconds for the whole cluster creation process. Expressed in seconds",
+	)
+
+	cmd.Flags().Bool(
+		"upgrade",
+		false,
+		"",
 	)
 }

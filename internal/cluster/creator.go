@@ -26,6 +26,7 @@ const (
 	CreatorPropertyKubeconfig     = "kubeconfig"
 	CreatorPropertyDryRun         = "dryrun"
 	CreatorPropertyForce          = "force"
+	CreatorPropertyUpgrade        = "upgrade"
 )
 
 var (
@@ -65,6 +66,7 @@ func NewCreator(
 	vpnAutoConnect,
 	dryRun,
 	force bool,
+	upgrade bool,
 ) (Creator, error) {
 	lcAPIVersion := strings.ToLower(minimalConf.APIVersion)
 	lcResourceType := strings.ToLower(minimalConf.Kind)
@@ -110,6 +112,10 @@ func NewCreator(
 			{
 				Name:  CreatorPropertyForce,
 				Value: force,
+			},
+			{
+				Name:  CreatorPropertyUpgrade,
+				Value: upgrade,
 			},
 		})
 	}
