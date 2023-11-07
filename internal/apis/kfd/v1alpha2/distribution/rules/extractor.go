@@ -40,6 +40,10 @@ func NewDistroClusterRulesExtractor(distributionPath string) (*DistroExtractor, 
 func (r *DistroExtractor) GetImmutables(phase string) []string {
 	switch phase {
 	case "distribution":
+		if r.Spec.Distribution == nil {
+			return []string{}
+		}
+
 		return r.BaseExtractor.ExtractImmutablesFromRules(*r.Spec.Distribution)
 
 	default:
@@ -50,6 +54,10 @@ func (r *DistroExtractor) GetImmutables(phase string) []string {
 func (r *DistroExtractor) GetReducers(phase string) []rules.Rule {
 	switch phase {
 	case "distribution":
+		if r.Spec.Distribution == nil {
+			return []rules.Rule{}
+		}
+
 		return r.BaseExtractor.ExtractReducerRules(*r.Spec.Distribution)
 
 	default:
