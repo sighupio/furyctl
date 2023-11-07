@@ -21,6 +21,7 @@ import (
 	"github.com/sighupio/furyctl/internal/template"
 	"github.com/sighupio/furyctl/internal/tool/kubectl"
 	"github.com/sighupio/furyctl/internal/tool/shell"
+	"github.com/sighupio/furyctl/internal/upgrade"
 	execx "github.com/sighupio/furyctl/internal/x/exec"
 	iox "github.com/sighupio/furyctl/internal/x/io"
 	yamlx "github.com/sighupio/furyctl/internal/x/yaml"
@@ -41,6 +42,7 @@ type Distribution struct {
 	dryRun          bool
 	shellRunner     *shell.Runner
 	kubeRunner      *kubectl.Runner
+	upgrade         *upgrade.Upgrade
 }
 
 func (d *Distribution) Exec(reducers v1alpha2.Reducers) error {
@@ -132,6 +134,11 @@ func (d *Distribution) Exec(reducers v1alpha2.Reducers) error {
 		[]string{"manifests", "terraform", ".gitignore"},
 	); err != nil {
 		return fmt.Errorf("error running pre-apply reducers: %w", err)
+	}
+
+	// Run upgrade scripts if needed.
+	if err := d.upgrade.Exec(d.OperationPhase); err != nil {
+		return fmt.Errorf("error running upgrade: %w", err)
 	}
 
 	// Apply manifests.
@@ -286,6 +293,7 @@ func NewDistribution(
 	kfdManifest config.KFD,
 	paths cluster.CreatorPaths,
 	dryRun bool,
+	upgr *upgrade.Upgrade,
 ) (*Distribution, error) {
 	kubeDir := path.Join(paths.WorkDir, cluster.OperationPhaseDistribution)
 
@@ -327,5 +335,6 @@ func NewDistribution(
 			true,
 			false,
 		),
+		upgrade: upgr,
 	}, nil
 }
