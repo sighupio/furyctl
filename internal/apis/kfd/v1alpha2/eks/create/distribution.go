@@ -273,7 +273,7 @@ func (d *Distribution) Exec(reducers v1alpha2.Reducers) error {
 	}
 
 	if err := d.runReducers(reducers, mCfg, LifecyclePostTf, []string{"manifests", ".gitignore"}); err != nil {
-		return fmt.Errorf("error running pre-tf reducers: %w", err)
+		return fmt.Errorf("error running post-tf reducers: %w", err)
 	}
 
 	logrus.Info("Checking that the cluster is reachable...")
@@ -283,7 +283,7 @@ func (d *Distribution) Exec(reducers v1alpha2.Reducers) error {
 	}
 
 	if err := d.runReducers(reducers, mCfg, LifecyclePreApply, []string{"manifests", ".gitignore"}); err != nil {
-		return fmt.Errorf("error running pre-tf reducers: %w", err)
+		return fmt.Errorf("error running pre-apply reducers: %w", err)
 	}
 
 	logrus.Info("Applying manifests...")
@@ -293,7 +293,7 @@ func (d *Distribution) Exec(reducers v1alpha2.Reducers) error {
 	}
 
 	if err := d.runReducers(reducers, mCfg, LifecyclePostApply, []string{"manifests", ".gitignore"}); err != nil {
-		return fmt.Errorf("error running pre-tf reducers: %w", err)
+		return fmt.Errorf("error running post-apply reducers: %w", err)
 	}
 
 	return nil
