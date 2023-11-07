@@ -18,6 +18,7 @@ import (
 	"github.com/sighupio/furyctl/internal/merge"
 	"github.com/sighupio/furyctl/internal/template"
 	"github.com/sighupio/furyctl/internal/tool/ansible"
+	"github.com/sighupio/furyctl/internal/upgrade"
 	execx "github.com/sighupio/furyctl/internal/x/exec"
 	kubex "github.com/sighupio/furyctl/internal/x/kube"
 	yamlx "github.com/sighupio/furyctl/internal/x/yaml"
@@ -31,6 +32,7 @@ type Kubernetes struct {
 	paths           cluster.CreatorPaths
 	dryRun          bool
 	ansibleRunner   *ansible.Runner
+	upgrade         *upgrade.Upgrade
 }
 
 func (k *Kubernetes) Exec() error {
@@ -104,6 +106,11 @@ func (k *Kubernetes) Exec() error {
 
 	if _, err := k.ansibleRunner.Exec("all", "-m", "ping"); err != nil {
 		return fmt.Errorf("error checking hosts: %w", err)
+	}
+
+	// Run upgrade scripts if needed.
+	if err := k.upgrade.Exec(k.OperationPhase); err != nil {
+		return fmt.Errorf("error running upgrade: %w", err)
 	}
 
 	logrus.Info("Running ansible playbook...")
@@ -182,6 +189,7 @@ func NewKubernetes(
 	kfdManifest config.KFD,
 	paths cluster.CreatorPaths,
 	dryRun bool,
+	upgr *upgrade.Upgrade,
 ) (*Kubernetes, error) {
 	kubeDir := path.Join(paths.WorkDir, cluster.OperationPhaseKubernetes)
 
@@ -205,5 +213,6 @@ func NewKubernetes(
 				WorkDir:         phase.Path,
 			},
 		),
+		upgrade: upgr,
 	}, nil
 }
