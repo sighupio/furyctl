@@ -215,9 +215,9 @@ func (d *Distribution) Exec(reducers v1alpha2.Reducers) error {
 		reducers,
 		mCfg,
 		LifecyclePreApply,
-		[]string{"manifests", ".gitignore"},
+		[]string{"manifests", "terraform", ".gitignore"},
 	); err != nil {
-		return fmt.Errorf("error running pre-tf reducers: %w", err)
+		return fmt.Errorf("error running pre-apply reducers: %w", err)
 	}
 
 	// Apply manifests.
@@ -231,9 +231,9 @@ func (d *Distribution) Exec(reducers v1alpha2.Reducers) error {
 		reducers,
 		mCfg,
 		LifecyclePostApply,
-		[]string{"manifests", ".gitignore"},
+		[]string{"manifests", "terraform", ".gitignore"},
 	); err != nil {
-		return fmt.Errorf("error running pre-tf reducers: %w", err)
+		return fmt.Errorf("error running post-apply reducers: %w", err)
 	}
 
 	logrus.Info("Kubernetes Fury Distribution installed successfully")
