@@ -25,6 +25,7 @@ const (
 	CreatorPropertyVpnAutoConnect = "vpnautoconnect"
 	CreatorPropertyKubeconfig     = "kubeconfig"
 	CreatorPropertyDryRun         = "dryrun"
+	CreatorPropertyForce          = "force"
 )
 
 var (
@@ -62,7 +63,8 @@ func NewCreator(
 	phase string,
 	skipVpn,
 	vpnAutoConnect,
-	dryRun bool,
+	dryRun,
+	force bool,
 ) (Creator, error) {
 	lcAPIVersion := strings.ToLower(minimalConf.APIVersion)
 	lcResourceType := strings.ToLower(minimalConf.Kind)
@@ -104,6 +106,10 @@ func NewCreator(
 			{
 				Name:  CreatorPropertyDryRun,
 				Value: dryRun,
+			},
+			{
+				Name:  CreatorPropertyForce,
+				Value: force,
 			},
 		})
 	}

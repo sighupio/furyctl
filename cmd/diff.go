@@ -242,6 +242,7 @@ func getPhasePath(
 		true,
 		false,
 		true,
+		true,
 	)
 	if err != nil {
 		return "", fmt.Errorf("error while initializing cluster creator: %w", err)

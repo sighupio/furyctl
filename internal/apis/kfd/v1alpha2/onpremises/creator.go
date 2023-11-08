@@ -5,8 +5,10 @@
 package onpremises
 
 import (
+	"bufio"
 	"errors"
 	"fmt"
+	"os"
 	"strings"
 
 	r3diff "github.com/r3labs/diff/v3"
@@ -21,6 +23,7 @@ import (
 	"github.com/sighupio/furyctl/internal/cluster"
 	"github.com/sighupio/furyctl/internal/rules"
 	"github.com/sighupio/furyctl/internal/state"
+	iox "github.com/sighupio/furyctl/internal/x/io"
 )
 
 const (
@@ -30,7 +33,10 @@ const (
 	AllPhaseSchemaPath          = ""
 )
 
-var ErrUnsupportedPhase = errors.New("unsupported phase")
+var (
+	ErrUnsupportedPhase = errors.New("unsupported phase")
+	ErrAbortedByUser    = errors.New("operation aborted by user")
+)
 
 type ClusterCreator struct {
 	paths       cluster.CreatorPaths
@@ -39,6 +45,7 @@ type ClusterCreator struct {
 	kfdManifest config.KFD
 	phase       string
 	dryRun      bool
+	force       bool
 }
 
 func (c *ClusterCreator) SetProperties(props []cluster.CreatorProperty) {
@@ -101,6 +108,11 @@ func (c *ClusterCreator) SetProperty(name string, value any) {
 	case cluster.CreatorPropertyDryRun:
 		if b, ok := value.(bool); ok {
 			c.dryRun = b
+		}
+
+	case cluster.CreatorPropertyForce:
+		if b, ok := value.(bool); ok {
+			c.force = b
 		}
 	}
 }
@@ -193,6 +205,17 @@ func (c *ClusterCreator) Create(skipPhase string, _ int) error {
 			cluster.OperationPhaseDistribution,
 		)
 
+		if len(reducers) > 0 {
+			confirm, err := c.AskConfirmation()
+			if err != nil {
+				return fmt.Errorf("error while asking for confirmation: %w", err)
+			}
+
+			if !confirm {
+				return ErrAbortedByUser
+			}
+		}
+
 		if err := distributionPhase.Exec(reducers); err != nil {
 			return fmt.Errorf("error while executing distribution phase: %w", err)
 		}
@@ -215,6 +238,17 @@ func (c *ClusterCreator) Create(skipPhase string, _ int) error {
 				r,
 				cluster.OperationPhaseDistribution,
 			)
+
+			if len(reducers) > 0 {
+				confirm, err := c.AskConfirmation()
+				if err != nil {
+					return fmt.Errorf("error while asking for confirmation: %w", err)
+				}
+
+				if !confirm {
+					return ErrAbortedByUser
+				}
+			}
 
 			if err := distributionPhase.Exec(reducers); err != nil {
 				return fmt.Errorf("error while executing distribution phase: %w", err)
@@ -278,4 +312,29 @@ func (*ClusterCreator) buildReducers(
 	}
 
 	return reducers
+}
+
+func (c *ClusterCreator) AskConfirmation() (bool, error) {
+	if !c.force {
+		if _, err := fmt.Println("WARNING: You are about to apply changes to the cluster configuration."); err != nil {
+			return false, fmt.Errorf("error while printing to stdout: %w", err)
+		}
+
+		if _, err := fmt.Println("Are you sure you want to continue? Only 'yes' will be accepted to confirm."); err != nil {
+			return false, fmt.Errorf("error while printing to stdout: %w", err)
+		}
+
+		prompter := iox.NewPrompter(bufio.NewReader(os.Stdin))
+
+		prompt, err := prompter.Ask("yes")
+		if err != nil {
+			return false, fmt.Errorf("error reading user input: %w", err)
+		}
+
+		if !prompt {
+			return false, nil
+		}
+	}
+
+	return true, nil
 }

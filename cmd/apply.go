@@ -41,6 +41,7 @@ type ClusterCmdFlags struct {
 	SkipDepsValidation bool
 	NoTTY              bool
 	HTTPS              bool
+	Force              bool
 	Kubeconfig         string
 	Timeout            int
 	Outdir             string
@@ -223,6 +224,7 @@ func NewApplyCommand(tracker *analytics.Tracker) *cobra.Command {
 				flags.SkipVpn,
 				flags.VpnAutoConnect,
 				flags.DryRun,
+				flags.Force,
 			)
 			if err != nil {
 				cmdEvent.AddErrorMessage(err)
@@ -324,6 +326,11 @@ func getCreateClusterCmdFlags(cmd *cobra.Command, tracker *analytics.Tracker, cm
 		return ClusterCmdFlags{}, fmt.Errorf("%w: %s", ErrParsingFlag, "no-tty")
 	}
 
+	force, err := cmdutil.BoolFlag(cmd, "force", tracker, cmdEvent)
+	if err != nil {
+		return ClusterCmdFlags{}, fmt.Errorf("%w: %s", ErrParsingFlag, "force")
+	}
+
 	skipDepsDownload, err := cmdutil.BoolFlag(cmd, "skip-deps-download", tracker, cmdEvent)
 	if err != nil {
 		return ClusterCmdFlags{}, fmt.Errorf("%w: %s", ErrParsingFlag, "skip-deps-download")
@@ -367,6 +374,7 @@ func getCreateClusterCmdFlags(cmd *cobra.Command, tracker *analytics.Tracker, cm
 		SkipDepsDownload:   skipDepsDownload,
 		SkipDepsValidation: skipDepsValidation,
 		NoTTY:              noTTY,
+		Force:              force,
 		Kubeconfig:         kubeconfig,
 		HTTPS:              https,
 		Timeout:            timeout,
@@ -445,6 +453,12 @@ func setupCreateClusterCmdFlags(cmd *cobra.Command) {
 		"skip-vpn-confirmation",
 		false,
 		"When set will not wait for user confirmation that the VPN is connected",
+	)
+
+	cmd.Flags().Bool(
+		"force",
+		false,
+		"WARNING: furyctl won't ask for confirmation and will proceed applying reducers",
 	)
 
 	cmd.Flags().String(
