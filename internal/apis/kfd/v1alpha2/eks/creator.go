@@ -5,6 +5,7 @@
 package eks
 
 import (
+	"bufio"
 	"errors"
 	"fmt"
 	"os"
@@ -26,6 +27,7 @@ import (
 	"github.com/sighupio/furyctl/internal/cluster"
 	"github.com/sighupio/furyctl/internal/rules"
 	"github.com/sighupio/furyctl/internal/state"
+	iox "github.com/sighupio/furyctl/internal/x/io"
 )
 
 const (
@@ -40,6 +42,7 @@ var (
 	ErrUnsupportedPhase = errors.New("unsupported phase")
 	ErrInfraNotPresent  = errors.New("the configuration file does not contain an infrastructure section")
 	ErrTimeout          = errors.New("timeout reached")
+	ErrAbortedByUser    = errors.New("operation aborted by user")
 )
 
 type ClusterCreator struct {
@@ -51,6 +54,7 @@ type ClusterCreator struct {
 	skipVpn        bool
 	vpnAutoConnect bool
 	dryRun         bool
+	force          bool
 }
 
 type Phases struct {
@@ -133,6 +137,11 @@ func (v *ClusterCreator) SetProperty(name string, value any) {
 	case cluster.CreatorPropertyDryRun:
 		if b, ok := value.(bool); ok {
 			v.dryRun = b
+		}
+
+	case cluster.CreatorPropertyForce:
+		if f, ok := value.(bool); ok {
+			v.force = f
 		}
 	}
 }
@@ -302,6 +311,17 @@ func (v *ClusterCreator) CreateAsync(
 	case cluster.OperationPhaseDistribution:
 		reducers := v.buildReducers(status.Diffs, r, cluster.OperationPhaseDistribution)
 
+		if len(reducers) > 0 {
+			confirm, err := v.AskConfirmation()
+			if err != nil {
+				errCh <- err
+			}
+
+			if !confirm {
+				errCh <- ErrAbortedByUser
+			}
+		}
+
 		if err := v.distributionPhase(phases.Distribution, vpnConnector, reducers); err != nil {
 			errCh <- err
 		}
@@ -313,6 +333,17 @@ func (v *ClusterCreator) CreateAsync(
 
 	case cluster.OperationPhaseAll:
 		reducers := v.buildReducers(status.Diffs, r, cluster.OperationPhaseDistribution)
+
+		if len(reducers) > 0 {
+			confirm, err := v.AskConfirmation()
+			if err != nil {
+				errCh <- err
+			}
+
+			if !confirm {
+				errCh <- ErrAbortedByUser
+			}
+		}
 
 		errCh <- v.allPhases(
 			skipPhase,
@@ -656,4 +687,29 @@ func (*ClusterCreator) logVPNKill(vpnConnector *vpn.Connector) error {
 	}
 
 	return nil
+}
+
+func (v *ClusterCreator) AskConfirmation() (bool, error) {
+	if !v.force {
+		if _, err := fmt.Println("WARNING: You are about to apply changes to the cluster configuration."); err != nil {
+			return false, fmt.Errorf("error while printing to stdout: %w", err)
+		}
+
+		if _, err := fmt.Println("Are you sure you want to continue? Only 'yes' will be accepted to confirm."); err != nil {
+			return false, fmt.Errorf("error while printing to stdout: %w", err)
+		}
+
+		prompter := iox.NewPrompter(bufio.NewReader(os.Stdin))
+
+		prompt, err := prompter.Ask("yes")
+		if err != nil {
+			return false, fmt.Errorf("error reading user input: %w", err)
+		}
+
+		if !prompt {
+			return false, nil
+		}
+	}
+
+	return true, nil
 }
