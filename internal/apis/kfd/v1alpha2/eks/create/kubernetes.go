@@ -680,6 +680,15 @@ func (k *Kubernetes) createTfVars() error {
 
 			err = bytesx.SafeWriteToBuffer(
 				&buffer,
+				"type = \"%v\"\n",
+				np.Type,
+			)
+			if err != nil {
+				return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
+			}
+
+			err = bytesx.SafeWriteToBuffer(
+				&buffer,
 				"name = \"%v\"\n",
 				np.Name,
 			)

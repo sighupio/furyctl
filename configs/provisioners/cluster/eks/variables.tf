@@ -64,6 +64,7 @@ variable "node_pools" {
   description = "An object list defining node pools configurations"
   type = list(object({
     name              = string
+    type              = optional(string, "self-managed") # "eks-managed" or "self-managed"
     ami_id            = optional(string)
     version           = optional(string) # null to use cluster_version
     min_size          = number
@@ -72,7 +73,7 @@ variable "node_pools" {
     container_runtime = optional(string)
     spot_instance     = optional(bool)
     max_pods          = optional(number) # null to use default upstream configuration
-    volume_size       = number
+    volume_size       = optional(number, 100)
     subnets           = optional(list(string)) # null to use default upstream configuration
     labels            = optional(map(string))
     taints            = optional(list(string))
