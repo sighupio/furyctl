@@ -25,6 +25,8 @@ import (
 	netx "github.com/sighupio/furyctl/internal/x/net"
 )
 
+const WrappedErrMessage = "%w: %s"
+
 var ErrDownloadDependenciesFailed = errors.New("dependencies download failed")
 
 type ClusterCmdFlags struct {
@@ -255,22 +257,22 @@ func NewApplyCommand(tracker *analytics.Tracker) *cobra.Command {
 func getCreateClusterCmdFlags(cmd *cobra.Command, tracker *analytics.Tracker, cmdEvent analytics.Event) (ClusterCmdFlags, error) {
 	debug, err := cmdutil.BoolFlag(cmd, "debug", tracker, cmdEvent)
 	if err != nil {
-		return ClusterCmdFlags{}, fmt.Errorf("%w: %s", ErrParsingFlag, "debug")
+		return ClusterCmdFlags{}, fmt.Errorf(WrappedErrMessage, ErrParsingFlag, "debug")
 	}
 
 	furyctlPath, err := cmdutil.StringFlag(cmd, "config", tracker, cmdEvent)
 	if err != nil {
-		return ClusterCmdFlags{}, fmt.Errorf("%w: %s", ErrParsingFlag, "config")
+		return ClusterCmdFlags{}, fmt.Errorf(WrappedErrMessage, ErrParsingFlag, "config")
 	}
 
 	distroLocation, err := cmdutil.StringFlag(cmd, "distro-location", tracker, cmdEvent)
 	if err != nil {
-		return ClusterCmdFlags{}, fmt.Errorf("%w: %s", ErrParsingFlag, "distro-location")
+		return ClusterCmdFlags{}, fmt.Errorf(WrappedErrMessage, ErrParsingFlag, "distro-location")
 	}
 
 	phase, err := cmdutil.StringFlag(cmd, "phase", tracker, cmdEvent)
 	if err != nil {
-		return ClusterCmdFlags{}, fmt.Errorf("%w: %s", ErrParsingFlag, "phase")
+		return ClusterCmdFlags{}, fmt.Errorf(WrappedErrMessage, ErrParsingFlag, "phase")
 	}
 
 	err = cluster.CheckPhase(phase)
@@ -280,7 +282,7 @@ func getCreateClusterCmdFlags(cmd *cobra.Command, tracker *analytics.Tracker, cm
 
 	skipPhase, err := cmdutil.StringFlag(cmd, "skip-phase", tracker, cmdEvent)
 	if err != nil {
-		return ClusterCmdFlags{}, fmt.Errorf("%w: %s", ErrParsingFlag, "skip-phase")
+		return ClusterCmdFlags{}, fmt.Errorf(WrappedErrMessage, ErrParsingFlag, "skip-phase")
 	}
 
 	if phase != cluster.OperationPhaseAll && skipPhase != "" {
@@ -300,12 +302,12 @@ func getCreateClusterCmdFlags(cmd *cobra.Command, tracker *analytics.Tracker, cm
 
 	skipVpn, err := cmdutil.BoolFlag(cmd, "skip-vpn-confirmation", tracker, cmdEvent)
 	if err != nil {
-		return ClusterCmdFlags{}, fmt.Errorf("%w: %s", ErrParsingFlag, "skip-vpn-confirmation")
+		return ClusterCmdFlags{}, fmt.Errorf(WrappedErrMessage, ErrParsingFlag, "skip-vpn-confirmation")
 	}
 
 	vpnAutoConnect, err := cmdutil.BoolFlag(cmd, "vpn-auto-connect", tracker, cmdEvent)
 	if err != nil {
-		return ClusterCmdFlags{}, fmt.Errorf("%w: %s", ErrParsingFlag, "vpn-auto-connect")
+		return ClusterCmdFlags{}, fmt.Errorf(WrappedErrMessage, ErrParsingFlag, "vpn-auto-connect")
 	}
 
 	if skipVpn && vpnAutoConnect {
@@ -318,47 +320,47 @@ func getCreateClusterCmdFlags(cmd *cobra.Command, tracker *analytics.Tracker, cm
 
 	dryRun, err := cmdutil.BoolFlag(cmd, "dry-run", tracker, cmdEvent)
 	if err != nil {
-		return ClusterCmdFlags{}, fmt.Errorf("%w: %s", ErrParsingFlag, "dry-run")
+		return ClusterCmdFlags{}, fmt.Errorf(WrappedErrMessage, ErrParsingFlag, "dry-run")
 	}
 
 	noTTY, err := cmdutil.BoolFlag(cmd, "no-tty", tracker, cmdEvent)
 	if err != nil {
-		return ClusterCmdFlags{}, fmt.Errorf("%w: %s", ErrParsingFlag, "no-tty")
+		return ClusterCmdFlags{}, fmt.Errorf(WrappedErrMessage, ErrParsingFlag, "no-tty")
 	}
 
 	force, err := cmdutil.BoolFlag(cmd, "force", tracker, cmdEvent)
 	if err != nil {
-		return ClusterCmdFlags{}, fmt.Errorf("%w: %s", ErrParsingFlag, "force")
+		return ClusterCmdFlags{}, fmt.Errorf(WrappedErrMessage, ErrParsingFlag, "force")
 	}
 
 	skipDepsDownload, err := cmdutil.BoolFlag(cmd, "skip-deps-download", tracker, cmdEvent)
 	if err != nil {
-		return ClusterCmdFlags{}, fmt.Errorf("%w: %s", ErrParsingFlag, "skip-deps-download")
+		return ClusterCmdFlags{}, fmt.Errorf(WrappedErrMessage, ErrParsingFlag, "skip-deps-download")
 	}
 
 	skipDepsValidation, err := cmdutil.BoolFlag(cmd, "skip-deps-validation", tracker, cmdEvent)
 	if err != nil {
-		return ClusterCmdFlags{}, fmt.Errorf("%w: %s", ErrParsingFlag, "skip-deps-validation")
+		return ClusterCmdFlags{}, fmt.Errorf(WrappedErrMessage, ErrParsingFlag, "skip-deps-validation")
 	}
 
 	kubeconfig, err := cmdutil.StringFlag(cmd, "kubeconfig", tracker, cmdEvent)
 	if err != nil {
-		return ClusterCmdFlags{}, fmt.Errorf("%w: %s", ErrParsingFlag, "kubeconfig")
+		return ClusterCmdFlags{}, fmt.Errorf(WrappedErrMessage, ErrParsingFlag, "kubeconfig")
 	}
 
 	https, err := cmdutil.BoolFlag(cmd, "https", tracker, cmdEvent)
 	if err != nil {
-		return ClusterCmdFlags{}, fmt.Errorf("%w: %s", ErrParsingFlag, "https")
+		return ClusterCmdFlags{}, fmt.Errorf(WrappedErrMessage, ErrParsingFlag, "https")
 	}
 
 	timeout, err := cmdutil.IntFlag(cmd, "timeout", tracker, cmdEvent)
 	if err != nil {
-		return ClusterCmdFlags{}, fmt.Errorf("%w: %s", ErrParsingFlag, "timeout")
+		return ClusterCmdFlags{}, fmt.Errorf(WrappedErrMessage, ErrParsingFlag, "timeout")
 	}
 
 	outdir, err := cmdutil.StringFlag(cmd, "outdir", tracker, cmdEvent)
 	if err != nil {
-		return ClusterCmdFlags{}, fmt.Errorf("%w: %s", ErrParsingFlag, "outdir")
+		return ClusterCmdFlags{}, fmt.Errorf(WrappedErrMessage, ErrParsingFlag, "outdir")
 	}
 
 	return ClusterCmdFlags{
