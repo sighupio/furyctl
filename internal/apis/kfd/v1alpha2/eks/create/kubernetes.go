@@ -678,13 +678,15 @@ func (k *Kubernetes) createTfVars() error {
 				return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
 			}
 
-			err = bytesx.SafeWriteToBuffer(
-				&buffer,
-				"type = \"%v\"\n",
-				np.Type,
-			)
-			if err != nil {
-				return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
+			if np.Type != nil {
+				err = bytesx.SafeWriteToBuffer(
+					&buffer,
+					"type = \"%v\"\n",
+					*np.Type,
+				)
+				if err != nil {
+					return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
+				}
 			}
 
 			err = bytesx.SafeWriteToBuffer(
