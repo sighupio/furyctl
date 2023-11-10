@@ -427,7 +427,7 @@ func (k *Kubernetes) mergeConfig() (template.Config, error) {
 	return cfg, nil
 }
 
-//nolint:gocyclo,maintidx,funlen // it will be refactored
+//nolint:gocyclo,maintidx // it will be refactored
 func (k *Kubernetes) createTfVars() error {
 	var buffer bytes.Buffer
 
@@ -495,39 +495,35 @@ func (k *Kubernetes) createTfVars() error {
 
 	allowedClusterEndpointPrivateAccessCIDRs = slices.Uniq(allowedClusterEndpointPrivateAccessCIDRs)
 
-	err := bytesx.SafeWriteToBuffer(
+	if err := bytesx.SafeWriteToBuffer(
 		&buffer,
 		"cluster_name = \"%v\"\n",
 		k.furyctlConf.Metadata.Name,
-	)
-	if err != nil {
+	); err != nil {
 		return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
 	}
 
-	err = bytesx.SafeWriteToBuffer(
+	if err := bytesx.SafeWriteToBuffer(
 		&buffer,
 		"kubectl_path = \"%s\"\n",
 		k.KubectlPath,
-	)
-	if err != nil {
+	); err != nil {
 		return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
 	}
 
-	err = bytesx.SafeWriteToBuffer(
+	if err := bytesx.SafeWriteToBuffer(
 		&buffer,
 		"cluster_version = \"%v\"\n",
 		k.kfdManifest.Kubernetes.Eks.Version,
-	)
-	if err != nil {
+	); err != nil {
 		return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
 	}
 
-	err = bytesx.SafeWriteToBuffer(
+	if err := bytesx.SafeWriteToBuffer(
 		&buffer,
 		"cluster_endpoint_private_access = %v\n",
 		k.furyctlConf.Spec.Kubernetes.ApiServer.PrivateAccess,
-	)
-	if err != nil {
+	); err != nil {
 		return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
 	}
 
@@ -537,21 +533,19 @@ func (k *Kubernetes) createTfVars() error {
 		clusterEndpointPrivateAccessCidrs[i] = fmt.Sprintf("\"%v\"", cidr)
 	}
 
-	err = bytesx.SafeWriteToBuffer(
+	if err := bytesx.SafeWriteToBuffer(
 		&buffer,
 		"cluster_endpoint_private_access_cidrs = [%v]\n",
 		strings.Join(clusterEndpointPrivateAccessCidrs, ","),
-	)
-	if err != nil {
+	); err != nil {
 		return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
 	}
 
-	err = bytesx.SafeWriteToBuffer(
+	if err := bytesx.SafeWriteToBuffer(
 		&buffer,
 		"cluster_endpoint_public_access = %v\n",
 		k.furyctlConf.Spec.Kubernetes.ApiServer.PublicAccess,
-	)
-	if err != nil {
+	); err != nil {
 		return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
 	}
 
@@ -568,48 +562,42 @@ func (k *Kubernetes) createTfVars() error {
 		clusterEndpointPublicAccessCidrs[i] = fmt.Sprintf("\"%v\"", cidr)
 	}
 
-	err = bytesx.SafeWriteToBuffer(
+	if err := bytesx.SafeWriteToBuffer(
 		&buffer,
 		"cluster_endpoint_public_access_cidrs = [%v]\n",
 		strings.Join(clusterEndpointPublicAccessCidrs, ","),
-	)
-	if err != nil {
+	); err != nil {
 		return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
 	}
 
 	if k.furyctlConf.Spec.Kubernetes.ServiceIpV4Cidr == nil {
-		err = bytesx.SafeWriteToBuffer(
-			&buffer,
-			"cluster_service_ipv4_cidr = null\n",
-		)
+		if err := bytesx.SafeWriteToBuffer(&buffer, "cluster_service_ipv4_cidr = null\n"); err != nil {
+			return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
+		}
 	} else {
-		err = bytesx.SafeWriteToBuffer(
+		if err := bytesx.SafeWriteToBuffer(
 			&buffer,
 			"cluster_service_ipv4_cidr = \"%v\"\n",
 			k.furyctlConf.Spec.Kubernetes.ServiceIpV4Cidr,
-		)
+		); err != nil {
+			return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
+		}
 	}
 
-	if err != nil {
-		return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
-	}
-
-	err = bytesx.SafeWriteToBuffer(
+	if err := bytesx.SafeWriteToBuffer(
 		&buffer,
 		"node_pools_launch_kind = \"%v\"\n",
 		k.furyctlConf.Spec.Kubernetes.NodePoolsLaunchKind,
-	)
-	if err != nil {
+	); err != nil {
 		return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
 	}
 
 	if k.furyctlConf.Spec.Kubernetes.LogRetentionDays != nil {
-		err = bytesx.SafeWriteToBuffer(
+		if err := bytesx.SafeWriteToBuffer(
 			&buffer,
 			"cluster_log_retention_days = %v\n",
 			*k.furyctlConf.Spec.Kubernetes.LogRetentionDays,
-		)
-		if err != nil {
+		); err != nil {
 			return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
 		}
 	}
@@ -622,12 +610,7 @@ func (k *Kubernetes) createTfVars() error {
 		vpcIDSource = new(private.TypesAwsVpcId)
 	}
 
-	err = bytesx.SafeWriteToBuffer(
-		&buffer,
-		"vpc_id = \"%v\"\n",
-		*vpcIDSource,
-	)
-	if err != nil {
+	if err := bytesx.SafeWriteToBuffer(&buffer, "vpc_id = \"%v\"\n", *vpcIDSource); err != nil {
 		return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
 	}
 
@@ -637,82 +620,48 @@ func (k *Kubernetes) createTfVars() error {
 		subnetIds[i] = fmt.Sprintf("\"%v\"", subnetID)
 	}
 
-	err = bytesx.SafeWriteToBuffer(
-		&buffer,
-		"subnets = [%v]\n",
-		strings.Join(subnetIds, ","),
-	)
-	if err != nil {
+	if err := bytesx.SafeWriteToBuffer(&buffer, "subnets = [%v]\n", strings.Join(subnetIds, ",")); err != nil {
 		return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
 	}
 
-	err = bytesx.SafeWriteToBuffer(
+	if err := bytesx.SafeWriteToBuffer(
 		&buffer,
 		"ssh_public_key = \"%v\"\n",
 		k.furyctlConf.Spec.Kubernetes.NodeAllowedSshPublicKey,
-	)
-	if err != nil {
+	); err != nil {
 		return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
 	}
 
-	err = k.addAwsAuthToTfVars(&buffer)
-	if err != nil {
+	if err := k.addAwsAuthToTfVars(&buffer); err != nil {
 		return fmt.Errorf("error writing AWS Auth to Terraform vars file: %w", err)
 	}
 
 	if len(k.furyctlConf.Spec.Kubernetes.NodePools) > 0 {
-		err = bytesx.SafeWriteToBuffer(
-			&buffer,
-			"node_pools = [\n",
-		)
-		if err != nil {
+		if err := bytesx.SafeWriteToBuffer(&buffer, "node_pools = [\n"); err != nil {
 			return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
 		}
 
 		for _, np := range k.furyctlConf.Spec.Kubernetes.NodePools {
-			err = bytesx.SafeWriteToBuffer(
-				&buffer,
-				"{\n",
-			)
-			if err != nil {
+			if err := bytesx.SafeWriteToBuffer(&buffer, "{\n"); err != nil {
 				return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
 			}
 
 			if np.Type != nil {
-				err = bytesx.SafeWriteToBuffer(
-					&buffer,
-					"type = \"%v\"\n",
-					*np.Type,
-				)
-				if err != nil {
+				if err := bytesx.SafeWriteToBuffer(&buffer, "type = \"%v\"\n", *np.Type); err != nil {
 					return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
 				}
 			}
 
-			err = bytesx.SafeWriteToBuffer(
-				&buffer,
-				"name = \"%v\"\n",
-				np.Name,
-			)
-			if err != nil {
+			if err := bytesx.SafeWriteToBuffer(&buffer, "name = \"%v\"\n", np.Name); err != nil {
 				return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
 			}
 
-			err = bytesx.SafeWriteToBuffer(
-				&buffer,
-				"version = null\n",
-			)
-			if err != nil {
+			if err := bytesx.SafeWriteToBuffer(&buffer, "version = null\n"); err != nil {
 				return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
 			}
 
 			if np.Ami != nil {
-				err = bytesx.SafeWriteToBuffer(
-					&buffer,
-					"ami_id = \"%v\"\n",
-					np.Ami.Id,
-				)
-				if err != nil {
+				if err := bytesx.SafeWriteToBuffer(&buffer, "ami_id = \"%v\"\n", np.Ami.Id); err != nil {
 					return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
 				}
 			}
@@ -723,50 +672,29 @@ func (k *Kubernetes) createTfVars() error {
 				spot = strconv.FormatBool(*np.Instance.Spot)
 			}
 
-			err = bytesx.SafeWriteToBuffer(
-				&buffer,
-				"spot_instance = %v\n",
-				spot,
-			)
-			if err != nil {
+			if err := bytesx.SafeWriteToBuffer(&buffer, "spot_instance = %v\n", spot); err != nil {
 				return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
 			}
 
 			if np.ContainerRuntime != nil {
-				err = bytesx.SafeWriteToBuffer(
+				if err := bytesx.SafeWriteToBuffer(
 					&buffer,
 					"container_runtime = \"%v\"\n",
 					*np.ContainerRuntime,
-				)
-				if err != nil {
+				); err != nil {
 					return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
 				}
 			}
 
-			err = bytesx.SafeWriteToBuffer(
-				&buffer,
-				"min_size = %v\n",
-				np.Size.Min,
-			)
-			if err != nil {
+			if err := bytesx.SafeWriteToBuffer(&buffer, "min_size = %v\n", np.Size.Min); err != nil {
 				return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
 			}
 
-			err = bytesx.SafeWriteToBuffer(
-				&buffer,
-				"max_size = %v\n",
-				np.Size.Max,
-			)
-			if err != nil {
+			if err := bytesx.SafeWriteToBuffer(&buffer, "max_size = %v\n", np.Size.Max); err != nil {
 				return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
 			}
 
-			err = bytesx.SafeWriteToBuffer(
-				&buffer,
-				"instance_type = \"%v\"\n",
-				np.Instance.Type,
-			)
-			if err != nil {
+			if err := bytesx.SafeWriteToBuffer(&buffer, "instance_type = \"%v\"\n", np.Instance.Type); err != nil {
 				return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
 			}
 
@@ -777,12 +705,11 @@ func (k *Kubernetes) createTfVars() error {
 					attachedTargetGroups[i] = fmt.Sprintf("\"%v\"", tg)
 				}
 
-				err = bytesx.SafeWriteToBuffer(
+				if err := bytesx.SafeWriteToBuffer(
 					&buffer,
 					"target_group_arns = [%v]\n",
 					strings.Join(attachedTargetGroups, ","),
-				)
-				if err != nil {
+				); err != nil {
 					return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
 				}
 			}
@@ -803,17 +730,11 @@ func (k *Kubernetes) createTfVars() error {
 				volumeSize = *np.Instance.VolumeSize
 			}
 
-			err = bytesx.SafeWriteToBuffer(
-				&buffer,
-				"volume_size = %v\n",
-				volumeSize,
-			)
-			if err != nil {
+			if err := bytesx.SafeWriteToBuffer(&buffer, "volume_size = %v\n", volumeSize); err != nil {
 				return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
 			}
 
-			err = k.addFirewallRulesToNodePool(&buffer, np)
-			if err != nil {
+			if err := k.addFirewallRulesToNodePool(&buffer, np); err != nil {
 				return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
 			}
 
@@ -824,20 +745,15 @@ func (k *Kubernetes) createTfVars() error {
 					npSubNetIds[i] = fmt.Sprintf("\"%v\"", subnetID)
 				}
 
-				err = bytesx.SafeWriteToBuffer(
+				if err := bytesx.SafeWriteToBuffer(
 					&buffer,
 					"subnets = [%v]\n",
 					strings.Join(npSubNetIds, ","),
-				)
-				if err != nil {
+				); err != nil {
 					return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
 				}
 			} else {
-				err = bytesx.SafeWriteToBuffer(
-					&buffer,
-					"subnets = null\n",
-				)
-				if err != nil {
+				if err := bytesx.SafeWriteToBuffer(&buffer, "subnets = null\n"); err != nil {
 					return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
 				}
 			}
@@ -850,39 +766,25 @@ func (k *Kubernetes) createTfVars() error {
 					return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
 				}
 
-				err = bytesx.SafeWriteToBuffer(
-					&buffer,
-					"labels = %v\n",
-					string(labels),
-				)
-				if err != nil {
+				if err := bytesx.SafeWriteToBuffer(&buffer, "labels = %v\n", string(labels)); err != nil {
 					return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
 				}
 			} else {
-				err = bytesx.SafeWriteToBuffer(
-					&buffer,
-					"labels = null\n",
-				)
-				if err != nil {
+				if err := bytesx.SafeWriteToBuffer(&buffer, "labels = null\n"); err != nil {
 					return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
 				}
 			}
 
 			if len(np.Taints) > 0 {
-				err = bytesx.SafeWriteToBuffer(
+				if err := bytesx.SafeWriteToBuffer(
 					&buffer,
 					"taints = [\"%v\"]\n",
 					strings.Join(np.Taints, "\",\""),
-				)
-				if err != nil {
+				); err != nil {
 					return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
 				}
 			} else {
-				err = bytesx.SafeWriteToBuffer(
-					&buffer,
-					"taints = null\n",
-				)
-				if err != nil {
+				if err := bytesx.SafeWriteToBuffer(&buffer, "taints = null\n"); err != nil {
 					return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
 				}
 			}
@@ -895,46 +797,28 @@ func (k *Kubernetes) createTfVars() error {
 					return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
 				}
 
-				err = bytesx.SafeWriteToBuffer(
-					&buffer,
-					"tags = %v\n",
-					string(tags),
-				)
-				if err != nil {
+				if err := bytesx.SafeWriteToBuffer(&buffer, "tags = %v\n", string(tags)); err != nil {
 					return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
 				}
 			} else {
-				err = bytesx.SafeWriteToBuffer(
-					&buffer,
-					"tags = null\n",
-				)
-				if err != nil {
+				if err := bytesx.SafeWriteToBuffer(&buffer, "tags = null\n"); err != nil {
 					return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
 				}
 			}
 
-			err = bytesx.SafeWriteToBuffer(
-				&buffer,
-				"},\n",
-			)
-			if err != nil {
+			if err := bytesx.SafeWriteToBuffer(&buffer, "},\n"); err != nil {
 				return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
 			}
 		}
 
-		err = bytesx.SafeWriteToBuffer(
-			&buffer,
-			"]\n",
-		)
-		if err != nil {
+		if err := bytesx.SafeWriteToBuffer(&buffer, "]\n"); err != nil {
 			return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
 		}
 	}
 
 	targetTfVars := path.Join(k.Path, "terraform", "main.auto.tfvars")
 
-	err = os.WriteFile(targetTfVars, buffer.Bytes(), iox.FullRWPermAccess)
-	if err != nil {
+	if err := os.WriteFile(targetTfVars, buffer.Bytes(), iox.FullRWPermAccess); err != nil {
 		return fmt.Errorf("error writing terraform vars file: %w", err)
 	}
 
