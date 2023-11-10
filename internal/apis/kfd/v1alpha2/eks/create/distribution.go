@@ -26,6 +26,7 @@ import (
 	"github.com/sighupio/furyctl/internal/tool/kubectl"
 	"github.com/sighupio/furyctl/internal/tool/shell"
 	"github.com/sighupio/furyctl/internal/tool/terraform"
+	"github.com/sighupio/furyctl/internal/upgrade"
 	execx "github.com/sighupio/furyctl/internal/x/exec"
 	iox "github.com/sighupio/furyctl/internal/x/io"
 	yamlx "github.com/sighupio/furyctl/internal/x/yaml"
@@ -64,6 +65,7 @@ type Distribution struct {
 	dryRun           bool
 	phase            string
 	kubeconfig       string
+	upgrade          *upgrade.Upgrade
 }
 
 type injectType struct {
@@ -78,6 +80,7 @@ func NewDistribution(
 	dryRun bool,
 	phase string,
 	kubeconfig string,
+	upgrade *upgrade.Upgrade,
 ) (*Distribution, error) {
 	distroDir := path.Join(paths.WorkDir, cluster.OperationPhaseDistribution)
 
@@ -132,6 +135,7 @@ func NewDistribution(
 		dryRun:     dryRun,
 		phase:      phase,
 		kubeconfig: kubeconfig,
+		upgrade:    upgrade,
 	}, nil
 }
 
@@ -286,6 +290,11 @@ func (d *Distribution) Exec(reducers v1alpha2.Reducers) error {
 		return fmt.Errorf("error running pre-apply reducers: %w", err)
 	}
 
+	// Run upgrade script if needed.
+	if err := d.upgrade.Exec(d.Path, "pre-distribution"); err != nil {
+		return fmt.Errorf("error running upgrade: %w", err)
+	}
+
 	logrus.Info("Applying manifests...")
 
 	if _, err := d.shellRunner.Run(path.Join(d.Path, "scripts", "apply.sh"), "false", d.kubeconfig); err != nil {
@@ -294,6 +303,11 @@ func (d *Distribution) Exec(reducers v1alpha2.Reducers) error {
 
 	if err := d.runReducers(reducers, mCfg, LifecyclePostApply, []string{"manifests", ".gitignore"}); err != nil {
 		return fmt.Errorf("error running post-apply reducers: %w", err)
+	}
+
+	// Run upgrade script if needed.
+	if err := d.upgrade.Exec(d.Path, "post-distribution"); err != nil {
+		return fmt.Errorf("error running upgrade: %w", err)
 	}
 
 	return nil

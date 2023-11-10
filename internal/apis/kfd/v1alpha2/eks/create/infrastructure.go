@@ -25,6 +25,7 @@ import (
 	"github.com/sighupio/furyctl/internal/parser"
 	"github.com/sighupio/furyctl/internal/template"
 	"github.com/sighupio/furyctl/internal/tool/terraform"
+	"github.com/sighupio/furyctl/internal/upgrade"
 	bytesx "github.com/sighupio/furyctl/internal/x/bytes"
 	execx "github.com/sighupio/furyctl/internal/x/exec"
 	iox "github.com/sighupio/furyctl/internal/x/io"
@@ -47,6 +48,7 @@ type Infrastructure struct {
 	furyctlConfPath string
 	tfRunner        *terraform.Runner
 	dryRun          bool
+	upgrade         *upgrade.Upgrade
 }
 
 func NewInfrastructure(
@@ -54,6 +56,7 @@ func NewInfrastructure(
 	kfdManifest config.KFD,
 	paths cluster.CreatorPaths,
 	dryRun bool,
+	upgrade *upgrade.Upgrade,
 ) (*Infrastructure, error) {
 	infraDir := path.Join(paths.WorkDir, cluster.OperationPhaseInfrastructure)
 
@@ -79,7 +82,8 @@ func NewInfrastructure(
 				Terraform: phase.TerraformPath,
 			},
 		),
-		dryRun: dryRun,
+		dryRun:  dryRun,
+		upgrade: upgrade,
 	}, nil
 }
 
@@ -144,6 +148,11 @@ func (i *Infrastructure) Exec() error {
 		}
 	}
 
+	// Run upgrade script if needed.
+	if err := i.upgrade.Exec(i.Path, "pre-infrastructure"); err != nil {
+		return fmt.Errorf("error running upgrade: %w", err)
+	}
+
 	logrus.Warn("Creating cloud resources, this could take a while...")
 
 	if err := i.tfRunner.Apply(timestamp); err != nil {
@@ -152,6 +161,11 @@ func (i *Infrastructure) Exec() error {
 
 	if _, err := i.tfRunner.Output(); err != nil {
 		return fmt.Errorf("error getting terraform output: %w", err)
+	}
+
+	// Run upgrade script if needed.
+	if err := i.upgrade.Exec(i.Path, "post-infrastructure"); err != nil {
+		return fmt.Errorf("error running upgrade: %w", err)
 	}
 
 	return nil

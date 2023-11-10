@@ -616,7 +616,13 @@ func (v *ClusterCreator) setupPhases() (
 ) {
 	upgr := upgrade.New(v.paths, string(v.furyctlConf.Kind))
 
-	infra, err := create.NewInfrastructure(v.furyctlConf, v.kfdManifest, v.paths, v.dryRun)
+	infra, err := create.NewInfrastructure(
+		v.furyctlConf,
+		v.kfdManifest,
+		v.paths,
+		v.dryRun,
+		upgr,
+	)
 	if err != nil {
 		return nil, nil, nil, nil, nil, fmt.Errorf("error while initiating infrastructure phase: %w", err)
 	}
@@ -627,6 +633,7 @@ func (v *ClusterCreator) setupPhases() (
 		infra.TerraformOutputsPath,
 		v.paths,
 		v.dryRun,
+		upgr,
 	)
 	if err != nil {
 		return nil, nil, nil, nil, nil, fmt.Errorf("error while initiating kubernetes phase: %w", err)
@@ -640,6 +647,7 @@ func (v *ClusterCreator) setupPhases() (
 		v.dryRun,
 		v.phase,
 		v.paths.Kubeconfig,
+		upgr,
 	)
 	if err != nil {
 		return nil, nil, nil, nil, nil, fmt.Errorf("error while initiating distribution phase: %w", err)
