@@ -281,7 +281,7 @@ func (v *ClusterCreator) Create(skipPhase string, timeout int) error {
 	return nil
 }
 
-func (v *ClusterCreator) CreateAsync(
+func (c *ClusterCreator) CreateAsync(
 	phases *Phases,
 	skipPhase string,
 	vpnConnector *vpn.Connector,
@@ -297,29 +297,29 @@ func (v *ClusterCreator) CreateAsync(
 		return
 	}
 
-	r, err := eksrules.NewEKSClusterRulesExtractor(v.paths.DistroPath)
+	r, err := eksrules.NewEKSClusterRulesExtractor(c.paths.DistroPath)
 	if err != nil {
 		if !errors.Is(err, eksrules.ErrReadingRulesFile) {
 			errCh <- fmt.Errorf("error while creating rules builder: %w", err)
 		}
 	}
 
-	switch v.phase {
+	reducers := c.buildReducers(status.Diffs, r, cluster.OperationPhaseDistribution)
+
+	switch c.phase {
 	case cluster.OperationPhaseInfrastructure:
-		if err := v.infraPhase(phases.Infrastructure, vpnConnector); err != nil {
+		if err := c.infraPhase(phases.Infrastructure, vpnConnector); err != nil {
 			errCh <- err
 		}
 
 	case cluster.OperationPhaseKubernetes:
-		if err := v.kubernetesPhase(phases.Kubernetes, vpnConnector); err != nil {
+		if err := c.kubernetesPhase(phases.Kubernetes, vpnConnector); err != nil {
 			errCh <- err
 		}
 
 	case cluster.OperationPhaseDistribution:
-		reducers := v.buildReducers(status.Diffs, r, cluster.OperationPhaseDistribution)
-
 		if len(reducers) > 0 {
-			confirm, err := v.AskConfirmation()
+			confirm, err := c.AskConfirmation()
 			if err != nil {
 				errCh <- err
 			}
@@ -329,7 +329,7 @@ func (v *ClusterCreator) CreateAsync(
 			}
 		}
 
-		if err := v.distributionPhase(phases.Distribution, vpnConnector, reducers); err != nil {
+		if err := c.distributionPhase(phases.Distribution, vpnConnector, reducers); err != nil {
 			errCh <- err
 		}
 
@@ -339,10 +339,8 @@ func (v *ClusterCreator) CreateAsync(
 		}
 
 	case cluster.OperationPhaseAll:
-		reducers := v.buildReducers(status.Diffs, r, cluster.OperationPhaseDistribution)
-
 		if len(reducers) > 0 {
-			confirm, err := v.AskConfirmation()
+			confirm, err := c.AskConfirmation()
 			if err != nil {
 				errCh <- err
 			}
@@ -352,7 +350,7 @@ func (v *ClusterCreator) CreateAsync(
 			}
 		}
 
-		errCh <- v.allPhases(
+		errCh <- c.allPhases(
 			skipPhase,
 			phases,
 			vpnConnector,
@@ -360,7 +358,7 @@ func (v *ClusterCreator) CreateAsync(
 		)
 
 	default:
-		errCh <- fmt.Errorf("%w: %s", ErrUnsupportedPhase, v.phase)
+		errCh <- fmt.Errorf("%w: %s", ErrUnsupportedPhase, c.phase)
 	}
 }
 
@@ -671,9 +669,6 @@ func (v *ClusterCreator) setupPhases() (
 		v.dryRun,
 		v.vpnAutoConnect,
 		v.skipVpn,
-		v.upgrade,
-		upgr,
-		v.force,
 	)
 	if err != nil {
 		return nil, nil, nil, nil, nil, fmt.Errorf("error while initiating preflight phase: %w", err)
