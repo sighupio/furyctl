@@ -468,7 +468,7 @@ func setupCreateClusterCmdFlags(cmd *cobra.Command) {
 	cmd.Flags().Bool(
 		"force",
 		false,
-		"WARNING: furyctl won't ask for confirmation and will proceed applying reducers",
+		"WARNING: furyctl won't ask for confirmation and will proceed applying upgrades and reducers",
 	)
 
 	cmd.Flags().String(
@@ -487,6 +487,6 @@ func setupCreateClusterCmdFlags(cmd *cobra.Command) {
 	cmd.Flags().Bool(
 		"upgrade",
 		false,
-		"",
+		"When set will run the upgrade scripts",
 	)
 }
