@@ -19,7 +19,7 @@ require (
 	github.com/r3labs/diff/v3 v3.0.1
 	github.com/santhosh-tekuri/jsonschema/v5 v5.3.1
 	github.com/shirou/gopsutil/v3 v3.23.9
-	github.com/sighupio/fury-distribution v1.26.2
+	github.com/sighupio/fury-distribution v1.26.3-0.20231110110329-25fa9804afc4
 	github.com/sirupsen/logrus v1.9.3
 	github.com/spf13/cobra v1.7.0
 	github.com/spf13/viper v1.17.0
