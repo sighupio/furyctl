@@ -31,6 +31,7 @@ import (
 	"github.com/sighupio/furyctl/internal/template"
 	"github.com/sighupio/furyctl/internal/tool/awscli"
 	"github.com/sighupio/furyctl/internal/tool/terraform"
+	"github.com/sighupio/furyctl/internal/upgrade"
 	bytesx "github.com/sighupio/furyctl/internal/x/bytes"
 	execx "github.com/sighupio/furyctl/internal/x/exec"
 	iox "github.com/sighupio/furyctl/internal/x/io"
@@ -73,6 +74,7 @@ type Kubernetes struct {
 	tfRunner         *terraform.Runner
 	awsRunner        *awscli.Runner
 	dryRun           bool
+	upgrade          *upgrade.Upgrade
 }
 
 func NewKubernetes(
@@ -81,6 +83,7 @@ func NewKubernetes(
 	infraOutputsPath string,
 	paths cluster.CreatorPaths,
 	dryRun bool,
+	upgrade *upgrade.Upgrade,
 ) (*Kubernetes, error) {
 	kubeDir := path.Join(paths.WorkDir, cluster.OperationPhaseKubernetes)
 
@@ -113,7 +116,8 @@ func NewKubernetes(
 				WorkDir: phase.Path,
 			},
 		),
-		dryRun: dryRun,
+		dryRun:  dryRun,
+		upgrade: upgrade,
 	}, nil
 }
 
@@ -200,6 +204,11 @@ func (k *Kubernetes) Exec() error {
 		}
 	}
 
+	// Run upgrade script if needed.
+	if err := k.upgrade.Exec(k.Path, "pre-kubernetes"); err != nil {
+		return fmt.Errorf("error running upgrade: %w", err)
+	}
+
 	logrus.Warn("Creating cloud resources, this could take a while...")
 
 	if err := k.tfRunner.Apply(timestamp); err != nil {
@@ -231,6 +240,11 @@ func (k *Kubernetes) Exec() error {
 
 	if err := kubex.CopyToWorkDir(p, "kubeconfig"); err != nil {
 		return fmt.Errorf("error copying kubeconfig: %w", err)
+	}
+
+	// Run upgrade script if needed.
+	if err := k.upgrade.Exec(k.Path, "post-kubernetes"); err != nil {
+		return fmt.Errorf("error running upgrade: %w", err)
 	}
 
 	return nil
