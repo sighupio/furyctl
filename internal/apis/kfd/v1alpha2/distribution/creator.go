@@ -174,6 +174,7 @@ func (c *ClusterCreator) Create(skipPhase string, _ int) error {
 		c.stateStore,
 		c.upgrade,
 		upgr,
+		c.force,
 	)
 	if err != nil {
 		return fmt.Errorf("error while initiating preflight phase: %w", err)
@@ -189,6 +190,22 @@ func (c *ClusterCreator) Create(skipPhase string, _ int) error {
 		if !errors.Is(err, distrorules.ErrReadingRulesFile) {
 			return fmt.Errorf("error while creating rules builder: %w", err)
 		}
+	}
+
+	preupgradePhase, err := commcreate.NewPreUpgrade(
+		c.paths,
+		c.kfdManifest,
+		string(c.furyctlConf.Kind),
+		c.dryRun,
+		c.paths.Kubeconfig,
+		upgr,
+	)
+	if err != nil {
+		return fmt.Errorf("error while initiating preupgrade phase: %w", err)
+	}
+
+	if err := preupgradePhase.Exec(); err != nil {
+		return fmt.Errorf("error while executing preupgrade phase: %w", err)
 	}
 
 	switch c.phase {

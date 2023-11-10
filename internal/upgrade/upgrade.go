@@ -27,13 +27,14 @@ type Upgrade struct {
 	To      string
 }
 
-func (u *Upgrade) Exec(phase *cluster.OperationPhase) error {
+func (u *Upgrade) Exec(phase string) error {
 	if !u.Enabled {
 		return nil
 	}
 
 	logrus.Infof(
-		"Running upgrade from %s to %s...",
+		"Running %s upgrade from %s to %s...",
+		phase,
 		u.From,
 		u.To,
 	)
@@ -42,9 +43,16 @@ func (u *Upgrade) Exec(phase *cluster.OperationPhase) error {
 	to := semver.EnsureNoPrefix(u.To)
 
 	// Compose the path to the upgrade script.
-	upgradePath := path.Join(phase.Path, "upgrade", fmt.Sprintf("%s-%s", from, to), strings.ToLower(u.kind))
+	upgradePath := path.Join(
+		u.paths.WorkDir,
+		"upgrades",
+		fmt.Sprintf("%s-%s", from, to),
+		strings.ToLower(u.kind),
+	)
 
-	if _, err := os.Stat(upgradePath); err != nil {
+	upgradeScript := path.Join(upgradePath, fmt.Sprintf("%s.sh", phase))
+
+	if _, err := os.Stat(upgradeScript); err != nil {
 		if os.IsNotExist(err) {
 			logrus.Debug("Upgrade script not found, skipping...")
 
@@ -62,7 +70,7 @@ func (u *Upgrade) Exec(phase *cluster.OperationPhase) error {
 		},
 	)
 
-	if _, err := shellRunner.Run("upgrade.sh"); err != nil {
+	if _, err := shellRunner.Run(upgradeScript); err != nil {
 		return fmt.Errorf("error running upgrade script: %w", err)
 	}
 

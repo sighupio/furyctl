@@ -22,6 +22,7 @@ const (
 	OperationPhaseKubernetes     = "kubernetes"
 	OperationPhaseDistribution   = "distribution"
 	OperationPhasePlugins        = "plugins"
+	OperationPhasePreUpgrade     = "preupgrade"
 	OperationPhaseAll            = ""
 
 	OperationPhaseOptionVPNAutoConnect = "vpnautoconnect"

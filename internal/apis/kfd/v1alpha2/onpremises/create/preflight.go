@@ -58,6 +58,7 @@ type PreFlight struct {
 	dryRun          bool
 	upgradeFlag     bool
 	upgrade         *upgrade.Upgrade
+	forceFlag       bool
 }
 
 func NewPreFlight(
@@ -69,6 +70,7 @@ func NewPreFlight(
 	stateStore state.Storer,
 	upgradeFlag bool,
 	upgr *upgrade.Upgrade,
+	forceFlag bool,
 ) (*PreFlight, error) {
 	preFlightDir := path.Join(paths.WorkDir, cluster.OperationPhasePreFlight)
 
@@ -108,6 +110,7 @@ func NewPreFlight(
 		dryRun:      dryRun,
 		upgradeFlag: upgradeFlag,
 		upgrade:     upgr,
+		forceFlag:   forceFlag,
 	}, nil
 }
 
@@ -251,17 +254,19 @@ func (p *PreFlight) Exec() (Status, error) {
 				return status, errUpgradeFlagNotSet
 			}
 
-			fmt.Println("Are you sure you want to continue? Only 'yes' will be accepted to confirm.")
+			if !p.forceFlag {
+				fmt.Println("Are you sure you want to continue? Only 'yes' will be accepted to confirm.")
 
-			prompter := iox.NewPrompter(bufio.NewReader(os.Stdin))
+				prompter := iox.NewPrompter(bufio.NewReader(os.Stdin))
 
-			prompt, err := prompter.Ask("yes")
-			if err != nil {
-				return status, fmt.Errorf("error reading user input: %w", err)
-			}
+				prompt, err := prompter.Ask("yes")
+				if err != nil {
+					return status, fmt.Errorf("error reading user input: %w", err)
+				}
 
-			if !prompt {
-				return status, errUpgradeCanceled
+				if !prompt {
+					return status, errUpgradeCanceled
+				}
 			}
 
 			p.upgrade.Enabled = true
