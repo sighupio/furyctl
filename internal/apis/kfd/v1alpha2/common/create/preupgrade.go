@@ -5,6 +5,8 @@
 package create
 
 import (
+	"bufio"
+	"errors"
 	"fmt"
 	"os"
 	"path"
@@ -14,11 +16,20 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/sighupio/fury-distribution/pkg/apis/config"
+	"github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2"
+	"github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/distribution/create"
 	"github.com/sighupio/furyctl/internal/cluster"
 	"github.com/sighupio/furyctl/internal/merge"
 	"github.com/sighupio/furyctl/internal/template"
 	"github.com/sighupio/furyctl/internal/upgrade"
+	iox "github.com/sighupio/furyctl/internal/x/io"
 	yamlx "github.com/sighupio/furyctl/internal/x/yaml"
+)
+
+var (
+	errUpgradeCanceled               = errors.New("upgrade canceled by user")
+	errUpgradeFlagNotSet             = errors.New("upgrade flag not set by user")
+	errUpgradeWithReducersNotAllowed = errors.New("upgrade with reducers not allowed")
 )
 
 type PreUpgrade struct {
@@ -29,6 +40,10 @@ type PreUpgrade struct {
 	kubeconfig      string
 	kind            string
 	upgrade         *upgrade.Upgrade
+	upgradeFlag     bool
+	reducers        v1alpha2.Reducers
+	status          *create.Status
+	forceFlag       bool
 }
 
 func NewPreUpgrade(
@@ -37,7 +52,11 @@ func NewPreUpgrade(
 	kind string,
 	dryRun bool,
 	kubeconfig string,
+	upgradeFlag bool,
+	forceFlag bool,
 	upgr *upgrade.Upgrade,
+	reducers v1alpha2.Reducers,
+	status *create.Status,
 ) (*PreUpgrade, error) {
 	phaseOp, err := cluster.NewOperationPhase(path.Join(paths.WorkDir, "upgrades"), kfdManifest.Tools, paths.BinPath)
 	if err != nil {
@@ -52,11 +71,54 @@ func NewPreUpgrade(
 		kubeconfig:      kubeconfig,
 		kind:            kind,
 		upgrade:         upgr,
+		upgradeFlag:     upgradeFlag,
+		reducers:        reducers,
+		status:          status,
+		forceFlag:       forceFlag,
 	}, nil
 }
 
 func (p *PreUpgrade) Exec() error {
 	logrus.Info("Running preupgrade phase...")
+
+	distributionVersionChanges := p.status.Diffs.Filter([]string{"spec", "distributionVersion"})
+	if len(distributionVersionChanges) > 0 {
+		if len(p.reducers) > 0 {
+			return errUpgradeWithReducersNotAllowed
+		}
+
+		distributionVersionChange := distributionVersionChanges[0]
+
+		p.upgrade.From = distributionVersionChange.From.(string)
+		p.upgrade.To = distributionVersionChange.To.(string)
+
+		fmt.Printf(
+			"WARNING: Distribution version changed from %s to %s, you are about to upgrade the cluster.\n",
+			p.upgrade.From,
+			p.upgrade.To,
+		)
+
+		if !p.upgradeFlag {
+			return errUpgradeFlagNotSet
+		}
+
+		if !p.forceFlag {
+			fmt.Println("Are you sure you want to continue? Only 'yes' will be accepted to confirm.")
+
+			prompter := iox.NewPrompter(bufio.NewReader(os.Stdin))
+
+			prompt, err := prompter.Ask("yes")
+			if err != nil {
+				return fmt.Errorf("error reading user input: %w", err)
+			}
+
+			if !prompt {
+				return errUpgradeCanceled
+			}
+		}
+
+		p.upgrade.Enabled = true
+	}
 
 	if err := p.CreateFolder(); err != nil {
 		return fmt.Errorf("error creating preupgrade phase folder: %w", err)
