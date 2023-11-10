@@ -186,9 +186,6 @@ func (c *ClusterCreator) Create(skipPhase string, _ int) error {
 		c.dryRun,
 		c.paths.Kubeconfig,
 		c.stateStore,
-		c.upgrade,
-		upgr,
-		c.force,
 	)
 	if err != nil {
 		return fmt.Errorf("error while initiating preflight phase: %w", err)
@@ -206,6 +203,12 @@ func (c *ClusterCreator) Create(skipPhase string, _ int) error {
 		}
 	}
 
+	reducers := c.buildReducers(
+		status.Diffs,
+		r,
+		cluster.OperationPhaseDistribution,
+	)
+
 	switch c.phase {
 	case cluster.OperationPhaseKubernetes:
 		if err := kubernetesPhase.Exec(); err != nil {
@@ -213,12 +216,6 @@ func (c *ClusterCreator) Create(skipPhase string, _ int) error {
 		}
 
 	case cluster.OperationPhaseDistribution:
-		reducers := c.buildReducers(
-			status.Diffs,
-			r,
-			cluster.OperationPhaseDistribution,
-		)
-
 		if len(reducers) > 0 {
 			confirm, err := c.AskConfirmation()
 			if err != nil {
@@ -247,12 +244,6 @@ func (c *ClusterCreator) Create(skipPhase string, _ int) error {
 		}
 
 		if skipPhase != cluster.OperationPhaseDistribution {
-			reducers := c.buildReducers(
-				status.Diffs,
-				r,
-				cluster.OperationPhaseDistribution,
-			)
-
 			if len(reducers) > 0 {
 				confirm, err := c.AskConfirmation()
 				if err != nil {
@@ -313,12 +304,14 @@ func (*ClusterCreator) buildReducers(
 				}
 
 				for _, red := range *reducer.Reducers {
-					reducers = append(reducers, v1alpha2.NewBaseReducer(
-						red.Key,
-						red.From,
-						red.To,
-						red.Lifecycle,
-					),
+					reducers = append(
+						reducers,
+						v1alpha2.NewBaseReducer(
+							red.Key,
+							red.From,
+							red.To,
+							red.Lifecycle,
+						),
 					)
 				}
 			}
