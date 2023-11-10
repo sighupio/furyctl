@@ -172,9 +172,6 @@ func (c *ClusterCreator) Create(skipPhase string, _ int) error {
 		c.dryRun,
 		c.paths.Kubeconfig,
 		c.stateStore,
-		c.upgrade,
-		upgr,
-		c.force,
 	)
 	if err != nil {
 		return fmt.Errorf("error while initiating preflight phase: %w", err)
@@ -192,13 +189,23 @@ func (c *ClusterCreator) Create(skipPhase string, _ int) error {
 		}
 	}
 
+	reducers := c.buildReducers(
+		status.Diffs,
+		r,
+		cluster.OperationPhaseDistribution,
+	)
+
 	preupgradePhase, err := commcreate.NewPreUpgrade(
 		c.paths,
 		c.kfdManifest,
 		string(c.furyctlConf.Kind),
 		c.dryRun,
 		c.paths.Kubeconfig,
+		c.upgrade,
+		c.force,
 		upgr,
+		reducers,
+		status,
 	)
 	if err != nil {
 		return fmt.Errorf("error while initiating preupgrade phase: %w", err)
@@ -210,12 +217,6 @@ func (c *ClusterCreator) Create(skipPhase string, _ int) error {
 
 	switch c.phase {
 	case cluster.OperationPhaseDistribution:
-		reducers := c.buildReducers(
-			status.Diffs,
-			r,
-			cluster.OperationPhaseDistribution,
-		)
-
 		if len(reducers) > 0 {
 			confirm, err := c.AskConfirmation()
 			if err != nil {
@@ -238,12 +239,6 @@ func (c *ClusterCreator) Create(skipPhase string, _ int) error {
 
 	case cluster.OperationPhaseAll:
 		if skipPhase != cluster.OperationPhaseDistribution {
-			reducers := c.buildReducers(
-				status.Diffs,
-				r,
-				cluster.OperationPhaseDistribution,
-			)
-
 			if len(reducers) > 0 {
 				confirm, err := c.AskConfirmation()
 				if err != nil {
