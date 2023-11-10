@@ -209,6 +209,26 @@ func (c *ClusterCreator) Create(skipPhase string, _ int) error {
 		cluster.OperationPhaseDistribution,
 	)
 
+	preupgradePhase, err := commcreate.NewPreUpgrade(
+		c.paths,
+		c.kfdManifest,
+		string(c.furyctlConf.Kind),
+		c.dryRun,
+		c.paths.Kubeconfig,
+		c.upgrade,
+		c.force,
+		upgr,
+		reducers,
+		status.Diffs,
+	)
+	if err != nil {
+		return fmt.Errorf("error while initiating preupgrade phase: %w", err)
+	}
+
+	if err := preupgradePhase.Exec(); err != nil {
+		return fmt.Errorf("error while executing preupgrade phase: %w", err)
+	}
+
 	switch c.phase {
 	case cluster.OperationPhaseKubernetes:
 		if err := kubernetesPhase.Exec(); err != nil {
