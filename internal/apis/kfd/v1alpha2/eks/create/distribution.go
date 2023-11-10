@@ -236,6 +236,11 @@ func (d *Distribution) Exec(reducers v1alpha2.Reducers) error {
 		return nil
 	}
 
+	// Run upgrade script if needed.
+	if err := d.upgrade.Exec(d.Path, "pre-distribution"); err != nil {
+		return fmt.Errorf("error running upgrade: %w", err)
+	}
+
 	logrus.Warn("Creating cloud resources, this could take a while...")
 
 	if err := d.tfRunner.Apply(timestamp); err != nil {
@@ -288,11 +293,6 @@ func (d *Distribution) Exec(reducers v1alpha2.Reducers) error {
 
 	if err := d.runReducers(reducers, mCfg, LifecyclePreApply, []string{"manifests", ".gitignore"}); err != nil {
 		return fmt.Errorf("error running pre-apply reducers: %w", err)
-	}
-
-	// Run upgrade script if needed.
-	if err := d.upgrade.Exec(d.Path, "pre-distribution"); err != nil {
-		return fmt.Errorf("error running upgrade: %w", err)
 	}
 
 	logrus.Info("Applying manifests...")
