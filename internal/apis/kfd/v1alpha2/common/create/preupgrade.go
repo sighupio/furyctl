@@ -180,6 +180,20 @@ func (p *PreUpgrade) Exec() error {
 		return fmt.Errorf("error generating from template files: %w", err)
 	}
 
+	upgradePath := path.Join(
+		p.Path,
+		fmt.Sprintf("%s-%s", p.upgrade.From, p.upgrade.To),
+		strings.ToLower(p.kind),
+	)
+
+	if _, err := os.Stat(upgradePath); err != nil {
+		if os.IsNotExist(err) {
+			return fmt.Errorf("unable to upgrade from %s to %s, upgrade path not found", p.upgrade.From, p.upgrade.To)
+		}
+
+		return fmt.Errorf("error checking upgrade path: %w", err)
+	}
+
 	logrus.Info("Preupgrade phase completed successfully")
 
 	return nil
