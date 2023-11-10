@@ -205,7 +205,7 @@ func (c *ClusterCreator) Create(skipPhase string, _ int) error {
 		c.force,
 		upgr,
 		reducers,
-		status,
+		status.Diffs,
 	)
 	if err != nil {
 		return fmt.Errorf("error while initiating preupgrade phase: %w", err)

@@ -176,7 +176,9 @@ func (*ClusterCreator) GetPhasePath(phase string) (string, error) {
 }
 
 func (v *ClusterCreator) Create(skipPhase string, timeout int) error {
-	infra, kube, distro, plugins, preflight, err := v.setupPhases()
+	upgr := upgrade.New(v.paths, string(v.furyctlConf.Kind))
+
+	infra, kube, distro, plugins, preflight, err := v.setupPhases(upgr)
 	if err != nil {
 		return err
 	}
@@ -213,6 +215,7 @@ func (v *ClusterCreator) Create(skipPhase string, timeout int) error {
 		},
 		skipPhase,
 		vpnConnector,
+		upgr,
 		errCh,
 		doneCh,
 	)
@@ -285,6 +288,7 @@ func (c *ClusterCreator) CreateAsync(
 	phases *Phases,
 	skipPhase string,
 	vpnConnector *vpn.Connector,
+	upgrade *upgrade.Upgrade,
 	errCh chan error,
 	doneCh chan bool,
 ) {
@@ -305,6 +309,26 @@ func (c *ClusterCreator) CreateAsync(
 	}
 
 	reducers := c.buildReducers(status.Diffs, r, cluster.OperationPhaseDistribution)
+
+	preupgrade, err := commcreate.NewPreUpgrade(
+		c.paths,
+		c.kfdManifest,
+		string(c.furyctlConf.Kind),
+		c.dryRun,
+		c.paths.Kubeconfig,
+		c.upgrade,
+		c.force,
+		upgrade,
+		reducers,
+		status.Diffs,
+	)
+	if err != nil {
+		errCh <- fmt.Errorf("error while initiating preupgrade phase: %w", err)
+	}
+
+	if err := preupgrade.Exec(); err != nil {
+		errCh <- fmt.Errorf("error while executing preupgrade phase: %w", err)
+	}
 
 	switch c.phase {
 	case cluster.OperationPhaseInfrastructure:
@@ -604,7 +628,7 @@ func (*ClusterCreator) buildReducers(
 }
 
 //nolint:revive // ignore maximum number of return results
-func (v *ClusterCreator) setupPhases() (
+func (v *ClusterCreator) setupPhases(upgr *upgrade.Upgrade) (
 	*create.Infrastructure,
 	*create.Kubernetes,
 	*create.Distribution,
@@ -612,8 +636,6 @@ func (v *ClusterCreator) setupPhases() (
 	*create.PreFlight,
 	error,
 ) {
-	upgr := upgrade.New(v.paths, string(v.furyctlConf.Kind))
-
 	infra, err := create.NewInfrastructure(
 		v.furyctlConf,
 		v.kfdManifest,
