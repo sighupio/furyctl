@@ -13,11 +13,11 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/r3labs/diff/v3"
 	"github.com/sirupsen/logrus"
 
 	"github.com/sighupio/fury-distribution/pkg/apis/config"
 	"github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2"
-	"github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/distribution/create"
 	"github.com/sighupio/furyctl/internal/cluster"
 	"github.com/sighupio/furyctl/internal/merge"
 	"github.com/sighupio/furyctl/internal/template"
@@ -42,7 +42,7 @@ type PreUpgrade struct {
 	upgrade         *upgrade.Upgrade
 	upgradeFlag     bool
 	reducers        v1alpha2.Reducers
-	status          *create.Status
+	diffs           diff.Changelog
 	forceFlag       bool
 }
 
@@ -56,7 +56,7 @@ func NewPreUpgrade(
 	forceFlag bool,
 	upgr *upgrade.Upgrade,
 	reducers v1alpha2.Reducers,
-	status *create.Status,
+	diffs diff.Changelog,
 ) (*PreUpgrade, error) {
 	phaseOp, err := cluster.NewOperationPhase(path.Join(paths.WorkDir, "upgrades"), kfdManifest.Tools, paths.BinPath)
 	if err != nil {
@@ -73,7 +73,7 @@ func NewPreUpgrade(
 		upgrade:         upgr,
 		upgradeFlag:     upgradeFlag,
 		reducers:        reducers,
-		status:          status,
+		diffs:           diffs,
 		forceFlag:       forceFlag,
 	}, nil
 }
@@ -81,7 +81,7 @@ func NewPreUpgrade(
 func (p *PreUpgrade) Exec() error {
 	logrus.Info("Running preupgrade phase...")
 
-	distributionVersionChanges := p.status.Diffs.Filter([]string{"spec", "distributionVersion"})
+	distributionVersionChanges := p.diffs.Filter([]string{"spec", "distributionVersion"})
 	if len(distributionVersionChanges) > 0 {
 		if len(p.reducers) > 0 {
 			return errUpgradeWithReducersNotAllowed
