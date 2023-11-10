@@ -20,6 +20,7 @@ import (
 	"github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2"
 	"github.com/sighupio/furyctl/internal/cluster"
 	"github.com/sighupio/furyctl/internal/merge"
+	"github.com/sighupio/furyctl/internal/semver"
 	"github.com/sighupio/furyctl/internal/template"
 	"github.com/sighupio/furyctl/internal/upgrade"
 	iox "github.com/sighupio/furyctl/internal/x/io"
@@ -81,45 +82,6 @@ func NewPreUpgrade(
 func (p *PreUpgrade) Exec() error {
 	logrus.Info("Running preupgrade phase...")
 
-	distributionVersionChanges := p.diffs.Filter([]string{"spec", "distributionVersion"})
-	if len(distributionVersionChanges) > 0 {
-		if len(p.reducers) > 0 {
-			return errUpgradeWithReducersNotAllowed
-		}
-
-		distributionVersionChange := distributionVersionChanges[0]
-
-		p.upgrade.From = distributionVersionChange.From.(string)
-		p.upgrade.To = distributionVersionChange.To.(string)
-
-		fmt.Printf(
-			"WARNING: Distribution version changed from %s to %s, you are about to upgrade the cluster.\n",
-			p.upgrade.From,
-			p.upgrade.To,
-		)
-
-		if !p.upgradeFlag {
-			return errUpgradeFlagNotSet
-		}
-
-		if !p.forceFlag {
-			fmt.Println("Are you sure you want to continue? Only 'yes' will be accepted to confirm.")
-
-			prompter := iox.NewPrompter(bufio.NewReader(os.Stdin))
-
-			prompt, err := prompter.Ask("yes")
-			if err != nil {
-				return fmt.Errorf("error reading user input: %w", err)
-			}
-
-			if !prompt {
-				return errUpgradeCanceled
-			}
-		}
-
-		p.upgrade.Enabled = true
-	}
-
 	if err := p.CreateFolder(); err != nil {
 		return fmt.Errorf("error creating preupgrade phase folder: %w", err)
 	}
@@ -180,18 +142,60 @@ func (p *PreUpgrade) Exec() error {
 		return fmt.Errorf("error generating from template files: %w", err)
 	}
 
-	upgradePath := path.Join(
-		p.Path,
-		fmt.Sprintf("%s-%s", p.upgrade.From, p.upgrade.To),
-		strings.ToLower(p.kind),
-	)
-
-	if _, err := os.Stat(upgradePath); err != nil {
-		if os.IsNotExist(err) {
-			return fmt.Errorf("unable to upgrade from %s to %s, upgrade path not found", p.upgrade.From, p.upgrade.To)
+	distributionVersionChanges := p.diffs.Filter([]string{"spec", "distributionVersion"})
+	if len(distributionVersionChanges) > 0 {
+		if len(p.reducers) > 0 {
+			return errUpgradeWithReducersNotAllowed
 		}
 
-		return fmt.Errorf("error checking upgrade path: %w", err)
+		distributionVersionChange := distributionVersionChanges[0]
+
+		p.upgrade.From = distributionVersionChange.From.(string)
+		p.upgrade.To = distributionVersionChange.To.(string)
+
+		fmt.Printf(
+			"WARNING: Distribution version changed from %s to %s, you are about to upgrade the cluster.\n",
+			p.upgrade.From,
+			p.upgrade.To,
+		)
+
+		if !p.upgradeFlag {
+			return errUpgradeFlagNotSet
+		}
+
+		if !p.forceFlag {
+			fmt.Println("Are you sure you want to continue? Only 'yes' will be accepted to confirm.")
+
+			prompter := iox.NewPrompter(bufio.NewReader(os.Stdin))
+
+			prompt, err := prompter.Ask("yes")
+			if err != nil {
+				return fmt.Errorf("error reading user input: %w", err)
+			}
+
+			if !prompt {
+				return errUpgradeCanceled
+			}
+		}
+
+		from := semver.EnsureNoPrefix(p.upgrade.From)
+		to := semver.EnsureNoPrefix(p.upgrade.To)
+
+		upgradePath := path.Join(
+			p.Path,
+			fmt.Sprintf("%s-%s", from, to),
+			strings.ToLower(p.kind),
+		)
+
+		if _, err := os.Stat(upgradePath); err != nil {
+			if os.IsNotExist(err) {
+				return fmt.Errorf("unable to upgrade from %s to %s, upgrade path not found", p.upgrade.From, p.upgrade.To)
+			}
+
+			return fmt.Errorf("error checking upgrade path: %w", err)
+		}
+
+		p.upgrade.Enabled = true
 	}
 
 	logrus.Info("Preupgrade phase completed successfully")
