@@ -144,14 +144,20 @@ func (p *PreUpgrade) Exec() error {
 
 	distributionVersionChanges := p.diffs.Filter([]string{"spec", "distributionVersion"})
 	if len(distributionVersionChanges) > 0 {
-		if len(p.reducers) > 0 {
-			return errUpgradeWithReducersNotAllowed
-		}
-
 		distributionVersionChange := distributionVersionChanges[0]
 
 		p.upgrade.From = distributionVersionChange.From.(string)
 		p.upgrade.To = distributionVersionChange.To.(string)
+
+		fmt.Printf(
+			"WARNING: Distribution version changed from %s to %s, you are about to upgrade the cluster.\n",
+			p.upgrade.From,
+			p.upgrade.To,
+		)
+
+		if !p.upgradeFlag {
+			return errUpgradeFlagNotSet
+		}
 
 		from := semver.EnsureNoPrefix(p.upgrade.From)
 		to := semver.EnsureNoPrefix(p.upgrade.To)
@@ -170,14 +176,8 @@ func (p *PreUpgrade) Exec() error {
 			return fmt.Errorf("error checking upgrade path: %w", err)
 		}
 
-		fmt.Printf(
-			"WARNING: Distribution version changed from %s to %s, you are about to upgrade the cluster.\n",
-			p.upgrade.From,
-			p.upgrade.To,
-		)
-
-		if !p.upgradeFlag {
-			return errUpgradeFlagNotSet
+		if len(p.reducers) > 0 {
+			return errUpgradeWithReducersNotAllowed
 		}
 
 		if !p.forceFlag {
