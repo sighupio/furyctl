@@ -109,7 +109,7 @@ func (k *Kubernetes) Exec() error {
 	}
 
 	// Run upgrade script if needed.
-	if err := k.upgrade.Exec("pre-kubernetes"); err != nil {
+	if err := k.upgrade.Exec(k.Path, "pre-kubernetes"); err != nil {
 		return fmt.Errorf("error running upgrade: %w", err)
 	}
 
@@ -143,7 +143,7 @@ func (k *Kubernetes) Exec() error {
 	}
 
 	// Run upgrade script if needed.
-	if err := k.upgrade.Exec("post-kubernetes"); err != nil {
+	if err := k.upgrade.Exec(k.Path, "post-kubernetes"); err != nil {
 		return fmt.Errorf("error running upgrade: %w", err)
 	}
 

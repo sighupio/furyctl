@@ -78,6 +78,7 @@ func (p *PreUpgrade) Exec() error {
 		"kubeconfig": p.kubeconfig,
 		"kubectl":    p.KubectlPath,
 		"yq":         p.YqPath,
+		"terraform":  p.TerraformPath,
 	}
 
 	outYaml, err := yamlx.MarshalV2(mCfg)
