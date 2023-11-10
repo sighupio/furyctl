@@ -136,8 +136,8 @@ func (d *Distribution) Exec(reducers v1alpha2.Reducers) error {
 		return fmt.Errorf("error running pre-apply reducers: %w", err)
 	}
 
-	// Run upgrade scripts if needed.
-	if err := d.upgrade.Exec(d.OperationPhase); err != nil {
+	// Run upgrade script if needed.
+	if err := d.upgrade.Exec("pre-distribution"); err != nil {
 		return fmt.Errorf("error running upgrade: %w", err)
 	}
 
@@ -155,6 +155,11 @@ func (d *Distribution) Exec(reducers v1alpha2.Reducers) error {
 		[]string{"manifests", "terraform", ".gitignore"},
 	); err != nil {
 		return fmt.Errorf("error running post-apply reducers: %w", err)
+	}
+
+	// Run upgrade script if needed.
+	if err := d.upgrade.Exec("post-distribution"); err != nil {
+		return fmt.Errorf("error running upgrade: %w", err)
 	}
 
 	logrus.Info("Kubernetes Fury Distribution installed successfully")

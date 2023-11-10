@@ -108,8 +108,8 @@ func (k *Kubernetes) Exec() error {
 		return fmt.Errorf("error checking hosts: %w", err)
 	}
 
-	// Run upgrade scripts if needed.
-	if err := k.upgrade.Exec(k.OperationPhase); err != nil {
+	// Run upgrade script if needed.
+	if err := k.upgrade.Exec("pre-kubernetes"); err != nil {
 		return fmt.Errorf("error running upgrade: %w", err)
 	}
 
@@ -140,6 +140,11 @@ func (k *Kubernetes) Exec() error {
 				return fmt.Errorf("error copying %s.kubeconfig: %w", username, err)
 			}
 		}
+	}
+
+	// Run upgrade script if needed.
+	if err := k.upgrade.Exec("post-kubernetes"); err != nil {
+		return fmt.Errorf("error running upgrade: %w", err)
 	}
 
 	logrus.Info("Kubernetes cluster created successfully")

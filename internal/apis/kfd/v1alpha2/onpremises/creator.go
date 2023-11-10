@@ -188,6 +188,7 @@ func (c *ClusterCreator) Create(skipPhase string, _ int) error {
 		c.stateStore,
 		c.upgrade,
 		upgr,
+		c.force,
 	)
 	if err != nil {
 		return fmt.Errorf("error while initiating preflight phase: %w", err)
