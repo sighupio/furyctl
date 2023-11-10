@@ -57,6 +57,14 @@ func (k *Kubernetes) Exec() error {
 		"version": k.kfdManifest.Kubernetes.OnPremises.Version,
 	}
 
+	mCfg.Data["paths"] = map[any]any{
+		"helm":      k.HelmPath,
+		"kustomize": k.KustomizePath,
+		"kubectl":   k.KubectlPath,
+		"yq":        k.YqPath,
+		"terraform": k.TerraformPath,
+	}
+
 	// Generate playbook and hosts file.
 	outYaml, err := yamlx.MarshalV2(mCfg)
 	if err != nil {
