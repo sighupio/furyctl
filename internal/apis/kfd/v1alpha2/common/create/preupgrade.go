@@ -153,6 +153,23 @@ func (p *PreUpgrade) Exec() error {
 		p.upgrade.From = distributionVersionChange.From.(string)
 		p.upgrade.To = distributionVersionChange.To.(string)
 
+		from := semver.EnsureNoPrefix(p.upgrade.From)
+		to := semver.EnsureNoPrefix(p.upgrade.To)
+
+		upgradePath := path.Join(
+			p.Path,
+			fmt.Sprintf("%s-%s", from, to),
+			strings.ToLower(p.kind),
+		)
+
+		if _, err := os.Stat(upgradePath); err != nil {
+			if os.IsNotExist(err) {
+				return fmt.Errorf("unable to upgrade from %s to %s, upgrade path not found", p.upgrade.From, p.upgrade.To)
+			}
+
+			return fmt.Errorf("error checking upgrade path: %w", err)
+		}
+
 		fmt.Printf(
 			"WARNING: Distribution version changed from %s to %s, you are about to upgrade the cluster.\n",
 			p.upgrade.From,
@@ -176,23 +193,6 @@ func (p *PreUpgrade) Exec() error {
 			if !prompt {
 				return errUpgradeCanceled
 			}
-		}
-
-		from := semver.EnsureNoPrefix(p.upgrade.From)
-		to := semver.EnsureNoPrefix(p.upgrade.To)
-
-		upgradePath := path.Join(
-			p.Path,
-			fmt.Sprintf("%s-%s", from, to),
-			strings.ToLower(p.kind),
-		)
-
-		if _, err := os.Stat(upgradePath); err != nil {
-			if os.IsNotExist(err) {
-				return fmt.Errorf("unable to upgrade from %s to %s, upgrade path not found", p.upgrade.From, p.upgrade.To)
-			}
-
-			return fmt.Errorf("error checking upgrade path: %w", err)
 		}
 
 		p.upgrade.Enabled = true
