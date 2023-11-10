@@ -27,7 +27,7 @@ type Upgrade struct {
 	To      string
 }
 
-func (u *Upgrade) Exec(phase string) error {
+func (u *Upgrade) Exec(workdir, phase string) error {
 	if !u.Enabled {
 		return nil
 	}
@@ -66,7 +66,7 @@ func (u *Upgrade) Exec(phase string) error {
 		execx.NewStdExecutor(),
 		shell.Paths{
 			Shell:   "sh",
-			WorkDir: upgradePath,
+			WorkDir: workdir,
 		},
 	)
 

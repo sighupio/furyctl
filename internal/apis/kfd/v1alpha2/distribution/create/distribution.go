@@ -221,7 +221,7 @@ func (d *Distribution) Exec(reducers v1alpha2.Reducers) error {
 	}
 
 	// Run upgrade script if needed.
-	if err := d.upgrade.Exec("pre-distribution"); err != nil {
+	if err := d.upgrade.Exec(d.Path, "pre-distribution"); err != nil {
 		return fmt.Errorf("error running upgrade: %w", err)
 	}
 
@@ -242,7 +242,7 @@ func (d *Distribution) Exec(reducers v1alpha2.Reducers) error {
 	}
 
 	// Run upgrade script if needed.
-	if err := d.upgrade.Exec("post-distribution"); err != nil {
+	if err := d.upgrade.Exec(d.Path, "post-distribution"); err != nil {
 		return fmt.Errorf("error running upgrade: %w", err)
 	}
 
