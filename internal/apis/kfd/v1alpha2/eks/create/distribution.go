@@ -215,11 +215,7 @@ func (d *Distribution) Exec(reducers v1alpha2.Reducers) error {
 			return fmt.Errorf("error creating template config: %w", err)
 		}
 
-		mCfg.Data["paths"] = map[any]any{
-			"kubectl":   d.OperationPhase.KubectlPath,
-			"kustomize": d.OperationPhase.KustomizePath,
-			"yq":        d.OperationPhase.YqPath,
-		}
+		d.CopyPathsToConfig(&mCfg)
 
 		mCfg.Data["checks"] = map[any]any{
 			"storageClassAvailable": true,
@@ -261,12 +257,7 @@ func (d *Distribution) Exec(reducers v1alpha2.Reducers) error {
 		return fmt.Errorf("error creating template config: %w", err)
 	}
 
-	mCfg.Data["paths"] = map[any]any{
-		"kubectl":    d.KubectlPath,
-		"kustomize":  d.KustomizePath,
-		"yq":         d.YqPath,
-		"vendorPath": path.Join(d.Path, "..", "vendor"),
-	}
+	d.CopyPathsToConfig(&mCfg)
 
 	mCfg.Data["checks"] = map[any]any{
 		"storageClassAvailable": true,

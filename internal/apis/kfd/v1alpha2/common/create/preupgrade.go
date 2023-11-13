@@ -96,14 +96,7 @@ func (p *PreUpgrade) Exec() error {
 		return fmt.Errorf("error creating template config: %w", err)
 	}
 
-	mCfg.Data["paths"] = map[any]any{
-		"helm":       p.HelmPath,
-		"kustomize":  p.KustomizePath,
-		"kubeconfig": p.kubeconfig,
-		"kubectl":    p.KubectlPath,
-		"yq":         p.YqPath,
-		"terraform":  p.TerraformPath,
-	}
+	p.CopyPathsToConfig(&mCfg)
 
 	outYaml, err := yamlx.MarshalV2(mCfg)
 	if err != nil {
