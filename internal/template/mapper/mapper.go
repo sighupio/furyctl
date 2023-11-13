@@ -18,24 +18,23 @@ const (
 	File = "file"
 )
 
+var (
+	EnvRegexp          = regexp.MustCompile(`{(.*?)}`)
+	RelativePathRegexp = regexp.MustCompile(`^\.{1,}\/`)
+)
+
 type Mapper struct {
-	context            map[string]map[any]any
-	envRegexp          *regexp.Regexp
-	relativePathRegexp *regexp.Regexp
-	furyctlConfDir     string
+	context        map[string]map[any]any
+	furyctlConfDir string
 }
 
 func NewMapper(
 	context map[string]map[any]any,
 	furyctlConfPath string,
 ) *Mapper {
-	furyctlConfDir := filepath.Dir(furyctlConfPath)
-
 	return &Mapper{
-		context:            context,
-		envRegexp:          regexp.MustCompile(`{(.*?)}`),
-		relativePathRegexp: regexp.MustCompile(`^\.{1,}\/`),
-		furyctlConfDir:     furyctlConfDir,
+		context:        context,
+		furyctlConfDir: filepath.Dir(furyctlConfPath),
 	}
 }
 
@@ -129,9 +128,9 @@ func (m *Mapper) injectDynamicValuesAndPaths(
 
 func (m *Mapper) injectDynamicValuesAndPathsString(value string) (string, error) {
 	// If the value contains dynamic values, we need to parse them.
-	dynamicValues := m.envRegexp.FindAllString(value, -1)
+	dynamicValues := EnvRegexp.FindAllString(value, -1)
 	for _, dynamicValue := range dynamicValues {
-		parsedDynamicValue, err := ParseDynamicValue(dynamicValue)
+		parsedDynamicValue, err := ParseDynamicValue(dynamicValue, m.furyctlConfDir)
 		if err != nil {
 			return "", err
 		}
@@ -140,7 +139,7 @@ func (m *Mapper) injectDynamicValuesAndPathsString(value string) (string, error)
 	}
 
 	// If the value is a relative path, we need to convert it to an absolute path.
-	isRelativePath := m.relativePathRegexp.MatchString(value)
+	isRelativePath := RelativePathRegexp.MatchString(value)
 	if isRelativePath {
 		value = filepath.Clean(value)
 		value = filepath.Join(m.furyctlConfDir, value)
@@ -155,7 +154,7 @@ func readValueFromFile(path string) (string, error) {
 	return string(val), err
 }
 
-func ParseDynamicValue(val any) (string, error) {
+func ParseDynamicValue(val any, baseDir string) (string, error) {
 	strVal := fmt.Sprintf("%v", val)
 
 	spl := strings.Split(strVal, "://")
@@ -173,6 +172,13 @@ func ParseDynamicValue(val any) (string, error) {
 			return envVar, nil
 
 		case File:
+			// If the value is a relative path, we need to convert it to an absolute path.
+			isRelativePath := RelativePathRegexp.MatchString(sourceValue)
+			if isRelativePath {
+				sourceValue = filepath.Clean(sourceValue)
+				sourceValue = filepath.Join(baseDir, sourceValue)
+			}
+
 			content, err := readValueFromFile(sourceValue)
 			if err != nil {
 				return "", fmt.Errorf("%w", err)
