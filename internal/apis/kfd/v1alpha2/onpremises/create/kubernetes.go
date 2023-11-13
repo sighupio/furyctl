@@ -53,16 +53,10 @@ func (k *Kubernetes) Exec() error {
 		return fmt.Errorf("error creating template config: %w", err)
 	}
 
+	k.CopyPathsToConfig(&mCfg)
+
 	mCfg.Data["kubernetes"] = map[any]any{
 		"version": k.kfdManifest.Kubernetes.OnPremises.Version,
-	}
-
-	mCfg.Data["paths"] = map[any]any{
-		"helm":      k.HelmPath,
-		"kustomize": k.KustomizePath,
-		"kubectl":   k.KubectlPath,
-		"yq":        k.YqPath,
-		"terraform": k.TerraformPath,
 	}
 
 	// Generate playbook and hosts file.

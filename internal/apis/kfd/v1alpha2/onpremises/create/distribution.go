@@ -70,12 +70,7 @@ func (d *Distribution) Exec(reducers v1alpha2.Reducers) error {
 		return fmt.Errorf("error creating template config: %w", err)
 	}
 
-	mCfg.Data["paths"] = map[any]any{
-		"kubectl":    d.OperationPhase.KubectlPath,
-		"kustomize":  d.OperationPhase.KustomizePath,
-		"yq":         d.OperationPhase.YqPath,
-		"vendorPath": path.Join(d.Path, "..", "vendor"),
-	}
+	d.CopyPathsToConfig(&mCfg)
 
 	// Check cluster connection and requirements.
 	storageClassAvailable := true
