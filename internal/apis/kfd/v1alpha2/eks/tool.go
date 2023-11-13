@@ -13,9 +13,7 @@ import (
 	yamlx "github.com/sighupio/furyctl/internal/x/yaml"
 )
 
-var (
-	ErrOpenVPNNotInstalled = errors.New("openvpn is not installed")
-)
+var ErrOpenVPNNotInstalled = errors.New("openvpn is not installed")
 
 type ExtraToolsValidator struct {
 	executor    execx.Executor
