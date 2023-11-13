@@ -67,7 +67,7 @@ func TestSafeWriteToBuffer(t *testing.T) {
 
 			values, content := tc.setup()
 
-			err = bytesx.SafeWriteToBuffer(buffer, content, values...)
+			err = bytesx.SafeWriteToBuffer(buffer, content, "", values...)
 
 			if !tc.wantErr && err != nil {
 				t.Fatalf("unexpected error: %v", err)
