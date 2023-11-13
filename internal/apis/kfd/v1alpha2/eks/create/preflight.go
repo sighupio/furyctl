@@ -562,7 +562,7 @@ func (p *PreFlight) CheckReducerDiffs(d r3diff.Changelog, diffChecker diffs.Chec
 }
 
 func (p *PreFlight) ensureTerraformStateAWSS3Bucket() error {
-	getErr := p.getTerraformStateAWSS3Bucket()
+	getErr := p.assertTerraformStateAWSS3BucketMatches()
 	if getErr == nil {
 		return nil
 	}
@@ -572,7 +572,7 @@ func (p *PreFlight) ensureTerraformStateAWSS3Bucket() error {
 			return fmt.Errorf("%w: %w", ErrEnsureTerraformStateAWSS3Bucket, err)
 		}
 
-		return p.getTerraformStateAWSS3Bucket()
+		return p.assertTerraformStateAWSS3BucketMatches()
 	}
 
 	return getErr
@@ -595,7 +595,7 @@ func (p *PreFlight) createTerraformStateAWSS3Bucket() error {
 	return nil
 }
 
-func (p *PreFlight) getTerraformStateAWSS3Bucket() error {
+func (p *PreFlight) assertTerraformStateAWSS3BucketMatches() error {
 	r, err := p.awsRunner.S3Api(
 		false,
 		"get-bucket-location",
