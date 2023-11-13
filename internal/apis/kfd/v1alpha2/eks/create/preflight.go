@@ -38,10 +38,15 @@ import (
 const vpnDefaultPort = 1194
 
 var (
-	errImmutable   = errors.New("immutable path changed")
-	errUnsupported = errors.New("unsupported reducer values detected")
-	bucketRegex    = regexp.MustCompile("(?m)bucket\\s*=\\s*\"([^\"]+)\"")
-	serverIPRegex  = regexp.MustCompile("(?m)public_ip\\s*=\\s*\"([^\"]+)\"")
+	ErrAWSS3BucketNotFound                   = errors.New("AWS S3 Bucket not found, please create it before running furyctl")
+	ErrAWSS3BucketRegionMismatch             = errors.New("AWS S3 Bucket region mismatch")
+	ErrCannotCreateTerraformStateAWSS3Bucket = errors.New("cannot create terraform state aws s3 bucket")
+	ErrEnsureTerraformStateAWSS3Bucket       = errors.New("cannot ensure terraform state aws s3 bucket is present")
+	errImmutable                             = errors.New("immutable path changed")
+	errUnsupported                           = errors.New("unsupported reducer values detected")
+	bucketRegex                              = regexp.MustCompile("(?m)bucket\\s*=\\s*\"([^\"]+)\"")
+	serverIPRegex                            = regexp.MustCompile("(?m)public_ip\\s*=\\s*\"([^\"]+)\"")
+	ErrPreflightFailed                       = errors.New("preflight execution failed")
 )
 
 type Status struct {
@@ -155,6 +160,12 @@ func (p *PreFlight) Exec() (Status, error) {
 	status := Status{
 		Diffs:   r3diff.Changelog{},
 		Success: false,
+	}
+
+	logrus.Info("Ensure prerequisites are in place...")
+
+	if err := p.ensureTerraformStateAWSS3Bucket(); err != nil {
+		return status, fmt.Errorf("%w: %w", ErrPreflightFailed, err)
 	}
 
 	logrus.Info("Running preflight checks")
@@ -545,6 +556,71 @@ func (p *PreFlight) CheckReducerDiffs(d r3diff.Changelog, diffChecker diffs.Chec
 
 	if len(errs) > 0 {
 		return fmt.Errorf("%w: %s", errUnsupported, errs)
+	}
+
+	return nil
+}
+
+func (p *PreFlight) ensureTerraformStateAWSS3Bucket() error {
+	getErr := p.getTerraformStateAWSS3Bucket()
+	if getErr == nil {
+		return nil
+	}
+
+	if errors.Is(getErr, ErrAWSS3BucketNotFound) {
+		if err := p.createTerraformStateAWSS3Bucket(); err != nil {
+			return fmt.Errorf("%w: %w", ErrEnsureTerraformStateAWSS3Bucket, err)
+		}
+
+		return p.getTerraformStateAWSS3Bucket()
+	}
+
+	return getErr
+}
+
+func (p *PreFlight) createTerraformStateAWSS3Bucket() error {
+	bucket := string(p.furyctlConf.Spec.ToolsConfiguration.Terraform.State.S3.BucketName)
+	region := string(p.furyctlConf.Spec.ToolsConfiguration.Terraform.State.S3.Region)
+
+	if _, err := p.awsRunner.S3Api(
+		false,
+		"create-bucket",
+		"--bucket", bucket,
+		"--region", region,
+		"--create-bucket-configuration", fmt.Sprintf("LocationConstraint=%s", region),
+	); err != nil {
+		return fmt.Errorf("%w: %w", ErrCannotCreateTerraformStateAWSS3Bucket, err)
+	}
+
+	return nil
+}
+
+func (p *PreFlight) getTerraformStateAWSS3Bucket() error {
+	r, err := p.awsRunner.S3Api(
+		false,
+		"get-bucket-location",
+		"--bucket",
+		string(p.furyctlConf.Spec.ToolsConfiguration.Terraform.State.S3.BucketName),
+		"--output",
+		"text",
+	)
+	if err != nil {
+		return ErrAWSS3BucketNotFound
+	}
+
+	// AWS S3 Bucket in us-east-1 region returns None as LocationConstraint
+	//nolint:lll // https://awscli.amazonaws.com/v2/documentation/api/latest/reference/s3api/get-bucket-location.html#output
+	if r == "None" {
+		r = "us-east-1"
+	}
+
+	if r != string(p.furyctlConf.Spec.ToolsConfiguration.Terraform.State.S3.Region) {
+		return fmt.Errorf(
+			"%w, expected %s, got %s",
+			ErrAWSS3BucketRegionMismatch,
+			p.furyctlConf.Spec.ToolsConfiguration.Terraform.State.S3.Region,
+			r,
+		)
 	}
 
 	return nil
