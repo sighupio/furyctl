@@ -38,7 +38,7 @@ import (
 const vpnDefaultPort = 1194
 
 var (
-	ErrAWSS3BucketNotFound                   = errors.New("AWS S3 Bucket not found, please create it before running furyctl")
+	ErrAWSS3BucketNotFound                   = errors.New("AWS S3 Bucket not found")
 	ErrAWSS3BucketRegionMismatch             = errors.New("AWS S3 Bucket region mismatch")
 	ErrCannotCreateTerraformStateAWSS3Bucket = errors.New("cannot create terraform state aws s3 bucket")
 	ErrEnsureTerraformStateAWSS3Bucket       = errors.New("cannot ensure terraform state aws s3 bucket is present")
