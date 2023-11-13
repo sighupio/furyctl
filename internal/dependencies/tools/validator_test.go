@@ -114,7 +114,6 @@ func Test_Validator_Validate(t *testing.T) {
 				"helmfile",
 				"awscli",
 				"openvpn",
-				"terraform state aws s3 bucket",
 			},
 		},
 	}
