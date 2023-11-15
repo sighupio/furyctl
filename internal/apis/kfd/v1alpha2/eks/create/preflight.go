@@ -607,7 +607,11 @@ func (p *PreFlight) assertTerraformStateAWSS3BucketMatches() error {
 		"text",
 	)
 	if err != nil {
-		return ErrAWSS3BucketNotFound
+		return fmt.Errorf(
+			"%s: %w",
+			string(p.furyctlConf.Spec.ToolsConfiguration.Terraform.State.S3.BucketName),
+			ErrAWSS3BucketNotFound,
+		)
 	}
 
 	// AWS S3 Bucket in us-east-1 region returns None as LocationConstraint
