@@ -215,12 +215,7 @@ func (*Connector) checkExistingOpenVPN() (bool, int32, error) {
 	}
 
 	for _, p := range processes {
-		name, err := p.Name()
-		if err != nil {
-			logrus.Warning(err)
-
-			continue
-		}
+		name, _ := p.Name()
 
 		if name == "openvpn" {
 			return true, p.Pid, nil
