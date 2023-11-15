@@ -95,7 +95,11 @@ func (x *ExtraToolsValidator) terraformStateAWSS3Bucket(conf private.EksclusterK
 		"text",
 	)
 	if err != nil {
-		return ErrAWSS3BucketNotFound
+		return fmt.Errorf(
+			"%s: %w",
+			string(conf.Spec.ToolsConfiguration.Terraform.State.S3.BucketName),
+			ErrAWSS3BucketNotFound,
+		)
 	}
 
 	// AWS S3 Bucket in us-east-1 region returns None as LocationConstraint
