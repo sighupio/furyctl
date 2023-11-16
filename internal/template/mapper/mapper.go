@@ -7,6 +7,7 @@ package mapper
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 	"reflect"
 	"regexp"
 	"strings"
@@ -17,8 +18,14 @@ const (
 	File = "file"
 )
 
+var (
+	EnvRegexp          = regexp.MustCompile(`{(.*?)}`)
+	RelativePathRegexp = regexp.MustCompile(`^\.{1,}\/`)
+)
+
 type Mapper struct {
-	context map[string]map[any]any
+	context        map[string]map[any]any
+	furyctlConfDir string
 }
 
 func NewMapper(context map[string]map[any]any) *Mapper {
@@ -29,7 +36,7 @@ func (m *Mapper) MapDynamicValues() (map[string]map[any]any, error) {
 	mappedCtx := make(map[string]map[any]any, len(m.context))
 
 	for k, c := range m.context {
-		res, err := injectDynamicRes(c)
+		res, err := m.injectDynamicRes(c)
 		mappedCtx[k] = res
 
 		if err != nil {
@@ -51,10 +58,8 @@ func (*Mapper) MapEnvironmentVars() map[any]any {
 	return envMap
 }
 
-func injectDynamicRes(
-	m map[any]any,
-) (map[any]any, error) {
-	for k, v := range m {
+func (m *Mapper) injectDynamicRes(vm map[any]any) (map[any]any, error) {
+	for k, v := range vm {
 		if v == nil {
 			continue
 		}
@@ -62,19 +67,19 @@ func injectDynamicRes(
 		switch reflect.TypeOf(v).Kind() {
 		case reflect.Map:
 			if mapVal, ok := v.(map[any]any); ok {
-				if _, err := injectDynamicRes(mapVal); err != nil {
+				if _, err := m.injectDynamicRes(mapVal); err != nil {
 					return nil, err
 				}
 			}
 
 		case reflect.String:
 			if stringVal, ok := v.(string); ok {
-				injectedStringVal, err := injectDynamicResString(stringVal)
+				injectedStringVal, err := m.injectDynamicResString(stringVal)
 				if err != nil {
 					return nil, err
 				}
 
-				m[k] = injectedStringVal
+				vm[k] = injectedStringVal
 			}
 
 		case reflect.Slice:
@@ -83,13 +88,13 @@ func injectDynamicRes(
 					switch reflect.TypeOf(arrChildVal).Kind() {
 					case reflect.Map:
 						if mapVal, ok := arrChildVal.(map[any]any); ok {
-							if _, err := injectDynamicRes(mapVal); err != nil {
+							if _, err := m.injectDynamicRes(mapVal); err != nil {
 								return nil, err
 							}
 						}
 
 					case reflect.String:
-						injectedStringVal, err := injectDynamicResString(arrChildVal.(string))
+						injectedStringVal, err := m.injectDynamicResString(arrChildVal.(string))
 						if err != nil {
 							return nil, err
 						}
@@ -105,13 +110,13 @@ func injectDynamicRes(
 		}
 	}
 
-	return m, nil
+	return vm, nil
 }
 
-func injectDynamicResString(val string) (string, error) {
-	dynamicValues := regexp.MustCompile(`{(.*?)}`).FindAllString(val, -1)
+func (m *Mapper) injectDynamicResString(val string) (string, error) {
+	dynamicValues := EnvRegexp.FindAllString(val, -1)
 	for _, dynamicValue := range dynamicValues {
-		parsedDynamicValue, err := ParseDynamicValue(dynamicValue)
+		parsedDynamicValue, err := ParseDynamicValue(dynamicValue, m.furyctlConfDir)
 		if err != nil {
 			return "", err
 		}
@@ -128,7 +133,7 @@ func readValueFromFile(path string) (string, error) {
 	return string(val), err
 }
 
-func ParseDynamicValue(val any) (string, error) {
+func ParseDynamicValue(val any, baseDir string) (string, error) {
 	strVal := fmt.Sprintf("%v", val)
 
 	spl := strings.Split(strVal, "://")
@@ -146,6 +151,13 @@ func ParseDynamicValue(val any) (string, error) {
 			return envVar, nil
 
 		case File:
+			// If the value is a relative path, we need to convert it to an absolute path.
+			isRelativePath := RelativePathRegexp.MatchString(sourceValue)
+			if isRelativePath {
+				sourceValue = filepath.Clean(sourceValue)
+				sourceValue = filepath.Join(baseDir, sourceValue)
+			}
+
 			content, err := readValueFromFile(sourceValue)
 			if err != nil {
 				return "", fmt.Errorf("%w", err)

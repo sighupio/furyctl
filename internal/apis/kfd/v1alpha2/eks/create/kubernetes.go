@@ -14,6 +14,7 @@ import (
 	"net"
 	"os"
 	"path"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"sync"
@@ -497,6 +498,7 @@ func (k *Kubernetes) createTfVars() error {
 	err := bytesx.SafeWriteToBuffer(
 		&buffer,
 		"cluster_name = \"%v\"\n",
+		filepath.Dir(k.furyctlConfPath),
 		k.furyctlConf.Metadata.Name,
 	)
 	if err != nil {
@@ -506,6 +508,7 @@ func (k *Kubernetes) createTfVars() error {
 	err = bytesx.SafeWriteToBuffer(
 		&buffer,
 		"kubectl_path = \"%s\"\n",
+		filepath.Dir(k.furyctlConfPath),
 		k.KubectlPath,
 	)
 	if err != nil {
@@ -515,6 +518,7 @@ func (k *Kubernetes) createTfVars() error {
 	err = bytesx.SafeWriteToBuffer(
 		&buffer,
 		"cluster_version = \"%v\"\n",
+		filepath.Dir(k.furyctlConfPath),
 		k.kfdManifest.Kubernetes.Eks.Version,
 	)
 	if err != nil {
@@ -524,6 +528,7 @@ func (k *Kubernetes) createTfVars() error {
 	err = bytesx.SafeWriteToBuffer(
 		&buffer,
 		"cluster_endpoint_private_access = %v\n",
+		filepath.Dir(k.furyctlConfPath),
 		k.furyctlConf.Spec.Kubernetes.ApiServer.PrivateAccess,
 	)
 	if err != nil {
@@ -539,6 +544,7 @@ func (k *Kubernetes) createTfVars() error {
 	err = bytesx.SafeWriteToBuffer(
 		&buffer,
 		"cluster_endpoint_private_access_cidrs = [%v]\n",
+		filepath.Dir(k.furyctlConfPath),
 		strings.Join(clusterEndpointPrivateAccessCidrs, ","),
 	)
 	if err != nil {
@@ -548,6 +554,7 @@ func (k *Kubernetes) createTfVars() error {
 	err = bytesx.SafeWriteToBuffer(
 		&buffer,
 		"cluster_endpoint_public_access = %v\n",
+		filepath.Dir(k.furyctlConfPath),
 		k.furyctlConf.Spec.Kubernetes.ApiServer.PublicAccess,
 	)
 	if err != nil {
@@ -563,6 +570,7 @@ func (k *Kubernetes) createTfVars() error {
 	err = bytesx.SafeWriteToBuffer(
 		&buffer,
 		"cluster_endpoint_public_access_cidrs = [%v]\n",
+		filepath.Dir(k.furyctlConfPath),
 		strings.Join(clusterEndpointPublicAccessCidrs, ","),
 	)
 	if err != nil {
@@ -573,11 +581,13 @@ func (k *Kubernetes) createTfVars() error {
 		err = bytesx.SafeWriteToBuffer(
 			&buffer,
 			"cluster_service_ipv4_cidr = null\n",
+			filepath.Dir(k.furyctlConfPath),
 		)
 	} else {
 		err = bytesx.SafeWriteToBuffer(
 			&buffer,
 			"cluster_service_ipv4_cidr = \"%v\"\n",
+			filepath.Dir(k.furyctlConfPath),
 			k.furyctlConf.Spec.Kubernetes.ServiceIpV4Cidr,
 		)
 	}
@@ -589,6 +599,7 @@ func (k *Kubernetes) createTfVars() error {
 	err = bytesx.SafeWriteToBuffer(
 		&buffer,
 		"node_pools_launch_kind = \"%v\"\n",
+		filepath.Dir(k.furyctlConfPath),
 		k.furyctlConf.Spec.Kubernetes.NodePoolsLaunchKind,
 	)
 	if err != nil {
@@ -599,6 +610,7 @@ func (k *Kubernetes) createTfVars() error {
 		err = bytesx.SafeWriteToBuffer(
 			&buffer,
 			"cluster_log_retention_days = %v\n",
+			filepath.Dir(k.furyctlConfPath),
 			*k.furyctlConf.Spec.Kubernetes.LogRetentionDays,
 		)
 		if err != nil {
@@ -617,6 +629,7 @@ func (k *Kubernetes) createTfVars() error {
 	err = bytesx.SafeWriteToBuffer(
 		&buffer,
 		"vpc_id = \"%v\"\n",
+		filepath.Dir(k.furyctlConfPath),
 		*vpcIDSource,
 	)
 	if err != nil {
@@ -632,6 +645,7 @@ func (k *Kubernetes) createTfVars() error {
 	err = bytesx.SafeWriteToBuffer(
 		&buffer,
 		"subnets = [%v]\n",
+		filepath.Dir(k.furyctlConfPath),
 		strings.Join(subnetIds, ","),
 	)
 	if err != nil {
@@ -641,6 +655,7 @@ func (k *Kubernetes) createTfVars() error {
 	err = bytesx.SafeWriteToBuffer(
 		&buffer,
 		"ssh_public_key = \"%v\"\n",
+		filepath.Dir(k.furyctlConfPath),
 		k.furyctlConf.Spec.Kubernetes.NodeAllowedSshPublicKey,
 	)
 	if err != nil {
@@ -656,6 +671,7 @@ func (k *Kubernetes) createTfVars() error {
 		err = bytesx.SafeWriteToBuffer(
 			&buffer,
 			"node_pools = [\n",
+			filepath.Dir(k.furyctlConfPath),
 		)
 		if err != nil {
 			return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
@@ -665,6 +681,7 @@ func (k *Kubernetes) createTfVars() error {
 			err = bytesx.SafeWriteToBuffer(
 				&buffer,
 				"{\n",
+				filepath.Dir(k.furyctlConfPath),
 			)
 			if err != nil {
 				return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
@@ -673,6 +690,7 @@ func (k *Kubernetes) createTfVars() error {
 			err = bytesx.SafeWriteToBuffer(
 				&buffer,
 				"name = \"%v\"\n",
+				filepath.Dir(k.furyctlConfPath),
 				np.Name,
 			)
 			if err != nil {
@@ -682,6 +700,7 @@ func (k *Kubernetes) createTfVars() error {
 			err = bytesx.SafeWriteToBuffer(
 				&buffer,
 				"version = null\n",
+				filepath.Dir(k.furyctlConfPath),
 			)
 			if err != nil {
 				return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
@@ -691,6 +710,7 @@ func (k *Kubernetes) createTfVars() error {
 				err = bytesx.SafeWriteToBuffer(
 					&buffer,
 					"ami_id = \"%v\"\n",
+					filepath.Dir(k.furyctlConfPath),
 					np.Ami.Id,
 				)
 				if err != nil {
@@ -707,6 +727,7 @@ func (k *Kubernetes) createTfVars() error {
 			err = bytesx.SafeWriteToBuffer(
 				&buffer,
 				"spot_instance = %v\n",
+				filepath.Dir(k.furyctlConfPath),
 				spot,
 			)
 			if err != nil {
@@ -717,6 +738,7 @@ func (k *Kubernetes) createTfVars() error {
 				err = bytesx.SafeWriteToBuffer(
 					&buffer,
 					"container_runtime = \"%v\"\n",
+					filepath.Dir(k.furyctlConfPath),
 					*np.ContainerRuntime,
 				)
 				if err != nil {
@@ -727,6 +749,7 @@ func (k *Kubernetes) createTfVars() error {
 			err = bytesx.SafeWriteToBuffer(
 				&buffer,
 				"min_size = %v\n",
+				filepath.Dir(k.furyctlConfPath),
 				np.Size.Min,
 			)
 			if err != nil {
@@ -736,6 +759,7 @@ func (k *Kubernetes) createTfVars() error {
 			err = bytesx.SafeWriteToBuffer(
 				&buffer,
 				"max_size = %v\n",
+				filepath.Dir(k.furyctlConfPath),
 				np.Size.Max,
 			)
 			if err != nil {
@@ -745,6 +769,7 @@ func (k *Kubernetes) createTfVars() error {
 			err = bytesx.SafeWriteToBuffer(
 				&buffer,
 				"instance_type = \"%v\"\n",
+				filepath.Dir(k.furyctlConfPath),
 				np.Instance.Type,
 			)
 			if err != nil {
@@ -761,6 +786,7 @@ func (k *Kubernetes) createTfVars() error {
 				err = bytesx.SafeWriteToBuffer(
 					&buffer,
 					"target_group_arns = [%v]\n",
+					filepath.Dir(k.furyctlConfPath),
 					strings.Join(attachedTargetGroups, ","),
 				)
 				if err != nil {
@@ -777,6 +803,7 @@ func (k *Kubernetes) createTfVars() error {
 			err = bytesx.SafeWriteToBuffer(
 				&buffer,
 				"volume_size = %v\n",
+				filepath.Dir(k.furyctlConfPath),
 				volumeSize,
 			)
 			if err != nil {
@@ -798,6 +825,7 @@ func (k *Kubernetes) createTfVars() error {
 				err = bytesx.SafeWriteToBuffer(
 					&buffer,
 					"subnets = [%v]\n",
+					filepath.Dir(k.furyctlConfPath),
 					strings.Join(npSubNetIds, ","),
 				)
 				if err != nil {
@@ -807,6 +835,7 @@ func (k *Kubernetes) createTfVars() error {
 				err = bytesx.SafeWriteToBuffer(
 					&buffer,
 					"subnets = null\n",
+					filepath.Dir(k.furyctlConfPath),
 				)
 				if err != nil {
 					return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
@@ -824,6 +853,7 @@ func (k *Kubernetes) createTfVars() error {
 				err = bytesx.SafeWriteToBuffer(
 					&buffer,
 					"labels = %v\n",
+					filepath.Dir(k.furyctlConfPath),
 					string(labels),
 				)
 				if err != nil {
@@ -833,6 +863,7 @@ func (k *Kubernetes) createTfVars() error {
 				err = bytesx.SafeWriteToBuffer(
 					&buffer,
 					"labels = null\n",
+					filepath.Dir(k.furyctlConfPath),
 				)
 				if err != nil {
 					return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
@@ -843,6 +874,7 @@ func (k *Kubernetes) createTfVars() error {
 				err = bytesx.SafeWriteToBuffer(
 					&buffer,
 					"taints = [\"%v\"]\n",
+					filepath.Dir(k.furyctlConfPath),
 					strings.Join(np.Taints, "\",\""),
 				)
 				if err != nil {
@@ -852,6 +884,7 @@ func (k *Kubernetes) createTfVars() error {
 				err = bytesx.SafeWriteToBuffer(
 					&buffer,
 					"taints = null\n",
+					filepath.Dir(k.furyctlConfPath),
 				)
 				if err != nil {
 					return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
@@ -869,6 +902,7 @@ func (k *Kubernetes) createTfVars() error {
 				err = bytesx.SafeWriteToBuffer(
 					&buffer,
 					"tags = %v\n",
+					filepath.Dir(k.furyctlConfPath),
 					string(tags),
 				)
 				if err != nil {
@@ -878,6 +912,7 @@ func (k *Kubernetes) createTfVars() error {
 				err = bytesx.SafeWriteToBuffer(
 					&buffer,
 					"tags = null\n",
+					filepath.Dir(k.furyctlConfPath),
 				)
 				if err != nil {
 					return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
@@ -887,6 +922,7 @@ func (k *Kubernetes) createTfVars() error {
 			err = bytesx.SafeWriteToBuffer(
 				&buffer,
 				"},\n",
+				filepath.Dir(k.furyctlConfPath),
 			)
 			if err != nil {
 				return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
@@ -896,6 +932,7 @@ func (k *Kubernetes) createTfVars() error {
 		err = bytesx.SafeWriteToBuffer(
 			&buffer,
 			"]\n",
+			filepath.Dir(k.furyctlConfPath),
 		)
 		if err != nil {
 			return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
@@ -920,6 +957,7 @@ func (k *Kubernetes) addAwsAuthToTfVars(buffer *bytes.Buffer) error {
 			err = bytesx.SafeWriteToBuffer(
 				buffer,
 				"eks_map_accounts = [\"%v\"]\n",
+				filepath.Dir(k.furyctlConfPath),
 				strings.Join(k.furyctlConf.Spec.Kubernetes.AwsAuth.AdditionalAccounts, "\",\""),
 			)
 			if err != nil {
@@ -931,6 +969,7 @@ func (k *Kubernetes) addAwsAuthToTfVars(buffer *bytes.Buffer) error {
 			err = bytesx.SafeWriteToBuffer(
 				buffer,
 				"eks_map_users = [\n",
+				filepath.Dir(k.furyctlConfPath),
 			)
 			if err != nil {
 				return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
@@ -946,6 +985,7 @@ func (k *Kubernetes) addAwsAuthToTfVars(buffer *bytes.Buffer) error {
 				err = bytesx.SafeWriteToBuffer(
 					buffer,
 					content,
+					filepath.Dir(k.furyctlConfPath),
 					strings.Join(account.Groups, "\",\""),
 					account.Username,
 					account.Userarn,
@@ -958,6 +998,7 @@ func (k *Kubernetes) addAwsAuthToTfVars(buffer *bytes.Buffer) error {
 			err = bytesx.SafeWriteToBuffer(
 				buffer,
 				"]\n",
+				filepath.Dir(k.furyctlConfPath),
 			)
 			if err != nil {
 				return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
@@ -968,6 +1009,7 @@ func (k *Kubernetes) addAwsAuthToTfVars(buffer *bytes.Buffer) error {
 			err = bytesx.SafeWriteToBuffer(
 				buffer,
 				"eks_map_roles = [\n",
+				filepath.Dir(k.furyctlConfPath),
 			)
 			if err != nil {
 				return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
@@ -983,6 +1025,7 @@ func (k *Kubernetes) addAwsAuthToTfVars(buffer *bytes.Buffer) error {
 				err = bytesx.SafeWriteToBuffer(
 					buffer,
 					content,
+					filepath.Dir(k.furyctlConfPath),
 					strings.Join(account.Groups, "\",\""),
 					account.Username,
 					account.Rolearn,
@@ -995,6 +1038,7 @@ func (k *Kubernetes) addAwsAuthToTfVars(buffer *bytes.Buffer) error {
 			err = bytesx.SafeWriteToBuffer(
 				buffer,
 				"]\n",
+				filepath.Dir(k.furyctlConfPath),
 			)
 			if err != nil {
 				return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
@@ -1010,6 +1054,7 @@ func (k *Kubernetes) addFirewallRulesToNodePool(buffer *bytes.Buffer, np private
 		err := bytesx.SafeWriteToBuffer(
 			buffer,
 			"additional_firewall_rules = {\n",
+			filepath.Dir(k.furyctlConfPath),
 		)
 		if err != nil {
 			return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
@@ -1019,6 +1064,7 @@ func (k *Kubernetes) addFirewallRulesToNodePool(buffer *bytes.Buffer, np private
 			if err := bytesx.SafeWriteToBuffer(
 				buffer,
 				"cidr_blocks = [\n",
+				filepath.Dir(k.furyctlConfPath),
 			); err != nil {
 				return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
 			}
@@ -1030,6 +1076,7 @@ func (k *Kubernetes) addFirewallRulesToNodePool(buffer *bytes.Buffer, np private
 			if err = bytesx.SafeWriteToBuffer(
 				buffer,
 				"]\n",
+				filepath.Dir(k.furyctlConfPath),
 			); err != nil {
 				return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
 			}
@@ -1039,6 +1086,7 @@ func (k *Kubernetes) addFirewallRulesToNodePool(buffer *bytes.Buffer, np private
 			if err := bytesx.SafeWriteToBuffer(
 				buffer,
 				"source_security_group_id = [\n",
+				filepath.Dir(k.furyctlConfPath),
 			); err != nil {
 				return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
 			}
@@ -1052,6 +1100,7 @@ func (k *Kubernetes) addFirewallRulesToNodePool(buffer *bytes.Buffer, np private
 			if err = bytesx.SafeWriteToBuffer(
 				buffer,
 				"]\n",
+				filepath.Dir(k.furyctlConfPath),
 			); err != nil {
 				return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
 			}
@@ -1061,6 +1110,7 @@ func (k *Kubernetes) addFirewallRulesToNodePool(buffer *bytes.Buffer, np private
 			if err := bytesx.SafeWriteToBuffer(
 				buffer,
 				"self = [\n",
+				filepath.Dir(k.furyctlConfPath),
 			); err != nil {
 				return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
 			}
@@ -1072,6 +1122,7 @@ func (k *Kubernetes) addFirewallRulesToNodePool(buffer *bytes.Buffer, np private
 			if err = bytesx.SafeWriteToBuffer(
 				buffer,
 				"]\n",
+				filepath.Dir(k.furyctlConfPath),
 			); err != nil {
 				return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
 			}
@@ -1080,6 +1131,7 @@ func (k *Kubernetes) addFirewallRulesToNodePool(buffer *bytes.Buffer, np private
 		err = bytesx.SafeWriteToBuffer(
 			buffer,
 			"}\n",
+			filepath.Dir(k.furyctlConfPath),
 		)
 		if err != nil {
 			return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
@@ -1088,6 +1140,7 @@ func (k *Kubernetes) addFirewallRulesToNodePool(buffer *bytes.Buffer, np private
 		err := bytesx.SafeWriteToBuffer(
 			buffer,
 			"additional_firewall_rules = null\n",
+			filepath.Dir(k.furyctlConfPath),
 		)
 		if err != nil {
 			return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
@@ -1097,7 +1150,7 @@ func (k *Kubernetes) addFirewallRulesToNodePool(buffer *bytes.Buffer, np private
 	return nil
 }
 
-func (*Kubernetes) addCidrBlocksFirewallRules(
+func (k *Kubernetes) addCidrBlocksFirewallRules(
 	buffer *bytes.Buffer,
 	cb []private.SpecKubernetesNodePoolAdditionalFirewallRuleCidrBlock,
 ) error {
@@ -1133,6 +1186,7 @@ func (*Kubernetes) addCidrBlocksFirewallRules(
 		if err := bytesx.SafeWriteToBuffer(
 			buffer,
 			content,
+			filepath.Dir(k.furyctlConfPath),
 			fwRule.Name,
 			fwRule.Type,
 			fmt.Sprintf("[%v]", strings.Join(dmzCidrRanges, ",")),
@@ -1148,7 +1202,7 @@ func (*Kubernetes) addCidrBlocksFirewallRules(
 	return nil
 }
 
-func (*Kubernetes) addSourceSecurityGroupIDFirewallRules(
+func (k *Kubernetes) addSourceSecurityGroupIDFirewallRules(
 	buffer *bytes.Buffer,
 	cb []private.SpecKubernetesNodePoolAdditionalFirewallRuleSourceSecurityGroupId,
 ) error {
@@ -1176,6 +1230,7 @@ func (*Kubernetes) addSourceSecurityGroupIDFirewallRules(
 		if err := bytesx.SafeWriteToBuffer(
 			buffer,
 			content,
+			filepath.Dir(k.furyctlConfPath),
 			fwRule.Name,
 			fwRule.Type,
 			fwRule.SourceSecurityGroupId,
@@ -1191,7 +1246,7 @@ func (*Kubernetes) addSourceSecurityGroupIDFirewallRules(
 	return nil
 }
 
-func (*Kubernetes) addSelfFirewallRules(
+func (k *Kubernetes) addSelfFirewallRules(
 	buffer *bytes.Buffer,
 	cb []private.SpecKubernetesNodePoolAdditionalFirewallRuleSelf,
 ) error {
@@ -1219,6 +1274,7 @@ func (*Kubernetes) addSelfFirewallRules(
 		if err := bytesx.SafeWriteToBuffer(
 			buffer,
 			content,
+			filepath.Dir(k.furyctlConfPath),
 			fwRule.Name,
 			fwRule.Type,
 			fwRule.Self,
