@@ -117,7 +117,7 @@ func (p *PreUpgrade) Exec() error {
 	}
 
 	templateModel, err := template.NewTemplateModel(
-		path.Join(p.distroPath, "templates", "upgrades"),
+		path.Join(p.distroPath, "templates", "upgrades", strings.ToLower(p.kind)),
 		path.Join(p.Path),
 		confPath,
 		outDirPath1,
@@ -155,11 +155,7 @@ func (p *PreUpgrade) Exec() error {
 		from := semver.EnsureNoPrefix(p.upgrade.From)
 		to := semver.EnsureNoPrefix(p.upgrade.To)
 
-		upgradePath := path.Join(
-			p.Path,
-			fmt.Sprintf("%s-%s", from, to),
-			strings.ToLower(p.kind),
-		)
+		upgradePath := path.Join(p.Path, fmt.Sprintf("%s-%s", from, to))
 
 		if _, err := os.Stat(upgradePath); err != nil {
 			if os.IsNotExist(err) {
