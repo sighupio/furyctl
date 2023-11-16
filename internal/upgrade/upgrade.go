@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"os"
 	"path"
-	"strings"
 
 	"github.com/sirupsen/logrus"
 
@@ -47,7 +46,6 @@ func (u *Upgrade) Exec(workdir, phase string) error {
 		u.paths.WorkDir,
 		"upgrades",
 		fmt.Sprintf("%s-%s", from, to),
-		strings.ToLower(u.kind),
 	)
 
 	upgradeScript := path.Join(upgradePath, fmt.Sprintf("%s.sh", phase))
