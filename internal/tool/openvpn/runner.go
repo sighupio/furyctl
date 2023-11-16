@@ -59,7 +59,7 @@ func (r *Runner) deleteCmd(id string) {
 
 func (r *Runner) Connect(name string) error {
 	path := "sudo"
-	args := []string{"--config", fmt.Sprintf("%s.ovpn", name), "--daemon"}
+	args := []string{"openvpn", "--config", fmt.Sprintf("%s.ovpn", name), "--daemon"}
 
 	userIsRoot, err := osx.IsRoot()
 	if err != nil {
