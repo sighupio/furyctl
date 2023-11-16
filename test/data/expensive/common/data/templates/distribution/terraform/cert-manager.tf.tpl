@@ -1,4 +1,8 @@
-{{- if eq .spec.distribution.modules.ingress.certManager.clusterIssuer.type "dns01" -}}
+{{ if eq .spec.distribution.modules.ingress.certManager. }}
+
+{{ if eq .spec.distribution.modules.ingress.certManager.clusterIssuer }}
+
+{{ if eq .spec.distribution.modules.ingress.certManager.clusterIssuer.type "dns01" }}
 module "cert_manager_iam_role" {
   source          = "{{ print .spec.distribution.common.relativeVendorPath "/modules/ingress/modules/aws-cert-manager" }}"
   cluster_name    = "{{ .metadata.name }}"
@@ -9,4 +13,8 @@ output "cert_manager_iam_role_arn" {
   value = module.cert_manager_iam_role.cert_manager_iam_role_arn
 }
 
-{{- end }}
+{{ end }}
+
+{{ end }}
+
+{{ end }}
