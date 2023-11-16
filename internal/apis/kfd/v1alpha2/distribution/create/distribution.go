@@ -173,6 +173,10 @@ func (d *Distribution) Exec() error {
 		return errNoStorageClass
 	}
 
+	mCfg.Data["checks"] = map[any]any{
+		"storageClassAvailable": true,
+	}
+
 	if d.furyctlConf.Spec.Distribution.Modules.Networking.Type == "none" {
 		logrus.Info("Checking if all nodes are ready...")
 
