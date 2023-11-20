@@ -93,7 +93,7 @@ func (v *Connector) Connect() error {
 			return err
 		}
 
-		if vpn {
+		if vpn && !v.skip {
 			if err := v.promptAutoConnect(pid); err != nil {
 				return err
 			}
