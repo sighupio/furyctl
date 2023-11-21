@@ -299,6 +299,8 @@ func (c *ClusterCreator) CreateAsync(
 	if err != nil {
 		if !errors.Is(err, eksrules.ErrReadingRulesFile) {
 			errCh <- fmt.Errorf("error while creating rules builder: %w", err)
+
+			return
 		}
 	}
 
@@ -317,10 +319,14 @@ func (c *ClusterCreator) CreateAsync(
 	)
 	if err != nil {
 		errCh <- fmt.Errorf("error while initiating preupgrade phase: %w", err)
+
+		return
 	}
 
 	if err := preupgrade.Exec(); err != nil {
 		errCh <- fmt.Errorf("error while executing preupgrade phase: %w", err)
+
+		return
 	}
 
 	switch c.phase {
