@@ -114,7 +114,7 @@ func (r *Runner) Apply(timestamp int64) error {
 	defer r.deleteCmd(applyID)
 
 	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("cannot create cloud resources: %w", err)
+		return fmt.Errorf("failed to run terraform apply: %w", err)
 	}
 
 	if err := os.WriteFile(
