@@ -131,8 +131,7 @@ func (p *PreUpgrade) Exec() error {
 		return fmt.Errorf("error creating template model: %w", err)
 	}
 
-	err = templateModel.Generate()
-	if err != nil {
+	if err := templateModel.Generate(); err != nil {
 		return fmt.Errorf("error generating from template files: %w", err)
 	}
 
