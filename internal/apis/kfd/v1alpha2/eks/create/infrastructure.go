@@ -115,6 +115,10 @@ func (i *Infrastructure) Exec() error {
 		return fmt.Errorf("error running terraform init: %w", err)
 	}
 
+	if err := i.upgrade.Exec(i.Path, "pre-infrastructure"); err != nil {
+		return fmt.Errorf("error running upgrade: %w", err)
+	}
+
 	plan, err := i.tfRunner.Plan(timestamp)
 	if err != nil {
 		return fmt.Errorf("error running terraform plan: %w", err)
@@ -147,11 +151,6 @@ func (i *Infrastructure) Exec() error {
 		if !prompt {
 			return ErrAbortedByUser
 		}
-	}
-
-	// Run upgrade script if needed.
-	if err := i.upgrade.Exec(i.Path, "pre-infrastructure"); err != nil {
-		return fmt.Errorf("error running upgrade: %w", err)
 	}
 
 	logrus.Warn("Creating cloud resources, this could take a while...")
