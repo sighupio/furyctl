@@ -57,7 +57,6 @@ func (c *ClusterCreator) SetProperties(props []cluster.CreatorProperty) {
 	c.stateStore = state.NewStore(
 		c.paths.DistroPath,
 		c.paths.ConfigPath,
-		c.paths.Kubeconfig,
 		c.paths.WorkDir,
 		c.kfdManifest.Tools.Common.Kubectl.Version,
 		c.paths.BinPath,
@@ -84,11 +83,6 @@ func (c *ClusterCreator) SetProperty(name string, value any) {
 	case cluster.CreatorPropertyBinPath:
 		if s, ok := value.(string); ok {
 			c.paths.BinPath = s
-		}
-
-	case cluster.CreatorPropertyKubeconfig:
-		if s, ok := value.(string); ok {
-			c.paths.Kubeconfig = s
 		}
 
 	case cluster.CreatorPropertyFuryctlConf:
@@ -147,7 +141,6 @@ func (c *ClusterCreator) Create(skipPhase string, _ int) error {
 		c.furyctlConf,
 		c.kfdManifest,
 		c.dryRun,
-		c.paths.Kubeconfig,
 		upgr,
 	)
 	if err != nil {
@@ -159,7 +152,6 @@ func (c *ClusterCreator) Create(skipPhase string, _ int) error {
 		c.kfdManifest,
 		string(c.furyctlConf.Kind),
 		c.dryRun,
-		c.paths.Kubeconfig,
 	)
 	if err != nil {
 		return fmt.Errorf("error while initiating plugins phase: %w", err)
@@ -170,7 +162,6 @@ func (c *ClusterCreator) Create(skipPhase string, _ int) error {
 		c.kfdManifest,
 		c.paths,
 		c.dryRun,
-		c.paths.Kubeconfig,
 		c.stateStore,
 	)
 	if err != nil {
@@ -200,7 +191,6 @@ func (c *ClusterCreator) Create(skipPhase string, _ int) error {
 		c.kfdManifest,
 		string(c.furyctlConf.Kind),
 		c.dryRun,
-		c.paths.Kubeconfig,
 		c.upgrade,
 		c.force,
 		upgr,

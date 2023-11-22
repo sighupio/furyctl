@@ -6,6 +6,7 @@ package eks
 
 import (
 	"fmt"
+	"path"
 	"strings"
 
 	"github.com/sirupsen/logrus"
@@ -15,6 +16,7 @@ import (
 	del "github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/eks/delete"
 	"github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/eks/vpn"
 	"github.com/sighupio/furyctl/internal/cluster"
+	kubex "github.com/sighupio/furyctl/internal/x/kube"
 )
 
 type ClusterDeleter struct {
@@ -72,11 +74,6 @@ func (d *ClusterDeleter) SetProperty(name string, value any) {
 			d.paths.BinPath = s
 		}
 
-	case cluster.DeleterPropertyKubeconfig:
-		if s, ok := value.(string); ok {
-			d.paths.Kubeconfig = s
-		}
-
 	case cluster.DeleterPropertyDryRun:
 		if b, ok := value.(bool); ok {
 			d.dryRun = b
@@ -85,7 +82,7 @@ func (d *ClusterDeleter) SetProperty(name string, value any) {
 }
 
 func (d *ClusterDeleter) Delete() error {
-	distro, err := del.NewDistribution(d.dryRun, d.paths.WorkDir, d.paths.BinPath, d.kfdManifest, d.paths.Kubeconfig)
+	distro, err := del.NewDistribution(d.dryRun, d.paths.WorkDir, d.paths.BinPath, d.kfdManifest)
 	if err != nil {
 		return fmt.Errorf("error while creating distribution phase: %w", err)
 	}
@@ -117,6 +114,16 @@ func (d *ClusterDeleter) Delete() error {
 	)
 	if err != nil {
 		return fmt.Errorf("error while creating vpn connector: %w", err)
+	}
+
+	// Move this code to delete preflight.
+	if err := kubex.SetConfigEnv(path.Join(
+		d.paths.WorkDir,
+		cluster.OperationPhasePreFlight,
+		"secrets",
+		"kubeconfig",
+	)); err != nil {
+		return fmt.Errorf("error setting kubeconfig env: %w", err)
 	}
 
 	switch d.phase {

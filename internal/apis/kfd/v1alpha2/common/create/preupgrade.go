@@ -38,7 +38,6 @@ type PreUpgrade struct {
 	distroPath      string
 	furyctlConfPath string
 	dryRun          bool
-	kubeconfig      string
 	kind            string
 	upgrade         *upgrade.Upgrade
 	upgradeFlag     bool
@@ -52,14 +51,17 @@ func NewPreUpgrade(
 	kfdManifest config.KFD,
 	kind string,
 	dryRun bool,
-	kubeconfig string,
 	upgradeFlag bool,
 	forceFlag bool,
 	upgr *upgrade.Upgrade,
 	reducers v1alpha2.Reducers,
 	diffs diff.Changelog,
 ) (*PreUpgrade, error) {
-	phaseOp, err := cluster.NewOperationPhase(path.Join(paths.WorkDir, "upgrades"), kfdManifest.Tools, paths.BinPath)
+	phaseOp, err := cluster.NewOperationPhase(
+		path.Join(paths.WorkDir, "upgrades"),
+		kfdManifest.Tools,
+		paths.BinPath,
+	)
 	if err != nil {
 		return nil, fmt.Errorf("error creating preupgrade phase: %w", err)
 	}
@@ -69,7 +71,6 @@ func NewPreUpgrade(
 		distroPath:      paths.DistroPath,
 		furyctlConfPath: paths.ConfigPath,
 		dryRun:          dryRun,
-		kubeconfig:      kubeconfig,
 		kind:            kind,
 		upgrade:         upgr,
 		upgradeFlag:     upgradeFlag,

@@ -30,7 +30,6 @@ type Plugins struct {
 	distroPath      string
 	furyctlConfPath string
 	dryRun          bool
-	kubeconfig      string
 	kind            string
 }
 
@@ -39,11 +38,12 @@ func NewPlugins(
 	kfdManifest config.KFD,
 	kind string,
 	dryRun bool,
-	kubeconfig string,
 ) (*Plugins, error) {
-	distroDir := path.Join(paths.WorkDir, cluster.OperationPhasePlugins)
-
-	phaseOp, err := cluster.NewOperationPhase(distroDir, kfdManifest.Tools, paths.BinPath)
+	phaseOp, err := cluster.NewOperationPhase(
+		path.Join(paths.WorkDir, cluster.OperationPhasePlugins),
+		kfdManifest.Tools,
+		paths.BinPath,
+	)
 	if err != nil {
 		return nil, fmt.Errorf("error creating plugins phase: %w", err)
 	}
@@ -53,7 +53,6 @@ func NewPlugins(
 		distroPath:      paths.DistroPath,
 		furyctlConfPath: paths.ConfigPath,
 		dryRun:          dryRun,
-		kubeconfig:      kubeconfig,
 		kind:            kind,
 		helmfileRunner: helmfile.NewRunner(
 			execx.NewStdExecutor(),
@@ -163,7 +162,7 @@ func (p *Plugins) Exec() error {
 	}
 
 	if hasSpecPluginsKustomize && len(specPluginsKustomize) > 0 {
-		if _, err := p.shellRunner.Run(path.Join(p.Path, "scripts", "apply.sh"), "false", p.kubeconfig); err != nil {
+		if _, err := p.shellRunner.Run(path.Join(p.Path, "scripts", "apply.sh"), "false"); err != nil {
 			return fmt.Errorf("error applying plugins with kustomize: %w", err)
 		}
 	}

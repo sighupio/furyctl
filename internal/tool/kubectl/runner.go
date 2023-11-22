@@ -13,9 +13,8 @@ import (
 )
 
 type Paths struct {
-	Kubectl    string
-	WorkDir    string
-	Kubeconfig string
+	Kubectl string
+	WorkDir string
 }
 
 type Runner struct {
@@ -63,10 +62,6 @@ func (r *Runner) deleteCmd(id string) {
 func (r *Runner) Apply(manifestPath string, params ...string) error {
 	args := []string{"apply"}
 
-	if r.paths.Kubeconfig != "" {
-		args = append(args, "--kubeconfig", r.paths.Kubeconfig)
-	}
-
 	if r.serverSide {
 		args = append(args, "--server-side")
 	}
@@ -90,10 +85,6 @@ func (r *Runner) Apply(manifestPath string, params ...string) error {
 func (r *Runner) Get(sensitive bool, ns string, params ...string) (string, error) {
 	args := []string{"get"}
 
-	if r.paths.Kubeconfig != "" {
-		args = append(args, "--kubeconfig", r.paths.Kubeconfig)
-	}
-
 	if ns != "all" {
 		args = append(args, "-n", ns)
 	} else {
@@ -115,10 +106,6 @@ func (r *Runner) Get(sensitive bool, ns string, params ...string) (string, error
 
 func (r *Runner) Version() (string, error) {
 	args := []string{"version"}
-
-	if r.paths.Kubeconfig != "" {
-		args = append(args, "--kubeconfig", r.paths.Kubeconfig)
-	}
 
 	if r.clientVersion {
 		args = append(args, "--client")
