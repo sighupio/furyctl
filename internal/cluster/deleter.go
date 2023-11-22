@@ -20,7 +20,6 @@ const (
 	DeleterPropertyBinPath        = "binpath"
 	DeleterPropertySkipVpn        = "skipvpn"
 	DeleterPropertyVpnAutoConnect = "vpnautoconnect"
-	DeleterPropertyKubeconfig     = "kubeconfig"
 	DeleterPropertyDryRun         = "dryrun"
 )
 
@@ -31,7 +30,6 @@ type DeleterPaths struct {
 	ConfigPath string
 	WorkDir    string
 	BinPath    string
-	Kubeconfig string
 }
 
 type DeleterFactory func(configPath string, props []DeleterProperty) (Deleter, error)
@@ -76,10 +74,6 @@ func NewDeleter(
 			{
 				Name:  DeleterPropertyBinPath,
 				Value: paths.BinPath,
-			},
-			{
-				Name:  DeleterPropertyKubeconfig,
-				Value: paths.Kubeconfig,
 			},
 			{
 				Name:  DeleterPropertySkipVpn,

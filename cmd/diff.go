@@ -33,7 +33,6 @@ type DiffCommandFlags struct {
 	Phase          string
 	NoTTY          bool
 	HTTPS          bool
-	Kubeconfig     string
 	BinPath        string
 	Outdir         string
 }
@@ -54,31 +53,6 @@ func NewDiffCommand(tracker *analytics.Tracker) *cobra.Command {
 			}
 
 			execx.Debug = flags.Debug
-
-			kubeconfigPath := flags.Kubeconfig
-
-			if kubeconfigPath == "" {
-				kubeconfigFromEnv := os.Getenv("KUBECONFIG")
-
-				if kubeconfigFromEnv == "" {
-					return ErrKubeconfigReq
-				}
-
-				kubeconfigPath = kubeconfigFromEnv
-
-				logrus.Warnf("Missing --kubeconfig flag, falling back to KUBECONFIG from environment: %s", kubeconfigFromEnv)
-			}
-
-			kubeAbsPath, err := filepath.Abs(kubeconfigPath)
-			if err != nil {
-				return fmt.Errorf("error while getting absolute path of kubeconfig: %w", err)
-			}
-
-			kubeconfigPath = kubeAbsPath
-
-			if _, err := os.Stat(kubeconfigPath); os.IsNotExist(err) {
-				return fmt.Errorf("%w in %s", ErrKubeconfigNotFound, kubeconfigPath)
-			}
 
 			logrus.Debug("Getting Home Directory Path...")
 			outDir := flags.Outdir
@@ -116,7 +90,6 @@ func NewDiffCommand(tracker *analytics.Tracker) *cobra.Command {
 			stateStore := state.NewStore(
 				res.RepoPath,
 				flags.FuryctlPath,
-				kubeconfigPath,
 				basePath,
 				res.DistroManifest.Tools.Common.Kubectl.Version,
 				flags.BinPath,
@@ -135,7 +108,6 @@ func NewDiffCommand(tracker *analytics.Tracker) *cobra.Command {
 				basePath,
 				res.RepoPath,
 				flags.BinPath,
-				kubeconfigPath,
 				flags.Phase,
 				res.MinimalConf,
 				res.DistroManifest,
@@ -195,12 +167,6 @@ func NewDiffCommand(tracker *analytics.Tracker) *cobra.Command {
 			"Any format supported by hashicorp/go-getter can be used.",
 	)
 
-	cmd.Flags().String(
-		"kubeconfig",
-		"",
-		"Path to the kubeconfig file, mandatory if you want to run the distribution phase alone and the KUBECONFIG environment variable is not set",
-	)
-
 	cmd.Flags().StringP(
 		"bin-path",
 		"b",
@@ -216,7 +182,6 @@ func getPhasePath(
 	workDir string,
 	distroPath string,
 	binPath string,
-	kubeconfigPath string,
 	phase string,
 	minimalConf config.Furyctl,
 	distroManifest config.KFD,
@@ -231,7 +196,6 @@ func getPhasePath(
 		WorkDir:    workDir,
 		DistroPath: distroPath,
 		BinPath:    binPath,
-		Kubeconfig: kubeconfigPath,
 	}
 
 	clusterCreator, err := cluster.NewCreator(
@@ -318,11 +282,6 @@ func getDiffCommandFlags(
 		return DiffCommandFlags{}, fmt.Errorf("%w: %s: %s", ErrParsingFlag, "phase", err.Error())
 	}
 
-	kubeconfig, err := cmdutil.StringFlag(cmd, "kubeconfig", tracker, cmdEvent)
-	if err != nil {
-		return DiffCommandFlags{}, fmt.Errorf("%w: %s", ErrParsingFlag, "kubeconfig")
-	}
-
 	noTTY, err := cmdutil.BoolFlag(cmd, "no-tty", tracker, cmdEvent)
 	if err != nil {
 		return DiffCommandFlags{}, fmt.Errorf("%w: %s", ErrParsingFlag, "no-tty")
@@ -347,7 +306,6 @@ func getDiffCommandFlags(
 		Phase:          phase,
 		NoTTY:          noTTY,
 		HTTPS:          https,
-		Kubeconfig:     kubeconfig,
 		BinPath:        binPath,
 		Outdir:         outdir,
 	}, nil

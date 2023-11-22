@@ -44,7 +44,6 @@ type ClusterCmdFlags struct {
 	NoTTY              bool
 	HTTPS              bool
 	Force              bool
-	Kubeconfig         string
 	Timeout            int
 	Outdir             string
 	Upgrade            bool
@@ -80,44 +79,6 @@ func NewApplyCommand(tracker *analytics.Tracker) *cobra.Command {
 
 			if outDir == "" {
 				outDir = homeDir
-			}
-
-			kubeconfigPath := flags.Kubeconfig
-
-			if kubeconfigPath != "" &&
-				(flags.Phase != "" && flags.Phase != cluster.OperationPhaseDistribution) ||
-				(flags.SkipPhase != "" && flags.SkipPhase != cluster.OperationPhaseKubernetes) {
-				return fmt.Errorf(
-					"%w: --kubeconfig flag can only be used when running distribution phase alone",
-					ErrParsingFlag,
-				)
-			}
-
-			// Check if kubeconfig is needed.
-			if flags.Phase == cluster.OperationPhaseDistribution || flags.SkipPhase == cluster.OperationPhaseKubernetes {
-				if kubeconfigPath == "" {
-					kubeconfigFromEnv := os.Getenv("KUBECONFIG")
-
-					if kubeconfigFromEnv == "" {
-						return ErrKubeconfigReq
-					}
-
-					kubeconfigPath = kubeconfigFromEnv
-
-					logrus.Warnf("Missing --kubeconfig flag, falling back to KUBECONFIG from environment: %s", kubeconfigFromEnv)
-				}
-
-				kubeAbsPath, err := filepath.Abs(kubeconfigPath)
-				if err != nil {
-					return fmt.Errorf("error while getting absolute path of kubeconfig: %w", err)
-				}
-
-				kubeconfigPath = kubeAbsPath
-
-				// Check the kubeconfig file exists.
-				if _, err := os.Stat(kubeconfigPath); os.IsNotExist(err) {
-					return fmt.Errorf("%w in %s", ErrKubeconfigNotFound, kubeconfigPath)
-				}
 			}
 
 			if flags.BinPath == "" {
@@ -212,7 +173,6 @@ func NewApplyCommand(tracker *analytics.Tracker) *cobra.Command {
 				WorkDir:    basePath,
 				DistroPath: res.RepoPath,
 				BinPath:    flags.BinPath,
-				Kubeconfig: kubeconfigPath,
 			}
 
 			// Set debug mode.
@@ -345,11 +305,6 @@ func getCreateClusterCmdFlags(cmd *cobra.Command, tracker *analytics.Tracker, cm
 		return ClusterCmdFlags{}, fmt.Errorf(WrappedErrMessage, ErrParsingFlag, "skip-deps-validation")
 	}
 
-	kubeconfig, err := cmdutil.StringFlag(cmd, "kubeconfig", tracker, cmdEvent)
-	if err != nil {
-		return ClusterCmdFlags{}, fmt.Errorf(WrappedErrMessage, ErrParsingFlag, "kubeconfig")
-	}
-
 	https, err := cmdutil.BoolFlag(cmd, "https", tracker, cmdEvent)
 	if err != nil {
 		return ClusterCmdFlags{}, fmt.Errorf(WrappedErrMessage, ErrParsingFlag, "https")
@@ -384,7 +339,6 @@ func getCreateClusterCmdFlags(cmd *cobra.Command, tracker *analytics.Tracker, cm
 		SkipDepsValidation: skipDepsValidation,
 		NoTTY:              noTTY,
 		Force:              force,
-		Kubeconfig:         kubeconfig,
 		HTTPS:              https,
 		Timeout:            timeout,
 		Outdir:             outdir,

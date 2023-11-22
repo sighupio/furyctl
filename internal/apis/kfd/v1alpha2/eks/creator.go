@@ -75,7 +75,6 @@ func (v *ClusterCreator) SetProperties(props []cluster.CreatorProperty) {
 	v.stateStore = state.NewStore(
 		v.paths.DistroPath,
 		v.paths.ConfigPath,
-		v.paths.Kubeconfig,
 		v.paths.WorkDir,
 		v.kfdManifest.Tools.Common.Kubectl.Version,
 		v.paths.BinPath,
@@ -129,11 +128,6 @@ func (v *ClusterCreator) SetProperty(name string, value any) {
 	case cluster.CreatorPropertyBinPath:
 		if s, ok := value.(string); ok {
 			v.paths.BinPath = s
-		}
-
-	case cluster.CreatorPropertyKubeconfig:
-		if s, ok := value.(string); ok {
-			v.paths.Kubeconfig = s
 		}
 
 	case cluster.CreatorPropertyDryRun:
@@ -315,7 +309,6 @@ func (c *ClusterCreator) CreateAsync(
 		c.kfdManifest,
 		string(c.furyctlConf.Kind),
 		c.dryRun,
-		c.paths.Kubeconfig,
 		c.upgrade,
 		c.force,
 		upgrade,
@@ -666,7 +659,6 @@ func (v *ClusterCreator) setupPhases(upgr *upgrade.Upgrade) (
 		infra.TerraformOutputsPath,
 		v.dryRun,
 		v.phase,
-		v.paths.Kubeconfig,
 		upgr,
 	)
 	if err != nil {
@@ -678,7 +670,6 @@ func (v *ClusterCreator) setupPhases(upgr *upgrade.Upgrade) (
 		v.kfdManifest,
 		string(v.furyctlConf.Kind),
 		v.dryRun,
-		v.paths.Kubeconfig,
 	)
 	if err != nil {
 		return nil, nil, nil, nil, nil, fmt.Errorf("error while initiating plugins phase: %w", err)

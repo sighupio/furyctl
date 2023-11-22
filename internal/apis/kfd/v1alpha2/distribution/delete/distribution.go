@@ -12,6 +12,7 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/sighupio/fury-distribution/pkg/apis/config"
+	"github.com/sighupio/fury-distribution/pkg/apis/kfddistribution/v1alpha2/public"
 	"github.com/sighupio/furyctl/internal/cluster"
 	"github.com/sighupio/furyctl/internal/tool/kubectl"
 	"github.com/sighupio/furyctl/internal/tool/shell"
@@ -28,18 +29,18 @@ type Ingress struct {
 
 type Distribution struct {
 	*cluster.OperationPhase
+	furyctlConf public.KfddistributionKfdV1Alpha2
 	kubeRunner  *kubectl.Runner
 	shellRunner *shell.Runner
 	dryRun      bool
-	kubeconfig  string
 }
 
 func NewDistribution(
+	furyctlConf public.KfddistributionKfdV1Alpha2,
 	dryRun bool,
 	workDir,
 	binPath string,
 	kfdManifest config.KFD,
-	kubeconfig string,
 ) (*Distribution, error) {
 	distroDir := path.Join(workDir, cluster.OperationPhaseDistribution)
 
@@ -50,12 +51,12 @@ func NewDistribution(
 
 	return &Distribution{
 		OperationPhase: phaseOp,
+		furyctlConf:    furyctlConf,
 		kubeRunner: kubectl.NewRunner(
 			execx.NewStdExecutor(),
 			kubectl.Paths{
-				Kubectl:    phaseOp.KubectlPath,
-				WorkDir:    path.Join(phaseOp.Path, "manifests"),
-				Kubeconfig: kubeconfig,
+				Kubectl: phaseOp.KubectlPath,
+				WorkDir: path.Join(phaseOp.Path, "manifests"),
 			},
 			true,
 			true,
@@ -68,8 +69,7 @@ func NewDistribution(
 				WorkDir: path.Join(phaseOp.Path, "manifests"),
 			},
 		),
-		dryRun:     dryRun,
-		kubeconfig: kubeconfig,
+		dryRun: dryRun,
 	}, nil
 }
 
@@ -84,6 +84,12 @@ func (d *Distribution) Exec() error {
 		return nil
 	}
 
+	if d.dryRun {
+		logrus.Info("Kubernetes Fury Distribution deleted successfully (dry-run mode)")
+
+		return nil
+	}
+
 	// Check cluster connection and requirements.
 	logrus.Info("Checking that the cluster is reachable...")
 
@@ -93,20 +99,14 @@ func (d *Distribution) Exec() error {
 		return errClusterConnect
 	}
 
-	if d.dryRun {
-		if _, err := d.shellRunner.Run(path.Join(d.Path, "scripts", "delete.sh"), "true", d.kubeconfig); err != nil {
-			return fmt.Errorf("error deleting resources: %w", err)
-		}
-
-		return nil
-	}
-
 	logrus.Info("Deleting kubernetes resources...")
 
 	// Delete manifests.
-	if _, err := d.shellRunner.Run(path.Join(d.Path, "scripts", "delete.sh"), "false", d.kubeconfig); err != nil {
+	if _, err := d.shellRunner.Run(path.Join(d.Path, "scripts", "delete.sh")); err != nil {
 		return fmt.Errorf("error deleting resources: %w", err)
 	}
+
+	logrus.Info("Kubernetes Fury Distribution deleted successfully")
 
 	return nil
 }

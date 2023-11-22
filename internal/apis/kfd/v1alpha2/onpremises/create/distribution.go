@@ -139,7 +139,7 @@ func (d *Distribution) Exec(reducers v1alpha2.Reducers) error {
 	// Apply manifests.
 	logrus.Info("Applying manifests...")
 
-	if _, err := d.shellRunner.Run(path.Join(d.Path, "scripts", "apply.sh"), "false", d.paths.Kubeconfig); err != nil {
+	if _, err := d.shellRunner.Run(path.Join(d.Path, "scripts", "apply.sh")); err != nil {
 		return fmt.Errorf("error applying manifests: %w", err)
 	}
 
@@ -181,8 +181,6 @@ func (d *Distribution) runReducers(
 
 		if _, err := d.shellRunner.Run(
 			path.Join(d.Path, "scripts", fmt.Sprintf("%s.sh", lifecycle)),
-			"true",
-			d.paths.Kubeconfig,
 		); err != nil {
 			return fmt.Errorf("error applying manifests: %w", err)
 		}
@@ -312,7 +310,6 @@ func NewDistribution(
 		stateStore: state.NewStore(
 			paths.DistroPath,
 			paths.ConfigPath,
-			paths.Kubeconfig,
 			paths.WorkDir,
 			kfdManifest.Tools.Common.Kubectl.Version,
 			paths.BinPath,
@@ -327,9 +324,8 @@ func NewDistribution(
 		kubeRunner: kubectl.NewRunner(
 			execx.NewStdExecutor(),
 			kubectl.Paths{
-				Kubectl:    phase.KubectlPath,
-				WorkDir:    path.Join(phase.Path, "manifests"),
-				Kubeconfig: paths.Kubeconfig,
+				Kubectl: phase.KubectlPath,
+				WorkDir: path.Join(phase.Path, "manifests"),
 			},
 			true,
 			true,
