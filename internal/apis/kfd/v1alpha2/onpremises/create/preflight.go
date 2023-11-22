@@ -48,7 +48,6 @@ type PreFlight struct {
 	stateStore      state.Storer
 	distroPath      string
 	furyctlConfPath string
-	kubeconfig      string
 	kubeRunner      *kubectl.Runner
 	ansibleRunner   *ansible.Runner
 	kfdManifest     config.KFD
@@ -60,7 +59,6 @@ func NewPreFlight(
 	kfdManifest config.KFD,
 	paths cluster.CreatorPaths,
 	dryRun bool,
-	kubeconfig string,
 	stateStore state.Storer,
 ) (*PreFlight, error) {
 	preFlightDir := path.Join(paths.WorkDir, cluster.OperationPhasePreFlight)
@@ -88,15 +86,13 @@ func NewPreFlight(
 		kubeRunner: kubectl.NewRunner(
 			execx.NewStdExecutor(),
 			kubectl.Paths{
-				Kubectl:    phase.KubectlPath,
-				WorkDir:    phase.Path,
-				Kubeconfig: paths.Kubeconfig,
+				Kubectl: phase.KubectlPath,
+				WorkDir: phase.Path,
 			},
 			true,
 			true,
 			false,
 		),
-		kubeconfig:  kubeconfig,
 		kfdManifest: kfdManifest,
 		dryRun:      dryRun,
 	}, nil
@@ -180,7 +176,7 @@ func (p *PreFlight) Exec() (*Status, error) {
 		return status, nil //nolint:nilerr // we want to return nil here
 	}
 
-	if err := kubex.SetConfigEnv(path.Join(p.OperationPhase.Path, "admin.conf")); err != nil {
+	if err := kubex.SetConfigEnv(path.Join(p.Path, "admin.conf")); err != nil {
 		return status, fmt.Errorf("error setting kubeconfig env: %w", err)
 	}
 

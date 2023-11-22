@@ -14,6 +14,7 @@ import (
 	"github.com/sighupio/fury-distribution/pkg/apis/kfddistribution/v1alpha2/public"
 	del "github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/distribution/delete"
 	"github.com/sighupio/furyctl/internal/cluster"
+	kubex "github.com/sighupio/furyctl/internal/x/kube"
 )
 
 type ClusterDeleter struct {
@@ -59,11 +60,6 @@ func (d *ClusterDeleter) SetProperty(name string, value any) {
 			d.paths.BinPath = s
 		}
 
-	case cluster.DeleterPropertyKubeconfig:
-		if s, ok := value.(string); ok {
-			d.paths.Kubeconfig = s
-		}
-
 	case cluster.DeleterPropertyDryRun:
 		if b, ok := value.(bool); ok {
 			d.dryRun = b
@@ -76,9 +72,14 @@ func (d *ClusterDeleter) Delete() error {
 		return ErrUnsupportedPhase
 	}
 
-	distro, err := del.NewDistribution(d.dryRun, d.paths.WorkDir, d.paths.BinPath, d.kfdManifest, d.paths.Kubeconfig)
+	distro, err := del.NewDistribution(d.furyctlConf, d.dryRun, d.paths.WorkDir, d.paths.BinPath, d.kfdManifest)
 	if err != nil {
 		return fmt.Errorf("error while initiating distribution phase: %w", err)
+	}
+
+	// Move this code to delete preflight.
+	if err := kubex.SetConfigEnv(d.furyctlConf.Spec.Distribution.Kubeconfig); err != nil {
+		return fmt.Errorf("error setting kubeconfig env: %w", err)
 	}
 
 	if err := distro.Exec(); err != nil {

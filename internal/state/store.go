@@ -32,11 +32,10 @@ type Store struct {
 	KubectlRunner *kubectl.Runner
 }
 
-func NewStore(distroPath, configPath, kubeconfigPath, workDir, kubectlVersion, binPath string) *Store {
+func NewStore(distroPath, configPath, workDir, kubectlVersion, binPath string) *Store {
 	runner := kubectl.NewRunner(execx.NewStdExecutor(), kubectl.Paths{
-		Kubectl:    path.Join(binPath, "kubectl", kubectlVersion, "kubectl"),
-		WorkDir:    workDir,
-		Kubeconfig: kubeconfigPath,
+		Kubectl: path.Join(binPath, "kubectl", kubectlVersion, "kubectl"),
+		WorkDir: workDir,
 	}, true, true, false)
 
 	return &Store{

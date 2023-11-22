@@ -45,7 +45,6 @@ type Distribution struct {
 	kubeRunner      *kubectl.Runner
 	dryRun          bool
 	shellRunner     *shell.Runner
-	kubeconfig      string
 	upgrade         *upgrade.Upgrade
 }
 
@@ -54,7 +53,6 @@ func NewDistribution(
 	furyctlConf public.KfddistributionKfdV1Alpha2,
 	kfdManifest config.KFD,
 	dryRun bool,
-	kubeconfig string,
 	upgr *upgrade.Upgrade,
 ) (*Distribution, error) {
 	distroDir := path.Join(paths.WorkDir, cluster.OperationPhaseDistribution)
@@ -72,7 +70,6 @@ func NewDistribution(
 		stateStore: state.NewStore(
 			paths.DistroPath,
 			paths.ConfigPath,
-			paths.Kubeconfig,
 			paths.WorkDir,
 			kfdManifest.Tools.Common.Kubectl.Version,
 			paths.BinPath,
@@ -80,9 +77,8 @@ func NewDistribution(
 		kubeRunner: kubectl.NewRunner(
 			execx.NewStdExecutor(),
 			kubectl.Paths{
-				Kubectl:    phaseOp.KubectlPath,
-				WorkDir:    path.Join(phaseOp.Path, "manifests"),
-				Kubeconfig: paths.Kubeconfig,
+				Kubectl: phaseOp.KubectlPath,
+				WorkDir: path.Join(phaseOp.Path, "manifests"),
 			},
 			true,
 			true,
@@ -95,9 +91,8 @@ func NewDistribution(
 				WorkDir: path.Join(phaseOp.Path, "manifests"),
 			},
 		),
-		dryRun:     dryRun,
-		kubeconfig: kubeconfig,
-		upgrade:    upgr,
+		dryRun:  dryRun,
+		upgrade: upgr,
 	}, nil
 }
 
@@ -223,7 +218,7 @@ func (d *Distribution) Exec(reducers v1alpha2.Reducers) error {
 	// Apply manifests.
 	logrus.Info("Applying manifests...")
 
-	if _, err := d.shellRunner.Run(path.Join(d.Path, "scripts", "apply.sh"), "false", d.kubeconfig); err != nil {
+	if _, err := d.shellRunner.Run(path.Join(d.Path, "scripts", "apply.sh")); err != nil {
 		return fmt.Errorf("error applying manifests: %w", err)
 	}
 
@@ -311,8 +306,6 @@ func (d *Distribution) runReducers(
 
 		if _, err := d.shellRunner.Run(
 			path.Join(d.Path, "scripts", fmt.Sprintf("%s.sh", lifecycle)),
-			"true",
-			d.kubeconfig,
 		); err != nil {
 			return fmt.Errorf("error applying manifests: %w", err)
 		}

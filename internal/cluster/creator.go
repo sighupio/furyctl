@@ -23,7 +23,6 @@ const (
 	CreatorPropertyPhase          = "phase"
 	CreatorPropertySkipVpn        = "skipvpn"
 	CreatorPropertyVpnAutoConnect = "vpnautoconnect"
-	CreatorPropertyKubeconfig     = "kubeconfig"
 	CreatorPropertyDryRun         = "dryrun"
 	CreatorPropertyForce          = "force"
 	CreatorPropertyUpgrade        = "upgrade"
@@ -40,7 +39,6 @@ type CreatorPaths struct {
 	WorkDir    string
 	DistroPath string
 	BinPath    string
-	Kubeconfig string
 }
 
 type CreatorFactory func(configPath string, props []CreatorProperty) (Creator, error)
@@ -100,10 +98,6 @@ func NewCreator(
 			{
 				Name:  CreatorPropertyWorkDir,
 				Value: paths.WorkDir,
-			},
-			{
-				Name:  CreatorPropertyKubeconfig,
-				Value: paths.Kubeconfig,
 			},
 			{
 				Name:  CreatorPropertyDryRun,

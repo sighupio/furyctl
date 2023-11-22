@@ -64,7 +64,6 @@ type Distribution struct {
 	kubeRunner       *kubectl.Runner
 	dryRun           bool
 	phase            string
-	kubeconfig       string
 	upgrade          *upgrade.Upgrade
 }
 
@@ -79,7 +78,6 @@ func NewDistribution(
 	infraOutputsPath string,
 	dryRun bool,
 	phase string,
-	kubeconfig string,
 	upgrade *upgrade.Upgrade,
 ) (*Distribution, error) {
 	distroDir := path.Join(paths.WorkDir, cluster.OperationPhaseDistribution)
@@ -99,7 +97,6 @@ func NewDistribution(
 		stateStore: state.NewStore(
 			paths.DistroPath,
 			paths.ConfigPath,
-			kubeconfig,
 			paths.WorkDir,
 			kfdManifest.Tools.Common.Kubectl.Version,
 			paths.BinPath,
@@ -124,18 +121,16 @@ func NewDistribution(
 		kubeRunner: kubectl.NewRunner(
 			execx.NewStdExecutor(),
 			kubectl.Paths{
-				Kubectl:    phaseOp.KubectlPath,
-				WorkDir:    path.Join(phaseOp.Path, "manifests"),
-				Kubeconfig: paths.Kubeconfig,
+				Kubectl: phaseOp.KubectlPath,
+				WorkDir: path.Join(phaseOp.Path, "manifests"),
 			},
 			true,
 			true,
 			false,
 		),
-		dryRun:     dryRun,
-		phase:      phase,
-		kubeconfig: kubeconfig,
-		upgrade:    upgrade,
+		dryRun:  dryRun,
+		phase:   phase,
+		upgrade: upgrade,
 	}, nil
 }
 
@@ -225,10 +220,6 @@ func (d *Distribution) Exec(reducers v1alpha2.Reducers) error {
 			return err
 		}
 
-		if _, err := d.shellRunner.Run(path.Join(d.Path, "scripts", "apply.sh"), "true", d.kubeconfig); err != nil {
-			return fmt.Errorf("error applying manifests: %w", err)
-		}
-
 		return nil
 	}
 
@@ -288,7 +279,7 @@ func (d *Distribution) Exec(reducers v1alpha2.Reducers) error {
 
 	logrus.Info("Applying manifests...")
 
-	if _, err := d.shellRunner.Run(path.Join(d.Path, "scripts", "apply.sh"), "false", d.kubeconfig); err != nil {
+	if _, err := d.shellRunner.Run(path.Join(d.Path, "scripts", "apply.sh")); err != nil {
 		return fmt.Errorf("error applying manifests: %w", err)
 	}
 
@@ -359,8 +350,6 @@ func (d *Distribution) runReducers(
 
 		if _, err := d.shellRunner.Run(
 			path.Join(d.Path, "scripts", fmt.Sprintf("%s.sh", lifecycle)),
-			"true",
-			d.kubeconfig,
 		); err != nil {
 			return fmt.Errorf("error applying manifests: %w", err)
 		}

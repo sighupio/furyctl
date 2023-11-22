@@ -20,6 +20,7 @@ import (
 	"github.com/sighupio/furyctl/internal/state"
 	"github.com/sighupio/furyctl/internal/tool/kubectl"
 	execx "github.com/sighupio/furyctl/internal/x/exec"
+	kubex "github.com/sighupio/furyctl/internal/x/kube"
 	yamlx "github.com/sighupio/furyctl/internal/x/yaml"
 )
 
@@ -39,7 +40,6 @@ type PreFlight struct {
 	stateStore      state.Storer
 	distroPath      string
 	furyctlConfPath string
-	kubeconfig      string
 	kubeRunner      *kubectl.Runner
 	dryRun          bool
 }
@@ -49,7 +49,6 @@ func NewPreFlight(
 	kfdManifest config.KFD,
 	paths cluster.CreatorPaths,
 	dryRun bool,
-	kubeconfig string,
 	stateStore state.Storer,
 ) (*PreFlight, error) {
 	preFlightDir := path.Join(paths.WorkDir, cluster.OperationPhasePreFlight)
@@ -68,16 +67,14 @@ func NewPreFlight(
 		kubeRunner: kubectl.NewRunner(
 			execx.NewStdExecutor(),
 			kubectl.Paths{
-				Kubectl:    phase.KubectlPath,
-				WorkDir:    phase.Path,
-				Kubeconfig: paths.Kubeconfig,
+				Kubectl: phase.KubectlPath,
+				WorkDir: phase.Path,
 			},
 			true,
 			true,
 			false,
 		),
-		kubeconfig: kubeconfig,
-		dryRun:     dryRun,
+		dryRun: dryRun,
 	}, nil
 }
 
@@ -91,6 +88,10 @@ func (p *PreFlight) Exec() (*Status, error) {
 
 	if err := p.CreateFolder(); err != nil {
 		return status, fmt.Errorf("error creating preflight phase folder: %w", err)
+	}
+
+	if err := kubex.SetConfigEnv(p.furyctlConf.Spec.Distribution.Kubeconfig); err != nil {
+		return status, fmt.Errorf("error setting kubeconfig env: %w", err)
 	}
 
 	logrus.Info("Checking that the cluster is reachable...")

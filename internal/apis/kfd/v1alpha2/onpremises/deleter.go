@@ -6,6 +6,7 @@ package onpremises
 
 import (
 	"fmt"
+	"path"
 	"strings"
 
 	"github.com/sirupsen/logrus"
@@ -14,6 +15,7 @@ import (
 	"github.com/sighupio/fury-distribution/pkg/apis/onpremises/v1alpha2/public"
 	"github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/onpremises/delete"
 	"github.com/sighupio/furyctl/internal/cluster"
+	kubex "github.com/sighupio/furyctl/internal/x/kube"
 )
 
 type ClusterDeleter struct {
@@ -45,11 +47,6 @@ func (c *ClusterDeleter) SetProperty(name string, value any) {
 	case cluster.CreatorPropertyBinPath:
 		if s, ok := value.(string); ok {
 			c.paths.BinPath = s
-		}
-
-	case cluster.CreatorPropertyKubeconfig:
-		if s, ok := value.(string); ok {
-			c.paths.Kubeconfig = s
 		}
 
 	case cluster.CreatorPropertyFuryctlConf:
@@ -96,6 +93,11 @@ func (c *ClusterDeleter) Delete() error {
 	)
 	if err != nil {
 		return fmt.Errorf("error while initiating distribution phase: %w", err)
+	}
+
+	// Move this code to delete preflight.
+	if err := kubex.SetConfigEnv(path.Join(c.paths.WorkDir, cluster.OperationPhasePreFlight, "admin.conf")); err != nil {
+		return fmt.Errorf("error setting kubeconfig env: %w", err)
 	}
 
 	switch c.phase {

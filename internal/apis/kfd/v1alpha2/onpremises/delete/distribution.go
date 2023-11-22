@@ -60,7 +60,7 @@ func (d *Distribution) Exec() error {
 	logrus.Info("Deleting kubernetes resources...")
 
 	// Delete manifests.
-	if _, err := d.shellRunner.Run(path.Join(d.Path, "scripts", "delete.sh"), "false", d.paths.Kubeconfig); err != nil {
+	if _, err := d.shellRunner.Run(path.Join(d.Path, "scripts", "delete.sh")); err != nil {
 		return fmt.Errorf("error deleting resources: %w", err)
 	}
 
@@ -98,9 +98,8 @@ func NewDistribution(
 		kubeRunner: kubectl.NewRunner(
 			execx.NewStdExecutor(),
 			kubectl.Paths{
-				Kubectl:    phase.KubectlPath,
-				WorkDir:    path.Join(phase.Path, "manifests"),
-				Kubeconfig: paths.Kubeconfig,
+				Kubectl: phase.KubectlPath,
+				WorkDir: path.Join(phase.Path, "manifests"),
 			},
 			true,
 			true,
