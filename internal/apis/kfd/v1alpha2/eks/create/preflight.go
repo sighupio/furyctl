@@ -32,6 +32,7 @@ import (
 	"github.com/sighupio/furyctl/internal/tool/terraform"
 	execx "github.com/sighupio/furyctl/internal/x/exec"
 	iox "github.com/sighupio/furyctl/internal/x/io"
+	kubex "github.com/sighupio/furyctl/internal/x/kube"
 	yamlx "github.com/sighupio/furyctl/internal/x/yaml"
 )
 
@@ -62,7 +63,6 @@ type PreFlight struct {
 	stateStore      state.Storer
 	distroPath      string
 	furyctlConfPath string
-	kubeconfig      string
 	tfRunnerKube    *terraform.Runner
 	tfRunnerInfra   *terraform.Runner
 	vpnConnector    *vpn.Connector
@@ -92,8 +92,6 @@ func NewPreFlight(
 		return nil, fmt.Errorf("error creating preflight phase: %w", err)
 	}
 
-	kubeconfig := path.Join(phase.Path, "secrets", "kubeconfig")
-
 	vpnConnector, err := vpn.NewConnector(
 		furyctlConf.Metadata.Name,
 		path.Join(phase.Path, "secrets"),
@@ -113,7 +111,6 @@ func NewPreFlight(
 		stateStore: state.NewStore(
 			paths.DistroPath,
 			paths.ConfigPath,
-			kubeconfig,
 			paths.WorkDir,
 			kfdManifest.Tools.Common.Kubectl.Version,
 			paths.BinPath,
@@ -137,9 +134,8 @@ func NewPreFlight(
 		kubeRunner: kubectl.NewRunner(
 			execx.NewStdExecutor(),
 			kubectl.Paths{
-				Kubectl:    phase.KubectlPath,
-				WorkDir:    phase.Path,
-				Kubeconfig: kubeconfig,
+				Kubectl: phase.KubectlPath,
+				WorkDir: phase.Path,
 			},
 			true,
 			true,
@@ -153,7 +149,6 @@ func NewPreFlight(
 			},
 		),
 		vpnConnector: vpnConnector,
-		kubeconfig:   kubeconfig,
 		dryRun:       dryRun,
 	}, nil
 }
@@ -204,6 +199,8 @@ func (p *PreFlight) Exec() (*Status, error) {
 		return status, nil //nolint:nilerr // we want to return nil here
 	}
 
+	kubeconfig := path.Join(p.Path, "secrets", "kubeconfig")
+
 	logrus.Info("Updating kubeconfig...")
 
 	if _, err := p.awsRunner.Eks(
@@ -212,11 +209,15 @@ func (p *PreFlight) Exec() (*Status, error) {
 		"--name",
 		p.furyctlConf.Metadata.Name,
 		"--kubeconfig",
-		p.kubeconfig,
+		kubeconfig,
 		"--region",
 		string(p.furyctlConf.Spec.Region),
 	); err != nil {
 		return status, fmt.Errorf("error updating kubeconfig: %w", err)
+	}
+
+	if err := kubex.SetConfigEnv(kubeconfig); err != nil {
+		return status, fmt.Errorf("error setting kubeconfig env: %w", err)
 	}
 
 	if p.isVPNRequired() {

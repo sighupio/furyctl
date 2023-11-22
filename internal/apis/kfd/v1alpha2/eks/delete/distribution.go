@@ -44,7 +44,6 @@ func NewDistribution(
 	workDir,
 	binPath string,
 	kfdManifest config.KFD,
-	kubeconfig string,
 ) (*Distribution, error) {
 	distroDir := path.Join(workDir, cluster.OperationPhaseDistribution)
 
@@ -75,7 +74,6 @@ func NewDistribution(
 		kubeClient: kubernetes.NewClient(
 			phase.KubectlPath,
 			path.Join(phase.Path, "manifests"),
-			kubeconfig,
 			true,
 			true,
 			false,
@@ -88,8 +86,7 @@ func NewDistribution(
 				WorkDir: path.Join(phase.Path, "manifests"),
 			},
 		),
-		kubeconfig: kubeconfig,
-		dryRun:     dryRun,
+		dryRun: dryRun,
 	}, nil
 }
 

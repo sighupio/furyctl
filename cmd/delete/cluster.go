@@ -43,7 +43,6 @@ type ClusterCmdFlags struct {
 	DryRun         bool
 	NoTTY          bool
 	HTTPS          bool
-	Kubeconfig     string
 	Outdir         string
 }
 
@@ -76,35 +75,6 @@ func NewClusterCmd(tracker *analytics.Tracker) *cobra.Command {
 
 			if outDir == "" {
 				outDir = homeDir
-			}
-
-			kubeconfigPath := flags.Kubeconfig
-
-			// Check if kubeconfig is needed.
-			if flags.Phase == cluster.OperationPhaseDistribution || flags.Phase == cluster.OperationPhaseAll {
-				if kubeconfigPath == "" {
-					kubeconfigFromEnv := os.Getenv("KUBECONFIG")
-
-					if kubeconfigFromEnv == "" {
-						return ErrKubeconfigReq
-					}
-
-					kubeconfigPath = kubeconfigFromEnv
-
-					logrus.Warnf("Missing --kubeconfig flag, falling back to KUBECONFIG from environment: %s", kubeconfigFromEnv)
-				}
-
-				kubeAbsPath, err := filepath.Abs(kubeconfigPath)
-				if err != nil {
-					return fmt.Errorf("error while getting absolute path of kubeconfig: %w", err)
-				}
-
-				kubeconfigPath = kubeAbsPath
-
-				// Check the kubeconfig file exists.
-				if _, err := os.Stat(kubeconfigPath); os.IsNotExist(err) {
-					return fmt.Errorf("%w in %s", ErrKubeconfigNotFound, kubeconfigPath)
-				}
 			}
 
 			if flags.BinPath == "" {
@@ -160,7 +130,6 @@ func NewClusterCmd(tracker *analytics.Tracker) *cobra.Command {
 				ConfigPath: flags.FuryctlPath,
 				WorkDir:    basePath,
 				BinPath:    flags.BinPath,
-				Kubeconfig: kubeconfigPath,
 			}
 
 			clusterDeleter, err := cluster.NewDeleter(
@@ -345,11 +314,6 @@ func getDeleteClusterCmdFlags(cmd *cobra.Command, tracker *analytics.Tracker, cm
 		return ClusterCmdFlags{}, fmt.Errorf("%w: %s", ErrParsingFlag, "no-tty")
 	}
 
-	kubeconfig, err := cmdutil.StringFlag(cmd, "kubeconfig", tracker, cmdEvent)
-	if err != nil {
-		return ClusterCmdFlags{}, fmt.Errorf("%w: %s", ErrParsingFlag, "kubeconfig")
-	}
-
 	force, err := cmdutil.BoolFlag(cmd, "force", tracker, cmdEvent)
 	if err != nil {
 		return ClusterCmdFlags{}, fmt.Errorf("%w: force", ErrParsingFlag)
@@ -376,7 +340,6 @@ func getDeleteClusterCmdFlags(cmd *cobra.Command, tracker *analytics.Tracker, cm
 		DryRun:         dryRun,
 		Force:          force,
 		NoTTY:          noTTY,
-		Kubeconfig:     kubeconfig,
 		HTTPS:          https,
 		Outdir:         outdir,
 	}, nil

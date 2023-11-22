@@ -124,7 +124,6 @@ func FakeClient(t *testing.T) *kubernetes.Client {
 	return kubernetes.NewClient(
 		"kubectl",
 		"",
-		"",
 		true,
 		true,
 		true,

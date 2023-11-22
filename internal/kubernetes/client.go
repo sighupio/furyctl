@@ -28,8 +28,7 @@ type Client struct {
 
 func NewClient(
 	binPath,
-	workDir,
-	kubeconfig string,
+	workDir string,
 	serverSide,
 	skipNotFound,
 	clientVersion bool,
@@ -39,9 +38,8 @@ func NewClient(
 		kubeRunner: kubectl.NewRunner(
 			executor,
 			kubectl.Paths{
-				Kubectl:    binPath,
-				WorkDir:    workDir,
-				Kubeconfig: kubeconfig,
+				Kubectl: binPath,
+				WorkDir: workDir,
 			},
 			serverSide,
 			skipNotFound,
