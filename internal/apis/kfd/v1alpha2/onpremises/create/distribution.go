@@ -45,7 +45,7 @@ type Distribution struct {
 	upgrade         *upgrade.Upgrade
 }
 
-func (d *Distribution) Exec(reducers v1alpha2.Reducers) error {
+func (d *Distribution) Exec(reducers v1alpha2.Reducers, startFrom string) error {
 	logrus.Info("Installing Kubernetes Fury Distribution...")
 	logrus.Debug("Create: running distribution phase...")
 
@@ -131,25 +131,29 @@ func (d *Distribution) Exec(reducers v1alpha2.Reducers) error {
 		return fmt.Errorf("error running pre-apply reducers: %w", err)
 	}
 
-	// Run upgrade script if needed.
-	if err := d.upgrade.Exec(d.Path, "pre-distribution"); err != nil {
-		return fmt.Errorf("error running upgrade: %w", err)
+	if startFrom == "" || startFrom == cluster.OperationSubPhasePreDistribution {
+		// Run upgrade script if needed.
+		if err := d.upgrade.Exec(d.Path, "pre-distribution"); err != nil {
+			return fmt.Errorf("error running upgrade: %w", err)
+		}
 	}
 
-	// Apply manifests.
-	logrus.Info("Applying manifests...")
+	if startFrom != cluster.OperationSubPhasePostDistribution {
+		// Apply manifests.
+		logrus.Info("Applying manifests...")
 
-	if _, err := d.shellRunner.Run(path.Join(d.Path, "scripts", "apply.sh")); err != nil {
-		return fmt.Errorf("error applying manifests: %w", err)
-	}
+		if _, err := d.shellRunner.Run(path.Join(d.Path, "scripts", "apply.sh")); err != nil {
+			return fmt.Errorf("error applying manifests: %w", err)
+		}
 
-	if err := d.runReducers(
-		reducers,
-		mCfg,
-		LifecyclePostApply,
-		[]string{"manifests", "terraform", ".gitignore"},
-	); err != nil {
-		return fmt.Errorf("error running post-apply reducers: %w", err)
+		if err := d.runReducers(
+			reducers,
+			mCfg,
+			LifecyclePostApply,
+			[]string{"manifests", "terraform", ".gitignore"},
+		); err != nil {
+			return fmt.Errorf("error running post-apply reducers: %w", err)
+		}
 	}
 
 	// Run upgrade script if needed.

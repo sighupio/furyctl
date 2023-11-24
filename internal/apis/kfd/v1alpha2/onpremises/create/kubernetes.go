@@ -35,7 +35,7 @@ type Kubernetes struct {
 	upgrade         *upgrade.Upgrade
 }
 
-func (k *Kubernetes) Exec() error {
+func (k *Kubernetes) Exec(startFrom string) error {
 	logrus.Info("Creating Kubernetes Fury cluster...")
 	logrus.Debug("Create: running kubernetes phase...")
 
@@ -110,36 +110,40 @@ func (k *Kubernetes) Exec() error {
 		return fmt.Errorf("error checking hosts: %w", err)
 	}
 
-	// Run upgrade script if needed.
-	if err := k.upgrade.Exec(k.Path, "pre-kubernetes"); err != nil {
-		return fmt.Errorf("error running upgrade: %w", err)
+	if startFrom == "" || startFrom == cluster.OperationSubPhasePreKubernetes {
+		// Run upgrade script if needed.
+		if err := k.upgrade.Exec(k.Path, "pre-kubernetes"); err != nil {
+			return fmt.Errorf("error running upgrade: %w", err)
+		}
 	}
 
-	logrus.Info("Running ansible playbook...")
+	if startFrom != cluster.OperationSubPhasePostKubernetes {
+		logrus.Info("Running ansible playbook...")
 
-	// Apply create playbook.
-	if _, err := k.ansibleRunner.Playbook("create-playbook.yaml"); err != nil {
-		return fmt.Errorf("error applying playbook: %w", err)
-	}
+		// Apply create playbook.
+		if _, err := k.ansibleRunner.Playbook("create-playbook.yaml"); err != nil {
+			return fmt.Errorf("error applying playbook: %w", err)
+		}
 
-	if err := kubex.SetConfigEnv(path.Join(k.OperationPhase.Path, "admin.conf")); err != nil {
-		return fmt.Errorf("error setting kubeconfig env: %w", err)
-	}
+		if err := kubex.SetConfigEnv(path.Join(k.OperationPhase.Path, "admin.conf")); err != nil {
+			return fmt.Errorf("error setting kubeconfig env: %w", err)
+		}
 
-	if err := kubex.CopyToWorkDir(path.Join(k.OperationPhase.Path, "admin.conf"), "kubeconfig"); err != nil {
-		return fmt.Errorf("error copying kubeconfig: %w", err)
-	}
+		if err := kubex.CopyToWorkDir(path.Join(k.OperationPhase.Path, "admin.conf"), "kubeconfig"); err != nil {
+			return fmt.Errorf("error copying kubeconfig: %w", err)
+		}
 
-	if k.furyctlConf.Spec.Kubernetes.Advanced != nil && k.furyctlConf.Spec.Kubernetes.Advanced.Users != nil {
-		for _, username := range k.furyctlConf.Spec.Kubernetes.Advanced.Users.Names {
-			if err := kubex.CopyToWorkDir(
-				path.Join(
-					k.OperationPhase.Path,
+		if k.furyctlConf.Spec.Kubernetes.Advanced != nil && k.furyctlConf.Spec.Kubernetes.Advanced.Users != nil {
+			for _, username := range k.furyctlConf.Spec.Kubernetes.Advanced.Users.Names {
+				if err := kubex.CopyToWorkDir(
+					path.Join(
+						k.OperationPhase.Path,
+						fmt.Sprintf("%s.kubeconfig", username),
+					),
 					fmt.Sprintf("%s.kubeconfig", username),
-				),
-				fmt.Sprintf("%s.kubeconfig", username),
-			); err != nil {
-				return fmt.Errorf("error copying %s.kubeconfig: %w", username, err)
+				); err != nil {
+					return fmt.Errorf("error copying %s.kubeconfig: %w", username, err)
+				}
 			}
 		}
 	}

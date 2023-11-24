@@ -121,7 +121,7 @@ func NewKubernetes(
 	}, nil
 }
 
-func (k *Kubernetes) Exec() error {
+func (k *Kubernetes) Exec(startFrom string) error {
 	timestamp := time.Now().Unix()
 
 	logrus.Info("Creating Kubernetes Fury cluster...")
@@ -153,7 +153,7 @@ func (k *Kubernetes) Exec() error {
 		return fmt.Errorf("error running terraform init: %w", err)
 	}
 
-	if !k.dryRun {
+	if !k.dryRun && (startFrom == "" || startFrom == cluster.OperationSubPhasePreKubernetes) {
 		if err := k.upgrade.Exec(k.Path, "pre-kubernetes"); err != nil {
 			return fmt.Errorf("error running upgrade: %w", err)
 		}
@@ -210,37 +210,39 @@ func (k *Kubernetes) Exec() error {
 		}
 	}
 
-	logrus.Warn("Creating cloud resources, this could take a while...")
+	if startFrom != cluster.OperationSubPhasePostKubernetes {
+		logrus.Warn("Creating cloud resources, this could take a while...")
 
-	if err := k.tfRunner.Apply(timestamp); err != nil {
-		return fmt.Errorf("cannot create cloud resources: %w", err)
-	}
+		if err := k.tfRunner.Apply(timestamp); err != nil {
+			return fmt.Errorf("cannot create cloud resources: %w", err)
+		}
 
-	out, err := k.tfRunner.Output()
-	if err != nil {
-		return fmt.Errorf("error getting terraform output: %w", err)
-	}
+		out, err := k.tfRunner.Output()
+		if err != nil {
+			return fmt.Errorf("error getting terraform output: %w", err)
+		}
 
-	if out["kubeconfig"] == nil {
-		return errMissingKubeconfig
-	}
+		if out["kubeconfig"] == nil {
+			return errMissingKubeconfig
+		}
 
-	kubeString, ok := out["kubeconfig"].Value.(string)
-	if !ok {
-		return errWrongKubeconfig
-	}
+		kubeString, ok := out["kubeconfig"].Value.(string)
+		if !ok {
+			return errWrongKubeconfig
+		}
 
-	p, err := kubex.CreateConfig([]byte(kubeString), k.TerraformSecretsPath)
-	if err != nil {
-		return fmt.Errorf("error creating kubeconfig: %w", err)
-	}
+		p, err := kubex.CreateConfig([]byte(kubeString), k.TerraformSecretsPath)
+		if err != nil {
+			return fmt.Errorf("error creating kubeconfig: %w", err)
+		}
 
-	if err := kubex.SetConfigEnv(p); err != nil {
-		return fmt.Errorf("error setting kubeconfig env: %w", err)
-	}
+		if err := kubex.SetConfigEnv(p); err != nil {
+			return fmt.Errorf("error setting kubeconfig env: %w", err)
+		}
 
-	if err := kubex.CopyToWorkDir(p, "kubeconfig"); err != nil {
-		return fmt.Errorf("error copying kubeconfig: %w", err)
+		if err := kubex.CopyToWorkDir(p, "kubeconfig"); err != nil {
+			return fmt.Errorf("error copying kubeconfig: %w", err)
+		}
 	}
 
 	// Run upgrade script if needed.
