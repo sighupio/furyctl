@@ -88,7 +88,7 @@ func NewInfrastructure(
 	}, nil
 }
 
-func (i *Infrastructure) Exec() error {
+func (i *Infrastructure) Exec(startFrom string) error {
 	logrus.Info("Creating infrastructure...")
 
 	logrus.Debug("Create: running infrastructure phase...")
@@ -115,7 +115,7 @@ func (i *Infrastructure) Exec() error {
 		return fmt.Errorf("error running terraform init: %w", err)
 	}
 
-	if !i.dryRun {
+	if !i.dryRun && (startFrom == "" || startFrom == cluster.OperationSubPhasePreInfrastructure) {
 		if err := i.upgrade.Exec(i.Path, "pre-infrastructure"); err != nil {
 			return fmt.Errorf("error running upgrade: %w", err)
 		}
@@ -130,39 +130,41 @@ func (i *Infrastructure) Exec() error {
 		return nil
 	}
 
-	tfParser := parser.NewTfPlanParser(string(plan))
+	if startFrom != cluster.OperationSubPhasePostInfrastructure {
+		tfParser := parser.NewTfPlanParser(string(plan))
 
-	parsedPlan := tfParser.Parse()
+		parsedPlan := tfParser.Parse()
 
-	eksInf := eks.NewInfra()
+		eksInf := eks.NewInfra()
 
-	criticalResources := slices.Intersection(eksInf.GetCriticalTFResourceTypes(), parsedPlan.Destroy)
+		criticalResources := slices.Intersection(eksInf.GetCriticalTFResourceTypes(), parsedPlan.Destroy)
 
-	if len(criticalResources) > 0 {
-		logrus.Warnf("Deletion of the following critical resources has been detected: %s. See the logs for more details.",
-			strings.Join(criticalResources, ", "))
-		logrus.Warn("Do you want to proceed? write 'yes' to continue or anything else to abort: ")
+		if len(criticalResources) > 0 {
+			logrus.Warnf("Deletion of the following critical resources has been detected: %s. See the logs for more details.",
+				strings.Join(criticalResources, ", "))
+			logrus.Warn("Do you want to proceed? write 'yes' to continue or anything else to abort: ")
 
-		prompter := iox.NewPrompter(bufio.NewReader(os.Stdin))
+			prompter := iox.NewPrompter(bufio.NewReader(os.Stdin))
 
-		prompt, err := prompter.Ask("yes")
-		if err != nil {
-			return fmt.Errorf("error reading user input: %w", err)
+			prompt, err := prompter.Ask("yes")
+			if err != nil {
+				return fmt.Errorf("error reading user input: %w", err)
+			}
+
+			if !prompt {
+				return ErrAbortedByUser
+			}
 		}
 
-		if !prompt {
-			return ErrAbortedByUser
+		logrus.Warn("Creating cloud resources, this could take a while...")
+
+		if err := i.tfRunner.Apply(timestamp); err != nil {
+			return fmt.Errorf("cannot create cloud resources: %w", err)
 		}
-	}
 
-	logrus.Warn("Creating cloud resources, this could take a while...")
-
-	if err := i.tfRunner.Apply(timestamp); err != nil {
-		return fmt.Errorf("cannot create cloud resources: %w", err)
-	}
-
-	if _, err := i.tfRunner.Output(); err != nil {
-		return fmt.Errorf("error getting terraform output: %w", err)
+		if _, err := i.tfRunner.Output(); err != nil {
+			return fmt.Errorf("error getting terraform output: %w", err)
+		}
 	}
 
 	// Run upgrade script if needed.

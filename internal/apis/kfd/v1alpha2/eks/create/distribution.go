@@ -144,7 +144,7 @@ func (*Distribution) SupportsLifecycle(lifecycle string) bool {
 	}
 }
 
-func (d *Distribution) Exec(reducers v1alpha2.Reducers) error {
+func (d *Distribution) Exec(reducers v1alpha2.Reducers, startFrom string) error {
 	timestamp := time.Now().Unix()
 
 	logrus.Info("Installing Kubernetes Fury Distribution...")
@@ -183,17 +183,19 @@ func (d *Distribution) Exec(reducers v1alpha2.Reducers) error {
 		return fmt.Errorf("error injecting stored config: %w", err)
 	}
 
-	if err := d.runReducers(reducers, tfCfg, LifecyclePreTf, []string{"manifests", ".gitignore"}); err != nil {
-		return fmt.Errorf("error running pre-tf reducers: %w", err)
-	}
-
 	if err := d.tfRunner.Init(); err != nil {
 		return fmt.Errorf("error running terraform init: %w", err)
 	}
 
 	if !d.dryRun {
-		if err := d.upgrade.Exec(d.Path, "pre-distribution"); err != nil {
-			return fmt.Errorf("error running upgrade: %w", err)
+		if err := d.runReducers(reducers, tfCfg, LifecyclePreTf, []string{"manifests", ".gitignore"}); err != nil {
+			return fmt.Errorf("error running pre-tf reducers: %w", err)
+		}
+
+		if startFrom == "" || startFrom == cluster.OperationSubPhasePreDistribution {
+			if err := d.upgrade.Exec(d.Path, "pre-distribution"); err != nil {
+				return fmt.Errorf("error running upgrade: %w", err)
+			}
 		}
 	}
 
@@ -229,63 +231,65 @@ func (d *Distribution) Exec(reducers v1alpha2.Reducers) error {
 		return nil
 	}
 
-	logrus.Warn("Creating cloud resources, this could take a while...")
+	if startFrom != cluster.OperationSubPhasePostDistribution {
+		logrus.Warn("Creating cloud resources, this could take a while...")
 
-	if err := d.tfRunner.Apply(timestamp); err != nil {
-		return fmt.Errorf("cannot create cloud resources: %w", err)
-	}
+		if err := d.tfRunner.Apply(timestamp); err != nil {
+			return fmt.Errorf("cannot create cloud resources: %w", err)
+		}
 
-	if _, err := d.tfRunner.Output(); err != nil {
-		return fmt.Errorf("error running terraform output: %w", err)
-	}
+		if _, err := d.tfRunner.Output(); err != nil {
+			return fmt.Errorf("error running terraform output: %w", err)
+		}
 
-	postTfMerger, err := d.injectDataPostTf(preTfMerger)
-	if err != nil {
-		return err
-	}
+		postTfMerger, err := d.injectDataPostTf(preTfMerger)
+		if err != nil {
+			return err
+		}
 
-	mCfg, err := template.NewConfig(furyctlMerger, postTfMerger, []string{"terraform", ".gitignore"})
-	if err != nil {
-		return fmt.Errorf("error creating template config: %w", err)
-	}
+		mCfg, err := template.NewConfig(furyctlMerger, postTfMerger, []string{"terraform", ".gitignore"})
+		if err != nil {
+			return fmt.Errorf("error creating template config: %w", err)
+		}
 
-	d.CopyPathsToConfig(&mCfg)
+		d.CopyPathsToConfig(&mCfg)
 
-	mCfg.Data["checks"] = map[any]any{
-		"storageClassAvailable": true,
-	}
+		mCfg.Data["checks"] = map[any]any{
+			"storageClassAvailable": true,
+		}
 
-	mCfg, err = d.injectStoredConfig(mCfg)
-	if err != nil {
-		return fmt.Errorf("error injecting stored config: %w", err)
-	}
+		mCfg, err = d.injectStoredConfig(mCfg)
+		if err != nil {
+			return fmt.Errorf("error injecting stored config: %w", err)
+		}
 
-	if err := d.copyFromTemplate(mCfg); err != nil {
-		return err
-	}
+		if err := d.copyFromTemplate(mCfg); err != nil {
+			return err
+		}
 
-	if err := d.runReducers(reducers, mCfg, LifecyclePostTf, []string{"manifests", ".gitignore"}); err != nil {
-		return fmt.Errorf("error running post-tf reducers: %w", err)
-	}
+		if err := d.runReducers(reducers, mCfg, LifecyclePostTf, []string{"manifests", ".gitignore"}); err != nil {
+			return fmt.Errorf("error running post-tf reducers: %w", err)
+		}
 
-	logrus.Info("Checking that the cluster is reachable...")
+		logrus.Info("Checking that the cluster is reachable...")
 
-	if err := d.checkKubeVersion(); err != nil {
-		return fmt.Errorf("error checking cluster reachability: %w", err)
-	}
+		if err := d.checkKubeVersion(); err != nil {
+			return fmt.Errorf("error checking cluster reachability: %w", err)
+		}
 
-	if err := d.runReducers(reducers, mCfg, LifecyclePreApply, []string{"manifests", ".gitignore"}); err != nil {
-		return fmt.Errorf("error running pre-apply reducers: %w", err)
-	}
+		if err := d.runReducers(reducers, mCfg, LifecyclePreApply, []string{"manifests", ".gitignore"}); err != nil {
+			return fmt.Errorf("error running pre-apply reducers: %w", err)
+		}
 
-	logrus.Info("Applying manifests...")
+		logrus.Info("Applying manifests...")
 
-	if _, err := d.shellRunner.Run(path.Join(d.Path, "scripts", "apply.sh")); err != nil {
-		return fmt.Errorf("error applying manifests: %w", err)
-	}
+		if _, err := d.shellRunner.Run(path.Join(d.Path, "scripts", "apply.sh")); err != nil {
+			return fmt.Errorf("error applying manifests: %w", err)
+		}
 
-	if err := d.runReducers(reducers, mCfg, LifecyclePostApply, []string{"manifests", ".gitignore"}); err != nil {
-		return fmt.Errorf("error running post-apply reducers: %w", err)
+		if err := d.runReducers(reducers, mCfg, LifecyclePostApply, []string{"manifests", ".gitignore"}); err != nil {
+			return fmt.Errorf("error running post-apply reducers: %w", err)
+		}
 	}
 
 	// Run upgrade script if needed.
