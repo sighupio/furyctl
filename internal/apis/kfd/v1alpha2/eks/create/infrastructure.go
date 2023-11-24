@@ -115,8 +115,10 @@ func (i *Infrastructure) Exec() error {
 		return fmt.Errorf("error running terraform init: %w", err)
 	}
 
-	if err := i.upgrade.Exec(i.Path, "pre-infrastructure"); err != nil {
-		return fmt.Errorf("error running upgrade: %w", err)
+	if !i.dryRun {
+		if err := i.upgrade.Exec(i.Path, "pre-infrastructure"); err != nil {
+			return fmt.Errorf("error running upgrade: %w", err)
+		}
 	}
 
 	plan, err := i.tfRunner.Plan(timestamp)
