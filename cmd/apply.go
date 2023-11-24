@@ -34,7 +34,7 @@ type ClusterCmdFlags struct {
 	FuryctlPath        string
 	DistroLocation     string
 	Phase              string
-	SkipPhase          string
+	StartFrom          string
 	BinPath            string
 	SkipVpn            bool
 	VpnAutoConnect     bool
@@ -197,7 +197,7 @@ func NewApplyCommand(tracker *analytics.Tracker) *cobra.Command {
 				return fmt.Errorf("error while initializing cluster creation: %w", err)
 			}
 
-			if err := clusterCreator.Create(flags.SkipPhase, flags.Timeout); err != nil {
+			if err := clusterCreator.Create(flags.StartFrom, flags.Timeout); err != nil {
 				cmdEvent.AddErrorMessage(err)
 				tracker.Track(cmdEvent)
 
@@ -242,22 +242,22 @@ func getCreateClusterCmdFlags(cmd *cobra.Command, tracker *analytics.Tracker, cm
 		return ClusterCmdFlags{}, fmt.Errorf("%w: %s: %s", ErrParsingFlag, "phase", err.Error())
 	}
 
-	skipPhase, err := cmdutil.StringFlag(cmd, "skip-phase", tracker, cmdEvent)
+	startFrom, err := cmdutil.StringFlag(cmd, "start-from", tracker, cmdEvent)
 	if err != nil {
-		return ClusterCmdFlags{}, fmt.Errorf(WrappedErrMessage, ErrParsingFlag, "skip-phase")
+		return ClusterCmdFlags{}, fmt.Errorf(WrappedErrMessage, ErrParsingFlag, "start-from")
 	}
 
-	if phase != cluster.OperationPhaseAll && skipPhase != "" {
+	if phase != cluster.OperationPhaseAll && startFrom != "" {
 		return ClusterCmdFlags{}, fmt.Errorf(
 			"%w: %s: cannot use together with phase flag",
 			ErrParsingFlag,
-			"skip-phase",
+			"start-from",
 		)
 	}
 
-	err = cluster.CheckPhase(skipPhase)
+	err = cluster.ValidateOperationPhase(startFrom)
 	if err != nil {
-		return ClusterCmdFlags{}, fmt.Errorf("%w: %s: %s", ErrParsingFlag, "skip-phase", err.Error())
+		return ClusterCmdFlags{}, fmt.Errorf("%w: %s: %s", ErrParsingFlag, "start-from", err.Error())
 	}
 
 	binPath := cmdutil.StringFlagOptional(cmd, "bin-path")
@@ -330,7 +330,7 @@ func getCreateClusterCmdFlags(cmd *cobra.Command, tracker *analytics.Tracker, cm
 		FuryctlPath:        furyctlPath,
 		DistroLocation:     distroLocation,
 		Phase:              phase,
-		SkipPhase:          skipPhase,
+		StartFrom:          startFrom,
 		BinPath:            binPath,
 		SkipVpn:            skipVpn,
 		VpnAutoConnect:     vpnAutoConnect,
@@ -362,13 +362,10 @@ func setupCreateClusterCmdFlags(cmd *cobra.Command) {
 	)
 
 	cmd.Flags().String(
-		"skip-phase",
+		"start-from",
 		"",
-		"Avoid executing unwanted phases. Options are: infrastructure, kubernetes, distribution, plugins. More specifically:\n"+
-			"- skipping infrastructure will execute kubernetes, distribution and plugins\n"+
-			"- skipping kubernetes will only execute distribution and plugins\n"+
-			"- skipping distribution will execute infrastructure, kubernetes and plugins\n"+
-			"- skipping plugins will execute infrastructure, kubernetes and distribution\n",
+		"Start the execution from a specific phase. Options are: preinfrastructure, infrastructure, postinfrastructure, prekubernetes, "+
+			"kubernetes, postkubernetes, predistribution, distribution, postdistribution, plugins",
 	)
 
 	cmd.Flags().StringP(
