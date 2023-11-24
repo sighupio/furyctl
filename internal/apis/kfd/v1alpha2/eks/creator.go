@@ -545,31 +545,11 @@ func (v *ClusterCreator) allPhases(
 		if err := phases.Kubernetes.Exec(v.getKubernetesSubPhase(startFrom)); err != nil {
 			return fmt.Errorf("error while executing kubernetes phase: %w", err)
 		}
-
-		if !v.dryRun {
-			if err := v.stateStore.StoreConfig(); err != nil {
-				return fmt.Errorf("error while storing cluster config: %w", err)
-			}
-
-			if err := v.stateStore.StoreKFD(); err != nil {
-				return fmt.Errorf("error while creating secret with the distribution configuration: %w", err)
-			}
-		}
 	}
 
 	if startFrom != cluster.OperationPhasePlugins {
 		if err := phases.Distribution.Exec(reducers, v.getDistributionSubPhase(startFrom)); err != nil {
 			return fmt.Errorf("error while executing distribution phase: %w", err)
-		}
-
-		if !v.dryRun {
-			if err := v.stateStore.StoreConfig(); err != nil {
-				return fmt.Errorf("error while storing cluster config: %w", err)
-			}
-
-			if err := v.stateStore.StoreKFD(); err != nil {
-				return fmt.Errorf("error while creating secret with the distribution configuration: %w", err)
-			}
 		}
 	}
 
@@ -581,6 +561,14 @@ func (v *ClusterCreator) allPhases(
 		logrus.Info("Kubernetes Fury cluster created successfully (dry-run mode)")
 
 		return nil
+	}
+
+	if err := v.stateStore.StoreConfig(); err != nil {
+		return fmt.Errorf("error while storing cluster config: %w", err)
+	}
+
+	if err := v.stateStore.StoreKFD(); err != nil {
+		return fmt.Errorf("error while creating secret with the distribution configuration: %w", err)
 	}
 
 	logrus.Info("Kubernetes Fury cluster created successfully")
@@ -602,11 +590,6 @@ func (*ClusterCreator) getInfrastructureSubPhase(startFrom string) string {
 
 func (*ClusterCreator) getKubernetesSubPhase(startFrom string) string {
 	switch startFrom {
-	case cluster.OperationPhaseAll,
-		cluster.OperationPhaseInfrastructure,
-		cluster.OperationSubPhasePreInfrastructure,
-		cluster.OperationSubPhasePostInfrastructure:
-		return ""
 	case cluster.OperationPhaseKubernetes,
 		cluster.OperationSubPhasePreKubernetes,
 		cluster.OperationSubPhasePostKubernetes:
@@ -618,14 +601,6 @@ func (*ClusterCreator) getKubernetesSubPhase(startFrom string) string {
 
 func (*ClusterCreator) getDistributionSubPhase(startFrom string) string {
 	switch startFrom {
-	case cluster.OperationPhaseAll,
-		cluster.OperationPhaseInfrastructure,
-		cluster.OperationSubPhasePreInfrastructure,
-		cluster.OperationSubPhasePostInfrastructure,
-		cluster.OperationPhaseKubernetes,
-		cluster.OperationSubPhasePreKubernetes,
-		cluster.OperationSubPhasePostKubernetes:
-		return ""
 	case cluster.OperationPhaseDistribution,
 		cluster.OperationSubPhasePreDistribution,
 		cluster.OperationSubPhasePostDistribution:
