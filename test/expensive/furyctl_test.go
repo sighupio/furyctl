@@ -86,7 +86,7 @@ var (
 		return exec.Command(furyctl, args...)
 	}
 
-	FuryctlCreateCluster = func(cfgPath, distroPath, phase, skipPhase string, dryRun bool, w string) *exec.Cmd {
+	FuryctlCreateCluster = func(cfgPath, distroPath, phase, startFrom string, dryRun bool, w string) *exec.Cmd {
 		args := []string{
 			"create",
 			"cluster",
@@ -107,8 +107,8 @@ var (
 			args = append(args, "--vpn-auto-connect")
 		}
 
-		if skipPhase != "" {
-			args = append(args, "--skip-phase", skipPhase)
+		if startFrom != "" {
+			args = append(args, "--start-from", startFrom)
 		}
 
 		if dryRun {

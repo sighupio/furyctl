@@ -17,38 +17,66 @@ import (
 )
 
 const (
-	OperationPhasePreFlight      = "preflight"
-	OperationPhaseInfrastructure = "infrastructure"
-	OperationPhaseKubernetes     = "kubernetes"
-	OperationPhaseDistribution   = "distribution"
-	OperationPhasePlugins        = "plugins"
-	OperationPhasePreUpgrade     = "preupgrade"
-	OperationPhaseAll            = ""
+	OperationPhasePreFlight             = "preflight"
+	OperationPhaseInfrastructure        = "infrastructure"
+	OperationSubPhasePreInfrastructure  = "preinfrastructure"
+	OperationSubPhasePostInfrastructure = "postinfrastructure"
+	OperationPhaseKubernetes            = "kubernetes"
+	OperationSubPhasePreKubernetes      = "prekubernetes"
+	OperationSubPhasePostKubernetes     = "postkubernetes"
+	OperationPhaseDistribution          = "distribution"
+	OperationSubPhasePreDistribution    = "predistribution"
+	OperationSubPhasePostDistribution   = "postdistribution"
+	OperationPhasePlugins               = "plugins"
+	OperationPhasePreUpgrade            = "preupgrade"
+	OperationPhaseAll                   = ""
 
 	OperationPhaseOptionVPNAutoConnect = "vpnautoconnect"
 )
 
-var errUnsupportedPhase = errors.New(
-	"unsupported phase, options are: infrastructure, kubernetes, distribution, plugins",
+var (
+	errUnsupportedPhase = errors.New(
+		"unsupported phase, options are: infrastructure, kubernetes, distribution, plugins",
+	)
+	errUnsupportedOperationPhase = errors.New(
+		"unsupported operation phase, options are: preinfrastructure, infrastructure, postinfrastructure, " +
+			"prekubernetes, kubernetes, postkubernetes, predistribution, distribution, postdistribution, plugins",
+	)
 )
 
 func CheckPhase(phase string) error {
 	switch phase {
-	case OperationPhasePreFlight:
-	case OperationPhaseInfrastructure:
-	case OperationPhaseKubernetes:
-	case OperationPhaseDistribution:
-	case OperationPhasePlugins:
-	case OperationPhaseAll:
-		{
-			break
-		}
+	case OperationPhasePreFlight,
+		OperationPhaseInfrastructure,
+		OperationPhaseKubernetes,
+		OperationPhaseDistribution,
+		OperationPhasePlugins,
+		OperationPhaseAll:
+		return nil
 
 	default:
 		return errUnsupportedPhase
 	}
+}
 
-	return nil
+func ValidateOperationPhase(phase string) error {
+	err := CheckPhase(phase)
+	if err == nil {
+		return nil
+	}
+
+	switch phase {
+	case OperationSubPhasePreInfrastructure,
+		OperationSubPhasePostInfrastructure,
+		OperationSubPhasePreKubernetes,
+		OperationSubPhasePostKubernetes,
+		OperationSubPhasePreDistribution,
+		OperationSubPhasePostDistribution:
+		return nil
+
+	default:
+		return errUnsupportedOperationPhase
+	}
 }
 
 type OperationPhase struct {
