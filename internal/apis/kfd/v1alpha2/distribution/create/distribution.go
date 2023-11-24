@@ -107,6 +107,10 @@ func (d *Distribution) Exec() error {
 		"yq":        d.OperationPhase.YqPath,
 	}
 
+	mCfg.Data["checks"] = map[any]any{
+		"storageClassAvailable": true,
+	}
+
 	// Generate manifests.
 	outYaml, err := yamlx.MarshalV2(mCfg)
 	if err != nil {
@@ -171,10 +175,6 @@ func (d *Distribution) Exec() error {
 
 	if getStorageClassesOutput == "No resources found" {
 		return errNoStorageClass
-	}
-
-	mCfg.Data["checks"] = map[any]any{
-		"storageClassAvailable": true,
 	}
 
 	if d.furyctlConf.Spec.Distribution.Modules.Networking.Type == "none" {
