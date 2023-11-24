@@ -191,6 +191,12 @@ func (d *Distribution) Exec(reducers v1alpha2.Reducers) error {
 		return fmt.Errorf("error running terraform init: %w", err)
 	}
 
+	if !d.dryRun {
+		if err := d.upgrade.Exec(d.Path, "pre-distribution"); err != nil {
+			return fmt.Errorf("error running upgrade: %w", err)
+		}
+	}
+
 	if _, err := d.tfRunner.Plan(timestamp); err != nil && !d.dryRun {
 		return fmt.Errorf("error running terraform plan: %w", err)
 	}
@@ -221,11 +227,6 @@ func (d *Distribution) Exec(reducers v1alpha2.Reducers) error {
 		}
 
 		return nil
-	}
-
-	// Run upgrade script if needed.
-	if err := d.upgrade.Exec(d.Path, "pre-distribution"); err != nil {
-		return fmt.Errorf("error running upgrade: %w", err)
 	}
 
 	logrus.Warn("Creating cloud resources, this could take a while...")
