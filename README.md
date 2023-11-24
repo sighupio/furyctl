@@ -302,7 +302,7 @@ The following steps will guide you through the process of creating a Kubernetes 
 
 Same as the previous section, but you can skip the infrastructure creation phase
 by not filling the section `infrastructure` in the `furyctl.yaml` file and
-running `furyctl create cluster --skip-phase infrastructure`.
+running `furyctl create cluster --start-from kubernetes`.
 
 #### Deploy a cluster step by step
 

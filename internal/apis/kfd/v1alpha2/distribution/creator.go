@@ -133,7 +133,7 @@ func (*ClusterCreator) GetPhasePath(phase string) (string, error) {
 	}
 }
 
-func (c *ClusterCreator) Create(skipPhase string, _ int) error {
+func (c *ClusterCreator) Create(startFrom string, _ int) error {
 	upgr := upgrade.New(c.paths, string(c.furyctlConf.Kind))
 
 	distributionPhase, err := create.NewDistribution(
@@ -218,7 +218,7 @@ func (c *ClusterCreator) Create(skipPhase string, _ int) error {
 			}
 		}
 
-		if err := distributionPhase.Exec(reducers); err != nil {
+		if err := distributionPhase.Exec(reducers, ""); err != nil {
 			return fmt.Errorf("error while executing distribution phase: %w", err)
 		}
 
@@ -228,7 +228,7 @@ func (c *ClusterCreator) Create(skipPhase string, _ int) error {
 		}
 
 	case cluster.OperationPhaseAll:
-		if skipPhase != cluster.OperationPhaseDistribution {
+		if startFrom != cluster.OperationPhasePlugins {
 			if len(reducers) > 0 {
 				confirm, err := c.AskConfirmation()
 				if err != nil {
@@ -240,15 +240,13 @@ func (c *ClusterCreator) Create(skipPhase string, _ int) error {
 				}
 			}
 
-			if err := distributionPhase.Exec(reducers); err != nil {
+			if err := distributionPhase.Exec(reducers, c.getDistributionSubPhase(startFrom)); err != nil {
 				return fmt.Errorf("error while executing distribution phase: %w", err)
 			}
 		}
 
-		if skipPhase != cluster.OperationPhasePlugins {
-			if err := pluginsPhase.Exec(); err != nil {
-				return fmt.Errorf("error while executing plugins phase: %w", err)
-			}
+		if err := pluginsPhase.Exec(); err != nil {
+			return fmt.Errorf("error while executing plugins phase: %w", err)
 		}
 
 	default:
@@ -268,6 +266,17 @@ func (c *ClusterCreator) Create(skipPhase string, _ int) error {
 	}
 
 	return nil
+}
+
+func (*ClusterCreator) getDistributionSubPhase(startFrom string) string {
+	switch startFrom {
+	case cluster.OperationPhaseDistribution,
+		cluster.OperationSubPhasePreDistribution,
+		cluster.OperationSubPhasePostDistribution:
+		return startFrom
+	default:
+		return ""
+	}
 }
 
 func (*ClusterCreator) buildReducers(

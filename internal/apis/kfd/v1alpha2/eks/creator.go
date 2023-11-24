@@ -169,7 +169,7 @@ func (*ClusterCreator) GetPhasePath(phase string) (string, error) {
 	}
 }
 
-func (v *ClusterCreator) Create(skipPhase string, timeout int) error {
+func (v *ClusterCreator) Create(startFrom string, timeout int) error {
 	upgr := upgrade.New(v.paths, string(v.furyctlConf.Kind))
 
 	infra, kube, distro, plugins, preflight, err := v.setupPhases(upgr)
@@ -207,7 +207,7 @@ func (v *ClusterCreator) Create(skipPhase string, timeout int) error {
 			Distribution:   distro,
 			Plugins:        plugins,
 		},
-		skipPhase,
+		startFrom,
 		vpnConnector,
 		upgr,
 		errCh,
@@ -280,7 +280,7 @@ func (v *ClusterCreator) Create(skipPhase string, timeout int) error {
 
 func (c *ClusterCreator) CreateAsync(
 	phases *Phases,
-	skipPhase string,
+	startFrom string,
 	vpnConnector *vpn.Connector,
 	upgrade *upgrade.Upgrade,
 	errCh chan error,
@@ -374,7 +374,7 @@ func (c *ClusterCreator) CreateAsync(
 		}
 
 		errCh <- c.allPhases(
-			skipPhase,
+			startFrom,
 			phases,
 			vpnConnector,
 			reducers,
@@ -397,7 +397,7 @@ func (v *ClusterCreator) infraPhase(infra *create.Infrastructure, vpnConnector *
 		return fmt.Errorf("%w: check at %s", ErrInfraNotPresent, absPath)
 	}
 
-	if err := infra.Exec(); err != nil {
+	if err := infra.Exec(""); err != nil {
 		return fmt.Errorf("error while executing infrastructure phase: %w", err)
 	}
 
@@ -430,7 +430,7 @@ func (v *ClusterCreator) kubernetesPhase(kube *create.Kubernetes, vpnConnector *
 	logrus.Warn("Please make sure that the Kubernetes API is reachable before continuing" +
 		" (e.g. check VPN connection is active`), otherwise the installation will fail.")
 
-	if err := kube.Exec(); err != nil {
+	if err := kube.Exec(""); err != nil {
 		return fmt.Errorf("error while executing kubernetes phase: %w", err)
 	}
 
@@ -474,7 +474,7 @@ func (v *ClusterCreator) distributionPhase(
 		}
 	}
 
-	if err := distro.Exec(reducers); err != nil {
+	if err := distro.Exec(reducers, ""); err != nil {
 		return fmt.Errorf("error while installing Kubernetes Fury Distribution: %w", err)
 	}
 
@@ -502,7 +502,7 @@ func (v *ClusterCreator) distributionPhase(
 }
 
 func (v *ClusterCreator) allPhases(
-	skipPhase string,
+	startFrom string,
 	phases *Phases,
 	vpnConnector *vpn.Connector,
 	reducers v1alpha2.Reducers,
@@ -515,8 +515,11 @@ func (v *ClusterCreator) allPhases(
 	logrus.Info("Creating cluster...")
 
 	if v.furyctlConf.Spec.Infrastructure != nil &&
-		(skipPhase == "" || skipPhase == cluster.OperationPhaseDistribution) {
-		if err := phases.Infrastructure.Exec(); err != nil {
+		(startFrom == "" ||
+			startFrom == cluster.OperationPhaseInfrastructure ||
+			startFrom == cluster.OperationSubPhasePreInfrastructure ||
+			startFrom == cluster.OperationSubPhasePostInfrastructure) {
+		if err := phases.Infrastructure.Exec(v.getInfrastructureSubPhase(startFrom)); err != nil {
 			return fmt.Errorf("error while executing infrastructure phase: %w", err)
 		}
 
@@ -535,8 +538,11 @@ func (v *ClusterCreator) allPhases(
 		}
 	}
 
-	if skipPhase != cluster.OperationPhaseKubernetes {
-		if err := phases.Kubernetes.Exec(); err != nil {
+	if startFrom != cluster.OperationSubPhasePreDistribution &&
+		startFrom != cluster.OperationPhaseDistribution &&
+		startFrom != cluster.OperationSubPhasePostDistribution &&
+		startFrom != cluster.OperationPhasePlugins {
+		if err := phases.Kubernetes.Exec(v.getKubernetesSubPhase(startFrom)); err != nil {
 			return fmt.Errorf("error while executing kubernetes phase: %w", err)
 		}
 
@@ -551,8 +557,8 @@ func (v *ClusterCreator) allPhases(
 		}
 	}
 
-	if skipPhase != cluster.OperationPhaseDistribution {
-		if err := phases.Distribution.Exec(reducers); err != nil {
+	if startFrom != cluster.OperationPhasePlugins {
+		if err := phases.Distribution.Exec(reducers, v.getDistributionSubPhase(startFrom)); err != nil {
 			return fmt.Errorf("error while executing distribution phase: %w", err)
 		}
 
@@ -567,10 +573,8 @@ func (v *ClusterCreator) allPhases(
 		}
 	}
 
-	if skipPhase != cluster.OperationPhasePlugins {
-		if err := phases.Plugins.Exec(); err != nil {
-			return fmt.Errorf("error while executing plugins phase: %w", err)
-		}
+	if err := phases.Plugins.Exec(); err != nil {
+		return fmt.Errorf("error while executing plugins phase: %w", err)
 	}
 
 	if v.dryRun {
@@ -590,6 +594,45 @@ func (v *ClusterCreator) allPhases(
 	}
 
 	return nil
+}
+
+func (*ClusterCreator) getInfrastructureSubPhase(startFrom string) string {
+	return startFrom
+}
+
+func (*ClusterCreator) getKubernetesSubPhase(startFrom string) string {
+	switch startFrom {
+	case cluster.OperationPhaseAll,
+		cluster.OperationPhaseInfrastructure,
+		cluster.OperationSubPhasePreInfrastructure,
+		cluster.OperationSubPhasePostInfrastructure:
+		return ""
+	case cluster.OperationPhaseKubernetes,
+		cluster.OperationSubPhasePreKubernetes,
+		cluster.OperationSubPhasePostKubernetes:
+		return startFrom
+	default:
+		return ""
+	}
+}
+
+func (*ClusterCreator) getDistributionSubPhase(startFrom string) string {
+	switch startFrom {
+	case cluster.OperationPhaseAll,
+		cluster.OperationPhaseInfrastructure,
+		cluster.OperationSubPhasePreInfrastructure,
+		cluster.OperationSubPhasePostInfrastructure,
+		cluster.OperationPhaseKubernetes,
+		cluster.OperationSubPhasePreKubernetes,
+		cluster.OperationSubPhasePostKubernetes:
+		return ""
+	case cluster.OperationPhaseDistribution,
+		cluster.OperationSubPhasePreDistribution,
+		cluster.OperationSubPhasePostDistribution:
+		return startFrom
+	default:
+		return ""
+	}
 }
 
 func (*ClusterCreator) buildReducers(
