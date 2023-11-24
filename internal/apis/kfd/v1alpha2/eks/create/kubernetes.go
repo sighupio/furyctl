@@ -153,6 +153,12 @@ func (k *Kubernetes) Exec() error {
 		return fmt.Errorf("error running terraform init: %w", err)
 	}
 
+	if !k.dryRun {
+		if err := k.upgrade.Exec(k.Path, "pre-kubernetes"); err != nil {
+			return fmt.Errorf("error running upgrade: %w", err)
+		}
+	}
+
 	plan, err := k.tfRunner.Plan(timestamp)
 	if err != nil {
 		return fmt.Errorf("error running terraform plan: %w", err)
@@ -202,11 +208,6 @@ func (k *Kubernetes) Exec() error {
 
 			return fmt.Errorf("%w please check your VPC configuration and try again", errKubeAPIUnreachable)
 		}
-	}
-
-	// Run upgrade script if needed.
-	if err := k.upgrade.Exec(k.Path, "pre-kubernetes"); err != nil {
-		return fmt.Errorf("error running upgrade: %w", err)
 	}
 
 	logrus.Warn("Creating cloud resources, this could take a while...")
