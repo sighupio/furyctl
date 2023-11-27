@@ -215,7 +215,7 @@ func (*Connector) checkExistingOpenVPN() (bool, int32, error) {
 	}
 
 	for _, p := range processes {
-		name, _ := p.Name()
+		name, _ := p.Name() //nolint: errcheck // we don't care about the error here
 
 		if name == "openvpn" {
 			return true, p.Pid, nil

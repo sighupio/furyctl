@@ -161,42 +161,88 @@ func (d *Distribution) Exec(
 
 	logrus.Debug("Create: running distribution phase...")
 
+	furyctlMerger, preTfMerger, tfCfg, err := d.prepare()
+	if err != nil {
+		return fmt.Errorf("error preparing distribution phase: %w", err)
+	}
+
+	if err := d.preDistribution(reducers, startFrom, upgradeState, tfCfg); err != nil {
+		return fmt.Errorf("error running pre-distribution phase: %w", err)
+	}
+
+	if err := d.coreDistribution(
+		reducers,
+		startFrom,
+		upgradeState,
+		preTfMerger,
+		furyctlMerger,
+		timestamp,
+	); err != nil {
+		return fmt.Errorf("error running core distribution phase: %w", err)
+	}
+
+	if d.dryRun {
+		return nil
+	}
+
+	if err := d.postDistribution(upgradeState); err != nil {
+		return fmt.Errorf("error running post-distribution phase: %w", err)
+	}
+
+	return nil
+}
+
+func (d *Distribution) prepare() (
+	*merge.Merger,
+	*merge.Merger,
+	template.Config,
+	error,
+) {
 	if err := d.CreateFolder(); err != nil {
-		return fmt.Errorf("error creating distribution phase folder: %w", err)
+		return nil, nil, template.Config{}, fmt.Errorf("error creating distribution phase folder: %w", err)
 	}
 
 	furyctlMerger, err := d.createFuryctlMerger()
 	if err != nil {
-		return err
+		return nil, nil, template.Config{}, err
 	}
 
 	preTfMerger, err := d.injectDataPreTf(furyctlMerger)
 	if err != nil {
-		return err
+		return nil, nil, template.Config{}, err
 	}
 
 	tfCfg, err := template.NewConfig(furyctlMerger, preTfMerger, []string{"manifests", "scripts", ".gitignore"})
 	if err != nil {
-		return fmt.Errorf("error creating template config: %w", err)
+		return nil, nil, template.Config{}, fmt.Errorf("error creating template config: %w", err)
 	}
 
 	if err := d.copyFromTemplate(tfCfg); err != nil {
-		return err
+		return nil, nil, template.Config{}, err
 	}
 
 	if err := d.CreateFolderStructure(); err != nil {
-		return fmt.Errorf("error creating distribution phase folder structure: %w", err)
+		return nil, nil, template.Config{}, fmt.Errorf("error creating distribution phase folder structure: %w", err)
 	}
 
 	tfCfg, err = d.injectStoredConfig(tfCfg)
 	if err != nil {
-		return fmt.Errorf("error injecting stored config: %w", err)
+		return nil, nil, template.Config{}, fmt.Errorf("error injecting stored config: %w", err)
 	}
 
 	if err := d.tfRunner.Init(); err != nil {
-		return fmt.Errorf("error running terraform init: %w", err)
+		return nil, nil, template.Config{}, fmt.Errorf("error running terraform init: %w", err)
 	}
 
+	return furyctlMerger, preTfMerger, tfCfg, nil
+}
+
+func (d *Distribution) preDistribution(
+	reducers v1alpha2.Reducers,
+	startFrom string,
+	upgradeState *upgrade.State,
+	tfCfg template.Config,
+) error {
 	if !d.dryRun {
 		if err := d.runReducers(reducers, tfCfg, LifecyclePreTf, []string{"manifests", ".gitignore"}); err != nil {
 			return fmt.Errorf("error running pre-tf reducers: %w", err)
@@ -223,39 +269,46 @@ func (d *Distribution) Exec(
 		}
 	}
 
-	if _, err := d.tfRunner.Plan(timestamp); err != nil && !d.dryRun {
-		return fmt.Errorf("error running terraform plan: %w", err)
-	}
+	return nil
+}
 
-	if d.dryRun {
-		if err := d.createDummyOutput(); err != nil {
-			return fmt.Errorf("error creating dummy output: %w", err)
-		}
-
-		postTfMerger, err := d.injectDataPostTf(preTfMerger)
-		if err != nil {
-			return err
-		}
-
-		mCfg, err := template.NewConfig(furyctlMerger, postTfMerger, []string{"terraform", ".gitignore"})
-		if err != nil {
-			return fmt.Errorf("error creating template config: %w", err)
-		}
-
-		d.CopyPathsToConfig(&mCfg)
-
-		mCfg.Data["checks"] = map[any]any{
-			"storageClassAvailable": true,
-		}
-
-		if err := d.copyFromTemplate(mCfg); err != nil {
-			return err
-		}
-
-		return nil
-	}
-
+func (d *Distribution) coreDistribution(
+	reducers v1alpha2.Reducers,
+	startFrom string,
+	upgradeState *upgrade.State,
+	preTfMerger *merge.Merger,
+	furyctlMerger *merge.Merger,
+	timestamp int64,
+) error {
 	if startFrom != cluster.OperationSubPhasePostDistribution {
+		if _, err := d.tfRunner.Plan(timestamp); err != nil && !d.dryRun {
+			return fmt.Errorf("error running terraform plan: %w", err)
+		}
+
+		if d.dryRun {
+			if err := d.createDummyOutput(); err != nil {
+				return fmt.Errorf("error creating dummy output: %w", err)
+			}
+
+			postTfMerger, err := d.injectDataPostTf(preTfMerger)
+			if err != nil {
+				return err
+			}
+
+			mCfg, err := template.NewConfig(furyctlMerger, postTfMerger, []string{"terraform", ".gitignore"})
+			if err != nil {
+				return fmt.Errorf("error creating template config: %w", err)
+			}
+
+			d.CopyPathsToConfig(&mCfg)
+
+			mCfg.Data["checks"] = map[any]any{
+				"storageClassAvailable": true,
+			}
+
+			return d.copyFromTemplate(mCfg)
+		}
+
 		logrus.Warn("Creating cloud resources, this could take a while...")
 
 		if err := d.tfRunner.Apply(timestamp); err != nil {
@@ -332,7 +385,12 @@ func (d *Distribution) Exec(
 		}
 	}
 
-	// Run upgrade script if needed.
+	return nil
+}
+
+func (d *Distribution) postDistribution(
+	upgradeState *upgrade.State,
+) error {
 	if err := d.upgrade.Exec(d.Path, "post-distribution"); err != nil {
 		upgradeState.Phases.PostDistribution.Status = upgrade.PhaseStatusFailed
 

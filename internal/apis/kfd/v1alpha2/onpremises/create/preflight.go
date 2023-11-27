@@ -30,10 +30,8 @@ import (
 )
 
 var (
-	errImmutable         = errors.New("immutable path changed")
-	errUnsupported       = errors.New("unsupported reducer values detected")
-	errUpgradeCanceled   = errors.New("upgrade canceled by user")
-	errUpgradeFlagNotSet = errors.New("upgrade flag not set by user")
+	errImmutable   = errors.New("immutable path changed")
+	errUnsupported = errors.New("unsupported reducer values detected")
 )
 
 type Status struct {
