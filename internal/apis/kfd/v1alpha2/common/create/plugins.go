@@ -9,13 +9,12 @@ import (
 	"os"
 	"path"
 	"path/filepath"
-	"strings"
 
 	"github.com/sirupsen/logrus"
 
 	"github.com/sighupio/fury-distribution/pkg/apis/config"
+	"github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2"
 	"github.com/sighupio/furyctl/internal/cluster"
-	"github.com/sighupio/furyctl/internal/merge"
 	"github.com/sighupio/furyctl/internal/template"
 	"github.com/sighupio/furyctl/internal/tool/helmfile"
 	"github.com/sighupio/furyctl/internal/tool/shell"
@@ -27,6 +26,7 @@ type Plugins struct {
 	*cluster.OperationPhase
 	helmfileRunner  *helmfile.Runner
 	shellRunner     *shell.Runner
+	merger          v1alpha2.Merger
 	distroPath      string
 	furyctlConfPath string
 	dryRun          bool
@@ -69,6 +69,11 @@ func NewPlugins(
 				WorkDir: phaseOp.Path,
 			},
 		),
+		merger: v1alpha2.NewBaseMerger(
+			paths.DistroPath,
+			kind,
+			paths.ConfigPath,
+		),
 	}, nil
 }
 
@@ -79,9 +84,9 @@ func (p *Plugins) Exec() error {
 		return fmt.Errorf("error creating plugins phase folder: %w", err)
 	}
 
-	furyctlMerger, err := p.createFuryctlMerger()
+	furyctlMerger, err := p.merger.Create()
 	if err != nil {
-		return err
+		return fmt.Errorf("error creating furyctl merger: %w", err)
 	}
 
 	mCfg, err := template.NewConfigWithoutData(furyctlMerger, []string{})
@@ -139,8 +144,10 @@ func (p *Plugins) Exec() error {
 
 	specPluginsHelm, hasSpecPluginsHelm := specPlugins["helm"].(map[any]any)
 	if hasSpecPluginsHelm {
-		//nolint:errcheck,revive // We don't care about the error here.
-		specPluginsHelmReleases, _ = specPluginsHelm["releases"].([]any)
+		releases, hasSpecPluginHelmReleases := specPluginsHelm["releases"].([]any)
+		if hasSpecPluginHelmReleases {
+			specPluginsHelmReleases = releases
+		}
 	}
 
 	specPluginsKustomize, hasSpecPluginsKustomize := specPlugins["kustomize"].([]any)
@@ -170,40 +177,4 @@ func (p *Plugins) Exec() error {
 	logrus.Info("Plugins installed successfully")
 
 	return nil
-}
-
-func (p *Plugins) createFuryctlMerger() (*merge.Merger, error) {
-	defaultsFilePath := path.Join(p.distroPath, "defaults", fmt.Sprintf("%s-kfd-v1alpha2.yaml", strings.ToLower(p.kind)))
-
-	defaultsFile, err := yamlx.FromFileV2[map[any]any](defaultsFilePath)
-	if err != nil {
-		return &merge.Merger{}, fmt.Errorf("%s - %w", defaultsFilePath, err)
-	}
-
-	furyctlConf, err := yamlx.FromFileV2[map[any]any](p.furyctlConfPath)
-	if err != nil {
-		return &merge.Merger{}, fmt.Errorf("%s - %w", p.furyctlConfPath, err)
-	}
-
-	merger := merge.NewMerger(
-		merge.NewDefaultModel(defaultsFile, ".data"),
-		merge.NewDefaultModel(furyctlConf, ".spec.distribution"),
-	)
-
-	_, err = merger.Merge()
-	if err != nil {
-		return nil, fmt.Errorf("error merging furyctl config: %w", err)
-	}
-
-	reverseMerger := merge.NewMerger(
-		*merger.GetCustom(),
-		*merger.GetBase(),
-	)
-
-	_, err = reverseMerger.Merge()
-	if err != nil {
-		return nil, fmt.Errorf("error merging furyctl config: %w", err)
-	}
-
-	return reverseMerger, nil
 }
