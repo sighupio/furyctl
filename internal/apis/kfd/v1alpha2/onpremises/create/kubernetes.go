@@ -32,10 +32,11 @@ type Kubernetes struct {
 	paths           cluster.CreatorPaths
 	dryRun          bool
 	ansibleRunner   *ansible.Runner
+	upgradeStore    upgrade.Storer
 	upgrade         *upgrade.Upgrade
 }
 
-func (k *Kubernetes) Exec(startFrom string) error {
+func (k *Kubernetes) Exec(startFrom string, upgradeState *upgrade.State) error {
 	logrus.Info("Creating Kubernetes Fury cluster...")
 	logrus.Debug("Create: running kubernetes phase...")
 
@@ -113,7 +114,21 @@ func (k *Kubernetes) Exec(startFrom string) error {
 	if startFrom == "" || startFrom == cluster.OperationSubPhasePreKubernetes {
 		// Run upgrade script if needed.
 		if err := k.upgrade.Exec(k.Path, "pre-kubernetes"); err != nil {
+			upgradeState.Phases.PreKubernetes.Status = upgrade.PhaseStatusFailed
+
+			if err := k.upgradeStore.Store(upgradeState); err != nil {
+				return fmt.Errorf("error storing upgrade state: %w", err)
+			}
+
 			return fmt.Errorf("error running upgrade: %w", err)
+		}
+
+		if k.upgrade.Enabled {
+			upgradeState.Phases.PreKubernetes.Status = upgrade.PhaseStatusSuccess
+
+			if err := k.upgradeStore.Store(upgradeState); err != nil {
+				return fmt.Errorf("error storing upgrade state: %w", err)
+			}
 		}
 	}
 
@@ -122,7 +137,23 @@ func (k *Kubernetes) Exec(startFrom string) error {
 
 		// Apply create playbook.
 		if _, err := k.ansibleRunner.Playbook("create-playbook.yaml"); err != nil {
+			if k.upgrade.Enabled {
+				upgradeState.Phases.Kubernetes.Status = upgrade.PhaseStatusFailed
+
+				if err := k.upgradeStore.Store(upgradeState); err != nil {
+					return fmt.Errorf("error storing upgrade state: %w", err)
+				}
+			}
+
 			return fmt.Errorf("error applying playbook: %w", err)
+		}
+
+		if k.upgrade.Enabled {
+			upgradeState.Phases.Kubernetes.Status = upgrade.PhaseStatusSuccess
+
+			if err := k.upgradeStore.Store(upgradeState); err != nil {
+				return fmt.Errorf("error storing upgrade state: %w", err)
+			}
 		}
 
 		if err := kubex.SetConfigEnv(path.Join(k.OperationPhase.Path, "admin.conf")); err != nil {
@@ -150,7 +181,21 @@ func (k *Kubernetes) Exec(startFrom string) error {
 
 	// Run upgrade script if needed.
 	if err := k.upgrade.Exec(k.Path, "post-kubernetes"); err != nil {
+		upgradeState.Phases.PostKubernetes.Status = upgrade.PhaseStatusFailed
+
+		if err := k.upgradeStore.Store(upgradeState); err != nil {
+			return fmt.Errorf("error storing upgrade state: %w", err)
+		}
+
 		return fmt.Errorf("error running upgrade: %w", err)
+	}
+
+	if k.upgrade.Enabled {
+		upgradeState.Phases.PostKubernetes.Status = upgrade.PhaseStatusSuccess
+
+		if err := k.upgradeStore.Store(upgradeState); err != nil {
+			return fmt.Errorf("error storing upgrade state: %w", err)
+		}
 	}
 
 	logrus.Info("Kubernetes cluster created successfully")
@@ -223,6 +268,11 @@ func NewKubernetes(
 				AnsiblePlaybook: "ansible-playbook",
 				WorkDir:         phase.Path,
 			},
+		),
+		upgradeStore: upgrade.NewStateStore(
+			paths.WorkDir,
+			kfdManifest.Tools.Common.Kubectl.Version,
+			paths.BinPath,
 		),
 		upgrade: upgr,
 	}, nil

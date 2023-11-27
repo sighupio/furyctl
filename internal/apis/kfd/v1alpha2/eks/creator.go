@@ -29,6 +29,7 @@ import (
 	"github.com/sighupio/furyctl/internal/state"
 	"github.com/sighupio/furyctl/internal/upgrade"
 	iox "github.com/sighupio/furyctl/internal/x/io"
+	yamlx "github.com/sighupio/furyctl/internal/x/yaml"
 )
 
 const (
@@ -37,6 +38,7 @@ const (
 	DistributionPhaseSchemaPath   = ".spec.distribution"
 	PluginsPhaseSchemaPath        = ".spec.plugins"
 	AllPhaseSchemaPath            = ""
+	StartFromFlagNotSet           = ""
 )
 
 var (
@@ -47,16 +49,17 @@ var (
 )
 
 type ClusterCreator struct {
-	paths          cluster.CreatorPaths
-	furyctlConf    private.EksclusterKfdV1Alpha2
-	stateStore     state.Storer
-	kfdManifest    config.KFD
-	phase          string
-	skipVpn        bool
-	vpnAutoConnect bool
-	dryRun         bool
-	force          bool
-	upgrade        bool
+	paths             cluster.CreatorPaths
+	furyctlConf       private.EksclusterKfdV1Alpha2
+	stateStore        state.Storer
+	upgradeStateStore upgrade.Storer
+	kfdManifest       config.KFD
+	phase             string
+	skipVpn           bool
+	vpnAutoConnect    bool
+	dryRun            bool
+	force             bool
+	upgrade           bool
 }
 
 type Phases struct {
@@ -75,6 +78,12 @@ func (v *ClusterCreator) SetProperties(props []cluster.CreatorProperty) {
 	v.stateStore = state.NewStore(
 		v.paths.DistroPath,
 		v.paths.ConfigPath,
+		v.paths.WorkDir,
+		v.kfdManifest.Tools.Common.Kubectl.Version,
+		v.paths.BinPath,
+	)
+
+	v.upgradeStateStore = upgrade.NewStateStore(
 		v.paths.WorkDir,
 		v.kfdManifest.Tools.Common.Kubectl.Version,
 		v.paths.BinPath,
@@ -278,11 +287,27 @@ func (v *ClusterCreator) Create(startFrom string, timeout int) error {
 	return nil
 }
 
+func (*ClusterCreator) initUpgradeState() *upgrade.State {
+	return &upgrade.State{
+		Phases: upgrade.Phases{
+			PreInfrastructure:  &upgrade.Phase{Status: upgrade.PhaseStatusPending},
+			Infrastructure:     &upgrade.Phase{Status: upgrade.PhaseStatusPending},
+			PostInfrastructure: &upgrade.Phase{Status: upgrade.PhaseStatusPending},
+			PreKubernetes:      &upgrade.Phase{Status: upgrade.PhaseStatusPending},
+			Kubernetes:         &upgrade.Phase{Status: upgrade.PhaseStatusPending},
+			PostKubernetes:     &upgrade.Phase{Status: upgrade.PhaseStatusPending},
+			PreDistribution:    &upgrade.Phase{Status: upgrade.PhaseStatusPending},
+			Distribution:       &upgrade.Phase{Status: upgrade.PhaseStatusPending},
+			PostDistribution:   &upgrade.Phase{Status: upgrade.PhaseStatusPending},
+		},
+	}
+}
+
 func (c *ClusterCreator) CreateAsync(
 	phases *Phases,
 	startFrom string,
 	vpnConnector *vpn.Connector,
-	upgrade *upgrade.Upgrade,
+	upgr *upgrade.Upgrade,
 	errCh chan error,
 	doneCh chan bool,
 ) {
@@ -313,7 +338,7 @@ func (c *ClusterCreator) CreateAsync(
 		c.dryRun,
 		c.upgrade,
 		c.force,
-		upgrade,
+		upgr,
 		reducers,
 		status.Diffs,
 	)
@@ -378,6 +403,7 @@ func (c *ClusterCreator) CreateAsync(
 			phases,
 			vpnConnector,
 			reducers,
+			upgr,
 		)
 
 	default:
@@ -397,7 +423,7 @@ func (v *ClusterCreator) infraPhase(infra *create.Infrastructure, vpnConnector *
 		return fmt.Errorf("%w: check at %s", ErrInfraNotPresent, absPath)
 	}
 
-	if err := infra.Exec(""); err != nil {
+	if err := infra.Exec(StartFromFlagNotSet, &upgrade.State{}); err != nil {
 		return fmt.Errorf("error while executing infrastructure phase: %w", err)
 	}
 
@@ -430,7 +456,7 @@ func (v *ClusterCreator) kubernetesPhase(kube *create.Kubernetes, vpnConnector *
 	logrus.Warn("Please make sure that the Kubernetes API is reachable before continuing" +
 		" (e.g. check VPN connection is active`), otherwise the installation will fail.")
 
-	if err := kube.Exec(""); err != nil {
+	if err := kube.Exec(StartFromFlagNotSet, &upgrade.State{}); err != nil {
 		return fmt.Errorf("error while executing kubernetes phase: %w", err)
 	}
 
@@ -474,7 +500,7 @@ func (v *ClusterCreator) distributionPhase(
 		}
 	}
 
-	if err := distro.Exec(reducers, ""); err != nil {
+	if err := distro.Exec(reducers, StartFromFlagNotSet, &upgrade.State{}); err != nil {
 		return fmt.Errorf("error while installing Kubernetes Fury Distribution: %w", err)
 	}
 
@@ -506,10 +532,31 @@ func (v *ClusterCreator) allPhases(
 	phases *Phases,
 	vpnConnector *vpn.Connector,
 	reducers v1alpha2.Reducers,
+	upgr *upgrade.Upgrade,
 ) error {
 	if v.dryRun {
 		logrus.Info("furcytl will try its best to calculate what would have changed. " +
 			"Sometimes this is not possible, for better results limit the scope with the --phase flag.")
+	}
+
+	upgradeState := &upgrade.State{}
+
+	if upgr.Enabled && !v.dryRun {
+		s, err := v.upgradeStateStore.Get()
+		if err == nil {
+			if err := yamlx.UnmarshalV3(s, &upgradeState); err != nil {
+				return fmt.Errorf("error while unmarshalling upgrade state: %w", err)
+			}
+		} else {
+			logrus.Debugf("error while getting upgrade state: %v", err)
+			logrus.Debugf("creating a new upgrade state on the cluster...")
+
+			upgradeState = v.initUpgradeState()
+
+			if err := v.upgradeStateStore.Store(upgradeState); err != nil {
+				return fmt.Errorf("error while storing upgrade state: %w", err)
+			}
+		}
 	}
 
 	logrus.Info("Creating cluster...")
@@ -519,7 +566,7 @@ func (v *ClusterCreator) allPhases(
 			startFrom == cluster.OperationPhaseInfrastructure ||
 			startFrom == cluster.OperationSubPhasePreInfrastructure ||
 			startFrom == cluster.OperationSubPhasePostInfrastructure) {
-		if err := phases.Infrastructure.Exec(v.getInfrastructureSubPhase(startFrom)); err != nil {
+		if err := phases.Infrastructure.Exec(v.getInfrastructureSubPhase(startFrom), upgradeState); err != nil {
 			return fmt.Errorf("error while executing infrastructure phase: %w", err)
 		}
 
@@ -542,13 +589,13 @@ func (v *ClusterCreator) allPhases(
 		startFrom != cluster.OperationPhaseDistribution &&
 		startFrom != cluster.OperationSubPhasePostDistribution &&
 		startFrom != cluster.OperationPhasePlugins {
-		if err := phases.Kubernetes.Exec(v.getKubernetesSubPhase(startFrom)); err != nil {
+		if err := phases.Kubernetes.Exec(v.getKubernetesSubPhase(startFrom), upgradeState); err != nil {
 			return fmt.Errorf("error while executing kubernetes phase: %w", err)
 		}
 	}
 
 	if startFrom != cluster.OperationPhasePlugins {
-		if err := phases.Distribution.Exec(reducers, v.getDistributionSubPhase(startFrom)); err != nil {
+		if err := phases.Distribution.Exec(reducers, v.getDistributionSubPhase(startFrom), upgradeState); err != nil {
 			return fmt.Errorf("error while executing distribution phase: %w", err)
 		}
 	}
@@ -561,6 +608,12 @@ func (v *ClusterCreator) allPhases(
 		logrus.Info("Kubernetes Fury cluster created successfully (dry-run mode)")
 
 		return nil
+	}
+
+	if upgr.Enabled {
+		if err := v.upgradeStateStore.Delete(); err != nil {
+			return fmt.Errorf("error while deleting upgrade state: %w", err)
+		}
 	}
 
 	if err := v.stateStore.StoreConfig(); err != nil {
