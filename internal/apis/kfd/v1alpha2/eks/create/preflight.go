@@ -48,8 +48,6 @@ var (
 	bucketRegex                              = regexp.MustCompile("(?m)bucket\\s*=\\s*\"([^\"]+)\"")
 	serverIPRegex                            = regexp.MustCompile("(?m)public_ip\\s*=\\s*\"([^\"]+)\"")
 	ErrPreflightFailed                       = errors.New("preflight execution failed")
-	errUpgradeCanceled                       = errors.New("upgrade canceled by user")
-	errUpgradeFlagNotSet                     = errors.New("upgrade flag not set by user")
 )
 
 type Status struct {

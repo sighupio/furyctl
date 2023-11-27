@@ -303,7 +303,7 @@ func (*ClusterCreator) initUpgradeState() *upgrade.State {
 	}
 }
 
-func (c *ClusterCreator) CreateAsync(
+func (v *ClusterCreator) CreateAsync(
 	phases *Phases,
 	startFrom string,
 	vpnConnector *vpn.Connector,
@@ -320,7 +320,7 @@ func (c *ClusterCreator) CreateAsync(
 		return
 	}
 
-	r, err := eksrules.NewEKSClusterRulesExtractor(c.paths.DistroPath)
+	r, err := eksrules.NewEKSClusterRulesExtractor(v.paths.DistroPath)
 	if err != nil {
 		if !errors.Is(err, eksrules.ErrReadingRulesFile) {
 			errCh <- fmt.Errorf("error while creating rules builder: %w", err)
@@ -329,15 +329,15 @@ func (c *ClusterCreator) CreateAsync(
 		}
 	}
 
-	reducers := c.buildReducers(status.Diffs, r, cluster.OperationPhaseDistribution)
+	reducers := v.buildReducers(status.Diffs, r, cluster.OperationPhaseDistribution)
 
 	preupgrade, err := commcreate.NewPreUpgrade(
-		c.paths,
-		c.kfdManifest,
-		string(c.furyctlConf.Kind),
-		c.dryRun,
-		c.upgrade,
-		c.force,
+		v.paths,
+		v.kfdManifest,
+		string(v.furyctlConf.Kind),
+		v.dryRun,
+		v.upgrade,
+		v.force,
 		upgr,
 		reducers,
 		status.Diffs,
@@ -354,20 +354,20 @@ func (c *ClusterCreator) CreateAsync(
 		return
 	}
 
-	switch c.phase {
+	switch v.phase {
 	case cluster.OperationPhaseInfrastructure:
-		if err := c.infraPhase(phases.Infrastructure, vpnConnector); err != nil {
+		if err := v.infraPhase(phases.Infrastructure, vpnConnector); err != nil {
 			errCh <- err
 		}
 
 	case cluster.OperationPhaseKubernetes:
-		if err := c.kubernetesPhase(phases.Kubernetes, vpnConnector); err != nil {
+		if err := v.kubernetesPhase(phases.Kubernetes, vpnConnector); err != nil {
 			errCh <- err
 		}
 
 	case cluster.OperationPhaseDistribution:
 		if len(reducers) > 0 {
-			confirm, err := c.AskConfirmation()
+			confirm, err := v.AskConfirmation()
 			if err != nil {
 				errCh <- err
 			}
@@ -377,7 +377,7 @@ func (c *ClusterCreator) CreateAsync(
 			}
 		}
 
-		if err := c.distributionPhase(phases.Distribution, vpnConnector, reducers); err != nil {
+		if err := v.distributionPhase(phases.Distribution, vpnConnector, reducers); err != nil {
 			errCh <- err
 		}
 
@@ -388,7 +388,7 @@ func (c *ClusterCreator) CreateAsync(
 
 	case cluster.OperationPhaseAll:
 		if len(reducers) > 0 {
-			confirm, err := c.AskConfirmation()
+			confirm, err := v.AskConfirmation()
 			if err != nil {
 				errCh <- err
 			}
@@ -398,7 +398,7 @@ func (c *ClusterCreator) CreateAsync(
 			}
 		}
 
-		errCh <- c.allPhases(
+		errCh <- v.allPhases(
 			startFrom,
 			phases,
 			vpnConnector,
@@ -407,7 +407,7 @@ func (c *ClusterCreator) CreateAsync(
 		)
 
 	default:
-		errCh <- fmt.Errorf("%w: %s", ErrUnsupportedPhase, c.phase)
+		errCh <- fmt.Errorf("%w: %s", ErrUnsupportedPhase, v.phase)
 	}
 }
 
@@ -561,6 +561,56 @@ func (v *ClusterCreator) allPhases(
 
 	logrus.Info("Creating cluster...")
 
+	if err := v.allPhasesExec(
+		startFrom,
+		phases,
+		vpnConnector,
+		reducers,
+		upgradeState,
+	); err != nil {
+		return err
+	}
+
+	if v.dryRun {
+		logrus.Info("Kubernetes Fury cluster created successfully (dry-run mode)")
+
+		return nil
+	}
+
+	if upgr.Enabled {
+		if err := v.upgradeStateStore.Delete(); err != nil {
+			return fmt.Errorf("error while deleting upgrade state: %w", err)
+		}
+	}
+
+	if err := v.stateStore.StoreConfig(); err != nil {
+		return fmt.Errorf("error while storing cluster config: %w", err)
+	}
+
+	if err := v.stateStore.StoreKFD(); err != nil {
+		return fmt.Errorf("error while creating secret with the distribution configuration: %w", err)
+	}
+
+	logrus.Info("Kubernetes Fury cluster created successfully")
+
+	if err := v.logVPNKill(vpnConnector); err != nil {
+		return fmt.Errorf("error while logging vpn kill message: %w", err)
+	}
+
+	if err := v.logKubeconfig(); err != nil {
+		return fmt.Errorf("error while logging kubeconfig path: %w", err)
+	}
+
+	return nil
+}
+
+func (v *ClusterCreator) allPhasesExec(
+	startFrom string,
+	phases *Phases,
+	vpnConnector *vpn.Connector,
+	reducers v1alpha2.Reducers,
+	upgradeState *upgrade.State,
+) error {
 	if v.furyctlConf.Spec.Infrastructure != nil &&
 		(startFrom == "" ||
 			startFrom == cluster.OperationPhaseInfrastructure ||
@@ -604,36 +654,6 @@ func (v *ClusterCreator) allPhases(
 		return fmt.Errorf("error while executing plugins phase: %w", err)
 	}
 
-	if v.dryRun {
-		logrus.Info("Kubernetes Fury cluster created successfully (dry-run mode)")
-
-		return nil
-	}
-
-	if upgr.Enabled {
-		if err := v.upgradeStateStore.Delete(); err != nil {
-			return fmt.Errorf("error while deleting upgrade state: %w", err)
-		}
-	}
-
-	if err := v.stateStore.StoreConfig(); err != nil {
-		return fmt.Errorf("error while storing cluster config: %w", err)
-	}
-
-	if err := v.stateStore.StoreKFD(); err != nil {
-		return fmt.Errorf("error while creating secret with the distribution configuration: %w", err)
-	}
-
-	logrus.Info("Kubernetes Fury cluster created successfully")
-
-	if err := v.logVPNKill(vpnConnector); err != nil {
-		return fmt.Errorf("error while logging vpn kill message: %w", err)
-	}
-
-	if err := v.logKubeconfig(); err != nil {
-		return fmt.Errorf("error while logging kubeconfig path: %w", err)
-	}
-
 	return nil
 }
 
@@ -647,6 +667,7 @@ func (*ClusterCreator) getKubernetesSubPhase(startFrom string) string {
 		cluster.OperationSubPhasePreKubernetes,
 		cluster.OperationSubPhasePostKubernetes:
 		return startFrom
+
 	default:
 		return ""
 	}
@@ -658,6 +679,7 @@ func (*ClusterCreator) getDistributionSubPhase(startFrom string) string {
 		cluster.OperationSubPhasePreDistribution,
 		cluster.OperationSubPhasePostDistribution:
 		return startFrom
+
 	default:
 		return ""
 	}

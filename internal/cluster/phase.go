@@ -216,14 +216,14 @@ func (*OperationPhase) CopyFromTemplate(
 	return nil
 }
 
-func (p *OperationPhase) CopyPathsToConfig(cfg *template.Config) {
+func (cp *OperationPhase) CopyPathsToConfig(cfg *template.Config) {
 	cfg.Data["paths"] = map[any]any{
-		"helm":       p.HelmPath,
-		"helmfile":   p.HelmfilePath,
-		"kubectl":    p.KubectlPath,
-		"kustomize":  p.KustomizePath,
-		"terraform":  p.TerraformPath,
-		"vendorPath": path.Join(p.Path, "..", "vendor"),
-		"yq":         p.YqPath,
+		"helm":       cp.HelmPath,
+		"helmfile":   cp.HelmfilePath,
+		"kubectl":    cp.KubectlPath,
+		"kustomize":  cp.KustomizePath,
+		"terraform":  cp.TerraformPath,
+		"vendorPath": path.Join(cp.Path, "..", "vendor"),
+		"yq":         cp.YqPath,
 	}
 }
