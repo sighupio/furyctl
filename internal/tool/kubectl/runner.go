@@ -104,6 +104,31 @@ func (r *Runner) Get(sensitive bool, ns string, params ...string) (string, error
 	return out, nil
 }
 
+func (r *Runner) Delete(params ...string) error {
+	args := []string{"delete"}
+
+	if r.serverSide {
+		args = append(args, "--server-side")
+	}
+
+	if r.skipNotFound {
+		args = append(args, "--ignore-not-found")
+	}
+
+	if len(params) > 0 {
+		args = append(args, params...)
+	}
+
+	cmd, id := r.newCmd(args, false)
+	defer r.deleteCmd(id)
+
+	if _, err := execx.CombinedOutput(cmd); err != nil {
+		return fmt.Errorf("error deleting manifests: %w", err)
+	}
+
+	return nil
+}
+
 func (r *Runner) Version() (string, error) {
 	args := []string{"version"}
 

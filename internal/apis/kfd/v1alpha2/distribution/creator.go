@@ -25,12 +25,14 @@ import (
 	"github.com/sighupio/furyctl/internal/state"
 	"github.com/sighupio/furyctl/internal/upgrade"
 	iox "github.com/sighupio/furyctl/internal/x/io"
+	yamlx "github.com/sighupio/furyctl/internal/x/yaml"
 )
 
 const (
 	DistributionPhaseSchemaPath = ".spec.distribution"
 	PluginsPhaseSchemaPath      = ".spec.plugins"
 	AllPhaseSchemaPath          = ""
+	StartFromFlagNotSet         = ""
 )
 
 var (
@@ -39,14 +41,15 @@ var (
 )
 
 type ClusterCreator struct {
-	paths       cluster.CreatorPaths
-	furyctlConf public.KfddistributionKfdV1Alpha2
-	stateStore  state.Storer
-	kfdManifest config.KFD
-	phase       string
-	dryRun      bool
-	force       bool
-	upgrade     bool
+	paths             cluster.CreatorPaths
+	furyctlConf       public.KfddistributionKfdV1Alpha2
+	stateStore        state.Storer
+	upgradeStateStore upgrade.Storer
+	kfdManifest       config.KFD
+	phase             string
+	dryRun            bool
+	force             bool
+	upgrade           bool
 }
 
 func (c *ClusterCreator) SetProperties(props []cluster.CreatorProperty) {
@@ -57,6 +60,12 @@ func (c *ClusterCreator) SetProperties(props []cluster.CreatorProperty) {
 	c.stateStore = state.NewStore(
 		c.paths.DistroPath,
 		c.paths.ConfigPath,
+		c.paths.WorkDir,
+		c.kfdManifest.Tools.Common.Kubectl.Version,
+		c.paths.BinPath,
+	)
+
+	c.upgradeStateStore = upgrade.NewStateStore(
 		c.paths.WorkDir,
 		c.kfdManifest.Tools.Common.Kubectl.Version,
 		c.paths.BinPath,
@@ -218,7 +227,7 @@ func (c *ClusterCreator) Create(startFrom string, _ int) error {
 			}
 		}
 
-		if err := distributionPhase.Exec(reducers, ""); err != nil {
+		if err := distributionPhase.Exec(reducers, StartFromFlagNotSet, &upgrade.State{}); err != nil {
 			return fmt.Errorf("error while executing distribution phase: %w", err)
 		}
 
@@ -228,6 +237,26 @@ func (c *ClusterCreator) Create(startFrom string, _ int) error {
 		}
 
 	case cluster.OperationPhaseAll:
+		upgradeState := &upgrade.State{}
+
+		if upgr.Enabled && !c.dryRun {
+			s, err := c.upgradeStateStore.Get()
+			if err == nil {
+				if err := yamlx.UnmarshalV3(s, &upgradeState); err != nil {
+					return fmt.Errorf("error while unmarshalling upgrade state: %w", err)
+				}
+			} else {
+				logrus.Debugf("error while getting upgrade state: %v", err)
+				logrus.Debugf("creating a new upgrade state on the cluster...")
+
+				upgradeState = c.initUpgradeState()
+
+				if err := c.upgradeStateStore.Store(upgradeState); err != nil {
+					return fmt.Errorf("error while storing upgrade state: %w", err)
+				}
+			}
+		}
+
 		if startFrom != cluster.OperationPhasePlugins {
 			if len(reducers) > 0 {
 				confirm, err := c.AskConfirmation()
@@ -240,7 +269,7 @@ func (c *ClusterCreator) Create(startFrom string, _ int) error {
 				}
 			}
 
-			if err := distributionPhase.Exec(reducers, c.getDistributionSubPhase(startFrom)); err != nil {
+			if err := distributionPhase.Exec(reducers, c.getDistributionSubPhase(startFrom), upgradeState); err != nil {
 				return fmt.Errorf("error while executing distribution phase: %w", err)
 			}
 		}
@@ -257,6 +286,12 @@ func (c *ClusterCreator) Create(startFrom string, _ int) error {
 		return nil
 	}
 
+	if upgr.Enabled {
+		if err := c.upgradeStateStore.Delete(); err != nil {
+			return fmt.Errorf("error while deleting upgrade state: %w", err)
+		}
+	}
+
 	if err := c.stateStore.StoreConfig(); err != nil {
 		return fmt.Errorf("error while storing cluster config: %w", err)
 	}
@@ -266,6 +301,16 @@ func (c *ClusterCreator) Create(startFrom string, _ int) error {
 	}
 
 	return nil
+}
+
+func (*ClusterCreator) initUpgradeState() *upgrade.State {
+	return &upgrade.State{
+		Phases: upgrade.Phases{
+			PreDistribution:  &upgrade.Phase{Status: upgrade.PhaseStatusPending},
+			Distribution:     &upgrade.Phase{Status: upgrade.PhaseStatusPending},
+			PostDistribution: &upgrade.Phase{Status: upgrade.PhaseStatusPending},
+		},
+	}
 }
 
 func (*ClusterCreator) getDistributionSubPhase(startFrom string) string {

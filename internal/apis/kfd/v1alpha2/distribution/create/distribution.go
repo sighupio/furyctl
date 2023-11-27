@@ -42,6 +42,7 @@ type Distribution struct {
 	furyctlConf     public.KfddistributionKfdV1Alpha2
 	distroPath      string
 	stateStore      state.Storer
+	upgradeStore    upgrade.Storer
 	kubeRunner      *kubectl.Runner
 	dryRun          bool
 	shellRunner     *shell.Runner
@@ -70,6 +71,11 @@ func NewDistribution(
 		stateStore: state.NewStore(
 			paths.DistroPath,
 			paths.ConfigPath,
+			paths.WorkDir,
+			kfdManifest.Tools.Common.Kubectl.Version,
+			paths.BinPath,
+		),
+		upgradeStore: upgrade.NewStateStore(
 			paths.WorkDir,
 			kfdManifest.Tools.Common.Kubectl.Version,
 			paths.BinPath,
@@ -106,7 +112,7 @@ func (*Distribution) SupportsLifecycle(lifecycle string) bool {
 	}
 }
 
-func (d *Distribution) Exec(reducers v1alpha2.Reducers, startFrom string) error {
+func (d *Distribution) Exec(reducers v1alpha2.Reducers, startFrom string, upgradeState *upgrade.State) error {
 	logrus.Info("Installing Kubernetes Fury Distribution...")
 
 	if err := d.CreateFolder(); err != nil {
@@ -213,7 +219,21 @@ func (d *Distribution) Exec(reducers v1alpha2.Reducers, startFrom string) error 
 	if startFrom == "" || startFrom == cluster.OperationSubPhasePreDistribution {
 		// Run upgrade script if needed.
 		if err := d.upgrade.Exec(d.Path, "pre-distribution"); err != nil {
+			upgradeState.Phases.PreDistribution.Status = upgrade.PhaseStatusFailed
+
+			if err := d.upgradeStore.Store(upgradeState); err != nil {
+				return fmt.Errorf("error storing upgrade state: %w", err)
+			}
+
 			return fmt.Errorf("error running upgrade: %w", err)
+		}
+
+		if d.upgrade.Enabled {
+			upgradeState.Phases.PreDistribution.Status = upgrade.PhaseStatusSuccess
+
+			if err := d.upgradeStore.Store(upgradeState); err != nil {
+				return fmt.Errorf("error storing upgrade state: %w", err)
+			}
 		}
 	}
 
@@ -222,6 +242,14 @@ func (d *Distribution) Exec(reducers v1alpha2.Reducers, startFrom string) error 
 		logrus.Info("Applying manifests...")
 
 		if _, err := d.shellRunner.Run(path.Join(d.Path, "scripts", "apply.sh")); err != nil {
+			if d.upgrade.Enabled {
+				upgradeState.Phases.Distribution.Status = upgrade.PhaseStatusFailed
+
+				if err := d.upgradeStore.Store(upgradeState); err != nil {
+					return fmt.Errorf("error storing upgrade state: %w", err)
+				}
+			}
+
 			return fmt.Errorf("error applying manifests: %w", err)
 		}
 
@@ -233,11 +261,33 @@ func (d *Distribution) Exec(reducers v1alpha2.Reducers, startFrom string) error 
 		); err != nil {
 			return fmt.Errorf("error running post-apply reducers: %w", err)
 		}
+
+		if d.upgrade.Enabled {
+			upgradeState.Phases.Distribution.Status = upgrade.PhaseStatusSuccess
+
+			if err := d.upgradeStore.Store(upgradeState); err != nil {
+				return fmt.Errorf("error storing upgrade state: %w", err)
+			}
+		}
 	}
 
 	// Run upgrade script if needed.
 	if err := d.upgrade.Exec(d.Path, "post-distribution"); err != nil {
+		upgradeState.Phases.PostDistribution.Status = upgrade.PhaseStatusFailed
+
+		if err := d.upgradeStore.Store(upgradeState); err != nil {
+			return fmt.Errorf("error storing upgrade state: %w", err)
+		}
+
 		return fmt.Errorf("error running upgrade: %w", err)
+	}
+
+	if d.upgrade.Enabled {
+		upgradeState.Phases.PostDistribution.Status = upgrade.PhaseStatusSuccess
+
+		if err := d.upgradeStore.Store(upgradeState); err != nil {
+			return fmt.Errorf("error storing upgrade state: %w", err)
+		}
 	}
 
 	logrus.Info("Kubernetes Fury Distribution installed successfully")
