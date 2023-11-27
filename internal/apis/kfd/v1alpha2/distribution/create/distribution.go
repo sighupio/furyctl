@@ -115,25 +115,55 @@ func (*Distribution) SupportsLifecycle(lifecycle string) bool {
 func (d *Distribution) Exec(reducers v1alpha2.Reducers, startFrom string, upgradeState *upgrade.State) error {
 	logrus.Info("Installing Kubernetes Fury Distribution...")
 
+	mCfg, err := d.prepare()
+	if err != nil {
+		return fmt.Errorf("error preparing distribution phase: %w", err)
+	}
+
+	// Stop if dry run is enabled.
+	if d.dryRun {
+		logrus.Info("Kubernetes Fury Distribution installed successfully (dry-run mode)")
+
+		return nil
+	}
+
+	if err := d.preDistribution(reducers, startFrom, upgradeState, mCfg); err != nil {
+		return fmt.Errorf("error running pre-distribution phase: %w", err)
+	}
+
+	if err := d.coreDistribution(reducers, startFrom, upgradeState, mCfg); err != nil {
+		return fmt.Errorf("error running core distribution phase: %w", err)
+	}
+
+	if err := d.postDistribution(upgradeState); err != nil {
+		return fmt.Errorf("error running post-distribution phase: %w", err)
+	}
+
+	logrus.Info("Kubernetes Fury Distribution installed successfully")
+
+	return nil
+}
+
+func (d *Distribution) prepare() (template.Config, error) {
 	if err := d.CreateFolder(); err != nil {
-		return fmt.Errorf("error creating distribution phase folder: %w", err)
+		return template.Config{}, fmt.Errorf("error creating distribution phase folder: %w", err)
 	}
 
 	if _, err := os.Stat(path.Join(d.OperationPhase.Path, "manifests")); os.IsNotExist(err) {
 		err = os.Mkdir(path.Join(d.OperationPhase.Path, "manifests"), iox.FullPermAccess)
 		if err != nil {
-			return fmt.Errorf("error creating manifests folder: %w", err)
+			return template.Config{}, fmt.Errorf("error creating manifests folder: %w", err)
 		}
 	}
 
 	furyctlMerger, err := d.createFuryctlMerger()
 	if err != nil {
-		return err
+		return template.Config{}, err
 	}
 
 	mCfg, err := template.NewConfigWithoutData(furyctlMerger, []string{"terraform", ".gitignore", "manifests/aws"})
 	if err != nil {
-		return fmt.Errorf("error creating template config: %w", err)
+		return template.Config{}, fmt.Errorf("error creating template config: %w", err)
 	}
 
 	d.CopyPathsToConfig(&mCfg)
@@ -146,14 +176,14 @@ func (d *Distribution) Exec(reducers v1alpha2.Reducers, startFrom string, upgrad
 	if _, err := d.kubeRunner.Version(); err != nil {
 		logrus.Debugf("Got error while running cluster reachability check: %s", err)
 
-		return fmt.Errorf("error connecting to cluster: %w", err)
+		return template.Config{}, fmt.Errorf("error connecting to cluster: %w", err)
 	}
 
 	logrus.Info("Checking storage classes...")
 
 	getStorageClassesOutput, err := d.kubeRunner.Get(false, "", "storageclasses")
 	if err != nil {
-		return fmt.Errorf("error while checking storage class: %w", err)
+		return template.Config{}, fmt.Errorf("error while checking storage class: %w", err)
 	}
 
 	if getStorageClassesOutput == "No resources found" {
@@ -173,19 +203,16 @@ func (d *Distribution) Exec(reducers v1alpha2.Reducers, startFrom string, upgrad
 
 	mCfg, err = d.injectStoredConfig(mCfg)
 	if err != nil {
-		return fmt.Errorf("error injecting stored config: %w", err)
+		return template.Config{}, fmt.Errorf("error injecting stored config: %w", err)
 	}
 
 	// Generate manifests.
 	if err := d.copyFromTemplate(mCfg); err != nil {
-		return fmt.Errorf("error copying from template: %w", err)
+		return template.Config{}, fmt.Errorf("error copying from template: %w", err)
 	}
 
-	// Stop if dry run is enabled.
 	if d.dryRun {
-		logrus.Info("Kubernetes Fury Distribution installed successfully (dry-run mode)")
-
-		return nil
+		return template.Config{}, nil
 	}
 
 	if d.furyctlConf.Spec.Distribution.Modules.Networking.Type == "none" {
@@ -199,14 +226,23 @@ func (d *Distribution) Exec(reducers v1alpha2.Reducers, startFrom string, upgrad
 			"jsonpath=\"{range .items[*]}{.spec.taints[?(@.key==\"node.kubernetes.io/not-ready\")]}{end}\"",
 		)
 		if err != nil {
-			return fmt.Errorf("error while checking nodes: %w", err)
+			return template.Config{}, fmt.Errorf("error while checking nodes: %w", err)
 		}
 
 		if getNotReadyNodesOutput != "\"\"" {
-			return errNodesNotReady
+			return template.Config{}, errNodesNotReady
 		}
 	}
 
+	return mCfg, nil
+}
+
+func (d *Distribution) preDistribution(
+	reducers v1alpha2.Reducers,
+	startFrom string,
+	upgradeState *upgrade.State,
+	mCfg template.Config,
+) error {
 	if err := d.runReducers(
 		reducers,
 		mCfg,
@@ -237,6 +273,15 @@ func (d *Distribution) Exec(reducers v1alpha2.Reducers, startFrom string, upgrad
 		}
 	}
 
+	return nil
+}
+
+func (d *Distribution) coreDistribution(
+	reducers v1alpha2.Reducers,
+	startFrom string,
+	upgradeState *upgrade.State,
+	mCfg template.Config,
+) error {
 	if startFrom != cluster.OperationSubPhasePostDistribution {
 		// Apply manifests.
 		logrus.Info("Applying manifests...")
@@ -271,7 +316,12 @@ func (d *Distribution) Exec(reducers v1alpha2.Reducers, startFrom string, upgrad
 		}
 	}
 
-	// Run upgrade script if needed.
+	return nil
+}
+
+func (d *Distribution) postDistribution(
+	upgradeState *upgrade.State,
+) error {
 	if err := d.upgrade.Exec(d.Path, "post-distribution"); err != nil {
 		upgradeState.Phases.PostDistribution.Status = upgrade.PhaseStatusFailed
 
@@ -289,8 +339,6 @@ func (d *Distribution) Exec(reducers v1alpha2.Reducers, startFrom string, upgrad
 			return fmt.Errorf("error storing upgrade state: %w", err)
 		}
 	}
-
-	logrus.Info("Kubernetes Fury Distribution installed successfully")
 
 	return nil
 }

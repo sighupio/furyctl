@@ -19,7 +19,6 @@ import (
 	"github.com/sighupio/fury-distribution/pkg/apis/config"
 	"github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2"
 	"github.com/sighupio/furyctl/internal/cluster"
-	"github.com/sighupio/furyctl/internal/merge"
 	"github.com/sighupio/furyctl/internal/semver"
 	"github.com/sighupio/furyctl/internal/template"
 	"github.com/sighupio/furyctl/internal/upgrade"
@@ -31,6 +30,7 @@ var (
 	errUpgradeCanceled               = errors.New("upgrade canceled by user")
 	errUpgradeFlagNotSet             = errors.New("upgrade flag not set by user")
 	errUpgradeWithReducersNotAllowed = errors.New("upgrade with reducers not allowed")
+	errUpgradePathNotFound           = errors.New("upgrade path not found")
 )
 
 type PreUpgrade struct {
@@ -42,6 +42,7 @@ type PreUpgrade struct {
 	upgrade         *upgrade.Upgrade
 	upgradeFlag     bool
 	reducers        v1alpha2.Reducers
+	merger          v1alpha2.Merger
 	diffs           diff.Changelog
 	forceFlag       bool
 }
@@ -75,21 +76,24 @@ func NewPreUpgrade(
 		upgrade:         upgr,
 		upgradeFlag:     upgradeFlag,
 		reducers:        reducers,
+		merger:          v1alpha2.NewBaseMerger(paths.DistroPath, kind, paths.ConfigPath),
 		diffs:           diffs,
 		forceFlag:       forceFlag,
 	}, nil
 }
 
 func (p *PreUpgrade) Exec() error {
+	var ok bool
+
 	logrus.Info("Running preupgrade phase...")
 
 	if err := p.CreateFolder(); err != nil {
 		return fmt.Errorf("error creating preupgrade phase folder: %w", err)
 	}
 
-	furyctlMerger, err := p.createFuryctlMerger()
+	furyctlMerger, err := p.merger.Create()
 	if err != nil {
-		return err
+		return fmt.Errorf("error creating furyctl merger: %w", err)
 	}
 
 	mCfg, err := template.NewConfigWithoutData(furyctlMerger, []string{})
@@ -139,8 +143,15 @@ func (p *PreUpgrade) Exec() error {
 	if len(distributionVersionChanges) > 0 {
 		distributionVersionChange := distributionVersionChanges[0]
 
-		p.upgrade.From = distributionVersionChange.From.(string)
-		p.upgrade.To = distributionVersionChange.To.(string)
+		p.upgrade.From, ok = distributionVersionChange.From.(string)
+		if !ok {
+			return fmt.Errorf("error while getting distribution version from: %w", err)
+		}
+
+		p.upgrade.To, ok = distributionVersionChange.To.(string)
+		if !ok {
+			return fmt.Errorf("error while getting distribution version to: %w", err)
+		}
 
 		fmt.Printf(
 			"WARNING: Distribution version changed from %s to %s, you are about to upgrade the cluster.\n",
@@ -159,7 +170,7 @@ func (p *PreUpgrade) Exec() error {
 
 		if _, err := os.Stat(upgradePath); err != nil {
 			if os.IsNotExist(err) {
-				return fmt.Errorf("unable to upgrade from %s to %s, upgrade path not found", p.upgrade.From, p.upgrade.To)
+				return fmt.Errorf("%w: unable to upgrade from %s to %s", errUpgradePathNotFound, p.upgrade.From, p.upgrade.To)
 			}
 
 			return fmt.Errorf("error checking upgrade path: %w", err)
@@ -170,7 +181,9 @@ func (p *PreUpgrade) Exec() error {
 		}
 
 		if !p.forceFlag {
-			fmt.Println("Are you sure you want to continue? Only 'yes' will be accepted to confirm.")
+			if _, err := fmt.Println("Are you sure you want to continue? Only 'yes' will be accepted to confirm."); err != nil {
+				return fmt.Errorf("error writing to stdout: %w", err)
+			}
 
 			prompter := iox.NewPrompter(bufio.NewReader(os.Stdin))
 
@@ -190,40 +203,4 @@ func (p *PreUpgrade) Exec() error {
 	logrus.Info("Preupgrade phase completed successfully")
 
 	return nil
-}
-
-func (p *PreUpgrade) createFuryctlMerger() (*merge.Merger, error) {
-	defaultsFilePath := path.Join(p.distroPath, "defaults", fmt.Sprintf("%s-kfd-v1alpha2.yaml", strings.ToLower(p.kind)))
-
-	defaultsFile, err := yamlx.FromFileV2[map[any]any](defaultsFilePath)
-	if err != nil {
-		return &merge.Merger{}, fmt.Errorf("%s - %w", defaultsFilePath, err)
-	}
-
-	furyctlConf, err := yamlx.FromFileV2[map[any]any](p.furyctlConfPath)
-	if err != nil {
-		return &merge.Merger{}, fmt.Errorf("%s - %w", p.furyctlConfPath, err)
-	}
-
-	merger := merge.NewMerger(
-		merge.NewDefaultModel(defaultsFile, ".data"),
-		merge.NewDefaultModel(furyctlConf, ".spec.distribution"),
-	)
-
-	_, err = merger.Merge()
-	if err != nil {
-		return nil, fmt.Errorf("error merging furyctl config: %w", err)
-	}
-
-	reverseMerger := merge.NewMerger(
-		*merger.GetCustom(),
-		*merger.GetBase(),
-	)
-
-	_, err = reverseMerger.Merge()
-	if err != nil {
-		return nil, fmt.Errorf("error merging furyctl config: %w", err)
-	}
-
-	return reverseMerger, nil
 }

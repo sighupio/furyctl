@@ -40,6 +40,34 @@ func (k *Kubernetes) Exec(startFrom string, upgradeState *upgrade.State) error {
 	logrus.Info("Creating Kubernetes Fury cluster...")
 	logrus.Debug("Create: running kubernetes phase...")
 
+	if err := k.prepare(); err != nil {
+		return fmt.Errorf("error preparing kubernetes phase: %w", err)
+	}
+
+	if k.dryRun {
+		logrus.Info("Kubernetes cluster created successfully (dry-run mode)")
+
+		return nil
+	}
+
+	if err := k.preKubernetes(startFrom, upgradeState); err != nil {
+		return fmt.Errorf("error running pre-kubernetes phase: %w", err)
+	}
+
+	if err := k.coreKubernetes(startFrom, upgradeState); err != nil {
+		return fmt.Errorf("error running core kubernetes phase: %w", err)
+	}
+
+	if err := k.postKubernetes(upgradeState); err != nil {
+		return fmt.Errorf("error running post-kubernetes phase: %w", err)
+	}
+
+	logrus.Info("Kubernetes cluster created successfully")
+
+	return nil
+}
+
+func (k *Kubernetes) prepare() error {
 	if err := k.CreateFolder(); err != nil {
 		return fmt.Errorf("error creating kubernetes phase folder: %w", err)
 	}
@@ -99,8 +127,6 @@ func (k *Kubernetes) Exec(startFrom string, upgradeState *upgrade.State) error {
 	}
 
 	if k.dryRun {
-		logrus.Info("Kubernetes cluster created successfully (dry-run mode)")
-
 		return nil
 	}
 
@@ -111,6 +137,13 @@ func (k *Kubernetes) Exec(startFrom string, upgradeState *upgrade.State) error {
 		return fmt.Errorf("error checking hosts: %w", err)
 	}
 
+	return nil
+}
+
+func (k *Kubernetes) preKubernetes(
+	startFrom string,
+	upgradeState *upgrade.State,
+) error {
 	if startFrom == "" || startFrom == cluster.OperationSubPhasePreKubernetes {
 		// Run upgrade script if needed.
 		if err := k.upgrade.Exec(k.Path, "pre-kubernetes"); err != nil {
@@ -132,6 +165,13 @@ func (k *Kubernetes) Exec(startFrom string, upgradeState *upgrade.State) error {
 		}
 	}
 
+	return nil
+}
+
+func (k *Kubernetes) coreKubernetes(
+	startFrom string,
+	upgradeState *upgrade.State,
+) error {
 	if startFrom != cluster.OperationSubPhasePostKubernetes {
 		logrus.Info("Running ansible playbook...")
 
@@ -179,7 +219,12 @@ func (k *Kubernetes) Exec(startFrom string, upgradeState *upgrade.State) error {
 		}
 	}
 
-	// Run upgrade script if needed.
+	return nil
+}
+
+func (k *Kubernetes) postKubernetes(
+	upgradeState *upgrade.State,
+) error {
 	if err := k.upgrade.Exec(k.Path, "post-kubernetes"); err != nil {
 		upgradeState.Phases.PostKubernetes.Status = upgrade.PhaseStatusFailed
 
@@ -197,8 +242,6 @@ func (k *Kubernetes) Exec(startFrom string, upgradeState *upgrade.State) error {
 			return fmt.Errorf("error storing upgrade state: %w", err)
 		}
 	}
-
-	logrus.Info("Kubernetes cluster created successfully")
 
 	return nil
 }

@@ -10,12 +10,13 @@ import (
 	"os"
 	"path"
 
+	"github.com/sirupsen/logrus"
+
 	"github.com/sighupio/furyctl/internal/tool/kubectl"
 	execx "github.com/sighupio/furyctl/internal/x/exec"
 	iox "github.com/sighupio/furyctl/internal/x/io"
 	kubex "github.com/sighupio/furyctl/internal/x/kube"
 	yamlx "github.com/sighupio/furyctl/internal/x/yaml"
-	"github.com/sirupsen/logrus"
 )
 
 type PhaseStatus string
