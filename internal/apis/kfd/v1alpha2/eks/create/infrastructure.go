@@ -101,6 +101,30 @@ func (i *Infrastructure) Exec(startFrom string, upgradeState *upgrade.State) err
 
 	timestamp := time.Now().Unix()
 
+	if err := i.prepare(); err != nil {
+		return fmt.Errorf("error preparing infrastructure phase: %w", err)
+	}
+
+	if err := i.preInfrastructure(startFrom, upgradeState); err != nil {
+		return fmt.Errorf("error running pre-infrastructure phase: %w", err)
+	}
+
+	if err := i.coreInfrastructure(startFrom, upgradeState, timestamp); err != nil {
+		return fmt.Errorf("error running core infrastructure phase: %w", err)
+	}
+
+	if i.dryRun {
+		return nil
+	}
+
+	if err := i.postInfrastructure(upgradeState); err != nil {
+		return fmt.Errorf("error running post-infrastructure phase: %w", err)
+	}
+
+	return nil
+}
+
+func (i *Infrastructure) prepare() error {
 	if err := i.CreateFolder(); err != nil {
 		return fmt.Errorf("error creating infrastructure folder: %w", err)
 	}
@@ -121,6 +145,13 @@ func (i *Infrastructure) Exec(startFrom string, upgradeState *upgrade.State) err
 		return fmt.Errorf("error running terraform init: %w", err)
 	}
 
+	return nil
+}
+
+func (i *Infrastructure) preInfrastructure(
+	startFrom string,
+	upgradeState *upgrade.State,
+) error {
 	if !i.dryRun && (startFrom == "" || startFrom == cluster.OperationSubPhasePreInfrastructure) {
 		if err := i.upgrade.Exec(i.Path, "pre-infrastructure"); err != nil {
 			upgradeState.Phases.PreInfrastructure.Status = upgrade.PhaseStatusFailed
@@ -141,16 +172,24 @@ func (i *Infrastructure) Exec(startFrom string, upgradeState *upgrade.State) err
 		}
 	}
 
-	plan, err := i.tfRunner.Plan(timestamp)
-	if err != nil {
-		return fmt.Errorf("error running terraform plan: %w", err)
-	}
+	return nil
+}
 
-	if i.dryRun {
-		return nil
-	}
-
+func (i *Infrastructure) coreInfrastructure(
+	startFrom string,
+	upgradeState *upgrade.State,
+	timestamp int64,
+) error {
 	if startFrom != cluster.OperationSubPhasePostInfrastructure {
+		plan, err := i.tfRunner.Plan(timestamp)
+		if err != nil {
+			return fmt.Errorf("error running terraform plan: %w", err)
+		}
+
+		if i.dryRun {
+			return nil
+		}
+
 		tfParser := parser.NewTfPlanParser(string(plan))
 
 		parsedPlan := tfParser.Parse()
@@ -203,7 +242,12 @@ func (i *Infrastructure) Exec(startFrom string, upgradeState *upgrade.State) err
 		}
 	}
 
-	// Run upgrade script if needed.
+	return nil
+}
+
+func (i *Infrastructure) postInfrastructure(
+	upgradeState *upgrade.State,
+) error {
 	if err := i.upgrade.Exec(i.Path, "post-infrastructure"); err != nil {
 		upgradeState.Phases.PostInfrastructure.Status = upgrade.PhaseStatusFailed
 

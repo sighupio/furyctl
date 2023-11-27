@@ -237,45 +237,14 @@ func (c *ClusterCreator) Create(startFrom string, _ int) error {
 		}
 
 	case cluster.OperationPhaseAll:
-		upgradeState := &upgrade.State{}
-
-		if upgr.Enabled && !c.dryRun {
-			s, err := c.upgradeStateStore.Get()
-			if err == nil {
-				if err := yamlx.UnmarshalV3(s, &upgradeState); err != nil {
-					return fmt.Errorf("error while unmarshalling upgrade state: %w", err)
-				}
-			} else {
-				logrus.Debugf("error while getting upgrade state: %v", err)
-				logrus.Debugf("creating a new upgrade state on the cluster...")
-
-				upgradeState = c.initUpgradeState()
-
-				if err := c.upgradeStateStore.Store(upgradeState); err != nil {
-					return fmt.Errorf("error while storing upgrade state: %w", err)
-				}
-			}
-		}
-
-		if startFrom != cluster.OperationPhasePlugins {
-			if len(reducers) > 0 {
-				confirm, err := c.AskConfirmation()
-				if err != nil {
-					return fmt.Errorf("error while asking for confirmation: %w", err)
-				}
-
-				if !confirm {
-					return ErrAbortedByUser
-				}
-			}
-
-			if err := distributionPhase.Exec(reducers, c.getDistributionSubPhase(startFrom), upgradeState); err != nil {
-				return fmt.Errorf("error while executing distribution phase: %w", err)
-			}
-		}
-
-		if err := pluginsPhase.Exec(); err != nil {
-			return fmt.Errorf("error while executing plugins phase: %w", err)
+		if err := c.allPhases(
+			startFrom,
+			reducers,
+			distributionPhase,
+			pluginsPhase,
+			upgr,
+		); err != nil {
+			return fmt.Errorf("error while executing cluster creation: %w", err)
 		}
 
 	default:
@@ -303,6 +272,57 @@ func (c *ClusterCreator) Create(startFrom string, _ int) error {
 	return nil
 }
 
+func (c *ClusterCreator) allPhases(
+	startFrom string,
+	reducers v1alpha2.Reducers,
+	distributionPhase *create.Distribution,
+	pluginsPhase *commcreate.Plugins,
+	upgr *upgrade.Upgrade,
+) error {
+	upgradeState := &upgrade.State{}
+
+	if upgr.Enabled && !c.dryRun {
+		s, err := c.upgradeStateStore.Get()
+		if err == nil {
+			if err := yamlx.UnmarshalV3(s, &upgradeState); err != nil {
+				return fmt.Errorf("error while unmarshalling upgrade state: %w", err)
+			}
+		} else {
+			logrus.Debugf("error while getting upgrade state: %v", err)
+			logrus.Debugf("creating a new upgrade state on the cluster...")
+
+			upgradeState = c.initUpgradeState()
+
+			if err := c.upgradeStateStore.Store(upgradeState); err != nil {
+				return fmt.Errorf("error while storing upgrade state: %w", err)
+			}
+		}
+	}
+
+	if startFrom != cluster.OperationPhasePlugins {
+		if len(reducers) > 0 {
+			confirm, err := c.AskConfirmation()
+			if err != nil {
+				return fmt.Errorf("error while asking for confirmation: %w", err)
+			}
+
+			if !confirm {
+				return ErrAbortedByUser
+			}
+		}
+
+		if err := distributionPhase.Exec(reducers, c.getDistributionSubPhase(startFrom), upgradeState); err != nil {
+			return fmt.Errorf("error while executing distribution phase: %w", err)
+		}
+	}
+
+	if err := pluginsPhase.Exec(); err != nil {
+		return fmt.Errorf("error while executing plugins phase: %w", err)
+	}
+
+	return nil
+}
+
 func (*ClusterCreator) initUpgradeState() *upgrade.State {
 	return &upgrade.State{
 		Phases: upgrade.Phases{
@@ -319,6 +339,7 @@ func (*ClusterCreator) getDistributionSubPhase(startFrom string) string {
 		cluster.OperationSubPhasePreDistribution,
 		cluster.OperationSubPhasePostDistribution:
 		return startFrom
+
 	default:
 		return ""
 	}
