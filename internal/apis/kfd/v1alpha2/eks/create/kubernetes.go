@@ -1128,8 +1128,15 @@ func (*Kubernetes) addCidrBlocksFirewallRules(
 			fwRuleTags = string(tags)
 		}
 
-		content := "{\ndescription = \"%v\"\ntype = \"%v\"\ncidr_blocks = %v\nprotocol = \"%v\"\n" +
-			"from_port = \"%v\"\nto_port = \"%v\"\ntags = %v\n}"
+		content := `{
+	description = "%v"
+	type = "%v"
+	cidr_blocks = %v
+	protocol = "%v"
+	from_port = "%v"
+	to_port = "%v"
+	tags = %v
+}`
 
 		if i < len(cb)-1 {
 			content += ","
@@ -1179,8 +1186,15 @@ func (*Kubernetes) addSourceSecurityGroupIDFirewallRules(
 			fwRuleTags = string(tags)
 		}
 
-		content := "{\ndescription = \"%v\"\ntype = \"%v\"\nsource_security_group_id = %v\nprotocol = \"%v\"\n" +
-			"from_port = \"%v\"\nto_port = \"%v\"\ntags = %v\n}"
+		content := `{
+	description = "%v"
+	type = "%v"
+	source_security_group_id = %v
+	protocol = "%v"
+	from_port = "%v"
+	to_port = "%v"
+	tags = %v
+}`
 
 		if i < len(cb)-1 {
 			content += ","
@@ -1222,8 +1236,15 @@ func (*Kubernetes) addSelfFirewallRules(
 			fwRuleTags = string(tags)
 		}
 
-		content := "{\ndescription = \"%v\"\ntype = \"%v\"\nself = %t\nprotocol = \"%v\"\n" +
-			"from_port = \"%v\"\nto_port = \"%v\"\ntags = %v\n}"
+		content := `{
+	description = "%v"
+	type = "%v"
+	self = %t
+	protocol = "%v"
+	from_port = "%v"
+	to_port = "%v"
+	tags = %v
+}`
 
 		if i < len(cb)-1 {
 			content += ","

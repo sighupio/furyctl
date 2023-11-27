@@ -13,7 +13,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 
-	distroConfig "github.com/sighupio/fury-distribution/pkg/apis/config"
+	distroconfig "github.com/sighupio/fury-distribution/pkg/apis/config"
 	"github.com/sighupio/furyctl/internal/analytics"
 	"github.com/sighupio/furyctl/internal/cmd/cmdutil"
 	"github.com/sighupio/furyctl/internal/config"
@@ -87,13 +87,13 @@ func NewConfigCmd(tracker *analytics.Tracker) *cobra.Command {
 				return fmt.Errorf("%w: https", ErrParsingFlag)
 			}
 
-			minimalConf := distroConfig.Furyctl{
+			minimalConf := distroconfig.Furyctl{
 				APIVersion: apiVersion,
 				Kind:       kind,
-				Metadata: distroConfig.FuryctlMeta{
+				Metadata: distroconfig.FuryctlMeta{
 					Name: name,
 				},
-				Spec: distroConfig.FuryctlSpec{
+				Spec: distroconfig.FuryctlSpec{
 					DistributionVersion: semver.EnsurePrefix(version),
 				},
 			}

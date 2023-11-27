@@ -19,7 +19,7 @@ var (
 
 type Mergeable interface {
 	Get() (map[any]any, error)
-	Walk(map[any]any) error
+	Walk(v map[any]any) error
 	Content() map[any]any
 	Path() string
 }

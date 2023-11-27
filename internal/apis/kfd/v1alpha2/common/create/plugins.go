@@ -146,7 +146,7 @@ func (p *Plugins) Exec() error {
 
 	specPluginsHelm, hasSpecPluginsHelm := specPlugins["helm"].(map[any]any)
 	if hasSpecPluginsHelm {
-		//nolint:errcheck // We don't care about the error here.
+		//nolint:errcheck,revive // We don't care about the error here.
 		specPluginsHelmReleases, _ = specPluginsHelm["releases"].([]any)
 	}
 

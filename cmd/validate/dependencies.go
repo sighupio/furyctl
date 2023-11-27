@@ -45,7 +45,8 @@ func NewDependenciesCmd(tracker *analytics.Tracker) *cobra.Command {
 				return fmt.Errorf("%w: distro-location", ErrParsingFlag)
 			}
 
-			binPath := cobrax.Flag[string](cmd, "bin-path").(string) //nolint:errcheck,forcetypeassert // optional flag
+			//nolint:errcheck,forcetypeassert,revive // optional flag
+			binPath := cobrax.Flag[string](cmd, "bin-path").(string)
 			if binPath == "" {
 				// Init paths.
 				logrus.Debug("Getting Home Directory Path...")

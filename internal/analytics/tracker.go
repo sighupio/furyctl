@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"net"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
@@ -44,8 +45,8 @@ func NewTracker(token, version, arch, os, org, hostname string) *Tracker {
 		"org":          org,
 		"hostname":     hostname,
 		"trackID":      getTrackID(token),
-		"isNext":       fmt.Sprintf("%t", isNext),
-		"development":  fmt.Sprintf("%t", isDevelopBuild),
+		"isNext":       strconv.FormatBool(isNext),
+		"development":  strconv.FormatBool(isDevelopBuild),
 	}
 
 	tracker := &Tracker{
