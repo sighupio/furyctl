@@ -769,6 +769,17 @@ func (k *Kubernetes) createTfVars() error {
 				}
 			}
 
+			if np.Instance.MaxPods != nil {
+				if err := bytesx.SafeWriteToBuffer(
+					&buffer,
+					"max_pods = %v\n",
+					filepath.Dir(k.furyctlConfPath),
+					*np.Instance.MaxPods,
+				); err != nil {
+					return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
+				}
+			}
+
 			volumeSize := nodePoolDefaultVolumeSize
 
 			if np.Instance.VolumeSize != nil {
