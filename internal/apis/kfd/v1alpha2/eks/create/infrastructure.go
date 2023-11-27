@@ -48,6 +48,7 @@ type Infrastructure struct {
 	kfdManifest     config.KFD
 	furyctlConfPath string
 	tfRunner        *terraform.Runner
+	upgradeStore    upgrade.Storer
 	dryRun          bool
 	upgrade         *upgrade.Upgrade
 }
@@ -57,7 +58,7 @@ func NewInfrastructure(
 	kfdManifest config.KFD,
 	paths cluster.CreatorPaths,
 	dryRun bool,
-	upgrade *upgrade.Upgrade,
+	upgr *upgrade.Upgrade,
 ) (*Infrastructure, error) {
 	infraDir := path.Join(paths.WorkDir, cluster.OperationPhaseInfrastructure)
 
@@ -83,12 +84,17 @@ func NewInfrastructure(
 				Terraform: phase.TerraformPath,
 			},
 		),
+		upgradeStore: upgrade.NewStateStore(
+			paths.WorkDir,
+			kfdManifest.Tools.Common.Kubectl.Version,
+			paths.BinPath,
+		),
 		dryRun:  dryRun,
-		upgrade: upgrade,
+		upgrade: upgr,
 	}, nil
 }
 
-func (i *Infrastructure) Exec(startFrom string) error {
+func (i *Infrastructure) Exec(startFrom string, upgradeState *upgrade.State) error {
 	logrus.Info("Creating infrastructure...")
 
 	logrus.Debug("Create: running infrastructure phase...")
@@ -117,7 +123,21 @@ func (i *Infrastructure) Exec(startFrom string) error {
 
 	if !i.dryRun && (startFrom == "" || startFrom == cluster.OperationSubPhasePreInfrastructure) {
 		if err := i.upgrade.Exec(i.Path, "pre-infrastructure"); err != nil {
+			upgradeState.Phases.PreInfrastructure.Status = upgrade.PhaseStatusFailed
+
+			if err := i.upgradeStore.Store(upgradeState); err != nil {
+				return fmt.Errorf("error storing upgrade state: %w", err)
+			}
+
 			return fmt.Errorf("error running upgrade: %w", err)
+		}
+
+		if i.upgrade.Enabled {
+			upgradeState.Phases.PreInfrastructure.Status = upgrade.PhaseStatusSuccess
+
+			if err := i.upgradeStore.Store(upgradeState); err != nil {
+				return fmt.Errorf("error storing upgrade state: %w", err)
+			}
 		}
 	}
 
@@ -159,7 +179,23 @@ func (i *Infrastructure) Exec(startFrom string) error {
 		logrus.Warn("Creating cloud resources, this could take a while...")
 
 		if err := i.tfRunner.Apply(timestamp); err != nil {
+			if i.upgrade.Enabled {
+				upgradeState.Phases.Infrastructure.Status = upgrade.PhaseStatusFailed
+
+				if err := i.upgradeStore.Store(upgradeState); err != nil {
+					return fmt.Errorf("error storing upgrade state: %w", err)
+				}
+			}
+
 			return fmt.Errorf("cannot create cloud resources: %w", err)
+		}
+
+		if i.upgrade.Enabled {
+			upgradeState.Phases.Infrastructure.Status = upgrade.PhaseStatusSuccess
+
+			if err := i.upgradeStore.Store(upgradeState); err != nil {
+				return fmt.Errorf("error storing upgrade state: %w", err)
+			}
 		}
 
 		if _, err := i.tfRunner.Output(); err != nil {
@@ -169,7 +205,21 @@ func (i *Infrastructure) Exec(startFrom string) error {
 
 	// Run upgrade script if needed.
 	if err := i.upgrade.Exec(i.Path, "post-infrastructure"); err != nil {
+		upgradeState.Phases.PostInfrastructure.Status = upgrade.PhaseStatusFailed
+
+		if err := i.upgradeStore.Store(upgradeState); err != nil {
+			return fmt.Errorf("error storing upgrade state: %w", err)
+		}
+
 		return fmt.Errorf("error running upgrade: %w", err)
+	}
+
+	if i.upgrade.Enabled {
+		upgradeState.Phases.PostInfrastructure.Status = upgrade.PhaseStatusSuccess
+
+		if err := i.upgradeStore.Store(upgradeState); err != nil {
+			return fmt.Errorf("error storing upgrade state: %w", err)
+		}
 	}
 
 	return nil
