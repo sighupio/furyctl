@@ -87,7 +87,7 @@ func (d *Distribution) Exec() error {
 	if getStorageClassesOutput == "No resources found" {
 		logrus.Warn(
 			"No storage classes found in the cluster. " +
-				"logging module (if enabled), dr module (if enabled) " +
+				"logging module (if enabled), tracing module (if enabled), dr module (if enabled) " +
 				"and prometheus-operated package installation will be skipped. " +
 				"You need to install a StorageClass and re-run furyctl to install the missing components.",
 		)
