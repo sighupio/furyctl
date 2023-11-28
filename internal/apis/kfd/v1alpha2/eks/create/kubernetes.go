@@ -14,7 +14,6 @@ import (
 	"net"
 	"os"
 	"path"
-	"path/filepath"
 	"strconv"
 	"strings"
 	"sync"
@@ -774,7 +773,6 @@ func (k *Kubernetes) createTfVars() error {
 				if err := bytesx.SafeWriteToBuffer(
 					&buffer,
 					"max_pods = %v\n",
-					filepath.Dir(k.furyctlConfPath),
 					*np.Instance.MaxPods,
 				); err != nil {
 					return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
