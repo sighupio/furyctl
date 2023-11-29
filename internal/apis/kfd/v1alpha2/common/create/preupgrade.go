@@ -31,6 +31,8 @@ var (
 	errUpgradeFlagNotSet             = errors.New("upgrade flag not set by user")
 	errUpgradeWithReducersNotAllowed = errors.New("upgrade with reducers not allowed")
 	errUpgradePathNotFound           = errors.New("upgrade path not found")
+	errGettingDistoVersionFrom       = errors.New("error while getting distribution version from")
+	errGettingDistroVersionTo        = errors.New("error while getting distribution version to")
 )
 
 type PreUpgrade struct {
@@ -145,12 +147,12 @@ func (p *PreUpgrade) Exec() error {
 
 		p.upgrade.From, ok = distributionVersionChange.From.(string)
 		if !ok {
-			return fmt.Errorf("error while getting distribution version from: %w", err)
+			return errGettingDistoVersionFrom
 		}
 
 		p.upgrade.To, ok = distributionVersionChange.To.(string)
 		if !ok {
-			return fmt.Errorf("error while getting distribution version to: %w", err)
+			return errGettingDistroVersionTo
 		}
 
 		fmt.Printf(
