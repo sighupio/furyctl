@@ -5,7 +5,6 @@
 package upgrade
 
 import (
-	"encoding/base64"
 	"fmt"
 	"os"
 	"path"
@@ -13,6 +12,7 @@ import (
 
 	"github.com/sirupsen/logrus"
 
+	"github.com/sighupio/furyctl/internal/cluster"
 	"github.com/sighupio/furyctl/internal/tool/kubectl"
 	execx "github.com/sighupio/furyctl/internal/x/exec"
 	iox "github.com/sighupio/furyctl/internal/x/io"
@@ -93,7 +93,7 @@ func (s *StateStore) Store(state *State) error {
 
 	logrus.Info("Saving furyctl upgrade state file in the cluster...")
 
-	if err := s.KubectlRunner.Apply(cmPath); err != nil {
+	if err := s.KubectlRunner.Apply(cmPath, "--force-conflicts"); err != nil {
 		return fmt.Errorf("error while saving furyctl upgrade state file in the cluster: %w", err)
 	}
 
@@ -103,7 +103,7 @@ func (s *StateStore) Store(state *State) error {
 func (s *StateStore) Get() ([]byte, error) {
 	configMap := map[string]any{}
 
-	out, err := s.KubectlRunner.Get(true, "kube-system", "", "furyctl-upgrade-state", "-o", "yaml")
+	out, err := s.KubectlRunner.Get(true, "kube-system", "cm", "furyctl-upgrade-state", "-o", "yaml")
 	if err != nil {
 		return nil, fmt.Errorf("error while getting current cluster upgrade state: %w", err)
 	}
@@ -122,12 +122,7 @@ func (s *StateStore) Get() ([]byte, error) {
 		return nil, fmt.Errorf("error while getting current cluster upgrade state: %w", err)
 	}
 
-	decodedConfig, err := base64.StdEncoding.DecodeString(configData)
-	if err != nil {
-		return nil, fmt.Errorf("error while decoding current cluster upgrade state: %w", err)
-	}
-
-	return decodedConfig, nil
+	return []byte(configData), nil
 }
 
 func (s *StateStore) Delete() error {
@@ -149,7 +144,7 @@ func (s *StateStore) GetLatestResumablePhase(state *State) string {
 		phaseStatus := reflectedPhase.Elem().FieldByName("Status").String()
 
 		if phaseStatus == string(PhaseStatusPending) || phaseStatus == string(PhaseStatusFailed) {
-			return phase
+			return s.getPhase(phase)
 		}
 	}
 
@@ -168,4 +163,21 @@ func (*StateStore) getPhasesOrder() []string {
 		"Distribution",
 		"PostDistribution",
 	}
+}
+
+func (*StateStore) getPhase(phase string) string {
+	mapSubPhase := map[string]string{
+		"PreInfrastructure":  cluster.OperationSubPhasePreInfrastructure,
+		"Infrastructure":     cluster.OperationPhaseInfrastructure,
+		"PostInfrastructure": cluster.OperationSubPhasePostInfrastructure,
+		"PreKubernetes":      cluster.OperationSubPhasePreKubernetes,
+		"Kubernetes":         cluster.OperationPhaseKubernetes,
+		"PostKubernetes":     cluster.OperationSubPhasePostKubernetes,
+		"PreDistribution":    cluster.OperationSubPhasePreDistribution,
+		"Distribution":       cluster.OperationPhaseDistribution,
+		"PostDistribution":   cluster.OperationSubPhasePostDistribution,
+		"":                   cluster.OperationPhaseAll,
+	}
+
+	return mapSubPhase[phase]
 }
