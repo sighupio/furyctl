@@ -288,13 +288,15 @@ func (c *ClusterCreator) allPhases(
 				return fmt.Errorf("error while unmarshalling upgrade state: %w", err)
 			}
 
-			resumableState := c.upgradeStateStore.GetLatestResumablePhase(upgradeState)
+			if startFrom == "" {
+				resumableState := c.upgradeStateStore.GetLatestResumablePhase(upgradeState)
 
-			logrus.Infof("an upgrade is already in progress, resuming from %s phase.\n"+
-				"If you wish to start from a different phase, you can use the --start-from "+
-				"flag to select the desired phase to resume.", resumableState)
+				logrus.Infof("an upgrade is already in progress, resuming from %s phase.\n"+
+					"If you wish to start from a different phase, you can use the --start-from "+
+					"flag to select the desired phase to resume.", resumableState)
 
-			startFrom = resumableState
+				startFrom = resumableState
+			}
 		} else {
 			logrus.Debugf("error while getting upgrade state: %v", err)
 			logrus.Debugf("creating a new upgrade state on the cluster...")
