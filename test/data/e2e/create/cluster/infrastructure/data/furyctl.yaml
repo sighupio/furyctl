@@ -91,10 +91,6 @@ spec:
           type: single
           tls:
             provider: certManager
-            secret:
-              cert: "{file://relative/path/to/ssl.crt}"
-              key: "{file://relative/path/to/ssl.key}"
-              ca: "{file://relative/path/to/ssl.ca}"
         certManager:
           clusterIssuer:
             name: letsencrypt-fury
