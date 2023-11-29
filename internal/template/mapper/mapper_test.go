@@ -113,19 +113,25 @@ func TestMapper_MapDynamicValuesAndPaths(t *testing.T) {
 }
 
 func TestMapper_MapDynamicValuesAndPaths_RelativePath(t *testing.T) {
-	path := "../.."
+	realPath, err := os.MkdirTemp("", "test")
+
+	assert.NoError(t, err)
+
+	relPath := "../.."
 
 	timestamp := time.Now().Unix()
 
 	fileName := fmt.Sprintf("test_file-%v.txt", timestamp)
 
-	filePath := filepath.Join(path, fileName)
+	relFilePath := filepath.Join(relPath, fileName)
+
+	realFilePath := filepath.Join(realPath, fileName)
 
 	exampleStr := "test!"
 
-	err := os.WriteFile(filePath, []byte(exampleStr), os.ModePerm)
+	err = os.WriteFile(realFilePath, []byte(exampleStr), os.ModePerm)
 
-	defer os.RemoveAll(filePath)
+	defer os.RemoveAll(realFilePath)
 
 	assert.NoError(t, err)
 
@@ -133,14 +139,14 @@ func TestMapper_MapDynamicValuesAndPaths_RelativePath(t *testing.T) {
 		"data": {
 			"meta": map[any]any{
 				"name":  "{env://TEST_MAPPER_DYNAMIC_VALUE}",
-				"value": fmt.Sprintf("{file://%s}", filePath),
+				"value": fmt.Sprintf("{file://%s}", relFilePath),
 			},
 		},
 	}
 
 	m := mapper.NewMapper(
 		dummyContext,
-		"dummy/furyctlconf/path/furyctl.yaml",
+		fmt.Sprintf("%s/furyctlconf/path/furyctl.yaml", realPath),
 	)
 
 	err = os.Setenv("TEST_MAPPER_DYNAMIC_VALUE", "test")
