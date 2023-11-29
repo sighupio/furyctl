@@ -107,10 +107,6 @@ func (r *Runner) Get(sensitive bool, ns string, params ...string) (string, error
 func (r *Runner) Delete(params ...string) error {
 	args := []string{"delete"}
 
-	if r.serverSide {
-		args = append(args, "--server-side")
-	}
-
 	if r.skipNotFound {
 		args = append(args, "--ignore-not-found")
 	}
