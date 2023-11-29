@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"os"
 	"path"
+	"reflect"
 
 	"github.com/sirupsen/logrus"
 
@@ -45,6 +46,7 @@ type Storer interface {
 	Store(state *State) error
 	Get() ([]byte, error)
 	Delete() error
+	GetLatestResumablePhase(state *State) string
 }
 
 type StateStore struct {
@@ -134,4 +136,36 @@ func (s *StateStore) Delete() error {
 	}
 
 	return nil
+}
+
+func (s *StateStore) GetLatestResumablePhase(state *State) string {
+	for _, phase := range s.getPhasesOrder() {
+		reflectedPhase := reflect.ValueOf(state.Phases).FieldByName(phase)
+
+		if reflectedPhase.IsNil() {
+			continue
+		}
+
+		phaseStatus := reflectedPhase.Elem().FieldByName("Status").String()
+
+		if phaseStatus == string(PhaseStatusPending) || phaseStatus == string(PhaseStatusFailed) {
+			return phase
+		}
+	}
+
+	return ""
+}
+
+func (*StateStore) getPhasesOrder() []string {
+	return []string{
+		"PreInfrastructure",
+		"Infrastructure",
+		"PostInfrastructure",
+		"PreKubernetes",
+		"Kubernetes",
+		"PostKubernetes",
+		"PreDistribution",
+		"Distribution",
+		"PostDistribution",
+	}
 }
