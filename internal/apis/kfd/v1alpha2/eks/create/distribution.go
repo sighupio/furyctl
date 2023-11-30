@@ -131,6 +131,10 @@ func NewDistribution(
 	}
 }
 
+func (d *Distribution) Self() *cluster.OperationPhase {
+	return d.OperationPhase
+}
+
 func (*Distribution) SupportsLifecycle(lifecycle string) bool {
 	switch lifecycle {
 	case LifecyclePreTf, LifecyclePostTf, LifecyclePreApply, LifecyclePostApply:
