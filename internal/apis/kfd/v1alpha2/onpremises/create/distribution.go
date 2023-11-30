@@ -45,6 +45,10 @@ type Distribution struct {
 	upgrade         *upgrade.Upgrade
 }
 
+func (d *Distribution) Self() *cluster.OperationPhase {
+	return d.OperationPhase
+}
+
 func (d *Distribution) Exec(reducers v1alpha2.Reducers, startFrom string, upgradeState *upgrade.State) error {
 	logrus.Info("Installing Kubernetes Fury Distribution...")
 	logrus.Debug("Create: running distribution phase...")

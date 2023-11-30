@@ -194,7 +194,7 @@ func (v *ClusterCreator) Create(startFrom string, timeout int) error {
 
 	vpnConnector, err := vpn.NewConnector(
 		v.furyctlConf.Metadata.Name,
-		infra.Decorated().TerraformSecretsPath,
+		infra.Self().TerraformSecretsPath,
 		v.paths.BinPath,
 		v.kfdManifest.Tools.Common.Furyagent.Version,
 		v.vpnAutoConnect,
@@ -749,7 +749,7 @@ func (v *ClusterCreator) setupPhases(upgr *upgrade.Upgrade) (
 		create.NewKubernetes(
 			v.furyctlConf,
 			v.kfdManifest,
-			infra.Decorated().TerraformOutputsPath,
+			infra.Self().TerraformOutputsPath,
 			v.paths,
 			v.dryRun,
 			upgr,
@@ -762,7 +762,7 @@ func (v *ClusterCreator) setupPhases(upgr *upgrade.Upgrade) (
 			v.paths,
 			v.furyctlConf,
 			v.kfdManifest,
-			infra.Decorated().TerraformOutputsPath,
+			infra.Self().TerraformOutputsPath,
 			v.dryRun,
 			v.phase,
 			upgr,

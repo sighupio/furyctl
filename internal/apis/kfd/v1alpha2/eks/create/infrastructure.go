@@ -85,6 +85,10 @@ func NewInfrastructure(
 	}
 }
 
+func (i *Infrastructure) Self() *cluster.OperationPhase {
+	return i.OperationPhase
+}
+
 func (i *Infrastructure) Exec(startFrom string, upgradeState *upgrade.State) error {
 	logrus.Info("Creating infrastructure...")
 

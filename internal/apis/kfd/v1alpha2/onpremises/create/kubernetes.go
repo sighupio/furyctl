@@ -35,6 +35,10 @@ type Kubernetes struct {
 	upgrade         *upgrade.Upgrade
 }
 
+func (k *Kubernetes) Self() *cluster.OperationPhase {
+	return k.OperationPhase
+}
+
 func (k *Kubernetes) Exec(startFrom string, upgradeState *upgrade.State) error {
 	logrus.Info("Creating Kubernetes Fury cluster...")
 	logrus.Debug("Create: running kubernetes phase...")
