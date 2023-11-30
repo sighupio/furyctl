@@ -101,7 +101,7 @@ func (p *PreFlight) Exec() (*Status, error) {
 
 	logrus.Info("Running preflight checks")
 
-	if err := p.CreateFolder(); err != nil {
+	if err := p.CreateRootFolder(); err != nil {
 		return status, fmt.Errorf("error creating kubernetes phase folder: %w", err)
 	}
 
@@ -181,12 +181,7 @@ func (p *PreFlight) Exec() (*Status, error) {
 		return status, fmt.Errorf("cluster is unreachable, make sure you have access to the cluster: %w", err)
 	}
 
-	storedCfg, err := p.GetStateFromCluster()
-	if err != nil {
-		return status, fmt.Errorf("error while getting current cluster config: %w", err)
-	}
-
-	diffChecker, err := p.CreateDiffChecker(storedCfg)
+	diffChecker, err := p.CreateDiffChecker()
 	if err != nil {
 		return status, fmt.Errorf("error creating diff checker: %w", err)
 	}
@@ -217,9 +212,9 @@ func (p *PreFlight) Exec() (*Status, error) {
 		}
 	}
 
-	status.Success = true
-
 	logrus.Info("Preflight checks completed successfully")
+
+	status.Success = true
 
 	return status, nil
 }
@@ -261,17 +256,13 @@ func (p *PreFlight) createFuryctlMerger() (*merge.Merger, error) {
 	return reverseMerger, nil
 }
 
-func (p *PreFlight) GetStateFromCluster() ([]byte, error) {
+func (p *PreFlight) CreateDiffChecker() (diffs.Checker, error) {
+	storedCfg := map[string]any{}
+
 	storedCfgStr, err := p.stateStore.GetConfig()
 	if err != nil {
 		return nil, fmt.Errorf("error while getting current cluster config: %w", err)
 	}
-
-	return storedCfgStr, nil
-}
-
-func (p *PreFlight) CreateDiffChecker(storedCfgStr []byte) (diffs.Checker, error) {
-	storedCfg := map[string]any{}
 
 	if err := yamlx.UnmarshalV3(storedCfgStr, &storedCfg); err != nil {
 		return nil, fmt.Errorf("error while unmarshalling config file: %w", err)

@@ -83,7 +83,7 @@ func (p *PreFlight) Exec() (*Status, error) {
 
 	logrus.Info("Running preflight checks")
 
-	if err := p.CreateFolder(); err != nil {
+	if err := p.CreateRootFolder(); err != nil {
 		return status, fmt.Errorf("error creating preflight phase folder: %w", err)
 	}
 
