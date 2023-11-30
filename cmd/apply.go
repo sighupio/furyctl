@@ -364,8 +364,8 @@ func setupCreateClusterCmdFlags(cmd *cobra.Command) {
 	cmd.Flags().String(
 		"start-from",
 		"",
-		"Start the execution from a specific phase. Options are: preinfrastructure, infrastructure, postinfrastructure, prekubernetes, "+
-			"kubernetes, postkubernetes, predistribution, distribution, postdistribution, plugins",
+		"Start the execution from a specific phase. Options are: pre-infrastructure, infrastructure, post-infrastructure, pre-kubernetes, "+
+			"kubernetes, post-kubernetes, pre-distribution, distribution, post-distribution, plugins",
 	)
 
 	cmd.Flags().StringP(
