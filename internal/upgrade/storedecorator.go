@@ -27,11 +27,13 @@ func NewReducerOperatorPhaseDecorator[T Reducers](
 	storer Storer,
 	phase ReducersOperatorPhase[T],
 	dryRun bool,
+	upgr *Upgrade,
 ) *ReducerOperatorPhaseDecorator[T] {
 	return &ReducerOperatorPhaseDecorator[T]{
 		storer: storer,
 		phase:  phase,
 		dryRun: dryRun,
+		upgr:   upgr,
 	}
 }
 
@@ -39,12 +41,13 @@ type ReducerOperatorPhaseDecorator[T Reducers] struct {
 	storer Storer
 	phase  ReducersOperatorPhase[T]
 	dryRun bool
+	upgr   *Upgrade
 }
 
 func (d *ReducerOperatorPhaseDecorator[T]) Exec(reducers T, startFrom string, upgradeState *State) error {
 	fnErr := d.phase.Exec(reducers, startFrom, upgradeState)
 
-	if !d.dryRun {
+	if !d.dryRun && d.upgr.Enabled {
 		if sErr := d.storer.Store(upgradeState); sErr != nil {
 			err := fmt.Errorf("error storing upgrade state: %w", sErr)
 
@@ -71,11 +74,13 @@ func NewReducerOperatorPhaseAsyncDecorator[T Reducers](
 	storer Storer,
 	phase ReducersOperatorPhaseAsync[T],
 	dryRun bool,
+	upgr *Upgrade,
 ) *ReducerOperatorPhaseAsyncDecorator[T] {
 	return &ReducerOperatorPhaseAsyncDecorator[T]{
 		storer: storer,
 		phase:  phase,
 		dryRun: dryRun,
+		upgr:   upgr,
 	}
 }
 
@@ -83,12 +88,13 @@ type ReducerOperatorPhaseAsyncDecorator[T Reducers] struct {
 	storer Storer
 	phase  ReducersOperatorPhaseAsync[T]
 	dryRun bool
+	upgr   *Upgrade
 }
 
 func (d *ReducerOperatorPhaseAsyncDecorator[T]) Exec(reducers T, startFrom string, upgradeState *State) error { //nolint: lll,revive // confusing-naming is a false positive
 	fnErr := d.phase.Exec(reducers, startFrom, upgradeState)
 
-	if !d.dryRun {
+	if !d.dryRun && d.upgr.Enabled {
 		if sErr := d.storer.Store(upgradeState); sErr != nil {
 			err := fmt.Errorf("error storing upgrade state: %w", sErr)
 
@@ -133,11 +139,13 @@ func NewOperatorPhaseDecorator(
 	storer Storer,
 	phase OperatorPhase,
 	dryRun bool,
+	upgr *Upgrade,
 ) *OperatorPhaseDecorator {
 	return &OperatorPhaseDecorator{
 		storer: storer,
 		phase:  phase,
 		dryRun: dryRun,
+		upgr:   upgr,
 	}
 }
 
@@ -145,12 +153,13 @@ type OperatorPhaseDecorator struct {
 	storer Storer
 	phase  OperatorPhase
 	dryRun bool
+	upgr   *Upgrade
 }
 
 func (d *OperatorPhaseDecorator) Exec(startFrom string, upgradeState *State) error {
 	fnErr := d.phase.Exec(startFrom, upgradeState)
 
-	if !d.dryRun {
+	if !d.dryRun && d.upgr.Enabled {
 		if sErr := d.storer.Store(upgradeState); sErr != nil {
 			err := fmt.Errorf("error storing upgrade state: %w", sErr)
 
@@ -177,24 +186,27 @@ type OperatorPhaseAsyncDecorator struct {
 	storer Storer
 	phase  OperatorPhaseAsync
 	dryRun bool
+	upgr   *Upgrade
 }
 
 func NewOperatorPhaseAsyncDecorator(
 	storer Storer,
 	phase OperatorPhaseAsync,
 	dryRun bool,
+	upgr *Upgrade,
 ) *OperatorPhaseAsyncDecorator {
 	return &OperatorPhaseAsyncDecorator{
 		storer: storer,
 		phase:  phase,
 		dryRun: dryRun,
+		upgr:   upgr,
 	}
 }
 
 func (d *OperatorPhaseAsyncDecorator) Exec(startFrom string, upgradeState *State) error {
 	fnErr := d.phase.Exec(startFrom, upgradeState)
 
-	if !d.dryRun {
+	if !d.dryRun && d.upgr.Enabled {
 		if sErr := d.storer.Store(upgradeState); sErr != nil {
 			err := fmt.Errorf("error storing upgrade state: %w", sErr)
 
