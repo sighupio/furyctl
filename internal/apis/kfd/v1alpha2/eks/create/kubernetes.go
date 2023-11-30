@@ -119,6 +119,10 @@ func NewKubernetes(
 	}
 }
 
+func (k *Kubernetes) Self() *cluster.OperationPhase {
+	return k.OperationPhase
+}
+
 func (k *Kubernetes) Exec(startFrom string, upgradeState *upgrade.State) error {
 	timestamp := time.Now().Unix()
 
