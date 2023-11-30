@@ -155,26 +155,20 @@ func (c *ClusterCreator) Create(startFrom string, _ int) error {
 		),
 	)
 
-	pluginsPhase, err := commcreate.NewPlugins(
+	pluginsPhase := commcreate.NewPlugins(
 		c.paths,
 		c.kfdManifest,
 		string(c.furyctlConf.Kind),
 		c.dryRun,
 	)
-	if err != nil {
-		return fmt.Errorf("error while initiating plugins phase: %w", err)
-	}
 
-	preflight, err := create.NewPreFlight(
+	preflight := create.NewPreFlight(
 		c.furyctlConf,
 		c.kfdManifest,
 		c.paths,
 		c.dryRun,
 		c.stateStore,
 	)
-	if err != nil {
-		return fmt.Errorf("error while initiating preflight phase: %w", err)
-	}
 
 	status, err := preflight.Exec()
 	if err != nil {
@@ -194,7 +188,7 @@ func (c *ClusterCreator) Create(startFrom string, _ int) error {
 		cluster.OperationPhaseDistribution,
 	)
 
-	preupgradePhase, err := commcreate.NewPreUpgrade(
+	preupgradePhase := commcreate.NewPreUpgrade(
 		c.paths,
 		c.kfdManifest,
 		string(c.furyctlConf.Kind),
@@ -205,9 +199,6 @@ func (c *ClusterCreator) Create(startFrom string, _ int) error {
 		reducers,
 		status.Diffs,
 	)
-	if err != nil {
-		return fmt.Errorf("error while initiating preupgrade phase: %w", err)
-	}
 
 	if err := preupgradePhase.Exec(); err != nil {
 		return fmt.Errorf("error while executing preupgrade phase: %w", err)

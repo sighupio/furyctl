@@ -59,15 +59,12 @@ func NewPreUpgrade(
 	upgr *upgrade.Upgrade,
 	reducers v1alpha2.Reducers,
 	diffs diff.Changelog,
-) (*PreUpgrade, error) {
-	phaseOp, err := cluster.NewOperationPhase(
+) *PreUpgrade {
+	phaseOp := cluster.NewOperationPhase(
 		path.Join(paths.WorkDir, "upgrades"),
 		kfdManifest.Tools,
 		paths.BinPath,
 	)
-	if err != nil {
-		return nil, fmt.Errorf("error creating preupgrade phase: %w", err)
-	}
 
 	return &PreUpgrade{
 		OperationPhase:  phaseOp,
@@ -81,7 +78,7 @@ func NewPreUpgrade(
 		merger:          v1alpha2.NewBaseMerger(paths.DistroPath, kind, paths.ConfigPath),
 		diffs:           diffs,
 		forceFlag:       forceFlag,
-	}, nil
+	}
 }
 
 func (p *PreUpgrade) Exec() error {

@@ -64,9 +64,9 @@ type ClusterCreator struct {
 
 type Phases struct {
 	*create.PreFlight
-	*create.Infrastructure
-	*create.Kubernetes
-	*create.Distribution
+	Infrastructure upgrade.OperatorPhaseAsync
+	Kubernetes     upgrade.OperatorPhaseAsync
+	Distribution   upgrade.ReducersOperatorPhaseAsync[v1alpha2.Reducers]
 	*commcreate.Plugins
 }
 
@@ -194,7 +194,7 @@ func (v *ClusterCreator) Create(startFrom string, timeout int) error {
 
 	vpnConnector, err := vpn.NewConnector(
 		v.furyctlConf.Metadata.Name,
-		infra.TerraformSecretsPath,
+		infra.Decorated().TerraformSecretsPath,
 		v.paths.BinPath,
 		v.kfdManifest.Tools.Common.Furyagent.Version,
 		v.vpnAutoConnect,
@@ -331,7 +331,7 @@ func (v *ClusterCreator) CreateAsync(
 
 	reducers := v.buildReducers(status.Diffs, r, cluster.OperationPhaseDistribution)
 
-	preupgrade, err := commcreate.NewPreUpgrade(
+	preupgrade := commcreate.NewPreUpgrade(
 		v.paths,
 		v.kfdManifest,
 		string(v.furyctlConf.Kind),
@@ -342,11 +342,6 @@ func (v *ClusterCreator) CreateAsync(
 		reducers,
 		status.Diffs,
 	)
-	if err != nil {
-		errCh <- fmt.Errorf("error while initiating preupgrade phase: %w", err)
-
-		return
-	}
 
 	if err := preupgrade.Exec(); err != nil {
 		errCh <- fmt.Errorf("error while executing preupgrade phase: %w", err)
@@ -411,7 +406,7 @@ func (v *ClusterCreator) CreateAsync(
 	}
 }
 
-func (v *ClusterCreator) infraPhase(infra *create.Infrastructure, vpnConnector *vpn.Connector) error {
+func (v *ClusterCreator) infraPhase(infra upgrade.OperatorPhaseAsync, vpnConnector *vpn.Connector) error {
 	if v.furyctlConf.Spec.Infrastructure == nil {
 		absPath, err := filepath.Abs(v.paths.ConfigPath)
 		if err != nil {
@@ -444,7 +439,7 @@ func (v *ClusterCreator) infraPhase(infra *create.Infrastructure, vpnConnector *
 	return nil
 }
 
-func (v *ClusterCreator) kubernetesPhase(kube *create.Kubernetes, vpnConnector *vpn.Connector) error {
+func (v *ClusterCreator) kubernetesPhase(kube upgrade.OperatorPhaseAsync, vpnConnector *vpn.Connector) error {
 	if v.furyctlConf.Spec.Kubernetes.ApiServer.PrivateAccess &&
 		!v.furyctlConf.Spec.Kubernetes.ApiServer.PublicAccess &&
 		!v.dryRun {
@@ -488,7 +483,7 @@ func (v *ClusterCreator) kubernetesPhase(kube *create.Kubernetes, vpnConnector *
 }
 
 func (v *ClusterCreator) distributionPhase(
-	distro *create.Distribution,
+	distro upgrade.ReducersOperatorPhaseAsync[v1alpha2.Reducers],
 	vpnConnector *vpn.Connector,
 	reducers v1alpha2.Reducers,
 ) error {
@@ -731,58 +726,55 @@ func (*ClusterCreator) buildReducers(
 
 //nolint:revive // ignore maximum number of return results
 func (v *ClusterCreator) setupPhases(upgr *upgrade.Upgrade) (
-	*create.Infrastructure,
-	*create.Kubernetes,
-	*create.Distribution,
+	*upgrade.OperatorPhaseAsyncDecorator,
+	*upgrade.OperatorPhaseAsyncDecorator,
+	*upgrade.ReducerOperatorPhaseAsyncDecorator[v1alpha2.Reducers],
 	*commcreate.Plugins,
 	*create.PreFlight,
 	error,
 ) {
-	infra, err := create.NewInfrastructure(
-		v.furyctlConf,
-		v.kfdManifest,
-		v.paths,
-		v.dryRun,
-		upgr,
+	infra := upgrade.NewOperatorPhaseAsyncDecorator(
+		v.upgradeStateStore,
+		create.NewInfrastructure(
+			v.furyctlConf,
+			v.kfdManifest,
+			v.paths,
+			v.dryRun,
+			upgr,
+		),
 	)
-	if err != nil {
-		return nil, nil, nil, nil, nil, fmt.Errorf("error while initiating infrastructure phase: %w", err)
-	}
 
-	kube, err := create.NewKubernetes(
-		v.furyctlConf,
-		v.kfdManifest,
-		infra.TerraformOutputsPath,
-		v.paths,
-		v.dryRun,
-		upgr,
+	kube := upgrade.NewOperatorPhaseAsyncDecorator(
+		v.upgradeStateStore,
+		create.NewKubernetes(
+			v.furyctlConf,
+			v.kfdManifest,
+			infra.Decorated().TerraformOutputsPath,
+			v.paths,
+			v.dryRun,
+			upgr,
+		),
 	)
-	if err != nil {
-		return nil, nil, nil, nil, nil, fmt.Errorf("error while initiating kubernetes phase: %w", err)
-	}
 
-	distro, err := create.NewDistribution(
-		v.paths,
-		v.furyctlConf,
-		v.kfdManifest,
-		infra.TerraformOutputsPath,
-		v.dryRun,
-		v.phase,
-		upgr,
+	distro := upgrade.NewReducerOperatorPhaseAsyncDecorator(
+		v.upgradeStateStore,
+		create.NewDistribution(
+			v.paths,
+			v.furyctlConf,
+			v.kfdManifest,
+			infra.Decorated().TerraformOutputsPath,
+			v.dryRun,
+			v.phase,
+			upgr,
+		),
 	)
-	if err != nil {
-		return nil, nil, nil, nil, nil, fmt.Errorf("error while initiating distribution phase: %w", err)
-	}
 
-	plugins, err := commcreate.NewPlugins(
+	plugins := commcreate.NewPlugins(
 		v.paths,
 		v.kfdManifest,
 		string(v.furyctlConf.Kind),
 		v.dryRun,
 	)
-	if err != nil {
-		return nil, nil, nil, nil, nil, fmt.Errorf("error while initiating plugins phase: %w", err)
-	}
 
 	preflight, err := create.NewPreFlight(
 		v.furyctlConf,

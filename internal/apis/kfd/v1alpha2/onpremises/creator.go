@@ -149,48 +149,42 @@ func (*ClusterCreator) GetPhasePath(phase string) (string, error) {
 func (c *ClusterCreator) Create(startFrom string, _ int) error {
 	upgr := upgrade.New(c.paths, string(c.furyctlConf.Kind))
 
-	kubernetesPhase, err := create.NewKubernetes(
-		c.furyctlConf,
-		c.kfdManifest,
-		c.paths,
-		c.dryRun,
-		upgr,
+	kubernetesPhase := upgrade.NewOperatorPhaseDecorator(
+		c.upgradeStateStore,
+		create.NewKubernetes(
+			c.furyctlConf,
+			c.kfdManifest,
+			c.paths,
+			c.dryRun,
+			upgr,
+		),
 	)
-	if err != nil {
-		return fmt.Errorf("error while initiating kubernetes phase: %w", err)
-	}
 
-	distributionPhase, err := create.NewDistribution(
-		c.furyctlConf,
-		c.kfdManifest,
-		c.paths,
-		c.dryRun,
-		upgr,
+	distributionPhase := upgrade.NewReducerOperatorPhaseDecorator(
+		c.upgradeStateStore,
+		create.NewDistribution(
+			c.furyctlConf,
+			c.kfdManifest,
+			c.paths,
+			c.dryRun,
+			upgr,
+		),
 	)
-	if err != nil {
-		return fmt.Errorf("error while initiating distribution phase: %w", err)
-	}
 
-	pluginsPhase, err := commcreate.NewPlugins(
+	pluginsPhase := commcreate.NewPlugins(
 		c.paths,
 		c.kfdManifest,
 		string(c.furyctlConf.Kind),
 		c.dryRun,
 	)
-	if err != nil {
-		return fmt.Errorf("error while initiating plugins phase: %w", err)
-	}
 
-	preflight, err := create.NewPreFlight(
+	preflight := create.NewPreFlight(
 		c.furyctlConf,
 		c.kfdManifest,
 		c.paths,
 		c.dryRun,
 		c.stateStore,
 	)
-	if err != nil {
-		return fmt.Errorf("error while initiating preflight phase: %w", err)
-	}
 
 	status, err := preflight.Exec()
 	if err != nil {
@@ -210,7 +204,7 @@ func (c *ClusterCreator) Create(startFrom string, _ int) error {
 		cluster.OperationPhaseDistribution,
 	)
 
-	preupgradePhase, err := commcreate.NewPreUpgrade(
+	preupgradePhase := commcreate.NewPreUpgrade(
 		c.paths,
 		c.kfdManifest,
 		string(c.furyctlConf.Kind),
@@ -221,9 +215,6 @@ func (c *ClusterCreator) Create(startFrom string, _ int) error {
 		reducers,
 		status.Diffs,
 	)
-	if err != nil {
-		return fmt.Errorf("error while initiating preupgrade phase: %w", err)
-	}
 
 	if err := preupgradePhase.Exec(); err != nil {
 		return fmt.Errorf("error while executing preupgrade phase: %w", err)
@@ -295,8 +286,8 @@ func (c *ClusterCreator) Create(startFrom string, _ int) error {
 
 func (c *ClusterCreator) allPhases(
 	startFrom string,
-	kubernetesPhase *create.Kubernetes,
-	distributionPhase *create.Distribution,
+	kubernetesPhase upgrade.OperatorPhase,
+	distributionPhase upgrade.ReducersOperatorPhase[v1alpha2.Reducers],
 	pluginsPhase *commcreate.Plugins,
 	upgr *upgrade.Upgrade,
 	reducers v1alpha2.Reducers,

@@ -50,13 +50,10 @@ func NewPreFlight(
 	paths cluster.CreatorPaths,
 	dryRun bool,
 	stateStore state.Storer,
-) (*PreFlight, error) {
+) *PreFlight {
 	preFlightDir := path.Join(paths.WorkDir, cluster.OperationPhasePreFlight)
 
-	phase, err := cluster.NewOperationPhase(preFlightDir, kfdManifest.Tools, paths.BinPath)
-	if err != nil {
-		return nil, fmt.Errorf("error creating preflight phase: %w", err)
-	}
+	phase := cluster.NewOperationPhase(preFlightDir, kfdManifest.Tools, paths.BinPath)
 
 	return &PreFlight{
 		OperationPhase:  phase,
@@ -75,7 +72,7 @@ func NewPreFlight(
 			false,
 		),
 		dryRun: dryRun,
-	}, nil
+	}
 }
 
 func (p *PreFlight) Exec() (*Status, error) {
