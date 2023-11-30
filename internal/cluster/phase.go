@@ -99,7 +99,7 @@ type OperationPhaseOption struct {
 	Value any
 }
 
-func NewOperationPhase(folder string, kfdTools config.KFDTools, binPath string) (*OperationPhase, error) {
+func NewOperationPhase(folder string, kfdTools config.KFDTools, binPath string) *OperationPhase {
 	basePath := folder
 
 	kustomizePath := path.Join(binPath, "kustomize", kfdTools.Common.Kustomize.Version, "kustomize")
@@ -127,7 +127,7 @@ func NewOperationPhase(folder string, kfdTools config.KFDTools, binPath string) 
 		YqPath:               yqPath,
 		HelmPath:             helmPath,
 		HelmfilePath:         helmfilePath,
-	}, nil
+	}
 }
 
 func (cp *OperationPhase) CreateFolder() error {
