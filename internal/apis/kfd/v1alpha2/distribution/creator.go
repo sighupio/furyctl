@@ -154,6 +154,7 @@ func (c *ClusterCreator) Create(startFrom string, _ int) error {
 			upgr,
 		),
 		c.dryRun,
+		upgr,
 	)
 
 	pluginsPhase := commcreate.NewPlugins(
