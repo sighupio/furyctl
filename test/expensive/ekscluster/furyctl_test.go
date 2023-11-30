@@ -8,13 +8,13 @@ package ekscluster_test
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"math/rand"
 	"os"
 	"os/exec"
 	"path"
 	"path/filepath"
-	"strconv"
 	"testing"
 	"time"
 
@@ -49,12 +49,68 @@ type confMeta struct {
 	Name string `yaml:"name" validate:"required"`
 }
 
+type contextState struct {
+	TestId      int
+	TestName    string
+	ClusterName string
+	Kubeconfig  string
+	HomeDir     string
+	DataDir     string
+	DistroDir   string
+	TestDir     string
+	TmpDir      string
+}
+
+func newContextState(testName string) *contextState {
+	testId := rand.Intn(100000)
+	clusterName := fmt.Sprintf("furytest-%d", testId)
+
+	homeDir, dataDir, distroDir, tmpDir := PrepareDirs(testName)
+
+	testDir := path.Join(homeDir, ".furyctl", "tests", testName)
+	testState := path.Join(testDir, fmt.Sprintf("%s.teststate", clusterName))
+
+	Must0(os.MkdirAll(testDir, 0755))
+
+	kubeconfig := path.Join(
+		homeDir,
+		".furyctl",
+		clusterName,
+		cluster.OperationPhaseKubernetes,
+		"terraform",
+		"secrets",
+		"kubeconfig",
+	)
+
+	s := contextState{
+		TestId:      testId,
+		TestName:    testName,
+		ClusterName: clusterName,
+		Kubeconfig:  kubeconfig,
+		HomeDir:     homeDir,
+		DataDir:     dataDir,
+		DistroDir:   distroDir,
+		TestDir:     testDir,
+		TmpDir:      tmpDir,
+	}
+
+	Must0(os.WriteFile(testState, Must1(json.Marshal(s)), 0644))
+
+	return &s
+}
+
 func TestExpensive(t *testing.T) {
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "Furyctl Expensive Suite")
 }
 
-func Must[T any](t T, err error) T {
+func Must0(err error) {
+	if err != nil {
+		panic(err)
+	}
+}
+
+func Must1[T any](t T, err error) T {
 	if err != nil {
 		panic(err)
 	}
@@ -80,23 +136,23 @@ var (
 	assertPollingInterval = 10 * time.Second
 
 	_ = BeforeSuite(func() {
-		tmpDir := Must(os.MkdirTemp("", "furyctl-expensive"))
+		tmpDir := Must1(os.MkdirTemp("", "furyctl-expensive-ekscluster"))
 
 		furyctl = filepath.Join(tmpDir, "furyctl")
 
 		cmd := exec.Command("go", "build", "-o", furyctl, "../../../main.go")
 
-		session := Must(gexec.Start(cmd, GinkgoWriter, GinkgoWriter))
+		session := Must1(gexec.Start(cmd, GinkgoWriter, GinkgoWriter))
 
 		Eventually(session, 5*time.Minute).Should(gexec.Exit(0))
 	})
 
 	DownloadFuryDistribution = func(furyctlConfPath string) distribution.DownloadResult {
-		absBasePath := Must(filepath.Abs(basePath))
+		absBasePath := Must1(filepath.Abs(basePath))
 
 		commonDir := path.Join(absBasePath, "common")
 
-		dlRes := Must(distrodl.Download(commonDir, furyctlConfPath))
+		dlRes := Must1(distrodl.Download(commonDir, furyctlConfPath))
 
 		return dlRes
 	}
@@ -123,43 +179,45 @@ var (
 			panic(fmt.Errorf("%w '%s': %v", distribution.ErrChangingFilePermissions, tfc.SrcPath(), err))
 		}
 
-		return dst
+		return path.Join(dst, name)
 	}
 
 	PrepareDirs = func(name string) (string, string, string, string) {
-		absBasePath := Must(filepath.Abs(basePath))
+		absBasePath := Must1(filepath.Abs(basePath)) // TODO: get rid of this, ../../data/expensive
 
-		homeDir := Must(os.UserHomeDir())
+		homeDir := Must1(os.UserHomeDir())
 
-		dataDir := path.Join(absBasePath, name)
+		dataDir := Must1(filepath.Abs(path.Join(".", "testdata", name)))
 
 		commonDir := path.Join(absBasePath, "common")
 
-		tmpDir := Must(os.MkdirTemp("", name))
+		tmpDir := Must1(os.MkdirTemp("", name))
 
 		return homeDir, dataDir, commonDir, tmpDir
 	}
 
-	CreateFuryctlYaml = func(furyctlYamlTplPath string) string {
-		tplData := Must(os.ReadFile(furyctlYamlTplPath))
+	CreateFuryctlYaml = func(s *contextState, furyctlYamlTplName string) string {
+		furyctlYamlTplPath := path.Join(s.DataDir, furyctlYamlTplName)
 
-		id := strconv.Itoa(rand.Intn(100000))
+		tplData := Must1(os.ReadFile(furyctlYamlTplPath))
 
-		tmpDir := Must(os.MkdirTemp("", id))
+		data := bytes.ReplaceAll(tplData, []byte("__CLUSTER_NAME__"), []byte(s.ClusterName))
 
-		data := bytes.ReplaceAll(tplData, []byte("__ID__"), []byte(id))
+		furyctlYamlPath := path.Join(s.TestDir, fmt.Sprintf("%s.yaml", s.ClusterName))
 
-		furyctlYamlPath := path.Join(tmpDir, "furyctl.yaml")
-
-		if err := os.WriteFile(furyctlYamlPath, data, iox.FullPermAccess); err != nil {
-			panic(err)
-		}
+		Must0(os.WriteFile(furyctlYamlPath, data, iox.FullPermAccess))
 
 		return furyctlYamlPath
 	}
 
+	Copy = func(src, dst string) {
+		input := Must1(os.ReadFile(src))
+
+		Must0(os.WriteFile(dst, input, 0644))
+	}
+
 	LoadFuryCtl = func(furyctlYamlPath string) conf {
-		return Must(yamlx.FromFileV3[conf](furyctlYamlPath))
+		return Must1(yamlx.FromFileV3[conf](furyctlYamlPath))
 	}
 
 	FuryctlDeleteCluster = func(cfgPath, distroPath, phase string, dryRun bool, workDir string) *exec.Cmd {
@@ -246,55 +304,82 @@ var (
 			}
 		})
 
-		Context("v1.25 cluster creation and delete", Ordered, Serial, Label("slow"), func() {
-			homeDir, dataDir, distroDir, tmpDir := PrepareDirs("v1-25-create-delete")
-			furyctlYamlPath := CreateFuryctlYaml(path.Join(dataDir, "furyctl-public-minimal.yaml.tpl"))
-			clusterName := LoadFuryCtl(furyctlYamlPath).Metadata.Name
+		Context("v1.25 create and delete", Ordered, Serial, Label("slow"), func() {
+			var (
+				furyctlYamlPath string
+				state           *contextState
+			)
 
-			kubeconfigPath := path.Join(homeDir, ".furyctl", clusterName, cluster.OperationPhaseKubernetes, "terraform", "secrets", "kubeconfig")
+			BeforeAll(func() {
+				state = newContextState("v1-25-create-and-delete")
 
-			if err := os.Setenv("KUBECONFIG", kubeconfigPath); err != nil {
-				panic(err)
-			}
+				GinkgoWriter.Write([]byte(fmt.Sprintf("Test id: %d", state.TestId)))
 
-			FIt("should create a minimal 1.25 cluster", Serial, func() {
+				Copy("./testdata/id_ed25519", path.Join(state.TestDir, "id_ed25519"))
+				Copy("./testdata/id_ed25519.pub", path.Join(state.TestDir, "id_ed25519.pub"))
+
+				furyctlYamlPath = CreateFuryctlYaml(state, "furyctl-public-minimal.yaml.tpl")
+			})
+
+			It("should create a minimal 1.25 cluster", Serial, func() {
 				dlRes := DownloadFuryDistribution(furyctlYamlPath)
 
 				kubectlPath := DownloadKubectl(dlRes.DistroManifest.Tools.Common.Kubectl.Version)
-				tfInfraPath := path.Join(homeDir, ".furyctl", clusterName, cluster.OperationPhaseInfrastructure, "terraform")
-				tfPlanPath := path.Join(tfInfraPath, "plan", "terraform.plan")
+				tfPlanPath := path.Join(
+					state.HomeDir,
+					".furyctl",
+					state.ClusterName,
+					cluster.OperationPhaseInfrastructure,
+					"terraform",
+					"plan",
+					"terraform.plan",
+				)
 
-				createClusterCmd := FuryctlCreateCluster(furyctlYamlPath, distroDir, cluster.OperationPhaseAll, "", false, tmpDir)
+				createClusterCmd := FuryctlCreateCluster(
+					furyctlYamlPath,
+					state.DistroDir,
+					cluster.OperationPhaseAll,
+					"",
+					false,
+					state.TmpDir,
+				)
 
-				session := Must(gexec.Start(createClusterCmd, GinkgoWriter, GinkgoWriter))
+				session := Must1(gexec.Start(createClusterCmd, GinkgoWriter, GinkgoWriter))
 
 				Consistently(session, 3*time.Minute).ShouldNot(gexec.Exit())
 
 				Eventually(tfPlanPath, assertTimeout, assertPollingInterval).Should(BeAnExistingFile())
-				Eventually(kubeconfigPath, assertTimeout, assertPollingInterval).Should(BeAnExistingFile())
+				Eventually(state.Kubeconfig, assertTimeout, assertPollingInterval).Should(BeAnExistingFile())
 				Eventually(session, assertTimeout, assertPollingInterval).Should(gexec.Exit(0))
 
-				kubeCmd := exec.Command(kubectlPath, "--kubeconfig", kubeconfigPath, "get", "nodes")
+				kubeCmd := exec.Command(kubectlPath, "--kubeconfig", state.Kubeconfig, "get", "nodes")
 
-				kubeSession := Must(gexec.Start(kubeCmd, GinkgoWriter, GinkgoWriter))
+				kubeSession, err := gexec.Start(kubeCmd, GinkgoWriter, GinkgoWriter)
 
+				Expect(err).To(Not(HaveOccurred()))
 				Eventually(kubeSession, assertTimeout, assertPollingInterval).Should(gexec.Exit(0))
 			})
 
 			It("should delete a minimal 1.25 cluster", Serial, func() {
 				DeferCleanup(func() {
-					_ = os.Unsetenv("KUBECONFIG")
-					_ = os.RemoveAll(tmpDir)
+					_ = os.RemoveAll(state.TmpDir)
 
-					pkillSession := Must(KillOpenVPN())
+					pkillSession := Must1(KillOpenVPN())
 
-					Eventually(pkillSession, assertPollingInterval, 1*time.Second).Should(gexec.Exit(0))
+					Eventually(pkillSession, 5*time.Minute, 1*time.Second).Should(gexec.Exit(0))
 				})
 
-				deleteClusterCmd := FuryctlDeleteCluster(furyctlYamlPath, distroDir, cluster.OperationPhaseAll, false, tmpDir)
+				deleteClusterCmd := FuryctlDeleteCluster(
+					furyctlYamlPath,
+					state.DistroDir,
+					cluster.OperationPhaseAll,
+					false,
+					state.TmpDir,
+				)
 
-				session := Must(gexec.Start(deleteClusterCmd, GinkgoWriter, GinkgoWriter))
+				session, err := gexec.Start(deleteClusterCmd, GinkgoWriter, GinkgoWriter)
 
+				Expect(err).To(Not(HaveOccurred()))
 				Eventually(session, assertTimeout, assertPollingInterval).Should(gexec.Exit(0))
 			})
 		})

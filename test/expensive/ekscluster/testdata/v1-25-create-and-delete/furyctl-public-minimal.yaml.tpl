@@ -4,20 +4,20 @@
 apiVersion: kfd.sighup.io/v1alpha2
 kind: EKSCluster
 metadata:
-  name: furytest-__ID__
+  name: __CLUSTER_NAME__
 spec:
   distributionVersion: v1.25.9
   toolsConfiguration:
     terraform:
       state:
         s3:
-          bucketName: furytest-__ID__
-          keyPrefix: swe-dev/furytest-__ID__
+          bucketName: __CLUSTER_NAME__
+          keyPrefix: swe-dev/__CLUSTER_NAME__
           region: eu-west-1
   region: eu-west-1
   tags:
     env: "swe-dev"
-    k8s: "furytest-__ID__"
+    k8s: "__CLUSTER_NAME__"
     githubOrg: "sighupio"
     githubRepo: "product-management"
     githubIssue: "193"
@@ -41,7 +41,7 @@ spec:
       publicAccess: true
       privateAccessCidrs: ["0.0.0.0/0"]
       publicAccessCidrs: ["0.0.0.0/0"]
-    nodeAllowedSshPublicKey: "{file:///Users/omissis/Work/Sighup/Repositories/fury/tests/product-management-193/tests/id_ed25519.pub}"
+    nodeAllowedSshPublicKey: "{file://./id_ed25519.pub}"
     nodePoolsLaunchKind: "launch_templates"
     logRetentionDays: 1
     nodePools:
