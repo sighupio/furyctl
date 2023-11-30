@@ -27,15 +27,15 @@ type Phase struct {
 }
 
 type Phases struct {
-	PreInfrastructure  *Phase `yaml:"preInfrastructure,omitempty"`
+	PreInfrastructure  *Phase `yaml:"preinfrastructure,omitempty"`
 	Infrastructure     *Phase `yaml:"infrastructure,omitempty"`
-	PostInfrastructure *Phase `yaml:"postInfrastructure,omitempty"`
-	PreKubernetes      *Phase `yaml:"preKubernetes,omitempty"`
+	PostInfrastructure *Phase `yaml:"postinfrastructure,omitempty"`
+	PreKubernetes      *Phase `yaml:"prekubernetes,omitempty"`
 	Kubernetes         *Phase `yaml:"kubernetes,omitempty"`
-	PostKubernetes     *Phase `yaml:"postKubernetes,omitempty"`
-	PreDistribution    *Phase `yaml:"preDistribution,omitempty"`
+	PostKubernetes     *Phase `yaml:"postkubernetes,omitempty"`
+	PreDistribution    *Phase `yaml:"predistribution,omitempty"`
 	Distribution       *Phase `yaml:"distribution,omitempty"`
-	PostDistribution   *Phase `yaml:"postDistribution,omitempty"`
+	PostDistribution   *Phase `yaml:"postdistribution,omitempty"`
 }
 
 type State struct {
