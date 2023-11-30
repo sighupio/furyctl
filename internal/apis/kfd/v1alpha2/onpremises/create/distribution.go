@@ -61,8 +61,8 @@ func (d *Distribution) Exec(reducers v1alpha2.Reducers, startFrom string, upgrad
 		return nil
 	}
 
-	if err := d.preDistribution(startFrom, upgradeState, reducers, mCfg); err != nil {
-		return fmt.Errorf("error running predistribution phase: %w", err)
+	if err := d.preDistribution(startFrom, upgradeState); err != nil {
+		return fmt.Errorf("error running pre-distribution phase: %w", err)
 	}
 
 	if err := d.coreDistribution(startFrom, upgradeState, reducers, mCfg); err != nil {
@@ -70,7 +70,7 @@ func (d *Distribution) Exec(reducers v1alpha2.Reducers, startFrom string, upgrad
 	}
 
 	if err := d.postDistribution(upgradeState); err != nil {
-		return fmt.Errorf("error running postdistribution phase: %w", err)
+		return fmt.Errorf("error running post-distribution phase: %w", err)
 	}
 
 	logrus.Info("Kubernetes Fury Distribution installed successfully")
@@ -151,21 +151,10 @@ func (d *Distribution) prepare() (template.Config, error) {
 func (d *Distribution) preDistribution(
 	startFrom string,
 	upgradeState *upgrade.State,
-	reducers v1alpha2.Reducers,
-	mCfg template.Config,
 ) error {
-	if err := d.runReducers(
-		reducers,
-		mCfg,
-		LifecyclePreApply,
-		[]string{"manifests", "terraform", ".gitignore"},
-	); err != nil {
-		return fmt.Errorf("error running pre-apply reducers: %w", err)
-	}
-
 	if startFrom == "" || startFrom == cluster.OperationSubPhasePreDistribution {
 		// Run upgrade script if needed.
-		if err := d.upgrade.Exec(d.Path, "predistribution"); err != nil {
+		if err := d.upgrade.Exec(d.Path, "pre-distribution"); err != nil {
 			upgradeState.Phases.PreDistribution.Status = upgrade.PhaseStatusFailed
 
 			if err := d.upgradeStore.Store(upgradeState); err != nil {
@@ -194,8 +183,16 @@ func (d *Distribution) coreDistribution(
 	mCfg template.Config,
 ) error {
 	if startFrom != cluster.OperationSubPhasePostDistribution {
-		// Apply manifests.
 		logrus.Info("Applying manifests...")
+
+		if err := d.runReducers(
+			reducers,
+			mCfg,
+			LifecyclePreApply,
+			[]string{"manifests", "terraform", ".gitignore"},
+		); err != nil {
+			return fmt.Errorf("error running pre-apply reducers: %w", err)
+		}
 
 		if _, err := d.shellRunner.Run(path.Join(d.Path, "scripts", "apply.sh")); err != nil {
 			if d.upgrade.Enabled {

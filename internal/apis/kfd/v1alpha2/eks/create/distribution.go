@@ -166,12 +166,13 @@ func (d *Distribution) Exec(
 		return fmt.Errorf("error preparing distribution phase: %w", err)
 	}
 
-	if err := d.preDistribution(reducers, startFrom, upgradeState, tfCfg); err != nil {
-		return fmt.Errorf("error running predistribution phase: %w", err)
+	if err := d.preDistribution(startFrom, upgradeState); err != nil {
+		return fmt.Errorf("error running pre-distribution phase: %w", err)
 	}
 
 	if err := d.coreDistribution(
 		reducers,
+		tfCfg,
 		startFrom,
 		upgradeState,
 		preTfMerger,
@@ -238,18 +239,12 @@ func (d *Distribution) prepare() (
 }
 
 func (d *Distribution) preDistribution(
-	reducers v1alpha2.Reducers,
 	startFrom string,
 	upgradeState *upgrade.State,
-	tfCfg template.Config,
 ) error {
 	if !d.dryRun {
-		if err := d.runReducers(reducers, tfCfg, LifecyclePreTf, []string{"manifests", ".gitignore"}); err != nil {
-			return fmt.Errorf("error running pre-tf reducers: %w", err)
-		}
-
 		if startFrom == "" || startFrom == cluster.OperationSubPhasePreDistribution {
-			if err := d.upgrade.Exec(d.Path, "predistribution"); err != nil {
+			if err := d.upgrade.Exec(d.Path, "pre-distribution"); err != nil {
 				upgradeState.Phases.PreDistribution.Status = upgrade.PhaseStatusFailed
 
 				if err := d.upgradeStore.Store(upgradeState); err != nil {
@@ -274,6 +269,7 @@ func (d *Distribution) preDistribution(
 
 func (d *Distribution) coreDistribution(
 	reducers v1alpha2.Reducers,
+	tfCfg template.Config,
 	startFrom string,
 	upgradeState *upgrade.State,
 	preTfMerger *merge.Merger,
@@ -281,6 +277,10 @@ func (d *Distribution) coreDistribution(
 	timestamp int64,
 ) error {
 	if startFrom != cluster.OperationSubPhasePostDistribution {
+		if err := d.runReducers(reducers, tfCfg, LifecyclePreTf, []string{"manifests", ".gitignore"}); err != nil {
+			return fmt.Errorf("error running pre-tf reducers: %w", err)
+		}
+
 		if _, err := d.tfRunner.Plan(timestamp); err != nil && !d.dryRun {
 			return fmt.Errorf("error running terraform plan: %w", err)
 		}

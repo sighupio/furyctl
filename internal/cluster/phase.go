@@ -19,16 +19,16 @@ import (
 const (
 	OperationPhasePreFlight             = "preflight"
 	OperationPhaseInfrastructure        = "infrastructure"
-	OperationSubPhasePreInfrastructure  = "preinfrastructure"
-	OperationSubPhasePostInfrastructure = "postinfrastructure"
+	OperationSubPhasePreInfrastructure  = "pre-infrastructure"
+	OperationSubPhasePostInfrastructure = "post-infrastructure"
 	OperationPhaseKubernetes            = "kubernetes"
-	OperationSubPhasePreKubernetes      = "prekubernetes"
-	OperationSubPhasePostKubernetes     = "postkubernetes"
+	OperationSubPhasePreKubernetes      = "pre-kubernetes"
+	OperationSubPhasePostKubernetes     = "post-kubernetes"
 	OperationPhaseDistribution          = "distribution"
-	OperationSubPhasePreDistribution    = "predistribution"
-	OperationSubPhasePostDistribution   = "postdistribution"
+	OperationSubPhasePreDistribution    = "pre-distribution"
+	OperationSubPhasePostDistribution   = "post-distribution"
 	OperationPhasePlugins               = "plugins"
-	OperationPhasePreUpgrade            = "preupgrade"
+	OperationPhasePreUpgrade            = "pre-upgrade"
 	OperationPhaseAll                   = ""
 
 	OperationPhaseOptionVPNAutoConnect = "vpnautoconnect"
@@ -39,8 +39,8 @@ var (
 		"unsupported phase, options are: infrastructure, kubernetes, distribution, plugins",
 	)
 	errUnsupportedOperationPhase = errors.New(
-		"unsupported operation phase, options are: preinfrastructure, infrastructure, postinfrastructure, " +
-			"prekubernetes, kubernetes, postkubernetes, predistribution, distribution, postdistribution, plugins",
+		"unsupported operation phase, options are: pre-infrastructure, infrastructure, post-infrastructure, " +
+			"pre-kubernetes, kubernetes, post-kubernetes, pre-distribution, distribution, post-distribution, plugins",
 	)
 )
 
