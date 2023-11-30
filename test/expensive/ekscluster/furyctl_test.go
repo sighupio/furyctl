@@ -26,7 +26,6 @@ import (
 	"github.com/sighupio/furyctl/internal/dependencies/tools"
 	"github.com/sighupio/furyctl/internal/distribution"
 	"github.com/sighupio/furyctl/internal/tool"
-
 	execx "github.com/sighupio/furyctl/internal/x/exec"
 	iox "github.com/sighupio/furyctl/internal/x/io"
 	netx "github.com/sighupio/furyctl/internal/x/net"
@@ -70,7 +69,7 @@ func newContextState(testName string) *contextState {
 	testDir := path.Join(homeDir, ".furyctl", "tests", testName)
 	testState := path.Join(testDir, fmt.Sprintf("%s.teststate", clusterName))
 
-	Must0(os.MkdirAll(testDir, 0755))
+	Must0(os.MkdirAll(testDir, 0o755))
 
 	kubeconfig := path.Join(
 		homeDir,
@@ -94,7 +93,7 @@ func newContextState(testName string) *contextState {
 		TmpDir:      tmpDir,
 	}
 
-	Must0(os.WriteFile(testState, Must1(json.Marshal(s)), 0644))
+	Must0(os.WriteFile(testState, Must1(json.Marshal(s)), 0o644))
 
 	return &s
 }
@@ -213,7 +212,7 @@ var (
 	Copy = func(src, dst string) {
 		input := Must1(os.ReadFile(src))
 
-		Must0(os.WriteFile(dst, input, 0644))
+		Must0(os.WriteFile(dst, input, 0o644))
 	}
 
 	LoadFuryCtl = func(furyctlYamlPath string) conf {
