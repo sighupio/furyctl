@@ -82,20 +82,11 @@ func (d *ClusterDeleter) SetProperty(name string, value any) {
 }
 
 func (d *ClusterDeleter) Delete() error {
-	distro, err := del.NewDistribution(d.dryRun, d.paths.WorkDir, d.paths.BinPath, d.kfdManifest)
-	if err != nil {
-		return fmt.Errorf("error while creating distribution phase: %w", err)
-	}
+	distro := del.NewDistribution(d.dryRun, d.paths.WorkDir, d.paths.BinPath, d.kfdManifest)
 
-	kube, err := del.NewKubernetes(d.furyctlConf, d.dryRun, d.paths.WorkDir, d.paths.BinPath, d.kfdManifest)
-	if err != nil {
-		return fmt.Errorf("error while creating kubernetes phase: %w", err)
-	}
+	kube := del.NewKubernetes(d.furyctlConf, d.dryRun, d.paths.WorkDir, d.paths.BinPath, d.kfdManifest)
 
-	infra, err := del.NewInfrastructure(d.furyctlConf, d.dryRun, d.paths.WorkDir, d.paths.BinPath, d.kfdManifest)
-	if err != nil {
-		return fmt.Errorf("error while creating infrastructure phase: %w", err)
-	}
+	infra := del.NewInfrastructure(d.furyctlConf, d.dryRun, d.paths.WorkDir, d.paths.BinPath, d.kfdManifest)
 
 	var vpnConfig *private.SpecInfrastructureVpn
 

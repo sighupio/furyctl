@@ -42,7 +42,6 @@ type Distribution struct {
 	dryRun          bool
 	shellRunner     *shell.Runner
 	kubeRunner      *kubectl.Runner
-	upgradeStore    upgrade.Storer
 	upgrade         *upgrade.Upgrade
 }
 
@@ -157,19 +156,11 @@ func (d *Distribution) preDistribution(
 		if err := d.upgrade.Exec(d.Path, "pre-distribution"); err != nil {
 			upgradeState.Phases.PreDistribution.Status = upgrade.PhaseStatusFailed
 
-			if err := d.upgradeStore.Store(upgradeState); err != nil {
-				return fmt.Errorf("error storing upgrade state: %w", err)
-			}
-
 			return fmt.Errorf("error running upgrade: %w", err)
 		}
 
 		if d.upgrade.Enabled {
 			upgradeState.Phases.PreDistribution.Status = upgrade.PhaseStatusSuccess
-
-			if err := d.upgradeStore.Store(upgradeState); err != nil {
-				return fmt.Errorf("error storing upgrade state: %w", err)
-			}
 		}
 	}
 
@@ -197,10 +188,6 @@ func (d *Distribution) coreDistribution(
 		if _, err := d.shellRunner.Run(path.Join(d.Path, "scripts", "apply.sh")); err != nil {
 			if d.upgrade.Enabled {
 				upgradeState.Phases.Distribution.Status = upgrade.PhaseStatusFailed
-
-				if err := d.upgradeStore.Store(upgradeState); err != nil {
-					return fmt.Errorf("error storing upgrade state: %w", err)
-				}
 			}
 
 			return fmt.Errorf("error applying manifests: %w", err)
@@ -208,10 +195,6 @@ func (d *Distribution) coreDistribution(
 
 		if d.upgrade.Enabled {
 			upgradeState.Phases.Distribution.Status = upgrade.PhaseStatusSuccess
-
-			if err := d.upgradeStore.Store(upgradeState); err != nil {
-				return fmt.Errorf("error storing upgrade state: %w", err)
-			}
 		}
 
 		if err := d.runReducers(
@@ -233,19 +216,11 @@ func (d *Distribution) postDistribution(
 	if err := d.upgrade.Exec(d.Path, "post-distribution"); err != nil {
 		upgradeState.Phases.PostDistribution.Status = upgrade.PhaseStatusFailed
 
-		if err := d.upgradeStore.Store(upgradeState); err != nil {
-			return fmt.Errorf("error storing upgrade state: %w", err)
-		}
-
 		return fmt.Errorf("error running upgrade: %w", err)
 	}
 
 	if d.upgrade.Enabled {
 		upgradeState.Phases.PostDistribution.Status = upgrade.PhaseStatusSuccess
-
-		if err := d.upgradeStore.Store(upgradeState); err != nil {
-			return fmt.Errorf("error storing upgrade state: %w", err)
-		}
 	}
 
 	return nil
@@ -381,13 +356,10 @@ func NewDistribution(
 	paths cluster.CreatorPaths,
 	dryRun bool,
 	upgr *upgrade.Upgrade,
-) (*Distribution, error) {
+) *Distribution {
 	kubeDir := path.Join(paths.WorkDir, cluster.OperationPhaseDistribution)
 
-	phase, err := cluster.NewOperationPhase(kubeDir, kfdManifest.Tools, paths.BinPath)
-	if err != nil {
-		return nil, fmt.Errorf("error creating distribution phase: %w", err)
-	}
+	phase := cluster.NewOperationPhase(kubeDir, kfdManifest.Tools, paths.BinPath)
 
 	return &Distribution{
 		OperationPhase:  phase,
@@ -420,11 +392,6 @@ func NewDistribution(
 			true,
 			false,
 		),
-		upgradeStore: upgrade.NewStateStore(
-			paths.WorkDir,
-			kfdManifest.Tools.Common.Kubectl.Version,
-			paths.BinPath,
-		),
 		upgrade: upgr,
-	}, nil
+	}
 }

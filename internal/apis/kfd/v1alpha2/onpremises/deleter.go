@@ -75,25 +75,19 @@ func (c *ClusterDeleter) Delete() error {
 	logrus.Warn("This process will only reset the Kubernetes cluster " +
 		"and will not uninstall all the packages installed on the nodes.")
 
-	kubernetesPhase, err := delete.NewKubernetes(
+	kubernetesPhase := delete.NewKubernetes(
 		c.furyctlConf,
 		c.kfdManifest,
 		c.paths,
 		c.dryRun,
 	)
-	if err != nil {
-		return fmt.Errorf("error while initiating kubernetes phase: %w", err)
-	}
 
-	distributionPhase, err := delete.NewDistribution(
+	distributionPhase := delete.NewDistribution(
 		c.furyctlConf,
 		c.kfdManifest,
 		c.paths,
 		c.dryRun,
 	)
-	if err != nil {
-		return fmt.Errorf("error while initiating distribution phase: %w", err)
-	}
 
 	// Move this code to delete preflight.
 	if err := kubex.SetConfigEnv(path.Join(c.paths.WorkDir, cluster.OperationPhasePreFlight, "admin.conf")); err != nil {

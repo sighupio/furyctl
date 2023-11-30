@@ -44,13 +44,10 @@ func NewDistribution(
 	workDir,
 	binPath string,
 	kfdManifest config.KFD,
-) (*Distribution, error) {
+) *Distribution {
 	distroDir := path.Join(workDir, cluster.OperationPhaseDistribution)
 
-	phase, err := cluster.NewOperationPhase(distroDir, kfdManifest.Tools, binPath)
-	if err != nil {
-		return nil, fmt.Errorf("error creating distribution phase: %w", err)
-	}
+	phase := cluster.NewOperationPhase(distroDir, kfdManifest.Tools, binPath)
 
 	return &Distribution{
 		OperationPhase: phase,
@@ -87,7 +84,7 @@ func NewDistribution(
 			},
 		),
 		dryRun: dryRun,
-	}, nil
+	}
 }
 
 func (d *Distribution) Exec() error {
