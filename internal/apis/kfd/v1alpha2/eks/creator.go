@@ -25,6 +25,7 @@ import (
 	eksrules "github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/eks/rules"
 	"github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/eks/vpn"
 	"github.com/sighupio/furyctl/internal/cluster"
+	"github.com/sighupio/furyctl/internal/distribution"
 	"github.com/sighupio/furyctl/internal/rules"
 	"github.com/sighupio/furyctl/internal/state"
 	"github.com/sighupio/furyctl/internal/upgrade"
@@ -331,22 +332,24 @@ func (v *ClusterCreator) CreateAsync(
 
 	reducers := v.buildReducers(status.Diffs, r, cluster.OperationPhaseDistribution)
 
-	preupgrade := commcreate.NewPreUpgrade(
-		v.paths,
-		v.kfdManifest,
-		string(v.furyctlConf.Kind),
-		v.dryRun,
-		v.upgrade,
-		v.force,
-		upgr,
-		reducers,
-		status.Diffs,
-	)
+	if distribution.HasFeature(v.kfdManifest, distribution.FeatureClusterUpgrade) {
+		preupgrade := commcreate.NewPreUpgrade(
+			v.paths,
+			v.kfdManifest,
+			string(v.furyctlConf.Kind),
+			v.dryRun,
+			v.upgrade,
+			v.force,
+			upgr,
+			reducers,
+			status.Diffs,
+		)
 
-	if err := preupgrade.Exec(); err != nil {
-		errCh <- fmt.Errorf("error while executing preupgrade phase: %w", err)
+		if err := preupgrade.Exec(); err != nil {
+			errCh <- fmt.Errorf("error while executing preupgrade phase: %w", err)
 
-		return
+			return
+		}
 	}
 
 	switch v.phase {
