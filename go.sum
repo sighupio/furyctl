@@ -484,6 +484,8 @@ github.com/shopspring/decimal v1.3.1 h1:2Usl1nmF/WZucqkFZhnfFYxxxu8LG21F6nPQBE5g
 github.com/shopspring/decimal v1.3.1/go.mod h1:DKyhrW/HYNuLGql+MJL6WCR6knT2jwCFRcu2hWCYk4o=
 github.com/sighupio/fury-distribution v1.26.3-rc.1 h1:H/KLAaHMKbhkewQxArc+shu0BAJVTUKf94NeAxuPPSc=
 github.com/sighupio/fury-distribution v1.26.3-rc.1/go.mod h1:5gp8s+7qkpyoVeOZNuMRDLhjElYEY1F3X1GmC8QkYc0=
+github.com/sighupio/fury-distribution v1.26.3 h1:Imh28jHs8Yc0NrgLxLUa4oGqvYT3PNuQgUV8RE6Mb2M=
+github.com/sighupio/fury-distribution v1.26.3/go.mod h1:5gp8s+7qkpyoVeOZNuMRDLhjElYEY1F3X1GmC8QkYc0=
 github.com/sirupsen/logrus v1.9.3 h1:dueUQJ1C2q9oE3F7wvmSGAaVtTmUizReu6fjN8uqzbQ=
 github.com/sirupsen/logrus v1.9.3/go.mod h1:naHLuLoDiP4jHNo9R0sCBMtWGeIprob74mVsIT4qYEQ=
 github.com/sourcegraph/conc v0.3.0 h1:OQTbbt6P72L20UqAkXXuLOj79LfEanQ+YQFNpLA9ySo=
