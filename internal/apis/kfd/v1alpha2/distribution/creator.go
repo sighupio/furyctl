@@ -144,17 +144,16 @@ func (*ClusterCreator) GetPhasePath(phase string) (string, error) {
 
 func (c *ClusterCreator) Create(startFrom string, _ int) error {
 	upgr := upgrade.New(c.paths, string(c.furyctlConf.Kind))
-
-	distributionPhase, err := create.NewDistribution(
-		c.paths,
-		c.furyctlConf,
-		c.kfdManifest,
-		c.dryRun,
-		upgr,
+	distributionPhase := upgrade.NewReducerOperatorPhaseDecorator(
+		c.upgradeStateStore,
+		create.NewDistribution(
+			c.paths,
+			c.furyctlConf,
+			c.kfdManifest,
+			c.dryRun,
+			upgr,
+		),
 	)
-	if err != nil {
-		return fmt.Errorf("error while initiating distribution phase: %w", err)
-	}
 
 	pluginsPhase, err := commcreate.NewPlugins(
 		c.paths,
@@ -275,7 +274,7 @@ func (c *ClusterCreator) Create(startFrom string, _ int) error {
 func (c *ClusterCreator) allPhases(
 	startFrom string,
 	reducers v1alpha2.Reducers,
-	distributionPhase *create.Distribution,
+	distributionPhase upgrade.ReducersOperatorPhase[v1alpha2.Reducers],
 	pluginsPhase *commcreate.Plugins,
 	upgr *upgrade.Upgrade,
 ) error {
