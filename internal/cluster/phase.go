@@ -181,7 +181,7 @@ func NewOperationPhase(folder string, kfdTools config.KFDTools, binPath string) 
 	}
 }
 
-func (op *OperationPhase) CreateFolder() error {
+func (op *OperationPhase) CreateRootFolder() error {
 	if _, err := os.Stat(op.Path); !os.IsNotExist(err) {
 		return nil
 	}

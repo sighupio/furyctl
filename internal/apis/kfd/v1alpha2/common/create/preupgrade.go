@@ -86,7 +86,7 @@ func (p *PreUpgrade) Exec() error {
 
 	logrus.Info("Running preupgrade phase...")
 
-	if err := p.CreateFolder(); err != nil {
+	if err := p.CreateRootFolder(); err != nil {
 		return fmt.Errorf("error creating preupgrade phase folder: %w", err)
 	}
 
