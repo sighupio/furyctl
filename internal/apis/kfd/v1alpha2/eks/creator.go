@@ -743,6 +743,7 @@ func (v *ClusterCreator) setupPhases(upgr *upgrade.Upgrade) (
 			upgr,
 		),
 		v.dryRun,
+		upgr,
 	)
 
 	kube := upgrade.NewOperatorPhaseAsyncDecorator(
@@ -756,6 +757,7 @@ func (v *ClusterCreator) setupPhases(upgr *upgrade.Upgrade) (
 			upgr,
 		),
 		v.dryRun,
+		upgr,
 	)
 
 	distro := upgrade.NewReducerOperatorPhaseAsyncDecorator(
@@ -770,6 +772,7 @@ func (v *ClusterCreator) setupPhases(upgr *upgrade.Upgrade) (
 			upgr,
 		),
 		v.dryRun,
+		upgr,
 	)
 
 	plugins := commcreate.NewPlugins(
