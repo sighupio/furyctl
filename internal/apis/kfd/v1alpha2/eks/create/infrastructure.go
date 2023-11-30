@@ -106,7 +106,7 @@ func (i *Infrastructure) Exec(startFrom string, upgradeState *upgrade.State) err
 	}
 
 	if err := i.preInfrastructure(startFrom, upgradeState); err != nil {
-		return fmt.Errorf("error running pre-infrastructure phase: %w", err)
+		return fmt.Errorf("error running preinfrastructure phase: %w", err)
 	}
 
 	if err := i.coreInfrastructure(startFrom, upgradeState, timestamp); err != nil {
@@ -118,7 +118,7 @@ func (i *Infrastructure) Exec(startFrom string, upgradeState *upgrade.State) err
 	}
 
 	if err := i.postInfrastructure(upgradeState); err != nil {
-		return fmt.Errorf("error running post-infrastructure phase: %w", err)
+		return fmt.Errorf("error running postinfrastructure phase: %w", err)
 	}
 
 	return nil
@@ -153,7 +153,7 @@ func (i *Infrastructure) preInfrastructure(
 	upgradeState *upgrade.State,
 ) error {
 	if !i.dryRun && (startFrom == "" || startFrom == cluster.OperationSubPhasePreInfrastructure) {
-		if err := i.upgrade.Exec(i.Path, "pre-infrastructure"); err != nil {
+		if err := i.upgrade.Exec(i.Path, "preinfrastructure"); err != nil {
 			upgradeState.Phases.PreInfrastructure.Status = upgrade.PhaseStatusFailed
 
 			if err := i.upgradeStore.Store(upgradeState); err != nil {

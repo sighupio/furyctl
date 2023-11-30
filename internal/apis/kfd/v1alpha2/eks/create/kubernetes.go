@@ -140,7 +140,7 @@ func (k *Kubernetes) Exec(startFrom string, upgradeState *upgrade.State) error {
 	}
 
 	if err := k.preKubernetes(startFrom, upgradeState); err != nil {
-		return fmt.Errorf("error running pre-kubernetes phase: %w", err)
+		return fmt.Errorf("error running prekubernetes phase: %w", err)
 	}
 
 	if err := k.coreKubernetes(startFrom, upgradeState, timestamp); err != nil {
@@ -192,7 +192,7 @@ func (k *Kubernetes) preKubernetes(
 	upgradeState *upgrade.State,
 ) error {
 	if !k.dryRun && (startFrom == "" || startFrom == cluster.OperationSubPhasePreKubernetes) {
-		if err := k.upgrade.Exec(k.Path, "pre-kubernetes"); err != nil {
+		if err := k.upgrade.Exec(k.Path, "prekubernetes"); err != nil {
 			upgradeState.Phases.PreKubernetes.Status = upgrade.PhaseStatusFailed
 
 			if err := k.upgradeStore.Store(upgradeState); err != nil {
