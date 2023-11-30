@@ -55,6 +55,8 @@ type Status struct {
 	Success bool
 }
 
+// Preflight is a phase tasked with ensuring cluster connectivity
+// and checking for violations in the updates made on the furyctl.yaml file.
 type PreFlight struct {
 	*cluster.OperationPhase
 	furyctlConf     private.EksclusterKfdV1Alpha2
@@ -162,7 +164,7 @@ func (p *PreFlight) Exec() (*Status, error) {
 
 	logrus.Info("Running preflight checks")
 
-	if err := p.CreateFolder(); err != nil {
+	if err := p.CreateRootFolder(); err != nil {
 		return status, fmt.Errorf("error creating preflight phase folder: %w", err)
 	}
 
@@ -247,13 +249,13 @@ func (p *PreFlight) Exec() (*Status, error) {
 
 		logrus.Info("Cluster configuration has changed, checking for immutable violations...")
 
-		if err := p.CheckStateDiffs(d, diffChecker); err != nil {
+		if err := p.CheckImmutablesDiffs(d, diffChecker); err != nil {
 			return status, fmt.Errorf("error checking state diffs: %w", err)
 		}
 
 		logrus.Info("Cluster configuration has changed, checking for unsupported reducers violations...")
 
-		if err := p.CheckReducerDiffs(d, diffChecker); err != nil {
+		if err := p.CheckReducersDiffs(d, diffChecker); err != nil {
 			return status, fmt.Errorf("error checking reducer diffs: %w", err)
 		}
 	}
@@ -500,7 +502,8 @@ func (*PreFlight) GenerateDiffs(diffChecker diffs.Checker) (r3diff.Changelog, er
 	return d, nil
 }
 
-func (p *PreFlight) CheckStateDiffs(d r3diff.Changelog, diffChecker diffs.Checker) error {
+// CheckImmutablesDiffs checks if there have been changes to immutable fields in the furyctl.yaml.
+func (p *PreFlight) CheckImmutablesDiffs(d r3diff.Changelog, diffChecker diffs.Checker) error {
 	var errs []error
 
 	r, err := rules.NewEKSClusterRulesExtractor(p.distroPath)
@@ -525,7 +528,9 @@ func (p *PreFlight) CheckStateDiffs(d r3diff.Changelog, diffChecker diffs.Checke
 	return nil
 }
 
-func (p *PreFlight) CheckReducerDiffs(d r3diff.Changelog, diffChecker diffs.Checker) error {
+// CheckReducersDiffs checks if the changes to the reducers are supported by the distribution.
+// This is needed as not all from/to combinations are supported.
+func (p *PreFlight) CheckReducersDiffs(d r3diff.Changelog, diffChecker diffs.Checker) error {
 	var errs []error
 
 	r, err := rules.NewEKSClusterRulesExtractor(p.distroPath)

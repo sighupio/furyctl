@@ -120,7 +120,7 @@ func (i *Infrastructure) Exec(startFrom string, upgradeState *upgrade.State) err
 }
 
 func (i *Infrastructure) prepare() error {
-	if err := i.CreateFolder(); err != nil {
+	if err := i.CreateRootFolder(); err != nil {
 		return fmt.Errorf("error creating infrastructure folder: %w", err)
 	}
 

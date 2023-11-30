@@ -77,7 +77,7 @@ func NewPlugins(
 func (p *Plugins) Exec() error {
 	logrus.Info("Applying plugins...")
 
-	if err := p.CreateFolder(); err != nil {
+	if err := p.CreateRootFolder(); err != nil {
 		return fmt.Errorf("error creating plugins phase folder: %w", err)
 	}
 
