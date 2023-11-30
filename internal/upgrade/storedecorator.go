@@ -14,6 +14,7 @@ type (
 	Reducers                          = any
 	ReducersOperatorPhase[T Reducers] interface {
 		Exec(reducers T, startFrom string, upgradeState *State) error
+		Self() *cluster.OperationPhase
 	}
 )
 
@@ -55,6 +56,10 @@ func (d *ReducerOperatorPhaseDecorator[T]) Exec(reducers T, startFrom string, up
 	}
 
 	return nil
+}
+
+func (d *ReducerOperatorPhaseDecorator[T]) Self() *cluster.OperationPhase {
+	return d.phase.Self()
 }
 
 func NewReducerOperatorPhaseAsyncDecorator[T Reducers](
@@ -100,14 +105,13 @@ func (d *ReducerOperatorPhaseAsyncDecorator[T]) Stop() error {
 	return nil
 }
 
-func (d *ReducerOperatorPhaseAsyncDecorator[T]) Decorated() *cluster.OperationPhase {
-	var p any = d.phase
-
-	return p.(*cluster.OperationPhase) //nolint: revive,forcetypeassert // it should be safe
+func (d *ReducerOperatorPhaseAsyncDecorator[T]) Self() *cluster.OperationPhase { //nolint: lll,revive // confusing-naming is a false positive
+	return d.phase.Self()
 }
 
 type OperatorPhase interface {
 	Exec(startFrom string, upgradeState *State) error
+	Self() *cluster.OperationPhase
 }
 
 type OperatorPhaseAsync interface {
@@ -148,6 +152,10 @@ func (d *OperatorPhaseDecorator) Exec(startFrom string, upgradeState *State) err
 	}
 
 	return nil
+}
+
+func (d *OperatorPhaseDecorator) Self() *cluster.OperationPhase {
+	return d.phase.Self()
 }
 
 type OperatorPhaseAsyncDecorator struct {
@@ -193,8 +201,6 @@ func (d *OperatorPhaseAsyncDecorator) Stop() error {
 	return nil
 }
 
-func (d *OperatorPhaseAsyncDecorator) Decorated() *cluster.OperationPhase {
-	var p any = d.phase
-
-	return p.(*cluster.OperationPhase) //nolint: revive,forcetypeassert // it should be safe
+func (d *OperatorPhaseAsyncDecorator) Self() *cluster.OperationPhase {
+	return d.phase.Self()
 }
