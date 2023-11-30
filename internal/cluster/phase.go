@@ -227,3 +227,7 @@ func (cp *OperationPhase) CopyPathsToConfig(cfg *template.Config) {
 		"yq":         cp.YqPath,
 	}
 }
+
+func (cp *OperationPhase) Self() *OperationPhase {
+	return cp
+}
