@@ -21,6 +21,7 @@ import (
 	"github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/onpremises/create"
 	premrules "github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/onpremises/rules"
 	"github.com/sighupio/furyctl/internal/cluster"
+	"github.com/sighupio/furyctl/internal/distribution"
 	"github.com/sighupio/furyctl/internal/rules"
 	"github.com/sighupio/furyctl/internal/state"
 	"github.com/sighupio/furyctl/internal/upgrade"
@@ -208,20 +209,22 @@ func (c *ClusterCreator) Create(startFrom string, _ int) error {
 		cluster.OperationPhaseDistribution,
 	)
 
-	preupgradePhase := commcreate.NewPreUpgrade(
-		c.paths,
-		c.kfdManifest,
-		string(c.furyctlConf.Kind),
-		c.dryRun,
-		c.upgrade,
-		c.force,
-		upgr,
-		reducers,
-		status.Diffs,
-	)
+	if distribution.HasFeature(c.kfdManifest, distribution.FeatureClusterUpgrade) {
+		preupgradePhase := commcreate.NewPreUpgrade(
+			c.paths,
+			c.kfdManifest,
+			string(c.furyctlConf.Kind),
+			c.dryRun,
+			c.upgrade,
+			c.force,
+			upgr,
+			reducers,
+			status.Diffs,
+		)
 
-	if err := preupgradePhase.Exec(); err != nil {
-		return fmt.Errorf("error while executing preupgrade phase: %w", err)
+		if err := preupgradePhase.Exec(); err != nil {
+			return fmt.Errorf("error while executing preupgrade phase: %w", err)
+		}
 	}
 
 	switch c.phase {
