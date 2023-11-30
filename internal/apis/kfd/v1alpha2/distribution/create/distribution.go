@@ -128,7 +128,7 @@ func (d *Distribution) Exec(reducers v1alpha2.Reducers, startFrom string, upgrad
 	}
 
 	if err := d.preDistribution(reducers, startFrom, upgradeState, mCfg); err != nil {
-		return fmt.Errorf("error running pre-distribution phase: %w", err)
+		return fmt.Errorf("error running predistribution phase: %w", err)
 	}
 
 	if err := d.coreDistribution(reducers, startFrom, upgradeState, mCfg); err != nil {
@@ -136,7 +136,7 @@ func (d *Distribution) Exec(reducers v1alpha2.Reducers, startFrom string, upgrad
 	}
 
 	if err := d.postDistribution(upgradeState); err != nil {
-		return fmt.Errorf("error running post-distribution phase: %w", err)
+		return fmt.Errorf("error running postdistribution phase: %w", err)
 	}
 
 	logrus.Info("Kubernetes Fury Distribution installed successfully")
@@ -254,7 +254,7 @@ func (d *Distribution) preDistribution(
 
 	if startFrom == "" || startFrom == cluster.OperationSubPhasePreDistribution {
 		// Run upgrade script if needed.
-		if err := d.upgrade.Exec(d.Path, "pre-distribution"); err != nil {
+		if err := d.upgrade.Exec(d.Path, "predistribution"); err != nil {
 			upgradeState.Phases.PreDistribution.Status = upgrade.PhaseStatusFailed
 
 			if err := d.upgradeStore.Store(upgradeState); err != nil {

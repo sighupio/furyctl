@@ -291,7 +291,7 @@ func (c *ClusterCreator) allPhases(
 			if startFrom == "" {
 				resumableState := c.upgradeStateStore.GetLatestResumablePhase(upgradeState)
 
-				logrus.Infof("an upgrade is already in progress, resuming from %s phase.\n"+
+				logrus.Infof("An upgrade is already in progress, resuming from %s phase.\n"+
 					"If you wish to start from a different phase, you can use the --start-from "+
 					"flag to select the desired phase to resume.", resumableState)
 
