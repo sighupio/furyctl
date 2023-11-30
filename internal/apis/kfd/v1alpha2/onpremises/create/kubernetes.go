@@ -51,7 +51,7 @@ func (k *Kubernetes) Exec(startFrom string, upgradeState *upgrade.State) error {
 	}
 
 	if err := k.preKubernetes(startFrom, upgradeState); err != nil {
-		return fmt.Errorf("error running pre-kubernetes phase: %w", err)
+		return fmt.Errorf("error running prekubernetes phase: %w", err)
 	}
 
 	if err := k.coreKubernetes(startFrom, upgradeState); err != nil {
@@ -59,7 +59,7 @@ func (k *Kubernetes) Exec(startFrom string, upgradeState *upgrade.State) error {
 	}
 
 	if err := k.postKubernetes(upgradeState); err != nil {
-		return fmt.Errorf("error running post-kubernetes phase: %w", err)
+		return fmt.Errorf("error running postkubernetes phase: %w", err)
 	}
 
 	logrus.Info("Kubernetes cluster created successfully")
@@ -146,7 +146,7 @@ func (k *Kubernetes) preKubernetes(
 ) error {
 	if startFrom == "" || startFrom == cluster.OperationSubPhasePreKubernetes {
 		// Run upgrade script if needed.
-		if err := k.upgrade.Exec(k.Path, "pre-kubernetes"); err != nil {
+		if err := k.upgrade.Exec(k.Path, "prekubernetes"); err != nil {
 			upgradeState.Phases.PreKubernetes.Status = upgrade.PhaseStatusFailed
 
 			if err := k.upgradeStore.Store(upgradeState); err != nil {

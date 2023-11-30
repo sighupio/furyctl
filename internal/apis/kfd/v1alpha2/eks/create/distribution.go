@@ -167,7 +167,7 @@ func (d *Distribution) Exec(
 	}
 
 	if err := d.preDistribution(reducers, startFrom, upgradeState, tfCfg); err != nil {
-		return fmt.Errorf("error running pre-distribution phase: %w", err)
+		return fmt.Errorf("error running predistribution phase: %w", err)
 	}
 
 	if err := d.coreDistribution(
@@ -249,7 +249,7 @@ func (d *Distribution) preDistribution(
 		}
 
 		if startFrom == "" || startFrom == cluster.OperationSubPhasePreDistribution {
-			if err := d.upgrade.Exec(d.Path, "pre-distribution"); err != nil {
+			if err := d.upgrade.Exec(d.Path, "predistribution"); err != nil {
 				upgradeState.Phases.PreDistribution.Status = upgrade.PhaseStatusFailed
 
 				if err := d.upgradeStore.Store(upgradeState); err != nil {
