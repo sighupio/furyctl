@@ -72,10 +72,7 @@ func (d *ClusterDeleter) Delete() error {
 		return ErrUnsupportedPhase
 	}
 
-	distro, err := del.NewDistribution(d.furyctlConf, d.dryRun, d.paths.WorkDir, d.paths.BinPath, d.kfdManifest)
-	if err != nil {
-		return fmt.Errorf("error while initiating distribution phase: %w", err)
-	}
+	distro := del.NewDistribution(d.furyctlConf, d.dryRun, d.paths.WorkDir, d.paths.BinPath, d.kfdManifest)
 
 	// Move this code to delete preflight.
 	if err := kubex.SetConfigEnv(d.furyctlConf.Spec.Distribution.Kubeconfig); err != nil {

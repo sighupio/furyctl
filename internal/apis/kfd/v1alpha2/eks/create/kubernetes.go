@@ -74,7 +74,6 @@ type Kubernetes struct {
 	furyctlConfPath  string
 	tfRunner         *terraform.Runner
 	awsRunner        *awscli.Runner
-	upgradeStore     upgrade.Storer
 	dryRun           bool
 	upgrade          *upgrade.Upgrade
 }
@@ -86,13 +85,10 @@ func NewKubernetes(
 	paths cluster.CreatorPaths,
 	dryRun bool,
 	upgr *upgrade.Upgrade,
-) (*Kubernetes, error) {
+) *Kubernetes {
 	kubeDir := path.Join(paths.WorkDir, cluster.OperationPhaseKubernetes)
 
-	phase, err := cluster.NewOperationPhase(kubeDir, kfdManifest.Tools, paths.BinPath)
-	if err != nil {
-		return nil, fmt.Errorf("error creating kubernetes phase: %w", err)
-	}
+	phase := cluster.NewOperationPhase(kubeDir, kfdManifest.Tools, paths.BinPath)
 
 	return &Kubernetes{
 		OperationPhase:   phase,
@@ -118,14 +114,9 @@ func NewKubernetes(
 				WorkDir: phase.Path,
 			},
 		),
-		upgradeStore: upgrade.NewStateStore(
-			paths.WorkDir,
-			kfdManifest.Tools.Common.Kubectl.Version,
-			paths.BinPath,
-		),
 		dryRun:  dryRun,
 		upgrade: upgr,
-	}, nil
+	}
 }
 
 func (k *Kubernetes) Exec(startFrom string, upgradeState *upgrade.State) error {
@@ -195,19 +186,11 @@ func (k *Kubernetes) preKubernetes(
 		if err := k.upgrade.Exec(k.Path, "pre-kubernetes"); err != nil {
 			upgradeState.Phases.PreKubernetes.Status = upgrade.PhaseStatusFailed
 
-			if err := k.upgradeStore.Store(upgradeState); err != nil {
-				return fmt.Errorf("error storing upgrade state: %w", err)
-			}
-
 			return fmt.Errorf("error running upgrade: %w", err)
 		}
 
 		if k.upgrade.Enabled {
 			upgradeState.Phases.PreKubernetes.Status = upgrade.PhaseStatusSuccess
-
-			if err := k.upgradeStore.Store(upgradeState); err != nil {
-				return fmt.Errorf("error storing upgrade state: %w", err)
-			}
 		}
 	}
 
@@ -276,10 +259,6 @@ func (k *Kubernetes) coreKubernetes(
 		if err := k.tfRunner.Apply(timestamp); err != nil {
 			if k.upgrade.Enabled {
 				upgradeState.Phases.Kubernetes.Status = upgrade.PhaseStatusFailed
-
-				if err := k.upgradeStore.Store(upgradeState); err != nil {
-					return fmt.Errorf("error storing upgrade state: %w", err)
-				}
 			}
 
 			return fmt.Errorf("cannot create cloud resources: %w", err)
@@ -287,10 +266,6 @@ func (k *Kubernetes) coreKubernetes(
 
 		if k.upgrade.Enabled {
 			upgradeState.Phases.Kubernetes.Status = upgrade.PhaseStatusSuccess
-
-			if err := k.upgradeStore.Store(upgradeState); err != nil {
-				return fmt.Errorf("error storing upgrade state: %w", err)
-			}
 		}
 
 		out, err := k.tfRunner.Output()
@@ -330,19 +305,11 @@ func (k *Kubernetes) postKubernetes(
 	if err := k.upgrade.Exec(k.Path, "post-kubernetes"); err != nil {
 		upgradeState.Phases.PostKubernetes.Status = upgrade.PhaseStatusFailed
 
-		if err := k.upgradeStore.Store(upgradeState); err != nil {
-			return fmt.Errorf("error storing upgrade state: %w", err)
-		}
-
 		return fmt.Errorf("error running upgrade: %w", err)
 	}
 
 	if k.upgrade.Enabled {
 		upgradeState.Phases.PostKubernetes.Status = upgrade.PhaseStatusSuccess
-
-		if err := k.upgradeStore.Store(upgradeState); err != nil {
-			return fmt.Errorf("error storing upgrade state: %w", err)
-		}
 	}
 
 	return nil

@@ -32,7 +32,6 @@ type Kubernetes struct {
 	paths           cluster.CreatorPaths
 	dryRun          bool
 	ansibleRunner   *ansible.Runner
-	upgradeStore    upgrade.Storer
 	upgrade         *upgrade.Upgrade
 }
 
@@ -149,19 +148,11 @@ func (k *Kubernetes) preKubernetes(
 		if err := k.upgrade.Exec(k.Path, "pre-kubernetes"); err != nil {
 			upgradeState.Phases.PreKubernetes.Status = upgrade.PhaseStatusFailed
 
-			if err := k.upgradeStore.Store(upgradeState); err != nil {
-				return fmt.Errorf("error storing upgrade state: %w", err)
-			}
-
 			return fmt.Errorf("error running upgrade: %w", err)
 		}
 
 		if k.upgrade.Enabled {
 			upgradeState.Phases.PreKubernetes.Status = upgrade.PhaseStatusSuccess
-
-			if err := k.upgradeStore.Store(upgradeState); err != nil {
-				return fmt.Errorf("error storing upgrade state: %w", err)
-			}
 		}
 	}
 
@@ -179,10 +170,6 @@ func (k *Kubernetes) coreKubernetes(
 		if _, err := k.ansibleRunner.Playbook("create-playbook.yaml"); err != nil {
 			if k.upgrade.Enabled {
 				upgradeState.Phases.Kubernetes.Status = upgrade.PhaseStatusFailed
-
-				if err := k.upgradeStore.Store(upgradeState); err != nil {
-					return fmt.Errorf("error storing upgrade state: %w", err)
-				}
 			}
 
 			return fmt.Errorf("error applying playbook: %w", err)
@@ -190,10 +177,6 @@ func (k *Kubernetes) coreKubernetes(
 
 		if k.upgrade.Enabled {
 			upgradeState.Phases.Kubernetes.Status = upgrade.PhaseStatusSuccess
-
-			if err := k.upgradeStore.Store(upgradeState); err != nil {
-				return fmt.Errorf("error storing upgrade state: %w", err)
-			}
 		}
 
 		if err := kubex.SetConfigEnv(path.Join(k.OperationPhase.Path, "admin.conf")); err != nil {
@@ -228,19 +211,11 @@ func (k *Kubernetes) postKubernetes(
 	if err := k.upgrade.Exec(k.Path, "post-kubernetes"); err != nil {
 		upgradeState.Phases.PostKubernetes.Status = upgrade.PhaseStatusFailed
 
-		if err := k.upgradeStore.Store(upgradeState); err != nil {
-			return fmt.Errorf("error storing upgrade state: %w", err)
-		}
-
 		return fmt.Errorf("error running upgrade: %w", err)
 	}
 
 	if k.upgrade.Enabled {
 		upgradeState.Phases.PostKubernetes.Status = upgrade.PhaseStatusSuccess
-
-		if err := k.upgradeStore.Store(upgradeState); err != nil {
-			return fmt.Errorf("error storing upgrade state: %w", err)
-		}
 	}
 
 	return nil
@@ -289,13 +264,10 @@ func NewKubernetes(
 	paths cluster.CreatorPaths,
 	dryRun bool,
 	upgr *upgrade.Upgrade,
-) (*Kubernetes, error) {
+) *Kubernetes {
 	kubeDir := path.Join(paths.WorkDir, cluster.OperationPhaseKubernetes)
 
-	phase, err := cluster.NewOperationPhase(kubeDir, kfdManifest.Tools, paths.BinPath)
-	if err != nil {
-		return nil, fmt.Errorf("error creating kubernetes phase: %w", err)
-	}
+	phase := cluster.NewOperationPhase(kubeDir, kfdManifest.Tools, paths.BinPath)
 
 	return &Kubernetes{
 		OperationPhase:  phase,
@@ -312,11 +284,6 @@ func NewKubernetes(
 				WorkDir:         phase.Path,
 			},
 		),
-		upgradeStore: upgrade.NewStateStore(
-			paths.WorkDir,
-			kfdManifest.Tools.Common.Kubectl.Version,
-			paths.BinPath,
-		),
 		upgrade: upgr,
-	}, nil
+	}
 }

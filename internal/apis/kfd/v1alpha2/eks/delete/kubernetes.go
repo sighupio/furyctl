@@ -52,13 +52,10 @@ func NewKubernetes(
 	workDir,
 	binPath string,
 	kfdManifest config.KFD,
-) (*Kubernetes, error) {
+) *Kubernetes {
 	kubeDir := path.Join(workDir, cluster.OperationPhaseKubernetes)
 
-	phase, err := cluster.NewOperationPhase(kubeDir, kfdManifest.Tools, binPath)
-	if err != nil {
-		return nil, fmt.Errorf("error creating kubernetes phase: %w", err)
-	}
+	phase := cluster.NewOperationPhase(kubeDir, kfdManifest.Tools, binPath)
 
 	return &Kubernetes{
 		OperationPhase: phase,
@@ -81,7 +78,7 @@ func NewKubernetes(
 			},
 		),
 		dryRun: dryRun,
-	}, nil
+	}
 }
 
 func (k *Kubernetes) Exec() error {
