@@ -74,13 +74,10 @@ func NewDistribution(
 	kfdManifest config.KFD,
 	paths cluster.DeleterPaths,
 	dryRun bool,
-) (*Distribution, error) {
+) *Distribution {
 	kubeDir := path.Join(paths.WorkDir, cluster.OperationPhaseDistribution)
 
-	phase, err := cluster.NewOperationPhase(kubeDir, kfdManifest.Tools, paths.BinPath)
-	if err != nil {
-		return nil, fmt.Errorf("error creating distribution phase: %w", err)
-	}
+	phase := cluster.NewOperationPhase(kubeDir, kfdManifest.Tools, paths.BinPath)
 
 	return &Distribution{
 		OperationPhase: phase,
@@ -105,5 +102,5 @@ func NewDistribution(
 			true,
 			false,
 		),
-	}, nil
+	}
 }

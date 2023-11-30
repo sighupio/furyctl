@@ -62,7 +62,6 @@ type Distribution struct {
 	tfRunner         *terraform.Runner
 	shellRunner      *shell.Runner
 	kubeRunner       *kubectl.Runner
-	upgradeStore     upgrade.Storer
 	dryRun           bool
 	phase            string
 	upgrade          *upgrade.Upgrade
@@ -80,13 +79,10 @@ func NewDistribution(
 	dryRun bool,
 	phase string,
 	upgr *upgrade.Upgrade,
-) (*Distribution, error) {
+) *Distribution {
 	distroDir := path.Join(paths.WorkDir, cluster.OperationPhaseDistribution)
 
-	phaseOp, err := cluster.NewOperationPhase(distroDir, kfdManifest.Tools, paths.BinPath)
-	if err != nil {
-		return nil, fmt.Errorf("error creating distribution phase: %w", err)
-	}
+	phaseOp := cluster.NewOperationPhase(distroDir, kfdManifest.Tools, paths.BinPath)
 
 	return &Distribution{
 		OperationPhase:   phaseOp,
@@ -129,15 +125,10 @@ func NewDistribution(
 			true,
 			false,
 		),
-		upgradeStore: upgrade.NewStateStore(
-			paths.WorkDir,
-			kfdManifest.Tools.Common.Kubectl.Version,
-			paths.BinPath,
-		),
 		dryRun:  dryRun,
 		phase:   phase,
 		upgrade: upgr,
-	}, nil
+	}
 }
 
 func (*Distribution) SupportsLifecycle(lifecycle string) bool {
@@ -247,19 +238,11 @@ func (d *Distribution) preDistribution(
 			if err := d.upgrade.Exec(d.Path, "pre-distribution"); err != nil {
 				upgradeState.Phases.PreDistribution.Status = upgrade.PhaseStatusFailed
 
-				if err := d.upgradeStore.Store(upgradeState); err != nil {
-					return fmt.Errorf("error storing upgrade state: %w", err)
-				}
-
 				return fmt.Errorf("error running upgrade: %w", err)
 			}
 
 			if d.upgrade.Enabled {
 				upgradeState.Phases.PreDistribution.Status = upgrade.PhaseStatusSuccess
-
-				if err := d.upgradeStore.Store(upgradeState); err != nil {
-					return fmt.Errorf("error storing upgrade state: %w", err)
-				}
 			}
 		}
 	}
@@ -363,10 +346,6 @@ func (d *Distribution) coreDistribution(
 		if _, err := d.shellRunner.Run(path.Join(d.Path, "scripts", "apply.sh")); err != nil {
 			if d.upgrade.Enabled {
 				upgradeState.Phases.Distribution.Status = upgrade.PhaseStatusFailed
-
-				if err := d.upgradeStore.Store(upgradeState); err != nil {
-					return fmt.Errorf("error storing upgrade state: %w", err)
-				}
 			}
 
 			return fmt.Errorf("error applying manifests: %w", err)
@@ -374,10 +353,6 @@ func (d *Distribution) coreDistribution(
 
 		if d.upgrade.Enabled {
 			upgradeState.Phases.Distribution.Status = upgrade.PhaseStatusSuccess
-
-			if err := d.upgradeStore.Store(upgradeState); err != nil {
-				return fmt.Errorf("error storing upgrade state: %w", err)
-			}
 		}
 
 		if err := d.runReducers(reducers, mCfg, LifecyclePostApply, []string{"manifests", ".gitignore"}); err != nil {
@@ -394,19 +369,11 @@ func (d *Distribution) postDistribution(
 	if err := d.upgrade.Exec(d.Path, "post-distribution"); err != nil {
 		upgradeState.Phases.PostDistribution.Status = upgrade.PhaseStatusFailed
 
-		if err := d.upgradeStore.Store(upgradeState); err != nil {
-			return fmt.Errorf("error storing upgrade state: %w", err)
-		}
-
 		return fmt.Errorf("error running upgrade: %w", err)
 	}
 
 	if d.upgrade.Enabled {
 		upgradeState.Phases.PostDistribution.Status = upgrade.PhaseStatusSuccess
-
-		if err := d.upgradeStore.Store(upgradeState); err != nil {
-			return fmt.Errorf("error storing upgrade state: %w", err)
-		}
 	}
 
 	return nil
