@@ -16,7 +16,7 @@ require (
 	github.com/hashicorp/go-getter v1.7.3
 	github.com/hashicorp/terraform-json v0.18.0
 	github.com/miekg/dns v1.1.57
-	github.com/onsi/ginkgo/v2 v2.13.0
+	github.com/onsi/ginkgo/v2 v2.13.1
 	github.com/onsi/gomega v1.30.0
 	github.com/r3labs/diff/v3 v3.0.1
 	github.com/santhosh-tekuri/jsonschema/v5 v5.3.1
@@ -46,7 +46,7 @@ require (
 	github.com/fatih/color v1.16.0 // indirect
 	github.com/fsnotify/fsnotify v1.7.0 // indirect
 	github.com/gabriel-vasile/mimetype v1.4.3 // indirect
-	github.com/go-logr/logr v1.2.4 // indirect
+	github.com/go-logr/logr v1.3.0 // indirect
 	github.com/go-ole/go-ole v1.3.0 // indirect
 	github.com/go-playground/locales v0.14.1 // indirect
 	github.com/go-playground/universal-translator v0.18.1 // indirect
