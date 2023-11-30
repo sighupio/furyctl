@@ -158,6 +158,7 @@ func (c *ClusterCreator) Create(startFrom string, _ int) error {
 			c.dryRun,
 			upgr,
 		),
+		c.dryRun,
 	)
 
 	distributionPhase := upgrade.NewReducerOperatorPhaseDecorator(
@@ -169,6 +170,7 @@ func (c *ClusterCreator) Create(startFrom string, _ int) error {
 			c.dryRun,
 			upgr,
 		),
+		c.dryRun,
 	)
 
 	pluginsPhase := commcreate.NewPlugins(

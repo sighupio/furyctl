@@ -26,29 +26,34 @@ type ReducersOperatorPhaseAsync[T Reducers] interface {
 func NewReducerOperatorPhaseDecorator[T Reducers](
 	storer Storer,
 	phase ReducersOperatorPhase[T],
+	dryRun bool,
 ) *ReducerOperatorPhaseDecorator[T] {
 	return &ReducerOperatorPhaseDecorator[T]{
 		storer: storer,
 		phase:  phase,
+		dryRun: dryRun,
 	}
 }
 
 type ReducerOperatorPhaseDecorator[T Reducers] struct {
 	storer Storer
 	phase  ReducersOperatorPhase[T]
+	dryRun bool
 }
 
 func (d *ReducerOperatorPhaseDecorator[T]) Exec(reducers T, startFrom string, upgradeState *State) error {
 	fnErr := d.phase.Exec(reducers, startFrom, upgradeState)
 
-	if sErr := d.storer.Store(upgradeState); sErr != nil {
-		err := fmt.Errorf("error storing upgrade state: %w", sErr)
+	if !d.dryRun {
+		if sErr := d.storer.Store(upgradeState); sErr != nil {
+			err := fmt.Errorf("error storing upgrade state: %w", sErr)
 
-		if fnErr != nil {
-			err = fmt.Errorf("%w, %w", err, fnErr)
+			if fnErr != nil {
+				err = fmt.Errorf("%w, %w", err, fnErr)
+			}
+
+			return err
 		}
-
-		return err
 	}
 
 	if fnErr != nil {
@@ -65,29 +70,34 @@ func (d *ReducerOperatorPhaseDecorator[T]) Self() *cluster.OperationPhase {
 func NewReducerOperatorPhaseAsyncDecorator[T Reducers](
 	storer Storer,
 	phase ReducersOperatorPhaseAsync[T],
+	dryRun bool,
 ) *ReducerOperatorPhaseAsyncDecorator[T] {
 	return &ReducerOperatorPhaseAsyncDecorator[T]{
 		storer: storer,
 		phase:  phase,
+		dryRun: dryRun,
 	}
 }
 
 type ReducerOperatorPhaseAsyncDecorator[T Reducers] struct {
 	storer Storer
 	phase  ReducersOperatorPhaseAsync[T]
+	dryRun bool
 }
 
 func (d *ReducerOperatorPhaseAsyncDecorator[T]) Exec(reducers T, startFrom string, upgradeState *State) error { //nolint: lll,revive // confusing-naming is a false positive
 	fnErr := d.phase.Exec(reducers, startFrom, upgradeState)
 
-	if sErr := d.storer.Store(upgradeState); sErr != nil {
-		err := fmt.Errorf("error storing upgrade state: %w", sErr)
+	if !d.dryRun {
+		if sErr := d.storer.Store(upgradeState); sErr != nil {
+			err := fmt.Errorf("error storing upgrade state: %w", sErr)
 
-		if fnErr != nil {
-			err = fmt.Errorf("%w, %w", err, fnErr)
+			if fnErr != nil {
+				err = fmt.Errorf("%w, %w", err, fnErr)
+			}
+
+			return err
 		}
-
-		return err
 	}
 
 	if fnErr != nil {
@@ -122,29 +132,34 @@ type OperatorPhaseAsync interface {
 func NewOperatorPhaseDecorator(
 	storer Storer,
 	phase OperatorPhase,
+	dryRun bool,
 ) *OperatorPhaseDecorator {
 	return &OperatorPhaseDecorator{
 		storer: storer,
 		phase:  phase,
+		dryRun: dryRun,
 	}
 }
 
 type OperatorPhaseDecorator struct {
 	storer Storer
 	phase  OperatorPhase
+	dryRun bool
 }
 
 func (d *OperatorPhaseDecorator) Exec(startFrom string, upgradeState *State) error {
 	fnErr := d.phase.Exec(startFrom, upgradeState)
 
-	if sErr := d.storer.Store(upgradeState); sErr != nil {
-		err := fmt.Errorf("error storing upgrade state: %w", sErr)
+	if !d.dryRun {
+		if sErr := d.storer.Store(upgradeState); sErr != nil {
+			err := fmt.Errorf("error storing upgrade state: %w", sErr)
 
-		if fnErr != nil {
-			err = fmt.Errorf("%w, %w", err, fnErr)
+			if fnErr != nil {
+				err = fmt.Errorf("%w, %w", err, fnErr)
+			}
+
+			return err
 		}
-
-		return err
 	}
 
 	if fnErr != nil {
@@ -161,29 +176,34 @@ func (d *OperatorPhaseDecorator) Self() *cluster.OperationPhase {
 type OperatorPhaseAsyncDecorator struct {
 	storer Storer
 	phase  OperatorPhaseAsync
+	dryRun bool
 }
 
 func NewOperatorPhaseAsyncDecorator(
 	storer Storer,
 	phase OperatorPhaseAsync,
+	dryRun bool,
 ) *OperatorPhaseAsyncDecorator {
 	return &OperatorPhaseAsyncDecorator{
 		storer: storer,
 		phase:  phase,
+		dryRun: dryRun,
 	}
 }
 
 func (d *OperatorPhaseAsyncDecorator) Exec(startFrom string, upgradeState *State) error {
 	fnErr := d.phase.Exec(startFrom, upgradeState)
 
-	if sErr := d.storer.Store(upgradeState); sErr != nil {
-		err := fmt.Errorf("error storing upgrade state: %w", sErr)
+	if !d.dryRun {
+		if sErr := d.storer.Store(upgradeState); sErr != nil {
+			err := fmt.Errorf("error storing upgrade state: %w", sErr)
 
-		if fnErr != nil {
-			err = fmt.Errorf("%w, %w", err, fnErr)
+			if fnErr != nil {
+				err = fmt.Errorf("%w, %w", err, fnErr)
+			}
+
+			return err
 		}
-
-		return err
 	}
 
 	if fnErr != nil {
