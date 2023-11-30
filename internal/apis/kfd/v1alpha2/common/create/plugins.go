@@ -38,15 +38,12 @@ func NewPlugins(
 	kfdManifest config.KFD,
 	kind string,
 	dryRun bool,
-) (*Plugins, error) {
-	phaseOp, err := cluster.NewOperationPhase(
+) *Plugins {
+	phaseOp := cluster.NewOperationPhase(
 		path.Join(paths.WorkDir, cluster.OperationPhasePlugins),
 		kfdManifest.Tools,
 		paths.BinPath,
 	)
-	if err != nil {
-		return nil, fmt.Errorf("error creating plugins phase: %w", err)
-	}
 
 	return &Plugins{
 		OperationPhase:  phaseOp,
@@ -74,7 +71,7 @@ func NewPlugins(
 			kind,
 			paths.ConfigPath,
 		),
-	}, nil
+	}
 }
 
 func (p *Plugins) Exec() error {

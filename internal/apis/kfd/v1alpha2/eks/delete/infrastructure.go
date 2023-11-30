@@ -33,13 +33,10 @@ func NewInfrastructure(
 	workDir,
 	binPath string,
 	kfdManifest config.KFD,
-) (*Infrastructure, error) {
+) *Infrastructure {
 	infraDir := path.Join(workDir, cluster.OperationPhaseInfrastructure)
 
-	phase, err := cluster.NewOperationPhase(infraDir, kfdManifest.Tools, binPath)
-	if err != nil {
-		return nil, fmt.Errorf("error creating infrastructure phase: %w", err)
-	}
+	phase := cluster.NewOperationPhase(infraDir, kfdManifest.Tools, binPath)
 
 	return &Infrastructure{
 		OperationPhase: phase,
@@ -55,7 +52,7 @@ func NewInfrastructure(
 			},
 		),
 		dryRun: dryRun,
-	}, nil
+	}
 }
 
 func (i *Infrastructure) Exec() error {

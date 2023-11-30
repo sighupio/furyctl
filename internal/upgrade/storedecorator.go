@@ -1,11 +1,21 @@
 package upgrade
 
-import "fmt"
+import (
+	"fmt"
 
-type Reducers = any
+	"github.com/sighupio/furyctl/internal/cluster"
+)
 
-type ReducersOperatorPhase[T Reducers] interface {
-	Exec(reducers T, startFrom string, upgradeState *State) error
+type (
+	Reducers                          = any
+	ReducersOperatorPhase[T Reducers] interface {
+		Exec(reducers T, startFrom string, upgradeState *State) error
+	}
+)
+
+type ReducersOperatorPhaseAsync[T Reducers] interface {
+	ReducersOperatorPhase[T]
+	Stop() error
 }
 
 func NewReducerOperatorPhaseDecorator[T Reducers](
@@ -34,14 +44,71 @@ func (d *ReducerOperatorPhaseDecorator[T]) Exec(reducers T, startFrom string, up
 		}
 
 		return err
-
 	}
 
-	return fnErr
+	if fnErr != nil {
+		return fmt.Errorf("error while executing phase: %w", fnErr)
+	}
+
+	return nil
+}
+
+func NewReducerOperatorPhaseAsyncDecorator[T Reducers](
+	storer Storer,
+	phase ReducersOperatorPhaseAsync[T],
+) *ReducerOperatorPhaseAsyncDecorator[T] {
+	return &ReducerOperatorPhaseAsyncDecorator[T]{
+		storer: storer,
+		phase:  phase,
+	}
+}
+
+type ReducerOperatorPhaseAsyncDecorator[T Reducers] struct {
+	storer Storer
+	phase  ReducersOperatorPhaseAsync[T]
+}
+
+func (d *ReducerOperatorPhaseAsyncDecorator[T]) Exec(reducers T, startFrom string, upgradeState *State) error { //nolint: lll,revive // confusing-naming is a false positive
+	fnErr := d.phase.Exec(reducers, startFrom, upgradeState)
+
+	if sErr := d.storer.Store(upgradeState); sErr != nil {
+		err := fmt.Errorf("error storing upgrade state: %w", sErr)
+
+		if fnErr != nil {
+			err = fmt.Errorf("%w, %w", err, fnErr)
+		}
+
+		return err
+	}
+
+	if fnErr != nil {
+		return fmt.Errorf("error while executing phase: %w", fnErr)
+	}
+
+	return nil
+}
+
+func (d *ReducerOperatorPhaseAsyncDecorator[T]) Stop() error {
+	if err := d.phase.Stop(); err != nil {
+		return fmt.Errorf("error while stopping phase: %w", err)
+	}
+
+	return nil
+}
+
+func (d *ReducerOperatorPhaseAsyncDecorator[T]) Decorated() *cluster.OperationPhase {
+	var p any = d.phase
+
+	return p.(*cluster.OperationPhase) //nolint: revive,forcetypeassert // it should be safe
 }
 
 type OperatorPhase interface {
 	Exec(startFrom string, upgradeState *State) error
+}
+
+type OperatorPhaseAsync interface {
+	OperatorPhase
+	Stop() error
 }
 
 func NewOperatorPhaseDecorator(
@@ -70,8 +137,60 @@ func (d *OperatorPhaseDecorator) Exec(startFrom string, upgradeState *State) err
 		}
 
 		return err
-
 	}
 
-	return fnErr
+	if fnErr != nil {
+		return fmt.Errorf("error while executing phase: %w", fnErr)
+	}
+
+	return nil
+}
+
+type OperatorPhaseAsyncDecorator struct {
+	storer Storer
+	phase  OperatorPhaseAsync
+}
+
+func NewOperatorPhaseAsyncDecorator(
+	storer Storer,
+	phase OperatorPhaseAsync,
+) *OperatorPhaseAsyncDecorator {
+	return &OperatorPhaseAsyncDecorator{
+		storer: storer,
+		phase:  phase,
+	}
+}
+
+func (d *OperatorPhaseAsyncDecorator) Exec(startFrom string, upgradeState *State) error {
+	fnErr := d.phase.Exec(startFrom, upgradeState)
+
+	if sErr := d.storer.Store(upgradeState); sErr != nil {
+		err := fmt.Errorf("error storing upgrade state: %w", sErr)
+
+		if fnErr != nil {
+			err = fmt.Errorf("%w, %w", err, fnErr)
+		}
+
+		return err
+	}
+
+	if fnErr != nil {
+		return fmt.Errorf("error while executing phase: %w", fnErr)
+	}
+
+	return nil
+}
+
+func (d *OperatorPhaseAsyncDecorator) Stop() error {
+	if err := d.phase.Stop(); err != nil {
+		return fmt.Errorf("error while stopping phase: %w", err)
+	}
+
+	return nil
+}
+
+func (d *OperatorPhaseAsyncDecorator) Decorated() *cluster.OperationPhase {
+	var p any = d.phase
+
+	return p.(*cluster.OperationPhase) //nolint: revive,forcetypeassert // it should be safe
 }
