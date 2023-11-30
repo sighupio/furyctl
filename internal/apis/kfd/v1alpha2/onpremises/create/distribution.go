@@ -82,7 +82,7 @@ func (d *Distribution) Exec(reducers v1alpha2.Reducers, startFrom string, upgrad
 }
 
 func (d *Distribution) prepare() (template.Config, error) {
-	if err := d.CreateFolder(); err != nil {
+	if err := d.CreateRootFolder(); err != nil {
 		return template.Config{}, fmt.Errorf("error creating distribution phase folder: %w", err)
 	}
 

@@ -71,7 +71,7 @@ func (k *Kubernetes) Exec(startFrom string, upgradeState *upgrade.State) error {
 }
 
 func (k *Kubernetes) prepare() error {
-	if err := k.CreateFolder(); err != nil {
+	if err := k.CreateRootFolder(); err != nil {
 		return fmt.Errorf("error creating kubernetes phase folder: %w", err)
 	}
 

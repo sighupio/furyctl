@@ -108,9 +108,8 @@ func (tm *Model) Generate() error {
 		}
 	}
 
-	osErr := os.MkdirAll(tm.TargetPath, os.ModePerm)
-	if osErr != nil {
-		return fmt.Errorf("error creating target directory: %w", osErr)
+	if err := os.MkdirAll(tm.TargetPath, os.ModePerm); err != nil {
+		return fmt.Errorf("error creating target directory: %w", err)
 	}
 
 	context, cErr := tm.generateContext()
@@ -130,8 +129,7 @@ func (tm *Model) Generate() error {
 
 	tm.Context = context
 
-	err = filepath.Walk(tm.SourcePath, tm.applyTemplates)
-	if err != nil {
+	if err := filepath.Walk(tm.SourcePath, tm.applyTemplates); err != nil {
 		return fmt.Errorf("error applying templates: %w", err)
 	}
 
