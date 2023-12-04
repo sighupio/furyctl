@@ -7,6 +7,7 @@ package create
 import (
 	"errors"
 	"fmt"
+	"os"
 	"path"
 
 	r3diff "github.com/r3labs/diff/v3"
@@ -17,6 +18,7 @@ import (
 	"github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/distribution/rules"
 	"github.com/sighupio/furyctl/internal/cluster"
 	"github.com/sighupio/furyctl/internal/diffs"
+	"github.com/sighupio/furyctl/internal/distribution"
 	"github.com/sighupio/furyctl/internal/state"
 	"github.com/sighupio/furyctl/internal/tool/kubectl"
 	execx "github.com/sighupio/furyctl/internal/x/exec"
@@ -41,6 +43,7 @@ type PreFlight struct {
 	distroPath      string
 	furyctlConfPath string
 	kubeRunner      *kubectl.Runner
+	kfd             config.KFD
 	dryRun          bool
 }
 
@@ -71,6 +74,7 @@ func NewPreFlight(
 			true,
 			false,
 		),
+		kfd:    kfdManifest,
 		dryRun: dryRun,
 	}
 }
@@ -87,7 +91,13 @@ func (p *PreFlight) Exec() (*Status, error) {
 		return status, fmt.Errorf("error creating preflight phase folder: %w", err)
 	}
 
-	if err := kubex.SetConfigEnv(p.furyctlConf.Spec.Distribution.Kubeconfig); err != nil {
+	kubeconfigPath := os.Getenv("KUBECONFIG")
+
+	if distribution.HasFeature(p.kfd, distribution.FeatureKubeconfigInSchema) {
+		kubeconfigPath = p.furyctlConf.Spec.Distribution.Kubeconfig
+	}
+
+	if err := kubex.SetConfigEnv(kubeconfigPath); err != nil {
 		return status, fmt.Errorf("error setting kubeconfig env: %w", err)
 	}
 

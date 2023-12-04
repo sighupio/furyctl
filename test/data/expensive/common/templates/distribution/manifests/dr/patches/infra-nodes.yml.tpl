@@ -1,25 +1,9 @@
-{{- define "nodeSelector" -}}
-  {{ $indent := 8 -}}
-  {{ if hasKey . "indent" -}}
-    {{ $indent = .indent -}}
-  {{- end -}}
-  {{ if ne .spec.distribution.modules.dr.overrides.nodeSelector nil -}}
-    {{ .spec.distribution.modules.dr.overrides.nodeSelector | toYaml | indent $indent | trim }}
-  {{- else -}}
-    {{ template "commonNodeSelector" ( dict "spec" .spec "indent" $indent ) }}
-  {{- end }}
-{{- end -}}
-{{- define "tolerations" -}}
-  {{ $indent := 8 -}}
-  {{ if hasKey . "indent" -}}
-    {{ $indent = .indent -}}
-  {{- end -}}
-  {{ if ne .spec.distribution.modules.dr.overrides.tolerations nil -}}
-    {{ .spec.distribution.modules.dr.overrides.tolerations | toYaml | indent $indent | trim }}
-  {{- else -}}
-    {{ template "commonTolerations" ( dict "spec" .spec "indent" $indent ) }}
-  {{- end }}
-{{- end -}}
+# Copyright (c) 2017-present SIGHUP s.r.l All rights reserved.
+# Use of this source code is governed by a BSD-style
+# license that can be found in the LICENSE file.
+
+{{- $veleroArgs := dict "module" "dr" "package" "velero" "spec" .spec -}}
+
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -30,6 +14,6 @@ spec:
   template:
     spec:
       nodeSelector:
-        {{ template "nodeSelector" ( dict "spec" .spec ) }}
+        {{ template "nodeSelector" $veleroArgs }}
       tolerations:
-        {{ template "tolerations" ( dict "spec" .spec ) }}
+        {{ template "tolerations" $veleroArgs }}
