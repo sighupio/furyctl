@@ -1,3 +1,7 @@
+# Copyright (c) 2017-present SIGHUP s.r.l All rights reserved.
+# Use of this source code is governed by a BSD-style
+# license that can be found in the LICENSE file.
+
 {{- if eq .spec.distribution.modules.auth.provider.type "sso" -}}
 ---
 apiVersion: networking.k8s.io/v1
@@ -10,9 +14,10 @@ metadata:
   name: pomerium
   namespace: pomerium
 spec:
-  ingressClassName: {{ template "ingressClass" (dict "module" "auth" "package" "pomerium" "type" "internal" "spec" .spec) }}
+  # Needs to be externally available if the user wants to protect other applications in the cluster
+  ingressClassName: {{ template "ingressClass" (dict "module" "auth" "package" "pomerium" "type" "external" "spec" .spec) }}
   rules:
-    - host: {{ template "pomeriumHost" . }}
+    - host: {{ template "pomeriumUrl" .spec }}
       http:
         paths:
           - path: /
@@ -22,5 +27,5 @@ spec:
                 name: pomerium
                 port:
                   number: 80
-{{- template "ingressTls" (dict "module" "auth" "package" "pomerium" "prefix" "pomerium.internal." "spec" .spec) }}
+{{- template "ingressTlsAuth" (dict "module" "auth" "package" "pomerium" "prefix" "pomerium." "spec" .spec) }}
 {{- end }}

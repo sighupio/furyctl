@@ -1,3 +1,22 @@
+# Copyright (c) 2017-present SIGHUP s.r.l All rights reserved.
+# Use of this source code is governed by a BSD-style
+# license that can be found in the LICENSE file.
+
+{{- define "iamRoleArn" -}}
+  {{- $roleArn := "__UNKNOWN__" -}}
+  {{- $module := index .spec.distribution.modules "aws" -}}
+
+  {{- if $module -}}
+    {{- $package := index .spec.distribution.modules.aws (index . "package") -}}
+
+    {{- if $package -}}
+      {{- $roleArn = $package.iamRoleArn -}}
+    {{- end -}}
+  {{- end -}}
+
+  {{- $roleArn -}}
+{{ end }}
+
 {{- define "nodeSelector" -}}
   {{- $indent := default 8 (index . "indent") -}}
 
@@ -53,7 +72,6 @@
 
   {{- $tolerations | toYaml | indent $indent | trim -}}
 {{- end -}}
-
 
 {{ define "globalIngressClass" }}
   {{- if eq .spec.distribution.modules.ingress.nginx.type "single" -}}
@@ -125,10 +143,6 @@
 {{- end }}
 {{- end -}}
 
-{{ define "pomeriumHost" }}
-  {{- template "ingressHost" (dict "module" "auth" "package" "pomerium" "prefix" "pomerium." "spec" .spec) -}}
-{{ end }}
-
 {{ define "ingressAuth" }}
 {{- if eq .spec.distribution.modules.auth.provider.type "basicAuth" -}}
     nginx.ingress.kubernetes.io/auth-type: basic
@@ -181,4 +195,8 @@ cert-manager.io/cluster-issuer: {{ .spec.distribution.modules.ingress.certManage
 
 {{ define "dexUrl" }}
   {{- template "ingressHostAuth" (dict "module" "auth" "package" "dex" "prefix" "login." "spec" .) -}}
+{{ end }}
+
+{{ define "gangwayUrl" }}
+  {{- template "ingressHostAuth" (dict "module" "auth" "package" "gangway" "prefix" "gangway." "spec" .) -}}
 {{ end }}
