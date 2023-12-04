@@ -15,6 +15,7 @@ import (
 	"github.com/sighupio/fury-distribution/pkg/apis/config"
 	"github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2"
 	"github.com/sighupio/furyctl/internal/cluster"
+	"github.com/sighupio/furyctl/internal/distribution"
 	"github.com/sighupio/furyctl/internal/template"
 	"github.com/sighupio/furyctl/internal/tool/helmfile"
 	"github.com/sighupio/furyctl/internal/tool/shell"
@@ -30,6 +31,7 @@ type Plugins struct {
 	distroPath      string
 	furyctlConfPath string
 	dryRun          bool
+	kfd             config.KFD
 	kind            string
 }
 
@@ -71,6 +73,7 @@ func NewPlugins(
 			kind,
 			paths.ConfigPath,
 		),
+		kfd: kfdManifest,
 	}
 }
 
@@ -92,6 +95,10 @@ func (p *Plugins) Exec() error {
 	}
 
 	p.CopyPathsToConfig(&mCfg)
+
+	if !distribution.HasFeature(p.kfd, distribution.FeatureKubeconfigInSchema) {
+		mCfg.Data["paths"]["kubeconfig"] = os.Getenv("KUBECONFIG")
+	}
 
 	outYaml, err := yamlx.MarshalV2(mCfg)
 	if err != nil {
