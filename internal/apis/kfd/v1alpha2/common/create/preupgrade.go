@@ -31,7 +31,7 @@ var (
 	errUpgradeFlagNotSet             = errors.New("upgrade flag not set by user")
 	errUpgradeWithReducersNotAllowed = errors.New("upgrade with reducers not allowed")
 	errUpgradePathNotFound           = errors.New("upgrade path not found")
-	errGettingDistoVersionFrom       = errors.New("error while getting distribution version from")
+	errGettingDistroVersionFrom      = errors.New("error while getting distribution version from")
 	errGettingDistroVersionTo        = errors.New("error while getting distribution version to")
 )
 
@@ -144,7 +144,7 @@ func (p *PreUpgrade) Exec() error {
 
 		p.upgrade.From, ok = distributionVersionChange.From.(string)
 		if !ok {
-			return errGettingDistoVersionFrom
+			return errGettingDistroVersionFrom
 		}
 
 		p.upgrade.To, ok = distributionVersionChange.To.(string)

@@ -133,8 +133,8 @@ func (s *StateStore) Delete() error {
 	return nil
 }
 
-func (s *StateStore) GetLatestResumablePhase(state *State) string {
-	for _, phase := range s.getPhasesOrder() {
+func (*StateStore) GetLatestResumablePhase(state *State) string {
+	for _, phase := range cluster.GetPhasesOrder() {
 		reflectedPhase := reflect.ValueOf(state.Phases).FieldByName(phase)
 
 		if reflectedPhase.IsNil() {
@@ -144,40 +144,9 @@ func (s *StateStore) GetLatestResumablePhase(state *State) string {
 		phaseStatus := reflectedPhase.Elem().FieldByName("Status").String()
 
 		if phaseStatus == string(PhaseStatusPending) || phaseStatus == string(PhaseStatusFailed) {
-			return s.getPhase(phase)
+			return cluster.GetPhase(phase)
 		}
 	}
 
 	return ""
-}
-
-func (*StateStore) getPhasesOrder() []string {
-	return []string{
-		"PreInfrastructure",
-		"Infrastructure",
-		"PostInfrastructure",
-		"PreKubernetes",
-		"Kubernetes",
-		"PostKubernetes",
-		"PreDistribution",
-		"Distribution",
-		"PostDistribution",
-	}
-}
-
-func (*StateStore) getPhase(phase string) string {
-	mapSubPhase := map[string]string{
-		"PreInfrastructure":  cluster.OperationSubPhasePreInfrastructure,
-		"Infrastructure":     cluster.OperationPhaseInfrastructure,
-		"PostInfrastructure": cluster.OperationSubPhasePostInfrastructure,
-		"PreKubernetes":      cluster.OperationSubPhasePreKubernetes,
-		"Kubernetes":         cluster.OperationPhaseKubernetes,
-		"PostKubernetes":     cluster.OperationSubPhasePostKubernetes,
-		"PreDistribution":    cluster.OperationSubPhasePreDistribution,
-		"Distribution":       cluster.OperationPhaseDistribution,
-		"PostDistribution":   cluster.OperationSubPhasePostDistribution,
-		"":                   cluster.OperationPhaseAll,
-	}
-
-	return mapSubPhase[phase]
 }
