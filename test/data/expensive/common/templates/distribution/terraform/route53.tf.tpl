@@ -1,3 +1,7 @@
+# Copyright (c) 2017-present SIGHUP s.r.l All rights reserved.
+# Use of this source code is governed by a BSD-style
+# license that can be found in the LICENSE file.
+
 # Create public DNS if nginx is single or dual and create is true
 
 {{- if (.spec.distribution.modules.ingress.dns.public.create)}}
@@ -35,7 +39,7 @@ output "aws_route53_zone_public_id" {
 resource "aws_route53_zone" "private" {
   name = "{{ .spec.distribution.modules.ingress.dns.private.name }}"
   vpc {
-    vpc_id = "{ .spec.distribution.modules.ingress.dns.private.vpcId }"
+    vpc_id = "{{ .spec.distribution.modules.ingress.dns.private.vpcId }}"
   }
 }
 
@@ -49,7 +53,7 @@ output "aws_route53_zone_private_id" {
 
 data "aws_route53_zone" "private" {
   name = "{{ .spec.distribution.modules.ingress.dns.private.name }}"
-  vpc_id = "{ .spec.distribution.modules.ingress.dns.private.vpcId }"
+  vpc_id = "{{ .spec.distribution.modules.ingress.dns.private.vpcId }}"
 }
 
 output "aws_route53_zone_private_id" {
