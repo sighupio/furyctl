@@ -1,25 +1,12 @@
-{{- define "nodeSelector" -}}
-  {{ $indent := 8 -}}
-  {{ if hasKey . "indent" -}}
-    {{ $indent = .indent -}}
-  {{- end -}}
-  {{ if ne .spec.distribution.modules.aws.overrides.nodeSelector nil -}}
-    {{ .spec.distribution.modules.aws.overrides.nodeSelector | toYaml | indent $indent | trim }}
-  {{- else -}}
-    {{ template "commonNodeSelector" ( dict "spec" .spec "indent" $indent ) }}
-  {{- end }}
-{{- end -}}
-{{- define "tolerations" -}}
-  {{ $indent := 8 -}}
-  {{ if hasKey . "indent" -}}
-    {{ $indent = .indent -}}
-  {{- end -}}
-  {{ if ne .spec.distribution.modules.aws.overrides.tolerations nil -}}
-    {{ .spec.distribution.modules.aws.overrides.tolerations | toYaml | indent $indent | trim }}
-  {{- else -}}
-    {{ template "commonTolerations" ( dict "spec" .spec "indent" $indent ) }}
-  {{- end }}
-{{- end -}}
+# Copyright (c) 2017-present SIGHUP s.r.l All rights reserved.
+# Use of this source code is governed by a BSD-style
+# license that can be found in the LICENSE file.
+
+{{- $loadBalancerArgs := dict "module" "aws" "package" "loadBalancerController" "spec" .spec -}}
+{{- $clusterAutoscalerArgs := dict "module" "aws" "package" "clusterAutoscaler" "spec" .spec -}}
+{{- $ebsCsiDriverArgs := dict "module" "aws" "package" "ebsCsiDriver" "spec" .spec -}}
+{{- $ebsSnapshotControllerArgs := dict "module" "aws" "package" "ebsSnapshotController" "spec" .spec -}}
+
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -30,9 +17,9 @@ spec:
   template:
     spec:
       nodeSelector:
-        {{ template "nodeSelector" ( dict "spec" .spec ) }}
+        {{ template "nodeSelector" $loadBalancerArgs }}
       tolerations:
-        {{ template "tolerations" ( dict "spec" .spec ) }}
+        {{ template "tolerations" $loadBalancerArgs }}
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -43,22 +30,9 @@ spec:
   template:
     spec:
       nodeSelector:
-        {{ template "nodeSelector" ( dict "spec" .spec ) }}
+        {{ template "nodeSelector" $clusterAutoscalerArgs }}
       tolerations:
-        {{ template "tolerations" ( dict "spec" .spec ) }}
----
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: ebs-csi-controller
-  namespace: kube-system
-spec:
-  template:
-    spec:
-      nodeSelector:
-        {{ template "nodeSelector" ( dict "spec" .spec ) }}
-      tolerations:
-        {{ template "tolerations" ( dict "spec" .spec ) }}
+        {{ template "tolerations" $clusterAutoscalerArgs }}
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -69,6 +43,6 @@ spec:
   template:
     spec:
       nodeSelector:
-        {{ template "nodeSelector" ( dict "spec" .spec ) }}
+        {{ template "nodeSelector" $ebsSnapshotControllerArgs }}
       tolerations:
-        {{ template "tolerations" ( dict "spec" .spec ) }}
+        {{ template "tolerations" $ebsSnapshotControllerArgs }}
