@@ -8,7 +8,8 @@ import (
 type Feature string
 
 const (
-	FeatureClusterUpgrade     = Feature("ClusterUpgrade")
+	FeatureClusterUpgrade = Feature("ClusterUpgrade")
+	// REMOVE THIS FEATURE AFTER v1.25 EOL.
 	FeatureKubeconfigInSchema = Feature("KubeconfigInSchema")
 )
 
@@ -18,7 +19,7 @@ func HasFeature(kfd config.KFD, name Feature) bool {
 		return hasFeatureClusterUpgrade(kfd)
 
 	case FeatureKubeconfigInSchema:
-		return hasFeatureKubeconfigFlag(kfd)
+		return hasFeatureKubeconfigInSchema(kfd)
 	}
 
 	return false
@@ -38,7 +39,7 @@ func hasFeatureClusterUpgrade(kfd config.KFD) bool {
 	return v1.GreaterThanOrEqual(v2)
 }
 
-func hasFeatureKubeconfigFlag(kfd config.KFD) bool {
+func hasFeatureKubeconfigInSchema(kfd config.KFD) bool {
 	v1, err := semver.NewVersion(kfd.Version)
 	if err != nil {
 		return false
