@@ -35,10 +35,10 @@ const (
 )
 
 var (
-	errUnsupportedPhase = errors.New(
+	ErrUnsupportedPhase = errors.New(
 		"unsupported phase, options are: infrastructure, kubernetes, distribution, plugins",
 	)
-	errUnsupportedOperationPhase = errors.New(
+	ErrUnsupportedOperationPhase = errors.New(
 		"unsupported operation phase, options are: pre-infrastructure, infrastructure, post-infrastructure, " +
 			"pre-kubernetes, kubernetes, post-kubernetes, pre-distribution, distribution, post-distribution, plugins",
 	)
@@ -55,7 +55,7 @@ func CheckPhase(phase string) error {
 		return nil
 
 	default:
-		return errUnsupportedPhase
+		return ErrUnsupportedPhase
 	}
 }
 
@@ -75,7 +75,58 @@ func ValidateOperationPhase(phase string) error {
 		return nil
 
 	default:
-		return errUnsupportedOperationPhase
+		return ErrUnsupportedOperationPhase
+	}
+}
+
+func GetPhasesOrder() []string {
+	return []string{
+		"PreInfrastructure",
+		"Infrastructure",
+		"PostInfrastructure",
+		"PreKubernetes",
+		"Kubernetes",
+		"PostKubernetes",
+		"PreDistribution",
+		"Distribution",
+		"PostDistribution",
+	}
+}
+
+func GetPhase(phase string) string {
+	switch phase {
+	case "PreInfrastructure":
+		return OperationSubPhasePreInfrastructure
+
+	case "Infrastructure":
+		return OperationPhaseInfrastructure
+
+	case "PostInfrastructure":
+		return OperationSubPhasePostInfrastructure
+
+	case "PreKubernetes":
+		return OperationSubPhasePreKubernetes
+
+	case "Kubernetes":
+		return OperationPhaseKubernetes
+
+	case "PostKubernetes":
+		return OperationSubPhasePostKubernetes
+
+	case "PreDistribution":
+		return OperationSubPhasePreDistribution
+
+	case "Distribution":
+		return OperationPhaseDistribution
+
+	case "PostDistribution":
+		return OperationSubPhasePostDistribution
+
+	case "":
+		return OperationPhaseAll
+
+	default:
+		return ""
 	}
 }
 
@@ -130,41 +181,41 @@ func NewOperationPhase(folder string, kfdTools config.KFDTools, binPath string) 
 	}
 }
 
-func (cp *OperationPhase) CreateFolder() error {
-	if _, err := os.Stat(cp.Path); !os.IsNotExist(err) {
+func (op *OperationPhase) CreateFolder() error {
+	if _, err := os.Stat(op.Path); !os.IsNotExist(err) {
 		return nil
 	}
 
-	err := os.Mkdir(cp.Path, iox.FullPermAccess)
+	err := os.Mkdir(op.Path, iox.FullPermAccess)
 	if err != nil {
-		return fmt.Errorf("error creating folder %s: %w", cp.Path, err)
+		return fmt.Errorf("error creating folder %s: %w", op.Path, err)
 	}
 
 	return nil
 }
 
-func (cp *OperationPhase) CreateFolderStructure() error {
-	if _, err := os.Stat(cp.TerraformPlanPath); os.IsNotExist(err) {
-		if err := os.Mkdir(cp.TerraformPlanPath, iox.FullPermAccess); err != nil {
-			return fmt.Errorf("error creating folder %s: %w", cp.TerraformPlanPath, err)
+func (op *OperationPhase) CreateFolderStructure() error {
+	if _, err := os.Stat(op.TerraformPlanPath); os.IsNotExist(err) {
+		if err := os.Mkdir(op.TerraformPlanPath, iox.FullPermAccess); err != nil {
+			return fmt.Errorf("error creating folder %s: %w", op.TerraformPlanPath, err)
 		}
 	}
 
-	if _, err := os.Stat(cp.TerraformLogsPath); os.IsNotExist(err) {
-		if err := os.Mkdir(cp.TerraformLogsPath, iox.FullPermAccess); err != nil {
-			return fmt.Errorf("error creating folder %s: %w", cp.TerraformLogsPath, err)
+	if _, err := os.Stat(op.TerraformLogsPath); os.IsNotExist(err) {
+		if err := os.Mkdir(op.TerraformLogsPath, iox.FullPermAccess); err != nil {
+			return fmt.Errorf("error creating folder %s: %w", op.TerraformLogsPath, err)
 		}
 	}
 
-	if _, err := os.Stat(cp.TerraformSecretsPath); os.IsNotExist(err) {
-		if err := os.Mkdir(cp.TerraformSecretsPath, iox.FullPermAccess); err != nil {
-			return fmt.Errorf("error creating folder %s: %w", cp.TerraformSecretsPath, err)
+	if _, err := os.Stat(op.TerraformSecretsPath); os.IsNotExist(err) {
+		if err := os.Mkdir(op.TerraformSecretsPath, iox.FullPermAccess); err != nil {
+			return fmt.Errorf("error creating folder %s: %w", op.TerraformSecretsPath, err)
 		}
 	}
 
-	if _, err := os.Stat(cp.TerraformOutputsPath); os.IsNotExist(err) {
-		if err := os.Mkdir(cp.TerraformOutputsPath, iox.FullPermAccess); err != nil {
-			return fmt.Errorf("error creating folder %s: %w", cp.TerraformOutputsPath, err)
+	if _, err := os.Stat(op.TerraformOutputsPath); os.IsNotExist(err) {
+		if err := os.Mkdir(op.TerraformOutputsPath, iox.FullPermAccess); err != nil {
+			return fmt.Errorf("error creating folder %s: %w", op.TerraformOutputsPath, err)
 		}
 	}
 
@@ -216,18 +267,18 @@ func (*OperationPhase) CopyFromTemplate(
 	return nil
 }
 
-func (cp *OperationPhase) CopyPathsToConfig(cfg *template.Config) {
+func (op *OperationPhase) CopyPathsToConfig(cfg *template.Config) {
 	cfg.Data["paths"] = map[any]any{
-		"helm":       cp.HelmPath,
-		"helmfile":   cp.HelmfilePath,
-		"kubectl":    cp.KubectlPath,
-		"kustomize":  cp.KustomizePath,
-		"terraform":  cp.TerraformPath,
-		"vendorPath": path.Join(cp.Path, "..", "vendor"),
-		"yq":         cp.YqPath,
+		"helm":       op.HelmPath,
+		"helmfile":   op.HelmfilePath,
+		"kubectl":    op.KubectlPath,
+		"kustomize":  op.KustomizePath,
+		"terraform":  op.TerraformPath,
+		"vendorPath": path.Join(op.Path, "..", "vendor"),
+		"yq":         op.YqPath,
 	}
 }
 
-func (cp *OperationPhase) Self() *OperationPhase {
-	return cp
+func (op *OperationPhase) Self() *OperationPhase {
+	return op
 }
