@@ -12,6 +12,7 @@ modules:
   monitoring: v2.1.0
   opa: v1.8.0
   networking: v1.12.2
+  tracing: v1.0.0
 kubernetes:
   eks:
     version: 1.25
