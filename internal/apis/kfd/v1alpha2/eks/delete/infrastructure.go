@@ -13,34 +13,37 @@ import (
 
 	"github.com/sighupio/fury-distribution/pkg/apis/config"
 	"github.com/sighupio/fury-distribution/pkg/apis/ekscluster/v1alpha2/private"
+	"github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/eks/common"
 	"github.com/sighupio/furyctl/internal/cluster"
 	"github.com/sighupio/furyctl/internal/tool/terraform"
 	execx "github.com/sighupio/furyctl/internal/x/exec"
-	iox "github.com/sighupio/furyctl/internal/x/io"
 	osx "github.com/sighupio/furyctl/internal/x/os"
 )
 
 type Infrastructure struct {
-	*cluster.OperationPhase
-	furyctlConf private.EksclusterKfdV1Alpha2
-	tfRunner    *terraform.Runner
-	dryRun      bool
+	*common.Infrastructure
+
+	tfRunner *terraform.Runner
+	dryRun   bool
 }
 
 func NewInfrastructure(
 	furyctlConf private.EksclusterKfdV1Alpha2,
 	dryRun bool,
-	workDir,
-	binPath string,
 	kfdManifest config.KFD,
+	paths cluster.DeleterPaths,
 ) *Infrastructure {
-	infraDir := path.Join(workDir, cluster.OperationPhaseInfrastructure)
-
-	phase := cluster.NewOperationPhase(infraDir, kfdManifest.Tools, binPath)
+	phase := cluster.NewOperationPhase(
+		path.Join(paths.WorkDir, cluster.OperationPhaseInfrastructure),
+		kfdManifest.Tools,
+		paths.BinPath,
+	)
 
 	return &Infrastructure{
-		OperationPhase: phase,
-		furyctlConf:    furyctlConf,
+		Infrastructure: &common.Infrastructure{
+			OperationPhase: phase,
+			FuryctlConf:    furyctlConf,
+		},
 		tfRunner: terraform.NewRunner(
 			execx.NewStdExecutor(),
 			terraform.Paths{
@@ -58,35 +61,31 @@ func NewInfrastructure(
 func (i *Infrastructure) Exec() error {
 	logrus.Info("Deleting infrastructure...")
 
-	logrus.Debug("Delete: running infrastructure phase...")
-
-	timestamp := time.Now().Unix()
-
-	err := iox.CheckDirIsEmpty(i.OperationPhase.Path)
-	if err == nil {
-		logrus.Info("Infrastructure already deleted, skipping...")
-
-		logrus.Debug("Infrastructure phase already executed, skipping...")
-
-		return nil
+	if err := i.Prepare(); err != nil {
+		return fmt.Errorf("error preparing infrastructure phase: %w", err)
 	}
 
-	if _, err := i.tfRunner.Plan(timestamp, "-destroy"); err != nil {
-		return fmt.Errorf("error running terraform plan: %w", err)
+	if err := i.tfRunner.Init(); err != nil {
+		return fmt.Errorf("error running terraform init: %w", err)
 	}
 
 	if i.dryRun {
+		if _, err := i.tfRunner.Plan(time.Now().Unix(), "-destroy"); err != nil {
+			return fmt.Errorf("error running terraform plan: %w", err)
+		}
+
+		logrus.Info("Infrastructure deleted successfully (dry-run mode)")
+
 		return nil
 	}
 
-	err = i.tfRunner.Destroy()
-	if err != nil {
+	if err := i.tfRunner.Destroy(); err != nil {
 		return fmt.Errorf("error while deleting infrastructure: %w", err)
 	}
 
 	if i.isVpnConfigured() &&
-		i.furyctlConf.Spec.Kubernetes.ApiServer.PrivateAccess &&
-		!i.furyctlConf.Spec.Kubernetes.ApiServer.PublicAccess {
+		i.FuryctlConf.Spec.Kubernetes.ApiServer.PrivateAccess &&
+		!i.FuryctlConf.Spec.Kubernetes.ApiServer.PublicAccess {
 		killMsg := "killall openvpn"
 
 		isRoot, err := osx.IsRoot()
@@ -102,20 +101,22 @@ func (i *Infrastructure) Exec() error {
 			"you can do it with the following command: '%s'", killMsg)
 	}
 
+	logrus.Info("Infrastructure deleted successfully")
+
 	return nil
 }
 
 func (i *Infrastructure) isVpnConfigured() bool {
-	if i.furyctlConf.Spec.Infrastructure == nil {
+	if i.FuryctlConf.Spec.Infrastructure == nil {
 		return false
 	}
 
-	vpn := i.furyctlConf.Spec.Infrastructure.Vpn
+	vpn := i.FuryctlConf.Spec.Infrastructure.Vpn
 	if vpn == nil {
 		return false
 	}
 
-	instances := i.furyctlConf.Spec.Infrastructure.Vpn.Instances
+	instances := i.FuryctlConf.Spec.Infrastructure.Vpn.Instances
 	if instances == nil {
 		return true
 	}

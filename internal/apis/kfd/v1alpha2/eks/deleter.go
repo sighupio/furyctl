@@ -39,6 +39,26 @@ func (d *ClusterDeleter) SetProperty(name string, value any) {
 	lcName := strings.ToLower(name)
 
 	switch lcName {
+	case cluster.DeleterPropertyDistroPath:
+		if s, ok := value.(string); ok {
+			d.paths.DistroPath = s
+		}
+
+	case cluster.DeleterPropertyWorkDir:
+		if s, ok := value.(string); ok {
+			d.paths.WorkDir = s
+		}
+
+	case cluster.DeleterPropertyBinPath:
+		if s, ok := value.(string); ok {
+			d.paths.BinPath = s
+		}
+
+	case cluster.DeleterPropertyConfigPath:
+		if s, ok := value.(string); ok {
+			d.paths.ConfigPath = s
+		}
+
 	case cluster.DeleterPropertyKfdManifest:
 		if kfdManifest, ok := value.(config.KFD); ok {
 			d.kfdManifest = kfdManifest
@@ -64,16 +84,6 @@ func (d *ClusterDeleter) SetProperty(name string, value any) {
 			d.vpnAutoConnect = b
 		}
 
-	case cluster.DeleterPropertyWorkDir:
-		if s, ok := value.(string); ok {
-			d.paths.WorkDir = s
-		}
-
-	case cluster.DeleterPropertyBinPath:
-		if s, ok := value.(string); ok {
-			d.paths.BinPath = s
-		}
-
 	case cluster.DeleterPropertyDryRun:
 		if b, ok := value.(bool); ok {
 			d.dryRun = b
@@ -82,11 +92,11 @@ func (d *ClusterDeleter) SetProperty(name string, value any) {
 }
 
 func (d *ClusterDeleter) Delete() error {
-	distro := del.NewDistribution(d.dryRun, d.paths.WorkDir, d.paths.BinPath, d.kfdManifest)
+	distro := del.NewDistribution(d.dryRun, d.kfdManifest, d.paths)
 
-	kube := del.NewKubernetes(d.furyctlConf, d.dryRun, d.paths.WorkDir, d.paths.BinPath, d.kfdManifest)
+	kube := del.NewKubernetes(d.furyctlConf, d.dryRun, d.kfdManifest, d.paths)
 
-	infra := del.NewInfrastructure(d.furyctlConf, d.dryRun, d.paths.WorkDir, d.paths.BinPath, d.kfdManifest)
+	infra := del.NewInfrastructure(d.furyctlConf, d.dryRun, d.kfdManifest, d.paths)
 
 	var vpnConfig *private.SpecInfrastructureVpn
 

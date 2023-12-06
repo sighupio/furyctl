@@ -6,33 +6,29 @@ package create
 
 import (
 	"fmt"
-	"os"
 	"path"
-	"path/filepath"
 
 	"github.com/sirupsen/logrus"
 
 	"github.com/sighupio/fury-distribution/pkg/apis/config"
 	"github.com/sighupio/fury-distribution/pkg/apis/onpremises/v1alpha2/public"
 	"github.com/sighupio/furyctl/internal/cluster"
-	"github.com/sighupio/furyctl/internal/merge"
 	"github.com/sighupio/furyctl/internal/template"
 	"github.com/sighupio/furyctl/internal/tool/ansible"
 	"github.com/sighupio/furyctl/internal/upgrade"
 	execx "github.com/sighupio/furyctl/internal/x/exec"
 	kubex "github.com/sighupio/furyctl/internal/x/kube"
-	yamlx "github.com/sighupio/furyctl/internal/x/yaml"
 )
 
 type Kubernetes struct {
 	*cluster.OperationPhase
-	furyctlConfPath string
-	furyctlConf     public.OnpremisesKfdV1Alpha2
-	kfdManifest     config.KFD
-	paths           cluster.CreatorPaths
-	dryRun          bool
-	ansibleRunner   *ansible.Runner
-	upgrade         *upgrade.Upgrade
+
+	furyctlConf   public.OnpremisesKfdV1Alpha2
+	kfdManifest   config.KFD
+	paths         cluster.CreatorPaths
+	dryRun        bool
+	ansibleRunner *ansible.Runner
+	upgrade       *upgrade.Upgrade
 }
 
 func (k *Kubernetes) Self() *cluster.OperationPhase {
@@ -41,7 +37,6 @@ func (k *Kubernetes) Self() *cluster.OperationPhase {
 
 func (k *Kubernetes) Exec(startFrom string, upgradeState *upgrade.State) error {
 	logrus.Info("Creating Kubernetes Fury cluster...")
-	logrus.Debug("Create: running kubernetes phase...")
 
 	if err := k.prepare(); err != nil {
 		return fmt.Errorf("error preparing kubernetes phase: %w", err)
@@ -75,9 +70,13 @@ func (k *Kubernetes) prepare() error {
 		return fmt.Errorf("error creating kubernetes phase folder: %w", err)
 	}
 
-	furyctlMerger, err := k.createFuryctlMerger()
+	furyctlMerger, err := k.CreateFuryctlMerger(
+		k.paths.DistroPath,
+		k.paths.ConfigPath,
+		"onpremises",
+	)
 	if err != nil {
-		return err
+		return fmt.Errorf("error creating furyctl merger: %w", err)
 	}
 
 	mCfg, err := template.NewConfigWithoutData(furyctlMerger, []string{})
@@ -91,42 +90,14 @@ func (k *Kubernetes) prepare() error {
 		"version": k.kfdManifest.Kubernetes.OnPremises.Version,
 	}
 
-	// Generate playbook and hosts file.
-	outYaml, err := yamlx.MarshalV2(mCfg)
-	if err != nil {
-		return fmt.Errorf("error marshaling template config: %w", err)
-	}
-
-	outDirPath1, err := os.MkdirTemp("", "furyctl-dist-")
-	if err != nil {
-		return fmt.Errorf("error creating temp dir: %w", err)
-	}
-
-	confPath := filepath.Join(outDirPath1, "config.yaml")
-
-	logrus.Debugf("config path = %s", confPath)
-
-	if err = os.WriteFile(confPath, outYaml, os.ModePerm); err != nil {
-		return fmt.Errorf("error writing config file: %w", err)
-	}
-
-	templateModel, err := template.NewTemplateModel(
+	if err := k.CopyFromTemplate(
+		mCfg,
+		"kubernetes",
 		path.Join(k.paths.DistroPath, "templates", cluster.OperationPhaseKubernetes, "onpremises"),
-		path.Join(k.Path),
-		confPath,
-		outDirPath1,
-		k.furyctlConfPath,
-		".tpl",
-		false,
-		k.dryRun,
-	)
-	if err != nil {
-		return fmt.Errorf("error creating template model: %w", err)
-	}
-
-	err = templateModel.Generate()
-	if err != nil {
-		return fmt.Errorf("error generating from template files: %w", err)
+		k.Path,
+		k.paths.ConfigPath,
+	); err != nil {
+		return fmt.Errorf("error copying from template: %w", err)
 	}
 
 	if k.dryRun {
@@ -225,43 +196,6 @@ func (k *Kubernetes) postKubernetes(
 	return nil
 }
 
-//nolint:dupl // Remove duplicated code in the future.
-func (k *Kubernetes) createFuryctlMerger() (*merge.Merger, error) {
-	defaultsFilePath := path.Join(k.paths.DistroPath, "defaults", "onpremises-kfd-v1alpha2.yaml")
-
-	defaultsFile, err := yamlx.FromFileV2[map[any]any](defaultsFilePath)
-	if err != nil {
-		return &merge.Merger{}, fmt.Errorf("%s - %w", defaultsFilePath, err)
-	}
-
-	furyctlConf, err := yamlx.FromFileV2[map[any]any](k.paths.ConfigPath)
-	if err != nil {
-		return &merge.Merger{}, fmt.Errorf("%s - %w", k.paths.ConfigPath, err)
-	}
-
-	merger := merge.NewMerger(
-		merge.NewDefaultModel(defaultsFile, ".data"),
-		merge.NewDefaultModel(furyctlConf, ".spec.distribution"),
-	)
-
-	_, err = merger.Merge()
-	if err != nil {
-		return nil, fmt.Errorf("error merging furyctl config: %w", err)
-	}
-
-	reverseMerger := merge.NewMerger(
-		*merger.GetCustom(),
-		*merger.GetBase(),
-	)
-
-	_, err = reverseMerger.Merge()
-	if err != nil {
-		return nil, fmt.Errorf("error merging furyctl config: %w", err)
-	}
-
-	return reverseMerger, nil
-}
-
 func NewKubernetes(
 	furyctlConf public.OnpremisesKfdV1Alpha2,
 	kfdManifest config.KFD,
@@ -269,17 +203,18 @@ func NewKubernetes(
 	dryRun bool,
 	upgr *upgrade.Upgrade,
 ) *Kubernetes {
-	kubeDir := path.Join(paths.WorkDir, cluster.OperationPhaseKubernetes)
-
-	phase := cluster.NewOperationPhase(kubeDir, kfdManifest.Tools, paths.BinPath)
+	phase := cluster.NewOperationPhase(
+		path.Join(paths.WorkDir, cluster.OperationPhaseKubernetes),
+		kfdManifest.Tools,
+		paths.BinPath,
+	)
 
 	return &Kubernetes{
-		OperationPhase:  phase,
-		furyctlConf:     furyctlConf,
-		kfdManifest:     kfdManifest,
-		paths:           paths,
-		dryRun:          dryRun,
-		furyctlConfPath: paths.ConfigPath,
+		OperationPhase: phase,
+		furyctlConf:    furyctlConf,
+		kfdManifest:    kfdManifest,
+		paths:          paths,
+		dryRun:         dryRun,
 		ansibleRunner: ansible.NewRunner(
 			execx.NewStdExecutor(),
 			ansible.Paths{

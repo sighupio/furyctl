@@ -7,9 +7,7 @@ package create
 import (
 	"errors"
 	"fmt"
-	"os"
 	"path"
-	"path/filepath"
 
 	r3diff "github.com/r3labs/diff/v3"
 	"github.com/sirupsen/logrus"
@@ -19,7 +17,6 @@ import (
 	"github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/onpremises/rules"
 	"github.com/sighupio/furyctl/internal/cluster"
 	"github.com/sighupio/furyctl/internal/diffs"
-	"github.com/sighupio/furyctl/internal/merge"
 	"github.com/sighupio/furyctl/internal/state"
 	"github.com/sighupio/furyctl/internal/template"
 	"github.com/sighupio/furyctl/internal/tool/ansible"
@@ -41,16 +38,15 @@ type Status struct {
 
 type PreFlight struct {
 	*cluster.OperationPhase
-	furyctlConf     public.OnpremisesKfdV1Alpha2
-	paths           cluster.CreatorPaths
-	stateStore      state.Storer
-	distroPath      string
-	furyctlConfPath string
-	kubeRunner      *kubectl.Runner
-	ansibleRunner   *ansible.Runner
-	kfdManifest     config.KFD
-	dryRun          bool
-	force           bool
+
+	furyctlConf   public.OnpremisesKfdV1Alpha2
+	paths         cluster.CreatorPaths
+	stateStore    state.Storer
+	kubeRunner    *kubectl.Runner
+	ansibleRunner *ansible.Runner
+	kfdManifest   config.KFD
+	dryRun        bool
+	force         bool
 }
 
 func NewPreFlight(
@@ -61,17 +57,17 @@ func NewPreFlight(
 	stateStore state.Storer,
 	force bool,
 ) *PreFlight {
-	preFlightDir := path.Join(paths.WorkDir, cluster.OperationPhasePreFlight)
-
-	phase := cluster.NewOperationPhase(preFlightDir, kfdManifest.Tools, paths.BinPath)
+	phase := cluster.NewOperationPhase(
+		path.Join(paths.WorkDir, cluster.OperationPhasePreFlight),
+		kfdManifest.Tools,
+		paths.BinPath,
+	)
 
 	return &PreFlight{
-		OperationPhase:  phase,
-		furyctlConf:     furyctlConf,
-		paths:           paths,
-		stateStore:      stateStore,
-		distroPath:      paths.DistroPath,
-		furyctlConfPath: paths.ConfigPath,
+		OperationPhase: phase,
+		furyctlConf:    furyctlConf,
+		paths:          paths,
+		stateStore:     stateStore,
 		ansibleRunner: ansible.NewRunner(
 			execx.NewStdExecutor(),
 			ansible.Paths{
@@ -108,9 +104,13 @@ func (p *PreFlight) Exec() (*Status, error) {
 		return status, fmt.Errorf("error creating kubernetes phase folder: %w", err)
 	}
 
-	furyctlMerger, err := p.createFuryctlMerger()
+	furyctlMerger, err := p.CreateFuryctlMerger(
+		p.paths.DistroPath,
+		p.paths.ConfigPath,
+		"onpremises",
+	)
 	if err != nil {
-		return status, err
+		return status, fmt.Errorf("error creating furyctl merger: %w", err)
 	}
 
 	mCfg, err := template.NewConfigWithoutData(furyctlMerger, []string{})
@@ -122,42 +122,14 @@ func (p *PreFlight) Exec() (*Status, error) {
 		"version": p.kfdManifest.Kubernetes.OnPremises.Version,
 	}
 
-	// Generate playbook and hosts file.
-	outYaml, err := yamlx.MarshalV2(mCfg)
-	if err != nil {
-		return status, fmt.Errorf("error marshaling template config: %w", err)
-	}
-
-	outDirPath1, err := os.MkdirTemp("", "furyctl-dist-")
-	if err != nil {
-		return status, fmt.Errorf("error creating temp dir: %w", err)
-	}
-
-	confPath := filepath.Join(outDirPath1, "config.yaml")
-
-	logrus.Debugf("config path = %s", confPath)
-
-	if err = os.WriteFile(confPath, outYaml, os.ModePerm); err != nil {
-		return status, fmt.Errorf("error writing config file: %w", err)
-	}
-
-	templateModel, err := template.NewTemplateModel(
+	if err := p.CopyFromTemplate(
+		mCfg,
+		"preflight",
 		path.Join(p.paths.DistroPath, "templates", cluster.OperationPhasePreFlight, "onpremises"),
-		path.Join(p.Path),
-		confPath,
-		outDirPath1,
-		p.furyctlConfPath,
-		".tpl",
-		false,
-		p.dryRun,
-	)
-	if err != nil {
-		return status, fmt.Errorf("error creating template model: %w", err)
-	}
-
-	err = templateModel.Generate()
-	if err != nil {
-		return status, fmt.Errorf("error generating from template files: %w", err)
+		p.Path,
+		p.paths.ConfigPath,
+	); err != nil {
+		return status, fmt.Errorf("error copying from template: %w", err)
 	}
 
 	if _, err := p.ansibleRunner.Exec("all", "-m", "ping"); err != nil {
@@ -230,43 +202,6 @@ func (p *PreFlight) Exec() (*Status, error) {
 	return status, nil
 }
 
-//nolint:dupl // Remove duplicated code in the future.
-func (p *PreFlight) createFuryctlMerger() (*merge.Merger, error) {
-	defaultsFilePath := path.Join(p.paths.DistroPath, "defaults", "onpremises-kfd-v1alpha2.yaml")
-
-	defaultsFile, err := yamlx.FromFileV2[map[any]any](defaultsFilePath)
-	if err != nil {
-		return &merge.Merger{}, fmt.Errorf("%s - %w", defaultsFilePath, err)
-	}
-
-	furyctlConf, err := yamlx.FromFileV2[map[any]any](p.paths.ConfigPath)
-	if err != nil {
-		return &merge.Merger{}, fmt.Errorf("%s - %w", p.paths.ConfigPath, err)
-	}
-
-	merger := merge.NewMerger(
-		merge.NewDefaultModel(defaultsFile, ".data"),
-		merge.NewDefaultModel(furyctlConf, ".spec.distribution"),
-	)
-
-	_, err = merger.Merge()
-	if err != nil {
-		return nil, fmt.Errorf("error merging furyctl config: %w", err)
-	}
-
-	reverseMerger := merge.NewMerger(
-		*merger.GetCustom(),
-		*merger.GetBase(),
-	)
-
-	_, err = reverseMerger.Merge()
-	if err != nil {
-		return nil, fmt.Errorf("error merging furyctl config: %w", err)
-	}
-
-	return reverseMerger, nil
-}
-
 func (p *PreFlight) CreateDiffChecker() (diffs.Checker, error) {
 	storedCfg := map[string]any{}
 
@@ -279,7 +214,7 @@ func (p *PreFlight) CreateDiffChecker() (diffs.Checker, error) {
 		return nil, fmt.Errorf("error while unmarshalling config file: %w", err)
 	}
 
-	newCfg, err := yamlx.FromFileV3[map[string]any](p.furyctlConfPath)
+	newCfg, err := yamlx.FromFileV3[map[string]any](p.paths.ConfigPath)
 	if err != nil {
 		return nil, fmt.Errorf("error while reading config file: %w", err)
 	}
@@ -290,7 +225,7 @@ func (p *PreFlight) CreateDiffChecker() (diffs.Checker, error) {
 func (p *PreFlight) CheckStateDiffs(d r3diff.Changelog, diffChecker diffs.Checker) error {
 	var errs []error
 
-	r, err := rules.NewOnPremClusterRulesExtractor(p.distroPath)
+	r, err := rules.NewOnPremClusterRulesExtractor(p.paths.DistroPath)
 	if err != nil {
 		if !errors.Is(err, rules.ErrReadingRulesFile) {
 			return fmt.Errorf("error while creating rules builder: %w", err)
@@ -314,7 +249,7 @@ func (p *PreFlight) CheckStateDiffs(d r3diff.Changelog, diffChecker diffs.Checke
 func (p *PreFlight) CheckReducerDiffs(d r3diff.Changelog, diffChecker diffs.Checker) error {
 	var errs []error
 
-	r, err := rules.NewOnPremClusterRulesExtractor(p.distroPath)
+	r, err := rules.NewOnPremClusterRulesExtractor(p.paths.DistroPath)
 	if err != nil {
 		if !errors.Is(err, rules.ErrReadingRulesFile) {
 			return fmt.Errorf("error while creating rules builder: %w", err)

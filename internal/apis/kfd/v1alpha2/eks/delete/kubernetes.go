@@ -15,11 +15,11 @@ import (
 
 	"github.com/sighupio/fury-distribution/pkg/apis/config"
 	"github.com/sighupio/fury-distribution/pkg/apis/ekscluster/v1alpha2/private"
+	"github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/eks/common"
 	"github.com/sighupio/furyctl/internal/cluster"
 	"github.com/sighupio/furyctl/internal/tool/awscli"
 	"github.com/sighupio/furyctl/internal/tool/terraform"
 	execx "github.com/sighupio/furyctl/internal/x/exec"
-	iox "github.com/sighupio/furyctl/internal/x/io"
 	netx "github.com/sighupio/furyctl/internal/x/net"
 )
 
@@ -39,27 +39,33 @@ var (
 )
 
 type Kubernetes struct {
-	*cluster.OperationPhase
-	furyctlConf private.EksclusterKfdV1Alpha2
-	tfRunner    *terraform.Runner
-	awsRunner   *awscli.Runner
-	dryRun      bool
+	*common.Kubernetes
+
+	tfRunner  *terraform.Runner
+	awsRunner *awscli.Runner
 }
 
 func NewKubernetes(
 	furyctlConf private.EksclusterKfdV1Alpha2,
 	dryRun bool,
-	workDir,
-	binPath string,
 	kfdManifest config.KFD,
+	paths cluster.DeleterPaths,
 ) *Kubernetes {
-	kubeDir := path.Join(workDir, cluster.OperationPhaseKubernetes)
-
-	phase := cluster.NewOperationPhase(kubeDir, kfdManifest.Tools, binPath)
+	phase := cluster.NewOperationPhase(
+		path.Join(paths.WorkDir, cluster.OperationPhaseKubernetes),
+		kfdManifest.Tools,
+		paths.BinPath,
+	)
 
 	return &Kubernetes{
-		OperationPhase: phase,
-		furyctlConf:    furyctlConf,
+		Kubernetes: &common.Kubernetes{
+			OperationPhase:  phase,
+			FuryctlConf:     furyctlConf,
+			FuryctlConfPath: paths.ConfigPath,
+			DistroPath:      paths.DistroPath,
+			KFDManifest:     kfdManifest,
+			DryRun:          dryRun,
+		},
 		tfRunner: terraform.NewRunner(
 			execx.NewStdExecutor(),
 			terraform.Paths{
@@ -77,35 +83,27 @@ func NewKubernetes(
 				WorkDir: phase.Path,
 			},
 		),
-		dryRun: dryRun,
 	}
 }
 
 func (k *Kubernetes) Exec() error {
 	logrus.Info("Deleting Kubernetes Fury cluster...")
 
-	logrus.Debug("Delete: running kubernetes phase...")
-
 	timestamp := time.Now().Unix()
 
-	err := iox.CheckDirIsEmpty(k.OperationPhase.Path)
-	if err == nil {
-		logrus.Info("Kubernetes Fury cluster already deleted, skipping...")
-
-		logrus.Debug("Kubernetes phase already executed, skipping...")
-
-		return nil
+	if err := k.Prepare(); err != nil {
+		return fmt.Errorf("error preparing kubernetes phase: %w", err)
 	}
 
-	if k.furyctlConf.Spec.Kubernetes.ApiServer.PrivateAccess &&
-		!k.furyctlConf.Spec.Kubernetes.ApiServer.PublicAccess {
+	if k.FuryctlConf.Spec.Kubernetes.ApiServer.PrivateAccess &&
+		!k.FuryctlConf.Spec.Kubernetes.ApiServer.PublicAccess {
 		logrus.Info("Checking connection to the VPC...")
 
 		if err := k.checkVPCConnection(); err != nil {
 			logrus.Debugf("error checking VPC connection: %v", err)
 
-			if k.furyctlConf.Spec.Infrastructure != nil {
-				if k.furyctlConf.Spec.Infrastructure.Vpn != nil {
+			if k.FuryctlConf.Spec.Infrastructure != nil {
+				if k.FuryctlConf.Spec.Infrastructure.Vpn != nil {
 					return fmt.Errorf("%w please check your VPN connection and try again", errKubeAPIUnreachable)
 				}
 			}
@@ -122,16 +120,23 @@ func (k *Kubernetes) Exec() error {
 		return fmt.Errorf("error running terraform plan: %w", err)
 	}
 
-	if k.dryRun {
+	if k.DryRun {
+		if _, err := k.tfRunner.Plan(timestamp, "-destroy"); err != nil {
+			return fmt.Errorf("error running terraform plan: %w", err)
+		}
+
+		logrus.Info("Kubernetes cluster deleted successfully (dry-run mode)")
+
 		return nil
 	}
 
 	logrus.Warn("Deleting cloud resources, this could take a while...")
 
-	err = k.tfRunner.Destroy()
-	if err != nil {
+	if err := k.tfRunner.Destroy(); err != nil {
 		return fmt.Errorf("error while deleting kubernetes phase: %w", err)
 	}
+
+	logrus.Info("Kubernetes cluster deleted successfully")
 
 	return nil
 }
@@ -141,11 +146,11 @@ func (k *Kubernetes) checkVPCConnection() error {
 
 	var err error
 
-	if k.furyctlConf.Spec.Infrastructure != nil &&
-		k.furyctlConf.Spec.Infrastructure.Vpc != nil {
-		cidr = string(k.furyctlConf.Spec.Infrastructure.Vpc.Network.Cidr)
+	if k.FuryctlConf.Spec.Infrastructure != nil &&
+		k.FuryctlConf.Spec.Infrastructure.Vpc != nil {
+		cidr = string(k.FuryctlConf.Spec.Infrastructure.Vpc.Network.Cidr)
 	} else {
-		vpcID := k.furyctlConf.Spec.Kubernetes.VpcId
+		vpcID := k.FuryctlConf.Spec.Kubernetes.VpcId
 		if vpcID == nil {
 			return errVpcIDNotProvided
 		}
@@ -158,7 +163,7 @@ func (k *Kubernetes) checkVPCConnection() error {
 			"--query",
 			"Vpcs[0].CidrBlock",
 			"--region",
-			string(k.furyctlConf.Spec.Region),
+			string(k.FuryctlConf.Spec.Region),
 			"--output",
 			"text",
 		)
@@ -167,9 +172,9 @@ func (k *Kubernetes) checkVPCConnection() error {
 		}
 	}
 
-	if k.furyctlConf.Spec.Kubernetes.ApiServer.PrivateAccess &&
-		!k.furyctlConf.Spec.Kubernetes.ApiServer.PublicAccess &&
-		k.furyctlConf.Spec.Infrastructure.Vpn != nil {
+	if k.FuryctlConf.Spec.Kubernetes.ApiServer.PrivateAccess &&
+		!k.FuryctlConf.Spec.Kubernetes.ApiServer.PublicAccess &&
+		k.FuryctlConf.Spec.Infrastructure.Vpn != nil {
 		return k.queryAWSDNSServer(cidr)
 	}
 

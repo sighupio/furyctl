@@ -10,7 +10,6 @@ import (
 	"fmt"
 	"os"
 	"path"
-	"path/filepath"
 	"sync"
 	"time"
 
@@ -19,6 +18,7 @@ import (
 	"github.com/sighupio/fury-distribution/pkg/apis/config"
 	"github.com/sighupio/fury-distribution/pkg/apis/ekscluster/v1alpha2/private"
 	"github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2"
+	"github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/eks/common"
 	"github.com/sighupio/furyctl/internal/cluster"
 	"github.com/sighupio/furyctl/internal/merge"
 	"github.com/sighupio/furyctl/internal/state"
@@ -40,7 +40,6 @@ const (
 )
 
 var (
-	errCastingVpcIDToStr     = errors.New("error casting vpc_id output to string")
 	errCastingEbsIamToStr    = errors.New("error casting ebs_csi_driver_iam_role_arn output to string")
 	errCastingLbIamToStr     = errors.New("error casting load_balancer_controller_iam_role_arn output to string")
 	errCastingClsAsIamToStr  = errors.New("error casting cluster_autoscaler_iam_role_arn output to string")
@@ -52,19 +51,17 @@ var (
 )
 
 type Distribution struct {
-	*cluster.OperationPhase
-	furyctlConfPath  string
-	furyctlConf      private.EksclusterKfdV1Alpha2
-	kfdManifest      config.KFD
-	infraOutputsPath string
-	distroPath       string
-	stateStore       state.Storer
-	tfRunner         *terraform.Runner
-	shellRunner      *shell.Runner
-	kubeRunner       *kubectl.Runner
-	dryRun           bool
-	phase            string
-	upgrade          *upgrade.Upgrade
+	*common.Distribution
+
+	furyctlConf private.EksclusterKfdV1Alpha2
+	kfdManifest config.KFD
+	stateStore  state.Storer
+	tfRunner    *terraform.Runner
+	shellRunner *shell.Runner
+	kubeRunner  *kubectl.Runner
+	phase       string
+	upgrade     *upgrade.Upgrade
+	paths       cluster.CreatorPaths
 }
 
 type injectType struct {
@@ -75,22 +72,25 @@ func NewDistribution(
 	paths cluster.CreatorPaths,
 	furyctlConf private.EksclusterKfdV1Alpha2,
 	kfdManifest config.KFD,
-	infraOutputsPath string,
 	dryRun bool,
 	phase string,
 	upgr *upgrade.Upgrade,
 ) *Distribution {
-	distroDir := path.Join(paths.WorkDir, cluster.OperationPhaseDistribution)
-
-	phaseOp := cluster.NewOperationPhase(distroDir, kfdManifest.Tools, paths.BinPath)
+	phaseOp := cluster.NewOperationPhase(
+		path.Join(paths.WorkDir, cluster.OperationPhaseDistribution),
+		kfdManifest.Tools,
+		paths.BinPath,
+	)
 
 	return &Distribution{
-		OperationPhase:   phaseOp,
-		furyctlConf:      furyctlConf,
-		kfdManifest:      kfdManifest,
-		infraOutputsPath: infraOutputsPath,
-		distroPath:       paths.DistroPath,
-		furyctlConfPath:  paths.ConfigPath,
+		Distribution: &common.Distribution{
+			OperationPhase: phaseOp,
+			DryRun:         dryRun,
+			DistroPath:     paths.DistroPath,
+			ConfigPath:     paths.ConfigPath,
+		},
+		furyctlConf: furyctlConf,
+		kfdManifest: kfdManifest,
 		stateStore: state.NewStore(
 			paths.DistroPath,
 			paths.ConfigPath,
@@ -125,9 +125,9 @@ func NewDistribution(
 			true,
 			false,
 		),
-		dryRun:  dryRun,
 		phase:   phase,
 		upgrade: upgr,
+		paths:   paths,
 	}
 }
 
@@ -154,11 +154,17 @@ func (d *Distribution) Exec(
 
 	logrus.Info("Installing Kubernetes Fury Distribution...")
 
-	logrus.Debug("Create: running distribution phase...")
-
-	furyctlMerger, preTfMerger, tfCfg, err := d.prepare()
+	furyctlMerger, preTfMerger, tfCfg, err := d.Prepare()
 	if err != nil {
 		return fmt.Errorf("error preparing distribution phase: %w", err)
+	}
+
+	if err = d.injectStoredConfig(tfCfg); err != nil {
+		return fmt.Errorf("error injecting stored config: %w", err)
+	}
+
+	if err := d.tfRunner.Init(); err != nil {
+		return fmt.Errorf("error running terraform init: %w", err)
 	}
 
 	if err := d.preDistribution(startFrom, upgradeState); err != nil {
@@ -177,7 +183,9 @@ func (d *Distribution) Exec(
 		return fmt.Errorf("error running core distribution phase: %w", err)
 	}
 
-	if d.dryRun {
+	if d.DryRun {
+		logrus.Info("Kubernetes Fury Distribution installed successfully (dry-run mode)")
+
 		return nil
 	}
 
@@ -185,59 +193,16 @@ func (d *Distribution) Exec(
 		return fmt.Errorf("error running post-distribution phase: %w", err)
 	}
 
+	logrus.Info("Kubernetes Fury Distribution installed successfully")
+
 	return nil
-}
-
-func (d *Distribution) prepare() (
-	*merge.Merger,
-	*merge.Merger,
-	template.Config,
-	error,
-) {
-	if err := d.CreateRootFolder(); err != nil {
-		return nil, nil, template.Config{}, fmt.Errorf("error creating distribution phase folder: %w", err)
-	}
-
-	furyctlMerger, err := d.createFuryctlMerger()
-	if err != nil {
-		return nil, nil, template.Config{}, err
-	}
-
-	preTfMerger, err := d.injectDataPreTf(furyctlMerger)
-	if err != nil {
-		return nil, nil, template.Config{}, err
-	}
-
-	tfCfg, err := template.NewConfig(furyctlMerger, preTfMerger, []string{"manifests", "scripts", ".gitignore"})
-	if err != nil {
-		return nil, nil, template.Config{}, fmt.Errorf("error creating template config: %w", err)
-	}
-
-	if err := d.copyFromTemplate(tfCfg); err != nil {
-		return nil, nil, template.Config{}, err
-	}
-
-	if err := d.CreateFolderStructure(); err != nil {
-		return nil, nil, template.Config{}, fmt.Errorf("error creating distribution phase folder structure: %w", err)
-	}
-
-	tfCfg, err = d.injectStoredConfig(tfCfg)
-	if err != nil {
-		return nil, nil, template.Config{}, fmt.Errorf("error injecting stored config: %w", err)
-	}
-
-	if err := d.tfRunner.Init(); err != nil {
-		return nil, nil, template.Config{}, fmt.Errorf("error running terraform init: %w", err)
-	}
-
-	return furyctlMerger, preTfMerger, tfCfg, nil
 }
 
 func (d *Distribution) preDistribution(
 	startFrom string,
 	upgradeState *upgrade.State,
 ) error {
-	if !d.dryRun {
+	if !d.DryRun {
 		if startFrom == "" || startFrom == cluster.OperationSubPhasePreDistribution {
 			if err := d.upgrade.Exec(d.Path, "pre-distribution"); err != nil {
 				upgradeState.Phases.PreDistribution.Status = upgrade.PhaseStatusFailed
@@ -256,7 +221,7 @@ func (d *Distribution) preDistribution(
 
 func (d *Distribution) coreDistribution(
 	reducers v1alpha2.Reducers,
-	tfCfg template.Config,
+	tfCfg *template.Config,
 	startFrom string,
 	upgradeState *upgrade.State,
 	preTfMerger *merge.Merger,
@@ -268,11 +233,11 @@ func (d *Distribution) coreDistribution(
 			return fmt.Errorf("error running pre-tf reducers: %w", err)
 		}
 
-		if _, err := d.tfRunner.Plan(timestamp); err != nil && !d.dryRun {
+		if _, err := d.tfRunner.Plan(timestamp); err != nil && !d.DryRun {
 			return fmt.Errorf("error running terraform plan: %w", err)
 		}
 
-		if d.dryRun {
+		if d.DryRun {
 			if err := d.createDummyOutput(); err != nil {
 				return fmt.Errorf("error creating dummy output: %w", err)
 			}
@@ -293,7 +258,17 @@ func (d *Distribution) coreDistribution(
 				"storageClassAvailable": true,
 			}
 
-			return d.copyFromTemplate(mCfg)
+			if err := d.CopyFromTemplate(
+				mCfg,
+				"distribution",
+				path.Join(d.paths.DistroPath, "templates", cluster.OperationPhaseDistribution),
+				d.Path,
+				d.paths.ConfigPath,
+			); err != nil {
+				return fmt.Errorf("error copying from template: %w", err)
+			}
+
+			return nil
 		}
 
 		logrus.Warn("Creating cloud resources, this could take a while...")
@@ -322,16 +297,21 @@ func (d *Distribution) coreDistribution(
 			"storageClassAvailable": true,
 		}
 
-		mCfg, err = d.injectStoredConfig(mCfg)
-		if err != nil {
+		if err = d.injectStoredConfig(&mCfg); err != nil {
 			return fmt.Errorf("error injecting stored config: %w", err)
 		}
 
-		if err := d.copyFromTemplate(mCfg); err != nil {
-			return err
+		if err := d.CopyFromTemplate(
+			mCfg,
+			"distribution",
+			path.Join(d.paths.DistroPath, "templates", cluster.OperationPhaseDistribution),
+			d.Path,
+			d.paths.ConfigPath,
+		); err != nil {
+			return fmt.Errorf("error copying from template: %w", err)
 		}
 
-		if err := d.runReducers(reducers, mCfg, LifecyclePostTf, []string{"manifests", ".gitignore"}); err != nil {
+		if err := d.runReducers(reducers, &mCfg, LifecyclePostTf, []string{"manifests", ".gitignore"}); err != nil {
 			return fmt.Errorf("error running post-tf reducers: %w", err)
 		}
 
@@ -341,7 +321,7 @@ func (d *Distribution) coreDistribution(
 			return fmt.Errorf("error checking cluster reachability: %w", err)
 		}
 
-		if err := d.runReducers(reducers, mCfg, LifecyclePreApply, []string{"manifests", ".gitignore"}); err != nil {
+		if err := d.runReducers(reducers, &mCfg, LifecyclePreApply, []string{"manifests", ".gitignore"}); err != nil {
 			return fmt.Errorf("error running pre-apply reducers: %w", err)
 		}
 
@@ -359,7 +339,7 @@ func (d *Distribution) coreDistribution(
 			upgradeState.Phases.Distribution.Status = upgrade.PhaseStatusSuccess
 		}
 
-		if err := d.runReducers(reducers, mCfg, LifecyclePostApply, []string{"manifests", ".gitignore"}); err != nil {
+		if err := d.runReducers(reducers, &mCfg, LifecyclePostApply, []string{"manifests", ".gitignore"}); err != nil {
 			return fmt.Errorf("error running post-apply reducers: %w", err)
 		}
 	}
@@ -387,7 +367,7 @@ func (d *Distribution) checkKubeVersion() error {
 	if _, err := d.kubeRunner.Version(); err != nil {
 		logrus.Debugf("Got error while running cluster reachability check: %s", err)
 
-		if !d.dryRun {
+		if !d.DryRun {
 			return errClusterConnect
 		}
 
@@ -400,28 +380,28 @@ func (d *Distribution) checkKubeVersion() error {
 	return nil
 }
 
-func (d *Distribution) injectStoredConfig(cfg template.Config) (template.Config, error) {
+func (d *Distribution) injectStoredConfig(cfg *template.Config) error {
 	storedCfg := map[any]any{}
 
 	storedCfgStr, err := d.stateStore.GetConfig()
 	if err != nil {
 		logrus.Debugf("error while getting current config, skipping stored config injection: %s", err)
 
-		return cfg, nil
+		return nil
 	}
 
 	if err = yamlx.UnmarshalV3(storedCfgStr, &storedCfg); err != nil {
-		return cfg, fmt.Errorf("error while unmarshalling config file: %w", err)
+		return fmt.Errorf("error while unmarshalling config file: %w", err)
 	}
 
 	cfg.Data["storedCfg"] = storedCfg
 
-	return cfg, nil
+	return nil
 }
 
 func (d *Distribution) runReducers(
 	reducers v1alpha2.Reducers,
-	cfg template.Config,
+	cfg *template.Config,
 	lifecycle string,
 	excludes []string,
 ) error {
@@ -432,8 +412,14 @@ func (d *Distribution) runReducers(
 		preTfReducersCfg.Data = r.Combine(cfg.Data, "reducers")
 		preTfReducersCfg.Templates.Excludes = excludes
 
-		if err := d.copyFromTemplate(preTfReducersCfg); err != nil {
-			return err
+		if err := d.CopyFromTemplate(
+			*preTfReducersCfg,
+			"distribution",
+			path.Join(d.paths.DistroPath, "templates", cluster.OperationPhaseDistribution),
+			d.Path,
+			d.paths.ConfigPath,
+		); err != nil {
+			return fmt.Errorf("error copying from template: %w", err)
 		}
 
 		if _, err := d.shellRunner.Run(
@@ -500,118 +486,6 @@ func (d *Distribution) Stop() error {
 	}
 
 	return nil
-}
-
-func (d *Distribution) createFuryctlMerger() (*merge.Merger, error) {
-	defaultsFilePath := path.Join(d.distroPath, "defaults", "ekscluster-kfd-v1alpha2.yaml")
-
-	defaultsFile, err := yamlx.FromFileV2[map[any]any](defaultsFilePath)
-	if err != nil {
-		return &merge.Merger{}, fmt.Errorf("%s - %w", defaultsFilePath, err)
-	}
-
-	furyctlConf, err := yamlx.FromFileV2[map[any]any](d.furyctlConfPath)
-	if err != nil {
-		return &merge.Merger{}, fmt.Errorf("%s - %w", d.furyctlConfPath, err)
-	}
-
-	merger := merge.NewMerger(
-		merge.NewDefaultModel(defaultsFile, ".data"),
-		merge.NewDefaultModel(furyctlConf, ".spec.distribution"),
-	)
-
-	_, err = merger.Merge()
-	if err != nil {
-		return nil, fmt.Errorf("error merging furyctl config: %w", err)
-	}
-
-	reverseMerger := merge.NewMerger(
-		*merger.GetCustom(),
-		*merger.GetBase(),
-	)
-
-	_, err = reverseMerger.Merge()
-	if err != nil {
-		return nil, fmt.Errorf("error merging furyctl config: %w", err)
-	}
-
-	return reverseMerger, nil
-}
-
-func (d *Distribution) injectDataPreTf(fMerger *merge.Merger) (*merge.Merger, error) {
-	vpcID, err := d.extractVpcIDFromPrevPhases(fMerger)
-	if err != nil {
-		return nil, err
-	}
-
-	if vpcID == "" {
-		return fMerger, nil
-	}
-
-	injectData := injectType{
-		Data: private.SpecDistribution{
-			Modules: private.SpecDistributionModules{
-				Ingress: private.SpecDistributionModulesIngress{
-					Dns: private.SpecDistributionModulesIngressDNS{
-						Private: private.SpecDistributionModulesIngressDNSPrivate{
-							VpcId: vpcID,
-						},
-					},
-				},
-			},
-		},
-	}
-
-	injectDataModel := merge.NewDefaultModelFromStruct(injectData, ".data", true)
-
-	merger := merge.NewMerger(
-		*fMerger.GetBase(),
-		injectDataModel,
-	)
-
-	_, err = merger.Merge()
-	if err != nil {
-		return nil, fmt.Errorf("error merging furyctl config: %w", err)
-	}
-
-	return merger, nil
-}
-
-func (d *Distribution) extractVpcIDFromPrevPhases(fMerger *merge.Merger) (string, error) {
-	vpcID := ""
-
-	if infraOutJSON, err := os.ReadFile(path.Join(d.infraOutputsPath, "output.json")); err == nil {
-		var infraOut terraform.OutputJSON
-
-		if err := json.Unmarshal(infraOutJSON, &infraOut); err == nil {
-			if infraOut["vpc_id"] == nil {
-				return vpcID, ErrVpcIDNotFound
-			}
-
-			vpcIDOut, ok := infraOut["vpc_id"].Value.(string)
-			if !ok {
-				return vpcID, errCastingVpcIDToStr
-			}
-
-			vpcID = vpcIDOut
-		}
-	} else {
-		fModel := merge.NewDefaultModel((*fMerger.GetBase()).Content(), ".spec.kubernetes")
-
-		kubeFromFuryctlConf, err := fModel.Get()
-		if err != nil {
-			return vpcID, fmt.Errorf("error getting kubernetes from furyctl config: %w", err)
-		}
-
-		vpcFromFuryctlConf, ok := kubeFromFuryctlConf["vpcId"].(string)
-		if !ok && !d.dryRun {
-			return vpcID, errCastingVpcIDToStr
-		}
-
-		vpcID = vpcFromFuryctlConf
-	}
-
-	return vpcID, nil
 }
 
 func (d *Distribution) injectDataPostTf(fMerger *merge.Merger) (*merge.Merger, error) {
@@ -774,45 +648,4 @@ func (d *Distribution) extractARNsFromTfOut() (map[string]string, error) {
 	}
 
 	return arns, nil
-}
-
-func (d *Distribution) copyFromTemplate(cfg template.Config) error {
-	outYaml, err := yamlx.MarshalV2(cfg)
-	if err != nil {
-		return fmt.Errorf("error marshaling template config: %w", err)
-	}
-
-	outDirPath, err := os.MkdirTemp("", "furyctl-dist-")
-	if err != nil {
-		return fmt.Errorf("error creating temp dir: %w", err)
-	}
-
-	confPath := filepath.Join(outDirPath, "config.yaml")
-
-	logrus.Debugf("config path = %s", confPath)
-
-	if err = os.WriteFile(confPath, outYaml, os.ModePerm); err != nil {
-		return fmt.Errorf("error writing config file: %w", err)
-	}
-
-	templateModel, err := template.NewTemplateModel(
-		path.Join(d.distroPath, "templates", cluster.OperationPhaseDistribution),
-		path.Join(d.Path),
-		confPath,
-		outDirPath,
-		d.furyctlConfPath,
-		".tpl",
-		false,
-		d.dryRun,
-	)
-	if err != nil {
-		return fmt.Errorf("error creating template model: %w", err)
-	}
-
-	err = templateModel.Generate()
-	if err != nil {
-		return fmt.Errorf("error generating from template files: %w", err)
-	}
-
-	return nil
 }

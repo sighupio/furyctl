@@ -5,22 +5,14 @@
 package distribution
 
 import (
-	"errors"
 	"fmt"
-	"os"
 	"strings"
-
-	"github.com/sirupsen/logrus"
 
 	"github.com/sighupio/fury-distribution/pkg/apis/config"
 	"github.com/sighupio/fury-distribution/pkg/apis/kfddistribution/v1alpha2/public"
 	del "github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/distribution/delete"
 	"github.com/sighupio/furyctl/internal/cluster"
-	"github.com/sighupio/furyctl/internal/distribution"
-	kubex "github.com/sighupio/furyctl/internal/x/kube"
 )
-
-var ErrKubeconfigNotSet = errors.New("KUBECONFIG env variable is not set")
 
 type ClusterDeleter struct {
 	paths       cluster.DeleterPaths
@@ -40,6 +32,26 @@ func (d *ClusterDeleter) SetProperty(name string, value any) {
 	lcName := strings.ToLower(name)
 
 	switch lcName {
+	case cluster.DeleterPropertyDistroPath:
+		if s, ok := value.(string); ok {
+			d.paths.DistroPath = s
+		}
+
+	case cluster.DeleterPropertyWorkDir:
+		if s, ok := value.(string); ok {
+			d.paths.WorkDir = s
+		}
+
+	case cluster.DeleterPropertyBinPath:
+		if s, ok := value.(string); ok {
+			d.paths.BinPath = s
+		}
+
+	case cluster.DeleterPropertyConfigPath:
+		if s, ok := value.(string); ok {
+			d.paths.ConfigPath = s
+		}
+
 	case cluster.DeleterPropertyKfdManifest:
 		if kfdManifest, ok := value.(config.KFD); ok {
 			d.kfdManifest = kfdManifest
@@ -55,16 +67,6 @@ func (d *ClusterDeleter) SetProperty(name string, value any) {
 			d.phase = s
 		}
 
-	case cluster.DeleterPropertyWorkDir:
-		if s, ok := value.(string); ok {
-			d.paths.WorkDir = s
-		}
-
-	case cluster.DeleterPropertyBinPath:
-		if s, ok := value.(string); ok {
-			d.paths.BinPath = s
-		}
-
 	case cluster.DeleterPropertyDryRun:
 		if b, ok := value.(bool); ok {
 			d.dryRun = b
@@ -77,26 +79,17 @@ func (d *ClusterDeleter) Delete() error {
 		return ErrUnsupportedPhase
 	}
 
-	distro := del.NewDistribution(d.furyctlConf, d.dryRun, d.paths.WorkDir, d.paths.BinPath, d.kfdManifest)
+	preflight := del.NewPreFlight(d.furyctlConf, d.kfdManifest, d.paths)
 
-	kubeconfigPath := os.Getenv("KUBECONFIG")
-
-	if distribution.HasFeature(d.kfdManifest, distribution.FeatureKubeconfigInSchema) {
-		kubeconfigPath = d.furyctlConf.Spec.Distribution.Kubeconfig
-	} else if kubeconfigPath == "" {
-		return ErrKubeconfigNotSet
+	if err := preflight.Exec(); err != nil {
+		return fmt.Errorf("error while executing preflight phase: %w", err)
 	}
 
-	// Move this code to delete preflight.
-	if err := kubex.SetConfigEnv(kubeconfigPath); err != nil {
-		return fmt.Errorf("error setting kubeconfig env: %w", err)
-	}
+	distro := del.NewDistribution(d.furyctlConf, d.dryRun, d.kfdManifest, d.paths)
 
 	if err := distro.Exec(); err != nil {
 		return fmt.Errorf("error while deleting distribution: %w", err)
 	}
-
-	logrus.Info("Kubernetes Fury Distribution deleted successfully")
 
 	return nil
 }
