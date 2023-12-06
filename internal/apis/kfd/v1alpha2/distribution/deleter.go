@@ -6,6 +6,7 @@ package distribution
 
 import (
 	"fmt"
+	"os"
 	"strings"
 
 	"github.com/sirupsen/logrus"
@@ -14,6 +15,7 @@ import (
 	"github.com/sighupio/fury-distribution/pkg/apis/kfddistribution/v1alpha2/public"
 	del "github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/distribution/delete"
 	"github.com/sighupio/furyctl/internal/cluster"
+	"github.com/sighupio/furyctl/internal/distribution"
 	kubex "github.com/sighupio/furyctl/internal/x/kube"
 )
 
@@ -74,8 +76,14 @@ func (d *ClusterDeleter) Delete() error {
 
 	distro := del.NewDistribution(d.furyctlConf, d.dryRun, d.paths.WorkDir, d.paths.BinPath, d.kfdManifest)
 
+	kubeconfigPath := os.Getenv("KUBECONFIG")
+
+	if distribution.HasFeature(d.kfdManifest, distribution.FeatureKubeconfigInSchema) {
+		kubeconfigPath = d.furyctlConf.Spec.Distribution.Kubeconfig
+	}
+
 	// Move this code to delete preflight.
-	if err := kubex.SetConfigEnv(d.furyctlConf.Spec.Distribution.Kubeconfig); err != nil {
+	if err := kubex.SetConfigEnv(kubeconfigPath); err != nil {
 		return fmt.Errorf("error setting kubeconfig env: %w", err)
 	}
 
