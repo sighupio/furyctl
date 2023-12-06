@@ -13,13 +13,13 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/sighupio/fury-distribution/pkg/apis/config"
+	"github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/eks/common"
 	"github.com/sighupio/furyctl/internal/cluster"
 	"github.com/sighupio/furyctl/internal/kubernetes"
 	"github.com/sighupio/furyctl/internal/tool/awscli"
 	"github.com/sighupio/furyctl/internal/tool/shell"
 	"github.com/sighupio/furyctl/internal/tool/terraform"
 	execx "github.com/sighupio/furyctl/internal/x/exec"
-	iox "github.com/sighupio/furyctl/internal/x/io"
 )
 
 var errClusterConnect = errors.New("error connecting to cluster")
@@ -30,27 +30,34 @@ type Ingress struct {
 }
 
 type Distribution struct {
-	*cluster.OperationPhase
+	*common.Distribution
+
 	tfRunner    *terraform.Runner
 	awsRunner   *awscli.Runner
 	shellRunner *shell.Runner
 	kubeClient  *kubernetes.Client
 	dryRun      bool
-	kubeconfig  string
+	paths       cluster.DeleterPaths
 }
 
 func NewDistribution(
 	dryRun bool,
-	workDir,
-	binPath string,
 	kfdManifest config.KFD,
+	paths cluster.DeleterPaths,
 ) *Distribution {
-	distroDir := path.Join(workDir, cluster.OperationPhaseDistribution)
-
-	phase := cluster.NewOperationPhase(distroDir, kfdManifest.Tools, binPath)
+	phase := cluster.NewOperationPhase(
+		path.Join(paths.WorkDir, cluster.OperationPhaseDistribution),
+		kfdManifest.Tools,
+		paths.BinPath,
+	)
 
 	return &Distribution{
-		OperationPhase: phase,
+		Distribution: &common.Distribution{
+			OperationPhase: phase,
+			DryRun:         dryRun,
+			DistroPath:     paths.DistroPath,
+			ConfigPath:     paths.ConfigPath,
+		},
 		tfRunner: terraform.NewRunner(
 			execx.NewStdExecutor(),
 			terraform.Paths{
@@ -84,20 +91,17 @@ func NewDistribution(
 			},
 		),
 		dryRun: dryRun,
+		paths:  paths,
 	}
 }
 
 func (d *Distribution) Exec() error {
 	logrus.Info("Deleting Kubernetes Fury Distribution...")
 
-	logrus.Debug("Delete: running distribution phase...")
-
-	if err := iox.CheckDirIsEmpty(d.OperationPhase.Path); err == nil {
-		logrus.Info("Kubernetes Fury Distribution already deleted, skipping...")
-
-		logrus.Debug("Distribution phase already executed, skipping...")
-
-		return nil
+	//nolint:dogsled // return variabiles are not used
+	_, _, _, err := d.Prepare()
+	if err != nil {
+		return fmt.Errorf("error preparing distribution phase: %w", err)
 	}
 
 	logrus.Info("Checking cluster connectivity...")
@@ -106,19 +110,15 @@ func (d *Distribution) Exec() error {
 		return errClusterConnect
 	}
 
+	if err := d.tfRunner.Init(); err != nil {
+		return fmt.Errorf("error running terraform init: %w", err)
+	}
+
 	if d.dryRun {
 		timestamp := time.Now().Unix()
 
-		if err := d.tfRunner.Init(); err != nil {
-			return fmt.Errorf("error running terraform init: %w", err)
-		}
-
 		if _, err := d.tfRunner.Plan(timestamp, "-destroy"); err != nil {
 			return fmt.Errorf("error running terraform plan: %w", err)
-		}
-
-		if _, err := d.shellRunner.Run(path.Join(d.Path, "scripts", "delete.sh"), "true", d.kubeconfig); err != nil {
-			return fmt.Errorf("error deleting resources: %w", err)
 		}
 
 		logrus.Info("The following resources, regardless of the built manifests, are going to be deleted:")
@@ -151,12 +151,14 @@ func (d *Distribution) Exec() error {
 			logrus.Errorf("error while getting list of service resources: %v", err)
 		}
 
+		logrus.Info("Kubernetes Fury Distribution deleted successfully (dry-run mode)")
+
 		return nil
 	}
 
 	logrus.Info("Deleting kubernetes resources...")
 
-	if _, err := d.shellRunner.Run(path.Join(d.Path, "scripts", "delete.sh"), "false", d.kubeconfig); err != nil {
+	if _, err := d.shellRunner.Run(path.Join(d.Path, "scripts", "delete.sh")); err != nil {
 		return fmt.Errorf("error deleting resources: %w", err)
 	}
 
@@ -165,6 +167,8 @@ func (d *Distribution) Exec() error {
 	if err := d.tfRunner.Destroy(); err != nil {
 		return fmt.Errorf("error while deleting infra resources: %w", err)
 	}
+
+	logrus.Info("Kubernetes Fury Distribution deleted successfully")
 
 	return nil
 }

@@ -7,6 +7,7 @@ package delete
 
 import (
 	"fmt"
+	"os"
 	"path"
 
 	"github.com/sirupsen/logrus"
@@ -14,6 +15,7 @@ import (
 	"github.com/sighupio/fury-distribution/pkg/apis/config"
 	"github.com/sighupio/fury-distribution/pkg/apis/onpremises/v1alpha2/public"
 	"github.com/sighupio/furyctl/internal/cluster"
+	"github.com/sighupio/furyctl/internal/template"
 	"github.com/sighupio/furyctl/internal/tool/kubectl"
 	"github.com/sighupio/furyctl/internal/tool/shell"
 	execx "github.com/sighupio/furyctl/internal/x/exec"
@@ -22,6 +24,7 @@ import (
 
 type Distribution struct {
 	*cluster.OperationPhase
+
 	furyctlConf public.OnpremisesKfdV1Alpha2
 	kfdManifest config.KFD
 	paths       cluster.DeleterPaths
@@ -32,29 +35,74 @@ type Distribution struct {
 
 func (d *Distribution) Exec() error {
 	logrus.Info("Deleting Kubernetes Fury Distribution...")
-	logrus.Debug("Delete: running distribution phase...")
 
-	if err := iox.CheckDirIsEmpty(d.OperationPhase.Path); err == nil {
-		logrus.Info("Kubernetes Fury Distribution already deleted, skipping...")
-
-		logrus.Debug("Distribution phase already executed, skipping...")
-
-		return nil
+	if err := d.CreateRootFolder(); err != nil {
+		return fmt.Errorf("error creating distribution phase folder: %w", err)
 	}
 
-	if d.dryRun {
-		logrus.Info("Kubernetes Fury Distribution deleted successfully (dry-run mode)")
-
-		return nil
+	if _, err := os.Stat(path.Join(d.OperationPhase.Path, "manifests")); os.IsNotExist(err) {
+		err = os.Mkdir(path.Join(d.OperationPhase.Path, "manifests"), iox.FullPermAccess)
+		if err != nil {
+			return fmt.Errorf("error creating manifests folder: %w", err)
+		}
 	}
+
+	furyctlMerger, err := d.CreateFuryctlMerger(
+		d.paths.DistroPath,
+		d.paths.ConfigPath,
+		"onpremises",
+	)
+	if err != nil {
+		return fmt.Errorf("error creating furyctl merger: %w", err)
+	}
+
+	mCfg, err := template.NewConfigWithoutData(furyctlMerger, []string{"terraform", ".gitignore", "manifests/aws"})
+	if err != nil {
+		return fmt.Errorf("error creating template config: %w", err)
+	}
+
+	d.CopyPathsToConfig(&mCfg)
 
 	// Check cluster connection and requirements.
+	storageClassAvailable := true
+
 	logrus.Info("Checking that the cluster is reachable...")
 
 	if _, err := d.kubeRunner.Version(); err != nil {
 		logrus.Debugf("Got error while running cluster reachability check: %s", err)
 
 		return fmt.Errorf("error connecting to cluster: %w", err)
+	}
+
+	logrus.Info("Checking storage classes...")
+
+	getStorageClassesOutput, err := d.kubeRunner.Get(false, "", "storageclasses")
+	if err != nil {
+		return fmt.Errorf("error while checking storage class: %w", err)
+	}
+
+	if getStorageClassesOutput == "No resources found" {
+		storageClassAvailable = false
+	}
+
+	mCfg.Data["checks"] = map[any]any{
+		"storageClassAvailable": storageClassAvailable,
+	}
+
+	if err := d.CopyFromTemplate(
+		mCfg,
+		"distribution",
+		path.Join(d.paths.DistroPath, "templates", cluster.OperationPhaseDistribution),
+		d.Path,
+		d.paths.ConfigPath,
+	); err != nil {
+		return fmt.Errorf("error copying from template: %w", err)
+	}
+
+	if d.dryRun {
+		logrus.Info("Kubernetes Fury Distribution deleted successfully (dry-run mode)")
+
+		return nil
 	}
 
 	logrus.Info("Deleting kubernetes resources...")
@@ -75,9 +123,11 @@ func NewDistribution(
 	paths cluster.DeleterPaths,
 	dryRun bool,
 ) *Distribution {
-	kubeDir := path.Join(paths.WorkDir, cluster.OperationPhaseDistribution)
-
-	phase := cluster.NewOperationPhase(kubeDir, kfdManifest.Tools, paths.BinPath)
+	phase := cluster.NewOperationPhase(
+		path.Join(paths.WorkDir, cluster.OperationPhaseDistribution),
+		kfdManifest.Tools,
+		paths.BinPath,
+	)
 
 	return &Distribution{
 		OperationPhase: phase,

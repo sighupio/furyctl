@@ -57,9 +57,11 @@ func NewPreFlight(
 	stateStore state.Storer,
 	force bool,
 ) *PreFlight {
-	preFlightDir := path.Join(paths.WorkDir, cluster.OperationPhasePreFlight)
-
-	phase := cluster.NewOperationPhase(preFlightDir, kfdManifest.Tools, paths.BinPath)
+	phase := cluster.NewOperationPhase(
+		path.Join(paths.WorkDir, cluster.OperationPhasePreFlight),
+		kfdManifest.Tools,
+		paths.BinPath,
+	)
 
 	return &PreFlight{
 		OperationPhase:  phase,

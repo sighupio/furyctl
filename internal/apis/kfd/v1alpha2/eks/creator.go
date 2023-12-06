@@ -767,7 +767,6 @@ func (v *ClusterCreator) setupPhases(upgr *upgrade.Upgrade) (
 		create.NewKubernetes(
 			v.furyctlConf,
 			v.kfdManifest,
-			infra.Self().TerraformOutputsPath,
 			v.paths,
 			v.dryRun,
 			upgr,
@@ -782,7 +781,6 @@ func (v *ClusterCreator) setupPhases(upgr *upgrade.Upgrade) (
 			v.paths,
 			v.furyctlConf,
 			v.kfdManifest,
-			infra.Self().TerraformOutputsPath,
 			v.dryRun,
 			v.phase,
 			upgr,

@@ -39,16 +39,14 @@ var (
 
 type PreUpgrade struct {
 	*cluster.OperationPhase
-	distroPath           string
-	furyctlConfPath      string
 	dryRun               bool
 	kind                 string
 	upgrade              *upgrade.Upgrade
 	upgradeFlag          bool
 	reducers             v1alpha2.Reducers
-	merger               v1alpha2.Merger
 	diffs                diff.Changelog
 	forceFlag            bool
+	paths                cluster.CreatorPaths
 	externalUpgradesPath string
 }
 
@@ -73,16 +71,14 @@ func NewPreUpgrade(
 
 	return &PreUpgrade{
 		OperationPhase:       phaseOp,
-		distroPath:           paths.DistroPath,
-		furyctlConfPath:      paths.ConfigPath,
 		dryRun:               dryRun,
 		kind:                 kind,
 		upgrade:              upgr,
 		upgradeFlag:          upgradeFlag,
 		reducers:             reducers,
-		merger:               v1alpha2.NewBaseMerger(paths.DistroPath, kind, paths.ConfigPath),
 		diffs:                diffs,
 		forceFlag:            forceFlag,
+		paths:                paths,
 		externalUpgradesPath: externalUpgradesPath,
 	}
 }
@@ -96,7 +92,11 @@ func (p *PreUpgrade) Exec() error {
 		return fmt.Errorf("error creating preupgrade phase folder: %w", err)
 	}
 
-	furyctlMerger, err := p.merger.Create()
+	furyctlMerger, err := p.CreateFuryctlMerger(
+		p.paths.DistroPath,
+		p.paths.ConfigPath,
+		strings.ToLower(p.kind),
+	)
 	if err != nil {
 		return fmt.Errorf("error creating furyctl merger: %w", err)
 	}
@@ -155,7 +155,7 @@ func (p *PreUpgrade) Exec() error {
 		p.Path,
 		confPath,
 		outDirPath1,
-		p.furyctlConfPath,
+		p.paths.ConfigPath,
 		".tpl",
 		false,
 		p.dryRun,

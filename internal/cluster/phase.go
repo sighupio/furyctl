@@ -9,8 +9,12 @@ import (
 	"fmt"
 	"os"
 	"path"
+	"path/filepath"
+
+	"github.com/sirupsen/logrus"
 
 	"github.com/sighupio/fury-distribution/pkg/apis/config"
+	"github.com/sighupio/furyctl/internal/merge"
 	"github.com/sighupio/furyctl/internal/template"
 	iox "github.com/sighupio/furyctl/internal/x/io"
 	yamlx "github.com/sighupio/furyctl/internal/x/yaml"
@@ -194,7 +198,7 @@ func (op *OperationPhase) CreateRootFolder() error {
 	return nil
 }
 
-func (op *OperationPhase) CreateFolderStructure() error {
+func (op *OperationPhase) CreateTerraformFolderStructure() error {
 	if _, err := os.Stat(op.TerraformPlanPath); os.IsNotExist(err) {
 		if err := os.Mkdir(op.TerraformPlanPath, iox.FullPermAccess); err != nil {
 			return fmt.Errorf("error creating folder %s: %w", op.TerraformPlanPath, err)
@@ -229,26 +233,28 @@ func (*OperationPhase) CopyFromTemplate(
 	targetPath,
 	furyctlConfPath string,
 ) error {
+	outYaml, err := yamlx.MarshalV2(cfg)
+	if err != nil {
+		return fmt.Errorf("error marshaling template config: %w", err)
+	}
+
 	outDirPath, err := os.MkdirTemp("", fmt.Sprintf("furyctl-%s-", prefix))
 	if err != nil {
-		return fmt.Errorf("error creating temp folder: %w", err)
+		return fmt.Errorf("error creating temp dir: %w", err)
 	}
 
-	tfConfigPath := path.Join(outDirPath, "tf-config.yaml")
+	confPath := filepath.Join(outDirPath, "config.yaml")
 
-	tfConfig, err := yamlx.MarshalV2(cfg)
-	if err != nil {
-		return fmt.Errorf("error marshaling tf-config: %w", err)
-	}
+	logrus.Debugf("config path = %s", confPath)
 
-	if err = os.WriteFile(tfConfigPath, tfConfig, iox.RWPermAccess); err != nil {
-		return fmt.Errorf("error writing tf-config: %w", err)
+	if err = os.WriteFile(confPath, outYaml, os.ModePerm); err != nil {
+		return fmt.Errorf("error writing config file: %w", err)
 	}
 
 	templateModel, err := template.NewTemplateModel(
 		sourcePath,
 		targetPath,
-		tfConfigPath,
+		confPath,
 		outDirPath,
 		furyctlConfPath,
 		".tpl",
@@ -261,7 +267,7 @@ func (*OperationPhase) CopyFromTemplate(
 
 	err = templateModel.Generate()
 	if err != nil {
-		return fmt.Errorf("error generating from template: %w", err)
+		return fmt.Errorf("error generating from template files: %w", err)
 	}
 
 	return nil
@@ -281,4 +287,44 @@ func (op *OperationPhase) CopyPathsToConfig(cfg *template.Config) {
 
 func (op *OperationPhase) Self() *OperationPhase {
 	return op
+}
+
+func (*OperationPhase) CreateFuryctlMerger(
+	distroPath string,
+	furyctlConfPath string,
+	kind string,
+) (*merge.Merger, error) {
+	defaultsFilePath := path.Join(distroPath, "defaults", fmt.Sprintf("%s-kfd-v1alpha2.yaml", kind))
+
+	defaultsFile, err := yamlx.FromFileV2[map[any]any](defaultsFilePath)
+	if err != nil {
+		return &merge.Merger{}, fmt.Errorf("%s - %w", defaultsFilePath, err)
+	}
+
+	furyctlConf, err := yamlx.FromFileV2[map[any]any](furyctlConfPath)
+	if err != nil {
+		return &merge.Merger{}, fmt.Errorf("%s - %w", furyctlConfPath, err)
+	}
+
+	merger := merge.NewMerger(
+		merge.NewDefaultModel(defaultsFile, ".data"),
+		merge.NewDefaultModel(furyctlConf, ".spec.distribution"),
+	)
+
+	_, err = merger.Merge()
+	if err != nil {
+		return nil, fmt.Errorf("error merging furyctl config: %w", err)
+	}
+
+	reverseMerger := merge.NewMerger(
+		*merger.GetCustom(),
+		*merger.GetBase(),
+	)
+
+	_, err = reverseMerger.Merge()
+	if err != nil {
+		return nil, fmt.Errorf("error merging furyctl config: %w", err)
+	}
+
+	return reverseMerger, nil
 }
