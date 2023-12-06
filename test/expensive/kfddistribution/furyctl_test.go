@@ -8,6 +8,7 @@ package kfddistribution_test
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"math/rand"
@@ -21,6 +22,9 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gexec"
+	"sigs.k8s.io/e2e-framework/klient"
+	"sigs.k8s.io/e2e-framework/support"
+	"sigs.k8s.io/e2e-framework/support/kind"
 
 	"github.com/sighupio/furyctl/internal/cluster"
 	"github.com/sighupio/furyctl/internal/dependencies/tools"
@@ -51,6 +55,7 @@ type confMeta struct {
 type contextState struct {
 	TestId      int
 	TestName    string
+	Cluster     support.E2EClusterProvider
 	ClusterName string
 	Kubeconfig  string
 	HomeDir     string
@@ -304,7 +309,16 @@ var (
 			BeforeAll(func() {
 				testName := "v1-25-create-and-delete"
 
+				k := kind.NewProvider().SetDefaults().WithName(testName).WithOpts(kind.WithImage("kindest/node:v1.25.9"))
+
+				kubecfg, err := k.CreateWithConfig(context.Background(), fmt.Sprintf("./testdata/%s/kind-config.yml", testName))
+				Expect(err).To(Not(HaveOccurred()))
+
+				Copy(kubecfg, fmt.Sprintf("./testdata/%s/kubeconfig", testName))
+
 				state = newContextState(testName)
+
+				state.Cluster = k
 
 				GinkgoWriter.Write([]byte(fmt.Sprintf("Test id: %d", state.TestId)))
 
@@ -312,7 +326,17 @@ var (
 
 				os.Setenv("KUBECONFIG", state.Kubeconfig)
 
+				client, err := klient.New(k.KubernetesRestConfig())
+				Expect(err).To(Not(HaveOccurred()))
+
+				err = k.WaitForControlPlane(context.Background(), client)
+				Expect(err).To(Not(HaveOccurred()))
+
 				furyctlYamlPath = CreateFuryctlYaml(state, "furyctl-minimal.yaml.tpl")
+			})
+
+			AfterAll(func() {
+				state.Cluster.Destroy(context.Background())
 			})
 
 			It("should create a minimal 1.25 cluster", Serial, func() {
@@ -347,14 +371,6 @@ var (
 			})
 
 			It("should delete a minimal 1.25 cluster", Serial, func() {
-				DeferCleanup(func() {
-					_ = os.RemoveAll(state.TmpDir)
-
-					pkillSession := Must1(KillOpenVPN())
-
-					Eventually(pkillSession, 5*time.Minute, 1*time.Second).Should(gexec.Exit(0))
-				})
-
 				deleteClusterCmd := FuryctlDeleteCluster(
 					furyctlYamlPath,
 					state.DistroDir,
@@ -363,143 +379,9 @@ var (
 					state.TmpDir,
 				)
 
-				session, err := gexec.Start(deleteClusterCmd, GinkgoWriter, GinkgoWriter)
-
-				Expect(err).To(Not(HaveOccurred()))
+				session := Must1(gexec.Start(deleteClusterCmd, GinkgoWriter, GinkgoWriter))
 				Eventually(session, assertTimeout, assertPollingInterval).Should(gexec.Exit(0))
 			})
 		})
-
-		// Context("cluster creation skipping infra phase, and cleanup", Ordered, Serial, Label("slow"), func() {
-		// 	absWorkDirPath, absCommonPath, w := CreatePaths("create-skip-infra")
-
-		// 	It("should create a cluster, skipping the infrastructure phase", Serial, func() {
-		// 		furyctlYamlPath := path.Join(absWorkDirPath, "furyctl.yaml")
-		// 		distroPath := absCommonPath
-
-		// 		homeDir, err := os.UserHomeDir()
-		// 		Expect(err).To(Not(HaveOccurred()))
-
-		// 		kubectlPath := path.Join(homeDir, ".furyctl", "bin", "kubectl", "1.24.7", "kubectl")
-		// 		kcfgPath := path.Join(homeDir, ".furyctl", "furyctl-test-aws-si", cluster.OperationPhaseKubernetes, "terraform", "secrets", "kubeconfig")
-
-		// 		createClusterInfraCmd := FuryctlCreateCluster(furyctlYamlPath, distroPath, cluster.OperationPhaseInfrastructure, "", false, w)
-
-		// 		infraSession, err := gexec.Start(createClusterInfraCmd, GinkgoWriter, GinkgoWriter)
-		// 		Expect(err).To(Not(HaveOccurred()))
-
-		// 		Eventually(infraSession, 20*time.Minute).Should(gexec.Exit(0))
-
-		// 		createClusterCmd := FuryctlCreateCluster(furyctlYamlPath, distroPath, cluster.OperationPhaseAll, cluster.OperationPhaseInfrastructure, false, w)
-
-		// 		session, err := gexec.Start(createClusterCmd, GinkgoWriter, GinkgoWriter)
-		// 		Expect(err).To(Not(HaveOccurred()))
-		// 		Consistently(session, 3*time.Minute).ShouldNot(gexec.Exit())
-		// 		Eventually(kcfgPath, 20*time.Minute).Should(BeAnExistingFile())
-		// 		Eventually(session, 40*time.Minute).Should(gexec.Exit(0))
-
-		// 		kubeCmd := exec.Command(kubectlPath, "--kubeconfig", kcfgPath, "get", "nodes")
-
-		// 		kubeSession, err := gexec.Start(kubeCmd, GinkgoWriter, GinkgoWriter)
-
-		// 		Expect(err).To(Not(HaveOccurred()))
-		// 		Eventually(kubeSession, 2*time.Minute).Should(gexec.Exit(0))
-		// 	})
-
-		// 	It("should destroy a cluster", Serial, func() {
-		// 		furyctlYamlPath := path.Join(absWorkDirPath, "furyctl.yaml")
-		// 		distroPath := absCommonPath
-
-		// 		homeDir, err := os.UserHomeDir()
-		// 		Expect(err).To(Not(HaveOccurred()))
-
-		// 		kcfgPath := path.Join(homeDir, ".furyctl", "furyctl-test-aws-si", cluster.OperationPhaseKubernetes, "terraform", "secrets", "kubeconfig")
-
-		// 		err = os.Setenv("KUBECONFIG", kcfgPath)
-		// 		Expect(err).To(Not(HaveOccurred()))
-
-		// 		DeferCleanup(func() {
-		// 			_ = os.Unsetenv("KUBECONFIG")
-		// 			_ = os.RemoveAll(w)
-		// 			pkillSession, err := KillOpenVPN()
-		// 			Expect(err).To(Not(HaveOccurred()))
-		// 			Eventually(pkillSession, 10*time.Second).Should(gexec.Exit(0))
-		// 		})
-
-		// 		deleteClusterCmd := FuryctlDeleteCluster(furyctlYamlPath, distroPath, cluster.OperationPhaseAll, false, w)
-
-		// 		session, err := gexec.Start(deleteClusterCmd, GinkgoWriter, GinkgoWriter)
-		// 		Expect(err).To(Not(HaveOccurred()))
-
-		// 		Eventually(session, 40*time.Minute).Should(gexec.Exit(0))
-		// 	})
-		// })
-
-		// Context("cluster creation skipping kubernetes phase, and cleanup", Ordered, Serial, Label("slow"), func() {
-		// 	absWorkDirPath, absCommonPath, w := CreatePaths("create-skip-kube")
-
-		// 	It("should create a cluster, skipping the kubernetes phase", Serial, func() {
-		// 		furyctlYamlPath := path.Join(absWorkDirPath, "furyctl.yaml")
-		// 		distroPath := absCommonPath
-
-		// 		homeDir, err := os.UserHomeDir()
-		// 		Expect(err).To(Not(HaveOccurred()))
-
-		// 		kubectlPath := path.Join(homeDir, ".furyctl", "bin", "kubectl", "1.24.7", "kubectl")
-		// 		kcfgPath := path.Join(homeDir, ".furyctl", "furyctl-test-aws-sk", cluster.OperationPhaseKubernetes, "terraform", "secrets", "kubeconfig")
-
-		// 		createClusterKubeCmd := FuryctlCreateCluster(furyctlYamlPath, distroPath, cluster.OperationPhaseAll, cluster.OperationPhaseDistribution, false, w)
-
-		// 		kubeSession, err := gexec.Start(createClusterKubeCmd, GinkgoWriter, GinkgoWriter)
-		// 		Expect(err).To(Not(HaveOccurred()))
-
-		// 		Eventually(kubeSession, 20*time.Minute).Should(gexec.Exit(0))
-
-		// 		err = os.Setenv("KUBECONFIG", kcfgPath)
-		// 		Expect(err).To(Not(HaveOccurred()))
-
-		// 		createClusterCmd := FuryctlCreateCluster(furyctlYamlPath, distroPath, cluster.OperationPhaseAll, cluster.OperationPhaseKubernetes, false, w)
-
-		// 		session, err := gexec.Start(createClusterCmd, GinkgoWriter, GinkgoWriter)
-		// 		Expect(err).To(Not(HaveOccurred()))
-		// 		Consistently(session, 3*time.Minute).ShouldNot(gexec.Exit())
-		// 		Eventually(session, 40*time.Minute).Should(gexec.Exit(0))
-
-		// 		kubeCmd := exec.Command(kubectlPath, "--kubeconfig", kcfgPath, "get", "nodes")
-
-		// 		kubectlSession, err := gexec.Start(kubeCmd, GinkgoWriter, GinkgoWriter)
-
-		// 		Expect(err).To(Not(HaveOccurred()))
-		// 		Eventually(kubectlSession, 2*time.Minute).Should(gexec.Exit(0))
-		// 	})
-
-		// 	It("should destroy a cluster", Serial, func() {
-		// 		furyctlYamlPath := path.Join(absWorkDirPath, "furyctl.yaml")
-		// 		distroPath := absCommonPath
-
-		// 		homeDir, err := os.UserHomeDir()
-		// 		Expect(err).To(Not(HaveOccurred()))
-
-		// 		kcfgPath := path.Join(homeDir, ".furyctl", "furyctl-test-aws-sk", cluster.OperationPhaseKubernetes, "terraform", "secrets", "kubeconfig")
-
-		// 		err = os.Setenv("KUBECONFIG", kcfgPath)
-		// 		Expect(err).To(Not(HaveOccurred()))
-
-		// 		DeferCleanup(func() {
-		// 			_ = os.Unsetenv("KUBECONFIG")
-		// 			_ = os.RemoveAll(w)
-		// 			pkillSession, err := KillOpenVPN()
-		// 			Expect(err).To(Not(HaveOccurred()))
-		// 			Eventually(pkillSession, 10*time.Second).Should(gexec.Exit(0))
-		// 		})
-
-		// 		deleteClusterCmd := FuryctlDeleteCluster(furyctlYamlPath, distroPath, cluster.OperationPhaseAll, false, w)
-
-		// 		session, err := gexec.Start(deleteClusterCmd, GinkgoWriter, GinkgoWriter)
-		// 		Expect(err).To(Not(HaveOccurred()))
-
-		// 		Eventually(session, 40*time.Minute).Should(gexec.Exit(0))
-		// 	})
-		// })
 	})
 )
