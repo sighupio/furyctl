@@ -9,11 +9,11 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"strings"
 
 	"github.com/sirupsen/logrus"
 
 	"github.com/sighupio/fury-distribution/pkg/apis/config"
-	"github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2"
 	"github.com/sighupio/furyctl/internal/cluster"
 	"github.com/sighupio/furyctl/internal/distribution"
 	"github.com/sighupio/furyctl/internal/template"
@@ -25,14 +25,13 @@ import (
 
 type Plugins struct {
 	*cluster.OperationPhase
-	helmfileRunner  *helmfile.Runner
-	shellRunner     *shell.Runner
-	merger          v1alpha2.Merger
-	distroPath      string
-	furyctlConfPath string
-	dryRun          bool
-	kfd             config.KFD
-	kind            string
+
+	helmfileRunner *helmfile.Runner
+	shellRunner    *shell.Runner
+	dryRun         bool
+	kfd            config.KFD
+	kind           string
+	paths          cluster.CreatorPaths
 }
 
 func NewPlugins(
@@ -48,11 +47,9 @@ func NewPlugins(
 	)
 
 	return &Plugins{
-		OperationPhase:  phaseOp,
-		distroPath:      paths.DistroPath,
-		furyctlConfPath: paths.ConfigPath,
-		dryRun:          dryRun,
-		kind:            kind,
+		OperationPhase: phaseOp,
+		dryRun:         dryRun,
+		kind:           kind,
 		helmfileRunner: helmfile.NewRunner(
 			execx.NewStdExecutor(),
 			helmfile.Paths{
@@ -68,12 +65,8 @@ func NewPlugins(
 				WorkDir: phaseOp.Path,
 			},
 		),
-		merger: v1alpha2.NewBaseMerger(
-			paths.DistroPath,
-			kind,
-			paths.ConfigPath,
-		),
-		kfd: kfdManifest,
+		kfd:   kfdManifest,
+		paths: paths,
 	}
 }
 
@@ -84,7 +77,11 @@ func (p *Plugins) Exec() error {
 		return fmt.Errorf("error creating plugins phase folder: %w", err)
 	}
 
-	furyctlMerger, err := p.merger.Create()
+	furyctlMerger, err := p.CreateFuryctlMerger(
+		p.paths.DistroPath,
+		p.paths.ConfigPath,
+		strings.ToLower(p.kind),
+	)
 	if err != nil {
 		return fmt.Errorf("error creating furyctl merger: %w", err)
 	}
@@ -119,11 +116,11 @@ func (p *Plugins) Exec() error {
 	}
 
 	templateModel, err := template.NewTemplateModel(
-		path.Join(p.distroPath, "templates", cluster.OperationPhasePlugins),
+		path.Join(p.paths.DistroPath, "templates", cluster.OperationPhasePlugins),
 		path.Join(p.Path),
 		confPath,
 		outDirPath1,
-		p.furyctlConfPath,
+		p.paths.ConfigPath,
 		".tpl",
 		false,
 		p.dryRun,

@@ -126,6 +126,7 @@ func NewClusterCmd(tracker *analytics.Tracker) *cobra.Command {
 				ConfigPath: flags.FuryctlPath,
 				WorkDir:    basePath,
 				BinPath:    flags.BinPath,
+				DistroPath: res.RepoPath,
 			}
 
 			clusterDeleter, err := cluster.NewDeleter(

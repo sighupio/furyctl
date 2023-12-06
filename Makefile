@@ -53,6 +53,7 @@ tools:
 	@go install github.com/onsi/ginkgo/v2/ginkgo@latest
 	@go install golang.org/x/tools/cmd/goimports@latest
 	@go install mvdan.cc/gofumpt@latest
+	@go install github.com/momaek/formattag@latest
 
 .PHONY: mod-download mod-tidy mod-verify
 

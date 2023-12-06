@@ -14,13 +14,14 @@ import (
 	"github.com/sighupio/fury-distribution/pkg/apis/config"
 	"github.com/sighupio/fury-distribution/pkg/apis/onpremises/v1alpha2/public"
 	"github.com/sighupio/furyctl/internal/cluster"
+	"github.com/sighupio/furyctl/internal/template"
 	"github.com/sighupio/furyctl/internal/tool/ansible"
 	execx "github.com/sighupio/furyctl/internal/x/exec"
-	iox "github.com/sighupio/furyctl/internal/x/io"
 )
 
 type Kubernetes struct {
 	*cluster.OperationPhase
+
 	furyctlConf   public.OnpremisesKfdV1Alpha2
 	kfdManifest   config.KFD
 	paths         cluster.DeleterPaths
@@ -30,13 +31,39 @@ type Kubernetes struct {
 
 func (k *Kubernetes) Exec() error {
 	logrus.Info("Deleting Kubernetes Fury cluster...")
-	logrus.Debug("Delete: running kubernetes phase...")
 
-	err := iox.CheckDirIsEmpty(k.OperationPhase.Path)
-	if err == nil {
-		logrus.Info("Kubernetes Fury cluster already deleted")
+	if err := k.CreateRootFolder(); err != nil {
+		return fmt.Errorf("error creating kubernetes phase folder: %w", err)
+	}
 
-		return nil
+	furyctlMerger, err := k.CreateFuryctlMerger(
+		k.paths.DistroPath,
+		k.paths.ConfigPath,
+		"onpremises",
+	)
+	if err != nil {
+		return fmt.Errorf("error creating furyctl merger: %w", err)
+	}
+
+	mCfg, err := template.NewConfigWithoutData(furyctlMerger, []string{})
+	if err != nil {
+		return fmt.Errorf("error creating template config: %w", err)
+	}
+
+	k.CopyPathsToConfig(&mCfg)
+
+	mCfg.Data["kubernetes"] = map[any]any{
+		"version": k.kfdManifest.Kubernetes.OnPremises.Version,
+	}
+
+	if err := k.CopyFromTemplate(
+		mCfg,
+		"kubernetes",
+		path.Join(k.paths.DistroPath, "templates", cluster.OperationPhaseKubernetes, "onpremises"),
+		k.Path,
+		k.paths.ConfigPath,
+	); err != nil {
+		return fmt.Errorf("error copying from template: %w", err)
 	}
 
 	if k.dryRun {
@@ -70,9 +97,11 @@ func NewKubernetes(
 	paths cluster.DeleterPaths,
 	dryRun bool,
 ) *Kubernetes {
-	kubeDir := path.Join(paths.WorkDir, cluster.OperationPhaseKubernetes)
-
-	phase := cluster.NewOperationPhase(kubeDir, kfdManifest.Tools, paths.BinPath)
+	phase := cluster.NewOperationPhase(
+		path.Join(paths.WorkDir, cluster.OperationPhaseKubernetes),
+		kfdManifest.Tools,
+		paths.BinPath,
+	)
 
 	return &Kubernetes{
 		OperationPhase: phase,

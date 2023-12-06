@@ -81,15 +81,16 @@ func NewPreFlight(
 	skipVpn bool,
 	force bool,
 ) (*PreFlight, error) {
-	var vpnConfig *private.SpecInfrastructureVpn
+	phase := cluster.NewOperationPhase(
+		path.Join(paths.WorkDir, cluster.OperationPhasePreFlight),
+		kfdManifest.Tools,
+		paths.BinPath,
+	)
 
+	var vpnConfig *private.SpecInfrastructureVpn
 	if furyctlConf.Spec.Infrastructure != nil {
 		vpnConfig = furyctlConf.Spec.Infrastructure.Vpn
 	}
-
-	preFlightDir := path.Join(paths.WorkDir, cluster.OperationPhasePreFlight)
-
-	phase := cluster.NewOperationPhase(preFlightDir, kfdManifest.Tools, paths.BinPath)
 
 	vpnConnector, err := vpn.NewConnector(
 		furyctlConf.Metadata.Name,
@@ -175,7 +176,7 @@ func (p *PreFlight) Exec() (*Status, error) {
 		return status, err
 	}
 
-	if err := p.CreateFolderStructure(); err != nil {
+	if err := p.CreateTerraformFolderStructure(); err != nil {
 		return status, fmt.Errorf("error creating preflight phase folder structure: %w", err)
 	}
 
@@ -316,7 +317,7 @@ func (p *PreFlight) copyFromTemplate() error {
 
 	cfg.Data = tfConfVars
 
-	err = p.OperationPhase.CopyFromTemplate(
+	err = p.CopyFromTemplate(
 		cfg,
 		prefix,
 		tmpFolder,

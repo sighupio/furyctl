@@ -5,8 +5,8 @@
 package del
 
 import (
-	"errors"
 	"fmt"
+	"os"
 	"path"
 
 	"github.com/sirupsen/logrus"
@@ -14,13 +14,12 @@ import (
 	"github.com/sighupio/fury-distribution/pkg/apis/config"
 	"github.com/sighupio/fury-distribution/pkg/apis/kfddistribution/v1alpha2/public"
 	"github.com/sighupio/furyctl/internal/cluster"
+	"github.com/sighupio/furyctl/internal/template"
 	"github.com/sighupio/furyctl/internal/tool/kubectl"
 	"github.com/sighupio/furyctl/internal/tool/shell"
 	execx "github.com/sighupio/furyctl/internal/x/exec"
 	iox "github.com/sighupio/furyctl/internal/x/io"
 )
-
-var errClusterConnect = errors.New("error connecting to cluster")
 
 type Ingress struct {
 	Name string
@@ -29,22 +28,25 @@ type Ingress struct {
 
 type Distribution struct {
 	*cluster.OperationPhase
+
 	furyctlConf public.KfddistributionKfdV1Alpha2
 	kubeRunner  *kubectl.Runner
 	shellRunner *shell.Runner
 	dryRun      bool
+	paths       cluster.DeleterPaths
 }
 
 func NewDistribution(
 	furyctlConf public.KfddistributionKfdV1Alpha2,
 	dryRun bool,
-	workDir,
-	binPath string,
 	kfdManifest config.KFD,
+	paths cluster.DeleterPaths,
 ) *Distribution {
-	distroDir := path.Join(workDir, cluster.OperationPhaseDistribution)
-
-	phaseOp := cluster.NewOperationPhase(distroDir, kfdManifest.Tools, binPath)
+	phaseOp := cluster.NewOperationPhase(
+		path.Join(paths.WorkDir, cluster.OperationPhaseDistribution),
+		kfdManifest.Tools,
+		paths.BinPath,
+	)
 
 	return &Distribution{
 		OperationPhase: phaseOp,
@@ -67,33 +69,81 @@ func NewDistribution(
 			},
 		),
 		dryRun: dryRun,
+		paths:  paths,
 	}
 }
 
 func (d *Distribution) Exec() error {
 	logrus.Info("Deleting Kubernetes Fury Distribution...")
 
-	if err := iox.CheckDirIsEmpty(d.OperationPhase.Path); err == nil {
-		logrus.Info("Kubernetes Fury Distribution already deleted, skipping...")
+	if err := d.CreateRootFolder(); err != nil {
+		return fmt.Errorf("error creating distribution phase folder: %w", err)
+	}
 
-		logrus.Debug("Distribution phase already executed, skipping...")
+	if _, err := os.Stat(path.Join(d.OperationPhase.Path, "manifests")); os.IsNotExist(err) {
+		err = os.Mkdir(path.Join(d.OperationPhase.Path, "manifests"), iox.FullPermAccess)
+		if err != nil {
+			return fmt.Errorf("error creating manifests folder: %w", err)
+		}
+	}
 
-		return nil
+	furyctlMerger, err := d.CreateFuryctlMerger(
+		d.paths.DistroPath,
+		d.paths.ConfigPath,
+		"kfddistribution",
+	)
+	if err != nil {
+		return fmt.Errorf("error creating furyctl merger: %w", err)
+	}
+
+	mCfg, err := template.NewConfigWithoutData(furyctlMerger, []string{"terraform", ".gitignore", "manifests/aws"})
+	if err != nil {
+		return fmt.Errorf("error creating template config: %w", err)
+	}
+
+	d.CopyPathsToConfig(&mCfg)
+
+	// Check cluster connection and requirements.
+	storageClassAvailable := true
+
+	logrus.Info("Checking that the cluster is reachable...")
+
+	if _, err := d.kubeRunner.Version(); err != nil {
+		logrus.Debugf("Got error while running cluster reachability check: %s", err)
+
+		return fmt.Errorf("error connecting to cluster: %w", err)
+	}
+
+	logrus.Info("Checking storage classes...")
+
+	getStorageClassesOutput, err := d.kubeRunner.Get(false, "", "storageclasses")
+	if err != nil {
+		return fmt.Errorf("error while checking storage class: %w", err)
+	}
+
+	if getStorageClassesOutput == "No resources found" {
+		storageClassAvailable = false
+	}
+
+	mCfg.Data["checks"] = map[any]any{
+		"storageClassAvailable": storageClassAvailable,
+	}
+
+	// Generate manifests.
+	if err := d.CopyFromTemplate(
+		mCfg,
+		"distribution",
+		path.Join(d.paths.DistroPath, "templates", cluster.OperationPhaseDistribution),
+		d.Path,
+		d.paths.ConfigPath,
+	); err != nil {
+		return fmt.Errorf("error copying from template: %w", err)
 	}
 
 	if d.dryRun {
 		logrus.Info("Kubernetes Fury Distribution deleted successfully (dry-run mode)")
 
 		return nil
-	}
-
-	// Check cluster connection and requirements.
-	logrus.Info("Checking that the cluster is reachable...")
-
-	if _, err := d.kubeRunner.Version(); err != nil {
-		logrus.Debugf("Got error while running cluster reachability check: %s", err)
-
-		return errClusterConnect
 	}
 
 	logrus.Info("Deleting kubernetes resources...")

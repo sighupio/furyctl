@@ -6,16 +6,14 @@ package onpremises
 
 import (
 	"fmt"
-	"path"
 	"strings"
 
 	"github.com/sirupsen/logrus"
 
 	"github.com/sighupio/fury-distribution/pkg/apis/config"
 	"github.com/sighupio/fury-distribution/pkg/apis/onpremises/v1alpha2/public"
-	"github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/onpremises/delete"
+	del "github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/onpremises/delete"
 	"github.com/sighupio/furyctl/internal/cluster"
-	kubex "github.com/sighupio/furyctl/internal/x/kube"
 )
 
 type ClusterDeleter struct {
@@ -26,77 +24,81 @@ type ClusterDeleter struct {
 	dryRun      bool
 }
 
-func (c *ClusterDeleter) SetProperties(props []cluster.DeleterProperty) {
+func (d *ClusterDeleter) SetProperties(props []cluster.DeleterProperty) {
 	for _, prop := range props {
-		c.SetProperty(prop.Name, prop.Value)
+		d.SetProperty(prop.Name, prop.Value)
 	}
 }
 
-func (c *ClusterDeleter) SetProperty(name string, value any) {
+func (d *ClusterDeleter) SetProperty(name string, value any) {
 	switch strings.ToLower(name) {
-	case cluster.CreatorPropertyConfigPath:
+	case cluster.DeleterPropertyDistroPath:
 		if s, ok := value.(string); ok {
-			c.paths.ConfigPath = s
+			d.paths.DistroPath = s
 		}
 
-	case cluster.CreatorPropertyWorkDir:
+	case cluster.DeleterPropertyWorkDir:
 		if s, ok := value.(string); ok {
-			c.paths.WorkDir = s
+			d.paths.WorkDir = s
 		}
 
-	case cluster.CreatorPropertyBinPath:
+	case cluster.DeleterPropertyBinPath:
 		if s, ok := value.(string); ok {
-			c.paths.BinPath = s
+			d.paths.BinPath = s
+		}
+
+	case cluster.DeleterPropertyConfigPath:
+		if s, ok := value.(string); ok {
+			d.paths.ConfigPath = s
 		}
 
 	case cluster.CreatorPropertyFuryctlConf:
 		if s, ok := value.(public.OnpremisesKfdV1Alpha2); ok {
-			c.furyctlConf = s
+			d.furyctlConf = s
 		}
 
 	case cluster.CreatorPropertyKfdManifest:
 		if s, ok := value.(config.KFD); ok {
-			c.kfdManifest = s
+			d.kfdManifest = s
 		}
 
 	case cluster.CreatorPropertyPhase:
 		if s, ok := value.(string); ok {
-			c.phase = s
+			d.phase = s
 		}
 
 	case cluster.CreatorPropertyDryRun:
 		if b, ok := value.(bool); ok {
-			c.dryRun = b
+			d.dryRun = b
 		}
 	}
 }
 
-func (c *ClusterDeleter) Delete() error {
+func (d *ClusterDeleter) Delete() error {
 	logrus.Warn("This process will only reset the Kubernetes cluster " +
 		"and will not uninstall all the packages installed on the nodes.")
 
-	kubernetesPhase := delete.NewKubernetes(
-		c.furyctlConf,
-		c.kfdManifest,
-		c.paths,
-		c.dryRun,
+	kubernetesPhase := del.NewKubernetes(
+		d.furyctlConf,
+		d.kfdManifest,
+		d.paths,
+		d.dryRun,
 	)
 
-	distributionPhase := delete.NewDistribution(
-		c.furyctlConf,
-		c.kfdManifest,
-		c.paths,
-		c.dryRun,
+	distributionPhase := del.NewDistribution(
+		d.furyctlConf,
+		d.kfdManifest,
+		d.paths,
+		d.dryRun,
 	)
 
-	// Temporary workaround to set the kubeconfig env var.
-	kubeconfigPath := path.Join(c.paths.WorkDir, cluster.OperationPhaseKubernetes, "admin.conf")
+	preflight := del.NewPreFlight(d.furyctlConf, d.kfdManifest, d.paths, d.dryRun)
 
-	if err := kubex.SetConfigEnv(kubeconfigPath); err != nil {
-		return fmt.Errorf("error setting kubeconfig env: %w", err)
+	if err := preflight.Exec(); err != nil {
+		return fmt.Errorf("error while executing preflight phase: %w", err)
 	}
 
-	switch c.phase {
+	switch d.phase {
 	case cluster.OperationPhaseKubernetes:
 		if err := kubernetesPhase.Exec(); err != nil {
 			return fmt.Errorf("error while deleting kubernetes phase: %w", err)

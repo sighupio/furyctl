@@ -13,10 +13,12 @@ import (
 )
 
 const (
+	DeleterPropertyConfigPath     = "configpath"
 	DeleterPropertyFuryctlConf    = "furyctlconf"
 	DeleterPropertyPhase          = "phase"
 	DeleterPropertyWorkDir        = "workdir"
 	DeleterPropertyKfdManifest    = "kfdmanifest"
+	DeleterPropertyDistroPath     = "distropath"
 	DeleterPropertyBinPath        = "binpath"
 	DeleterPropertySkipVpn        = "skipvpn"
 	DeleterPropertyVpnAutoConnect = "vpnautoconnect"
@@ -27,6 +29,7 @@ var delFactories = make(map[string]map[string]DeleterFactory) //nolint:gocheckno
 //  as global to work with init function.
 
 type DeleterPaths struct {
+	DistroPath string
 	ConfigPath string
 	WorkDir    string
 	BinPath    string
@@ -76,6 +79,10 @@ func NewDeleter(
 				Value: paths.WorkDir,
 			},
 			{
+				Name:  DeleterPropertyDistroPath,
+				Value: paths.DistroPath,
+			},
+			{
 				Name:  DeleterPropertyBinPath,
 				Value: paths.BinPath,
 			},
@@ -115,6 +122,7 @@ func NewDeleterFactory[T Deleter, S any](dd T) DeleterFactory {
 			return nil, err
 		}
 
+		dd.SetProperty(DeleterPropertyConfigPath, configPath)
 		dd.SetProperty(DeleterPropertyFuryctlConf, furyctlConf)
 		dd.SetProperties(props)
 
