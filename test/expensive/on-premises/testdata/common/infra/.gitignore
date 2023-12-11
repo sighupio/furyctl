@@ -1,0 +1,6 @@
+/.terraform
+/secrets
+!/secrets/furyagent-pkis.yml
+*.tfstate*
+ssh-users.yml
+kubeconfig
