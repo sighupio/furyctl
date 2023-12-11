@@ -75,6 +75,23 @@ func (r *Runner) ConfigOpenvpnClient(name string, params ...string) (*bytes.Buff
 	return cmd.Log.Out, nil
 }
 
+func (r *Runner) Init(initType string, params ...string) (*bytes.Buffer, error) {
+	args := []string{"init", initType}
+
+	if len(params) > 0 {
+		args = append(args, params...)
+	}
+
+	cmd, id := r.newCmd(args)
+	defer r.deleteCmd(id)
+
+	if err := cmd.Run(); err != nil {
+		return nil, fmt.Errorf("error while running furyagent init: %w", err)
+	}
+
+	return cmd.Log.Out, nil
+}
+
 func (r *Runner) Version() (string, error) {
 	args := []string{"version"}
 
