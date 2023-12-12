@@ -73,6 +73,5 @@ module "fury" {
   eks_map_roles    = var.eks_map_roles
   eks_map_accounts = var.eks_map_accounts
 
-  # availability_zone_names = []
   # ssh_to_nodes_allowed_cidr_blocks = []
 }

@@ -49,6 +49,7 @@ func NewKubernetes(
 	furyctlConf private.EksclusterKfdV1Alpha2,
 	dryRun bool,
 	kfdManifest config.KFD,
+	infraOutputsPath string,
 	paths cluster.DeleterPaths,
 ) *Kubernetes {
 	phase := cluster.NewOperationPhase(
@@ -59,12 +60,13 @@ func NewKubernetes(
 
 	return &Kubernetes{
 		Kubernetes: &common.Kubernetes{
-			OperationPhase:  phase,
-			FuryctlConf:     furyctlConf,
-			FuryctlConfPath: paths.ConfigPath,
-			DistroPath:      paths.DistroPath,
-			KFDManifest:     kfdManifest,
-			DryRun:          dryRun,
+			OperationPhase:                     phase,
+			FuryctlConf:                        furyctlConf,
+			FuryctlConfPath:                    paths.ConfigPath,
+			DistroPath:                         paths.DistroPath,
+			KFDManifest:                        kfdManifest,
+			DryRun:                             dryRun,
+			InfrastructureTerraformOutputsPath: infraOutputsPath,
 		},
 		tfRunner: terraform.NewRunner(
 			execx.NewStdExecutor(),

@@ -6,7 +6,6 @@ package eks
 
 import (
 	"fmt"
-	"path"
 	"strings"
 
 	"github.com/sirupsen/logrus"
@@ -16,7 +15,6 @@ import (
 	del "github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/eks/delete"
 	"github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/eks/vpn"
 	"github.com/sighupio/furyctl/internal/cluster"
-	kubex "github.com/sighupio/furyctl/internal/x/kube"
 )
 
 type ClusterDeleter struct {
@@ -92,11 +90,25 @@ func (d *ClusterDeleter) SetProperty(name string, value any) {
 }
 
 func (d *ClusterDeleter) Delete() error {
-	distro := del.NewDistribution(d.dryRun, d.kfdManifest, d.paths)
+	infra := del.NewInfrastructure(
+		d.furyctlConf,
+		d.dryRun,
+		d.kfdManifest,
+		d.paths,
+	)
 
-	kube := del.NewKubernetes(d.furyctlConf, d.dryRun, d.kfdManifest, d.paths)
+	distro := del.NewDistribution(d.dryRun,
+		d.kfdManifest,
+		infra.Self().TerraformOutputsPath,
+		d.paths,
+	)
 
-	infra := del.NewInfrastructure(d.furyctlConf, d.dryRun, d.kfdManifest, d.paths)
+	kube := del.NewKubernetes(d.furyctlConf,
+		d.dryRun,
+		d.kfdManifest,
+		infra.Self().TerraformOutputsPath,
+		d.paths,
+	)
 
 	var vpnConfig *private.SpecInfrastructureVpn
 
@@ -117,15 +129,13 @@ func (d *ClusterDeleter) Delete() error {
 		return fmt.Errorf("error while creating vpn connector: %w", err)
 	}
 
-	// Move this code to delete preflight.
-	if err := kubex.SetConfigEnv(path.Join(
-		d.paths.WorkDir,
-		cluster.OperationPhaseKubernetes,
-		"terraform",
-		"secrets",
-		"kubeconfig",
-	)); err != nil {
-		return fmt.Errorf("error setting kubeconfig env: %w", err)
+	preflight, err := del.NewPreFlight(d.furyctlConf, d.kfdManifest, d.paths, d.vpnAutoConnect, d.skipVpn)
+	if err != nil {
+		return fmt.Errorf("error while creating preflight phase: %w", err)
+	}
+
+	if err := preflight.Exec(); err != nil {
+		return fmt.Errorf("error while executing preflight phase: %w", err)
 	}
 
 	switch d.phase {
@@ -133,8 +143,6 @@ func (d *ClusterDeleter) Delete() error {
 		if err := infra.Exec(); err != nil {
 			return fmt.Errorf("error while deleting infrastructure phase: %w", err)
 		}
-
-		logrus.Info("Infrastructure deleted successfully")
 
 		return nil
 
@@ -152,8 +160,6 @@ func (d *ClusterDeleter) Delete() error {
 			return fmt.Errorf("error while deleting kubernetes phase: %w", err)
 		}
 
-		logrus.Info("Kubernetes cluster deleted successfully")
-
 		return nil
 
 	case cluster.OperationPhaseDistribution:
@@ -166,8 +172,6 @@ func (d *ClusterDeleter) Delete() error {
 		if err := distro.Exec(); err != nil {
 			return fmt.Errorf("error while deleting distribution phase: %w", err)
 		}
-
-		logrus.Info("Kubernetes Fury Distribution deleted successfully")
 
 		return nil
 
@@ -198,8 +202,6 @@ func (d *ClusterDeleter) Delete() error {
 				return fmt.Errorf("error while deleting infrastructure phase: %w", err)
 			}
 		}
-
-		logrus.Info("Kubernetes Fury cluster deleted successfully")
 
 		return nil
 

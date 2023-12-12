@@ -72,6 +72,7 @@ func NewDistribution(
 	paths cluster.CreatorPaths,
 	furyctlConf private.EksclusterKfdV1Alpha2,
 	kfdManifest config.KFD,
+	infraOutputsPath string,
 	dryRun bool,
 	phase string,
 	upgr *upgrade.Upgrade,
@@ -84,10 +85,11 @@ func NewDistribution(
 
 	return &Distribution{
 		Distribution: &common.Distribution{
-			OperationPhase: phaseOp,
-			DryRun:         dryRun,
-			DistroPath:     paths.DistroPath,
-			ConfigPath:     paths.ConfigPath,
+			OperationPhase:                     phaseOp,
+			DryRun:                             dryRun,
+			DistroPath:                         paths.DistroPath,
+			ConfigPath:                         paths.ConfigPath,
+			InfrastructureTerraformOutputsPath: infraOutputsPath,
 		},
 		furyctlConf: furyctlConf,
 		kfdManifest: kfdManifest,

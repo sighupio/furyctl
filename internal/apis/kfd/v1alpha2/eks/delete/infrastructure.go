@@ -43,6 +43,7 @@ func NewInfrastructure(
 		Infrastructure: &common.Infrastructure{
 			OperationPhase: phase,
 			FuryctlConf:    furyctlConf,
+			ConfigPath:     paths.ConfigPath,
 		},
 		tfRunner: terraform.NewRunner(
 			execx.NewStdExecutor(),
