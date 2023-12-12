@@ -20,9 +20,10 @@ import (
 type Distribution struct {
 	*cluster.OperationPhase
 
-	DryRun     bool
-	DistroPath string
-	ConfigPath string
+	DryRun                             bool
+	DistroPath                         string
+	ConfigPath                         string
+	InfrastructureTerraformOutputsPath string
 }
 
 type InjectType struct {
@@ -117,7 +118,7 @@ func (d *Distribution) injectDataPreTf(fMerger *merge.Merger) (*merge.Merger, er
 func (d *Distribution) extractVpcIDFromPrevPhases(fMerger *merge.Merger) (string, error) {
 	vpcID := ""
 
-	if infraOutJSON, err := os.ReadFile(path.Join(d.TerraformOutputsPath, "output.json")); err == nil {
+	if infraOutJSON, err := os.ReadFile(path.Join(d.InfrastructureTerraformOutputsPath, "output.json")); err == nil {
 		var infraOut terraform.OutputJSON
 
 		if err := json.Unmarshal(infraOutJSON, &infraOut); err == nil {

@@ -35,11 +35,12 @@ const (
 type Kubernetes struct {
 	*cluster.OperationPhase
 
-	FuryctlConf     private.EksclusterKfdV1Alpha2
-	FuryctlConfPath string
-	DistroPath      string
-	KFDManifest     config.KFD
-	DryRun          bool
+	FuryctlConf                        private.EksclusterKfdV1Alpha2
+	FuryctlConfPath                    string
+	DistroPath                         string
+	KFDManifest                        config.KFD
+	DryRun                             bool
+	InfrastructureTerraformOutputsPath string
 }
 
 func (k *Kubernetes) Prepare() error {
@@ -219,7 +220,7 @@ func (k *Kubernetes) createTfVars() error {
 
 	if k.FuryctlConf.Spec.Infrastructure != nil &&
 		k.FuryctlConf.Spec.Infrastructure.Vpc != nil {
-		if infraOutJSON, err := os.ReadFile(path.Join(k.TerraformOutputsPath, "output.json")); err == nil {
+		if infraOutJSON, err := os.ReadFile(path.Join(k.InfrastructureTerraformOutputsPath, "output.json")); err == nil {
 			var infraOut terraform.OutputJSON
 
 			if err := json.Unmarshal(infraOutJSON, &infraOut); err == nil {

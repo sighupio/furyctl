@@ -61,6 +61,7 @@ type Kubernetes struct {
 func NewKubernetes(
 	furyctlConf private.EksclusterKfdV1Alpha2,
 	kfdManifest config.KFD,
+	infraOutputsPath string,
 	paths cluster.CreatorPaths,
 	dryRun bool,
 	upgr *upgrade.Upgrade,
@@ -73,12 +74,13 @@ func NewKubernetes(
 
 	return &Kubernetes{
 		Kubernetes: &common.Kubernetes{
-			OperationPhase:  phase,
-			FuryctlConf:     furyctlConf,
-			FuryctlConfPath: paths.ConfigPath,
-			DistroPath:      paths.DistroPath,
-			KFDManifest:     kfdManifest,
-			DryRun:          dryRun,
+			OperationPhase:                     phase,
+			FuryctlConf:                        furyctlConf,
+			FuryctlConfPath:                    paths.ConfigPath,
+			DistroPath:                         paths.DistroPath,
+			KFDManifest:                        kfdManifest,
+			DryRun:                             dryRun,
+			InfrastructureTerraformOutputsPath: infraOutputsPath,
 		},
 		tfRunner: terraform.NewRunner(
 			execx.NewStdExecutor(),
