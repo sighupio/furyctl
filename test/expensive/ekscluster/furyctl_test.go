@@ -38,7 +38,7 @@ var (
 
 	_ = BeforeSuite(CompileFuryctl(furyctl))
 
-	BeforeCreateDeleteTestFunc = func(state *ContextState, version string) func() {
+	BeforeCreateDeleteTestFunc = func(state *ContextState, version string, furyctlYamlTemplate string) func() {
 		return func() {
 			*state = NewContextState(fmt.Sprintf("ekscluster-v%s-create-and-delete", version))
 
@@ -47,7 +47,7 @@ var (
 			Copy("./testdata/id_ed25519", path.Join(state.TestDir, "id_ed25519"))
 			Copy("./testdata/id_ed25519.pub", path.Join(state.TestDir, "id_ed25519.pub"))
 
-			CreateFuryctlYaml(state, "furyctl-public-minimal.yaml.tpl")
+			CreateFuryctlYaml(state, furyctlYamlTemplate)
 		}
 	}
 
@@ -128,23 +128,32 @@ var (
 				}
 			})
 
-			Context(fmt.Sprintf("v%s create and delete", version), Ordered, Serial, Label("slow"), func() {
-				BeforeAll(BeforeCreateDeleteTestFunc(state, version))
+			contextTitle := fmt.Sprintf("v%s create and delete a minimal public cluster", version)
 
-				It(fmt.Sprintf("should create a minimal %s cluster", version), Serial, CreateClusterTestFunc(state))
+			Context(contextTitle, Ordered, Serial, Label("slow"), func() {
+				BeforeAll(BeforeCreateDeleteTestFunc(state, version, "furyctl-public-public minimal.yaml.tpl"))
 
-				It(fmt.Sprintf("should delete a minimal %s cluster", version), Serial, DeleteClusterTestFunc(state))
+				It(fmt.Sprintf("should create a minimal public %s cluster", version), Serial, CreateClusterTestFunc(state))
+
+				It(fmt.Sprintf("should delete a minimal public %s cluster", version), Serial, DeleteClusterTestFunc(state))
 			})
 		}
 	}
 
-	// _ = Describe("furyctl & distro v1.25.0", Ordered, Serial, CreateAndDeleteTestScenario("1.25.0"))
-	// _ = Describe("furyctl & distro v1.25.1", Ordered, Serial, CreateAndDeleteTestScenario("1.25.1"))
-	// _ = Describe("furyctl & distro v1.25.2", Ordered, Serial, CreateAndDeleteTestScenario("1.25.2"))
-	// _ = Describe("furyctl & distro v1.25.3", Ordered, Serial, CreateAndDeleteTestScenario("1.25.3"))
-	// _ = Describe("furyctl & distro v1.25.4", Ordered, Serial, CreateAndDeleteTestScenario("1.25.4"))
-	// _ = Describe("furyctl & distro v1.25.5", Ordered, Serial, CreateAndDeleteTestScenario("1.25.5"))
-	// _ = Describe("furyctl & distro v1.25.6", Ordered, Serial, CreateAndDeleteTestScenario("1.25.6"))
-	// _ = Describe("furyctl & distro v1.25.7", Ordered, Serial, CreateAndDeleteTestScenario("1.25.7"))
-	_ = Describe("furyctl & distro v1.25.8", Ordered, Serial, CreateAndDeleteTestScenario("1.25.8"))
+	// _ = Describe("furyctl & distro v1.25.0 - public minimal", Ordered, Serial, CreateAndDeleteTestScenario("1.25.0"))
+	// _ = Describe("furyctl & distro v1.25.1 - public minimal", Ordered, Serial, CreateAndDeleteTestScenario("1.25.1"))
+	// _ = Describe("furyctl & distro v1.25.2 - public minimal", Ordered, Serial, CreateAndDeleteTestScenario("1.25.2"))
+	// _ = Describe("furyctl & distro v1.25.3 - public minimal", Ordered, Serial, CreateAndDeleteTestScenario("1.25.3"))
+	// _ = Describe("furyctl & distro v1.25.4 - public minimal", Ordered, Serial, CreateAndDeleteTestScenario("1.25.4"))
+	// _ = Describe("furyctl & distro v1.25.5 - public minimal", Ordered, Serial, CreateAndDeleteTestScenario("1.25.5"))
+	// _ = Describe("furyctl & distro v1.25.6 - public minimal", Ordered, Serial, CreateAndDeleteTestScenario("1.25.6"))
+	// _ = Describe("furyctl & distro v1.25.7 - public minimal", Ordered, Serial, CreateAndDeleteTestScenario("1.25.7"))
+	_ = Describe("furyctl & distro v1.25.8 - public minimal", Ordered, Serial, CreateAndDeleteTestScenario("1.25.8"))
+
+	// _ = Describe("furyctl & distro v1.26.0 - public minimal", Ordered, Serial, CreateAndDeleteTestScenario("1.26.0"))
+	// _ = Describe("furyctl & distro v1.26.1 - public minimal", Ordered, Serial, CreateAndDeleteTestScenario("1.26.1"))
+	// _ = Describe("furyctl & distro v1.26.2 - public minimal", Ordered, Serial, CreateAndDeleteTestScenario("1.26.2"))
+	_ = Describe("furyctl & distro v1.26.3 - public minimal", Ordered, Serial, CreateAndDeleteTestScenario("1.26.3"))
+
+	// _ = Describe("furyctl & distro v1.27.0 - public minimal", Ordered, Serial, CreateAndDeleteTestScenario("1.27.0"))
 )
