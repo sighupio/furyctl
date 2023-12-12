@@ -17,6 +17,7 @@ import (
 	"github.com/sighupio/furyctl/internal/analytics"
 	"github.com/sighupio/furyctl/internal/cluster"
 	"github.com/sighupio/furyctl/internal/cmd/cmdutil"
+	"github.com/sighupio/furyctl/internal/config"
 	"github.com/sighupio/furyctl/internal/dependencies"
 	"github.com/sighupio/furyctl/internal/distribution"
 	cobrax "github.com/sighupio/furyctl/internal/x/cobra"
@@ -25,21 +26,28 @@ import (
 	netx "github.com/sighupio/furyctl/internal/x/net"
 )
 
-var ErrParsingFlag = errors.New("error while parsing flag")
+const WrappedErrMessage = "%w: %s"
+
+var (
+	ErrParsingFlag                = errors.New("error while parsing flag")
+	ErrDownloadDependenciesFailed = errors.New("dependencies download failed")
+)
 
 type ClusterCmdFlags struct {
-	Debug          bool
-	FuryctlPath    string
-	DistroLocation string
-	Phase          string
-	BinPath        string
-	Force          bool
-	SkipVpn        bool
-	VpnAutoConnect bool
-	DryRun         bool
-	NoTTY          bool
-	HTTPS          bool
-	Outdir         string
+	Debug              bool
+	FuryctlPath        string
+	DistroLocation     string
+	Phase              string
+	BinPath            string
+	Force              bool
+	SkipVpn            bool
+	VpnAutoConnect     bool
+	DryRun             bool
+	NoTTY              bool
+	HTTPS              bool
+	Outdir             string
+	SkipDepsDownload   bool
+	SkipDepsValidation bool
 }
 
 func NewClusterCmd(tracker *analytics.Tracker) *cobra.Command {
@@ -77,13 +85,16 @@ func NewClusterCmd(tracker *analytics.Tracker) *cobra.Command {
 				flags.BinPath = filepath.Join(outDir, ".furyctl", "bin")
 			}
 
+			if flags.DryRun {
+				logrus.Info("Dry run mode enabled, no changes will be applied")
+			}
+
 			// Init first half of collaborators.
 			client := netx.NewGoGetterClient()
 			executor := execx.NewStdExecutor()
 			distrodl := distribution.NewDownloader(client, flags.HTTPS)
 			depsvl := dependencies.NewValidator(executor, flags.BinPath, flags.FuryctlPath, flags.VpnAutoConnect)
 
-			execx.Debug = flags.Debug
 			execx.NoTTY = flags.NoTTY
 
 			// Validate base requirements.
@@ -115,19 +126,58 @@ func NewClusterCmd(tracker *analytics.Tracker) *cobra.Command {
 
 			basePath := filepath.Join(outDir, ".furyctl", res.MinimalConf.Metadata.Name)
 
-			// Validate the dependencies.
-			logrus.Info("Validating dependencies...")
-			if err := depsvl.Validate(res); err != nil {
-				return fmt.Errorf("error while validating dependencies: %w", err)
+			// Init second half of collaborators.
+			depsdl := dependencies.NewDownloader(client, basePath, flags.BinPath, flags.HTTPS)
+
+			// Validate the furyctl.yaml file.
+			logrus.Info("Validating configuration file...")
+			if err := config.Validate(flags.FuryctlPath, res.RepoPath); err != nil {
+				cmdEvent.AddErrorMessage(err)
+				tracker.Track(cmdEvent)
+
+				return fmt.Errorf("error while validating configuration file: %w", err)
+			}
+
+			// Download the dependencies.
+			if !flags.SkipDepsDownload {
+				logrus.Info("Downloading dependencies...")
+				if errs, _ := depsdl.DownloadAll(res.DistroManifest); len(errs) > 0 {
+					cmdEvent.AddErrorMessage(ErrDownloadDependenciesFailed)
+					tracker.Track(cmdEvent)
+
+					return fmt.Errorf("%w: %v", ErrDownloadDependenciesFailed, errs)
+				}
+			}
+
+			// Validate the dependencies, unless explicitly told to skip it.
+			if !flags.SkipDepsValidation {
+				logrus.Info("Validating dependencies...")
+				if err := depsvl.Validate(res); err != nil {
+					cmdEvent.AddErrorMessage(err)
+					tracker.Track(cmdEvent)
+
+					return fmt.Errorf("error while validating dependencies: %w", err)
+				}
+			}
+
+			absFuryctlPath, err := filepath.Abs(flags.FuryctlPath)
+			if err != nil {
+				cmdEvent.AddErrorMessage(err)
+				tracker.Track(cmdEvent)
+
+				return fmt.Errorf("error while initializing cluster creation: %w", err)
 			}
 
 			// Define cluster deletion paths.
 			paths := cluster.DeleterPaths{
-				ConfigPath: flags.FuryctlPath,
+				ConfigPath: absFuryctlPath,
 				WorkDir:    basePath,
 				BinPath:    flags.BinPath,
 				DistroPath: res.RepoPath,
 			}
+
+			// Set debug mode.
+			execx.Debug = flags.Debug
 
 			clusterDeleter, err := cluster.NewDeleter(
 				res.MinimalConf,
@@ -245,28 +295,40 @@ func NewClusterCmd(tracker *analytics.Tracker) *cobra.Command {
 		"WARNING: furyctl won't ask for confirmation and will force delete the cluster and its resources.",
 	)
 
+	cmd.Flags().Bool(
+		"skip-deps-download",
+		false,
+		"Skip downloading the distribution modules, installers and binaries",
+	)
+
+	cmd.Flags().Bool(
+		"skip-deps-validation",
+		false,
+		"Skip validating dependencies",
+	)
+
 	return cmd
 }
 
 func getDeleteClusterCmdFlags(cmd *cobra.Command, tracker *analytics.Tracker, cmdEvent analytics.Event) (ClusterCmdFlags, error) {
 	debug, err := cmdutil.BoolFlag(cmd, "debug", tracker, cmdEvent)
 	if err != nil {
-		return ClusterCmdFlags{}, fmt.Errorf("%w: %s", ErrParsingFlag, "debug")
+		return ClusterCmdFlags{}, fmt.Errorf(WrappedErrMessage, ErrParsingFlag, "debug")
 	}
 
 	furyctlPath, err := cmdutil.StringFlag(cmd, "config", tracker, cmdEvent)
 	if err != nil {
-		return ClusterCmdFlags{}, fmt.Errorf("%w: %s", ErrParsingFlag, "config")
+		return ClusterCmdFlags{}, fmt.Errorf(WrappedErrMessage, ErrParsingFlag, "config")
 	}
 
 	distroLocation, err := cmdutil.StringFlag(cmd, "distro-location", tracker, cmdEvent)
 	if err != nil {
-		return ClusterCmdFlags{}, fmt.Errorf("%w: %s", ErrParsingFlag, "distro-location")
+		return ClusterCmdFlags{}, fmt.Errorf(WrappedErrMessage, ErrParsingFlag, "distro-location")
 	}
 
 	phase, err := cmdutil.StringFlag(cmd, "phase", tracker, cmdEvent)
 	if err != nil {
-		return ClusterCmdFlags{}, fmt.Errorf("%w: %s", ErrParsingFlag, "phase")
+		return ClusterCmdFlags{}, fmt.Errorf(WrappedErrMessage, ErrParsingFlag, "phase")
 	}
 
 	err = cluster.CheckPhase(phase)
@@ -278,12 +340,12 @@ func getDeleteClusterCmdFlags(cmd *cobra.Command, tracker *analytics.Tracker, cm
 
 	skipVpn, err := cmdutil.BoolFlag(cmd, "skip-vpn-confirmation", tracker, cmdEvent)
 	if err != nil {
-		return ClusterCmdFlags{}, fmt.Errorf("%w: %s", ErrParsingFlag, "skip-vpn-confirmation")
+		return ClusterCmdFlags{}, fmt.Errorf(WrappedErrMessage, ErrParsingFlag, "skip-vpn-confirmation")
 	}
 
 	vpnAutoConnect, err := cmdutil.BoolFlag(cmd, "vpn-auto-connect", tracker, cmdEvent)
 	if err != nil {
-		return ClusterCmdFlags{}, fmt.Errorf("%w: %s", ErrParsingFlag, "vpn-auto-connect")
+		return ClusterCmdFlags{}, fmt.Errorf(WrappedErrMessage, ErrParsingFlag, "vpn-auto-connect")
 	}
 
 	if skipVpn && vpnAutoConnect {
@@ -296,41 +358,53 @@ func getDeleteClusterCmdFlags(cmd *cobra.Command, tracker *analytics.Tracker, cm
 
 	dryRun, err := cmdutil.BoolFlag(cmd, "dry-run", tracker, cmdEvent)
 	if err != nil {
-		return ClusterCmdFlags{}, fmt.Errorf("%w: %s", ErrParsingFlag, "dry-run")
+		return ClusterCmdFlags{}, fmt.Errorf(WrappedErrMessage, ErrParsingFlag, "dry-run")
 	}
 
 	noTTY, err := cmdutil.BoolFlag(cmd, "no-tty", tracker, cmdEvent)
 	if err != nil {
-		return ClusterCmdFlags{}, fmt.Errorf("%w: %s", ErrParsingFlag, "no-tty")
+		return ClusterCmdFlags{}, fmt.Errorf(WrappedErrMessage, ErrParsingFlag, "no-tty")
 	}
 
 	force, err := cmdutil.BoolFlag(cmd, "force", tracker, cmdEvent)
 	if err != nil {
-		return ClusterCmdFlags{}, fmt.Errorf("%w: force", ErrParsingFlag)
+		return ClusterCmdFlags{}, fmt.Errorf(WrappedErrMessage, ErrParsingFlag, "force")
 	}
 
 	https, err := cmdutil.BoolFlag(cmd, "https", tracker, cmdEvent)
 	if err != nil {
-		return ClusterCmdFlags{}, fmt.Errorf("%w: %s", ErrParsingFlag, "https")
+		return ClusterCmdFlags{}, fmt.Errorf(WrappedErrMessage, ErrParsingFlag, "https")
 	}
 
 	outdir, err := cmdutil.StringFlag(cmd, "outdir", tracker, cmdEvent)
 	if err != nil {
-		return ClusterCmdFlags{}, fmt.Errorf("%w: %s", ErrParsingFlag, "outdir")
+		return ClusterCmdFlags{}, fmt.Errorf(WrappedErrMessage, ErrParsingFlag, "outdir")
+	}
+
+	skipDepsDownload, err := cmdutil.BoolFlag(cmd, "skip-deps-download", tracker, cmdEvent)
+	if err != nil {
+		return ClusterCmdFlags{}, fmt.Errorf(WrappedErrMessage, ErrParsingFlag, "skip-deps-download")
+	}
+
+	skipDepsValidation, err := cmdutil.BoolFlag(cmd, "skip-deps-validation", tracker, cmdEvent)
+	if err != nil {
+		return ClusterCmdFlags{}, fmt.Errorf(WrappedErrMessage, ErrParsingFlag, "skip-deps-validation")
 	}
 
 	return ClusterCmdFlags{
-		Debug:          debug,
-		FuryctlPath:    furyctlPath,
-		DistroLocation: distroLocation,
-		Phase:          phase,
-		BinPath:        binPath,
-		SkipVpn:        skipVpn,
-		VpnAutoConnect: vpnAutoConnect,
-		DryRun:         dryRun,
-		Force:          force,
-		NoTTY:          noTTY,
-		HTTPS:          https,
-		Outdir:         outdir,
+		Debug:              debug,
+		FuryctlPath:        furyctlPath,
+		DistroLocation:     distroLocation,
+		Phase:              phase,
+		BinPath:            binPath,
+		SkipVpn:            skipVpn,
+		VpnAutoConnect:     vpnAutoConnect,
+		DryRun:             dryRun,
+		Force:              force,
+		NoTTY:              noTTY,
+		HTTPS:              https,
+		Outdir:             outdir,
+		SkipDepsDownload:   skipDepsDownload,
+		SkipDepsValidation: skipDepsValidation,
 	}, nil
 }
