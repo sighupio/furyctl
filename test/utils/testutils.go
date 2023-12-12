@@ -9,6 +9,7 @@ import (
 	"os/exec"
 	"path"
 	"path/filepath"
+	"strings"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -65,7 +66,7 @@ var (
 	toolFactory = tools.NewFactory(execx.NewStdExecutor(), tools.FactoryPaths{Bin: binPath})
 )
 
-func NewContextState(testName string) *ContextState {
+func NewContextState(testName string) ContextState {
 	testId := rand.Intn(100000)
 	clusterName := fmt.Sprintf("furytest-%d", testId)
 
@@ -102,7 +103,7 @@ func NewContextState(testName string) *ContextState {
 
 	Must0(os.WriteFile(testState, Must1(json.Marshal(s)), 0o644))
 
-	return &s
+	return s
 }
 
 func Must0(err error) {
@@ -122,7 +123,7 @@ func Must1[T any](t T, err error) T {
 func PrepareDirs(name string) (string, string, string) {
 	homeDir := Must1(os.UserHomeDir())
 
-	dataDir := Must1(filepath.Abs(path.Join(".", "testdata", name)))
+	dataDir := Must1(filepath.Abs(path.Join(".", "testdata", strings.ReplaceAll(name, ".", "-"))))
 
 	tmpDir := Must1(os.MkdirTemp("", name))
 
