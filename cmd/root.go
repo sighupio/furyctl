@@ -6,6 +6,7 @@ package cmd
 
 import (
 	"fmt"
+	"math/rand"
 	"os"
 	"path/filepath"
 	"time"
@@ -95,7 +96,11 @@ furyctl is a command line interface tool to manage the full lifecycle of a Kuber
 				logPath := cobrax.Flag[string](cmd, "log")
 				if logPath != "stdout" {
 					if logPath == "" {
-						logPath = filepath.Join(outDir, ".furyctl", "furyctl.log")
+						logPath = filepath.Join(
+							outDir,
+							".furyctl",
+							fmt.Sprintf("furyctl.%d-%d.log", time.Now().Unix(), rand.Intn(100000)),
+						)
 					}
 
 					logFile, err = createLogFile(logPath)
