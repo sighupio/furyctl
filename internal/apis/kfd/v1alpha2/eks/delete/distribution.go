@@ -43,6 +43,7 @@ type Distribution struct {
 func NewDistribution(
 	dryRun bool,
 	kfdManifest config.KFD,
+	infraOutputsPath string,
 	paths cluster.DeleterPaths,
 ) *Distribution {
 	phase := cluster.NewOperationPhase(
@@ -53,10 +54,11 @@ func NewDistribution(
 
 	return &Distribution{
 		Distribution: &common.Distribution{
-			OperationPhase: phase,
-			DryRun:         dryRun,
-			DistroPath:     paths.DistroPath,
-			ConfigPath:     paths.ConfigPath,
+			OperationPhase:                     phase,
+			DryRun:                             dryRun,
+			DistroPath:                         paths.DistroPath,
+			ConfigPath:                         paths.ConfigPath,
+			InfrastructureTerraformOutputsPath: infraOutputsPath,
 		},
 		tfRunner: terraform.NewRunner(
 			execx.NewStdExecutor(),
