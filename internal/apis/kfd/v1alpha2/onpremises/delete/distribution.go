@@ -15,11 +15,13 @@ import (
 	"github.com/sighupio/fury-distribution/pkg/apis/config"
 	"github.com/sighupio/fury-distribution/pkg/apis/onpremises/v1alpha2/public"
 	"github.com/sighupio/furyctl/internal/cluster"
+	"github.com/sighupio/furyctl/internal/state"
 	"github.com/sighupio/furyctl/internal/template"
 	"github.com/sighupio/furyctl/internal/tool/kubectl"
 	"github.com/sighupio/furyctl/internal/tool/shell"
 	execx "github.com/sighupio/furyctl/internal/x/exec"
 	iox "github.com/sighupio/furyctl/internal/x/io"
+	yamlx "github.com/sighupio/furyctl/internal/x/yaml"
 )
 
 type Distribution struct {
@@ -31,6 +33,7 @@ type Distribution struct {
 	dryRun      bool
 	shellRunner *shell.Runner
 	kubeRunner  *kubectl.Runner
+	stateStore  state.Storer
 }
 
 func (d *Distribution) Exec() error {
@@ -41,8 +44,7 @@ func (d *Distribution) Exec() error {
 	}
 
 	if _, err := os.Stat(path.Join(d.OperationPhase.Path, "manifests")); os.IsNotExist(err) {
-		err = os.Mkdir(path.Join(d.OperationPhase.Path, "manifests"), iox.FullPermAccess)
-		if err != nil {
+		if err := os.Mkdir(path.Join(d.OperationPhase.Path, "manifests"), iox.FullPermAccess); err != nil {
 			return fmt.Errorf("error creating manifests folder: %w", err)
 		}
 	}
@@ -50,6 +52,7 @@ func (d *Distribution) Exec() error {
 	furyctlMerger, err := d.CreateFuryctlMerger(
 		d.paths.DistroPath,
 		d.paths.ConfigPath,
+		"kfd-v1alpha2",
 		"onpremises",
 	)
 	if err != nil {
@@ -89,6 +92,11 @@ func (d *Distribution) Exec() error {
 		"storageClassAvailable": storageClassAvailable,
 	}
 
+	mCfg, err = d.injectStoredConfig(mCfg)
+	if err != nil {
+		return fmt.Errorf("error injecting stored config: %w", err)
+	}
+
 	if err := d.CopyFromTemplate(
 		mCfg,
 		"distribution",
@@ -115,6 +123,25 @@ func (d *Distribution) Exec() error {
 	logrus.Info("Kubernetes Fury Distribution deleted successfully")
 
 	return nil
+}
+
+func (d *Distribution) injectStoredConfig(cfg template.Config) (template.Config, error) {
+	storedCfg := map[any]any{}
+
+	storedCfgStr, err := d.stateStore.GetConfig()
+	if err != nil {
+		logrus.Debugf("error while getting current config, skipping stored config injection: %s", err)
+
+		return cfg, nil
+	}
+
+	if err = yamlx.UnmarshalV3(storedCfgStr, &storedCfg); err != nil {
+		return cfg, fmt.Errorf("error while unmarshalling config file: %w", err)
+	}
+
+	cfg.Data["storedCfg"] = storedCfg
+
+	return cfg, nil
 }
 
 func NewDistribution(
@@ -151,6 +178,13 @@ func NewDistribution(
 			true,
 			true,
 			false,
+		),
+		stateStore: state.NewStore(
+			paths.DistroPath,
+			paths.ConfigPath,
+			paths.WorkDir,
+			kfdManifest.Tools.Common.Kubectl.Version,
+			paths.BinPath,
 		),
 	}
 }
