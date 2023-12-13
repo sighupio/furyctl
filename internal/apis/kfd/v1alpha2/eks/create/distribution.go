@@ -29,7 +29,6 @@ import (
 	"github.com/sighupio/furyctl/internal/upgrade"
 	execx "github.com/sighupio/furyctl/internal/x/exec"
 	iox "github.com/sighupio/furyctl/internal/x/io"
-	yamlx "github.com/sighupio/furyctl/internal/x/yaml"
 )
 
 const (
@@ -39,24 +38,13 @@ const (
 	LifecyclePostApply = "post-apply"
 )
 
-var (
-	errCastingEbsIamToStr    = errors.New("error casting ebs_csi_driver_iam_role_arn output to string")
-	errCastingLbIamToStr     = errors.New("error casting load_balancer_controller_iam_role_arn output to string")
-	errCastingClsAsIamToStr  = errors.New("error casting cluster_autoscaler_iam_role_arn output to string")
-	errCastingDNSPvtIamToStr = errors.New("error casting external_dns_private_iam_role_arn output to string")
-	errCastingDNSPubIamToStr = errors.New("error casting external_dns_public_iam_role_arn output to string")
-	errCastingCertIamToStr   = errors.New("error casting cert_manager_iam_role_arn output to string")
-	errCastingVelIamToStr    = errors.New("error casting velero_iam_role_arn output to string")
-	errClusterConnect        = errors.New("error connecting to cluster")
-)
+var errClusterConnect = errors.New("error connecting to cluster")
 
 type Distribution struct {
 	*common.Distribution
 
-	furyctlConf private.EksclusterKfdV1Alpha2
 	kfdManifest config.KFD
-	stateStore  state.Storer
-	tfRunner    *terraform.Runner
+
 	shellRunner *shell.Runner
 	kubeRunner  *kubectl.Runner
 	phase       string
@@ -90,26 +78,26 @@ func NewDistribution(
 			DistroPath:                         paths.DistroPath,
 			ConfigPath:                         paths.ConfigPath,
 			InfrastructureTerraformOutputsPath: infraOutputsPath,
+			FuryctlConf:                        furyctlConf,
+			StateStore: state.NewStore(
+				paths.DistroPath,
+				paths.ConfigPath,
+				paths.WorkDir,
+				kfdManifest.Tools.Common.Kubectl.Version,
+				paths.BinPath,
+			),
+			TFRunner: terraform.NewRunner(
+				execx.NewStdExecutor(),
+				terraform.Paths{
+					Logs:      phaseOp.TerraformLogsPath,
+					Outputs:   phaseOp.TerraformOutputsPath,
+					WorkDir:   path.Join(phaseOp.Path, "terraform"),
+					Plan:      phaseOp.TerraformPlanPath,
+					Terraform: phaseOp.TerraformPath,
+				},
+			),
 		},
-		furyctlConf: furyctlConf,
 		kfdManifest: kfdManifest,
-		stateStore: state.NewStore(
-			paths.DistroPath,
-			paths.ConfigPath,
-			paths.WorkDir,
-			kfdManifest.Tools.Common.Kubectl.Version,
-			paths.BinPath,
-		),
-		tfRunner: terraform.NewRunner(
-			execx.NewStdExecutor(),
-			terraform.Paths{
-				Logs:      phaseOp.TerraformLogsPath,
-				Outputs:   phaseOp.TerraformOutputsPath,
-				WorkDir:   path.Join(phaseOp.Path, "terraform"),
-				Plan:      phaseOp.TerraformPlanPath,
-				Terraform: phaseOp.TerraformPath,
-			},
-		),
 		shellRunner: shell.NewRunner(
 			execx.NewStdExecutor(),
 			shell.Paths{
@@ -156,16 +144,16 @@ func (d *Distribution) Exec(
 
 	logrus.Info("Installing Kubernetes Fury Distribution...")
 
-	furyctlMerger, preTfMerger, tfCfg, err := d.Prepare()
+	furyctlMerger, preTfMerger, tfCfg, err := d.PreparePreTerraform()
 	if err != nil {
-		return fmt.Errorf("error preparing distribution phase: %w", err)
+		return fmt.Errorf("error preparing distribution phase (pre terraform): %w", err)
 	}
 
-	if err = d.injectStoredConfig(tfCfg); err != nil {
+	if err = d.InjectStoredConfig(tfCfg); err != nil {
 		return fmt.Errorf("error injecting stored config: %w", err)
 	}
 
-	if err := d.tfRunner.Init(); err != nil {
+	if err := d.TFRunner.Init(); err != nil {
 		return fmt.Errorf("error running terraform init: %w", err)
 	}
 
@@ -235,7 +223,7 @@ func (d *Distribution) coreDistribution(
 			return fmt.Errorf("error running pre-tf reducers: %w", err)
 		}
 
-		if _, err := d.tfRunner.Plan(timestamp); err != nil && !d.DryRun {
+		if _, err := d.TFRunner.Plan(timestamp); err != nil && !d.DryRun {
 			return fmt.Errorf("error running terraform plan: %w", err)
 		}
 
@@ -244,7 +232,7 @@ func (d *Distribution) coreDistribution(
 				return fmt.Errorf("error creating dummy output: %w", err)
 			}
 
-			postTfMerger, err := d.injectDataPostTf(preTfMerger)
+			postTfMerger, err := d.InjectDataPostTf(preTfMerger)
 			if err != nil {
 				return err
 			}
@@ -275,45 +263,23 @@ func (d *Distribution) coreDistribution(
 
 		logrus.Warn("Creating cloud resources, this could take a while...")
 
-		if err := d.tfRunner.Apply(timestamp); err != nil {
+		if err := d.TFRunner.Apply(timestamp); err != nil {
 			return fmt.Errorf("cannot create cloud resources: %w", err)
 		}
 
-		if _, err := d.tfRunner.Output(); err != nil {
+		if _, err := d.TFRunner.Output(); err != nil {
 			return fmt.Errorf("error running terraform output: %w", err)
 		}
 
-		postTfMerger, err := d.injectDataPostTf(preTfMerger)
+		mCfg, err := d.PreparePostTerraform(
+			furyctlMerger,
+			preTfMerger,
+		)
 		if err != nil {
-			return err
+			return fmt.Errorf("error preparing distribution phase (post terraform): %w", err)
 		}
 
-		mCfg, err := template.NewConfig(furyctlMerger, postTfMerger, []string{"terraform", ".gitignore"})
-		if err != nil {
-			return fmt.Errorf("error creating template config: %w", err)
-		}
-
-		d.CopyPathsToConfig(&mCfg)
-
-		mCfg.Data["checks"] = map[any]any{
-			"storageClassAvailable": true,
-		}
-
-		if err = d.injectStoredConfig(&mCfg); err != nil {
-			return fmt.Errorf("error injecting stored config: %w", err)
-		}
-
-		if err := d.CopyFromTemplate(
-			mCfg,
-			"distribution",
-			path.Join(d.paths.DistroPath, "templates", cluster.OperationPhaseDistribution),
-			d.Path,
-			d.paths.ConfigPath,
-		); err != nil {
-			return fmt.Errorf("error copying from template: %w", err)
-		}
-
-		if err := d.runReducers(reducers, &mCfg, LifecyclePostTf, []string{"manifests", ".gitignore"}); err != nil {
+		if err := d.runReducers(reducers, mCfg, LifecyclePostTf, []string{"manifests", ".gitignore"}); err != nil {
 			return fmt.Errorf("error running post-tf reducers: %w", err)
 		}
 
@@ -323,7 +289,7 @@ func (d *Distribution) coreDistribution(
 			return fmt.Errorf("error checking cluster reachability: %w", err)
 		}
 
-		if err := d.runReducers(reducers, &mCfg, LifecyclePreApply, []string{"manifests", ".gitignore"}); err != nil {
+		if err := d.runReducers(reducers, mCfg, LifecyclePreApply, []string{"manifests", ".gitignore"}); err != nil {
 			return fmt.Errorf("error running pre-apply reducers: %w", err)
 		}
 
@@ -341,7 +307,7 @@ func (d *Distribution) coreDistribution(
 			upgradeState.Phases.Distribution.Status = upgrade.PhaseStatusSuccess
 		}
 
-		if err := d.runReducers(reducers, &mCfg, LifecyclePostApply, []string{"manifests", ".gitignore"}); err != nil {
+		if err := d.runReducers(reducers, mCfg, LifecyclePostApply, []string{"manifests", ".gitignore"}); err != nil {
 			return fmt.Errorf("error running post-apply reducers: %w", err)
 		}
 	}
@@ -378,25 +344,6 @@ func (d *Distribution) checkKubeVersion() error {
 				"running the command without --dry-run")
 		}
 	}
-
-	return nil
-}
-
-func (d *Distribution) injectStoredConfig(cfg *template.Config) error {
-	storedCfg := map[any]any{}
-
-	storedCfgStr, err := d.stateStore.GetConfig()
-	if err != nil {
-		logrus.Debugf("error while getting current config, skipping stored config injection: %s", err)
-
-		return nil
-	}
-
-	if err = yamlx.UnmarshalV3(storedCfgStr, &storedCfg); err != nil {
-		return fmt.Errorf("error while unmarshalling config file: %w", err)
-	}
-
-	cfg.Data["storedCfg"] = storedCfg
 
 	return nil
 }
@@ -446,7 +393,7 @@ func (d *Distribution) Stop() error {
 	go func() {
 		logrus.Debug("Stopping terraform...")
 
-		if err := d.tfRunner.Stop(); err != nil {
+		if err := d.TFRunner.Stop(); err != nil {
 			errCh <- fmt.Errorf("error stopping terraform: %w", err)
 		}
 
@@ -490,68 +437,6 @@ func (d *Distribution) Stop() error {
 	return nil
 }
 
-func (d *Distribution) injectDataPostTf(fMerger *merge.Merger) (*merge.Merger, error) {
-	arns, err := d.extractARNsFromTfOut()
-	if err != nil {
-		return nil, err
-	}
-
-	injectData := injectType{
-		Data: private.SpecDistribution{
-			Modules: private.SpecDistributionModules{
-				Aws: &private.SpecDistributionModulesAws{
-					EbsCsiDriver: private.SpecDistributionModulesAwsEbsCsiDriver{
-						IamRoleArn: private.TypesAwsArn(arns["ebs_csi_driver_iam_role_arn"]),
-					},
-					LoadBalancerController: private.SpecDistributionModulesAwsLoadBalancerController{
-						IamRoleArn: private.TypesAwsArn(arns["load_balancer_controller_iam_role_arn"]),
-					},
-					ClusterAutoscaler: private.SpecDistributionModulesAwsClusterAutoscaler{
-						IamRoleArn: private.TypesAwsArn(arns["cluster_autoscaler_iam_role_arn"]),
-					},
-				},
-				Ingress: private.SpecDistributionModulesIngress{
-					ExternalDns: private.SpecDistributionModulesIngressExternalDNS{
-						PrivateIamRoleArn: private.TypesAwsArn(arns["external_dns_private_iam_role_arn"]),
-						PublicIamRoleArn:  private.TypesAwsArn(arns["external_dns_public_iam_role_arn"]),
-					},
-					CertManager: private.SpecDistributionModulesIngressCertManager{
-						ClusterIssuer: private.SpecDistributionModulesIngressCertManagerClusterIssuer{
-							Route53: private.SpecDistributionModulesIngressClusterIssuerRoute53{
-								IamRoleArn: private.TypesAwsArn(arns["cert_manager_iam_role_arn"]),
-							},
-						},
-					},
-				},
-			},
-		},
-	}
-
-	if d.furyctlConf.Spec.Distribution.Modules.Dr.Type == "eks" {
-		injectData.Data.Modules.Dr = private.SpecDistributionModulesDr{
-			Velero: &private.SpecDistributionModulesDrVelero{
-				Eks: private.SpecDistributionModulesDrVeleroEks{
-					IamRoleArn: private.TypesAwsArn(arns["velero_iam_role_arn"]),
-				},
-			},
-		}
-	}
-
-	injectDataModel := merge.NewDefaultModelFromStruct(injectData, ".data", true)
-
-	merger := merge.NewMerger(
-		*fMerger.GetBase(),
-		injectDataModel,
-	)
-
-	_, err = merger.Merge()
-	if err != nil {
-		return nil, fmt.Errorf("error merging furyctl config: %w", err)
-	}
-
-	return merger, nil
-}
-
 func (d *Distribution) createDummyOutput() error {
 	arns := map[string]string{
 		"ebs_csi_driver_iam_role_arn":           "arn:aws:iam::123456789012:role/dummy",
@@ -583,71 +468,4 @@ func (d *Distribution) createDummyOutput() error {
 	}
 
 	return nil
-}
-
-func (d *Distribution) extractARNsFromTfOut() (map[string]string, error) {
-	arns := map[string]string{}
-
-	out, err := d.tfRunner.Output()
-	if err != nil {
-		return nil, fmt.Errorf("error getting terraform output: %w", err)
-	}
-
-	ebsCsiDriverArn, ok := out["ebs_csi_driver_iam_role_arn"]
-	if ok {
-		arns["ebs_csi_driver_iam_role_arn"], ok = ebsCsiDriverArn.Value.(string)
-		if !ok {
-			return nil, errCastingEbsIamToStr
-		}
-	}
-
-	loadBalancerControllerArn, ok := out["load_balancer_controller_iam_role_arn"]
-	if ok {
-		arns["load_balancer_controller_iam_role_arn"], ok = loadBalancerControllerArn.Value.(string)
-		if !ok {
-			return nil, errCastingLbIamToStr
-		}
-	}
-
-	clusterAutoscalerArn, ok := out["cluster_autoscaler_iam_role_arn"]
-	if ok {
-		arns["cluster_autoscaler_iam_role_arn"], ok = clusterAutoscalerArn.Value.(string)
-		if !ok {
-			return nil, errCastingClsAsIamToStr
-		}
-	}
-
-	externalDNSPrivateArn, ok := out["external_dns_private_iam_role_arn"]
-	if ok {
-		arns["external_dns_private_iam_role_arn"], ok = externalDNSPrivateArn.Value.(string)
-		if !ok {
-			return nil, errCastingDNSPvtIamToStr
-		}
-	}
-
-	externalDNSPublicArn, ok := out["external_dns_public_iam_role_arn"]
-	if ok {
-		arns["external_dns_public_iam_role_arn"], ok = externalDNSPublicArn.Value.(string)
-		if !ok {
-			return nil, errCastingDNSPubIamToStr
-		}
-	}
-
-	certManagerArn, ok := out["cert_manager_iam_role_arn"]
-	if ok {
-		arns["cert_manager_iam_role_arn"], ok = certManagerArn.Value.(string)
-		if !ok {
-			return nil, errCastingCertIamToStr
-		}
-	}
-
-	veleroArn, ok := out["velero_iam_role_arn"]
-	if ok {
-		arns["velero_iam_role_arn"], ok = veleroArn.Value.(string)
-		if !ok {
-			return nil, errCastingVelIamToStr
-		}
-	}
-
-	return arns, nil
 }

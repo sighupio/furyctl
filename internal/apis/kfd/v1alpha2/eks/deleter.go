@@ -101,6 +101,7 @@ func (d *ClusterDeleter) Delete() error {
 		d.kfdManifest,
 		infra.Self().TerraformOutputsPath,
 		d.paths,
+		d.furyctlConf,
 	)
 
 	kube := del.NewKubernetes(d.furyctlConf,
@@ -129,7 +130,14 @@ func (d *ClusterDeleter) Delete() error {
 		return fmt.Errorf("error while creating vpn connector: %w", err)
 	}
 
-	preflight, err := del.NewPreFlight(d.furyctlConf, d.kfdManifest, d.paths, d.vpnAutoConnect, d.skipVpn)
+	preflight, err := del.NewPreFlight(
+		d.furyctlConf,
+		d.kfdManifest,
+		d.paths,
+		d.vpnAutoConnect,
+		d.skipVpn,
+		infra.Self().TerraformOutputsPath,
+	)
 	if err != nil {
 		return fmt.Errorf("error while creating preflight phase: %w", err)
 	}
