@@ -28,7 +28,6 @@ var ErrClusterDoesNotExist = errors.New("cluster does not exist, nothing to dele
 type PreFlight struct {
 	*common.PreFlight
 
-	vpnConnector *vpn.Connector
 	tfRunnerKube *terraform.Runner
 	kubeRunner   *kubectl.Runner
 }
@@ -39,6 +38,7 @@ func NewPreFlight(
 	paths cluster.DeleterPaths,
 	vpnAutoConnect bool,
 	skipVpn bool,
+	infraOutputsPath string,
 ) (*PreFlight, error) {
 	phase := cluster.NewOperationPhase(
 		path.Join(paths.WorkDir, cluster.OperationPhasePreFlight),
@@ -76,6 +76,16 @@ func NewPreFlight(
 					WorkDir: paths.WorkDir,
 				},
 			),
+			VPNConnector: vpnConnector,
+			TFRunnerInfra: terraform.NewRunner(
+				execx.NewStdExecutor(),
+				terraform.Paths{
+					WorkDir:   path.Join(phase.Path, "terraform", "infrastructure"),
+					Terraform: phase.TerraformPath,
+					Outputs:   infraOutputsPath,
+				},
+			),
+			InfrastructureTerraformOutputsPath: infraOutputsPath,
 		},
 		tfRunnerKube: terraform.NewRunner(
 			execx.NewStdExecutor(),
@@ -94,7 +104,6 @@ func NewPreFlight(
 			true,
 			false,
 		),
-		vpnConnector: vpnConnector,
 	}, nil
 }
 
@@ -116,7 +125,11 @@ func (p *PreFlight) Exec() error {
 	}
 
 	if _, err := p.tfRunnerKube.State("show", "data.aws_eks_cluster.fury"); err != nil {
-		return ErrClusterDoesNotExist
+		logrus.Debug("Cluster does not exist, skipping state checks")
+
+		logrus.Info("Preflight checks completed successfully")
+
+		return nil //nolint:nilerr // we want to return nil here
 	}
 
 	kubeconfig := path.Join(p.Path, "secrets", "kubeconfig")
@@ -150,6 +163,14 @@ func (p *PreFlight) Exec() error {
 
 	if _, err := p.kubeRunner.Version(); err != nil {
 		return fmt.Errorf("cluster is unreachable, make sure you have access to the cluster: %w", err)
+	}
+
+	if err := p.TFRunnerInfra.Init(); err != nil {
+		return fmt.Errorf("error running terraform init: %w", err)
+	}
+
+	if _, err := p.TFRunnerInfra.Output(); err != nil {
+		return fmt.Errorf("error getting terraform output: %w", err)
 	}
 
 	logrus.Info("Preflight checks completed successfully")

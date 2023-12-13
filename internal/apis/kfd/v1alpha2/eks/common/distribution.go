@@ -6,6 +6,7 @@ package common
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"path"
@@ -13,8 +14,21 @@ import (
 	"github.com/sighupio/fury-distribution/pkg/apis/ekscluster/v1alpha2/private"
 	"github.com/sighupio/furyctl/internal/cluster"
 	"github.com/sighupio/furyctl/internal/merge"
+	"github.com/sighupio/furyctl/internal/state"
 	"github.com/sighupio/furyctl/internal/template"
 	"github.com/sighupio/furyctl/internal/tool/terraform"
+	yamlx "github.com/sighupio/furyctl/internal/x/yaml"
+	"github.com/sirupsen/logrus"
+)
+
+var (
+	errCastingEbsIamToStr    = errors.New("error casting ebs_csi_driver_iam_role_arn output to string")
+	errCastingLbIamToStr     = errors.New("error casting load_balancer_controller_iam_role_arn output to string")
+	errCastingClsAsIamToStr  = errors.New("error casting cluster_autoscaler_iam_role_arn output to string")
+	errCastingDNSPvtIamToStr = errors.New("error casting external_dns_private_iam_role_arn output to string")
+	errCastingDNSPubIamToStr = errors.New("error casting external_dns_public_iam_role_arn output to string")
+	errCastingCertIamToStr   = errors.New("error casting cert_manager_iam_role_arn output to string")
+	errCastingVelIamToStr    = errors.New("error casting velero_iam_role_arn output to string")
 )
 
 type Distribution struct {
@@ -24,13 +38,16 @@ type Distribution struct {
 	DistroPath                         string
 	ConfigPath                         string
 	InfrastructureTerraformOutputsPath string
+	FuryctlConf                        private.EksclusterKfdV1Alpha2
+	StateStore                         state.Storer
+	TFRunner                           *terraform.Runner
 }
 
 type InjectType struct {
 	Data private.SpecDistribution `json:"data"`
 }
 
-func (d *Distribution) Prepare() (
+func (d *Distribution) PreparePreTerraform() (
 	*merge.Merger,
 	*merge.Merger,
 	*template.Config,
@@ -150,4 +167,189 @@ func (d *Distribution) extractVpcIDFromPrevPhases(fMerger *merge.Merger) (string
 	}
 
 	return vpcID, nil
+}
+
+func (d *Distribution) PreparePostTerraform(
+	furyctlMerger *merge.Merger,
+	preTfMerger *merge.Merger,
+) (*template.Config, error) {
+	postTfMerger, err := d.InjectDataPostTf(preTfMerger)
+	if err != nil {
+		return nil, err
+	}
+
+	mCfg, err := template.NewConfig(furyctlMerger, postTfMerger, []string{"terraform", ".gitignore"})
+	if err != nil {
+		return nil, fmt.Errorf("error creating template config: %w", err)
+	}
+
+	d.CopyPathsToConfig(&mCfg)
+
+	mCfg.Data["checks"] = map[any]any{
+		"storageClassAvailable": true,
+	}
+
+	if err = d.InjectStoredConfig(&mCfg); err != nil {
+		return nil, fmt.Errorf("error injecting stored config: %w", err)
+	}
+
+	if err := d.CopyFromTemplate(
+		mCfg,
+		"distribution",
+		path.Join(d.DistroPath, "templates", cluster.OperationPhaseDistribution),
+		d.Path,
+		d.ConfigPath,
+	); err != nil {
+		return nil, fmt.Errorf("error copying from template: %w", err)
+	}
+
+	return &mCfg, nil
+}
+
+func (d *Distribution) InjectStoredConfig(cfg *template.Config) error {
+	storedCfg := map[any]any{}
+
+	storedCfgStr, err := d.StateStore.GetConfig()
+	if err != nil {
+		logrus.Debugf("error while getting current config, skipping stored config injection: %s", err)
+
+		return nil
+	}
+
+	if err = yamlx.UnmarshalV3(storedCfgStr, &storedCfg); err != nil {
+		return fmt.Errorf("error while unmarshalling config file: %w", err)
+	}
+
+	cfg.Data["storedCfg"] = storedCfg
+
+	return nil
+}
+
+func (d *Distribution) InjectDataPostTf(fMerger *merge.Merger) (*merge.Merger, error) {
+	arns, err := d.extractARNsFromTfOut()
+	if err != nil {
+		return nil, err
+	}
+
+	injectData := InjectType{
+		Data: private.SpecDistribution{
+			Modules: private.SpecDistributionModules{
+				Aws: &private.SpecDistributionModulesAws{
+					EbsCsiDriver: private.SpecDistributionModulesAwsEbsCsiDriver{
+						IamRoleArn: private.TypesAwsArn(arns["ebs_csi_driver_iam_role_arn"]),
+					},
+					LoadBalancerController: private.SpecDistributionModulesAwsLoadBalancerController{
+						IamRoleArn: private.TypesAwsArn(arns["load_balancer_controller_iam_role_arn"]),
+					},
+					ClusterAutoscaler: private.SpecDistributionModulesAwsClusterAutoscaler{
+						IamRoleArn: private.TypesAwsArn(arns["cluster_autoscaler_iam_role_arn"]),
+					},
+				},
+				Ingress: private.SpecDistributionModulesIngress{
+					ExternalDns: private.SpecDistributionModulesIngressExternalDNS{
+						PrivateIamRoleArn: private.TypesAwsArn(arns["external_dns_private_iam_role_arn"]),
+						PublicIamRoleArn:  private.TypesAwsArn(arns["external_dns_public_iam_role_arn"]),
+					},
+					CertManager: private.SpecDistributionModulesIngressCertManager{
+						ClusterIssuer: private.SpecDistributionModulesIngressCertManagerClusterIssuer{
+							Route53: private.SpecDistributionModulesIngressClusterIssuerRoute53{
+								IamRoleArn: private.TypesAwsArn(arns["cert_manager_iam_role_arn"]),
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	if d.FuryctlConf.Spec.Distribution.Modules.Dr.Type == "eks" {
+		injectData.Data.Modules.Dr = private.SpecDistributionModulesDr{
+			Velero: &private.SpecDistributionModulesDrVelero{
+				Eks: private.SpecDistributionModulesDrVeleroEks{
+					IamRoleArn: private.TypesAwsArn(arns["velero_iam_role_arn"]),
+				},
+			},
+		}
+	}
+
+	injectDataModel := merge.NewDefaultModelFromStruct(injectData, ".data", true)
+
+	merger := merge.NewMerger(
+		*fMerger.GetBase(),
+		injectDataModel,
+	)
+
+	_, err = merger.Merge()
+	if err != nil {
+		return nil, fmt.Errorf("error merging furyctl config: %w", err)
+	}
+
+	return merger, nil
+}
+
+func (d *Distribution) extractARNsFromTfOut() (map[string]string, error) {
+	arns := map[string]string{}
+
+	out, err := d.TFRunner.Output()
+	if err != nil {
+		return nil, fmt.Errorf("error getting terraform output: %w", err)
+	}
+
+	ebsCsiDriverArn, ok := out["ebs_csi_driver_iam_role_arn"]
+	if ok {
+		arns["ebs_csi_driver_iam_role_arn"], ok = ebsCsiDriverArn.Value.(string)
+		if !ok {
+			return nil, errCastingEbsIamToStr
+		}
+	}
+
+	loadBalancerControllerArn, ok := out["load_balancer_controller_iam_role_arn"]
+	if ok {
+		arns["load_balancer_controller_iam_role_arn"], ok = loadBalancerControllerArn.Value.(string)
+		if !ok {
+			return nil, errCastingLbIamToStr
+		}
+	}
+
+	clusterAutoscalerArn, ok := out["cluster_autoscaler_iam_role_arn"]
+	if ok {
+		arns["cluster_autoscaler_iam_role_arn"], ok = clusterAutoscalerArn.Value.(string)
+		if !ok {
+			return nil, errCastingClsAsIamToStr
+		}
+	}
+
+	externalDNSPrivateArn, ok := out["external_dns_private_iam_role_arn"]
+	if ok {
+		arns["external_dns_private_iam_role_arn"], ok = externalDNSPrivateArn.Value.(string)
+		if !ok {
+			return nil, errCastingDNSPvtIamToStr
+		}
+	}
+
+	externalDNSPublicArn, ok := out["external_dns_public_iam_role_arn"]
+	if ok {
+		arns["external_dns_public_iam_role_arn"], ok = externalDNSPublicArn.Value.(string)
+		if !ok {
+			return nil, errCastingDNSPubIamToStr
+		}
+	}
+
+	certManagerArn, ok := out["cert_manager_iam_role_arn"]
+	if ok {
+		arns["cert_manager_iam_role_arn"], ok = certManagerArn.Value.(string)
+		if !ok {
+			return nil, errCastingCertIamToStr
+		}
+	}
+
+	veleroArn, ok := out["velero_iam_role_arn"]
+	if ok {
+		arns["velero_iam_role_arn"], ok = veleroArn.Value.(string)
+		if !ok {
+			return nil, errCastingVelIamToStr
+		}
+	}
+
+	return arns, nil
 }

@@ -60,6 +60,7 @@ func NewPreFlight(
 	vpnAutoConnect bool,
 	skipVpn bool,
 	force bool,
+	infraOutputsPath string,
 ) (*PreFlight, error) {
 	phase := cluster.NewOperationPhase(
 		path.Join(paths.WorkDir, cluster.OperationPhasePreFlight),
@@ -105,6 +106,7 @@ func NewPreFlight(
 					Terraform: phase.TerraformPath,
 				},
 			),
+			InfrastructureTerraformOutputsPath: infraOutputsPath,
 		},
 		stateStore: state.NewStore(
 			paths.DistroPath,
@@ -120,7 +122,6 @@ func NewPreFlight(
 				Terraform: phase.TerraformPath,
 			},
 		),
-
 		kubeRunner: kubectl.NewRunner(
 			execx.NewStdExecutor(),
 			kubectl.Paths{

@@ -113,7 +113,11 @@ func (p *PreFlight) Exec() error {
 	}
 
 	if _, err := p.ansibleRunner.Playbook("verify-playbook.yaml"); err != nil {
-		return fmt.Errorf("error verifying cluster: %w", err)
+		logrus.Debug("Cluster does not exist, skipping state checks")
+
+		logrus.Info("Preflight checks completed successfully")
+
+		return nil //nolint:nilerr // we want to return nil here
 	}
 
 	if err := kubex.SetConfigEnv(path.Join(p.Path, "admin.conf")); err != nil {
