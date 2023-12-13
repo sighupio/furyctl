@@ -166,5 +166,5 @@ var (
 		}
 	}
 
-	_ = Describe("furyctl & distro v1.25.8", Ordered, Serial, CreateAndDeleteTestScenario("1.25.8"))
+	_ = Describe("furyctl & distro v1.25.8 - minimal", Ordered, Serial, CreateAndDeleteTestScenario("1.25.8"))
 )
