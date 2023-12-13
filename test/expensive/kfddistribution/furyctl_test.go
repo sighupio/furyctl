@@ -7,11 +7,8 @@
 package kfddistribution_test
 
 import (
-	"bytes"
 	"context"
-	"encoding/json"
 	"fmt"
-	"math/rand"
 	"os"
 	"os/exec"
 	"path"
@@ -26,73 +23,21 @@ import (
 	"sigs.k8s.io/e2e-framework/support"
 	"sigs.k8s.io/e2e-framework/support/kind"
 
+	. "github.com/sighupio/furyctl/test/utils"
+
 	"github.com/sighupio/furyctl/internal/cluster"
-	"github.com/sighupio/furyctl/internal/dependencies/tools"
-	"github.com/sighupio/furyctl/internal/distribution"
-	"github.com/sighupio/furyctl/internal/tool"
-	execx "github.com/sighupio/furyctl/internal/x/exec"
-	iox "github.com/sighupio/furyctl/internal/x/io"
-	netx "github.com/sighupio/furyctl/internal/x/net"
-	osx "github.com/sighupio/furyctl/internal/x/os"
-	yamlx "github.com/sighupio/furyctl/internal/x/yaml"
 )
 
-type conf struct {
-	APIVersion string   `yaml:"apiVersion" validate:"required,api-version"`
-	Kind       string   `yaml:"kind"       validate:"required,cluster-kind"`
-	Metadata   confMeta `yaml:"metadata"   validate:"required"`
-	Spec       confSpec `yaml:"spec"       validate:"required"`
+type distroContextState struct {
+	*ContextState
+	Cluster support.E2EClusterProvider
 }
 
-type confSpec struct {
-	DistributionVersion string `yaml:"distributionVersion" validate:"required"`
-}
-
-type confMeta struct {
-	Name string `yaml:"name" validate:"required"`
-}
-
-type contextState struct {
-	TestId      int
-	TestName    string
-	Cluster     support.E2EClusterProvider
-	ClusterName string
-	Kubeconfig  string
-	HomeDir     string
-	DataDir     string
-	DistroDir   string
-	TestDir     string
-	TmpDir      string
-}
-
-func newContextState(testName string) *contextState {
-	testId := rand.Intn(100000)
-	clusterName := fmt.Sprintf("furytest-%d", testId)
-
-	homeDir, dataDir, distroDir, tmpDir := PrepareDirs(testName)
-
-	testDir := path.Join(homeDir, ".furyctl", "tests", testName)
-	testState := path.Join(testDir, fmt.Sprintf("%s.teststate", clusterName))
-
-	kubeconfig := path.Join(testDir, "kubeconfig")
-
-	Must0(os.MkdirAll(testDir, 0o755))
-
-	s := contextState{
-		TestId:      testId,
-		TestName:    testName,
-		ClusterName: clusterName,
-		Kubeconfig:  kubeconfig,
-		HomeDir:     homeDir,
-		DataDir:     dataDir,
-		DistroDir:   distroDir,
-		TestDir:     testDir,
-		TmpDir:      tmpDir,
+func newDistroContextState(cluster support.E2EClusterProvider, state *ContextState) *distroContextState {
+	return &distroContextState{
+		ContextState: state,
+		Cluster:      cluster,
 	}
-
-	Must0(os.WriteFile(testState, Must1(json.Marshal(s)), 0o644))
-
-	return &s
 }
 
 func TestExpensive(t *testing.T) {
@@ -100,288 +45,126 @@ func TestExpensive(t *testing.T) {
 	RunSpecs(t, "Furyctl Expensive Suite")
 }
 
-func Must0(err error) {
-	if err != nil {
-		panic(err)
-	}
-}
-
-func Must1[T any](t T, err error) T {
-	if err != nil {
-		panic(err)
-	}
-
-	return t
-}
-
 var (
-	furyctl string
-
-	basePath = "../../data/expensive"
-
-	binPath = filepath.Join(os.TempDir(), "bin")
-
-	client = netx.NewGoGetterClient()
-
-	distrodl = distribution.NewDownloader(client, true)
-
-	toolFactory = tools.NewFactory(execx.NewStdExecutor(), tools.FactoryPaths{Bin: binPath})
+	furyctl = filepath.Join(Must1(os.MkdirTemp("", "furyctl-expensive-kfddistribution")), "furyctl")
 
 	assertTimeout = 30 * time.Minute
 
 	assertPollingInterval = 10 * time.Second
 
-	_ = BeforeSuite(func() {
-		tmpDir := Must1(os.MkdirTemp("", "furyctl-expensive-kfddistribution"))
+	_ = BeforeSuite(CompileFuryctl(furyctl))
 
-		furyctl = filepath.Join(tmpDir, "furyctl")
+	BeforeCreateDeleteTestFunc = func(state *distroContextState, version string) func() {
+		return func() {
+			testName := fmt.Sprintf("kfddistribution-v%s-create-and-delete", version)
 
-		cmd := exec.Command("go", "build", "-o", furyctl, "../../../main.go")
+			ctxState := NewContextState(testName)
 
-		session := Must1(gexec.Start(cmd, GinkgoWriter, GinkgoWriter))
+			ctxState.Kubeconfig = path.Join(ctxState.TestDir, "kubeconfig")
 
-		Eventually(session, 5*time.Minute).Should(gexec.Exit(0))
-	})
+			k := kind.NewProvider().SetDefaults().WithName(testName).WithOpts(kind.WithImage("kindest/node:v1.25.9"))
 
-	DownloadFuryDistribution = func(furyctlConfPath string) distribution.DownloadResult {
-		absBasePath := Must1(filepath.Abs(basePath))
+			kubecfg, err := k.CreateWithConfig(context.Background(), fmt.Sprintf("%s/kind-config.yml", ctxState.DataDir))
+			Expect(err).To(Not(HaveOccurred()))
 
-		commonDir := path.Join(absBasePath, "common")
+			*state = *newDistroContextState(k, &ctxState)
 
-		dlRes := Must1(distrodl.Download(commonDir, furyctlConfPath))
+			Copy(kubecfg, fmt.Sprintf("%s/kubeconfig", ctxState.DataDir))
 
-		return dlRes
+			GinkgoWriter.Write([]byte(fmt.Sprintf("Test id: %d", state.TestId)))
+
+			Copy(fmt.Sprintf("%s/kubeconfig", ctxState.DataDir), state.Kubeconfig)
+
+			os.Setenv("KUBECONFIG", state.Kubeconfig)
+
+			client, err := klient.New(k.KubernetesRestConfig())
+			Expect(err).To(Not(HaveOccurred()))
+
+			err = k.WaitForControlPlane(context.Background(), client)
+			Expect(err).To(Not(HaveOccurred()))
+
+			CreateFuryctlYaml(state.ContextState, "furyctl-minimal.yaml.tpl")
+		}
 	}
 
-	DownloadKubectl = func(version string) string {
-		name := "kubectl"
-
-		tfc := toolFactory.Create(tool.Name(name), version)
-		if tfc == nil || !tfc.SupportsDownload() {
-			panic(fmt.Errorf("tool '%s' does not support download", name))
+	AfterCreateDeleteTestFunc = func(state *distroContextState) func() {
+		return func() {
+			state.Cluster.Destroy(context.Background())
 		}
-
-		dst := filepath.Join(binPath, name, version)
-
-		if err := client.Download(tfc.SrcPath(), dst); err != nil {
-			panic(fmt.Errorf("%w '%s': %v", distribution.ErrDownloadingFolder, tfc.SrcPath(), err))
-		}
-
-		if err := tfc.Rename(dst); err != nil {
-			panic(fmt.Errorf("%w '%s': %v", distribution.ErrRenamingFile, tfc.SrcPath(), err))
-		}
-
-		if err := os.Chmod(filepath.Join(dst, name), iox.FullPermAccess); err != nil {
-			panic(fmt.Errorf("%w '%s': %v", distribution.ErrChangingFilePermissions, tfc.SrcPath(), err))
-		}
-
-		return path.Join(dst, name)
 	}
 
-	PrepareDirs = func(name string) (string, string, string, string) {
-		absBasePath := Must1(filepath.Abs(basePath)) // TODO: get rid of this, ../../data/expensive
+	CreateClusterTestFunc = func(state *distroContextState) func() {
+		return func() {
+			dlRes := DownloadFuryDistribution(state.FuryctlYaml)
 
-		homeDir := Must1(os.UserHomeDir())
+			kubectlPath := DownloadKubectl(dlRes.DistroManifest.Tools.Common.Kubectl.Version)
 
-		dataDir := Must1(filepath.Abs(path.Join(".", "testdata", name)))
+			GinkgoWriter.Write([]byte(fmt.Sprintf("Furyctl config path: %s", state.FuryctlYaml)))
 
-		commonDir := path.Join(absBasePath, "common")
-
-		tmpDir := Must1(os.MkdirTemp("", name))
-
-		return homeDir, dataDir, commonDir, tmpDir
-	}
-
-	CreateFuryctlYaml = func(s *contextState, furyctlYamlTplName string) string {
-		furyctlYamlTplPath := path.Join(s.DataDir, furyctlYamlTplName)
-
-		tplData := Must1(os.ReadFile(furyctlYamlTplPath))
-
-		data := bytes.ReplaceAll(tplData, []byte("__CLUSTER_NAME__"), []byte(s.ClusterName))
-
-		furyctlYamlPath := path.Join(s.TestDir, fmt.Sprintf("%s.yaml", s.ClusterName))
-
-		Must0(os.WriteFile(furyctlYamlPath, data, iox.FullPermAccess))
-
-		return furyctlYamlPath
-	}
-
-	Copy = func(src, dst string) {
-		input := Must1(os.ReadFile(src))
-
-		Must0(os.WriteFile(dst, input, 0o644))
-	}
-
-	LoadFuryCtl = func(furyctlYamlPath string) conf {
-		return Must1(yamlx.FromFileV3[conf](furyctlYamlPath))
-	}
-
-	FuryctlDeleteCluster = func(cfgPath, distroPath, phase string, dryRun bool, workDir string) *exec.Cmd {
-		args := []string{
-			"delete",
-			"cluster",
-			"--config",
-			cfgPath,
-			"--distro-location",
-			distroPath,
-			"--debug",
-			"--force",
-			"--workdir",
-			workDir,
-		}
-
-		if phase != cluster.OperationPhaseAll {
-			args = append(args, "--phase", phase)
-		}
-
-		if dryRun {
-			args = append(args, "--dry-run")
-		}
-
-		return exec.Command(furyctl, args...)
-	}
-
-	FuryctlCreateCluster = func(configPath, distroPath, phase, skipPhase string, dryRun bool, workDir string) *exec.Cmd {
-		args := []string{
-			"create",
-			"cluster",
-			"--config",
-			configPath,
-			"--distro-location",
-			distroPath,
-			"--disable-analytics",
-			"--debug",
-			"--force",
-			"--skip-vpn-confirmation",
-			"--workdir",
-			workDir,
-		}
-
-		if phase != cluster.OperationPhaseAll {
-			args = append(args, "--phase", phase)
-		}
-
-		if phase == cluster.OperationPhaseInfrastructure {
-			args = append(args, "--vpn-auto-connect")
-		}
-
-		if skipPhase != "" {
-			args = append(args, "--skip-phase", skipPhase)
-		}
-
-		if dryRun {
-			args = append(args, "--dry-run")
-		}
-
-		return exec.Command(furyctl, args...)
-	}
-
-	KillOpenVPN = func() (*gexec.Session, error) {
-		var cmd *exec.Cmd
-
-		isRoot, err := osx.IsRoot()
-		if err != nil {
-			return nil, err
-		}
-
-		if isRoot {
-			cmd = exec.Command("pkill", "openvpn")
-		} else {
-			cmd = exec.Command("sudo", "pkill", "openvpn")
-		}
-
-		return gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
-	}
-
-	_ = Describe("furyctl", Ordered, Serial, func() {
-		_ = AfterEach(func() {
-			if CurrentSpecReport().Failed() {
-				GinkgoWriter.Write([]byte("Test failed, cleaning up..."))
-			}
-		})
-
-		Context("v1.25 create and delete", Ordered, Serial, Label("slow"), func() {
-			var (
-				furyctlYamlPath string
-				state           *contextState
+			createClusterCmd := FuryctlCreateCluster(
+				furyctl,
+				state.FuryctlYaml,
+				cluster.OperationPhaseAll,
+				"",
+				false,
+				state.TmpDir,
 			)
 
-			BeforeAll(func() {
-				testName := "v1-25-create-and-delete"
+			session := Must1(gexec.Start(createClusterCmd, GinkgoWriter, GinkgoWriter))
 
-				k := kind.NewProvider().SetDefaults().WithName(testName).WithOpts(kind.WithImage("kindest/node:v1.25.9"))
+			Consistently(session, 1*time.Minute).ShouldNot(gexec.Exit())
 
-				kubecfg, err := k.CreateWithConfig(context.Background(), fmt.Sprintf("./testdata/%s/kind-config.yml", testName))
-				Expect(err).To(Not(HaveOccurred()))
+			Eventually(state.Kubeconfig, assertTimeout, assertPollingInterval).Should(BeAnExistingFile())
+			Eventually(session, assertTimeout, assertPollingInterval).Should(gexec.Exit(0))
 
-				Copy(kubecfg, fmt.Sprintf("./testdata/%s/kubeconfig", testName))
+			kubeCmd := exec.Command(kubectlPath, "--kubeconfig", state.Kubeconfig, "get", "nodes")
 
-				state = newContextState(testName)
+			kubeSession, err := gexec.Start(kubeCmd, GinkgoWriter, GinkgoWriter)
 
-				state.Cluster = k
+			Expect(err).To(Not(HaveOccurred()))
+			Eventually(kubeSession, assertTimeout, assertPollingInterval).Should(gexec.Exit(0))
+		}
+	}
 
-				GinkgoWriter.Write([]byte(fmt.Sprintf("Test id: %d", state.TestId)))
+	DeleteClusterTestFunc = func(state *distroContextState) func() {
+		return func() {
+			deleteClusterCmd := FuryctlDeleteCluster(
+				furyctl,
+				state.FuryctlYaml,
+				state.DistroDir,
+				cluster.OperationPhaseAll,
+				false,
+				state.TmpDir,
+			)
 
-				Copy(fmt.Sprintf("./testdata/%s/kubeconfig", testName), state.Kubeconfig)
+			session := Must1(gexec.Start(deleteClusterCmd, GinkgoWriter, GinkgoWriter))
+			Eventually(session, assertTimeout, assertPollingInterval).Should(gexec.Exit(0))
+		}
+	}
 
-				os.Setenv("KUBECONFIG", state.Kubeconfig)
+	CreateAndDeleteTestScenario = func(version string) func() {
+		var state *distroContextState = new(distroContextState)
 
-				client, err := klient.New(k.KubernetesRestConfig())
-				Expect(err).To(Not(HaveOccurred()))
-
-				err = k.WaitForControlPlane(context.Background(), client)
-				Expect(err).To(Not(HaveOccurred()))
-
-				furyctlYamlPath = CreateFuryctlYaml(state, "furyctl-minimal.yaml.tpl")
+		return func() {
+			_ = AfterEach(func() {
+				if CurrentSpecReport().Failed() {
+					GinkgoWriter.Write([]byte(fmt.Sprintf("Test for version %s failed, cleaning up...", version)))
+				}
 			})
 
-			AfterAll(func() {
-				state.Cluster.Destroy(context.Background())
+			contextTitle := fmt.Sprintf("v%s create and delete a minimal public cluster", version)
+
+			Context(contextTitle, Ordered, Serial, Label("slow"), func() {
+				BeforeAll(BeforeCreateDeleteTestFunc(state, version))
+
+				AfterAll(AfterCreateDeleteTestFunc(state))
+
+				It(fmt.Sprintf("should create a minimal %s cluster", version), Serial, CreateClusterTestFunc(state))
+
+				It(fmt.Sprintf("should delete a minimal %s cluster", version), Serial, DeleteClusterTestFunc(state))
 			})
+		}
+	}
 
-			It("should create a minimal 1.25 cluster", Serial, func() {
-				dlRes := DownloadFuryDistribution(furyctlYamlPath)
-
-				kubectlPath := DownloadKubectl(dlRes.DistroManifest.Tools.Common.Kubectl.Version)
-
-				GinkgoWriter.Write([]byte(fmt.Sprintf("Furyctl config path: %s", furyctlYamlPath)))
-
-				createClusterCmd := FuryctlCreateCluster(
-					furyctlYamlPath,
-					state.DistroDir,
-					cluster.OperationPhaseAll,
-					"",
-					false,
-					state.TmpDir,
-				)
-
-				session := Must1(gexec.Start(createClusterCmd, GinkgoWriter, GinkgoWriter))
-
-				Consistently(session, 1*time.Minute).ShouldNot(gexec.Exit())
-
-				Eventually(state.Kubeconfig, assertTimeout, assertPollingInterval).Should(BeAnExistingFile())
-				Eventually(session, assertTimeout, assertPollingInterval).Should(gexec.Exit(0))
-
-				kubeCmd := exec.Command(kubectlPath, "--kubeconfig", state.Kubeconfig, "get", "nodes")
-
-				kubeSession, err := gexec.Start(kubeCmd, GinkgoWriter, GinkgoWriter)
-
-				Expect(err).To(Not(HaveOccurred()))
-				Eventually(kubeSession, assertTimeout, assertPollingInterval).Should(gexec.Exit(0))
-			})
-
-			It("should delete a minimal 1.25 cluster", Serial, func() {
-				deleteClusterCmd := FuryctlDeleteCluster(
-					furyctlYamlPath,
-					state.DistroDir,
-					cluster.OperationPhaseAll,
-					false,
-					state.TmpDir,
-				)
-
-				session := Must1(gexec.Start(deleteClusterCmd, GinkgoWriter, GinkgoWriter))
-				Eventually(session, assertTimeout, assertPollingInterval).Should(gexec.Exit(0))
-			})
-		})
-	})
+	_ = Describe("furyctl & distro v1.25.8", Ordered, Serial, CreateAndDeleteTestScenario("1.25.8"))
 )
