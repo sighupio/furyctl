@@ -11,6 +11,8 @@ import (
 	"os"
 	"path"
 
+	"github.com/sirupsen/logrus"
+
 	"github.com/sighupio/fury-distribution/pkg/apis/ekscluster/v1alpha2/private"
 	"github.com/sighupio/furyctl/internal/cluster"
 	"github.com/sighupio/furyctl/internal/merge"
@@ -18,7 +20,6 @@ import (
 	"github.com/sighupio/furyctl/internal/template"
 	"github.com/sighupio/furyctl/internal/tool/terraform"
 	yamlx "github.com/sighupio/furyctl/internal/x/yaml"
-	"github.com/sirupsen/logrus"
 )
 
 var (

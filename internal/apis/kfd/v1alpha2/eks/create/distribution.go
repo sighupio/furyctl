@@ -52,10 +52,6 @@ type Distribution struct {
 	paths       cluster.CreatorPaths
 }
 
-type injectType struct {
-	Data private.SpecDistribution `json:"data"`
-}
-
 func NewDistribution(
 	paths cluster.CreatorPaths,
 	furyctlConf private.EksclusterKfdV1Alpha2,
@@ -234,7 +230,7 @@ func (d *Distribution) coreDistribution(
 
 			postTfMerger, err := d.InjectDataPostTf(preTfMerger)
 			if err != nil {
-				return err
+				return fmt.Errorf("error injecting data post terraform: %w", err)
 			}
 
 			mCfg, err := template.NewConfig(furyctlMerger, postTfMerger, []string{"terraform", ".gitignore"})
