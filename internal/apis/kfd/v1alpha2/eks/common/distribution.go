@@ -61,6 +61,7 @@ func (d *Distribution) PreparePreTerraform() (
 	furyctlMerger, err := d.CreateFuryctlMerger(
 		d.DistroPath,
 		d.ConfigPath,
+		"kfd-v1alpha2",
 		"ekscluster",
 	)
 	if err != nil {

@@ -292,9 +292,10 @@ func (op *OperationPhase) Self() *OperationPhase {
 func (*OperationPhase) CreateFuryctlMerger(
 	distroPath string,
 	furyctlConfPath string,
+	apiVersion string,
 	kind string,
 ) (*merge.Merger, error) {
-	defaultsFilePath := path.Join(distroPath, "defaults", fmt.Sprintf("%s-kfd-v1alpha2.yaml", kind))
+	defaultsFilePath := path.Join(distroPath, "defaults", fmt.Sprintf("%s-%s.yaml", kind, apiVersion))
 
 	defaultsFile, err := yamlx.FromFileV2[map[any]any](defaultsFilePath)
 	if err != nil {

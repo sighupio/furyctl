@@ -39,6 +39,7 @@ func (k *Kubernetes) Exec() error {
 	furyctlMerger, err := k.CreateFuryctlMerger(
 		k.paths.DistroPath,
 		k.paths.ConfigPath,
+		"kfd-v1alpha2",
 		"onpremises",
 	)
 	if err != nil {

@@ -107,6 +107,7 @@ func (p *PreFlight) Exec() (*Status, error) {
 	furyctlMerger, err := p.CreateFuryctlMerger(
 		p.paths.DistroPath,
 		p.paths.ConfigPath,
+		"kfd-v1alpha2",
 		"onpremises",
 	)
 	if err != nil {
