@@ -80,6 +80,7 @@ func (p *Plugins) Exec() error {
 	furyctlMerger, err := p.CreateFuryctlMerger(
 		p.paths.DistroPath,
 		p.paths.ConfigPath,
+		"kfd-v1alpha2",
 		strings.ToLower(p.kind),
 	)
 	if err != nil {

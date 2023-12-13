@@ -36,6 +36,7 @@ var errNodesNotReady = errors.New("all nodes should be Ready")
 
 type Distribution struct {
 	*cluster.OperationPhase
+
 	furyctlConf public.KfddistributionKfdV1Alpha2
 	stateStore  state.Storer
 	kubeRunner  *kubectl.Runner
@@ -143,8 +144,7 @@ func (d *Distribution) prepare() (template.Config, error) {
 	}
 
 	if _, err := os.Stat(path.Join(d.OperationPhase.Path, "manifests")); os.IsNotExist(err) {
-		err = os.Mkdir(path.Join(d.OperationPhase.Path, "manifests"), iox.FullPermAccess)
-		if err != nil {
+		if err := os.Mkdir(path.Join(d.OperationPhase.Path, "manifests"), iox.FullPermAccess); err != nil {
 			return template.Config{}, fmt.Errorf("error creating manifests folder: %w", err)
 		}
 	}
@@ -152,6 +152,7 @@ func (d *Distribution) prepare() (template.Config, error) {
 	furyctlMerger, err := d.CreateFuryctlMerger(
 		d.paths.DistroPath,
 		d.paths.ConfigPath,
+		"kfd-v1alpha2",
 		"kfddistribution",
 	)
 	if err != nil {
