@@ -42,11 +42,12 @@ var (
 type PreFlight struct {
 	*cluster.OperationPhase
 
-	FuryctlConf   private.EksclusterKfdV1Alpha2
-	ConfigPath    string
-	AWSRunner     *awscli.Runner
-	VPNConnector  *vpn.Connector
-	TFRunnerInfra *terraform.Runner
+	FuryctlConf                        private.EksclusterKfdV1Alpha2
+	ConfigPath                         string
+	AWSRunner                          *awscli.Runner
+	VPNConnector                       *vpn.Connector
+	TFRunnerInfra                      *terraform.Runner
+	InfrastructureTerraformOutputsPath string
 }
 
 func (p *PreFlight) Prepare() error {
@@ -65,6 +66,12 @@ func (p *PreFlight) Prepare() error {
 	if _, err := os.Stat(path.Join(p.Path, "secrets")); os.IsNotExist(err) {
 		if err := os.Mkdir(path.Join(p.Path, "secrets"), iox.FullPermAccess); err != nil {
 			return fmt.Errorf("error creating secrets folder: %w", err)
+		}
+	}
+
+	if _, err := os.Stat(p.InfrastructureTerraformOutputsPath); os.IsNotExist(err) {
+		if err := os.MkdirAll(p.InfrastructureTerraformOutputsPath, iox.FullPermAccess); err != nil {
+			return fmt.Errorf("error creating infrastructure terraform outputs folder: %w", err)
 		}
 	}
 

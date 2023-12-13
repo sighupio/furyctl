@@ -13,9 +13,11 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/sighupio/fury-distribution/pkg/apis/config"
+	"github.com/sighupio/fury-distribution/pkg/apis/ekscluster/v1alpha2/private"
 	"github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/eks/common"
 	"github.com/sighupio/furyctl/internal/cluster"
 	"github.com/sighupio/furyctl/internal/kubernetes"
+	"github.com/sighupio/furyctl/internal/state"
 	"github.com/sighupio/furyctl/internal/tool/awscli"
 	"github.com/sighupio/furyctl/internal/tool/shell"
 	"github.com/sighupio/furyctl/internal/tool/terraform"
@@ -32,7 +34,6 @@ type Ingress struct {
 type Distribution struct {
 	*common.Distribution
 
-	tfRunner    *terraform.Runner
 	awsRunner   *awscli.Runner
 	shellRunner *shell.Runner
 	kubeClient  *kubernetes.Client
@@ -45,6 +46,7 @@ func NewDistribution(
 	kfdManifest config.KFD,
 	infraOutputsPath string,
 	paths cluster.DeleterPaths,
+	furyctlConf private.EksclusterKfdV1Alpha2,
 ) *Distribution {
 	phase := cluster.NewOperationPhase(
 		path.Join(paths.WorkDir, cluster.OperationPhaseDistribution),
@@ -59,17 +61,25 @@ func NewDistribution(
 			DistroPath:                         paths.DistroPath,
 			ConfigPath:                         paths.ConfigPath,
 			InfrastructureTerraformOutputsPath: infraOutputsPath,
+			FuryctlConf:                        furyctlConf,
+			StateStore: state.NewStore(
+				paths.DistroPath,
+				paths.ConfigPath,
+				paths.WorkDir,
+				kfdManifest.Tools.Common.Kubectl.Version,
+				paths.BinPath,
+			),
+			TFRunner: terraform.NewRunner(
+				execx.NewStdExecutor(),
+				terraform.Paths{
+					Logs:      phase.TerraformLogsPath,
+					Outputs:   phase.TerraformOutputsPath,
+					WorkDir:   path.Join(phase.Path, "terraform"),
+					Plan:      phase.TerraformPlanPath,
+					Terraform: phase.TerraformPath,
+				},
+			),
 		},
-		tfRunner: terraform.NewRunner(
-			execx.NewStdExecutor(),
-			terraform.Paths{
-				Logs:      phase.TerraformLogsPath,
-				Outputs:   phase.TerraformOutputsPath,
-				WorkDir:   path.Join(phase.Path, "terraform"),
-				Plan:      phase.TerraformPlanPath,
-				Terraform: phase.TerraformPath,
-			},
-		),
 		awsRunner: awscli.NewRunner(
 			execx.NewStdExecutor(),
 			awscli.Paths{
@@ -100,26 +110,37 @@ func NewDistribution(
 func (d *Distribution) Exec() error {
 	logrus.Info("Deleting Kubernetes Fury Distribution...")
 
-	//nolint:dogsled // return variabiles are not used
-	_, _, _, err := d.Prepare()
+	furyctlMerger, preTfMerger, _, err := d.PreparePreTerraform()
 	if err != nil {
-		return fmt.Errorf("error preparing distribution phase: %w", err)
+		return fmt.Errorf("error preparing distribution phase (pre terraform): %w", err)
+	}
+
+	if err := d.TFRunner.Init(); err != nil {
+		return fmt.Errorf("error running terraform init: %w", err)
+	}
+
+	if _, err := d.TFRunner.Output(); err != nil {
+		return fmt.Errorf("error running terraform output: %w", err)
+	}
+
+	_, err = d.PreparePostTerraform(
+		furyctlMerger,
+		preTfMerger,
+	)
+	if err != nil {
+		return fmt.Errorf("error preparing distribution phase (post terraform): %w", err)
 	}
 
 	logrus.Info("Checking cluster connectivity...")
 
 	if _, err := d.kubeClient.ToolVersion(); err != nil {
-		return errClusterConnect
-	}
-
-	if err := d.tfRunner.Init(); err != nil {
-		return fmt.Errorf("error running terraform init: %w", err)
+		return fmt.Errorf("%w: %w", errClusterConnect, err)
 	}
 
 	if d.dryRun {
 		timestamp := time.Now().Unix()
 
-		if _, err := d.tfRunner.Plan(timestamp, "-destroy"); err != nil {
+		if _, err := d.TFRunner.Plan(timestamp, "-destroy"); err != nil {
 			return fmt.Errorf("error running terraform plan: %w", err)
 		}
 
@@ -166,7 +187,7 @@ func (d *Distribution) Exec() error {
 
 	logrus.Info("Deleting infra resources...")
 
-	if err := d.tfRunner.Destroy(); err != nil {
+	if err := d.TFRunner.Destroy(); err != nil {
 		return fmt.Errorf("error while deleting infra resources: %w", err)
 	}
 
