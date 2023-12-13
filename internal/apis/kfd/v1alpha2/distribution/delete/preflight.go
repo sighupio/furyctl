@@ -45,6 +45,7 @@ func NewPreFlight(
 	return &PreFlight{
 		OperationPhase: phase,
 		furyctlConf:    furyctlConf,
+		kfdManifest:    kfdManifest,
 		kubeRunner: kubectl.NewRunner(
 			execx.NewStdExecutor(),
 			kubectl.Paths{
@@ -55,7 +56,6 @@ func NewPreFlight(
 			true,
 			false,
 		),
-		kfdManifest: kfdManifest,
 	}
 }
 
