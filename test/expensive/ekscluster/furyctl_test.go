@@ -136,7 +136,7 @@ var (
 			contextTitle := fmt.Sprintf("v%s create and delete a minimal public cluster", version)
 
 			Context(contextTitle, Ordered, Serial, Label("slow"), func() {
-				BeforeAll(BeforeCreateDeleteTestFunc(state, version, "furyctl-public-public minimal.yaml.tpl"))
+				BeforeAll(BeforeCreateDeleteTestFunc(state, version, "furyctl-public-minimal.yaml.tpl"))
 
 				It(fmt.Sprintf("should create a minimal public %s cluster", version), Serial, CreateClusterTestFunc(state))
 
