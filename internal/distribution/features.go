@@ -49,7 +49,7 @@ func hasFeatureKubeconfigInSchema(kfd config.KFD) bool {
 		return false
 	}
 
-	v2, err := semver.NewVersion("v1.26.0")
+	v2, err := semver.NewVersion("v1.26.4")
 	if err != nil {
 		return false
 	}
