@@ -19,9 +19,8 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gexec"
 
-	. "github.com/sighupio/furyctl/test/utils"
-
 	"github.com/sighupio/furyctl/internal/cluster"
+	. "github.com/sighupio/furyctl/test/utils"
 )
 
 func TestExpensive(t *testing.T) {
@@ -38,11 +37,11 @@ var (
 
 	_ = BeforeSuite(CompileFuryctl(furyctl))
 
-	BeforeCreateDeleteTestFunc = func(state *ContextState, version string, furyctlYamlTemplate string) func() {
+	BeforeCreateDeleteTestFunc = func(state *ContextState, version, furyctlYamlTemplate string) func() {
 		return func() {
 			*state = NewContextState(fmt.Sprintf("ekscluster-v%s-create-and-delete", version))
 
-			GinkgoWriter.Write([]byte(fmt.Sprintf("Test id: %d", state.TestId)))
+			GinkgoWriter.Write([]byte(fmt.Sprintf("Test id: %d", state.TestID)))
 
 			Copy("./testdata/id_ed25519", path.Join(state.TestDir, "id_ed25519"))
 			Copy("./testdata/id_ed25519.pub", path.Join(state.TestDir, "id_ed25519.pub"))
@@ -65,13 +64,16 @@ var (
 				"terraform.plan",
 			)
 
-			createClusterCmd := FuryctlCreateCluster(
+			furyctlCreator := NewFuryctlCreator(
 				furyctl,
 				state.FuryctlYaml,
+				state.TmpDir,
+				false,
+			)
+
+			createClusterCmd := furyctlCreator.Create(
 				cluster.OperationPhaseAll,
 				"",
-				false,
-				state.TmpDir,
 			)
 
 			session := Must1(gexec.Start(createClusterCmd, GinkgoWriter, GinkgoWriter))
@@ -102,13 +104,16 @@ var (
 				Eventually(pkillSession, 5*time.Minute, 1*time.Second).Should(gexec.Exit(0))
 			})
 
-			deleteClusterCmd := FuryctlDeleteCluster(
+			furyctlDeleter := NewFuryctlDeleter(
 				furyctl,
 				state.FuryctlYaml,
 				state.DistroDir,
-				cluster.OperationPhaseAll,
-				false,
 				state.TmpDir,
+				false,
+			)
+
+			deleteClusterCmd := furyctlDeleter.Delete(
+				cluster.OperationPhaseAll,
 			)
 
 			session, err := gexec.Start(deleteClusterCmd, GinkgoWriter, GinkgoWriter)

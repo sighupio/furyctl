@@ -5,8 +5,9 @@
 package cmd
 
 import (
+	"crypto/rand"
 	"fmt"
-	"math/rand"
+	"math/big"
 	"os"
 	"path/filepath"
 	"time"
@@ -40,6 +41,7 @@ type RootCommand struct {
 
 const (
 	timeout      = 100 * time.Millisecond
+	logRndCeil   = 100000
 	spinnerStyle = 11
 )
 
@@ -96,10 +98,15 @@ furyctl is a command line interface tool to manage the full lifecycle of a Kuber
 				logPath := cobrax.Flag[string](cmd, "log")
 				if logPath != "stdout" {
 					if logPath == "" {
+						rndNum, err := rand.Int(rand.Reader, big.NewInt(logRndCeil))
+						if err != nil {
+							logrus.Fatalf("%v", err)
+						}
+
 						logPath = filepath.Join(
 							outDir,
 							".furyctl",
-							fmt.Sprintf("furyctl.%d-%d.log", time.Now().Unix(), rand.Intn(100000)),
+							fmt.Sprintf("furyctl.%d-%d.log", time.Now().Unix(), rndNum.Int64()),
 						)
 					}
 

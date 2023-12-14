@@ -6,9 +6,11 @@ package test
 
 import (
 	"bytes"
+	"crypto/rand"
 	"encoding/json"
+	"errors"
 	"fmt"
-	"math/rand"
+	"math/big"
 	"os"
 	"os/exec"
 	"path"
@@ -16,70 +18,85 @@ import (
 	"strings"
 	"time"
 
-	. "github.com/onsi/ginkgo/v2"
-	. "github.com/onsi/gomega"
+	. "github.com/onsi/ginkgo/v2" //nolint:revive,stylecheck // dot import is required for ginkgo
+	. "github.com/onsi/gomega"    //nolint:revive,stylecheck // dot import is required for gomega
 	"github.com/onsi/gomega/gexec"
 
 	"github.com/sighupio/furyctl/internal/cluster"
 	"github.com/sighupio/furyctl/internal/dependencies/tools"
+	"github.com/sighupio/furyctl/internal/distribution"
 	"github.com/sighupio/furyctl/internal/tool"
 	execx "github.com/sighupio/furyctl/internal/x/exec"
 	iox "github.com/sighupio/furyctl/internal/x/io"
 	netx "github.com/sighupio/furyctl/internal/x/net"
 	osx "github.com/sighupio/furyctl/internal/x/os"
 	yamlx "github.com/sighupio/furyctl/internal/x/yaml"
-
-	"github.com/sighupio/furyctl/internal/distribution"
 )
 
 type Conf struct {
-	APIVersion string   `yaml:"apiVersion" validate:"required,api-version"`
-	Kind       string   `yaml:"kind"       validate:"required,cluster-kind"`
-	Metadata   ConfMeta `yaml:"metadata"   validate:"required"`
-	Spec       ConfSpec `yaml:"spec"       validate:"required"`
+	APIVersion string   `validate:"required,api-version"  yaml:"apiVersion"`
+	Kind       string   `validate:"required,cluster-kind" yaml:"kind"`
+	Metadata   ConfMeta `validate:"required"              yaml:"metadata"`
+	Spec       ConfSpec `validate:"required"              yaml:"spec"`
 }
 
 type ConfSpec struct {
-	DistributionVersion string `yaml:"distributionVersion" validate:"required"`
+	DistributionVersion string `validate:"required" yaml:"distributionVersion"`
 }
 
 type ConfMeta struct {
-	Name string `yaml:"name" validate:"required"`
+	Name string `validate:"required" yaml:"name"`
+}
+
+type FuryctlCreator struct {
+	furyctl    string
+	configPath string
+	workDir    string
+	dryRun     bool
+}
+
+type FuryctlDeleter struct {
+	furyctl    string
+	configPath string
+	distroPath string
+	workDir    string
+	dryRun     bool
 }
 
 type ContextState struct {
-	TestId      int
-	TestName    string
-	ClusterName string
-	Kubeconfig  string
-	FuryctlYaml string
-	HomeDir     string
-	DataDir     string
-	DistroDir   string
-	TestDir     string
-	TmpDir      string
+	TestID      int    `json:"testId"`
+	TestName    string `json:"testName"`
+	ClusterName string `json:"clusterName"`
+	Kubeconfig  string `json:"kubeconfig"`
+	FuryctlYaml string `json:"furyctlYaml"`
+	HomeDir     string `json:"homeDir"`
+	DataDir     string `json:"dataDir"`
+	DistroDir   string `json:"distroDir"`
+	TestDir     string `json:"testDir"`
+	TmpDir      string `json:"tmpDir"`
 }
 
-var (
-	client = netx.NewGoGetterClient()
-
-	distrodl = distribution.NewDownloader(client, true)
-
-	binPath = filepath.Join(os.TempDir(), "bin")
-
-	toolFactory = tools.NewFactory(execx.NewStdExecutor(), tools.FactoryPaths{Bin: binPath})
+const (
+	TestIDCeiling = 100000
+	BuildWaitTime = 5 * time.Minute
 )
 
+var errToolDoesNotSupportDownload = errors.New("does not support download")
+
 func NewContextState(testName string) ContextState {
-	testId := rand.Intn(100000)
-	clusterName := fmt.Sprintf("furytest-%d", testId)
+	testID, err := rand.Int(rand.Reader, big.NewInt(TestIDCeiling))
+	if err != nil {
+		panic(err)
+	}
+
+	clusterName := fmt.Sprintf("furytest-%d", testID.Int64())
 
 	homeDir, dataDir, tmpDir := PrepareDirs(testName)
 
 	testDir := path.Join(homeDir, ".furyctl", "tests", testName)
 	testState := path.Join(testDir, fmt.Sprintf("%s.teststate", clusterName))
 
-	Must0(os.MkdirAll(testDir, 0o755))
+	Must0(os.MkdirAll(testDir, iox.FullPermAccess))
 
 	kubeconfig := path.Join(
 		homeDir,
@@ -94,7 +111,7 @@ func NewContextState(testName string) ContextState {
 	furyctlYaml := path.Join(testDir, fmt.Sprintf("%s.yaml", clusterName))
 
 	s := ContextState{
-		TestId:      testId,
+		TestID:      int(testID.Int64()),
 		TestName:    testName,
 		ClusterName: clusterName,
 		Kubeconfig:  kubeconfig,
@@ -105,7 +122,7 @@ func NewContextState(testName string) ContextState {
 		TmpDir:      tmpDir,
 	}
 
-	Must0(os.WriteFile(testState, Must1(json.Marshal(s)), 0o644))
+	Must0(os.WriteFile(testState, Must1(json.Marshal(s)), iox.RWPermAccess))
 
 	return s
 }
@@ -137,7 +154,7 @@ func PrepareDirs(name string) (string, string, string) {
 func Copy(src, dst string) {
 	input := Must1(os.ReadFile(src))
 
-	Must0(os.WriteFile(dst, input, 0o644))
+	Must0(os.WriteFile(dst, input, iox.RWPermAccess))
 }
 
 func CompileFuryctl(outputPath string) func() {
@@ -146,20 +163,28 @@ func CompileFuryctl(outputPath string) func() {
 
 		session := Must1(gexec.Start(cmd, GinkgoWriter, GinkgoWriter))
 
-		Eventually(session, 5*time.Minute).Should(gexec.Exit(0))
+		Eventually(session, BuildWaitTime).Should(gexec.Exit(0))
 	}
 }
 
 func DownloadFuryDistribution(furyctlConfPath string) distribution.DownloadResult {
+	distrodl := distribution.NewDownloader(netx.NewGoGetterClient(), true)
+
 	return Must1(distrodl.Download("", furyctlConfPath))
 }
 
 func DownloadKubectl(version string) string {
 	name := "kubectl"
 
+	binPath := filepath.Join(os.TempDir(), "bin")
+
+	toolFactory := tools.NewFactory(execx.NewStdExecutor(), tools.FactoryPaths{Bin: binPath})
+
+	client := netx.NewGoGetterClient()
+
 	tfc := toolFactory.Create(tool.Name(name), version)
 	if tfc == nil || !tfc.SupportsDownload() {
-		panic(fmt.Errorf("tool '%s' does not support download", name))
+		panic(fmt.Errorf("tool '%s' %w", name, errToolDoesNotSupportDownload))
 	}
 
 	dst := filepath.Join(binPath, name, version)
@@ -198,7 +223,7 @@ func KillOpenVPN() (*gexec.Session, error) {
 
 	isRoot, err := osx.IsRoot()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error checking if user is root: %w", err)
 	}
 
 	if isRoot {
@@ -207,23 +232,35 @@ func KillOpenVPN() (*gexec.Session, error) {
 		cmd = exec.Command("sudo", "pkill", "openvpn")
 	}
 
-	return gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
+	session, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
+	if err != nil {
+		return nil, fmt.Errorf("error killing openvpn: %w", err)
+	}
+
+	return session, nil
 }
 
-func FuryctlCreateCluster(furyctl, configPath, phase, skipPhase string, dryRun bool, workDir string) *exec.Cmd {
+func NewFuryctlCreator(furyctl, configPath, workDir string, dryRun bool) *FuryctlCreator {
+	return &FuryctlCreator{
+		furyctl:    furyctl,
+		configPath: configPath,
+		workDir:    workDir,
+		dryRun:     dryRun,
+	}
+}
+
+func (f *FuryctlCreator) Create(phase, startFrom string) *exec.Cmd {
 	args := []string{
 		"create",
 		"cluster",
 		"--config",
-		configPath,
-		// "--distro-location",
-		// distroPath,
+		f.configPath,
 		"--disable-analytics",
 		"--debug",
 		"--force",
 		"--skip-vpn-confirmation",
 		"--workdir",
-		workDir,
+		f.workDir,
 	}
 
 	if phase != cluster.OperationPhaseAll {
@@ -234,38 +271,54 @@ func FuryctlCreateCluster(furyctl, configPath, phase, skipPhase string, dryRun b
 		args = append(args, "--vpn-auto-connect")
 	}
 
-	if skipPhase != "" {
-		args = append(args, "--skip-phase", skipPhase)
+	if startFrom != "" {
+		args = append(args, "--start-from", startFrom)
 	}
 
-	if dryRun {
+	if f.dryRun {
 		args = append(args, "--dry-run")
 	}
 
-	return exec.Command(furyctl, args...)
+	return exec.Command(f.furyctl, args...)
 }
 
-func FuryctlDeleteCluster(furyctl, cfgPath, distroPath, phase string, dryRun bool, workDir string) *exec.Cmd {
+func NewFuryctlDeleter(
+	furyctl,
+	configPath,
+	distroPath,
+	workDir string,
+	dryRun bool,
+) *FuryctlDeleter {
+	return &FuryctlDeleter{
+		furyctl:    furyctl,
+		configPath: configPath,
+		distroPath: distroPath,
+		workDir:    workDir,
+		dryRun:     dryRun,
+	}
+}
+
+func (f *FuryctlDeleter) Delete(phase string) *exec.Cmd {
 	args := []string{
 		"delete",
 		"cluster",
 		"--config",
-		cfgPath,
+		f.configPath,
 		"--distro-location",
-		distroPath,
+		f.distroPath,
 		"--debug",
 		"--force",
 		"--workdir",
-		workDir,
+		f.workDir,
 	}
 
 	if phase != cluster.OperationPhaseAll {
 		args = append(args, "--phase", phase)
 	}
 
-	if dryRun {
+	if f.dryRun {
 		args = append(args, "--dry-run")
 	}
 
-	return exec.Command(furyctl, args...)
+	return exec.Command(f.furyctl, args...)
 }

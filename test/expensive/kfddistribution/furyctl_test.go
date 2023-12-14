@@ -23,9 +23,8 @@ import (
 	"sigs.k8s.io/e2e-framework/support"
 	"sigs.k8s.io/e2e-framework/support/kind"
 
-	. "github.com/sighupio/furyctl/test/utils"
-
 	"github.com/sighupio/furyctl/internal/cluster"
+	. "github.com/sighupio/furyctl/test/utils"
 )
 
 type distroContextState struct {
@@ -71,7 +70,7 @@ var (
 
 			Copy(kubecfg, fmt.Sprintf("%s/kubeconfig", ctxState.DataDir))
 
-			GinkgoWriter.Write([]byte(fmt.Sprintf("Test id: %d", state.TestId)))
+			GinkgoWriter.Write([]byte(fmt.Sprintf("Test id: %d", state.TestID)))
 
 			Copy(fmt.Sprintf("%s/kubeconfig", ctxState.DataDir), state.Kubeconfig)
 
@@ -101,13 +100,16 @@ var (
 
 			GinkgoWriter.Write([]byte(fmt.Sprintf("Furyctl config path: %s", state.FuryctlYaml)))
 
-			createClusterCmd := FuryctlCreateCluster(
+			furyctlCreator := NewFuryctlCreator(
 				furyctl,
 				state.FuryctlYaml,
+				state.TmpDir,
+				false,
+			)
+
+			createClusterCmd := furyctlCreator.Create(
 				cluster.OperationPhaseAll,
 				"",
-				false,
-				state.TmpDir,
 			)
 
 			session := Must1(gexec.Start(createClusterCmd, GinkgoWriter, GinkgoWriter))
@@ -128,13 +130,16 @@ var (
 
 	DeleteClusterTestFunc = func(state *distroContextState) func() {
 		return func() {
-			deleteClusterCmd := FuryctlDeleteCluster(
+			furyctlDeleter := NewFuryctlDeleter(
 				furyctl,
 				state.FuryctlYaml,
 				state.DistroDir,
-				cluster.OperationPhaseAll,
-				false,
 				state.TmpDir,
+				false,
+			)
+
+			deleteClusterCmd := furyctlDeleter.Delete(
+				cluster.OperationPhaseAll,
 			)
 
 			session := Must1(gexec.Start(deleteClusterCmd, GinkgoWriter, GinkgoWriter))
