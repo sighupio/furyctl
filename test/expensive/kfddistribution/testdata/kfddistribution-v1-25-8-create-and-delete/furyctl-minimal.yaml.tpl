@@ -8,7 +8,7 @@ kind: KFDDistribution
 metadata:
   name: __CLUSTER_NAME__
 spec:
-  distributionVersion: fix/on-prem-furyctl-0-27-compatible
+  distributionVersion: release-v1.25
   distribution:
     modules:
       auth:
