@@ -22,11 +22,11 @@ spec:
   kubernetes:
     nodeAllowedSshPublicKey: "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIAQt/UN/edbCpeWU6M17UqCUqTXs96b7DDWUcbdBrATP"
     nodePoolsLaunchKind: "launch_templates"
-    vpcId: "vpc-04a74eb4c1eab8b2d"
+    vpcId: __VPC_ID__
     subnetIds:
-      - "subnet-00699eaca4b61fb9c"
-      - "subnet-02e860f39b603c4ff"
-      - "subnet-0cdc8ec151dc56188"
+      - __SUBNET_1_ID__
+      - __SUBNET_2_ID__
+      - __SUBNET_3_ID__
     apiServer:
       privateAccess: true
       publicAccess: false

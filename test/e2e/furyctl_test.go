@@ -21,6 +21,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gexec"
+	. "github.com/sighupio/furyctl/test/e2e/utils"
 
 	"github.com/sighupio/furyctl/internal/cluster"
 )
@@ -29,6 +30,10 @@ func TestE2e(t *testing.T) {
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "Furyctl E2e Suite")
 }
+
+const (
+	AWS_DEFAULT_REGION = "eu-west-1"
+)
 
 var (
 	furyctl string
@@ -190,7 +195,7 @@ var (
 
 				cfgPath := filepath.Join(absBasepath, "furyctl.yaml")
 
-				patchedCfgPath, err := patchFuryctlYaml(cfgPath)
+				patchedCfgPath, err := patchFuryctlYaml(cfgPath, nil)
 				if err != nil {
 					panic(err)
 				}
@@ -491,8 +496,8 @@ var (
 
 			basepath := "../data/e2e/create/cluster"
 
-			FuryctlCreateCluster := func(cfgPath, distroPath, phase string, dryRun bool) *exec.Cmd {
-				patchedCfgPath, err := patchFuryctlYaml(cfgPath)
+			FuryctlCreateCluster := func(cfgPath, distroPath, phase string, dryRun bool, infra *EKSInfra) *exec.Cmd {
+				patchedCfgPath, err := patchFuryctlYaml(cfgPath, infra)
 				if err != nil {
 					panic(err)
 				}
@@ -560,7 +565,7 @@ var (
 
 				tfPath := path.Join(homeDir, ".furyctl", "furyctl-dev-aws", cluster.OperationPhaseInfrastructure, "terraform")
 
-				createInfraCmd := FuryctlCreateCluster(furyctlYamlPath, distroPath, cluster.OperationPhaseInfrastructure, true)
+				createInfraCmd := FuryctlCreateCluster(furyctlYamlPath, distroPath, cluster.OperationPhaseInfrastructure, true, nil)
 				session, err := gexec.Start(createInfraCmd, GinkgoWriter, GinkgoWriter)
 				Expect(err).To(Not(HaveOccurred()))
 
@@ -592,7 +597,24 @@ var (
 
 				tfPath := path.Join(homeDir, ".furyctl", "furyctl-dev-aws", cluster.OperationPhaseKubernetes, "terraform")
 
-				createKubeCmd := FuryctlCreateCluster(furyctlYamlPath, distroPath, cluster.OperationPhaseKubernetes, true)
+				region := os.Getenv("AWS_DEFAULT_REGION")
+
+				if region == "" {
+					region = AWS_DEFAULT_REGION
+				}
+
+				infraCreator := NewEKSInfraCreator(w, region)
+				infraDeleter := NewEKSInfraDeleter(w, region)
+
+				infra, err := infraCreator.Create()
+				Expect(err).To(Not(HaveOccurred()))
+
+				defer func() {
+					err := infraDeleter.Delete(infra)
+					Expect(err).To(Not(HaveOccurred()))
+				}()
+
+				createKubeCmd := FuryctlCreateCluster(furyctlYamlPath, distroPath, cluster.OperationPhaseKubernetes, true, infra)
 				session, err := gexec.Start(createKubeCmd, GinkgoWriter, GinkgoWriter)
 				Expect(err).To(Not(HaveOccurred()))
 
@@ -610,7 +632,7 @@ var (
 // patch the furyctl.yaml's "spec.toolsConfiguration.terraform.state.s3.keyPrefix" key to add a timestamp and random int
 // to avoid collisions in s3 when running tests in parallel, and also because the bucket is a super global resource,
 // we also replace the "TERRAFORM_TF_STATES_BUCKET_NAME" with the actual bucket name from the env vars
-func patchFuryctlYaml(furyctlYamlPath string) (string, error) {
+func patchFuryctlYaml(furyctlYamlPath string, infra *EKSInfra) (string, error) {
 	furyctlYaml, err := os.ReadFile(furyctlYamlPath)
 	if err != nil {
 		return "", err
@@ -624,6 +646,14 @@ func patchFuryctlYaml(furyctlYamlPath string) (string, error) {
 	furyctlYaml = bytes.ReplaceAll(furyctlYaml, []byte("keyPrefix: furyctl/"), []byte("keyPrefix: "+newKeyPrefix+"/"))
 
 	furyctlYaml = bytes.ReplaceAll(furyctlYaml, []byte("TERRAFORM_TF_STATES_BUCKET_NAME"), []byte(tfBucketName))
+
+	if infra != nil {
+		furyctlYaml = bytes.ReplaceAll(furyctlYaml, []byte("__VPC_ID__"), []byte(infra.VpcID))
+
+		for i, subnetID := range infra.SubnetIDs {
+			furyctlYaml = bytes.ReplaceAll(furyctlYaml, []byte(fmt.Sprintf("__SUBNET_%d_ID__", i+1)), []byte(subnetID))
+		}
+	}
 
 	// create a temporary file to write the patched furyctl.yaml
 	tmpFile, err := os.CreateTemp("", "furyctl.yaml")
