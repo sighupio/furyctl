@@ -2,7 +2,7 @@
 
 set -e
 
-## aggiornamento master TODO UNO ALLA VOLTA
+## master upgrades - only one at a time
 {{- range $h := .spec.kubernetes.masters.hosts }}
 ansible-playbook 55.upgrade-control-plane.yml --limit "{{ $h.name }}" --become
 {{- end }}
