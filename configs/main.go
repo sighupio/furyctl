@@ -6,5 +6,7 @@ package configs
 
 import "embed"
 
+//go:embed patches
 //go:embed provisioners
+//go:embed upgrades
 var Tpl embed.FS

@@ -7,7 +7,9 @@ package distribution
 import (
 	"errors"
 	"fmt"
+	"io/fs"
 	"os"
+	"path"
 	"path/filepath"
 	"strings"
 
@@ -15,6 +17,8 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/sighupio/fury-distribution/pkg/apis/config"
+	"github.com/sighupio/furyctl/configs"
+	iox "github.com/sighupio/furyctl/internal/x/io"
 	netx "github.com/sighupio/furyctl/internal/x/net"
 	yamlx "github.com/sighupio/furyctl/internal/x/yaml"
 )
@@ -153,9 +157,40 @@ func (d *Downloader) DoDownload(
 		return DownloadResult{}, fmt.Errorf("invalid kfd config: %w", err)
 	}
 
+	if err := d.applyCompatibilityPatches(kfdManifest, dst); err != nil {
+		return DownloadResult{}, fmt.Errorf("error applying compat patches: %w", err)
+	}
+
 	return DownloadResult{
 		RepoPath:       dst,
 		MinimalConf:    minimalConf,
 		DistroManifest: kfdManifest,
 	}, nil
+}
+
+func (d *Downloader) applyCompatibilityPatches(kfdManifest config.KFD, dst string) error {
+	patchesPath := path.Join("patches", strings.ToLower(kfdManifest.Version))
+
+	subFS, err := fs.Sub(configs.Tpl, patchesPath)
+	if err != nil {
+		return fmt.Errorf("error getting subfs: %w", err)
+	}
+
+	finfo, err := fs.Stat(subFS, patchesPath)
+	if err != nil {
+		var perr *fs.PathError
+		if errors.As(err, &perr) {
+			return nil
+		}
+
+		return fmt.Errorf("error getting subfs stat: %w", err)
+	}
+
+	if finfo.IsDir() {
+		if err := iox.CopyRecursive(subFS, dst); err != nil {
+			return fmt.Errorf("error copying template files: %w", err)
+		}
+	}
+
+	return nil
 }
