@@ -126,6 +126,8 @@ func (ic *EKSInfraCreator) CreateSubnet(vpcID, cidrBlock, availabilityZone strin
 		availabilityZone,
 		"--query",
 		"Subnet.{SubnetId:SubnetId}",
+		"--region",
+		ic.region,
 	)
 	if err != nil {
 		return "", fmt.Errorf("error creating subnet: %w", err)
