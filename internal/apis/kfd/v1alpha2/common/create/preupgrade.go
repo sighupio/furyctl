@@ -8,6 +8,7 @@ import (
 	"bufio"
 	"errors"
 	"fmt"
+	"io/fs"
 	"os"
 	"path"
 	"path/filepath"
@@ -17,6 +18,7 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/sighupio/fury-distribution/pkg/apis/config"
+	"github.com/sighupio/furyctl/configs"
 	"github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2"
 	"github.com/sighupio/furyctl/internal/cluster"
 	"github.com/sighupio/furyctl/internal/semver"
@@ -120,8 +122,24 @@ func (p *PreUpgrade) Exec() error {
 		return fmt.Errorf("error writing config file: %w", err)
 	}
 
+	subFS, err := fs.Sub(configs.Tpl, path.Join("upgrades", strings.ToLower(p.kind)))
+	if err != nil {
+		return fmt.Errorf("error getting subfs: %w", err)
+	}
+
+	tmpUpgradesFolder, err := os.MkdirTemp("", "furyctl-create-preupgrade-")
+	if err != nil {
+		return fmt.Errorf("error creating temp folder: %w", err)
+	}
+
+	if err := iox.CopyRecursive(subFS, tmpUpgradesFolder); err != nil {
+		return fmt.Errorf("error copying template files: %w", err)
+	}
+
+	defer os.RemoveAll(tmpUpgradesFolder)
+
 	templateModel, err := template.NewTemplateModel(
-		path.Join(p.distroPath, "templates", "upgrades", strings.ToLower(p.kind)),
+		tmpUpgradesFolder,
 		path.Join(p.Path),
 		confPath,
 		outDirPath1,
