@@ -106,6 +106,8 @@ func (ic *EKSInfraCreator) CreateVpc() (string, error) {
 		"Vpc.{VpcId:VpcId}",
 		"--region",
 		ic.region,
+		"--output",
+		"text",
 	)
 	if err != nil {
 		return "", fmt.Errorf("error creating vpc: %w", err)
@@ -128,6 +130,8 @@ func (ic *EKSInfraCreator) CreateSubnet(vpcID, cidrBlock, availabilityZone strin
 		"Subnet.{SubnetId:SubnetId}",
 		"--region",
 		ic.region,
+		"--output",
+		"text",
 	)
 	if err != nil {
 		return "", fmt.Errorf("error creating subnet: %w", err)
