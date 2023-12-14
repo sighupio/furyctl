@@ -53,7 +53,7 @@ var (
 
 	_ = BeforeSuite(CompileFuryctl(furyctl))
 
-	BeforeCreateDeleteTestFunc = func(state *distroContextState, version string) func() {
+	BeforeCreateDeleteTestFunc = func(state *distroContextState, version, kubernetesVersion string) func() {
 		return func() {
 			testName := fmt.Sprintf("kfddistribution-v%s-create-and-delete", version)
 
@@ -61,7 +61,7 @@ var (
 
 			ctxState.Kubeconfig = path.Join(ctxState.TestDir, "kubeconfig")
 
-			k := kind.NewProvider().SetDefaults().WithName(testName).WithOpts(kind.WithImage("kindest/node:v1.25.9"))
+			k := kind.NewProvider().SetDefaults().WithName(testName).WithOpts(kind.WithImage(fmt.Sprintf("kindest/node:%s", kubernetesVersion)))
 
 			kubecfg, err := k.CreateWithConfig(context.Background(), fmt.Sprintf("%s/kind-config.yml", ctxState.DataDir))
 			Expect(err).To(Not(HaveOccurred()))
@@ -147,7 +147,7 @@ var (
 		}
 	}
 
-	CreateAndDeleteTestScenario = func(version string) func() {
+	CreateAndDeleteTestScenario = func(version, kuberneterVersion string) func() {
 		var state *distroContextState = new(distroContextState)
 
 		return func() {
@@ -160,7 +160,7 @@ var (
 			contextTitle := fmt.Sprintf("v%s create and delete a minimal public cluster", version)
 
 			Context(contextTitle, Ordered, Serial, Label("slow"), func() {
-				BeforeAll(BeforeCreateDeleteTestFunc(state, version))
+				BeforeAll(BeforeCreateDeleteTestFunc(state, version, kuberneterVersion))
 
 				AfterAll(AfterCreateDeleteTestFunc(state))
 
@@ -171,5 +171,7 @@ var (
 		}
 	}
 
-	_ = Describe("furyctl & distro v1.25.8 - minimal", Ordered, Serial, CreateAndDeleteTestScenario("1.25.8"))
+	_ = Describe("furyctl & distro v1.25.8 - minimal", Ordered, Serial, CreateAndDeleteTestScenario("1.25.8", "v1.25.11"))
+
+	_ = Describe("furyctl & distro v1.26.3 - minimal", Ordered, Serial, CreateAndDeleteTestScenario("1.26.3", "v1.26.6"))
 )
