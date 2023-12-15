@@ -8,7 +8,7 @@ kind: KFDDistribution
 metadata:
   name: __CLUSTER_NAME__
 spec:
-  distributionVersion: v1.25.9
+  distributionVersion: v1.26.3
   distribution:
     modules:
       auth:

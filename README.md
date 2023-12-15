@@ -296,7 +296,7 @@ The following steps will guide you through the process of creating a Kubernetes 
 2. Edit the `furyctl.yaml` to customize the cluster configuration by filling the sections `infrastructure`, `kubernetes` and `distribution`.
 3. Check that the configuration file is valid by running `furyctl validate config`.
 4. Run `furyctl create cluster` to create the cluster.
-5. (Optional) Watch the logs of the cluster creation process with `tail -f ~/.furyctl/furyctl.log`.
+5. (Optional) Watch the logs of the cluster creation process with `tail -f ~/.furyctl/furyctl.<timestamp>-<random>.log`.
 
 #### Create a cluster in an already existing infrastructure
 
