@@ -29,7 +29,7 @@ func TestHasFeature(t *testing.T) {
 		{
 			desc: "v1.26 - has cluster upgrade",
 			kfd: config.KFD{
-				Version: "v1.26.0",
+				Version: "v1.26.4",
 			},
 			want: true,
 		},
