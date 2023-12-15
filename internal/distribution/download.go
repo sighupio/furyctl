@@ -176,7 +176,7 @@ func (d *Downloader) applyCompatibilityPatches(kfdManifest config.KFD, dst strin
 		return fmt.Errorf("error getting subfs: %w", err)
 	}
 
-	finfo, err := fs.Stat(subFS, patchesPath)
+	finfo, err := fs.Stat(subFS, ".")
 	if err != nil {
 		var perr *fs.PathError
 		if errors.As(err, &perr) {
@@ -191,6 +191,8 @@ func (d *Downloader) applyCompatibilityPatches(kfdManifest config.KFD, dst strin
 			return fmt.Errorf("error copying template files: %w", err)
 		}
 	}
+
+	logrus.Infof("Compatibility patches applied for %s", kfdManifest.Version)
 
 	return nil
 }
