@@ -245,7 +245,7 @@ func ConnectOpenVPN(certPath string) (*gexec.Session, error) {
 
 	isRoot, err := osx.IsRoot()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error checking if user is root: %w", err)
 	}
 
 	if isRoot {
@@ -254,7 +254,12 @@ func ConnectOpenVPN(certPath string) (*gexec.Session, error) {
 		cmd = exec.Command("sudo", "openvpn", "--config", certPath, "--daemon")
 	}
 
-	return gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
+	session, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
+	if err != nil {
+		return nil, fmt.Errorf("error connecting to openvpn: %w", err)
+	}
+
+	return session, nil
 }
 
 func KillOpenVPN() (*gexec.Session, error) {
