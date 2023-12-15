@@ -69,6 +69,7 @@ type PreFlight struct {
 	kubeRunner      *kubectl.Runner
 	awsRunner       *awscli.Runner
 	dryRun          bool
+	force           bool
 }
 
 func NewPreFlight(
@@ -78,6 +79,7 @@ func NewPreFlight(
 	dryRun bool,
 	vpnAutoConnect bool,
 	skipVpn bool,
+	force bool,
 ) (*PreFlight, error) {
 	var vpnConfig *private.SpecInfrastructureVpn
 
@@ -147,6 +149,7 @@ func NewPreFlight(
 		),
 		vpnConnector: vpnConnector,
 		dryRun:       dryRun,
+		force:        force,
 	}, nil
 }
 
@@ -231,32 +234,36 @@ func (p *PreFlight) Exec() (*Status, error) {
 
 	diffChecker, err := p.CreateDiffChecker()
 	if err != nil {
-		return status, fmt.Errorf("error creating diff checker: %w", err)
-	}
-
-	d, err := diffChecker.GenerateDiff()
-	if err != nil {
-		return status, fmt.Errorf("error while generating diff: %w", err)
-	}
-
-	status.Diffs = d
-
-	if len(d) > 0 {
-		logrus.Infof(
-			"Differences found from previous cluster configuration:\n%s",
-			diffChecker.DiffToString(d),
-		)
-
-		logrus.Info("Cluster configuration has changed, checking for immutable violations...")
-
-		if err := p.CheckImmutablesDiffs(d, diffChecker); err != nil {
-			return status, fmt.Errorf("error checking state diffs: %w", err)
+		if !p.force {
+			return status, fmt.Errorf("error creating diff checker: %w", err)
 		}
 
-		logrus.Info("Cluster configuration has changed, checking for unsupported reducers violations...")
+		logrus.Error("error creating diff checker, skipping: %w", err)
+	} else {
+		d, err := diffChecker.GenerateDiff()
+		if err != nil {
+			return status, fmt.Errorf("error while generating diff: %w", err)
+		}
 
-		if err := p.CheckReducersDiffs(d, diffChecker); err != nil {
-			return status, fmt.Errorf("error checking reducer diffs: %w", err)
+		status.Diffs = d
+
+		if len(d) > 0 {
+			logrus.Infof(
+				"Differences found from previous cluster configuration:\n%s",
+				diffChecker.DiffToString(d),
+			)
+
+			logrus.Info("Cluster configuration has changed, checking for immutable violations...")
+
+			if err := p.CheckImmutablesDiffs(d, diffChecker); err != nil {
+				return status, fmt.Errorf("error checking state diffs: %w", err)
+			}
+
+			logrus.Info("Cluster configuration has changed, checking for unsupported reducers violations...")
+
+			if err := p.CheckReducersDiffs(d, diffChecker); err != nil {
+				return status, fmt.Errorf("error checking reducer diffs: %w", err)
+			}
 		}
 	}
 
