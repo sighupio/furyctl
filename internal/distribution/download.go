@@ -168,7 +168,7 @@ func (d *Downloader) DoDownload(
 	}, nil
 }
 
-func (d *Downloader) applyCompatibilityPatches(kfdManifest config.KFD, dst string) error {
+func (*Downloader) applyCompatibilityPatches(kfdManifest config.KFD, dst string) error {
 	patchesPath := path.Join("patches", strings.ToLower(kfdManifest.Version))
 
 	subFS, err := fs.Sub(configs.Tpl, patchesPath)
