@@ -6,7 +6,6 @@ package onpremises
 
 import (
 	"fmt"
-	"os"
 	"path"
 	"strings"
 
@@ -16,7 +15,6 @@ import (
 	"github.com/sighupio/fury-distribution/pkg/apis/onpremises/v1alpha2/public"
 	"github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/onpremises/delete"
 	"github.com/sighupio/furyctl/internal/cluster"
-	"github.com/sighupio/furyctl/internal/distribution"
 	kubex "github.com/sighupio/furyctl/internal/x/kube"
 )
 
@@ -91,13 +89,9 @@ func (c *ClusterDeleter) Delete() error {
 		c.dryRun,
 	)
 
-	kubeconfigPath := os.Getenv("KUBECONFIG")
+	// Temporary workaround to set the kubeconfig env var.
+	kubeconfigPath := path.Join(c.paths.WorkDir, cluster.OperationPhaseKubernetes, "admin.conf")
 
-	if distribution.HasFeature(c.kfdManifest, distribution.FeatureKubeconfigInSchema) {
-		kubeconfigPath = path.Join(c.paths.WorkDir, cluster.OperationPhasePreFlight, "admin.conf")
-	}
-
-	// Move this code to delete preflight.
 	if err := kubex.SetConfigEnv(kubeconfigPath); err != nil {
 		return fmt.Errorf("error setting kubeconfig env: %w", err)
 	}
