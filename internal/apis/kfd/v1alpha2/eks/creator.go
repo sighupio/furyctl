@@ -792,6 +792,7 @@ func (v *ClusterCreator) setupPhases(upgr *upgrade.Upgrade) (
 		v.dryRun,
 		v.vpnAutoConnect,
 		v.skipVpn,
+		v.force,
 	)
 	if err != nil {
 		return nil, nil, nil, nil, nil, fmt.Errorf("error while initiating preflight phase: %w", err)
