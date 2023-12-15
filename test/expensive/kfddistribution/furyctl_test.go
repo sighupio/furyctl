@@ -82,7 +82,7 @@ var (
 			err = k.WaitForControlPlane(context.Background(), client)
 			Expect(err).To(Not(HaveOccurred()))
 
-			CreateFuryctlYaml(state.ContextState, "furyctl-minimal.yaml.tpl")
+			CreateFuryctlYaml(state.ContextState, "furyctl-minimal.yaml.tpl", nil)
 		}
 	}
 

@@ -173,21 +173,19 @@ func DownloadFuryDistribution(furyctlConfPath string) distribution.DownloadResul
 	return Must1(distrodl.Download("", furyctlConfPath))
 }
 
-func DownloadKubectl(version string) string {
-	name := "kubectl"
-
+func Download(toolName, version string) string {
 	binPath := filepath.Join(os.TempDir(), "bin")
 
 	toolFactory := tools.NewFactory(execx.NewStdExecutor(), tools.FactoryPaths{Bin: binPath})
 
 	client := netx.NewGoGetterClient()
 
-	tfc := toolFactory.Create(tool.Name(name), version)
+	tfc := toolFactory.Create(tool.Name(toolName), version)
 	if tfc == nil || !tfc.SupportsDownload() {
-		panic(fmt.Errorf("tool '%s' %w", name, errToolDoesNotSupportDownload))
+		panic(fmt.Errorf("tool '%s' %w", toolName, errToolDoesNotSupportDownload))
 	}
 
-	dst := filepath.Join(binPath, name, version)
+	dst := filepath.Join(binPath, toolName, version)
 
 	if err := client.Download(tfc.SrcPath(), dst); err != nil {
 		panic(fmt.Errorf("%w '%s': %v", distribution.ErrDownloadingFolder, tfc.SrcPath(), err))
@@ -197,25 +195,66 @@ func DownloadKubectl(version string) string {
 		panic(fmt.Errorf("%w '%s': %v", distribution.ErrRenamingFile, tfc.SrcPath(), err))
 	}
 
-	if err := os.Chmod(filepath.Join(dst, name), iox.FullPermAccess); err != nil {
+	if err := os.Chmod(filepath.Join(dst, toolName), iox.FullPermAccess); err != nil {
 		panic(fmt.Errorf("%w '%s': %v", distribution.ErrChangingFilePermissions, tfc.SrcPath(), err))
 	}
 
-	return path.Join(dst, name)
+	return path.Join(dst, toolName)
 }
 
-func CreateFuryctlYaml(s *ContextState, furyctlYamlTplName string) {
+func DownloadKubectl(version string) string {
+	return Download("kubectl", version)
+}
+
+func DownloadTerraform(version string) string {
+	return Download("terraform", version)
+}
+
+func DownloadFuryagent(version string) string {
+	return Download("furyagent", version)
+}
+
+type FuryctlYamlCreatorStrategy func(prevData []byte) []byte
+
+func FuryctlYamlCreatorIdentityStrategy(prevData []byte) []byte {
+	return prevData
+}
+
+func CreateFuryctlYaml(s *ContextState, furyctlYamlTplName string, strategy FuryctlYamlCreatorStrategy) {
+	if strategy == nil {
+		strategy = FuryctlYamlCreatorIdentityStrategy
+	}
+
 	furyctlYamlTplPath := path.Join(s.DataDir, furyctlYamlTplName)
 
 	tplData := Must1(os.ReadFile(furyctlYamlTplPath))
 
 	data := bytes.ReplaceAll(tplData, []byte("__CLUSTER_NAME__"), []byte(s.ClusterName))
 
+	data = strategy(data)
+
 	Must0(os.WriteFile(s.FuryctlYaml, data, iox.FullPermAccess))
 }
 
 func LoadFuryCtl(furyctlYamlPath string) Conf {
 	return Must1(yamlx.FromFileV3[Conf](furyctlYamlPath))
+}
+
+func ConnectOpenVPN(certPath string) (*gexec.Session, error) {
+	var cmd *exec.Cmd
+
+	isRoot, err := osx.IsRoot()
+	if err != nil {
+		return nil, err
+	}
+
+	if isRoot {
+		cmd = exec.Command("openvpn", "--config", certPath, "--daemon")
+	} else {
+		cmd = exec.Command("sudo", "openvpn", "--config", certPath, "--daemon")
+	}
+
+	return gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
 }
 
 func KillOpenVPN() (*gexec.Session, error) {

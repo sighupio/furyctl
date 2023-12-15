@@ -46,7 +46,7 @@ var (
 			Copy("./testdata/id_ed25519", path.Join(state.TestDir, "id_ed25519"))
 			Copy("./testdata/id_ed25519.pub", path.Join(state.TestDir, "id_ed25519.pub"))
 
-			CreateFuryctlYaml(state, furyctlYamlTemplate)
+			CreateFuryctlYaml(state, furyctlYamlTemplate, nil)
 		}
 	}
 
