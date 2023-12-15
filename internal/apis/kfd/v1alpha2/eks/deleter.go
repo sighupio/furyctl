@@ -110,7 +110,8 @@ func (d *ClusterDeleter) Delete() error {
 	// Move this code to delete preflight.
 	if err := kubex.SetConfigEnv(path.Join(
 		d.paths.WorkDir,
-		cluster.OperationPhasePreFlight,
+		cluster.OperationPhaseKubernetes,
+		"terraform",
 		"secrets",
 		"kubeconfig",
 	)); err != nil {
