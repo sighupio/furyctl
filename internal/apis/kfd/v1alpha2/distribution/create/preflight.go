@@ -96,10 +96,8 @@ func (p *PreFlight) Exec() (*Status, error) {
 
 	if distribution.HasFeature(p.kfd, distribution.FeatureKubeconfigInSchema) {
 		kubeconfigPath = p.furyctlConf.Spec.Distribution.Kubeconfig
-	} else {
-		if kubeconfigPath == "" {
-			return status, ErrKubeconfigNotSet
-		}
+	} else if kubeconfigPath == "" {
+		return status, ErrKubeconfigNotSet
 	}
 
 	if err := kubex.SetConfigEnv(kubeconfigPath); err != nil {

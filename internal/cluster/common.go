@@ -5,16 +5,20 @@
 package cluster
 
 import (
+	"errors"
+	"fmt"
 	"os"
 
 	"github.com/sighupio/fury-distribution/pkg/apis/config"
 	"github.com/sighupio/furyctl/internal/distribution"
 )
 
+var ErrCannotSetEnvVar = errors.New("cannot set env var")
+
 func resetKubeconfigEnv(kfdManifest config.KFD) error {
 	if distribution.HasFeature(kfdManifest, distribution.FeatureKubeconfigInSchema) {
 		if err := os.Setenv("KUBECONFIG", "willingly-invalid-kubeconfig-path-to-avoid-accidental-usage"); err != nil {
-			return err
+			return fmt.Errorf("%w: %w", ErrCannotSetEnvVar, err)
 		}
 	}
 
