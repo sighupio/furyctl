@@ -7,6 +7,7 @@
 package kfddistribution_test
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"os"
@@ -82,7 +83,7 @@ var (
 			err = k.WaitForControlPlane(context.Background(), client)
 			Expect(err).To(Not(HaveOccurred()))
 
-			CreateFuryctlYaml(state.ContextState, "furyctl-minimal.yaml.tpl", nil)
+			CreateFuryctlYaml(state.ContextState, "furyctl-minimal.yaml.tpl", InjectKubeconfig(state.Kubeconfig))
 		}
 	}
 
@@ -126,6 +127,14 @@ var (
 
 			Expect(err).To(Not(HaveOccurred()))
 			Eventually(kubeSession, assertTimeout, assertPollingInterval).Should(gexec.Exit(0))
+		}
+	}
+
+	InjectKubeconfig = func(kubeconfigPath string) FuryctlYamlCreatorStrategy {
+		return func(prevData []byte) []byte {
+			data := bytes.ReplaceAll(prevData, []byte("__KUBECONFIG__"), []byte(fmt.Sprintf("%s", kubeconfigPath)))
+
+			return data
 		}
 	}
 
@@ -176,4 +185,6 @@ var (
 	_ = Describe("furyctl & distro v1.25.8 - minimal", Ordered, Serial, CreateAndDeleteTestScenario("1.25.8", "v1.25.11"))
 
 	_ = Describe("furyctl & distro v1.26.3 - minimal", Ordered, Serial, CreateAndDeleteTestScenario("1.26.3", "v1.26.6"))
+
+	_ = Describe("furyctl & distro v1.27.0 - minimal", Ordered, Serial, CreateAndDeleteTestScenario("1.27.0", "v1.27.3"))
 )

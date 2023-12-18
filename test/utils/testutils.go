@@ -331,7 +331,7 @@ func NewFuryctlDeleter(
 		configPath: configPath,
 		distroPath: distroPath,
 		workDir:    workDir,
-		outDir:     workDir,
+		outDir:     outDir,
 		dryRun:     dryRun,
 	}
 }
