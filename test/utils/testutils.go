@@ -52,6 +52,7 @@ type FuryctlCreator struct {
 	furyctl    string
 	configPath string
 	workDir    string
+	outDir     string
 	dryRun     bool
 }
 
@@ -60,6 +61,7 @@ type FuryctlDeleter struct {
 	configPath string
 	distroPath string
 	workDir    string
+	outDir     string
 	dryRun     bool
 }
 
@@ -69,7 +71,6 @@ type ContextState struct {
 	ClusterName string `json:"clusterName"`
 	Kubeconfig  string `json:"kubeconfig"`
 	FuryctlYaml string `json:"furyctlYaml"`
-	HomeDir     string `json:"homeDir"`
 	DataDir     string `json:"dataDir"`
 	DistroDir   string `json:"distroDir"`
 	TestDir     string `json:"testDir"`
@@ -98,25 +99,13 @@ func NewContextState(testName string) ContextState {
 
 	Must0(os.MkdirAll(testDir, iox.FullPermAccess))
 
-	kubeconfig := path.Join(
-		homeDir,
-		".furyctl",
-		clusterName,
-		cluster.OperationPhaseKubernetes,
-		"terraform",
-		"secrets",
-		"kubeconfig",
-	)
-
 	furyctlYaml := path.Join(testDir, fmt.Sprintf("%s.yaml", clusterName))
 
 	s := ContextState{
 		TestID:      int(testID.Int64()),
 		TestName:    testName,
 		ClusterName: clusterName,
-		Kubeconfig:  kubeconfig,
 		FuryctlYaml: furyctlYaml,
-		HomeDir:     homeDir,
 		DataDir:     dataDir,
 		TestDir:     testDir,
 		TmpDir:      tmpDir,
@@ -284,11 +273,12 @@ func KillOpenVPN() (*gexec.Session, error) {
 	return session, nil
 }
 
-func NewFuryctlCreator(furyctl, configPath, workDir string, dryRun bool) *FuryctlCreator {
+func NewFuryctlCreator(furyctl, configPath, workDir, outDir string, dryRun bool) *FuryctlCreator {
 	return &FuryctlCreator{
 		furyctl:    furyctl,
 		configPath: configPath,
 		workDir:    workDir,
+		outDir:     outDir,
 		dryRun:     dryRun,
 	}
 }
@@ -305,6 +295,8 @@ func (f *FuryctlCreator) Create(phase, startFrom string) *exec.Cmd {
 		"--skip-vpn-confirmation",
 		"--workdir",
 		f.workDir,
+		"--outdir",
+		f.outDir,
 	}
 
 	if phase != cluster.OperationPhaseAll {
@@ -330,7 +322,8 @@ func NewFuryctlDeleter(
 	furyctl,
 	configPath,
 	distroPath,
-	workDir string,
+	workDir,
+	outDir string,
 	dryRun bool,
 ) *FuryctlDeleter {
 	return &FuryctlDeleter{
@@ -338,6 +331,7 @@ func NewFuryctlDeleter(
 		configPath: configPath,
 		distroPath: distroPath,
 		workDir:    workDir,
+		outDir:     workDir,
 		dryRun:     dryRun,
 	}
 }
@@ -354,6 +348,8 @@ func (f *FuryctlDeleter) Delete(phase string) *exec.Cmd {
 		"--force",
 		"--workdir",
 		f.workDir,
+		"--outdir",
+		f.outDir,
 	}
 
 	if phase != cluster.OperationPhaseAll {

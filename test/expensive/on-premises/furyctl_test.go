@@ -461,6 +461,7 @@ var (
 				furyctl,
 				state.FuryctlYaml,
 				state.TmpDir,
+				state.TestDir,
 				false,
 			)
 
@@ -492,6 +493,7 @@ var (
 				state.FuryctlYaml,
 				state.DistroDir,
 				state.TmpDir,
+				state.TestDir,
 				false,
 			)
 
