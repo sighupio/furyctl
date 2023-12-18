@@ -66,6 +66,10 @@ func NewCreator(
 	force bool,
 	upgrade bool,
 ) (Creator, error) {
+	if err := resetKubeconfigEnv(kfdManifest); err != nil {
+		return nil, fmt.Errorf("error resetting kubeconfig env: %w", err)
+	}
+
 	lcAPIVersion := strings.ToLower(minimalConf.APIVersion)
 	lcResourceType := strings.ToLower(minimalConf.Kind)
 

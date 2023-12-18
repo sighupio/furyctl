@@ -5,6 +5,7 @@
 package distribution
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"strings"
@@ -18,6 +19,8 @@ import (
 	"github.com/sighupio/furyctl/internal/distribution"
 	kubex "github.com/sighupio/furyctl/internal/x/kube"
 )
+
+var ErrKubeconfigNotSet = errors.New("KUBECONFIG env variable is not set")
 
 type ClusterDeleter struct {
 	paths       cluster.DeleterPaths
@@ -80,6 +83,10 @@ func (d *ClusterDeleter) Delete() error {
 
 	if distribution.HasFeature(d.kfdManifest, distribution.FeatureKubeconfigInSchema) {
 		kubeconfigPath = d.furyctlConf.Spec.Distribution.Kubeconfig
+	} else {
+		if kubeconfigPath == "" {
+			return ErrKubeconfigNotSet
+		}
 	}
 
 	// Move this code to delete preflight.
