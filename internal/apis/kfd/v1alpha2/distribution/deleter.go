@@ -83,10 +83,8 @@ func (d *ClusterDeleter) Delete() error {
 
 	if distribution.HasFeature(d.kfdManifest, distribution.FeatureKubeconfigInSchema) {
 		kubeconfigPath = d.furyctlConf.Spec.Distribution.Kubeconfig
-	} else {
-		if kubeconfigPath == "" {
-			return ErrKubeconfigNotSet
-		}
+	} else if kubeconfigPath == "" {
+		return ErrKubeconfigNotSet
 	}
 
 	// Move this code to delete preflight.
