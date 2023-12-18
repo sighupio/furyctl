@@ -991,9 +991,7 @@ func (k *Kubernetes) addSubnetIdsToNodePool(buffer *bytes.Buffer, subnetIds []pr
 
 func (k *Kubernetes) addLabelsToNodePool(buffer *bytes.Buffer, labels private.TypesKubeLabels) error {
 	if len(labels) > 0 {
-		var uLabels []byte
-
-		l, err := json.Marshal(uLabels)
+		l, err := json.Marshal(labels)
 		if err != nil {
 			return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
 		}
@@ -1044,9 +1042,7 @@ func (k *Kubernetes) addTaintsToNodePool(buffer *bytes.Buffer, taints private.Ty
 
 func (k *Kubernetes) addTagsToNodePool(buffer *bytes.Buffer, tags private.TypesAwsTags) error {
 	if len(tags) > 0 {
-		var uTags []byte
-
-		t, err := json.Marshal(uTags)
+		t, err := json.Marshal(tags)
 		if err != nil {
 			return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
 		}
