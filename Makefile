@@ -151,14 +151,24 @@ test-e2e:
 
 test-expensive:
 	$(call yes-or-no, "WARNING: This test will create a cluster on AWS. Are you sure you want to continue?")
-	@GOFLAGS=-mod=mod ginkgo run -vv --trace -tags=expensive -timeout 36000s -p test/expensive
+	@GOFLAGS=-mod=mod ginkgo run -vv --trace -tags=expensive -timeout 36000s --procs=3 test/expensive
+
+test-expensive-ekscluster:
+	$(call yes-or-no, "WARNING: This test will create a cluster on AWS. Are you sure you want to continue?")
+	@GOFLAGS=-mod=mod ginkgo run -vv --trace -tags=expensive -timeout 36000s --procs=2 test/expensive/ekscluster
+
+test-expensive-kfddistribution:
+	@GOFLAGS=-mod=mod ginkgo run -vv --trace -tags=expensive -timeout 36000s --procs=4 test/expensive/kfddistribution
+
+test-expensive-onpremises:
+	@GOFLAGS=-mod=mod ginkgo run -vv --trace -tags=expensive -timeout 36000s --procs=4 test/expensive/onpremises
 
 test-most:
 	@GOFLAGS=-mod=mod ginkgo run -vv --trace -coverpkg=./... -covermode=count -coverprofile=coverage.out -tags=unit,integration,e2e,expensive --skip-package=expensive -timeout 300s -p ./...
 
 test-all:
 	$(call yes-or-no, "WARNING: This test will create a cluster on AWS. Are you sure you want to continue?")
-	@GOFLAGS=-mod=mod ginkgo run -vv --trace -coverpkg=./... -covermode=count -coverprofile=coverage.out -tags=unit,integration,e2e,expensive -timeout 300s -p ./...
+	@GOFLAGS=-mod=mod ginkgo run -vv --trace -coverpkg=./... -covermode=count -coverprofile=coverage.out -tags=unit,integration,e2e,expensive -timeout 300s --procs=2 ./...
 
 show-coverage:
 	@go tool cover -html=coverage.out -o coverage.html
