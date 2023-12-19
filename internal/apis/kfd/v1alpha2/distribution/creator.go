@@ -171,6 +171,7 @@ func (c *ClusterCreator) Create(startFrom string, _ int) error {
 		c.paths,
 		c.dryRun,
 		c.stateStore,
+		c.force,
 	)
 
 	status, err := preflight.Exec()
