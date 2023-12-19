@@ -111,7 +111,13 @@ func (d *Downloader) downloadProcess(wg *sync.WaitGroup, data Package, errChan c
 			return
 		}
 
-		defer resp.Body.Close()
+		defer func() {
+			if resp != nil && resp.Body != nil {
+				if err := resp.Body.Close(); err != nil {
+					logrus.Error(err)
+				}
+			}
+		}()
 
 		if resp.StatusCode == http.StatusUnauthorized || resp.StatusCode == http.StatusNotFound {
 			o := humanReadableSource(pU.getConsumableURL())
@@ -138,7 +144,13 @@ func (d *Downloader) downloadProcess(wg *sync.WaitGroup, data Package, errChan c
 					humanReadableSource(pU.getConsumableURL()),
 				)
 
-				defer resp.Body.Close()
+				defer func() {
+					if resp != nil && resp.Body != nil {
+						if err := resp.Body.Close(); err != nil {
+							logrus.Error(err)
+						}
+					}
+				}()
 
 				return
 			}

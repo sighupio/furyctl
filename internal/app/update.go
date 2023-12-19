@@ -10,6 +10,8 @@ import (
 	"fmt"
 	"net/http"
 	"time"
+
+	"github.com/sirupsen/logrus"
 )
 
 type Release struct {
@@ -40,7 +42,13 @@ func GetLatestRelease() (Release, error) {
 		return release, fmt.Errorf("error performing request: %w", err)
 	}
 
-	defer resp.Body.Close()
+	defer func() {
+		if resp != nil && resp.Body != nil {
+			if err := resp.Body.Close(); err != nil {
+				logrus.Error(err)
+			}
+		}
+	}()
 
 	if err := json.NewDecoder(resp.Body).Decode(&release); err != nil {
 		return release, fmt.Errorf("error decoding response: %w", err)
