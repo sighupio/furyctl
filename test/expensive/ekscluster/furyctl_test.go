@@ -90,10 +90,14 @@ var (
 		Eventually(kubeSession, assertTimeout, assertPollingInterval).Should(gexec.Exit(0))
 	}
 
-	DeleteClusterTest = func(state *ContextState) {
+	DeleteClusterTest = func(state *ContextState, ephemeral bool) {
 		DeferCleanup(func() {
 			_ = os.RemoveAll(state.TestDir)
 		})
+
+		if ephemeral {
+			_ = os.RemoveAll(path.Join(state.TestDir, ".furyctl"))
+		}
 
 		furyctlDeleter := NewFuryctlDeleter(
 			furyctl,
@@ -112,7 +116,7 @@ var (
 		Eventually(session, assertTimeout, assertPollingInterval).Should(gexec.Exit(0))
 	}
 
-	CreateAndDeleteTestScenario = func(version string) func() {
+	CreateAndDeleteTestScenario = func(version string, ephemeral bool) func() {
 		var state *ContextState = new(ContextState)
 
 		return func() {
@@ -130,25 +134,27 @@ var (
 						PrepareCreateDeleteClusterTest(state, version, "furyctl-public-minimal.yaml.tpl")
 
 						CreateClusterTest(s)
-						DeleteClusterTest(s)
+						DeleteClusterTest(s, ephemeral)
 					}
 				}(state))
 			})
 		}
 	}
 
-	_ = Describe("furyctl & distro v1.25.4 - public minimal", CreateAndDeleteTestScenario("1.25.4"))
-	_ = Describe("furyctl & distro v1.25.5 - public minimal", CreateAndDeleteTestScenario("1.25.5"))
-	_ = Describe("furyctl & distro v1.25.6 - public minimal", CreateAndDeleteTestScenario("1.25.6"))
-	_ = Describe("furyctl & distro v1.25.7 - public minimal", CreateAndDeleteTestScenario("1.25.7"))
-	_ = Describe("furyctl & distro v1.25.8 - public minimal", CreateAndDeleteTestScenario("1.25.8"))
-	_ = Describe("furyctl & distro v1.25.9 - public minimal", CreateAndDeleteTestScenario("1.25.9"))
+	_ = Describe("furyctl & distro v1.25.4 - public minimal", CreateAndDeleteTestScenario("1.25.4", false))
+	_ = Describe("furyctl & distro v1.25.5 - public minimal", CreateAndDeleteTestScenario("1.25.5", false))
+	_ = Describe("furyctl & distro v1.25.6 - public minimal", CreateAndDeleteTestScenario("1.25.6", false))
+	_ = Describe("furyctl & distro v1.25.7 - public minimal", CreateAndDeleteTestScenario("1.25.7", false))
+	_ = Describe("furyctl & distro v1.25.8 - public minimal", CreateAndDeleteTestScenario("1.25.8", false))
+	_ = Describe("furyctl & distro v1.25.9 - public minimal", CreateAndDeleteTestScenario("1.25.9", false))
 
-	_ = Describe("furyctl & distro v1.26.0 - public minimal", CreateAndDeleteTestScenario("1.26.0"))
-	_ = Describe("furyctl & distro v1.26.1 - public minimal", CreateAndDeleteTestScenario("1.26.1"))
-	_ = Describe("furyctl & distro v1.26.2 - public minimal", CreateAndDeleteTestScenario("1.26.2"))
-	_ = Describe("furyctl & distro v1.26.3 - public minimal", CreateAndDeleteTestScenario("1.26.3"))
-	_ = Describe("furyctl & distro v1.26.4 - public minimal", CreateAndDeleteTestScenario("1.26.4"))
+	_ = Describe("furyctl & distro v1.26.0 - public minimal", CreateAndDeleteTestScenario("1.26.0", false))
+	_ = Describe("furyctl & distro v1.26.1 - public minimal", CreateAndDeleteTestScenario("1.26.1", false))
+	_ = Describe("furyctl & distro v1.26.2 - public minimal", CreateAndDeleteTestScenario("1.26.2", false))
+	_ = Describe("furyctl & distro v1.26.3 - public minimal", CreateAndDeleteTestScenario("1.26.3", false))
+	_ = Describe("furyctl & distro v1.26.4 - public minimal", CreateAndDeleteTestScenario("1.26.4", false))
 
-	_ = Describe("furyctl & distro v1.27.0 - public minimal", CreateAndDeleteTestScenario("1.27.0"))
+	_ = Describe("furyctl & distro v1.27.0 - public minimal", CreateAndDeleteTestScenario("1.27.0", false))
+
+	_ = Describe("furyctl & distro v1.27.0 - public minimal - ephemeral", CreateAndDeleteTestScenario("1.27.0", true))
 )
