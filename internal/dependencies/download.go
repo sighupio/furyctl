@@ -80,7 +80,7 @@ func (dd *Downloader) DownloadAll(kfd config.KFD) ([]error, []string) {
 		gitPrefix = GithubHTTPSRepoPrefix
 	}
 
-	if err := dd.DownloadModules(kfd.Modules, gitPrefix); err != nil {
+	if err := dd.DownloadModules(kfd, gitPrefix); err != nil {
 		errs = append(errs, err)
 	}
 
@@ -88,7 +88,7 @@ func (dd *Downloader) DownloadAll(kfd config.KFD) ([]error, []string) {
 		errs = append(errs, err)
 	}
 
-	ut, err := dd.DownloadTools(kfd.Tools)
+	ut, err := dd.DownloadTools(kfd)
 	if err != nil {
 		errs = append(errs, err)
 	}
@@ -96,9 +96,10 @@ func (dd *Downloader) DownloadAll(kfd config.KFD) ([]error, []string) {
 	return errs, ut
 }
 
-func (dd *Downloader) DownloadModules(modules config.KFDModules, gitPrefix string) error {
+func (dd *Downloader) DownloadModules(kfd config.KFD, gitPrefix string) error {
 	oldPrefix := "kubernetes-fury"
 	newPrefix := "fury-kubernetes"
+	modules := kfd.Modules
 
 	mods := reflect.ValueOf(modules)
 
@@ -112,6 +113,10 @@ func (dd *Downloader) DownloadModules(modules config.KFDModules, gitPrefix strin
 
 		if name == "" {
 			return ErrModuleHasNoName
+		}
+
+		if name == "tracing" && !distribution.HasFeature(kfd, distribution.FeatureTracingModule) {
+			continue
 		}
 
 		errs := []error{}
@@ -218,7 +223,8 @@ func (dd *Downloader) DownloadInstallers(installers config.KFDKubernetes, gitPre
 	return nil
 }
 
-func (dd *Downloader) DownloadTools(kfdTools config.KFDTools) ([]string, error) {
+func (dd *Downloader) DownloadTools(kfd config.KFD) ([]string, error) {
+	kfdTools := kfd.Tools
 	tls := reflect.ValueOf(kfdTools)
 
 	unsupportedTools := []string{}
@@ -231,6 +237,10 @@ func (dd *Downloader) DownloadTools(kfdTools config.KFDTools) ([]string, error) 
 
 			if !ok {
 				return unsupportedTools, fmt.Errorf("%s: %w", name, ErrModuleHasNoVersion)
+			}
+
+			if name == "helm" || name == "helmfile" && !distribution.HasFeature(kfd, distribution.FeaturePlugins) {
+				continue
 			}
 
 			tfc := dd.toolFactory.Create(tool.Name(name), toolCfg.Version)

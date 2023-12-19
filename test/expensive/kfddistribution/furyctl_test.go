@@ -93,7 +93,7 @@ var (
 		}
 	}
 
-	CreateClusterTestFunc = func(state *distroContextState) func() {
+	CreateClusterTestFunc = func(state *distroContextState, phase string) func() {
 		return func() {
 			dlRes := DownloadFuryDistribution(state.FuryctlYaml)
 
@@ -110,7 +110,7 @@ var (
 			)
 
 			createClusterCmd := furyctlCreator.Create(
-				cluster.OperationPhaseAll,
+				phase,
 				"",
 			)
 
@@ -138,7 +138,7 @@ var (
 		}
 	}
 
-	DeleteClusterTestFunc = func(state *distroContextState) func() {
+	DeleteClusterTestFunc = func(state *distroContextState, phase string) func() {
 		return func() {
 			furyctlDeleter := NewFuryctlDeleter(
 				furyctl,
@@ -150,7 +150,7 @@ var (
 			)
 
 			deleteClusterCmd := furyctlDeleter.Delete(
-				cluster.OperationPhaseAll,
+				phase,
 			)
 
 			session := Must1(gexec.Start(deleteClusterCmd, GinkgoWriter, GinkgoWriter))
@@ -175,16 +175,58 @@ var (
 
 				AfterAll(AfterCreateDeleteTestFunc(state))
 
-				It(fmt.Sprintf("should create a minimal %s cluster", version), Serial, CreateClusterTestFunc(state))
+				It(fmt.Sprintf("should create a minimal %s cluster", version), Serial, CreateClusterTestFunc(state, cluster.OperationPhaseAll))
 
-				It(fmt.Sprintf("should delete a minimal %s cluster", version), Serial, DeleteClusterTestFunc(state))
+				It(fmt.Sprintf("should delete a minimal %s cluster", version), Serial, DeleteClusterTestFunc(state, cluster.OperationPhaseAll))
 			})
 		}
 	}
 
-	_ = Describe("furyctl & distro v1.25.8 - minimal", Ordered, Serial, CreateAndDeleteTestScenario("1.25.8", "v1.25.11"))
+	CreateAndDeleteByPhaseTestScenario = func(version, kuberneterVersion string) func() {
+		var state *distroContextState = new(distroContextState)
 
-	_ = Describe("furyctl & distro v1.26.3 - minimal", Ordered, Serial, CreateAndDeleteTestScenario("1.26.3", "v1.26.6"))
+		return func() {
+			_ = AfterEach(func() {
+				if CurrentSpecReport().Failed() {
+					GinkgoWriter.Write([]byte(fmt.Sprintf("Test for version %s failed, cleaning up...", version)))
+				}
+			})
 
-	_ = Describe("furyctl & distro v1.27.0 - minimal", Ordered, Serial, CreateAndDeleteTestScenario("1.27.0", "v1.27.3"))
+			contextTitle := fmt.Sprintf("v%s create and delete a minimal public cluster by phase", version)
+
+			Context(contextTitle, Ordered, Serial, Label("slow"), func() {
+				BeforeAll(BeforeCreateDeleteTestFunc(state, version, kuberneterVersion))
+
+				AfterAll(AfterCreateDeleteTestFunc(state))
+
+				It(fmt.Sprintf("should create a minimal %s cluster by phase", version), Serial, CreateClusterTestFunc(state, cluster.OperationPhaseDistribution))
+
+				It(fmt.Sprintf("should delete a minimal %s clusterby phase", version), Serial, DeleteClusterTestFunc(state, cluster.OperationPhaseDistribution))
+			})
+		}
+	}
+
+	// _ = Describe("furyctl & distro v1.25.8 - minimal", Ordered, Serial, CreateAndDeleteTestScenario("1.25.8", "v1.25.11"))
+
+	// _ = Describe("furyctl & distro v1.26.0 - minimal", Ordered, Serial, CreateAndDeleteTestScenario("1.26.0", "v1.26.6"))
+
+	_ = Describe("furyctl & distro v1.26.1 - minimal", Ordered, Serial, CreateAndDeleteTestScenario("1.26.1", "v1.26.6"))
+
+	// _ = Describe("furyctl & distro v1.26.2 - minimal", Ordered, Serial, CreateAndDeleteTestScenario("1.26.2", "v1.26.6"))
+
+	// _ = Describe("furyctl & distro v1.26.3 - minimal", Ordered, Serial, CreateAndDeleteTestScenario("1.26.3", "v1.26.6"))
+
+	// _ = Describe("furyctl & distro v1.27.0 - minimal", Ordered, Serial, CreateAndDeleteTestScenario("1.27.0", "v1.27.3"))
+
+	// _ = Describe("furyctl & distro v1.25.8 - minimal - by phase", Ordered, Serial, CreateAndDeleteByPhaseTestScenario("1.25.8", "v1.25.11"))
+
+	// _ = Describe("furyctl & distro v1.26.0 - minimal - by phase", Ordered, Serial, CreateAndDeleteByPhaseTestScenario("1.26.0", "v1.26.6"))
+
+	// _ = Describe("furyctl & distro v1.26.1 - minimal - by phase", Ordered, Serial, CreateAndDeleteByPhaseTestScenario("1.26.1", "v1.26.6"))
+
+	// _ = Describe("furyctl & distro v1.26.2 - minimal - by phase", Ordered, Serial, CreateAndDeleteByPhaseTestScenario("1.26.2", "v1.26.6"))
+
+	// _ = Describe("furyctl & distro v1.26.3 - minimal - by phase", Ordered, Serial, CreateAndDeleteByPhaseTestScenario("1.26.3", "v1.26.6"))
+
+	// _ = Describe("furyctl & distro v1.27.0 - minimal - by phase", Ordered, Serial, CreateAndDeleteByPhaseTestScenario("1.27.0", "v1.27.3"))
 )

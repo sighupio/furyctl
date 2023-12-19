@@ -11,6 +11,7 @@ import (
 
 	"github.com/sighupio/fury-distribution/pkg/apis/config"
 	"github.com/sighupio/furyctl/internal/apis"
+	"github.com/sighupio/furyctl/internal/distribution"
 	itool "github.com/sighupio/furyctl/internal/tool"
 	execx "github.com/sighupio/furyctl/internal/x/exec"
 )
@@ -65,13 +66,13 @@ func (tv *Validator) Validate(kfdManifest config.KFD, miniConf config.Furyctl) (
 	)
 
 	// Validate common tools.
-	cOks, cErrs := tv.validateTools(kfdManifest.Tools.Common)
+	cOks, cErrs := tv.validateTools(kfdManifest.Tools.Common, kfdManifest)
 	oks = append(oks, cOks...)
 	errs = append(errs, cErrs...)
 
 	// Validate eks tools only if kind is EKSCluster.
 	if miniConf.Kind == "EKSCluster" {
-		cOks, cErrs := tv.validateTools(kfdManifest.Tools.Eks)
+		cOks, cErrs := tv.validateTools(kfdManifest.Tools.Eks, kfdManifest)
 		oks = append(oks, cOks...)
 		errs = append(errs, cErrs...)
 	}
@@ -91,7 +92,7 @@ func (tv *Validator) Validate(kfdManifest config.KFD, miniConf config.Furyctl) (
 	return oks, errs
 }
 
-func (tv *Validator) validateTools(i any) ([]string, []error) {
+func (tv *Validator) validateTools(i any, kfdManifest config.KFD) ([]string, []error) {
 	var oks []string
 
 	var errs []error
@@ -104,6 +105,11 @@ func (tv *Validator) validateTools(i any) ([]string, []error) {
 		}
 
 		toolName := strings.ToLower(toolCfgs.Type().Field(i).Name)
+
+		if toolName == "helm" || toolName == "helmfile" &&
+			!distribution.HasFeature(kfdManifest, distribution.FeaturePlugins) {
+			continue
+		}
 
 		tool := tv.toolFactory.Create(itool.Name(toolName), toolCfg.Version)
 		if err := tool.CheckBinVersion(); err != nil {
