@@ -538,8 +538,12 @@ var (
 		}
 	}
 
-	DeleteClusterTestFunc = func(state *onPremContextState, phase string) func() {
+	DeleteClusterTestFunc = func(state *onPremContextState, phase string, ephemeral bool) func() {
 		return func() {
+			if ephemeral {
+				_ = os.RemoveAll(path.Join(state.TestDir, ".furyctl"))
+			}
+
 			furyctlDeleter := NewFuryctlDeleter(
 				furyctl,
 				state.FuryctlYaml,
@@ -556,7 +560,7 @@ var (
 		}
 	}
 
-	CreateAndDeleteTestScenario = func(version string) func() {
+	CreateAndDeleteTestScenario = func(version string, ephemeral bool) func() {
 		var state *onPremContextState = new(onPremContextState)
 
 		return func() {
@@ -575,12 +579,12 @@ var (
 
 				It(fmt.Sprintf("should create a minimal %s cluster", version), Serial, CreateClusterTestFunc(state))
 
-				It(fmt.Sprintf("should delete a minimal %s cluster", version), Serial, DeleteClusterTestFunc(state, cluster.OperationPhaseAll))
+				It(fmt.Sprintf("should delete a minimal %s cluster", version), Serial, DeleteClusterTestFunc(state, cluster.OperationPhaseAll, ephemeral))
 			})
 		}
 	}
 
-	CreateAndDeleteByPhaseTestScenario = func(version string) func() {
+	CreateAndDeleteByPhaseTestScenario = func(version string, ephemeral bool) func() {
 		var state *onPremContextState = new(onPremContextState)
 
 		return func() {
@@ -601,34 +605,34 @@ var (
 
 				It(fmt.Sprintf("should create a minimal %s cluster - phase distribution", version), Serial, CreateClusterPhaseDistributionTestFunc(state))
 
-				It(fmt.Sprintf("should delete a minimal %s cluster - phase distribution", version), Serial, DeleteClusterTestFunc(state, cluster.OperationPhaseDistribution))
+				It(fmt.Sprintf("should delete a minimal %s cluster - phase distribution", version), Serial, DeleteClusterTestFunc(state, cluster.OperationPhaseDistribution, ephemeral))
 
-				It(fmt.Sprintf("should delete a minimal %s cluster - phase kubernetes", version), Serial, DeleteClusterTestFunc(state, cluster.OperationPhaseKubernetes))
+				It(fmt.Sprintf("should delete a minimal %s cluster - phase kubernetes", version), Serial, DeleteClusterTestFunc(state, cluster.OperationPhaseKubernetes, ephemeral))
 			})
 		}
 	}
 
-	_ = Describe("furyctl & distro v1.25.8 - minimal", Ordered, Serial, CreateAndDeleteTestScenario("1.25.8"))
+	_ = Describe("furyctl & distro v1.25.8 - minimal", Ordered, Serial, CreateAndDeleteTestScenario("1.25.8", false))
 
-	_ = Describe("furyctl & distro v1.25.9 - minimal", Ordered, Serial, CreateAndDeleteTestScenario("1.25.9"))
+	_ = Describe("furyctl & distro v1.25.9 - minimal", Ordered, Serial, CreateAndDeleteTestScenario("1.25.9", false))
 
-	_ = Describe("furyctl & distro v1.26.2 - minimal", Ordered, Serial, CreateAndDeleteTestScenario("1.26.2"))
+	_ = Describe("furyctl & distro v1.26.2 - minimal", Ordered, Serial, CreateAndDeleteTestScenario("1.26.2", false))
 
-	_ = Describe("furyctl & distro v1.26.3 - minimal", Ordered, Serial, CreateAndDeleteTestScenario("1.26.3"))
+	_ = Describe("furyctl & distro v1.26.3 - minimal", Ordered, Serial, CreateAndDeleteTestScenario("1.26.3", false))
 
-	_ = Describe("furyctl & distro v1.26.4 - minimal", Ordered, Serial, CreateAndDeleteTestScenario("1.26.4"))
+	_ = Describe("furyctl & distro v1.26.4 - minimal", Ordered, Serial, CreateAndDeleteTestScenario("1.26.4", false))
 
-	_ = Describe("furyctl & distro v1.27.0 - minimal", Ordered, Serial, CreateAndDeleteTestScenario("1.27.0"))
+	_ = Describe("furyctl & distro v1.27.0 - minimal", Ordered, Serial, CreateAndDeleteTestScenario("1.27.0", false))
 
-	_ = Describe("furyctl & distro v1.25.8 - minimal - by phase", Ordered, Serial, CreateAndDeleteByPhaseTestScenario("1.25.8"))
+	_ = Describe("furyctl & distro v1.27.0 - minimal - ephemeral", Ordered, Serial, CreateAndDeleteTestScenario("1.27.0", true))
 
-	_ = Describe("furyctl & distro v1.25.9 - minimal - by phase", Ordered, Serial, CreateAndDeleteByPhaseTestScenario("1.25.9"))
+	_ = Describe("furyctl & distro v1.25.9 - minimal - by phase", Ordered, Serial, CreateAndDeleteByPhaseTestScenario("1.25.9", false))
 
-	_ = Describe("furyctl & distro v1.26.2 - minimal - by phase", Ordered, Serial, CreateAndDeleteByPhaseTestScenario("1.26.2"))
+	_ = Describe("furyctl & distro v1.26.2 - minimal - by phase", Ordered, Serial, CreateAndDeleteByPhaseTestScenario("1.26.2", false))
 
-	_ = Describe("furyctl & distro v1.26.3 - minimal - by phase", Ordered, Serial, CreateAndDeleteByPhaseTestScenario("1.26.3"))
+	_ = Describe("furyctl & distro v1.26.2 - minimal - by phase", Ordered, Serial, CreateAndDeleteByPhaseTestScenario("1.26.2", false))
 
-	_ = Describe("furyctl & distro v1.26.4 - minimal - by phase", Ordered, Serial, CreateAndDeleteByPhaseTestScenario("1.26.4"))
+	_ = Describe("furyctl & distro v1.26.4 - minimal - by phase", Ordered, Serial, CreateAndDeleteByPhaseTestScenario("1.26.4", false))
 
-	_ = Describe("furyctl & distro v1.27.0 - minimal - by phase", Ordered, Serial, CreateAndDeleteByPhaseTestScenario("1.27.0"))
+	_ = Describe("furyctl & distro v1.27.0 - minimal - by phase", Ordered, Serial, CreateAndDeleteByPhaseTestScenario("1.27.0", false))
 )
