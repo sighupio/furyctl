@@ -380,6 +380,10 @@ func (v *ClusterCreator) CreateAsync(
 		}
 
 	case cluster.OperationPhasePlugins:
+		if !distribution.HasFeature(v.kfdManifest, distribution.FeaturePlugins) {
+			errCh <- fmt.Errorf("error while executing plugins phase: %w", distribution.ErrPluginsFeatureNotSupported)
+		}
+
 		if err := phases.Plugins.Exec(); err != nil {
 			errCh <- err
 		}
@@ -658,8 +662,10 @@ func (v *ClusterCreator) allPhasesExec(
 		}
 	}
 
-	if err := phases.Plugins.Exec(); err != nil {
-		return fmt.Errorf("error while executing plugins phase: %w", err)
+	if distribution.HasFeature(v.kfdManifest, distribution.FeaturePlugins) {
+		if err := phases.Plugins.Exec(); err != nil {
+			return fmt.Errorf("error while executing plugins phase: %w", err)
+		}
 	}
 
 	return nil

@@ -227,6 +227,10 @@ func (c *ClusterCreator) Create(startFrom string, _ int) error {
 		}
 
 	case cluster.OperationPhasePlugins:
+		if !distribution.HasFeature(c.kfdManifest, distribution.FeaturePlugins) {
+			return fmt.Errorf("error while executing plugins phase: %w", distribution.ErrPluginsFeatureNotSupported)
+		}
+
 		if err := pluginsPhase.Exec(); err != nil {
 			return fmt.Errorf("error while executing plugins phase: %w", err)
 		}
@@ -321,8 +325,10 @@ func (c *ClusterCreator) allPhases(
 		}
 	}
 
-	if err := pluginsPhase.Exec(); err != nil {
-		return fmt.Errorf("error while executing plugins phase: %w", err)
+	if distribution.HasFeature(c.kfdManifest, distribution.FeaturePlugins) {
+		if err := pluginsPhase.Exec(); err != nil {
+			return fmt.Errorf("error while executing plugins phase: %w", err)
+		}
 	}
 
 	return nil
