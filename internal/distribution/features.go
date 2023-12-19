@@ -30,6 +30,12 @@ func HasFeature(kfd config.KFD, name Feature) bool {
 
 	case FeatureKubeconfigInSchema:
 		return hasFeatureKubeconfigInSchema(kfd)
+
+	case FeatureTracingModule:
+		return hasFeatureTracingModule(kfd)
+
+	case FeaturePlugins:
+		return hasFeaturePlugins(kfd)
 	}
 
 	return false
