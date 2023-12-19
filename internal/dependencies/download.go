@@ -131,16 +131,18 @@ func (dd *Downloader) DownloadModules(kfd config.KFD, gitPrefix string) error {
 
 			req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, moduleURL, nil)
 			if err != nil {
-				return fmt.Errorf("%w '%s' (url: %s): %v", ErrDownloadingModule, name, moduleURL, err)
+				return fmt.Errorf("%w '%s' (url: %s): %w", ErrDownloadingModule, name, moduleURL, err)
 			}
 
 			resp, err := http.DefaultClient.Do(req)
 			if err != nil {
-				if err := resp.Body.Close(); err != nil {
-					return fmt.Errorf("%w '%s' (url: %s): %v", ErrDownloadingModule, name, moduleURL, err)
+				if resp != nil && resp.Body != nil {
+					if berr := resp.Body.Close(); berr != nil {
+						return fmt.Errorf("%w '%s' (url: %s): %w, %w", ErrDownloadingModule, name, moduleURL, err, berr)
+					}
 				}
 
-				return fmt.Errorf("%w '%s' (url: %s): %v", ErrDownloadingModule, name, moduleURL, err)
+				return fmt.Errorf("%w '%s' (url: %s): %w", ErrDownloadingModule, name, moduleURL, err)
 			}
 
 			retries[name]++
