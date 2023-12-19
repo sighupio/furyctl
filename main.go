@@ -60,12 +60,6 @@ func exec() int {
 		Level: logrus.DebugLevel,
 	}
 
-	if err := os.Setenv("KUBECONFIG", "willingly-invalid-kubeconfig-path-to-avoid-accidental-usage"); err != nil {
-		log.Error(err)
-
-		return 1
-	}
-
 	h, err := os.Hostname()
 	if err != nil {
 		log.Debug(err)
