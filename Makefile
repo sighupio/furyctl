@@ -155,7 +155,7 @@ test-expensive:
 
 test-expensive-ekscluster:
 	$(call yes-or-no, "WARNING: This test will create a cluster on AWS. Are you sure you want to continue?")
-	@GOFLAGS=-mod=mod ginkgo run -vv --trace -tags=expensive -timeout 36000s --procs=2 test/expensive/ekscluster
+	@GOFLAGS=-mod=mod ginkgo run -vv --trace -tags=expensive -timeout 36000s --procs=3 test/expensive/ekscluster
 
 test-expensive-kfddistribution:
 	@GOFLAGS=-mod=mod ginkgo run -vv --trace -tags=expensive -timeout 36000s --procs=4 test/expensive/kfddistribution
