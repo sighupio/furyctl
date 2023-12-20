@@ -12,7 +12,6 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
-	"path"
 	"path/filepath"
 	"testing"
 	"time"
@@ -60,8 +59,6 @@ var (
 
 			ctxState := NewContextState(testName)
 
-			ctxState.Kubeconfig = path.Join(ctxState.TestDir, "kubeconfig")
-
 			k := kind.NewProvider().SetDefaults().WithName(testName).WithOpts(kind.WithImage(fmt.Sprintf("kindest/node:%s", kubernetesVersion)))
 
 			kubecfg, err := k.CreateWithConfig(context.Background(), fmt.Sprintf("%s/kind-config.yml", ctxState.DataDir))
@@ -104,7 +101,6 @@ var (
 			furyctlCreator := NewFuryctlCreator(
 				furyctl,
 				state.FuryctlYaml,
-				state.TmpDir,
 				state.TestDir,
 				false,
 			)
@@ -143,8 +139,6 @@ var (
 			furyctlDeleter := NewFuryctlDeleter(
 				furyctl,
 				state.FuryctlYaml,
-				state.DistroDir,
-				state.TmpDir,
 				state.TestDir,
 				false,
 			)

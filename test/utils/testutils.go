@@ -51,30 +51,25 @@ type ConfMeta struct {
 type FuryctlCreator struct {
 	furyctl    string
 	configPath string
-	workDir    string
-	outDir     string
+	testDir    string
 	dryRun     bool
 }
 
 type FuryctlDeleter struct {
 	furyctl    string
 	configPath string
-	distroPath string
-	workDir    string
-	outDir     string
+	testDir    string
 	dryRun     bool
 }
 
 type ContextState struct {
-	TestID      int    `json:"testId"`
+	TestID      int64  `json:"testId"`
 	TestName    string `json:"testName"`
 	ClusterName string `json:"clusterName"`
 	Kubeconfig  string `json:"kubeconfig"`
 	FuryctlYaml string `json:"furyctlYaml"`
 	DataDir     string `json:"dataDir"`
-	DistroDir   string `json:"distroDir"`
 	TestDir     string `json:"testDir"`
-	TmpDir      string `json:"tmpDir"`
 }
 
 const (
@@ -85,31 +80,25 @@ const (
 var errToolDoesNotSupportDownload = errors.New("does not support download")
 
 func NewContextState(testName string) ContextState {
-	testID, err := rand.Int(rand.Reader, big.NewInt(TestIDCeiling))
-	if err != nil {
-		panic(err)
-	}
+	testID := Must1(rand.Int(rand.Reader, big.NewInt(TestIDCeiling))).Int64()
 
-	clusterName := fmt.Sprintf("furytest-%d", testID.Int64())
+	clusterName := fmt.Sprintf("furytest-%d", testID)
 
-	homeDir, dataDir, tmpDir := PrepareDirs(testName)
+	dataDir, testDir := PrepareDirs(testName, testID)
 
-	testDir := path.Join(homeDir, ".furyctl", "tests", testName)
-	testState := path.Join(testDir, fmt.Sprintf("%s.teststate", clusterName))
-
-	Must0(os.MkdirAll(testDir, iox.FullPermAccess))
-
-	furyctlYaml := path.Join(testDir, fmt.Sprintf("%s.yaml", clusterName))
+	furyctlYaml := path.Join(testDir, "furyctl.yaml")
 
 	s := ContextState{
-		TestID:      int(testID.Int64()),
+		TestID:      testID,
 		TestName:    testName,
 		ClusterName: clusterName,
 		FuryctlYaml: furyctlYaml,
 		DataDir:     dataDir,
 		TestDir:     testDir,
-		TmpDir:      tmpDir,
+		Kubeconfig:  path.Join(testDir, "kubeconfig"),
 	}
+
+	testState := path.Join(testDir, "teststate.json")
 
 	Must0(os.WriteFile(testState, Must1(json.Marshal(s)), iox.RWPermAccess))
 
@@ -130,14 +119,16 @@ func Must1[T any](t T, err error) T {
 	return t
 }
 
-func PrepareDirs(name string) (string, string, string) {
+func PrepareDirs(testName string, testID int64) (string, string) {
 	homeDir := Must1(os.UserHomeDir())
 
-	dataDir := Must1(filepath.Abs(path.Join(".", "testdata", strings.ReplaceAll(name, ".", "-"))))
+	dataDir := Must1(filepath.Abs(path.Join(".", "testdata", strings.ReplaceAll(testName, ".", "-"))))
 
-	tmpDir := Must1(os.MkdirTemp("", name))
+	testDir := path.Join(homeDir, ".furyctl", "tests", fmt.Sprintf("%s-%d", testName, testID))
 
-	return homeDir, dataDir, tmpDir
+	Must0(os.MkdirAll(testDir, iox.FullPermAccess))
+
+	return dataDir, testDir
 }
 
 func Copy(src, dst string) {
@@ -273,12 +264,11 @@ func KillOpenVPN() (*gexec.Session, error) {
 	return session, nil
 }
 
-func NewFuryctlCreator(furyctl, configPath, workDir, outDir string, dryRun bool) *FuryctlCreator {
+func NewFuryctlCreator(furyctl, configPath, testDir string, dryRun bool) *FuryctlCreator {
 	return &FuryctlCreator{
 		furyctl:    furyctl,
 		configPath: configPath,
-		workDir:    workDir,
-		outDir:     outDir,
+		testDir:    testDir,
 		dryRun:     dryRun,
 	}
 }
@@ -294,9 +284,9 @@ func (f *FuryctlCreator) Create(phase, startFrom string) *exec.Cmd {
 		"--force",
 		"--skip-vpn-confirmation",
 		"--workdir",
-		f.workDir,
+		f.testDir,
 		"--outdir",
-		f.outDir,
+		f.testDir,
 	}
 
 	if phase != cluster.OperationPhaseAll {
@@ -321,17 +311,13 @@ func (f *FuryctlCreator) Create(phase, startFrom string) *exec.Cmd {
 func NewFuryctlDeleter(
 	furyctl,
 	configPath,
-	distroPath,
-	workDir,
-	outDir string,
+	testDir string,
 	dryRun bool,
 ) *FuryctlDeleter {
 	return &FuryctlDeleter{
 		furyctl:    furyctl,
 		configPath: configPath,
-		distroPath: distroPath,
-		workDir:    workDir,
-		outDir:     outDir,
+		testDir:    testDir,
 		dryRun:     dryRun,
 	}
 }
@@ -342,14 +328,12 @@ func (f *FuryctlDeleter) Delete(phase string) *exec.Cmd {
 		"cluster",
 		"--config",
 		f.configPath,
-		"--distro-location",
-		f.distroPath,
 		"--debug",
 		"--force",
 		"--workdir",
-		f.workDir,
+		f.testDir,
 		"--outdir",
-		f.outDir,
+		f.testDir,
 	}
 
 	if phase != cluster.OperationPhaseAll {
