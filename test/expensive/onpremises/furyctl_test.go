@@ -41,11 +41,6 @@ type onPremContextState struct {
 func newOnPremContextState(tfBinPath, furyAgentBinpath, kubectlBinPath string, state *ContextState) *onPremContextState {
 	onPremCommonDir := Must1(filepath.Abs(path.Join(".", "testdata", "common")))
 
-	state.Kubeconfig = path.Join(
-		state.TmpDir,
-		"kubeconfig",
-	)
-
 	return &onPremContextState{
 		ContextState:     state,
 		OnPremCommonDir:  onPremCommonDir,
@@ -441,7 +436,7 @@ var (
 
 			Eventually(pkillSession, 5*time.Minute, 1*time.Second).Should(gexec.Exit(0))
 
-			err := os.RemoveAll(state.TmpDir)
+			err := os.RemoveAll(state.TestDir)
 			Expect(err).To(Not(HaveOccurred()))
 
 			err = os.RemoveAll(infraDir)
@@ -460,7 +455,6 @@ var (
 			furyctlCreator := NewFuryctlCreator(
 				furyctl,
 				state.FuryctlYaml,
-				state.TmpDir,
 				state.TestDir,
 				false,
 			)
@@ -493,7 +487,6 @@ var (
 			furyctlCreator := NewFuryctlCreator(
 				furyctl,
 				state.FuryctlYaml,
-				state.TmpDir,
 				state.TestDir,
 				false,
 			)
@@ -523,7 +516,6 @@ var (
 			furyctlCreator := NewFuryctlCreator(
 				furyctl,
 				state.FuryctlYaml,
-				state.TmpDir,
 				state.TestDir,
 				false,
 			)
@@ -551,8 +543,6 @@ var (
 			furyctlDeleter := NewFuryctlDeleter(
 				furyctl,
 				state.FuryctlYaml,
-				state.DistroDir,
-				state.TmpDir,
 				state.TestDir,
 				false,
 			)

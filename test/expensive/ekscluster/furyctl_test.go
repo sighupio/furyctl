@@ -40,15 +40,6 @@ var (
 	PrepareCreateDeleteClusterTest = func(state *ContextState, version, furyctlYamlTemplate string) {
 		*state = NewContextState(fmt.Sprintf("ekscluster-v%s-create-and-delete", version))
 
-		state.Kubeconfig = path.Join(
-			state.TestDir,
-			state.ClusterName,
-			cluster.OperationPhaseKubernetes,
-			"terraform",
-			"secrets",
-			"kubeconfig",
-		)
-
 		GinkgoWriter.Write([]byte(fmt.Sprintf("Test id: %d", state.TestID)))
 
 		Copy("./testdata/id_ed25519", path.Join(state.TestDir, "id_ed25519"))
@@ -62,6 +53,7 @@ var (
 
 		tfPlanPath := path.Join(
 			state.TestDir,
+			".furyctl",
 			state.ClusterName,
 			cluster.OperationPhaseInfrastructure,
 			"terraform",
@@ -72,7 +64,6 @@ var (
 		furyctlCreator := NewFuryctlCreator(
 			furyctl,
 			state.FuryctlYaml,
-			state.TmpDir,
 			state.TestDir,
 			false,
 		)
@@ -101,18 +92,12 @@ var (
 
 	DeleteClusterTest = func(state *ContextState) {
 		DeferCleanup(func() {
-			_ = os.RemoveAll(state.TmpDir)
-
-			pkillSession := Must1(KillOpenVPN())
-
-			Eventually(pkillSession, 5*time.Minute, 1*time.Second).Should(gexec.Exit(0))
+			_ = os.RemoveAll(state.TestDir)
 		})
 
 		furyctlDeleter := NewFuryctlDeleter(
 			furyctl,
 			state.FuryctlYaml,
-			state.DistroDir,
-			state.TmpDir,
 			state.TestDir,
 			false,
 		)
