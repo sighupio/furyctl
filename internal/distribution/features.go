@@ -86,23 +86,12 @@ func hasFeatureTracingModule(kfd config.KFD) bool {
 		return false
 	}
 
-	v1259, err := semver.NewVersion("v1.25.9")
-	if err != nil {
-		return false
-	}
-
-	v1260, err := semver.NewVersion("v1.26.0")
-	if err != nil {
-		return false
-	}
-
 	v1264, err := semver.NewVersion("v1.26.4")
 	if err != nil {
 		return false
 	}
 
-	return (v1.GreaterThanOrEqual(v1259) && v1.LessThan(v1260)) ||
-		v1.GreaterThanOrEqual(v1264)
+	return v1.GreaterThanOrEqual(v1264)
 }
 
 func hasFeaturePlugins(kfd config.KFD) bool {
