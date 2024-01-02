@@ -106,7 +106,7 @@ func (tv *Validator) validateTools(i any, kfdManifest config.KFD) ([]string, []e
 
 		toolName := strings.ToLower(toolCfgs.Type().Field(i).Name)
 
-		if toolName == "helm" || toolName == "helmfile" &&
+		if (toolName == "helm" || toolName == "helmfile") &&
 			!distribution.HasFeature(kfdManifest, distribution.FeaturePlugins) {
 			continue
 		}
