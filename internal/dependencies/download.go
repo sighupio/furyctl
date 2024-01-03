@@ -241,7 +241,7 @@ func (dd *Downloader) DownloadTools(kfd config.KFD) ([]string, error) {
 				return unsupportedTools, fmt.Errorf("%s: %w", name, ErrModuleHasNoVersion)
 			}
 
-			if name == "helm" || name == "helmfile" && !distribution.HasFeature(kfd, distribution.FeaturePlugins) {
+			if (name == "helm" || name == "helmfile") && !distribution.HasFeature(kfd, distribution.FeaturePlugins) {
 				continue
 			}
 
