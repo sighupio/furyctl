@@ -186,16 +186,18 @@ func (p *PreUpgrade) Exec() error {
 		upgradePath := path.Join(p.Path, fmt.Sprintf("%s-%s", from, to))
 
 		if _, err := os.Stat(upgradePath); err != nil {
-			if os.IsNotExist(err) {
-				return fmt.Errorf("%w: unable to upgrade from %s to %s", errUpgradePathNotFound, p.upgrade.From, p.upgrade.To)
-			}
-
 			if p.forceFlag {
-				logrus.Warn("an upgrade path was not found, but the force flag was set, so the process will continue.")
+				logrus.Warn("An upgrade path was not found, but the force flag was set, so the process will continue.")
 
 				p.upgrade.Enabled = false
 
 				return nil
+			}
+
+			if os.IsNotExist(err) {
+				return fmt.Errorf("%w: unable to upgrade from %s to %s, "+
+					"please check if the upgrade path is available to a newer KFD version",
+					errUpgradePathNotFound, p.upgrade.From, p.upgrade.To)
 			}
 
 			return fmt.Errorf("error checking upgrade path: %w", err)
