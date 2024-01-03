@@ -6,7 +6,7 @@ kind: EKSCluster
 metadata:
   name: __CLUSTER_NAME__
 spec:
-  distributionVersion: v1.27.0-rc.14
+  distributionVersion: v1.25.9-rc.0
   toolsConfiguration:
     terraform:
       state:
@@ -19,7 +19,7 @@ spec:
     env: "swe-dev"
     k8s: "__CLUSTER_NAME__"
     githubOrg: "sighupio"
-    githubRepo: "furyctl"
+    githubRepo: "product-management"
   infrastructure:
     vpc:
       network:

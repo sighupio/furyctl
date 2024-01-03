@@ -8,7 +8,7 @@ kind: KFDDistribution
 metadata:
   name: __CLUSTER_NAME__
 spec:
-  distributionVersion: v1.27.0-rc.11
+  distributionVersion: v1.27.0-rc.14
   distribution:
     kubeconfig: __KUBECONFIG__
     modules:
