@@ -549,12 +549,6 @@ github.com/shoenig/test v0.6.4/go.mod h1:byHiCGXqrVaflBLAMq/srcZIHynQPQgeyvkvXnj
 github.com/shopspring/decimal v1.2.0/go.mod h1:DKyhrW/HYNuLGql+MJL6WCR6knT2jwCFRcu2hWCYk4o=
 github.com/shopspring/decimal v1.3.1 h1:2Usl1nmF/WZucqkFZhnfFYxxxu8LG21F6nPQBE5gKV8=
 github.com/shopspring/decimal v1.3.1/go.mod h1:DKyhrW/HYNuLGql+MJL6WCR6knT2jwCFRcu2hWCYk4o=
-github.com/sighupio/fury-distribution v1.27.0-rc.10.0.20231218144710-32a7ed78d647 h1:zkQurtU++/g6uPLYfBSSwACjhiUZQMeXYqE5NFoBJyo=
-github.com/sighupio/fury-distribution v1.27.0-rc.10.0.20231218144710-32a7ed78d647/go.mod h1:iYBnl0N/6zGPz3j3L2X6nzFC3nzNQtIkAzmaPfnO0zA=
-github.com/sighupio/fury-distribution v1.27.0-rc.11.0.20231218175733-d01f529ac3ff h1:D4Vjd/9HYNlK7mayuKCTkI7zk0HLAXq0oqjdWEPNsfc=
-github.com/sighupio/fury-distribution v1.27.0-rc.11.0.20231218175733-d01f529ac3ff/go.mod h1:iYBnl0N/6zGPz3j3L2X6nzFC3nzNQtIkAzmaPfnO0zA=
-github.com/sighupio/fury-distribution v1.27.0-rc.11.0.20231219101900-a1ae3c533fde h1:jlSj/tbKISMn5E6b9fMOvlZIqudcdqDYlETO4BWwpPg=
-github.com/sighupio/fury-distribution v1.27.0-rc.11.0.20231219101900-a1ae3c533fde/go.mod h1:iYBnl0N/6zGPz3j3L2X6nzFC3nzNQtIkAzmaPfnO0zA=
 github.com/sighupio/fury-distribution v1.27.0-rc.11.0.20231219110006-75ef8f5a164f h1:lCsem6/ZA7Yol6xQChj4JxUVGwbLJulb8BxnXzqz0As=
 github.com/sighupio/fury-distribution v1.27.0-rc.11.0.20231219110006-75ef8f5a164f/go.mod h1:iYBnl0N/6zGPz3j3L2X6nzFC3nzNQtIkAzmaPfnO0zA=
 github.com/sirupsen/logrus v1.9.3 h1:dueUQJ1C2q9oE3F7wvmSGAaVtTmUizReu6fjN8uqzbQ=
