@@ -8,7 +8,7 @@ kind: OnPremises
 metadata:
   name: __CLUSTER_NAME__
 spec:
-  distributionVersion: v1.25.9-rc.0
+  distributionVersion: v1.25.9
   kubernetes:
     pkiFolder: ./infra/secrets/pki
     ssh:

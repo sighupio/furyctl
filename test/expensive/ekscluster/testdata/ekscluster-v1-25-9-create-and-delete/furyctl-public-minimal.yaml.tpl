@@ -6,7 +6,7 @@ kind: EKSCluster
 metadata:
   name: __CLUSTER_NAME__
 spec:
-  distributionVersion: v1.25.9-rc.0
+  distributionVersion: v1.25.9
   toolsConfiguration:
     terraform:
       state:
