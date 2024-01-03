@@ -234,6 +234,10 @@ Last but not least, you can launch the creation of the resources defined in the 
 furyctl create cluster --config /path/to/your/furyctl.yaml
 ```
 
+> 💡 **TIP**
+>
+> You can use the alias `furyctl apply` instead of `furyctl create cluster`.
+
 > 📖 **NOTE**
 >
 > The creation process will take a while.
