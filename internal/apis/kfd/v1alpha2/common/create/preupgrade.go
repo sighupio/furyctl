@@ -190,6 +190,14 @@ func (p *PreUpgrade) Exec() error {
 				return fmt.Errorf("%w: unable to upgrade from %s to %s", errUpgradePathNotFound, p.upgrade.From, p.upgrade.To)
 			}
 
+			if p.forceFlag {
+				logrus.Warn("an upgrade path was not found, but the force flag was set, so the process will continue.")
+
+				p.upgrade.Enabled = false
+
+				return nil
+			}
+
 			return fmt.Errorf("error checking upgrade path: %w", err)
 		}
 
