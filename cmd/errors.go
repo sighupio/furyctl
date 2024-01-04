@@ -6,6 +6,4 @@ package cmd
 
 import "errors"
 
-var (
-	ErrParsingFlag = errors.New("error while parsing flag")
-)
+var ErrParsingFlag = errors.New("error while parsing flag")

@@ -25,9 +25,7 @@ import (
 	netx "github.com/sighupio/furyctl/internal/x/net"
 )
 
-var (
-	ErrParsingFlag = errors.New("error while parsing flag")
-)
+var ErrParsingFlag = errors.New("error while parsing flag")
 
 type ClusterCmdFlags struct {
 	Debug          bool
