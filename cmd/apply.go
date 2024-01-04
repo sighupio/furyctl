@@ -430,12 +430,6 @@ func setupCreateClusterCmdFlags(cmd *cobra.Command) {
 		"WARNING: furyctl won't ask for confirmation and will proceed applying upgrades and reducers",
 	)
 
-	cmd.Flags().String(
-		"kubeconfig",
-		"",
-		"Path to the kubeconfig file, mandatory if you want to run the distribution phase alone and the KUBECONFIG environment variable is not set",
-	)
-
 	//nolint:gomnd,revive // ignore magic number linters
 	cmd.Flags().Int(
 		"timeout",
