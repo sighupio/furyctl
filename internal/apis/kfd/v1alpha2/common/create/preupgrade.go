@@ -39,18 +39,20 @@ var (
 
 type PreUpgrade struct {
 	*cluster.OperationPhase
-	distroPath      string
-	furyctlConfPath string
-	dryRun          bool
-	kind            string
-	upgrade         *upgrade.Upgrade
-	upgradeFlag     bool
-	reducers        v1alpha2.Reducers
-	merger          v1alpha2.Merger
-	diffs           diff.Changelog
-	forceFlag       bool
+	distroPath           string
+	furyctlConfPath      string
+	dryRun               bool
+	kind                 string
+	upgrade              *upgrade.Upgrade
+	upgradeFlag          bool
+	reducers             v1alpha2.Reducers
+	merger               v1alpha2.Merger
+	diffs                diff.Changelog
+	forceFlag            bool
+	externalUpgradesPath string
 }
 
+//nolint:revive // ignore arguments limit
 func NewPreUpgrade(
 	paths cluster.CreatorPaths,
 	kfdManifest config.KFD,
@@ -61,6 +63,7 @@ func NewPreUpgrade(
 	upgr *upgrade.Upgrade,
 	reducers v1alpha2.Reducers,
 	diffs diff.Changelog,
+	externalUpgradesPath string,
 ) *PreUpgrade {
 	phaseOp := cluster.NewOperationPhase(
 		path.Join(paths.WorkDir, "upgrades"),
@@ -69,17 +72,18 @@ func NewPreUpgrade(
 	)
 
 	return &PreUpgrade{
-		OperationPhase:  phaseOp,
-		distroPath:      paths.DistroPath,
-		furyctlConfPath: paths.ConfigPath,
-		dryRun:          dryRun,
-		kind:            kind,
-		upgrade:         upgr,
-		upgradeFlag:     upgradeFlag,
-		reducers:        reducers,
-		merger:          v1alpha2.NewBaseMerger(paths.DistroPath, kind, paths.ConfigPath),
-		diffs:           diffs,
-		forceFlag:       forceFlag,
+		OperationPhase:       phaseOp,
+		distroPath:           paths.DistroPath,
+		furyctlConfPath:      paths.ConfigPath,
+		dryRun:               dryRun,
+		kind:                 kind,
+		upgrade:              upgr,
+		upgradeFlag:          upgradeFlag,
+		reducers:             reducers,
+		merger:               v1alpha2.NewBaseMerger(paths.DistroPath, kind, paths.ConfigPath),
+		diffs:                diffs,
+		forceFlag:            forceFlag,
+		externalUpgradesPath: externalUpgradesPath,
 	}
 }
 
@@ -122,24 +126,30 @@ func (p *PreUpgrade) Exec() error {
 		return fmt.Errorf("error writing config file: %w", err)
 	}
 
-	subFS, err := fs.Sub(configs.Tpl, path.Join("upgrades", strings.ToLower(p.kind)))
-	if err != nil {
-		return fmt.Errorf("error getting subfs: %w", err)
-	}
+	upgradesPath := p.externalUpgradesPath
 
-	tmpUpgradesFolder, err := os.MkdirTemp("", "furyctl-create-preupgrade-")
-	if err != nil {
-		return fmt.Errorf("error creating temp folder: %w", err)
-	}
+	if p.externalUpgradesPath == "" {
+		subFS, err := fs.Sub(configs.Tpl, path.Join("upgrades", strings.ToLower(p.kind)))
+		if err != nil {
+			return fmt.Errorf("error getting subfs: %w", err)
+		}
 
-	if err := iox.CopyRecursive(subFS, tmpUpgradesFolder); err != nil {
-		return fmt.Errorf("error copying template files: %w", err)
-	}
+		tmpUpgradesFolder, err := os.MkdirTemp("", "furyctl-create-preupgrade-")
+		if err != nil {
+			return fmt.Errorf("error creating temp folder: %w", err)
+		}
 
-	defer os.RemoveAll(tmpUpgradesFolder)
+		if err := iox.CopyRecursive(subFS, tmpUpgradesFolder); err != nil {
+			return fmt.Errorf("error copying template files: %w", err)
+		}
+
+		defer os.RemoveAll(tmpUpgradesFolder)
+
+		upgradesPath = tmpUpgradesFolder
+	}
 
 	templateModel, err := template.NewTemplateModel(
-		tmpUpgradesFolder,
+		upgradesPath,
 		path.Join(p.Path),
 		confPath,
 		outDirPath1,
