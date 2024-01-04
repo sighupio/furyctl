@@ -126,7 +126,7 @@ func (p *PreUpgrade) Exec() error {
 		return fmt.Errorf("error writing config file: %w", err)
 	}
 
-	upgradesPath := p.externalUpgradesPath
+	var upgradesPath string
 
 	if p.externalUpgradesPath == "" {
 		subFS, err := fs.Sub(configs.Tpl, path.Join("upgrades", strings.ToLower(p.kind)))
@@ -146,11 +146,13 @@ func (p *PreUpgrade) Exec() error {
 		defer os.RemoveAll(tmpUpgradesFolder)
 
 		upgradesPath = tmpUpgradesFolder
+	} else {
+		upgradesPath = path.Join(p.externalUpgradesPath, strings.ToLower(p.kind))
 	}
 
 	templateModel, err := template.NewTemplateModel(
 		upgradesPath,
-		path.Join(p.Path),
+		p.Path,
 		confPath,
 		outDirPath1,
 		p.furyctlConfPath,
