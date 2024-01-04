@@ -42,15 +42,16 @@ var (
 )
 
 type ClusterCreator struct {
-	paths             cluster.CreatorPaths
-	furyctlConf       public.KfddistributionKfdV1Alpha2
-	stateStore        state.Storer
-	upgradeStateStore upgrade.Storer
-	kfdManifest       config.KFD
-	phase             string
-	dryRun            bool
-	force             bool
-	upgrade           bool
+	paths                cluster.CreatorPaths
+	furyctlConf          public.KfddistributionKfdV1Alpha2
+	stateStore           state.Storer
+	upgradeStateStore    upgrade.Storer
+	kfdManifest          config.KFD
+	phase                string
+	dryRun               bool
+	force                bool
+	upgrade              bool
+	externalUpgradesPath string
 }
 
 func (c *ClusterCreator) SetProperties(props []cluster.CreatorProperty) {
@@ -123,6 +124,11 @@ func (c *ClusterCreator) SetProperty(name string, value any) {
 	case cluster.CreatorPropertyUpgrade:
 		if b, ok := value.(bool); ok {
 			c.upgrade = b
+		}
+
+	case cluster.CreatorPropertyExternalUpgradesPath:
+		if s, ok := value.(string); ok {
+			c.externalUpgradesPath = s
 		}
 	}
 }
@@ -203,6 +209,7 @@ func (c *ClusterCreator) Create(startFrom string, _ int) error {
 			upgr,
 			reducers,
 			status.Diffs,
+			c.externalUpgradesPath,
 		)
 
 		if err := preupgradePhase.Exec(); err != nil {

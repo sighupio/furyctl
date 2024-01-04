@@ -27,14 +27,15 @@ import (
 )
 
 type DiffCommandFlags struct {
-	Debug          bool
-	FuryctlPath    string
-	DistroLocation string
-	Phase          string
-	NoTTY          bool
-	HTTPS          bool
-	BinPath        string
-	Outdir         string
+	Debug               bool
+	FuryctlPath         string
+	DistroLocation      string
+	Phase               string
+	NoTTY               bool
+	HTTPS               bool
+	BinPath             string
+	Outdir              string
+	UpgradePathLocation string
 }
 
 func NewDiffCommand(tracker *analytics.Tracker) *cobra.Command {
@@ -111,6 +112,7 @@ func NewDiffCommand(tracker *analytics.Tracker) *cobra.Command {
 				flags.Phase,
 				res.MinimalConf,
 				res.DistroManifest,
+				flags.UpgradePathLocation,
 			)
 			if err != nil {
 				cmdEvent.AddErrorMessage(err)
@@ -174,6 +176,13 @@ func NewDiffCommand(tracker *analytics.Tracker) *cobra.Command {
 		"Path to the folder where all the dependencies' binaries are installed",
 	)
 
+	cmd.Flags().StringP(
+		"upgrade-path-location",
+		"",
+		"",
+		"Location where the upgrade scripts are located, if not set the embedded ones will be used",
+	)
+
 	return cmd
 }
 
@@ -185,6 +194,7 @@ func getPhasePath(
 	phase string,
 	minimalConf config.Furyctl,
 	distroManifest config.KFD,
+	upgradePathLocation string,
 ) (string, error) {
 	absFuryctlPath, err := filepath.Abs(furyctlPath)
 	if err != nil {
@@ -208,6 +218,7 @@ func getPhasePath(
 		true,
 		true,
 		true,
+		upgradePathLocation,
 	)
 	if err != nil {
 		return "", fmt.Errorf("error while initializing cluster creator: %w", err)
@@ -299,14 +310,20 @@ func getDiffCommandFlags(
 		return DiffCommandFlags{}, fmt.Errorf("%w: %s", ErrParsingFlag, "https")
 	}
 
+	upgradePathLocation, err := cmdutil.StringFlag(cmd, "upgrade-path-location", tracker, cmdEvent)
+	if err != nil {
+		return DiffCommandFlags{}, fmt.Errorf("%w: %s", ErrParsingFlag, "upgrade-path-location")
+	}
+
 	return DiffCommandFlags{
-		Debug:          debug,
-		FuryctlPath:    furyctlPath,
-		DistroLocation: distroLocation,
-		Phase:          phase,
-		NoTTY:          noTTY,
-		HTTPS:          https,
-		BinPath:        binPath,
-		Outdir:         outdir,
+		Debug:               debug,
+		FuryctlPath:         furyctlPath,
+		DistroLocation:      distroLocation,
+		Phase:               phase,
+		NoTTY:               noTTY,
+		HTTPS:               https,
+		BinPath:             binPath,
+		Outdir:              outdir,
+		UpgradePathLocation: upgradePathLocation,
 	}, nil
 }

@@ -14,18 +14,19 @@ import (
 )
 
 const (
-	CreatorPropertyConfigPath     = "configpath"
-	CreatorPropertyWorkDir        = "workdir"
-	CreatorPropertyFuryctlConf    = "furyctlconf"
-	CreatorPropertyKfdManifest    = "kfdmanifest"
-	CreatorPropertyDistroPath     = "distropath"
-	CreatorPropertyBinPath        = "binpath"
-	CreatorPropertyPhase          = "phase"
-	CreatorPropertySkipVpn        = "skipvpn"
-	CreatorPropertyVpnAutoConnect = "vpnautoconnect"
-	CreatorPropertyDryRun         = "dryrun"
-	CreatorPropertyForce          = "force"
-	CreatorPropertyUpgrade        = "upgrade"
+	CreatorPropertyConfigPath           = "configpath"
+	CreatorPropertyWorkDir              = "workdir"
+	CreatorPropertyFuryctlConf          = "furyctlconf"
+	CreatorPropertyKfdManifest          = "kfdmanifest"
+	CreatorPropertyDistroPath           = "distropath"
+	CreatorPropertyBinPath              = "binpath"
+	CreatorPropertyPhase                = "phase"
+	CreatorPropertySkipVpn              = "skipvpn"
+	CreatorPropertyVpnAutoConnect       = "vpnautoconnect"
+	CreatorPropertyDryRun               = "dryrun"
+	CreatorPropertyForce                = "force"
+	CreatorPropertyUpgrade              = "upgrade"
+	CreatorPropertyExternalUpgradesPath = "externalupgradespath"
 )
 
 var (
@@ -55,6 +56,7 @@ type Creator interface {
 	GetPhasePath(phase string) (string, error)
 }
 
+//nolint:revive // ignore arguments limit
 func NewCreator(
 	minimalConf config.Furyctl,
 	kfdManifest config.KFD,
@@ -65,6 +67,7 @@ func NewCreator(
 	dryRun,
 	force bool,
 	upgrade bool,
+	externalUpgradesPath string,
 ) (Creator, error) {
 	if err := resetKubeconfigEnv(kfdManifest); err != nil {
 		return nil, fmt.Errorf("error resetting kubeconfig env: %w", err)
@@ -114,6 +117,10 @@ func NewCreator(
 			{
 				Name:  CreatorPropertyUpgrade,
 				Value: upgrade,
+			},
+			{
+				Name:  CreatorPropertyExternalUpgradesPath,
+				Value: externalUpgradesPath,
 			},
 		})
 	}
