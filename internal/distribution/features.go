@@ -47,12 +47,12 @@ func hasFeatureClusterUpgrade(kfd config.KFD) bool {
 		return false
 	}
 
-	v2, err := semver.NewVersion("v1.26.4")
+	v125, err := semver.NewVersion("v1.25.7")
 	if err != nil {
 		return false
 	}
 
-	return v1.GreaterThanOrEqual(v2)
+	return v1.GreaterThanOrEqual(v125)
 }
 
 func hasFeatureKubeconfigInSchema(kfd config.KFD) bool {
