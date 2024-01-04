@@ -2,6 +2,8 @@
 
 set -e
 
+{{- if index .spec "kubernetes" }}
+
 ## master upgrades - only one at a time
 {{- range $h := .spec.kubernetes.masters.hosts }}
 ansible-playbook 55.upgrade-control-plane.yml --limit "{{ $h.name }}" --become
@@ -11,4 +13,6 @@ ansible-playbook 55.upgrade-control-plane.yml --limit "{{ $h.name }}" --become
     {{- range $h := $n.hosts }}
 ansible-playbook 56.upgrade-worker-nodes.yml --limit "{{ $h.name }}"
     {{- end }}
+{{- end }}
+
 {{- end }}

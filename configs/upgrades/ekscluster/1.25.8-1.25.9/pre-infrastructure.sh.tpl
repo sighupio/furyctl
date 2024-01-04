@@ -6,7 +6,7 @@ terraformbin="{{ .paths.terraform }}"
 
 {{ $hasVpnEnabled := (
     and
-        (index .spec.infrastructure "vpn")
+        (and (index .spec "infrastructure") (index .spec.infrastructure "vpn"))
         (
             or
                 (not (index .spec.infrastructure.vpn "instances"))
