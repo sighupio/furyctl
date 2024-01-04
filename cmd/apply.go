@@ -30,23 +30,24 @@ const WrappedErrMessage = "%w: %s"
 var ErrDownloadDependenciesFailed = errors.New("dependencies download failed")
 
 type ClusterCmdFlags struct {
-	Debug              bool
-	FuryctlPath        string
-	DistroLocation     string
-	Phase              string
-	StartFrom          string
-	BinPath            string
-	SkipVpn            bool
-	VpnAutoConnect     bool
-	DryRun             bool
-	SkipDepsDownload   bool
-	SkipDepsValidation bool
-	NoTTY              bool
-	HTTPS              bool
-	Force              bool
-	Timeout            int
-	Outdir             string
-	Upgrade            bool
+	Debug               bool
+	FuryctlPath         string
+	DistroLocation      string
+	Phase               string
+	StartFrom           string
+	BinPath             string
+	SkipVpn             bool
+	VpnAutoConnect      bool
+	DryRun              bool
+	SkipDepsDownload    bool
+	SkipDepsValidation  bool
+	NoTTY               bool
+	HTTPS               bool
+	Force               bool
+	Timeout             int
+	Outdir              string
+	Upgrade             bool
+	UpgradePathLocation string
 }
 
 func NewApplyCommand(tracker *analytics.Tracker) *cobra.Command {
@@ -189,6 +190,7 @@ func NewApplyCommand(tracker *analytics.Tracker) *cobra.Command {
 				flags.DryRun,
 				flags.Force,
 				flags.Upgrade,
+				flags.UpgradePathLocation,
 			)
 			if err != nil {
 				cmdEvent.AddErrorMessage(err)
@@ -325,24 +327,30 @@ func getCreateClusterCmdFlags(cmd *cobra.Command, tracker *analytics.Tracker, cm
 		return ClusterCmdFlags{}, fmt.Errorf("%w: %s", ErrParsingFlag, "upgrade")
 	}
 
+	upgradePathLocation, err := cmdutil.StringFlag(cmd, "upgrade-path-location", tracker, cmdEvent)
+	if err != nil {
+		return ClusterCmdFlags{}, fmt.Errorf("%w: %s", ErrParsingFlag, "upgrade-path-location")
+	}
+
 	return ClusterCmdFlags{
-		Debug:              debug,
-		FuryctlPath:        furyctlPath,
-		DistroLocation:     distroLocation,
-		Phase:              phase,
-		StartFrom:          startFrom,
-		BinPath:            binPath,
-		SkipVpn:            skipVpn,
-		VpnAutoConnect:     vpnAutoConnect,
-		DryRun:             dryRun,
-		SkipDepsDownload:   skipDepsDownload,
-		SkipDepsValidation: skipDepsValidation,
-		NoTTY:              noTTY,
-		Force:              force,
-		HTTPS:              https,
-		Timeout:            timeout,
-		Outdir:             outdir,
-		Upgrade:            upgrade,
+		Debug:               debug,
+		FuryctlPath:         furyctlPath,
+		DistroLocation:      distroLocation,
+		Phase:               phase,
+		StartFrom:           startFrom,
+		BinPath:             binPath,
+		SkipVpn:             skipVpn,
+		VpnAutoConnect:      vpnAutoConnect,
+		DryRun:              dryRun,
+		SkipDepsDownload:    skipDepsDownload,
+		SkipDepsValidation:  skipDepsValidation,
+		NoTTY:               noTTY,
+		Force:               force,
+		HTTPS:               https,
+		Timeout:             timeout,
+		Outdir:              outdir,
+		Upgrade:             upgrade,
+		UpgradePathLocation: upgradePathLocation,
 	}, nil
 }
 
@@ -439,5 +447,12 @@ func setupCreateClusterCmdFlags(cmd *cobra.Command) {
 		"upgrade",
 		false,
 		"When set will run the upgrade scripts",
+	)
+
+	cmd.Flags().StringP(
+		"upgrade-path-location",
+		"",
+		"",
+		"Location where the upgrade scripts are located, if not set the embedded ones will be used",
 	)
 }

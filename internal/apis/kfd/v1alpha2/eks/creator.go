@@ -50,17 +50,18 @@ var (
 )
 
 type ClusterCreator struct {
-	paths             cluster.CreatorPaths
-	furyctlConf       private.EksclusterKfdV1Alpha2
-	stateStore        state.Storer
-	upgradeStateStore upgrade.Storer
-	kfdManifest       config.KFD
-	phase             string
-	skipVpn           bool
-	vpnAutoConnect    bool
-	dryRun            bool
-	force             bool
-	upgrade           bool
+	paths                cluster.CreatorPaths
+	furyctlConf          private.EksclusterKfdV1Alpha2
+	stateStore           state.Storer
+	upgradeStateStore    upgrade.Storer
+	kfdManifest          config.KFD
+	phase                string
+	skipVpn              bool
+	vpnAutoConnect       bool
+	dryRun               bool
+	force                bool
+	upgrade              bool
+	externalUpgradesPath string
 }
 
 type Phases struct {
@@ -153,6 +154,11 @@ func (v *ClusterCreator) SetProperty(name string, value any) {
 	case cluster.CreatorPropertyUpgrade:
 		if b, ok := value.(bool); ok {
 			v.upgrade = b
+		}
+
+	case cluster.CreatorPropertyExternalUpgradesPath:
+		if s, ok := value.(string); ok {
+			v.externalUpgradesPath = s
 		}
 	}
 }
@@ -343,6 +349,7 @@ func (v *ClusterCreator) CreateAsync(
 			upgr,
 			reducers,
 			status.Diffs,
+			v.externalUpgradesPath,
 		)
 
 		if err := preupgrade.Exec(); err != nil {
