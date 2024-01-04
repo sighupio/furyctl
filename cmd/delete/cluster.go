@@ -26,9 +26,7 @@ import (
 )
 
 var (
-	ErrParsingFlag        = errors.New("error while parsing flag")
-	ErrKubeconfigReq      = errors.New("when running distribution phase, either the KUBECONFIG environment variable or the --kubeconfig flag should be set")
-	ErrKubeconfigNotFound = errors.New("kubeconfig file not found")
+	ErrParsingFlag = errors.New("error while parsing flag")
 )
 
 type ClusterCmdFlags struct {
@@ -246,13 +244,6 @@ func NewClusterCmd(tracker *analytics.Tracker) *cobra.Command {
 		"force",
 		false,
 		"WARNING: furyctl won't ask for confirmation and will force delete the cluster and its resources.",
-	)
-
-	cmd.Flags().String(
-		"kubeconfig",
-		"",
-		"Path to the kubeconfig file, mandatory if you want to run the distribution phase alone or "+
-			"if you want to delete a cluster and the KUBECONFIG environment variable is not set",
 	)
 
 	return cmd
