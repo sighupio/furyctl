@@ -235,7 +235,11 @@ func (p *PreFlight) Exec() (*Status, error) {
 	diffChecker, err := p.CreateDiffChecker()
 	if err != nil {
 		if !p.force {
-			return status, fmt.Errorf("error creating diff checker: %w", err)
+			return status, fmt.Errorf(
+				"error creating diff checker: %w; "+
+					"if this happened after a failed attempt at creating a cluster, retry using the --force flag.",
+				err,
+			)
 		}
 
 		logrus.Error("error creating diff checker, skipping: %w", err)
