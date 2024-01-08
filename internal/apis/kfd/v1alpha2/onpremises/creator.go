@@ -169,7 +169,7 @@ func (c *ClusterCreator) Create(startFrom string, _ int) error {
 		upgr,
 	)
 
-	distributionPhase := upgrade.NewReducerOperatorPhaseDecorator(
+	distributionPhase := upgrade.NewReducerOperatorPhaseDecorator[v1alpha2.Reducers](
 		c.upgradeStateStore,
 		create.NewDistribution(
 			c.furyctlConf,
