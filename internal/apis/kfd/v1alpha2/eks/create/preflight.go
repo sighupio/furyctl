@@ -237,7 +237,7 @@ func (p *PreFlight) Exec() (*Status, error) {
 		if !p.force {
 			return status, fmt.Errorf(
 				"error creating diff checker: %w; "+
-					"if this happened after a failed attempt at creating a cluster, retry using the --force flag.",
+					"if this happened after a failed attempt at creating a cluster, retry using the --force flag",
 				err,
 			)
 		}
