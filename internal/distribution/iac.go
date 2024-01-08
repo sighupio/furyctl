@@ -94,15 +94,29 @@ func (m *IACBuilder) Build() error {
 		return fmt.Errorf("error merging files: %w", err)
 	}
 
-	tmplCfg, err := template.NewConfig(reverseMerger, reverseMerger, []string{"terraform", ".gitignore"})
+	excluded := []string{"terraform", ".gitignore"}
+
+	if m.kind != "EKSCluster" {
+		excluded = append(excluded, "manifests/aws")
+	}
+
+	tmplCfg, err := template.NewConfig(reverseMerger, reverseMerger, excluded)
 	if err != nil {
 		return fmt.Errorf("error creating template config: %w", err)
 	}
 
 	tmplCfg.Data["paths"] = map[any]any{
-		"kubectl":   "",
-		"kustomize": "",
-		"yq":        "",
+		"helm":       "",
+		"helmfile":   "",
+		"kubectl":    "",
+		"kustomize":  "",
+		"terraform":  "",
+		"vendorPath": "",
+		"yq":         "",
+	}
+
+	tmplCfg.Data["checks"] = map[any]any{
+		"storageClassAvailable": true,
 	}
 
 	outYaml, err := yamlx.MarshalV2(tmplCfg)
