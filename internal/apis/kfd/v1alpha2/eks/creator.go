@@ -776,7 +776,7 @@ func (v *ClusterCreator) setupPhases(upgr *upgrade.Upgrade) (
 		upgr,
 	)
 
-	distro := upgrade.NewReducerOperatorPhaseAsyncDecorator(
+	distro := upgrade.NewReducerOperatorPhaseAsyncDecorator[v1alpha2.Reducers](
 		v.upgradeStateStore,
 		create.NewDistribution(
 			v.paths,
