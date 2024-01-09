@@ -1,3 +1,10 @@
+# Copyright (c) 2017-present SIGHUP s.r.l All rights reserved.
+# Use of this source code is governed by a BSD-style
+# license that can be found in the LICENSE file.
+
+# THIS FILE HAS BEEN PATCHED BY FURYCTL TO ENSURE BACKWARDS COMPATIBILITY.
+# IT IS NOT THE ORIGINAL FILE FOUND IN THE DISTRIBUTION REPOSITORY.
+
 {{- $dnsZone := .spec.kubernetes.dnsZone -}}
 {{- $controlPlaneAddress := .spec.kubernetes.controlPlaneAddress -}}
 
@@ -47,7 +54,7 @@ all:
 
         {{- if and (index .spec.kubernetes "advanced") (index .spec.kubernetes.advanced "users") }}
         {{- if index .spec.kubernetes.advanced.users "names" }}
-        kubernetes_users_names: 
+        kubernetes_users_names:
 {{ .spec.kubernetes.advanced.users.names | toYaml | indent 10 }}
         {{- end }}
         {{- end }}
