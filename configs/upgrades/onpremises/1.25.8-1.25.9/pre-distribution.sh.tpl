@@ -14,7 +14,7 @@ $kubectlbin delete ingress --ignore-not-found=true --namespace=pomerium minio
 {{- end }}
 
 {{- if ne .spec.distribution.modules.dr.type "none" }}
-kubectl delete --ignore-not-found=true daemonset -n kube-system node-agent
+$kubectlbin delete --ignore-not-found=true daemonset -n kube-system node-agent
 {{- end }}
 
-kubectl delete --ignore-not-found=true job -n kube-system minio-setup
+$kubectlbin delete --ignore-not-found=true job -n kube-system minio-setup
