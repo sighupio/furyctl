@@ -16,11 +16,11 @@ type Feature string
 var ErrPluginsFeatureNotSupported = errors.New("plugins feature not supported")
 
 const (
-	FeatureClusterUpgrade = Feature("ClusterUpgrade")
-	FeatureTracingModule  = Feature("TracingModule")
-	// REMOVE THIS FEATURE AFTER v1.25 EOL.
+	FeatureClusterUpgrade     = Feature("ClusterUpgrade")
+	FeatureTracingModule      = Feature("TracingModule")
 	FeatureKubeconfigInSchema = Feature("KubeconfigInSchema")
 	FeaturePlugins            = Feature("Plugins")
+	FeatureYqSupport          = Feature("YqSupport")
 )
 
 func HasFeature(kfd config.KFD, name Feature) bool {
@@ -36,6 +36,9 @@ func HasFeature(kfd config.KFD, name Feature) bool {
 
 	case FeaturePlugins:
 		return hasFeaturePlugins(kfd)
+
+	case FeatureYqSupport:
+		return hasFeatureYQSupport(kfd)
 	}
 
 	return false
@@ -117,4 +120,18 @@ func hasFeaturePlugins(kfd config.KFD) bool {
 
 	return v1.GreaterThanOrEqual(v1258) && v1.LessThan(v1260) ||
 		v1.GreaterThanOrEqual(v1262)
+}
+
+func hasFeatureYQSupport(kfd config.KFD) bool {
+	v, err := semver.NewVersion(kfd.Version)
+	if err != nil {
+		return false
+	}
+
+	v1253, err := semver.NewVersion("v1.25.3")
+	if err != nil {
+		return false
+	}
+
+	return v.GreaterThan(v1253)
 }

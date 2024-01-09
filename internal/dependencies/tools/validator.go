@@ -111,6 +111,10 @@ func (tv *Validator) validateTools(i any, kfdManifest config.KFD) ([]string, []e
 			continue
 		}
 
+		if (toolName == "yq") && !distribution.HasFeature(kfdManifest, distribution.FeatureYqSupport) {
+			continue
+		}
+
 		tool := tv.toolFactory.Create(itool.Name(toolName), toolCfg.Version)
 		if err := tool.CheckBinVersion(); err != nil {
 			errs = append(errs, err)

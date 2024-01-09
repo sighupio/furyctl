@@ -276,6 +276,9 @@ func (i *Infrastructure) copyFromTemplate() error {
 	vpnInstallerPath := path.Join(i.Path, "..", "vendor", "installers", "eks", "modules", "vpn")
 
 	cfg.Data = map[string]map[any]any{
+		"kfd": {
+			"version": i.furyctlConf.Spec.DistributionVersion,
+		},
 		"spec": {
 			"region": i.furyctlConf.Spec.Region,
 			"tags":   i.furyctlConf.Spec.Tags,

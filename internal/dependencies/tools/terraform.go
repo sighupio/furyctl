@@ -14,9 +14,31 @@ import (
 	"github.com/sighupio/furyctl/internal/tool/terraform"
 )
 
+// TODO: remove when dropping support for fury 1.25
+func hasTerraformDarwinArm64Support(version string) bool {
+	v, err := semver.NewVersion(version)
+	if err != nil {
+		return false
+	}
+
+	v102, err := semver.NewVersion("v1.0.2")
+	if err != nil {
+		return false
+	}
+
+	return v.GreaterThanOrEqual(v102)
+}
+
 func NewTerraform(runner *terraform.Runner, version string) *Terraform {
+	arch := runtime.GOARCH
+
+	// TODO: remove when dropping support for fury 1.25
+	if !hasTerraformDarwinArm64Support(version) {
+		arch = "amd64"
+	}
+
 	return &Terraform{
-		arch:    runtime.GOARCH,
+		arch:    arch,
 		os:      runtime.GOOS,
 		version: version,
 		checker: &checker{
