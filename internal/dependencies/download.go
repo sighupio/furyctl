@@ -245,6 +245,10 @@ func (dd *Downloader) DownloadTools(kfd config.KFD) ([]string, error) {
 				continue
 			}
 
+			if name == "yq" && !distribution.HasFeature(kfd, distribution.FeatureYqSupport) {
+				continue
+			}
+
 			tfc := dd.toolFactory.Create(tool.Name(name), toolCfg.Version)
 			if tfc == nil || !tfc.SupportsDownload() {
 				unsupportedTools = append(unsupportedTools, name)
