@@ -246,7 +246,7 @@ furyctl create cluster --config /path/to/your/furyctl.yaml
 
 #### 3. Upgrade a cluster
 
-Upgrading a cluster is a process that can be divided into two step: upgrading the fury version and running the migrations(if present).
+Upgrading a cluster is a process that can be divided into two steps: upgrading the fury version and running the migrations(if present).
 
 The first step consist in bringing the cluster up to date with the latest version of the Kubernetes Fury Distribution. This is done by running the following command:
 
