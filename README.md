@@ -45,7 +45,7 @@ You can find `furyctl` binaries on the [Releases page](https://github.com/sighup
 To download the latest release, run:
 
 ```console
-curl -L "https://github.com/sighupio/furyctl/releases/download/v0.27.0/furyctl_$(uname -s)_x86_64.tar.gz" -o /tmp/furyctl.tar.gz && tar xfz /tmp/furyctl.tar.gz -C /tmp
+curl -L "https://github.com/sighupio/furyctl/releases/latest/download/furyctl-$(uname -s)-amd64.tar.gz" -o /tmp/furyctl.tar.gz && tar xfz /tmp/furyctl.tar.gz -C /tmp
 chmod +x /tmp/furyctl
 sudo mv /tmp/furyctl /usr/local/bin/furyctl
 ```
@@ -169,7 +169,7 @@ Additionaly, the schema of the file is versioned with the `apiVersion` field, so
 To scaffold a configuration file to use as a starter, you use the following command:
 
 ```console
-furyctl create config --version v1.27.0 --kind "EKSCluster"
+furyctl create config --version v1.27.1 --kind "EKSCluster"
 ```
 
 > 💡 **TIP**
@@ -244,9 +244,29 @@ furyctl create cluster --config /path/to/your/furyctl.yaml
 
 🎉 Congratulations! You have created your production-grade Kubernetes Fury Cluster from scratch and it is now ready to go into battle.
 
-#### 3. Destroy a cluster
+#### 3. Upgrade a cluster
 
-Destroying a cluster can be thought as running the creation phases in reverse order. `furyctl` automates this operation for you.
+Upgrading a cluster is a process that can be divided into two step: upgrading the fury version and running the migrations(if present).
+
+The first step consist in bringing the cluster up to date with the latest version of the Kubernetes Fury Distribution. This is done by running the following command:
+
+```console
+furyctl apply --upgrade --config /path/to/your/furyctl.yaml
+```
+
+Once that is done, if you were also planning to move to a different provider (e.g.: `opensearch` to `loki`), you can run the following command to run the migrations:
+
+```console
+furyctl apply --config /path/to/your/furyctl.yaml
+```
+
+> ❗️ **WARNING**
+>
+> You must first upgrade the cluster using the old provider(e.g.: `opensearch`), update the configuration file to use the new provider(e.g.: `loki`) and then run the command above.
+
+#### 4. Destroy a cluster
+
+Destroying a cluster will run through the four phases mentioned above, in reverse order, starting from `distribution`.
 
 To destroy a cluster created using `furyctl` and all its related resources, run the following command:
 
@@ -397,7 +417,17 @@ spec:
 
 ### Advanced Tips
 
+#### Using a custom distribution location
+
 Furyctl comes with the flag `--distro-location`, allowing you to use a local copy of KFD instead of downloading it from the internet. This allows you to test changes to the KFD without having to push them to the repository, and might come in handy when you need to test new features or bugfixes.
+
+#### Using a custom upgrade path location
+
+On the same note, the tool comes with the `--upgrade-path-location` flag, too, allowing you to test changes to the upgrade path without having to push them to the repository, and to support cases that are not covered by the official release, such as upgrading from a beta or rc release to a stable one.
+
+#### Restarting the cluster creation or update process from a specific (sub-)phase
+
+If, for any reason, the cluster creation or update process fails, you can restart it from a specific (sub-)phase by using the `--start-from` flag. Starting from v0.27.0 we introduced the support for sub-phases, to give the operator more control over the process. The supported options are: `pre-infrastructure`, `infrastructure`, `post-infrastructure`, `pre-kubernetes`, `kubernetes`, `post-kubernetes`, `pre-distribution`, `distribution`, `post-distribution`, `plugins`.
 
 <!-- </KFD-DOCS> -->
 <!-- <FOOTER> -->
