@@ -9,7 +9,7 @@
 <!-- FIXME: UPDATE THE BUILD BADGE WITH THE RIGHT BRANCH -->
 
 [![Build Status](https://ci.sighup.io/api/badges/sighupio/furyctl/status.svg)](https://ci.sighup.io/sighupio/furyctl)
-![Release](https://img.shields.io/badge/furyctl-v0.27.0-blue)
+![Release](https://img.shields.io/badge/furyctl-v0.27.1-blue)
 ![Slack](https://img.shields.io/badge/slack-@kubernetes/fury-yellow.svg?logo=slack)
 ![License](https://img.shields.io/github/license/sighupio/furyctl)
 [![Go Report Card](https://goreportcard.com/badge/github.com/sighupio/furyctl)](https://goreportcard.com/report/github.com/sighupio/furyctl)
@@ -76,7 +76,7 @@ $ furyctl version
 ...
 goVersion: go1.21
 osArch: amd64
-version: 0.27.0
+version: 0.27.1
 ```
 
 ### Installing from source
