@@ -9,7 +9,6 @@ import (
 	"strings"
 
 	"github.com/r3labs/diff/v3"
-	"github.com/sirupsen/logrus"
 )
 
 var numbersToWildcardRegex = regexp.MustCompile(`\.\d+\b`)
@@ -29,16 +28,16 @@ type Rule struct {
 }
 
 type Unsupported struct {
-	From   *string `yaml:"from,omitempty"`
-	To     *string `yaml:"to,omitempty"`
+	From   *any    `yaml:"from,omitempty"`
+	To     *any    `yaml:"to,omitempty"`
 	Reason *string `yaml:"reason,omitempty"`
 }
 
 type Reducer struct {
 	Key       string `yaml:"key"`
 	Lifecycle string `yaml:"lifecycle"`
-	From      string `yaml:"from"`
-	To        string `yaml:"to"`
+	From      any    `yaml:"from"`
+	To        any    `yaml:"to"`
 }
 
 type Extractor interface {
@@ -131,19 +130,9 @@ func (*BaseExtractor) ReducerRulesByDiffs(rules []Rule, ds diff.Changelog) []Rul
 					continue
 				}
 
-				toStr, toOk := d.To.(string)
-
-				fromStr, fromOk := d.From.(string)
-
-				if !fromOk || !toOk {
-					logrus.Debugf("skipping reducer rule %s, from or to are not strings", rule.Path)
-
-					continue
-				}
-
 				for i := range *rule.Reducers {
-					(*rule.Reducers)[i].To = toStr
-					(*rule.Reducers)[i].From = fromStr
+					(*rule.Reducers)[i].To = d.To
+					(*rule.Reducers)[i].From = d.From
 				}
 
 				filteredRules = append(filteredRules, rule)
