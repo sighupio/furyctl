@@ -14,12 +14,12 @@ type Reducer interface {
 
 type BaseReducer struct {
 	Key       string
-	From      string
-	To        string
+	From      any
+	To        any
 	Lifecycle string
 }
 
-func NewBaseReducer(key, from, to, lifecycle string) *BaseReducer {
+func NewBaseReducer(key string, from, to any, lifecycle string) *BaseReducer {
 	return &BaseReducer{
 		Key:       key,
 		From:      from,

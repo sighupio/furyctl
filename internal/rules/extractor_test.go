@@ -375,9 +375,11 @@ func TestBaseExtractor_ReducerRulesByDiffs(t *testing.T) {
 func TestBaseExtractor_UnsupportedReducerRulesByDiffs(t *testing.T) {
 	t.Parallel()
 
-	foo := "foo"
-	bar := "bar"
-	baz := "baz"
+	var foo, bar, baz any
+
+	foo = "foo"
+	bar = "bar"
+	baz = "baz"
 
 	testCases := []struct {
 		name  string
