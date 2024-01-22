@@ -72,3 +72,7 @@ func (r *DistroExtractor) ReducerRulesByDiffs(rls []rules.Rule, ds diff.Changelo
 func (r *DistroExtractor) UnsupportedReducerRulesByDiffs(rls []rules.Rule, ds diff.Changelog) []rules.Rule {
 	return r.BaseExtractor.UnsupportedReducerRulesByDiffs(rls, ds)
 }
+
+func (r *DistroExtractor) UnsafeReducerRulesByDiffs(rls []rules.Rule, ds diff.Changelog) []rules.Rule {
+	return r.BaseExtractor.UnsafeReducerRulesByDiffs(rls, ds)
+}

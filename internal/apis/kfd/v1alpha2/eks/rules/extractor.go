@@ -101,3 +101,7 @@ func (r *EKSExtractor) ReducerRulesByDiffs(rls []rules.Rule, ds diff.Changelog) 
 func (r *EKSExtractor) UnsupportedReducerRulesByDiffs(rls []rules.Rule, ds diff.Changelog) []rules.Rule {
 	return r.BaseExtractor.UnsupportedReducerRulesByDiffs(rls, ds)
 }
+
+func (r *EKSExtractor) UnsafeReducerRulesByDiffs(rls []rules.Rule, ds diff.Changelog) []rules.Rule {
+	return r.BaseExtractor.UnsafeReducerRulesByDiffs(rls, ds)
+}
