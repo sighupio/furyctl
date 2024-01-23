@@ -35,8 +35,8 @@ type Unsupported struct {
 }
 
 type Safe struct {
-	From any `yaml:"from,omitempty"`
-	To   any `yaml:"to,omitempty"`
+	From *any `yaml:"from,omitempty"`
+	To   *any `yaml:"to,omitempty"`
 }
 
 type Reducer struct {
@@ -200,7 +200,7 @@ func (b *BaseExtractor) areReducersSafe(reducers *[]Reducer, safe *[]Safe) bool 
 
 func (*BaseExtractor) isReducerSafe(reducer Reducer, safe []Safe) bool {
 	for _, s := range safe {
-		if reducer.From == s.From && reducer.To == s.To {
+		if (s.From == nil || reducer.From == *s.From) && (s.To == nil || reducer.To == *s.To) {
 			return true
 		}
 	}

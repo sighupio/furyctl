@@ -672,6 +672,11 @@ func TestBaseExtractor_ExtractImmutablesFromRules(t *testing.T) {
 func TestBaseExtractor_UnsafeReducerRulesByDiffs(t *testing.T) {
 	t.Parallel()
 
+	var foo, bar any
+
+	foo = "foo"
+	bar = "bar"
+
 	testCases := []struct {
 		name  string
 		rules []rules.Rule
@@ -696,14 +701,14 @@ func TestBaseExtractor_UnsafeReducerRulesByDiffs(t *testing.T) {
 					Path: ".foo",
 					Reducers: &[]rules.Reducer{
 						{
-							From: "foo",
-							To:   "bar",
+							From: &foo,
+							To:   &bar,
 						},
 					},
 					Safe: &[]rules.Safe{
 						{
-							From: "foo",
-							To:   "bar",
+							From: &foo,
+							To:   &bar,
 						},
 					},
 				},
@@ -747,6 +752,100 @@ func TestBaseExtractor_UnsafeReducerRulesByDiffs(t *testing.T) {
 			},
 		},
 		{
+			name: "should handle empty safe",
+			rules: []rules.Rule{
+				{
+					Path: ".foo",
+					Reducers: &[]rules.Reducer{
+						{
+							From: "foo",
+							To:   "bar",
+						},
+					},
+					Safe: &[]rules.Safe{{}},
+				},
+			},
+			diffs: diff.Changelog{
+				{
+					Type: diff.CREATE,
+					Path: []string{"foo"},
+					From: "foo",
+					To:   "bar",
+				},
+			},
+			want: []rules.Rule{},
+		},
+		{
+			name: "should handle nil from in safe",
+			rules: []rules.Rule{
+				{
+					Path: ".foo",
+					Reducers: &[]rules.Reducer{
+						{
+							From: "foo",
+							To:   "bar",
+						},
+						{
+							From: "baz",
+							To:   "bar",
+						},
+					},
+					Safe: &[]rules.Safe{
+						{
+							To: &bar,
+						},
+					},
+				},
+			},
+			diffs: diff.Changelog{
+				{
+					Type: diff.CREATE,
+					Path: []string{"foo"},
+					From: "foo",
+					To:   "bar",
+				},
+				{
+					Type: diff.CREATE,
+					Path: []string{"foo"},
+					From: "baz",
+					To:   "bar",
+				},
+			},
+			want: []rules.Rule{},
+		},
+		{
+			name: "should handle nil to in safe",
+			rules: []rules.Rule{
+				{
+					Path: ".foo",
+					Reducers: &[]rules.Reducer{
+						{
+							From: "foo",
+							To:   "bar",
+						},
+						{
+							From: "baz",
+							To:   "bar",
+						},
+					},
+					Safe: &[]rules.Safe{
+						{
+							From: &foo,
+						},
+					},
+				},
+			},
+			diffs: diff.Changelog{
+				{
+					Type: diff.CREATE,
+					Path: []string{"foo"},
+					From: "foo",
+					To:   "bar",
+				},
+			},
+			want: []rules.Rule{},
+		},
+		{
 			name: "should handle nil reducers",
 			rules: []rules.Rule{
 				{
@@ -754,8 +853,8 @@ func TestBaseExtractor_UnsafeReducerRulesByDiffs(t *testing.T) {
 					Reducers: nil,
 					Safe: &[]rules.Safe{
 						{
-							From: "foo",
-							To:   "bar",
+							From: &foo,
+							To:   &bar,
 						},
 					},
 				},
@@ -783,8 +882,8 @@ func TestBaseExtractor_UnsafeReducerRulesByDiffs(t *testing.T) {
 					},
 					Safe: &[]rules.Safe{
 						{
-							From: "foo",
-							To:   "bar",
+							From: &foo,
+							To:   &bar,
 						},
 					},
 				},
@@ -798,8 +897,8 @@ func TestBaseExtractor_UnsafeReducerRulesByDiffs(t *testing.T) {
 					},
 					Safe: &[]rules.Safe{
 						{
-							From: "bar",
-							To:   "foo",
+							From: &bar,
+							To:   &foo,
 						},
 					},
 				},
@@ -813,8 +912,8 @@ func TestBaseExtractor_UnsafeReducerRulesByDiffs(t *testing.T) {
 					},
 					Safe: &[]rules.Safe{
 						{
-							From: "foo",
-							To:   "bar",
+							From: &foo,
+							To:   &bar,
 						},
 					},
 				},
@@ -850,8 +949,8 @@ func TestBaseExtractor_UnsafeReducerRulesByDiffs(t *testing.T) {
 					},
 					Safe: &[]rules.Safe{
 						{
-							From: "foo",
-							To:   "bar",
+							From: &foo,
+							To:   &bar,
 						},
 					},
 				},
@@ -866,7 +965,7 @@ func TestBaseExtractor_UnsafeReducerRulesByDiffs(t *testing.T) {
 			got := x.UnsafeReducerRulesByDiffs(tc.rules, tc.diffs)
 
 			if !reflect.DeepEqual(got, tc.want) {
-				t.Errorf("expected %v, got %v", tc.want, *got[0].Reducers)
+				t.Errorf("expected %v, got %v", tc.want, got)
 			}
 		})
 	}
