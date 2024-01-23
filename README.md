@@ -9,7 +9,7 @@
 <!-- FIXME: UPDATE THE BUILD BADGE WITH THE RIGHT BRANCH -->
 
 [![Build Status](https://ci.sighup.io/api/badges/sighupio/furyctl/status.svg)](https://ci.sighup.io/sighupio/furyctl)
-![Release](https://img.shields.io/badge/furyctl-v0.27.1-blue)
+![Release](https://img.shields.io/badge/furyctl-v0.27.2-blue)
 ![Slack](https://img.shields.io/badge/slack-@kubernetes/fury-yellow.svg?logo=slack)
 ![License](https://img.shields.io/github/license/sighupio/furyctl)
 [![Go Report Card](https://goreportcard.com/badge/github.com/sighupio/furyctl)](https://goreportcard.com/report/github.com/sighupio/furyctl)
@@ -76,7 +76,7 @@ $ furyctl version
 ...
 goVersion: go1.21
 osArch: amd64
-version: 0.27.1
+version: 0.27.2
 ```
 
 ### Installing from source
@@ -169,7 +169,7 @@ Additionaly, the schema of the file is versioned with the `apiVersion` field, so
 To scaffold a configuration file to use as a starter, you use the following command:
 
 ```console
-furyctl create config --version v1.27.1 --kind "EKSCluster"
+furyctl create config --version v1.27.2 --kind "EKSCluster"
 ```
 
 > 💡 **TIP**
