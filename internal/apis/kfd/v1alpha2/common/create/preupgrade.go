@@ -29,12 +29,11 @@ import (
 )
 
 var (
-	errUpgradeCanceled               = errors.New("upgrade canceled by user")
-	errUpgradeFlagNotSet             = errors.New("upgrade flag not set by user")
-	errUpgradeWithReducersNotAllowed = errors.New("upgrade with reducers not allowed")
-	errUpgradePathNotFound           = errors.New("upgrade path not found")
-	errGettingDistroVersionFrom      = errors.New("error while getting distribution version from")
-	errGettingDistroVersionTo        = errors.New("error while getting distribution version to")
+	errUpgradeCanceled          = errors.New("upgrade canceled by user")
+	errUpgradeFlagNotSet        = errors.New("upgrade flag not set by user")
+	errUpgradePathNotFound      = errors.New("upgrade path not found")
+	errGettingDistroVersionFrom = errors.New("error while getting distribution version from")
+	errGettingDistroVersionTo   = errors.New("error while getting distribution version to")
 )
 
 type PreUpgrade struct {
@@ -216,9 +215,10 @@ func (p *PreUpgrade) Exec() error {
 			return fmt.Errorf("error checking upgrade path: %w", err)
 		}
 
-		if len(p.reducers) > 0 {
-			return errUpgradeWithReducersNotAllowed
-		}
+		// We should find a smarer way to stop the process if the reducers are from the upgrade or not
+		// if len(p.reducers) > 0 {
+		// return errUpgradeWithReducersNotAllowed
+		// }.
 
 		if !p.forceFlag {
 			if _, err := fmt.Println("Are you sure you want to continue? Only 'yes' will be accepted to confirm."); err != nil {
