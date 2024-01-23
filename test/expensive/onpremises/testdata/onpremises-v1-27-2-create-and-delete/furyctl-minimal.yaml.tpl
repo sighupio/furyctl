@@ -67,6 +67,9 @@ spec:
         type: calico
       policy:
         type: gatekeeper
+        gatekeeper:
+          enforcementAction: deny
+          installDefaultPolicies: true
       dr:
         type: on-premises
         velero: {}
