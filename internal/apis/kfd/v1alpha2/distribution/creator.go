@@ -198,6 +198,13 @@ func (c *ClusterCreator) Create(startFrom string, _ int) error {
 		cluster.OperationPhaseDistribution,
 	)
 
+	unsafeReducers := r.UnsafeReducerRulesByDiffs(
+		r.GetReducers(
+			cluster.OperationPhaseDistribution,
+		),
+		status.Diffs,
+	)
+
 	if distribution.HasFeature(c.kfdManifest, distribution.FeatureClusterUpgrade) {
 		preupgradePhase := commcreate.NewPreUpgrade(
 			c.paths,
@@ -219,7 +226,7 @@ func (c *ClusterCreator) Create(startFrom string, _ int) error {
 
 	switch c.phase {
 	case cluster.OperationPhaseDistribution:
-		if len(reducers) > 0 {
+		if len(reducers) > 0 && len(unsafeReducers) > 0 {
 			confirm, err := c.AskConfirmation()
 			if err != nil {
 				return fmt.Errorf("error while asking for confirmation: %w", err)
@@ -247,6 +254,7 @@ func (c *ClusterCreator) Create(startFrom string, _ int) error {
 		if err := c.allPhases(
 			startFrom,
 			reducers,
+			unsafeReducers,
 			distributionPhase,
 			pluginsPhase,
 			upgr,
@@ -282,6 +290,7 @@ func (c *ClusterCreator) Create(startFrom string, _ int) error {
 func (c *ClusterCreator) allPhases(
 	startFrom string,
 	reducers v1alpha2.Reducers,
+	unsafeReducers []rules.Rule,
 	distributionPhase upgrade.ReducersOperatorPhase[v1alpha2.Reducers],
 	pluginsPhase *commcreate.Plugins,
 	upgr *upgrade.Upgrade,
@@ -317,7 +326,7 @@ func (c *ClusterCreator) allPhases(
 	}
 
 	if startFrom != cluster.OperationPhasePlugins {
-		if len(reducers) > 0 {
+		if len(reducers) > 0 && len(unsafeReducers) > 0 {
 			confirm, err := c.AskConfirmation()
 			if err != nil {
 				return fmt.Errorf("error while asking for confirmation: %w", err)

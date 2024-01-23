@@ -338,6 +338,13 @@ func (v *ClusterCreator) CreateAsync(
 
 	reducers := v.buildReducers(status.Diffs, r, cluster.OperationPhaseDistribution)
 
+	unsafeReducers := r.UnsafeReducerRulesByDiffs(
+		r.GetReducers(
+			cluster.OperationPhaseDistribution,
+		),
+		status.Diffs,
+	)
+
 	if distribution.HasFeature(v.kfdManifest, distribution.FeatureClusterUpgrade) {
 		preupgrade := commcreate.NewPreUpgrade(
 			v.paths,
@@ -371,7 +378,7 @@ func (v *ClusterCreator) CreateAsync(
 		}
 
 	case cluster.OperationPhaseDistribution:
-		if len(reducers) > 0 {
+		if len(reducers) > 0 && len(unsafeReducers) > 0 {
 			confirm, err := v.AskConfirmation()
 			if err != nil {
 				errCh <- err
@@ -396,7 +403,7 @@ func (v *ClusterCreator) CreateAsync(
 		}
 
 	case cluster.OperationPhaseAll:
-		if len(reducers) > 0 {
+		if len(reducers) > 0 && len(unsafeReducers) > 0 {
 			confirm, err := v.AskConfirmation()
 			if err != nil {
 				errCh <- err

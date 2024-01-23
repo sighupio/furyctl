@@ -24,6 +24,7 @@ type Rule struct {
 	Immutable   bool           `yaml:"immutable"`
 	Description *string        `yaml:"description,omitempty"`
 	Unsupported *[]Unsupported `yaml:"unsupported,omitempty"`
+	Safe        *[]Safe        `yaml:"safe,omitempty"`
 	Reducers    *[]Reducer     `yaml:"reducers,omitempty"`
 }
 
@@ -31,6 +32,11 @@ type Unsupported struct {
 	From   *any    `yaml:"from,omitempty"`
 	To     *any    `yaml:"to,omitempty"`
 	Reason *string `yaml:"reason,omitempty"`
+}
+
+type Safe struct {
+	From *any `yaml:"from,omitempty"`
+	To   *any `yaml:"to,omitempty"`
 }
 
 type Reducer struct {
@@ -45,6 +51,7 @@ type Extractor interface {
 	GetReducers(phase string) []Rule
 	ReducerRulesByDiffs(reducers []Rule, ds diff.Changelog) []Rule
 	UnsupportedReducerRulesByDiffs(rules []Rule, ds diff.Changelog) []Rule
+	UnsafeReducerRulesByDiffs(rules []Rule, ds diff.Changelog) []Rule
 }
 
 type BaseExtractor struct {
@@ -159,6 +166,46 @@ func (b *BaseExtractor) UnsupportedReducerRulesByDiffs(rules []Rule, ds diff.Cha
 	}
 
 	return filteredRules
+}
+
+func (b *BaseExtractor) UnsafeReducerRulesByDiffs(rules []Rule, ds diff.Changelog) []Rule {
+	filteredRules := make([]Rule, 0)
+
+	for _, rule := range b.ReducerRulesByDiffs(rules, ds) {
+		if rule.Safe != nil && len(*rule.Safe) > 0 {
+			if b.areReducersSafe(rule.Reducers, rule.Safe) {
+				continue
+			}
+		}
+
+		filteredRules = append(filteredRules, rule)
+	}
+
+	return filteredRules
+}
+
+func (b *BaseExtractor) areReducersSafe(reducers *[]Reducer, safe *[]Safe) bool {
+	if safe == nil {
+		return false
+	}
+
+	for _, r := range *reducers {
+		if !b.isReducerSafe(r, *safe) {
+			return false
+		}
+	}
+
+	return true
+}
+
+func (*BaseExtractor) isReducerSafe(reducer Reducer, safe []Safe) bool {
+	for _, s := range safe {
+		if (s.From == nil || reducer.From == *s.From) && (s.To == nil || reducer.To == *s.To) {
+			return true
+		}
+	}
+
+	return false
 }
 
 func (*BaseExtractor) ExtractImmutablesFromRules(rls []Rule) []string {
