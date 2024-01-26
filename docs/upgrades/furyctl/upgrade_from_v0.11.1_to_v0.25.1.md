@@ -1,4 +1,4 @@
-# Migration steps to migrate from furyctl v0.11.1(aws/eks provisioner) to v0.25.2(EKSCluster) 
+# Migration steps to migrate from furyctl v0.11.1(aws/eks provisioner) to v0.25.2(EKSCluster)
 
 > WARNING: The following guide is only to move infrastructure and/or kubernetes phase from v0.11.1 to v0.25.2 furyctl version using the old aws/eks provisioner
 
@@ -196,6 +196,12 @@ echo "../../../bin/terraform/1.4.6/terraform state rm 'module.${EKS_MODULE_NAME}
 echo "../../../bin/terraform/1.4.6/terraform state mv 'module.${EKS_MODULE_NAME}.aws_security_group.nodes' 'module.${EKS_MODULE_NAME}.aws_security_group.node_pool_shared'" | sh
 echo "../../../bin/terraform/1.4.6/terraform state mv 'module.${EKS_MODULE_NAME}.aws_security_group_rule.ssh_from_dmz_to_nodes' 'module.${EKS_MODULE_NAME}.aws_security_group_rule.ssh_to_nodes'" | sh
 
+additional_firewall_rules_count=$(cat ../../../../furyctl.yaml | ../../../bin/yq/4.34.1/yq -e '.spec.kubernetes.nodePools.[].additionalFirewallRules[] | length' | awk '{ sum += $1} END { print sum - 1 }')
+for i in {0..$additional_firewall_rules_count}
+do
+   echo "../../../bin/terraform/1.4.6/terraform state mv 'module.${EKS_MODULE_NAME}.aws_security_group_rule.node_pool[$i]' 'module.${EKS_MODULE_NAME}.aws_security_group_rule.node_pool_additional_firewall_rules_cidr_blocks[$i]'" | sh
+done
+
 # Make sure to run on bash because zsh is not supported
 #!/bin/bash
 nodepools=(`cat ../../../../furyctl.yaml | ../../../bin/yq/4.34.1/yq -e '.spec.kubernetes.nodePools.[].name'`)
@@ -210,7 +216,5 @@ cd ../../../..
 11. And finalize the migration
 
 ```shell
-furyctl create cluster --phase kubernetes  -o $(pwd) 
+furyctl create cluster --phase kubernetes  -o $(pwd)
 ```
-
-
