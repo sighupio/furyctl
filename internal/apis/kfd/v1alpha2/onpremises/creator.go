@@ -47,6 +47,7 @@ type ClusterCreator struct {
 	furyctlConf          public.OnpremisesKfdV1Alpha2
 	stateStore           state.Storer
 	upgradeStateStore    upgrade.Storer
+	skipNodesUpgrade     bool
 	kfdManifest          config.KFD
 	phase                string
 	dryRun               bool
@@ -110,6 +111,11 @@ func (c *ClusterCreator) SetProperty(name string, value any) {
 	case cluster.CreatorPropertyPhase:
 		if s, ok := value.(string); ok {
 			c.phase = s
+		}
+
+	case cluster.CreatorPropertySkipNodesUpgrade:
+		if b, ok := value.(bool); ok {
+			c.skipNodesUpgrade = b
 		}
 
 	case cluster.CreatorPropertyDryRun:
@@ -235,6 +241,7 @@ func (c *ClusterCreator) Create(startFrom string, _ int) error {
 			reducers,
 			status.Diffs,
 			c.externalUpgradesPath,
+			c.skipNodesUpgrade,
 		)
 
 		if err := preupgradePhase.Exec(); err != nil {

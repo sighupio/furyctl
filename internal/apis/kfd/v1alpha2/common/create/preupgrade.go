@@ -47,6 +47,7 @@ type PreUpgrade struct {
 	forceFlag            bool
 	paths                cluster.CreatorPaths
 	externalUpgradesPath string
+	skipNodesUpgrade     bool
 }
 
 //nolint:revive // ignore arguments limit
@@ -61,6 +62,7 @@ func NewPreUpgrade(
 	reducers v1alpha2.Reducers,
 	diffs diff.Changelog,
 	externalUpgradesPath string,
+	skipNodesUpgrade bool,
 ) *PreUpgrade {
 	phaseOp := cluster.NewOperationPhase(
 		path.Join(paths.WorkDir, "upgrades"),
@@ -79,6 +81,7 @@ func NewPreUpgrade(
 		forceFlag:            forceFlag,
 		paths:                paths,
 		externalUpgradesPath: externalUpgradesPath,
+		skipNodesUpgrade:     skipNodesUpgrade,
 	}
 }
 
@@ -104,6 +107,12 @@ func (p *PreUpgrade) Exec() error {
 	mCfg, err := template.NewConfigWithoutData(furyctlMerger, []string{})
 	if err != nil {
 		return fmt.Errorf("error creating template config: %w", err)
+	}
+
+	if p.skipNodesUpgrade {
+		mCfg.Data["upgrade"] = map[any]any{
+			"skipNodesUpgrade": true,
+		}
 	}
 
 	p.CopyPathsToConfig(&mCfg)

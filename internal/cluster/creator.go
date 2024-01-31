@@ -22,6 +22,7 @@ const (
 	CreatorPropertyBinPath              = "binpath"
 	CreatorPropertyPhase                = "phase"
 	CreatorPropertySkipVpn              = "skipvpn"
+	CreatorPropertySkipNodesUpgrade     = "skipnodesupgrade"
 	CreatorPropertyVpnAutoConnect       = "vpnautoconnect"
 	CreatorPropertyDryRun               = "dryrun"
 	CreatorPropertyForce                = "force"
@@ -63,6 +64,7 @@ func NewCreator(
 	paths CreatorPaths,
 	phase string,
 	skipVpn,
+	skipNodesUpgrade,
 	vpnAutoConnect,
 	dryRun,
 	force bool,
@@ -85,6 +87,10 @@ func NewCreator(
 			{
 				Name:  CreatorPropertySkipVpn,
 				Value: skipVpn,
+			},
+			{
+				Name:  CreatorPropertySkipNodesUpgrade,
+				Value: skipNodesUpgrade,
 			},
 			{
 				Name:  CreatorPropertyVpnAutoConnect,
