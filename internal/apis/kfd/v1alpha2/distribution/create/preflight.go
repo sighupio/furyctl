@@ -19,6 +19,7 @@ import (
 	"github.com/sighupio/furyctl/internal/cluster"
 	"github.com/sighupio/furyctl/internal/diffs"
 	"github.com/sighupio/furyctl/internal/distribution"
+	"github.com/sighupio/furyctl/internal/parser"
 	"github.com/sighupio/furyctl/internal/state"
 	"github.com/sighupio/furyctl/internal/tool/kubectl"
 	execx "github.com/sighupio/furyctl/internal/x/exec"
@@ -86,10 +87,14 @@ func NewPreFlight(
 }
 
 func (p *PreFlight) Exec() (*Status, error) {
+	var err error
+
 	status := &Status{
 		Diffs:   r3diff.Changelog{},
 		Success: false,
 	}
+
+	cfgParser := parser.NewConfigParser(p.furyctlConfPath)
 
 	logrus.Info("Running preflight checks")
 
@@ -100,7 +105,10 @@ func (p *PreFlight) Exec() (*Status, error) {
 	kubeconfigPath := os.Getenv("KUBECONFIG")
 
 	if distribution.HasFeature(p.kfd, distribution.FeatureKubeconfigInSchema) {
-		kubeconfigPath = p.furyctlConf.Spec.Distribution.Kubeconfig
+		kubeconfigPath, err = cfgParser.ParseDynamicValue(p.furyctlConf.Spec.Distribution.Kubeconfig)
+		if err != nil {
+			return status, fmt.Errorf("error parsing kubeconfig value: %w", err)
+		}
 	} else if kubeconfigPath == "" {
 		return status, ErrKubeconfigNotSet
 	}

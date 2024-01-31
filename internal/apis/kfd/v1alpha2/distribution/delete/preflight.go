@@ -16,6 +16,7 @@ import (
 	"github.com/sighupio/fury-distribution/pkg/apis/kfddistribution/v1alpha2/public"
 	"github.com/sighupio/furyctl/internal/cluster"
 	"github.com/sighupio/furyctl/internal/distribution"
+	"github.com/sighupio/furyctl/internal/parser"
 	"github.com/sighupio/furyctl/internal/tool/kubectl"
 	execx "github.com/sighupio/furyctl/internal/x/exec"
 	kubex "github.com/sighupio/furyctl/internal/x/kube"
@@ -26,9 +27,10 @@ var ErrKubeconfigNotSet = errors.New("KUBECONFIG env variable is not set")
 type PreFlight struct {
 	*cluster.OperationPhase
 
-	furyctlConf public.KfddistributionKfdV1Alpha2
-	kubeRunner  *kubectl.Runner
-	kfdManifest config.KFD
+	furyctlConf     public.KfddistributionKfdV1Alpha2
+	furyctlConfPath string
+	kubeRunner      *kubectl.Runner
+	kfdManifest     config.KFD
 }
 
 func NewPreFlight(
@@ -43,9 +45,10 @@ func NewPreFlight(
 	)
 
 	return &PreFlight{
-		OperationPhase: phase,
-		furyctlConf:    furyctlConf,
-		kfdManifest:    kfdManifest,
+		OperationPhase:  phase,
+		furyctlConf:     furyctlConf,
+		furyctlConfPath: paths.ConfigPath,
+		kfdManifest:     kfdManifest,
 		kubeRunner: kubectl.NewRunner(
 			execx.NewStdExecutor(),
 			kubectl.Paths{
@@ -60,6 +63,10 @@ func NewPreFlight(
 }
 
 func (p *PreFlight) Exec() error {
+	var err error
+
+	cfgParser := parser.NewConfigParser(p.furyctlConfPath)
+
 	logrus.Info("Running preflight checks")
 
 	if err := p.CreateRootFolder(); err != nil {
@@ -69,7 +76,10 @@ func (p *PreFlight) Exec() error {
 	kubeconfigPath := os.Getenv("KUBECONFIG")
 
 	if distribution.HasFeature(p.kfdManifest, distribution.FeatureKubeconfigInSchema) {
-		kubeconfigPath = p.furyctlConf.Spec.Distribution.Kubeconfig
+		kubeconfigPath, err = cfgParser.ParseDynamicValue(p.furyctlConf.Spec.Distribution.Kubeconfig)
+		if err != nil {
+			return fmt.Errorf("error parsing kubeconfig value: %w", err)
+		}
 	} else if kubeconfigPath == "" {
 		return ErrKubeconfigNotSet
 	}
