@@ -41,6 +41,7 @@ type ClusterCmdFlags struct {
 	DryRun              bool
 	SkipDepsDownload    bool
 	SkipDepsValidation  bool
+	SkipNodesUpgrade    bool
 	NoTTY               bool
 	HTTPS               bool
 	Force               bool
@@ -187,6 +188,7 @@ func NewApplyCommand(tracker *analytics.Tracker) *cobra.Command {
 				flags.Phase,
 				flags.SkipVpn,
 				flags.VpnAutoConnect,
+				flags.SkipNodesUpgrade,
 				flags.DryRun,
 				flags.Force,
 				flags.Upgrade,
@@ -307,6 +309,11 @@ func getCreateClusterCmdFlags(cmd *cobra.Command, tracker *analytics.Tracker, cm
 		return ClusterCmdFlags{}, fmt.Errorf(WrappedErrMessage, ErrParsingFlag, "skip-deps-validation")
 	}
 
+	skipNodesUpgrade, err := cmdutil.BoolFlag(cmd, "skip-nodes-upgrade", tracker, cmdEvent)
+	if err != nil {
+		return ClusterCmdFlags{}, fmt.Errorf(WrappedErrMessage, ErrParsingFlag, "skip-nodes-upgrade")
+	}
+
 	https, err := cmdutil.BoolFlag(cmd, "https", tracker, cmdEvent)
 	if err != nil {
 		return ClusterCmdFlags{}, fmt.Errorf(WrappedErrMessage, ErrParsingFlag, "https")
@@ -344,6 +351,7 @@ func getCreateClusterCmdFlags(cmd *cobra.Command, tracker *analytics.Tracker, cm
 		DryRun:              dryRun,
 		SkipDepsDownload:    skipDepsDownload,
 		SkipDepsValidation:  skipDepsValidation,
+		SkipNodesUpgrade:    skipNodesUpgrade,
 		NoTTY:               noTTY,
 		Force:               force,
 		HTTPS:               https,
@@ -391,6 +399,12 @@ func setupCreateClusterCmdFlags(cmd *cobra.Command) {
 		"b",
 		"",
 		"Path to the folder where all the dependencies' binaries are installed",
+	)
+
+	cmd.Flags().Bool(
+		"skip-nodes-upgrade",
+		false,
+		"Skip upgrading the nodes, on kind OnPremises this will skip the upgrade of the nodes",
 	)
 
 	cmd.Flags().Bool(
