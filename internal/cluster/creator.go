@@ -28,6 +28,7 @@ const (
 	CreatorPropertyForce                = "force"
 	CreatorPropertyUpgrade              = "upgrade"
 	CreatorPropertyExternalUpgradesPath = "externalupgradespath"
+	CreatorPropertyUpgradeNode          = "upgradenode"
 )
 
 var (
@@ -69,7 +70,8 @@ func NewCreator(
 	dryRun,
 	force bool,
 	upgrade bool,
-	externalUpgradesPath string,
+	externalUpgradesPath,
+	upgradeNode string,
 ) (Creator, error) {
 	lcAPIVersion := strings.ToLower(minimalConf.APIVersion)
 	lcResourceType := strings.ToLower(minimalConf.Kind)
@@ -123,6 +125,10 @@ func NewCreator(
 			{
 				Name:  CreatorPropertyExternalUpgradesPath,
 				Value: externalUpgradesPath,
+			},
+			{
+				Name:  CreatorPropertyUpgradeNode,
+				Value: upgradeNode,
 			},
 		})
 	}
