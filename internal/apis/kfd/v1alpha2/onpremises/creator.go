@@ -54,6 +54,7 @@ type ClusterCreator struct {
 	force                bool
 	upgrade              bool
 	externalUpgradesPath string
+	upgradeNode          string
 }
 
 func (c *ClusterCreator) SetProperties(props []cluster.CreatorProperty) {
@@ -136,6 +137,11 @@ func (c *ClusterCreator) SetProperty(name string, value any) {
 	case cluster.CreatorPropertyExternalUpgradesPath:
 		if s, ok := value.(string); ok {
 			c.externalUpgradesPath = s
+		}
+
+	case cluster.CreatorPropertyUpgradeNode:
+		if s, ok := value.(string); ok {
+			c.upgradeNode = s
 		}
 	}
 }
@@ -242,6 +248,7 @@ func (c *ClusterCreator) Create(startFrom string, _ int) error {
 			status.Diffs,
 			c.externalUpgradesPath,
 			c.skipNodesUpgrade,
+			c.upgradeNode,
 		)
 
 		if err := preupgradePhase.Exec(); err != nil {

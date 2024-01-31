@@ -49,6 +49,7 @@ type ClusterCmdFlags struct {
 	Outdir              string
 	Upgrade             bool
 	UpgradePathLocation string
+	UpgradeNode         string
 }
 
 func NewApplyCommand(tracker *analytics.Tracker) *cobra.Command {
@@ -193,6 +194,7 @@ func NewApplyCommand(tracker *analytics.Tracker) *cobra.Command {
 				flags.Force,
 				flags.Upgrade,
 				flags.UpgradePathLocation,
+				flags.UpgradeNode,
 			)
 			if err != nil {
 				cmdEvent.AddErrorMessage(err)
@@ -339,6 +341,11 @@ func getCreateClusterCmdFlags(cmd *cobra.Command, tracker *analytics.Tracker, cm
 		return ClusterCmdFlags{}, fmt.Errorf("%w: %s", ErrParsingFlag, "upgrade-path-location")
 	}
 
+	upgradeNode, err := cmdutil.StringFlag(cmd, "upgrade-node", tracker, cmdEvent)
+	if err != nil {
+		return ClusterCmdFlags{}, fmt.Errorf("%w: %s", ErrParsingFlag, "upgrade-node")
+	}
+
 	return ClusterCmdFlags{
 		Debug:               debug,
 		FuryctlPath:         furyctlPath,
@@ -359,6 +366,7 @@ func getCreateClusterCmdFlags(cmd *cobra.Command, tracker *analytics.Tracker, cm
 		Outdir:              outdir,
 		Upgrade:             upgrade,
 		UpgradePathLocation: upgradePathLocation,
+		UpgradeNode:         upgradeNode,
 	}, nil
 }
 
@@ -404,7 +412,7 @@ func setupCreateClusterCmdFlags(cmd *cobra.Command) {
 	cmd.Flags().Bool(
 		"skip-nodes-upgrade",
 		false,
-		"Skip upgrading the nodes, on kind OnPremises this will skip the upgrade of the nodes",
+		"On kind OnPremises this will skip the upgrade of the nodes",
 	)
 
 	cmd.Flags().Bool(
@@ -462,5 +470,11 @@ func setupCreateClusterCmdFlags(cmd *cobra.Command) {
 		"",
 		"",
 		"Location where the upgrade scripts are located, if not set the embedded ones will be used",
+	)
+
+	cmd.Flags().String(
+		"upgrade-node",
+		"",
+		"On kind OnPremises this will upgrade a specific node",
 	)
 }

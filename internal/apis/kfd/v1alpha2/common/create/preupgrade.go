@@ -48,6 +48,7 @@ type PreUpgrade struct {
 	paths                cluster.CreatorPaths
 	externalUpgradesPath string
 	skipNodesUpgrade     bool
+	upgradeNode          string
 }
 
 //nolint:revive // ignore arguments limit
@@ -63,6 +64,7 @@ func NewPreUpgrade(
 	diffs diff.Changelog,
 	externalUpgradesPath string,
 	skipNodesUpgrade bool,
+	upgradeNode string,
 ) *PreUpgrade {
 	phaseOp := cluster.NewOperationPhase(
 		path.Join(paths.WorkDir, "upgrades"),
@@ -82,6 +84,7 @@ func NewPreUpgrade(
 		paths:                paths,
 		externalUpgradesPath: externalUpgradesPath,
 		skipNodesUpgrade:     skipNodesUpgrade,
+		upgradeNode:          upgradeNode,
 	}
 }
 
@@ -109,10 +112,9 @@ func (p *PreUpgrade) Exec() error {
 		return fmt.Errorf("error creating template config: %w", err)
 	}
 
-	if p.skipNodesUpgrade {
-		mCfg.Data["upgrade"] = map[any]any{
-			"skipNodesUpgrade": true,
-		}
+	mCfg.Data["upgrade"] = map[any]any{
+		"skipNodesUpgrade": p.skipNodesUpgrade,
+		"upgradeNode":      p.upgradeNode,
 	}
 
 	p.CopyPathsToConfig(&mCfg)
