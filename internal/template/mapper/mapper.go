@@ -11,11 +11,8 @@ import (
 	"reflect"
 	"regexp"
 	"strings"
-)
 
-const (
-	Env  = "env"
-	File = "file"
+	"github.com/sighupio/furyctl/internal/parser"
 )
 
 var (
@@ -127,12 +124,14 @@ func (m *Mapper) injectDynamicValuesAndPaths(
 }
 
 func (m *Mapper) injectDynamicValuesAndPathsString(value string) (string, error) {
+	cfgParser := parser.NewConfigParser(m.furyctlConfDir)
+
 	// If the value contains dynamic values, we need to parse them.
 	dynamicValues := EnvRegexp.FindAllString(value, -1)
 	for _, dynamicValue := range dynamicValues {
-		parsedDynamicValue, err := ParseDynamicValue(dynamicValue, m.furyctlConfDir)
+		parsedDynamicValue, err := cfgParser.ParseDynamicValue(dynamicValue)
 		if err != nil {
-			return "", err
+			return "", fmt.Errorf("error parsing dynamic value: %w", err)
 		}
 
 		value = strings.Replace(value, dynamicValue, parsedDynamicValue, 1)
@@ -146,52 +145,4 @@ func (m *Mapper) injectDynamicValuesAndPathsString(value string) (string, error)
 	}
 
 	return value, nil
-}
-
-func readValueFromFile(path string) (string, error) {
-	val, err := os.ReadFile(path)
-
-	return string(val), err
-}
-
-func ParseDynamicValue(val any, baseDir string) (string, error) {
-	strVal := fmt.Sprintf("%v", val)
-
-	spl := strings.Split(strVal, "://")
-
-	if len(spl) > 1 {
-		source := strings.TrimPrefix(spl[0], "{")
-		sourceValue := strings.TrimSuffix(spl[1], "}")
-
-		switch source {
-		case Env:
-			envVar := os.Getenv(sourceValue)
-
-			envVar = strings.TrimRight(envVar, "\n")
-
-			return envVar, nil
-
-		case File:
-			// If the value is a relative path, we need to convert it to an absolute path.
-			isRelativePath := RelativePathRegexp.MatchString(sourceValue)
-			if isRelativePath {
-				sourceValue = filepath.Clean(sourceValue)
-				sourceValue = filepath.Join(baseDir, sourceValue)
-			}
-
-			content, err := readValueFromFile(sourceValue)
-			if err != nil {
-				return "", fmt.Errorf("%w", err)
-			}
-
-			content = strings.TrimRight(content, "\n")
-
-			return content, nil
-
-		default:
-			return strVal, nil
-		}
-	}
-
-	return strVal, nil
 }

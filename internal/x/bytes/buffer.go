@@ -8,18 +8,20 @@ import (
 	"bytes"
 	"fmt"
 
-	"github.com/sighupio/furyctl/internal/template/mapper"
+	"github.com/sighupio/furyctl/internal/parser"
 )
 
 func SafeWriteToBuffer(buffer *bytes.Buffer, content, baseDir string, values ...any) error {
 	vs := make([]any, 0)
+
+	cfgParser := parser.NewConfigParser(baseDir)
 
 	for _, sv := range values {
 		if sv == nil {
 			continue
 		}
 
-		v, err := mapper.ParseDynamicValue(sv, baseDir)
+		v, err := cfgParser.ParseDynamicValue(sv)
 		if err != nil {
 			return fmt.Errorf("error parsing dynamic value: %w", err)
 		}
