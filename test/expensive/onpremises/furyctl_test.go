@@ -634,7 +634,7 @@ var (
 
 	_ = Describe("furyctl & distro v1.26.2 - minimal - by phase", Ordered, Serial, CreateAndDeleteByPhaseTestScenario("1.26.2", false))
 
-	_ = Describe("furyctl & distro v1.26.2 - minimal - by phase", Ordered, Serial, CreateAndDeleteByPhaseTestScenario("1.26.2", false))
+	_ = Describe("furyctl & distro v1.26.3 - minimal - by phase", Ordered, Serial, CreateAndDeleteByPhaseTestScenario("1.26.3", false))
 
 	_ = Describe("furyctl & distro v1.26.4 - minimal - by phase", Ordered, Serial, CreateAndDeleteByPhaseTestScenario("1.26.4", false))
 
