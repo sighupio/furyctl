@@ -8,8 +8,11 @@ package parser_test
 
 import (
 	"fmt"
+	"math/rand"
+	"net/http"
 	"os"
 	"path"
+	"sync"
 	"testing"
 
 	"github.com/sighupio/furyctl/internal/parser"
@@ -27,46 +30,108 @@ func TestNewConfigParser(t *testing.T) {
 func TestConfigParser_ParseDynamicValue(t *testing.T) {
 	t.Parallel()
 
-	tmpDir, err := os.MkdirTemp("", "test")
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	exampleStr := "test"
-
-	err = os.WriteFile(tmpDir+"/test_file.txt", []byte(exampleStr), os.ModePerm)
-
-	defer os.RemoveAll(tmpDir)
-
-	assert.NoError(t, err)
-
 	testCases := []struct {
 		name     string
-		baseDir  string
-		envName  string
-		envValue string
-		value    any
+		setup    func() (baseDir string, value string, teardown func())
 		expected string
 	}{
 		{
-			name:     "parsing env",
-			baseDir:  "dummy/base/dir",
-			envName:  "TEST_ENV_VAR",
-			envValue: "test",
-			value:    "{env://TEST_ENV_VAR}",
-			expected: "test",
+			name: "no parsing",
+			setup: func() (string, string, func()) {
+				return "", "hello test", func() {}
+			},
+			expected: "hello test",
 		},
 		{
-			name:     "parsing file - relative path",
-			baseDir:  tmpDir,
-			value:    fmt.Sprintf("{file://./test_file.txt}"),
-			expected: "test",
+			name: "unknown token parsing",
+			setup: func() (string, string, func()) {
+				return "", "{unknown://hello test}", func() {}
+			},
+			expected: "{unknown://hello test}",
 		},
 		{
-			name:     "parsing file - absolute path",
-			baseDir:  tmpDir,
-			value:    fmt.Sprintf("{file://%s}", path.Join(tmpDir, "test_file.txt")),
-			expected: "test",
+			name: "parsing env",
+			setup: func() (string, string, func()) {
+				if err := os.Setenv("TEST_ENV_VAR", "hello test"); err != nil {
+					t.Fatal(err)
+				}
+
+				return "", "{env://TEST_ENV_VAR}", func() {
+					if err := os.Unsetenv("TEST_ENV_VAR"); err != nil {
+						t.Fatal(err)
+					}
+				}
+			},
+			expected: "hello test",
+		},
+		{
+			name: "parsing file - relative path",
+			setup: func() (string, string, func()) {
+				tmpDir, err := os.MkdirTemp("", "test")
+				if err != nil {
+					t.Fatal(err)
+				}
+
+				if err := os.WriteFile(tmpDir+"/test_file.txt", []byte("hello test"), os.ModePerm); err != nil {
+					t.Fatal(err)
+				}
+
+				return tmpDir, fmt.Sprintf("{file://./test_file.txt}"), func() {
+					os.RemoveAll(tmpDir)
+				}
+			},
+			expected: "hello test",
+		},
+		{
+			name: "parsing file - absolute path",
+			setup: func() (string, string, func()) {
+				tmpDir, err := os.MkdirTemp("", "test")
+				if err != nil {
+					t.Fatal(err)
+				}
+
+				if err := os.WriteFile(tmpDir+"/test_file.txt", []byte("hello test"), os.ModePerm); err != nil {
+					t.Fatal(err)
+				}
+
+				return tmpDir, fmt.Sprintf("{file://%s}", path.Join(tmpDir, "test_file.txt")), func() {
+					os.RemoveAll(tmpDir)
+				}
+			},
+			expected: "hello test",
+		},
+		{
+			name: "parsing http",
+			setup: func() (string, string, func()) {
+				// Get a random port between 1024 and 65535
+				port := rand.Intn(65535-1024) + 1024
+				server := &http.Server{Addr: fmt.Sprintf(":%d", port)}
+
+				wg := &sync.WaitGroup{}
+
+				wg.Add(1)
+
+				go func(t *testing.T) {
+					wg.Done()
+
+					if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+						t.Fatal(err)
+					}
+				}(t)
+
+				wg.Wait()
+
+				http.HandleFunc("/", func(w http.ResponseWriter, _ *http.Request) {
+					fmt.Fprint(w, "hello test")
+				})
+
+				return "", fmt.Sprintf("{http://localhost:%d}", port), func() {
+					if err := server.Close(); err != nil {
+						t.Fatal(err)
+					}
+				}
+			},
+			expected: "hello test",
 		},
 	}
 
@@ -74,15 +139,15 @@ func TestConfigParser_ParseDynamicValue(t *testing.T) {
 		tc := tc
 
 		t.Run(tc.name, func(t *testing.T) {
-			cfgParser := parser.NewConfigParser(tc.baseDir)
+			t.Parallel()
 
-			if tc.envName != "" {
-				err := os.Setenv(tc.envName, tc.envValue)
+			baseDir, value, teardownFn := tc.setup()
 
-				assert.NoError(t, err)
-			}
+			defer teardownFn()
 
-			res, err := cfgParser.ParseDynamicValue(tc.value)
+			cfgParser := parser.NewConfigParser(baseDir)
+
+			res, err := cfgParser.ParseDynamicValue(value)
 
 			assert.NoError(t, err)
 			assert.Equal(t, tc.expected, res)

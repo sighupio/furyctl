@@ -10,14 +10,21 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+
+	httpx "github.com/sighupio/furyctl/internal/x/http"
 )
 
 const (
-	Env  = "env"
-	File = "file"
+	Env   = "env"
+	File  = "file"
+	Http  = "http"
+	Https = "https"
 )
 
-var RelativePathRegexp = regexp.MustCompile(`^\.{1,}\/`)
+var (
+	ErrCannotParseDynamicValue = fmt.Errorf("cannot parse dynamic value")
+	RelativePathRegexp         = regexp.MustCompile(`^\.{1,}\/`)
+)
 
 type ConfigParser struct {
 	baseDir string
@@ -54,14 +61,25 @@ func (p *ConfigParser) ParseDynamicValue(val any) (string, error) {
 				sourceValue = filepath.Join(p.baseDir, sourceValue)
 			}
 
-			content, err := readValueFromFile(sourceValue)
+			val, err := os.ReadFile(sourceValue)
 			if err != nil {
-				return "", fmt.Errorf("%w", err)
+				return "", fmt.Errorf("%w: %w", ErrCannotParseDynamicValue, err)
 			}
 
-			content = strings.TrimRight(content, "\n")
+			return strings.TrimRight(string(val), "\n"), nil
 
-			return content, nil
+		case Http, Https:
+			f, err := httpx.DownloadFile(strings.Trim(strVal, "{}"))
+			if err != nil {
+				return "", fmt.Errorf("%w: %w", ErrCannotParseDynamicValue, err)
+			}
+
+			val, err := os.ReadFile(f)
+			if err != nil {
+				return "", fmt.Errorf("%w: %w", ErrCannotParseDynamicValue, err)
+			}
+
+			return strings.TrimRight(string(val), "\n"), nil
 
 		default:
 			return strVal, nil
@@ -69,10 +87,4 @@ func (p *ConfigParser) ParseDynamicValue(val any) (string, error) {
 	}
 
 	return strVal, nil
-}
-
-func readValueFromFile(path string) (string, error) {
-	val, err := os.ReadFile(path)
-
-	return string(val), err
 }
