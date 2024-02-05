@@ -2,7 +2,7 @@ module github.com/sighupio/furyctl
 
 go 1.21
 
-toolchain go1.21.5
+toolchain go1.21.6
 
 require (
 	github.com/Al-Pragliola/go-version v1.6.2

@@ -8,7 +8,7 @@ name: main
 
 steps:
   - name: prepare
-    image: quay.io/sighup/golang:1.21.5
+    image: quay.io/sighup/golang:1.21.6
     depends_on:
       - clone
     pull: always
@@ -22,7 +22,7 @@ steps:
       GOTMPDIR: /drone/src/.go/tmp
 
   - name: license
-    image: quay.io/sighup/golang:1.21.5
+    image: quay.io/sighup/golang:1.21.6
     depends_on:
       - prepare
     pull: always
@@ -35,7 +35,7 @@ steps:
       GOTMPDIR: /drone/src/.go/tmp
 
   - name: lint
-    image: quay.io/sighup/golang:1.21.5
+    image: quay.io/sighup/golang:1.21.6
     depends_on:
       - prepare
     pull: always
@@ -48,7 +48,7 @@ steps:
       GOTMPDIR: /drone/src/.go/tmp
 
   - name: test-unit
-    image: quay.io/sighup/golang:1.21.5
+    image: quay.io/sighup/golang:1.21.6
     depends_on:
       - prepare
     pull: always
@@ -61,7 +61,7 @@ steps:
       GOTMPDIR: /drone/src/.go/tmp
 
   - name: test-integration
-    image: quay.io/sighup/golang:1.21.5
+    image: quay.io/sighup/golang:1.21.6
     depends_on:
       - prepare
     commands:
@@ -76,7 +76,7 @@ steps:
         from_secret: NETRC_FILE
 
   - name: test-e2e
-    image: quay.io/sighup/golang:1.21.5
+    image: quay.io/sighup/golang:1.21.6
     depends_on:
       - prepare
     commands:
