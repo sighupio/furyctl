@@ -201,7 +201,7 @@ furyctl is a command line interface tool to manage the full lifecycle of a Kuber
 
 	rootCmd.PersistentFlags().StringP(
 		"git-protocol",
-		"p",
+		"g",
 		"https",
 		"download repositories using the given protocol (options: https, ssh). Use when SSH traffic is being blocked or when SSH "+
 			"client has not been configured\nset the GITHUB_TOKEN environment variable with your token to use "+
