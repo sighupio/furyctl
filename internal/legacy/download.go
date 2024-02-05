@@ -37,9 +37,9 @@ type Downloader struct {
 	HTTPS bool
 }
 
-func NewDownloader(https bool) Downloader {
+func NewDownloader(gitProtocol string) Downloader {
 	return Downloader{
-		HTTPS: https,
+		HTTPS: gitProtocol == "https",
 	}
 }
 

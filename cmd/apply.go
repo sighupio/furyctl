@@ -20,6 +20,7 @@ import (
 	"github.com/sighupio/furyctl/internal/config"
 	"github.com/sighupio/furyctl/internal/dependencies"
 	"github.com/sighupio/furyctl/internal/distribution"
+	"github.com/sighupio/furyctl/internal/git"
 	cobrax "github.com/sighupio/furyctl/internal/x/cobra"
 	execx "github.com/sighupio/furyctl/internal/x/exec"
 	netx "github.com/sighupio/furyctl/internal/x/net"
@@ -49,7 +50,7 @@ type ClusterCmdFlags struct {
 	SkipDepsValidation  bool
 	SkipNodesUpgrade    bool
 	NoTTY               bool
-	HTTPS               bool
+	GitProtocol         git.Protocol
 	Force               bool
 	Outdir              string
 	Upgrade             bool
@@ -100,7 +101,7 @@ func NewApplyCommand(tracker *analytics.Tracker) *cobra.Command {
 			// Init first half of collaborators.
 			client := netx.NewGoGetterClient()
 			executor := execx.NewStdExecutor()
-			distrodl := distribution.NewDownloader(client, flags.HTTPS)
+			distrodl := distribution.NewDownloader(client, flags.GitProtocol)
 			depsvl := dependencies.NewValidator(executor, flags.BinPath, flags.FuryctlPath, flags.VpnAutoConnect)
 
 			// Init packages.
@@ -134,7 +135,7 @@ func NewApplyCommand(tracker *analytics.Tracker) *cobra.Command {
 			basePath := filepath.Join(outDir, ".furyctl", res.MinimalConf.Metadata.Name)
 
 			// Init second half of collaborators.
-			depsdl := dependencies.NewDownloader(client, basePath, flags.BinPath, flags.HTTPS)
+			depsdl := dependencies.NewDownloader(client, basePath, flags.BinPath, flags.GitProtocol)
 
 			// Validate the furyctl.yaml file.
 			logrus.Info("Validating configuration file...")
@@ -325,9 +326,14 @@ func getCreateClusterCmdFlags(cmd *cobra.Command, tracker *analytics.Tracker, cm
 		return ClusterCmdFlags{}, fmt.Errorf(WrappedErrMessage, ErrParsingFlag, "skip-nodes-upgrade")
 	}
 
-	https, err := cmdutil.BoolFlag(cmd, "https", tracker, cmdEvent)
+	gitProtocol, err := cmdutil.StringFlag(cmd, "git-protocol", tracker, cmdEvent)
 	if err != nil {
-		return ClusterCmdFlags{}, fmt.Errorf(WrappedErrMessage, ErrParsingFlag, "https")
+		return ClusterCmdFlags{}, fmt.Errorf(WrappedErrMessage, ErrParsingFlag, "git-protocol")
+	}
+
+	typedGitProtocol, err := git.NewProtocol(gitProtocol)
+	if err != nil {
+		return ClusterCmdFlags{}, fmt.Errorf("%w: %w", ErrParsingFlag, err)
 	}
 
 	timeout, err := cmdutil.IntFlag(cmd, "timeout", tracker, cmdEvent)
@@ -375,7 +381,7 @@ func getCreateClusterCmdFlags(cmd *cobra.Command, tracker *analytics.Tracker, cm
 		SkipNodesUpgrade:   skipNodesUpgrade,
 		NoTTY:              noTTY,
 		Force:              force,
-		HTTPS:              https,
+		GitProtocol:        typedGitProtocol,
 		Timeouts: Timeouts{
 			ProcessTimeout:         timeout,
 			PodRunningCheckTimeout: podRunningCheckTimeout,

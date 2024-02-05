@@ -18,16 +18,13 @@ import (
 
 	"github.com/sighupio/fury-distribution/pkg/apis/config"
 	"github.com/sighupio/furyctl/configs"
+	"github.com/sighupio/furyctl/internal/git"
 	iox "github.com/sighupio/furyctl/internal/x/io"
 	netx "github.com/sighupio/furyctl/internal/x/net"
 	yamlx "github.com/sighupio/furyctl/internal/x/yaml"
 )
 
-const (
-	DefaultBaseURL        = "git::%s/fury-distribution?ref=%s&depth=1"
-	GithubSSHRepoPrefix   = "git@github.com:sighupio"
-	GithubHTTPSRepoPrefix = "https://github.com/sighupio"
-)
+const DefaultBaseURL = "git::%s/fury-distribution?ref=%s&depth=1"
 
 var (
 	ErrChangingFilePermissions = errors.New("error changing file permissions")
@@ -50,18 +47,18 @@ type DownloadResult struct {
 	DistroManifest config.KFD
 }
 
-func NewDownloader(client netx.Client, https bool) *Downloader {
+func NewDownloader(client netx.Client, gitProtocol git.Protocol) *Downloader {
 	return &Downloader{
-		client:   client,
-		validate: config.NewValidator(),
-		HTTPS:    https,
+		client:      client,
+		validate:    config.NewValidator(),
+		GitProtocol: gitProtocol,
 	}
 }
 
 type Downloader struct {
-	client   netx.Client
-	validate *validator.Validate
-	HTTPS    bool
+	client      netx.Client
+	validate    *validator.Validate
+	GitProtocol git.Protocol
 }
 
 func (d *Downloader) Download(
@@ -82,14 +79,8 @@ func (d *Downloader) DoDownload(
 ) (DownloadResult, error) {
 	url := distroLocation
 
-	gitPrefix := GithubSSHRepoPrefix
-
-	if d.HTTPS {
-		gitPrefix = GithubHTTPSRepoPrefix
-	}
-
 	if distroLocation == "" {
-		url = fmt.Sprintf(DefaultBaseURL, gitPrefix, minimalConf.Spec.DistributionVersion)
+		url = fmt.Sprintf(DefaultBaseURL, git.RepoPrefixByProtocol(d.GitProtocol), minimalConf.Spec.DistributionVersion)
 	}
 
 	if strings.HasPrefix(url, ".") {

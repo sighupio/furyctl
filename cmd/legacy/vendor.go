@@ -29,7 +29,7 @@ var (
 type VendorCmdFlags struct {
 	FuryFilePath string
 	Prefix       string
-	HTTPS        bool
+	GitProtocol  string
 }
 
 func NewVendorCmd(tracker *analytics.Tracker) *cobra.Command {
@@ -79,7 +79,7 @@ func NewVendorCmd(tracker *analytics.Tracker) *cobra.Command {
 				}
 			}
 
-			downloader := legacy.NewDownloader(flags.HTTPS)
+			downloader := legacy.NewDownloader(flags.GitProtocol)
 
 			err = downloader.Download(ps)
 			if err != nil {
@@ -116,9 +116,9 @@ func NewVendorCmd(tracker *analytics.Tracker) *cobra.Command {
 }
 
 func getLegacyVendorCmdFlags(cmd *cobra.Command, tracker *analytics.Tracker, cmdEvent analytics.Event) (VendorCmdFlags, error) {
-	https, err := cmdutil.BoolFlag(cmd, "https", tracker, cmdEvent)
+	gitProtocol, err := cmdutil.StringFlag(cmd, "git-protocol", tracker, cmdEvent)
 	if err != nil {
-		return VendorCmdFlags{}, fmt.Errorf("%w: %s", ErrParsingFlag, "https")
+		return VendorCmdFlags{}, fmt.Errorf("%w: %s", ErrParsingFlag, "git-protocol")
 	}
 
 	prefix, err := cmdutil.StringFlag(cmd, "prefix", tracker, cmdEvent)
@@ -134,6 +134,6 @@ func getLegacyVendorCmdFlags(cmd *cobra.Command, tracker *analytics.Tracker, cmd
 	return VendorCmdFlags{
 		FuryFilePath: furyFilePath,
 		Prefix:       prefix,
-		HTTPS:        https,
+		GitProtocol:  gitProtocol,
 	}, nil
 }

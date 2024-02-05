@@ -20,6 +20,7 @@ import (
 	"github.com/sighupio/furyctl/internal/config"
 	"github.com/sighupio/furyctl/internal/dependencies"
 	"github.com/sighupio/furyctl/internal/distribution"
+	"github.com/sighupio/furyctl/internal/git"
 	cobrax "github.com/sighupio/furyctl/internal/x/cobra"
 	execx "github.com/sighupio/furyctl/internal/x/exec"
 	iox "github.com/sighupio/furyctl/internal/x/io"
@@ -44,7 +45,7 @@ type ClusterCmdFlags struct {
 	VpnAutoConnect     bool
 	DryRun             bool
 	NoTTY              bool
-	HTTPS              bool
+	GitProtocol        git.Protocol
 	Outdir             string
 	SkipDepsDownload   bool
 	SkipDepsValidation bool
@@ -92,7 +93,7 @@ func NewClusterCmd(tracker *analytics.Tracker) *cobra.Command {
 			// Init first half of collaborators.
 			client := netx.NewGoGetterClient()
 			executor := execx.NewStdExecutor()
-			distrodl := distribution.NewDownloader(client, flags.HTTPS)
+			distrodl := distribution.NewDownloader(client, flags.GitProtocol)
 			depsvl := dependencies.NewValidator(executor, flags.BinPath, flags.FuryctlPath, flags.VpnAutoConnect)
 
 			execx.NoTTY = flags.NoTTY
@@ -127,7 +128,7 @@ func NewClusterCmd(tracker *analytics.Tracker) *cobra.Command {
 			basePath := filepath.Join(outDir, ".furyctl", res.MinimalConf.Metadata.Name)
 
 			// Init second half of collaborators.
-			depsdl := dependencies.NewDownloader(client, basePath, flags.BinPath, flags.HTTPS)
+			depsdl := dependencies.NewDownloader(client, basePath, flags.BinPath, flags.GitProtocol)
 
 			// Validate the furyctl.yaml file.
 			logrus.Info("Validating configuration file...")
@@ -371,9 +372,14 @@ func getDeleteClusterCmdFlags(cmd *cobra.Command, tracker *analytics.Tracker, cm
 		return ClusterCmdFlags{}, fmt.Errorf(WrappedErrMessage, ErrParsingFlag, "force")
 	}
 
-	https, err := cmdutil.BoolFlag(cmd, "https", tracker, cmdEvent)
+	gitProtocol, err := cmdutil.StringFlag(cmd, "git-protocol", tracker, cmdEvent)
 	if err != nil {
-		return ClusterCmdFlags{}, fmt.Errorf(WrappedErrMessage, ErrParsingFlag, "https")
+		return ClusterCmdFlags{}, fmt.Errorf(WrappedErrMessage, ErrParsingFlag, "git-protocol")
+	}
+
+	typedGitProtocol, err := git.NewProtocol(gitProtocol)
+	if err != nil {
+		return ClusterCmdFlags{}, fmt.Errorf("%w: %w", ErrParsingFlag, err)
 	}
 
 	outdir, err := cmdutil.StringFlag(cmd, "outdir", tracker, cmdEvent)
@@ -402,7 +408,7 @@ func getDeleteClusterCmdFlags(cmd *cobra.Command, tracker *analytics.Tracker, cm
 		DryRun:             dryRun,
 		Force:              force,
 		NoTTY:              noTTY,
-		HTTPS:              https,
+		GitProtocol:        typedGitProtocol,
 		Outdir:             outdir,
 		SkipDepsDownload:   skipDepsDownload,
 		SkipDepsValidation: skipDepsValidation,

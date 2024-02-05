@@ -19,6 +19,7 @@ import (
 	"github.com/sighupio/furyctl/internal/cmd/cmdutil"
 	"github.com/sighupio/furyctl/internal/diffs"
 	"github.com/sighupio/furyctl/internal/distribution"
+	"github.com/sighupio/furyctl/internal/git"
 	"github.com/sighupio/furyctl/internal/state"
 	cobrax "github.com/sighupio/furyctl/internal/x/cobra"
 	execx "github.com/sighupio/furyctl/internal/x/exec"
@@ -32,7 +33,7 @@ type DiffCommandFlags struct {
 	DistroLocation      string
 	Phase               string
 	NoTTY               bool
-	HTTPS               bool
+	GitProtocol         git.Protocol
 	BinPath             string
 	Outdir              string
 	UpgradePathLocation string
@@ -75,7 +76,7 @@ func NewDiffCommand(tracker *analytics.Tracker) *cobra.Command {
 			}
 
 			client := netx.NewGoGetterClient()
-			distrodl := distribution.NewDownloader(client, flags.HTTPS)
+			distrodl := distribution.NewDownloader(client, flags.GitProtocol)
 
 			logrus.Info("Downloading distribution...")
 			res, err := distrodl.Download(flags.DistroLocation, flags.FuryctlPath)
@@ -290,8 +291,7 @@ func getDiffCommandFlags(
 		return DiffCommandFlags{}, fmt.Errorf("%w: %s", ErrParsingFlag, "phase")
 	}
 
-	err = cluster.CheckPhase(phase)
-	if err != nil {
+	if err := cluster.CheckPhase(phase); err != nil {
 		return DiffCommandFlags{}, fmt.Errorf("%w: %s: %s", ErrParsingFlag, "phase", err.Error())
 	}
 
@@ -307,9 +307,14 @@ func getDiffCommandFlags(
 		return DiffCommandFlags{}, fmt.Errorf("%w: %s", ErrParsingFlag, "outdir")
 	}
 
-	https, err := cmdutil.BoolFlag(cmd, "https", tracker, cmdEvent)
+	gitProtocol, err := cmdutil.StringFlag(cmd, "git-protocol", tracker, cmdEvent)
 	if err != nil {
-		return DiffCommandFlags{}, fmt.Errorf("%w: %s", ErrParsingFlag, "https")
+		return DiffCommandFlags{}, fmt.Errorf("%w: %s", ErrParsingFlag, "git-protocol")
+	}
+
+	typedGitProtocol, err := git.NewProtocol(gitProtocol)
+	if err != nil {
+		return DiffCommandFlags{}, fmt.Errorf("%w: %w", ErrParsingFlag, err)
 	}
 
 	upgradePathLocation, err := cmdutil.StringFlag(cmd, "upgrade-path-location", tracker, cmdEvent)
@@ -323,7 +328,7 @@ func getDiffCommandFlags(
 		DistroLocation:      distroLocation,
 		Phase:               phase,
 		NoTTY:               noTTY,
-		HTTPS:               https,
+		GitProtocol:         typedGitProtocol,
 		BinPath:             binPath,
 		Outdir:              outdir,
 		UpgradePathLocation: upgradePathLocation,

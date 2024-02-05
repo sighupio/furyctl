@@ -18,6 +18,7 @@ import (
 	"github.com/sighupio/furyctl/internal/config"
 	"github.com/sighupio/furyctl/internal/dependencies"
 	"github.com/sighupio/furyctl/internal/distribution"
+	"github.com/sighupio/furyctl/internal/git"
 	cobrax "github.com/sighupio/furyctl/internal/x/cobra"
 	execx "github.com/sighupio/furyctl/internal/x/exec"
 	netx "github.com/sighupio/furyctl/internal/x/net"
@@ -30,7 +31,7 @@ type TemplateCmdFlags struct {
 	DryRun         bool
 	NoOverwrite    bool
 	SkipValidation bool
-	HTTPS          bool
+	GitProtocol    git.Protocol
 	Outdir         string
 	FuryctlPath    string
 	DistroLocation string
@@ -50,7 +51,6 @@ The generated folder will be created starting from a provided templates folder a
 			cmdEvent = analytics.NewCommandEvent(cobrax.GetFullname(cmd))
 		},
 		RunE: func(cmd *cobra.Command, _ []string) error {
-			// Get flags.
 			flags, err := getDumpTemplateCmdFlags(cmd, tracker, cmdEvent)
 			if err != nil {
 				return err
@@ -64,13 +64,11 @@ The generated folder will be created starting from a provided templates folder a
 				return fmt.Errorf("error: %w", err)
 			}
 
-			// Init collaborators.
 			client := netx.NewGoGetterClient()
 			executor := execx.NewStdExecutor()
 			depsvl := dependencies.NewValidator(executor, "", absFuryctlPath, false)
-			distrodl := distribution.NewDownloader(client, flags.HTTPS)
+			distrodl := distribution.NewDownloader(client, flags.GitProtocol)
 
-			// Validate base requirements.
 			if err := depsvl.ValidateBaseReqs(); err != nil {
 				cmdEvent.AddErrorMessage(err)
 				tracker.Track(cmdEvent)
@@ -78,7 +76,6 @@ The generated folder will be created starting from a provided templates folder a
 				return fmt.Errorf("error while validating requirements: %w", err)
 			}
 
-			// Download the distribution.
 			logrus.Info("Downloading distribution...")
 			res, err := distrodl.Download(flags.DistroLocation, absFuryctlPath)
 			if err != nil {
@@ -95,7 +92,6 @@ The generated folder will be created starting from a provided templates folder a
 			})
 
 			if !flags.SkipValidation {
-				// Validate the furyctl.yaml file.
 				logrus.Info("Validating configuration file...")
 				if err := config.Validate(absFuryctlPath, res.RepoPath); err != nil {
 					cmdEvent.AddErrorMessage(err)
@@ -232,9 +228,14 @@ func getDumpTemplateCmdFlags(cmd *cobra.Command, tracker *analytics.Tracker, cmd
 		return TemplateCmdFlags{}, fmt.Errorf("%w: %s", ErrParsingFlag, "config")
 	}
 
-	https, err := cmdutil.BoolFlag(cmd, "https", tracker, cmdEvent)
+	gitProtocol, err := cmdutil.StringFlag(cmd, "git-protocol", tracker, cmdEvent)
 	if err != nil {
-		return TemplateCmdFlags{}, fmt.Errorf("%w: %s", ErrParsingFlag, "https")
+		return TemplateCmdFlags{}, fmt.Errorf("%w: %s", ErrParsingFlag, "git-protocol")
+	}
+
+	typedGitProtocol, err := git.NewProtocol(gitProtocol)
+	if err != nil {
+		return TemplateCmdFlags{}, fmt.Errorf("%w: %w", ErrParsingFlag, err)
 	}
 
 	return TemplateCmdFlags{
@@ -244,6 +245,6 @@ func getDumpTemplateCmdFlags(cmd *cobra.Command, tracker *analytics.Tracker, cmd
 		Outdir:         outdir,
 		DistroLocation: distroLocation,
 		FuryctlPath:    furyctlPath,
-		HTTPS:          https,
+		GitProtocol:    typedGitProtocol,
 	}, nil
 }
