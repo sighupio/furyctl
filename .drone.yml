@@ -106,6 +106,7 @@ steps:
       # Create required s3 bucket if it doesn't exist
       - (test ! $(aws s3api get-bucket-location --bucket $${TERRAFORM_TF_STATES_BUCKET_NAME} --output text --no-cli-pager 2>/dev/null | grep "$${AWS_DEFAULT_REGION}")) && aws s3 mb s3://$${TERRAFORM_TF_STATES_BUCKET_NAME} --region $${AWS_DEFAULT_REGION}
       # Run tests
+      - go install github.com/onsi/ginkgo/v2/ginkgo@v2.13.1
       - make test-e2e
     environment:
       CGO_ENABLED: 0
