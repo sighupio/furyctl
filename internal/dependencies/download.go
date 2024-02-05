@@ -62,8 +62,7 @@ func (dd *Downloader) DownloadAll(kfd config.KFD) ([]error, []string) {
 	logrus.Debug("Cleaning vendor folder")
 
 	if err := iox.CheckDirIsEmpty(vendorFolder); err != nil {
-		err = os.RemoveAll(vendorFolder)
-		if err != nil {
+		if err := os.RemoveAll(vendorFolder); err != nil {
 			logrus.Debugf("Error while cleaning vendor folder: %v", err)
 
 			return []error{fmt.Errorf("error removing folder: %w", err)}, nil
@@ -160,6 +159,12 @@ func (dd *Downloader) DownloadModules(kfd config.KFD, gitPrefix string) error {
 
 			if err := dd.client.Download(src, dst); err != nil {
 				errs = append(errs, fmt.Errorf("%w '%s': %v", distribution.ErrDownloadingFolder, src, err))
+
+				if _, err := os.Stat(dst); err == nil {
+					if err := os.RemoveAll(dst); err != nil {
+						logrus.Warningf("Error while cleaning up folder after failing download: %v", err)
+					}
+				}
 
 				continue
 			}
