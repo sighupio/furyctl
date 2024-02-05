@@ -291,7 +291,7 @@ var (
 
 		Context("dependencies download", Label("slow"), func() {
 			basepath := "../data/e2e/download/dependencies"
-			FuryctlDownloadDependencies := func(basepath string) (string, error) {
+			FuryctlDownloadDependencies := func(basepath string, protocol string) (string, error) {
 				absBasepath := Abs(basepath)
 
 				return RunCmd(
@@ -302,44 +302,56 @@ var (
 					"--debug",
 					"--disable-analytics",
 					"--log", "stdout",
+					"--git-protocol", protocol,
 				)
 			}
+			itShouldDownloadAllDepsUsing := func(gitProtocol string) func() {
+				return func() {
+					bp := basepath + "/v1.27.1"
 
-			FIt("should download all dependencies for v1.27.1", func() {
-				bp := basepath + "/v1.27.1"
+					homeDir, err := os.UserHomeDir()
+					Expect(err).To(Not(HaveOccurred()))
 
-				homeDir, err := os.UserHomeDir()
-				Expect(err).To(Not(HaveOccurred()))
+					vp := path.Join(homeDir, ".furyctl", "minimal", "vendor")
+					binP := path.Join(homeDir, ".furyctl", "bin")
 
-				vp := path.Join(homeDir, ".furyctl", "minimal", "vendor")
-				binP := path.Join(homeDir, ".furyctl", "bin")
+					RemoveAll(vp)
+					defer RemoveAll(vp)
 
-				RemoveAll(vp)
-				defer RemoveAll(vp)
+					_, err = FuryctlDownloadDependencies(bp, gitProtocol)
 
-				_, err = FuryctlDownloadDependencies(bp)
+					Expect(err).To(Not(HaveOccurred()))
 
-				Expect(err).To(Not(HaveOccurred()))
-				Expect(binP + "/furyagent/0.4.0/furyagent").To(BeAnExistingFile())
-				Expect(binP + "/kubectl/1.27.6/kubectl").To(BeAnExistingFile())
-				Expect(binP + "/kustomize/3.10.0/kustomize").To(BeAnExistingFile())
-				Expect(binP + "/terraform/1.4.6/terraform").To(BeAnExistingFile())
-				Expect(vp + "/installers/eks/README.md").To(BeAnExistingFile())
-				Expect(vp + "/installers/eks/modules/eks/main.tf").To(BeAnExistingFile())
-				Expect(vp + "/installers/eks/modules/vpc/main.tf").To(BeAnExistingFile())
-				Expect(vp + "/modules/auth/README.md").To(BeAnExistingFile())
-				Expect(vp + "/modules/auth/katalog/gangway/kustomization.yaml").To(BeAnExistingFile())
-				Expect(vp + "/modules/dr/README.md").To(BeAnExistingFile())
-				Expect(vp + "/modules/dr/katalog/velero/velero-aws/kustomization.yaml").To(BeAnExistingFile())
-				Expect(vp + "/modules/ingress/README.md").To(BeAnExistingFile())
-				Expect(vp + "/modules/ingress/katalog/nginx/kustomization.yaml").To(BeAnExistingFile())
-				Expect(vp + "/modules/logging/README.md").To(BeAnExistingFile())
-				Expect(vp + "/modules/logging/katalog/configs/kustomization.yaml").To(BeAnExistingFile())
-				Expect(vp + "/modules/monitoring/README.md").To(BeAnExistingFile())
-				Expect(vp + "/modules/monitoring/katalog/configs/kustomization.yaml").To(BeAnExistingFile())
-				Expect(vp + "/modules/opa/README.md").To(BeAnExistingFile())
-				Expect(vp + "/modules/opa/katalog/gatekeeper/kustomization.yaml").To(BeAnExistingFile())
-			})
+					Expect(binP + "/furyagent/0.4.0/furyagent").To(BeAnExistingFile())
+					Expect(binP + "/kubectl/1.27.6/kubectl").To(BeAnExistingFile())
+					Expect(binP + "/kustomize/3.10.0/kustomize").To(BeAnExistingFile())
+					Expect(binP + "/terraform/1.4.6/terraform").To(BeAnExistingFile())
+					Expect(vp + "/installers/eks/README.md").To(BeAnExistingFile())
+					Expect(vp + "/installers/eks/modules/eks/main.tf").To(BeAnExistingFile())
+					Expect(vp + "/installers/eks/modules/vpc/main.tf").To(BeAnExistingFile())
+					Expect(vp + "/installers/eks/modules/vpn/main.tf").To(BeAnExistingFile())
+					Expect(vp + "/modules/auth/README.md").To(BeAnExistingFile())
+					Expect(vp + "/modules/auth/katalog/gangway/kustomization.yaml").To(BeAnExistingFile())
+					Expect(vp + "/modules/dr/README.md").To(BeAnExistingFile())
+					Expect(vp + "/modules/dr/katalog/velero/velero-aws/kustomization.yaml").To(BeAnExistingFile())
+					Expect(vp + "/modules/ingress/README.md").To(BeAnExistingFile())
+					Expect(vp + "/modules/ingress/katalog/nginx/kustomization.yaml").To(BeAnExistingFile())
+					Expect(vp + "/modules/logging/README.md").To(BeAnExistingFile())
+					Expect(vp + "/modules/logging/katalog/configs/kustomization.yaml").To(BeAnExistingFile())
+					Expect(vp + "/modules/monitoring/README.md").To(BeAnExistingFile())
+					Expect(vp + "/modules/monitoring/katalog/configs/kustomization.yaml").To(BeAnExistingFile())
+					Expect(vp + "/modules/networking/README.md").To(BeAnExistingFile())
+					Expect(vp + "/modules/networking/katalog/calico/kustomization.yaml").To(BeAnExistingFile())
+					Expect(vp + "/modules/opa/README.md").To(BeAnExistingFile())
+					Expect(vp + "/modules/opa/katalog/gatekeeper/kustomization.yaml").To(BeAnExistingFile())
+					Expect(vp + "/modules/tracing/README.md").To(BeAnExistingFile())
+					Expect(vp + "/modules/tracing/katalog/minio-ha/kustomization.yaml").To(BeAnExistingFile())
+				}
+			}
+
+			It("should download all dependencies for v1.27.1 using https", itShouldDownloadAllDepsUsing("https"))
+
+			It("should download all dependencies for v1.27.1 using ssh", itShouldDownloadAllDepsUsing("ssh"))
 		})
 
 		Context("template dump", func() {
