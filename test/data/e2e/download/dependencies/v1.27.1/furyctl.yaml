@@ -1,0 +1,79 @@
+---
+apiVersion: kfd.sighup.io/v1alpha2
+kind: EKSCluster
+metadata:
+  name: minimal
+spec:
+  distributionVersion: v1.27.1
+  toolsConfiguration:
+    terraform:
+      state:
+        s3:
+          bucketName: minimal
+          keyPrefix: swe-dev/minimal
+          region: eu-west-1
+  region: eu-west-1
+  tags:
+    env: "swe-dev"
+    k8s: "minimal"
+    githubOrg: "sighupio"
+  infrastructure:
+    vpc:
+      network:
+        cidr: 10.10.0.0/16
+        subnetsCidrs:
+          private:
+            - 10.10.0.0/20
+            - 10.10.16.0/20
+            - 10.10.32.0/20
+            - 10.10.48.0/20
+          public:
+            - 10.10.192.0/24
+            - 10.10.193.0/24
+            - 10.10.194.0/24
+  kubernetes:
+    apiServer:
+      privateAccess: false
+      publicAccess: true
+    nodeAllowedSshPublicKey: "{file://./id_ed25519.pub}"
+    nodePoolsLaunchKind: "launch_templates"
+    logRetentionDays: 1
+    nodePools:
+      - name: workers
+        size:
+          min: 1
+          max: 2
+        instance:
+          type: t3.xlarge
+          spot: true
+          volumeSize: 50
+          maxPods: 66
+        tags:
+          k8s.io/cluster-autoscaler/node-template/label/nodepool: "workers"
+          k8s.io/cluster-autoscaler/node-template/label/node.kubernetes.io/role: "workers"
+  distribution:
+    modules:
+      auth:
+        provider:
+          type: none
+      ingress:
+        baseDomain: internal.example.dev
+        nginx:
+          type: none
+          tls:
+            provider: none
+      logging:
+        type: none
+      monitoring:
+        type: prometheus
+        alertmanager:
+          defaultRules: "disabled"
+          deadManSwitchWebhookUrl: ""
+          slackWebhookUrl: https://slack.com
+      policy:
+        type: none
+      dr:
+        type: none
+        velero: {}
+      tracing:
+        tyoe: none

@@ -19,16 +19,12 @@ import (
 	"github.com/sighupio/fury-distribution/pkg/apis/config"
 	"github.com/sighupio/furyctl/internal/dependencies/tools"
 	"github.com/sighupio/furyctl/internal/distribution"
+	"github.com/sighupio/furyctl/internal/git"
 	"github.com/sighupio/furyctl/internal/semver"
 	"github.com/sighupio/furyctl/internal/tool"
 	execx "github.com/sighupio/furyctl/internal/x/exec"
 	iox "github.com/sighupio/furyctl/internal/x/io"
 	netx "github.com/sighupio/furyctl/internal/x/net"
-)
-
-const (
-	GithubSSHRepoPrefix   = "git@github.com:sighupio"
-	GithubHTTPSRepoPrefix = "https://github.com/sighupio"
 )
 
 var (
@@ -38,7 +34,7 @@ var (
 	ErrModuleNotFound     = errors.New("module not found")
 )
 
-func NewDownloader(client netx.Client, basePath, binPath string, https bool) *Downloader {
+func NewDownloader(client netx.Client, basePath, binPath string, gitProtocol git.Protocol) *Downloader {
 	return &Downloader{
 		client:   client,
 		basePath: basePath,
@@ -46,7 +42,7 @@ func NewDownloader(client netx.Client, basePath, binPath string, https bool) *Do
 		toolFactory: tools.NewFactory(execx.NewStdExecutor(), tools.FactoryPaths{
 			Bin: filepath.Join(basePath, "vendor", "bin"),
 		}),
-		HTTPS: https,
+		GitProtocol: gitProtocol,
 	}
 }
 
@@ -55,7 +51,7 @@ type Downloader struct {
 	toolFactory *tools.Factory
 	basePath    string
 	binPath     string
-	HTTPS       bool
+	GitProtocol git.Protocol
 }
 
 func (dd *Downloader) DownloadAll(kfd config.KFD) ([]error, []string) {
@@ -74,11 +70,7 @@ func (dd *Downloader) DownloadAll(kfd config.KFD) ([]error, []string) {
 		}
 	}
 
-	gitPrefix := GithubSSHRepoPrefix
-
-	if dd.HTTPS {
-		gitPrefix = GithubHTTPSRepoPrefix
-	}
+	gitPrefix := git.RepoPrefixByProtocol(dd.GitProtocol)
 
 	if err := dd.DownloadModules(kfd, gitPrefix); err != nil {
 		errs = append(errs, err)

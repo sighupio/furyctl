@@ -18,6 +18,7 @@ import (
 	"github.com/sighupio/furyctl/internal/dependencies/envvars"
 	"github.com/sighupio/furyctl/internal/dependencies/tools"
 	"github.com/sighupio/furyctl/internal/distribution"
+	"github.com/sighupio/furyctl/internal/git"
 	cobrax "github.com/sighupio/furyctl/internal/x/cobra"
 	execx "github.com/sighupio/furyctl/internal/x/exec"
 	netx "github.com/sighupio/furyctl/internal/x/net"
@@ -69,12 +70,17 @@ func NewDependenciesCmd(tracker *analytics.Tracker) *cobra.Command {
 				binPath = filepath.Join(outDir, ".furyctl", "bin")
 			}
 
-			https, err := cmdutil.BoolFlag(cmd, "https", tracker, cmdEvent)
+			gitProtocol, err := cmdutil.StringFlag(cmd, "git-protocol", tracker, cmdEvent)
 			if err != nil {
-				return fmt.Errorf("%w: https", ErrParsingFlag)
+				return fmt.Errorf("%w: git-protocol", ErrParsingFlag)
 			}
 
-			dloader := distribution.NewDownloader(netx.NewGoGetterClient(), https)
+			typedGitProtocol, err := git.NewProtocol(gitProtocol)
+			if err != nil {
+				return fmt.Errorf("%w: %w", ErrParsingFlag, err)
+			}
+
+			dloader := distribution.NewDownloader(netx.NewGoGetterClient(), typedGitProtocol)
 			executor := execx.NewStdExecutor()
 			depsvl := dependencies.NewValidator(executor, "", furyctlPath, false)
 

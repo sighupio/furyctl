@@ -25,6 +25,7 @@ import (
 	"github.com/sighupio/furyctl/internal/cluster"
 	"github.com/sighupio/furyctl/internal/dependencies/tools"
 	"github.com/sighupio/furyctl/internal/distribution"
+	"github.com/sighupio/furyctl/internal/git"
 	"github.com/sighupio/furyctl/internal/tool"
 	execx "github.com/sighupio/furyctl/internal/x/exec"
 	iox "github.com/sighupio/furyctl/internal/x/io"
@@ -148,7 +149,7 @@ func CompileFuryctl(outputPath string) func() {
 }
 
 func DownloadFuryDistribution(furyctlConfPath string) distribution.DownloadResult {
-	distrodl := distribution.NewDownloader(netx.NewGoGetterClient(), true)
+	distrodl := distribution.NewDownloader(netx.NewGoGetterClient(), git.ProtocolSSH)
 
 	return Must1(distrodl.Download("", furyctlConfPath))
 }

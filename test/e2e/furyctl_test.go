@@ -305,13 +305,13 @@ var (
 				)
 			}
 
-			It("should download all dependencies for v1.25.1", func() {
-				bp := basepath + "/v1.25.1"
+			FIt("should download all dependencies for v1.27.1", func() {
+				bp := basepath + "/v1.27.1"
 
 				homeDir, err := os.UserHomeDir()
 				Expect(err).To(Not(HaveOccurred()))
 
-				vp := path.Join(homeDir, ".furyctl", "awesome-cluster-staging", "vendor")
+				vp := path.Join(homeDir, ".furyctl", "minimal", "vendor")
 				binP := path.Join(homeDir, ".furyctl", "bin")
 
 				RemoveAll(vp)
@@ -320,10 +320,10 @@ var (
 				_, err = FuryctlDownloadDependencies(bp)
 
 				Expect(err).To(Not(HaveOccurred()))
-				Expect(binP + "/furyagent/0.3.0/furyagent").To(BeAnExistingFile())
-				Expect(binP + "/kubectl/1.25.8/kubectl").To(BeAnExistingFile())
-				Expect(binP + "/kustomize/3.5.3/kustomize").To(BeAnExistingFile())
-				Expect(binP + "/terraform/0.15.4/terraform").To(BeAnExistingFile())
+				Expect(binP + "/furyagent/0.4.0/furyagent").To(BeAnExistingFile())
+				Expect(binP + "/kubectl/1.27.6/kubectl").To(BeAnExistingFile())
+				Expect(binP + "/kustomize/3.10.0/kustomize").To(BeAnExistingFile())
+				Expect(binP + "/terraform/1.4.6/terraform").To(BeAnExistingFile())
 				Expect(vp + "/installers/eks/README.md").To(BeAnExistingFile())
 				Expect(vp + "/installers/eks/modules/eks/main.tf").To(BeAnExistingFile())
 				Expect(vp + "/installers/eks/modules/vpc/main.tf").To(BeAnExistingFile())

@@ -19,6 +19,7 @@ import (
 	"github.com/sighupio/furyctl/internal/config"
 	"github.com/sighupio/furyctl/internal/dependencies"
 	"github.com/sighupio/furyctl/internal/distribution"
+	"github.com/sighupio/furyctl/internal/git"
 	"github.com/sighupio/furyctl/internal/semver"
 	cobrax "github.com/sighupio/furyctl/internal/x/cobra"
 	execx "github.com/sighupio/furyctl/internal/x/exec"
@@ -83,9 +84,14 @@ func NewConfigCommand(tracker *analytics.Tracker) *cobra.Command {
 				return fmt.Errorf("%w: name", ErrParsingFlag)
 			}
 
-			https, err := cmdutil.BoolFlag(cmd, "https", tracker, cmdEvent)
+			gitProtocol, err := cmdutil.StringFlag(cmd, "git-protocol", tracker, cmdEvent)
 			if err != nil {
-				return fmt.Errorf("%w: https", ErrParsingFlag)
+				return fmt.Errorf("%w: git-protocol", ErrParsingFlag)
+			}
+
+			typedGitProtocol, err := git.NewProtocol(gitProtocol)
+			if err != nil {
+				return fmt.Errorf("%w: %w", ErrParsingFlag, err)
 			}
 
 			minimalConf := distroconf.Furyctl{
@@ -100,7 +106,7 @@ func NewConfigCommand(tracker *analytics.Tracker) *cobra.Command {
 			}
 
 			// Init collaborators.
-			distrodl := distribution.NewDownloader(netx.NewGoGetterClient(), https)
+			distrodl := distribution.NewDownloader(netx.NewGoGetterClient(), typedGitProtocol)
 			executor := execx.NewStdExecutor()
 			depsvl := dependencies.NewValidator(executor, "", "", false)
 

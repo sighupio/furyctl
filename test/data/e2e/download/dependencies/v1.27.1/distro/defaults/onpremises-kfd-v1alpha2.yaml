@@ -3,21 +3,17 @@
 # license that can be found in the LICENSE file.
 
 data:
+  customPatches:
+    configMapGenerator: []
+    secretGenerator: []
+    patches: []
+    patchesStrategicMerge: []
   # the common section will be used by all the templates in all modules, everything defined here is something used by all the KFD modules.
   common:
     # where all the KFD modules are downloaded
     relativeVendorPath: "../../vendor"
     provider:
-      # can be eks for now, in the future we will add additional providers
-      type: eks
-    # nodeSelector and tolerations will be used to select the nodes where the KFD will be installed
-    nodeSelector:
-      node.kubernetes.io/role: infra
-    tolerations:
-      - effect: NoSchedule
-        key: node.kubernetes.io/role
-        value: infra
-    # this section will contain the authentication configuration that will be used to protect the KFD infrastructural ingresses
+      type: none
 
   # the module section will be used to fine tune each module behaviour and configuration
   modules:
@@ -36,9 +32,6 @@ data:
             ingressClass: ""
 
       baseDomain: example.dev
-      externalDns:
-        privateIamRoleArn: arn:aws:iam::123456789012:role/external-dns-private
-        publicIamRoleArn: arn:aws:iam::123456789012:role/external-dns-public
       dns:
         public:
           name: ""
@@ -72,13 +65,7 @@ data:
         clusterIssuer:
           name: letsencrypt-fury
           email: engineering+fury-distribution@sighup.io
-          # can be dns01 or http01 , if http01 we need to extrapolate the ingress type. If single the class will be nginx, if dual the class will be external
-          type: http01
-          # if auth type is route53, we need to provide the following configurations
-          route53:
-            iamRoleArn: arn:aws:iam::123456789012:role/example-route53
-            region: eu-west-1
-            hostedZoneId: ""
+          type: null
     # logging module configuration
     logging:
       overrides:
@@ -97,22 +84,31 @@ data:
             disableAuth: false
             host: ""
             ingressClass: ""
+      # can be opensearch or loki
+      type: opensearch
       opensearch:
         # can be single or triple
         type: single
-        # if not set, no resource patch will be created
-        resources:
-          requests:
-            cpu: ""
-            memory: ""
-          limits:
-            cpu: ""
-            memory: ""
         # if set, it will override the volumeClaimTemplates in the opensearch statefulSet
         storageSize: 150Gi
+      minio:
+        # define the size for each minio disk, total disks to be created: 6
+        storageSize: 20Gi
+        rootUser:
+          username: minio
+          password: minio123
+      loki:
+        backend: minio
+        externalEndpoint:
+          endpoint: s3.eu-west-1.amazonaws.com
+          insecure: false
+          secretAccessKey: example
+          accessKeyId: example
+          bucketName: lokibucket
       # override ingresses parameters
     # monitoring module configuration
     monitoring:
+      type: prometheus
       overrides:
         nodeSelector: null
         tolerations: null
@@ -130,20 +126,67 @@ data:
             disableAuth: false
             host: ""
             ingressClass: ""
+          minio:
+            disableAuth: false
+            host: ""
+            ingressClass: ""
       prometheus:
-        resources:
-          requests:
-            cpu: ""
-            memory: ""
-          limits:
-            cpu: ""
-            memory: ""
         retentionTime: 30d
         retentionSize: 120GB
         storageSize: 150Gi
       alertmanager:
         deadManSwitchWebhookUrl: ""
         slackWebhookUrl: ""
+      mimir:
+        retentionTime: 30d
+        # backend can be minio, externalEndpoint
+        backend: minio
+        externalEndpoint:
+          endpoint: s3.eu-west-1.amazonaws.com
+          insecure: false
+          secretAccessKey: example
+          accessKeyId: example
+          bucketName: mimirbucket
+      minio:
+        # define the size for each minio disk, total disks to be created: 6
+        storageSize: 20Gi
+        rootUser:
+          username: minio
+          password: minio123
+    # tracing module configuration
+    tracing:
+      overrides:
+        nodeSelector: null
+        tolerations: null
+        ingresses:
+          minio:
+            disableAuth: false
+            host: ""
+            ingressClass: ""
+      type: tempo
+      tempo:
+        retentionTime: 720h
+        backend: minio
+        externalEndpoint:
+          endpoint: s3.eu-west-1.amazonaws.com
+          insecure: false
+          secretAccessKey: example
+          accessKeyId: example
+          bucketName: tempobucket
+      minio:
+        # define the size for each minio disk, total disks to be created: 6
+        storageSize: 20Gi
+        rootUser:
+          username: minio
+          password: minio123
+    # networking module configuration
+    networking:
+      cilium:
+        podCidr: null
+        maskSize: "24"
+      overrides:
+        nodeSelector: null
+        tolerations: null
     # policy module configuration
     policy:
       overrides:
@@ -159,18 +202,24 @@ data:
       gatekeeper:
         # this configuration adds namespaces to the excluded list, actually whitelisting them
         additionalExcludedNamespaces: []
+      kyverno:
+        # this configuration adds namespaces to the excluded list, actually whitelisting them
+        additionalExcludedNamespaces: []
     # dr module configuration
     dr:
+      type: none
       overrides:
         nodeSelector: null
         tolerations: null
       # the standard configuration for velero on the dr module
       velero:
-        # this configuration will be used if common.provider.type is eks
-        eks:
-          iamRoleArn: arn:aws:iam::123456789012:role/example-velero
-          region: eu-west-1
-          bucketName: example-velero
+        backend: minio
+        externalEndpoint:
+          endpoint: s3.eu-west-1.amazonaws.com
+          insecure: false
+          secretAccessKey: example
+          accessKeyId: example
+          bucketName: velerobucket
     # auth module configuration
     auth:
       overrides:
@@ -182,6 +231,9 @@ data:
             host: ""
             ingressClass: ""
           dex:
+            host: ""
+            ingressClass: ""
+          gangway:
             host: ""
             ingressClass: ""
         tolerations: null
@@ -204,17 +256,10 @@ data:
       dex:
         # see dex documentation for more information
         connectors: []
-    aws:
-      overrides:
-        nodeSelector: null
-        tolerations: null
-      ebsCsiDriver:
-        iamRoleArn: arn:aws:iam::123456789012:role/ebs-csi-controller-role
-      loadBalancerController:
-        iamRoleArn: arn:aws:iam::123456789012:role/example-load-balancer-controller
-      clusterAutoscaler:
-        region: eu-west-1
-        iamRoleArn: arn:aws:iam::123456789012:role/example-cluster-autoscaler
+      oidcKubernetesAuth:
+        enabled: false
+      baseDomain: ""
+
 templates:
   includes:
     - ".*\\.yaml"
