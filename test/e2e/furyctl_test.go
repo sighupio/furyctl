@@ -290,35 +290,28 @@ var (
 		})
 
 		Context("dependencies download", Label("slow"), func() {
-			basepath := "../data/e2e/download/dependencies"
-			FuryctlDownloadDependencies := func(basepath string, protocol string) (string, error) {
-				absBasepath := Abs(basepath)
-
-				return RunCmd(
-					furyctl, "download", "dependencies",
-					"--config", filepath.Join(absBasepath, "furyctl.yaml"),
-					"--distro-location", absBasepath+"/distro",
-					"--workdir", absBasepath,
-					"--debug",
-					"--disable-analytics",
-					"--log", "stdout",
-					"--git-protocol", protocol,
-				)
-			}
 			itShouldDownloadAllDepsUsing := func(gitProtocol string) func() {
 				return func() {
-					bp := basepath + "/v1.27.1"
-
 					homeDir, err := os.UserHomeDir()
 					Expect(err).To(Not(HaveOccurred()))
 
+					bp := Abs("../data/e2e/download/dependencies/v1.27.1")
 					vp := path.Join(homeDir, ".furyctl", "minimal", "vendor")
 					binP := path.Join(homeDir, ".furyctl", "bin")
 
 					RemoveAll(vp)
 					defer RemoveAll(vp)
 
-					_, err = FuryctlDownloadDependencies(bp, gitProtocol)
+					_, err = RunCmd(
+						furyctl, "download", "dependencies",
+						"--config", filepath.Join(bp, "furyctl.yaml"),
+						"--distro-location", bp+"/distro",
+						"--workdir", bp,
+						"--debug",
+						"--disable-analytics",
+						"--log", "stdout",
+						"--git-protocol", gitProtocol,
+					)
 
 					Expect(err).To(Not(HaveOccurred()))
 
@@ -349,9 +342,9 @@ var (
 				}
 			}
 
-			It("should download all dependencies for v1.27.1 using https", itShouldDownloadAllDepsUsing("https"))
+			It("should download all dependencies for v1.27.1 using https", Serial, itShouldDownloadAllDepsUsing("https"))
 
-			It("should download all dependencies for v1.27.1 using ssh", itShouldDownloadAllDepsUsing("ssh"))
+			It("should download all dependencies for v1.27.1 using ssh", Serial, itShouldDownloadAllDepsUsing("ssh"))
 		})
 
 		Context("template dump", func() {
