@@ -42,7 +42,7 @@ func NewDownloader(client netx.Client, basePath, binPath string, gitProtocol git
 		toolFactory: tools.NewFactory(execx.NewStdExecutor(), tools.FactoryPaths{
 			Bin: filepath.Join(basePath, "vendor", "bin"),
 		}),
-		GitProtocol: gitProtocol,
+		gitProtocol: gitProtocol,
 	}
 }
 
@@ -51,7 +51,7 @@ type Downloader struct {
 	toolFactory *tools.Factory
 	basePath    string
 	binPath     string
-	GitProtocol git.Protocol
+	gitProtocol git.Protocol
 }
 
 func (dd *Downloader) DownloadAll(kfd config.KFD) ([]error, []string) {
@@ -69,7 +69,7 @@ func (dd *Downloader) DownloadAll(kfd config.KFD) ([]error, []string) {
 		}
 	}
 
-	gitPrefix := git.RepoPrefixByProtocol(dd.GitProtocol)
+	gitPrefix := git.RepoPrefixByProtocol(dd.gitProtocol)
 
 	if err := dd.DownloadModules(kfd, gitPrefix); err != nil {
 		errs = append(errs, err)
