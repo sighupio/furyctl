@@ -17,8 +17,8 @@ import (
 const (
 	Env   = "env"
 	File  = "file"
-	Http  = "http"
-	Https = "https"
+	HTTP  = "http"
+	HTTPS = "https"
 )
 
 var (
@@ -68,7 +68,7 @@ func (p *ConfigParser) ParseDynamicValue(val any) (string, error) {
 
 			return strings.TrimRight(string(val), "\n"), nil
 
-		case Http, Https:
+		case HTTP, HTTPS:
 			f, err := httpx.DownloadFile(strings.Trim(strVal, "{}"))
 			if err != nil {
 				return "", fmt.Errorf("%w: %w", ErrCannotParseDynamicValue, err)

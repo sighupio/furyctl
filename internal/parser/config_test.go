@@ -15,8 +15,9 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/sighupio/furyctl/internal/parser"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/sighupio/furyctl/internal/parser"
 )
 
 func TestNewConfigParser(t *testing.T) {
@@ -32,7 +33,7 @@ func TestConfigParser_ParseDynamicValue(t *testing.T) {
 
 	testCases := []struct {
 		name     string
-		setup    func() (baseDir string, value string, teardown func())
+		setup    func() (baseDir, value string, teardown func())
 		expected string
 	}{
 		{
