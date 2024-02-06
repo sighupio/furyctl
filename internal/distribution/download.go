@@ -51,14 +51,14 @@ func NewDownloader(client netx.Client, gitProtocol git.Protocol) *Downloader {
 	return &Downloader{
 		client:      client,
 		validate:    config.NewValidator(),
-		GitProtocol: gitProtocol,
+		gitProtocol: gitProtocol,
 	}
 }
 
 type Downloader struct {
 	client      netx.Client
 	validate    *validator.Validate
-	GitProtocol git.Protocol
+	gitProtocol git.Protocol
 }
 
 func (d *Downloader) Download(
@@ -80,7 +80,7 @@ func (d *Downloader) DoDownload(
 	url := distroLocation
 
 	if distroLocation == "" {
-		url = fmt.Sprintf(DefaultBaseURL, git.RepoPrefixByProtocol(d.GitProtocol), minimalConf.Spec.DistributionVersion)
+		url = fmt.Sprintf(DefaultBaseURL, git.RepoPrefixByProtocol(d.gitProtocol), minimalConf.Spec.DistributionVersion)
 	}
 
 	if strings.HasPrefix(url, ".") {
