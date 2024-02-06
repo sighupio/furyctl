@@ -102,9 +102,7 @@ func (d *Downloader) DoDownload(
 	src := url
 	dst := filepath.Join(baseDst, "data")
 
-	logrus.Debugf("Downloading '%s' in '%s'", src, dst)
-
-	if err := netx.NewGoGetterClient().Download(src, dst); err != nil {
+	if err := netx.WithLocalCache(netx.NewGoGetterClient()).Download(src, dst); err != nil {
 		if errors.Is(err, netx.ErrDownloadOptionsExhausted) {
 			if distroLocation == "" {
 				return DownloadResult{}, fmt.Errorf("%w: seems like the specified version "+
