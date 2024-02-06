@@ -12,6 +12,8 @@ import (
 	"time"
 
 	"github.com/sirupsen/logrus"
+
+	"github.com/sighupio/furyctl/internal/semver"
 )
 
 type Release struct {
@@ -22,8 +24,42 @@ type Release struct {
 
 const (
 	latestSource = "https://api.github.com/repos/sighupio/furyctl/releases/latest"
-	timeout      = 30 * time.Second
+	timeout      = 5 * time.Second
 )
+
+var ErrCannotCheckNewRelease = fmt.Errorf("cannot check for new release")
+
+// CheckNewRelease checks if there is a new release available.
+func CheckNewRelease(bv string) (string, error) {
+	if bv == "" || bv == "unknown" {
+		return "", nil
+	}
+
+	rel, err := GetLatestRelease()
+	if err != nil {
+		return "", fmt.Errorf("%w: %w", ErrCannotCheckNewRelease, err)
+	}
+
+	if rel.Version == "" {
+		return "", fmt.Errorf("%w: fetched release is empty", ErrCannotCheckNewRelease)
+	}
+
+	latestVer, err := semver.NewVersion(rel.Version)
+	if err != nil {
+		return "", fmt.Errorf("%w: %w", ErrCannotCheckNewRelease, err)
+	}
+
+	buildVer, err := semver.NewVersion(bv)
+	if err != nil {
+		return "", fmt.Errorf("%w: %w", ErrCannotCheckNewRelease, err)
+	}
+
+	if latestVer.GreaterThan(buildVer) {
+		return rel.Version, nil
+	}
+
+	return "", nil
+}
 
 // GetLatestRelease fetches the latest release from the GitHub API.
 func GetLatestRelease() (Release, error) {

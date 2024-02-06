@@ -9,8 +9,7 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/stretchr/testify/require"
-
+	"github.com/sighupio/furyctl/internal/test"
 	httpx "github.com/sighupio/furyctl/internal/x/http"
 )
 
@@ -76,7 +75,7 @@ func TestClient_CheckRedirect(t *testing.T) {
 
 			err := client.CheckRedirect(tC.req, tC.via)
 
-			assertErrorIs(t, err, tC.wantErr)
+			test.AssertErrorIs(t, err, tC.wantErr)
 		})
 	}
 }
@@ -88,14 +87,4 @@ func req(url string) *http.Request {
 	}
 
 	return req
-}
-
-func assertErrorIs(t *testing.T, err, want error) {
-	t.Helper()
-
-	if want == nil {
-		require.NoError(t, err)
-	} else {
-		require.ErrorIs(t, err, want)
-	}
 }

@@ -18,11 +18,13 @@ import (
 	"os"
 	"runtime"
 	"strings"
+	"sync"
 
 	"github.com/sirupsen/logrus"
 
 	"github.com/sighupio/furyctl/cmd"
 	"github.com/sighupio/furyctl/internal/analytics"
+	"github.com/sighupio/furyctl/internal/app"
 )
 
 var (
@@ -39,7 +41,10 @@ func main() {
 }
 
 func exec() int {
-	var logFile *os.File
+	wg := &sync.WaitGroup{}
+	wg.Add(1)
+
+	go checkNewRelease(wg, version)
 
 	versions := map[string]string{
 		"version":   version,
@@ -48,8 +53,6 @@ func exec() int {
 		"goVersion": goVersion,
 		"osArch":    osArch,
 	}
-
-	defer logFile.Close()
 
 	log := &logrus.Logger{
 		Out: os.Stdout,
@@ -70,10 +73,13 @@ func exec() int {
 	mixPanelToken = strings.ReplaceAll(mixPanelToken, "\"", "")
 	mixPanelToken = strings.ReplaceAll(mixPanelToken, "'", "")
 
-	// Create the analytics tracker.
 	a := analytics.NewTracker(mixPanelToken, versions["version"], osArch, runtime.GOOS, "SIGHUP", h)
-
 	defer a.Flush()
+
+	var logFile *os.File
+	defer logFile.Close()
+
+	defer wg.Wait()
 
 	if _, err := cmd.NewRootCommand(versions, logFile, a, mixPanelToken).ExecuteC(); err != nil {
 		log.Error(err)
@@ -82,4 +88,23 @@ func exec() int {
 	}
 
 	return 0
+}
+
+func checkNewRelease(wg *sync.WaitGroup, v string) {
+	defer wg.Done()
+
+	newRel, err := app.CheckNewRelease(v)
+	if err != nil {
+		logrus.Trace(err)
+
+		return
+	}
+
+	if newRel != "" {
+		logrus.Infof("There is a newer release available: %s", newRel)
+
+		return
+	}
+
+	logrus.Infof("No new releases available")
 }
