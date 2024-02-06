@@ -141,97 +141,136 @@ func (dd *Downloader) DownloadModules(kfd config.KFD, gitPrefix string) error {
 
 	mods := reflect.ValueOf(modules)
 
+	doneCh := make(chan bool)
+	errCh := make(chan error)
+
 	for i := 0; i < mods.NumField(); i++ {
-		name := strings.ToLower(mods.Type().Field(i).Name)
-		version, ok := mods.Field(i).Interface().(string)
+		i := i
 
-		if !ok {
-			return fmt.Errorf("%s: %w", name, ErrModuleHasNoVersion)
-		}
+		go func(i int) {
+			defer func() {
+				doneCh <- true
+			}()
 
-		if name == "" {
-			return ErrModuleHasNoName
-		}
+			name := strings.ToLower(mods.Type().Field(i).Name)
+			version, ok := mods.Field(i).Interface().(string)
 
-		if name == "tracing" && !distribution.HasFeature(kfd, distribution.FeatureTracingModule) {
-			continue
-		}
+			if !ok {
+				errCh <- fmt.Errorf("%s: %w", name, ErrModuleHasNoVersion)
 
-		errs := []error{}
-		retries := map[string]int{}
-
-		dst := filepath.Join(dd.basePath, "vendor", "modules", name)
-
-		for _, prefix := range []string{oldPrefix, newPrefix} {
-			src := fmt.Sprintf("git::%s/%s-%s?ref=%s&depth=1", gitPrefix, prefix, name, version)
-
-			moduleURL := createURL(prefix, name, version)
-
-			req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, moduleURL, nil)
-			if err != nil {
-				return fmt.Errorf("%w '%s' (url: %s): %w", ErrDownloadingModule, name, moduleURL, err)
+				return
 			}
 
-			resp, err := http.DefaultClient.Do(req)
-			if err != nil {
-				if resp != nil && resp.Body != nil {
-					if berr := resp.Body.Close(); berr != nil {
-						return fmt.Errorf("%w '%s' (url: %s): %w, %w", ErrDownloadingModule, name, moduleURL, err, berr)
+			if name == "" {
+				errCh <- ErrModuleHasNoName
+
+				return
+			}
+
+			if name == "tracing" && !distribution.HasFeature(kfd, distribution.FeatureTracingModule) {
+				return
+			}
+
+			errs := []error{}
+			retries := map[string]int{}
+
+			dst := filepath.Join(dd.basePath, "vendor", "modules", name)
+
+			for _, prefix := range []string{oldPrefix, newPrefix} {
+				src := fmt.Sprintf("git::%s/%s-%s?ref=%s&depth=1", gitPrefix, prefix, name, version)
+
+				moduleURL := createURL(prefix, name, version)
+
+				req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, moduleURL, nil)
+				if err != nil {
+					errCh <- fmt.Errorf("%w '%s' (url: %s): %w", ErrDownloadingModule, name, moduleURL, err)
+
+					return
+				}
+
+				resp, err := http.DefaultClient.Do(req)
+				if err != nil {
+					if resp != nil && resp.Body != nil {
+						if berr := resp.Body.Close(); berr != nil {
+							errCh <- fmt.Errorf("%w '%s' (url: %s): %w, %w", ErrDownloadingModule, name, moduleURL, err, berr)
+
+							return
+						}
 					}
+
+					errCh <- fmt.Errorf("%w '%s' (url: %s): %w", ErrDownloadingModule, name, moduleURL, err)
+
+					return
 				}
 
-				return fmt.Errorf("%w '%s' (url: %s): %w", ErrDownloadingModule, name, moduleURL, err)
-			}
+				retries[name]++
 
-			retries[name]++
+				// Threshold to retry with the new prefix according to the fallback mechanism.
+				threshold := 2
 
-			// Threshold to retry with the new prefix according to the fallback mechanism.
-			threshold := 2
-
-			if resp.StatusCode != http.StatusOK {
-				if retries[name] >= threshold {
-					errs = append(
-						errs,
-						fmt.Errorf(
-							"%w '%s (url: %s)': please check if module exists or credentials are correctly configured",
-							ErrModuleNotFound,
-							name,
-							moduleURL,
-						),
-					)
-				}
-
-				continue
-			}
-
-			if err := dd.client.Download(src, dst); err != nil {
-				errs = append(errs, fmt.Errorf("%w '%s': %v", distribution.ErrDownloadingFolder, src, err))
-
-				if _, err := os.Stat(dst); err == nil {
-					if err := os.RemoveAll(dst); err != nil {
-						logrus.Warningf("Error while cleaning up folder after failing download: %v", err)
+				if resp.StatusCode != http.StatusOK {
+					if retries[name] >= threshold {
+						errs = append(
+							errs,
+							fmt.Errorf(
+								"%w '%s (url: %s)': please check if module exists or credentials are correctly configured",
+								ErrModuleNotFound,
+								name,
+								moduleURL,
+							),
+						)
 					}
+
+					continue
 				}
 
-				continue
+				if err := dd.client.Download(src, dst); err != nil {
+					errs = append(errs, fmt.Errorf("%w '%s': %v", distribution.ErrDownloadingFolder, src, err))
+
+					if _, err := os.Stat(dst); err == nil {
+						if err := os.RemoveAll(dst); err != nil {
+							logrus.Warningf("Error while cleaning up folder after failing download: %v", err)
+						}
+					}
+
+					continue
+				}
+
+				errs = []error{}
+
+				break
 			}
 
-			errs = []error{}
+			if len(errs) > 0 {
+				errCh <- fmt.Errorf("%w '%s': %v", ErrDownloadingModule, name, errs)
 
-			break
-		}
+				return
+			}
 
-		if len(errs) > 0 {
-			return fmt.Errorf("%w '%s': %v", ErrDownloadingModule, name, errs)
-		}
+			if err := os.RemoveAll(filepath.Join(dst, ".git")); err != nil {
+				errCh <- fmt.Errorf("error removing .git subfolder: %w", err)
 
-		err := os.RemoveAll(filepath.Join(dst, ".git"))
-		if err != nil {
-			return fmt.Errorf("error removing .git subfolder: %w", err)
-		}
+				return
+			}
+		}(i)
 	}
 
-	return nil
+	done := 0
+
+	for {
+		select {
+		case <-doneCh:
+			done++
+
+			if done == mods.NumField() {
+				return nil
+			}
+		case err := <-errCh:
+			return err
+		case <-time.After(5 * time.Minute):
+			return fmt.Errorf("timeout while downloading modules")
+		}
+	}
 }
 
 func (dd *Downloader) DownloadInstallers(installers config.KFDKubernetes, gitPrefix string) error {
@@ -270,55 +309,95 @@ func (dd *Downloader) DownloadInstallers(installers config.KFDKubernetes, gitPre
 }
 
 func (dd *Downloader) DownloadTools(kfd config.KFD) ([]string, error) {
+	toolsCount := 0
 	kfdTools := kfd.Tools
 	tls := reflect.ValueOf(kfdTools)
 
-	unsupportedTools := []string{}
+	doneCh := make(chan bool)
+	utsCh := make(chan string)
+	errCh := make(chan error)
 
 	for i := 0; i < tls.NumField(); i++ {
+		i := i
 		for j := 0; j < tls.Field(i).NumField(); j++ {
-			name := strings.ToLower(tls.Field(i).Type().Field(j).Name)
+			j := j
 
-			toolCfg, ok := tls.Field(i).Field(j).Interface().(config.KFDTool)
+			toolsCount++
 
-			if !ok {
-				return unsupportedTools, fmt.Errorf("%s: %w", name, ErrModuleHasNoVersion)
-			}
+			go func(i, j int) {
+				defer func() {
+					doneCh <- true
+				}()
 
-			if (name == "helm" || name == "helmfile") && !distribution.HasFeature(kfd, distribution.FeaturePlugins) {
-				continue
-			}
+				name := strings.ToLower(tls.Field(i).Type().Field(j).Name)
 
-			if name == "yq" && !distribution.HasFeature(kfd, distribution.FeatureYqSupport) {
-				continue
-			}
+				toolCfg, ok := tls.Field(i).Field(j).Interface().(config.KFDTool)
 
-			tfc := dd.toolFactory.Create(tool.Name(name), toolCfg.Version)
-			if tfc == nil || !tfc.SupportsDownload() {
-				unsupportedTools = append(unsupportedTools, name)
+				if !ok {
+					errCh <- fmt.Errorf("%s: %w", name, ErrModuleHasNoVersion)
 
-				continue
-			}
-
-			dst := filepath.Join(dd.binPath, name, toolCfg.Version)
-
-			if err := dd.client.Download(tfc.SrcPath(), dst); err != nil {
-				return unsupportedTools, fmt.Errorf("%w '%s': %w", distribution.ErrDownloadingFolder, tfc.SrcPath(), err)
-			}
-
-			if err := tfc.Rename(dst); err != nil {
-				return unsupportedTools, fmt.Errorf("%w '%s': %w", distribution.ErrRenamingFile, tfc.SrcPath(), err)
-			}
-
-			if _, err := os.Stat(filepath.Join(dst, name)); err == nil {
-				if err := os.Chmod(filepath.Join(dst, name), iox.FullPermAccess); err != nil {
-					return unsupportedTools, fmt.Errorf("%w '%s': %w", distribution.ErrChangingFilePermissions, filepath.Join(dst, name), err)
+					return
 				}
-			}
+
+				if (name == "helm" || name == "helmfile") && !distribution.HasFeature(kfd, distribution.FeaturePlugins) {
+					return
+				}
+
+				if name == "yq" && !distribution.HasFeature(kfd, distribution.FeatureYqSupport) {
+					return
+				}
+
+				tfc := dd.toolFactory.Create(tool.Name(name), toolCfg.Version)
+				if tfc == nil || !tfc.SupportsDownload() {
+					utsCh <- name
+
+					return
+				}
+
+				dst := filepath.Join(dd.binPath, name, toolCfg.Version)
+
+				if err := dd.client.Download(tfc.SrcPath(), dst); err != nil {
+					errCh <- fmt.Errorf("%w '%s': %w", distribution.ErrDownloadingFolder, tfc.SrcPath(), err)
+
+					return
+				}
+
+				if err := tfc.Rename(dst); err != nil {
+					errCh <- fmt.Errorf("%w '%s': %w", distribution.ErrRenamingFile, tfc.SrcPath(), err)
+
+					return
+				}
+
+				if _, err := os.Stat(filepath.Join(dst, name)); err == nil {
+					if err := os.Chmod(filepath.Join(dst, name), iox.FullPermAccess); err != nil {
+						errCh <- fmt.Errorf("%w '%s': %w", distribution.ErrChangingFilePermissions, filepath.Join(dst, name), err)
+
+						return
+					}
+				}
+			}(i, j)
 		}
 	}
 
-	return unsupportedTools, nil
+	uts := []string{}
+	done := 0
+
+	for {
+		select {
+		case <-doneCh:
+			done++
+
+			if done == toolsCount {
+				return uts, nil
+			}
+		case ut := <-utsCh:
+			uts = append(uts, ut)
+		case err := <-errCh:
+			return uts, err
+		case <-time.After(5 * time.Minute):
+			return uts, fmt.Errorf("timeout while downloading modules")
+		}
+	}
 }
 
 func createURL(prefix, name, version string) string {
