@@ -1,6 +1,11 @@
+// Copyright (c) 2017-present SIGHUP s.r.l All rights reserved.
+// Use of this source code is governed by a BSD-style
+// license that can be found in the LICENSE file.
+
 package http
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"net/http"
@@ -16,7 +21,12 @@ func DownloadFile(url string) (string, error) {
 	}
 	defer out.Close()
 
-	resp, err := http.Get(url)
+	req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, url, nil)
+	if err != nil {
+		return "", fmt.Errorf("%w: %w", ErrCannotDownloadFile, err)
+	}
+
+	resp, err := DefaultClient.Do(req)
 	if err != nil {
 		return "", fmt.Errorf("%w: %w", ErrCannotDownloadFile, err)
 	}
