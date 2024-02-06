@@ -6,7 +6,6 @@ package tools
 
 import (
 	"fmt"
-	"os"
 	"path/filepath"
 	"regexp"
 	"runtime"
@@ -14,6 +13,7 @@ import (
 
 	"github.com/sighupio/furyctl/internal/semver"
 	"github.com/sighupio/furyctl/internal/tool/helm"
+	iox "github.com/sighupio/furyctl/internal/x/io"
 )
 
 func NewHelm(runner *helm.Runner, version string) *Helm {
@@ -55,16 +55,16 @@ func (h *Helm) SrcPath() string {
 }
 
 func (h *Helm) Rename(basePath string) error {
-	oldName := fmt.Sprintf("%s-%s/helm", h.os, h.arch)
-	newName := "helm"
+	oldPath := filepath.Join(basePath, fmt.Sprintf("%s-%s/helm", h.os, h.arch))
+	newPath := filepath.Join(basePath, "helm")
 
-	if err := os.Rename(filepath.Join(basePath, oldName), filepath.Join(basePath, newName)); err != nil {
+	if err := iox.CopyFile(oldPath, newPath); err != nil {
 		return fmt.Errorf("error while renaming helm: %w", err)
 	}
 
-	if err := os.RemoveAll(filepath.Join(basePath, fmt.Sprintf("%s-%s", h.os, h.arch))); err != nil {
-		return fmt.Errorf("error while renaming helm: %w", err)
-	}
+	// if err := os.RemoveAll(filepath.Join(basePath, fmt.Sprintf("%s-%s", h.os, h.arch))); err != nil {
+	// 	return fmt.Errorf("error while renaming helm: %w", err)
+	// }
 
 	return nil
 }

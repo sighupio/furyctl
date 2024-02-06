@@ -6,7 +6,6 @@ package tools
 
 import (
 	"fmt"
-	"os"
 	"path/filepath"
 	"regexp"
 	"runtime"
@@ -14,6 +13,7 @@ import (
 
 	"github.com/sighupio/furyctl/internal/semver"
 	"github.com/sighupio/furyctl/internal/tool/furyagent"
+	iox "github.com/sighupio/furyctl/internal/x/io"
 )
 
 func NewFuryagent(runner *furyagent.Runner, version string) *Furyagent {
@@ -55,11 +55,10 @@ func (f *Furyagent) SrcPath() string {
 }
 
 func (f *Furyagent) Rename(basePath string) error {
-	oldName := fmt.Sprintf("furyagent-%s-%s", f.os, f.arch)
-	newName := "furyagent"
+	oldPath := filepath.Join(basePath, fmt.Sprintf("furyagent-%s-%s", f.os, f.arch))
+	newPath := filepath.Join(basePath, "furyagent")
 
-	err := os.Rename(filepath.Join(basePath, oldName), filepath.Join(basePath, newName))
-	if err != nil {
+	if err := iox.CopyFile(oldPath, newPath); err != nil {
 		return fmt.Errorf("error while renaming furyagent: %w", err)
 	}
 
