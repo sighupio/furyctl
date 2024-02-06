@@ -6,7 +6,6 @@ package tools
 
 import (
 	"fmt"
-	"os"
 	"path/filepath"
 	"regexp"
 	"runtime"
@@ -14,6 +13,7 @@ import (
 
 	"github.com/sighupio/furyctl/internal/semver"
 	"github.com/sighupio/furyctl/internal/tool/yq"
+	iox "github.com/sighupio/furyctl/internal/x/io"
 )
 
 func NewYq(runner *yq.Runner, version string) *Yq {
@@ -55,11 +55,10 @@ func (y *Yq) SrcPath() string {
 }
 
 func (y *Yq) Rename(basePath string) error {
-	oldName := fmt.Sprintf("yq_%s_%s", y.os, y.arch)
-	newName := "yq"
+	oldPath := filepath.Join(basePath, fmt.Sprintf("yq_%s_%s", y.os, y.arch))
+	newPath := filepath.Join(basePath, "yq")
 
-	err := os.Rename(filepath.Join(basePath, oldName), filepath.Join(basePath, newName))
-	if err != nil {
+	if err := iox.CopyFile(oldPath, newPath); err != nil {
 		return fmt.Errorf("error while renaming yq: %w", err)
 	}
 

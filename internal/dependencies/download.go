@@ -260,17 +260,17 @@ func (dd *Downloader) DownloadTools(kfd config.KFD) ([]string, error) {
 			dst := filepath.Join(dd.binPath, name, toolCfg.Version)
 
 			if err := dd.client.Download(tfc.SrcPath(), dst); err != nil {
-				return unsupportedTools, fmt.Errorf("%w '%s': %v", distribution.ErrDownloadingFolder, tfc.SrcPath(), err)
+				return unsupportedTools, fmt.Errorf("%w '%s': %w", distribution.ErrDownloadingFolder, tfc.SrcPath(), err)
 			}
 
-			if _, err := os.Stat(tfc.SrcPath()); err == nil {
-				if err := tfc.Rename(dst); err != nil {
-					return unsupportedTools, fmt.Errorf("%w '%s': %v", distribution.ErrRenamingFile, tfc.SrcPath(), err)
+			if err := tfc.Rename(dst); err != nil {
+				return unsupportedTools, fmt.Errorf("%w '%s': %w", distribution.ErrRenamingFile, tfc.SrcPath(), err)
+			}
+
+			if _, err := os.Stat(filepath.Join(dst, name)); err == nil {
+				if err := os.Chmod(filepath.Join(dst, name), iox.FullPermAccess); err != nil {
+					return unsupportedTools, fmt.Errorf("%w '%s': %w", distribution.ErrChangingFilePermissions, filepath.Join(dst, name), err)
 				}
-			}
-
-			if err := os.Chmod(filepath.Join(dst, name), iox.FullPermAccess); err != nil {
-				return unsupportedTools, fmt.Errorf("%w '%s': %v", distribution.ErrChangingFilePermissions, tfc.SrcPath(), err)
 			}
 		}
 	}
