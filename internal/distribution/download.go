@@ -47,6 +47,10 @@ type DownloadResult struct {
 	DistroManifest config.KFD
 }
 
+func NewCachingDownloader(client netx.Client, gitProtocol git.Protocol) *Downloader {
+	return NewDownloader(netx.WithLocalCache(client), gitProtocol)
+}
+
 func NewDownloader(client netx.Client, gitProtocol git.Protocol) *Downloader {
 	return &Downloader{
 		client:      client,

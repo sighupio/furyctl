@@ -106,7 +106,7 @@ func NewConfigCommand(tracker *analytics.Tracker) *cobra.Command {
 			}
 
 			// Init collaborators.
-			distrodl := distribution.NewDownloader(netx.NewGoGetterClient(), typedGitProtocol)
+			distrodl := distribution.NewCachingDownloader(netx.NewGoGetterClient(), typedGitProtocol)
 			executor := execx.NewStdExecutor()
 			depsvl := dependencies.NewValidator(executor, "", "", false)
 

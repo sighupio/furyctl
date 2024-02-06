@@ -80,7 +80,7 @@ func NewDependenciesCmd(tracker *analytics.Tracker) *cobra.Command {
 				return fmt.Errorf("%w: %w", ErrParsingFlag, err)
 			}
 
-			dloader := distribution.NewDownloader(netx.NewGoGetterClient(), typedGitProtocol)
+			dloader := distribution.NewCachingDownloader(netx.NewGoGetterClient(), typedGitProtocol)
 			executor := execx.NewStdExecutor()
 			depsvl := dependencies.NewValidator(executor, "", furyctlPath, false)
 

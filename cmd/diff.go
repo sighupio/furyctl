@@ -76,7 +76,7 @@ func NewDiffCommand(tracker *analytics.Tracker) *cobra.Command {
 			}
 
 			client := netx.NewGoGetterClient()
-			distrodl := distribution.NewDownloader(client, flags.GitProtocol)
+			distrodl := distribution.NewCachingDownloader(client, flags.GitProtocol)
 
 			logrus.Info("Downloading distribution...")
 			res, err := distrodl.Download(flags.DistroLocation, flags.FuryctlPath)

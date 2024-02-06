@@ -34,6 +34,10 @@ var (
 	ErrModuleNotFound     = errors.New("module not found")
 )
 
+func NewCachingDownloader(client netx.Client, basePath, binPath string, gitProtocol git.Protocol) *Downloader {
+	return NewDownloader(netx.WithLocalCache(client), basePath, binPath, gitProtocol)
+}
+
 func NewDownloader(client netx.Client, basePath, binPath string, gitProtocol git.Protocol) *Downloader {
 	return &Downloader{
 		client:   client,
@@ -259,8 +263,10 @@ func (dd *Downloader) DownloadTools(kfd config.KFD) ([]string, error) {
 				return unsupportedTools, fmt.Errorf("%w '%s': %v", distribution.ErrDownloadingFolder, tfc.SrcPath(), err)
 			}
 
-			if err := tfc.Rename(dst); err != nil {
-				return unsupportedTools, fmt.Errorf("%w '%s': %v", distribution.ErrRenamingFile, tfc.SrcPath(), err)
+			if _, err := os.Stat(tfc.SrcPath()); err == nil {
+				if err := tfc.Rename(dst); err != nil {
+					return unsupportedTools, fmt.Errorf("%w '%s': %v", distribution.ErrRenamingFile, tfc.SrcPath(), err)
+				}
 			}
 
 			if err := os.Chmod(filepath.Join(dst, name), iox.FullPermAccess); err != nil {

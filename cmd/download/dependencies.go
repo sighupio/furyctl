@@ -85,7 +85,7 @@ func NewDependenciesCmd(tracker *analytics.Tracker) *cobra.Command {
 			client := netx.NewGoGetterClient()
 			executor := execx.NewStdExecutor()
 			depsvl := dependencies.NewValidator(executor, binPath, furyctlPath, false)
-			distrodl := distribution.NewDownloader(client, typedGitProtocol)
+			distrodl := distribution.NewCachingDownloader(client, typedGitProtocol)
 
 			// Validate base requirements.
 			if err := depsvl.ValidateBaseReqs(); err != nil {
@@ -110,7 +110,7 @@ func NewDependenciesCmd(tracker *analytics.Tracker) *cobra.Command {
 
 			basePath := filepath.Join(outDir, ".furyctl", dres.MinimalConf.Metadata.Name)
 
-			depsdl := dependencies.NewDownloader(client, basePath, binPath, typedGitProtocol)
+			depsdl := dependencies.NewCachingDownloader(client, basePath, binPath, typedGitProtocol)
 
 			logrus.Info("Downloading dependencies...")
 
