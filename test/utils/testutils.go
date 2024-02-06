@@ -149,7 +149,7 @@ func CompileFuryctl(outputPath string) func() {
 }
 
 func DownloadFuryDistribution(furyctlConfPath string) distribution.DownloadResult {
-	distrodl := distribution.NewDownloader(netx.NewGoGetterClient(), git.ProtocolSSH)
+	distrodl := distribution.NewCachingDownloader(netx.NewGoGetterClient(), git.ProtocolSSH)
 
 	return Must1(distrodl.Download("", furyctlConfPath))
 }

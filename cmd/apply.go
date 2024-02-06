@@ -101,7 +101,7 @@ func NewApplyCommand(tracker *analytics.Tracker) *cobra.Command {
 			// Init first half of collaborators.
 			client := netx.NewGoGetterClient()
 			executor := execx.NewStdExecutor()
-			distrodl := distribution.NewDownloader(client, flags.GitProtocol)
+			distrodl := distribution.NewCachingDownloader(client, flags.GitProtocol)
 			depsvl := dependencies.NewValidator(executor, flags.BinPath, flags.FuryctlPath, flags.VpnAutoConnect)
 
 			// Init packages.
@@ -135,7 +135,7 @@ func NewApplyCommand(tracker *analytics.Tracker) *cobra.Command {
 			basePath := filepath.Join(outDir, ".furyctl", res.MinimalConf.Metadata.Name)
 
 			// Init second half of collaborators.
-			depsdl := dependencies.NewDownloader(client, basePath, flags.BinPath, flags.GitProtocol)
+			depsdl := dependencies.NewCachingDownloader(client, basePath, flags.BinPath, flags.GitProtocol)
 
 			// Validate the furyctl.yaml file.
 			logrus.Info("Validating configuration file...")

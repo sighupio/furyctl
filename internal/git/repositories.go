@@ -4,6 +4,8 @@
 
 package git
 
+import "strings"
+
 const (
 	GithubSSHRepoPrefix   = "git@github.com:sighupio"
 	GithubHTTPSRepoPrefix = "https://github.com/sighupio"
@@ -15,4 +17,11 @@ func RepoPrefixByProtocol(protocol Protocol) string {
 	}
 
 	return GithubHTTPSRepoPrefix
+}
+
+func StripPrefix(repo string) string {
+	strippedRepo := strings.TrimPrefix(repo, GithubSSHRepoPrefix+"/")
+	strippedRepo = strings.TrimPrefix(strippedRepo, GithubHTTPSRepoPrefix+"/")
+
+	return strippedRepo
 }

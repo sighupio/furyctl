@@ -67,7 +67,7 @@ The generated folder will be created starting from a provided templates folder a
 			client := netx.NewGoGetterClient()
 			executor := execx.NewStdExecutor()
 			depsvl := dependencies.NewValidator(executor, "", absFuryctlPath, false)
-			distrodl := distribution.NewDownloader(client, flags.GitProtocol)
+			distrodl := distribution.NewCachingDownloader(client, flags.GitProtocol)
 
 			if err := depsvl.ValidateBaseReqs(); err != nil {
 				cmdEvent.AddErrorMessage(err)

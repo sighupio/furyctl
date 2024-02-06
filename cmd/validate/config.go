@@ -59,7 +59,7 @@ func NewConfigCmd(tracker *analytics.Tracker) *cobra.Command {
 
 			executor := execx.NewStdExecutor()
 			depsvl := dependencies.NewValidator(executor, "", furyctlPath, false)
-			dloader := distribution.NewDownloader(netx.NewGoGetterClient(), typedGitProtocol)
+			dloader := distribution.NewCachingDownloader(netx.NewGoGetterClient(), typedGitProtocol)
 
 			// Validate base requirements.
 			if err := depsvl.ValidateBaseReqs(); err != nil {
