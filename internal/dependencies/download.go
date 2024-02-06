@@ -13,6 +13,7 @@ import (
 	"path/filepath"
 	"reflect"
 	"strings"
+	"time"
 
 	"github.com/sirupsen/logrus"
 
@@ -60,6 +61,7 @@ type Downloader struct {
 
 func (dd *Downloader) DownloadAll(kfd config.KFD) ([]error, []string) {
 	errs := []error{}
+	uts := []string{}
 
 	vendorFolder := filepath.Join(dd.basePath, "vendor")
 
@@ -75,20 +77,61 @@ func (dd *Downloader) DownloadAll(kfd config.KFD) ([]error, []string) {
 
 	gitPrefix := git.RepoPrefixByProtocol(dd.gitProtocol)
 
-	if err := dd.DownloadModules(kfd, gitPrefix); err != nil {
-		errs = append(errs, err)
-	}
+	utsCh := make(chan string)
+	errCh := make(chan error)
+	doneCh := make(chan bool)
 
-	if err := dd.DownloadInstallers(kfd.Kubernetes, gitPrefix); err != nil {
-		errs = append(errs, err)
-	}
+	go func() {
+		if err := dd.DownloadModules(kfd, gitPrefix); err != nil {
+			errCh <- err
+		}
 
-	ut, err := dd.DownloadTools(kfd)
-	if err != nil {
-		errs = append(errs, err)
-	}
+		doneCh <- true
+	}()
 
-	return errs, ut
+	go func() {
+		if err := dd.DownloadInstallers(kfd.Kubernetes, gitPrefix); err != nil {
+			errCh <- err
+		}
+
+		doneCh <- true
+	}()
+
+	go func() {
+		uts, err := dd.DownloadTools(kfd)
+		if err != nil {
+			errCh <- err
+
+			return
+		}
+
+		for _, ut := range uts {
+			utsCh <- ut
+		}
+
+		doneCh <- true
+	}()
+
+	done := 0
+
+	for {
+		select {
+		case err := <-errCh:
+			errs = append(errs, err)
+		case ut := <-utsCh:
+			uts = append(uts, ut)
+		case <-doneCh:
+			done++
+
+			if done == 3 {
+				return errs, uts
+			}
+		case <-time.After(5 * time.Minute):
+			errs = append(errs, fmt.Errorf("timeout while downloading dependencies"))
+
+			return errs, uts
+		}
+	}
 }
 
 func (dd *Downloader) DownloadModules(kfd config.KFD, gitPrefix string) error {
