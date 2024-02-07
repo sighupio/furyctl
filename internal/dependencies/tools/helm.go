@@ -62,10 +62,6 @@ func (h *Helm) Rename(basePath string) error {
 		return fmt.Errorf("error while renaming helm: %w", err)
 	}
 
-	// if err := os.RemoveAll(filepath.Join(basePath, fmt.Sprintf("%s-%s", h.os, h.arch))); err != nil {
-	// 	return fmt.Errorf("error while renaming helm: %w", err)
-	// }
-
 	return nil
 }
 

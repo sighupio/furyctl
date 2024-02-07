@@ -28,8 +28,11 @@ import (
 	netx "github.com/sighupio/furyctl/internal/x/net"
 )
 
+const downloadsTimeout = 5 * time.Minute
+
 var (
 	ErrDownloadingModule  = errors.New("error downloading module")
+	ErrDownloadTimeout    = fmt.Errorf("timeout while downloading")
 	ErrModuleHasNoVersion = errors.New("module has no version")
 	ErrModuleHasNoName    = errors.New("module has no name")
 	ErrModuleNotFound     = errors.New("module not found")
@@ -114,20 +117,25 @@ func (dd *Downloader) DownloadAll(kfd config.KFD) ([]error, []string) {
 
 	done := 0
 
+	const todo = 3
+
 	for {
 		select {
 		case err := <-errCh:
 			errs = append(errs, err)
+
 		case ut := <-utsCh:
 			uts = append(uts, ut)
+
 		case <-doneCh:
 			done++
 
-			if done == 3 {
+			if done == todo {
 				return errs, uts
 			}
-		case <-time.After(5 * time.Minute):
-			errs = append(errs, fmt.Errorf("timeout while downloading dependencies"))
+
+		case <-time.After(downloadsTimeout):
+			errs = append(errs, fmt.Errorf("%w dependencies", ErrDownloadTimeout))
 
 			return errs, uts
 		}
@@ -265,10 +273,12 @@ func (dd *Downloader) DownloadModules(kfd config.KFD, gitPrefix string) error {
 			if done == mods.NumField() {
 				return nil
 			}
+
 		case err := <-errCh:
 			return err
-		case <-time.After(5 * time.Minute):
-			return fmt.Errorf("timeout while downloading modules")
+
+		case <-time.After(downloadsTimeout):
+			return fmt.Errorf("%w modules", ErrDownloadTimeout)
 		}
 	}
 }
@@ -390,12 +400,15 @@ func (dd *Downloader) DownloadTools(kfd config.KFD) ([]string, error) {
 			if done == toolsCount {
 				return uts, nil
 			}
+
 		case ut := <-utsCh:
 			uts = append(uts, ut)
+
 		case err := <-errCh:
 			return uts, err
-		case <-time.After(5 * time.Minute):
-			return uts, fmt.Errorf("timeout while downloading modules")
+
+		case <-time.After(downloadsTimeout):
+			return uts, fmt.Errorf("%w tools", ErrDownloadTimeout)
 		}
 	}
 }
