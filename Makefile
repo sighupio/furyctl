@@ -46,14 +46,14 @@ env:
 	@grep -v '^#' .env | sed 's/^/export /'
 
 tools:
-	@go install github.com/daixiang0/gci@v0.12.0
-	@go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
-	@go install github.com/google/addlicense@latest
-	@go install github.com/nikolaydubina/go-cover-treemap@latest
+	@go install github.com/daixiang0/gci@v0.12.1
+	@go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.55.2
+	@go install github.com/google/addlicense@v1.1.1
+	@go install github.com/nikolaydubina/go-cover-treemap@v1.3.0
 	@go install github.com/onsi/ginkgo/v2/ginkgo@v2.15.0
-	@go install golang.org/x/tools/cmd/goimports@latest
-	@go install mvdan.cc/gofumpt@latest
-	@go install github.com/momaek/formattag@latest
+	@go install golang.org/x/tools/cmd/goimports@v0.17.0
+	@go install mvdan.cc/gofumpt@v0.6.0
+	@go install github.com/momaek/formattag@v0.0.9
 
 .PHONY: mod-download mod-tidy mod-verify
 
