@@ -4,24 +4,43 @@
 
 package git
 
-import "strings"
+import (
+	"fmt"
+	"strings"
+)
 
 const (
 	GithubSSHRepoPrefix   = "git@github.com:sighupio"
 	GithubHTTPSRepoPrefix = "https://github.com/sighupio"
 )
 
-func RepoPrefixByProtocol(protocol Protocol) string {
-	if protocol == ProtocolSSH {
-		return GithubSSHRepoPrefix
-	}
+func RepoPrefixByProtocol(protocol Protocol) (string, error) {
+	switch protocol {
+	case ProtocolSSH:
+		return GithubSSHRepoPrefix, nil
 
-	return GithubHTTPSRepoPrefix
+	case ProtocolHTTPS:
+		return GithubHTTPSRepoPrefix, nil
+
+	default:
+		return "", fmt.Errorf("%w: %s", ErrUnsupportedGitProtocol, protocol)
+	}
 }
 
 func StripPrefix(repo string) string {
 	strippedRepo := strings.TrimPrefix(repo, GithubSSHRepoPrefix+"/")
 	strippedRepo = strings.TrimPrefix(strippedRepo, GithubHTTPSRepoPrefix+"/")
+
+	return strippedRepo
+}
+
+func StripSuffix(repo string) string {
+	return strings.TrimSuffix(repo, ".git")
+}
+
+func CleanupRepoURL(repo string) string {
+	strippedRepo := StripPrefix(repo)
+	strippedRepo = StripSuffix(strippedRepo)
 
 	return strippedRepo
 }

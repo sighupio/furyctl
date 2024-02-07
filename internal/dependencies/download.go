@@ -39,7 +39,7 @@ var (
 )
 
 func NewCachingDownloader(client netx.Client, basePath, binPath string, gitProtocol git.Protocol) *Downloader {
-	return NewDownloader(netx.WithLocalCache(client), basePath, binPath, gitProtocol)
+	return NewDownloader(netx.WithLocalCache(client, netx.GetCacheFolder()), basePath, binPath, gitProtocol)
 }
 
 func NewDownloader(client netx.Client, basePath, binPath string, gitProtocol git.Protocol) *Downloader {
@@ -78,7 +78,10 @@ func (dd *Downloader) DownloadAll(kfd config.KFD) ([]error, []string) {
 		}
 	}
 
-	gitPrefix := git.RepoPrefixByProtocol(dd.gitProtocol)
+	gitPrefix, err := git.RepoPrefixByProtocol(dd.gitProtocol)
+	if err != nil {
+		return []error{err}, nil
+	}
 
 	utsCh := make(chan string)
 	errCh := make(chan error)
