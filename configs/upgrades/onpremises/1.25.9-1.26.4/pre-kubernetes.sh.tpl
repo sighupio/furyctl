@@ -9,12 +9,10 @@ set -e
 ansible-playbook 55.upgrade-control-plane.yml --limit "{{ $h.name }}" --become
 {{- end }}
 
-{{-if and (index .spec "upgrade") (index .spec.upgrade "skipNodesUpgrade") (ne .spec.upgrade.skipNodesUpgrade true) }}
+{{- if and (index .spec "upgrade") (index .spec.upgrade "skipNodesUpgrade") (ne .spec.upgrade.skipNodesUpgrade true) }}
 {{- range $n := .spec.kubernetes.nodes }}
     {{- range $h := $n.hosts }}
-    {{- if and (index .spec.upgrade "upgradeNode") or (eq .spec.upgrade.upgradeNode "") (eq .spec.upgrade.upgradeNode $h.name)  }}
 ansible-playbook 56.upgrade-worker-nodes.yml --limit "{{ $h.name }}"
-    {{- end }}
     {{- end }}
 {{- end }}
 {{- end }}

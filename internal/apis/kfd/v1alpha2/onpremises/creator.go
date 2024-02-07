@@ -176,6 +176,8 @@ func (c *ClusterCreator) Create(startFrom string, _ int) error {
 			c.paths,
 			c.dryRun,
 			upgr,
+			c.upgradeNode,
+			c.force,
 		),
 		c.dryRun,
 		upgr,
@@ -248,7 +250,6 @@ func (c *ClusterCreator) Create(startFrom string, _ int) error {
 			status.Diffs,
 			c.externalUpgradesPath,
 			c.skipNodesUpgrade,
-			c.upgradeNode,
 		)
 
 		if err := preupgradePhase.Exec(); err != nil {
@@ -370,6 +371,10 @@ func (c *ClusterCreator) allPhases(
 		startFrom != cluster.OperationPhasePlugins {
 		if err := kubernetesPhase.Exec(c.getKubernetesSubPhase(startFrom), upgradeState); err != nil {
 			return fmt.Errorf("error while executing kubernetes phase: %w", err)
+		}
+
+		if c.upgradeNode != "" {
+			return nil
 		}
 	}
 

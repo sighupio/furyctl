@@ -358,7 +358,6 @@ func (v *ClusterCreator) CreateAsync(
 			status.Diffs,
 			v.externalUpgradesPath,
 			false,
-			"",
 		)
 
 		if err := preupgrade.Exec(); err != nil {

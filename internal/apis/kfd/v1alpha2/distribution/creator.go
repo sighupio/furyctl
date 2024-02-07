@@ -218,7 +218,6 @@ func (c *ClusterCreator) Create(startFrom string, _ int) error {
 			status.Diffs,
 			c.externalUpgradesPath,
 			false,
-			"",
 		)
 
 		if err := preupgradePhase.Exec(); err != nil {
