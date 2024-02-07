@@ -110,7 +110,7 @@ func (d *LocalCacheClientDecorator) copyCacheToDestination(cacheFolder, destFold
 			return fmt.Errorf("%w: %w", ErrCannotCopyCacheToDestination, err)
 		}
 
-		if err := os.MkdirAll(destFolder, 0755); err != nil {
+		if err := os.MkdirAll(destFolder, 0o755); err != nil {
 			return fmt.Errorf("%w: %w", ErrCannotCopyCacheToDestination, err)
 		}
 	}
@@ -133,7 +133,7 @@ func (d *LocalCacheClientDecorator) copyDownloadToLocalCache(downloadFolder, cac
 			return fmt.Errorf("%w: %w", ErrCannotCopyCacheToDestination, err)
 		}
 
-		if err := os.MkdirAll(key, 0755); err != nil {
+		if err := os.MkdirAll(key, 0o755); err != nil {
 			return fmt.Errorf("%w: %w", ErrCannotCopyCacheToDestination, err)
 		}
 	}
