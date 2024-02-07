@@ -246,7 +246,7 @@ furyctl create cluster --config /path/to/your/furyctl.yaml
 
 #### 3. Upgrade a cluster
 
-Upgrading a cluster is a process that can be divided into two steps: upgrading the fury version and running the migrations(if present).
+Upgrading a cluster is a process that can be divided into two steps: upgrading the fury version and running the migrations (if present).
 
 The first step consist in bringing the cluster up to date with the latest version of the Kubernetes Fury Distribution. This is done by running the following command:
 
@@ -263,6 +263,22 @@ furyctl apply --config /path/to/your/furyctl.yaml
 > ❗️ **WARNING**
 >
 > You must first upgrade the cluster using the old provider(e.g.: `opensearch`), update the configuration file to use the new provider(e.g.: `loki`) and then run the command above.
+
+#### 3.1. Advanced upgrade options (OnPremises provider only)
+
+You can also split nodes upgrade process into several steps, for example, you can upgrade the control plane nodes first:
+
+```console
+furyctl apply --upgrade --config /path/to/your/furyctl.yaml --skip-nodes-upgrade
+```
+
+And then upgrade the worker nodes, one by one:
+
+```console
+furyctl apply --upgrade --config /path/to/your/furyctl.yaml --upgrade-node workerNode1
+```
+
+At the end of the node upgrade process, a check is performed to ensure every pod is either `Running` or in a `Completed` state. You can specify a timeout for this check with the `--pod-running-check-timeout` flag or skip it with the `--force` flag.
 
 #### 4. Destroy a cluster
 
