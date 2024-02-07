@@ -27,18 +27,19 @@ import (
 const DefaultBaseURL = "git::%s/fury-distribution?ref=%s&depth=1"
 
 var (
-	ErrChangingFilePermissions = errors.New("error changing file permissions")
-	ErrCreatingTempDir         = errors.New("error creating temp dir")
-	ErrDownloadingFolder       = errors.New("error downloading folder")
-	ErrMergeCompleteConfig     = errors.New("error merging complete config")
-	ErrMergeDistroConfig       = errors.New("error merging distribution config")
-	ErrRenamingFile            = errors.New("error renaming file")
-	ErrResolvingAbsPath        = errors.New("error resolving absolute path")
-	ErrValidateConfig          = errors.New("error validating config")
-	ErrWriteFile               = errors.New("error writing file")
-	ErrYamlMarshalFile         = errors.New("error marshaling yaml file")
-	ErrYamlUnmarshalFile       = errors.New("error unmarshaling yaml file")
-	ErrUnsupportedVersion      = errors.New("unsupported KFD version")
+	ErrCannotDownloadDistribution = errors.New("cannot download distribution")
+	ErrChangingFilePermissions    = errors.New("error changing file permissions")
+	ErrCreatingTempDir            = errors.New("error creating temp dir")
+	ErrDownloadingFolder          = errors.New("error downloading folder")
+	ErrMergeCompleteConfig        = errors.New("error merging complete config")
+	ErrMergeDistroConfig          = errors.New("error merging distribution config")
+	ErrRenamingFile               = errors.New("error renaming file")
+	ErrResolvingAbsPath           = errors.New("error resolving absolute path")
+	ErrValidateConfig             = errors.New("error validating config")
+	ErrWriteFile                  = errors.New("error writing file")
+	ErrYamlMarshalFile            = errors.New("error marshaling yaml file")
+	ErrYamlUnmarshalFile          = errors.New("error unmarshaling yaml file")
+	ErrUnsupportedVersion         = errors.New("unsupported KFD version")
 )
 
 type DownloadResult struct {
@@ -48,7 +49,7 @@ type DownloadResult struct {
 }
 
 func NewCachingDownloader(client netx.Client, gitProtocol git.Protocol) *Downloader {
-	return NewDownloader(netx.WithLocalCache(client), gitProtocol)
+	return NewDownloader(netx.WithLocalCache(client, netx.GetCacheFolder()), gitProtocol)
 }
 
 func NewDownloader(client netx.Client, gitProtocol git.Protocol) *Downloader {
@@ -83,8 +84,13 @@ func (d *Downloader) DoDownload(
 ) (DownloadResult, error) {
 	url := distroLocation
 
+	protocol, err := git.RepoPrefixByProtocol(d.gitProtocol)
+	if err != nil {
+		return DownloadResult{}, fmt.Errorf("%w: %w", ErrCannotDownloadDistribution, err)
+	}
+
 	if distroLocation == "" {
-		url = fmt.Sprintf(DefaultBaseURL, git.RepoPrefixByProtocol(d.gitProtocol), minimalConf.Spec.DistributionVersion)
+		url = fmt.Sprintf(DefaultBaseURL, protocol, minimalConf.Spec.DistributionVersion)
 	}
 
 	if strings.HasPrefix(url, ".") {
@@ -102,7 +108,9 @@ func (d *Downloader) DoDownload(
 	src := url
 	dst := filepath.Join(baseDst, "data")
 
-	if err := netx.WithLocalCache(netx.NewGoGetterClient()).Download(src, dst); err != nil {
+	client := netx.WithLocalCache(netx.NewGoGetterClient(), netx.GetCacheFolder())
+
+	if err := client.Download(src, dst); err != nil {
 		if errors.Is(err, netx.ErrDownloadOptionsExhausted) {
 			if distroLocation == "" {
 				return DownloadResult{}, fmt.Errorf("%w: seems like the specified version "+

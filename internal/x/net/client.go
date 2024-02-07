@@ -27,18 +27,29 @@ var (
 	URLPrefixRegexp                 = regexp.MustCompile(`^[A-z0-9]+::`)
 )
 
+func GetCacheFolder() string {
+	hd, err := os.UserHomeDir()
+	if err != nil {
+		hd = os.TempDir()
+	}
+
+	return filepath.Join(hd, ".furyctl", "cache")
+}
+
 type Client interface {
 	Download(src, dst string) error
 }
 
-func WithLocalCache(c Client) Client {
+func WithLocalCache(c Client, dir string) Client {
 	return &LocalCacheClientDecorator{
 		client: c,
+		dir:    dir,
 	}
 }
 
 type LocalCacheClientDecorator struct {
 	client Client
+	dir    string
 }
 
 func (d *LocalCacheClientDecorator) Download(src, dst string) error {
@@ -69,10 +80,7 @@ func (d *LocalCacheClientDecorator) Download(src, dst string) error {
 }
 
 func (d *LocalCacheClientDecorator) hasLocalCache(src string) (bool, error) {
-	key, err := d.getKeyFromURL(src)
-	if err != nil {
-		return false, fmt.Errorf("%w: %w", ErrCannotCheckLocalCache, err)
-	}
+	key := d.getKeyFromURL(src)
 
 	if _, err := os.Stat(key); err != nil {
 		if os.IsNotExist(err) {
@@ -85,24 +93,16 @@ func (d *LocalCacheClientDecorator) hasLocalCache(src string) (bool, error) {
 	return true, nil
 }
 
-func (*LocalCacheClientDecorator) getKeyFromURL(url string) (string, error) {
-	hd, err := os.UserHomeDir()
-	if err != nil {
-		return "", fmt.Errorf("%w: %w", ErrCannotGetKeyFromURL, err)
-	}
-
-	cleanURL := git.StripPrefix(url)
+func (d *LocalCacheClientDecorator) getKeyFromURL(url string) string {
+	cleanURL := git.CleanupRepoURL(url)
 
 	urlSum := sha256.Sum256([]byte(cleanURL))
 
-	return filepath.Join(hd, ".furyctl", "cache", hex.EncodeToString(urlSum[:])), nil
+	return filepath.Join(d.dir, hex.EncodeToString(urlSum[:]))
 }
 
 func (d *LocalCacheClientDecorator) copyCacheToDestination(cacheFolder, destFolder string) error {
-	key, err := d.getKeyFromURL(cacheFolder)
-	if err != nil {
-		return fmt.Errorf("%w: %w", ErrCannotCopyCacheToDestination, err)
-	}
+	key := d.getKeyFromURL(cacheFolder)
 
 	if _, err := os.Stat(destFolder); err != nil {
 		if !errors.Is(err, os.ErrNotExist) {
@@ -122,10 +122,7 @@ func (d *LocalCacheClientDecorator) copyCacheToDestination(cacheFolder, destFold
 }
 
 func (d *LocalCacheClientDecorator) copyDownloadToLocalCache(downloadFolder, cacheFolder string) error {
-	key, err := d.getKeyFromURL(downloadFolder)
-	if err != nil {
-		return fmt.Errorf("%w: %w", ErrCannotCopyCacheToDestination, err)
-	}
+	key := d.getKeyFromURL(downloadFolder)
 
 	if _, err := os.Stat(key); err != nil {
 		if !errors.Is(err, os.ErrNotExist) {
