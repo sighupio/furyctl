@@ -76,23 +76,15 @@ steps:
         from_secret: NETRC_FILE
 
   - name: test-e2e
-    image: quay.io/sighup/golang:1.22.0
+    image: golang:1.22.0
     depends_on:
       - prepare
     commands:
-      - apk add curl && apk add --upgrade curl
-      - apk add --update binutils groff openssh-client openvpn
-      # Install aws-cli
-      - curl -sL https://alpine-pkgs.sgerrand.com/sgerrand.rsa.pub -o /etc/apk/keys/sgerrand.rsa.pub
-      - curl -sLO https://github.com/sgerrand/alpine-pkg-glibc/releases/download/$${GLIBC_VER}/glibc-$${GLIBC_VER}.apk
-      - curl -sLO https://github.com/sgerrand/alpine-pkg-glibc/releases/download/$${GLIBC_VER}/glibc-bin-$${GLIBC_VER}.apk
-      - curl -sLO https://github.com/sgerrand/alpine-pkg-glibc/releases/download/$${GLIBC_VER}/glibc-i18n-$${GLIBC_VER}.apk
-      - apk add --force-overwrite --virtual .glibc glibc-$${GLIBC_VER}.apk glibc-bin-$${GLIBC_VER}.apk glibc-i18n-$${GLIBC_VER}.apk
-      - /usr/glibc-compat/bin/localedef -i en_US -f UTF-8 en_US.UTF-8
+      - apt update
+      - apt install -y unzip curl
       - curl -sL https://awscli.amazonaws.com/awscli-exe-linux-x86_64-$${AWSCLI_VERSION}.zip -o awscliv2.zip
       - unzip awscliv2.zip
       - aws/install
-      - apk add gcompat || true
       # Setup SSH
       - mkdir /root/.ssh
       - echo "$${GITHUB_SSH}" | tr -d '\r' | sed -e '$a\' > /root/.ssh/id_rsa
@@ -104,17 +96,16 @@ steps:
       # Create required s3 bucket if it doesn't exist
       - (test ! $(aws s3api get-bucket-location --bucket $${TERRAFORM_TF_STATES_BUCKET_NAME} --output text --no-cli-pager 2>/dev/null | grep "$${AWS_DEFAULT_REGION}")) && aws s3 mb s3://$${TERRAFORM_TF_STATES_BUCKET_NAME} --region $${AWS_DEFAULT_REGION}
       # Run tests
+      - go install github.com/onsi/ginkgo/v2/ginkgo@v2.15.0
       - make test-e2e
       # Cleanup
       - rm -rf aws/
-      - rm awscliv2.zip glibc-$${GLIBC_VER}.apk glibc-bin-$${GLIBC_VER}.apk glibc-i18n-$${GLIBC_VER}.apk
     environment:
       CGO_ENABLED: 0
       GOCACHE: /drone/src/.go/cache
       GOMODCACHE: /drone/src/.go/modcache
       GOTMPDIR: /drone/src/.go/tmp
-      AWSCLI_VERSION: 2.8.12
-      GLIBC_VER: 2.35-r0
+      AWSCLI_VERSION: 2.15.17
       AWS_ACCESS_KEY_ID:
         from_secret: AWS_ACCESS_KEY_ID
       AWS_SECRET_ACCESS_KEY:
