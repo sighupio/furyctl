@@ -54,7 +54,7 @@ type CreatorProperty struct {
 type Creator interface {
 	SetProperties(props []CreatorProperty)
 	SetProperty(name string, value any)
-	Create(startFrom string, timeout int) error
+	Create(startFrom string, timeout, podRunningTimeout int) error
 	GetPhasePath(phase string) (string, error)
 }
 
