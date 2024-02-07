@@ -50,7 +50,7 @@ tools:
 	@go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
 	@go install github.com/google/addlicense@latest
 	@go install github.com/nikolaydubina/go-cover-treemap@latest
-	@go install github.com/onsi/ginkgo/v2/ginkgo@v2.13.1
+	@go install github.com/onsi/ginkgo/v2/ginkgo@v2.15.0
 	@go install golang.org/x/tools/cmd/goimports@latest
 	@go install mvdan.cc/gofumpt@latest
 	@go install github.com/momaek/formattag@latest
