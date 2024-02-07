@@ -9,9 +9,9 @@ name: main
 steps:
   - name: prepare
     image: quay.io/sighup/golang:1.22.0
+    pull: always
     depends_on:
       - clone
-    pull: always
     commands:
       - mkdir -p .go/cache .go/modcache .go/tmp
       - go mod download
@@ -23,9 +23,9 @@ steps:
 
   - name: license
     image: quay.io/sighup/golang:1.22.0
+    pull: always
     depends_on:
       - prepare
-    pull: always
     commands:
       - make license-check
     environment:
@@ -36,9 +36,9 @@ steps:
 
   - name: lint
     image: quay.io/sighup/golang:1.22.0
+    pull: always
     depends_on:
       - prepare
-    pull: always
     commands:
       - make lint
     environment:
@@ -49,9 +49,9 @@ steps:
 
   - name: test-unit
     image: quay.io/sighup/golang:1.22.0
+    pull: always
     depends_on:
       - prepare
-    pull: always
     commands:
       - make test-unit
     environment:
@@ -62,6 +62,7 @@ steps:
 
   - name: test-integration
     image: quay.io/sighup/golang:1.22.0
+    pull: always
     depends_on:
       - prepare
     commands:
@@ -128,13 +129,13 @@ steps:
         from_secret: TERRAFORM_TF_STATES_BUCKET_NAME
 
   - name: build
-    image: ghcr.io/goreleaser/goreleaser:v1.24.0
+    image: quay.io/sighup/golang:1.22.0
+    pull: always
     depends_on:
       - lint
       - test-unit
       - test-integration
       - test-e2e
-    pull: always
     commands:
       - git reset --hard
       - git fetch --tags
@@ -154,7 +155,8 @@ steps:
         from_secret: GITHUB_TOKEN
 
   - name: build-release
-    image: ghcr.io/goreleaser/goreleaser:v1.24.0
+    image: quay.io/sighup/golang:1.22.0
+    pull: always
     depends_on:
       - lint
       - test-unit
