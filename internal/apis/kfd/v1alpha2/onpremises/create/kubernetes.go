@@ -29,6 +29,8 @@ type Kubernetes struct {
 	dryRun        bool
 	ansibleRunner *ansible.Runner
 	upgrade       *upgrade.Upgrade
+	upgradeNode   string
+	force         bool
 }
 
 func (k *Kubernetes) Self() *cluster.OperationPhase {
@@ -44,6 +46,14 @@ func (k *Kubernetes) Exec(startFrom string, upgradeState *upgrade.State) error {
 
 	if k.dryRun {
 		logrus.Info("Kubernetes cluster created successfully (dry-run mode)")
+
+		return nil
+	}
+
+	if k.upgradeNode != "" {
+		if _, err := k.ansibleRunner.Playbook("56.upgrade-worker-nodes.yml", "--limit", k.upgradeNode); err != nil {
+			return fmt.Errorf("error upgrading node %s: %w", k.upgradeNode, err)
+		}
 
 		return nil
 	}
@@ -88,7 +98,8 @@ func (k *Kubernetes) prepare() error {
 	k.CopyPathsToConfig(&mCfg)
 
 	mCfg.Data["kubernetes"] = map[any]any{
-		"version": k.kfdManifest.Kubernetes.OnPremises.Version,
+		"version":              k.kfdManifest.Kubernetes.OnPremises.Version,
+		"skipPodsRunningCheck": k.force,
 	}
 
 	if err := k.CopyFromTemplate(
@@ -143,15 +154,11 @@ func (k *Kubernetes) coreKubernetes(
 		logrus.Info("Running ansible playbook...")
 
 		// Apply create playbook.
-		if _, err := k.ansibleRunner.Playbook("create-playbook.yaml"); err != nil {
-			if k.upgrade.Enabled {
-				upgradeState.Phases.Kubernetes.Status = upgrade.PhaseStatusFailed
+		if !k.upgrade.Enabled {
+			if _, err := k.ansibleRunner.Playbook("create-playbook.yaml"); err != nil {
+				return fmt.Errorf("error applying playbook: %w", err)
 			}
-
-			return fmt.Errorf("error applying playbook: %w", err)
-		}
-
-		if k.upgrade.Enabled {
+		} else {
 			upgradeState.Phases.Kubernetes.Status = upgrade.PhaseStatusSuccess
 		}
 
@@ -203,6 +210,8 @@ func NewKubernetes(
 	paths cluster.CreatorPaths,
 	dryRun bool,
 	upgr *upgrade.Upgrade,
+	upgradeNode string,
+	force bool,
 ) *Kubernetes {
 	phase := cluster.NewOperationPhase(
 		path.Join(paths.WorkDir, cluster.OperationPhaseKubernetes),
@@ -224,6 +233,8 @@ func NewKubernetes(
 				WorkDir:         phase.Path,
 			},
 		),
-		upgrade: upgr,
+		upgrade:     upgr,
+		upgradeNode: upgradeNode,
+		force:       force,
 	}
 }
