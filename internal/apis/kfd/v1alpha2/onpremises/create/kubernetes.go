@@ -20,17 +20,20 @@ import (
 	kubex "github.com/sighupio/furyctl/internal/x/kube"
 )
 
+const FromSecondsToHalfMinuteRetries = 30
+
 type Kubernetes struct {
 	*cluster.OperationPhase
 
-	furyctlConf   public.OnpremisesKfdV1Alpha2
-	kfdManifest   config.KFD
-	paths         cluster.CreatorPaths
-	dryRun        bool
-	ansibleRunner *ansible.Runner
-	upgrade       *upgrade.Upgrade
-	upgradeNode   string
-	force         bool
+	furyctlConf       public.OnpremisesKfdV1Alpha2
+	kfdManifest       config.KFD
+	paths             cluster.CreatorPaths
+	dryRun            bool
+	ansibleRunner     *ansible.Runner
+	upgrade           *upgrade.Upgrade
+	upgradeNode       string
+	force             bool
+	podRunningTimeout int
 }
 
 func (k *Kubernetes) Self() *cluster.OperationPhase {
@@ -100,6 +103,7 @@ func (k *Kubernetes) prepare() error {
 	mCfg.Data["kubernetes"] = map[any]any{
 		"version":              k.kfdManifest.Kubernetes.OnPremises.Version,
 		"skipPodsRunningCheck": k.force,
+		"podRunningTimeout":    k.podRunningTimeout / FromSecondsToHalfMinuteRetries,
 	}
 
 	if err := k.CopyFromTemplate(
@@ -212,6 +216,7 @@ func NewKubernetes(
 	upgr *upgrade.Upgrade,
 	upgradeNode string,
 	force bool,
+	podRunningTimeout int,
 ) *Kubernetes {
 	phase := cluster.NewOperationPhase(
 		path.Join(paths.WorkDir, cluster.OperationPhaseKubernetes),
@@ -233,8 +238,9 @@ func NewKubernetes(
 				WorkDir:         phase.Path,
 			},
 		),
-		upgrade:     upgr,
-		upgradeNode: upgradeNode,
-		force:       force,
+		upgrade:           upgr,
+		upgradeNode:       upgradeNode,
+		force:             force,
+		podRunningTimeout: podRunningTimeout,
 	}
 }

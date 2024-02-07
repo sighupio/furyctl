@@ -29,7 +29,13 @@ const WrappedErrMessage = "%w: %s"
 
 var ErrDownloadDependenciesFailed = errors.New("dependencies download failed")
 
+type Timeouts struct {
+	ProcessTimeout         int
+	PodRunningCheckTimeout int
+}
+
 type ClusterCmdFlags struct {
+	Timeouts
 	Debug               bool
 	FuryctlPath         string
 	DistroLocation      string
@@ -45,7 +51,6 @@ type ClusterCmdFlags struct {
 	NoTTY               bool
 	HTTPS               bool
 	Force               bool
-	Timeout             int
 	Outdir              string
 	Upgrade             bool
 	UpgradePathLocation string
@@ -203,7 +208,11 @@ func NewApplyCommand(tracker *analytics.Tracker) *cobra.Command {
 				return fmt.Errorf("error while initializing cluster creation: %w", err)
 			}
 
-			if err := clusterCreator.Create(flags.StartFrom, flags.Timeout); err != nil {
+			if err := clusterCreator.Create(
+				flags.StartFrom,
+				flags.Timeouts.ProcessTimeout,
+				flags.PodRunningCheckTimeout,
+			); err != nil {
 				cmdEvent.AddErrorMessage(err)
 				tracker.Track(cmdEvent)
 
@@ -326,6 +335,11 @@ func getCreateClusterCmdFlags(cmd *cobra.Command, tracker *analytics.Tracker, cm
 		return ClusterCmdFlags{}, fmt.Errorf(WrappedErrMessage, ErrParsingFlag, "timeout")
 	}
 
+	podRunningCheckTimeout, err := cmdutil.IntFlag(cmd, "pod-running-check-timeout", tracker, cmdEvent)
+	if err != nil {
+		return ClusterCmdFlags{}, fmt.Errorf(WrappedErrMessage, ErrParsingFlag, "pod-running-check-timeout")
+	}
+
 	outdir, err := cmdutil.StringFlag(cmd, "outdir", tracker, cmdEvent)
 	if err != nil {
 		return ClusterCmdFlags{}, fmt.Errorf(WrappedErrMessage, ErrParsingFlag, "outdir")
@@ -347,22 +361,25 @@ func getCreateClusterCmdFlags(cmd *cobra.Command, tracker *analytics.Tracker, cm
 	}
 
 	return ClusterCmdFlags{
-		Debug:               debug,
-		FuryctlPath:         furyctlPath,
-		DistroLocation:      distroLocation,
-		Phase:               phase,
-		StartFrom:           startFrom,
-		BinPath:             binPath,
-		SkipVpn:             skipVpn,
-		VpnAutoConnect:      vpnAutoConnect,
-		DryRun:              dryRun,
-		SkipDepsDownload:    skipDepsDownload,
-		SkipDepsValidation:  skipDepsValidation,
-		SkipNodesUpgrade:    skipNodesUpgrade,
-		NoTTY:               noTTY,
-		Force:               force,
-		HTTPS:               https,
-		Timeout:             timeout,
+		Debug:              debug,
+		FuryctlPath:        furyctlPath,
+		DistroLocation:     distroLocation,
+		Phase:              phase,
+		StartFrom:          startFrom,
+		BinPath:            binPath,
+		SkipVpn:            skipVpn,
+		VpnAutoConnect:     vpnAutoConnect,
+		DryRun:             dryRun,
+		SkipDepsDownload:   skipDepsDownload,
+		SkipDepsValidation: skipDepsValidation,
+		SkipNodesUpgrade:   skipNodesUpgrade,
+		NoTTY:              noTTY,
+		Force:              force,
+		HTTPS:              https,
+		Timeouts: Timeouts{
+			ProcessTimeout:         timeout,
+			PodRunningCheckTimeout: podRunningCheckTimeout,
+		},
 		Outdir:              outdir,
 		Upgrade:             upgrade,
 		UpgradePathLocation: upgradePathLocation,
@@ -456,7 +473,14 @@ func setupCreateClusterCmdFlags(cmd *cobra.Command) {
 	cmd.Flags().Int(
 		"timeout",
 		3600,
-		"Timeout in seconds for the whole cluster creation process. Expressed in seconds",
+		"Timeout for the whole cluster creation process, expressed in seconds",
+	)
+
+	//nolint:gomnd,revive // ignore magic number linters
+	cmd.Flags().Int(
+		"pod-running-check-timeout",
+		300,
+		"Timeout for the pod running check after the worker nodes upgrade, expressed in seconds",
 	)
 
 	cmd.Flags().Bool(

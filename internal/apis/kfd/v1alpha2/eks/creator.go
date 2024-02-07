@@ -185,7 +185,7 @@ func (*ClusterCreator) GetPhasePath(phase string) (string, error) {
 	}
 }
 
-func (v *ClusterCreator) Create(startFrom string, timeout int) error {
+func (v *ClusterCreator) Create(startFrom string, timeout, _ int) error {
 	upgr := upgrade.New(v.paths, string(v.furyctlConf.Kind))
 
 	infra, kube, distro, plugins, preflight, err := v.setupPhases(upgr)

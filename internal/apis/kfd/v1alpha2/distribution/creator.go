@@ -149,7 +149,7 @@ func (*ClusterCreator) GetPhasePath(phase string) (string, error) {
 	}
 }
 
-func (c *ClusterCreator) Create(startFrom string, _ int) error {
+func (c *ClusterCreator) Create(startFrom string, _, _ int) error {
 	upgr := upgrade.New(c.paths, string(c.furyctlConf.Kind))
 	distributionPhase := upgrade.NewReducerOperatorPhaseDecorator[v1alpha2.Reducers](
 		c.upgradeStateStore,

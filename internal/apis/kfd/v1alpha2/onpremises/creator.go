@@ -165,7 +165,7 @@ func (*ClusterCreator) GetPhasePath(phase string) (string, error) {
 	}
 }
 
-func (c *ClusterCreator) Create(startFrom string, _ int) error {
+func (c *ClusterCreator) Create(startFrom string, _, podRunningCheckTimeout int) error {
 	upgr := upgrade.New(c.paths, string(c.furyctlConf.Kind))
 
 	kubernetesPhase := upgrade.NewOperatorPhaseDecorator(
@@ -178,6 +178,7 @@ func (c *ClusterCreator) Create(startFrom string, _ int) error {
 			upgr,
 			c.upgradeNode,
 			c.force,
+			podRunningCheckTimeout,
 		),
 		c.dryRun,
 		upgr,
