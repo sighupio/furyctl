@@ -6,6 +6,7 @@ package netx
 
 import (
 	"crypto/sha256"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"os"
@@ -16,10 +17,12 @@ import (
 	iox "github.com/sighupio/furyctl/internal/x/io"
 )
 
+const dirPerms = 0o755
+
 var (
 	ErrCannotCacheDownload          = fmt.Errorf("cannot cache download")
 	ErrCannotCheckLocalCache        = fmt.Errorf("cannot check local cache")
-	ErrCannotGetKeyFromUrl          = fmt.Errorf("cannot get key from url")
+	ErrCannotGetKeyFromURL          = fmt.Errorf("cannot get key from url")
 	ErrCannotCopyCacheToDestination = fmt.Errorf("cannot copy cache to destination")
 	URLPrefixRegexp                 = regexp.MustCompile(`^[A-z0-9]+::`)
 )
@@ -39,7 +42,7 @@ type LocalCacheClientDecorator struct {
 }
 
 func (d *LocalCacheClientDecorator) Download(src, dst string) error {
-	csrc := d.stripPrefixFromSource(src)
+	csrc := URLPrefixRegexp.ReplaceAllString(src, "")
 
 	hlc, err := d.hasLocalCache(csrc)
 	if err != nil {
@@ -65,10 +68,6 @@ func (d *LocalCacheClientDecorator) Download(src, dst string) error {
 	return nil
 }
 
-func (d *LocalCacheClientDecorator) stripPrefixFromSource(src string) string {
-	return URLPrefixRegexp.ReplaceAllString(src, "")
-}
-
 func (d *LocalCacheClientDecorator) hasLocalCache(src string) (bool, error) {
 	key, err := d.getKeyFromURL(src)
 	if err != nil {
@@ -86,17 +85,17 @@ func (d *LocalCacheClientDecorator) hasLocalCache(src string) (bool, error) {
 	return true, nil
 }
 
-func (d *LocalCacheClientDecorator) getKeyFromURL(url string) (string, error) {
+func (*LocalCacheClientDecorator) getKeyFromURL(url string) (string, error) {
 	hd, err := os.UserHomeDir()
 	if err != nil {
-		return "", fmt.Errorf("%w: %w", ErrCannotGetKeyFromUrl, err)
+		return "", fmt.Errorf("%w: %w", ErrCannotGetKeyFromURL, err)
 	}
 
 	cleanURL := git.StripPrefix(url)
 
 	urlSum := sha256.Sum256([]byte(cleanURL))
 
-	return filepath.Join(hd, ".furyctl", "cache", fmt.Sprintf("%x", urlSum)), nil
+	return filepath.Join(hd, ".furyctl", "cache", hex.EncodeToString(urlSum[:])), nil
 }
 
 func (d *LocalCacheClientDecorator) copyCacheToDestination(cacheFolder, destFolder string) error {
@@ -110,7 +109,7 @@ func (d *LocalCacheClientDecorator) copyCacheToDestination(cacheFolder, destFold
 			return fmt.Errorf("%w: %w", ErrCannotCopyCacheToDestination, err)
 		}
 
-		if err := os.MkdirAll(destFolder, 0o755); err != nil {
+		if err := os.MkdirAll(destFolder, dirPerms); err != nil {
 			return fmt.Errorf("%w: %w", ErrCannotCopyCacheToDestination, err)
 		}
 	}
@@ -133,7 +132,7 @@ func (d *LocalCacheClientDecorator) copyDownloadToLocalCache(downloadFolder, cac
 			return fmt.Errorf("%w: %w", ErrCannotCopyCacheToDestination, err)
 		}
 
-		if err := os.MkdirAll(key, 0o755); err != nil {
+		if err := os.MkdirAll(key, dirPerms); err != nil {
 			return fmt.Errorf("%w: %w", ErrCannotCopyCacheToDestination, err)
 		}
 	}
