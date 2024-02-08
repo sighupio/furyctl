@@ -13,7 +13,8 @@ import (
 
 func NewConnectCommand(tracker *analytics.Tracker) *cobra.Command {
 	connectCmd := &cobra.Command{
-		Use: "connect",
+		Use:   "connect",
+		Short: "Start up a new private connection to a cluster",
 	}
 
 	connectCmd.AddCommand(connect.NewOpenVPNCmd(tracker))
