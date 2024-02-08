@@ -4,12 +4,12 @@
 
 //go:build unit
 
-package eks_test
+package ekscluster_test
 
 import (
 	"testing"
 
-	"github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/eks"
+	"github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/ekscluster"
 )
 
 func Test_ExtraSchemaValidator_Validate(t *testing.T) {
@@ -44,7 +44,7 @@ func Test_ExtraSchemaValidator_Validate(t *testing.T) {
 		},
 	}
 
-	esv := &eks.ExtraSchemaValidator{}
+	esv := &ekscluster.ExtraSchemaValidator{}
 
 	for _, tC := range testCases {
 		tC := tC

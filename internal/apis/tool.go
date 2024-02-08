@@ -5,7 +5,7 @@
 package apis
 
 import (
-	"github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/eks"
+	"github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/ekscluster"
 	"github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/onpremises"
 	execx "github.com/sighupio/furyctl/internal/x/exec"
 )
@@ -24,7 +24,7 @@ func NewExtraToolsValidatorFactory(
 	case "kfd.sighup.io/v1alpha2":
 		switch kind {
 		case "EKSCluster":
-			return eks.NewExtraToolsValidator(executor, autoConnect)
+			return ekscluster.NewExtraToolsValidator(executor, autoConnect)
 
 		case "OnPremises":
 			return onpremises.NewExtraToolsValidator(executor)
