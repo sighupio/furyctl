@@ -5,8 +5,8 @@
 package apis
 
 import (
-	"github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/distribution"
-	"github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/eks"
+	"github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/ekscluster"
+	"github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/kfddistribution"
 	"github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/onpremises"
 )
 
@@ -19,10 +19,10 @@ func NewExtraSchemaValidatorFactory(apiVersion, kind string) ExtraSchemaValidato
 	case "kfd.sighup.io/v1alpha2":
 		switch kind {
 		case "EKSCluster":
-			return &eks.ExtraSchemaValidator{}
+			return &ekscluster.ExtraSchemaValidator{}
 
 		case "KFDDistribution":
-			return &distribution.ExtraSchemaValidator{}
+			return &kfddistribution.ExtraSchemaValidator{}
 
 		case "OnPremises":
 			return &onpremises.ExtraSchemaValidator{}

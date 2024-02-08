@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-package distribution
+package kfddistribution
 
 import (
 	"bufio"
@@ -18,8 +18,8 @@ import (
 	"github.com/sighupio/fury-distribution/pkg/apis/kfddistribution/v1alpha2/public"
 	"github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2"
 	commcreate "github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/common/create"
-	"github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/distribution/create"
-	distrorules "github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/distribution/rules"
+	"github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/kfddistribution/create"
+	distrorules "github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/kfddistribution/rules"
 	"github.com/sighupio/furyctl/internal/cluster"
 	"github.com/sighupio/furyctl/internal/distribution"
 	"github.com/sighupio/furyctl/internal/rules"

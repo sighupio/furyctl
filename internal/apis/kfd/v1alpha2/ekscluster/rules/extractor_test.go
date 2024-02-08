@@ -10,7 +10,7 @@ import (
 	"reflect"
 	"testing"
 
-	eksrules "github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/eks/rules"
+	eksrules "github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/ekscluster/rules"
 	"github.com/sighupio/furyctl/internal/rules"
 )
 

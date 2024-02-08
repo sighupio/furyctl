@@ -14,7 +14,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/sighupio/furyctl/internal/analytics"
-	_ "github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/eks"
+	_ "github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/ekscluster"
 	"github.com/sighupio/furyctl/internal/cluster"
 	"github.com/sighupio/furyctl/internal/cmd/cmdutil"
 	"github.com/sighupio/furyctl/internal/config"

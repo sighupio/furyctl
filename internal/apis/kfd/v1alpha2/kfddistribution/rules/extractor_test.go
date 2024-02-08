@@ -10,7 +10,7 @@ import (
 	"reflect"
 	"testing"
 
-	distrorules "github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/distribution/rules"
+	distrorules "github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/kfddistribution/rules"
 	"github.com/sighupio/furyctl/internal/rules"
 )
 

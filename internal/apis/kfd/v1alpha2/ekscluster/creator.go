@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-package eks
+package ekscluster
 
 import (
 	"bufio"
@@ -21,9 +21,9 @@ import (
 	"github.com/sighupio/fury-distribution/pkg/apis/ekscluster/v1alpha2/private"
 	"github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2"
 	commcreate "github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/common/create"
-	"github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/eks/create"
-	eksrules "github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/eks/rules"
-	"github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/eks/vpn"
+	"github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/ekscluster/create"
+	eksrules "github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/ekscluster/rules"
+	"github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/ekscluster/vpn"
 	"github.com/sighupio/furyctl/internal/cluster"
 	"github.com/sighupio/furyctl/internal/distribution"
 	"github.com/sighupio/furyctl/internal/rules"

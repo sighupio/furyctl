@@ -2,10 +2,10 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-package eks
+package kfddistribution
 
 import (
-	"github.com/sighupio/fury-distribution/pkg/apis/ekscluster/v1alpha2/private"
+	"github.com/sighupio/fury-distribution/pkg/apis/kfddistribution/v1alpha2/public"
 	"github.com/sighupio/furyctl/internal/cluster"
 )
 
@@ -13,13 +13,13 @@ import (
 func init() {
 	cluster.RegisterCreatorFactory(
 		"kfd.sighup.io/v1alpha2",
-		"EKSCluster",
-		cluster.NewCreatorFactory[*ClusterCreator, private.EksclusterKfdV1Alpha2](&ClusterCreator{}),
+		"KFDDistribution",
+		cluster.NewCreatorFactory[*ClusterCreator, public.KfddistributionKfdV1Alpha2](&ClusterCreator{}),
 	)
 
 	cluster.RegisterDeleterFactory(
 		"kfd.sighup.io/v1alpha2",
-		"EKSCluster",
-		cluster.NewDeleterFactory[*ClusterDeleter, private.EksclusterKfdV1Alpha2](&ClusterDeleter{}),
+		"KFDDistribution",
+		cluster.NewDeleterFactory[*ClusterDeleter, public.KfddistributionKfdV1Alpha2](&ClusterDeleter{}),
 	)
 }
