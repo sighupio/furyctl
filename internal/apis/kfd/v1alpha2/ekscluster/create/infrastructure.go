@@ -19,7 +19,6 @@ import (
 	"github.com/sighupio/fury-distribution/pkg/apis/ekscluster/v1alpha2/private"
 	"github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/ekscluster/common"
 	"github.com/sighupio/furyctl/internal/cluster"
-	"github.com/sighupio/furyctl/internal/eks"
 	"github.com/sighupio/furyctl/internal/parser"
 	"github.com/sighupio/furyctl/internal/tool/terraform"
 	"github.com/sighupio/furyctl/internal/upgrade"
@@ -154,9 +153,7 @@ func (i *Infrastructure) coreInfrastructure(
 
 		parsedPlan := tfParser.Parse()
 
-		eksInf := eks.NewInfra()
-
-		criticalResources := slices.Intersection(eksInf.GetCriticalTFResourceTypes(), parsedPlan.Destroy)
+		criticalResources := slices.Intersection(i.getCriticalTFResourceTypes(), parsedPlan.Destroy)
 
 		if len(criticalResources) > 0 {
 			logrus.Warnf("Deletion of the following critical resources has been detected: %s. See the logs for more details.",
@@ -195,6 +192,10 @@ func (i *Infrastructure) coreInfrastructure(
 	}
 
 	return nil
+}
+
+func (*Infrastructure) getCriticalTFResourceTypes() []string {
+	return []string{"aws_vpc", "aws_subnet"}
 }
 
 func (i *Infrastructure) postInfrastructure(
