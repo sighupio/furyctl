@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-package eks
+package ekscluster
 
 import (
 	"fmt"
@@ -12,8 +12,8 @@ import (
 
 	"github.com/sighupio/fury-distribution/pkg/apis/config"
 	"github.com/sighupio/fury-distribution/pkg/apis/ekscluster/v1alpha2/private"
-	del "github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/eks/delete"
-	"github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/eks/vpn"
+	del "github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/ekscluster/delete"
+	"github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/ekscluster/vpn"
 	"github.com/sighupio/furyctl/internal/cluster"
 )
 

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-package distribution
+package kfddistribution
 
 import (
 	"fmt"
@@ -10,7 +10,7 @@ import (
 
 	"github.com/sighupio/fury-distribution/pkg/apis/config"
 	"github.com/sighupio/fury-distribution/pkg/apis/kfddistribution/v1alpha2/public"
-	del "github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/distribution/delete"
+	del "github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/kfddistribution/delete"
 	"github.com/sighupio/furyctl/internal/cluster"
 )
 

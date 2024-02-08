@@ -15,7 +15,7 @@ import (
 
 	"github.com/sighupio/fury-distribution/pkg/apis/config"
 	"github.com/sighupio/fury-distribution/pkg/apis/kfddistribution/v1alpha2/public"
-	"github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/distribution/rules"
+	"github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/kfddistribution/rules"
 	"github.com/sighupio/furyctl/internal/cluster"
 	"github.com/sighupio/furyctl/internal/diffs"
 	"github.com/sighupio/furyctl/internal/distribution"
