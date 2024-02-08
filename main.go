@@ -105,6 +105,4 @@ func checkNewRelease(wg *sync.WaitGroup, v string) {
 
 		return
 	}
-
-	logrus.Infof("No new releases available")
 }
