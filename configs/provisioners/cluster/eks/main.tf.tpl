@@ -55,7 +55,9 @@ module "fury" {
   cluster_name                          = var.cluster_name
   cluster_version                       = var.cluster_version
   cluster_log_retention_days            = var.cluster_log_retention_days
+  {{- if eq .features.logTypesEnabled true }}
   cluster_enabled_log_types             = var.cluster_enabled_log_types
+  {{- end }}
   cluster_endpoint_public_access        = var.cluster_endpoint_public_access
   cluster_endpoint_public_access_cidrs  = var.cluster_endpoint_public_access_cidrs
   cluster_endpoint_private_access       = var.cluster_endpoint_private_access

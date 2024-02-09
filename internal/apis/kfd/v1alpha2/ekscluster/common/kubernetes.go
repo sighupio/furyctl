@@ -19,6 +19,7 @@ import (
 	"github.com/sighupio/fury-distribution/pkg/apis/ekscluster/v1alpha2/private"
 	"github.com/sighupio/furyctl/configs"
 	"github.com/sighupio/furyctl/internal/cluster"
+	"github.com/sighupio/furyctl/internal/distribution"
 	"github.com/sighupio/furyctl/internal/merge"
 	"github.com/sighupio/furyctl/internal/template"
 	"github.com/sighupio/furyctl/internal/tool/terraform"
@@ -158,6 +159,9 @@ func (k *Kubernetes) copyFromTemplate(furyctlCfg template.Config) error {
 					"skipRegionValidation": k.FuryctlConf.Spec.ToolsConfiguration.Terraform.State.S3.SkipRegionValidation,
 				},
 			},
+		},
+		"features": {
+			"logTypesEnabled": distribution.HasFeature(k.KFDManifest, distribution.FeatureKubernetesLogTypes),
 		},
 	}
 
