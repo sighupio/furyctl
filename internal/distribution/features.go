@@ -141,7 +141,7 @@ func hasFeatureYQSupport(kfd config.KFD) bool {
 }
 
 func hasFeatureKubernetesLogTypes(kfd config.KFD) bool {
-	v, err := semver.NewVersion(kfd.Version)
+	v1, err := semver.NewVersion(kfd.Version)
 	if err != nil {
 		return false
 	}
@@ -156,7 +156,7 @@ func hasFeatureKubernetesLogTypes(kfd config.KFD) bool {
 		return false
 	}
 
-	v1272, err := semver.NewVersion("v1.27.2")
+	v12Seven2, err := semver.NewVersion("v1.27.2")
 	if err != nil {
 		return false
 	}
@@ -166,12 +166,12 @@ func hasFeatureKubernetesLogTypes(kfd config.KFD) bool {
 		return false
 	}
 
-	v1270, err := semver.NewVersion("v1.27.0")
+	v12Seven0, err := semver.NewVersion("v1.27.0")
 	if err != nil {
 		return false
 	}
 
-	return v.GreaterThan(v1259) && v.LessThan(v1260) ||
-		v.GreaterThan(v1264) && v.LessThan(v1270) ||
-		v.GreaterThan(v1272)
+	return v1.GreaterThan(v1259) && v1.LessThan(v1260) ||
+		v1.GreaterThan(v1264) && v1.LessThan(v12Seven0) ||
+		v1.GreaterThan(v12Seven2)
 }
