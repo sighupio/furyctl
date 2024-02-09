@@ -31,12 +31,7 @@ import (
 	yamlx "github.com/sighupio/furyctl/internal/x/yaml"
 )
 
-const (
-	DistributionPhaseSchemaPath = ".spec.distribution"
-	PluginsPhaseSchemaPath      = ".spec.plugins"
-	AllPhaseSchemaPath          = ""
-	StartFromFlagNotSet         = ""
-)
+const StartFromFlagNotSet = ""
 
 var (
 	ErrUnsupportedPhase = errors.New("unsupported phase")
@@ -132,22 +127,6 @@ func (c *ClusterCreator) SetProperty(name string, value any) {
 		if s, ok := value.(string); ok {
 			c.externalUpgradesPath = s
 		}
-	}
-}
-
-func (*ClusterCreator) GetPhasePath(phase string) (string, error) {
-	switch phase {
-	case cluster.OperationPhaseDistribution:
-		return DistributionPhaseSchemaPath, nil
-
-	case cluster.OperationPhasePlugins:
-		return PluginsPhaseSchemaPath, nil
-
-	case cluster.OperationPhaseAll:
-		return AllPhaseSchemaPath, nil
-
-	default:
-		return "", fmt.Errorf("%w: %s", ErrUnsupportedPhase, phase)
 	}
 }
 

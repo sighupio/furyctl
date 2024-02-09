@@ -27,6 +27,7 @@ type Checker interface {
 	GenerateDiff() (r3diff.Changelog, error)
 	DiffToString(diffs r3diff.Changelog) string
 	FilterDiffFromPhase(changelog r3diff.Changelog, phasePath string) r3diff.Changelog
+	GetFilteredDiffs(phasePath string) (r3diff.Changelog, error)
 }
 
 type BaseChecker struct {
@@ -41,13 +42,22 @@ func NewBaseChecker(currentConfig, newConfig map[string]any) *BaseChecker {
 	}
 }
 
-func (v *BaseChecker) GenerateDiff() (r3diff.Changelog, error) {
-	changelog, err := r3diff.Diff(v.CurrentConfig, v.NewConfig)
+func (bc *BaseChecker) GenerateDiff() (r3diff.Changelog, error) {
+	changelog, err := r3diff.Diff(bc.CurrentConfig, bc.NewConfig)
 	if err != nil {
 		return nil, fmt.Errorf("error while diffing configs: %w", err)
 	}
 
 	return changelog, nil
+}
+
+func (bc *BaseChecker) GetFilteredDiffs(phasePath string) (r3diff.Changelog, error) {
+	changeLog, err := bc.GenerateDiff()
+	if err != nil {
+		return changeLog, fmt.Errorf("error while generating diff: %w", err)
+	}
+
+	return bc.FilterDiffFromPhase(changeLog, phasePath), nil
 }
 
 func (*BaseChecker) FilterDiffFromPhase(changelog r3diff.Changelog, phasePath string) r3diff.Changelog {

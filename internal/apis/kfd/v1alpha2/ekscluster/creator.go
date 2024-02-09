@@ -35,14 +35,7 @@ import (
 	yamlx "github.com/sighupio/furyctl/internal/x/yaml"
 )
 
-const (
-	InfrastructurePhaseSchemaPath = ".spec.infrastructure"
-	KubernetesPhaseSchemaPath     = ".spec.kubernetes"
-	DistributionPhaseSchemaPath   = ".spec.distribution"
-	PluginsPhaseSchemaPath        = ".spec.plugins"
-	AllPhaseSchemaPath            = ""
-	StartFromFlagNotSet           = ""
-)
+const StartFromFlagNotSet = ""
 
 var (
 	ErrUnsupportedPhase = errors.New("unsupported phase")
@@ -165,28 +158,6 @@ func (v *ClusterCreator) SetProperty(name string, value any) {
 	}
 }
 
-func (*ClusterCreator) GetPhasePath(phase string) (string, error) {
-	switch phase {
-	case cluster.OperationPhaseInfrastructure:
-		return InfrastructurePhaseSchemaPath, nil
-
-	case cluster.OperationPhaseKubernetes:
-		return KubernetesPhaseSchemaPath, nil
-
-	case cluster.OperationPhaseDistribution:
-		return DistributionPhaseSchemaPath, nil
-
-	case cluster.OperationPhasePlugins:
-		return PluginsPhaseSchemaPath, nil
-
-	case cluster.OperationPhaseAll:
-		return AllPhaseSchemaPath, nil
-
-	default:
-		return "", fmt.Errorf("%w: %s", ErrUnsupportedPhase, phase)
-	}
-}
-
 func (v *ClusterCreator) Create(startFrom string, timeout, _ int) error {
 	upgr := upgrade.New(v.paths, string(v.furyctlConf.Kind))
 
@@ -294,22 +265,6 @@ func (v *ClusterCreator) Create(startFrom string, timeout, _ int) error {
 	}
 
 	return nil
-}
-
-func (*ClusterCreator) initUpgradeState() *upgrade.State {
-	return &upgrade.State{
-		Phases: upgrade.Phases{
-			PreInfrastructure:  &upgrade.Phase{Status: upgrade.PhaseStatusPending},
-			Infrastructure:     &upgrade.Phase{Status: upgrade.PhaseStatusPending},
-			PostInfrastructure: &upgrade.Phase{Status: upgrade.PhaseStatusPending},
-			PreKubernetes:      &upgrade.Phase{Status: upgrade.PhaseStatusPending},
-			Kubernetes:         &upgrade.Phase{Status: upgrade.PhaseStatusPending},
-			PostKubernetes:     &upgrade.Phase{Status: upgrade.PhaseStatusPending},
-			PreDistribution:    &upgrade.Phase{Status: upgrade.PhaseStatusPending},
-			Distribution:       &upgrade.Phase{Status: upgrade.PhaseStatusPending},
-			PostDistribution:   &upgrade.Phase{Status: upgrade.PhaseStatusPending},
-		},
-	}
 }
 
 func (v *ClusterCreator) CreateAsync(
@@ -439,6 +394,31 @@ func (v *ClusterCreator) CreateAsync(
 	default:
 		errCh <- fmt.Errorf("%w: %s", ErrUnsupportedPhase, v.phase)
 	}
+}
+
+func (v *ClusterCreator) AskConfirmation() (bool, error) {
+	if !v.force {
+		if _, err := fmt.Println("WARNING: You are about to apply changes to the cluster configuration."); err != nil {
+			return false, fmt.Errorf("error while printing to stdout: %w", err)
+		}
+
+		if _, err := fmt.Println("Are you sure you want to continue? Only 'yes' will be accepted to confirm."); err != nil {
+			return false, fmt.Errorf("error while printing to stdout: %w", err)
+		}
+
+		prompter := iox.NewPrompter(bufio.NewReader(os.Stdin))
+
+		prompt, err := prompter.Ask("yes")
+		if err != nil {
+			return false, fmt.Errorf("error reading user input: %w", err)
+		}
+
+		if !prompt {
+			return false, nil
+		}
+	}
+
+	return true, nil
 }
 
 func (v *ClusterCreator) infraPhase(infra upgrade.OperatorPhaseAsync, vpnConnector *vpn.Connector) error {
@@ -597,7 +577,7 @@ func (v *ClusterCreator) allPhases(
 			logrus.Debugf("error while getting upgrade state: %v", err)
 			logrus.Debugf("creating a new upgrade state on the cluster...")
 
-			upgradeState = v.initUpgradeState()
+			upgradeState = v.newUpgradeState()
 
 			if err := v.upgradeStateStore.Store(upgradeState); err != nil {
 				return fmt.Errorf("error while storing upgrade state: %w", err)
@@ -703,34 +683,6 @@ func (v *ClusterCreator) allPhasesExec(
 	}
 
 	return nil
-}
-
-func (*ClusterCreator) getInfrastructureSubPhase(startFrom string) string {
-	return startFrom
-}
-
-func (*ClusterCreator) getKubernetesSubPhase(startFrom string) string {
-	switch startFrom {
-	case cluster.OperationPhaseKubernetes,
-		cluster.OperationSubPhasePreKubernetes,
-		cluster.OperationSubPhasePostKubernetes:
-		return startFrom
-
-	default:
-		return ""
-	}
-}
-
-func (*ClusterCreator) getDistributionSubPhase(startFrom string) string {
-	switch startFrom {
-	case cluster.OperationPhaseDistribution,
-		cluster.OperationSubPhasePreDistribution,
-		cluster.OperationSubPhasePostDistribution:
-		return startFrom
-
-	default:
-		return ""
-	}
 }
 
 func (*ClusterCreator) buildReducers(
@@ -874,6 +826,34 @@ func (v *ClusterCreator) setupPhases(upgr *upgrade.Upgrade) (
 	return infra, kube, distro, plugins, preflight, nil
 }
 
+func (*ClusterCreator) getInfrastructureSubPhase(startFrom string) string {
+	return startFrom
+}
+
+func (*ClusterCreator) getKubernetesSubPhase(startFrom string) string {
+	switch startFrom {
+	case cluster.OperationPhaseKubernetes,
+		cluster.OperationSubPhasePreKubernetes,
+		cluster.OperationSubPhasePostKubernetes:
+		return startFrom
+
+	default:
+		return ""
+	}
+}
+
+func (*ClusterCreator) getDistributionSubPhase(startFrom string) string {
+	switch startFrom {
+	case cluster.OperationPhaseDistribution,
+		cluster.OperationSubPhasePreDistribution,
+		cluster.OperationSubPhasePostDistribution:
+		return startFrom
+
+	default:
+		return ""
+	}
+}
+
 func (*ClusterCreator) logKubeconfig() error {
 	currentDir, err := os.Getwd()
 	if err != nil {
@@ -901,27 +881,18 @@ func (*ClusterCreator) logVPNKill(vpnConnector *vpn.Connector) error {
 	return nil
 }
 
-func (v *ClusterCreator) AskConfirmation() (bool, error) {
-	if !v.force {
-		if _, err := fmt.Println("WARNING: You are about to apply changes to the cluster configuration."); err != nil {
-			return false, fmt.Errorf("error while printing to stdout: %w", err)
-		}
-
-		if _, err := fmt.Println("Are you sure you want to continue? Only 'yes' will be accepted to confirm."); err != nil {
-			return false, fmt.Errorf("error while printing to stdout: %w", err)
-		}
-
-		prompter := iox.NewPrompter(bufio.NewReader(os.Stdin))
-
-		prompt, err := prompter.Ask("yes")
-		if err != nil {
-			return false, fmt.Errorf("error reading user input: %w", err)
-		}
-
-		if !prompt {
-			return false, nil
-		}
+func (*ClusterCreator) newUpgradeState() *upgrade.State {
+	return &upgrade.State{
+		Phases: upgrade.Phases{
+			PreInfrastructure:  &upgrade.Phase{Status: upgrade.PhaseStatusPending},
+			Infrastructure:     &upgrade.Phase{Status: upgrade.PhaseStatusPending},
+			PostInfrastructure: &upgrade.Phase{Status: upgrade.PhaseStatusPending},
+			PreKubernetes:      &upgrade.Phase{Status: upgrade.PhaseStatusPending},
+			Kubernetes:         &upgrade.Phase{Status: upgrade.PhaseStatusPending},
+			PostKubernetes:     &upgrade.Phase{Status: upgrade.PhaseStatusPending},
+			PreDistribution:    &upgrade.Phase{Status: upgrade.PhaseStatusPending},
+			Distribution:       &upgrade.Phase{Status: upgrade.PhaseStatusPending},
+			PostDistribution:   &upgrade.Phase{Status: upgrade.PhaseStatusPending},
+		},
 	}
-
-	return true, nil
 }

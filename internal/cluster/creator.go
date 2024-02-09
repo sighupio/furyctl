@@ -55,7 +55,6 @@ type Creator interface {
 	SetProperties(props []CreatorProperty)
 	SetProperty(name string, value any)
 	Create(startFrom string, timeout, podRunningTimeout int) error
-	GetPhasePath(phase string) (string, error)
 }
 
 //nolint:revive // ignore arguments limit
