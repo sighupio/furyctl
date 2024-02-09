@@ -285,6 +285,23 @@ func (k *Kubernetes) createTfVars() error {
 		return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
 	}
 
+	if k.FuryctlConf.Spec.Kubernetes.LogsTypes != nil {
+		logsTypes := make([]string, len(k.FuryctlConf.Spec.Kubernetes.LogsTypes))
+
+		for i, logType := range k.FuryctlConf.Spec.Kubernetes.LogsTypes {
+			logsTypes[i] = fmt.Sprintf("\"%v\"", logType)
+		}
+
+		if err := bytesx.SafeWriteToBuffer(
+			&buffer,
+			"cluster_enabled_log_types = [%v]\n",
+			filepath.Dir(k.FuryctlConfPath),
+			strings.Join(logsTypes, ","),
+		); err != nil {
+			return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
+		}
+	}
+
 	if err := bytesx.SafeWriteToBuffer(
 		&buffer,
 		"kubectl_path = \"%s\"\n",
