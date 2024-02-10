@@ -17,8 +17,6 @@ import (
 	iox "github.com/sighupio/furyctl/internal/x/io"
 )
 
-const dirPerms = 0o755
-
 var (
 	ErrCannotCacheDownload          = fmt.Errorf("cannot cache download")
 	ErrCannotCheckLocalCache        = fmt.Errorf("cannot check local cache")
@@ -109,7 +107,7 @@ func (d *LocalCacheClientDecorator) copyCacheToDestination(cacheFolder, destFold
 			return fmt.Errorf("%w: %w", ErrCannotCopyCacheToDestination, err)
 		}
 
-		if err := os.MkdirAll(destFolder, dirPerms); err != nil {
+		if err := os.MkdirAll(destFolder, iox.FullPermAccess); err != nil {
 			return fmt.Errorf("%w: %w", ErrCannotCopyCacheToDestination, err)
 		}
 	}
@@ -129,7 +127,7 @@ func (d *LocalCacheClientDecorator) copyDownloadToLocalCache(downloadFolder, cac
 			return fmt.Errorf("%w: %w", ErrCannotCopyCacheToDestination, err)
 		}
 
-		if err := os.MkdirAll(key, dirPerms); err != nil {
+		if err := os.MkdirAll(key, iox.FullPermAccess); err != nil {
 			return fmt.Errorf("%w: %w", ErrCannotCopyCacheToDestination, err)
 		}
 	}
