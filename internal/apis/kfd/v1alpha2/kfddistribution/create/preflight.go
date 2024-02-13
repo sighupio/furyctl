@@ -45,6 +45,7 @@ type PreFlight struct {
 	distroPath      string
 	furyctlConfPath string
 	kubeRunner      *kubectl.Runner
+	paths           cluster.CreatorPaths
 	kfd             config.KFD
 	dryRun          bool
 	force           bool
@@ -80,13 +81,14 @@ func NewPreFlight(
 			true,
 			false,
 		),
+		paths:  paths,
 		kfd:    kfdManifest,
 		dryRun: dryRun,
 		force:  force,
 	}
 }
 
-func (p *PreFlight) Exec() (*Status, error) {
+func (p *PreFlight) Exec(renderedConfig map[string]any) (*Status, error) {
 	var err error
 
 	status := &Status{
@@ -123,7 +125,7 @@ func (p *PreFlight) Exec() (*Status, error) {
 		return status, fmt.Errorf("cluster is unreachable, make sure you have access to the cluster: %w", err)
 	}
 
-	storedCfg, err := p.GetStateFromCluster()
+	storedCfg, err := p.stateStore.GetConfig()
 	if err != nil {
 		logrus.Debug("error while getting cluster state: ", err)
 
@@ -134,7 +136,7 @@ func (p *PreFlight) Exec() (*Status, error) {
 		return status, nil
 	}
 
-	diffChecker, err := p.CreateDiffChecker(storedCfg)
+	diffChecker, err := p.CreateDiffChecker(storedCfg, renderedConfig)
 	if err != nil {
 		if !p.force {
 			return status, fmt.Errorf(
@@ -154,7 +156,7 @@ func (p *PreFlight) Exec() (*Status, error) {
 		status.Diffs = d
 
 		if len(d) > 0 {
-			logrus.Infof(
+			logrus.Debugf(
 				"Differences found from previous cluster configuration:\n%s",
 				diffChecker.DiffToString(d),
 			)
@@ -180,28 +182,28 @@ func (p *PreFlight) Exec() (*Status, error) {
 	return status, nil
 }
 
-func (p *PreFlight) GetStateFromCluster() ([]byte, error) {
-	storedCfgStr, err := p.stateStore.GetConfig()
-	if err != nil {
-		return nil, fmt.Errorf("error while getting current cluster config: %w", err)
+func (p *PreFlight) CreateDiffChecker(storedCfgStr []byte, renderedConfig map[string]any) (diffs.Checker, error) {
+	clusterCfg := map[string]any{}
+
+	clusterRenderedCfg, err := p.stateStore.GetRenderedConfig()
+	if err == nil {
+		if err := yamlx.UnmarshalV3(clusterRenderedCfg, &clusterCfg); err != nil {
+			return nil, fmt.Errorf("error while unmarshalling rendered config file: %w", err)
+		}
+
+		return diffs.NewBaseChecker(clusterCfg, renderedConfig), nil
 	}
 
-	return storedCfgStr, nil
-}
-
-func (p *PreFlight) CreateDiffChecker(storedCfgStr []byte) (diffs.Checker, error) {
-	storedCfg := map[string]any{}
-
-	if err := yamlx.UnmarshalV3(storedCfgStr, &storedCfg); err != nil {
+	if err := yamlx.UnmarshalV3(storedCfgStr, &clusterCfg); err != nil {
 		return nil, fmt.Errorf("error while unmarshalling config file: %w", err)
 	}
 
-	newCfg, err := yamlx.FromFileV3[map[string]any](p.furyctlConfPath)
+	cfg, err := yamlx.FromFileV3[map[string]any](p.paths.ConfigPath)
 	if err != nil {
 		return nil, fmt.Errorf("error while reading config file: %w", err)
 	}
 
-	return diffs.NewBaseChecker(storedCfg, newCfg), nil
+	return diffs.NewBaseChecker(clusterCfg, cfg), nil
 }
 
 func (p *PreFlight) CheckStateDiffs(d r3diff.Changelog, diffChecker diffs.Checker) error {

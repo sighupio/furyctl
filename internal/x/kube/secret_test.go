@@ -43,7 +43,11 @@ func TestCreateSecret(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	got, err := kubex.CreateSecret([]byte("test"), name, key, namespace)
+	data := map[string]string{
+		key: config,
+	}
+
+	got, err := kubex.CreateSecret(name, namespace, data)
 	if err != nil {
 		t.Fatal(err)
 	}

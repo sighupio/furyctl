@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path"
 	"strings"
 
 	r3diff "github.com/r3labs/diff/v3"
@@ -24,6 +25,7 @@ import (
 	"github.com/sighupio/furyctl/internal/distribution"
 	"github.com/sighupio/furyctl/internal/rules"
 	"github.com/sighupio/furyctl/internal/state"
+	"github.com/sighupio/furyctl/internal/template"
 	"github.com/sighupio/furyctl/internal/upgrade"
 	iox "github.com/sighupio/furyctl/internal/x/io"
 	yamlx "github.com/sighupio/furyctl/internal/x/yaml"
@@ -180,7 +182,12 @@ func (c *ClusterCreator) Create(startFrom string, _, _ int) error {
 		c.force,
 	)
 
-	status, err := preflight.Exec()
+	renderedConfig, err := c.RenderConfig()
+	if err != nil {
+		return fmt.Errorf("error while rendering config: %w", err)
+	}
+
+	status, err := preflight.Exec(renderedConfig)
 	if err != nil {
 		return fmt.Errorf("error while executing preflight phase: %w", err)
 	}
@@ -204,6 +211,11 @@ func (c *ClusterCreator) Create(startFrom string, _, _ int) error {
 		),
 		status.Diffs,
 	)
+
+	if len(reducers) > 0 {
+		logrus.Infof("Differences found from previous cluster configuration, "+
+			"handling the following changes:\n%s", reducers.ToString())
+	}
 
 	if distribution.HasFeature(c.kfdManifest, distribution.FeatureClusterUpgrade) {
 		preupgradePhase := commcreate.NewPreUpgrade(
@@ -277,7 +289,7 @@ func (c *ClusterCreator) Create(startFrom string, _, _ int) error {
 		}
 	}
 
-	if err := c.stateStore.StoreConfig(); err != nil {
+	if err := c.stateStore.StoreConfig(renderedConfig); err != nil {
 		return fmt.Errorf("error while storing cluster config: %w", err)
 	}
 
@@ -398,6 +410,7 @@ func (*ClusterCreator) buildReducers(
 						red.From,
 						red.To,
 						red.Lifecycle,
+						reducer.Path,
 					),
 					)
 				}
@@ -406,6 +419,37 @@ func (*ClusterCreator) buildReducers(
 	}
 
 	return reducers
+}
+
+func (c *ClusterCreator) RenderConfig() (map[string]any, error) {
+	specMap := map[string]any{}
+
+	phase := cluster.NewOperationPhase(
+		path.Join(c.paths.WorkDir, cluster.OperationPhaseDistribution),
+		c.kfdManifest.Tools,
+		c.paths.BinPath,
+	)
+
+	furyctlMerger, err := phase.CreateFuryctlMerger(
+		c.paths.DistroPath,
+		c.paths.ConfigPath,
+		"kfd-v1alpha2",
+		"kfddistribution",
+	)
+	if err != nil {
+		return nil, fmt.Errorf("error while creating furyctl merger: %w", err)
+	}
+
+	tfCfg, err := template.NewConfigWithoutData(furyctlMerger, []string{})
+	if err != nil {
+		return nil, fmt.Errorf("error while creating template config: %w", err)
+	}
+
+	for k, v := range tfCfg.Data {
+		specMap[k] = v
+	}
+
+	return specMap, nil
 }
 
 func (c *ClusterCreator) AskConfirmation() (bool, error) {
