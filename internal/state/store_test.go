@@ -48,7 +48,9 @@ func TestStore_StoreConfig(t *testing.T) {
 		KubectlRunner: FakeClient(t),
 	}
 
-	err := store.StoreConfig()
+	renderedConfig := map[string]any{}
+
+	err := store.StoreConfig(renderedConfig)
 	if err != nil {
 		t.Errorf("expected no error, got %v", err)
 	}
