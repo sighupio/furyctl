@@ -21,8 +21,9 @@ import (
 
 type Storer interface {
 	StoreKFD() error
-	StoreConfig() error
+	StoreConfig(rendered map[string]any) error
 	GetConfig() ([]byte, error)
+	GetRenderedConfig() ([]byte, error)
 }
 
 type Store struct {
@@ -52,7 +53,11 @@ func (s *Store) StoreKFD() error {
 		return fmt.Errorf("error while reading config file: %w", err)
 	}
 
-	secret, err := kubex.CreateSecret(x, "furyctl-kfd", "kfd", "kube-system")
+	data := map[string]string{
+		"kfd": base64.StdEncoding.EncodeToString(x),
+	}
+
+	secret, err := kubex.CreateSecret("furyctl-kfd", "kube-system", data)
 	if err != nil {
 		return fmt.Errorf("error while creating secret: %w", err)
 	}
@@ -74,13 +79,23 @@ func (s *Store) StoreKFD() error {
 	return nil
 }
 
-func (s *Store) StoreConfig() error {
+func (s *Store) StoreConfig(rendered map[string]any) error {
 	x, err := os.ReadFile(s.ConfigPath)
 	if err != nil {
 		return fmt.Errorf("error while reading config file: %w", err)
 	}
 
-	secret, err := kubex.CreateSecret(x, "furyctl-config", "config", "kube-system")
+	renderedYaml, err := yamlx.MarshalV3(rendered)
+	if err != nil {
+		return fmt.Errorf("error while marshalling config file: %w", err)
+	}
+
+	data := map[string]string{
+		"config":   base64.StdEncoding.EncodeToString(x),
+		"rendered": base64.StdEncoding.EncodeToString(renderedYaml),
+	}
+
+	secret, err := kubex.CreateSecret("furyctl-config", "kube-system", data)
 	if err != nil {
 		return fmt.Errorf("error while creating secret: %w", err)
 	}
@@ -103,6 +118,14 @@ func (s *Store) StoreConfig() error {
 }
 
 func (s *Store) GetConfig() ([]byte, error) {
+	return s.getBaseConfig("config")
+}
+
+func (s *Store) GetRenderedConfig() ([]byte, error) {
+	return s.getBaseConfig("rendered")
+}
+
+func (s *Store) getBaseConfig(key string) ([]byte, error) {
 	secret := map[string]any{}
 
 	out, err := s.KubectlRunner.Get(true, "kube-system", "secret", "furyctl-config", "-o", "yaml")
@@ -119,7 +142,7 @@ func (s *Store) GetConfig() ([]byte, error) {
 		return nil, fmt.Errorf("error while getting current cluster config: %w", err)
 	}
 
-	configData, ok := data["config"].(string)
+	configData, ok := data[key].(string)
 	if !ok {
 		return nil, fmt.Errorf("error while getting current cluster config: %w", err)
 	}

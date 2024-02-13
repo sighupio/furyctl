@@ -4,27 +4,34 @@
 
 package v1alpha2
 
+import "fmt"
+
 type Reducers []Reducer
 
 type Reducer interface {
 	Prepare() map[any]any
 	GetLifecycle() string
 	GetKey() string
+	GetPath() string
+	GetFrom() any
+	GetTo() any
 }
 
 type BaseReducer struct {
+	Path      string
 	Key       string
 	From      any
 	To        any
 	Lifecycle string
 }
 
-func NewBaseReducer(key string, from, to any, lifecycle string) *BaseReducer {
+func NewBaseReducer(key string, from, to any, lifecycle, path string) *BaseReducer {
 	return &BaseReducer{
 		Key:       key,
 		From:      from,
 		To:        to,
 		Lifecycle: lifecycle,
+		Path:      path,
 	}
 }
 
@@ -43,6 +50,18 @@ func (r *BaseReducer) GetLifecycle() string {
 
 func (r *BaseReducer) GetKey() string {
 	return r.Key
+}
+
+func (r *BaseReducer) GetPath() string {
+	return r.Path
+}
+
+func (r *BaseReducer) GetFrom() any {
+	return r.From
+}
+
+func (r *BaseReducer) GetTo() any {
+	return r.To
 }
 
 func (rs Reducers) ByLifecycle(lifecycle string) Reducers {
@@ -75,4 +94,18 @@ func (rs Reducers) Combine(origin map[string]map[any]any, key string) map[string
 	}
 
 	return origin
+}
+
+func (rs Reducers) ToString() string {
+	res := ""
+
+	for _, r := range rs {
+		if r == nil {
+			continue
+		}
+
+		res += fmt.Sprintf("%s: %v -> %v\n", r.GetPath(), r.GetFrom(), r.GetTo())
+	}
+
+	return res
 }

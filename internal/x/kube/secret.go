@@ -5,13 +5,12 @@
 package kubex
 
 import (
-	"encoding/base64"
 	"fmt"
 
 	yamlx "github.com/sighupio/furyctl/internal/x/yaml"
 )
 
-func CreateSecret(data []byte, name, key, namespace string) ([]byte, error) {
+func CreateSecret(name, namespace string, data map[string]string) ([]byte, error) {
 	secret := struct {
 		APIVersion string            `yaml:"apiVersion"`
 		Kind       string            `yaml:"kind"`
@@ -26,15 +25,13 @@ func CreateSecret(data []byte, name, key, namespace string) ([]byte, error) {
 			"namespace": namespace,
 		},
 		Type: "Opaque",
-		Data: map[string]string{
-			key: base64.StdEncoding.EncodeToString(data),
-		},
+		Data: data,
 	}
 
-	data, err := yamlx.MarshalV3(secret)
+	secretYaml, err := yamlx.MarshalV3(secret)
 	if err != nil {
 		return []byte{}, fmt.Errorf("%w", err)
 	}
 
-	return data, nil
+	return secretYaml, nil
 }

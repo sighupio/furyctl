@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -28,6 +29,7 @@ import (
 	"github.com/sighupio/furyctl/internal/distribution"
 	"github.com/sighupio/furyctl/internal/rules"
 	"github.com/sighupio/furyctl/internal/state"
+	"github.com/sighupio/furyctl/internal/template"
 	"github.com/sighupio/furyctl/internal/upgrade"
 	iox "github.com/sighupio/furyctl/internal/x/io"
 	yamlx "github.com/sighupio/furyctl/internal/x/yaml"
@@ -320,7 +322,12 @@ func (v *ClusterCreator) CreateAsync(
 ) {
 	defer close(doneCh)
 
-	status, err := phases.PreFlight.Exec()
+	renderedConfig, err := v.RenderConfig()
+	if err != nil {
+		errCh <- fmt.Errorf("error while rendering config: %w", err)
+	}
+
+	status, err := phases.PreFlight.Exec(renderedConfig)
 	if err != nil {
 		errCh <- fmt.Errorf("error while executing preflight phase: %w", err)
 
@@ -344,6 +351,11 @@ func (v *ClusterCreator) CreateAsync(
 		),
 		status.Diffs,
 	)
+
+	if len(reducers) > 0 {
+		logrus.Infof("Differences found from previous cluster configuration, "+
+			"handling the following changes:\n%s", reducers.ToString())
+	}
 
 	if distribution.HasFeature(v.kfdManifest, distribution.FeatureClusterUpgrade) {
 		preupgrade := commcreate.NewPreUpgrade(
@@ -374,7 +386,7 @@ func (v *ClusterCreator) CreateAsync(
 		}
 
 	case cluster.OperationPhaseKubernetes:
-		if err := v.kubernetesPhase(phases.Kubernetes, vpnConnector); err != nil {
+		if err := v.kubernetesPhase(phases.Kubernetes, vpnConnector, renderedConfig); err != nil {
 			errCh <- err
 		}
 
@@ -390,7 +402,7 @@ func (v *ClusterCreator) CreateAsync(
 			}
 		}
 
-		if err := v.distributionPhase(phases.Distribution, vpnConnector, reducers); err != nil {
+		if err := v.distributionPhase(phases.Distribution, vpnConnector, reducers, renderedConfig); err != nil {
 			errCh <- err
 		}
 
@@ -421,6 +433,7 @@ func (v *ClusterCreator) CreateAsync(
 			vpnConnector,
 			reducers,
 			upgr,
+			renderedConfig,
 		)
 
 	default:
@@ -461,7 +474,11 @@ func (v *ClusterCreator) infraPhase(infra upgrade.OperatorPhaseAsync, vpnConnect
 	return nil
 }
 
-func (v *ClusterCreator) kubernetesPhase(kube upgrade.OperatorPhaseAsync, vpnConnector *vpn.Connector) error {
+func (v *ClusterCreator) kubernetesPhase(
+	kube upgrade.OperatorPhaseAsync,
+	vpnConnector *vpn.Connector,
+	renderedConfig map[string]any,
+) error {
 	if v.furyctlConf.Spec.Kubernetes.ApiServer.PrivateAccess &&
 		!v.furyctlConf.Spec.Kubernetes.ApiServer.PublicAccess &&
 		!v.dryRun {
@@ -483,7 +500,7 @@ func (v *ClusterCreator) kubernetesPhase(kube upgrade.OperatorPhaseAsync, vpnCon
 		return nil
 	}
 
-	if err := v.stateStore.StoreConfig(); err != nil {
+	if err := v.stateStore.StoreConfig(renderedConfig); err != nil {
 		return fmt.Errorf("error while creating secret with the cluster configuration: %w", err)
 	}
 
@@ -508,6 +525,7 @@ func (v *ClusterCreator) distributionPhase(
 	distro upgrade.ReducersOperatorPhaseAsync[v1alpha2.Reducers],
 	vpnConnector *vpn.Connector,
 	reducers v1alpha2.Reducers,
+	renderedConfig map[string]any,
 ) error {
 	if v.furyctlConf.Spec.Kubernetes.ApiServer.PrivateAccess &&
 		!v.furyctlConf.Spec.Kubernetes.ApiServer.PublicAccess &&
@@ -527,7 +545,7 @@ func (v *ClusterCreator) distributionPhase(
 		return nil
 	}
 
-	if err := v.stateStore.StoreConfig(); err != nil {
+	if err := v.stateStore.StoreConfig(renderedConfig); err != nil {
 		return fmt.Errorf("error while creating secret with the cluster configuration: %w", err)
 	}
 
@@ -550,6 +568,7 @@ func (v *ClusterCreator) allPhases(
 	vpnConnector *vpn.Connector,
 	reducers v1alpha2.Reducers,
 	upgr *upgrade.Upgrade,
+	renderedConfig map[string]any,
 ) error {
 	if v.dryRun {
 		logrus.Info("furcytl will try its best to calculate what would have changed. " +
@@ -610,7 +629,7 @@ func (v *ClusterCreator) allPhases(
 		}
 	}
 
-	if err := v.stateStore.StoreConfig(); err != nil {
+	if err := v.stateStore.StoreConfig(renderedConfig); err != nil {
 		return fmt.Errorf("error while storing cluster config: %w", err)
 	}
 
@@ -738,6 +757,7 @@ func (*ClusterCreator) buildReducers(
 						red.From,
 						red.To,
 						red.Lifecycle,
+						reducer.Path,
 					),
 					)
 				}
@@ -746,6 +766,37 @@ func (*ClusterCreator) buildReducers(
 	}
 
 	return reducers
+}
+
+func (v *ClusterCreator) RenderConfig() (map[string]any, error) {
+	specMap := map[string]any{}
+
+	phase := cluster.NewOperationPhase(
+		path.Join(v.paths.WorkDir, cluster.OperationPhaseDistribution),
+		v.kfdManifest.Tools,
+		v.paths.BinPath,
+	)
+
+	furyctlMerger, err := phase.CreateFuryctlMerger(
+		v.paths.DistroPath,
+		v.paths.ConfigPath,
+		"kfd-v1alpha2",
+		"ekscluster",
+	)
+	if err != nil {
+		return nil, fmt.Errorf("error while creating furyctl merger: %w", err)
+	}
+
+	tfCfg, err := template.NewConfigWithoutData(furyctlMerger, []string{})
+	if err != nil {
+		return nil, fmt.Errorf("error while creating template config: %w", err)
+	}
+
+	for k, v := range tfCfg.Data {
+		specMap[k] = v
+	}
+
+	return specMap, nil
 }
 
 //nolint:revive // ignore maximum number of return results

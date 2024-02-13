@@ -92,7 +92,7 @@ func NewPreFlight(
 	}
 }
 
-func (p *PreFlight) Exec() (*Status, error) {
+func (p *PreFlight) Exec(renderedConfig map[string]any) (*Status, error) {
 	status := &Status{
 		Diffs:   r3diff.Changelog{},
 		Success: false,
@@ -157,7 +157,7 @@ func (p *PreFlight) Exec() (*Status, error) {
 		return status, fmt.Errorf("cluster is unreachable, make sure you have access to the cluster: %w", err)
 	}
 
-	diffChecker, err := p.CreateDiffChecker()
+	diffChecker, err := p.CreateDiffChecker(renderedConfig)
 	if err != nil {
 		if !p.force {
 			return status, fmt.Errorf(
@@ -177,7 +177,7 @@ func (p *PreFlight) Exec() (*Status, error) {
 		status.Diffs = d
 
 		if len(d) > 0 {
-			logrus.Infof(
+			logrus.Debugf(
 				"Differences found from previous cluster configuration:\n%s",
 				diffChecker.DiffToString(d),
 			)
@@ -203,24 +203,33 @@ func (p *PreFlight) Exec() (*Status, error) {
 	return status, nil
 }
 
-func (p *PreFlight) CreateDiffChecker() (diffs.Checker, error) {
-	storedCfg := map[string]any{}
+func (p *PreFlight) CreateDiffChecker(renderedConfig map[string]any) (diffs.Checker, error) {
+	clusterCfg := map[string]any{}
 
 	storedCfgStr, err := p.stateStore.GetConfig()
 	if err != nil {
 		return nil, fmt.Errorf("error while getting current cluster config: %w", err)
 	}
 
-	if err := yamlx.UnmarshalV3(storedCfgStr, &storedCfg); err != nil {
+	clusterRenderedCfg, err := p.stateStore.GetRenderedConfig()
+	if err == nil {
+		if err := yamlx.UnmarshalV3(clusterRenderedCfg, &clusterCfg); err != nil {
+			return nil, fmt.Errorf("error while unmarshalling rendered config file: %w", err)
+		}
+
+		return diffs.NewBaseChecker(clusterCfg, renderedConfig), nil
+	}
+
+	if err := yamlx.UnmarshalV3(storedCfgStr, &clusterCfg); err != nil {
 		return nil, fmt.Errorf("error while unmarshalling config file: %w", err)
 	}
 
-	newCfg, err := yamlx.FromFileV3[map[string]any](p.paths.ConfigPath)
+	cfg, err := yamlx.FromFileV3[map[string]any](p.paths.ConfigPath)
 	if err != nil {
 		return nil, fmt.Errorf("error while reading config file: %w", err)
 	}
 
-	return diffs.NewBaseChecker(storedCfg, newCfg), nil
+	return diffs.NewBaseChecker(clusterCfg, cfg), nil
 }
 
 func (p *PreFlight) CheckStateDiffs(d r3diff.Changelog, diffChecker diffs.Checker) error {
