@@ -18,6 +18,7 @@ func NewDiffCommand(tracker *analytics.Tracker) *cobra.Command {
 	}
 
 	diffCmd.AddCommand(diff.NewClusterCommand(tracker))
+	diffCmd.AddCommand(diff.NewManifestsCommand(tracker))
 
 	return diffCmd
 }

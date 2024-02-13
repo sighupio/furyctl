@@ -82,6 +82,35 @@ func (r *Runner) Apply(manifestPath string, params ...string) error {
 	return nil
 }
 
+func (r *Runner) Diff(manifestPath string, params ...string) ([]byte, error) {
+	args := []string{"diff"}
+
+	if r.serverSide {
+		args = append(args, "--server-side")
+	}
+
+	if len(params) > 0 {
+		args = append(args, params...)
+	}
+
+	args = append(args, "-f", manifestPath)
+
+	cmd, id := r.newCmd(args, false)
+	defer r.deleteCmd(id)
+
+	out, err := execx.CombinedOutputBytes(cmd)
+	if err != nil {
+		// kubectl diff returns 1 when there are differences
+		if cmd.ProcessState.ExitCode() == 1 {
+			return out, nil
+		}
+
+		return nil, fmt.Errorf("error diffing manifests: %w", err)
+	}
+
+	return out, nil
+}
+
 func (r *Runner) Get(sensitive bool, ns string, params ...string) (string, error) {
 	args := []string{"get"}
 

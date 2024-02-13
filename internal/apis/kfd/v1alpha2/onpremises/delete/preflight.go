@@ -95,6 +95,9 @@ func (p *PreFlight) Exec() error {
 
 	p.CopyPathsToConfig(&mCfg)
 
+	mCfg.Data["options"] = map[any]any{
+		"dryRun": p.dryRun,
+	}
 	mCfg.Data["kubernetes"] = map[any]any{
 		"version": p.kfdManifest.Kubernetes.OnPremises.Version,
 	}

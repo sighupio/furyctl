@@ -42,6 +42,7 @@ var (
 type PreFlight struct {
 	*cluster.OperationPhase
 
+	DryRun                             bool
 	FuryctlConf                        private.EksclusterKfdV1Alpha2
 	ConfigPath                         string
 	AWSRunner                          *awscli.Runner
@@ -180,6 +181,9 @@ func (p *PreFlight) copyFromTemplate() error {
 					"skipRegionValidation": p.FuryctlConf.Spec.ToolsConfiguration.Terraform.State.S3.SkipRegionValidation,
 				},
 			},
+		},
+		"options": {
+			"dryRun": p.DryRun,
 		},
 	}
 

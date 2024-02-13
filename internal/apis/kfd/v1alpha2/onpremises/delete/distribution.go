@@ -88,6 +88,9 @@ func (d *Distribution) Exec() error {
 		storageClassAvailable = false
 	}
 
+	mCfg.Data["options"] = map[any]any{
+		"dryRun": d.dryRun,
+	}
 	mCfg.Data["checks"] = map[any]any{
 		"storageClassAvailable": storageClassAvailable,
 	}

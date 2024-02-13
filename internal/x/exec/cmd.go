@@ -203,3 +203,30 @@ func CombinedOutput(cmd *Cmd) (string, error) {
 
 	return strings.Trim(trimOut+"\n"+trimErr, "\n"), err
 }
+
+func CombinedOutputBytes(cmd *Cmd) ([]byte, error) {
+	err := cmd.Run()
+
+	out := cmd.Log.Out
+	errOut := cmd.Log.Err
+
+	if cmd.Sensitive {
+		outB, ok := cmd.Cmd.Stdout.(*bytes.Buffer)
+		if !ok {
+			return nil, ErrCastingToBuffer
+		}
+
+		errOutB, ok := cmd.Cmd.Stderr.(*bytes.Buffer)
+		if !ok {
+			return nil, ErrCastingToBuffer
+		}
+
+		out = outB
+		errOut = errOutB
+	}
+
+	trimOut := bytesx.EnsureTrailingNL(out.Bytes())
+	trimErr := bytesx.EnsureTrailingNL(errOut.Bytes())
+
+	return bytes.Trim(append(trimOut, trimErr...), "\n"), err
+}

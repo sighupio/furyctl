@@ -78,15 +78,15 @@ func NewApplyCommand(tracker *analytics.Tracker) *cobra.Command {
 			logrus.Debug("Getting Home Directory Path...")
 			outDir := flags.Outdir
 
-			homeDir, err := os.UserHomeDir()
-			if err != nil {
-				cmdEvent.AddErrorMessage(err)
-				tracker.Track(cmdEvent)
-
-				return fmt.Errorf("error while getting user home directory: %w", err)
-			}
-
 			if outDir == "" {
+				homeDir, err := os.UserHomeDir()
+				if err != nil {
+					cmdEvent.AddErrorMessage(err)
+					tracker.Track(cmdEvent)
+
+					return fmt.Errorf("error while getting user home directory: %w", err)
+				}
+
 				outDir = homeDir
 			}
 

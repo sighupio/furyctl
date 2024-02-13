@@ -59,6 +59,7 @@ func NewInfrastructure(
 			OperationPhase: phase,
 			FuryctlConf:    furyctlConf,
 			ConfigPath:     paths.ConfigPath,
+			DryRun:         dryRun,
 		},
 		kfdManifest: kfdManifest,
 		tfRunner: terraform.NewRunner(
@@ -145,41 +146,39 @@ func (i *Infrastructure) coreInfrastructure(
 			return fmt.Errorf("error running terraform plan: %w", err)
 		}
 
-		if i.dryRun {
-			return nil
-		}
+		if !i.dryRun {
+			tfParser := parser.NewTfPlanParser(string(plan))
 
-		tfParser := parser.NewTfPlanParser(string(plan))
+			parsedPlan := tfParser.Parse()
 
-		parsedPlan := tfParser.Parse()
+			criticalResources := slices.Intersection(i.getCriticalTFResourceTypes(), parsedPlan.Destroy)
 
-		criticalResources := slices.Intersection(i.getCriticalTFResourceTypes(), parsedPlan.Destroy)
+			if len(criticalResources) > 0 {
+				logrus.Warnf("Deletion of the following critical resources has been detected: %s. See the logs for more details.",
+					strings.Join(criticalResources, ", "))
+				logrus.Warn("Do you want to proceed? write 'yes' to continue or anything else to abort: ")
 
-		if len(criticalResources) > 0 {
-			logrus.Warnf("Deletion of the following critical resources has been detected: %s. See the logs for more details.",
-				strings.Join(criticalResources, ", "))
-			logrus.Warn("Do you want to proceed? write 'yes' to continue or anything else to abort: ")
+				prompter := iox.NewPrompter(bufio.NewReader(os.Stdin))
 
-			prompter := iox.NewPrompter(bufio.NewReader(os.Stdin))
+				prompt, err := prompter.Ask("yes")
+				if err != nil {
+					return fmt.Errorf("error reading user input: %w", err)
+				}
 
-			prompt, err := prompter.Ask("yes")
-			if err != nil {
-				return fmt.Errorf("error reading user input: %w", err)
+				if !prompt {
+					return ErrAbortedByUser
+				}
 			}
 
-			if !prompt {
-				return ErrAbortedByUser
+			logrus.Warn("Creating cloud resources, this could take a while...")
+
+			if err := i.tfRunner.Apply(timestamp); err != nil {
+				if i.upgrade.Enabled {
+					upgradeState.Phases.Infrastructure.Status = upgrade.PhaseStatusFailed
+				}
+
+				return fmt.Errorf("cannot create cloud resources: %w", err)
 			}
-		}
-
-		logrus.Warn("Creating cloud resources, this could take a while...")
-
-		if err := i.tfRunner.Apply(timestamp); err != nil {
-			if i.upgrade.Enabled {
-				upgradeState.Phases.Infrastructure.Status = upgrade.PhaseStatusFailed
-			}
-
-			return fmt.Errorf("cannot create cloud resources: %w", err)
 		}
 
 		if i.upgrade.Enabled {

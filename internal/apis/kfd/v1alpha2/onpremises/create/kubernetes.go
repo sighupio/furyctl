@@ -100,6 +100,9 @@ func (k *Kubernetes) prepare() error {
 
 	k.CopyPathsToConfig(&mCfg)
 
+	mCfg.Data["options"] = map[any]any{
+		"dryRun": k.dryRun,
+	}
 	mCfg.Data["kubernetes"] = map[any]any{
 		"version":              k.kfdManifest.Kubernetes.OnPremises.Version,
 		"skipPodsRunningCheck": k.force,

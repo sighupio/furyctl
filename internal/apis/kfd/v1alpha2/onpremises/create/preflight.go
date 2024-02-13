@@ -119,6 +119,9 @@ func (p *PreFlight) Exec(renderedConfig map[string]any) (*Status, error) {
 		return status, fmt.Errorf("error creating template config: %w", err)
 	}
 
+	mCfg.Data["options"] = map[any]any{
+		"dryRun": p.dryRun,
+	}
 	mCfg.Data["kubernetes"] = map[any]any{
 		"version": p.kfdManifest.Kubernetes.OnPremises.Version,
 	}

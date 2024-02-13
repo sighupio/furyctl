@@ -49,34 +49,14 @@ func NewClusterCommand(tracker *analytics.Tracker) *cobra.Command {
 			cmdEvent = analytics.NewCommandEvent(cobrax.GetFullname(cmd))
 		},
 		RunE: func(cmd *cobra.Command, _ []string) error {
-			flags, err := getDiffCommandFlags(cmd, tracker, cmdEvent)
+			flags, err := getClusterCommandFlags(cmd, tracker, cmdEvent)
 			if err != nil {
 				return err
 			}
 
 			execx.Debug = flags.Debug
 
-			logrus.Debug("Getting Home Directory Path...")
-			outDir := flags.Outdir
-
-			homeDir, err := os.UserHomeDir()
-			if err != nil {
-				cmdEvent.AddErrorMessage(err)
-				tracker.Track(cmdEvent)
-
-				return fmt.Errorf("error while getting user home directory: %w", err)
-			}
-
-			if outDir == "" {
-				outDir = homeDir
-			}
-
-			if flags.BinPath == "" {
-				flags.BinPath = filepath.Join(outDir, ".furyctl", "bin")
-			}
-
-			client := netx.NewGoGetterClient()
-			distrodl := distribution.NewCachingDownloader(client, flags.GitProtocol)
+			distrodl := distribution.NewCachingDownloader(netx.NewGoGetterClient(), flags.GitProtocol)
 
 			logrus.Info("Downloading distribution...")
 			res, err := distrodl.Download(flags.DistroLocation, flags.FuryctlPath)
@@ -87,7 +67,7 @@ func NewClusterCommand(tracker *analytics.Tracker) *cobra.Command {
 				return fmt.Errorf("error while downloading distribution: %w", err)
 			}
 
-			basePath := filepath.Join(outDir, ".furyctl", res.MinimalConf.Metadata.Name)
+			basePath := filepath.Join(flags.Outdir, ".furyctl", res.MinimalConf.Metadata.Name)
 
 			stateStore := state.NewStore(
 				res.RepoPath,
@@ -179,7 +159,7 @@ func NewClusterCommand(tracker *analytics.Tracker) *cobra.Command {
 	return cmd
 }
 
-func getDiffCommandFlags(
+func getClusterCommandFlags(
 	cmd *cobra.Command,
 	tracker *analytics.Tracker,
 	cmdEvent analytics.Event,
@@ -213,11 +193,26 @@ func getDiffCommandFlags(
 		return ClusterCommandFlags{}, fmt.Errorf("%w: %s", ErrParsingFlag, "no-tty")
 	}
 
-	binPath := cmdutil.StringFlagOptional(cmd, "bin-path")
-
-	outdir, err := cmdutil.StringFlag(cmd, "outdir", tracker, cmdEvent)
+	outDir, err := cmdutil.StringFlag(cmd, "outdir", tracker, cmdEvent)
 	if err != nil {
 		return ClusterCommandFlags{}, fmt.Errorf("%w: %s", ErrParsingFlag, "outdir")
+	}
+
+	if outDir == "" {
+		homeDir, err := os.UserHomeDir()
+		if err != nil {
+			cmdEvent.AddErrorMessage(err)
+			tracker.Track(cmdEvent)
+
+			return ClusterCommandFlags{}, fmt.Errorf("error while getting user home directory: %w", err)
+		}
+
+		outDir = homeDir
+	}
+
+	binPath := cmdutil.StringFlagOptional(cmd, "bin-path")
+	if binPath == "" {
+		binPath = filepath.Join(outDir, ".furyctl", "bin")
 	}
 
 	gitProtocol, err := cmdutil.StringFlag(cmd, "git-protocol", tracker, cmdEvent)
@@ -243,7 +238,7 @@ func getDiffCommandFlags(
 		NoTTY:               noTTY,
 		GitProtocol:         typedGitProtocol,
 		BinPath:             binPath,
-		Outdir:              outdir,
+		Outdir:              outDir,
 		UpgradePathLocation: upgradePathLocation,
 	}, nil
 }

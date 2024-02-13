@@ -28,4 +28,10 @@ func init() {
 		"EKSCluster",
 		NewSchemaSettings(),
 	)
+
+	cluster.RegisterDifferFactory(
+		"kfd.sighup.io/v1alpha2",
+		"EKSCluster",
+		NewClusterDiffer,
+	)
 }

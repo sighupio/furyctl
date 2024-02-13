@@ -159,6 +159,9 @@ func (k *Kubernetes) copyFromTemplate(furyctlCfg template.Config) error {
 				},
 			},
 		},
+		"options": {
+			"dryRun": k.DryRun,
+		},
 	}
 
 	cfg.Data = tfConfVars

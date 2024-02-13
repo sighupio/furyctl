@@ -1,6 +1,8 @@
 bats 1.8.2
-drone 1.7.0
+drone 1.8.0
 golang 1.22.0
-golangci-lint 1.55.2
+golangci-lint 1.56.1
 goreleaser 1.24.0
 kubectx 0.9.5
+kubectl 1.29.1
+kustomize 3.10.0

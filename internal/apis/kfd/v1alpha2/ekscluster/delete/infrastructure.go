@@ -41,6 +41,7 @@ func NewInfrastructure(
 
 	return &Infrastructure{
 		Infrastructure: &common.Infrastructure{
+			DryRun:         dryRun,
 			OperationPhase: phase,
 			FuryctlConf:    furyctlConf,
 			ConfigPath:     paths.ConfigPath,
