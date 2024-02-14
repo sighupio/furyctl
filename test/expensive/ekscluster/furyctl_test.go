@@ -147,20 +147,23 @@ var (
 	_ = Describe("furyctl & distro v1.25.7 - public minimal", CreateAndDeleteTestScenario("1.25.7", false))
 	_ = Describe("furyctl & distro v1.25.8 - public minimal", CreateAndDeleteTestScenario("1.25.8", false))
 	_ = Describe("furyctl & distro v1.25.9 - public minimal", CreateAndDeleteTestScenario("1.25.9", false))
+	_ = Describe("furyctl & distro v1.25.10 - public minimal", CreateAndDeleteTestScenario("1.25.10", false))
 
-	_ = Describe("furyctl & distro v1.25.9 - public minimal - ephemeral", CreateAndDeleteTestScenario("1.25.9", true))
+	_ = Describe("furyctl & distro v1.25.10 - public minimal - ephemeral", CreateAndDeleteTestScenario("1.25.10", true))
 
 	_ = Describe("furyctl & distro v1.26.0 - public minimal", CreateAndDeleteTestScenario("1.26.0", false))
 	_ = Describe("furyctl & distro v1.26.1 - public minimal", CreateAndDeleteTestScenario("1.26.1", false))
 	_ = Describe("furyctl & distro v1.26.2 - public minimal", CreateAndDeleteTestScenario("1.26.2", false))
 	_ = Describe("furyctl & distro v1.26.3 - public minimal", CreateAndDeleteTestScenario("1.26.3", false))
 	_ = Describe("furyctl & distro v1.26.4 - public minimal", CreateAndDeleteTestScenario("1.26.4", false))
+	_ = Describe("furyctl & distro v1.26.5 - public minimal", CreateAndDeleteTestScenario("1.26.5", false))
 
-	_ = Describe("furyctl & distro v1.26.4 - public minimal - ephemeral", CreateAndDeleteTestScenario("1.26.4", true))
+	_ = Describe("furyctl & distro v1.26.5 - public minimal - ephemeral", CreateAndDeleteTestScenario("1.26.5", true))
 
 	_ = Describe("furyctl & distro v1.27.0 - public minimal", CreateAndDeleteTestScenario("1.27.0", false))
 	_ = Describe("furyctl & distro v1.27.1 - public minimal", CreateAndDeleteTestScenario("1.27.1", false))
 	_ = Describe("furyctl & distro v1.27.2 - public minimal", CreateAndDeleteTestScenario("1.27.2", false))
+	_ = Describe("furyctl & distro v1.27.3 - public minimal", CreateAndDeleteTestScenario("1.27.3", false))
 
-	_ = Describe("furyctl & distro v1.27.2 - public minimal - ephemeral", CreateAndDeleteTestScenario("1.27.2", true))
+	_ = Describe("furyctl & distro v1.27.3 - public minimal - ephemeral", CreateAndDeleteTestScenario("1.27.3", true))
 )
