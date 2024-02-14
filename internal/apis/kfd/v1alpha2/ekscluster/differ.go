@@ -34,11 +34,11 @@ type ClusterDiffer struct {
 	kubectlRunner *kubectl.Runner
 }
 
-func (d *ClusterDiffer) DiffInfrastructurePhase() ([]byte, error) {
+func (*ClusterDiffer) DiffInfrastructurePhase() ([]byte, error) {
 	return nil, nil
 }
 
-func (d *ClusterDiffer) DiffKubernetesPhase() ([]byte, error) {
+func (*ClusterDiffer) DiffKubernetesPhase() ([]byte, error) {
 	return nil, nil
 }
 

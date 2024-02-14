@@ -11,6 +11,9 @@ import (
 	"path"
 	"path/filepath"
 
+	"github.com/sirupsen/logrus"
+	"github.com/spf13/cobra"
+
 	"github.com/sighupio/furyctl/internal/analytics"
 	"github.com/sighupio/furyctl/internal/cluster"
 	"github.com/sighupio/furyctl/internal/cmd/cmdutil"
@@ -24,13 +27,16 @@ import (
 	execx "github.com/sighupio/furyctl/internal/x/exec"
 	kubex "github.com/sighupio/furyctl/internal/x/kube"
 	netx "github.com/sighupio/furyctl/internal/x/net"
-	"github.com/sirupsen/logrus"
-	"github.com/spf13/cobra"
+)
+
+const (
+	defaultCreatorTimeout = 300
 )
 
 var (
 	ErrCannotProduceDiff          = errors.New("cannot produce diff")
 	ErrDownloadDependenciesFailed = errors.New("dependencies download failed")
+	ErrUnknownPhase               = errors.New("unknown phase")
 )
 
 type ManifestsCommandFlags struct {
@@ -130,7 +136,7 @@ func NewManifestsCommand(
 				return fmt.Errorf("error while initializing cluster creation: %w", err)
 			}
 
-			if err := clusterCreator.Create("", 300, 300); err != nil {
+			if err := clusterCreator.Create("", defaultCreatorTimeout, defaultCreatorTimeout); err != nil {
 				cmdEvent.AddErrorMessage(err)
 				tracker.Track(cmdEvent)
 
@@ -144,13 +150,22 @@ func NewManifestsCommand(
 
 			switch flags.Phase {
 			case cluster.OperationPhaseAll, "all":
-				fmt.Println("Diffing all phases")
+				logrus.Info("Diffing all phases (to be implemented)")
+
+				return nil
+
 			case cluster.OperationPhaseInfrastructure:
-				fmt.Println("Diffing infrastructure phase")
+				logrus.Info("Diffing infrastructure phase (to be implemented)")
+
+				return nil
+
 			case cluster.OperationPhaseKubernetes:
-				fmt.Println("Diffing kubernetes phase")
+				logrus.Info("Diffing kubernetes phase (to be implemented)")
+
+				return nil
+
 			case cluster.OperationPhaseDistribution:
-				fmt.Println("Diffing distribution phase")
+				logrus.Info("Diffing distribution phase")
 
 				diff, err := differ.DiffDistributionPhase()
 				if err != nil {
@@ -168,7 +183,7 @@ func NewManifestsCommand(
 				fmt.Println(string(diff))
 
 			default:
-				return fmt.Errorf("unknown phase: %s", flags.Phase)
+				return fmt.Errorf("%w: %s", ErrUnknownPhase, flags.Phase)
 			}
 
 			return nil
@@ -220,6 +235,7 @@ func createDiffer(
 	}
 
 	kubectlVersion := res.DistroManifest.Tools.Common.Kubectl.Version
+
 	kubectlRunner, ok := trf.Create(tool.Kubectl, kubectlVersion, basePath).(*kubectl.Runner)
 	if !ok {
 		return nil, fmt.Errorf("%w: cannot initialize kubectl runner", ErrCannotProduceDiff)

@@ -100,7 +100,7 @@ func (r *Runner) Diff(manifestPath string, params ...string) ([]byte, error) {
 
 	out, err := execx.CombinedOutputBytes(cmd)
 	if err != nil {
-		// kubectl diff returns 1 when there are differences
+		// Kubectl diff returns 1 when there are differences.
 		if cmd.ProcessState.ExitCode() == 1 {
 			return out, nil
 		}
