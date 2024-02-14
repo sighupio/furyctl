@@ -88,6 +88,7 @@ func NewPreFlight(
 
 	return &PreFlight{
 		PreFlight: &common.PreFlight{
+			DryRun:         dryRun,
 			OperationPhase: phase,
 			FuryctlConf:    furyctlConf,
 			ConfigPath:     paths.ConfigPath,

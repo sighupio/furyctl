@@ -240,6 +240,9 @@ func (d *Distribution) coreDistribution(
 
 			d.CopyPathsToConfig(&mCfg)
 
+			mCfg.Data["options"] = map[any]any{
+				"dryRun": d.DryRun,
+			}
 			mCfg.Data["checks"] = map[any]any{
 				"storageClassAvailable": true,
 			}
@@ -356,6 +359,10 @@ func (d *Distribution) runReducers(
 		preTfReducersCfg := cfg
 		preTfReducersCfg.Data = r.Combine(cfg.Data, "reducers")
 		preTfReducersCfg.Templates.Excludes = excludes
+
+		preTfReducersCfg.Data["options"] = map[any]any{
+			"dryRun": d.DryRun,
+		}
 
 		if err := d.CopyFromTemplate(
 			*preTfReducersCfg,

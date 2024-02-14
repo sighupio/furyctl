@@ -136,6 +136,9 @@ func (d *Distribution) prepare() (template.Config, error) {
 		storageClassAvailable = false
 	}
 
+	mCfg.Data["options"] = map[any]any{
+		"dryRun": d.dryRun,
+	}
 	mCfg.Data["checks"] = map[any]any{
 		"storageClassAvailable": storageClassAvailable,
 	}
@@ -249,6 +252,10 @@ func (d *Distribution) runReducers(
 		preTfReducersCfg := cfg
 		preTfReducersCfg.Data = r.Combine(cfg.Data, "reducers")
 		preTfReducersCfg.Templates.Excludes = excludes
+
+		preTfReducersCfg.Data["options"] = map[any]any{
+			"dryRun": d.dryRun,
+		}
 
 		if err := d.CopyFromTemplate(
 			preTfReducersCfg,

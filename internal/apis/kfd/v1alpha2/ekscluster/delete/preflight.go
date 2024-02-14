@@ -39,6 +39,7 @@ func NewPreFlight(
 	vpnAutoConnect bool,
 	skipVpn bool,
 	infraOutputsPath string,
+	dryRun bool,
 ) (*PreFlight, error) {
 	phase := cluster.NewOperationPhase(
 		path.Join(paths.WorkDir, cluster.OperationPhasePreFlight),
@@ -66,6 +67,7 @@ func NewPreFlight(
 
 	return &PreFlight{
 		PreFlight: &common.PreFlight{
+			DryRun:         dryRun,
 			OperationPhase: phase,
 			FuryctlConf:    furyctlConf,
 			ConfigPath:     paths.ConfigPath,

@@ -78,6 +78,10 @@ func (d *Distribution) PreparePreTerraform() (
 		return nil, nil, nil, fmt.Errorf("error creating template config: %w", err)
 	}
 
+	tfCfg.Data["options"] = map[any]any{
+		"dryRun": d.DryRun,
+	}
+
 	if err := d.CopyFromTemplate(
 		tfCfg,
 		"distribution",
@@ -187,6 +191,9 @@ func (d *Distribution) PreparePostTerraform(
 
 	d.CopyPathsToConfig(&mCfg)
 
+	mCfg.Data["options"] = map[any]any{
+		"dryRun": d.DryRun,
+	}
 	mCfg.Data["checks"] = map[any]any{
 		"storageClassAvailable": true,
 	}

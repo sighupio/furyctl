@@ -66,8 +66,12 @@ func (r *Runner) Version() (string, error) {
 	return out, nil
 }
 
-func (r *Runner) Build() (string, error) {
-	args := []string{"build", "--load_restrictor", "none", "."}
+func (r *Runner) Build(path string) (string, error) {
+	if path == "" {
+		path = "."
+	}
+
+	args := []string{"build", "--load_restrictor", "none", path}
 
 	cmd, id := r.newCmd(args)
 	defer r.deleteCmd(id)

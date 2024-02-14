@@ -47,7 +47,7 @@ env:
 
 tools:
 	@go install github.com/daixiang0/gci@v0.12.1
-	@go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.55.2
+	@go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.56.1
 	@go install github.com/google/addlicense@v1.1.1
 	@go install github.com/nikolaydubina/go-cover-treemap@v1.3.0
 	@go install github.com/onsi/ginkgo/v2/ginkgo@v2.15.0

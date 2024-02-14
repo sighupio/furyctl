@@ -53,6 +53,9 @@ func (k *Kubernetes) Exec() error {
 
 	k.CopyPathsToConfig(&mCfg)
 
+	mCfg.Data["options"] = map[any]any{
+		"dryRun": k.dryRun,
+	}
 	mCfg.Data["kubernetes"] = map[any]any{
 		"version": k.kfdManifest.Kubernetes.OnPremises.Version,
 	}

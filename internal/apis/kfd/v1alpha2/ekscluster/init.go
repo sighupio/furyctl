@@ -22,4 +22,16 @@ func init() {
 		"EKSCluster",
 		cluster.NewDeleterFactory[*ClusterDeleter, private.EksclusterKfdV1Alpha2](&ClusterDeleter{}),
 	)
+
+	cluster.RegisterSchemaSettings(
+		"kfd.sighup.io/v1alpha2",
+		"EKSCluster",
+		NewSchemaSettings(),
+	)
+
+	cluster.RegisterDifferFactory(
+		"kfd.sighup.io/v1alpha2",
+		"EKSCluster",
+		NewClusterDiffer,
+	)
 }

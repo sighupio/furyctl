@@ -173,58 +173,56 @@ func (k *Kubernetes) coreKubernetes(
 			return fmt.Errorf("error running terraform plan: %w", err)
 		}
 
-		if k.DryRun {
-			return nil
-		}
+		if !k.DryRun {
+			tfParser := parser.NewTfPlanParser(string(plan))
 
-		tfParser := parser.NewTfPlanParser(string(plan))
+			parsedPlan := tfParser.Parse()
 
-		parsedPlan := tfParser.Parse()
+			criticalResources := slices.Intersection(k.getCriticalTFResourceTypes(), parsedPlan.Destroy)
 
-		criticalResources := slices.Intersection(k.getCriticalTFResourceTypes(), parsedPlan.Destroy)
+			if len(criticalResources) > 0 {
+				logrus.Warnf("Deletion of the following critical resources has been detected: %s. See the logs for more details.",
+					strings.Join(criticalResources, ", "))
+				logrus.Warn("Do you want to proceed? write 'yes' to continue or anything else to abort: ")
 
-		if len(criticalResources) > 0 {
-			logrus.Warnf("Deletion of the following critical resources has been detected: %s. See the logs for more details.",
-				strings.Join(criticalResources, ", "))
-			logrus.Warn("Do you want to proceed? write 'yes' to continue or anything else to abort: ")
+				prompter := iox.NewPrompter(bufio.NewReader(os.Stdin))
 
-			prompter := iox.NewPrompter(bufio.NewReader(os.Stdin))
-
-			prompt, err := prompter.Ask("yes")
-			if err != nil {
-				return fmt.Errorf("error reading user input: %w", err)
-			}
-
-			if !prompt {
-				return ErrAbortedByUser
-			}
-		}
-
-		if k.FuryctlConf.Spec.Kubernetes.ApiServer.PrivateAccess &&
-			!k.FuryctlConf.Spec.Kubernetes.ApiServer.PublicAccess {
-			logrus.Info("Checking connection to the VPC...")
-
-			if err := k.checkVPCConnection(); err != nil {
-				logrus.Debugf("error checking VPC connection: %v", err)
-
-				if k.FuryctlConf.Spec.Infrastructure != nil {
-					if k.FuryctlConf.Spec.Infrastructure.Vpn != nil {
-						return fmt.Errorf("%w please check your VPN connection and try again", errKubeAPIUnreachable)
-					}
+				prompt, err := prompter.Ask("yes")
+				if err != nil {
+					return fmt.Errorf("error reading user input: %w", err)
 				}
 
-				return fmt.Errorf("%w please check your VPC configuration and try again", errKubeAPIUnreachable)
-			}
-		}
-
-		logrus.Warn("Creating cloud resources, this could take a while...")
-
-		if err := k.tfRunner.Apply(timestamp); err != nil {
-			if k.upgrade.Enabled {
-				upgradeState.Phases.Kubernetes.Status = upgrade.PhaseStatusFailed
+				if !prompt {
+					return ErrAbortedByUser
+				}
 			}
 
-			return fmt.Errorf("cannot create cloud resources: %w", err)
+			if k.FuryctlConf.Spec.Kubernetes.ApiServer.PrivateAccess &&
+				!k.FuryctlConf.Spec.Kubernetes.ApiServer.PublicAccess {
+				logrus.Info("Checking connection to the VPC...")
+
+				if err := k.checkVPCConnection(); err != nil {
+					logrus.Debugf("error checking VPC connection: %v", err)
+
+					if k.FuryctlConf.Spec.Infrastructure != nil {
+						if k.FuryctlConf.Spec.Infrastructure.Vpn != nil {
+							return fmt.Errorf("%w please check your VPN connection and try again", errKubeAPIUnreachable)
+						}
+					}
+
+					return fmt.Errorf("%w please check your VPC configuration and try again", errKubeAPIUnreachable)
+				}
+			}
+
+			logrus.Warn("Creating cloud resources, this could take a while...")
+
+			if err := k.tfRunner.Apply(timestamp); err != nil {
+				if k.upgrade.Enabled {
+					upgradeState.Phases.Kubernetes.Status = upgrade.PhaseStatusFailed
+				}
+
+				return fmt.Errorf("cannot create cloud resources: %w", err)
+			}
 		}
 
 		if k.upgrade.Enabled {

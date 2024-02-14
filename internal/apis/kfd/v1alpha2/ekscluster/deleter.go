@@ -137,6 +137,7 @@ func (d *ClusterDeleter) Delete() error {
 		d.vpnAutoConnect,
 		d.skipVpn,
 		infra.Self().TerraformOutputsPath,
+		d.dryRun,
 	)
 	if err != nil {
 		return fmt.Errorf("error while creating preflight phase: %w", err)

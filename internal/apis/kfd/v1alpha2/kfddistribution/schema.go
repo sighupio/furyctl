@@ -4,6 +4,40 @@
 
 package kfddistribution
 
+import (
+	"fmt"
+
+	"github.com/sighupio/furyctl/internal/cluster"
+)
+
+const (
+	DistributionPhaseSchemaPath = ".spec.distribution"
+	PluginsPhaseSchemaPath      = ".spec.plugins"
+	AllPhaseSchemaPath          = ""
+)
+
+func NewSchemaSettings() *SchemaSettings {
+	return &SchemaSettings{}
+}
+
+type SchemaSettings struct{}
+
+func (*SchemaSettings) SchemaPathForPhase(phase string) (string, error) {
+	switch phase {
+	case cluster.OperationPhaseDistribution:
+		return DistributionPhaseSchemaPath, nil
+
+	case cluster.OperationPhasePlugins:
+		return PluginsPhaseSchemaPath, nil
+
+	case cluster.OperationPhaseAll:
+		return AllPhaseSchemaPath, nil
+
+	default:
+		return "", fmt.Errorf("%w: %s", ErrUnsupportedPhase, phase)
+	}
+}
+
 type ExtraSchemaValidator struct{}
 
 func (*ExtraSchemaValidator) Validate(_ string) error {

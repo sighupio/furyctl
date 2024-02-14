@@ -25,6 +25,7 @@ import (
 type Infrastructure struct {
 	*cluster.OperationPhase
 
+	DryRun      bool
 	FuryctlConf private.EksclusterKfdV1Alpha2
 	ConfigPath  string
 }
@@ -90,6 +91,9 @@ func (i *Infrastructure) copyFromTemplate() error {
 					"skipRegionValidation": i.FuryctlConf.Spec.ToolsConfiguration.Terraform.State.S3.SkipRegionValidation,
 				},
 			},
+		},
+		"options": {
+			"dryRun": i.DryRun,
 		},
 	}
 

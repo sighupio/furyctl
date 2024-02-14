@@ -407,7 +407,7 @@ linters-settings:
         disabled: false
         arguments:
           - "fmt.Printf"
-          - "myFunction"
+          - "fmt.Println"
       # https://github.com/mgechev/revive/blob/master/RULES_DESCRIPTIONS.md#unnecessary-stmt
       - name: unnecessary-stmt
         severity: warning

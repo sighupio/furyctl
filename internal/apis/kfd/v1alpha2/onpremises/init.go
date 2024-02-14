@@ -22,4 +22,10 @@ func init() {
 		"OnPremises",
 		cluster.NewDeleterFactory[*ClusterDeleter, public.OnpremisesKfdV1Alpha2](&ClusterDeleter{}),
 	)
+
+	cluster.RegisterSchemaSettings(
+		"kfd.sighup.io/v1alpha2",
+		"OnPremises",
+		NewSchemaSettings(),
+	)
 }

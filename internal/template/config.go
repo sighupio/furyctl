@@ -62,7 +62,9 @@ func NewConfig(tplSource, data *merge.Merger, excluded []string) (Config, error)
 
 	cfg.Templates = tmpl
 	cfg.Data = builder.ToMapStringAny((*data.GetBase()).Content())
-	cfg.Include = nil
+	cfg.Data["options"] = map[any]any{
+		"dryRun": false,
+	}
 
 	if _, ok := cfg.Data["options"]; !ok {
 		cfg.Data["options"] = map[any]any{
