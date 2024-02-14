@@ -50,8 +50,7 @@ func TestStore_StoreConfig(t *testing.T) {
 
 	renderedConfig := map[string]any{}
 
-	err := store.StoreConfig(renderedConfig)
-	if err != nil {
+	if err := store.StoreConfig(renderedConfig); err != nil {
 		t.Errorf("expected no error, got %v", err)
 	}
 }

@@ -10,6 +10,8 @@ import (
 	yamlx "github.com/sighupio/furyctl/internal/x/yaml"
 )
 
+var ErrCannotCreateSecret = fmt.Errorf("cannot create secret")
+
 func CreateSecret(name, namespace string, data map[string]string) ([]byte, error) {
 	secret := struct {
 		APIVersion string            `yaml:"apiVersion"`
@@ -30,7 +32,7 @@ func CreateSecret(name, namespace string, data map[string]string) ([]byte, error
 
 	secretYaml, err := yamlx.MarshalV3(secret)
 	if err != nil {
-		return []byte{}, fmt.Errorf("%w", err)
+		return []byte{}, fmt.Errorf("%w: %w", ErrCannotCreateSecret, err)
 	}
 
 	return secretYaml, nil

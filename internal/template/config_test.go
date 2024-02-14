@@ -104,6 +104,9 @@ func TestNewConfig(t *testing.T) {
 				},
 				Include: nil,
 				Data: map[string]map[any]any{
+					"options": {
+						"dryRun": false,
+					},
 					"parentTest": {
 						"test": map[any]any{
 							"foo": "bar",
