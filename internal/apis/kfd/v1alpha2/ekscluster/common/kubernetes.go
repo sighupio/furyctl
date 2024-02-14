@@ -19,6 +19,7 @@ import (
 	"github.com/sighupio/fury-distribution/pkg/apis/ekscluster/v1alpha2/private"
 	"github.com/sighupio/furyctl/configs"
 	"github.com/sighupio/furyctl/internal/cluster"
+	"github.com/sighupio/furyctl/internal/distribution"
 	"github.com/sighupio/furyctl/internal/merge"
 	"github.com/sighupio/furyctl/internal/template"
 	"github.com/sighupio/furyctl/internal/tool/terraform"
@@ -159,6 +160,9 @@ func (k *Kubernetes) copyFromTemplate(furyctlCfg template.Config) error {
 				},
 			},
 		},
+		"features": {
+			"logTypesEnabled": distribution.HasFeature(k.KFDManifest, distribution.FeatureKubernetesLogTypes),
+		},
 	}
 
 	cfg.Data = tfConfVars
@@ -283,6 +287,23 @@ func (k *Kubernetes) createTfVars() error {
 		k.FuryctlConf.Metadata.Name,
 	); err != nil {
 		return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
+	}
+
+	if k.FuryctlConf.Spec.Kubernetes.LogsTypes != nil {
+		logsTypes := make([]string, len(k.FuryctlConf.Spec.Kubernetes.LogsTypes))
+
+		for i, logType := range k.FuryctlConf.Spec.Kubernetes.LogsTypes {
+			logsTypes[i] = fmt.Sprintf("\"%v\"", logType)
+		}
+
+		if err := bytesx.SafeWriteToBuffer(
+			&buffer,
+			"cluster_enabled_log_types = [%v]\n",
+			filepath.Dir(k.FuryctlConfPath),
+			strings.Join(logsTypes, ","),
+		); err != nil {
+			return fmt.Errorf(SErrWrapWithStr, ErrWritingTfVars, err)
+		}
 	}
 
 	if err := bytesx.SafeWriteToBuffer(

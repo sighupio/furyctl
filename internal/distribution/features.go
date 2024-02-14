@@ -21,6 +21,7 @@ const (
 	FeatureKubeconfigInSchema = Feature("KubeconfigInSchema")
 	FeaturePlugins            = Feature("Plugins")
 	FeatureYqSupport          = Feature("YqSupport")
+	FeatureKubernetesLogTypes = Feature("KubernetesLogTypes")
 )
 
 func HasFeature(kfd config.KFD, name Feature) bool {
@@ -39,6 +40,9 @@ func HasFeature(kfd config.KFD, name Feature) bool {
 
 	case FeatureYqSupport:
 		return hasFeatureYQSupport(kfd)
+
+	case FeatureKubernetesLogTypes:
+		return hasFeatureKubernetesLogTypes(kfd)
 	}
 
 	return false
@@ -134,4 +138,40 @@ func hasFeatureYQSupport(kfd config.KFD) bool {
 	}
 
 	return v.GreaterThan(v1253)
+}
+
+func hasFeatureKubernetesLogTypes(kfd config.KFD) bool {
+	v1, err := semver.NewVersion(kfd.Version)
+	if err != nil {
+		return false
+	}
+
+	v1259, err := semver.NewVersion("v1.25.9")
+	if err != nil {
+		return false
+	}
+
+	v1264, err := semver.NewVersion("v1.26.4")
+	if err != nil {
+		return false
+	}
+
+	v12Seven2, err := semver.NewVersion("v1.27.2")
+	if err != nil {
+		return false
+	}
+
+	v1260, err := semver.NewVersion("v1.26.0")
+	if err != nil {
+		return false
+	}
+
+	v12Seven0, err := semver.NewVersion("v1.27.0")
+	if err != nil {
+		return false
+	}
+
+	return v1.GreaterThan(v1259) && v1.LessThan(v1260) ||
+		v1.GreaterThan(v1264) && v1.LessThan(v12Seven0) ||
+		v1.GreaterThan(v12Seven2)
 }
