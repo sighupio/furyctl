@@ -51,7 +51,7 @@ type ClusterCmdFlags struct {
 	SkipNodesUpgrade    bool
 	NoTTY               bool
 	GitProtocol         git.Protocol
-	Force               bool
+	Force               []string
 	Outdir              string
 	Upgrade             bool
 	UpgradePathLocation string
@@ -306,7 +306,7 @@ func getCreateClusterCmdFlags(cmd *cobra.Command, tracker *analytics.Tracker, cm
 		return ClusterCmdFlags{}, fmt.Errorf(WrappedErrMessage, ErrParsingFlag, "no-tty")
 	}
 
-	force, err := cmdutil.BoolFlag(cmd, "force", tracker, cmdEvent)
+	force, err := cmdutil.StringSliceFlag(cmd, "force", tracker, cmdEvent)
 	if err != nil {
 		return ClusterCmdFlags{}, fmt.Errorf(WrappedErrMessage, ErrParsingFlag, "force")
 	}
@@ -469,10 +469,10 @@ func setupCreateClusterCmdFlags(cmd *cobra.Command) {
 		"When set will not wait for user confirmation that the VPN is connected",
 	)
 
-	cmd.Flags().Bool(
+	cmd.Flags().StringSlice(
 		"force",
-		false,
-		"WARNING: furyctl won't ask for confirmation and will proceed applying upgrades and reducers",
+		[]string{},
+		"WARNING: furyctl won't ask for confirmation and will proceed applying upgrades and reducers. Options are: all, upgrades, migrations, pods-running-check",
 	)
 
 	//nolint:gomnd,revive // ignore magic number linters

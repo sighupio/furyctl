@@ -48,7 +48,7 @@ type PreFlight struct {
 	paths           cluster.CreatorPaths
 	kfd             config.KFD
 	dryRun          bool
-	force           bool
+	force           []string
 }
 
 func NewPreFlight(
@@ -57,7 +57,7 @@ func NewPreFlight(
 	paths cluster.CreatorPaths,
 	dryRun bool,
 	stateStore state.Storer,
-	force bool,
+	force []string,
 ) *PreFlight {
 	phase := cluster.NewOperationPhase(
 		path.Join(paths.WorkDir, cluster.OperationPhasePreFlight),
@@ -138,7 +138,7 @@ func (p *PreFlight) Exec(renderedConfig map[string]any) (*Status, error) {
 
 	diffChecker, err := p.CreateDiffChecker(storedCfg, renderedConfig)
 	if err != nil {
-		if !p.force {
+		if !cluster.IsForceEnabledForFeature(p.force, cluster.ForceFeatureMigrations) {
 			return status, fmt.Errorf(
 				"error creating diff checker: %w; "+
 					"if this happened after a failed attempt at creating a cluster, retry using the --force flag",

@@ -218,7 +218,7 @@ func getPhasePath(
 		false,
 		false,
 		true,
-		true,
+		[]string{"all"},
 		true,
 		upgradePathLocation,
 		"",

@@ -49,7 +49,7 @@ type PreFlight struct {
 	kubeRunner *kubectl.Runner
 	dryRun     bool
 	paths      cluster.CreatorPaths
-	force      bool
+	force      []string
 }
 
 func NewPreFlight(
@@ -59,7 +59,7 @@ func NewPreFlight(
 	dryRun bool,
 	vpnAutoConnect bool,
 	skipVpn bool,
-	force bool,
+	force []string,
 	infraOutputsPath string,
 ) (*PreFlight, error) {
 	phase := cluster.NewOperationPhase(
@@ -216,7 +216,7 @@ func (p *PreFlight) Exec(renderedConfig map[string]any) (*Status, error) {
 
 	diffChecker, err := p.CreateDiffChecker(storedCfg, renderedConfig)
 	if err != nil {
-		if !p.force {
+		if !cluster.IsForceEnabledForFeature(p.force, cluster.ForceFeatureMigrations) {
 			return status, fmt.Errorf(
 				"error creating diff checker: %w; "+
 					"if this happened after a failed attempt at creating a cluster, retry using the --force flag",

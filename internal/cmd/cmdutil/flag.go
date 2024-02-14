@@ -59,3 +59,15 @@ func StringFlagOptional(cmd *cobra.Command, flagName string) string {
 
 	return value
 }
+
+func StringSliceFlag(cmd *cobra.Command, flagName string, tracker *analytics.Tracker, event analytics.Event) ([]string, error) {
+	value, err := cmd.Flags().GetStringSlice(flagName)
+	if err != nil {
+		event.AddErrorMessage(fmt.Errorf("%w: %s", ErrParsingFlag, flagName))
+		tracker.Track(event)
+
+		return []string{}, fmt.Errorf("%w: %s", ErrParsingFlag, flagName)
+	}
+
+	return value, nil
+}

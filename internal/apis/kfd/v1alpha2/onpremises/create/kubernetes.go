@@ -32,7 +32,7 @@ type Kubernetes struct {
 	ansibleRunner     *ansible.Runner
 	upgrade           *upgrade.Upgrade
 	upgradeNode       string
-	force             bool
+	force             []string
 	podRunningTimeout int
 }
 
@@ -102,7 +102,7 @@ func (k *Kubernetes) prepare() error {
 
 	mCfg.Data["kubernetes"] = map[any]any{
 		"version":              k.kfdManifest.Kubernetes.OnPremises.Version,
-		"skipPodsRunningCheck": k.force,
+		"skipPodsRunningCheck": cluster.IsForceEnabledForFeature(k.force, cluster.ForceFeaturePodsRunningCheck),
 		"podRunningTimeout":    k.podRunningTimeout / FromSecondsToHalfMinuteRetries,
 	}
 
@@ -215,7 +215,7 @@ func NewKubernetes(
 	dryRun bool,
 	upgr *upgrade.Upgrade,
 	upgradeNode string,
-	force bool,
+	force []string,
 	podRunningTimeout int,
 ) *Kubernetes {
 	phase := cluster.NewOperationPhase(
