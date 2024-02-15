@@ -72,7 +72,23 @@ func (d *Downloader) Download(
 ) (DownloadResult, error) {
 	minimalConf, err := yamlx.FromFileV3[config.Furyctl](furyctlConfPath)
 	if err != nil {
-		return DownloadResult{}, fmt.Errorf("%w: %v", ErrYamlUnmarshalFile, err)
+		return DownloadResult{}, fmt.Errorf("%w: %w", ErrYamlUnmarshalFile, err)
+	}
+
+	compatChecker, err := NewCompatibilityChecker(minimalConf.Spec.DistributionVersion, minimalConf.Kind)
+	if err != nil {
+		return DownloadResult{}, fmt.Errorf("%w: %w", ErrCannotDownloadDistribution, err)
+	}
+
+	compat, err := compatChecker.IsCompatible()
+	if err != nil {
+		logrus.Debugf("Error checking compatibility: %v", err)
+	}
+
+	if !compat {
+		logrus.Warnf("The specified KFD version %s is not supported by furyctl, "+
+			"please upgrade furyctl to the latest version or use a supported version",
+			minimalConf.Spec.DistributionVersion)
 	}
 
 	return d.DoDownload(distroLocation, minimalConf)
@@ -135,14 +151,14 @@ func (d *Downloader) DoDownload(
 	_, err = os.Stat(kfdPath)
 	if os.IsNotExist(err) {
 		if distroLocation == "" {
-			return DownloadResult{}, fmt.Errorf("%w: %s is not supported by furyctl-ng, "+
+			return DownloadResult{}, fmt.Errorf("%w: %s is not supported by furyctl, "+
 				"try another version or use flag --distro-location to specify a custom location",
 				ErrUnsupportedVersion,
 				minimalConf.Spec.DistributionVersion,
 			)
 		}
 
-		return DownloadResult{}, fmt.Errorf("%w: seems like %s is not supported by furyctl-ng, "+
+		return DownloadResult{}, fmt.Errorf("%w: seems like %s is not supported by furyctl, "+
 			"try another version from the official repository",
 			ErrUnsupportedVersion,
 			distroLocation,
