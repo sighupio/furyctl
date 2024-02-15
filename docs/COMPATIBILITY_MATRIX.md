@@ -9,6 +9,24 @@ Note: Always use the latest `furyctl` version, we make sure that is compatible w
 | 0.27.1        |                    |                    | :white_check_mark: | :white_check_mark: |                    | :white_check_mark: | :white_check_mark: |                    | :white_check_mark: | :white_check_mark: |
 | 0.27.0        |                    |                    | :white_check_mark: | :white_check_mark: |                    | :white_check_mark: | :white_check_mark: |                    | :white_check_mark: | :white_check_mark: |
 
+## Furyctl and Providers compatibility
+
+| Furyctl / Providers | EKSCluster         | KFDDistribution    | OnPremises         |
+| ------------------- | ------------------ | ------------------ | ------------------ |
+| 0.27.3              | :white_check_mark: | :white_check_mark: | :white_check_mark: |
+| 0.27.2              | :white_check_mark: | :white_check_mark: | :white_check_mark: |
+| 0.27.1              | :white_check_mark: | :white_check_mark: | :white_check_mark: |
+| 0.27.0              | :white_check_mark: | :white_check_mark: | :white_check_mark: |
+| 0.26.3              | :white_check_mark: | :white_check_mark: | :white_check_mark: |
+| 0.26.2              | :white_check_mark: | :white_check_mark: | :white_check_mark: |
+| 0.26.1              | :white_check_mark: | :white_check_mark: |                    |
+| 0.26.0              | :white_check_mark: | :white_check_mark: |                    |
+| 0.25.2              | :white_check_mark: | :white_check_mark: |                    |
+| 0.25.1              | :white_check_mark: | :white_check_mark: |                    |
+| 0.25.0              | :white_check_mark: | :white_check_mark: |                    |
+| 0.25.0-beta.0       | :white_check_mark: |                    |                    |
+| 0.25.0-alpha.1      | :white_check_mark: |                    |                    |
+
 ## Legacy compatibility
 
 These versions were still not using the paradigm to have a full backward compatibility with the latest 3 minor versions of KFD.
