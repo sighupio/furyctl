@@ -36,6 +36,10 @@ If you're looking for the old documentation, you can find it [here](https://gith
 - `KFDDistribution`: Dedicated provider for the distribution, which installs the Distribution (modules only) on an existing Kubernetes cluster.
 - `OnPremises`: Provider to install a KFD Cluster on VMs.
 
+## Support & Compatibility 🪢
+
+Check the [compatibility matrix][compatibility-matrix] for additional information about `furyctl` and `KFD` compatibility.
+
 ## Installation
 
 ### Installing from binaries
@@ -473,3 +477,5 @@ In case you experience any problems with `furyctl`, please [open a new issue](ht
 This software is open-source and it's released under the following [LICENSE](LICENSE).
 
 <!-- </FOOTER> -->
+
+[compatibility-matrix]: https://github.com/sighupio/furyctl/blob/main/docs/COMPATIBILITY_MATRIX.md
