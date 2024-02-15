@@ -90,6 +90,14 @@ func (p *PreUpgrade) Exec() error {
 
 	logrus.Info("Running preupgrade phase...")
 
+	logrus.Debug("Cleaning up upgrade folder...")
+
+	if err := iox.CheckDirIsEmpty(p.Path); err != nil {
+		if err := os.RemoveAll(p.Path); err != nil {
+			return fmt.Errorf("error while cleaning vendor folder: %w", err)
+		}
+	}
+
 	if err := p.CreateRootFolder(); err != nil {
 		return fmt.Errorf("error creating preupgrade phase folder: %w", err)
 	}

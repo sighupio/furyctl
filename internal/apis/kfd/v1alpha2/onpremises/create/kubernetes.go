@@ -101,10 +101,14 @@ func (k *Kubernetes) prepare() error {
 	k.CopyPathsToConfig(&mCfg)
 
 	mCfg.Data["kubernetes"] = map[any]any{
-		"version":              k.kfdManifest.Kubernetes.OnPremises.Version,
-		"skipPodsRunningCheck": cluster.IsForceEnabledForFeature(k.force, cluster.ForceFeaturePodsRunningCheck),
-		"podRunningTimeout":    k.podRunningTimeout / FromSecondsToHalfMinuteRetries,
+		"version": k.kfdManifest.Kubernetes.OnPremises.Version,
 	}
+
+	mCfg.Data["options"]["skipPodsRunningCheck"] = cluster.IsForceEnabledForFeature(
+		k.force,
+		cluster.ForceFeaturePodsRunningCheck,
+	)
+	mCfg.Data["options"]["podRunningTimeout"] = k.podRunningTimeout / FromSecondsToHalfMinuteRetries
 
 	if err := k.CopyFromTemplate(
 		mCfg,
