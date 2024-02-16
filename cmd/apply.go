@@ -373,6 +373,14 @@ func getCreateClusterCmdFlags(cmd *cobra.Command, tracker *analytics.Tracker, cm
 		return ClusterCmdFlags{}, fmt.Errorf("%w: %s", ErrParsingFlag, "upgrade-node")
 	}
 
+	if upgrade && upgradeNode != "" {
+		return ClusterCmdFlags{}, fmt.Errorf(
+			"%w: %s: cannot use together with upgrade flag",
+			ErrParsingFlag,
+			"upgrade-node",
+		)
+	}
+
 	return ClusterCmdFlags{
 		Debug:              debug,
 		FuryctlPath:        furyctlPath,
