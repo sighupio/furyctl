@@ -80,12 +80,7 @@ func (d *Downloader) Download(
 		return DownloadResult{}, fmt.Errorf("%w: %w", ErrCannotDownloadDistribution, err)
 	}
 
-	compat, err := compatChecker.IsCompatible()
-	if err != nil {
-		logrus.Debugf("Error checking compatibility: %v", err)
-	}
-
-	if !compat {
+	if !compatChecker.IsCompatible() {
 		logrus.Warnf("The specified KFD version %s is not supported by furyctl, "+
 			"please upgrade furyctl to the latest version or use a supported version",
 			minimalConf.Spec.DistributionVersion)

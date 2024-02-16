@@ -98,11 +98,18 @@ func NewApplyCommand(tracker *analytics.Tracker) *cobra.Command {
 				logrus.Info("Dry run mode enabled, no changes will be applied")
 			}
 
+			var distrodl *distribution.Downloader
+
 			// Init first half of collaborators.
 			client := netx.NewGoGetterClient()
 			executor := execx.NewStdExecutor()
-			distrodl := distribution.NewCachingDownloader(client, flags.GitProtocol)
 			depsvl := dependencies.NewValidator(executor, flags.BinPath, flags.FuryctlPath, flags.VpnAutoConnect)
+
+			if flags.DistroLocation == "" {
+				distrodl = distribution.NewCachingDownloader(client, flags.GitProtocol)
+			} else {
+				distrodl = distribution.NewDownloader(client, flags.GitProtocol)
+			}
 
 			// Init packages.
 			execx.NoTTY = flags.NoTTY

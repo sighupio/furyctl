@@ -80,9 +80,17 @@ func NewDependenciesCmd(tracker *analytics.Tracker) *cobra.Command {
 				return fmt.Errorf("%w: %w", ErrParsingFlag, err)
 			}
 
-			dloader := distribution.NewCachingDownloader(netx.NewGoGetterClient(), typedGitProtocol)
+			var distrodl *distribution.Downloader
+
+			client := netx.NewGoGetterClient()
 			executor := execx.NewStdExecutor()
 			depsvl := dependencies.NewValidator(executor, "", furyctlPath, false)
+
+			if distroLocation == "" {
+				distrodl = distribution.NewCachingDownloader(client, typedGitProtocol)
+			} else {
+				distrodl = distribution.NewDownloader(client, typedGitProtocol)
+			}
 
 			// Validate base requirements.
 			if err := depsvl.ValidateBaseReqs(); err != nil {
@@ -94,7 +102,7 @@ func NewDependenciesCmd(tracker *analytics.Tracker) *cobra.Command {
 
 			// Download the distribution.
 			logrus.Info("Downloading distribution...")
-			dres, err := dloader.Download(distroLocation, furyctlPath)
+			dres, err := distrodl.Download(distroLocation, furyctlPath)
 			if err != nil {
 				cmdEvent.AddErrorMessage(err)
 				tracker.Track(cmdEvent)

@@ -6,6 +6,7 @@
 package distribution
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/sighupio/furyctl/internal/semver"
@@ -17,8 +18,10 @@ const (
 	OnPremisesKind      = "OnPremises"
 )
 
+var ErrUnsupportedKind = errors.New("unsupported kind")
+
 type CompatibilityChecker interface {
-	IsCompatible() (bool, error)
+	IsCompatible() bool
 }
 
 type CompatibilityCheck struct {
@@ -37,7 +40,7 @@ func NewCompatibilityChecker(distributionVersion, kind string) (CompatibilityChe
 		return NewOnPremisesCheck(distributionVersion), nil
 
 	default:
-		return nil, fmt.Errorf("unsupported kind: %s", kind)
+		return nil, fmt.Errorf("%w: %s", ErrUnsupportedKind, kind)
 	}
 }
 
@@ -51,45 +54,45 @@ func NewEKSClusterCheck(distributionVersion string) *EKSClusterCheck {
 	}
 }
 
-func (c *EKSClusterCheck) IsCompatible() (bool, error) {
+func (c *EKSClusterCheck) IsCompatible() bool {
 	currentVersion, err := semver.NewVersion(c.distributionVersion)
 	if err != nil {
-		return false, err
+		return false
 	}
 
 	min125Version, err := semver.NewVersion("v1.25.6")
 	if err != nil {
-		return false, err
+		return false
 	}
 
 	max125Version, err := semver.NewVersion("v1.25.10")
 	if err != nil {
-		return false, err
+		return false
 	}
 
 	min126Version, err := semver.NewVersion("v1.26.0")
 	if err != nil {
-		return false, err
+		return false
 	}
 
 	max126Version, err := semver.NewVersion("v1.26.5")
 	if err != nil {
-		return false, err
+		return false
 	}
 
 	min12SevenVersion, err := semver.NewVersion("v1.27.0")
 	if err != nil {
-		return false, err
+		return false
 	}
 
 	max12SevenVersion, err := semver.NewVersion("v1.27.3")
 	if err != nil {
-		return false, err
+		return false
 	}
 
 	return (currentVersion.GreaterThanOrEqual(min125Version) && currentVersion.LessThanOrEqual(max125Version)) ||
 		(currentVersion.GreaterThanOrEqual(min126Version) && currentVersion.LessThanOrEqual(max126Version)) ||
-		(currentVersion.GreaterThanOrEqual(min12SevenVersion) && currentVersion.LessThanOrEqual(max12SevenVersion)), nil
+		(currentVersion.GreaterThanOrEqual(min12SevenVersion) && currentVersion.LessThanOrEqual(max12SevenVersion))
 }
 
 type KFDDistributionCheck struct {
@@ -102,45 +105,45 @@ func NewKFDDistributionCheck(distributionVersion string) *KFDDistributionCheck {
 	}
 }
 
-func (c *KFDDistributionCheck) IsCompatible() (bool, error) {
+func (c *KFDDistributionCheck) IsCompatible() bool {
 	currentVersion, err := semver.NewVersion(c.distributionVersion)
 	if err != nil {
-		return false, err
+		return false
 	}
 
 	min125Version, err := semver.NewVersion("v1.25.6")
 	if err != nil {
-		return false, err
+		return false
 	}
 
 	max125Version, err := semver.NewVersion("v1.25.10")
 	if err != nil {
-		return false, err
+		return false
 	}
 
 	min126Version, err := semver.NewVersion("v1.26.0")
 	if err != nil {
-		return false, err
+		return false
 	}
 
 	max126Version, err := semver.NewVersion("v1.26.5")
 	if err != nil {
-		return false, err
+		return false
 	}
 
 	min12SevenVersion, err := semver.NewVersion("v1.27.0")
 	if err != nil {
-		return false, err
+		return false
 	}
 
 	max12SevenVersion, err := semver.NewVersion("v1.27.3")
 	if err != nil {
-		return false, err
+		return false
 	}
 
 	return (currentVersion.GreaterThanOrEqual(min125Version) && currentVersion.LessThanOrEqual(max125Version)) ||
 		(currentVersion.GreaterThanOrEqual(min126Version) && currentVersion.LessThanOrEqual(max126Version)) ||
-		(currentVersion.GreaterThanOrEqual(min12SevenVersion) && currentVersion.LessThanOrEqual(max12SevenVersion)), nil
+		(currentVersion.GreaterThanOrEqual(min12SevenVersion) && currentVersion.LessThanOrEqual(max12SevenVersion))
 }
 
 type OnPremisesCheck struct {
@@ -153,43 +156,43 @@ func NewOnPremisesCheck(distributionVersion string) *OnPremisesCheck {
 	}
 }
 
-func (c *OnPremisesCheck) IsCompatible() (bool, error) {
+func (c *OnPremisesCheck) IsCompatible() bool {
 	currentVersion, err := semver.NewVersion(c.distributionVersion)
 	if err != nil {
-		return false, err
+		return false
 	}
 
 	min125Version, err := semver.NewVersion("v1.25.8")
 	if err != nil {
-		return false, err
+		return false
 	}
 
 	max125Version, err := semver.NewVersion("v1.25.10")
 	if err != nil {
-		return false, err
+		return false
 	}
 
 	min126Version, err := semver.NewVersion("v1.26.2")
 	if err != nil {
-		return false, err
+		return false
 	}
 
 	max126Version, err := semver.NewVersion("v1.26.5")
 	if err != nil {
-		return false, err
+		return false
 	}
 
 	min12SevenVersion, err := semver.NewVersion("v1.27.0")
 	if err != nil {
-		return false, err
+		return false
 	}
 
 	max12SevenVersion, err := semver.NewVersion("v1.27.3")
 	if err != nil {
-		return false, err
+		return false
 	}
 
 	return (currentVersion.GreaterThanOrEqual(min125Version) && currentVersion.LessThanOrEqual(max125Version)) ||
 		(currentVersion.GreaterThanOrEqual(min126Version) && currentVersion.LessThanOrEqual(max126Version)) ||
-		(currentVersion.GreaterThanOrEqual(min12SevenVersion) && currentVersion.LessThanOrEqual(max12SevenVersion)), nil
+		(currentVersion.GreaterThanOrEqual(min12SevenVersion) && currentVersion.LessThanOrEqual(max12SevenVersion))
 }
