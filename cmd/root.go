@@ -148,6 +148,11 @@ furyctl is a command line interface tool to manage the full lifecycle of a Kuber
 				if token == "" {
 					logrus.Trace("FURYCTL_MIXPANEL_TOKEN is not set")
 				}
+
+				https := cobrax.Flag[bool](cmd, "https")
+				if !https {
+					logrus.Warn("The --https flag is deprecated, if you want to use ssh protocol to download repositories use --git-protocol ssh")
+				}
 			},
 		},
 		config: cfg,
@@ -206,6 +211,13 @@ furyctl is a command line interface tool to manage the full lifecycle of a Kuber
 		"download repositories using the given protocol (options: https, ssh). Use when SSH traffic is being blocked or when SSH "+
 			"client has not been configured\nset the GITHUB_TOKEN environment variable with your token to use "+
 			"authentication while downloading, for example for private repositories",
+	)
+
+	rootCmd.PersistentFlags().BoolP(
+		"https",
+		"H",
+		true,
+		"DEPRECATED: by default furyctl uses https protocol to download repositories",
 	)
 
 	rootCmd.AddCommand(NewCompletionCommand(tracker))
