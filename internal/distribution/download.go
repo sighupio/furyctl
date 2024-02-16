@@ -119,9 +119,7 @@ func (d *Downloader) DoDownload(
 	src := url
 	dst := filepath.Join(baseDst, "data")
 
-	client := netx.WithLocalCache(netx.NewGoGetterClient(), netx.GetCacheFolder())
-
-	if err := client.Download(src, dst); err != nil {
+	if err := d.client.Download(src, dst); err != nil {
 		if errors.Is(err, netx.ErrDownloadOptionsExhausted) {
 			if distroLocation == "" {
 				return DownloadResult{}, fmt.Errorf("%w: seems like the specified version "+
