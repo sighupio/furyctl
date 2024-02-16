@@ -44,7 +44,7 @@ type PreUpgrade struct {
 	upgradeFlag          bool
 	reducers             v1alpha2.Reducers
 	diffs                diff.Changelog
-	forceFlag            bool
+	forceFlag            []string
 	paths                cluster.CreatorPaths
 	externalUpgradesPath string
 	skipNodesUpgrade     bool
@@ -57,7 +57,7 @@ func NewPreUpgrade(
 	kind string,
 	dryRun bool,
 	upgradeFlag bool,
-	forceFlag bool,
+	forceFlag []string,
 	upgr *upgrade.Upgrade,
 	reducers v1alpha2.Reducers,
 	diffs diff.Changelog,
@@ -205,7 +205,7 @@ func (p *PreUpgrade) Exec() error {
 		upgradePath := path.Join(p.Path, fmt.Sprintf("%s-%s", from, to))
 
 		if _, err := os.Stat(upgradePath); err != nil {
-			if p.forceFlag {
+			if cluster.IsForceEnabledForFeature(p.forceFlag, cluster.ForceFeatureUpgrades) {
 				logrus.Warn("An upgrade path was not found, but the force flag was set, so the process will continue.")
 
 				p.upgrade.Enabled = false
@@ -227,7 +227,7 @@ func (p *PreUpgrade) Exec() error {
 		// return errUpgradeWithReducersNotAllowed
 		// }.
 
-		if !p.forceFlag {
+		if !cluster.IsForceEnabledForFeature(p.forceFlag, cluster.ForceFeatureUpgrades) {
 			if _, err := fmt.Println("Are you sure you want to continue? Only 'yes' will be accepted to confirm."); err != nil {
 				return fmt.Errorf("error writing to stdout: %w", err)
 			}

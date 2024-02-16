@@ -5,10 +5,8 @@
 package kfddistribution
 
 import (
-	"bufio"
 	"errors"
 	"fmt"
-	"os"
 	"path"
 	"strings"
 
@@ -27,7 +25,6 @@ import (
 	"github.com/sighupio/furyctl/internal/state"
 	"github.com/sighupio/furyctl/internal/template"
 	"github.com/sighupio/furyctl/internal/upgrade"
-	iox "github.com/sighupio/furyctl/internal/x/io"
 	yamlx "github.com/sighupio/furyctl/internal/x/yaml"
 )
 
@@ -51,7 +48,7 @@ type ClusterCreator struct {
 	kfdManifest          config.KFD
 	phase                string
 	dryRun               bool
-	force                bool
+	force                []string
 	upgrade              bool
 	externalUpgradesPath string
 }
@@ -119,7 +116,7 @@ func (c *ClusterCreator) SetProperty(name string, value any) {
 		}
 
 	case cluster.CreatorPropertyForce:
-		if b, ok := value.(bool); ok {
+		if b, ok := value.([]string); ok {
 			c.force = b
 		}
 
@@ -240,7 +237,7 @@ func (c *ClusterCreator) Create(startFrom string, _, _ int) error {
 	switch c.phase {
 	case cluster.OperationPhaseDistribution:
 		if len(reducers) > 0 && len(unsafeReducers) > 0 {
-			confirm, err := c.AskConfirmation()
+			confirm, err := cluster.AskConfirmation(cluster.IsForceEnabledForFeature(c.force, cluster.ForceFeatureMigrations))
 			if err != nil {
 				return fmt.Errorf("error while asking for confirmation: %w", err)
 			}
@@ -340,7 +337,7 @@ func (c *ClusterCreator) allPhases(
 
 	if startFrom != cluster.OperationPhasePlugins {
 		if len(reducers) > 0 && len(unsafeReducers) > 0 {
-			confirm, err := c.AskConfirmation()
+			confirm, err := cluster.AskConfirmation(cluster.IsForceEnabledForFeature(c.force, cluster.ForceFeatureMigrations))
 			if err != nil {
 				return fmt.Errorf("error while asking for confirmation: %w", err)
 			}
@@ -450,29 +447,4 @@ func (c *ClusterCreator) RenderConfig() (map[string]any, error) {
 	}
 
 	return specMap, nil
-}
-
-func (c *ClusterCreator) AskConfirmation() (bool, error) {
-	if !c.force {
-		if _, err := fmt.Println("WARNING: You are about to apply changes to the cluster configuration."); err != nil {
-			return false, fmt.Errorf("error while printing to stdout: %w", err)
-		}
-
-		if _, err := fmt.Println("Are you sure you want to continue? Only 'yes' will be accepted to confirm."); err != nil {
-			return false, fmt.Errorf("error while printing to stdout: %w", err)
-		}
-
-		prompter := iox.NewPrompter(bufio.NewReader(os.Stdin))
-
-		prompt, err := prompter.Ask("yes")
-		if err != nil {
-			return false, fmt.Errorf("error reading user input: %w", err)
-		}
-
-		if !prompt {
-			return false, nil
-		}
-	}
-
-	return true, nil
 }

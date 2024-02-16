@@ -304,6 +304,7 @@ var (
 			distroPath,
 			"--debug",
 			"--force",
+			"all",
 			"--workdir",
 			workDir,
 		}
@@ -330,6 +331,7 @@ var (
 			"--disable-analytics",
 			"--debug",
 			"--force",
+			"all",
 			"--skip-vpn-confirmation",
 			"--workdir",
 			workDir,
