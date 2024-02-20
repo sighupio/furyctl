@@ -98,11 +98,18 @@ func NewApplyCommand(tracker *analytics.Tracker) *cobra.Command {
 				logrus.Info("Dry run mode enabled, no changes will be applied")
 			}
 
+			var distrodl *distribution.Downloader
+
 			// Init first half of collaborators.
 			client := netx.NewGoGetterClient()
 			executor := execx.NewStdExecutor()
-			distrodl := distribution.NewCachingDownloader(client, flags.GitProtocol)
 			depsvl := dependencies.NewValidator(executor, flags.BinPath, flags.FuryctlPath, flags.VpnAutoConnect)
+
+			if flags.DistroLocation == "" {
+				distrodl = distribution.NewCachingDownloader(client, flags.GitProtocol)
+			} else {
+				distrodl = distribution.NewDownloader(client, flags.GitProtocol)
+			}
 
 			// Init packages.
 			execx.NoTTY = flags.NoTTY
@@ -364,6 +371,14 @@ func getCreateClusterCmdFlags(cmd *cobra.Command, tracker *analytics.Tracker, cm
 	upgradeNode, err := cmdutil.StringFlag(cmd, "upgrade-node", tracker, cmdEvent)
 	if err != nil {
 		return ClusterCmdFlags{}, fmt.Errorf("%w: %s", ErrParsingFlag, "upgrade-node")
+	}
+
+	if upgrade && upgradeNode != "" {
+		return ClusterCmdFlags{}, fmt.Errorf(
+			"%w: %s: cannot use together with upgrade flag",
+			ErrParsingFlag,
+			"upgrade-node",
+		)
 	}
 
 	return ClusterCmdFlags{

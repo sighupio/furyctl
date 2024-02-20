@@ -75,8 +75,15 @@ func NewDiffCommand(tracker *analytics.Tracker) *cobra.Command {
 				flags.BinPath = filepath.Join(outDir, ".furyctl", "bin")
 			}
 
+			var distrodl *distribution.Downloader
+
 			client := netx.NewGoGetterClient()
-			distrodl := distribution.NewCachingDownloader(client, flags.GitProtocol)
+
+			if flags.DistroLocation == "" {
+				distrodl = distribution.NewCachingDownloader(client, flags.GitProtocol)
+			} else {
+				distrodl = distribution.NewDownloader(client, flags.GitProtocol)
+			}
 
 			logrus.Info("Downloading distribution...")
 			res, err := distrodl.Download(flags.DistroLocation, flags.FuryctlPath)

@@ -90,6 +90,14 @@ func (p *PreUpgrade) Exec() error {
 
 	logrus.Info("Running preupgrade phase...")
 
+	logrus.Debug("Cleaning up upgrade folder...")
+
+	if err := iox.CheckDirIsEmpty(p.Path); err != nil {
+		if err := os.RemoveAll(p.Path); err != nil {
+			return fmt.Errorf("error while cleaning vendor folder: %w", err)
+		}
+	}
+
 	if err := p.CreateRootFolder(); err != nil {
 		return fmt.Errorf("error creating preupgrade phase folder: %w", err)
 	}
@@ -189,8 +197,8 @@ func (p *PreUpgrade) Exec() error {
 			return errGettingDistroVersionTo
 		}
 
-		fmt.Printf(
-			"WARNING: Distribution version changed from %s to %s, you are about to upgrade the cluster.\n",
+		logrus.Warnf(
+			"Distribution version changed from %s to %s, you are about to upgrade the cluster.\n",
 			p.upgrade.From,
 			p.upgrade.To,
 		)

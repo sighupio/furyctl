@@ -64,10 +64,17 @@ The generated folder will be created starting from a provided templates folder a
 				return fmt.Errorf("error: %w", err)
 			}
 
+			var distrodl *distribution.Downloader
+
 			client := netx.NewGoGetterClient()
 			executor := execx.NewStdExecutor()
 			depsvl := dependencies.NewValidator(executor, "", absFuryctlPath, false)
-			distrodl := distribution.NewCachingDownloader(client, flags.GitProtocol)
+
+			if flags.DistroLocation == "" {
+				distrodl = distribution.NewCachingDownloader(client, flags.GitProtocol)
+			} else {
+				distrodl = distribution.NewDownloader(client, flags.GitProtocol)
+			}
 
 			if err := depsvl.ValidateBaseReqs(); err != nil {
 				cmdEvent.AddErrorMessage(err)

@@ -9,7 +9,7 @@
 <!-- FIXME: UPDATE THE BUILD BADGE WITH THE RIGHT BRANCH -->
 
 [![Build Status](https://ci.sighup.io/api/badges/sighupio/furyctl/status.svg)](https://ci.sighup.io/sighupio/furyctl)
-![Release](https://img.shields.io/badge/furyctl-v0.27.2-blue)
+![Release](https://img.shields.io/badge/furyctl-v0.27.3-blue)
 ![Slack](https://img.shields.io/badge/slack-@kubernetes/fury-yellow.svg?logo=slack)
 ![License](https://img.shields.io/github/license/sighupio/furyctl)
 [![Go Report Card](https://goreportcard.com/badge/github.com/sighupio/furyctl)](https://goreportcard.com/report/github.com/sighupio/furyctl)
@@ -35,6 +35,10 @@ If you're looking for the old documentation, you can find it [here](https://gith
 - `EKSCluster`: Provides comprehensive lifecycle management for an EKS cluster on AWS. It handles the installation of the VPC, VPN, EKS using the installers, and deploys the Distribution onto the EKS cluster.
 - `KFDDistribution`: Dedicated provider for the distribution, which installs the Distribution (modules only) on an existing Kubernetes cluster.
 - `OnPremises`: Provider to install a KFD Cluster on VMs.
+
+## Support & Compatibility 🪢
+
+Check the [compatibility matrix][compatibility-matrix] for additional information about `furyctl` and `KFD` compatibility.
 
 ## Installation
 
@@ -76,7 +80,7 @@ $ furyctl version
 ...
 goVersion: go1.22
 osArch: amd64
-version: 0.27.2
+version: 0.27.3
 ```
 
 ### Installing from source
@@ -278,7 +282,7 @@ And then upgrade the worker nodes, one by one:
 furyctl apply --upgrade --config /path/to/your/furyctl.yaml --upgrade-node workerNode1
 ```
 
-At the end of the node upgrade process, a check is performed to ensure every pod is either `Running` or in a `Completed` state. You can specify a timeout for this check with the `--pod-running-check-timeout` flag or skip it with the `--force` flag.
+At the end of the node upgrade process, a check is performed to ensure every pod is either `Running` or in a `Completed` state. You can specify a timeout for this check with the `--pod-running-check-timeout` flag or skip it with the `--force pods-running-check` flag.
 
 #### 4. Destroy a cluster
 
@@ -473,3 +477,5 @@ In case you experience any problems with `furyctl`, please [open a new issue](ht
 This software is open-source and it's released under the following [LICENSE](LICENSE).
 
 <!-- </FOOTER> -->
+
+[compatibility-matrix]: https://github.com/sighupio/furyctl/blob/main/docs/COMPATIBILITY_MATRIX.md
