@@ -197,8 +197,8 @@ func (p *PreUpgrade) Exec() error {
 			return errGettingDistroVersionTo
 		}
 
-		fmt.Printf(
-			"WARNING: Distribution version changed from %s to %s, you are about to upgrade the cluster.\n",
+		logrus.Warnf(
+			"Distribution version changed from %s to %s, you are about to upgrade the cluster.\n",
 			p.upgrade.From,
 			p.upgrade.To,
 		)
