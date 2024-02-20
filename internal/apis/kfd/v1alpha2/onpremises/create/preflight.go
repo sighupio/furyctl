@@ -162,7 +162,7 @@ func (p *PreFlight) Exec(renderedConfig map[string]any) (*Status, error) {
 		if !cluster.IsForceEnabledForFeature(p.force, cluster.ForceFeatureMigrations) {
 			return status, fmt.Errorf(
 				"error creating diff checker: %w; "+
-					"if this happened after a failed attempt at creating a cluster, retry using the --force flag",
+					"if this happened after a failed attempt at creating a cluster, retry using the \"--force migrations\" flag",
 				err,
 			)
 		}
