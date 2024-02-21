@@ -283,10 +283,15 @@ func TestCopyFile(t *testing.T) {
 func TestCopyRecursive(t *testing.T) {
 	t.Parallel()
 
+	type File struct {
+		FileType string
+		FilePerm fs.FileMode
+	}
+
 	testCases := []struct {
 		desc  string
 		setup func() (fs.FS, string, error)
-		want  map[string]string
+		want  map[string]File
 	}{
 		{
 			desc: "dir containing other dirs and files",
@@ -312,6 +317,10 @@ func TestCopyRecursive(t *testing.T) {
 				}
 				defer f2.Close()
 
+				if err := os.Chmod(filepath.Join(src, "foo", "bar.txt"), 0o664); err != nil {
+					return nil, "", err
+				}
+
 				if err := os.Mkdir(filepath.Join(src, "foo", "bar"), 0o755); err != nil {
 					return nil, "", err
 				}
@@ -321,6 +330,10 @@ func TestCopyRecursive(t *testing.T) {
 					return nil, "", err
 				}
 				defer f3.Close()
+
+				if err := os.Chmod(filepath.Join(src, "foo", "bar", "baz.txt"), 0o666); err != nil {
+					return nil, "", err
+				}
 
 				if err := os.Mkdir(filepath.Join(src, "foo", "bar", "baz"), 0o755); err != nil {
 					return nil, "", err
@@ -333,13 +346,31 @@ func TestCopyRecursive(t *testing.T) {
 
 				return os.DirFS(src), dst, nil
 			},
-			want: map[string]string{
-				"foo":             "dir",
-				"bar.txt":         "file",
-				"foo/bar.txt":     "file",
-				"foo/bar":         "dir",
-				"foo/bar/baz.txt": "file",
-				"foo/bar/baz":     "dir",
+			want: map[string]File{
+				"foo": {
+					FileType: "dir",
+					FilePerm: 0o755,
+				},
+				"bar.txt": {
+					FileType: "file",
+					FilePerm: 0o644,
+				},
+				"foo/bar.txt": {
+					FileType: "file",
+					FilePerm: 0o664,
+				},
+				"foo/bar": {
+					FileType: "dir",
+					FilePerm: 0o755,
+				},
+				"foo/bar/baz.txt": {
+					FileType: "file",
+					FilePerm: 0o666,
+				},
+				"foo/bar/baz": {
+					FileType: "dir",
+					FilePerm: 0o755,
+				},
 			},
 		},
 	}
@@ -358,16 +389,20 @@ func TestCopyRecursive(t *testing.T) {
 				t.Fatalf("unexpected error: %v", err)
 			}
 
-			for fname, ftype := range tC.want {
+			for fname, f := range tC.want {
 				info, err := os.Stat(filepath.Join(dst, fname))
 				if err != nil {
 					t.Fatalf("expected no error, got %v", err)
 				}
 
-				if ftype == "dir" && !info.IsDir() {
+				if f.FilePerm != info.Mode().Perm() {
+					t.Errorf("expected %s to have permissions %o, got %o", fname, f.FilePerm, info.Mode().Perm())
+				}
+
+				if f.FileType == "dir" && !info.IsDir() {
 					t.Errorf("expected %s to be a directory", fname)
 				}
-				if ftype == "file" && info.IsDir() {
+				if f.FileType == "file" && info.IsDir() {
 					t.Errorf("expected %s to be a file", fname)
 				}
 			}

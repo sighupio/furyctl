@@ -164,6 +164,15 @@ func CopyRecursive(src fs.FS, dest string) error {
 		if err := os.WriteFile(path.Join(dest, file.Name()), fileContent, RWPermAccess); err != nil {
 			return fmt.Errorf("error while writing file %s: %w", file.Name(), err)
 		}
+
+		si, err := fs.Stat(src, file.Name())
+		if err != nil {
+			return fmt.Errorf("error while getting file info %s: %w", file.Name(), err)
+		}
+
+		if err := os.Chmod(path.Join(dest, file.Name()), si.Mode()); err != nil {
+			return fmt.Errorf("error while changing file mode %s: %w", file.Name(), err)
+		}
 	}
 
 	return nil
