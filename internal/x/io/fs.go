@@ -170,8 +170,7 @@ func CopyRecursive(src fs.FS, dest string) error {
 			return fmt.Errorf("error while getting file info %s: %w", file.Name(), err)
 		}
 
-		err = os.Chmod(path.Join(dest, file.Name()), si.Mode())
-		if err != nil {
+		if err := os.Chmod(path.Join(dest, file.Name()), si.Mode()); err != nil {
 			return fmt.Errorf("error while changing file mode %s: %w", file.Name(), err)
 		}
 	}
