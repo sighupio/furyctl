@@ -6,12 +6,12 @@
 
 terraform {
   backend "s3" {
-    bucket = "{{ .terraform.backend.s3.bucketName }}"
-    key    = "{{ .terraform.backend.s3.keyPrefix }}/infrastructure.json"
-    region = "{{ .terraform.backend.s3.region }}"
+    bucket = "{{ .spec.toolsConfiguration.terraform.state.s3.bucketName }}"
+    key    = "{{ .spec.toolsConfiguration.terraform.state.s3.keyPrefix }}/infrastructure.json"
+    region = "{{ .spec.toolsConfiguration.terraform.state.s3.region }}"
 
-    {{- if index .terraform.backend.s3 "skipRegionValidation" }}
-      skip_region_validation = {{ default false .terraform.backend.s3.skipRegionValidation }}
+    {{- if index .spec.toolsConfiguration.terraform.state.s3 "skipRegionValidation" }}
+      skip_region_validation = {{ default false .spec.toolsConfiguration.terraform.state.s3.skipRegionValidation }}
     {{- end }}
   }
 
@@ -34,7 +34,7 @@ provider "aws" {
 }
 
 module "vpc" {
-  source = "{{ .kubernetes.vpcInstallerPath }}"
+  source = "{{ .infrastructure.vpcInstallerPath }}"
 
   count = var.vpc_enabled ? 1 : 0
 
@@ -53,7 +53,7 @@ module "vpc" {
 }
 
 module "vpn" {
-  source = "{{ .kubernetes.vpnInstallerPath }}"
+  source = "{{ .infrastructure.vpnInstallerPath }}"
 
   count = var.vpn_enabled ? 1 : 0
 
