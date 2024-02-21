@@ -4,19 +4,13 @@
  * license that can be found in the LICENSE file.
  */
 
-{{- $deprecateOptionalTfVer := semver "1.3.0" }}
-
 terraform {
-  {{ if eq ($deprecateOptionalTfVer | (semver .kubernetes.tfVersion).Compare) -1 -}}
-  experiments = [module_variable_optional_attrs]
-  {{ end -}}
-
   backend "s3" {
-    bucket = "{{ .terraform.backend.s3.bucketName }}"
-    key    = "{{ .terraform.backend.s3.keyPrefix }}/cluster.json"
-    region = "{{ .terraform.backend.s3.region }}"
+    bucket = {{ .spec.toolsConfiguration.terraform.state.s3.bucketName }}"
+    key    = "{{ .spec.toolsConfiguration.terraform.state.s3.keyPrefix }}/cluster.json"
+    region = "{{ .spec.toolsConfiguration.terraform.state.s3.region }}"
 
-    {{- if index .terraform.backend.s3 "skipRegionValidation" }}
+    {{- if index .spec.toolsConfiguration.terraform.state.s3 "skipRegionValidation" }}
       skip_region_validation = {{ default false .terraform.backend.s3.skipRegionValidation }}
     {{- end }}
   }

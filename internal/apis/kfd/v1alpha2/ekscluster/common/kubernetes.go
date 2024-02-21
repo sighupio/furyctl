@@ -8,7 +8,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"io/fs"
 	"os"
 	"path"
 	"path/filepath"
@@ -17,7 +16,6 @@ import (
 
 	"github.com/sighupio/fury-distribution/pkg/apis/config"
 	"github.com/sighupio/fury-distribution/pkg/apis/ekscluster/v1alpha2/private"
-	"github.com/sighupio/furyctl/configs"
 	"github.com/sighupio/furyctl/internal/cluster"
 	"github.com/sighupio/furyctl/internal/distribution"
 	"github.com/sighupio/furyctl/internal/merge"
@@ -109,27 +107,6 @@ func (k *Kubernetes) mergeConfig() (template.Config, error) {
 }
 
 func (k *Kubernetes) copyFromTemplate(furyctlCfg template.Config) error {
-	var cfg template.Config
-
-	tmpFolder, err := os.MkdirTemp("", "furyctl-kubernetes-configs-")
-	if err != nil {
-		return fmt.Errorf("error creating temp folder: %w", err)
-	}
-
-	defer os.RemoveAll(tmpFolder)
-
-	subFS, err := fs.Sub(configs.Tpl, path.Join("provisioners", "cluster", "eks"))
-	if err != nil {
-		return fmt.Errorf("error getting subfs: %w", err)
-	}
-
-	err = iox.CopyRecursive(subFS, tmpFolder)
-	if err != nil {
-		return fmt.Errorf("error copying template files: %w", err)
-	}
-
-	targetTfDir := path.Join(k.Path, "terraform")
-
 	eksInstallerPath := path.Join(k.Path, "..", "vendor", "installers", "eks", "modules", "eks")
 
 	nodeSelector, tolerations, err := k.getCommonDataFromDistribution(furyctlCfg)
@@ -137,41 +114,37 @@ func (k *Kubernetes) copyFromTemplate(furyctlCfg template.Config) error {
 		return err
 	}
 
-	tfConfVars := map[string]map[any]any{
-		"spec": {
-			"region": k.FuryctlConf.Spec.Region,
-			"tags":   k.FuryctlConf.Spec.Tags,
-		},
-		"kubernetes": {
-			"installerPath": eksInstallerPath,
-			"tfVersion":     k.KFDManifest.Tools.Common.Terraform.Version,
-		},
-		"distribution": {
-			"nodeSelector": nodeSelector,
-			"tolerations":  tolerations,
-		},
-		"terraform": {
-			"backend": map[string]any{
-				"s3": map[string]any{
-					"bucketName":           k.FuryctlConf.Spec.ToolsConfiguration.Terraform.State.S3.BucketName,
-					"keyPrefix":            k.FuryctlConf.Spec.ToolsConfiguration.Terraform.State.S3.KeyPrefix,
-					"region":               k.FuryctlConf.Spec.ToolsConfiguration.Terraform.State.S3.Region,
-					"skipRegionValidation": k.FuryctlConf.Spec.ToolsConfiguration.Terraform.State.S3.SkipRegionValidation,
-				},
-			},
-		},
-		"features": {
-			"logTypesEnabled": distribution.HasFeature(k.KFDManifest, distribution.FeatureKubernetesLogTypes),
-		},
+	infraData, err := k.injectInfraDataFromOutputs()
+	if err != nil {
+		return fmt.Errorf("error injecting infrastructure data from outputs: %w", err)
 	}
 
-	cfg.Data = tfConfVars
+	furyctlCfg.Data["infrastructure"] = infraData
+
+	furyctlCfg.Data["kubernetes"] = map[any]any{
+		"installerPath": eksInstallerPath,
+	}
+
+	furyctlCfg.Data["distribution"] = map[any]any{
+		"nodeSelector": nodeSelector,
+		"tolerations":  tolerations,
+	}
+
+	furyctlCfg.Data["features"] = map[any]any{
+		"logTypesEnabled": distribution.HasFeature(k.KFDManifest, distribution.FeatureKubernetesLogTypes),
+	}
 
 	err = k.CopyFromTemplate(
-		cfg,
+		furyctlCfg,
 		"kubernetes",
-		tmpFolder,
-		targetTfDir,
+		path.Join(
+			k.DistroPath,
+			"templates",
+			cluster.OperationPhaseKubernetes,
+			"ekscluster",
+			"terraform",
+		),
+		path.Join(k.Path, "terraform"),
 		k.FuryctlConfPath,
 	)
 	if err != nil {
@@ -210,6 +183,75 @@ func (*Kubernetes) getCommonDataFromDistribution(furyctlCfg template.Config) (ma
 	}
 
 	return nodeSelector, tolerations, nil
+}
+
+func (k *Kubernetes) injectInfraDataFromOutputs() (map[any]any, error) {
+	out := make(map[any]any)
+
+	if k.FuryctlConf.Spec.Infrastructure != nil &&
+		k.FuryctlConf.Spec.Infrastructure.Vpc != nil {
+		var infraOut terraform.OutputJSON
+
+		infraOutJSON, err := os.ReadFile(path.Join(k.InfrastructureTerraformOutputsPath, "output.json"))
+		if err != nil {
+			return out, fmt.Errorf("error reading infrastructure terraform outputs: %w", err)
+		}
+
+		if err := json.Unmarshal(infraOutJSON, &infraOut); err != nil {
+			return out, fmt.Errorf("error unmarshalling infrastructure terraform outputs: %w", err)
+		}
+
+		if infraOut["private_subnets"] == nil {
+			return out, ErrPvtSubnetNotFound
+		}
+
+		s, ok := infraOut["private_subnets"].Value.([]any)
+		if !ok {
+			return out, ErrPvtSubnetFromOut
+		}
+
+		if infraOut["vpc_id"] == nil {
+			return out, ErrVpcIDNotFound
+		}
+
+		v, ok := infraOut["vpc_id"].Value.(string)
+		if !ok {
+			return out, ErrVpcIDFromOut
+		}
+
+		if infraOut["vpc_cidr_block"] == nil {
+			return out, ErrVpcCIDRNotFound
+		}
+
+		c, ok := infraOut["vpc_cidr_block"].Value.(string)
+		if !ok {
+			return out, ErrVpcCIDRFromOut
+		}
+
+		subs := make([]private.TypesAwsSubnetId, len(s))
+
+		for i, sub := range s {
+			ss, ok := sub.(string)
+			if !ok {
+				return out, ErrPvtSubnetFromOut
+			}
+
+			subs[i] = private.TypesAwsSubnetId(ss)
+		}
+
+		vpcID := private.TypesAwsVpcId(v)
+
+		out["subnets"] = subs
+
+		out["vpc_id"] = &vpcID
+
+		out["cluster_endpoint_private_access_cidrs"] = append(
+			k.FuryctlConf.Spec.Kubernetes.ApiServer.PrivateAccessCidrs,
+			private.TypesCidr(c),
+		)
+	}
+
+	return out, nil
 }
 
 //nolint:gocyclo,maintidx // it will be refactored
