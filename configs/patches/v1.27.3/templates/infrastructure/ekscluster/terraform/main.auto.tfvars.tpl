@@ -6,20 +6,10 @@
 
 name = {{ .metadata.name | quote }}
 {{- if and .spec.infrastructure (index .spec.infrastructure "vpc") }}
-{{- $publicSubnetworkCIDRS := list }}
-{{- $privateSubnetworkCIDRS := list }}
-{{- range $p := .spec.infrastructure.vpc.network.subnetsCidrs.public }}
-{{- $currCIDR := $p | quote}}
-{{- $publicSubnetworkCIDRS = append $publicSubnetworkCIDRS $currCIDR }}
-{{- end }}
-{{- range $p := .spec.infrastructure.vpc.network.subnetsCidrs.private }}
-{{- $currCIDR := $p | quote}}
-{{- $privateSubnetworkCIDRS = append $privateSubnetworkCIDRS $currCIDR }}
-{{- end }}
 vpc_enabled = true
 cidr = {{ .spec.infrastructure.vpc.network.cidr | quote }}
-vpc_public_subnetwork_cidrs = [{{ $publicSubnetworkCIDRS | join ","}}]
-vpc_private_subnetwork_cidrs = [{{ $privateSubnetworkCIDRS | join ","}}]
+vpc_public_subnetwork_cidrs = {{ toJson .spec.infrastructure.vpc.network.subnetsCidrs.public }}
+vpc_private_subnetwork_cidrs = {{ toJson .spec.infrastructure.vpc.network.subnetsCidrs.private }}
 {{- else }}
 vpc_enabled = false
 {{- end }}
@@ -48,20 +38,10 @@ vpn_dhparams_bits = {{ .spec.infrastructure.vpn.dhParamsBits }}
 vpn_bucket_name_prefix = {{ .spec.infrastructure.vpn.bucketNamePrefix | quote }}
 {{- end }}
 {{- if gt (len .spec.infrastructure.vpn.ssh.allowedFromCidrs) 0 }}
-{{- $allowedCIDRS := list }}
-{{- range $p := .spec.infrastructure.vpn.ssh.allowedFromCidrs }}
-{{- $currCIDR := $p | quote}}
-{{- $allowedCIDRS = append $allowedCIDRS $currCIDR }}
-{{- end }}
-vpn_operator_cidrs = [{{ $allowedCIDRS | uniq | join ","}}]
+vpn_operator_cidrs = {{ toJson (.spec.infrastructure.vpn.ssh.allowedFromCidrs | uniq) }}
 {{- end }}
 {{- if gt (len .spec.infrastructure.vpn.ssh.githubUsersName) 0 }}
-{{- $sshUsers := list }}
-{{- range $p := .spec.infrastructure.vpn.ssh.githubUsersName }}
-{{- $currUser := $p | quote }}
-{{- $sshUsers = append $sshUsers $currUser }}
-{{- end }}
-vpn_ssh_users = [{{ $sshUsers | join ","}}]
+vpn_ssh_users = {{ toJson .spec.infrastructure.vpn.ssh.githubUsersName }}
 {{- end }}
 {{- else }}
 vpn_enabled = false
