@@ -47,7 +47,7 @@ vpc_id = {{ .spec.kubernetes.vpcId | quote }}
 {{- if hasKeyAny .infrastructure "subnets" }}
     {{- $subnets = .infrastructure.subnets }}
 {{- else }}
-    {{- $subnets = .spec.kubernetes.subnets }}
+    {{- $subnets = .spec.kubernetes.subnetIds }}
 {{- end }}
 subnets = {{ toJson $subnets }}
 ssh_public_key = {{ .spec.kubernetes.nodeAllowedSshPublicKey | quote }}
