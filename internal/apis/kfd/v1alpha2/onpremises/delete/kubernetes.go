@@ -57,6 +57,8 @@ func (k *Kubernetes) Exec() error {
 		"version": k.kfdManifest.Kubernetes.OnPremises.Version,
 	}
 
+	mCfg.Data["options"]["skipPodsRunningCheck"] = true
+
 	if err := k.CopyFromTemplate(
 		mCfg,
 		"kubernetes",
