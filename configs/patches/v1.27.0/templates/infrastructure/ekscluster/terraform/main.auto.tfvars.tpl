@@ -16,6 +16,9 @@ vpc_enabled = false
 {{- if and .spec.infrastructure (index .spec.infrastructure "vpn") ((hasKeyAny .spec.infrastructure.vpn "instances") | ternary (and (index .spec.infrastructure.vpn "instances") (gt .spec.infrastructure.vpn.instances 0)) true) }}
 vpn_enabled = true
 vpn_subnetwork_cidr = {{ .spec.infrastructure.vpn.vpnClientsSubnetCidr | quote }}
+{{- if index .spec.infrastructure.vpn "vpcId" }}
+vpn_vpc_id = {{ .spec.infrastructure.vpn.vpcId | quote }}
+{{- end }}
 {{- if index .spec.infrastructure.vpn "instances" }}
 vpn_instances = {{ .spec.infrastructure.vpn.instances }}
 {{- end }}

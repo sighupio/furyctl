@@ -82,7 +82,7 @@ eks_map_roles = {{ toPrettyJson $roles | join "," }}
     {{- $nodePools := list }}
 
     {{- range $np := .spec.kubernetes.nodePools }}
-        {{- $currNodePool := dict "name" $np.name "version" nil "min_size" $np.size.min "max_size" $np.size.max "instance_type" $np.instance.type "subnets" nil "additional_firewall_rules" nil "labels" nil "taints" nil "tags" nil }}
+        {{- $currNodePool := dict "name" $np.name "version" nil "min_size" $np.size.min "max_size" $np.size.max "instance_type" $np.instance.type "spot" false "volume_size" 35 "subnets" nil "additional_firewall_rules" nil "labels" nil "taints" nil "tags" nil }}
         
         {{- if hasKeyAny $np "type" }}
             {{- $currNodePool = merge $currNodePool (dict "type" $np.type) }}
@@ -92,13 +92,9 @@ eks_map_roles = {{ toPrettyJson $roles | join "," }}
             {{- $currNodePool = merge $currNodePool (dict "ami_id" $np.ami.id) }}
         {{- end }}
         
-        {{- $spot := false }}
-        
         {{- if hasKeyAny $np.instance "spot" }}
-            {{- $spot = $np.instance.spot }}
+            {{- $currNodePool = merge $currNodePool (dict "spot" $np.instance.spot) }}
         {{- end }}
-        
-        {{- $currNodePool = merge $currNodePool (dict "spot" $spot) }}
         
         {{- if hasKeyAny $np "containerRuntime" }}
             {{- $currNodePool = merge $currNodePool (dict "container_runtime" $np.containerRuntime) }}
@@ -108,13 +104,9 @@ eks_map_roles = {{ toPrettyJson $roles | join "," }}
             {{- $currNodePool = merge $currNodePool (dict "max_pods" $np.instance.maxPods) }}
         {{- end }}
         
-        {{- $volumeSize := 35 }}
-        
         {{- if hasKeyAny $np.instance "volumeSize" }}
-            {{- $volumeSize = $np.instance.volumeSize }}
+            {{- $currNodePool = merge $currNodePool (dict "volume_size" $np.instance.volumeSize) }}
         {{- end }}
-        
-        {{- $currNodePool = merge $currNodePool (dict "volume_size" $volumeSize) }}
         
         {{- if and (hasKeyAny $np "subnetIds") (gt (len $np.subnetIds) 0) }}
             {{- $currNodePool = merge $currNodePool (dict "subnets" $np.subnetIds) }}
@@ -218,6 +210,5 @@ eks_map_roles = {{ toPrettyJson $roles | join "," }}
 
         {{- $nodePools = append $nodePools $currNodePool }}
     {{- end }}
-node_pools = {{ toPrettyJson $nodePools | join "," }}
+node_pools = {{ toPrettyJson $nodePools }}
 {{- end }}
-
