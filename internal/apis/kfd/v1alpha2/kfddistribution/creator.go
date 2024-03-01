@@ -177,6 +177,7 @@ func (c *ClusterCreator) Create(startFrom string, _, _ int) error {
 		c.dryRun,
 		c.stateStore,
 		c.force,
+		c.phase,
 	)
 
 	renderedConfig, err := c.RenderConfig()

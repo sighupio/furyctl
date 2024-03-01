@@ -13,33 +13,38 @@ import (
 	"github.com/sighupio/furyctl/internal/x/slices"
 )
 
-func TestClean(t *testing.T) {
+func TestDifference(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
 		name string
-		s    []string
+		a    []string
+		b    []string
 		want []string
 	}{
 		{
 			name: "empty",
-			s:    []string{},
+			a:    []string{},
+			b:    []string{},
 			want: []string{},
 		},
 		{
-			name: "one element",
-			s:    []string{"a"},
+			name: "one element - not equal",
+			a:    []string{"a"},
+			b:    []string{"b"},
 			want: []string{"a"},
 		},
 		{
-			name: "one zero",
-			s:    []string{"a", "", "c"},
-			want: []string{"a", "c"},
+			name: "one element - equal",
+			a:    []string{"a"},
+			b:    []string{"a"},
+			want: []string{},
 		},
 		{
-			name: "all zero",
-			s:    []string{"", "", ""},
-			want: []string{},
+			name: "not disjoint",
+			a:    []string{"a", "b", "c"},
+			b:    []string{"a", "d", "e"},
+			want: []string{"b", "c"},
 		},
 	}
 
@@ -48,8 +53,8 @@ func TestClean(t *testing.T) {
 
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			if got := slices.Clean(tt.s); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("Clean() = %v, want %v", got, tt.want)
+			if got := slices.Difference(tt.a, tt.b); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("Difference() = %v, want %v", got, tt.want)
 			}
 		})
 	}

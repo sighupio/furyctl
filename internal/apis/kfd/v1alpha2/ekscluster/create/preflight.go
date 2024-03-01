@@ -16,6 +16,7 @@ import (
 	"github.com/sighupio/fury-distribution/pkg/apis/ekscluster/v1alpha2/private"
 	"github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/ekscluster/common"
 	"github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/ekscluster/rules"
+	"github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/ekscluster/supported"
 	"github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/ekscluster/vpn"
 	"github.com/sighupio/furyctl/internal/cluster"
 	"github.com/sighupio/furyctl/internal/diffs"
@@ -50,6 +51,7 @@ type PreFlight struct {
 	dryRun     bool
 	paths      cluster.CreatorPaths
 	force      []string
+	phase      string
 }
 
 func NewPreFlight(
@@ -60,9 +62,10 @@ func NewPreFlight(
 	vpnAutoConnect bool,
 	skipVpn bool,
 	force []string,
-	infraOutputsPath string,
+	infraOutputsPath,
+	phase string,
 ) (*PreFlight, error) {
-	phase := cluster.NewOperationPhase(
+	p := cluster.NewOperationPhase(
 		path.Join(paths.WorkDir, cluster.OperationPhasePreFlight),
 		kfdManifest.Tools,
 		paths.BinPath,
@@ -75,7 +78,7 @@ func NewPreFlight(
 
 	vpnConnector, err := vpn.NewConnector(
 		furyctlConf.Metadata.Name,
-		path.Join(phase.Path, "secrets"),
+		path.Join(p.Path, "secrets"),
 		paths.BinPath,
 		kfdManifest.Tools.Common.Furyagent.Version,
 		vpnAutoConnect,
@@ -88,7 +91,7 @@ func NewPreFlight(
 
 	return &PreFlight{
 		PreFlight: &common.PreFlight{
-			OperationPhase: phase,
+			OperationPhase: p,
 			FuryctlConf:    furyctlConf,
 			ConfigPath:     paths.ConfigPath,
 			AWSRunner: awscli.NewRunner(
@@ -102,8 +105,8 @@ func NewPreFlight(
 			TFRunnerInfra: terraform.NewRunner(
 				execx.NewStdExecutor(),
 				terraform.Paths{
-					WorkDir:   path.Join(phase.Path, "terraform", "infrastructure"),
-					Terraform: phase.TerraformPath,
+					WorkDir:   path.Join(p.Path, "terraform", "infrastructure"),
+					Terraform: p.TerraformPath,
 				},
 			),
 			InfrastructureTerraformOutputsPath: infraOutputsPath,
@@ -118,15 +121,15 @@ func NewPreFlight(
 		tfRunnerKube: terraform.NewRunner(
 			execx.NewStdExecutor(),
 			terraform.Paths{
-				WorkDir:   path.Join(phase.Path, "terraform", "kubernetes"),
-				Terraform: phase.TerraformPath,
+				WorkDir:   path.Join(p.Path, "terraform", "kubernetes"),
+				Terraform: p.TerraformPath,
 			},
 		),
 		kubeRunner: kubectl.NewRunner(
 			execx.NewStdExecutor(),
 			kubectl.Paths{
-				Kubectl: phase.KubectlPath,
-				WorkDir: phase.Path,
+				Kubectl: p.KubectlPath,
+				WorkDir: p.Path,
 			},
 			true,
 			true,
@@ -135,6 +138,7 @@ func NewPreFlight(
 		dryRun: dryRun,
 		paths:  paths,
 		force:  force,
+		phase:  phase,
 	}, nil
 }
 
@@ -249,6 +253,14 @@ func (p *PreFlight) Exec(renderedConfig map[string]any) (*Status, error) {
 
 			if err := p.CheckReducersDiffs(d, diffChecker); err != nil {
 				return status, fmt.Errorf("error checking reducer diffs: %w", err)
+			}
+
+			if p.phase != cluster.OperationPhaseAll {
+				logrus.Info("Cluster configuration has changed, checking if changes are supported in the current phase...")
+
+				if err := cluster.AssertPhaseDiffs(d, p.phase, (&supported.Phases{}).Get()); err != nil {
+					return status, fmt.Errorf("error checking changes to other phases: %w", err)
+				}
 			}
 		}
 	}
