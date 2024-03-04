@@ -171,10 +171,15 @@ func (d *Downloader) DoDownload(
 		return DownloadResult{}, fmt.Errorf("error applying compat patches: %w", err)
 	}
 
+	postPatchkfdManifest, err := yamlx.FromFileV3[config.KFD](kfdPath)
+	if err != nil {
+		return DownloadResult{}, err
+	}
+
 	return DownloadResult{
 		RepoPath:       dst,
 		MinimalConf:    minimalConf,
-		DistroManifest: kfdManifest,
+		DistroManifest: postPatchkfdManifest,
 	}, nil
 }
 
