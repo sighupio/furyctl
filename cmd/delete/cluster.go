@@ -40,7 +40,7 @@ type ClusterCmdFlags struct {
 	DistroLocation     string
 	Phase              string
 	BinPath            string
-	Force              bool
+	Force              []string
 	SkipVpn            bool
 	VpnAutoConnect     bool
 	DryRun             bool
@@ -203,7 +203,7 @@ func NewClusterCmd(tracker *analytics.Tracker) *cobra.Command {
 				return fmt.Errorf("error while initializing cluster deleter: %w", err)
 			}
 
-			if !flags.Force {
+			if !cluster.IsForceEnabledForFeature(flags.Force, cluster.ForceFeatureAll) {
 				_, err = fmt.Println("WARNING: You are about to delete a cluster. This action is irreversible.")
 				if err != nil {
 					cmdEvent.AddErrorMessage(err)
@@ -297,10 +297,10 @@ func NewClusterCmd(tracker *analytics.Tracker) *cobra.Command {
 		"When set will not wait for user confirmation that the VPN is connected",
 	)
 
-	cmd.Flags().Bool(
+	cmd.Flags().StringSlice(
 		"force",
-		false,
-		"WARNING: furyctl won't ask for confirmation and will force delete the cluster and its resources.",
+		[]string{},
+		"WARNING: furyctl won't ask for confirmation and will force delete the cluster and its resources. The only available option is 'all'.",
 	)
 
 	cmd.Flags().Bool(
@@ -374,7 +374,7 @@ func getDeleteClusterCmdFlags(cmd *cobra.Command, tracker *analytics.Tracker, cm
 		return ClusterCmdFlags{}, fmt.Errorf(WrappedErrMessage, ErrParsingFlag, "no-tty")
 	}
 
-	force, err := cmdutil.BoolFlag(cmd, "force", tracker, cmdEvent)
+	force, err := cmdutil.StringSliceFlag(cmd, "force", tracker, cmdEvent)
 	if err != nil {
 		return ClusterCmdFlags{}, fmt.Errorf(WrappedErrMessage, ErrParsingFlag, "force")
 	}
