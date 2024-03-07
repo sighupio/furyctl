@@ -48,3 +48,4 @@ tools:
   eks:
     awscli:
       version: ">= 2.8.12"
+
