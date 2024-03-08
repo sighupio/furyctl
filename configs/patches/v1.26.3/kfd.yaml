@@ -2,22 +2,22 @@
 # Use of this source code is governed by a BSD-style
 # license that can be found in the LICENSE file.
 
-version: v1.25.9
+version: v1.26.3
 modules:
   auth: v0.0.4
-  aws: v4.0.1-rc.0
+  aws: v4.0.0
   dr: v2.1.0
   ingress: v2.1.0
-  logging: v3.1.3
-  monitoring: v2.1.0
-  opa: v1.8.0
-  networking: v1.13.0
+  logging: v3.2.0
+  monitoring: v2.2.0
+  opa: v1.9.0
+  networking: v1.14.0
 kubernetes:
   eks:
-    version: 1.25
-    installer: v2.0.2 
+    version: 1.26
+    installer: v2.0.2
   onpremises:
-    version: 1.25.12
+    version: 1.26.7
     installer: v1.28.7
 furyctlSchemas:
   eks:
@@ -34,7 +34,7 @@ tools:
     furyagent:
       version: 0.3.0
     kubectl:
-      version: 1.25.9
+      version: 1.26.7
     kustomize:
       version: 3.10.0
     terraform:
@@ -48,4 +48,3 @@ tools:
   eks:
     awscli:
       version: ">= 2.8.12"
-

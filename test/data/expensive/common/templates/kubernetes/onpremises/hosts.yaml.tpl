@@ -1,5 +1,5 @@
-{{- $dnsZone := .spec.kubernetes.dnsZone -}}
-{{- $controlPlaneAddress := .spec.kubernetes.controlPlaneAddress -}}
+{{- $dnsZone := .spec.kubernetes.dnsZone }}
+{{- $controlPlaneAddress := .spec.kubernetes.controlPlaneAddress }}
 
 all:
   children:

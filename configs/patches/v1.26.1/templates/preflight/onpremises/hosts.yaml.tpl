@@ -5,8 +5,8 @@
 # THIS FILE HAS BEEN PATCHED BY FURYCTL TO ENSURE BACKWARDS COMPATIBILITY.
 # IT IS NOT THE ORIGINAL FILE FOUND IN THE DISTRIBUTION REPOSITORY.
 
-{{- $dnsZone := .spec.kubernetes.dnsZone -}}
-{{- $controlPlaneAddress := .spec.kubernetes.controlPlaneAddress -}}
+{{- $dnsZone := .spec.kubernetes.dnsZone }}
+{{- $controlPlaneAddress := .spec.kubernetes.controlPlaneAddress }}
 
 all:
   children:
