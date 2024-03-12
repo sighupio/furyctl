@@ -6,6 +6,7 @@ Warning: Versions < 0.27.5 do not work with the OnPremises provider, we fixed th
 
 | Furyctl / KFD | 1.27.3             | 1.27.2             | 1.27.1             | 1.27.0             | 1.26.5             | 1.26.4             | 1.26.3             | 1.25.10            | 1.25.9             | 1.25.8             |
 | ------------- | ------------------ | ------------------ | ------------------ | ------------------ | ------------------ | ------------------ | ------------------ | ------------------ | ------------------ | ------------------ |
+| 0.27.6        | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: |
 | 0.27.5        | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: |
 | 0.27.4        | :warning:          | :warning:          | :warning:          | :warning:          | :warning:          | :warning:          | :warning:          | :warning:          | :warning:          | :warning:          |
 | 0.27.3        | :warning:          | :warning:          | :warning:          | :warning:          | :warning:          | :warning:          | :warning:          | :warning:          | :warning:          | :warning:          |
@@ -17,6 +18,7 @@ Warning: Versions < 0.27.5 do not work with the OnPremises provider, we fixed th
 
 | Furyctl / Providers | EKSCluster         | KFDDistribution    | OnPremises         |
 | ------------------- | ------------------ | ------------------ | ------------------ |
+| 0.27.6              | :white_check_mark: | :white_check_mark: | :white_check_mark: |
 | 0.27.5              | :white_check_mark: | :white_check_mark: | :white_check_mark: |
 | 0.27.4              | :white_check_mark: | :white_check_mark: | :x:                |
 | 0.27.3              | :white_check_mark: | :white_check_mark: | :x:                |
