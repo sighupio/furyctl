@@ -440,6 +440,14 @@ func (v *ClusterCreator) CreateAsync(
 }
 
 func (v *ClusterCreator) infraPhase(infra upgrade.OperatorPhaseAsync, vpnConnector *vpn.Connector) error {
+	upgradeState := upgrade.State{
+		Phases: upgrade.Phases{
+			PreInfrastructure:  &upgrade.Phase{Status: upgrade.PhaseStatusPending},
+			Infrastructure:     &upgrade.Phase{Status: upgrade.PhaseStatusPending},
+			PostInfrastructure: &upgrade.Phase{Status: upgrade.PhaseStatusPending},
+		},
+	}
+
 	if v.furyctlConf.Spec.Infrastructure == nil {
 		absPath, err := filepath.Abs(v.paths.ConfigPath)
 		if err != nil {
@@ -451,7 +459,7 @@ func (v *ClusterCreator) infraPhase(infra upgrade.OperatorPhaseAsync, vpnConnect
 		return fmt.Errorf("%w: check at %s", ErrInfraNotPresent, absPath)
 	}
 
-	if err := infra.Exec(StartFromFlagNotSet, &upgrade.State{}); err != nil {
+	if err := infra.Exec(StartFromFlagNotSet, &upgradeState); err != nil {
 		return fmt.Errorf("error while executing infrastructure phase: %w", err)
 	}
 
@@ -477,6 +485,14 @@ func (v *ClusterCreator) kubernetesPhase(
 	vpnConnector *vpn.Connector,
 	renderedConfig map[string]any,
 ) error {
+	upgradeState := upgrade.State{
+		Phases: upgrade.Phases{
+			PreKubernetes:  &upgrade.Phase{Status: upgrade.PhaseStatusPending},
+			Kubernetes:     &upgrade.Phase{Status: upgrade.PhaseStatusPending},
+			PostKubernetes: &upgrade.Phase{Status: upgrade.PhaseStatusPending},
+		},
+	}
+
 	if v.furyctlConf.Spec.Kubernetes.ApiServer.PrivateAccess &&
 		!v.furyctlConf.Spec.Kubernetes.ApiServer.PublicAccess &&
 		!v.dryRun {
@@ -488,7 +504,7 @@ func (v *ClusterCreator) kubernetesPhase(
 	logrus.Warn("Please make sure that the Kubernetes API is reachable before continuing" +
 		" (e.g. check VPN connection is active`), otherwise the installation will fail.")
 
-	if err := kube.Exec(StartFromFlagNotSet, &upgrade.State{}); err != nil {
+	if err := kube.Exec(StartFromFlagNotSet, &upgradeState); err != nil {
 		return fmt.Errorf("error while executing kubernetes phase: %w", err)
 	}
 
@@ -525,6 +541,14 @@ func (v *ClusterCreator) distributionPhase(
 	reducers v1alpha2.Reducers,
 	renderedConfig map[string]any,
 ) error {
+	upgradeState := upgrade.State{
+		Phases: upgrade.Phases{
+			PreDistribution:  &upgrade.Phase{Status: upgrade.PhaseStatusPending},
+			Distribution:     &upgrade.Phase{Status: upgrade.PhaseStatusPending},
+			PostDistribution: &upgrade.Phase{Status: upgrade.PhaseStatusPending},
+		},
+	}
+
 	if v.furyctlConf.Spec.Kubernetes.ApiServer.PrivateAccess &&
 		!v.furyctlConf.Spec.Kubernetes.ApiServer.PublicAccess &&
 		!v.dryRun {
@@ -533,7 +557,7 @@ func (v *ClusterCreator) distributionPhase(
 		}
 	}
 
-	if err := distro.Exec(reducers, StartFromFlagNotSet, &upgrade.State{}); err != nil {
+	if err := distro.Exec(reducers, StartFromFlagNotSet, &upgradeState); err != nil {
 		return fmt.Errorf("error while installing Kubernetes Fury Distribution: %w", err)
 	}
 

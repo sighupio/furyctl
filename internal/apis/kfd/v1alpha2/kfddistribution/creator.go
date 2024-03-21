@@ -247,7 +247,15 @@ func (c *ClusterCreator) Create(startFrom string, _, _ int) error {
 			}
 		}
 
-		if err := distributionPhase.Exec(reducers, StartFromFlagNotSet, &upgrade.State{}); err != nil {
+		upgradeState := upgrade.State{
+			Phases: upgrade.Phases{
+				PreDistribution:  &upgrade.Phase{Status: upgrade.PhaseStatusPending},
+				Distribution:     &upgrade.Phase{Status: upgrade.PhaseStatusPending},
+				PostDistribution: &upgrade.Phase{Status: upgrade.PhaseStatusPending},
+			},
+		}
+
+		if err := distributionPhase.Exec(reducers, StartFromFlagNotSet, &upgradeState); err != nil {
 			return fmt.Errorf("error while executing distribution phase: %w", err)
 		}
 
