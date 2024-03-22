@@ -269,7 +269,15 @@ func (c *ClusterCreator) Create(startFrom string, _, podRunningCheckTimeout int)
 
 	switch c.phase {
 	case cluster.OperationPhaseKubernetes:
-		if err := kubernetesPhase.Exec(StartFromFlagNotSet, &upgrade.State{}); err != nil {
+		upgradeState := upgrade.State{
+			Phases: upgrade.Phases{
+				PreKubernetes:  &upgrade.Phase{Status: upgrade.PhaseStatusPending},
+				Kubernetes:     &upgrade.Phase{Status: upgrade.PhaseStatusPending},
+				PostKubernetes: &upgrade.Phase{Status: upgrade.PhaseStatusPending},
+			},
+		}
+
+		if err := kubernetesPhase.Exec(StartFromFlagNotSet, &upgradeState); err != nil {
 			return fmt.Errorf("error while executing kubernetes phase: %w", err)
 		}
 
@@ -285,7 +293,15 @@ func (c *ClusterCreator) Create(startFrom string, _, podRunningCheckTimeout int)
 			}
 		}
 
-		if err := distributionPhase.Exec(reducers, StartFromFlagNotSet, &upgrade.State{}); err != nil {
+		upgradeState := upgrade.State{
+			Phases: upgrade.Phases{
+				PreDistribution:  &upgrade.Phase{Status: upgrade.PhaseStatusPending},
+				Distribution:     &upgrade.Phase{Status: upgrade.PhaseStatusPending},
+				PostDistribution: &upgrade.Phase{Status: upgrade.PhaseStatusPending},
+			},
+		}
+
+		if err := distributionPhase.Exec(reducers, StartFromFlagNotSet, &upgradeState); err != nil {
 			return fmt.Errorf("error while executing distribution phase: %w", err)
 		}
 
