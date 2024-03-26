@@ -113,7 +113,7 @@ func TestKFDDistributionCheckIsCompatible(t *testing.T) {
 			expected:            false,
 		},
 		{
-			name:                "should return true if distribution version is greater than 1.27.0 and less than 1.27.4",
+			name:                "should return true if distribution version is greater than 1.27.0 and less than 1.27.5",
 			distributionVersion: "v1.27.2",
 			expected:            true,
 		},
