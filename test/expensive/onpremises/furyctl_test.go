@@ -636,7 +636,9 @@ var (
 
 	_ = Describe("furyctl & distro v1.27.3 - minimal", Ordered, Serial, CreateAndDeleteTestScenario("1.27.3", false))
 
-	_ = Describe("furyctl & distro v1.27.3 - minimal - ephemeral", Ordered, Serial, CreateAndDeleteTestScenario("1.27.3", true))
+	_ = Describe("furyctl & distro v1.27.4 - minimal", Ordered, Serial, CreateAndDeleteTestScenario("1.27.4", false))
+
+	_ = Describe("furyctl & distro v1.27.4 - minimal - ephemeral", Ordered, Serial, CreateAndDeleteTestScenario("1.27.4", true))
 
 	_ = Describe("furyctl & distro v1.25.9 - minimal - by phase", Ordered, Serial, CreateAndDeleteByPhaseTestScenario("1.25.9", false))
 
@@ -657,4 +659,6 @@ var (
 	_ = Describe("furyctl & distro v1.27.2 - minimal - by phase", Ordered, Serial, CreateAndDeleteByPhaseTestScenario("1.27.2", false))
 
 	_ = Describe("furyctl & distro v1.27.3 - minimal - by phase", Ordered, Serial, CreateAndDeleteByPhaseTestScenario("1.27.3", false))
+
+	_ = Describe("furyctl & distro v1.27.4 - minimal - by phase", Ordered, Serial, CreateAndDeleteByPhaseTestScenario("1.27.4", false))
 )
