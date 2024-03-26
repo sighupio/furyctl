@@ -85,7 +85,7 @@ func (c *EKSClusterCheck) IsCompatible() bool {
 		return false
 	}
 
-	max12SevenVersion, err := semver.NewVersion("v1.27.3")
+	max12SevenVersion, err := semver.NewVersion("v1.27.4")
 	if err != nil {
 		return false
 	}
@@ -136,7 +136,7 @@ func (c *KFDDistributionCheck) IsCompatible() bool {
 		return false
 	}
 
-	max12SevenVersion, err := semver.NewVersion("v1.27.3")
+	max12SevenVersion, err := semver.NewVersion("v1.27.4")
 	if err != nil {
 		return false
 	}
@@ -187,7 +187,7 @@ func (c *OnPremisesCheck) IsCompatible() bool {
 		return false
 	}
 
-	max12SevenVersion, err := semver.NewVersion("v1.27.3")
+	max12SevenVersion, err := semver.NewVersion("v1.27.4")
 	if err != nil {
 		return false
 	}
