@@ -11,6 +11,8 @@ import (
 
 	"github.com/hashicorp/go-getter"
 	"github.com/sirupsen/logrus"
+
+	gogetterx "github.com/sighupio/furyctl/internal/x/go-getter"
 )
 
 var ErrDownloadOptionsExhausted = errors.New("downloading options exhausted")
@@ -40,6 +42,22 @@ func (g *GoGetterClient) Download(src, dst string) error {
 			Src:  fullSrc,
 			Dst:  dst,
 			Mode: getter.ClientModeAny,
+			Getters: map[string]getter.Getter{
+				"file": &gogetterx.FileGetter{
+					Copy: true,
+				},
+				"git": new(getter.GitGetter),
+				"gcs": new(getter.GCSGetter),
+				"hg":  new(getter.HgGetter),
+				"s3":  new(getter.S3Getter),
+				"http": &getter.HttpGetter{
+					Netrc: true,
+				},
+				"https": &getter.HttpGetter{
+					Netrc: true,
+				},
+			},
+			DisableSymlinks: true,
 		}
 
 		err := client.Get()
