@@ -16,7 +16,7 @@ import (
 )
 
 var (
-	EnvRegexp          = regexp.MustCompile(`{(.*?)}`)
+	DynamicRegexp      = regexp.MustCompile(`{(.*?)}`)
 	RelativePathRegexp = regexp.MustCompile(`^\.{1,}\/`)
 )
 
@@ -127,7 +127,7 @@ func (m *Mapper) injectDynamicValuesAndPathsString(value string) (string, error)
 	cfgParser := parser.NewConfigParser(m.furyctlConfDir)
 
 	// If the value contains dynamic values, we need to parse them.
-	dynamicValues := EnvRegexp.FindAllString(value, -1)
+	dynamicValues := DynamicRegexp.FindAllString(value, -1)
 	for _, dynamicValue := range dynamicValues {
 		parsedDynamicValue, err := cfgParser.ParseDynamicValue(dynamicValue)
 		if err != nil {

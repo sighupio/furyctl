@@ -15,6 +15,7 @@ import (
 )
 
 const (
+	Path  = "path"
 	Env   = "env"
 	File  = "file"
 	HTTP  = "http"
@@ -46,6 +47,9 @@ func (p *ConfigParser) ParseDynamicValue(val any) (string, error) {
 		sourceValue := strings.TrimSuffix(spl[1], "}")
 
 		switch source {
+		case Path:
+			return filepath.Join(p.baseDir, filepath.Clean(sourceValue)), nil
+
 		case Env:
 			envVar := os.Getenv(sourceValue)
 
