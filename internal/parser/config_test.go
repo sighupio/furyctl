@@ -31,6 +31,11 @@ func TestNewConfigParser(t *testing.T) {
 func TestConfigParser_ParseDynamicValue(t *testing.T) {
 	t.Parallel()
 
+	pathTmpDir, err := os.MkdirTemp("", "test")
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	testCases := []struct {
 		name     string
 		setup    func() (baseDir, value string, teardown func())
@@ -134,24 +139,55 @@ func TestConfigParser_ParseDynamicValue(t *testing.T) {
 			},
 			expected: "hello test",
 		},
+		{
+			name: "parsing path relative - one level",
+			setup: func() (string, string, func()) {
+				if err := os.WriteFile(pathTmpDir+"/test_file.txt", []byte("hello test"), os.ModePerm); err != nil {
+					t.Fatal(err)
+				}
+
+				return pathTmpDir, fmt.Sprintf("{path://./test_file.txt}"), func() {}
+			},
+			expected: path.Join(pathTmpDir, "/test_file.txt"),
+		},
+		{
+			name: "parsing path relative - two levels",
+			setup: func() (string, string, func()) {
+				err := os.Mkdir(pathTmpDir+"/test_dir", os.ModePerm)
+				if err != nil {
+					t.Fatal(err)
+				}
+
+				if err := os.WriteFile(pathTmpDir+"/test_file_2.txt", []byte("hello test"), os.ModePerm); err != nil {
+					t.Fatal(err)
+				}
+
+				return path.Join(pathTmpDir, "/test_dir"), fmt.Sprintf("{path://../test_file_2.txt}"), func() {}
+			},
+			expected: path.Join(pathTmpDir, "/test_file_2.txt"),
+		},
 	}
 
-	for _, tc := range testCases {
-		tc := tc
+	t.Run("group", func(t *testing.T) {
+		for _, tc := range testCases {
+			tc := tc
 
-		t.Run(tc.name, func(t *testing.T) {
-			t.Parallel()
+			t.Run(tc.name, func(t *testing.T) {
+				t.Parallel()
 
-			baseDir, value, teardownFn := tc.setup()
+				baseDir, value, teardownFn := tc.setup()
 
-			defer teardownFn()
+				defer teardownFn()
 
-			cfgParser := parser.NewConfigParser(baseDir)
+				cfgParser := parser.NewConfigParser(baseDir)
 
-			res, err := cfgParser.ParseDynamicValue(value)
+				res, err := cfgParser.ParseDynamicValue(value)
 
-			assert.NoError(t, err)
-			assert.Equal(t, tc.expected, res)
-		})
-	}
+				assert.NoError(t, err)
+				assert.Equal(t, tc.expected, res)
+			})
+		}
+	})
+
+	os.RemoveAll(pathTmpDir)
 }
