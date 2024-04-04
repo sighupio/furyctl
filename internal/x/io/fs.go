@@ -17,10 +17,11 @@ import (
 )
 
 const (
-	FullPermAccess   = 0o755
-	UserGroupPerm    = 0o750
-	FullRWPermAccess = 0o600
-	RWPermAccess     = 0o644
+	FullPermAccess         = 0o755
+	UserGroupPerm          = 0o750
+	FullRWPermAccess       = 0o600
+	RWPermAccess           = 0o644
+	RWPermAccessPermissive = 0o666
 )
 
 var (
@@ -161,7 +162,7 @@ func CopyRecursive(src fs.FS, dest string) error {
 			return err
 		}
 
-		if err := os.WriteFile(path.Join(dest, file.Name()), fileContent, RWPermAccess); err != nil {
+		if err := os.WriteFile(path.Join(dest, file.Name()), fileContent, RWPermAccessPermissive); err != nil {
 			return fmt.Errorf("error while writing file %s: %w", file.Name(), err)
 		}
 
@@ -187,7 +188,7 @@ func EnsureDir(fileName string) error {
 			return fmt.Errorf("error while checking if directory %s exists: %w", dirName, serr)
 		}
 
-		if err := os.MkdirAll(dirName, os.ModePerm); err != nil {
+		if err := os.MkdirAll(dirName, FullPermAccess); err != nil {
 			return fmt.Errorf("error while creating directory %s: %w", dirName, err)
 		}
 	}

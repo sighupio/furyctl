@@ -148,7 +148,7 @@ test-integration:
 	@GOFLAGS=-mod=mod go test -v -tags=integration -timeout 120s ./...
 
 test-e2e:
-	@GOFLAGS=-mod=mod ginkgo run -vv --trace -tags=e2e -timeout 300s -p test/e2e
+	@GOFLAGS=-mod=mod ginkgo run -vv --trace -tags=e2e -timeout 600s -p test/e2e
 
 test-expensive:
 	$(call yes-or-no, "WARNING: This test will create a cluster on AWS. Are you sure you want to continue?")

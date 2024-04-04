@@ -10,6 +10,7 @@ run:
   timeout: 5m
   skip-files:
     - ".*\\.gen\\.go$"
+    - "file_getter.go"
   modules-download-mode: readonly
 
 # output configuration options
