@@ -59,6 +59,7 @@ func NewInfrastructure(
 			OperationPhase: phase,
 			FuryctlConf:    furyctlConf,
 			ConfigPath:     paths.ConfigPath,
+			DistroPath:     paths.DistroPath,
 		},
 		kfdManifest: kfdManifest,
 		tfRunner: terraform.NewRunner(
