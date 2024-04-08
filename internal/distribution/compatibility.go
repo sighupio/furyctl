@@ -90,9 +90,20 @@ func (c *EKSClusterCheck) IsCompatible() bool {
 		return false
 	}
 
+	min12EightVersion, err := semver.NewVersion("v1.28.0")
+	if err != nil {
+		return false
+	}
+
+	max12EightVersion, err := semver.NewVersion("v1.28.0")
+	if err != nil {
+		return false
+	}
+
 	return (currentVersion.GreaterThanOrEqual(min125Version) && currentVersion.LessThanOrEqual(max125Version)) ||
 		(currentVersion.GreaterThanOrEqual(min126Version) && currentVersion.LessThanOrEqual(max126Version)) ||
-		(currentVersion.GreaterThanOrEqual(min12SevenVersion) && currentVersion.LessThanOrEqual(max12SevenVersion))
+		(currentVersion.GreaterThanOrEqual(min12SevenVersion) && currentVersion.LessThanOrEqual(max12SevenVersion)) ||
+		(currentVersion.GreaterThanOrEqual(min12EightVersion)) && currentVersion.LessThanOrEqual(max12EightVersion)
 }
 
 type KFDDistributionCheck struct {

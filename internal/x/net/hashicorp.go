@@ -57,7 +57,7 @@ func (g *GoGetterClient) Download(src, dst string) error {
 					Netrc: true,
 				},
 			},
-			DisableSymlinks: true,
+			DisableSymlinks: false,
 		}
 
 		err := client.Get()
