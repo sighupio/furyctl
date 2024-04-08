@@ -10,13 +10,17 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"slices"
+	"strings"
 
+	r3diff "github.com/r3labs/diff/v3"
 	"github.com/sirupsen/logrus"
 
 	"github.com/sighupio/fury-distribution/pkg/apis/config"
 	"github.com/sighupio/furyctl/internal/merge"
 	"github.com/sighupio/furyctl/internal/template"
 	iox "github.com/sighupio/furyctl/internal/x/io"
+	slicesx "github.com/sighupio/furyctl/internal/x/slices"
 	yamlx "github.com/sighupio/furyctl/internal/x/yaml"
 )
 
@@ -46,6 +50,7 @@ var (
 		"unsupported operation phase, options are: pre-infrastructure, infrastructure, post-infrastructure, " +
 			"pre-kubernetes, kubernetes, post-kubernetes, pre-distribution, distribution, post-distribution, plugins",
 	)
+	ErrChangesToOtherPhases = errors.New("changes to other phases detected")
 )
 
 func CheckPhase(phase string) error {
@@ -328,4 +333,30 @@ func (*OperationPhase) CreateFuryctlMerger(
 	}
 
 	return reverseMerger, nil
+}
+
+func AssertPhaseDiffs(d r3diff.Changelog, currentPhase string, supportedPhases []string) error {
+	unsupportedChanges := make([]string, 0)
+
+	otherPhases := slicesx.Map(slicesx.Difference(supportedPhases, []string{currentPhase}), func(s string) string {
+		return fmt.Sprintf(".spec.%s.", s)
+	})
+
+	for _, dfs := range d {
+		joinedPath := "." + strings.Join(dfs.Path, ".")
+
+		if slices.ContainsFunc(otherPhases, func(s string) bool {
+			return strings.HasPrefix(joinedPath, s)
+		}) {
+			unsupportedChanges = append(unsupportedChanges, joinedPath)
+		}
+	}
+
+	if len(unsupportedChanges) > 0 {
+		logrus.Debugf("unsupported changes to other phases: %s", unsupportedChanges)
+
+		return ErrChangesToOtherPhases
+	}
+
+	return nil
 }

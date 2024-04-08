@@ -15,6 +15,7 @@ import (
 	"github.com/sighupio/fury-distribution/pkg/apis/config"
 	"github.com/sighupio/fury-distribution/pkg/apis/onpremises/v1alpha2/public"
 	"github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/onpremises/rules"
+	"github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/onpremises/supported"
 	"github.com/sighupio/furyctl/internal/cluster"
 	"github.com/sighupio/furyctl/internal/diffs"
 	"github.com/sighupio/furyctl/internal/state"
@@ -47,6 +48,7 @@ type PreFlight struct {
 	kfdManifest   config.KFD
 	dryRun        bool
 	force         []string
+	phase         string
 }
 
 func NewPreFlight(
@@ -56,15 +58,16 @@ func NewPreFlight(
 	dryRun bool,
 	stateStore state.Storer,
 	force []string,
+	phase string,
 ) *PreFlight {
-	phase := cluster.NewOperationPhase(
+	p := cluster.NewOperationPhase(
 		path.Join(paths.WorkDir, cluster.OperationPhasePreFlight),
 		kfdManifest.Tools,
 		paths.BinPath,
 	)
 
 	return &PreFlight{
-		OperationPhase: phase,
+		OperationPhase: p,
 		furyctlConf:    furyctlConf,
 		paths:          paths,
 		stateStore:     stateStore,
@@ -73,14 +76,14 @@ func NewPreFlight(
 			ansible.Paths{
 				Ansible:         "ansible",
 				AnsiblePlaybook: "ansible-playbook",
-				WorkDir:         phase.Path,
+				WorkDir:         p.Path,
 			},
 		),
 		kubeRunner: kubectl.NewRunner(
 			execx.NewStdExecutor(),
 			kubectl.Paths{
-				Kubectl: phase.KubectlPath,
-				WorkDir: phase.Path,
+				Kubectl: p.KubectlPath,
+				WorkDir: p.Path,
 			},
 			true,
 			true,
@@ -89,6 +92,7 @@ func NewPreFlight(
 		kfdManifest: kfdManifest,
 		dryRun:      dryRun,
 		force:       force,
+		phase:       phase,
 	}
 }
 
@@ -192,6 +196,14 @@ func (p *PreFlight) Exec(renderedConfig map[string]any) (*Status, error) {
 
 			if err := p.CheckReducerDiffs(d, diffChecker); err != nil {
 				return status, fmt.Errorf("error checking reducer diffs: %w", err)
+			}
+
+			if p.phase != cluster.OperationPhaseAll {
+				logrus.Info("Cluster configuration has changed, checking if changes are supported in the current phase...")
+
+				if err := cluster.AssertPhaseDiffs(d, p.phase, (&supported.Phases{}).Get()); err != nil {
+					return status, fmt.Errorf("error checking changes to other phases: %w", err)
+				}
 			}
 		}
 	}

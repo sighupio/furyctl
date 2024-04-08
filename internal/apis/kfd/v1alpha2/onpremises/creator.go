@@ -210,6 +210,7 @@ func (c *ClusterCreator) Create(startFrom string, _, podRunningCheckTimeout int)
 		c.dryRun,
 		c.stateStore,
 		c.force,
+		c.phase,
 	)
 
 	renderedConfig, err := c.RenderConfig()
