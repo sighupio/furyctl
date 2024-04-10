@@ -21,6 +21,7 @@ Warning: Versions < 0.27.5 do not work with the OnPremises provider, we fixed th
 
 | Furyctl / Providers | EKSCluster         | KFDDistribution    | OnPremises         |
 | ------------------- | ------------------ | ------------------ | ------------------ |
+| 0.28.0              | :white_check_mark: | :white_check_mark: | :white_check_mark: |
 | 0.27.8              | :white_check_mark: | :white_check_mark: | :white_check_mark: |
 | 0.27.7              | :white_check_mark: | :white_check_mark: | :white_check_mark: |
 | 0.27.6              | :white_check_mark: | :white_check_mark: | :white_check_mark: |
