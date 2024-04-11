@@ -46,13 +46,13 @@ func TestEKSClusterCheckIsCompatible(t *testing.T) {
 			expected:            false,
 		},
 		{
-			name:                "should return false if distribution version is greater than 1.26.5",
-			distributionVersion: "v1.26.6",
+			name:                "should return false if distribution version is greater than 1.26.6",
+			distributionVersion: "v1.26.7",
 			expected:            false,
 		},
 		{
-			name:                "should return false if distribution version is greater than 1.27.4",
-			distributionVersion: "v1.27.5",
+			name:                "should return false if distribution version is greater than 1.27.5",
+			distributionVersion: "v1.27.6",
 			expected:            false,
 		},
 		{
@@ -113,8 +113,8 @@ func TestKFDDistributionCheckIsCompatible(t *testing.T) {
 			expected:            true,
 		},
 		{
-			name:                "should return false if distribution version is greater than 1.26.5",
-			distributionVersion: "v1.26.6",
+			name:                "should return false if distribution version is greater than 1.26.6",
+			distributionVersion: "v1.26.7",
 			expected:            false,
 		},
 		{
@@ -123,8 +123,8 @@ func TestKFDDistributionCheckIsCompatible(t *testing.T) {
 			expected:            true,
 		},
 		{
-			name:                "should return false if distribution version is greater than 1.27.4",
-			distributionVersion: "v1.27.5",
+			name:                "should return false if distribution version is greater than 1.27.5",
+			distributionVersion: "v1.27.6",
 			expected:            false,
 		},
 		{
@@ -190,8 +190,8 @@ func TestOnPremisesCheckIsCompatible(t *testing.T) {
 			expected:            true,
 		},
 		{
-			name:                "should return false if distribution version is greater than 1.26.5",
-			distributionVersion: "v1.26.6",
+			name:                "should return false if distribution version is greater than 1.26.6",
+			distributionVersion: "v1.26.7",
 			expected:            false,
 		},
 		{
@@ -200,8 +200,8 @@ func TestOnPremisesCheckIsCompatible(t *testing.T) {
 			expected:            true,
 		},
 		{
-			name:                "should return false if distribution version is greater than 1.27.4",
-			distributionVersion: "v1.27.5",
+			name:                "should return false if distribution version is greater than 1.27.5",
+			distributionVersion: "v1.27.6",
 			expected:            false,
 		},
 		{
