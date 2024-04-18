@@ -60,6 +60,11 @@ func TestEKSClusterCheckIsCompatible(t *testing.T) {
 			distributionVersion: "v1.28.0",
 			expected:            true,
 		},
+		{
+			name:                "should return true if distribution version is equal to 1.29.0",
+			distributionVersion: "v1.29.0",
+			expected:            true,
+		},
 	}
 
 	for _, tc := range testCases {
@@ -137,6 +142,11 @@ func TestKFDDistributionCheckIsCompatible(t *testing.T) {
 			distributionVersion: "v1.28.0",
 			expected:            true,
 		},
+		{
+			name:                "should return true if distribution version is equal to 1.29.0",
+			distributionVersion: "v1.29.0",
+			expected:            true,
+		},
 	}
 
 	for _, tc := range testCases {
@@ -207,6 +217,11 @@ func TestOnPremisesCheckIsCompatible(t *testing.T) {
 		{
 			name:                "should return true if distribution version is equal to 1.28.0",
 			distributionVersion: "v1.28.0",
+			expected:            true,
+		},
+		{
+			name:                "should return true if distribution version is equal to 1.29.0",
+			distributionVersion: "v1.29.0",
 			expected:            true,
 		},
 	}
