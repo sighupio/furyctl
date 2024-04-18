@@ -173,4 +173,8 @@ var (
 	_ = Describe("furyctl & distro v1.28.0 - public minimal", CreateAndDeleteTestScenario("1.28.0", false))
 
 	_ = Describe("furyctl & distro v1.28.0 - public minimal - ephemeral", CreateAndDeleteTestScenario("1.28.0", true))
+
+	_ = Describe("furyctl & distro v1.29.0 - public minimal", CreateAndDeleteTestScenario("1.29.0", false))
+
+	_ = Describe("furyctl & distro v1.29.0 - public minimal - ephemeral", CreateAndDeleteTestScenario("1.29.0", true))
 )
