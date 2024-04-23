@@ -74,9 +74,10 @@ func NewApplyCommand(tracker *analytics.Tracker) *cobra.Command {
 				return err
 			}
 
+			outDir := flags.Outdir
+
 			// Get home dir.
 			logrus.Debug("Getting Home Directory Path...")
-			outDir := flags.Outdir
 
 			homeDir, err := os.UserHomeDir()
 			if err != nil {
@@ -106,7 +107,7 @@ func NewApplyCommand(tracker *analytics.Tracker) *cobra.Command {
 			depsvl := dependencies.NewValidator(executor, flags.BinPath, flags.FuryctlPath, flags.VpnAutoConnect)
 
 			if flags.DistroLocation == "" {
-				distrodl = distribution.NewCachingDownloader(client, flags.GitProtocol)
+				distrodl = distribution.NewCachingDownloader(client, outDir, flags.GitProtocol)
 			} else {
 				distrodl = distribution.NewDownloader(client, flags.GitProtocol)
 			}
@@ -142,7 +143,7 @@ func NewApplyCommand(tracker *analytics.Tracker) *cobra.Command {
 			basePath := filepath.Join(outDir, ".furyctl", res.MinimalConf.Metadata.Name)
 
 			// Init second half of collaborators.
-			depsdl := dependencies.NewCachingDownloader(client, basePath, flags.BinPath, flags.GitProtocol)
+			depsdl := dependencies.NewCachingDownloader(client, outDir, basePath, flags.BinPath, flags.GitProtocol)
 
 			// Validate the furyctl.yaml file.
 			logrus.Info("Validating configuration file...")

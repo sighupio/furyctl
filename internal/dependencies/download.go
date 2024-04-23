@@ -38,8 +38,14 @@ var (
 	ErrModuleNotFound     = errors.New("module not found")
 )
 
-func NewCachingDownloader(client netx.Client, basePath, binPath string, gitProtocol git.Protocol) *Downloader {
-	return NewDownloader(netx.WithLocalCache(client, netx.GetCacheFolder()), basePath, binPath, gitProtocol)
+func NewCachingDownloader(client netx.Client, outDir, basePath, binPath string, gitProtocol git.Protocol) *Downloader {
+	return NewDownloader(netx.WithLocalCache(
+		client,
+		filepath.Join(outDir, ".furyctl", "cache")),
+		basePath,
+		binPath,
+		gitProtocol,
+	)
 }
 
 func NewDownloader(client netx.Client, basePath, binPath string, gitProtocol git.Protocol) *Downloader {

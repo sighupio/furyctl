@@ -49,7 +49,7 @@ var (
 	}
 
 	CreateClusterTest = func(state *ContextState) {
-		dlRes := DownloadFuryDistribution(state.FuryctlYaml)
+		dlRes := DownloadFuryDistribution(state.TestDir, state.FuryctlYaml)
 
 		tfPlanPath := path.Join(
 			state.TestDir,
