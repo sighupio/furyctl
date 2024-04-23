@@ -889,6 +889,7 @@ func (v *ClusterCreator) setupPhases(upgr *upgrade.Upgrade) (
 		v.force,
 		infra.Self().TerraformOutputsPath,
 		v.phase,
+		upgr.Enabled,
 	)
 	if err != nil {
 		return nil, nil, nil, nil, nil, fmt.Errorf("error while initiating preflight phase: %w", err)
