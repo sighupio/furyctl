@@ -188,7 +188,7 @@ func (*ClusterCreator) GetPhasePath(phase string) (string, error) {
 func (v *ClusterCreator) Create(startFrom string, timeout, _ int) error {
 	upgr := upgrade.New(v.paths, string(v.furyctlConf.Kind))
 
-	infra, kube, distro, plugins, preflight, err := v.setupPhases(upgr)
+	infra, kube, distro, plugins, preflight, err := v.setupPhases(upgr, v.upgrade)
 	if err != nil {
 		return err
 	}
@@ -822,7 +822,7 @@ func (v *ClusterCreator) RenderConfig() (map[string]any, error) {
 }
 
 //nolint:revive // ignore maximum number of return results
-func (v *ClusterCreator) setupPhases(upgr *upgrade.Upgrade) (
+func (v *ClusterCreator) setupPhases(upgr *upgrade.Upgrade, upgradeFlag bool) (
 	*upgrade.OperatorPhaseAsyncDecorator,
 	*upgrade.OperatorPhaseAsyncDecorator,
 	*upgrade.ReducerOperatorPhaseAsyncDecorator[v1alpha2.Reducers],
@@ -889,6 +889,7 @@ func (v *ClusterCreator) setupPhases(upgr *upgrade.Upgrade) (
 		v.force,
 		infra.Self().TerraformOutputsPath,
 		v.phase,
+		upgradeFlag,
 	)
 	if err != nil {
 		return nil, nil, nil, nil, nil, fmt.Errorf("error while initiating preflight phase: %w", err)
