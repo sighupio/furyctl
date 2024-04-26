@@ -27,6 +27,7 @@ var (
 
 type Client interface {
 	Download(src, dst string) error
+	Clear() error
 }
 
 func WithLocalCache(c Client, dir string) Client {
@@ -39,6 +40,10 @@ func WithLocalCache(c Client, dir string) Client {
 type LocalCacheClientDecorator struct {
 	client Client
 	dir    string
+}
+
+func (d *LocalCacheClientDecorator) Clear() error {
+	return os.RemoveAll(d.dir)
 }
 
 func (d *LocalCacheClientDecorator) Download(src, dst string) error {
