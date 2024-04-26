@@ -96,7 +96,7 @@ func (dd *Downloader) DownloadAll(kfd config.KFD) ([]error, []string) {
 	go func() {
 		if err := dd.DownloadModules(kfd, gitPrefix); err != nil {
 			if errClear := dd.client.Clear(); errClear != nil {
-				logrus.Errorf("error while clearing cache: %s", errClear)
+				logrus.Error(errClear)
 			}
 
 			errCh <- err
@@ -108,7 +108,7 @@ func (dd *Downloader) DownloadAll(kfd config.KFD) ([]error, []string) {
 	go func() {
 		if err := dd.DownloadInstallers(kfd.Kubernetes, gitPrefix); err != nil {
 			if errClear := dd.client.Clear(); errClear != nil {
-				logrus.Errorf("error while clearing cache: %s", errClear)
+				logrus.Error(errClear)
 			}
 
 			errCh <- err
@@ -121,7 +121,7 @@ func (dd *Downloader) DownloadAll(kfd config.KFD) ([]error, []string) {
 		uts, err := dd.DownloadTools(kfd)
 		if err != nil {
 			if errClear := dd.client.Clear(); errClear != nil {
-				logrus.Errorf("error while clearing cache: %s", errClear)
+				logrus.Error(errClear)
 			}
 
 			errCh <- err

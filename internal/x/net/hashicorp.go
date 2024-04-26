@@ -27,7 +27,7 @@ type GoGetterClient struct {
 	protocols []string
 }
 
-func (g *GoGetterClient) Clear() error {
+func (*GoGetterClient) Clear() error {
 	return nil
 }
 

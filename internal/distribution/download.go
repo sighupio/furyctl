@@ -89,7 +89,7 @@ func (d *Downloader) Download(
 	result, err := d.DoDownload(distroLocation, minimalConf)
 	if err != nil {
 		if errClear := d.client.Clear(); errClear != nil {
-			logrus.Errorf("error while clearing cache: %s", errClear)
+			logrus.Error(errClear)
 
 			return DownloadResult{}, fmt.Errorf("%w: %w", ErrCannotDownloadDistribution, err)
 		}

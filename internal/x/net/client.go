@@ -22,6 +22,7 @@ var (
 	ErrCannotCheckLocalCache        = fmt.Errorf("cannot check local cache")
 	ErrCannotGetKeyFromURL          = fmt.Errorf("cannot get key from url")
 	ErrCannotCopyCacheToDestination = fmt.Errorf("cannot copy cache to destination")
+	ErrCannotClearCache             = errors.New("cannot clear cache")
 	URLPrefixRegexp                 = regexp.MustCompile(`^[A-z0-9]+::`)
 )
 
@@ -43,7 +44,11 @@ type LocalCacheClientDecorator struct {
 }
 
 func (d *LocalCacheClientDecorator) Clear() error {
-	return os.RemoveAll(d.dir)
+	if err := os.RemoveAll(d.dir); err != nil {
+		return fmt.Errorf("%w: %w", ErrCannotClearCache, err)
+	}
+
+	return nil
 }
 
 func (d *LocalCacheClientDecorator) Download(src, dst string) error {
