@@ -95,10 +95,6 @@ func (dd *Downloader) DownloadAll(kfd config.KFD) ([]error, []string) {
 
 	go func() {
 		if err := dd.DownloadModules(kfd, gitPrefix); err != nil {
-			if errClear := dd.client.Clear(); errClear != nil {
-				logrus.Error(errClear)
-			}
-
 			errCh <- err
 		}
 
@@ -107,10 +103,6 @@ func (dd *Downloader) DownloadAll(kfd config.KFD) ([]error, []string) {
 
 	go func() {
 		if err := dd.DownloadInstallers(kfd.Kubernetes, gitPrefix); err != nil {
-			if errClear := dd.client.Clear(); errClear != nil {
-				logrus.Error(errClear)
-			}
-
 			errCh <- err
 		}
 
@@ -120,10 +112,6 @@ func (dd *Downloader) DownloadAll(kfd config.KFD) ([]error, []string) {
 	go func() {
 		uts, err := dd.DownloadTools(kfd)
 		if err != nil {
-			if errClear := dd.client.Clear(); errClear != nil {
-				logrus.Error(errClear)
-			}
-
 			errCh <- err
 
 			return
@@ -152,11 +140,21 @@ func (dd *Downloader) DownloadAll(kfd config.KFD) ([]error, []string) {
 			done++
 
 			if done == todo {
+				if len(errs) > 0 {
+					if errClear := dd.client.Clear(); errClear != nil {
+						logrus.Error(errClear)
+					}
+				}
+
 				return errs, uts
 			}
 
 		case <-time.After(downloadsTimeout):
 			errs = append(errs, fmt.Errorf("%w dependencies", ErrDownloadTimeout))
+
+			if errClear := dd.client.Clear(); errClear != nil {
+				logrus.Error(errClear)
+			}
 
 			return errs, uts
 		}
