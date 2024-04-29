@@ -93,6 +93,8 @@ func (d *Downloader) Download(
 
 			return DownloadResult{}, fmt.Errorf("%w: %w", ErrCannotDownloadDistribution, err)
 		}
+
+		return result, err
 	}
 
 	return result, nil
