@@ -226,8 +226,15 @@ func (d *Downloader) applyCustomCompatibilityPatches(kfdManifest config.KFD, dst
 	info, err := os.Stat(patchesPath)
 	if err != nil {
 		if os.IsNotExist(err) {
-			return fmt.Errorf("custom distro patches not found: %w", err)
+			logrus.Warnf("Cannot find a custom distribution patches directory for version %s in %s, skipping...",
+				kfdManifest.Version,
+				d.customDistroPatchesPath,
+			)
+
+			return nil
 		}
+
+		return fmt.Errorf("error getting custom distro patches info: %w", err)
 	}
 
 	if !info.IsDir() {
