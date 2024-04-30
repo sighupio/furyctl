@@ -35,27 +35,32 @@ type Timeouts struct {
 	PodRunningCheckTimeout int
 }
 
+type ClusterSkipsCmdFlags struct {
+	SkipVpn            bool
+	SkipDepsDownload   bool
+	SkipDepsValidation bool
+	SkipNodesUpgrade   bool
+}
+
 type ClusterCmdFlags struct {
 	Timeouts
-	Debug               bool
-	FuryctlPath         string
-	DistroLocation      string
-	Phase               string
-	StartFrom           string
-	BinPath             string
-	SkipVpn             bool
-	VpnAutoConnect      bool
-	DryRun              bool
-	SkipDepsDownload    bool
-	SkipDepsValidation  bool
-	SkipNodesUpgrade    bool
-	NoTTY               bool
-	GitProtocol         git.Protocol
-	Force               []string
-	Outdir              string
-	Upgrade             bool
-	UpgradePathLocation string
-	UpgradeNode         string
+	Debug                 bool
+	FuryctlPath           string
+	DistroLocation        string
+	Phase                 string
+	StartFrom             string
+	BinPath               string
+	VpnAutoConnect        bool
+	DryRun                bool
+	NoTTY                 bool
+	GitProtocol           git.Protocol
+	Force                 []string
+	Outdir                string
+	Upgrade               bool
+	UpgradePathLocation   string
+	UpgradeNode           string
+	DistroPatchesLocation string
+	ClusterSkipsCmdFlags
 }
 
 func NewApplyCommand(tracker *analytics.Tracker) *cobra.Command {
@@ -107,9 +112,9 @@ func NewApplyCommand(tracker *analytics.Tracker) *cobra.Command {
 			depsvl := dependencies.NewValidator(executor, flags.BinPath, flags.FuryctlPath, flags.VpnAutoConnect)
 
 			if flags.DistroLocation == "" {
-				distrodl = distribution.NewCachingDownloader(client, outDir, flags.GitProtocol)
+				distrodl = distribution.NewCachingDownloader(client, outDir, flags.GitProtocol, flags.DistroPatchesLocation)
 			} else {
-				distrodl = distribution.NewDownloader(client, flags.GitProtocol)
+				distrodl = distribution.NewDownloader(client, flags.GitProtocol, flags.DistroPatchesLocation)
 			}
 
 			// Init packages.
@@ -240,7 +245,41 @@ func NewApplyCommand(tracker *analytics.Tracker) *cobra.Command {
 	return cmd
 }
 
+func getSkipsClusterCmdFlags(cmd *cobra.Command, tracker *analytics.Tracker, cmdEvent analytics.Event) (ClusterSkipsCmdFlags, error) {
+	skipDepsDownload, err := cmdutil.BoolFlag(cmd, "skip-deps-download", tracker, cmdEvent)
+	if err != nil {
+		return ClusterSkipsCmdFlags{}, fmt.Errorf(WrappedErrMessage, ErrParsingFlag, "skip-deps-download")
+	}
+
+	skipDepsValidation, err := cmdutil.BoolFlag(cmd, "skip-deps-validation", tracker, cmdEvent)
+	if err != nil {
+		return ClusterSkipsCmdFlags{}, fmt.Errorf(WrappedErrMessage, ErrParsingFlag, "skip-deps-validation")
+	}
+
+	skipNodesUpgrade, err := cmdutil.BoolFlag(cmd, "skip-nodes-upgrade", tracker, cmdEvent)
+	if err != nil {
+		return ClusterSkipsCmdFlags{}, fmt.Errorf(WrappedErrMessage, ErrParsingFlag, "skip-nodes-upgrade")
+	}
+
+	skipVpn, err := cmdutil.BoolFlag(cmd, "skip-vpn-confirmation", tracker, cmdEvent)
+	if err != nil {
+		return ClusterSkipsCmdFlags{}, fmt.Errorf(WrappedErrMessage, ErrParsingFlag, "skip-vpn-confirmation")
+	}
+
+	return ClusterSkipsCmdFlags{
+		SkipVpn:            skipVpn,
+		SkipDepsDownload:   skipDepsDownload,
+		SkipDepsValidation: skipDepsValidation,
+		SkipNodesUpgrade:   skipNodesUpgrade,
+	}, nil
+}
+
 func getCreateClusterCmdFlags(cmd *cobra.Command, tracker *analytics.Tracker, cmdEvent analytics.Event) (ClusterCmdFlags, error) {
+	skips, err := getSkipsClusterCmdFlags(cmd, tracker, cmdEvent)
+	if err != nil {
+		return ClusterCmdFlags{}, err
+	}
+
 	debug, err := cmdutil.BoolFlag(cmd, "debug", tracker, cmdEvent)
 	if err != nil {
 		return ClusterCmdFlags{}, fmt.Errorf(WrappedErrMessage, ErrParsingFlag, "debug")
@@ -286,17 +325,12 @@ func getCreateClusterCmdFlags(cmd *cobra.Command, tracker *analytics.Tracker, cm
 
 	binPath := cmdutil.StringFlagOptional(cmd, "bin-path")
 
-	skipVpn, err := cmdutil.BoolFlag(cmd, "skip-vpn-confirmation", tracker, cmdEvent)
-	if err != nil {
-		return ClusterCmdFlags{}, fmt.Errorf(WrappedErrMessage, ErrParsingFlag, "skip-vpn-confirmation")
-	}
-
 	vpnAutoConnect, err := cmdutil.BoolFlag(cmd, "vpn-auto-connect", tracker, cmdEvent)
 	if err != nil {
 		return ClusterCmdFlags{}, fmt.Errorf(WrappedErrMessage, ErrParsingFlag, "vpn-auto-connect")
 	}
 
-	if skipVpn && vpnAutoConnect {
+	if skips.SkipVpn && vpnAutoConnect {
 		return ClusterCmdFlags{}, fmt.Errorf(
 			"%w: %s: cannot use together with skip-vpn flag",
 			ErrParsingFlag,
@@ -317,21 +351,6 @@ func getCreateClusterCmdFlags(cmd *cobra.Command, tracker *analytics.Tracker, cm
 	force, err := cmdutil.StringSliceFlag(cmd, "force", tracker, cmdEvent)
 	if err != nil {
 		return ClusterCmdFlags{}, fmt.Errorf(WrappedErrMessage, ErrParsingFlag, "force")
-	}
-
-	skipDepsDownload, err := cmdutil.BoolFlag(cmd, "skip-deps-download", tracker, cmdEvent)
-	if err != nil {
-		return ClusterCmdFlags{}, fmt.Errorf(WrappedErrMessage, ErrParsingFlag, "skip-deps-download")
-	}
-
-	skipDepsValidation, err := cmdutil.BoolFlag(cmd, "skip-deps-validation", tracker, cmdEvent)
-	if err != nil {
-		return ClusterCmdFlags{}, fmt.Errorf(WrappedErrMessage, ErrParsingFlag, "skip-deps-validation")
-	}
-
-	skipNodesUpgrade, err := cmdutil.BoolFlag(cmd, "skip-nodes-upgrade", tracker, cmdEvent)
-	if err != nil {
-		return ClusterCmdFlags{}, fmt.Errorf(WrappedErrMessage, ErrParsingFlag, "skip-nodes-upgrade")
 	}
 
 	gitProtocol, err := cmdutil.StringFlag(cmd, "git-protocol", tracker, cmdEvent)
@@ -382,30 +401,33 @@ func getCreateClusterCmdFlags(cmd *cobra.Command, tracker *analytics.Tracker, cm
 		)
 	}
 
+	distroPatchesLocation, err := cmdutil.StringFlag(cmd, "distro-patches", tracker, cmdEvent)
+	if err != nil {
+		return ClusterCmdFlags{}, fmt.Errorf("%w: %s", ErrParsingFlag, "distro-patches")
+	}
+
 	return ClusterCmdFlags{
-		Debug:              debug,
-		FuryctlPath:        furyctlPath,
-		DistroLocation:     distroLocation,
-		Phase:              phase,
-		StartFrom:          startFrom,
-		BinPath:            binPath,
-		SkipVpn:            skipVpn,
-		VpnAutoConnect:     vpnAutoConnect,
-		DryRun:             dryRun,
-		SkipDepsDownload:   skipDepsDownload,
-		SkipDepsValidation: skipDepsValidation,
-		SkipNodesUpgrade:   skipNodesUpgrade,
-		NoTTY:              noTTY,
-		Force:              force,
-		GitProtocol:        typedGitProtocol,
+		Debug:          debug,
+		FuryctlPath:    furyctlPath,
+		DistroLocation: distroLocation,
+		Phase:          phase,
+		StartFrom:      startFrom,
+		BinPath:        binPath,
+		VpnAutoConnect: vpnAutoConnect,
+		DryRun:         dryRun,
+		NoTTY:          noTTY,
+		Force:          force,
+		GitProtocol:    typedGitProtocol,
 		Timeouts: Timeouts{
 			ProcessTimeout:         timeout,
 			PodRunningCheckTimeout: podRunningCheckTimeout,
 		},
-		Outdir:              outdir,
-		Upgrade:             upgrade,
-		UpgradePathLocation: upgradePathLocation,
-		UpgradeNode:         upgradeNode,
+		Outdir:                outdir,
+		Upgrade:               upgrade,
+		UpgradePathLocation:   upgradePathLocation,
+		UpgradeNode:           upgradeNode,
+		DistroPatchesLocation: distroPatchesLocation,
+		ClusterSkipsCmdFlags:  skips,
 	}, nil
 }
 
@@ -438,7 +460,14 @@ func setupCreateClusterCmdFlags(cmd *cobra.Command) {
 		"Location where to download schemas, defaults and the distribution manifests from. "+
 			"It can either be a local path (eg: /path/to/fury/distribution) or "+
 			"a remote URL (eg: git::git@github.com:sighupio/fury-distribution?depth=1&ref=BRANCH_NAME). "+
-			"Any format supported by hashicorp/go-getter can be used.",
+			cmdutil.AnyGoGetterFormatStr,
+	)
+
+	cmd.Flags().String(
+		"distro-patches",
+		"",
+		"Location where to download distribution's user-made patches from. "+
+			cmdutil.AnyGoGetterFormatStr,
 	)
 
 	cmd.Flags().StringP(

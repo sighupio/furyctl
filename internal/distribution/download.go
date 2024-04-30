@@ -48,22 +48,33 @@ type DownloadResult struct {
 	DistroManifest config.KFD
 }
 
-func NewCachingDownloader(client netx.Client, outDir string, gitProtocol git.Protocol) *Downloader {
-	return NewDownloader(netx.WithLocalCache(client, filepath.Join(outDir, ".furyctl", "cache")), gitProtocol)
+func NewCachingDownloader(
+	client netx.Client,
+	outDir string,
+	gitProtocol git.Protocol,
+	customDistroPatchesPath string,
+) *Downloader {
+	return NewDownloader(
+		netx.WithLocalCache(client, filepath.Join(outDir, ".furyctl", "cache")),
+		gitProtocol,
+		customDistroPatchesPath,
+	)
 }
 
-func NewDownloader(client netx.Client, gitProtocol git.Protocol) *Downloader {
+func NewDownloader(client netx.Client, gitProtocol git.Protocol, customDistroPatchesPath string) *Downloader {
 	return &Downloader{
-		client:      client,
-		validate:    config.NewValidator(),
-		gitProtocol: gitProtocol,
+		client:                  client,
+		validate:                config.NewValidator(),
+		gitProtocol:             gitProtocol,
+		customDistroPatchesPath: customDistroPatchesPath,
 	}
 }
 
 type Downloader struct {
-	client      netx.Client
-	validate    *validator.Validate
-	gitProtocol git.Protocol
+	client                  netx.Client
+	validate                *validator.Validate
+	gitProtocol             git.Protocol
+	customDistroPatchesPath string
 }
 
 func (d *Downloader) Download(
@@ -182,6 +193,12 @@ func (d *Downloader) DoDownload(
 		return DownloadResult{}, fmt.Errorf("error applying compat patches: %w", err)
 	}
 
+	if d.customDistroPatchesPath != "" {
+		if err := d.applyCustomCompatibilityPatches(kfdManifest, dst); err != nil {
+			return DownloadResult{}, fmt.Errorf("error applying custom compat patches: %w", err)
+		}
+	}
+
 	postPatchkfdManifest, err := yamlx.FromFileV3[config.KFD](kfdPath)
 	if err != nil {
 		return DownloadResult{}, err
@@ -192,6 +209,41 @@ func (d *Downloader) DoDownload(
 		MinimalConf:    minimalConf,
 		DistroManifest: postPatchkfdManifest,
 	}, nil
+}
+
+func (d *Downloader) applyCustomCompatibilityPatches(kfdManifest config.KFD, dst string) error {
+	tmpDir, err := os.MkdirTemp("", "furyctl-custom-distro-patches-")
+	if err != nil {
+		return fmt.Errorf("error creating temp dir: %w", err)
+	}
+
+	if err := d.client.Download(d.customDistroPatchesPath, tmpDir); err != nil {
+		return fmt.Errorf("%w '%s': %w", ErrDownloadingFolder, d.customDistroPatchesPath, err)
+	}
+
+	patchesPath := path.Join(tmpDir, strings.ToLower(kfdManifest.Version))
+
+	info, err := os.Stat(patchesPath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return fmt.Errorf("custom distro patches not found: %w", err)
+		}
+	}
+
+	if !info.IsDir() {
+		return fmt.Errorf("custom distro patches is not a directory: %w", err)
+	}
+
+	fsPatches, err := fs.Sub(os.DirFS(patchesPath), ".")
+	if err != nil {
+		return fmt.Errorf("error reading custom distro patches: %w", err)
+	}
+
+	if err := iox.CopyRecursive(fsPatches, dst); err != nil {
+		return fmt.Errorf("error copying custom distro patches files: %w", err)
+	}
+
+	return nil
 }
 
 func (*Downloader) applyCompatibilityPatches(kfdManifest config.KFD, dst string) error {
