@@ -22,4 +22,10 @@ func init() {
 		"KFDDistribution",
 		cluster.NewDeleterFactory[*ClusterDeleter, public.KfddistributionKfdV1Alpha2](&ClusterDeleter{}),
 	)
+
+	cluster.RegisterKubeconfigFactory(
+		"kfd.sighup.io/v1alpha2",
+		"KFDDistribution",
+		cluster.NewKubeconfigFactory[*KubeconfigGetter, public.KfddistributionKfdV1Alpha2](&KubeconfigGetter{}),
+	)
 }
