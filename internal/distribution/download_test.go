@@ -52,7 +52,7 @@ func Test_Downloader_Download(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			d := distribution.NewDownloader(netx.NewGoGetterClient(), git.ProtocolSSH)
+			d := distribution.NewDownloader(netx.NewGoGetterClient(), git.ProtocolSSH, "")
 
 			res, err := d.Download(
 				absDistroPath,

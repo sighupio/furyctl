@@ -15,6 +15,8 @@ import (
 
 var ErrParsingFlag = errors.New("error while parsing flag")
 
+const AnyGoGetterFormatStr = "Any format supported by hashicorp/go-getter can be used."
+
 func BoolFlag(cmd *cobra.Command, flagName string, tracker *analytics.Tracker, event analytics.Event) (bool, error) {
 	value, err := cmd.Flags().GetBool(flagName)
 	if err != nil {

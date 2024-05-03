@@ -28,15 +28,16 @@ import (
 )
 
 type DiffCommandFlags struct {
-	Debug               bool
-	FuryctlPath         string
-	DistroLocation      string
-	Phase               string
-	NoTTY               bool
-	GitProtocol         git.Protocol
-	BinPath             string
-	Outdir              string
-	UpgradePathLocation string
+	Debug                 bool
+	FuryctlPath           string
+	DistroLocation        string
+	Phase                 string
+	NoTTY                 bool
+	GitProtocol           git.Protocol
+	BinPath               string
+	Outdir                string
+	UpgradePathLocation   string
+	DistroPatchesLocation string
 }
 
 func NewDiffCommand(tracker *analytics.Tracker) *cobra.Command {
@@ -80,9 +81,9 @@ func NewDiffCommand(tracker *analytics.Tracker) *cobra.Command {
 			client := netx.NewGoGetterClient()
 
 			if flags.DistroLocation == "" {
-				distrodl = distribution.NewCachingDownloader(client, outDir, flags.GitProtocol)
+				distrodl = distribution.NewCachingDownloader(client, outDir, flags.GitProtocol, flags.DistroPatchesLocation)
 			} else {
-				distrodl = distribution.NewDownloader(client, flags.GitProtocol)
+				distrodl = distribution.NewDownloader(client, flags.GitProtocol, flags.DistroPatchesLocation)
 			}
 
 			logrus.Info("Downloading distribution...")
@@ -175,6 +176,13 @@ func NewDiffCommand(tracker *analytics.Tracker) *cobra.Command {
 			"It can either be a local path (eg: /path/to/fury/distribution) or "+
 			"a remote URL (eg: git::git@github.com:sighupio/fury-distribution?depth=1&ref=BRANCH_NAME). "+
 			"Any format supported by hashicorp/go-getter can be used.",
+	)
+
+	cmd.Flags().String(
+		"distro-patches",
+		"",
+		"Location where to download distribution's user-made patches from. "+
+			cmdutil.AnyGoGetterFormatStr,
 	)
 
 	cmd.Flags().StringP(
@@ -329,15 +337,21 @@ func getDiffCommandFlags(
 		return DiffCommandFlags{}, fmt.Errorf("%w: %s", ErrParsingFlag, "upgrade-path-location")
 	}
 
+	distroPatchesLocation, err := cmdutil.StringFlag(cmd, "distro-patches", tracker, cmdEvent)
+	if err != nil {
+		return DiffCommandFlags{}, fmt.Errorf("%w: %s", ErrParsingFlag, "distro-patches")
+	}
+
 	return DiffCommandFlags{
-		Debug:               debug,
-		FuryctlPath:         furyctlPath,
-		DistroLocation:      distroLocation,
-		Phase:               phase,
-		NoTTY:               noTTY,
-		GitProtocol:         typedGitProtocol,
-		BinPath:             binPath,
-		Outdir:              outdir,
-		UpgradePathLocation: upgradePathLocation,
+		Debug:                 debug,
+		FuryctlPath:           furyctlPath,
+		DistroLocation:        distroLocation,
+		Phase:                 phase,
+		NoTTY:                 noTTY,
+		GitProtocol:           typedGitProtocol,
+		BinPath:               binPath,
+		Outdir:                outdir,
+		UpgradePathLocation:   upgradePathLocation,
+		DistroPatchesLocation: distroPatchesLocation,
 	}, nil
 }
