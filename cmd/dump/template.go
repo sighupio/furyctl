@@ -28,13 +28,14 @@ import (
 var ErrParsingFlag = errors.New("error while parsing flag")
 
 type TemplateCmdFlags struct {
-	DryRun         bool
-	NoOverwrite    bool
-	SkipValidation bool
-	GitProtocol    git.Protocol
-	Outdir         string
-	FuryctlPath    string
-	DistroLocation string
+	DryRun                bool
+	NoOverwrite           bool
+	SkipValidation        bool
+	GitProtocol           git.Protocol
+	Outdir                string
+	FuryctlPath           string
+	DistroLocation        string
+	DistroPatchesLocation string
 }
 
 func NewTemplateCmd(tracker *analytics.Tracker) *cobra.Command {
@@ -64,6 +65,23 @@ The generated folder will be created starting from a provided templates folder a
 				return fmt.Errorf("error: %w", err)
 			}
 
+			outDir := flags.Outdir
+
+			// Get home dir.
+			logrus.Debug("Getting Home Directory Path...")
+
+			homeDir, err := os.UserHomeDir()
+			if err != nil {
+				cmdEvent.AddErrorMessage(err)
+				tracker.Track(cmdEvent)
+
+				return fmt.Errorf("error while getting user home directory: %w", err)
+			}
+
+			if outDir == "" {
+				outDir = homeDir
+			}
+
 			var distrodl *distribution.Downloader
 
 			client := netx.NewGoGetterClient()
@@ -71,9 +89,9 @@ The generated folder will be created starting from a provided templates folder a
 			depsvl := dependencies.NewValidator(executor, "", absFuryctlPath, false)
 
 			if flags.DistroLocation == "" {
-				distrodl = distribution.NewCachingDownloader(client, flags.GitProtocol)
+				distrodl = distribution.NewCachingDownloader(client, outDir, flags.GitProtocol, flags.DistroPatchesLocation)
 			} else {
-				distrodl = distribution.NewDownloader(client, flags.GitProtocol)
+				distrodl = distribution.NewDownloader(client, flags.GitProtocol, flags.DistroPatchesLocation)
 			}
 
 			if err := depsvl.ValidateBaseReqs(); err != nil {
@@ -115,8 +133,6 @@ The generated folder will be created starting from a provided templates folder a
 
 				return fmt.Errorf("%s - %w", absFuryctlPath, err)
 			}
-
-			outDir := flags.Outdir
 
 			currentDir, err := os.Getwd()
 			if err != nil {
@@ -201,6 +217,13 @@ The generated folder will be created starting from a provided templates folder a
 		"Skip validation of the configuration file",
 	)
 
+	cmd.Flags().String(
+		"distro-patches",
+		"",
+		"Location where to download distribution's user-made patches from. "+
+			cmdutil.AnyGoGetterFormatStr,
+	)
+
 	return cmd
 }
 
@@ -245,13 +268,19 @@ func getDumpTemplateCmdFlags(cmd *cobra.Command, tracker *analytics.Tracker, cmd
 		return TemplateCmdFlags{}, fmt.Errorf("%w: %w", ErrParsingFlag, err)
 	}
 
+	distroPatchesLocation, err := cmdutil.StringFlag(cmd, "distro-patches", tracker, cmdEvent)
+	if err != nil {
+		return TemplateCmdFlags{}, fmt.Errorf("%w: %s", ErrParsingFlag, "distro-patches")
+	}
+
 	return TemplateCmdFlags{
-		DryRun:         dryRun,
-		NoOverwrite:    noOverwrite,
-		SkipValidation: skipValidation,
-		Outdir:         outdir,
-		DistroLocation: distroLocation,
-		FuryctlPath:    furyctlPath,
-		GitProtocol:    typedGitProtocol,
+		DryRun:                dryRun,
+		NoOverwrite:           noOverwrite,
+		SkipValidation:        skipValidation,
+		Outdir:                outdir,
+		DistroLocation:        distroLocation,
+		FuryctlPath:           furyctlPath,
+		GitProtocol:           typedGitProtocol,
+		DistroPatchesLocation: distroPatchesLocation,
 	}, nil
 }

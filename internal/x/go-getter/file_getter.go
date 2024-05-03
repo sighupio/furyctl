@@ -103,7 +103,7 @@ func (g *FileGetter) Get(dst string, u *url.URL) error {
 	}
 
 	// Create all the parent directories.
-	if err := os.MkdirAll(filepath.Dir(dst), g.mode(0755)); err != nil {
+	if err := os.MkdirAll(filepath.Dir(dst), g.mode(0o755)); err != nil {
 		return err
 	}
 
@@ -111,7 +111,7 @@ func (g *FileGetter) Get(dst string, u *url.URL) error {
 		return os.Symlink(path, dst)
 	}
 
-	if err := os.Mkdir(dst, g.mode(0755)); err != nil {
+	if err := os.Mkdir(dst, g.mode(0o755)); err != nil {
 		return err
 	}
 
@@ -151,7 +151,7 @@ func (g *FileGetter) GetFile(dst string, u *url.URL) error {
 	}
 
 	// Create all the parent directories.
-	if err = os.MkdirAll(filepath.Dir(dst), g.mode(0755)); err != nil {
+	if err = os.MkdirAll(filepath.Dir(dst), g.mode(0o755)); err != nil {
 		return err
 	}
 
@@ -241,7 +241,7 @@ func copyFile(ctx context.Context, dst, src string, disableSymlinks bool, fmode,
 // should already exist.
 //
 // If ignoreDot is set to true, then dot-prefixed files/folders are ignored.
-func copyDir(ctx context.Context, dst string, src string, ignoreDot bool, disableSymlinks bool, umask os.FileMode) error {
+func copyDir(ctx context.Context, dst, src string, ignoreDot, disableSymlinks bool, umask os.FileMode) error {
 	// We can safely evaluate the symlinks here, even if disabled, because they
 	// will be checked before actual use in walkFn and copyFile.
 	var err error
@@ -296,7 +296,7 @@ func copyDir(ctx context.Context, dst string, src string, ignoreDot bool, disabl
 				return nil
 			}
 
-			if err := os.MkdirAll(dstPath, mode(0755, umask)); err != nil {
+			if err := os.MkdirAll(dstPath, mode(0o755, umask)); err != nil {
 				return err
 			}
 

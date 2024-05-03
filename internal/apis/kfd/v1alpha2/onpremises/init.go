@@ -22,4 +22,10 @@ func init() {
 		"OnPremises",
 		cluster.NewDeleterFactory[*ClusterDeleter, public.OnpremisesKfdV1Alpha2](&ClusterDeleter{}),
 	)
+
+	cluster.RegisterKubeconfigFactory(
+		"kfd.sighup.io/v1alpha2",
+		"OnPremises",
+		cluster.NewKubeconfigFactory[*KubeconfigGetter, public.OnpremisesKfdV1Alpha2](&KubeconfigGetter{}),
+	)
 }

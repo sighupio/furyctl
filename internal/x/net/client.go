@@ -22,20 +22,14 @@ var (
 	ErrCannotCheckLocalCache        = fmt.Errorf("cannot check local cache")
 	ErrCannotGetKeyFromURL          = fmt.Errorf("cannot get key from url")
 	ErrCannotCopyCacheToDestination = fmt.Errorf("cannot copy cache to destination")
+	ErrCannotClearCache             = errors.New("cannot clear cache")
 	URLPrefixRegexp                 = regexp.MustCompile(`^[A-z0-9]+::`)
 )
 
-func GetCacheFolder() string {
-	hd, err := os.UserHomeDir()
-	if err != nil {
-		hd = os.TempDir()
-	}
-
-	return filepath.Join(hd, ".furyctl", "cache")
-}
-
 type Client interface {
 	Download(src, dst string) error
+	Clear() error
+	ClearItem(src string) error
 }
 
 func WithLocalCache(c Client, dir string) Client {
@@ -48,6 +42,24 @@ func WithLocalCache(c Client, dir string) Client {
 type LocalCacheClientDecorator struct {
 	client Client
 	dir    string
+}
+
+func (d *LocalCacheClientDecorator) Clear() error {
+	if err := os.RemoveAll(d.dir); err != nil {
+		return fmt.Errorf("%w: %w", ErrCannotClearCache, err)
+	}
+
+	return nil
+}
+
+func (d *LocalCacheClientDecorator) ClearItem(src string) error {
+	key := d.getKeyFromURL(src)
+
+	if err := os.RemoveAll(key); err != nil {
+		return fmt.Errorf("%w: %w", ErrCannotClearCache, err)
+	}
+
+	return nil
 }
 
 func (d *LocalCacheClientDecorator) Download(src, dst string) error {

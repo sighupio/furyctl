@@ -38,8 +38,14 @@ var (
 	ErrModuleNotFound     = errors.New("module not found")
 )
 
-func NewCachingDownloader(client netx.Client, basePath, binPath string, gitProtocol git.Protocol) *Downloader {
-	return NewDownloader(netx.WithLocalCache(client, netx.GetCacheFolder()), basePath, binPath, gitProtocol)
+func NewCachingDownloader(client netx.Client, outDir, basePath, binPath string, gitProtocol git.Protocol) *Downloader {
+	return NewDownloader(netx.WithLocalCache(
+		client,
+		filepath.Join(outDir, ".furyctl", "cache")),
+		basePath,
+		binPath,
+		gitProtocol,
+	)
 }
 
 func NewDownloader(client netx.Client, basePath, binPath string, gitProtocol git.Protocol) *Downloader {
@@ -134,11 +140,21 @@ func (dd *Downloader) DownloadAll(kfd config.KFD) ([]error, []string) {
 			done++
 
 			if done == todo {
+				if len(errs) > 0 {
+					if errClear := dd.client.Clear(); errClear != nil {
+						logrus.Error(errClear)
+					}
+				}
+
 				return errs, uts
 			}
 
 		case <-time.After(downloadsTimeout):
 			errs = append(errs, fmt.Errorf("%w dependencies", ErrDownloadTimeout))
+
+			if errClear := dd.client.Clear(); errClear != nil {
+				logrus.Error(errClear)
+			}
 
 			return errs, uts
 		}

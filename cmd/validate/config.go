@@ -7,6 +7,7 @@ package validate
 import (
 	"errors"
 	"fmt"
+	"os"
 
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -52,9 +53,31 @@ func NewConfigCmd(tracker *analytics.Tracker) *cobra.Command {
 				return fmt.Errorf("%w: git-protocol", ErrParsingFlag)
 			}
 
+			outDir, err := cmdutil.StringFlag(cmd, "outdir", tracker, cmdEvent)
+			if err != nil {
+				return fmt.Errorf("%w: outdir", ErrParsingFlag)
+			}
+
 			typedGitProtocol, err := git.NewProtocol(gitProtocol)
 			if err != nil {
 				return fmt.Errorf("%w: %w", ErrParsingFlag, err)
+			}
+
+			distroPatchesLocation, err := cmdutil.StringFlag(cmd, "distro-patches", tracker, cmdEvent)
+			if err != nil {
+				return fmt.Errorf("%w: %s", ErrParsingFlag, "distro-patches")
+			}
+
+			homeDir, err := os.UserHomeDir()
+			if err != nil {
+				cmdEvent.AddErrorMessage(err)
+				tracker.Track(cmdEvent)
+
+				return fmt.Errorf("error while getting user home directory: %w", err)
+			}
+
+			if outDir == "" {
+				outDir = homeDir
 			}
 
 			var distrodl *distribution.Downloader
@@ -64,9 +87,9 @@ func NewConfigCmd(tracker *analytics.Tracker) *cobra.Command {
 			depsvl := dependencies.NewValidator(executor, "", furyctlPath, false)
 
 			if distroLocation == "" {
-				distrodl = distribution.NewCachingDownloader(client, typedGitProtocol)
+				distrodl = distribution.NewCachingDownloader(client, outDir, typedGitProtocol, distroPatchesLocation)
 			} else {
-				distrodl = distribution.NewDownloader(client, typedGitProtocol)
+				distrodl = distribution.NewDownloader(client, typedGitProtocol, distroPatchesLocation)
 			}
 
 			// Validate base requirements.
@@ -127,6 +150,13 @@ func NewConfigCmd(tracker *analytics.Tracker) *cobra.Command {
 			"It can either be a local path (eg: /path/to/fury/distribution) or "+
 			"a remote URL (eg: git::git@github.com:sighupio/fury-distribution?depth=1&ref=BRANCH_NAME). "+
 			"Any format supported by hashicorp/go-getter can be used.",
+	)
+
+	cmd.Flags().String(
+		"distro-patches",
+		"",
+		"Location where to download distribution's user-made patches from. "+
+			cmdutil.AnyGoGetterFormatStr,
 	)
 
 	return cmd
