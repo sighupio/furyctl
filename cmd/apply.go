@@ -474,8 +474,12 @@ func setupCreateClusterCmdFlags(cmd *cobra.Command) {
 	cmd.Flags().String(
 		"distro-patches",
 		"",
-		"Location where to download distribution's user-made patches from. "+
-			cmdutil.AnyGoGetterFormatStr,
+		"Location where the distribution's user-made patches can be downloaded from. "+
+			"This can be either a local path (eg: /path/to/distro-patches) or "+
+			"a remote URL (eg: git::git@github.com:your-org/distro-patches?depth=1&ref=BRANCH_NAME). "+
+			cmdutil.AnyGoGetterFormatStr+
+			" Patches within this location must be in a folder named after the distribution version (eg: v1.29.0) and "+
+			"must have the same structure as the distribution's repository.",
 	)
 
 	cmd.Flags().StringP(
