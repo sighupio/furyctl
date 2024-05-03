@@ -31,7 +31,7 @@ func (*GoGetterClient) Clear() error {
 	return nil
 }
 
-func (*GoGetterClient) ClearItem(src string) error {
+func (*GoGetterClient) ClearItem(_ string) error {
 	return nil
 }
 
