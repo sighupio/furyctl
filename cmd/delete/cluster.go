@@ -35,20 +35,21 @@ var (
 )
 
 type ClusterCmdFlags struct {
-	Debug              bool
-	FuryctlPath        string
-	DistroLocation     string
-	Phase              string
-	BinPath            string
-	Force              bool
-	SkipVpn            bool
-	VpnAutoConnect     bool
-	DryRun             bool
-	NoTTY              bool
-	GitProtocol        git.Protocol
-	Outdir             string
-	SkipDepsDownload   bool
-	SkipDepsValidation bool
+	Debug                 bool
+	FuryctlPath           string
+	DistroLocation        string
+	Phase                 string
+	BinPath               string
+	Force                 bool
+	SkipVpn               bool
+	VpnAutoConnect        bool
+	DryRun                bool
+	NoTTY                 bool
+	GitProtocol           git.Protocol
+	Outdir                string
+	SkipDepsDownload      bool
+	SkipDepsValidation    bool
+	DistroPatchesLocation string
 }
 
 func NewClusterCmd(tracker *analytics.Tracker) *cobra.Command {
@@ -101,9 +102,9 @@ func NewClusterCmd(tracker *analytics.Tracker) *cobra.Command {
 			depsvl := dependencies.NewValidator(executor, flags.BinPath, flags.FuryctlPath, flags.VpnAutoConnect)
 
 			if flags.DistroLocation == "" {
-				distrodl = distribution.NewCachingDownloader(client, outDir, flags.GitProtocol)
+				distrodl = distribution.NewCachingDownloader(client, outDir, flags.GitProtocol, flags.DistroPatchesLocation)
 			} else {
-				distrodl = distribution.NewDownloader(client, flags.GitProtocol)
+				distrodl = distribution.NewDownloader(client, flags.GitProtocol, flags.DistroPatchesLocation)
 			}
 
 			execx.NoTTY = flags.NoTTY
@@ -267,6 +268,13 @@ func NewClusterCmd(tracker *analytics.Tracker) *cobra.Command {
 			"Any format supported by hashicorp/go-getter can be used.",
 	)
 
+	cmd.Flags().String(
+		"distro-patches",
+		"",
+		"Location where to download distribution's user-made patches from. "+
+			cmdutil.AnyGoGetterFormatStr,
+	)
+
 	cmd.Flags().StringP(
 		"bin-path",
 		"b",
@@ -407,20 +415,26 @@ func getDeleteClusterCmdFlags(cmd *cobra.Command, tracker *analytics.Tracker, cm
 		return ClusterCmdFlags{}, fmt.Errorf(WrappedErrMessage, ErrParsingFlag, "skip-deps-validation")
 	}
 
+	distroPatchesLocation, err := cmdutil.StringFlag(cmd, "distro-patches", tracker, cmdEvent)
+	if err != nil {
+		return ClusterCmdFlags{}, fmt.Errorf("%w: %s", ErrParsingFlag, "distro-patches")
+	}
+
 	return ClusterCmdFlags{
-		Debug:              debug,
-		FuryctlPath:        furyctlPath,
-		DistroLocation:     distroLocation,
-		Phase:              phase,
-		BinPath:            binPath,
-		SkipVpn:            skipVpn,
-		VpnAutoConnect:     vpnAutoConnect,
-		DryRun:             dryRun,
-		Force:              force,
-		NoTTY:              noTTY,
-		GitProtocol:        typedGitProtocol,
-		Outdir:             outdir,
-		SkipDepsDownload:   skipDepsDownload,
-		SkipDepsValidation: skipDepsValidation,
+		Debug:                 debug,
+		FuryctlPath:           furyctlPath,
+		DistroLocation:        distroLocation,
+		Phase:                 phase,
+		BinPath:               binPath,
+		SkipVpn:               skipVpn,
+		VpnAutoConnect:        vpnAutoConnect,
+		DryRun:                dryRun,
+		Force:                 force,
+		NoTTY:                 noTTY,
+		GitProtocol:           typedGitProtocol,
+		Outdir:                outdir,
+		SkipDepsDownload:      skipDepsDownload,
+		SkipDepsValidation:    skipDepsValidation,
+		DistroPatchesLocation: distroPatchesLocation,
 	}, nil
 }
