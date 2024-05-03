@@ -27,6 +27,10 @@ type GoGetterClient struct {
 	protocols []string
 }
 
+func (*GoGetterClient) Clear() error {
+	return nil
+}
+
 func (g *GoGetterClient) Download(src, dst string) error {
 	protocols := []string{""}
 	if !g.URLHasForcedProtocol(src) {

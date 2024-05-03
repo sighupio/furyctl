@@ -140,11 +140,21 @@ func (dd *Downloader) DownloadAll(kfd config.KFD) ([]error, []string) {
 			done++
 
 			if done == todo {
+				if len(errs) > 0 {
+					if errClear := dd.client.Clear(); errClear != nil {
+						logrus.Error(errClear)
+					}
+				}
+
 				return errs, uts
 			}
 
 		case <-time.After(downloadsTimeout):
 			errs = append(errs, fmt.Errorf("%w dependencies", ErrDownloadTimeout))
+
+			if errClear := dd.client.Clear(); errClear != nil {
+				logrus.Error(errClear)
+			}
 
 			return errs, uts
 		}

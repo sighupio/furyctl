@@ -86,7 +86,18 @@ func (d *Downloader) Download(
 			minimalConf.Spec.DistributionVersion)
 	}
 
-	return d.DoDownload(distroLocation, minimalConf)
+	result, err := d.DoDownload(distroLocation, minimalConf)
+	if err != nil {
+		if errClear := d.client.Clear(); errClear != nil {
+			logrus.Error(errClear)
+
+			return DownloadResult{}, fmt.Errorf("%w: %w", ErrCannotDownloadDistribution, err)
+		}
+
+		return result, err
+	}
+
+	return result, nil
 }
 
 func (d *Downloader) DoDownload(
