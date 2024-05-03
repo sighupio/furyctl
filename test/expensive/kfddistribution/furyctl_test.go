@@ -93,7 +93,7 @@ var (
 
 	CreateClusterTestFunc = func(state *distroContextState, phase string) func() {
 		return func() {
-			dlRes := DownloadFuryDistribution(state.FuryctlYaml)
+			dlRes := DownloadFuryDistribution(state.TestDir, state.FuryctlYaml)
 
 			kubectlPath := DownloadKubectl(dlRes.DistroManifest.Tools.Common.Kubectl.Version)
 

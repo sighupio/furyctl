@@ -376,7 +376,7 @@ var (
 				InjectNodesData("", "", "", ""),
 			)
 
-			dlRes := DownloadFuryDistribution(ctxState.FuryctlYaml)
+			dlRes := DownloadFuryDistribution(state.TestDir, ctxState.FuryctlYaml)
 
 			terraformBinPath := DownloadTerraform(dlRes.DistroManifest.Tools.Common.Terraform.Version)
 
@@ -448,7 +448,7 @@ var (
 
 	CreateClusterTestFunc = func(state *onPremContextState) func() {
 		return func() {
-			dlRes := DownloadFuryDistribution(state.FuryctlYaml)
+			dlRes := DownloadFuryDistribution(state.TestDir, state.FuryctlYaml)
 
 			kubectlPath := DownloadKubectl(dlRes.DistroManifest.Tools.Common.Kubectl.Version)
 
@@ -509,7 +509,7 @@ var (
 
 	CreateClusterPhaseDistributionTestFunc = func(state *onPremContextState) func() {
 		return func() {
-			dlRes := DownloadFuryDistribution(state.FuryctlYaml)
+			dlRes := DownloadFuryDistribution(state.TestDir, state.FuryctlYaml)
 
 			kubectlPath := DownloadKubectl(dlRes.DistroManifest.Tools.Common.Kubectl.Version)
 

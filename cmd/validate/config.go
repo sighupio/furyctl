@@ -7,6 +7,7 @@ package validate
 import (
 	"errors"
 	"fmt"
+	"os"
 
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -52,9 +53,26 @@ func NewConfigCmd(tracker *analytics.Tracker) *cobra.Command {
 				return fmt.Errorf("%w: git-protocol", ErrParsingFlag)
 			}
 
+			outDir, err := cmdutil.StringFlag(cmd, "outdir", tracker, cmdEvent)
+			if err != nil {
+				return fmt.Errorf("%w: outdir", ErrParsingFlag)
+			}
+
 			typedGitProtocol, err := git.NewProtocol(gitProtocol)
 			if err != nil {
 				return fmt.Errorf("%w: %w", ErrParsingFlag, err)
+			}
+
+			homeDir, err := os.UserHomeDir()
+			if err != nil {
+				cmdEvent.AddErrorMessage(err)
+				tracker.Track(cmdEvent)
+
+				return fmt.Errorf("error while getting user home directory: %w", err)
+			}
+
+			if outDir == "" {
+				outDir = homeDir
 			}
 
 			var distrodl *distribution.Downloader
@@ -64,7 +82,7 @@ func NewConfigCmd(tracker *analytics.Tracker) *cobra.Command {
 			depsvl := dependencies.NewValidator(executor, "", furyctlPath, false)
 
 			if distroLocation == "" {
-				distrodl = distribution.NewCachingDownloader(client, typedGitProtocol)
+				distrodl = distribution.NewCachingDownloader(client, outDir, typedGitProtocol)
 			} else {
 				distrodl = distribution.NewDownloader(client, typedGitProtocol)
 			}

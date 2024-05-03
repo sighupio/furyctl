@@ -25,15 +25,6 @@ var (
 	URLPrefixRegexp                 = regexp.MustCompile(`^[A-z0-9]+::`)
 )
 
-func GetCacheFolder() string {
-	hd, err := os.UserHomeDir()
-	if err != nil {
-		hd = os.TempDir()
-	}
-
-	return filepath.Join(hd, ".furyctl", "cache")
-}
-
 type Client interface {
 	Download(src, dst string) error
 }

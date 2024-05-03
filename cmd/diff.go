@@ -80,7 +80,7 @@ func NewDiffCommand(tracker *analytics.Tracker) *cobra.Command {
 			client := netx.NewGoGetterClient()
 
 			if flags.DistroLocation == "" {
-				distrodl = distribution.NewCachingDownloader(client, flags.GitProtocol)
+				distrodl = distribution.NewCachingDownloader(client, outDir, flags.GitProtocol)
 			} else {
 				distrodl = distribution.NewDownloader(client, flags.GitProtocol)
 			}
