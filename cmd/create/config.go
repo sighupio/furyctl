@@ -62,6 +62,7 @@ func NewConfigCommand(tracker *analytics.Tracker) *cobra.Command {
 			if err != nil {
 				return fmt.Errorf("%w: version", ErrParsingFlag)
 			}
+
 			if version == "" {
 				return fmt.Errorf("%w: version", ErrMandatoryFlag)
 			}
@@ -99,17 +100,6 @@ func NewConfigCommand(tracker *analytics.Tracker) *cobra.Command {
 				return fmt.Errorf("%w: %s", ErrParsingFlag, "distro-patches")
 			}
 
-			minimalConf := distroconf.Furyctl{
-				APIVersion: apiVersion,
-				Kind:       kind,
-				Metadata: distroconf.FuryctlMeta{
-					Name: name,
-				},
-				Spec: distroconf.FuryctlSpec{
-					DistributionVersion: semver.EnsurePrefix(version),
-				},
-			}
-
 			outDir, err := cmdutil.StringFlag(cmd, "outdir", tracker, cmdEvent)
 			if err != nil {
 				return fmt.Errorf("%w: outdir", ErrParsingFlag)
@@ -125,6 +115,17 @@ func NewConfigCommand(tracker *analytics.Tracker) *cobra.Command {
 
 			if outDir == "" {
 				outDir = homeDir
+			}
+
+			minimalConf := distroconf.Furyctl{
+				APIVersion: apiVersion,
+				Kind:       kind,
+				Metadata: distroconf.FuryctlMeta{
+					Name: name,
+				},
+				Spec: distroconf.FuryctlSpec{
+					DistributionVersion: version,
+				},
 			}
 
 			var distrodl *distribution.Downloader
@@ -194,6 +195,15 @@ func NewConfigCommand(tracker *analytics.Tracker) *cobra.Command {
 				tracker.Track(cmdEvent)
 
 				return fmt.Errorf("failed to create configuration file: %w", err)
+			}
+
+			if err := config.Validate(furyctlPath, res.RepoPath); err != nil {
+				cmdEvent.AddErrorMessage(err)
+				tracker.Track(cmdEvent)
+
+				_ = os.Remove(furyctlPath)
+
+				return fmt.Errorf("error while validating configuration file: %w", err)
 			}
 
 			logrus.Infof("Configuration file created successfully at: %s", out.Name())
