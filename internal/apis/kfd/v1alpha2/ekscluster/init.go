@@ -22,4 +22,10 @@ func init() {
 		"EKSCluster",
 		cluster.NewDeleterFactory[*ClusterDeleter, private.EksclusterKfdV1Alpha2](&ClusterDeleter{}),
 	)
+
+	cluster.RegisterKubeconfigFactory(
+		"kfd.sighup.io/v1alpha2",
+		"EKSCluster",
+		cluster.NewKubeconfigFactory[*KubeconfigGetter, private.EksclusterKfdV1Alpha2](&KubeconfigGetter{}),
+	)
 }
