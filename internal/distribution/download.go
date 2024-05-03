@@ -48,8 +48,8 @@ type DownloadResult struct {
 	DistroManifest config.KFD
 }
 
-func NewCachingDownloader(client netx.Client, gitProtocol git.Protocol) *Downloader {
-	return NewDownloader(netx.WithLocalCache(client, netx.GetCacheFolder()), gitProtocol)
+func NewCachingDownloader(client netx.Client, outDir string, gitProtocol git.Protocol) *Downloader {
+	return NewDownloader(netx.WithLocalCache(client, filepath.Join(outDir, ".furyctl", "cache")), gitProtocol)
 }
 
 func NewDownloader(client netx.Client, gitProtocol git.Protocol) *Downloader {

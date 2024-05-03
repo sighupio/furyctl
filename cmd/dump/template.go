@@ -64,6 +64,23 @@ The generated folder will be created starting from a provided templates folder a
 				return fmt.Errorf("error: %w", err)
 			}
 
+			outDir := flags.Outdir
+
+			// Get home dir.
+			logrus.Debug("Getting Home Directory Path...")
+
+			homeDir, err := os.UserHomeDir()
+			if err != nil {
+				cmdEvent.AddErrorMessage(err)
+				tracker.Track(cmdEvent)
+
+				return fmt.Errorf("error while getting user home directory: %w", err)
+			}
+
+			if outDir == "" {
+				outDir = homeDir
+			}
+
 			var distrodl *distribution.Downloader
 
 			client := netx.NewGoGetterClient()
@@ -71,7 +88,7 @@ The generated folder will be created starting from a provided templates folder a
 			depsvl := dependencies.NewValidator(executor, "", absFuryctlPath, false)
 
 			if flags.DistroLocation == "" {
-				distrodl = distribution.NewCachingDownloader(client, flags.GitProtocol)
+				distrodl = distribution.NewCachingDownloader(client, outDir, flags.GitProtocol)
 			} else {
 				distrodl = distribution.NewDownloader(client, flags.GitProtocol)
 			}
@@ -115,8 +132,6 @@ The generated folder will be created starting from a provided templates folder a
 
 				return fmt.Errorf("%s - %w", absFuryctlPath, err)
 			}
-
-			outDir := flags.Outdir
 
 			currentDir, err := os.Getwd()
 			if err != nil {

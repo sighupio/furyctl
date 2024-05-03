@@ -61,11 +61,14 @@ func NewDependenciesCmd(tracker *analytics.Tracker) *cobra.Command {
 			binPath := cmdutil.StringFlagOptional(cmd, "bin-path")
 
 			// Init paths.
-			logrus.Debug("Getting Home Directory Path...")
+
 			outDir, err := cmdutil.StringFlag(cmd, "outdir", tracker, cmdEvent)
 			if err != nil {
 				return fmt.Errorf("%w: outdir", ErrParsingFlag)
 			}
+
+			logrus.Debug("Getting Home Directory Path...")
+
 			homeDir, err := os.UserHomeDir()
 			if err != nil {
 				cmdEvent.AddErrorMessage(err)
@@ -89,7 +92,7 @@ func NewDependenciesCmd(tracker *analytics.Tracker) *cobra.Command {
 			depsvl := dependencies.NewValidator(executor, binPath, furyctlPath, false)
 
 			if distroLocation == "" {
-				distrodl = distribution.NewCachingDownloader(client, typedGitProtocol)
+				distrodl = distribution.NewCachingDownloader(client, outDir, typedGitProtocol)
 			} else {
 				distrodl = distribution.NewDownloader(client, typedGitProtocol)
 			}
@@ -117,7 +120,7 @@ func NewDependenciesCmd(tracker *analytics.Tracker) *cobra.Command {
 
 			basePath := filepath.Join(outDir, ".furyctl", dres.MinimalConf.Metadata.Name)
 
-			depsdl := dependencies.NewCachingDownloader(client, basePath, binPath, typedGitProtocol)
+			depsdl := dependencies.NewCachingDownloader(client, outDir, basePath, binPath, typedGitProtocol)
 
 			logrus.Info("Downloading dependencies...")
 

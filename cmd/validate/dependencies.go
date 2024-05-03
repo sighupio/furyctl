@@ -46,27 +46,27 @@ func NewDependenciesCmd(tracker *analytics.Tracker) *cobra.Command {
 				return fmt.Errorf("%w: distro-location", ErrParsingFlag)
 			}
 
+			// Init paths.
+			logrus.Debug("Getting Home Directory Path...")
+			outDir, err := cmdutil.StringFlag(cmd, "outdir", tracker, cmdEvent)
+			if err != nil {
+				return fmt.Errorf("%w: outdir", ErrParsingFlag)
+			}
+
+			homeDir, err := os.UserHomeDir()
+			if err != nil {
+				cmdEvent.AddErrorMessage(err)
+				tracker.Track(cmdEvent)
+
+				return fmt.Errorf("error while getting user home directory: %w", err)
+			}
+
+			if outDir == "" {
+				outDir = homeDir
+			}
+
 			binPath := cobrax.Flag[string](cmd, "bin-path")
 			if binPath == "" {
-				// Init paths.
-				logrus.Debug("Getting Home Directory Path...")
-				outDir, err := cmdutil.StringFlag(cmd, "outdir", tracker, cmdEvent)
-				if err != nil {
-					return fmt.Errorf("%w: outdir", ErrParsingFlag)
-				}
-
-				homeDir, err := os.UserHomeDir()
-				if err != nil {
-					cmdEvent.AddErrorMessage(err)
-					tracker.Track(cmdEvent)
-
-					return fmt.Errorf("error while getting user home directory: %w", err)
-				}
-
-				if outDir == "" {
-					outDir = homeDir
-				}
-
 				binPath = filepath.Join(outDir, ".furyctl", "bin")
 			}
 
@@ -87,7 +87,7 @@ func NewDependenciesCmd(tracker *analytics.Tracker) *cobra.Command {
 			depsvl := dependencies.NewValidator(executor, "", furyctlPath, false)
 
 			if distroLocation == "" {
-				distrodl = distribution.NewCachingDownloader(client, typedGitProtocol)
+				distrodl = distribution.NewCachingDownloader(client, outDir, typedGitProtocol)
 			} else {
 				distrodl = distribution.NewDownloader(client, typedGitProtocol)
 			}
