@@ -196,6 +196,11 @@ func NewKubeconfigCmd(tracker *analytics.Tracker) *cobra.Command {
 				return fmt.Errorf("error while getting the kubeconfig, please check that the cluster is up and running and is reachable: %w", err)
 			}
 
+			logrus.Infof("Kubeconfig successfully retrieved, you can find it at: %s", path.Join(outDir, "kubeconfig"))
+
+			cmdEvent.AddSuccessMessage("kubeconfig successfully retrieved")
+			tracker.Track(cmdEvent)
+
 			return nil
 		},
 	}
