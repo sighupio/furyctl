@@ -37,6 +37,10 @@ func (f *FakeClient) Clear() error {
 	return nil
 }
 
+func (f *FakeClient) ClearItem(src string) error {
+	return nil
+}
+
 func (f *FakeClient) Download(src, dst string) error {
 	switch src {
 	case distroHTTPSURL, distroSSHURL:

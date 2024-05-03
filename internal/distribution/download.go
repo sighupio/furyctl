@@ -217,6 +217,10 @@ func (d *Downloader) applyCustomCompatibilityPatches(kfdManifest config.KFD, dst
 		return fmt.Errorf("error creating temp dir: %w", err)
 	}
 
+	if err := d.client.ClearItem(d.customDistroPatchesPath); err != nil {
+		return fmt.Errorf("%w '%s': %w", ErrCannotDownloadDistribution, d.customDistroPatchesPath, err)
+	}
+
 	if err := d.client.Download(d.customDistroPatchesPath, tmpDir); err != nil {
 		return fmt.Errorf("%w '%s': %w", ErrDownloadingFolder, d.customDistroPatchesPath, err)
 	}
@@ -234,20 +238,20 @@ func (d *Downloader) applyCustomCompatibilityPatches(kfdManifest config.KFD, dst
 			return nil
 		}
 
-		return fmt.Errorf("error getting custom distro patches info: %w", err)
+		return fmt.Errorf("error getting custom distribution patches directory info: %w", err)
 	}
 
 	if !info.IsDir() {
-		return fmt.Errorf("custom distro patches is not a directory: %w", err)
+		return fmt.Errorf("custom distribution patches location is not a directory: %w", err)
 	}
 
 	fsPatches, err := fs.Sub(os.DirFS(patchesPath), ".")
 	if err != nil {
-		return fmt.Errorf("error reading custom distro patches: %w", err)
+		return fmt.Errorf("error reading custom distribution patches directory: %w", err)
 	}
 
 	if err := iox.CopyRecursive(fsPatches, dst); err != nil {
-		return fmt.Errorf("error copying custom distro patches files: %w", err)
+		return fmt.Errorf("error copying custom distribution patches directory files: %w", err)
 	}
 
 	return nil

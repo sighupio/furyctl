@@ -29,6 +29,7 @@ var (
 type Client interface {
 	Download(src, dst string) error
 	Clear() error
+	ClearItem(src string) error
 }
 
 func WithLocalCache(c Client, dir string) Client {
@@ -45,6 +46,16 @@ type LocalCacheClientDecorator struct {
 
 func (d *LocalCacheClientDecorator) Clear() error {
 	if err := os.RemoveAll(d.dir); err != nil {
+		return fmt.Errorf("%w: %w", ErrCannotClearCache, err)
+	}
+
+	return nil
+}
+
+func (d *LocalCacheClientDecorator) ClearItem(src string) error {
+	key := d.getKeyFromURL(src)
+
+	if err := os.RemoveAll(key); err != nil {
 		return fmt.Errorf("%w: %w", ErrCannotClearCache, err)
 	}
 
