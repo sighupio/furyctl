@@ -52,6 +52,7 @@ type ClusterCreator struct {
 	upgrade              bool
 	externalUpgradesPath string
 	upgradeNode          string
+	postApplyPhases      []string
 }
 
 func (c *ClusterCreator) SetProperties(props []cluster.CreatorProperty) {
@@ -139,6 +140,11 @@ func (c *ClusterCreator) SetProperty(name string, value any) {
 	case cluster.CreatorPropertyUpgradeNode:
 		if s, ok := value.(string); ok {
 			c.upgradeNode = s
+		}
+
+	case cluster.CreatorPropertyPostApplyPhases:
+		if s, ok := value.([]string); ok {
+			c.postApplyPhases = s
 		}
 	}
 }
@@ -424,6 +430,61 @@ func (c *ClusterCreator) allPhases(
 	if distribution.HasFeature(c.kfdManifest, distribution.FeaturePlugins) {
 		if err := pluginsPhase.Exec(); err != nil {
 			return fmt.Errorf("error while executing plugins phase: %w", err)
+		}
+	}
+
+	if len(c.postApplyPhases) > 0 {
+		logrus.Info("Executing extra phases...")
+
+		if err := c.extraPhases(
+			kubernetesPhase,
+			distributionPhase,
+			pluginsPhase,
+			upgr,
+			upgradeState,
+		); err != nil {
+			return fmt.Errorf("error while executing extra phases: %w", err)
+		}
+	}
+
+	return nil
+}
+
+func (c *ClusterCreator) extraPhases(
+	kubernetesPhase upgrade.OperatorPhase,
+	distributionPhase upgrade.ReducersOperatorPhase[v1alpha2.Reducers],
+	pluginsPhase *commcreate.Plugins,
+	upgr *upgrade.Upgrade,
+	upgradeState *upgrade.State,
+) error {
+	initialUpgrade := upgr.Enabled
+
+	defer func() {
+		upgr.Enabled = initialUpgrade
+	}()
+
+	for _, phase := range c.postApplyPhases {
+		switch phase {
+		case cluster.OperationPhaseKubernetes:
+			kubernetesPhase.SetUpgrade(false)
+
+			if err := kubernetesPhase.Exec(StartFromFlagNotSet, upgradeState); err != nil {
+				return fmt.Errorf("error while executing kubernetes phase: %w", err)
+			}
+
+		case cluster.OperationPhaseDistribution:
+			distributionPhase.SetUpgrade(false)
+
+			if err := distributionPhase.Exec(nil, StartFromFlagNotSet, upgradeState); err != nil {
+				return fmt.Errorf("error while executing distribution phase: %w", err)
+			}
+
+		case cluster.OperationPhasePlugins:
+			if distribution.HasFeature(c.kfdManifest, distribution.FeaturePlugins) {
+				if err := pluginsPhase.Exec(); err != nil {
+					return fmt.Errorf("error while executing plugins phase: %w", err)
+				}
+			}
 		}
 	}
 
