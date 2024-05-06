@@ -215,6 +215,10 @@ func (i *Infrastructure) postInfrastructure(
 	return nil
 }
 
+func (i *Infrastructure) SetUpgrade(upgradeEnabled bool) {
+	i.upgrade.Enabled = upgradeEnabled
+}
+
 func (i *Infrastructure) Stop() error {
 	logrus.Debug("Stopping terraform...")
 

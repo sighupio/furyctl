@@ -289,6 +289,10 @@ func (d *Distribution) injectStoredConfig(cfg template.Config) (template.Config,
 	return cfg, nil
 }
 
+func (d *Distribution) SetUpgrade(upgradeEnabled bool) {
+	d.upgrade.Enabled = upgradeEnabled
+}
+
 func NewDistribution(
 	furyctlConf public.OnpremisesKfdV1Alpha2,
 	kfdManifest config.KFD,

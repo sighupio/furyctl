@@ -60,6 +60,7 @@ type ClusterCmdFlags struct {
 	UpgradePathLocation   string
 	UpgradeNode           string
 	DistroPatchesLocation string
+	PostApplyPhases       []string
 	ClusterSkipsCmdFlags
 }
 
@@ -222,6 +223,7 @@ func NewApplyCommand(tracker *analytics.Tracker) *cobra.Command {
 				flags.Upgrade,
 				flags.UpgradePathLocation,
 				flags.UpgradeNode,
+				flags.PostApplyPhases,
 			)
 			if err != nil {
 				cmdEvent.AddErrorMessage(err)
@@ -414,6 +416,11 @@ func getCreateClusterCmdFlags(cmd *cobra.Command, tracker *analytics.Tracker, cm
 		return ClusterCmdFlags{}, fmt.Errorf("%w: %s", ErrParsingFlag, "distro-patches")
 	}
 
+	postApplyPhases, err := cmdutil.StringSliceFlag(cmd, "post-apply-phases", tracker, cmdEvent)
+	if err != nil {
+		return ClusterCmdFlags{}, fmt.Errorf("%w: %s", ErrParsingFlag, "post-apply-phases")
+	}
+
 	return ClusterCmdFlags{
 		Debug:          debug,
 		FuryctlPath:    furyctlPath,
@@ -436,6 +443,7 @@ func getCreateClusterCmdFlags(cmd *cobra.Command, tracker *analytics.Tracker, cm
 		UpgradeNode:           upgradeNode,
 		DistroPatchesLocation: distroPatchesLocation,
 		ClusterSkipsCmdFlags:  skips,
+		PostApplyPhases:       postApplyPhases,
 	}, nil
 }
 
@@ -530,6 +538,12 @@ func setupCreateClusterCmdFlags(cmd *cobra.Command) {
 		"force",
 		[]string{},
 		"WARNING: furyctl won't ask for confirmation and will proceed applying upgrades and reducers. Options are: all, upgrades, migrations, pods-running-check",
+	)
+
+	cmd.Flags().StringSlice(
+		"post-apply-phases",
+		[]string{},
+		"Phases to run after the apply command. Options are: infrastructure, kubernetes, distribution, plugins",
 	)
 
 	//nolint:gomnd,revive // ignore magic number linters
