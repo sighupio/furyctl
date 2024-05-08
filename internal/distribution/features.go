@@ -22,6 +22,7 @@ const (
 	FeaturePlugins            = Feature("Plugins")
 	FeatureYqSupport          = Feature("YqSupport")
 	FeatureKubernetesLogTypes = Feature("KubernetesLogTypes")
+	FeatureKappSupport        = Feature("KappSupport")
 )
 
 func HasFeature(kfd config.KFD, name Feature) bool {
@@ -43,6 +44,9 @@ func HasFeature(kfd config.KFD, name Feature) bool {
 
 	case FeatureKubernetesLogTypes:
 		return hasFeatureKubernetesLogTypes(kfd)
+
+	case FeatureKappSupport:
+		return hasFeatureKappSupport(kfd)
 	}
 
 	return false
@@ -174,4 +178,18 @@ func hasFeatureKubernetesLogTypes(kfd config.KFD) bool {
 	return v1.GreaterThan(v1259) && v1.LessThan(v1260) ||
 		v1.GreaterThan(v1264) && v1.LessThan(v12Seven0) ||
 		v1.GreaterThan(v12Seven2)
+}
+
+func hasFeatureKappSupport(kfd config.KFD) bool {
+	v, err := semver.NewVersion(kfd.Version)
+	if err != nil {
+		return false
+	}
+
+	v1290, err := semver.NewVersion("v1.29.0")
+	if err != nil {
+		return false
+	}
+
+	return v.GreaterThanOrEqual(v1290)
 }
