@@ -28,7 +28,10 @@ import (
 
 const WrappedErrMessage = "%w: %s"
 
-var ErrDownloadDependenciesFailed = errors.New("dependencies download failed")
+var (
+	ErrDownloadDependenciesFailed = errors.New("dependencies download failed")
+	ErrPhaseInvalid               = errors.New("phase is not valid")
+)
 
 type Timeouts struct {
 	ProcessTimeout         int
@@ -421,6 +424,10 @@ func getCreateClusterCmdFlags(cmd *cobra.Command, tracker *analytics.Tracker, cm
 		return ClusterCmdFlags{}, fmt.Errorf("%w: %s", ErrParsingFlag, "post-apply-phases")
 	}
 
+	if err := validatePostApplyPhasesFlag(postApplyPhases); err != nil {
+		return ClusterCmdFlags{}, fmt.Errorf("%w: %s %w", ErrParsingFlag, "post-apply-phases", err)
+	}
+
 	return ClusterCmdFlags{
 		Debug:          debug,
 		FuryctlPath:    furyctlPath,
@@ -445,6 +452,16 @@ func getCreateClusterCmdFlags(cmd *cobra.Command, tracker *analytics.Tracker, cm
 		ClusterSkipsCmdFlags:  skips,
 		PostApplyPhases:       postApplyPhases,
 	}, nil
+}
+
+func validatePostApplyPhasesFlag(phases []string) error {
+	for _, phase := range phases {
+		if err := cluster.ValidateMainPhases(phase); err != nil {
+			return fmt.Errorf("%w: %s", ErrPhaseInvalid, phase)
+		}
+	}
+
+	return nil
 }
 
 func setupCreateClusterCmdFlags(cmd *cobra.Command) {
