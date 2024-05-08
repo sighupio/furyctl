@@ -28,7 +28,7 @@ func Test_Validator_Validate(t *testing.T) {
 		{
 			desc: "all tools are installed in their correct version",
 			manifest: config.KFD{
-				Version: "1.27.0",
+				Version: "1.29.0",
 				Tools: config.KFDTools{
 					Common: config.KFDToolsCommon{
 						Kubectl:   config.KFDTool{Version: "1.21.1"},
@@ -59,7 +59,7 @@ func Test_Validator_Validate(t *testing.T) {
 		{
 			desc: "all tools are installed in their wrong version",
 			manifest: config.KFD{
-				Version: "1.27.0",
+				Version: "1.29.0",
 				Tools: config.KFDTools{
 					Common: config.KFDToolsCommon{
 						Kubectl:   config.KFDTool{Version: "1.22.0"},
@@ -90,7 +90,7 @@ func Test_Validator_Validate(t *testing.T) {
 		{
 			desc: "all tools for EKSCluster kind are installed",
 			manifest: config.KFD{
-				Version: "1.27.0",
+				Version: "1.29.0",
 				Tools: config.KFDTools{
 					Common: config.KFDToolsCommon{
 						Kubectl:   config.KFDTool{Version: "1.21.1"},
