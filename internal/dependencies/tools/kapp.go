@@ -65,7 +65,6 @@ func (k *Kapp) Rename(basePath string) error {
 	return nil
 }
 
-
 func (k *Kapp) CheckBinVersion() error {
 	if err := k.checker.version(k.version); err != nil {
 		return fmt.Errorf("kapp: %w", err)

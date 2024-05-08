@@ -303,7 +303,7 @@ func (op *OperationPhase) CopyPathsToConfig(cfg *template.Config) {
 		"terraform":  op.TerraformPath,
 		"vendorPath": path.Join(op.Path, "..", "vendor"),
 		"yq":         op.YqPath,
-		"kapp":         op.KappPath,
+		"kapp":       op.KappPath,
 	}
 }
 
