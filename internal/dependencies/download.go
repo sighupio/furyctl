@@ -376,7 +376,7 @@ func (dd *Downloader) DownloadTools(kfd config.KFD) ([]string, error) {
 					return
 				}
 
-				if (name == "kapp") && !distribution.HasFeature(kfd, distribution.FeatureKapp) {
+				if (name == "kapp") && !distribution.HasFeature(kfd, distribution.FeatureKappSupport) {
 					return
 				}
 
