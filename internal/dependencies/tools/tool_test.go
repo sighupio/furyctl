@@ -175,6 +175,13 @@ func TestHelperProcess(t *testing.T) {
 		case "version":
 			fmt.Fprintf(os.Stdout, "v0.156.0")
 		}
+	case "kapp":
+		switch subcmd {
+		case "version":
+			fmt.Fprintf(os.Stdout, "kapp version 0.62.0\n"+
+				"\n"+
+				"Succeeded\n")
+		}
 	default:
 		fmt.Fprintf(os.Stdout, "command not found")
 	}
