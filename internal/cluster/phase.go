@@ -147,6 +147,7 @@ type OperationPhase struct {
 	YqPath               string
 	HelmPath             string
 	HelmfilePath         string
+	KappPath             string
 	TerraformPlanPath    string
 	TerraformLogsPath    string
 	TerraformOutputsPath string
@@ -168,6 +169,7 @@ func NewOperationPhase(folder string, kfdTools config.KFDTools, binPath string) 
 	yqPath := path.Join(binPath, "yq", kfdTools.Common.Yq.Version, "yq")
 	helmPath := path.Join(binPath, "helm", kfdTools.Common.Helm.Version, "helm")
 	helmfilePath := path.Join(binPath, "helmfile", kfdTools.Common.Helmfile.Version, "helmfile")
+	kappPath := path.Join(binPath, "kapp", kfdTools.Common.Kapp.Version, "kapp")
 
 	planPath := path.Join(basePath, "terraform", "plan")
 	logsPath := path.Join(basePath, "terraform", "logs")
@@ -187,6 +189,7 @@ func NewOperationPhase(folder string, kfdTools config.KFDTools, binPath string) 
 		YqPath:               yqPath,
 		HelmPath:             helmPath,
 		HelmfilePath:         helmfilePath,
+		KappPath:             kappPath,
 	}
 }
 
@@ -287,6 +290,7 @@ func (op *OperationPhase) CopyPathsToConfig(cfg *template.Config) {
 		"terraform":  op.TerraformPath,
 		"vendorPath": path.Join(op.Path, "..", "vendor"),
 		"yq":         op.YqPath,
+		"kapp":         op.KappPath,
 	}
 }
 

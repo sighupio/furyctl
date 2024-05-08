@@ -25,6 +25,7 @@ import (
 	"github.com/sighupio/furyctl/internal/tool/shell"
 	"github.com/sighupio/furyctl/internal/tool/terraform"
 	"github.com/sighupio/furyctl/internal/tool/yq"
+	"github.com/sighupio/furyctl/internal/tool/kapp"
 	execx "github.com/sighupio/furyctl/internal/x/exec"
 )
 
@@ -163,6 +164,14 @@ func (f *Factory) Create(name tool.Name, version string) Tool {
 		}
 
 		return NewHelmfile(hfr, version)
+
+	case tool.Kapp:
+		ka, ok := t.(*kapp.Runner)
+		if !ok {
+			panic(fmt.Sprintf("expected kapp.Runner, got %T", t))
+		}
+
+		return NewKapp(ka, version)
 
 	default:
 		return nil

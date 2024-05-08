@@ -19,6 +19,7 @@ import (
 	"github.com/sighupio/furyctl/internal/tool/shell"
 	"github.com/sighupio/furyctl/internal/tool/terraform"
 	"github.com/sighupio/furyctl/internal/tool/yq"
+	"github.com/sighupio/furyctl/internal/tool/kapp"
 	execx "github.com/sighupio/furyctl/internal/x/exec"
 )
 
@@ -37,6 +38,7 @@ const (
 	Shell     Name = "shell"
 	Helm      Name = "helm"
 	Helmfile  Name = "helmfile"
+	Kapp      Name = "kapp"
 )
 
 type Runner interface {
@@ -139,6 +141,16 @@ func (rf *RunnerFactory) Create(name Name, version, workDir string) Runner {
 			Helmfile: filepath.Join(rf.paths.Bin, string(name), version, string(name)),
 			WorkDir:  workDir,
 		})
+	
+	case Kapp:
+		return kapp.NewRunner(
+			rf.executor,
+			kapp.Paths{
+				Kapp: filepath.Join(rf.paths.Bin, string(name), version, string(name)),
+				WorkDir: workDir,
+			},
+			false,
+		)
 
 	default:
 		return nil
