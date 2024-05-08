@@ -19,13 +19,13 @@ import (
 	"github.com/sighupio/furyctl/internal/tool/git"
 	"github.com/sighupio/furyctl/internal/tool/helm"
 	"github.com/sighupio/furyctl/internal/tool/helmfile"
+	"github.com/sighupio/furyctl/internal/tool/kapp"
 	"github.com/sighupio/furyctl/internal/tool/kubectl"
 	"github.com/sighupio/furyctl/internal/tool/kustomize"
 	"github.com/sighupio/furyctl/internal/tool/openvpn"
 	"github.com/sighupio/furyctl/internal/tool/shell"
 	"github.com/sighupio/furyctl/internal/tool/terraform"
 	"github.com/sighupio/furyctl/internal/tool/yq"
-	"github.com/sighupio/furyctl/internal/tool/kapp"
 	execx "github.com/sighupio/furyctl/internal/x/exec"
 )
 

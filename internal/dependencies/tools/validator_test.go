@@ -38,6 +38,7 @@ func Test_Validator_Validate(t *testing.T) {
 						Yq:        config.KFDTool{Version: "4.34.1"},
 						Helm:      config.KFDTool{Version: "3.12.3"},
 						Helmfile:  config.KFDTool{Version: "0.156.0"},
+						Kapp:      config.KFDTool{Version: "0.62.0"},
 					},
 				},
 			},
@@ -52,6 +53,7 @@ func Test_Validator_Validate(t *testing.T) {
 				"yq",
 				"helm",
 				"helmfile",
+				"kapp",
 			},
 		},
 		{
@@ -67,6 +69,7 @@ func Test_Validator_Validate(t *testing.T) {
 						Yq:        config.KFDTool{Version: "4.33.0"},
 						Helm:      config.KFDTool{Version: "3.11.3"},
 						Helmfile:  config.KFDTool{Version: "0.155.0"},
+						Kapp:      config.KFDTool{Version: "0.61.0"},
 					},
 				},
 			},
@@ -81,6 +84,7 @@ func Test_Validator_Validate(t *testing.T) {
 				errors.New("yq: wrong tool version - installed = 4.34.1, expected = 4.33.0"),
 				errors.New("helm: wrong tool version - installed = 3.12.3, expected = 3.11.3"),
 				errors.New("helmfile: wrong tool version - installed = 0.156.0, expected = 0.155.0"),
+				errors.New("kapp: wrong tool version - installed = 0.61.0, expected = 0.62.0"),
 			},
 		},
 		{
@@ -96,6 +100,7 @@ func Test_Validator_Validate(t *testing.T) {
 						Yq:        config.KFDTool{Version: "4.34.1"},
 						Helm:      config.KFDTool{Version: "3.12.3"},
 						Helmfile:  config.KFDTool{Version: "0.156.0"},
+						Kapp:      config.KFDTool{Version: "0.62.0"},
 					},
 					Eks: config.KFDToolsEks{
 						Awscli: config.KFDTool{Version: "2.8.12"},
@@ -117,6 +122,7 @@ func Test_Validator_Validate(t *testing.T) {
 				"helmfile",
 				"awscli",
 				"openvpn",
+				"kapp",
 			},
 		},
 	}
