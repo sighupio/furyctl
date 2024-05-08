@@ -376,6 +376,10 @@ func (dd *Downloader) DownloadTools(kfd config.KFD) ([]string, error) {
 					return
 				}
 
+				if (name == "kapp") && !distribution.HasFeature(kfd, distribution.FeatureKapp) {
+					return
+				}
+
 				tfc := dd.toolFactory.Create(tool.Name(name), toolCfg.Version)
 				if tfc == nil || !tfc.SupportsDownload() {
 					utsCh <- name
