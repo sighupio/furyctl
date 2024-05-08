@@ -84,7 +84,7 @@ func Test_Validator_Validate(t *testing.T) {
 				errors.New("yq: wrong tool version - installed = 4.34.1, expected = 4.33.0"),
 				errors.New("helm: wrong tool version - installed = 3.12.3, expected = 3.11.3"),
 				errors.New("helmfile: wrong tool version - installed = 0.156.0, expected = 0.155.0"),
-				errors.New("kapp: wrong tool version - installed = 0.61.0, expected = 0.62.0"),
+				errors.New("kapp: wrong tool version - installed = 0.62.0, expected = 0.61.0"),
 			},
 		},
 		{

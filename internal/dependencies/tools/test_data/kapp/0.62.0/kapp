@@ -1,0 +1,7 @@
+#!/bin/sh
+
+cat <<EOF
+kapp version 0.62.0
+
+Succeeded
+EOF
