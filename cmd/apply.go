@@ -63,7 +63,10 @@ type ClusterCmdFlags struct {
 	ClusterSkipsCmdFlags
 }
 
-var ErrDownloadDependenciesFailed = errors.New("dependencies download failed")
+var (
+	ErrDownloadDependenciesFailed = errors.New("dependencies download failed")
+	ErrPhaseInvalid               = errors.New("phase is not valid")
+)
 
 func NewApplyCmd() *cobra.Command {
 	var cmdEvent analytics.Event
@@ -330,6 +333,12 @@ func getCreateClusterCmdFlags() (ClusterCmdFlags, error) {
 		)
 	}
 
+	postApplyPhases := viper.GetStringSlice("post-apply-phases")
+
+	if err := validatePostApplyPhasesFlag(postApplyPhases); err != nil {
+		return ClusterCmdFlags{}, fmt.Errorf("%w: %s %w", ErrParsingFlag, "post-apply-phases", err)
+	}
+
 	return ClusterCmdFlags{
 		Debug:          viper.GetBool("debug"),
 		FuryctlPath:    viper.GetString("config"),
@@ -352,8 +361,18 @@ func getCreateClusterCmdFlags() (ClusterCmdFlags, error) {
 		UpgradeNode:           upgradeNode,
 		DistroPatchesLocation: viper.GetString("distro-patches"),
 		ClusterSkipsCmdFlags:  skips,
-		PostApplyPhases:       viper.GetStringSlice("post-apply-phases"),
+		PostApplyPhases:       postApplyPhases,
 	}, nil
+}
+
+func validatePostApplyPhasesFlag(phases []string) error {
+	for _, phase := range phases {
+		if err := cluster.ValidateMainPhases(phase); err != nil {
+			return fmt.Errorf("%w: %s", ErrPhaseInvalid, phase)
+		}
+	}
+
+	return nil
 }
 
 func setupCreateClusterCmdFlags(cmd *cobra.Command) {
