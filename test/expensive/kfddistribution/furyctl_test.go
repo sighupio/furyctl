@@ -245,11 +245,17 @@ var (
 
 	_ = Describe("furyctl & distro v1.27.5 - minimal", Ordered, Serial, CreateAndDeleteTestScenario("1.27.5", "v1.27.10", false))
 
+	_ = Describe("furyctl & distro v1.27.6 - minimal", Ordered, Serial, CreateAndDeleteTestScenario("1.27.6", "v1.27.10", false))
+
 	_ = Describe("furyctl & distro v1.28.0 - minimal", Ordered, Serial, CreateAndDeleteTestScenario("1.28.0", "v1.28.6", false))
+
+	_ = Describe("furyctl & distro v1.28.1 - minimal", Ordered, Serial, CreateAndDeleteTestScenario("1.28.1", "v1.28.6", false))
 
 	_ = Describe("furyctl & distro v1.29.0 - minimal", Ordered, Serial, CreateAndDeleteTestScenario("1.29.0", "v1.29.2", false))
 
-	_ = Describe("furyctl & distro v1.27.4 - minimal - ephemeral", Ordered, Serial, CreateAndDeleteTestScenario("1.27.4", "v1.27.3", true))
+	_ = Describe("furyctl & distro v1.29.1 - minimal", Ordered, Serial, CreateAndDeleteTestScenario("1.29.1", "v1.29.2", false))
+
+	_ = Describe("furyctl & distro v1.29.1 - minimal - ephemeral", Ordered, Serial, CreateAndDeleteTestScenario("1.29.1", "v1.29.2", true))
 
 	_ = Describe("furyctl & distro v1.25.4 - minimal - by phase", Ordered, Serial, CreateAndDeleteByPhaseTestScenario("1.25.4", "v1.25.11", false))
 
@@ -289,7 +295,13 @@ var (
 
 	_ = Describe("furyctl & distro v1.27.5 - minimal - by phase", Ordered, Serial, CreateAndDeleteByPhaseTestScenario("1.27.5", "v1.27.10", false))
 
+	_ = Describe("furyctl & distro v1.27.6 - minimal - by phase", Ordered, Serial, CreateAndDeleteByPhaseTestScenario("1.27.6", "v1.27.10", false))
+
 	_ = Describe("furyctl & distro v1.28.0 - minimal - by phase", Ordered, Serial, CreateAndDeleteByPhaseTestScenario("1.28.0", "v1.28.6", false))
 
+	_ = Describe("furyctl & distro v1.28.1 - minimal - by phase", Ordered, Serial, CreateAndDeleteByPhaseTestScenario("1.28.1", "v1.28.6", false))
+
 	_ = Describe("furyctl & distro v1.29.0 - minimal - by phase", Ordered, Serial, CreateAndDeleteByPhaseTestScenario("1.29.0", "v1.29.2", false))
+
+	_ = Describe("furyctl & distro v1.29.1 - minimal - by phase", Ordered, Serial, CreateAndDeleteByPhaseTestScenario("1.29.1", "v1.29.2", false))
 )
