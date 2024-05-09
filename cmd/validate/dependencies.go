@@ -85,6 +85,18 @@ func NewDependenciesCmd(tracker *analytics.Tracker) *cobra.Command {
 				return fmt.Errorf("%w: %w", ErrParsingFlag, err)
 			}
 
+			absDistroPatchesLocation := distroPatchesLocation
+
+			if absDistroPatchesLocation != "" {
+				absDistroPatchesLocation, err = filepath.Abs(distroPatchesLocation)
+				if err != nil {
+					cmdEvent.AddErrorMessage(err)
+					tracker.Track(cmdEvent)
+
+					return fmt.Errorf("error while getting absolute path of distro patches location: %w", err)
+				}
+			}
+
 			var distrodl *distribution.Downloader
 
 			client := netx.NewGoGetterClient()
@@ -92,9 +104,9 @@ func NewDependenciesCmd(tracker *analytics.Tracker) *cobra.Command {
 			depsvl := dependencies.NewValidator(executor, "", furyctlPath, false)
 
 			if distroLocation == "" {
-				distrodl = distribution.NewCachingDownloader(client, outDir, typedGitProtocol, distroPatchesLocation)
+				distrodl = distribution.NewCachingDownloader(client, outDir, typedGitProtocol, absDistroPatchesLocation)
 			} else {
-				distrodl = distribution.NewDownloader(client, typedGitProtocol, distroPatchesLocation)
+				distrodl = distribution.NewDownloader(client, typedGitProtocol, absDistroPatchesLocation)
 			}
 
 			// Validate base requirements.

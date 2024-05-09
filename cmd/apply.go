@@ -104,12 +104,16 @@ func NewApplyCommand(tracker *analytics.Tracker) *cobra.Command {
 				logrus.Info("Dry run mode enabled, no changes will be applied")
 			}
 
-			absDistroPatchesLocation, err := filepath.Abs(flags.DistroPatchesLocation)
-			if err != nil {
-				cmdEvent.AddErrorMessage(err)
-				tracker.Track(cmdEvent)
+			absDistroPatchesLocation := flags.DistroPatchesLocation
 
-				return fmt.Errorf("error while getting absolute path of distro patches location: %w", err)
+			if absDistroPatchesLocation != "" {
+				absDistroPatchesLocation, err = filepath.Abs(flags.DistroPatchesLocation)
+				if err != nil {
+					cmdEvent.AddErrorMessage(err)
+					tracker.Track(cmdEvent)
+
+					return fmt.Errorf("error while getting absolute path of distro patches location: %w", err)
+				}
 			}
 
 			var distrodl *distribution.Downloader

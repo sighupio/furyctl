@@ -82,6 +82,18 @@ The generated folder will be created starting from a provided templates folder a
 				outDir = homeDir
 			}
 
+			absDistroPatchesLocation := flags.DistroPatchesLocation
+
+			if absDistroPatchesLocation != "" {
+				absDistroPatchesLocation, err = filepath.Abs(flags.DistroPatchesLocation)
+				if err != nil {
+					cmdEvent.AddErrorMessage(err)
+					tracker.Track(cmdEvent)
+
+					return fmt.Errorf("error while getting absolute path of distro patches location: %w", err)
+				}
+			}
+
 			var distrodl *distribution.Downloader
 
 			client := netx.NewGoGetterClient()
@@ -89,9 +101,9 @@ The generated folder will be created starting from a provided templates folder a
 			depsvl := dependencies.NewValidator(executor, "", absFuryctlPath, false)
 
 			if flags.DistroLocation == "" {
-				distrodl = distribution.NewCachingDownloader(client, outDir, flags.GitProtocol, flags.DistroPatchesLocation)
+				distrodl = distribution.NewCachingDownloader(client, outDir, flags.GitProtocol, absDistroPatchesLocation)
 			} else {
-				distrodl = distribution.NewDownloader(client, flags.GitProtocol, flags.DistroPatchesLocation)
+				distrodl = distribution.NewDownloader(client, flags.GitProtocol, absDistroPatchesLocation)
 			}
 
 			if err := depsvl.ValidateBaseReqs(); err != nil {

@@ -128,6 +128,18 @@ func NewConfigCommand(tracker *analytics.Tracker) *cobra.Command {
 				},
 			}
 
+			absDistroPatchesLocation := distroPatchesLocation
+
+			if absDistroPatchesLocation != "" {
+				absDistroPatchesLocation, err = filepath.Abs(distroPatchesLocation)
+				if err != nil {
+					cmdEvent.AddErrorMessage(err)
+					tracker.Track(cmdEvent)
+
+					return fmt.Errorf("error while getting absolute path of distro patches location: %w", err)
+				}
+			}
+
 			var distrodl *distribution.Downloader
 
 			// Init collaborators.
@@ -136,9 +148,9 @@ func NewConfigCommand(tracker *analytics.Tracker) *cobra.Command {
 			depsvl := dependencies.NewValidator(executor, "", "", false)
 
 			if distroLocation == "" {
-				distrodl = distribution.NewCachingDownloader(client, outDir, typedGitProtocol, distroPatchesLocation)
+				distrodl = distribution.NewCachingDownloader(client, outDir, typedGitProtocol, absDistroPatchesLocation)
 			} else {
-				distrodl = distribution.NewDownloader(client, typedGitProtocol, distroPatchesLocation)
+				distrodl = distribution.NewDownloader(client, typedGitProtocol, absDistroPatchesLocation)
 			}
 
 			// Init packages.

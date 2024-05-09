@@ -76,14 +76,26 @@ func NewDiffCommand(tracker *analytics.Tracker) *cobra.Command {
 				flags.BinPath = filepath.Join(outDir, ".furyctl", "bin")
 			}
 
+			absDistroPatchesLocation := flags.DistroPatchesLocation
+
+			if absDistroPatchesLocation != "" {
+				absDistroPatchesLocation, err = filepath.Abs(flags.DistroPatchesLocation)
+				if err != nil {
+					cmdEvent.AddErrorMessage(err)
+					tracker.Track(cmdEvent)
+
+					return fmt.Errorf("error while getting absolute path of distro patches location: %w", err)
+				}
+			}
+
 			var distrodl *distribution.Downloader
 
 			client := netx.NewGoGetterClient()
 
 			if flags.DistroLocation == "" {
-				distrodl = distribution.NewCachingDownloader(client, outDir, flags.GitProtocol, flags.DistroPatchesLocation)
+				distrodl = distribution.NewCachingDownloader(client, outDir, flags.GitProtocol, absDistroPatchesLocation)
 			} else {
-				distrodl = distribution.NewDownloader(client, flags.GitProtocol, flags.DistroPatchesLocation)
+				distrodl = distribution.NewDownloader(client, flags.GitProtocol, absDistroPatchesLocation)
 			}
 
 			logrus.Info("Downloading distribution...")
