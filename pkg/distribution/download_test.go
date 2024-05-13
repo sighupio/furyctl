@@ -11,9 +11,9 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/sighupio/furyctl/internal/distribution"
 	"github.com/sighupio/furyctl/internal/git"
 	netx "github.com/sighupio/furyctl/internal/x/net"
+	dist "github.com/sighupio/furyctl/pkg/distribution"
 )
 
 func Test_Downloader_Download(t *testing.T) {
@@ -52,7 +52,7 @@ func Test_Downloader_Download(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			d := distribution.NewDownloader(netx.NewGoGetterClient(), git.ProtocolSSH, "")
+			d := dist.NewDownloader(netx.NewGoGetterClient(), git.ProtocolSSH, "")
 
 			res, err := d.Download(
 				absDistroPath,

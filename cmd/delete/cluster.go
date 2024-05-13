@@ -19,12 +19,12 @@ import (
 	"github.com/sighupio/furyctl/internal/cmd/cmdutil"
 	"github.com/sighupio/furyctl/internal/config"
 	"github.com/sighupio/furyctl/internal/dependencies"
-	"github.com/sighupio/furyctl/internal/distribution"
 	"github.com/sighupio/furyctl/internal/git"
 	cobrax "github.com/sighupio/furyctl/internal/x/cobra"
 	execx "github.com/sighupio/furyctl/internal/x/exec"
 	iox "github.com/sighupio/furyctl/internal/x/io"
 	netx "github.com/sighupio/furyctl/internal/x/net"
+	dist "github.com/sighupio/furyctl/pkg/distribution"
 )
 
 const WrappedErrMessage = "%w: %s"
@@ -106,7 +106,7 @@ func NewClusterCmd(tracker *analytics.Tracker) *cobra.Command {
 				}
 			}
 
-			var distrodl *distribution.Downloader
+			var distrodl *dist.Downloader
 
 			// Init first half of collaborators.
 			client := netx.NewGoGetterClient()
@@ -114,9 +114,9 @@ func NewClusterCmd(tracker *analytics.Tracker) *cobra.Command {
 			depsvl := dependencies.NewValidator(executor, flags.BinPath, flags.FuryctlPath, flags.VpnAutoConnect)
 
 			if flags.DistroLocation == "" {
-				distrodl = distribution.NewCachingDownloader(client, outDir, flags.GitProtocol, absDistroPatchesLocation)
+				distrodl = dist.NewCachingDownloader(client, outDir, flags.GitProtocol, absDistroPatchesLocation)
 			} else {
-				distrodl = distribution.NewDownloader(client, flags.GitProtocol, absDistroPatchesLocation)
+				distrodl = dist.NewDownloader(client, flags.GitProtocol, absDistroPatchesLocation)
 			}
 
 			execx.NoTTY = flags.NoTTY

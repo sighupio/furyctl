@@ -18,12 +18,12 @@ import (
 	"github.com/sighupio/furyctl/internal/cmd/cmdutil"
 	"github.com/sighupio/furyctl/internal/config"
 	"github.com/sighupio/furyctl/internal/dependencies"
-	"github.com/sighupio/furyctl/internal/distribution"
 	"github.com/sighupio/furyctl/internal/git"
 	"github.com/sighupio/furyctl/internal/semver"
 	cobrax "github.com/sighupio/furyctl/internal/x/cobra"
 	execx "github.com/sighupio/furyctl/internal/x/exec"
 	netx "github.com/sighupio/furyctl/internal/x/net"
+	dist "github.com/sighupio/furyctl/pkg/distribution"
 )
 
 var (
@@ -140,7 +140,7 @@ func NewConfigCommand(tracker *analytics.Tracker) *cobra.Command {
 				}
 			}
 
-			var distrodl *distribution.Downloader
+			var distrodl *dist.Downloader
 
 			// Init collaborators.
 			client := netx.NewGoGetterClient()
@@ -148,9 +148,9 @@ func NewConfigCommand(tracker *analytics.Tracker) *cobra.Command {
 			depsvl := dependencies.NewValidator(executor, "", "", false)
 
 			if distroLocation == "" {
-				distrodl = distribution.NewCachingDownloader(client, outDir, typedGitProtocol, absDistroPatchesLocation)
+				distrodl = dist.NewCachingDownloader(client, outDir, typedGitProtocol, absDistroPatchesLocation)
 			} else {
-				distrodl = distribution.NewDownloader(client, typedGitProtocol, absDistroPatchesLocation)
+				distrodl = dist.NewDownloader(client, typedGitProtocol, absDistroPatchesLocation)
 			}
 
 			// Init packages.

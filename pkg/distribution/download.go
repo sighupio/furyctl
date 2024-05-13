@@ -18,6 +18,7 @@ import (
 
 	"github.com/sighupio/fury-distribution/pkg/apis/config"
 	"github.com/sighupio/furyctl/configs"
+	idist "github.com/sighupio/furyctl/internal/distribution"
 	"github.com/sighupio/furyctl/internal/git"
 	iox "github.com/sighupio/furyctl/internal/x/io"
 	netx "github.com/sighupio/furyctl/internal/x/net"
@@ -86,7 +87,7 @@ func (d *Downloader) Download(
 		return DownloadResult{}, fmt.Errorf("%w: %w", ErrYamlUnmarshalFile, err)
 	}
 
-	compatChecker, err := NewCompatibilityChecker(minimalConf.Spec.DistributionVersion, minimalConf.Kind)
+	compatChecker, err := idist.NewCompatibilityChecker(minimalConf.Spec.DistributionVersion, minimalConf.Kind)
 	if err != nil {
 		return DownloadResult{}, fmt.Errorf("%w: %w", ErrCannotDownloadDistribution, err)
 	}

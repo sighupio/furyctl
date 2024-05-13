@@ -17,10 +17,11 @@ import (
 	"github.com/sighupio/furyctl/internal/schema/santhosh"
 	iox "github.com/sighupio/furyctl/internal/x/io"
 	yamlx "github.com/sighupio/furyctl/internal/x/yaml"
+	dist "github.com/sighupio/furyctl/pkg/distribution"
 )
 
 func Create(
-	res distribution.DownloadResult,
+	res dist.DownloadResult,
 	furyctlPath string,
 	cmdEvent analytics.Event,
 	tracker *analytics.Tracker,
@@ -124,7 +125,7 @@ func loadFromFile(path string) (config.Furyctl, error) {
 	}
 
 	if err := config.NewValidator().Struct(conf); err != nil {
-		return config.Furyctl{}, fmt.Errorf("%w: %v", distribution.ErrValidateConfig, err)
+		return config.Furyctl{}, fmt.Errorf("%w: %v", dist.ErrValidateConfig, err)
 	}
 
 	return conf, err
