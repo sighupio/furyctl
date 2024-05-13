@@ -17,9 +17,9 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/sighupio/fury-distribution/pkg/apis/config"
-	"github.com/sighupio/furyctl/internal/merge"
 	iox "github.com/sighupio/furyctl/internal/x/io"
 	slicesx "github.com/sighupio/furyctl/internal/x/slices"
+	"github.com/sighupio/furyctl/pkg/merge"
 	"github.com/sighupio/furyctl/pkg/template"
 	yamlx "github.com/sighupio/furyctl/pkg/x/yaml"
 )

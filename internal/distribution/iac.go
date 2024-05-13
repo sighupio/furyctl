@@ -13,8 +13,8 @@ import (
 
 	"github.com/sirupsen/logrus"
 
-	"github.com/sighupio/furyctl/internal/merge"
 	iox "github.com/sighupio/furyctl/internal/x/io"
+	"github.com/sighupio/furyctl/pkg/merge"
 	"github.com/sighupio/furyctl/pkg/template"
 	yamlx "github.com/sighupio/furyctl/pkg/x/yaml"
 )

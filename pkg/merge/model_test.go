@@ -11,7 +11,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/sighupio/furyctl/internal/merge"
+	"github.com/sighupio/furyctl/pkg/merge"
 )
 
 func TestNewDefaultModel(t *testing.T) {

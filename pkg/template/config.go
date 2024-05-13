@@ -9,8 +9,8 @@ import (
 	"fmt"
 	"reflect"
 
-	"github.com/sighupio/furyctl/internal/merge"
 	mapx "github.com/sighupio/furyctl/internal/x/map"
+	"github.com/sighupio/furyctl/pkg/merge"
 )
 
 var (
