@@ -8,7 +8,7 @@ import (
 	"reflect"
 	"testing"
 
-	mapx "github.com/sighupio/furyctl/internal/x/map"
+	mapx "github.com/sighupio/furyctl/pkg/x/map"
 )
 
 func TestFromStruct(t *testing.T) {
