@@ -12,7 +12,7 @@ import (
 	"github.com/r3labs/diff/v3"
 
 	"github.com/sighupio/furyctl/internal/rules"
-	yamlx "github.com/sighupio/furyctl/internal/x/yaml"
+	yamlx "github.com/sighupio/furyctl/pkg/x/yaml"
 )
 
 var ErrReadingRulesFile = errors.New("error while reading rules file")

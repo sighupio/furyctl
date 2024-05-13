@@ -29,9 +29,9 @@ import (
 	execx "github.com/sighupio/furyctl/internal/x/exec"
 	iox "github.com/sighupio/furyctl/internal/x/io"
 	osx "github.com/sighupio/furyctl/internal/x/os"
-	yamlx "github.com/sighupio/furyctl/internal/x/yaml"
 	dist "github.com/sighupio/furyctl/pkg/distribution"
 	netx "github.com/sighupio/furyctl/pkg/x/net"
+	yamlx "github.com/sighupio/furyctl/pkg/x/yaml"
 )
 
 type Conf struct {

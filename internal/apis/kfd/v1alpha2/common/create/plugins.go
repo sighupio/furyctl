@@ -19,8 +19,8 @@ import (
 	"github.com/sighupio/furyctl/internal/tool/helmfile"
 	"github.com/sighupio/furyctl/internal/tool/shell"
 	execx "github.com/sighupio/furyctl/internal/x/exec"
-	yamlx "github.com/sighupio/furyctl/internal/x/yaml"
 	"github.com/sighupio/furyctl/pkg/template"
+	yamlx "github.com/sighupio/furyctl/pkg/x/yaml"
 )
 
 type Plugins struct {

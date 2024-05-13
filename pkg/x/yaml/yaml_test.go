@@ -12,7 +12,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	yamlx "github.com/sighupio/furyctl/internal/x/yaml"
+	yamlx "github.com/sighupio/furyctl/pkg/x/yaml"
 )
 
 type TestYaml struct {

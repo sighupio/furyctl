@@ -26,7 +26,7 @@ import (
 	"github.com/sighupio/furyctl/internal/tool/terraform"
 	execx "github.com/sighupio/furyctl/internal/x/exec"
 	kubex "github.com/sighupio/furyctl/internal/x/kube"
-	yamlx "github.com/sighupio/furyctl/internal/x/yaml"
+	yamlx "github.com/sighupio/furyctl/pkg/x/yaml"
 )
 
 var (
