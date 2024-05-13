@@ -14,9 +14,9 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/sighupio/furyctl/internal/merge"
-	"github.com/sighupio/furyctl/internal/template"
 	iox "github.com/sighupio/furyctl/internal/x/io"
 	yamlx "github.com/sighupio/furyctl/internal/x/yaml"
+	"github.com/sighupio/furyctl/pkg/template"
 )
 
 const (

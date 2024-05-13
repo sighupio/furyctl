@@ -15,7 +15,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/sighupio/furyctl/internal/template/mapper"
+	"github.com/sighupio/furyctl/pkg/template/mapper"
 )
 
 func TestNewMapper(t *testing.T) {

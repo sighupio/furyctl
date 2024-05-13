@@ -10,7 +10,7 @@ import (
 	"testing"
 
 	"github.com/sighupio/furyctl/internal/merge"
-	"github.com/sighupio/furyctl/internal/template"
+	"github.com/sighupio/furyctl/pkg/template"
 )
 
 func TestNewConfig(t *testing.T) {

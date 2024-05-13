@@ -15,7 +15,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"gopkg.in/yaml.v2"
 
-	"github.com/sighupio/furyctl/internal/template"
+	"github.com/sighupio/furyctl/pkg/template"
 )
 
 type Meta struct {

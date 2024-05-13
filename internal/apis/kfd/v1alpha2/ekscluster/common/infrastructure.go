@@ -10,7 +10,7 @@ import (
 
 	"github.com/sighupio/fury-distribution/pkg/apis/ekscluster/v1alpha2/private"
 	"github.com/sighupio/furyctl/internal/cluster"
-	"github.com/sighupio/furyctl/internal/template"
+	"github.com/sighupio/furyctl/pkg/template"
 )
 
 type Infrastructure struct {
