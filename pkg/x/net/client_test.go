@@ -14,7 +14,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"github.com/sighupio/furyctl/internal/test"
-	netx "github.com/sighupio/furyctl/internal/x/net"
+	netx "github.com/sighupio/furyctl/pkg/x/net"
 )
 
 const (
