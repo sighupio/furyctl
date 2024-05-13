@@ -26,6 +26,7 @@ import (
 	execx "github.com/sighupio/furyctl/internal/x/exec"
 	iox "github.com/sighupio/furyctl/internal/x/io"
 	netx "github.com/sighupio/furyctl/internal/x/net"
+	dist "github.com/sighupio/furyctl/pkg/distribution"
 )
 
 const downloadsTimeout = 5 * time.Minute
@@ -250,7 +251,7 @@ func (dd *Downloader) DownloadModules(kfd config.KFD, gitPrefix string) error {
 				}
 
 				if err := dd.client.Download(src, dst); err != nil {
-					errs = append(errs, fmt.Errorf("%w '%s': %v", distribution.ErrDownloadingFolder, src, err))
+					errs = append(errs, fmt.Errorf("%w '%s': %v", dist.ErrDownloadingFolder, src, err))
 
 					if _, err := os.Stat(dst); err == nil {
 						if err := os.RemoveAll(dst); err != nil {
@@ -323,7 +324,7 @@ func (dd *Downloader) DownloadInstallers(installers config.KFDKubernetes, gitPre
 		}
 
 		if err := dd.client.Download(src, dst); err != nil {
-			return fmt.Errorf("%w '%s': %v", distribution.ErrDownloadingFolder, src, err)
+			return fmt.Errorf("%w '%s': %v", dist.ErrDownloadingFolder, src, err)
 		}
 
 		err := os.RemoveAll(filepath.Join(dst, ".git"))
@@ -381,20 +382,20 @@ func (dd *Downloader) DownloadTools(kfd config.KFD) ([]string, error) {
 				dst := filepath.Join(dd.binPath, name, toolCfg.Version)
 
 				if err := dd.client.Download(tfc.SrcPath(), dst); err != nil {
-					errCh <- fmt.Errorf("%w '%s': %w", distribution.ErrDownloadingFolder, tfc.SrcPath(), err)
+					errCh <- fmt.Errorf("%w '%s': %w", dist.ErrDownloadingFolder, tfc.SrcPath(), err)
 
 					return
 				}
 
 				if err := tfc.Rename(dst); err != nil {
-					errCh <- fmt.Errorf("%w '%s': %w", distribution.ErrRenamingFile, tfc.SrcPath(), err)
+					errCh <- fmt.Errorf("%w '%s': %w", dist.ErrRenamingFile, tfc.SrcPath(), err)
 
 					return
 				}
 
 				if _, err := os.Stat(filepath.Join(dst, name)); err == nil {
 					if err := os.Chmod(filepath.Join(dst, name), iox.FullPermAccess); err != nil {
-						errCh <- fmt.Errorf("%w '%s': %w", distribution.ErrChangingFilePermissions, filepath.Join(dst, name), err)
+						errCh <- fmt.Errorf("%w '%s': %w", dist.ErrChangingFilePermissions, filepath.Join(dst, name), err)
 
 						return
 					}

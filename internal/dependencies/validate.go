@@ -10,8 +10,8 @@ import (
 
 	"github.com/sighupio/furyctl/internal/dependencies/envvars"
 	"github.com/sighupio/furyctl/internal/dependencies/tools"
-	"github.com/sighupio/furyctl/internal/distribution"
 	execx "github.com/sighupio/furyctl/internal/x/exec"
+	dist "github.com/sighupio/furyctl/pkg/distribution"
 )
 
 var (
@@ -39,7 +39,7 @@ func (v *Validator) ValidateBaseReqs() error {
 	return nil
 }
 
-func (v *Validator) Validate(res distribution.DownloadResult) error {
+func (v *Validator) Validate(res dist.DownloadResult) error {
 	if _, errs := v.toolsValidator.Validate(
 		res.DistroManifest,
 		res.MinimalConf,
