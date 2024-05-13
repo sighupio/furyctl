@@ -20,8 +20,8 @@ import (
 	"github.com/sighupio/furyctl/internal/tool/shell"
 	execx "github.com/sighupio/furyctl/internal/x/exec"
 	iox "github.com/sighupio/furyctl/internal/x/io"
-	yamlx "github.com/sighupio/furyctl/internal/x/yaml"
 	"github.com/sighupio/furyctl/pkg/template"
+	yamlx "github.com/sighupio/furyctl/pkg/x/yaml"
 )
 
 type Distribution struct {

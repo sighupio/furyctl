@@ -16,8 +16,8 @@ import (
 	"github.com/sighupio/furyctl/internal/distribution"
 	"github.com/sighupio/furyctl/internal/schema/santhosh"
 	iox "github.com/sighupio/furyctl/internal/x/io"
-	yamlx "github.com/sighupio/furyctl/internal/x/yaml"
 	dist "github.com/sighupio/furyctl/pkg/distribution"
+	yamlx "github.com/sighupio/furyctl/pkg/x/yaml"
 )
 
 func Create(

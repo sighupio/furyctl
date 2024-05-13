@@ -7,7 +7,7 @@ package kubex
 import (
 	"fmt"
 
-	yamlx "github.com/sighupio/furyctl/internal/x/yaml"
+	yamlx "github.com/sighupio/furyctl/pkg/x/yaml"
 )
 
 func CreateConfigMap(data []byte, name, key, namespace string) ([]byte, error) {

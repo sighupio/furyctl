@@ -8,7 +8,7 @@ import (
 	"testing"
 
 	kubex "github.com/sighupio/furyctl/internal/x/kube"
-	yamlx "github.com/sighupio/furyctl/internal/x/yaml"
+	yamlx "github.com/sighupio/furyctl/pkg/x/yaml"
 )
 
 func TestCreateSecret(t *testing.T) {

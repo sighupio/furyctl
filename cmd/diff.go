@@ -23,9 +23,9 @@ import (
 	"github.com/sighupio/furyctl/internal/state"
 	cobrax "github.com/sighupio/furyctl/internal/x/cobra"
 	execx "github.com/sighupio/furyctl/internal/x/exec"
-	yamlx "github.com/sighupio/furyctl/internal/x/yaml"
 	dist "github.com/sighupio/furyctl/pkg/distribution"
 	netx "github.com/sighupio/furyctl/pkg/x/net"
+	yamlx "github.com/sighupio/furyctl/pkg/x/yaml"
 )
 
 type DiffCommandFlags struct {

@@ -15,8 +15,8 @@ import (
 
 	"github.com/sighupio/furyctl/internal/merge"
 	iox "github.com/sighupio/furyctl/internal/x/io"
-	yamlx "github.com/sighupio/furyctl/internal/x/yaml"
 	"github.com/sighupio/furyctl/pkg/template"
+	yamlx "github.com/sighupio/furyctl/pkg/x/yaml"
 )
 
 const (

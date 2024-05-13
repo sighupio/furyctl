@@ -15,8 +15,8 @@ import (
 	"gopkg.in/yaml.v2"
 
 	iox "github.com/sighupio/furyctl/internal/x/io"
-	yamlx "github.com/sighupio/furyctl/internal/x/yaml"
 	"github.com/sighupio/furyctl/pkg/template/mapper"
+	yamlx "github.com/sighupio/furyctl/pkg/x/yaml"
 )
 
 var (
