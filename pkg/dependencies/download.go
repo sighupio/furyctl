@@ -25,8 +25,8 @@ import (
 	"github.com/sighupio/furyctl/internal/tool"
 	execx "github.com/sighupio/furyctl/internal/x/exec"
 	iox "github.com/sighupio/furyctl/internal/x/io"
-	netx "github.com/sighupio/furyctl/internal/x/net"
 	dist "github.com/sighupio/furyctl/pkg/distribution"
+	netx "github.com/sighupio/furyctl/pkg/x/net"
 )
 
 const downloadsTimeout = 5 * time.Minute

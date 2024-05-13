@@ -28,10 +28,10 @@ import (
 	"github.com/sighupio/furyctl/internal/tool"
 	execx "github.com/sighupio/furyctl/internal/x/exec"
 	iox "github.com/sighupio/furyctl/internal/x/io"
-	netx "github.com/sighupio/furyctl/internal/x/net"
 	osx "github.com/sighupio/furyctl/internal/x/os"
 	yamlx "github.com/sighupio/furyctl/internal/x/yaml"
 	dist "github.com/sighupio/furyctl/pkg/distribution"
+	netx "github.com/sighupio/furyctl/pkg/x/net"
 )
 
 type Conf struct {

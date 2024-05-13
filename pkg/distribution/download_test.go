@@ -12,8 +12,8 @@ import (
 	"testing"
 
 	"github.com/sighupio/furyctl/internal/git"
-	netx "github.com/sighupio/furyctl/internal/x/net"
 	dist "github.com/sighupio/furyctl/pkg/distribution"
+	netx "github.com/sighupio/furyctl/pkg/x/net"
 )
 
 func Test_Downloader_Download(t *testing.T) {
