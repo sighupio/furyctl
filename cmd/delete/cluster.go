@@ -23,9 +23,9 @@ import (
 	cobrax "github.com/sighupio/furyctl/internal/x/cobra"
 	execx "github.com/sighupio/furyctl/internal/x/exec"
 	iox "github.com/sighupio/furyctl/internal/x/io"
-	netx "github.com/sighupio/furyctl/internal/x/net"
 	"github.com/sighupio/furyctl/pkg/dependencies"
 	dist "github.com/sighupio/furyctl/pkg/distribution"
+	netx "github.com/sighupio/furyctl/pkg/x/net"
 )
 
 const WrappedErrMessage = "%w: %s"
