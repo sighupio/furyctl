@@ -13,7 +13,7 @@ import (
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/stretchr/testify/assert"
 
-	"github.com/sighupio/furyctl/internal/template"
+	"github.com/sighupio/furyctl/pkg/template"
 )
 
 func TestNewFuncMap(t *testing.T) {

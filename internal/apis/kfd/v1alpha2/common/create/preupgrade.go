@@ -22,10 +22,10 @@ import (
 	"github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2"
 	"github.com/sighupio/furyctl/internal/cluster"
 	"github.com/sighupio/furyctl/internal/semver"
-	"github.com/sighupio/furyctl/internal/template"
 	"github.com/sighupio/furyctl/internal/upgrade"
 	iox "github.com/sighupio/furyctl/internal/x/io"
 	yamlx "github.com/sighupio/furyctl/internal/x/yaml"
+	"github.com/sighupio/furyctl/pkg/template"
 )
 
 var (

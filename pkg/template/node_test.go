@@ -14,7 +14,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	template2 "github.com/sighupio/furyctl/internal/template"
+	template2 "github.com/sighupio/furyctl/pkg/template"
 )
 
 func TestNewNode(t *testing.T) {

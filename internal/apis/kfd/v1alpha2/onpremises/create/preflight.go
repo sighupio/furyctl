@@ -19,12 +19,12 @@ import (
 	"github.com/sighupio/furyctl/internal/cluster"
 	"github.com/sighupio/furyctl/internal/diffs"
 	"github.com/sighupio/furyctl/internal/state"
-	"github.com/sighupio/furyctl/internal/template"
 	"github.com/sighupio/furyctl/internal/tool/ansible"
 	"github.com/sighupio/furyctl/internal/tool/kubectl"
 	execx "github.com/sighupio/furyctl/internal/x/exec"
 	kubex "github.com/sighupio/furyctl/internal/x/kube"
 	yamlx "github.com/sighupio/furyctl/internal/x/yaml"
+	"github.com/sighupio/furyctl/pkg/template"
 )
 
 var (

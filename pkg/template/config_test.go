@@ -9,7 +9,7 @@ import (
 	"testing"
 
 	"github.com/sighupio/furyctl/internal/merge"
-	"github.com/sighupio/furyctl/internal/template"
+	"github.com/sighupio/furyctl/pkg/template"
 )
 
 func TestNewConfig(t *testing.T) {
@@ -128,7 +128,7 @@ func TestNewConfig(t *testing.T) {
 				if !tc.wantErr {
 					t.Fatalf("unexpected error: %v", err)
 				}
-				if !reflect.DeepEqual(err, tc.err) {
+				if !reflect.DeepEqual(err.Error(), tc.err.Error()) {
 					t.Fatalf("want error %v, got %v", tc.err, err)
 				}
 			}

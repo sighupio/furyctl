@@ -16,11 +16,11 @@ import (
 	"github.com/sighupio/fury-distribution/pkg/apis/config"
 	"github.com/sighupio/furyctl/internal/cluster"
 	"github.com/sighupio/furyctl/internal/distribution"
-	"github.com/sighupio/furyctl/internal/template"
 	"github.com/sighupio/furyctl/internal/tool/helmfile"
 	"github.com/sighupio/furyctl/internal/tool/shell"
 	execx "github.com/sighupio/furyctl/internal/x/exec"
 	yamlx "github.com/sighupio/furyctl/internal/x/yaml"
+	"github.com/sighupio/furyctl/pkg/template"
 )
 
 type Plugins struct {
