@@ -9,7 +9,7 @@ import (
 	"fmt"
 	"strings"
 
-	mapx "github.com/sighupio/furyctl/internal/x/map"
+	mapx "github.com/sighupio/furyctl/pkg/x/map"
 )
 
 var (
