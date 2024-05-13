@@ -16,13 +16,13 @@ import (
 
 	"github.com/sighupio/furyctl/internal/analytics"
 	"github.com/sighupio/furyctl/internal/app"
-	"github.com/sighupio/furyctl/internal/dependencies"
 	"github.com/sighupio/furyctl/internal/dependencies/envvars"
 	"github.com/sighupio/furyctl/internal/dependencies/tools"
 	"github.com/sighupio/furyctl/internal/git"
 	cobrax "github.com/sighupio/furyctl/internal/x/cobra"
 	execx "github.com/sighupio/furyctl/internal/x/exec"
 	netx "github.com/sighupio/furyctl/internal/x/net"
+	"github.com/sighupio/furyctl/pkg/dependencies"
 	dist "github.com/sighupio/furyctl/pkg/distribution"
 )
 

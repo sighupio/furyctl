@@ -17,7 +17,6 @@ import (
 	"github.com/sighupio/furyctl/internal/analytics"
 	"github.com/sighupio/furyctl/internal/app"
 	"github.com/sighupio/furyctl/internal/config"
-	"github.com/sighupio/furyctl/internal/dependencies"
 	"github.com/sighupio/furyctl/internal/distribution"
 	"github.com/sighupio/furyctl/internal/git"
 	"github.com/sighupio/furyctl/internal/template"
@@ -25,6 +24,7 @@ import (
 	execx "github.com/sighupio/furyctl/internal/x/exec"
 	netx "github.com/sighupio/furyctl/internal/x/net"
 	yamlx "github.com/sighupio/furyctl/internal/x/yaml"
+	"github.com/sighupio/furyctl/pkg/dependencies"
 	dist "github.com/sighupio/furyctl/pkg/distribution"
 )
 
