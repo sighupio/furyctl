@@ -21,8 +21,8 @@ import (
 	idist "github.com/sighupio/furyctl/internal/distribution"
 	"github.com/sighupio/furyctl/internal/git"
 	iox "github.com/sighupio/furyctl/internal/x/io"
-	netx "github.com/sighupio/furyctl/internal/x/net"
 	yamlx "github.com/sighupio/furyctl/internal/x/yaml"
+	netx "github.com/sighupio/furyctl/pkg/x/net"
 )
 
 const DefaultBaseURL = "git::%s/fury-distribution?ref=%s&depth=1"
