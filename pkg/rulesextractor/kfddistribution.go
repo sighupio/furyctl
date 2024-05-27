@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-package rules
+package rulesextractor
 
 import (
 	"errors"
@@ -11,6 +11,7 @@ import (
 
 	"github.com/r3labs/diff/v3"
 
+	"github.com/sighupio/furyctl/internal/cluster"
 	"github.com/sighupio/furyctl/internal/rules"
 	yamlx "github.com/sighupio/furyctl/pkg/x/yaml"
 )
@@ -39,7 +40,7 @@ func NewDistroClusterRulesExtractor(distributionPath string) (*DistroExtractor, 
 
 func (r *DistroExtractor) GetImmutables(phase string) []string {
 	switch phase {
-	case "distribution":
+	case cluster.OperationPhaseDistribution:
 		if r.Spec.Distribution == nil {
 			return []string{}
 		}
@@ -53,7 +54,7 @@ func (r *DistroExtractor) GetImmutables(phase string) []string {
 
 func (r *DistroExtractor) GetReducers(phase string) []rules.Rule {
 	switch phase {
-	case "distribution":
+	case cluster.OperationPhaseDistribution:
 		if r.Spec.Distribution == nil {
 			return []rules.Rule{}
 		}
