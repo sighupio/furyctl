@@ -14,7 +14,6 @@ import (
 
 	"github.com/sighupio/fury-distribution/pkg/apis/config"
 	"github.com/sighupio/fury-distribution/pkg/apis/onpremises/v1alpha2/public"
-	"github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/onpremises/rules"
 	"github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/onpremises/supported"
 	"github.com/sighupio/furyctl/internal/cluster"
 	"github.com/sighupio/furyctl/internal/state"
@@ -23,6 +22,7 @@ import (
 	execx "github.com/sighupio/furyctl/internal/x/exec"
 	kubex "github.com/sighupio/furyctl/internal/x/kube"
 	"github.com/sighupio/furyctl/pkg/diffs"
+	rules "github.com/sighupio/furyctl/pkg/rulesextractor"
 	"github.com/sighupio/furyctl/pkg/template"
 	yamlx "github.com/sighupio/furyctl/pkg/x/yaml"
 )

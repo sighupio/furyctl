@@ -4,17 +4,17 @@
 
 //go:build unit
 
-package rules_test
+package rulesextractor_test
 
 import (
 	"reflect"
 	"testing"
 
-	distrorules "github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/kfddistribution/rules"
 	"github.com/sighupio/furyctl/internal/rules"
+	rules_extractor "github.com/sighupio/furyctl/pkg/rulesextractor"
 )
 
-func TestEKSBuilder_GetImmutables(t *testing.T) {
+func TestKFDBuilder_GetImmutables(t *testing.T) {
 	t.Parallel()
 
 	testCases := []struct {
@@ -54,7 +54,7 @@ func TestEKSBuilder_GetImmutables(t *testing.T) {
 		t.Run(tC.desc, func(t *testing.T) {
 			t.Parallel()
 
-			builder := distrorules.DistroExtractor{
+			builder := rules_extractor.DistroExtractor{
 				Spec: *tC.Spec,
 			}
 

@@ -4,40 +4,63 @@
 
 //go:build unit
 
-package rules_test
+package rulesextractor_test
 
 import (
 	"reflect"
 	"testing"
 
-	onpremrules "github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/onpremises/rules"
 	"github.com/sighupio/furyctl/internal/rules"
+	eksrules "github.com/sighupio/furyctl/pkg/rulesextractor"
 )
 
 func TestEKSBuilder_GetImmutables(t *testing.T) {
 	t.Parallel()
 
 	testCases := []struct {
-		desc            string
-		onPremRulesSpec *rules.Spec
-		phase           string
-		want            []string
+		desc         string
+		eksRulesSpec *rules.Spec
+		phase        string
+		want         []string
 	}{
 		{
-			desc:            "kubernetes - empty",
-			onPremRulesSpec: &rules.Spec{},
-			phase:           "kubernetes",
-			want:            []string{},
+			desc:         "infrastructure - empty",
+			eksRulesSpec: &rules.Spec{},
+			phase:        "infrastructure",
+			want:         []string{},
 		},
 		{
-			desc:            "distribution - empty",
-			onPremRulesSpec: &rules.Spec{},
-			phase:           "distribution",
-			want:            []string{},
+			desc:         "kubernetes - empty",
+			eksRulesSpec: &rules.Spec{},
+			phase:        "kubernetes",
+			want:         []string{},
+		},
+		{
+			desc:         "distribution - empty",
+			eksRulesSpec: &rules.Spec{},
+			phase:        "distribution",
+			want:         []string{},
+		},
+		{
+			desc: "infrastructure - not empty",
+			eksRulesSpec: &rules.Spec{
+				Infrastructure: &[]rules.Rule{
+					{
+						Path:      "foo",
+						Immutable: true,
+					},
+					{
+						Path:      "bar",
+						Immutable: false,
+					},
+				},
+			},
+			phase: "infrastructure",
+			want:  []string{"foo"},
 		},
 		{
 			desc: "kubernetes - not empty",
-			onPremRulesSpec: &rules.Spec{
+			eksRulesSpec: &rules.Spec{
 				Kubernetes: &[]rules.Rule{
 					{
 						Path:      "foo",
@@ -54,7 +77,7 @@ func TestEKSBuilder_GetImmutables(t *testing.T) {
 		},
 		{
 			desc: "distribution - not empty",
-			onPremRulesSpec: &rules.Spec{
+			eksRulesSpec: &rules.Spec{
 				Distribution: &[]rules.Rule{
 					{
 						Path:      "foo",
@@ -77,8 +100,8 @@ func TestEKSBuilder_GetImmutables(t *testing.T) {
 		t.Run(tC.desc, func(t *testing.T) {
 			t.Parallel()
 
-			builder := onpremrules.OnPremExtractor{
-				Spec: *tC.onPremRulesSpec,
+			builder := eksrules.EKSExtractor{
+				Spec: *tC.eksRulesSpec,
 			}
 
 			got := builder.GetImmutables(tC.phase)
