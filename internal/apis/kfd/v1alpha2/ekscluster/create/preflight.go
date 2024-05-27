@@ -19,13 +19,13 @@ import (
 	"github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/ekscluster/supported"
 	"github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/ekscluster/vpn"
 	"github.com/sighupio/furyctl/internal/cluster"
-	"github.com/sighupio/furyctl/internal/diffs"
 	"github.com/sighupio/furyctl/internal/state"
 	"github.com/sighupio/furyctl/internal/tool/awscli"
 	"github.com/sighupio/furyctl/internal/tool/kubectl"
 	"github.com/sighupio/furyctl/internal/tool/terraform"
 	execx "github.com/sighupio/furyctl/internal/x/exec"
 	kubex "github.com/sighupio/furyctl/internal/x/kube"
+	"github.com/sighupio/furyctl/pkg/diffs"
 	yamlx "github.com/sighupio/furyctl/pkg/x/yaml"
 )
 
