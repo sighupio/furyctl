@@ -11,13 +11,12 @@ import (
 	"github.com/r3labs/diff/v3"
 
 	"github.com/sighupio/furyctl/internal/cluster"
-	"github.com/sighupio/furyctl/internal/rules"
 	yamlx "github.com/sighupio/furyctl/pkg/x/yaml"
 )
 
 type OnPremExtractor struct {
-	*rules.BaseExtractor
-	Spec rules.Spec
+	*BaseExtractor
+	Spec Spec
 }
 
 func NewOnPremClusterRulesExtractor(distributionPath string) (*OnPremExtractor, error) {
@@ -25,7 +24,7 @@ func NewOnPremClusterRulesExtractor(distributionPath string) (*OnPremExtractor, 
 
 	rulesPath := filepath.Join(distributionPath, "rules", "onpremises-kfd-v1alpha2.yaml")
 
-	spec, err := yamlx.FromFileV3[rules.Spec](rulesPath)
+	spec, err := yamlx.FromFileV3[Spec](rulesPath)
 	if err != nil {
 		return &builder, fmt.Errorf("%w: %s", ErrReadingRulesFile, err)
 	}
@@ -56,35 +55,35 @@ func (r *OnPremExtractor) GetImmutables(phase string) []string {
 	}
 }
 
-func (r *OnPremExtractor) GetReducers(phase string) []rules.Rule {
+func (r *OnPremExtractor) GetReducers(phase string) []Rule {
 	switch phase {
 	case cluster.OperationPhaseKubernetes:
 		if r.Spec.Kubernetes == nil {
-			return []rules.Rule{}
+			return []Rule{}
 		}
 
 		return r.BaseExtractor.ExtractReducerRules(*r.Spec.Kubernetes)
 
 	case cluster.OperationPhaseDistribution:
 		if r.Spec.Distribution == nil {
-			return []rules.Rule{}
+			return []Rule{}
 		}
 
 		return r.BaseExtractor.ExtractReducerRules(*r.Spec.Distribution)
 
 	default:
-		return []rules.Rule{}
+		return []Rule{}
 	}
 }
 
-func (r *OnPremExtractor) ReducerRulesByDiffs(rls []rules.Rule, ds diff.Changelog) []rules.Rule {
+func (r *OnPremExtractor) ReducerRulesByDiffs(rls []Rule, ds diff.Changelog) []Rule {
 	return r.BaseExtractor.ReducerRulesByDiffs(rls, ds)
 }
 
-func (r *OnPremExtractor) UnsupportedReducerRulesByDiffs(rls []rules.Rule, ds diff.Changelog) []rules.Rule {
+func (r *OnPremExtractor) UnsupportedReducerRulesByDiffs(rls []Rule, ds diff.Changelog) []Rule {
 	return r.BaseExtractor.UnsupportedReducerRulesByDiffs(rls, ds)
 }
 
-func (r *OnPremExtractor) UnsafeReducerRulesByDiffs(rls []rules.Rule, ds diff.Changelog) []rules.Rule {
+func (r *OnPremExtractor) UnsafeReducerRulesByDiffs(rls []Rule, ds diff.Changelog) []Rule {
 	return r.BaseExtractor.UnsafeReducerRulesByDiffs(rls, ds)
 }

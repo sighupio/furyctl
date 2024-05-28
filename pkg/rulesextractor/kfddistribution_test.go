@@ -10,7 +10,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/sighupio/furyctl/internal/rules"
+	rules "github.com/sighupio/furyctl/pkg/rulesextractor"
 	rules_extractor "github.com/sighupio/furyctl/pkg/rulesextractor"
 )
 

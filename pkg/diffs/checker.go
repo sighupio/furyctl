@@ -12,7 +12,7 @@ import (
 
 	r3diff "github.com/r3labs/diff/v3"
 
-	"github.com/sighupio/furyctl/internal/rules"
+	rules "github.com/sighupio/furyctl/pkg/rulesextractor"
 )
 
 var (

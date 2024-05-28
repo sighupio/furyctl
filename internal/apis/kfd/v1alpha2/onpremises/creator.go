@@ -15,14 +15,13 @@ import (
 
 	"github.com/sighupio/fury-distribution/pkg/apis/config"
 	"github.com/sighupio/fury-distribution/pkg/apis/onpremises/v1alpha2/public"
-	"github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2"
 	commcreate "github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/common/create"
 	"github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/onpremises/create"
 	"github.com/sighupio/furyctl/internal/cluster"
 	"github.com/sighupio/furyctl/internal/distribution"
-	"github.com/sighupio/furyctl/internal/rules"
 	"github.com/sighupio/furyctl/internal/state"
 	"github.com/sighupio/furyctl/internal/upgrade"
+	v1alpha2 "github.com/sighupio/furyctl/pkg/reducers"
 	premrules "github.com/sighupio/furyctl/pkg/rulesextractor"
 	"github.com/sighupio/furyctl/pkg/template"
 	yamlx "github.com/sighupio/furyctl/pkg/x/yaml"
@@ -361,7 +360,7 @@ func (c *ClusterCreator) allPhases(
 	pluginsPhase *commcreate.Plugins,
 	upgr *upgrade.Upgrade,
 	reducers v1alpha2.Reducers,
-	unsafeReducers []rules.Rule,
+	unsafeReducers []premrules.Rule,
 ) error {
 	upgradeState := &upgrade.State{}
 
@@ -471,7 +470,7 @@ func (*ClusterCreator) getDistributionSubPhase(startFrom string) string {
 
 func (*ClusterCreator) buildReducers(
 	statusDiffs r3diff.Changelog,
-	rulesExtractor rules.Extractor,
+	rulesExtractor premrules.Extractor,
 	phase string,
 ) v1alpha2.Reducers {
 	reducersRules := rulesExtractor.GetReducers(phase)

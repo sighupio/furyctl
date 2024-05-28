@@ -17,7 +17,6 @@ import (
 
 	"github.com/sighupio/fury-distribution/pkg/apis/config"
 	"github.com/sighupio/fury-distribution/pkg/apis/ekscluster/v1alpha2/private"
-	"github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2"
 	"github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/ekscluster/common"
 	"github.com/sighupio/furyctl/internal/cluster"
 	"github.com/sighupio/furyctl/internal/state"
@@ -28,6 +27,7 @@ import (
 	execx "github.com/sighupio/furyctl/internal/x/exec"
 	iox "github.com/sighupio/furyctl/internal/x/io"
 	"github.com/sighupio/furyctl/pkg/merge"
+	v1alpha2 "github.com/sighupio/furyctl/pkg/reducers"
 	"github.com/sighupio/furyctl/pkg/template"
 )
 
