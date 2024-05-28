@@ -4,7 +4,7 @@
 
 //go:build unit
 
-package rules_test
+package rulesextractor_test
 
 import (
 	"reflect"
@@ -12,7 +12,7 @@ import (
 
 	"github.com/r3labs/diff/v3"
 
-	"github.com/sighupio/furyctl/internal/rules"
+	rules "github.com/sighupio/furyctl/pkg/rulesextractor"
 )
 
 func TestNewBaseExtractor(t *testing.T) {

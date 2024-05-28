@@ -10,8 +10,8 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/sighupio/furyctl/internal/rules"
 	eksrules "github.com/sighupio/furyctl/pkg/rulesextractor"
+	rules "github.com/sighupio/furyctl/pkg/rulesextractor"
 )
 
 func TestEKSBuilder_GetImmutables(t *testing.T) {

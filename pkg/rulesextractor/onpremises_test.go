@@ -10,8 +10,8 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/sighupio/furyctl/internal/rules"
 	onpremrules "github.com/sighupio/furyctl/pkg/rulesextractor"
+	rules "github.com/sighupio/furyctl/pkg/rulesextractor"
 )
 
 func TestOnPremisesBuilder_GetImmutables(t *testing.T) {
