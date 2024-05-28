@@ -26,7 +26,7 @@ import (
 	"github.com/sighupio/furyctl/internal/distribution"
 	"github.com/sighupio/furyctl/internal/state"
 	"github.com/sighupio/furyctl/internal/upgrade"
-	v1alpha2 "github.com/sighupio/furyctl/pkg/reducers"
+	"github.com/sighupio/furyctl/pkg/reducers"
 	eksrules "github.com/sighupio/furyctl/pkg/rulesextractor"
 	"github.com/sighupio/furyctl/pkg/template"
 	yamlx "github.com/sighupio/furyctl/pkg/x/yaml"
@@ -67,7 +67,7 @@ type Phases struct {
 	*create.PreFlight
 	Infrastructure upgrade.OperatorPhaseAsync
 	Kubernetes     upgrade.OperatorPhaseAsync
-	Distribution   upgrade.ReducersOperatorPhaseAsync[v1alpha2.Reducers]
+	Distribution   upgrade.ReducersOperatorPhaseAsync[reducers.Reducers]
 	*commcreate.Plugins
 }
 
@@ -340,7 +340,7 @@ func (v *ClusterCreator) CreateAsync(
 		}
 	}
 
-	reducers := v.buildReducers(status.Diffs, r, cluster.OperationPhaseDistribution)
+	rdcs := v.buildReducers(status.Diffs, r, cluster.OperationPhaseDistribution)
 
 	unsafeReducers := r.UnsafeReducerRulesByDiffs(
 		r.GetReducers(
@@ -349,9 +349,9 @@ func (v *ClusterCreator) CreateAsync(
 		status.Diffs,
 	)
 
-	if len(reducers) > 0 {
+	if len(rdcs) > 0 {
 		logrus.Infof("Differences found from previous cluster configuration, "+
-			"handling the following changes:\n%s", reducers.ToString())
+			"handling the following changes:\n%s", rdcs.ToString())
 	}
 
 	if distribution.HasFeature(v.kfdManifest, distribution.FeatureClusterUpgrade) {
@@ -363,7 +363,7 @@ func (v *ClusterCreator) CreateAsync(
 			v.upgrade,
 			v.force,
 			upgr,
-			reducers,
+			rdcs,
 			status.Diffs,
 			v.externalUpgradesPath,
 			false,
@@ -388,7 +388,7 @@ func (v *ClusterCreator) CreateAsync(
 		}
 
 	case cluster.OperationPhaseDistribution:
-		if len(reducers) > 0 && len(unsafeReducers) > 0 {
+		if len(rdcs) > 0 && len(unsafeReducers) > 0 {
 			confirm, err := cluster.AskConfirmation(cluster.IsForceEnabledForFeature(v.force, cluster.ForceFeatureMigrations))
 			if err != nil {
 				errCh <- err
@@ -399,7 +399,7 @@ func (v *ClusterCreator) CreateAsync(
 			}
 		}
 
-		if err := v.distributionPhase(phases.Distribution, vpnConnector, reducers, renderedConfig); err != nil {
+		if err := v.distributionPhase(phases.Distribution, vpnConnector, rdcs, renderedConfig); err != nil {
 			errCh <- err
 		}
 
@@ -413,7 +413,7 @@ func (v *ClusterCreator) CreateAsync(
 		}
 
 	case cluster.OperationPhaseAll:
-		if len(reducers) > 0 && len(unsafeReducers) > 0 {
+		if len(rdcs) > 0 && len(unsafeReducers) > 0 {
 			confirm, err := cluster.AskConfirmation(cluster.IsForceEnabledForFeature(v.force, cluster.ForceFeatureMigrations))
 			if err != nil {
 				errCh <- err
@@ -428,7 +428,7 @@ func (v *ClusterCreator) CreateAsync(
 			startFrom,
 			phases,
 			vpnConnector,
-			reducers,
+			rdcs,
 			upgr,
 			renderedConfig,
 		)
@@ -535,9 +535,9 @@ func (v *ClusterCreator) kubernetesPhase(
 }
 
 func (v *ClusterCreator) distributionPhase(
-	distro upgrade.ReducersOperatorPhaseAsync[v1alpha2.Reducers],
+	distro upgrade.ReducersOperatorPhaseAsync[reducers.Reducers],
 	vpnConnector *vpn.Connector,
-	reducers v1alpha2.Reducers,
+	rdcs reducers.Reducers,
 	renderedConfig map[string]any,
 ) error {
 	upgradeState := upgrade.State{
@@ -556,7 +556,7 @@ func (v *ClusterCreator) distributionPhase(
 		}
 	}
 
-	if err := distro.Exec(reducers, StartFromFlagNotSet, &upgradeState); err != nil {
+	if err := distro.Exec(rdcs, StartFromFlagNotSet, &upgradeState); err != nil {
 		return fmt.Errorf("error while installing Kubernetes Fury Distribution: %w", err)
 	}
 
@@ -587,7 +587,7 @@ func (v *ClusterCreator) allPhases(
 	startFrom string,
 	phases *Phases,
 	vpnConnector *vpn.Connector,
-	reducers v1alpha2.Reducers,
+	rdcs reducers.Reducers,
 	upgr *upgrade.Upgrade,
 	renderedConfig map[string]any,
 ) error {
@@ -632,7 +632,7 @@ func (v *ClusterCreator) allPhases(
 		startFrom,
 		phases,
 		vpnConnector,
-		reducers,
+		rdcs,
 		upgradeState,
 	); err != nil {
 		return err
@@ -675,7 +675,7 @@ func (v *ClusterCreator) allPhasesExec(
 	startFrom string,
 	phases *Phases,
 	vpnConnector *vpn.Connector,
-	reducers v1alpha2.Reducers,
+	rdcs reducers.Reducers,
 	upgradeState *upgrade.State,
 ) error {
 	if v.furyctlConf.Spec.Infrastructure != nil &&
@@ -712,7 +712,7 @@ func (v *ClusterCreator) allPhasesExec(
 	}
 
 	if startFrom != cluster.OperationPhasePlugins {
-		if err := phases.Distribution.Exec(reducers, v.getDistributionSubPhase(startFrom), upgradeState); err != nil {
+		if err := phases.Distribution.Exec(rdcs, v.getDistributionSubPhase(startFrom), upgradeState); err != nil {
 			return fmt.Errorf("error while executing distribution phase: %w", err)
 		}
 	}
@@ -758,12 +758,12 @@ func (*ClusterCreator) buildReducers(
 	statusDiffs r3diff.Changelog,
 	rulesExtractor eksrules.Extractor,
 	phase string,
-) v1alpha2.Reducers {
+) reducers.Reducers {
 	reducersRules := rulesExtractor.GetReducers(phase)
 
 	filteredReducers := rulesExtractor.ReducerRulesByDiffs(reducersRules, statusDiffs)
 
-	reducers := make(v1alpha2.Reducers, len(filteredReducers))
+	rdcs := make(reducers.Reducers, len(filteredReducers))
 
 	if len(filteredReducers) > 0 {
 		for _, reducer := range filteredReducers {
@@ -773,7 +773,7 @@ func (*ClusterCreator) buildReducers(
 				}
 
 				for _, red := range *reducer.Reducers {
-					reducers = append(reducers, v1alpha2.NewBaseReducer(
+					rdcs = append(rdcs, reducers.NewBaseReducer(
 						red.Key,
 						red.From,
 						red.To,
@@ -786,7 +786,7 @@ func (*ClusterCreator) buildReducers(
 		}
 	}
 
-	return reducers
+	return rdcs
 }
 
 func (v *ClusterCreator) RenderConfig() (map[string]any, error) {
@@ -824,7 +824,7 @@ func (v *ClusterCreator) RenderConfig() (map[string]any, error) {
 func (v *ClusterCreator) setupPhases(upgr *upgrade.Upgrade, upgradeFlag bool) (
 	*upgrade.OperatorPhaseAsyncDecorator,
 	*upgrade.OperatorPhaseAsyncDecorator,
-	*upgrade.ReducerOperatorPhaseAsyncDecorator[v1alpha2.Reducers],
+	*upgrade.ReducerOperatorPhaseAsyncDecorator[reducers.Reducers],
 	*commcreate.Plugins,
 	*create.PreFlight,
 	error,
@@ -856,7 +856,7 @@ func (v *ClusterCreator) setupPhases(upgr *upgrade.Upgrade, upgradeFlag bool) (
 		upgr,
 	)
 
-	distro := upgrade.NewReducerOperatorPhaseAsyncDecorator[v1alpha2.Reducers](
+	distro := upgrade.NewReducerOperatorPhaseAsyncDecorator[reducers.Reducers](
 		v.upgradeStateStore,
 		create.NewDistribution(
 			v.paths,

@@ -27,7 +27,7 @@ import (
 	execx "github.com/sighupio/furyctl/internal/x/exec"
 	iox "github.com/sighupio/furyctl/internal/x/io"
 	"github.com/sighupio/furyctl/pkg/merge"
-	v1alpha2 "github.com/sighupio/furyctl/pkg/reducers"
+	"github.com/sighupio/furyctl/pkg/reducers"
 	"github.com/sighupio/furyctl/pkg/template"
 )
 
@@ -132,7 +132,7 @@ func (*Distribution) SupportsLifecycle(lifecycle string) bool {
 }
 
 func (d *Distribution) Exec(
-	reducers v1alpha2.Reducers,
+	rdcs reducers.Reducers,
 	startFrom string,
 	upgradeState *upgrade.State,
 ) error {
@@ -158,7 +158,7 @@ func (d *Distribution) Exec(
 	}
 
 	if err := d.coreDistribution(
-		reducers,
+		rdcs,
 		tfCfg,
 		startFrom,
 		upgradeState,
@@ -206,7 +206,7 @@ func (d *Distribution) preDistribution(
 }
 
 func (d *Distribution) coreDistribution(
-	reducers v1alpha2.Reducers,
+	rdcs reducers.Reducers,
 	tfCfg *template.Config,
 	startFrom string,
 	upgradeState *upgrade.State,
@@ -215,7 +215,7 @@ func (d *Distribution) coreDistribution(
 	timestamp int64,
 ) error {
 	if startFrom != cluster.OperationSubPhasePostDistribution {
-		if err := d.runReducers(reducers, tfCfg, LifecyclePreTf, []string{"manifests", ".gitignore"}); err != nil {
+		if err := d.runReducers(rdcs, tfCfg, LifecyclePreTf, []string{"manifests", ".gitignore"}); err != nil {
 			return fmt.Errorf("error running pre-tf reducers: %w", err)
 		}
 
@@ -275,7 +275,7 @@ func (d *Distribution) coreDistribution(
 			return fmt.Errorf("error preparing distribution phase (post terraform): %w", err)
 		}
 
-		if err := d.runReducers(reducers, mCfg, LifecyclePostTf, []string{"manifests", ".gitignore"}); err != nil {
+		if err := d.runReducers(rdcs, mCfg, LifecyclePostTf, []string{"manifests", ".gitignore"}); err != nil {
 			return fmt.Errorf("error running post-tf reducers: %w", err)
 		}
 
@@ -285,7 +285,7 @@ func (d *Distribution) coreDistribution(
 			return fmt.Errorf("error checking cluster reachability: %w", err)
 		}
 
-		if err := d.runReducers(reducers, mCfg, LifecyclePreApply, []string{"manifests", ".gitignore"}); err != nil {
+		if err := d.runReducers(rdcs, mCfg, LifecyclePreApply, []string{"manifests", ".gitignore"}); err != nil {
 			return fmt.Errorf("error running pre-apply reducers: %w", err)
 		}
 
@@ -303,7 +303,7 @@ func (d *Distribution) coreDistribution(
 			upgradeState.Phases.Distribution.Status = upgrade.PhaseStatusSuccess
 		}
 
-		if err := d.runReducers(reducers, mCfg, LifecyclePostApply, []string{"manifests", ".gitignore"}); err != nil {
+		if err := d.runReducers(rdcs, mCfg, LifecyclePostApply, []string{"manifests", ".gitignore"}); err != nil {
 			return fmt.Errorf("error running post-apply reducers: %w", err)
 		}
 	}
@@ -345,12 +345,12 @@ func (d *Distribution) checkKubeVersion() error {
 }
 
 func (d *Distribution) runReducers(
-	reducers v1alpha2.Reducers,
+	rdcs reducers.Reducers,
 	cfg *template.Config,
 	lifecycle string,
 	excludes []string,
 ) error {
-	r := reducers.ByLifecycle(lifecycle)
+	r := rdcs.ByLifecycle(lifecycle)
 
 	if len(r) > 0 {
 		preTfReducersCfg := cfg
