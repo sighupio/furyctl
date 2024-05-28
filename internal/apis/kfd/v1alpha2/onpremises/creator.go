@@ -10,7 +10,6 @@ import (
 	"path"
 	"strings"
 
-	r3diff "github.com/r3labs/diff/v3"
 	"github.com/sirupsen/logrus"
 
 	"github.com/sighupio/fury-distribution/pkg/apis/config"
@@ -230,7 +229,7 @@ func (c *ClusterCreator) Create(startFrom string, _, podRunningCheckTimeout int)
 		}
 	}
 
-	rdcs := c.buildReducers(
+	rdcs := reducers.Build(
 		status.Diffs,
 		r,
 		cluster.OperationPhaseDistribution,
@@ -466,43 +465,6 @@ func (*ClusterCreator) getDistributionSubPhase(startFrom string) string {
 	default:
 		return ""
 	}
-}
-
-func (*ClusterCreator) buildReducers(
-	statusDiffs r3diff.Changelog,
-	rulesExtractor premrules.Extractor,
-	phase string,
-) reducers.Reducers {
-	reducersRules := rulesExtractor.GetReducers(phase)
-
-	filteredReducers := rulesExtractor.ReducerRulesByDiffs(reducersRules, statusDiffs)
-
-	rdcs := make(reducers.Reducers, len(filteredReducers))
-
-	if len(filteredReducers) > 0 {
-		for _, reducer := range filteredReducers {
-			if reducer.Reducers != nil {
-				if reducer.Description != nil {
-					logrus.Infof("%s", *reducer.Description)
-				}
-
-				for _, red := range *reducer.Reducers {
-					rdcs = append(
-						rdcs,
-						reducers.NewBaseReducer(
-							red.Key,
-							red.From,
-							red.To,
-							red.Lifecycle,
-							reducer.Path,
-						),
-					)
-				}
-			}
-		}
-	}
-
-	return rdcs
 }
 
 func (c *ClusterCreator) RenderConfig() (map[string]any, error) {
