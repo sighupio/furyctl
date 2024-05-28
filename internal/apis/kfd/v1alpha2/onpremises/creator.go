@@ -21,7 +21,7 @@ import (
 	"github.com/sighupio/furyctl/internal/distribution"
 	"github.com/sighupio/furyctl/internal/state"
 	"github.com/sighupio/furyctl/internal/upgrade"
-	v1alpha2 "github.com/sighupio/furyctl/pkg/reducers"
+	"github.com/sighupio/furyctl/pkg/reducers"
 	premrules "github.com/sighupio/furyctl/pkg/rulesextractor"
 	"github.com/sighupio/furyctl/pkg/template"
 	yamlx "github.com/sighupio/furyctl/pkg/x/yaml"
@@ -182,7 +182,7 @@ func (c *ClusterCreator) Create(startFrom string, _, podRunningCheckTimeout int)
 		upgr,
 	)
 
-	distributionPhase := upgrade.NewReducerOperatorPhaseDecorator[v1alpha2.Reducers](
+	distributionPhase := upgrade.NewReducerOperatorPhaseDecorator[reducers.Reducers](
 		c.upgradeStateStore,
 		create.NewDistribution(
 			c.furyctlConf,
@@ -230,7 +230,7 @@ func (c *ClusterCreator) Create(startFrom string, _, podRunningCheckTimeout int)
 		}
 	}
 
-	reducers := c.buildReducers(
+	rdcs := c.buildReducers(
 		status.Diffs,
 		r,
 		cluster.OperationPhaseDistribution,
@@ -243,9 +243,9 @@ func (c *ClusterCreator) Create(startFrom string, _, podRunningCheckTimeout int)
 		status.Diffs,
 	)
 
-	if len(reducers) > 0 {
+	if len(rdcs) > 0 {
 		logrus.Infof("Differences found from previous cluster configuration, "+
-			"handling the following changes:\n%s", reducers.ToString())
+			"handling the following changes:\n%s", rdcs.ToString())
 	}
 
 	if distribution.HasFeature(c.kfdManifest, distribution.FeatureClusterUpgrade) {
@@ -257,7 +257,7 @@ func (c *ClusterCreator) Create(startFrom string, _, podRunningCheckTimeout int)
 			c.upgrade,
 			c.force,
 			upgr,
-			reducers,
+			rdcs,
 			status.Diffs,
 			c.externalUpgradesPath,
 			c.skipNodesUpgrade,
@@ -283,7 +283,7 @@ func (c *ClusterCreator) Create(startFrom string, _, podRunningCheckTimeout int)
 		}
 
 	case cluster.OperationPhaseDistribution:
-		if len(reducers) > 0 && len(unsafeReducers) > 0 {
+		if len(rdcs) > 0 && len(unsafeReducers) > 0 {
 			confirm, err := cluster.AskConfirmation(cluster.IsForceEnabledForFeature(c.force, cluster.ForceFeatureMigrations))
 			if err != nil {
 				return fmt.Errorf("error while asking for confirmation: %w", err)
@@ -302,7 +302,7 @@ func (c *ClusterCreator) Create(startFrom string, _, podRunningCheckTimeout int)
 			},
 		}
 
-		if err := distributionPhase.Exec(reducers, StartFromFlagNotSet, &upgradeState); err != nil {
+		if err := distributionPhase.Exec(rdcs, StartFromFlagNotSet, &upgradeState); err != nil {
 			return fmt.Errorf("error while executing distribution phase: %w", err)
 		}
 
@@ -322,7 +322,7 @@ func (c *ClusterCreator) Create(startFrom string, _, podRunningCheckTimeout int)
 			distributionPhase,
 			pluginsPhase,
 			upgr,
-			reducers,
+			rdcs,
 			unsafeReducers,
 		); err != nil {
 			return fmt.Errorf("error while executing cluster creation: %w", err)
@@ -356,10 +356,10 @@ func (c *ClusterCreator) Create(startFrom string, _, podRunningCheckTimeout int)
 func (c *ClusterCreator) allPhases(
 	startFrom string,
 	kubernetesPhase upgrade.OperatorPhase,
-	distributionPhase upgrade.ReducersOperatorPhase[v1alpha2.Reducers],
+	distributionPhase upgrade.ReducersOperatorPhase[reducers.Reducers],
 	pluginsPhase *commcreate.Plugins,
 	upgr *upgrade.Upgrade,
-	reducers v1alpha2.Reducers,
+	rdcs reducers.Reducers,
 	unsafeReducers []premrules.Rule,
 ) error {
 	upgradeState := &upgrade.State{}
@@ -406,7 +406,7 @@ func (c *ClusterCreator) allPhases(
 	}
 
 	if startFrom != cluster.OperationPhasePlugins {
-		if len(reducers) > 0 && len(unsafeReducers) > 0 {
+		if len(rdcs) > 0 && len(unsafeReducers) > 0 {
 			confirm, err := cluster.AskConfirmation(cluster.IsForceEnabledForFeature(c.force, cluster.ForceFeatureMigrations))
 			if err != nil {
 				return fmt.Errorf("error while asking for confirmation: %w", err)
@@ -417,7 +417,7 @@ func (c *ClusterCreator) allPhases(
 			}
 		}
 
-		if err := distributionPhase.Exec(reducers, c.getDistributionSubPhase(startFrom), upgradeState); err != nil {
+		if err := distributionPhase.Exec(rdcs, c.getDistributionSubPhase(startFrom), upgradeState); err != nil {
 			return fmt.Errorf("error while executing distribution phase: %w", err)
 		}
 	}
@@ -472,12 +472,12 @@ func (*ClusterCreator) buildReducers(
 	statusDiffs r3diff.Changelog,
 	rulesExtractor premrules.Extractor,
 	phase string,
-) v1alpha2.Reducers {
+) reducers.Reducers {
 	reducersRules := rulesExtractor.GetReducers(phase)
 
 	filteredReducers := rulesExtractor.ReducerRulesByDiffs(reducersRules, statusDiffs)
 
-	reducers := make(v1alpha2.Reducers, len(filteredReducers))
+	rdcs := make(reducers.Reducers, len(filteredReducers))
 
 	if len(filteredReducers) > 0 {
 		for _, reducer := range filteredReducers {
@@ -487,9 +487,9 @@ func (*ClusterCreator) buildReducers(
 				}
 
 				for _, red := range *reducer.Reducers {
-					reducers = append(
-						reducers,
-						v1alpha2.NewBaseReducer(
+					rdcs = append(
+						rdcs,
+						reducers.NewBaseReducer(
 							red.Key,
 							red.From,
 							red.To,
@@ -502,7 +502,7 @@ func (*ClusterCreator) buildReducers(
 		}
 	}
 
-	return reducers
+	return rdcs
 }
 
 func (c *ClusterCreator) RenderConfig() (map[string]any, error) {
