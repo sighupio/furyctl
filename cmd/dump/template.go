@@ -26,7 +26,10 @@ import (
 	yamlx "github.com/sighupio/furyctl/internal/x/yaml"
 )
 
-var ErrParsingFlag = errors.New("error while parsing flag")
+var (
+	ErrParsingFlag      = errors.New("error while parsing flag")
+	ErrTargetIsNotEmpty = errors.New("output directory is not empty, set --no-overwrite=false to overwrite it")
+)
 
 type TemplateCmdFlags struct {
 	DryRun                bool
@@ -186,7 +189,7 @@ The generated folder will be created starting from a provided templates folder a
 				tracker.Track(cmdEvent)
 
 				if errors.Is(err, template.ErrTargetIsNotEmpty) {
-					return fmt.Errorf("output directory is not empty, set --no-overwrite=false to overwrite it")
+					return ErrTargetIsNotEmpty
 				}
 
 				return fmt.Errorf("error while generating distribution manifests: %w", err)
