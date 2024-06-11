@@ -14,6 +14,7 @@ type (
 	Reducers                          = any
 	ReducersOperatorPhase[T Reducers] interface {
 		Exec(reducers T, startFrom string, upgradeState *State) error
+		SetUpgrade(upgradeEnabled bool)
 		Self() *cluster.OperationPhase
 	}
 )
@@ -66,6 +67,10 @@ func (d *ReducerOperatorPhaseDecorator[T]) Exec(reducers T, startFrom string, up
 	return nil
 }
 
+func (d *ReducerOperatorPhaseDecorator[T]) SetUpgrade(upgradeEnabled bool) {
+	d.upgr.Enabled = upgradeEnabled
+}
+
 func (d *ReducerOperatorPhaseDecorator[T]) Self() *cluster.OperationPhase {
 	return d.phase.Self()
 }
@@ -113,6 +118,10 @@ func (d *ReducerOperatorPhaseAsyncDecorator[T]) Exec(reducers T, startFrom strin
 	return nil
 }
 
+func (d *ReducerOperatorPhaseAsyncDecorator[T]) SetUpgrade(upgradeEnabled bool) { //nolint: lll,revive // confusing-naming is a false positive
+	d.upgr.Enabled = upgradeEnabled
+}
+
 func (d *ReducerOperatorPhaseAsyncDecorator[T]) Stop() error {
 	if err := d.phase.Stop(); err != nil {
 		return fmt.Errorf("error while stopping phase: %w", err)
@@ -128,6 +137,7 @@ func (d *ReducerOperatorPhaseAsyncDecorator[T]) Self() *cluster.OperationPhase {
 type OperatorPhase interface {
 	Exec(startFrom string, upgradeState *State) error
 	Self() *cluster.OperationPhase
+	SetUpgrade(upgradeEnabled bool)
 }
 
 type OperatorPhaseAsync interface {
@@ -176,6 +186,10 @@ func (d *OperatorPhaseDecorator) Exec(startFrom string, upgradeState *State) err
 	}
 
 	return nil
+}
+
+func (d *OperatorPhaseDecorator) SetUpgrade(upgradeEnabled bool) {
+	d.upgr.Enabled = upgradeEnabled
 }
 
 func (d *OperatorPhaseDecorator) Self() *cluster.OperationPhase {
@@ -231,6 +245,10 @@ func (d *OperatorPhaseAsyncDecorator) Stop() error {
 	}
 
 	return nil
+}
+
+func (d *OperatorPhaseAsyncDecorator) SetUpgrade(upgradeEnabled bool) {
+	d.upgr.Enabled = upgradeEnabled
 }
 
 func (d *OperatorPhaseAsyncDecorator) Self() *cluster.OperationPhase {

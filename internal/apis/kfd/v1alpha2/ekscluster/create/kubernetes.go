@@ -282,6 +282,10 @@ func (k *Kubernetes) postKubernetes(
 	return nil
 }
 
+func (k *Kubernetes) SetUpgrade(upgradeEnabled bool) {
+	k.upgrade.Enabled = upgradeEnabled
+}
+
 func (k *Kubernetes) Stop() error {
 	errCh := make(chan error)
 	doneCh := make(chan bool)

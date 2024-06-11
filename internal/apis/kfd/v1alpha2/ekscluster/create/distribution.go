@@ -377,6 +377,10 @@ func (d *Distribution) runReducers(
 	return nil
 }
 
+func (d *Distribution) SetUpgrade(upgradeEnabled bool) {
+	d.upgrade.Enabled = upgradeEnabled
+}
+
 func (d *Distribution) Stop() error {
 	errCh := make(chan error)
 	doneCh := make(chan bool)
