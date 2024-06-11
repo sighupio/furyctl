@@ -19,13 +19,17 @@ import (
 	"github.com/sighupio/furyctl/internal/dependencies"
 	"github.com/sighupio/furyctl/internal/distribution"
 	"github.com/sighupio/furyctl/internal/git"
+	"github.com/sighupio/furyctl/internal/template"
 	cobrax "github.com/sighupio/furyctl/internal/x/cobra"
 	execx "github.com/sighupio/furyctl/internal/x/exec"
 	netx "github.com/sighupio/furyctl/internal/x/net"
 	yamlx "github.com/sighupio/furyctl/internal/x/yaml"
 )
 
-var ErrParsingFlag = errors.New("error while parsing flag")
+var (
+	ErrParsingFlag      = errors.New("error while parsing flag")
+	ErrTargetIsNotEmpty = errors.New("output directory is not empty, set --no-overwrite=false to overwrite it")
+)
 
 type TemplateCmdFlags struct {
 	DryRun                bool
@@ -146,6 +150,8 @@ The generated folder will be created starting from a provided templates folder a
 				return fmt.Errorf("%s - %w", absFuryctlPath, err)
 			}
 
+			outDir = flags.Outdir
+
 			currentDir, err := os.Getwd()
 			if err != nil {
 				cmdEvent.AddErrorMessage(err)
@@ -154,11 +160,11 @@ The generated folder will be created starting from a provided templates folder a
 				return fmt.Errorf("error while getting current directory: %w", err)
 			}
 
-			distroDir := filepath.Join(currentDir, "distribution")
-
 			if outDir == "" {
-				outDir = distroDir
+				outDir = currentDir
 			}
+
+			outDir = filepath.Join(outDir, "distribution")
 
 			logrus.Info("Generating distribution manifests...")
 
@@ -182,6 +188,10 @@ The generated folder will be created starting from a provided templates folder a
 				cmdEvent.AddErrorMessage(err)
 				tracker.Track(cmdEvent)
 
+				if errors.Is(err, template.ErrTargetIsNotEmpty) {
+					return ErrTargetIsNotEmpty
+				}
+
 				return fmt.Errorf("error while generating distribution manifests: %w", err)
 			}
 
@@ -202,7 +212,7 @@ The generated folder will be created starting from a provided templates folder a
 
 	cmd.Flags().Bool(
 		"no-overwrite",
-		false,
+		true,
 		"Stop if target directory is not empty",
 	)
 

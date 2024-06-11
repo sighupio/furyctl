@@ -20,6 +20,7 @@ import (
 )
 
 var (
+	ErrTargetIsNotEmpty = errors.New("target directory is not empty")
 	errSourceMustbeSet  = errors.New("source must be set")
 	errTargetMustbeSet  = errors.New("target must be set")
 	errTemplateNotFound = errors.New("no template found")
@@ -104,7 +105,7 @@ func (tm *Model) Generate() error {
 	if tm.StopIfTargetNotEmpty {
 		err := iox.CheckDirIsEmpty(tm.TargetPath)
 		if err != nil {
-			return fmt.Errorf("target directory is not empty: %w", err)
+			return fmt.Errorf("%w: %w", ErrTargetIsNotEmpty, err)
 		}
 	}
 
