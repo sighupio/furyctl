@@ -560,6 +560,8 @@ github.com/sighupio/fury-distribution v1.29.2-0.20240614123648-36d40332d592 h1:O
 github.com/sighupio/fury-distribution v1.29.2-0.20240614123648-36d40332d592/go.mod h1:iYBnl0N/6zGPz3j3L2X6nzFC3nzNQtIkAzmaPfnO0zA=
 github.com/sighupio/fury-distribution v1.29.2-0.20240614150207-2a988cbcc96c h1:+RPqWTJyDP1NKPHQ/bRzzYC7FURcsdH8FQa3xDUOK7c=
 github.com/sighupio/fury-distribution v1.29.2-0.20240614150207-2a988cbcc96c/go.mod h1:iYBnl0N/6zGPz3j3L2X6nzFC3nzNQtIkAzmaPfnO0zA=
+github.com/sighupio/fury-distribution v1.29.2-0.20240614160116-d2b7b003ff8a h1:5tShZDq41aDNdxETkiP6riaoBbdLZtWi1a9I+uQSL+Y=
+github.com/sighupio/fury-distribution v1.29.2-0.20240614160116-d2b7b003ff8a/go.mod h1:iYBnl0N/6zGPz3j3L2X6nzFC3nzNQtIkAzmaPfnO0zA=
 github.com/sirupsen/logrus v1.9.3 h1:dueUQJ1C2q9oE3F7wvmSGAaVtTmUizReu6fjN8uqzbQ=
 github.com/sirupsen/logrus v1.9.3/go.mod h1:naHLuLoDiP4jHNo9R0sCBMtWGeIprob74mVsIT4qYEQ=
 github.com/sourcegraph/conc v0.3.0 h1:OQTbbt6P72L20UqAkXXuLOj79LfEanQ+YQFNpLA9ySo=
