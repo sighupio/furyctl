@@ -183,9 +183,9 @@ func (k *Kubernetes) coreKubernetes(
 				if err := kubex.CopyToWorkDir(
 					path.Join(
 						k.OperationPhase.Path,
-						fmt.Sprintf("%s.kubeconfig", username),
+						username+".kubeconfig",
 					),
-					fmt.Sprintf("%s.kubeconfig", username),
+					username+".kubeconfig",
 				); err != nil {
 					return fmt.Errorf("error copying %s.kubeconfig: %w", username, err)
 				}

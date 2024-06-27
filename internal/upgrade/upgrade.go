@@ -48,7 +48,7 @@ func (u *Upgrade) Exec(workdir, phase string) error {
 		fmt.Sprintf("%s-%s", from, to),
 	)
 
-	upgradeScript := path.Join(upgradePath, fmt.Sprintf("%s.sh", phase))
+	upgradeScript := path.Join(upgradePath, phase+".sh")
 
 	if _, err := os.Stat(upgradeScript); err != nil {
 		if os.IsNotExist(err) {

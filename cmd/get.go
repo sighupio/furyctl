@@ -5,19 +5,26 @@
 package cmd
 
 import (
+	"fmt"
+
 	"github.com/spf13/cobra"
 
 	"github.com/sighupio/furyctl/cmd/get"
 	"github.com/sighupio/furyctl/internal/analytics"
 )
 
-func NewGetCommand(tracker *analytics.Tracker) *cobra.Command {
+func NewGetCommand(tracker *analytics.Tracker) (*cobra.Command, error) {
 	getCmd := &cobra.Command{
 		Use:   "get",
 		Short: "Get a resource (e.g. kubeconfig) from a cluster",
 	}
 
-	getCmd.AddCommand(get.NewKubeconfigCmd(tracker))
+	kubeconfigCmd, err := get.NewKubeconfigCmd(tracker)
+	if err != nil {
+		return nil, fmt.Errorf("error while creating kubeconfig command: %w", err)
+	}
 
-	return getCmd
+	getCmd.AddCommand(kubeconfigCmd)
+
+	return getCmd, nil
 }

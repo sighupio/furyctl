@@ -12,6 +12,7 @@ import (
 
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 
 	"github.com/sighupio/furyctl/internal/analytics"
 	"github.com/sighupio/furyctl/internal/cmd/cmdutil"
@@ -42,7 +43,7 @@ type TemplateCmdFlags struct {
 	DistroPatchesLocation string
 }
 
-func NewTemplateCmd(tracker *analytics.Tracker) *cobra.Command {
+func NewTemplateCmd(tracker *analytics.Tracker) (*cobra.Command, error) {
 	var cmdEvent analytics.Event
 
 	cmd := &cobra.Command{
@@ -55,8 +56,8 @@ The generated folder will be created starting from a provided templates folder a
 		PreRun: func(cmd *cobra.Command, _ []string) {
 			cmdEvent = analytics.NewCommandEvent(cobrax.GetFullname(cmd))
 		},
-		RunE: func(cmd *cobra.Command, _ []string) error {
-			flags, err := getDumpTemplateCmdFlags(cmd, tracker, cmdEvent)
+		RunE: func(_ *cobra.Command, _ []string) error {
+			flags, err := getDumpTemplateCmdFlags()
 			if err != nil {
 				return err
 			}
@@ -246,63 +247,29 @@ The generated folder will be created starting from a provided templates folder a
 			cmdutil.AnyGoGetterFormatStr,
 	)
 
-	return cmd
+	if err := viper.BindPFlags(cmd.Flags()); err != nil {
+		return nil, fmt.Errorf("error while binding flags: %w", err)
+	}
+
+	return cmd, nil
 }
 
-func getDumpTemplateCmdFlags(cmd *cobra.Command, tracker *analytics.Tracker, cmdEvent analytics.Event) (TemplateCmdFlags, error) {
-	dryRun, err := cmdutil.BoolFlag(cmd, "dry-run", tracker, cmdEvent)
-	if err != nil {
-		return TemplateCmdFlags{}, fmt.Errorf("%w: %s", ErrParsingFlag, "dry-run")
-	}
-
-	noOverwrite, err := cmdutil.BoolFlag(cmd, "no-overwrite", tracker, cmdEvent)
-	if err != nil {
-		return TemplateCmdFlags{}, fmt.Errorf("%w: %s", ErrParsingFlag, "no-overwrite")
-	}
-
-	skipValidation, err := cmdutil.BoolFlag(cmd, "skip-validation", tracker, cmdEvent)
-	if err != nil {
-		return TemplateCmdFlags{}, fmt.Errorf("%w: %s", ErrParsingFlag, "skip-validation")
-	}
-
-	outdir, err := cmdutil.StringFlag(cmd, "outdir", tracker, cmdEvent)
-	if err != nil {
-		return TemplateCmdFlags{}, fmt.Errorf("%w: %s", ErrParsingFlag, "outdir")
-	}
-
-	distroLocation, err := cmdutil.StringFlag(cmd, "distro-location", tracker, cmdEvent)
-	if err != nil {
-		return TemplateCmdFlags{}, fmt.Errorf("%w: %s", ErrParsingFlag, "distro-location")
-	}
-
-	furyctlPath, err := cmdutil.StringFlag(cmd, "config", tracker, cmdEvent)
-	if err != nil {
-		return TemplateCmdFlags{}, fmt.Errorf("%w: %s", ErrParsingFlag, "config")
-	}
-
-	gitProtocol, err := cmdutil.StringFlag(cmd, "git-protocol", tracker, cmdEvent)
-	if err != nil {
-		return TemplateCmdFlags{}, fmt.Errorf("%w: %s", ErrParsingFlag, "git-protocol")
-	}
+func getDumpTemplateCmdFlags() (TemplateCmdFlags, error) {
+	gitProtocol := viper.GetString("git-protocol")
 
 	typedGitProtocol, err := git.NewProtocol(gitProtocol)
 	if err != nil {
 		return TemplateCmdFlags{}, fmt.Errorf("%w: %w", ErrParsingFlag, err)
 	}
 
-	distroPatchesLocation, err := cmdutil.StringFlag(cmd, "distro-patches", tracker, cmdEvent)
-	if err != nil {
-		return TemplateCmdFlags{}, fmt.Errorf("%w: %s", ErrParsingFlag, "distro-patches")
-	}
-
 	return TemplateCmdFlags{
-		DryRun:                dryRun,
-		NoOverwrite:           noOverwrite,
-		SkipValidation:        skipValidation,
-		Outdir:                outdir,
-		DistroLocation:        distroLocation,
-		FuryctlPath:           furyctlPath,
+		DryRun:                viper.GetBool("dry-run"),
+		NoOverwrite:           viper.GetBool("no-overwrite"),
+		SkipValidation:        viper.GetBool("skip-validation"),
+		Outdir:                viper.GetString("outdir"),
+		DistroLocation:        viper.GetString("distro-location"),
+		FuryctlPath:           viper.GetString("config"),
 		GitProtocol:           typedGitProtocol,
-		DistroPatchesLocation: distroPatchesLocation,
+		DistroPatchesLocation: viper.GetString("distro-patches"),
 	}, nil
 }

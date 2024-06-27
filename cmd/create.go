@@ -5,22 +5,32 @@
 package cmd
 
 import (
+	"fmt"
+
 	"github.com/spf13/cobra"
 
 	"github.com/sighupio/furyctl/cmd/create"
 	"github.com/sighupio/furyctl/internal/analytics"
 )
 
-func NewCreateCommand(tracker *analytics.Tracker) *cobra.Command {
+func NewCreateCommand(tracker *analytics.Tracker) (*cobra.Command, error) {
 	createCmd := &cobra.Command{
 		Use:   "create",
 		Short: "Create a cluster or a sample configuration file",
 	}
 
-	createCmd.AddCommand(create.NewConfigCommand(tracker))
+	configCmd, err := create.NewConfigCommand(tracker)
+	if err != nil {
+		return nil, fmt.Errorf("error while creating config command: %w", err)
+	}
+
+	createCmd.AddCommand(configCmd)
 
 	// Configure create cluster command as alias of apply command.
-	applyCmd := NewApplyCommand(tracker)
+	applyCmd, err := NewApplyCommand(tracker)
+	if err != nil {
+		return nil, err
+	}
 
 	clusterCmd := &cobra.Command{
 		Use:    "cluster",
@@ -33,5 +43,5 @@ func NewCreateCommand(tracker *analytics.Tracker) *cobra.Command {
 
 	createCmd.AddCommand(clusterCmd)
 
-	return createCmd
+	return createCmd, nil
 }

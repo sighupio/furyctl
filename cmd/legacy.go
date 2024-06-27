@@ -5,19 +5,26 @@
 package cmd
 
 import (
+	"fmt"
+
 	"github.com/spf13/cobra"
 
 	"github.com/sighupio/furyctl/cmd/legacy"
 	"github.com/sighupio/furyctl/internal/analytics"
 )
 
-func NewLegacyCommand(tracker *analytics.Tracker) *cobra.Command {
+func NewLegacyCommand(tracker *analytics.Tracker) (*cobra.Command, error) {
 	legacyCmd := &cobra.Command{
 		Use:   "legacy",
 		Short: "Legacy commands for compatibility with older versions of furyctl",
 	}
 
-	legacyCmd.AddCommand(legacy.NewVendorCmd(tracker))
+	vendorCmd, err := legacy.NewVendorCmd(tracker)
+	if err != nil {
+		return nil, fmt.Errorf("error while creating vendor command: %w", err)
+	}
 
-	return legacyCmd
+	legacyCmd.AddCommand(vendorCmd)
+
+	return legacyCmd, nil
 }

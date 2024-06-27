@@ -5,12 +5,14 @@
 package validate
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
 
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 
 	"github.com/sighupio/furyctl/internal/analytics"
 	"github.com/sighupio/furyctl/internal/cmd/cmdutil"
@@ -24,9 +26,9 @@ import (
 	netx "github.com/sighupio/furyctl/internal/x/net"
 )
 
-var ErrDependencies = fmt.Errorf("dependencies are not satisfied")
+var ErrDependencies = errors.New("dependencies are not satisfied")
 
-func NewDependenciesCmd(tracker *analytics.Tracker) *cobra.Command {
+func NewDependenciesCmd(tracker *analytics.Tracker) (*cobra.Command, error) {
 	var cmdEvent analytics.Event
 
 	cmd := &cobra.Command{
@@ -35,28 +37,17 @@ func NewDependenciesCmd(tracker *analytics.Tracker) *cobra.Command {
 		PreRun: func(cmd *cobra.Command, _ []string) {
 			cmdEvent = analytics.NewCommandEvent(cobrax.GetFullname(cmd))
 		},
-		RunE: func(cmd *cobra.Command, _ []string) error {
-			furyctlPath, err := cmdutil.StringFlag(cmd, "config", tracker, cmdEvent)
-			if err != nil {
-				return fmt.Errorf("%w: config", ErrParsingFlag)
-			}
+		RunE: func(_ *cobra.Command, _ []string) error {
+			furyctlPath := viper.GetString("config")
+			distroLocation := viper.GetString("distro-location")
+			distroPatchesLocation := viper.GetString("distro-patches")
 
-			distroLocation, err := cmdutil.StringFlag(cmd, "distro-location", tracker, cmdEvent)
-			if err != nil {
-				return fmt.Errorf("%w: distro-location", ErrParsingFlag)
-			}
-
-			distroPatchesLocation, err := cmdutil.StringFlag(cmd, "distro-patches", tracker, cmdEvent)
-			if err != nil {
-				return fmt.Errorf("%w: %s", ErrParsingFlag, "distro-patches")
-			}
+			outDir := viper.GetString("outdir")
+			binPath := viper.GetString("bin-path")
+			gitProtocol := viper.GetString("git-protocol")
 
 			// Init paths.
 			logrus.Debug("Getting Home Directory Path...")
-			outDir, err := cmdutil.StringFlag(cmd, "outdir", tracker, cmdEvent)
-			if err != nil {
-				return fmt.Errorf("%w: outdir", ErrParsingFlag)
-			}
 
 			homeDir, err := os.UserHomeDir()
 			if err != nil {
@@ -68,16 +59,6 @@ func NewDependenciesCmd(tracker *analytics.Tracker) *cobra.Command {
 
 			if outDir == "" {
 				outDir = homeDir
-			}
-
-			binPath := cobrax.Flag[string](cmd, "bin-path")
-			if binPath == "" {
-				binPath = filepath.Join(outDir, ".furyctl", "bin")
-			}
-
-			gitProtocol, err := cmdutil.StringFlag(cmd, "git-protocol", tracker, cmdEvent)
-			if err != nil {
-				return fmt.Errorf("%w: git-protocol", ErrParsingFlag)
 			}
 
 			typedGitProtocol, err := git.NewProtocol(gitProtocol)
@@ -218,5 +199,9 @@ func NewDependenciesCmd(tracker *analytics.Tracker) *cobra.Command {
 			cmdutil.AnyGoGetterFormatStr,
 	)
 
-	return cmd
+	if err := viper.BindPFlags(cmd.Flags()); err != nil {
+		return nil, fmt.Errorf("error while binding flags: %w", err)
+	}
+
+	return cmd, nil
 }

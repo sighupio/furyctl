@@ -251,7 +251,7 @@ func (v *ClusterCreator) Create(startFrom string, timeout, _ int) error {
 		case cluster.OperationPhaseAll:
 			var stopWg sync.WaitGroup
 
-			//nolint:gomnd,revive // ignore magic number linters
+			//nolint:mnd,revive // ignore magic number linters
 			stopWg.Add(3)
 
 			go func() {

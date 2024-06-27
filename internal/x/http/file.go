@@ -6,13 +6,14 @@ package http
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
 	"os"
 )
 
-var ErrCannotDownloadFile = fmt.Errorf("cannot download file")
+var ErrCannotDownloadFile = errors.New("cannot download file")
 
 func DownloadFile(url string) (string, error) {
 	out, err := os.CreateTemp(os.TempDir(), "furyctl")

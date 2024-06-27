@@ -4,9 +4,12 @@
 
 package git
 
-import "fmt"
+import (
+	"errors"
+	"fmt"
+)
 
-var ErrUnsupportedGitProtocol = fmt.Errorf("unsupported git protocol")
+var ErrUnsupportedGitProtocol = errors.New("unsupported git protocol")
 
 func NewProtocol(protocol string) (Protocol, error) {
 	switch protocol {

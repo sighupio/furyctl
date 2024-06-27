@@ -137,7 +137,7 @@ func (p *PreUpgrade) Exec() error {
 
 	logrus.Debugf("config path = %s", confPath)
 
-	if err = os.WriteFile(confPath, outYaml, os.ModePerm); err != nil {
+	if err = os.WriteFile(confPath, outYaml, iox.FullRWPermAccess); err != nil {
 		return fmt.Errorf("error writing config file: %w", err)
 	}
 

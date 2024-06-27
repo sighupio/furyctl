@@ -5,6 +5,7 @@
 package netx
 
 import (
+	"errors"
 	"fmt"
 	"math"
 	"net"
@@ -12,8 +13,8 @@ import (
 )
 
 var (
-	ErrInvalidIP  = fmt.Errorf("invalid ip")
-	ErrIPNetIsNil = fmt.Errorf("ipnet is nil")
+	ErrInvalidIP  = errors.New("invalid ip")
+	ErrIPNetIsNil = errors.New("ipnet is nil")
 )
 
 func AddOffsetToIPNet(ipNet *net.IPNet, offset int) (*net.IPNet, error) {
@@ -26,7 +27,7 @@ func AddOffsetToIPNet(ipNet *net.IPNet, offset int) (*net.IPNet, error) {
 		return nil, fmt.Errorf("%w: %v", ErrInvalidIP, err)
 	}
 
-	for i := 0; i < int(math.Abs(float64(offset))); i++ {
+	for range int(math.Abs(float64(offset))) {
 		if offset > 0 {
 			newIP = newIP.Next()
 

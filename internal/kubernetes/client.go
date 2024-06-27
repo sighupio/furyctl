@@ -18,8 +18,8 @@ import (
 var cmdOutRegex = regexp.MustCompile(`'(.*?)'`)
 
 type Resource struct {
-	Name string
-	Kind string
+	Name string `json:"name"`
+	Kind string `json:"kind"`
 }
 
 type Client struct {
@@ -52,7 +52,7 @@ func (c *Client) ListNamespaceResources(resName, ns string) ([]Resource, error) 
 	var result []Resource
 
 	cmdOut, err := c.kubeRunner.Get(false, ns, resName, "-o",
-		`jsonpath='[{range .items[*]}{"{"}"Name": "{.metadata.name}", "Kind": "{.kind}"{"}"},{end}]'`)
+		`jsonpath='[{range .items[*]}{"{"}"name": "{.metadata.name}", "kind": "{.kind}"{"}"},{end}]'`)
 	if err != nil {
 		return result, fmt.Errorf("error while reading resources from cluster: %w", err)
 	}

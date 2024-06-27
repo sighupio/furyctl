@@ -15,6 +15,7 @@ import (
 
 	"github.com/sighupio/furyctl/internal/merge"
 	"github.com/sighupio/furyctl/internal/template"
+	iox "github.com/sighupio/furyctl/internal/x/io"
 	yamlx "github.com/sighupio/furyctl/internal/x/yaml"
 )
 
@@ -133,7 +134,7 @@ func (m *IACBuilder) Build() error {
 
 	logrus.Debugf("config path = %s", confPath)
 
-	if err = os.WriteFile(confPath, outYaml, os.ModePerm); err != nil {
+	if err = os.WriteFile(confPath, outYaml, iox.FullRWPermAccess); err != nil {
 		return fmt.Errorf("error writing config file: %w", err)
 	}
 

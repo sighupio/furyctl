@@ -46,12 +46,12 @@ env:
 	@grep -v '^#' .env | sed 's/^/export /'
 
 tools:
-	@go install github.com/daixiang0/gci@v0.12.1
-	@go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.55.2
+	@go install github.com/daixiang0/gci@v0.13.4
+	@go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.59.1
 	@go install github.com/google/addlicense@v1.1.1
-	@go install github.com/nikolaydubina/go-cover-treemap@v1.3.0
-	@go install github.com/onsi/ginkgo/v2/ginkgo@v2.15.0
-	@go install golang.org/x/tools/cmd/goimports@v0.17.0
+	@go install github.com/nikolaydubina/go-cover-treemap@v1.4.2
+	@go install github.com/onsi/ginkgo/v2/ginkgo@v2.19.0
+	@go install golang.org/x/tools/cmd/goimports@v0.22.0
 	@go install mvdan.cc/gofumpt@v0.6.0
 	@go install github.com/momaek/formattag@v0.0.9
 
@@ -137,7 +137,7 @@ formattag:
 lint: lint-go
 
 lint-go:
-	@GOFLAGS=-mod=mod golangci-lint -v run --color=always --config=${_PROJECT_DIRECTORY}/.rules/.golangci.yml ./...
+	@GOFLAGS=-mod=mod golangci-lint -v run --color=always --max-same-issues 25 --config=${_PROJECT_DIRECTORY}/.rules/.golangci.yml ./...
 
 .PHONY: test-unit test-integration test-e2e test-all show-coverage
 

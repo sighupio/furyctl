@@ -96,7 +96,7 @@ func (i *Infrastructure) Exec() error {
 		}
 
 		if !isRoot {
-			killMsg = fmt.Sprintf("sudo %s", killMsg)
+			killMsg = "sudo " + killMsg
 		}
 
 		logrus.Warnf("Please, remember to kill the OpenVPN process, "+

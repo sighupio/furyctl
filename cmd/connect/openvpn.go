@@ -12,10 +12,10 @@ import (
 
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 
 	"github.com/sighupio/fury-distribution/pkg/apis/config"
 	"github.com/sighupio/furyctl/internal/analytics"
-	"github.com/sighupio/furyctl/internal/cmd/cmdutil"
 	cobrax "github.com/sighupio/furyctl/internal/x/cobra"
 	execx "github.com/sighupio/furyctl/internal/x/exec"
 	yamlx "github.com/sighupio/furyctl/internal/x/yaml"
@@ -34,7 +34,7 @@ type OpenVPNCmdFlags struct {
 	Outdir      string
 }
 
-func NewOpenVPNCmd(tracker *analytics.Tracker) *cobra.Command {
+func NewOpenVPNCmd(tracker *analytics.Tracker) (*cobra.Command, error) {
 	var cmdEvent analytics.Event
 
 	cmd := &cobra.Command{
@@ -43,15 +43,12 @@ func NewOpenVPNCmd(tracker *analytics.Tracker) *cobra.Command {
 		PreRun: func(cmd *cobra.Command, _ []string) {
 			cmdEvent = analytics.NewCommandEvent(cobrax.GetFullname(cmd))
 		},
-		RunE: func(cmd *cobra.Command, _ []string) error {
+		RunE: func(_ *cobra.Command, _ []string) error {
 			logrus.Info("Connecting to OpenVPN...")
 
 			// Parse flags.
 			logrus.Debug("Parsing VPN Flags...")
-			flags, err := getOpenVPNCmdFlags(cmd, tracker, cmdEvent)
-			if err != nil {
-				return err
-			}
+			flags := getOpenVPNCmdFlags()
 
 			if flags.Profile == "" {
 				return ErrProfileFlagRequired
@@ -110,30 +107,19 @@ func NewOpenVPNCmd(tracker *analytics.Tracker) *cobra.Command {
 
 	setupOpenVPNCmdFlags(cmd)
 
-	return cmd
+	if err := viper.BindPFlags(cmd.Flags()); err != nil {
+		return nil, fmt.Errorf("error while binding flags: %w", err)
+	}
+
+	return cmd, nil
 }
 
-func getOpenVPNCmdFlags(cmd *cobra.Command, tracker *analytics.Tracker, cmdEvent analytics.Event) (OpenVPNCmdFlags, error) {
-	furyctlPath, err := cmdutil.StringFlag(cmd, "config", tracker, cmdEvent)
-	if err != nil {
-		return OpenVPNCmdFlags{}, fmt.Errorf("%w: %s", ErrParsingFlag, "config")
-	}
-
-	profile, err := cmdutil.StringFlag(cmd, "profile", tracker, cmdEvent)
-	if err != nil {
-		return OpenVPNCmdFlags{}, fmt.Errorf("%w: %s", ErrParsingFlag, "profile")
-	}
-
-	outdir, err := cmdutil.StringFlag(cmd, "outdir", tracker, cmdEvent)
-	if err != nil {
-		return OpenVPNCmdFlags{}, fmt.Errorf("%w: %s", ErrParsingFlag, "outdir")
-	}
-
+func getOpenVPNCmdFlags() OpenVPNCmdFlags {
 	return OpenVPNCmdFlags{
-		Profile:     profile,
-		FuryctlPath: furyctlPath,
-		Outdir:      outdir,
-	}, nil
+		Profile:     viper.GetString("profile"),
+		FuryctlPath: viper.GetString("config"),
+		Outdir:      viper.GetString("outdir"),
+	}
 }
 
 func setupOpenVPNCmdFlags(cmd *cobra.Command) {
