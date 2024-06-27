@@ -18,10 +18,10 @@ import (
 )
 
 var (
-	ErrCannotCacheDownload          = fmt.Errorf("cannot cache download")
-	ErrCannotCheckLocalCache        = fmt.Errorf("cannot check local cache")
-	ErrCannotGetKeyFromURL          = fmt.Errorf("cannot get key from url")
-	ErrCannotCopyCacheToDestination = fmt.Errorf("cannot copy cache to destination")
+	ErrCannotCacheDownload          = errors.New("cannot cache download")
+	ErrCannotCheckLocalCache        = errors.New("cannot check local cache")
+	ErrCannotGetKeyFromURL          = errors.New("cannot get key from url")
+	ErrCannotCopyCacheToDestination = errors.New("cannot copy cache to destination")
 	ErrCannotClearCache             = errors.New("cannot clear cache")
 	URLPrefixRegexp                 = regexp.MustCompile(`^[A-z0-9]+::`)
 )

@@ -93,12 +93,12 @@ func (tv *Validator) Validate(kfdManifest config.KFD, miniConf config.Furyctl) (
 }
 
 func (tv *Validator) validateTools(i any, kfdManifest config.KFD) ([]string, []error) {
-	var oks []string
-
 	var errs []error
 
+	oks := make([]string, 0)
+
 	toolCfgs := reflect.ValueOf(i)
-	for i := 0; i < toolCfgs.NumField(); i++ {
+	for i := range toolCfgs.NumField() {
 		toolCfg, ok := toolCfgs.Field(i).Interface().(config.KFDTool)
 		if !ok {
 			continue

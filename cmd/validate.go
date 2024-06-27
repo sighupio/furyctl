@@ -5,20 +5,32 @@
 package cmd
 
 import (
+	"fmt"
+
 	"github.com/spf13/cobra"
 
 	"github.com/sighupio/furyctl/cmd/validate"
 	"github.com/sighupio/furyctl/internal/analytics"
 )
 
-func NewValidateCommand(tracker *analytics.Tracker) *cobra.Command {
+func NewValidateCommand(tracker *analytics.Tracker) (*cobra.Command, error) {
 	validateCmd := &cobra.Command{
 		Use:   "validate",
 		Short: "Validate a configuration file and the dependencies relative to the Kubernetes Fury Distribution version specified in it",
 	}
 
-	validateCmd.AddCommand(validate.NewConfigCmd(tracker))
-	validateCmd.AddCommand(validate.NewDependenciesCmd(tracker))
+	configCmd, err := validate.NewConfigCmd(tracker)
+	if err != nil {
+		return nil, fmt.Errorf("error while creating config command: %w", err)
+	}
 
-	return validateCmd
+	dependenciesCmd, err := validate.NewDependenciesCmd(tracker)
+	if err != nil {
+		return nil, fmt.Errorf("error while creating dependencies command: %w", err)
+	}
+
+	validateCmd.AddCommand(configCmd)
+	validateCmd.AddCommand(dependenciesCmd)
+
+	return validateCmd, nil
 }

@@ -110,7 +110,7 @@ func (v *Connector) Connect() error {
 }
 
 func (v *Connector) GenerateCertificates() error {
-	opvnCertPath := filepath.Join(v.certDir, fmt.Sprintf("%s.ovpn", v.clusterName))
+	opvnCertPath := filepath.Join(v.certDir, v.clusterName+".ovpn")
 
 	if _, err := os.Stat(opvnCertPath); os.IsNotExist(err) {
 		logrus.Info("Generating VPN client certificate...")
@@ -136,7 +136,7 @@ func (v *Connector) writeOVPNFileToDisk(certName string, cert []byte) error {
 	err := os.WriteFile(
 		filepath.Join(
 			v.certDir,
-			fmt.Sprintf("%s.ovpn", certName)),
+			certName+".ovpn"),
 		cert,
 		iox.FullRWPermAccess,
 	)
@@ -176,7 +176,7 @@ func (v *Connector) GetKillMessage() (string, error) {
 	}
 
 	if !isRoot {
-		killMsg = fmt.Sprintf("sudo %s", killMsg)
+		killMsg = "sudo " + killMsg
 	}
 
 	return fmt.Sprintf("%s, you can do it with the following command: '%s'", endVpnMsg, killMsg), nil
@@ -188,7 +188,7 @@ func (v *Connector) copyOpenvpnToWorkDir(clientName string) error {
 		return fmt.Errorf("error getting current dir: %w", err)
 	}
 
-	ovpnFileName := fmt.Sprintf("%s.ovpn", clientName)
+	ovpnFileName := clientName + ".ovpn"
 
 	ovpnPath, err := filepath.Abs(path.Join(v.certDir, ovpnFileName))
 	if err != nil {
@@ -234,7 +234,7 @@ func (v *Connector) startOpenVPN() error {
 	}
 
 	if !isRoot {
-		connectMsg = fmt.Sprintf("%s, you will be asked for your SUDO password", connectMsg)
+		connectMsg += ", you will be asked for your SUDO password"
 	}
 
 	logrus.Infof("%s...", connectMsg)
@@ -262,7 +262,7 @@ func (*Connector) promptAutoConnect(pid int32) error {
 func (v *Connector) prompt() error {
 	connectMsg := "Please connect to the VPN before continuing"
 
-	certPath := filepath.Join(v.workDir, fmt.Sprintf("%s.ovpn", v.clusterName))
+	certPath := filepath.Join(v.workDir, v.clusterName+".ovpn")
 
 	if v.IsConfigured() {
 		isRoot, err := osx.IsRoot()
@@ -273,7 +273,7 @@ func (v *Connector) prompt() error {
 		vpnConnectCmd := fmt.Sprintf("openvpn --config %s --daemon", certPath)
 
 		if !isRoot {
-			vpnConnectCmd = fmt.Sprintf("sudo %s", vpnConnectCmd)
+			vpnConnectCmd = "sudo " + vpnConnectCmd
 		}
 
 		connectMsg = fmt.Sprintf(

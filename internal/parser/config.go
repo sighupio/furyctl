@@ -5,6 +5,7 @@
 package parser
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -23,7 +24,7 @@ const (
 )
 
 var (
-	ErrCannotParseDynamicValue = fmt.Errorf("cannot parse dynamic value")
+	ErrCannotParseDynamicValue = errors.New("cannot parse dynamic value")
 	RelativePathRegexp         = regexp.MustCompile(`^\.{1,}\/`)
 )
 

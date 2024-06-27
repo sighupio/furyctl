@@ -12,9 +12,9 @@ import (
 
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 
 	"github.com/sighupio/furyctl/internal/analytics"
-	"github.com/sighupio/furyctl/internal/cmd/cmdutil"
 	"github.com/sighupio/furyctl/internal/legacy"
 	cobrax "github.com/sighupio/furyctl/internal/x/cobra"
 )
@@ -32,7 +32,7 @@ type VendorCmdFlags struct {
 	GitProtocol  string
 }
 
-func NewVendorCmd(tracker *analytics.Tracker) *cobra.Command {
+func NewVendorCmd(tracker *analytics.Tracker) (*cobra.Command, error) {
 	var cmdEvent analytics.Event
 
 	cmd := &cobra.Command{
@@ -41,11 +41,8 @@ func NewVendorCmd(tracker *analytics.Tracker) *cobra.Command {
 		PreRun: func(cmd *cobra.Command, _ []string) {
 			cmdEvent = analytics.NewCommandEvent(cobrax.GetFullname(cmd))
 		},
-		RunE: func(cmd *cobra.Command, _ []string) error {
-			flags, err := getLegacyVendorCmdFlags(cmd, tracker, cmdEvent)
-			if err != nil {
-				return err
-			}
+		RunE: func(_ *cobra.Command, _ []string) error {
+			flags := getLegacyVendorCmdFlags()
 
 			ff, err := legacy.NewFuryFile(flags.FuryFilePath)
 			if err != nil {
@@ -112,28 +109,17 @@ func NewVendorCmd(tracker *analytics.Tracker) *cobra.Command {
 			"like 'monitoring', and ignore the rest",
 	)
 
-	return cmd
+	if err := viper.BindPFlags(cmd.Flags()); err != nil {
+		return nil, fmt.Errorf("error while binding flags: %w", err)
+	}
+
+	return cmd, nil
 }
 
-func getLegacyVendorCmdFlags(cmd *cobra.Command, tracker *analytics.Tracker, cmdEvent analytics.Event) (VendorCmdFlags, error) {
-	gitProtocol, err := cmdutil.StringFlag(cmd, "git-protocol", tracker, cmdEvent)
-	if err != nil {
-		return VendorCmdFlags{}, fmt.Errorf("%w: %s", ErrParsingFlag, "git-protocol")
-	}
-
-	prefix, err := cmdutil.StringFlag(cmd, "prefix", tracker, cmdEvent)
-	if err != nil {
-		return VendorCmdFlags{}, fmt.Errorf("%w: %s", ErrParsingFlag, "prefix")
-	}
-
-	furyFilePath, err := cmdutil.StringFlag(cmd, "furyfile", tracker, cmdEvent)
-	if err != nil {
-		return VendorCmdFlags{}, fmt.Errorf("%w: %s", ErrParsingFlag, "furyfile")
-	}
-
+func getLegacyVendorCmdFlags() VendorCmdFlags {
 	return VendorCmdFlags{
-		FuryFilePath: furyFilePath,
-		Prefix:       prefix,
-		GitProtocol:  gitProtocol,
-	}, nil
+		FuryFilePath: viper.GetString("furyfile"),
+		Prefix:       viper.GetString("prefix"),
+		GitProtocol:  viper.GetString("git-protocol"),
+	}
 }

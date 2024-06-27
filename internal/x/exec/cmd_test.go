@@ -15,10 +15,12 @@ import (
 	execx "github.com/sighupio/furyctl/internal/x/exec"
 )
 
+var ErrTest = errors.New("test error")
+
 func TestNewErrCmdFailed(t *testing.T) {
 	t.Parallel()
 
-	err := execx.NewErrCmdFailed("foo", []string{"bar", "baz"}, errors.New("test error"), nil)
+	err := execx.NewErrCmdFailed("foo", []string{"bar", "baz"}, ErrTest, nil)
 	if err == nil {
 		t.Error("error is nil")
 	}
@@ -55,8 +57,6 @@ func TestNewCmd(t *testing.T) {
 		},
 	}
 	for _, tC := range testCases {
-		tC := tC
-
 		t.Run(tC.desc, func(t *testing.T) {
 			t.Parallel()
 
@@ -107,13 +107,10 @@ func Test_Cmd_Run(t *testing.T) {
 		},
 	}
 	for _, tC := range testCases {
-		tC := tC
-
 		t.Run(tC.desc, func(t *testing.T) {
 			t.Parallel()
 
 			err := tC.cmd.Run()
-
 			if (err != nil) != tC.wantErr {
 				t.Errorf("Cmd.Run() error = %v, wantErr = %v", err, tC.wantErr)
 			}
@@ -144,13 +141,10 @@ func Test_Cmd_Stop(t *testing.T) {
 	}
 
 	for _, tC := range testCases {
-		tC := tC
-
 		t.Run(tC.desc, func(t *testing.T) {
 			t.Parallel()
 
 			err := tC.cmd.Stop()
-
 			if (err != nil) != tC.wantErr {
 				t.Errorf("Cmd.Stop() error = %v, wantErr = %v", err, tC.wantErr)
 			}
@@ -226,8 +220,6 @@ func TestCombinedOutput(t *testing.T) {
 		},
 	}
 	for _, tC := range testCases {
-		tC := tC
-
 		t.Run(tC.desc, func(t *testing.T) {
 			t.Parallel()
 

@@ -5,6 +5,7 @@
 package template_test
 
 import (
+	"errors"
 	"reflect"
 	"testing"
 
@@ -119,7 +120,6 @@ func TestNewConfig(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		tc := tc
 		t.Run(tc.desc, func(t *testing.T) {
 			t.Parallel()
 
@@ -128,7 +128,8 @@ func TestNewConfig(t *testing.T) {
 				if !tc.wantErr {
 					t.Fatalf("unexpected error: %v", err)
 				}
-				if !reflect.DeepEqual(err, tc.err) {
+
+				if !errors.Is(err, tc.err) {
 					t.Fatalf("want error %v, got %v", tc.err, err)
 				}
 			}

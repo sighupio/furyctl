@@ -35,7 +35,7 @@ func (b *Builder) FromStruct(s any, tagType string) map[any]any {
 
 	sVal := reflect.ValueOf(s)
 
-	for i := 0; i < sVal.NumField(); i++ {
+	for i := range sVal.NumField() {
 		if !sVal.Field(i).CanInterface() {
 			continue
 		}

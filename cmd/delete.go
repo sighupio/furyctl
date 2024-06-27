@@ -5,19 +5,26 @@
 package cmd
 
 import (
+	"fmt"
+
 	"github.com/spf13/cobra"
 
 	del "github.com/sighupio/furyctl/cmd/delete"
 	"github.com/sighupio/furyctl/internal/analytics"
 )
 
-func NewDeleteCommand(tracker *analytics.Tracker) *cobra.Command {
+func NewDeleteCommand(tracker *analytics.Tracker) (*cobra.Command, error) {
 	deleteCmd := &cobra.Command{
 		Use:   "delete",
 		Short: "Delete a cluster and its related infrastructure",
 	}
 
-	deleteCmd.AddCommand(del.NewClusterCmd(tracker))
+	clusterCmd, err := del.NewClusterCmd(tracker)
+	if err != nil {
+		return nil, fmt.Errorf("error while creating cluster command: %w", err)
+	}
 
-	return deleteCmd
+	deleteCmd.AddCommand(clusterCmd)
+
+	return deleteCmd, nil
 }

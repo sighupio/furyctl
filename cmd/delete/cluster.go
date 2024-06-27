@@ -13,6 +13,7 @@ import (
 
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 
 	"github.com/sighupio/furyctl/internal/analytics"
 	"github.com/sighupio/furyctl/internal/cluster"
@@ -52,7 +53,7 @@ type ClusterCmdFlags struct {
 	DistroPatchesLocation string
 }
 
-func NewClusterCmd(tracker *analytics.Tracker) *cobra.Command {
+func NewClusterCmd(tracker *analytics.Tracker) (*cobra.Command, error) {
 	var cmdEvent analytics.Event
 
 	cmd := &cobra.Command{
@@ -61,9 +62,9 @@ func NewClusterCmd(tracker *analytics.Tracker) *cobra.Command {
 		PreRun: func(cmd *cobra.Command, _ []string) {
 			cmdEvent = analytics.NewCommandEvent(cobrax.GetFullname(cmd))
 		},
-		RunE: func(cmd *cobra.Command, _ []string) error {
+		RunE: func(_ *cobra.Command, _ []string) error {
 			// Get flags.
-			flags, err := getDeleteClusterCmdFlags(cmd, tracker, cmdEvent)
+			flags, err := getDeleteClusterCmdFlags()
 			if err != nil {
 				return err
 			}
@@ -338,46 +339,23 @@ func NewClusterCmd(tracker *analytics.Tracker) *cobra.Command {
 		"Skip validating dependencies",
 	)
 
-	return cmd
+	if err := viper.BindPFlags(cmd.Flags()); err != nil {
+		return nil, fmt.Errorf("error while binding flags: %w", err)
+	}
+
+	return cmd, nil
 }
 
-func getDeleteClusterCmdFlags(cmd *cobra.Command, tracker *analytics.Tracker, cmdEvent analytics.Event) (ClusterCmdFlags, error) {
-	debug, err := cmdutil.BoolFlag(cmd, "debug", tracker, cmdEvent)
-	if err != nil {
-		return ClusterCmdFlags{}, fmt.Errorf(WrappedErrMessage, ErrParsingFlag, "debug")
-	}
+func getDeleteClusterCmdFlags() (ClusterCmdFlags, error) {
+	phase := viper.GetString("phase")
 
-	furyctlPath, err := cmdutil.StringFlag(cmd, "config", tracker, cmdEvent)
-	if err != nil {
-		return ClusterCmdFlags{}, fmt.Errorf(WrappedErrMessage, ErrParsingFlag, "config")
-	}
-
-	distroLocation, err := cmdutil.StringFlag(cmd, "distro-location", tracker, cmdEvent)
-	if err != nil {
-		return ClusterCmdFlags{}, fmt.Errorf(WrappedErrMessage, ErrParsingFlag, "distro-location")
-	}
-
-	phase, err := cmdutil.StringFlag(cmd, "phase", tracker, cmdEvent)
-	if err != nil {
-		return ClusterCmdFlags{}, fmt.Errorf(WrappedErrMessage, ErrParsingFlag, "phase")
-	}
-
-	err = cluster.CheckPhase(phase)
+	err := cluster.CheckPhase(phase)
 	if err != nil {
 		return ClusterCmdFlags{}, fmt.Errorf("%w: %s: %s", ErrParsingFlag, "phase", err.Error())
 	}
 
-	binPath := cmdutil.StringFlagOptional(cmd, "bin-path")
-
-	skipVpn, err := cmdutil.BoolFlag(cmd, "skip-vpn-confirmation", tracker, cmdEvent)
-	if err != nil {
-		return ClusterCmdFlags{}, fmt.Errorf(WrappedErrMessage, ErrParsingFlag, "skip-vpn-confirmation")
-	}
-
-	vpnAutoConnect, err := cmdutil.BoolFlag(cmd, "vpn-auto-connect", tracker, cmdEvent)
-	if err != nil {
-		return ClusterCmdFlags{}, fmt.Errorf(WrappedErrMessage, ErrParsingFlag, "vpn-auto-connect")
-	}
+	vpnAutoConnect := viper.GetBool("vpn-auto-connect")
+	skipVpn := viper.GetBool("skip-vpn-confirmation")
 
 	if skipVpn && vpnAutoConnect {
 		return ClusterCmdFlags{}, fmt.Errorf(
@@ -387,66 +365,28 @@ func getDeleteClusterCmdFlags(cmd *cobra.Command, tracker *analytics.Tracker, cm
 		)
 	}
 
-	dryRun, err := cmdutil.BoolFlag(cmd, "dry-run", tracker, cmdEvent)
-	if err != nil {
-		return ClusterCmdFlags{}, fmt.Errorf(WrappedErrMessage, ErrParsingFlag, "dry-run")
-	}
-
-	noTTY, err := cmdutil.BoolFlag(cmd, "no-tty", tracker, cmdEvent)
-	if err != nil {
-		return ClusterCmdFlags{}, fmt.Errorf(WrappedErrMessage, ErrParsingFlag, "no-tty")
-	}
-
-	force, err := cmdutil.BoolFlag(cmd, "force", tracker, cmdEvent)
-	if err != nil {
-		return ClusterCmdFlags{}, fmt.Errorf(WrappedErrMessage, ErrParsingFlag, "force")
-	}
-
-	gitProtocol, err := cmdutil.StringFlag(cmd, "git-protocol", tracker, cmdEvent)
-	if err != nil {
-		return ClusterCmdFlags{}, fmt.Errorf(WrappedErrMessage, ErrParsingFlag, "git-protocol")
-	}
+	gitProtocol := viper.GetString("git-protocol")
 
 	typedGitProtocol, err := git.NewProtocol(gitProtocol)
 	if err != nil {
 		return ClusterCmdFlags{}, fmt.Errorf("%w: %w", ErrParsingFlag, err)
 	}
 
-	outdir, err := cmdutil.StringFlag(cmd, "outdir", tracker, cmdEvent)
-	if err != nil {
-		return ClusterCmdFlags{}, fmt.Errorf(WrappedErrMessage, ErrParsingFlag, "outdir")
-	}
-
-	skipDepsDownload, err := cmdutil.BoolFlag(cmd, "skip-deps-download", tracker, cmdEvent)
-	if err != nil {
-		return ClusterCmdFlags{}, fmt.Errorf(WrappedErrMessage, ErrParsingFlag, "skip-deps-download")
-	}
-
-	skipDepsValidation, err := cmdutil.BoolFlag(cmd, "skip-deps-validation", tracker, cmdEvent)
-	if err != nil {
-		return ClusterCmdFlags{}, fmt.Errorf(WrappedErrMessage, ErrParsingFlag, "skip-deps-validation")
-	}
-
-	distroPatchesLocation, err := cmdutil.StringFlag(cmd, "distro-patches", tracker, cmdEvent)
-	if err != nil {
-		return ClusterCmdFlags{}, fmt.Errorf("%w: %s", ErrParsingFlag, "distro-patches")
-	}
-
 	return ClusterCmdFlags{
-		Debug:                 debug,
-		FuryctlPath:           furyctlPath,
-		DistroLocation:        distroLocation,
+		Debug:                 viper.GetBool("debug"),
+		FuryctlPath:           viper.GetString("config"),
+		DistroLocation:        viper.GetString("distro-location"),
 		Phase:                 phase,
-		BinPath:               binPath,
+		BinPath:               viper.GetString("bin-path"),
 		SkipVpn:               skipVpn,
 		VpnAutoConnect:        vpnAutoConnect,
-		DryRun:                dryRun,
-		Force:                 force,
-		NoTTY:                 noTTY,
+		DryRun:                viper.GetBool("dry-run"),
+		Force:                 viper.GetBool("force"),
+		NoTTY:                 viper.GetBool("no-tty"),
 		GitProtocol:           typedGitProtocol,
-		Outdir:                outdir,
-		SkipDepsDownload:      skipDepsDownload,
-		SkipDepsValidation:    skipDepsValidation,
-		DistroPatchesLocation: distroPatchesLocation,
+		Outdir:                viper.GetString("outdir"),
+		SkipDepsDownload:      viper.GetBool("skip-deps-download"),
+		SkipDepsValidation:    viper.GetBool("skip-deps-validation"),
+		DistroPatchesLocation: viper.GetString("distro-patches"),
 	}, nil
 }

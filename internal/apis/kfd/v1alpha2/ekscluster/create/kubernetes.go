@@ -288,7 +288,7 @@ func (k *Kubernetes) Stop() error {
 
 	var wg sync.WaitGroup
 
-	//nolint:gomnd // ignore magic number linters
+	//nolint:mnd // ignore magic number linters
 	wg.Add(2)
 
 	go func() {

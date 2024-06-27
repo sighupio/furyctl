@@ -5,19 +5,26 @@
 package cmd
 
 import (
+	"fmt"
+
 	"github.com/spf13/cobra"
 
 	"github.com/sighupio/furyctl/cmd/download"
 	"github.com/sighupio/furyctl/internal/analytics"
 )
 
-func NewDownloadCommand(tracker *analytics.Tracker) *cobra.Command {
+func NewDownloadCommand(tracker *analytics.Tracker) (*cobra.Command, error) {
 	dumpCmd := &cobra.Command{
 		Use:   "download",
 		Short: "Download all dependencies for the Kubernetes Fury Distribution version specified in the configuration file",
 	}
 
-	dumpCmd.AddCommand(download.NewDependenciesCmd(tracker))
+	dependenciesCmd, err := download.NewDependenciesCmd(tracker)
+	if err != nil {
+		return nil, fmt.Errorf("error while creating dependencies command: %w", err)
+	}
 
-	return dumpCmd
+	dumpCmd.AddCommand(dependenciesCmd)
+
+	return dumpCmd, nil
 }

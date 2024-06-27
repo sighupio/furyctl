@@ -5,6 +5,7 @@
 package semver
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/Al-Pragliola/go-version"
@@ -12,9 +13,9 @@ import (
 
 var (
 	// ErrInvalidVersion is returned when the version is not valid.
-	ErrInvalidVersion = fmt.Errorf("invalid version")
+	ErrInvalidVersion = errors.New("invalid version")
 	// ErrInvalidConstraint is returned when the constraint is not valid.
-	ErrInvalidConstraint = fmt.Errorf("invalid constraint")
+	ErrInvalidConstraint = errors.New("invalid constraint")
 )
 
 func NewVersion(v string) (*version.Version, error) {

@@ -81,7 +81,14 @@ func exec() int {
 
 	defer wg.Wait()
 
-	if _, err := cmd.NewRootCommand(versions, logFile, a, mixPanelToken).ExecuteC(); err != nil {
+	rootCmd, err := cmd.NewRootCommand(versions, logFile, a, mixPanelToken)
+	if err != nil {
+		log.Error(err)
+
+		return 1
+	}
+
+	if _, err := rootCmd.ExecuteC(); err != nil {
 		log.Error(err)
 
 		return 1

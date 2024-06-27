@@ -41,7 +41,6 @@ func TestStripColor(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		tc := tc
 		t.Run(tc.desc, func(t *testing.T) {
 			t.Parallel()
 
@@ -91,7 +90,6 @@ func TestToJSONLogFormat(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		tc := tc
 		t.Run(tc.desc, func(t *testing.T) {
 			t.Parallel()
 
@@ -137,8 +135,6 @@ func TestAppendNewLine(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		tc := tc
-
 		t.Run(tc.desc, func(t *testing.T) {
 			t.Parallel()
 
@@ -184,7 +180,6 @@ func TestIdentity(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		tc := tc
 		t.Run(tc.desc, func(t *testing.T) {
 			t.Parallel()
 

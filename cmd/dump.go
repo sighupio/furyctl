@@ -5,19 +5,26 @@
 package cmd
 
 import (
+	"fmt"
+
 	"github.com/spf13/cobra"
 
 	"github.com/sighupio/furyctl/cmd/dump"
 	"github.com/sighupio/furyctl/internal/analytics"
 )
 
-func NewDumpCommand(tracker *analytics.Tracker) *cobra.Command {
+func NewDumpCommand(tracker *analytics.Tracker) (*cobra.Command, error) {
 	dumpCmd := &cobra.Command{
 		Use:   "dump",
 		Short: "Dump manifests templates and other useful KFD objects",
 	}
 
-	dumpCmd.AddCommand(dump.NewTemplateCmd(tracker))
+	templateCmd, err := dump.NewTemplateCmd(tracker)
+	if err != nil {
+		return nil, fmt.Errorf("error while creating template command: %w", err)
+	}
 
-	return dumpCmd
+	dumpCmd.AddCommand(templateCmd)
+
+	return dumpCmd, nil
 }

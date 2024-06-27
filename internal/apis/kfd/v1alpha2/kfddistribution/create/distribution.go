@@ -324,7 +324,7 @@ func (d *Distribution) Stop() error {
 
 	var wg sync.WaitGroup
 
-	//nolint:gomnd // ignore magic number linters
+	//nolint:mnd // ignore magic number linters
 	wg.Add(2)
 
 	go func() {
@@ -388,7 +388,7 @@ func (d *Distribution) runReducers(
 		}
 
 		if _, err := d.shellRunner.Run(
-			path.Join(d.Path, "scripts", fmt.Sprintf("%s.sh", lifecycle)),
+			path.Join(d.Path, "scripts", lifecycle+".sh"),
 		); err != nil {
 			return fmt.Errorf("error applying manifests: %w", err)
 		}

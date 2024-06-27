@@ -139,7 +139,7 @@ func (p *PreFlight) createTerraformStateAWSS3Bucket() error {
 		"create-bucket",
 		"--bucket", bucket,
 		"--region", region,
-		"--create-bucket-configuration", fmt.Sprintf("LocationConstraint=%s", region),
+		"--create-bucket-configuration", "LocationConstraint="+region,
 	); err != nil {
 		return fmt.Errorf("%w: %w", ErrCannotCreateTerraformStateAWSS3Bucket, err)
 	}
@@ -217,7 +217,7 @@ func (p *PreFlight) HandleVPN() error {
 		return fmt.Errorf("error getting current dir: %w", err)
 	}
 
-	ovpnFileName := fmt.Sprintf("%s.ovpn", p.FuryctlConf.Metadata.Name)
+	ovpnFileName := p.FuryctlConf.Metadata.Name + ".ovpn"
 
 	ovpnPath, err := filepath.Abs(path.Join(wd, ovpnFileName))
 	if err != nil {
@@ -314,7 +314,7 @@ func (p *PreFlight) getVPNBucketName() (string, error) {
 
 	bucket := bucketRegex.FindStringSubmatch(out)
 
-	if len(bucket) < 2 { //nolint:gomnd // we want to check the length of the regex match
+	if len(bucket) < 2 { //nolint:mnd // we want to check the length of the regex match
 		return "", fmt.Errorf("error getting vpn bucket name: %w", err)
 	}
 
@@ -331,7 +331,7 @@ func (p *PreFlight) getVPNServers() ([]string, error) {
 		port = int(p)
 	}
 
-	for i := 0; i < *p.FuryctlConf.Spec.Infrastructure.Vpn.Instances; i++ {
+	for i := range *p.FuryctlConf.Spec.Infrastructure.Vpn.Instances {
 		out, err := p.TFRunnerInfra.State("show", fmt.Sprintf("module.vpn[0].aws_eip.vpn[%d]", i), "-no-color")
 		if err != nil {
 			return servers, fmt.Errorf("error getting vpn instance: %w", err)
