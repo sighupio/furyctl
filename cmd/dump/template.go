@@ -14,7 +14,9 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
+	"github.com/sighupio/furyctl/cmd"
 	"github.com/sighupio/furyctl/internal/analytics"
+	"github.com/sighupio/furyctl/internal/app"
 	"github.com/sighupio/furyctl/internal/cmd/cmdutil"
 	"github.com/sighupio/furyctl/internal/config"
 	"github.com/sighupio/furyctl/internal/dependencies"
@@ -25,11 +27,6 @@ import (
 	execx "github.com/sighupio/furyctl/internal/x/exec"
 	netx "github.com/sighupio/furyctl/internal/x/net"
 	yamlx "github.com/sighupio/furyctl/internal/x/yaml"
-)
-
-var (
-	ErrParsingFlag      = errors.New("error while parsing flag")
-	ErrTargetIsNotEmpty = errors.New("output directory is not empty, set --no-overwrite=false to overwrite it")
 )
 
 type TemplateCmdFlags struct {
@@ -43,10 +40,11 @@ type TemplateCmdFlags struct {
 	DistroPatchesLocation string
 }
 
-func NewTemplateCmd(tracker *analytics.Tracker) (*cobra.Command, error) {
-	var cmdEvent analytics.Event
-
-	cmd := &cobra.Command{
+var (
+	ErrParsingFlag      = errors.New("error while parsing flag")
+	ErrTargetIsNotEmpty = errors.New("output directory is not empty, set --no-overwrite=false to overwrite it")
+	cmdEvent            analytics.Event   //nolint:gochecknoglobals // needed for cobra/viper compatibility.
+	templateCmd         = &cobra.Command{ //nolint:gochecknoglobals // needed for cobra/viper compatibility.
 		Use:   "template",
 		Short: "Renders the distribution's infrastructure code from template files and a configuration file",
 		Long: `Generates a folder with the Terraform and Kustomization code for deploying the Kubernetes Fury Distribution into a cluster.
@@ -57,6 +55,11 @@ The generated folder will be created starting from a provided templates folder a
 			cmdEvent = analytics.NewCommandEvent(cobrax.GetFullname(cmd))
 		},
 		RunE: func(_ *cobra.Command, _ []string) error {
+			ctn := app.GetContainerInstance()
+
+			tracker := ctn.Tracker()
+			tracker.Flush()
+
 			flags, err := getDumpTemplateCmdFlags()
 			if err != nil {
 				return err
@@ -204,20 +207,23 @@ The generated folder will be created starting from a provided templates folder a
 			return nil
 		},
 	}
+)
 
-	cmd.Flags().Bool(
+//nolint:gochecknoinits // this pattern requires init function to work.
+func init() {
+	templateCmd.Flags().Bool(
 		"dry-run",
 		false,
 		"Furyctl will try its best to generate the manifests despite the errors",
 	)
 
-	cmd.Flags().Bool(
+	templateCmd.Flags().Bool(
 		"no-overwrite",
 		true,
 		"Stop if target directory is not empty",
 	)
 
-	cmd.Flags().StringP(
+	templateCmd.Flags().StringP(
 		"distro-location",
 		"",
 		"",
@@ -227,31 +233,31 @@ The generated folder will be created starting from a provided templates folder a
 			"Any format supported by hashicorp/go-getter can be used.",
 	)
 
-	cmd.Flags().StringP(
+	templateCmd.Flags().StringP(
 		"config",
 		"c",
 		"furyctl.yaml",
 		"Path to the configuration file",
 	)
 
-	cmd.Flags().Bool(
+	templateCmd.Flags().Bool(
 		"skip-validation",
 		false,
 		"Skip validation of the configuration file",
 	)
 
-	cmd.Flags().String(
+	templateCmd.Flags().String(
 		"distro-patches",
 		"",
 		"Location where to download distribution's user-made patches from. "+
 			cmdutil.AnyGoGetterFormatStr,
 	)
 
-	if err := viper.BindPFlags(cmd.Flags()); err != nil {
-		return nil, fmt.Errorf("error while binding flags: %w", err)
+	if err := viper.BindPFlags(templateCmd.Flags()); err != nil {
+		logrus.Fatalf("error while binding flags: %v", err)
 	}
 
-	return cmd, nil
+	cmd.DumpCmd.AddCommand(templateCmd)
 }
 
 func getDumpTemplateCmdFlags() (TemplateCmdFlags, error) {

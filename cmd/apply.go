@@ -16,6 +16,7 @@ import (
 
 	"github.com/sighupio/furyctl/internal/analytics"
 	_ "github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/ekscluster"
+	"github.com/sighupio/furyctl/internal/app"
 	"github.com/sighupio/furyctl/internal/cluster"
 	"github.com/sighupio/furyctl/internal/cmd/cmdutil"
 	"github.com/sighupio/furyctl/internal/config"
@@ -28,8 +29,6 @@ import (
 )
 
 const WrappedErrMessage = "%w: %s"
-
-var ErrDownloadDependenciesFailed = errors.New("dependencies download failed")
 
 type Timeouts struct {
 	ProcessTimeout         int
@@ -64,16 +63,21 @@ type ClusterCmdFlags struct {
 	ClusterSkipsCmdFlags
 }
 
-func NewApplyCommand(tracker *analytics.Tracker) (*cobra.Command, error) {
-	var cmdEvent analytics.Event
-
-	cmd := &cobra.Command{
+var (
+	ErrDownloadDependenciesFailed = errors.New("dependencies download failed")
+	cmdEvent                      analytics.Event   //nolint:gochecknoglobals // needed for cobra/viper compatibility.
+	ApplyCmd                      = &cobra.Command{ //nolint:gochecknoglobals // needed for cobra/viper compatibility.
 		Use:   "apply",
 		Short: "Apply the configuration to create or upgrade a battle-tested Kubernetes Fury cluster",
 		PreRun: func(cmd *cobra.Command, _ []string) {
 			cmdEvent = analytics.NewCommandEvent(cobrax.GetFullname(cmd))
 		},
 		RunE: func(cmd *cobra.Command, _ []string) error {
+			ctn := app.GetContainerInstance()
+
+			tracker := ctn.Tracker()
+			tracker.Flush()
+
 			// Get flags.
 			flags, err := getCreateClusterCmdFlags(cmd, tracker, cmdEvent)
 			if err != nil {
@@ -252,12 +256,15 @@ func NewApplyCommand(tracker *analytics.Tracker) (*cobra.Command, error) {
 			return nil
 		},
 	}
+)
 
-	if err := setupCreateClusterCmdFlags(cmd); err != nil {
-		return nil, err
+//nolint:gochecknoinits // this pattern requires init function to work.
+func init() {
+	if err := setupCreateClusterCmdFlags(ApplyCmd); err != nil {
+		logrus.Fatalf("error while setting up apply command flags: %v", err)
 	}
 
-	return cmd, nil
+	RootCmd.AddCommand(ApplyCmd)
 }
 
 func getSkipsClusterCmdFlags() ClusterSkipsCmdFlags {

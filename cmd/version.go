@@ -8,33 +8,57 @@ import (
 	"fmt"
 
 	"github.com/spf13/cobra"
-	"golang.org/x/exp/maps"
-	"golang.org/x/exp/slices"
 
 	"github.com/sighupio/furyctl/internal/analytics"
+	"github.com/sighupio/furyctl/internal/app"
 	cobrax "github.com/sighupio/furyctl/internal/x/cobra"
 )
 
-func NewVersionCmd(versions map[string]string, tracker *analytics.Tracker) *cobra.Command {
-	var cmdEvent analytics.Event
-
-	return &cobra.Command{
+var (
+	verCmdEvent analytics.Event   //nolint:gochecknoglobals // needed for cobra/viper compatibility.
+	versionCmd  = &cobra.Command{ //nolint:gochecknoglobals // needed for cobra/viper compatibility.
 		Use:   "version",
 		Short: "Print the version number and build information of furyctl",
 		PreRun: func(cmd *cobra.Command, _ []string) {
-			cmdEvent = analytics.NewCommandEvent(cobrax.GetFullname(cmd))
+			verCmdEvent = analytics.NewCommandEvent(cobrax.GetFullname(cmd))
 		},
-		Run: func(_ *cobra.Command, _ []string) {
-			keys := maps.Keys(versions)
+		RunE: func(_ *cobra.Command, _ []string) error {
+			ctn := app.GetContainerInstance()
 
-			slices.Sort(keys)
+			tracker := ctn.Tracker()
+			defer tracker.Flush()
 
-			for _, k := range keys {
-				fmt.Printf("%s: %s\n", k, versions[k])
+			versions := ctn.Versions()
+
+			if _, err := fmt.Println("buildTime: ", versions.BuildTime); err != nil {
+				return fmt.Errorf("error while printing buildTime: %w", err)
 			}
 
-			cmdEvent.AddSuccessMessage("version command executed successfully")
-			tracker.Track(cmdEvent)
+			if _, err := fmt.Println("gitCommit: ", versions.GitCommit); err != nil {
+				return fmt.Errorf("error while printing gitCommit: %w", err)
+			}
+
+			if _, err := fmt.Println("goVersion: ", versions.GoVersion); err != nil {
+				return fmt.Errorf("error while printing goVersion: %w", err)
+			}
+
+			if _, err := fmt.Println("osArch: ", versions.OSArch); err != nil {
+				return fmt.Errorf("error while printing osArch: %w", err)
+			}
+
+			if _, err := fmt.Println("version: ", versions.Version); err != nil {
+				return fmt.Errorf("error while printing version: %w", err)
+			}
+
+			verCmdEvent.AddSuccessMessage("version command executed successfully")
+			tracker.Track(verCmdEvent)
+
+			return nil
 		},
 	}
+)
+
+//nolint:gochecknoinits // this pattern requires init function to work.
+func init() {
+	RootCmd.AddCommand(versionCmd)
 }

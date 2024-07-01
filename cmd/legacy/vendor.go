@@ -14,16 +14,11 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
+	"github.com/sighupio/furyctl/cmd"
 	"github.com/sighupio/furyctl/internal/analytics"
+	"github.com/sighupio/furyctl/internal/app"
 	"github.com/sighupio/furyctl/internal/legacy"
 	cobrax "github.com/sighupio/furyctl/internal/x/cobra"
-)
-
-var (
-	ErrParsingFlag     = errors.New("error while parsing flag")
-	ErrParsingFuryFile = errors.New("error while parsing furyfile")
-	ErrParsingPackages = errors.New("error while parsing packages")
-	ErrDownloading     = errors.New("error while downloading")
 )
 
 type VendorCmdFlags struct {
@@ -32,16 +27,24 @@ type VendorCmdFlags struct {
 	GitProtocol  string
 }
 
-func NewVendorCmd(tracker *analytics.Tracker) (*cobra.Command, error) {
-	var cmdEvent analytics.Event
-
-	cmd := &cobra.Command{
+var (
+	ErrParsingFlag     = errors.New("error while parsing flag")
+	ErrParsingFuryFile = errors.New("error while parsing furyfile")
+	ErrParsingPackages = errors.New("error while parsing packages")
+	ErrDownloading     = errors.New("error while downloading")
+	cmdEvent           analytics.Event   //nolint:gochecknoglobals // needed for cobra/viper compatibility.
+	vendorCmd          = &cobra.Command{ //nolint:gochecknoglobals // needed for cobra/viper compatibility.
 		Use:   "vendor",
 		Short: "Download the dependencies specified in the Furyfile.yml",
 		PreRun: func(cmd *cobra.Command, _ []string) {
 			cmdEvent = analytics.NewCommandEvent(cobrax.GetFullname(cmd))
 		},
 		RunE: func(_ *cobra.Command, _ []string) error {
+			ctn := app.GetContainerInstance()
+
+			tracker := ctn.Tracker()
+			tracker.Flush()
+
 			flags := getLegacyVendorCmdFlags()
 
 			ff, err := legacy.NewFuryFile(flags.FuryFilePath)
@@ -92,15 +95,18 @@ func NewVendorCmd(tracker *analytics.Tracker) (*cobra.Command, error) {
 			return nil
 		},
 	}
+)
 
-	cmd.Flags().StringP(
+//nolint:gochecknoinits // this pattern requires init function to work.
+func init() {
+	vendorCmd.Flags().StringP(
 		"furyfile",
 		"F",
 		"Furyfile.yaml",
 		"Path to the Furyfile.yaml file",
 	)
 
-	cmd.Flags().StringP(
+	vendorCmd.Flags().StringP(
 		"prefix",
 		"P",
 		"",
@@ -109,11 +115,11 @@ func NewVendorCmd(tracker *analytics.Tracker) (*cobra.Command, error) {
 			"like 'monitoring', and ignore the rest",
 	)
 
-	if err := viper.BindPFlags(cmd.Flags()); err != nil {
-		return nil, fmt.Errorf("error while binding flags: %w", err)
+	if err := viper.BindPFlags(vendorCmd.Flags()); err != nil {
+		logrus.Fatalf("error while binding flags: %v", err)
 	}
 
-	return cmd, nil
+	cmd.LegacyCmd.AddCommand(vendorCmd)
 }
 
 func getLegacyVendorCmdFlags() VendorCmdFlags {

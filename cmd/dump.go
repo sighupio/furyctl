@@ -5,26 +5,15 @@
 package cmd
 
 import (
-	"fmt"
-
 	"github.com/spf13/cobra"
-
-	"github.com/sighupio/furyctl/cmd/dump"
-	"github.com/sighupio/furyctl/internal/analytics"
 )
 
-func NewDumpCommand(tracker *analytics.Tracker) (*cobra.Command, error) {
-	dumpCmd := &cobra.Command{
-		Use:   "dump",
-		Short: "Dump manifests templates and other useful KFD objects",
-	}
+var DumpCmd = &cobra.Command{ //nolint:gochecknoglobals // needed for cobra/viper compatibility.
+	Use:   "dump",
+	Short: "Dump manifests templates and other useful KFD objects",
+}
 
-	templateCmd, err := dump.NewTemplateCmd(tracker)
-	if err != nil {
-		return nil, fmt.Errorf("error while creating template command: %w", err)
-	}
-
-	dumpCmd.AddCommand(templateCmd)
-
-	return dumpCmd, nil
+//nolint:gochecknoinits // this pattern requires init function to work.
+func init() {
+	RootCmd.AddCommand(DumpCmd)
 }

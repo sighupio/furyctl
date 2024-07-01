@@ -5,26 +5,15 @@
 package cmd
 
 import (
-	"fmt"
-
 	"github.com/spf13/cobra"
-
-	del "github.com/sighupio/furyctl/cmd/delete"
-	"github.com/sighupio/furyctl/internal/analytics"
 )
 
-func NewDeleteCommand(tracker *analytics.Tracker) (*cobra.Command, error) {
-	deleteCmd := &cobra.Command{
-		Use:   "delete",
-		Short: "Delete a cluster and its related infrastructure",
-	}
+var DeleteCmd = &cobra.Command{ //nolint:gochecknoglobals // needed for cobra/viper compatibility.
+	Use:   "delete",
+	Short: "Delete a cluster and its related infrastructure",
+}
 
-	clusterCmd, err := del.NewClusterCmd(tracker)
-	if err != nil {
-		return nil, fmt.Errorf("error while creating cluster command: %w", err)
-	}
-
-	deleteCmd.AddCommand(clusterCmd)
-
-	return deleteCmd, nil
+//nolint:gochecknoinits // this pattern requires init function to work.
+func init() {
+	RootCmd.AddCommand(DeleteCmd)
 }

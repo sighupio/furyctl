@@ -5,26 +5,15 @@
 package cmd
 
 import (
-	"fmt"
-
 	"github.com/spf13/cobra"
-
-	"github.com/sighupio/furyctl/cmd/connect"
-	"github.com/sighupio/furyctl/internal/analytics"
 )
 
-func NewConnectCommand(tracker *analytics.Tracker) (*cobra.Command, error) {
-	connectCmd := &cobra.Command{
-		Use:   "connect",
-		Short: "Start up a new private connection to a cluster",
-	}
+var ConnectCmd = &cobra.Command{ //nolint:gochecknoglobals // needed for cobra/viper compatibility.
+	Use:   "connect",
+	Short: "Start up a new private connection to a cluster",
+}
 
-	openvpnCmd, err := connect.NewOpenVPNCmd(tracker)
-	if err != nil {
-		return nil, fmt.Errorf("error while creating openvpn command: %w", err)
-	}
-
-	connectCmd.AddCommand(openvpnCmd)
-
-	return connectCmd, nil
+//nolint:gochecknoinits // this pattern requires init function to work.
+func init() {
+	RootCmd.AddCommand(ConnectCmd)
 }

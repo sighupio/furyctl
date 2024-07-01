@@ -14,7 +14,9 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
+	"github.com/sighupio/furyctl/cmd"
 	"github.com/sighupio/furyctl/internal/analytics"
+	"github.com/sighupio/furyctl/internal/app"
 	"github.com/sighupio/furyctl/internal/cmd/cmdutil"
 	"github.com/sighupio/furyctl/internal/dependencies"
 	"github.com/sighupio/furyctl/internal/dependencies/envvars"
@@ -26,18 +28,21 @@ import (
 	netx "github.com/sighupio/furyctl/internal/x/net"
 )
 
-var ErrDependencies = errors.New("dependencies are not satisfied")
-
-func NewDependenciesCmd(tracker *analytics.Tracker) (*cobra.Command, error) {
-	var cmdEvent analytics.Event
-
-	cmd := &cobra.Command{
+var (
+	ErrDependencies = errors.New("dependencies are not satisfied")
+	depCmdEvent     analytics.Event   //nolint:gochecknoglobals // needed for cobra/viper compatibility.
+	dependenciesCmd = &cobra.Command{ //nolint:gochecknoglobals // needed for cobra/viper compatibility.
 		Use:   "dependencies",
 		Short: "Validate dependencies for the Kubernetes Fury Distribution version specified in the configuration file",
 		PreRun: func(cmd *cobra.Command, _ []string) {
-			cmdEvent = analytics.NewCommandEvent(cobrax.GetFullname(cmd))
+			depCmdEvent = analytics.NewCommandEvent(cobrax.GetFullname(cmd))
 		},
 		RunE: func(_ *cobra.Command, _ []string) error {
+			ctn := app.GetContainerInstance()
+
+			tracker := ctn.Tracker()
+			tracker.Flush()
+
 			furyctlPath := viper.GetString("config")
 			distroLocation := viper.GetString("distro-location")
 			distroPatchesLocation := viper.GetString("distro-patches")
@@ -51,8 +56,8 @@ func NewDependenciesCmd(tracker *analytics.Tracker) (*cobra.Command, error) {
 
 			homeDir, err := os.UserHomeDir()
 			if err != nil {
-				cmdEvent.AddErrorMessage(err)
-				tracker.Track(cmdEvent)
+				depCmdEvent.AddErrorMessage(err)
+				tracker.Track(depCmdEvent)
 
 				return fmt.Errorf("error while getting user home directory: %w", err)
 			}
@@ -71,8 +76,8 @@ func NewDependenciesCmd(tracker *analytics.Tracker) (*cobra.Command, error) {
 			if absDistroPatchesLocation != "" {
 				absDistroPatchesLocation, err = filepath.Abs(distroPatchesLocation)
 				if err != nil {
-					cmdEvent.AddErrorMessage(err)
-					tracker.Track(cmdEvent)
+					depCmdEvent.AddErrorMessage(err)
+					tracker.Track(depCmdEvent)
 
 					return fmt.Errorf("error while getting absolute path of distro patches location: %w", err)
 				}
@@ -92,8 +97,8 @@ func NewDependenciesCmd(tracker *analytics.Tracker) (*cobra.Command, error) {
 
 			// Validate base requirements.
 			if err := depsvl.ValidateBaseReqs(); err != nil {
-				cmdEvent.AddErrorMessage(err)
-				tracker.Track(cmdEvent)
+				depCmdEvent.AddErrorMessage(err)
+				tracker.Track(depCmdEvent)
 
 				return fmt.Errorf("error while validating requirements: %w", err)
 			}
@@ -102,13 +107,13 @@ func NewDependenciesCmd(tracker *analytics.Tracker) (*cobra.Command, error) {
 			logrus.Info("Downloading distribution...")
 			dres, err := distrodl.Download(distroLocation, furyctlPath)
 			if err != nil {
-				cmdEvent.AddErrorMessage(err)
-				tracker.Track(cmdEvent)
+				depCmdEvent.AddErrorMessage(err)
+				tracker.Track(depCmdEvent)
 
 				return fmt.Errorf("failed to download distribution: %w", err)
 			}
 
-			cmdEvent.AddClusterDetails(analytics.ClusterDetails{
+			depCmdEvent.AddClusterDetails(analytics.ClusterDetails{
 				Provider:   dres.MinimalConf.Kind,
 				KFDVersion: dres.DistroManifest.Version,
 			})
@@ -148,8 +153,8 @@ func NewDependenciesCmd(tracker *analytics.Tracker) (*cobra.Command, error) {
 					logrus.Error(err)
 				}
 
-				cmdEvent.AddErrorMessage(ErrDependencies)
-				tracker.Track(cmdEvent)
+				depCmdEvent.AddErrorMessage(ErrDependencies)
+				tracker.Track(depCmdEvent)
 
 				logrus.Info(
 					"You can use the 'furyctl download dependencies' command to download most dependencies, " +
@@ -161,28 +166,31 @@ func NewDependenciesCmd(tracker *analytics.Tracker) (*cobra.Command, error) {
 
 			logrus.Info("Dependencies validation succeeded")
 
-			cmdEvent.AddSuccessMessage("Dependencies validation succeeded")
-			tracker.Track(cmdEvent)
+			depCmdEvent.AddSuccessMessage("Dependencies validation succeeded")
+			tracker.Track(depCmdEvent)
 
 			return nil
 		},
 	}
+)
 
-	cmd.Flags().StringP(
+//nolint:gochecknoinits // this pattern requires init function to work.
+func init() {
+	dependenciesCmd.Flags().StringP(
 		"bin-path",
 		"b",
 		"",
 		"Path to the folder where all the dependencies' binaries are installed",
 	)
 
-	cmd.Flags().StringP(
+	dependenciesCmd.Flags().StringP(
 		"config",
 		"c",
 		"furyctl.yaml",
 		"Path to the configuration file",
 	)
 
-	cmd.Flags().StringP(
+	dependenciesCmd.Flags().StringP(
 		"distro-location",
 		"",
 		"",
@@ -192,16 +200,16 @@ func NewDependenciesCmd(tracker *analytics.Tracker) (*cobra.Command, error) {
 			"Any format supported by hashicorp/go-getter can be used.",
 	)
 
-	cmd.Flags().String(
+	dependenciesCmd.Flags().String(
 		"distro-patches",
 		"",
 		"Location where to download distribution's user-made patches from. "+
 			cmdutil.AnyGoGetterFormatStr,
 	)
 
-	if err := viper.BindPFlags(cmd.Flags()); err != nil {
-		return nil, fmt.Errorf("error while binding flags: %w", err)
+	if err := viper.BindPFlags(dependenciesCmd.Flags()); err != nil {
+		logrus.Fatalf("error while binding flags: %v", err)
 	}
 
-	return cmd, nil
+	cmd.ValidateCmd.AddCommand(dependenciesCmd)
 }
