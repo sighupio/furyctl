@@ -14,7 +14,9 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
+	"github.com/sighupio/furyctl/cmd"
 	"github.com/sighupio/furyctl/internal/analytics"
+	"github.com/sighupio/furyctl/internal/app"
 	"github.com/sighupio/furyctl/internal/cmd/cmdutil"
 	"github.com/sighupio/furyctl/internal/config"
 	"github.com/sighupio/furyctl/internal/dependencies"
@@ -28,18 +30,19 @@ import (
 var (
 	ErrValidationFailed = errors.New("configuration file validation failed")
 	ErrParsingFlag      = errors.New("error while parsing flag")
-)
-
-func NewConfigCmd(tracker *analytics.Tracker) (*cobra.Command, error) {
-	var cmdEvent analytics.Event
-
-	cmd := &cobra.Command{
+	cmdEvent            analytics.Event   //nolint:gochecknoglobals // needed for cobra/viper compatibility.
+	configCmd           = &cobra.Command{ //nolint:gochecknoglobals // needed for cobra/viper compatibility.
 		Use:   "config",
 		Short: "Validate configuration file",
 		PreRun: func(cmd *cobra.Command, _ []string) {
 			cmdEvent = analytics.NewCommandEvent(cobrax.GetFullname(cmd))
 		},
 		RunE: func(_ *cobra.Command, _ []string) error {
+			ctn := app.GetContainerInstance()
+
+			tracker := ctn.Tracker()
+			tracker.Flush()
+
 			furyctlPath := viper.GetString("config")
 			distroLocation := viper.GetString("distro-location")
 			gitProtocol := viper.GetString("git-protocol")
@@ -129,15 +132,18 @@ func NewConfigCmd(tracker *analytics.Tracker) (*cobra.Command, error) {
 			return nil
 		},
 	}
+)
 
-	cmd.Flags().StringP(
+//nolint:gochecknoinits // this pattern requires init function to work.
+func init() {
+	configCmd.Flags().StringP(
 		"config",
 		"c",
 		"furyctl.yaml",
 		"Path to the configuration file",
 	)
 
-	cmd.Flags().StringP(
+	configCmd.Flags().StringP(
 		"distro-location",
 		"",
 		"",
@@ -147,16 +153,16 @@ func NewConfigCmd(tracker *analytics.Tracker) (*cobra.Command, error) {
 			"Any format supported by hashicorp/go-getter can be used.",
 	)
 
-	cmd.Flags().String(
+	configCmd.Flags().String(
 		"distro-patches",
 		"",
 		"Location where to download distribution's user-made patches from. "+
 			cmdutil.AnyGoGetterFormatStr,
 	)
 
-	if err := viper.BindPFlags(cmd.Flags()); err != nil {
-		return nil, fmt.Errorf("error while binding flags: %w", err)
+	if err := viper.BindPFlags(configCmd.Flags()); err != nil {
+		logrus.Fatalf("error while binding flags: %v", err)
 	}
 
-	return cmd, nil
+	cmd.ValidateCmd.AddCommand(configCmd)
 }

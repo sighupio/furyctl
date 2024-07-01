@@ -15,7 +15,9 @@ import (
 	"github.com/spf13/viper"
 
 	distroconf "github.com/sighupio/fury-distribution/pkg/apis/config"
+	"github.com/sighupio/furyctl/cmd"
 	"github.com/sighupio/furyctl/internal/analytics"
+	"github.com/sighupio/furyctl/internal/app"
 	"github.com/sighupio/furyctl/internal/cmd/cmdutil"
 	"github.com/sighupio/furyctl/internal/config"
 	"github.com/sighupio/furyctl/internal/dependencies"
@@ -31,18 +33,19 @@ var (
 	ErrParsingFlag          = errors.New("error while parsing flag")
 	ErrMandatoryFlag        = errors.New("flag must be specified")
 	ErrConfigCreationFailed = errors.New("config creation failed")
-)
-
-func NewConfigCommand(tracker *analytics.Tracker) (*cobra.Command, error) {
-	var cmdEvent analytics.Event
-
-	cmd := &cobra.Command{
+	cmdEvent                analytics.Event   //nolint:gochecknoglobals // needed for cobra/viper compatibility.
+	configCmd               = &cobra.Command{ //nolint:gochecknoglobals // needed for cobra/viper compatibility.
 		Use:   "config",
 		Short: "Scaffolds a new furyctl configuration file",
 		PreRun: func(cmd *cobra.Command, _ []string) {
 			cmdEvent = analytics.NewCommandEvent(cobrax.GetFullname(cmd))
 		},
 		RunE: func(_ *cobra.Command, _ []string) error {
+			ctn := app.GetContainerInstance()
+
+			tracker := ctn.Tracker()
+			defer tracker.Flush()
+
 			// Get flags.
 			debug := viper.GetBool("debug")
 			furyctlPath := viper.GetString("config")
@@ -192,15 +195,18 @@ func NewConfigCommand(tracker *analytics.Tracker) (*cobra.Command, error) {
 			return nil
 		},
 	}
+)
 
-	cmd.Flags().StringP(
+//nolint:gochecknoinits // this pattern requires init function to work.
+func init() {
+	configCmd.Flags().StringP(
 		"config",
 		"c",
 		"furyctl.yaml",
 		"Path to the configuration file",
 	)
 
-	cmd.Flags().StringP(
+	configCmd.Flags().StringP(
 		"distro-location",
 		"",
 		"",
@@ -210,44 +216,44 @@ func NewConfigCommand(tracker *analytics.Tracker) (*cobra.Command, error) {
 			"Any format supported by hashicorp/go-getter can be used.",
 	)
 
-	cmd.Flags().String(
+	configCmd.Flags().String(
 		"distro-patches",
 		"",
 		"Location where to download distribution's user-made patches from. "+
 			cmdutil.AnyGoGetterFormatStr,
 	)
 
-	cmd.Flags().StringP(
+	configCmd.Flags().StringP(
 		"version",
 		"v",
 		"",
 		"Kubernetes Fury Distribution version to use (eg: v1.24.1)",
 	)
 
-	cmd.Flags().StringP(
+	configCmd.Flags().StringP(
 		"kind",
 		"k",
 		"",
 		"Type of cluster to create (eg: EKSCluster, KFDDistribution, OnPremises)",
 	)
 
-	cmd.Flags().StringP(
+	configCmd.Flags().StringP(
 		"api-version",
 		"a",
 		"kfd.sighup.io/v1alpha2",
 		"Version of the API to use for the selected kind (eg: kfd.sighup.io/v1alpha2)",
 	)
 
-	cmd.Flags().StringP(
+	configCmd.Flags().StringP(
 		"name",
 		"n",
 		"example",
 		"Name of cluster to create",
 	)
 
-	if err := viper.BindPFlags(cmd.Flags()); err != nil {
-		return nil, fmt.Errorf("error while binding flags: %w", err)
+	if err := viper.BindPFlags(configCmd.Flags()); err != nil {
+		logrus.Fatalf("error while binding flags: %v", err)
 	}
 
-	return cmd, nil
+	cmd.CreateCmd.AddCommand(configCmd)
 }

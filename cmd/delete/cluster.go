@@ -15,7 +15,9 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
+	"github.com/sighupio/furyctl/cmd"
 	"github.com/sighupio/furyctl/internal/analytics"
+	"github.com/sighupio/furyctl/internal/app"
 	"github.com/sighupio/furyctl/internal/cluster"
 	"github.com/sighupio/furyctl/internal/cmd/cmdutil"
 	"github.com/sighupio/furyctl/internal/config"
@@ -29,11 +31,6 @@ import (
 )
 
 const WrappedErrMessage = "%w: %s"
-
-var (
-	ErrParsingFlag                = errors.New("error while parsing flag")
-	ErrDownloadDependenciesFailed = errors.New("dependencies download failed")
-)
 
 type ClusterCmdFlags struct {
 	Debug                 bool
@@ -53,16 +50,22 @@ type ClusterCmdFlags struct {
 	DistroPatchesLocation string
 }
 
-func NewClusterCmd(tracker *analytics.Tracker) (*cobra.Command, error) {
-	var cmdEvent analytics.Event
-
-	cmd := &cobra.Command{
+var (
+	ErrParsingFlag                = errors.New("error while parsing flag")
+	ErrDownloadDependenciesFailed = errors.New("dependencies download failed")
+	cmdEvent                      analytics.Event   //nolint:gochecknoglobals // needed for cobra/viper compatibility.
+	clusterCmd                    = &cobra.Command{ //nolint:gochecknoglobals // needed for cobra/viper compatibility.
 		Use:   "cluster",
 		Short: "Deletes a cluster",
 		PreRun: func(cmd *cobra.Command, _ []string) {
 			cmdEvent = analytics.NewCommandEvent(cobrax.GetFullname(cmd))
 		},
 		RunE: func(_ *cobra.Command, _ []string) error {
+			ctn := app.GetContainerInstance()
+
+			tracker := ctn.Tracker()
+			tracker.Flush()
+
 			// Get flags.
 			flags, err := getDeleteClusterCmdFlags()
 			if err != nil {
@@ -263,15 +266,18 @@ func NewClusterCmd(tracker *analytics.Tracker) (*cobra.Command, error) {
 			return nil
 		},
 	}
+)
 
-	cmd.Flags().StringP(
+//nolint:gochecknoinits // this pattern requires init function to work.
+func init() {
+	clusterCmd.Flags().StringP(
 		"config",
 		"c",
 		"furyctl.yaml",
 		"Path to the configuration file",
 	)
 
-	cmd.Flags().StringP(
+	clusterCmd.Flags().StringP(
 		"distro-location",
 		"",
 		"",
@@ -281,69 +287,69 @@ func NewClusterCmd(tracker *analytics.Tracker) (*cobra.Command, error) {
 			"Any format supported by hashicorp/go-getter can be used.",
 	)
 
-	cmd.Flags().String(
+	clusterCmd.Flags().String(
 		"distro-patches",
 		"",
 		"Location where to download distribution's user-made patches from. "+
 			cmdutil.AnyGoGetterFormatStr,
 	)
 
-	cmd.Flags().StringP(
+	clusterCmd.Flags().StringP(
 		"bin-path",
 		"b",
 		"",
 		"Path to the folder where all the dependencies' binaries are installed",
 	)
 
-	cmd.Flags().StringP(
+	clusterCmd.Flags().StringP(
 		"phase",
 		"p",
 		"",
 		"Limit execution to the specified phase. Options are: infrastructure, kubernetes, distribution",
 	)
 
-	cmd.Flags().Bool(
+	clusterCmd.Flags().Bool(
 		"dry-run",
 		false,
 		"when set furyctl won't delete any resources. Allows to inspect what resources will be deleted",
 	)
 
-	cmd.Flags().Bool(
+	clusterCmd.Flags().Bool(
 		"vpn-auto-connect",
 		false,
 		"When set will automatically connect to the created VPN by the infrastructure phase "+
 			"(requires OpenVPN installed in the system)",
 	)
 
-	cmd.Flags().Bool(
+	clusterCmd.Flags().Bool(
 		"skip-vpn-confirmation",
 		false,
 		"When set will not wait for user confirmation that the VPN is connected",
 	)
 
-	cmd.Flags().Bool(
+	clusterCmd.Flags().Bool(
 		"force",
 		false,
 		"WARNING: furyctl won't ask for confirmation and will force delete the cluster and its resources.",
 	)
 
-	cmd.Flags().Bool(
+	clusterCmd.Flags().Bool(
 		"skip-deps-download",
 		false,
 		"Skip downloading the distribution modules, installers and binaries",
 	)
 
-	cmd.Flags().Bool(
+	clusterCmd.Flags().Bool(
 		"skip-deps-validation",
 		false,
 		"Skip validating dependencies",
 	)
 
-	if err := viper.BindPFlags(cmd.Flags()); err != nil {
-		return nil, fmt.Errorf("error while binding flags: %w", err)
+	if err := viper.BindPFlags(clusterCmd.Flags()); err != nil {
+		logrus.Fatalf("error while binding flags: %v", err)
 	}
 
-	return cmd, nil
+	cmd.DeleteCmd.AddCommand(clusterCmd)
 }
 
 func getDeleteClusterCmdFlags() (ClusterCmdFlags, error) {

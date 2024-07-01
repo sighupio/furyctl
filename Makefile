@@ -109,12 +109,12 @@ format-go: fmt fumpt imports gci formattag
 fmt:
 	@find . -name "*.go" -type f -not -path '*/vendor/*' \
 	| sed 's/^\.\///g' \
-	| xargs -I {} sh -c 'echo "formatting {}.." && gofmt -w -s {}'
+	| xargs -I {} -S 5000 sh -c 'echo "formatting {}.." && gofmt -w -s {}'
 
 fumpt:
 	@find . -name "*.go" -type f -not -path '*/vendor/*' \
 	| sed 's/^\.\///g' \
-	| xargs -I {} sh -c 'echo "formatting {}.." && gofumpt -w -extra {}'
+	| xargs -I {} -S 5000 sh -c 'echo "formatting {}.." && gofumpt -w -extra {}'
 
 imports:
 	@goimports -v -w -e -local github.com/sighupio main.go
@@ -124,13 +124,13 @@ imports:
 gci:
 	@find . -name "*.go" -type f -not -path '*/vendor/*' \
 	| sed 's/^\.\///g' \
-	| xargs -I {} sh -c 'echo "formatting imports for {}.." && \
+	| xargs -I {} -S 5000 sh -c 'echo "formatting imports for {}.." && \
 	gci write --skip-generated  -s standard -s default -s "Prefix(github.com/sighupio)" {}'
 
 formattag:
 	@find . -name "*.go" -type f -not -path '*/vendor/*' \
 	| sed 's/^\.\///g' \
-	| xargs -I {} sh -c 'formattag -file {}'
+	| xargs -I {} -S 5000 sh -c 'formattag -file {}'
 
 .PHONY: lint lint-go
 

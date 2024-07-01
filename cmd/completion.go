@@ -13,6 +13,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/sighupio/furyctl/internal/analytics"
+	"github.com/sighupio/furyctl/internal/app"
 	cobrax "github.com/sighupio/furyctl/internal/x/cobra"
 )
 
@@ -21,12 +22,8 @@ var (
 	ErrZshCompletion        = errors.New("error generating zsh completion")
 	ErrFishCompletion       = errors.New("error generating fish completion")
 	ErrPowershellCompletion = errors.New("error generating powershell completion")
-)
-
-func NewCompletionCommand(tracker *analytics.Tracker) *cobra.Command {
-	var cmdEvent analytics.Event
-
-	return &cobra.Command{
+	complCmdEvent           analytics.Event   //nolint:gochecknoglobals // needed for cobra/viper compatibility.
+	completionCmd           = &cobra.Command{ //nolint:gochecknoglobals // needed for cobra/viper compatibility.
 		Use:   "completion [bash|zsh|fish|powershell]",
 		Short: "Generate completion script",
 		Long: `To load furyctl completions:
@@ -72,46 +69,56 @@ func NewCompletionCommand(tracker *analytics.Tracker) *cobra.Command {
 		ValidArgs:             []string{"bash", "zsh", "fish", "powershell"},
 		Args:                  cobra.MatchAll(cobra.ExactArgs(1), cobra.OnlyValidArgs),
 		PreRun: func(cmd *cobra.Command, _ []string) {
-			cmdEvent = analytics.NewCommandEvent(cobrax.GetFullname(cmd))
+			complCmdEvent = analytics.NewCommandEvent(cobrax.GetFullname(cmd))
 			logrus.SetLevel(logrus.FatalLevel)
 		},
 
 		RunE: func(cmd *cobra.Command, args []string) error {
+			ctn := app.GetContainerInstance()
+
+			tracker := ctn.Tracker()
+			defer tracker.Flush()
+
 			switch args[0] {
 			case "bash":
 				if err := cmd.Root().GenBashCompletion(os.Stdout); err != nil {
-					cmdEvent.AddErrorMessage(ErrBashCompletion)
-					tracker.Track(cmdEvent)
+					complCmdEvent.AddErrorMessage(ErrBashCompletion)
+					tracker.Track(complCmdEvent)
 
 					return fmt.Errorf("error generating bash completion: %w", err)
 				}
 			case "zsh":
 				if err := cmd.Root().GenZshCompletion(os.Stdout); err != nil {
-					cmdEvent.AddErrorMessage(ErrZshCompletion)
-					tracker.Track(cmdEvent)
+					complCmdEvent.AddErrorMessage(ErrZshCompletion)
+					tracker.Track(complCmdEvent)
 
 					return fmt.Errorf("error generating zsh completion: %w", err)
 				}
 			case "fish":
 				if err := cmd.Root().GenFishCompletion(os.Stdout, true); err != nil {
-					cmdEvent.AddErrorMessage(ErrFishCompletion)
-					tracker.Track(cmdEvent)
+					complCmdEvent.AddErrorMessage(ErrFishCompletion)
+					tracker.Track(complCmdEvent)
 
 					return fmt.Errorf("error generating fish completion: %w", err)
 				}
 			case "powershell":
 				if err := cmd.Root().GenPowerShellCompletion(os.Stdout); err != nil {
-					cmdEvent.AddErrorMessage(ErrPowershellCompletion)
-					tracker.Track(cmdEvent)
+					complCmdEvent.AddErrorMessage(ErrPowershellCompletion)
+					tracker.Track(complCmdEvent)
 
 					return fmt.Errorf("error generating powershell completion: %w", err)
 				}
 			}
 
-			cmdEvent.AddSuccessMessage("completion generated for " + args[0])
-			tracker.Track(cmdEvent)
+			complCmdEvent.AddSuccessMessage("completion generated for " + args[0])
+			tracker.Track(complCmdEvent)
 
 			return nil
 		},
 	}
+)
+
+//nolint:gochecknoinits // this pattern requires init function to work.
+func init() {
+	RootCmd.AddCommand(completionCmd)
 }
