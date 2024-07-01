@@ -14,7 +14,6 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
-	"github.com/sighupio/furyctl/cmd"
 	"github.com/sighupio/furyctl/internal/analytics"
 	"github.com/sighupio/furyctl/internal/app"
 	"github.com/sighupio/furyctl/internal/cmd/cmdutil"
@@ -30,11 +29,15 @@ var (
 	ErrParsingFlag    = errors.New("error while parsing flag")
 	ErrDownloadFailed = errors.New("dependencies download failed")
 	cmdEvent          analytics.Event   //nolint:gochecknoglobals // needed for cobra/viper compatibility.
-	dependenciesCmd   = &cobra.Command{ //nolint:gochecknoglobals // needed for cobra/viper compatibility.
+	DependenciesCmd   = &cobra.Command{ //nolint:gochecknoglobals // needed for cobra/viper compatibility.
 		Use:   "dependencies",
 		Short: "Download all dependencies for the Fury Distribution version specified in the configuration file",
 		PreRun: func(cmd *cobra.Command, _ []string) {
 			cmdEvent = analytics.NewCommandEvent(cobrax.GetFullname(cmd))
+
+			if err := viper.BindPFlags(cmd.Flags()); err != nil {
+				logrus.Fatalf("error while binding flags: %v", err)
+			}
 		},
 		RunE: func(_ *cobra.Command, _ []string) error {
 			ctn := app.GetContainerInstance()
@@ -155,21 +158,21 @@ var (
 
 //nolint:gochecknoinits // this pattern requires init function to work.
 func init() {
-	dependenciesCmd.Flags().StringP(
+	DependenciesCmd.Flags().StringP(
 		"bin-path",
 		"b",
 		"",
 		"Path to the folder where all the dependencies' binaries are installed",
 	)
 
-	dependenciesCmd.Flags().StringP(
+	DependenciesCmd.Flags().StringP(
 		"config",
 		"c",
 		"furyctl.yaml",
 		"Path to the configuration file",
 	)
 
-	dependenciesCmd.Flags().StringP(
+	DependenciesCmd.Flags().StringP(
 		"distro-location",
 		"",
 		"",
@@ -179,16 +182,10 @@ func init() {
 			"Any format supported by hashicorp/go-getter can be used.",
 	)
 
-	dependenciesCmd.Flags().String(
+	DependenciesCmd.Flags().String(
 		"distro-patches",
 		"",
 		"Location where to download distribution's user-made patches from. "+
 			cmdutil.AnyGoGetterFormatStr,
 	)
-
-	if err := viper.BindPFlags(dependenciesCmd.Flags()); err != nil {
-		logrus.Fatalf("error while binding flags: %v", err)
-	}
-
-	cmd.DownloadCmd.AddCommand(dependenciesCmd)
 }

@@ -117,8 +117,3 @@ var (
 		},
 	}
 )
-
-//nolint:gochecknoinits // this pattern requires init function to work.
-func init() {
-	RootCmd.AddCommand(completionCmd)
-}

@@ -6,14 +6,16 @@ package cmd
 
 import (
 	"github.com/spf13/cobra"
+
+	"github.com/sighupio/furyctl/cmd/legacy"
 )
 
-var LegacyCmd = &cobra.Command{ //nolint:gochecknoglobals // needed for cobra/viper compatibility.
+var legacyCmd = &cobra.Command{ //nolint:gochecknoglobals // needed for cobra/viper compatibility.
 	Use:   "legacy",
 	Short: "Legacy commands for compatibility with older versions of furyctl",
 }
 
 //nolint:gochecknoinits // this pattern requires init function to work.
 func init() {
-	RootCmd.AddCommand(LegacyCmd)
+	legacyCmd.AddCommand(legacy.VendorCmd)
 }

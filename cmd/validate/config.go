@@ -14,7 +14,6 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
-	"github.com/sighupio/furyctl/cmd"
 	"github.com/sighupio/furyctl/internal/analytics"
 	"github.com/sighupio/furyctl/internal/app"
 	"github.com/sighupio/furyctl/internal/cmd/cmdutil"
@@ -31,11 +30,15 @@ var (
 	ErrValidationFailed = errors.New("configuration file validation failed")
 	ErrParsingFlag      = errors.New("error while parsing flag")
 	cmdEvent            analytics.Event   //nolint:gochecknoglobals // needed for cobra/viper compatibility.
-	configCmd           = &cobra.Command{ //nolint:gochecknoglobals // needed for cobra/viper compatibility.
+	ConfigCmd           = &cobra.Command{ //nolint:gochecknoglobals // needed for cobra/viper compatibility.
 		Use:   "config",
 		Short: "Validate configuration file",
 		PreRun: func(cmd *cobra.Command, _ []string) {
 			cmdEvent = analytics.NewCommandEvent(cobrax.GetFullname(cmd))
+
+			if err := viper.BindPFlags(cmd.Flags()); err != nil {
+				logrus.Fatalf("error while binding flags: %v", err)
+			}
 		},
 		RunE: func(_ *cobra.Command, _ []string) error {
 			ctn := app.GetContainerInstance()
@@ -136,14 +139,14 @@ var (
 
 //nolint:gochecknoinits // this pattern requires init function to work.
 func init() {
-	configCmd.Flags().StringP(
+	ConfigCmd.Flags().StringP(
 		"config",
 		"c",
 		"furyctl.yaml",
 		"Path to the configuration file",
 	)
 
-	configCmd.Flags().StringP(
+	ConfigCmd.Flags().StringP(
 		"distro-location",
 		"",
 		"",
@@ -153,16 +156,10 @@ func init() {
 			"Any format supported by hashicorp/go-getter can be used.",
 	)
 
-	configCmd.Flags().String(
+	ConfigCmd.Flags().String(
 		"distro-patches",
 		"",
 		"Location where to download distribution's user-made patches from. "+
 			cmdutil.AnyGoGetterFormatStr,
 	)
-
-	if err := viper.BindPFlags(configCmd.Flags()); err != nil {
-		logrus.Fatalf("error while binding flags: %v", err)
-	}
-
-	cmd.ValidateCmd.AddCommand(configCmd)
 }

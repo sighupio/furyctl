@@ -14,7 +14,6 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
-	"github.com/sighupio/furyctl/cmd"
 	"github.com/sighupio/furyctl/internal/analytics"
 	"github.com/sighupio/furyctl/internal/app"
 	"github.com/sighupio/furyctl/internal/cluster"
@@ -32,11 +31,15 @@ var (
 	ErrParsingFlag                = errors.New("error while parsing flag")
 	ErrDownloadDependenciesFailed = errors.New("dependencies download failed")
 	cmdEvent                      analytics.Event   //nolint:gochecknoglobals // needed for cobra/viper compatibility.
-	kubeconfigCmd                 = &cobra.Command{ //nolint:gochecknoglobals // needed for cobra/viper compatibility.
+	KubeconfigCmd                 = &cobra.Command{ //nolint:gochecknoglobals // needed for cobra/viper compatibility.
 		Use:   "kubeconfig",
 		Short: "Get kubeconfig from a cluster",
 		PreRun: func(cmd *cobra.Command, _ []string) {
 			cmdEvent = analytics.NewCommandEvent(cobrax.GetFullname(cmd))
+
+			if err := viper.BindPFlags(cmd.Flags()); err != nil {
+				logrus.Fatalf("error while binding flags: %v", err)
+			}
 		},
 		RunE: func(_ *cobra.Command, _ []string) error {
 			ctn := app.GetContainerInstance()
@@ -184,21 +187,21 @@ var (
 
 //nolint:gochecknoinits // this pattern requires init function to work.
 func init() {
-	kubeconfigCmd.Flags().StringP(
+	KubeconfigCmd.Flags().StringP(
 		"bin-path",
 		"b",
 		"",
 		"Path to the folder where all the dependencies' binaries are installed",
 	)
 
-	kubeconfigCmd.Flags().StringP(
+	KubeconfigCmd.Flags().StringP(
 		"config",
 		"c",
 		"furyctl.yaml",
 		"Path to the configuration file",
 	)
 
-	kubeconfigCmd.Flags().StringP(
+	KubeconfigCmd.Flags().StringP(
 		"distro-location",
 		"",
 		"",
@@ -208,21 +211,15 @@ func init() {
 			cmdutil.AnyGoGetterFormatStr,
 	)
 
-	kubeconfigCmd.Flags().Bool(
+	KubeconfigCmd.Flags().Bool(
 		"skip-deps-download",
 		false,
 		"Skip downloading the binaries",
 	)
 
-	kubeconfigCmd.Flags().Bool(
+	KubeconfigCmd.Flags().Bool(
 		"skip-deps-validation",
 		false,
 		"Skip validating dependencies",
 	)
-
-	if err := viper.BindPFlags(kubeconfigCmd.Flags()); err != nil {
-		logrus.Fatalf("error while binding flags: %v", err)
-	}
-
-	cmd.GetCmd.AddCommand(kubeconfigCmd)
 }

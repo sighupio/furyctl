@@ -44,11 +44,15 @@ type DiffCommandFlags struct {
 
 var (
 	diffCmdEvent analytics.Event   //nolint:gochecknoglobals // needed for cobra/viper compatibility.
-	DiffCmd      = &cobra.Command{ //nolint:gochecknoglobals // needed for cobra/viper compatibility.
+	diffCmd      = &cobra.Command{ //nolint:gochecknoglobals // needed for cobra/viper compatibility.
 		Use:   "diff",
 		Short: "Diff the current configuration with the one in the cluster",
 		PreRun: func(cmd *cobra.Command, _ []string) {
 			diffCmdEvent = analytics.NewCommandEvent(cobrax.GetFullname(cmd))
+
+			if err := viper.BindPFlags(cmd.Flags()); err != nil {
+				logrus.Fatalf("error while binding flags: %v", err)
+			}
 		},
 		RunE: func(_ *cobra.Command, _ []string) error {
 			ctn := app.GetContainerInstance()
@@ -175,21 +179,21 @@ var (
 
 //nolint:gochecknoinits // this pattern requires init function to work.
 func init() {
-	DiffCmd.Flags().StringP(
+	diffCmd.Flags().StringP(
 		"config",
 		"c",
 		"furyctl.yaml",
 		"Path to the configuration file",
 	)
 
-	DiffCmd.Flags().StringP(
+	diffCmd.Flags().StringP(
 		"phase",
 		"p",
 		"",
 		"Limit the execution to a specific phase. Options are: infrastructure, kubernetes, distribution",
 	)
 
-	DiffCmd.Flags().StringP(
+	diffCmd.Flags().StringP(
 		"distro-location",
 		"",
 		"",
@@ -199,32 +203,26 @@ func init() {
 			"Any format supported by hashicorp/go-getter can be used.",
 	)
 
-	DiffCmd.Flags().String(
+	diffCmd.Flags().String(
 		"distro-patches",
 		"",
 		"Location where to download distribution's user-made patches from. "+
 			cmdutil.AnyGoGetterFormatStr,
 	)
 
-	DiffCmd.Flags().StringP(
+	diffCmd.Flags().StringP(
 		"bin-path",
 		"b",
 		"",
 		"Path to the folder where all the dependencies' binaries are installed",
 	)
 
-	DiffCmd.Flags().StringP(
+	diffCmd.Flags().StringP(
 		"upgrade-path-location",
 		"",
 		"",
 		"Location where the upgrade scripts are located, if not set the embedded ones will be used",
 	)
-
-	if err := viper.BindPFlags(DiffCmd.Flags()); err != nil {
-		logrus.Fatalf("error while binding flags: %v", err)
-	}
-
-	RootCmd.AddCommand(DiffCmd)
 }
 
 func getPhasePath(
