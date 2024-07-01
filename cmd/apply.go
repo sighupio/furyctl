@@ -66,11 +66,15 @@ type ClusterCmdFlags struct {
 var (
 	ErrDownloadDependenciesFailed = errors.New("dependencies download failed")
 	cmdEvent                      analytics.Event   //nolint:gochecknoglobals // needed for cobra/viper compatibility.
-	ApplyCmd                      = &cobra.Command{ //nolint:gochecknoglobals // needed for cobra/viper compatibility.
+	applyCmd                      = &cobra.Command{ //nolint:gochecknoglobals // needed for cobra/viper compatibility.
 		Use:   "apply",
 		Short: "Apply the configuration to create or upgrade a battle-tested Kubernetes Fury cluster",
 		PreRun: func(cmd *cobra.Command, _ []string) {
 			cmdEvent = analytics.NewCommandEvent(cobrax.GetFullname(cmd))
+
+			if err := viper.BindPFlags(cmd.Flags()); err != nil {
+				logrus.Fatalf("error while binding flags: %v", err)
+			}
 		},
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			ctn := app.GetContainerInstance()
@@ -260,11 +264,7 @@ var (
 
 //nolint:gochecknoinits // this pattern requires init function to work.
 func init() {
-	if err := setupCreateClusterCmdFlags(ApplyCmd); err != nil {
-		logrus.Fatalf("error while setting up apply command flags: %v", err)
-	}
-
-	RootCmd.AddCommand(ApplyCmd)
+	setupCreateClusterCmdFlags()
 }
 
 func getSkipsClusterCmdFlags() ClusterSkipsCmdFlags {
@@ -359,29 +359,29 @@ func getCreateClusterCmdFlags(cmd *cobra.Command, tracker *analytics.Tracker, cm
 	}, nil
 }
 
-func setupCreateClusterCmdFlags(cmd *cobra.Command) error {
-	cmd.Flags().StringP(
+func setupCreateClusterCmdFlags() {
+	applyCmd.Flags().StringP(
 		"config",
 		"c",
 		"furyctl.yaml",
 		"Path to the configuration file",
 	)
 
-	cmd.Flags().StringP(
+	applyCmd.Flags().StringP(
 		"phase",
 		"p",
 		"",
 		"Limit the execution to a specific phase. Options are: infrastructure, kubernetes, distribution, plugins",
 	)
 
-	cmd.Flags().String(
+	applyCmd.Flags().String(
 		"start-from",
 		"",
 		"Start the execution from a specific phase. Options are: pre-infrastructure, infrastructure, post-infrastructure, pre-kubernetes, "+
 			"kubernetes, post-kubernetes, pre-distribution, distribution, post-distribution, plugins",
 	)
 
-	cmd.Flags().StringP(
+	applyCmd.Flags().StringP(
 		"distro-location",
 		"",
 		"",
@@ -391,7 +391,7 @@ func setupCreateClusterCmdFlags(cmd *cobra.Command) error {
 			cmdutil.AnyGoGetterFormatStr,
 	)
 
-	cmd.Flags().String(
+	applyCmd.Flags().String(
 		"distro-patches",
 		"",
 		"Location where the distribution's user-made patches can be downloaded from. "+
@@ -402,90 +402,84 @@ func setupCreateClusterCmdFlags(cmd *cobra.Command) error {
 			"must have the same structure as the distribution's repository.",
 	)
 
-	cmd.Flags().StringP(
+	applyCmd.Flags().StringP(
 		"bin-path",
 		"b",
 		"",
 		"Path to the folder where all the dependencies' binaries are installed",
 	)
 
-	cmd.Flags().Bool(
+	applyCmd.Flags().Bool(
 		"skip-nodes-upgrade",
 		false,
 		"On kind OnPremises this will skip the upgrade of the nodes",
 	)
 
-	cmd.Flags().Bool(
+	applyCmd.Flags().Bool(
 		"skip-deps-download",
 		false,
 		"Skip downloading the distribution modules, installers and binaries",
 	)
 
-	cmd.Flags().Bool(
+	applyCmd.Flags().Bool(
 		"skip-deps-validation",
 		false,
 		"Skip validating dependencies",
 	)
 
-	cmd.Flags().Bool(
+	applyCmd.Flags().Bool(
 		"dry-run",
 		false,
 		"Allows to inspect what resources will be created before applying them",
 	)
 
-	cmd.Flags().Bool(
+	applyCmd.Flags().Bool(
 		"vpn-auto-connect",
 		false,
 		"When set will automatically connect to the created VPN by the infrastructure phase "+
 			"(requires OpenVPN installed in the system)",
 	)
 
-	cmd.Flags().Bool(
+	applyCmd.Flags().Bool(
 		"skip-vpn-confirmation",
 		false,
 		"When set will not wait for user confirmation that the VPN is connected",
 	)
 
-	cmd.Flags().StringSlice(
+	applyCmd.Flags().StringSlice(
 		"force",
 		[]string{},
 		"WARNING: furyctl won't ask for confirmation and will proceed applying upgrades and reducers. Options are: all, upgrades, migrations, pods-running-check",
 	)
 
-	cmd.Flags().Int(
+	applyCmd.Flags().Int(
 		"timeout",
 		3600, //nolint:mnd,revive // ignore magic number linters
 		"Timeout for the whole cluster creation process, expressed in seconds",
 	)
 
-	cmd.Flags().Int(
+	applyCmd.Flags().Int(
 		"pod-running-check-timeout",
 		300, //nolint:mnd,revive // ignore magic number linters
 		"Timeout for the pod running check after the worker nodes upgrade, expressed in seconds",
 	)
 
-	cmd.Flags().Bool(
+	applyCmd.Flags().Bool(
 		"upgrade",
 		false,
 		"When set will run the upgrade scripts",
 	)
 
-	cmd.Flags().StringP(
+	applyCmd.Flags().StringP(
 		"upgrade-path-location",
 		"",
 		"",
 		"Location where the upgrade scripts are located, if not set the embedded ones will be used",
 	)
 
-	cmd.Flags().String(
+	applyCmd.Flags().String(
 		"upgrade-node",
 		"",
 		"On kind OnPremises this will upgrade a specific node",
 	)
-
-	if err := viper.BindPFlags(cmd.Flags()); err != nil {
-		return fmt.Errorf("error while binding flags: %w", err)
-	}
-
-	return nil
 }

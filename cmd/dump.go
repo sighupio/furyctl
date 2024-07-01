@@ -6,14 +6,16 @@ package cmd
 
 import (
 	"github.com/spf13/cobra"
+
+	"github.com/sighupio/furyctl/cmd/dump"
 )
 
-var DumpCmd = &cobra.Command{ //nolint:gochecknoglobals // needed for cobra/viper compatibility.
+var dumpCmd = &cobra.Command{ //nolint:gochecknoglobals // needed for cobra/viper compatibility.
 	Use:   "dump",
 	Short: "Dump manifests templates and other useful KFD objects",
 }
 
 //nolint:gochecknoinits // this pattern requires init function to work.
 func init() {
-	RootCmd.AddCommand(DumpCmd)
+	dumpCmd.AddCommand(dump.TemplateCmd)
 }

@@ -6,14 +6,16 @@ package cmd
 
 import (
 	"github.com/spf13/cobra"
+
+	del "github.com/sighupio/furyctl/cmd/delete"
 )
 
-var DeleteCmd = &cobra.Command{ //nolint:gochecknoglobals // needed for cobra/viper compatibility.
+var deleteCmd = &cobra.Command{ //nolint:gochecknoglobals // needed for cobra/viper compatibility.
 	Use:   "delete",
 	Short: "Delete a cluster and its related infrastructure",
 }
 
 //nolint:gochecknoinits // this pattern requires init function to work.
 func init() {
-	RootCmd.AddCommand(DeleteCmd)
+	deleteCmd.AddCommand(del.ClusterCmd)
 }

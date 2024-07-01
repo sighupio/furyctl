@@ -152,11 +152,7 @@ furyctl is a command line interface tool to manage the full lifecycle of a Kuber
 
 //nolint:gochecknoinits // this pattern requires init function to work.
 func init() {
-	viper.SetEnvPrefix("FURYCTL")
-
-	viper.SetEnvKeyReplacer(strings.NewReplacer("-", "_"))
-
-	viper.AutomaticEnv()
+	cobra.OnInitialize(initConfig)
 
 	RootCmd.PersistentFlags().BoolVarP(
 		&RootCmd.config.Debug,
@@ -226,7 +222,26 @@ func init() {
 		logrus.Fatalf("error while binding flags: %v", err)
 	}
 
-	RootCmd.AddCommand(CreateCmd)
+	RootCmd.AddCommand(applyCmd)
+	RootCmd.AddCommand(completionCmd)
+	RootCmd.AddCommand(connectCmd)
+	RootCmd.AddCommand(createCmd)
+	RootCmd.AddCommand(deleteCmd)
+	RootCmd.AddCommand(diffCmd)
+	RootCmd.AddCommand(downloadCmd)
+	RootCmd.AddCommand(dumpCmd)
+	RootCmd.AddCommand(getCmd)
+	RootCmd.AddCommand(legacyCmd)
+	RootCmd.AddCommand(validateCmd)
+	RootCmd.AddCommand(versionCmd)
+}
+
+func initConfig() {
+	viper.SetEnvPrefix("FURYCTL")
+
+	viper.SetEnvKeyReplacer(strings.NewReplacer("-", "_"))
+
+	viper.AutomaticEnv()
 }
 
 func createLogFile(path string) (*os.File, error) {

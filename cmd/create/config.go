@@ -15,7 +15,6 @@ import (
 	"github.com/spf13/viper"
 
 	distroconf "github.com/sighupio/fury-distribution/pkg/apis/config"
-	"github.com/sighupio/furyctl/cmd"
 	"github.com/sighupio/furyctl/internal/analytics"
 	"github.com/sighupio/furyctl/internal/app"
 	"github.com/sighupio/furyctl/internal/cmd/cmdutil"
@@ -34,11 +33,15 @@ var (
 	ErrMandatoryFlag        = errors.New("flag must be specified")
 	ErrConfigCreationFailed = errors.New("config creation failed")
 	cmdEvent                analytics.Event   //nolint:gochecknoglobals // needed for cobra/viper compatibility.
-	configCmd               = &cobra.Command{ //nolint:gochecknoglobals // needed for cobra/viper compatibility.
+	ConfigCmd               = &cobra.Command{ //nolint:gochecknoglobals // needed for cobra/viper compatibility.
 		Use:   "config",
 		Short: "Scaffolds a new furyctl configuration file",
 		PreRun: func(cmd *cobra.Command, _ []string) {
 			cmdEvent = analytics.NewCommandEvent(cobrax.GetFullname(cmd))
+
+			if err := viper.BindPFlags(cmd.Flags()); err != nil {
+				logrus.Fatalf("error while binding flags: %v", err)
+			}
 		},
 		RunE: func(_ *cobra.Command, _ []string) error {
 			ctn := app.GetContainerInstance()
@@ -199,14 +202,14 @@ var (
 
 //nolint:gochecknoinits // this pattern requires init function to work.
 func init() {
-	configCmd.Flags().StringP(
+	ConfigCmd.Flags().StringP(
 		"config",
 		"c",
 		"furyctl.yaml",
 		"Path to the configuration file",
 	)
 
-	configCmd.Flags().StringP(
+	ConfigCmd.Flags().StringP(
 		"distro-location",
 		"",
 		"",
@@ -216,44 +219,38 @@ func init() {
 			"Any format supported by hashicorp/go-getter can be used.",
 	)
 
-	configCmd.Flags().String(
+	ConfigCmd.Flags().String(
 		"distro-patches",
 		"",
 		"Location where to download distribution's user-made patches from. "+
 			cmdutil.AnyGoGetterFormatStr,
 	)
 
-	configCmd.Flags().StringP(
+	ConfigCmd.Flags().StringP(
 		"version",
 		"v",
 		"",
 		"Kubernetes Fury Distribution version to use (eg: v1.24.1)",
 	)
 
-	configCmd.Flags().StringP(
+	ConfigCmd.Flags().StringP(
 		"kind",
 		"k",
 		"",
 		"Type of cluster to create (eg: EKSCluster, KFDDistribution, OnPremises)",
 	)
 
-	configCmd.Flags().StringP(
+	ConfigCmd.Flags().StringP(
 		"api-version",
 		"a",
 		"kfd.sighup.io/v1alpha2",
 		"Version of the API to use for the selected kind (eg: kfd.sighup.io/v1alpha2)",
 	)
 
-	configCmd.Flags().StringP(
+	ConfigCmd.Flags().StringP(
 		"name",
 		"n",
 		"example",
 		"Name of cluster to create",
 	)
-
-	if err := viper.BindPFlags(configCmd.Flags()); err != nil {
-		logrus.Fatalf("error while binding flags: %v", err)
-	}
-
-	cmd.CreateCmd.AddCommand(configCmd)
 }

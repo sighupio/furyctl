@@ -6,14 +6,16 @@ package cmd
 
 import (
 	"github.com/spf13/cobra"
+
+	"github.com/sighupio/furyctl/cmd/connect"
 )
 
-var ConnectCmd = &cobra.Command{ //nolint:gochecknoglobals // needed for cobra/viper compatibility.
+var connectCmd = &cobra.Command{ //nolint:gochecknoglobals // needed for cobra/viper compatibility.
 	Use:   "connect",
 	Short: "Start up a new private connection to a cluster",
 }
 
 //nolint:gochecknoinits // this pattern requires init function to work.
 func init() {
-	RootCmd.AddCommand(ConnectCmd)
+	connectCmd.AddCommand(connect.OpenvpnCmd)
 }

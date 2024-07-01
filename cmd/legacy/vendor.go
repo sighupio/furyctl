@@ -14,7 +14,6 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
-	"github.com/sighupio/furyctl/cmd"
 	"github.com/sighupio/furyctl/internal/analytics"
 	"github.com/sighupio/furyctl/internal/app"
 	"github.com/sighupio/furyctl/internal/legacy"
@@ -33,11 +32,15 @@ var (
 	ErrParsingPackages = errors.New("error while parsing packages")
 	ErrDownloading     = errors.New("error while downloading")
 	cmdEvent           analytics.Event   //nolint:gochecknoglobals // needed for cobra/viper compatibility.
-	vendorCmd          = &cobra.Command{ //nolint:gochecknoglobals // needed for cobra/viper compatibility.
+	VendorCmd          = &cobra.Command{ //nolint:gochecknoglobals // needed for cobra/viper compatibility.
 		Use:   "vendor",
 		Short: "Download the dependencies specified in the Furyfile.yml",
 		PreRun: func(cmd *cobra.Command, _ []string) {
 			cmdEvent = analytics.NewCommandEvent(cobrax.GetFullname(cmd))
+
+			if err := viper.BindPFlags(cmd.Flags()); err != nil {
+				logrus.Fatalf("error while binding flags: %v", err)
+			}
 		},
 		RunE: func(_ *cobra.Command, _ []string) error {
 			ctn := app.GetContainerInstance()
@@ -99,14 +102,14 @@ var (
 
 //nolint:gochecknoinits // this pattern requires init function to work.
 func init() {
-	vendorCmd.Flags().StringP(
+	VendorCmd.Flags().StringP(
 		"furyfile",
 		"F",
 		"Furyfile.yaml",
 		"Path to the Furyfile.yaml file",
 	)
 
-	vendorCmd.Flags().StringP(
+	VendorCmd.Flags().StringP(
 		"prefix",
 		"P",
 		"",
@@ -114,12 +117,6 @@ func init() {
 			"Example:\nfuryctl legacy vendor -P mon\nwill download all modules that start with 'mon', "+
 			"like 'monitoring', and ignore the rest",
 	)
-
-	if err := viper.BindPFlags(vendorCmd.Flags()); err != nil {
-		logrus.Fatalf("error while binding flags: %v", err)
-	}
-
-	cmd.LegacyCmd.AddCommand(vendorCmd)
 }
 
 func getLegacyVendorCmdFlags() VendorCmdFlags {

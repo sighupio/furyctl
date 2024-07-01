@@ -15,7 +15,6 @@ import (
 	"github.com/spf13/viper"
 
 	"github.com/sighupio/fury-distribution/pkg/apis/config"
-	"github.com/sighupio/furyctl/cmd"
 	"github.com/sighupio/furyctl/internal/analytics"
 	"github.com/sighupio/furyctl/internal/app"
 	cobrax "github.com/sighupio/furyctl/internal/x/cobra"
@@ -35,11 +34,15 @@ var (
 	ErrRunningOpenVPN      = errors.New("cannot run openvpn")
 	ErrCannotGetHomeDir    = errors.New("cannot get current working directory")
 	cmdEvent               analytics.Event   //nolint:gochecknoglobals // needed for cobra/viper compatibility.
-	openvpnCmd             = &cobra.Command{ //nolint:gochecknoglobals // needed for cobra/viper compatibility.
+	OpenvpnCmd             = &cobra.Command{ //nolint:gochecknoglobals // needed for cobra/viper compatibility.
 		Use:   "openvpn",
 		Short: "Connect to OpenVPN with the specified profile name",
 		PreRun: func(cmd *cobra.Command, _ []string) {
 			cmdEvent = analytics.NewCommandEvent(cobrax.GetFullname(cmd))
+
+			if err := viper.BindPFlags(cmd.Flags()); err != nil {
+				logrus.Fatalf("error while binding flags: %v", err)
+			}
 		},
 		RunE: func(_ *cobra.Command, _ []string) error {
 			ctn := app.GetContainerInstance()
@@ -111,25 +114,19 @@ var (
 
 //nolint:gochecknoinits // this pattern requires init function to work.
 func init() {
-	openvpnCmd.Flags().StringP(
+	OpenvpnCmd.Flags().StringP(
 		"config",
 		"c",
 		"furyctl.yaml",
 		"Path to the configuration file",
 	)
 
-	openvpnCmd.Flags().StringP(
+	OpenvpnCmd.Flags().StringP(
 		"profile",
 		"p",
 		"",
 		"Name of to the OpenVPN profile",
 	)
-
-	if err := viper.BindPFlags(openvpnCmd.Flags()); err != nil {
-		logrus.Fatalf("error while binding flags: %v", err)
-	}
-
-	cmd.ConnectCmd.AddCommand(openvpnCmd)
 }
 
 func getOpenVPNCmdFlags() OpenVPNCmdFlags {
