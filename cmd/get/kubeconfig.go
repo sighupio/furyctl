@@ -12,8 +12,10 @@ import (
 
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 
 	"github.com/sighupio/furyctl/internal/analytics"
+	"github.com/sighupio/furyctl/internal/app"
 	"github.com/sighupio/furyctl/internal/cluster"
 	"github.com/sighupio/furyctl/internal/cmd/cmdutil"
 	"github.com/sighupio/furyctl/internal/config"
@@ -28,55 +30,32 @@ import (
 var (
 	ErrParsingFlag                = errors.New("error while parsing flag")
 	ErrDownloadDependenciesFailed = errors.New("dependencies download failed")
-)
-
-func NewKubeconfigCmd(tracker *analytics.Tracker) *cobra.Command {
-	var cmdEvent analytics.Event
-
-	cmd := &cobra.Command{
+	cmdEvent                      analytics.Event   //nolint:gochecknoglobals // needed for cobra/viper compatibility.
+	KubeconfigCmd                 = &cobra.Command{ //nolint:gochecknoglobals // needed for cobra/viper compatibility.
 		Use:   "kubeconfig",
 		Short: "Get kubeconfig from a cluster",
 		PreRun: func(cmd *cobra.Command, _ []string) {
 			cmdEvent = analytics.NewCommandEvent(cobrax.GetFullname(cmd))
+
+			if err := viper.BindPFlags(cmd.Flags()); err != nil {
+				logrus.Fatalf("error while binding flags: %v", err)
+			}
 		},
-		RunE: func(cmd *cobra.Command, _ []string) error {
+		RunE: func(_ *cobra.Command, _ []string) error {
+			ctn := app.GetContainerInstance()
+
+			tracker := ctn.Tracker()
+			tracker.Flush()
+
 			// Get flags.
-			debug, err := cmdutil.BoolFlag(cmd, "debug", tracker, cmdEvent)
-			if err != nil {
-				return fmt.Errorf("%w: debug", ErrParsingFlag)
-			}
-
-			binPath := cmdutil.StringFlagOptional(cmd, "bin-path")
-
-			furyctlPath, err := cmdutil.StringFlag(cmd, "config", tracker, cmdEvent)
-			if err != nil {
-				return fmt.Errorf("%w: config", ErrParsingFlag)
-			}
-
-			outDir, err := cmdutil.StringFlag(cmd, "outdir", tracker, cmdEvent)
-			if err != nil {
-				return fmt.Errorf("%w: outdir", ErrParsingFlag)
-			}
-
-			distroLocation, err := cmdutil.StringFlag(cmd, "distro-location", tracker, cmdEvent)
-			if err != nil {
-				return fmt.Errorf("%w: distro-location", ErrParsingFlag)
-			}
-
-			gitProtocol, err := cmdutil.StringFlag(cmd, "git-protocol", tracker, cmdEvent)
-			if err != nil {
-				return fmt.Errorf("%w: git-protocol", ErrParsingFlag)
-			}
-
-			skipDepsDownload, err := cmdutil.BoolFlag(cmd, "skip-deps-download", tracker, cmdEvent)
-			if err != nil {
-				return fmt.Errorf("%w: skip-deps-download", ErrParsingFlag)
-			}
-
-			skipDepsValidation, err := cmdutil.BoolFlag(cmd, "skip-deps-validation", tracker, cmdEvent)
-			if err != nil {
-				return fmt.Errorf("%w: skip-deps-validation", ErrParsingFlag)
-			}
+			debug := viper.GetBool("debug")
+			binPath := viper.GetString("bin-path")
+			furyctlPath := viper.GetString("config")
+			outDir := viper.GetString("outdir")
+			distroLocation := viper.GetString("distro-location")
+			gitProtocol := viper.GetString("git-protocol")
+			skipDepsDownload := viper.GetBool("skip-deps-download")
+			skipDepsValidation := viper.GetBool("skip-deps-validation")
 
 			// Get Current dir.
 			logrus.Debug("Getting current directory path...")
@@ -204,22 +183,25 @@ func NewKubeconfigCmd(tracker *analytics.Tracker) *cobra.Command {
 			return nil
 		},
 	}
+)
 
-	cmd.Flags().StringP(
+//nolint:gochecknoinits // this pattern requires init function to work.
+func init() {
+	KubeconfigCmd.Flags().StringP(
 		"bin-path",
 		"b",
 		"",
 		"Path to the folder where all the dependencies' binaries are installed",
 	)
 
-	cmd.Flags().StringP(
+	KubeconfigCmd.Flags().StringP(
 		"config",
 		"c",
 		"furyctl.yaml",
 		"Path to the configuration file",
 	)
 
-	cmd.Flags().StringP(
+	KubeconfigCmd.Flags().StringP(
 		"distro-location",
 		"",
 		"",
@@ -229,17 +211,15 @@ func NewKubeconfigCmd(tracker *analytics.Tracker) *cobra.Command {
 			cmdutil.AnyGoGetterFormatStr,
 	)
 
-	cmd.Flags().Bool(
+	KubeconfigCmd.Flags().Bool(
 		"skip-deps-download",
 		false,
 		"Skip downloading the binaries",
 	)
 
-	cmd.Flags().Bool(
+	KubeconfigCmd.Flags().Bool(
 		"skip-deps-validation",
 		false,
 		"Skip validating dependencies",
 	)
-
-	return cmd
 }

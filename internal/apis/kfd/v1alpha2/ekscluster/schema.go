@@ -82,7 +82,7 @@ func (*ExtraSchemaValidator) validateInfraVPNOverrides(furyctlConf *private.Eksc
 }
 
 func (*ExtraSchemaValidator) validateKubernetesOverrides(furyctlConf *private.EksclusterKfdV1Alpha2) error {
-	//nolint:revive,gomnd,mnd // ignore magic number linters
+	//nolint:revive,mnd // ignore magic number linters
 	if len(furyctlConf.Metadata.Name) <= 40 {
 		return nil
 	}
@@ -103,7 +103,7 @@ func (*ExtraSchemaValidator) validateKubernetesOverrides(furyctlConf *private.Ek
 }
 
 func (v *ExtraSchemaValidator) validateAWSModuleOverrides(furyctlConf *private.EksclusterKfdV1Alpha2) error {
-	//nolint:revive,gomnd,mnd // ignore magic number linters
+	//nolint:revive,mnd // ignore magic number linters
 	if len(furyctlConf.Metadata.Name) <= 40 {
 		return nil
 	}

@@ -8,16 +8,14 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/sighupio/furyctl/cmd/dump"
-	"github.com/sighupio/furyctl/internal/analytics"
 )
 
-func NewDumpCommand(tracker *analytics.Tracker) *cobra.Command {
-	dumpCmd := &cobra.Command{
-		Use:   "dump",
-		Short: "Dump manifests templates and other useful KFD objects",
-	}
+var dumpCmd = &cobra.Command{ //nolint:gochecknoglobals // needed for cobra/viper compatibility.
+	Use:   "dump",
+	Short: "Dump manifests templates and other useful KFD objects",
+}
 
-	dumpCmd.AddCommand(dump.NewTemplateCmd(tracker))
-
-	return dumpCmd
+//nolint:gochecknoinits // this pattern requires init function to work.
+func init() {
+	dumpCmd.AddCommand(dump.TemplateCmd)
 }

@@ -26,7 +26,7 @@ func (k *ProviderKind) getLabeledURI(providerName, label string) (string, error)
 				continue
 			}
 
-			return fmt.Sprintf("git::%s", providerMap.BaseURI), nil
+			return "git::" + providerMap.BaseURI, nil
 		}
 	}
 

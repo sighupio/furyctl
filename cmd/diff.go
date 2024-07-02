@@ -12,9 +12,11 @@ import (
 	"github.com/r3labs/diff/v3"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 
 	"github.com/sighupio/fury-distribution/pkg/apis/config"
 	"github.com/sighupio/furyctl/internal/analytics"
+	"github.com/sighupio/furyctl/internal/app"
 	"github.com/sighupio/furyctl/internal/cluster"
 	"github.com/sighupio/furyctl/internal/cmd/cmdutil"
 	"github.com/sighupio/furyctl/internal/diffs"
@@ -40,17 +42,25 @@ type DiffCommandFlags struct {
 	DistroPatchesLocation string
 }
 
-func NewDiffCommand(tracker *analytics.Tracker) *cobra.Command {
-	var cmdEvent analytics.Event
-
-	cmd := &cobra.Command{
+var (
+	diffCmdEvent analytics.Event   //nolint:gochecknoglobals // needed for cobra/viper compatibility.
+	diffCmd      = &cobra.Command{ //nolint:gochecknoglobals // needed for cobra/viper compatibility.
 		Use:   "diff",
 		Short: "Diff the current configuration with the one in the cluster",
 		PreRun: func(cmd *cobra.Command, _ []string) {
-			cmdEvent = analytics.NewCommandEvent(cobrax.GetFullname(cmd))
+			diffCmdEvent = analytics.NewCommandEvent(cobrax.GetFullname(cmd))
+
+			if err := viper.BindPFlags(cmd.Flags()); err != nil {
+				logrus.Fatalf("error while binding flags: %v", err)
+			}
 		},
-		RunE: func(cmd *cobra.Command, _ []string) error {
-			flags, err := getDiffCommandFlags(cmd, tracker, cmdEvent)
+		RunE: func(_ *cobra.Command, _ []string) error {
+			ctn := app.GetContainerInstance()
+
+			tracker := ctn.Tracker()
+			defer tracker.Flush()
+
+			flags, err := getDiffCommandFlags()
 			if err != nil {
 				return err
 			}
@@ -62,8 +72,8 @@ func NewDiffCommand(tracker *analytics.Tracker) *cobra.Command {
 
 			homeDir, err := os.UserHomeDir()
 			if err != nil {
-				cmdEvent.AddErrorMessage(err)
-				tracker.Track(cmdEvent)
+				diffCmdEvent.AddErrorMessage(err)
+				tracker.Track(diffCmdEvent)
 
 				return fmt.Errorf("error while getting user home directory: %w", err)
 			}
@@ -81,8 +91,8 @@ func NewDiffCommand(tracker *analytics.Tracker) *cobra.Command {
 			if absDistroPatchesLocation != "" {
 				absDistroPatchesLocation, err = filepath.Abs(flags.DistroPatchesLocation)
 				if err != nil {
-					cmdEvent.AddErrorMessage(err)
-					tracker.Track(cmdEvent)
+					diffCmdEvent.AddErrorMessage(err)
+					tracker.Track(diffCmdEvent)
 
 					return fmt.Errorf("error while getting absolute path of distro patches location: %w", err)
 				}
@@ -101,8 +111,8 @@ func NewDiffCommand(tracker *analytics.Tracker) *cobra.Command {
 			logrus.Info("Downloading distribution...")
 			res, err := distrodl.Download(flags.DistroLocation, flags.FuryctlPath)
 			if err != nil {
-				cmdEvent.AddErrorMessage(err)
-				tracker.Track(cmdEvent)
+				diffCmdEvent.AddErrorMessage(err)
+				tracker.Track(diffCmdEvent)
 
 				return fmt.Errorf("error while downloading distribution: %w", err)
 			}
@@ -119,8 +129,8 @@ func NewDiffCommand(tracker *analytics.Tracker) *cobra.Command {
 
 			diffChecker, err := createDiffChecker(stateStore, flags.FuryctlPath)
 			if err != nil {
-				cmdEvent.AddErrorMessage(err)
-				tracker.Track(cmdEvent)
+				diffCmdEvent.AddErrorMessage(err)
+				tracker.Track(diffCmdEvent)
 
 				return fmt.Errorf("error while creating diff checker: %w", err)
 			}
@@ -136,16 +146,16 @@ func NewDiffCommand(tracker *analytics.Tracker) *cobra.Command {
 				flags.UpgradePathLocation,
 			)
 			if err != nil {
-				cmdEvent.AddErrorMessage(err)
-				tracker.Track(cmdEvent)
+				diffCmdEvent.AddErrorMessage(err)
+				tracker.Track(diffCmdEvent)
 
 				return fmt.Errorf("error while getting phase path: %w", err)
 			}
 
 			d, err := getDiffs(diffChecker, phasePath)
 			if err != nil {
-				cmdEvent.AddErrorMessage(err)
-				tracker.Track(cmdEvent)
+				diffCmdEvent.AddErrorMessage(err)
+				tracker.Track(diffCmdEvent)
 
 				return fmt.Errorf("error while getting diffs: %w", err)
 			}
@@ -159,28 +169,31 @@ func NewDiffCommand(tracker *analytics.Tracker) *cobra.Command {
 				logrus.Info("No differences found from previous cluster configuration")
 			}
 
-			cmdEvent.AddSuccessMessage("diff command executed successfully")
-			tracker.Track(cmdEvent)
+			diffCmdEvent.AddSuccessMessage("diff command executed successfully")
+			tracker.Track(diffCmdEvent)
 
 			return nil
 		},
 	}
+)
 
-	cmd.Flags().StringP(
+//nolint:gochecknoinits // this pattern requires init function to work.
+func init() {
+	diffCmd.Flags().StringP(
 		"config",
 		"c",
 		"furyctl.yaml",
 		"Path to the configuration file",
 	)
 
-	cmd.Flags().StringP(
+	diffCmd.Flags().StringP(
 		"phase",
 		"p",
 		"",
 		"Limit the execution to a specific phase. Options are: infrastructure, kubernetes, distribution",
 	)
 
-	cmd.Flags().StringP(
+	diffCmd.Flags().StringP(
 		"distro-location",
 		"",
 		"",
@@ -190,28 +203,26 @@ func NewDiffCommand(tracker *analytics.Tracker) *cobra.Command {
 			"Any format supported by hashicorp/go-getter can be used.",
 	)
 
-	cmd.Flags().String(
+	diffCmd.Flags().String(
 		"distro-patches",
 		"",
 		"Location where to download distribution's user-made patches from. "+
 			cmdutil.AnyGoGetterFormatStr,
 	)
 
-	cmd.Flags().StringP(
+	diffCmd.Flags().StringP(
 		"bin-path",
 		"b",
 		"",
 		"Path to the folder where all the dependencies' binaries are installed",
 	)
 
-	cmd.Flags().StringP(
+	diffCmd.Flags().StringP(
 		"upgrade-path-location",
 		"",
 		"",
 		"Location where the upgrade scripts are located, if not set the embedded ones will be used",
 	)
-
-	return cmd
 }
 
 func getPhasePath(
@@ -293,77 +304,29 @@ func getDiffs(diffChecker diffs.Checker, phasePath string) (diff.Changelog, erro
 	return diffChecker.FilterDiffFromPhase(changeLog, phasePath), nil
 }
 
-func getDiffCommandFlags(
-	cmd *cobra.Command,
-	tracker *analytics.Tracker,
-	cmdEvent analytics.Event,
-) (DiffCommandFlags, error) {
-	debug, err := cmdutil.BoolFlag(cmd, "debug", tracker, cmdEvent)
-	if err != nil {
-		return DiffCommandFlags{}, fmt.Errorf("%w: %s", ErrParsingFlag, "debug")
-	}
-
-	furyctlPath, err := cmdutil.StringFlag(cmd, "config", tracker, cmdEvent)
-	if err != nil {
-		return DiffCommandFlags{}, fmt.Errorf("%w: %s", ErrParsingFlag, "config")
-	}
-
-	distroLocation, err := cmdutil.StringFlag(cmd, "distro-location", tracker, cmdEvent)
-	if err != nil {
-		return DiffCommandFlags{}, fmt.Errorf("%w: %s", ErrParsingFlag, "distro-location")
-	}
-
-	phase, err := cmdutil.StringFlag(cmd, "phase", tracker, cmdEvent)
-	if err != nil {
-		return DiffCommandFlags{}, fmt.Errorf("%w: %s", ErrParsingFlag, "phase")
-	}
-
+func getDiffCommandFlags() (DiffCommandFlags, error) {
+	phase := viper.GetString("phase")
 	if err := cluster.CheckPhase(phase); err != nil {
 		return DiffCommandFlags{}, fmt.Errorf("%w: %s: %s", ErrParsingFlag, "phase", err.Error())
 	}
 
-	noTTY, err := cmdutil.BoolFlag(cmd, "no-tty", tracker, cmdEvent)
-	if err != nil {
-		return DiffCommandFlags{}, fmt.Errorf("%w: %s", ErrParsingFlag, "no-tty")
-	}
-
-	binPath := cmdutil.StringFlagOptional(cmd, "bin-path")
-
-	outdir, err := cmdutil.StringFlag(cmd, "outdir", tracker, cmdEvent)
-	if err != nil {
-		return DiffCommandFlags{}, fmt.Errorf("%w: %s", ErrParsingFlag, "outdir")
-	}
-
-	gitProtocol, err := cmdutil.StringFlag(cmd, "git-protocol", tracker, cmdEvent)
-	if err != nil {
-		return DiffCommandFlags{}, fmt.Errorf("%w: %s", ErrParsingFlag, "git-protocol")
-	}
+	gitProtocol := viper.GetString("git-protocol")
 
 	typedGitProtocol, err := git.NewProtocol(gitProtocol)
 	if err != nil {
 		return DiffCommandFlags{}, fmt.Errorf("%w: %w", ErrParsingFlag, err)
 	}
 
-	upgradePathLocation, err := cmdutil.StringFlag(cmd, "upgrade-path-location", tracker, cmdEvent)
-	if err != nil {
-		return DiffCommandFlags{}, fmt.Errorf("%w: %s", ErrParsingFlag, "upgrade-path-location")
-	}
-
-	distroPatchesLocation, err := cmdutil.StringFlag(cmd, "distro-patches", tracker, cmdEvent)
-	if err != nil {
-		return DiffCommandFlags{}, fmt.Errorf("%w: %s", ErrParsingFlag, "distro-patches")
-	}
-
 	return DiffCommandFlags{
-		Debug:                 debug,
-		FuryctlPath:           furyctlPath,
-		DistroLocation:        distroLocation,
+		Debug:                 viper.GetBool("debug"),
+		FuryctlPath:           viper.GetString("config"),
+		DistroLocation:        viper.GetString("distro-location"),
 		Phase:                 phase,
-		NoTTY:                 noTTY,
+		NoTTY:                 viper.GetBool("no-tty"),
 		GitProtocol:           typedGitProtocol,
-		BinPath:               binPath,
-		Outdir:                outdir,
-		UpgradePathLocation:   upgradePathLocation,
-		DistroPatchesLocation: distroPatchesLocation,
+		BinPath:               viper.GetString("bin-path"),
+		Outdir:                viper.GetString("outdir"),
+		UpgradePathLocation:   viper.GetString("upgrade-path-location"),
+		DistroPatchesLocation: viper.GetString("distro-patches"),
 	}, nil
 }

@@ -12,8 +12,10 @@ import (
 
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 
 	"github.com/sighupio/furyctl/internal/analytics"
+	"github.com/sighupio/furyctl/internal/app"
 	"github.com/sighupio/furyctl/internal/cmd/cmdutil"
 	"github.com/sighupio/furyctl/internal/config"
 	"github.com/sighupio/furyctl/internal/dependencies"
@@ -25,48 +27,34 @@ import (
 )
 
 var (
-	ErrValidationFailed = fmt.Errorf("configuration file validation failed")
+	ErrValidationFailed = errors.New("configuration file validation failed")
 	ErrParsingFlag      = errors.New("error while parsing flag")
-)
-
-func NewConfigCmd(tracker *analytics.Tracker) *cobra.Command {
-	var cmdEvent analytics.Event
-
-	cmd := &cobra.Command{
+	cmdEvent            analytics.Event   //nolint:gochecknoglobals // needed for cobra/viper compatibility.
+	ConfigCmd           = &cobra.Command{ //nolint:gochecknoglobals // needed for cobra/viper compatibility.
 		Use:   "config",
 		Short: "Validate configuration file",
 		PreRun: func(cmd *cobra.Command, _ []string) {
 			cmdEvent = analytics.NewCommandEvent(cobrax.GetFullname(cmd))
+
+			if err := viper.BindPFlags(cmd.Flags()); err != nil {
+				logrus.Fatalf("error while binding flags: %v", err)
+			}
 		},
-		RunE: func(cmd *cobra.Command, _ []string) error {
-			furyctlPath, err := cmdutil.StringFlag(cmd, "config", tracker, cmdEvent)
-			if err != nil {
-				return fmt.Errorf("%w: config", ErrParsingFlag)
-			}
+		RunE: func(_ *cobra.Command, _ []string) error {
+			ctn := app.GetContainerInstance()
 
-			distroLocation, err := cmdutil.StringFlag(cmd, "distro-location", tracker, cmdEvent)
-			if err != nil {
-				return fmt.Errorf("%w: distro-location", ErrParsingFlag)
-			}
+			tracker := ctn.Tracker()
+			tracker.Flush()
 
-			gitProtocol, err := cmdutil.StringFlag(cmd, "git-protocol", tracker, cmdEvent)
-			if err != nil {
-				return fmt.Errorf("%w: git-protocol", ErrParsingFlag)
-			}
-
-			outDir, err := cmdutil.StringFlag(cmd, "outdir", tracker, cmdEvent)
-			if err != nil {
-				return fmt.Errorf("%w: outdir", ErrParsingFlag)
-			}
+			furyctlPath := viper.GetString("config")
+			distroLocation := viper.GetString("distro-location")
+			gitProtocol := viper.GetString("git-protocol")
+			outDir := viper.GetString("outdir")
+			distroPatchesLocation := viper.GetString("distro-patches")
 
 			typedGitProtocol, err := git.NewProtocol(gitProtocol)
 			if err != nil {
 				return fmt.Errorf("%w: %w", ErrParsingFlag, err)
-			}
-
-			distroPatchesLocation, err := cmdutil.StringFlag(cmd, "distro-patches", tracker, cmdEvent)
-			if err != nil {
-				return fmt.Errorf("%w: %s", ErrParsingFlag, "distro-patches")
 			}
 
 			homeDir, err := os.UserHomeDir()
@@ -147,15 +135,18 @@ func NewConfigCmd(tracker *analytics.Tracker) *cobra.Command {
 			return nil
 		},
 	}
+)
 
-	cmd.Flags().StringP(
+//nolint:gochecknoinits // this pattern requires init function to work.
+func init() {
+	ConfigCmd.Flags().StringP(
 		"config",
 		"c",
 		"furyctl.yaml",
 		"Path to the configuration file",
 	)
 
-	cmd.Flags().StringP(
+	ConfigCmd.Flags().StringP(
 		"distro-location",
 		"",
 		"",
@@ -165,12 +156,10 @@ func NewConfigCmd(tracker *analytics.Tracker) *cobra.Command {
 			"Any format supported by hashicorp/go-getter can be used.",
 	)
 
-	cmd.Flags().String(
+	ConfigCmd.Flags().String(
 		"distro-patches",
 		"",
 		"Location where to download distribution's user-made patches from. "+
 			cmdutil.AnyGoGetterFormatStr,
 	)
-
-	return cmd
 }

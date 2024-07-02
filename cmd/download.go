@@ -8,16 +8,14 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/sighupio/furyctl/cmd/download"
-	"github.com/sighupio/furyctl/internal/analytics"
 )
 
-func NewDownloadCommand(tracker *analytics.Tracker) *cobra.Command {
-	dumpCmd := &cobra.Command{
-		Use:   "download",
-		Short: "Download all dependencies for the Kubernetes Fury Distribution version specified in the configuration file",
-	}
+var downloadCmd = &cobra.Command{ //nolint:gochecknoglobals // needed for cobra/viper compatibility.
+	Use:   "download",
+	Short: "Download all dependencies for the Kubernetes Fury Distribution version specified in the configuration file",
+}
 
-	dumpCmd.AddCommand(download.NewDependenciesCmd(tracker))
-
-	return dumpCmd
+//nolint:gochecknoinits // this pattern requires init function to work.
+func init() {
+	downloadCmd.AddCommand(download.DependenciesCmd)
 }

@@ -8,16 +8,14 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/sighupio/furyctl/cmd/get"
-	"github.com/sighupio/furyctl/internal/analytics"
 )
 
-func NewGetCommand(tracker *analytics.Tracker) *cobra.Command {
-	getCmd := &cobra.Command{
-		Use:   "get",
-		Short: "Get a resource (e.g. kubeconfig) from a cluster",
-	}
+var getCmd = &cobra.Command{ //nolint:gochecknoglobals // needed for cobra/viper compatibility.
+	Use:   "get",
+	Short: "Get a resource (e.g. kubeconfig) from a cluster",
+}
 
-	getCmd.AddCommand(get.NewKubeconfigCmd(tracker))
-
-	return getCmd
+//nolint:gochecknoinits // this pattern requires init function to work.
+func init() {
+	getCmd.AddCommand(get.KubeconfigCmd)
 }

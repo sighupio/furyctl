@@ -8,16 +8,14 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/sighupio/furyctl/cmd/legacy"
-	"github.com/sighupio/furyctl/internal/analytics"
 )
 
-func NewLegacyCommand(tracker *analytics.Tracker) *cobra.Command {
-	legacyCmd := &cobra.Command{
-		Use:   "legacy",
-		Short: "Legacy commands for compatibility with older versions of furyctl",
-	}
+var legacyCmd = &cobra.Command{ //nolint:gochecknoglobals // needed for cobra/viper compatibility.
+	Use:   "legacy",
+	Short: "Legacy commands for compatibility with older versions of furyctl",
+}
 
-	legacyCmd.AddCommand(legacy.NewVendorCmd(tracker))
-
-	return legacyCmd
+//nolint:gochecknoinits // this pattern requires init function to work.
+func init() {
+	legacyCmd.AddCommand(legacy.VendorCmd)
 }

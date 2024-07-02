@@ -32,7 +32,7 @@ const downloadsTimeout = 5 * time.Minute
 
 var (
 	ErrDownloadingModule  = errors.New("error downloading module")
-	ErrDownloadTimeout    = fmt.Errorf("timeout while downloading")
+	ErrDownloadTimeout    = errors.New("timeout while downloading")
 	ErrModuleHasNoVersion = errors.New("module has no version")
 	ErrModuleHasNoName    = errors.New("module has no name")
 	ErrModuleNotFound     = errors.New("module not found")
@@ -171,9 +171,7 @@ func (dd *Downloader) DownloadModules(kfd config.KFD, gitPrefix string) error {
 	doneCh := make(chan bool)
 	errCh := make(chan error)
 
-	for i := 0; i < mods.NumField(); i++ {
-		i := i
-
+	for i := range mods.NumField() {
 		go func(i int) {
 			defer func() {
 				doneCh <- true
@@ -305,7 +303,7 @@ func (dd *Downloader) DownloadModules(kfd config.KFD, gitPrefix string) error {
 func (dd *Downloader) DownloadInstallers(installers config.KFDKubernetes, gitPrefix string) error {
 	insts := reflect.ValueOf(installers)
 
-	for i := 0; i < insts.NumField(); i++ {
+	for i := range insts.NumField() {
 		name := strings.ToLower(insts.Type().Field(i).Name)
 
 		dst := filepath.Join(dd.basePath, "vendor", "installers", name)
@@ -346,11 +344,8 @@ func (dd *Downloader) DownloadTools(kfd config.KFD) ([]string, error) {
 	utsCh := make(chan string)
 	errCh := make(chan error)
 
-	for i := 0; i < tls.NumField(); i++ {
-		i := i
-		for j := 0; j < tls.Field(i).NumField(); j++ {
-			j := j
-
+	for i := range tls.NumField() {
+		for j := range tls.Field(i).NumField() {
 			toolsCount++
 
 			go func(i, j int) {

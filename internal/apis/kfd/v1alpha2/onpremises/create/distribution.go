@@ -261,7 +261,7 @@ func (d *Distribution) runReducers(
 		}
 
 		if _, err := d.shellRunner.Run(
-			path.Join(d.Path, "scripts", fmt.Sprintf("%s.sh", lifecycle)),
+			path.Join(d.Path, "scripts", lifecycle+".sh"),
 		); err != nil {
 			return fmt.Errorf("error applying manifests: %w", err)
 		}

@@ -262,7 +262,7 @@ func get(src, dest string, mode getter.ClientMode) error {
 		return fmt.Errorf("%w: %v", ErrRenameDir, err)
 	}
 
-	gitFolder := fmt.Sprintf("%s/.git", dest)
+	gitFolder := dest + "/.git"
 	logrus.Infof("removing git subfolder: %s", gitFolder)
 
 	if err = os.RemoveAll(gitFolder); err != nil {

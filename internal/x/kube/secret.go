@@ -5,12 +5,13 @@
 package kubex
 
 import (
+	"errors"
 	"fmt"
 
 	yamlx "github.com/sighupio/furyctl/internal/x/yaml"
 )
 
-var ErrCannotCreateSecret = fmt.Errorf("cannot create secret")
+var ErrCannotCreateSecret = errors.New("cannot create secret")
 
 func CreateSecret(name, namespace string, data map[string]string) ([]byte, error) {
 	secret := struct {

@@ -35,8 +35,6 @@ func TestHasFeature(t *testing.T) {
 		},
 	}
 	for _, tC := range testCases {
-		tC := tC
-
 		t.Run(tC.desc, func(t *testing.T) {
 			t.Parallel()
 
