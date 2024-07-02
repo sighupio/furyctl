@@ -49,7 +49,7 @@ brews:
       owner: sighupio
       name: homebrew-furyctl
     skip_upload: auto
-    folder: Formula
+    directory: Formula
     homepage: "https://gihub.com/sighupio/furyctl"
     description: "furyctl binary"
     conflicts:
