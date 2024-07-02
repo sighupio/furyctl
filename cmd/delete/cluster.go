@@ -18,7 +18,6 @@ import (
 	"github.com/sighupio/furyctl/internal/analytics"
 	"github.com/sighupio/furyctl/internal/app"
 	"github.com/sighupio/furyctl/internal/cluster"
-	"github.com/sighupio/furyctl/internal/cmd/cmdutil"
 	"github.com/sighupio/furyctl/internal/config"
 	"github.com/sighupio/furyctl/internal/dependencies"
 	"github.com/sighupio/furyctl/internal/distribution"
@@ -295,7 +294,7 @@ func NewClusterCmd() *cobra.Command {
 		"distro-patches",
 		"",
 		"Location where to download distribution's user-made patches from. "+
-			cmdutil.AnyGoGetterFormatStr,
+			"Any format supported by hashicorp/go-getter can be used.",
 	)
 
 	clusterCmd.Flags().StringP(

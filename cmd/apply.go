@@ -18,7 +18,6 @@ import (
 	_ "github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/ekscluster"
 	"github.com/sighupio/furyctl/internal/app"
 	"github.com/sighupio/furyctl/internal/cluster"
-	"github.com/sighupio/furyctl/internal/cmd/cmdutil"
 	"github.com/sighupio/furyctl/internal/config"
 	"github.com/sighupio/furyctl/internal/dependencies"
 	"github.com/sighupio/furyctl/internal/distribution"
@@ -78,14 +77,14 @@ func NewApplyCmd() *cobra.Command {
 				logrus.Fatalf("error while binding flags: %v", err)
 			}
 		},
-		RunE: func(cmd *cobra.Command, _ []string) error {
+		RunE: func(_ *cobra.Command, _ []string) error {
 			ctn := app.GetContainerInstance()
 
 			tracker := ctn.Tracker()
 			tracker.Flush()
 
 			// Get flags.
-			flags, err := getCreateClusterCmdFlags(cmd, tracker, cmdEvent)
+			flags, err := getCreateClusterCmdFlags()
 			if err != nil {
 				return err
 			}
@@ -277,7 +276,7 @@ func getSkipsClusterCmdFlags() ClusterSkipsCmdFlags {
 	}
 }
 
-func getCreateClusterCmdFlags(cmd *cobra.Command, tracker *analytics.Tracker, cmdEvent analytics.Event) (ClusterCmdFlags, error) {
+func getCreateClusterCmdFlags() (ClusterCmdFlags, error) {
 	skips := getSkipsClusterCmdFlags()
 
 	phase := viper.GetString("phase")
@@ -317,15 +316,9 @@ func getCreateClusterCmdFlags(cmd *cobra.Command, tracker *analytics.Tracker, cm
 		return ClusterCmdFlags{}, fmt.Errorf("%w: %w", ErrParsingFlag, err)
 	}
 
-	upgrade, err := cmdutil.BoolFlag(cmd, "upgrade", tracker, cmdEvent)
-	if err != nil {
-		return ClusterCmdFlags{}, fmt.Errorf("%w: %s", ErrParsingFlag, "upgrade")
-	}
+	upgrade := viper.GetBool("upgrade")
 
-	upgradeNode, err := cmdutil.StringFlag(cmd, "upgrade-node", tracker, cmdEvent)
-	if err != nil {
-		return ClusterCmdFlags{}, fmt.Errorf("%w: %s", ErrParsingFlag, "upgrade-node")
-	}
+	upgradeNode := viper.GetString("upgrade-node")
 
 	if upgrade && upgradeNode != "" {
 		return ClusterCmdFlags{}, fmt.Errorf(
@@ -389,7 +382,7 @@ func setupCreateClusterCmdFlags(cmd *cobra.Command) {
 		"Location where to download schemas, defaults and the distribution manifests from. "+
 			"It can either be a local path (eg: /path/to/fury/distribution) or "+
 			"a remote URL (eg: git::git@github.com:sighupio/fury-distribution?depth=1&ref=BRANCH_NAME). "+
-			cmdutil.AnyGoGetterFormatStr,
+			"Any format supported by hashicorp/go-getter can be used.",
 	)
 
 	cmd.Flags().String(
@@ -398,7 +391,7 @@ func setupCreateClusterCmdFlags(cmd *cobra.Command) {
 		"Location where the distribution's user-made patches can be downloaded from. "+
 			"This can be either a local path (eg: /path/to/distro-patches) or "+
 			"a remote URL (eg: git::git@github.com:your-org/distro-patches?depth=1&ref=BRANCH_NAME). "+
-			cmdutil.AnyGoGetterFormatStr+
+			"Any format supported by hashicorp/go-getter can be used."+
 			" Patches within this location must be in a folder named after the distribution version (eg: v1.29.0) and "+
 			"must have the same structure as the distribution's repository.",
 	)

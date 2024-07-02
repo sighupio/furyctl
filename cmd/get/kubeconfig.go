@@ -17,7 +17,6 @@ import (
 	"github.com/sighupio/furyctl/internal/analytics"
 	"github.com/sighupio/furyctl/internal/app"
 	"github.com/sighupio/furyctl/internal/cluster"
-	"github.com/sighupio/furyctl/internal/cmd/cmdutil"
 	"github.com/sighupio/furyctl/internal/config"
 	"github.com/sighupio/furyctl/internal/dependencies"
 	"github.com/sighupio/furyctl/internal/distribution"
@@ -209,7 +208,7 @@ func NewKubeconfigCmd() *cobra.Command {
 		"Location where to download schemas, defaults and the distribution manifests from. "+
 			"It can either be a local path (eg: /path/to/fury/distribution) or "+
 			"a remote URL (eg: git::git@github.com:sighupio/fury-distribution?depth=1&ref=BRANCH_NAME). "+
-			cmdutil.AnyGoGetterFormatStr,
+			"Any format supported by hashicorp/go-getter can be used.",
 	)
 
 	kubeconfigCmd.Flags().Bool(

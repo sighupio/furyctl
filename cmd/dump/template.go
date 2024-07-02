@@ -16,7 +16,6 @@ import (
 
 	"github.com/sighupio/furyctl/internal/analytics"
 	"github.com/sighupio/furyctl/internal/app"
-	"github.com/sighupio/furyctl/internal/cmd/cmdutil"
 	"github.com/sighupio/furyctl/internal/config"
 	"github.com/sighupio/furyctl/internal/dependencies"
 	"github.com/sighupio/furyctl/internal/distribution"
@@ -254,7 +253,7 @@ The generated folder will be created starting from a provided templates folder a
 		"distro-patches",
 		"",
 		"Location where to download distribution's user-made patches from. "+
-			cmdutil.AnyGoGetterFormatStr,
+			"Any format supported by hashicorp/go-getter can be used.",
 	)
 
 	return templateCmd

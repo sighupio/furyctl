@@ -16,7 +16,6 @@ import (
 
 	"github.com/sighupio/furyctl/internal/analytics"
 	"github.com/sighupio/furyctl/internal/app"
-	"github.com/sighupio/furyctl/internal/cmd/cmdutil"
 	"github.com/sighupio/furyctl/internal/dependencies"
 	"github.com/sighupio/furyctl/internal/distribution"
 	"github.com/sighupio/furyctl/internal/git"
@@ -187,7 +186,7 @@ func NewDependenciesCmd() *cobra.Command {
 		"distro-patches",
 		"",
 		"Location where to download distribution's user-made patches from. "+
-			cmdutil.AnyGoGetterFormatStr,
+			"Any format supported by hashicorp/go-getter can be used.",
 	)
 
 	return dependenciesCmd

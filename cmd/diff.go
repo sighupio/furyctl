@@ -18,7 +18,6 @@ import (
 	"github.com/sighupio/furyctl/internal/analytics"
 	"github.com/sighupio/furyctl/internal/app"
 	"github.com/sighupio/furyctl/internal/cluster"
-	"github.com/sighupio/furyctl/internal/cmd/cmdutil"
 	"github.com/sighupio/furyctl/internal/diffs"
 	"github.com/sighupio/furyctl/internal/distribution"
 	"github.com/sighupio/furyctl/internal/git"
@@ -203,7 +202,7 @@ func NewDiffCmd() *cobra.Command {
 		"distro-patches",
 		"",
 		"Location where to download distribution's user-made patches from. "+
-			cmdutil.AnyGoGetterFormatStr,
+			"Any format supported by hashicorp/go-getter can be used.",
 	)
 
 	diffCmd.Flags().StringP(
