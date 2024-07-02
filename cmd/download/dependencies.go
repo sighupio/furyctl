@@ -28,8 +28,12 @@ import (
 var (
 	ErrParsingFlag    = errors.New("error while parsing flag")
 	ErrDownloadFailed = errors.New("dependencies download failed")
-	cmdEvent          analytics.Event   //nolint:gochecknoglobals // needed for cobra/viper compatibility.
-	DependenciesCmd   = &cobra.Command{ //nolint:gochecknoglobals // needed for cobra/viper compatibility.
+)
+
+func NewDependenciesCmd() *cobra.Command {
+	var cmdEvent analytics.Event
+
+	dependenciesCmd := &cobra.Command{
 		Use:   "dependencies",
 		Short: "Download all dependencies for the Fury Distribution version specified in the configuration file",
 		PreRun: func(cmd *cobra.Command, _ []string) {
@@ -154,25 +158,22 @@ var (
 			return nil
 		},
 	}
-)
 
-//nolint:gochecknoinits // this pattern requires init function to work.
-func init() {
-	DependenciesCmd.Flags().StringP(
+	dependenciesCmd.Flags().StringP(
 		"bin-path",
 		"b",
 		"",
 		"Path to the folder where all the dependencies' binaries are installed",
 	)
 
-	DependenciesCmd.Flags().StringP(
+	dependenciesCmd.Flags().StringP(
 		"config",
 		"c",
 		"furyctl.yaml",
 		"Path to the configuration file",
 	)
 
-	DependenciesCmd.Flags().StringP(
+	dependenciesCmd.Flags().StringP(
 		"distro-location",
 		"",
 		"",
@@ -182,10 +183,12 @@ func init() {
 			"Any format supported by hashicorp/go-getter can be used.",
 	)
 
-	DependenciesCmd.Flags().String(
+	dependenciesCmd.Flags().String(
 		"distro-patches",
 		"",
 		"Location where to download distribution's user-made patches from. "+
 			cmdutil.AnyGoGetterFormatStr,
 	)
+
+	return dependenciesCmd
 }

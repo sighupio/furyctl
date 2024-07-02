@@ -42,8 +42,12 @@ type TemplateCmdFlags struct {
 var (
 	ErrParsingFlag      = errors.New("error while parsing flag")
 	ErrTargetIsNotEmpty = errors.New("output directory is not empty, set --no-overwrite=false to overwrite it")
-	cmdEvent            analytics.Event   //nolint:gochecknoglobals // needed for cobra/viper compatibility.
-	TemplateCmd         = &cobra.Command{ //nolint:gochecknoglobals // needed for cobra/viper compatibility.
+)
+
+func NewTemplateCmd() *cobra.Command {
+	var cmdEvent analytics.Event
+
+	templateCmd := &cobra.Command{
 		Use:   "template",
 		Short: "Renders the distribution's infrastructure code from template files and a configuration file",
 		Long: `Generates a folder with the Terraform and Kustomization code for deploying the Kubernetes Fury Distribution into a cluster.
@@ -210,23 +214,20 @@ The generated folder will be created starting from a provided templates folder a
 			return nil
 		},
 	}
-)
 
-//nolint:gochecknoinits // this pattern requires init function to work.
-func init() {
-	TemplateCmd.Flags().Bool(
+	templateCmd.Flags().Bool(
 		"dry-run",
 		false,
 		"Furyctl will try its best to generate the manifests despite the errors",
 	)
 
-	TemplateCmd.Flags().Bool(
+	templateCmd.Flags().Bool(
 		"no-overwrite",
 		true,
 		"Stop if target directory is not empty",
 	)
 
-	TemplateCmd.Flags().StringP(
+	templateCmd.Flags().StringP(
 		"distro-location",
 		"",
 		"",
@@ -236,25 +237,27 @@ func init() {
 			"Any format supported by hashicorp/go-getter can be used.",
 	)
 
-	TemplateCmd.Flags().StringP(
+	templateCmd.Flags().StringP(
 		"config",
 		"c",
 		"furyctl.yaml",
 		"Path to the configuration file",
 	)
 
-	TemplateCmd.Flags().Bool(
+	templateCmd.Flags().Bool(
 		"skip-validation",
 		false,
 		"Skip validation of the configuration file",
 	)
 
-	TemplateCmd.Flags().String(
+	templateCmd.Flags().String(
 		"distro-patches",
 		"",
 		"Location where to download distribution's user-made patches from. "+
 			cmdutil.AnyGoGetterFormatStr,
 	)
+
+	return templateCmd
 }
 
 func getDumpTemplateCmdFlags() (TemplateCmdFlags, error) {

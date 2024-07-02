@@ -29,8 +29,12 @@ import (
 var (
 	ErrValidationFailed = errors.New("configuration file validation failed")
 	ErrParsingFlag      = errors.New("error while parsing flag")
-	cmdEvent            analytics.Event   //nolint:gochecknoglobals // needed for cobra/viper compatibility.
-	ConfigCmd           = &cobra.Command{ //nolint:gochecknoglobals // needed for cobra/viper compatibility.
+)
+
+func NewConfigCmd() *cobra.Command {
+	var cmdEvent analytics.Event
+
+	configCmd := &cobra.Command{
 		Use:   "config",
 		Short: "Validate configuration file",
 		PreRun: func(cmd *cobra.Command, _ []string) {
@@ -135,18 +139,15 @@ var (
 			return nil
 		},
 	}
-)
 
-//nolint:gochecknoinits // this pattern requires init function to work.
-func init() {
-	ConfigCmd.Flags().StringP(
+	configCmd.Flags().StringP(
 		"config",
 		"c",
 		"furyctl.yaml",
 		"Path to the configuration file",
 	)
 
-	ConfigCmd.Flags().StringP(
+	configCmd.Flags().StringP(
 		"distro-location",
 		"",
 		"",
@@ -156,10 +157,12 @@ func init() {
 			"Any format supported by hashicorp/go-getter can be used.",
 	)
 
-	ConfigCmd.Flags().String(
+	configCmd.Flags().String(
 		"distro-patches",
 		"",
 		"Location where to download distribution's user-made patches from. "+
 			cmdutil.AnyGoGetterFormatStr,
 	)
+
+	return configCmd
 }

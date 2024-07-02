@@ -10,23 +10,29 @@ import (
 	"github.com/sighupio/furyctl/cmd/create"
 )
 
-var (
-	createCmd = &cobra.Command{ //nolint:gochecknoglobals // needed for cobra/viper compatibility.
-		Use:   "create",
-		Short: "Create a cluster or a sample configuration file",
-	}
-	clusterCmd = &cobra.Command{ //nolint:gochecknoglobals // needed for cobra/viper compatibility.
+func NewClusterCmd() *cobra.Command {
+	applyCmd := NewApplyCmd()
+
+	clusterCmd := &cobra.Command{
 		Use:    "cluster",
 		Short:  "Apply the configuration to create or upgrade a battle-tested Kubernetes Fury cluster",
 		PreRun: applyCmd.PreRun,
 		RunE:   applyCmd.RunE,
 	}
-)
 
-//nolint:gochecknoinits // this pattern requires init function to work.
-func init() {
 	clusterCmd.Flags().AddFlagSet(applyCmd.Flags())
 
-	createCmd.AddCommand(clusterCmd)
-	createCmd.AddCommand(create.ConfigCmd)
+	return clusterCmd
+}
+
+func NewCreateCmd() *cobra.Command {
+	createCmd := &cobra.Command{
+		Use:   "create",
+		Short: "Create a cluster or a sample configuration file",
+	}
+
+	createCmd.AddCommand(NewClusterCmd())
+	createCmd.AddCommand(create.NewConfigCmd())
+
+	return createCmd
 }

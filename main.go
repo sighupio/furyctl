@@ -77,7 +77,7 @@ func exec() int {
 
 	defer wg.Wait()
 
-	if _, err := cmd.RootCmd.ExecuteC(); err != nil {
+	if _, err := cmd.NewRootCmd().ExecuteC(); err != nil {
 		log.Error(err)
 
 		return 1

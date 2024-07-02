@@ -33,8 +33,12 @@ var (
 	ErrProfileFlagRequired = errors.New("profile flag is required")
 	ErrRunningOpenVPN      = errors.New("cannot run openvpn")
 	ErrCannotGetHomeDir    = errors.New("cannot get current working directory")
-	cmdEvent               analytics.Event   //nolint:gochecknoglobals // needed for cobra/viper compatibility.
-	OpenvpnCmd             = &cobra.Command{ //nolint:gochecknoglobals // needed for cobra/viper compatibility.
+)
+
+func NewOpenVPNCmd() *cobra.Command {
+	var cmdEvent analytics.Event
+
+	openvpnCmd := &cobra.Command{
 		Use:   "openvpn",
 		Short: "Connect to OpenVPN with the specified profile name",
 		PreRun: func(cmd *cobra.Command, _ []string) {
@@ -110,23 +114,22 @@ var (
 			return nil
 		},
 	}
-)
 
-//nolint:gochecknoinits // this pattern requires init function to work.
-func init() {
-	OpenvpnCmd.Flags().StringP(
+	openvpnCmd.Flags().StringP(
 		"config",
 		"c",
 		"furyctl.yaml",
 		"Path to the configuration file",
 	)
 
-	OpenvpnCmd.Flags().StringP(
+	openvpnCmd.Flags().StringP(
 		"profile",
 		"p",
 		"",
 		"Name of to the OpenVPN profile",
 	)
+
+	return openvpnCmd
 }
 
 func getOpenVPNCmdFlags() OpenVPNCmdFlags {

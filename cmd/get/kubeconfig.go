@@ -30,8 +30,12 @@ import (
 var (
 	ErrParsingFlag                = errors.New("error while parsing flag")
 	ErrDownloadDependenciesFailed = errors.New("dependencies download failed")
-	cmdEvent                      analytics.Event   //nolint:gochecknoglobals // needed for cobra/viper compatibility.
-	KubeconfigCmd                 = &cobra.Command{ //nolint:gochecknoglobals // needed for cobra/viper compatibility.
+)
+
+func NewKubeconfigCmd() *cobra.Command {
+	var cmdEvent analytics.Event
+
+	kubeconfigCmd := &cobra.Command{
 		Use:   "kubeconfig",
 		Short: "Get kubeconfig from a cluster",
 		PreRun: func(cmd *cobra.Command, _ []string) {
@@ -183,25 +187,22 @@ var (
 			return nil
 		},
 	}
-)
 
-//nolint:gochecknoinits // this pattern requires init function to work.
-func init() {
-	KubeconfigCmd.Flags().StringP(
+	kubeconfigCmd.Flags().StringP(
 		"bin-path",
 		"b",
 		"",
 		"Path to the folder where all the dependencies' binaries are installed",
 	)
 
-	KubeconfigCmd.Flags().StringP(
+	kubeconfigCmd.Flags().StringP(
 		"config",
 		"c",
 		"furyctl.yaml",
 		"Path to the configuration file",
 	)
 
-	KubeconfigCmd.Flags().StringP(
+	kubeconfigCmd.Flags().StringP(
 		"distro-location",
 		"",
 		"",
@@ -211,15 +212,17 @@ func init() {
 			cmdutil.AnyGoGetterFormatStr,
 	)
 
-	KubeconfigCmd.Flags().Bool(
+	kubeconfigCmd.Flags().Bool(
 		"skip-deps-download",
 		false,
 		"Skip downloading the binaries",
 	)
 
-	KubeconfigCmd.Flags().Bool(
+	kubeconfigCmd.Flags().Bool(
 		"skip-deps-validation",
 		false,
 		"Skip validating dependencies",
 	)
+
+	return kubeconfigCmd
 }

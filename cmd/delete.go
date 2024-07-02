@@ -10,12 +10,13 @@ import (
 	del "github.com/sighupio/furyctl/cmd/delete"
 )
 
-var deleteCmd = &cobra.Command{ //nolint:gochecknoglobals // needed for cobra/viper compatibility.
-	Use:   "delete",
-	Short: "Delete a cluster and its related infrastructure",
-}
+func NewDeleteCmd() *cobra.Command {
+	deleteCmd := &cobra.Command{
+		Use:   "delete",
+		Short: "Delete a cluster and its related infrastructure",
+	}
 
-//nolint:gochecknoinits // this pattern requires init function to work.
-func init() {
-	deleteCmd.AddCommand(del.ClusterCmd)
+	deleteCmd.AddCommand(del.NewClusterCmd())
+
+	return deleteCmd
 }

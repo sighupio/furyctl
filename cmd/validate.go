@@ -10,13 +10,14 @@ import (
 	"github.com/sighupio/furyctl/cmd/validate"
 )
 
-var validateCmd = &cobra.Command{ //nolint:gochecknoglobals // needed for cobra/viper compatibility.
-	Use:   "validate",
-	Short: "Validate a configuration file and the dependencies relative to the Kubernetes Fury Distribution version specified in it",
-}
+func NewValidateCmd() *cobra.Command {
+	validateCmd := &cobra.Command{
+		Use:   "validate",
+		Short: "Validate a configuration file and the dependencies relative to the Kubernetes Fury Distribution version specified in it",
+	}
 
-//nolint:gochecknoinits // this pattern requires init function to work.
-func init() {
-	validateCmd.AddCommand(validate.ConfigCmd)
-	validateCmd.AddCommand(validate.DependenciesCmd)
+	validateCmd.AddCommand(validate.NewConfigCmd())
+	validateCmd.AddCommand(validate.NewDependenciesCmd())
+
+	return validateCmd
 }

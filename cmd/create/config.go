@@ -32,8 +32,12 @@ var (
 	ErrParsingFlag          = errors.New("error while parsing flag")
 	ErrMandatoryFlag        = errors.New("flag must be specified")
 	ErrConfigCreationFailed = errors.New("config creation failed")
-	cmdEvent                analytics.Event   //nolint:gochecknoglobals // needed for cobra/viper compatibility.
-	ConfigCmd               = &cobra.Command{ //nolint:gochecknoglobals // needed for cobra/viper compatibility.
+)
+
+func NewConfigCmd() *cobra.Command {
+	var cmdEvent analytics.Event
+
+	configCmd := &cobra.Command{
 		Use:   "config",
 		Short: "Scaffolds a new furyctl configuration file",
 		PreRun: func(cmd *cobra.Command, _ []string) {
@@ -198,18 +202,15 @@ var (
 			return nil
 		},
 	}
-)
 
-//nolint:gochecknoinits // this pattern requires init function to work.
-func init() {
-	ConfigCmd.Flags().StringP(
+	configCmd.Flags().StringP(
 		"config",
 		"c",
 		"furyctl.yaml",
 		"Path to the configuration file",
 	)
 
-	ConfigCmd.Flags().StringP(
+	configCmd.Flags().StringP(
 		"distro-location",
 		"",
 		"",
@@ -219,38 +220,40 @@ func init() {
 			"Any format supported by hashicorp/go-getter can be used.",
 	)
 
-	ConfigCmd.Flags().String(
+	configCmd.Flags().String(
 		"distro-patches",
 		"",
 		"Location where to download distribution's user-made patches from. "+
 			cmdutil.AnyGoGetterFormatStr,
 	)
 
-	ConfigCmd.Flags().StringP(
+	configCmd.Flags().StringP(
 		"version",
 		"v",
 		"",
 		"Kubernetes Fury Distribution version to use (eg: v1.24.1)",
 	)
 
-	ConfigCmd.Flags().StringP(
+	configCmd.Flags().StringP(
 		"kind",
 		"k",
 		"",
 		"Type of cluster to create (eg: EKSCluster, KFDDistribution, OnPremises)",
 	)
 
-	ConfigCmd.Flags().StringP(
+	configCmd.Flags().StringP(
 		"api-version",
 		"a",
 		"kfd.sighup.io/v1alpha2",
 		"Version of the API to use for the selected kind (eg: kfd.sighup.io/v1alpha2)",
 	)
 
-	ConfigCmd.Flags().StringP(
+	configCmd.Flags().StringP(
 		"name",
 		"n",
 		"example",
 		"Name of cluster to create",
 	)
+
+	return configCmd
 }

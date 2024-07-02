@@ -52,8 +52,12 @@ type ClusterCmdFlags struct {
 var (
 	ErrParsingFlag                = errors.New("error while parsing flag")
 	ErrDownloadDependenciesFailed = errors.New("dependencies download failed")
-	cmdEvent                      analytics.Event   //nolint:gochecknoglobals // needed for cobra/viper compatibility.
-	ClusterCmd                    = &cobra.Command{ //nolint:gochecknoglobals // needed for cobra/viper compatibility.
+)
+
+func NewClusterCmd() *cobra.Command {
+	var cmdEvent analytics.Event
+
+	clusterCmd := &cobra.Command{
 		Use:   "cluster",
 		Short: "Deletes a cluster",
 		PreRun: func(cmd *cobra.Command, _ []string) {
@@ -269,18 +273,15 @@ var (
 			return nil
 		},
 	}
-)
 
-//nolint:gochecknoinits // this pattern requires init function to work.
-func init() {
-	ClusterCmd.Flags().StringP(
+	clusterCmd.Flags().StringP(
 		"config",
 		"c",
 		"furyctl.yaml",
 		"Path to the configuration file",
 	)
 
-	ClusterCmd.Flags().StringP(
+	clusterCmd.Flags().StringP(
 		"distro-location",
 		"",
 		"",
@@ -290,63 +291,65 @@ func init() {
 			"Any format supported by hashicorp/go-getter can be used.",
 	)
 
-	ClusterCmd.Flags().String(
+	clusterCmd.Flags().String(
 		"distro-patches",
 		"",
 		"Location where to download distribution's user-made patches from. "+
 			cmdutil.AnyGoGetterFormatStr,
 	)
 
-	ClusterCmd.Flags().StringP(
+	clusterCmd.Flags().StringP(
 		"bin-path",
 		"b",
 		"",
 		"Path to the folder where all the dependencies' binaries are installed",
 	)
 
-	ClusterCmd.Flags().StringP(
+	clusterCmd.Flags().StringP(
 		"phase",
 		"p",
 		"",
 		"Limit execution to the specified phase. Options are: infrastructure, kubernetes, distribution",
 	)
 
-	ClusterCmd.Flags().Bool(
+	clusterCmd.Flags().Bool(
 		"dry-run",
 		false,
 		"when set furyctl won't delete any resources. Allows to inspect what resources will be deleted",
 	)
 
-	ClusterCmd.Flags().Bool(
+	clusterCmd.Flags().Bool(
 		"vpn-auto-connect",
 		false,
 		"When set will automatically connect to the created VPN by the infrastructure phase "+
 			"(requires OpenVPN installed in the system)",
 	)
 
-	ClusterCmd.Flags().Bool(
+	clusterCmd.Flags().Bool(
 		"skip-vpn-confirmation",
 		false,
 		"When set will not wait for user confirmation that the VPN is connected",
 	)
 
-	ClusterCmd.Flags().Bool(
+	clusterCmd.Flags().Bool(
 		"force",
 		false,
 		"WARNING: furyctl won't ask for confirmation and will force delete the cluster and its resources.",
 	)
 
-	ClusterCmd.Flags().Bool(
+	clusterCmd.Flags().Bool(
 		"skip-deps-download",
 		false,
 		"Skip downloading the distribution modules, installers and binaries",
 	)
 
-	ClusterCmd.Flags().Bool(
+	clusterCmd.Flags().Bool(
 		"skip-deps-validation",
 		false,
 		"Skip validating dependencies",
 	)
+
+	return clusterCmd
 }
 
 func getDeleteClusterCmdFlags() (ClusterCmdFlags, error) {

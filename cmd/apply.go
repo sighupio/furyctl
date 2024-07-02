@@ -63,10 +63,12 @@ type ClusterCmdFlags struct {
 	ClusterSkipsCmdFlags
 }
 
-var (
-	ErrDownloadDependenciesFailed = errors.New("dependencies download failed")
-	cmdEvent                      analytics.Event   //nolint:gochecknoglobals // needed for cobra/viper compatibility.
-	applyCmd                      = &cobra.Command{ //nolint:gochecknoglobals // needed for cobra/viper compatibility.
+var ErrDownloadDependenciesFailed = errors.New("dependencies download failed")
+
+func NewApplyCmd() *cobra.Command {
+	var cmdEvent analytics.Event
+
+	applyCmd := &cobra.Command{
 		Use:   "apply",
 		Short: "Apply the configuration to create or upgrade a battle-tested Kubernetes Fury cluster",
 		PreRun: func(cmd *cobra.Command, _ []string) {
@@ -260,11 +262,10 @@ var (
 			return nil
 		},
 	}
-)
 
-//nolint:gochecknoinits // this pattern requires init function to work.
-func init() {
-	setupCreateClusterCmdFlags()
+	setupCreateClusterCmdFlags(applyCmd)
+
+	return applyCmd
 }
 
 func getSkipsClusterCmdFlags() ClusterSkipsCmdFlags {
@@ -359,29 +360,29 @@ func getCreateClusterCmdFlags(cmd *cobra.Command, tracker *analytics.Tracker, cm
 	}, nil
 }
 
-func setupCreateClusterCmdFlags() {
-	applyCmd.Flags().StringP(
+func setupCreateClusterCmdFlags(cmd *cobra.Command) {
+	cmd.Flags().StringP(
 		"config",
 		"c",
 		"furyctl.yaml",
 		"Path to the configuration file",
 	)
 
-	applyCmd.Flags().StringP(
+	cmd.Flags().StringP(
 		"phase",
 		"p",
 		"",
 		"Limit the execution to a specific phase. Options are: infrastructure, kubernetes, distribution, plugins",
 	)
 
-	applyCmd.Flags().String(
+	cmd.Flags().String(
 		"start-from",
 		"",
 		"Start the execution from a specific phase. Options are: pre-infrastructure, infrastructure, post-infrastructure, pre-kubernetes, "+
 			"kubernetes, post-kubernetes, pre-distribution, distribution, post-distribution, plugins",
 	)
 
-	applyCmd.Flags().StringP(
+	cmd.Flags().StringP(
 		"distro-location",
 		"",
 		"",
@@ -391,7 +392,7 @@ func setupCreateClusterCmdFlags() {
 			cmdutil.AnyGoGetterFormatStr,
 	)
 
-	applyCmd.Flags().String(
+	cmd.Flags().String(
 		"distro-patches",
 		"",
 		"Location where the distribution's user-made patches can be downloaded from. "+
@@ -402,82 +403,82 @@ func setupCreateClusterCmdFlags() {
 			"must have the same structure as the distribution's repository.",
 	)
 
-	applyCmd.Flags().StringP(
+	cmd.Flags().StringP(
 		"bin-path",
 		"b",
 		"",
 		"Path to the folder where all the dependencies' binaries are installed",
 	)
 
-	applyCmd.Flags().Bool(
+	cmd.Flags().Bool(
 		"skip-nodes-upgrade",
 		false,
 		"On kind OnPremises this will skip the upgrade of the nodes",
 	)
 
-	applyCmd.Flags().Bool(
+	cmd.Flags().Bool(
 		"skip-deps-download",
 		false,
 		"Skip downloading the distribution modules, installers and binaries",
 	)
 
-	applyCmd.Flags().Bool(
+	cmd.Flags().Bool(
 		"skip-deps-validation",
 		false,
 		"Skip validating dependencies",
 	)
 
-	applyCmd.Flags().Bool(
+	cmd.Flags().Bool(
 		"dry-run",
 		false,
 		"Allows to inspect what resources will be created before applying them",
 	)
 
-	applyCmd.Flags().Bool(
+	cmd.Flags().Bool(
 		"vpn-auto-connect",
 		false,
 		"When set will automatically connect to the created VPN by the infrastructure phase "+
 			"(requires OpenVPN installed in the system)",
 	)
 
-	applyCmd.Flags().Bool(
+	cmd.Flags().Bool(
 		"skip-vpn-confirmation",
 		false,
 		"When set will not wait for user confirmation that the VPN is connected",
 	)
 
-	applyCmd.Flags().StringSlice(
+	cmd.Flags().StringSlice(
 		"force",
 		[]string{},
 		"WARNING: furyctl won't ask for confirmation and will proceed applying upgrades and reducers. Options are: all, upgrades, migrations, pods-running-check",
 	)
 
-	applyCmd.Flags().Int(
+	cmd.Flags().Int(
 		"timeout",
 		3600, //nolint:mnd,revive // ignore magic number linters
 		"Timeout for the whole cluster creation process, expressed in seconds",
 	)
 
-	applyCmd.Flags().Int(
+	cmd.Flags().Int(
 		"pod-running-check-timeout",
 		300, //nolint:mnd,revive // ignore magic number linters
 		"Timeout for the pod running check after the worker nodes upgrade, expressed in seconds",
 	)
 
-	applyCmd.Flags().Bool(
+	cmd.Flags().Bool(
 		"upgrade",
 		false,
 		"When set will run the upgrade scripts",
 	)
 
-	applyCmd.Flags().StringP(
+	cmd.Flags().StringP(
 		"upgrade-path-location",
 		"",
 		"",
 		"Location where the upgrade scripts are located, if not set the embedded ones will be used",
 	)
 
-	applyCmd.Flags().String(
+	cmd.Flags().String(
 		"upgrade-node",
 		"",
 		"On kind OnPremises this will upgrade a specific node",

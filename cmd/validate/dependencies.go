@@ -27,14 +27,16 @@ import (
 	netx "github.com/sighupio/furyctl/internal/x/net"
 )
 
-var (
-	ErrDependencies = errors.New("dependencies are not satisfied")
-	depCmdEvent     analytics.Event   //nolint:gochecknoglobals // needed for cobra/viper compatibility.
-	DependenciesCmd = &cobra.Command{ //nolint:gochecknoglobals // needed for cobra/viper compatibility.
+var ErrDependencies = errors.New("dependencies are not satisfied")
+
+func NewDependenciesCmd() *cobra.Command {
+	var cmdEvent analytics.Event
+
+	dependenciesCmd := &cobra.Command{
 		Use:   "dependencies",
 		Short: "Validate dependencies for the Kubernetes Fury Distribution version specified in the configuration file",
 		PreRun: func(cmd *cobra.Command, _ []string) {
-			depCmdEvent = analytics.NewCommandEvent(cobrax.GetFullname(cmd))
+			cmdEvent = analytics.NewCommandEvent(cobrax.GetFullname(cmd))
 
 			if err := viper.BindPFlags(cmd.Flags()); err != nil {
 				logrus.Fatalf("error while binding flags: %v", err)
@@ -59,8 +61,8 @@ var (
 
 			homeDir, err := os.UserHomeDir()
 			if err != nil {
-				depCmdEvent.AddErrorMessage(err)
-				tracker.Track(depCmdEvent)
+				cmdEvent.AddErrorMessage(err)
+				tracker.Track(cmdEvent)
 
 				return fmt.Errorf("error while getting user home directory: %w", err)
 			}
@@ -79,8 +81,8 @@ var (
 			if absDistroPatchesLocation != "" {
 				absDistroPatchesLocation, err = filepath.Abs(distroPatchesLocation)
 				if err != nil {
-					depCmdEvent.AddErrorMessage(err)
-					tracker.Track(depCmdEvent)
+					cmdEvent.AddErrorMessage(err)
+					tracker.Track(cmdEvent)
 
 					return fmt.Errorf("error while getting absolute path of distro patches location: %w", err)
 				}
@@ -100,8 +102,8 @@ var (
 
 			// Validate base requirements.
 			if err := depsvl.ValidateBaseReqs(); err != nil {
-				depCmdEvent.AddErrorMessage(err)
-				tracker.Track(depCmdEvent)
+				cmdEvent.AddErrorMessage(err)
+				tracker.Track(cmdEvent)
 
 				return fmt.Errorf("error while validating requirements: %w", err)
 			}
@@ -110,13 +112,13 @@ var (
 			logrus.Info("Downloading distribution...")
 			dres, err := distrodl.Download(distroLocation, furyctlPath)
 			if err != nil {
-				depCmdEvent.AddErrorMessage(err)
-				tracker.Track(depCmdEvent)
+				cmdEvent.AddErrorMessage(err)
+				tracker.Track(cmdEvent)
 
 				return fmt.Errorf("failed to download distribution: %w", err)
 			}
 
-			depCmdEvent.AddClusterDetails(analytics.ClusterDetails{
+			cmdEvent.AddClusterDetails(analytics.ClusterDetails{
 				Provider:   dres.MinimalConf.Kind,
 				KFDVersion: dres.DistroManifest.Version,
 			})
@@ -156,8 +158,8 @@ var (
 					logrus.Error(err)
 				}
 
-				depCmdEvent.AddErrorMessage(ErrDependencies)
-				tracker.Track(depCmdEvent)
+				cmdEvent.AddErrorMessage(ErrDependencies)
+				tracker.Track(cmdEvent)
 
 				logrus.Info(
 					"You can use the 'furyctl download dependencies' command to download most dependencies, " +
@@ -169,31 +171,28 @@ var (
 
 			logrus.Info("Dependencies validation succeeded")
 
-			depCmdEvent.AddSuccessMessage("Dependencies validation succeeded")
-			tracker.Track(depCmdEvent)
+			cmdEvent.AddSuccessMessage("Dependencies validation succeeded")
+			tracker.Track(cmdEvent)
 
 			return nil
 		},
 	}
-)
 
-//nolint:gochecknoinits // this pattern requires init function to work.
-func init() {
-	DependenciesCmd.Flags().StringP(
+	dependenciesCmd.Flags().StringP(
 		"bin-path",
 		"b",
 		"",
 		"Path to the folder where all the dependencies' binaries are installed",
 	)
 
-	DependenciesCmd.Flags().StringP(
+	dependenciesCmd.Flags().StringP(
 		"config",
 		"c",
 		"furyctl.yaml",
 		"Path to the configuration file",
 	)
 
-	DependenciesCmd.Flags().StringP(
+	dependenciesCmd.Flags().StringP(
 		"distro-location",
 		"",
 		"",
@@ -203,10 +202,12 @@ func init() {
 			"Any format supported by hashicorp/go-getter can be used.",
 	)
 
-	DependenciesCmd.Flags().String(
+	dependenciesCmd.Flags().String(
 		"distro-patches",
 		"",
 		"Location where to download distribution's user-made patches from. "+
 			cmdutil.AnyGoGetterFormatStr,
 	)
+
+	return dependenciesCmd
 }

@@ -42,13 +42,14 @@ type DiffCommandFlags struct {
 	DistroPatchesLocation string
 }
 
-var (
-	diffCmdEvent analytics.Event   //nolint:gochecknoglobals // needed for cobra/viper compatibility.
-	diffCmd      = &cobra.Command{ //nolint:gochecknoglobals // needed for cobra/viper compatibility.
+func NewDiffCmd() *cobra.Command {
+	var cmdEvent analytics.Event
+
+	diffCmd := &cobra.Command{
 		Use:   "diff",
 		Short: "Diff the current configuration with the one in the cluster",
 		PreRun: func(cmd *cobra.Command, _ []string) {
-			diffCmdEvent = analytics.NewCommandEvent(cobrax.GetFullname(cmd))
+			cmdEvent = analytics.NewCommandEvent(cobrax.GetFullname(cmd))
 
 			if err := viper.BindPFlags(cmd.Flags()); err != nil {
 				logrus.Fatalf("error while binding flags: %v", err)
@@ -72,8 +73,8 @@ var (
 
 			homeDir, err := os.UserHomeDir()
 			if err != nil {
-				diffCmdEvent.AddErrorMessage(err)
-				tracker.Track(diffCmdEvent)
+				cmdEvent.AddErrorMessage(err)
+				tracker.Track(cmdEvent)
 
 				return fmt.Errorf("error while getting user home directory: %w", err)
 			}
@@ -91,28 +92,26 @@ var (
 			if absDistroPatchesLocation != "" {
 				absDistroPatchesLocation, err = filepath.Abs(flags.DistroPatchesLocation)
 				if err != nil {
-					diffCmdEvent.AddErrorMessage(err)
-					tracker.Track(diffCmdEvent)
+					cmdEvent.AddErrorMessage(err)
+					tracker.Track(cmdEvent)
 
 					return fmt.Errorf("error while getting absolute path of distro patches location: %w", err)
 				}
 			}
 
-			var distrodl *distribution.Downloader
-
 			client := netx.NewGoGetterClient()
+
+			distrodl := distribution.NewDownloader(client, flags.GitProtocol, absDistroPatchesLocation)
 
 			if flags.DistroLocation == "" {
 				distrodl = distribution.NewCachingDownloader(client, outDir, flags.GitProtocol, absDistroPatchesLocation)
-			} else {
-				distrodl = distribution.NewDownloader(client, flags.GitProtocol, absDistroPatchesLocation)
 			}
 
 			logrus.Info("Downloading distribution...")
 			res, err := distrodl.Download(flags.DistroLocation, flags.FuryctlPath)
 			if err != nil {
-				diffCmdEvent.AddErrorMessage(err)
-				tracker.Track(diffCmdEvent)
+				cmdEvent.AddErrorMessage(err)
+				tracker.Track(cmdEvent)
 
 				return fmt.Errorf("error while downloading distribution: %w", err)
 			}
@@ -129,8 +128,8 @@ var (
 
 			diffChecker, err := createDiffChecker(stateStore, flags.FuryctlPath)
 			if err != nil {
-				diffCmdEvent.AddErrorMessage(err)
-				tracker.Track(diffCmdEvent)
+				cmdEvent.AddErrorMessage(err)
+				tracker.Track(cmdEvent)
 
 				return fmt.Errorf("error while creating diff checker: %w", err)
 			}
@@ -146,16 +145,16 @@ var (
 				flags.UpgradePathLocation,
 			)
 			if err != nil {
-				diffCmdEvent.AddErrorMessage(err)
-				tracker.Track(diffCmdEvent)
+				cmdEvent.AddErrorMessage(err)
+				tracker.Track(cmdEvent)
 
 				return fmt.Errorf("error while getting phase path: %w", err)
 			}
 
 			d, err := getDiffs(diffChecker, phasePath)
 			if err != nil {
-				diffCmdEvent.AddErrorMessage(err)
-				tracker.Track(diffCmdEvent)
+				cmdEvent.AddErrorMessage(err)
+				tracker.Track(cmdEvent)
 
 				return fmt.Errorf("error while getting diffs: %w", err)
 			}
@@ -169,16 +168,13 @@ var (
 				logrus.Info("No differences found from previous cluster configuration")
 			}
 
-			diffCmdEvent.AddSuccessMessage("diff command executed successfully")
-			tracker.Track(diffCmdEvent)
+			cmdEvent.AddSuccessMessage("diff command executed successfully")
+			tracker.Track(cmdEvent)
 
 			return nil
 		},
 	}
-)
 
-//nolint:gochecknoinits // this pattern requires init function to work.
-func init() {
 	diffCmd.Flags().StringP(
 		"config",
 		"c",
@@ -223,6 +219,8 @@ func init() {
 		"",
 		"Location where the upgrade scripts are located, if not set the embedded ones will be used",
 	)
+
+	return diffCmd
 }
 
 func getPhasePath(

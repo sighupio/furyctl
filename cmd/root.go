@@ -45,164 +45,163 @@ const (
 	spinnerStyle = 11
 )
 
-var RootCmd = &RootCommand{ //nolint:gochecknoglobals // needed for cobra/viper compatibility.
-	Command: &cobra.Command{
-		Use:   "furyctl",
-		Short: "The Swiss Army knife for the Kubernetes Fury Distribution",
-		Long: `The multi-purpose command line tool for the Kubernetes Fury Distribution.
+func NewRootCmd() *RootCommand {
+	rootCmd := &RootCommand{
+		Command: &cobra.Command{
+			Use:   "furyctl",
+			Short: "The Swiss Army knife for the Kubernetes Fury Distribution",
+			Long: `The multi-purpose command line tool for the Kubernetes Fury Distribution.
 
-furyctl is a command line interface tool to manage the full lifecycle of a Kubernetes Fury Cluster.
-`,
-		SilenceUsage:  true,
-		SilenceErrors: true,
-		PersistentPreRun: func(cmd *cobra.Command, _ []string) {
-			var err error
-			var logFile *os.File
-			defer logFile.Close()
+	furyctl is a command line interface tool to manage the full lifecycle of a Kubernetes Fury Cluster.
+	`,
+			SilenceUsage:  true,
+			SilenceErrors: true,
+			PersistentPreRun: func(cmd *cobra.Command, _ []string) {
+				var err error
+				var logFile *os.File
+				defer logFile.Close()
 
-			ctn := app.GetContainerInstance()
+				ctn := app.GetContainerInstance()
 
-			tracker := ctn.Tracker()
-			defer tracker.Flush()
+				tracker := ctn.Tracker()
+				defer tracker.Flush()
 
-			if cmd.Name() == "__complete" {
-				oldPreRunFunc := cmd.PreRun
+				if cmd.Name() == "__complete" {
+					oldPreRunFunc := cmd.PreRun
 
-				cmd.PreRun = func(cmd *cobra.Command, args []string) {
-					if oldPreRunFunc != nil {
-						oldPreRunFunc(cmd, args)
+					cmd.PreRun = func(cmd *cobra.Command, args []string) {
+						if oldPreRunFunc != nil {
+							oldPreRunFunc(cmd, args)
+						}
+
+						logrus.SetLevel(logrus.FatalLevel)
+					}
+				}
+
+				// Configure the spinner.
+				cflag := viper.GetBool("no-tty")
+
+				outDir := viper.GetString("outdir")
+
+				homeDir, err := os.UserHomeDir()
+				if err != nil {
+					logrus.Fatalf("error while getting user home directory: %v", err)
+				}
+
+				if outDir == "" {
+					outDir = homeDir
+				}
+
+				logPath := viper.GetString("log")
+				if logPath != "stdout" {
+					if logPath == "" {
+						rndNum, err := rand.Int(rand.Reader, big.NewInt(logRndCeil))
+						if err != nil {
+							logrus.Fatalf("%v", err)
+						}
+
+						logPath = filepath.Join(
+							outDir,
+							".furyctl",
+							fmt.Sprintf("furyctl.%d-%d.log", time.Now().Unix(), rndNum.Int64()),
+						)
 					}
 
-					logrus.SetLevel(logrus.FatalLevel)
-				}
-			}
-
-			// Configure the spinner.
-			cflag := viper.GetBool("no-tty")
-
-			outDir := viper.GetString("outdir")
-
-			homeDir, err := os.UserHomeDir()
-			if err != nil {
-				logrus.Fatalf("error while getting user home directory: %v", err)
-			}
-
-			if outDir == "" {
-				outDir = homeDir
-			}
-
-			logPath := viper.GetString("log")
-			if logPath != "stdout" {
-				if logPath == "" {
-					rndNum, err := rand.Int(rand.Reader, big.NewInt(logRndCeil))
+					logFile, err = createLogFile(logPath)
 					if err != nil {
 						logrus.Fatalf("%v", err)
 					}
 
-					logPath = filepath.Join(
-						outDir,
-						".furyctl",
-						fmt.Sprintf("furyctl.%d-%d.log", time.Now().Unix(), rndNum.Int64()),
-					)
+					execx.LogFile = logFile
 				}
 
-				logFile, err = createLogFile(logPath)
-				if err != nil {
-					logrus.Fatalf("%v", err)
+				// Set log level.
+				dflag := viper.GetBool("debug")
+				logrusx.InitLog(logFile, dflag, cflag)
+
+				logrus.Debugf("logging to: %s", logPath)
+
+				// Configure analytics.
+				aflag := viper.GetBool("disable-analytics")
+				if aflag {
+					tracker.Disable()
 				}
 
-				execx.LogFile = logFile
-			}
+				// Change working directory if it is specified.
+				if workdir := viper.GetString("workdir"); workdir != "" {
+					// Get absolute path of workdir.
+					absWorkdir, err := filepath.Abs(workdir)
+					if err != nil {
+						logrus.Fatalf("Error getting absolute path of workdir: %v", err)
+					}
 
-			// Set log level.
-			dflag := viper.GetBool("debug")
-			logrusx.InitLog(logFile, dflag, cflag)
+					if err := os.Chdir(absWorkdir); err != nil {
+						logrus.Fatalf("Could not change directory: %v", err)
+					}
 
-			logrus.Debugf("logging to: %s", logPath)
-
-			// Configure analytics.
-			aflag := viper.GetBool("disable-analytics")
-			if aflag {
-				tracker.Disable()
-			}
-
-			// Change working directory if it is specified.
-			if workdir := viper.GetString("workdir"); workdir != "" {
-				// Get absolute path of workdir.
-				absWorkdir, err := filepath.Abs(workdir)
-				if err != nil {
-					logrus.Fatalf("Error getting absolute path of workdir: %v", err)
+					logrus.Debugf("Changed working directory to %s", absWorkdir)
 				}
 
-				if err := os.Chdir(absWorkdir); err != nil {
-					logrus.Fatalf("Could not change directory: %v", err)
+				https := viper.GetBool("https")
+				if !https {
+					logrus.Warn("The --https flag is deprecated, if you want to use ssh protocol to download repositories use --git-protocol ssh")
 				}
-
-				logrus.Debugf("Changed working directory to %s", absWorkdir)
-			}
-
-			https := viper.GetBool("https")
-			if !https {
-				logrus.Warn("The --https flag is deprecated, if you want to use ssh protocol to download repositories use --git-protocol ssh")
-			}
+			},
 		},
-	},
-	config: &rootConfig{},
-}
+		config: &rootConfig{},
+	}
 
-//nolint:gochecknoinits // this pattern requires init function to work.
-func init() {
 	cobra.OnInitialize(initConfig)
 
-	RootCmd.PersistentFlags().BoolVarP(
-		&RootCmd.config.Debug,
+	rootCmd.PersistentFlags().BoolVarP(
+		&rootCmd.config.Debug,
 		"debug",
 		"D",
 		false,
 		"Enables furyctl debug output",
 	)
 
-	RootCmd.PersistentFlags().BoolVarP(
-		&RootCmd.config.DisableAnalytics,
+	rootCmd.PersistentFlags().BoolVarP(
+		&rootCmd.config.DisableAnalytics,
 		"disable-analytics",
 		"d",
 		false,
 		"Disable analytics",
 	)
 
-	RootCmd.PersistentFlags().BoolVarP(
-		&RootCmd.config.DisableTty,
+	rootCmd.PersistentFlags().BoolVarP(
+		&rootCmd.config.DisableTty,
 		"no-tty",
 		"T",
 		false,
 		"Disable TTY making furyctl's output more friendly to non-interactive shells by disabling animations and colors",
 	)
 
-	RootCmd.PersistentFlags().StringVarP(
-		&RootCmd.config.Workdir,
+	rootCmd.PersistentFlags().StringVarP(
+		&rootCmd.config.Workdir,
 		"workdir",
 		"w",
 		"",
 		"Switch to a different working directory before executing the given subcommand",
 	)
 
-	RootCmd.PersistentFlags().StringVarP(
-		&RootCmd.config.Outdir,
+	rootCmd.PersistentFlags().StringVarP(
+		&rootCmd.config.Outdir,
 		"outdir",
 		"o",
 		"",
 		"Switch to a different working directory before executing the given subcommand",
 	)
 
-	RootCmd.PersistentFlags().StringVarP(
-		&RootCmd.config.Log,
+	rootCmd.PersistentFlags().StringVarP(
+		&rootCmd.config.Log,
 		"log",
 		"l",
 		"",
 		"Path to the log file or set to 'stdout' to log to standard output (default: ~/.furyctl/furyctl.log)",
 	)
 
-	RootCmd.PersistentFlags().StringP(
+	rootCmd.PersistentFlags().StringP(
 		"git-protocol",
 		"g",
 		"https",
@@ -211,29 +210,31 @@ func init() {
 			"authentication while downloading, for example for private repositories",
 	)
 
-	RootCmd.PersistentFlags().BoolP(
+	rootCmd.PersistentFlags().BoolP(
 		"https",
 		"H",
 		true,
 		"DEPRECATED: by default furyctl uses https protocol to download repositories",
 	)
 
-	if err := viper.BindPFlags(RootCmd.PersistentFlags()); err != nil {
+	if err := viper.BindPFlags(rootCmd.PersistentFlags()); err != nil {
 		logrus.Fatalf("error while binding flags: %v", err)
 	}
 
-	RootCmd.AddCommand(applyCmd)
-	RootCmd.AddCommand(completionCmd)
-	RootCmd.AddCommand(connectCmd)
-	RootCmd.AddCommand(createCmd)
-	RootCmd.AddCommand(deleteCmd)
-	RootCmd.AddCommand(diffCmd)
-	RootCmd.AddCommand(downloadCmd)
-	RootCmd.AddCommand(dumpCmd)
-	RootCmd.AddCommand(getCmd)
-	RootCmd.AddCommand(legacyCmd)
-	RootCmd.AddCommand(validateCmd)
-	RootCmd.AddCommand(versionCmd)
+	rootCmd.AddCommand(NewApplyCmd())
+	rootCmd.AddCommand(NewCompletionCmd())
+	rootCmd.AddCommand(NewConnectCmd())
+	rootCmd.AddCommand(NewCreateCmd())
+	rootCmd.AddCommand(NewDeleteCmd())
+	rootCmd.AddCommand(NewDiffCmd())
+	rootCmd.AddCommand(NewDownloadCmd())
+	rootCmd.AddCommand(NewDumpCmd())
+	rootCmd.AddCommand(NewGetCmd())
+	rootCmd.AddCommand(NewLegacyCmd())
+	rootCmd.AddCommand(NewValidateCmd())
+	rootCmd.AddCommand(NewVersionCmd())
+
+	return rootCmd
 }
 
 func initConfig() {

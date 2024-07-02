@@ -14,13 +14,14 @@ import (
 	cobrax "github.com/sighupio/furyctl/internal/x/cobra"
 )
 
-var (
-	verCmdEvent analytics.Event   //nolint:gochecknoglobals // needed for cobra/viper compatibility.
-	versionCmd  = &cobra.Command{ //nolint:gochecknoglobals // needed for cobra/viper compatibility.
+func NewVersionCmd() *cobra.Command {
+	var cmdEvent analytics.Event
+
+	versionCmd := &cobra.Command{
 		Use:   "version",
 		Short: "Print the version number and build information of furyctl",
 		PreRun: func(cmd *cobra.Command, _ []string) {
-			verCmdEvent = analytics.NewCommandEvent(cobrax.GetFullname(cmd))
+			cmdEvent = analytics.NewCommandEvent(cobrax.GetFullname(cmd))
 		},
 		RunE: func(_ *cobra.Command, _ []string) error {
 			ctn := app.GetContainerInstance()
@@ -50,15 +51,12 @@ var (
 				return fmt.Errorf("error while printing version: %w", err)
 			}
 
-			verCmdEvent.AddSuccessMessage("version command executed successfully")
-			tracker.Track(verCmdEvent)
+			cmdEvent.AddSuccessMessage("version command executed successfully")
+			tracker.Track(cmdEvent)
 
 			return nil
 		},
 	}
-)
 
-//nolint:gochecknoinits // this pattern requires init function to work.
-func init() {
-	RootCmd.AddCommand(versionCmd)
+	return versionCmd
 }

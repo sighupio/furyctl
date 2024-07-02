@@ -10,12 +10,13 @@ import (
 	"github.com/sighupio/furyctl/cmd/get"
 )
 
-var getCmd = &cobra.Command{ //nolint:gochecknoglobals // needed for cobra/viper compatibility.
-	Use:   "get",
-	Short: "Get a resource (e.g. kubeconfig) from a cluster",
-}
+func NewGetCmd() *cobra.Command {
+	getCmd := &cobra.Command{
+		Use:   "get",
+		Short: "Get a resource (e.g. kubeconfig) from a cluster",
+	}
 
-//nolint:gochecknoinits // this pattern requires init function to work.
-func init() {
-	getCmd.AddCommand(get.KubeconfigCmd)
+	getCmd.AddCommand(get.NewKubeconfigCmd())
+
+	return getCmd
 }

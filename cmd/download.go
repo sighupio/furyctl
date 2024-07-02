@@ -10,12 +10,13 @@ import (
 	"github.com/sighupio/furyctl/cmd/download"
 )
 
-var downloadCmd = &cobra.Command{ //nolint:gochecknoglobals // needed for cobra/viper compatibility.
-	Use:   "download",
-	Short: "Download all dependencies for the Kubernetes Fury Distribution version specified in the configuration file",
-}
+func NewDownloadCmd() *cobra.Command {
+	downloadCmd := &cobra.Command{
+		Use:   "download",
+		Short: "Download all dependencies for the Kubernetes Fury Distribution version specified in the configuration file",
+	}
 
-//nolint:gochecknoinits // this pattern requires init function to work.
-func init() {
-	downloadCmd.AddCommand(download.DependenciesCmd)
+	downloadCmd.AddCommand(download.NewDependenciesCmd())
+
+	return downloadCmd
 }

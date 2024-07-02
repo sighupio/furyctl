@@ -31,8 +31,12 @@ var (
 	ErrParsingFuryFile = errors.New("error while parsing furyfile")
 	ErrParsingPackages = errors.New("error while parsing packages")
 	ErrDownloading     = errors.New("error while downloading")
-	cmdEvent           analytics.Event   //nolint:gochecknoglobals // needed for cobra/viper compatibility.
-	VendorCmd          = &cobra.Command{ //nolint:gochecknoglobals // needed for cobra/viper compatibility.
+)
+
+func NewVendorCmd() *cobra.Command {
+	var cmdEvent analytics.Event
+
+	vendorCmd := &cobra.Command{
 		Use:   "vendor",
 		Short: "Download the dependencies specified in the Furyfile.yml",
 		PreRun: func(cmd *cobra.Command, _ []string) {
@@ -98,18 +102,15 @@ var (
 			return nil
 		},
 	}
-)
 
-//nolint:gochecknoinits // this pattern requires init function to work.
-func init() {
-	VendorCmd.Flags().StringP(
+	vendorCmd.Flags().StringP(
 		"furyfile",
 		"F",
 		"Furyfile.yaml",
 		"Path to the Furyfile.yaml file",
 	)
 
-	VendorCmd.Flags().StringP(
+	vendorCmd.Flags().StringP(
 		"prefix",
 		"P",
 		"",
@@ -117,6 +118,8 @@ func init() {
 			"Example:\nfuryctl legacy vendor -P mon\nwill download all modules that start with 'mon', "+
 			"like 'monitoring', and ignore the rest",
 	)
+
+	return vendorCmd
 }
 
 func getLegacyVendorCmdFlags() VendorCmdFlags {
