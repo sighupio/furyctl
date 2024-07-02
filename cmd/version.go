@@ -30,23 +30,23 @@ var (
 
 			versions := ctn.Versions()
 
-			if _, err := fmt.Println("buildTime: ", versions.BuildTime); err != nil {
+			if _, err := fmt.Println("buildTime:", versions.BuildTime); err != nil {
 				return fmt.Errorf("error while printing buildTime: %w", err)
 			}
 
-			if _, err := fmt.Println("gitCommit: ", versions.GitCommit); err != nil {
+			if _, err := fmt.Println("gitCommit:", versions.GitCommit); err != nil {
 				return fmt.Errorf("error while printing gitCommit: %w", err)
 			}
 
-			if _, err := fmt.Println("goVersion: ", versions.GoVersion); err != nil {
+			if _, err := fmt.Println("goVersion:", versions.GoVersion); err != nil {
 				return fmt.Errorf("error while printing goVersion: %w", err)
 			}
 
-			if _, err := fmt.Println("osArch: ", versions.OSArch); err != nil {
+			if _, err := fmt.Println("osArch:", versions.OSArch); err != nil {
 				return fmt.Errorf("error while printing osArch: %w", err)
 			}
 
-			if _, err := fmt.Println("version: ", versions.Version); err != nil {
+			if _, err := fmt.Println("version:", versions.Version); err != nil {
 				return fmt.Errorf("error while printing version: %w", err)
 			}
 
