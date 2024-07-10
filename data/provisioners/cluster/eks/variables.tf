@@ -50,6 +50,7 @@ variable "node_pools" {
     os                    = optional(string)
     max_pods              = optional(number) # null to use default upstream configuration
     volume_size           = number
+    volume_type           = optional(string, "gp2")
     subnetworks           = list(string) # null to use default upstream configuration
     labels                = map(string)
     taints                = list(string)

@@ -201,6 +201,10 @@ func (e EKS) createVarFile() (err error) {
 			}
 			buffer.WriteString(fmt.Sprintf("volume_size = %v\n", np.VolumeSize))
 
+			if np.VolumeType != "" {
+				buffer.WriteString(fmt.Sprintf("volume_type = \"%v\"\n", np.VolumeType))
+			}
+
 			if len(np.AdditionalFirewallRules) > 0 {
 
 				buffer.WriteString("additional_firewall_rules = [\n")
