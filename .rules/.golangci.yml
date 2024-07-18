@@ -8,10 +8,8 @@
 # Options for analysis running.
 run:
   timeout: 5m
-  skip-files:
-    - ".*\\.gen\\.go$"
-    - "file_getter.go"
   modules-download-mode: readonly
+  go: "1.22"
 
 # output configuration options
 output:
@@ -30,17 +28,8 @@ linters:
     - wastedassign
     - ireturn # not working with generics https://github.com/butuzov/ireturn/issues/37
     - varnamelen # not useful
-    # deprecated
-    - deadcode
-    - exhaustivestruct
-    - golint
-    - nosnakecase
-    - structcheck
-    - ifshort
-    - interfacer
-    - maligned
-    - scopelint
-    - varcheck
+    - gomnd
+    - execinquery
     # unused
     - exhaustruct
     - forbidigo
@@ -88,7 +77,6 @@ linters-settings:
     capital: true
     period: true
   gofumpt:
-    lang-version: "1.22"
     extra-rules: true
   goimports:
     local-prefixes: github.com/sighupio
@@ -96,8 +84,6 @@ linters-settings:
     excludes:
       - G204
       - G101
-  govet:
-    check-shadowing: false
   grouper:
     const-require-single-const: true
     const-require-grouping: false
@@ -285,7 +271,7 @@ linters-settings:
         severity: warning
         disabled: false
       # https://github.com/mgechev/revive/blob/master/RULES_DESCRIPTIONS.md#imports-blacklist
-      - name: imports-blacklist
+      - name: imports-blocklist
         severity: warning
         disabled: false
         arguments:
@@ -433,8 +419,6 @@ linters-settings:
       - name: waitgroup-by-value
         severity: warning
         disabled: false
-  varcheck:
-    exported-fields: true
   varnamelen:
     check-receiver: true
     check-return: true
@@ -467,6 +451,10 @@ issues:
   #
   # Default: []
   exclude: []
+
+  exclude-files:
+    - ".*\\.gen\\.go$"
+    - "file_getter.go"
 
   # Excluding configuration per-path, per-linter, per-text and per-source
   exclude-rules:

@@ -12,9 +12,10 @@ import (
 
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 
 	"github.com/sighupio/furyctl/internal/analytics"
-	"github.com/sighupio/furyctl/internal/cmd/cmdutil"
+	"github.com/sighupio/furyctl/internal/app"
 	"github.com/sighupio/furyctl/internal/config"
 	"github.com/sighupio/furyctl/internal/dependencies"
 	"github.com/sighupio/furyctl/internal/distribution"
@@ -24,11 +25,6 @@ import (
 	execx "github.com/sighupio/furyctl/internal/x/exec"
 	netx "github.com/sighupio/furyctl/internal/x/net"
 	yamlx "github.com/sighupio/furyctl/internal/x/yaml"
-)
-
-var (
-	ErrParsingFlag      = errors.New("error while parsing flag")
-	ErrTargetIsNotEmpty = errors.New("output directory is not empty, set --no-overwrite=false to overwrite it")
 )
 
 type TemplateCmdFlags struct {
@@ -42,10 +38,15 @@ type TemplateCmdFlags struct {
 	DistroPatchesLocation string
 }
 
-func NewTemplateCmd(tracker *analytics.Tracker) *cobra.Command {
+var (
+	ErrParsingFlag      = errors.New("error while parsing flag")
+	ErrTargetIsNotEmpty = errors.New("output directory is not empty, set --no-overwrite=false to overwrite it")
+)
+
+func NewTemplateCmd() *cobra.Command {
 	var cmdEvent analytics.Event
 
-	cmd := &cobra.Command{
+	templateCmd := &cobra.Command{
 		Use:   "template",
 		Short: "Renders the distribution's infrastructure code from template files and a configuration file",
 		Long: `Generates a folder with the Terraform and Kustomization code for deploying the Kubernetes Fury Distribution into a cluster.
@@ -54,9 +55,18 @@ The generated folder will be created starting from a provided templates folder a
 		SilenceErrors: true,
 		PreRun: func(cmd *cobra.Command, _ []string) {
 			cmdEvent = analytics.NewCommandEvent(cobrax.GetFullname(cmd))
+
+			if err := viper.BindPFlags(cmd.Flags()); err != nil {
+				logrus.Fatalf("error while binding flags: %v", err)
+			}
 		},
-		RunE: func(cmd *cobra.Command, _ []string) error {
-			flags, err := getDumpTemplateCmdFlags(cmd, tracker, cmdEvent)
+		RunE: func(_ *cobra.Command, _ []string) error {
+			ctn := app.GetContainerInstance()
+
+			tracker := ctn.Tracker()
+			tracker.Flush()
+
+			flags, err := getDumpTemplateCmdFlags()
 			if err != nil {
 				return err
 			}
@@ -204,19 +214,19 @@ The generated folder will be created starting from a provided templates folder a
 		},
 	}
 
-	cmd.Flags().Bool(
+	templateCmd.Flags().Bool(
 		"dry-run",
 		false,
 		"Furyctl will try its best to generate the manifests despite the errors",
 	)
 
-	cmd.Flags().Bool(
+	templateCmd.Flags().Bool(
 		"no-overwrite",
 		true,
 		"Stop if target directory is not empty",
 	)
 
-	cmd.Flags().StringP(
+	templateCmd.Flags().StringP(
 		"distro-location",
 		"",
 		"",
@@ -226,83 +236,45 @@ The generated folder will be created starting from a provided templates folder a
 			"Any format supported by hashicorp/go-getter can be used.",
 	)
 
-	cmd.Flags().StringP(
+	templateCmd.Flags().StringP(
 		"config",
 		"c",
 		"furyctl.yaml",
 		"Path to the configuration file",
 	)
 
-	cmd.Flags().Bool(
+	templateCmd.Flags().Bool(
 		"skip-validation",
 		false,
 		"Skip validation of the configuration file",
 	)
 
-	cmd.Flags().String(
+	templateCmd.Flags().String(
 		"distro-patches",
 		"",
 		"Location where to download distribution's user-made patches from. "+
-			cmdutil.AnyGoGetterFormatStr,
+			"Any format supported by hashicorp/go-getter can be used.",
 	)
 
-	return cmd
+	return templateCmd
 }
 
-func getDumpTemplateCmdFlags(cmd *cobra.Command, tracker *analytics.Tracker, cmdEvent analytics.Event) (TemplateCmdFlags, error) {
-	dryRun, err := cmdutil.BoolFlag(cmd, "dry-run", tracker, cmdEvent)
-	if err != nil {
-		return TemplateCmdFlags{}, fmt.Errorf("%w: %s", ErrParsingFlag, "dry-run")
-	}
-
-	noOverwrite, err := cmdutil.BoolFlag(cmd, "no-overwrite", tracker, cmdEvent)
-	if err != nil {
-		return TemplateCmdFlags{}, fmt.Errorf("%w: %s", ErrParsingFlag, "no-overwrite")
-	}
-
-	skipValidation, err := cmdutil.BoolFlag(cmd, "skip-validation", tracker, cmdEvent)
-	if err != nil {
-		return TemplateCmdFlags{}, fmt.Errorf("%w: %s", ErrParsingFlag, "skip-validation")
-	}
-
-	outdir, err := cmdutil.StringFlag(cmd, "outdir", tracker, cmdEvent)
-	if err != nil {
-		return TemplateCmdFlags{}, fmt.Errorf("%w: %s", ErrParsingFlag, "outdir")
-	}
-
-	distroLocation, err := cmdutil.StringFlag(cmd, "distro-location", tracker, cmdEvent)
-	if err != nil {
-		return TemplateCmdFlags{}, fmt.Errorf("%w: %s", ErrParsingFlag, "distro-location")
-	}
-
-	furyctlPath, err := cmdutil.StringFlag(cmd, "config", tracker, cmdEvent)
-	if err != nil {
-		return TemplateCmdFlags{}, fmt.Errorf("%w: %s", ErrParsingFlag, "config")
-	}
-
-	gitProtocol, err := cmdutil.StringFlag(cmd, "git-protocol", tracker, cmdEvent)
-	if err != nil {
-		return TemplateCmdFlags{}, fmt.Errorf("%w: %s", ErrParsingFlag, "git-protocol")
-	}
+func getDumpTemplateCmdFlags() (TemplateCmdFlags, error) {
+	gitProtocol := viper.GetString("git-protocol")
 
 	typedGitProtocol, err := git.NewProtocol(gitProtocol)
 	if err != nil {
 		return TemplateCmdFlags{}, fmt.Errorf("%w: %w", ErrParsingFlag, err)
 	}
 
-	distroPatchesLocation, err := cmdutil.StringFlag(cmd, "distro-patches", tracker, cmdEvent)
-	if err != nil {
-		return TemplateCmdFlags{}, fmt.Errorf("%w: %s", ErrParsingFlag, "distro-patches")
-	}
-
 	return TemplateCmdFlags{
-		DryRun:                dryRun,
-		NoOverwrite:           noOverwrite,
-		SkipValidation:        skipValidation,
-		Outdir:                outdir,
-		DistroLocation:        distroLocation,
-		FuryctlPath:           furyctlPath,
+		DryRun:                viper.GetBool("dry-run"),
+		NoOverwrite:           viper.GetBool("no-overwrite"),
+		SkipValidation:        viper.GetBool("skip-validation"),
+		Outdir:                viper.GetString("outdir"),
+		DistroLocation:        viper.GetString("distro-location"),
+		FuryctlPath:           viper.GetString("config"),
 		GitProtocol:           typedGitProtocol,
-		DistroPatchesLocation: distroPatchesLocation,
+		DistroPatchesLocation: viper.GetString("distro-patches"),
 	}, nil
 }

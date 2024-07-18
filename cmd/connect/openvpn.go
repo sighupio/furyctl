@@ -12,20 +12,14 @@ import (
 
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 
 	"github.com/sighupio/fury-distribution/pkg/apis/config"
 	"github.com/sighupio/furyctl/internal/analytics"
-	"github.com/sighupio/furyctl/internal/cmd/cmdutil"
+	"github.com/sighupio/furyctl/internal/app"
 	cobrax "github.com/sighupio/furyctl/internal/x/cobra"
 	execx "github.com/sighupio/furyctl/internal/x/exec"
 	yamlx "github.com/sighupio/furyctl/internal/x/yaml"
-)
-
-var (
-	ErrParsingFlag         = errors.New("cannot parse command-line flag")
-	ErrProfileFlagRequired = errors.New("profile flag is required")
-	ErrRunningOpenVPN      = errors.New("cannot run openvpn")
-	ErrCannotGetHomeDir    = errors.New("cannot get current working directory")
 )
 
 type OpenVPNCmdFlags struct {
@@ -34,24 +28,37 @@ type OpenVPNCmdFlags struct {
 	Outdir      string
 }
 
-func NewOpenVPNCmd(tracker *analytics.Tracker) *cobra.Command {
+var (
+	ErrParsingFlag         = errors.New("cannot parse command-line flag")
+	ErrProfileFlagRequired = errors.New("profile flag is required")
+	ErrRunningOpenVPN      = errors.New("cannot run openvpn")
+	ErrCannotGetHomeDir    = errors.New("cannot get current working directory")
+)
+
+func NewOpenVPNCmd() *cobra.Command {
 	var cmdEvent analytics.Event
 
-	cmd := &cobra.Command{
+	openvpnCmd := &cobra.Command{
 		Use:   "openvpn",
 		Short: "Connect to OpenVPN with the specified profile name",
 		PreRun: func(cmd *cobra.Command, _ []string) {
 			cmdEvent = analytics.NewCommandEvent(cobrax.GetFullname(cmd))
+
+			if err := viper.BindPFlags(cmd.Flags()); err != nil {
+				logrus.Fatalf("error while binding flags: %v", err)
+			}
 		},
-		RunE: func(cmd *cobra.Command, _ []string) error {
+		RunE: func(_ *cobra.Command, _ []string) error {
+			ctn := app.GetContainerInstance()
+
+			tracker := ctn.Tracker()
+			tracker.Flush()
+
 			logrus.Info("Connecting to OpenVPN...")
 
 			// Parse flags.
 			logrus.Debug("Parsing VPN Flags...")
-			flags, err := getOpenVPNCmdFlags(cmd, tracker, cmdEvent)
-			if err != nil {
-				return err
-			}
+			flags := getOpenVPNCmdFlags()
 
 			if flags.Profile == "" {
 				return ErrProfileFlagRequired
@@ -108,46 +115,27 @@ func NewOpenVPNCmd(tracker *analytics.Tracker) *cobra.Command {
 		},
 	}
 
-	setupOpenVPNCmdFlags(cmd)
-
-	return cmd
-}
-
-func getOpenVPNCmdFlags(cmd *cobra.Command, tracker *analytics.Tracker, cmdEvent analytics.Event) (OpenVPNCmdFlags, error) {
-	furyctlPath, err := cmdutil.StringFlag(cmd, "config", tracker, cmdEvent)
-	if err != nil {
-		return OpenVPNCmdFlags{}, fmt.Errorf("%w: %s", ErrParsingFlag, "config")
-	}
-
-	profile, err := cmdutil.StringFlag(cmd, "profile", tracker, cmdEvent)
-	if err != nil {
-		return OpenVPNCmdFlags{}, fmt.Errorf("%w: %s", ErrParsingFlag, "profile")
-	}
-
-	outdir, err := cmdutil.StringFlag(cmd, "outdir", tracker, cmdEvent)
-	if err != nil {
-		return OpenVPNCmdFlags{}, fmt.Errorf("%w: %s", ErrParsingFlag, "outdir")
-	}
-
-	return OpenVPNCmdFlags{
-		Profile:     profile,
-		FuryctlPath: furyctlPath,
-		Outdir:      outdir,
-	}, nil
-}
-
-func setupOpenVPNCmdFlags(cmd *cobra.Command) {
-	cmd.Flags().StringP(
+	openvpnCmd.Flags().StringP(
 		"config",
 		"c",
 		"furyctl.yaml",
 		"Path to the configuration file",
 	)
 
-	cmd.Flags().StringP(
+	openvpnCmd.Flags().StringP(
 		"profile",
 		"p",
 		"",
 		"Name of to the OpenVPN profile",
 	)
+
+	return openvpnCmd
+}
+
+func getOpenVPNCmdFlags() OpenVPNCmdFlags {
+	return OpenVPNCmdFlags{
+		Profile:     viper.GetString("profile"),
+		FuryctlPath: viper.GetString("config"),
+		Outdir:      viper.GetString("outdir"),
+	}
 }

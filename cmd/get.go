@@ -8,16 +8,15 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/sighupio/furyctl/cmd/get"
-	"github.com/sighupio/furyctl/internal/analytics"
 )
 
-func NewGetCommand(tracker *analytics.Tracker) *cobra.Command {
+func NewGetCmd() *cobra.Command {
 	getCmd := &cobra.Command{
 		Use:   "get",
 		Short: "Get a resource (e.g. kubeconfig) from a cluster",
 	}
 
-	getCmd.AddCommand(get.NewKubeconfigCmd(tracker))
+	getCmd.AddCommand(get.NewKubeconfigCmd())
 
 	return getCmd
 }

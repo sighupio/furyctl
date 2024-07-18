@@ -13,6 +13,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/sighupio/furyctl/internal/analytics"
+	"github.com/sighupio/furyctl/internal/app"
 	cobrax "github.com/sighupio/furyctl/internal/x/cobra"
 )
 
@@ -23,10 +24,10 @@ var (
 	ErrPowershellCompletion = errors.New("error generating powershell completion")
 )
 
-func NewCompletionCommand(tracker *analytics.Tracker) *cobra.Command {
+func NewCompletionCmd() *cobra.Command {
 	var cmdEvent analytics.Event
 
-	return &cobra.Command{
+	completionCmd := &cobra.Command{
 		Use:   "completion [bash|zsh|fish|powershell]",
 		Short: "Generate completion script",
 		Long: `To load furyctl completions:
@@ -77,6 +78,11 @@ func NewCompletionCommand(tracker *analytics.Tracker) *cobra.Command {
 		},
 
 		RunE: func(cmd *cobra.Command, args []string) error {
+			ctn := app.GetContainerInstance()
+
+			tracker := ctn.Tracker()
+			defer tracker.Flush()
+
 			switch args[0] {
 			case "bash":
 				if err := cmd.Root().GenBashCompletion(os.Stdout); err != nil {
@@ -114,4 +120,6 @@ func NewCompletionCommand(tracker *analytics.Tracker) *cobra.Command {
 			return nil
 		},
 	}
+
+	return completionCmd
 }

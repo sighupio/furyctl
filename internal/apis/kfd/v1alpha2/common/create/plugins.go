@@ -20,6 +20,7 @@ import (
 	"github.com/sighupio/furyctl/internal/tool/helmfile"
 	"github.com/sighupio/furyctl/internal/tool/shell"
 	execx "github.com/sighupio/furyctl/internal/x/exec"
+	iox "github.com/sighupio/furyctl/internal/x/io"
 	yamlx "github.com/sighupio/furyctl/internal/x/yaml"
 )
 
@@ -112,7 +113,7 @@ func (p *Plugins) Exec() error {
 
 	logrus.Debugf("config path = %s", confPath)
 
-	if err = os.WriteFile(confPath, outYaml, os.ModePerm); err != nil {
+	if err = os.WriteFile(confPath, outYaml, iox.FullRWPermAccess); err != nil {
 		return fmt.Errorf("error writing config file: %w", err)
 	}
 

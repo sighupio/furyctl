@@ -12,10 +12,11 @@ import (
 
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 
 	distroconf "github.com/sighupio/fury-distribution/pkg/apis/config"
 	"github.com/sighupio/furyctl/internal/analytics"
-	"github.com/sighupio/furyctl/internal/cmd/cmdutil"
+	"github.com/sighupio/furyctl/internal/app"
 	"github.com/sighupio/furyctl/internal/config"
 	"github.com/sighupio/furyctl/internal/dependencies"
 	"github.com/sighupio/furyctl/internal/distribution"
@@ -29,80 +30,54 @@ import (
 var (
 	ErrParsingFlag          = errors.New("error while parsing flag")
 	ErrMandatoryFlag        = errors.New("flag must be specified")
-	ErrConfigCreationFailed = fmt.Errorf("config creation failed")
+	ErrConfigCreationFailed = errors.New("config creation failed")
 )
 
-func NewConfigCommand(tracker *analytics.Tracker) *cobra.Command {
+func NewConfigCmd() *cobra.Command {
 	var cmdEvent analytics.Event
 
-	cmd := &cobra.Command{
+	configCmd := &cobra.Command{
 		Use:   "config",
 		Short: "Scaffolds a new furyctl configuration file",
 		PreRun: func(cmd *cobra.Command, _ []string) {
 			cmdEvent = analytics.NewCommandEvent(cobrax.GetFullname(cmd))
+
+			if err := viper.BindPFlags(cmd.Flags()); err != nil {
+				logrus.Fatalf("error while binding flags: %v", err)
+			}
 		},
-		RunE: func(cmd *cobra.Command, _ []string) error {
+		RunE: func(_ *cobra.Command, _ []string) error {
+			ctn := app.GetContainerInstance()
+
+			tracker := ctn.Tracker()
+			defer tracker.Flush()
+
 			// Get flags.
-			debug, err := cmdutil.BoolFlag(cmd, "debug", tracker, cmdEvent)
-			if err != nil {
-				return fmt.Errorf("%w: %s", ErrParsingFlag, "debug")
-			}
+			debug := viper.GetBool("debug")
+			furyctlPath := viper.GetString("config")
+			distroLocation := viper.GetString("distro-location")
+			apiVersion := viper.GetString("api-version")
+			name := viper.GetString("name")
+			distroPatchesLocation := viper.GetString("distro-patches")
+			outDir := viper.GetString("outdir")
 
-			furyctlPath, err := cmdutil.StringFlag(cmd, "config", tracker, cmdEvent)
-			if err != nil {
-				return fmt.Errorf("%w: config", ErrParsingFlag)
-			}
-
-			distroLocation, err := cmdutil.StringFlag(cmd, "distro-location", tracker, cmdEvent)
-			if err != nil {
-				return fmt.Errorf("%w: %s", ErrParsingFlag, "distro-location")
-			}
-
-			version, err := cmdutil.StringFlag(cmd, "version", tracker, cmdEvent)
-			if err != nil {
-				return fmt.Errorf("%w: version", ErrParsingFlag)
-			}
+			version := viper.GetString("version")
 
 			if version == "" {
 				return fmt.Errorf("%w: version", ErrMandatoryFlag)
 			}
 
-			kind, err := cmdutil.StringFlag(cmd, "kind", tracker, cmdEvent)
-			if err != nil {
-				return fmt.Errorf("%w: kind", ErrParsingFlag)
-			}
+			kind := viper.GetString("kind")
+
 			if kind == "" {
 				return fmt.Errorf("%w: kind", ErrMandatoryFlag)
 			}
 
-			apiVersion, err := cmdutil.StringFlag(cmd, "api-version", tracker, cmdEvent)
-			if err != nil {
-				return fmt.Errorf("%w: api-version", ErrParsingFlag)
-			}
-
-			name, err := cmdutil.StringFlag(cmd, "name", tracker, cmdEvent)
-			if err != nil {
-				return fmt.Errorf("%w: name", ErrParsingFlag)
-			}
-
-			gitProtocol, err := cmdutil.StringFlag(cmd, "git-protocol", tracker, cmdEvent)
-			if err != nil {
-				return fmt.Errorf("%w: git-protocol", ErrParsingFlag)
-			}
+			gitProtocol := viper.GetString("git-protocol")
 
 			typedGitProtocol, err := git.NewProtocol(gitProtocol)
 			if err != nil {
 				return fmt.Errorf("%w: %w", ErrParsingFlag, err)
-			}
-
-			distroPatchesLocation, err := cmdutil.StringFlag(cmd, "distro-patches", tracker, cmdEvent)
-			if err != nil {
-				return fmt.Errorf("%w: %s", ErrParsingFlag, "distro-patches")
-			}
-
-			outDir, err := cmdutil.StringFlag(cmd, "outdir", tracker, cmdEvent)
-			if err != nil {
-				return fmt.Errorf("%w: outdir", ErrParsingFlag)
 			}
 
 			homeDir, err := os.UserHomeDir()
@@ -220,21 +195,21 @@ func NewConfigCommand(tracker *analytics.Tracker) *cobra.Command {
 
 			logrus.Infof("Configuration file created successfully at: %s", out.Name())
 
-			cmdEvent.AddSuccessMessage(fmt.Sprintf("Configuration file created successfully at: %s", out.Name()))
+			cmdEvent.AddSuccessMessage("Configuration file created successfully at:" + out.Name())
 			tracker.Track(cmdEvent)
 
 			return nil
 		},
 	}
 
-	cmd.Flags().StringP(
+	configCmd.Flags().StringP(
 		"config",
 		"c",
 		"furyctl.yaml",
 		"Path to the configuration file",
 	)
 
-	cmd.Flags().StringP(
+	configCmd.Flags().StringP(
 		"distro-location",
 		"",
 		"",
@@ -244,40 +219,40 @@ func NewConfigCommand(tracker *analytics.Tracker) *cobra.Command {
 			"Any format supported by hashicorp/go-getter can be used.",
 	)
 
-	cmd.Flags().String(
+	configCmd.Flags().String(
 		"distro-patches",
 		"",
 		"Location where to download distribution's user-made patches from. "+
-			cmdutil.AnyGoGetterFormatStr,
+			"Any format supported by hashicorp/go-getter can be used.",
 	)
 
-	cmd.Flags().StringP(
+	configCmd.Flags().StringP(
 		"version",
 		"v",
 		"",
 		"Kubernetes Fury Distribution version to use (eg: v1.24.1)",
 	)
 
-	cmd.Flags().StringP(
+	configCmd.Flags().StringP(
 		"kind",
 		"k",
 		"",
 		"Type of cluster to create (eg: EKSCluster, KFDDistribution, OnPremises)",
 	)
 
-	cmd.Flags().StringP(
+	configCmd.Flags().StringP(
 		"api-version",
 		"a",
 		"kfd.sighup.io/v1alpha2",
 		"Version of the API to use for the selected kind (eg: kfd.sighup.io/v1alpha2)",
 	)
 
-	cmd.Flags().StringP(
+	configCmd.Flags().StringP(
 		"name",
 		"n",
 		"example",
 		"Name of cluster to create",
 	)
 
-	return cmd
+	return configCmd
 }

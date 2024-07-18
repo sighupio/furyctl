@@ -10,6 +10,7 @@ import (
 	"math/big"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/briandowns/spinner"
@@ -17,8 +18,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
-	"github.com/sighupio/furyctl/internal/analytics"
-	cobrax "github.com/sighupio/furyctl/internal/x/cobra"
+	"github.com/sighupio/furyctl/internal/app"
 	execx "github.com/sighupio/furyctl/internal/x/exec"
 	iox "github.com/sighupio/furyctl/internal/x/io"
 	logrusx "github.com/sighupio/furyctl/internal/x/logrus"
@@ -45,25 +45,26 @@ const (
 	spinnerStyle = 11
 )
 
-func NewRootCommand(
-	versions map[string]string,
-	logFile *os.File,
-	tracker *analytics.Tracker,
-	token string,
-) *RootCommand {
-	cfg := &rootConfig{}
+func NewRootCmd() *RootCommand {
 	rootCmd := &RootCommand{
 		Command: &cobra.Command{
 			Use:   "furyctl",
 			Short: "The Swiss Army knife for the Kubernetes Fury Distribution",
 			Long: `The multi-purpose command line tool for the Kubernetes Fury Distribution.
 
-furyctl is a command line interface tool to manage the full lifecycle of a Kubernetes Fury Cluster.
-`,
+	furyctl is a command line interface tool to manage the full lifecycle of a Kubernetes Fury Cluster.
+	`,
 			SilenceUsage:  true,
 			SilenceErrors: true,
 			PersistentPreRun: func(cmd *cobra.Command, _ []string) {
 				var err error
+				var logFile *os.File
+				defer logFile.Close()
+
+				ctn := app.GetContainerInstance()
+
+				tracker := ctn.Tracker()
+				defer tracker.Flush()
 
 				if cmd.Name() == "__complete" {
 					oldPreRunFunc := cmd.PreRun
@@ -78,13 +79,9 @@ furyctl is a command line interface tool to manage the full lifecycle of a Kuber
 				}
 
 				// Configure the spinner.
-				w := logrus.StandardLogger().Out
+				cflag := viper.GetBool("no-tty")
 
-				cflag := cobrax.Flag[bool](cmd, "no-tty")
-
-				cfg.Spinner = spinner.New(spinner.CharSets[spinnerStyle], timeout, spinner.WithWriter(w))
-
-				outDir := cobrax.Flag[string](cmd, "outdir")
+				outDir := viper.GetString("outdir")
 
 				homeDir, err := os.UserHomeDir()
 				if err != nil {
@@ -95,7 +92,7 @@ furyctl is a command line interface tool to manage the full lifecycle of a Kuber
 					outDir = homeDir
 				}
 
-				logPath := cobrax.Flag[string](cmd, "log")
+				logPath := viper.GetString("log")
 				if logPath != "stdout" {
 					if logPath == "" {
 						rndNum, err := rand.Int(rand.Reader, big.NewInt(logRndCeil))
@@ -119,19 +116,19 @@ furyctl is a command line interface tool to manage the full lifecycle of a Kuber
 				}
 
 				// Set log level.
-				dflag := cobrax.Flag[bool](cmd, "debug")
+				dflag := viper.GetBool("debug")
 				logrusx.InitLog(logFile, dflag, cflag)
 
 				logrus.Debugf("logging to: %s", logPath)
 
 				// Configure analytics.
-				aflag := cobrax.Flag[bool](cmd, "disable-analytics")
+				aflag := viper.GetBool("disable-analytics")
 				if aflag {
 					tracker.Disable()
 				}
 
 				// Change working directory if it is specified.
-				if workdir := cobrax.Flag[string](cmd, "workdir"); workdir != "" {
+				if workdir := viper.GetString("workdir"); workdir != "" {
 					// Get absolute path of workdir.
 					absWorkdir, err := filepath.Abs(workdir)
 					if err != nil {
@@ -145,21 +142,16 @@ furyctl is a command line interface tool to manage the full lifecycle of a Kuber
 					logrus.Debugf("Changed working directory to %s", absWorkdir)
 				}
 
-				if token == "" {
-					logrus.Trace("FURYCTL_MIXPANEL_TOKEN is not set")
-				}
-
-				https := cobrax.Flag[bool](cmd, "https")
+				https := viper.GetBool("https")
 				if !https {
 					logrus.Warn("The --https flag is deprecated, if you want to use ssh protocol to download repositories use --git-protocol ssh")
 				}
 			},
 		},
-		config: cfg,
+		config: &rootConfig{},
 	}
 
-	viper.AutomaticEnv()
-	viper.SetEnvPrefix("furyctl")
+	cobra.OnInitialize(initConfig)
 
 	rootCmd.PersistentFlags().BoolVarP(
 		&rootCmd.config.Debug,
@@ -168,6 +160,7 @@ furyctl is a command line interface tool to manage the full lifecycle of a Kuber
 		false,
 		"Enables furyctl debug output",
 	)
+
 	rootCmd.PersistentFlags().BoolVarP(
 		&rootCmd.config.DisableAnalytics,
 		"disable-analytics",
@@ -175,6 +168,7 @@ furyctl is a command line interface tool to manage the full lifecycle of a Kuber
 		false,
 		"Disable analytics",
 	)
+
 	rootCmd.PersistentFlags().BoolVarP(
 		&rootCmd.config.DisableTty,
 		"no-tty",
@@ -182,6 +176,7 @@ furyctl is a command line interface tool to manage the full lifecycle of a Kuber
 		false,
 		"Disable TTY making furyctl's output more friendly to non-interactive shells by disabling animations and colors",
 	)
+
 	rootCmd.PersistentFlags().StringVarP(
 		&rootCmd.config.Workdir,
 		"workdir",
@@ -189,6 +184,7 @@ furyctl is a command line interface tool to manage the full lifecycle of a Kuber
 		"",
 		"Switch to a different working directory before executing the given subcommand",
 	)
+
 	rootCmd.PersistentFlags().StringVarP(
 		&rootCmd.config.Outdir,
 		"outdir",
@@ -196,6 +192,7 @@ furyctl is a command line interface tool to manage the full lifecycle of a Kuber
 		"",
 		"Switch to a different working directory before executing the given subcommand",
 	)
+
 	rootCmd.PersistentFlags().StringVarP(
 		&rootCmd.config.Log,
 		"log",
@@ -220,20 +217,32 @@ furyctl is a command line interface tool to manage the full lifecycle of a Kuber
 		"DEPRECATED: by default furyctl uses https protocol to download repositories",
 	)
 
-	rootCmd.AddCommand(NewCompletionCommand(tracker))
-	rootCmd.AddCommand(NewCreateCommand(tracker))
-	rootCmd.AddCommand(NewDownloadCommand(tracker))
-	rootCmd.AddCommand(NewDumpCommand(tracker))
-	rootCmd.AddCommand(NewValidateCommand(tracker))
-	rootCmd.AddCommand(NewVersionCmd(versions, tracker))
-	rootCmd.AddCommand(NewDeleteCommand(tracker))
-	rootCmd.AddCommand(NewLegacyCommand(tracker))
-	rootCmd.AddCommand(NewConnectCommand(tracker))
-	rootCmd.AddCommand(NewApplyCommand(tracker))
-	rootCmd.AddCommand(NewDiffCommand(tracker))
-	rootCmd.AddCommand(NewGetCommand(tracker))
+	if err := viper.BindPFlags(rootCmd.PersistentFlags()); err != nil {
+		logrus.Fatalf("error while binding flags: %v", err)
+	}
+
+	rootCmd.AddCommand(NewApplyCmd())
+	rootCmd.AddCommand(NewCompletionCmd())
+	rootCmd.AddCommand(NewConnectCmd())
+	rootCmd.AddCommand(NewCreateCmd())
+	rootCmd.AddCommand(NewDeleteCmd())
+	rootCmd.AddCommand(NewDiffCmd())
+	rootCmd.AddCommand(NewDownloadCmd())
+	rootCmd.AddCommand(NewDumpCmd())
+	rootCmd.AddCommand(NewGetCmd())
+	rootCmd.AddCommand(NewLegacyCmd())
+	rootCmd.AddCommand(NewValidateCmd())
+	rootCmd.AddCommand(NewVersionCmd())
 
 	return rootCmd
+}
+
+func initConfig() {
+	viper.SetEnvPrefix("FURYCTL")
+
+	viper.SetEnvKeyReplacer(strings.NewReplacer("-", "_"))
+
+	viper.AutomaticEnv()
 }
 
 func createLogFile(path string) (*os.File, error) {

@@ -20,7 +20,7 @@ func NewGit(runner *git.Runner, version string) *Git {
 		os:      runtime.GOOS,
 		version: version,
 		checker: &checker{
-			regex:  regexp.MustCompile(fmt.Sprintf("git version %s", semver.Regex)),
+			regex:  regexp.MustCompile("git version " + semver.Regex),
 			runner: runner,
 			splitFn: func(version string) []string {
 				return strings.Split(version, " ")

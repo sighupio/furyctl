@@ -57,7 +57,7 @@ func (r *Runner) ConfigOpenvpnClient(name string, params ...string) (*bytes.Buff
 	args := []string{
 		"configure",
 		"openvpn-client",
-		fmt.Sprintf("--client-name=%s", name),
+		"--client-name=" + name,
 		"--config=furyagent.yml",
 	}
 

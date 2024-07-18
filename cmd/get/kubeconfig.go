@@ -12,10 +12,11 @@ import (
 
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 
 	"github.com/sighupio/furyctl/internal/analytics"
+	"github.com/sighupio/furyctl/internal/app"
 	"github.com/sighupio/furyctl/internal/cluster"
-	"github.com/sighupio/furyctl/internal/cmd/cmdutil"
 	"github.com/sighupio/furyctl/internal/config"
 	"github.com/sighupio/furyctl/internal/dependencies"
 	"github.com/sighupio/furyctl/internal/distribution"
@@ -30,53 +31,34 @@ var (
 	ErrDownloadDependenciesFailed = errors.New("dependencies download failed")
 )
 
-func NewKubeconfigCmd(tracker *analytics.Tracker) *cobra.Command {
+func NewKubeconfigCmd() *cobra.Command {
 	var cmdEvent analytics.Event
 
-	cmd := &cobra.Command{
+	kubeconfigCmd := &cobra.Command{
 		Use:   "kubeconfig",
 		Short: "Get kubeconfig from a cluster",
 		PreRun: func(cmd *cobra.Command, _ []string) {
 			cmdEvent = analytics.NewCommandEvent(cobrax.GetFullname(cmd))
+
+			if err := viper.BindPFlags(cmd.Flags()); err != nil {
+				logrus.Fatalf("error while binding flags: %v", err)
+			}
 		},
-		RunE: func(cmd *cobra.Command, _ []string) error {
+		RunE: func(_ *cobra.Command, _ []string) error {
+			ctn := app.GetContainerInstance()
+
+			tracker := ctn.Tracker()
+			tracker.Flush()
+
 			// Get flags.
-			debug, err := cmdutil.BoolFlag(cmd, "debug", tracker, cmdEvent)
-			if err != nil {
-				return fmt.Errorf("%w: debug", ErrParsingFlag)
-			}
-
-			binPath := cmdutil.StringFlagOptional(cmd, "bin-path")
-
-			furyctlPath, err := cmdutil.StringFlag(cmd, "config", tracker, cmdEvent)
-			if err != nil {
-				return fmt.Errorf("%w: config", ErrParsingFlag)
-			}
-
-			outDir, err := cmdutil.StringFlag(cmd, "outdir", tracker, cmdEvent)
-			if err != nil {
-				return fmt.Errorf("%w: outdir", ErrParsingFlag)
-			}
-
-			distroLocation, err := cmdutil.StringFlag(cmd, "distro-location", tracker, cmdEvent)
-			if err != nil {
-				return fmt.Errorf("%w: distro-location", ErrParsingFlag)
-			}
-
-			gitProtocol, err := cmdutil.StringFlag(cmd, "git-protocol", tracker, cmdEvent)
-			if err != nil {
-				return fmt.Errorf("%w: git-protocol", ErrParsingFlag)
-			}
-
-			skipDepsDownload, err := cmdutil.BoolFlag(cmd, "skip-deps-download", tracker, cmdEvent)
-			if err != nil {
-				return fmt.Errorf("%w: skip-deps-download", ErrParsingFlag)
-			}
-
-			skipDepsValidation, err := cmdutil.BoolFlag(cmd, "skip-deps-validation", tracker, cmdEvent)
-			if err != nil {
-				return fmt.Errorf("%w: skip-deps-validation", ErrParsingFlag)
-			}
+			debug := viper.GetBool("debug")
+			binPath := viper.GetString("bin-path")
+			furyctlPath := viper.GetString("config")
+			outDir := viper.GetString("outdir")
+			distroLocation := viper.GetString("distro-location")
+			gitProtocol := viper.GetString("git-protocol")
+			skipDepsDownload := viper.GetBool("skip-deps-download")
+			skipDepsValidation := viper.GetBool("skip-deps-validation")
 
 			// Get Current dir.
 			logrus.Debug("Getting current directory path...")
@@ -205,41 +187,41 @@ func NewKubeconfigCmd(tracker *analytics.Tracker) *cobra.Command {
 		},
 	}
 
-	cmd.Flags().StringP(
+	kubeconfigCmd.Flags().StringP(
 		"bin-path",
 		"b",
 		"",
 		"Path to the folder where all the dependencies' binaries are installed",
 	)
 
-	cmd.Flags().StringP(
+	kubeconfigCmd.Flags().StringP(
 		"config",
 		"c",
 		"furyctl.yaml",
 		"Path to the configuration file",
 	)
 
-	cmd.Flags().StringP(
+	kubeconfigCmd.Flags().StringP(
 		"distro-location",
 		"",
 		"",
 		"Location where to download schemas, defaults and the distribution manifests from. "+
 			"It can either be a local path (eg: /path/to/fury/distribution) or "+
 			"a remote URL (eg: git::git@github.com:sighupio/fury-distribution?depth=1&ref=BRANCH_NAME). "+
-			cmdutil.AnyGoGetterFormatStr,
+			"Any format supported by hashicorp/go-getter can be used.",
 	)
 
-	cmd.Flags().Bool(
+	kubeconfigCmd.Flags().Bool(
 		"skip-deps-download",
 		false,
 		"Skip downloading the binaries",
 	)
 
-	cmd.Flags().Bool(
+	kubeconfigCmd.Flags().Bool(
 		"skip-deps-validation",
 		false,
 		"Skip validating dependencies",
 	)
 
-	return cmd
+	return kubeconfigCmd
 }

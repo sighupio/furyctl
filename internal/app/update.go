@@ -7,6 +7,7 @@ package app
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"time"
@@ -27,7 +28,7 @@ const (
 	timeout      = 5 * time.Second
 )
 
-var ErrCannotCheckNewRelease = fmt.Errorf("cannot check for new release")
+var ErrCannotCheckNewRelease = errors.New("cannot check for new release")
 
 // CheckNewRelease checks if there is a new release available.
 func CheckNewRelease(bv string) (string, error) {

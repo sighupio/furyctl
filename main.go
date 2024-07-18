@@ -23,7 +23,6 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/sighupio/furyctl/cmd"
-	"github.com/sighupio/furyctl/internal/analytics"
 	"github.com/sighupio/furyctl/internal/app"
 )
 
@@ -46,14 +45,6 @@ func exec() int {
 
 	go checkNewRelease(wg, version)
 
-	versions := map[string]string{
-		"version":   version,
-		"gitCommit": gitCommit,
-		"buildTime": buildTime,
-		"goVersion": goVersion,
-		"osArch":    osArch,
-	}
-
 	log := &logrus.Logger{
 		Out: os.Stdout,
 		Formatter: &logrus.TextFormatter{
@@ -73,15 +64,20 @@ func exec() int {
 	mixPanelToken = strings.ReplaceAll(mixPanelToken, "\"", "")
 	mixPanelToken = strings.ReplaceAll(mixPanelToken, "'", "")
 
-	a := analytics.NewTracker(mixPanelToken, versions["version"], osArch, runtime.GOOS, "SIGHUP", h)
-	defer a.Flush()
+	ctn := app.GetContainerInstance()
 
-	var logFile *os.File
-	defer logFile.Close()
+	ctn.Version = version
+	ctn.GitCommit = gitCommit
+	ctn.BuildTime = buildTime
+	ctn.GoVersion = goVersion
+	ctn.MachineArch = osArch
+	ctn.MachineOS = runtime.GOOS
+	ctn.TrackerToken = mixPanelToken
+	ctn.MachineHostname = h
 
 	defer wg.Wait()
 
-	if _, err := cmd.NewRootCommand(versions, logFile, a, mixPanelToken).ExecuteC(); err != nil {
+	if _, err := cmd.NewRootCmd().ExecuteC(); err != nil {
 		log.Error(err)
 
 		return 1

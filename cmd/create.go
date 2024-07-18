@@ -8,19 +8,10 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/sighupio/furyctl/cmd/create"
-	"github.com/sighupio/furyctl/internal/analytics"
 )
 
-func NewCreateCommand(tracker *analytics.Tracker) *cobra.Command {
-	createCmd := &cobra.Command{
-		Use:   "create",
-		Short: "Create a cluster or a sample configuration file",
-	}
-
-	createCmd.AddCommand(create.NewConfigCommand(tracker))
-
-	// Configure create cluster command as alias of apply command.
-	applyCmd := NewApplyCommand(tracker)
+func NewClusterCmd() *cobra.Command {
+	applyCmd := NewApplyCmd()
 
 	clusterCmd := &cobra.Command{
 		Use:    "cluster",
@@ -31,7 +22,17 @@ func NewCreateCommand(tracker *analytics.Tracker) *cobra.Command {
 
 	clusterCmd.Flags().AddFlagSet(applyCmd.Flags())
 
-	createCmd.AddCommand(clusterCmd)
+	return clusterCmd
+}
+
+func NewCreateCmd() *cobra.Command {
+	createCmd := &cobra.Command{
+		Use:   "create",
+		Short: "Create a cluster or a sample configuration file",
+	}
+
+	createCmd.AddCommand(NewClusterCmd())
+	createCmd.AddCommand(create.NewConfigCmd())
 
 	return createCmd
 }

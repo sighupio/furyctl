@@ -19,7 +19,6 @@ import (
 
 const isNext = true
 
-// NewTracker returns a new Tracker instance.
 func NewTracker(token, version, arch, os, org, hostname string) *Tracker {
 	const timeout = time.Second * 5
 

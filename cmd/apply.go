@@ -12,11 +12,12 @@ import (
 
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 
 	"github.com/sighupio/furyctl/internal/analytics"
 	_ "github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/ekscluster"
+	"github.com/sighupio/furyctl/internal/app"
 	"github.com/sighupio/furyctl/internal/cluster"
-	"github.com/sighupio/furyctl/internal/cmd/cmdutil"
 	"github.com/sighupio/furyctl/internal/config"
 	"github.com/sighupio/furyctl/internal/dependencies"
 	"github.com/sighupio/furyctl/internal/distribution"
@@ -27,8 +28,6 @@ import (
 )
 
 const WrappedErrMessage = "%w: %s"
-
-var ErrDownloadDependenciesFailed = errors.New("dependencies download failed")
 
 type Timeouts struct {
 	ProcessTimeout         int
@@ -63,18 +62,29 @@ type ClusterCmdFlags struct {
 	ClusterSkipsCmdFlags
 }
 
-func NewApplyCommand(tracker *analytics.Tracker) *cobra.Command {
+var ErrDownloadDependenciesFailed = errors.New("dependencies download failed")
+
+func NewApplyCmd() *cobra.Command {
 	var cmdEvent analytics.Event
 
-	cmd := &cobra.Command{
+	applyCmd := &cobra.Command{
 		Use:   "apply",
 		Short: "Apply the configuration to create or upgrade a battle-tested Kubernetes Fury cluster",
 		PreRun: func(cmd *cobra.Command, _ []string) {
 			cmdEvent = analytics.NewCommandEvent(cobrax.GetFullname(cmd))
+
+			if err := viper.BindPFlags(cmd.Flags()); err != nil {
+				logrus.Fatalf("error while binding flags: %v", err)
+			}
 		},
-		RunE: func(cmd *cobra.Command, _ []string) error {
+		RunE: func(_ *cobra.Command, _ []string) error {
+			ctn := app.GetContainerInstance()
+
+			tracker := ctn.Tracker()
+			tracker.Flush()
+
 			// Get flags.
-			flags, err := getCreateClusterCmdFlags(cmd, tracker, cmdEvent)
+			flags, err := getCreateClusterCmdFlags()
 			if err != nil {
 				return err
 			}
@@ -252,75 +262,30 @@ func NewApplyCommand(tracker *analytics.Tracker) *cobra.Command {
 		},
 	}
 
-	setupCreateClusterCmdFlags(cmd)
+	setupCreateClusterCmdFlags(applyCmd)
 
-	return cmd
+	return applyCmd
 }
 
-func getSkipsClusterCmdFlags(cmd *cobra.Command, tracker *analytics.Tracker, cmdEvent analytics.Event) (ClusterSkipsCmdFlags, error) {
-	skipDepsDownload, err := cmdutil.BoolFlag(cmd, "skip-deps-download", tracker, cmdEvent)
-	if err != nil {
-		return ClusterSkipsCmdFlags{}, fmt.Errorf(WrappedErrMessage, ErrParsingFlag, "skip-deps-download")
-	}
-
-	skipDepsValidation, err := cmdutil.BoolFlag(cmd, "skip-deps-validation", tracker, cmdEvent)
-	if err != nil {
-		return ClusterSkipsCmdFlags{}, fmt.Errorf(WrappedErrMessage, ErrParsingFlag, "skip-deps-validation")
-	}
-
-	skipNodesUpgrade, err := cmdutil.BoolFlag(cmd, "skip-nodes-upgrade", tracker, cmdEvent)
-	if err != nil {
-		return ClusterSkipsCmdFlags{}, fmt.Errorf(WrappedErrMessage, ErrParsingFlag, "skip-nodes-upgrade")
-	}
-
-	skipVpn, err := cmdutil.BoolFlag(cmd, "skip-vpn-confirmation", tracker, cmdEvent)
-	if err != nil {
-		return ClusterSkipsCmdFlags{}, fmt.Errorf(WrappedErrMessage, ErrParsingFlag, "skip-vpn-confirmation")
-	}
-
+func getSkipsClusterCmdFlags() ClusterSkipsCmdFlags {
 	return ClusterSkipsCmdFlags{
-		SkipVpn:            skipVpn,
-		SkipDepsDownload:   skipDepsDownload,
-		SkipDepsValidation: skipDepsValidation,
-		SkipNodesUpgrade:   skipNodesUpgrade,
-	}, nil
+		SkipVpn:            viper.GetBool("skip-vpn-confirmation"),
+		SkipDepsDownload:   viper.GetBool("skip-deps-download"),
+		SkipDepsValidation: viper.GetBool("skip-deps-validation"),
+		SkipNodesUpgrade:   viper.GetBool("skip-nodes-upgrade"),
+	}
 }
 
-func getCreateClusterCmdFlags(cmd *cobra.Command, tracker *analytics.Tracker, cmdEvent analytics.Event) (ClusterCmdFlags, error) {
-	skips, err := getSkipsClusterCmdFlags(cmd, tracker, cmdEvent)
-	if err != nil {
-		return ClusterCmdFlags{}, err
-	}
+func getCreateClusterCmdFlags() (ClusterCmdFlags, error) {
+	skips := getSkipsClusterCmdFlags()
 
-	debug, err := cmdutil.BoolFlag(cmd, "debug", tracker, cmdEvent)
-	if err != nil {
-		return ClusterCmdFlags{}, fmt.Errorf(WrappedErrMessage, ErrParsingFlag, "debug")
-	}
+	phase := viper.GetString("phase")
 
-	furyctlPath, err := cmdutil.StringFlag(cmd, "config", tracker, cmdEvent)
-	if err != nil {
-		return ClusterCmdFlags{}, fmt.Errorf(WrappedErrMessage, ErrParsingFlag, "config")
-	}
-
-	distroLocation, err := cmdutil.StringFlag(cmd, "distro-location", tracker, cmdEvent)
-	if err != nil {
-		return ClusterCmdFlags{}, fmt.Errorf(WrappedErrMessage, ErrParsingFlag, "distro-location")
-	}
-
-	phase, err := cmdutil.StringFlag(cmd, "phase", tracker, cmdEvent)
-	if err != nil {
-		return ClusterCmdFlags{}, fmt.Errorf(WrappedErrMessage, ErrParsingFlag, "phase")
-	}
-
-	err = cluster.CheckPhase(phase)
-	if err != nil {
+	if err := cluster.CheckPhase(phase); err != nil {
 		return ClusterCmdFlags{}, fmt.Errorf("%w: %s: %s", ErrParsingFlag, "phase", err.Error())
 	}
 
-	startFrom, err := cmdutil.StringFlag(cmd, "start-from", tracker, cmdEvent)
-	if err != nil {
-		return ClusterCmdFlags{}, fmt.Errorf(WrappedErrMessage, ErrParsingFlag, "start-from")
-	}
+	startFrom := viper.GetString("start-from")
 
 	if phase != cluster.OperationPhaseAll && startFrom != "" {
 		return ClusterCmdFlags{}, fmt.Errorf(
@@ -330,17 +295,11 @@ func getCreateClusterCmdFlags(cmd *cobra.Command, tracker *analytics.Tracker, cm
 		)
 	}
 
-	err = cluster.ValidateOperationPhase(startFrom)
-	if err != nil {
+	if err := cluster.ValidateOperationPhase(startFrom); err != nil {
 		return ClusterCmdFlags{}, fmt.Errorf("%w: %s: %s", ErrParsingFlag, "start-from", err.Error())
 	}
 
-	binPath := cmdutil.StringFlagOptional(cmd, "bin-path")
-
-	vpnAutoConnect, err := cmdutil.BoolFlag(cmd, "vpn-auto-connect", tracker, cmdEvent)
-	if err != nil {
-		return ClusterCmdFlags{}, fmt.Errorf(WrappedErrMessage, ErrParsingFlag, "vpn-auto-connect")
-	}
+	vpnAutoConnect := viper.GetBool("vpn-auto-connect")
 
 	if skips.SkipVpn && vpnAutoConnect {
 		return ClusterCmdFlags{}, fmt.Errorf(
@@ -350,60 +309,16 @@ func getCreateClusterCmdFlags(cmd *cobra.Command, tracker *analytics.Tracker, cm
 		)
 	}
 
-	dryRun, err := cmdutil.BoolFlag(cmd, "dry-run", tracker, cmdEvent)
-	if err != nil {
-		return ClusterCmdFlags{}, fmt.Errorf(WrappedErrMessage, ErrParsingFlag, "dry-run")
-	}
-
-	noTTY, err := cmdutil.BoolFlag(cmd, "no-tty", tracker, cmdEvent)
-	if err != nil {
-		return ClusterCmdFlags{}, fmt.Errorf(WrappedErrMessage, ErrParsingFlag, "no-tty")
-	}
-
-	force, err := cmdutil.StringSliceFlag(cmd, "force", tracker, cmdEvent)
-	if err != nil {
-		return ClusterCmdFlags{}, fmt.Errorf(WrappedErrMessage, ErrParsingFlag, "force")
-	}
-
-	gitProtocol, err := cmdutil.StringFlag(cmd, "git-protocol", tracker, cmdEvent)
-	if err != nil {
-		return ClusterCmdFlags{}, fmt.Errorf(WrappedErrMessage, ErrParsingFlag, "git-protocol")
-	}
+	gitProtocol := viper.GetString("git-protocol")
 
 	typedGitProtocol, err := git.NewProtocol(gitProtocol)
 	if err != nil {
 		return ClusterCmdFlags{}, fmt.Errorf("%w: %w", ErrParsingFlag, err)
 	}
 
-	timeout, err := cmdutil.IntFlag(cmd, "timeout", tracker, cmdEvent)
-	if err != nil {
-		return ClusterCmdFlags{}, fmt.Errorf(WrappedErrMessage, ErrParsingFlag, "timeout")
-	}
+	upgrade := viper.GetBool("upgrade")
 
-	podRunningCheckTimeout, err := cmdutil.IntFlag(cmd, "pod-running-check-timeout", tracker, cmdEvent)
-	if err != nil {
-		return ClusterCmdFlags{}, fmt.Errorf(WrappedErrMessage, ErrParsingFlag, "pod-running-check-timeout")
-	}
-
-	outdir, err := cmdutil.StringFlag(cmd, "outdir", tracker, cmdEvent)
-	if err != nil {
-		return ClusterCmdFlags{}, fmt.Errorf(WrappedErrMessage, ErrParsingFlag, "outdir")
-	}
-
-	upgrade, err := cmdutil.BoolFlag(cmd, "upgrade", tracker, cmdEvent)
-	if err != nil {
-		return ClusterCmdFlags{}, fmt.Errorf("%w: %s", ErrParsingFlag, "upgrade")
-	}
-
-	upgradePathLocation, err := cmdutil.StringFlag(cmd, "upgrade-path-location", tracker, cmdEvent)
-	if err != nil {
-		return ClusterCmdFlags{}, fmt.Errorf("%w: %s", ErrParsingFlag, "upgrade-path-location")
-	}
-
-	upgradeNode, err := cmdutil.StringFlag(cmd, "upgrade-node", tracker, cmdEvent)
-	if err != nil {
-		return ClusterCmdFlags{}, fmt.Errorf("%w: %s", ErrParsingFlag, "upgrade-node")
-	}
+	upgradeNode := viper.GetString("upgrade-node")
 
 	if upgrade && upgradeNode != "" {
 		return ClusterCmdFlags{}, fmt.Errorf(
@@ -413,32 +328,27 @@ func getCreateClusterCmdFlags(cmd *cobra.Command, tracker *analytics.Tracker, cm
 		)
 	}
 
-	distroPatchesLocation, err := cmdutil.StringFlag(cmd, "distro-patches", tracker, cmdEvent)
-	if err != nil {
-		return ClusterCmdFlags{}, fmt.Errorf("%w: %s", ErrParsingFlag, "distro-patches")
-	}
-
 	return ClusterCmdFlags{
-		Debug:          debug,
-		FuryctlPath:    furyctlPath,
-		DistroLocation: distroLocation,
+		Debug:          viper.GetBool("debug"),
+		FuryctlPath:    viper.GetString("config"),
+		DistroLocation: viper.GetString("distro-location"),
 		Phase:          phase,
 		StartFrom:      startFrom,
-		BinPath:        binPath,
+		BinPath:        viper.GetString("bin-path"),
 		VpnAutoConnect: vpnAutoConnect,
-		DryRun:         dryRun,
-		NoTTY:          noTTY,
-		Force:          force,
+		DryRun:         viper.GetBool("dry-run"),
+		NoTTY:          viper.GetBool("no-tty"),
+		Force:          viper.GetStringSlice("force"),
 		GitProtocol:    typedGitProtocol,
 		Timeouts: Timeouts{
-			ProcessTimeout:         timeout,
-			PodRunningCheckTimeout: podRunningCheckTimeout,
+			ProcessTimeout:         viper.GetInt("timeout"),
+			PodRunningCheckTimeout: viper.GetInt("pod-running-check-timeout"),
 		},
-		Outdir:                outdir,
+		Outdir:                viper.GetString("outdir"),
 		Upgrade:               upgrade,
-		UpgradePathLocation:   upgradePathLocation,
+		UpgradePathLocation:   viper.GetString("upgrade-path-location"),
 		UpgradeNode:           upgradeNode,
-		DistroPatchesLocation: distroPatchesLocation,
+		DistroPatchesLocation: viper.GetString("distro-patches"),
 		ClusterSkipsCmdFlags:  skips,
 	}, nil
 }
@@ -472,7 +382,7 @@ func setupCreateClusterCmdFlags(cmd *cobra.Command) {
 		"Location where to download schemas, defaults and the distribution manifests from. "+
 			"It can either be a local path (eg: /path/to/fury/distribution) or "+
 			"a remote URL (eg: git::git@github.com:sighupio/fury-distribution?depth=1&ref=BRANCH_NAME). "+
-			cmdutil.AnyGoGetterFormatStr,
+			"Any format supported by hashicorp/go-getter can be used.",
 	)
 
 	cmd.Flags().String(
@@ -481,7 +391,7 @@ func setupCreateClusterCmdFlags(cmd *cobra.Command) {
 		"Location where the distribution's user-made patches can be downloaded from. "+
 			"This can be either a local path (eg: /path/to/distro-patches) or "+
 			"a remote URL (eg: git::git@github.com:your-org/distro-patches?depth=1&ref=BRANCH_NAME). "+
-			cmdutil.AnyGoGetterFormatStr+
+			"Any format supported by hashicorp/go-getter can be used."+
 			" Patches within this location must be in a folder named after the distribution version (eg: v1.29.0) and "+
 			"must have the same structure as the distribution's repository.",
 	)
@@ -536,17 +446,15 @@ func setupCreateClusterCmdFlags(cmd *cobra.Command) {
 		"WARNING: furyctl won't ask for confirmation and will proceed applying upgrades and reducers. Options are: all, upgrades, migrations, pods-running-check",
 	)
 
-	//nolint:gomnd,revive // ignore magic number linters
 	cmd.Flags().Int(
 		"timeout",
-		3600,
+		3600, //nolint:mnd,revive // ignore magic number linters
 		"Timeout for the whole cluster creation process, expressed in seconds",
 	)
 
-	//nolint:gomnd,revive // ignore magic number linters
 	cmd.Flags().Int(
 		"pod-running-check-timeout",
-		300,
+		300, //nolint:mnd,revive // ignore magic number linters
 		"Timeout for the pod running check after the worker nodes upgrade, expressed in seconds",
 	)
 

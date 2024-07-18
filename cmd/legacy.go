@@ -8,16 +8,15 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/sighupio/furyctl/cmd/legacy"
-	"github.com/sighupio/furyctl/internal/analytics"
 )
 
-func NewLegacyCommand(tracker *analytics.Tracker) *cobra.Command {
+func NewLegacyCmd() *cobra.Command {
 	legacyCmd := &cobra.Command{
 		Use:   "legacy",
 		Short: "Legacy commands for compatibility with older versions of furyctl",
 	}
 
-	legacyCmd.AddCommand(legacy.NewVendorCmd(tracker))
+	legacyCmd.AddCommand(legacy.NewVendorCmd())
 
 	return legacyCmd
 }

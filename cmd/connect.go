@@ -8,16 +8,15 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/sighupio/furyctl/cmd/connect"
-	"github.com/sighupio/furyctl/internal/analytics"
 )
 
-func NewConnectCommand(tracker *analytics.Tracker) *cobra.Command {
+func NewConnectCmd() *cobra.Command {
 	connectCmd := &cobra.Command{
 		Use:   "connect",
 		Short: "Start up a new private connection to a cluster",
 	}
 
-	connectCmd.AddCommand(connect.NewOpenVPNCmd(tracker))
+	connectCmd.AddCommand(connect.NewOpenVPNCmd())
 
 	return connectCmd
 }
