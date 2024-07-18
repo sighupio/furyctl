@@ -17,14 +17,15 @@ import (
 	"github.com/sighupio/furyctl/internal/analytics"
 	"github.com/sighupio/furyctl/internal/app"
 	"github.com/sighupio/furyctl/internal/config"
-	"github.com/sighupio/furyctl/internal/dependencies"
 	"github.com/sighupio/furyctl/internal/distribution"
 	"github.com/sighupio/furyctl/internal/git"
-	"github.com/sighupio/furyctl/internal/template"
 	cobrax "github.com/sighupio/furyctl/internal/x/cobra"
 	execx "github.com/sighupio/furyctl/internal/x/exec"
-	netx "github.com/sighupio/furyctl/internal/x/net"
-	yamlx "github.com/sighupio/furyctl/internal/x/yaml"
+	"github.com/sighupio/furyctl/pkg/dependencies"
+	dist "github.com/sighupio/furyctl/pkg/distribution"
+	"github.com/sighupio/furyctl/pkg/template"
+	netx "github.com/sighupio/furyctl/pkg/x/net"
+	yamlx "github.com/sighupio/furyctl/pkg/x/yaml"
 )
 
 type TemplateCmdFlags struct {
@@ -108,16 +109,16 @@ The generated folder will be created starting from a provided templates folder a
 				}
 			}
 
-			var distrodl *distribution.Downloader
+			var distrodl *dist.Downloader
 
 			client := netx.NewGoGetterClient()
 			executor := execx.NewStdExecutor()
 			depsvl := dependencies.NewValidator(executor, "", absFuryctlPath, false)
 
 			if flags.DistroLocation == "" {
-				distrodl = distribution.NewCachingDownloader(client, outDir, flags.GitProtocol, absDistroPatchesLocation)
+				distrodl = dist.NewCachingDownloader(client, outDir, flags.GitProtocol, absDistroPatchesLocation)
 			} else {
-				distrodl = distribution.NewDownloader(client, flags.GitProtocol, absDistroPatchesLocation)
+				distrodl = dist.NewDownloader(client, flags.GitProtocol, absDistroPatchesLocation)
 			}
 
 			if err := depsvl.ValidateBaseReqs(); err != nil {

@@ -5,7 +5,7 @@
 package furyagent
 
 import (
-	yamlx "github.com/sighupio/furyctl/internal/x/yaml"
+	yamlx "github.com/sighupio/furyctl/pkg/x/yaml"
 )
 
 type Storage struct {

@@ -8,7 +8,7 @@ import (
 	"errors"
 	"fmt"
 
-	yamlx "github.com/sighupio/furyctl/internal/x/yaml"
+	yamlx "github.com/sighupio/furyctl/pkg/x/yaml"
 )
 
 var ErrCannotCreateSecret = errors.New("cannot create secret")

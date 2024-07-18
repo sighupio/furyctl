@@ -13,16 +13,16 @@ import (
 
 	"github.com/sighupio/fury-distribution/pkg/apis/config"
 	"github.com/sighupio/fury-distribution/pkg/apis/onpremises/v1alpha2/public"
-	"github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2"
 	"github.com/sighupio/furyctl/internal/cluster"
 	"github.com/sighupio/furyctl/internal/state"
-	"github.com/sighupio/furyctl/internal/template"
 	"github.com/sighupio/furyctl/internal/tool/kubectl"
 	"github.com/sighupio/furyctl/internal/tool/shell"
 	"github.com/sighupio/furyctl/internal/upgrade"
 	execx "github.com/sighupio/furyctl/internal/x/exec"
 	iox "github.com/sighupio/furyctl/internal/x/io"
-	yamlx "github.com/sighupio/furyctl/internal/x/yaml"
+	"github.com/sighupio/furyctl/pkg/reducers"
+	"github.com/sighupio/furyctl/pkg/template"
+	yamlx "github.com/sighupio/furyctl/pkg/x/yaml"
 )
 
 const (
@@ -48,7 +48,7 @@ func (d *Distribution) Self() *cluster.OperationPhase {
 	return d.OperationPhase
 }
 
-func (d *Distribution) Exec(reducers v1alpha2.Reducers, startFrom string, upgradeState *upgrade.State) error {
+func (d *Distribution) Exec(rdcs reducers.Reducers, startFrom string, upgradeState *upgrade.State) error {
 	logrus.Info("Installing Kubernetes Fury Distribution...")
 
 	mCfg, err := d.prepare()
@@ -66,7 +66,7 @@ func (d *Distribution) Exec(reducers v1alpha2.Reducers, startFrom string, upgrad
 		return fmt.Errorf("error running pre-distribution phase: %w", err)
 	}
 
-	if err := d.coreDistribution(startFrom, upgradeState, reducers, mCfg); err != nil {
+	if err := d.coreDistribution(startFrom, upgradeState, rdcs, mCfg); err != nil {
 		return fmt.Errorf("error running core distribution phase: %w", err)
 	}
 
@@ -181,14 +181,14 @@ func (d *Distribution) preDistribution(
 func (d *Distribution) coreDistribution(
 	startFrom string,
 	upgradeState *upgrade.State,
-	reducers v1alpha2.Reducers,
+	rcds reducers.Reducers,
 	mCfg template.Config,
 ) error {
 	if startFrom != cluster.OperationSubPhasePostDistribution {
 		logrus.Info("Applying manifests...")
 
 		if err := d.runReducers(
-			reducers,
+			rcds,
 			mCfg,
 			LifecyclePreApply,
 			[]string{"manifests", "terraform", ".gitignore"},
@@ -209,7 +209,7 @@ func (d *Distribution) coreDistribution(
 		}
 
 		if err := d.runReducers(
-			reducers,
+			rcds,
 			mCfg,
 			LifecyclePostApply,
 			[]string{"manifests", "terraform", ".gitignore"},
@@ -238,12 +238,12 @@ func (d *Distribution) postDistribution(
 }
 
 func (d *Distribution) runReducers(
-	reducers v1alpha2.Reducers,
+	rdcs reducers.Reducers,
 	cfg template.Config,
 	lifecycle string,
 	excludes []string,
 ) error {
-	r := reducers.ByLifecycle(lifecycle)
+	r := rdcs.ByLifecycle(lifecycle)
 
 	if len(r) > 0 {
 		preTfReducersCfg := cfg

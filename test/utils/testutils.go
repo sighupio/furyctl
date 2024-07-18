@@ -24,14 +24,14 @@ import (
 
 	"github.com/sighupio/furyctl/internal/cluster"
 	"github.com/sighupio/furyctl/internal/dependencies/tools"
-	"github.com/sighupio/furyctl/internal/distribution"
 	"github.com/sighupio/furyctl/internal/git"
 	"github.com/sighupio/furyctl/internal/tool"
 	execx "github.com/sighupio/furyctl/internal/x/exec"
 	iox "github.com/sighupio/furyctl/internal/x/io"
-	netx "github.com/sighupio/furyctl/internal/x/net"
 	osx "github.com/sighupio/furyctl/internal/x/os"
-	yamlx "github.com/sighupio/furyctl/internal/x/yaml"
+	dist "github.com/sighupio/furyctl/pkg/distribution"
+	netx "github.com/sighupio/furyctl/pkg/x/net"
+	yamlx "github.com/sighupio/furyctl/pkg/x/yaml"
 )
 
 type Conf struct {
@@ -148,8 +148,8 @@ func CompileFuryctl(outputPath string) func() {
 	}
 }
 
-func DownloadFuryDistribution(outDir, furyctlConfPath string) distribution.DownloadResult {
-	distrodl := distribution.NewCachingDownloader(netx.NewGoGetterClient(), outDir, git.ProtocolSSH, "")
+func DownloadFuryDistribution(outDir, furyctlConfPath string) dist.DownloadResult {
+	distrodl := dist.NewCachingDownloader(netx.NewGoGetterClient(), outDir, git.ProtocolSSH, "")
 
 	return Must1(distrodl.Download("", furyctlConfPath))
 }
@@ -169,15 +169,15 @@ func Download(toolName, version string) string {
 	dst := filepath.Join(binPath, toolName, version)
 
 	if err := client.Download(tfc.SrcPath(), dst); err != nil {
-		panic(fmt.Errorf("%w '%s': %v", distribution.ErrDownloadingFolder, tfc.SrcPath(), err))
+		panic(fmt.Errorf("%w '%s': %v", dist.ErrDownloadingFolder, tfc.SrcPath(), err))
 	}
 
 	if err := tfc.Rename(dst); err != nil {
-		panic(fmt.Errorf("%w '%s': %v", distribution.ErrRenamingFile, tfc.SrcPath(), err))
+		panic(fmt.Errorf("%w '%s': %v", dist.ErrRenamingFile, tfc.SrcPath(), err))
 	}
 
 	if err := os.Chmod(filepath.Join(dst, toolName), iox.FullPermAccess); err != nil {
-		panic(fmt.Errorf("%w '%s': %v", distribution.ErrChangingFilePermissions, tfc.SrcPath(), err))
+		panic(fmt.Errorf("%w '%s': %v", dist.ErrChangingFilePermissions, tfc.SrcPath(), err))
 	}
 
 	return path.Join(dst, toolName)

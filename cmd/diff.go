@@ -18,14 +18,14 @@ import (
 	"github.com/sighupio/furyctl/internal/analytics"
 	"github.com/sighupio/furyctl/internal/app"
 	"github.com/sighupio/furyctl/internal/cluster"
-	"github.com/sighupio/furyctl/internal/diffs"
-	"github.com/sighupio/furyctl/internal/distribution"
 	"github.com/sighupio/furyctl/internal/git"
 	"github.com/sighupio/furyctl/internal/state"
 	cobrax "github.com/sighupio/furyctl/internal/x/cobra"
 	execx "github.com/sighupio/furyctl/internal/x/exec"
-	netx "github.com/sighupio/furyctl/internal/x/net"
-	yamlx "github.com/sighupio/furyctl/internal/x/yaml"
+	"github.com/sighupio/furyctl/pkg/diffs"
+	dist "github.com/sighupio/furyctl/pkg/distribution"
+	netx "github.com/sighupio/furyctl/pkg/x/net"
+	yamlx "github.com/sighupio/furyctl/pkg/x/yaml"
 )
 
 type DiffCommandFlags struct {
@@ -100,10 +100,10 @@ func NewDiffCmd() *cobra.Command {
 
 			client := netx.NewGoGetterClient()
 
-			distrodl := distribution.NewDownloader(client, flags.GitProtocol, absDistroPatchesLocation)
+			distrodl := dist.NewDownloader(client, flags.GitProtocol, absDistroPatchesLocation)
 
 			if flags.DistroLocation == "" {
-				distrodl = distribution.NewCachingDownloader(client, outDir, flags.GitProtocol, absDistroPatchesLocation)
+				distrodl = dist.NewCachingDownloader(client, outDir, flags.GitProtocol, absDistroPatchesLocation)
 			}
 
 			logrus.Info("Downloading distribution...")

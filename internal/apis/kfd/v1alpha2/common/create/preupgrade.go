@@ -19,13 +19,13 @@ import (
 
 	"github.com/sighupio/fury-distribution/pkg/apis/config"
 	"github.com/sighupio/furyctl/configs"
-	"github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2"
 	"github.com/sighupio/furyctl/internal/cluster"
 	"github.com/sighupio/furyctl/internal/semver"
-	"github.com/sighupio/furyctl/internal/template"
 	"github.com/sighupio/furyctl/internal/upgrade"
 	iox "github.com/sighupio/furyctl/internal/x/io"
-	yamlx "github.com/sighupio/furyctl/internal/x/yaml"
+	"github.com/sighupio/furyctl/pkg/reducers"
+	"github.com/sighupio/furyctl/pkg/template"
+	yamlx "github.com/sighupio/furyctl/pkg/x/yaml"
 )
 
 var (
@@ -42,7 +42,7 @@ type PreUpgrade struct {
 	kind                 string
 	upgrade              *upgrade.Upgrade
 	upgradeFlag          bool
-	reducers             v1alpha2.Reducers
+	reducers             reducers.Reducers
 	diffs                diff.Changelog
 	forceFlag            []string
 	paths                cluster.CreatorPaths
@@ -59,7 +59,7 @@ func NewPreUpgrade(
 	upgradeFlag bool,
 	forceFlag []string,
 	upgr *upgrade.Upgrade,
-	reducers v1alpha2.Reducers,
+	reducers reducers.Reducers,
 	diffs diff.Changelog,
 	externalUpgradesPath string,
 	skipNodesUpgrade bool,
