@@ -13,7 +13,7 @@ require (
 	github.com/go-playground/validator/v10 v10.17.0
 	github.com/google/go-cmp v0.6.0
 	github.com/google/uuid v1.6.0
-	github.com/hashicorp/go-getter v1.7.4
+	github.com/hashicorp/go-getter v1.7.5
 	github.com/hashicorp/terraform-json v0.21.0
 	github.com/miekg/dns v1.1.58
 	github.com/onsi/ginkgo/v2 v2.15.0
