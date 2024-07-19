@@ -384,7 +384,7 @@ func (c *ClusterCreator) allPhases(
 }
 
 func (c *ClusterCreator) extraPhases(
-	distributionPhase upgrade.ReducersOperatorPhase[v1alpha2.Reducers],
+	distributionPhase upgrade.ReducersOperatorPhase[reducers.Reducers],
 	pluginsPhase *commcreate.Plugins,
 	upgradeState *upgrade.State,
 	upgr *upgrade.Upgrade,
@@ -400,7 +400,7 @@ func (c *ClusterCreator) extraPhases(
 		case cluster.OperationPhaseDistribution:
 			distributionPhase.SetUpgrade(false)
 
-			if err := distributionPhase.Exec(v1alpha2.Reducers{}, StartFromFlagNotSet, upgradeState); err != nil {
+			if err := distributionPhase.Exec(reducers.Reducers{}, StartFromFlagNotSet, upgradeState); err != nil {
 				return fmt.Errorf("error while executing distribution phase: %w", err)
 			}
 

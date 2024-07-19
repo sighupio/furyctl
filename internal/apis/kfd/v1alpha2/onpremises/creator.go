@@ -452,7 +452,7 @@ func (c *ClusterCreator) allPhases(
 
 func (c *ClusterCreator) extraPhases(
 	kubernetesPhase upgrade.OperatorPhase,
-	distributionPhase upgrade.ReducersOperatorPhase[v1alpha2.Reducers],
+	distributionPhase upgrade.ReducersOperatorPhase[reducers.Reducers],
 	pluginsPhase *commcreate.Plugins,
 	upgr *upgrade.Upgrade,
 	upgradeState *upgrade.State,

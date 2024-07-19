@@ -711,7 +711,7 @@ func (v *ClusterCreator) extraPhases(phases *Phases, upgradeState *upgrade.State
 			phases.Distribution.SetUpgrade(false)
 
 			if err := phases.Distribution.Exec(
-				v1alpha2.Reducers{},
+				reducers.Reducers{},
 				StartFromFlagNotSet,
 				upgradeState,
 			); err != nil {
