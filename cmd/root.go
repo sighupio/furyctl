@@ -233,6 +233,7 @@ func NewRootCmd() *RootCommand {
 	rootCmd.AddCommand(NewLegacyCmd())
 	rootCmd.AddCommand(NewValidateCmd())
 	rootCmd.AddCommand(NewVersionCmd())
+	rootCmd.AddCommand(NewRenewCmd())
 
 	return rootCmd
 }
