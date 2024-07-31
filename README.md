@@ -6,9 +6,7 @@
 
 <p>The Swiss Army Knife<br/>for the Kubernetes Fury Distribution</p>
 
-<!-- FIXME: UPDATE THE BUILD BADGE WITH THE RIGHT BRANCH -->
-
-[![Build Status](https://ci.sighup.io/api/badges/sighupio/furyctl/status.svg)](https://ci.sighup.io/sighupio/furyctl)
+[![Build Status](https://ci.sighup.io/api/badges/sighupio/furyctl/status.svg?ref=refs/heads/main)](https://ci.sighup.io/sighupio/furyctl)
 ![Release](https://img.shields.io/badge/furyctl-v0.29.3-blue)
 ![Slack](https://img.shields.io/badge/slack-@kubernetes/fury-yellow.svg?logo=slack)
 ![License](https://img.shields.io/github/license/sighupio/furyctl)
@@ -21,7 +19,7 @@
 
 > The next generation of `furyctl`, called "furyctl next", has been officially released. It is now in a stable state and available starting from version v0.25.0. The previous version, furyctl 0.11, is considered legacy and will only receive bug fixes. It will be maintained under the v0.11 branch.
 
-## What is Furyctl?
+## What is furyctl?
 
 `furyctl` is the command line companion for the Kubernetes Fury Distribution to manage the **full lifecycle** of your Kubernetes Fury clusters.
 <br/>
@@ -150,13 +148,13 @@ See all the available commands and their usage by running `furyctl help`.
 
 <!-- line left blank as spacer -->
 
-> Check [KFD Compatibility matrix](https://github.com/sighupio/fury-distribution/blob/main/docs/COMPATIBILITY_MATRIX.md) for the Furyctl / KFD versions to use.
+> Check [KFD Compatibility matrix](https://github.com/sighupio/fury-distribution/blob/main/docs/COMPATIBILITY_MATRIX.md) for the furyctl / KFD versions to use.
 
 ### Basic Usage
 
 Basic usage of `furyctl` for a new project consists on the following steps:
 
-1. Creating a configuration file defining the prequired infrastructure, Kubernetes cluster details, and KFD modules configuration.
+1. Creating a configuration file defining the required infrastructure, Kubernetes cluster details, and KFD modules configuration.
 2. Creating a cluster as defined in the configuration file.
 3. Destroying the cluster and its related resources.
 
@@ -164,11 +162,11 @@ Basic usage of `furyctl` for a new project consists on the following steps:
 
 `furyctl` provides a command that outputs a sample configuration file (by default called `furyctl.yaml`) with all the possible fields explained in comments.
 
-Furyctl configuration files have a kind that specifies what type of cluster will be created, for example the `EKSCluster` kind has all the parameters needed to create a KFD cluster using the EKS managed clusters from AWS.
+furyctl configuration files have a kind that specifies what type of cluster will be created, for example the `EKSCluster` kind has all the parameters needed to create a KFD cluster using the EKS managed clusters from AWS.
 
 You can also use the `KFDDistribution` kind to install the KFD distribution on top of an existing Kubernetes cluster or `OnPremises` kind to install a KFD cluster on VMs.
 
-Additionaly, the schema of the file is versioned with the `apiVersion` field, so when new features are introduced you can switch to a newer version of the configuration file structure.
+Additionally, the schema of the file is versioned with the `apiVersion` field, so when new features are introduced you can switch to a newer version of the configuration file structure.
 
 To scaffold a configuration file to use as a starter, you use the following command:
 
@@ -184,7 +182,7 @@ furyctl create config --version v1.29.1 --kind "EKSCluster"
 
 Open the generated configuration file with your editor of choice and edit it according to your needs. You can follow the instructions included as comments in the file.
 
-Once you have filled your configuration file, you can check that it's content is valid by running the following comand:
+Once you have filled your configuration file, you can check that it's content is valid by running the following command:
 
 ```console
 furyctl validate config --config /path/to/your/furyctl.yaml
@@ -201,9 +199,9 @@ Requirements (EKSCluster):
 - AWS CLI
 - OpenVPN (when filling the `vpn` field in the configuration file)
 
-In the previous step, you have created and validated a configuration file that defines the Kubernetes cluster and its sorroundings, you can now proceed to actually creating the resources.
+In the previous step, you have created and validated a configuration file that defines the Kubernetes cluster and its surroundings, you can now proceed to actually creating the resources.
 
-Furyctl divides the cluster creation in four phases: `infrastructure`, `kubernetes`, `distribution` and `plugins`.
+furyctl divides the cluster creation in four phases: `infrastructure`, `kubernetes`, `distribution` and `plugins`.
 
 1. The first phase, `infrastructure`, creates all the prerequisites needed to be able to create a cluster. For example, the VPC and its networks.
 2. The second phase, `kubernetes`, creates the actual Kubernetes clusters. For example, the EKS cluster and its node pools.
@@ -214,7 +212,7 @@ Furyctl divides the cluster creation in four phases: `infrastructure`, `kubernet
 >
 > You will find these four phases when editing the furyctl.yaml file.
 
-Just like you can validate that your configuration file is well formed, `furyctl` let you check that you have all the needed dependencies (environment variables, binaries, etc.) before starting a cluster creation process.
+Just like you can validate that your configuration file is well-formed, `furyctl` let you check that you have all the needed dependencies (environment variables, binaries, etc.) before starting a cluster creation process.
 
 To validate that your system has all the dependencies needed to create the cluster defined in your configuration file, run the following command:
 
@@ -241,7 +239,7 @@ furyctl create cluster --config /path/to/your/furyctl.yaml
 > 💡 **TIP**
 >
 > You can use the alias `furyctl apply` instead of `furyctl create cluster`.
-
+<!-- spacer -->
 > 📖 **NOTE**
 >
 > The creation process will take a while.
@@ -252,7 +250,7 @@ furyctl create cluster --config /path/to/your/furyctl.yaml
 
 Upgrading a cluster is a process that can be divided into two steps: upgrading the fury version and running the migrations (if present).
 
-The first step consist in bringing the cluster up to date with the latest version of the Kubernetes Fury Distribution. This is done by running the following command:
+The first step consists in bringing the cluster up to date with the latest version of the Kubernetes Fury Distribution. This is done by running the following command:
 
 ```console
 furyctl apply --upgrade --config /path/to/your/furyctl.yaml
@@ -342,6 +340,24 @@ The following steps will guide you through the process of creating a Kubernetes 
 4. Run `furyctl create cluster` to create the cluster.
 5. (Optional) Watch the logs of the cluster creation process with `tail -f ~/.furyctl/furyctl.<timestamp>-<random>.log`.
 
+#### Create the PKI for on-premises clusters
+
+On-premises clusters need a set of certificates authorities and certificate files to work as a prerequisite. Both for the Kubernetes control plane and for the etcd database.
+
+furyctl provides a command that allows the creation of this PKI:
+
+```bash
+furyctl create pki
+```
+
+The command supports some additional options, like `--etcd` to create only the PKI for etcd, or creating the files in a different path.
+
+See all the additional options with the `--help` flag:
+
+```bash
+furyctl create pki --help
+```
+
 #### Create a cluster in an already existing infrastructure
 
 Same as the previous section, but you can skip the infrastructure creation phase
@@ -378,9 +394,9 @@ to use the flag `--kubeconfig` in the following command.
 furyctl create cluster --phase distribution
 ```
 
-#### Legacy download
+#### Legacy vendor download
 
-The new furyctl still embed some of the legacy features, for example the command `furyctl legacy vendor` to download KFD dependencies from a deprecated `Furyfile.yml`.
+The new furyctl still embeds some legacy features, for example the command `furyctl legacy vendor` to download KFD dependencies from a deprecated `Furyfile.yml`.
 
 This can be still used to manually manage all the components of the distribution.
 
@@ -390,11 +406,14 @@ This can be still used to manually manage all the components of the distribution
 
 #### Plugins
 
-Furyctl supports Helm and Kustomize plugins.
+furyctl supports Helm and Kustomize plugins.
 
 ##### Helm plugins
 
-To install an Helm plugin (chart), first you have to add the repository to the `spec.plugins.helm.repositories` section of your `furyctl.yaml` file and then you can add the release to the `spec.plugins.helm.releases` section, specifying the chart name, the namespace, the chart version and the values to override. To override the values you can use the `spec.plugins.helm.releases[].set` or the `spec.plugins.helm.releases[].values` section.
+To install a Helm plugin (chart), follow these steps:
+
+1. Add the repository to the `spec.plugins.helm.repositories` section of your `furyctl.yaml` file.
+2. Add the release to the `spec.plugins.helm.releases` section, specifying the chart name, the namespace, the chart version and the values to override. To override the values you can use the `spec.plugins.helm.releases[].set` or the `spec.plugins.helm.releases[].values` section.
 
 For example to install the Prometheus Helm chart you have to add the following to your `furyctl.yaml`:
 
@@ -439,11 +458,11 @@ spec:
 
 #### Using a custom distribution location
 
-Furyctl comes with the flag `--distro-location`, allowing you to use a local copy of KFD instead of downloading it from the internet. This allows you to test changes to the KFD without having to push them to the repository, and might come in handy when you need to test new features or bugfixes.
+furyctl comes with the flag `--distro-location`, allowing you to use a local copy of KFD instead of downloading it from the internet. This allows you to test changes to the KFD without having to push them to the repository, and might come in handy when you need to test new features or bug fixes.
 
 #### Using a custom upgrade path location
 
-On the same note, the tool comes with the `--upgrade-path-location` flag, too, allowing you to test changes to the upgrade path without having to push them to the repository, and to support cases that are not covered by the official release, such as upgrading from a beta or rc release to a stable one.
+On the same note, the tool comes with the `--upgrade-path-location` flag, too, allowing you to test changes to the upgrade path without having to push them to the repository, and to support cases that are not covered by the official release, such as upgrading from a beta or release candidate release to a stable one.
 
 #### Restarting the cluster creation or update process from a specific (sub-)phase
 
@@ -454,10 +473,10 @@ If, for any reason, the cluster creation or update process fails, you can restar
 
 ### Test classes
 
-There are four kind of tests: unit, integration, e2e, and expensive.
+There are four kinds of tests: unit, integration, e2e, and expensive.
 
 Each of them covers specific use cases depending on the speed, cost, and dependencies at play in a given scenario.
-Anything that uses i/o should be marked as integration, with the only expection of local files and folders: any test
+Anything that uses i/o should be marked as integration, with the only expectation of local files and folders: any test
 that uses the local filesystem and nothing more can be marked as 'unit'. This is made for convenience and it's open to
 change in the future should we decide to refactor the code to better isolate that kind of i/o from the logic of the tool.
 
