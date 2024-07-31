@@ -8,7 +8,9 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"os/signal"
 	"path/filepath"
+	"syscall"
 
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -20,6 +22,7 @@ import (
 	"github.com/sighupio/furyctl/internal/cluster"
 	"github.com/sighupio/furyctl/internal/config"
 	"github.com/sighupio/furyctl/internal/git"
+	"github.com/sighupio/furyctl/internal/lockfile"
 	cobrax "github.com/sighupio/furyctl/internal/x/cobra"
 	execx "github.com/sighupio/furyctl/internal/x/exec"
 	"github.com/sighupio/furyctl/pkg/dependencies"
@@ -74,7 +77,7 @@ func NewApplyCmd() *cobra.Command {
 	applyCmd := &cobra.Command{
 		Use:   "apply",
 		Short: "Apply the configuration to create or upgrade a battle-tested Kubernetes Fury cluster",
-		PreRun: func(cmd *cobra.Command, _ []string) {
+		PersistentPreRun: func(cmd *cobra.Command, _ []string) {
 			cmdEvent = analytics.NewCommandEvent(cobrax.GetFullname(cmd))
 
 			if err := viper.BindPFlags(cmd.Flags()); err != nil {
@@ -170,6 +173,42 @@ func NewApplyCmd() *cobra.Command {
 				Phase:      flags.Phase,
 				DryRun:     flags.DryRun,
 			})
+
+			lockFileHandler := lockfile.NewLockFile(res.MinimalConf.Metadata.Name)
+			sigs := make(chan os.Signal, 1)
+
+			go func() {
+				<-sigs
+
+				if lockFileHandler != nil {
+					logrus.Debugf("Removing lock file %s", lockFileHandler.Path)
+
+					if err := lockFileHandler.Remove(); err != nil {
+						logrus.Errorf("error while removing lock file: %v", err)
+					}
+				}
+
+				os.Exit(1) //nolint:revive // ignore error
+			}()
+
+			signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
+
+			err = lockFileHandler.Verify()
+			if err != nil {
+				cmdEvent.AddErrorMessage(err)
+				tracker.Track(cmdEvent)
+
+				return fmt.Errorf("error while verifying lock file: %w", err)
+			}
+
+			err = lockFileHandler.Create()
+			if err != nil {
+				cmdEvent.AddErrorMessage(err)
+				tracker.Track(cmdEvent)
+
+				return fmt.Errorf("error while creating lock file: %w", err)
+			}
+			defer lockFileHandler.Remove() //nolint:errcheck // ignore error
 
 			basePath := filepath.Join(outDir, ".furyctl", res.MinimalConf.Metadata.Name)
 
