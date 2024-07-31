@@ -59,10 +59,14 @@ type ClusterCmdFlags struct {
 	UpgradePathLocation   string
 	UpgradeNode           string
 	DistroPatchesLocation string
+	PostApplyPhases       []string
 	ClusterSkipsCmdFlags
 }
 
-var ErrDownloadDependenciesFailed = errors.New("dependencies download failed")
+var (
+	ErrDownloadDependenciesFailed = errors.New("dependencies download failed")
+	ErrPhaseInvalid               = errors.New("phase is not valid")
+)
 
 func NewApplyCmd() *cobra.Command {
 	var cmdEvent analytics.Event
@@ -236,6 +240,7 @@ func NewApplyCmd() *cobra.Command {
 				flags.Upgrade,
 				flags.UpgradePathLocation,
 				flags.UpgradeNode,
+				flags.PostApplyPhases,
 			)
 			if err != nil {
 				cmdEvent.AddErrorMessage(err)
@@ -328,6 +333,12 @@ func getCreateClusterCmdFlags() (ClusterCmdFlags, error) {
 		)
 	}
 
+	postApplyPhases := viper.GetStringSlice("post-apply-phases")
+
+	if err := validatePostApplyPhasesFlag(postApplyPhases); err != nil {
+		return ClusterCmdFlags{}, fmt.Errorf("%w: %s %w", ErrParsingFlag, "post-apply-phases", err)
+	}
+
 	return ClusterCmdFlags{
 		Debug:          viper.GetBool("debug"),
 		FuryctlPath:    viper.GetString("config"),
@@ -350,7 +361,18 @@ func getCreateClusterCmdFlags() (ClusterCmdFlags, error) {
 		UpgradeNode:           upgradeNode,
 		DistroPatchesLocation: viper.GetString("distro-patches"),
 		ClusterSkipsCmdFlags:  skips,
+		PostApplyPhases:       postApplyPhases,
 	}, nil
+}
+
+func validatePostApplyPhasesFlag(phases []string) error {
+	for _, phase := range phases {
+		if err := cluster.ValidateMainPhases(phase); err != nil {
+			return fmt.Errorf("%w: %s", ErrPhaseInvalid, phase)
+		}
+	}
+
+	return nil
 }
 
 func setupCreateClusterCmdFlags(cmd *cobra.Command) {
@@ -444,6 +466,12 @@ func setupCreateClusterCmdFlags(cmd *cobra.Command) {
 		"force",
 		[]string{},
 		"WARNING: furyctl won't ask for confirmation and will proceed applying upgrades and reducers. Options are: all, upgrades, migrations, pods-running-check",
+	)
+
+	cmd.Flags().StringSlice(
+		"post-apply-phases",
+		[]string{},
+		"Phases to run after the apply command. Options are: infrastructure, kubernetes, distribution, plugins",
 	)
 
 	cmd.Flags().Int(

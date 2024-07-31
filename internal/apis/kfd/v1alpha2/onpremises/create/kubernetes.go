@@ -212,6 +212,10 @@ func (k *Kubernetes) postKubernetes(
 	return nil
 }
 
+func (k *Kubernetes) SetUpgrade(upgradeEnabled bool) {
+	k.upgrade.Enabled = upgradeEnabled
+}
+
 func NewKubernetes(
 	furyctlConf public.OnpremisesKfdV1Alpha2,
 	kfdManifest config.KFD,

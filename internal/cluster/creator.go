@@ -29,6 +29,7 @@ const (
 	CreatorPropertyUpgrade              = "upgrade"
 	CreatorPropertyExternalUpgradesPath = "externalupgradespath"
 	CreatorPropertyUpgradeNode          = "upgradenode"
+	CreatorPropertyPostApplyPhases      = "postapplyphases"
 )
 
 var (
@@ -72,6 +73,7 @@ func NewCreator(
 	upgrade bool,
 	externalUpgradesPath,
 	upgradeNode string,
+	postApplyPhases []string,
 ) (Creator, error) {
 	lcAPIVersion := strings.ToLower(minimalConf.APIVersion)
 	lcResourceType := strings.ToLower(minimalConf.Kind)
@@ -129,6 +131,10 @@ func NewCreator(
 			{
 				Name:  CreatorPropertyUpgradeNode,
 				Value: upgradeNode,
+			},
+			{
+				Name:  CreatorPropertyPostApplyPhases,
+				Value: postApplyPhases,
 			},
 		})
 	}

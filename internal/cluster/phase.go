@@ -88,6 +88,19 @@ func ValidateOperationPhase(phase string) error {
 	}
 }
 
+func ValidateMainPhases(phase string) error {
+	switch phase {
+	case OperationPhaseInfrastructure,
+		OperationPhaseKubernetes,
+		OperationPhaseDistribution,
+		OperationPhasePlugins:
+		return nil
+
+	default:
+		return ErrUnsupportedPhase
+	}
+}
+
 func GetPhasesOrder() []string {
 	return []string{
 		"PreInfrastructure",

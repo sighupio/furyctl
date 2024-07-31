@@ -49,6 +49,7 @@ type ClusterCreator struct {
 	force                []string
 	upgrade              bool
 	externalUpgradesPath string
+	postApplyPhases      []string
 }
 
 func (c *ClusterCreator) SetProperties(props []cluster.CreatorProperty) {
@@ -126,6 +127,11 @@ func (c *ClusterCreator) SetProperty(name string, value any) {
 	case cluster.CreatorPropertyExternalUpgradesPath:
 		if s, ok := value.(string); ok {
 			c.externalUpgradesPath = s
+		}
+
+	case cluster.CreatorPropertyPostApplyPhases:
+		if s, ok := value.([]string); ok {
+			c.postApplyPhases = s
 		}
 	}
 }
@@ -363,6 +369,47 @@ func (c *ClusterCreator) allPhases(
 	if distribution.HasFeature(c.kfdManifest, distribution.FeaturePlugins) {
 		if err := pluginsPhase.Exec(); err != nil {
 			return fmt.Errorf("error while executing plugins phase: %w", err)
+		}
+	}
+
+	if len(c.postApplyPhases) > 0 {
+		logrus.Info("Executing extra phases...")
+
+		if err := c.extraPhases(distributionPhase, pluginsPhase, upgradeState, upgr); err != nil {
+			return fmt.Errorf("error while executing extra phases: %w", err)
+		}
+	}
+
+	return nil
+}
+
+func (c *ClusterCreator) extraPhases(
+	distributionPhase upgrade.ReducersOperatorPhase[reducers.Reducers],
+	pluginsPhase *commcreate.Plugins,
+	upgradeState *upgrade.State,
+	upgr *upgrade.Upgrade,
+) error {
+	initialUpgrade := upgr.Enabled
+
+	defer func() {
+		upgr.Enabled = initialUpgrade
+	}()
+
+	for _, phase := range c.postApplyPhases {
+		switch phase {
+		case cluster.OperationPhaseDistribution:
+			distributionPhase.SetUpgrade(false)
+
+			if err := distributionPhase.Exec(reducers.Reducers{}, StartFromFlagNotSet, upgradeState); err != nil {
+				return fmt.Errorf("error while executing distribution phase: %w", err)
+			}
+
+		case cluster.OperationPhasePlugins:
+			if distribution.HasFeature(c.kfdManifest, distribution.FeaturePlugins) {
+				if err := pluginsPhase.Exec(); err != nil {
+					return fmt.Errorf("error while executing plugins phase: %w", err)
+				}
+			}
 		}
 	}
 
