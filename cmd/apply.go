@@ -77,7 +77,7 @@ func NewApplyCmd() *cobra.Command {
 	applyCmd := &cobra.Command{
 		Use:   "apply",
 		Short: "Apply the configuration to create or upgrade a battle-tested Kubernetes Fury cluster",
-		PersistentPreRun: func(cmd *cobra.Command, _ []string) {
+		PreRun: func(cmd *cobra.Command, _ []string) {
 			cmdEvent = analytics.NewCommandEvent(cobrax.GetFullname(cmd))
 
 			if err := viper.BindPFlags(cmd.Flags()); err != nil {
