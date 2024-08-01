@@ -85,7 +85,7 @@ func (c *EKSClusterCheck) IsCompatible() bool {
 		return false
 	}
 
-	max12SevenVersion, err := semver.NewVersion("v1.27.6")
+	max12SevenVersion, err := semver.NewVersion("v1.27.7")
 	if err != nil {
 		return false
 	}
@@ -95,7 +95,7 @@ func (c *EKSClusterCheck) IsCompatible() bool {
 		return false
 	}
 
-	max12EightVersion, err := semver.NewVersion("v1.28.1")
+	max12EightVersion, err := semver.NewVersion("v1.28.2")
 	if err != nil {
 		return false
 	}
@@ -105,7 +105,7 @@ func (c *EKSClusterCheck) IsCompatible() bool {
 		return false
 	}
 
-	max12NineVersion, err := semver.NewVersion("v1.29.1")
+	max12NineVersion, err := semver.NewVersion("v1.29.2")
 	if err != nil {
 		return false
 	}
@@ -158,7 +158,7 @@ func (c *KFDDistributionCheck) IsCompatible() bool {
 		return false
 	}
 
-	max12SevenVersion, err := semver.NewVersion("v1.27.6")
+	max12SevenVersion, err := semver.NewVersion("v1.27.7")
 	if err != nil {
 		return false
 	}
@@ -168,7 +168,7 @@ func (c *KFDDistributionCheck) IsCompatible() bool {
 		return false
 	}
 
-	max12EightVersion, err := semver.NewVersion("v1.28.1")
+	max12EightVersion, err := semver.NewVersion("v1.28.2")
 	if err != nil {
 		return false
 	}
@@ -178,7 +178,7 @@ func (c *KFDDistributionCheck) IsCompatible() bool {
 		return false
 	}
 
-	max12NineVersion, err := semver.NewVersion("v1.29.1")
+	max12NineVersion, err := semver.NewVersion("v1.29.2")
 	if err != nil {
 		return false
 	}
@@ -231,7 +231,7 @@ func (c *OnPremisesCheck) IsCompatible() bool {
 		return false
 	}
 
-	max12SevenVersion, err := semver.NewVersion("v1.27.6")
+	max12SevenVersion, err := semver.NewVersion("v1.27.7")
 	if err != nil {
 		return false
 	}
@@ -241,7 +241,7 @@ func (c *OnPremisesCheck) IsCompatible() bool {
 		return false
 	}
 
-	max12EightVersion, err := semver.NewVersion("v1.28.1")
+	max12EightVersion, err := semver.NewVersion("v1.28.2")
 	if err != nil {
 		return false
 	}
@@ -251,7 +251,7 @@ func (c *OnPremisesCheck) IsCompatible() bool {
 		return false
 	}
 
-	max12NineVersion, err := semver.NewVersion("v1.29.1")
+	max12NineVersion, err := semver.NewVersion("v1.29.2")
 	if err != nil {
 		return false
 	}
