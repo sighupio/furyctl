@@ -28,4 +28,10 @@ func init() {
 		"OnPremises",
 		cluster.NewKubeconfigFactory[*KubeconfigGetter, public.OnpremisesKfdV1Alpha2](&KubeconfigGetter{}),
 	)
+
+	cluster.RegisterCertificatesRenewerFactory(
+		"kfd.sighup.io/v1alpha2",
+		"OnPremises",
+		cluster.NewCertificatesRenewerFactory[*CertificatesRenewer, public.OnpremisesKfdV1Alpha2](&CertificatesRenewer{}),
+	)
 }

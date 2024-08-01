@@ -28,4 +28,12 @@ func init() {
 		"KFDDistribution",
 		cluster.NewKubeconfigFactory[*KubeconfigGetter, public.KfddistributionKfdV1Alpha2](&KubeconfigGetter{}),
 	)
+
+	cluster.RegisterCertificatesRenewerFactory(
+		"kfd.sighup.io/v1alpha2",
+		"KFDDistribution",
+		cluster.NewCertificatesRenewerFactory[*CertificatesRenewer, public.KfddistributionKfdV1Alpha2](
+			&CertificatesRenewer{},
+		),
+	)
 }

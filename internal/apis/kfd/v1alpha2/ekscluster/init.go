@@ -28,4 +28,12 @@ func init() {
 		"EKSCluster",
 		cluster.NewKubeconfigFactory[*KubeconfigGetter, private.EksclusterKfdV1Alpha2](&KubeconfigGetter{}),
 	)
+
+	cluster.RegisterCertificatesRenewerFactory(
+		"kfd.sighup.io/v1alpha2",
+		"EKSCluster",
+		cluster.NewCertificatesRenewerFactory[*CertificatesRenewer, private.EksclusterKfdV1Alpha2](
+			&CertificatesRenewer{},
+		),
+	)
 }

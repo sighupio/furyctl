@@ -17,11 +17,10 @@ import (
 	"github.com/sighupio/furyctl/internal/cluster"
 	"github.com/sighupio/furyctl/internal/tool/ansible"
 	execx "github.com/sighupio/furyctl/internal/x/exec"
-	iox "github.com/sighupio/furyctl/internal/x/io"
 	"github.com/sighupio/furyctl/pkg/template"
 )
 
-type KubeconfigGetter struct {
+type CertificatesRenewer struct {
 	*cluster.OperationPhase
 	furyctlConf public.OnpremisesKfdV1Alpha2
 	kfdManifest config.KFD
@@ -30,7 +29,7 @@ type KubeconfigGetter struct {
 	outDir      string
 }
 
-func (k *KubeconfigGetter) SetProperties(props []cluster.KubeconfigProperty) {
+func (k *CertificatesRenewer) SetProperties(props []cluster.CertificatesRenewerProperty) {
 	for _, prop := range props {
 		k.SetProperty(prop.Name, prop.Value)
 	}
@@ -38,7 +37,7 @@ func (k *KubeconfigGetter) SetProperties(props []cluster.KubeconfigProperty) {
 	k.OperationPhase = &cluster.OperationPhase{}
 }
 
-func (k *KubeconfigGetter) SetProperty(name string, value any) {
+func (k *CertificatesRenewer) SetProperty(name string, value any) {
 	lcName := strings.ToLower(name)
 
 	switch lcName {
@@ -69,12 +68,10 @@ func (k *KubeconfigGetter) SetProperty(name string, value any) {
 	}
 }
 
-func (k *KubeconfigGetter) Get() error {
-	logrus.Info("Getting kubeconfig...")
+func (k *CertificatesRenewer) Renew() error {
+	logrus.Info("Renewing certificates...")
 
-	kubeconfigPath := path.Join(k.outDir, "kubeconfig")
-
-	tmpDir, err := os.MkdirTemp("", "fury-kubeconfig-*")
+	tmpDir, err := os.MkdirTemp("", "fury-certificates-renewer-*")
 	if err != nil {
 		return fmt.Errorf("error creating temporary directory: %w", err)
 	}
@@ -109,10 +106,25 @@ func (k *KubeconfigGetter) Get() error {
 		"version": k.kfdManifest.Kubernetes.OnPremises.Version,
 	}
 
+	mCfg.Data["paths"] = map[any]any{
+		"helm":       "",
+		"helmfile":   "",
+		"kubectl":    "",
+		"kustomize":  "",
+		"terraform":  "",
+		"vendorPath": "",
+		"yq":         "",
+	}
+
+	mCfg.Data["options"] = map[any]any{
+		"skipPodsRunningCheck": false,
+		"podRunningTimeout":    "",
+	}
+
 	if err := k.CopyFromTemplate(
 		mCfg,
-		"preflight",
-		path.Join(k.distroPath, "templates", cluster.OperationPhasePreFlight, "onpremises"),
+		"kubernetes",
+		path.Join(k.distroPath, "templates", cluster.OperationPhaseKubernetes, "onpremises"),
 		tmpDir,
 		k.configPath,
 	); err != nil {
@@ -123,17 +135,8 @@ func (k *KubeconfigGetter) Get() error {
 		return fmt.Errorf("error checking hosts: %w", err)
 	}
 
-	if _, err := ansibleRunner.Playbook("verify-playbook.yaml"); err != nil {
-		return fmt.Errorf("error getting kubeconfig: %w", err)
-	}
-
-	kubeconfig, err := os.ReadFile(path.Join(tmpDir, "admin.conf"))
-	if err != nil {
-		return fmt.Errorf("error reading kubeconfig file: %w", err)
-	}
-
-	if err := os.WriteFile(kubeconfigPath, kubeconfig, iox.FullRWPermAccess); err != nil {
-		return fmt.Errorf("error writing kubeconfig file: %w", err)
+	if _, err := ansibleRunner.Playbook("98.cluster-certificates-renewal.yaml"); err != nil {
+		return fmt.Errorf("error renewing certificates: %w", err)
 	}
 
 	return nil
