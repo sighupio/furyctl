@@ -52,7 +52,10 @@ func (p *ConfigParser) ParseDynamicValue(val any) (string, error) {
 			return filepath.Join(p.baseDir, filepath.Clean(sourceValue)), nil
 
 		case Env:
-			envVar := os.Getenv(sourceValue)
+			envVar, exists := os.LookupEnv(sourceValue)
+			if !exists {
+				return "", fmt.Errorf("%w: %s is empty", ErrCannotParseDynamicValue, sourceValue)
+			}
 
 			envVar = strings.TrimRight(envVar, "\n")
 
