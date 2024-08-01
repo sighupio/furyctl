@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
+//nolint:dupl // ignoring duplication linting error
 package cluster
 
 import (
@@ -22,7 +23,7 @@ const (
 
 var certificatesRenewerFactories = make(map[string]map[string]CertificatesRenewerFactory) //nolint:gochecknoglobals, lll // This patterns requires certificatesRenewerFactories as global to work with init function.
 
-type CertificatesRenewerFactory func(configPath string, props []CertificatesRenewerProperty) (CertificatesRenewer, error)
+type CertificatesRenewerFactory func(configPath string, props []CertificatesRenewerProperty) (CertificatesRenewer, error) //nolint:lll // This pattern requires CertificatesRenewerFactory as global to work with init function.
 
 type CertificatesRenewerProperty struct {
 	Name  string

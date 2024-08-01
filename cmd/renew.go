@@ -5,8 +5,9 @@
 package cmd
 
 import (
-	"github.com/sighupio/furyctl/cmd/renew"
 	"github.com/spf13/cobra"
+
+	"github.com/sighupio/furyctl/cmd/renew"
 )
 
 func NewRenewCmd() *cobra.Command {
