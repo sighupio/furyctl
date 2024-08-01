@@ -135,7 +135,7 @@ func (k *CertificatesRenewer) Renew() error {
 		return fmt.Errorf("error checking hosts: %w", err)
 	}
 
-	if _, err := ansibleRunner.Playbook("renew-certificates.yaml"); err != nil {
+	if _, err := ansibleRunner.Playbook("98.cluster-certificates-renewal.yaml"); err != nil {
 		return fmt.Errorf("error renewing certificates: %w", err)
 	}
 
