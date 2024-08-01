@@ -81,13 +81,7 @@ func (a *Tracker) Track(event Event) {
 	// // add a channel to send events to a goroutine that will send them to mixpanel
 	// // this will allow us to send events in a non-blocking way.
 	if a.enable {
-		select {
-		case a.events <- event:
-			logrus.Trace("Event sent: ", event.Name())
-
-		default:
-			logrus.Trace("Event channel is closed, dropping event: ", event.Name())
-		}
+		a.events <- event
 	}
 }
 
@@ -116,6 +110,8 @@ func (a *Tracker) processEvents() {
 		if !ok {
 			logrus.Trace("Event processor stopped")
 
+			a.Disable()
+
 			break
 		}
 
@@ -124,7 +120,8 @@ func (a *Tracker) processEvents() {
 		switch e.(type) {
 		case StopEvent:
 			logrus.Trace("Stop event received, stopping event processor")
-			a.close()
+
+			a.Disable()
 
 			return
 
