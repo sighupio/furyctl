@@ -110,7 +110,7 @@ func (a *Tracker) processEvents() {
 		if !ok {
 			logrus.Trace("Event processor stopped")
 
-			a.Disable()
+			a.enable = false
 
 			break
 		}
