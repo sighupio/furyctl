@@ -11,7 +11,9 @@ import (
 	"path/filepath"
 )
 
-var ErrLockFileExists = errors.New("lock file exists")
+var ErrLockFileExists = errors.New(
+	"lock file exists. This usually means that there is another instance of furyctl running",
+)
 
 type LockFile struct {
 	Path string
