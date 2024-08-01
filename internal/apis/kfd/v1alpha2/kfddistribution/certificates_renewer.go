@@ -5,17 +5,19 @@
 package kfddistribution
 
 import (
-	"fmt"
+	"errors"
 
 	"github.com/sighupio/furyctl/internal/cluster"
 )
 
+var ErrRenewNotSupported = errors.New("you can't renew certificates for KFDDistribution")
+
 type CertificatesRenewer struct{}
 
-func (k *CertificatesRenewer) SetProperties(props []cluster.CertificatesRenewerProperty) {}
+func (*CertificatesRenewer) SetProperties(_ []cluster.CertificatesRenewerProperty) {}
 
-func (k *CertificatesRenewer) SetProperty(name string, value any) {}
+func (*CertificatesRenewer) SetProperty(_ string, _ any) {}
 
-func (k *CertificatesRenewer) Renew() error {
-	return fmt.Errorf("you can't renew certificates for KFDDistribution")
+func (*CertificatesRenewer) Renew() error {
+	return ErrRenewNotSupported
 }
