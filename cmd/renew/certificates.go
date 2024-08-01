@@ -172,7 +172,7 @@ func NewCertificatesCmd() *cobra.Command {
 				cmdEvent.AddErrorMessage(err)
 				tracker.Track(cmdEvent)
 
-				return fmt.Errorf("error while renewing certificates, please check that the cluster is up and running and is reachable: %w", err)
+				return fmt.Errorf("error while renewing certificates: %w", err)
 			}
 
 			logrus.Infof("Certificates successfully renewed")
