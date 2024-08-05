@@ -54,15 +54,6 @@ sudo mv /tmp/furyctl /usr/local/bin/furyctl
 
 Alternatively, you can install `furyctl` using the asdf plugin.
 
-<!--
-### Installing with [Homebrew](https://brew.sh/)
-
-```console
-brew tap sighupio/furyctl
-brew install furyctl
-```
--->
-
 ### Installing with [asdf](https://github.com/asdf-vm/asdf)
 
 Add furyctl asdf plugin:
@@ -99,8 +90,6 @@ Once you've ensured the above dependencies are installed, you can proceed with t
 
 1. Clone the repository:
 
-<!-- FIXME: remove the branch switching in the future -->
-
 ```console
 git clone git@github.com:sighupio/furyctl.git
 # cd into the cloned repository
@@ -110,31 +99,31 @@ cd furyctl
 2. Build the binaries by running the following command:
 
 ```console
-make build
+go build .
 ```
 
-3. You will find the binaries for Linux and Darwin (macOS) for your current architecture inside the `dist` folder:
+3. You will find the binaries for your current architecture inside the current folder:
 
 ```console
-$ tree dist/furyctl_*/
-dist/furyctl_darwin_amd64_v1
-└── furyctl
-dist/furyctl_linux_amd64_v1
-└── furyctl
+$ ls furyctl
+furyctl
 ```
 
 4. Check that the binary is working as expected:
 
-> **Note** replace `darwin` with your OS and `amd64` with your architecture in the following commands.
-
 ```console
-./dist/furyctl_darwin_amd64_v1/furyctl version
+$ ./furyctl version
+buildTime: unknown
+gitCommit: unknown
+goVersion: unknown
+osArch: unknown
+version: unknown
 ```
 
 5. (optional) move the binary to your `bin` folder, in macOS:
 
 ```console
-sudo mv ./dist/furyctl_darwin_amd64_v1/furyctl /usr/local/bin/furyctl
+sudo mv ./furyctl /usr/local/bin/furyctl
 ```
 
 ## Usage
@@ -145,6 +134,13 @@ See all the available commands and their usage by running `furyctl help`.
 >
 > Enable command tab autocompletion for `furyctl` on your shell (`bash`, `zsh`, `fish` are supported).
 > See the instruction on how to enable it with `furyctl completion --help`
+
+<!-- line left blank as spacer -->
+
+> 💡 **TIP**
+>
+> You can follow the Kubernetes Fury Distribution quick start guides in KFD's official documentation site:
+> <https://docs.kubernetesfury.com/docs/quickstart/quickstart>
 
 <!-- line left blank as spacer -->
 
