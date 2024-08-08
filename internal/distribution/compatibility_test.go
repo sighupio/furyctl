@@ -51,19 +51,29 @@ func TestEKSClusterCheckIsCompatible(t *testing.T) {
 			expected:            false,
 		},
 		{
-			name:                "should return false if distribution version is greater than 1.27.6",
-			distributionVersion: "v1.27.7",
+			name:                "should return false if distribution version is greater than 1.27.7",
+			distributionVersion: "v1.27.8",
 			expected:            false,
 		},
 		{
-			name:                "should return true if distribution version is equal to 1.28.1",
-			distributionVersion: "v1.28.1",
+			name:                "should return true if distribution version is greater than 1.28.0 and less than 1.28.3",
+			distributionVersion: "v1.28.2",
 			expected:            true,
 		},
 		{
-			name:                "should return true if distribution version is equal to 1.29.1",
-			distributionVersion: "v1.29.1",
+			name:                "should return false if distribution version is greater than 1.28.2",
+			distributionVersion: "v1.28.3",
+			expected:            false,
+		},
+		{
+			name:                "should return true if distribution version is greater than 1.29.0 and less than 1.29.3",
+			distributionVersion: "v1.29.2",
 			expected:            true,
+		},
+		{
+			name:                "should return false if distribution version is greater than 1.29.2",
+			distributionVersion: "v1.29.3",
+			expected:            false,
 		},
 	}
 
@@ -128,19 +138,29 @@ func TestKFDDistributionCheckIsCompatible(t *testing.T) {
 			expected:            true,
 		},
 		{
-			name:                "should return false if distribution version is greater than 1.27.6",
-			distributionVersion: "v1.27.7",
+			name:                "should return false if distribution version is greater than 1.27.7",
+			distributionVersion: "v1.27.8",
 			expected:            false,
 		},
 		{
-			name:                "should return true if distribution version is equal to 1.28.1",
-			distributionVersion: "v1.28.1",
+			name:                "should return true if distribution version is greater than 1.28.0 and less than 1.28.3",
+			distributionVersion: "v1.28.2",
 			expected:            true,
 		},
 		{
-			name:                "should return true if distribution version is equal to 1.29.1",
-			distributionVersion: "v1.29.1",
+			name:                "should return false if distribution version is greater than 1.28.2",
+			distributionVersion: "v1.28.3",
+			expected:            false,
+		},
+		{
+			name:                "should return true if distribution version is greater than 1.29.0 and less than 1.29.3",
+			distributionVersion: "v1.29.2",
 			expected:            true,
+		},
+		{
+			name:                "should return false if distribution version is greater than 1.29.2",
+			distributionVersion: "v1.29.3",
+			expected:            false,
 		},
 	}
 
@@ -205,19 +225,29 @@ func TestOnPremisesCheckIsCompatible(t *testing.T) {
 			expected:            true,
 		},
 		{
-			name:                "should return false if distribution version is greater than 1.27.6",
-			distributionVersion: "v1.27.7",
+			name:                "should return false if distribution version is greater than 1.27.7",
+			distributionVersion: "v1.27.8",
 			expected:            false,
 		},
 		{
-			name:                "should return true if distribution version is equal to 1.28.1",
-			distributionVersion: "v1.28.1",
+			name:                "should return true if distribution version is greater than 1.28.0 and less than 1.28.3",
+			distributionVersion: "v1.28.2",
 			expected:            true,
 		},
 		{
-			name:                "should return true if distribution version is equal to 1.29.1",
-			distributionVersion: "v1.29.1",
+			name:                "should return false if distribution version is greater than 1.28.2",
+			distributionVersion: "v1.28.3",
+			expected:            false,
+		},
+		{
+			name:                "should return true if distribution version is greater than 1.29.0 and less than 1.29.3",
+			distributionVersion: "v1.29.2",
 			expected:            true,
+		},
+		{
+			name:                "should return false if distribution version is greater than 1.29.2",
+			distributionVersion: "v1.29.3",
+			expected:            false,
 		},
 	}
 
