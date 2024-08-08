@@ -148,7 +148,13 @@ test-integration:
 	@GOFLAGS=-mod=mod go test -v -tags=integration -timeout 120s ./...
 
 test-e2e:
-	@GOFLAGS=-mod=mod ginkgo run -vv --trace -tags=e2e -timeout 600s -p test/e2e
+	@export KFD_AUTH_DEX_CONNECTORS_GITHUB_CLIENT_ID=dummy && \
+	export KFD_AUTH_DEX_CONNECTORS_GITHUB_CLIENT_SECRET=dummy && \
+	export KFD_BASIC_AUTH_PASSWORD=dummy && \
+	export KFD_AUTH_POMERIUM_COOKIE_SECRET=dummy && \
+	export KFD_AUTH_POMERIUM_IDP_CLIENT_SECRET=dummy && \
+	export KFD_AUTH_POMERIUM_SHARED_SECRET=dummy && \
+	GOFLAGS=-mod=mod ginkgo run -vv --trace -tags=e2e -timeout 600s -p test/e2e
 
 test-expensive:
 	$(call yes-or-no, "WARNING: This test will create a cluster on AWS. Are you sure you want to continue?")
