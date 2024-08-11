@@ -33,6 +33,7 @@ func NewCreateCmd() *cobra.Command {
 
 	createCmd.AddCommand(NewClusterCmd())
 	createCmd.AddCommand(create.NewConfigCmd())
+	createCmd.AddCommand(create.NewPKICmd())
 
 	return createCmd
 }

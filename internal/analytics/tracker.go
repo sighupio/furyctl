@@ -110,6 +110,8 @@ func (a *Tracker) processEvents() {
 		if !ok {
 			logrus.Trace("Event processor stopped")
 
+			a.enable = false
+
 			break
 		}
 
@@ -118,7 +120,8 @@ func (a *Tracker) processEvents() {
 		switch e.(type) {
 		case StopEvent:
 			logrus.Trace("Stop event received, stopping event processor")
-			a.close()
+
+			a.Disable()
 
 			return
 

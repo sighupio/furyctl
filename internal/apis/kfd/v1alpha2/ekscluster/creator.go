@@ -60,6 +60,7 @@ type ClusterCreator struct {
 	force                []string
 	upgrade              bool
 	externalUpgradesPath string
+	postApplyPhases      []string
 }
 
 type Phases struct {
@@ -157,6 +158,11 @@ func (v *ClusterCreator) SetProperty(name string, value any) {
 	case cluster.CreatorPropertyExternalUpgradesPath:
 		if s, ok := value.(string); ok {
 			v.externalUpgradesPath = s
+		}
+
+	case cluster.CreatorPropertyPostApplyPhases:
+		if s, ok := value.([]string); ok {
+			v.postApplyPhases = s
 		}
 	}
 }
@@ -637,6 +643,14 @@ func (v *ClusterCreator) allPhases(
 		return err
 	}
 
+	if len(v.postApplyPhases) > 0 {
+		logrus.Info("Executing extra phases...")
+
+		if err := v.extraPhases(phases, upgradeState, upgr); err != nil {
+			return fmt.Errorf("error while executing extra phases: %w", err)
+		}
+	}
+
 	if v.dryRun {
 		logrus.Info("Kubernetes Fury cluster created successfully (dry-run mode)")
 
@@ -665,6 +679,52 @@ func (v *ClusterCreator) allPhases(
 
 	if err := v.logKubeconfig(); err != nil {
 		return fmt.Errorf("error while logging kubeconfig path: %w", err)
+	}
+
+	return nil
+}
+
+func (v *ClusterCreator) extraPhases(phases *Phases, upgradeState *upgrade.State, upgr *upgrade.Upgrade) error {
+	initialUpgrade := upgr.Enabled
+
+	defer func() {
+		upgr.Enabled = initialUpgrade
+	}()
+
+	for _, phase := range v.postApplyPhases {
+		switch phase {
+		case cluster.OperationPhaseInfrastructure:
+			phases.Infrastructure.SetUpgrade(false)
+
+			if err := phases.Infrastructure.Exec(StartFromFlagNotSet, upgradeState); err != nil {
+				return fmt.Errorf("error while executing post infrastructure phase: %w", err)
+			}
+
+		case cluster.OperationPhaseKubernetes:
+			phases.Kubernetes.SetUpgrade(false)
+
+			if err := phases.Kubernetes.Exec(StartFromFlagNotSet, upgradeState); err != nil {
+				return fmt.Errorf("error while executing post kubernetes phase: %w", err)
+			}
+
+		case cluster.OperationPhaseDistribution:
+			phases.Distribution.SetUpgrade(false)
+
+			if err := phases.Distribution.Exec(
+				reducers.Reducers{},
+				StartFromFlagNotSet,
+				upgradeState,
+			); err != nil {
+				return fmt.Errorf("error while executing post distribution phase: %w", err)
+			}
+
+		case cluster.OperationPhasePlugins:
+			if distribution.HasFeature(v.kfdManifest, distribution.FeaturePlugins) {
+				if err := phases.Plugins.Exec(); err != nil {
+					return fmt.Errorf("error while executing plugins phase: %w", err)
+				}
+			}
+		}
 	}
 
 	return nil

@@ -364,6 +364,10 @@ func (d *Distribution) Stop() error {
 	return nil
 }
 
+func (d *Distribution) SetUpgrade(upgradeEnabled bool) {
+	d.upgrade.Enabled = upgradeEnabled
+}
+
 func (d *Distribution) runReducers(
 	rdcs reducers.Reducers,
 	cfg template.Config,

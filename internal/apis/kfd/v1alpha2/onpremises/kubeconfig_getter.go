@@ -5,7 +5,6 @@
 package onpremises
 
 import (
-	"errors"
 	"fmt"
 	"os"
 	"path"
@@ -21,8 +20,6 @@ import (
 	iox "github.com/sighupio/furyctl/internal/x/io"
 	"github.com/sighupio/furyctl/pkg/template"
 )
-
-var ErrKubeconfigNotSet = errors.New("KUBECONFIG env variable is not set")
 
 type KubeconfigGetter struct {
 	*cluster.OperationPhase
