@@ -91,9 +91,9 @@ func NewPKICmd() *cobra.Command {
 
 	pkiCmd := &cobra.Command{
 		Use:   "pki",
-		Short: "Creates the Public Key infrastructure files needed.",
-		Long: `Creates the Public Key infrastructure files needed (CA, certificates, keys, etc.) by a Kubernetes cluster and its etcd database.
-		You can limit the creation of the PKI to just etcd or just Kubernetes using the flags, if not specified the command will create the PKI for both of them.`,
+		Short: "Creates the Public Key Infrastructure files needed for an on-premises cluster.",
+		Long: `Creates the Public Key Infrastructure files needed (CA, certificates, keys, etc.) by a Kubernetes cluster and its etcd database.
+You can limit the creation of the PKI to just etcd or just Kubernetes using the flags, if not specified the command will create the PKI for both of them.`,
 		PreRun: func(cmd *cobra.Command, _ []string) {
 			cmdEvent = analytics.NewCommandEvent(cobrax.GetFullname(cmd))
 
