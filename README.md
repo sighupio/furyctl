@@ -7,7 +7,7 @@
 <p>The Swiss Army Knife<br/>for the Kubernetes Fury Distribution</p>
 
 [![Build Status](https://ci.sighup.io/api/badges/sighupio/furyctl/status.svg?ref=refs/heads/main)](https://ci.sighup.io/sighupio/furyctl)
-![Release](https://img.shields.io/badge/furyctl-v0.29.4-blue)
+![Release](https://img.shields.io/badge/furyctl-v0.29.5-blue)
 ![Slack](https://img.shields.io/badge/slack-@kubernetes/fury-yellow.svg?logo=slack)
 ![License](https://img.shields.io/github/license/sighupio/furyctl)
 [![Go Report Card](https://goreportcard.com/badge/github.com/sighupio/furyctl)](https://goreportcard.com/report/github.com/sighupio/furyctl)
@@ -69,7 +69,7 @@ $ furyctl version
 ...
 goVersion: go1.22
 osArch: amd64
-version: 0.29.4
+version: 0.29.5
 ```
 
 ### Installing from source
@@ -235,7 +235,9 @@ furyctl create cluster --config /path/to/your/furyctl.yaml
 > 💡 **TIP**
 >
 > You can use the alias `furyctl apply` instead of `furyctl create cluster`.
+
 <!-- spacer -->
+
 > 📖 **NOTE**
 >
 > The creation process will take a while.
