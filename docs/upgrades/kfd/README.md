@@ -9,9 +9,30 @@ If you are running a custom set of modules, or different versions than the ones 
 
 ## Upgrade procedure
 
-Check the available automatic upgrade paths [here](https://github.com/sighupio/furyctl/tree/main/configs/upgrades). These are the tested and suggested upgrade paths to be used.
+### 1. Identify the upgrade path
 
-### Run the upgrade
+Each version of furyctl supports a set of upgrade paths for a specific version of Kubernetes Fury Distribution.  These are the tested and suggested upgrade paths to be used.
+
+We recommend using the latest version of furcytl available. furyctl is backwards compatible with older versions and may include new upgrades paths in a release, even for older versions of the distribution.
+
+To get the available upgrades paths for your cluster run the following command:
+
+```bash
+furyctl get upgrade-paths
+```
+
+This will read the cluster configuration file and give you the available target versions you can upgrade the current version to.
+
+> [!TIP]
+> You can get the paths for other versions too, using the `--from` flag:
+>
+> ```bash
+> furyctl get upgrade-paths --from 1.29.3 --kind OnPremises
+> ```
+>
+> See `furyctl get upgrade-paths --help` for more options.
+
+### 2. Run the upgrade
 
 Change `.spec.distributionVersion` on your `furyctl.yaml` file with the new `vX.X.X` version.
 

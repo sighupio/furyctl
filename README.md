@@ -26,7 +26,7 @@
 
 > 💡 Learn more about the Kubernetes Fury Distribution in the [official site](https://kubernetesfury.com).
 
-If you're looking for the old documentation, you can find it [here](https://github.com/sighupio/furyctl/blob/release-v0.11/README.md).
+If you're looking for the old documentation for furyctl legay, you can find it [here](https://github.com/sighupio/furyctl/blob/release-v0.11/README.md).
 
 ### Available providers
 
@@ -139,8 +139,8 @@ See all the available commands and their usage by running `furyctl help`.
 
 > 💡 **TIP**
 >
-> You can follow the Kubernetes Fury Distribution quick start guides in KFD's official documentation site:
-> <https://docs.kubernetesfury.com/docs/quickstart/quickstart>
+> You can follow the Kubernetes Fury Distribution quick start guides for cloud and on-premises installations in KFD's official documentation site:
+> https://docs.kubernetesfury.com/docs/quickstart/quickstart
 
 <!-- line left blank as spacer -->
 
@@ -167,7 +167,7 @@ Additionally, the schema of the file is versioned with the `apiVersion` field, s
 To scaffold a configuration file to use as a starter, you use the following command:
 
 ```console
-furyctl create config --version v1.29.1 --kind "EKSCluster"
+furyctl create config --version v1.29.3 --kind "EKSCluster"
 ```
 
 > 💡 **TIP**
@@ -246,15 +246,27 @@ furyctl create cluster --config /path/to/your/furyctl.yaml
 
 #### 3. Upgrade a cluster
 
+> [!NOTE]
+> This is a quick overview of the process. For a more complete documentation please see [the universal upgrade guide](./docs/upgrades/kfd/README.md).
+
 Upgrading a cluster is a process that can be divided into two steps: upgrading the fury version and running the migrations (if present).
 
-The first step consists in bringing the cluster up to date with the latest version of the Kubernetes Fury Distribution. This is done by running the following command:
+The first step consists in bringing the cluster up to date with the latest version of the Kubernetes Fury Distribution. This is done by:
+
+1. Identifying the target version to which upgrade to with:
+
+   ```bash
+   furyctl get upgrade-paths
+   ```
+
+2. Bumping the version in the configuration file to the desired one.
+3. Upgrading the cluster:
 
 ```console
 furyctl apply --upgrade --config /path/to/your/furyctl.yaml
 ```
 
-Once that is done, if you were also planning to move to a different provider (e.g.: `opensearch` to `loki`), you can run the following command to run the migrations:
+Once that is done, if you were also planning to move to a different configuration (e.g.: changing from logging type `opensearch` to `loki`), you can run the following command to run the migrations as usual:
 
 ```console
 furyctl apply --config /path/to/your/furyctl.yaml
@@ -262,7 +274,7 @@ furyctl apply --config /path/to/your/furyctl.yaml
 
 > ❗️ **WARNING**
 >
-> You must first upgrade the cluster using the old provider(e.g.: `opensearch`), update the configuration file to use the new provider(e.g.: `loki`) and then run the command above.
+> You must first upgrade the cluster using the old configuration (e.g.: logging type `opensearch`), update the configuration file to use the new type (e.g.: `loki`) and then run the command above.
 
 #### 3.1. Advanced upgrade options (OnPremises provider only)
 
