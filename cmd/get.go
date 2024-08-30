@@ -17,6 +17,7 @@ func NewGetCmd() *cobra.Command {
 	}
 
 	getCmd.AddCommand(get.NewKubeconfigCmd())
+	getCmd.AddCommand(get.NewUpgradePathsCmd())
 
 	return getCmd
 }
