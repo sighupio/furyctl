@@ -1,3 +1,7 @@
+// Copyright (c) 2017-present SIGHUP s.r.l All rights reserved.
+// Use of this source code is governed by a BSD-style
+// license that can be found in the LICENSE file.
+
 package get
 
 import (
@@ -33,9 +37,9 @@ func NewUpgradePathsCmd() *cobra.Command {
 	upgradePathsCmd := &cobra.Command{
 		Use:   "upgrade-paths",
 		Short: "Get available upgrade paths for the kind and version defined in the configuration file or a custom one.",
-		Long: `Get available upgrade paths for the kind and version defined in the configuration file or a custom one. If a from version or kind are specified the command will give the upgrade path for those instaed.
+		Long: `Get available upgrade paths for the kind and version defined in the configuration file or a custom one. If the "--from" or "--kind" parameters are specified, the command will give the upgrade path for those instead.
  Examples:
- - furyctl get upgrade-paths                               	will show the available upgrade paths for the kind a distribution version defined in the configuration file (furyctl.yaml by default)
+ - furyctl get upgrade-paths                               	will show the available upgrade paths for the kind and distribution version defined in the configuration file (furyctl.yaml by default)
  - furyctl get upgrade-paths --from vX.Y.Z                 	will show the available upgrade paths for the kind defined in the configuration file but for the version X.Y.Z instead.
  - furyctl get upgrade-paths --kind OnPremises             	will show the available upgrade paths for the version defined in the configuration file but for the OnPremises kind, even if the cluster is an EKSCluster, for example.
  - furyctl get upgrade-paths --kind OnPremises --from X.Y.X	will show the available upgrade paths for the version X.Y.Z of the OnPremises kind, without reading the configuration file.
