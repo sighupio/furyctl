@@ -26,7 +26,7 @@
 
 > 💡 Learn more about the Kubernetes Fury Distribution in the [official site](https://kubernetesfury.com).
 
-If you're looking for the old documentation for furyctl legay, you can find it [here](https://github.com/sighupio/furyctl/blob/release-v0.11/README.md).
+If you're looking for the old documentation for furyctl legacy, you can find it [here](https://github.com/sighupio/furyctl/blob/release-v0.11/README.md).
 
 ### Available providers
 
