@@ -222,9 +222,8 @@ func (p *PreUpgrade) Exec() error {
 			}
 
 			if os.IsNotExist(err) {
-				return fmt.Errorf("%w: unable to upgrade from %s to %s, "+
-					"please check the available upgrade paths " + 
-					"with the command 'furyctl get upgrade-paths'",
+				return fmt.Errorf("%w: unable to upgrade from %s to %s, please check the available upgrade "+
+					"paths with the command 'furyctl get upgrade-paths'",
 					errUpgradePathNotFound, p.upgrade.From, p.upgrade.To)
 			}
 
