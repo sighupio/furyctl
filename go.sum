@@ -552,8 +552,8 @@ github.com/shoenig/test v0.6.4/go.mod h1:byHiCGXqrVaflBLAMq/srcZIHynQPQgeyvkvXnj
 github.com/shopspring/decimal v1.2.0/go.mod h1:DKyhrW/HYNuLGql+MJL6WCR6knT2jwCFRcu2hWCYk4o=
 github.com/shopspring/decimal v1.3.1 h1:2Usl1nmF/WZucqkFZhnfFYxxxu8LG21F6nPQBE5gKV8=
 github.com/shopspring/decimal v1.3.1/go.mod h1:DKyhrW/HYNuLGql+MJL6WCR6knT2jwCFRcu2hWCYk4o=
-github.com/sighupio/fury-distribution v1.29.3 h1:F1gg8h2xG284YeMAQCiPMRgviQGwf3bpYiRoJ/nOhZM=
-github.com/sighupio/fury-distribution v1.29.3/go.mod h1:iYBnl0N/6zGPz3j3L2X6nzFC3nzNQtIkAzmaPfnO0zA=
+github.com/sighupio/fury-distribution v1.29.4-rc.1 h1:hzlzEQoAtc+tREbRdVSvU2ehtlYi2oiAf2tbEUy01uQ=
+github.com/sighupio/fury-distribution v1.29.4-rc.1/go.mod h1:iYBnl0N/6zGPz3j3L2X6nzFC3nzNQtIkAzmaPfnO0zA=
 github.com/sirupsen/logrus v1.9.3 h1:dueUQJ1C2q9oE3F7wvmSGAaVtTmUizReu6fjN8uqzbQ=
 github.com/sirupsen/logrus v1.9.3/go.mod h1:naHLuLoDiP4jHNo9R0sCBMtWGeIprob74mVsIT4qYEQ=
 github.com/sourcegraph/conc v0.3.0 h1:OQTbbt6P72L20UqAkXXuLOj79LfEanQ+YQFNpLA9ySo=

@@ -251,7 +251,7 @@ func (c *OnPremisesCheck) IsCompatible() bool {
 		return false
 	}
 
-	max12NineVersion, err := semver.NewVersion("v1.29.3")
+	max12NineVersion, err := semver.NewVersion("v1.29.4")
 	if err != nil {
 		return false
 	}

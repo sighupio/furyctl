@@ -42,6 +42,13 @@ func (tv *Validator) ValidateBaseReqs() ([]string, []error) {
 		errs []error
 	)
 
+	sed := tv.toolFactory.Create(itool.Sed, "*")
+	if err := sed.CheckBinVersion(); err != nil {
+		errs = append(errs, err)
+	} else {
+		oks = append(oks, "sed")
+	}
+
 	git := tv.toolFactory.Create(itool.Git, "*")
 	if err := git.CheckBinVersion(); err != nil {
 		errs = append(errs, err)
