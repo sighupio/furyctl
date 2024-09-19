@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"os"
 	"path"
+	"path/filepath"
 
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -71,6 +72,15 @@ func NewKubeconfigCmd() *cobra.Command {
 				return fmt.Errorf("error while getting current directory: %w", err)
 			}
 
+			// Get absolute path to the config file.
+			absFuryctlPath, err := filepath.Abs(furyctlPath)
+			if err != nil {
+				cmdEvent.AddErrorMessage(err)
+				tracker.Track(cmdEvent)
+
+				return fmt.Errorf("error while getting config directory: %w", err)
+			}
+
 			// Get home dir.
 			logrus.Debug("Getting Home directory path...")
 			homeDir, err := os.UserHomeDir()
@@ -97,7 +107,7 @@ func NewKubeconfigCmd() *cobra.Command {
 			executor := execx.NewStdExecutor()
 
 			distrodl := &dist.Downloader{}
-			depsvl := dependencies.NewValidator(executor, binPath, furyctlPath, false)
+			depsvl := dependencies.NewValidator(executor, binPath, absFuryctlPath, false)
 
 			// Init first half of collaborators.
 			client := netx.NewGoGetterClient()
@@ -119,7 +129,7 @@ func NewKubeconfigCmd() *cobra.Command {
 			// Download the distribution.
 			logrus.Info("Downloading distribution...")
 
-			res, err := distrodl.Download(distroLocation, furyctlPath)
+			res, err := distrodl.Download(distroLocation, absFuryctlPath)
 			if err != nil {
 				cmdEvent.AddErrorMessage(err)
 				tracker.Track(cmdEvent)
@@ -134,7 +144,7 @@ func NewKubeconfigCmd() *cobra.Command {
 
 			// Validate the furyctl.yaml file.
 			logrus.Info("Validating configuration file...")
-			if err := config.Validate(furyctlPath, res.RepoPath); err != nil {
+			if err := config.Validate(absFuryctlPath, res.RepoPath); err != nil {
 				cmdEvent.AddErrorMessage(err)
 				tracker.Track(cmdEvent)
 
@@ -163,7 +173,7 @@ func NewKubeconfigCmd() *cobra.Command {
 				}
 			}
 
-			getter, err := cluster.NewKubeconfigGetter(res.MinimalConf, res.DistroManifest, res.RepoPath, furyctlPath, outDir)
+			getter, err := cluster.NewKubeconfigGetter(res.MinimalConf, res.DistroManifest, res.RepoPath, absFuryctlPath, outDir)
 			if err != nil {
 				cmdEvent.AddErrorMessage(err)
 				tracker.Track(cmdEvent)
