@@ -16,6 +16,7 @@ import (
 	"github.com/sighupio/furyctl/internal/tool/kubectl"
 	"github.com/sighupio/furyctl/internal/tool/kustomize"
 	"github.com/sighupio/furyctl/internal/tool/openvpn"
+	"github.com/sighupio/furyctl/internal/tool/sed"
 	"github.com/sighupio/furyctl/internal/tool/shell"
 	"github.com/sighupio/furyctl/internal/tool/terraform"
 	"github.com/sighupio/furyctl/internal/tool/yq"
@@ -37,6 +38,7 @@ const (
 	Shell     Name = "shell"
 	Helm      Name = "helm"
 	Helmfile  Name = "helmfile"
+	Sed       Name = "sed"
 )
 
 type Runner interface {
@@ -85,6 +87,12 @@ func (rf *RunnerFactory) Create(name Name, version, workDir string) Runner {
 	case Git:
 		return git.NewRunner(rf.executor, git.Paths{
 			Git:     string(name),
+			WorkDir: workDir,
+		})
+
+	case Sed:
+		return sed.NewRunner(rf.executor, sed.Paths{
+			Sed:     string(name),
 			WorkDir: workDir,
 		})
 

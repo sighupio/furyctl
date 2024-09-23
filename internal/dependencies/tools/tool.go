@@ -22,6 +22,7 @@ import (
 	"github.com/sighupio/furyctl/internal/tool/kubectl"
 	"github.com/sighupio/furyctl/internal/tool/kustomize"
 	"github.com/sighupio/furyctl/internal/tool/openvpn"
+	"github.com/sighupio/furyctl/internal/tool/sed"
 	"github.com/sighupio/furyctl/internal/tool/shell"
 	"github.com/sighupio/furyctl/internal/tool/terraform"
 	"github.com/sighupio/furyctl/internal/tool/yq"
@@ -147,6 +148,14 @@ func (f *Factory) Create(name tool.Name, version string) Tool {
 		}
 
 		return NewShell(shellr, version)
+
+	case tool.Sed:
+		sedr, ok := t.(*sed.Runner)
+		if !ok {
+			panic(fmt.Sprintf("expected sed.Runner, got %T", t))
+		}
+
+		return NewSed(sedr, version)
 
 	case tool.Helm:
 		hr, ok := t.(*helm.Runner)

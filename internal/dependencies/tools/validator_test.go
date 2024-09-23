@@ -182,6 +182,7 @@ func TestValidator_ValidateBaseReqs(t *testing.T) {
 			wantOks: []string{
 				"git",
 				"shell",
+				"sed",
 			},
 		},
 	}

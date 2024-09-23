@@ -220,33 +220,33 @@ func TestOnPremisesCheckIsCompatible(t *testing.T) {
 			expected:            false,
 		},
 		{
-			name:                "should return true if distribution version is greater than 1.27.0 and less than 1.27.9",
+			name:                "should return true if distribution version is greater than 1.27.0 and less than 1.27.10",
 			distributionVersion: "v1.27.2",
 			expected:            true,
 		},
 		{
-			name:                "should return false if distribution version is greater than 1.27.8",
-			distributionVersion: "v1.27.9",
+			name:                "should return false if distribution version is greater than 1.27.9",
+			distributionVersion: "v1.27.10",
 			expected:            false,
 		},
 		{
-			name:                "should return true if distribution version is greater than 1.28.0 and less than 1.28.4",
+			name:                "should return true if distribution version is greater than 1.28.0 and less than 1.28.5",
 			distributionVersion: "v1.28.3",
 			expected:            true,
 		},
 		{
-			name:                "should return false if distribution version is greater than 1.28.3",
-			distributionVersion: "v1.28.4",
+			name:                "should return false if distribution version is greater than 1.28.4",
+			distributionVersion: "v1.28.5",
 			expected:            false,
 		},
 		{
-			name:                "should return true if distribution version is greater than 1.29.1 and less than 1.29.4",
+			name:                "should return true if distribution version is greater than 1.29.1 and less than 1.29.5",
 			distributionVersion: "v1.29.3",
 			expected:            true,
 		},
 		{
-			name:                "should return false if distribution version is greater than 1.29.3",
-			distributionVersion: "v1.29.4",
+			name:                "should return false if distribution version is greater than 1.29.4",
+			distributionVersion: "v1.29.5",
 			expected:            false,
 		},
 	}
