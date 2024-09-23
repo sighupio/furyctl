@@ -46,7 +46,7 @@ You can find `furyctl` binaries on the [Releases page](https://github.com/sighup
 
 To download the latest release, run:
 
-```console
+```bash
 curl -L "https://github.com/sighupio/furyctl/releases/latest/download/furyctl-$(uname -s)-amd64.tar.gz" -o /tmp/furyctl.tar.gz && tar xfz /tmp/furyctl.tar.gz -C /tmp
 chmod +x /tmp/furyctl
 sudo mv /tmp/furyctl /usr/local/bin/furyctl
@@ -58,13 +58,13 @@ Alternatively, you can install `furyctl` using the asdf plugin.
 
 Add furyctl asdf plugin:
 
-```console
+```bash
 asdf plugin add furyctl
 ```
 
 Check that everything is working correctly with `furyctl version`:
 
-```console
+```bash
 $ furyctl version
 ...
 goVersion: go1.22
@@ -82,7 +82,7 @@ Prerequisites:
 
 > You can install `goreleaser` with the following command once you have Go in your system:
 >
-> ```console
+> ```bash
 > go install github.com/goreleaser/goreleaser@v1.24.0
 > ```
 
@@ -90,41 +90,41 @@ Once you've ensured the above dependencies are installed, you can proceed with t
 
 1. Clone the repository:
 
-```console
-git clone git@github.com:sighupio/furyctl.git
-# cd into the cloned repository
-cd furyctl
-```
+    ```bash
+    git clone git@github.com:sighupio/furyctl.git
+    # cd into the cloned repository
+    cd furyctl
+    ```
 
 2. Build the binaries by running the following command:
 
-```console
-go build .
-```
+    ```bash
+    go build .
+    ```
 
 3. You will find the binaries for your current architecture inside the current folder:
 
-```console
-$ ls furyctl
-furyctl
-```
+    ```bash
+    $ ls furyctl
+    furyctl
+    ```
 
 4. Check that the binary is working as expected:
 
-```console
-$ ./furyctl version
-buildTime: unknown
-gitCommit: unknown
-goVersion: unknown
-osArch: unknown
-version: unknown
-```
+    ```bash
+    $ ./furyctl version
+    buildTime: unknown
+    gitCommit: unknown
+    goVersion: unknown
+    osArch: unknown
+    version: unknown
+    ```
 
 5. (optional) move the binary to your `bin` folder, in macOS:
 
-```console
-sudo mv ./furyctl /usr/local/bin/furyctl
-```
+    ```bash
+    sudo mv ./furyctl /usr/local/bin/furyctl
+    ```
 
 ## Usage
 
@@ -166,8 +166,8 @@ Additionally, the schema of the file is versioned with the `apiVersion` field, s
 
 To scaffold a configuration file to use as a starter, you use the following command:
 
-```console
-furyctl create config --version v1.29.3 --kind "EKSCluster"
+```bash
+furyctl create config --version v1.29.4 --kind "EKSCluster"
 ```
 
 > 💡 **TIP**
@@ -180,7 +180,7 @@ Open the generated configuration file with your editor of choice and edit it acc
 
 Once you have filled your configuration file, you can check that it's content is valid by running the following command:
 
-```console
+```bash
 furyctl validate config --config /path/to/your/furyctl.yaml
 ```
 
@@ -212,7 +212,7 @@ Just like you can validate that your configuration file is well-formed, `furyctl
 
 To validate that your system has all the dependencies needed to create the cluster defined in your configuration file, run the following command:
 
-```console
+```bash
 furyctl validate dependencies
 ```
 
@@ -228,7 +228,7 @@ Last but not least, you can launch the creation of the resources defined in the 
 >
 > The cluster creation process, by default, will create a VPN in the `infrastructure` phase and connect your machine to it automatically before proceeding to the `kubernetes` phase.
 
-```console
+```bash
 furyctl create cluster --config /path/to/your/furyctl.yaml
 ```
 
@@ -262,13 +262,13 @@ The first step consists in bringing the cluster up to date with the latest versi
 2. Bumping the version in the configuration file to the desired one.
 3. Upgrading the cluster:
 
-```console
+```bash
 furyctl apply --upgrade --config /path/to/your/furyctl.yaml
 ```
 
 Once that is done, if you were also planning to move to a different configuration (e.g.: changing from logging type `opensearch` to `loki`), you can run the following command to run the migrations as usual:
 
-```console
+```bash
 furyctl apply --config /path/to/your/furyctl.yaml
 ```
 
@@ -280,13 +280,13 @@ furyctl apply --config /path/to/your/furyctl.yaml
 
 You can also split nodes upgrade process into several steps, for example, you can upgrade the control plane nodes first:
 
-```console
+```bash
 furyctl apply --upgrade --config /path/to/your/furyctl.yaml --skip-nodes-upgrade
 ```
 
 And then upgrade the worker nodes, one by one:
 
-```console
+```bash
 furyctl apply --upgrade --config /path/to/your/furyctl.yaml --upgrade-node workerNode1
 ```
 
@@ -302,7 +302,7 @@ To destroy a cluster created using `furyctl` and all its related resources, run 
 >
 > You are about to run a destructive operation.
 
-```console
+```bash
 furyctl delete cluster --dry-run
 ```
 
