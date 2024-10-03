@@ -26,7 +26,6 @@ type CertificatesRenewer struct {
 	kfdManifest config.KFD
 	distroPath  string
 	configPath  string
-	outDir      string
 }
 
 func (k *CertificatesRenewer) SetProperties(props []cluster.CertificatesRenewerProperty) {
@@ -41,27 +40,22 @@ func (k *CertificatesRenewer) SetProperty(name string, value any) {
 	lcName := strings.ToLower(name)
 
 	switch lcName {
-	case cluster.KubeconfigPropertyFuryctlConf:
+	case cluster.CertificatesRenewerPropertyFuryctlConf:
 		if s, ok := value.(public.OnpremisesKfdV1Alpha2); ok {
 			k.furyctlConf = s
 		}
 
-	case cluster.KubeconfigPropertyConfigPath:
+	case cluster.CertificatesRenewerPropertyConfigPath:
 		if s, ok := value.(string); ok {
 			k.configPath = s
 		}
 
-	case cluster.KubeconfigPropertyOutdir:
-		if s, ok := value.(string); ok {
-			k.outDir = s
-		}
-
-	case cluster.KubeconfigPropertyKfdManifest:
+	case cluster.CertificatesRenewerPropertyKfdManifest:
 		if s, ok := value.(config.KFD); ok {
 			k.kfdManifest = s
 		}
 
-	case cluster.KubeconfigPropertyDistroPath:
+	case cluster.CertificatesRenewerPropertyDistroPath:
 		if s, ok := value.(string); ok {
 			k.distroPath = s
 		}

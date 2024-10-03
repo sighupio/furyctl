@@ -14,7 +14,6 @@ import (
 )
 
 const (
-	CertificatesRenewerPropertyOutdir      = "outdir"
 	CertificatesRenewerPropertyFuryctlConf = "furyctlconf"
 	CertificatesRenewerPropertyConfigPath  = "configpath"
 	CertificatesRenewerPropertyKfdManifest = "kfdmanifest"
@@ -41,7 +40,6 @@ func NewCertificatesRenewer(
 	kfdManifest config.KFD,
 	distroPath string,
 	configPath string,
-	outDir string,
 ) (CertificatesRenewer, error) {
 	lcAPIVersion := strings.ToLower(minimalConf.APIVersion)
 	lcResourceType := strings.ToLower(minimalConf.Kind)
@@ -51,10 +49,6 @@ func NewCertificatesRenewer(
 			{
 				Name:  CertificatesRenewerPropertyKfdManifest,
 				Value: kfdManifest,
-			},
-			{
-				Name:  CertificatesRenewerPropertyOutdir,
-				Value: outDir,
 			},
 			{
 				Name:  CertificatesRenewerPropertyDistroPath,

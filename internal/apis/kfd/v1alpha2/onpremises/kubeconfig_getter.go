@@ -27,7 +27,7 @@ type KubeconfigGetter struct {
 	kfdManifest config.KFD
 	distroPath  string
 	configPath  string
-	outDir      string
+	workDir     string
 }
 
 func (k *KubeconfigGetter) SetProperties(props []cluster.KubeconfigProperty) {
@@ -52,9 +52,9 @@ func (k *KubeconfigGetter) SetProperty(name string, value any) {
 			k.configPath = s
 		}
 
-	case cluster.KubeconfigPropertyOutdir:
+	case cluster.KubeconfigPropertyWorkDir:
 		if s, ok := value.(string); ok {
-			k.outDir = s
+			k.workDir = s
 		}
 
 	case cluster.KubeconfigPropertyKfdManifest:
@@ -72,7 +72,7 @@ func (k *KubeconfigGetter) SetProperty(name string, value any) {
 func (k *KubeconfigGetter) Get() error {
 	logrus.Info("Getting kubeconfig...")
 
-	kubeconfigPath := path.Join(k.outDir, "kubeconfig")
+	kubeconfigPath := path.Join(k.workDir, "kubeconfig")
 
 	tmpDir, err := os.MkdirTemp("", "fury-kubeconfig-*")
 	if err != nil {

@@ -14,7 +14,7 @@ import (
 )
 
 const (
-	KubeconfigPropertyOutdir      = "outdir"
+	KubeconfigPropertyWorkDir     = "workdir"
 	KubeconfigPropertyFuryctlConf = "furyctlconf"
 	KubeconfigPropertyConfigPath  = "configpath"
 	KubeconfigPropertyKfdManifest = "kfdmanifest"
@@ -42,7 +42,7 @@ func NewKubeconfigGetter(
 	kfdManifest config.KFD,
 	distroPath string,
 	configPath string,
-	outDir string,
+	workDir string,
 ) (KubeconfigGetter, error) {
 	lcAPIVersion := strings.ToLower(minimalConf.APIVersion)
 	lcResourceType := strings.ToLower(minimalConf.Kind)
@@ -54,8 +54,8 @@ func NewKubeconfigGetter(
 				Value: kfdManifest,
 			},
 			{
-				Name:  KubeconfigPropertyOutdir,
-				Value: outDir,
+				Name:  KubeconfigPropertyWorkDir,
+				Value: workDir,
 			},
 			{
 				Name:  KubeconfigPropertyDistroPath,

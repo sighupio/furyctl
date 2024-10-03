@@ -22,7 +22,6 @@ import (
 	"github.com/sighupio/furyctl/internal/git"
 	cobrax "github.com/sighupio/furyctl/internal/x/cobra"
 	execx "github.com/sighupio/furyctl/internal/x/exec"
-	iox "github.com/sighupio/furyctl/internal/x/io"
 	"github.com/sighupio/furyctl/pkg/dependencies"
 	dist "github.com/sighupio/furyctl/pkg/distribution"
 	netx "github.com/sighupio/furyctl/pkg/x/net"
@@ -175,7 +174,7 @@ func NewKubeconfigCmd() *cobra.Command {
 				}
 			}
 
-			getter, err := cluster.NewKubeconfigGetter(res.MinimalConf, res.DistroManifest, res.RepoPath, absFuryctlPath, outDir)
+			getter, err := cluster.NewKubeconfigGetter(res.MinimalConf, res.DistroManifest, res.RepoPath, absFuryctlPath, currentDir)
 			if err != nil {
 				cmdEvent.AddErrorMessage(err)
 				tracker.Track(cmdEvent)
@@ -188,13 +187,6 @@ func NewKubeconfigCmd() *cobra.Command {
 				tracker.Track(cmdEvent)
 
 				return fmt.Errorf("error while getting the kubeconfig, please check that the cluster is up and running and is reachable: %w", err)
-			}
-
-			if err := iox.CopyFile(path.Join(outDir, "kubeconfig"), path.Join(currentDir, "kubeconfig")); err != nil {
-				cmdEvent.AddErrorMessage(err)
-				tracker.Track(cmdEvent)
-
-				return fmt.Errorf("error while copying the kubeconfig: %w", err)
 			}
 
 			logrus.Infof("Kubeconfig successfully retrieved, you can find it at: %s", path.Join(currentDir, "kubeconfig"))
