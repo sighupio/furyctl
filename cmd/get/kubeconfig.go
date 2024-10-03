@@ -22,6 +22,7 @@ import (
 	"github.com/sighupio/furyctl/internal/git"
 	cobrax "github.com/sighupio/furyctl/internal/x/cobra"
 	execx "github.com/sighupio/furyctl/internal/x/exec"
+	iox "github.com/sighupio/furyctl/internal/x/io"
 	"github.com/sighupio/furyctl/pkg/dependencies"
 	dist "github.com/sighupio/furyctl/pkg/distribution"
 	netx "github.com/sighupio/furyctl/pkg/x/net"
@@ -83,6 +84,7 @@ func NewKubeconfigCmd() *cobra.Command {
 
 			// Get home dir.
 			logrus.Debug("Getting Home directory path...")
+
 			homeDir, err := os.UserHomeDir()
 			if err != nil {
 				cmdEvent.AddErrorMessage(err)
@@ -91,15 +93,15 @@ func NewKubeconfigCmd() *cobra.Command {
 				return fmt.Errorf("error while getting user home directory: %w", err)
 			}
 
+			if outDir == "" {
+				outDir = homeDir
+			}
+
 			if binPath == "" {
-				binPath = path.Join(homeDir, ".furyctl", "bin")
+				binPath = path.Join(outDir, ".furyctl", "bin")
 			}
 
 			parsedGitProtocol := (git.Protocol)(gitProtocol)
-
-			if outDir == "" {
-				outDir = currentDir
-			}
 
 			// Init packages.
 			execx.Debug = debug
@@ -140,7 +142,7 @@ func NewKubeconfigCmd() *cobra.Command {
 			basePath := path.Join(outDir, ".furyctl", res.MinimalConf.Metadata.Name)
 
 			// Init second half of collaborators.
-			depsdl := dependencies.NewCachingDownloader(client, homeDir, basePath, binPath, parsedGitProtocol)
+			depsdl := dependencies.NewCachingDownloader(client, outDir, basePath, binPath, parsedGitProtocol)
 
 			// Validate the furyctl.yaml file.
 			logrus.Info("Validating configuration file...")
@@ -188,7 +190,14 @@ func NewKubeconfigCmd() *cobra.Command {
 				return fmt.Errorf("error while getting the kubeconfig, please check that the cluster is up and running and is reachable: %w", err)
 			}
 
-			logrus.Infof("Kubeconfig successfully retrieved, you can find it at: %s", path.Join(outDir, "kubeconfig"))
+			if err := iox.CopyFile(path.Join(outDir, "kubeconfig"), path.Join(currentDir, "kubeconfig")); err != nil {
+				cmdEvent.AddErrorMessage(err)
+				tracker.Track(cmdEvent)
+
+				return fmt.Errorf("error while copying the kubeconfig: %w", err)
+			}
+
+			logrus.Infof("Kubeconfig successfully retrieved, you can find it at: %s", path.Join(currentDir, "kubeconfig"))
 
 			cmdEvent.AddSuccessMessage("kubeconfig successfully retrieved")
 			tracker.Track(cmdEvent)
