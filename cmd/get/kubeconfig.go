@@ -73,7 +73,7 @@ func NewKubeconfigCmd() *cobra.Command {
 			}
 
 			// Get absolute path to the config file.
-			absFuryctlPath, err := filepath.Abs(furyctlPath)
+			furyctlPath, err = filepath.Abs(furyctlPath)
 			if err != nil {
 				cmdEvent.AddErrorMessage(err)
 				tracker.Track(cmdEvent)
@@ -108,7 +108,7 @@ func NewKubeconfigCmd() *cobra.Command {
 			executor := execx.NewStdExecutor()
 
 			distrodl := &dist.Downloader{}
-			depsvl := dependencies.NewValidator(executor, binPath, absFuryctlPath, false)
+			depsvl := dependencies.NewValidator(executor, binPath, furyctlPath, false)
 
 			// Init first half of collaborators.
 			client := netx.NewGoGetterClient()
@@ -130,7 +130,7 @@ func NewKubeconfigCmd() *cobra.Command {
 			// Download the distribution.
 			logrus.Info("Downloading distribution...")
 
-			res, err := distrodl.Download(distroLocation, absFuryctlPath)
+			res, err := distrodl.Download(distroLocation, furyctlPath)
 			if err != nil {
 				cmdEvent.AddErrorMessage(err)
 				tracker.Track(cmdEvent)
@@ -145,7 +145,7 @@ func NewKubeconfigCmd() *cobra.Command {
 
 			// Validate the furyctl.yaml file.
 			logrus.Info("Validating configuration file...")
-			if err := config.Validate(absFuryctlPath, res.RepoPath); err != nil {
+			if err := config.Validate(furyctlPath, res.RepoPath); err != nil {
 				cmdEvent.AddErrorMessage(err)
 				tracker.Track(cmdEvent)
 
@@ -174,7 +174,7 @@ func NewKubeconfigCmd() *cobra.Command {
 				}
 			}
 
-			getter, err := cluster.NewKubeconfigGetter(res.MinimalConf, res.DistroManifest, res.RepoPath, absFuryctlPath, currentDir)
+			getter, err := cluster.NewKubeconfigGetter(res.MinimalConf, res.DistroManifest, res.RepoPath, furyctlPath, currentDir)
 			if err != nil {
 				cmdEvent.AddErrorMessage(err)
 				tracker.Track(cmdEvent)

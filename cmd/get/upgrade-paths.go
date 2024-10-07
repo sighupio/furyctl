@@ -68,19 +68,20 @@ func NewUpgradePathsCmd() *cobra.Command {
 			skipDepsValidation := viper.GetBool("skip-deps-validation")
 			fromVersion := viper.GetString("from")
 			kind := viper.GetString("kind")
-			// Get Current dir.
-			logrus.Debug("Getting current directory path...")
 
-			currentDir, err := os.Getwd()
+			// Get absolute path to the config file.
+			var err error
+			furyctlPath, err = filepath.Abs(furyctlPath)
 			if err != nil {
 				cmdEvent.AddErrorMessage(err)
 				tracker.Track(cmdEvent)
 
-				return fmt.Errorf("error while getting current directory: %w", err)
+				return fmt.Errorf("error while getting config directory: %w", err)
 			}
 
 			// Get home dir.
 			logrus.Debug("Getting Home directory path...")
+
 			homeDir, err := os.UserHomeDir()
 			if err != nil {
 				cmdEvent.AddErrorMessage(err)
@@ -89,15 +90,15 @@ func NewUpgradePathsCmd() *cobra.Command {
 				return fmt.Errorf("error while getting user home directory: %w", err)
 			}
 
+			if outDir == "" {
+				outDir = homeDir
+			}
+
 			if binPath == "" {
-				binPath = path.Join(homeDir, ".furyctl", "bin")
+				binPath = path.Join(outDir, ".furyctl", "bin")
 			}
 
 			parsedGitProtocol := (git.Protocol)(gitProtocol)
-
-			if outDir == "" {
-				outDir = currentDir
-			}
 
 			// Init packages.
 			execx.Debug = debug
