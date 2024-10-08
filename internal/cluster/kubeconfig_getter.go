@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-//nolint:dupl // ignoring duplication linting error
 package cluster
 
 import (
@@ -14,7 +13,7 @@ import (
 )
 
 const (
-	KubeconfigPropertyOutdir      = "outdir"
+	KubeconfigPropertyWorkDir     = "workdir"
 	KubeconfigPropertyFuryctlConf = "furyctlconf"
 	KubeconfigPropertyConfigPath  = "configpath"
 	KubeconfigPropertyKfdManifest = "kfdmanifest"
@@ -42,7 +41,7 @@ func NewKubeconfigGetter(
 	kfdManifest config.KFD,
 	distroPath string,
 	configPath string,
-	outDir string,
+	workDir string,
 ) (KubeconfigGetter, error) {
 	lcAPIVersion := strings.ToLower(minimalConf.APIVersion)
 	lcResourceType := strings.ToLower(minimalConf.Kind)
@@ -54,8 +53,8 @@ func NewKubeconfigGetter(
 				Value: kfdManifest,
 			},
 			{
-				Name:  KubeconfigPropertyOutdir,
-				Value: outDir,
+				Name:  KubeconfigPropertyWorkDir,
+				Value: workDir,
 			},
 			{
 				Name:  KubeconfigPropertyDistroPath,

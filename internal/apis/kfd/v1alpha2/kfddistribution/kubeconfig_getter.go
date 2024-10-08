@@ -27,7 +27,7 @@ type KubeconfigGetter struct {
 	furyctlConf public.KfddistributionKfdV1Alpha2
 	kfdManifest config.KFD
 	configPath  string
-	outDir      string
+	workDir     string
 }
 
 func (k *KubeconfigGetter) SetProperties(props []cluster.KubeconfigProperty) {
@@ -50,9 +50,9 @@ func (k *KubeconfigGetter) SetProperty(name string, value any) {
 			k.configPath = s
 		}
 
-	case cluster.KubeconfigPropertyOutdir:
+	case cluster.KubeconfigPropertyWorkDir:
 		if s, ok := value.(string); ok {
-			k.outDir = s
+			k.workDir = s
 		}
 
 	case cluster.KubeconfigPropertyKfdManifest:
@@ -85,7 +85,7 @@ func (k *KubeconfigGetter) Get() error {
 		return fmt.Errorf("error reading kubeconfig file: %w", err)
 	}
 
-	kubeconfigPath = path.Join(k.outDir, "kubeconfig")
+	kubeconfigPath = path.Join(k.workDir, "kubeconfig")
 
 	if err := os.WriteFile(kubeconfigPath, kubeconfig, iox.FullRWPermAccess); err != nil {
 		return fmt.Errorf("error writing kubeconfig file: %w", err)

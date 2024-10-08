@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"os"
 	"path"
+	"path/filepath"
 
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -57,19 +58,19 @@ func NewCertificatesCmd() *cobra.Command {
 			skipDepsDownload := viper.GetBool("skip-deps-download")
 			skipDepsValidation := viper.GetBool("skip-deps-validation")
 
-			// Get Current dir.
-			logrus.Debug("Getting current directory path...")
-
-			currentDir, err := os.Getwd()
+			// Get absolute path to the config file.
+			var err error
+			furyctlPath, err = filepath.Abs(furyctlPath)
 			if err != nil {
 				cmdEvent.AddErrorMessage(err)
 				tracker.Track(cmdEvent)
 
-				return fmt.Errorf("error while getting current directory: %w", err)
+				return fmt.Errorf("error while getting config directory: %w", err)
 			}
 
 			// Get home dir.
 			logrus.Debug("Getting Home directory path...")
+
 			homeDir, err := os.UserHomeDir()
 			if err != nil {
 				cmdEvent.AddErrorMessage(err)
@@ -78,15 +79,15 @@ func NewCertificatesCmd() *cobra.Command {
 				return fmt.Errorf("error while getting user home directory: %w", err)
 			}
 
+			if outDir == "" {
+				outDir = homeDir
+			}
+
 			if binPath == "" {
-				binPath = path.Join(homeDir, ".furyctl", "bin")
+				binPath = path.Join(outDir, ".furyctl", "bin")
 			}
 
 			parsedGitProtocol := (git.Protocol)(gitProtocol)
-
-			if outDir == "" {
-				outDir = currentDir
-			}
 
 			// Init packages.
 			execx.Debug = debug
@@ -127,7 +128,7 @@ func NewCertificatesCmd() *cobra.Command {
 			basePath := path.Join(outDir, ".furyctl", res.MinimalConf.Metadata.Name)
 
 			// Init second half of collaborators.
-			depsdl := dependencies.NewCachingDownloader(client, homeDir, basePath, binPath, parsedGitProtocol)
+			depsdl := dependencies.NewCachingDownloader(client, outDir, basePath, binPath, parsedGitProtocol)
 
 			// Validate the furyctl.yaml file.
 			logrus.Info("Validating configuration file...")
@@ -160,7 +161,7 @@ func NewCertificatesCmd() *cobra.Command {
 				}
 			}
 
-			renewer, err := cluster.NewCertificatesRenewer(res.MinimalConf, res.DistroManifest, res.RepoPath, furyctlPath, outDir)
+			renewer, err := cluster.NewCertificatesRenewer(res.MinimalConf, res.DistroManifest, res.RepoPath, furyctlPath)
 			if err != nil {
 				cmdEvent.AddErrorMessage(err)
 				tracker.Track(cmdEvent)

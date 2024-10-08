@@ -190,7 +190,7 @@ func NewRootCmd() *RootCommand {
 		"outdir",
 		"o",
 		"",
-		"Switch to a different working directory before executing the given subcommand",
+		"Change the directory where to create the data directory (.furyctl)",
 	)
 
 	rootCmd.PersistentFlags().StringVarP(
