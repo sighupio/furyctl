@@ -8,7 +8,7 @@ name: main
 
 steps:
   - name: prepare
-    image: quay.io/sighup/golang:1.22.3
+    image: quay.io/sighup/golang:1.23.2
     pull: always
     depends_on:
       - clone
@@ -22,7 +22,7 @@ steps:
       GOTMPDIR: /drone/src/.go/tmp
 
   - name: license
-    image: quay.io/sighup/golang:1.22.3
+    image: quay.io/sighup/golang:1.23.2
     pull: always
     depends_on:
       - prepare
@@ -35,7 +35,7 @@ steps:
       GOTMPDIR: /drone/src/.go/tmp
 
   - name: lint
-    image: quay.io/sighup/golang:1.22.3
+    image: quay.io/sighup/golang:1.23.2
     pull: always
     depends_on:
       - prepare
@@ -48,7 +48,7 @@ steps:
       GOTMPDIR: /drone/src/.go/tmp
 
   - name: test-unit
-    image: quay.io/sighup/golang:1.22.3
+    image: quay.io/sighup/golang:1.23.2
     pull: always
     depends_on:
       - prepare
@@ -61,7 +61,7 @@ steps:
       GOTMPDIR: /drone/src/.go/tmp
 
   - name: test-integration
-    image: quay.io/sighup/golang:1.22.3
+    image: quay.io/sighup/golang:1.23.2
     pull: always
     depends_on:
       - prepare
@@ -84,8 +84,8 @@ steps:
       - apt update
       - apt install -y curl git make ssh unzip
       # Install Golang & deps
-      - curl -sL https://go.dev/dl/go1.22.3.linux-amd64.tar.gz -o go1.22.3.tar.gz
-      - rm -rf /usr/local/go && tar -C /usr/local -xzf go1.22.3.tar.gz
+      - curl -sL https://go.dev/dl/go1.23.2.linux-amd64.tar.gz -o go1.23.2.tar.gz
+      - rm -rf /usr/local/go && tar -C /usr/local -xzf go1.23.2.tar.gz
       - echo 'export PATH=$$PATH:/usr/local/go/bin:/root/go/bin' >> /etc/profile
       - export PATH=$$PATH:/usr/local/go/bin:/root/go/bin
       - go install github.com/onsi/ginkgo/v2/ginkgo@v2.15.0
@@ -108,7 +108,7 @@ steps:
       # Run tests
       - make test-e2e
       # Cleanup
-      - rm go1.22.3.tar.gz
+      - rm go1.23.2.tar.gz
       - rm awscliv2.zip
     environment:
       CGO_ENABLED: 0
@@ -132,7 +132,7 @@ steps:
         from_secret: TERRAFORM_TF_STATES_BUCKET_NAME
 
   - name: build
-    image: quay.io/sighup/golang:1.22.3
+    image: quay.io/sighup/golang:1.23.2
     pull: always
     depends_on:
       - lint
@@ -158,7 +158,7 @@ steps:
         from_secret: GITHUB_TOKEN
 
   - name: build-release
-    image: quay.io/sighup/golang:1.22.3
+    image: quay.io/sighup/golang:1.23.2
     pull: always
     depends_on:
       - lint
