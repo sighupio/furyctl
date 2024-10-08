@@ -96,7 +96,7 @@ type ReducerOperatorPhaseAsyncDecorator[T Reducers] struct {
 	upgr   *Upgrade
 }
 
-func (d *ReducerOperatorPhaseAsyncDecorator[T]) Exec(reducers T, startFrom string, upgradeState *State) error { //nolint: lll,revive // confusing-naming is a false positive
+func (d *ReducerOperatorPhaseAsyncDecorator[T]) Exec(reducers T, startFrom string, upgradeState *State) error { //nolint: lll // confusing-naming is a false positive
 	fnErr := d.phase.Exec(reducers, startFrom, upgradeState)
 
 	if !d.dryRun && d.upgr.Enabled {
@@ -118,7 +118,7 @@ func (d *ReducerOperatorPhaseAsyncDecorator[T]) Exec(reducers T, startFrom strin
 	return nil
 }
 
-func (d *ReducerOperatorPhaseAsyncDecorator[T]) SetUpgrade(upgradeEnabled bool) { //nolint: lll,revive // confusing-naming is a false positive
+func (d *ReducerOperatorPhaseAsyncDecorator[T]) SetUpgrade(upgradeEnabled bool) { //nolint: lll // confusing-naming is a false positive
 	d.upgr.Enabled = upgradeEnabled
 }
 
@@ -130,7 +130,7 @@ func (d *ReducerOperatorPhaseAsyncDecorator[T]) Stop() error {
 	return nil
 }
 
-func (d *ReducerOperatorPhaseAsyncDecorator[T]) Self() *cluster.OperationPhase { //nolint: lll,revive // confusing-naming is a false positive
+func (d *ReducerOperatorPhaseAsyncDecorator[T]) Self() *cluster.OperationPhase { //nolint: lll // confusing-naming is a false positive
 	return d.phase.Self()
 }
 

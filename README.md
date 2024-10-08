@@ -7,7 +7,7 @@
 <p>The Swiss Army Knife<br/>for the Kubernetes Fury Distribution</p>
 
 [![Build Status](https://ci.sighup.io/api/badges/sighupio/furyctl/status.svg?ref=refs/heads/main)](https://ci.sighup.io/sighupio/furyctl)
-![Release](https://img.shields.io/badge/furyctl-v0.29.7-blue)
+![Release](https://img.shields.io/badge/furyctl-v0.29.9-blue)
 ![Slack](https://img.shields.io/badge/slack-@kubernetes/fury-yellow.svg?logo=slack)
 ![License](https://img.shields.io/github/license/sighupio/furyctl)
 [![Go Report Card](https://goreportcard.com/badge/github.com/sighupio/furyctl)](https://goreportcard.com/report/github.com/sighupio/furyctl)
@@ -67,9 +67,9 @@ Check that everything is working correctly with `furyctl version`:
 ```bash
 $ furyctl version
 ...
-goVersion: go1.22
+goVersion: go1.23
 osArch: amd64
-version: 0.29.7
+version: 0.29.9
 ```
 
 ### Installing from source
@@ -77,54 +77,54 @@ version: 0.29.7
 Prerequisites:
 
 - `make >= 4.1`
-- `go >= 1.22`
-- `goreleaser >= v1.24`
+- `go >= 1.23`
+- `goreleaser >= 2.3`
 
 > You can install `goreleaser` with the following command once you have Go in your system:
 >
 > ```bash
-> go install github.com/goreleaser/goreleaser@v1.24.0
+> go install github.com/goreleaser/goreleaser/v2@v2.3.2
 > ```
 
 Once you've ensured the above dependencies are installed, you can proceed with the installation.
 
 1. Clone the repository:
 
-    ```bash
-    git clone git@github.com:sighupio/furyctl.git
-    # cd into the cloned repository
-    cd furyctl
-    ```
+   ```bash
+   git clone git@github.com:sighupio/furyctl.git
+   # cd into the cloned repository
+   cd furyctl
+   ```
 
 2. Build the binaries by running the following command:
 
-    ```bash
-    go build .
-    ```
+   ```bash
+   go build .
+   ```
 
 3. You will find the binaries for your current architecture inside the current folder:
 
-    ```bash
-    $ ls furyctl
-    furyctl
-    ```
+   ```bash
+   $ ls furyctl
+   furyctl
+   ```
 
 4. Check that the binary is working as expected:
 
-    ```bash
-    $ ./furyctl version
-    buildTime: unknown
-    gitCommit: unknown
-    goVersion: unknown
-    osArch: unknown
-    version: unknown
-    ```
+   ```bash
+   $ ./furyctl version
+   buildTime: 2024-10-08T07:46:28Z
+   gitCommit: 217cdcc8bf075fccfdb11c41ccc6bb317ec704bc
+   goVersion: go1.23.2
+   osArch: arm64
+   version: 0.29.9
+   ```
 
 5. (optional) move the binary to your `bin` folder, in macOS:
 
-    ```bash
-    sudo mv ./furyctl /usr/local/bin/furyctl
-    ```
+   ```bash
+   sudo mv ./furyctl /usr/local/bin/furyctl
+   ```
 
 ## Usage
 

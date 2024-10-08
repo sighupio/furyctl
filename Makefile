@@ -191,12 +191,12 @@ clean: deps
 build:
 	@export GO_VERSION=$$(go version | cut -d ' ' -f 3) && \
 	goreleaser check && \
-	goreleaser release --debug --snapshot --clean
+	goreleaser release --verbose --snapshot --clean
 
 release:
 	@export GO_VERSION=$$(go version | cut -d ' ' -f 3) && \
 	goreleaser check && \
-	goreleaser release --debug --clean
+	goreleaser release --verbose --clean
 
 # Helpers
 
