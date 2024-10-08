@@ -113,11 +113,11 @@ Once you've ensured the above dependencies are installed, you can proceed with t
 
    ```bash
    $ ./furyctl version
-   buildTime: unknown
-   gitCommit: unknown
-   goVersion: unknown
-   osArch: unknown
-   version: unknown
+   buildTime: 2024-10-08T07:46:28Z
+   gitCommit: 217cdcc8bf075fccfdb11c41ccc6bb317ec704bc
+   goVersion: go1.23.2
+   osArch: arm64
+   version: 0.29.9
    ```
 
 5. (optional) move the binary to your `bin` folder, in macOS:
