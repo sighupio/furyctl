@@ -78,12 +78,12 @@ Prerequisites:
 
 - `make >= 4.1`
 - `go >= 1.23`
-- `goreleaser >= v2.3`
+- `goreleaser >= 2.3`
 
 > You can install `goreleaser` with the following command once you have Go in your system:
 >
 > ```bash
-> go install github.com/goreleaser/goreleaser@v2.3.2
+> go install github.com/goreleaser/goreleaser/v2@v2.3.2
 > ```
 
 Once you've ensured the above dependencies are installed, you can proceed with the installation.
