@@ -67,7 +67,7 @@ Check that everything is working correctly with `furyctl version`:
 ```bash
 $ furyctl version
 ...
-goVersion: go1.22
+goVersion: go1.23
 osArch: amd64
 version: 0.29.9
 ```
