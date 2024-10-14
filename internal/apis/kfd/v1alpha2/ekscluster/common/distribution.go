@@ -30,6 +30,7 @@ var (
 	errCastingDNSPubIamToStr = errors.New("error casting external_dns_public_iam_role_arn output to string")
 	errCastingCertIamToStr   = errors.New("error casting cert_manager_iam_role_arn output to string")
 	errCastingVelIamToStr    = errors.New("error casting velero_iam_role_arn output to string")
+	errTerraformOutputToStr  = errors.New("error casting terraform output to string")
 )
 
 type Distribution struct {
@@ -228,7 +229,7 @@ func (d *Distribution) InjectStoredConfig(cfg *template.Config) error {
 }
 
 func (d *Distribution) InjectDataPostTf(fMerger *merge.Merger) (*merge.Merger, error) {
-	arns, err := d.extractARNsFromTfOut()
+	outputs, err := d.extractTfOutputs()
 	if err != nil {
 		return nil, err
 	}
@@ -238,24 +239,25 @@ func (d *Distribution) InjectDataPostTf(fMerger *merge.Merger) (*merge.Merger, e
 			Modules: private.SpecDistributionModules{
 				Aws: &private.SpecDistributionModulesAws{
 					EbsCsiDriver: private.SpecDistributionModulesAwsEbsCsiDriver{
-						IamRoleArn: private.TypesAwsArn(arns["ebs_csi_driver_iam_role_arn"]),
+						IamRoleArn: private.TypesAwsArn(outputs["ebs_csi_driver_iam_role_arn"]),
 					},
 					LoadBalancerController: private.SpecDistributionModulesAwsLoadBalancerController{
-						IamRoleArn: private.TypesAwsArn(arns["load_balancer_controller_iam_role_arn"]),
+						IamRoleArn: private.TypesAwsArn(outputs["load_balancer_controller_iam_role_arn"]),
 					},
 					ClusterAutoscaler: private.SpecDistributionModulesAwsClusterAutoscaler{
-						IamRoleArn: private.TypesAwsArn(arns["cluster_autoscaler_iam_role_arn"]),
+						IamRoleArn: private.TypesAwsArn(outputs["cluster_autoscaler_iam_role_arn"]),
 					},
 				},
 				Ingress: private.SpecDistributionModulesIngress{
 					ExternalDns: private.SpecDistributionModulesIngressExternalDNS{
-						PrivateIamRoleArn: private.TypesAwsArn(arns["external_dns_private_iam_role_arn"]),
-						PublicIamRoleArn:  private.TypesAwsArn(arns["external_dns_public_iam_role_arn"]),
+						PrivateIamRoleArn: private.TypesAwsArn(outputs["external_dns_private_iam_role_arn"]),
+						PublicIamRoleArn:  private.TypesAwsArn(outputs["external_dns_public_iam_role_arn"]),
 					},
 					CertManager: private.SpecDistributionModulesIngressCertManager{
 						ClusterIssuer: private.SpecDistributionModulesIngressCertManagerClusterIssuer{
 							Route53: private.SpecDistributionModulesIngressClusterIssuerRoute53{
-								IamRoleArn: private.TypesAwsArn(arns["cert_manager_iam_role_arn"]),
+								IamRoleArn:   private.TypesAwsArn(outputs["cert_manager_iam_role_arn"]),
+								HostedZoneId: outputs["aws_route53_zone_public_id"],
 							},
 						},
 					},
@@ -268,7 +270,7 @@ func (d *Distribution) InjectDataPostTf(fMerger *merge.Merger) (*merge.Merger, e
 		injectData.Data.Modules.Dr = private.SpecDistributionModulesDr{
 			Velero: &private.SpecDistributionModulesDrVelero{
 				Eks: private.SpecDistributionModulesDrVeleroEks{
-					IamRoleArn: private.TypesAwsArn(arns["velero_iam_role_arn"]),
+					IamRoleArn: private.TypesAwsArn(outputs["velero_iam_role_arn"]),
 				},
 			},
 		}
@@ -289,7 +291,7 @@ func (d *Distribution) InjectDataPostTf(fMerger *merge.Merger) (*merge.Merger, e
 	return merger, nil
 }
 
-func (d *Distribution) extractARNsFromTfOut() (map[string]string, error) {
+func (d *Distribution) extractTfOutputs() (map[string]string, error) {
 	arns := map[string]string{}
 
 	out, err := d.TFRunner.Output()
@@ -350,6 +352,14 @@ func (d *Distribution) extractARNsFromTfOut() (map[string]string, error) {
 		arns["velero_iam_role_arn"], ok = veleroArn.Value.(string)
 		if !ok {
 			return nil, errCastingVelIamToStr
+		}
+	}
+
+	awsRoute53ZonePublicID, ok := out["aws_route53_zone_public_id"]
+	if ok {
+		arns["aws_route53_zone_public_id"], ok = awsRoute53ZonePublicID.Value.(string)
+		if !ok {
+			return nil, errTerraformOutputToStr
 		}
 	}
 
