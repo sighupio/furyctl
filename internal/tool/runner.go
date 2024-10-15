@@ -13,6 +13,7 @@ import (
 	"github.com/sighupio/furyctl/internal/tool/git"
 	"github.com/sighupio/furyctl/internal/tool/helm"
 	"github.com/sighupio/furyctl/internal/tool/helmfile"
+	"github.com/sighupio/furyctl/internal/tool/kapp"
 	"github.com/sighupio/furyctl/internal/tool/kubectl"
 	"github.com/sighupio/furyctl/internal/tool/kustomize"
 	"github.com/sighupio/furyctl/internal/tool/openvpn"
@@ -39,6 +40,7 @@ const (
 	Helm      Name = "helm"
 	Helmfile  Name = "helmfile"
 	Sed       Name = "sed"
+	Kapp      Name = "kapp"
 )
 
 type Runner interface {
@@ -147,6 +149,16 @@ func (rf *RunnerFactory) Create(name Name, version, workDir string) Runner {
 			Helmfile: filepath.Join(rf.paths.Bin, string(name), version, string(name)),
 			WorkDir:  workDir,
 		})
+
+	case Kapp:
+		return kapp.NewRunner(
+			rf.executor,
+			kapp.Paths{
+				Kapp:    filepath.Join(rf.paths.Bin, string(name), version, string(name)),
+				WorkDir: workDir,
+			},
+			false,
+		)
 
 	default:
 		return nil
