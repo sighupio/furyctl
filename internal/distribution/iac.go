@@ -114,6 +114,7 @@ func (m *IACBuilder) Build() error {
 		"terraform":  "",
 		"vendorPath": "",
 		"yq":         "",
+		"kapp":       "",
 	}
 
 	tmplCfg.Data["checks"] = map[any]any{
