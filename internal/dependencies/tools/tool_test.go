@@ -30,6 +30,10 @@ func Test_Factory_Create(t *testing.T) {
 			wantTool: true,
 		},
 		{
+			desc:     "kapp",
+			wantTool: true,
+		},
+		{
 			desc:     "kustomize",
 			wantTool: true,
 		},
