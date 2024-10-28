@@ -23,14 +23,14 @@ import (
 )
 
 var (
-	errCastingEbsIamToStr    = errors.New("error casting ebs_csi_driver_iam_role_arn output to string")
-	errCastingLbIamToStr     = errors.New("error casting load_balancer_controller_iam_role_arn output to string")
-	errCastingClsAsIamToStr  = errors.New("error casting cluster_autoscaler_iam_role_arn output to string")
-	errCastingDNSPvtIamToStr = errors.New("error casting external_dns_private_iam_role_arn output to string")
-	errCastingDNSPubIamToStr = errors.New("error casting external_dns_public_iam_role_arn output to string")
-	errCastingCertIamToStr   = errors.New("error casting cert_manager_iam_role_arn output to string")
-	errCastingVelIamToStr    = errors.New("error casting velero_iam_role_arn output to string")
-	errTerraformOutputToStr  = errors.New("error casting terraform output to string")
+	errCastingEbsIamToStr         = errors.New("error casting ebs_csi_driver_iam_role_arn output to string")
+	errCastingLbIamToStr          = errors.New("error casting load_balancer_controller_iam_role_arn output to string")
+	errCastingClsAsIamToStr       = errors.New("error casting cluster_autoscaler_iam_role_arn output to string")
+	errCastingDNSPvtIamToStr      = errors.New("error casting external_dns_private_iam_role_arn output to string")
+	errCastingDNSPubIamToStr      = errors.New("error casting external_dns_public_iam_role_arn output to string")
+	errCastingCertIamToStr        = errors.New("error casting cert_manager_iam_role_arn output to string")
+	errCastingVelIamToStr         = errors.New("error casting velero_iam_role_arn output to string")
+	errCastingAWSRoute53ZoneToStr = errors.New("error casting aws_route53_zone_public_id output to string")
 )
 
 type Distribution struct {
@@ -359,7 +359,7 @@ func (d *Distribution) extractTfOutputs() (map[string]string, error) {
 	if ok {
 		arns["aws_route53_zone_public_id"], ok = awsRoute53ZonePublicID.Value.(string)
 		if !ok {
-			return nil, errTerraformOutputToStr
+			return nil, errCastingAWSRoute53ZoneToStr
 		}
 	}
 
