@@ -181,20 +181,6 @@ func hasFeatureKubernetesLogTypes(kfd config.KFD) bool {
 }
 
 func hasFeatureKappSupport(kfd config.KFD) bool {
-	v, err := semver.NewVersion(kfd.Version)
-	if err != nil {
-		return false
-	}
-
-	v1290, err := semver.NewVersion("v1.29.0")
-	if err != nil {
-		return false
-	}
-
 	// If defined or empty, do not mark it as supported.
-	if kfd.Tools.Common.Kapp.Version == "" {
-		return false
-	}
-
-	return v.GreaterThanOrEqual(v1290)
+	return kfd.Tools.Common.Kapp.Version != ""
 }

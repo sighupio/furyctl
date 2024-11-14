@@ -37,24 +37,9 @@ func TestHasFeature(t *testing.T) {
 			want:    true,
 		},
 		{
-			desc: "v1.28 - has kapp support - unsupported kfd",
+			desc: "v1.28 - has kapp support",
 			kfd: config.KFD{
 				Version: "v1.28.0",
-				Tools: config.KFDTools{
-					Common: config.KFDToolsCommon{
-						Kapp: config.KFDTool{
-							Version: "1.2.3",
-						},
-					},
-				},
-			},
-			feature: distribution.FeatureKappSupport,
-			want:    false,
-		},
-		{
-			desc: "v1.29 - has kapp support",
-			kfd: config.KFD{
-				Version: "v1.29.0",
 				Tools: config.KFDTools{
 					Common: config.KFDToolsCommon{
 						Kapp: config.KFDTool{
