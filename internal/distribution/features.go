@@ -191,5 +191,10 @@ func hasFeatureKappSupport(kfd config.KFD) bool {
 		return false
 	}
 
+	// If defined or empty, do not mark it as supported.
+	if kfd.Tools.Common.Kapp.Version == "" {
+		return false
+	}
+
 	return v.GreaterThanOrEqual(v1290)
 }
