@@ -95,7 +95,7 @@ func (c *EKSClusterCheck) IsCompatible() bool {
 		return false
 	}
 
-	max12EightVersion, err := semver.NewVersion("v1.28.4")
+	max12EightVersion, err := semver.NewVersion("v1.28.5")
 	if err != nil {
 		return false
 	}
@@ -105,7 +105,17 @@ func (c *EKSClusterCheck) IsCompatible() bool {
 		return false
 	}
 
-	max12NineVersion, err := semver.NewVersion("v1.29.4")
+	max12NineVersion, err := semver.NewVersion("v1.29.5")
+	if err != nil {
+		return false
+	}
+
+	min130Version, err := semver.NewVersion("v1.30.0")
+	if err != nil {
+		return false
+	}
+
+	max130Version, err := semver.NewVersion("v1.30.0")
 	if err != nil {
 		return false
 	}
@@ -114,7 +124,8 @@ func (c *EKSClusterCheck) IsCompatible() bool {
 		(currentVersion.GreaterThanOrEqual(min126Version) && currentVersion.LessThanOrEqual(max126Version)) ||
 		(currentVersion.GreaterThanOrEqual(min12SevenVersion) && currentVersion.LessThanOrEqual(max12SevenVersion)) ||
 		(currentVersion.GreaterThanOrEqual(min12EightVersion)) && currentVersion.LessThanOrEqual(max12EightVersion) ||
-		(currentVersion.GreaterThanOrEqual(min12NineVersion)) && currentVersion.LessThanOrEqual(max12NineVersion)
+		(currentVersion.GreaterThanOrEqual(min12NineVersion)) && currentVersion.LessThanOrEqual(max12NineVersion) ||
+		(currentVersion.GreaterThanOrEqual(min130Version)) && currentVersion.LessThanOrEqual(max130Version)
 }
 
 type KFDDistributionCheck struct {
@@ -168,7 +179,7 @@ func (c *KFDDistributionCheck) IsCompatible() bool {
 		return false
 	}
 
-	max12EightVersion, err := semver.NewVersion("v1.28.4")
+	max12EightVersion, err := semver.NewVersion("v1.28.5")
 	if err != nil {
 		return false
 	}
@@ -178,7 +189,17 @@ func (c *KFDDistributionCheck) IsCompatible() bool {
 		return false
 	}
 
-	max12NineVersion, err := semver.NewVersion("v1.29.4")
+	max12NineVersion, err := semver.NewVersion("v1.29.5")
+	if err != nil {
+		return false
+	}
+
+	min130Version, err := semver.NewVersion("v1.30.0")
+	if err != nil {
+		return false
+	}
+
+	max130Version, err := semver.NewVersion("v1.30.0")
 	if err != nil {
 		return false
 	}
@@ -187,7 +208,8 @@ func (c *KFDDistributionCheck) IsCompatible() bool {
 		(currentVersion.GreaterThanOrEqual(min126Version) && currentVersion.LessThanOrEqual(max126Version)) ||
 		(currentVersion.GreaterThanOrEqual(min12SevenVersion) && currentVersion.LessThanOrEqual(max12SevenVersion)) ||
 		(currentVersion.GreaterThanOrEqual(min12EightVersion)) && currentVersion.LessThanOrEqual(max12EightVersion) ||
-		(currentVersion.GreaterThanOrEqual(min12NineVersion)) && currentVersion.LessThanOrEqual(max12NineVersion)
+		(currentVersion.GreaterThanOrEqual(min12NineVersion)) && currentVersion.LessThanOrEqual(max12NineVersion) ||
+		(currentVersion.GreaterThanOrEqual(min130Version)) && currentVersion.LessThanOrEqual(max130Version)
 }
 
 type OnPremisesCheck struct {
@@ -241,7 +263,7 @@ func (c *OnPremisesCheck) IsCompatible() bool {
 		return false
 	}
 
-	max12EightVersion, err := semver.NewVersion("v1.28.4")
+	max12EightVersion, err := semver.NewVersion("v1.28.5")
 	if err != nil {
 		return false
 	}
@@ -251,7 +273,17 @@ func (c *OnPremisesCheck) IsCompatible() bool {
 		return false
 	}
 
-	max12NineVersion, err := semver.NewVersion("v1.29.4")
+	max12NineVersion, err := semver.NewVersion("v1.29.5")
+	if err != nil {
+		return false
+	}
+
+	min130Version, err := semver.NewVersion("v1.30.0")
+	if err != nil {
+		return false
+	}
+
+	max130Version, err := semver.NewVersion("v1.30.0")
 	if err != nil {
 		return false
 	}
@@ -260,5 +292,6 @@ func (c *OnPremisesCheck) IsCompatible() bool {
 		(currentVersion.GreaterThanOrEqual(min126Version) && currentVersion.LessThanOrEqual(max126Version)) ||
 		(currentVersion.GreaterThanOrEqual(min12SevenVersion) && currentVersion.LessThanOrEqual(max12SevenVersion)) ||
 		(currentVersion.GreaterThanOrEqual(min12EightVersion)) && currentVersion.LessThanOrEqual(max12EightVersion) ||
-		(currentVersion.GreaterThanOrEqual(min12NineVersion)) && currentVersion.LessThanOrEqual(max12NineVersion)
+		(currentVersion.GreaterThanOrEqual(min12NineVersion)) && currentVersion.LessThanOrEqual(max12NineVersion) ||
+		(currentVersion.GreaterThanOrEqual(min130Version)) && currentVersion.LessThanOrEqual(max130Version)
 }
