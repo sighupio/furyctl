@@ -110,8 +110,8 @@ func (d *Distribution) injectDataPreTf(fMerger *merge.Merger) (*merge.Merger, er
 		Data: private.SpecDistribution{
 			Modules: private.SpecDistributionModules{
 				Ingress: private.SpecDistributionModulesIngress{
-					Dns: private.SpecDistributionModulesIngressDNS{
-						Private: private.SpecDistributionModulesIngressDNSPrivate{
+					Dns: &private.SpecDistributionModulesIngressDNS{
+						Private: &private.SpecDistributionModulesIngressDNSPrivate{
 							VpcId: vpcID,
 						},
 					},
