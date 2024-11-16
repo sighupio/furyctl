@@ -190,7 +190,7 @@ func NewRootCmd() *RootCommand {
 		"outdir",
 		"o",
 		"",
-		"Change the directory where to create the data directory (.furyctl)",
+		"Change the directory where to create the data directory (.furyctl). Default to $HOME.",
 	)
 
 	rootCmd.PersistentFlags().StringVarP(

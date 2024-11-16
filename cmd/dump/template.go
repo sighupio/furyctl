@@ -7,7 +7,6 @@ package dump
 import (
 	"errors"
 	"fmt"
-	"os"
 	"path/filepath"
 
 	"github.com/sirupsen/logrus"
@@ -16,6 +15,7 @@ import (
 
 	"github.com/sighupio/furyctl/internal/analytics"
 	"github.com/sighupio/furyctl/internal/app"
+	utils "github.com/sighupio/furyctl/internal/cmdutils"
 	"github.com/sighupio/furyctl/internal/config"
 	"github.com/sighupio/furyctl/internal/distribution"
 	"github.com/sighupio/furyctl/internal/git"
@@ -82,20 +82,14 @@ The generated folder will be created starting from a provided templates folder a
 
 			outDir := flags.Outdir
 
-			// Get home dir.
-			logrus.Debug("Getting Home Directory Path...")
-
-			homeDir, err := os.UserHomeDir()
+			outDir, err = utils.ResolveOutputDirectory(outDir)
 			if err != nil {
 				cmdEvent.AddErrorMessage(err)
 				tracker.Track(cmdEvent)
-
-				return fmt.Errorf("error while getting user home directory: %w", err)
+				return fmt.Errorf("Error while resolving output dir: %w", err)
 			}
 
-			if outDir == "" {
-				outDir = homeDir
-			}
+			logrus.Debug("Resolved output directory: ", outDir)
 
 			absDistroPatchesLocation := flags.DistroPatchesLocation
 
@@ -159,20 +153,6 @@ The generated folder will be created starting from a provided templates folder a
 				tracker.Track(cmdEvent)
 
 				return fmt.Errorf("%s - %w", absFuryctlPath, err)
-			}
-
-			outDir = flags.Outdir
-
-			currentDir, err := os.Getwd()
-			if err != nil {
-				cmdEvent.AddErrorMessage(err)
-				tracker.Track(cmdEvent)
-
-				return fmt.Errorf("error while getting current directory: %w", err)
-			}
-
-			if outDir == "" {
-				outDir = currentDir
 			}
 
 			outDir = filepath.Join(outDir, "distribution")
