@@ -22,7 +22,7 @@ func NewKapp(runner *kapp.Runner, version string) *Kapp {
 		os:      runtime.GOOS,
 		version: version,
 		checker: &checker{
-			regex:  regexp.MustCompile(fmt.Sprintf("kapp version %s", semver.Regex)),
+			regex:  regexp.MustCompile("kapp version " + semver.Regex),
 			runner: runner,
 			splitFn: func(version string) []string {
 				return strings.Split(version, " ")
