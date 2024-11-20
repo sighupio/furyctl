@@ -19,6 +19,7 @@ import (
 	"github.com/sighupio/furyctl/internal/tool/git"
 	"github.com/sighupio/furyctl/internal/tool/helm"
 	"github.com/sighupio/furyctl/internal/tool/helmfile"
+	"github.com/sighupio/furyctl/internal/tool/kapp"
 	"github.com/sighupio/furyctl/internal/tool/kubectl"
 	"github.com/sighupio/furyctl/internal/tool/kustomize"
 	"github.com/sighupio/furyctl/internal/tool/openvpn"
@@ -172,6 +173,14 @@ func (f *Factory) Create(name tool.Name, version string) Tool {
 		}
 
 		return NewHelmfile(hfr, version)
+
+	case tool.Kapp:
+		ka, ok := t.(*kapp.Runner)
+		if !ok {
+			panic(fmt.Sprintf("expected kapp.Runner, got %T", t))
+		}
+
+		return NewKapp(ka, version)
 
 	default:
 		return nil
