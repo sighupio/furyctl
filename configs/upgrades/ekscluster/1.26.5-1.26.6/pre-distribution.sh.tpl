@@ -9,7 +9,6 @@ kubectlbin="{{ .paths.kubectl }}"
 $kubectlbin delete --ignore-not-found=true validatingwebhookconfiguration gatekeeper-validating-webhook-configuration
 {{- end }}
 
-
 # Always remove cerebro, it was removed
 
 $kubectlbin delete --ignore-not-found=true deployment cerebro -n logging
