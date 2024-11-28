@@ -167,7 +167,7 @@ Additionally, the schema of the file is versioned with the `apiVersion` field, s
 To scaffold a configuration file to use as a starter, you use the following command:
 
 ```bash
-furyctl create config --version v1.29.4 --kind "EKSCluster"
+furyctl create config --version v1.30.0 --kind "EKSCluster"
 ```
 
 > 💡 **TIP**
