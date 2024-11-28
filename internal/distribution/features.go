@@ -22,6 +22,7 @@ const (
 	FeaturePlugins            = Feature("Plugins")
 	FeatureYqSupport          = Feature("YqSupport")
 	FeatureKubernetesLogTypes = Feature("KubernetesLogTypes")
+	FeatureKappSupport        = Feature("KappSupport")
 )
 
 func HasFeature(kfd config.KFD, name Feature) bool {
@@ -43,6 +44,9 @@ func HasFeature(kfd config.KFD, name Feature) bool {
 
 	case FeatureKubernetesLogTypes:
 		return hasFeatureKubernetesLogTypes(kfd)
+
+	case FeatureKappSupport:
+		return hasFeatureKappSupport(kfd)
 	}
 
 	return false
@@ -174,4 +178,9 @@ func hasFeatureKubernetesLogTypes(kfd config.KFD) bool {
 	return v1.GreaterThan(v1259) && v1.LessThan(v1260) ||
 		v1.GreaterThan(v1264) && v1.LessThan(v12Seven0) ||
 		v1.GreaterThan(v12Seven2)
+}
+
+func hasFeatureKappSupport(kfd config.KFD) bool {
+	// If defined or empty, do not mark it as supported.
+	return kfd.Tools.Common.Kapp.Version != ""
 }

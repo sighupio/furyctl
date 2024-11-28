@@ -30,6 +30,10 @@ func Test_Factory_Create(t *testing.T) {
 			wantTool: true,
 		},
 		{
+			desc:     "kapp",
+			wantTool: true,
+		},
+		{
 			desc:     "kustomize",
 			wantTool: true,
 		},
@@ -174,6 +178,13 @@ func TestHelperProcess(t *testing.T) {
 		switch subcmd {
 		case "version":
 			fmt.Fprintf(os.Stdout, "v0.156.0")
+		}
+	case "kapp":
+		switch subcmd {
+		case "version":
+			fmt.Fprintf(os.Stdout, "kapp version 0.62.0\n"+
+				"\n"+
+				"Succeeded\n")
 		}
 	default:
 		fmt.Fprintf(os.Stdout, "command not found")
