@@ -69,7 +69,7 @@ $ furyctl version
 ...
 goVersion: go1.23
 osArch: amd64
-version: 0.29.10
+version: 0.30.0
 ```
 
 ### Installing from source
@@ -117,7 +117,7 @@ Once you've ensured the above dependencies are installed, you can proceed with t
    gitCommit: 217cdcc8bf075fccfdb11c41ccc6bb317ec704bc
    goVersion: go1.23.2
    osArch: arm64
-   version: 0.29.10
+   version: 0.30.0
    ```
 
 5. (optional) move the binary to your `bin` folder, in macOS:
