@@ -14,8 +14,10 @@ $kubectlbin delete --ignore-not-found=true certificate.cert-manager.io ingress-n
 $kubectlbin delete --ignore-not-found=true certificate.cert-manager.io ingress-nginx-tls -n ingress-nginx
 $kubectlbin delete --ignore-not-found=true issuer.cert-manager.io ingress-nginx-ca -n ingress-nginx
 $kubectlbin delete --ignore-not-found=true issuer.cert-manager.io ingress-nginx-selfsign -n ingress-nginx
+  {{- if ne .spec.distribution.modules.monitoring.type "none" }}
 $kubectlbin delete --ignore-not-found=true prometheusrule.monitoring.coreos.com ingress-nginx-k8s-rules -n ingress-nginx
 $kubectlbin delete --ignore-not-found=true servicemonitor.monitoring.coreos.com ingress-nginx -n ingress-nginx
+  {{- end }}
 {{- end }}
 
 {{- if eq .spec.distribution.modules.ingress.nginx.type "dual" }}
@@ -31,6 +33,8 @@ $kubectlbin delete --ignore-not-found=true certificate.cert-manager.io ingress-n
 $kubectlbin delete --ignore-not-found=true certificate.cert-manager.io ingress-nginx-tls-internal -n ingress-nginx
 $kubectlbin delete --ignore-not-found=true issuer.cert-manager.io ingress-nginx-ca -n ingress-nginx
 $kubectlbin delete --ignore-not-found=true issuer.cert-manager.io ingress-nginx-selfsign -n ingress-nginx
+  {{- if ne .spec.distribution.modules.monitoring.type "none" }}
 $kubectlbin delete --ignore-not-found=true prometheusrule.monitoring.coreos.com ingress-nginx-k8s-rules -n ingress-nginx
 $kubectlbin delete --ignore-not-found=true servicemonitor.monitoring.coreos.com ingress-nginx -n ingress-nginx
+  {{- end }}
 {{- end }}
