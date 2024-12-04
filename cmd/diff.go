@@ -6,7 +6,6 @@ package cmd
 
 import (
 	"fmt"
-	"os"
 	"path/filepath"
 
 	"github.com/r3labs/diff/v3"
@@ -18,6 +17,7 @@ import (
 	"github.com/sighupio/furyctl/internal/analytics"
 	"github.com/sighupio/furyctl/internal/app"
 	"github.com/sighupio/furyctl/internal/cluster"
+	utils "github.com/sighupio/furyctl/internal/cmdutils"
 	"github.com/sighupio/furyctl/internal/git"
 	"github.com/sighupio/furyctl/internal/state"
 	cobrax "github.com/sighupio/furyctl/internal/x/cobra"
@@ -67,20 +67,16 @@ func NewDiffCmd() *cobra.Command {
 
 			execx.Debug = flags.Debug
 
-			logrus.Debug("Getting Home Directory Path...")
 			outDir := flags.Outdir
 
-			homeDir, err := os.UserHomeDir()
+			outDir, err = utils.ResolveOutputDirectory(outDir)
 			if err != nil {
 				cmdEvent.AddErrorMessage(err)
 				tracker.Track(cmdEvent)
-
-				return fmt.Errorf("error while getting user home directory: %w", err)
+				return fmt.Errorf("Error while resolving output dir: %w", err)
 			}
 
-			if outDir == "" {
-				outDir = homeDir
-			}
+			logrus.Debug("Resolved output directory: ", outDir)
 
 			if flags.BinPath == "" {
 				flags.BinPath = filepath.Join(outDir, ".furyctl", "bin")

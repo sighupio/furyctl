@@ -20,6 +20,7 @@ import (
 	_ "github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/ekscluster"
 	"github.com/sighupio/furyctl/internal/app"
 	"github.com/sighupio/furyctl/internal/cluster"
+	utils "github.com/sighupio/furyctl/internal/cmdutils"
 	"github.com/sighupio/furyctl/internal/config"
 	"github.com/sighupio/furyctl/internal/git"
 	"github.com/sighupio/furyctl/internal/lockfile"
@@ -98,20 +99,14 @@ func NewApplyCmd() *cobra.Command {
 
 			outDir := flags.Outdir
 
-			// Get home dir.
-			logrus.Debug("Getting Home Directory Path...")
-
-			homeDir, err := os.UserHomeDir()
+			outDir, err = utils.ResolveOutputDirectory(outDir)
 			if err != nil {
 				cmdEvent.AddErrorMessage(err)
 				tracker.Track(cmdEvent)
-
-				return fmt.Errorf("error while getting user home directory: %w", err)
+				return fmt.Errorf("Error while resolving output dir: %w", err)
 			}
 
-			if outDir == "" {
-				outDir = homeDir
-			}
+			logrus.Debug("Resolved output directory: ", outDir)
 
 			if flags.BinPath == "" {
 				flags.BinPath = filepath.Join(outDir, ".furyctl", "bin")

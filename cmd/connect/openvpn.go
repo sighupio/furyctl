@@ -7,7 +7,6 @@ package connect
 import (
 	"errors"
 	"fmt"
-	"os"
 	"path/filepath"
 
 	"github.com/sirupsen/logrus"
@@ -17,6 +16,7 @@ import (
 	"github.com/sighupio/fury-distribution/pkg/apis/config"
 	"github.com/sighupio/furyctl/internal/analytics"
 	"github.com/sighupio/furyctl/internal/app"
+	utils "github.com/sighupio/furyctl/internal/cmdutils"
 	cobrax "github.com/sighupio/furyctl/internal/x/cobra"
 	execx "github.com/sighupio/furyctl/internal/x/exec"
 	yamlx "github.com/sighupio/furyctl/pkg/x/yaml"
@@ -64,20 +64,16 @@ func NewOpenVPNCmd() *cobra.Command {
 				return ErrProfileFlagRequired
 			}
 
-			// Get home dir.
-			logrus.Debug("Getting Home Directory Path...")
 			outDir := flags.Outdir
-			homeDir, err := os.UserHomeDir()
+
+			outDir, err := utils.ResolveOutputDirectory(outDir)
 			if err != nil {
 				cmdEvent.AddErrorMessage(err)
 				tracker.Track(cmdEvent)
-
-				return fmt.Errorf("%w: %w", ErrCannotGetHomeDir, err)
+				return fmt.Errorf("Error while resolving output dir: %w", err)
 			}
 
-			if outDir == "" {
-				outDir = homeDir
-			}
+			logrus.Debug("Resolved output directory: ", outDir)
 
 			// Parse furyctl.yaml config.
 			logrus.Debug("Parsing furyctl.yaml file...")
