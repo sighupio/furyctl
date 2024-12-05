@@ -159,7 +159,7 @@ func (k *Kubernetes) coreKubernetes(
 	upgradeState *upgrade.State,
 ) error {
 	if startFrom != cluster.OperationSubPhasePostKubernetes {
-		logrus.Info("Running ansible playbook...")
+		logrus.Info("Applying cluster configuration...")
 
 		// Apply create playbook.
 		if !k.upgrade.Enabled {

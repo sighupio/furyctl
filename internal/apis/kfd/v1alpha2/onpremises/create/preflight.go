@@ -105,7 +105,7 @@ func (p *PreFlight) Exec(renderedConfig map[string]any) (*Status, error) {
 		Success: false,
 	}
 
-	logrus.Info("Running preflight checks")
+	logrus.Info("Running preflight checks...")
 
 	if err := p.CreateRootFolder(); err != nil {
 		return status, fmt.Errorf("error creating kubernetes phase folder: %w", err)

@@ -13,7 +13,7 @@ import (
 func NewDumpCmd() *cobra.Command {
 	dumpCmd := &cobra.Command{
 		Use:   "dump",
-		Short: "Dump manifests templates and other useful KFD objects",
+		Short: "Dump rendered templates and other useful KFD objects to the filesystem",
 	}
 
 	dumpCmd.AddCommand(dump.NewTemplateCmd())

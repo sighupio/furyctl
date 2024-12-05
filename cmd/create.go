@@ -15,7 +15,7 @@ func NewClusterCmd() *cobra.Command {
 
 	clusterCmd := &cobra.Command{
 		Use:    "cluster",
-		Short:  "Apply the configuration to create or upgrade a battle-tested Kubernetes Fury cluster",
+		Short:  "Apply the configuration to create, update, or upgrade a battle-tested Kubernetes Fury cluster. Note: 'create cluster' is an alias of 'apply'.",
 		PreRun: applyCmd.PreRun,
 		RunE:   applyCmd.RunE,
 	}
@@ -28,7 +28,7 @@ func NewClusterCmd() *cobra.Command {
 func NewCreateCmd() *cobra.Command {
 	createCmd := &cobra.Command{
 		Use:   "create",
-		Short: "Create a cluster or a sample configuration file",
+		Short: "Create a cluster, a sample configuration file, or the PKI needed for an on-premises cluster",
 	}
 
 	createCmd.AddCommand(NewClusterCmd())

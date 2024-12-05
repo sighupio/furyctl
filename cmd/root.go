@@ -144,7 +144,7 @@ func NewRootCmd() *RootCommand {
 
 				https := viper.GetBool("https")
 				if !https {
-					logrus.Warn("The --https flag is deprecated, if you want to use ssh protocol to download repositories use --git-protocol ssh")
+					logrus.Warn("The --https flag is deprecated, if you want to use SSH protocol to download repositories use --git-protocol ssh")
 				}
 			},
 		},
@@ -158,7 +158,7 @@ func NewRootCmd() *RootCommand {
 		"debug",
 		"D",
 		false,
-		"Enables furyctl debug output",
+		"Enables furyctl debug output. This will greatly increase the verbosity. Notice that you can always access the debug output in the log file.",
 	)
 
 	rootCmd.PersistentFlags().BoolVarP(
@@ -190,7 +190,7 @@ func NewRootCmd() *RootCommand {
 		"outdir",
 		"o",
 		"",
-		"Change the directory where to create the data directory (.furyctl)",
+		"Path where to create the data directory (.furyctl). Default is the user's home.",
 	)
 
 	rootCmd.PersistentFlags().StringVarP(
@@ -198,14 +198,14 @@ func NewRootCmd() *RootCommand {
 		"log",
 		"l",
 		"",
-		"Path to the log file or set to 'stdout' to log to standard output (default: ~/.furyctl/furyctl.log)",
+		"Path to the log file or set to 'stdout' to log to standard output. Default is '<outdir>/.furyctl/furyctl<timestamp>-<random number>.log'",
 	)
 
 	rootCmd.PersistentFlags().StringP(
 		"git-protocol",
 		"g",
 		"https",
-		"download repositories using the given protocol (options: https, ssh). Use when SSH traffic is being blocked or when SSH "+
+		"Download repositories using the given protocol (options: https, ssh). Use when SSH traffic is being blocked or when SSH "+
 			"client has not been configured\nset the GITHUB_TOKEN environment variable with your token to use "+
 			"authentication while downloading, for example for private repositories",
 	)
