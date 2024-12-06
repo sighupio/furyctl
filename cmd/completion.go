@@ -29,7 +29,7 @@ func NewCompletionCmd() *cobra.Command {
 
 	completionCmd := &cobra.Command{
 		Use:   "completion [bash|zsh|fish|powershell]",
-		Short: "Generate completion script",
+		Short: "Generate completion script for your shell",
 		Long: `To load furyctl completions:
 
 	Bash:

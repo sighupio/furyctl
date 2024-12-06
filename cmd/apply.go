@@ -76,7 +76,7 @@ func NewApplyCmd() *cobra.Command {
 
 	applyCmd := &cobra.Command{
 		Use:   "apply",
-		Short: "Apply the configuration to create or upgrade a battle-tested Kubernetes Fury cluster",
+		Short: "Apply the configuration to create, update, or upgrade a battle-tested Kubernetes Fury cluster",
 		PreRun: func(cmd *cobra.Command, _ []string) {
 			cmdEvent = analytics.NewCommandEvent(cobrax.GetFullname(cmd))
 
@@ -299,7 +299,7 @@ func NewApplyCmd() *cobra.Command {
 				return fmt.Errorf("error while creating cluster: %w", err)
 			}
 
-			cmdEvent.AddSuccessMessage("cluster creation succeeded")
+			cmdEvent.AddSuccessMessage("apply configuration succeeded")
 			tracker.Track(cmdEvent)
 
 			return nil
@@ -432,7 +432,7 @@ func setupCreateClusterCmdFlags(cmd *cobra.Command) {
 	cmd.Flags().String(
 		"start-from",
 		"",
-		"Start the execution from a specific phase. Options are: pre-infrastructure, infrastructure, post-infrastructure, pre-kubernetes, "+
+		"Start the execution from a specific phase and continue with the following phases. Options are: pre-infrastructure, infrastructure, post-infrastructure, pre-kubernetes, "+
 			"kubernetes, post-kubernetes, pre-distribution, distribution, post-distribution, plugins",
 	)
 
@@ -440,7 +440,7 @@ func setupCreateClusterCmdFlags(cmd *cobra.Command) {
 		"distro-location",
 		"",
 		"",
-		"Location where to download schemas, defaults and the distribution manifests from. "+
+		"Location where to download schemas, defaults, and the distribution manifests from. "+
 			"It can either be a local path (eg: /path/to/fury/distribution) or "+
 			"a remote URL (eg: git::git@github.com:sighupio/fury-distribution?depth=1&ref=BRANCH_NAME). "+
 			"Any format supported by hashicorp/go-getter can be used.",
@@ -467,7 +467,7 @@ func setupCreateClusterCmdFlags(cmd *cobra.Command) {
 	cmd.Flags().Bool(
 		"skip-nodes-upgrade",
 		false,
-		"On kind OnPremises this will skip the upgrade of the nodes",
+		"On kind OnPremises, this will skip the upgrade of the nodes upgrading only the control-plane",
 	)
 
 	cmd.Flags().Bool(
@@ -504,7 +504,7 @@ func setupCreateClusterCmdFlags(cmd *cobra.Command) {
 	cmd.Flags().StringSlice(
 		"force",
 		[]string{},
-		"WARNING: furyctl won't ask for confirmation and will proceed applying upgrades and reducers. Options are: all, upgrades, migrations, pods-running-check",
+		"WARNING: furyctl won't ask for confirmation and will proceed applying upgrades and migrations. Options are: all, upgrades, migrations, pods-running-check",
 	)
 
 	cmd.Flags().StringSlice(
@@ -528,19 +528,19 @@ func setupCreateClusterCmdFlags(cmd *cobra.Command) {
 	cmd.Flags().Bool(
 		"upgrade",
 		false,
-		"When set will run the upgrade scripts",
+		"When set will run the upgrade scripts, allowing to upgrade from one version to another one in the supported upgrade paths. See available target versions with 'get upgrade-paths'",
 	)
 
 	cmd.Flags().StringP(
 		"upgrade-path-location",
 		"",
 		"",
-		"Location where the upgrade scripts are located, if not set the embedded ones will be used",
+		"Set to use a custom location for the upgrade scripts instead of the embedded ones",
 	)
 
 	cmd.Flags().String(
 		"upgrade-node",
 		"",
-		"On kind OnPremises this will upgrade a specific node",
+		"On kind OnPremises, this will upgrade one specific node passed as parameter",
 	)
 }

@@ -157,7 +157,7 @@ func (p *PreFlight) Exec(renderedConfig map[string]any) (*Status, error) {
 		return status, fmt.Errorf("error ensuring terraform state aws s3 bucket: %w", err)
 	}
 
-	logrus.Info("Running preflight checks")
+	logrus.Info("Running preflight checks...")
 
 	if err := p.Prepare(); err != nil {
 		return status, fmt.Errorf("error preparing preflight phase: %w", err)
