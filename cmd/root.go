@@ -198,7 +198,7 @@ func NewRootCmd() *RootCommand {
 		"log",
 		"l",
 		"",
-		"Path to the log file or set to 'stdout' to log to standard output. Default is '<outdir>/.furyctl/furyctl<timestamp>-<random number>.log'",
+		"Path to the log file or set to 'stdout' to log to standard output. Default is '<outdir>/.furyctl/furyctl.<timestamp>-<random number>.log'",
 	)
 
 	rootCmd.PersistentFlags().StringP(
