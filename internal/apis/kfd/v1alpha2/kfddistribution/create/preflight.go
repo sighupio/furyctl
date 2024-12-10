@@ -105,7 +105,7 @@ func (p *PreFlight) Exec(renderedConfig map[string]any) (*Status, error) {
 
 	cfgParser := parser.NewConfigParser(p.furyctlConfPath)
 
-	logrus.Info("Running preflight checks")
+	logrus.Info("Running preflight checks...")
 
 	if err := p.CreateRootFolder(); err != nil {
 		return status, fmt.Errorf("error creating preflight phase folder: %w", err)

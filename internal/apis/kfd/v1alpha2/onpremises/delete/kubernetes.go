@@ -82,7 +82,7 @@ func (k *Kubernetes) Exec() error {
 		return fmt.Errorf("error checking hosts: %w", err)
 	}
 
-	logrus.Info("Running ansible playbook...")
+	logrus.Info("Deleting cluster...")
 
 	// Apply delete playbook.
 	if _, err := k.ansibleRunner.Playbook("delete-playbook.yaml"); err != nil {
