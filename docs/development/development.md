@@ -37,7 +37,9 @@ Unit tests in the project follow Go’s standard testing framework and are integ
 
 End-to-End (E2E) tests, which are more comprehensive and typically involve interactions with external systems (like Kubernetes clusters), are also part of the project. These tests simulate real-world scenarios to ensure the entire system works as expected when all components are integrated. For example, E2E tests include creating and managing EKS (Elastic Kubernetes Service) clusters, verifying that the system behaves correctly in a real cluster environment. These tests can be triggered by running the `make test-expensive` command. The reason for this designation as "expensive" is that E2E tests often involve external dependencies, such as Kubernetes clusters, which can take time to set up and may incur additional costs if used in a cloud environment.
 
-E2E tests expensive have historically been only run locally by hand, in CI `test-expensive` are never run.
+Expensive tests have historically been only run locally by hand, in CI `test-expensive` are never run.
+
+There are also basic E2E tests (`make test-e2e`) that execute some `furyctl` commands to verify its functionality. The cluster creation commands are run with the `--dry-run` flag.
 
 </details>
 
@@ -76,7 +78,7 @@ In Go projects, the `pkg` and `internal` directories serve distinct purposes, ba
 
 The merge of defaults happens primarily for the distribution configurations. When a user provides a `furyctl.yaml` file, the default values for the distribution are overwritten by the user-defined configurations, but only for the settings explicitly defined in the YAML file. This approach allows applying a custom configuration without losing the base configuration. The defaults are only for distribution configuration.
 
-The cluster state is monitored by comparing the current configuration with the desired one. Specifically, when `furyctl` writes information, such as secrets in the `kube-system` namespace, this is used to determine which changes have been made and what needs to be updated or created. This information is then used to synchronize the cluster state with the specified configuration. When we run the `apply` command, `furyctl` saves the current `furyctl.yaml` file inside a Kubernetes `Secret`. For subsequent calls to `apply`, the `Secret` is read and decoded, then we diff it against the current and compared. Depending on the differences, `furyctl` decides what to do (explained in fury-distribution docs).
+The cluster state is monitored by comparing the current configuration with the desired one. Specifically, when `furyctl` writes information, such as secrets `furyctl-config` and `furyctl-kfd` in the `kube-system` namespace, this is used to determine which changes have been made and what needs to be updated or created. This information is then used to synchronize the cluster state with the specified configuration. When we run the `apply` command, `furyctl` saves the current `furyctl.yaml` file inside a Kubernetes secret. For subsequent calls to `apply`, the secret is read and decoded, then we diff it against the current and compared. Depending on the differences, `furyctl` decides what to do (explained in fury-distribution docs).
 
 </details>
 
@@ -109,7 +111,7 @@ These libraries are essential for handling command-line interfaces, logging, val
 <details>
 <summary>Answer</summary>
 
-Caching is implemented directly in the file download process. Every file downloaded from an external source is saved in the local cache directory, which resides within the project’s configuration folder. The cache helps avoid downloading the same files again, improving performance and reducing reliance on external connections.
+Caching is implemented directly in the file download process. Every file downloaded from an external source is saved in the local cache directory, which resides within the project’s configuration folder (`.furyctl/cache`). The cache helps avoid downloading the same files again, improving performance and reducing reliance on external connections.
 
 The code that handles this functionality can be found in `pkg/dependencies/download.go` at line 43, where the files are downloaded, and in `pkg/x/net/client.go` at line 65, where caching is managed. If you want to modify the caching behavior, you can intervene on these files to add custom logic, such as version validation or timestamp checks to determine when to update the cache.
 
@@ -128,6 +130,9 @@ To use `furyctl` in these environments, the following flags should be used:
 
 - `--distro-location`: This flag specifies the local path of the downloaded distribution, allowing `furyctl` to use the local version instead of attempting to download it.
 - `--skip-deps-download`: This flag skips downloading additional dependencies or binaries from external sources, ensuring that everything is used from the cache or the local distribution.
+
+The air-gapped feature is documented here: https://docs.kubernetesfury.com/docs/advanced-use-cases/air-gapped.
+
 </details>
 
 ---
@@ -207,6 +212,8 @@ The release process for a new version is documented at [this link](https://githu
 
 The template engine used is the standard Go template engine, which also leverages the `https://github.com/Masterminds/sprig` library. Sprig provides several additional functions for templates, such as string manipulations, date formatting, and other utilities not included in Go's native template engine.
 
+We've also added `toYaml`, `fromYaml` and `hasKeyAny` custom functions to the template engine (`pkg/template/model.go:74`).
+
 </details>
 
 ---
@@ -218,6 +225,8 @@ The template engine used is the standard Go template engine, which also leverage
 
 Logging in the project is implemented using the `https://github.com/sirupsen/logrus` library, which is one of the most popular logging libraries for Go. There are no strict conventions for log messages, but Logrus supports various logging levels (info, error, debug) and can output logs in different formats, including plain text and JSON.
 
+The logs of all the tools used by furyctl, such as Terraform and Ansible, are intercepted and displayed using Logrus. They are also written to the furyctl log file. To display all logs when using furyctl use the flag `--debug`.
+
 </details>
 
 ---
@@ -227,7 +236,7 @@ Logging in the project is implemented using the `https://github.com/sirupsen/log
 <details>
 <summary>Answer</summary>
 
-There are no critical parts of the project that require immediate attention. However, simplifying the template engine and reducing code duplication would help future development by making the code easier to maintain and extend.
+There are no critical parts of the project that require immediate attention. However, the code that create the various folders where it copies the templates can be re-engineered and simplified. Also reducing code duplication would help future development by making the code easier to maintain and extend.
 
 </details>
 
