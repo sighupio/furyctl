@@ -231,6 +231,25 @@ The logs of all the tools used by furyctl, such as Terraform and Ansible, are in
 
 ---
 
+### **Is there any best pratice in place for logging?**
+
+<details>
+<summary>Answer</summary>
+
+- Log messages that the user sees by default should provide useful information and not leak implementation details, for example:
+
+  BAD:
+  INFO Running ansible playbooks
+
+  GOOD:
+  INFO Installing Kubernetes packages in the nodes
+
+- All the tools that we call should be configured to output structured logs and should be wrapped in furyctl structured logs in the log file. This is handled automatically by the tools implementation on furyctl.
+
+</details>
+
+---
+
 ### **Are there any critical parts of the project that require special attention during future development?**
 
 <details>
