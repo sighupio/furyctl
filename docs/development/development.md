@@ -212,7 +212,7 @@ The release process for a new version is documented at [this link](https://githu
 
 The template engine used is the standard Go template engine, which also leverages the `https://github.com/Masterminds/sprig` library. Sprig provides several additional functions for templates, such as string manipulations, date formatting, and other utilities not included in Go's native template engine.
 
-We've also added `toYaml`, `fromYaml` and `hasKeyAny` custom functions to the template engine (`pkg/template/model.go:74`).
+We've added `toYaml`, `fromYaml` and `hasKeyAny` custom functions to the template engine (`pkg/template/model.go:74`). All files with `.tpl` extension are processed by the template engine, the generated files folder structure remains the same and the file is simply renamed without the `.tpl` extension (for example `apply.sh.tpl` to `apply.sh`). The folder processed by the template engine is different depending on the phase, for example for `distribution` the folder is taken from the fury-distribution downloaded by furyctl path `templates/distribution`.
 
 </details>
 
