@@ -296,6 +296,8 @@ It is a set of instructions for _furyctl_ in order to perform an upgrade between
 
 </details>
 
+---
+
 ### **How to write *upgrade path*s?**
 
 <details>
