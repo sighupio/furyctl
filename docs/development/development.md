@@ -284,3 +284,27 @@ An example of using `{path://}` is when you need to specify a file path inside a
 There are no known major bugs or workarounds at this time.
 
 </details>
+
+---
+
+### **What is an _upgrade path_?**
+
+<details>
+<summary>Answer</summary>
+
+It is a set of instructions for _furyctl_ in order to perform an upgrade between two versions. As many other components of _furyctl_, the instructions to perform an upgrade are contained in one or multiple templated bash scripts. Every bash script is run as a hook in one of the _phases_ of the install process.
+
+</details>
+
+### **How to write *upgrade path*s?**
+
+<details>
+<summary>Answer</summary>
+
+You should create a new file under `config/upgrades/{onpremises,kfddistribution,ekscluster}/{starting-version}-{target-version}/hook.tpl`, where `{starting-version}` and `{target-version}` are two different KFD versions.
+
+In your typical _upgrade path_ there will be a file named `pre-distribution.sh.tpl` which will disable admission webhooks in order not to create problems during the deploy. Don't worry, there's no need to restore them as they will be reprovisioned later in the install process!
+
+In the OnPremises upgrade paths when there are Kubernetes version upgrades you also need to include a `pre-kubernetes.sh.tpl` file to run the Ansible playbook that upgrade control planes and worker nodes (for example `configs/upgrades/onpremises/1.29.5-1.30.0/pre-kubernetes.sh.tpl`). This usually only happens during Kubernetes minor version bumps (for example `1.29.5` to `1.30.0`) but there are some exceptional cases where we upgrade the Kubernetes version in a patch release (for example `1.29.4` to `1.29.5`).
+
+</details>
