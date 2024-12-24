@@ -38,11 +38,7 @@ Note: Always use the latest `furyctl` version, we make sure that is compatible w
 
 | furyctl / Providers | EKSCluster         | KFDDistribution    | OnPremises         |
 | ------------------- | ------------------ | ------------------ | ------------------ |
-| 0.29.10             | :white_check_mark: | :white_check_mark: | :white_check_mark: |
-| 0.29.9              | :white_check_mark: | :white_check_mark: | :white_check_mark: |
-| 0.29.8              | :white_check_mark: | :white_check_mark: | :white_check_mark: |
-| 0.29.7              | :white_check_mark: | :white_check_mark: | :white_check_mark: |
-| 0.29.6              | :white_check_mark: | :white_check_mark: | :white_check_mark: |
+| 0.29.6+             | :white_check_mark: | :white_check_mark: | :white_check_mark: |
 | 0.29.5              | :x:                | :x:                | :x:                |
 | 0.29.4              | :white_check_mark: | :white_check_mark: | :white_check_mark: |
 | 0.29.3              | :white_check_mark: | :white_check_mark: | :white_check_mark: |
