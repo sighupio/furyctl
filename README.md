@@ -7,7 +7,7 @@
 <p>The Swiss Army Knife<br/>for the Kubernetes Fury Distribution</p>
 
 [![Build Status](https://ci.sighup.io/api/badges/sighupio/furyctl/status.svg?ref=refs/heads/main)](https://ci.sighup.io/sighupio/furyctl)
-![Release](https://img.shields.io/badge/furyctl-v0.30.1-blue)
+![Release](https://img.shields.io/badge/furyctl-v0.31.0-blue)
 ![Slack](https://img.shields.io/badge/slack-@kubernetes/fury-yellow.svg?logo=slack)
 ![License](https://img.shields.io/github/license/sighupio/furyctl)
 [![Go Report Card](https://goreportcard.com/badge/github.com/sighupio/furyctl)](https://goreportcard.com/report/github.com/sighupio/furyctl)
@@ -69,7 +69,7 @@ $ furyctl version
 ...
 goVersion: go1.23
 osArch: amd64
-version: 0.30.1
+version: 0.XX.X
 ```
 
 ### Installing from source
