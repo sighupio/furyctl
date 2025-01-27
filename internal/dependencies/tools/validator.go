@@ -135,7 +135,7 @@ func (tv *Validator) validateTools(i any, kfdManifest config.KFD) ([]string, []e
 		if tool == nil {
 			errs = append(
 				errs,
-				fmt.Errorf("%w: %s", ErrToolNotFound, toolName),
+				fmt.Errorf("%s version %s: %w", toolName, toolCfg.Version, ErrToolNotFound),
 			)
 
 			continue
