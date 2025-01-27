@@ -6,6 +6,7 @@ package tools
 
 import (
 	"errors"
+	"fmt"
 	"reflect"
 	"strings"
 
@@ -16,7 +17,10 @@ import (
 	execx "github.com/sighupio/furyctl/internal/x/exec"
 )
 
-var ErrWrongToolVersion = errors.New("wrong tool version")
+var (
+	ErrWrongToolVersion = errors.New("wrong tool version")
+	ErrToolNotFound     = errors.New("tool not found in the toolFactory, possible fury-distribution version mismatch")
+)
 
 func NewValidator(executor execx.Executor, binPath, furyctlPath string, autoConnect bool) *Validator {
 	return &Validator{
@@ -127,6 +131,16 @@ func (tv *Validator) validateTools(i any, kfdManifest config.KFD) ([]string, []e
 		}
 
 		tool := tv.toolFactory.Create(itool.Name(toolName), toolCfg.Version)
+
+		if tool == nil {
+			errs = append(
+				errs,
+				fmt.Errorf("%s version %s: %w", toolName, toolCfg.Version, ErrToolNotFound),
+			)
+
+			continue
+		}
+
 		if err := tool.CheckBinVersion(); err != nil {
 			errs = append(errs, err)
 
