@@ -6,6 +6,7 @@ package tools
 
 import (
 	"errors"
+	"fmt"
 	"reflect"
 	"strings"
 
@@ -127,6 +128,12 @@ func (tv *Validator) validateTools(i any, kfdManifest config.KFD) ([]string, []e
 		}
 
 		tool := tv.toolFactory.Create(itool.Name(toolName), toolCfg.Version)
+
+		if tool == nil {
+			errs = append(errs, fmt.Errorf("%s not found in the toolFactory, possible fury-distribution version mismatch", toolName))
+			continue
+		}
+
 		if err := tool.CheckBinVersion(); err != nil {
 			errs = append(errs, err)
 
