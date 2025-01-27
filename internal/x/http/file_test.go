@@ -17,7 +17,7 @@ import (
 func TestDownloadFile(t *testing.T) {
 	t.Parallel()
 
-	fpath, err := httpx.DownloadFile("https://sighup.io")
+	fpath, err := httpx.DownloadFile("https://example.com")
 
 	assert.NotNil(t, fpath)
 	assert.FileExists(t, fpath)
