@@ -7,13 +7,14 @@ package get
 import (
 	"fmt"
 
+	"github.com/sirupsen/logrus"
+	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
+
 	"github.com/sighupio/furyctl/internal/analytics"
 	"github.com/sighupio/furyctl/internal/app"
 	"github.com/sighupio/furyctl/internal/git"
 	cobrax "github.com/sighupio/furyctl/internal/x/cobra"
-	"github.com/sirupsen/logrus"
-	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 )
 
 const DateFmt = "2006-01-02"
@@ -40,9 +41,10 @@ func NewDistroVersionCmd() *cobra.Command {
 			if err != nil {
 				cmdEvent.AddErrorMessage(err)
 				tracker.Track(cmdEvent)
+
 				return fmt.Errorf("error getting supported distro versions: %w", err)
 			}
-			logrus.Info(formatDistroVersions(releases))
+			logrus.Info(FormatDistroVersions(releases))
 
 			cmdEvent.AddSuccessMessage("upgrade paths successfully retrieved")
 			tracker.Track(cmdEvent)
@@ -54,16 +56,18 @@ func NewDistroVersionCmd() *cobra.Command {
 	return distroVersionCmd
 }
 
-func formatDistroVersions(releases []app.DistroRelease) string {
+func FormatDistroVersions(releases []app.DistroRelease) string {
 	fmtDistroVersions := ""
 	fmtDistroVersions += "AVAILABLE KUBERNETES FURY DISTRIBUTION VERSIONS\n"
 	fmtDistroVersions += "-----------------------------------------------\n"
 	fmtDistroVersions += "VERSION\tRELEASE DATE\tEKS\tKFD\tON PREMISE\n"
+
 	for _, r := range releases {
 		supported := func(s bool) string {
 			if s {
 				return "X"
 			}
+
 			return ""
 		}
 
@@ -76,5 +80,6 @@ func formatDistroVersions(releases []app.DistroRelease) string {
 			supported(r.FuryctlSupport.OnPremises),
 		)
 	}
+
 	return fmtDistroVersions
 }

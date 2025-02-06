@@ -1,8 +1,13 @@
+// Copyright (c) 2017-present SIGHUP s.r.l All rights reserved.
+// Use of this source code is governed by a BSD-style
+// license that can be found in the LICENSE file.
+
 package git
 
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -11,12 +16,12 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-// HTTPClient is an interface for making HTTP requests
+// HTTPClient is an interface for making HTTP requests.
 type HTTPClient interface {
 	Do(req *http.Request) (*http.Response, error)
 }
 
-// ClientConfig holds the configuration for the GitHub API client
+// ClientConfig holds the configuration for the GitHub API client.
 type ClientConfig struct {
 	TagsAPI   string
 	CommitAPI string
@@ -28,7 +33,9 @@ type RepoClient interface {
 	GetCommit(sha string) (Commit, error)
 }
 
-// GitHubClient provides methods for interacting with the GitHub API
+// GitHubClient provides methods for interacting with the GitHub API.
+//
+//revive:disable-next-line:exported
 type GitHubClient struct {
 	client HTTPClient
 	config ClientConfig
@@ -59,14 +66,14 @@ type CommitAuthor struct {
 	Date  string `json:"date"`
 }
 
-type GithubMessage struct {
-	Message string `json:"message"`
-}
+var ErrGHRateLimit = errors.New("rate limited from github public api, retry in 1 hour")
 
-// GetTags retrieves Git tags from the GitHub API
+// GetTags retrieves Git tags from the GitHub API.
 func (gc GitHubClient) GetTags() ([]Tag, error) {
 	var tags []Tag
+
 	ctx, cancel := context.WithTimeout(context.Background(), gc.config.Timeout)
+
 	defer cancel()
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, gc.config.TagsAPI, nil)
@@ -78,6 +85,7 @@ func (gc GitHubClient) GetTags() ([]Tag, error) {
 	if err != nil {
 		return tags, fmt.Errorf("error performing request: %w", err)
 	}
+
 	defer func() {
 		if resp != nil && resp.Body != nil {
 			if err := resp.Body.Close(); err != nil {
@@ -86,24 +94,28 @@ func (gc GitHubClient) GetTags() ([]Tag, error) {
 		}
 	}()
 
-	respBody, _ := io.ReadAll(resp.Body)
+	if resp.StatusCode == http.StatusTooManyRequests {
+		return tags, ErrGHRateLimit
+	}
+
+	respBody, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return tags, fmt.Errorf("error reading from github api: %w", err)
+	}
 
 	if err := json.Unmarshal(respBody, &tags); err != nil {
-		var ghMessage GithubMessage
-
-		if err := json.Unmarshal(respBody, &ghMessage); err == nil {
-			return tags, fmt.Errorf("error from github api: %s", ghMessage.Message)
-		}
 		return tags, fmt.Errorf("error decoding response: %w", err)
 	}
 
 	return tags, nil
 }
 
-// GetCommit fetches commit details for a given SHA
+// GetCommit fetches commit details for a given SHA.
 func (gc GitHubClient) GetCommit(sha string) (Commit, error) {
 	var commit Commit
+
 	ctx, cancel := context.WithTimeout(context.Background(), gc.config.Timeout)
+
 	defer cancel()
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, gc.config.CommitAPI+sha, nil)
@@ -115,6 +127,7 @@ func (gc GitHubClient) GetCommit(sha string) (Commit, error) {
 	if err != nil {
 		return commit, fmt.Errorf("error performing request: %w", err)
 	}
+
 	defer func() {
 		if resp != nil && resp.Body != nil {
 			if err := resp.Body.Close(); err != nil {
@@ -123,27 +136,32 @@ func (gc GitHubClient) GetCommit(sha string) (Commit, error) {
 		}
 	}()
 
-	respBody, _ := io.ReadAll(resp.Body)
+	if resp.StatusCode == http.StatusTooManyRequests {
+		return commit, ErrGHRateLimit
+	}
+
+	respBody, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return commit, fmt.Errorf("error reading from github api: %w", err)
+	}
 
 	if err := json.Unmarshal(respBody, &commit); err != nil {
-		var ghMessage GithubMessage
-
-		if err := json.Unmarshal(respBody, &ghMessage); err == nil {
-			return commit, fmt.Errorf("error from github api: %s", ghMessage.Message)
-		}
 		return commit, fmt.Errorf("error decoding response: %w", err)
 	}
+
 	return commit, nil
 }
 
-// NewGitHubClient creates a new GitHub client with the given configuration
+const gitHubClientTimeout = 5 * time.Second
+
+// NewGitHubClient creates a new GitHub client with the given configuration.
 func NewGitHubClient() *GitHubClient {
 	return &GitHubClient{
 		client: http.DefaultClient,
 		config: ClientConfig{
 			TagsAPI:   "https://api.github.com/repos/sighupio/fury-distribution/git/refs/tags",
 			CommitAPI: "https://api.github.com/repos/sighupio/fury-distribution/git/commits/",
-			Timeout:   5 * time.Second,
+			Timeout:   gitHubClientTimeout,
 		},
 	}
 }

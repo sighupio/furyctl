@@ -1,16 +1,21 @@
+// Copyright (c) 2017-present SIGHUP s.r.l All rights reserved.
+// Use of this source code is governed by a BSD-style
+// license that can be found in the LICENSE file.
+
 package app
 
 import (
+	"errors"
 	"fmt"
+	"slices"
 	"strings"
 	"time"
 
-	"slices"
-
 	"github.com/Al-Pragliola/go-version"
+	"github.com/sirupsen/logrus"
+
 	"github.com/sighupio/furyctl/internal/distribution"
 	"github.com/sighupio/furyctl/internal/git"
-	"github.com/sirupsen/logrus"
 )
 
 // DistroRelease holds information about a distribution release.
@@ -30,7 +35,7 @@ type FuryctlSupported struct {
 
 // GetSupportedDistroVersions retrieves distro releases filtering out unsupported versions.
 func GetSupportedDistroVersions(ghClient git.RepoClient) ([]DistroRelease, error) {
-	var releases []DistroRelease
+	releases := []DistroRelease{}
 
 	// Fetch all tags from the GitHub API.
 	tags, err := ghClient.GetTags()
@@ -53,28 +58,44 @@ func GetSupportedDistroVersions(ghClient git.RepoClient) ([]DistroRelease, error
 		if err != nil || v.LessThan(&latestSupportedVersion) || v.Prerelease() != "" {
 			continue
 		}
+
 		release, err := newDistroRelease(ghClient, tag)
 		if err != nil {
 			// Skip tags that cannot be parsed or processed.
 			continue
 		}
+
 		releases = append(releases, release)
 	}
+
 	slices.Reverse(releases)
+
 	return releases, nil
 }
+
+const previousSupportedVersions = 2
 
 // GetLatestSupportedVersion returns the supported version based on the second segment of the version.
 func GetLatestSupportedVersion(v version.Version) version.Version {
 	// Generate a version string using the second segment from the provided version.
-	versionStr := fmt.Sprintf("1.%d.0", v.Segments()[1]-2)
-	supportedVersion, _ := version.NewSemver(versionStr)
+	versionStr := fmt.Sprintf("1.%d.0", v.Segments()[1]-previousSupportedVersions)
+
+	supportedVersion, err := version.NewSemver(versionStr)
+	if err != nil {
+		return version.Version{}
+	}
+
 	return *supportedVersion
 }
 
+var (
+	ErrLatestDistroVersionNotFound = errors.New("latest distro not found")
+	ErrInvalidVersion              = errors.New("invalid version")
+)
+
 // GetLatestDistroVersion iterates backward over tags to return the latest valid distro release.
 func getLatestDistroVersion(ghClient git.RepoClient, tags []git.Tag) (DistroRelease, error) {
-	// Iterate from last to first using slices.Backward
+	// Iterate from last to first using slices.Backward.
 	for _, tag := range slices.Backward(tags) {
 		version, err := VersionFromRef(tag.Ref)
 		if err != nil {
@@ -84,9 +105,11 @@ func getLatestDistroVersion(ghClient git.RepoClient, tags []git.Tag) (DistroRele
 		if version.Prerelease() != "" {
 			continue
 		}
+
 		return newDistroRelease(ghClient, tag)
 	}
-	return DistroRelease{}, fmt.Errorf("latest distro not found")
+
+	return DistroRelease{}, ErrLatestDistroVersionNotFound
 }
 
 // NewDistroRelease creates a DistroRelease from a Tag, fetching its commit details.
@@ -97,6 +120,7 @@ func newDistroRelease(ghClient git.RepoClient, tag git.Tag) (DistroRelease, erro
 	version, err := VersionFromRef(tag.Ref)
 	if err != nil {
 		logrus.Debug(err)
+
 		return release, fmt.Errorf("invalid version: %w", err)
 	}
 
@@ -104,15 +128,22 @@ func newDistroRelease(ghClient git.RepoClient, tag git.Tag) (DistroRelease, erro
 	commit, err := ghClient.GetCommit(tag.Object.SHA)
 	if err != nil {
 		logrus.Error(err)
+
 		return release, fmt.Errorf("error getting commit: %w", err)
 	}
 
 	// Parse the commit date.
 	var commitDate time.Time
 	if commit.Author != nil {
-		commitDate, _ = time.Parse(time.RFC3339, commit.Author.Date)
+		commitDate, err = time.Parse(time.RFC3339, commit.Author.Date)
+		if err != nil {
+			commitDate = time.Time{}
+		}
 	} else if commit.Tagger != nil {
-		commitDate, _ = time.Parse(time.RFC3339, commit.Tagger.Date)
+		commitDate, err = time.Parse(time.RFC3339, commit.Tagger.Date)
+		if err != nil {
+			commitDate = time.Time{}
+		}
 	}
 
 	// Build the release struct.
@@ -122,6 +153,7 @@ func newDistroRelease(ghClient git.RepoClient, tag git.Tag) (DistroRelease, erro
 		Date:           commitDate,
 		FuryctlSupport: GetFuryctlSupport(version),
 	}
+
 	return release, nil
 }
 
@@ -136,6 +168,7 @@ func GetFuryctlSupport(version version.Version) FuryctlSupported {
 		if err != nil {
 			return false
 		}
+
 		return checker.IsCompatible()
 	}
 
@@ -147,16 +180,23 @@ func GetFuryctlSupport(version version.Version) FuryctlSupported {
 }
 
 // VersionFromRef converts a tag ref string to a semver version.
-// Expected format: "refs/tags/v1.2.3"
+// Expected format: "refs/tags/v1.2.3".
 func VersionFromRef(ref string) (version.Version, error) {
 	var v version.Version
 	// Remove the "refs/tags/" prefix.
 	versionStr := strings.ReplaceAll(ref, "refs/tags/", "")
+
 	if !strings.HasPrefix(versionStr, "v") {
-		return v, fmt.Errorf("invalid version: %s", versionStr)
+		return v, ErrInvalidVersion
 	}
+
 	// Remove the "v" prefix to isolate the version number.
 	versionStr = versionStr[1:]
+
 	ver, err := version.NewSemver(versionStr)
-	return *ver, err
+	if err != nil {
+		return v, ErrInvalidVersion
+	}
+
+	return *ver, nil
 }

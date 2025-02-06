@@ -1,16 +1,24 @@
-package app
+// Copyright (c) 2017-present SIGHUP s.r.l All rights reserved.
+// Use of this source code is governed by a BSD-style
+// license that can be found in the LICENSE file.
+
+package app_test
 
 import (
 	"testing"
 
 	"github.com/Al-Pragliola/go-version"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
+	"github.com/sighupio/furyctl/internal/app"
 	"github.com/sighupio/furyctl/internal/git"
 	"github.com/sighupio/furyctl/mocks"
-	"github.com/stretchr/testify/assert"
 )
 
 func TestGetSupportedDistroVersions(t *testing.T) {
-	// Mock GitHub client
+	t.Parallel()
+	// Mock GitHub client.
 	mockGhClient := mocks.NewMockGitHubClient(
 		[]git.Tag{{
 			Ref:    "v1.20.0",
@@ -49,26 +57,28 @@ func TestGetSupportedDistroVersions(t *testing.T) {
 		},
 	)
 
-	// Call the function being tested
-	releases, err := GetSupportedDistroVersions(mockGhClient)
+	// Call the function being tested.
+	releases, err := app.GetSupportedDistroVersions(mockGhClient)
 
-	// Assert results
-	assert.NoError(t, err)
-	assert.Equal(t, 3, len(releases))
-	assert.Equal(t, "1.29.0", releases[0].Version.String())
+	// Assert results.
+	require.NoError(t, err)
+	assert.Len(t, releases, 3)
+	assert.Equal(t, "1.31.0", releases[0].Version.String())
 }
 
 func TestGetLatestSupportedVersion(t *testing.T) {
-	// Test case for GetLatestSupportedVersion
+	t.Parallel()
+	// Test case for GetLatestSupportedVersion.
 	v, _ := version.NewSemver("1.31.0")
-	supportedV := GetLatestSupportedVersion(*v)
+	supportedV := app.GetLatestSupportedVersion(*v)
 	assert.Equal(t, "1.29.0", supportedV.String())
 }
 
 func TestVersionFromRef(t *testing.T) {
-	// Test case for VersionFromRef
+	t.Parallel()
+	// Test case for VersionFromRef.
 	ref := "refs/tags/v1.2.3-abcXXX"
-	v, err := VersionFromRef(ref)
-	assert.NoError(t, err)
+	v, err := app.VersionFromRef(ref)
+	require.NoError(t, err)
 	assert.Equal(t, "1.2.3-abcXXX", v.String())
 }
