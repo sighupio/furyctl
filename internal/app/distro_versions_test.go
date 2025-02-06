@@ -38,14 +38,14 @@ func TestGetSupportedDistroVersions(t *testing.T) {
 			Object: git.TagCommit{SHA: "31", URL: "https://..."},
 		}},
 		map[string]git.Commit{
-			"31": {Author: git.CommitAuthor{Name: "John Doe", Email: "john@example.com", Date: "2023-10-06T14:16:00Z"}},
-			"30": {Author: git.CommitAuthor{Name: "John Doe", Email: "john@example.com", Date: "2023-10-06T14:16:00Z"}},
-			"29": {Author: git.CommitAuthor{Name: "John Doe", Email: "john@example.com", Date: "2023-10-06T14:16:00Z"}},
-			"28": {Author: git.CommitAuthor{Name: "John Doe", Email: "john@example.com", Date: "2023-10-06T14:16:00Z"}},
-			"27": {Author: git.CommitAuthor{Name: "John Doe", Email: "john@example.com", Date: "2023-10-06T14:16:00Z"}},
-			"23": {Author: git.CommitAuthor{Name: "John Doe", Email: "john@example.com", Date: "2023-10-06T14:16:00Z"}},
-			"22": {Author: git.CommitAuthor{Name: "John Doe", Email: "john@example.com", Date: "2023-10-06T14:16:00Z"}},
-			"20": {Author: git.CommitAuthor{Name: "John Doe", Email: "john@example.com", Date: "2023-10-06T14:16:00Z"}},
+			"31": {Tagger: &git.CommitAuthor{Name: "John Doe", Email: "john@example.com", Date: "2023-10-06T14:16:00Z"}},
+			"30": {Author: &git.CommitAuthor{Name: "John Doe", Email: "john@example.com", Date: "2023-10-06T14:16:00Z"}},
+			"29": {Tagger: &git.CommitAuthor{Name: "John Doe", Email: "john@example.com", Date: "2023-10-06T14:16:00Z"}},
+			"28": {Author: &git.CommitAuthor{Name: "John Doe", Email: "john@example.com", Date: "2023-10-06T14:16:00Z"}},
+			"27": {Author: &git.CommitAuthor{Name: "John Doe", Email: "john@example.com", Date: "2023-10-06T14:16:00Z"}},
+			"23": {Author: &git.CommitAuthor{Name: "John Doe", Email: "john@example.com", Date: "2023-10-06T14:16:00Z"}},
+			"22": {Author: &git.CommitAuthor{Name: "John Doe", Email: "john@example.com", Date: "2023-10-06T14:16:00Z"}},
+			"20": {Author: &git.CommitAuthor{Name: "John Doe", Email: "john@example.com", Date: "2023-10-06T14:16:00Z"}},
 		},
 	)
 

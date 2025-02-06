@@ -42,14 +42,14 @@ func TestFormatDistroVersions(t *testing.T) {
 			Object: git.TagCommit{SHA: "31", URL: "https://..."},
 		}},
 		map[string]git.Commit{
-			"31": {Author: git.CommitAuthor{Name: "John Doe", Email: "john@example.com", Date: "2024-10-06T14:16:00Z"}},
-			"30": {Author: git.CommitAuthor{Name: "John Doe", Email: "john@example.com", Date: "2023-10-06T14:16:00Z"}},
-			"29": {Author: git.CommitAuthor{Name: "John Doe", Email: "john@example.com", Date: "2022-10-06T14:16:00Z"}},
-			"28": {Author: git.CommitAuthor{Name: "John Doe", Email: "john@example.com", Date: "2020-10-06T14:16:00Z"}},
-			"27": {Author: git.CommitAuthor{Name: "John Doe", Email: "john@example.com", Date: "2019-10-06T14:16:00Z"}},
-			"23": {Author: git.CommitAuthor{Name: "John Doe", Email: "john@example.com", Date: "2018-10-06T14:16:00Z"}},
-			"22": {Author: git.CommitAuthor{Name: "John Doe", Email: "john@example.com", Date: "2023-10-06T14:16:00Z"}},
-			"20": {Author: git.CommitAuthor{Name: "John Doe", Email: "john@example.com", Date: "2023-10-06T14:16:00Z"}},
+			"31": {Tagger: &git.CommitAuthor{Name: "John Doe", Email: "john@example.com", Date: "2024-10-06T14:16:00Z"}},
+			"30": {Author: &git.CommitAuthor{Name: "John Doe", Email: "john@example.com", Date: "2023-10-06T14:16:00Z"}},
+			"29": {Author: &git.CommitAuthor{Name: "John Doe", Email: "john@example.com", Date: "2022-10-06T14:16:00Z"}},
+			"28": {Tagger: &git.CommitAuthor{Name: "John Doe", Email: "john@example.com", Date: "2020-10-06T14:16:00Z"}},
+			"27": {Tagger: &git.CommitAuthor{Name: "John Doe", Email: "john@example.com", Date: "2019-10-06T14:16:00Z"}},
+			"23": {Author: &git.CommitAuthor{Name: "John Doe", Email: "john@example.com", Date: "2018-10-06T14:16:00Z"}},
+			"22": {Author: &git.CommitAuthor{Name: "John Doe", Email: "john@example.com", Date: "2023-10-06T14:16:00Z"}},
+			"20": {Author: &git.CommitAuthor{Name: "John Doe", Email: "john@example.com", Date: "2023-10-06T14:16:00Z"}},
 		},
 	)
 	releases, err := app.GetSupportedDistroVersions(mockGhClient)
@@ -58,8 +58,8 @@ func TestFormatDistroVersions(t *testing.T) {
 	lines := strings.Split(fmtString, "\n")
 	assert.Equal(t, lines[0], "AVAILABLE KUBERNETES FURY DISTRIBUTION VERSIONS")
 	assert.Equal(t, lines[1], "-----------------------------------------------")
-	assert.Equal(t, lines[2], "VERSION\tRELEASE DATE\tEKS\tKFD\tON PREM")
-	assert.Contains(t, lines[3], "v1.29.0\t2022-10-06")
+	assert.Equal(t, lines[2], "VERSION\tRELEASE DATE\tEKS\tKFD\tON PREMISE")
+	assert.Contains(t, lines[3], "v1.31.0\t2024-10-06")
 	assert.Contains(t, lines[4], "v1.30.0\t2023-10-06")
-	assert.Contains(t, lines[5], "v1.31.0\t2024-10-06")
+	assert.Contains(t, lines[5], "v1.29.0\t2022-10-06")
 }

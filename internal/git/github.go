@@ -48,7 +48,8 @@ type TagCommit struct {
 
 // Commit represents the commit details retrieved from GitHub.
 type Commit struct {
-	Author CommitAuthor `json:"author"`
+	Author *CommitAuthor `json:"author"`
+	Tagger *CommitAuthor `json:"tagger"`
 }
 
 // CommitAuthor holds the commit author’s details.
