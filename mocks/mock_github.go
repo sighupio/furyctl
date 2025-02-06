@@ -13,7 +13,7 @@ import (
 // MockGitHubClient is a mocked version of GitHubClient.
 type MockGitHubClient struct {
 	tagsResponse   []git.Tag
-	commitResponse map[string]git.Commit
+	commitResponse map[string]git.ObjectInfo
 }
 
 // GetTags mocks the GetTags method of GitHubClient.
@@ -24,16 +24,16 @@ func (m MockGitHubClient) GetTags() ([]git.Tag, error) {
 var ErrGitHubMock = errors.New("commit not found")
 
 // GetCommit mocks the GetCommit method of GitHubClient.
-func (m MockGitHubClient) GetCommit(sha string) (git.Commit, error) {
-	if commit, ok := m.commitResponse[sha]; ok {
+func (m MockGitHubClient) GetObjectInfo(url string) (git.ObjectInfo, error) {
+	if commit, ok := m.commitResponse[url]; ok {
 		return commit, nil
 	}
 
-	return git.Commit{}, ErrGitHubMock
+	return git.ObjectInfo{}, ErrGitHubMock
 }
 
 // NewMockGitHubClient creates a new MockGitHubClient with predefined responses.
-func NewMockGitHubClient(tags []git.Tag, commits map[string]git.Commit) git.RepoClient {
+func NewMockGitHubClient(tags []git.Tag, commits map[string]git.ObjectInfo) git.RepoClient {
 	return MockGitHubClient{
 		tagsResponse:   tags,
 		commitResponse: commits,

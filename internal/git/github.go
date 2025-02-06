@@ -23,14 +23,13 @@ type HTTPClient interface {
 
 // ClientConfig holds the configuration for the GitHub API client.
 type ClientConfig struct {
-	TagsAPI   string
-	CommitAPI string
-	Timeout   time.Duration
+	TagsAPI string
+	Timeout time.Duration
 }
 
 type RepoClient interface {
 	GetTags() ([]Tag, error)
-	GetCommit(sha string) (Commit, error)
+	GetObjectInfo(sha string) (ObjectInfo, error)
 }
 
 // GitHubClient provides methods for interacting with the GitHub API.
@@ -43,24 +42,25 @@ type GitHubClient struct {
 
 // Tag represents the Git tag structure from the GitHub API.
 type Tag struct {
-	Ref    string    `json:"ref"`
-	Object TagCommit `json:"object"`
+	Ref    string `json:"ref"`
+	Type   string `json:"type"`
+	Object TagRef `json:"object"`
 }
 
 // TagCommit represents the commit object within a tag.
-type TagCommit struct {
+type TagRef struct {
 	SHA string `json:"sha"`
 	URL string `json:"url"`
 }
 
 // Commit represents the commit details retrieved from GitHub.
-type Commit struct {
-	Author *CommitAuthor `json:"author"`
-	Tagger *CommitAuthor `json:"tagger"`
+type ObjectInfo struct {
+	Author *Author `json:"author"`
+	Tagger *Author `json:"tagger"`
 }
 
 // CommitAuthor holds the commit author’s details.
-type CommitAuthor struct {
+type Author struct {
 	Name  string `json:"name"`
 	Email string `json:"email"`
 	Date  string `json:"date"`
@@ -110,22 +110,22 @@ func (gc GitHubClient) GetTags() ([]Tag, error) {
 	return tags, nil
 }
 
-// GetCommit fetches commit details for a given SHA.
-func (gc GitHubClient) GetCommit(sha string) (Commit, error) {
-	var commit Commit
+// GetObjectInfo fetches commit/tag details for a given URL.
+func (gc GitHubClient) GetObjectInfo(url string) (ObjectInfo, error) {
+	var objectInfo ObjectInfo
 
 	ctx, cancel := context.WithTimeout(context.Background(), gc.config.Timeout)
 
 	defer cancel()
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, gc.config.CommitAPI+sha, nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
-		return commit, fmt.Errorf("error creating request: %w", err)
+		return objectInfo, fmt.Errorf("error creating request: %w", err)
 	}
 
 	resp, err := gc.client.Do(req)
 	if err != nil {
-		return commit, fmt.Errorf("error performing request: %w", err)
+		return objectInfo, fmt.Errorf("error performing request: %w", err)
 	}
 
 	defer func() {
@@ -137,19 +137,19 @@ func (gc GitHubClient) GetCommit(sha string) (Commit, error) {
 	}()
 
 	if resp.StatusCode == http.StatusTooManyRequests {
-		return commit, ErrGHRateLimit
+		return objectInfo, ErrGHRateLimit
 	}
 
 	respBody, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return commit, fmt.Errorf("error reading from github api: %w", err)
+		return objectInfo, fmt.Errorf("error reading from github api: %w", err)
 	}
 
-	if err := json.Unmarshal(respBody, &commit); err != nil {
-		return commit, fmt.Errorf("error decoding response: %w", err)
+	if err := json.Unmarshal(respBody, &objectInfo); err != nil {
+		return objectInfo, fmt.Errorf("error decoding response: %w", err)
 	}
 
-	return commit, nil
+	return objectInfo, nil
 }
 
 const gitHubClientTimeout = 5 * time.Second
@@ -159,9 +159,8 @@ func NewGitHubClient() *GitHubClient {
 	return &GitHubClient{
 		client: http.DefaultClient,
 		config: ClientConfig{
-			TagsAPI:   "https://api.github.com/repos/sighupio/fury-distribution/git/refs/tags",
-			CommitAPI: "https://api.github.com/repos/sighupio/fury-distribution/git/commits/",
-			Timeout:   gitHubClientTimeout,
+			TagsAPI: "https://api.github.com/repos/sighupio/fury-distribution/git/refs/tags",
+			Timeout: gitHubClientTimeout,
 		},
 	}
 }

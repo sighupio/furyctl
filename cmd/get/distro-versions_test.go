@@ -23,38 +23,38 @@ func TestFormatDistroVersions(t *testing.T) {
 	mockGhClient := mocks.NewMockGitHubClient(
 		[]git.Tag{{
 			Ref:    "v1.20.0",
-			Object: git.TagCommit{SHA: "20", URL: "https://..."},
+			Object: git.TagRef{SHA: "20", URL: "https://.../20"},
 		}, {
 			Ref:    "v1.22.0",
-			Object: git.TagCommit{SHA: "22", URL: "https://..."},
+			Object: git.TagRef{SHA: "22", URL: "https://.../22"},
 		}, {
 			Ref:    "v1.23.0",
-			Object: git.TagCommit{SHA: "23", URL: "https://..."},
+			Object: git.TagRef{SHA: "23", URL: "https://.../23"},
 		}, {
 			Ref:    "v1.24.0",
-			Object: git.TagCommit{SHA: "27", URL: "https://..."},
+			Object: git.TagRef{SHA: "27", URL: "https://.../24"},
 		}, {
 			Ref:    "v1.28.0",
-			Object: git.TagCommit{SHA: "28", URL: "https://..."},
+			Object: git.TagRef{SHA: "28", URL: "https://.../28"},
 		}, {
 			Ref:    "v1.29.0",
-			Object: git.TagCommit{SHA: "29", URL: "https://..."},
+			Object: git.TagRef{SHA: "29", URL: "https://.../29"},
 		}, {
 			Ref:    "v1.30.0",
-			Object: git.TagCommit{SHA: "30", URL: "https://..."},
+			Object: git.TagRef{SHA: "30", URL: "https://.../30"},
 		}, {
 			Ref:    "v1.31.0",
-			Object: git.TagCommit{SHA: "31", URL: "https://..."},
+			Object: git.TagRef{SHA: "31", URL: "https://.../31"},
 		}},
-		map[string]git.Commit{
-			"31": {Tagger: &git.CommitAuthor{Name: "John Doe", Email: "john@example.com", Date: "2024-10-06T14:16:00Z"}},
-			"30": {Author: &git.CommitAuthor{Name: "John Doe", Email: "john@example.com", Date: "2023-10-06T14:16:00Z"}},
-			"29": {Author: &git.CommitAuthor{Name: "John Doe", Email: "john@example.com", Date: "2022-10-06T14:16:00Z"}},
-			"28": {Tagger: &git.CommitAuthor{Name: "John Doe", Email: "john@example.com", Date: "2020-10-06T14:16:00Z"}},
-			"27": {Tagger: &git.CommitAuthor{Name: "John Doe", Email: "john@example.com", Date: "2019-10-06T14:16:00Z"}},
-			"23": {Author: &git.CommitAuthor{Name: "John Doe", Email: "john@example.com", Date: "2018-10-06T14:16:00Z"}},
-			"22": {Author: &git.CommitAuthor{Name: "John Doe", Email: "john@example.com", Date: "2023-10-06T14:16:00Z"}},
-			"20": {Author: &git.CommitAuthor{Name: "John Doe", Email: "john@example.com", Date: "2023-10-06T14:16:00Z"}},
+		map[string]git.ObjectInfo{
+			"https://.../31": {Tagger: &git.Author{Name: "John Doe", Email: "john@example.com", Date: "2024-10-06T14:16:00Z"}},
+			"https://.../30": {Author: &git.Author{Name: "John Doe", Email: "john@example.com", Date: "2023-10-06T14:16:00Z"}},
+			"https://.../29": {Author: &git.Author{Name: "John Doe", Email: "john@example.com", Date: "2022-10-06T14:16:00Z"}},
+			"https://.../28": {Tagger: &git.Author{Name: "John Doe", Email: "john@example.com", Date: "2020-10-06T14:16:00Z"}},
+			"https://.../27": {Tagger: &git.Author{Name: "John Doe", Email: "john@example.com", Date: "2019-10-06T14:16:00Z"}},
+			"https://.../23": {Author: &git.Author{Name: "John Doe", Email: "john@example.com", Date: "2018-10-06T14:16:00Z"}},
+			"https://.../22": {Author: &git.Author{Name: "John Doe", Email: "john@example.com", Date: "2023-10-06T14:16:00Z"}},
+			"https://.../20": {Author: &git.Author{Name: "John Doe", Email: "john@example.com", Date: "2023-10-06T14:16:00Z"}},
 		},
 	)
 

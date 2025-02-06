@@ -21,7 +21,9 @@ import (
 // DistroRelease holds information about a distribution release.
 type DistroRelease struct {
 	Version        version.Version
-	Sha            string
+	Type           string
+	SHA            string
+	URL            string
 	Date           time.Time
 	FuryctlSupport FuryctlSupported
 }
@@ -124,8 +126,8 @@ func newDistroRelease(ghClient git.RepoClient, tag git.Tag) (DistroRelease, erro
 		return release, fmt.Errorf("invalid version: %w", err)
 	}
 
-	// Fetch the commit information using the SHA.
-	commit, err := ghClient.GetCommit(tag.Object.SHA)
+	// Fetch the commit information using the URL.
+	commit, err := ghClient.GetObjectInfo(tag.Object.URL)
 	if err != nil {
 		logrus.Error(err)
 
@@ -149,7 +151,9 @@ func newDistroRelease(ghClient git.RepoClient, tag git.Tag) (DistroRelease, erro
 	// Build the release struct.
 	release = DistroRelease{
 		Version:        version,
-		Sha:            tag.Object.SHA,
+		Type:           tag.Type,
+		SHA:            tag.Object.SHA,
+		URL:            tag.Object.URL,
 		Date:           commitDate,
 		FuryctlSupport: GetFuryctlSupport(version),
 	}
