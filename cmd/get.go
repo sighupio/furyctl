@@ -18,6 +18,6 @@ func NewGetCmd() *cobra.Command {
 
 	getCmd.AddCommand(get.NewKubeconfigCmd())
 	getCmd.AddCommand(get.NewUpgradePathsCmd())
-
+	getCmd.AddCommand(get.NewDistroVersionCmd())
 	return getCmd
 }
