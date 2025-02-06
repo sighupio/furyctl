@@ -306,7 +306,7 @@ func (c *OnPremisesCheck) IsCompatible() bool {
 		return false
 	}
 
-	max130Version, err := semver.NewVersion("v1.30.0")
+	max130Version, err := semver.NewVersion("v1.30.1")
 	if err != nil {
 		return false
 	}
