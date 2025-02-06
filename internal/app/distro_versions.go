@@ -50,7 +50,7 @@ func GetSupportedDistroVersions(ghClient git.RepoClient) ([]DistroRelease, error
 	// Loop over all tags except the final element and only keep supported ones.
 	for _, tag := range tags {
 		v, err := VersionFromRef(tag.Ref)
-		if err != nil || v.LessThan(&latestSupportedVersion) {
+		if err != nil || v.LessThan(&latestSupportedVersion) || v.Prerelease() != "" {
 			continue
 		}
 		release, err := newDistroRelease(ghClient, tag)
@@ -60,6 +60,7 @@ func GetSupportedDistroVersions(ghClient git.RepoClient) ([]DistroRelease, error
 		}
 		releases = append(releases, release)
 	}
+	slices.Reverse(releases)
 	return releases, nil
 }
 
@@ -107,7 +108,12 @@ func newDistroRelease(ghClient git.RepoClient, tag git.Tag) (DistroRelease, erro
 	}
 
 	// Parse the commit date.
-	commitDate, _ := time.Parse(time.RFC3339, commit.Author.Date)
+	var commitDate time.Time
+	if commit.Author != nil {
+		commitDate, _ = time.Parse(time.RFC3339, commit.Author.Date)
+	} else if commit.Tagger != nil {
+		commitDate, _ = time.Parse(time.RFC3339, commit.Tagger.Date)
+	}
 
 	// Build the release struct.
 	release = DistroRelease{
