@@ -2,28 +2,24 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-package app
+package distribution
 
 import (
 	"errors"
 	"fmt"
-	"slices"
+	"sort"
 	"strings"
 	"time"
 
 	"github.com/Al-Pragliola/go-version"
 	"github.com/sirupsen/logrus"
 
-	"github.com/sighupio/furyctl/internal/distribution"
 	"github.com/sighupio/furyctl/internal/git"
 )
 
 // DistroRelease holds information about a distribution release.
 type DistroRelease struct {
 	Version        version.Version
-	Type           string
-	SHA            string
-	URL            string
 	Date           time.Time
 	FuryctlSupport FuryctlSupported
 }
@@ -36,32 +32,49 @@ type FuryctlSupported struct {
 }
 
 // GetSupportedDistroVersions retrieves distro releases filtering out unsupported versions.
-func GetSupportedDistroVersions(ghClient git.RepoClient) ([]DistroRelease, error) {
+func GetSupportedVersions(ghClient git.RepoClient) ([]DistroRelease, error) {
 	releases := []DistroRelease{}
 
-	// Fetch all tags from the GitHub API.
-	tags, err := ghClient.GetTags()
+	// Fetch all releases from the GitHub API.
+	ghReleases, err := ghClient.GetReleases()
 	if err != nil {
-		return releases, fmt.Errorf("error getting tags from github: %w", err)
+		return releases, fmt.Errorf("error getting releases from GitHub: %w", err)
 	}
 
+	sort.Slice(ghReleases, func(i, j int) bool {
+		iRelease := ghReleases[i]
+		jRelease := ghReleases[j]
+
+		iVersion, err := VersionFromString(iRelease.TagName)
+		if err != nil {
+			return false
+		}
+
+		jVersion, err := VersionFromString(jRelease.TagName)
+		if err != nil {
+			return true
+		}
+
+		return jVersion.LessThan(&iVersion)
+	})
+
 	// Get the latest distro version from the tag list.
-	latestRelease, err := getLatestDistroVersion(ghClient, tags)
+	latestRelease, err := getLatestDistroVersion(ghReleases)
 	if err != nil {
-		return releases, fmt.Errorf("error getting latest distro version: %w", err)
+		return releases, fmt.Errorf("error getting latest KFD version: %w", err)
 	}
 
 	// Calculate the latest supported version based on the latest release.
 	latestSupportedVersion := GetLatestSupportedVersion(latestRelease.Version)
 
 	// Loop over all tags except the final element and only keep supported ones.
-	for _, tag := range tags {
-		v, err := VersionFromRef(tag.Ref)
+	for _, ghRelease := range ghReleases {
+		v, err := VersionFromString(ghRelease.TagName)
 		if err != nil || v.LessThan(&latestSupportedVersion) || v.Prerelease() != "" {
 			continue
 		}
 
-		release, err := newDistroRelease(ghClient, tag)
+		release, err := newDistroRelease(ghRelease)
 		if err != nil {
 			// Skip tags that cannot be parsed or processed.
 			continue
@@ -69,8 +82,6 @@ func GetSupportedDistroVersions(ghClient git.RepoClient) ([]DistroRelease, error
 
 		releases = append(releases, release)
 	}
-
-	slices.Reverse(releases)
 
 	return releases, nil
 }
@@ -91,70 +102,49 @@ func GetLatestSupportedVersion(v version.Version) version.Version {
 }
 
 var (
-	ErrLatestDistroVersionNotFound = errors.New("latest distro not found")
+	ErrLatestDistroVersionNotFound = errors.New("latest KFD version not found")
 	ErrInvalidVersion              = errors.New("invalid version")
 )
 
-// GetLatestDistroVersion iterates backward over tags to return the latest valid distro release.
-func getLatestDistroVersion(ghClient git.RepoClient, tags []git.Tag) (DistroRelease, error) {
-	// Iterate from last to first using slices.Backward.
-	for _, tag := range slices.Backward(tags) {
-		version, err := VersionFromRef(tag.Ref)
+// GetLatestDistroVersion iterates over tags to return the latest valid distro release(not RC or prerelease).
+func getLatestDistroVersion(ghReleases []git.Release) (DistroRelease, error) {
+	for _, ghRelease := range ghReleases {
+		if ghRelease.PreRelease {
+			continue
+		}
+
+		version, err := VersionFromString(ghRelease.TagName)
 		if err != nil {
 			continue
 		}
+
 		// Skip prerelease versions.
 		if version.Prerelease() != "" {
 			continue
 		}
 
-		return newDistroRelease(ghClient, tag)
+		return newDistroRelease(ghRelease)
 	}
 
 	return DistroRelease{}, ErrLatestDistroVersionNotFound
 }
 
-// NewDistroRelease creates a DistroRelease from a Tag, fetching its commit details.
-func newDistroRelease(ghClient git.RepoClient, tag git.Tag) (DistroRelease, error) {
+// NewDistroRelease creates a DistroRelease from a Release.
+func newDistroRelease(ghRelease git.Release) (DistroRelease, error) {
 	var release DistroRelease
 
-	// Parse version from tag reference.
-	version, err := VersionFromRef(tag.Ref)
+	// Parse version from Release tag name.
+	version, err := VersionFromString(ghRelease.TagName)
 	if err != nil {
 		logrus.Debug(err)
 
 		return release, fmt.Errorf("invalid version: %w", err)
 	}
 
-	// Fetch the commit information using the URL.
-	commit, err := ghClient.GetObjectInfo(tag.Object.URL)
-	if err != nil {
-		logrus.Error(err)
-
-		return release, fmt.Errorf("error getting commit: %w", err)
-	}
-
-	// Parse the commit date.
-	var commitDate time.Time
-	if commit.Author != nil {
-		commitDate, err = time.Parse(time.RFC3339, commit.Author.Date)
-		if err != nil {
-			commitDate = time.Time{}
-		}
-	} else if commit.Tagger != nil {
-		commitDate, err = time.Parse(time.RFC3339, commit.Tagger.Date)
-		if err != nil {
-			commitDate = time.Time{}
-		}
-	}
-
 	// Build the release struct.
 	release = DistroRelease{
 		Version:        version,
-		Type:           tag.Type,
-		SHA:            tag.Object.SHA,
-		URL:            tag.Object.URL,
-		Date:           commitDate,
+		Date:           ghRelease.CreatedAt,
 		FuryctlSupport: GetFuryctlSupport(version),
 	}
 
@@ -163,12 +153,12 @@ func newDistroRelease(ghClient git.RepoClient, tag git.Tag) (DistroRelease, erro
 
 // GetFuryctlSupport checks for compatibility with various distributions.
 func GetFuryctlSupport(version version.Version) FuryctlSupported {
-	eks, errEKS := distribution.NewCompatibilityChecker(version.String(), distribution.EKSClusterKind)
-	kfd, errKFD := distribution.NewCompatibilityChecker(version.String(), distribution.KFDDistributionKind)
-	onprem, errOnPrem := distribution.NewCompatibilityChecker(version.String(), distribution.OnPremisesKind)
+	eks, errEKS := NewCompatibilityChecker(version.String(), EKSClusterKind)
+	kfd, errKFD := NewCompatibilityChecker(version.String(), KFDDistributionKind)
+	onprem, errOnPrem := NewCompatibilityChecker(version.String(), OnPremisesKind)
 
 	// Helper function to interpret compatibility result.
-	isCompatible := func(checker distribution.CompatibilityChecker, err error) bool {
+	isCompatible := func(checker CompatibilityChecker, err error) bool {
 		if err != nil {
 			return false
 		}
@@ -183,9 +173,9 @@ func GetFuryctlSupport(version version.Version) FuryctlSupported {
 	}
 }
 
-// VersionFromRef converts a tag ref string to a semver version.
+// VersionFromString converts a tag ref string to a semver version.
 // Expected format: "refs/tags/v1.2.3".
-func VersionFromRef(ref string) (version.Version, error) {
+func VersionFromString(ref string) (version.Version, error) {
 	var v version.Version
 	// Remove the "refs/tags/" prefix.
 	versionStr := strings.ReplaceAll(ref, "refs/tags/", "")
