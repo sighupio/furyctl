@@ -69,7 +69,7 @@ func TestFormatDistroVersions(t *testing.T) {
 
 	require.NoError(t, err)
 
-	fmtString := get.FormatDistroVersions(releases)
+	fmtString := get.FormatSupportedVersions(releases, []string{})
 	lines := strings.Split(fmtString, "\n")
 
 	assert.Equal(t, "------------------------------------------------------------------------------------", lines[1])

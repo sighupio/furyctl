@@ -17,23 +17,16 @@ import (
 	"github.com/sighupio/furyctl/internal/git"
 )
 
-// DistroRelease holds information about a distribution release.
-type DistroRelease struct {
-	Version        version.Version
-	Date           time.Time
-	FuryctlSupport FuryctlSupported
-}
-
-// FuryctlSupported holds boolean flags for supported distributions.
-type FuryctlSupported struct {
-	EKSCluster      bool
-	KFDDistribution bool
-	OnPremises      bool
+// KFDRelease holds information about a distribution release.
+type KFDRelease struct {
+	Version version.Version
+	Date    time.Time
+	Support map[string]bool
 }
 
 // GetSupportedDistroVersions retrieves distro releases filtering out unsupported versions.
-func GetSupportedVersions(ghClient git.RepoClient) ([]DistroRelease, error) {
-	releases := []DistroRelease{}
+func GetSupportedVersions(ghClient git.RepoClient) ([]KFDRelease, error) {
+	releases := []KFDRelease{}
 
 	// Fetch all releases from the GitHub API.
 	ghReleases, err := ghClient.GetReleases()
@@ -74,7 +67,7 @@ func GetSupportedVersions(ghClient git.RepoClient) ([]DistroRelease, error) {
 			continue
 		}
 
-		release, err := newDistroRelease(ghRelease)
+		release, err := newKFDRelease(ghRelease)
 		if err != nil {
 			// Skip tags that cannot be parsed or processed.
 			continue
@@ -107,7 +100,7 @@ var (
 )
 
 // GetLatestDistroVersion iterates over tags to return the latest valid distro release(not RC or prerelease).
-func getLatestDistroVersion(ghReleases []git.Release) (DistroRelease, error) {
+func getLatestDistroVersion(ghReleases []git.Release) (KFDRelease, error) {
 	for _, ghRelease := range ghReleases {
 		if ghRelease.PreRelease {
 			continue
@@ -123,15 +116,15 @@ func getLatestDistroVersion(ghReleases []git.Release) (DistroRelease, error) {
 			continue
 		}
 
-		return newDistroRelease(ghRelease)
+		return newKFDRelease(ghRelease)
 	}
 
-	return DistroRelease{}, ErrLatestDistroVersionNotFound
+	return KFDRelease{}, ErrLatestDistroVersionNotFound
 }
 
-// NewDistroRelease creates a DistroRelease from a Release.
-func newDistroRelease(ghRelease git.Release) (DistroRelease, error) {
-	var release DistroRelease
+// NewKFDRelease creates a KFDRelease from a Release.
+func newKFDRelease(ghRelease git.Release) (KFDRelease, error) {
+	var release KFDRelease
 
 	// Parse version from Release tag name.
 	version, err := VersionFromString(ghRelease.TagName)
@@ -142,17 +135,17 @@ func newDistroRelease(ghRelease git.Release) (DistroRelease, error) {
 	}
 
 	// Build the release struct.
-	release = DistroRelease{
-		Version:        version,
-		Date:           ghRelease.CreatedAt,
-		FuryctlSupport: GetFuryctlSupport(version),
+	release = KFDRelease{
+		Version: version,
+		Date:    ghRelease.CreatedAt,
+		Support: GetSupport(version),
 	}
 
 	return release, nil
 }
 
-// GetFuryctlSupport checks for compatibility with various distributions.
-func GetFuryctlSupport(version version.Version) FuryctlSupported {
+// GetSupport checks for compatibility with various distributions.
+func GetSupport(version version.Version) map[string]bool {
 	eks, errEKS := NewCompatibilityChecker(version.String(), EKSClusterKind)
 	kfd, errKFD := NewCompatibilityChecker(version.String(), KFDDistributionKind)
 	onprem, errOnPrem := NewCompatibilityChecker(version.String(), OnPremisesKind)
@@ -166,11 +159,12 @@ func GetFuryctlSupport(version version.Version) FuryctlSupported {
 		return checker.IsCompatible()
 	}
 
-	return FuryctlSupported{
-		EKSCluster:      isCompatible(eks, errEKS),
-		KFDDistribution: isCompatible(kfd, errKFD),
-		OnPremises:      isCompatible(onprem, errOnPrem),
-	}
+	support := make(map[string]bool)
+	support[EKSClusterKind] = isCompatible(eks, errEKS)
+	support[KFDDistributionKind] = isCompatible(kfd, errKFD)
+	support[OnPremisesKind] = isCompatible(onprem, errOnPrem)
+
+	return support
 }
 
 // VersionFromString converts a tag ref string to a semver version.

@@ -9,6 +9,7 @@ import (
 
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 
 	"github.com/sighupio/furyctl/internal/analytics"
 	"github.com/sighupio/furyctl/internal/app"
@@ -22,11 +23,14 @@ const DateFmt = "2006-01-02"
 func NewSupportedVersionsCmd() *cobra.Command {
 	var cmdEvent analytics.Event
 
-	distroVersionCmd := &cobra.Command{
+	supportedVersionCmd := &cobra.Command{
 		Use:   "supported-versions",
 		Short: "List the currently supported KFD versions and compatibilities with the different distribution's kind.",
 		PreRun: func(cmd *cobra.Command, _ []string) {
 			cmdEvent = analytics.NewCommandEvent(cobrax.GetFullname(cmd))
+			if err := viper.BindPFlags(cmd.Flags()); err != nil {
+				logrus.Fatalf("error while binding flags: %v", err)
+			}
 		},
 		RunE: func(_ *cobra.Command, _ []string) error {
 			ctn := app.GetContainerInstance()
@@ -41,7 +45,13 @@ func NewSupportedVersionsCmd() *cobra.Command {
 				return fmt.Errorf("error getting supported KFD versions: %w", err)
 			}
 
-			logrus.Info(FormatDistroVersions(releases))
+			kind := viper.GetString("kind")
+			kinds := []string{distribution.EKSClusterKind, distribution.KFDDistributionKind, distribution.OnPremisesKind}
+			if kind != "" {
+				kinds = []string{kind}
+			}
+
+			logrus.Info(FormatSupportedVersions(releases, kinds))
 
 			cmdEvent.AddSuccessMessage("supported KFD versions")
 			tracker.Track(cmdEvent)
@@ -50,14 +60,24 @@ func NewSupportedVersionsCmd() *cobra.Command {
 		},
 	}
 
-	return distroVersionCmd
+	supportedVersionCmd.Flags().StringP(
+		"kind",
+		"k",
+		"",
+		"Show upgrade paths for the kind of cluster specified (eg: EKSCluster, KFDDistribution, OnPremises), when missing shows all kinds.",
+	)
+	return supportedVersionCmd
 }
 
-func FormatDistroVersions(releases []distribution.DistroRelease) string {
-	fmtDistroVersions := "\n"
-	fmtDistroVersions += "------------------------------------------------------------------------------------\n"
-	fmtDistroVersions += "VERSION\t\tRELEASE DATE\t\tEKSCluster\tKFDDistribution\tOnPremises\n"
-	fmtDistroVersions += "------------------------------------------------------------------------------------\n"
+func FormatSupportedVersions(releases []distribution.KFDRelease, kinds []string) string {
+	fmtSupportedVersions := "\n"
+	fmtSupportedVersions += "------------------------------------------------------------------------------------\n"
+	fmtSupportedVersions += "VERSION\t\tRELEASE DATE\t\t"
+	for _, k := range kinds {
+		fmtSupportedVersions += k + "\t"
+	}
+	fmtSupportedVersions += "\n"
+	fmtSupportedVersions += "------------------------------------------------------------------------------------\n"
 
 	for _, r := range releases {
 		supported := func(s bool) string {
@@ -73,15 +93,16 @@ func FormatDistroVersions(releases []distribution.DistroRelease) string {
 			dateStr = r.Date.Format(DateFmt)
 		}
 
-		fmtDistroVersions += fmt.Sprintf(
-			"v%s\t\t%s\t\t%s\t\t%s\t\t%s\n",
+		fmtSupportedVersions += fmt.Sprintf(
+			"v%s\t\t%s",
 			r.Version.String(),
 			dateStr,
-			supported(r.FuryctlSupport.EKSCluster),
-			supported(r.FuryctlSupport.KFDDistribution),
-			supported(r.FuryctlSupport.OnPremises),
 		)
+		for _, k := range kinds {
+			fmtSupportedVersions += "\t\t" + supported(r.Support[k])
+		}
+		fmtSupportedVersions += "\n"
 	}
 
-	return fmtDistroVersions
+	return fmtSupportedVersions
 }
