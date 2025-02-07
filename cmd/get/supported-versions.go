@@ -24,7 +24,7 @@ func NewSupportedVersionsCmd() *cobra.Command {
 
 	distroVersionCmd := &cobra.Command{
 		Use:   "supported-versions",
-		Short: "List the supported distro versions and shows compatibilities with the current furyctl version used to invoke this command with the different distribution's kind.",
+		Short: "List the currently supported KFD versions and compatibilities with the different distribution's kind.",
 		PreRun: func(cmd *cobra.Command, _ []string) {
 			cmdEvent = analytics.NewCommandEvent(cobrax.GetFullname(cmd))
 		},
