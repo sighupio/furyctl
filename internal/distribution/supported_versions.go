@@ -60,16 +60,25 @@ func GetSupportedVersions(ghClient git.RepoClient) ([]KFDRelease, error) {
 	// Calculate the latest supported version based on the latest release.
 	latestSupportedVersion := GetLatestSupportedVersion(latestRelease.Version)
 
-	// Loop over all tags except the final element and only keep supported ones.
+	latestMinor := latestSupportedVersion
+
+	// Loop over all releases, only keep supported ones, skip.
 	for _, ghRelease := range ghReleases {
 		v, err := VersionFromString(ghRelease.TagName)
 		if err != nil || v.LessThan(&latestSupportedVersion) || v.Prerelease() != "" {
 			continue
 		}
 
+		if latestMinor.Segments()[0] != v.Segments()[0] || latestMinor.Segments()[1] != v.Segments()[1] {
+			latestMinor = v
+		} else {
+			// skip all the versions that are not the latest patch for a certain release
+			continue
+		}
+
 		release, err := newKFDRelease(ghRelease)
 		if err != nil {
-			// Skip tags that cannot be parsed or processed.
+			// Skip releases that cannot be parsed or processed.
 			continue
 		}
 

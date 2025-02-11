@@ -43,22 +43,27 @@ func TestFormatDistroVersions(t *testing.T) {
 			PublishedAt: time.Date(2020, time.February, 7, 12, 30, 0, 0, time.UTC),
 			PreRelease:  false,
 		}, {
-			TagName:     "v1.28.0",
+			TagName:     "v1.94.0",
 			CreatedAt:   time.Date(2025, time.February, 6, 12, 30, 0, 0, time.UTC),
 			PublishedAt: time.Date(2025, time.February, 7, 12, 30, 0, 0, time.UTC),
 			PreRelease:  false,
 		}, {
-			TagName:     "v1.29.0",
+			TagName:     "v1.96.0",
 			CreatedAt:   time.Date(2023, time.February, 6, 12, 30, 0, 0, time.UTC),
 			PublishedAt: time.Date(2023, time.February, 7, 12, 30, 0, 0, time.UTC),
 			PreRelease:  false,
 		}, {
-			TagName:     "v1.30.0",
+			TagName:     "v1.97.0",
 			CreatedAt:   time.Date(2025, time.February, 6, 12, 30, 0, 0, time.UTC),
 			PublishedAt: time.Date(2025, time.February, 7, 12, 30, 0, 0, time.UTC),
 			PreRelease:  false,
 		}, {
-			TagName:     "v1.31.0",
+			TagName:     "v1.98.0",
+			CreatedAt:   time.Date(2025, time.February, 6, 12, 30, 0, 0, time.UTC),
+			PublishedAt: time.Date(2025, time.February, 7, 12, 30, 0, 0, time.UTC),
+			PreRelease:  false,
+		}, {
+			TagName:     "v1.99.0",
 			CreatedAt:   time.Date(2025, time.February, 6, 12, 30, 0, 0, time.UTC),
 			PublishedAt: time.Date(2025, time.February, 7, 12, 30, 0, 0, time.UTC),
 			PreRelease:  false,
@@ -69,13 +74,14 @@ func TestFormatDistroVersions(t *testing.T) {
 
 	require.NoError(t, err)
 
-	fmtString := get.FormatSupportedVersions(releases, []string{})
+	fmtString := get.FormatSupportedVersions(releases, []string{distribution.EKSClusterKind, distribution.KFDDistributionKind, distribution.OnPremisesKind})
 	lines := strings.Split(fmtString, "\n")
 
-	assert.Equal(t, "------------------------------------------------------------------------------------", lines[1])
-	assert.Equal(t, "VERSION\t\tRELEASE DATE\t\tEKSCluster\tKFDDistribution\tOnPremises", lines[2])
-	assert.Equal(t, "------------------------------------------------------------------------------------", lines[3])
-	assert.Contains(t, lines[4], "v1.31.0\t\t2025-02-06")
-	assert.Contains(t, lines[5], "v1.30.0\t\t2025-02-06")
-	assert.Contains(t, lines[6], "v1.29.0\t\t2023-02-06")
+	assert.Equal(t, "-----------------------------------------------------------------------------------------", lines[2])
+	assert.Equal(t, "VERSION \t\tRELEASE DATE\t\tEKSCluster\tKFDDistribution\tOnPremises\t", lines[3])
+	assert.Equal(t, "-----------------------------------------------------------------------------------------", lines[4])
+	assert.Contains(t, lines[5], "v1.99.0*\t\t2025-02-06")
+	assert.Contains(t, lines[6], "v1.98.0*\t\t2025-02-06")
+	assert.Contains(t, lines[7], "v1.97.0*\t\t2025-02-06")
+	assert.Equal(t, "* this usually indicates you are not using the latest version of furyctl, try updating or checking the online documentation.", lines[8])
 }

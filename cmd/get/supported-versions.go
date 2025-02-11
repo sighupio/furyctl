@@ -25,7 +25,7 @@ func NewSupportedVersionsCmd() *cobra.Command {
 
 	supportedVersionCmd := &cobra.Command{
 		Use:   "supported-versions",
-		Short: "List the currently supported KFD versions and compatibilities with the different distribution's kind.",
+		Short: "List of currently supported KFD versions and their compatibility with this version of furyctl for each kind.",
 		PreRun: func(cmd *cobra.Command, _ []string) {
 			cmdEvent = analytics.NewCommandEvent(cobrax.GetFullname(cmd))
 			if err := viper.BindPFlags(cmd.Flags()); err != nil {
@@ -51,6 +51,7 @@ func NewSupportedVersionsCmd() *cobra.Command {
 				kinds = []string{kind}
 			}
 
+			logrus.Info("list of currently supported KFD versions and their compatibility with this version of furyctl for each kind")
 			logrus.Info(FormatSupportedVersions(releases, kinds))
 
 			cmdEvent.AddSuccessMessage("supported KFD versions")
@@ -71,37 +72,62 @@ func NewSupportedVersionsCmd() *cobra.Command {
 
 func FormatSupportedVersions(releases []distribution.KFDRelease, kinds []string) string {
 	fmtSupportedVersions := "\n"
-	fmtSupportedVersions += "------------------------------------------------------------------------------------\n"
-	fmtSupportedVersions += "VERSION\t\tRELEASE DATE\t\t"
+	fmtSupportedVersions += "list of currently supported KFD versions and their compatibility with this version of furyctl for each kind\n"
+	fmtSupportedVersions += "-----------------------------------------------------------------------------------------\n"
+	fmtSupportedVersions += "VERSION \t\tRELEASE DATE\t\t"
 	for _, k := range kinds {
 		fmtSupportedVersions += k + "\t"
 	}
 	fmtSupportedVersions += "\n"
-	fmtSupportedVersions += "------------------------------------------------------------------------------------\n"
+	fmtSupportedVersions += "-----------------------------------------------------------------------------------------\n"
 
-	for _, r := range releases {
-		supported := func(s bool) string {
-			if s {
-				return "Yes"
-			}
-
-			return "No"
+	supported := func(s bool) string {
+		if s {
+			return "Yes"
 		}
+
+		return "No"
+	}
+
+	showUnsupportedFuryctlMsg := false
+	for _, r := range releases {
 
 		dateStr := "-"
 		if !r.Date.IsZero() {
 			dateStr = r.Date.Format(DateFmt)
 		}
 
+		versionStr := r.Version.String()
+
+		allKindsSupported := func() bool {
+			for _, v := range r.Support {
+				if v {
+					return false
+				}
+			}
+			return true
+		}
+
+		if allKindsSupported() {
+			showUnsupportedFuryctlMsg = true
+			versionStr += "*"
+		} else {
+			versionStr += " "
+		}
+
 		fmtSupportedVersions += fmt.Sprintf(
 			"v%s\t\t%s",
-			r.Version.String(),
+			versionStr,
 			dateStr,
 		)
 		for _, k := range kinds {
 			fmtSupportedVersions += "\t\t" + supported(r.Support[k])
 		}
 		fmtSupportedVersions += "\n"
+	}
+
+	if showUnsupportedFuryctlMsg {
+		fmtSupportedVersions += "* this usually indicates you are not using the latest version of furyctl, try updating or checking the online documentation.\n"
 	}
 
 	return fmtSupportedVersions
