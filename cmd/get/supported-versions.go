@@ -73,7 +73,6 @@ func NewSupportedVersionsCmd() *cobra.Command {
 
 func FormatSupportedVersions(releases []distribution.KFDRelease, kinds []string) string {
 	fmtSupportedVersions := "\n"
-	fmtSupportedVersions += "list of currently supported KFD versions and their compatibility with this version of furyctl for each kind\n"
 	fmtSupportedVersions += "-----------------------------------------------------------------------------------------\n"
 	fmtSupportedVersions += "VERSION \t\tRELEASE DATE\t\t"
 

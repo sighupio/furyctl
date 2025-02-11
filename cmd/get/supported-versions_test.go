@@ -77,11 +77,11 @@ func TestFormatDistroVersions(t *testing.T) {
 	fmtString := get.FormatSupportedVersions(releases, []string{distribution.EKSClusterKind, distribution.KFDDistributionKind, distribution.OnPremisesKind})
 	lines := strings.Split(fmtString, "\n")
 
-	assert.Equal(t, "-----------------------------------------------------------------------------------------", lines[2])
-	assert.Equal(t, "VERSION \t\tRELEASE DATE\t\tEKSCluster\tKFDDistribution\tOnPremises\t", lines[3])
-	assert.Equal(t, "-----------------------------------------------------------------------------------------", lines[4])
-	assert.Contains(t, lines[5], "v1.99.0*\t\t2025-02-06")
-	assert.Contains(t, lines[6], "v1.98.0*\t\t2025-02-06")
-	assert.Contains(t, lines[7], "v1.97.0*\t\t2025-02-06")
-	assert.Equal(t, "* this usually indicates you are not using the latest version of furyctl, try updating or checking the online documentation.", lines[8])
+	assert.Equal(t, "-----------------------------------------------------------------------------------------", lines[1])
+	assert.Equal(t, "VERSION \t\tRELEASE DATE\t\tEKSCluster\tKFDDistribution\tOnPremises\t", lines[2])
+	assert.Equal(t, "-----------------------------------------------------------------------------------------", lines[3])
+	assert.Contains(t, lines[4], "v1.99.0*\t\t2025-02-06")
+	assert.Contains(t, lines[5], "v1.98.0*\t\t2025-02-06")
+	assert.Contains(t, lines[6], "v1.97.0*\t\t2025-02-06")
+	assert.Equal(t, "* this usually indicates you are not using the latest version of furyctl, try updating or checking the online documentation.", lines[7])
 }
