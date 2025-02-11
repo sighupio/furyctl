@@ -83,5 +83,5 @@ func TestFormatDistroVersions(t *testing.T) {
 	assert.Contains(t, lines[4], "v1.99.0*\t\t2025-02-06")
 	assert.Contains(t, lines[5], "v1.98.0*\t\t2025-02-06")
 	assert.Contains(t, lines[6], "v1.97.0*\t\t2025-02-06")
-	assert.Equal(t, "* this usually indicates you are not using the latest version of furyctl, try updating or checking the online documentation.", lines[7])
+	assert.Equal(t, "* this usually indicates you are not using the latest version of furyctl, try updating or checking the online documentation.", lines[8])
 }

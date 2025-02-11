@@ -47,12 +47,15 @@ func NewSupportedVersionsCmd() *cobra.Command {
 
 			kind := viper.GetString("kind")
 			kinds := []string{distribution.EKSClusterKind, distribution.KFDDistributionKind, distribution.OnPremisesKind}
+			msg := "list of currently supported KFD versions and their compatibility with this version of furyctl for "
 			if kind != "" {
 				kinds = []string{kind}
+				msg += kind + "\n"
+			} else {
+				msg += "each kind\n"
 			}
 
-			logrus.Info("list of currently supported KFD versions and their compatibility with this version of furyctl for each kind")
-			logrus.Info(FormatSupportedVersions(releases, kinds))
+			logrus.Info(msg + FormatSupportedVersions(releases, kinds))
 
 			cmdEvent.AddSuccessMessage("supported KFD versions")
 			tracker.Track(cmdEvent)
@@ -132,7 +135,7 @@ func FormatSupportedVersions(releases []distribution.KFDRelease, kinds []string)
 	}
 
 	if showUnsupportedFuryctlMsg {
-		fmtSupportedVersions += "* this usually indicates you are not using the latest version of furyctl, try updating or checking the online documentation.\n"
+		fmtSupportedVersions += "\n* this usually indicates you are not using the latest version of furyctl, try updating or checking the online documentation.\n"
 	}
 
 	return fmtSupportedVersions
