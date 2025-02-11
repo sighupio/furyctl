@@ -67,6 +67,7 @@ func NewSupportedVersionsCmd() *cobra.Command {
 		"",
 		"Show upgrade paths for the kind of cluster specified (eg: EKSCluster, KFDDistribution, OnPremises), when missing shows all kinds.",
 	)
+
 	return supportedVersionCmd
 }
 
@@ -75,9 +76,11 @@ func FormatSupportedVersions(releases []distribution.KFDRelease, kinds []string)
 	fmtSupportedVersions += "list of currently supported KFD versions and their compatibility with this version of furyctl for each kind\n"
 	fmtSupportedVersions += "-----------------------------------------------------------------------------------------\n"
 	fmtSupportedVersions += "VERSION \t\tRELEASE DATE\t\t"
+
 	for _, k := range kinds {
 		fmtSupportedVersions += k + "\t"
 	}
+
 	fmtSupportedVersions += "\n"
 	fmtSupportedVersions += "-----------------------------------------------------------------------------------------\n"
 
@@ -90,8 +93,8 @@ func FormatSupportedVersions(releases []distribution.KFDRelease, kinds []string)
 	}
 
 	showUnsupportedFuryctlMsg := false
-	for _, r := range releases {
 
+	for _, r := range releases {
 		dateStr := "-"
 		if !r.Date.IsZero() {
 			dateStr = r.Date.Format(DateFmt)
@@ -105,6 +108,7 @@ func FormatSupportedVersions(releases []distribution.KFDRelease, kinds []string)
 					return false
 				}
 			}
+
 			return true
 		}
 
@@ -120,9 +124,11 @@ func FormatSupportedVersions(releases []distribution.KFDRelease, kinds []string)
 			versionStr,
 			dateStr,
 		)
+
 		for _, k := range kinds {
 			fmtSupportedVersions += "\t\t" + supported(r.Support[k])
 		}
+
 		fmtSupportedVersions += "\n"
 	}
 

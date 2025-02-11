@@ -69,12 +69,12 @@ func GetSupportedVersions(ghClient git.RepoClient) ([]KFDRelease, error) {
 			continue
 		}
 
-		if latestMinor.Segments()[0] != v.Segments()[0] || latestMinor.Segments()[1] != v.Segments()[1] {
-			latestMinor = v
-		} else {
-			// skip all the versions that are not the latest patch for a certain release
+		// Skip all the versions that are not the latest patch for a certain release.
+		if !(latestMinor.Segments()[0] != v.Segments()[0] || latestMinor.Segments()[1] != v.Segments()[1]) {
 			continue
 		}
+
+		latestMinor = v
 
 		release, err := newKFDRelease(ghRelease)
 		if err != nil {
