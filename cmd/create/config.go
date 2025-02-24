@@ -39,7 +39,7 @@ func NewConfigCmd() *cobra.Command {
 	configCmd := &cobra.Command{
 		Use:     "config",
 		Short:   "Scaffolds a new furyctl configuration file for a specific version and kind",
-		Example: "furyctl create config --kind OnPremises --version 1.30.0 --name test-cluster",
+		Example: "furyctl create config --kind OnPremises --version v1.30.0 --name test-cluster",
 		PreRun: func(cmd *cobra.Command, _ []string) {
 			cmdEvent = analytics.NewCommandEvent(cobrax.GetFullname(cmd))
 
