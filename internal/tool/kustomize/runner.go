@@ -53,7 +53,7 @@ func (r *Runner) deleteCmd(id string) {
 }
 
 func (r *Runner) Version() (string, error) {
-	args := []string{"version", "--short"}
+	args := []string{"version"}
 
 	cmd, id := r.newCmd(args)
 	defer r.deleteCmd(id)
@@ -67,7 +67,7 @@ func (r *Runner) Version() (string, error) {
 }
 
 func (r *Runner) Build() (string, error) {
-	args := []string{"build", "--load_restrictor", "none", "."}
+	args := []string{"build", "--load-restrictor", "none", "."}
 
 	cmd, id := r.newCmd(args)
 	defer r.deleteCmd(id)
