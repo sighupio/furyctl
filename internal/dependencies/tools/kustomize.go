@@ -20,7 +20,7 @@ func NewKustomize(runner *kustomize.Runner, version string) *Kustomize {
 		os:      runtime.GOOS,
 		version: version,
 		checker: &checker{
-			regex:  regexp.MustCompile(`v(\S*)`),
+			regex:  regexp.MustCompile(`v(\S+)`),
 			runner: runner,
 			trimFn: func(tokens []string) string {
 				return strings.TrimLeft(tokens[len(tokens)-1], "v")
