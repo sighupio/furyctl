@@ -66,20 +66,6 @@ func (r *Runner) Version() (string, error) {
 	return out, nil
 }
 
-func (r *Runner) Build() (string, error) {
-	args := []string{"build", "--load-restrictor", "none", "."}
-
-	cmd, id := r.newCmd(args)
-	defer r.deleteCmd(id)
-
-	out, err := execx.CombinedOutput(cmd)
-	if err != nil {
-		return "", fmt.Errorf("error while running kustomize build: %w", err)
-	}
-
-	return out, nil
-}
-
 func (r *Runner) Stop() error {
 	for _, cmd := range r.cmds {
 		if err := cmd.Stop(); err != nil {
