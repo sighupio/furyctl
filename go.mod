@@ -28,7 +28,7 @@ require (
 	gopkg.in/yaml.v2 v2.4.0
 	gopkg.in/yaml.v3 v3.0.1
 	k8s.io/client-go v1.5.2
-	k8s.io/kubernetes v1.30.7
+	k8s.io/kubernetes v1.30.10
 	sigs.k8s.io/e2e-framework v0.4.0
 )
 
