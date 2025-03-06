@@ -53,7 +53,7 @@ func (r *Runner) deleteCmd(id string) {
 }
 
 func (r *Runner) Version() (string, error) {
-	args := []string{"version", "--short"}
+	args := []string{"version"}
 
 	cmd, id := r.newCmd(args)
 	defer r.deleteCmd(id)
@@ -61,20 +61,6 @@ func (r *Runner) Version() (string, error) {
 	out, err := execx.CombinedOutput(cmd)
 	if err != nil {
 		return "", fmt.Errorf("error getting kustomize version: %w", err)
-	}
-
-	return out, nil
-}
-
-func (r *Runner) Build() (string, error) {
-	args := []string{"build", "--load_restrictor", "none", "."}
-
-	cmd, id := r.newCmd(args)
-	defer r.deleteCmd(id)
-
-	out, err := execx.CombinedOutput(cmd)
-	if err != nil {
-		return "", fmt.Errorf("error while running kustomize build: %w", err)
 	}
 
 	return out, nil
