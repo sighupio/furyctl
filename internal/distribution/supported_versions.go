@@ -108,8 +108,12 @@ func SetRecommendedVersions(releases []KFDRelease) {
 	recommendedCounter := 0
 
 	for i := range releases {
+		if recommendedCounter == recommendedVersions {
+			return
+		}
+
 		segments := releases[i].Version.Segments()
-		if len(segments) < RequiredSegments {
+		if len(segments) < requiredSegments {
 			continue
 		}
 
@@ -118,10 +122,6 @@ func SetRecommendedVersions(releases []KFDRelease) {
 			minorVersionsFound[minor] = true
 			releases[i].Recommended = true
 			recommendedCounter++
-
-			if recommendedCounter == RecommendedVersions {
-				return
-			}
 		}
 	}
 }
