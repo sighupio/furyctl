@@ -7,15 +7,21 @@ package distribution
 import (
 	"errors"
 	"fmt"
+	"slices"
 	"sort"
 	"strings"
 	"time"
 
 	"github.com/Al-Pragliola/go-version"
 	"github.com/sirupsen/logrus"
-	"slices"
 
 	"github.com/sighupio/furyctl/internal/git"
+)
+
+const (
+	RequiredSegments          = 2
+	previousSupportedVersions = 2
+	RecommendedVersions       = 3
 )
 
 // KFDRelease holds information about a distribution release.
@@ -29,10 +35,10 @@ type KFDRelease struct {
 // Check if current KFD version is a release or a prerelease.
 func IsNotRelease(ghRelease git.Release) bool {
 	v, err := VersionFromString(ghRelease.TagName)
-
 	if err != nil || v.Prerelease() != "" {
 		return true
 	}
+
 	return false
 }
 
@@ -81,8 +87,6 @@ func GetSupportedVersions(ghClient git.RepoClient) ([]KFDRelease, error) {
 	return releases, nil
 }
 
-const previousSupportedVersions = 2
-
 // GetLatestSupportedVersion returns the supported version based on the second segment of the version.
 func GetLatestSupportedVersion(v version.Version) version.Version {
 	// Generate a version string using the second segment from the provided version.
@@ -96,42 +100,16 @@ func GetLatestSupportedVersion(v version.Version) version.Version {
 	return *supportedVersion
 }
 
-var (
-	ErrLatestDistroVersionNotFound = errors.New("latest KFD version not found")
-	ErrInvalidVersion              = errors.New("invalid version")
-)
+var ErrInvalidVersion = errors.New("invalid version")
 
-// GetLatestDistroVersion iterates over tags to return the latest valid distro release(not RC or prerelease).
-func getLatestDistroVersion(ghReleases []git.Release) (KFDRelease, error) {
-	for _, ghRelease := range ghReleases {
-		if ghRelease.PreRelease {
-			continue
-		}
-
-		version, err := VersionFromString(ghRelease.TagName)
-		if err != nil {
-			continue
-		}
-
-		// Skip prerelease versions.
-		if version.Prerelease() != "" {
-			continue
-		}
-
-		return newKFDRelease(ghRelease)
-	}
-
-	return KFDRelease{}, ErrLatestDistroVersionNotFound
-}
-
-// GetRecommendedVersions returns the last 3 minor with the last patch.
-func GetRecommendedVersions(releases []KFDRelease) {
+// SetRecommendedVersions Set as recommended the last 3 minor with the last patch.
+func SetRecommendedVersions(releases []KFDRelease) {
 	minorVersionsFound := make(map[int]bool)
 	recommendedCounter := 0
 
 	for i := range releases {
 		segments := releases[i].Version.Segments()
-		if len(segments) < 2 {
+		if len(segments) < RequiredSegments {
 			continue
 		}
 
@@ -141,7 +119,7 @@ func GetRecommendedVersions(releases []KFDRelease) {
 			releases[i].Recommended = true
 			recommendedCounter++
 
-			if recommendedCounter == 3 {
+			if recommendedCounter == RecommendedVersions {
 				return
 			}
 		}

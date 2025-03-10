@@ -14,15 +14,13 @@ import (
 )
 
 const (
-	EKSClusterKind      = "EKSCluster"
-	KFDDistributionKind = "KFDDistribution"
-	OnPremisesKind      = "OnPremises"
-)
-
-var (
-	ErrUnsupportedKind     = errors.New("unsupported kind")
+	EKSClusterKind         = "EKSCluster"
+	KFDDistributionKind    = "KFDDistribution"
+	OnPremisesKind         = "OnPremises"
 	MinSupportedKFDVersion = "v1.25.8"
 )
+
+var ErrUnsupportedKind = errors.New("unsupported kind")
 
 type CompatibilityChecker interface {
 	IsCompatible() bool
@@ -35,6 +33,7 @@ type CompatibilityCheck struct {
 // Check the minimal KDF version supported by furyctl.
 func IsReleaseUnsupportedByFuryctl(ghRelease git.Release) bool {
 	distributionVersion := ghRelease.TagName
+
 	latestSupported, err := semver.NewVersion(MinSupportedKFDVersion)
 	if err != nil {
 		return true

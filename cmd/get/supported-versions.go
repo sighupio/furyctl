@@ -80,7 +80,7 @@ func NewSupportedVersionsCmd() *cobra.Command {
 }
 
 func FormatSupportedVersions(releases []distribution.KFDRelease, kinds []string) string {
-	distribution.GetRecommendedVersions(releases)
+	distribution.SetRecommendedVersions(releases)
 
 	fmtSupportedVersions := "\n"
 	fmtSupportedVersions += "-----------------------------------------------------------------------------------------\n"
