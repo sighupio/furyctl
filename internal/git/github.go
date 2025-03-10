@@ -52,44 +52,57 @@ type GitHubClient struct {
 var ErrGHRateLimit = errors.New("rate limited from GitHub public API, retry in 1 hour")
 
 func (gc GitHubClient) GetReleases() ([]Release, error) {
-	var release []Release
+	var releases []Release
+	page := 1
+	perPage := 100
+	hasMorePages := true
 
-	ctx, cancel := context.WithTimeout(context.Background(), gc.config.Timeout)
+	for hasMorePages {
+		ctx, cancel := context.WithTimeout(context.Background(), gc.config.Timeout)
+		defer cancel()
 
-	defer cancel()
-
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, gc.config.ReleaseAPI, nil)
-	if err != nil {
-		return release, fmt.Errorf("error creating request: %w", err)
-	}
-
-	resp, err := gc.client.Do(req)
-	if err != nil {
-		return release, fmt.Errorf("error performing request: %w", err)
-	}
-
-	defer func() {
-		if resp != nil && resp.Body != nil {
-			if err := resp.Body.Close(); err != nil {
-				logrus.Error(err)
-			}
+		url := fmt.Sprintf("%s?per_page=%d&page=%d", gc.config.ReleaseAPI, perPage, page)
+		req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+		if err != nil {
+			return releases, fmt.Errorf("error creating request: %w", err)
 		}
-	}()
 
-	if resp.StatusCode == http.StatusTooManyRequests {
-		return release, ErrGHRateLimit
+		resp, err := gc.client.Do(req)
+		if err != nil {
+			return releases, fmt.Errorf("error performing request: %w", err)
+		}
+
+		defer func() {
+			if resp != nil && resp.Body != nil {
+				if err := resp.Body.Close(); err != nil {
+					logrus.Error(err)
+				}
+			}
+		}()
+
+		if resp.StatusCode == http.StatusTooManyRequests {
+			return releases, ErrGHRateLimit
+		}
+
+		respBody, err := io.ReadAll(resp.Body)
+		if err != nil {
+			return releases, fmt.Errorf("error reading from GitHub API: %w", err)
+		}
+
+		var currentReleases []Release
+		if err := json.Unmarshal(respBody, &currentReleases); err != nil {
+			return releases, fmt.Errorf("error decoding response: %w", err)
+		}
+
+		if len(currentReleases) == 0 {
+			hasMorePages = false
+		} else {
+			releases = append(releases, currentReleases...)
+			page++
+		}
 	}
 
-	respBody, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return release, fmt.Errorf("error reading from GitHub API: %w", err)
-	}
-
-	if err := json.Unmarshal(respBody, &release); err != nil {
-		return release, fmt.Errorf("error decoding response: %w", err)
-	}
-
-	return release, nil
+	return releases, nil
 }
 
 const gitHubClientTimeout = 5 * time.Second
