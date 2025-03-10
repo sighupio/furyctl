@@ -19,7 +19,7 @@ import (
 )
 
 const (
-	RequiredSegments          = 2
+	requiredSegments          = 2
 	previousSupportedVersions = 2
 	RecommendedVersions       = 3
 )
