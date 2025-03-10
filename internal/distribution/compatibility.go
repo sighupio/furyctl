@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/sighupio/furyctl/internal/git"
 	"github.com/sighupio/furyctl/internal/semver"
 )
 
@@ -18,7 +19,10 @@ const (
 	OnPremisesKind      = "OnPremises"
 )
 
-var ErrUnsupportedKind = errors.New("unsupported kind")
+var (
+	ErrUnsupportedKind     = errors.New("unsupported kind")
+	MinSupportedKFDVersion = "v1.25.8"
+)
 
 type CompatibilityChecker interface {
 	IsCompatible() bool
@@ -26,6 +30,22 @@ type CompatibilityChecker interface {
 
 type CompatibilityCheck struct {
 	distributionVersion string
+}
+
+// Check the minimal KDF version supported by furyctl.
+func IsReleaseUnsupportedByFuryctl(ghRelease git.Release) bool {
+	distributionVersion := ghRelease.TagName
+	latestSupported, err := semver.NewVersion(MinSupportedKFDVersion)
+	if err != nil {
+		return true
+	}
+
+	currentVersion, err := semver.NewVersion(distributionVersion)
+	if err != nil {
+		return true
+	}
+
+	return currentVersion.LessThan(latestSupported)
 }
 
 func NewCompatibilityChecker(distributionVersion, kind string) (CompatibilityChecker, error) {
