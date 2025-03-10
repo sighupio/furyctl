@@ -13,7 +13,7 @@ import (
 func NewGetCmd() *cobra.Command {
 	getCmd := &cobra.Command{
 		Use:   "get",
-		Short: "Get the kubeconfig or available upgrade paths for a cluster",
+		Short: "Get the kubeconfig, available upgrade paths for a cluster or compatible versions to use between KFD, providers, furyctl.",
 	}
 
 	getCmd.AddCommand(get.NewKubeconfigCmd())

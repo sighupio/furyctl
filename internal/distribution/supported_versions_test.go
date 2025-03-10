@@ -74,10 +74,10 @@ func TestGetSupportedDistroVersions(t *testing.T) {
 
 	// Assert results.
 	require.NoError(t, err)
-	assert.Len(t, releases, 3)
+	assert.Len(t, releases, 6)
 	assert.Equal(t, "1.31.1", releases[0].Version.String())
-	assert.Equal(t, "1.30.0", releases[1].Version.String())
-	assert.Equal(t, "1.29.0", releases[2].Version.String())
+	assert.Equal(t, "1.31.0", releases[1].Version.String())
+	assert.Equal(t, "1.30.0", releases[2].Version.String())
 }
 
 func TestGetLatestSupportedVersion(t *testing.T) {

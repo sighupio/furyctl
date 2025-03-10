@@ -7,6 +7,7 @@ package distribution
 import (
 	"errors"
 	"fmt"
+	"slices"
 	"sort"
 	"strings"
 	"time"
@@ -17,14 +18,31 @@ import (
 	"github.com/sighupio/furyctl/internal/git"
 )
 
+const (
+	requiredSegments          = 2
+	previousSupportedVersions = 2
+	recommendedVersions       = 3
+)
+
 // KFDRelease holds information about a distribution release.
 type KFDRelease struct {
-	Version version.Version
-	Date    time.Time
-	Support map[string]bool
+	Version     version.Version
+	Date        time.Time
+	Support     map[string]bool
+	Recommended bool
 }
 
-// GetSupportedDistroVersions retrieves distro releases filtering out unsupported versions.
+// Check if current KFD version is a release or a prerelease.
+func IsNotRelease(ghRelease git.Release) bool {
+	v, err := VersionFromString(ghRelease.TagName)
+	if err != nil || v.Prerelease() != "" {
+		return true
+	}
+
+	return false
+}
+
+// GetSupportedVersions retrieves all distro releases filtering out prereleases and invalid versions.
 func GetSupportedVersions(ghClient git.RepoClient) ([]KFDRelease, error) {
 	releases := []KFDRelease{}
 
@@ -51,31 +69,12 @@ func GetSupportedVersions(ghClient git.RepoClient) ([]KFDRelease, error) {
 		return jVersion.LessThan(&iVersion)
 	})
 
-	// Get the latest distro version from the tag list.
-	latestRelease, err := getLatestDistroVersion(ghReleases)
-	if err != nil {
-		return releases, fmt.Errorf("error getting latest KFD version: %w", err)
-	}
+	ghReleases = slices.DeleteFunc(ghReleases, IsReleaseUnsupportedByFuryctl)
 
-	// Calculate the latest supported version based on the latest release.
-	latestSupportedVersion := GetLatestSupportedVersion(latestRelease.Version)
+	ghReleases = slices.DeleteFunc(ghReleases, IsNotRelease)
 
-	latestMinor := latestSupportedVersion
-
-	// Loop over all releases, only keep supported ones, skip.
+	// Loop over releases and skip invalid versions.
 	for _, ghRelease := range ghReleases {
-		v, err := VersionFromString(ghRelease.TagName)
-		if err != nil || v.LessThan(&latestSupportedVersion) || v.Prerelease() != "" {
-			continue
-		}
-
-		// Skip all the versions that are not the latest patch for a certain release.
-		if !(latestMinor.Segments()[0] != v.Segments()[0] || latestMinor.Segments()[1] != v.Segments()[1]) {
-			continue
-		}
-
-		latestMinor = v
-
 		release, err := newKFDRelease(ghRelease)
 		if err != nil {
 			// Skip releases that cannot be parsed or processed.
@@ -87,8 +86,6 @@ func GetSupportedVersions(ghClient git.RepoClient) ([]KFDRelease, error) {
 
 	return releases, nil
 }
-
-const previousSupportedVersions = 2
 
 // GetLatestSupportedVersion returns the supported version based on the second segment of the version.
 func GetLatestSupportedVersion(v version.Version) version.Version {
@@ -103,32 +100,30 @@ func GetLatestSupportedVersion(v version.Version) version.Version {
 	return *supportedVersion
 }
 
-var (
-	ErrLatestDistroVersionNotFound = errors.New("latest KFD version not found")
-	ErrInvalidVersion              = errors.New("invalid version")
-)
+var ErrInvalidVersion = errors.New("invalid version")
 
-// GetLatestDistroVersion iterates over tags to return the latest valid distro release(not RC or prerelease).
-func getLatestDistroVersion(ghReleases []git.Release) (KFDRelease, error) {
-	for _, ghRelease := range ghReleases {
-		if ghRelease.PreRelease {
+// SetRecommendedVersions Set as recommended the last 3 minor with the last patch.
+func SetRecommendedVersions(releases []KFDRelease) {
+	minorVersionsFound := make(map[int]bool)
+	recommendedCounter := 0
+
+	for i := range releases {
+		if recommendedCounter == recommendedVersions {
+			return
+		}
+
+		segments := releases[i].Version.Segments()
+		if len(segments) < requiredSegments {
 			continue
 		}
 
-		version, err := VersionFromString(ghRelease.TagName)
-		if err != nil {
-			continue
+		minor := segments[1]
+		if !minorVersionsFound[minor] {
+			minorVersionsFound[minor] = true
+			releases[i].Recommended = true
+			recommendedCounter++
 		}
-
-		// Skip prerelease versions.
-		if version.Prerelease() != "" {
-			continue
-		}
-
-		return newKFDRelease(ghRelease)
 	}
-
-	return KFDRelease{}, ErrLatestDistroVersionNotFound
 }
 
 // NewKFDRelease creates a KFDRelease from a Release.

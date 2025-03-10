@@ -16,6 +16,12 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+const (
+	GitHubDefaultPage   = 1
+	GitHubPerPageLimit  = 100
+	gitHubClientTimeout = 5 * time.Second
+)
+
 // HTTPClient is an interface for making HTTP requests.
 type HTTPClient interface {
 	Do(req *http.Request) (*http.Response, error)
@@ -51,21 +57,46 @@ type GitHubClient struct {
 
 var ErrGHRateLimit = errors.New("rate limited from GitHub public API, retry in 1 hour")
 
+// GetReleases fetches all releases from GitHub.
 func (gc GitHubClient) GetReleases() ([]Release, error) {
-	var release []Release
+	var releases []Release
 
+	page := GitHubDefaultPage
+	perPage := GitHubPerPageLimit
+	hasMorePages := true
+
+	for hasMorePages {
+		pageReleases, nextPage, err := gc.fetchReleasesPage(page, perPage)
+		if err != nil {
+			return releases, err
+		}
+
+		releases = append(releases, pageReleases...)
+
+		if len(pageReleases) == 0 {
+			hasMorePages = false
+		} else {
+			page = nextPage
+		}
+	}
+
+	return releases, nil
+}
+
+func (gc GitHubClient) fetchReleasesPage(page, perPage int) ([]Release, int, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), gc.config.Timeout)
-
 	defer cancel()
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, gc.config.ReleaseAPI, nil)
+	url := fmt.Sprintf("%s?per_page=%d&page=%d", gc.config.ReleaseAPI, perPage, page)
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
-		return release, fmt.Errorf("error creating request: %w", err)
+		return nil, page, fmt.Errorf("error creating request: %w", err)
 	}
 
 	resp, err := gc.client.Do(req)
 	if err != nil {
-		return release, fmt.Errorf("error performing request: %w", err)
+		return nil, page, fmt.Errorf("error performing request: %w", err)
 	}
 
 	defer func() {
@@ -77,22 +108,21 @@ func (gc GitHubClient) GetReleases() ([]Release, error) {
 	}()
 
 	if resp.StatusCode == http.StatusTooManyRequests {
-		return release, ErrGHRateLimit
+		return nil, page, ErrGHRateLimit
 	}
 
 	respBody, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return release, fmt.Errorf("error reading from GitHub API: %w", err)
+		return nil, page, fmt.Errorf("error reading from GitHub API: %w", err)
 	}
 
-	if err := json.Unmarshal(respBody, &release); err != nil {
-		return release, fmt.Errorf("error decoding response: %w", err)
+	var releases []Release
+	if err := json.Unmarshal(respBody, &releases); err != nil {
+		return nil, page, fmt.Errorf("error decoding response: %w", err)
 	}
 
-	return release, nil
+	return releases, page + 1, nil
 }
-
-const gitHubClientTimeout = 5 * time.Second
 
 // NewGitHubClient creates a new GitHub client with the given configuration.
 func NewGitHubClient() *GitHubClient {
