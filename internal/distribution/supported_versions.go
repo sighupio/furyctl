@@ -21,7 +21,7 @@ import (
 const (
 	requiredSegments          = 2
 	previousSupportedVersions = 2
-	RecommendedVersions       = 3
+	recommendedVersions       = 3
 )
 
 // KFDRelease holds information about a distribution release.
