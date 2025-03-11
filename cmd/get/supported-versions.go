@@ -26,6 +26,11 @@ func NewSupportedVersionsCmd() *cobra.Command {
 	supportedVersionCmd := &cobra.Command{
 		Use:   "supported-versions",
 		Short: "List of currently supported KFD versions and their compatibility with this version of furyctl for each kind.",
+		Long: `List of currently supported KFD versions and their compatibility with this version of furyctl for each kind. If the "--kind" parameter is specified, the command will only provide information about the selected provider.
+ Examples:
+ - furyctl get supported-versions                  	will list the currently supported KFD versions and their compatibility with this version of furyctl for each kind.
+ - furyctl get supported-versions --kind OnPremises	will list the currently supported KFD versions and their compatibility with this version of furyctl but for the OnPremises kind.
+ `,
 		PreRun: func(cmd *cobra.Command, _ []string) {
 			cmdEvent = analytics.NewCommandEvent(cobrax.GetFullname(cmd))
 			if err := viper.BindPFlags(cmd.Flags()); err != nil {
@@ -68,13 +73,15 @@ func NewSupportedVersionsCmd() *cobra.Command {
 		"kind",
 		"k",
 		"",
-		"Show upgrade paths for the kind of cluster specified (eg: EKSCluster, KFDDistribution, OnPremises), when missing shows all kinds.",
+		"Show supported KFD versions for the kind of cluster specified (eg: EKSCluster, KFDDistribution, OnPremises), when missing shows all kinds.",
 	)
 
 	return supportedVersionCmd
 }
 
 func FormatSupportedVersions(releases []distribution.KFDRelease, kinds []string) string {
+	distribution.SetRecommendedVersions(releases)
+
 	fmtSupportedVersions := "\n"
 	fmtSupportedVersions += "-----------------------------------------------------------------------------------------\n"
 	fmtSupportedVersions += "VERSION \t\tRELEASE DATE\t\t"
@@ -95,6 +102,7 @@ func FormatSupportedVersions(releases []distribution.KFDRelease, kinds []string)
 	}
 
 	showUnsupportedFuryctlMsg := false
+	showRecommendedMsg := false
 
 	for _, r := range releases {
 		dateStr := "-"
@@ -116,9 +124,14 @@ func FormatSupportedVersions(releases []distribution.KFDRelease, kinds []string)
 
 		if allKindsSupported() {
 			showUnsupportedFuryctlMsg = true
-			versionStr += "*"
+			versionStr += " *"
 		} else {
 			versionStr += " "
+		}
+
+		if r.Recommended {
+			versionStr += "**"
+			showRecommendedMsg = true
 		}
 
 		fmtSupportedVersions += fmt.Sprintf(
@@ -136,6 +149,10 @@ func FormatSupportedVersions(releases []distribution.KFDRelease, kinds []string)
 
 	if showUnsupportedFuryctlMsg {
 		fmtSupportedVersions += "\n* this usually indicates you are not using the latest version of furyctl, try updating or checking the online documentation.\n"
+	}
+
+	if showRecommendedMsg {
+		fmtSupportedVersions += "\n** this indicates the recommended KFD versions.\n"
 	}
 
 	return fmtSupportedVersions
