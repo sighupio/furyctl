@@ -4,7 +4,7 @@
   <!-- <img src="docs/assets/furyctl-logo.svg" width="200px" alt="furyctl logo" /> -->
   <img src="docs/assets/furyctl-temporary.png" width="200px" alt="furyctl logo" />
 
-<p>The Swiss Army Knife<br/>for the Kubernetes Fury Distribution</p>
+<p>The Swiss Army Knife<br/>for the SIGHUP Distribution</p>
 
 [![Build Status](https://ci.sighup.io/api/badges/sighupio/furyctl/status.svg?ref=refs/heads/main)](https://ci.sighup.io/sighupio/furyctl)
 ![Release](https://img.shields.io/badge/furyctl-v0.31.1-blue)
@@ -21,22 +21,22 @@
 
 ## What is furyctl?
 
-`furyctl` is the command line companion for the Kubernetes Fury Distribution to manage the **full lifecycle** of your Kubernetes Fury clusters.
+`furyctl` is the command line companion for the SIGHUP Distribution to manage the **full lifecycle** of your Kubernetes clusters (SKD).
 <br/>
 
-> 💡 Learn more about the Kubernetes Fury Distribution in the [official site](https://kubernetesfury.com).
+> 💡 Learn more about the SIGHUP Distribution in the [official site](https://docs.sighup.io).
 
 If you're looking for the old documentation for furyctl legacy, you can find it [here](https://github.com/sighupio/furyctl/blob/release-v0.11/README.md).
 
 ### Available providers
 
 - `EKSCluster`: Provides comprehensive lifecycle management for an EKS cluster on AWS. It handles the installation of the VPC, VPN, EKS using the installers, and deploys the Distribution onto the EKS cluster.
-- `KFDDistribution`: Dedicated provider for the distribution, which installs the Distribution (modules only) on an existing Kubernetes cluster.
-- `OnPremises`: Provider to install a KFD Cluster on VMs.
+- `KFDDistribution`: Dedicated provider for the distribution, which installs the SIGHUP Distribution (modules only) on an existing Kubernetes cluster.
+- `OnPremises`: Provider to install a SKD Cluster on VMs.
 
 ## Support & Compatibility 🪢
 
-Check the [compatibility matrix][compatibility-matrix] for additional information about `furyctl` and `KFD` compatibility.
+Check the [compatibility matrix][compatibility-matrix] for additional information about `furyctl` and `SKD` compatibility.
 
 ## Installation
 
@@ -139,12 +139,12 @@ See all the available commands and their usage by running `furyctl help`.
 
 > 💡 **TIP**
 >
-> You can follow the Kubernetes Fury Distribution quick start guides for cloud and on-premises installations in KFD's official documentation site:
+> You can follow the SIGHUP Distribution quick start guides for cloud and on-premises installations in KFD's official documentation site:
 > https://docs.kubernetesfury.com/docs/quickstart/quickstart
 
 <!-- line left blank as spacer -->
 
-> Check [KFD Compatibility matrix](https://github.com/sighupio/fury-distribution/blob/main/docs/COMPATIBILITY_MATRIX.md) for the furyctl / KFD versions to use.
+> Check [SKD Compatibility matrix](https://github.com/sighupio/fury-distribution/blob/main/docs/COMPATIBILITY_MATRIX.md) for the furyctl / SKD versions to use.
 
 ### Basic Usage
 
@@ -158,9 +158,9 @@ Basic usage of `furyctl` for a new project consists on the following steps:
 
 `furyctl` provides a command that outputs a sample configuration file (by default called `furyctl.yaml`) with all the possible fields explained in comments.
 
-furyctl configuration files have a kind that specifies what type of cluster will be created, for example the `EKSCluster` kind has all the parameters needed to create a KFD cluster using the EKS managed clusters from AWS.
+furyctl configuration files have a kind that specifies what type of cluster will be created, for example the `EKSCluster` kind has all the parameters needed to create a SKD cluster using the EKS managed clusters from AWS.
 
-You can also use the `KFDDistribution` kind to install the KFD distribution on top of an existing Kubernetes cluster or `OnPremises` kind to install a KFD cluster on VMs.
+You can also use the `KFDDistribution` kind to install the SKD distribution on top of an existing Kubernetes cluster or `OnPremises` kind to install a SKD cluster on VMs.
 
 Additionally, the schema of the file is versioned with the `apiVersion` field, so when new features are introduced you can switch to a newer version of the configuration file structure.
 
@@ -201,7 +201,7 @@ furyctl divides the cluster creation in four phases: `infrastructure`, `kubernet
 
 1. The first phase, `infrastructure`, creates all the prerequisites needed to be able to create a cluster. For example, the VPC and its networks.
 2. The second phase, `kubernetes`, creates the actual Kubernetes clusters. For example, the EKS cluster and its node pools.
-3. The third phase, `distribution`, deploys KFD modules to the Kubernetes cluster.
+3. The third phase, `distribution`, deploys SKD modules to the Kubernetes cluster.
 4. The fourth phase, `plugins`, installs Helm and Kustomize plugins into the cluster.
 
 > 📖 **NOTE**
@@ -251,7 +251,7 @@ furyctl create cluster --config /path/to/your/furyctl.yaml
 
 Upgrading a cluster is a process that can be divided into two steps: upgrading the fury version and running the migrations (if present).
 
-The first step consists in bringing the cluster up to date with the latest version of the Kubernetes Fury Distribution. This is done by:
+The first step consists in bringing the cluster up to date with the latest version of the SIGHUP Distribution. This is done by:
 
 1. Identifying the target version to which upgrade to with:
 
@@ -318,16 +318,16 @@ Check that the dry-run output is what you expect and then run the command again 
 
 TODO This is not a viable way to manage dependencies without the possibility to change the --workdir instead of using ~/.furyctl
 
-#### KFD modules management
+#### SKD modules management
 
-`furyctl` can be used as a package manager for KFD.
+`furyctl` can be used as a package manager for SKD.
 
-It provides a simple way to download all the desired modules of the KFD by reading a single `furyctl.yaml`.
+It provides a simple way to download all the desired modules of the SKD by reading a single `furyctl.yaml`.
 
 The process requires the following steps:
 
-1. Generate a `furyctl.yaml` by running `furyctl create config` specifying the desired Kubernetes Fury Distribution version using the `--version` flag.
-2. Run `furyctl download dependencies` to download all the dependencies including the modules of the KFD.
+1. Generate a `furyctl.yaml` by running `furyctl create config` specifying the desired SIGHUP Distribution version using the `--version` flag.
+2. Run `furyctl download dependencies` to download all the dependencies including the modules of the SKD.
 
 ##### 1. Customizing the `furyctl.yaml`
 
@@ -406,7 +406,7 @@ furyctl create cluster --phase distribution
 
 #### Legacy vendor download
 
-The new furyctl still embeds some legacy features, for example the command `furyctl legacy vendor` to download KFD dependencies from a deprecated `Furyfile.yml`.
+The new furyctl still embeds some legacy features, for example the command `furyctl legacy vendor` to download SKD dependencies from a deprecated `Furyfile.yml`.
 
 This can be still used to manually manage all the components of the distribution.
 
@@ -468,7 +468,7 @@ spec:
 
 #### Using a custom distribution location
 
-furyctl comes with the flag `--distro-location`, allowing you to use a local copy of KFD instead of downloading it from the internet. This allows you to test changes to the KFD without having to push them to the repository, and might come in handy when you need to test new features or bug fixes.
+furyctl comes with the flag `--distro-location`, allowing you to use a local copy of SKD instead of downloading it from the internet. This allows you to test changes to the SKD without having to push them to the repository, and might come in handy when you need to test new features or bug fixes.
 
 #### Using a custom upgrade path location
 
