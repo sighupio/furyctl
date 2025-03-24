@@ -49,8 +49,8 @@ func NewRootCmd() *RootCommand {
 	rootCmd := &RootCommand{
 		Command: &cobra.Command{
 			Use:   "furyctl",
-			Short: "The Swiss Army knife for the Kubernetes Fury Distribution",
-			Long: `The multi-purpose command line tool for the Kubernetes Fury Distribution.
+			Short: "The Swiss Army knife for the SIGHUP Distribution",
+			Long: `The multi-purpose command line tool for the SIGHUP Distribution.
 
 	furyctl is a command line interface tool to manage the full lifecycle of a Kubernetes Fury Cluster.
 	`,

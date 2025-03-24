@@ -33,7 +33,7 @@ func NewDependenciesCmd() *cobra.Command {
 
 	dependenciesCmd := &cobra.Command{
 		Use:   "dependencies",
-		Short: "Validate dependencies for the Kubernetes Fury Distribution version specified in the configuration file",
+		Short: "Validate dependencies for the SIGHUP Distribution version specified in the configuration file",
 		PreRun: func(cmd *cobra.Command, _ []string) {
 			cmdEvent = analytics.NewCommandEvent(cobrax.GetFullname(cmd))
 

@@ -13,7 +13,7 @@ import (
 func NewValidateCmd() *cobra.Command {
 	validateCmd := &cobra.Command{
 		Use:   "validate",
-		Short: "Validate a configuration file and the dependencies relative to the Kubernetes Fury Distribution version specified in it",
+		Short: "Validate a configuration file and the dependencies relative to the SIGHUP Distribution version specified in it",
 	}
 
 	validateCmd.AddCommand(validate.NewConfigCmd())

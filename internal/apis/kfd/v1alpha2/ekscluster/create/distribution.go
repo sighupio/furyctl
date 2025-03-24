@@ -138,7 +138,7 @@ func (d *Distribution) Exec(
 ) error {
 	timestamp := time.Now().Unix()
 
-	logrus.Info("Installing Kubernetes Fury Distribution...")
+	logrus.Info("Installing SIGHUP Distribution...")
 
 	furyctlMerger, preTfMerger, tfCfg, err := d.PreparePreTerraform()
 	if err != nil {
@@ -170,7 +170,7 @@ func (d *Distribution) Exec(
 	}
 
 	if d.DryRun {
-		logrus.Info("Kubernetes Fury Distribution installed successfully (dry-run mode)")
+		logrus.Info("SIGHUP Distribution installed successfully (dry-run mode)")
 
 		return nil
 	}
@@ -179,7 +179,7 @@ func (d *Distribution) Exec(
 		return fmt.Errorf("error running post-distribution phase: %w", err)
 	}
 
-	logrus.Info("Kubernetes Fury Distribution installed successfully")
+	logrus.Info("SIGHUP Distribution installed successfully")
 
 	return nil
 }

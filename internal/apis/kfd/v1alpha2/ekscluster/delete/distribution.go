@@ -108,7 +108,7 @@ func NewDistribution(
 }
 
 func (d *Distribution) Exec() error {
-	logrus.Info("Deleting Kubernetes Fury Distribution...")
+	logrus.Info("Deleting SIGHUP Distribution...")
 
 	furyctlMerger, preTfMerger, _, err := d.PreparePreTerraform()
 	if err != nil {
@@ -174,7 +174,7 @@ func (d *Distribution) Exec() error {
 			logrus.Errorf("error while getting list of service resources: %v", err)
 		}
 
-		logrus.Info("Kubernetes Fury Distribution deleted successfully (dry-run mode)")
+		logrus.Info("SIGHUP Distribution deleted successfully (dry-run mode)")
 
 		return nil
 	}
@@ -191,7 +191,7 @@ func (d *Distribution) Exec() error {
 		return fmt.Errorf("error while deleting infra resources: %w", err)
 	}
 
-	logrus.Info("Kubernetes Fury Distribution deleted successfully")
+	logrus.Info("SIGHUP Distribution deleted successfully")
 
 	return nil
 }
