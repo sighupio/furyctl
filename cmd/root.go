@@ -52,7 +52,7 @@ func NewRootCmd() *RootCommand {
 			Short: "The Swiss Army knife for the SIGHUP Distribution",
 			Long: `The multi-purpose command line tool for the SIGHUP Distribution.
 
-	furyctl is a command line interface tool to manage the full lifecycle of a Kubernetes Fury Cluster.
+	furyctl is a command line interface tool to manage the full lifecycle of a SIGHUP Distribution Cluster.
 	`,
 			SilenceUsage:  true,
 			SilenceErrors: true,

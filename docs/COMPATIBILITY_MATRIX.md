@@ -1,6 +1,6 @@
 # furyctl and SKD compatibility
 
-Note: Always use the latest `furyctl` version, we make sure that is compatible with all the last 3 minor KFD versions.
+Note: Always use the latest `furyctl` version, we make sure that is compatible with all the last 3 minor SKD versions.
 
 ## Warnings
 

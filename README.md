@@ -21,10 +21,10 @@
 
 ## What is furyctl?
 
-`furyctl` is the command line companion for the SIGHUP Distribution to manage the **full lifecycle** of your Kubernetes clusters (SKD).
+`furyctl` is the command line companion for the SIGHUP Distribution (SKD) to manage the **full lifecycle** of your SKD Kubernetes clusters.
 <br/>
 
-> 💡 Learn more about the SIGHUP Distribution in the [official site](https://docs.sighup.io).
+> 💡 Learn more about the SIGHUP Distribution in the [documentation site](https://docs.sighup.io).
 
 If you're looking for the old documentation for furyctl legacy, you can find it [here](https://github.com/sighupio/furyctl/blob/release-v0.11/README.md).
 
@@ -139,8 +139,8 @@ See all the available commands and their usage by running `furyctl help`.
 
 > 💡 **TIP**
 >
-> You can follow the SIGHUP Distribution quick start guides for cloud and on-premises installations in KFD's official documentation site:
-> https://docs.kubernetesfury.com/docs/quickstart/quickstart
+> You can follow the SIGHUP Distribution quick start guides for cloud and on-premises installations in SKD's official documentation site:
+> https://docs.sighup.io/docs/quickstart/quickstart
 
 <!-- line left blank as spacer -->
 
@@ -249,7 +249,7 @@ furyctl create cluster --config /path/to/your/furyctl.yaml
 > [!NOTE]
 > This is a quick overview of the process. For a more complete documentation please see [the universal upgrade guide](./docs/upgrades/kfd/README.md).
 
-Upgrading a cluster is a process that can be divided into two steps: upgrading the fury version and running the migrations (if present).
+Upgrading a cluster is a process that can be divided into two steps: upgrading the SKD version and running the migrations (if present).
 
 The first step consists in bringing the cluster up to date with the latest version of the SIGHUP Distribution. This is done by:
 
