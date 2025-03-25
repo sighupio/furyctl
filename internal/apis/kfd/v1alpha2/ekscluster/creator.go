@@ -562,11 +562,11 @@ func (v *ClusterCreator) distributionPhase(
 	}
 
 	if err := distro.Exec(rdcs, StartFromFlagNotSet, &upgradeState); err != nil {
-		return fmt.Errorf("error while installing Kubernetes Fury Distribution: %w", err)
+		return fmt.Errorf("error while installing SIGHUP Distribution: %w", err)
 	}
 
 	if v.dryRun {
-		logrus.Info("Kubernetes Fury Distribution installed successfully (dry-run mode)")
+		logrus.Info("SIGHUP Distribution installed successfully (dry-run mode)")
 
 		return nil
 	}
@@ -579,7 +579,7 @@ func (v *ClusterCreator) distributionPhase(
 		return fmt.Errorf("error while creating secret with the distribution configuration: %w", err)
 	}
 
-	logrus.Info("Kubernetes Fury Distribution installed successfully")
+	logrus.Info("SIGHUP Distribution installed successfully")
 
 	if err := v.logVPNKill(vpnConnector); err != nil {
 		return fmt.Errorf("error while logging vpn kill message: %w", err)

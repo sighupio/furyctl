@@ -50,7 +50,7 @@ func NewTemplateCmd() *cobra.Command {
 	templateCmd := &cobra.Command{
 		Use:   "template",
 		Short: "Renders the distribution's code from template files parametrized with the configuration file",
-		Long: `Generates a folder with the Terraform and Kustomization code for deploying the Kubernetes Fury Distribution into a cluster.
+		Long: `Generates a folder with the Terraform and Kustomization code for deploying the SIGHUP Distribution into a cluster.
 The generated folder will be created starting from a provided templates folder and the parameters set in a configuration file that is merged with default values.`,
 		SilenceUsage:  true,
 		SilenceErrors: true,

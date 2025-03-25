@@ -37,7 +37,7 @@ type Distribution struct {
 }
 
 func (d *Distribution) Exec() error {
-	logrus.Info("Deleting Kubernetes Fury Distribution...")
+	logrus.Info("Deleting SIGHUP Distribution...")
 
 	if err := d.CreateRootFolder(); err != nil {
 		return fmt.Errorf("error creating distribution phase folder: %w", err)
@@ -108,7 +108,7 @@ func (d *Distribution) Exec() error {
 	}
 
 	if d.dryRun {
-		logrus.Info("Kubernetes Fury Distribution deleted successfully (dry-run mode)")
+		logrus.Info("SIGHUP Distribution deleted successfully (dry-run mode)")
 
 		return nil
 	}
@@ -120,7 +120,7 @@ func (d *Distribution) Exec() error {
 		return fmt.Errorf("error deleting resources: %w", err)
 	}
 
-	logrus.Info("Kubernetes Fury Distribution deleted successfully")
+	logrus.Info("SIGHUP Distribution deleted successfully")
 
 	return nil
 }

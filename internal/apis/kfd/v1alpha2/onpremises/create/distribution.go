@@ -49,7 +49,7 @@ func (d *Distribution) Self() *cluster.OperationPhase {
 }
 
 func (d *Distribution) Exec(rdcs reducers.Reducers, startFrom string, upgradeState *upgrade.State) error {
-	logrus.Info("Installing Kubernetes Fury Distribution...")
+	logrus.Info("Installing SIGHUP Distribution...")
 
 	mCfg, err := d.prepare()
 	if err != nil {
@@ -57,7 +57,7 @@ func (d *Distribution) Exec(rdcs reducers.Reducers, startFrom string, upgradeSta
 	}
 
 	if d.dryRun {
-		logrus.Info("Kubernetes Fury Distribution installed successfully (dry-run mode)")
+		logrus.Info("SIGHUP Distribution installed successfully (dry-run mode)")
 
 		return nil
 	}
@@ -74,7 +74,7 @@ func (d *Distribution) Exec(rdcs reducers.Reducers, startFrom string, upgradeSta
 		return fmt.Errorf("error running post-distribution phase: %w", err)
 	}
 
-	logrus.Info("Kubernetes Fury Distribution installed successfully")
+	logrus.Info("SIGHUP Distribution installed successfully")
 
 	return nil
 }

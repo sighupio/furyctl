@@ -13,7 +13,7 @@ import (
 func NewDownloadCmd() *cobra.Command {
 	downloadCmd := &cobra.Command{
 		Use:   "download",
-		Short: "Download all dependencies for the Kubernetes Fury Distribution version specified in the configuration file",
+		Short: "Download all dependencies for the SIGHUP Distribution version specified in the configuration file",
 	}
 
 	downloadCmd.AddCommand(download.NewDependenciesCmd())

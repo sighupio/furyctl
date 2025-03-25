@@ -231,7 +231,7 @@ func NewConfigCmd() *cobra.Command {
 		"version",
 		"v",
 		"",
-		"Kubernetes Fury Distribution version to use (eg: v1.24.1)",
+		"SIGHUP Distribution version to use (eg: v1.24.1)",
 	)
 
 	configCmd.Flags().StringP(

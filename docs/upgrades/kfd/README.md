@@ -1,8 +1,8 @@
-# Kubernetes Fury Distribution universal upgrade guide
+# SIGHUP Distribution universal upgrade guide
 
-This guide describes the steps to follow to upgrade the Kubernetes Fury Distribution from one versions to the next.
+This guide describes the steps to follow to upgrade the SIGHUP Distribution from one versions to the next.
 
-If you are running a custom set of modules, or different versions than the ones included with each release of KFD, please refer to each module's release notes.
+If you are running a custom set of modules, or different versions than the ones included with each release of SKD, please refer to each module's release notes.
 
 > ⛔️ **IMPORTANT**
 > we strongly recommend reading the whole guide before starting the upgrade process to identify possible blockers.
@@ -11,7 +11,7 @@ If you are running a custom set of modules, or different versions than the ones 
 
 ### 1. Identify the upgrade path
 
-Each version of furyctl supports a set of upgrade paths for a specific version of Kubernetes Fury Distribution.  These are the tested and suggested upgrade paths to be used.
+Each version of furyctl supports a set of upgrade paths for a specific version of SIGHUP Distribution.  These are the tested and suggested upgrade paths to be used.
 
 We recommend using the latest version of furcytl available. furyctl is backwards compatible with older versions and may include new upgrades paths in a release, even for older versions of the distribution.
 

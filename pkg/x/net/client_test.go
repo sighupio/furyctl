@@ -204,7 +204,7 @@ func createFakeDistroDst(dst string) error {
 		return fmt.Errorf("%w: %w", errCannotCreateFakeDistroDstFolder, err)
 	}
 
-	if err := os.WriteFile(filepath.Join(dst, "README.md"), []byte("# Kubernetes Fury Distribution"), 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(dst, "README.md"), []byte("# SIGHUP Distribution"), 0o644); err != nil {
 		return fmt.Errorf("%w: %w", errCannotCreateFakeDistroDstFolder, err)
 	}
 

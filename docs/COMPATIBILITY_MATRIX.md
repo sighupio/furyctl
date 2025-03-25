@@ -1,14 +1,14 @@
-# furyctl and KFD compatibility
+# furyctl and SKD compatibility
 
-Note: Always use the latest `furyctl` version, we make sure that is compatible with all the last 3 minor KFD versions.
+Note: Always use the latest `furyctl` version, we make sure that is compatible with all the last 3 minor SKD versions.
 
 ## Warnings
 
-- upgrading an on-prem KFD cluster to 1.31.0 using furyctl 0.31.0 for a cluster with the control plane in HA could result in kube-scheduler and kube-controller-manager broken in two of the three nodes. See: [issue on-prem#115](https://github.com/sighupio/fury-kubernetes-on-premises/issues/115).
+- upgrading an on-prem SKD cluster to 1.31.0 using furyctl 0.31.0 for a cluster with the control plane in HA could result in kube-scheduler and kube-controller-manager broken in two of the three nodes. See: [issue on-prem#115](https://github.com/sighupio/fury-kubernetes-on-premises/issues/115).
 - If you are using version 0.29.1 or 0.29.2, please upgrade to 0.29.3 or later.
 - Versions < 0.27.5 do not work with the OnPremises provider, we fixed this issue in 0.27.5, so we recommend using this version or later.
 
-| furyctl / KFD | 1.31.0             | 1.30.0             | 1.29.5             | 1.29.4             | 1.29.3             | 1.29.2             | 1.29.1             | 1.29.0             | 1.28.5             | 1.28.4             | 1.28.3             | 1.28.2             | 1.28.1             | 1.28.0             | 1.27.9             | 1.27.8             | 1.27.7             | 1.27.6             | 1.27.5             | 1.27.4             | 1.27.3             | 1.27.2             | 1.27.1             | 1.27.0             | 1.26.6             | 1.26.5             | 1.26.4             | 1.26.3             | 1.25.10            | 1.25.9             | 1.25.8             |
+| furyctl / SKD | 1.31.0             | 1.30.0             | 1.29.5             | 1.29.4             | 1.29.3             | 1.29.2             | 1.29.1             | 1.29.0             | 1.28.5             | 1.28.4             | 1.28.3             | 1.28.2             | 1.28.1             | 1.28.0             | 1.27.9             | 1.27.8             | 1.27.7             | 1.27.6             | 1.27.5             | 1.27.4             | 1.27.3             | 1.27.2             | 1.27.1             | 1.27.0             | 1.26.6             | 1.26.5             | 1.26.4             | 1.26.3             | 1.25.10            | 1.25.9             | 1.25.8             |
 | ------------- | ------------------ | ------------------ | ------------------ | ------------------ | ------------------ | ------------------ | ------------------ | ------------------ | ------------------ | ------------------ | ------------------ | ------------------ | ------------------ | ------------------ | ------------------ | ------------------ | ------------------ | ------------------ | ------------------ | ------------------ | ------------------ | ------------------ | ------------------ | ------------------ | ------------------ | ------------------ | ------------------ | ------------------ | ------------------ | ------------------ | ------------------ |
 | 0.31.1        | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: |
 | 0.31.0        | :warning:          | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: |
@@ -69,9 +69,9 @@ Note: Always use the latest `furyctl` version, we make sure that is compatible w
 
 ## Legacy compatibility
 
-These versions were still not using the paradigm to have a full backward compatibility with the latest 3 minor versions of KFD.
+These versions were still not using the paradigm to have a full backward compatibility with the latest 3 minor versions of SKD.
 
-| furyctl / KFD  | 1.26.3    | 1.26.2    | 1.26.1             | 1.26.0             | 1.25.9 | 1.25.8             | 1.25.7             | 1.25.6             | 1.25.5             | 1.25.4             | 1.25.3             | 1.25.2             |
+| furyctl / SKD  | 1.26.3    | 1.26.2    | 1.26.1             | 1.26.0             | 1.25.9 | 1.25.8             | 1.25.7             | 1.25.6             | 1.25.5             | 1.25.4             | 1.25.3             | 1.25.2             |
 | -------------- | --------- | --------- | ------------------ | ------------------ | ------ | ------------------ | ------------------ | ------------------ | ------------------ | ------------------ | ------------------ | ------------------ |
 | 0.26.3         | :warning: | :warning: | :white_check_mark: | :white_check_mark: |        | :white_check_mark: |                    |                    |                    |                    |                    |                    |
 | 0.26.2         | :warning: | :warning: | :white_check_mark: | :white_check_mark: |        | :white_check_mark: |                    |                    |                    |                    |                    |                    |
