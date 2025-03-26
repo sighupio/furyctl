@@ -20,15 +20,15 @@ const (
 	MinSupportedKFDVersion = "v1.25.8"
 )
 
-// VersionRange represents a min-max version range
+// VersionRange represents a min-max version range.
 type VersionRange struct {
 	Min string
 	Max string
 }
 
-// Compatible version ranges for different distribution types
+// Compatible version ranges for different distribution types.
 var (
-	// EKSCompatibleRanges defines version ranges compatible with both EKS and KFD
+	// EKSCompatibleRanges defines version ranges compatible with both EKS.
 	EKSCompatibleRanges = []VersionRange{
 		{"v1.25.6", "v1.25.10"},
 		{"v1.26.0", "v1.26.6"},
@@ -40,7 +40,7 @@ var (
 		{"v1.32.0", "v1.32.0"},
 	}
 
-	// KFDCompatibleRanges defines version ranges compatible with both EKS and KFD
+	// KFDCompatibleRanges defines version ranges compatible with KFD.
 	KFDCompatibleRanges = []VersionRange{
 		{"v1.25.6", "v1.25.10"},
 		{"v1.26.0", "v1.26.6"},
@@ -52,7 +52,7 @@ var (
 		{"v1.32.0", "v1.32.0"},
 	}
 
-	// OnPremisesCompatibleRanges defines version ranges compatible with OnPremises
+	// OnPremisesCompatibleRanges defines version ranges compatible with OnPremises.
 	OnPremisesCompatibleRanges = []VersionRange{
 		{"v1.25.8", "v1.25.10"},
 		{"v1.26.2", "v1.26.6"},
@@ -113,7 +113,7 @@ func NewEKSClusterCheck(distributionVersion string) *EKSClusterCheck {
 }
 
 func (c *EKSClusterCheck) IsCompatible() bool {
-	// Parse the current version
+	// Parse the current version.
 	currentVersion, err := semver.NewVersion(c.distributionVersion)
 	if err != nil {
 		return false
@@ -133,7 +133,7 @@ func NewKFDDistributionCheck(distributionVersion string) *KFDDistributionCheck {
 }
 
 func (c *KFDDistributionCheck) IsCompatible() bool {
-	// Parse the current version
+	// Parse the current version.
 	currentVersion, err := semver.NewVersion(c.distributionVersion)
 	if err != nil {
 		return false
@@ -142,7 +142,7 @@ func (c *KFDDistributionCheck) IsCompatible() bool {
 	return isVersionInAnyRange(currentVersion, KFDCompatibleRanges)
 }
 
-// isVersionInAnyRange checks if the given version is within any of the specified version ranges
+// isVersionInAnyRange checks if the given version is within any of the specified version ranges.
 func isVersionInAnyRange(currentVersion *version.Version, compatibleRanges []VersionRange) bool {
 	// Helper function to safely create a version
 	newVersion := func(v string) (*version.Version, bool) {
@@ -150,13 +150,13 @@ func isVersionInAnyRange(currentVersion *version.Version, compatibleRanges []Ver
 		return version, err == nil
 	}
 
-	// Check if current version is within any of the compatible ranges
+	// Check if current version is within any of the compatible ranges.
 	for _, r := range compatibleRanges {
 		minVersion, minOk := newVersion(r.Min)
 		maxVersion, maxOk := newVersion(r.Max)
 
 		if !minOk || !maxOk {
-			continue // Skip this range if we can't parse the versions
+			continue // Skip this range if we can't parse the versions.
 		}
 
 		if currentVersion.GreaterThanOrEqual(minVersion) && currentVersion.LessThanOrEqual(maxVersion) {
@@ -178,7 +178,7 @@ func NewOnPremisesCheck(distributionVersion string) *OnPremisesCheck {
 }
 
 func (c *OnPremisesCheck) IsCompatible() bool {
-	// Parse the current version
+	// Parse the current version.
 	currentVersion, err := semver.NewVersion(c.distributionVersion)
 	if err != nil {
 		return false
