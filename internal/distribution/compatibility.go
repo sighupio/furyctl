@@ -1,13 +1,13 @@
 // Copyright (c) 2017-present SIGHUP s.r.l All rights reserved.
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
-
-//nolint:dupl // duplicated code is acceptable in this case
 package distribution
 
 import (
 	"errors"
 	"fmt"
+
+	"github.com/Al-Pragliola/go-version"
 
 	"github.com/sighupio/furyctl/internal/git"
 	"github.com/sighupio/furyctl/internal/semver"
@@ -19,6 +19,54 @@ const (
 	OnPremisesKind         = "OnPremises"
 	MinSupportedKFDVersion = "v1.25.8"
 )
+
+// VersionRange represents a min-max version range.
+type VersionRange struct {
+	Min string
+	Max string
+}
+
+// getEKSCompatibleRanges returns version ranges compatible with EKS.
+func getEKSCompatibleRanges() []VersionRange {
+	return []VersionRange{
+		{"v1.25.6", "v1.25.10"},
+		{"v1.26.0", "v1.26.6"},
+		{"v1.27.0", "v1.27.9"},
+		{"v1.28.0", "v1.28.6"},
+		{"v1.29.0", "v1.29.7"},
+		{"v1.30.0", "v1.30.2"},
+		{"v1.31.0", "v1.31.1"},
+		{"v1.32.0", "v1.32.0"},
+	}
+}
+
+// getKFDCompatibleRanges returns version ranges compatible with KFD.
+func getKFDCompatibleRanges() []VersionRange {
+	return []VersionRange{
+		{"v1.25.6", "v1.25.10"},
+		{"v1.26.0", "v1.26.6"},
+		{"v1.27.0", "v1.27.9"},
+		{"v1.28.0", "v1.28.6"},
+		{"v1.29.0", "v1.29.7"},
+		{"v1.30.0", "v1.30.2"},
+		{"v1.31.0", "v1.31.1"},
+		{"v1.32.0", "v1.32.0"},
+	}
+}
+
+// getOnPremisesCompatibleRanges returns version ranges compatible with OnPremises.
+func getOnPremisesCompatibleRanges() []VersionRange {
+	return []VersionRange{
+		{"v1.25.8", "v1.25.10"},
+		{"v1.26.2", "v1.26.6"},
+		{"v1.27.0", "v1.27.9"},
+		{"v1.28.0", "v1.28.6"},
+		{"v1.29.0", "v1.29.7"},
+		{"v1.30.0", "v1.30.2"},
+		{"v1.31.0", "v1.31.1"},
+		{"v1.32.0", "v1.32.0"},
+	}
+}
 
 var ErrUnsupportedKind = errors.New("unsupported kind")
 
@@ -74,99 +122,13 @@ func NewEKSClusterCheck(distributionVersion string) *EKSClusterCheck {
 }
 
 func (c *EKSClusterCheck) IsCompatible() bool {
+	// Parse the current version.
 	currentVersion, err := semver.NewVersion(c.distributionVersion)
 	if err != nil {
 		return false
 	}
 
-	min125Version, err := semver.NewVersion("v1.25.6")
-	if err != nil {
-		return false
-	}
-
-	max125Version, err := semver.NewVersion("v1.25.10")
-	if err != nil {
-		return false
-	}
-
-	min126Version, err := semver.NewVersion("v1.26.0")
-	if err != nil {
-		return false
-	}
-
-	max126Version, err := semver.NewVersion("v1.26.6")
-	if err != nil {
-		return false
-	}
-
-	min12SevenVersion, err := semver.NewVersion("v1.27.0")
-	if err != nil {
-		return false
-	}
-
-	max12SevenVersion, err := semver.NewVersion("v1.27.9")
-	if err != nil {
-		return false
-	}
-
-	min12EightVersion, err := semver.NewVersion("v1.28.0")
-	if err != nil {
-		return false
-	}
-
-	max12EightVersion, err := semver.NewVersion("v1.28.6")
-	if err != nil {
-		return false
-	}
-
-	min12NineVersion, err := semver.NewVersion("v1.29.0")
-	if err != nil {
-		return false
-	}
-
-	max12NineVersion, err := semver.NewVersion("v1.29.7")
-	if err != nil {
-		return false
-	}
-
-	min130Version, err := semver.NewVersion("v1.30.0")
-	if err != nil {
-		return false
-	}
-
-	max130Version, err := semver.NewVersion("v1.30.2")
-	if err != nil {
-		return false
-	}
-
-	min131Version, err := semver.NewVersion("v1.31.0")
-	if err != nil {
-		return false
-	}
-
-	max131Version, err := semver.NewVersion("v1.31.1")
-	if err != nil {
-		return false
-	}
-
-	min132Version, err := semver.NewVersion("v1.32.0")
-	if err != nil {
-		return false
-	}
-
-	max132Version, err := semver.NewVersion("v1.32.0")
-	if err != nil {
-		return false
-	}
-
-	return (currentVersion.GreaterThanOrEqual(min125Version) && currentVersion.LessThanOrEqual(max125Version)) ||
-		(currentVersion.GreaterThanOrEqual(min126Version) && currentVersion.LessThanOrEqual(max126Version)) ||
-		(currentVersion.GreaterThanOrEqual(min12SevenVersion) && currentVersion.LessThanOrEqual(max12SevenVersion)) ||
-		(currentVersion.GreaterThanOrEqual(min12EightVersion) && currentVersion.LessThanOrEqual(max12EightVersion)) ||
-		(currentVersion.GreaterThanOrEqual(min12NineVersion) && currentVersion.LessThanOrEqual(max12NineVersion)) ||
-		(currentVersion.GreaterThanOrEqual(min130Version) && currentVersion.LessThanOrEqual(max130Version)) ||
-		(currentVersion.GreaterThanOrEqual(min131Version) && currentVersion.LessThanOrEqual(max131Version)) ||
-		(currentVersion.GreaterThanOrEqual(min132Version) && currentVersion.LessThanOrEqual(max132Version))
+	return isVersionInAnyRange(currentVersion, getEKSCompatibleRanges())
 }
 
 type KFDDistributionCheck struct {
@@ -180,99 +142,39 @@ func NewKFDDistributionCheck(distributionVersion string) *KFDDistributionCheck {
 }
 
 func (c *KFDDistributionCheck) IsCompatible() bool {
+	// Parse the current version.
 	currentVersion, err := semver.NewVersion(c.distributionVersion)
 	if err != nil {
 		return false
 	}
 
-	min125Version, err := semver.NewVersion("v1.25.6")
-	if err != nil {
-		return false
+	return isVersionInAnyRange(currentVersion, getKFDCompatibleRanges())
+}
+
+// isVersionInAnyRange checks if the given version is within any of the specified version ranges.
+func isVersionInAnyRange(currentVersion *version.Version, compatibleRanges []VersionRange) bool {
+	// Helper function to safely create a version.
+	newVersion := func(v string) (*version.Version, bool) {
+		version, err := semver.NewVersion(v)
+
+		return version, err == nil
 	}
 
-	max125Version, err := semver.NewVersion("v1.25.10")
-	if err != nil {
-		return false
+	// Check if current version is within any of the compatible ranges.
+	for _, r := range compatibleRanges {
+		minVersion, minOk := newVersion(r.Min)
+		maxVersion, maxOk := newVersion(r.Max)
+
+		if !minOk || !maxOk {
+			continue // Skip this range if we can't parse the versions.
+		}
+
+		if currentVersion.GreaterThanOrEqual(minVersion) && currentVersion.LessThanOrEqual(maxVersion) {
+			return true
+		}
 	}
 
-	min126Version, err := semver.NewVersion("v1.26.0")
-	if err != nil {
-		return false
-	}
-
-	max126Version, err := semver.NewVersion("v1.26.6")
-	if err != nil {
-		return false
-	}
-
-	min12SevenVersion, err := semver.NewVersion("v1.27.0")
-	if err != nil {
-		return false
-	}
-
-	max12SevenVersion, err := semver.NewVersion("v1.27.9")
-	if err != nil {
-		return false
-	}
-
-	min12EightVersion, err := semver.NewVersion("v1.28.0")
-	if err != nil {
-		return false
-	}
-
-	max12EightVersion, err := semver.NewVersion("v1.28.6")
-	if err != nil {
-		return false
-	}
-
-	min12NineVersion, err := semver.NewVersion("v1.29.0")
-	if err != nil {
-		return false
-	}
-
-	max12NineVersion, err := semver.NewVersion("v1.29.7")
-	if err != nil {
-		return false
-	}
-
-	min130Version, err := semver.NewVersion("v1.30.0")
-	if err != nil {
-		return false
-	}
-
-	max130Version, err := semver.NewVersion("v1.30.2")
-	if err != nil {
-		return false
-	}
-
-	min131Version, err := semver.NewVersion("v1.31.0")
-	if err != nil {
-		return false
-	}
-
-	max131Version, err := semver.NewVersion("v1.31.1")
-	if err != nil {
-		return false
-	}
-
-	min132Version, err := semver.NewVersion("v1.32.0")
-	if err != nil {
-		return false
-	}
-
-	max132Version, err := semver.NewVersion("v1.32.0")
-	if err != nil {
-		return false
-	}
-
-	return (currentVersion.GreaterThanOrEqual(min125Version) && currentVersion.LessThanOrEqual(max125Version)) ||
-		(currentVersion.GreaterThanOrEqual(min126Version) && currentVersion.LessThanOrEqual(max126Version)) ||
-		(currentVersion.GreaterThanOrEqual(min12SevenVersion) && currentVersion.LessThanOrEqual(max12SevenVersion)) ||
-		(currentVersion.GreaterThanOrEqual(min12EightVersion) && currentVersion.LessThanOrEqual(max12EightVersion)) ||
-		(currentVersion.GreaterThanOrEqual(min12NineVersion) && currentVersion.LessThanOrEqual(max12NineVersion)) ||
-		(currentVersion.GreaterThanOrEqual(min130Version) && currentVersion.LessThanOrEqual(max130Version)) ||
-		(currentVersion.GreaterThanOrEqual(min131Version) && currentVersion.LessThanOrEqual(max131Version)) ||
-		(currentVersion.GreaterThanOrEqual(min132Version) && currentVersion.LessThanOrEqual(max132Version))
+	return false
 }
 
 type OnPremisesCheck struct {
@@ -286,97 +188,11 @@ func NewOnPremisesCheck(distributionVersion string) *OnPremisesCheck {
 }
 
 func (c *OnPremisesCheck) IsCompatible() bool {
+	// Parse the current version.
 	currentVersion, err := semver.NewVersion(c.distributionVersion)
 	if err != nil {
 		return false
 	}
 
-	min125Version, err := semver.NewVersion("v1.25.8")
-	if err != nil {
-		return false
-	}
-
-	max125Version, err := semver.NewVersion("v1.25.10")
-	if err != nil {
-		return false
-	}
-
-	min126Version, err := semver.NewVersion("v1.26.2")
-	if err != nil {
-		return false
-	}
-
-	max126Version, err := semver.NewVersion("v1.26.6")
-	if err != nil {
-		return false
-	}
-
-	min12SevenVersion, err := semver.NewVersion("v1.27.0")
-	if err != nil {
-		return false
-	}
-
-	max12SevenVersion, err := semver.NewVersion("v1.27.9")
-	if err != nil {
-		return false
-	}
-
-	min12EightVersion, err := semver.NewVersion("v1.28.0")
-	if err != nil {
-		return false
-	}
-
-	max12EightVersion, err := semver.NewVersion("v1.28.6")
-	if err != nil {
-		return false
-	}
-
-	min12NineVersion, err := semver.NewVersion("v1.29.0")
-	if err != nil {
-		return false
-	}
-
-	max12NineVersion, err := semver.NewVersion("v1.29.7")
-	if err != nil {
-		return false
-	}
-
-	min130Version, err := semver.NewVersion("v1.30.0")
-	if err != nil {
-		return false
-	}
-
-	max130Version, err := semver.NewVersion("v1.30.2")
-	if err != nil {
-		return false
-	}
-
-	min131Version, err := semver.NewVersion("v1.31.0")
-	if err != nil {
-		return false
-	}
-
-	max131Version, err := semver.NewVersion("v1.31.1")
-	if err != nil {
-		return false
-	}
-
-	min132Version, err := semver.NewVersion("v1.32.0")
-	if err != nil {
-		return false
-	}
-
-	max132Version, err := semver.NewVersion("v1.32.0")
-	if err != nil {
-		return false
-	}
-
-	return (currentVersion.GreaterThanOrEqual(min125Version) && currentVersion.LessThanOrEqual(max125Version)) ||
-		(currentVersion.GreaterThanOrEqual(min126Version) && currentVersion.LessThanOrEqual(max126Version)) ||
-		(currentVersion.GreaterThanOrEqual(min12SevenVersion) && currentVersion.LessThanOrEqual(max12SevenVersion)) ||
-		(currentVersion.GreaterThanOrEqual(min12EightVersion) && currentVersion.LessThanOrEqual(max12EightVersion)) ||
-		(currentVersion.GreaterThanOrEqual(min12NineVersion) && currentVersion.LessThanOrEqual(max12NineVersion)) ||
-		(currentVersion.GreaterThanOrEqual(min130Version) && currentVersion.LessThanOrEqual(max130Version)) ||
-		(currentVersion.GreaterThanOrEqual(min131Version) && currentVersion.LessThanOrEqual(max131Version)) ||
-		(currentVersion.GreaterThanOrEqual(min132Version) && currentVersion.LessThanOrEqual(max132Version))
+	return isVersionInAnyRange(currentVersion, getOnPremisesCompatibleRanges())
 }
