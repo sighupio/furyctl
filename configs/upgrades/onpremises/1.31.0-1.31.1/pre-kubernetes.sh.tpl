@@ -4,6 +4,18 @@ set -e
 
 {{- if index .spec "kubernetes" }}
 
+{{- if index .spec.kubernetes "etcd" }}
+## etcd upgrades on dedicated nodes - only one at a time
+{{- range $h := .spec.kubernetes.etcd.hosts }}
+ansible-playbook 54.upgrade-etcd.yaml --limit "{{ $h.name }}" --become
+{{- end }}
+{{ else }}
+## etcd upgrades on control plane nodes - only one at a time
+{{- range $h := .spec.kubernetes.masters.hosts }}
+ansible-playbook 54.upgrade-etcd.yaml --limit "{{ $h.name }}" --become
+{{- end }}
+{{- end }}
+
 ## master upgrades - only one at a time
 {{- range $h := .spec.kubernetes.masters.hosts }}
 ansible-playbook 55.upgrade-control-plane.yml --limit "{{ $h.name }}" --become
