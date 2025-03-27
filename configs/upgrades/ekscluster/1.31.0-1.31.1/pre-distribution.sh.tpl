@@ -32,6 +32,7 @@ wait_for_job() {
 
 vendorPath="{{ .paths.vendorPath }}"
 kubectlbin="{{ .paths.kubectl }}"
+kappbin="{{ .paths.kapp }}"
 
 # Remove some validating webhooks during the upgrade
 {{- if eq .spec.distribution.modules.policy.type "gatekeeper" }}
