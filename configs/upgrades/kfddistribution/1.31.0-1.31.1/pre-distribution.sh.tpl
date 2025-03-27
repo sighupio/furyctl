@@ -38,6 +38,12 @@ kubectlbin="{{ .paths.kubectl }}"
 $kubectlbin delete --ignore-not-found=true validatingwebhookconfiguration gatekeeper-validating-webhook-configuration
 {{- end }}
 
+# Delete Cilium Hubble mTLS certs so they are recreated to force a renew
+{{- if eq .spec.distribution.modules.networking.type "cilium" }}
+$kubectlbin delete --ignore-not-found=true certificate -n kube-system hubble-relay-client-certs hubble-server-certs
+$kubectlbin delete --ignore-not-found=true secrets -n kube-system hubble-relay-client-certs hubble-server-certs
+{{- end }}
+
 # Upgrade Kyverno steps
 {{- if eq .spec.distribution.modules.policy.type "kyverno" }}
 echo "scaling down kyverno and deleting webhooks"
