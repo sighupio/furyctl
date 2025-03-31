@@ -59,7 +59,6 @@ $kappbin delete -a kfd -n kube-system \
   --filter-kind ClusterRoleBinding --filter-name snapshot-controller-role --yes
 
 $kappbin delete -a kfd -n kube-system \
-  --filter-kind \
   --filter-name volumegroupsnapshotclasses.groupsnapshot.storage.k8s.io \
   --filter-name volumegroupsnapshots.groupsnapshot.storage.k8s.io \
   --filter-name volumesnapshots.snapshot.storage.k8s.io \
