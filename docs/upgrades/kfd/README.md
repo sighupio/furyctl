@@ -2,7 +2,7 @@
 
 This guide describes the steps to follow to upgrade the SIGHUP Distribution from one versions to the next.
 
-If you are running a custom set of modules, or different versions than the ones included with each release of SKD, please refer to each module's release notes.
+If you are running a custom set of modules, or different versions than the ones included with each release of SD, please refer to each module's release notes.
 
 > ⛔️ **IMPORTANT**
 > we strongly recommend reading the whole guide before starting the upgrade process to identify possible blockers.

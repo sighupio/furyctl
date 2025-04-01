@@ -303,7 +303,7 @@ It is a set of instructions for _furyctl_ in order to perform an upgrade between
 <details>
 <summary>Answer</summary>
 
-You should create a new file under `config/upgrades/{onpremises,kfddistribution,ekscluster}/{starting-version}-{target-version}/hook.tpl`, where `{starting-version}` and `{target-version}` are two different SKD versions.
+You should create a new file under `config/upgrades/{onpremises,kfddistribution,ekscluster}/{starting-version}-{target-version}/hook.tpl`, where `{starting-version}` and `{target-version}` are two different SD versions.
 
 In your typical _upgrade path_ there will be a file named `pre-distribution.sh.tpl` which will disable admission webhooks in order not to create problems during the deploy. Don't worry, there's no need to restore them as they will be reprovisioned later in the install process!
 
