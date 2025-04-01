@@ -1,6 +1,6 @@
 #!/usr/bin/env sh
 
-set -eu
+set -e
 
 wait_for_job() {
   local kubectlbin="{{ .paths.kubectl }}"  
