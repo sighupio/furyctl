@@ -7,7 +7,7 @@
 <p>The Swiss Army Knife<br/>for the SIGHUP Distribution</p>
 
 [![Build Status](https://ci.sighup.io/api/badges/sighupio/furyctl/status.svg?ref=refs/heads/main)](https://ci.sighup.io/sighupio/furyctl)
-![Release](https://img.shields.io/badge/furyctl-v0.31.1-blue)
+![Release](https://img.shields.io/badge/furyctl-v0.32.0-blue)
 ![Slack](https://img.shields.io/badge/slack-@kubernetes/fury-yellow.svg?logo=slack)
 ![License](https://img.shields.io/github/license/sighupio/furyctl)
 [![Go Report Card](https://goreportcard.com/badge/github.com/sighupio/furyctl)](https://goreportcard.com/report/github.com/sighupio/furyctl)
@@ -69,7 +69,7 @@ $ furyctl version
 ...
 goVersion: go1.23
 osArch: amd64
-version: 0.XX.X
+version: 0.32.0
 ```
 
 ### Installing from source
@@ -144,7 +144,7 @@ See all the available commands and their usage by running `furyctl help`.
 
 <!-- line left blank as spacer -->
 
-> Check [SD Compatibility matrix](https://github.com/sighupio/fury-distribution/blob/main/docs/COMPATIBILITY_MATRIX.md) for the furyctl / SD versions to use.
+> Check [SD Compatibility matrix](https://github.com/sighupio/distribution/blob/main/docs/COMPATIBILITY_MATRIX.md) for the furyctl / SD versions to use.
 
 ### Basic Usage
 
