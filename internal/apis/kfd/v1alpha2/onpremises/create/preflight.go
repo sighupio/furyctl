@@ -168,13 +168,13 @@ func (p *PreFlight) Exec(renderedConfig map[string]any) (*Status, error) {
 	if err != nil {
 		if !cluster.IsForceEnabledForFeature(p.force, cluster.ForceFeatureMigrations) {
 			return status, fmt.Errorf(
-				"error creating diff checker: %w; "+
+				"error creating configuration diff checker: %w; "+
 					"if this happened after a failed attempt at creating a cluster, retry using the \"--force migrations\" flag",
 				err,
 			)
 		}
 
-		logrus.Error("error creating diff checker, skipping: %w", err)
+		logrus.WithError(err).Warn("error creating configuration diff checker but force flag was used. Continuing")
 	} else {
 		d, err := diffChecker.GenerateDiff()
 		if err != nil {

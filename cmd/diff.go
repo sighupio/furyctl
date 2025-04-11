@@ -130,7 +130,7 @@ func NewDiffCmd() *cobra.Command {
 				cmdEvent.AddErrorMessage(err)
 				tracker.Track(cmdEvent)
 
-				return fmt.Errorf("error while creating diff checker: %w", err)
+				return fmt.Errorf("error while creating configuration diff checker: %w", err)
 			}
 
 			phasePath, err := getPhasePath(
