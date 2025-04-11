@@ -652,7 +652,7 @@ func (v *ClusterCreator) allPhases(
 	}
 
 	if v.dryRun {
-		logrus.Info("Kubernetes Fury cluster created successfully (dry-run mode)")
+		logrus.Info("SIGHUP Distribution cluster created successfully (dry-run mode)")
 
 		return nil
 	}
@@ -671,7 +671,7 @@ func (v *ClusterCreator) allPhases(
 		return fmt.Errorf("error while creating secret with the distribution configuration: %w", err)
 	}
 
-	logrus.Info("Kubernetes Fury cluster created successfully")
+	logrus.Info("SIGHUP Distribution cluster created successfully")
 
 	if err := v.logVPNKill(vpnConnector); err != nil {
 		return fmt.Errorf("error while logging vpn kill message: %w", err)

@@ -110,7 +110,7 @@ func (k *Kubernetes) Self() *cluster.OperationPhase {
 func (k *Kubernetes) Exec(startFrom string, upgradeState *upgrade.State) error {
 	timestamp := time.Now().Unix()
 
-	logrus.Info("Creating Kubernetes Fury cluster...")
+	logrus.Info("Configuring SIGHUP Distribution cluster...")
 
 	if err := k.Prepare(); err != nil {
 		return fmt.Errorf("error preparing kubernetes phase: %w", err)

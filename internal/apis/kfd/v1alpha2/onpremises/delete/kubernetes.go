@@ -30,7 +30,7 @@ type Kubernetes struct {
 }
 
 func (k *Kubernetes) Exec() error {
-	logrus.Info("Deleting Kubernetes Fury cluster...")
+	logrus.Info("Deleting SIGHUP Distribution cluster...")
 
 	if err := k.CreateRootFolder(); err != nil {
 		return fmt.Errorf("error creating kubernetes phase folder: %w", err)
