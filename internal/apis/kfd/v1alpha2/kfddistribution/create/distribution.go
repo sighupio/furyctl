@@ -266,7 +266,7 @@ func (d *Distribution) coreDistribution(
 	mCfg template.Config,
 ) error {
 	if startFrom != cluster.OperationSubPhasePostDistribution {
-		logrus.Info("Applying manifests...")
+		logrus.Info("Applying Distribution modules...")
 
 		if err := d.runReducers(
 			rdcs,
@@ -282,7 +282,7 @@ func (d *Distribution) coreDistribution(
 				upgradeState.Phases.Distribution.Status = upgrade.PhaseStatusFailed
 			}
 
-			return fmt.Errorf("error applying manifests: %w", err)
+			return fmt.Errorf("error applying Distribution modules: %w", err)
 		}
 
 		if err := d.runReducers(

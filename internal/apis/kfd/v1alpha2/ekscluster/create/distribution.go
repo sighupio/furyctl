@@ -289,14 +289,14 @@ func (d *Distribution) coreDistribution(
 			return fmt.Errorf("error running pre-apply reducers: %w", err)
 		}
 
-		logrus.Info("Applying manifests...")
+		logrus.Info("Applying Distribution modules...")
 
 		if _, err := d.shellRunner.Run(path.Join(d.Path, "scripts", "apply.sh")); err != nil {
 			if d.upgrade.Enabled {
 				upgradeState.Phases.Distribution.Status = upgrade.PhaseStatusFailed
 			}
 
-			return fmt.Errorf("error applying manifests: %w", err)
+			return fmt.Errorf("error applying Distribution modules: %w", err)
 		}
 
 		if d.upgrade.Enabled {

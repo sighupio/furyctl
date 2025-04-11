@@ -76,7 +76,7 @@ func NewApplyCmd() *cobra.Command {
 
 	applyCmd := &cobra.Command{
 		Use:   "apply",
-		Short: "Apply the configuration to create, update, or upgrade a battle-tested Kubernetes Fury cluster",
+		Short: "Apply the configuration to create, update, or upgrade a battle-tested SIGHUP Distribution cluster",
 		PreRun: func(cmd *cobra.Command, _ []string) {
 			cmdEvent = analytics.NewCommandEvent(cobrax.GetFullname(cmd))
 

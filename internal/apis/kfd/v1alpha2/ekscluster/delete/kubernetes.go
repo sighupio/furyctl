@@ -89,7 +89,7 @@ func NewKubernetes(
 }
 
 func (k *Kubernetes) Exec() error {
-	logrus.Info("Deleting Kubernetes Fury cluster...")
+	logrus.Info("Deleting SIGHUP Distribution cluster...")
 
 	timestamp := time.Now().Unix()
 
