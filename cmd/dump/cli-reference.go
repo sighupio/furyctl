@@ -1,6 +1,11 @@
+// Copyright (c) 2017-present SIGHUP s.r.l All rights reserved.
+// Use of this source code is governed by a BSD-style
+// license that can be found in the LICENSE file.
+
 package dump
 
 import (
+	"errors"
 	"fmt"
 	"os"
 
@@ -9,6 +14,8 @@ import (
 	"github.com/spf13/cobra/doc"
 )
 
+var ErrOutputFolderArgMissing = errors.New("output folder path argument is required")
+
 func NewDumpCLIReferenceCmd() *cobra.Command {
 	dumpCLIReferenceCmd := &cobra.Command{
 		Use:   "cli-reference <folder>",
@@ -16,11 +23,12 @@ func NewDumpCLIReferenceCmd() *cobra.Command {
 		Long:  "Exports the CLI reference in markdown format into a specified folder",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) < 1 {
-				return fmt.Errorf("output folder path is required")
+				return ErrOutputFolderArgMissing
 			}
 
 			outputFolder := args[0]
-			if err := os.MkdirAll(outputFolder, 0o755); err != nil {
+			const perms = 0o755
+			if err := os.MkdirAll(outputFolder, perms); err != nil {
 				return fmt.Errorf("failed to create output folder: %w", err)
 			}
 
@@ -29,7 +37,8 @@ func NewDumpCLIReferenceCmd() *cobra.Command {
 				return fmt.Errorf("failed to generate CLI reference: %w", err)
 			}
 
-			logrus.Infof("Markdown CLI reference successfuly exported to %s", outputFolder)
+			logrus.Infof("Markdown CLI reference successfully exported to %s", outputFolder)
+
 			return nil
 		},
 	}
