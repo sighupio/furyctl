@@ -83,5 +83,5 @@ func TestFormatDistroVersions(t *testing.T) {
 	assert.Contains(t, lines[4], "v1.30.0 **\t\t2025-02-06")
 	assert.Contains(t, lines[5], "v1.29.1 **\t\t2025-02-06")
 	assert.Contains(t, lines[6], "v1.28.2 **\t\t2023-02-06")
-	assert.Equal(t, "** this indicates the recommended KFD versions.", lines[10])
+	assert.Equal(t, "** this indicates the recommended SD versions.", lines[10])
 }

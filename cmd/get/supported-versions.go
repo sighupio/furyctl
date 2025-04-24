@@ -25,11 +25,11 @@ func NewSupportedVersionsCmd() *cobra.Command {
 
 	supportedVersionCmd := &cobra.Command{
 		Use:   "supported-versions",
-		Short: "List of currently supported KFD versions and their compatibility with this version of furyctl for each kind.",
-		Long: `List of currently supported KFD versions and their compatibility with this version of furyctl for each kind. If the "--kind" parameter is specified, the command will only provide information about the selected provider.
+		Short: "List of currently supported SD versions and their compatibility with this version of furyctl for each kind.",
+		Long: `List of currently supported SD versions and their compatibility with this version of furyctl for each kind. If the "--kind" parameter is specified, the command will only provide information about the selected provider.
  Examples:
- - furyctl get supported-versions                  	will list the currently supported KFD versions and their compatibility with this version of furyctl for each kind.
- - furyctl get supported-versions --kind OnPremises	will list the currently supported KFD versions and their compatibility with this version of furyctl but for the OnPremises kind.
+ - furyctl get supported-versions                  	will list the currently supported SD versions and their compatibility with this version of furyctl for each kind.
+ - furyctl get supported-versions --kind OnPremises	will list the currently supported SD versions and their compatibility with this version of furyctl but for the OnPremises kind.
  `,
 		PreRun: func(cmd *cobra.Command, _ []string) {
 			cmdEvent = analytics.NewCommandEvent(cobrax.GetFullname(cmd))
@@ -47,12 +47,12 @@ func NewSupportedVersionsCmd() *cobra.Command {
 				cmdEvent.AddErrorMessage(err)
 				tracker.Track(cmdEvent)
 
-				return fmt.Errorf("error getting supported KFD versions: %w", err)
+				return fmt.Errorf("error getting supported SD versions: %w", err)
 			}
 
 			kind := viper.GetString("kind")
 			kinds := []string{distribution.EKSClusterKind, distribution.KFDDistributionKind, distribution.OnPremisesKind}
-			msg := "list of currently supported KFD versions and their compatibility with this version of furyctl for "
+			msg := "list of currently supported SD versions and their compatibility with this version of furyctl for "
 			if kind != "" {
 				kinds = []string{kind}
 				msg += kind + "\n"
@@ -62,7 +62,7 @@ func NewSupportedVersionsCmd() *cobra.Command {
 
 			logrus.Info(msg + FormatSupportedVersions(releases, kinds))
 
-			cmdEvent.AddSuccessMessage("supported KFD versions")
+			cmdEvent.AddSuccessMessage("supported SD versions")
 			tracker.Track(cmdEvent)
 
 			return nil
@@ -73,7 +73,7 @@ func NewSupportedVersionsCmd() *cobra.Command {
 		"kind",
 		"k",
 		"",
-		"Show supported KFD versions for the kind of cluster specified (eg: EKSCluster, KFDDistribution, OnPremises), when missing shows all kinds.",
+		"Show supported SD versions for the kind of cluster specified (eg: EKSCluster, KFDDistribution, OnPremises), when missing shows all kinds.",
 	)
 
 	return supportedVersionCmd
@@ -152,7 +152,7 @@ func FormatSupportedVersions(releases []distribution.KFDRelease, kinds []string)
 	}
 
 	if showRecommendedMsg {
-		fmtSupportedVersions += "\n** this indicates the recommended KFD versions.\n"
+		fmtSupportedVersions += "\n** this indicates the recommended SD versions.\n"
 	}
 
 	return fmtSupportedVersions
