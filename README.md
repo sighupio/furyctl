@@ -1,16 +1,14 @@
 <!-- markdownlint-disable MD033 -->
 <h1 align="center">
-  <!-- Using a temporary PNG until we get the updated SVG -->
-  <!-- <img src="docs/assets/furyctl-logo.svg" width="200px" alt="furyctl logo" /> -->
   <img src="docs/assets/furyctl-temporary.png" width="200px" alt="furyctl logo" />
 
-<p>The Swiss Army Knife<br/>for the SIGHUP Distribution</p>
+   <p>The Swiss Army Knife<br/>for the SIGHUP Distribution</p>
 
-[![Build Status](https://ci.sighup.io/api/badges/sighupio/furyctl/status.svg?ref=refs/heads/main)](https://ci.sighup.io/sighupio/furyctl)
-![Release](https://img.shields.io/badge/furyctl-v0.32.0-blue)
-![Slack](https://img.shields.io/badge/slack-@kubernetes/fury-yellow.svg?logo=slack)
-![License](https://img.shields.io/github/license/sighupio/furyctl)
-[![Go Report Card](https://goreportcard.com/badge/github.com/sighupio/furyctl)](https://goreportcard.com/report/github.com/sighupio/furyctl)
+   [![Build Status](https://ci.sighup.io/api/badges/sighupio/furyctl/status.svg?ref=refs/heads/main)](https://ci.sighup.io/sighupio/furyctl)
+   ![Release](https://img.shields.io/badge/furyctl-v0.32.1-blue)
+   ![Slack](https://img.shields.io/badge/slack-@kubernetes/fury-yellow.svg?logo=slack)
+   ![License](https://img.shields.io/github/license/sighupio/furyctl)
+   [![Go Report Card](https://goreportcard.com/badge/github.com/sighupio/furyctl)](https://goreportcard.com/report/github.com/sighupio/furyctl)
 
 </h1>
 <!-- markdownlint-eable MD033 -->
@@ -26,7 +24,7 @@
 > Learn more about the SIGHUP Distribution in the [documentation site](https://docs.sighup.io).
 <!-- spacer -->
 > [!NOTE]
-> Starting from v0.25.0, the next generation of `furyctl` has been officially released. Previous versions, furyctl <= 0.11, are considered legacy and will only receive bug fixes. It will be maintained under the v0.11 branch.
+> Starting from v0.25.0, the next generation of `furyctl` has been officially released. Previous versions (<= 0.11), are considered legacy and will only receive bug fixes. It will be maintained under the `release-v0.11` branch.
 >
 > If you're looking for the old documentation for furyctl legacy, you can find it [here](https://github.com/sighupio/furyctl/blob/release-v0.11/README.md).
 
@@ -59,7 +57,7 @@ Alternatively, you can install `furyctl` using `mise` or the `asdf` plugin.
 ### Installing with [mise](https://mise.jdx.dev/)
 
 ```bash
-mise use furyctl@0.32.0
+mise use furyctl@0.32.1
 ```
 
 Check that everything is working correctly with `furyctl version`:
@@ -68,8 +66,8 @@ Check that everything is working correctly with `furyctl version`:
 $ furyctl version
 ...
 goVersion: go1.23
-osArch: amd64
-version: 0.32.0
+osArch: arm64
+version: 0.32.1
 ```
 
 ### Installing with [asdf](https://github.com/asdf-vm/asdf)
@@ -87,22 +85,14 @@ $ furyctl version
 ...
 goVersion: go1.23
 osArch: amd64
-version: 0.32.0
+version: 0.32.1
 ```
 
 ### Installing from source
 
 Prerequisites:
 
-- `make >= 4.1`
 - `go >= 1.23`
-- `goreleaser >= 2.3`
-
-> You can install `goreleaser` with the following command once you have Go in your system:
->
-> ```bash
-> go install github.com/goreleaser/goreleaser/v2@v2.3.2
-> ```
 
 Once you've ensured the above dependencies are installed, you can proceed with the installation.
 
@@ -131,11 +121,11 @@ Once you've ensured the above dependencies are installed, you can proceed with t
 
    ```bash
    $ ./furyctl version
-   buildTime: 2024-10-08T07:46:28Z
-   gitCommit: 217cdcc8bf075fccfdb11c41ccc6bb317ec704bc
+   buildTime: 2025-04-14T14:38:20Z
+   gitCommit: b2741d0ea623d83209fd488f9893ca33d3d335dd
    goVersion: go1.23.2
    osArch: arm64
-   version: 0.30.1
+   version: 0.32.1
    ```
 
 5. (optional) move the binary to your `bin` folder, in macOS:
@@ -148,11 +138,10 @@ Once you've ensured the above dependencies are installed, you can proceed with t
 
 For basic and advanced usage instructions, please refer to furyctl's [official documentation](https://docs.sighup.io/furyctl/) and the [SIGHUP Distribution getting started guides](https://docs.sighup.io/docs/getting-started/).
 
-
 <!-- </SD-DOCS> -->
 <!-- <FOOTER> -->
 
-### Test classes
+## Development - Test classes
 
 There are four kinds of tests: unit, integration, e2e, and expensive.
 
@@ -168,9 +157,9 @@ That said, here's a little summary of the used tags:
 - e2e: tests that exercise furyctl binary, invoking it as a cli tool and checking its output
 - expensive: e2e tests that incur in some monetary cost, like running an EKS instance on AWS
 
-### Reporting Issues
+## Reporting Issues
 
-In case you experience any problems with `furyctl`, please [open a new issue](https://github.com/sighupio/furyctl/issues/new/choose) on GitHub.
+In case you experience any problems with `furyctl` itslef, please [open a new issue](https://github.com/sighupio/furyctl/issues/new/choose) on GitHub. If the issue is related to the SIGHUP Distribution, please open the issue in [its repository](https://github.com/sighupio/distribution) instead.
 
 ## License
 
