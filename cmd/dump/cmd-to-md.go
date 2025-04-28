@@ -85,17 +85,17 @@ func GenMarkdownCustom(cmd *cobra.Command, w io.Writer, linkHandler func(string)
 	buf.WriteString(cmd.Short + "\n\n")
 	if len(cmd.Long) > 0 {
 		buf.WriteString("## Synopsis\n\n")
-		buf.WriteString(cmd.Long + "\n\n")
+		buf.WriteString(strings.ReplaceAll(cmd.Long, "\t", "  ") + "\n\n")
 	}
 
 	if cmd.Runnable() {
 		buf.WriteString("## Usage\n\n")
-		buf.WriteString(fmt.Sprintf("```bash\n%s\n```\n\n", cmd.UseLine()))
+		buf.WriteString(fmt.Sprintf("```bash\n%s\n```\n\n", strings.ReplaceAll(cmd.UseLine(), "\t", "  ")))
 	}
 
 	if len(cmd.Example) > 0 {
 		buf.WriteString("## Examples\n\n")
-		buf.WriteString(fmt.Sprintf("```bash\n%s\n```\n\n", cmd.Example))
+		buf.WriteString(fmt.Sprintf("```bash\n%s\n```\n\n", strings.ReplaceAll(cmd.Example, "\t", "  ")))
 	}
 
 	if err := printOptions(buf, cmd, name); err != nil {
@@ -108,7 +108,7 @@ func GenMarkdownCustom(cmd *cobra.Command, w io.Writer, linkHandler func(string)
 			pname := parent.CommandPath()
 			link := pname + markdownExtension
 			link = strings.ReplaceAll(link, " ", "_")
-			buf.WriteString(fmt.Sprintf("* [%s](%s)\t - %s\n", pname, linkHandler(link), parent.Short))
+			buf.WriteString(fmt.Sprintf("* [%s](%s) - %s\n", pname, linkHandler(link), parent.Short))
 			cmd.VisitParents(func(c *cobra.Command) {
 				if c.DisableAutoGenTag {
 					cmd.DisableAutoGenTag = c.DisableAutoGenTag
@@ -126,9 +126,8 @@ func GenMarkdownCustom(cmd *cobra.Command, w io.Writer, linkHandler func(string)
 			cname := name + " " + child.Name()
 			link := cname + markdownExtension
 			link = strings.ReplaceAll(link, " ", "_")
-			buf.WriteString(fmt.Sprintf("* [%s](%s)\t - %s\n", cname, linkHandler(link), child.Short))
+			buf.WriteString(fmt.Sprintf("* [%s](%s) - %s\n", cname, linkHandler(link), child.Short))
 		}
-		buf.WriteString("\n")
 	}
 	_, err := buf.WriteTo(w)
 	return err
