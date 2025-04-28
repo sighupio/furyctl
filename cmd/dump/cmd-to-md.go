@@ -170,9 +170,11 @@ func GenMarkdownCustom(cmd *cobra.Command, w io.Writer, linkHandler func(string)
 		}
 	}
 
-	_, err := buf.WriteTo(w)
+	if _, err := buf.WriteTo(w); err != nil {
+		return fmt.Errorf("error while writing contents to file: %w", err)
+	}
 
-	return fmt.Errorf("error while writing contents: %w", err)
+	return nil
 }
 
 // GenMarkdownTree will generate a markdown page for this command and all
@@ -204,7 +206,6 @@ func GenMarkdownTreeCustom(cmd *cobra.Command, dir string, filePrepender, linkHa
 	basename := strings.ReplaceAll(cmd.CommandPath(), " ", "_") + markdownExtension
 	filename := filepath.Join(dir, basename)
 	f, err := os.Create(filename)
-
 	if err != nil {
 		return fmt.Errorf("error while creating file: %w", err)
 	}
