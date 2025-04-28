@@ -52,8 +52,7 @@ func NewRootCmd() *RootCommand {
 			Short: "The Swiss Army knife for the SIGHUP Distribution",
 			Long: `The multi-purpose command line tool for the SIGHUP Distribution.
 
-	furyctl is a command line interface tool to manage the full lifecycle of a SIGHUP Distribution Cluster.
-	`,
+furyctl is a command line interface tool to manage the full lifecycle of SIGHUP Distribution Clusters.`,
 			SilenceUsage:  true,
 			SilenceErrors: true,
 			PersistentPreRun: func(cmd *cobra.Command, _ []string) {
