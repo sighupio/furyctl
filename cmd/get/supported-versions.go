@@ -23,6 +23,7 @@ const DateFmt = "2006-01-02"
 
 func NewSupportedVersionsCmd() *cobra.Command {
     var cmdEvent analytics.Event
+
     kinds := []string{distribution.EKSClusterKind, distribution.KFDDistributionKind, distribution.OnPremisesKind}
     
     supportedVersionCmd := &cobra.Command{
@@ -43,6 +44,7 @@ func NewSupportedVersionsCmd() *cobra.Command {
             ctn := app.GetContainerInstance()
             tracker := ctn.Tracker()
             tracker.Flush()
+
             releases, err := distribution.GetSupportedVersions(git.NewGitHubClient())
             if err != nil {
                 cmdEvent.AddErrorMessage(err)
@@ -56,6 +58,7 @@ func NewSupportedVersionsCmd() *cobra.Command {
             if err != nil {
                 cmdEvent.AddErrorMessage(err)
                 tracker.Track(cmdEvent)
+
                 return err
             }
             
@@ -72,6 +75,7 @@ func NewSupportedVersionsCmd() *cobra.Command {
             logrus.Info(msg + FormatSupportedVersions(releases, kindsToPrint))
             cmdEvent.AddSuccessMessage("supported SD versions")
             tracker.Track(cmdEvent)
+			
             return nil
         },
     }
