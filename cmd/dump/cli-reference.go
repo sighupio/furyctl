@@ -172,8 +172,8 @@ func escapeCodeBlock(path string) error {
 	escapedContent := string(content)
 	escapedContent = reUnix.ReplaceAllString(escapedContent, "${1}```shell\n${1}$$ ${2}\n${1}```")
 	escapedContent = rePS.ReplaceAllString(escapedContent, "${1}```powershell\n${1}PS> ${2}\n${1}```")
-        reFencedNewLineFix := regexp.MustCompile(":\\n(.+)```")
-        escapedContent = reFencedNewLineFix.ReplaceAllString(escapedContent, ":\n\n${1}```")
+	reFencedNewLineFix := regexp.MustCompile(":\\n(.+)```")
+	escapedContent = reFencedNewLineFix.ReplaceAllString(escapedContent, ":\n\n${1}```")
 
 	fileStat, err := os.Stat(path)
 	if err != nil {
