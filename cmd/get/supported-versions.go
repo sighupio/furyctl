@@ -5,6 +5,7 @@
 package get
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 
@@ -20,6 +21,8 @@ import (
 )
 
 const DateFmt = "2006-01-02"
+
+var ErrInvalidKind = errors.New("invalid kind")
 
 func NewSupportedVersionsCmd() *cobra.Command {
 	var cmdEvent analytics.Event
@@ -84,8 +87,7 @@ func NewSupportedVersionsCmd() *cobra.Command {
 		"kind",
 		"k",
 		"",
-		fmt.Sprintf("Show supported SD versions for the kind of cluster specified. Valid values: %s",
-			strings.Join(kinds, ", ")),
+		"Show supported SD versions for the kind of cluster specified. Valid values: "+strings.Join(kinds, ", "),
 	)
 
 	return supportedVersionCmd
@@ -103,8 +105,8 @@ func validateKind(kind string, validKinds []string) (string, error) {
 
 	matchedKind, ok := kindMap[strings.ToLower(kind)]
 	if !ok {
-		return "", fmt.Errorf("invalid kind: %s. Valid values are: %s",
-			kind, strings.Join(validKinds, ", "))
+		return "", fmt.Errorf("%w: %s. Valid values are: %s",
+			ErrInvalidKind, kind, strings.Join(validKinds, ", "))
 	}
 
 	return matchedKind, nil
