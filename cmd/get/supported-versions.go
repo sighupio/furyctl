@@ -26,11 +26,10 @@ func NewSupportedVersionsCmd() *cobra.Command {
 	supportedVersionCmd := &cobra.Command{
 		Use:   "supported-versions",
 		Short: "List of currently supported SD versions and their compatibility with this version of furyctl for each kind.",
-		Long: `List of currently supported SD versions and their compatibility with this version of furyctl for each kind. If the "--kind" parameter is specified, the command will only provide information about the selected provider.
- Examples:
- - furyctl get supported-versions                  	will list the currently supported SD versions and their compatibility with this version of furyctl for each kind.
- - furyctl get supported-versions --kind OnPremises	will list the currently supported SD versions and their compatibility with this version of furyctl but for the OnPremises kind.
- `,
+		Long:  "List of currently supported SD versions and their compatibility with this version of furyctl for each kind. If the `--kind` parameter is specified, the command will only provide information about the selected provider.",
+		Example: `  - furyctl get supported-versions                  	will list the currently supported SD versions and their compatibility with this version of furyctl for each kind.
+  - furyctl get supported-versions --kind OnPremises	will list the currently supported SD versions and their compatibility with this version of furyctl but for the OnPremises kind.
+`,
 		PreRun: func(cmd *cobra.Command, _ []string) {
 			cmdEvent = analytics.NewCommandEvent(cobrax.GetFullname(cmd))
 			if err := viper.BindPFlags(cmd.Flags()); err != nil {
