@@ -49,22 +49,37 @@ import (
 
 const markdownExtension = ".md"
 
-func printOptions(buf *bytes.Buffer, cmd *cobra.Command, name string) error {
+func printOptions(buf *bytes.Buffer, cmd *cobra.Command, _ string) error {
 	flags := cmd.NonInheritedFlags()
 	flags.SetOutput(buf)
+
 	if flags.HasAvailableFlags() {
-		buf.WriteString("## Options\n\n```bash\n")
+		if _, err := buf.WriteString("## Options\n\n```bash\n"); err != nil {
+			return fmt.Errorf("error while writing to buffer: %w", err)
+		}
+
 		flags.PrintDefaults()
-		buf.WriteString("```\n\n")
+
+		if _, err := buf.WriteString("```\n\n"); err != nil {
+			return fmt.Errorf("error while writing to buffer: %w", err)
+		}
 	}
 
 	parentFlags := cmd.InheritedFlags()
 	parentFlags.SetOutput(buf)
+
 	if parentFlags.HasAvailableFlags() {
-		buf.WriteString("## Options inherited from parent commands\n\n```bash\n")
+		if _, err := buf.WriteString("## Options inherited from parent commands\n\n```bash\n"); err != nil {
+			return fmt.Errorf("error while writing to buffer: %w", err)
+		}
+
 		parentFlags.PrintDefaults()
-		buf.WriteString("```\n\n")
+
+		if _, err := buf.WriteString("```\n\n"); err != nil {
+			return fmt.Errorf("error while writing to buffer: %w", err)
+		}
 	}
+
 	return nil
 }
 
@@ -81,34 +96,55 @@ func GenMarkdownCustom(cmd *cobra.Command, w io.Writer, linkHandler func(string)
 	buf := new(bytes.Buffer)
 	name := cmd.CommandPath()
 
-	buf.WriteString("# " + name + "\n\n")
-	buf.WriteString(cmd.Short + "\n\n")
+	if _, err := buf.WriteString("# " + name + "\n\n"); err != nil {
+		return fmt.Errorf("error while writing to buffer: %w", err)
+	}
+
+	if _, err := buf.WriteString(cmd.Short + "\n\n"); err != nil {
+		return fmt.Errorf("error while writing to buffer: %w", err)
+	}
+
 	if len(cmd.Long) > 0 {
-		buf.WriteString("## Synopsis\n\n")
-		buf.WriteString(strings.ReplaceAll(cmd.Long, "\t", "  ") + "\n\n")
+		if _, err := buf.WriteString("## Synopsis\n\n%s"); err != nil {
+			return fmt.Errorf("error while writing to buffer: %w", err)
+		}
+
+		if _, err := buf.WriteString(strings.ReplaceAll(cmd.Long, "\t", "  ") + "\n\n"); err != nil {
+			return fmt.Errorf("error while writing to buffer: %w", err)
+		}
 	}
 
 	if cmd.Runnable() {
-		buf.WriteString("## Usage\n\n")
-		buf.WriteString(fmt.Sprintf("```bash\n%s\n```\n\n", strings.ReplaceAll(cmd.UseLine(), "\t", "  ")))
+		if _, err := buf.WriteString(fmt.Sprintf("## Usage\n\n```bash\n%s\n```\n\n", strings.ReplaceAll(cmd.UseLine(), "\t", "  "))); err != nil {
+			return fmt.Errorf("error while writing to buffer: %w", err)
+		}
 	}
 
 	if len(cmd.Example) > 0 {
-		buf.WriteString("## Examples\n\n")
-		buf.WriteString(fmt.Sprintf("```bash\n%s\n```\n\n", strings.ReplaceAll(cmd.Example, "\t", "  ")))
+		if _, err := buf.WriteString(fmt.Sprintf("## Examples\n\n```bash\n%s\n```\n\n", strings.ReplaceAll(cmd.Example, "\t", "  "))); err != nil {
+			return fmt.Errorf("error while writing to buffer: %w", err)
+		}
 	}
 
 	if err := printOptions(buf, cmd, name); err != nil {
 		return err
 	}
+
 	if hasSeeAlso(cmd) {
-		buf.WriteString("## See Also\n\n")
+		if _, err := buf.WriteString("## See Also\n\n"); err != nil {
+			return fmt.Errorf("error while writing to buffer: %w", err)
+		}
+
 		if cmd.HasParent() {
 			parent := cmd.Parent()
 			pname := parent.CommandPath()
 			link := pname + markdownExtension
 			link = strings.ReplaceAll(link, " ", "_")
-			buf.WriteString(fmt.Sprintf("* [%s](%s) - %s\n", pname, linkHandler(link), parent.Short))
+
+			if _, err := buf.WriteString(fmt.Sprintf("* [%s](%s) - %s\n", pname, linkHandler(link), parent.Short)); err != nil {
+				return fmt.Errorf("error while writing to buffer: %w", err)
+			}
+
 			cmd.VisitParents(func(c *cobra.Command) {
 				if c.DisableAutoGenTag {
 					cmd.DisableAutoGenTag = c.DisableAutoGenTag
@@ -123,14 +159,20 @@ func GenMarkdownCustom(cmd *cobra.Command, w io.Writer, linkHandler func(string)
 			if !child.IsAvailableCommand() || child.IsAdditionalHelpTopicCommand() {
 				continue
 			}
+
 			cname := name + " " + child.Name()
 			link := cname + markdownExtension
 			link = strings.ReplaceAll(link, " ", "_")
-			buf.WriteString(fmt.Sprintf("* [%s](%s) - %s\n", cname, linkHandler(link), child.Short))
+
+			if _, err := buf.WriteString(fmt.Sprintf("* [%s](%s) - %s\n", cname, linkHandler(link), child.Short)); err != nil {
+				return fmt.Errorf("error while writing to buffer: %w", err)
+			}
 		}
 	}
+
 	_, err := buf.WriteTo(w)
-	return err
+
+	return fmt.Errorf("error while writing contents: %w", err)
 }
 
 // GenMarkdownTree will generate a markdown page for this command and all
@@ -141,7 +183,8 @@ func GenMarkdownCustom(cmd *cobra.Command, w io.Writer, linkHandler func(string)
 // help output will be in the file `cmd-sub-third.1`.
 func GenMarkdownTree(cmd *cobra.Command, dir string) error {
 	identity := func(s string) string { return s }
-	emptyStr := func(s string) string { return "" }
+	emptyStr := func(_ string) string { return "" }
+
 	return GenMarkdownTreeCustom(cmd, dir, emptyStr, identity)
 }
 
@@ -152,6 +195,7 @@ func GenMarkdownTreeCustom(cmd *cobra.Command, dir string, filePrepender, linkHa
 		if !c.IsAvailableCommand() || c.IsAdditionalHelpTopicCommand() {
 			continue
 		}
+
 		if err := GenMarkdownTreeCustom(c, dir, filePrepender, linkHandler); err != nil {
 			return err
 		}
@@ -160,17 +204,21 @@ func GenMarkdownTreeCustom(cmd *cobra.Command, dir string, filePrepender, linkHa
 	basename := strings.ReplaceAll(cmd.CommandPath(), " ", "_") + markdownExtension
 	filename := filepath.Join(dir, basename)
 	f, err := os.Create(filename)
+
 	if err != nil {
-		return err
+		return fmt.Errorf("error while creating file: %w", err)
 	}
+
 	defer f.Close()
 
 	if _, err := io.WriteString(f, filePrepender(filename)); err != nil {
-		return err
+		return fmt.Errorf("error while writing with prepender: %w", err)
 	}
+
 	if err := GenMarkdownCustom(cmd, f, linkHandler); err != nil {
-		return err
+		return fmt.Errorf("error while writing with linkHandler: %w", err)
 	}
+
 	return nil
 }
 
@@ -178,12 +226,15 @@ func hasSeeAlso(cmd *cobra.Command) bool {
 	if cmd.HasParent() {
 		return true
 	}
+
 	for _, c := range cmd.Commands() {
 		if !c.IsAvailableCommand() || c.IsAdditionalHelpTopicCommand() {
 			continue
 		}
+
 		return true
 	}
+
 	return false
 }
 
