@@ -24,52 +24,53 @@ var (
 	ErrPowershellCompletion = errors.New("error generating powershell completion")
 )
 
-func NewCompletionCmd() *cobra.Command {
+func NewCompletionCmd(rootCmd *cobra.Command) *cobra.Command {
 	var cmdEvent analytics.Event
 
 	completionCmd := &cobra.Command{
 		Use:   "completion [bash|zsh|fish|powershell]",
 		Short: "Generate completion script for your shell",
-		Long: `To load furyctl completions:
+		Long: fmt.Sprintf(`To load completions:
 
 Bash:
 
-	$ source <(furyctl completion bash)
+  $ source <(%[1]s completion bash)
 
-	To load completions for each session, execute once:
+  To load completions for each session, execute once:
 
-	Linux:
-	$ furyctl completion bash > /etc/bash_completion.d/furyctl
-	macOS:
-	$ furyctl completion bash > /usr/local/etc/bash_completion.d/furyctl
+  Linux:
+  $ %[1]s completion bash > /etc/bash_completion.d/%[1]s
+  
+  macOS:
+  $ %[1]s completion bash > $(brew --prefix)/etc/bash_completion.d/%[1]s
 
 Zsh:
 
-	If shell completion is not already enabled in your environment,
-	you will need to enable it.  You can execute the following once:
+  If shell completion is not already enabled in your environment,
+  you will need to enable it.  You can execute the following once:
 
-	$ echo "autoload -U compinit; compinit" >> ~/.zshrc
+  $ echo "autoload -U compinit; compinit" >> ~/.zshrc
 
-	To load completions for each session, execute once:
-	$ furyctl completion zsh > "${fpath[1]}/_furyctl"
+  To load completions for each session, execute once:
+  $ %[1]s completion zsh > "${fpath[1]}/_%[1]s"
 
-	You will need to start a new shell for this setup to take effect.
+  You will need to start a new shell for this setup to take effect.
 
 fish:
 
-	$ furyctl completion fish | source
+  $ %[1]s completion fish | source
 
-	To load completions for each session, execute once:
-	$ furyctl completion fish > ~/.config/fish/completions/furyctl.fish
+  To load completions for each session, execute once:
+  $ %[1]s completion fish > ~/.config/fish/completions/%[1]s.fish
 
 PowerShell:
 
-	PS> furyctl completion powershell | Out-String | Invoke-Expression
+  PS> %[1]s completion powershell | Out-String | Invoke-Expression
 
-	To load completions for every new session, run:
-	PS> furyctl completion powershell > furyctl.ps1
-	and source this file from your PowerShell profile.
-	`,
+  To load completions for every new session, run:
+  PS> %[1]s completion powershell > %[1]s.ps1
+  and source this file from your PowerShell profile.
+`, rootCmd.Name()),
 		DisableFlagsInUseLine: true,
 		ValidArgs:             []string{"bash", "zsh", "fish", "powershell"},
 		Args:                  cobra.MatchAll(cobra.ExactArgs(1), cobra.OnlyValidArgs),

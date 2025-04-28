@@ -222,7 +222,7 @@ func NewRootCmd() *RootCommand {
 	}
 
 	rootCmd.AddCommand(NewApplyCmd())
-	rootCmd.AddCommand(NewCompletionCmd())
+	rootCmd.AddCommand(NewCompletionCmd(rootCmd.Root()))
 	rootCmd.AddCommand(NewConnectCmd())
 	rootCmd.AddCommand(NewCreateCmd())
 	rootCmd.AddCommand(NewDeleteCmd())
