@@ -7,13 +7,13 @@ package distribution
 import (
 	"errors"
 	"fmt"
+	"slices"
 	"sort"
 	"strings"
 	"time"
 
 	"github.com/Al-Pragliola/go-version"
 	"github.com/sirupsen/logrus"
-	"slices"
 
 	"github.com/sighupio/furyctl/internal/git"
 )

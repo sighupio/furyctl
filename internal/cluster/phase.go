@@ -10,11 +10,11 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"slices"
 	"strings"
 
 	r3diff "github.com/r3labs/diff/v3"
 	"github.com/sirupsen/logrus"
-	"slices"
 
 	"github.com/sighupio/fury-distribution/pkg/apis/config"
 	iox "github.com/sighupio/furyctl/internal/x/io"
