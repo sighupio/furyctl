@@ -8,7 +8,6 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"path"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -78,16 +77,10 @@ func NewDumpCLIReferenceCmd() *cobra.Command {
 				return fmt.Errorf("failed to generate CLI reference for main command: %w", err)
 			}
 			defer mainFile.Close()
-			// filePrepender is a function that generates the front matter for the markdown files
-			filePrepender := func(filename string) string {
-				const frontMatter = `---
-title: %s
----
-`
-				name := filepath.Base(filename)
-				base := strings.TrimSuffix(name, path.Ext(name))
-				title := strings.Replace(base, "_", " ", -1)
-				return fmt.Sprintf(frontMatter, title)
+
+			// nullFilePrepender is a function that generates an empty front matter for the markdown files
+			nullFilePrepender := func(filename string) string {
+				return ""
 			}
 
 			linkHandlerRoot := func(name string) string {
@@ -125,11 +118,7 @@ title: %s
 			}
 
 			cmd.Root().DisableAutoGenTag = true
-			mainFile.WriteString(`---
-title: furyctl CLI Reference
-sidebar_position: 4
----
-`)
+
 			if err := GenMarkdownCustom(cmd.Root(), mainFile, linkHandlerRoot); err != nil {
 				return fmt.Errorf("failed to generate CLI reference: %w", err)
 			}
@@ -139,7 +128,7 @@ sidebar_position: 4
 					return fmt.Errorf("failed to create output folder: %w", err)
 				}
 				// err := GenMarkdownTree(command, outputPath)
-				err := GenMarkdownTreeCustom(command, outputPath, filePrepender, linkHandler)
+				err := GenMarkdownTreeCustom(command, outputPath, nullFilePrepender, linkHandler)
 				if err != nil {
 					return fmt.Errorf("failed to generate CLI reference for command %s: %w", command.Name(), err)
 				}
@@ -175,8 +164,7 @@ func getDumpCliReferenceCmdFlags() (CliReferenceCmdFlags, error) {
 }
 
 func escapeCodeBlock(path string) error {
-	// Escape code blocks in the file
-	logrus.Debugf("Escaping code blocks in file %s", path)
+	// Escape code blocks in the file sorrounding them with triple backticks
 	if content, err := os.ReadFile(path); err != nil {
 		return fmt.Errorf("failed to read file %s: %w", path, err)
 	} else {
