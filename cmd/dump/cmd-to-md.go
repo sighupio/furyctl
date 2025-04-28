@@ -105,7 +105,7 @@ func GenMarkdownCustom(cmd *cobra.Command, w io.Writer, linkHandler func(string)
 	}
 
 	if len(cmd.Long) > 0 {
-		if _, err := buf.WriteString("## Synopsis\n\n%s"); err != nil {
+		if _, err := buf.WriteString("## Synopsis\n\n"); err != nil {
 			return fmt.Errorf("error while writing to buffer: %w", err)
 		}
 
@@ -206,7 +206,6 @@ func GenMarkdownTreeCustom(cmd *cobra.Command, dir string, filePrepender, linkHa
 	basename := strings.ReplaceAll(cmd.CommandPath(), " ", "_") + markdownExtension
 	filename := filepath.Join(dir, basename)
 	f, err := os.Create(filename)
-
 	if err != nil {
 		return fmt.Errorf("error while creating file: %w", err)
 	}
