@@ -8,14 +8,16 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path"
 	"path/filepath"
+	"regexp"
+	"strings"
 
 	"github.com/sighupio/furyctl/internal/analytics"
 	"github.com/sighupio/furyctl/internal/app"
 	cobrax "github.com/sighupio/furyctl/internal/x/cobra"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
-	"github.com/spf13/cobra/doc"
 	"github.com/spf13/viper"
 )
 
@@ -30,7 +32,7 @@ func NewDumpCLIReferenceCmd() *cobra.Command {
 	var cmdEvent analytics.Event
 
 	dumpCLIReferenceCmd := &cobra.Command{
-		Use:     "cli-reference <folder>",
+		Use:     "cli-reference [folder]",
 		Short:   "Exports the CLI reference in markdown format into a specified folder in the working directory",
 		Long:    "Exports the CLI reference in markdown format into a specified folder in the working directory. The folder will be created if it does not exist.",
 		Example: `furyctl dump cli-reference ./docs/cli-reference`,
@@ -76,9 +78,59 @@ func NewDumpCLIReferenceCmd() *cobra.Command {
 				return fmt.Errorf("failed to generate CLI reference for main command: %w", err)
 			}
 			defer mainFile.Close()
+			// filePrepender is a function that generates the front matter for the markdown files
+			filePrepender := func(filename string) string {
+				const frontMatter = `---
+title: %s
+---
+`
+				name := filepath.Base(filename)
+				base := strings.TrimSuffix(name, path.Ext(name))
+				title := strings.Replace(base, "_", " ", -1)
+				return fmt.Sprintf(frontMatter, title)
+			}
+
+			linkHandlerRoot := func(name string) string {
+				if name == "furyctl.md" {
+					return "index.md"
+				}
+
+				for _, command := range cmd.Root().Commands() {
+					basename := strings.Replace(command.CommandPath(), " ", "_", -1) + ".md"
+					// logrus.Debugf("checking command %s with basename %s", command.Name(), basename)
+					if basename == name {
+						// logrus.Debugf("found command %s with basename %s", command.Name(), basename)
+						return fmt.Sprintf("%s/index.md", command.Name())
+					}
+				}
+
+				return name
+			}
+
+			linkHandler := func(name string) string {
+				if name == "furyctl.md" {
+					return "../index.md"
+				}
+
+				for _, command := range cmd.Root().Commands() {
+					basename := strings.Replace(command.CommandPath(), " ", "_", -1) + ".md"
+					// logrus.Debugf("checking command %s with basename %s", command.Name(), basename)
+					if basename == name {
+						// logrus.Debugf("found command %s with basename %s", command.Name(), basename)
+						return fmt.Sprintf("../%s/index.md", command.Name())
+					}
+				}
+
+				return name
+			}
 
 			cmd.Root().DisableAutoGenTag = true
-			if err := doc.GenMarkdown(cmd.Root(), mainFile); err != nil {
+			mainFile.WriteString(`---
+title: furyctl CLI Reference
+sidebar_position: 4
+---
+`)
+			if err := GenMarkdownCustom(cmd.Root(), mainFile, linkHandlerRoot); err != nil {
 				return fmt.Errorf("failed to generate CLI reference: %w", err)
 			}
 			for _, command := range cmd.Root().Commands() {
@@ -86,12 +138,17 @@ func NewDumpCLIReferenceCmd() *cobra.Command {
 				if err := os.MkdirAll(outputPath, outputFolderPerms); err != nil {
 					return fmt.Errorf("failed to create output folder: %w", err)
 				}
-				err := doc.GenMarkdownTree(command, outputPath)
+				// err := GenMarkdownTree(command, outputPath)
+				err := GenMarkdownTreeCustom(command, outputPath, filePrepender, linkHandler)
 				if err != nil {
 					return fmt.Errorf("failed to generate CLI reference for command %s: %w", command.Name(), err)
 				}
 				if err := os.Rename(fmt.Sprintf("%s/furyctl_%s.md", outputPath, command.Name()), fmt.Sprintf("%s/index.md", outputPath)); err != nil {
 					return fmt.Errorf("failed to rename CLI reference file for command %s: %w", command.Name(), err)
+				}
+				// replace lines in the generated markdown that break docusaurus because it thinks are MDX
+				if command.Name() == "completion" {
+					escapeCodeBlock(fmt.Sprintf("%s/index.md", outputPath))
 				}
 			}
 
@@ -115,4 +172,23 @@ func getDumpCliReferenceCmdFlags() (CliReferenceCmdFlags, error) {
 		NoOverwrite: viper.GetBool("no-overwrite"),
 		Workdir:     viper.GetString("workdir"),
 	}, nil
+}
+
+func escapeCodeBlock(path string) error {
+	// Escape code blocks in the file
+	logrus.Debugf("Escaping code blocks in file %s", path)
+	if content, err := os.ReadFile(path); err != nil {
+		return fmt.Errorf("failed to read file %s: %w", path, err)
+	} else {
+		reUnix := regexp.MustCompile("(.+)\\$ (.+)")
+		rePS := regexp.MustCompile("(.+)PS> (.+)")
+		escapedContent := string(content)
+		escapedContent = reUnix.ReplaceAllString(escapedContent, "${1}```shell\n${1}$$ ${2}\n${1}```")
+		escapedContent = rePS.ReplaceAllString(escapedContent, "${1}```powershell\n${1}PS> ${2}\n${1}```")
+		if err := os.WriteFile(path, []byte(escapedContent), 0o644); err != nil {
+			return fmt.Errorf("failed to write file %s: %w", path, err)
+		}
+	}
+
+	return nil
 }

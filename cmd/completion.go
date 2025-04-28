@@ -32,42 +32,43 @@ func NewCompletionCmd() *cobra.Command {
 		Short: "Generate completion script for your shell",
 		Long: `To load furyctl completions:
 
-	Bash:
+Bash:
 
 	$ source <(furyctl completion bash)
 
-	# To load completions for each session, execute once:
-	# Linux:
+	To load completions for each session, execute once:
+
+	Linux:
 	$ furyctl completion bash > /etc/bash_completion.d/furyctl
-	# macOS:
+	macOS:
 	$ furyctl completion bash > /usr/local/etc/bash_completion.d/furyctl
 
-	Zsh:
+Zsh:
 
-	# If shell completion is not already enabled in your environment,
-	# you will need to enable it.  You can execute the following once:
+	If shell completion is not already enabled in your environment,
+	you will need to enable it.  You can execute the following once:
 
 	$ echo "autoload -U compinit; compinit" >> ~/.zshrc
 
-	# To load completions for each session, execute once:
+	To load completions for each session, execute once:
 	$ furyctl completion zsh > "${fpath[1]}/_furyctl"
 
-	# You will need to start a new shell for this setup to take effect.
+	You will need to start a new shell for this setup to take effect.
 
-	fish:
+fish:
 
 	$ furyctl completion fish | source
 
-	# To load completions for each session, execute once:
+	To load completions for each session, execute once:
 	$ furyctl completion fish > ~/.config/fish/completions/furyctl.fish
 
-	PowerShell:
+PowerShell:
 
 	PS> furyctl completion powershell | Out-String | Invoke-Expression
 
-	# To load completions for every new session, run:
+	To load completions for every new session, run:
 	PS> furyctl completion powershell > furyctl.ps1
-	# and source this file from your PowerShell profile.
+	and source this file from your PowerShell profile.
 	`,
 		DisableFlagsInUseLine: true,
 		ValidArgs:             []string{"bash", "zsh", "fish", "powershell"},
