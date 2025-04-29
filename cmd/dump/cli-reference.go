@@ -115,7 +115,7 @@ func NewDumpCLIReferenceCmd() *cobra.Command {
 
 			cmd.Root().DisableAutoGenTag = true
 
-			if err := GenMarkdownCustom(cmd.Root(), mainFile, linkHandlerRoot); err != nil {
+			if err := genMarkdownCustom(cmd.Root(), mainFile, linkHandlerRoot); err != nil {
 				return fmt.Errorf("failed to generate CLI reference: %w", err)
 			}
 			for _, command := range cmd.Root().Commands() {
@@ -123,7 +123,7 @@ func NewDumpCLIReferenceCmd() *cobra.Command {
 				if err := os.MkdirAll(outputPath, outputFolderPerms); err != nil {
 					return fmt.Errorf("failed to create output folder: %w", err)
 				}
-				err := GenMarkdownTreeCustom(command, outputPath, dummyFilePrepender, linkHandler)
+				err := genMarkdownTreeCustom(command, outputPath, dummyFilePrepender, linkHandler)
 				if err != nil {
 					return fmt.Errorf("failed to generate CLI reference for command %s: %w", command.Name(), err)
 				}
