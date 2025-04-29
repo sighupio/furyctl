@@ -94,21 +94,18 @@ func NewSupportedVersionsCmd() *cobra.Command {
 
 func validateKind(kind string, validKinds []string) (string, error) {
 	if kind == "" {
-		return "", nil
+		return "", errors.New("empty kind")
 	}
 
-	kindMap := make(map[string]string)
-	for _, k := range validKinds {
-		kindMap[strings.ToLower(k)] = k
+	kindLower := strings.ToLower(kind)
+	for _, validKind := range validKinds {
+		if strings.ToLower(validKind) == kindLower {
+			return validKind, nil
+		}
 	}
 
-	matchedKind, ok := kindMap[strings.ToLower(kind)]
-	if !ok {
-		return "", fmt.Errorf("%w: %s. Valid values are: %s",
-			ErrInvalidKind, kind, strings.Join(validKinds, ", "))
-	}
-
-	return matchedKind, nil
+	return "", fmt.Errorf("%w: %s. Valid values are: %s",
+		ErrInvalidKind, kind, strings.Join(validKinds, ", "))
 }
 
 func FormatSupportedVersions(releases []distribution.KFDRelease, kinds []string) string {
