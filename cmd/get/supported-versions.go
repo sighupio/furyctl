@@ -42,7 +42,7 @@ func NewSupportedVersionsCmd() *cobra.Command {
 				logrus.Fatalf("error while binding flags: %v", err)
 			}
 		},
-		RunE: func(_ *cobra.Command, _ []string) error {
+		RunE: func(cmd *cobra.Command, _ []string) error {
 			ctn := app.GetContainerInstance()
 			tracker := ctn.Tracker()
 			tracker.Flush()
@@ -55,21 +55,23 @@ func NewSupportedVersionsCmd() *cobra.Command {
 				return fmt.Errorf("error getting supported SD versions: %w", err)
 			}
 
-			kind := viper.GetString("kind")
-			validKind, err := validateKind(kind, kinds)
-			if err != nil {
-				cmdEvent.AddErrorMessage(err)
-				tracker.Track(cmdEvent)
-
-				return err
-			}
-
 			kindsToPrint := kinds
 			msg := "list of currently supported SD versions and their compatibility with this version of furyctl for "
 
-			if validKind != "" {
-				kindsToPrint = []string{validKind}
-				msg += validKind + "\n"
+			if cmd.Flags().Changed("kind") {
+				kind := viper.GetString("kind")
+				validKind, err := validateKind(kind, kinds)
+				if err != nil {
+					cmdEvent.AddErrorMessage(err)
+					tracker.Track(cmdEvent)
+
+					return err
+				}
+
+				if validKind != "" {
+					kindsToPrint = []string{validKind}
+					msg += validKind + "\n"
+				}
 			} else {
 				msg += "each kind\n"
 			}
@@ -94,7 +96,7 @@ func NewSupportedVersionsCmd() *cobra.Command {
 
 func validateKind(kind string, validKinds []string) (string, error) {
 	if kind == "" {
-		return "", errors.New("empty kind")
+		return "", fmt.Errorf("%w: empty value not allowed", ErrInvalidKind)
 	}
 
 	kindLower := strings.ToLower(kind)
