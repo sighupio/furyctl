@@ -196,8 +196,8 @@ func NewDependenciesCmd() *cobra.Command {
 		"",
 		"",
 		"Location where to download schemas, defaults and the distribution manifests from. "+
-			"It can either be a local path (eg: /path/to/fury/distribution) or "+
-			"a remote URL (eg: git::git@github.com:sighupio/fury-distribution?depth=1&ref=BRANCH_NAME). "+
+			"It can either be a local path (eg: /path/to/distribution) or "+
+			"a remote URL (eg: git::git@github.com:sighupio/distribution?depth=1&ref=BRANCH_NAME). "+
 			"Any format supported by hashicorp/go-getter can be used.",
 	)
 

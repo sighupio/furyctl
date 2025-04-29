@@ -232,8 +232,8 @@ The generated folder will be created starting from a provided templates folder a
 		"",
 		"",
 		"Location where to download schemas, defaults and the distribution manifest. "+
-			"It can either be a local path(eg: /path/to/fury/distribution) or "+
-			"a remote URL(eg: git::git@github.com:sighupio/fury-distribution?ref=BRANCH_NAME&depth=1). "+
+			"It can either be a local path(eg: /path/to/distribution) or "+
+			"a remote URL(eg: git::git@github.com:sighupio/distribution?ref=BRANCH_NAME&depth=1). "+
 			"Any format supported by hashicorp/go-getter can be used.",
 	)
 

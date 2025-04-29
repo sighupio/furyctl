@@ -13,7 +13,7 @@
 
 ## Warnings
 
-- Upgrading an on-prem SD cluster to 1.31.0 using furyctl 0.31.0 for a cluster with the control plane in HA could result in kube-scheduler and kube-controller-manager broken in two of the three nodes. See: [issue on-prem#115](https://github.com/sighupio/fury-kubernetes-on-premises/issues/115).
+- Upgrading an on-prem SD cluster to 1.31.0 using furyctl 0.31.0 for a cluster with the control plane in HA could result in kube-scheduler and kube-controller-manager broken in two of the three nodes. See: [issue on-prem#115](https://github.com/sighupio/installer-on-premises/issues/115).
 - If you are using version 0.29.1 or 0.29.2, please upgrade to 0.29.3 or later.
 - Versions < 0.27.5 do not work with the OnPremises provider, we fixed this issue in 0.27.5, so we recommend using this version or later.
 
