@@ -119,7 +119,7 @@ func NewDumpCLIReferenceCmd() *cobra.Command {
 				return fmt.Errorf("failed to generate CLI reference: %w", err)
 			}
 			for _, command := range cmd.Root().Commands() {
-				outputPath := fmt.Sprintf("%s/%s", outputFolder, command.Name())
+				outputPath := filepath.Join(outputFolder, command.Name())
 				if err := os.MkdirAll(outputPath, outputFolderPerms); err != nil {
 					return fmt.Errorf("failed to create output folder: %w", err)
 				}
