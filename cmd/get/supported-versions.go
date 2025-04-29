@@ -22,7 +22,7 @@ import (
 
 const DateFmt = "2006-01-02"
 
-var ErrInvalidKind = errors.New("invalid kind")
+var ErrInvalidKind = errors.New("invalid value for kind flag")
 
 func NewSupportedVersionsCmd() *cobra.Command {
 	var cmdEvent analytics.Event
