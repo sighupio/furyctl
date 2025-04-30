@@ -22,6 +22,7 @@ const (
 	sshRepoPrefix           = "git@github.com:sighupio/fury-kubernetes"
 	fallbackHTTPSRepoPrefix = "git::https://github.com/sighupio/kubernetes-fury"
 	fallbackSSHRepoPrefix   = "git@github.com:sighupio/kubernetes-fury"
+	externalKind            = "external"
 )
 
 var (
@@ -95,8 +96,13 @@ func (d *Downloader) downloadProcess(wg *sync.WaitGroup, data Package, errChan c
 	logrus.Debugf("worker %d : received data %v", i, data)
 
 	if d.HTTPS {
+		repoPrefix := httpsRepoPrefix
+		if data.Kind == externalKind {
+			repoPrefix = data.URL
+		}
+
 		pU = newPackageURL(
-			httpsRepoPrefix,
+			repoPrefix,
 			strings.Split(data.Name, "/"),
 			data.Kind,
 			data.Version,
@@ -163,8 +169,13 @@ func (d *Downloader) downloadProcess(wg *sync.WaitGroup, data Package, errChan c
 	}
 
 	if !d.HTTPS {
+		repoPrefix := sshRepoPrefix
+		if data.Kind == externalKind {
+			repoPrefix = data.URL
+		}
+
 		pU = newPackageURL(
-			sshRepoPrefix,
+			repoPrefix,
 			strings.Split(data.Name, "/"),
 			data.Kind,
 			data.Version,
