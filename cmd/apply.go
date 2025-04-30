@@ -184,7 +184,7 @@ func NewApplyCmd() *cobra.Command {
 					logrus.Debugf("Removing lock file %s", lockFileHandler.Path)
 
 					if err := lockFileHandler.Remove(); err != nil {
-						logrus.Errorf("error while removing lock file: %v", err)
+						logrus.Errorf("error while removing lock file %s: %v", lockFileHandler.Path, err)
 					}
 				}
 
@@ -198,7 +198,7 @@ func NewApplyCmd() *cobra.Command {
 				cmdEvent.AddErrorMessage(err)
 				tracker.Track(cmdEvent)
 
-				return fmt.Errorf("error while verifying lock file: %w", err)
+				return fmt.Errorf("error while verifying lock file %s: %w", lockFileHandler.Path, err)
 			}
 
 			err = lockFileHandler.Create()
@@ -206,7 +206,7 @@ func NewApplyCmd() *cobra.Command {
 				cmdEvent.AddErrorMessage(err)
 				tracker.Track(cmdEvent)
 
-				return fmt.Errorf("error while creating lock file: %w", err)
+				return fmt.Errorf("error while creating lock file %s: %w", lockFileHandler.Path, err)
 			}
 			defer lockFileHandler.Remove() //nolint:errcheck // ignore error
 
