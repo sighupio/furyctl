@@ -5,7 +5,9 @@
 package get
 
 import (
+	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -20,8 +22,12 @@ import (
 
 const DateFmt = "2006-01-02"
 
+var ErrInvalidKind = errors.New("invalid value for kind flag")
+
 func NewSupportedVersionsCmd() *cobra.Command {
 	var cmdEvent analytics.Event
+
+	kinds := []string{distribution.EKSClusterKind, distribution.KFDDistributionKind, distribution.OnPremisesKind}
 
 	supportedVersionCmd := &cobra.Command{
 		Use:   "supported-versions",
@@ -36,11 +42,11 @@ func NewSupportedVersionsCmd() *cobra.Command {
 				logrus.Fatalf("error while binding flags: %v", err)
 			}
 		},
-		RunE: func(_ *cobra.Command, _ []string) error {
+		RunE: func(cmd *cobra.Command, _ []string) error {
 			ctn := app.GetContainerInstance()
-
 			tracker := ctn.Tracker()
 			tracker.Flush()
+
 			releases, err := distribution.GetSupportedVersions(git.NewGitHubClient())
 			if err != nil {
 				cmdEvent.AddErrorMessage(err)
@@ -49,18 +55,28 @@ func NewSupportedVersionsCmd() *cobra.Command {
 				return fmt.Errorf("error getting supported SD versions: %w", err)
 			}
 
-			kind := viper.GetString("kind")
-			kinds := []string{distribution.EKSClusterKind, distribution.KFDDistributionKind, distribution.OnPremisesKind}
+			kindsToPrint := kinds
 			msg := "list of currently supported SD versions and their compatibility with this version of furyctl for "
-			if kind != "" {
-				kinds = []string{kind}
-				msg += kind + "\n"
+
+			if cmd.Flags().Changed("kind") {
+				kind := viper.GetString("kind")
+				validKind, err := validateKind(kind, kinds)
+				if err != nil {
+					cmdEvent.AddErrorMessage(err)
+					tracker.Track(cmdEvent)
+
+					return err
+				}
+
+				if validKind != "" {
+					kindsToPrint = []string{validKind}
+					msg += validKind + "\n"
+				}
 			} else {
 				msg += "each kind\n"
 			}
 
-			logrus.Info(msg + FormatSupportedVersions(releases, kinds))
-
+			logrus.Info(msg + FormatSupportedVersions(releases, kindsToPrint))
 			cmdEvent.AddSuccessMessage("supported SD versions")
 			tracker.Track(cmdEvent)
 
@@ -72,10 +88,26 @@ func NewSupportedVersionsCmd() *cobra.Command {
 		"kind",
 		"k",
 		"",
-		"Show supported SD versions for the kind of cluster specified (eg: EKSCluster, KFDDistribution, OnPremises), when missing shows all kinds.",
+		"Show supported SD versions for the kind of cluster specified. Valid values: "+strings.Join(kinds, ", "),
 	)
 
 	return supportedVersionCmd
+}
+
+func validateKind(kind string, validKinds []string) (string, error) {
+	if kind == "" {
+		return "", fmt.Errorf("%w: empty value not allowed", ErrInvalidKind)
+	}
+
+	kindLower := strings.ToLower(kind)
+	for _, validKind := range validKinds {
+		if strings.ToLower(validKind) == kindLower {
+			return validKind, nil
+		}
+	}
+
+	return "", fmt.Errorf("%w: %s. Valid values are: %s",
+		ErrInvalidKind, kind, strings.Join(validKinds, ", "))
 }
 
 func FormatSupportedVersions(releases []distribution.KFDRelease, kinds []string) string {
