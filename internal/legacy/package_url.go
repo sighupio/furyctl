@@ -59,6 +59,10 @@ func (n *PackageURL) getURLFromCompanyRepos() string {
 		dG = ".git"
 	}
 
+	if n.Kind == "external" {
+		return fmt.Sprintf("%s/?ref=%s", n.Prefix, n.Version)
+	}
+
 	if len(n.Blocks) == 1 {
 		return fmt.Sprintf("%s-%s%s//%s?ref=%s", n.Prefix, n.Blocks[0], dG, n.Kind, n.Version)
 	}

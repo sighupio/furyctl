@@ -51,6 +51,7 @@ type FuryFile struct {
 	Roles            []Package       `yaml:"roles"`
 	Modules          []Package       `yaml:"modules"`
 	Bases            []Package       `yaml:"bases"`
+	External         []Package       `yaml:"external"`
 	Provider         ProviderPattern `yaml:"provider"`
 }
 
@@ -101,6 +102,16 @@ func (f *FuryFile) BuildPackages(prefix string) ([]Package, error) {
 			pkgs = append(pkgs, v)
 		} else {
 			logrus.Debugf("katalog '%s' does not match prefix, skipping it", v.Name)
+		}
+	}
+
+	for _, v := range f.External {
+		v.Kind = "external"
+		if strings.HasPrefix(v.Name, prefix) {
+			logrus.Debugf("external '%s' matches prefix, adding it to the download list", v.Name)
+			pkgs = append(pkgs, v)
+		} else {
+			logrus.Debugf("external '%s' does not match prefix, skipping it", v.Name)
 		}
 	}
 

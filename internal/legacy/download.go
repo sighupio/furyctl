@@ -95,8 +95,12 @@ func (d *Downloader) downloadProcess(wg *sync.WaitGroup, data Package, errChan c
 	logrus.Debugf("worker %d : received data %v", i, data)
 
 	if d.HTTPS {
+		repoPrefix := httpsRepoPrefix
+		if data.Kind == "external" {
+			repoPrefix = data.URL
+		}
 		pU = newPackageURL(
-			httpsRepoPrefix,
+			repoPrefix,
 			strings.Split(data.Name, "/"),
 			data.Kind,
 			data.Version,
@@ -163,8 +167,12 @@ func (d *Downloader) downloadProcess(wg *sync.WaitGroup, data Package, errChan c
 	}
 
 	if !d.HTTPS {
+		repoPrefix := sshRepoPrefix
+		if data.Kind == "external" {
+			repoPrefix = data.URL
+		}
 		pU = newPackageURL(
-			sshRepoPrefix,
+			repoPrefix,
 			strings.Split(data.Name, "/"),
 			data.Kind,
 			data.Version,
