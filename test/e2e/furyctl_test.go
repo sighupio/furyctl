@@ -381,7 +381,7 @@ var (
 				out, err := FuryctlDumpTemplate(bp, false)
 
 				Expect(err).To(HaveOccurred())
-				Expect(out).To(ContainSubstring("unsupported kind"))
+				Expect(out).To(ContainSubstring("kind is not valid"))
 			})
 
 			It("fails if no furyctl.yaml file is found", func() {
