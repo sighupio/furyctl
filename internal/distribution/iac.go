@@ -141,6 +141,7 @@ func (m *IACBuilder) Build() error {
 
 	if !m.noOverwrite {
 		logrus.Debugf("removing target directory %s", m.outDir)
+
 		if err = os.RemoveAll(m.outDir); err != nil {
 			return fmt.Errorf("error removing target directory: %w", err)
 		}
