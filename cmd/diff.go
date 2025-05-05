@@ -186,20 +186,12 @@ func NewDiffCmd() *cobra.Command {
 		"phase",
 		"p",
 		"",
-		"Limit the execution to a specific phase. Options are: "+strings.Join([]string{
-			cluster.OperationPhaseInfrastructure,
-			cluster.OperationPhaseKubernetes,
-			cluster.OperationPhaseDistribution,
-		}, ", "),
+		"Limit the execution to a specific phase. Options are: "+strings.Join(cluster.GetMainPhases(), ", "),
 	)
 
 	// Add completion for the phase flag.
 	if err := diffCmd.RegisterFlagCompletionFunc("phase", func(_ *cobra.Command, _ []string, _ string) ([]string, cobra.ShellCompDirective) {
-		return []string{
-			cluster.OperationPhaseInfrastructure,
-			cluster.OperationPhaseKubernetes,
-			cluster.OperationPhaseDistribution,
-		}, cobra.ShellCompDirectiveDefault
+		return cluster.GetMainPhases(), cobra.ShellCompDirectiveDefault
 	}); err != nil {
 		logrus.Fatalf("error while registering flag completion: %v", err)
 	}
