@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/r3labs/diff/v3"
 	"github.com/sirupsen/logrus"
@@ -185,8 +186,23 @@ func NewDiffCmd() *cobra.Command {
 		"phase",
 		"p",
 		"",
-		"Limit the execution to a specific phase. Options are: infrastructure, kubernetes, distribution",
+		"Limit the execution to a specific phase. Options are: "+strings.Join([]string{
+			cluster.OperationPhaseInfrastructure,
+			cluster.OperationPhaseKubernetes,
+			cluster.OperationPhaseDistribution,
+		}, ", "),
 	)
+
+	// Add completion for the phase flag.
+	if err := diffCmd.RegisterFlagCompletionFunc("phase", func(_ *cobra.Command, _ []string, _ string) ([]string, cobra.ShellCompDirective) {
+		return []string{
+			cluster.OperationPhaseInfrastructure,
+			cluster.OperationPhaseKubernetes,
+			cluster.OperationPhaseDistribution,
+		}, cobra.ShellCompDirectiveDefault
+	}); err != nil {
+		logrus.Fatalf("error while registering flag completion: %v", err)
+	}
 
 	diffCmd.Flags().StringP(
 		"distro-location",

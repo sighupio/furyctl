@@ -6,6 +6,7 @@ package distribution
 import (
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/Al-Pragliola/go-version"
 
@@ -24,6 +25,28 @@ const (
 type VersionRange struct {
 	Min string
 	Max string
+}
+
+// GetConfigKinds returns the list of supported configuration kinds.
+func GetConfigKinds() []string {
+	// We should get this list from the supported APIs instead of hardcoding it,
+	// but AFAIK we don't have a way to do that yet.
+	return []string{
+		EKSClusterKind,
+		KFDDistributionKind,
+		OnPremisesKind,
+	}
+}
+
+// ValidateConfigKind checks if the given kind is supported and returns the normalised value for the Kind and an error.
+func ValidateConfigKind(kind string) (string, error) {
+	for _, k := range GetConfigKinds() {
+		if strings.EqualFold(k, kind) {
+			return k, nil
+		}
+	}
+
+	return "", fmt.Errorf("\"%s\" %w", kind, ErrUnsupportedKind)
 }
 
 // getEKSCompatibleRanges returns version ranges compatible with EKS.
@@ -68,7 +91,8 @@ func getOnPremisesCompatibleRanges() []VersionRange {
 	}
 }
 
-var ErrUnsupportedKind = errors.New("unsupported kind")
+var ErrUnsupportedKind = errors.New("kind is not valid. Accepted values are " +
+	strings.Join(GetConfigKinds(), ", "))
 
 type CompatibilityChecker interface {
 	IsCompatible() bool
@@ -96,7 +120,12 @@ func IsReleaseUnsupportedByFuryctl(ghRelease git.Release) bool {
 }
 
 func NewCompatibilityChecker(distributionVersion, kind string) (CompatibilityChecker, error) {
-	switch kind {
+	normalisedKind, err := ValidateConfigKind(kind)
+	if err != nil {
+		return nil, fmt.Errorf("\"%s\" %w", kind, ErrUnsupportedKind)
+	}
+
+	switch normalisedKind {
 	case EKSClusterKind:
 		return NewEKSClusterCheck(distributionVersion), nil
 

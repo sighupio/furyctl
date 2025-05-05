@@ -27,7 +27,7 @@ var ErrInvalidKind = errors.New("invalid value for kind flag")
 func NewSupportedVersionsCmd() *cobra.Command {
 	var cmdEvent analytics.Event
 
-	kinds := []string{distribution.EKSClusterKind, distribution.KFDDistributionKind, distribution.OnPremisesKind}
+	kinds := distribution.GetConfigKinds()
 
 	supportedVersionCmd := &cobra.Command{
 		Use:   "supported-versions",
@@ -58,20 +58,19 @@ func NewSupportedVersionsCmd() *cobra.Command {
 			kindsToPrint := kinds
 			msg := "list of currently supported SD versions and their compatibility with this version of furyctl for "
 
+			// Check if the kind flag is set, if it is not set we will print all kinds.
 			if cmd.Flags().Changed("kind") {
 				kind := viper.GetString("kind")
-				validKind, err := validateKind(kind, kinds)
+				validKind, err := distribution.ValidateConfigKind(kind)
 				if err != nil {
 					cmdEvent.AddErrorMessage(err)
 					tracker.Track(cmdEvent)
 
-					return err
+					return fmt.Errorf("error while validating kind: %w", err)
 				}
 
-				if validKind != "" {
-					kindsToPrint = []string{validKind}
-					msg += validKind + "\n"
-				}
+				kindsToPrint = []string{validKind}
+				msg += validKind + "\n"
 			} else {
 				msg += "each kind\n"
 			}
@@ -91,23 +90,13 @@ func NewSupportedVersionsCmd() *cobra.Command {
 		"Show supported SD versions for the kind of cluster specified. Valid values: "+strings.Join(kinds, ", "),
 	)
 
+	if err := supportedVersionCmd.RegisterFlagCompletionFunc("kind", func(_ *cobra.Command, _ []string, _ string) ([]string, cobra.ShellCompDirective) {
+		return distribution.GetConfigKinds(), cobra.ShellCompDirectiveDefault
+	}); err != nil {
+		logrus.Fatalf("error while registering flag completion: %v", err)
+	}
+
 	return supportedVersionCmd
-}
-
-func validateKind(kind string, validKinds []string) (string, error) {
-	if kind == "" {
-		return "", fmt.Errorf("%w: empty value not allowed", ErrInvalidKind)
-	}
-
-	kindLower := strings.ToLower(kind)
-	for _, validKind := range validKinds {
-		if strings.ToLower(validKind) == kindLower {
-			return validKind, nil
-		}
-	}
-
-	return "", fmt.Errorf("%w: %s. Valid values are: %s",
-		ErrInvalidKind, kind, strings.Join(validKinds, ", "))
 }
 
 func FormatSupportedVersions(releases []distribution.KFDRelease, kinds []string) string {

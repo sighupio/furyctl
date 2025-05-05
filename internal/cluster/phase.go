@@ -50,55 +50,67 @@ var (
 		"unsupported operation phase, options are: pre-infrastructure, infrastructure, post-infrastructure, " +
 			"pre-kubernetes, kubernetes, post-kubernetes, pre-distribution, distribution, post-distribution, plugins",
 	)
-	ErrChangesToOtherPhases = errors.New("changes to other phases detected")
+	ErrChangesToOtherPhases = errors.New("changes to other phases detected. When using the --phase flag, changes " +
+		"only to the section corresponding to the selected phase are accepted. ",
+	)
 )
 
 func CheckPhase(phase string) error {
-	switch phase {
-	case OperationPhasePreFlight,
+	phases := slices.Concat(
+		GetMainPhases(),
+		[]string{
+			OperationPhasePreFlight,
+			OperationPhaseAll,
+		})
+	if slices.Contains(phases, phase) {
+		return nil
+	}
+
+	return ErrUnsupportedPhase
+}
+
+// GetMainPhases returns all the main phases that can be used in the operation phase.
+func GetMainPhases() []string {
+	return []string{
 		OperationPhaseInfrastructure,
 		OperationPhaseKubernetes,
 		OperationPhaseDistribution,
 		OperationPhasePlugins,
-		OperationPhaseAll:
-		return nil
-
-	default:
-		return ErrUnsupportedPhase
 	}
 }
 
-func ValidateOperationPhase(phase string) error {
-	err := CheckPhase(phase)
-	if err == nil {
-		return nil
-	}
-
-	switch phase {
-	case OperationSubPhasePreInfrastructure,
+// GetOperationPhases returns all the sub-phases that can be used in the operation phase.
+func GetOperationPhases() []string {
+	return []string{
+		OperationSubPhasePreInfrastructure,
 		OperationSubPhasePostInfrastructure,
 		OperationSubPhasePreKubernetes,
 		OperationSubPhasePostKubernetes,
 		OperationSubPhasePreDistribution,
-		OperationSubPhasePostDistribution:
-		return nil
-
-	default:
-		return ErrUnsupportedOperationPhase
+		OperationSubPhasePostDistribution,
 	}
 }
 
-func ValidateMainPhases(phase string) error {
-	switch phase {
-	case OperationPhaseInfrastructure,
-		OperationPhaseKubernetes,
-		OperationPhaseDistribution,
-		OperationPhasePlugins:
+func ValidateOperationPhase(phase string) error {
+	// Check if the phase is a valid main or additional phase.
+	if err := CheckPhase(phase); err == nil {
 		return nil
-
-	default:
-		return ErrUnsupportedPhase
 	}
+
+	// Check if the phase is a valid sub-phase.
+	if slices.Contains(GetOperationPhases(), phase) {
+		return nil
+	}
+
+	return ErrUnsupportedOperationPhase
+}
+
+func ValidateMainPhases(phase string) error {
+	if slices.Contains(GetMainPhases(), phase) {
+		return nil
+	}
+
+	return ErrUnsupportedPhase
 }
 
 func GetPhasesOrder() []string {
