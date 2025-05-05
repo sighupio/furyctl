@@ -28,7 +28,7 @@ import (
 
 func TestE2e(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Furyctl E2e Suite")
+	RunSpecs(t, "furyctl E2E Suite")
 }
 
 const (
@@ -369,13 +369,11 @@ var (
 				bp := filepath.Join(basepath, folder)
 				tp := filepath.Join(bp, "distribution")
 				RemoveAll(tp)
-
 				return bp
 			}
 
 			It("fails if no distribution yaml is found", func() {
 				bp := Setup("no-distribution-yaml")
-
 				out, err := FuryctlDumpTemplate(bp, false)
 
 				Expect(err).To(HaveOccurred())
@@ -442,7 +440,6 @@ var (
 
 			It("succeeds when given a complex template", func() {
 				bp := Setup("complex")
-
 				_, err := FuryctlDumpTemplate(bp, false)
 
 				Expect(err).To(Not(HaveOccurred()))

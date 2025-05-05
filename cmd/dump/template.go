@@ -34,7 +34,6 @@ type TemplateCmdFlags struct {
 	SkipValidation        bool
 	GitProtocol           git.Protocol
 	Outdir                string
-	Workdir               string
 	FuryctlPath           string
 	DistroLocation        string
 	DistroPatchesLocation string
@@ -83,18 +82,17 @@ The command will dump into a 'distribution' folder in the working diretory all t
 
 			outDir := flags.Outdir
 
-			// Get home dir.
-			logrus.Debug("Getting Home Directory Path...")
-
-			homeDir, err := os.UserHomeDir()
-			if err != nil {
-				cmdEvent.AddErrorMessage(err)
-				tracker.Track(cmdEvent)
-
-				return fmt.Errorf("error while getting user home directory: %w", err)
-			}
-
 			if outDir == "" {
+				// Get home dir and use that as outdir if it's not set.
+				logrus.Debug("Getting Home Directory Path...")
+
+				homeDir, err := os.UserHomeDir()
+				if err != nil {
+					cmdEvent.AddErrorMessage(err)
+					tracker.Track(cmdEvent)
+
+					return fmt.Errorf("error while getting user home directory: %w", err)
+				}
 				outDir = homeDir
 			}
 
@@ -162,6 +160,7 @@ The command will dump into a 'distribution' folder in the working diretory all t
 				return fmt.Errorf("%s - %w", absFuryctlPath, err)
 			}
 
+			// Note: this is already the right working directory because it is updated in the root command.
 			currentDir, err := os.Getwd()
 			if err != nil {
 				cmdEvent.AddErrorMessage(err)
@@ -170,14 +169,16 @@ The command will dump into a 'distribution' folder in the working diretory all t
 				return fmt.Errorf("error while getting current directory: %w", err)
 			}
 
-			dumpDir := flags.Workdir
-			if dumpDir == "" {
-				dumpDir = currentDir
+			dumpDir := filepath.Join(currentDir, "distribution")
+			absDumpDir, err := filepath.Abs(dumpDir)
+			if err != nil {
+				cmdEvent.AddErrorMessage(err)
+				tracker.Track(cmdEvent)
+
+				return fmt.Errorf("error while getting absolute path of dump directory: %w", err)
 			}
 
-			dumpDir = filepath.Join(dumpDir, "distribution")
-
-			logrus.Info("Generating distribution manifests...")
+			logrus.Info("Rendering distribution manifests...")
 
 			distroManBuilder, err := distribution.NewIACBuilder(
 				furyctlFile,
@@ -200,15 +201,15 @@ The command will dump into a 'distribution' folder in the working diretory all t
 				tracker.Track(cmdEvent)
 
 				if errors.Is(err, template.ErrTargetIsNotEmpty) {
-					return fmt.Errorf("%w: \"%s\"", ErrTargetIsNotEmpty, dumpDir)
+					return fmt.Errorf("%w: \"%s\"", ErrTargetIsNotEmpty, absDumpDir)
 				}
 
 				return fmt.Errorf("error while generating distribution manifests: %w", err)
 			}
 
-			logrus.Info("Distribution manifests generated successfully")
+			logrus.Info("Distribution manifests successfully dumped to ", absDumpDir)
 
-			cmdEvent.AddSuccessMessage("Distribution manifests generated successfully")
+			cmdEvent.AddSuccessMessage("Distribution manifests dumped successfully")
 			tracker.Track(cmdEvent)
 
 			return nil
@@ -224,7 +225,7 @@ The command will dump into a 'distribution' folder in the working diretory all t
 	templateCmd.Flags().Bool(
 		"no-overwrite",
 		true,
-		"Stop if target directory is not empty",
+		"Stop if target directory is not empty. WARNING: setting this to false will delete the folder and its content",
 	)
 
 	templateCmd.Flags().StringP(
@@ -273,7 +274,6 @@ func getDumpTemplateCmdFlags() (TemplateCmdFlags, error) {
 		NoOverwrite:           viper.GetBool("no-overwrite"),
 		SkipValidation:        viper.GetBool("skip-validation"),
 		Outdir:                viper.GetString("outdir"),
-		Workdir:               viper.GetString("workdir"),
 		DistroLocation:        viper.GetString("distro-location"),
 		FuryctlPath:           viper.GetString("config"),
 		GitProtocol:           typedGitProtocol,
