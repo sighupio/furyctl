@@ -34,6 +34,7 @@ type TemplateCmdFlags struct {
 	SkipValidation        bool
 	GitProtocol           git.Protocol
 	Outdir                string
+	Workdir               string
 	FuryctlPath           string
 	DistroLocation        string
 	DistroPatchesLocation string
@@ -41,7 +42,7 @@ type TemplateCmdFlags struct {
 
 var (
 	ErrParsingFlag      = errors.New("error while parsing flag")
-	ErrTargetIsNotEmpty = errors.New("output directory is not empty, set --no-overwrite=false to overwrite it")
+	ErrTargetIsNotEmpty = errors.New("directory is not empty, set --no-overwrite=false to overwrite it")
 )
 
 func NewTemplateCmd() *cobra.Command {
@@ -50,8 +51,8 @@ func NewTemplateCmd() *cobra.Command {
 	templateCmd := &cobra.Command{
 		Use:   "template",
 		Short: "Renders the distribution's code from template files parametrized with the configuration file",
-		Long: `Generates a folder with the Terraform and Kustomization code for deploying the SIGHUP Distribution into a cluster.
-The generated folder will be created starting from a provided templates folder and the parameters set in a configuration file that is merged with default values.`,
+		Long: `Generates a folder with the parametrized version of the Terraform and Kustomization code for deploying the SIGHUP Distribution into a cluster.
+The command will dump into a 'distribution' folder in the working diretory all the rendered files using the parameters set in the configuration file.`,
 		SilenceUsage:  true,
 		SilenceErrors: true,
 		PreRun: func(cmd *cobra.Command, _ []string) {
@@ -161,8 +162,6 @@ The generated folder will be created starting from a provided templates folder a
 				return fmt.Errorf("%s - %w", absFuryctlPath, err)
 			}
 
-			outDir = flags.Outdir
-
 			currentDir, err := os.Getwd()
 			if err != nil {
 				cmdEvent.AddErrorMessage(err)
@@ -171,11 +170,12 @@ The generated folder will be created starting from a provided templates folder a
 				return fmt.Errorf("error while getting current directory: %w", err)
 			}
 
-			if outDir == "" {
-				outDir = currentDir
+			dumpDir := flags.Workdir
+			if dumpDir == "" {
+				dumpDir = currentDir
 			}
 
-			outDir = filepath.Join(outDir, "distribution")
+			dumpDir = filepath.Join(dumpDir, "distribution")
 
 			logrus.Info("Generating distribution manifests...")
 
@@ -183,7 +183,7 @@ The generated folder will be created starting from a provided templates folder a
 				furyctlFile,
 				res.RepoPath,
 				res.MinimalConf.Kind,
-				outDir,
+				dumpDir,
 				absFuryctlPath,
 				flags.NoOverwrite,
 				flags.DryRun,
@@ -200,7 +200,7 @@ The generated folder will be created starting from a provided templates folder a
 				tracker.Track(cmdEvent)
 
 				if errors.Is(err, template.ErrTargetIsNotEmpty) {
-					return ErrTargetIsNotEmpty
+					return fmt.Errorf("%w: \"%s\"", ErrTargetIsNotEmpty, dumpDir)
 				}
 
 				return fmt.Errorf("error while generating distribution manifests: %w", err)
@@ -231,7 +231,7 @@ The generated folder will be created starting from a provided templates folder a
 		"distro-location",
 		"",
 		"",
-		"Location where to download schemas, defaults and the distribution manifest. "+
+		"Location where to download schemas, defaults and the distribution manifest from. "+
 			"It can either be a local path(eg: /path/to/distribution) or "+
 			"a remote URL(eg: git::git@github.com:sighupio/distribution?ref=BRANCH_NAME&depth=1). "+
 			"Any format supported by hashicorp/go-getter can be used.",
@@ -273,6 +273,7 @@ func getDumpTemplateCmdFlags() (TemplateCmdFlags, error) {
 		NoOverwrite:           viper.GetBool("no-overwrite"),
 		SkipValidation:        viper.GetBool("skip-validation"),
 		Outdir:                viper.GetString("outdir"),
+		Workdir:               viper.GetString("workdir"),
 		DistroLocation:        viper.GetString("distro-location"),
 		FuryctlPath:           viper.GetString("config"),
 		GitProtocol:           typedGitProtocol,
