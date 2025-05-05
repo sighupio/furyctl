@@ -355,7 +355,6 @@ var (
 					"--debug",
 					"--workdir", workdir,
 					"--distro-location", ".",
-					"--outdir", "target",
 					"--disable-analytics",
 					"--log", "stdout",
 					"--skip-validation",
@@ -368,8 +367,7 @@ var (
 			}
 			Setup := func(folder string) string {
 				bp := filepath.Join(basepath, folder)
-				tp := filepath.Join(bp, "target")
-
+				tp := filepath.Join(bp, "distribution")
 				RemoveAll(tp)
 
 				return bp
@@ -408,7 +406,7 @@ var (
 				_, err := FuryctlDumpTemplate(bp, false)
 
 				Expect(err).To(HaveOccurred())
-				Expect(bp + "/target/distribution/file.txt").To(Not(BeAnExistingFile()))
+				Expect(bp + "/distribution/file.txt").To(Not(BeAnExistingFile()))
 			})
 
 			It("succeeds when given a simple template on dry-run", func() {
@@ -417,7 +415,7 @@ var (
 				_, err := FuryctlDumpTemplate(bp, true)
 
 				Expect(err).To(Not(HaveOccurred()))
-				Expect(FileContent(bp + "/target/distribution/file.txt")).To(ContainSubstring("testValue"))
+				Expect(FileContent(bp + "/distribution/file.txt")).To(ContainSubstring("testValue"))
 			})
 
 			It("succeeds when given a simple template", func() {
@@ -426,7 +424,7 @@ var (
 				_, err := FuryctlDumpTemplate(bp, false)
 
 				Expect(err).To(Not(HaveOccurred()))
-				Expect(FileContent(bp + "/target/distribution/file.txt")).To(ContainSubstring("testValue"))
+				Expect(FileContent(bp + "/distribution/file.txt")).To(ContainSubstring("testValue"))
 			})
 
 			It("succeeds when given a complex template on dry-run", func() {
@@ -435,10 +433,10 @@ var (
 				_, err := FuryctlDumpTemplate(bp, true)
 
 				Expect(err).To(Not(HaveOccurred()))
-				Expect(bp + "/target/distribution/config/example.yaml").To(BeAnExistingFile())
-				Expect(bp + "/target/distribution/kustomization.yaml").To(BeAnExistingFile())
-				Expect(FileContent(bp + "/target/distribution/config/example.yaml")).To(ContainSubstring("configdata: example"))
-				Expect(FileContent(bp + "/target/distribution/kustomization.yaml")).
+				Expect(bp + "/distribution/config/example.yaml").To(BeAnExistingFile())
+				Expect(bp + "/distribution/kustomization.yaml").To(BeAnExistingFile())
+				Expect(FileContent(bp + "/distribution/config/example.yaml")).To(ContainSubstring("configdata: example"))
+				Expect(FileContent(bp + "/distribution/kustomization.yaml")).
 					To(Equal(FileContent(bp + "/data/expected-kustomization.yaml")))
 			})
 
@@ -448,10 +446,10 @@ var (
 				_, err := FuryctlDumpTemplate(bp, false)
 
 				Expect(err).To(Not(HaveOccurred()))
-				Expect(bp + "/target/distribution/config/example.yaml").To(BeAnExistingFile())
-				Expect(bp + "/target/distribution/kustomization.yaml").To(BeAnExistingFile())
-				Expect(FileContent(bp + "/target/distribution/config/example.yaml")).To(ContainSubstring("configdata: example"))
-				Expect(FileContent(bp + "/target/distribution/kustomization.yaml")).
+				Expect(bp + "/distribution/config/example.yaml").To(BeAnExistingFile())
+				Expect(bp + "/distribution/kustomization.yaml").To(BeAnExistingFile())
+				Expect(FileContent(bp + "/distribution/config/example.yaml")).To(ContainSubstring("configdata: example"))
+				Expect(FileContent(bp + "/distribution/kustomization.yaml")).
 					To(Equal(FileContent(bp + "/data/expected-kustomization.yaml")))
 			})
 		})
