@@ -300,7 +300,7 @@ func NewUpgradePathsCmd() *cobra.Command {
 	)
 
 	if err := upgradePathsCmd.RegisterFlagCompletionFunc("kind", func(_ *cobra.Command, _ []string, _ string) ([]string, cobra.ShellCompDirective) {
-		return distribution.GetConfigKinds(), cobra.ShellCompDirectiveDefault
+		return distribution.ConfigKinds(), cobra.ShellCompDirectiveDefault
 	}); err != nil {
 		logrus.Fatalf("error while registering flag completion: %v", err)
 	}

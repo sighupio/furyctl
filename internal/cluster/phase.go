@@ -57,7 +57,7 @@ var (
 
 func CheckPhase(phase string) error {
 	phases := slices.Concat(
-		GetMainPhases(),
+		MainPhases(),
 		[]string{
 			OperationPhasePreFlight,
 			OperationPhaseAll,
@@ -69,8 +69,8 @@ func CheckPhase(phase string) error {
 	return ErrUnsupportedPhase
 }
 
-// GetMainPhases returns all the main phases that can be used in the operation phase.
-func GetMainPhases() []string {
+// MainPhases returns all the main phases that can be used in the operation phase.
+func MainPhases() []string {
 	return []string{
 		OperationPhaseInfrastructure,
 		OperationPhaseKubernetes,
@@ -79,8 +79,8 @@ func GetMainPhases() []string {
 	}
 }
 
-// GetOperationPhases returns all the sub-phases that can be used in the operation phase.
-func GetOperationPhases() []string {
+// OperationPhases returns all the sub-phases that can be used in the operation phase.
+func OperationPhases() []string {
 	return []string{
 		OperationSubPhasePreInfrastructure,
 		OperationSubPhasePostInfrastructure,
@@ -98,7 +98,7 @@ func ValidateOperationPhase(phase string) error {
 	}
 
 	// Check if the phase is a valid sub-phase.
-	if slices.Contains(GetOperationPhases(), phase) {
+	if slices.Contains(OperationPhases(), phase) {
 		return nil
 	}
 
@@ -106,7 +106,7 @@ func ValidateOperationPhase(phase string) error {
 }
 
 func ValidateMainPhases(phase string) error {
-	if slices.Contains(GetMainPhases(), phase) {
+	if slices.Contains(MainPhases(), phase) {
 		return nil
 	}
 

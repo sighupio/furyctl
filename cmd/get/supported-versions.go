@@ -27,7 +27,7 @@ var ErrInvalidKind = errors.New("invalid value for kind flag")
 func NewSupportedVersionsCmd() *cobra.Command {
 	var cmdEvent analytics.Event
 
-	kinds := distribution.GetConfigKinds()
+	kinds := distribution.ConfigKinds()
 
 	supportedVersionCmd := &cobra.Command{
 		Use:   "supported-versions",
@@ -91,7 +91,7 @@ func NewSupportedVersionsCmd() *cobra.Command {
 	)
 
 	if err := supportedVersionCmd.RegisterFlagCompletionFunc("kind", func(_ *cobra.Command, _ []string, _ string) ([]string, cobra.ShellCompDirective) {
-		return distribution.GetConfigKinds(), cobra.ShellCompDirectiveDefault
+		return distribution.ConfigKinds(), cobra.ShellCompDirectiveDefault
 	}); err != nil {
 		logrus.Fatalf("error while registering flag completion: %v", err)
 	}

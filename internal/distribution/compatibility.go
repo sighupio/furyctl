@@ -27,8 +27,8 @@ type VersionRange struct {
 	Max string
 }
 
-// GetConfigKinds returns the list of supported configuration kinds.
-func GetConfigKinds() []string {
+// ConfigKinds returns the list of supported configuration kinds.
+func ConfigKinds() []string {
 	// We should get this list from the supported APIs instead of hardcoding it,
 	// but AFAIK we don't have a way to do that yet.
 	return []string{
@@ -40,7 +40,7 @@ func GetConfigKinds() []string {
 
 // ValidateConfigKind checks if the given kind is supported and returns the normalised value for the Kind and an error.
 func ValidateConfigKind(kind string) (string, error) {
-	for _, k := range GetConfigKinds() {
+	for _, k := range ConfigKinds() {
 		if strings.EqualFold(k, kind) {
 			return k, nil
 		}
@@ -92,7 +92,7 @@ func getOnPremisesCompatibleRanges() []VersionRange {
 }
 
 var ErrUnsupportedKind = errors.New("kind is not valid. Accepted values are " +
-	strings.Join(GetConfigKinds(), ", "))
+	strings.Join(ConfigKinds(), ", "))
 
 type CompatibilityChecker interface {
 	IsCompatible() bool

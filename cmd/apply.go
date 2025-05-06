@@ -428,12 +428,12 @@ func setupCreateClusterCmdFlags(cmd *cobra.Command) {
 		"phase",
 		"p",
 		"",
-		"Limit the execution to a specific phase. Options are: "+strings.Join(cluster.GetMainPhases(), ", "),
+		"Limit the execution to a specific phase. Options are: "+strings.Join(cluster.MainPhases(), ", "),
 	)
 
 	// Tab-completion for the "phase" flag.
 	if err := cmd.RegisterFlagCompletionFunc("phase", func(_ *cobra.Command, _ []string, _ string) ([]string, cobra.ShellCompDirective) {
-		return cluster.GetMainPhases(), cobra.ShellCompDirectiveDefault
+		return cluster.MainPhases(), cobra.ShellCompDirectiveDefault
 	}); err != nil {
 		logrus.Fatalf("error while registering flag completion: %v", err)
 	}
@@ -442,11 +442,11 @@ func setupCreateClusterCmdFlags(cmd *cobra.Command) {
 		"start-from",
 		"",
 		"Start the execution from a specific phase and continue with the following phases. "+
-			"Options are: "+strings.Join(slices.Concat(cluster.GetMainPhases(), cluster.GetOperationPhases()), ", "))
+			"Options are: "+strings.Join(slices.Concat(cluster.MainPhases(), cluster.OperationPhases()), ", "))
 
 	// Tab-completion for the "start-from" flag.
 	if err := cmd.RegisterFlagCompletionFunc("start-from", func(_ *cobra.Command, _ []string, _ string) ([]string, cobra.ShellCompDirective) {
-		return slices.Concat(cluster.GetMainPhases(), cluster.GetOperationPhases()), cobra.ShellCompDirectiveDefault
+		return slices.Concat(cluster.MainPhases(), cluster.OperationPhases()), cobra.ShellCompDirectiveDefault
 	}); err != nil {
 		logrus.Fatalf("error while registering flag completion: %v", err)
 	}
@@ -536,13 +536,13 @@ func setupCreateClusterCmdFlags(cmd *cobra.Command) {
 	cmd.Flags().StringSlice(
 		"post-apply-phases",
 		[]string{},
-		"Comma separated list of phases to run after the apply command. Options are: infrastructure, kubernetes, distribution, plugins",
+		"Comma separated list of phases to run after the apply command. Options are: " + strings.Join(cluster.MainPhases(), ", "),
 	)
 
 	// Tab-autocomplete for post-apply-phases.
 	if err := cmd.RegisterFlagCompletionFunc("post-apply-phases", func(_ *cobra.Command, _ []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 		// The post-apply-phases flag accepts a comma separated list of phases, so we need to take the passed list and add a new valid option at the end of it.
-		phases := cluster.GetMainPhases()
+		phases := cluster.MainPhases()
 		toCompleteList := strings.Split(toComplete, ",")
 		toCompleteLast := toCompleteList[len(toCompleteList)-1]
 		completion := []string{}
