@@ -536,7 +536,7 @@ func setupCreateClusterCmdFlags(cmd *cobra.Command) {
 	cmd.Flags().StringSlice(
 		"post-apply-phases",
 		[]string{},
-		"Comma separated list of phases to run after the apply command. Options are: " + strings.Join(cluster.MainPhases(), ", "),
+		"Comma separated list of phases to run after the apply command. Options are: "+strings.Join(cluster.MainPhases(), ", "),
 	)
 
 	// Tab-autocomplete for post-apply-phases.
