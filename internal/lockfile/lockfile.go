@@ -9,10 +9,11 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strconv"
 )
 
 var ErrLockFileExists = errors.New(
-	"lock file exists. This usually means that there is another instance of furyctl running",
+	"lock file exists. Last execution finished abnormally or there may be another instance of furyctl running with PID",
 )
 
 type LockFile struct {
@@ -28,21 +29,21 @@ func NewLockFile(clusterName string) *LockFile {
 }
 
 func (l *LockFile) Verify() error {
-	_, err := os.Stat(l.Path)
+	pid, err := os.ReadFile(l.Path)
 	if err == nil {
-		return ErrLockFileExists
+		return fmt.Errorf("%w %s", ErrLockFileExists, pid)
 	}
 
 	if !os.IsNotExist(err) {
-		return fmt.Errorf("error while checking lock file: %w", err)
+		return fmt.Errorf("error while checking lock file: \"%w\"", err)
 	}
 
 	return nil
 }
 
 func (l *LockFile) Create() error {
-	_, err := os.Create(l.Path)
-	if err != nil {
+	const perms = os.FileMode(0o666)
+	if err := os.WriteFile(l.Path, []byte(strconv.Itoa(os.Getpid())), perms); err != nil {
 		return fmt.Errorf("error while creating lock file: %w", err)
 	}
 
