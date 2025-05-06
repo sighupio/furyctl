@@ -147,7 +147,7 @@ func NewDumpCLIReferenceCmd() *cobra.Command {
 		},
 	}
 
-	dumpCLIReferenceCmd.Flags().Bool("no-overwrite", true, "Do not overwrite existing files. Will exit if the output folder already exists")
+	dumpCLIReferenceCmd.Flags().Bool("no-overwrite", true, "Do not overwrite existing files. Will exit if the output folder already exists. WARNING: setting this to false will delete the folder and its content.")
 	dumpCLIReferenceCmd.Flags().StringP("workdir", "w", "", "Working directory to use for the output folder. Default is the current working directory")
 
 	return dumpCLIReferenceCmd

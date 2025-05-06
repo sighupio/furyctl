@@ -350,6 +350,17 @@ func NewClusterCmd() *cobra.Command {
 		"Limit execution to the specified phase. Options are: infrastructure, kubernetes, distribution",
 	)
 
+	if err := clusterCmd.RegisterFlagCompletionFunc("phase", func(_ *cobra.Command, _ []string, _ string) ([]string, cobra.ShellCompDirective) {
+		return []string{
+				cluster.OperationPhaseInfrastructure,
+				cluster.OperationPhaseKubernetes,
+				cluster.OperationPhaseDistribution,
+			},
+			cobra.ShellCompDirectiveDefault
+	}); err != nil {
+		logrus.Fatalf("error while registering flag completion: %v", err)
+	}
+
 	clusterCmd.Flags().Bool(
 		"dry-run",
 		false,

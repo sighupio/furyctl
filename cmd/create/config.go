@@ -18,6 +18,7 @@ import (
 	"github.com/sighupio/furyctl/internal/analytics"
 	"github.com/sighupio/furyctl/internal/app"
 	"github.com/sighupio/furyctl/internal/config"
+	"github.com/sighupio/furyctl/internal/distribution"
 	"github.com/sighupio/furyctl/internal/git"
 	"github.com/sighupio/furyctl/internal/semver"
 	cobrax "github.com/sighupio/furyctl/internal/x/cobra"
@@ -70,8 +71,11 @@ func NewConfigCmd() *cobra.Command {
 
 			kind := viper.GetString("kind")
 
-			if kind == "" {
-				return fmt.Errorf("%w: kind", ErrMandatoryFlag)
+			if _, err := distribution.NewCompatibilityChecker(version, kind); err != nil {
+				cmdEvent.AddErrorMessage(err)
+				tracker.Track(cmdEvent)
+
+				return fmt.Errorf("error while checking compatibility: %w", err)
 			}
 
 			gitProtocol := viper.GetString("git-protocol")
@@ -240,6 +244,12 @@ func NewConfigCmd() *cobra.Command {
 		"",
 		"Type of cluster to create (eg: EKSCluster, KFDDistribution, OnPremises)",
 	)
+
+	if err := configCmd.RegisterFlagCompletionFunc("kind", func(_ *cobra.Command, _ []string, _ string) ([]string, cobra.ShellCompDirective) {
+		return distribution.ConfigKinds(), cobra.ShellCompDirectiveDefault
+	}); err != nil {
+		logrus.Fatalf("error while registering flag completion: %v", err)
+	}
 
 	configCmd.Flags().StringP(
 		"api-version",

@@ -21,6 +21,7 @@ import (
 	"github.com/sighupio/furyctl/internal/analytics"
 	"github.com/sighupio/furyctl/internal/app"
 	"github.com/sighupio/furyctl/internal/config"
+	"github.com/sighupio/furyctl/internal/distribution"
 	"github.com/sighupio/furyctl/internal/git"
 	"github.com/sighupio/furyctl/internal/semver"
 	cobrax "github.com/sighupio/furyctl/internal/x/cobra"
@@ -205,6 +206,13 @@ func NewUpgradePathsCmd() *cobra.Command {
 			// We don't need the starting v in the version. Drop it if the user passes it.
 			fromVersion, _ = strings.CutPrefix(fromVersion, "v")
 
+			// Validate the kind. We don't need the normalised kind because we are checking against the folder names.
+			if _, err := distribution.ValidateConfigKind(kind); err != nil {
+				cmdEvent.AddErrorMessage(err)
+				tracker.Track(cmdEvent)
+
+				return fmt.Errorf("error while validating kind: %w", err)
+			}
 			globPattern := fmt.Sprintf("%s/%s/%s-*", "upgrades", strings.ToLower(kind), fromVersion)
 			availablePaths, err := fs.Glob(configs.Tpl, globPattern)
 			logrus.Debug("found folders: ", availablePaths)
@@ -290,6 +298,12 @@ func NewUpgradePathsCmd() *cobra.Command {
 		"",
 		"Show upgrade paths for the kind of cluster specified (eg: EKSCluster, KFDDistribution, OnPremises) instead of the kind defined in the configuration file.",
 	)
+
+	if err := upgradePathsCmd.RegisterFlagCompletionFunc("kind", func(_ *cobra.Command, _ []string, _ string) ([]string, cobra.ShellCompDirective) {
+		return distribution.ConfigKinds(), cobra.ShellCompDirectiveDefault
+	}); err != nil {
+		logrus.Fatalf("error while registering flag completion: %v", err)
+	}
 
 	return upgradePathsCmd
 }

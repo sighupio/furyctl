@@ -93,8 +93,8 @@ func (d *Downloader) Download(
 	}
 
 	if !compatChecker.IsCompatible() {
-		logrus.Warnf("The specified KFD version %s is not supported by this version of furyctl, "+
-			"please upgrade furyctl to the latest version or use a supported KFD version. "+
+		logrus.Warnf("The specified SD version %s is not supported by this version of furyctl, "+
+			"please upgrade furyctl to the latest version or use a supported SD version. "+
 			"Run `furyctl get supported-versions` for a compatibility matrix.",
 			minimalConf.Spec.DistributionVersion)
 	}

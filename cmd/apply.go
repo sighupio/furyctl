@@ -10,6 +10,8 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"slices"
+	"strings"
 	"syscall"
 
 	"github.com/sirupsen/logrus"
@@ -426,15 +428,28 @@ func setupCreateClusterCmdFlags(cmd *cobra.Command) {
 		"phase",
 		"p",
 		"",
-		"Limit the execution to a specific phase. Options are: infrastructure, kubernetes, distribution, plugins",
+		"Limit the execution to a specific phase. Options are: "+strings.Join(cluster.MainPhases(), ", "),
 	)
+
+	// Tab-completion for the "phase" flag.
+	if err := cmd.RegisterFlagCompletionFunc("phase", func(_ *cobra.Command, _ []string, _ string) ([]string, cobra.ShellCompDirective) {
+		return cluster.MainPhases(), cobra.ShellCompDirectiveDefault
+	}); err != nil {
+		logrus.Fatalf("error while registering flag completion: %v", err)
+	}
 
 	cmd.Flags().String(
 		"start-from",
 		"",
-		"Start the execution from a specific phase and continue with the following phases. Options are: pre-infrastructure, infrastructure, post-infrastructure, pre-kubernetes, "+
-			"kubernetes, post-kubernetes, pre-distribution, distribution, post-distribution, plugins",
-	)
+		"Start the execution from a specific phase and continue with the following phases. "+
+			"Options are: "+strings.Join(slices.Concat(cluster.MainPhases(), cluster.OperationPhases()), ", "))
+
+	// Tab-completion for the "start-from" flag.
+	if err := cmd.RegisterFlagCompletionFunc("start-from", func(_ *cobra.Command, _ []string, _ string) ([]string, cobra.ShellCompDirective) {
+		return slices.Concat(cluster.MainPhases(), cluster.OperationPhases()), cobra.ShellCompDirectiveDefault
+	}); err != nil {
+		logrus.Fatalf("error while registering flag completion: %v", err)
+	}
 
 	cmd.Flags().StringP(
 		"distro-location",
@@ -507,11 +522,42 @@ func setupCreateClusterCmdFlags(cmd *cobra.Command) {
 		"WARNING: furyctl won't ask for confirmation and will proceed applying upgrades and migrations. Options are: all, upgrades, migrations, pods-running-check",
 	)
 
+	if err := cmd.RegisterFlagCompletionFunc("force", func(_ *cobra.Command, _ []string, _ string) ([]string, cobra.ShellCompDirective) {
+		return []string{
+			cluster.ForceFeatureAll,
+			cluster.ForceFeatureMigrations,
+			cluster.ForceFeaturePodsRunningCheck,
+			cluster.ForceFeatureUpgrades,
+		}, cobra.ShellCompDirectiveDefault
+	}); err != nil {
+		logrus.Fatalf("error while registering flag completion: %v", err)
+	}
+
 	cmd.Flags().StringSlice(
 		"post-apply-phases",
 		[]string{},
-		"Phases to run after the apply command. Options are: infrastructure, kubernetes, distribution, plugins",
+		"Comma separated list of phases to run after the apply command. Options are: "+strings.Join(cluster.MainPhases(), ", "),
 	)
+
+	// Tab-autocomplete for post-apply-phases.
+	if err := cmd.RegisterFlagCompletionFunc("post-apply-phases", func(_ *cobra.Command, _ []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+		// The post-apply-phases flag accepts a comma separated list of phases, so we need to take the passed list and add a new valid option at the end of it.
+		phases := cluster.MainPhases()
+		toCompleteList := strings.Split(toComplete, ",")
+		toCompleteLast := toCompleteList[len(toCompleteList)-1]
+		completion := []string{}
+
+		for p := range phases {
+			if strings.HasPrefix(phases[p], toCompleteLast) {
+				toCompleteList[len(toCompleteList)-1] = phases[p]
+				completion = append(completion, strings.Join(toCompleteList, ","))
+			}
+		}
+
+		return completion, cobra.ShellCompDirectiveNoFileComp | cobra.ShellCompDirectiveNoSpace
+	}); err != nil {
+		logrus.Fatalf("error while registering flag completion: %v", err)
+	}
 
 	cmd.Flags().Int(
 		"timeout",
