@@ -51,7 +51,7 @@ func NewTemplateCmd() *cobra.Command {
 		Use:   "template",
 		Short: "Renders the distribution's code from template files parametrized with the configuration file",
 		Long: `Generates a folder with the parametrized version of the Terraform and Kustomization code for deploying the SIGHUP Distribution into a cluster.
-The command will dump into a 'distribution' folder in the working diretory all the rendered files using the parameters set in the configuration file.`,
+The command will dump into a 'distribution' folder in the working directory all the rendered files using the parameters set in the configuration file.`,
 		SilenceUsage:  true,
 		SilenceErrors: true,
 		PreRun: func(cmd *cobra.Command, _ []string) {
