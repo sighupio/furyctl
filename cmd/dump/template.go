@@ -41,7 +41,7 @@ type TemplateCmdFlags struct {
 
 var (
 	ErrParsingFlag      = errors.New("error while parsing flag")
-	ErrTargetIsNotEmpty = errors.New("output directory is not empty, set --no-overwrite=false to overwrite it")
+	ErrTargetIsNotEmpty = errors.New("directory is not empty, set --no-overwrite=false to overwrite it")
 )
 
 func NewTemplateCmd() *cobra.Command {
@@ -50,8 +50,8 @@ func NewTemplateCmd() *cobra.Command {
 	templateCmd := &cobra.Command{
 		Use:   "template",
 		Short: "Renders the distribution's code from template files parametrized with the configuration file",
-		Long: `Generates a folder with the Terraform and Kustomization code for deploying the SIGHUP Distribution into a cluster.
-The generated folder will be created starting from a provided templates folder and the parameters set in a configuration file that is merged with default values.`,
+		Long: `Generates a folder with the parametrized version of the Terraform and Kustomization code for deploying the SIGHUP Distribution into a cluster.
+The command will dump into a 'distribution' folder in the working directory all the rendered files using the parameters set in the configuration file.`,
 		SilenceUsage:  true,
 		SilenceErrors: true,
 		PreRun: func(cmd *cobra.Command, _ []string) {
@@ -82,18 +82,17 @@ The generated folder will be created starting from a provided templates folder a
 
 			outDir := flags.Outdir
 
-			// Get home dir.
-			logrus.Debug("Getting Home Directory Path...")
-
-			homeDir, err := os.UserHomeDir()
-			if err != nil {
-				cmdEvent.AddErrorMessage(err)
-				tracker.Track(cmdEvent)
-
-				return fmt.Errorf("error while getting user home directory: %w", err)
-			}
-
 			if outDir == "" {
+				// Get home dir and use that as outdir if it's not set.
+				logrus.Debug("Getting Home Directory Path...")
+
+				homeDir, err := os.UserHomeDir()
+				if err != nil {
+					cmdEvent.AddErrorMessage(err)
+					tracker.Track(cmdEvent)
+
+					return fmt.Errorf("error while getting user home directory: %w", err)
+				}
 				outDir = homeDir
 			}
 
@@ -161,8 +160,7 @@ The generated folder will be created starting from a provided templates folder a
 				return fmt.Errorf("%s - %w", absFuryctlPath, err)
 			}
 
-			outDir = flags.Outdir
-
+			// Note: this is already the right working directory because it is updated in the root command.
 			currentDir, err := os.Getwd()
 			if err != nil {
 				cmdEvent.AddErrorMessage(err)
@@ -171,19 +169,22 @@ The generated folder will be created starting from a provided templates folder a
 				return fmt.Errorf("error while getting current directory: %w", err)
 			}
 
-			if outDir == "" {
-				outDir = currentDir
+			dumpDir := filepath.Join(currentDir, "distribution")
+			absDumpDir, err := filepath.Abs(dumpDir)
+			if err != nil {
+				cmdEvent.AddErrorMessage(err)
+				tracker.Track(cmdEvent)
+
+				return fmt.Errorf("error while getting absolute path of dump directory: %w", err)
 			}
 
-			outDir = filepath.Join(outDir, "distribution")
-
-			logrus.Info("Generating distribution manifests...")
+			logrus.Info("Rendering distribution manifests...")
 
 			distroManBuilder, err := distribution.NewIACBuilder(
 				furyctlFile,
 				res.RepoPath,
 				res.MinimalConf.Kind,
-				outDir,
+				dumpDir,
 				absFuryctlPath,
 				flags.NoOverwrite,
 				flags.DryRun,
@@ -200,15 +201,15 @@ The generated folder will be created starting from a provided templates folder a
 				tracker.Track(cmdEvent)
 
 				if errors.Is(err, template.ErrTargetIsNotEmpty) {
-					return ErrTargetIsNotEmpty
+					return fmt.Errorf("%w: \"%s\"", ErrTargetIsNotEmpty, absDumpDir)
 				}
 
 				return fmt.Errorf("error while generating distribution manifests: %w", err)
 			}
 
-			logrus.Info("Distribution manifests generated successfully")
+			logrus.Info("Distribution manifests successfully dumped to ", absDumpDir)
 
-			cmdEvent.AddSuccessMessage("Distribution manifests generated successfully")
+			cmdEvent.AddSuccessMessage("Distribution manifests dumped successfully")
 			tracker.Track(cmdEvent)
 
 			return nil
@@ -224,14 +225,14 @@ The generated folder will be created starting from a provided templates folder a
 	templateCmd.Flags().Bool(
 		"no-overwrite",
 		true,
-		"Stop if target directory is not empty",
+		"Stop if target directory is not empty. WARNING: setting this to false will delete the folder and its content",
 	)
 
 	templateCmd.Flags().StringP(
 		"distro-location",
 		"",
 		"",
-		"Location where to download schemas, defaults and the distribution manifest. "+
+		"Location where to download schemas, defaults and the distribution manifest from. "+
 			"It can either be a local path(eg: /path/to/distribution) or "+
 			"a remote URL(eg: git::git@github.com:sighupio/distribution?ref=BRANCH_NAME&depth=1). "+
 			"Any format supported by hashicorp/go-getter can be used.",
