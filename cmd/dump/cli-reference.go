@@ -19,6 +19,7 @@ import (
 	"github.com/sighupio/furyctl/internal/analytics"
 	"github.com/sighupio/furyctl/internal/app"
 	cobrax "github.com/sighupio/furyctl/internal/x/cobra"
+	iox "github.com/sighupio/furyctl/internal/x/io"
 )
 
 type CliReferenceCmdFlags struct {
@@ -54,7 +55,6 @@ func NewDumpCLIReferenceCmd() *cobra.Command {
 
 			flags := getDumpCliReferenceCmdFlags()
 
-			const outputFolderPerms = 0o755
 			outputFolder := flags.Workdir
 
 			if len(args) > 1 {
@@ -69,7 +69,7 @@ func NewDumpCLIReferenceCmd() *cobra.Command {
 				}
 			}
 
-			if err := os.MkdirAll(outputFolder, outputFolderPerms); err != nil {
+			if err := os.MkdirAll(outputFolder, iox.FullPermAccess); err != nil {
 				return ErrOutputFolderExists
 			}
 			outputPath := filepath.Join(outputFolder, "index.md")
@@ -120,7 +120,7 @@ func NewDumpCLIReferenceCmd() *cobra.Command {
 			}
 			for _, command := range cmd.Root().Commands() {
 				outputPath := filepath.Join(outputFolder, command.Name())
-				if err := os.MkdirAll(outputPath, outputFolderPerms); err != nil {
+				if err := os.MkdirAll(outputPath, iox.FullPermAccess); err != nil {
 					return fmt.Errorf("failed to create output folder: %w", err)
 				}
 				err := genMarkdownTreeCustom(command, outputPath, dummyFilePrepender, linkHandler)
