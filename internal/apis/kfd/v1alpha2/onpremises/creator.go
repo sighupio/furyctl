@@ -337,6 +337,27 @@ func (c *ClusterCreator) Create(startFrom string, _, podRunningCheckTimeout int)
 		return fmt.Errorf("%w: %s", ErrUnsupportedPhase, c.phase)
 	}
 
+	if len(c.postApplyPhases) > 0 {
+		logrus.Info("Executing extra phases...")
+
+		upgradeState := &upgrade.State{
+			Phases: upgrade.Phases{
+				PreDistribution:  &upgrade.Phase{Status: upgrade.PhaseStatusPending},
+				Distribution:     &upgrade.Phase{Status: upgrade.PhaseStatusPending},
+				PostDistribution: &upgrade.Phase{Status: upgrade.PhaseStatusPending},
+			},
+		}
+		if err := c.extraPhases(
+			kubernetesPhase,
+			distributionPhase,
+			pluginsPhase,
+			upgr,
+			upgradeState,
+		); err != nil {
+			return fmt.Errorf("error while executing extra phases: %w", err)
+		}
+	}
+
 	if c.dryRun {
 		return nil
 	}
@@ -430,20 +451,6 @@ func (c *ClusterCreator) allPhases(
 	if distribution.HasFeature(c.kfdManifest, distribution.FeaturePlugins) {
 		if err := pluginsPhase.Exec(); err != nil {
 			return fmt.Errorf("error while executing plugins phase: %w", err)
-		}
-	}
-
-	if len(c.postApplyPhases) > 0 {
-		logrus.Info("Executing extra phases...")
-
-		if err := c.extraPhases(
-			kubernetesPhase,
-			distributionPhase,
-			pluginsPhase,
-			upgr,
-			upgradeState,
-		); err != nil {
-			return fmt.Errorf("error while executing extra phases: %w", err)
 		}
 	}
 
