@@ -10,6 +10,8 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+
+	iox "github.com/sighupio/furyctl/internal/x/io"
 )
 
 var ErrLockFileExists = errors.New(
@@ -42,8 +44,7 @@ func (l *LockFile) Verify() error {
 }
 
 func (l *LockFile) Create() error {
-	const perms = os.FileMode(0o666)
-	if err := os.WriteFile(l.Path, []byte(strconv.Itoa(os.Getpid())), perms); err != nil {
+	if err := os.WriteFile(l.Path, []byte(strconv.Itoa(os.Getpid())), iox.RWPermAccessPermissive); err != nil {
 		return fmt.Errorf("error while creating lock file: %w", err)
 	}
 
