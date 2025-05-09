@@ -110,6 +110,8 @@ steps:
       # Cleanup
       - rm go1.23.2.tar.gz
       - rm awscliv2.zip
+      # Check if the e2e left the directory dirty.
+      - "[[ -z $(git status -s) ]]"
     environment:
       CGO_ENABLED: 0
       GOCACHE: /drone/src/.go/cache
