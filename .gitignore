@@ -12,6 +12,7 @@ dist/
 .kubernetes
 .distribution
 test/data/e2e/**/target
+test/data/e2e/dump/template/**/distribution
 test/e2e/e2e.test
 test/**/kubeconfig
 
