@@ -4,7 +4,7 @@ Welcome to furyctl release `vTBD`.
 
 The distribution is maintained with ❤️ by the team [SIGHUP](https://sighup.io/).
 
-## New Features since `v0.32.1`
+## New Features since `v0.32.2`
 
 - TBD
 
