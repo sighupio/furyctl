@@ -111,7 +111,7 @@ steps:
       - rm go1.23.2.tar.gz
       - rm awscliv2.zip
       # Check if the e2e left the directory dirty.
-      - "[[ -z $(git status -s) ]]"
+      - "[ -z \"$(git status -s)\" ] || (echo 'Dirty git repository! Check the e2e tests: they are probably leaving some garbage.' && exit 1)"
     environment:
       CGO_ENABLED: 0
       GOCACHE: /drone/src/.go/cache
