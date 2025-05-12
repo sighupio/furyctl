@@ -79,17 +79,10 @@ func NewApplyCmd() *cobra.Command {
 	applyCmd := &cobra.Command{
 		Use:   "apply",
 		Short: "Apply the configuration to create, update, or upgrade a battle-tested SIGHUP Distribution cluster",
-		Example: `  Apply the configuration file and all the phases using the default configuration file:
-  furyctl apply
-
-  Apply a custom configuration file:
-  furyctl apply --config mycluster.yaml
-
-  Apply a single phase, for example the distribution phase:
-  furyctl apply --phase distribution
-
-  Apply all the phases, and repeat the distribution phase afterwards:
-  furyctl apply --post-apply-phases distribution
+		Example: `  furyctl apply                                     Apply all the configuration to the cluster using the default configuration file name
+  furyctl apply --config mycluster.yaml             Apply a custom configuration file
+  furyctl apply --phase distribution                Apply a single phase, for example the distribution phase
+  furyctl apply --post-apply-phases distribution    Apply all the phases, and repeat the distribution phase afterwards
 `,
 		PreRun: func(cmd *cobra.Command, _ []string) {
 			cmdEvent = analytics.NewCommandEvent(cobrax.GetFullname(cmd))
@@ -118,6 +111,8 @@ func NewApplyCmd() *cobra.Command {
 			}
 
 			var distrodl *dist.Downloader
+
+			logrus.Debugf("Using configuration file from path %s", flags.FuryctlPath)
 
 			// Init first half of collaborators.
 			client := netx.NewGoGetterClient()
@@ -218,7 +213,7 @@ func NewApplyCmd() *cobra.Command {
 					return fmt.Errorf("%w: %v", ErrDownloadDependenciesFailed, errs)
 				}
 			} else {
-				logrus.Info("Skipping dependencies download")
+				logrus.Info("Dependencies download skipped")
 			}
 
 			// Validate the dependencies, unless explicitly told to skip it.
@@ -231,7 +226,7 @@ func NewApplyCmd() *cobra.Command {
 					return fmt.Errorf("error while validating dependencies: %w", err)
 				}
 			} else {
-				logrus.Info("Skipping dependencies validation")
+				logrus.Info("Dependencies validation skipped")
 			}
 
 			// Define cluster creation paths.

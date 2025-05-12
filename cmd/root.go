@@ -196,7 +196,7 @@ furyctl is a command line interface tool to manage the full lifecycle of SIGHUP 
 		"workdir",
 		"w",
 		"",
-		"Switch to a different working directory before executing the given subcommand. NOTE: this will affect all the paths passed the command, including other flags like outdir and log, for example",
+		"Switch to a different working directory before executing the given subcommand. NOTE: this will affect all the paths passed, including other flags like outdir and log, for example",
 	)
 
 	rootCmd.PersistentFlags().StringVarP(

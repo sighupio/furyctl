@@ -151,7 +151,7 @@ func NewKubeconfigCmd() *cobra.Command {
 					return fmt.Errorf("%w: %v", ErrDownloadDependenciesFailed, err)
 				}
 			} else {
-				logrus.Info("Skipping dependencies download")
+				logrus.Info("Dependencies download skipped")
 			}
 
 			// Validate the dependencies, unless explicitly told to skip it.
@@ -164,7 +164,7 @@ func NewKubeconfigCmd() *cobra.Command {
 					return fmt.Errorf("error while validating dependencies: %w", err)
 				}
 			} else {
-				logrus.Info("Skipping dependencies validation")
+				logrus.Info("Dependencies validation skipped")
 			}
 
 			getter, err := cluster.NewKubeconfigGetter(res.MinimalConf, res.DistroManifest, res.RepoPath, furyctlPath, currentDir)

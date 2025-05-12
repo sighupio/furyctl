@@ -81,6 +81,9 @@ func NewDiffCmd() *cobra.Command {
 			logrus.Info("Downloading distribution...")
 			res, err := distrodl.Download(flags.DistroLocation, flags.FuryctlPath)
 			if err != nil {
+				cmdEvent.AddErrorMessage(err)
+				tracker.Track(cmdEvent)
+
 				return fmt.Errorf("error while downloading distribution: %w", err)
 			}
 
@@ -295,9 +298,12 @@ func getDiffCommandFlags() (DiffCommandFlags, error) {
 		}
 	}
 
-	distroPatchesLocation, err := filepath.Abs(viper.GetString("distro-patches"))
-	if err != nil {
-		return DiffCommandFlags{}, fmt.Errorf("error while getting absolute path of distro patches location: %w", err)
+	distroPatchesLocation := viper.GetString("distro-patches")
+	if distroPatchesLocation != "" {
+		distroPatchesLocation, err = filepath.Abs(distroPatchesLocation)
+		if err != nil {
+			return DiffCommandFlags{}, fmt.Errorf("error while getting absolute path of distro patches location: %w", err)
+		}
 	}
 
 	phase := viper.GetString("phase")
