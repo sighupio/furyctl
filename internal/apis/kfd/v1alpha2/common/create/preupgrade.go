@@ -236,7 +236,8 @@ func (p *PreUpgrade) Exec() error {
 		// }.
 
 		if !cluster.IsForceEnabledForFeature(p.forceFlag, cluster.ForceFeatureUpgrades) {
-			if _, err := fmt.Println("Are you sure you want to continue? Only 'yes' will be accepted to confirm."); err != nil {
+			_, err := fmt.Println("\nAre you sure you want to continue? Only 'yes' will be accepted to confirm.")
+			if err != nil {
 				return fmt.Errorf("error writing to stdout: %w", err)
 			}
 

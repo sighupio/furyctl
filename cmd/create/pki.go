@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"net"
+	"path/filepath"
 
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -107,11 +108,18 @@ You can limit the creation of the PKI to just etcd or just Kubernetes using the 
 			tracker := ctn.Tracker()
 			defer tracker.Flush()
 
-			// Get flags
-			// maybe we could get this path from the furyctl.yaml file.
-			pkiPath := viper.GetString("path")
+			// Get flags.
 			etcd := viper.GetBool("etcd")
 			controlplane := viper.GetBool("controlplane")
+			// Maybe we could get this path from the furyctl.yaml file in the future.
+			pkiPath := viper.GetString("path")
+			pkiPath, err := filepath.Abs(pkiPath)
+			if err != nil {
+				tracker.Track(cmdEvent)
+				cmdEvent.AddErrorMessage(err)
+
+				return fmt.Errorf("error while getting absolute path for PKI folder path: %w", err)
+			}
 
 			if err := NewPki(etcd, controlplane, pkiPath); err != nil {
 				cmdEvent.AddErrorMessage(err)
@@ -119,8 +127,9 @@ You can limit the creation of the PKI to just etcd or just Kubernetes using the 
 				return fmt.Errorf("PKI creation failed with error: %w", err)
 			}
 
-			cmdEvent.AddSuccessMessage("PKI files successfully created at:" + pkiPath)
+			cmdEvent.AddSuccessMessage("PKI files successfully created at" + pkiPath)
 			tracker.Track(cmdEvent)
+			logrus.Infof("PKI files successfully created at %s", pkiPath)
 
 			return nil
 		},

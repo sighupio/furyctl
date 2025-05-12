@@ -38,10 +38,10 @@ func NewUpgradePathsCmd() *cobra.Command {
 		Use:   "upgrade-paths",
 		Short: "Get available upgrade paths for the kind and version defined in the configuration file or a custom one.",
 		Long:  `Get available upgrade paths for the kind and version defined in the configuration file or a custom one. If the "--from" or "--kind" parameters are specified, the command will give the upgrade path for those instead.`,
-		Example: `- furyctl get upgrade-paths                               	will show the available upgrade paths for the kind and distribution version defined in the configuration file (furyctl.yaml by default)
-- furyctl get upgrade-paths --from vX.Y.Z                 	will show the available upgrade paths for the kind defined in the configuration file but for the version X.Y.Z instead.
-- furyctl get upgrade-paths --kind OnPremises             	will show the available upgrade paths for the version defined in the configuration file but for the OnPremises kind, even if the cluster is an EKSCluster, for example.
-- furyctl get upgrade-paths --kind OnPremises --from X.Y.X	will show the available upgrade paths for the version X.Y.Z of the OnPremises kind, without reading the configuration file.
+		Example: `  furyctl get upgrade-paths                                 shows the available upgrade paths for the kind and distribution version defined in the configuration file (furyctl.yaml by default)
+  furyctl get upgrade-paths --from vX.Y.Z                   shows the available upgrade paths for the kind defined in the configuration file but for the version X.Y.Z instead.
+  furyctl get upgrade-paths --kind OnPremises               shows the available upgrade paths for the version defined in the configuration file but for the OnPremises kind, even if the cluster is an EKSCluster, for example.
+  furyctl get upgrade-paths --kind OnPremises --from X.Y.X  shows the available upgrade paths for the version X.Y.Z of the OnPremises kind, without reading the configuration file.
  `,
 		PreRun: func(cmd *cobra.Command, _ []string) {
 			cmdEvent = analytics.NewCommandEvent(cobrax.GetFullname(cmd))
@@ -171,7 +171,7 @@ func NewUpgradePathsCmd() *cobra.Command {
 						return fmt.Errorf("%w: %v", ErrDownloadDependenciesFailed, err)
 					}
 				} else {
-					logrus.Info("Skipping dependencies download")
+					logrus.Info("Dependencies download skipped")
 				}
 
 				// Validate the dependencies, unless explicitly told to skip it.
@@ -184,7 +184,7 @@ func NewUpgradePathsCmd() *cobra.Command {
 						return fmt.Errorf("error while validating dependencies: %w", err)
 					}
 				} else {
-					logrus.Info("Skipping dependencies validation")
+					logrus.Info("Dependencies validation skipped")
 				}
 
 				logrus.Debugf("either kind or fromVersion is not specified, reading them from the configuration file in path %s.", furyctlPath)

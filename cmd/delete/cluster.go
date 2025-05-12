@@ -195,7 +195,7 @@ func NewClusterCmd() *cobra.Command {
 					return fmt.Errorf("%w: %v", ErrDownloadDependenciesFailed, errs)
 				}
 			} else {
-				logrus.Info("Skipping dependencies download")
+				logrus.Info("Dependencies download skipped")
 			}
 
 			// Validate the dependencies, unless explicitly told to skip it.
@@ -208,7 +208,7 @@ func NewClusterCmd() *cobra.Command {
 					return fmt.Errorf("error while validating dependencies: %w", err)
 				}
 			} else {
-				logrus.Info("Skipping dependencies validation")
+				logrus.Info("Dependencies validation skipped")
 			}
 
 			// Define cluster deletion paths.
