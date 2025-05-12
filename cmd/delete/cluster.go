@@ -11,6 +11,7 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"strings"
 	"syscall"
 
 	"github.com/sirupsen/logrus"
@@ -78,6 +79,9 @@ func NewClusterCmd() *cobra.Command {
 			// Get flags.
 			flags, err := getDeleteClusterCmdFlags()
 			if err != nil {
+				cmdEvent.AddErrorMessage(err)
+				tracker.Track(cmdEvent)
+
 				return err
 			}
 
@@ -85,38 +89,8 @@ func NewClusterCmd() *cobra.Command {
 
 			outDir := flags.Outdir
 
-			logrus.Debug("Getting Home Directory Path...")
-
-			homeDir, err := os.UserHomeDir()
-			if err != nil {
-				cmdEvent.AddErrorMessage(err)
-				tracker.Track(cmdEvent)
-
-				return fmt.Errorf("error while getting user home directory: %w", err)
-			}
-
-			if outDir == "" {
-				outDir = homeDir
-			}
-
-			if flags.BinPath == "" {
-				flags.BinPath = filepath.Join(outDir, ".furyctl", "bin")
-			}
-
 			if flags.DryRun {
 				logrus.Info("Dry run mode enabled, no changes will be applied")
-			}
-
-			absDistroPatchesLocation := flags.DistroPatchesLocation
-
-			if absDistroPatchesLocation != "" {
-				absDistroPatchesLocation, err = filepath.Abs(flags.DistroPatchesLocation)
-				if err != nil {
-					cmdEvent.AddErrorMessage(err)
-					tracker.Track(cmdEvent)
-
-					return fmt.Errorf("error while getting absolute path of distro patches location: %w", err)
-				}
 			}
 
 			var distrodl *dist.Downloader
@@ -127,9 +101,9 @@ func NewClusterCmd() *cobra.Command {
 			depsvl := dependencies.NewValidator(executor, flags.BinPath, flags.FuryctlPath, flags.VpnAutoConnect)
 
 			if flags.DistroLocation == "" {
-				distrodl = dist.NewCachingDownloader(client, outDir, flags.GitProtocol, absDistroPatchesLocation)
+				distrodl = dist.NewCachingDownloader(client, outDir, flags.GitProtocol, flags.DistroPatchesLocation)
 			} else {
-				distrodl = dist.NewDownloader(client, flags.GitProtocol, absDistroPatchesLocation)
+				distrodl = dist.NewDownloader(client, flags.GitProtocol, flags.DistroPatchesLocation)
 			}
 
 			execx.NoTTY = flags.NoTTY
@@ -220,6 +194,8 @@ func NewClusterCmd() *cobra.Command {
 
 					return fmt.Errorf("%w: %v", ErrDownloadDependenciesFailed, errs)
 				}
+			} else {
+				logrus.Info("Skipping dependencies download")
 			}
 
 			// Validate the dependencies, unless explicitly told to skip it.
@@ -231,19 +207,13 @@ func NewClusterCmd() *cobra.Command {
 
 					return fmt.Errorf("error while validating dependencies: %w", err)
 				}
-			}
-
-			absFuryctlPath, err := filepath.Abs(flags.FuryctlPath)
-			if err != nil {
-				cmdEvent.AddErrorMessage(err)
-				tracker.Track(cmdEvent)
-
-				return fmt.Errorf("error while initializing cluster creation: %w", err)
+			} else {
+				logrus.Info("Skipping dependencies validation")
 			}
 
 			// Define cluster deletion paths.
 			paths := cluster.DeleterPaths{
-				ConfigPath: absFuryctlPath,
+				ConfigPath: flags.FuryctlPath,
 				WorkDir:    basePath,
 				BinPath:    flags.BinPath,
 				DistroPath: res.RepoPath,
@@ -277,7 +247,7 @@ func NewClusterCmd() *cobra.Command {
 					return fmt.Errorf("error while printing to stdout: %w", err)
 				}
 
-				_, err = fmt.Println("Are you sure you want to continue? Only 'yes' will be accepted to confirm.")
+				_, err = fmt.Println("\nAre you sure you want to continue? Only 'yes' will be accepted to confirm.")
 				if err != nil {
 					cmdEvent.AddErrorMessage(err)
 					tracker.Track(cmdEvent)
@@ -326,37 +296,36 @@ func NewClusterCmd() *cobra.Command {
 		"Location where to download schemas, defaults and the distribution manifests from. "+
 			"It can either be a local path (eg: /path/to/distribution) or "+
 			"a remote URL (eg: git::git@github.com:sighupio/distribution?depth=1&ref=BRANCH_NAME). "+
-			"Any format supported by hashicorp/go-getter can be used.",
+			"Any format supported by hashicorp/go-getter can be used",
 	)
 
 	clusterCmd.Flags().String(
 		"distro-patches",
 		"",
-		"Location where to download distribution's user-made patches from. "+
-			"Any format supported by hashicorp/go-getter can be used.",
+		"Location where the distribution's user-made patches can be downloaded from. "+
+			"This can be either a local path (eg: /path/to/distro-patches) or "+
+			"a remote URL (eg: git::git@github.com:your-org/distro-patches?depth=1&ref=BRANCH_NAME). "+
+			"Any format supported by hashicorp/go-getter can be used."+
+			" Patches within this location must be in a folder named after the distribution version (eg: v1.29.0) and "+
+			"must have the same structure as the distribution's repository",
 	)
 
 	clusterCmd.Flags().StringP(
 		"bin-path",
 		"b",
 		"",
-		"Path to the folder where all the dependencies' binaries are installed",
+		"Path to the folder where all the dependencies' binaries are downloaded",
 	)
 
 	clusterCmd.Flags().StringP(
 		"phase",
 		"p",
 		"",
-		"Limit execution to the specified phase. Options are: infrastructure, kubernetes, distribution",
+		"Limit execution to a specific phase. Options are: "+strings.Join(cluster.MainPhases(), ", "),
 	)
 
 	if err := clusterCmd.RegisterFlagCompletionFunc("phase", func(_ *cobra.Command, _ []string, _ string) ([]string, cobra.ShellCompDirective) {
-		return []string{
-				cluster.OperationPhaseInfrastructure,
-				cluster.OperationPhaseKubernetes,
-				cluster.OperationPhaseDistribution,
-			},
-			cobra.ShellCompDirectiveDefault
+		return cluster.MainPhases(), cobra.ShellCompDirectiveDefault
 	}); err != nil {
 		logrus.Fatalf("error while registering flag completion: %v", err)
 	}
@@ -402,10 +371,38 @@ func NewClusterCmd() *cobra.Command {
 }
 
 func getDeleteClusterCmdFlags() (ClusterCmdFlags, error) {
-	phase := viper.GetString("phase")
+	var err error
 
-	err := cluster.CheckPhase(phase)
+	// The binPath path must be calculated here because when we launch the tools
+	// we sometimes change the working directory where the binary is launched
+	// breaking the relative path.
+	binPath := viper.GetString("bin-path")
+	if binPath == "" {
+		// The outdir flag is already calculated in the root command, so we can use it here.
+		binPath = filepath.Join(viper.GetString("outdir"), ".furyctl", "bin")
+	} else {
+		binPath, err = filepath.Abs(binPath)
+		if err != nil {
+			return ClusterCmdFlags{}, fmt.Errorf("error while getting absolute path for bin folder: %w", err)
+		}
+	}
+
+	distroPatchesLocation := viper.GetString("distro-patches")
+	if distroPatchesLocation != "" {
+		distroPatchesLocation, err = filepath.Abs(viper.GetString("distro-patches"))
+		if err != nil {
+			return ClusterCmdFlags{}, fmt.Errorf("error while getting absolute path of distro patches location: %w", err)
+		}
+	}
+
+	furyctlPath, err := filepath.Abs(viper.GetString("config"))
 	if err != nil {
+		return ClusterCmdFlags{}, fmt.Errorf("error while initializing cluster creation: %w", err)
+	}
+
+	phase := viper.GetString("phase")
+	err = cluster.CheckPhase(phase)
+	if err != nil { //nolint: wsl // conflicts with gofumpt
 		return ClusterCmdFlags{}, fmt.Errorf("%w: %s: %s", ErrParsingFlag, "phase", err.Error())
 	}
 
@@ -429,10 +426,10 @@ func getDeleteClusterCmdFlags() (ClusterCmdFlags, error) {
 
 	return ClusterCmdFlags{
 		Debug:                 viper.GetBool("debug"),
-		FuryctlPath:           viper.GetString("config"),
+		FuryctlPath:           furyctlPath,
 		DistroLocation:        viper.GetString("distro-location"),
 		Phase:                 phase,
-		BinPath:               viper.GetString("bin-path"),
+		BinPath:               binPath,
 		SkipVpn:               skipVpn,
 		VpnAutoConnect:        vpnAutoConnect,
 		DryRun:                viper.GetBool("dry-run"),
@@ -442,6 +439,6 @@ func getDeleteClusterCmdFlags() (ClusterCmdFlags, error) {
 		Outdir:                viper.GetString("outdir"),
 		SkipDepsDownload:      viper.GetBool("skip-deps-download"),
 		SkipDepsValidation:    viper.GetBool("skip-deps-validation"),
-		DistroPatchesLocation: viper.GetString("distro-patches"),
+		DistroPatchesLocation: distroPatchesLocation,
 	}, nil
 }

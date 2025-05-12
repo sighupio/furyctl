@@ -7,7 +7,6 @@ package validate
 import (
 	"errors"
 	"fmt"
-	"os"
 	"path/filepath"
 
 	"github.com/sirupsen/logrus"
@@ -54,21 +53,6 @@ func NewDependenciesCmd() *cobra.Command {
 			outDir := viper.GetString("outdir")
 			binPath := viper.GetString("bin-path")
 			gitProtocol := viper.GetString("git-protocol")
-
-			// Init paths.
-			logrus.Debug("Getting Home Directory Path...")
-
-			homeDir, err := os.UserHomeDir()
-			if err != nil {
-				cmdEvent.AddErrorMessage(err)
-				tracker.Track(cmdEvent)
-
-				return fmt.Errorf("error while getting user home directory: %w", err)
-			}
-
-			if outDir == "" {
-				outDir = homeDir
-			}
 
 			typedGitProtocol, err := git.NewProtocol(gitProtocol)
 			if err != nil {
@@ -198,14 +182,18 @@ func NewDependenciesCmd() *cobra.Command {
 		"Location where to download schemas, defaults and the distribution manifests from. "+
 			"It can either be a local path (eg: /path/to/distribution) or "+
 			"a remote URL (eg: git::git@github.com:sighupio/distribution?depth=1&ref=BRANCH_NAME). "+
-			"Any format supported by hashicorp/go-getter can be used.",
+			"Any format supported by hashicorp/go-getter can be used",
 	)
 
 	dependenciesCmd.Flags().String(
 		"distro-patches",
 		"",
-		"Location where to download distribution's user-made patches from. "+
-			"Any format supported by hashicorp/go-getter can be used.",
+		"Location where the distribution's user-made patches can be downloaded from. "+
+			"This can be either a local path (eg: /path/to/distro-patches) or "+
+			"a remote URL (eg: git::git@github.com:your-org/distro-patches?depth=1&ref=BRANCH_NAME). "+
+			"Any format supported by hashicorp/go-getter can be used."+
+			" Patches within this location must be in a folder named after the distribution version (eg: v1.29.0) and "+
+			"must have the same structure as the distribution's repository",
 	)
 
 	return dependenciesCmd
