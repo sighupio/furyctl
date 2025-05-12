@@ -142,6 +142,7 @@ func (d *Downloader) DoDownload(
 
 	src := url
 	dst := filepath.Join(baseDst, "data")
+	logrus.Debugf("Downloading distribution from %s to %s", src, dst)
 
 	if err := d.client.Download(src, dst); err != nil {
 		if errors.Is(err, netx.ErrDownloadOptionsExhausted) {

@@ -7,7 +7,6 @@ package renew
 import (
 	"errors"
 	"fmt"
-	"os"
 	"path"
 	"path/filepath"
 
@@ -68,26 +67,25 @@ func NewCertificatesCmd() *cobra.Command {
 				return fmt.Errorf("error while getting config directory: %w", err)
 			}
 
-			// Get home dir.
-			logrus.Debug("Getting Home directory path...")
+			if binPath == "" {
+				binPath = path.Join(outDir, ".furyctl", "bin")
+			} else {
+				binPath, err = filepath.Abs(binPath)
+				if err != nil {
+					cmdEvent.AddErrorMessage(err)
+					tracker.Track(cmdEvent)
 
-			homeDir, err := os.UserHomeDir()
+					return fmt.Errorf("error while getting absolute path for bin folder: %w", err)
+				}
+			}
+
+			typedGitProtocol, err := git.NewProtocol(gitProtocol)
 			if err != nil {
 				cmdEvent.AddErrorMessage(err)
 				tracker.Track(cmdEvent)
 
-				return fmt.Errorf("error while getting user home directory: %w", err)
+				return fmt.Errorf("%w", err)
 			}
-
-			if outDir == "" {
-				outDir = homeDir
-			}
-
-			if binPath == "" {
-				binPath = path.Join(outDir, ".furyctl", "bin")
-			}
-
-			parsedGitProtocol := (git.Protocol)(gitProtocol)
 
 			// Init packages.
 			execx.Debug = debug
@@ -101,9 +99,9 @@ func NewCertificatesCmd() *cobra.Command {
 			client := netx.NewGoGetterClient()
 
 			if distroLocation == "" {
-				distrodl = dist.NewCachingDownloader(client, outDir, parsedGitProtocol, "")
+				distrodl = dist.NewCachingDownloader(client, outDir, typedGitProtocol, "")
 			} else {
-				distrodl = dist.NewDownloader(client, parsedGitProtocol, "")
+				distrodl = dist.NewDownloader(client, typedGitProtocol, "")
 			}
 
 			// Validate base requirements.
@@ -128,7 +126,7 @@ func NewCertificatesCmd() *cobra.Command {
 			basePath := path.Join(outDir, ".furyctl", res.MinimalConf.Metadata.Name)
 
 			// Init second half of collaborators.
-			depsdl := dependencies.NewCachingDownloader(client, outDir, basePath, binPath, parsedGitProtocol)
+			depsdl := dependencies.NewCachingDownloader(client, outDir, basePath, binPath, typedGitProtocol)
 
 			// Validate the furyctl.yaml file.
 			logrus.Info("Validating configuration file...")
@@ -148,6 +146,8 @@ func NewCertificatesCmd() *cobra.Command {
 
 					return fmt.Errorf("%w: %v", ErrDownloadDependenciesFailed, err)
 				}
+			} else {
+				logrus.Info("Skipping dependencies download")
 			}
 
 			// Validate the dependencies, unless explicitly told to skip it.
@@ -159,6 +159,8 @@ func NewCertificatesCmd() *cobra.Command {
 
 					return fmt.Errorf("error while validating dependencies: %w", err)
 				}
+			} else {
+				logrus.Info("Skipping dependencies validation")
 			}
 
 			renewer, err := cluster.NewCertificatesRenewer(res.MinimalConf, res.DistroManifest, res.RepoPath, furyctlPath)
@@ -189,7 +191,7 @@ func NewCertificatesCmd() *cobra.Command {
 		"bin-path",
 		"b",
 		"",
-		"Path to the folder where all the dependencies' binaries are installed",
+		"Path to the folder where all the dependencies' binaries are downloaded",
 	)
 
 	certificatesCmd.Flags().StringP(
@@ -206,13 +208,13 @@ func NewCertificatesCmd() *cobra.Command {
 		"Location where to download schemas, defaults and the distribution manifests from. "+
 			"It can either be a local path (eg: /path/to/distribution) or "+
 			"a remote URL (eg: git::git@github.com:sighupio/distribution?depth=1&ref=BRANCH_NAME). "+
-			"Any format supported by hashicorp/go-getter can be used.",
+			"Any format supported by hashicorp/go-getter can be used",
 	)
 
 	certificatesCmd.Flags().Bool(
 		"skip-deps-download",
 		false,
-		"Skip downloading the binaries",
+		"Skip downloading the distribution modules, installers and binaries",
 	)
 
 	certificatesCmd.Flags().Bool(

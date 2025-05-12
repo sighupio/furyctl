@@ -130,7 +130,7 @@ You can limit the creation of the PKI to just etcd or just Kubernetes using the 
 		"path",
 		"p",
 		"pki",
-		"path where to save the created PKI files. One subfolder will be created for the control plane files and another one for the etcd files.",
+		"path where to save the created PKI files. One subfolder will be created for the control plane files and another one for the etcd files",
 	)
 
 	pkiCmd.Flags().BoolP(
