@@ -321,11 +321,19 @@ func NewClusterCmd() *cobra.Command {
 		"phase",
 		"p",
 		"",
-		"Limit execution to a specific phase. Options are: "+strings.Join(cluster.MainPhases(), ", "),
+		"Limit execution to a specific phase. Options are: "+strings.Join([]string{
+			cluster.OperationPhaseInfrastructure,
+			cluster.OperationPhaseKubernetes,
+			cluster.OperationPhaseDistribution,
+		}, ", "),
 	)
 
 	if err := clusterCmd.RegisterFlagCompletionFunc("phase", func(_ *cobra.Command, _ []string, _ string) ([]string, cobra.ShellCompDirective) {
-		return cluster.MainPhases(), cobra.ShellCompDirectiveDefault
+		return []string{
+			cluster.OperationPhaseInfrastructure,
+			cluster.OperationPhaseKubernetes,
+			cluster.OperationPhaseDistribution,
+		}, cobra.ShellCompDirectiveDefault
 	}); err != nil {
 		logrus.Fatalf("error while registering flag completion: %v", err)
 	}
