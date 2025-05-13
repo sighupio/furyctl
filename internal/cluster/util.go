@@ -32,11 +32,11 @@ func IsForceEnabledForFeature(force []string, feature string) bool {
 //nolint:revive // force bool needs to be here
 func AskConfirmation(force bool) (bool, error) {
 	if !force {
-		if _, err := fmt.Println("WARNING: You are about to apply changes to the cluster configuration."); err != nil {
+		if _, err := fmt.Println("\nWARNING: You are about to apply changes to the cluster configuration."); err != nil {
 			return false, fmt.Errorf("error while printing to stdout: %w", err)
 		}
 
-		if _, err := fmt.Println("\nAre you sure you want to continue? Only 'yes' will be accepted to confirm."); err != nil {
+		if _, err := fmt.Println("Are you sure you want to continue? Only 'yes' will be accepted to confirm."); err != nil {
 			return false, fmt.Errorf("error while printing to stdout: %w", err)
 		}
 

@@ -239,7 +239,7 @@ func NewClusterCmd() *cobra.Command {
 			}
 
 			if !flags.Force {
-				_, err = fmt.Println("WARNING: You are about to delete a cluster. This action is irreversible.")
+				_, err = fmt.Println("\nWARNING: You are about to delete a cluster. This action is irreversible.")
 				if err != nil {
 					cmdEvent.AddErrorMessage(err)
 					tracker.Track(cmdEvent)
@@ -247,7 +247,7 @@ func NewClusterCmd() *cobra.Command {
 					return fmt.Errorf("error while printing to stdout: %w", err)
 				}
 
-				_, err = fmt.Println("\nAre you sure you want to continue? Only 'yes' will be accepted to confirm.")
+				_, err = fmt.Println("Are you sure you want to continue? Only 'yes' will be accepted to confirm.")
 				if err != nil {
 					cmdEvent.AddErrorMessage(err)
 					tracker.Track(cmdEvent)
