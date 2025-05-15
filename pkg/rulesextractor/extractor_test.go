@@ -978,9 +978,8 @@ func TestBaseExtractor_UnsafeReducerRulesByDiffs(t *testing.T) {
 						{
 							FromNodes: &[]rules.FromNode{
 								{
-									Path:  stringPtr(".spec.distribution.modules.logging.type"),
-									From:  stringPtr("none"),
-									Value: anyPtr(none),
+									Path: stringPtr(".spec.distribution.modules.logging.type"),
+									From: stringPtr("none"),
 								},
 							},
 						},
@@ -1018,9 +1017,8 @@ func TestBaseExtractor_UnsafeReducerRulesByDiffs(t *testing.T) {
 						{
 							FromNodes: &[]rules.FromNode{
 								{
-									Path:  stringPtr(".spec.distribution.modules.logging.type"),
-									From:  stringPtr("none"),
-									Value: anyPtr(none),
+									Path: stringPtr(".spec.distribution.modules.logging.type"),
+									From: stringPtr("none"),
 								},
 							},
 						},
@@ -1055,9 +1053,8 @@ func TestBaseExtractor_UnsafeReducerRulesByDiffs(t *testing.T) {
 						{
 							FromNodes: &[]rules.FromNode{
 								{
-									Path:  stringPtr(".spec.distribution.modules.logging.type"),
-									From:  stringPtr("none"),
-									Value: anyPtr(none),
+									Path: stringPtr(".spec.distribution.modules.logging.type"),
+									From: stringPtr("none"),
 								},
 							},
 						},
@@ -1375,9 +1372,8 @@ func TestBaseExtractor_FilterSafeImmutableRules(t *testing.T) {
 						{
 							FromNodes: &[]rules.FromNode{
 								{
-									Path:  stringPtr(".spec.distribution.modules.logging.type"),
-									From:  stringPtr("none"),
-									Value: anyPtr(none),
+									Path: stringPtr(".spec.distribution.modules.logging.type"),
+									From: stringPtr("none"),
 								},
 							},
 						},
@@ -1410,9 +1406,8 @@ func TestBaseExtractor_FilterSafeImmutableRules(t *testing.T) {
 						{
 							FromNodes: &[]rules.FromNode{
 								{
-									Path:  stringPtr(".spec.distribution.modules.logging.type"),
-									From:  stringPtr("none"),
-									Value: anyPtr(none),
+									Path: stringPtr(".spec.distribution.modules.logging.type"),
+									From: stringPtr("none"),
 								},
 							},
 						},
@@ -1441,9 +1436,8 @@ func TestBaseExtractor_FilterSafeImmutableRules(t *testing.T) {
 						{
 							FromNodes: &[]rules.FromNode{
 								{
-									Path:  stringPtr(".spec.distribution.modules.logging.type"),
-									From:  stringPtr("none"),
-									Value: anyPtr(none),
+									Path: stringPtr(".spec.distribution.modules.logging.type"),
+									From: stringPtr("none"),
 								},
 							},
 						},
@@ -1463,9 +1457,8 @@ func TestBaseExtractor_FilterSafeImmutableRules(t *testing.T) {
 							To:   anyPtr(tsdbDate),
 							FromNodes: &[]rules.FromNode{
 								{
-									Path:  stringPtr(".spec.distribution.modules.logging.type"),
-									From:  stringPtr("none"),
-									Value: anyPtr(none),
+									Path: stringPtr(".spec.distribution.modules.logging.type"),
+									From: stringPtr("none"),
 								},
 							},
 						},
