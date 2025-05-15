@@ -10,10 +10,10 @@ import (
 	"path"
 
 	r3diff "github.com/r3labs/diff/v3"
-	"github.com/sirupsen/logrus"
-
 	"github.com/sighupio/fury-distribution/pkg/apis/config"
 	"github.com/sighupio/fury-distribution/pkg/apis/onpremises/v1alpha2/public"
+	"github.com/sirupsen/logrus"
+
 	"github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/onpremises/supported"
 	"github.com/sighupio/furyctl/internal/cluster"
 	"github.com/sighupio/furyctl/internal/state"
@@ -261,8 +261,28 @@ func (p *PreFlight) CheckStateDiffs(d r3diff.Changelog, diffChecker diffs.Checke
 		return nil
 	}
 
-	errs = append(errs, diffChecker.AssertImmutableViolations(d, r.GetImmutables("kubernetes"))...)
-	errs = append(errs, diffChecker.AssertImmutableViolations(d, r.GetImmutables("distribution"))...)
+	// Get all immutable rules for each phase.
+	kubeImmutableRules := r.GetImmutableRules("kubernetes")
+	distroImmutableRules := r.GetImmutableRules("distribution")
+
+	// Filter out the rules that have matching safe conditions.
+	kubeFilteredRules := r.FilterSafeImmutableRules(kubeImmutableRules, d)
+	distroFilteredRules := r.FilterSafeImmutableRules(distroImmutableRules, d)
+
+	// Extract the paths from the filtered rules.
+	kubeImmutablePaths := make([]string, 0)
+	distroImmutablePaths := make([]string, 0)
+
+	for _, rule := range kubeFilteredRules {
+		kubeImmutablePaths = append(kubeImmutablePaths, rule.Path)
+	}
+
+	for _, rule := range distroFilteredRules {
+		distroImmutablePaths = append(distroImmutablePaths, rule.Path)
+	}
+
+	errs = append(errs, diffChecker.AssertImmutableViolations(d, kubeImmutablePaths)...)
+	errs = append(errs, diffChecker.AssertImmutableViolations(d, distroImmutablePaths)...)
 
 	if len(errs) > 0 {
 		return fmt.Errorf("%w: %s", errImmutable, errs)

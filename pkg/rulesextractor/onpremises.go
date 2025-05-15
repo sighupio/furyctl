@@ -34,24 +34,25 @@ func NewOnPremClusterRulesExtractor(distributionPath string) (*OnPremExtractor, 
 	return &builder, nil
 }
 
-func (r *OnPremExtractor) GetImmutables(phase string) []string {
+func (r *OnPremExtractor) GetImmutableRules(phase string) []Rule {
 	switch phase {
-	case cluster.OperationPhaseKubernetes:
-		if r.Spec.Kubernetes == nil {
-			return []string{}
-		}
-
-		return r.BaseExtractor.ExtractImmutablesFromRules(*r.Spec.Kubernetes)
-
 	case cluster.OperationPhaseDistribution:
 		if r.Spec.Distribution == nil {
-			return []string{}
+			return []Rule{}
 		}
 
-		return r.BaseExtractor.ExtractImmutablesFromRules(*r.Spec.Distribution)
+		var immutableRules []Rule
+
+		for _, rule := range *r.Spec.Distribution {
+			if rule.Immutable {
+				immutableRules = append(immutableRules, rule)
+			}
+		}
+
+		return immutableRules
 
 	default:
-		return []string{}
+		return []Rule{}
 	}
 }
 
@@ -86,4 +87,8 @@ func (r *OnPremExtractor) UnsupportedReducerRulesByDiffs(rls []Rule, ds diff.Cha
 
 func (r *OnPremExtractor) UnsafeReducerRulesByDiffs(rls []Rule, ds diff.Changelog) []Rule {
 	return r.BaseExtractor.UnsafeReducerRulesByDiffs(rls, ds)
+}
+
+func (r *OnPremExtractor) FilterSafeImmutableRules(rules []Rule, ds diff.Changelog) []Rule {
+	return r.BaseExtractor.FilterSafeImmutableRules(rules, ds)
 }

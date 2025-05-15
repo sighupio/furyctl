@@ -11,10 +11,10 @@ import (
 	"path"
 
 	r3diff "github.com/r3labs/diff/v3"
-	"github.com/sirupsen/logrus"
-
 	"github.com/sighupio/fury-distribution/pkg/apis/config"
 	"github.com/sighupio/fury-distribution/pkg/apis/kfddistribution/v1alpha2/public"
+	"github.com/sirupsen/logrus"
+
 	"github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/kfddistribution/supported"
 	"github.com/sighupio/furyctl/internal/cluster"
 	"github.com/sighupio/furyctl/internal/distribution"
@@ -235,7 +235,20 @@ func (p *PreFlight) CheckStateDiffs(d r3diff.Changelog, diffChecker diffs.Checke
 		return nil
 	}
 
-	errs = append(errs, diffChecker.AssertImmutableViolations(d, r.GetImmutables("distribution"))...)
+	// Get all immutable rules.
+	immutableRules := r.GetImmutableRules("distribution")
+
+	// Filter out the rules that have matching safe conditions.
+	filteredRules := r.FilterSafeImmutableRules(immutableRules, d)
+
+	// Extract the paths from the filtered rules.
+	immutablePaths := make([]string, 0)
+
+	for _, rule := range filteredRules {
+		immutablePaths = append(immutablePaths, rule.Path)
+	}
+
+	errs = append(errs, diffChecker.AssertImmutableViolations(d, immutablePaths)...)
 
 	if len(errs) > 0 {
 		return fmt.Errorf("%w: %s", errImmutable, errs)

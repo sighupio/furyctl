@@ -672,10 +672,21 @@ func TestBaseExtractor_ExtractImmutablesFromRules(t *testing.T) {
 func TestBaseExtractor_UnsafeReducerRulesByDiffs(t *testing.T) {
 	t.Parallel()
 
-	var foo, bar any
+	var foo, bar, none, loki, tsdbDate any
 
 	foo = "foo"
 	bar = "bar"
+	none = "none"
+	loki = "loki"
+	tsdbDate = "2023-01-01"
+
+	stringPtr := func(s string) *string {
+		return &s
+	}
+
+	anyPtr := func(a any) *any {
+		return &a
+	}
 
 	testCases := []struct {
 		name  string
@@ -951,6 +962,105 @@ func TestBaseExtractor_UnsafeReducerRulesByDiffs(t *testing.T) {
 						{
 							From: &foo,
 							To:   &bar,
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "should handle from-nodes condition - matching",
+			rules: []rules.Rule{
+				{
+					Path: ".spec.distribution.modules.logging.loki.tsdbStartDate",
+					Reducers: &[]rules.Reducer{
+						{
+							From: nil,
+							To:   tsdbDate,
+						},
+					},
+					Safe: &[]rules.Safe{
+						{
+							FromNodes: &[]rules.FromNode{
+								{
+									Path:  stringPtr(".spec.distribution.modules.logging.type"),
+									Value: anyPtr(none),
+								},
+							},
+						},
+					},
+				},
+			},
+			diffs: diff.Changelog{
+				{
+					Type: diff.UPDATE,
+					Path: []string{"spec", "distribution", "modules", "logging", "type"},
+					From: none,
+					To:   loki,
+				},
+				{
+					Type: diff.UPDATE,
+					Path: []string{"spec", "distribution", "modules", "logging", "loki", "tsdbStartDate"},
+					From: nil,
+					To:   tsdbDate,
+				},
+			},
+			want: []rules.Rule{}, // Empty because the rule is safe
+		},
+		{
+			name: "should handle from-nodes condition - not matching",
+			rules: []rules.Rule{
+				{
+					Path: ".spec.distribution.modules.logging.loki.tsdbStartDate",
+					Reducers: &[]rules.Reducer{
+						{
+							From: nil,
+							To:   tsdbDate,
+						},
+					},
+					Safe: &[]rules.Safe{
+						{
+							FromNodes: &[]rules.FromNode{
+								{
+									Path:  stringPtr(".spec.distribution.modules.logging.type"),
+									Value: anyPtr(none),
+								},
+							},
+						},
+					},
+				},
+			},
+			diffs: diff.Changelog{
+				{
+					Type: diff.UPDATE,
+					Path: []string{"spec", "distribution", "modules", "logging", "type"},
+					From: loki, // Not "none", so the condition doesn't match
+					To:   loki,
+				},
+				{
+					Type: diff.UPDATE,
+					Path: []string{"spec", "distribution", "modules", "logging", "loki", "tsdbStartDate"},
+					From: nil,
+					To:   tsdbDate,
+				},
+			},
+			want: []rules.Rule{
+				// The rule is returned because it's not safe
+				{
+					Path: ".spec.distribution.modules.logging.loki.tsdbStartDate",
+					Reducers: &[]rules.Reducer{
+						{
+							From: nil,
+							To:   tsdbDate,
+						},
+					},
+					Safe: &[]rules.Safe{
+						{
+							FromNodes: &[]rules.FromNode{
+								{
+									Path:  stringPtr(".spec.distribution.modules.logging.type"),
+									Value: anyPtr(none),
+								},
+							},
 						},
 					},
 				},
