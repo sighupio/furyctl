@@ -36,6 +36,21 @@ func NewOnPremClusterRulesExtractor(distributionPath string) (*OnPremExtractor, 
 
 func (r *OnPremExtractor) GetImmutableRules(phase string) []Rule {
 	switch phase {
+	case cluster.OperationPhaseKubernetes:
+		if r.Spec.Kubernetes == nil {
+			return []Rule{}
+		}
+
+		var immutableRules []Rule
+
+		for _, rule := range *r.Spec.Kubernetes {
+			if rule.Immutable {
+				immutableRules = append(immutableRules, rule)
+			}
+		}
+
+		return immutableRules
+
 	case cluster.OperationPhaseDistribution:
 		if r.Spec.Distribution == nil {
 			return []Rule{}
