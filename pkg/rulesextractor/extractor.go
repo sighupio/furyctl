@@ -36,7 +36,9 @@ type Unsupported struct {
 
 type FromNode struct {
 	Path  *string `yaml:"path"`
-	Value *any    `yaml:"value"`
+	From  *string `yaml:"from"`
+	To    *string `yaml:"to"`
+	Value *any    `yaml:"value"` // For backward compatibility
 }
 
 type Safe struct {
@@ -189,12 +191,13 @@ func (b *BaseExtractor) isImmutableRuleSafe(rule Rule, ds diff.Changelog) bool {
 	return false
 }
 
-func (*BaseExtractor) areNodeConditionsMet(fromNodes *[]FromNode, ds diff.Changelog) bool {
+func (b *BaseExtractor) areNodeConditionsMet(fromNodes *[]FromNode, ds diff.Changelog) bool {
 	if fromNodes == nil || len(*fromNodes) == 0 {
 		return true // No conditions means they're met by default.
 	}
 
-	allNodesMatch := true
+	// We need at least one node to match
+	anyNodeMatches := false
 
 	for _, node := range *fromNodes {
 		if node.Path == nil {
@@ -206,23 +209,45 @@ func (*BaseExtractor) areNodeConditionsMet(fromNodes *[]FromNode, ds diff.Change
 
 		for _, d := range ds {
 			joinedPath := "." + strings.Join(d.Path, ".")
-			if joinedPath == *node.Path &&
-				((node.Value == nil && d.From == "none") ||
-					(node.Value != nil && d.From == *node.Value)) {
-				nodeMatches = true
+			if joinedPath == *node.Path {
+				// Check if the node matches based on From/To or Value
+				if node.Value != nil {
+					// If Value is specified, check if it matches the From value in the diff
+					nodeMatches = (d.From == *node.Value) ||
+						(*node.Value == "none" && d.From == nil)
+				} else {
+					// Otherwise use the From/To fields
+					nodeMatches = b.checkConditionFrom(node.From, d.From) &&
+						b.checkConditionTo(node.To, d.To)
+				}
 
-				break
+				if nodeMatches {
+					break
+				}
 			}
 		}
 
-		if !nodeMatches {
-			allNodesMatch = false
-
-			break
+		if nodeMatches {
+			anyNodeMatches = true
+			break // We found a matching node, no need to check others
 		}
 	}
 
-	return allNodesMatch
+	return anyNodeMatches
+}
+
+func (*BaseExtractor) checkConditionFrom(nodeFrom *string, diffFrom interface{}) bool {
+	if nodeFrom == nil || *nodeFrom == "" {
+		return true
+	}
+	return (*nodeFrom == "none" && diffFrom == nil) || (diffFrom != nil && diffFrom == *nodeFrom)
+}
+
+func (*BaseExtractor) checkConditionTo(nodeTo *string, diffTo interface{}) bool {
+	if nodeTo == nil || *nodeTo == "" {
+		return true
+	}
+	return (*nodeTo == "none" && diffTo == nil) || (diffTo != nil && diffTo == *nodeTo)
 }
 
 func (b *BaseExtractor) GetReducers(_ string) []Rule {

@@ -684,10 +684,6 @@ func TestBaseExtractor_UnsafeReducerRulesByDiffs(t *testing.T) {
 		return &s
 	}
 
-	anyPtr := func(a any) *any {
-		return &a
-	}
-
 	testCases := []struct {
 		name  string
 		rules []rules.Rule
@@ -983,6 +979,7 @@ func TestBaseExtractor_UnsafeReducerRulesByDiffs(t *testing.T) {
 							FromNodes: &[]rules.FromNode{
 								{
 									Path:  stringPtr(".spec.distribution.modules.logging.type"),
+									From:  stringPtr("none"),
 									Value: anyPtr(none),
 								},
 							},
@@ -1022,6 +1019,7 @@ func TestBaseExtractor_UnsafeReducerRulesByDiffs(t *testing.T) {
 							FromNodes: &[]rules.FromNode{
 								{
 									Path:  stringPtr(".spec.distribution.modules.logging.type"),
+									From:  stringPtr("none"),
 									Value: anyPtr(none),
 								},
 							},
@@ -1058,6 +1056,7 @@ func TestBaseExtractor_UnsafeReducerRulesByDiffs(t *testing.T) {
 							FromNodes: &[]rules.FromNode{
 								{
 									Path:  stringPtr(".spec.distribution.modules.logging.type"),
+									From:  stringPtr("none"),
 									Value: anyPtr(none),
 								},
 							},
@@ -1377,6 +1376,7 @@ func TestBaseExtractor_FilterSafeImmutableRules(t *testing.T) {
 							FromNodes: &[]rules.FromNode{
 								{
 									Path:  stringPtr(".spec.distribution.modules.logging.type"),
+									From:  stringPtr("none"),
 									Value: anyPtr(none),
 								},
 							},
@@ -1411,6 +1411,7 @@ func TestBaseExtractor_FilterSafeImmutableRules(t *testing.T) {
 							FromNodes: &[]rules.FromNode{
 								{
 									Path:  stringPtr(".spec.distribution.modules.logging.type"),
+									From:  stringPtr("none"),
 									Value: anyPtr(none),
 								},
 							},
@@ -1441,6 +1442,7 @@ func TestBaseExtractor_FilterSafeImmutableRules(t *testing.T) {
 							FromNodes: &[]rules.FromNode{
 								{
 									Path:  stringPtr(".spec.distribution.modules.logging.type"),
+									From:  stringPtr("none"),
 									Value: anyPtr(none),
 								},
 							},
@@ -1462,6 +1464,7 @@ func TestBaseExtractor_FilterSafeImmutableRules(t *testing.T) {
 							FromNodes: &[]rules.FromNode{
 								{
 									Path:  stringPtr(".spec.distribution.modules.logging.type"),
+									From:  stringPtr("none"),
 									Value: anyPtr(none),
 								},
 							},
