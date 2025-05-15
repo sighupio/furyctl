@@ -246,7 +246,7 @@ func (p *PreFlight) Exec(renderedConfig map[string]any) (*Status, error) {
 				diffChecker.DiffToString(d),
 			)
 
-			logrus.Info("Cluster configuration has changed, checking for immutable violations...")
+			logrus.Info("Cluster configuration has changed, checking for immutability violations...")
 
 			if err := p.CheckImmutablesDiffs(d, diffChecker); err != nil {
 				return status, fmt.Errorf("error checking state diffs: %w", err)
