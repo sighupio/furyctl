@@ -19,7 +19,7 @@ type EKSExtractor struct {
 	Spec Spec
 }
 
-func NewEKSClusterRulesExtractor(distributionPath string) (*EKSExtractor, error) {
+func NewEKSClusterRulesExtractor(distributionPath string, renderedConfig map[string]any) (*EKSExtractor, error) {
 	builder := EKSExtractor{}
 
 	rulesPath := filepath.Join(distributionPath, "rules", "ekscluster-kfd-v1alpha2.yaml")
@@ -31,6 +31,7 @@ func NewEKSClusterRulesExtractor(distributionPath string) (*EKSExtractor, error)
 
 	builder.Spec = spec
 	builder.BaseExtractor = NewBaseExtractor(spec)
+	builder.BaseExtractor.RenderedConfig = renderedConfig
 
 	return &builder, nil
 }

@@ -5,10 +5,12 @@
 package rulesextractor
 
 import (
+	"fmt"
 	"regexp"
 	"strings"
 
 	"github.com/r3labs/diff/v3"
+	"github.com/sirupsen/logrus"
 )
 
 var numbersToWildcardRegex = regexp.MustCompile(`\.\d+\b`)
@@ -64,7 +66,24 @@ type Extractor interface {
 }
 
 type BaseExtractor struct {
-	Spec Spec
+	Spec           Spec
+	RenderedConfig map[string]any
+}
+
+type PathNotFoundError struct {
+	Key string
+}
+
+func (e *PathNotFoundError) Error() string {
+	return fmt.Sprintf("key '%s' not found in path", e.Key)
+}
+
+type NotAMapError struct {
+	Key string
+}
+
+func (e *NotAMapError) Error() string {
+	return fmt.Sprintf("path element '%s' is not a map", e.Key)
 }
 
 func NewBaseExtractor(spec Spec) *BaseExtractor {
@@ -205,10 +224,12 @@ func (b *BaseExtractor) areNodeConditionsMet(fromNodes *[]FromNode, ds diff.Chan
 
 		// Check if the path exists in the diffs and has the expected value.
 		nodeMatches := false
+		foundNodeInDiff := false
 
 		for _, d := range ds {
 			joinedPath := "." + strings.Join(d.Path, ".")
 			if joinedPath == *node.Path {
+				foundNodeInDiff = true
 				// Check if the node matches based on From/To or Value.
 				nodeMatches = b.checkConditionFrom(node.From, d.From) &&
 					b.checkConditionTo(node.To, d.To)
@@ -216,6 +237,16 @@ func (b *BaseExtractor) areNodeConditionsMet(fromNodes *[]FromNode, ds diff.Chan
 				if nodeMatches {
 					break
 				}
+			}
+		}
+
+		if !foundNodeInDiff && !nodeMatches {
+			unchangedValue, err := getNestedValue(b.RenderedConfig, *node.Path)
+			if err == nil {
+				nodeMatches = b.checkConditionFrom(node.From, unchangedValue) &&
+					b.checkConditionTo(node.To, unchangedValue)
+			} else {
+				logrus.Error(fmt.Sprintf("error getting value for %s: %s", *node.Path, err))
 			}
 		}
 
@@ -227,6 +258,42 @@ func (b *BaseExtractor) areNodeConditionsMet(fromNodes *[]FromNode, ds diff.Chan
 	}
 
 	return anyNodeMatches
+}
+
+func getNestedValue(m map[string]any, path string) (any, error) {
+	// Remove leading dot if present.
+	path = strings.TrimPrefix(path, ".")
+
+	// Split the path into individual keys.
+	keys := strings.Split(path, ".")
+
+	// Start with the root map.
+	var current any = m
+
+	// Traverse the nested structure.
+	for _, key := range keys {
+		// Skip empty keys.
+		if key == "" {
+			continue
+		}
+
+		// Check if current is a map.
+		currentMap, ok := current.(map[string]any)
+		if !ok {
+			return nil, &NotAMapError{Key: key}
+		}
+
+		// Look for the key in the current map.
+		value, exists := currentMap[key]
+		if !exists {
+			return nil, &PathNotFoundError{Key: key}
+		}
+
+		// Move to the next level.
+		current = value
+	}
+
+	return current, nil
 }
 
 func (*BaseExtractor) checkConditionFrom(nodeFrom *string, diffFrom any) bool {

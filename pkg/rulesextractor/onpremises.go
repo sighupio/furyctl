@@ -19,8 +19,12 @@ type OnPremExtractor struct {
 	Spec Spec
 }
 
-func NewOnPremClusterRulesExtractor(distributionPath string) (*OnPremExtractor, error) {
-	builder := OnPremExtractor{}
+func NewOnPremClusterRulesExtractor(distributionPath string, renderedConfig map[string]any) (*OnPremExtractor, error) {
+	builder := OnPremExtractor{
+		BaseExtractor: &BaseExtractor{
+			RenderedConfig: renderedConfig,
+		},
+	}
 
 	rulesPath := filepath.Join(distributionPath, "rules", "onpremises-kfd-v1alpha2.yaml")
 

@@ -224,7 +224,7 @@ func (p *PreFlight) CreateDiffChecker(storedCfgStr []byte, renderedConfig map[st
 func (p *PreFlight) CheckStateDiffs(d r3diff.Changelog, diffChecker diffs.Checker) error {
 	var errs []error
 
-	r, err := rules.NewDistroClusterRulesExtractor(p.distroPath)
+	r, err := rules.NewDistroClusterRulesExtractor(p.distroPath, diffChecker.GetCurrentConfig())
 	if err != nil {
 		if !errors.Is(err, rules.ErrReadingRulesFile) {
 			return fmt.Errorf("error while creating rules builder: %w", err)
@@ -260,7 +260,7 @@ func (p *PreFlight) CheckStateDiffs(d r3diff.Changelog, diffChecker diffs.Checke
 func (p *PreFlight) CheckReducerDiffs(d r3diff.Changelog, diffChecker diffs.Checker) error {
 	var errs []error
 
-	r, err := rules.NewDistroClusterRulesExtractor(p.distroPath)
+	r, err := rules.NewDistroClusterRulesExtractor(p.distroPath, diffChecker.GetCurrentConfig())
 	if err != nil {
 		if !errors.Is(err, rules.ErrReadingRulesFile) {
 			return fmt.Errorf("error while creating rules builder: %w", err)
