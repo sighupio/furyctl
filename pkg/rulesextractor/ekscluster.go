@@ -19,7 +19,7 @@ type EKSExtractor struct {
 	Spec Spec
 }
 
-func NewEKSClusterRulesExtractor(distributionPath string) (*EKSExtractor, error) {
+func NewEKSClusterRulesExtractor(distributionPath string, renderedConfig map[string]any) (*EKSExtractor, error) {
 	builder := EKSExtractor{}
 
 	rulesPath := filepath.Join(distributionPath, "rules", "ekscluster-kfd-v1alpha2.yaml")
@@ -31,35 +31,60 @@ func NewEKSClusterRulesExtractor(distributionPath string) (*EKSExtractor, error)
 
 	builder.Spec = spec
 	builder.BaseExtractor = NewBaseExtractor(spec)
+	builder.BaseExtractor.RenderedConfig = renderedConfig
 
 	return &builder, nil
 }
 
-func (r *EKSExtractor) GetImmutables(phase string) []string {
+func (r *EKSExtractor) GetImmutableRules(phase string) []Rule {
 	switch phase {
 	case cluster.OperationPhaseInfrastructure:
 		if r.Spec.Infrastructure == nil {
-			return []string{}
+			return []Rule{}
 		}
 
-		return r.BaseExtractor.ExtractImmutablesFromRules(*r.Spec.Infrastructure)
+		var immutableRules []Rule
+
+		for _, rule := range *r.Spec.Infrastructure {
+			if rule.Immutable {
+				immutableRules = append(immutableRules, rule)
+			}
+		}
+
+		return immutableRules
 
 	case cluster.OperationPhaseKubernetes:
 		if r.Spec.Kubernetes == nil {
-			return []string{}
+			return []Rule{}
 		}
 
-		return r.BaseExtractor.ExtractImmutablesFromRules(*r.Spec.Kubernetes)
+		var immutableRules []Rule
+
+		for _, rule := range *r.Spec.Kubernetes {
+			if rule.Immutable {
+				immutableRules = append(immutableRules, rule)
+			}
+		}
+
+		return immutableRules
 
 	case cluster.OperationPhaseDistribution:
 		if r.Spec.Distribution == nil {
-			return []string{}
+			return []Rule{}
 		}
 
-		return r.BaseExtractor.ExtractImmutablesFromRules(*r.Spec.Distribution)
+		var immutableRules []Rule
+
+		for _, rule := range *r.Spec.Distribution {
+			if rule.Immutable {
+				immutableRules = append(immutableRules, rule)
+			}
+		}
+
+		return immutableRules
 
 	default:
-		return []string{}
+		return []Rule{}
 	}
 }
 
@@ -101,4 +126,8 @@ func (r *EKSExtractor) UnsupportedReducerRulesByDiffs(rls []Rule, ds diff.Change
 
 func (r *EKSExtractor) UnsafeReducerRulesByDiffs(rls []Rule, ds diff.Changelog) []Rule {
 	return r.BaseExtractor.UnsafeReducerRulesByDiffs(rls, ds)
+}
+
+func (r *EKSExtractor) FilterSafeImmutableRules(rules []Rule, ds diff.Changelog) []Rule {
+	return r.BaseExtractor.FilterSafeImmutableRules(rules, ds)
 }

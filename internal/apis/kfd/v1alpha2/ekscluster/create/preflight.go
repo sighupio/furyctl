@@ -302,11 +302,10 @@ func (p *PreFlight) CreateDiffChecker(
 	return diffs.NewBaseChecker(clusterCfg, cfg), nil
 }
 
-// CheckImmutablesDiffs checks if there have been changes to immutable fields in the furyctl.yaml.
 func (p *PreFlight) CheckImmutablesDiffs(d r3diff.Changelog, diffChecker diffs.Checker) error {
 	var errs []error
 
-	r, err := rules.NewEKSClusterRulesExtractor(p.paths.DistroPath)
+	r, err := rules.NewEKSClusterRulesExtractor(p.paths.DistroPath, diffChecker.GetCurrentConfig())
 	if err != nil {
 		if !errors.Is(err, rules.ErrReadingRulesFile) {
 			return fmt.Errorf("error while creating rules builder: %w", err)
@@ -317,9 +316,36 @@ func (p *PreFlight) CheckImmutablesDiffs(d r3diff.Changelog, diffChecker diffs.C
 		return nil
 	}
 
-	errs = append(errs, diffChecker.AssertImmutableViolations(d, r.GetImmutables("infrastructure"))...)
-	errs = append(errs, diffChecker.AssertImmutableViolations(d, r.GetImmutables("kubernetes"))...)
-	errs = append(errs, diffChecker.AssertImmutableViolations(d, r.GetImmutables("distribution"))...)
+	// Get all immutable rules for each phase.
+	infraImmutableRules := r.GetImmutableRules("infrastructure")
+	kubeImmutableRules := r.GetImmutableRules("kubernetes")
+	distroImmutableRules := r.GetImmutableRules("distribution")
+
+	// Filter out the rules that have matching safe conditions.
+	infraFilteredRules := r.FilterSafeImmutableRules(infraImmutableRules, d)
+	kubeFilteredRules := r.FilterSafeImmutableRules(kubeImmutableRules, d)
+	distroFilteredRules := r.FilterSafeImmutableRules(distroImmutableRules, d)
+
+	// Extract the paths from the filtered rules.
+	infraImmutablePaths := make([]string, 0)
+	kubeImmutablePaths := make([]string, 0)
+	distroImmutablePaths := make([]string, 0)
+
+	for _, rule := range infraFilteredRules {
+		infraImmutablePaths = append(infraImmutablePaths, rule.Path)
+	}
+
+	for _, rule := range kubeFilteredRules {
+		kubeImmutablePaths = append(kubeImmutablePaths, rule.Path)
+	}
+
+	for _, rule := range distroFilteredRules {
+		distroImmutablePaths = append(distroImmutablePaths, rule.Path)
+	}
+
+	errs = append(errs, diffChecker.AssertImmutableViolations(d, infraImmutablePaths)...)
+	errs = append(errs, diffChecker.AssertImmutableViolations(d, kubeImmutablePaths)...)
+	errs = append(errs, diffChecker.AssertImmutableViolations(d, distroImmutablePaths)...)
 
 	if len(errs) > 0 {
 		return fmt.Errorf("%w: %s", errImmutable, errs)
@@ -333,7 +359,7 @@ func (p *PreFlight) CheckImmutablesDiffs(d r3diff.Changelog, diffChecker diffs.C
 func (p *PreFlight) CheckReducersDiffs(d r3diff.Changelog, diffChecker diffs.Checker) error {
 	var errs []error
 
-	r, err := rules.NewEKSClusterRulesExtractor(p.paths.DistroPath)
+	r, err := rules.NewEKSClusterRulesExtractor(p.paths.DistroPath, diffChecker.GetCurrentConfig())
 	if err != nil {
 		if !errors.Is(err, rules.ErrReadingRulesFile) {
 			return fmt.Errorf("error while creating rules builder: %w", err)

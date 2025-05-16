@@ -672,10 +672,17 @@ func TestBaseExtractor_ExtractImmutablesFromRules(t *testing.T) {
 func TestBaseExtractor_UnsafeReducerRulesByDiffs(t *testing.T) {
 	t.Parallel()
 
-	var foo, bar any
+	var foo, bar, none, loki, tsdbDate any
 
 	foo = "foo"
 	bar = "bar"
+	none = "none"
+	loki = "loki"
+	tsdbDate = "2023-01-01"
+
+	stringPtr := func(s string) *string {
+		return &s
+	}
 
 	testCases := []struct {
 		name  string
@@ -956,6 +963,105 @@ func TestBaseExtractor_UnsafeReducerRulesByDiffs(t *testing.T) {
 				},
 			},
 		},
+		{
+			name: "should handle from-nodes condition - matching",
+			rules: []rules.Rule{
+				{
+					Path: ".spec.distribution.modules.logging.loki.tsdbStartDate",
+					Reducers: &[]rules.Reducer{
+						{
+							From: nil,
+							To:   tsdbDate,
+						},
+					},
+					Safe: &[]rules.Safe{
+						{
+							FromNodes: &[]rules.FromNode{
+								{
+									Path: stringPtr(".spec.distribution.modules.logging.type"),
+									From: stringPtr("none"),
+								},
+							},
+						},
+					},
+				},
+			},
+			diffs: diff.Changelog{
+				{
+					Type: diff.UPDATE,
+					Path: []string{"spec", "distribution", "modules", "logging", "type"},
+					From: none,
+					To:   loki,
+				},
+				{
+					Type: diff.UPDATE,
+					Path: []string{"spec", "distribution", "modules", "logging", "loki", "tsdbStartDate"},
+					From: nil,
+					To:   tsdbDate,
+				},
+			},
+			want: []rules.Rule{}, // Empty because the rule is safe
+		},
+		{
+			name: "should handle from-nodes condition - not matching",
+			rules: []rules.Rule{
+				{
+					Path: ".spec.distribution.modules.logging.loki.tsdbStartDate",
+					Reducers: &[]rules.Reducer{
+						{
+							From: nil,
+							To:   tsdbDate,
+						},
+					},
+					Safe: &[]rules.Safe{
+						{
+							FromNodes: &[]rules.FromNode{
+								{
+									Path: stringPtr(".spec.distribution.modules.logging.type"),
+									From: stringPtr("none"),
+								},
+							},
+						},
+					},
+				},
+			},
+			diffs: diff.Changelog{
+				{
+					Type: diff.UPDATE,
+					Path: []string{"spec", "distribution", "modules", "logging", "type"},
+					From: loki, // Not "none", so the condition doesn't match
+					To:   loki,
+				},
+				{
+					Type: diff.UPDATE,
+					Path: []string{"spec", "distribution", "modules", "logging", "loki", "tsdbStartDate"},
+					From: nil,
+					To:   tsdbDate,
+				},
+			},
+			want: []rules.Rule{
+				// The rule is returned because it's not safe
+				{
+					Path: ".spec.distribution.modules.logging.loki.tsdbStartDate",
+					Reducers: &[]rules.Reducer{
+						{
+							From: nil,
+							To:   tsdbDate,
+						},
+					},
+					Safe: &[]rules.Safe{
+						{
+							FromNodes: &[]rules.FromNode{
+								{
+									Path: stringPtr(".spec.distribution.modules.logging.type"),
+									From: stringPtr("none"),
+								},
+							},
+						},
+					},
+				},
+			},
+		},
 	}
 
 	for _, tc := range testCases {
@@ -1043,6 +1149,345 @@ func TestBaseExtractor_ExtractReducerRules(t *testing.T) {
 			x := rules.NewBaseExtractor(rules.Spec{})
 
 			got := x.ExtractReducerRules(tc.rules)
+
+			if !reflect.DeepEqual(got, tc.want) {
+				t.Errorf("expected %v, got %v", tc.want, got)
+			}
+		})
+	}
+}
+
+func TestBaseExtractor_FilterSafeImmutableRules(t *testing.T) {
+	t.Parallel()
+
+	var foo, bar, none, loki, tsdbDate any
+
+	foo = "foo"
+	bar = "bar"
+	none = "none"
+	loki = "loki"
+	tsdbDate = "2023-01-01"
+
+	stringPtr := func(s string) *string {
+		return &s
+	}
+
+	anyPtr := func(a any) *any {
+		return &a
+	}
+
+	testCases := []struct {
+		name  string
+		rules []rules.Rule
+		diffs diff.Changelog
+		want  []rules.Rule
+	}{
+		{
+			name:  "should return empty slice if no rules",
+			rules: []rules.Rule{},
+			diffs: diff.Changelog{
+				{
+					Type: diff.CREATE,
+					Path: []string{"foo"},
+				},
+			},
+			want: []rules.Rule{},
+		},
+		{
+			name: "should handle nil diffs",
+			rules: []rules.Rule{
+				{
+					Path:      ".foo",
+					Immutable: true,
+					Safe: &[]rules.Safe{
+						{
+							From: &foo,
+							To:   &bar,
+						},
+					},
+				},
+			},
+			diffs: nil,
+			want: []rules.Rule{
+				{
+					Path:      ".foo",
+					Immutable: true,
+					Safe: &[]rules.Safe{
+						{
+							From: &foo,
+							To:   &bar,
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "should handle nil safe",
+			rules: []rules.Rule{
+				{
+					Path:      ".foo",
+					Immutable: true,
+					Safe:      nil,
+				},
+			},
+			diffs: diff.Changelog{
+				{
+					Type: diff.CREATE,
+					Path: []string{"foo"},
+					From: "foo",
+					To:   "bar",
+				},
+			},
+			want: []rules.Rule{
+				{
+					Path:      ".foo",
+					Immutable: true,
+					Safe:      nil,
+				},
+			},
+		},
+		{
+			name: "should handle empty safe",
+			rules: []rules.Rule{
+				{
+					Path:      ".foo",
+					Immutable: true,
+					Safe:      &[]rules.Safe{},
+				},
+			},
+			diffs: diff.Changelog{
+				{
+					Type: diff.CREATE,
+					Path: []string{"foo"},
+					From: "foo",
+					To:   "bar",
+				},
+			},
+			want: []rules.Rule{
+				{
+					Path:      ".foo",
+					Immutable: true,
+					Safe:      &[]rules.Safe{},
+				},
+			},
+		},
+		{
+			name: "should filter out rules with matching from/to conditions",
+			rules: []rules.Rule{
+				{
+					Path:      ".foo",
+					Immutable: true,
+					Safe: &[]rules.Safe{
+						{
+							From: &foo,
+							To:   &bar,
+						},
+					},
+				},
+				{
+					Path:      ".bar",
+					Immutable: true,
+					Safe: &[]rules.Safe{
+						{
+							From: &bar,
+							To:   &foo,
+						},
+					},
+				},
+			},
+			diffs: diff.Changelog{
+				{
+					Type: diff.CREATE,
+					Path: []string{"foo"},
+					From: "foo",
+					To:   "bar",
+				},
+				{
+					Type: diff.CREATE,
+					Path: []string{"bar"},
+					From: "bar",
+					To:   "foo",
+				},
+			},
+			want: []rules.Rule{}, // Both rules are filtered out because they match their safe conditions
+		},
+		{
+			name: "should keep rules without matching from/to conditions",
+			rules: []rules.Rule{
+				{
+					Path:      ".foo",
+					Immutable: true,
+					Safe: &[]rules.Safe{
+						{
+							From: &foo,
+							To:   &bar,
+						},
+					},
+				},
+				{
+					Path:      ".bar",
+					Immutable: true,
+					Safe: &[]rules.Safe{
+						{
+							From: &bar,
+							To:   &bar, // Doesn't match the diff
+						},
+					},
+				},
+			},
+			diffs: diff.Changelog{
+				{
+					Type: diff.CREATE,
+					Path: []string{"foo"},
+					From: "foo",
+					To:   "bar",
+				},
+				{
+					Type: diff.CREATE,
+					Path: []string{"bar"},
+					From: "bar",
+					To:   "foo",
+				},
+			},
+			want: []rules.Rule{
+				{
+					Path:      ".bar",
+					Immutable: true,
+					Safe: &[]rules.Safe{
+						{
+							From: &bar,
+							To:   &bar,
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "should filter out rules with matching FromNodes conditions",
+			rules: []rules.Rule{
+				{
+					Path:      ".spec.distribution.modules.logging.loki.tsdbStartDate",
+					Immutable: true,
+					Safe: &[]rules.Safe{
+						{
+							FromNodes: &[]rules.FromNode{
+								{
+									Path: stringPtr(".spec.distribution.modules.logging.type"),
+									From: stringPtr("none"),
+								},
+							},
+						},
+					},
+				},
+			},
+			diffs: diff.Changelog{
+				{
+					Type: diff.UPDATE,
+					Path: []string{"spec", "distribution", "modules", "logging", "type"},
+					From: none,
+					To:   loki,
+				},
+				{
+					Type: diff.UPDATE,
+					Path: []string{"spec", "distribution", "modules", "logging", "loki", "tsdbStartDate"},
+					From: nil,
+					To:   tsdbDate,
+				},
+			},
+			want: []rules.Rule{}, // Rule is filtered out because FromNodes condition matches
+		},
+		{
+			name: "should keep rules without matching FromNodes conditions",
+			rules: []rules.Rule{
+				{
+					Path:      ".spec.distribution.modules.logging.loki.tsdbStartDate",
+					Immutable: true,
+					Safe: &[]rules.Safe{
+						{
+							FromNodes: &[]rules.FromNode{
+								{
+									Path: stringPtr(".spec.distribution.modules.logging.type"),
+									From: stringPtr("none"),
+								},
+							},
+						},
+					},
+				},
+			},
+			diffs: diff.Changelog{
+				{
+					Type: diff.UPDATE,
+					Path: []string{"spec", "distribution", "modules", "logging", "type"},
+					From: loki, // Not "none", so the condition doesn't match
+					To:   loki,
+				},
+				{
+					Type: diff.UPDATE,
+					Path: []string{"spec", "distribution", "modules", "logging", "loki", "tsdbStartDate"},
+					From: nil,
+					To:   tsdbDate,
+				},
+			},
+			want: []rules.Rule{
+				{
+					Path:      ".spec.distribution.modules.logging.loki.tsdbStartDate",
+					Immutable: true,
+					Safe: &[]rules.Safe{
+						{
+							FromNodes: &[]rules.FromNode{
+								{
+									Path: stringPtr(".spec.distribution.modules.logging.type"),
+									From: stringPtr("none"),
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "should filter out rules with matching combined conditions",
+			rules: []rules.Rule{
+				{
+					Path:      ".spec.distribution.modules.logging.loki.tsdbStartDate",
+					Immutable: true,
+					Safe: &[]rules.Safe{
+						{
+							From: anyPtr(nil),
+							To:   anyPtr(tsdbDate),
+							FromNodes: &[]rules.FromNode{
+								{
+									Path: stringPtr(".spec.distribution.modules.logging.type"),
+									From: stringPtr("none"),
+								},
+							},
+						},
+					},
+				},
+			},
+			diffs: diff.Changelog{
+				{
+					Type: diff.UPDATE,
+					Path: []string{"spec", "distribution", "modules", "logging", "type"},
+					From: none,
+					To:   loki,
+				},
+				{
+					Type: diff.UPDATE,
+					Path: []string{"spec", "distribution", "modules", "logging", "loki", "tsdbStartDate"},
+					From: nil,
+					To:   tsdbDate,
+				},
+			},
+			want: []rules.Rule{}, // Rule is filtered out because both From/To and FromNodes conditions match
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			x := rules.NewBaseExtractor(rules.Spec{})
+
+			got := x.FilterSafeImmutableRules(tc.rules, tc.diffs)
 
 			if !reflect.DeepEqual(got, tc.want) {
 				t.Errorf("expected %v, got %v", tc.want, got)

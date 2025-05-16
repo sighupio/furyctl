@@ -107,12 +107,12 @@ func TestEKSClusterCheckIsCompatible(t *testing.T) {
 		},
 		{
 			name:                "should return true if distribution version equals 1.32.0",
-			distributionVersion: "v1.31.0",
+			distributionVersion: "v1.32.0",
 			expected:            true,
 		},
 		{
 			name:                "should return false if distribution version is greater than 1.32.0",
-			distributionVersion: "v1.31.2",
+			distributionVersion: "v1.32.2",
 			expected:            false,
 		},
 	}
