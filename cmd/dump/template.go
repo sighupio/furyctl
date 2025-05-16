@@ -7,7 +7,6 @@ package dump
 import (
 	"errors"
 	"fmt"
-	"os"
 	"path/filepath"
 
 	"github.com/sirupsen/logrus"
@@ -69,55 +68,22 @@ The command will dump into a 'distribution' folder in the working directory all 
 
 			flags, err := getDumpTemplateCmdFlags()
 			if err != nil {
-				return err
-			}
-
-			absFuryctlPath, err := filepath.Abs(flags.FuryctlPath)
-			if err != nil {
 				cmdEvent.AddErrorMessage(err)
 				tracker.Track(cmdEvent)
 
-				return fmt.Errorf("error: %w", err)
-			}
-
-			outDir := flags.Outdir
-
-			if outDir == "" {
-				// Get home dir and use that as outdir if it's not set.
-				logrus.Debug("Getting Home Directory Path...")
-
-				homeDir, err := os.UserHomeDir()
-				if err != nil {
-					cmdEvent.AddErrorMessage(err)
-					tracker.Track(cmdEvent)
-
-					return fmt.Errorf("error while getting user home directory: %w", err)
-				}
-				outDir = homeDir
-			}
-
-			absDistroPatchesLocation := flags.DistroPatchesLocation
-
-			if absDistroPatchesLocation != "" {
-				absDistroPatchesLocation, err = filepath.Abs(flags.DistroPatchesLocation)
-				if err != nil {
-					cmdEvent.AddErrorMessage(err)
-					tracker.Track(cmdEvent)
-
-					return fmt.Errorf("error while getting absolute path of distro patches location: %w", err)
-				}
+				return err
 			}
 
 			var distrodl *dist.Downloader
 
 			client := netx.NewGoGetterClient()
 			executor := execx.NewStdExecutor()
-			depsvl := dependencies.NewValidator(executor, "", absFuryctlPath, false)
+			depsvl := dependencies.NewValidator(executor, "", flags.FuryctlPath, false)
 
 			if flags.DistroLocation == "" {
-				distrodl = dist.NewCachingDownloader(client, outDir, flags.GitProtocol, absDistroPatchesLocation)
+				distrodl = dist.NewCachingDownloader(client, flags.Outdir, flags.GitProtocol, flags.DistroPatchesLocation)
 			} else {
-				distrodl = dist.NewDownloader(client, flags.GitProtocol, absDistroPatchesLocation)
+				distrodl = dist.NewDownloader(client, flags.GitProtocol, flags.DistroPatchesLocation)
 			}
 
 			if err := depsvl.ValidateBaseReqs(); err != nil {
@@ -128,7 +94,7 @@ The command will dump into a 'distribution' folder in the working directory all 
 			}
 
 			logrus.Info("Downloading distribution...")
-			res, err := distrodl.Download(flags.DistroLocation, absFuryctlPath)
+			res, err := distrodl.Download(flags.DistroLocation, flags.FuryctlPath)
 			if err != nil {
 				cmdEvent.AddErrorMessage(err)
 				tracker.Track(cmdEvent)
@@ -144,39 +110,26 @@ The command will dump into a 'distribution' folder in the working directory all 
 
 			if !flags.SkipValidation {
 				logrus.Info("Validating configuration file...")
-				if err := config.Validate(absFuryctlPath, res.RepoPath); err != nil {
+				if err := config.Validate(flags.FuryctlPath, res.RepoPath); err != nil {
 					cmdEvent.AddErrorMessage(err)
 					tracker.Track(cmdEvent)
 
 					return fmt.Errorf("error while validating configuration file: %w", err)
 				}
+			} else {
+				logrus.Info("Skipping configuration file validation")
 			}
 
-			furyctlFile, err := yamlx.FromFileV2[map[any]any](absFuryctlPath)
+			furyctlFile, err := yamlx.FromFileV2[map[any]any](flags.FuryctlPath)
 			if err != nil {
 				cmdEvent.AddErrorMessage(err)
 				tracker.Track(cmdEvent)
 
-				return fmt.Errorf("%s - %w", absFuryctlPath, err)
+				return fmt.Errorf("%s - %w", flags.FuryctlPath, err)
 			}
 
 			// Note: this is already the right working directory because it is updated in the root command.
-			currentDir, err := os.Getwd()
-			if err != nil {
-				cmdEvent.AddErrorMessage(err)
-				tracker.Track(cmdEvent)
-
-				return fmt.Errorf("error while getting current directory: %w", err)
-			}
-
-			dumpDir := filepath.Join(currentDir, "distribution")
-			absDumpDir, err := filepath.Abs(dumpDir)
-			if err != nil {
-				cmdEvent.AddErrorMessage(err)
-				tracker.Track(cmdEvent)
-
-				return fmt.Errorf("error while getting absolute path of dump directory: %w", err)
-			}
+			dumpDir := filepath.Join(viper.GetString("workdir"), "distribution")
 
 			logrus.Info("Rendering distribution manifests...")
 
@@ -185,7 +138,7 @@ The command will dump into a 'distribution' folder in the working directory all 
 				res.RepoPath,
 				res.MinimalConf.Kind,
 				dumpDir,
-				absFuryctlPath,
+				flags.FuryctlPath,
 				flags.NoOverwrite,
 				flags.DryRun,
 			)
@@ -201,13 +154,13 @@ The command will dump into a 'distribution' folder in the working directory all 
 				tracker.Track(cmdEvent)
 
 				if errors.Is(err, template.ErrTargetIsNotEmpty) {
-					return fmt.Errorf("%w: \"%s\"", ErrTargetIsNotEmpty, absDumpDir)
+					return fmt.Errorf("%w: \"%s\"", ErrTargetIsNotEmpty, dumpDir)
 				}
 
 				return fmt.Errorf("error while generating distribution manifests: %w", err)
 			}
 
-			logrus.Info("Distribution manifests successfully dumped to ", absDumpDir)
+			logrus.Info("Distribution manifests successfully dumped to ", dumpDir)
 
 			cmdEvent.AddSuccessMessage("Distribution manifests dumped successfully")
 			tracker.Track(cmdEvent)
@@ -219,7 +172,7 @@ The command will dump into a 'distribution' folder in the working directory all 
 	templateCmd.Flags().Bool(
 		"dry-run",
 		false,
-		"Furyctl will try its best to generate the manifests despite the errors",
+		"furyctl will try its best to generate the manifests despite the errors",
 	)
 
 	templateCmd.Flags().Bool(
@@ -235,7 +188,7 @@ The command will dump into a 'distribution' folder in the working directory all 
 		"Location where to download schemas, defaults and the distribution manifest from. "+
 			"It can either be a local path(eg: /path/to/distribution) or "+
 			"a remote URL(eg: git::git@github.com:sighupio/distribution?ref=BRANCH_NAME&depth=1). "+
-			"Any format supported by hashicorp/go-getter can be used.",
+			"Any format supported by hashicorp/go-getter can be used",
 	)
 
 	templateCmd.Flags().StringP(
@@ -254,8 +207,12 @@ The command will dump into a 'distribution' folder in the working directory all 
 	templateCmd.Flags().String(
 		"distro-patches",
 		"",
-		"Location where to download distribution's user-made patches from. "+
-			"Any format supported by hashicorp/go-getter can be used.",
+		"Location where the distribution's user-made patches can be downloaded from. "+
+			"This can be either a local path (eg: /path/to/distro-patches) or "+
+			"a remote URL (eg: git::git@github.com:your-org/distro-patches?depth=1&ref=BRANCH_NAME). "+
+			"Any format supported by hashicorp/go-getter can be used."+
+			" Patches within this location must be in a folder named after the distribution version (eg: v1.29.0) and "+
+			"must have the same structure as the distribution's repository",
 	)
 
 	return templateCmd
@@ -269,14 +226,27 @@ func getDumpTemplateCmdFlags() (TemplateCmdFlags, error) {
 		return TemplateCmdFlags{}, fmt.Errorf("%w: %w", ErrParsingFlag, err)
 	}
 
+	furyctlPath, err := filepath.Abs(viper.GetString("config"))
+	if err != nil {
+		return TemplateCmdFlags{}, fmt.Errorf("error: %w", err)
+	}
+
+	distroPatchesLocation := viper.GetString("distro-patches")
+	if distroPatchesLocation != "" {
+		distroPatchesLocation, err = filepath.Abs(distroPatchesLocation)
+		if err != nil {
+			return TemplateCmdFlags{}, fmt.Errorf("error while getting absolute path of distro patches location: %w", err)
+		}
+	}
+
 	return TemplateCmdFlags{
 		DryRun:                viper.GetBool("dry-run"),
 		NoOverwrite:           viper.GetBool("no-overwrite"),
 		SkipValidation:        viper.GetBool("skip-validation"),
 		Outdir:                viper.GetString("outdir"),
 		DistroLocation:        viper.GetString("distro-location"),
-		FuryctlPath:           viper.GetString("config"),
+		FuryctlPath:           furyctlPath,
 		GitProtocol:           typedGitProtocol,
-		DistroPatchesLocation: viper.GetString("distro-patches"),
+		DistroPatchesLocation: distroPatchesLocation,
 	}, nil
 }

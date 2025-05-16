@@ -7,7 +7,6 @@ package get
 import (
 	"errors"
 	"fmt"
-	"os"
 	"path"
 	"path/filepath"
 
@@ -46,31 +45,22 @@ func NewKubeconfigCmd() *cobra.Command {
 			}
 		},
 		RunE: func(_ *cobra.Command, _ []string) error {
+			var err error
 			ctn := app.GetContainerInstance()
 
 			tracker := ctn.Tracker()
 			tracker.Flush()
 
 			// Get flags.
-			debug := viper.GetBool("debug")
 			binPath := viper.GetString("bin-path")
-			furyctlPath := viper.GetString("config")
-			outDir := viper.GetString("outdir")
+			currentDir := viper.GetString("workdir")
+			debug := viper.GetBool("debug")
 			distroLocation := viper.GetString("distro-location")
+			furyctlPath := viper.GetString("config")
 			gitProtocol := viper.GetString("git-protocol")
+			outDir := viper.GetString("outdir")
 			skipDepsDownload := viper.GetBool("skip-deps-download")
 			skipDepsValidation := viper.GetBool("skip-deps-validation")
-
-			// Get Current dir.
-			logrus.Debug("Getting current directory path...")
-
-			currentDir, err := os.Getwd()
-			if err != nil {
-				cmdEvent.AddErrorMessage(err)
-				tracker.Track(cmdEvent)
-
-				return fmt.Errorf("error while getting current directory: %w", err)
-			}
 
 			// Get absolute path to the config file.
 			furyctlPath, err = filepath.Abs(furyctlPath)
@@ -81,26 +71,25 @@ func NewKubeconfigCmd() *cobra.Command {
 				return fmt.Errorf("error while getting config directory: %w", err)
 			}
 
-			// Get home dir.
-			logrus.Debug("Getting Home directory path...")
+			if binPath == "" {
+				binPath = path.Join(outDir, ".furyctl", "bin")
+			} else {
+				binPath, err = filepath.Abs(binPath)
+				if err != nil {
+					cmdEvent.AddErrorMessage(err)
+					tracker.Track(cmdEvent)
 
-			homeDir, err := os.UserHomeDir()
+					return fmt.Errorf("error while getting absolute path for bin folder: %w", err)
+				}
+			}
+
+			typedGitProtocol, err := git.NewProtocol(gitProtocol)
 			if err != nil {
 				cmdEvent.AddErrorMessage(err)
 				tracker.Track(cmdEvent)
 
-				return fmt.Errorf("error while getting user home directory: %w", err)
+				return fmt.Errorf("%w: %w", ErrParsingFlag, err)
 			}
-
-			if outDir == "" {
-				outDir = homeDir
-			}
-
-			if binPath == "" {
-				binPath = path.Join(outDir, ".furyctl", "bin")
-			}
-
-			parsedGitProtocol := (git.Protocol)(gitProtocol)
 
 			// Init packages.
 			execx.Debug = debug
@@ -114,9 +103,9 @@ func NewKubeconfigCmd() *cobra.Command {
 			client := netx.NewGoGetterClient()
 
 			if distroLocation == "" {
-				distrodl = dist.NewCachingDownloader(client, outDir, parsedGitProtocol, "")
+				distrodl = dist.NewCachingDownloader(client, outDir, typedGitProtocol, "")
 			} else {
-				distrodl = dist.NewDownloader(client, parsedGitProtocol, "")
+				distrodl = dist.NewDownloader(client, typedGitProtocol, "")
 			}
 
 			// Validate base requirements.
@@ -141,7 +130,7 @@ func NewKubeconfigCmd() *cobra.Command {
 			basePath := path.Join(outDir, ".furyctl", res.MinimalConf.Metadata.Name)
 
 			// Init second half of collaborators.
-			depsdl := dependencies.NewCachingDownloader(client, outDir, basePath, binPath, parsedGitProtocol)
+			depsdl := dependencies.NewCachingDownloader(client, outDir, basePath, binPath, typedGitProtocol)
 
 			// Validate the furyctl.yaml file.
 			logrus.Info("Validating configuration file...")
@@ -161,6 +150,8 @@ func NewKubeconfigCmd() *cobra.Command {
 
 					return fmt.Errorf("%w: %v", ErrDownloadDependenciesFailed, err)
 				}
+			} else {
+				logrus.Info("Dependencies download skipped")
 			}
 
 			// Validate the dependencies, unless explicitly told to skip it.
@@ -172,6 +163,8 @@ func NewKubeconfigCmd() *cobra.Command {
 
 					return fmt.Errorf("error while validating dependencies: %w", err)
 				}
+			} else {
+				logrus.Info("Dependencies validation skipped")
 			}
 
 			getter, err := cluster.NewKubeconfigGetter(res.MinimalConf, res.DistroManifest, res.RepoPath, furyctlPath, currentDir)
@@ -202,7 +195,7 @@ func NewKubeconfigCmd() *cobra.Command {
 		"bin-path",
 		"b",
 		"",
-		"Path to the folder where all the dependencies' binaries are installed",
+		"Path to the folder where all the dependencies' binaries are downloaded",
 	)
 
 	kubeconfigCmd.Flags().StringP(
@@ -219,7 +212,7 @@ func NewKubeconfigCmd() *cobra.Command {
 		"Location where to download schemas, defaults and the distribution manifests from. "+
 			"It can either be a local path (eg: /path/to/distribution) or "+
 			"a remote URL (eg: git::git@github.com:sighupio/distribution?depth=1&ref=BRANCH_NAME). "+
-			"Any format supported by hashicorp/go-getter can be used.",
+			"Any format supported by hashicorp/go-getter can be used",
 	)
 
 	kubeconfigCmd.Flags().Bool(
