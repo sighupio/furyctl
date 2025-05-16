@@ -22,8 +22,12 @@ type DistroExtractor struct {
 	Spec Spec
 }
 
-func NewDistroClusterRulesExtractor(distributionPath string) (*DistroExtractor, error) {
-	builder := DistroExtractor{}
+func NewDistroClusterRulesExtractor(distributionPath string, renderedConfig map[string]any) (*DistroExtractor, error) {
+	builder := DistroExtractor{
+		BaseExtractor: &BaseExtractor{
+			RenderedConfig: renderedConfig,
+		},
+	}
 
 	rulesPath := filepath.Join(distributionPath, "rules", "kfddistribution-kfd-v1alpha2.yaml")
 

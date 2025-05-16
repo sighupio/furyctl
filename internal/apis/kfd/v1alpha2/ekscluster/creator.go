@@ -336,7 +336,7 @@ func (v *ClusterCreator) CreateAsync(
 		return
 	}
 
-	r, err := eksrules.NewEKSClusterRulesExtractor(v.paths.DistroPath)
+	r, err := eksrules.NewEKSClusterRulesExtractor(v.paths.DistroPath, renderedConfig)
 	if err != nil {
 		if !errors.Is(err, eksrules.ErrReadingRulesFile) {
 			errCh <- fmt.Errorf("error while creating rules builder: %w", err)
