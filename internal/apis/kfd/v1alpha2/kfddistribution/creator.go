@@ -195,7 +195,7 @@ func (c *ClusterCreator) Create(startFrom string, _, _ int) error {
 		return fmt.Errorf("error while executing preflight phase: %w", err)
 	}
 
-	r, err := distrorules.NewDistroClusterRulesExtractor(c.paths.DistroPath)
+	r, err := distrorules.NewDistroClusterRulesExtractor(c.paths.DistroPath, renderedConfig)
 	if err != nil {
 		if !errors.Is(err, distrorules.ErrReadingRulesFile) {
 			return fmt.Errorf("error while creating rules builder: %w", err)

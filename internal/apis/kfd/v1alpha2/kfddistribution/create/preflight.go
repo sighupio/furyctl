@@ -224,7 +224,7 @@ func (p *PreFlight) CreateDiffChecker(storedCfgStr []byte, renderedConfig map[st
 func (p *PreFlight) CheckStateDiffs(d r3diff.Changelog, diffChecker diffs.Checker) error {
 	var errs []error
 
-	r, err := rules.NewDistroClusterRulesExtractor(p.distroPath)
+	r, err := rules.NewDistroClusterRulesExtractor(p.distroPath, diffChecker.GetCurrentConfig())
 	if err != nil {
 		if !errors.Is(err, rules.ErrReadingRulesFile) {
 			return fmt.Errorf("error while creating rules builder: %w", err)
@@ -235,7 +235,20 @@ func (p *PreFlight) CheckStateDiffs(d r3diff.Changelog, diffChecker diffs.Checke
 		return nil
 	}
 
-	errs = append(errs, diffChecker.AssertImmutableViolations(d, r.GetImmutables("distribution"))...)
+	// Get all immutable rules.
+	immutableRules := r.GetImmutableRules("distribution")
+
+	// Filter out the rules that have matching safe conditions.
+	filteredRules := r.FilterSafeImmutableRules(immutableRules, d)
+
+	// Extract the paths from the filtered rules.
+	immutablePaths := make([]string, 0)
+
+	for _, rule := range filteredRules {
+		immutablePaths = append(immutablePaths, rule.Path)
+	}
+
+	errs = append(errs, diffChecker.AssertImmutableViolations(d, immutablePaths)...)
 
 	if len(errs) > 0 {
 		return fmt.Errorf("%w: %s", errImmutable, errs)
@@ -247,7 +260,7 @@ func (p *PreFlight) CheckStateDiffs(d r3diff.Changelog, diffChecker diffs.Checke
 func (p *PreFlight) CheckReducerDiffs(d r3diff.Changelog, diffChecker diffs.Checker) error {
 	var errs []error
 
-	r, err := rules.NewDistroClusterRulesExtractor(p.distroPath)
+	r, err := rules.NewDistroClusterRulesExtractor(p.distroPath, diffChecker.GetCurrentConfig())
 	if err != nil {
 		if !errors.Is(err, rules.ErrReadingRulesFile) {
 			return fmt.Errorf("error while creating rules builder: %w", err)

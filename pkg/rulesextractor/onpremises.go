@@ -19,8 +19,12 @@ type OnPremExtractor struct {
 	Spec Spec
 }
 
-func NewOnPremClusterRulesExtractor(distributionPath string) (*OnPremExtractor, error) {
-	builder := OnPremExtractor{}
+func NewOnPremClusterRulesExtractor(distributionPath string, renderedConfig map[string]any) (*OnPremExtractor, error) {
+	builder := OnPremExtractor{
+		BaseExtractor: &BaseExtractor{
+			RenderedConfig: renderedConfig,
+		},
+	}
 
 	rulesPath := filepath.Join(distributionPath, "rules", "onpremises-kfd-v1alpha2.yaml")
 
@@ -34,24 +38,40 @@ func NewOnPremClusterRulesExtractor(distributionPath string) (*OnPremExtractor, 
 	return &builder, nil
 }
 
-func (r *OnPremExtractor) GetImmutables(phase string) []string {
+func (r *OnPremExtractor) GetImmutableRules(phase string) []Rule {
 	switch phase {
 	case cluster.OperationPhaseKubernetes:
 		if r.Spec.Kubernetes == nil {
-			return []string{}
+			return []Rule{}
 		}
 
-		return r.BaseExtractor.ExtractImmutablesFromRules(*r.Spec.Kubernetes)
+		var immutableRules []Rule
+
+		for _, rule := range *r.Spec.Kubernetes {
+			if rule.Immutable {
+				immutableRules = append(immutableRules, rule)
+			}
+		}
+
+		return immutableRules
 
 	case cluster.OperationPhaseDistribution:
 		if r.Spec.Distribution == nil {
-			return []string{}
+			return []Rule{}
 		}
 
-		return r.BaseExtractor.ExtractImmutablesFromRules(*r.Spec.Distribution)
+		var immutableRules []Rule
+
+		for _, rule := range *r.Spec.Distribution {
+			if rule.Immutable {
+				immutableRules = append(immutableRules, rule)
+			}
+		}
+
+		return immutableRules
 
 	default:
-		return []string{}
+		return []Rule{}
 	}
 }
 
@@ -86,4 +106,8 @@ func (r *OnPremExtractor) UnsupportedReducerRulesByDiffs(rls []Rule, ds diff.Cha
 
 func (r *OnPremExtractor) UnsafeReducerRulesByDiffs(rls []Rule, ds diff.Changelog) []Rule {
 	return r.BaseExtractor.UnsafeReducerRulesByDiffs(rls, ds)
+}
+
+func (r *OnPremExtractor) FilterSafeImmutableRules(rules []Rule, ds diff.Changelog) []Rule {
+	return r.BaseExtractor.FilterSafeImmutableRules(rules, ds)
 }
