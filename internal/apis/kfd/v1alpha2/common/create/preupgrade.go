@@ -135,7 +135,7 @@ func (p *PreUpgrade) Exec() error {
 
 	confPath := filepath.Join(outDirPath1, "config.yaml")
 
-	logrus.Debugf("config path = %s", confPath)
+	logrus.Debugf("Preupgrade configuration file path %s", confPath)
 
 	if err = os.WriteFile(confPath, outYaml, iox.FullRWPermAccess); err != nil {
 		return fmt.Errorf("error writing config file: %w", err)
@@ -236,7 +236,8 @@ func (p *PreUpgrade) Exec() error {
 		// }.
 
 		if !cluster.IsForceEnabledForFeature(p.forceFlag, cluster.ForceFeatureUpgrades) {
-			if _, err := fmt.Println("Are you sure you want to continue? Only 'yes' will be accepted to confirm."); err != nil {
+			_, err := fmt.Println("\nAre you sure you want to continue? Only 'yes' will be accepted to confirm.")
+			if err != nil {
 				return fmt.Errorf("error writing to stdout: %w", err)
 			}
 
