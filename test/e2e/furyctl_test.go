@@ -171,7 +171,7 @@ var (
 				out, err := FuryctlValidateConfig("../data/e2e/validate/config/nodistro")
 
 				Expect(err).To(HaveOccurred())
-				Expect(out).To(ContainSubstring("unsupported KFD version"))
+				Expect(out).To(ContainSubstring("unsupported SD version"))
 			})
 
 			It("should report an error when config validation fails", func() {

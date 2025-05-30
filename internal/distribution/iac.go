@@ -133,7 +133,7 @@ func (m *IACBuilder) Build() error {
 
 	confPath := filepath.Join(outDirPath, "config.yaml")
 
-	logrus.Debugf("config path = %s", confPath)
+	logrus.Debugf("IaC configuration file path %s", confPath)
 
 	if err = os.WriteFile(confPath, outYaml, iox.FullRWPermAccess); err != nil {
 		return fmt.Errorf("error writing config file: %w", err)

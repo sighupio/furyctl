@@ -54,7 +54,7 @@ func (p *ConfigParser) ParseDynamicValue(val any) (string, error) {
 		case Env:
 			envVar, exists := os.LookupEnv(sourceValue)
 			if !exists {
-				return "", fmt.Errorf("%w: %s is empty", ErrCannotParseDynamicValue, sourceValue)
+				return "", fmt.Errorf("%w: \"%s\" is empty", ErrCannotParseDynamicValue, sourceValue)
 			}
 
 			envVar = strings.TrimRight(envVar, "\n")
