@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"os"
 	"path"
+	"strings"
 	"sync"
 
 	"github.com/sirupsen/logrus"
@@ -177,7 +178,7 @@ func (d *Distribution) prepare() (template.Config, error) {
 		return template.Config{}, fmt.Errorf("error connecting to cluster: %w", err)
 	}
 
-	logrus.Info("Checking storage classes...")
+	logrus.Info("Checking for a default storage class...")
 
 	getStorageClassesOutput, err := d.kubeRunner.Get(false, "", "storageclasses")
 	if err != nil {
@@ -189,7 +190,19 @@ func (d *Distribution) prepare() (template.Config, error) {
 			"No storage classes found in the cluster. " +
 				"logging module (if enabled), tracing module (if enabled), dr module (if enabled) " +
 				"and prometheus-operated package installation will be skipped. " +
-				"You need to install a StorageClass and re-run furyctl to install the missing components.",
+				"Install a *default* StorageClass and re-run furyctl to install the missing components.",
+		)
+
+		storageClassAvailable = false
+	}
+
+	defaultSC := "(default)"
+	if !strings.Contains(getStorageClassesOutput, defaultSC) && getStorageClassesOutput != "No resources found" {
+		logrus.Warn(
+			"No *default* storage classes found in the cluster. " +
+				"logging module (if enabled), tracing module (if enabled), dr module (if enabled) " +
+				"and prometheus-operated package installation will be skipped. " +
+				"Set a default StorageClass and re-run furyctl to install the missing components.",
 		)
 
 		storageClassAvailable = false
