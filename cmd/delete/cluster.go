@@ -378,8 +378,7 @@ func NewClusterCmd() *cobra.Command {
 	return clusterCmd
 }
 
-func getDeleteClusterCmdFlags() (ClusterCmdFlags, error) {
-	var err error
+func getDeleteClusterCmdFlags() (_ ClusterCmdFlags, err error) {
 
 	// The binPath path must be calculated here because when we launch the tools
 	// we sometimes change the working directory where the binary is launched

@@ -155,7 +155,7 @@ furyctl is a command line interface tool to manage the full lifecycle of SIGHUP 
 
 				logrus.Debugf("Writing logs to %s", logPath)
 
-				// Deprected flags.
+				// Deprecated flags.
 				https := viper.GetBool("https")
 				if !https {
 					logrus.Warn("The --https flag is deprecated and https is the default, if you want to use SSH protocol to download repositories use --git-protocol ssh")

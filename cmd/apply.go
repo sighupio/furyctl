@@ -295,8 +295,7 @@ func getSkipsClusterCmdFlags() ClusterSkipsCmdFlags {
 	}
 }
 
-func getApplyCmdFlags() (ClusterCmdFlags, error) {
-	var err error
+func getApplyCmdFlags() (_ ClusterCmdFlags, err error) {
 
 	skips := getSkipsClusterCmdFlags()
 
