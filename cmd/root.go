@@ -172,7 +172,7 @@ furyctl is a command line interface tool to manage the full lifecycle of SIGHUP 
 		"debug",
 		"D",
 		false,
-		"Enables furyctl debug output. This will greatly increase the verbosity. Notice that you can always access the debug output and even more logs in the log file",
+		"Enables furyctl debug output. This will greatly increase the verbosity. Debug logs and additional logs are also always written to the log file. See the --log flag.",
 	)
 
 	rootCmd.PersistentFlags().BoolVarP(
@@ -204,7 +204,7 @@ furyctl is a command line interface tool to manage the full lifecycle of SIGHUP 
 		"outdir",
 		"o",
 		"",
-		"Path where to create the \".furyctl\" data directory. Default is the user's home",
+		"Path where to create the \".furyctl\" data directory. Default is the user's home. Path is relative to --workdir",
 	)
 
 	rootCmd.PersistentFlags().StringVarP(
@@ -212,7 +212,7 @@ furyctl is a command line interface tool to manage the full lifecycle of SIGHUP 
 		"log",
 		"l",
 		"",
-		"Path to a file or folder where to write logs to. Set to 'stdout' write to standard output. Target path will be created if it does not exists. Default is '<outdir>/.furyctl/furyctl.<timestamp>-<random number>.log'",
+		"Path to a file or folder where to write logs to. Set to 'stdout' write to standard output. Target path will be created if it does not exists. Path is relative to --workdir. Default is '<outdir>/.furyctl/furyctl.<timestamp>-<random number>.log'",
 	)
 
 	rootCmd.PersistentFlags().VarP(
