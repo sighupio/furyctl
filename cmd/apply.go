@@ -384,6 +384,10 @@ func getApplyCmdFlags() (ClusterCmdFlags, error) {
 
 	postApplyPhases := viper.GetStringSlice("post-apply-phases")
 
+	if phase != cluster.OperationPhaseAll && len(postApplyPhases) > 0 {
+		return ClusterCmdFlags{}, fmt.Errorf("%w: phase and post-apply-phases cannot be used at the same time", ErrParsingFlag)
+	}
+
 	if err := validatePostApplyPhasesFlag(postApplyPhases); err != nil {
 		return ClusterCmdFlags{}, fmt.Errorf("%w: %s %w", ErrParsingFlag, "post-apply-phases", err)
 	}
