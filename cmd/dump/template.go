@@ -226,9 +226,15 @@ func getDumpTemplateCmdFlags() (TemplateCmdFlags, error) {
 		return TemplateCmdFlags{}, fmt.Errorf("%w: %w", ErrParsingFlag, err)
 	}
 
-	furyctlPath, err := filepath.Abs(viper.GetString("config"))
+	furyctlPath := viper.GetString("config")
+
+	if furyctlPath == "" {
+		return TemplateCmdFlags{}, fmt.Errorf("%w --config: cannot be an empty string", ErrParsingFlag)
+	}
+
+	furyctlPath, err = filepath.Abs(furyctlPath)
 	if err != nil {
-		return TemplateCmdFlags{}, fmt.Errorf("error: %w", err)
+		return TemplateCmdFlags{}, fmt.Errorf("error while getting configuration file absolute path: %w", err)
 	}
 
 	distroPatchesLocation := viper.GetString("distro-patches")

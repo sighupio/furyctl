@@ -322,9 +322,15 @@ func getApplyCmdFlags() (ClusterCmdFlags, error) {
 		}
 	}
 
-	furyctlPath, err := filepath.Abs(viper.GetString("config"))
+	furyctlPath := viper.GetString("config")
+
+	if furyctlPath == "" {
+		return ClusterCmdFlags{}, fmt.Errorf("%w --config: cannot be an empty string", ErrParsingFlag)
+	}
+
+	furyctlPath, err = filepath.Abs(furyctlPath)
 	if err != nil {
-		return ClusterCmdFlags{}, fmt.Errorf("error while calculating furyctl configuration file absolute path: %w", err)
+		return ClusterCmdFlags{}, fmt.Errorf("error while getting configuration file absolute path: %w", err)
 	}
 
 	phase := viper.GetString("phase")
