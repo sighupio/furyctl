@@ -409,8 +409,7 @@ func getDeleteClusterCmdFlags() (ClusterCmdFlags, error) {
 	}
 
 	phase := viper.GetString("phase")
-	err = cluster.CheckPhase(phase)
-	if err != nil { //nolint: wsl // conflicts with gofumpt
+	if err = cluster.CheckPhase(phase); err != nil {
 		return ClusterCmdFlags{}, fmt.Errorf("%w: %s: %s", ErrParsingFlag, "phase", err.Error())
 	}
 
