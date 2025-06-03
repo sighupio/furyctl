@@ -44,7 +44,8 @@ func NewKubeconfigCmd() *cobra.Command {
 				logrus.Fatalf("error while binding flags: %v", err)
 			}
 		},
-		RunE: func(_ *cobra.Command, _ []string) (err error) {
+		RunE: func(_ *cobra.Command, _ []string) error {
+			var err error
 			ctn := app.GetContainerInstance()
 
 			tracker := ctn.Tracker()
