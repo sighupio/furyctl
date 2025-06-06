@@ -75,7 +75,7 @@ func (dd *Downloader) DownloadAll(kfd config.KFD) ([]error, []string) {
 
 	vendorFolder := filepath.Join(dd.basePath, "vendor")
 
-	logrus.Debug("Cleaning vendor folder")
+	logrus.Debug("Cleaning vendor folder ", vendorFolder)
 
 	if err := iox.CheckDirIsEmpty(vendorFolder); err != nil {
 		if err := os.RemoveAll(vendorFolder); err != nil {

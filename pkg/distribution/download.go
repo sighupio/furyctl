@@ -40,7 +40,7 @@ var (
 	ErrWriteFile                  = errors.New("error writing file")
 	ErrYamlMarshalFile            = errors.New("error marshaling yaml file")
 	ErrYamlUnmarshalFile          = errors.New("error unmarshaling yaml file")
-	ErrUnsupportedVersion         = errors.New("unsupported KFD version")
+	ErrUnsupportedVersion         = errors.New("unsupported SD version")
 )
 
 type DownloadResult struct {
@@ -142,14 +142,25 @@ func (d *Downloader) DoDownload(
 
 	src := url
 	dst := filepath.Join(baseDst, "data")
+	logrus.Debugf("Downloading distribution from %s to %s", src, dst)
 
 	if err := d.client.Download(src, dst); err != nil {
 		if errors.Is(err, netx.ErrDownloadOptionsExhausted) {
 			if distroLocation == "" {
+				msg := "try another version from the official repository"
+				if !strings.HasPrefix(minimalConf.Spec.DistributionVersion, "v") {
+					msg = fmt.Sprintf(
+						"versions usually have the `v` prefix as in `v%s`, you may want to try adding the prefix or %s",
+						minimalConf.Spec.DistributionVersion,
+						msg,
+					)
+				}
+
 				return DownloadResult{}, fmt.Errorf("%w: seems like the specified version "+
-					"%s does not exist, try another version from the official repository",
+					"%s does not exist, %v",
 					ErrUnsupportedVersion,
 					minimalConf.Spec.DistributionVersion,
+					msg,
 				)
 			}
 

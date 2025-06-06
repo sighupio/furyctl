@@ -7,7 +7,6 @@ package get
 import (
 	"fmt"
 	"io/fs"
-	"os"
 	"path"
 	"path/filepath"
 	"strings"
@@ -39,10 +38,10 @@ func NewUpgradePathsCmd() *cobra.Command {
 		Use:   "upgrade-paths",
 		Short: "Get available upgrade paths for the kind and version defined in the configuration file or a custom one.",
 		Long:  `Get available upgrade paths for the kind and version defined in the configuration file or a custom one. If the "--from" or "--kind" parameters are specified, the command will give the upgrade path for those instead.`,
-		Example: `- furyctl get upgrade-paths                               	will show the available upgrade paths for the kind and distribution version defined in the configuration file (furyctl.yaml by default)
-- furyctl get upgrade-paths --from vX.Y.Z                 	will show the available upgrade paths for the kind defined in the configuration file but for the version X.Y.Z instead.
-- furyctl get upgrade-paths --kind OnPremises             	will show the available upgrade paths for the version defined in the configuration file but for the OnPremises kind, even if the cluster is an EKSCluster, for example.
-- furyctl get upgrade-paths --kind OnPremises --from X.Y.X	will show the available upgrade paths for the version X.Y.Z of the OnPremises kind, without reading the configuration file.
+		Example: `  furyctl get upgrade-paths                                 shows the available upgrade paths for the kind and distribution version defined in the configuration file (furyctl.yaml by default)
+  furyctl get upgrade-paths --from vX.Y.Z                   shows the available upgrade paths for the kind defined in the configuration file but for the version X.Y.Z instead.
+  furyctl get upgrade-paths --kind OnPremises               shows the available upgrade paths for the version defined in the configuration file but for the OnPremises kind, even if the cluster is an EKSCluster, for example.
+  furyctl get upgrade-paths --kind OnPremises --from X.Y.X  shows the available upgrade paths for the version X.Y.Z of the OnPremises kind, without reading the configuration file.
  `,
 		PreRun: func(cmd *cobra.Command, _ []string) {
 			cmdEvent = analytics.NewCommandEvent(cobrax.GetFullname(cmd))
@@ -79,26 +78,25 @@ func NewUpgradePathsCmd() *cobra.Command {
 				return fmt.Errorf("error while getting config directory: %w", err)
 			}
 
-			// Get home dir.
-			logrus.Debug("Getting Home directory path...")
+			if binPath == "" {
+				binPath = path.Join(outDir, ".furyctl", "bin")
+			} else {
+				binPath, err = filepath.Abs(binPath)
+				if err != nil {
+					cmdEvent.AddErrorMessage(err)
+					tracker.Track(cmdEvent)
 
-			homeDir, err := os.UserHomeDir()
+					return fmt.Errorf("error while getting absolute path for bin folder: %w", err)
+				}
+			}
+
+			typedGitProtocol, err := git.NewProtocol(gitProtocol)
 			if err != nil {
 				cmdEvent.AddErrorMessage(err)
 				tracker.Track(cmdEvent)
 
-				return fmt.Errorf("error while getting user home directory: %w", err)
+				return fmt.Errorf("%w: %w", ErrParsingFlag, err)
 			}
-
-			if outDir == "" {
-				outDir = homeDir
-			}
-
-			if binPath == "" {
-				binPath = path.Join(outDir, ".furyctl", "bin")
-			}
-
-			parsedGitProtocol := (git.Protocol)(gitProtocol)
 
 			// Init packages.
 			execx.Debug = debug
@@ -125,9 +123,9 @@ func NewUpgradePathsCmd() *cobra.Command {
 				client := netx.NewGoGetterClient()
 
 				if distroLocation == "" {
-					distrodl = dist.NewCachingDownloader(client, outDir, parsedGitProtocol, "")
+					distrodl = dist.NewCachingDownloader(client, outDir, typedGitProtocol, "")
 				} else {
-					distrodl = dist.NewDownloader(client, parsedGitProtocol, "")
+					distrodl = dist.NewDownloader(client, typedGitProtocol, "")
 				}
 
 				// Validate base requirements.
@@ -152,7 +150,7 @@ func NewUpgradePathsCmd() *cobra.Command {
 				basePath := path.Join(outDir, ".furyctl", res.MinimalConf.Metadata.Name)
 
 				// Init second half of collaborators.
-				depsdl := dependencies.NewCachingDownloader(client, homeDir, basePath, binPath, parsedGitProtocol)
+				depsdl := dependencies.NewCachingDownloader(client, outDir, basePath, binPath, typedGitProtocol)
 
 				// Validate the furyctl.yaml file.
 				logrus.Info("Validating configuration file...")
@@ -172,6 +170,8 @@ func NewUpgradePathsCmd() *cobra.Command {
 
 						return fmt.Errorf("%w: %v", ErrDownloadDependenciesFailed, err)
 					}
+				} else {
+					logrus.Info("Dependencies download skipped")
 				}
 
 				// Validate the dependencies, unless explicitly told to skip it.
@@ -183,6 +183,8 @@ func NewUpgradePathsCmd() *cobra.Command {
 
 						return fmt.Errorf("error while validating dependencies: %w", err)
 					}
+				} else {
+					logrus.Info("Dependencies validation skipped")
 				}
 
 				logrus.Debugf("either kind or fromVersion is not specified, reading them from the configuration file in path %s.", furyctlPath)
@@ -203,7 +205,7 @@ func NewUpgradePathsCmd() *cobra.Command {
 				}
 			}
 
-			// We don't need the starting v in the version. Drop it if the user passes it.
+			// We don't need the "v" prefix in the version. Drop it if the user passes it.
 			fromVersion, _ = strings.CutPrefix(fromVersion, "v")
 
 			// Validate the kind. We don't need the normalised kind because we are checking against the folder names.
@@ -213,6 +215,7 @@ func NewUpgradePathsCmd() *cobra.Command {
 
 				return fmt.Errorf("error while validating kind: %w", err)
 			}
+
 			globPattern := fmt.Sprintf("%s/%s/%s-*", "upgrades", strings.ToLower(kind), fromVersion)
 			availablePaths, err := fs.Glob(configs.Tpl, globPattern)
 			logrus.Debug("found folders: ", availablePaths)
@@ -271,7 +274,7 @@ func NewUpgradePathsCmd() *cobra.Command {
 		"Location where to download schemas, defaults and the distribution manifests from. "+
 			"It can either be a local path (eg: /path/to/distribution) or "+
 			"a remote URL (eg: git::git@github.com:sighupio/distribution?depth=1&ref=BRANCH_NAME). "+
-			"Any format supported by hashicorp/go-getter can be used.",
+			"Any format supported by hashicorp/go-getter can be used",
 	)
 
 	upgradePathsCmd.Flags().Bool(
@@ -289,14 +292,14 @@ func NewUpgradePathsCmd() *cobra.Command {
 	upgradePathsCmd.Flags().String(
 		"from",
 		"",
-		"Show upgrade paths for the version specified (eg. 1.29.2) instead of the distribution version in the configuration file.",
+		"Show upgrade paths for the version specified (eg. 1.29.2) instead of the distribution version in the configuration file",
 	)
 
 	upgradePathsCmd.Flags().StringP(
 		"kind",
 		"k",
 		"",
-		"Show upgrade paths for the kind of cluster specified (eg: EKSCluster, KFDDistribution, OnPremises) instead of the kind defined in the configuration file.",
+		"Show upgrade paths for the kind of cluster specified instead of the kind defined in the configuration file. Options are: "+strings.Join(distribution.ConfigKinds(), ", "),
 	)
 
 	if err := upgradePathsCmd.RegisterFlagCompletionFunc("kind", func(_ *cobra.Command, _ []string, _ string) ([]string, cobra.ShellCompDirective) {
