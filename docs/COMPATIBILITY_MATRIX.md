@@ -51,34 +51,42 @@
 
 ## furyctl and Providers compatibility
 
+> [!WARNING]
+> The `EKSCluster` versions prior to v1.32.1/v1.31.2/v1.30.3 are incompatible with `self-managed` nodes using the `alinux2023` AMI type. 
+> This issue occurs because Amazon Linux 2023-based EKS AMIs have [deprecated the `bootstrap.sh`](https://github.com/sighupio/installer-eks/issues/88) script in favor of the new `nodeadm` system for node initialization.
+>
+> **Temporary Workaround:** If you must use older `EKSCluster` versions with `self-managed` nodes, we recommend using the `alinux2` AMI type instead.
+
+
 | furyctl / Providers |     EKSCluster     |  KFDDistribution   |     OnPremises     |
 | :------------------ | :----------------: | :----------------: | :----------------: |
-| >=0.29.6            | :white_check_mark: | :white_check_mark: | :white_check_mark: |
+| >=0.32.3            | :white_check_mark: | :white_check_mark: | :white_check_mark: |
+| >=0.29.6            |      :warning:     | :white_check_mark: | :white_check_mark: |
 | 0.29.5              |        :x:         |        :x:         |        :x:         |
-| 0.29.4              | :white_check_mark: | :white_check_mark: | :white_check_mark: |
-| 0.29.3              | :white_check_mark: | :white_check_mark: | :white_check_mark: |
+| 0.29.4              |      :warning:     | :white_check_mark: | :white_check_mark: |
+| 0.29.3              |      :warning:     | :white_check_mark: | :white_check_mark: |
 | 0.29.2              |        :x:         |        :x:         |        :x:         |
 | 0.29.1              |        :x:         |        :x:         |        :x:         |
-| 0.29.0              | :white_check_mark: | :white_check_mark: | :white_check_mark: |
-| 0.28.0              | :white_check_mark: | :white_check_mark: | :white_check_mark: |
-| 0.27.8              | :white_check_mark: | :white_check_mark: | :white_check_mark: |
-| 0.27.7              | :white_check_mark: | :white_check_mark: | :white_check_mark: |
-| 0.27.6              | :white_check_mark: | :white_check_mark: | :white_check_mark: |
-| 0.27.5              | :white_check_mark: | :white_check_mark: | :white_check_mark: |
-| 0.27.4              | :white_check_mark: | :white_check_mark: |        :x:         |
-| 0.27.3              | :white_check_mark: | :white_check_mark: |        :x:         |
-| 0.27.2              | :white_check_mark: | :white_check_mark: |        :x:         |
-| 0.27.1              | :white_check_mark: | :white_check_mark: |        :x:         |
-| 0.27.0              | :white_check_mark: | :white_check_mark: |        :x:         |
-| 0.26.3              | :white_check_mark: | :white_check_mark: |        :x:         |
-| 0.26.2              | :white_check_mark: | :white_check_mark: |        :x:         |
-| 0.26.1              | :white_check_mark: | :white_check_mark: |                    |
-| 0.26.0              | :white_check_mark: | :white_check_mark: |                    |
-| 0.25.2              | :white_check_mark: | :white_check_mark: |                    |
-| 0.25.1              | :white_check_mark: | :white_check_mark: |                    |
-| 0.25.0              | :white_check_mark: | :white_check_mark: |                    |
-| 0.25.0-beta.0       | :white_check_mark: |                    |                    |
-| 0.25.0-alpha.1      | :white_check_mark: |                    |                    |
+| 0.29.0              |      :warning:     | :white_check_mark: | :white_check_mark: |
+| 0.28.0              |      :warning:     | :white_check_mark: | :white_check_mark: |
+| 0.27.8              |      :warning:     | :white_check_mark: | :white_check_mark: |
+| 0.27.7              |      :warning:     | :white_check_mark: | :white_check_mark: |
+| 0.27.6              |      :warning:     | :white_check_mark: | :white_check_mark: |
+| 0.27.5              |      :warning:     | :white_check_mark: | :white_check_mark: |
+| 0.27.4              |      :warning:     | :white_check_mark: |        :x:         |
+| 0.27.3              |      :warning:     | :white_check_mark: |        :x:         |
+| 0.27.2              |      :warning:     | :white_check_mark: |        :x:         |
+| 0.27.1              |      :warning:     | :white_check_mark: |        :x:         |
+| 0.27.0              |      :warning:     | :white_check_mark: |        :x:         |
+| 0.26.3              |      :warning:     | :white_check_mark: |        :x:         |
+| 0.26.2              |      :warning:     | :white_check_mark: |        :x:         |
+| 0.26.1              |      :warning:     | :white_check_mark: |                    |
+| 0.26.0              |      :warning:     | :white_check_mark: |                    |
+| 0.25.2              |      :warning:     | :white_check_mark: |                    |
+| 0.25.1              |      :warning:     | :white_check_mark: |                    |
+| 0.25.0              |      :warning:     | :white_check_mark: |                    |
+| 0.25.0-beta.0       |      :warning:     |                    |                    |
+| 0.25.0-alpha.1      |      :warning:     |                    |                    |
 
 ## Legacy compatibility
 
