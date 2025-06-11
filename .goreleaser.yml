@@ -27,6 +27,8 @@ builds:
       - -X main.goVersion={{.Env.GO_VERSION}}
       - -X main.osArch={{.Arch}}
       - -X main.mixPanelToken={{.Env.MIX_PANEL_TOKEN}}
+git:
+  tag_sort: -version:creatordate
 archives:
   - name_template: "{{ tolower .ProjectName }}-{{ tolower .Os }}-{{ tolower .Arch }}"
 checksum:
