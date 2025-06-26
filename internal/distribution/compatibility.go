@@ -49,9 +49,9 @@ func ValidateConfigKind(kind string) (string, error) {
 	return "", fmt.Errorf("\"%s\" %w", kind, ErrUnsupportedKind)
 }
 
-// getEKSCompatibleRanges returns version ranges compatible with EKS.
-func getEKSCompatibleRanges() []VersionRange {
-	return []VersionRange{
+// compatibilityRegistry holds version ranges for each provider kind.
+var compatibilityRegistry = map[string][]VersionRange{
+	EKSClusterKind: {
 		{"v1.25.6", "v1.25.10"},
 		{"v1.26.0", "v1.26.6"},
 		{"v1.27.0", "v1.27.9"},
@@ -60,12 +60,8 @@ func getEKSCompatibleRanges() []VersionRange {
 		{"v1.30.0", "v1.30.2"},
 		{"v1.31.0", "v1.31.1"},
 		{"v1.32.0", "v1.32.0"},
-	}
-}
-
-// getKFDCompatibleRanges returns version ranges compatible with KFD.
-func getKFDCompatibleRanges() []VersionRange {
-	return []VersionRange{
+	},
+	KFDDistributionKind: {
 		{"v1.25.6", "v1.25.10"},
 		{"v1.26.0", "v1.26.6"},
 		{"v1.27.0", "v1.27.9"},
@@ -74,12 +70,8 @@ func getKFDCompatibleRanges() []VersionRange {
 		{"v1.30.0", "v1.30.2"},
 		{"v1.31.0", "v1.31.1"},
 		{"v1.32.0", "v1.32.0"},
-	}
-}
-
-// getOnPremisesCompatibleRanges returns version ranges compatible with OnPremises.
-func getOnPremisesCompatibleRanges() []VersionRange {
-	return []VersionRange{
+	},
+	OnPremisesKind: {
 		{"v1.25.8", "v1.25.10"},
 		{"v1.26.2", "v1.26.6"},
 		{"v1.27.0", "v1.27.9"},
@@ -88,7 +80,15 @@ func getOnPremisesCompatibleRanges() []VersionRange {
 		{"v1.30.0", "v1.30.2"},
 		{"v1.31.0", "v1.31.1"},
 		{"v1.32.0", "v1.32.0"},
+	},
+}
+
+// getCompatibleRanges returns version ranges for a given provider kind.
+func getCompatibleRanges(kind string) []VersionRange {
+	if ranges, exists := compatibilityRegistry[kind]; exists {
+		return ranges
 	}
+	return nil
 }
 
 var ErrUnsupportedKind = errors.New("kind is not valid. Accepted values are " +
@@ -98,8 +98,21 @@ type CompatibilityChecker interface {
 	IsCompatible() bool
 }
 
-type CompatibilityCheck struct {
+// GenericCompatibilityCheck provides version compatibility checking for any provider kind.
+type GenericCompatibilityCheck struct {
 	distributionVersion string
+	kind                string
+}
+
+// IsCompatible checks if the distribution version is compatible with the provider kind.
+func (c *GenericCompatibilityCheck) IsCompatible() bool {
+	currentVersion, err := semver.NewVersion(c.distributionVersion)
+	if err != nil {
+		return false
+	}
+
+	compatibleRanges := getCompatibleRanges(c.kind)
+	return isVersionInAnyRange(currentVersion, compatibleRanges)
 }
 
 // Check the minimal KDF version supported by furyctl.
@@ -125,60 +138,12 @@ func NewCompatibilityChecker(distributionVersion, kind string) (CompatibilityChe
 		return nil, fmt.Errorf("\"%s\" %w", kind, ErrUnsupportedKind)
 	}
 
-	switch normalisedKind {
-	case EKSClusterKind:
-		return NewEKSClusterCheck(distributionVersion), nil
-
-	case KFDDistributionKind:
-		return NewKFDDistributionCheck(distributionVersion), nil
-
-	case OnPremisesKind:
-		return NewOnPremisesCheck(distributionVersion), nil
-
-	default:
-		return nil, fmt.Errorf("%w: %s", ErrUnsupportedKind, kind)
-	}
+	return &GenericCompatibilityCheck{
+		distributionVersion: distributionVersion,
+		kind:                normalisedKind,
+	}, nil
 }
 
-type EKSClusterCheck struct {
-	CompatibilityCheck
-}
-
-func NewEKSClusterCheck(distributionVersion string) *EKSClusterCheck {
-	return &EKSClusterCheck{
-		CompatibilityCheck: CompatibilityCheck{distributionVersion: distributionVersion},
-	}
-}
-
-func (c *EKSClusterCheck) IsCompatible() bool {
-	// Parse the current version.
-	currentVersion, err := semver.NewVersion(c.distributionVersion)
-	if err != nil {
-		return false
-	}
-
-	return isVersionInAnyRange(currentVersion, getEKSCompatibleRanges())
-}
-
-type KFDDistributionCheck struct {
-	CompatibilityCheck
-}
-
-func NewKFDDistributionCheck(distributionVersion string) *KFDDistributionCheck {
-	return &KFDDistributionCheck{
-		CompatibilityCheck: CompatibilityCheck{distributionVersion: distributionVersion},
-	}
-}
-
-func (c *KFDDistributionCheck) IsCompatible() bool {
-	// Parse the current version.
-	currentVersion, err := semver.NewVersion(c.distributionVersion)
-	if err != nil {
-		return false
-	}
-
-	return isVersionInAnyRange(currentVersion, getKFDCompatibleRanges())
-}
 
 // isVersionInAnyRange checks if the given version is within any of the specified version ranges.
 func isVersionInAnyRange(currentVersion *version.Version, compatibleRanges []VersionRange) bool {
@@ -206,22 +171,3 @@ func isVersionInAnyRange(currentVersion *version.Version, compatibleRanges []Ver
 	return false
 }
 
-type OnPremisesCheck struct {
-	CompatibilityCheck
-}
-
-func NewOnPremisesCheck(distributionVersion string) *OnPremisesCheck {
-	return &OnPremisesCheck{
-		CompatibilityCheck: CompatibilityCheck{distributionVersion: distributionVersion},
-	}
-}
-
-func (c *OnPremisesCheck) IsCompatible() bool {
-	// Parse the current version.
-	currentVersion, err := semver.NewVersion(c.distributionVersion)
-	if err != nil {
-		return false
-	}
-
-	return isVersionInAnyRange(currentVersion, getOnPremisesCompatibleRanges())
-}
