@@ -123,7 +123,10 @@ func TestEKSClusterCheckIsCompatible(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			checker := distribution.NewEKSClusterCheck(tc.distributionVersion)
+			checker, err := distribution.NewCompatibilityChecker(tc.distributionVersion, distribution.EKSClusterKind)
+			if err != nil {
+				t.Fatalf("NewCompatibilityChecker() error = %v", err)
+			}
 
 			got := checker.IsCompatible()
 
@@ -245,7 +248,10 @@ func TestKFDDistributionCheckIsCompatible(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			checker := distribution.NewKFDDistributionCheck(tc.distributionVersion)
+			checker, err := distribution.NewCompatibilityChecker(tc.distributionVersion, distribution.KFDDistributionKind)
+			if err != nil {
+				t.Fatalf("NewCompatibilityChecker() error = %v", err)
+			}
 
 			got := checker.IsCompatible()
 
@@ -362,7 +368,10 @@ func TestOnPremisesCheckIsCompatible(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			checker := distribution.NewOnPremisesCheck(tc.distributionVersion)
+			checker, err := distribution.NewCompatibilityChecker(tc.distributionVersion, distribution.OnPremisesKind)
+			if err != nil {
+				t.Fatalf("NewCompatibilityChecker() error = %v", err)
+			}
 
 			got := checker.IsCompatible()
 
