@@ -310,3 +310,36 @@ In your typical _upgrade path_ there will be a file named `pre-distribution.sh.t
 In the OnPremises upgrade paths when there are Kubernetes version upgrades you also need to include a `pre-kubernetes.sh.tpl` file to run the Ansible playbook that upgrade control planes and worker nodes (for example `configs/upgrades/onpremises/1.29.5-1.30.0/pre-kubernetes.sh.tpl`). This usually only happens during Kubernetes minor version bumps (for example `1.29.5` to `1.30.0`) but there are some exceptional cases where we upgrade the Kubernetes version in a patch release (for example `1.29.4` to `1.29.5`).
 
 </details>
+
+---
+
+### **How to update the version compatibility matrix?**
+
+<details>
+<summary>Answer</summary>
+
+Version compatibility is managed in `internal/distribution/compatibility.go` through the `compatibilityRegistry` map. This registry defines which distribution versions are supported by each provider type (EKSCluster, KFDDistribution, OnPremises).
+
+To add support for new versions:
+
+1. **Add new version ranges** to the appropriate provider in `compatibilityRegistry`:
+   ```go
+   compatibilityRegistry = map[string][]VersionRange{
+       EKSClusterKind: {
+           {"v1.25.6", "v1.25.10"},
+           {"v1.32.0", "v1.32.1"}, // Add new range
+       },
+       // ... other providers
+   }
+   ```
+
+2. **Update unit tests** in `internal/distribution/compatibility_test.go` to cover the new version ranges.
+
+3. **Run tests** to ensure compatibility:
+   ```bash
+   go test -tags=unit ./internal/distribution -v
+   ```
+
+The refactored design uses a data-driven approach, making it easy to add new supported versions without code duplication.
+
+</details>
