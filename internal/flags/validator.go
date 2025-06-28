@@ -5,8 +5,21 @@
 package flags
 
 import (
+	"errors"
 	"fmt"
 	"strings"
+)
+
+// Static error definitions for linting compliance.
+var (
+	ErrInvalidProtocol       = errors.New("invalid git protocol")
+	ErrInvalidForceOption    = errors.New("invalid force option")
+	ErrMustBePositiveInteger = errors.New("must be a positive integer")
+	ErrConflictingFlags      = errors.New("conflicting flags detected")
+	ErrInvalidBooleanValue   = errors.New("invalid boolean value")
+	ErrExpectedBooleanType   = errors.New("expected boolean type")
+	ErrExpectedNumericType   = errors.New("expected numeric type")
+	ErrExpectedArrayOrString = errors.New("expected array or string type")
 )
 
 // Validator handles validation of flags configuration.
@@ -23,53 +36,54 @@ func NewValidator() *Validator {
 
 // Validate validates the entire flags configuration.
 func (v *Validator) Validate(flags *FlagsConfig) []ValidationError {
-	var errors []ValidationError
+	var validationErrors []ValidationError
 
 	if flags == nil {
-		return errors
+		return validationErrors
 	}
 
 	// Validate global flags
 	if flags.Global != nil {
-		errors = append(errors, v.validateCommandFlags(flags.Global, "global")...)
+		validationErrors = append(validationErrors, v.validateCommandFlags(flags.Global, "global")...)
 	}
 
 	// Validate command-specific flags
 	if flags.Apply != nil {
-		errors = append(errors, v.validateCommandFlags(flags.Apply, "apply")...)
+		validationErrors = append(validationErrors, v.validateCommandFlags(flags.Apply, "apply")...)
 	}
 
 	if flags.Delete != nil {
-		errors = append(errors, v.validateCommandFlags(flags.Delete, "delete")...)
+		validationErrors = append(validationErrors, v.validateCommandFlags(flags.Delete, "delete")...)
 	}
 
 	if flags.Create != nil {
-		errors = append(errors, v.validateCommandFlags(flags.Create, "create")...)
+		validationErrors = append(validationErrors, v.validateCommandFlags(flags.Create, "create")...)
 	}
 
 	if flags.Get != nil {
-		errors = append(errors, v.validateCommandFlags(flags.Get, "get")...)
+		validationErrors = append(validationErrors, v.validateCommandFlags(flags.Get, "get")...)
 	}
 
 	if flags.Diff != nil {
-		errors = append(errors, v.validateCommandFlags(flags.Diff, "diff")...)
+		validationErrors = append(validationErrors, v.validateCommandFlags(flags.Diff, "diff")...)
 	}
 
 	if flags.Tools != nil {
-		errors = append(errors, v.validateCommandFlags(flags.Tools, "tools")...)
+		validationErrors = append(validationErrors, v.validateCommandFlags(flags.Tools, "tools")...)
 	}
 
 	// Cross-validation: check for conflicting flags
-	errors = append(errors, v.validateFlagCombinations(flags)...)
+	validationErrors = append(validationErrors, v.validateFlagCombinations(flags)...)
 
-	return errors
+	return validationErrors
 }
 
 // validateCommandFlags validates flags for a specific command.
 func (v *Validator) validateCommandFlags(flagsMap map[string]any, command string) []ValidationError {
-	var errors []ValidationError
+	var validationErrors []ValidationError
 
 	var supportedFlagsMap map[string]FlagInfo
+
 	switch command {
 	case "global":
 		supportedFlagsMap = v.supportedFlags.Global
@@ -86,31 +100,33 @@ func (v *Validator) validateCommandFlags(flagsMap map[string]any, command string
 	case "tools":
 		supportedFlagsMap = v.supportedFlags.Tools
 	default:
-		errors = append(errors, ValidationError{
+		validationErrors = append(validationErrors, ValidationError{
 			Command: command,
 			Flag:    "",
 			Value:   nil,
 			Reason:  "unsupported command",
 		})
-		return errors
+
+		return validationErrors
 	}
 
 	for flagName, value := range flagsMap {
 		// Check if flag is supported
 		flagInfo, supported := supportedFlagsMap[flagName]
 		if !supported {
-			errors = append(errors, ValidationError{
+			validationErrors = append(validationErrors, ValidationError{
 				Command: command,
 				Flag:    flagName,
 				Value:   value,
 				Reason:  "unsupported flag for this command",
 			})
+
 			continue
 		}
 
 		// Validate the value type and content
 		if err := v.validateFlagValue(flagName, value, flagInfo); err != nil {
-			errors = append(errors, ValidationError{
+			validationErrors = append(validationErrors, ValidationError{
 				Command: command,
 				Flag:    flagName,
 				Value:   value,
@@ -119,7 +135,7 @@ func (v *Validator) validateCommandFlags(flagsMap map[string]any, command string
 		}
 	}
 
-	return errors
+	return validationErrors
 }
 
 // validateFlagValue validates a single flag's value.
@@ -128,12 +144,10 @@ func (v *Validator) validateFlagValue(flagName string, value any, flagInfo FlagI
 	switch flagInfo.Type {
 	case FlagTypeBool:
 		if _, ok := value.(bool); !ok {
-			if str, ok := value.(string); ok {
-				if str != "true" && str != "false" {
-					return fmt.Errorf("boolean flag must be true or false, got: %v", value)
-				}
-			} else {
-				return fmt.Errorf("expected boolean value, got: %T", value)
+			if str, ok := value.(string); !ok {
+				return fmt.Errorf("%w: got %T", ErrExpectedBooleanType, value)
+			} else if str != "true" && str != "false" {
+				return fmt.Errorf("%w: got %v", ErrInvalidBooleanValue, value)
 			}
 		}
 
@@ -144,7 +158,7 @@ func (v *Validator) validateFlagValue(flagName string, value any, flagInfo FlagI
 		case string:
 			// String representation of number, will be validated during conversion
 		default:
-			return fmt.Errorf("expected numeric value, got: %T", value)
+			return fmt.Errorf("%w: got %T", ErrExpectedNumericType, value)
 		}
 
 	case FlagTypeString:
@@ -155,8 +169,12 @@ func (v *Validator) validateFlagValue(flagName string, value any, flagInfo FlagI
 		case []any, []string, string:
 			// Valid slice types or comma-separated string
 		default:
-			return fmt.Errorf("expected array or string value, got: %T", value)
+			return fmt.Errorf("%w: got %T", ErrExpectedArrayOrString, value)
 		}
+
+	case FlagTypeDuration:
+		// Duration validation - most types can be converted to string for duration parsing
+		// Detailed validation will be done during conversion
 	}
 
 	// Specific flag validations
@@ -164,9 +182,9 @@ func (v *Validator) validateFlagValue(flagName string, value any, flagInfo FlagI
 }
 
 // validateSpecificFlag performs validation specific to certain flags.
-func (v *Validator) validateSpecificFlag(flagName string, value any) error {
+func (*Validator) validateSpecificFlag(flagName string, value any) error {
 	switch flagName {
-	case "git-protocol":
+	case "gitProtocol":
 		if str, ok := value.(string); ok {
 			validProtocols := []string{"https", "ssh"}
 			for _, valid := range validProtocols {
@@ -174,38 +192,44 @@ func (v *Validator) validateSpecificFlag(flagName string, value any) error {
 					return nil
 				}
 			}
-			return fmt.Errorf("git-protocol must be one of: %s", strings.Join(validProtocols, ", "))
+
+			return fmt.Errorf("%w: must be one of: %s", ErrInvalidProtocol, strings.Join(validProtocols, ", "))
 		}
 
 	case "phase":
 		if str, ok := value.(string); ok && str != "" {
 			// TODO: Add phase validation once we have access to cluster phase constants
 			// For now, accept any non-empty string
+			_ = str // Prevent unused variable warning
 		}
 
 	case "force":
 		if slice, ok := value.([]any); ok {
 			validForceOptions := []string{"all", "upgrades", "migrations", "pods-running-check"}
+
 			for _, item := range slice {
 				if str, ok := item.(string); ok {
 					found := false
+
 					for _, valid := range validForceOptions {
 						if str == valid {
 							found = true
+
 							break
 						}
 					}
+
 					if !found {
-						return fmt.Errorf("invalid force option: %s, must be one of: %s", str, strings.Join(validForceOptions, ", "))
+						return fmt.Errorf("%w: %s, must be one of: %s", ErrInvalidForceOption, str, strings.Join(validForceOptions, ", "))
 					}
 				}
 			}
 		}
 
-	case "timeout", "pod-running-check-timeout":
+	case "timeout", "podRunningCheckTimeout":
 		if val, ok := value.(int); ok {
 			if val <= 0 {
-				return fmt.Errorf("%s must be a positive integer", flagName)
+				return fmt.Errorf("%w: %s", ErrMustBePositiveInteger, flagName)
 			}
 		}
 	}
@@ -215,34 +239,34 @@ func (v *Validator) validateSpecificFlag(flagName string, value any) error {
 
 // validateFlagCombinations validates combinations of flags that might be incompatible.
 func (*Validator) validateFlagCombinations(flags *FlagsConfig) []ValidationError {
-	var errors []ValidationError
+	var validationErrors []ValidationError
 
 	// Check apply-specific flag combinations
 	if flags.Apply != nil {
-		// Check skip-vpn-confirmation vs vpn-auto-connect
-		if skipVpn, hasSkipVpn := flags.Apply["skip-vpn-confirmation"]; hasSkipVpn {
-			if autoConnect, hasAutoConnect := flags.Apply["vpn-auto-connect"]; hasAutoConnect {
+		// Check skipVpnConfirmation vs vpnAutoConnect
+		if skipVpn, hasSkipVpn := flags.Apply["skipVpnConfirmation"]; hasSkipVpn {
+			if autoConnect, hasAutoConnect := flags.Apply["vpnAutoConnect"]; hasAutoConnect {
 				if skipVpnBool, ok := skipVpn.(bool); ok && skipVpnBool {
 					if autoConnectBool, ok := autoConnect.(bool); ok && autoConnectBool {
-						errors = append(errors, ValidationError{
+						validationErrors = append(validationErrors, ValidationError{
 							Command: "apply",
-							Flag:    "vpn-auto-connect",
+							Flag:    "vpnAutoConnect",
 							Value:   autoConnect,
-							Reason:  "cannot be used together with skip-vpn-confirmation",
+							Reason:  "cannot be used together with skipVpnConfirmation",
 						})
 					}
 				}
 			}
 		}
 
-		// Check upgrade vs upgrade-node
+		// Check upgrade vs upgradeNode
 		if upgrade, hasUpgrade := flags.Apply["upgrade"]; hasUpgrade {
-			if upgradeNode, hasUpgradeNode := flags.Apply["upgrade-node"]; hasUpgradeNode {
+			if upgradeNode, hasUpgradeNode := flags.Apply["upgradeNode"]; hasUpgradeNode {
 				if upgradeBool, ok := upgrade.(bool); ok && upgradeBool {
 					if upgradeNodeStr, ok := upgradeNode.(string); ok && upgradeNodeStr != "" {
-						errors = append(errors, ValidationError{
+						validationErrors = append(validationErrors, ValidationError{
 							Command: "apply",
-							Flag:    "upgrade-node",
+							Flag:    "upgradeNode",
 							Value:   upgradeNode,
 							Reason:  "cannot be used together with upgrade",
 						})
@@ -251,14 +275,14 @@ func (*Validator) validateFlagCombinations(flags *FlagsConfig) []ValidationError
 			}
 		}
 
-		// Check phase vs start-from
+		// Check phase vs startFrom
 		if phase, hasPhase := flags.Apply["phase"]; hasPhase {
-			if startFrom, hasStartFrom := flags.Apply["start-from"]; hasStartFrom {
+			if startFrom, hasStartFrom := flags.Apply["startFrom"]; hasStartFrom {
 				if phaseStr, ok := phase.(string); ok && phaseStr != "" && phaseStr != "all" {
 					if startFromStr, ok := startFrom.(string); ok && startFromStr != "" {
-						errors = append(errors, ValidationError{
+						validationErrors = append(validationErrors, ValidationError{
 							Command: "apply",
-							Flag:    "start-from",
+							Flag:    "startFrom",
 							Value:   startFrom,
 							Reason:  "cannot be used together with phase flag",
 						})
@@ -267,14 +291,14 @@ func (*Validator) validateFlagCombinations(flags *FlagsConfig) []ValidationError
 			}
 		}
 
-		// Check phase vs post-apply-phases
+		// Check phase vs postApplyPhases
 		if phase, hasPhase := flags.Apply["phase"]; hasPhase {
-			if postApplyPhases, hasPostApply := flags.Apply["post-apply-phases"]; hasPostApply {
+			if postApplyPhases, hasPostApply := flags.Apply["postApplyPhases"]; hasPostApply {
 				if phaseStr, ok := phase.(string); ok && phaseStr != "" && phaseStr != "all" {
 					if phases, ok := postApplyPhases.([]any); ok && len(phases) > 0 {
-						errors = append(errors, ValidationError{
+						validationErrors = append(validationErrors, ValidationError{
 							Command: "apply",
-							Flag:    "post-apply-phases",
+							Flag:    "postApplyPhases",
 							Value:   postApplyPhases,
 							Reason:  "cannot be used together with phase flag",
 						})
@@ -284,10 +308,10 @@ func (*Validator) validateFlagCombinations(flags *FlagsConfig) []ValidationError
 		}
 	}
 
-	return errors
+	return validationErrors
 }
 
 // ValidateFlagValue is a public wrapper for testing the flag value validation.
-func (v *Validator) ValidateFlagValue(flagName string, value any, flagInfo FlagInfo) error {
+func (v *Validator) ValidateIndividualFlag(flagName string, value any, flagInfo FlagInfo) error {
 	return v.validateFlagValue(flagName, value, flagInfo)
 }

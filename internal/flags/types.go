@@ -45,6 +45,11 @@ const (
 	FlagTypeDuration    FlagType = "duration"
 )
 
+// Default timeout values.
+const DefaultTimeoutSeconds = 3600
+
+const DefaultPodRunningCheckTimeout = 300
+
 // ConfigWithFlags represents a furyctl configuration that may contain flags.
 type ConfigWithFlags struct {
 	APIVersion string         `yaml:"apiVersion"`
@@ -79,41 +84,61 @@ func GetSupportedFlags() SupportedFlags {
 		Global: map[string]FlagInfo{
 			"debug":            {Type: FlagTypeBool, DefaultValue: false, Description: "Enable debug output"},
 			"disableAnalytics": {Type: FlagTypeBool, DefaultValue: false, Description: "Disable analytics"},
-			"no-tty":           {Type: FlagTypeBool, DefaultValue: false, Description: "Disable TTY"},
+			"noTty":            {Type: FlagTypeBool, DefaultValue: false, Description: "Disable TTY"},
 			"workdir":          {Type: FlagTypeString, DefaultValue: "", Description: "Working directory"},
 			"outdir":           {Type: FlagTypeString, DefaultValue: "", Description: "Output directory"},
 			"log":              {Type: FlagTypeString, DefaultValue: "", Description: "Log file path"},
 			"gitProtocol":      {Type: FlagTypeString, DefaultValue: "https", Description: "Git protocol to use"},
 		},
 		Apply: map[string]FlagInfo{
-			"config":                 {Type: FlagTypeString, DefaultValue: "furyctl.yaml", Description: "Path to configuration file"},
-			"phase":                  {Type: FlagTypeString, DefaultValue: "", Description: "Limit execution to specific phase"},
-			"startFrom":              {Type: FlagTypeString, DefaultValue: "", Description: "Start execution from specific phase"},
-			"distroLocation":         {Type: FlagTypeString, DefaultValue: "", Description: "Distribution location"},
-			"distroPatches":          {Type: FlagTypeString, DefaultValue: "", Description: "Distribution patches location"},
-			"binPath":                {Type: FlagTypeString, DefaultValue: "", Description: "Binary path"},
-			"skipNodesUpgrade":       {Type: FlagTypeBool, DefaultValue: false, Description: "Skip nodes upgrade"},
-			"skipDepsDownload":       {Type: FlagTypeBool, DefaultValue: false, Description: "Skip dependencies download"},
-			"skipDepsValidation":     {Type: FlagTypeBool, DefaultValue: false, Description: "Skip dependencies validation"},
-			"dryRun":                 {Type: FlagTypeBool, DefaultValue: false, Description: "Dry run mode"},
-			"vpnAutoConnect":         {Type: FlagTypeBool, DefaultValue: false, Description: "Auto connect VPN"},
-			"skipVpnConfirmation":    {Type: FlagTypeBool, DefaultValue: false, Description: "Skip VPN confirmation"},
-			"force":                  {Type: FlagTypeStringSlice, DefaultValue: []string{}, Description: "Force options"},
-			"postApplyPhases":        {Type: FlagTypeStringSlice, DefaultValue: []string{}, Description: "Post apply phases"},
-			"timeout":                {Type: FlagTypeInt, DefaultValue: 3600, Description: "Timeout in seconds"},
-			"podRunningCheckTimeout": {Type: FlagTypeInt, DefaultValue: 300, Description: "Pod running check timeout"},
-			"upgrade":                {Type: FlagTypeBool, DefaultValue: false, Description: "Enable upgrade mode"},
-			"upgradePathLocation":    {Type: FlagTypeString, DefaultValue: "", Description: "Upgrade path location"},
-			"upgradeNode":            {Type: FlagTypeString, DefaultValue: "", Description: "Specific node to upgrade"},
+			"config": {
+				Type:         FlagTypeString,
+				DefaultValue: "furyctl.yaml",
+				Description:  "Path to configuration file",
+			},
+			"phase": {Type: FlagTypeString, DefaultValue: "", Description: "Limit execution to specific phase"},
+			"startFrom": {
+				Type:         FlagTypeString,
+				DefaultValue: "",
+				Description:  "Start execution from specific phase",
+			},
+			"distroLocation":      {Type: FlagTypeString, DefaultValue: "", Description: "Distribution location"},
+			"distroPatches":       {Type: FlagTypeString, DefaultValue: "", Description: "Distribution patches location"},
+			"binPath":             {Type: FlagTypeString, DefaultValue: "", Description: "Binary path"},
+			"skipNodesUpgrade":    {Type: FlagTypeBool, DefaultValue: false, Description: "Skip nodes upgrade"},
+			"skipDepsDownload":    {Type: FlagTypeBool, DefaultValue: false, Description: "Skip dependencies download"},
+			"skipDepsValidation":  {Type: FlagTypeBool, DefaultValue: false, Description: "Skip dependencies validation"},
+			"dryRun":              {Type: FlagTypeBool, DefaultValue: false, Description: "Dry run mode"},
+			"vpnAutoConnect":      {Type: FlagTypeBool, DefaultValue: false, Description: "Auto connect VPN"},
+			"skipVpnConfirmation": {Type: FlagTypeBool, DefaultValue: false, Description: "Skip VPN confirmation"},
+			"force":               {Type: FlagTypeStringSlice, DefaultValue: []string{}, Description: "Force options"},
+			"postApplyPhases":     {Type: FlagTypeStringSlice, DefaultValue: []string{}, Description: "Post apply phases"},
+			"timeout": {
+				Type:         FlagTypeInt,
+				DefaultValue: DefaultTimeoutSeconds,
+				Description:  "Timeout in seconds",
+			},
+			"podRunningCheckTimeout": {
+				Type:         FlagTypeInt,
+				DefaultValue: DefaultPodRunningCheckTimeout,
+				Description:  "Pod running check timeout",
+			},
+			"upgrade":             {Type: FlagTypeBool, DefaultValue: false, Description: "Enable upgrade mode"},
+			"upgradePathLocation": {Type: FlagTypeString, DefaultValue: "", Description: "Upgrade path location"},
+			"upgradeNode":         {Type: FlagTypeString, DefaultValue: "", Description: "Specific node to upgrade"},
 		},
 		Delete: map[string]FlagInfo{
-			"config":                {Type: FlagTypeString, DefaultValue: "furyctl.yaml", Description: "Path to configuration file"},
-			"phase":                 {Type: FlagTypeString, DefaultValue: "", Description: "Limit execution to specific phase"},
-			"start-from":            {Type: FlagTypeString, DefaultValue: "", Description: "Start execution from specific phase"},
-			"bin-path":              {Type: FlagTypeString, DefaultValue: "", Description: "Binary path"},
-			"dry-run":               {Type: FlagTypeBool, DefaultValue: false, Description: "Dry run mode"},
-			"skip-vpn-confirmation": {Type: FlagTypeBool, DefaultValue: false, Description: "Skip VPN confirmation"},
-			"auto-approve":          {Type: FlagTypeBool, DefaultValue: false, Description: "Auto approve deletion"},
+			"config": {
+				Type:         FlagTypeString,
+				DefaultValue: "furyctl.yaml",
+				Description:  "Path to configuration file",
+			},
+			"phase":               {Type: FlagTypeString, DefaultValue: "", Description: "Limit execution to specific phase"},
+			"startFrom":           {Type: FlagTypeString, DefaultValue: "", Description: "Start execution from specific phase"},
+			"binPath":             {Type: FlagTypeString, DefaultValue: "", Description: "Binary path"},
+			"dryRun":              {Type: FlagTypeBool, DefaultValue: false, Description: "Dry run mode"},
+			"skipVpnConfirmation": {Type: FlagTypeBool, DefaultValue: false, Description: "Skip VPN confirmation"},
+			"autoApprove":         {Type: FlagTypeBool, DefaultValue: false, Description: "Auto approve deletion"},
 		},
 		Create: map[string]FlagInfo{
 			"config":   {Type: FlagTypeString, DefaultValue: "furyctl.yaml", Description: "Path to configuration file"},
