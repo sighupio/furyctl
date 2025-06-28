@@ -37,11 +37,11 @@ func TestMerger_MergeIntoViper(t *testing.T) {
 			},
 			command: "apply",
 			expectedValues: map[string]any{
-				"debug":              true,
-				"disableAnalytics":   false,
-				"skipDepsValidation": true,
-				"dryRun":             false,
-				"timeout":            7200,
+				"debug":                true,
+				"disable-analytics":    false,
+				"skip-deps-validation": true,
+				"dry-run":              false,
+				"timeout":              7200,
 			},
 			setupViper: func() {
 				viper.Reset()
@@ -59,8 +59,8 @@ func TestMerger_MergeIntoViper(t *testing.T) {
 			},
 			command: "apply",
 			expectedValues: map[string]any{
-				"debug":  false, // Should remain false (already set in viper)
-				"dryRun": true,  // Should be set from config (not in viper)
+				"debug":   false, // Should remain false (already set in viper)
+				"dry-run": true,  // Should be set from config (not in viper)
 			},
 			setupViper: func() {
 				viper.Reset()
@@ -79,8 +79,8 @@ func TestMerger_MergeIntoViper(t *testing.T) {
 			},
 			command: "unknown",
 			expectedValues: map[string]any{
-				"debug":  true,
-				"dryRun": nil, // Should not be set
+				"debug":   true,
+				"dry-run": nil, // Should not be set
 			},
 			setupViper: func() {
 				viper.Reset()
@@ -120,6 +120,47 @@ func TestMerger_MergeIntoViper(t *testing.T) {
 						t.Errorf("Expected %s to be %v, got: %v", key, expectedValue, actualValue)
 					}
 				}
+			}
+		})
+	}
+}
+
+func TestCamelToKebab(t *testing.T) {
+	tests := []struct {
+		input    string
+		expected string
+	}{
+		{"distroLocation", "distro-location"},
+		{"skipDepsDownload", "skip-deps-download"},
+		{"skipDepsValidation", "skip-deps-validation"},
+		{"binPath", "bin-path"},
+		{"dryRun", "dry-run"},
+		{"vpnAutoConnect", "vpn-auto-connect"},
+		{"skipVpnConfirmation", "skip-vpn-confirmation"},
+		{"disableAnalytics", "disable-analytics"},
+		{"gitProtocol", "git-protocol"},
+		{"skipNodesUpgrade", "skip-nodes-upgrade"},
+		{"podRunningCheckTimeout", "pod-running-check-timeout"},
+		{"upgradePathLocation", "upgrade-path-location"},
+		{"upgradeNode", "upgrade-node"},
+		{"postApplyPhases", "post-apply-phases"},
+		{"noTty", "no-tty"},
+		{"startFrom", "start-from"},
+		{"autoApprove", "auto-approve"},
+		// Edge cases
+		{"debug", "debug"},     // No camelCase
+		{"timeout", "timeout"}, // No camelCase
+		{"force", "force"},     // No camelCase
+		{"workdir", "workdir"}, // No camelCase
+		{"outdir", "outdir"},   // No camelCase
+		{"log", "log"},         // No camelCase
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.input, func(t *testing.T) {
+			result := flags.CamelToKebab(tt.input)
+			if result != tt.expected {
+				t.Errorf("camelToKebab(%q) = %q, want %q", tt.input, result, tt.expected)
 			}
 		})
 	}
@@ -223,39 +264,8 @@ func TestMerger_ConvertValue(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// Use reflection to access the private method
-			// In a real implementation, you might want to make this method public for testing
-			// or create a test-specific interface
-
-			// For now, we'll test via the public MergeIntoViper method
-			viper.Reset()
-
-			// Create a test flags config with the value to convert
-			testFlags := &flags.FlagsConfig{
-				Global: map[string]any{
-					"testFlag": tt.value,
-				},
-			}
-
-			// Get the supported flags to ensure our test flag matches the expected type
-			supportedFlags := flags.GetSupportedFlags()
-
-			// Temporarily override the global flags for testing
-			originalFlag, exists := supportedFlags.Global["testFlag"]
-			supportedFlags.Global["testFlag"] = flags.FlagInfo{
-				Type:         tt.expectedType,
-				DefaultValue: nil,
-				Description:  "Test flag",
-			}
-
-			err := merger.MergeIntoViper(testFlags, "global")
-
-			// Restore original flag if it existed
-			if exists {
-				supportedFlags.Global["testFlag"] = originalFlag
-			} else {
-				delete(supportedFlags.Global, "testFlag")
-			}
+			// Test the ConvertValue method directly
+			actualValue, err := merger.ConvertValue(tt.value, tt.expectedType)
 
 			if tt.expectError {
 				if err == nil {
@@ -266,11 +276,24 @@ func TestMerger_ConvertValue(t *testing.T) {
 					t.Errorf("Unexpected error: %v", err)
 				}
 
-				if tt.expected != nil {
-					actualValue := viper.Get("testFlag")
-					if actualValue != tt.expected {
-						t.Errorf("Expected %v, got %v", tt.expected, actualValue)
+				// For string slices, we need to compare them properly
+				if expectedSlice, ok := tt.expected.([]string); ok {
+					if actualSlice, ok := actualValue.([]string); ok {
+						if len(expectedSlice) != len(actualSlice) {
+							t.Errorf("Expected %v, got %v", tt.expected, actualValue)
+						} else {
+							for i := range expectedSlice {
+								if expectedSlice[i] != actualSlice[i] {
+									t.Errorf("Expected %v, got %v", tt.expected, actualValue)
+									break
+								}
+							}
+						}
+					} else {
+						t.Errorf("Expected []string type, got %T", actualValue)
 					}
+				} else if actualValue != tt.expected {
+					t.Errorf("Expected %v, got %v", tt.expected, actualValue)
 				}
 			}
 		})

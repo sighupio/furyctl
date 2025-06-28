@@ -97,7 +97,7 @@ func TestValidator_Validate(t *testing.T) {
 			expectedErrors: 1, // Conflicting flags
 		},
 		{
-			name: "conflicting phase and start-from",
+			name: "conflicting phase and startFrom",
 			flags: &flags.FlagsConfig{
 				Apply: map[string]any{
 					"phase":     "distribution",
@@ -107,7 +107,7 @@ func TestValidator_Validate(t *testing.T) {
 			expectedErrors: 1, // Conflicting flags
 		},
 		{
-			name: "conflicting phase and post-apply-phases",
+			name: "conflicting phase and postApplyPhases",
 			flags: &flags.FlagsConfig{
 				Apply: map[string]any{
 					"phase":           "distribution",
@@ -144,20 +144,20 @@ func TestValidator_ValidateSpecificFlag(t *testing.T) {
 		expectError bool
 	}{
 		{
-			name:        "valid git-protocol https",
-			flagName:    "git-protocol",
+			name:        "valid gitProtocol https",
+			flagName:    "gitProtocol",
 			value:       "https",
 			expectError: false,
 		},
 		{
-			name:        "valid git-protocol ssh",
-			flagName:    "git-protocol",
+			name:        "valid gitProtocol ssh",
+			flagName:    "gitProtocol",
 			value:       "ssh",
 			expectError: false,
 		},
 		{
-			name:        "invalid git-protocol",
-			flagName:    "git-protocol",
+			name:        "invalid gitProtocol",
+			flagName:    "gitProtocol",
 			value:       "ftp",
 			expectError: true,
 		},
@@ -202,7 +202,7 @@ func TestValidator_ValidateSpecificFlag(t *testing.T) {
 			}
 
 			// Test through validateFlagValue which calls validateSpecificFlag
-			err := validator.ValidateFlagValue(tt.flagName, tt.value, flagInfo)
+			err := validator.ValidateIndividualFlag(tt.flagName, tt.value, flagInfo)
 
 			if tt.expectError && err == nil {
 				t.Errorf("Expected error for flag %s with value %v, but got none", tt.flagName, tt.value)
