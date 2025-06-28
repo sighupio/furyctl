@@ -69,12 +69,12 @@ func (m *Merger) MergeIntoViper(flags *FlagsConfig, command string) error {
 		return nil
 	}
 
-	// Merge global flags first
+	// Merge global flags first.
 	if err := m.mergeCommandFlags(flags.Global, CommandGlobal); err != nil {
 		return fmt.Errorf("error merging global flags: %w", err)
 	}
 
-	// Merge command-specific flags
+	// Merge command-specific flags.
 	var commandFlags map[string]any
 
 	switch command {
@@ -97,7 +97,7 @@ func (m *Merger) MergeIntoViper(flags *FlagsConfig, command string) error {
 		commandFlags = flags.Tools
 
 	default:
-		// Unknown command, skip command-specific flags
+		// Unknown command, skip command-specific flags.
 		return nil
 	}
 
@@ -141,24 +141,24 @@ func (m *Merger) mergeCommandFlags(flagsMap map[string]any, command string) erro
 	}
 
 	for flagName, value := range flagsMap {
-		// Check if the flag is supported
+		// Check if the flag is supported.
 		flagInfo, supported := supportedFlagsMap[flagName]
 		if !supported {
-			// Log warning but don't fail - might be a new flag
+			// Log warning but don't fail - might be a new flag.
 			continue
 		}
 
-		// Convert and validate the value
+		// Convert and validate the value.
 		convertedValue, err := m.ConvertValue(value, flagInfo.Type)
 		if err != nil {
 			return fmt.Errorf("error converting flag %s: %w", flagName, err)
 		}
 
-		// Convert camelCase flag name to kebab-case for viper
+		// Convert camelCase flag name to kebab-case for viper.
 		viperKey := CamelToKebab(flagName)
 
-		// Set the value in viper only if it's not already set
-		// This preserves the priority: env vars and command line flags take precedence
+		// Set the value in viper only if it's not already set.
+		// This preserves the priority: env vars and command line flags take precedence.
 		if !viper.IsSet(viperKey) {
 			viper.Set(viperKey, convertedValue)
 		}
@@ -177,6 +177,7 @@ func (*Merger) ConvertValue(value any, expectedType FlagType) (any, error) {
 		switch v := value.(type) {
 		case bool:
 			return v, nil
+
 		case string:
 			result, err := strconv.ParseBool(v)
 			if err != nil {
@@ -184,6 +185,7 @@ func (*Merger) ConvertValue(value any, expectedType FlagType) (any, error) {
 			}
 
 			return result, nil
+
 		default:
 			return false, fmt.Errorf("%w: got %T", ErrBoolConversion, value)
 		}
@@ -206,6 +208,7 @@ func (*Merger) ConvertValue(value any, expectedType FlagType) (any, error) {
 			}
 
 			return result, nil
+
 		default:
 			return 0, fmt.Errorf("%w: got %T", ErrIntConversion, value)
 		}
@@ -219,21 +222,24 @@ func (*Merger) ConvertValue(value any, expectedType FlagType) (any, error) {
 			}
 
 			return result, nil
+
 		case []string:
 			return v, nil
+
 		case string:
-			// Handle comma-separated string
+			// Handle comma-separated string.
 			if v == "" {
 				return []string{}, nil
 			}
 
 			return strings.Split(v, ","), nil
+
 		default:
 			return []string{}, ErrTypeConversion
 		}
 
 	case FlagTypeDuration:
-		// For now, treat duration as string and let viper handle the conversion
+		// For now, treat duration as string and let viper handle the conversion.
 		return fmt.Sprintf("%v", value), nil
 
 	default:

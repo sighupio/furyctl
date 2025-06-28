@@ -2,29 +2,37 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-package flags
+package flags_test
 
 import (
-	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/sighupio/furyctl/internal/flags"
 )
 
+//nolint:paralleltest // Global viper state prevents safe parallel execution
 func TestFuryDistributionCompatibility(t *testing.T) {
+	//nolint:paralleltest // Global viper state prevents safe parallel execution
 	t.Run("EKSCluster_ExistingConfig", testEKSClusterExistingConfig)
+	//nolint:paralleltest // Global viper state prevents safe parallel execution
 	t.Run("EKSCluster_WithFlags", testEKSClusterWithFlags)
+	//nolint:paralleltest // Global viper state prevents safe parallel execution
 	t.Run("KFDDistribution_ExistingConfig", testKFDDistributionExistingConfig)
+	//nolint:paralleltest // Global viper state prevents safe parallel execution
 	t.Run("KFDDistribution_WithFlags", testKFDDistributionWithFlags)
+	//nolint:paralleltest // Global viper state prevents safe parallel execution
 	t.Run("OnPremises_ExistingConfig", testOnPremisesExistingConfig)
+	//nolint:paralleltest // Global viper state prevents safe parallel execution
 	t.Run("OnPremises_WithFlags", testOnPremisesWithFlags)
 }
 
 func testEKSClusterExistingConfig(t *testing.T) {
-	// Based on fury-distribution/test/data/e2e/create/cluster/infrastructure/data/furyctl.yaml
+	// Based on fury-distribution/test/data/e2e/create/cluster/infrastructure/data/furyctl.yaml.
 	config := `apiVersion: kfd.sighup.io/v1alpha2
 kind: EKSCluster
 metadata:
@@ -158,22 +166,20 @@ spec:
             password: "{env://KFD_BASIC_AUTH_PASSWORD}"
 `
 
-	tempDir, err := os.MkdirTemp("", "furyctl-eks-compat-*")
-	require.NoError(t, err)
-	defer os.RemoveAll(tempDir)
+	tempDir := t.TempDir()
 
 	configPath := filepath.Join(tempDir, "furyctl.yaml")
-	err = os.WriteFile(configPath, []byte(config), 0o644)
+	err := os.WriteFile(configPath, []byte(config), 0o644)
 	require.NoError(t, err)
 
-	// Test that existing configuration loads without errors
-	manager := NewManager(tempDir)
+	// Test that existing configuration loads without errors.
+	manager := flags.NewManager(tempDir)
 	err = manager.LoadAndMergeFlags(configPath, "apply")
 	assert.NoError(t, err, "Existing EKSCluster config should load without errors")
 }
 
 func testEKSClusterWithFlags(t *testing.T) {
-	// Same EKSCluster config with flags added
+	// Same EKSCluster config with flags added.
 	config := `apiVersion: kfd.sighup.io/v1alpha2
 kind: EKSCluster
 metadata:
@@ -230,22 +236,20 @@ flags:
     autoApprove: false
 `
 
-	tempDir, err := os.MkdirTemp("", "furyctl-eks-flags-*")
-	require.NoError(t, err)
-	defer os.RemoveAll(tempDir)
+	tempDir := t.TempDir()
 
 	configPath := filepath.Join(tempDir, "furyctl.yaml")
-	err = os.WriteFile(configPath, []byte(config), 0o644)
+	err := os.WriteFile(configPath, []byte(config), 0o644)
 	require.NoError(t, err)
 
-	// Test that EKSCluster config with flags loads correctly
-	manager := NewManager(tempDir)
+	// Test that EKSCluster config with flags loads correctly.
+	manager := flags.NewManager(tempDir)
 	err = manager.LoadAndMergeFlags(configPath, "apply")
 	assert.NoError(t, err, "EKSCluster config with flags should load without errors")
 }
 
 func testKFDDistributionExistingConfig(t *testing.T) {
-	// Based on fury-getting-started/fury-on-minikube/furyctl.yaml
+	// Based on fury-getting-started/fury-on-minikube/furyctl.yaml.
 	config := `apiVersion: kfd.sighup.io/v1alpha2
 kind: KFDDistribution
 metadata:
@@ -305,22 +309,20 @@ spec:
             namespace: monitoring
 `
 
-	tempDir, err := os.MkdirTemp("", "furyctl-kfd-compat-*")
-	require.NoError(t, err)
-	defer os.RemoveAll(tempDir)
+	tempDir := t.TempDir()
 
 	configPath := filepath.Join(tempDir, "furyctl.yaml")
-	err = os.WriteFile(configPath, []byte(config), 0o644)
+	err := os.WriteFile(configPath, []byte(config), 0o644)
 	require.NoError(t, err)
 
-	// Test that existing KFDDistribution configuration loads without errors
-	manager := NewManager(tempDir)
+	// Test that existing KFDDistribution configuration loads without errors.
+	manager := flags.NewManager(tempDir)
 	err = manager.LoadAndMergeFlags(configPath, "apply")
 	assert.NoError(t, err, "Existing KFDDistribution config should load without errors")
 }
 
 func testKFDDistributionWithFlags(t *testing.T) {
-	// Same KFDDistribution config with flags added
+	// Same KFDDistribution config with flags added.
 	config := `apiVersion: kfd.sighup.io/v1alpha2
 kind: KFDDistribution
 metadata:
@@ -368,22 +370,20 @@ flags:
     config: "{file://./furyctl.yaml}"
 `
 
-	tempDir, err := os.MkdirTemp("", "furyctl-kfd-flags-*")
-	require.NoError(t, err)
-	defer os.RemoveAll(tempDir)
+	tempDir := t.TempDir()
 
 	configPath := filepath.Join(tempDir, "furyctl.yaml")
-	err = os.WriteFile(configPath, []byte(config), 0o644)
+	err := os.WriteFile(configPath, []byte(config), 0o644)
 	require.NoError(t, err)
 
-	// Test that KFDDistribution config with flags loads correctly
-	manager := NewManager(tempDir)
+	// Test that KFDDistribution config with flags loads correctly.
+	manager := flags.NewManager(tempDir)
 	err = manager.LoadAndMergeFlags(configPath, "apply")
 	assert.NoError(t, err, "KFDDistribution config with flags should load without errors")
 }
 
 func testOnPremisesExistingConfig(t *testing.T) {
-	// Based on typical OnPremises configuration
+	// Based on typical OnPremises configuration.
 	config := `apiVersion: kfd.sighup.io/v1alpha2
 kind: OnPremises
 metadata:
@@ -451,22 +451,20 @@ spec:
           type: none
 `
 
-	tempDir, err := os.MkdirTemp("", "furyctl-onprem-compat-*")
-	require.NoError(t, err)
-	defer os.RemoveAll(tempDir)
+	tempDir := t.TempDir()
 
 	configPath := filepath.Join(tempDir, "furyctl.yaml")
-	err = os.WriteFile(configPath, []byte(config), 0o644)
+	err := os.WriteFile(configPath, []byte(config), 0o644)
 	require.NoError(t, err)
 
-	// Test that existing OnPremises configuration loads without errors
-	manager := NewManager(tempDir)
+	// Test that existing OnPremises configuration loads without errors.
+	manager := flags.NewManager(tempDir)
 	err = manager.LoadAndMergeFlags(configPath, "apply")
 	assert.NoError(t, err, "Existing OnPremises config should load without errors")
 }
 
 func testOnPremisesWithFlags(t *testing.T) {
-	// Same OnPremises config with flags added
+	// Same OnPremises config with flags added.
 	config := `apiVersion: kfd.sighup.io/v1alpha2
 kind: OnPremises
 metadata:
@@ -521,21 +519,21 @@ flags:
     autoApprove: false
 `
 
-	tempDir, err := os.MkdirTemp("", "furyctl-onprem-flags-*")
-	require.NoError(t, err)
-	defer os.RemoveAll(tempDir)
+	tempDir := t.TempDir()
 
 	configPath := filepath.Join(tempDir, "furyctl.yaml")
-	err = os.WriteFile(configPath, []byte(config), 0o644)
+	err := os.WriteFile(configPath, []byte(config), 0o644)
 	require.NoError(t, err)
 
-	// Test that OnPremises config with flags loads correctly
-	manager := NewManager(tempDir)
+	// Test that OnPremises config with flags loads correctly.
+	manager := flags.NewManager(tempDir)
 	err = manager.LoadAndMergeFlags(configPath, "apply")
 	assert.NoError(t, err, "OnPremises config with flags should load without errors")
 }
 
-// TestBackwardCompatibilityGuarantee tests that the flags feature doesn't break existing functionality
+// TestBackwardCompatibilityGuarantee tests that the flags feature doesn't break existing functionality.
+//
+//nolint:paralleltest // Global viper state prevents safe parallel execution
 func TestBackwardCompatibilityGuarantee(t *testing.T) {
 	testCases := []struct {
 		name   string
@@ -610,21 +608,20 @@ spec:
 	}
 
 	for _, tc := range testCases {
+		//nolint:paralleltest // Global viper state prevents safe parallel execution
 		t.Run(tc.name, func(t *testing.T) {
-			tempDir, err := os.MkdirTemp("", fmt.Sprintf("furyctl-backward-compat-%s-*", tc.name))
-			require.NoError(t, err)
-			defer os.RemoveAll(tempDir)
+			tempDir := t.TempDir()
 
 			configPath := filepath.Join(tempDir, "furyctl.yaml")
-			err = os.WriteFile(configPath, []byte(tc.config), 0o644)
+			err := os.WriteFile(configPath, []byte(tc.config), 0o644)
 			require.NoError(t, err)
 
-			// Test with different commands
+			// Test with different commands.
 			commands := []string{"global", "apply", "delete", "create"}
-			manager := NewManager(tempDir)
+			manager := flags.NewManager(tempDir)
 
 			for _, command := range commands {
-				t.Run(fmt.Sprintf("command_%s", command), func(t *testing.T) {
+				t.Run("command_"+command, func(t *testing.T) {
 					err := manager.LoadAndMergeFlags(configPath, command)
 					assert.NoError(t, err,
 						"Backward compatibility: existing config should work with command %s", command)

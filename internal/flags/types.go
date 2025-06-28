@@ -5,6 +5,8 @@
 package flags
 
 // FlagsConfig represents the flags section in a furyctl.yaml file.
+//
+//nolint:revive // FlagsConfig name is intentionally explicit for external API clarity
 type FlagsConfig struct {
 	Global map[string]any `yaml:"global,omitempty"`
 	Apply  map[string]any `yaml:"apply,omitempty"`
@@ -43,12 +45,11 @@ const (
 	FlagTypeInt         FlagType = "int"
 	FlagTypeStringSlice FlagType = "stringSlice"
 	FlagTypeDuration    FlagType = "duration"
+
+	// Default timeout values.
+	DefaultTimeoutSeconds         = 3600
+	DefaultPodRunningCheckTimeout = 300
 )
-
-// Default timeout values.
-const DefaultTimeoutSeconds = 3600
-
-const DefaultPodRunningCheckTimeout = 300
 
 // ConfigWithFlags represents a furyctl configuration that may contain flags.
 type ConfigWithFlags struct {

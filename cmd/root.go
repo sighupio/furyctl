@@ -85,11 +85,11 @@ furyctl is a command line interface tool to manage the full lifecycle of SIGHUP 
 					}
 				}
 
-				// Load global flags from configuration file if available
-				// This needs to happen early to allow global flags to affect subsequent operations
+				// Load global flags from configuration file if available.
+				// This needs to happen early to allow global flags to affect subsequent operations.
 				flagsManager := flags.NewManager(".")
 				if err := flagsManager.TryLoadFromCurrentDirectory("global"); err != nil {
-					// Continue execution - global flags loading is optional
+					// Continue execution - global flags loading is optional.
 					logrus.Debugf("Failed to load global flags from current directory: %v", err)
 				}
 

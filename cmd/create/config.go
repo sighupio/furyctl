@@ -50,11 +50,11 @@ func NewConfigCmd() *cobra.Command {
 				logrus.Fatalf("error while binding flags: %v", err)
 			}
 
-			// Load and merge flags from configuration file if one exists
+			// Load and merge flags from configuration file if one exists.
 			flagsManager := flags.NewManager(".")
 			if err := flagsManager.TryLoadFromCurrentDirectory("create"); err != nil {
 				logrus.Debugf("Failed to load flags from current directory: %v", err)
-				// Continue execution - flags loading is optional
+				// Continue execution - flags loading is optional.
 			}
 		},
 		RunE: func(_ *cobra.Command, _ []string) error {

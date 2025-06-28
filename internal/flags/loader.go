@@ -5,12 +5,19 @@
 package flags
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
 
 	"github.com/sighupio/furyctl/internal/parser"
 	yamlx "github.com/sighupio/furyctl/pkg/x/yaml"
+)
+
+// Static error definitions for linting compliance.
+var (
+	ErrConfigurationFileNotFound = errors.New("configuration file not found")
+	ErrNoFuryctlConfigFileFound  = errors.New("no furyctl configuration file found in directory")
 )
 
 // Loader handles loading flags configuration from furyctl.yaml files.
@@ -27,16 +34,16 @@ func NewLoader(baseDir string) *Loader {
 
 // LoadFromFile loads flags configuration from the specified furyctl.yaml file.
 func (l *Loader) LoadFromFile(configPath string) (*LoadResult, error) {
-	// Ensure the config file exists
+	// Ensure the config file exists.
 	if _, err := os.Stat(configPath); os.IsNotExist(err) {
 		return &LoadResult{
 			ConfigPath: configPath,
 			Flags:      nil,
-			Errors:     []error{fmt.Errorf("configuration file not found: %s", configPath)},
+			Errors:     []error{fmt.Errorf("%w: %s", ErrConfigurationFileNotFound, configPath)},
 		}, nil
 	}
 
-	// Load the configuration file
+	// Load the configuration file.
 	config, err := yamlx.FromFileV3[ConfigWithFlags](configPath)
 	if err != nil {
 		return &LoadResult{
@@ -46,7 +53,7 @@ func (l *Loader) LoadFromFile(configPath string) (*LoadResult, error) {
 		}, nil
 	}
 
-	// If no flags section exists, return empty result
+	// If no flags section exists, return empty result.
 	if config.Flags == nil {
 		return &LoadResult{
 			ConfigPath: configPath,
@@ -55,7 +62,7 @@ func (l *Loader) LoadFromFile(configPath string) (*LoadResult, error) {
 		}, nil
 	}
 
-	// Process dynamic values in the flags configuration
+	// Process dynamic values in the flags configuration.
 	processedFlags, err := l.processDynamicValues(config.Flags)
 	if err != nil {
 		return &LoadResult{
@@ -78,7 +85,7 @@ func (l *Loader) processDynamicValues(flags *FlagsConfig) (*FlagsConfig, error) 
 
 	var err error
 
-	// Process each command's flags
+	// Process each command's flags.
 	if flags.Global != nil {
 		processed.Global, err = l.processCommandFlags(flags.Global)
 		if err != nil {
@@ -140,15 +147,16 @@ func (l *Loader) processCommandFlags(flagsMap map[string]any) (map[string]any, e
 		if err != nil {
 			return nil, fmt.Errorf("error processing flag %s: %w", key, err)
 		}
+
 		processed[key] = processedValue
 	}
 
 	return processed, nil
 }
 
-// LoadFromDirectory tries to find and load flags from a furyctl.yaml file in the given directory.
+// LoadFromDirectory tries to find and load flags from a furyctl.yaml file in the given directory..
 func (l *Loader) LoadFromDirectory(dir string) (*LoadResult, error) {
-	// Common configuration file names to try
+	// Common configuration file names to try.
 	configNames := []string{"furyctl.yaml", "furyctl.yml"}
 
 	for _, name := range configNames {
@@ -158,10 +166,10 @@ func (l *Loader) LoadFromDirectory(dir string) (*LoadResult, error) {
 		}
 	}
 
-	// No configuration file found
+	// No configuration file found.
 	return &LoadResult{
 		ConfigPath: dir,
 		Flags:      nil,
-		Errors:     []error{fmt.Errorf("no furyctl configuration file found in directory: %s", dir)},
+		Errors:     []error{fmt.Errorf("%w: %s", ErrNoFuryctlConfigFileFound, dir)},
 	}, nil
 }

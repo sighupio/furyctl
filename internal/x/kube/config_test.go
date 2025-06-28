@@ -15,12 +15,7 @@ import (
 func TestConfig(t *testing.T) {
 	t.Parallel()
 
-	dirPath, err := os.MkdirTemp("", "test-kube-config-")
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	defer os.RemoveAll(dirPath)
+	dirPath := t.TempDir()
 
 	data := []byte("test")
 
@@ -53,12 +48,7 @@ func TestConfig(t *testing.T) {
 func TestSetConfigEnv(t *testing.T) {
 	t.Parallel()
 
-	dirPath, err := os.MkdirTemp("", "test-kube-config-")
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	defer os.RemoveAll(dirPath)
+	dirPath := t.TempDir()
 
 	data := []byte("test")
 
@@ -84,12 +74,7 @@ func TestSetConfigEnv(t *testing.T) {
 func TestCopyToWorkDir(t *testing.T) {
 	t.Parallel()
 
-	dirPath, err := os.MkdirTemp("", "test-kube-config-")
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	defer os.RemoveAll(dirPath)
+	dirPath := t.TempDir()
 
 	data := []byte("test")
 

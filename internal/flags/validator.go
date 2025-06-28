@@ -42,12 +42,12 @@ func (v *Validator) Validate(flags *FlagsConfig) []ValidationError {
 		return validationErrors
 	}
 
-	// Validate global flags
+	// Validate global flags.
 	if flags.Global != nil {
 		validationErrors = append(validationErrors, v.validateCommandFlags(flags.Global, "global")...)
 	}
 
-	// Validate command-specific flags
+	// Validate command-specific flags.
 	if flags.Apply != nil {
 		validationErrors = append(validationErrors, v.validateCommandFlags(flags.Apply, "apply")...)
 	}
@@ -72,7 +72,7 @@ func (v *Validator) Validate(flags *FlagsConfig) []ValidationError {
 		validationErrors = append(validationErrors, v.validateCommandFlags(flags.Tools, "tools")...)
 	}
 
-	// Cross-validation: check for conflicting flags
+	// Cross-validation: check for conflicting flags.
 	validationErrors = append(validationErrors, v.validateFlagCombinations(flags)...)
 
 	return validationErrors
@@ -87,18 +87,25 @@ func (v *Validator) validateCommandFlags(flagsMap map[string]any, command string
 	switch command {
 	case "global":
 		supportedFlagsMap = v.supportedFlags.Global
+
 	case "apply":
 		supportedFlagsMap = v.supportedFlags.Apply
+
 	case "delete":
 		supportedFlagsMap = v.supportedFlags.Delete
+
 	case "create":
 		supportedFlagsMap = v.supportedFlags.Create
+
 	case "get":
 		supportedFlagsMap = v.supportedFlags.Get
+
 	case "diff":
 		supportedFlagsMap = v.supportedFlags.Diff
+
 	case "tools":
 		supportedFlagsMap = v.supportedFlags.Tools
+
 	default:
 		validationErrors = append(validationErrors, ValidationError{
 			Command: command,
@@ -111,7 +118,7 @@ func (v *Validator) validateCommandFlags(flagsMap map[string]any, command string
 	}
 
 	for flagName, value := range flagsMap {
-		// Check if flag is supported
+		// Check if flag is supported.
 		flagInfo, supported := supportedFlagsMap[flagName]
 		if !supported {
 			validationErrors = append(validationErrors, ValidationError{
@@ -124,7 +131,7 @@ func (v *Validator) validateCommandFlags(flagsMap map[string]any, command string
 			continue
 		}
 
-		// Validate the value type and content
+		// Validate the value type and content.
 		if err := v.validateFlagValue(flagName, value, flagInfo); err != nil {
 			validationErrors = append(validationErrors, ValidationError{
 				Command: command,
@@ -140,7 +147,7 @@ func (v *Validator) validateCommandFlags(flagsMap map[string]any, command string
 
 // validateFlagValue validates a single flag's value.
 func (v *Validator) validateFlagValue(flagName string, value any, flagInfo FlagInfo) error {
-	// Basic type validation
+	// Basic type validation.
 	switch flagInfo.Type {
 	case FlagTypeBool:
 		if _, ok := value.(bool); !ok {
@@ -154,30 +161,28 @@ func (v *Validator) validateFlagValue(flagName string, value any, flagInfo FlagI
 	case FlagTypeInt:
 		switch value.(type) {
 		case int, int64, float64:
-			// Valid numeric types
+			// Valid numeric types.
 		case string:
-			// String representation of number, will be validated during conversion
+			// String representation of number, will be validated during conversion.
 		default:
 			return fmt.Errorf("%w: got %T", ErrExpectedNumericType, value)
 		}
 
-	case FlagTypeString:
-		// Most types can be converted to string, so this is generally permissive
-
 	case FlagTypeStringSlice:
 		switch value.(type) {
 		case []any, []string, string:
-			// Valid slice types or comma-separated string
+			// Types are valid - no action needed.
 		default:
 			return fmt.Errorf("%w: got %T", ErrExpectedArrayOrString, value)
 		}
 
-	case FlagTypeDuration:
-		// Duration validation - most types can be converted to string for duration parsing
-		// Detailed validation will be done during conversion
+	case FlagTypeString, FlagTypeDuration:
+		// No validation needed - most types can be converted to string/duration.
+		// This is intentionally permissive for these types.
+		_ = value // No-op to satisfy WSL linter.
 	}
 
-	// Specific flag validations
+	// Specific flag validations.
 	return v.validateSpecificFlag(flagName, value)
 }
 
@@ -198,9 +203,10 @@ func (*Validator) validateSpecificFlag(flagName string, value any) error {
 
 	case "phase":
 		if str, ok := value.(string); ok && str != "" {
-			// TODO: Add phase validation once we have access to cluster phase constants
-			// For now, accept any non-empty string
-			_ = str // Prevent unused variable warning
+			//nolint:godox // TODO acceptable here - phase validation depends on external constants
+			// TODO: Add phase validation once we have access to cluster phase constants.
+			// For now, accept any non-empty string.
+			_ = str // Prevent unused variable warning.
 		}
 
 	case "force":
@@ -241,9 +247,9 @@ func (*Validator) validateSpecificFlag(flagName string, value any) error {
 func (*Validator) validateFlagCombinations(flags *FlagsConfig) []ValidationError {
 	var validationErrors []ValidationError
 
-	// Check apply-specific flag combinations
+	// Check apply-specific flag combinations.
 	if flags.Apply != nil {
-		// Check skipVpnConfirmation vs vpnAutoConnect
+		// Check skipVpnConfirmation vs vpnAutoConnect.
 		if skipVpn, hasSkipVpn := flags.Apply["skipVpnConfirmation"]; hasSkipVpn {
 			if autoConnect, hasAutoConnect := flags.Apply["vpnAutoConnect"]; hasAutoConnect {
 				if skipVpnBool, ok := skipVpn.(bool); ok && skipVpnBool {
@@ -259,7 +265,7 @@ func (*Validator) validateFlagCombinations(flags *FlagsConfig) []ValidationError
 			}
 		}
 
-		// Check upgrade vs upgradeNode
+		// Check upgrade vs upgradeNode.
 		if upgrade, hasUpgrade := flags.Apply["upgrade"]; hasUpgrade {
 			if upgradeNode, hasUpgradeNode := flags.Apply["upgradeNode"]; hasUpgradeNode {
 				if upgradeBool, ok := upgrade.(bool); ok && upgradeBool {
@@ -275,7 +281,7 @@ func (*Validator) validateFlagCombinations(flags *FlagsConfig) []ValidationError
 			}
 		}
 
-		// Check phase vs startFrom
+		// Check phase vs startFrom.
 		if phase, hasPhase := flags.Apply["phase"]; hasPhase {
 			if startFrom, hasStartFrom := flags.Apply["startFrom"]; hasStartFrom {
 				if phaseStr, ok := phase.(string); ok && phaseStr != "" && phaseStr != "all" {
@@ -291,7 +297,7 @@ func (*Validator) validateFlagCombinations(flags *FlagsConfig) []ValidationError
 			}
 		}
 
-		// Check phase vs postApplyPhases
+		// Check phase vs postApplyPhases.
 		if phase, hasPhase := flags.Apply["phase"]; hasPhase {
 			if postApplyPhases, hasPostApply := flags.Apply["postApplyPhases"]; hasPostApply {
 				if phaseStr, ok := phase.(string); ok && phaseStr != "" && phaseStr != "all" {

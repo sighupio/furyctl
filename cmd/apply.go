@@ -92,12 +92,12 @@ func NewApplyCmd() *cobra.Command {
 				logrus.Fatalf("error while binding flags: %v", err)
 			}
 
-			// Load and merge flags from configuration file
+			// Load and merge flags from configuration file.
 			configPath := flags.GetConfigPathFromViper()
 			flagsManager := flags.NewManager(filepath.Dir(configPath))
 			if err := flagsManager.LoadAndMergeFlags(configPath, "apply"); err != nil {
 				logrus.Debugf("Failed to load flags from configuration: %v", err)
-				// Continue execution - flags loading is optional
+				// Continue execution - flags loading is optional.
 			}
 		},
 		RunE: func(_ *cobra.Command, _ []string) error {

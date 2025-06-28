@@ -104,12 +104,14 @@ func (m *Mapper) injectDynamicValuesAndPaths(
 						}
 
 					case reflect.String:
-						injectedStringVal, err := m.injectDynamicValuesAndPathsString(arrChildVal.(string))
-						if err != nil {
-							return nil, err
-						}
+						if strVal, ok := arrChildVal.(string); ok {
+							injectedStringVal, err := m.injectDynamicValuesAndPathsString(strVal)
+							if err != nil {
+								return nil, err
+							}
 
-						arrVal[arrChildK] = injectedStringVal
+							arrVal[arrChildK] = injectedStringVal
+						}
 
 					default:
 					}
