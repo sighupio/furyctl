@@ -19,6 +19,7 @@ import (
 	"github.com/spf13/viper"
 
 	"github.com/sighupio/furyctl/internal/app"
+	"github.com/sighupio/furyctl/internal/flags"
 	"github.com/sighupio/furyctl/internal/git"
 	execx "github.com/sighupio/furyctl/internal/x/exec"
 	iox "github.com/sighupio/furyctl/internal/x/io"
@@ -82,6 +83,14 @@ furyctl is a command line interface tool to manage the full lifecycle of SIGHUP 
 
 						logrus.SetLevel(logrus.FatalLevel)
 					}
+				}
+
+				// Load global flags from configuration file if available
+				// This needs to happen early to allow global flags to affect subsequent operations
+				flagsManager := flags.NewManager(".")
+				if err := flagsManager.TryLoadFromCurrentDirectory("global"); err != nil {
+					// Continue execution - global flags loading is optional
+					logrus.Debugf("Failed to load global flags from current directory: %v", err)
 				}
 
 				// Change working directory (if it is specified) as first thing so all the following paths are relative

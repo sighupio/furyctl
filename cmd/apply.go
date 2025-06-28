@@ -23,6 +23,7 @@ import (
 	"github.com/sighupio/furyctl/internal/app"
 	"github.com/sighupio/furyctl/internal/cluster"
 	"github.com/sighupio/furyctl/internal/config"
+	"github.com/sighupio/furyctl/internal/flags"
 	"github.com/sighupio/furyctl/internal/git"
 	"github.com/sighupio/furyctl/internal/lockfile"
 	cobrax "github.com/sighupio/furyctl/internal/x/cobra"
@@ -89,6 +90,14 @@ func NewApplyCmd() *cobra.Command {
 
 			if err := viper.BindPFlags(cmd.Flags()); err != nil {
 				logrus.Fatalf("error while binding flags: %v", err)
+			}
+
+			// Load and merge flags from configuration file
+			configPath := flags.GetConfigPathFromViper()
+			flagsManager := flags.NewManager(filepath.Dir(configPath))
+			if err := flagsManager.LoadAndMergeFlags(configPath, "apply"); err != nil {
+				logrus.Debugf("Failed to load flags from configuration: %v", err)
+				// Continue execution - flags loading is optional
 			}
 		},
 		RunE: func(_ *cobra.Command, _ []string) error {

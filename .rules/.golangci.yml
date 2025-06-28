@@ -9,7 +9,9 @@
 run:
   timeout: 5m
   modules-download-mode: readonly
-  go: "1.22"
+  go: "1.23.2"
+  concurrency: 2
+  memory-limit: 1024
 
 # output configuration options
 output:

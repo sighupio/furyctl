@@ -14,6 +14,7 @@ import (
 	"github.com/sighupio/furyctl/internal/analytics"
 	"github.com/sighupio/furyctl/internal/apis"
 	"github.com/sighupio/furyctl/internal/distribution"
+	"github.com/sighupio/furyctl/internal/flags"
 	"github.com/sighupio/furyctl/internal/schema/santhosh"
 	iox "github.com/sighupio/furyctl/internal/x/io"
 	dist "github.com/sighupio/furyctl/pkg/distribution"
@@ -84,7 +85,7 @@ func createNewEmptyConfigFile(path string) (*os.File, error) {
 	return out, nil
 }
 
-// Validate the furyctl.yaml file.
+// Validate the furyctl.yaml file using preprocessing approach to handle flags section.
 func Validate(path, repoPath string) error {
 	miniConf, err := loadFromFile(path)
 	if err != nil {
@@ -101,18 +102,101 @@ func Validate(path, repoPath string) error {
 		return fmt.Errorf("error loading schema: %w", err)
 	}
 
-	conf, err := yamlx.FromFileV3[any](path)
+	// Load raw configuration as map for preprocessing
+	rawConf, err := yamlx.FromFileV3[map[string]any](path)
 	if err != nil {
 		return err
 	}
 
-	if err = schema.Validate(conf); err != nil {
+	// Extract and validate flags section separately if it exists
+	if flagsSection, exists := rawConf["flags"]; exists {
+		if err := validateFlagsSection(flagsSection); err != nil {
+			return fmt.Errorf("error validating flags section: %w", err)
+		}
+	}
+
+	// Create clean configuration without flags for schema validation
+	cleanConf := createCleanConfigForSchemaValidation(rawConf)
+
+	// Validate clean configuration against fury-distribution schema
+	if err = schema.Validate(cleanConf); err != nil {
 		return fmt.Errorf("error while validating against schema: %w", err)
 	}
 
+	// Run additional schema validation rules
 	esv := apis.NewExtraSchemaValidatorFactory(miniConf.APIVersion, miniConf.Kind)
 	if err = esv.Validate(path); err != nil {
 		return fmt.Errorf("error while validating against extra schema rules: %w", err)
+	}
+
+	return nil
+}
+
+// createCleanConfigForSchemaValidation removes furyctl-specific sections that shouldn't be validated
+// against fury-distribution schemas.
+func createCleanConfigForSchemaValidation(rawConf map[string]any) map[string]any {
+	cleanConf := make(map[string]any)
+
+	// Copy all sections except furyctl-specific ones
+	for key, value := range rawConf {
+		switch key {
+		case "flags":
+			// Skip flags section - it's furyctl-specific
+			continue
+		default:
+			// Copy all other sections for schema validation
+			cleanConf[key] = value
+		}
+	}
+
+	return cleanConf
+}
+
+// validateFlagsSection validates the flags section using furyctl-specific validation rules.
+func validateFlagsSection(flagsSection any) error {
+	// Convert to FlagsConfig type for validation
+	flagsMap, ok := flagsSection.(map[string]any)
+	if !ok {
+		return fmt.Errorf("flags section must be an object")
+	}
+
+	// Convert to internal flags structure for validation
+	flagsConfig := &flags.FlagsConfig{}
+
+	// Extract and validate each command section
+	for command, commandFlags := range flagsMap {
+		commandFlagsMap, ok := commandFlags.(map[string]any)
+		if !ok {
+			return fmt.Errorf("flags.%s must be an object", command)
+		}
+
+		// Set the command flags in the appropriate section
+		switch command {
+		case "global":
+			flagsConfig.Global = commandFlagsMap
+		case "apply":
+			flagsConfig.Apply = commandFlagsMap
+		case "delete":
+			flagsConfig.Delete = commandFlagsMap
+		case "create":
+			flagsConfig.Create = commandFlagsMap
+		case "get":
+			flagsConfig.Get = commandFlagsMap
+		case "diff":
+			flagsConfig.Diff = commandFlagsMap
+		case "tools":
+			flagsConfig.Tools = commandFlagsMap
+		default:
+			return fmt.Errorf("unsupported flags command: %s", command)
+		}
+	}
+
+	// Validate flags using the flags package validator
+	validator := flags.NewValidator()
+	validationErrors := validator.Validate(flagsConfig)
+
+	if len(validationErrors) > 0 {
+		return fmt.Errorf("flags validation failed: %v", validationErrors)
 	}
 
 	return nil

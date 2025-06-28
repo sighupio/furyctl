@@ -47,7 +47,7 @@ env:
 
 tools:
 	@go install github.com/daixiang0/gci@v0.13.4
-	@go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.59.1
+	@go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.64.8
 	@go install github.com/google/addlicense@v1.1.1
 	@go install github.com/nikolaydubina/go-cover-treemap@v1.4.2
 	@go install github.com/onsi/ginkgo/v2/ginkgo@v2.19.0
@@ -108,13 +108,11 @@ format-go: fmt fumpt imports gci formattag
 
 fmt:
 	@find . -name "*.go" -type f -not -path '*/vendor/*' \
-	| sed 's/^\.\///g' \
-	| xargs -I {} -S 5000 sh -c 'echo "formatting {}.." && gofmt -w -s {}'
+	-exec sh -c 'echo "formatting $$1.." && gofmt -w -s "$$1"' sh {} \;
 
 fumpt:
 	@find . -name "*.go" -type f -not -path '*/vendor/*' \
-	| sed 's/^\.\///g' \
-	| xargs -I {} -S 5000 sh -c 'echo "formatting {}.." && gofumpt -w -extra {}'
+	-exec sh -c 'echo "formatting $$1.." && gofumpt -w -extra "$$1"' sh {} \;
 
 imports:
 	@goimports -v -w -e -local github.com/sighupio main.go
@@ -123,21 +121,24 @@ imports:
 
 gci:
 	@find . -name "*.go" -type f -not -path '*/vendor/*' \
-	| sed 's/^\.\///g' \
-	| xargs -I {} -S 5000 sh -c 'echo "formatting imports for {}.." && \
-	gci write --skip-generated  -s standard -s default -s "Prefix(github.com/sighupio)" {}'
+	-exec sh -c 'echo "formatting imports for $$1.." && \
+	gci write --skip-generated  -s standard -s default -s "Prefix(github.com/sighupio)" "$$1"' sh {} \;
 
 formattag:
 	@find . -name "*.go" -type f -not -path '*/vendor/*' \
-	| sed 's/^\.\///g' \
-	| xargs -I {} -S 5000 sh -c 'formattag -file {}'
+	-exec sh -c 'formattag -file "$$1"' sh {} \;
 
-.PHONY: lint lint-go
+.PHONY: lint lint-go lint-go-common lint-common
 
 lint: lint-go
 
 lint-go:
 	@GOFLAGS=-mod=mod golangci-lint -v run --color=always --max-same-issues 25 --config=${_PROJECT_DIRECTORY}/.rules/.golangci.yml ./...
+
+lint-go-common:
+	@GOFLAGS=-mod=mod golangci-lint run --no-config -E godot -E wsl -E nlreturn -E grouper --color=always --max-same-issues 25 ./...
+
+lint-common: lint-go-common
 
 .PHONY: test-unit test-integration test-e2e test-all show-coverage
 
