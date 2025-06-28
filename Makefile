@@ -112,7 +112,7 @@ fmt:
 
 fumpt:
 	@find . -name "*.go" -type f -not -path '*/vendor/*' \
-	-exec sh -c 'echo "formatting $$1.." && gofumpt -w -extra "$$1"' sh {} \;
+	-exec sh -c 'echo "formatting $$1.." && gofumpt -w "$$1"' sh {} \;
 
 imports:
 	@goimports -v -w -e -local github.com/sighupio main.go
