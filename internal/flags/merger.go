@@ -5,11 +5,33 @@
 package flags
 
 import (
+	"errors"
 	"fmt"
 	"strconv"
 	"strings"
+	"unicode"
 
 	"github.com/spf13/viper"
+)
+
+// Command name constants.
+const (
+	CommandGlobal = "global"
+	CommandApply  = "apply"
+	CommandDelete = "delete"
+	CommandCreate = "create"
+	CommandGet    = "get"
+	CommandDiff   = "diff"
+	CommandTools  = "tools"
+)
+
+// Static error definitions for linting compliance.
+var (
+	ErrTypeConversion      = errors.New("type conversion failed")
+	ErrUnsupportedFlagType = errors.New("unsupported flag type")
+	ErrBoolConversion      = errors.New("cannot convert to bool")
+	ErrIntConversion       = errors.New("cannot convert to int")
+	ErrUnsupportedCommand  = errors.New("unsupported command")
 )
 
 // Merger handles merging flags from configuration file into viper with proper priority.
@@ -24,6 +46,22 @@ func NewMerger() *Merger {
 	}
 }
 
+// CamelToKebab converts a camelCase string to kebab-case.
+// For example: "distroLocation" -> "distro-location".
+func CamelToKebab(s string) string {
+	var result strings.Builder
+
+	for i, r := range s {
+		if i > 0 && unicode.IsUpper(r) {
+			_, _ = result.WriteRune('-')
+		}
+
+		_, _ = result.WriteRune(unicode.ToLower(r))
+	}
+
+	return result.String()
+}
+
 // MergeIntoViper merges flags from the configuration into viper with the lowest priority.
 // This ensures the priority order: furyctl.yaml < environment variables < command line flags.
 func (m *Merger) MergeIntoViper(flags *FlagsConfig, command string) error {
@@ -32,25 +70,32 @@ func (m *Merger) MergeIntoViper(flags *FlagsConfig, command string) error {
 	}
 
 	// Merge global flags first
-	if err := m.mergeCommandFlags(flags.Global, "global"); err != nil {
+	if err := m.mergeCommandFlags(flags.Global, CommandGlobal); err != nil {
 		return fmt.Errorf("error merging global flags: %w", err)
 	}
 
 	// Merge command-specific flags
-	var commandFlags map[string]interface{}
+	var commandFlags map[string]any
+
 	switch command {
-	case "apply":
+	case CommandApply:
 		commandFlags = flags.Apply
-	case "delete":
+
+	case CommandDelete:
 		commandFlags = flags.Delete
-	case "create":
+
+	case CommandCreate:
 		commandFlags = flags.Create
-	case "get":
+
+	case CommandGet:
 		commandFlags = flags.Get
-	case "diff":
+
+	case CommandDiff:
 		commandFlags = flags.Diff
-	case "tools":
+
+	case CommandTools:
 		commandFlags = flags.Tools
+
 	default:
 		// Unknown command, skip command-specific flags
 		return nil
@@ -70,22 +115,29 @@ func (m *Merger) mergeCommandFlags(flagsMap map[string]any, command string) erro
 	var supportedFlagsMap map[string]FlagInfo
 
 	switch command {
-	case "global":
+	case CommandGlobal:
 		supportedFlagsMap = m.supportedFlags.Global
-	case "apply":
+
+	case CommandApply:
 		supportedFlagsMap = m.supportedFlags.Apply
-	case "delete":
+
+	case CommandDelete:
 		supportedFlagsMap = m.supportedFlags.Delete
-	case "create":
+
+	case CommandCreate:
 		supportedFlagsMap = m.supportedFlags.Create
-	case "get":
+
+	case CommandGet:
 		supportedFlagsMap = m.supportedFlags.Get
-	case "diff":
+
+	case CommandDiff:
 		supportedFlagsMap = m.supportedFlags.Diff
-	case "tools":
+
+	case CommandTools:
 		supportedFlagsMap = m.supportedFlags.Tools
+
 	default:
-		return fmt.Errorf("unsupported command: %s", command)
+		return fmt.Errorf("%w: %s", ErrUnsupportedCommand, command)
 	}
 
 	for flagName, value := range flagsMap {
@@ -97,23 +149,26 @@ func (m *Merger) mergeCommandFlags(flagsMap map[string]any, command string) erro
 		}
 
 		// Convert and validate the value
-		convertedValue, err := m.convertValue(value, flagInfo.Type)
+		convertedValue, err := m.ConvertValue(value, flagInfo.Type)
 		if err != nil {
 			return fmt.Errorf("error converting flag %s: %w", flagName, err)
 		}
 
+		// Convert camelCase flag name to kebab-case for viper
+		viperKey := CamelToKebab(flagName)
+
 		// Set the value in viper only if it's not already set
 		// This preserves the priority: env vars and command line flags take precedence
-		if !viper.IsSet(flagName) {
-			viper.Set(flagName, convertedValue)
+		if !viper.IsSet(viperKey) {
+			viper.Set(viperKey, convertedValue)
 		}
 	}
 
 	return nil
 }
 
-// convertValue converts a value to the expected type for the flag.
-func (m *Merger) convertValue(value any, expectedType FlagType) (any, error) {
+// ConvertValue converts a value to the expected type for the flag.
+func (*Merger) ConvertValue(value any, expectedType FlagType) (any, error) {
 	switch expectedType {
 	case FlagTypeString:
 		return fmt.Sprintf("%v", value), nil
@@ -123,23 +178,36 @@ func (m *Merger) convertValue(value any, expectedType FlagType) (any, error) {
 		case bool:
 			return v, nil
 		case string:
-			return strconv.ParseBool(v)
+			result, err := strconv.ParseBool(v)
+			if err != nil {
+				return false, fmt.Errorf("%w: %w", ErrBoolConversion, err)
+			}
+
+			return result, nil
 		default:
-			return false, fmt.Errorf("cannot convert %T to bool", value)
+			return false, fmt.Errorf("%w: got %T", ErrBoolConversion, value)
 		}
 
 	case FlagTypeInt:
 		switch v := value.(type) {
 		case int:
 			return v, nil
+
 		case int64:
 			return int(v), nil
+
 		case float64:
 			return int(v), nil
+
 		case string:
-			return strconv.Atoi(v)
+			result, err := strconv.Atoi(v)
+			if err != nil {
+				return 0, fmt.Errorf("%w: %w", ErrIntConversion, err)
+			}
+
+			return result, nil
 		default:
-			return 0, fmt.Errorf("cannot convert %T to int", value)
+			return 0, fmt.Errorf("%w: got %T", ErrIntConversion, value)
 		}
 
 	case FlagTypeStringSlice:
@@ -149,6 +217,7 @@ func (m *Merger) convertValue(value any, expectedType FlagType) (any, error) {
 			for i, item := range v {
 				result[i] = fmt.Sprintf("%v", item)
 			}
+
 			return result, nil
 		case []string:
 			return v, nil
@@ -157,9 +226,10 @@ func (m *Merger) convertValue(value any, expectedType FlagType) (any, error) {
 			if v == "" {
 				return []string{}, nil
 			}
+
 			return strings.Split(v, ","), nil
 		default:
-			return []string{}, fmt.Errorf("cannot convert %T to []string", value)
+			return []string{}, ErrTypeConversion
 		}
 
 	case FlagTypeDuration:
@@ -167,7 +237,7 @@ func (m *Merger) convertValue(value any, expectedType FlagType) (any, error) {
 		return fmt.Sprintf("%v", value), nil
 
 	default:
-		return nil, fmt.Errorf("unsupported flag type: %s", expectedType)
+		return nil, ErrUnsupportedFlagType
 	}
 }
 
@@ -185,18 +255,25 @@ func (m *Merger) GetSupportedFlagsForCommand(command string) map[string]FlagInfo
 	switch command {
 	case "global":
 		return m.supportedFlags.Global
+
 	case "apply":
 		return m.supportedFlags.Apply
+
 	case "delete":
 		return m.supportedFlags.Delete
+
 	case "create":
 		return m.supportedFlags.Create
+
 	case "get":
 		return m.supportedFlags.Get
+
 	case "diff":
 		return m.supportedFlags.Diff
+
 	case "tools":
 		return m.supportedFlags.Tools
+
 	default:
 		return nil
 	}
