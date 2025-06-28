@@ -287,11 +287,13 @@ Validation errors are logged but won't prevent execution, allowing for graceful 
 
 ## Supported Flags
 
+**Note:** All flag names in the `furyctl.yaml` file use camelCase format (e.g., `disableAnalytics`, `skipDepsValidation`). These are automatically converted to kebab-case internally for CLI compatibility (e.g., `--disable-analytics`, `--skip-deps-validation`).
+
 ### Global Flags
 
 - `debug` (bool) - Enable debug output
 - `disableAnalytics` (bool) - Disable analytics
-- `no-tty` (bool) - Disable TTY
+- `noTty` (bool) - Disable TTY
 - `workdir` (string) - Working directory
 - `outdir` (string) - Output directory
 - `log` (string) - Log file path
@@ -323,11 +325,11 @@ Validation errors are logged but won't prevent execution, allowing for graceful 
 
 - `config` (string) - Path to configuration file
 - `phase` (string) - Limit execution to specific phase
-- `start-from` (string) - Start execution from specific phase
-- `bin-path` (string) - Binary path
-- `dry-run` (bool) - Dry run mode
-- `skip-vpn-confirmation` (bool) - Skip VPN confirmation
-- `auto-approve` (bool) - Auto approve deletion
+- `startFrom` (string) - Start execution from specific phase
+- `binPath` (string) - Binary path
+- `dryRun` (bool) - Dry run mode
+- `skipVpnConfirmation` (bool) - Skip VPN confirmation
+- `autoApprove` (bool) - Auto approve deletion
 
 ### Create Command Flags
 
