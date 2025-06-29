@@ -136,7 +136,9 @@ func (m *Mapper) injectDynamicValuesAndPathsString(value string) (string, error)
 			return "", fmt.Errorf("error parsing dynamic value: %w", err)
 		}
 
-		value = strings.Replace(value, dynamicValue, parsedDynamicValue, 1)
+		// Convert parsed value to string for string replacement.
+		parsedDynamicValueStr := fmt.Sprintf("%v", parsedDynamicValue)
+		value = strings.Replace(value, dynamicValue, parsedDynamicValueStr, 1)
 	}
 
 	// If the value is a relative path, we need to convert it to an absolute path.
