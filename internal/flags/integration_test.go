@@ -346,8 +346,8 @@ flags:
     upgradeNode: "node-1"
 `,
 			command:       "apply",
-			expectError:   false, // Validation errors are only logged as warnings
-			errorContains: "",
+			expectError:   true, // Conflicting flags are fatal validation errors
+			errorContains: "flags validation failed",
 		},
 		{
 			name: "nonexistent_file_reference",
