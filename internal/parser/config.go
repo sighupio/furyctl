@@ -38,9 +38,56 @@ func NewConfigParser(baseDir string) *ConfigParser {
 	}
 }
 
-func (p *ConfigParser) ParseDynamicValue(val any) (string, error) {
-	strVal := fmt.Sprintf("%v", val)
+func (p *ConfigParser) ParseDynamicValue(val any) (any, error) {
+	// Handle different types appropriately.
+	switch v := val.(type) {
+	case string:
+		// Check if this string contains dynamic value patterns.
+		if !strings.Contains(v, "://") {
+			// No dynamic pattern, return as-is.
+			return v, nil
+		}
 
+		return p.parseDynamicString(v)
+
+	case []any:
+		// Process each element in the array.
+		result := make([]any, len(v))
+
+		for i, item := range v {
+			processedItem, err := p.ParseDynamicValue(item)
+			if err != nil {
+				return nil, fmt.Errorf("error processing array element %d: %w", i, err)
+			}
+
+			result[i] = processedItem
+		}
+
+		return result, nil
+
+	case []string:
+		// Process each string in the array.
+		result := make([]any, len(v))
+
+		for i, item := range v {
+			processedItem, err := p.ParseDynamicValue(item)
+			if err != nil {
+				return nil, fmt.Errorf("error processing array element %d: %w", i, err)
+			}
+
+			result[i] = processedItem
+		}
+
+		return result, nil
+
+	default:
+		// For other types (bool, int, float, etc.), return as-is.
+		return val, nil
+	}
+}
+
+// parseDynamicString processes a string that may contain dynamic value patterns.
+func (p *ConfigParser) parseDynamicString(strVal string) (string, error) {
 	spl := strings.Split(strVal, "://")
 
 	if len(spl) > 1 {
