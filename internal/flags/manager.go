@@ -5,11 +5,15 @@
 package flags
 
 import (
+	"errors"
 	"fmt"
 	"path/filepath"
+	"strings"
 
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
+
+	"github.com/sighupio/furyctl/internal/parser"
 )
 
 // Manager coordinates flags loading, validation, and merging operations.
@@ -49,6 +53,10 @@ func (m *Manager) LoadAndMergeFlags(configPath, command string) error {
 
 		for _, loadErr := range result.Errors {
 			logrus.Debugf("Flags loading error: %v", loadErr)
+			// If this is a critical error (like file not found), return it.
+			if isCriticalError(loadErr) {
+				return loadErr
+			}
 		}
 		// If no flags were loaded due to errors, just return. (no flags to merge).
 		if result.Flags == nil {
@@ -184,4 +192,21 @@ func GetConfigPathFromViper() string {
 	}
 
 	return configPath
+}
+
+// isCriticalError determines if an error should cause the flags loading to fail
+// rather than just log a warning.
+func isCriticalError(err error) bool {
+	// Check if this is a dynamic value parsing error related to file operations.
+	if errors.Is(err, parser.ErrCannotParseDynamicValue) {
+		// Check if the error message contains file-related indicators.
+		errMsg := err.Error()
+
+		return strings.Contains(errMsg, "no such file") ||
+			strings.Contains(errMsg, "cannot find") ||
+			strings.Contains(errMsg, "file not found") ||
+			strings.Contains(errMsg, "permission denied")
+	}
+
+	return false
 }
