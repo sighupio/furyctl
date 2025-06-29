@@ -5,17 +5,11 @@
 package test
 
 import (
-	"os"
 	"testing"
 )
 
 func MkdirTemp(t *testing.T) string {
 	t.Helper()
 
-	dir, err := os.MkdirTemp("", "furyctl")
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	return dir
+	return t.TempDir()
 }

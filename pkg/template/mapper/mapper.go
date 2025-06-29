@@ -104,12 +104,14 @@ func (m *Mapper) injectDynamicValuesAndPaths(
 						}
 
 					case reflect.String:
-						injectedStringVal, err := m.injectDynamicValuesAndPathsString(arrChildVal.(string))
-						if err != nil {
-							return nil, err
-						}
+						if strVal, ok := arrChildVal.(string); ok {
+							injectedStringVal, err := m.injectDynamicValuesAndPathsString(strVal)
+							if err != nil {
+								return nil, err
+							}
 
-						arrVal[arrChildK] = injectedStringVal
+							arrVal[arrChildK] = injectedStringVal
+						}
 
 					default:
 					}
@@ -134,7 +136,9 @@ func (m *Mapper) injectDynamicValuesAndPathsString(value string) (string, error)
 			return "", fmt.Errorf("error parsing dynamic value: %w", err)
 		}
 
-		value = strings.Replace(value, dynamicValue, parsedDynamicValue, 1)
+		// Convert parsed value to string for string replacement.
+		parsedDynamicValueStr := fmt.Sprintf("%v", parsedDynamicValue)
+		value = strings.Replace(value, dynamicValue, parsedDynamicValueStr, 1)
 	}
 
 	// If the value is a relative path, we need to convert it to an absolute path.

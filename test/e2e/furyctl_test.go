@@ -182,7 +182,69 @@ var (
 			})
 
 			It("should exit without errors when config validation succeeds", func() {
-				out, err := FuryctlValidateConfig("../data/e2e/validate/config/correct")
+				// Create temporary directory for test
+				tempDir := MkdirTemp("config-validation-test")
+				defer RemoveAll(tempDir)
+
+				// Create SSL files directly in temp directory
+				sslCert := filepath.Join(tempDir, "ssl.crt")
+				sslKey := filepath.Join(tempDir, "ssl.key")
+				sslCA := filepath.Join(tempDir, "ssl.ca")
+
+				err := os.WriteFile(sslCert, []byte("dummy-cert-content"), 0o644)
+				Expect(err).To(Not(HaveOccurred()))
+
+				err = os.WriteFile(sslKey, []byte("dummy-key-content"), 0o644)
+				Expect(err).To(Not(HaveOccurred()))
+
+				err = os.WriteFile(sslCA, []byte("dummy-ca-content"), 0o644)
+				Expect(err).To(Not(HaveOccurred()))
+
+				// Read and modify the original config to point to temp files
+				originalConfigPath := Abs("../data/e2e/validate/config/correct/furyctl.yaml")
+				originalConfig := FileContent(originalConfigPath)
+
+				// Replace the hardcoded paths with temp file paths
+				modifiedConfig := strings.ReplaceAll(originalConfig,
+					`"{file://relative/path/to/ssl.crt}"`,
+					`"{file://./ssl.crt}"`)
+				modifiedConfig = strings.ReplaceAll(modifiedConfig,
+					`"{file://relative/path/to/ssl.key}"`,
+					`"{file://./ssl.key}"`)
+				modifiedConfig = strings.ReplaceAll(modifiedConfig,
+					`"{file://relative/path/to/ssl.ca}"`,
+					`"{file://./ssl.ca}"`)
+
+				// Write modified config to temp directory
+				tempConfigPath := filepath.Join(tempDir, "furyctl.yaml")
+				err = os.WriteFile(tempConfigPath, []byte(modifiedConfig), 0o644)
+				Expect(err).To(Not(HaveOccurred()))
+
+				// Copy other required files to temp directory
+				originalDir := Abs("../data/e2e/validate/config/correct")
+
+				// Copy kfd.yaml
+				kfdContent := FileContent(filepath.Join(originalDir, "kfd.yaml"))
+				err = os.WriteFile(filepath.Join(tempDir, "kfd.yaml"), []byte(kfdContent), 0o644)
+				Expect(err).To(Not(HaveOccurred()))
+
+				// Copy furyctl-defaults.yaml
+				defaultsContent := FileContent(filepath.Join(originalDir, "furyctl-defaults.yaml"))
+				err = os.WriteFile(filepath.Join(tempDir, "furyctl-defaults.yaml"), []byte(defaultsContent), 0o644)
+				Expect(err).To(Not(HaveOccurred()))
+
+				// Copy schemas directory
+				_, err = RunCmd("cp", "-r", filepath.Join(originalDir, "schemas"), tempDir)
+				Expect(err).To(Not(HaveOccurred()))
+
+				// Run validation against temp config
+				out, err := RunCmd(
+					furyctl, "validate", "config",
+					"--config", tempConfigPath,
+					"--distro-location", tempDir,
+					"--debug",
+					"--disable-analytics", "true",
+				)
 
 				Expect(err).To(Not(HaveOccurred()))
 				Expect(out).To(ContainSubstring("configuration file validation succeeded"))

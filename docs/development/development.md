@@ -310,3 +310,172 @@ In your typical _upgrade path_ there will be a file named `pre-distribution.sh.t
 In the OnPremises upgrade paths when there are Kubernetes version upgrades you also need to include a `pre-kubernetes.sh.tpl` file to run the Ansible playbook that upgrade control planes and worker nodes (for example `configs/upgrades/onpremises/1.29.5-1.30.0/pre-kubernetes.sh.tpl`). This usually only happens during Kubernetes minor version bumps (for example `1.29.5` to `1.30.0`) but there are some exceptional cases where we upgrade the Kubernetes version in a patch release (for example `1.29.4` to `1.29.5`).
 
 </details>
+
+---
+
+### **How to inject flags from config when creating new commands?**
+
+<details>
+<summary>Answer</summary>
+
+When creating new commands that should support flags configuration from `furyctl.yaml`, you need to integrate the flags system into your command. This system allows users to define CLI flags in their configuration file, making commands more repeatable and scriptable.
+
+#### Basic Integration Pattern
+
+Here's the standard pattern used in existing commands like `apply`, `delete`, etc.:
+
+```go
+package cmd
+
+import (
+    "path/filepath"
+    "github.com/spf13/cobra"
+    "github.com/sighupio/furyctl/internal/flags"
+)
+
+func NewMyCommand() *cobra.Command {
+    cmd := &cobra.Command{
+        Use:   "mycommand",
+        Short: "Description of my command",
+        RunE:  runMyCommand,
+    }
+    
+    // Define your regular CLI flags here
+    cmd.Flags().Bool("dry-run", false, "Perform a dry run")
+    cmd.Flags().String("output", "", "Output format")
+    
+    return cmd
+}
+
+func runMyCommand(cmd *cobra.Command, args []string) error {
+    // Get the config path (usually from global flags)
+    configPath := viper.GetString("config")
+    
+    // Initialize flags manager with the config directory
+    flagsManager := flags.NewManager(filepath.Dir(configPath))
+    
+    // Load and merge flags from config file
+    // Use your command name as the second parameter
+    if err := flagsManager.LoadAndMergeFlags(configPath, "mycommand"); err != nil {
+        return fmt.Errorf("failed to load flags configuration: %w", err)
+    }
+    
+    // Now you can access flags normally through viper
+    // Config file flags will be merged with CLI flags (CLI has higher priority)
+    dryRun := viper.GetBool("dry-run")
+    output := viper.GetString("output")
+    
+    // Continue with your command logic...
+    return nil
+}
+```
+
+#### Configuration File Format
+
+Users can then define flags in their `furyctl.yaml`:
+
+```yaml
+apiVersion: kfd.sighup.io/v1alpha2
+kind: KFDDistribution
+metadata:
+  name: my-cluster
+spec:
+  # ... regular config
+
+flags:
+  global:           # Applied to all commands
+    debug: true
+    log-level: info
+  mycommand:        # Applied only to 'mycommand'
+    dry-run: true
+    output: "json"
+```
+
+#### Advanced Features
+
+The flags system supports dynamic values and complex configurations:
+
+```yaml
+flags:
+  mycommand:
+    # File content injection
+    token: "{file://./secrets/api-token.txt}"
+    
+    # Environment variable injection  
+    endpoint: "{env://API_ENDPOINT}"
+    
+    # Path resolution
+    config-file: "{path://./configs/app.yaml}"
+    
+    # Array values
+    tags: ["production", "web-server"]
+    
+    # Nested configurations
+    nested:
+      enabled: true
+      count: 5
+```
+
+#### Error Handling Best Practices
+
+The flags system is designed to be forgiving and provide helpful feedback:
+
+```go
+func runMyCommand(cmd *cobra.Command, args []string) error {
+    flagsManager := flags.NewManager(filepath.Dir(configPath))
+    
+    // LoadAndMergeFlags handles errors gracefully:
+    // - File not found: logs debug message, continues
+    // - Invalid YAML: logs warning, continues  
+    // - Unknown flags: logs warning, continues
+    // - File permission errors: returns error
+    if err := flagsManager.LoadAndMergeFlags(configPath, "mycommand"); err != nil {
+        // Only critical errors (like file permission issues) reach here
+        return fmt.Errorf("failed to load flags configuration: %w", err)
+    }
+    
+    // Your command logic continues normally
+    return nil
+}
+```
+
+#### Priority Order
+
+The system maintains a clear priority order (highest to lowest):
+1. Command line flags (always take precedence)
+2. Environment variables  
+3. Configuration file flags (lowest priority)
+
+This ensures users can always override config file settings from the command line when needed.
+
+#### Testing Your Integration
+
+When writing tests for commands with flags integration, use temporary directories:
+
+```go
+func TestMyCommand(t *testing.T) {
+    // Create temporary config with flags
+    tempDir := t.TempDir()
+    configPath := filepath.Join(tempDir, "furyctl.yaml")
+    
+    configContent := `
+apiVersion: kfd.sighup.io/v1alpha2
+kind: KFDDistribution
+metadata:
+  name: test
+flags:
+  mycommand:
+    dry-run: true
+    output: "json"
+`
+    
+    os.WriteFile(configPath, []byte(configContent), 0644)
+    
+    // Test your command with the config
+    // The flags should be automatically loaded and merged
+}
+```
+
+This integration pattern ensures consistency across all furyctl commands while providing users with a powerful and flexible way to manage their command configurations.
+
+</details>
