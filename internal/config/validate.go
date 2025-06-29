@@ -16,6 +16,7 @@ import (
 	"github.com/sighupio/furyctl/internal/apis"
 	"github.com/sighupio/furyctl/internal/distribution"
 	"github.com/sighupio/furyctl/internal/flags"
+	"github.com/sighupio/furyctl/internal/parser"
 	"github.com/sighupio/furyctl/internal/schema/santhosh"
 	iox "github.com/sighupio/furyctl/internal/x/io"
 	dist "github.com/sighupio/furyctl/pkg/distribution"
@@ -24,9 +25,10 @@ import (
 
 // Static error definitions for linting compliance.
 var (
-	ErrFlagsMustBeObject       = errors.New("flags section must be an object")
-	ErrUnsupportedFlagsCommand = errors.New("unsupported flags command")
-	ErrFlagsValidationFailed   = errors.New("flags validation failed")
+	ErrFlagsMustBeObject            = errors.New("flags section must be an object")
+	ErrUnsupportedFlagsCommand      = errors.New("unsupported flags command")
+	ErrFlagsValidationFailed        = errors.New("flags validation failed")
+	ErrExpandedConfigurationNotAMap = errors.New("expanded configuration is not a map[string]any")
 )
 
 func Create(
@@ -126,8 +128,14 @@ func Validate(path, repoPath string) error {
 	// Create clean configuration without flags for schema validation.
 	cleanConf := createCleanConfigForSchemaValidation(rawConf)
 
-	// Validate clean configuration against fury-distribution schema.
-	if err = schema.Validate(cleanConf); err != nil {
+	// Expand dynamic values before schema validation.
+	expandedConf, err := expandDynamicValues(cleanConf, filepath.Dir(path))
+	if err != nil {
+		return fmt.Errorf("error expanding dynamic values: %w", err)
+	}
+
+	// Validate expanded configuration against fury-distribution schema.
+	if err = schema.Validate(expandedConf); err != nil {
 		return fmt.Errorf("error while validating against schema: %w", err)
 	}
 
@@ -159,6 +167,91 @@ func createCleanConfigForSchemaValidation(rawConf map[string]any) map[string]any
 	}
 
 	return cleanConf
+}
+
+// expandDynamicValues recursively expands dynamic values in the configuration
+// before schema validation.
+func expandDynamicValues(conf map[string]any, baseDir string) (map[string]any, error) {
+	result, err := expandDynamicValuesRecursive(conf, parser.NewConfigParser(baseDir))
+	if err != nil {
+		return nil, err
+	}
+
+	// Type assert the result back to map[string]any.
+	expandedConf, ok := result.(map[string]any)
+	if !ok {
+		return nil, ErrExpandedConfigurationNotAMap
+	}
+
+	return expandedConf, nil
+}
+
+// expandDynamicValuesRecursive recursively processes the configuration map to expand dynamic values.
+func expandDynamicValuesRecursive(value any, configParser *parser.ConfigParser) (any, error) {
+	switch v := value.(type) {
+	case map[string]any:
+		result := make(map[string]any)
+
+		for key, val := range v {
+			expandedVal, err := expandDynamicValuesRecursive(val, configParser)
+			if err != nil {
+				return nil, fmt.Errorf("error expanding value for key %s: %w", key, err)
+			}
+
+			result[key] = expandedVal
+		}
+
+		return result, nil
+
+	case []any:
+		result := make([]any, len(v))
+
+		for i, val := range v {
+			expandedVal, err := expandDynamicValuesRecursive(val, configParser)
+			if err != nil {
+				return nil, fmt.Errorf("error expanding array element %d: %w", i, err)
+			}
+
+			result[i] = expandedVal
+		}
+
+		return result, nil
+
+	case string:
+		// Check if this string contains dynamic value patterns.
+		if containsDynamicPattern(v) {
+			expandedVal, err := configParser.ParseDynamicValue(v)
+			if err != nil {
+				return nil, fmt.Errorf("error parsing dynamic value: %w", err)
+			}
+
+			return expandedVal, nil
+		}
+
+		return v, nil
+
+	default:
+		// For other types (bool, int, float, etc.), return as-is.
+		return value, nil
+	}
+}
+
+const (
+	envPrefixLen   = 6 // "env://"
+	filePrefixLen  = 7 // "file://"
+	httpPrefixLen  = 8 // "http://"
+	httpsPrefixLen = 9 // "https://"
+	pathPrefixLen  = 8 // "path://"
+)
+
+// containsDynamicPattern checks if a string contains dynamic value patterns like {env://}, {file://}, etc.
+func containsDynamicPattern(s string) bool {
+	// Simple check for dynamic value patterns.
+	return len(s) > 0 && s[0] == '{' && ((len(s) > envPrefixLen && s[1:envPrefixLen+1] == "env://") ||
+		(len(s) > filePrefixLen && s[1:filePrefixLen+1] == "file://") ||
+		(len(s) > httpPrefixLen && s[1:httpPrefixLen+1] == "http://") ||
+		(len(s) > httpsPrefixLen && s[1:httpsPrefixLen+1] == "https://") ||
+		(len(s) > pathPrefixLen && s[1:pathPrefixLen+1] == "path://"))
 }
 
 // validateFlagsSection validates the flags section using furyctl-specific validation rules.
