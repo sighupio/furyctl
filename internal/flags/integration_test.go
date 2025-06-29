@@ -32,7 +32,7 @@ func TestIntegration_FlagsConfiguration(t *testing.T) {
 }
 
 func testRealFileSystemOperations(t *testing.T) {
-	t.Parallel()
+	// Note: Not using t.Parallel() because we modify global viper state
 
 	// Create temporary directory
 	tempDir, err := os.MkdirTemp("", "furyctl-flags-test-*")
@@ -67,7 +67,7 @@ flags:
 				"workdir": "/tmp/test",
 				"timeout": 3600,
 				"dry-run": false,
-				"force":   []any{"upgrades"},
+				"force":   []string{"upgrades"},
 			},
 		},
 		{
@@ -99,7 +99,7 @@ flags:
 				"skip-deps-validation": true,
 				"timeout":              7200,
 				"vpn-auto-connect":     true,
-				"force":                []any{"upgrades", "migrations"},
+				"force":                []string{"upgrades", "migrations"},
 				"dry-run":              true,
 				"auto-approve":         false,
 			},
@@ -202,7 +202,7 @@ flags:
 }
 
 func testViperIntegration(t *testing.T) {
-	t.Parallel()
+	// Note: Not using t.Parallel() because we modify global viper state
 
 	tempDir, err := os.MkdirTemp("", "furyctl-viper-test-*")
 	require.NoError(t, err)
@@ -302,7 +302,7 @@ flags:
 }
 
 func testErrorHandling(t *testing.T) {
-	t.Parallel()
+	// Note: Not using t.Parallel() because we modify global viper state
 
 	tempDir, err := os.MkdirTemp("", "furyctl-error-test-*")
 	require.NoError(t, err)
@@ -390,7 +390,7 @@ flags:
 }
 
 func testFuryDistributionCompatibility(t *testing.T) {
-	t.Parallel()
+	// Note: Not using t.Parallel() because we modify global viper state
 
 	tempDir, err := os.MkdirTemp("", "furyctl-compat-test-*")
 	require.NoError(t, err)
