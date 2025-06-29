@@ -216,15 +216,153 @@ func TestValidator_ValidateSpecificFlag(t *testing.T) {
 }
 
 func TestValidationError_Error(t *testing.T) {
-	err := flags.ValidationError{
-		Command: "apply",
-		Flag:    "timeout",
-		Value:   -1,
-		Reason:  "must be positive",
+	tests := []struct {
+		name     string
+		err      flags.ValidationError
+		expected string
+	}{
+		{
+			name: "fatal error with flag",
+			err: flags.ValidationError{
+				Command:  "apply",
+				Flag:     "timeout",
+				Value:    -1,
+				Reason:   "must be positive",
+				Severity: flags.ValidationSeverityFatal,
+			},
+			expected: "fatal validation error for apply.timeout: must be positive",
+		},
+		{
+			name: "warning error with flag",
+			err: flags.ValidationError{
+				Command:  "global",
+				Flag:     "unknownFlag",
+				Value:    "value",
+				Reason:   "unsupported flag",
+				Severity: flags.ValidationSeverityWarning,
+			},
+			expected: "warning validation error for global.unknownFlag: unsupported flag",
+		},
+		{
+			name: "error without specific flag",
+			err: flags.ValidationError{
+				Command:  "apply",
+				Flag:     "",
+				Value:    nil,
+				Reason:   "unsupported command",
+				Severity: flags.ValidationSeverityFatal,
+			},
+			expected: "fatal validation error for apply: unsupported command",
+		},
 	}
 
-	expected := "validation error for apply.timeout: must be positive"
-	if err.Error() != expected {
-		t.Errorf("Expected error message %q, got %q", expected, err.Error())
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if tt.err.Error() != tt.expected {
+				t.Errorf("Expected error message %q, got %q", tt.expected, tt.err.Error())
+			}
+		})
+	}
+}
+
+func TestValidator_ErrorSeverityClassification(t *testing.T) {
+	validator := flags.NewValidator()
+
+	tests := []struct {
+		name             string
+		flags            *flags.FlagsConfig
+		expectedFatal    int
+		expectedWarnings int
+	}{
+		{
+			name: "fatal errors - invalid protocol and negative timeout",
+			flags: &flags.FlagsConfig{
+				Global: map[string]any{
+					"gitProtocol": "ftp", // Fatal: invalid protocol
+				},
+				Apply: map[string]any{
+					"timeout": -5, // Fatal: negative timeout
+				},
+			},
+			expectedFatal:    2,
+			expectedWarnings: 0,
+		},
+		{
+			name: "warning errors - unsupported flags",
+			flags: &flags.FlagsConfig{
+				Global: map[string]any{
+					"unknownGlobalFlag": "value", // Warning: unsupported
+				},
+				Apply: map[string]any{
+					"unknownApplyFlag": true, // Warning: unsupported
+				},
+			},
+			expectedFatal:    0,
+			expectedWarnings: 2,
+		},
+		{
+			name: "fatal errors - conflicting flags",
+			flags: &flags.FlagsConfig{
+				Apply: map[string]any{
+					"vpnAutoConnect":      true, // Fatal: conflicts with skipVpnConfirmation
+					"skipVpnConfirmation": true,
+					"upgrade":             true, // Fatal: conflicts with upgradeNode
+					"upgradeNode":         "worker1",
+				},
+			},
+			expectedFatal:    2,
+			expectedWarnings: 0,
+		},
+		{
+			name: "fatal errors - invalid force options",
+			flags: &flags.FlagsConfig{
+				Apply: map[string]any{
+					"force": []any{"invalid-option"}, // Fatal: invalid force option
+				},
+			},
+			expectedFatal:    1,
+			expectedWarnings: 0,
+		},
+		{
+			name: "mixed fatal and warning errors",
+			flags: &flags.FlagsConfig{
+				Global: map[string]any{
+					"gitProtocol": "invalid", // Fatal: invalid protocol
+					"unknownFlag": "value",   // Warning: unsupported
+				},
+				Apply: map[string]any{
+					"timeout":        -1,     // Fatal: negative timeout
+					"anotherUnknown": "test", // Warning: unsupported
+				},
+			},
+			expectedFatal:    2,
+			expectedWarnings: 2,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			errors := validator.Validate(tt.flags)
+
+			// Count fatal vs warning errors.
+			fatalCount := 0
+			warningCount := 0
+
+			for _, err := range errors {
+				if err.Severity == flags.ValidationSeverityFatal {
+					fatalCount++
+				} else if err.Severity == flags.ValidationSeverityWarning {
+					warningCount++
+				}
+			}
+
+			if fatalCount != tt.expectedFatal {
+				t.Errorf("Expected %d fatal errors, got %d", tt.expectedFatal, fatalCount)
+			}
+
+			if warningCount != tt.expectedWarnings {
+				t.Errorf("Expected %d warning errors, got %d", tt.expectedWarnings, warningCount)
+			}
+		})
 	}
 }

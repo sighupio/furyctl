@@ -16,6 +16,12 @@ import (
 	"github.com/sighupio/furyctl/internal/parser"
 )
 
+// Static error definitions for linting compliance.
+var (
+	ErrFlagsValidationFailed       = errors.New("flags validation failed")
+	ErrGlobalFlagsValidationFailed = errors.New("global flags validation failed")
+)
+
 // Manager coordinates flags loading, validation, and merging operations.
 type Manager struct {
 	loader    *Loader
@@ -74,10 +80,37 @@ func (m *Manager) LoadAndMergeFlags(configPath, command string) error {
 	// Validate the flags configuration.
 	validationErrors := m.validator.Validate(result.Flags)
 	if len(validationErrors) > 0 {
-		logrus.Warnf("Found %d validation errors in flags configuration:", len(validationErrors))
+		// Separate fatal errors from warnings.
+		var fatalErrors []ValidationError
+
+		var warnings []ValidationError
 
 		for _, valErr := range validationErrors {
-			logrus.Warnf("  %v", valErr)
+			if valErr.Severity == ValidationSeverityFatal {
+				fatalErrors = append(fatalErrors, valErr)
+			} else {
+				warnings = append(warnings, valErr)
+			}
+		}
+
+		// Return immediately if there are fatal errors.
+		if len(fatalErrors) > 0 {
+			logrus.Errorf("Found %d fatal validation errors in flags configuration:", len(fatalErrors))
+
+			for _, fatalErr := range fatalErrors {
+				logrus.Errorf("  %v", fatalErr)
+			}
+
+			return fmt.Errorf("%w with %d fatal errors", ErrFlagsValidationFailed, len(fatalErrors))
+		}
+
+		// Log warnings but continue execution.
+		if len(warnings) > 0 {
+			logrus.Warnf("Found %d validation warnings in flags configuration:", len(warnings))
+
+			for _, warning := range warnings {
+				logrus.Warnf("  %v", warning)
+			}
 		}
 	}
 
@@ -131,10 +164,37 @@ func (m *Manager) LoadAndMergeGlobalFlags(configPath string) error {
 	if result.Flags.Global != nil {
 		validationErrors := m.validator.validateCommandFlags(result.Flags.Global, "global")
 		if len(validationErrors) > 0 {
-			logrus.Warnf("Found %d validation errors in global flags configuration:", len(validationErrors))
+			// Separate fatal errors from warnings.
+			var fatalErrors []ValidationError
+
+			var warnings []ValidationError
 
 			for _, valErr := range validationErrors {
-				logrus.Warnf("  %v", valErr)
+				if valErr.Severity == ValidationSeverityFatal {
+					fatalErrors = append(fatalErrors, valErr)
+				} else {
+					warnings = append(warnings, valErr)
+				}
+			}
+
+			// Return immediately if there are fatal errors.
+			if len(fatalErrors) > 0 {
+				logrus.Errorf("Found %d fatal validation errors in global flags configuration:", len(fatalErrors))
+
+				for _, fatalErr := range fatalErrors {
+					logrus.Errorf("  %v", fatalErr)
+				}
+
+				return fmt.Errorf("%w with %d fatal errors", ErrGlobalFlagsValidationFailed, len(fatalErrors))
+			}
+
+			// Log warnings but continue execution.
+			if len(warnings) > 0 {
+				logrus.Warnf("Found %d validation warnings in global flags configuration:", len(warnings))
+
+				for _, warning := range warnings {
+					logrus.Warnf("  %v", warning)
+				}
 			}
 		}
 	}
@@ -168,10 +228,37 @@ func (m *Manager) TryLoadFromCurrentDirectory(command string) error {
 	// Validate and merge.
 	validationErrors := m.validator.Validate(result.Flags)
 	if len(validationErrors) > 0 {
-		logrus.Warnf("Found %d validation errors in flags configuration:", len(validationErrors))
+		// Separate fatal errors from warnings.
+		var fatalErrors []ValidationError
+
+		var warnings []ValidationError
 
 		for _, valErr := range validationErrors {
-			logrus.Warnf("  %v", valErr)
+			if valErr.Severity == ValidationSeverityFatal {
+				fatalErrors = append(fatalErrors, valErr)
+			} else {
+				warnings = append(warnings, valErr)
+			}
+		}
+
+		// Return immediately if there are fatal errors.
+		if len(fatalErrors) > 0 {
+			logrus.Errorf("Found %d fatal validation errors in flags configuration:", len(fatalErrors))
+
+			for _, fatalErr := range fatalErrors {
+				logrus.Errorf("  %v", fatalErr)
+			}
+
+			return fmt.Errorf("%w with %d fatal errors", ErrFlagsValidationFailed, len(fatalErrors))
+		}
+
+		// Log warnings but continue execution.
+		if len(warnings) > 0 {
+			logrus.Warnf("Found %d validation warnings in flags configuration:", len(warnings))
+
+			for _, warning := range warnings {
+				logrus.Warnf("  %v", warning)
+			}
 		}
 	}
 

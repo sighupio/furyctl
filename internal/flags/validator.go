@@ -108,10 +108,11 @@ func (v *Validator) validateCommandFlags(flagsMap map[string]any, command string
 
 	default:
 		validationErrors = append(validationErrors, ValidationError{
-			Command: command,
-			Flag:    "",
-			Value:   nil,
-			Reason:  "unsupported command",
+			Command:  command,
+			Flag:     "",
+			Value:    nil,
+			Reason:   "unsupported command",
+			Severity: ValidationSeverityFatal,
 		})
 
 		return validationErrors
@@ -125,7 +126,9 @@ func (v *Validator) validateCommandFlags(flagsMap map[string]any, command string
 				Command: command,
 				Flag:    flagName,
 				Value:   value,
-				Reason:  "unsupported flag for this command",
+				Reason: fmt.Sprintf("flag '%s' is not supported for '%s' command. "+
+					"Check documentation for supported flags.", flagName, command),
+				Severity: ValidationSeverityWarning,
 			})
 
 			continue
@@ -134,10 +137,11 @@ func (v *Validator) validateCommandFlags(flagsMap map[string]any, command string
 		// Validate the value type and content.
 		if err := v.validateFlagValue(flagName, value, flagInfo); err != nil {
 			validationErrors = append(validationErrors, ValidationError{
-				Command: command,
-				Flag:    flagName,
-				Value:   value,
-				Reason:  err.Error(),
+				Command:  command,
+				Flag:     flagName,
+				Value:    value,
+				Reason:   err.Error(),
+				Severity: getValidationSeverity(flagName, err),
 			})
 		}
 	}
@@ -198,7 +202,7 @@ func (*Validator) validateSpecificFlag(flagName string, value any) error {
 				}
 			}
 
-			return fmt.Errorf("%w: must be one of: %s", ErrInvalidProtocol, strings.Join(validProtocols, ", "))
+			return fmt.Errorf("%w: got '%s', must be one of: %s", ErrInvalidProtocol, str, strings.Join(validProtocols, ", "))
 		}
 
 	case "phase":
@@ -226,7 +230,8 @@ func (*Validator) validateSpecificFlag(flagName string, value any) error {
 					}
 
 					if !found {
-						return fmt.Errorf("%w: %s, must be one of: %s", ErrInvalidForceOption, str, strings.Join(validForceOptions, ", "))
+						return fmt.Errorf("%w: got '%s', must be one of: %s",
+							ErrInvalidForceOption, str, strings.Join(validForceOptions, ", "))
 					}
 				}
 			}
@@ -235,7 +240,7 @@ func (*Validator) validateSpecificFlag(flagName string, value any) error {
 	case "timeout", "podRunningCheckTimeout":
 		if val, ok := value.(int); ok {
 			if val <= 0 {
-				return fmt.Errorf("%w: %s", ErrMustBePositiveInteger, flagName)
+				return fmt.Errorf("%w: %s must be greater than 0, got %v", ErrMustBePositiveInteger, flagName, val)
 			}
 		}
 	}
@@ -255,10 +260,11 @@ func (*Validator) validateFlagCombinations(flags *FlagsConfig) []ValidationError
 				if skipVpnBool, ok := skipVpn.(bool); ok && skipVpnBool {
 					if autoConnectBool, ok := autoConnect.(bool); ok && autoConnectBool {
 						validationErrors = append(validationErrors, ValidationError{
-							Command: "apply",
-							Flag:    "vpnAutoConnect",
-							Value:   autoConnect,
-							Reason:  "cannot be used together with skipVpnConfirmation",
+							Command:  "apply",
+							Flag:     "vpnAutoConnect",
+							Value:    autoConnect,
+							Reason:   "vpnAutoConnect=true conflicts with skipVpnConfirmation=true. Use only one of these flags.",
+							Severity: ValidationSeverityFatal,
 						})
 					}
 				}
@@ -274,7 +280,9 @@ func (*Validator) validateFlagCombinations(flags *FlagsConfig) []ValidationError
 							Command: "apply",
 							Flag:    "upgradeNode",
 							Value:   upgradeNode,
-							Reason:  "cannot be used together with upgrade",
+							Reason: "upgradeNode cannot be used when upgrade=true. " +
+								"Use either 'upgrade' for all nodes or 'upgradeNode' for a specific node.",
+							Severity: ValidationSeverityFatal,
 						})
 					}
 				}
@@ -290,7 +298,9 @@ func (*Validator) validateFlagCombinations(flags *FlagsConfig) []ValidationError
 							Command: "apply",
 							Flag:    "startFrom",
 							Value:   startFrom,
-							Reason:  "cannot be used together with phase flag",
+							Reason: "startFrom cannot be used when phase is specified (and not 'all'). " +
+								"Use either 'phase' or 'startFrom', not both.",
+							Severity: ValidationSeverityFatal,
 						})
 					}
 				}
@@ -306,7 +316,9 @@ func (*Validator) validateFlagCombinations(flags *FlagsConfig) []ValidationError
 							Command: "apply",
 							Flag:    "postApplyPhases",
 							Value:   postApplyPhases,
-							Reason:  "cannot be used together with phase flag",
+							Reason: "postApplyPhases cannot be used when phase is specified (and not 'all'). " +
+								"Use either 'phase' or 'postApplyPhases', not both.",
+							Severity: ValidationSeverityFatal,
 						})
 					}
 				}
@@ -315,6 +327,32 @@ func (*Validator) validateFlagCombinations(flags *FlagsConfig) []ValidationError
 	}
 
 	return validationErrors
+}
+
+// getValidationSeverity determines the severity level for a validation error.
+func getValidationSeverity(flagName string, err error) ValidationSeverity {
+	// Critical errors that should stop execution.
+	if errors.Is(err, ErrInvalidProtocol) ||
+		errors.Is(err, ErrInvalidForceOption) ||
+		errors.Is(err, ErrMustBePositiveInteger) ||
+		errors.Is(err, ErrConflictingFlags) {
+		return ValidationSeverityFatal
+	}
+
+	// Timeout validation errors are always fatal.
+	if flagName == "timeout" || flagName == "podRunningCheckTimeout" {
+		return ValidationSeverityFatal
+	}
+
+	// Type validation errors for critical types are fatal.
+	if errors.Is(err, ErrExpectedBooleanType) ||
+		errors.Is(err, ErrExpectedNumericType) ||
+		errors.Is(err, ErrInvalidBooleanValue) {
+		return ValidationSeverityFatal
+	}
+
+	// Default to warning for less critical validation issues.
+	return ValidationSeverityWarning
 }
 
 // ValidateFlagValue is a public wrapper for testing the flag value validation.

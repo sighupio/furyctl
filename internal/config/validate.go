@@ -11,6 +11,8 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/sirupsen/logrus"
+
 	"github.com/sighupio/fury-distribution/pkg/apis/config"
 	"github.com/sighupio/furyctl/internal/analytics"
 	"github.com/sighupio/furyctl/internal/apis"
@@ -305,7 +307,32 @@ func validateFlagsSection(flagsSection any) error {
 	validationErrors := validator.Validate(flagsConfig)
 
 	if len(validationErrors) > 0 {
-		return fmt.Errorf("%w: %v", ErrFlagsValidationFailed, validationErrors)
+		// Separate fatal errors from warnings.
+		var fatalErrors []flags.ValidationError
+
+		var warnings []flags.ValidationError
+
+		for _, err := range validationErrors {
+			if err.Severity == flags.ValidationSeverityFatal {
+				fatalErrors = append(fatalErrors, err)
+			} else {
+				warnings = append(warnings, err)
+			}
+		}
+
+		// Log warnings but don't fail validation.
+		if len(warnings) > 0 {
+			logrus.Warnf("Found %d validation warnings in flags configuration:", len(warnings))
+
+			for _, warning := range warnings {
+				logrus.Warnf("  %v", warning)
+			}
+		}
+
+		// Only fail validation on fatal errors.
+		if len(fatalErrors) > 0 {
+			return fmt.Errorf("%w: %v", ErrFlagsValidationFailed, fatalErrors)
+		}
 	}
 
 	return nil

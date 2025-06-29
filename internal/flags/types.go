@@ -49,7 +49,15 @@ const (
 	// Default timeout values.
 	DefaultTimeoutSeconds         = 3600
 	DefaultPodRunningCheckTimeout = 300
+
+	// ValidationSeverityFatal indicates a critical error that should stop execution.
+	ValidationSeverityFatal ValidationSeverity = "fatal"
+	// ValidationSeverityWarning indicates a non-critical error that should log a warning.
+	ValidationSeverityWarning ValidationSeverity = "warning"
 )
+
+// ValidationSeverity represents the severity level of a validation error.
+type ValidationSeverity string
 
 // ConfigWithFlags represents a furyctl configuration that may contain flags.
 type ConfigWithFlags struct {
@@ -69,14 +77,20 @@ type LoadResult struct {
 
 // ValidationError represents an error that occurred during flag validation.
 type ValidationError struct {
-	Command string
-	Flag    string
-	Value   any
-	Reason  string
+	Command  string
+	Flag     string
+	Value    any
+	Reason   string
+	Severity ValidationSeverity
 }
 
 func (e ValidationError) Error() string {
-	return "validation error for " + e.Command + "." + e.Flag + ": " + e.Reason
+	severityStr := string(e.Severity)
+	if e.Flag != "" {
+		return severityStr + " validation error for " + e.Command + "." + e.Flag + ": " + e.Reason
+	}
+
+	return severityStr + " validation error for " + e.Command + ": " + e.Reason
 }
 
 // GetSupportedFlags returns the complete mapping of supported flags for all commands.
