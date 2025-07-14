@@ -140,7 +140,6 @@ func DiscoverTools(flags SharedFlags) ([]ToolInfo, error) {
 
 		// Download the distribution.
 		res, err := distrodl.Download(flags.DistroLocation, furyctlPath)
-
 		if err != nil {
 			return nil, fmt.Errorf("error while downloading distribution: %w", err)
 		}
@@ -170,7 +169,6 @@ func DiscoverTools(flags SharedFlags) ([]ToolInfo, error) {
 		}
 
 		res, err := distrodl.Download(flags.DistroLocation, furyctlPath)
-
 		if err != nil {
 			return nil, fmt.Errorf("error while downloading distribution: %w", err)
 		}
