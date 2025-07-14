@@ -138,13 +138,8 @@ func DiscoverTools(flags SharedFlags) ([]ToolInfo, error) {
 			return nil, fmt.Errorf("error while validating requirements: %w", err)
 		}
 
-		// Download the distribution (suppress logs for clean output).
-		originalLevel := logrus.GetLevel()
-		logrus.SetLevel(logrus.ErrorLevel)
-
+		// Download the distribution.
 		res, err := distrodl.Download(flags.DistroLocation, furyctlPath)
-
-		logrus.SetLevel(originalLevel)
 
 		if err != nil {
 			return nil, fmt.Errorf("error while downloading distribution: %w", err)
@@ -152,33 +147,21 @@ func DiscoverTools(flags SharedFlags) ([]ToolInfo, error) {
 
 		basePath := path.Join(outDir, ".furyctl", res.MinimalConf.Metadata.Name)
 
-		// Validate the furyctl.yaml file (suppress logs for clean output).
-		logrus.SetLevel(logrus.ErrorLevel)
-
+		// Validate the furyctl.yaml file.
 		if err := config.Validate(furyctlPath, res.RepoPath); err != nil {
-			logrus.SetLevel(originalLevel)
-
 			return nil, fmt.Errorf("error while validating configuration file: %w", err)
 		}
 
-		logrus.SetLevel(originalLevel)
-
-		// Download the dependencies (suppress logs for clean output).
+		// Download the dependencies.
 		depsdl := dependencies.NewCachingDownloader(client, outDir, basePath, binPath, typedGitProtocol)
 
-		logrus.SetLevel(logrus.ErrorLevel)
-
 		if _, err := depsdl.DownloadTools(res.DistroManifest); err != nil {
-			logrus.SetLevel(originalLevel)
-
 			return nil, fmt.Errorf("error while downloading tools: %w", err)
 		}
 
-		logrus.SetLevel(originalLevel)
-
 		distroManifest = res.DistroManifest
 	} else {
-		// Load the distribution to get tool versions from kfd.yaml (suppress logs for clean output).
+		// Load the distribution to get tool versions from kfd.yaml.
 		var distrodl *dist.Downloader
 		if flags.DistroLocation == "" {
 			distrodl = dist.NewCachingDownloader(client, outDir, typedGitProtocol, "")
@@ -186,12 +169,7 @@ func DiscoverTools(flags SharedFlags) ([]ToolInfo, error) {
 			distrodl = dist.NewDownloader(client, typedGitProtocol, "")
 		}
 
-		originalLevel := logrus.GetLevel()
-		logrus.SetLevel(logrus.ErrorLevel)
-
 		res, err := distrodl.Download(flags.DistroLocation, furyctlPath)
-
-		logrus.SetLevel(originalLevel)
 
 		if err != nil {
 			return nil, fmt.Errorf("error while downloading distribution: %w", err)
