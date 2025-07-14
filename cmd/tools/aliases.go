@@ -13,8 +13,8 @@ func NewAliasesCmd() *cobra.Command {
 		"Generate bash aliases for downloaded tools",
 		`Generate bash aliases for tools downloaded by furyctl.
 
-This command scans the .furyctl/bin directory and outputs bash aliases that point
-to the downloaded tool binaries with their correct versions.
+This command outputs bash aliases that point to the downloaded tool binaries
+with versions that are compatible with your SIGHUP Distribution configuration.
 
 Examples:
   # View aliases
