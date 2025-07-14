@@ -23,14 +23,13 @@ import (
 	iox "github.com/sighupio/furyctl/internal/x/io"
 )
 
-
 // MiseConfig represents the structure of a mise.toml file.
 type MiseConfig struct {
 	Tools map[string]string `toml:"tools"`
 	// Note: We use a map[string]any to preserve other sections
 	// that might exist in the mise configuration.
 	Other map[string]any `toml:",inline"`
-	// SectionOrder preserves the original order of sections in the TOML file
+	// SectionOrder preserves the original order of sections in the TOML file.
 	SectionOrder []string `toml:"-"`
 }
 
@@ -196,7 +195,6 @@ Examples:
 
 // updateMiseConfig creates or updates the mise.toml file with furyctl tools.
 func updateMiseConfig(tools []ToolInfo, miseFile string) error {
-
 	// Load existing configuration or create new one.
 	config, err := loadMiseConfig(miseFile)
 	if err != nil {
@@ -276,65 +274,72 @@ func loadMiseConfig(filename string) (*MiseConfig, error) {
 // extractSectionOrder parses the TOML file content to extract the order of sections.
 func extractSectionOrder(content string) []string {
 	var order []string
+
 	sectionRegex := regexp.MustCompile(`^\s*\[([^\]]+)\]\s*$`)
-	
+
 	lines := strings.Split(content, "\n")
 	for _, line := range lines {
 		matches := sectionRegex.FindStringSubmatch(line)
 		if len(matches) > 1 {
 			sectionName := matches[1]
-			// Only add if not already in the order (avoid duplicates)
+			// Only add if not already in the order (avoid duplicates).
 			found := false
+
 			for _, existing := range order {
 				if existing == sectionName {
 					found = true
+
 					break
 				}
 			}
+
 			if !found {
 				order = append(order, sectionName)
 			}
 		}
 	}
-	
+
 	return order
 }
 
 // saveMiseConfig saves the mise configuration to file preserving section order.
 func saveMiseConfig(filename string, config *MiseConfig) error {
-	// Use ordered map to preserve section order from the original file
+	// Use ordered map to preserve section order from the original file.
 	var orderedSections []string
-	
-	// First, add sections in their original order
+
+	// First, add sections in their original order.
 	for _, section := range config.SectionOrder {
 		if section != "tools" && config.Other[section] != nil {
 			orderedSections = append(orderedSections, section)
 		}
 	}
-	
-	// Add any new sections that weren't in the original order
+
+	// Add any new sections that weren't in the original order.
 	for section := range config.Other {
 		found := false
+
 		for _, existing := range orderedSections {
 			if existing == section {
 				found = true
+
 				break
 			}
 		}
+
 		if !found {
 			orderedSections = append(orderedSections, section)
 		}
 	}
-	
-	// Add tools section at the end (common convention)
+
+	// Add tools section at the end (common convention).
 	if len(config.Tools) > 0 {
 		orderedSections = append(orderedSections, "tools")
 	}
 
-	// Build the final combined map in the correct order
+	// Build the final combined map in the correct order.
 	combined := make(map[string]any)
-	
-	// Add sections in the preserved order
+
+	// Add sections in the preserved order.
 	for _, section := range orderedSections {
 		if section == "tools" {
 			if len(config.Tools) > 0 {
@@ -356,10 +361,10 @@ func saveMiseConfig(filename string, config *MiseConfig) error {
 		return fmt.Errorf("failed to write %s: %w", filename, err)
 	}
 
-	// Run mise fmt to format the file properly (if mise is available)
+	// Run mise fmt to format the file properly (if mise is available).
 	if err := runMiseFormat(filename); err != nil {
+		// Don't return error, just log as warning since the file is still valid.
 		logrus.Debugf("Warning: failed to run 'mise fmt' on %s: %v", filename, err)
-		// Don't return error, just log as warning since the file is still valid
 	}
 
 	return nil
@@ -371,12 +376,12 @@ func runMiseFormat(filename string) error {
 	if err := cmd.Run(); err != nil {
 		return fmt.Errorf("failed to run 'mise fmt %s': %w", filename, err)
 	}
+
 	return nil
 }
 
 // RevertMiseConfig removes furyctl-managed tools from mise.toml.
 func RevertMiseConfig(tools []ToolInfo, opts RevertOptions, miseFile string, cmd *cobra.Command) error {
-
 	// Check if mise.toml exists.
 	if _, err := os.Stat(miseFile); os.IsNotExist(err) {
 		cmd.Printf("No %s file found, nothing to revert\n", miseFile)
