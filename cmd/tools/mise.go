@@ -8,7 +8,10 @@ import (
 	"bufio"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
+	"regexp"
+	"strings"
 
 	"github.com/pelletier/go-toml/v2"
 	"github.com/sirupsen/logrus"
@@ -27,6 +30,8 @@ type MiseConfig struct {
 	// Note: We use a map[string]any to preserve other sections
 	// that might exist in the mise configuration.
 	Other map[string]any `toml:",inline"`
+	// SectionOrder preserves the original order of sections in the TOML file
+	SectionOrder []string `toml:"-"`
 }
 
 // RevertOptions contains options for the revert operation.
@@ -223,8 +228,9 @@ func updateMiseConfig(tools []ToolInfo, miseFile string) error {
 // loadMiseConfig loads existing mise.toml file or returns empty config.
 func loadMiseConfig(filename string) (*MiseConfig, error) {
 	config := &MiseConfig{
-		Tools: make(map[string]string),
-		Other: make(map[string]any),
+		Tools:        make(map[string]string),
+		Other:        make(map[string]any),
+		SectionOrder: []string{},
 	}
 
 	// Check if file exists.
@@ -238,6 +244,9 @@ func loadMiseConfig(filename string) (*MiseConfig, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to read %s: %w", filename, err)
 	}
+
+	// Extract section order from the original file by parsing line by line.
+	config.SectionOrder = extractSectionOrder(string(data))
 
 	// Parse existing TOML, preserving all sections.
 	var rawConfig map[string]any
@@ -264,21 +273,76 @@ func loadMiseConfig(filename string) (*MiseConfig, error) {
 	return config, nil
 }
 
-// saveMiseConfig saves the mise configuration to file.
-func saveMiseConfig(filename string, config *MiseConfig) error {
-	// Combine tools section with other sections.
-	// This intermediate map is used to preserve the order of the sections in the final TOML file,
-	// with the "tools" section appearing at the end, which is a common convention.
-	combined := make(map[string]any)
+// extractSectionOrder parses the TOML file content to extract the order of sections.
+func extractSectionOrder(content string) []string {
+	var order []string
+	sectionRegex := regexp.MustCompile(`^\s*\[([^\]]+)\]\s*$`)
+	
+	lines := strings.Split(content, "\n")
+	for _, line := range lines {
+		matches := sectionRegex.FindStringSubmatch(line)
+		if len(matches) > 1 {
+			sectionName := matches[1]
+			// Only add if not already in the order (avoid duplicates)
+			found := false
+			for _, existing := range order {
+				if existing == sectionName {
+					found = true
+					break
+				}
+			}
+			if !found {
+				order = append(order, sectionName)
+			}
+		}
+	}
+	
+	return order
+}
 
-	// Add other sections first.
-	for k, v := range config.Other {
-		combined[k] = v
+// saveMiseConfig saves the mise configuration to file preserving section order.
+func saveMiseConfig(filename string, config *MiseConfig) error {
+	// Use ordered map to preserve section order from the original file
+	var orderedSections []string
+	
+	// First, add sections in their original order
+	for _, section := range config.SectionOrder {
+		if section != "tools" && config.Other[section] != nil {
+			orderedSections = append(orderedSections, section)
+		}
+	}
+	
+	// Add any new sections that weren't in the original order
+	for section := range config.Other {
+		found := false
+		for _, existing := range orderedSections {
+			if existing == section {
+				found = true
+				break
+			}
+		}
+		if !found {
+			orderedSections = append(orderedSections, section)
+		}
+	}
+	
+	// Add tools section at the end (common convention)
+	if len(config.Tools) > 0 {
+		orderedSections = append(orderedSections, "tools")
 	}
 
-	// Add tools section.
-	if len(config.Tools) > 0 {
-		combined["tools"] = config.Tools
+	// Build the final combined map in the correct order
+	combined := make(map[string]any)
+	
+	// Add sections in the preserved order
+	for _, section := range orderedSections {
+		if section == "tools" {
+			if len(config.Tools) > 0 {
+				combined["tools"] = config.Tools
+			}
+		} else if config.Other[section] != nil {
+			combined[section] = config.Other[section]
+		}
 	}
 
 	// Marshal to TOML.
@@ -292,6 +356,21 @@ func saveMiseConfig(filename string, config *MiseConfig) error {
 		return fmt.Errorf("failed to write %s: %w", filename, err)
 	}
 
+	// Run mise fmt to format the file properly (if mise is available)
+	if err := runMiseFormat(filename); err != nil {
+		logrus.Debugf("Warning: failed to run 'mise fmt' on %s: %v", filename, err)
+		// Don't return error, just log as warning since the file is still valid
+	}
+
+	return nil
+}
+
+// runMiseFormat runs 'mise fmt' on the specified file to format it properly.
+func runMiseFormat(filename string) error {
+	cmd := exec.Command("mise", "fmt", filename)
+	if err := cmd.Run(); err != nil {
+		return fmt.Errorf("failed to run 'mise fmt %s': %w", filename, err)
+	}
 	return nil
 }
 
