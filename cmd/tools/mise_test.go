@@ -413,7 +413,7 @@ func TestRevertMiseConfig_NoFile(t *testing.T) { //nolint:paralleltest // Test c
 	// Mock command for output capture.
 	cmd := tools.NewMiseCmd()
 
-	err = tools.RevertMiseConfig(toolsList, tools.RevertOptions{SkipConfirmation: true}, cmd)
+	err = tools.RevertMiseConfig(toolsList, tools.RevertOptions{SkipConfirmation: true}, "mise.toml", cmd)
 	require.NoError(t, err)
 }
 
@@ -445,7 +445,7 @@ func TestRevertMiseConfig_NoFuryctlTools(t *testing.T) { //nolint:paralleltest /
 
 	cmd := tools.NewMiseCmd()
 
-	err = tools.RevertMiseConfig(toolsList, tools.RevertOptions{SkipConfirmation: true}, cmd)
+	err = tools.RevertMiseConfig(toolsList, tools.RevertOptions{SkipConfirmation: true}, "mise.toml", cmd)
 	require.NoError(t, err)
 
 	// Verify original file is unchanged.
@@ -494,7 +494,7 @@ func TestRevertMiseConfig_WithFuryctlTools(t *testing.T) { //nolint:paralleltest
 
 	cmd := tools.NewMiseCmd()
 
-	err = tools.RevertMiseConfig(discoveredTools, tools.RevertOptions{SkipConfirmation: true}, cmd)
+	err = tools.RevertMiseConfig(discoveredTools, tools.RevertOptions{SkipConfirmation: true}, "mise.toml", cmd)
 	require.NoError(t, err)
 
 	// Verify only furyctl tools were removed.
@@ -556,7 +556,7 @@ func TestRevertMiseConfig_PreservesStructure(t *testing.T) { //nolint:parallelte
 
 	cmd := tools.NewMiseCmd()
 
-	err = tools.RevertMiseConfig(toolsList, tools.RevertOptions{SkipConfirmation: true}, cmd)
+	err = tools.RevertMiseConfig(toolsList, tools.RevertOptions{SkipConfirmation: true}, "mise.toml", cmd)
 	require.NoError(t, err)
 
 	// Verify structure is preserved, only tools section modified.
@@ -615,7 +615,7 @@ func TestRevertMiseConfig_EmptyToolsSection(t *testing.T) { //nolint:paralleltes
 
 	cmd := tools.NewMiseCmd()
 
-	err = tools.RevertMiseConfig(toolsList, tools.RevertOptions{SkipConfirmation: true}, cmd)
+	err = tools.RevertMiseConfig(toolsList, tools.RevertOptions{SkipConfirmation: true}, "mise.toml", cmd)
 	require.NoError(t, err)
 
 	// Verify tools section is removed when empty, other sections preserved.
