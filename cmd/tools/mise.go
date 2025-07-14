@@ -81,6 +81,7 @@ Examples:
 
 			revert := viper.GetBool("revert")
 			force := viper.GetBool("force")
+			miseFile := viper.GetString("mise-file")
 
 			// Discover available tools.
 			tools, err := DiscoverTools(flags)
@@ -104,7 +105,7 @@ Examples:
 
 			// Handle revert mode.
 			if revert {
-				if err := RevertMiseConfig(tools, RevertOptions{SkipConfirmation: force}, cmd); err != nil {
+				if err := RevertMiseConfig(tools, RevertOptions{SkipConfirmation: force}, miseFile, cmd); err != nil {
 					cmdEvent.AddErrorMessage(err)
 					tracker.Track(cmdEvent)
 
@@ -118,7 +119,7 @@ Examples:
 			}
 
 			// Generate or update mise configuration.
-			if err := updateMiseConfig(tools); err != nil {
+			if err := updateMiseConfig(tools, miseFile); err != nil {
 				cmdEvent.AddErrorMessage(err)
 				tracker.Track(cmdEvent)
 
@@ -179,12 +180,17 @@ Examples:
 		"Skip confirmation prompt when reverting tools",
 	)
 
+	miseCmd.Flags().String(
+		"mise-file",
+		"mise.toml",
+		"Path to the mise configuration file (supports different directories, .mise.toml legacy format, or global config)",
+	)
+
 	return miseCmd
 }
 
 // updateMiseConfig creates or updates the mise.toml file with furyctl tools.
-func updateMiseConfig(tools []ToolInfo) error {
-	const miseFile = "mise.toml"
+func updateMiseConfig(tools []ToolInfo, miseFile string) error {
 
 	// Load existing configuration or create new one.
 	config, err := loadMiseConfig(miseFile)
@@ -290,8 +296,7 @@ func saveMiseConfig(filename string, config *MiseConfig) error {
 }
 
 // RevertMiseConfig removes furyctl-managed tools from mise.toml.
-func RevertMiseConfig(tools []ToolInfo, opts RevertOptions, cmd *cobra.Command) error {
-	const miseFile = "mise.toml"
+func RevertMiseConfig(tools []ToolInfo, opts RevertOptions, miseFile string, cmd *cobra.Command) error {
 
 	// Check if mise.toml exists.
 	if _, err := os.Stat(miseFile); os.IsNotExist(err) {
