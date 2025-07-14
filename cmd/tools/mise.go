@@ -20,10 +20,6 @@ import (
 	iox "github.com/sighupio/furyctl/internal/x/io"
 )
 
-const (
-	// FilePermissions represents the file permissions for mise.toml.
-	FilePermissions = 0o600
-)
 
 // MiseConfig represents the structure of a mise.toml file.
 type MiseConfig struct {
@@ -286,7 +282,7 @@ func saveMiseConfig(filename string, config *MiseConfig) error {
 	}
 
 	// Write to file.
-	if err := os.WriteFile(filename, data, FilePermissions); err != nil {
+	if err := os.WriteFile(filename, data, iox.FullRWPermAccess); err != nil {
 		return fmt.Errorf("failed to write %s: %w", filename, err)
 	}
 
