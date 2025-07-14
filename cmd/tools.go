@@ -22,7 +22,7 @@ development setup:
 
 - aliases: Traditional bash aliases (default)
 - functions: Bash functions that override version managers like mise/asdf  
-- mise: Native mise integration via .mise.toml file`,
+- mise: Native mise integration via mise.toml file`,
 	}
 
 	toolsCmd.AddCommand(tools.NewAliasesCmd())
