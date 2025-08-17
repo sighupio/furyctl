@@ -250,6 +250,7 @@ furyctl is a command line interface tool to manage the full lifecycle of SIGHUP 
 	rootCmd.AddCommand(NewDumpCmd())
 	rootCmd.AddCommand(NewGetCmd())
 	rootCmd.AddCommand(NewLegacyCmd())
+	rootCmd.AddCommand(NewToolsCmd())
 	rootCmd.AddCommand(NewValidateCmd())
 	rootCmd.AddCommand(NewVersionCmd())
 	rootCmd.AddCommand(NewRenewCmd())
