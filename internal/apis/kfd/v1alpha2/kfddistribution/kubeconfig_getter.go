@@ -72,10 +72,12 @@ func (k *KubeconfigGetter) Get() error {
 	kubeconfigPath := os.Getenv("KUBECONFIG")
 
 	if distribution.HasFeature(k.kfdManifest, distribution.FeatureKubeconfigInSchema) {
-		kubeconfigPath, err = cfgParser.ParseDynamicValue(k.furyctlConf.Spec.Distribution.Kubeconfig)
+		parsedValue, err := cfgParser.ParseDynamicValue(k.furyctlConf.Spec.Distribution.Kubeconfig)
 		if err != nil {
 			return fmt.Errorf("error parsing kubeconfig value: %w", err)
 		}
+
+		kubeconfigPath = fmt.Sprintf("%v", parsedValue)
 	} else if kubeconfigPath == "" {
 		return ErrKubeconfigNotSet
 	}

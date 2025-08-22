@@ -1,0 +1,468 @@
+# Frequently Asked Questions
+
+## Architecture and Workflow
+
+### **How to trace the workflow of various commands, for example, where can we find the full flow of the `apply` command for the OnPremises provider, and where is the definition of the various phases?**
+
+<details>
+<summary>Answer</summary>
+
+Everything starts from `main.go`, which executes the root command `cmd/root.go` created with the `github.com/spf13/cobra` library. Cobra is a popular library for managing commands in Go, and it provides a clear and scalable structure for adding new functionalities or commands to the project.
+
+The root command includes all other commands, for example, `cmd/apply.go`, which handles the application of configurations. Specifically, for the `OnPremises` provider, we can follow the logic defined in the `RunE` method found in `cmd/apply.go:275`. Here, the "Creator" is initialized to manage and create clusters based on the `Kind` type using `cluster.NewCreator()` (at `internal/cluster/creator.go:63`). For `OnPremises`, the logic for creation is located in `internal/apis/kfd/v1alpha2/onpremises/creator.go`.
+
+The four phases definition and handling depend on the concrete implementation of the `ClusterCreator`. There are two switches that can tell `furyctl` from which phase to start or which phase to run (`--start-from` and `--phase`).
+
+</details>
+
+---
+
+### **How does `furyctl` use the library generated in the `fury-distribution` repository?**
+
+<details>
+<summary>Answer</summary>
+
+The library generated in `fury-distribution` is mainly used for parsing the `furyctl.yaml` file, as it provides the necessary data structures for representing configurations in Go. The variables in the `furyctl` code are mapped to these data structures to ensure that the data is interpreted correctly during the execution of commands.
+
+The decision to separate the data structures between `fury-distribution` and `furyctl` stemmed from an initial design vision to have a versioned schema for the configuration, which would allow for better management of evolving structures over time. However, this approach was never fully implemented, and this division might be reviewed and potentially eliminated, centralizing the management of the configuration in one place.
+
+</details>
+
+---
+
+### **How are tests executed in the project (both unit and e2e)?**
+
+<details>
+<summary>Answer</summary>
+
+Unit tests in the project follow Go's standard testing framework and are integrated into the codebase. These tests are designed to verify the functionality of individual components, ensuring that each part of the code works as expected in isolation. Unit tests can be executed by running `mise run test-unit`. This command triggers the Go test suite, which looks for test functions (those prefixed with `Test`) in the relevant packages and runs them.
+
+End-to-End (E2E) tests are more comprehensive and typically involve interactions with external systems (like Kubernetes clusters). These tests simulate real-world scenarios to ensure the entire system works as expected when all components are integrated. E2E tests include creating and managing EKS (Elastic Kubernetes Service) clusters, verifying that the system behaves correctly in a real cluster environment. These tests can be triggered by running `mise run test-expensive`. The reason for this designation as "expensive" is that E2E tests often involve external dependencies, such as Kubernetes clusters, which can take time to set up and may incur additional costs if used in a cloud environment.
+
+Expensive tests have historically been only run locally by hand; in CI `test-expensive` are never run.
+
+There are also basic E2E tests (`mise run test-e2e`) that execute some `furyctl` commands to verify its functionality. The cluster creation commands are run with the `--dry-run` flag.
+
+</details>
+
+---
+
+### **What does the directory structure look like and what is the purpose of each directory?**
+
+<details>
+<summary>Answer</summary>
+
+The project structure is divided into several directories with specific responsibilities:
+
+- **`cmd`**: Contains the main commands created with the Cobra library. Each command represents a distinct functionality of the CLI (e.g., `apply`, `delete`, etc.).
+- **`configs`**: Contains the patch configurations and upgrade paths for the distribution.
+  - `patches`: Contains the patches applied by replacing files in the `fury-distribution` repo previously downloaded, categorized by specific version.
+  - `provisioners`: Contains some terraform templates that will be filled during the PreFlight phase in the EKS provider.
+  - `upgrades`: Contains folders categorized by upgrade version, for example, `1.29.5-1.30.0` for an upgrade from `v1.29.5` to `v1.30.0`. These folders contain hooks such as `pre-distribution.sh.tpl`, which is executed before the `distribution` phase. The hooks follow the structure `{pre|post}-{phase}.sh.tpl`.
+- **`docs`**: Contains the project documentation, including changelogs and other information.
+- **`internal`**: Contains code that is not meant to be exported, related to `furyctl`. It includes private implementations that should not be used outside the package.
+- **`pkg`**: Contains code that is exposed as APIs, meant to be used by other packages or projects.
+- **`test`**: Contains the data used in tests, including test configurations and assets needed to run the tests.
+
+In Go projects, the `pkg` and `internal` directories serve distinct purposes:
+
+- **`pkg`**: The `pkg` directory contains code that is **publicly available to other projects** or packages. This means that the code inside `pkg` is designed to be used by external consumers of your project. It includes libraries, utilities, or APIs that are intended to be shared, reused, or extended outside the project.
+
+- **`internal`**: The `internal` directory is for code that is **only meant to be used within the project**. Code inside this directory is **not accessible to external projects** or even to any packages outside of the current module. This provides a level of encapsulation, ensuring that only the code within the module itself can access and use the internal functionality.
+
+</details>
+
+---
+
+## Configuration and State Management
+
+### **Where in the code does the merge of defaults with the user-provided `furyctl.yaml` file happen, and how is the state managed in the cluster (secrets written to the `kube-system` namespace)?**
+
+<details>
+<summary>Answer</summary>
+
+The merge of defaults happens primarily for the distribution configurations. When a user provides a `furyctl.yaml` file, the default values for the distribution are overwritten by the user-defined configurations, but only for the settings explicitly defined in the YAML file. This approach allows applying a custom configuration without losing the base configuration. The defaults are only for distribution configuration.
+
+The cluster state is monitored by comparing the current configuration with the desired one. Specifically, when `furyctl` writes information, such as secrets `furyctl-config` and `furyctl-kfd` in the `kube-system` namespace, this is used to determine which changes have been made and what needs to be updated or created. This information is then used to synchronize the cluster state with the specified configuration. When we run the `apply` command, `furyctl` saves the current `furyctl.yaml` file inside a Kubernetes secret. For subsequent calls to `apply`, the secret is read and decoded, then we diff it against the current and compared. Depending on the differences, `furyctl` decides what to do (explained in fury-distribution docs).
+
+</details>
+
+---
+
+### **What are the libraries included in `go.mod` and their purposes (how are they used in the code)?**
+
+<details>
+<summary>Answer</summary>
+
+✅ **Validated against current go.mod** - The libraries included in `go.mod` are carefully selected for their specific purposes. Here are the key libraries used in the project:
+
+- **`github.com/spf13/cobra`**: This is the main library used for building the CLI commands. It helps structure the commands, arguments, flags, and the overall command-line interface. It's used in the `cmd` directory to define commands such as `apply`, `delete`, and others.
+
+- **`github.com/sirupsen/logrus`**: This is the logging library used to handle logging in the project. It's a popular choice for structured logging in Go. It is used throughout the codebase to log various events, including errors, info messages, and debug output.
+
+- **`github.com/santhosh-tekuri/jsonschema/v5`**: This library is used to validate JSON schema. It's used to validate the structure of the `furyctl.yaml` file, ensuring that the user configuration adheres to the expected format. We use it to check if the configuration is correct before applying any changes.
+
+- **`github.com/Masterminds/sprig/v3`**: This library provides a set of additional functions for Go templates, extending the functionality of the standard template engine. It's used for template rendering, which allows the project to handle dynamic configuration files with more complex logic, such as string manipulations and formatting.
+
+- **`k8s.io/client-go`**: This is the Kubernetes client library, and it is used for interacting with the Kubernetes API. It is critical for managing resources like secrets, config maps, and clusters. The code in `pkg` and `internal` uses this library to interact with a Kubernetes cluster, fetch resources, and apply changes based on the configurations provided.
+
+- **`github.com/sighupio/fury-distribution`**: The distribution library that provides data structures for parsing `furyctl.yaml` files and distribution manifests.
+
+- **`github.com/spf13/viper`**: Configuration management library used for handling CLI flags, environment variables, and configuration files.
+
+These libraries are essential for handling command-line interfaces, logging, validation, templating, and Kubernetes interactions.
+
+</details>
+
+---
+
+## Caching and Downloads
+
+### **How does caching work, and where can the caching behavior be modified in the code?**
+
+<details>
+<summary>Answer</summary>
+
+✅ **Validated file paths** - Caching is implemented directly in the file download process. Every file downloaded from an external source is saved in the local cache directory, which resides within the project's configuration folder (`.furyctl/cache`). The cache helps avoid downloading the same files again, improving performance and reducing reliance on external connections.
+
+The code that handles this functionality can be found in `pkg/dependencies/download.go` at line 42, where the caching downloader is created with `NewCachingDownloader()`, and in `pkg/x/net/client.go` at line 65, where caching is managed in the `Download()` method. If you want to modify the caching behavior, you can intervene on these files to add custom logic, such as version validation or timestamp checks to determine when to update the cache.
+
+</details>
+
+---
+
+### **How do you use `furyctl` in airgapped environments, and what flags are useful in these cases?**
+
+<details>
+<summary>Answer</summary>
+
+In airgapped environments, where no external connection is available to download binaries and dependencies, everything must be pre-downloaded and available locally. Binaries and resources can be copied manually into the `.furyctl` folder via tools like Ansible or committed directly to the project.
+
+To use `furyctl` in these environments, the following flags should be used:
+
+- `--distro-location`: This flag specifies the local path of the downloaded distribution, allowing `furyctl` to use the local version instead of attempting to download it.
+- `--skip-deps-download`: This flag skips downloading additional dependencies or binaries from external sources, ensuring that everything is used from the cache or the local distribution.
+
+The air-gapped feature is documented here: https://docs.kubernetesfury.com/docs/advanced-use-cases/air-gapped.
+
+</details>
+
+---
+
+### **How does `furyctl` apply patches to distribution versions, and does it download new dependency versions or use the initial ones?**
+
+<details>
+<summary>Answer</summary>
+
+The patches are applied in a way that resembles a "copy-paste" over the downloaded distribution files. When a patch (e.g., for `kfd.yaml`) is provided, it is applied directly on top of the version of the distribution already downloaded and available on the system. Before applying the patch, no new dependency versions are downloaded; instead, the initial version (the one downloaded initially) is used, and the specified changes are overwritten on top.
+
+This approach is helpful for applying local customizations without needing to repeat the entire dependency download process.
+
+</details>
+
+---
+
+## Validation and Schema
+
+### **How does `furyctl` validate the schema of the `furyctl.yaml` file, what is done by our library, and what is handled by the official library?**
+
+<details>
+<summary>Answer</summary>
+
+✅ **Validated library version** - The schema of the `furyctl.yaml` file is validated using the Go library `github.com/santhosh-tekuri/jsonschema/v5`. This library allows for validating a JSON/YAML file against a defined schema, ensuring that the structure of the data is correct and conforms to the specifications.
+
+Our library does not directly intervene in this validation step but merely downloads and provides the correct schema via `fury-distribution`, which is then used for the validation process.
+
+</details>
+
+---
+
+## Coding Standards and Development
+
+### **Are there any coding standards in place? For example, do we use structs with methods instead of functions?**
+
+<details>
+<summary>Answer</summary>
+
+The project follows the typical Go coding standards. Specifically, structs with associated methods are preferred over using standalone functions. This helps encapsulate business logic better and makes the code more organized and maintainable. Additionally, Go's naming and formatting conventions are followed, such as using lowercase letters for private variables and methods.
+
+</details>
+
+---
+
+### **Are there any critical parts of the project that require special attention during future development?**
+
+<details>
+<summary>Answer</summary>
+
+There are no critical parts of the project that require immediate attention. However, the code that creates the various folders where it copies the templates can be re-engineered and simplified. Also reducing code duplication would help future development by making the code easier to maintain and extend.
+
+</details>
+
+---
+
+## Template Engine and Configuration
+
+### **What's the difference between `{file://}` and `{path://}`, when to use one or the other, and what's the rationale behind their implementation?**
+
+<details>
+<summary>Answer</summary>
+
+- `{file://}`: This schema is used to load the content of a file as a string in the `furyctl.yaml`. When you use `{file://}`, the actual content of the file is read and embedded directly in the configuration file.
+
+- `{path://}`: This schema resolves a path relative to the `furyctl.yaml` file and turns it into an absolute path. This is useful when you need to refer to a file relative to the configuration file but want to ensure that the path is always resolved correctly.
+
+An example of using `{path://}` is when you need to specify a file path inside a string in `furyctl.yaml`, for instance, as part of a URL or a complex configuration.
+
+</details>
+
+---
+
+### **How does the template engine work and what are the available features?**
+
+<details>
+<summary>Answer</summary>
+
+✅ **Validated file path and custom functions** - The template engine used is the standard Go template engine, which also leverages the `github.com/Masterminds/sprig/v3` library. Sprig provides several additional functions for templates, such as string manipulations, date formatting, and other utilities not included in Go's native template engine.
+
+We've added `toYaml`, `fromYaml` and `hasKeyAny` custom functions to the template engine (`pkg/template/model.go:74-77`). All files with `.tpl` extension are processed by the template engine, the generated files folder structure remains the same and the file is simply renamed without the `.tpl` extension (for example `apply.sh.tpl` to `apply.sh`). The folder processed by the template engine is different depending on the phase, for example for `distribution` the folder is taken from the fury-distribution downloaded by furyctl path `templates/distribution`.
+
+</details>
+
+---
+
+## Logging and Monitoring
+
+### **How is logging implemented, libraries used, and conventions (e.g., log messages)?**
+
+<details>
+<summary>Answer</summary>
+
+✅ **Validated library** - Logging in the project is implemented using the `github.com/sirupsen/logrus` library, which is one of the most popular logging libraries for Go. There are no strict conventions for log messages, but Logrus supports various logging levels (info, error, debug) and can output logs in different formats, including plain text and JSON.
+
+The logs of all the tools used by furyctl, such as Terraform and Ansible, are intercepted and displayed using Logrus. They are also written to the furyctl log file. To display all logs when using furyctl use the flag `--debug`.
+
+</details>
+
+---
+
+### **Is there any best practice in place for logging?**
+
+<details>
+<summary>Answer</summary>
+
+- Log messages that the user sees by default should provide useful information and not leak implementation details, for example:
+
+  **BAD:**
+  ```
+  INFO Running ansible playbooks
+  ```
+
+  **GOOD:**
+  ```
+  INFO Installing Kubernetes packages in the nodes
+  ```
+
+- All the tools that we call should be configured to output structured logs and should be wrapped in furyctl structured logs in the log file. This is handled automatically by the tools implementation on furyctl.
+
+</details>
+
+---
+
+## Upgrade Paths
+
+### **What is an _upgrade path_?**
+
+<details>
+<summary>Answer</summary>
+
+It is a set of instructions for _furyctl_ in order to perform an upgrade between two versions. As many other components of _furyctl_, the instructions to perform an upgrade are contained in one or multiple templated bash scripts. Every bash script is run as a hook in one of the _phases_ of the install process.
+
+</details>
+
+---
+
+### **How to write *upgrade path*s?**
+
+<details>
+<summary>Answer</summary>
+
+You should create a new file under `configs/upgrades/{onpremises,kfddistribution,ekscluster}/{starting-version}-{target-version}/hook.tpl`, where `{starting-version}` and `{target-version}` are two different SD versions.
+
+In your typical _upgrade path_ there will be a file named `pre-distribution.sh.tpl` which will disable admission webhooks in order not to create problems during the deploy. Don't worry, there's no need to restore them as they will be reprovisioned later in the install process!
+
+In the OnPremises upgrade paths when there are Kubernetes version upgrades you also need to include a `pre-kubernetes.sh.tpl` file to run the Ansible playbook that upgrade control planes and worker nodes (for example `configs/upgrades/onpremises/1.29.5-1.30.0/pre-kubernetes.sh.tpl`). This usually only happens during Kubernetes minor version bumps (for example `1.29.5` to `1.30.0`) but there are some exceptional cases where we upgrade the Kubernetes version in a patch release (for example `1.29.4` to `1.29.5`).
+
+</details>
+
+---
+
+## Flags Configuration System
+
+### **How to inject flags from config when creating new commands?**
+
+<details>
+<summary>Answer</summary>
+
+⚡ **Updated for new flags system** - When creating new commands that should support flags configuration from `furyctl.yaml`, you need to integrate the flags system into your command. This system allows users to define CLI flags in their configuration file, making commands more repeatable and scriptable.
+
+#### Basic Integration Pattern
+
+Here's the standard pattern used in existing commands like `apply`, `delete`, etc.:
+
+```go
+package cmd
+
+import (
+    "path/filepath"
+    "github.com/spf13/cobra"
+    "github.com/sighupio/furyctl/internal/flags"
+)
+
+func NewMyCommand() *cobra.Command {
+    cmd := &cobra.Command{
+        Use:   "mycommand",
+        Short: "Description of my command",
+        PreRun: func(cmd *cobra.Command, _ []string) {
+            if err := viper.BindPFlags(cmd.Flags()); err != nil {
+                logrus.Fatalf("error while binding flags: %v", err)
+            }
+
+            // Load and merge flags from configuration file.
+            configPath := flags.GetConfigPathFromViper()
+            flagsManager := flags.NewManager(filepath.Dir(configPath))
+            if err := flagsManager.LoadAndMergeFlags(configPath, "mycommand"); err != nil {
+                logrus.Debugf("Failed to load flags from configuration: %v", err)
+                // Continue execution - flags loading is optional.
+            }
+        },
+        RunE: runMyCommand,
+    }
+    
+    // Define your regular CLI flags here
+    cmd.Flags().Bool("dry-run", false, "Perform a dry run")
+    cmd.Flags().String("output", "", "Output format")
+    
+    return cmd
+}
+
+func runMyCommand(cmd *cobra.Command, args []string) error {
+    // Now you can access flags normally through viper
+    // Config file flags will be merged with CLI flags (CLI has higher priority)
+    dryRun := viper.GetBool("dry-run")
+    output := viper.GetString("output")
+    
+    // Continue with your command logic...
+    return nil
+}
+```
+
+#### Configuration File Format
+
+Users can then define flags in their `furyctl.yaml`:
+
+```yaml
+apiVersion: kfd.sighup.io/v1alpha2
+kind: KFDDistribution
+metadata:
+  name: my-cluster
+spec:
+  # ... regular config
+
+flags:
+  global:           # Applied to all commands
+    debug: true
+    log-level: info
+  mycommand:        # Applied only to 'mycommand'
+    dry-run: true
+    output: "json"
+```
+
+#### Advanced Features
+
+The flags system supports dynamic values and complex configurations:
+
+```yaml
+flags:
+  mycommand:
+    # File content injection
+    token: "{file://./secrets/api-token.txt}"
+    
+    # Environment variable injection  
+    endpoint: "{env://API_ENDPOINT}"
+    
+    # Path resolution
+    config-file: "{path://./configs/app.yaml}"
+    
+    # Array values
+    tags: ["production", "web-server"]
+    
+    # Nested configurations
+    nested:
+      enabled: true
+      count: 5
+```
+
+#### Error Handling Best Practices
+
+The flags system is designed to be forgiving and provide helpful feedback:
+
+```go
+func runMyCommand(cmd *cobra.Command, args []string) error {
+    // LoadAndMergeFlags handles errors gracefully:
+    // - File not found: logs debug message, continues
+    // - Invalid YAML: logs warning, continues  
+    // - Unknown flags: logs warning, continues
+    // - File permission errors: returns error
+    if err := flagsManager.LoadAndMergeFlags(configPath, "mycommand"); err != nil {
+        // Only critical errors (like file permission issues) reach here
+        return fmt.Errorf("failed to load flags configuration: %w", err)
+    }
+    
+    // Your command logic continues normally
+    return nil
+}
+```
+
+#### Priority Order
+
+The system maintains a clear priority order (highest to lowest):
+1. Command line flags (always take precedence)
+2. Environment variables  
+3. Configuration file flags (lowest priority)
+
+This ensures users can always override config file settings from the command line when needed.
+
+</details>
+
+---
+
+## Release and Maintenance
+
+### **What's the release process for a new version?**
+
+<details>
+<summary>Answer</summary>
+
+The release process for a new version is documented at [this link](https://github.com/sighupio/fury-distribution/blob/main/MAINTENANCE.md#furyctl). If the release is not tied to `fury-distribution`, it's enough to create a tag and release it. However, if the release is dependent on new versions of the distribution, the process may be more complex and require updating `fury-distribution` before releasing a new version.
+
+</details>
+
+---
+
+### **Are there any known issues or bugs that are still open and for which workarounds are used?**
+
+<details>
+<summary>Answer</summary>
+
+There are no known major bugs or workarounds at this time.
+
+</details>
+
+---
+
+## Legend
+
+- ✅ **Validated**: Information has been checked against current codebase and confirmed accurate
+- ⚡ **Updated**: Information has been updated to reflect recent changes (like the new flags system)
+- ⚠️ **Needs Review**: May need updates in future versions
