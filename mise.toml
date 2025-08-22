@@ -1,0 +1,243 @@
+[tools]
+go = "1.23.2"
+golangci-lint = "1.59.1"
+goreleaser = "latest"
+awscli = "2.15.17"
+"ubi:google/addlicense" = "v1.1.1"
+"ubi:mvdan/gofumpt" = "v0.6.0"
+"go:github.com/daixiang0/gci" = "v0.13.4"
+"go:github.com/nikolaydubina/go-cover-treemap" = "v1.4.2"
+"go:golang.org/x/tools/cmd/goimports" = "v0.22.0"
+"go:github.com/momaek/formattag" = "v0.0.9"
+"go:github.com/onsi/ginkgo/v2/ginkgo" = "v2.19.0"
+
+[env]
+CGO_ENABLED = 0
+GOARCH = "{{arch()}}"
+GOFLAGS = "-mod=mod"
+
+[settings]
+experimental = true
+
+[tasks.setup]
+description = "complete development environment setup"
+run = [
+  "go mod download",
+  "go mod tidy"
+]
+
+[tasks.mod-download]
+description = "download go modules"
+run = "go mod download"
+
+[tasks.mod-tidy]
+description = "tidy go modules"
+run = "go mod tidy"
+
+[tasks.mod-verify]
+description = "verify go modules"
+run = "go mod verify"
+
+[tasks.mod-check-upgrades]
+description = "check for available module upgrades"
+run = """
+go list -mod=readonly -u -f "{{if (and (not (or .Main .Indirect)) .Update)}}{{.Path}}: {{.Version}} -> {{.Update.Version}}{{end}}" -m all
+"""
+
+[tasks.mod-upgrade]
+description = "upgrade all modules and tidy"
+run = ["go get -u ./...", "go mod tidy"]
+
+[tasks.license-add]
+description = "add license headers to source files"
+run = """
+addlicense -c "SIGHUP s.r.l" -y 2017-present -v -l bsd \
+  -ignore "scripts/e2e/libs/**/*" \
+  -ignore "vendor/**/*" \
+  -ignore "*.gen.go" \
+  -ignore ".idea/*" \
+  -ignore ".vscode/*" \
+  -ignore "*.js" \
+  -ignore "kind-config.yaml" \
+  -ignore ".husky/**/*" \
+  -ignore ".go/**/*" \
+  .
+"""
+
+[tasks.license-check]
+description = "check license headers"
+run = """
+addlicense -c "SIGHUP s.r.l" -y 2017-present -v -l bsd \
+  -ignore "scripts/e2e/libs/**/*" \
+  -ignore "vendor/**/*" \
+  -ignore "*.gen.go" \
+  -ignore ".idea/*" \
+  -ignore ".vscode/*" \
+  -ignore "*.js" \
+  -ignore "kind-config.yaml" \
+  -ignore ".husky/**/*" \
+  -ignore ".go/**/*" \
+  --check .
+"""
+
+[tasks.fmt]
+description = "format Go code with gofmt"
+run = """
+find . -name "*.go" -type f -not -path '*/vendor/*' \
+  -exec sh -c 'echo "formatting $1.." && gofmt -w -s "$1"' sh {} \\;
+"""
+
+[tasks.fumpt]
+description = "format Go code with gofumpt"
+run = """
+find . -name "*.go" -type f -not -path '*/vendor/*' \
+  -exec sh -c 'echo "formatting $1.." && gofumpt -w "$1"' sh {} \\;
+"""
+
+[tasks.imports]
+description = "organize Go imports with goimports"
+run = [
+  "goimports -v -w -e -local github.com/sighupio main.go",
+  "goimports -v -w -e -local github.com/sighupio cmd/",
+  "goimports -v -w -e -local github.com/sighupio internal/"
+]
+
+[tasks.gci]
+description = "format imports with gci"
+run = """
+find . -name "*.go" -type f -not -path '*/vendor/*' \
+  -exec sh -c 'echo "formatting imports for $1.." && \
+    gci write --skip-generated -s standard -s default -s "Prefix(github.com/sighupio)" "$1"' sh {} \\;
+"""
+
+[tasks.formattag]
+description = "format struct tags with formattag"
+run = """
+find . -name "*.go" -type f -not -path '*/vendor/*' \
+  -exec sh -c 'formattag -file "$1"' sh {} \\;
+"""
+
+[tasks.format-go]
+description = "run complete Go formatting pipeline"
+run = ["mise run fmt", "mise run fumpt", "mise run imports", "mise run gci", "mise run formattag"]
+
+[tasks.lint]
+description = "run linting with golangci-lint"
+run = "golangci-lint -v run --color=always --max-same-issues 25 --config=.rules/.golangci.yml ./..."
+
+[tasks.lint-go-common]
+description = "run common linting rules without config"
+run = "golangci-lint run --no-config -E godot -E wsl -E nlreturn -E grouper --color=always --max-same-issues 25 ./..."
+
+[tasks.test-unit]
+description = "run unit tests"
+run = "go test -v -tags=unit ./..."
+
+[tasks.test-integration]
+description = "run integration tests"
+run = "go test -v -tags=integration -timeout 120s ./..."
+
+[tasks.test-e2e]
+description = "run e2e tests"
+run = """
+export KFD_AUTH_DEX_CONNECTORS_GITHUB_CLIENT_ID=dummy
+export KFD_AUTH_DEX_CONNECTORS_GITHUB_CLIENT_SECRET=dummy
+export KFD_BASIC_AUTH_PASSWORD=dummy
+export KFD_AUTH_POMERIUM_COOKIE_SECRET=dummy
+export KFD_AUTH_POMERIUM_IDP_CLIENT_SECRET=dummy
+export KFD_AUTH_POMERIUM_SHARED_SECRET=dummy
+ginkgo run -vv --trace -tags=e2e -timeout 600s -p test/e2e
+"""
+
+[tasks.test-expensive]
+description = "WARNING: run expensive tests that create AWS clusters"
+run = """
+echo "WARNING: This test will create a cluster on AWS. Are you sure you want to continue? [y/n]: "
+read -r yn
+case "$yn" in
+  [Yy]) ;;
+  *) echo "Aborted, exiting..."; exit 1 ;;
+esac
+ginkgo run -vv --trace -tags=expensive -timeout 36000s --procs=4 test/expensive
+"""
+
+[tasks.test-expensive-ekscluster]
+description = "WARNING: run expensive EKS cluster tests"
+run = """
+echo "WARNING: This test will create a cluster on AWS. Are you sure you want to continue? [y/n]: "
+read -r yn
+case "$yn" in
+  [Yy]) ;;
+  *) echo "Aborted, exiting..."; exit 1 ;;
+esac
+ginkgo run -vv --trace -tags=expensive -timeout 36000s --procs=4 test/expensive/ekscluster
+"""
+
+[tasks.test-expensive-kfddistribution]
+description = "run expensive KFD distribution tests"
+run = "ginkgo run -vv --trace -tags=expensive -timeout 36000s --procs=4 test/expensive/kfddistribution"
+
+[tasks.test-expensive-onpremises]
+description = "run expensive on-premises tests"
+run = "ginkgo run -vv --trace -tags=expensive -timeout 36000s --procs=4 test/expensive/onpremises"
+
+[tasks.test-most]
+description = "run most tests except expensive ones"
+run = "ginkgo run -vv --trace -coverpkg=./... -covermode=count -coverprofile=coverage.out -tags=unit,integration,e2e --skip-package=expensive -timeout 300s -p ./..."
+
+[tasks.test-all]
+description = "WARNING: run all tests including expensive AWS tests"
+run = """
+echo "WARNING: This test will create a cluster on AWS. Are you sure you want to continue? [y/n]: "
+read -r yn
+case "$yn" in
+  [Yy]) ;;
+  *) echo "Aborted, exiting..."; exit 1 ;;
+esac
+ginkgo run -vv --trace -coverpkg=./... -covermode=count -coverprofile=coverage.out -tags=unit,integration,e2e,expensive -timeout 300s --procs=2 ./...
+"""
+
+[tasks.show-coverage]
+description = "show test coverage in browser"
+run = [
+  "go tool cover -html=coverage.out -o coverage.html",
+  "go-cover-treemap -coverprofile coverage.out > coverage.svg",
+  """
+  if [[ "$(uname -s)" == "Darwin" ]]; then
+    open coverage.svg
+  else
+    xdg-open coverage.svg
+  fi
+  """
+]
+
+[tasks.clean]
+description = "clean build artifacts"
+run = [
+  "rm -rf bin dist",
+  "rm -f furyctl coverage.out coverage.html coverage.svg"
+]
+
+[tasks.build]
+description = "build with goreleaser (snapshot)"
+run = """
+export GO_VERSION=$(go version | cut -d ' ' -f 3)
+goreleaser check
+goreleaser release --verbose --snapshot --clean
+"""
+
+[tasks.release]
+description = "release with goreleaser"
+run = """
+export GO_VERSION=$(go version | cut -d ' ' -f 3)
+goreleaser check
+goreleaser release --verbose --clean
+"""
+
+[tasks.env]
+description = "show environment variables for development"
+run = [
+  "echo 'export CGO_ENABLED=0'",
+  "echo 'export GOARCH={{arch()}}'",
+  "grep -v '^#' .env | sed 's/^/export /' 2>/dev/null || echo '# No .env file found'"
+]

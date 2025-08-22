@@ -6,94 +6,128 @@ kind: pipeline
 type: docker
 name: main
 
+volumes:
+  - name: mise-cache
+    host:
+      path: /root/mise_data_dir
+
 steps:
-  - name: prepare
-    image: quay.io/sighup/golang:1.23.2
+  - name: install-tools
+    image: quay.io/sighup/mise:v2025.4.4
     pull: always
     depends_on:
       - clone
-    commands:
-      - mkdir -p .go/cache .go/modcache .go/tmp
-      - go mod download
     environment:
+      MISE_DATA_DIR: /mise-data
+    volumes:
+      - name: mise-cache
+        path: /mise-data
+    commands:
+      - |
+        mise install
+        eval "$(mise activate bash --shims)"
+
+  - name: prepare
+    image: quay.io/sighup/mise:v2025.4.4
+    pull: always
+    depends_on:
+      - install-tools
+    commands:
+      - eval "$(mise activate bash --shims)"
+      - mkdir -p .go/cache .go/modcache .go/tmp
+      - mise run mod-download
+    environment:
+      MISE_DATA_DIR: /mise-data
       CGO_ENABLED: 0
       GOCACHE: /drone/src/.go/cache
       GOMODCACHE: /drone/src/.go/modcache
       GOTMPDIR: /drone/src/.go/tmp
+    volumes:
+      - name: mise-cache
+        path: /mise-data
 
   - name: license
-    image: quay.io/sighup/golang:1.23.2
+    image: quay.io/sighup/mise:v2025.4.4
     pull: always
     depends_on:
       - prepare
     commands:
-      - make license-check
+      - eval "$(mise activate bash --shims)"
+      - mise run license-check
     environment:
+      MISE_DATA_DIR: /mise-data
       CGO_ENABLED: 0
       GOCACHE: /drone/src/.go/cache
       GOMODCACHE: /drone/src/.go/modcache
       GOTMPDIR: /drone/src/.go/tmp
+    volumes:
+      - name: mise-cache
+        path: /mise-data
 
   - name: lint
-    image: quay.io/sighup/golang:1.23.2
+    image: quay.io/sighup/mise:v2025.4.4
     pull: always
     depends_on:
       - prepare
     commands:
-      - make lint
+      - eval "$(mise activate bash --shims)"
+      - mise run lint
     environment:
+      MISE_DATA_DIR: /mise-data
       CGO_ENABLED: 0
       GOCACHE: /drone/src/.go/cache
       GOMODCACHE: /drone/src/.go/modcache
       GOTMPDIR: /drone/src/.go/tmp
+    volumes:
+      - name: mise-cache
+        path: /mise-data
 
   - name: test-unit
-    image: quay.io/sighup/golang:1.23.2
+    image: quay.io/sighup/mise:v2025.4.4
     pull: always
     depends_on:
       - prepare
     commands:
-      - make test-unit
+      - eval "$(mise activate bash --shims)"
+      - mise run test-unit
     environment:
+      MISE_DATA_DIR: /mise-data
       CGO_ENABLED: 0
       GOCACHE: /drone/src/.go/cache
       GOMODCACHE: /drone/src/.go/modcache
       GOTMPDIR: /drone/src/.go/tmp
+    volumes:
+      - name: mise-cache
+        path: /mise-data
 
   - name: test-integration
-    image: quay.io/sighup/golang:1.23.2
+    image: quay.io/sighup/mise:v2025.4.4
     pull: always
     depends_on:
       - prepare
     commands:
+      - eval "$(mise activate bash --shims)"
       - echo $${NETRC_FILE} > /root/.netrc
-      - make test-integration
+      - mise run test-integration
     environment:
+      MISE_DATA_DIR: /mise-data
       CGO_ENABLED: 0
       GOCACHE: /drone/src/.go/cache
       GOMODCACHE: /drone/src/.go/modcache
       GOTMPDIR: /drone/src/.go/tmp
       NETRC_FILE:
         from_secret: NETRC_FILE
+    volumes:
+      - name: mise-cache
+        path: /mise-data
 
   - name: test-e2e
-    image: debian:bookworm-slim # using debian to install aws-cli as go:1.22.0 images have issues with aws-cli
+    image: quay.io/sighup/mise:v2025.4.4
+    pull: always
     depends_on:
       - prepare
     commands:
-      - apt update
-      - apt install -y curl git make ssh unzip
-      # Install Golang & deps
-      - curl -sL https://go.dev/dl/go1.23.2.linux-amd64.tar.gz -o go1.23.2.tar.gz
-      - rm -rf /usr/local/go && tar -C /usr/local -xzf go1.23.2.tar.gz
-      - echo 'export PATH=$$PATH:/usr/local/go/bin:/root/go/bin' >> /etc/profile
-      - export PATH=$$PATH:/usr/local/go/bin:/root/go/bin
-      - go install github.com/onsi/ginkgo/v2/ginkgo@v2.15.0
-      # Install aws-cli
-      - curl -sL https://awscli.amazonaws.com/awscli-exe-linux-x86_64-$${AWSCLI_VERSION}.zip -o awscliv2.zip
-      - unzip awscliv2.zip
-      - aws/install
-      - rm -rf aws/
+      - eval "$(mise activate bash --shims)"
       # Setup SSH
       - mkdir -p /root/.ssh
       - echo "$${GITHUB_SSH}" | tr -d '\r' | sed -e '$a\' > /root/.ssh/id_rsa
@@ -106,13 +140,11 @@ steps:
       # Create required s3 bucket if it doesn't exist
       - (test ! $(aws s3api get-bucket-location --bucket $${TERRAFORM_TF_STATES_BUCKET_NAME} --output text --no-cli-pager 2>/dev/null | grep "$${AWS_DEFAULT_REGION}")) && aws s3 mb s3://$${TERRAFORM_TF_STATES_BUCKET_NAME} --region $${AWS_DEFAULT_REGION}
       # Run tests
-      - make test-e2e
-      # Cleanup
-      - rm go1.23.2.tar.gz
-      - rm awscliv2.zip
+      - mise run test-e2e
       # Check if the e2e left the directory dirty.
       - "[ -z \"$(git status -s)\" ] || (echo 'Dirty git repository! Check the e2e tests: they are probably leaving some garbage.' && exit 1)"
     environment:
+      MISE_DATA_DIR: /mise-data
       CGO_ENABLED: 0
       GOCACHE: /drone/src/.go/cache
       GOMODCACHE: /drone/src/.go/modcache
@@ -132,9 +164,12 @@ steps:
         from_secret: GITHUB_SSH
       TERRAFORM_TF_STATES_BUCKET_NAME:
         from_secret: TERRAFORM_TF_STATES_BUCKET_NAME
+    volumes:
+      - name: mise-cache
+        path: /mise-data
 
   - name: build
-    image: quay.io/sighup/golang:1.23.2
+    image: quay.io/sighup/mise:v2025.4.4
     pull: always
     depends_on:
       - lint
@@ -142,14 +177,16 @@ steps:
       - test-integration
       - test-e2e
     commands:
+      - eval "$(mise activate bash --shims)"
       - git reset --hard
       - git fetch --tags
-      - make build
+      - mise run build
     when:
       ref:
         exclude:
           - refs/tags/v**
     environment:
+      MISE_DATA_DIR: /mise-data
       CGO_ENABLED: 0
       GOCACHE: /drone/src/.go/cache
       GOMODCACHE: /drone/src/.go/modcache
@@ -158,9 +195,12 @@ steps:
         from_secret: FURYCTL_MIXPANEL_TOKEN
       GITHUB_TOKEN:
         from_secret: GITHUB_TOKEN
+    volumes:
+      - name: mise-cache
+        path: /mise-data
 
   - name: build-release
-    image: quay.io/sighup/golang:1.23.2
+    image: quay.io/sighup/mise:v2025.4.4
     pull: always
     depends_on:
       - lint
@@ -168,14 +208,16 @@ steps:
       - test-integration
       - test-e2e
     commands:
+      - eval "$(mise activate bash --shims)"
       - git reset --hard
       - git fetch --tags
-      - make release
+      - mise run release
     when:
       ref:
         include:
           - refs/tags/v**
     environment:
+      MISE_DATA_DIR: /mise-data
       CGO_ENABLED: 0
       GOCACHE: /drone/src/.go/cache
       GOMODCACHE: /drone/src/.go/modcache
@@ -184,6 +226,9 @@ steps:
         from_secret: FURYCTL_MIXPANEL_TOKEN
       GITHUB_TOKEN:
         from_secret: GITHUB_TOKEN
+    volumes:
+      - name: mise-cache
+        path: /mise-data
 
 trigger:
   event:
