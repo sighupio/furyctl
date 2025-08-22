@@ -131,17 +131,8 @@ steps:
       - prepare
     commands:
       - eval "$(mise activate bash --shims)"
-      # Setup SSH
-      - mkdir -p /root/.ssh
-      - echo "$${GITHUB_SSH}" | tr -d '\r' | sed -e '$a\' > /root/.ssh/id_rsa
-      - echo $${NETRC_FILE} > /root/.netrc
-      - chmod 600 /root/.ssh/id_rsa
-      - touch /root/.ssh/known_hosts
-      - chmod 600 /root/.ssh/known_hosts
-      - mkdir -p /etc/ssh
-      - ssh-keyscan -H github.com > /etc/ssh/ssh_known_hosts 2> /dev/null
-      # Create required s3 bucket if it doesn't exist
-      - (test ! $(aws s3api get-bucket-location --bucket $${TERRAFORM_TF_STATES_BUCKET_NAME} --output text --no-cli-pager 2>/dev/null | grep "$${AWS_DEFAULT_REGION}")) && aws s3 mb s3://$${TERRAFORM_TF_STATES_BUCKET_NAME} --region $${AWS_DEFAULT_REGION}
+      # Setup E2E environment
+      - ./scripts/e2e-setup.sh
       # Run tests
       - mise run test-e2e
       # Check if the e2e left the directory dirty.
