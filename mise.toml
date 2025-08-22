@@ -1,6 +1,6 @@
 [tools]
 go = "1.23.2"
-golangci-lint = "1.59.1"
+golangci-lint = "1.61.0"
 goreleaser = "latest"
 awscli = "2.15.17"
 "ubi:google/addlicense" = "v1.1.1"
