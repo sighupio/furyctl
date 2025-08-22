@@ -24,7 +24,17 @@ steps:
         path: /mise-data
     commands:
       - |
-        unset GOBIN  # Fix: Unset GOBIN to prevent "cannot install cross-compiled binaries" error
+        # Debug and fix environment variables for Go backend
+        echo "=== Pre-fix environment ==="
+        echo "GOBIN: $GOBIN"
+        echo "GOARCH: $GOARCH" 
+        echo "System arch: $(uname -m)"
+        
+        # Unset problematic variables
+        unset GOBIN
+        unset GOARCH  # Let Go detect architecture automatically
+        
+        # Install tools
         mise install
         eval "$(mise activate bash --shims)"
 

@@ -13,7 +13,6 @@ awscli = "2.15.17"
 
 [env]
 CGO_ENABLED = 0
-GOARCH = "{{arch()}}"
 GOFLAGS = "-mod=mod"
 
 [settings]
