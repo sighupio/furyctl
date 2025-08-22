@@ -24,17 +24,9 @@ steps:
         path: /mise-data
     commands:
       - |
-        # Debug and fix environment variables for Go backend
-        echo "=== Pre-fix environment ==="
-        echo "GOBIN: $GOBIN"
-        echo "GOARCH: $GOARCH" 
-        echo "System arch: $(uname -m)"
-        
-        # Unset problematic variables
+        # Fix: Unset GOBIN and GOARCH to prevent cross-compilation errors
         unset GOBIN
-        unset GOARCH  # Let Go detect architecture automatically
-        
-        # Install tools
+        unset GOARCH
         mise install
         eval "$(mise activate bash --shims)"
 
