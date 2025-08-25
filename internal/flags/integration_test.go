@@ -108,6 +108,7 @@ flags:
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
+			defer viper.Reset()
 			// Create test config file
 			configPath := filepath.Join(tempDir, fmt.Sprintf("%s.yaml", tc.name))
 			err := os.WriteFile(configPath, []byte(tc.config), 0o644)
@@ -140,6 +141,7 @@ flags:
 }
 
 func testDynamicValueResolution(t *testing.T) {
+	defer viper.Reset()
 	// Note: Not using t.Parallel() because we need to set environment variables
 
 	// Create temporary directory
@@ -186,7 +188,6 @@ flags:
 
 	// Test dynamic value resolution
 	manager := NewManager(tempDir)
-	viper.Reset()
 
 	err = manager.LoadAndMergeFlags(configPath, "apply")
 	require.NoError(t, err)
@@ -202,6 +203,7 @@ flags:
 }
 
 func testViperIntegration(t *testing.T) {
+	defer viper.Reset()
 	// Note: Not using t.Parallel() because we modify global viper state
 
 	tempDir, err := os.MkdirTemp("", "furyctl-viper-test-*")
@@ -228,7 +230,6 @@ flags:
 	require.NoError(t, err)
 
 	// Test viper integration
-	viper.Reset()
 
 	// Set some values in viper before loading flags
 	viper.Set("debug", false)  // This should take precedence
@@ -248,6 +249,7 @@ flags:
 }
 
 func testPrioritySystem(t *testing.T) {
+	defer viper.Reset()
 	// Note: Not using t.Parallel() because we need to set environment variables
 
 	tempDir, err := os.MkdirTemp("", "furyctl-priority-test-*")
@@ -275,7 +277,6 @@ flags:
 	require.NoError(t, err)
 
 	// Test priority: furyctl.yaml < env vars < command flags (viper)
-	viper.Reset()
 
 	// 1. Set environment variable (medium priority)
 	t.Setenv("FURYCTL_DEBUG", "false")
@@ -369,6 +370,7 @@ flags:
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
+			defer viper.Reset()
 			configPath := filepath.Join(tempDir, fmt.Sprintf("%s.yaml", tc.name))
 			err := os.WriteFile(configPath, []byte(tc.config), 0o644)
 			require.NoError(t, err)
@@ -481,6 +483,7 @@ spec:
 
 	for _, tc := range testConfigs {
 		t.Run(tc.name, func(t *testing.T) {
+			defer viper.Reset()
 			// Test existing configuration without flags
 			configPath := filepath.Join(tempDir, fmt.Sprintf("%s.yaml", tc.name))
 			err := os.WriteFile(configPath, []byte(tc.config), 0o644)

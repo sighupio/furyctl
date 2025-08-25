@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
+//go:build unit
+
 package flags_test
 
 import (
@@ -9,6 +11,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -32,6 +35,7 @@ func TestFuryDistributionCompatibility(t *testing.T) {
 }
 
 func testEKSClusterExistingConfig(t *testing.T) {
+	defer viper.Reset()
 	// Based on fury-distribution/test/data/e2e/create/cluster/infrastructure/data/furyctl.yaml.
 	config := `apiVersion: kfd.sighup.io/v1alpha2
 kind: EKSCluster
@@ -179,6 +183,7 @@ spec:
 }
 
 func testEKSClusterWithFlags(t *testing.T) {
+	defer viper.Reset()
 	// Same EKSCluster config with flags added.
 	config := `apiVersion: kfd.sighup.io/v1alpha2
 kind: EKSCluster
@@ -249,6 +254,7 @@ flags:
 }
 
 func testKFDDistributionExistingConfig(t *testing.T) {
+	defer viper.Reset()
 	// Based on fury-getting-started/fury-on-minikube/furyctl.yaml.
 	config := `apiVersion: kfd.sighup.io/v1alpha2
 kind: KFDDistribution
@@ -322,6 +328,7 @@ spec:
 }
 
 func testKFDDistributionWithFlags(t *testing.T) {
+	defer viper.Reset()
 	// Same KFDDistribution config with flags added.
 	config := `apiVersion: kfd.sighup.io/v1alpha2
 kind: KFDDistribution
@@ -383,6 +390,7 @@ flags:
 }
 
 func testOnPremisesExistingConfig(t *testing.T) {
+	defer viper.Reset()
 	// Based on typical OnPremises configuration.
 	config := `apiVersion: kfd.sighup.io/v1alpha2
 kind: OnPremises
@@ -464,6 +472,7 @@ spec:
 }
 
 func testOnPremisesWithFlags(t *testing.T) {
+	defer viper.Reset()
 	// Same OnPremises config with flags added.
 	config := `apiVersion: kfd.sighup.io/v1alpha2
 kind: OnPremises
@@ -610,6 +619,7 @@ spec:
 	for _, tc := range testCases {
 		//nolint:paralleltest // Global viper state prevents safe parallel execution
 		t.Run(tc.name, func(t *testing.T) {
+			defer viper.Reset()
 			tempDir := t.TempDir()
 
 			configPath := filepath.Join(tempDir, "furyctl.yaml")
@@ -622,6 +632,7 @@ spec:
 
 			for _, command := range commands {
 				t.Run("command_"+command, func(t *testing.T) {
+					defer viper.Reset()
 					err := manager.LoadAndMergeFlags(configPath, command)
 					assert.NoError(t, err,
 						"Backward compatibility: existing config should work with command %s", command)

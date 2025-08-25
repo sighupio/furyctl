@@ -301,7 +301,7 @@ func TestMerger_ConvertValue(t *testing.T) {
 }
 
 func TestMerger_MergeGlobalFlags(t *testing.T) {
-	viper.Reset()
+	defer viper.Reset()
 
 	flagsConfig := &flags.FlagsConfig{
 		Global: map[string]any{

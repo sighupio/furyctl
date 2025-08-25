@@ -6,6 +6,7 @@ package cmd
 
 import (
 	"crypto/rand"
+	"errors"
 	"fmt"
 	"math/big"
 	"os"
@@ -41,6 +42,8 @@ type RootCommand struct {
 	*cobra.Command
 	config *rootConfig
 }
+
+var ErrInvalidPath = errors.New("invalid path")
 
 const (
 	timeout      = 100 * time.Millisecond
@@ -85,12 +88,10 @@ furyctl is a command line interface tool to manage the full lifecycle of SIGHUP 
 					}
 				}
 
-				// Load global flags from configuration file if available.
-				// This needs to happen early to allow global flags to affect subsequent operations.
-				flagsManager := flags.NewManager(".")
-				if err := flagsManager.TryLoadFromCurrentDirectory("global"); err != nil {
-					// Continue execution - global flags loading is optional.
-					logrus.Debugf("Failed to load global flags from current directory: %v", err)
+				// Load global flags from --config file if specified
+				// This must happen before log file creation to prevent directory creation with unexpanded paths
+				if err := flags.LoadAndMergeGlobalFlagsFromArgs(); err != nil {
+					logrus.Fatalf("%v", err)
 				}
 
 				// Change working directory (if it is specified) as first thing so all the following paths are relative
@@ -275,6 +276,11 @@ func initConfig() {
 }
 
 func createLogFile(path string) (*os.File, error) {
+	// Safety check: prevent creating directories with unexpanded dynamic values
+	if strings.Contains(path, "{env://") || strings.Contains(path, "{file://") || strings.Contains(path, "{path://") {
+		return nil, fmt.Errorf("cannot create log file with unexpanded dynamic values in path: %s", path)
+	}
+
 	// Create the log directory if it doesn't exist.
 	if err := os.MkdirAll(filepath.Dir(path), iox.UserGroupPerm); err != nil {
 		return nil, fmt.Errorf("error while creating log file: %w", err)

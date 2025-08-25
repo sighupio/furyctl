@@ -288,17 +288,17 @@ func TestValidator_ErrorSeverityClassification(t *testing.T) {
 			expectedWarnings: 0,
 		},
 		{
-			name: "warning errors - unsupported flags",
+			name: "fatal errors - unsupported flags",
 			flags: &flags.FlagsConfig{
 				Global: map[string]any{
-					"unknownGlobalFlag": "value", // Warning: unsupported
+					"unknownGlobalFlag": "value", // Fatal: unsupported
 				},
 				Apply: map[string]any{
-					"unknownApplyFlag": true, // Warning: unsupported
+					"unknownApplyFlag": true, // Fatal: unsupported
 				},
 			},
-			expectedFatal:    0,
-			expectedWarnings: 2,
+			expectedFatal:    2,
+			expectedWarnings: 0,
 		},
 		{
 			name: "fatal errors - conflicting flags",
@@ -324,19 +324,19 @@ func TestValidator_ErrorSeverityClassification(t *testing.T) {
 			expectedWarnings: 0,
 		},
 		{
-			name: "mixed fatal and warning errors",
+			name: "mixed fatal errors",
 			flags: &flags.FlagsConfig{
 				Global: map[string]any{
 					"gitProtocol": "invalid", // Fatal: invalid protocol
-					"unknownFlag": "value",   // Warning: unsupported
+					"unknownFlag": "value",   // Fatal: unsupported
 				},
 				Apply: map[string]any{
 					"timeout":        -1,     // Fatal: negative timeout
-					"anotherUnknown": "test", // Warning: unsupported
+					"anotherUnknown": "test", // Fatal: unsupported
 				},
 			},
-			expectedFatal:    2,
-			expectedWarnings: 2,
+			expectedFatal:    4,
+			expectedWarnings: 0,
 		},
 	}
 

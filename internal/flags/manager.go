@@ -7,6 +7,7 @@ package flags
 import (
 	"errors"
 	"fmt"
+	"os"
 	"path/filepath"
 	"strings"
 
@@ -284,16 +285,82 @@ func GetConfigPathFromViper() string {
 // isCriticalError determines if an error should cause the flags loading to fail
 // rather than just log a warning.
 func isCriticalError(err error) bool {
-	// Check if this is a dynamic value parsing error related to file operations.
+	// Check if this is a dynamic value parsing error.
 	if errors.Is(err, parser.ErrCannotParseDynamicValue) {
-		// Check if the error message contains file-related indicators.
 		errMsg := err.Error()
 
-		return strings.Contains(errMsg, "no such file") ||
+		// File-related errors are critical.
+		if strings.Contains(errMsg, "no such file") ||
 			strings.Contains(errMsg, "cannot find") ||
 			strings.Contains(errMsg, "file not found") ||
-			strings.Contains(errMsg, "permission denied")
+			strings.Contains(errMsg, "permission denied") {
+			return true
+		}
+
+		// Environment variable errors are also critical.
+		// Error format: "cannot parse dynamic value: \"VARIABLE_NAME\" is empty".
+		if strings.Contains(errMsg, "is empty") {
+			return true
+		}
+
+		// HTTP/HTTPS download errors are critical.
+		if strings.Contains(errMsg, "failed to download") ||
+			strings.Contains(errMsg, "http error") {
+			return true
+		}
 	}
 
 	return false
+}
+
+// LoadAndMergeCommandFlags loads and merges flags for a specific command with proper error handling.
+func LoadAndMergeCommandFlags(command string) error {
+	configPath := GetConfigPathFromViper()
+	flagsManager := NewManager(filepath.Dir(configPath))
+	if err := flagsManager.LoadAndMergeFlags(configPath, command); err != nil {
+		// Critical errors (like missing environment variables) should stop execution.
+		return fmt.Errorf("failed to load flags from configuration: %w", err)
+	}
+	return nil
+}
+
+// LoadAndMergeGlobalFlagsFromArgs loads global flags from command line --config argument.
+// This is called early in PersistentPreRun before log file creation.
+func LoadAndMergeGlobalFlagsFromArgs() error {
+	flagsManager := NewManager(".")
+
+	// Parse command line args directly since individual command flags haven't been bound to viper yet
+	var configPath string
+	args := os.Args
+	for i, arg := range args {
+		if arg == "--config" || arg == "-c" {
+			if i+1 < len(args) {
+				configPath = args[i+1]
+				break
+			}
+		} else if strings.HasPrefix(arg, "--config=") {
+			configPath = strings.TrimPrefix(arg, "--config=")
+			break
+		}
+	}
+
+	if configPath != "" {
+		if err := flagsManager.LoadAndMergeGlobalFlags(configPath); err != nil {
+			// Critical flag expansion errors should be fatal before log file creation
+			// to prevent directory creation with unexpanded dynamic values
+			if strings.Contains(err.Error(), "cannot parse dynamic value") ||
+				strings.Contains(err.Error(), "is empty") ||
+				strings.Contains(err.Error(), "failed to process dynamic values") {
+				return fmt.Errorf("critical flag expansion error in %s: %w", configPath, err)
+			}
+			logrus.Debugf("Failed to load global flags from %s: %v", configPath, err)
+		}
+	}
+
+	if err := flagsManager.TryLoadFromCurrentDirectory("global"); err != nil {
+		// Continue execution - global flags loading is optional.
+		logrus.Debugf("Failed to load global flags from current directory: %v", err)
+	}
+
+	return nil
 }

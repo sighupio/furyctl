@@ -10,6 +10,7 @@ import (
 	"html/template"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/sirupsen/logrus"
 
@@ -127,18 +128,35 @@ func Validate(path, repoPath string) error {
 		}
 	}
 
-	// Create clean configuration without flags for schema validation.
-	cleanConf := createCleanConfigForSchemaValidation(rawConf)
+	// Check if the schema supports flags field
+	schemaSupportsFlags := checkSchemaSupportsFlags(schemaPath)
 
-	// Expand dynamic values before schema validation.
-	expandedConf, err := expandDynamicValues(cleanConf, filepath.Dir(path))
-	if err != nil {
-		return fmt.Errorf("error expanding dynamic values: %w", err)
-	}
+	// Choose validation path based on schema capabilities
+	if schemaSupportsFlags {
+		// New path: schema knows about flags, validate with flags included
+		expandedConf, err := expandDynamicValues(rawConf, filepath.Dir(path))
+		if err != nil {
+			return fmt.Errorf("error expanding dynamic values: %w", err)
+		}
 
-	// Validate expanded configuration against fury-distribution schema.
-	if err = schema.Validate(expandedConf); err != nil {
-		return fmt.Errorf("error while validating against schema: %w", err)
+		// Validate configuration with flags included
+		if err = schema.Validate(expandedConf); err != nil {
+			return fmt.Errorf("error while validating against schema: %w", err)
+		}
+	} else {
+		// Fallback path: old schema, strip flags before validation (current behavior)
+		cleanConf := createCleanConfigForSchemaValidation(rawConf)
+
+		// Expand dynamic values before schema validation.
+		expandedConf, err := expandDynamicValues(cleanConf, filepath.Dir(path))
+		if err != nil {
+			return fmt.Errorf("error expanding dynamic values: %w", err)
+		}
+
+		// Validate expanded configuration against fury-distribution schema.
+		if err = schema.Validate(expandedConf); err != nil {
+			return fmt.Errorf("error while validating against schema: %w", err)
+		}
 	}
 
 	// Run additional schema validation rules.
@@ -148,6 +166,29 @@ func Validate(path, repoPath string) error {
 	}
 
 	return nil
+}
+
+// checkSchemaSupportsFlags determines if the schema includes support for the flags field.
+// This allows furyctl to work with both old schemas (without flags) and new schemas (with flags).
+func checkSchemaSupportsFlags(schemaPath string) bool {
+	// Simple check: does the schema file reference spec-flags.json?
+	content, err := os.ReadFile(schemaPath)
+	if err != nil {
+		// On error, assume old schema to maintain backward compatibility
+		logrus.Debugf("Could not read schema file to check flags support: %v", err)
+		return false
+	}
+
+	// Check if the schema references the flags specification
+	hasFlags := strings.Contains(string(content), "spec-flags.json")
+
+	if hasFlags {
+		logrus.Debug("Schema supports flags field, validating with flags included")
+	} else {
+		logrus.Debug("Schema does not support flags field, using fallback validation")
+	}
+
+	return hasFlags
 }
 
 // createCleanConfigForSchemaValidation removes furyctl-specific sections that shouldn't be validated

@@ -128,7 +128,7 @@ func (v *Validator) validateCommandFlags(flagsMap map[string]any, command string
 				Value:   value,
 				Reason: fmt.Sprintf("flag '%s' is not supported for '%s' command. "+
 					"Check documentation for supported flags.", flagName, command),
-				Severity: ValidationSeverityWarning,
+				Severity: ValidationSeverityFatal,
 			})
 
 			continue

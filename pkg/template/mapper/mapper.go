@@ -15,10 +15,7 @@ import (
 	"github.com/sighupio/furyctl/internal/parser"
 )
 
-var (
-	DynamicRegexp      = regexp.MustCompile(`{(.*?)}`)
-	RelativePathRegexp = regexp.MustCompile(`^\.{1,}\/`)
-)
+var RelativePathRegexp = regexp.MustCompile(`^\.{1,}\/`)
 
 type Mapper struct {
 	context        map[string]map[any]any
@@ -128,18 +125,13 @@ func (m *Mapper) injectDynamicValuesAndPaths(
 func (m *Mapper) injectDynamicValuesAndPathsString(value string) (string, error) {
 	cfgParser := parser.NewConfigParser(m.furyctlConfDir)
 
-	// If the value contains dynamic values, we need to parse them.
-	dynamicValues := DynamicRegexp.FindAllString(value, -1)
-	for _, dynamicValue := range dynamicValues {
-		parsedDynamicValue, err := cfgParser.ParseDynamicValue(dynamicValue)
-		if err != nil {
-			return "", fmt.Errorf("error parsing dynamic value: %w", err)
-		}
-
-		// Convert parsed value to string for string replacement.
-		parsedDynamicValueStr := fmt.Sprintf("%v", parsedDynamicValue)
-		value = strings.Replace(value, dynamicValue, parsedDynamicValueStr, 1)
+	// Use the shared parser method to handle multiple dynamic values.
+	parsedValue, err := cfgParser.ParseMultipleDynamicValues(value)
+	if err != nil {
+		return "", fmt.Errorf("error parsing dynamic values: %w", err)
 	}
+
+	value = parsedValue
 
 	// If the value is a relative path, we need to convert it to an absolute path.
 	isRelativePath := RelativePathRegexp.MatchString(value)

@@ -72,11 +72,8 @@ func NewClusterCmd() *cobra.Command {
 			}
 
 			// Load and merge flags from configuration file.
-			configPath := flags.GetConfigPathFromViper()
-			flagsManager := flags.NewManager(filepath.Dir(configPath))
-			if err := flagsManager.LoadAndMergeFlags(configPath, "delete"); err != nil {
-				logrus.Debugf("Failed to load flags from configuration: %v", err)
-				// Continue execution - flags loading is optional.
+			if err := flags.LoadAndMergeCommandFlags("delete"); err != nil {
+				logrus.Fatalf("%v", err)
 			}
 		},
 		RunE: func(_ *cobra.Command, _ []string) error {
