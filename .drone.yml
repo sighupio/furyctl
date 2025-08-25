@@ -124,6 +124,24 @@ steps:
       - name: mise-cache
         path: /mise-data
 
+  - name: test-flags
+    image: quay.io/sighup/mise:v2025.4.4
+    pull: always
+    depends_on:
+      - prepare
+    commands:
+      - eval "$(mise activate bash --shims)"
+      - mise run test-flags
+    environment:
+      MISE_DATA_DIR: /mise-data
+      CGO_ENABLED: 0
+      GOCACHE: /drone/src/.go/cache
+      GOMODCACHE: /drone/src/.go/modcache
+      GOTMPDIR: /drone/src/.go/tmp
+    volumes:
+      - name: mise-cache
+        path: /mise-data
+
   - name: test-e2e
     image: quay.io/sighup/mise:v2025.4.4
     pull: always
@@ -169,6 +187,7 @@ steps:
       - lint
       - test-unit
       - test-integration
+      - test-flags
       - test-e2e
     commands:
       - eval "$(mise activate bash --shims)"
@@ -200,6 +219,7 @@ steps:
       - lint
       - test-unit
       - test-integration
+      - test-flags
       - test-e2e
     commands:
       - eval "$(mise activate bash --shims)"

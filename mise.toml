@@ -148,6 +148,10 @@ export KFD_AUTH_POMERIUM_SHARED_SECRET=dummy
 ginkgo run -vv --trace -tags=e2e -timeout 600s -p test/e2e
 """
 
+[tasks.test-flags]
+description = "run flags behavior tests"
+run = "go test -v -tags=flags_e2e ./test/e2e"
+
 [tasks.test-expensive]
 description = "WARNING: run expensive tests that create AWS clusters"
 run = """
