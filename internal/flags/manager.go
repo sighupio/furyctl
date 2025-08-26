@@ -317,10 +317,12 @@ func isCriticalError(err error) bool {
 func LoadAndMergeCommandFlags(command string) error {
 	configPath := GetConfigPathFromViper()
 	flagsManager := NewManager(filepath.Dir(configPath))
+
 	if err := flagsManager.LoadAndMergeFlags(configPath, command); err != nil {
 		// Critical errors (like missing environment variables) should stop execution.
 		return fmt.Errorf("failed to load flags from configuration: %w", err)
 	}
+
 	return nil
 }
 
@@ -329,17 +331,21 @@ func LoadAndMergeCommandFlags(command string) error {
 func LoadAndMergeGlobalFlagsFromArgs() error {
 	flagsManager := NewManager(".")
 
-	// Parse command line args directly since individual command flags haven't been bound to viper yet
+	// Parse command line args directly since individual command flags haven't been bound to viper yet.
 	var configPath string
+
 	args := os.Args
+
 	for i, arg := range args {
 		if arg == "--config" || arg == "-c" {
 			if i+1 < len(args) {
 				configPath = args[i+1]
+
 				break
 			}
 		} else if strings.HasPrefix(arg, "--config=") {
 			configPath = strings.TrimPrefix(arg, "--config=")
+
 			break
 		}
 	}
@@ -347,12 +353,13 @@ func LoadAndMergeGlobalFlagsFromArgs() error {
 	if configPath != "" {
 		if err := flagsManager.LoadAndMergeGlobalFlags(configPath); err != nil {
 			// Critical flag expansion errors should be fatal before log file creation
-			// to prevent directory creation with unexpanded dynamic values
+			// to prevent directory creation with unexpanded dynamic values.
 			if strings.Contains(err.Error(), "cannot parse dynamic value") ||
 				strings.Contains(err.Error(), "is empty") ||
 				strings.Contains(err.Error(), "failed to process dynamic values") {
 				return fmt.Errorf("critical flag expansion error in %s: %w", configPath, err)
 			}
+
 			logrus.Debugf("Failed to load global flags from %s: %v", configPath, err)
 		}
 	}

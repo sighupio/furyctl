@@ -128,23 +128,23 @@ func Validate(path, repoPath string) error {
 		}
 	}
 
-	// Check if the schema supports flags field
+	// Check if the schema supports flags field.
 	schemaSupportsFlags := checkSchemaSupportsFlags(schemaPath)
 
-	// Choose validation path based on schema capabilities
+	// Choose validation path based on schema capabilities.
 	if schemaSupportsFlags {
-		// New path: schema knows about flags, validate with flags included
+		// New path: schema knows about flags, validate with flags included.
 		expandedConf, err := expandDynamicValues(rawConf, filepath.Dir(path))
 		if err != nil {
 			return fmt.Errorf("error expanding dynamic values: %w", err)
 		}
 
-		// Validate configuration with flags included
+		// Validate configuration with flags included.
 		if err = schema.Validate(expandedConf); err != nil {
 			return fmt.Errorf("error while validating against schema: %w", err)
 		}
 	} else {
-		// Fallback path: old schema, strip flags before validation (current behavior)
+		// Fallback path: old schema, strip flags before validation (current behavior).
 		cleanConf := createCleanConfigForSchemaValidation(rawConf)
 
 		// Expand dynamic values before schema validation.
@@ -174,12 +174,13 @@ func checkSchemaSupportsFlags(schemaPath string) bool {
 	// Simple check: does the schema file reference spec-flags.json?
 	content, err := os.ReadFile(schemaPath)
 	if err != nil {
-		// On error, assume old schema to maintain backward compatibility
+		// On error, assume old schema to maintain backward compatibility.
 		logrus.Debugf("Could not read schema file to check flags support: %v", err)
+
 		return false
 	}
 
-	// Check if the schema references the flags specification
+	// Check if the schema references the flags specification.
 	hasFlags := strings.Contains(string(content), "spec-flags.json")
 
 	if hasFlags {

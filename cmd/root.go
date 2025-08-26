@@ -43,7 +43,10 @@ type RootCommand struct {
 	config *rootConfig
 }
 
-var ErrInvalidPath = errors.New("invalid path")
+var (
+	ErrInvalidPath    = errors.New("invalid path")
+	ErrUnexpandedPath = errors.New("cannot create log file with unexpanded dynamic values in path")
+)
 
 const (
 	timeout      = 100 * time.Millisecond
@@ -89,7 +92,7 @@ furyctl is a command line interface tool to manage the full lifecycle of SIGHUP 
 				}
 
 				// Load global flags from --config file if specified
-				// This must happen before log file creation to prevent directory creation with unexpanded paths
+				// This must happen before log file creation to prevent directory creation with unexpanded paths.
 				if err := flags.LoadAndMergeGlobalFlagsFromArgs(); err != nil {
 					logrus.Fatalf("%v", err)
 				}
@@ -276,9 +279,9 @@ func initConfig() {
 }
 
 func createLogFile(path string) (*os.File, error) {
-	// Safety check: prevent creating directories with unexpanded dynamic values
+	// Safety check: prevent creating directories with unexpanded dynamic values.
 	if strings.Contains(path, "{env://") || strings.Contains(path, "{file://") || strings.Contains(path, "{path://") {
-		return nil, fmt.Errorf("cannot create log file with unexpanded dynamic values in path: %s", path)
+		return nil, fmt.Errorf("%w: %s", ErrUnexpandedPath, path)
 	}
 
 	// Create the log directory if it doesn't exist.
