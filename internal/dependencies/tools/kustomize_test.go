@@ -19,8 +19,25 @@ import (
 	execx "github.com/sighupio/furyctl/internal/x/exec"
 )
 
-func Test_Kustomize_SupportsDownload(t *testing.T) {
+func Test_OldKustomize_SupportsDownload(t *testing.T) {
 	a := tools.NewKustomize(newKustomizeRunner(), "3.5.3")
+
+	if a.SupportsDownload() != true {
+		t.Errorf("kustomize download must be supported")
+	}
+
+	wantSrcPath := fmt.Sprintf(
+		"https://github.com/kubernetes-sigs/kustomize/releases/download/kustomize/v3.5.3/kustomize_v3.5.3_%s_amd64.tar.gz",
+		runtime.GOOS,
+	)
+
+	if a.SrcPath() != wantSrcPath {
+		t.Errorf("Wrong kustomize src path: want = %s, got = %s", wantSrcPath, a.SrcPath())
+	}
+}
+
+func Test_Kustomize_SupportsDownload(t *testing.T) {
+	a := tools.NewKustomize(newKustomizeRunner(), "5.6.0")
 
 	if a.SupportsDownload() != true {
 		t.Errorf("kustomize download must be supported")
@@ -29,8 +46,9 @@ func Test_Kustomize_SupportsDownload(t *testing.T) {
 
 func Test_Kustomize_SrcPath(t *testing.T) {
 	wantSrcPath := fmt.Sprintf(
-		"https://github.com/kubernetes-sigs/kustomize/releases/download/kustomize/v3.5.3/kustomize_v3.5.3_%s_amd64.tar.gz",
+		"https://github.com/kubernetes-sigs/kustomize/releases/download/kustomize/v5.6.0/kustomize_v5.6.0_%s_%s.tar.gz",
 		runtime.GOOS,
+		runtime.GOARCH,
 	)
 
 	testCases := []struct {
@@ -38,12 +56,12 @@ func Test_Kustomize_SrcPath(t *testing.T) {
 		version string
 	}{
 		{
-			desc:    "3.5.3",
-			version: "3.5.3",
+			desc:    "5.6.0",
+			version: "5.6.0",
 		},
 		{
-			desc:    "v3.5.3",
-			version: "v3.5.3",
+			desc:    "v5.6.0",
+			version: "v5.6.0",
 		},
 	}
 	for _, tC := range testCases {
@@ -66,7 +84,7 @@ func Test_Kustomize_Rename(t *testing.T) {
 		t.Fatalf("error creating temp file: %v", err)
 	}
 
-	fa := tools.NewKustomize(newKustomizeRunner(), "3.5.3")
+	fa := tools.NewKustomize(newKustomizeRunner(), "5.6.0")
 
 	if err := fa.Rename(tmpDir); err != nil {
 		t.Fatalf("Error renaming kustomize binary: %v", err)
@@ -97,9 +115,9 @@ func Test_Kustomize_CheckBinVersion(t *testing.T) {
 		},
 		{
 			desc:        "wrong version installed",
-			wantVersion: "3.5.3",
+			wantVersion: "5.6.0",
 			wantErr:     true,
-			wantErrMsg:  "installed = 3.9.4, expected = 3.5.3",
+			wantErrMsg:  "installed = 3.9.4, expected = 5.6.0",
 		},
 	}
 	for _, tC := range testCases {
