@@ -373,8 +373,6 @@ flags:
     timeout: 3600
     dryRun: false
     skipDepsValidation: false
-  tools:
-    config: "{file://./furyctl.yaml}"
 `
 
 	tempDir := t.TempDir()

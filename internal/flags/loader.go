@@ -135,6 +135,41 @@ func (l *Loader) processDynamicValues(flags *FlagsConfig) (*FlagsConfig, error) 
 		}
 	}
 
+	if flags.Validate != nil {
+		processed.Validate, err = l.processCommandFlags(flags.Validate)
+		if err != nil {
+			return nil, fmt.Errorf("error processing validate flags: %w", err)
+		}
+	}
+
+	if flags.Download != nil {
+		processed.Download, err = l.processCommandFlags(flags.Download)
+		if err != nil {
+			return nil, fmt.Errorf("error processing download flags: %w", err)
+		}
+	}
+
+	if flags.Connect != nil {
+		processed.Connect, err = l.processCommandFlags(flags.Connect)
+		if err != nil {
+			return nil, fmt.Errorf("error processing connect flags: %w", err)
+		}
+	}
+
+	if flags.Renew != nil {
+		processed.Renew, err = l.processCommandFlags(flags.Renew)
+		if err != nil {
+			return nil, fmt.Errorf("error processing renew flags: %w", err)
+		}
+	}
+
+	if flags.Dump != nil {
+		processed.Dump, err = l.processCommandFlags(flags.Dump)
+		if err != nil {
+			return nil, fmt.Errorf("error processing dump flags: %w", err)
+		}
+	}
+
 	return processed, nil
 }
 

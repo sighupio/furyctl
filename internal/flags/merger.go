@@ -259,7 +259,7 @@ func (m *Merger) MergeGlobalFlags(flags *FlagsConfig) error {
 // GetSupportedFlagsForCommand returns the supported flags for a specific command.
 func (m *Merger) GetSupportedFlagsForCommand(command string) map[string]FlagInfo {
 	switch command {
-	case "global":
+	case CommandGlobal:
 		return m.supportedFlags.Global
 
 	case "apply":

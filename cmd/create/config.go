@@ -46,15 +46,13 @@ func NewConfigCmd() *cobra.Command {
 		PreRun: func(cmd *cobra.Command, _ []string) {
 			cmdEvent = analytics.NewCommandEvent(cobrax.GetFullname(cmd))
 
-			if err := viper.BindPFlags(cmd.Flags()); err != nil {
-				logrus.Fatalf("error while binding flags: %v", err)
+			// Load and validate flags from configuration FIRST.
+			if err := flags.LoadAndMergeCommandFlags("create"); err != nil {
+				logrus.Fatalf("failed to load flags from configuration: %v", err)
 			}
 
-			// Load and merge flags from configuration file if one exists.
-			flagsManager := flags.NewManager(".")
-			if err := flagsManager.TryLoadFromCurrentDirectory("create"); err != nil {
-				logrus.Debugf("Failed to load flags from current directory: %v", err)
-				// Continue execution - flags loading is optional.
+			if err := viper.BindPFlags(cmd.Flags()); err != nil {
+				logrus.Fatalf("error while binding flags: %v", err)
 			}
 		},
 		RunE: func(_ *cobra.Command, _ []string) error {

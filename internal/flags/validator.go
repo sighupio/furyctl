@@ -126,8 +126,14 @@ func (v *Validator) validateCommandFlags(flagsMap map[string]any, command string
 				Command: command,
 				Flag:    flagName,
 				Value:   value,
-				Reason: fmt.Sprintf("flag '%s' is not supported for '%s' command. "+
-					"Check documentation for supported flags.", flagName, command),
+				Reason: fmt.Sprintf("flag '%s' is not supported for '%s' %s. "+
+					"Check documentation for supported flags.", flagName, command, func() string {
+					if command == "global" {
+						return "configuration"
+					}
+
+					return "command"
+				}()),
 				Severity: ValidationSeverityFatal,
 			})
 

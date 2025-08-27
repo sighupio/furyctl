@@ -8,25 +8,35 @@ package flags
 //
 //nolint:revive // FlagsConfig name is intentionally explicit for external API clarity
 type FlagsConfig struct {
-	Global map[string]any `yaml:"global,omitempty"`
-	Apply  map[string]any `yaml:"apply,omitempty"`
-	Delete map[string]any `yaml:"delete,omitempty"`
-	Create map[string]any `yaml:"create,omitempty"`
-	Get    map[string]any `yaml:"get,omitempty"`
-	Diff   map[string]any `yaml:"diff,omitempty"`
-	Tools  map[string]any `yaml:"tools,omitempty"`
+	Global   map[string]any `yaml:"global,omitempty"`
+	Apply    map[string]any `yaml:"apply,omitempty"`
+	Delete   map[string]any `yaml:"delete,omitempty"`
+	Create   map[string]any `yaml:"create,omitempty"`
+	Get      map[string]any `yaml:"get,omitempty"`
+	Diff     map[string]any `yaml:"diff,omitempty"`
+	Tools    map[string]any `yaml:"tools,omitempty"`
+	Validate map[string]any `yaml:"validate,omitempty"`
+	Download map[string]any `yaml:"download,omitempty"`
+	Connect  map[string]any `yaml:"connect,omitempty"`
+	Renew    map[string]any `yaml:"renew,omitempty"`
+	Dump     map[string]any `yaml:"dump,omitempty"`
 }
 
 // SupportedFlags defines the mapping between flag names and their expected types
 // This helps with validation and type conversion.
 type SupportedFlags struct {
-	Global map[string]FlagInfo
-	Apply  map[string]FlagInfo
-	Delete map[string]FlagInfo
-	Create map[string]FlagInfo
-	Get    map[string]FlagInfo
-	Diff   map[string]FlagInfo
-	Tools  map[string]FlagInfo
+	Global   map[string]FlagInfo
+	Apply    map[string]FlagInfo
+	Delete   map[string]FlagInfo
+	Create   map[string]FlagInfo
+	Get      map[string]FlagInfo
+	Diff     map[string]FlagInfo
+	Tools    map[string]FlagInfo
+	Validate map[string]FlagInfo
+	Download map[string]FlagInfo
+	Connect  map[string]FlagInfo
+	Renew    map[string]FlagInfo
+	Dump     map[string]FlagInfo
 }
 
 // FlagInfo contains metadata about a supported flag.
@@ -106,11 +116,6 @@ func GetSupportedFlags() SupportedFlags {
 			"gitProtocol":      {Type: FlagTypeString, DefaultValue: "https", Description: "Git protocol to use"},
 		},
 		Apply: map[string]FlagInfo{
-			"config": {
-				Type:         FlagTypeString,
-				DefaultValue: "furyctl.yaml",
-				Description:  "Path to configuration file",
-			},
 			"phase": {Type: FlagTypeString, DefaultValue: "", Description: "Limit execution to specific phase"},
 			"startFrom": {
 				Type:         FlagTypeString,
@@ -143,32 +148,52 @@ func GetSupportedFlags() SupportedFlags {
 			"upgradeNode":         {Type: FlagTypeString, DefaultValue: "", Description: "Specific node to upgrade"},
 		},
 		Delete: map[string]FlagInfo{
-			"config": {
-				Type:         FlagTypeString,
-				DefaultValue: "furyctl.yaml",
-				Description:  "Path to configuration file",
-			},
 			"phase":               {Type: FlagTypeString, DefaultValue: "", Description: "Limit execution to specific phase"},
 			"startFrom":           {Type: FlagTypeString, DefaultValue: "", Description: "Start execution from specific phase"},
+			"distroLocation":      {Type: FlagTypeString, DefaultValue: "", Description: "Distribution location"},
+			"distroPatches":       {Type: FlagTypeString, DefaultValue: "", Description: "Distribution patches location"},
 			"binPath":             {Type: FlagTypeString, DefaultValue: "", Description: "Binary path"},
 			"dryRun":              {Type: FlagTypeBool, DefaultValue: false, Description: "Dry run mode"},
 			"skipVpnConfirmation": {Type: FlagTypeBool, DefaultValue: false, Description: "Skip VPN confirmation"},
 			"autoApprove":         {Type: FlagTypeBool, DefaultValue: false, Description: "Auto approve deletion"},
 		},
 		Create: map[string]FlagInfo{
-			"config":   {Type: FlagTypeString, DefaultValue: "furyctl.yaml", Description: "Path to configuration file"},
 			"name":     {Type: FlagTypeString, DefaultValue: "", Description: "Cluster name"},
 			"version":  {Type: FlagTypeString, DefaultValue: "", Description: "Distribution version"},
 			"provider": {Type: FlagTypeString, DefaultValue: "", Description: "Provider type"},
+			"path":     {Type: FlagTypeString, DefaultValue: "pki", Description: "Path where to save PKI files"},
+			"etcd":     {Type: FlagTypeBool, DefaultValue: false, Description: "Create PKI only for etcd"},
+			"controlplane": {
+				Type:         FlagTypeBool,
+				DefaultValue: false,
+				Description:  "Create PKI only for Kubernetes control plane",
+			},
 		},
 		Get: map[string]FlagInfo{
-			"config": {Type: FlagTypeString, DefaultValue: "furyctl.yaml", Description: "Path to configuration file"},
+			"binPath":            {Type: FlagTypeString, DefaultValue: "", Description: "Binary path"},
+			"distroLocation":     {Type: FlagTypeString, DefaultValue: "", Description: "Distribution location"},
+			"skipDepsDownload":   {Type: FlagTypeBool, DefaultValue: false, Description: "Skip dependencies download"},
+			"skipDepsValidation": {Type: FlagTypeBool, DefaultValue: false, Description: "Skip dependencies validation"},
 		},
 		Diff: map[string]FlagInfo{
-			"config": {Type: FlagTypeString, DefaultValue: "furyctl.yaml", Description: "Path to configuration file"},
+			"phase":               {Type: FlagTypeString, DefaultValue: "", Description: "Limit execution to specific phase"},
+			"distroLocation":      {Type: FlagTypeString, DefaultValue: "", Description: "Distribution location"},
+			"distroPatches":       {Type: FlagTypeString, DefaultValue: "", Description: "Distribution patches location"},
+			"binPath":             {Type: FlagTypeString, DefaultValue: "", Description: "Binary path"},
+			"upgradePathLocation": {Type: FlagTypeString, DefaultValue: "", Description: "Upgrade path location"},
 		},
-		Tools: map[string]FlagInfo{
-			"config": {Type: FlagTypeString, DefaultValue: "furyctl.yaml", Description: "Path to configuration file"},
+		Tools: map[string]FlagInfo{},
+		Validate: map[string]FlagInfo{
+			"distroLocation": {Type: FlagTypeString, DefaultValue: "", Description: "Distribution location"},
+			"distroPatches":  {Type: FlagTypeString, DefaultValue: "", Description: "Distribution patches location"},
 		},
+		Download: map[string]FlagInfo{
+			"binPath":        {Type: FlagTypeString, DefaultValue: "", Description: "Binary path"},
+			"distroLocation": {Type: FlagTypeString, DefaultValue: "", Description: "Distribution location"},
+			"distroPatches":  {Type: FlagTypeString, DefaultValue: "", Description: "Distribution patches location"},
+		},
+		Connect: map[string]FlagInfo{},
+		Renew:   map[string]FlagInfo{},
+		Dump:    map[string]FlagInfo{},
 	}
 }

@@ -137,7 +137,7 @@ func TestValidator_InvalidFlags_ErrorMessages(t *testing.T) {
 	assert.Equal(t, "global", err.Command)
 	assert.Equal(t, "invalidFlag", err.Flag)
 	assert.Equal(t, "value", err.Value)
-	assert.Contains(t, err.Reason, "flag 'invalidFlag' is not supported for 'global' command")
+	assert.Contains(t, err.Reason, "flag 'invalidFlag' is not supported for 'global' configuration")
 	assert.Contains(t, err.Reason, "Check documentation for supported flags")
 }
 
@@ -166,7 +166,6 @@ func TestValidator_SupportedFlags_DoNotCauseFatalErrors(t *testing.T) {
 			name: "common apply flags should be valid",
 			flagsConfig: &flags.FlagsConfig{
 				Apply: map[string]any{
-					"config":             "furyctl.yaml",
 					"phase":              "infrastructure",
 					"dryRun":             true,
 					"skipDepsDownload":   false,
