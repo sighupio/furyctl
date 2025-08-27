@@ -16,6 +16,42 @@ The flags configuration follows a priority system where values can be overridden
 
 This means you can set defaults in your configuration file, but still override them when needed.
 
+## Important Limitations
+
+### Config Flags Are Not Supported in YAML
+
+**⚠️ Critical Note**: You cannot specify `config` flags within the `flags` section of your `furyctl.yaml` file. This includes flags like:
+- `--config` / `-c` for specifying configuration file paths
+- Any flag that points to configuration files
+
+**Why this limitation exists**: This prevents **recursive loading** scenarios where:
+1. `furyctl` loads `furyctl.yaml`
+2. Finds a `config` flag pointing to another configuration file
+3. Attempts to load that file, potentially creating infinite loops or unexpected behavior
+
+**What still works**: 
+- CLI config flags work normally: `furyctl apply --config /path/to/config.yaml`
+- Environment variables for config: `FURYCTL_CONFIG=/path/to/config.yaml`
+- All other flags can be configured in YAML without any issues
+
+**Example of what NOT to do**:
+```yaml
+# ❌ This will cause a FATAL error
+flags:
+  apply:
+    config: "/path/to/other-config.yaml"  # NOT SUPPORTED
+```
+
+**Example of what works perfectly**:
+```yaml
+# ✅ All other flags work great
+flags:
+  apply:
+    dryRun: true
+    timeout: 3600
+    distroLocation: "/path/to/distribution"
+```
+
 ## Configuration Structure
 
 Add a `flags` section to your furyctl.yaml file:
@@ -54,7 +90,11 @@ The following commands support flags configuration:
 - `create` - Initial cluster configuration creation
 - `get` - Information retrieval
 - `diff` - Configuration comparison
-- `tools` - Tool management
+- `validate` - Configuration validation
+- `download` - Dependencies download
+- `connect` - VPN connections
+- `renew` - Certificate renewal
+- `dump` - Template rendering
 
 ## Dynamic Values
 
@@ -246,9 +286,8 @@ flags:
     # Safety settings
     dryRun: false
     
-  # Tools command for upgrade utilities
-  tools:
-    config: "{file://./furyctl.yaml}"
+  # Other commands like validate, download, connect, renew, dump
+  # also support flags - see their specific documentation or use --help
 ```
 
 ## Usage
@@ -277,13 +316,16 @@ furyctl apply --timeout 3600 --dry-run
 
 ## Validation
 
-The flags configuration includes built-in validation that will warn you about:
+The flags configuration includes built-in validation that will **stop execution** with FATAL errors for:
 
-- Unsupported flags for specific commands
-- Invalid flag values (e.g., negative timeouts)
-- Conflicting flag combinations (e.g., `upgrade` with `upgradeNode`)
+- **Unsupported flags** for specific commands - Commands will exit immediately with detailed error messages
+- **Invalid flag values** (e.g., negative timeouts, invalid protocols)
+- **Conflicting flag combinations** (e.g., `upgrade` with `upgradeNode`)
+- **Configuration file access issues** (permissions, malformed YAML)
 
-Validation errors are logged but won't prevent execution, allowing for graceful degradation.
+**⚠️ Breaking Change**: Invalid flags now cause FATAL errors and stop execution immediately. This ensures configuration problems are caught early rather than potentially causing issues later in the process.
+
+**Note**: If no `furyctl.yaml` file is present, commands that don't require configuration (like `furyctl create pki`) will work normally without any errors.
 
 ## Supported Flags
 
@@ -301,7 +343,6 @@ Validation errors are logged but won't prevent execution, allowing for graceful 
 
 ### Apply Command Flags
 
-- `config` (string) - Path to configuration file
 - `phase` (string) - Limit execution to specific phase
 - `startFrom` (string) - Start execution from specific phase
 - `distroLocation` (string) - Distribution location
@@ -323,9 +364,10 @@ Validation errors are logged but won't prevent execution, allowing for graceful 
 
 ### Delete Command Flags
 
-- `config` (string) - Path to configuration file
 - `phase` (string) - Limit execution to specific phase
 - `startFrom` (string) - Start execution from specific phase
+- `distroLocation` (string) - Distribution location
+- `distroPatches` (string) - Distribution patches location
 - `binPath` (string) - Binary path
 - `dryRun` (bool) - Dry run mode
 - `skipVpnConfirmation` (bool) - Skip VPN confirmation
@@ -333,11 +375,36 @@ Validation errors are logged but won't prevent execution, allowing for graceful 
 
 ### Create Command Flags
 
-- `config` (string) - Path to configuration file
 - `name` (string) - Cluster name
 - `version` (string) - Distribution version
 - `provider` (string) - Provider type
+- `path` (string) - Path where to save PKI files
+- `etcd` (bool) - Create PKI only for etcd
+- `controlplane` (bool) - Create PKI only for Kubernetes control plane
 
 ### Get, Diff, and Tools Command Flags
 
-- `config` (string) - Path to configuration file
+**Get Command:**
+- `binPath` (string) - Binary path
+- `distroLocation` (string) - Distribution location
+- `skipDepsDownload` (bool) - Skip dependencies download
+- `skipDepsValidation` (bool) - Skip dependencies validation
+
+**Diff Command:**
+- `phase` (string) - Limit execution to specific phase
+- `distroLocation` (string) - Distribution location
+- `distroPatches` (string) - Distribution patches location
+- `binPath` (string) - Binary path
+- `upgradePathLocation` (string) - Upgrade path location
+
+**Validate Command:**
+- `distroLocation` (string) - Distribution location
+- `distroPatches` (string) - Distribution patches location
+
+**Download Command:**
+- `binPath` (string) - Binary path  
+- `distroLocation` (string) - Distribution location
+- `distroPatches` (string) - Distribution patches location
+
+**Other Commands:**
+- `Connect`, `Renew`, `Dump` commands currently have no configurable flags - use `furyctl [command] --help` for details

@@ -329,11 +329,8 @@ func NewMyCommand() *cobra.Command {
             }
 
             // Load and merge flags from configuration file.
-            configPath := flags.GetConfigPathFromViper()
-            flagsManager := flags.NewManager(filepath.Dir(configPath))
-            if err := flagsManager.LoadAndMergeFlags(configPath, "mycommand"); err != nil {
-                logrus.Debugf("Failed to load flags from configuration: %v", err)
-                // Continue execution - flags loading is optional.
+            if err := flags.LoadAndMergeCommandFlags("mycommand"); err != nil {
+                logrus.Fatalf("failed to load flags from configuration: %v", err)
             }
         },
         RunE: runMyCommand,
@@ -372,10 +369,10 @@ spec:
 flags:
   global:           # Applied to all commands
     debug: true
-    log-level: info
+    gitProtocol: "https"
   mycommand:        # Applied only to 'mycommand'
-    dry-run: true
-    output: "json"
+    dryRun: true
+    timeout: 3600
 ```
 
 #### Advanced Features
@@ -391,38 +388,40 @@ flags:
     # Environment variable injection  
     endpoint: "{env://API_ENDPOINT}"
     
-    # Path resolution
-    config-file: "{path://./configs/app.yaml}"
+    # Path resolution for local files
+    distroPatches: "{path://./patches}"
     
     # Array values
     tags: ["production", "web-server"]
     
-    # Nested configurations
-    nested:
-      enabled: true
-      count: 5
+    # Boolean and numeric values
+    dryRun: true
+    timeout: 3600
 ```
 
-#### Error Handling Best Practices
+#### Error Handling and Validation
 
-The flags system is designed to be forgiving and provide helpful feedback:
+The flags system enforces strict validation with **FATAL errors**:
 
 ```go
 func runMyCommand(cmd *cobra.Command, args []string) error {
-    // LoadAndMergeFlags handles errors gracefully:
-    // - File not found: logs debug message, continues
-    // - Invalid YAML: logs warning, continues  
-    // - Unknown flags: logs warning, continues
-    // - File permission errors: returns error
-    if err := flagsManager.LoadAndMergeFlags(configPath, "mycommand"); err != nil {
-        // Only critical errors (like file permission issues) reach here
-        return fmt.Errorf("failed to load flags configuration: %w", err)
+    // LoadAndMergeCommandFlags validates strictly and fails fast:
+    // - File not found: logs debug message, continues (graceful)
+    // - Invalid YAML: FATAL error, stops execution
+    // - Unknown/unsupported flags: FATAL error, stops execution  
+    // - Invalid flag values: FATAL error, stops execution
+    // - Conflicting flags: FATAL error, stops execution
+    if err := flags.LoadAndMergeCommandFlags("mycommand"); err != nil {
+        // This is a FATAL error - execution stops here
+        logrus.Fatalf("failed to load flags from configuration: %v", err)
     }
     
-    // Your command logic continues normally
+    // Your command logic runs only if configuration is valid
     return nil
 }
 ```
+
+**⚠️ Breaking Change**: Invalid flags now cause immediate FATAL errors instead of warnings. This ensures configuration problems are caught early and prevents unexpected behavior during command execution.
 
 #### Priority Order
 
@@ -432,6 +431,23 @@ The system maintains a clear priority order (highest to lowest):
 3. Configuration file flags (lowest priority)
 
 This ensures users can always override config file settings from the command line when needed.
+
+#### Important Limitations
+
+**⚠️ Config Flags Are NOT Supported in YAML**: You cannot specify `config` flags within the `flags` section of `furyctl.yaml`. This prevents recursive loading scenarios where the config file tries to load another config file.
+
+**Example of what NOT to do**:
+```yaml
+# ❌ This will cause a FATAL error
+flags:
+  mycommand:
+    config: "/path/to/other-config.yaml"  # NOT SUPPORTED
+```
+
+**What still works**:
+- CLI config flags: `furyctl mycommand --config /path/to/config.yaml` ✅
+- Environment variables: `FURYCTL_CONFIG=/path/to/config.yaml` ✅
+- All other flags in YAML configuration ✅
 
 </details>
 
