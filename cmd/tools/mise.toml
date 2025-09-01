@@ -1,0 +1,7 @@
+[env]
+NODE_ENV = 'development'
+
+[tools]
+node = '20.0.0'
+python = '3.11.0'
+terraform = 'path:/path/to/terraform'

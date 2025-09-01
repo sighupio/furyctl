@@ -138,6 +138,30 @@ Once you've ensured the above dependencies are installed, you can proceed with t
 
 For basic and advanced usage instructions, please refer to furyctl's [official documentation](https://docs.sighup.io/furyctl/) and the [SIGHUP Distribution getting started guides](https://docs.sighup.io/docs/getting-started/).
 
+### Quick Start: Using Tool Aliases
+
+After downloading dependencies with `furyctl download dependencies`, you can easily access the downloaded CLI tools (kubectl, helm, etc.) using bash aliases:
+
+```bash
+# Generate and view aliases
+furyctl get aliases
+
+# Set aliases in your current session
+eval "$(furyctl get aliases)"
+
+# Add aliases to your shell profile for persistence
+furyctl get aliases >> ~/.bashrc
+# or for zsh users
+furyctl get aliases >> ~/.zshrc
+
+# Now you can use the tools directly
+kubectl get nodes
+helm list
+terraform --version
+```
+
+The aliases point to the exact versions of tools specified in your distribution configuration, ensuring consistency across your team and environments.
+
 <!-- </SD-DOCS> -->
 <!-- <FOOTER> -->
 
