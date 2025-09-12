@@ -41,13 +41,13 @@ func NewKubeconfigCmd() *cobra.Command {
 		PreRun: func(cmd *cobra.Command, _ []string) {
 			cmdEvent = analytics.NewCommandEvent(cobrax.GetFullname(cmd))
 
+			if err := viper.BindPFlags(cmd.Flags()); err != nil {
+				logrus.Fatalf("error while binding flags: %v", err)
+			}
+
 			// Load and validate flags from configuration FIRST.
 			if err := flags.LoadAndMergeCommandFlags("get"); err != nil {
 				logrus.Fatalf("failed to load flags from configuration: %v", err)
-			}
-
-			if err := viper.BindPFlags(cmd.Flags()); err != nil {
-				logrus.Fatalf("error while binding flags: %v", err)
 			}
 		},
 		RunE: func(_ *cobra.Command, _ []string) error {
