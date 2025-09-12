@@ -215,8 +215,8 @@ var _ = Describe("Flag Behavior E2E", func() {
 
 			outputStr := string(output)
 
-			// Should contain clear error message about unexpanded dynamic values
-			Expect(outputStr).To(ContainSubstring("cannot create log file with unexpanded dynamic values"), "Should mention unexpanded dynamic values error")
+			// Should contain clear error message about dynamic value parsing failure
+			Expect(outputStr).To(ContainSubstring("cannot parse dynamic value"), "Should mention dynamic value parsing error")
 			Expect(outputStr).To(ContainSubstring("NONEXISTENT_VAR"), "Error should mention the missing env var")
 
 			// CRITICAL: Verify no literal directory with unexpanded dynamic values was created

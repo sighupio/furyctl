@@ -82,7 +82,6 @@ type ConfigWithFlags struct {
 type LoadResult struct {
 	ConfigPath string
 	Flags      *FlagsConfig
-	Errors     []error
 }
 
 // ValidationError represents an error that occurred during flag validation.

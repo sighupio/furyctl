@@ -51,24 +51,13 @@ func (m *Manager) LoadAndMergeFlags(configPath, command string) error {
 	// Load flags from configuration file.
 	result, err := m.loader.LoadFromFile(absConfigPath)
 	if err != nil {
-		return fmt.Errorf("failed to load flags: %w", err)
-	}
-
-	// Check for loading errors.
-	if len(result.Errors) > 0 {
-		logrus.Debugf("Flags loading completed with %d errors", len(result.Errors))
-
-		for _, loadErr := range result.Errors {
-			logrus.Debugf("Flags loading error: %v", loadErr)
-			// If this is a critical error (like file not found), return it.
-			if isCriticalError(loadErr) {
-				return loadErr
-			}
+		// Check if this is a critical error that should stop execution
+		if isCriticalError(err) {
+			return fmt.Errorf("failed to load flags: %w", err)
 		}
-		// If no flags were loaded due to errors, just return. (no flags to merge).
-		if result.Flags == nil {
-			return nil
-		}
+		// Non-critical errors (like config file not found) should not stop execution
+		logrus.Debugf("Flags loading error: %v", err)
+		return nil
 	}
 
 	// If no flags configuration found, nothing to merge.
@@ -80,39 +69,8 @@ func (m *Manager) LoadAndMergeFlags(configPath, command string) error {
 
 	// Validate the flags configuration.
 	validationErrors := m.validator.Validate(result.Flags)
-	if len(validationErrors) > 0 {
-		// Separate fatal errors from warnings.
-		var fatalErrors []ValidationError
-
-		var warnings []ValidationError
-
-		for _, valErr := range validationErrors {
-			if valErr.Severity == ValidationSeverityFatal {
-				fatalErrors = append(fatalErrors, valErr)
-			} else {
-				warnings = append(warnings, valErr)
-			}
-		}
-
-		// Return immediately if there are fatal errors.
-		if len(fatalErrors) > 0 {
-			logrus.Errorf("Found %d fatal validation errors in flags configuration:", len(fatalErrors))
-
-			for _, fatalErr := range fatalErrors {
-				logrus.Errorf("  %v", fatalErr)
-			}
-
-			return fmt.Errorf("%w with %d fatal errors", ErrFlagsValidationFailed, len(fatalErrors))
-		}
-
-		// Log warnings but continue execution.
-		if len(warnings) > 0 {
-			logrus.Warnf("Found %d validation warnings in flags configuration:", len(warnings))
-
-			for _, warning := range warnings {
-				logrus.Warnf("  %v", warning)
-			}
-		}
+	if err := m.handleValidationErrors(validationErrors, ErrFlagsValidationFailed, "flags configuration"); err != nil {
+		return err
 	}
 
 	// Continue with merging despite validation errors (warnings only).
@@ -138,20 +96,13 @@ func (m *Manager) LoadAndMergeGlobalFlags(configPath string) error {
 	// Load flags from configuration file.
 	result, err := m.loader.LoadFromFile(absConfigPath)
 	if err != nil {
-		return fmt.Errorf("failed to load global flags: %w", err)
-	}
-
-	// Check for loading errors.
-	if len(result.Errors) > 0 {
-		logrus.Debugf("Global flags loading completed with %d errors", len(result.Errors))
-
-		for _, loadErr := range result.Errors {
-			logrus.Debugf("Global flags loading error: %v", loadErr)
+		// For global flags, critical errors should still be fatal before log file creation
+		if isCriticalError(err) {
+			return fmt.Errorf("failed to load global flags: %w", err)
 		}
-		// If no flags were loaded due to errors, just return.
-		if result.Flags == nil {
-			return nil
-		}
+		// Non-critical errors should not stop execution
+		logrus.Debugf("Global flags loading error: %v", err)
+		return nil
 	}
 
 	// If no flags configuration found, nothing to merge.
@@ -164,39 +115,8 @@ func (m *Manager) LoadAndMergeGlobalFlags(configPath string) error {
 	// Validate only global flags.
 	if result.Flags.Global != nil {
 		validationErrors := m.validator.validateCommandFlags(result.Flags.Global, "global")
-		if len(validationErrors) > 0 {
-			// Separate fatal errors from warnings.
-			var fatalErrors []ValidationError
-
-			var warnings []ValidationError
-
-			for _, valErr := range validationErrors {
-				if valErr.Severity == ValidationSeverityFatal {
-					fatalErrors = append(fatalErrors, valErr)
-				} else {
-					warnings = append(warnings, valErr)
-				}
-			}
-
-			// Return immediately if there are fatal errors.
-			if len(fatalErrors) > 0 {
-				logrus.Errorf("Found %d fatal validation errors in global flags configuration:", len(fatalErrors))
-
-				for _, fatalErr := range fatalErrors {
-					logrus.Errorf("  %v", fatalErr)
-				}
-
-				return fmt.Errorf("%w with %d fatal errors", ErrGlobalFlagsValidationFailed, len(fatalErrors))
-			}
-
-			// Log warnings but continue execution.
-			if len(warnings) > 0 {
-				logrus.Warnf("Found %d validation warnings in global flags configuration:", len(warnings))
-
-				for _, warning := range warnings {
-					logrus.Warnf("  %v", warning)
-				}
-			}
+		if err := m.handleValidationErrors(validationErrors, ErrGlobalFlagsValidationFailed, "global flags configuration"); err != nil {
+			return err
 		}
 	}
 
@@ -216,51 +136,18 @@ func (m *Manager) TryLoadFromCurrentDirectory(command string) error {
 	if err != nil {
 		// This is expected if no config file exists.
 		logrus.Debugf("No configuration file found in current directory: %v", err)
-
 		return nil
 	}
 
-	if len(result.Errors) > 0 || result.Flags == nil {
+	if result.Flags == nil {
 		logrus.Debugf("Unable to load flags from current directory")
-
 		return nil
 	}
 
 	// Validate and merge.
 	validationErrors := m.validator.Validate(result.Flags)
-	if len(validationErrors) > 0 {
-		// Separate fatal errors from warnings.
-		var fatalErrors []ValidationError
-
-		var warnings []ValidationError
-
-		for _, valErr := range validationErrors {
-			if valErr.Severity == ValidationSeverityFatal {
-				fatalErrors = append(fatalErrors, valErr)
-			} else {
-				warnings = append(warnings, valErr)
-			}
-		}
-
-		// Return immediately if there are fatal errors.
-		if len(fatalErrors) > 0 {
-			logrus.Errorf("Found %d fatal validation errors in flags configuration:", len(fatalErrors))
-
-			for _, fatalErr := range fatalErrors {
-				logrus.Errorf("  %v", fatalErr)
-			}
-
-			return fmt.Errorf("%w with %d fatal errors", ErrFlagsValidationFailed, len(fatalErrors))
-		}
-
-		// Log warnings but continue execution.
-		if len(warnings) > 0 {
-			logrus.Warnf("Found %d validation warnings in flags configuration:", len(warnings))
-
-			for _, warning := range warnings {
-				logrus.Warnf("  %v", warning)
-			}
-		}
+	if err := m.handleValidationErrors(validationErrors, ErrFlagsValidationFailed, "flags configuration"); err != nil {
+		return err
 	}
 
 	if err := m.merger.MergeIntoViper(result.Flags, command); err != nil {
@@ -285,6 +172,11 @@ func GetConfigPathFromViper() string {
 // isCriticalError determines if an error should cause the flags loading to fail
 // rather than just log a warning.
 func isCriticalError(err error) bool {
+	// Configuration file not found is not critical (expected in many cases)
+	if errors.Is(err, ErrConfigurationFileNotFound) || errors.Is(err, ErrNoFuryctlConfigFileFound) {
+		return false
+	}
+
 	// Check if this is a dynamic value parsing error.
 	if errors.Is(err, parser.ErrCannotParseDynamicValue) {
 		errMsg := err.Error()
@@ -310,7 +202,55 @@ func isCriticalError(err error) bool {
 		}
 	}
 
+	// YAML parsing errors and other processing errors are critical
+	if strings.Contains(err.Error(), "failed to parse configuration file") ||
+		strings.Contains(err.Error(), "failed to process dynamic values") {
+		return true
+	}
+
 	return false
+}
+
+// handleValidationErrors processes validation errors by separating fatal errors from warnings,
+// logging them appropriately, and returning early for fatal errors.
+func (m *Manager) handleValidationErrors(validationErrors []ValidationError, fatalError error, context string) error {
+	if len(validationErrors) == 0 {
+		return nil
+	}
+
+	// Separate fatal errors from warnings.
+	var fatalErrors []ValidationError
+	var warnings []ValidationError
+
+	for _, valErr := range validationErrors {
+		if valErr.Severity == ValidationSeverityFatal {
+			fatalErrors = append(fatalErrors, valErr)
+		} else {
+			warnings = append(warnings, valErr)
+		}
+	}
+
+	// Return immediately if there are fatal errors.
+	if len(fatalErrors) > 0 {
+		logrus.Errorf("Found %d fatal validation errors in %s:", len(fatalErrors), context)
+
+		for _, fatalErr := range fatalErrors {
+			logrus.Errorf("  %v", fatalErr)
+		}
+
+		return fmt.Errorf("%w with %d fatal errors", fatalError, len(fatalErrors))
+	}
+
+	// Log warnings but continue execution.
+	if len(warnings) > 0 {
+		logrus.Warnf("Found %d validation warnings in %s:", len(warnings), context)
+
+		for _, warning := range warnings {
+			logrus.Warnf("  %v", warning)
+		}
+	}
+
+	return nil
 }
 
 // LoadAndMergeCommandFlags loads and merges flags for a specific command with proper error handling.

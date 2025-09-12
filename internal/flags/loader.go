@@ -36,21 +36,13 @@ func NewLoader(baseDir string) *Loader {
 func (l *Loader) LoadFromFile(configPath string) (*LoadResult, error) {
 	// Ensure the config file exists.
 	if _, err := os.Stat(configPath); os.IsNotExist(err) {
-		return &LoadResult{
-			ConfigPath: configPath,
-			Flags:      nil,
-			Errors:     []error{fmt.Errorf("%w: %s", ErrConfigurationFileNotFound, configPath)},
-		}, nil
+		return nil, fmt.Errorf("%w: %s", ErrConfigurationFileNotFound, configPath)
 	}
 
 	// Load the configuration file.
 	config, err := yamlx.FromFileV3[ConfigWithFlags](configPath)
 	if err != nil {
-		return &LoadResult{
-			ConfigPath: configPath,
-			Flags:      nil,
-			Errors:     []error{fmt.Errorf("failed to parse configuration file: %w", err)},
-		}, nil
+		return nil, fmt.Errorf("failed to parse configuration file: %w", err)
 	}
 
 	// If no flags section exists, return empty result.
@@ -58,24 +50,18 @@ func (l *Loader) LoadFromFile(configPath string) (*LoadResult, error) {
 		return &LoadResult{
 			ConfigPath: configPath,
 			Flags:      nil,
-			Errors:     nil,
 		}, nil
 	}
 
 	// Process dynamic values in the flags configuration.
 	processedFlags, err := l.processDynamicValues(config.Flags)
 	if err != nil {
-		return &LoadResult{
-			ConfigPath: configPath,
-			Flags:      config.Flags,
-			Errors:     []error{fmt.Errorf("failed to process dynamic values: %w", err)},
-		}, nil
+		return nil, fmt.Errorf("failed to process dynamic values: %w", err)
 	}
 
 	return &LoadResult{
 		ConfigPath: configPath,
 		Flags:      processedFlags,
-		Errors:     nil,
 	}, nil
 }
 
@@ -202,9 +188,5 @@ func (l *Loader) LoadFromDirectory(dir string) (*LoadResult, error) {
 	}
 
 	// No configuration file found.
-	return &LoadResult{
-		ConfigPath: dir,
-		Flags:      nil,
-		Errors:     []error{fmt.Errorf("%w: %s", ErrNoFuryctlConfigFileFound, dir)},
-	}, nil
+	return nil, fmt.Errorf("%w: %s", ErrNoFuryctlConfigFileFound, dir)
 }
