@@ -34,35 +34,43 @@ func NewLoader(baseDir string) *Loader {
 
 // LoadFromFile loads flags configuration from the specified furyctl.yaml file.
 func (l *Loader) LoadFromFile(configPath string) (*LoadResult, error) {
+	result := &LoadResult{
+		ConfigPath: configPath,
+		Flags:      nil,
+		Errors:     []error{},
+	}
+
 	// Ensure the config file exists.
 	if _, err := os.Stat(configPath); os.IsNotExist(err) {
-		return nil, fmt.Errorf("%w: %s", ErrConfigurationFileNotFound, configPath)
+		result.Errors = append(result.Errors, fmt.Errorf("%w: %s", ErrConfigurationFileNotFound, configPath))
+
+		return result, nil
 	}
 
 	// Load the configuration file.
 	config, err := yamlx.FromFileV3[ConfigWithFlags](configPath)
 	if err != nil {
-		return nil, fmt.Errorf("failed to parse configuration file: %w", err)
+		result.Errors = append(result.Errors, fmt.Errorf("failed to parse configuration file: %w", err))
+
+		return result, nil
 	}
 
 	// If no flags section exists, return empty result.
 	if config.Flags == nil {
-		return &LoadResult{
-			ConfigPath: configPath,
-			Flags:      nil,
-		}, nil
+		return result, nil
 	}
 
 	// Process dynamic values in the flags configuration.
 	processedFlags, err := l.processDynamicValues(config.Flags)
 	if err != nil {
-		return nil, fmt.Errorf("failed to process dynamic values: %w", err)
+		result.Errors = append(result.Errors, fmt.Errorf("failed to process dynamic values: %w", err))
+
+		return result, nil
 	}
 
-	return &LoadResult{
-		ConfigPath: configPath,
-		Flags:      processedFlags,
-	}, nil
+	result.Flags = processedFlags
+
+	return result, nil
 }
 
 // processDynamicValues processes dynamic values like {env://VAR} and {file://path} in the flags configuration.
@@ -188,5 +196,11 @@ func (l *Loader) LoadFromDirectory(dir string) (*LoadResult, error) {
 	}
 
 	// No configuration file found.
-	return nil, fmt.Errorf("%w: %s", ErrNoFuryctlConfigFileFound, dir)
+	result := &LoadResult{
+		ConfigPath: "",
+		Flags:      nil,
+		Errors:     []error{fmt.Errorf("%w: %s", ErrNoFuryctlConfigFileFound, dir)},
+	}
+
+	return result, nil
 }

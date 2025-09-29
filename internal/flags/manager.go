@@ -51,13 +51,19 @@ func (m *Manager) LoadAndMergeFlags(configPath, command string) error {
 	// Load flags from configuration file.
 	result, err := m.loader.LoadFromFile(absConfigPath)
 	if err != nil {
-		// Check if this is a critical error that should stop execution
-		if isCriticalError(err) {
-			return fmt.Errorf("failed to load flags: %w", err)
+		return fmt.Errorf("failed to load flags: %w", err)
+	}
+
+	// Check for errors in the result.
+	if len(result.Errors) > 0 {
+		for _, loadErr := range result.Errors {
+			// Check if this is a critical error that should stop execution.
+			if isCriticalError(loadErr) {
+				return fmt.Errorf("failed to load flags: %w", loadErr)
+			}
+			// Non-critical errors (like config file not found) should not stop execution.
+			logrus.Debugf("Flags loading error: %v", loadErr)
 		}
-		// Non-critical errors (like config file not found) should not stop execution
-		logrus.Debugf("Flags loading error: %v", err)
-		return nil
 	}
 
 	// If no flags configuration found, nothing to merge.
@@ -96,13 +102,19 @@ func (m *Manager) LoadAndMergeGlobalFlags(configPath string) error {
 	// Load flags from configuration file.
 	result, err := m.loader.LoadFromFile(absConfigPath)
 	if err != nil {
-		// For global flags, critical errors should still be fatal before log file creation
-		if isCriticalError(err) {
-			return fmt.Errorf("failed to load global flags: %w", err)
+		return fmt.Errorf("failed to load global flags: %w", err)
+	}
+
+	// Check for errors in the result.
+	if len(result.Errors) > 0 {
+		for _, loadErr := range result.Errors {
+			// For global flags, critical errors should still be fatal before log file creation.
+			if isCriticalError(loadErr) {
+				return fmt.Errorf("failed to load global flags: %w", loadErr)
+			}
+			// Non-critical errors should not stop execution.
+			logrus.Debugf("Global flags loading error: %v", loadErr)
 		}
-		// Non-critical errors should not stop execution
-		logrus.Debugf("Global flags loading error: %v", err)
-		return nil
 	}
 
 	// If no flags configuration found, nothing to merge.
@@ -115,7 +127,9 @@ func (m *Manager) LoadAndMergeGlobalFlags(configPath string) error {
 	// Validate only global flags.
 	if result.Flags.Global != nil {
 		validationErrors := m.validator.validateCommandFlags(result.Flags.Global, "global")
-		if err := m.handleValidationErrors(validationErrors, ErrGlobalFlagsValidationFailed, "global flags configuration"); err != nil {
+		if err := m.handleValidationErrors(
+			validationErrors, ErrGlobalFlagsValidationFailed, "global flags configuration",
+		); err != nil {
 			return err
 		}
 	}
@@ -136,11 +150,21 @@ func (m *Manager) TryLoadFromCurrentDirectory(command string) error {
 	if err != nil {
 		// This is expected if no config file exists.
 		logrus.Debugf("No configuration file found in current directory: %v", err)
+
 		return nil
+	}
+
+	// Check for errors in the result.
+	if len(result.Errors) > 0 {
+		for _, loadErr := range result.Errors {
+			// This is expected if no config file exists.
+			logrus.Debugf("No configuration file found in current directory: %v", loadErr)
+		}
 	}
 
 	if result.Flags == nil {
 		logrus.Debugf("Unable to load flags from current directory")
+
 		return nil
 	}
 
@@ -172,7 +196,7 @@ func GetConfigPathFromViper() string {
 // isCriticalError determines if an error should cause the flags loading to fail
 // rather than just log a warning.
 func isCriticalError(err error) bool {
-	// Configuration file not found is not critical (expected in many cases)
+	// Configuration file not found is not critical (expected in many cases).
 	if errors.Is(err, ErrConfigurationFileNotFound) || errors.Is(err, ErrNoFuryctlConfigFileFound) {
 		return false
 	}
@@ -202,7 +226,7 @@ func isCriticalError(err error) bool {
 		}
 	}
 
-	// YAML parsing errors and other processing errors are critical
+	// YAML parsing errors and other processing errors are critical.
 	if strings.Contains(err.Error(), "failed to parse configuration file") ||
 		strings.Contains(err.Error(), "failed to process dynamic values") {
 		return true
@@ -213,13 +237,14 @@ func isCriticalError(err error) bool {
 
 // handleValidationErrors processes validation errors by separating fatal errors from warnings,
 // logging them appropriately, and returning early for fatal errors.
-func (m *Manager) handleValidationErrors(validationErrors []ValidationError, fatalError error, context string) error {
+func (*Manager) handleValidationErrors(validationErrors []ValidationError, fatalError error, context string) error {
 	if len(validationErrors) == 0 {
 		return nil
 	}
 
 	// Separate fatal errors from warnings.
 	var fatalErrors []ValidationError
+
 	var warnings []ValidationError
 
 	for _, valErr := range validationErrors {

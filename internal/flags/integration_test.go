@@ -330,8 +330,8 @@ flags:
     invalid_yaml: [unclosed array
 `,
 			command:       "global",
-			expectError:   false, // Manager continues execution on YAML errors
-			errorContains: "",
+			expectError:   true, // YAML parsing errors are now critical and cause failure
+			errorContains: "failed to parse configuration file",
 		},
 		{
 			name: "conflicting_flags",
