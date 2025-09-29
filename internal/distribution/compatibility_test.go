@@ -115,6 +115,16 @@ func TestEKSClusterCheckIsCompatible(t *testing.T) {
 			distributionVersion: "v1.32.2",
 			expected:            false,
 		},
+		{
+			name:                "should return true if distribution version equals 1.33.0",
+			distributionVersion: "v1.33.0",
+			expected:            true,
+		},
+		{
+			name:                "should return false if distribution version is greater than 1.33.0",
+			distributionVersion: "v1.33.2",
+			expected:            false,
+		},
 	}
 
 	for _, tc := range testCases {

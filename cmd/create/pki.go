@@ -6,7 +6,6 @@ package create
 
 import (
 	"crypto/x509"
-	"errors"
 	"fmt"
 	"net"
 	"path/filepath"
@@ -71,8 +70,10 @@ func NewPki(etcd, controlplane bool, pkiPath string) error {
 
 		err = etcd.Create()
 		if err != nil {
-			return fmt.Errorf("creating PKI for etcd failed: %w", err)
+			msg = fmt.Errorf("creating PKI for etcd failed: %w", err)
 		}
+
+		return msg
 
 	case controlplane:
 		logrus.Debug("creating PKI for Kubernetes control plane")
@@ -81,11 +82,11 @@ func NewPki(etcd, controlplane bool, pkiPath string) error {
 
 		err := cp.Create()
 		if err != nil {
-			return fmt.Errorf("creating PKI for etcd failed: %w", err)
+			msg = fmt.Errorf("creating PKI for etcd failed: %w", err)
 		}
-	}
 
-	return errors.ErrUnsupported
+		return msg
+	}
 }
 
 func NewPKICmd() *cobra.Command {

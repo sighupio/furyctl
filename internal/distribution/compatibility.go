@@ -60,6 +60,7 @@ func getEKSCompatibleRanges() []VersionRange {
 		{"v1.30.0", "v1.30.2"},
 		{"v1.31.0", "v1.31.1"},
 		{"v1.32.0", "v1.32.0"},
+		{"v1.33.0", "v1.33.0"},
 	}
 }
 
@@ -74,6 +75,7 @@ func getKFDCompatibleRanges() []VersionRange {
 		{"v1.30.0", "v1.30.2"},
 		{"v1.31.0", "v1.31.1"},
 		{"v1.32.0", "v1.32.0"},
+		{"v1.33.0", "v1.33.0"},
 	}
 }
 
@@ -88,6 +90,7 @@ func getOnPremisesCompatibleRanges() []VersionRange {
 		{"v1.30.0", "v1.30.2"},
 		{"v1.31.0", "v1.31.1"},
 		{"v1.32.0", "v1.32.0"},
+		{"v1.33.0", "v1.33.0"},
 	}
 }
 
