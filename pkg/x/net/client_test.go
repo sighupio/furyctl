@@ -59,44 +59,26 @@ func TestLocalCacheClientDecorator_Download_ColdCache(t *testing.T) {
 		desc    string
 		shasum  string
 		src     string
-		dst     string
 		wantErr error
 	}{
 		{
 			desc:   "cold cache - https",
 			shasum: "25ea7ee9d13d1843dfbeff40948be729af77a30503a6681a1d8293c746de527f",
 			src:    distroHTTPSURL,
-			dst: func() string {
-				baseDst, err := os.MkdirTemp("", "furyctl-")
-				if err != nil {
-					t.Fatal(err)
-				}
-
-				return filepath.Join(baseDst, "data")
-			}(),
 		},
 		{
 			desc:   "cold cache - ssh",
 			shasum: "25ea7ee9d13d1843dfbeff40948be729af77a30503a6681a1d8293c746de527f",
 			src:    distroSSHURL,
-			dst: func() string {
-				baseDst, err := os.MkdirTemp("", "furyctl-")
-				if err != nil {
-					t.Fatal(err)
-				}
-
-				return filepath.Join(baseDst, "data")
-			}(),
 		},
 	}
 	for _, tC := range testCases {
 		t.Run(tC.desc, func(t *testing.T) {
 			t.Parallel()
 
-			cacheDir, err := os.MkdirTemp("", "furyctl-cache-")
-			if err != nil {
-				t.Fatal(err)
-			}
+			cacheDir := t.TempDir()
+			baseDst := t.TempDir()
+			dst := filepath.Join(baseDst, "data")
 
 			c := netx.WithLocalCache(NewFakeClient(), cacheDir)
 
@@ -104,13 +86,13 @@ func TestLocalCacheClientDecorator_Download_ColdCache(t *testing.T) {
 			assert.NoFileExists(t, filepath.Join(cacheDir, tC.shasum, "kfd.yaml"))
 			assert.NoFileExists(t, filepath.Join(cacheDir, tC.shasum, "README.md"))
 
-			err = c.Download(tC.src, tC.dst)
+			err := c.Download(tC.src, dst)
 
 			test.AssertErrorIs(t, err, tC.wantErr)
 
 			// Check the files have been downloaded.
-			assert.FileExists(t, filepath.Join(tC.dst, "kfd.yaml"))
-			assert.FileExists(t, filepath.Join(tC.dst, "README.md"))
+			assert.FileExists(t, filepath.Join(dst, "kfd.yaml"))
+			assert.FileExists(t, filepath.Join(dst, "README.md"))
 
 			// Check the files have been cached.
 			assert.FileExists(t, filepath.Join(cacheDir, tC.shasum, "kfd.yaml"))
@@ -126,7 +108,6 @@ func TestLocalCacheClientDecorator_Download_WarmCache(t *testing.T) {
 		desc       string
 		shasum     string
 		src        string
-		dst        string
 		wantErr    error
 		cleanupDst bool
 	}{
@@ -134,42 +115,27 @@ func TestLocalCacheClientDecorator_Download_WarmCache(t *testing.T) {
 			desc:   "warm cache, no files in dst",
 			shasum: "25ea7ee9d13d1843dfbeff40948be729af77a30503a6681a1d8293c746de527f",
 			src:    distroHTTPSURL,
-			dst: func() string {
-				baseDst, err := os.MkdirTemp("", "furyctl-")
-				if err != nil {
-					t.Fatal(err)
-				}
-
-				return filepath.Join(baseDst, "data")
-			}(),
 		},
 		{
-			desc:   "warm cache, files already in dst",
-			shasum: "25ea7ee9d13d1843dfbeff40948be729af77a30503a6681a1d8293c746de527f",
-			src:    distroHTTPSURL,
-			dst: func() string {
-				baseDst, err := os.MkdirTemp("", "furyctl-")
-				if err != nil {
-					t.Fatal(err)
-				}
-
-				dst := filepath.Join(baseDst, "data")
-
-				if err := createFakeDistroDst(dst); err != nil {
-					t.Fatal(err)
-				}
-
-				return dst
-			}(),
+			desc:       "warm cache, files already in dst",
+			shasum:     "25ea7ee9d13d1843dfbeff40948be729af77a30503a6681a1d8293c746de527f",
+			src:        distroHTTPSURL,
+			cleanupDst: true,
 		},
 	}
 	for _, tC := range testCases {
 		t.Run(tC.desc, func(t *testing.T) {
 			t.Parallel()
 
-			cacheDir, err := os.MkdirTemp("", "furyctl-cache-")
-			if err != nil {
-				t.Fatal(err)
+			cacheDir := t.TempDir()
+			baseDst := t.TempDir()
+			dst := filepath.Join(baseDst, "data")
+
+			// Pre-populate dst if needed for test scenario.
+			if tC.cleanupDst {
+				if err := createFakeDistroDst(dst); err != nil {
+					t.Fatal(err)
+				}
 			}
 
 			c := netx.WithLocalCache(NewFakeClient(), cacheDir)
@@ -180,13 +146,13 @@ func TestLocalCacheClientDecorator_Download_WarmCache(t *testing.T) {
 			}
 
 			// Exercise the SUT.
-			err = c.Download(tC.src, tC.dst)
+			err := c.Download(tC.src, dst)
 
 			test.AssertErrorIs(t, err, tC.wantErr)
 
 			// Check the files have not been downloaded.
-			assert.FileExists(t, filepath.Join(tC.dst, "kfd.yaml"))
-			assert.FileExists(t, filepath.Join(tC.dst, "README.md"))
+			assert.FileExists(t, filepath.Join(dst, "kfd.yaml"))
+			assert.FileExists(t, filepath.Join(dst, "README.md"))
 
 			// Check the files have been cached.
 			assert.FileExists(t, filepath.Join(cacheDir, tC.shasum, "kfd.yaml"))

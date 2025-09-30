@@ -19,6 +19,7 @@ import (
 	"github.com/sighupio/furyctl/internal/analytics"
 	"github.com/sighupio/furyctl/internal/app"
 	"github.com/sighupio/furyctl/internal/clusterpki"
+	"github.com/sighupio/furyctl/internal/flags"
 	cobrax "github.com/sighupio/furyctl/internal/x/cobra"
 )
 
@@ -102,6 +103,11 @@ You can limit the creation of the PKI to just etcd or just Kubernetes using the 
 			if err := viper.BindPFlags(cmd.Flags()); err != nil {
 				logrus.Fatalf("error while binding flags: %v", err)
 			}
+
+			// Load and validate flags from configuration AFTER binding flags.
+			if err := flags.LoadAndMergeCommandFlags("create"); err != nil {
+				logrus.Fatalf("failed to load flags from configuration: %v", err)
+			}
 		},
 		RunE: func(_ *cobra.Command, _ []string) error {
 			ctn := app.GetContainerInstance()
@@ -152,9 +158,16 @@ You can limit the creation of the PKI to just etcd or just Kubernetes using the 
 
 	pkiCmd.Flags().BoolP(
 		"controlplane",
-		"c",
+		"k",
 		false,
 		"create PKI only for the Kubernetes control plane components",
+	)
+
+	pkiCmd.Flags().StringP(
+		"config",
+		"c",
+		"furyctl.yaml",
+		"Path to the configuration file",
 	)
 
 	return pkiCmd

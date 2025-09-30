@@ -17,6 +17,7 @@ import (
 	"github.com/sighupio/furyctl/internal/app"
 	"github.com/sighupio/furyctl/internal/dependencies/envvars"
 	"github.com/sighupio/furyctl/internal/dependencies/tools"
+	"github.com/sighupio/furyctl/internal/flags"
 	"github.com/sighupio/furyctl/internal/git"
 	cobrax "github.com/sighupio/furyctl/internal/x/cobra"
 	execx "github.com/sighupio/furyctl/internal/x/exec"
@@ -35,6 +36,11 @@ func NewDependenciesCmd() *cobra.Command {
 		Short: "Validate dependencies for the SIGHUP Distribution version specified in the configuration file",
 		PreRun: func(cmd *cobra.Command, _ []string) {
 			cmdEvent = analytics.NewCommandEvent(cobrax.GetFullname(cmd))
+
+			// Load and validate flags from configuration FIRST.
+			if err := flags.LoadAndMergeCommandFlags("validate"); err != nil {
+				logrus.Fatalf("failed to load flags from configuration: %v", err)
+			}
 
 			if err := viper.BindPFlags(cmd.Flags()); err != nil {
 				logrus.Fatalf("error while binding flags: %v", err)

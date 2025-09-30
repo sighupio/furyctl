@@ -22,6 +22,7 @@ import (
 	"github.com/sighupio/furyctl/internal/app"
 	"github.com/sighupio/furyctl/internal/cluster"
 	"github.com/sighupio/furyctl/internal/config"
+	"github.com/sighupio/furyctl/internal/flags"
 	"github.com/sighupio/furyctl/internal/git"
 	"github.com/sighupio/furyctl/internal/lockfile"
 	cobrax "github.com/sighupio/furyctl/internal/x/cobra"
@@ -68,6 +69,11 @@ func NewClusterCmd() *cobra.Command {
 
 			if err := viper.BindPFlags(cmd.Flags()); err != nil {
 				logrus.Fatalf("error while binding flags: %v", err)
+			}
+
+			// Load and merge flags from configuration file.
+			if err := flags.LoadAndMergeCommandFlags("delete"); err != nil {
+				logrus.Fatalf("%v", err)
 			}
 		},
 		RunE: func(_ *cobra.Command, _ []string) error {

@@ -8,9 +8,8 @@ import (
 	"bytes"
 	"errors"
 	"os"
+	"slices"
 	"testing"
-
-	"golang.org/x/exp/slices"
 
 	execx "github.com/sighupio/furyctl/internal/x/exec"
 )
