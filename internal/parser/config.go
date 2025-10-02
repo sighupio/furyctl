@@ -26,6 +26,7 @@ const (
 var (
 	ErrCannotParseDynamicValue = errors.New("cannot parse dynamic value")
 	RelativePathRegexp         = regexp.MustCompile(`^\.{1,}\/`)
+	DynamicRegexp              = regexp.MustCompile(`{(.*?)}`)
 )
 
 type ConfigParser struct {
@@ -38,9 +39,78 @@ func NewConfigParser(baseDir string) *ConfigParser {
 	}
 }
 
-func (p *ConfigParser) ParseDynamicValue(val any) (string, error) {
-	strVal := fmt.Sprintf("%v", val)
+func (p *ConfigParser) ParseDynamicValue(val any) (any, error) {
+	// Handle different types appropriately.
+	switch v := val.(type) {
+	case string:
+		// Check if this string contains dynamic value patterns.
+		if !strings.Contains(v, "://") {
+			// No dynamic pattern, return as-is.
+			return v, nil
+		}
 
+		return p.ParseMultipleDynamicValues(v)
+
+	case []any:
+		// Process each element in the array.
+		result := make([]any, len(v))
+
+		for i, item := range v {
+			processedItem, err := p.ParseDynamicValue(item)
+			if err != nil {
+				return nil, fmt.Errorf("error processing array element %d: %w", i, err)
+			}
+
+			result[i] = processedItem
+		}
+
+		return result, nil
+
+	case []string:
+		// Process each string in the array.
+		result := make([]any, len(v))
+
+		for i, item := range v {
+			processedItem, err := p.ParseDynamicValue(item)
+			if err != nil {
+				return nil, fmt.Errorf("error processing array element %d: %w", i, err)
+			}
+
+			result[i] = processedItem
+		}
+
+		return result, nil
+
+	default:
+		// For other types (bool, int, float, etc.), return as-is.
+		return val, nil
+	}
+}
+
+// ParseMultipleDynamicValues processes a string that may contain multiple dynamic value patterns.
+// This method handles strings like "{env://PWD}/furyctl.log" or "prefix-{env://VAR}-suffix" correctly.
+// It uses regex to find all {type://value} patterns and replaces them with resolved values.
+func (p *ConfigParser) ParseMultipleDynamicValues(value string) (string, error) {
+	// Find all dynamic value patterns in the string.
+	dynamicValues := DynamicRegexp.FindAllString(value, -1)
+
+	// Process each dynamic value found.
+	for _, dynamicValue := range dynamicValues {
+		// Parse the individual dynamic value using the existing single-value parser.
+		parsedDynamicValue, err := p.parseDynamicString(dynamicValue)
+		if err != nil {
+			return "", fmt.Errorf("error parsing dynamic value %s: %w", dynamicValue, err)
+		}
+
+		// Replace the dynamic value pattern with the resolved value in the original string.
+		value = strings.Replace(value, dynamicValue, parsedDynamicValue, 1)
+	}
+
+	return value, nil
+}
+
+// parseDynamicString processes a string that may contain dynamic value patterns.
+func (p *ConfigParser) parseDynamicString(strVal string) (string, error) {
 	spl := strings.Split(strVal, "://")
 
 	if len(spl) > 1 {
@@ -53,7 +123,7 @@ func (p *ConfigParser) ParseDynamicValue(val any) (string, error) {
 
 		case Env:
 			envVar, exists := os.LookupEnv(sourceValue)
-			if !exists {
+			if !exists || envVar == "" {
 				return "", fmt.Errorf("%w: \"%s\" is empty", ErrCannotParseDynamicValue, sourceValue)
 			}
 

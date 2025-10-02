@@ -114,10 +114,12 @@ func (p *PreFlight) Exec(renderedConfig map[string]any) (*Status, error) {
 	kubeconfigPath := os.Getenv("KUBECONFIG")
 
 	if distribution.HasFeature(p.kfd, distribution.FeatureKubeconfigInSchema) {
-		kubeconfigPath, err = cfgParser.ParseDynamicValue(p.furyctlConf.Spec.Distribution.Kubeconfig)
+		parsedValue, err := cfgParser.ParseDynamicValue(p.furyctlConf.Spec.Distribution.Kubeconfig)
 		if err != nil {
 			return status, fmt.Errorf("error parsing kubeconfig value: %w", err)
 		}
+
+		kubeconfigPath = fmt.Sprintf("%v", parsedValue)
 	} else if kubeconfigPath == "" {
 		return status, ErrKubeconfigNotSet
 	}

@@ -6,6 +6,7 @@ package cmd
 
 import (
 	"crypto/rand"
+	"errors"
 	"fmt"
 	"math/big"
 	"os"
@@ -19,6 +20,7 @@ import (
 	"github.com/spf13/viper"
 
 	"github.com/sighupio/furyctl/internal/app"
+	"github.com/sighupio/furyctl/internal/flags"
 	"github.com/sighupio/furyctl/internal/git"
 	execx "github.com/sighupio/furyctl/internal/x/exec"
 	iox "github.com/sighupio/furyctl/internal/x/io"
@@ -40,6 +42,11 @@ type RootCommand struct {
 	*cobra.Command
 	config *rootConfig
 }
+
+var (
+	ErrInvalidPath    = errors.New("invalid path")
+	ErrUnexpandedPath = errors.New("cannot create log file with unexpanded dynamic values in path")
+)
 
 const (
 	timeout      = 100 * time.Millisecond
@@ -82,6 +89,12 @@ furyctl is a command line interface tool to manage the full lifecycle of SIGHUP 
 
 						logrus.SetLevel(logrus.FatalLevel)
 					}
+				}
+
+				// Load global flags from --config file if specified
+				// This must happen before log file creation to prevent directory creation with unexpanded paths.
+				if err := flags.LoadAndMergeGlobalFlagsFromArgs(); err != nil {
+					logrus.Fatalf("%v", err)
 				}
 
 				// Change working directory (if it is specified) as first thing so all the following paths are relative
@@ -266,6 +279,11 @@ func initConfig() {
 }
 
 func createLogFile(path string) (*os.File, error) {
+	// Safety check: prevent creating directories with unexpanded dynamic values.
+	if strings.Contains(path, "{env://") || strings.Contains(path, "{file://") || strings.Contains(path, "{path://") {
+		return nil, fmt.Errorf("%w: %s", ErrUnexpandedPath, path)
+	}
+
 	// Create the log directory if it doesn't exist.
 	if err := os.MkdirAll(filepath.Dir(path), iox.UserGroupPerm); err != nil {
 		return nil, fmt.Errorf("error while creating log file: %w", err)

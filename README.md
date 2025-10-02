@@ -5,7 +5,7 @@
    <p>The Swiss Army Knife<br/>for the SIGHUP Distribution</p>
 
    [![Build Status](https://ci.sighup.io/api/badges/sighupio/furyctl/status.svg?ref=refs/heads/main)](https://ci.sighup.io/sighupio/furyctl)
-   ![Release](https://img.shields.io/badge/furyctl-v0.32.5-blue)
+   ![Release](https://img.shields.io/badge/furyctl-v0.33.0-blue)
    ![Slack](https://img.shields.io/badge/slack-@kubernetes/fury-yellow.svg?logo=slack)
    ![License](https://img.shields.io/github/license/sighupio/furyctl)
    [![Go Report Card](https://goreportcard.com/badge/github.com/sighupio/furyctl)](https://goreportcard.com/report/github.com/sighupio/furyctl)
@@ -57,7 +57,7 @@ Alternatively, you can install `furyctl` using `mise` or the `asdf` plugin.
 ### Installing with [mise](https://mise.jdx.dev/)
 
 ```bash
-mise use furyctl@0.32.5
+mise use furyctl@0.33.0
 ```
 
 Check that everything is working correctly with `furyctl version`:
@@ -67,7 +67,7 @@ $ furyctl version
 ...
 goVersion: go1.23
 osArch: arm64
-version: 0.32.5
+version: 0.33.0
 ```
 
 ### Installing with [asdf](https://github.com/asdf-vm/asdf)
@@ -85,54 +85,12 @@ $ furyctl version
 ...
 goVersion: go1.23
 osArch: amd64
-version: 0.32.5
+version: 0.33.0
 ```
 
-### Installing from source
+## Development
 
-Prerequisites:
-
-- `go >= 1.23`
-
-Once you've ensured the above dependencies are installed, you can proceed with the installation.
-
-1. Clone the repository:
-
-   ```bash
-   git clone git@github.com:sighupio/furyctl.git
-   # cd into the cloned repository
-   cd furyctl
-   ```
-
-2. Build the binaries by running the following command:
-
-   ```bash
-   go build .
-   ```
-
-3. You will find the binaries for your current architecture inside the current folder:
-
-   ```bash
-   $ ls furyctl
-   furyctl
-   ```
-
-4. Check that the binary is working as expected:
-
-   ```bash
-   $ ./furyctl version
-   buildTime: 2025-04-14T14:38:20Z
-   gitCommit: b2741d0ea623d83209fd488f9893ca33d3d335dd
-   goVersion: go1.23.2
-   osArch: arm64
-   version: 0.32.5
-   ```
-
-5. (optional) move the binary to your `bin` folder, in macOS:
-
-   ```bash
-   sudo mv ./furyctl /usr/local/bin/furyctl
-   ```
+For development setup, building from source, and contributing guidelines, see [DEVELOPMENT.md](docs/DEVELOPMENT.md).
 
 ## Usage
 
@@ -140,22 +98,6 @@ For basic and advanced usage instructions, please refer to furyctl's [official d
 
 <!-- </SD-DOCS> -->
 <!-- <FOOTER> -->
-
-## Development - Test classes
-
-There are four kinds of tests: unit, integration, e2e, and expensive.
-
-Each of them covers specific use cases depending on the speed, cost, and dependencies at play in a given scenario.
-Anything that uses i/o should be marked as integration, with the only expectation of local files and folders: any test
-that uses the local filesystem and nothing more can be marked as 'unit'. This is made for convenience and it's open to
-change in the future should we decide to refactor the code to better isolate that kind of i/o from the logic of the tool.
-
-That said, here's a little summary of the used tags:
-
-- unit: tests that exercise a single component or function in isolation. Tests using local files and dirs are permitted here.
-- integration: tests that require external services, such as github. Test using only local files and dirs should not be marked as integration.
-- e2e: tests that exercise furyctl binary, invoking it as a cli tool and checking its output
-- expensive: e2e tests that incur in some monetary cost, like running an EKS instance on AWS
 
 ## Reporting Issues
 
