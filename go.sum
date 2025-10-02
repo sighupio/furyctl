@@ -541,6 +541,8 @@ github.com/shopspring/decimal v1.4.0 h1:bxl37RwXBklmTi0C79JfXCEBD1cqqHt0bbgBAGFp
 github.com/shopspring/decimal v1.4.0/go.mod h1:gawqmDU56v4yIKSwfBSFip1HdCCXN8/+DMd9qYNcwME=
 github.com/sighupio/fury-distribution v1.33.0-rc.0 h1:y/BLgUP7tlPeb0LTb06gy8uk0iNOTkY725Vw04oxmiE=
 github.com/sighupio/fury-distribution v1.33.0-rc.0/go.mod h1:Ef6oeRJA+Ryt4KdKECSxd8GpRj0mfW+DjxRWJsA//ns=
+github.com/sighupio/fury-distribution v1.33.0 h1:mtg49eCxc4deToDvG01QKU1jCJPNS55Tg9wMnCkUUD0=
+github.com/sighupio/fury-distribution v1.33.0/go.mod h1:Ef6oeRJA+Ryt4KdKECSxd8GpRj0mfW+DjxRWJsA//ns=
 github.com/sighupio/go-jsonschema v0.15.3 h1:q2EtYBbXFRQbRbc9/lkFyg2lmxrJFaa8737dvwm/0bo=
 github.com/sighupio/go-jsonschema v0.15.3/go.mod h1:QOHAu5BGlMReCwWJx1Yf7FK+Z5D8TrVVT+SOgInHd5I=
 github.com/sirupsen/logrus v1.9.3 h1:dueUQJ1C2q9oE3F7wvmSGAaVtTmUizReu6fjN8uqzbQ=
