@@ -189,12 +189,18 @@ func NewOperationPhase(folder string, kfdTools config.KFDTools, binPath string) 
 	basePath := folder
 
 	kustomizePath := path.Join(binPath, "kustomize", kfdTools.Common.Kustomize.Version, "kustomize")
-	terraformPath := path.Join(binPath, "terraform", kfdTools.Common.Terraform.Version, "terraform")
 	kubectlPath := path.Join(binPath, "kubectl", kfdTools.Common.Kubectl.Version, "kubectl")
 	yqPath := path.Join(binPath, "yq", kfdTools.Common.Yq.Version, "yq")
 	helmPath := path.Join(binPath, "helm", kfdTools.Common.Helm.Version, "helm")
 	helmfilePath := path.Join(binPath, "helmfile", kfdTools.Common.Helmfile.Version, "helmfile")
 	kappPath := path.Join(binPath, "kapp", kfdTools.Common.Kapp.Version, "kapp")
+
+	var terraformPath string
+	if kfdTools.Common.OpenTofu.Version != "" {
+		terraformPath = path.Join(binPath, "opentofu", kfdTools.Common.OpenTofu.Version, "tofu")
+	} else {
+		terraformPath = path.Join(binPath, "terraform", kfdTools.Common.Terraform.Version, "terraform")
+	}
 
 	planPath := path.Join(basePath, "terraform", "plan")
 	logsPath := path.Join(basePath, "terraform", "logs")

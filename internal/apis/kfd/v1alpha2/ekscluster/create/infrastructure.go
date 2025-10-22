@@ -20,6 +20,7 @@ import (
 	"github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/ekscluster/common"
 	"github.com/sighupio/furyctl/internal/cluster"
 	"github.com/sighupio/furyctl/internal/parser"
+	"github.com/sighupio/furyctl/internal/tool/opentofu"
 	"github.com/sighupio/furyctl/internal/tool/terraform"
 	"github.com/sighupio/furyctl/internal/upgrade"
 	execx "github.com/sighupio/furyctl/internal/x/exec"
@@ -29,11 +30,19 @@ import (
 
 var ErrAbortedByUser = errors.New("aborted by user")
 
+type TerraformCompatibleRunner interface {
+	Init() error
+	Plan(timestamp int64, params ...string) ([]byte, error)
+	Apply(timestamp int64) error
+	Output() (terraform.OutputJSON, error)
+	Stop() error
+}
+
 type Infrastructure struct {
 	*common.Infrastructure
 
 	kfdManifest config.KFD
-	tfRunner    *terraform.Runner
+	runner      TerraformCompatibleRunner
 	dryRun      bool
 	upgrade     *upgrade.Upgrade
 	paths       cluster.CreatorPaths
@@ -54,15 +63,28 @@ func NewInfrastructure(
 
 	executor := execx.NewStdExecutor()
 
-	return &Infrastructure{
-		Infrastructure: &common.Infrastructure{
-			OperationPhase: phase,
-			FuryctlConf:    furyctlConf,
-			ConfigPath:     paths.ConfigPath,
-			DistroPath:     paths.DistroPath,
-		},
-		kfdManifest: kfdManifest,
-		tfRunner: terraform.NewRunner(
+	// if kfd has opentofu version, use that; else use terraform
+	var runner TerraformCompatibleRunner
+
+	if kfdManifest.Tools.Common.OpenTofu.Version != "" {
+		logrus.Info("Using OpenTofu for infrastructure phase")
+
+		opentofuPath := path.Join(paths.BinPath, "opentofu", kfdManifest.Tools.Common.OpenTofu.Version, "tofu")
+
+		runner = opentofu.NewRunner(
+			executor,
+			opentofu.Paths{
+				Logs:     phase.TerraformLogsPath,
+				Outputs:  phase.TerraformOutputsPath,
+				WorkDir:  path.Join(phase.Path, "terraform"),
+				Plan:     phase.TerraformPlanPath,
+				OpenTofu: opentofuPath,
+			},
+		)
+	} else {
+		logrus.Warn("WARNING: Terraform is deprecated. In future this support will be removed, please migrate to OpenTofu.")
+
+		runner = terraform.NewRunner(
 			executor,
 			terraform.Paths{
 				Logs:      phase.TerraformLogsPath,
@@ -71,10 +93,21 @@ func NewInfrastructure(
 				Plan:      phase.TerraformPlanPath,
 				Terraform: phase.TerraformPath,
 			},
-		),
-		dryRun:  dryRun,
-		upgrade: upgr,
-		paths:   paths,
+		)
+	}
+
+	return &Infrastructure{
+		Infrastructure: &common.Infrastructure{
+			OperationPhase: phase,
+			FuryctlConf:    furyctlConf,
+			ConfigPath:     paths.ConfigPath,
+			DistroPath:     paths.DistroPath,
+		},
+		kfdManifest: kfdManifest,
+		runner:      runner,
+		dryRun:      dryRun,
+		upgrade:     upgr,
+		paths:       paths,
 	}
 }
 
@@ -91,8 +124,8 @@ func (i *Infrastructure) Exec(startFrom string, upgradeState *upgrade.State) err
 		return fmt.Errorf("error preparing infrastructure phase: %w", err)
 	}
 
-	if err := i.tfRunner.Init(); err != nil {
-		return fmt.Errorf("error running terraform init: %w", err)
+	if err := i.runner.Init(); err != nil {
+		return fmt.Errorf("error running terraform/tofu init: %w", err)
 	}
 
 	if err := i.preInfrastructure(startFrom, upgradeState); err != nil {
@@ -141,9 +174,9 @@ func (i *Infrastructure) coreInfrastructure(
 	timestamp int64,
 ) error {
 	if startFrom != cluster.OperationSubPhasePostInfrastructure {
-		plan, err := i.tfRunner.Plan(timestamp)
+		plan, err := i.runner.Plan(timestamp)
 		if err != nil {
-			return fmt.Errorf("error running terraform plan: %w", err)
+			return fmt.Errorf("error running terraform/tofu plan: %w", err)
 		}
 
 		if i.dryRun {
@@ -175,7 +208,7 @@ func (i *Infrastructure) coreInfrastructure(
 
 		logrus.Warn("Creating cloud resources, this could take a while...")
 
-		if err := i.tfRunner.Apply(timestamp); err != nil {
+		if err := i.runner.Apply(timestamp); err != nil {
 			if i.upgrade.Enabled {
 				upgradeState.Phases.Infrastructure.Status = upgrade.PhaseStatusFailed
 			}
@@ -187,8 +220,8 @@ func (i *Infrastructure) coreInfrastructure(
 			upgradeState.Phases.Infrastructure.Status = upgrade.PhaseStatusSuccess
 		}
 
-		if _, err := i.tfRunner.Output(); err != nil {
-			return fmt.Errorf("error getting terraform output: %w", err)
+		if _, err := i.runner.Output(); err != nil {
+			return fmt.Errorf("error getting terraform/tofu output: %w", err)
 		}
 	}
 
@@ -220,10 +253,10 @@ func (i *Infrastructure) SetUpgrade(upgradeEnabled bool) {
 }
 
 func (i *Infrastructure) Stop() error {
-	logrus.Debug("Stopping terraform...")
+	logrus.Debug("Stopping terraform/tofu runner...")
 
-	if err := i.tfRunner.Stop(); err != nil {
-		return fmt.Errorf("error stopping terraform: %w", err)
+	if err := i.runner.Stop(); err != nil {
+		return fmt.Errorf("error stopping terraform/tofu runner: %w", err)
 	}
 
 	return nil

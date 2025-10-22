@@ -16,6 +16,7 @@ import (
 	"github.com/sighupio/furyctl/internal/tool/kapp"
 	"github.com/sighupio/furyctl/internal/tool/kubectl"
 	"github.com/sighupio/furyctl/internal/tool/kustomize"
+	"github.com/sighupio/furyctl/internal/tool/opentofu"
 	"github.com/sighupio/furyctl/internal/tool/openvpn"
 	"github.com/sighupio/furyctl/internal/tool/sed"
 	"github.com/sighupio/furyctl/internal/tool/shell"
@@ -36,6 +37,7 @@ const (
 	Kustomize Name = "kustomize"
 	Openvpn   Name = "openvpn"
 	Terraform Name = "terraform"
+	OpenTofu  Name = "opentofu"
 	Shell     Name = "shell"
 	Helm      Name = "helm"
 	Helmfile  Name = "helmfile"
@@ -124,6 +126,12 @@ func (rf *RunnerFactory) Create(name Name, version, workDir string) Runner {
 		return terraform.NewRunner(rf.executor, terraform.Paths{
 			Terraform: filepath.Join(rf.paths.Bin, string(name), version, string(name)),
 			WorkDir:   workDir,
+		})
+
+	case OpenTofu:
+		return opentofu.NewRunner(rf.executor, opentofu.Paths{
+			OpenTofu: filepath.Join(rf.paths.Bin, string(name), version, "tofu"),
+			WorkDir:  workDir,
 		})
 
 	case Yq:

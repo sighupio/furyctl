@@ -1,0 +1,205 @@
+// Copyright (c) 2017-present SIGHUP s.r.l All rights reserved.
+// Use of this source code is governed by a BSD-style
+// license that can be found in the LICENSE file.
+
+package opentofu
+
+import (
+	"encoding/json"
+	"fmt"
+	"os"
+	"path"
+
+	"github.com/google/uuid"
+
+	"github.com/sighupio/furyctl/internal/tool/terraform"
+	execx "github.com/sighupio/furyctl/internal/x/exec"
+	iox "github.com/sighupio/furyctl/internal/x/io"
+)
+
+type Paths struct {
+	Logs     string
+	Outputs  string
+	Plan     string
+	OpenTofu string
+	WorkDir  string
+}
+
+type Runner struct {
+	executor execx.Executor
+	paths    Paths
+	cmds     map[string]*execx.Cmd
+}
+
+func NewRunner(executor execx.Executor, paths Paths) *Runner {
+	return &Runner{
+		executor: executor,
+		paths:    paths,
+		cmds:     make(map[string]*execx.Cmd),
+	}
+}
+
+func (r *Runner) CmdPath() string {
+	return r.paths.OpenTofu
+}
+
+func (r *Runner) newCmd(args []string) (*execx.Cmd, string) {
+	cmd := execx.NewCmd(r.paths.OpenTofu, execx.CmdOptions{
+		Args:     args,
+		Executor: r.executor,
+		WorkDir:  r.paths.WorkDir,
+	})
+
+	id := uuid.NewString()
+	r.cmds[id] = cmd
+
+	return cmd, id
+}
+
+func (r *Runner) deleteCmd(id string) {
+	delete(r.cmds, id)
+}
+
+func (r *Runner) Init() error {
+	args := []string{"init", "-upgrade"}
+
+	if execx.NoTTY {
+		args = append(args, "-no-color")
+	}
+
+	cmd, id := r.newCmd(args)
+	defer r.deleteCmd(id)
+
+	if err := cmd.Run(); err != nil {
+		return fmt.Errorf("command execution failed: %w", err)
+	}
+
+	return nil
+}
+
+func (r *Runner) Plan(timestamp int64, params ...string) ([]byte, error) {
+	args := []string{"plan"}
+	out := []byte{}
+
+	if len(params) > 0 {
+		args = append(args, params...)
+	}
+
+	args = append(args, "-no-color", "-out", "plan/opentofu.plan")
+
+	cmd, id := r.newCmd(args)
+	defer r.deleteCmd(id)
+
+	if err := cmd.Run(); err != nil {
+		return out, fmt.Errorf("command execution failed: %w", err)
+	}
+
+	err := os.WriteFile(path.Join(r.paths.Plan,
+		fmt.Sprintf("plan-%d.log", timestamp)),
+		cmd.Log.Out.Bytes(),
+		iox.FullRWPermAccess)
+	if err != nil {
+		return out, fmt.Errorf("error writing opentofu plan log: %w", err)
+	}
+
+	out = cmd.Log.Out.Bytes()
+
+	return out, nil
+}
+
+func (r *Runner) Apply(timestamp int64) error {
+	cmd, applyID := r.newCmd([]string{"apply", "-no-color", "-json", "plan/opentofu.plan"})
+	defer r.deleteCmd(applyID)
+
+	if err := cmd.Run(); err != nil {
+		return fmt.Errorf("failed to run opentofu apply: %w", err)
+	}
+
+	if err := os.WriteFile(
+		path.Join(r.paths.Logs, fmt.Sprintf("%d.log", timestamp)),
+		cmd.Log.Out.Bytes(),
+		iox.FullRWPermAccess,
+	); err != nil {
+		return fmt.Errorf("error writing opentofu apply log: %w", err)
+	}
+
+	return nil
+}
+
+func (r *Runner) Output() (terraform.OutputJSON, error) {
+	var oj terraform.OutputJSON
+
+	cmd, outputID := r.newCmd([]string{"output", "-json"})
+	defer r.deleteCmd(outputID)
+
+	if err := cmd.Run(); err != nil {
+		return oj, fmt.Errorf("cannot access opentofu apply output: %w", err)
+	}
+
+	if err := os.WriteFile(
+		path.Join(r.paths.Outputs, "output.json"),
+		cmd.Log.Out.Bytes(),
+		iox.FullRWPermAccess,
+	); err != nil {
+		return oj, fmt.Errorf("error writing opentofu apply outputs: %w", err)
+	}
+
+	if err := json.Unmarshal(cmd.Log.Out.Bytes(), &oj); err != nil {
+		return oj, fmt.Errorf("error unmarshalling opentofu apply outputs: %w", err)
+	}
+
+	return oj, nil
+}
+
+func (r *Runner) State(params ...string) (string, error) {
+	cmd, outputID := r.newCmd(append([]string{"state"}, params...))
+
+	defer r.deleteCmd(outputID)
+
+	if err := cmd.Run(); err != nil {
+		return "", fmt.Errorf("cannot access opentofu state: %w", err)
+	}
+
+	return cmd.Log.Out.String(), nil
+}
+
+func (r *Runner) Destroy() error {
+	args := []string{"destroy", "-auto-approve"}
+
+	if execx.NoTTY {
+		args = append(args, "-no-color")
+	}
+
+	cmd, id := r.newCmd(args)
+	defer r.deleteCmd(id)
+
+	if err := cmd.Run(); err != nil {
+		return fmt.Errorf("error running opentofu destroy: %w", err)
+	}
+
+	return nil
+}
+
+func (r *Runner) Version() (string, error) {
+	args := []string{"version"}
+
+	cmd, id := r.newCmd(args)
+	defer r.deleteCmd(id)
+
+	log, err := execx.CombinedOutput(cmd)
+	if err != nil {
+		return "", fmt.Errorf("error running opentofu version: %w", err)
+	}
+
+	return log, nil
+}
+
+func (r *Runner) Stop() error {
+	for _, cmd := range r.cmds {
+		if err := cmd.Stop(); err != nil {
+			return fmt.Errorf("error stopping opentofu runner: %w", err)
+		}
+	}
+
+	return nil
+}

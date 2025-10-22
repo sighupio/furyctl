@@ -1,0 +1,6 @@
+#!/bin/sh
+
+cat <<EOF
+OpenTofu v1.01.0
+on darwin_amd64
+EOF
