@@ -50,6 +50,18 @@ type PreFlight struct {
 	InfrastructureTerraformOutputsPath string
 }
 
+func (p *PreFlight) getTerraformStateConfig() private.SpecToolsConfigurationTerraformStateS3 {
+	if p.FuryctlConf.Spec.ToolsConfiguration.Opentofu != nil {
+		return private.SpecToolsConfigurationTerraformStateS3{
+			BucketName:           p.FuryctlConf.Spec.ToolsConfiguration.Opentofu.State.S3.BucketName,
+			KeyPrefix:            p.FuryctlConf.Spec.ToolsConfiguration.Opentofu.State.S3.KeyPrefix,
+			Region:               p.FuryctlConf.Spec.ToolsConfiguration.Opentofu.State.S3.Region,
+			SkipRegionValidation: p.FuryctlConf.Spec.ToolsConfiguration.Opentofu.State.S3.SkipRegionValidation,
+		}
+	}
+	return p.FuryctlConf.Spec.ToolsConfiguration.Terraform.State.S3
+}
+
 func (p *PreFlight) Prepare() error {
 	if err := p.CreateRootFolder(); err != nil {
 		return fmt.Errorf("error creating preflight phase folder: %w", err)
@@ -96,18 +108,20 @@ func (p *PreFlight) EnsureTerraformStateAWSS3Bucket() error {
 }
 
 func (p *PreFlight) assertTerraformStateAWSS3BucketMatches() error {
+	stateConfig := p.getTerraformStateConfig()
+
 	r, err := p.AWSRunner.S3Api(
 		false,
 		"get-bucket-location",
 		"--bucket",
-		string(p.FuryctlConf.Spec.ToolsConfiguration.Terraform.State.S3.BucketName),
+		string(stateConfig.BucketName),
 		"--output",
 		"text",
 	)
 	if err != nil {
 		return fmt.Errorf(
 			"%s: %w",
-			string(p.FuryctlConf.Spec.ToolsConfiguration.Terraform.State.S3.BucketName),
+			string(stateConfig.BucketName),
 			ErrAWSS3BucketNotFound,
 		)
 	}
@@ -118,11 +132,11 @@ func (p *PreFlight) assertTerraformStateAWSS3BucketMatches() error {
 		r = "us-east-1"
 	}
 
-	if r != string(p.FuryctlConf.Spec.ToolsConfiguration.Terraform.State.S3.Region) {
+	if r != string(stateConfig.Region) {
 		return fmt.Errorf(
 			"%w, expected %s, got %s",
 			ErrAWSS3BucketRegionMismatch,
-			p.FuryctlConf.Spec.ToolsConfiguration.Terraform.State.S3.Region,
+			string(stateConfig.Region),
 			r,
 		)
 	}
@@ -131,8 +145,9 @@ func (p *PreFlight) assertTerraformStateAWSS3BucketMatches() error {
 }
 
 func (p *PreFlight) createTerraformStateAWSS3Bucket() error {
-	bucket := string(p.FuryctlConf.Spec.ToolsConfiguration.Terraform.State.S3.BucketName)
-	region := string(p.FuryctlConf.Spec.ToolsConfiguration.Terraform.State.S3.Region)
+	stateConfig := p.getTerraformStateConfig()
+	bucket := string(stateConfig.BucketName)
+	region := string(stateConfig.Region)
 
 	if _, err := p.AWSRunner.S3Api(
 		false,
@@ -170,14 +185,16 @@ func (p *PreFlight) copyFromTemplate() error {
 	targetTfDir := path.Join(p.Path, "terraform")
 	prefix := "kube"
 
+	stateConfig := p.getTerraformStateConfig()
+
 	tfConfVars := map[string]map[any]any{
 		"terraform": {
 			"backend": map[string]any{
 				"s3": map[string]any{
-					"bucketName":           p.FuryctlConf.Spec.ToolsConfiguration.Terraform.State.S3.BucketName,
-					"keyPrefix":            p.FuryctlConf.Spec.ToolsConfiguration.Terraform.State.S3.KeyPrefix,
-					"region":               p.FuryctlConf.Spec.ToolsConfiguration.Terraform.State.S3.Region,
-					"skipRegionValidation": p.FuryctlConf.Spec.ToolsConfiguration.Terraform.State.S3.SkipRegionValidation,
+					"bucketName":           stateConfig.BucketName,
+					"keyPrefix":            stateConfig.KeyPrefix,
+					"region":               stateConfig.Region,
+					"skipRegionValidation": stateConfig.SkipRegionValidation,
 				},
 			},
 		},
