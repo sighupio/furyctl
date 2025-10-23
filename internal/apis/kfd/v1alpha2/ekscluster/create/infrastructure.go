@@ -53,7 +53,7 @@ func NewInfrastructure(
 		paths.BinPath,
 	)
 
-	if distribution.HasFeature(kfdManifest, distribution.FeatureOpentofuSupport) && kfdManifest.Tools.Common.Terraform.Version != "" {
+	if !distribution.HasFeature(kfdManifest, distribution.FeatureOpentofuSupport) {
 		logrus.Warn("WARNING: Terraform is deprecated. In future this support will be removed, please migrate to OpenTofu.")
 	}
 
