@@ -16,7 +16,6 @@ import (
 	"github.com/sighupio/furyctl/internal/tool/kapp"
 	"github.com/sighupio/furyctl/internal/tool/kubectl"
 	"github.com/sighupio/furyctl/internal/tool/kustomize"
-	"github.com/sighupio/furyctl/internal/tool/opentofu"
 	"github.com/sighupio/furyctl/internal/tool/openvpn"
 	"github.com/sighupio/furyctl/internal/tool/sed"
 	"github.com/sighupio/furyctl/internal/tool/shell"
@@ -129,9 +128,9 @@ func (rf *RunnerFactory) Create(name Name, version, workDir string) Runner {
 		})
 
 	case OpenTofu:
-		return opentofu.NewRunner(rf.executor, opentofu.Paths{
-			OpenTofu: filepath.Join(rf.paths.Bin, string(name), version, "tofu"),
-			WorkDir:  workDir,
+		return terraform.NewRunner(rf.executor, terraform.Paths{
+			Terraform: filepath.Join(rf.paths.Bin, string(name), version, "tofu"),
+			WorkDir:   workDir,
 		})
 
 	case Yq:

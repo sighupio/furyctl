@@ -14,9 +14,11 @@ import (
 	"strings"
 
 	r3diff "github.com/r3labs/diff/v3"
-	"github.com/sirupsen/logrus"
-
 	"github.com/sighupio/fury-distribution/pkg/apis/config"
+	"github.com/sirupsen/logrus"
+	"github.com/spf13/viper/internal/features"
+
+	"github.com/sighupio/furyctl/internal/distribution"
 	iox "github.com/sighupio/furyctl/internal/x/io"
 	slicesx "github.com/sighupio/furyctl/internal/x/slices"
 	"github.com/sighupio/furyctl/pkg/merge"
@@ -196,9 +198,11 @@ func NewOperationPhase(folder string, kfdTools config.KFDTools, binPath string) 
 	kappPath := path.Join(binPath, "kapp", kfdTools.Common.Kapp.Version, "kapp")
 
 	var terraformPath string
-	if kfdTools.Common.OpenTofu.Version != "" {
+
+	if features.HasFeature(kfdTools, distribution.FeatureOpentofuSupport) {
 		terraformPath = path.Join(binPath, "opentofu", kfdTools.Common.OpenTofu.Version, "tofu")
 	} else {
+		logrus.Warn("WARNING: Terraform is deprecated. In future this support will be removed, please migrate to OpenTofu.")
 		terraformPath = path.Join(binPath, "terraform", kfdTools.Common.Terraform.Version, "terraform")
 	}
 

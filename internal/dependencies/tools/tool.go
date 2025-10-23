@@ -22,7 +22,6 @@ import (
 	"github.com/sighupio/furyctl/internal/tool/kapp"
 	"github.com/sighupio/furyctl/internal/tool/kubectl"
 	"github.com/sighupio/furyctl/internal/tool/kustomize"
-	"github.com/sighupio/furyctl/internal/tool/opentofu"
 	"github.com/sighupio/furyctl/internal/tool/openvpn"
 	"github.com/sighupio/furyctl/internal/tool/sed"
 	"github.com/sighupio/furyctl/internal/tool/shell"
@@ -136,9 +135,9 @@ func (f *Factory) Create(name tool.Name, version string) Tool {
 		return NewTerraform(tf, version)
 
 	case tool.OpenTofu:
-		tofu, ok := t.(*opentofu.Runner)
+		tofu, ok := t.(*terraform.Runner)
 		if !ok {
-			panic(fmt.Sprintf("expected opentofu.Runner, got %T", t))
+			panic(fmt.Sprintf("expected terraform.Runner, got %T", t))
 		}
 
 		return NewOpenTofu(tofu, version)

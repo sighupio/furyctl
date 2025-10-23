@@ -11,10 +11,10 @@ import (
 	"strings"
 
 	"github.com/sighupio/furyctl/internal/semver"
-	"github.com/sighupio/furyctl/internal/tool/opentofu"
+	"github.com/sighupio/furyctl/internal/tool/terraform"
 )
 
-func NewOpenTofu(runner *opentofu.Runner, version string) *OpenTofu {
+func NewOpenTofu(runner *terraform.Runner, version string) *OpenTofu {
 	return &OpenTofu{
 		arch:    runtime.GOARCH,
 		os:      runtime.GOOS,
