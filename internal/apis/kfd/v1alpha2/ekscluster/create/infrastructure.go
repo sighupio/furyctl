@@ -19,6 +19,7 @@ import (
 
 	"github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/ekscluster/common"
 	"github.com/sighupio/furyctl/internal/cluster"
+	"github.com/sighupio/furyctl/internal/distribution"
 	"github.com/sighupio/furyctl/internal/parser"
 	"github.com/sighupio/furyctl/internal/tool/terraform"
 	"github.com/sighupio/furyctl/internal/upgrade"
@@ -51,6 +52,10 @@ func NewInfrastructure(
 		kfdManifest.Tools,
 		paths.BinPath,
 	)
+
+	if distribution.HasFeature(kfdManifest, distribution.FeatureOpentofuSupport) && kfdManifest.Tools.Common.Terraform.Version != "" {
+		logrus.Warn("WARNING: Terraform is deprecated. In future this support will be removed, please migrate to OpenTofu.")
+	}
 
 	executor := execx.NewStdExecutor()
 
