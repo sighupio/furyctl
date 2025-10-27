@@ -13,8 +13,6 @@ echo "Backing up infrastructure terraform state to S3..."
   
 # Pull the current state from remote backend 
 $terraformbin -chdir=terraform state pull > /tmp/infrastructure-state-${timestamp}.json  
-
-cat /tmp/infrastructure-state-${timestamp}.json  
   
 # Upload to S3 with .bkp extension  
 aws s3 cp /tmp/infrastructure-state-${timestamp}.json s3://${s3bucket}/${s3keyprefix}/infrastructure.${timestamp}.bkp --region ${s3region}  
