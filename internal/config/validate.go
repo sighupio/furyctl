@@ -396,19 +396,11 @@ func validateToolsConfiguration(repoPath string, furyctlConf map[string]any) err
 	toolsConfig := spec["toolsConfiguration"].(map[string]any)
 
 	_, hasTerraformConfig := toolsConfig["terraform"]
-	_, hasOpentofuConfig := toolsConfig["opentofu"]
 
-	if hasTerraformConfig && kfdFile.Tools.Common.Terraform.Version == "" {
-		return fmt.Errorf("tool configuration mismatch: furyctl.yaml uses 'spec.toolsConfiguration.terraform' " +
-			"but the distribution does not provide a Terraform version. " +
-			"Terraform has been deprecated in favor of OpenTofu. " +
+	if hasTerraformConfig && kfdFile.Tools.Common.OpenTofu.Version != "" {
+		logrus.Warn("'spec.toolsConfiguration.terraform' is deprecated, " +
+			"it will be removed in future versions. " +
 			"Please use 'spec.toolsConfiguration.opentofu' instead")
-	}
-
-	if hasOpentofuConfig && kfdFile.Tools.Common.OpenTofu.Version == "" {
-		return fmt.Errorf("tool configuration mismatch: furyctl.yaml uses 'spec.toolsConfiguration.opentofu' " +
-			"but the distribution does not provide an OpenTofu version. " +
-			"Please use 'spec.toolsConfiguration.terraform' instead")
 	}
 
 	return nil
