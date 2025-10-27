@@ -12,9 +12,9 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/sighupio/fury-distribution/pkg/apis/config"
 	"github.com/sirupsen/logrus"
 
-	"github.com/sighupio/fury-distribution/pkg/apis/config"
 	"github.com/sighupio/furyctl/internal/analytics"
 	"github.com/sighupio/furyctl/internal/apis"
 	"github.com/sighupio/furyctl/internal/distribution"
@@ -399,15 +399,16 @@ func validateToolsConfiguration(repoPath string, furyctlConf map[string]any) err
 	_, hasOpentofuConfig := toolsConfig["opentofu"]
 
 	if hasTerraformConfig && kfdFile.Tools.Common.Terraform.Version == "" {
-		return fmt.Errorf("tool configuration mismatch: furyctl.yaml has Terraform, "+
-			"but kfd.yaml does not provide a Terraform version. "+
-			"Please use 'spec.toolsConfiguration.opentofu'")
+		return fmt.Errorf("tool configuration mismatch: furyctl.yaml uses 'spec.toolsConfiguration.terraform' " +
+			"but the distribution does not provide a Terraform version. " +
+			"Terraform has been deprecated in favor of OpenTofu. " +
+			"Please use 'spec.toolsConfiguration.opentofu' instead")
 	}
 
 	if hasOpentofuConfig && kfdFile.Tools.Common.OpenTofu.Version == "" {
-		return fmt.Errorf("tool configuration mismatch: furyctl.yaml has OpenTofu, "+
-			"but kfd.yaml does not provide an OpenTofu version. "+
-			"Please use 'spec.toolsConfiguration.terraform'")
+		return fmt.Errorf("tool configuration mismatch: furyctl.yaml uses 'spec.toolsConfiguration.opentofu' " +
+			"but the distribution does not provide an OpenTofu version. " +
+			"Please use 'spec.toolsConfiguration.terraform' instead")
 	}
 
 	return nil
