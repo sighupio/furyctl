@@ -165,6 +165,11 @@ func Validate(path, repoPath string) error {
 		return fmt.Errorf("error while validating against extra schema rules: %w", err)
 	}
 
+	// Validate configuration between kfd.yaml and furyctl.yaml files for Terraform/OpenTofu.
+	if err := validateToolsConfiguration(repoPath, rawConf); err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -375,6 +380,34 @@ func validateFlagsSection(flagsSection any) error {
 		if len(fatalErrors) > 0 {
 			return fmt.Errorf("%w: %v", ErrFlagsValidationFailed, fatalErrors)
 		}
+	}
+
+	return nil
+}
+
+// validateToolsConfiguration checks that the tool configured in furyctl.yaml
+// is available in kfd.yaml file.
+func validateToolsConfiguration(repoPath string, furyctlConf map[string]any) error {
+	kfdPath := filepath.Join(repoPath, "kfd.yaml")
+
+	kfdFile, _ := yamlx.FromFileV3[config.KFD](kfdPath)
+
+	spec := furyctlConf["spec"].(map[string]any)
+	toolsConfig := spec["toolsConfiguration"].(map[string]any)
+
+	_, hasTerraformConfig := toolsConfig["terraform"]
+	_, hasOpentofuConfig := toolsConfig["opentofu"]
+
+	if hasTerraformConfig && kfdFile.Tools.Common.Terraform.Version == "" {
+		return fmt.Errorf("tool configuration mismatch: furyctl.yaml has Terraform, "+
+			"but kfd.yaml does not provide a Terraform version. "+
+			"Please use 'spec.toolsConfiguration.opentofu'")
+	}
+
+	if hasOpentofuConfig && kfdFile.Tools.Common.OpenTofu.Version == "" {
+		return fmt.Errorf("tool configuration mismatch: furyctl.yaml has OpenTofu, "+
+			"but kfd.yaml does not provide an OpenTofu version. "+
+			"Please use 'spec.toolsConfiguration.terraform'")
 	}
 
 	return nil
