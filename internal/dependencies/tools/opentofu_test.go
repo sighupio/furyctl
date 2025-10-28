@@ -15,7 +15,6 @@ import (
 	"testing"
 
 	"github.com/sighupio/furyctl/internal/dependencies/tools"
-	"github.com/sighupio/furyctl/internal/tool/opentofu"
 	execx "github.com/sighupio/furyctl/internal/x/exec"
 )
 
