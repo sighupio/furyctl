@@ -14,10 +14,10 @@ import (
 	"sync"
 	"time"
 
-	"github.com/sighupio/fury-distribution/pkg/apis/config"
-	"github.com/sighupio/fury-distribution/pkg/apis/ekscluster/v1alpha2/private"
 	"github.com/sirupsen/logrus"
 
+	"github.com/sighupio/fury-distribution/pkg/apis/config"
+	"github.com/sighupio/fury-distribution/pkg/apis/ekscluster/v1alpha2/private"
 	commcreate "github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/common/create"
 	"github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/ekscluster/create"
 	"github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/ekscluster/vpn"

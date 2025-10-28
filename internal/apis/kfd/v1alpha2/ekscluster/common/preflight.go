@@ -59,6 +59,7 @@ func (p *PreFlight) getTerraformStateConfig() private.SpecToolsConfigurationTerr
 			SkipRegionValidation: p.FuryctlConf.Spec.ToolsConfiguration.Opentofu.State.S3.SkipRegionValidation,
 		}
 	}
+
 	return p.FuryctlConf.Spec.ToolsConfiguration.Terraform.State.S3
 }
 

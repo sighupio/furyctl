@@ -11,7 +11,6 @@ import (
 	"strings"
 
 	"github.com/sighupio/fury-distribution/pkg/apis/config"
-
 	"github.com/sighupio/furyctl/internal/apis"
 	"github.com/sighupio/furyctl/internal/distribution"
 	itool "github.com/sighupio/furyctl/internal/tool"
@@ -139,8 +138,7 @@ func (tv *Validator) validateTools(i any, kfdManifest config.KFD) ([]string, []e
 			continue
 		}
 
-		var tool Tool = nil
-		tool = tv.toolFactory.Create(itool.Name(toolName), toolCfg.Version)
+		tool := tv.toolFactory.Create(itool.Name(toolName), toolCfg.Version)
 
 		if tool == nil {
 			errs = append(

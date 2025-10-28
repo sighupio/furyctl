@@ -12,9 +12,9 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/sighupio/fury-distribution/pkg/apis/config"
 	"github.com/sirupsen/logrus"
 
+	"github.com/sighupio/fury-distribution/pkg/apis/config"
 	"github.com/sighupio/furyctl/internal/analytics"
 	"github.com/sighupio/furyctl/internal/apis"
 	"github.com/sighupio/furyctl/internal/distribution"
@@ -32,6 +32,8 @@ var (
 	ErrUnsupportedFlagsCommand      = errors.New("unsupported flags command")
 	ErrFlagsValidationFailed        = errors.New("flags validation failed")
 	ErrExpandedConfigurationNotAMap = errors.New("expanded configuration is not a map[string]any")
+	ErrReadingSpec                  = errors.New("error reading spec from kfd.yaml")
+	ErrReadingToolsConfiguration    = errors.New("error reading spec.toolsConfiguration from kfd.yaml")
 )
 
 func Create(
@@ -166,11 +168,9 @@ func Validate(path, repoPath string) error {
 	}
 
 	// Validate configuration between kfd.yaml and furyctl.yaml files for Terraform/OpenTofu.
-	if err := validateToolsConfiguration(repoPath, rawConf); err != nil {
-		return err
-	}
+	err = validateToolsConfiguration(repoPath, rawConf)
 
-	return nil
+	return err
 }
 
 // checkSchemaSupportsFlags determines if the schema includes support for the flags field.
@@ -390,10 +390,20 @@ func validateFlagsSection(flagsSection any) error {
 func validateToolsConfiguration(repoPath string, furyctlConf map[string]any) error {
 	kfdPath := filepath.Join(repoPath, "kfd.yaml")
 
-	kfdFile, _ := yamlx.FromFileV3[config.KFD](kfdPath)
+	kfdFile, err := yamlx.FromFileV3[config.KFD](kfdPath)
+	if err != nil {
+		return fmt.Errorf("%w: %w", dist.ErrYamlUnmarshalFile, err)
+	}
 
-	spec := furyctlConf["spec"].(map[string]any)
-	toolsConfig := spec["toolsConfiguration"].(map[string]any)
+	spec, exists := furyctlConf["spec"].(map[string]any)
+	if !exists {
+		return fmt.Errorf("%w: %w", ErrReadingSpec, err)
+	}
+
+	toolsConfig, exists := spec["toolsConfiguration"].(map[string]any)
+	if !exists {
+		return fmt.Errorf("%w: %w", ErrReadingToolsConfiguration, err)
+	}
 
 	_, hasTerraformConfig := toolsConfig["terraform"]
 
