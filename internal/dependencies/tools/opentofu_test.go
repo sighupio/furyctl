@@ -15,6 +15,7 @@ import (
 	"testing"
 
 	"github.com/sighupio/furyctl/internal/dependencies/tools"
+	"github.com/sighupio/furyctl/internal/tool/terraform"
 	execx "github.com/sighupio/furyctl/internal/x/exec"
 )
 
@@ -127,8 +128,8 @@ func Test_OpenTofu_CheckBinVersion(t *testing.T) {
 	}
 }
 
-func newOpenTofuRunner() *opentofu.Runner {
-	return opentofu.NewRunner(execx.NewFakeExecutor("TestHelperProcess"), opentofu.Paths{
-		OpenTofu: "tofu",
+func newOpenTofuRunner() *terraform.Runner {
+	return terraform.NewRunner(execx.NewFakeExecutor("TestHelperProcess"), terraform.Paths{
+		Terraform: "tofu",
 	})
 }

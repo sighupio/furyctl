@@ -13,6 +13,7 @@ import (
 	"testing"
 
 	"github.com/sighupio/fury-distribution/pkg/apis/config"
+
 	"github.com/sighupio/furyctl/internal/dependencies/tools"
 	execx "github.com/sighupio/furyctl/internal/x/exec"
 )
@@ -34,7 +35,6 @@ func Test_Validator_Validate(t *testing.T) {
 						Kubectl:   config.KFDTool{Version: "1.21.1"},
 						Kustomize: config.KFDTool{Version: "3.9.4"},
 						Terraform: config.KFDTool{Version: "0.15.4"},
-						OpenTofu:  config.KFDTool{Version: "1.10.0"},
 						Furyagent: config.KFDTool{Version: "0.3.0"},
 						Yq:        config.KFDTool{Version: "4.34.1"},
 						Helm:      config.KFDTool{Version: "3.12.3"},
@@ -50,7 +50,6 @@ func Test_Validator_Validate(t *testing.T) {
 				"kubectl",
 				"kustomize",
 				"terraform",
-				"opentofu",
 				"furyagent",
 				"yq",
 				"helm",
@@ -67,7 +66,6 @@ func Test_Validator_Validate(t *testing.T) {
 						Kubectl:   config.KFDTool{Version: "1.22.0"},
 						Kustomize: config.KFDTool{Version: "3.5.3"},
 						Terraform: config.KFDTool{Version: "1.3.0"},
-						OpenTofu:  config.KFDTool{Version: "1.01.0"},
 						Furyagent: config.KFDTool{Version: "0.4.0"},
 						Yq:        config.KFDTool{Version: "4.33.0"},
 						Helm:      config.KFDTool{Version: "3.11.3"},
@@ -84,7 +82,6 @@ func Test_Validator_Validate(t *testing.T) {
 				errors.New("kubectl: wrong tool version - installed = 1.21.1, expected = 1.22.0"),
 				errors.New("kustomize: wrong tool version - installed = 3.9.4, expected = 3.5.3"),
 				errors.New("terraform: wrong tool version - installed = 0.15.4, expected = 1.3.0"),
-				errors.New("opentofu: wrong tool version - installed = 1.10.0, expected = 1.01.0"),
 				errors.New("yq: wrong tool version - installed = 4.34.1, expected = 4.33.0"),
 				errors.New("helm: wrong tool version - installed = 3.12.3, expected = 3.11.3"),
 				errors.New("helmfile: wrong tool version - installed = 0.156.0, expected = 0.155.0"),
@@ -95,6 +92,44 @@ func Test_Validator_Validate(t *testing.T) {
 			desc: "all tools for EKSCluster kind are installed",
 			manifest: config.KFD{
 				Version: "1.29.0",
+				Tools: config.KFDTools{
+					Common: config.KFDToolsCommon{
+						Kubectl:   config.KFDTool{Version: "1.21.1"},
+						Kustomize: config.KFDTool{Version: "3.9.4"},
+						Terraform: config.KFDTool{Version: "0.15.4"},
+						Furyagent: config.KFDTool{Version: "0.3.0"},
+						Yq:        config.KFDTool{Version: "4.34.1"},
+						Helm:      config.KFDTool{Version: "3.12.3"},
+						Helmfile:  config.KFDTool{Version: "0.156.0"},
+						Kapp:      config.KFDTool{Version: "0.62.0"},
+					},
+					Eks: config.KFDToolsEks{
+						Awscli: config.KFDTool{Version: "2.8.12"},
+					},
+				},
+			},
+			state: config.Furyctl{
+				APIVersion: "kfd.sighup.io/v1alpha2",
+				Kind:       "EKSCluster",
+				Spec:       config.FuryctlSpec{},
+			},
+			wantOks: []string{
+				"kubectl",
+				"kustomize",
+				"terraform",
+				"furyagent",
+				"yq",
+				"helm",
+				"helmfile",
+				"awscli",
+				"openvpn",
+				"kapp",
+			},
+		},
+		{
+			desc: "when opentofu is configured do not download terraform for EKSCluster",
+			manifest: config.KFD{
+				Version: "1.33.2",
 				Tools: config.KFDTools{
 					Common: config.KFDToolsCommon{
 						Kubectl:   config.KFDTool{Version: "1.21.1"},
@@ -120,7 +155,6 @@ func Test_Validator_Validate(t *testing.T) {
 			wantOks: []string{
 				"kubectl",
 				"kustomize",
-				"terraform",
 				"opentofu",
 				"furyagent",
 				"yq",
