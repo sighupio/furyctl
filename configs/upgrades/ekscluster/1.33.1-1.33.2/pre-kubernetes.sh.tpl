@@ -20,4 +20,4 @@ echo "Backing up kubernetes terraform state to S3..."
 # Upload to S3 with .bkp extension  
 aws s3 cp s3://${s3bucket}/${s3keyprefix}/cluster.json s3://${s3bucket}/${s3keyprefix}/cluster.${timestamp}.bkp --region ${s3region}  
 
-echo "Kubernetes state backed up to s3://${s3bucket}/${s3keyprefix}/kubernetes.${timestamp}.bkp"
+echo "Kubernetes state backed up to s3://${s3bucket}/${s3keyprefix}/cluster.${timestamp}.bkp"
