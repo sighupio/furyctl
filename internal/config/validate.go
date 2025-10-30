@@ -168,9 +168,7 @@ func Validate(path, repoPath string) error {
 	}
 
 	// Validate configuration between kfd.yaml and furyctl.yaml files for Terraform/OpenTofu.
-	err = validateToolsConfiguration(repoPath, rawConf)
-
-	return err
+	return validateToolsConfiguration(repoPath, rawConf)
 }
 
 // checkSchemaSupportsFlags determines if the schema includes support for the flags field.
