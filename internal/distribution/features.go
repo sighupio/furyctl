@@ -8,6 +8,7 @@ import (
 	"errors"
 
 	"github.com/sighupio/fury-distribution/pkg/apis/config"
+
 	"github.com/sighupio/furyctl/internal/semver"
 )
 
@@ -23,7 +24,7 @@ const (
 	FeatureYqSupport          = Feature("YqSupport")
 	FeatureKubernetesLogTypes = Feature("KubernetesLogTypes")
 	FeatureKappSupport        = Feature("KappSupport")
-	FeatureOpentofuSupport    = Feature("OpentofuSupport")
+	FeatureOpenTofuSupport    = Feature("OpenTofuSupport")
 )
 
 func HasFeature(kfd config.KFD, name Feature) bool {
@@ -49,8 +50,8 @@ func HasFeature(kfd config.KFD, name Feature) bool {
 	case FeatureKappSupport:
 		return hasFeatureKappSupport(kfd)
 
-	case FeatureOpentofuSupport:
-		return hasFeatureOpentofuSupport(kfd)
+	case FeatureOpenTofuSupport:
+		return hasFeatureOpenTofuSupport(kfd)
 	}
 
 	return false
@@ -189,7 +190,7 @@ func hasFeatureKappSupport(kfd config.KFD) bool {
 	return kfd.Tools.Common.Kapp.Version != ""
 }
 
-func hasFeatureOpentofuSupport(kfd config.KFD) bool {
-	// If defined or empty, do not mark it as supported.
+func hasFeatureOpenTofuSupport(kfd config.KFD) bool {
+	// If empty(previous kfd.yaml), do not mark it as supported.
 	return kfd.Tools.Common.OpenTofu.Version != ""
 }

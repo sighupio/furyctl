@@ -376,11 +376,11 @@ func (dd *Downloader) DownloadTools(kfd config.KFD) ([]string, error) {
 					return
 				}
 
-				if (name == "terraform") && distribution.HasFeature(kfd, distribution.FeatureOpentofuSupport) {
+				if (name == "terraform") && distribution.HasFeature(kfd, distribution.FeatureOpenTofuSupport) {
 					return
 				}
 
-				if (name == "opentofu") && !distribution.HasFeature(kfd, distribution.FeatureOpentofuSupport) {
+				if (name == "opentofu") && !distribution.HasFeature(kfd, distribution.FeatureOpenTofuSupport) {
 					return
 				}
 

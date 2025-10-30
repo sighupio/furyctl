@@ -130,11 +130,11 @@ func (tv *Validator) validateTools(i any, kfdManifest config.KFD) ([]string, []e
 			continue
 		}
 
-		if (toolName == "terraform") && distribution.HasFeature(kfdManifest, distribution.FeatureOpentofuSupport) {
+		if (toolName == "terraform") && distribution.HasFeature(kfdManifest, distribution.FeatureOpenTofuSupport) {
 			continue
 		}
 
-		if (toolName == "opentofu") && !distribution.HasFeature(kfdManifest, distribution.FeatureOpentofuSupport) {
+		if (toolName == "opentofu") && !distribution.HasFeature(kfdManifest, distribution.FeatureOpenTofuSupport) {
 			continue
 		}
 
