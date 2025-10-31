@@ -92,7 +92,7 @@ func (i *Infrastructure) Exec(startFrom string, upgradeState *upgrade.State) err
 	}
 
 	if err := i.tfRunner.Init(); err != nil {
-		return fmt.Errorf("error running terraform init: %w", err)
+		return fmt.Errorf("error running terraform/tofu init: %w", err)
 	}
 
 	if err := i.preInfrastructure(startFrom, upgradeState); err != nil {
@@ -143,7 +143,7 @@ func (i *Infrastructure) coreInfrastructure(
 	if startFrom != cluster.OperationSubPhasePostInfrastructure {
 		plan, err := i.tfRunner.Plan(timestamp)
 		if err != nil {
-			return fmt.Errorf("error running terraform plan: %w", err)
+			return fmt.Errorf("error running terraform/tofu plan: %w", err)
 		}
 
 		if i.dryRun {
@@ -188,7 +188,7 @@ func (i *Infrastructure) coreInfrastructure(
 		}
 
 		if _, err := i.tfRunner.Output(); err != nil {
-			return fmt.Errorf("error getting terraform output: %w", err)
+			return fmt.Errorf("error getting terraform/tofu output: %w", err)
 		}
 	}
 
@@ -220,10 +220,10 @@ func (i *Infrastructure) SetUpgrade(upgradeEnabled bool) {
 }
 
 func (i *Infrastructure) Stop() error {
-	logrus.Debug("Stopping terraform...")
+	logrus.Debug("Stopping terraform/tofu runner...")
 
 	if err := i.tfRunner.Stop(); err != nil {
-		return fmt.Errorf("error stopping terraform: %w", err)
+		return fmt.Errorf("error stopping terraform/tofu runner: %w", err)
 	}
 
 	return nil

@@ -37,6 +37,7 @@ var (
 	errCannotParse          = errors.New("can't parse system tool version")
 	errMissingBin           = errors.New("missing binary from vendor folder")
 	errGetVersion           = errors.New("can't get tool version")
+	ErrInvalidRunnerType    = errors.New("invalid runner type")
 )
 
 type Tool interface {
@@ -69,122 +70,153 @@ type Factory struct {
 func (f *Factory) Create(name tool.Name, version string) Tool {
 	t := f.runnerFactory.Create(name, version, "")
 
-	switch name {
-	case tool.Ansible:
+	toolMap := make(map[tool.Name]func() (Tool, error))
+
+	toolMap[tool.Ansible] = func() (Tool, error) {
 		a, ok := t.(*ansible.Runner)
 		if !ok {
-			panic(fmt.Sprintf("expected ansible.Runner, got %T", t))
+			return nil, fmt.Errorf("expected ansible.Runner, got %T: %w", t, ErrInvalidRunnerType)
 		}
 
-		return NewAnsible(a, version)
+		return NewAnsible(a, version), nil
+	}
 
-	case tool.Awscli:
+	toolMap[tool.Awscli] = func() (Tool, error) {
 		a, ok := t.(*awscli.Runner)
 		if !ok {
-			panic(fmt.Sprintf("expected awscli.Runner, got %T", t))
+			return nil, fmt.Errorf("expected awscli.Runner, got %T: %w", t, ErrInvalidRunnerType)
 		}
 
-		return NewAwscli(a, version)
+		return NewAwscli(a, version), nil
+	}
 
-	case tool.Furyagent:
+	toolMap[tool.Furyagent] = func() (Tool, error) {
 		fa, ok := t.(*furyagent.Runner)
 		if !ok {
-			panic(fmt.Sprintf("expected furyagent.Runner, got %T", t))
+			return nil, fmt.Errorf("expected furyagent.Runner, got %T: %w", t, ErrInvalidRunnerType)
 		}
 
-		return NewFuryagent(fa, version)
+		return NewFuryagent(fa, version), nil
+	}
 
-	case tool.Git:
+	toolMap[tool.Git] = func() (Tool, error) {
 		g, ok := t.(*git.Runner)
 		if !ok {
-			panic(fmt.Sprintf("expected git.Runner, got %T", t))
+			return nil, fmt.Errorf("expected git.Runner, got %T: %w", t, ErrInvalidRunnerType)
 		}
 
-		return NewGit(g, version)
+		return NewGit(g, version), nil
+	}
 
-	case tool.Kubectl:
+	toolMap[tool.Kubectl] = func() (Tool, error) {
 		k, ok := t.(*kubectl.Runner)
 		if !ok {
-			panic(fmt.Sprintf("expected kubectl.Runner, got %T", t))
+			return nil, fmt.Errorf("expected kubectl.Runner, got %T: %w", t, ErrInvalidRunnerType)
 		}
 
-		return NewKubectl(k, version)
+		return NewKubectl(k, version), nil
+	}
 
-	case tool.Kustomize:
+	toolMap[tool.Kustomize] = func() (Tool, error) {
 		k, ok := t.(*kustomize.Runner)
 		if !ok {
-			panic(fmt.Sprintf("expected kustomize.Runner, got %T", t))
+			return nil, fmt.Errorf("expected kustomize.Runner, got %T: %w", t, ErrInvalidRunnerType)
 		}
 
-		return NewKustomize(k, version)
+		return NewKustomize(k, version), nil
+	}
 
-	case tool.Openvpn:
+	toolMap[tool.Openvpn] = func() (Tool, error) {
 		o, ok := t.(*openvpn.Runner)
 		if !ok {
-			panic(fmt.Sprintf("expected openvpn.Runner, got %T", t))
+			return nil, fmt.Errorf("expected openvpn.Runner, got %T: %w", t, ErrInvalidRunnerType)
 		}
 
-		return NewOpenvpn(o, version)
+		return NewOpenvpn(o, version), nil
+	}
 
-	case tool.Terraform:
+	toolMap[tool.Terraform] = func() (Tool, error) {
 		tf, ok := t.(*terraform.Runner)
 		if !ok {
-			panic(fmt.Sprintf("expected terraform.Runner, got %T", t))
+			return nil, fmt.Errorf("expected terraform.Runner, got %T: %w", t, ErrInvalidRunnerType)
 		}
 
-		return NewTerraform(tf, version)
+		return NewTerraform(tf, version), nil
+	}
 
-	case tool.Yq:
+	toolMap[tool.OpenTofu] = func() (Tool, error) {
+		tofu, ok := t.(*terraform.Runner)
+		if !ok {
+			return nil, fmt.Errorf("expected terraform.Runner, got %T: %w", t, ErrInvalidRunnerType)
+		}
+
+		return NewOpenTofu(tofu, version), nil
+	}
+
+	toolMap[tool.Yq] = func() (Tool, error) {
 		yqr, ok := t.(*yq.Runner)
 		if !ok {
-			panic(fmt.Sprintf("expected yq.Runner, got %T", t))
+			return nil, fmt.Errorf("expected yq.Runner, got %T: %w", t, ErrInvalidRunnerType)
 		}
 
-		return NewYq(yqr, version)
+		return NewYq(yqr, version), nil
+	}
 
-	case tool.Shell:
+	toolMap[tool.Shell] = func() (Tool, error) {
 		shellr, ok := t.(*shell.Runner)
 		if !ok {
-			panic(fmt.Sprintf("expected shell.Runner, got %T", t))
+			return nil, fmt.Errorf("expected shell.Runner, got %T: %w", t, ErrInvalidRunnerType)
 		}
 
-		return NewShell(shellr, version)
+		return NewShell(shellr, version), nil
+	}
 
-	case tool.Sed:
+	toolMap[tool.Sed] = func() (Tool, error) {
 		sedr, ok := t.(*sed.Runner)
 		if !ok {
-			panic(fmt.Sprintf("expected sed.Runner, got %T", t))
+			return nil, fmt.Errorf("expected sed.Runner, got %T: %w", t, ErrInvalidRunnerType)
 		}
 
-		return NewSed(sedr, version)
+		return NewSed(sedr, version), nil
+	}
 
-	case tool.Helm:
+	toolMap[tool.Helm] = func() (Tool, error) {
 		hr, ok := t.(*helm.Runner)
 		if !ok {
-			panic(fmt.Sprintf("expected helm.Runner, got %T", t))
+			return nil, fmt.Errorf("expected helm.Runner, got %T: %w", t, ErrInvalidRunnerType)
 		}
 
-		return NewHelm(hr, version)
+		return NewHelm(hr, version), nil
+	}
 
-	case tool.Helmfile:
+	toolMap[tool.Helmfile] = func() (Tool, error) {
 		hfr, ok := t.(*helmfile.Runner)
 		if !ok {
-			panic(fmt.Sprintf("expected helmfile.Runner, got %T", t))
+			return nil, fmt.Errorf("expected helmfile.Runner, got %T: %w", t, ErrInvalidRunnerType)
 		}
 
-		return NewHelmfile(hfr, version)
+		return NewHelmfile(hfr, version), nil
+	}
 
-	case tool.Kapp:
+	toolMap[tool.Kapp] = func() (Tool, error) {
 		ka, ok := t.(*kapp.Runner)
 		if !ok {
-			panic(fmt.Sprintf("expected kapp.Runner, got %T", t))
+			return nil, fmt.Errorf("expected kapp.Runner, got %T: %w", t, ErrInvalidRunnerType)
 		}
 
-		return NewKapp(ka, version)
-
-	default:
-		return nil
+		return NewKapp(ka, version), nil
 	}
+
+	if createFunc, ok := toolMap[name]; ok {
+		createdTool, err := createFunc()
+		if err != nil {
+			panic(err)
+		}
+
+		return createdTool
+	}
+
+	return nil
 }
 
 type checker struct {

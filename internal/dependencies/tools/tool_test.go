@@ -46,6 +46,10 @@ func Test_Factory_Create(t *testing.T) {
 			wantTool: true,
 		},
 		{
+			desc:     "opentofu",
+			wantTool: true,
+		},
+		{
 			desc:     "yq",
 			wantTool: true,
 		},
@@ -158,6 +162,11 @@ func TestHelperProcess(t *testing.T) {
 		switch subcmd {
 		case "version":
 			fmt.Fprintf(os.Stdout, "Terraform v0.15.4\non darwin_amd64")
+		}
+	case "tofu":
+		switch subcmd {
+		case "version":
+			fmt.Fprintf(os.Stdout, "OpenTofu v1.10.0\non darwin_arm64")
 		}
 	case "yq":
 		switch subcmd {

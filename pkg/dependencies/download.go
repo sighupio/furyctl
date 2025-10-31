@@ -376,6 +376,14 @@ func (dd *Downloader) DownloadTools(kfd config.KFD) ([]string, error) {
 					return
 				}
 
+				if (name == "terraform") && distribution.HasFeature(kfd, distribution.FeatureOpenTofuSupport) {
+					return
+				}
+
+				if (name == "opentofu") && !distribution.HasFeature(kfd, distribution.FeatureOpenTofuSupport) {
+					return
+				}
+
 				tfc := dd.toolFactory.Create(tool.Name(name), toolCfg.Version)
 				if tfc == nil || !tfc.SupportsDownload() {
 					utsCh <- name

@@ -32,6 +32,8 @@ var (
 	ErrUnsupportedFlagsCommand      = errors.New("unsupported flags command")
 	ErrFlagsValidationFailed        = errors.New("flags validation failed")
 	ErrExpandedConfigurationNotAMap = errors.New("expanded configuration is not a map[string]any")
+	ErrReadingSpec                  = errors.New("error reading spec from kfd.yaml")
+	ErrReadingToolsConfiguration    = errors.New("error reading spec.toolsConfiguration from kfd.yaml")
 )
 
 func Create(
@@ -165,7 +167,8 @@ func Validate(path, repoPath string) error {
 		return fmt.Errorf("error while validating against extra schema rules: %w", err)
 	}
 
-	return nil
+	// Validate configuration between kfd.yaml and furyctl.yaml files for Terraform/OpenTofu.
+	return validateToolsConfiguration(repoPath, rawConf)
 }
 
 // checkSchemaSupportsFlags determines if the schema includes support for the flags field.
@@ -375,6 +378,38 @@ func validateFlagsSection(flagsSection any) error {
 		if len(fatalErrors) > 0 {
 			return fmt.Errorf("%w: %v", ErrFlagsValidationFailed, fatalErrors)
 		}
+	}
+
+	return nil
+}
+
+// validateToolsConfiguration checks that the tool configured in furyctl.yaml
+// is available in kfd.yaml file.
+func validateToolsConfiguration(repoPath string, furyctlConf map[string]any) error {
+	kfdPath := filepath.Join(repoPath, "kfd.yaml")
+
+	kfdFile, err := yamlx.FromFileV3[config.KFD](kfdPath)
+	if err != nil {
+		return fmt.Errorf("%w: %w", dist.ErrYamlUnmarshalFile, err)
+	}
+
+	spec, exists := furyctlConf["spec"].(map[string]any)
+	if !exists {
+		return fmt.Errorf("%w: %w", ErrReadingSpec, err)
+	}
+
+	toolsConfig, exists := spec["toolsConfiguration"].(map[string]any)
+	if !exists {
+		// No error if there is no toolsConfiguration(e.g. not available in KFDDistribution).
+		return nil
+	}
+
+	_, hasTerraformConfig := toolsConfig["terraform"]
+
+	if hasTerraformConfig && kfdFile.Tools.Common.OpenTofu.Version != "" {
+		logrus.Warn("'spec.toolsConfiguration.terraform' is deprecated, " +
+			"it will be removed in future versions. " +
+			"Please use 'spec.toolsConfiguration.opentofu' instead")
 	}
 
 	return nil
