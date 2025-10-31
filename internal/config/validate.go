@@ -12,9 +12,9 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/sighupio/fury-distribution/pkg/apis/config"
 	"github.com/sirupsen/logrus"
 
-	"github.com/sighupio/fury-distribution/pkg/apis/config"
 	"github.com/sighupio/furyctl/internal/analytics"
 	"github.com/sighupio/furyctl/internal/apis"
 	"github.com/sighupio/furyctl/internal/distribution"
@@ -400,7 +400,8 @@ func validateToolsConfiguration(repoPath string, furyctlConf map[string]any) err
 
 	toolsConfig, exists := spec["toolsConfiguration"].(map[string]any)
 	if !exists {
-		return fmt.Errorf("%w: %w", ErrReadingToolsConfiguration, err)
+		// no error if there is no toolsConfiguration(e.g. not available in KFDDistribution)
+		return nil
 	}
 
 	_, hasTerraformConfig := toolsConfig["terraform"]
