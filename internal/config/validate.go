@@ -400,7 +400,7 @@ func validateToolsConfiguration(repoPath string, furyctlConf map[string]any) err
 
 	toolsConfig, exists := spec["toolsConfiguration"].(map[string]any)
 	if !exists {
-		// No error if there is no toolsConfiguration(e.g. not available in KFDDistribution)
+		// No error if there is no toolsConfiguration(e.g. not available in KFDDistribution).
 		return nil
 	}
 
