@@ -35,7 +35,7 @@ func NewCertificatesCmd() *cobra.Command {
 	certificatesCmd := &cobra.Command{
 		Use:   "certificates",
 		Short: "Renew certificates of the cluster's PKI used for componenents authentication",
-		Long:  "Renew certificates of the cluster's PKI used for componenents authentication. Note that this not renews other certificates like Ingress certificates or certificates managed by cert-manager.",
+		Long:  "Renew certificates of the cluster's PKI used for componenents authentication. Note that this not renews other certificates like Ingress certificates or certificates managed by cert-manager",
 		PreRun: func(cmd *cobra.Command, _ []string) {
 			cmdEvent = analytics.NewCommandEvent(cobrax.GetFullname(cmd))
 
