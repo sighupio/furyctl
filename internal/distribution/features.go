@@ -23,6 +23,7 @@ const (
 	FeatureYqSupport          = Feature("YqSupport")
 	FeatureKubernetesLogTypes = Feature("KubernetesLogTypes")
 	FeatureKappSupport        = Feature("KappSupport")
+	FeatureOpenTofuSupport    = Feature("OpenTofuSupport")
 )
 
 func HasFeature(kfd config.KFD, name Feature) bool {
@@ -47,6 +48,9 @@ func HasFeature(kfd config.KFD, name Feature) bool {
 
 	case FeatureKappSupport:
 		return hasFeatureKappSupport(kfd)
+
+	case FeatureOpenTofuSupport:
+		return hasFeatureOpenTofuSupport(kfd)
 	}
 
 	return false
@@ -183,4 +187,9 @@ func hasFeatureKubernetesLogTypes(kfd config.KFD) bool {
 func hasFeatureKappSupport(kfd config.KFD) bool {
 	// If defined or empty, do not mark it as supported.
 	return kfd.Tools.Common.Kapp.Version != ""
+}
+
+func hasFeatureOpenTofuSupport(kfd config.KFD) bool {
+	// If empty(previous kfd.yaml), do not mark it as supported.
+	return kfd.Tools.Common.OpenTofu.Version != ""
 }

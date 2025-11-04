@@ -125,6 +125,45 @@ func Test_Validator_Validate(t *testing.T) {
 				"kapp",
 			},
 		},
+		{
+			desc: "when opentofu is configured do not download terraform for EKSCluster",
+			manifest: config.KFD{
+				Version: "1.33.2",
+				Tools: config.KFDTools{
+					Common: config.KFDToolsCommon{
+						Kubectl:   config.KFDTool{Version: "1.21.1"},
+						Kustomize: config.KFDTool{Version: "3.9.4"},
+						Terraform: config.KFDTool{Version: "0.15.4"},
+						OpenTofu:  config.KFDTool{Version: "1.10.0"},
+						Furyagent: config.KFDTool{Version: "0.3.0"},
+						Yq:        config.KFDTool{Version: "4.34.1"},
+						Helm:      config.KFDTool{Version: "3.12.3"},
+						Helmfile:  config.KFDTool{Version: "0.156.0"},
+						Kapp:      config.KFDTool{Version: "0.62.0"},
+					},
+					Eks: config.KFDToolsEks{
+						Awscli: config.KFDTool{Version: "2.8.12"},
+					},
+				},
+			},
+			state: config.Furyctl{
+				APIVersion: "kfd.sighup.io/v1alpha2",
+				Kind:       "EKSCluster",
+				Spec:       config.FuryctlSpec{},
+			},
+			wantOks: []string{
+				"kubectl",
+				"kustomize",
+				"opentofu",
+				"furyagent",
+				"yq",
+				"helm",
+				"helmfile",
+				"awscli",
+				"openvpn",
+				"kapp",
+			},
+		},
 	}
 	for _, tC := range testCases {
 		tC := tC
