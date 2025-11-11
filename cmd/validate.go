@@ -18,6 +18,7 @@ func NewValidateCmd() *cobra.Command {
 
 	validateCmd.AddCommand(validate.NewConfigCmd())
 	validateCmd.AddCommand(validate.NewDependenciesCmd())
+	validateCmd.AddCommand(validate.NewInstallationCmd())
 
 	return validateCmd
 }
