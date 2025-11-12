@@ -42,6 +42,7 @@ const (
 	Helmfile  Name = "helmfile"
 	Sed       Name = "sed"
 	Kapp      Name = "kapp"
+	Go        Name = "go"
 )
 
 type Runner interface {

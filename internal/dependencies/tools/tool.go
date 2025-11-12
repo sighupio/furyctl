@@ -17,6 +17,7 @@ import (
 	"github.com/sighupio/furyctl/internal/tool/awscli"
 	"github.com/sighupio/furyctl/internal/tool/furyagent"
 	"github.com/sighupio/furyctl/internal/tool/git"
+	"github.com/sighupio/furyctl/internal/tool/golang"
 	"github.com/sighupio/furyctl/internal/tool/helm"
 	"github.com/sighupio/furyctl/internal/tool/helmfile"
 	"github.com/sighupio/furyctl/internal/tool/kapp"
@@ -205,6 +206,15 @@ func (f *Factory) Create(name tool.Name, version string) Tool {
 		}
 
 		return NewKapp(ka, version), nil
+	}
+
+	toolMap[tool.Go] = func() (Tool, error) {
+		golang, ok := t.(*golang.Runner)
+		if !ok {
+			return nil, fmt.Errorf("expected kapp.Runner, got %T: %w", t, ErrInvalidRunnerType)
+		}
+
+		return NewGolang(golang, version), nil
 	}
 
 	if createFunc, ok := toolMap[name]; ok {

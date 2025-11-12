@@ -87,6 +87,7 @@ type PkgSummary struct {
 }
 
 func RunTests(component, dir string) error {
+
 	logrus.Info(fmt.Sprintf("Running %s tests", component))
 	args := []string{"test", "-json", "-count", "1", "-tags", "integration"}
 	cmd := exec.CommandContext(context.TODO(), "go", args...)
