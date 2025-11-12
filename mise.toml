@@ -238,7 +238,7 @@ if [ -f "release-notes.md" ]; then
   echo "Using custom release notes from: release-notes.md"
   goreleaser release --verbose --clean --release-notes="release-notes.md"
 else
-  echo "Missing release notes"
+  echo "Missing release notes. Aborting"
 fi
 """
 
