@@ -21,3 +21,4 @@ test/**/kubeconfig
 go.work
 go.work.sum
 .env
+release-notes.md
