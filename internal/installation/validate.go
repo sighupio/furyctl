@@ -159,6 +159,6 @@ func RunTests(component, dir string) error {
 			return fmt.Errorf("go test failed: %v\n%s", waitErr, stderr)
 		}
 	}
-	logrus.Info("Tests for %s: ok", component)
+	logrus.Info(fmt.Sprintf("Tests for %s: ok", component))
 	return nil
 }
