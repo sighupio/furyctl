@@ -234,7 +234,12 @@ description = "release with goreleaser"
 run = """
 export GO_VERSION=$(go version | cut -d ' ' -f 3)
 goreleaser check
-goreleaser release --verbose --clean
+if [ -f "release-notes.md" ]; then
+  echo "Using custom release notes from: release-notes.md"
+  goreleaser release --verbose --clean --release-notes="release-notes.md"
+else
+  echo "Missing release notes. Aborting"
+fi
 """
 
 [tasks.env]

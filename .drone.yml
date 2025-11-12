@@ -212,8 +212,8 @@ steps:
       - name: mise-cache
         path: /mise-data
 
-  - name: build-release
-    image: quay.io/sighup/mise:v2025.4.4
+  - name: prepare-release-notes
+    image: quay.io/sighup/fury-release-notes-plugin:3.12_2.10.0
     pull: always
     depends_on:
       - lint
@@ -221,6 +221,18 @@ steps:
       - test-integration
       - test-flags
       - test-e2e
+    settings:
+      release_notes_file_path: release-notes.md
+    when:
+      ref:
+        include:
+          - refs/tags/v**
+
+  - name: build-release
+    image: quay.io/sighup/mise:v2025.4.4
+    pull: always
+    depends_on:
+      - prepare-release-notes
     commands:
       - eval "$(mise activate bash --shims)"
       - git reset --hard
