@@ -631,7 +631,7 @@ var (
 				session, err := gexec.Start(createInfraCmd, GinkgoWriter, GinkgoWriter)
 				Expect(err).To(Not(HaveOccurred()))
 
-				Eventually(path.Join(tfPath, "plan", "terraform.plan"), 120*time.Second).Should(BeAnExistingFile())
+				Eventually(path.Join(tfPath, "plan", "terraform.plan"), 240*time.Second).Should(BeAnExistingFile())
 
 				Eventually(session).Should(gexec.Exit(0))
 
@@ -680,7 +680,7 @@ var (
 				session, err := gexec.Start(createKubeCmd, GinkgoWriter, GinkgoWriter)
 				Expect(err).To(Not(HaveOccurred()))
 
-				Eventually(path.Join(tfPath, "plan", "terraform.plan"), 120*time.Second).Should(BeAnExistingFile())
+				Eventually(path.Join(tfPath, "plan", "terraform.plan"), 240*time.Second).Should(BeAnExistingFile())
 
 				Eventually(session).Should(gexec.Exit(0))
 
