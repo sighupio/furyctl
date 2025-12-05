@@ -7,6 +7,7 @@
 package template_test
 
 import (
+	"errors"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -128,5 +129,64 @@ func TestFromYAML(t *testing.T) {
 				t.Fatalf("expected %+v, got %+v", tC.want, got)
 			}
 		})
+	}
+}
+
+func TestDigAny_Success(t *testing.T) {
+	dict := map[any]any{
+		"a": map[any]any{"b": "value"},
+	}
+
+	got, err := template.DigAny("a", "b", "default", dict)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if got != "value" {
+		t.Fatalf("expected %q, got %v", "value", got)
+	}
+}
+
+func TestDigAny_MissingKeyReturnsDefault(t *testing.T) {
+	dict := map[any]any{"a": map[any]any{"b": "value"}}
+
+	got, err := template.DigAny("a", "x", "DEF", dict)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if got != "DEF" {
+		t.Fatalf("expected default %q, got %v", "DEF", got)
+	}
+}
+
+func TestDigAny_InsufficientArgs(t *testing.T) {
+	_, err := template.DigAny("only-one")
+	if !errors.Is(err, template.ErrDigAnyInsufficientArgs) {
+		t.Fatalf("expected ErrDigAnyInsufficientArgs, got %v", err)
+	}
+}
+
+func TestDigAny_NonStringKey(t *testing.T) {
+	dict := map[any]any{"a": map[any]any{"b": "value"}}
+	_, err := template.DigAny(123, "default", dict)
+	if err == nil || !errors.Is(err, template.ErrDigAnyInvalidKeyType) {
+		t.Fatalf("expected ErrDigAnyInvalidKeyType, got %v", err)
+	}
+}
+
+func TestDigAny_LastArgNotMap(t *testing.T) {
+	_, err := template.DigAny("a", "default", 123)
+	if err == nil || !errors.Is(err, template.ErrDigAnyInvalidDictType) {
+		t.Fatalf("expected ErrDigAnyInvalidDictType, got %v", err)
+	}
+}
+
+func TestDigAny_NestedNotMapReturnsDefault(t *testing.T) {
+	dict := map[any]any{"a": "not-a-map"}
+	got, err := template.DigAny("a", "b", "DEF", dict)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if got != "DEF" {
+		t.Fatalf("expected default %q, got %v", "DEF", got)
 	}
 }

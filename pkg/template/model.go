@@ -75,6 +75,7 @@ func NewTemplateModel(
 	funcMap.Add("toYaml", ToYAML)
 	funcMap.Add("fromYaml", FromYAML)
 	funcMap.Add("hasKeyAny", HasKeyAny)
+	funcMap.Add("digAny", DigAny)
 
 	return &Model{
 		SourcePath:           source,
