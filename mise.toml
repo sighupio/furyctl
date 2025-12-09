@@ -20,10 +20,7 @@ experimental = true
 
 [tasks.setup]
 description = "complete development environment setup"
-run = [
-  "go mod download",
-  "go mod tidy"
-]
+run = ["go mod download", "go mod tidy"]
 
 [tasks.mod-download]
 description = "download go modules"
@@ -40,7 +37,7 @@ run = "go mod verify"
 [tasks.mod-check-upgrades]
 description = "check for available module upgrades"
 run = """
-go list -mod=readonly -u -f "{{if (and (not (or .Main .Indirect)) .Update)}}{{.Path}}: {{.Version}} -> {{.Update.Version}}{{end}}" -m all
+go list -mod=readonly -u -f '{% raw %}{{if (and (not (or .Main .Indirect)) .Update)}}{{.Path}}: {{.Version}} -> {{.Update.Version}}{{end}}{% endraw %}' -m all
 """
 
 [tasks.mod-upgrade]
@@ -98,7 +95,7 @@ description = "organize Go imports with goimports"
 run = [
   "goimports -v -w -e -local github.com/sighupio main.go",
   "goimports -v -w -e -local github.com/sighupio cmd/",
-  "goimports -v -w -e -local github.com/sighupio internal/"
+  "goimports -v -w -e -local github.com/sighupio internal/",
 ]
 
 [tasks.gci]
@@ -118,7 +115,13 @@ find . -name "*.go" -type f -not -path '*/vendor/*' \
 
 [tasks.format-go]
 description = "run complete Go formatting pipeline"
-run = ["mise run fmt", "mise run fumpt", "mise run imports", "mise run gci", "mise run formattag"]
+run = [
+  "mise run fmt",
+  "mise run fumpt",
+  "mise run imports",
+  "mise run gci",
+  "mise run formattag",
+]
 
 [tasks.lint]
 description = "run linting with golangci-lint"
@@ -211,14 +214,14 @@ run = [
   else
     xdg-open coverage.svg
   fi
-  """
+  """,
 ]
 
 [tasks.clean]
 description = "clean build artifacts"
 run = [
   "rm -rf bin dist",
-  "rm -f furyctl coverage.out coverage.html coverage.svg"
+  "rm -f furyctl coverage.out coverage.html coverage.svg",
 ]
 
 [tasks.build]
@@ -247,5 +250,5 @@ description = "show environment variables for development"
 run = [
   "echo 'export CGO_ENABLED=0'",
   "echo 'export GOARCH={{arch()}}'",
-  "grep -v '^#' .env | sed 's/^/export /' 2>/dev/null || echo '# No .env file found'"
+  "grep -v '^#' .env | sed 's/^/export /' 2>/dev/null || echo '# No .env file found'",
 ]
