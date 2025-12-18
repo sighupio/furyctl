@@ -6,6 +6,7 @@ package apis
 
 import (
 	"github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/ekscluster"
+	"github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/immutable"
 	"github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/kfddistribution"
 	"github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/onpremises"
 )
@@ -27,11 +28,14 @@ func NewExtraSchemaValidatorFactory(apiVersion, kind string) ExtraSchemaValidato
 		case "OnPremises":
 			return &onpremises.ExtraSchemaValidator{}
 
+		case "Immutable":
+			return &immutable.ExtraSchemaValidator{}
+
 		default:
-			return nil
 		}
 
 	default:
 		return nil
 	}
+	return nil
 }
