@@ -18,6 +18,7 @@ const (
 	EKSClusterKind         = "EKSCluster"
 	KFDDistributionKind    = "KFDDistribution"
 	OnPremisesKind         = "OnPremises"
+	ImmutableKind          = "Immutable"
 	MinSupportedKFDVersion = "v1.25.8"
 )
 
@@ -35,6 +36,7 @@ func ConfigKinds() []string {
 		EKSClusterKind,
 		KFDDistributionKind,
 		OnPremisesKind,
+		ImmutableKind,
 	}
 }
 
@@ -76,6 +78,12 @@ func getKFDCompatibleRanges() []VersionRange {
 		{"v1.31.0", "v1.31.2"},
 		{"v1.32.0", "v1.32.1"},
 		{"v1.33.0", "v1.33.1"},
+	}
+}
+
+func getImmutableCompatibleRanges() []VersionRange {
+	return []VersionRange{
+		{"v1.33.1", "v1.33.1"},
 	}
 }
 
@@ -137,6 +145,9 @@ func NewCompatibilityChecker(distributionVersion, kind string) (CompatibilityChe
 
 	case OnPremisesKind:
 		return NewOnPremisesCheck(distributionVersion), nil
+
+	case ImmutableKind:
+		return NewImmutableCheck(distributionVersion), nil
 
 	default:
 		return nil, fmt.Errorf("%w: %s", ErrUnsupportedKind, kind)
@@ -217,6 +228,26 @@ func NewOnPremisesCheck(distributionVersion string) *OnPremisesCheck {
 	return &OnPremisesCheck{
 		CompatibilityCheck: CompatibilityCheck{distributionVersion: distributionVersion},
 	}
+}
+
+type ImmutableCheck struct {
+	CompatibilityCheck
+}
+
+func NewImmutableCheck(distributionVersion string) *ImmutableCheck {
+	return &ImmutableCheck{
+		CompatibilityCheck: CompatibilityCheck{distributionVersion: distributionVersion},
+	}
+}
+
+func (c *ImmutableCheck) IsCompatible() bool {
+	// Parse the current version.
+	currentVersion, err := semver.NewVersion(c.distributionVersion)
+	if err != nil {
+		return false
+	}
+
+	return isVersionInAnyRange(currentVersion, getImmutableCompatibleRanges())
 }
 
 func (c *OnPremisesCheck) IsCompatible() bool {
