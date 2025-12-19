@@ -2,7 +2,7 @@ module github.com/sighupio/furyctl
 
 go 1.23.2
 
-replace github.com/sighupio/fury-distribution => /Users/smerlos/work/github.com/sighupio/fury-distribution/
+// replace github.com/sighupio/fury-distribution => /Users/smerlos/work/github.com/sighupio/fury-distribution/
 
 require (
 	github.com/Al-Pragliola/go-version v1.6.2
@@ -21,7 +21,7 @@ require (
 	github.com/r3labs/diff/v3 v3.0.1
 	github.com/santhosh-tekuri/jsonschema/v5 v5.3.1
 	github.com/shirou/gopsutil/v3 v3.24.5
-	github.com/sighupio/fury-distribution v1.34.0-rc.0
+	github.com/sighupio/fury-distribution v1.33.1-0.20251218162731-5806e98d383b
 	github.com/sirupsen/logrus v1.9.3
 	github.com/spf13/cobra v1.8.1
 	github.com/spf13/viper v1.19.0
