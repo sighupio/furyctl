@@ -37,5 +37,6 @@ func NewExtraSchemaValidatorFactory(apiVersion, kind string) ExtraSchemaValidato
 	default:
 		return nil
 	}
+
 	return nil
 }
