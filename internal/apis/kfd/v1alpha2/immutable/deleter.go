@@ -5,13 +5,15 @@
 package immutable
 
 import (
-	"fmt"
+	"errors"
 	"strings"
 
 	"github.com/sighupio/fury-distribution/pkg/apis/config"
 	"github.com/sighupio/fury-distribution/pkg/apis/immutable/v1alpha2/public"
 	"github.com/sighupio/furyctl/internal/cluster"
 )
+
+var ErrClusterDeletionNotImplemented = errors.New("cluster deletion not implemented for Immutable kind")
 
 type ClusterDeleter struct {
 	paths       cluster.DeleterPaths
@@ -59,6 +61,6 @@ func (c *ClusterDeleter) SetProperty(name string, value any) {
 	}
 }
 
-func (d *ClusterDeleter) Delete() error {
-	return fmt.Errorf("cluster deletion not implemented for Immutable kind")
+func (*ClusterDeleter) Delete() error {
+	return ErrClusterDeletionNotImplemented
 }

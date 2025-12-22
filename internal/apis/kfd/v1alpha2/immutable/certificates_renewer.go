@@ -5,13 +5,15 @@
 package immutable
 
 import (
-	"fmt"
+	"errors"
 	"strings"
 
 	"github.com/sighupio/fury-distribution/pkg/apis/config"
 	"github.com/sighupio/fury-distribution/pkg/apis/immutable/v1alpha2/public"
 	"github.com/sighupio/furyctl/internal/cluster"
 )
+
+var ErrCertificatesRenewalNotImplemented = errors.New("certificates renewal not implemented for Immutable kind")
 
 type CertificatesRenewer struct {
 	*cluster.OperationPhase
@@ -53,6 +55,6 @@ func (c *CertificatesRenewer) SetProperty(name string, value any) {
 	}
 }
 
-func (c *CertificatesRenewer) Renew() error {
-	return fmt.Errorf("certificates renewal not implemented for Immutable kind")
+func (*CertificatesRenewer) Renew() error {
+	return ErrCertificatesRenewalNotImplemented
 }

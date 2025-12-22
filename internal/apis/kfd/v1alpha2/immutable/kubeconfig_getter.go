@@ -5,13 +5,15 @@
 package immutable
 
 import (
-	"fmt"
+	"errors"
 	"strings"
 
 	"github.com/sighupio/fury-distribution/pkg/apis/config"
 	"github.com/sighupio/fury-distribution/pkg/apis/immutable/v1alpha2/public"
 	"github.com/sighupio/furyctl/internal/cluster"
 )
+
+var ErrKubeconfigGetNotImplemented = errors.New("kubeconfig get not implemented for Immutable kind")
 
 type KubeconfigGetter struct {
 	*cluster.OperationPhase
@@ -59,6 +61,6 @@ func (k *KubeconfigGetter) SetProperty(name string, value any) {
 	}
 }
 
-func (k *KubeconfigGetter) Get() error {
-	return fmt.Errorf("kubeconfig get not implemented for Immutable kind")
+func (*KubeconfigGetter) Get() error {
+	return ErrKubeconfigGetNotImplemented
 }
