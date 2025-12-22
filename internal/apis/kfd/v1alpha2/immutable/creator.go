@@ -5,12 +5,17 @@
 package immutable
 
 import (
-	"fmt"
+	"errors"
 	"strings"
 
 	"github.com/sighupio/fury-distribution/pkg/apis/config"
 	"github.com/sighupio/fury-distribution/pkg/apis/immutable/v1alpha2/public"
 	"github.com/sighupio/furyctl/internal/cluster"
+)
+
+var (
+	ErrClusterCreationNotImplemented = errors.New("cluster creation not implemented for Immutable kind")
+	ErrGetPhasePathNotImplemented    = errors.New("GetPhasePath not implemented for Immutable kind")
 )
 
 type ClusterCreator struct {
@@ -59,10 +64,10 @@ func (c *ClusterCreator) SetProperty(name string, value any) {
 	}
 }
 
-func (c *ClusterCreator) Create(startFrom string, timeout, podRunningTimeout int) error {
-	return fmt.Errorf("cluster creation not implemented for Immutable kind")
+func (*ClusterCreator) Create(_ string, _, _ int) error {
+	return ErrClusterCreationNotImplemented
 }
 
-func (c *ClusterCreator) GetPhasePath(phase string) (string, error) {
-	return "", fmt.Errorf("GetPhasePath not implemented for Immutable kind")
+func (*ClusterCreator) GetPhasePath(_ string) (string, error) {
+	return "", ErrGetPhasePathNotImplemented
 }
