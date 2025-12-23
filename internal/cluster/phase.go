@@ -230,7 +230,7 @@ func (op *OperationPhase) CreateRootFolder() error {
 		return nil
 	}
 
-	err := os.Mkdir(op.Path, iox.FullPermAccess)
+	err := os.MkdirAll(op.Path, iox.FullPermAccess)
 	if err != nil {
 		return fmt.Errorf("error creating folder %s: %w", op.Path, err)
 	}

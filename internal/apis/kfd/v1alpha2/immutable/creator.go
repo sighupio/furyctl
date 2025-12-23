@@ -6,22 +6,33 @@ package immutable
 
 import (
 	"errors"
+	"fmt"
+	"path/filepath"
 	"strings"
+
+	"github.com/sirupsen/logrus"
 
 	"github.com/sighupio/fury-distribution/pkg/apis/config"
 	"github.com/sighupio/fury-distribution/pkg/apis/immutable/v1alpha2/public"
+	"github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/immutable/create"
 	"github.com/sighupio/furyctl/internal/cluster"
+	yamlx "github.com/sighupio/furyctl/pkg/x/yaml"
+)
+
+const (
+	InfrastructurePhaseSchemaPath = ".spec.infrastructure"
 )
 
 var (
+	ErrUnsupportedPhase              = errors.New("unsupported phase")
 	ErrClusterCreationNotImplemented = errors.New("cluster creation not implemented for Immutable kind")
-	ErrGetPhasePathNotImplemented    = errors.New("GetPhasePath not implemented for Immutable kind")
 )
 
 type ClusterCreator struct {
 	paths       cluster.CreatorPaths
 	furyctlConf public.ImmutableKfdV1Alpha2
 	kfdManifest config.KFD
+	phase       string
 }
 
 func (c *ClusterCreator) SetProperties(props []cluster.CreatorProperty) {
@@ -61,13 +72,62 @@ func (c *ClusterCreator) SetProperty(name string, value any) {
 		if s, ok := value.(config.KFD); ok {
 			c.kfdManifest = s
 		}
+
+	case cluster.CreatorPropertyPhase:
+		if s, ok := value.(string); ok {
+			c.phase = s
+		}
 	}
 }
 
-func (*ClusterCreator) Create(_ string, _, _ int) error {
-	return ErrClusterCreationNotImplemented
+func (c *ClusterCreator) Create(_ string, _, _ int) error {
+	if c.phase == "" {
+		return ErrClusterCreationNotImplemented
+	}
+
+	switch c.phase {
+	case cluster.OperationPhaseInfrastructure:
+		return c.createInfrastructure()
+
+	default:
+		return fmt.Errorf("%w: %s", ErrUnsupportedPhase, c.phase)
+	}
 }
 
-func (*ClusterCreator) GetPhasePath(_ string) (string, error) {
-	return "", ErrGetPhasePathNotImplemented
+func (c *ClusterCreator) createInfrastructure() error {
+	logrus.Info("Creating infrastructure phase...")
+
+	// Parse config to map[string]any.
+	configData, err := yamlx.FromFileV3[map[string]any](c.paths.ConfigPath)
+	if err != nil {
+		return fmt.Errorf("failed to parse config: %w", err)
+	}
+
+	// Create infrastructure phase.
+	infraPath := filepath.Join(c.paths.WorkDir, ".furyctl", "infrastructure")
+
+	phase := &cluster.OperationPhase{
+		Path: infraPath,
+	}
+
+	infra := create.NewInfrastructure(phase, c.paths.ConfigPath, configData)
+
+	// Execute phase.
+	if err := infra.Exec(); err != nil {
+		return fmt.Errorf("infrastructure phase failed: %w", err)
+	}
+
+	logrus.Info("Infrastructure phase completed successfully")
+
+	return nil
+}
+
+func (*ClusterCreator) GetPhasePath(phase string) (string, error) {
+	switch phase {
+	case cluster.OperationPhaseInfrastructure:
+		return InfrastructurePhaseSchemaPath, nil
+
+	default:
+		return "", fmt.Errorf("%w: %s", ErrUnsupportedPhase, phase)
+	}
 }
