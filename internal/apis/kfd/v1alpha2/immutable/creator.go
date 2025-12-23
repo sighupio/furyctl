@@ -104,7 +104,7 @@ func (c *ClusterCreator) createInfrastructure() error {
 	}
 
 	// Create infrastructure phase.
-	infraPath := filepath.Join(c.paths.WorkDir, ".furyctl", "infrastructure")
+	infraPath := filepath.Join(c.paths.WorkDir, "infrastructure")
 
 	phase := &cluster.OperationPhase{
 		Path: infraPath,
