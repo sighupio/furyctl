@@ -37,6 +37,7 @@ type TemplateCmdFlags struct {
 	FuryctlPath           string
 	DistroLocation        string
 	DistroPatchesLocation string
+	OutputDir             string
 }
 
 var (
@@ -134,8 +135,14 @@ The command will dump into a 'distribution' folder in the working directory all 
 				return fmt.Errorf("%s - %w", flags.FuryctlPath, err)
 			}
 
-			// Note: this is already the right working directory because it is updated in the root command.
-			dumpDir := filepath.Join(viper.GetString("workdir"), "distribution")
+			// Determine output directory: use --output-dir if provided, otherwise default to ./distribution.
+			var dumpDir string
+			if flags.OutputDir != "" {
+				dumpDir = flags.OutputDir
+			} else {
+				// Note: this is already the right working directory because it is updated in the root command.
+				dumpDir = filepath.Join(viper.GetString("workdir"), "distribution")
+			}
 
 			logrus.Info("Rendering distribution manifests...")
 
@@ -221,6 +228,12 @@ The command will dump into a 'distribution' folder in the working directory all 
 			"must have the same structure as the distribution's repository",
 	)
 
+	templateCmd.Flags().String(
+		"output-dir",
+		"",
+		"Output directory for rendered templates (default: ./distribution)",
+	)
+
 	return templateCmd
 }
 
@@ -260,5 +273,6 @@ func getDumpTemplateCmdFlags() (TemplateCmdFlags, error) {
 		FuryctlPath:           furyctlPath,
 		GitProtocol:           typedGitProtocol,
 		DistroPatchesLocation: distroPatchesLocation,
+		OutputDir:             viper.GetString("output-dir"),
 	}, nil
 }
