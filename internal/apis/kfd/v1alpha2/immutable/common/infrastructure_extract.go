@@ -86,7 +86,7 @@ func extractSSHConfig(infraConfig map[string]any) (string, []string, error) {
 
 	sshUser, ok := sshConfig["username"].(string)
 	if !ok {
-		sshUser = "core" // Default user.
+		sshUser = defaultSSHUser // Use default from constants.
 	}
 
 	sshKeyPath, ok := sshConfig["keyPath"].(string)
@@ -185,7 +185,7 @@ func processNode(
 		SSHUser:        sshUser,
 		SSHKeys:        sshKeys,
 		IPXEServerURL:  ipxeURL,
-		FlatcarVersion: flatcarVersion,
+		FlatcarVersion: "", // Will be set from Infrastructure config.
 	}, nil
 }
 
@@ -198,7 +198,7 @@ func extractStorageConfig(nodeMap map[string]any, hostname string) (string, erro
 
 	installDisk, ok := storage["installDisk"].(string)
 	if !ok {
-		installDisk = "/dev/sda" // Default disk.
+		installDisk = defaultInstallDisk // Use default from constants.
 	}
 
 	return installDisk, nil

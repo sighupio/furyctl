@@ -21,12 +21,14 @@ func NewInfrastructure(
 	phase *cluster.OperationPhase,
 	configPath string,
 	configData map[string]any,
+	distroPath string,
 ) *Infrastructure {
 	return &Infrastructure{
 		Infrastructure: &common.Infrastructure{
 			OperationPhase: phase,
 			ConfigPath:     configPath,
 			ConfigData:     configData,
+			DistroPath:     distroPath,
 		},
 	}
 }
