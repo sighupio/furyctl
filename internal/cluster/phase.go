@@ -14,9 +14,9 @@ import (
 	"strings"
 
 	r3diff "github.com/r3labs/diff/v3"
+	"github.com/sighupio/fury-distribution/pkg/apis/config"
 	"github.com/sirupsen/logrus"
 
-	"github.com/sighupio/fury-distribution/pkg/apis/config"
 	iox "github.com/sighupio/furyctl/internal/x/io"
 	slicesx "github.com/sighupio/furyctl/internal/x/slices"
 	"github.com/sighupio/furyctl/pkg/merge"
@@ -177,6 +177,7 @@ type OperationPhase struct {
 	TerraformLogsPath    string
 	TerraformOutputsPath string
 	TerraformSecretsPath string
+	FuryagentPath        string
 	binPath              string
 }
 
@@ -190,6 +191,7 @@ func NewOperationPhase(folder string, kfdTools config.KFDTools, binPath string) 
 
 	kustomizePath := path.Join(binPath, "kustomize", kfdTools.Common.Kustomize.Version, "kustomize")
 	kubectlPath := path.Join(binPath, "kubectl", kfdTools.Common.Kubectl.Version, "kubectl")
+	furyagentPath := path.Join(binPath, "furyagent", kfdTools.Common.Furyagent.Version, "furyagent")
 	yqPath := path.Join(binPath, "yq", kfdTools.Common.Yq.Version, "yq")
 	helmPath := path.Join(binPath, "helm", kfdTools.Common.Helm.Version, "helm")
 	helmfilePath := path.Join(binPath, "helmfile", kfdTools.Common.Helmfile.Version, "helmfile")
@@ -222,6 +224,7 @@ func NewOperationPhase(folder string, kfdTools config.KFDTools, binPath string) 
 		HelmPath:             helmPath,
 		HelmfilePath:         helmfilePath,
 		KappPath:             kappPath,
+		FuryagentPath:        furyagentPath,
 	}
 }
 

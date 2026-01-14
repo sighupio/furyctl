@@ -9,6 +9,7 @@ import (
 	"path"
 
 	"github.com/sighupio/fury-distribution/pkg/apis/ekscluster/v1alpha2/private"
+
 	"github.com/sighupio/furyctl/internal/cluster"
 	"github.com/sighupio/furyctl/pkg/template"
 )
@@ -59,6 +60,7 @@ func (i *Infrastructure) copyFromTemplate() error {
 	mCfg.Data["infrastructure"] = map[any]any{
 		"vpcInstallerPath": vpcInstallerPath,
 		"vpnInstallerPath": vpnInstallerPath,
+		"furyagentPath":    i.FuryagentPath,
 	}
 
 	err = i.CopyFromTemplate(
