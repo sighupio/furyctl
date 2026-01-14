@@ -22,3 +22,4 @@ go.work
 go.work.sum
 .env
 release-notes.md
+.furyctl
