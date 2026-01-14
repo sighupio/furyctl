@@ -14,9 +14,9 @@ import (
 	"strings"
 
 	r3diff "github.com/r3labs/diff/v3"
-	"github.com/sighupio/fury-distribution/pkg/apis/config"
 	"github.com/sirupsen/logrus"
 
+	"github.com/sighupio/fury-distribution/pkg/apis/config"
 	iox "github.com/sighupio/furyctl/internal/x/io"
 	slicesx "github.com/sighupio/furyctl/internal/x/slices"
 	"github.com/sighupio/furyctl/pkg/merge"

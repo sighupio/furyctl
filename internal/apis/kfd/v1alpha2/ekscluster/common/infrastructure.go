@@ -9,7 +9,6 @@ import (
 	"path"
 
 	"github.com/sighupio/fury-distribution/pkg/apis/ekscluster/v1alpha2/private"
-
 	"github.com/sighupio/furyctl/internal/cluster"
 	"github.com/sighupio/furyctl/pkg/template"
 )
