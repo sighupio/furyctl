@@ -1,0 +1,107 @@
+# Copyright (c) 2017-present SIGHUP s.r.l All rights reserved.
+# Use of this source code is governed by a BSD-style
+# license that can be found in the LICENSE file.
+
+---
+apiVersion: kfd.sighup.io/v1alpha2
+kind: Immutable
+metadata:
+  name: minimal-test-cluster
+
+spec:
+  distributionVersion: v1.33.1
+
+  infrastructure:
+    ipxeServer:
+      url: "http://192.168.1.100:8080"
+
+    ssh:
+      username: "core"
+      keyPath: "${HOME}/.ssh/id_ed25519.pub"
+
+    nodes:
+      # Control Plane Node
+      - hostname: "ctrl01.k8s.test.local"
+        macAddress: "52:54:00:10:00:01"
+        storage:
+          installDisk: "/dev/sda"
+        network:
+          ethernets:
+            eth0:
+              addresses:
+                - "192.168.1.11/24"
+              gateway: "192.168.1.1"
+              nameservers:
+                addresses:
+                  - "8.8.8.8"
+                  - "8.8.4.4"
+
+      # Worker Node
+      - hostname: "worker01.k8s.test.local"
+        macAddress: "52:54:00:10:00:02"
+        storage:
+          installDisk: "/dev/sda"
+        network:
+          ethernets:
+            eth0:
+              addresses:
+                - "192.168.1.21/24"
+              gateway: "192.168.1.1"
+              nameservers:
+                addresses:
+                  - "8.8.8.8"
+                  - "8.8.4.4"
+
+  kubernetes:
+    version: "1.33.4"
+
+    networking:
+      podCIDR: "10.244.0.0/16"
+      serviceCIDR: "10.96.0.0/12"
+
+    controlPlane:
+      address: "ctrl01.k8s.test.local:6443"
+      members:
+        - hostname: "ctrl01.k8s.test.local"
+
+    etcd:
+      members:
+        - hostname: "ctrl01.k8s.test.local"
+
+    nodeGroups:
+      - name: workers
+        nodes:
+          - hostname: "worker01.k8s.test.local"
+
+  distribution:
+    modules:
+      networking:
+        type: calico
+
+      ingress:
+        baseDomain: "test.local"
+        nginx:
+          type: single
+          tls:
+            provider: certManager
+        certManager:
+          clusterIssuer:
+            name: letsencrypt-fury
+            email: "admin@test.local"
+            type: http01
+
+      logging:
+        type: loki
+
+      monitoring:
+        type: prometheus
+
+      policy:
+        type: none
+
+      dr:
+        type: on-premises
+
+      auth:
+        provider:
+          type: none

@@ -1,0 +1,205 @@
+# Copyright (c) 2017-present SIGHUP s.r.l All rights reserved.
+# Use of this source code is governed by a BSD-style
+# license that can be found in the LICENSE file.
+
+---
+apiVersion: kfd.sighup.io/v1alpha2
+kind: Immutable
+metadata:
+  name: complete-test-cluster
+
+spec:
+  distributionVersion: v1.33.1
+
+  infrastructure:
+    ipxeServer:
+      url: "http://192.168.1.100:8080"
+
+    ssh:
+      username: "core"
+      keyPath: "${HOME}/.ssh/id_ed25519.pub"
+
+    nodes:
+      # Load Balancer Node 1
+      - hostname: "lb01.k8s.test.local"
+        macAddress: "52:54:00:10:00:10"
+        arch: "x86-64"
+        storage:
+          installDisk: "/dev/sda"
+        network:
+          ethernets:
+            eth0:
+              addresses:
+                - "192.168.1.10/24"
+              gateway: "192.168.1.1"
+              nameservers:
+                addresses:
+                  - "8.8.8.8"
+
+      # Load Balancer Node 2
+      - hostname: "lb02.k8s.test.local"
+        macAddress: "52:54:00:10:00:11"
+        arch: "arm64"
+        storage:
+          installDisk: "/dev/sda"
+        network:
+          ethernets:
+            eth0:
+              addresses:
+                - "192.168.1.11/24"
+              gateway: "192.168.1.1"
+              nameservers:
+                addresses:
+                  - "8.8.8.8"
+
+      # Control Plane Node 1
+      - hostname: "ctrl01.k8s.test.local"
+        macAddress: "52:54:00:10:00:01"
+        arch: "x86-64"
+        storage:
+          installDisk: "/dev/sda"
+        network:
+          ethernets:
+            eth0:
+              addresses:
+                - "192.168.1.21/24"
+              gateway: "192.168.1.1"
+              nameservers:
+                addresses:
+                  - "8.8.8.8"
+
+      # Control Plane Node 2
+      - hostname: "ctrl02.k8s.test.local"
+        macAddress: "52:54:00:10:00:02"
+        storage:
+          installDisk: "/dev/sda"
+        network:
+          ethernets:
+            eth0:
+              addresses:
+                - "192.168.1.22/24"
+              gateway: "192.168.1.1"
+              nameservers:
+                addresses:
+                  - "8.8.8.8"
+
+      # Etcd Node 1 (dedicated)
+      - hostname: "etcd01.k8s.test.local"
+        macAddress: "52:54:00:10:00:03"
+        arch: "x86-64"
+        storage:
+          installDisk: "/dev/sda"
+          additionalDisks:
+            - device: "/dev/sdb"
+              partitions:
+                - label: "etcd-data"
+                  number: 1
+                  sizeMiB: 0
+                  filesystem:
+                    format: "xfs"
+                    label: "ETCD"
+                    mountPoint: "/var/lib/etcd"
+                    mountOptions: ["noatime", "nodiratime"]
+        network:
+          ethernets:
+            eth0:
+              addresses:
+                - "192.168.1.31/24"
+              gateway: "192.168.1.1"
+              nameservers:
+                addresses:
+                  - "8.8.8.8"
+
+      # Worker Node 1
+      - hostname: "worker01.k8s.test.local"
+        macAddress: "52:54:00:10:00:41"
+        arch: "x86-64"
+        storage:
+          installDisk: "/dev/sda"
+        network:
+          ethernets:
+            eth0:
+              addresses:
+                - "192.168.1.41/24"
+              gateway: "192.168.1.1"
+              nameservers:
+                addresses:
+                  - "8.8.8.8"
+
+      # Worker Node 2
+      - hostname: "worker02.k8s.test.local"
+        macAddress: "52:54:00:10:00:42"
+        arch: "arm64"
+        storage:
+          installDisk: "/dev/sda"
+        network:
+          ethernets:
+            eth0:
+              addresses:
+                - "192.168.1.42/24"
+              gateway: "192.168.1.1"
+              nameservers:
+                addresses:
+                  - "8.8.8.8"
+
+  kubernetes:
+    version: "1.33.4"
+
+    networking:
+      podCIDR: "10.244.0.0/16"
+      serviceCIDR: "10.96.0.0/12"
+
+    loadBalancers:
+      virtualIP: "192.168.1.5"
+      members:
+        - hostname: "lb01.k8s.test.local"
+        - hostname: "lb02.k8s.test.local"
+
+    controlPlane:
+      address: "192.168.1.5:6443"
+      members:
+        - hostname: "ctrl01.k8s.test.local"
+        - hostname: "ctrl02.k8s.test.local"
+
+    etcd:
+      members:
+        - hostname: "etcd01.k8s.test.local"
+
+    nodeGroups:
+      - name: workers
+        nodes:
+          - hostname: "worker01.k8s.test.local"
+          - hostname: "worker02.k8s.test.local"
+
+  distribution:
+    modules:
+      networking:
+        type: calico
+
+      ingress:
+        baseDomain: "test.local"
+        nginx:
+          type: single
+          tls:
+            provider: certManager
+        certManager:
+          clusterIssuer:
+            name: letsencrypt-fury
+            email: "admin@test.local"
+            type: http01
+
+      logging:
+        type: loki
+
+      monitoring:
+        type: prometheus
+
+      policy:
+        type: none
+
+      dr:
+        type: on-premises
+
+      auth:
+        provider:
+          type: none

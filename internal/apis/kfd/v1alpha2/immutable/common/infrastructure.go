@@ -5,12 +5,15 @@
 package common
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/sirupsen/logrus"
+	"gopkg.in/yaml.v3"
 
 	"github.com/sighupio/furyctl/internal/cluster"
 	"github.com/sighupio/furyctl/internal/tool/butane"
@@ -42,7 +45,70 @@ var (
 	ErrNetworkNotFound        = errors.New("network config not found for node")
 	ErrNetworkEthersNotFound  = errors.New("network.ethernets not found for node")
 	ErrButaneFatalErrors      = errors.New("butane translation has fatal errors")
+	ErrNoKubernetesVersions   = errors.New("no Kubernetes versions defined in immutable manifest")
 )
+
+// SysextVersions holds version information for systemd-sysext packages.
+type SysextVersions struct {
+	ContainerdVersion string
+	RuncVersion       string
+	CNIPluginsVersion string
+	KubernetesVersion string
+	KubernetesMajor   string
+	KeepaliveVersion  string
+	EtcdVersion       string
+}
+
+// immutableManifest represents the structure of immutable.yaml file.
+// This file contains all versioning information for Kubernetes, sysext packages,
+// and Flatcar Container Linux. It should be located in the installer repository
+// (fury-kubernetes-immutable-installer) when ready.
+type immutableManifest struct {
+	DefaultKubernetesVersion string                       `yaml:"default_kubernetes_version"`
+	Kubernetes               map[string]kubernetesRelease `yaml:"kubernetes"`
+}
+
+// kubernetesRelease represents a Kubernetes version entry in immutable.yaml.
+type kubernetesRelease struct {
+	Sysext  []sysextPackage `yaml:"sysext"` // Array of sysext packages
+	Flatcar flatcarRelease  `yaml:"flatcar"`
+}
+
+// sysextPackage represents a systemd-sysext package configuration.
+// Filename convention: {name}-{version}-{arch}.raw
+type sysextPackage struct {
+	Name              string                    `yaml:"name"`
+	Version           string                    `yaml:"version"`
+	VersionMajorMinor string                    `yaml:"version_major_minor"`
+	Arch              map[string]sysextArchInfo `yaml:"arch"` // Map of arch -> url + sha256
+}
+
+// sysextArchInfo contains architecture-specific information.
+type sysextArchInfo struct {
+	URL    string `yaml:"url"`
+	SHA256 string `yaml:"sha256,omitempty"` // Optional SHA256 for verification
+}
+
+// flatcarRelease represents a Flatcar Container Linux version.
+type flatcarRelease struct {
+	Version string                 `yaml:"version"`
+	Channel string                 `yaml:"channel"`
+	Arch    map[string]flatcarArch `yaml:"arch"` // Map of arch -> boot artifacts
+}
+
+// flatcarArch contains architecture-specific boot artifacts.
+type flatcarArch struct {
+	Kernel flatcarArtifact `yaml:"kernel"`
+	Initrd flatcarArtifact `yaml:"initrd"`
+	Image  flatcarArtifact `yaml:"image"`
+}
+
+// flatcarArtifact represents a single boot artifact (kernel, initrd, image).
+type flatcarArtifact struct {
+	Filename string `yaml:"filename"`
+	URL      string `yaml:"url"`
+	SHA256   string `yaml:"sha256,omitempty"` // Optional SHA256 for verification
+}
 
 // Infrastructure handles the infrastructure phase for Immutable kind.
 type Infrastructure struct {
@@ -56,6 +122,7 @@ type Infrastructure struct {
 	flatcarVersion string
 	sshUser        string
 	installDisk    string
+	sysextVersions SysextVersions
 }
 
 // nodeInfo represents processed node information.
@@ -72,6 +139,7 @@ type nodeInfo struct {
 	SSHKeys        []string
 	IPXEServerURL  string
 	FlatcarVersion string
+	Arch           string // CPU architecture: x86-64 or arm64
 }
 
 // networkInfo represents network configuration for a node.
@@ -86,6 +154,11 @@ type networkInfo struct {
 func (i *Infrastructure) Prepare() error {
 	// Initialize configuration values from merged config.
 	i.initializeConfigValues()
+
+	// Load sysext versions from installer defaults.
+	if err := i.loadSysextVersions(); err != nil {
+		return fmt.Errorf("error loading sysext versions: %w", err)
+	}
 
 	if err := i.CreateRootFolder(); err != nil {
 		return fmt.Errorf("error creating infrastructure folder: %w", err)
@@ -110,6 +183,11 @@ func (i *Infrastructure) Prepare() error {
 	// Render Butane templates from fury-distribution.
 	if err := i.renderButaneTemplates(nodes); err != nil {
 		return fmt.Errorf("error rendering butane templates: %w", err)
+	}
+
+	// Render Matchbox profiles and groups from fury-distribution.
+	if err := i.renderMatchboxTemplates(nodes); err != nil {
+		return fmt.Errorf("error rendering matchbox templates: %w", err)
 	}
 
 	// Post-process: convert .bu to .ign for each node.
@@ -174,34 +252,127 @@ func (i *Infrastructure) getInfrastructureConfig() map[string]any {
 
 // renderButaneTemplates uses CopyFromTemplate to generate Butane files from fury-distribution.
 func (i *Infrastructure) renderButaneTemplates(nodes []nodeInfo) error {
-	// 1. Prepare configuration for templates.
+	// 1. Load the full immutable manifest to pass all sysext info to templates.
+	kubeVersion := i.getKubernetesVersion()
+	manifestPath := filepath.Join(i.DistroPath, "installers", "immutable", "immutable.yaml")
+	manifest, err := i.parseImmutableManifest(manifestPath)
+	if err != nil {
+		return fmt.Errorf("error loading immutable manifest for templates: %w", err)
+	}
+
+	release, ok := manifest.Kubernetes[kubeVersion]
+	if !ok {
+		return fmt.Errorf("kubernetes version %s not found in immutable manifest", kubeVersion)
+	}
+
+	// 2. Prepare configuration for templates.
 	nodesData := make([]map[string]any, len(nodes))
 
 	for idx, node := range nodes {
+		// Get Flatcar boot artifacts for this node's architecture
+		var flatcarKernelURL, flatcarInitrdURL, flatcarImageURL string
+		if archInfo, ok := release.Flatcar.Arch[node.Arch]; ok {
+			flatcarKernelURL = archInfo.Kernel.URL
+			flatcarInitrdURL = archInfo.Initrd.URL
+			flatcarImageURL = archInfo.Image.URL
+		} else {
+			return fmt.Errorf("flatcar artifacts not found for architecture: %s", node.Arch)
+		}
+
 		nodesData[idx] = map[string]any{
-			"ID":              idx,
-			"Hostname":        node.Hostname,
-			"MAC":             node.MAC,
-			"IP":              node.IP,
-			"Gateway":         node.Gateway,
-			"DNS":             node.DNS,
-			"Netmask":         node.Netmask,
-			"Role":            node.Role,
-			"InstallDisk":     node.InstallDisk,
-			"SSHUser":         node.SSHUser,
-			"SSHKeys":         node.SSHKeys,
-			"IPXEServerURL":   node.IPXEServerURL,
-			"FlatcarVersion":  i.flatcarVersion,
+			"ID":               idx,
+			"Hostname":         node.Hostname,
+			"MAC":              node.MAC,
+			"IP":               node.IP,
+			"Gateway":          node.Gateway,
+			"DNS":              node.DNS,
+			"Netmask":          node.Netmask,
+			"Role":             node.Role,
+			"InstallDisk":      node.InstallDisk,
+			"SSHUser":          node.SSHUser,
+			"SSHKeys":          node.SSHKeys,
+			"IPXEServerURL":    node.IPXEServerURL,
+			"FlatcarVersion":   i.flatcarVersion,
+			"Arch":             node.Arch,
+			"FlatcarKernelURL": flatcarKernelURL,
+			"FlatcarInitrdURL": flatcarInitrdURL,
+			"FlatcarImageURL":  flatcarImageURL,
 		}
 	}
 
-	// 2. Create config for templates.
+	// 3. Convert sysext packages to template-friendly format.
+	sysextData := make(map[any]any)
+	for _, pkg := range release.Sysext {
+		pkgData := map[any]any{
+			"name":    pkg.Name,
+			"version": pkg.Version,
+			"arch":    make(map[any]any),
+		}
+
+		if pkg.VersionMajorMinor != "" {
+			pkgData["version_major_minor"] = pkg.VersionMajorMinor
+		}
+
+		// Add arch-specific info.
+		for arch, archInfo := range pkg.Arch {
+			archData := map[any]any{
+				"url": archInfo.URL,
+			}
+			if archInfo.SHA256 != "" {
+				archData["sha256"] = archInfo.SHA256
+			}
+			pkgData["arch"].(map[any]any)[arch] = archData
+		}
+
+		sysextData[pkg.Name] = pkgData
+	}
+
+	// 4. Convert Flatcar boot artifacts to template-friendly format.
+	flatcarData := map[any]any{
+		"version": release.Flatcar.Version,
+		"channel": release.Flatcar.Channel,
+		"arch":    make(map[any]any),
+	}
+
+	for arch, archInfo := range release.Flatcar.Arch {
+		artifactsData := map[any]any{
+			"kernel": map[any]any{
+				"filename": archInfo.Kernel.Filename,
+				"url":      archInfo.Kernel.URL,
+			},
+			"initrd": map[any]any{
+				"filename": archInfo.Initrd.Filename,
+				"url":      archInfo.Initrd.URL,
+			},
+			"image": map[any]any{
+				"filename": archInfo.Image.Filename,
+				"url":      archInfo.Image.URL,
+			},
+		}
+
+		// Add SHA256 if present
+		if archInfo.Kernel.SHA256 != "" {
+			artifactsData["kernel"].(map[any]any)["sha256"] = archInfo.Kernel.SHA256
+		}
+		if archInfo.Initrd.SHA256 != "" {
+			artifactsData["initrd"].(map[any]any)["sha256"] = archInfo.Initrd.SHA256
+		}
+		if archInfo.Image.SHA256 != "" {
+			artifactsData["image"].(map[any]any)["sha256"] = archInfo.Image.SHA256
+		}
+
+		flatcarData["arch"].(map[any]any)[arch] = artifactsData
+	}
+
+	// 5. Create config for templates.
 	cfg := template.Config{
 		Data: map[string]map[any]any{
 			"data": {
 				"nodes":          nodesData,
 				"flatcarVersion": i.flatcarVersion,
 				"ipxeServerURL":  nodesData[0]["IPXEServerURL"],
+				"sysext":         sysextData,
+				"flatcar":        flatcarData,
 			},
 		},
 	}
@@ -242,7 +413,7 @@ func (i *Infrastructure) renderButaneTemplates(nodes []nodeInfo) error {
 // into individual files per node in the install/ directory.
 func (i *Infrastructure) splitButaneTemplates() error {
 	// Process each role's template file.
-	roles := []string{"controlplane", "worker", "loadbalancer"}
+	roles := []string{"controlplane", "worker", "loadbalancer", "etcd"}
 
 	for _, role := range roles {
 		templateFile := filepath.Join(i.Path, "butane", role+".bu")
@@ -291,12 +462,161 @@ func (i *Infrastructure) splitButaneTemplates() error {
 	return nil
 }
 
+// renderMatchboxTemplates generates Matchbox profiles and groups from templates.
+func (i *Infrastructure) renderMatchboxTemplates(nodes []nodeInfo) error {
+	// 1. Load immutable manifest to get Flatcar and sysext versions.
+	kubeVersion := i.getKubernetesVersion()
+
+	manifestPath := filepath.Join(i.DistroPath, "installers", "immutable", "immutable.yaml")
+
+	manifest, err := i.parseImmutableManifest(manifestPath)
+	if err != nil {
+		return fmt.Errorf("error loading immutable manifest for matchbox templates: %w", err)
+	}
+
+	release, ok := manifest.Kubernetes[kubeVersion]
+	if !ok {
+		return fmt.Errorf("kubernetes version %s not found in immutable manifest", kubeVersion)
+	}
+
+	// 2. Prepare configuration for templates (same as butane).
+	nodesData := make([]map[string]any, len(nodes))
+
+	for idx, node := range nodes {
+		// Get Flatcar boot artifacts for this node's architecture
+		var flatcarKernelURL, flatcarInitrdURL string
+		if archInfo, ok := release.Flatcar.Arch[node.Arch]; ok {
+			flatcarKernelURL = archInfo.Kernel.URL
+			flatcarInitrdURL = archInfo.Initrd.URL
+		} else {
+			return fmt.Errorf("flatcar artifacts not found for architecture: %s", node.Arch)
+		}
+
+		nodesData[idx] = map[string]any{
+			"ID":               idx,
+			"Hostname":         node.Hostname,
+			"MAC":              node.MAC,
+			"IP":               node.IP,
+			"Gateway":          node.Gateway,
+			"DNS":              node.DNS,
+			"Netmask":          node.Netmask,
+			"Role":             node.Role,
+			"IPXEServerURL":    node.IPXEServerURL,
+			"FlatcarKernelURL": flatcarKernelURL,
+			"FlatcarInitrdURL": flatcarInitrdURL,
+		}
+	}
+
+	// 3. Create config for templates.
+	cfg := template.Config{
+		Data: map[string]map[any]any{
+			"data": {
+				"nodes":          nodesData,
+				"ipxeServerURL":  nodes[0].IPXEServerURL,
+				"flatcarVersion": release.Flatcar.Version,
+			},
+		},
+	}
+
+	// 4. Render profile templates.
+	profileSourcePath := filepath.Join(i.DistroPath, "templates", "infrastructure", "immutable", "matchbox")
+	profileTargetPath := filepath.Join(i.Path, "matchbox")
+
+	if err := i.CopyFromTemplate(
+		cfg,
+		"immutable-infrastructure",
+		profileSourcePath,
+		profileTargetPath,
+		i.ConfigPath,
+	); err != nil {
+		return fmt.Errorf("error copying matchbox templates: %w", err)
+	}
+
+	// 5. Post-process: Split multi-document JSON files by node.
+	if err := i.splitMatchboxTemplates(); err != nil {
+		return fmt.Errorf("error splitting matchbox templates: %w", err)
+	}
+
+	logrus.Info("Matchbox profiles and groups rendered from fury-distribution")
+
+	return nil
+}
+
+// splitMatchboxTemplates splits the multi-document JSON files into individual files per node.
+func (i *Infrastructure) splitMatchboxTemplates() error {
+	// Process profile and group template files.
+	templates := []struct {
+		file   string
+		subdir string
+	}{
+		{"profile.json", "profiles"},
+		{"group.json", "groups"},
+	}
+
+	for _, tmpl := range templates {
+		templateFile := filepath.Join(i.Path, "matchbox", tmpl.file)
+
+		// Check if file exists.
+		if _, err := os.Stat(templateFile); os.IsNotExist(err) {
+			continue
+		}
+
+		// Read the multi-document JSON (documents separated by "---\n").
+		content, err := os.ReadFile(templateFile)
+		if err != nil {
+			return fmt.Errorf("error reading %s: %w", templateFile, err)
+		}
+
+		// Split by "---\n" to get individual node documents.
+		docs := splitYAMLDocuments(string(content))
+
+		// Write each document to subdirectory.
+		subdirPath := filepath.Join(i.Path, "matchbox", tmpl.subdir)
+		if err := os.MkdirAll(subdirPath, iox.FullPermAccess); err != nil {
+			return fmt.Errorf("error creating directory %s: %w", subdirPath, err)
+		}
+
+		for _, doc := range docs {
+			doc = strings.TrimSpace(doc)
+			if len(doc) == 0 {
+				continue
+			}
+
+			// Parse JSON to extract hostname for filename.
+			var jsonDoc map[string]any
+			if err := json.Unmarshal([]byte(doc), &jsonDoc); err != nil {
+				return fmt.Errorf("error parsing JSON document: %w", err)
+			}
+
+			hostname, ok := jsonDoc["id"].(string)
+			if !ok {
+				return fmt.Errorf("JSON document missing 'id' field")
+			}
+
+			// Write to file: profiles/hostname.json or groups/hostname.json.
+			outputFile := filepath.Join(subdirPath, hostname+".json")
+			if err := os.WriteFile(outputFile, []byte(doc), iox.FullPermAccess); err != nil {
+				return fmt.Errorf("error writing %s: %w", outputFile, err)
+			}
+		}
+
+		// Remove the template file after splitting.
+		if err := os.Remove(templateFile); err != nil {
+			return fmt.Errorf("error removing %s: %w", templateFile, err)
+		}
+	}
+
+	return nil
+}
+
 // CreateFolderStructure creates the directory structure declaratively.
 func (i *Infrastructure) CreateFolderStructure() error {
 	folders := []string{
 		filepath.Join(i.Path, "butane", "install"),
 		filepath.Join(i.Path, "butane", "bootstrap"),
 		filepath.Join(i.Path, "ignition", "install"),
+		filepath.Join(i.Path, "matchbox", "profiles"),
+		filepath.Join(i.Path, "matchbox", "groups"),
 	}
 
 	for _, folder := range folders {
@@ -543,6 +863,12 @@ func (i *Infrastructure) extractNodes() ([]nodeInfo, error) {
 			return nil, fmt.Errorf("error extracting network info for node %s: %w", hostname, err)
 		}
 
+		// Extract arch (default to x86-64).
+		arch := "x86-64"
+		if archValue, ok := nodeMap["arch"].(string); ok && archValue != "" {
+			arch = archValue
+		}
+
 		// Build nodeInfo struct.
 		nodesList = append(nodesList, nodeInfo{
 			Hostname:       hostname,
@@ -557,6 +883,7 @@ func (i *Infrastructure) extractNodes() ([]nodeInfo, error) {
 			SSHKeys:        sshKeys,
 			IPXEServerURL:  ipxeURL,
 			FlatcarVersion: i.flatcarVersion,
+			Arch:           arch,
 		})
 	}
 
@@ -629,7 +956,51 @@ func (i *Infrastructure) determineNodeRole(hostname string, kubeConfig map[strin
 		}
 	}
 
-	// 2. Check if in nodeGroups[].nodes[].
+	// 2. Check if in etcd.members[].
+	if etcdAny, ok := kubeConfig["etcd"]; ok {
+		if etcdMap, ok := etcdAny.(map[string]any); ok {
+			if membersAny, ok := etcdMap["members"]; ok {
+				if membersSlice, ok := membersAny.([]any); ok {
+					for _, memberAny := range membersSlice {
+						// Members are objects with {hostname: "..."}
+						if memberMap, ok := memberAny.(map[string]any); ok {
+							if memberHostname, ok := memberMap["hostname"].(string); ok && memberHostname == hostname {
+								return "etcd"
+							}
+						}
+						// Fallback for legacy string format (backward compatibility)
+						if member, ok := memberAny.(string); ok && member == hostname {
+							return "etcd"
+						}
+					}
+				}
+			}
+		}
+	}
+
+	// 3. Check if in loadBalancers.members[].
+	if lbAny, ok := kubeConfig["loadBalancers"]; ok {
+		if lbMap, ok := lbAny.(map[string]any); ok {
+			if membersAny, ok := lbMap["members"]; ok {
+				if membersSlice, ok := membersAny.([]any); ok {
+					for _, memberAny := range membersSlice {
+						// Members are objects with {hostname: "..."}
+						if memberMap, ok := memberAny.(map[string]any); ok {
+							if memberHostname, ok := memberMap["hostname"].(string); ok && memberHostname == hostname {
+								return "loadbalancer"
+							}
+						}
+						// Fallback for legacy string format (backward compatibility)
+						if member, ok := memberAny.(string); ok && member == hostname {
+							return "loadbalancer"
+						}
+					}
+				}
+			}
+		}
+	}
+
+	// 4. Check if in nodeGroups[].nodes[].
 	if groupsAny, ok := kubeConfig["nodeGroups"]; ok {
 		if groupsSlice, ok := groupsAny.([]any); ok {
 			for _, groupAny := range groupsSlice {
@@ -655,11 +1026,8 @@ func (i *Infrastructure) determineNodeRole(hostname string, kubeConfig map[strin
 		}
 	}
 
-	// 3. Check if in loadBalancer config (future implementation).
-	// TODO: Implement loadbalancer role detection when schema supports it.
-
-	// 4. Default to worker if not found.
-	logrus.Warnf("Node %s not found in controlPlane.members or nodeGroups.nodes, defaulting to worker role", hostname)
+	// 5. Default to worker if not found.
+	logrus.Warnf("Node %s not found in controlPlane, etcd, loadBalancers, or nodeGroups, defaulting to worker role", hostname)
 
 	return "worker"
 }
@@ -878,4 +1246,105 @@ func (i *Infrastructure) generateNodeConfigs(idx int, node nodeInfo) error {
 	logrus.Infof("✓ Generated Ignition config for node %s", node.Hostname)
 
 	return nil
+}
+
+// loadSysextVersions loads version mappings from immutable.yaml manifest.
+// The immutable.yaml file is a centralized manifest containing all versioning
+// information for Kubernetes, sysext packages, and Flatcar Container Linux.
+// It should be located in fury-kubernetes-immutable-installer repository when ready.
+func (i *Infrastructure) loadSysextVersions() error {
+	kubeVersion := i.getKubernetesVersion()
+
+	// Load immutable.yaml manifest from installer directory.
+	manifestPath := filepath.Join(i.DistroPath, "installers", "immutable", "immutable.yaml")
+	manifest, err := i.parseImmutableManifest(manifestPath)
+	if err != nil {
+		return fmt.Errorf("error loading immutable manifest: %w", err)
+	}
+
+	// Get the Kubernetes release for the requested version.
+	release, ok := manifest.Kubernetes[kubeVersion]
+	if !ok {
+		return fmt.Errorf("kubernetes version %s not found in immutable manifest (available: %v)",
+			kubeVersion, i.getAvailableVersions(manifest))
+	}
+
+	// Iterate through sysext array and extract versions by name.
+	for _, sysext := range release.Sysext {
+		switch sysext.Name {
+		case "containerd":
+			i.sysextVersions.ContainerdVersion = sysext.Version
+
+		case "kubernetes":
+			i.sysextVersions.KubernetesVersion = sysext.Version
+			i.sysextVersions.KubernetesMajor = sysext.VersionMajorMinor
+
+		case "keepalived":
+			i.sysextVersions.KeepaliveVersion = sysext.Version
+
+		case "etcd":
+			i.sysextVersions.EtcdVersion = sysext.Version
+		}
+	}
+
+	// Validate that required sysext packages were found.
+	if i.sysextVersions.ContainerdVersion == "" {
+		return fmt.Errorf("containerd sysext not found for kubernetes %s", kubeVersion)
+	}
+	if i.sysextVersions.KubernetesVersion == "" {
+		return fmt.Errorf("kubernetes sysext not found for kubernetes %s", kubeVersion)
+	}
+
+	logrus.Infof("Loaded sysext versions for Kubernetes %s", kubeVersion)
+	logrus.Debugf("  containerd: %s", i.sysextVersions.ContainerdVersion)
+	logrus.Debugf("  kubernetes: %s", i.sysextVersions.KubernetesVersion)
+
+	return nil
+}
+
+// parseImmutableManifest parses the immutable.yaml manifest file.
+// This manifest contains all versioning information for the Immutable installer.
+func (_ *Infrastructure) parseImmutableManifest(path string) (*immutableManifest, error) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return nil, fmt.Errorf("error reading immutable manifest at %s: %w", path, err)
+	}
+
+	var manifest immutableManifest
+	if err := yaml.Unmarshal(data, &manifest); err != nil {
+		return nil, fmt.Errorf("error parsing immutable manifest: %w", err)
+	}
+
+	// Validate that at least one Kubernetes version is defined.
+	if len(manifest.Kubernetes) == 0 {
+		return nil, ErrNoKubernetesVersions
+	}
+
+	return &manifest, nil
+}
+
+// getAvailableVersions returns a list of available Kubernetes versions from manifest.
+func (_ *Infrastructure) getAvailableVersions(manifest *immutableManifest) []string {
+	versions := make([]string, 0, len(manifest.Kubernetes))
+	for version := range manifest.Kubernetes {
+		versions = append(versions, version)
+	}
+
+	return versions
+}
+
+// getKubernetesVersion extracts the Kubernetes version from configuration.
+func (i *Infrastructure) getKubernetesVersion() string {
+	kubeConfig, ok := i.ConfigData["kubernetes"].(map[string]any)
+	if !ok {
+		// Use default from installer if not specified.
+		return "1.33.4"
+	}
+
+	version, ok := kubeConfig["version"].(string)
+	if !ok || version == "" {
+		return "1.33.4"
+	}
+
+	return version
 }

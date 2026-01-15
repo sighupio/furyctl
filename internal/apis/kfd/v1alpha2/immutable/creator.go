@@ -164,7 +164,7 @@ func (c *ClusterCreator) RenderConfig() (map[string]any, error) {
 		return nil, fmt.Errorf("error while creating template config: %w", err)
 	}
 
-	// tfCfg.Data already contains the properly structured merged config
+	// TfCfg.Data already contains the properly structured merged config
 	// with "spec", "metadata", etc. from the user config merged with defaults.
 	// Convert to map[string]any (including nested maps).
 	result := make(map[string]any)
@@ -193,6 +193,7 @@ func convertValue(v any) any {
 		}
 
 		return result
+
 	case map[string]any:
 		// Already correct type, but check nested values.
 		result := make(map[string]any)
@@ -201,6 +202,7 @@ func convertValue(v any) any {
 		}
 
 		return result
+
 	case []any:
 		result := make([]any, len(val))
 		for i, item := range val {
@@ -208,6 +210,7 @@ func convertValue(v any) any {
 		}
 
 		return result
+
 	default:
 		return val
 	}
