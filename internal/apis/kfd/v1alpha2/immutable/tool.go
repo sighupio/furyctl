@@ -45,7 +45,7 @@ func (tv *ToolValidator) Validate(phase string) error {
 func (*ToolValidator) getRequiredTools(phase string) []string {
 	switch phase {
 	case cluster.OperationPhaseInfrastructure:
-		return []string{"butane"} // For Butane to Ignition conversion.
+		return []string{"butane"} // For Ignition config generation.
 
 	case cluster.OperationPhaseKubernetes:
 		return []string{"ansible-playbook", "ssh"}
