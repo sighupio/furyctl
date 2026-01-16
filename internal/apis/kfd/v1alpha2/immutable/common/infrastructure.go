@@ -7,6 +7,7 @@ package common
 import (
 	"errors"
 	"fmt"
+	"net"
 	"os"
 	"path/filepath"
 	"strings"
@@ -25,13 +26,12 @@ const (
 	networkAddressParts = 2
 
 	// Default values (used as fallbacks if not provided in config).
-	defaultFlatcarVersion = "4206.0.0"
-	defaultSSHUser        = "core"
-	defaultInstallDisk    = "/dev/sda"
+	defaultOSVersion   = "4206.0.0" // Default Flatcar Container Linux version.
+	defaultSSHUser     = "core"     // Default SSH user for Flatcar Container Linux.
+	defaultInstallDisk = "/dev/sda" // Default installation disk.
 )
 
 var (
-	ErrInfraConfigNotFound    = errors.New("infrastructure config not found or invalid")
 	ErrIPXEServerNotFound     = errors.New("ipxeServer config not found")
 	ErrIPXEServerURLNotFound  = errors.New("ipxeServer.url not found")
 	ErrSSHConfigNotFound      = errors.New("ssh config not found")
@@ -40,7 +40,6 @@ var (
 	ErrKubeConfigNotFound     = errors.New("kubernetes config not found")
 	ErrControlPlaneNotFound   = errors.New("kubernetes.controlPlane not found")
 	ErrControlMembersNotFound = errors.New("kubernetes.controlPlane.members not found")
-	ErrStorageNotFound        = errors.New("storage config not found for node")
 	ErrNetworkNotFound        = errors.New("network config not found for node")
 	ErrNetworkEthersNotFound  = errors.New("network.ethernets not found for node")
 	ErrButaneFatalErrors      = errors.New("butane translation has fatal errors")
@@ -207,7 +206,7 @@ func (i *Infrastructure) initializeConfigValues() {
 	if version, ok := infraConfig["flatcarVersion"].(string); ok {
 		i.flatcarVersion = version
 	} else {
-		i.flatcarVersion = defaultFlatcarVersion
+		i.flatcarVersion = defaultOSVersion
 	}
 
 	// Extract sshUser.
@@ -485,7 +484,7 @@ func splitYAMLDocuments(content string) []string {
 	// We need to handle different variations of the separator.
 	currentDoc := ""
 
-	for _, line := range splitLines(content) {
+	for _, line := range strings.Split(content, "\n") {
 		// Check if this line is a document separator.
 		if line == "---" {
 			// Save current document if it has content.
@@ -514,32 +513,10 @@ func splitYAMLDocuments(content string) []string {
 	return parts
 }
 
-// splitLines splits a string by newlines.
-func splitLines(content string) []string {
-	lines := []string{}
-	currentLine := ""
-
-	for _, ch := range content {
-		if ch == '\n' {
-			lines = append(lines, currentLine)
-			currentLine = ""
-		} else {
-			currentLine += string(ch)
-		}
-	}
-
-	// Add the last line if it's not empty.
-	if len(currentLine) > 0 {
-		lines = append(lines, currentLine)
-	}
-
-	return lines
-}
-
 // extractHostnameFromButane extracts the hostname from a Butane YAML document.
 // It looks for the "inline:" value in the /etc/hostname file definition.
 func extractHostnameFromButane(content string) string {
-	lines := splitLines(content)
+	lines := strings.Split(content, "\n")
 	foundHostnamePath := false
 
 	for i, line := range lines {
@@ -548,12 +525,12 @@ func extractHostnameFromButane(content string) string {
 			// Next line after "contents:" should have "inline:" with the hostname.
 			if len(line) > 0 && (line[0] == ' ' || line[0] == '\t') {
 				// Check if this line contains "inline:".
-				if idx := findSubstring(line, "inline:"); idx >= 0 {
+				if idx := strings.Index(line, "inline:"); idx >= 0 {
 					// Extract the hostname after "inline:".
 					hostname := line[idx+7:] // Skip "inline:"
 
 					// Trim spaces.
-					hostname = trimSpaces(hostname)
+					hostname = strings.TrimSpace(hostname)
 
 					return hostname
 				}
@@ -561,16 +538,16 @@ func extractHostnameFromButane(content string) string {
 		}
 
 		// Look for "path: /etc/hostname".
-		if idx := findSubstring(line, "path:"); idx >= 0 {
-			if idx2 := findSubstring(line, "/etc/hostname"); idx2 >= 0 {
+		if idx := strings.Index(line, "path:"); idx >= 0 {
+			if idx2 := strings.Index(line, "/etc/hostname"); idx2 >= 0 {
 				// Found the hostname file definition, next "inline:" will have the hostname.
 				foundHostnamePath = true
 
 				// Also check if "contents:" is in the next few lines.
 				for j := i + 1; j < i+5 && j < len(lines); j++ {
-					if idx3 := findSubstring(lines[j], "inline:"); idx3 >= 0 {
+					if idx3 := strings.Index(lines[j], "inline:"); idx3 >= 0 {
 						hostname := lines[j][idx3+7:]
-						hostname = trimSpaces(hostname)
+						hostname = strings.TrimSpace(hostname)
 
 						return hostname
 					}
@@ -580,39 +557,6 @@ func extractHostnameFromButane(content string) string {
 	}
 
 	return ""
-}
-
-// findSubstring finds a substring in a string and returns its index, or -1 if not found.
-func findSubstring(s, substr string) int {
-	if len(substr) == 0 {
-		return 0
-	}
-
-	for i := 0; i <= len(s)-len(substr); i++ {
-		if s[i:i+len(substr)] == substr {
-			return i
-		}
-	}
-
-	return -1
-}
-
-// trimSpaces removes leading and trailing spaces from a string.
-func trimSpaces(s string) string {
-	start := 0
-	end := len(s)
-
-	// Find first non-space character.
-	for start < end && (s[start] == ' ' || s[start] == '\t') {
-		start++
-	}
-
-	// Find last non-space character.
-	for end > start && (s[end-1] == ' ' || s[end-1] == '\t' || s[end-1] == '\n' || s[end-1] == '\r') {
-		end--
-	}
-
-	return s[start:end]
 }
 
 // extractNodes processes the user configuration and extracts structured node information.
@@ -773,7 +717,7 @@ func (i *Infrastructure) readSSHPublicKeys(sshConfig map[string]any) ([]string, 
 	}
 
 	// Trim whitespace and return as single-element slice.
-	key := trimSpaces(string(keyContent))
+	key := strings.TrimSpace(string(keyContent))
 	if key == "" {
 		return nil, fmt.Errorf("SSH public key file %s is empty", keyPath)
 	}
@@ -932,9 +876,17 @@ func (i *Infrastructure) extractNetworkInfo(networkAny any, hostname string) (ne
 	}
 
 	// Parse IP and netmask from CIDR notation (e.g., "192.168.1.11/24").
-	ip, netmask, err := parseIPAndNetmask(addressWithCIDR)
-	if err != nil {
-		return networkInfo{}, fmt.Errorf("error parsing address %s for node %s: %w", addressWithCIDR, hostname, err)
+	parts := strings.Split(addressWithCIDR, "/")
+	if len(parts) != networkAddressParts {
+		return networkInfo{}, fmt.Errorf("invalid CIDR format: %s (expected format: IP/CIDR)", addressWithCIDR)
+	}
+
+	ip := parts[0]
+	netmask := parts[1]
+
+	// Validate IP format using net.ParseIP from Go stdlib.
+	if net.ParseIP(ip) == nil {
+		return networkInfo{}, fmt.Errorf("invalid IP address: %s", ip)
 	}
 
 	// Extract gateway.
@@ -967,90 +919,6 @@ func (i *Infrastructure) extractNetworkInfo(networkAny any, hostname string) (ne
 		DNS:     dns,
 		Netmask: netmask,
 	}, nil
-}
-
-// parseIPAndNetmask parses an IP address with CIDR notation (e.g., "192.168.1.11/24")
-// and returns the IP and netmask as separate strings.
-func parseIPAndNetmask(cidr string) (ip, netmask string, err error) {
-	// Split by '/'.
-	parts := []string{}
-	current := ""
-
-	for _, ch := range cidr {
-		if ch == '/' {
-			if len(current) > 0 {
-				parts = append(parts, current)
-			}
-
-			current = ""
-		} else {
-			current += string(ch)
-		}
-	}
-
-	// Add last part.
-	if len(current) > 0 {
-		parts = append(parts, current)
-	}
-
-	if len(parts) != networkAddressParts {
-		return "", "", fmt.Errorf("invalid CIDR format: %s (expected format: IP/CIDR)", cidr)
-	}
-
-	ip = parts[0]
-	cidrBits := parts[1]
-
-	// Validate IP format (simple check).
-	if !isValidIP(ip) {
-		return "", "", fmt.Errorf("invalid IP address: %s", ip)
-	}
-
-	return ip, cidrBits, nil
-}
-
-// isValidIP performs a simple validation of an IPv4 address.
-func isValidIP(ip string) bool {
-	// Split by '.'.
-	octets := []string{}
-	current := ""
-
-	for _, ch := range ip {
-		if ch == '.' {
-			if len(current) > 0 {
-				octets = append(octets, current)
-			}
-
-			current = ""
-		} else {
-			current += string(ch)
-		}
-	}
-
-	// Add last octet.
-	if len(current) > 0 {
-		octets = append(octets, current)
-	}
-
-	// IPv4 must have 4 octets.
-	if len(octets) != 4 {
-		return false
-	}
-
-	// Each octet must be a number between 0-255.
-	for _, octet := range octets {
-		// Simple check: all characters must be digits.
-		if len(octet) == 0 || len(octet) > 3 {
-			return false
-		}
-
-		for _, ch := range octet {
-			if ch < '0' || ch > '9' {
-				return false
-			}
-		}
-	}
-
-	return true
 }
 
 // generateNodeConfigs converts Butane YAML to Ignition JSON for a node.
