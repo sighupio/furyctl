@@ -5,7 +5,6 @@
 package common
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
@@ -70,12 +69,12 @@ type immutableManifest struct {
 
 // kubernetesRelease represents a Kubernetes version entry in immutable.yaml.
 type kubernetesRelease struct {
-	Sysext  []sysextPackage `yaml:"sysext"` // Array of sysext packages
+	Sysext  []sysextPackage `yaml:"sysext"` // Array of sysext packages.
 	Flatcar flatcarRelease  `yaml:"flatcar"`
 }
 
 // sysextPackage represents a systemd-sysext package configuration.
-// Filename convention: {name}-{version}-{arch}.raw
+// Filename convention: {name}-{version}-{arch}.raw.
 type sysextPackage struct {
 	Name              string                    `yaml:"name"`
 	Version           string                    `yaml:"version"`
@@ -183,11 +182,6 @@ func (i *Infrastructure) Prepare() error {
 	// Render Butane templates from fury-distribution.
 	if err := i.renderButaneTemplates(nodes); err != nil {
 		return fmt.Errorf("error rendering butane templates: %w", err)
-	}
-
-	// Render Matchbox profiles and groups from fury-distribution.
-	if err := i.renderMatchboxTemplates(nodes); err != nil {
-		return fmt.Errorf("error rendering matchbox templates: %w", err)
 	}
 
 	// Post-process: convert .bu to .ign for each node.
@@ -387,7 +381,7 @@ func (i *Infrastructure) renderButaneTemplates(nodes []nodeInfo) error {
 	)
 
 	// 4. Use CopyFromTemplate to render templates.
-	targetPath := filepath.Join(i.Path, "butane")
+	targetPath := filepath.Join(i.Path, "templates", "butane")
 
 	if err := i.CopyFromTemplate(
 		cfg,
@@ -416,7 +410,7 @@ func (i *Infrastructure) splitButaneTemplates() error {
 	roles := []string{"controlplane", "worker", "loadbalancer", "etcd"}
 
 	for _, role := range roles {
-		templateFile := filepath.Join(i.Path, "butane", role+".bu")
+		templateFile := filepath.Join(i.Path, "templates", "butane", role+".bu")
 
 		// Check if file exists.
 		if _, err := os.Stat(templateFile); os.IsNotExist(err) {
@@ -445,8 +439,8 @@ func (i *Infrastructure) splitButaneTemplates() error {
 				return fmt.Errorf("could not extract hostname from document in %s", templateFile)
 			}
 
-			// Write to install/ directory.
-			installPath := filepath.Join(i.Path, "butane", "install", hostname+".bu")
+			// Write to templates/butane/install/ directory.
+			installPath := filepath.Join(i.Path, "templates", "butane", "install", hostname+".bu")
 
 			if err := os.WriteFile(installPath, []byte(doc), 0o644); err != nil {
 				return fmt.Errorf("error writing %s: %w", installPath, err)
@@ -462,161 +456,16 @@ func (i *Infrastructure) splitButaneTemplates() error {
 	return nil
 }
 
-// renderMatchboxTemplates generates Matchbox profiles and groups from templates.
-func (i *Infrastructure) renderMatchboxTemplates(nodes []nodeInfo) error {
-	// 1. Load immutable manifest to get Flatcar and sysext versions.
-	kubeVersion := i.getKubernetesVersion()
-
-	manifestPath := filepath.Join(i.DistroPath, "installers", "immutable", "immutable.yaml")
-
-	manifest, err := i.parseImmutableManifest(manifestPath)
-	if err != nil {
-		return fmt.Errorf("error loading immutable manifest for matchbox templates: %w", err)
-	}
-
-	release, ok := manifest.Kubernetes[kubeVersion]
-	if !ok {
-		return fmt.Errorf("kubernetes version %s not found in immutable manifest", kubeVersion)
-	}
-
-	// 2. Prepare configuration for templates (same as butane).
-	nodesData := make([]map[string]any, len(nodes))
-
-	for idx, node := range nodes {
-		// Get Flatcar boot artifacts for this node's architecture
-		var flatcarKernelURL, flatcarInitrdURL string
-		if archInfo, ok := release.Flatcar.Arch[node.Arch]; ok {
-			flatcarKernelURL = archInfo.Kernel.URL
-			flatcarInitrdURL = archInfo.Initrd.URL
-		} else {
-			return fmt.Errorf("flatcar artifacts not found for architecture: %s", node.Arch)
-		}
-
-		nodesData[idx] = map[string]any{
-			"ID":               idx,
-			"Hostname":         node.Hostname,
-			"MAC":              node.MAC,
-			"IP":               node.IP,
-			"Gateway":          node.Gateway,
-			"DNS":              node.DNS,
-			"Netmask":          node.Netmask,
-			"Role":             node.Role,
-			"IPXEServerURL":    node.IPXEServerURL,
-			"FlatcarKernelURL": flatcarKernelURL,
-			"FlatcarInitrdURL": flatcarInitrdURL,
-		}
-	}
-
-	// 3. Create config for templates.
-	cfg := template.Config{
-		Data: map[string]map[any]any{
-			"data": {
-				"nodes":          nodesData,
-				"ipxeServerURL":  nodes[0].IPXEServerURL,
-				"flatcarVersion": release.Flatcar.Version,
-			},
-		},
-	}
-
-	// 4. Render profile templates.
-	profileSourcePath := filepath.Join(i.DistroPath, "templates", "infrastructure", "immutable", "matchbox")
-	profileTargetPath := filepath.Join(i.Path, "matchbox")
-
-	if err := i.CopyFromTemplate(
-		cfg,
-		"immutable-infrastructure",
-		profileSourcePath,
-		profileTargetPath,
-		i.ConfigPath,
-	); err != nil {
-		return fmt.Errorf("error copying matchbox templates: %w", err)
-	}
-
-	// 5. Post-process: Split multi-document JSON files by node.
-	if err := i.splitMatchboxTemplates(); err != nil {
-		return fmt.Errorf("error splitting matchbox templates: %w", err)
-	}
-
-	logrus.Info("Matchbox profiles and groups rendered from fury-distribution")
-
-	return nil
-}
-
-// splitMatchboxTemplates splits the multi-document JSON files into individual files per node.
-func (i *Infrastructure) splitMatchboxTemplates() error {
-	// Process profile and group template files.
-	templates := []struct {
-		file   string
-		subdir string
-	}{
-		{"profile.json", "profiles"},
-		{"group.json", "groups"},
-	}
-
-	for _, tmpl := range templates {
-		templateFile := filepath.Join(i.Path, "matchbox", tmpl.file)
-
-		// Check if file exists.
-		if _, err := os.Stat(templateFile); os.IsNotExist(err) {
-			continue
-		}
-
-		// Read the multi-document JSON (documents separated by "---\n").
-		content, err := os.ReadFile(templateFile)
-		if err != nil {
-			return fmt.Errorf("error reading %s: %w", templateFile, err)
-		}
-
-		// Split by "---\n" to get individual node documents.
-		docs := splitYAMLDocuments(string(content))
-
-		// Write each document to subdirectory.
-		subdirPath := filepath.Join(i.Path, "matchbox", tmpl.subdir)
-		if err := os.MkdirAll(subdirPath, iox.FullPermAccess); err != nil {
-			return fmt.Errorf("error creating directory %s: %w", subdirPath, err)
-		}
-
-		for _, doc := range docs {
-			doc = strings.TrimSpace(doc)
-			if len(doc) == 0 {
-				continue
-			}
-
-			// Parse JSON to extract hostname for filename.
-			var jsonDoc map[string]any
-			if err := json.Unmarshal([]byte(doc), &jsonDoc); err != nil {
-				return fmt.Errorf("error parsing JSON document: %w", err)
-			}
-
-			hostname, ok := jsonDoc["id"].(string)
-			if !ok {
-				return fmt.Errorf("JSON document missing 'id' field")
-			}
-
-			// Write to file: profiles/hostname.json or groups/hostname.json.
-			outputFile := filepath.Join(subdirPath, hostname+".json")
-			if err := os.WriteFile(outputFile, []byte(doc), iox.FullPermAccess); err != nil {
-				return fmt.Errorf("error writing %s: %w", outputFile, err)
-			}
-		}
-
-		// Remove the template file after splitting.
-		if err := os.Remove(templateFile); err != nil {
-			return fmt.Errorf("error removing %s: %w", templateFile, err)
-		}
-	}
-
-	return nil
-}
-
 // CreateFolderStructure creates the directory structure declaratively.
 func (i *Infrastructure) CreateFolderStructure() error {
 	folders := []string{
-		filepath.Join(i.Path, "butane", "install"),
-		filepath.Join(i.Path, "butane", "bootstrap"),
-		filepath.Join(i.Path, "ignition", "install"),
-		filepath.Join(i.Path, "matchbox", "profiles"),
-		filepath.Join(i.Path, "matchbox", "groups"),
+		// Templates directory: editable source files
+		filepath.Join(i.Path, "templates", "butane", "install"),
+		filepath.Join(i.Path, "templates", "butane", "bootstrap"),
+		// Server directory: ready to serve via HTTP
+		filepath.Join(i.Path, "server", "ignition"),
+		filepath.Join(i.Path, "server", "assets", "flatcar"),
+		filepath.Join(i.Path, "server", "assets", "extensions"),
 	}
 
 	for _, folder := range folders {
@@ -1206,9 +1055,19 @@ func isValidIP(ip string) bool {
 
 // generateNodeConfigs converts Butane YAML to Ignition JSON for a node.
 func (i *Infrastructure) generateNodeConfigs(idx int, node nodeInfo) error {
-	// 1. Construct file paths.
-	butanePath := filepath.Join(i.Path, "butane", "install", node.Hostname+".bu")
-	ignitionPath := filepath.Join(i.Path, "ignition", "install", node.Hostname+".json")
+	// 1. Read Butane template from templates/ directory.
+	butanePath := filepath.Join(i.Path, "templates", "butane", "install", node.Hostname+".bu")
+
+	// 2. Write Ignition to server/ directory (ready to serve via HTTP).
+	// Normalize MAC address: replace colons with hyphens for URL-safe paths.
+	normalizedMAC := strings.ReplaceAll(node.MAC, ":", "-")
+	macDir := filepath.Join(i.Path, "server", "ignition", normalizedMAC)
+
+	if err := os.MkdirAll(macDir, iox.FullPermAccess); err != nil {
+		return fmt.Errorf("error creating directory for MAC %s: %w", normalizedMAC, err)
+	}
+
+	ignitionPath := filepath.Join(macDir, "ignition.json")
 
 	logrus.Debugf("Converting Butane to Ignition for node %s (%d/%d)", node.Hostname, idx+1, idx+1)
 
@@ -1304,7 +1163,7 @@ func (i *Infrastructure) loadSysextVersions() error {
 
 // parseImmutableManifest parses the immutable.yaml manifest file.
 // This manifest contains all versioning information for the Immutable installer.
-func (_ *Infrastructure) parseImmutableManifest(path string) (*immutableManifest, error) {
+func (*Infrastructure) parseImmutableManifest(path string) (*immutableManifest, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return nil, fmt.Errorf("error reading immutable manifest at %s: %w", path, err)
@@ -1324,7 +1183,7 @@ func (_ *Infrastructure) parseImmutableManifest(path string) (*immutableManifest
 }
 
 // getAvailableVersions returns a list of available Kubernetes versions from manifest.
-func (_ *Infrastructure) getAvailableVersions(manifest *immutableManifest) []string {
+func (*Infrastructure) getAvailableVersions(manifest *immutableManifest) []string {
 	versions := make([]string, 0, len(manifest.Kubernetes))
 	for version := range manifest.Kubernetes {
 		versions = append(versions, version)
