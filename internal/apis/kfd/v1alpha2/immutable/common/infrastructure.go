@@ -702,24 +702,33 @@ func (i *Infrastructure) getKubernetesConfig() (map[string]any, error) {
 
 // readSSHPublicKeys reads SSH public keys from the filesystem.
 func (i *Infrastructure) readSSHPublicKeys(sshConfig map[string]any) ([]string, error) {
-	keyPath, ok := sshConfig["keyPath"].(string)
-	if !ok || keyPath == "" {
-		return nil, ErrSSHKeyPathNotFound
+	var publicKeyPath string
+
+	// Check if publicKeyPath is explicitly provided.
+	if pkPath, ok := sshConfig["publicKeyPath"].(string); ok && pkPath != "" {
+		publicKeyPath = pkPath
+	} else {
+		// If not provided, derive from keyPath by appending ".pub".
+		keyPath, ok := sshConfig["keyPath"].(string)
+		if !ok || keyPath == "" {
+			return nil, ErrSSHKeyPathNotFound
+		}
+		publicKeyPath = keyPath + ".pub"
 	}
 
-	// Expand environment variables (e.g., ${HOME}).
-	keyPath = os.ExpandEnv(keyPath)
+	// Expand environment variables (e.g., ${HOME}, $HOME).
+	publicKeyPath = os.ExpandEnv(publicKeyPath)
 
 	// Read the public key file.
-	keyContent, err := os.ReadFile(keyPath)
+	keyContent, err := os.ReadFile(publicKeyPath)
 	if err != nil {
-		return nil, fmt.Errorf("error reading SSH public key from %s: %w", keyPath, err)
+		return nil, fmt.Errorf("error reading SSH public key from %s: %w", publicKeyPath, err)
 	}
 
 	// Trim whitespace and return as single-element slice.
 	key := strings.TrimSpace(string(keyContent))
 	if key == "" {
-		return nil, fmt.Errorf("SSH public key file %s is empty", keyPath)
+		return nil, fmt.Errorf("SSH public key file %s is empty", publicKeyPath)
 	}
 
 	return []string{key}, nil
