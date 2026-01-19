@@ -35,7 +35,10 @@ func (lrw *loggingResponseWriter) Write(b []byte) (int, error) {
 	n, err := lrw.ResponseWriter.Write(b)
 	lrw.bytes += n
 
-	return n, fmt.Errorf("error writing response: %w", err)
+	if err != nil {
+		return n, fmt.Errorf("error writing response: %w", err)
+	}
+	return n, nil
 }
 
 // Start an HTTP server serving a path in the file system on a custom address and port, logging each request.
@@ -68,12 +71,12 @@ func Path(address, port, root string) error {
 		"address": address,
 		"port":    port,
 		"root":    root,
-	}).Info("Serving assets. Press ENTER to stop the server...")
+	}).Info("Serving assets. Press ENTER to stop the server and continue...")
+
+	const readHeaderTimeout = 5 * time.Second
 
 	// Create server so we can control shutdown and inspect errors.
-	const readTimeout = 5 * time.Second
-
-	srv := &http.Server{Addr: listenAddr, Handler: nil, ReadHeaderTimeout: readTimeout}
+	srv := &http.Server{Addr: listenAddr, Handler: nil, ReadHeaderTimeout: readHeaderTimeout}
 
 	// Channel to receive server errors.
 	errCh := make(chan error, 1)
