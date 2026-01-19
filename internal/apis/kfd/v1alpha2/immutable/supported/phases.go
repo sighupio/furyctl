@@ -10,18 +10,22 @@ import (
 	"github.com/sighupio/furyctl/internal/cluster"
 )
 
-// Phases returns the list of supported phases for Immutable kind.
-func Phases() []string {
+type Phases struct{}
+
+func NewPhases() *Phases {
+	return &Phases{}
+}
+
+func (*Phases) Get() []string {
 	return []string{
-		cluster.OperationPhaseInfrastructure,
 		cluster.OperationPhaseKubernetes,
 		cluster.OperationPhaseDistribution,
+		cluster.OperationPhasePlugins,
 	}
 }
 
-// IsSupported checks if a phase is supported for Immutable kind.
-func IsSupported(phase string) bool {
-	return slices.Contains(Phases(), phase)
+func (s *Phases) IsSupported(phase string) bool {
+	return slices.Contains(s.Get(), phase)
 }
 
 // SchemaPaths maps phases to their JSON schema paths in furyctl.yaml.
