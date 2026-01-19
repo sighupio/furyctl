@@ -1,0 +1,13 @@
+# furyctl release v0.34.0
+
+Welcome to the latest release of `furyctl` maintained by SIGHUP by ReeVo team.
+
+## New features 🌟
+
+- [[#643](https://github.com/sighupio/furyctl/pull/643)] Pass furyagent path to EKSCluster provider to avoid multiple downloads of the same binary.
+
+## Bug fixes 🐞
+
+## Breaking Changes 💔
+
+None.
