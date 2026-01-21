@@ -942,7 +942,7 @@ func (*Infrastructure) readSSHPublicKeys(sshConfig map[string]any) ([]string, er
 	}
 
 	// 3. Expand tilde (~) to home directory first.
-	// os.ExpandEnv() only expands $HOME and ${HOME}, not ~.
+	// Os.ExpandEnv() only expands $HOME and ${HOME}, not ~.
 	if strings.HasPrefix(publicKeyPath, "~/") {
 		homeDir, err := os.UserHomeDir()
 		if err != nil {
@@ -1331,7 +1331,7 @@ func (i *Infrastructure) getKubernetesVersion() string {
 // assetDownloader wraps the HTTP client with asset-specific download logic.
 type assetDownloader struct {
 	client         netx.Client
-	goGetterClient *netx.GoGetterClient // Direct reference to go-getter for file-specific downloads
+	goGetterClient *netx.GoGetterClient // Direct reference to go-getter for file-specific downloads.
 	assetsPath     string
 }
 
@@ -1366,7 +1366,7 @@ func (i *Infrastructure) downloadAssets(release kubernetesRelease, usedArchitect
 
 	downloader := &assetDownloader{
 		client:         cachedClient,
-		goGetterClient: httpClient, // Keep reference to unwrapped client for file-specific downloads
+		goGetterClient: httpClient, // Keep reference to unwrapped client for file-specific downloads.
 		assetsPath:     filepath.Join(i.Path, "server", "assets"),
 	}
 
