@@ -19,6 +19,7 @@ import (
 	"strings"
 	texttemplate "text/template"
 
+	"github.com/hashicorp/go-getter"
 	"github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v3"
 
@@ -940,8 +941,19 @@ func (*Infrastructure) readSSHPublicKeys(sshConfig map[string]any) ([]string, er
 		publicKeyPath = privateKeyPath + ".pub"
 	}
 
-	// 3. Expand environment variables (e.g., ${HOME}, $HOME).
-	publicKeyPath = os.ExpandEnv(publicKeyPath)
+	// 3. Expand tilde (~) to home directory first.
+	// os.ExpandEnv() only expands $HOME and ${HOME}, not ~.
+	if strings.HasPrefix(publicKeyPath, "~/") {
+		homeDir, err := os.UserHomeDir()
+		if err != nil {
+			return nil, fmt.Errorf("error getting home directory: %w", err)
+		}
+
+		publicKeyPath = filepath.Join(homeDir, publicKeyPath[2:])
+	} else {
+		// Expand environment variables (e.g., ${HOME}, $HOME).
+		publicKeyPath = os.ExpandEnv(publicKeyPath)
+	}
 
 	// 4. Read the public key file.
 	keyContent, err := os.ReadFile(publicKeyPath)
@@ -1318,8 +1330,9 @@ func (i *Infrastructure) getKubernetesVersion() string {
 
 // assetDownloader wraps the HTTP client with asset-specific download logic.
 type assetDownloader struct {
-	client     netx.Client
-	assetsPath string
+	client         netx.Client
+	goGetterClient *netx.GoGetterClient // Direct reference to go-getter for file-specific downloads
+	assetsPath     string
 }
 
 // extractUsedArchitectures analyzes nodes and returns unique architectures.
@@ -1352,8 +1365,9 @@ func (i *Infrastructure) downloadAssets(release kubernetesRelease, usedArchitect
 	)
 
 	downloader := &assetDownloader{
-		client:     cachedClient,
-		assetsPath: filepath.Join(i.Path, "server", "assets"),
+		client:         cachedClient,
+		goGetterClient: httpClient, // Keep reference to unwrapped client for file-specific downloads
+		assetsPath:     filepath.Join(i.Path, "server", "assets"),
 	}
 
 	// Download Flatcar artifacts by architecture.
@@ -1471,10 +1485,10 @@ func (ad *assetDownloader) downloadAndValidate(url, destPath, expectedSHA256 str
 		return nil
 	}
 
-	// Download file (the cache client handles avoiding re-downloads).
+	// Download file using ClientModeFile to prevent directory creation.
 	logrus.Debugf("Downloading %s", url)
 
-	if err := ad.client.Download(url, destPath); err != nil {
+	if err := ad.goGetterClient.DownloadWithMode(url, destPath, getter.ClientModeFile); err != nil {
 		return fmt.Errorf("error downloading from %s: %w", url, err)
 	}
 

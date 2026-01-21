@@ -36,6 +36,11 @@ func (*GoGetterClient) ClearItem(_ string) error {
 }
 
 func (g *GoGetterClient) Download(src, dst string) error {
+	return g.DownloadWithMode(src, dst, getter.ClientModeAny)
+}
+
+// DownloadWithMode allows downloading with a specific mode (File, Dir, or Any).
+func (g *GoGetterClient) DownloadWithMode(src, dst string, mode getter.ClientMode) error {
 	protocols := []string{""}
 	if !g.URLHasForcedProtocol(src) {
 		protocols = g.protocols
@@ -49,7 +54,7 @@ func (g *GoGetterClient) Download(src, dst string) error {
 		client := &getter.Client{
 			Src:  fullSrc,
 			Dst:  dst,
-			Mode: getter.ClientModeAny,
+			Mode: mode,
 			Getters: map[string]getter.Getter{
 				"file": &gogetterx.FileGetter{
 					Copy: true,

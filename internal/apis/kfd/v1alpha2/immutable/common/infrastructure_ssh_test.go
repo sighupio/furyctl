@@ -350,6 +350,62 @@ func TestReadSSHPublicKeys_EnvVarExpansion(t *testing.T) {
 	}
 }
 
+func TestReadSSHPublicKeys_TildeExpansion(t *testing.T) {
+	// Note: Cannot use t.Parallel() because we're using real home directory.
+
+	// Create temp directory with test SSH keys.
+	tmpDir := t.TempDir()
+	privateKeyName := "id_tilde_test"
+	publicKeyPath := filepath.Join(tmpDir, privateKeyName+".pub")
+	testPublicKey := "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQC tildetest@example.com"
+
+	if err := os.WriteFile(publicKeyPath, []byte(testPublicKey+"\n"), filePermissionUserReadWrite); err != nil {
+		t.Fatalf("failed to write test public key: %v", err)
+	}
+
+	// Move the public key to a subdirectory within home to simulate real usage.
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		t.Fatalf("failed to get home directory: %v", err)
+	}
+
+	// Create a test subdirectory in home.
+	testSSHDir := filepath.Join(homeDir, ".claude-test-ssh")
+	if err := os.MkdirAll(testSSHDir, 0o755); err != nil {
+		t.Fatalf("failed to create test SSH directory: %v", err)
+	}
+
+	defer os.RemoveAll(testSSHDir) // Clean up after test.
+
+	// Copy the public key to the test location.
+	realPublicKeyPath := filepath.Join(testSSHDir, privateKeyName+".pub")
+	if err := os.WriteFile(realPublicKeyPath, []byte(testPublicKey+"\n"), filePermissionUserReadWrite); err != nil {
+		t.Fatalf("failed to write real test public key: %v", err)
+	}
+
+	// Create Infrastructure instance.
+	infra := &Infrastructure{}
+
+	// Test config using tilde in privateKeyPath.
+	sshConfig := map[string]any{
+		"username":       "core",
+		"privateKeyPath": "~/.claude-test-ssh/" + privateKeyName,
+	}
+
+	keys, err := infra.readSSHPublicKeys(sshConfig)
+	if err != nil {
+		t.Fatalf("ReadSSHPublicKeys() with tilde expansion error = %v, want nil", err)
+	}
+
+	if len(keys) != 1 {
+		t.Fatalf("expected 1 key, got %d", len(keys))
+	}
+
+	if keys[0] != testPublicKey {
+		t.Errorf("key mismatch: got %q, want %q", keys[0], testPublicKey)
+	}
+}
+
 // Helper function to check if string contains substring.
 func contains(s, substr string) bool {
 	return len(s) >= len(substr) && (s == substr || len(s) > len(substr) && containsHelper(s, substr))
