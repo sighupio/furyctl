@@ -19,7 +19,7 @@ func TestReadSSHPublicKeys_PrivateKeyPath(t *testing.T) {
 	publicKeyPath := privateKeyPath + ".pub"
 	testPublicKey := "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQC test@example.com"
 
-	if err := os.WriteFile(publicKeyPath, []byte(testPublicKey+"\n"), filePermissionUserReadWrite); err != nil {
+	if err := os.WriteFile(publicKeyPath, []byte(testPublicKey+"\n"), 0o600); err != nil {
 		t.Fatalf("failed to write test public key: %v", err)
 	}
 
@@ -55,7 +55,7 @@ func TestReadSSHPublicKeys_KeyPath_Deprecated(t *testing.T) {
 	publicKeyPath := privateKeyPath + ".pub"
 	testPublicKey := "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAI test@deprecated.com"
 
-	if err := os.WriteFile(publicKeyPath, []byte(testPublicKey+"\n"), filePermissionUserReadWrite); err != nil {
+	if err := os.WriteFile(publicKeyPath, []byte(testPublicKey+"\n"), 0o600); err != nil {
 		t.Fatalf("failed to write test public key: %v", err)
 	}
 
@@ -81,10 +81,10 @@ func TestReadSSHPublicKeys_KeyPath_Deprecated(t *testing.T) {
 	if keys[0] != testPublicKey {
 		t.Errorf("key mismatch: got %q, want %q", keys[0], testPublicKey)
 	}
-
-	// Note: Testing the warning log would require capturing log output,
-	// which is beyond the scope of this unit test. Integration tests should verify this.
 }
+
+// Note: Testing the warning log would require capturing log output,
+// which is beyond the scope of this unit test. Integration tests should verify this.
 
 func TestReadSSHPublicKeys_BothSpecified(t *testing.T) {
 	t.Parallel()
@@ -104,6 +104,7 @@ func TestReadSSHPublicKeys_BothSpecified(t *testing.T) {
 	if err := os.WriteFile(deprecatedPublicKeyPath, []byte(deprecatedPublicKey+"\n"), 0o600); err != nil {
 		t.Fatalf("failed to write deprecated public key: %v", err)
 	}
+
 	if err := os.WriteFile(newPublicKeyPath, []byte(newPublicKey+"\n"), 0o600); err != nil {
 		t.Fatalf("failed to write new public key: %v", err)
 	}
@@ -152,7 +153,7 @@ func TestReadSSHPublicKeys_PublicKeyPath_Explicit(t *testing.T) {
 		t.Fatalf("failed to create public key dir: %v", err)
 	}
 
-	if err := os.WriteFile(publicKeyPath, []byte(testPublicKey+"\n"), filePermissionUserReadWrite); err != nil {
+	if err := os.WriteFile(publicKeyPath, []byte(testPublicKey+"\n"), 0o600); err != nil {
 		t.Fatalf("failed to write test public key: %v", err)
 	}
 
@@ -189,7 +190,7 @@ func TestReadSSHPublicKeys_PublicKeyPath_Derived(t *testing.T) {
 	publicKeyPath := privateKeyPath + ".pub"
 	testPublicKey := "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAI derived@example.com"
 
-	if err := os.WriteFile(publicKeyPath, []byte(testPublicKey+"\n"), filePermissionUserReadWrite); err != nil {
+	if err := os.WriteFile(publicKeyPath, []byte(testPublicKey+"\n"), 0o600); err != nil {
 		t.Fatalf("failed to write test public key: %v", err)
 	}
 
@@ -313,14 +314,13 @@ func TestReadSSHPublicKeys_PublicKeyFileNotFound(t *testing.T) {
 
 func TestReadSSHPublicKeys_EnvVarExpansion(t *testing.T) {
 	// Note: Cannot use t.Parallel() because t.Setenv() modifies global state.
-
 	// Create temp directory with test SSH keys.
 	tmpDir := t.TempDir()
 	privateKeyPath := filepath.Join(tmpDir, "id_envtest")
 	publicKeyPath := privateKeyPath + ".pub"
 	testPublicKey := "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQC envtest@example.com"
 
-	if err := os.WriteFile(publicKeyPath, []byte(testPublicKey+"\n"), filePermissionUserReadWrite); err != nil {
+	if err := os.WriteFile(publicKeyPath, []byte(testPublicKey+"\n"), 0o600); err != nil {
 		t.Fatalf("failed to write test public key: %v", err)
 	}
 
@@ -350,16 +350,14 @@ func TestReadSSHPublicKeys_EnvVarExpansion(t *testing.T) {
 	}
 }
 
-func TestReadSSHPublicKeys_TildeExpansion(t *testing.T) {
-	// Note: Cannot use t.Parallel() because we're using real home directory.
-
+func TestReadSSHPublicKeys_TildeExpansion(t *testing.T) { //nolint:paralleltest // Cannot use t.Parallel() because we're using real home directory.
 	// Create temp directory with test SSH keys.
 	tmpDir := t.TempDir()
 	privateKeyName := "id_tilde_test"
 	publicKeyPath := filepath.Join(tmpDir, privateKeyName+".pub")
 	testPublicKey := "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQC tildetest@example.com"
 
-	if err := os.WriteFile(publicKeyPath, []byte(testPublicKey+"\n"), filePermissionUserReadWrite); err != nil {
+	if err := os.WriteFile(publicKeyPath, []byte(testPublicKey+"\n"), 0o600); err != nil {
 		t.Fatalf("failed to write test public key: %v", err)
 	}
 
@@ -379,7 +377,7 @@ func TestReadSSHPublicKeys_TildeExpansion(t *testing.T) {
 
 	// Copy the public key to the test location.
 	realPublicKeyPath := filepath.Join(testSSHDir, privateKeyName+".pub")
-	if err := os.WriteFile(realPublicKeyPath, []byte(testPublicKey+"\n"), filePermissionUserReadWrite); err != nil {
+	if err := os.WriteFile(realPublicKeyPath, []byte(testPublicKey+"\n"), 0o600); err != nil {
 		t.Fatalf("failed to write real test public key: %v", err)
 	}
 
