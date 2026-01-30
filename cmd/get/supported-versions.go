@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"text/tabwriter"
 
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -75,7 +76,17 @@ func NewSupportedVersionsCmd() *cobra.Command {
 				msg += "each kind\n"
 			}
 
-			logrus.Info(msg + FormatSupportedVersions(releases, kindsToPrint))
+			var table strings.Builder
+			w := tabwriter.NewWriter(&table, 0, 0, 2, ' ', 0)
+			_, err = w.Write([]byte(FormatSupportedVersions(releases, kindsToPrint)))
+			if err != nil {
+				cmdEvent.AddErrorMessage(err)
+				tracker.Track(cmdEvent)
+
+				return fmt.Errorf("error writing supported versions to table: %w", err)
+			}
+			logrus.Info(msg + "\n" + table.String())
+
 			cmdEvent.AddSuccessMessage("supported SD versions")
 			tracker.Track(cmdEvent)
 
@@ -102,16 +113,13 @@ func NewSupportedVersionsCmd() *cobra.Command {
 func FormatSupportedVersions(releases []distribution.KFDRelease, kinds []string) string {
 	distribution.SetRecommendedVersions(releases)
 
-	fmtSupportedVersions := "\n"
-	fmtSupportedVersions += "-----------------------------------------------------------------------------------------\n"
-	fmtSupportedVersions += "VERSION \t\tRELEASE DATE\t\t"
+	fmtSupportedVersions := "VERSION\tRELEASE DATE"
 
 	for _, k := range kinds {
-		fmtSupportedVersions += k + "\t"
+		fmtSupportedVersions += "\t" + k
 	}
 
 	fmtSupportedVersions += "\n"
-	fmtSupportedVersions += "-----------------------------------------------------------------------------------------\n"
 
 	supported := func(s bool) string {
 		if s {
@@ -155,24 +163,24 @@ func FormatSupportedVersions(releases []distribution.KFDRelease, kinds []string)
 		}
 
 		fmtSupportedVersions += fmt.Sprintf(
-			"v%s\t\t%s",
+			"v%s\t%s",
 			versionStr,
 			dateStr,
 		)
 
 		for _, k := range kinds {
-			fmtSupportedVersions += "\t\t" + supported(r.Support[k])
+			fmtSupportedVersions += "\t" + supported(r.Support[k])
 		}
 
 		fmtSupportedVersions += "\n"
 	}
 
 	if showUnsupportedFuryctlMsg {
-		fmtSupportedVersions += "\n* this usually indicates you are not using the latest version of furyctl, try updating or checking the online documentation.\n"
+		fmtSupportedVersions += "\n* this usually indicates you are not using the latest version of furyctl, try updating or checking the online documentation:\nhttps://docs.sighup.io/furyctl/compatibility-matrix\n"
 	}
 
 	if showRecommendedMsg {
-		fmtSupportedVersions += "\n** this indicates the recommended SD versions.\n"
+		fmtSupportedVersions += "\n** indicates the recommended SD versions.\n"
 	}
 
 	return fmtSupportedVersions
