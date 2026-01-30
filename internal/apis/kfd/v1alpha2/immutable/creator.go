@@ -189,6 +189,7 @@ func (c *ClusterCreator) Create(startFrom string, _, podRunningCheckTimeout int)
 	if err != nil {
 		return fmt.Errorf("failed to create infrastructure phase: %w", err)
 	}
+
 	infrastructurePhase := upgrade.NewOperatorPhaseDecorator(
 		c.upgradeStateStore,
 		infra,

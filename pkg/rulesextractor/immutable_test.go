@@ -12,8 +12,7 @@ import (
 
 	"github.com/r3labs/diff/v3"
 
-	immutableRules "github.com/sighupio/furyctl/pkg/rulesextractor"
-	rules "github.com/sighupio/furyctl/pkg/rulesextractor"
+	"github.com/sighupio/furyctl/pkg/rulesextractor"
 )
 
 func TestImmutableBuilder_GetImmutableRules(t *testing.T) {
@@ -21,32 +20,32 @@ func TestImmutableBuilder_GetImmutableRules(t *testing.T) {
 
 	testCases := []struct {
 		desc               string
-		ImmutableRulesSpec *rules.Spec
+		ImmutableRulesSpec *rulesextractor.Spec
 		phase              string
-		want               []rules.Rule
+		want               []rulesextractor.Rule
 	}{
 		{
 			desc:               "infrastucture - empty",
-			ImmutableRulesSpec: &rules.Spec{},
+			ImmutableRulesSpec: &rulesextractor.Spec{},
 			phase:              "infrastructure",
-			want:               []rules.Rule{},
+			want:               []rulesextractor.Rule{},
 		},
 		{
 			desc:               "kubernetes - empty",
-			ImmutableRulesSpec: &rules.Spec{},
+			ImmutableRulesSpec: &rulesextractor.Spec{},
 			phase:              "kubernetes",
-			want:               []rules.Rule{},
+			want:               []rulesextractor.Rule{},
 		},
 		{
 			desc:               "distribution - empty",
-			ImmutableRulesSpec: &rules.Spec{},
+			ImmutableRulesSpec: &rulesextractor.Spec{},
 			phase:              "distribution",
-			want:               []rules.Rule{},
+			want:               []rulesextractor.Rule{},
 		},
 		{
 			desc: "infrastructure - not empty",
-			ImmutableRulesSpec: &rules.Spec{
-				Infrastructure: &[]rules.Rule{
+			ImmutableRulesSpec: &rulesextractor.Spec{
+				Infrastructure: &[]rulesextractor.Rule{
 					{
 						Path:      "foo",
 						Immutable: true,
@@ -58,7 +57,7 @@ func TestImmutableBuilder_GetImmutableRules(t *testing.T) {
 				},
 			},
 			phase: "infrastructure",
-			want: []rules.Rule{
+			want: []rulesextractor.Rule{
 				{
 					Path:      "foo",
 					Immutable: true,
@@ -67,8 +66,8 @@ func TestImmutableBuilder_GetImmutableRules(t *testing.T) {
 		},
 		{
 			desc: "kubernetes - not empty",
-			ImmutableRulesSpec: &rules.Spec{
-				Kubernetes: &[]rules.Rule{
+			ImmutableRulesSpec: &rulesextractor.Spec{
+				Kubernetes: &[]rulesextractor.Rule{
 					{
 						Path:      "foo",
 						Immutable: true,
@@ -80,7 +79,7 @@ func TestImmutableBuilder_GetImmutableRules(t *testing.T) {
 				},
 			},
 			phase: "kubernetes",
-			want: []rules.Rule{
+			want: []rulesextractor.Rule{
 				{
 					Path:      "foo",
 					Immutable: true,
@@ -89,8 +88,8 @@ func TestImmutableBuilder_GetImmutableRules(t *testing.T) {
 		},
 		{
 			desc: "distribution - not empty",
-			ImmutableRulesSpec: &rules.Spec{
-				Distribution: &[]rules.Rule{
+			ImmutableRulesSpec: &rulesextractor.Spec{
+				Distribution: &[]rulesextractor.Rule{
 					{
 						Path:      "foo",
 						Immutable: true,
@@ -102,7 +101,7 @@ func TestImmutableBuilder_GetImmutableRules(t *testing.T) {
 				},
 			},
 			phase: "distribution",
-			want: []rules.Rule{
+			want: []rulesextractor.Rule{
 				{
 					Path:      "foo",
 					Immutable: true,
@@ -117,7 +116,7 @@ func TestImmutableBuilder_GetImmutableRules(t *testing.T) {
 		t.Run(tC.desc, func(t *testing.T) {
 			t.Parallel()
 
-			builder := immutableRules.ImmutableExtractor{
+			builder := rulesextractor.ImmutableExtractor{
 				Spec: *tC.ImmutableRulesSpec,
 			}
 
@@ -140,22 +139,22 @@ func TestImmutableBuilder_FilterSafeImmutableRules(t *testing.T) {
 
 	testCases := []struct {
 		desc               string
-		ImmutableRulesSpec *rules.Spec
-		rules              []rules.Rule
+		ImmutableRulesSpec *rulesextractor.Spec
+		rules              []rulesextractor.Rule
 		diffs              diff.Changelog
-		want               []rules.Rule
+		want               []rulesextractor.Rule
 	}{
 		{
 			desc:               "empty rules",
-			ImmutableRulesSpec: &rules.Spec{},
-			rules:              []rules.Rule{},
+			ImmutableRulesSpec: &rulesextractor.Spec{},
+			rules:              []rulesextractor.Rule{},
 			diffs:              diff.Changelog{},
-			want:               []rules.Rule{},
+			want:               []rulesextractor.Rule{},
 		},
 		{
 			desc:               "no safe conditions",
-			ImmutableRulesSpec: &rules.Spec{},
-			rules: []rules.Rule{
+			ImmutableRulesSpec: &rulesextractor.Spec{},
+			rules: []rulesextractor.Rule{
 				{
 					Path:      "foo",
 					Immutable: true,
@@ -168,7 +167,7 @@ func TestImmutableBuilder_FilterSafeImmutableRules(t *testing.T) {
 					To:   "bar",
 				},
 			},
-			want: []rules.Rule{
+			want: []rulesextractor.Rule{
 				{
 					Path:      "foo",
 					Immutable: true,
@@ -177,12 +176,12 @@ func TestImmutableBuilder_FilterSafeImmutableRules(t *testing.T) {
 		},
 		{
 			desc:               "matching safe conditions",
-			ImmutableRulesSpec: &rules.Spec{},
-			rules: []rules.Rule{
+			ImmutableRulesSpec: &rulesextractor.Spec{},
+			rules: []rulesextractor.Rule{
 				{
 					Path:      ".foo",
 					Immutable: true,
-					Safe: &[]rules.Safe{
+					Safe: &[]rulesextractor.Safe{
 						{
 							From: &foo,
 							To:   &bar,
@@ -197,19 +196,19 @@ func TestImmutableBuilder_FilterSafeImmutableRules(t *testing.T) {
 					To:   "bar",
 				},
 			},
-			want: []rules.Rule{},
+			want: []rulesextractor.Rule{},
 		},
 		{
 			desc:               "non-matching safe conditions",
-			ImmutableRulesSpec: &rules.Spec{},
-			rules: []rules.Rule{
+			ImmutableRulesSpec: &rulesextractor.Spec{},
+			rules: []rulesextractor.Rule{
 				{
 					Path:      ".foo",
 					Immutable: true,
-					Safe: &[]rules.Safe{
+					Safe: &[]rulesextractor.Safe{
 						{
 							From: &foo,
-							To:   &foo, // Doesn't match the diff
+							To:   &foo, // Doesn't match the diff.
 						},
 					},
 				},
@@ -221,11 +220,11 @@ func TestImmutableBuilder_FilterSafeImmutableRules(t *testing.T) {
 					To:   "bar",
 				},
 			},
-			want: []rules.Rule{
+			want: []rulesextractor.Rule{
 				{
 					Path:      ".foo",
 					Immutable: true,
-					Safe: &[]rules.Safe{
+					Safe: &[]rulesextractor.Safe{
 						{
 							From: &foo,
 							To:   &foo,
@@ -242,7 +241,7 @@ func TestImmutableBuilder_FilterSafeImmutableRules(t *testing.T) {
 		t.Run(tC.desc, func(t *testing.T) {
 			t.Parallel()
 
-			builder := immutableRules.ImmutableExtractor{
+			builder := rulesextractor.ImmutableExtractor{
 				Spec: *tC.ImmutableRulesSpec,
 			}
 

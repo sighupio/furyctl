@@ -19,7 +19,10 @@ type ImmutableExtractor struct {
 	Spec Spec
 }
 
-func NewImmutableClusterRulesExtractor(distributionPath string, renderedConfig map[string]any) (*ImmutableExtractor, error) {
+func NewImmutableClusterRulesExtractor(
+	distributionPath string,
+	renderedConfig map[string]any,
+) (*ImmutableExtractor, error) {
 	builder := ImmutableExtractor{
 		BaseExtractor: &BaseExtractor{
 			RenderedConfig: renderedConfig,
