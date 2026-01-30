@@ -162,16 +162,13 @@ func (*ClusterCreator) GetPhasePath(phase string) (string, error) {
 	return schemaPath, nil
 }
 
-func (c *ClusterCreator) createInfrastructure() error {
-	logrus.Info("Creating infrastructure phase...")
-
+func createInfrastructurePhase(c *ClusterCreator) (*create.Infrastructure, error) {
 	// Render merged configuration (defaults + user config).
 	mergedConfig, err := c.RenderConfig()
 	if err != nil {
-		return fmt.Errorf("failed to render config: %w", err)
+		return nil, fmt.Errorf("failed to render config: %w", err)
 	}
 
-	// Create infrastructure phase.
 	infraPath := filepath.Join(c.paths.WorkDir, "infrastructure")
 
 	phase := cluster.NewOperationPhase(
@@ -182,18 +179,22 @@ func (c *ClusterCreator) createInfrastructure() error {
 
 	infra := create.NewInfrastructure(phase, c.paths.ConfigPath, mergedConfig, c.paths.DistroPath)
 
-	// Execute phase.
-	if err := infra.Exec(); err != nil {
-		return fmt.Errorf("infrastructure phase failed: %w", err)
-	}
-
-	logrus.Info("Infrastructure phase completed successfully")
-
-	return nil
+	return infra, nil
 }
 
 func (c *ClusterCreator) Create(startFrom string, _, podRunningCheckTimeout int) error {
 	upgr := upgrade.New(c.paths, string(c.furyctlConf.Kind))
+
+	infra, err := createInfrastructurePhase(c)
+	if err != nil {
+		return fmt.Errorf("failed to create infrastructure phase: %w", err)
+	}
+	infrastructurePhase := upgrade.NewOperatorPhaseDecorator(
+		c.upgradeStateStore,
+		infra,
+		c.dryRun,
+		upgr,
+	)
 
 	kubernetesPhase := upgrade.NewOperatorPhaseDecorator(
 		c.upgradeStateStore,
@@ -299,7 +300,17 @@ func (c *ClusterCreator) Create(startFrom string, _, podRunningCheckTimeout int)
 
 	switch c.phase {
 	case cluster.OperationPhaseInfrastructure:
-		return c.createInfrastructure()
+		upgradeState := upgrade.State{
+			Phases: upgrade.Phases{
+				PreInfrastructure:  &upgrade.Phase{Status: upgrade.PhaseStatusPending},
+				Infrastructure:     &upgrade.Phase{Status: upgrade.PhaseStatusPending},
+				PostInfrastructure: &upgrade.Phase{Status: upgrade.PhaseStatusPending},
+			},
+		}
+
+		if err := infrastructurePhase.Exec(StartFromFlagNotSet, &upgradeState); err != nil {
+			return fmt.Errorf("error while executing infrastructure phase: %w", err)
+		}
 
 	case cluster.OperationPhaseKubernetes:
 		upgradeState := upgrade.State{
@@ -350,6 +361,7 @@ func (c *ClusterCreator) Create(startFrom string, _, podRunningCheckTimeout int)
 	case cluster.OperationPhaseAll:
 		if err := c.allPhases(
 			startFrom,
+			infrastructurePhase,
 			kubernetesPhase,
 			distributionPhase,
 			pluginsPhase,
@@ -427,6 +439,7 @@ func convertValue(v any) any {
 
 func (c *ClusterCreator) allPhases(
 	startFrom string,
+	infrastructurePhase upgrade.OperatorPhase,
 	kubernetesPhase upgrade.OperatorPhase,
 	distributionPhase upgrade.ReducersOperatorPhase[reducers.Reducers],
 	pluginsPhase *commcreate.Plugins,
@@ -461,6 +474,15 @@ func (c *ClusterCreator) allPhases(
 			if err := c.upgradeStateStore.Store(upgradeState); err != nil {
 				return fmt.Errorf("error while storing upgrade state: %w", err)
 			}
+		}
+	}
+
+	if startFrom == "" ||
+		startFrom == cluster.OperationPhaseInfrastructure ||
+		startFrom == cluster.OperationSubPhasePreInfrastructure ||
+		startFrom == cluster.OperationSubPhasePostInfrastructure {
+		if err := infrastructurePhase.Exec(c.getInfrastructureSubPhase(startFrom), upgradeState); err != nil {
+			return fmt.Errorf("error while executing infrastructure phase: %w", err)
 		}
 	}
 
@@ -569,6 +591,10 @@ func (*ClusterCreator) initUpgradeState() *upgrade.State {
 			PostDistribution: &upgrade.Phase{Status: upgrade.PhaseStatusPending},
 		},
 	}
+}
+
+func (*ClusterCreator) getInfrastructureSubPhase(startFrom string) string {
+	return startFrom
 }
 
 func (*ClusterCreator) getKubernetesSubPhase(startFrom string) string {

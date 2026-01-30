@@ -18,6 +18,7 @@ func NewPhases() *Phases {
 
 func (*Phases) Get() []string {
 	return []string{
+		cluster.OperationPhaseInfrastructure,
 		cluster.OperationPhaseKubernetes,
 		cluster.OperationPhaseDistribution,
 		cluster.OperationPhasePlugins,
@@ -35,6 +36,7 @@ var SchemaPaths = map[string]string{
 	cluster.OperationPhaseInfrastructure: ".spec.infrastructure",
 	cluster.OperationPhaseKubernetes:     ".spec.kubernetes",
 	cluster.OperationPhaseDistribution:   ".spec.distribution",
+	cluster.OperationPhasePlugins:        ".spec.plugins",
 }
 
 // GetSchemaPath returns the schema path for a given phase.
