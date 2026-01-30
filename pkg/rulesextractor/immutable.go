@@ -26,7 +26,7 @@ func NewImmutableClusterRulesExtractor(distributionPath string, renderedConfig m
 		},
 	}
 
-	rulesPath := filepath.Join(distributionPath, "rules", "onpremises-kfd-v1alpha2.yaml")
+	rulesPath := filepath.Join(distributionPath, "rules", "immutable-kfd-v1alpha2.yaml")
 
 	spec, err := yamlx.FromFileV3[Spec](rulesPath)
 	if err != nil {
@@ -40,6 +40,21 @@ func NewImmutableClusterRulesExtractor(distributionPath string, renderedConfig m
 
 func (r *ImmutableExtractor) GetImmutableRules(phase string) []Rule {
 	switch phase {
+	case cluster.OperationPhaseInfrastructure:
+		if r.Spec.Infrastructure == nil {
+			return []Rule{}
+		}
+
+		var immutableRules []Rule
+
+		for _, rule := range *r.Spec.Infrastructure {
+			if rule.Immutable {
+				immutableRules = append(immutableRules, rule)
+			}
+		}
+
+		return immutableRules
+
 	case cluster.OperationPhaseKubernetes:
 		if r.Spec.Kubernetes == nil {
 			return []Rule{}
@@ -77,6 +92,13 @@ func (r *ImmutableExtractor) GetImmutableRules(phase string) []Rule {
 
 func (r *ImmutableExtractor) GetReducers(phase string) []Rule {
 	switch phase {
+	case cluster.OperationPhaseInfrastructure:
+		if r.Spec.Infrastructure == nil {
+			return []Rule{}
+		}
+
+		return r.BaseExtractor.ExtractReducerRules(*r.Spec.Infrastructure)
+
 	case cluster.OperationPhaseKubernetes:
 		if r.Spec.Kubernetes == nil {
 			return []Rule{}

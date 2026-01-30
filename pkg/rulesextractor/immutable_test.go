@@ -4,7 +4,6 @@
 
 //go:build unit
 
-// FIXME: I just copied over the same file from onpremrules_test.go
 package rulesextractor_test
 
 import (
@@ -13,34 +12,62 @@ import (
 
 	"github.com/r3labs/diff/v3"
 
-	onpremrules "github.com/sighupio/furyctl/pkg/rulesextractor"
+	immutableRules "github.com/sighupio/furyctl/pkg/rulesextractor"
 	rules "github.com/sighupio/furyctl/pkg/rulesextractor"
 )
 
-func TestOnPremisesBuilder_GetImmutableRules(t *testing.T) {
+func TestImmutableBuilder_GetImmutableRules(t *testing.T) {
 	t.Parallel()
 
 	testCases := []struct {
-		desc            string
-		onPremRulesSpec *rules.Spec
-		phase           string
-		want            []rules.Rule
+		desc               string
+		ImmutableRulesSpec *rules.Spec
+		phase              string
+		want               []rules.Rule
 	}{
 		{
-			desc:            "kubernetes - empty",
-			onPremRulesSpec: &rules.Spec{},
-			phase:           "kubernetes",
-			want:            []rules.Rule{},
+			desc:               "infrastucture - empty",
+			ImmutableRulesSpec: &rules.Spec{},
+			phase:              "infrastructure",
+			want:               []rules.Rule{},
 		},
 		{
-			desc:            "distribution - empty",
-			onPremRulesSpec: &rules.Spec{},
-			phase:           "distribution",
-			want:            []rules.Rule{},
+			desc:               "kubernetes - empty",
+			ImmutableRulesSpec: &rules.Spec{},
+			phase:              "kubernetes",
+			want:               []rules.Rule{},
+		},
+		{
+			desc:               "distribution - empty",
+			ImmutableRulesSpec: &rules.Spec{},
+			phase:              "distribution",
+			want:               []rules.Rule{},
+		},
+		{
+			desc: "infrastructure - not empty",
+			ImmutableRulesSpec: &rules.Spec{
+				Infrastructure: &[]rules.Rule{
+					{
+						Path:      "foo",
+						Immutable: true,
+					},
+					{
+						Path:      "bar",
+						Immutable: false,
+					},
+				},
+			},
+			phase: "infrastructure",
+			want: []rules.Rule{
+				{
+					Path:      "foo",
+					Immutable: true,
+				},
+			},
 		},
 		{
 			desc: "kubernetes - not empty",
-			onPremRulesSpec: &rules.Spec{
+			ImmutableRulesSpec: &rules.Spec{
 				Kubernetes: &[]rules.Rule{
 					{
 						Path:      "foo",
@@ -62,7 +89,7 @@ func TestOnPremisesBuilder_GetImmutableRules(t *testing.T) {
 		},
 		{
 			desc: "distribution - not empty",
-			onPremRulesSpec: &rules.Spec{
+			ImmutableRulesSpec: &rules.Spec{
 				Distribution: &[]rules.Rule{
 					{
 						Path:      "foo",
@@ -90,8 +117,8 @@ func TestOnPremisesBuilder_GetImmutableRules(t *testing.T) {
 		t.Run(tC.desc, func(t *testing.T) {
 			t.Parallel()
 
-			builder := onpremrules.OnPremExtractor{
-				Spec: *tC.onPremRulesSpec,
+			builder := immutableRules.ImmutableExtractor{
+				Spec: *tC.ImmutableRulesSpec,
 			}
 
 			got := builder.GetImmutableRules(tC.phase)
@@ -103,7 +130,7 @@ func TestOnPremisesBuilder_GetImmutableRules(t *testing.T) {
 	}
 }
 
-func TestOnPremisesBuilder_FilterSafeImmutableRules(t *testing.T) {
+func TestImmutableBuilder_FilterSafeImmutableRules(t *testing.T) {
 	t.Parallel()
 
 	var foo, bar any
@@ -112,22 +139,22 @@ func TestOnPremisesBuilder_FilterSafeImmutableRules(t *testing.T) {
 	bar = "bar"
 
 	testCases := []struct {
-		desc            string
-		onPremRulesSpec *rules.Spec
-		rules           []rules.Rule
-		diffs           diff.Changelog
-		want            []rules.Rule
+		desc               string
+		ImmutableRulesSpec *rules.Spec
+		rules              []rules.Rule
+		diffs              diff.Changelog
+		want               []rules.Rule
 	}{
 		{
-			desc:            "empty rules",
-			onPremRulesSpec: &rules.Spec{},
-			rules:           []rules.Rule{},
-			diffs:           diff.Changelog{},
-			want:            []rules.Rule{},
+			desc:               "empty rules",
+			ImmutableRulesSpec: &rules.Spec{},
+			rules:              []rules.Rule{},
+			diffs:              diff.Changelog{},
+			want:               []rules.Rule{},
 		},
 		{
-			desc:            "no safe conditions",
-			onPremRulesSpec: &rules.Spec{},
+			desc:               "no safe conditions",
+			ImmutableRulesSpec: &rules.Spec{},
 			rules: []rules.Rule{
 				{
 					Path:      "foo",
@@ -149,8 +176,8 @@ func TestOnPremisesBuilder_FilterSafeImmutableRules(t *testing.T) {
 			},
 		},
 		{
-			desc:            "matching safe conditions",
-			onPremRulesSpec: &rules.Spec{},
+			desc:               "matching safe conditions",
+			ImmutableRulesSpec: &rules.Spec{},
 			rules: []rules.Rule{
 				{
 					Path:      ".foo",
@@ -173,8 +200,8 @@ func TestOnPremisesBuilder_FilterSafeImmutableRules(t *testing.T) {
 			want: []rules.Rule{},
 		},
 		{
-			desc:            "non-matching safe conditions",
-			onPremRulesSpec: &rules.Spec{},
+			desc:               "non-matching safe conditions",
+			ImmutableRulesSpec: &rules.Spec{},
 			rules: []rules.Rule{
 				{
 					Path:      ".foo",
@@ -215,8 +242,8 @@ func TestOnPremisesBuilder_FilterSafeImmutableRules(t *testing.T) {
 		t.Run(tC.desc, func(t *testing.T) {
 			t.Parallel()
 
-			builder := onpremrules.OnPremExtractor{
-				Spec: *tC.onPremRulesSpec,
+			builder := immutableRules.ImmutableExtractor{
+				Spec: *tC.ImmutableRulesSpec,
 			}
 
 			got := builder.FilterSafeImmutableRules(tC.rules, tC.diffs)
