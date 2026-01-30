@@ -75,14 +75,14 @@ func TestFormatDistroVersions(t *testing.T) {
 
 	fmtString := get.FormatSupportedVersions(releases, []string{distribution.EKSClusterKind, distribution.KFDDistributionKind, distribution.OnPremisesKind, distribution.ImmutableKind})
 
-	// Verify the header is present
+	// Verify the header is present.
 	assert.Contains(t, fmtString, "VERSION\tRELEASE DATE\tEKSCluster\tKFDDistribution\tOnPremises\tImmutable")
 
-	// Verify the recommended versions are present and marked with **
+	// Verify the recommended versions are present and marked with **.
 	assert.Contains(t, fmtString, "v1.30.0 **\t2025-02-06")
 	assert.Contains(t, fmtString, "v1.29.1 **\t2025-02-06")
 	assert.Contains(t, fmtString, "v1.28.2 **\t2023-02-06")
 
-	// Verify the footer message for recommended versions
+	// Verify the footer message for recommended versions.
 	assert.Contains(t, fmtString, "** indicates the recommended SD versions.")
 }

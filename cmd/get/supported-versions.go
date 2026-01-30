@@ -77,7 +77,8 @@ func NewSupportedVersionsCmd() *cobra.Command {
 			}
 
 			var table strings.Builder
-			w := tabwriter.NewWriter(&table, 0, 0, 2, ' ', 0)
+			padWidth := 2
+			w := tabwriter.NewWriter(&table, 0, 0, padWidth, ' ', 0)
 			_, err = w.Write([]byte(FormatSupportedVersions(releases, kindsToPrint)))
 			if err != nil {
 				cmdEvent.AddErrorMessage(err)

@@ -10,13 +10,14 @@ import (
 	"path"
 	"strings"
 
+	"github.com/sirupsen/logrus"
+
 	"github.com/sighupio/fury-distribution/pkg/apis/config"
 	"github.com/sighupio/fury-distribution/pkg/apis/immutable/v1alpha2/public"
 	"github.com/sighupio/furyctl/internal/cluster"
 	"github.com/sighupio/furyctl/internal/tool/ansible"
 	execx "github.com/sighupio/furyctl/internal/x/exec"
 	"github.com/sighupio/furyctl/pkg/template"
-	"github.com/sirupsen/logrus"
 )
 
 type CertificatesRenewer struct {
@@ -59,7 +60,7 @@ func (c *CertificatesRenewer) SetProperty(name string, value any) {
 	}
 }
 
-func (k *CertificatesRenewer) Renew() error {
+func (c *CertificatesRenewer) Renew() error {
 	logrus.Info("Renewing certificates...")
 
 	tmpDir, err := os.MkdirTemp("", "fury-certificates-renewer-*")
@@ -78,9 +79,9 @@ func (k *CertificatesRenewer) Renew() error {
 		},
 	)
 
-	furyctlMerger, err := k.CreateFuryctlMerger(
-		k.distroPath,
-		k.configPath,
+	furyctlMerger, err := c.CreateFuryctlMerger(
+		c.distroPath,
+		c.configPath,
 		"kfd-v1alpha2",
 		"immutable",
 	)
@@ -94,7 +95,7 @@ func (k *CertificatesRenewer) Renew() error {
 	}
 
 	mCfg.Data["kubernetes"] = map[any]any{
-		"version": k.kfdManifest.Kubernetes.OnPremises.Version,
+		"version": c.kfdManifest.Kubernetes.OnPremises.Version,
 	}
 
 	mCfg.Data["paths"] = map[any]any{
@@ -112,12 +113,12 @@ func (k *CertificatesRenewer) Renew() error {
 		"podRunningTimeout":    "",
 	}
 
-	if err := k.CopyFromTemplate(
+	if err := c.CopyFromTemplate(
 		mCfg,
 		"kubernetes",
-		path.Join(k.distroPath, "templates", cluster.OperationPhaseKubernetes, "immutable"),
+		path.Join(c.distroPath, "templates", cluster.OperationPhaseKubernetes, "immutable"),
 		tmpDir,
-		k.configPath,
+		c.configPath,
 	); err != nil {
 		return fmt.Errorf("error copying from template: %w", err)
 	}
