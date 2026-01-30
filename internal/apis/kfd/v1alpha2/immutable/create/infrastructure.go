@@ -9,11 +9,13 @@ import (
 
 	"github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/immutable/common"
 	"github.com/sighupio/furyctl/internal/cluster"
+	"github.com/sighupio/furyctl/internal/upgrade"
 )
 
 // Infrastructure wraps the common infrastructure phase.
 type Infrastructure struct {
 	*common.Infrastructure
+	upgrade *upgrade.Upgrade
 }
 
 // NewInfrastructure creates a new Infrastructure phase.
@@ -34,7 +36,7 @@ func NewInfrastructure(
 }
 
 // Exec executes the infrastructure phase.
-func (i *Infrastructure) Exec() error {
+func (i *Infrastructure) Exec(_ string, _ *upgrade.State) error {
 	if err := i.Prepare(); err != nil {
 		return fmt.Errorf("infrastructure phase failed: %w", err)
 	}
@@ -45,4 +47,8 @@ func (i *Infrastructure) Exec() error {
 // Self returns the operation phase.
 func (i *Infrastructure) Self() *cluster.OperationPhase {
 	return i.OperationPhase
+}
+
+func (i *Infrastructure) SetUpgrade(upgradeEnabled bool) {
+	i.upgrade.Enabled = upgradeEnabled
 }
