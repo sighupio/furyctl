@@ -5,15 +5,19 @@
 package immutable
 
 import (
-	"errors"
+	"fmt"
+	"os"
+	"path"
 	"strings"
 
 	"github.com/sighupio/fury-distribution/pkg/apis/config"
 	"github.com/sighupio/fury-distribution/pkg/apis/immutable/v1alpha2/public"
 	"github.com/sighupio/furyctl/internal/cluster"
+	"github.com/sighupio/furyctl/internal/tool/ansible"
+	execx "github.com/sighupio/furyctl/internal/x/exec"
+	"github.com/sighupio/furyctl/pkg/template"
+	"github.com/sirupsen/logrus"
 )
-
-var ErrCertificatesRenewalNotImplemented = errors.New("certificates renewal not implemented for Immutable kind")
 
 type CertificatesRenewer struct {
 	*cluster.OperationPhase
@@ -55,6 +59,76 @@ func (c *CertificatesRenewer) SetProperty(name string, value any) {
 	}
 }
 
-func (*CertificatesRenewer) Renew() error {
-	return ErrCertificatesRenewalNotImplemented
+func (k *CertificatesRenewer) Renew() error {
+	logrus.Info("Renewing certificates...")
+
+	tmpDir, err := os.MkdirTemp("", "fury-certificates-renewer-*")
+	if err != nil {
+		return fmt.Errorf("error creating temporary directory: %w", err)
+	}
+
+	defer os.RemoveAll(tmpDir)
+
+	ansibleRunner := ansible.NewRunner(
+		execx.NewStdExecutor(),
+		ansible.Paths{
+			Ansible:         "ansible",
+			AnsiblePlaybook: "ansible-playbook",
+			WorkDir:         tmpDir,
+		},
+	)
+
+	furyctlMerger, err := k.CreateFuryctlMerger(
+		k.distroPath,
+		k.configPath,
+		"kfd-v1alpha2",
+		"immutable",
+	)
+	if err != nil {
+		return fmt.Errorf("error creating furyctl merger: %w", err)
+	}
+
+	mCfg, err := template.NewConfigWithoutData(furyctlMerger, []string{})
+	if err != nil {
+		return fmt.Errorf("error creating template config: %w", err)
+	}
+
+	mCfg.Data["kubernetes"] = map[any]any{
+		"version": k.kfdManifest.Kubernetes.OnPremises.Version,
+	}
+
+	mCfg.Data["paths"] = map[any]any{
+		"helm":       "",
+		"helmfile":   "",
+		"kubectl":    "",
+		"kustomize":  "",
+		"terraform":  "",
+		"vendorPath": "",
+		"yq":         "",
+	}
+
+	mCfg.Data["options"] = map[any]any{
+		"skipPodsRunningCheck": false,
+		"podRunningTimeout":    "",
+	}
+
+	if err := k.CopyFromTemplate(
+		mCfg,
+		"kubernetes",
+		path.Join(k.distroPath, "templates", cluster.OperationPhaseKubernetes, "immutable"),
+		tmpDir,
+		k.configPath,
+	); err != nil {
+		return fmt.Errorf("error copying from template: %w", err)
+	}
+
+	if _, err := ansibleRunner.Exec("all", "-m", "ping"); err != nil {
+		return fmt.Errorf("error checking hosts: %w", err)
+	}
+
+	if _, err := ansibleRunner.Playbook("98.cluster-certificates-renewal.yaml"); err != nil {
+		return fmt.Errorf("error renewing certificates: %w", err)
+	}
+
+	return nil
 }
