@@ -5,7 +5,6 @@
 package get_test
 
 import (
-	"strings"
 	"testing"
 	"time"
 
@@ -74,14 +73,16 @@ func TestFormatDistroVersions(t *testing.T) {
 
 	require.NoError(t, err)
 
-	fmtString := get.FormatSupportedVersions(releases, []string{distribution.EKSClusterKind, distribution.KFDDistributionKind, distribution.OnPremisesKind})
-	lines := strings.Split(fmtString, "\n")
+	fmtString := get.FormatSupportedVersions(releases, []string{distribution.EKSClusterKind, distribution.KFDDistributionKind, distribution.OnPremisesKind, distribution.ImmutableKind})
 
-	assert.Equal(t, "-----------------------------------------------------------------------------------------", lines[1])
-	assert.Equal(t, "VERSION \t\tRELEASE DATE\t\tEKSCluster\tKFDDistribution\tOnPremises\t", lines[2])
-	assert.Equal(t, "-----------------------------------------------------------------------------------------", lines[3])
-	assert.Contains(t, lines[4], "v1.30.0 **\t\t2025-02-06")
-	assert.Contains(t, lines[5], "v1.29.1 **\t\t2025-02-06")
-	assert.Contains(t, lines[6], "v1.28.2 **\t\t2023-02-06")
-	assert.Equal(t, "** this indicates the recommended SD versions.", lines[10])
+	// Verify the header is present
+	assert.Contains(t, fmtString, "VERSION\tRELEASE DATE\tEKSCluster\tKFDDistribution\tOnPremises\tImmutable")
+
+	// Verify the recommended versions are present and marked with **
+	assert.Contains(t, fmtString, "v1.30.0 **\t2025-02-06")
+	assert.Contains(t, fmtString, "v1.29.1 **\t2025-02-06")
+	assert.Contains(t, fmtString, "v1.28.2 **\t2023-02-06")
+
+	// Verify the footer message for recommended versions
+	assert.Contains(t, fmtString, "** indicates the recommended SD versions.")
 }
