@@ -262,16 +262,23 @@ func (p *PreFlight) CheckStateDiffs(d r3diff.Changelog, diffChecker diffs.Checke
 	}
 
 	// Get all immutable rules for each phase.
+	infraImmutableRules := r.GetImmutableRules("infrastructure")
 	kubeImmutableRules := r.GetImmutableRules("kubernetes")
 	distroImmutableRules := r.GetImmutableRules("distribution")
 
 	// Filter out the rules that have matching safe conditions.
+	infraFilteredRules := r.FilterSafeImmutableRules(infraImmutableRules, d)
 	kubeFilteredRules := r.FilterSafeImmutableRules(kubeImmutableRules, d)
 	distroFilteredRules := r.FilterSafeImmutableRules(distroImmutableRules, d)
 
 	// Extract the paths from the filtered rules.
+	infraImmutablePaths := make([]string, 0)
 	kubeImmutablePaths := make([]string, 0)
 	distroImmutablePaths := make([]string, 0)
+
+	for _, rule := range infraFilteredRules {
+		infraImmutablePaths = append(infraImmutablePaths, rule.Path)
+	}
 
 	for _, rule := range kubeFilteredRules {
 		kubeImmutablePaths = append(kubeImmutablePaths, rule.Path)
@@ -281,6 +288,7 @@ func (p *PreFlight) CheckStateDiffs(d r3diff.Changelog, diffChecker diffs.Checke
 		distroImmutablePaths = append(distroImmutablePaths, rule.Path)
 	}
 
+	errs = append(errs, diffChecker.AssertImmutableViolations(d, infraImmutablePaths)...)
 	errs = append(errs, diffChecker.AssertImmutableViolations(d, kubeImmutablePaths)...)
 	errs = append(errs, diffChecker.AssertImmutableViolations(d, distroImmutablePaths)...)
 
