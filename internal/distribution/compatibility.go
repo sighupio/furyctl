@@ -85,7 +85,7 @@ func getKFDCompatibleRanges() []VersionRange {
 
 func getImmutableCompatibleRanges() []VersionRange {
 	return []VersionRange{
-		{"v1.33.1", "v1.33.1"},
+		{"v1.34.0", "v1.34.0"},
 	}
 }
 
