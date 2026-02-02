@@ -6,11 +6,19 @@ package immutable
 
 import (
 	"errors"
+	"fmt"
+	"os"
+	"path"
 	"strings"
 
 	"github.com/sighupio/fury-distribution/pkg/apis/config"
 	"github.com/sighupio/fury-distribution/pkg/apis/immutable/v1alpha2/public"
 	"github.com/sighupio/furyctl/internal/cluster"
+	"github.com/sighupio/furyctl/internal/tool/ansible"
+	execx "github.com/sighupio/furyctl/internal/x/exec"
+	iox "github.com/sighupio/furyctl/internal/x/io"
+	"github.com/sighupio/furyctl/pkg/template"
+	"github.com/sirupsen/logrus"
 )
 
 var ErrKubeconfigGetNotImplemented = errors.New("kubeconfig get not implemented for Immutable kind")
@@ -61,6 +69,72 @@ func (k *KubeconfigGetter) SetProperty(name string, value any) {
 	}
 }
 
-func (*KubeconfigGetter) Get() error {
-	return ErrKubeconfigGetNotImplemented
+func (k *KubeconfigGetter) Get() error {
+	logrus.Info("Getting kubeconfig...")
+
+	kubeconfigPath := path.Join(k.workDir, "kubeconfig")
+
+	tmpDir, err := os.MkdirTemp("", "fury-kubeconfig-*")
+	if err != nil {
+		return fmt.Errorf("error creating temporary directory: %w", err)
+	}
+
+	defer os.RemoveAll(tmpDir)
+
+	ansibleRunner := ansible.NewRunner(
+		execx.NewStdExecutor(),
+		ansible.Paths{
+			Ansible:         "ansible",
+			AnsiblePlaybook: "ansible-playbook",
+			WorkDir:         tmpDir,
+		},
+	)
+
+	furyctlMerger, err := k.CreateFuryctlMerger(
+		k.distroPath,
+		k.configPath,
+		"kfd-v1alpha2",
+		"immutable",
+	)
+	if err != nil {
+		return fmt.Errorf("error creating furyctl merger: %w", err)
+	}
+
+	mCfg, err := template.NewConfigWithoutData(furyctlMerger, []string{})
+	if err != nil {
+		return fmt.Errorf("error creating template config: %w", err)
+	}
+
+	mCfg.Data["kubernetes"] = map[any]any{
+		"version": k.kfdManifest.Kubernetes.Immutable.Version,
+	}
+
+	if err := k.CopyFromTemplate(
+		mCfg,
+		"preflight",
+		path.Join(k.distroPath, "templates", cluster.OperationPhasePreFlight, "immutable"),
+		tmpDir,
+		k.configPath,
+	); err != nil {
+		return fmt.Errorf("error copying from template: %w", err)
+	}
+
+	if _, err := ansibleRunner.Exec("all", "-m", "ping"); err != nil {
+		return fmt.Errorf("error checking hosts: %w", err)
+	}
+
+	if _, err := ansibleRunner.Playbook("verify-playbook.yaml"); err != nil {
+		return fmt.Errorf("error getting kubeconfig: %w", err)
+	}
+
+	kubeconfig, err := os.ReadFile(path.Join(tmpDir, "admin.conf"))
+	if err != nil {
+		return fmt.Errorf("error reading kubeconfig file: %w", err)
+	}
+
+	if err := os.WriteFile(kubeconfigPath, kubeconfig, iox.FullRWPermAccess); err != nil {
+		return fmt.Errorf("error writing kubeconfig file: %w", err)
+	}
+
+	return nil
 }
