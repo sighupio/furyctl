@@ -477,3 +477,50 @@ func TestOnPremisesCheckIsCompatible(t *testing.T) {
 		})
 	}
 }
+
+func TestImmutableCheckIsCompatible(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		name                string
+		distributionVersion string
+		expected            bool
+	}{
+		{
+			name:                "should return true if distribution version is greater than 1.34.0 and less than 1.34.0",
+			distributionVersion: "v1.34.0",
+			expected:            true,
+		},
+		{
+			name:                "should return false if distribution version is less than 1.34.0",
+			distributionVersion: "v1.25.5",
+			expected:            false,
+		},
+		{
+			name:                "should return false if distribution version is invalid",
+			distributionVersion: "invalid",
+			expected:            false,
+		},
+		{
+			name:                "should return false if distribution version is greater than 1.34.0",
+			distributionVersion: "v1.34.1",
+			expected:            false,
+		},
+	}
+
+	for _, tc := range testCases {
+		tc := tc
+
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			checker := distribution.NewImmutableCheck(tc.distributionVersion)
+
+			got := checker.IsCompatible()
+
+			if got != tc.expected {
+				t.Errorf("IsCompatible() got = %v, want %v", got, tc.expected)
+			}
+		})
+	}
+}
