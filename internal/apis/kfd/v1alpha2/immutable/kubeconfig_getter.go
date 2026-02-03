@@ -11,6 +11,8 @@ import (
 	"path"
 	"strings"
 
+	"github.com/sirupsen/logrus"
+
 	"github.com/sighupio/fury-distribution/pkg/apis/config"
 	"github.com/sighupio/fury-distribution/pkg/apis/immutable/v1alpha2/public"
 	"github.com/sighupio/furyctl/internal/cluster"
@@ -18,7 +20,6 @@ import (
 	execx "github.com/sighupio/furyctl/internal/x/exec"
 	iox "github.com/sighupio/furyctl/internal/x/io"
 	"github.com/sighupio/furyctl/pkg/template"
-	"github.com/sirupsen/logrus"
 )
 
 var ErrKubeconfigGetNotImplemented = errors.New("kubeconfig get not implemented for Immutable kind")
