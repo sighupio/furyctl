@@ -7,12 +7,9 @@ package common
 import (
 	"bytes"
 	"compress/gzip"
-	"crypto/sha256"
 	"encoding/base64"
-	"encoding/hex"
 	"errors"
 	"fmt"
-	"io"
 	"net"
 	"os"
 	"path/filepath"
@@ -84,7 +81,6 @@ var (
 	ErrGatewayNotFound           = errors.New("gateway not found in ethernet config for node")
 	ErrContainerdSysextNotFound  = errors.New("containerd sysext not found for kubernetes")
 	ErrKubernetesSysextNotFound  = errors.New("kubernetes sysext not found for kubernetes")
-	ErrChecksumMismatch          = errors.New("checksum mismatch")
 )
 
 // SysextVersions holds version information for systemd-sysext packages.
@@ -126,8 +122,7 @@ type sysextPackage struct {
 
 // sysextArchInfo contains architecture-specific information.
 type sysextArchInfo struct {
-	URL    string `yaml:"url"`
-	SHA256 string `yaml:"sha256,omitempty"` // Optional SHA256 for verification.
+	URL string `yaml:"url"`
 }
 
 // flatcarRelease represents a Flatcar Container Linux version.
@@ -148,7 +143,6 @@ type flatcarArch struct {
 type flatcarArtifact struct {
 	Filename string `yaml:"filename"`
 	URL      string `yaml:"url"`
-	SHA256   string `yaml:"sha256,omitempty"` // Optional SHA256 for verification.
 }
 
 // Infrastructure handles the infrastructure phase for Immutable kind.
@@ -237,7 +231,7 @@ func (i *Infrastructure) Prepare() error {
 
 	// Download assets for architectures used in the cluster.
 	kubeVersion := i.getKubernetesVersion()
-	manifestPath := filepath.Join(i.DistroPath, "installers", "immutable", "immutable.yaml")
+	manifestPath := filepath.Join(i.Path, "..", "vendor", "installers", "immutable", "immutable.yaml")
 
 	manifest, err := i.parseImmutableManifest(manifestPath)
 	if err != nil {
@@ -309,7 +303,7 @@ func (i *Infrastructure) getInfrastructureConfig() map[string]any {
 func (i *Infrastructure) renderButaneTemplates(nodes []nodeInfo) error {
 	// 1. Load the full immutable manifest to pass all sysext info to templates.
 	kubeVersion := i.getKubernetesVersion()
-	manifestPath := filepath.Join(i.DistroPath, "installers", "immutable", "immutable.yaml")
+	manifestPath := filepath.Join(i.Path, "..", "vendor", "installers", "immutable", "immutable.yaml")
 
 	manifest, err := i.parseImmutableManifest(manifestPath)
 	if err != nil {
@@ -375,9 +369,6 @@ func (i *Infrastructure) renderButaneTemplates(nodes []nodeInfo) error {
 			archData := map[any]any{
 				"url": archInfo.URL,
 			}
-			if archInfo.SHA256 != "" {
-				archData["sha256"] = archInfo.SHA256
-			}
 
 			if archMap, ok := pkgData["arch"].(map[any]any); ok {
 				archMap[arch] = archData
@@ -408,25 +399,6 @@ func (i *Infrastructure) renderButaneTemplates(nodes []nodeInfo) error {
 				"filename": archInfo.Image.Filename,
 				"url":      archInfo.Image.URL,
 			},
-		}
-
-		// Add SHA256 if present.
-		if archInfo.Kernel.SHA256 != "" {
-			if kernelMap, ok := artifactsData["kernel"].(map[any]any); ok {
-				kernelMap["sha256"] = archInfo.Kernel.SHA256
-			}
-		}
-
-		if archInfo.Initrd.SHA256 != "" {
-			if initrdMap, ok := artifactsData["initrd"].(map[any]any); ok {
-				initrdMap["sha256"] = archInfo.Initrd.SHA256
-			}
-		}
-
-		if archInfo.Image.SHA256 != "" {
-			if imageMap, ok := artifactsData["image"].(map[any]any); ok {
-				imageMap["sha256"] = archInfo.Image.SHA256
-			}
 		}
 
 		if flatcarArchMap, ok := flatcarData["arch"].(map[any]any); ok {
@@ -1232,7 +1204,7 @@ func (i *Infrastructure) loadSysextVersions() error {
 	kubeVersion := i.getKubernetesVersion()
 
 	// Load immutable.yaml manifest from installer directory.
-	manifestPath := filepath.Join(i.DistroPath, "installers", "immutable", "immutable.yaml")
+	manifestPath := filepath.Join(i.Path, "..", "vendor", "installers", "immutable", "immutable.yaml")
 
 	manifest, err := i.parseImmutableManifest(manifestPath)
 	if err != nil {
@@ -1409,7 +1381,6 @@ func (*Infrastructure) downloadFlatcarArtifacts(
 		if err := downloader.downloadAndValidate(
 			archInfo.Kernel.URL,
 			filepath.Join(flatcarDir, archInfo.Kernel.Filename),
-			archInfo.Kernel.SHA256,
 		); err != nil {
 			return fmt.Errorf("error downloading kernel for %s: %w", arch, err)
 		}
@@ -1418,7 +1389,6 @@ func (*Infrastructure) downloadFlatcarArtifacts(
 		if err := downloader.downloadAndValidate(
 			archInfo.Initrd.URL,
 			filepath.Join(flatcarDir, archInfo.Initrd.Filename),
-			archInfo.Initrd.SHA256,
 		); err != nil {
 			return fmt.Errorf("error downloading initrd for %s: %w", arch, err)
 		}
@@ -1427,7 +1397,6 @@ func (*Infrastructure) downloadFlatcarArtifacts(
 		if err := downloader.downloadAndValidate(
 			archInfo.Image.URL,
 			filepath.Join(flatcarDir, archInfo.Image.Filename),
-			archInfo.Image.SHA256,
 		); err != nil {
 			return fmt.Errorf("error downloading image for %s: %w", arch, err)
 		}
@@ -1464,7 +1433,6 @@ func (*Infrastructure) downloadSysextPackages(
 			if err := downloader.downloadAndValidate(
 				archInfo.URL,
 				destPath,
-				archInfo.SHA256,
 			); err != nil {
 				return fmt.Errorf("error downloading %s for %s: %w", pkg.Name, arch, err)
 			}
@@ -1476,10 +1444,10 @@ func (*Infrastructure) downloadSysextPackages(
 	return nil
 }
 
-// downloadAndValidate downloads a file and optionally validates its checksum SHA256.
-func (ad *assetDownloader) downloadAndValidate(url, destPath, expectedSHA256 string) error {
-	// Check if file already exists with valid checksum (idempotent).
-	if ad.fileExistsAndValid(destPath, expectedSHA256) {
+// downloadAndValidate downloads a file to the specified destination path.
+func (ad *assetDownloader) downloadAndValidate(url, destPath string) error {
+	// Check if file already exists (idempotent).
+	if ad.fileExistsAndValid(destPath) {
 		logrus.Debugf("Skipping download, file already exists: %s", filepath.Base(destPath))
 
 		return nil
@@ -1492,53 +1460,12 @@ func (ad *assetDownloader) downloadAndValidate(url, destPath, expectedSHA256 str
 		return fmt.Errorf("error downloading from %s: %w", url, err)
 	}
 
-	// Validate checksum if present.
-	if expectedSHA256 != "" {
-		if err := ad.validateChecksum(destPath, expectedSHA256); err != nil {
-			// Remove corrupted file.
-			_ = os.Remove(destPath)
-
-			return fmt.Errorf("checksum validation failed for %s: %w", filepath.Base(destPath), err)
-		}
-
-		logrus.Debugf("✓ Checksum validated for %s", filepath.Base(destPath))
-	}
-
 	return nil
 }
 
-// fileExistsAndValid checks if file exists and has valid checksum.
-func (ad *assetDownloader) fileExistsAndValid(path, expectedSHA256 string) bool {
-	if _, err := os.Stat(path); os.IsNotExist(err) {
-		return false
-	}
+// fileExistsAndValid checks if file exists.
+func (*assetDownloader) fileExistsAndValid(path string) bool {
+	_, err := os.Stat(path)
 
-	if expectedSHA256 == "" {
-		// No checksum to validate, assume valid.
-		return true
-	}
-
-	return ad.validateChecksum(path, expectedSHA256) == nil
-}
-
-// validateChecksum validates the SHA256 checksum of a file.
-func (*assetDownloader) validateChecksum(path, expectedSHA256 string) error {
-	file, err := os.Open(path)
-	if err != nil {
-		return fmt.Errorf("error opening file: %w", err)
-	}
-	defer file.Close()
-
-	hasher := sha256.New()
-	if _, err := io.Copy(hasher, file); err != nil {
-		return fmt.Errorf("error computing checksum: %w", err)
-	}
-
-	actualSHA256 := hex.EncodeToString(hasher.Sum(nil))
-
-	if actualSHA256 != expectedSHA256 {
-		return fmt.Errorf("%w: expected %s, got %s", ErrChecksumMismatch, expectedSHA256, actualSHA256)
-	}
-
-	return nil
+	return !os.IsNotExist(err)
 }
