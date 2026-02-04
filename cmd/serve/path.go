@@ -48,7 +48,7 @@ func (lrw *loggingResponseWriter) Write(b []byte) (int, error) {
 
 // Start an HTTP server serving a path in the file system on a custom address and port, logging each request.
 // The server is stopped when the user presses ENTER.
-// FIXME: Avoid path traversal attacks, serving directory listings, dot files, and other security vulnerabilities.
+// Note: Path traversal attacks, serving directory listings, dot files, and other security vulnerabilities should be addressed.
 func Path(address, port, root string) error {
 	fs := http.FileServer(http.Dir(root))
 
