@@ -162,7 +162,7 @@ func (*ClusterCreator) GetPhasePath(phase string) (string, error) {
 	return schemaPath, nil
 }
 
-func createInfrastructurePhase(c *ClusterCreator) (*create.Infrastructure, error) {
+func createInfrastructurePhase(c *ClusterCreator, upgr *upgrade.Upgrade) (*create.Infrastructure, error) {
 	// Render merged configuration (defaults + user config).
 	mergedConfig, err := c.RenderConfig()
 	if err != nil {
@@ -177,7 +177,18 @@ func createInfrastructurePhase(c *ClusterCreator) (*create.Infrastructure, error
 		c.paths.BinPath,
 	)
 
-	infra := create.NewInfrastructure(phase, c.paths.ConfigPath, mergedConfig, c.paths.DistroPath)
+	infra := create.NewInfrastructure(
+		phase,
+		c.paths.ConfigPath,
+		mergedConfig,
+		c.paths.DistroPath,
+		upgr,
+		c.furyctlConf,
+		c.kfdManifest,
+		c.paths,
+		c.dryRun,
+		c.force,
+	)
 
 	return infra, nil
 }
@@ -185,7 +196,7 @@ func createInfrastructurePhase(c *ClusterCreator) (*create.Infrastructure, error
 func (c *ClusterCreator) Create(startFrom string, _, podRunningCheckTimeout int) error {
 	upgr := upgrade.New(c.paths, string(c.furyctlConf.Kind))
 
-	infra, err := createInfrastructurePhase(c)
+	infra, err := createInfrastructurePhase(c, upgr)
 	if err != nil {
 		return fmt.Errorf("failed to create infrastructure phase: %w", err)
 	}
