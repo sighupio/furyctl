@@ -76,7 +76,7 @@ func Path(address, port, root string) error {
 		"address": address,
 		"port":    port,
 		"root":    root,
-	}).Info("Serving assets. Press ENTER to stop the server and continue...")
+	}).Warn("Serving assets, you can boot your machines now. Press ENTER to stop the server and continue or CTRL+C to cancel...")
 
 	const readHeaderTimeout = 5 * time.Second
 
