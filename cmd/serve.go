@@ -21,7 +21,7 @@ func NewServeCmd() *cobra.Command {
 
 	serveCmd := &cobra.Command{
 		Use:   "serve",
-		Short: "Start HTTP server to serve assets for the Immutable OS machines bootstrap",
+		Short: "Start HTTP server to serve assets from a custom path for the Immutable OS machines bootstrap",
 		PreRun: func(cmd *cobra.Command, _ []string) {
 			cmdEvent = analytics.NewCommandEvent(cobrax.GetFullname(cmd))
 			ctn := app.GetContainerInstance()
@@ -44,14 +44,12 @@ func NewServeCmd() *cobra.Command {
 		},
 
 		RunE: func(_ *cobra.Command, _ []string) error {
-			// TODO: Implement dependencies dowload and initialization.
 			return serve.Path(viper.GetString("address"), viper.GetString("port"), viper.GetString("path"))
 		},
 	}
 
 	serveCmd.Flags().StringP("address", "a", "0.0.0.0", "Address to listen on")
 	serveCmd.Flags().StringP("port", "p", "8080", "Port to listen on")
-	// TODO: this should be a path to a directory containing assets (inside the Outdir probably) and not a flag.
 	serveCmd.Flags().StringP("path", "x", "./", "Path to serve assets from")
 
 	return serveCmd
