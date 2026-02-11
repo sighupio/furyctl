@@ -140,9 +140,12 @@ func (p *PreFlight) Exec(renderedConfig map[string]any) (*Status, error) {
 		return status, fmt.Errorf("error copying from template: %w", err)
 	}
 
-	if _, err := p.ansibleRunner.Exec("all", "-m", "ping"); err != nil {
-		return status, fmt.Errorf("error checking hosts: %w", err)
-	}
+	// TODO: review the prefliht logic. We are omitting the pings check for now becasue it makes the infrastructure
+	//  phase fail when the cluster does not exist yet.
+	// if _, err := p.ansibleRunner.Exec("all", "-m", "ping"); err != nil {
+	// 	return status, fmt.Errorf("error checking hosts: %w", err)
+	// }
+	// Make linter happy.
 
 	if _, err := p.ansibleRunner.Playbook("verify-playbook.yaml"); err != nil {
 		status.Success = true
