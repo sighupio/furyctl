@@ -17,6 +17,16 @@ $kubectlbin delete --ignore-not-found=true serviceaccount forecastle -n ingress-
 $kubectlbin delete --ignore-not-found=true configmap -n ingress-nginx $($kubectlbin get configmap -n ingress-nginx -o name 2>/dev/null | grep forecastle) 2>/dev/null || true
 {{- end }}
 
+# External-DNS namespace migration from ingress-nginx to external-dns
+{{- if ne .spec.distribution.modules.ingress.nginx.type "none" }}
+$kubectlbin delete --ignore-not-found=true deployment external-dns-public -n ingress-nginx
+$kubectlbin delete --ignore-not-found=true service external-dns-metrics-public -n ingress-nginx
+$kubectlbin delete --ignore-not-found=true serviceaccount external-dns-public -n ingress-nginx
+$kubectlbin delete --ignore-not-found=true deployment external-dns-private -n ingress-nginx
+$kubectlbin delete --ignore-not-found=true service external-dns-metrics-private -n ingress-nginx
+$kubectlbin delete --ignore-not-found=true serviceaccount external-dns-private -n ingress-nginx
+{{- end }}
+
 # Backup Terraform states before introducing OpenTofu
 {{- $stateConfig := dict }}
 {{- if index .spec.toolsConfiguration "opentofu" }}
