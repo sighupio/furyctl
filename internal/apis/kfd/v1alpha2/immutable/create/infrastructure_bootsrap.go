@@ -207,6 +207,32 @@ func (i *Infrastructure) getImmutableAssets() (assets, error) {
 	return immutableAssets, nil
 }
 
+// Render templates for the root of the server.
+func (i *Infrastructure) renderRootTemplates() error {
+	// Create data that will be passed to the template.
+	cfg := template.Config{
+		Data: map[string]map[any]any{
+			"data": {
+				"ipxeServerURL": i.furyctlConf.Spec.Infrastructure.IpxeServer.Url,
+			},
+		},
+	}
+
+	if err := i.CopyFromTemplate(
+		cfg,
+		"immutable-infrastructure",
+		filepath.Join(i.paths.DistroPath, "templates", "infrastructure", "immutable", "server"),
+		filepath.Join(i.Path, "server"),
+		i.paths.ConfigPath,
+	); err != nil {
+		return fmt.Errorf("error copying from templates: %w", err)
+	}
+
+	logrus.Debug("boot.ipxe templates rendered from distribution")
+
+	return nil
+}
+
 // Generate Butane files from distribution's templates and then convert them to ignition files.
 func (i *Infrastructure) renderButaneTemplates() error {
 	// 1. Load the full immutable manifest to pass all sysext info to templates.
@@ -723,6 +749,10 @@ func (i *Infrastructure) BootstrapNodes() error {
 
 	if err := i.CreateFolderStructure(); err != nil {
 		return fmt.Errorf("error creating folder structure: %w", err)
+	}
+
+	if err := i.renderRootTemplates(); err != nil {
+		return fmt.Errorf("error rendering root templates: %w", err)
 	}
 
 	// Render Butane templates from distribution.
