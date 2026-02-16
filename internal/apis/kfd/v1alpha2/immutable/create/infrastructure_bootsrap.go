@@ -303,7 +303,7 @@ func (i *Infrastructure) renderButaneTemplates() error {
 	)
 
 	// Use CopyFromTemplate to render templates.
-	targetPath := filepath.Join(i.Path, "butane", "install")
+	targetPath := filepath.Join(i.Path, "butane", "node-config")
 
 	for _, node := range i.furyctlConf.Spec.Infrastructure.Nodes {
 		nodeRole := i.getNodeRole(node.Hostname)
@@ -316,7 +316,7 @@ func (i *Infrastructure) renderButaneTemplates() error {
 
 		// Create target directory for this node's install ignition.
 		err = os.MkdirAll(
-			filepath.Join(sourcePath, "install", normalizedMAC),
+			filepath.Join(sourcePath, "node-config", normalizedMAC),
 			iox.FullPermAccess,
 		)
 		if err != nil {
@@ -326,7 +326,7 @@ func (i *Infrastructure) renderButaneTemplates() error {
 		// Copy helper file to the target folder so it is available for all node templates.
 		err = iox.CopyFile(
 			filepath.Join(sourcePath, "_helpers.tpl"),
-			filepath.Join(sourcePath, "install", normalizedMAC, "_helpers.tpl"),
+			filepath.Join(sourcePath, "node-config", normalizedMAC, "_helpers.tpl"),
 		)
 		if err != nil {
 			return fmt.Errorf("error copying template helper for node %s: %w", node.Hostname, err)
@@ -335,7 +335,7 @@ func (i *Infrastructure) renderButaneTemplates() error {
 		// Copy the role's butane template to the target path with the node-specific data.
 		err = iox.CopyFile(
 			filepath.Join(sourcePath, nodeRole+".bu.tpl"),
-			filepath.Join(sourcePath, "install", normalizedMAC, node.Hostname+".bu.tpl"),
+			filepath.Join(sourcePath, "node-config", normalizedMAC, node.Hostname+".bu.tpl"),
 		)
 		if err != nil {
 			return fmt.Errorf("error copying butane template for node %s: %w", node.Hostname, err)
@@ -348,7 +348,7 @@ func (i *Infrastructure) renderButaneTemplates() error {
 					"SSHUser":        i.furyctlConf.Spec.Infrastructure.Ssh.Username,
 					"SSHPublicKey":   sshPublicKeyContent,
 					"node":           node,
-					"role":           nodeRole, // TODO: nos hace falta saber esto en el template?
+					"role":           nodeRole,
 					"flatcarVersion": immutableAssets.Flatcar.Version,
 					"ipxeServerURL":  i.furyctlConf.Spec.Infrastructure.IpxeServer.Url,
 					"sysext":         sysextData,
@@ -360,7 +360,7 @@ func (i *Infrastructure) renderButaneTemplates() error {
 		if err := i.CopyFromTemplate(
 			cfg,
 			"immutable-infrastructure",
-			filepath.Join(sourcePath, "install", normalizedMAC),
+			filepath.Join(sourcePath, "node-config", normalizedMAC),
 			targetPath,
 			i.paths.ConfigPath,
 		); err != nil {
@@ -373,7 +373,7 @@ func (i *Infrastructure) renderButaneTemplates() error {
 		return fmt.Errorf("error generating bootstrap templates: %w", err)
 	}
 
-	logrus.Info("Butane templates rendered from fury-distribution")
+	logrus.Info("All butane templates rendered")
 
 	return nil
 }
@@ -382,13 +382,14 @@ func (i *Infrastructure) renderButaneTemplates() error {
 // The bootstrap templates embed the install ignition (compressed and base64 encoded) and handle
 // the initial PXE boot -> disk installation workflow.
 func (i *Infrastructure) generateBootstrapTemplates() error {
-	installDir := filepath.Join(i.Path, "butane", "install")
-	bootstrapDir := filepath.Join(i.Path, "butane", "bootstrap")
+	nodeConfigDir := filepath.Join(i.Path, "butane", "node-config")
+	flatcarInstallDir := filepath.Join(i.Path, "butane", "install")
 
 	// Read all install butane files.
-	entries, err := os.ReadDir(installDir)
+	// FIXME: we should cycle the nodes Object and not the filesystem
+	entries, err := os.ReadDir(nodeConfigDir)
 	if err != nil {
-		return fmt.Errorf("error reading install directory: %w", err)
+		return fmt.Errorf("error reading node-config directory: %w", err)
 	}
 
 	// Get path to bootstrap template in fury-distribution.
@@ -421,21 +422,21 @@ func (i *Infrastructure) generateBootstrapTemplates() error {
 			continue
 		}
 
-		installPath := filepath.Join(installDir, entry.Name())
+		nodeConfigPath := filepath.Join(nodeConfigDir, entry.Name())
 		hostname := strings.TrimSuffix(entry.Name(), ".bu")
 
 		logrus.Debugf("Generating bootstrap for %s", hostname)
 
 		// 1. Read install butane file.
-		butaneContent, err := os.ReadFile(installPath)
+		butaneContent, err := os.ReadFile(nodeConfigPath)
 		if err != nil {
-			return fmt.Errorf("error reading install butane %s: %w", installPath, err)
+			return fmt.Errorf("error reading install butane %s: %w", nodeConfigPath, err)
 		}
 
 		// 2. Convert install butane to ignition JSON.
 		ignitionJSON, report, err := runner.ConvertWithReport(butaneContent)
 		if err != nil {
-			return fmt.Errorf("error converting %s to ignition: %w", installPath, err)
+			return fmt.Errorf("error converting %s to ignition: %w", nodeConfigPath, err)
 		}
 
 		// Check for fatal errors in report.
@@ -499,7 +500,7 @@ func (i *Infrastructure) generateBootstrapTemplates() error {
 		}
 
 		// 7. Write bootstrap butane file.
-		bootstrapPath := filepath.Join(bootstrapDir, entry.Name())
+		bootstrapPath := filepath.Join(flatcarInstallDir, entry.Name())
 		if err := os.WriteFile(bootstrapPath, renderedContent.Bytes(), filePermissionUserReadWrite); err != nil {
 			return fmt.Errorf("error writing bootstrap file %s: %w", bootstrapPath, err)
 		}
@@ -513,11 +514,43 @@ func (i *Infrastructure) generateBootstrapTemplates() error {
 }
 
 // Convert Butane YAML to Ignition JSON for a node.
-func (i *Infrastructure) generateNodeIgnition(node public.SpecInfrastructureNode) error {
-	// 1. Read Butane template from templates/ directory.
-	butanePath := filepath.Join(i.Path, "butane", "bootstrap", node.Hostname+".bu")
+func convertButaneToIgnition(butanePath, ignitionPath string) error {
+	// 1. Read Butane file.
+	butaneContent, err := os.ReadFile(butanePath)
+	if err != nil {
+		return fmt.Errorf("error reading butane file %s: %w", butanePath, err)
+	}
 
-	// 2. Write Ignition to server/ directory (ready to serve via HTTP).
+	// 2. Create Butane runner.
+	runner := butane.NewRunner()
+	runner.SetPretty(true)
+
+	// 3. Convert Butane YAML to Ignition JSON.
+	ignitionJSON, report, err := runner.ConvertWithReport(butaneContent)
+	if err != nil {
+		return fmt.Errorf("error converting butane to ignition: %w", err)
+	}
+
+	// 4. Check for fatal errors in report.
+	if report.IsFatal() {
+		return fmt.Errorf("%w: %s", ErrButaneFatalErrors, report.String())
+	}
+
+	// 5. Log warnings if present.
+	if len(report.Entries) > 0 {
+		logrus.Warnf("Butane conversion warnings: %s", report.String())
+	}
+
+	// 6. Write Ignition JSON.
+	if err := os.WriteFile(ignitionPath, ignitionJSON, filePermissionUserReadWrite); err != nil {
+		return fmt.Errorf("error writing ignition file %s: %w", ignitionPath, err)
+	}
+
+	return nil
+}
+
+// Convert
+func (i *Infrastructure) generateNodeIgnition(node public.SpecInfrastructureNode) error {
 	// Normalize MAC address: replace colons with hyphens for URL-safe paths.
 	normalizedMAC := strings.ReplaceAll(string(node.MacAddress), ":", "-")
 	macDir := filepath.Join(i.Path, "server", "ignition", normalizedMAC)
@@ -526,42 +559,23 @@ func (i *Infrastructure) generateNodeIgnition(node public.SpecInfrastructureNode
 		return fmt.Errorf("error creating directory for MAC %s: %w", normalizedMAC, err)
 	}
 
-	ignitionPath := filepath.Join(macDir, "ignition.json")
+	// 1. Read Butane template from templates/ directory.
+	installFlatcarButanePath := filepath.Join(i.Path, "butane", "install", node.Hostname+".bu")
+	nodeConfigurationButanePath := filepath.Join(i.Path, "butane", "node-config", node.Hostname+".bu")
 
-	logrus.Debugf("Converting Butane to Ignition for node %s", node.Hostname)
+	installFlatcarIgnitionPath := filepath.Join(macDir, "install-flatcar.json")
+	nodeConfigurationIgnitionPath := filepath.Join(macDir, "node-configuration.json")
 
-	// 2. Read Butane file.
-	butaneContent, err := os.ReadFile(butanePath)
-	if err != nil {
-		return fmt.Errorf("error reading butane file %s: %w", butanePath, err)
+	// 2. Convert Butane to Ignition for both install and node configuration.
+	if err := convertButaneToIgnition(installFlatcarButanePath, installFlatcarIgnitionPath); err != nil {
+		return fmt.Errorf("error generating install flatcar ignition for node %s: %w", node.Hostname, err)
 	}
 
-	// 3. Create Butane runner.
-	runner := butane.NewRunner()
-	runner.SetPretty(true)
-
-	// 4. Convert Butane YAML to Ignition JSON.
-	ignitionJSON, report, err := runner.ConvertWithReport(butaneContent)
-	if err != nil {
-		return fmt.Errorf("error converting butane to ignition for %s: %w", node.Hostname, err)
+	if err := convertButaneToIgnition(nodeConfigurationButanePath, nodeConfigurationIgnitionPath); err != nil {
+		return fmt.Errorf("error generating node configuration ignition for node %s: %w", node.Hostname, err)
 	}
 
-	// 5. Check for fatal errors in report.
-	if report.IsFatal() {
-		return fmt.Errorf("%w for node %s: %s", ErrButaneFatalErrors, node.Hostname, report.String())
-	}
-
-	// 6. Log warnings if present.
-	if len(report.Entries) > 0 {
-		logrus.Warnf("Butane conversion warnings for %s: %s", node.Hostname, report.String())
-	}
-
-	// 7. Write Ignition JSON.
-	if err := os.WriteFile(ignitionPath, ignitionJSON, filePermissionUserReadWrite); err != nil {
-		return fmt.Errorf("error writing ignition file %s: %w", ignitionPath, err)
-	}
-
-	logrus.Infof("✓ Generated Ignition config for node %s", node.Hostname)
+	logrus.Debugf("Generated ignition files for node %s", node.Hostname)
 
 	return nil
 }
