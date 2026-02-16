@@ -6,6 +6,7 @@ package create
 
 import (
 	"fmt"
+	"net/url"
 	"path/filepath"
 
 	"github.com/sirupsen/logrus"
@@ -113,9 +114,29 @@ func (i *Infrastructure) Exec(_ string, upgradeState *upgrade.State) error {
 		return fmt.Errorf("error copying from templates: %w", err)
 	}
 
-	// Serve the downloaded assets to the installer.
-	// FIXME: Use the values from mCfg instead of hardcoding the address and port.
-	if err := serve.Path("0.0.0.0", "80", filepath.Join(i.Path, "server")); err != nil {
+	nodeStatus := make(map[string]string, len(i.furyctlConf.Spec.Infrastructure.Nodes))
+	for _, node := range i.furyctlConf.Spec.Infrastructure.Nodes {
+		nodeStatus[node.Hostname] = "pending"
+	}
+
+	// Serve the downloaded assets to the machines.
+	ipxeServer, err := url.Parse(string(i.furyctlConf.Spec.Infrastructure.IpxeServer.Url))
+	ipxeServerHost := ""
+	ipxeServerPort := ""
+	if err != nil {
+		return fmt.Errorf("failed to parse ipxe server URL: %w", err)
+	}
+	if i.furyctlConf.Spec.Infrastructure.IpxeServer.BindAddress != nil {
+		ipxeServerHost = string(*i.furyctlConf.Spec.Infrastructure.IpxeServer.BindAddress)
+	} else {
+		ipxeServerHost = string(ipxeServer.Hostname())
+	}
+	if i.furyctlConf.Spec.Infrastructure.IpxeServer.BindPort != nil {
+		ipxeServerPort = string(*i.furyctlConf.Spec.Infrastructure.IpxeServer.BindPort)
+	} else {
+		ipxeServerPort = ipxeServer.Port()
+	}
+	if err := serve.Path(ipxeServerHost, ipxeServerPort, filepath.Join(i.Path, "server"), &nodeStatus); err != nil {
 		return fmt.Errorf("serving assets failed: %w", err)
 	}
 

@@ -49,7 +49,7 @@ func (lrw *loggingResponseWriter) Write(b []byte) (int, error) {
 // Start an HTTP server serving a path in the file system on a custom address and port, logging each request.
 // The server is stopped when the user presses ENTER.
 // Note: Path traversal attacks, serving directory listings, dot files, and other security vulnerabilities should be addressed.
-func Path(address, port, root string) error {
+func Path(address, port, root string, nodesStatus *map[string]string) error {
 	fs := http.FileServer(http.Dir(root))
 
 	// Wrap the file server with a logging handler that logs each request.
@@ -66,9 +66,56 @@ func Path(address, port, root string) error {
 			"path":       r.URL.Path,
 			"status":     lrw.status,
 			"bytes":      lrw.bytes,
-		}).Info("served request")
+		}).Info("served asset request")
 	})
 
+	// Wrap the file server with a logging handler that logs each request.
+	statusHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Use package-level loggingResponseWriter.
+		lrw := &loggingResponseWriter{ResponseWriter: w}
+		lrw.WriteHeader(http.StatusNoContent)
+
+		// Update node status based on query parameters.
+		node := r.URL.Query().Get("node")
+		status := r.URL.Query().Get("status")
+		if node != "" && status != "" {
+			(*nodesStatus)[node] = status
+		} else {
+			logrus.WithFields(logrus.Fields{
+				"remote":     r.RemoteAddr,
+				"user-agent": r.Header.Get("User-Agent"),
+				"method":     r.Method,
+				"path":       r.URL.Path,
+			}).Warn("received status update with missing node or status query parameters")
+			return
+		}
+
+		// Log relevant request/response information.
+		logrus.WithFields(logrus.Fields{
+			"remote":     r.RemoteAddr,
+			"user-agent": r.Header.Get("User-Agent"),
+			"method":     r.Method,
+			"path":       r.URL.Path,
+			"respStatus": lrw.status,
+			"respBytes":  lrw.bytes,
+			"hostname":   r.URL.Query().Get("node"),
+			"nodeStatus": r.URL.Query().Get("status"),
+		}).Info("received node status update")
+
+		// Check if all nodes are in "booted" status and log if so.
+		allBooted := true
+		for _, s := range *nodesStatus {
+			if s != "booted" {
+				allBooted = false
+				break
+			}
+		}
+		if allBooted {
+			logrus.Infof("all %d nodes are in 'booted' status. Press ENTER to continue...", len(*nodesStatus))
+		}
+	})
+
+	http.Handle("/status", statusHandler)
 	http.Handle("/", typedHandler)
 
 	listenAddr := strings.Join([]string{address, port}, ":")
@@ -76,7 +123,7 @@ func Path(address, port, root string) error {
 		"address": address,
 		"port":    port,
 		"root":    root,
-	}).Warn("Serving assets, you can boot your machines now. Press ENTER to stop the server and continue or CTRL+C to cancel...")
+	}).Warn("serving assets, you can boot your machines now. Press ENTER to stop the server and continue or CTRL+C to cancel...")
 
 	const readHeaderTimeout = 5 * time.Second
 

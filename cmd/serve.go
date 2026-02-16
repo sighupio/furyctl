@@ -44,7 +44,8 @@ func NewServeCmd() *cobra.Command {
 		},
 
 		RunE: func(_ *cobra.Command, _ []string) error {
-			return serve.Path(viper.GetString("address"), viper.GetString("port"), viper.GetString("path"))
+			nodes := map[string]string{}
+			return serve.Path(viper.GetString("address"), viper.GetString("port"), viper.GetString("path"), &nodes)
 		},
 	}
 

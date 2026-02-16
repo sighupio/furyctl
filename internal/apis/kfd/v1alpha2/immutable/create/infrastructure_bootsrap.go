@@ -455,10 +455,17 @@ func (i *Infrastructure) generateBootstrapTemplates() error {
 		}
 
 		var renderedContent bytes.Buffer
-
+		sshPublicKeyContent, err := i.getSSHPublicKeyContent()
+		if err != nil {
+			return fmt.Errorf("error getting SSH public key content: %w", err)
+		}
 		templateData := map[string]string{
-			"Base64EncodedIgnition": base64Encoded,
-			"InstallDisk":           installDisk,
+			"base64EncodedIgnition": base64Encoded,
+			"installDisk":           installDisk,
+			"hostname":              hostname,
+			"ipxeServerURL":         string(i.furyctlConf.Spec.Infrastructure.IpxeServer.Url),
+			"sshUsername":           i.furyctlConf.Spec.Infrastructure.Ssh.Username,
+			"sshPublicKey":          sshPublicKeyContent,
 		}
 
 		if err := tmpl.Execute(&renderedContent, templateData); err != nil {
@@ -480,9 +487,9 @@ func (i *Infrastructure) generateBootstrapTemplates() error {
 }
 
 // Convert Butane YAML to Ignition JSON for a node.
-func (i *Infrastructure) generateNodeConfigs(node public.SpecInfrastructureNode) error {
+func (i *Infrastructure) generateNodeIgnition(node public.SpecInfrastructureNode) error {
 	// 1. Read Butane template from templates/ directory.
-	butanePath := filepath.Join(i.Path, "butane", "install", node.Hostname+".bu")
+	butanePath := filepath.Join(i.Path, "butane", "bootstrap", node.Hostname+".bu")
 
 	// 2. Write Ignition to server/ directory (ready to serve via HTTP).
 	// Normalize MAC address: replace colons with hyphens for URL-safe paths.
@@ -725,7 +732,7 @@ func (i *Infrastructure) BootstrapNodes() error {
 
 	// Post-process: convert .bu to .ign for each node.
 	for _, node := range i.furyctlConf.Spec.Infrastructure.Nodes {
-		if err := i.generateNodeConfigs(node); err != nil {
+		if err := i.generateNodeIgnition(node); err != nil {
 			return fmt.Errorf("error generating configs for node %s: %w", node.Hostname, err)
 		}
 	}
