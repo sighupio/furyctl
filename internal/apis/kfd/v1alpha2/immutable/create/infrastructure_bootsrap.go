@@ -22,11 +22,6 @@ import (
 	netx "github.com/sighupio/furyctl/pkg/x/net"
 )
 
-const (
-	// File permission modes.
-	filePermissionUserReadWrite = 0o600 // User read/write only.
-)
-
 var (
 	ErrNoKubernetesVersions      = errors.New("no kubernetes versions defined in immutable installer spec")
 	ErrKubernetesVersionNotFound = errors.New("kubernetes version not found in immutable installer spec")
@@ -168,27 +163,6 @@ func (*Infrastructure) parseImmutableInstallerSpec(path string) (*immutableManif
 	return &manifest, nil
 }
 
-// CreateFolderStructure creates the directory structure declaratively.
-func (i *Infrastructure) CreateFolderStructure() error {
-	folders := []string{
-		// Templates directory: editable source files.
-		filepath.Join(i.Path, "butane", "install"),
-		filepath.Join(i.Path, "butane", "bootstrap"),
-		// Server directory: ready to serve via HTTP.
-		filepath.Join(i.Path, "server", "ignition"),
-		filepath.Join(i.Path, "server", "assets", "flatcar"),
-		filepath.Join(i.Path, "server", "assets", "extensions"),
-	}
-
-	for _, folder := range folders {
-		if err := os.MkdirAll(folder, iox.FullPermAccess); err != nil {
-			return fmt.Errorf("error creating folder %s: %w", folder, err)
-		}
-	}
-
-	return nil
-}
-
 func (i *Infrastructure) getImmutableAssets() (assets, error) {
 	kubeVersion := i.kfdManifest.Kubernetes.Immutable.Version
 
@@ -314,7 +288,7 @@ func (i *Infrastructure) renderButaneTemplates() error {
 			return fmt.Errorf("error getting SSH public key content: %w", err)
 		}
 
-		// Create target directory for this node's install ignition.
+		// Create target directory for this node's config ignition.
 		err = os.MkdirAll(
 			filepath.Join(sourcePath, "node-config", normalizedMAC),
 			iox.FullPermAccess,
@@ -368,72 +342,58 @@ func (i *Infrastructure) renderButaneTemplates() error {
 		}
 	}
 
-	// Generate bootstrap templates that embed install ignition.
-	if err := i.generateBootstrapTemplates(); err != nil {
-		return fmt.Errorf("error generating bootstrap templates: %w", err)
+	// Generate flatcar-install templates that embed install ignition.
+	if err := i.generateInstallFlatcarIgnitionFiles(); err != nil {
+		return fmt.Errorf("error generating faltcar-install ignition files: %w", err)
 	}
-
-	logrus.Info("All butane templates rendered")
 
 	return nil
 }
 
-// Generates bootstrap butane templates from install templates.
-// The bootstrap templates embed the install ignition (compressed and base64 encoded) and handle
+// Generates butane files from distribution templates.
+// The flatcar-install templates embed the node-config ignition (compressed and base64 encoded) and handle
 // the initial PXE boot -> disk installation workflow.
-func (i *Infrastructure) generateBootstrapTemplates() error {
-	nodeConfigDir := filepath.Join(i.Path, "butane", "node-config")
-	flatcarInstallDir := filepath.Join(i.Path, "butane", "install")
+// The node-config has the final node configuration.
+func (i *Infrastructure) generateInstallFlatcarIgnitionFiles() error {
+	nodeConfigButanesDir := filepath.Join(i.Path, "butane", "node-config")
+	installButanesDir := filepath.Join(i.Path, "butane", "install")
 
-	// Read all install butane files.
-	// FIXME: we should cycle the nodes Object and not the filesystem
-	entries, err := os.ReadDir(nodeConfigDir)
-	if err != nil {
-		return fmt.Errorf("error reading node-config directory: %w", err)
-	}
-
-	// Get path to bootstrap template in fury-distribution.
-	bootstrapTemplatePath := filepath.Join(
+	// Get path to the install-flatcar butane file template in the distribution.
+	flatcarInstallButaneTemplatePath := filepath.Join(
 		i.paths.DistroPath,
 		"templates",
 		"infrastructure",
 		"immutable",
 		"butane",
-		"bootstrap.bu.tmpl",
+		"install-flatcar.bu.tpl",
 	)
 
 	// Check if template exists.
-	if _, err := os.Stat(bootstrapTemplatePath); err != nil {
-		return fmt.Errorf("bootstrap template not found at %s: %w", bootstrapTemplatePath, err)
+	if _, err := os.Stat(flatcarInstallButaneTemplatePath); err != nil {
+		return fmt.Errorf("install-flatcar butante template not found at %s: %w", flatcarInstallButaneTemplatePath, err)
 	}
 
-	// Read bootstrap template once.
-	bootstrapTemplateContent, err := os.ReadFile(bootstrapTemplatePath)
+	// Read flatcar-install template once.
+	flatcarInstallTemplateContent, err := os.ReadFile(flatcarInstallButaneTemplatePath)
 	if err != nil {
-		return fmt.Errorf("error reading bootstrap template: %w", err)
+		return fmt.Errorf("error reading flat-car install butante template: %w", err)
 	}
 
 	// Create butane runner.
 	runner := butane.NewRunner()
 	runner.SetPretty(true)
 
-	for _, entry := range entries {
-		if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".bu") {
-			continue
-		}
+	for _, node := range i.furyctlConf.Spec.Infrastructure.Nodes {
+		nodeConfigPath := filepath.Join(nodeConfigButanesDir, node.Hostname+".bu")
+		logrus.Debugf("Generating flatcar-install for %s", node.Hostname)
 
-		nodeConfigPath := filepath.Join(nodeConfigDir, entry.Name())
-		hostname := strings.TrimSuffix(entry.Name(), ".bu")
-
-		logrus.Debugf("Generating bootstrap for %s", hostname)
-
-		// 1. Read install butane file.
+		// Read node-config butane file.
 		butaneContent, err := os.ReadFile(nodeConfigPath)
 		if err != nil {
-			return fmt.Errorf("error reading install butane %s: %w", nodeConfigPath, err)
+			return fmt.Errorf("error reading node-config butane %s: %w", nodeConfigPath, err)
 		}
 
-		// 2. Convert install butane to ignition JSON.
+		// 2. Convert node-config butane to ignition JSON.
 		ignitionJSON, report, err := runner.ConvertWithReport(butaneContent)
 		if err != nil {
 			return fmt.Errorf("error converting %s to ignition: %w", nodeConfigPath, err)
@@ -441,74 +401,70 @@ func (i *Infrastructure) generateBootstrapTemplates() error {
 
 		// Check for fatal errors in report.
 		if report.IsFatal() {
-			return fmt.Errorf("%w for %s: %s", ErrButaneConversionFatal, hostname, report.String())
+			return fmt.Errorf("%w for %s: %s", ErrButaneConversionFatal, node.Hostname, report.String())
 		}
 
 		// Log warnings if present.
 		if len(report.Entries) > 0 {
-			logrus.Warnf("Butane conversion warnings for %s: %s", hostname, report.String())
+			logrus.Warnf("Butane conversion warnings for %s: %s", node.Hostname, report.String())
 		}
 
-		// 3. Compress with gzip.
+		// Compress with gzip.
 		var gzipBuf bytes.Buffer
 		gzipWriter := gzip.NewWriter(&gzipBuf)
 
 		if _, err := gzipWriter.Write(ignitionJSON); err != nil {
-			return fmt.Errorf("error gzip compressing ignition for %s: %w", hostname, err)
+			return fmt.Errorf("error gzip compressing ignition for %s: %w", node.Hostname, err)
 		}
 
 		if err := gzipWriter.Close(); err != nil {
-			return fmt.Errorf("error closing gzip writer for %s: %w", hostname, err)
+			return fmt.Errorf("error closing gzip writer for %s: %w", node.Hostname, err)
 		}
 
-		// 4. Encode to base64.
+		// Encode node-config to base64.
 		base64Encoded := base64.StdEncoding.EncodeToString(gzipBuf.Bytes())
 
-		// 5. Find the node info for this hostname to get InstallDisk.
-		var installDisk string
-
-		for _, node := range i.furyctlConf.Spec.Infrastructure.Nodes {
-			if node.Hostname == hostname {
-				installDisk = string(node.Storage.InstallDisk)
-
-				break
-			}
-		}
-
-		// 6. Render bootstrap template using Go text/template.
-		tmpl, err := texttemplate.New("bootstrap").Parse(string(bootstrapTemplateContent))
+		// Render flatcar-install butane template using Go text/template.
+		tmpl, err := texttemplate.New("flatcar-install").Parse(string(flatcarInstallTemplateContent))
 		if err != nil {
-			return fmt.Errorf("error parsing bootstrap template: %w", err)
+			return fmt.Errorf("error parsing flatcar-install butane template: %w", err)
 		}
 
 		var renderedContent bytes.Buffer
+
 		sshPublicKeyContent, err := i.getSSHPublicKeyContent()
 		if err != nil {
 			return fmt.Errorf("error getting SSH public key content: %w", err)
 		}
+
 		templateData := map[string]string{
 			"base64EncodedIgnition": base64Encoded,
-			"installDisk":           installDisk,
-			"hostname":              hostname,
+			"installDisk":           string(node.Storage.InstallDisk),
+			"hostname":              node.Hostname,
 			"ipxeServerURL":         string(i.furyctlConf.Spec.Infrastructure.IpxeServer.Url),
 			"sshUsername":           i.furyctlConf.Spec.Infrastructure.Ssh.Username,
 			"sshPublicKey":          sshPublicKeyContent,
 		}
 
 		if err := tmpl.Execute(&renderedContent, templateData); err != nil {
-			return fmt.Errorf("error rendering bootstrap template for %s: %w", hostname, err)
+			return fmt.Errorf("error rendering flatcar-install template for %s: %w", node.Hostname, err)
 		}
 
-		// 7. Write bootstrap butane file.
-		bootstrapPath := filepath.Join(flatcarInstallDir, entry.Name())
-		if err := os.WriteFile(bootstrapPath, renderedContent.Bytes(), filePermissionUserReadWrite); err != nil {
-			return fmt.Errorf("error writing bootstrap file %s: %w", bootstrapPath, err)
+		// Write flatcar-install butane file for this node.
+		flatcarInstallIgnitionPath := filepath.Join(installButanesDir, node.Hostname+".bu")
+
+		if err := os.MkdirAll(installButanesDir, iox.FullPermAccess); err != nil {
+			return fmt.Errorf("error creating destination folder %s: %w", installButanesDir, err)
 		}
 
-		logrus.Debugf("Generated bootstrap template: %s", bootstrapPath)
+		if err := os.WriteFile(flatcarInstallIgnitionPath, renderedContent.Bytes(), iox.FullRWPermAccess); err != nil {
+			return fmt.Errorf("error writing flatcar-install file %s: %w", flatcarInstallIgnitionPath, err)
+		}
+
+		logrus.Debugf("Generated flatcar-install ignition file for %s at: %s", node.Hostname, flatcarInstallIgnitionPath)
 	}
 
-	logrus.Info("Bootstrap templates generated successfully")
+	logrus.Info("Flatcar installation ignition files generated successfully")
 
 	return nil
 }
@@ -542,14 +498,14 @@ func convertButaneToIgnition(butanePath, ignitionPath string) error {
 	}
 
 	// 6. Write Ignition JSON.
-	if err := os.WriteFile(ignitionPath, ignitionJSON, filePermissionUserReadWrite); err != nil {
+	if err := os.WriteFile(ignitionPath, ignitionJSON, iox.FullRWPermAccess); err != nil {
 		return fmt.Errorf("error writing ignition file %s: %w", ignitionPath, err)
 	}
 
 	return nil
 }
 
-// Convert
+// Convert butane files to ignition files.
 func (i *Infrastructure) generateNodeIgnition(node public.SpecInfrastructureNode) error {
 	// Normalize MAC address: replace colons with hyphens for URL-safe paths.
 	normalizedMAC := strings.ReplaceAll(string(node.MacAddress), ":", "-")
@@ -630,7 +586,7 @@ func (i *Infrastructure) downloadAssets(usedArchitectures []string) error {
 		return fmt.Errorf("error downloading sysext packages: %w", err)
 	}
 
-	logrus.Info("✓ Asset download completed successfully")
+	logrus.Info("Assets download completed successfully")
 
 	return nil
 }
@@ -679,7 +635,7 @@ func (*Infrastructure) downloadFlatcarArtifacts(
 			return fmt.Errorf("error downloading image for %s: %w", arch, err)
 		}
 
-		logrus.Infof("✓ Flatcar artifacts for %s downloaded successfully", arch)
+		logrus.Infof("Flatcar artifacts for %s downloaded successfully", arch)
 	}
 
 	return nil
@@ -694,7 +650,7 @@ func (*Infrastructure) downloadSysextPackages(
 	extensionsDir := filepath.Join(downloader.assetsPath, "extensions")
 
 	for _, pkg := range sysextPackages {
-		logrus.Infof("Downloading %s sysext package (v%s)...", pkg.Name, pkg.Version)
+		logrus.Infof("Downloading %s sysext package %s...", pkg.Name, pkg.Version)
 
 		for _, arch := range architectures {
 			archInfo, ok := pkg.Arch[arch]
@@ -716,7 +672,7 @@ func (*Infrastructure) downloadSysextPackages(
 			}
 		}
 
-		logrus.Infof("✓ %s sysext package downloaded successfully", pkg.Name)
+		logrus.Infof("%s sysext package downloaded successfully", pkg.Name)
 	}
 
 	return nil
@@ -756,14 +712,6 @@ func (*assetDownloader) fileExistsAndValid(path string) bool {
 // - Starting a server to serve the assets to the installer.
 func (i *Infrastructure) BootstrapNodes() error {
 	logrus.Debug("Bootstrapping nodes...")
-
-	if err := i.CreateRootFolder(); err != nil {
-		return fmt.Errorf("error creating infrastructure folder: %w", err)
-	}
-
-	if err := i.CreateFolderStructure(); err != nil {
-		return fmt.Errorf("error creating folder structure: %w", err)
-	}
 
 	if err := i.renderRootTemplates(); err != nil {
 		return fmt.Errorf("error rendering root templates: %w", err)
