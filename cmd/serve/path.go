@@ -154,7 +154,8 @@ func Path(address, port, root string, nodesStatus *map[string]string) error {
 		"address": address,
 		"port":    port,
 		"root":    root,
-	}).Warn("Assets server started. You can boot your machines now. Press ENTER to stop the server and continue or CTRL+C to cancel...")
+	}).Warn("Assets server started. You can boot your machines now")
+	logrus.Info("You can press ENTER to stop the server at any time and continue or CTRL+C to cancel and exit")
 
 	const readHeaderTimeout = 5 * time.Second
 
