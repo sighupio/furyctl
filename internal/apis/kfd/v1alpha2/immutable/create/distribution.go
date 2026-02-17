@@ -50,7 +50,7 @@ func (d *Distribution) Self() *cluster.OperationPhase {
 }
 
 func (d *Distribution) Exec(rdcs reducers.Reducers, startFrom string, upgradeState *upgrade.State) error {
-	logrus.Info("Installing SIGHUP Distribution...")
+	logrus.Info("Configuring SIGHUP Distribution modules...")
 
 	mCfg, err := d.prepare()
 	if err != nil {
@@ -75,7 +75,7 @@ func (d *Distribution) Exec(rdcs reducers.Reducers, startFrom string, upgradeSta
 		return fmt.Errorf("error running post-distribution phase: %w", err)
 	}
 
-	logrus.Info("SIGHUP Distribution installed successfully")
+	logrus.Info("SIGHUP Distribution configured successfully")
 
 	return nil
 }

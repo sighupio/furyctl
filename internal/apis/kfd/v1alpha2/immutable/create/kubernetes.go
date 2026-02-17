@@ -41,14 +41,14 @@ func (k *Kubernetes) Self() *cluster.OperationPhase {
 }
 
 func (k *Kubernetes) Exec(startFrom string, upgradeState *upgrade.State) error {
-	logrus.Info("Configuring SIGHUP Distribution cluster...")
+	logrus.Info("Configuring SIGHUP Distribution Kubernetes cluster...")
 
 	if err := k.prepare(); err != nil {
 		return fmt.Errorf("error preparing kubernetes phase: %w", err)
 	}
 
 	if k.dryRun {
-		logrus.Info("Kubernetes cluster created successfully (dry-run mode)")
+		logrus.Info("Kubernetes cluster configured successfully (dry-run mode)")
 
 		return nil
 	}
@@ -73,7 +73,7 @@ func (k *Kubernetes) Exec(startFrom string, upgradeState *upgrade.State) error {
 		return fmt.Errorf("error running post-kubernetes phase: %w", err)
 	}
 
-	logrus.Info("Kubernetes cluster created successfully")
+	logrus.Info("SIGHUP Distribution Kubernetes cluster configured successfully")
 
 	return nil
 }
