@@ -51,6 +51,9 @@ func (lrw *loggingResponseWriter) Write(b []byte) (int, error) {
 // The server is stopped when the user presses ENTER.
 // Note: Path traversal attacks, serving directory listings, dot files, and other security vulnerabilities should be addressed.
 func Path(address, port, root string, nodesStatus *map[string]string) error {
+	// Channel to signal user requested stop (ENTER).
+	inputCh := make(chan struct{})
+
 	fs := http.FileServer(http.Dir(root))
 
 	// Wrap the file server with a logging handler that logs each request.
@@ -137,7 +140,8 @@ func Path(address, port, root string, nodesStatus *map[string]string) error {
 			}
 
 			if allBooted {
-				logrus.Infof("all %d nodes are in 'booted' status. Press ENTER to continue...", len(*nodesStatus))
+				logrus.Infof("All %d nodes reached 'booted' state. Continuing...", len(*nodesStatus))
+				close(inputCh)
 			}
 		}
 	})
@@ -150,7 +154,7 @@ func Path(address, port, root string, nodesStatus *map[string]string) error {
 		"address": address,
 		"port":    port,
 		"root":    root,
-	}).Warn("serving assets, you can boot your machines now. Press ENTER to stop the server and continue or CTRL+C to cancel...")
+	}).Warn("Assets server started. You can boot your machines now. Press ENTER to stop the server and continue or CTRL+C to cancel...")
 
 	const readHeaderTimeout = 5 * time.Second
 
@@ -164,9 +168,6 @@ func Path(address, port, root string, nodesStatus *map[string]string) error {
 		err := srv.ListenAndServe()
 		errCh <- err
 	}()
-
-	// Channel to signal user requested stop (ENTER).
-	inputCh := make(chan struct{})
 	go func() {
 		_, err := bufio.NewReader(os.Stdin).ReadBytes('\n')
 		if err != nil {
@@ -179,8 +180,6 @@ func Path(address, port, root string, nodesStatus *map[string]string) error {
 	// Wait for either user input or server error.
 	select {
 	case <-inputCh:
-		logrus.Info("Shutdown requested by user, shutting down HTTP server...")
-
 		const shutdownTimeout = 5 * time.Second
 		ctx, cancel := context.WithTimeout(context.Background(), shutdownTimeout)
 
