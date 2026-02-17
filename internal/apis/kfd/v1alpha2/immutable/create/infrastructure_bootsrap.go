@@ -461,10 +461,10 @@ func (i *Infrastructure) generateInstallFlatcarIgnitionFiles() error {
 			return fmt.Errorf("error writing flatcar-install file %s: %w", flatcarInstallIgnitionPath, err)
 		}
 
-		logrus.Debugf("Generated flatcar-install ignition file for %s at: %s", node.Hostname, flatcarInstallIgnitionPath)
+		logrus.Debugf("Generated flatcar-install butane file for %s at: %s", node.Hostname, flatcarInstallIgnitionPath)
 	}
 
-	logrus.Info("Flatcar installation ignition files generated successfully")
+	logrus.Info("Flatcar installation butane files generated successfully")
 
 	return nil
 }
