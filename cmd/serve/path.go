@@ -7,6 +7,7 @@ package serve
 import (
 	"bufio"
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
@@ -66,57 +67,78 @@ func Path(address, port, root string, nodesStatus *map[string]string) error {
 			"path":       r.URL.Path,
 			"status":     lrw.status,
 			"bytes":      lrw.bytes,
-		}).Info("served asset request")
+		}).Debug("served asset request")
 	})
 
 	// Wrap the file server with a logging handler that logs each request.
 	statusHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// Use package-level loggingResponseWriter.
 		lrw := &loggingResponseWriter{ResponseWriter: w}
-		lrw.WriteHeader(http.StatusNoContent)
 
-		// Update node status based on query parameters.
-		node := r.URL.Query().Get("node")
-		status := r.URL.Query().Get("status")
+		if r.Method == http.MethodGet {
+			lrw.Header().Set("Content-Type", "application/json")
+			lrw.WriteHeader(http.StatusOK)
+			encoder := json.NewEncoder(lrw)
+			if err := encoder.Encode(*nodesStatus); err != nil {
+				logrus.Errorf("error while encoding response: %s", err)
+			} else {
+				logrus.WithFields(logrus.Fields{
+					"remote":     r.RemoteAddr,
+					"user-agent": r.Header.Get("User-Agent"),
+					"method":     r.Method,
+					"path":       r.URL.Path,
+					"status":     lrw.status,
+					"bytes":      lrw.bytes,
+				}).Debug("served nodes status")
+			}
+		}
+		if r.Method == http.MethodPost {
+			lrw.WriteHeader(http.StatusNoContent)
 
-		if node == "" || status == "" {
+			// Update node status based on query parameters.
+			node := r.URL.Query().Get("node")
+			status := r.URL.Query().Get("status")
+
+			if node == "" || status == "" {
+				logrus.WithFields(logrus.Fields{
+					"remote":     r.RemoteAddr,
+					"user-agent": r.Header.Get("User-Agent"),
+					"method":     r.Method,
+					"path":       r.URL.Path,
+				}).Warn("received status update with missing node or status query parameters")
+
+				return
+			}
+
+			(*nodesStatus)[node] = status
+
+			// Log relevant request/response information.
 			logrus.WithFields(logrus.Fields{
 				"remote":     r.RemoteAddr,
 				"user-agent": r.Header.Get("User-Agent"),
 				"method":     r.Method,
 				"path":       r.URL.Path,
-			}).Warn("received status update with missing node or status query parameters")
+				"respStatus": lrw.status,
+				"respBytes":  lrw.bytes,
+				"hostname":   node,
+				"nodeStatus": status,
+			}).Debug("received node status update")
 
-			return
-		}
+			logrus.Infof("Node %s is %s", node, status)
+			// Check if all nodes are in "booted" status and log if so.
+			allBooted := true
 
-		(*nodesStatus)[node] = status
+			for _, s := range *nodesStatus {
+				if s != "booted" {
+					allBooted = false
 
-		// Log relevant request/response information.
-		logrus.WithFields(logrus.Fields{
-			"remote":     r.RemoteAddr,
-			"user-agent": r.Header.Get("User-Agent"),
-			"method":     r.Method,
-			"path":       r.URL.Path,
-			"respStatus": lrw.status,
-			"respBytes":  lrw.bytes,
-			"hostname":   node,
-			"nodeStatus": status,
-		}).Info("received node status update")
-
-		// Check if all nodes are in "booted" status and log if so.
-		allBooted := true
-
-		for _, s := range *nodesStatus {
-			if s != "booted" {
-				allBooted = false
-
-				break
+					break
+				}
 			}
-		}
 
-		if allBooted {
-			logrus.Infof("all %d nodes are in 'booted' status. Press ENTER to continue...", len(*nodesStatus))
+			if allBooted {
+				logrus.Infof("all %d nodes are in 'booted' status. Press ENTER to continue...", len(*nodesStatus))
+			}
 		}
 	})
 
