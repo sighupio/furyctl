@@ -78,17 +78,19 @@ func Path(address, port, root string, nodesStatus *map[string]string) error {
 		// Update node status based on query parameters.
 		node := r.URL.Query().Get("node")
 		status := r.URL.Query().Get("status")
-		if node != "" && status != "" {
-			(*nodesStatus)[node] = status
-		} else {
+
+		if node == "" || status == "" {
 			logrus.WithFields(logrus.Fields{
 				"remote":     r.RemoteAddr,
 				"user-agent": r.Header.Get("User-Agent"),
 				"method":     r.Method,
 				"path":       r.URL.Path,
 			}).Warn("received status update with missing node or status query parameters")
+
 			return
 		}
+
+		(*nodesStatus)[node] = status
 
 		// Log relevant request/response information.
 		logrus.WithFields(logrus.Fields{
@@ -98,18 +100,21 @@ func Path(address, port, root string, nodesStatus *map[string]string) error {
 			"path":       r.URL.Path,
 			"respStatus": lrw.status,
 			"respBytes":  lrw.bytes,
-			"hostname":   r.URL.Query().Get("node"),
-			"nodeStatus": r.URL.Query().Get("status"),
+			"hostname":   node,
+			"nodeStatus": status,
 		}).Info("received node status update")
 
 		// Check if all nodes are in "booted" status and log if so.
 		allBooted := true
+
 		for _, s := range *nodesStatus {
 			if s != "booted" {
 				allBooted = false
+
 				break
 			}
 		}
+
 		if allBooted {
 			logrus.Infof("all %d nodes are in 'booted' status. Press ENTER to continue...", len(*nodesStatus))
 		}

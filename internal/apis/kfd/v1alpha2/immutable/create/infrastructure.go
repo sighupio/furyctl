@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"net/url"
 	"path/filepath"
+	"strconv"
 
 	"github.com/sirupsen/logrus"
 
@@ -123,19 +124,23 @@ func (i *Infrastructure) Exec(_ string, upgradeState *upgrade.State) error {
 	ipxeServer, err := url.Parse(string(i.furyctlConf.Spec.Infrastructure.IpxeServer.Url))
 	ipxeServerHost := ""
 	ipxeServerPort := ""
+
 	if err != nil {
 		return fmt.Errorf("failed to parse ipxe server URL: %w", err)
 	}
+
 	if i.furyctlConf.Spec.Infrastructure.IpxeServer.BindAddress != nil {
-		ipxeServerHost = string(*i.furyctlConf.Spec.Infrastructure.IpxeServer.BindAddress)
+		ipxeServerHost = *i.furyctlConf.Spec.Infrastructure.IpxeServer.BindAddress
 	} else {
-		ipxeServerHost = string(ipxeServer.Hostname())
+		ipxeServerHost = ipxeServer.Hostname()
 	}
+
 	if i.furyctlConf.Spec.Infrastructure.IpxeServer.BindPort != nil {
-		ipxeServerPort = string(*i.furyctlConf.Spec.Infrastructure.IpxeServer.BindPort)
+		ipxeServerPort = strconv.Itoa(*i.furyctlConf.Spec.Infrastructure.IpxeServer.BindPort)
 	} else {
 		ipxeServerPort = ipxeServer.Port()
 	}
+
 	if err := serve.Path(ipxeServerHost, ipxeServerPort, filepath.Join(i.Path, "server"), &nodeStatus); err != nil {
 		return fmt.Errorf("serving assets failed: %w", err)
 	}
