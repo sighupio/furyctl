@@ -342,16 +342,16 @@ func (i *Infrastructure) renderButaneTemplates() error {
 		}
 	}
 
-	// Generate flatcar-install templates that embed install ignition.
+	// Generate install-flatcar templates that embed install ignition.
 	if err := i.generateInstallFlatcarIgnitionFiles(); err != nil {
-		return fmt.Errorf("error generating faltcar-install ignition files: %w", err)
+		return fmt.Errorf("error generating install-flatcar ignition files: %w", err)
 	}
 
 	return nil
 }
 
 // Generates butane files from distribution templates.
-// The flatcar-install templates embed the node-config ignition (compressed and base64 encoded) and handle
+// The install-flatcar templates embed the node-config ignition (compressed and base64 encoded) and handle
 // the initial PXE boot -> disk installation workflow.
 // The node-config has the final node configuration.
 func (i *Infrastructure) generateInstallFlatcarIgnitionFiles() error {
@@ -359,7 +359,7 @@ func (i *Infrastructure) generateInstallFlatcarIgnitionFiles() error {
 	installButanesDir := filepath.Join(i.Path, "butane", "install")
 
 	// Get path to the install-flatcar butane file template in the distribution.
-	flatcarInstallButaneTemplatePath := filepath.Join(
+	installFlatcarButaneTemplatePath := filepath.Join(
 		i.paths.DistroPath,
 		"templates",
 		"infrastructure",
@@ -368,33 +368,23 @@ func (i *Infrastructure) generateInstallFlatcarIgnitionFiles() error {
 		"install-flatcar.bu.tpl",
 	)
 
-	// Check if template exists.
-	if _, err := os.Stat(flatcarInstallButaneTemplatePath); err != nil {
-		return fmt.Errorf("install-flatcar butante template not found at %s: %w", flatcarInstallButaneTemplatePath, err)
-	}
-
-	// Read flatcar-install template once.
-	flatcarInstallTemplateContent, err := os.ReadFile(flatcarInstallButaneTemplatePath)
-	if err != nil {
-		return fmt.Errorf("error reading flat-car install butante template: %w", err)
-	}
-
 	// Create butane runner.
 	runner := butane.NewRunner()
 	runner.SetPretty(true)
 
 	for _, node := range i.furyctlConf.Spec.Infrastructure.Nodes {
+		logrus.Debugf("Generating install-flatcar butane for %s", node.Hostname)
+
 		nodeConfigPath := filepath.Join(nodeConfigButanesDir, node.Hostname+".bu")
-		logrus.Debugf("Generating flatcar-install for %s", node.Hostname)
 
 		// Read node-config butane file.
-		butaneContent, err := os.ReadFile(nodeConfigPath)
+		ncfgButaneContent, err := os.ReadFile(nodeConfigPath)
 		if err != nil {
 			return fmt.Errorf("error reading node-config butane %s: %w", nodeConfigPath, err)
 		}
 
-		// 2. Convert node-config butane to ignition JSON.
-		ignitionJSON, report, err := runner.ConvertWithReport(butaneContent)
+		// Convert node-config butane to ignition JSON.
+		ignitionJSON, report, err := runner.ConvertWithReport(ncfgButaneContent)
 		if err != nil {
 			return fmt.Errorf("error converting %s to ignition: %w", nodeConfigPath, err)
 		}
@@ -421,36 +411,38 @@ func (i *Infrastructure) generateInstallFlatcarIgnitionFiles() error {
 			return fmt.Errorf("error closing gzip writer for %s: %w", node.Hostname, err)
 		}
 
-		// Encode node-config to base64.
+		// Encode node-config ignition to base64.
 		base64Encoded := base64.StdEncoding.EncodeToString(gzipBuf.Bytes())
 
-		// Render flatcar-install butane template using Go text/template.
-		tmpl, err := texttemplate.New("flatcar-install").Parse(string(flatcarInstallTemplateContent))
+		// Render install-flatcar butane template
+		tmpl, err := texttemplate.New(
+			filepath.Base(installFlatcarButaneTemplatePath)).
+			ParseFiles(installFlatcarButaneTemplatePath)
 		if err != nil {
-			return fmt.Errorf("error parsing flatcar-install butane template: %w", err)
+			return fmt.Errorf("error parsing install-flatcar butane template %s: %w", installFlatcarButaneTemplatePath, err)
 		}
-
-		var renderedContent bytes.Buffer
 
 		sshPublicKeyContent, err := i.getSSHPublicKeyContent()
 		if err != nil {
 			return fmt.Errorf("error getting SSH public key content: %w", err)
 		}
 
-		templateData := map[string]string{
+		templateData := map[string]any{
 			"base64EncodedIgnition": base64Encoded,
-			"installDisk":           string(node.Storage.InstallDisk),
-			"hostname":              node.Hostname,
-			"ipxeServerURL":         string(i.furyctlConf.Spec.Infrastructure.IpxeServer.Url),
+			"ipxeServerURL":         i.furyctlConf.Spec.Infrastructure.IpxeServer.Url,
 			"sshUsername":           i.furyctlConf.Spec.Infrastructure.Ssh.Username,
 			"sshPublicKey":          sshPublicKeyContent,
+			"installDisk":           node.Storage.InstallDisk,
+			"hostname":              node.Hostname,
 		}
+
+		var renderedContent bytes.Buffer
 
 		if err := tmpl.Execute(&renderedContent, templateData); err != nil {
-			return fmt.Errorf("error rendering flatcar-install template for %s: %w", node.Hostname, err)
+			return fmt.Errorf("error rendering install-flatcar template for %s: %w", node.Hostname, err)
 		}
 
-		// Write flatcar-install butane file for this node.
+		// Write install-flatcar butane file for this node.
 		flatcarInstallIgnitionPath := filepath.Join(installButanesDir, node.Hostname+".bu")
 
 		if err := os.MkdirAll(installButanesDir, iox.FullPermAccess); err != nil {
@@ -458,10 +450,10 @@ func (i *Infrastructure) generateInstallFlatcarIgnitionFiles() error {
 		}
 
 		if err := os.WriteFile(flatcarInstallIgnitionPath, renderedContent.Bytes(), iox.FullRWPermAccess); err != nil {
-			return fmt.Errorf("error writing flatcar-install file %s: %w", flatcarInstallIgnitionPath, err)
+			return fmt.Errorf("error writing install-flatcar file %s: %w", flatcarInstallIgnitionPath, err)
 		}
 
-		logrus.Debugf("Generated flatcar-install butane file for %s at: %s", node.Hostname, flatcarInstallIgnitionPath)
+		logrus.Debugf("Generated install-flatcar butane file for %s at: %s", node.Hostname, flatcarInstallIgnitionPath)
 	}
 
 	logrus.Info("Flatcar installation butane files generated successfully")
