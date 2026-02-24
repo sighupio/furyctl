@@ -327,6 +327,7 @@ func (i *Infrastructure) renderButaneTemplates() error {
 					"ipxeServerURL":  i.furyctlConf.Spec.Infrastructure.IpxeServer.Url,
 					"sysext":         sysextData,
 					"flatcar":        flatcarData,
+					"proxy":          i.furyctlConf.Spec.Infrastructure.Proxy,
 				},
 			},
 		}
@@ -427,6 +428,14 @@ func (i *Infrastructure) generateInstallFlatcarIgnitionFiles() error {
 			return fmt.Errorf("error getting SSH public key content: %w", err)
 		}
 
+		httpProxy := make(map[string]any)
+
+		if i.furyctlConf.Spec.Infrastructure.Proxy != nil {
+			httpProxy["http"] = i.furyctlConf.Spec.Infrastructure.Proxy.Http
+			httpProxy["https"] = i.furyctlConf.Spec.Infrastructure.Proxy.Https
+			httpProxy["no_proxy"] = i.furyctlConf.Spec.Infrastructure.Proxy.NoProxy
+		}
+
 		templateData := map[string]any{
 			"base64EncodedIgnition": base64Encoded,
 			"ipxeServerURL":         i.furyctlConf.Spec.Infrastructure.IpxeServer.Url,
@@ -434,6 +443,7 @@ func (i *Infrastructure) generateInstallFlatcarIgnitionFiles() error {
 			"sshPublicKey":          sshPublicKeyContent,
 			"installDisk":           node.Storage.InstallDisk,
 			"hostname":              node.Hostname,
+			"proxy":                 httpProxy,
 		}
 
 		var renderedContent bytes.Buffer
