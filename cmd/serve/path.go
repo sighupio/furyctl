@@ -58,6 +58,13 @@ func Path(address, port, root string, nodesStatus *map[string]string) error {
 
 	// Wrap the file server with a logging handler that logs each request.
 	typedHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Normalize MAC addresses to uppercase in /boot/ paths.
+		// iPXE sends lowercase MACs (bc-24-11-cc-dd-01), but files are uppercase (BC-24-11-CC-DD-01).
+		if strings.HasPrefix(r.URL.Path, "/boot/") {
+			macPart := strings.TrimPrefix(r.URL.Path, "/boot/")
+			r.URL.Path = "/boot/" + strings.ToUpper(macPart)
+		}
+
 		// Use package-level loggingResponseWriter.
 		lrw := &loggingResponseWriter{ResponseWriter: w}
 		fs.ServeHTTP(lrw, r)
