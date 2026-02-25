@@ -281,7 +281,7 @@ func (i *Infrastructure) renderButaneTemplates() error {
 
 	for _, node := range i.furyctlConf.Spec.Infrastructure.Nodes {
 		nodeRole := i.getNodeRole(node.Hostname)
-		normalizedMAC := strings.ToLower(strings.ReplaceAll(string(node.MacAddress), ":", "-"))
+		normalizedMAC := strings.ToUpper(strings.ReplaceAll(string(node.MacAddress), ":", "-"))
 
 		sshPublicKeyContent, err := i.getSSHPublicKeyContent()
 		if err != nil {
@@ -510,7 +510,7 @@ func convertButaneToIgnition(butanePath, ignitionPath string) error {
 // Convert butane files to ignition files.
 func (i *Infrastructure) generateNodeIgnition(node public.SpecInfrastructureNode) error {
 	// Normalize MAC address: replace colons with hyphens for URL-safe paths.
-	normalizedMAC := strings.ReplaceAll(string(node.MacAddress), ":", "-")
+	normalizedMAC := strings.ToUpper(strings.ReplaceAll(string(node.MacAddress), ":", "-"))
 	macDir := filepath.Join(i.Path, "server", "ignition", normalizedMAC)
 
 	if err := os.MkdirAll(macDir, iox.FullPermAccess); err != nil {
@@ -595,7 +595,7 @@ func (i *Infrastructure) downloadAssets(usedArchitectures []string) error {
 
 // Generate node-specific boot iPXE file from template.
 func (i *Infrastructure) generateNodeBootFile(node public.SpecInfrastructureNode) error {
-	normalizedMAC := strings.ToLower(strings.ReplaceAll(string(node.MacAddress), ":", "-"))
+	normalizedMAC := strings.ToUpper(strings.ReplaceAll(string(node.MacAddress), ":", "-"))
 	bootDir := filepath.Join(i.Path, "server", "boot")
 
 	if err := os.MkdirAll(bootDir, iox.FullPermAccess); err != nil {
