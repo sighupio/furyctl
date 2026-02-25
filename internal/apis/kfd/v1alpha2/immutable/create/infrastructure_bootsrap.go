@@ -281,7 +281,7 @@ func (i *Infrastructure) renderButaneTemplates() error {
 
 	for _, node := range i.furyctlConf.Spec.Infrastructure.Nodes {
 		nodeRole := i.getNodeRole(node.Hostname)
-		normalizedMAC := strings.ReplaceAll(string(node.MacAddress), ":", "-")
+		normalizedMAC := strings.ToLower(strings.ReplaceAll(string(node.MacAddress), ":", "-"))
 
 		sshPublicKeyContent, err := i.getSSHPublicKeyContent()
 		if err != nil {
@@ -593,6 +593,52 @@ func (i *Infrastructure) downloadAssets(usedArchitectures []string) error {
 	return nil
 }
 
+// Generate node-specific boot iPXE file from template.
+func (i *Infrastructure) generateNodeBootFile(node public.SpecInfrastructureNode) error {
+	normalizedMAC := strings.ToLower(strings.ReplaceAll(string(node.MacAddress), ":", "-"))
+	bootDir := filepath.Join(i.Path, "server", "boot")
+
+	if err := os.MkdirAll(bootDir, iox.FullPermAccess); err != nil {
+		return fmt.Errorf("error creating boot directory: %w", err)
+	}
+
+	bootTemplatePath := filepath.Join(
+		i.paths.DistroPath,
+		"templates",
+		"infrastructure",
+		"immutable",
+		"boot",
+		"node.ipxe.tpl",
+	)
+
+	tmpl, err := texttemplate.New(filepath.Base(bootTemplatePath)).ParseFiles(bootTemplatePath)
+	if err != nil {
+		return fmt.Errorf("error parsing boot template %s: %w", bootTemplatePath, err)
+	}
+
+	templateData := map[string]any{
+		"arch":          string(node.Arch),
+		"macNormalized": normalizedMAC,
+		"ipxeServerURL": string(i.furyctlConf.Spec.Infrastructure.IpxeServer.Url),
+	}
+
+	var renderedContent bytes.Buffer
+
+	if err := tmpl.Execute(&renderedContent, templateData); err != nil {
+		return fmt.Errorf("error rendering boot template for %s: %w", node.Hostname, err)
+	}
+
+	bootFilePath := filepath.Join(bootDir, normalizedMAC)
+
+	if err := os.WriteFile(bootFilePath, renderedContent.Bytes(), iox.FullRWPermAccess); err != nil {
+		return fmt.Errorf("error writing boot file for MAC %s: %w", normalizedMAC, err)
+	}
+
+	logrus.Debugf("Generated boot file for node %s at: %s", node.Hostname, bootFilePath)
+
+	return nil
+}
+
 // Downloads kernel, initrd, and image for each architecture.
 func (*Infrastructure) downloadFlatcarArtifacts(
 	downloader *assetDownloader,
@@ -728,6 +774,9 @@ func (i *Infrastructure) BootstrapNodes() error {
 	for _, node := range i.furyctlConf.Spec.Infrastructure.Nodes {
 		if err := i.generateNodeIgnition(node); err != nil {
 			return fmt.Errorf("error generating configs for node %s: %w", node.Hostname, err)
+		}
+		if err := i.generateNodeBootFile(node); err != nil {
+			return fmt.Errorf("error generating boot file for node %s: %w", node.Hostname, err)
 		}
 	}
 
