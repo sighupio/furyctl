@@ -444,6 +444,7 @@ func (i *Infrastructure) generateInstallFlatcarIgnitionFiles() error {
 			"installDisk":           node.Storage.InstallDisk,
 			"hostname":              node.Hostname,
 			"proxy":                 httpProxy,
+			"arch":                  node.Arch,
 		}
 
 		var renderedContent bytes.Buffer
@@ -616,10 +617,15 @@ func (i *Infrastructure) generateNodeBootFile(node public.SpecInfrastructureNode
 		return fmt.Errorf("error parsing boot template %s: %w", bootTemplatePath, err)
 	}
 
+	assets, err := i.getImmutableAssets()
+	if err != nil {
+		return fmt.Errorf("error getting immutable assets: %w", err)
+	}
 	templateData := map[string]any{
-		"arch":          string(node.Arch),
-		"macNormalized": normalizedMAC,
-		"ipxeServerURL": string(i.furyctlConf.Spec.Infrastructure.IpxeServer.Url),
+		"arch":           string(node.Arch),
+		"macNormalized":  normalizedMAC,
+		"ipxeServerURL":  string(i.furyctlConf.Spec.Infrastructure.IpxeServer.Url),
+		"flatcarVersion": assets.Flatcar.Version,
 	}
 
 	var renderedContent bytes.Buffer
@@ -653,8 +659,8 @@ func (*Infrastructure) downloadFlatcarArtifacts(
 
 		logrus.Infof("Downloading Flatcar %s artifacts for %s...", flatcar.Version, arch)
 
-		// Create subdirectory by architecture: server/assets/flatcar/{arch}/.
-		flatcarDir := filepath.Join(downloader.assetsPath, "flatcar", arch)
+		// Create subdirectory by architecture: server/assets/flatcar/{arch}/{version}/.
+		flatcarDir := filepath.Join(downloader.assetsPath, "flatcar", arch, flatcar.Version)
 		if err := os.MkdirAll(flatcarDir, iox.FullPermAccess); err != nil {
 			return fmt.Errorf("error creating directory %s: %w", flatcarDir, err)
 		}
@@ -681,6 +687,14 @@ func (*Infrastructure) downloadFlatcarArtifacts(
 			filepath.Join(flatcarDir, archInfo.Image.Filename),
 		); err != nil {
 			return fmt.Errorf("error downloading image for %s: %w", arch, err)
+		}
+
+		// Download image signature.
+		if err := downloader.downloadAndValidate(
+			archInfo.Image.URL+".sig",
+			filepath.Join(flatcarDir, archInfo.Image.Filename+".sig"),
+		); err != nil {
+			return fmt.Errorf("error downloading image signature for %s: %w", arch, err)
 		}
 
 		logrus.Infof("Flatcar artifacts for %s downloaded successfully", arch)
@@ -738,10 +752,7 @@ func (ad *assetDownloader) downloadAndValidate(url, destPath string) error {
 		return nil
 	}
 
-	// Download file using ClientModeFile to prevent directory creation.
-	logrus.Debugf("Downloading %s", url)
-
-	if err := ad.goGetterClient.DownloadWithMode(url, destPath, getter.ClientModeFile); err != nil {
+	if err := ad.goGetterClient.DownloadWithMode(url, destPath, getter.ClientModeFile, false); err != nil {
 		return fmt.Errorf("error downloading from %s: %w", url, err)
 	}
 
