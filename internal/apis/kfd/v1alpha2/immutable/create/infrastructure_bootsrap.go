@@ -666,33 +666,41 @@ func (*Infrastructure) downloadFlatcarArtifacts(
 		}
 
 		// Download kernel.
-		if err := downloader.downloadAndValidate(
+		if err := downloader.goGetterClient.DownloadWithMode(
 			archInfo.Kernel.URL,
 			filepath.Join(flatcarDir, archInfo.Kernel.Filename),
+			getter.ClientModeFile,
+			false,
 		); err != nil {
 			return fmt.Errorf("error downloading kernel for %s: %w", arch, err)
 		}
 
 		// Download initrd.
-		if err := downloader.downloadAndValidate(
+		if err := downloader.goGetterClient.DownloadWithMode(
 			archInfo.Initrd.URL,
 			filepath.Join(flatcarDir, archInfo.Initrd.Filename),
+			getter.ClientModeFile,
+			false,
 		); err != nil {
 			return fmt.Errorf("error downloading initrd for %s: %w", arch, err)
 		}
 
 		// Download image.
-		if err := downloader.downloadAndValidate(
+		if err := downloader.goGetterClient.DownloadWithMode(
 			archInfo.Image.URL,
 			filepath.Join(flatcarDir, archInfo.Image.Filename),
+			getter.ClientModeFile,
+			false,
 		); err != nil {
 			return fmt.Errorf("error downloading image for %s: %w", arch, err)
 		}
 
 		// Download image signature.
-		if err := downloader.downloadAndValidate(
+		if err := downloader.goGetterClient.DownloadWithMode(
 			archInfo.Image.URL+".sig",
 			filepath.Join(flatcarDir, archInfo.Image.Filename+".sig"),
+			getter.ClientModeFile,
+			false,
 		); err != nil {
 			return fmt.Errorf("error downloading image signature for %s: %w", arch, err)
 		}
@@ -726,9 +734,11 @@ func (*Infrastructure) downloadSysextPackages(
 			filename := fmt.Sprintf("%s-%s-%s.raw", pkg.Name, pkg.Version, arch)
 			destPath := filepath.Join(extensionsDir, filename)
 
-			if err := downloader.downloadAndValidate(
+			if err := downloader.goGetterClient.DownloadWithMode(
 				archInfo.URL,
 				destPath,
+				getter.ClientModeFile,
+				false,
 			); err != nil {
 				return fmt.Errorf("error downloading %s for %s: %w", pkg.Name, arch, err)
 			}
@@ -738,32 +748,6 @@ func (*Infrastructure) downloadSysextPackages(
 	}
 
 	return nil
-}
-
-// Download a file to the specified destination path.
-func (ad *assetDownloader) downloadAndValidate(url, destPath string) error {
-	// Check if file already exists (idempotent).
-	// FIXME: this is a very simple check that doesn't validate file integrity (e.g. with checksums).
-	// We should enhance this in the future.
-	// Maybe we could reuse something from the dependency manager that already handles caching and validation?
-	if ad.fileExistsAndValid(destPath) {
-		logrus.Debugf("Skipping download, file already exists: %s", filepath.Base(destPath))
-
-		return nil
-	}
-
-	if err := ad.goGetterClient.DownloadWithMode(url, destPath, getter.ClientModeFile, false); err != nil {
-		return fmt.Errorf("error downloading from %s: %w", url, err)
-	}
-
-	return nil
-}
-
-// Checks if file exists.
-func (*assetDownloader) fileExistsAndValid(path string) bool {
-	_, err := os.Stat(path)
-
-	return !os.IsNotExist(err)
 }
 
 // Bootstrap Flatcar nodes by:
