@@ -115,7 +115,7 @@ func (i *Infrastructure) Exec(_ string, upgradeState *upgrade.State) error {
 		return fmt.Errorf("error copying from templates: %w", err)
 	}
 
-	// Struct to keep each node's bootstrap status
+	// Struct to keep each node's bootstrap status.
 	nodeStatus := make(map[string]string, len(i.furyctlConf.Spec.Infrastructure.Nodes))
 	for _, node := range i.furyctlConf.Spec.Infrastructure.Nodes {
 		nodeStatus[node.Hostname] = "pending"
