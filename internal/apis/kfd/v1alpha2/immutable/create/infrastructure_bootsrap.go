@@ -415,7 +415,7 @@ func (i *Infrastructure) generateInstallFlatcarIgnitionFiles() error {
 		// Encode node-config ignition to base64.
 		base64Encoded := base64.StdEncoding.EncodeToString(gzipBuf.Bytes())
 
-		// Render install-flatcar butane template
+		// Render install-flatcar butane template.
 		tmpl, err := texttemplate.New(
 			filepath.Base(installFlatcarButaneTemplatePath)).
 			ParseFiles(installFlatcarButaneTemplatePath)
@@ -566,11 +566,10 @@ func (i *Infrastructure) downloadAssets(usedArchitectures []string) error {
 	}
 
 	// Create HTTP client with caching.
-	// FIXME: path to cache should not be calculated this way.
 	httpClient := netx.NewGoGetterClient()
 	cachedClient := netx.WithLocalCache(
 		httpClient,
-		filepath.Join(i.Path, "..", "..", ".cache", "assets"),
+		filepath.Join(i.paths.BinPath, "..", ".cache"),
 	)
 
 	downloader := &assetDownloader{
@@ -621,6 +620,7 @@ func (i *Infrastructure) generateNodeBootFile(node public.SpecInfrastructureNode
 	if err != nil {
 		return fmt.Errorf("error getting immutable assets: %w", err)
 	}
+
 	templateData := map[string]any{
 		"arch":           string(node.Arch),
 		"macNormalized":  normalizedMAC,
@@ -670,7 +670,7 @@ func (*Infrastructure) downloadFlatcarArtifacts(
 			archInfo.Kernel.URL,
 			filepath.Join(flatcarDir, archInfo.Kernel.Filename),
 			getter.ClientModeFile,
-			false,
+			map[string]getter.Decompressor{},
 		); err != nil {
 			return fmt.Errorf("error downloading kernel for %s: %w", arch, err)
 		}
@@ -680,7 +680,7 @@ func (*Infrastructure) downloadFlatcarArtifacts(
 			archInfo.Initrd.URL,
 			filepath.Join(flatcarDir, archInfo.Initrd.Filename),
 			getter.ClientModeFile,
-			false,
+			map[string]getter.Decompressor{},
 		); err != nil {
 			return fmt.Errorf("error downloading initrd for %s: %w", arch, err)
 		}
@@ -690,7 +690,7 @@ func (*Infrastructure) downloadFlatcarArtifacts(
 			archInfo.Image.URL,
 			filepath.Join(flatcarDir, archInfo.Image.Filename),
 			getter.ClientModeFile,
-			false,
+			map[string]getter.Decompressor{},
 		); err != nil {
 			return fmt.Errorf("error downloading image for %s: %w", arch, err)
 		}
@@ -700,7 +700,7 @@ func (*Infrastructure) downloadFlatcarArtifacts(
 			archInfo.Image.URL+".sig",
 			filepath.Join(flatcarDir, archInfo.Image.Filename+".sig"),
 			getter.ClientModeFile,
-			false,
+			map[string]getter.Decompressor{},
 		); err != nil {
 			return fmt.Errorf("error downloading image signature for %s: %w", arch, err)
 		}
@@ -738,7 +738,7 @@ func (*Infrastructure) downloadSysextPackages(
 				archInfo.URL,
 				destPath,
 				getter.ClientModeFile,
-				false,
+				map[string]getter.Decompressor{},
 			); err != nil {
 				return fmt.Errorf("error downloading %s for %s: %w", pkg.Name, arch, err)
 			}
@@ -770,6 +770,7 @@ func (i *Infrastructure) BootstrapNodes() error {
 		if err := i.generateNodeIgnition(node); err != nil {
 			return fmt.Errorf("error generating configs for node %s: %w", node.Hostname, err)
 		}
+
 		if err := i.generateNodeBootFile(node); err != nil {
 			return fmt.Errorf("error generating boot file for node %s: %w", node.Hostname, err)
 		}

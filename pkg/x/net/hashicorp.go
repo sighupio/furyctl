@@ -36,11 +36,16 @@ func (*GoGetterClient) ClearItem(_ string) error {
 }
 
 func (g *GoGetterClient) Download(src, dst string) error {
-	return g.DownloadWithMode(src, dst, getter.ClientModeAny, true)
+	return g.DownloadWithMode(src, dst, getter.ClientModeAny, nil)
 }
 
 // DownloadWithMode allows downloading with a specific mode (File, Dir, or Any).
-func (g *GoGetterClient) DownloadWithMode(src, dst string, mode getter.ClientMode, decompress bool) error {
+// The decompressors map can be used to specify custom decompressors or disable built-in ones by passing an empty map.
+func (g *GoGetterClient) DownloadWithMode(
+	src, dst string,
+	mode getter.ClientMode,
+	decompressors map[string]getter.Decompressor,
+) error {
 	protocols := []string{""}
 	if !g.URLHasForcedProtocol(src) {
 		protocols = g.protocols
@@ -74,8 +79,8 @@ func (g *GoGetterClient) DownloadWithMode(src, dst string, mode getter.ClientMod
 
 		// When downloading a single file we don't want go-getter to auto-decompress
 		// archives (eg. .bz2). An empty map disables the built-in decompressors.
-		if !decompress && mode == getter.ClientModeFile {
-			client.Decompressors = map[string]getter.Decompressor{}
+		if decompressors != nil {
+			client.Decompressors = decompressors
 		}
 
 		err := client.Get()

@@ -140,8 +140,8 @@ func (p *PreFlight) Exec(renderedConfig map[string]any) (*Status, error) {
 		return status, fmt.Errorf("error copying from template: %w", err)
 	}
 
-	// TODO: review the prefliht logic. We are omitting the pings check for now becasue it makes the infrastructure
-	//  phase fail when the cluster does not exist yet.
+	// We are omitting the pings check for now because it makes the infrastructure
+	// phase fail when the cluster does not exist yet.
 	// if _, err := p.ansibleRunner.Exec("all", "-m", "ping"); err != nil {
 	// 	return status, fmt.Errorf("error checking hosts: %w", err)
 	// }

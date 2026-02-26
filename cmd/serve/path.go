@@ -58,8 +58,8 @@ func Path(address, port, root string, nodesStatus *map[string]string) error {
 
 	// Wrap the file server with a logging handler that logs each request.
 	typedHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// Normalize MAC addresses to uppercase in /boot/ paths.
-		// iPXE sends lowercase MACs (bc-24-11-cc-dd-01), but files are uppercase (BC-24-11-CC-DD-01).
+		// Normalize MAC addresses to uppercase in /boot/ paths because iPXE sends lowercase MACs (bc-24-11-cc-dd-01)
+		// in the URL, but files are uppercase (BC-24-11-CC-DD-01).
 		if strings.HasPrefix(r.URL.Path, "/boot/") {
 			macPart := strings.TrimPrefix(r.URL.Path, "/boot/")
 			r.URL.Path = "/boot/" + strings.ToUpper(macPart)
@@ -89,6 +89,7 @@ func Path(address, port, root string, nodesStatus *map[string]string) error {
 			lrw.Header().Set("Content-Type", "application/json")
 			lrw.WriteHeader(http.StatusOK)
 			encoder := json.NewEncoder(lrw)
+
 			if err := encoder.Encode(*nodesStatus); err != nil {
 				logrus.Errorf("error while encoding response: %s", err)
 			} else {
@@ -102,6 +103,7 @@ func Path(address, port, root string, nodesStatus *map[string]string) error {
 				}).Debug("served nodes status")
 			}
 		}
+
 		if r.Method == http.MethodPost {
 			lrw.WriteHeader(http.StatusNoContent)
 
