@@ -62,6 +62,7 @@ func NewClusterCmd() *cobra.Command {
 	var cmdEvent analytics.Event
 
 	clusterCmd := &cobra.Command{
+		Args:  cobra.NoArgs,
 		Use:   "cluster",
 		Short: "Deletes a cluster",
 		PreRun: func(cmd *cobra.Command, _ []string) {
