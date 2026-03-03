@@ -33,8 +33,9 @@ var (
 )
 
 type Status struct {
-	Diffs   r3diff.Changelog
-	Success bool
+	Diffs         r3diff.Changelog
+	Success       bool
+	ClusterExists bool
 }
 
 type PreFlight struct {
@@ -101,14 +102,15 @@ func NewPreFlight(
 
 func (p *PreFlight) Exec(renderedConfig map[string]any) (*Status, error) {
 	status := &Status{
-		Diffs:   r3diff.Changelog{},
-		Success: false,
+		Diffs:         r3diff.Changelog{},
+		Success:       false,
+		ClusterExists: false, // we assume the cluster exists until we check it, to avoid doing unnecessary checks when creating a new cluster
 	}
 
 	logrus.Info("Running preflight checks...")
 
 	if err := p.CreateRootFolder(); err != nil {
-		return status, fmt.Errorf("error creating kubernetes phase folder: %w", err)
+		return status, fmt.Errorf("error creating preflight phase folder: %w", err)
 	}
 
 	furyctlMerger, err := p.CreateFuryctlMerger(
@@ -145,7 +147,7 @@ func (p *PreFlight) Exec(renderedConfig map[string]any) (*Status, error) {
 	// if _, err := p.ansibleRunner.Exec("all", "-m", "ping"); err != nil {
 	// 	return status, fmt.Errorf("error checking hosts: %w", err)
 	// }
-	// Make linter happy.
+	// This line is to make the linter happy.
 
 	if _, err := p.ansibleRunner.Playbook("verify-playbook.yaml"); err != nil {
 		status.Success = true
@@ -156,6 +158,8 @@ func (p *PreFlight) Exec(renderedConfig map[string]any) (*Status, error) {
 
 		return status, nil //nolint:nilerr // we want to return nil here
 	}
+
+	status.ClusterExists = true
 
 	if err := kubex.SetConfigEnv(path.Join(p.Path, "admin.conf")); err != nil {
 		return status, fmt.Errorf("error setting kubeconfig env: %w", err)
