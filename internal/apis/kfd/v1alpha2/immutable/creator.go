@@ -398,12 +398,16 @@ func (c *ClusterCreator) Create(startFrom string, _, podRunningCheckTimeout int)
 		}
 	}
 
-	if err := c.stateStore.StoreConfig(renderedConfig); err != nil {
-		return fmt.Errorf("error while creating secret with the cluster configuration: %w", err)
-	}
+	if !status.ClusterExists && c.phase == cluster.OperationPhaseInfrastructure {
+		logrus.Info("skipping saving status to cluster because Kubernetes cluster does not exist yet")
+	} else {
+		if err := c.stateStore.StoreConfig(renderedConfig); err != nil {
+			return fmt.Errorf("error while creating secret with the cluster configuration: %w", err)
+		}
 
-	if err := c.stateStore.StoreKFD(); err != nil {
-		return fmt.Errorf("error while creating secret with the distribution configuration: %w", err)
+		if err := c.stateStore.StoreKFD(); err != nil {
+			return fmt.Errorf("error while creating secret with the distribution configuration: %w", err)
+		}
 	}
 
 	return nil
