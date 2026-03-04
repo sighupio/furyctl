@@ -36,6 +36,7 @@ func NewKubeconfigCmd() *cobra.Command {
 	var cmdEvent analytics.Event
 
 	kubeconfigCmd := &cobra.Command{
+		Args:  cobra.NoArgs,
 		Use:   "kubeconfig",
 		Short: "Get kubeconfig from a cluster",
 		PreRun: func(cmd *cobra.Command, _ []string) {

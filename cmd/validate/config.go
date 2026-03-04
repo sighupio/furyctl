@@ -34,6 +34,7 @@ func NewConfigCmd() *cobra.Command {
 	var cmdEvent analytics.Event
 
 	configCmd := &cobra.Command{
+		Args:  cobra.NoArgs,
 		Use:   "config",
 		Short: "Validate configuration file",
 		PreRun: func(cmd *cobra.Command, _ []string) {

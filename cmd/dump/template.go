@@ -48,6 +48,7 @@ func NewTemplateCmd() *cobra.Command {
 	var cmdEvent analytics.Event
 
 	templateCmd := &cobra.Command{
+		Args:  cobra.NoArgs,
 		Use:   "template",
 		Short: "Renders the distribution's code from template files parametrized with the configuration file",
 		Long: `Generates a folder with the parametrized version of the Terraform and Kustomization code for deploying the SIGHUP Distribution into a cluster.

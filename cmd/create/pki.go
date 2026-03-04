@@ -93,6 +93,7 @@ func NewPKICmd() *cobra.Command {
 	var cmdEvent analytics.Event
 
 	pkiCmd := &cobra.Command{
+		Args:  cobra.NoArgs,
 		Use:   "pki",
 		Short: "Creates the Public Key Infrastructure files needed for an on-premises cluster.",
 		Long: `Creates the Public Key Infrastructure files needed (CA, certificates, keys, etc.) by a Kubernetes cluster and its etcd database.

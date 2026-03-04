@@ -46,6 +46,7 @@ func NewDiffCmd() *cobra.Command {
 	var cmdEvent analytics.Event
 
 	diffCmd := &cobra.Command{
+		Args:  cobra.NoArgs,
 		Use:   "diff",
 		Short: "Diff the current configuration with the one in the cluster",
 		PreRun: func(cmd *cobra.Command, _ []string) {

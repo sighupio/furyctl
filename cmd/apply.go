@@ -78,12 +78,14 @@ func NewApplyCmd() *cobra.Command {
 	var cmdEvent analytics.Event
 
 	applyCmd := &cobra.Command{
+		Args:  cobra.NoArgs,
 		Use:   "apply",
 		Short: "Apply the configuration to create, update, or upgrade a battle-tested SIGHUP Distribution cluster",
 		Example: `  furyctl apply                                     Apply all the configuration to the cluster using the default configuration file name
   furyctl apply --config mycluster.yaml             Apply a custom configuration file
   furyctl apply --phase distribution                Apply a single phase, for example the distribution phase
   furyctl apply --post-apply-phases distribution    Apply all the phases, and repeat the distribution phase afterwards
+  furyctl apply --upgrade                           Upgrade a cluster after bumping it's version in the configuration file.
 `,
 		PreRun: func(cmd *cobra.Command, _ []string) {
 			cmdEvent = analytics.NewCommandEvent(cobrax.GetFullname(cmd))
