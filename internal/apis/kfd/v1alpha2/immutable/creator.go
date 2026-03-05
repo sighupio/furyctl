@@ -272,18 +272,36 @@ func (c *ClusterCreator) Create(startFrom string, _, podRunningCheckTimeout int)
 		}
 	}
 
-	rdcs := reducers.Build(
+	rdcsInfrastructure := reducers.Build(
+		status.Diffs,
+		r,
+		cluster.OperationPhaseInfrastructure,
+	)
+
+	rdcsDistribution := reducers.Build(
 		status.Diffs,
 		r,
 		cluster.OperationPhaseDistribution,
 	)
 
-	unsafeReducers := r.UnsafeReducerRulesByDiffs(
+	unsafeReducersInfrastructure := r.UnsafeReducerRulesByDiffs(
+		r.GetReducers(
+			cluster.OperationPhaseInfrastructure,
+		),
+		status.Diffs,
+	)
+
+	unsafeReducersDistribution := r.UnsafeReducerRulesByDiffs(
 		r.GetReducers(
 			cluster.OperationPhaseDistribution,
 		),
 		status.Diffs,
 	)
+
+	rdcs := rdcsInfrastructure
+	rdcs = append(rdcs, rdcsDistribution...)
+	unsafeReducers := unsafeReducersInfrastructure
+	unsafeReducers = append(unsafeReducers, unsafeReducersDistribution...)
 
 	if len(rdcs) > 0 {
 		logrus.Infof("Differences found from previous cluster configuration, "+
@@ -299,7 +317,7 @@ func (c *ClusterCreator) Create(startFrom string, _, podRunningCheckTimeout int)
 			c.upgrade,
 			c.force,
 			upgr,
-			rdcs,
+			rdcsDistribution,
 			status.Diffs,
 			c.externalUpgradesPath,
 			c.skipNodesUpgrade,
@@ -312,6 +330,27 @@ func (c *ClusterCreator) Create(startFrom string, _, podRunningCheckTimeout int)
 
 	switch c.phase {
 	case cluster.OperationPhaseInfrastructure:
+		if len(rdcsInfrastructure) > 0 && len(unsafeReducersInfrastructure) > 0 {
+			msg := "\nWARNING: Changes to infrastructure phase configuration " +
+				"that could cause data loss or service disruption have been found."
+			if strings.Contains(rdcsInfrastructure.ToString(), ".spec.infrastructure.nodes") {
+				msg = "\nWARNING: Changes to configuration that require nodes reprovisioning have been found. " +
+					"Manual intervention will be required to reset the nodes."
+			}
+
+			confirm, err := cluster.AskConfirmationWithMessage(
+				cluster.IsForceEnabledForFeature(c.force, cluster.ForceFeatureMigrations),
+				msg,
+			)
+			if err != nil {
+				return fmt.Errorf("error while asking for confirmation: %w", err)
+			}
+
+			if !confirm {
+				return ErrAbortedByUser
+			}
+		}
+
 		upgradeState := upgrade.State{
 			Phases: upgrade.Phases{
 				PreInfrastructure:  &upgrade.Phase{Status: upgrade.PhaseStatusPending},
@@ -338,7 +377,7 @@ func (c *ClusterCreator) Create(startFrom string, _, podRunningCheckTimeout int)
 		}
 
 	case cluster.OperationPhaseDistribution:
-		if len(rdcs) > 0 && len(unsafeReducers) > 0 {
+		if len(rdcsDistribution) > 0 && len(unsafeReducersDistribution) > 0 {
 			confirm, err := cluster.AskConfirmation(cluster.IsForceEnabledForFeature(c.force, cluster.ForceFeatureMigrations))
 			if err != nil {
 				return fmt.Errorf("error while asking for confirmation: %w", err)
@@ -357,7 +396,7 @@ func (c *ClusterCreator) Create(startFrom string, _, podRunningCheckTimeout int)
 			},
 		}
 
-		if err := distributionPhase.Exec(rdcs, StartFromFlagNotSet, &upgradeState); err != nil {
+		if err := distributionPhase.Exec(rdcsDistribution, StartFromFlagNotSet, &upgradeState); err != nil {
 			return fmt.Errorf("error while executing distribution phase: %w", err)
 		}
 
@@ -497,6 +536,29 @@ func (c *ClusterCreator) allPhases(
 		startFrom == cluster.OperationPhaseInfrastructure ||
 		startFrom == cluster.OperationSubPhasePreInfrastructure ||
 		startFrom == cluster.OperationSubPhasePostInfrastructure {
+		if len(rdcs) > 0 && len(unsafeReducers) > 0 {
+			if strings.Contains(rdcs.ToString(), ".spec.infrastructure") {
+				msg := "\nWARNING: Changes to infrastructure phase configuration " +
+					"that could cause data loss or service disruption have been found."
+				if strings.Contains(rdcs.ToString(), ".spec.infrastructure.nodes") {
+					msg = "\nWARNING: Changes to configuration that require nodes reprovisioning have been found. " +
+						"Manual intervention will be required to reset the nodes."
+				}
+
+				confirm, err := cluster.AskConfirmationWithMessage(
+					cluster.IsForceEnabledForFeature(c.force, cluster.ForceFeatureMigrations),
+					msg,
+				)
+				if err != nil {
+					return fmt.Errorf("error while asking for confirmation: %w", err)
+				}
+
+				if !confirm {
+					return ErrAbortedByUser
+				}
+			}
+		}
+
 		if err := infrastructurePhase.Exec(c.getInfrastructureSubPhase(startFrom), upgradeState); err != nil {
 			return fmt.Errorf("error while executing infrastructure phase: %w", err)
 		}
@@ -517,13 +579,15 @@ func (c *ClusterCreator) allPhases(
 
 	if startFrom != cluster.OperationPhasePlugins {
 		if len(rdcs) > 0 && len(unsafeReducers) > 0 {
-			confirm, err := cluster.AskConfirmation(cluster.IsForceEnabledForFeature(c.force, cluster.ForceFeatureMigrations))
-			if err != nil {
-				return fmt.Errorf("error while asking for confirmation: %w", err)
-			}
+			if strings.Contains(rdcs.ToString(), ".spec.distribution") {
+				confirm, err := cluster.AskConfirmation(cluster.IsForceEnabledForFeature(c.force, cluster.ForceFeatureMigrations))
+				if err != nil {
+					return fmt.Errorf("error while asking for confirmation: %w", err)
+				}
 
-			if !confirm {
-				return ErrAbortedByUser
+				if !confirm {
+					return ErrAbortedByUser
+				}
 			}
 		}
 
@@ -539,7 +603,7 @@ func (c *ClusterCreator) allPhases(
 	}
 
 	if len(c.postApplyPhases) > 0 {
-		logrus.Info("Executing extra phases...")
+		logrus.Infof("Executing extra phases: %s...", strings.Join(c.postApplyPhases, ", "))
 
 		if err := c.extraPhases(
 			kubernetesPhase,

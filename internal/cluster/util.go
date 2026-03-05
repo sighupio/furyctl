@@ -30,10 +30,9 @@ func IsForceEnabledForFeature(force []string, feature string) bool {
 }
 
 //nolint:revive // force bool needs to be here
-func AskConfirmation(force bool) (bool, error) {
+func AskConfirmationWithMessage(force bool, msg string) (bool, error) {
 	if !force {
-		if _, err := fmt.Println("\nWARNING: You are about to apply changes to the cluster configuration " +
-			"that could potentially produce data loss or service disruption."); err != nil {
+		if _, err := fmt.Println(msg); err != nil {
 			return false, fmt.Errorf("error while printing to stdout: %w", err)
 		}
 
@@ -54,4 +53,9 @@ func AskConfirmation(force bool) (bool, error) {
 	}
 
 	return true, nil
+}
+
+func AskConfirmation(force bool) (bool, error) {
+	return AskConfirmationWithMessage(force, "\nWARNING: You are about to apply changes to the cluster configuration "+
+		"that could potentially produce data loss or service disruption.")
 }
