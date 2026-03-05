@@ -104,7 +104,7 @@ func (p *PreFlight) Exec(renderedConfig map[string]any) (*Status, error) {
 	status := &Status{
 		Diffs:         r3diff.Changelog{},
 		Success:       false,
-		ClusterExists: false, // we assume the cluster exists until we check it, to avoid doing unnecessary checks when creating a new cluster
+		ClusterExists: false,
 	}
 
 	logrus.Info("Running preflight checks...")
@@ -322,11 +322,16 @@ func (p *PreFlight) CheckReducerDiffs(d r3diff.Changelog, diffChecker diffs.Chec
 
 	errs = append(errs, diffChecker.AssertReducerUnsupportedViolations(
 		d,
-		r.UnsupportedReducerRulesByDiffs(r.GetReducers("kubernetes"), d),
+		r.UnsupportedReducerRulesByDiffs(r.GetReducers(cluster.OperationPhaseInfrastructure), d),
+	)...)
+
+	errs = append(errs, diffChecker.AssertReducerUnsupportedViolations(
+		d,
+		r.UnsupportedReducerRulesByDiffs(r.GetReducers(cluster.OperationPhaseKubernetes), d),
 	)...)
 	errs = append(errs, diffChecker.AssertReducerUnsupportedViolations(
 		d,
-		r.UnsupportedReducerRulesByDiffs(r.GetReducers("distribution"), d),
+		r.UnsupportedReducerRulesByDiffs(r.GetReducers(cluster.OperationPhaseDistribution), d),
 	)...)
 
 	if len(errs) > 0 {
