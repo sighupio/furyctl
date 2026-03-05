@@ -37,6 +37,8 @@ func NewImmutableClusterRulesExtractor(
 	}
 
 	builder.Spec = spec
+	builder.BaseExtractor = NewBaseExtractor(spec)
+	builder.BaseExtractor.RenderedConfig = renderedConfig
 
 	return &builder, nil
 }
