@@ -20,6 +20,7 @@ func NewServeCmd() *cobra.Command {
 	var cmdEvent analytics.Event
 
 	serveCmd := &cobra.Command{
+		Args:  cobra.NoArgs,
 		Use:   "serve",
 		Short: "Start HTTP server to serve assets from a custom path for the Immutable OS machines bootstrap",
 		PreRun: func(cmd *cobra.Command, _ []string) {
