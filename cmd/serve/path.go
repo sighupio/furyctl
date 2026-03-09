@@ -54,6 +54,9 @@ func Path(address, port, root string, nodesStatus *map[string]string) error {
 	// Channel to signal user requested stop (ENTER).
 	inputCh := make(chan struct{})
 
+	// Context to cancel the input goroutine when all nodes are booted.
+	ctx, cancel := context.WithCancel(context.Background())
+
 	fs := http.FileServer(http.Dir(root))
 
 	// Wrap the file server with a logging handler that logs each request.
@@ -151,6 +154,7 @@ func Path(address, port, root string, nodesStatus *map[string]string) error {
 			if allBooted {
 				logrus.Infof("All %d nodes reached 'booted' state. Continuing...", len(*nodesStatus))
 				close(inputCh)
+				cancel()
 			}
 		}
 	})
@@ -179,12 +183,23 @@ func Path(address, port, root string, nodesStatus *map[string]string) error {
 		errCh <- err
 	}()
 	go func() {
-		_, err := bufio.NewReader(os.Stdin).ReadBytes('\n')
-		if err != nil {
-			errCh <- err
-		}
+		done := make(chan struct{})
+		go func() {
+			_, err := bufio.NewReader(os.Stdin).ReadBytes('\n')
+			if err != nil {
+				errCh <- err
+			}
 
-		close(inputCh)
+			close(done)
+		}()
+		select {
+		case <-ctx.Done():
+			// All nodes booted, stop waiting for user input.
+			return
+
+		case <-done:
+			close(inputCh)
+		}
 	}()
 
 	// Wait for either user input or server error.
