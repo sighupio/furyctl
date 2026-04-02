@@ -36,6 +36,23 @@ func Test_OldKustomize_SupportsDownload(t *testing.T) {
 	}
 }
 
+func Test_Kustomize3_10_0_SupportsDownload(t *testing.T) {
+	a := tools.NewKustomize(newKustomizeRunner(), "3.10.0")
+
+	if a.SupportsDownload() != true {
+		t.Errorf("kustomize download must be supported")
+	}
+
+	wantSrcPath := fmt.Sprintf(
+		"https://github.com/kubernetes-sigs/kustomize/releases/download/kustomize/v3.10.0/kustomize_v3.10.0_%s_amd64.tar.gz",
+		runtime.GOOS,
+	)
+
+	if a.SrcPath() != wantSrcPath {
+		t.Errorf("Wrong kustomize src path: want = %s, got = %s", wantSrcPath, a.SrcPath())
+	}
+}
+
 func Test_Kustomize_SupportsDownload(t *testing.T) {
 	a := tools.NewKustomize(newKustomizeRunner(), "5.6.0")
 
