@@ -7,6 +7,7 @@ package get
 import (
 	"errors"
 	"fmt"
+	"os"
 	"strings"
 
 	"github.com/sirupsen/logrus"
@@ -57,7 +58,7 @@ func NewSupportedVersionsCmd() *cobra.Command {
 			}
 
 			kindsToPrint := kinds
-			msg := "list of currently supported SD versions and their compatibility with this version of furyctl for "
+			msg := "List of currently supported SD versions and their compatibility with this version of furyctl for "
 
 			// Check if the kind flag is set, if it is not set we will print all kinds.
 			if cmd.Flags().Changed("kind") {
@@ -76,7 +77,9 @@ func NewSupportedVersionsCmd() *cobra.Command {
 				msg += "each kind\n"
 			}
 
-			logrus.Info(msg + FormatSupportedVersions(releases, kindsToPrint))
+			if _, err := fmt.Fprint(os.Stdout, msg+FormatSupportedVersions(releases, kindsToPrint)); err != nil {
+				return fmt.Errorf("error writing output: %w", err)
+			}
 			cmdEvent.AddSuccessMessage("supported SD versions")
 			tracker.Track(cmdEvent)
 
