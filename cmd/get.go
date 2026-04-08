@@ -16,6 +16,7 @@ func NewGetCmd() *cobra.Command {
 		Short: "Get the kubeconfig, available upgrade paths for a cluster or compatible versions to use between SD, providers, furyctl",
 	}
 
+	getCmd.AddCommand(get.NewClusterInfoCmd())
 	getCmd.AddCommand(get.NewKubeconfigCmd())
 	getCmd.AddCommand(get.NewUpgradePathsCmd())
 	getCmd.AddCommand(get.NewSupportedVersionsCmd())
