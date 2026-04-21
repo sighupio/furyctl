@@ -45,7 +45,7 @@ func NewClusterInfoCmd() *cobra.Command {
 		Use:   "cluster-info",
 		Short: "Display cluster information.",
 		Long:  `Display information about the cluster, Kubernetes, and SD status. The command provides a quick overview of the cluster configuration and its current state; its output can be used for analysis and troubleshooting.`,
-		Example: `  furyctl get cluster-info                display cluster info in text format (default)
+		Example: `  furyctl get cluster-info                 display cluster info in text format (default)
   furyctl get cluster-info --format json   display cluster info as JSON
   furyctl get cluster-info --format yaml   display cluster info as YAML
  `,
