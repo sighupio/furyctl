@@ -221,6 +221,55 @@ func TestEtcdTopology(t *testing.T) {
 	if got := etcdTopology("OnPremises", mDedicated); got != "Dedicated" {
 		t.Fatalf("expected Dedicated when hosts present, got %q", got)
 	}
+
+	// Immutable cases.
+	if got := etcdTopology("Immutable", map[string]any{}); got != "Stacked" {
+		t.Fatalf("expected Stacked when etcd missing for Immutable, got %q", got)
+	}
+
+	mImmutableStacked := map[string]any{
+		"spec": map[string]any{
+			"kubernetes": map[string]any{
+				"controlPlane": map[string]any{
+					"members": []any{
+						map[string]any{"hostname": "ctrl01"},
+						map[string]any{"hostname": "ctrl02"},
+					},
+				},
+				"etcd": map[string]any{
+					"members": []any{
+						map[string]any{"hostname": "ctrl01"},
+					},
+				},
+			},
+		},
+	}
+
+	if got := etcdTopology("Immutable", mImmutableStacked); got != "Stacked" {
+		t.Fatalf("expected Stacked when etcd members are a subset of controlPlane, got %q", got)
+	}
+
+	mImmutableDedicated := map[string]any{
+		"spec": map[string]any{
+			"kubernetes": map[string]any{
+				"controlPlane": map[string]any{
+					"members": []any{
+						map[string]any{"hostname": "ctrl01"},
+						map[string]any{"hostname": "ctrl02"},
+					},
+				},
+				"etcd": map[string]any{
+					"members": []any{
+						map[string]any{"hostname": "etcd01"},
+					},
+				},
+			},
+		},
+	}
+
+	if got := etcdTopology("Immutable", mImmutableDedicated); got != "Dedicated" {
+		t.Fatalf("expected Dedicated when etcd members differ from controlPlane, got %q", got)
+	}
 }
 
 func TestIngressType(t *testing.T) {

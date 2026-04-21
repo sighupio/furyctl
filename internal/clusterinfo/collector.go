@@ -523,10 +523,21 @@ func extractPlugins(configMap map[string]any) *PluginsInfo {
 }
 
 func etcdTopology(kind string, configMap map[string]any) string {
-	if kind != "OnPremises" {
+	switch kind {
+	case "OnPremises":
+		return onPremisesEtcdTopology(configMap)
+
+	case "Immutable":
+		return immutableEtcdTopology(configMap)
+
+	default:
 		return ""
 	}
+}
 
+// onPremisesEtcdTopology returns Dedicated when spec.kubernetes.etcd.hosts is
+// non-empty, otherwise Stacked.
+func onPremisesEtcdTopology(configMap map[string]any) string {
 	etcd := nestedMap(configMap, "spec", "kubernetes", "etcd")
 	if etcd == nil {
 		return etcdStacked
@@ -538,6 +549,56 @@ func etcdTopology(kind string, configMap map[string]any) string {
 	}
 
 	return etcdDedicated
+}
+
+// immutableEtcdTopology returns Stacked when etcd members are a subset of
+// controlPlane members, otherwise Dedicated.
+func immutableEtcdTopology(configMap map[string]any) string {
+	etcdHosts := memberHostnames(nestedMap(configMap, "spec", "kubernetes", "etcd"))
+	if len(etcdHosts) == 0 {
+		return etcdStacked
+	}
+
+	cpHosts := memberHostnames(nestedMap(configMap, "spec", "kubernetes", "controlPlane"))
+
+	cpSet := make(map[string]struct{}, len(cpHosts))
+	for _, h := range cpHosts {
+		cpSet[h] = struct{}{}
+	}
+
+	for _, h := range etcdHosts {
+		if _, ok := cpSet[h]; !ok {
+			return etcdDedicated
+		}
+	}
+
+	return etcdStacked
+}
+
+func memberHostnames(section map[string]any) []string {
+	if section == nil {
+		return nil
+	}
+
+	members, ok := section["members"].([]any)
+	if !ok {
+		return nil
+	}
+
+	hostnames := make([]string, 0, len(members))
+
+	for _, m := range members {
+		entry, ok := m.(map[string]any)
+		if !ok {
+			continue
+		}
+
+		if h := stringField(entry, "hostname"); h != "" {
+			hostnames = append(hostnames, h)
+		}
+	}
+
+	return hostnames
 }
 
 func installerVersion(kind string, sd distroconf.KFD) string {
