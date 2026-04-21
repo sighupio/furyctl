@@ -123,6 +123,13 @@ func NewClusterInfoCmd() *cobra.Command {
 		"Output format. Supported values: text, json, yaml",
 	)
 
+	// Tab-completion for the "format" flag.
+	if err := clusterInfoCmd.RegisterFlagCompletionFunc("format", func(_ *cobra.Command, _ []string, _ string) ([]string, cobra.ShellCompDirective) {
+		return []string{outputFormatText, outputFormatJSON, outputFormatYAML}, cobra.ShellCompDirectiveDefault
+	}); err != nil {
+		logrus.Fatalf("error while registering flag completion: %v", err)
+	}
+
 	return clusterInfoCmd
 }
 
