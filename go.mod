@@ -1,6 +1,6 @@
 module github.com/sighupio/furyctl
 
-go 1.24.0
+go 1.24.13
 
 require (
 	github.com/Al-Pragliola/go-version v1.6.2

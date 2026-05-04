@@ -9,7 +9,7 @@
 run:
   timeout: 5m
   modules-download-mode: readonly
-  go: "1.23.2"
+  go: "1.24.13"
   concurrency: 2
   memory-limit: 1024
 
@@ -30,13 +30,12 @@ linters:
     - wastedassign
     - ireturn # not working with generics https://github.com/butuzov/ireturn/issues/37
     - varnamelen # not useful
-    - gomnd
-    - execinquery
     # unused
     - exhaustruct
     - forbidigo
     - depguard
     - maintidx
+    - tenv
 
 linters-settings:
   decorder:
