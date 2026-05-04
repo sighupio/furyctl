@@ -36,6 +36,7 @@ func NewUpgradePathsCmd() *cobra.Command {
 	var cmdEvent analytics.Event
 
 	upgradePathsCmd := &cobra.Command{
+		Args:  cobra.NoArgs,
 		Use:   "upgrade-paths",
 		Short: "Get available upgrade paths for the kind and version defined in the configuration file or a custom one.",
 		Long:  `Get available upgrade paths for the kind and version defined in the configuration file or a custom one. If the "--from" or "--kind" parameters are specified, the command will give the upgrade path for those instead.`,

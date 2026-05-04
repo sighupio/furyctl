@@ -59,6 +59,7 @@ func (i *Infrastructure) copyFromTemplate() error {
 	mCfg.Data["infrastructure"] = map[any]any{
 		"vpcInstallerPath": vpcInstallerPath,
 		"vpnInstallerPath": vpnInstallerPath,
+		"furyagentPath":    i.FuryagentPath,
 	}
 
 	err = i.CopyFromTemplate(

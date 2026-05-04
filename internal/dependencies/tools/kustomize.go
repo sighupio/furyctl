@@ -17,7 +17,7 @@ import (
 func NewKustomize(runner *kustomize.Runner, version string) *Kustomize {
 	arch := runtime.GOARCH
 	// Older versions of kustomize did not provide ARM64 binaries.
-	if version == "3.5.3" {
+	if version == "3.5.3" || version == "3.10.0" {
 		arch = "amd64"
 	}
 
