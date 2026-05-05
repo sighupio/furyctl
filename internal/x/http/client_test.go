@@ -5,7 +5,6 @@
 package http_test
 
 import (
-	"context"
 	"net/http"
 	"testing"
 
@@ -30,37 +29,37 @@ func TestClient_CheckRedirect(t *testing.T) {
 		},
 		{
 			desc: "too many redirects",
-			req:  req("https://sighup.io"),
+			req:  req(t, "https://sighup.io"),
 			via: []*http.Request{
-				req("https://sighup.io/0"),
-				req("https://sighup.io/1"),
-				req("https://sighup.io/2"),
-				req("https://sighup.io/3"),
-				req("https://sighup.io/4"),
-				req("https://sighup.io/5"),
-				req("https://sighup.io/6"),
-				req("https://sighup.io/7"),
-				req("https://sighup.io/8"),
-				req("https://sighup.io/9"),
-				req("https://sighup.io/10"),
+				req(t, "https://sighup.io/0"),
+				req(t, "https://sighup.io/1"),
+				req(t, "https://sighup.io/2"),
+				req(t, "https://sighup.io/3"),
+				req(t, "https://sighup.io/4"),
+				req(t, "https://sighup.io/5"),
+				req(t, "https://sighup.io/6"),
+				req(t, "https://sighup.io/7"),
+				req(t, "https://sighup.io/8"),
+				req(t, "https://sighup.io/9"),
+				req(t, "https://sighup.io/10"),
 			},
 			wantErr: httpx.ErrMaxAllowedRedirectsExceeded,
 		},
 		{
 			desc:    "allow https redirect",
-			req:     req("https://sighup.io"),
+			req:     req(t, "https://sighup.io"),
 			via:     nil,
 			wantErr: nil,
 		},
 		{
 			desc:    "allow http redirect",
-			req:     req("http://sighup.io"),
+			req:     req(t, "http://sighup.io"),
 			via:     nil,
 			wantErr: nil,
 		},
 		{
 			desc:    "disallow redirect",
-			req:     req("https://example.dev"),
+			req:     req(t, "https://example.dev"),
 			via:     nil,
 			wantErr: http.ErrUseLastResponse,
 		},
@@ -78,8 +77,10 @@ func TestClient_CheckRedirect(t *testing.T) {
 	}
 }
 
-func req(url string) *http.Request {
-	req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, url, nil)
+func req(t *testing.T, url string) *http.Request {
+	t.Helper()
+
+	req, err := http.NewRequestWithContext(t.Context(), http.MethodGet, url, nil)
 	if err != nil {
 		panic(err)
 	}

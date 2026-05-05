@@ -17,8 +17,8 @@ func EnsurePrefix(version string) string {
 }
 
 func EnsureNoPrefix(version string) string {
-	if strings.HasPrefix(version, prefix) {
-		return strings.TrimPrefix(version, prefix)
+	if v, ok := strings.CutPrefix(version, prefix); ok {
+		return v
 	}
 
 	return version

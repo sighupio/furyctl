@@ -24,9 +24,7 @@ func TestFromFileV2(t *testing.T) {
 		"test",
 	}
 
-	path, err := os.MkdirTemp("", "test")
-
-	assert.NoError(t, err)
+	path := t.TempDir()
 
 	file, err := os.Create(path + "/test.yaml")
 
@@ -40,8 +38,6 @@ func TestFromFileV2(t *testing.T) {
 
 	assert.NoError(t, err)
 
-	defer os.RemoveAll(path)
-
 	testRes, err := yamlx.FromFileV2[TestYaml](path + "/test.yaml")
 
 	assert.NoError(t, err)
@@ -54,9 +50,7 @@ func TestFromFileV3(t *testing.T) {
 		"test",
 	}
 
-	path, err := os.MkdirTemp("", "test")
-
-	assert.NoError(t, err)
+	path := t.TempDir()
 
 	file, err := os.Create(path + "/test.yaml")
 
@@ -69,8 +63,6 @@ func TestFromFileV3(t *testing.T) {
 	_, err = file.Write(testBytes)
 
 	assert.NoError(t, err)
-
-	defer os.RemoveAll(path)
 
 	testRes, err := yamlx.FromFileV3[TestYaml](path + "/test.yaml")
 

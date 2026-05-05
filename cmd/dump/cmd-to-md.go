@@ -10,7 +10,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
-	"sort"
+	"slices"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -148,7 +148,9 @@ func genMarkdownCustom(cmd *cobra.Command, w io.Writer, linkHandler func(string)
 		}
 
 		children := cmd.Commands()
-		sort.Sort(byName(children))
+		slices.SortFunc(children, func(a, b *cobra.Command) int {
+			return strings.Compare(a.Name(), b.Name())
+		})
 
 		for _, child := range children {
 			if !child.IsAvailableCommand() || child.IsAdditionalHelpTopicCommand() {
@@ -221,9 +223,3 @@ func hasSeeAlso(cmd *cobra.Command) bool {
 
 	return false
 }
-
-type byName []*cobra.Command
-
-func (s byName) Len() int           { return len(s) }
-func (s byName) Swap(i, j int)      { s[i], s[j] = s[j], s[i] }
-func (s byName) Less(i, j int) bool { return s[i].Name() < s[j].Name() }

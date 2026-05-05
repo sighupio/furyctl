@@ -9,6 +9,7 @@ package tools_test
 import (
 	"errors"
 	"path"
+	"slices"
 	"strings"
 	"testing"
 
@@ -166,8 +167,6 @@ func Test_Validator_Validate(t *testing.T) {
 		},
 	}
 	for _, tC := range testCases {
-		tC := tC
-
 		t.Run(tC.desc, func(t *testing.T) {
 			furyctlPath := path.Join("test_data", "furyctl.yaml")
 
@@ -184,31 +183,15 @@ func Test_Validator_Validate(t *testing.T) {
 			}
 
 			for _, ok := range oks {
-				found := false
-				for _, wantOk := range tC.wantOks {
-					if ok == wantOk {
-						found = true
-
-						break
-					}
-				}
-
-				if !found {
+				if !slices.Contains(tC.wantOks, ok) {
 					t.Errorf("Unexpected ok: %s", ok)
 				}
 			}
 
 			for _, err := range errs {
-				found := false
-				for _, wantErr := range tC.wantErrs {
-					if strings.Trim(err.Error(), "\n") == strings.Trim(wantErr.Error(), "\n") {
-						found = true
-
-						break
-					}
-				}
-
-				if !found {
+				if !slices.ContainsFunc(tC.wantErrs, func(wantErr error) bool {
+					return strings.Trim(err.Error(), "\n") == strings.Trim(wantErr.Error(), "\n")
+				}) {
 					t.Errorf("Unexpected error: %s", err)
 				}
 			}
@@ -233,8 +216,6 @@ func TestValidator_ValidateBaseReqs(t *testing.T) {
 	}
 
 	for _, tC := range testCases {
-		tC := tC
-
 		t.Run(tC.desc, func(t *testing.T) {
 			furyctlPath := path.Join("test_data", "furyctl.yaml")
 
@@ -251,31 +232,15 @@ func TestValidator_ValidateBaseReqs(t *testing.T) {
 			}
 
 			for _, ok := range oks {
-				found := false
-				for _, wantOk := range tC.wantOks {
-					if ok == wantOk {
-						found = true
-
-						break
-					}
-				}
-
-				if !found {
+				if !slices.Contains(tC.wantOks, ok) {
 					t.Errorf("Unexpected ok: %s", ok)
 				}
 			}
 
 			for _, err := range errs {
-				found := false
-				for _, wantErr := range tC.wantErrs {
-					if strings.Trim(err.Error(), "\n") == strings.Trim(wantErr.Error(), "\n") {
-						found = true
-
-						break
-					}
-				}
-
-				if !found {
+				if !slices.ContainsFunc(tC.wantErrs, func(wantErr error) bool {
+					return strings.Trim(err.Error(), "\n") == strings.Trim(wantErr.Error(), "\n")
+				}) {
 					t.Errorf("Unexpected error: %s", err)
 				}
 			}

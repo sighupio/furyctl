@@ -7,10 +7,10 @@
 package rulesextractor_test
 
 import (
-	"reflect"
 	"testing"
 
 	"github.com/r3labs/diff/v3"
+	"github.com/stretchr/testify/require"
 
 	onpremrules "github.com/sighupio/furyctl/pkg/rulesextractor"
 	rules "github.com/sighupio/furyctl/pkg/rulesextractor"
@@ -84,8 +84,6 @@ func TestOnPremisesBuilder_GetImmutableRules(t *testing.T) {
 	}
 
 	for _, tC := range testCases {
-		tC := tC
-
 		t.Run(tC.desc, func(t *testing.T) {
 			t.Parallel()
 
@@ -95,9 +93,7 @@ func TestOnPremisesBuilder_GetImmutableRules(t *testing.T) {
 
 			got := builder.GetImmutableRules(tC.phase)
 
-			if !reflect.DeepEqual(got, tC.want) {
-				t.Errorf("expected immutable rules to be %v, got: %v", tC.want, got)
-			}
+			require.Equal(t, tC.want, got)
 		})
 	}
 }
@@ -209,8 +205,6 @@ func TestOnPremisesBuilder_FilterSafeImmutableRules(t *testing.T) {
 	}
 
 	for _, tC := range testCases {
-		tC := tC
-
 		t.Run(tC.desc, func(t *testing.T) {
 			t.Parallel()
 
@@ -220,9 +214,7 @@ func TestOnPremisesBuilder_FilterSafeImmutableRules(t *testing.T) {
 
 			got := builder.FilterSafeImmutableRules(tC.rules, tC.diffs)
 
-			if !reflect.DeepEqual(got, tC.want) {
-				t.Errorf("expected filtered rules to be %v, got: %v", tC.want, got)
-			}
+			require.Equal(t, tC.want, got)
 		})
 	}
 }

@@ -10,8 +10,9 @@ import (
 	"fmt"
 	"os"
 	"path"
-	"reflect"
 	"testing"
+
+	"github.com/stretchr/testify/require"
 
 	"github.com/sighupio/furyctl/internal/state"
 	"github.com/sighupio/furyctl/internal/tool/kubectl"
@@ -33,9 +34,7 @@ func TestStore_GetConfig(t *testing.T) {
 		t.Errorf("expected no error, got %v", err)
 	}
 
-	if !reflect.DeepEqual(cfg, []byte("test string")) {
-		t.Errorf("expected config to be %v, got: %v", []byte("config: test string"), cfg)
-	}
+	require.Equal(t, []byte("test string"), cfg)
 }
 
 func TestStore_StoreConfig(t *testing.T) {

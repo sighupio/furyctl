@@ -32,14 +32,12 @@ func TestNewTemplateModel(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	path, err := os.MkdirTemp("", "test")
+	path := t.TempDir()
 
 	err = os.Mkdir(path+"/source", os.ModePerm)
 	err = os.Mkdir(path+"/target", os.ModePerm)
 	err = os.WriteFile(path+"/source/test.md.tpl", []byte(templateTest), os.ModePerm)
 	err = os.WriteFile(path+"/configTest.yaml", confYaml, os.ModePerm)
-
-	defer os.RemoveAll(path)
 
 	tm, err := template.NewTemplateModel(
 		path+"/source",

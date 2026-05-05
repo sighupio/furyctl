@@ -308,8 +308,8 @@ func LoadAndMergeGlobalFlagsFromArgs() error {
 
 				break
 			}
-		} else if strings.HasPrefix(arg, "--config=") {
-			configPath = strings.TrimPrefix(arg, "--config=")
+		} else if v, ok := strings.CutPrefix(arg, "--config="); ok {
+			configPath = v
 
 			break
 		}

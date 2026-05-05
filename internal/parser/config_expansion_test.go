@@ -145,13 +145,8 @@ func TestDynamicValueExpansion_FilePaths(t *testing.T) {
 				err := os.WriteFile(filePath, []byte("debug-enabled"), 0o644)
 				require.NoError(t, err)
 				// Change to tmpDir so relative path works
-				oldWd, err := os.Getwd()
-				require.NoError(t, err)
-				err = os.Chdir(tmpDir)
-				require.NoError(t, err)
-				return "./relative-config.txt", func() {
-					os.Chdir(oldWd)
-				}
+				t.Chdir(tmpDir)
+				return "./relative-config.txt", func() {}
 			},
 			inputValue: "", // Will be set by setupFile
 			expected:   "debug-enabled",
