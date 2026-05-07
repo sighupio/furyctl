@@ -29,12 +29,8 @@ import (
 )
 
 const (
-	InfrastructurePhaseSchemaPath = ".spec.infrastructure"
-	KubernetesPhaseSchemaPath     = ".spec.kubernetes"
-	DistributionPhaseSchemaPath   = ".spec.distribution"
-	PluginsPhaseSchemaPath        = ".spec.plugins"
-	AllPhaseSchemaPath            = ""
-	StartFromFlagNotSet           = ""
+	AllPhaseSchemaPath  = ""
+	StartFromFlagNotSet = ""
 )
 
 var (
@@ -162,13 +158,7 @@ func (*ClusterCreator) GetPhasePath(phase string) (string, error) {
 	return schemaPath, nil
 }
 
-func createInfrastructurePhase(c *ClusterCreator, upgr *upgrade.Upgrade) (*create.Infrastructure, error) {
-	// Render merged configuration (defaults + user config).
-	mergedConfig, err := c.RenderConfig()
-	if err != nil {
-		return nil, fmt.Errorf("failed to render config: %w", err)
-	}
-
+func createInfrastructurePhase(c *ClusterCreator, upgr *upgrade.Upgrade) *create.Infrastructure {
 	infraPath := filepath.Join(c.paths.WorkDir, "infrastructure")
 
 	phase := cluster.NewOperationPhase(
@@ -180,7 +170,6 @@ func createInfrastructurePhase(c *ClusterCreator, upgr *upgrade.Upgrade) (*creat
 	infra := create.NewInfrastructure(
 		phase,
 		c.paths.ConfigPath,
-		mergedConfig,
 		c.paths.DistroPath,
 		upgr,
 		c.furyctlConf,
@@ -190,16 +179,13 @@ func createInfrastructurePhase(c *ClusterCreator, upgr *upgrade.Upgrade) (*creat
 		c.force,
 	)
 
-	return infra, nil
+	return infra
 }
 
 func (c *ClusterCreator) Create(startFrom string, _, podRunningCheckTimeout int) error {
 	upgr := upgrade.New(c.paths, string(c.furyctlConf.Kind))
 
-	infra, err := createInfrastructurePhase(c, upgr)
-	if err != nil {
-		return fmt.Errorf("failed to create infrastructure phase: %w", err)
-	}
+	infra := createInfrastructurePhase(c, upgr)
 
 	infrastructurePhase := upgrade.NewOperatorPhaseDecorator(
 		c.upgradeStateStore,
@@ -265,7 +251,7 @@ func (c *ClusterCreator) Create(startFrom string, _, podRunningCheckTimeout int)
 		return fmt.Errorf("error while executing preflight phase: %w", err)
 	}
 
-	r, err := premrules.NewImmutableClusterRulesExtractor(c.paths.DistroPath, renderedConfig)
+	rulesExtractor, err := premrules.NewImmutableClusterRulesExtractor(c.paths.DistroPath, renderedConfig)
 	if err != nil {
 		if !errors.Is(err, premrules.ErrReadingRulesFile) {
 			return fmt.Errorf("error while creating rules builder: %w", err)
@@ -274,25 +260,25 @@ func (c *ClusterCreator) Create(startFrom string, _, podRunningCheckTimeout int)
 
 	rdcsInfrastructure := reducers.Build(
 		status.Diffs,
-		r,
+		rulesExtractor,
 		cluster.OperationPhaseInfrastructure,
 	)
 
 	rdcsDistribution := reducers.Build(
 		status.Diffs,
-		r,
+		rulesExtractor,
 		cluster.OperationPhaseDistribution,
 	)
 
-	unsafeReducersInfrastructure := r.UnsafeReducerRulesByDiffs(
-		r.GetReducers(
+	unsafeReducersInfrastructure := rulesExtractor.UnsafeReducerRulesByDiffs(
+		rulesExtractor.GetReducers(
 			cluster.OperationPhaseInfrastructure,
 		),
 		status.Diffs,
 	)
 
-	unsafeReducersDistribution := r.UnsafeReducerRulesByDiffs(
-		r.GetReducers(
+	unsafeReducersDistribution := rulesExtractor.UnsafeReducerRulesByDiffs(
+		rulesExtractor.GetReducers(
 			cluster.OperationPhaseDistribution,
 		),
 		status.Diffs,
