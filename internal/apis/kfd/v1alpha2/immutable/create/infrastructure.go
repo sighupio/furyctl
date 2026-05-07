@@ -38,7 +38,6 @@ type Infrastructure struct {
 func NewInfrastructure(
 	phase *cluster.OperationPhase,
 	configPath string,
-	configData map[string]any,
 	distroPath string,
 	upgr *upgrade.Upgrade,
 	furyctlConf public.ImmutableKfdV1Alpha2,

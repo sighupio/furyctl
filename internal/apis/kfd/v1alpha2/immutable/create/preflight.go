@@ -142,13 +142,6 @@ func (p *PreFlight) Exec(renderedConfig map[string]any) (*Status, error) {
 		return status, fmt.Errorf("error copying from template: %w", err)
 	}
 
-	// We are omitting the pings check for now because it makes the infrastructure
-	// phase fail when the cluster does not exist yet.
-	// if _, err := p.ansibleRunner.Exec("all", "-m", "ping"); err != nil {
-	// 	return status, fmt.Errorf("error checking hosts: %w", err)
-	// }
-	// This line is to make the linter happy.
-
 	if _, err := p.ansibleRunner.Playbook("verify-playbook.yaml"); err != nil {
 		status.Success = true
 
@@ -165,7 +158,7 @@ func (p *PreFlight) Exec(renderedConfig map[string]any) (*Status, error) {
 		return status, fmt.Errorf("error setting kubeconfig env: %w", err)
 	}
 
-	logrus.Info("Checking that the cluster is reachable...")
+	logrus.Info("Checking that the Kubernetes API is reachable...")
 
 	if _, err := p.kubeRunner.Version(); err != nil {
 		return status, fmt.Errorf("cluster is unreachable, make sure you have access to the cluster: %w", err)
