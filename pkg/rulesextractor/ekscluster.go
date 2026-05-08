@@ -36,7 +36,7 @@ func NewEKSClusterRulesExtractor(distributionPath string, renderedConfig map[str
 	return &builder, nil
 }
 
-func (r *EKSExtractor) GetImmutableRules(phase string) []Rule {
+func (r *EKSExtractor) GetImmutableRules(phase string) []Rule { //nolint:dupl // providers might not support all phases
 	switch phase {
 	case cluster.OperationPhaseInfrastructure:
 		if r.Spec.Infrastructure == nil {

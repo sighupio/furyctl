@@ -43,7 +43,7 @@ func NewImmutableClusterRulesExtractor(
 	return &builder, nil
 }
 
-func (r *ImmutableExtractor) GetImmutableRules(phase string) []Rule {
+func (r *ImmutableExtractor) GetImmutableRules(phase string) []Rule { //nolint:dupl // code duplication is necessary
 	switch phase {
 	case cluster.OperationPhaseInfrastructure:
 		if r.Spec.Infrastructure == nil {
