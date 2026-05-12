@@ -40,6 +40,7 @@ func NewConfigCmd() *cobra.Command {
 	var cmdEvent analytics.Event
 
 	configCmd := &cobra.Command{
+		Args:    cobra.NoArgs,
 		Use:     "config",
 		Short:   "Scaffolds a new furyctl configuration file for a specific version and kind",
 		Example: "furyctl create config --kind OnPremises --version v1.30.0 --name test-cluster",

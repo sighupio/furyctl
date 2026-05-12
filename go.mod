@@ -19,7 +19,7 @@ require (
 	github.com/r3labs/diff/v3 v3.0.1
 	github.com/santhosh-tekuri/jsonschema/v5 v5.3.1
 	github.com/shirou/gopsutil/v3 v3.24.5
-	github.com/sighupio/fury-distribution v1.33.2-rc.0
+	github.com/sighupio/fury-distribution v1.34.1
 	github.com/sirupsen/logrus v1.9.3
 	github.com/spf13/cobra v1.8.1
 	github.com/spf13/viper v1.19.0
@@ -28,7 +28,7 @@ require (
 	gopkg.in/yaml.v2 v2.4.0
 	gopkg.in/yaml.v3 v3.0.1
 	k8s.io/client-go v1.5.2
-	k8s.io/kubernetes v1.32.7
+	k8s.io/kubernetes v1.32.10
 	sigs.k8s.io/e2e-framework v0.4.0
 )
 

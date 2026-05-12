@@ -33,6 +33,7 @@ func NewDependenciesCmd() *cobra.Command {
 	var cmdEvent analytics.Event
 
 	dependenciesCmd := &cobra.Command{
+		Args:  cobra.NoArgs,
 		Use:   "dependencies",
 		Short: "Download all dependencies for the SIGHUP Distribution version specified in the configuration file",
 		PreRun: func(cmd *cobra.Command, _ []string) {

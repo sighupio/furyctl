@@ -30,6 +30,7 @@ func NewSupportedVersionsCmd() *cobra.Command {
 	kinds := distribution.ConfigKinds()
 
 	supportedVersionCmd := &cobra.Command{
+		Args:  cobra.NoArgs,
 		Use:   "supported-versions",
 		Short: "List of currently supported SD versions and their compatibility with this version of furyctl for each kind.",
 		Long:  "List of currently supported SD versions and their compatibility with this version of furyctl for each kind. If the `--kind` parameter is specified, the command will only provide information about the selected provider.",

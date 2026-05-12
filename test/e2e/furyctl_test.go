@@ -156,7 +156,7 @@ var (
 					"--config", filepath.Join(absBasepath, "furyctl.yaml"),
 					"--distro-location", absBasepath,
 					"--debug",
-					"--disable-analytics", "true",
+					"--disable-analytics",
 				)
 			}
 
@@ -243,7 +243,7 @@ var (
 					"--config", tempConfigPath,
 					"--distro-location", tempDir,
 					"--debug",
-					"--disable-analytics", "true",
+					"--disable-analytics",
 				)
 
 				Expect(err).To(Not(HaveOccurred()))
@@ -268,7 +268,7 @@ var (
 					"--distro-location", absBasepath,
 					"--bin-path", binpath,
 					"--debug",
-					"--disable-analytics", "true",
+					"--disable-analytics",
 					"--log", "stdout",
 				)
 			}
@@ -523,7 +523,7 @@ var (
 					"--config", workdir+"/target/furyctl.yaml",
 					"--kind", "EKSCluster",
 					"--debug",
-					"--disable-analytics", "true",
+					"--disable-analytics",
 					"--distro-location", absBasepath+"/distro",
 					"--version", "1.25.1",
 					"--log", "stdout",

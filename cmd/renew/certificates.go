@@ -33,6 +33,7 @@ func NewCertificatesCmd() *cobra.Command {
 	var cmdEvent analytics.Event
 
 	certificatesCmd := &cobra.Command{
+		Args:  cobra.NoArgs,
 		Use:   "certificates",
 		Short: "Renew certificates of the cluster's PKI used for componenents authentication",
 		Long:  "Renew certificates of the cluster's PKI used for componenents authentication. Note that this not renews other certificates like Ingress certificates or certificates managed by cert-manager",
