@@ -43,8 +43,6 @@ func Test_Downloader_Download(t *testing.T) {
 		},
 	}
 	for _, tC := range testCases {
-		tC := tC
-
 		t.Run(tC.desc, func(t *testing.T) {
 			distroPath := fmt.Sprintf("../../test/data/integration/%s/distro", tC.wantDistroVer)
 			absDistroPath, err := filepath.Abs(distroPath)

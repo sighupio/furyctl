@@ -47,7 +47,6 @@ func Test_ExtraSchemaValidator_Validate(t *testing.T) {
 	esv := &ekscluster.ExtraSchemaValidator{}
 
 	for _, tC := range testCases {
-		tC := tC
 		t.Run(tC.desc, func(t *testing.T) {
 			t.Parallel()
 

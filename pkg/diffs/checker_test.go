@@ -8,10 +8,10 @@ package diffs_test
 
 import (
 	"fmt"
-	"reflect"
 	"testing"
 
 	diffx "github.com/r3labs/diff/v3"
+	"github.com/stretchr/testify/require"
 
 	"github.com/sighupio/furyctl/pkg/diffs"
 )
@@ -96,8 +96,6 @@ func TestBaseChecker_GenerateDiff(t *testing.T) {
 	}
 
 	for _, tC := range testCases {
-		tC := tC
-
 		t.Run(tC.desc, func(t *testing.T) {
 			t.Parallel()
 
@@ -116,9 +114,7 @@ func TestBaseChecker_GenerateDiff(t *testing.T) {
 				t.Errorf("expected error message '%s', got '%s'", tC.wantErrMsg, err.Error())
 			}
 
-			if !reflect.DeepEqual(diffs, tC.expectedDiffs) {
-				t.Fatalf("expected diffs %v, got %v", tC.expectedDiffs, diffs)
-			}
+			require.Equal(t, tC.expectedDiffs, diffs)
 		})
 	}
 }
@@ -175,8 +171,6 @@ func TestBaseChecker_AssertImmutableViolations(t *testing.T) {
 	}
 
 	for _, tC := range testCases {
-		tC := tC
-
 		t.Run(tC.desc, func(t *testing.T) {
 			t.Parallel()
 

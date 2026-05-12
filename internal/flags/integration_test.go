@@ -35,9 +35,7 @@ func testRealFileSystemOperations(t *testing.T) {
 	// Note: Not using t.Parallel() because we modify global viper state
 
 	// Create temporary directory
-	tempDir, err := os.MkdirTemp("", "furyctl-flags-test-*")
-	require.NoError(t, err)
-	defer os.RemoveAll(tempDir)
+	tempDir := t.TempDir()
 
 	// Test data
 	testCases := []struct {
@@ -145,14 +143,12 @@ func testDynamicValueResolution(t *testing.T) {
 	// Note: Not using t.Parallel() because we need to set environment variables
 
 	// Create temporary directory
-	tempDir, err := os.MkdirTemp("", "furyctl-dynamic-test-*")
-	require.NoError(t, err)
-	defer os.RemoveAll(tempDir)
+	tempDir := t.TempDir()
 
 	// Create test files for file references
 	testFile := filepath.Join(tempDir, "test-file.txt")
 	testContent := "/path/from/file"
-	err = os.WriteFile(testFile, []byte(testContent), 0o644)
+	err := os.WriteFile(testFile, []byte(testContent), 0o644)
 	require.NoError(t, err)
 
 	// Set test environment variables
@@ -206,9 +202,7 @@ func testViperIntegration(t *testing.T) {
 	defer viper.Reset()
 	// Note: Not using t.Parallel() because we modify global viper state
 
-	tempDir, err := os.MkdirTemp("", "furyctl-viper-test-*")
-	require.NoError(t, err)
-	defer os.RemoveAll(tempDir)
+	tempDir := t.TempDir()
 
 	config := `apiVersion: kfd.sighup.io/v1alpha2
 kind: EKSCluster
@@ -226,7 +220,7 @@ flags:
 `
 
 	configPath := filepath.Join(tempDir, "viper-test.yaml")
-	err = os.WriteFile(configPath, []byte(config), 0o644)
+	err := os.WriteFile(configPath, []byte(config), 0o644)
 	require.NoError(t, err)
 
 	// Test viper integration
@@ -252,9 +246,7 @@ func testPrioritySystem(t *testing.T) {
 	defer viper.Reset()
 	// Note: Not using t.Parallel() because we need to set environment variables
 
-	tempDir, err := os.MkdirTemp("", "furyctl-priority-test-*")
-	require.NoError(t, err)
-	defer os.RemoveAll(tempDir)
+	tempDir := t.TempDir()
 
 	config := `apiVersion: kfd.sighup.io/v1alpha2
 kind: OnPremises
@@ -273,7 +265,7 @@ flags:
 `
 
 	configPath := filepath.Join(tempDir, "priority-test.yaml")
-	err = os.WriteFile(configPath, []byte(config), 0o644)
+	err := os.WriteFile(configPath, []byte(config), 0o644)
 	require.NoError(t, err)
 
 	// Test priority: furyctl.yaml < env vars < command flags (viper)
@@ -305,9 +297,7 @@ flags:
 func testErrorHandling(t *testing.T) {
 	// Note: Not using t.Parallel() because we modify global viper state
 
-	tempDir, err := os.MkdirTemp("", "furyctl-error-test-*")
-	require.NoError(t, err)
-	defer os.RemoveAll(tempDir)
+	tempDir := t.TempDir()
 
 	testCases := []struct {
 		name          string
@@ -394,9 +384,7 @@ flags:
 func testFuryDistributionCompatibility(t *testing.T) {
 	// Note: Not using t.Parallel() because we modify global viper state
 
-	tempDir, err := os.MkdirTemp("", "furyctl-compat-test-*")
-	require.NoError(t, err)
-	defer os.RemoveAll(tempDir)
+	tempDir := t.TempDir()
 
 	// Test with fury-distribution style configurations
 	testConfigs := []struct {
@@ -531,11 +519,7 @@ func createTestConfig(dir, name, content string) (string, error) {
 
 // Benchmark tests for performance validation
 func BenchmarkFlagsLoading(b *testing.B) {
-	tempDir, err := os.MkdirTemp("", "furyctl-benchmark-*")
-	if err != nil {
-		b.Fatal(err)
-	}
-	defer os.RemoveAll(tempDir)
+	tempDir := b.TempDir()
 
 	config := `apiVersion: kfd.sighup.io/v1alpha2
 kind: EKSCluster
@@ -554,7 +538,7 @@ flags:
 `
 
 	configPath := filepath.Join(tempDir, "benchmark.yaml")
-	err = os.WriteFile(configPath, []byte(config), 0o644)
+	err := os.WriteFile(configPath, []byte(config), 0o644)
 	if err != nil {
 		b.Fatal(err)
 	}
@@ -562,7 +546,7 @@ flags:
 	manager := NewManager(tempDir)
 
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		viper.Reset()
 		err := manager.LoadAndMergeFlags(configPath, "apply")
 		if err != nil {

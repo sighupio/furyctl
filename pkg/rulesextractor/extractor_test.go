@@ -7,10 +7,10 @@
 package rulesextractor_test
 
 import (
-	"reflect"
 	"testing"
 
 	"github.com/r3labs/diff/v3"
+	"github.com/stretchr/testify/require"
 
 	rules "github.com/sighupio/furyctl/pkg/rulesextractor"
 )
@@ -130,9 +130,7 @@ func TestBaseExtractor_GetImmutables(t *testing.T) {
 
 			got := x.GetImmutables("")
 
-			if !reflect.DeepEqual(got, tc.want) {
-				t.Errorf("expected %v, got %v", tc.want, got)
-			}
+			require.Equal(t, tc.want, got)
 		})
 	}
 }
@@ -248,9 +246,7 @@ func TestBaseExtractor_GetReducers(t *testing.T) {
 
 			got := x.GetReducers("")
 
-			if !reflect.DeepEqual(got, tc.want) {
-				t.Errorf("expected %v, got %v", tc.want, got)
-			}
+			require.Equal(t, tc.want, got)
 		})
 	}
 }
@@ -365,9 +361,7 @@ func TestBaseExtractor_ReducerRulesByDiffs(t *testing.T) {
 
 			got := x.ReducerRulesByDiffs(tc.rules, tc.diffs)
 
-			if !reflect.DeepEqual(got, tc.want) {
-				t.Errorf("expected %v, got %v", tc.want, got)
-			}
+			require.Equal(t, tc.want, got)
 		})
 	}
 }
@@ -611,9 +605,7 @@ func TestBaseExtractor_UnsupportedReducerRulesByDiffs(t *testing.T) {
 
 			got := x.UnsupportedReducerRulesByDiffs(tc.rules, tc.diffs)
 
-			if !reflect.DeepEqual(got, tc.want) {
-				t.Errorf("expected %v, got %v", tc.want, got)
-			}
+			require.Equal(t, tc.want, got)
 		})
 	}
 }
@@ -662,9 +654,7 @@ func TestBaseExtractor_ExtractImmutablesFromRules(t *testing.T) {
 
 			got := x.ExtractImmutablesFromRules(tc.rules)
 
-			if !reflect.DeepEqual(got, tc.want) {
-				t.Errorf("expected %v, got %v", tc.want, got)
-			}
+			require.Equal(t, tc.want, got)
 		})
 	}
 }
@@ -1070,9 +1060,7 @@ func TestBaseExtractor_UnsafeReducerRulesByDiffs(t *testing.T) {
 
 			got := x.UnsafeReducerRulesByDiffs(tc.rules, tc.diffs)
 
-			if !reflect.DeepEqual(got, tc.want) {
-				t.Errorf("expected %v, got %v", tc.want, got)
-			}
+			require.Equal(t, tc.want, got)
 		})
 	}
 }
@@ -1150,9 +1138,7 @@ func TestBaseExtractor_ExtractReducerRules(t *testing.T) {
 
 			got := x.ExtractReducerRules(tc.rules)
 
-			if !reflect.DeepEqual(got, tc.want) {
-				t.Errorf("expected %v, got %v", tc.want, got)
-			}
+			require.Equal(t, tc.want, got)
 		})
 	}
 }
@@ -1489,9 +1475,7 @@ func TestBaseExtractor_FilterSafeImmutableRules(t *testing.T) {
 
 			got := x.FilterSafeImmutableRules(tc.rules, tc.diffs)
 
-			if !reflect.DeepEqual(got, tc.want) {
-				t.Errorf("expected %v, got %v", tc.want, got)
-			}
+			require.Equal(t, tc.want, got)
 		})
 	}
 }

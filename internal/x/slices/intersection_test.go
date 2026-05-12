@@ -7,8 +7,9 @@
 package slices_test
 
 import (
-	"reflect"
 	"testing"
+
+	"github.com/stretchr/testify/require"
 
 	"github.com/sighupio/furyctl/internal/x/slices"
 )
@@ -61,16 +62,12 @@ func TestIntersection(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		tc := tc
-
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
 			got := slices.Intersection(tc.a, tc.b)
 
-			if !reflect.DeepEqual(got, tc.want) {
-				t.Errorf("Intersection() = %v, want %v", got, tc.want)
-			}
+			require.Equal(t, tc.want, got)
 		})
 	}
 }

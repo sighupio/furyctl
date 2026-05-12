@@ -7,8 +7,9 @@
 package slices_test
 
 import (
-	"reflect"
 	"testing"
+
+	"github.com/stretchr/testify/require"
 
 	"github.com/sighupio/furyctl/internal/x/slices"
 )
@@ -44,13 +45,9 @@ func TestClean(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		tt := tt
-
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			if got := slices.Clean(tt.s); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("Clean() = %v, want %v", got, tt.want)
-			}
+			require.Equal(t, tt.want, slices.Clean(tt.s))
 		})
 	}
 }

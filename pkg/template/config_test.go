@@ -6,8 +6,9 @@ package template_test
 
 import (
 	"errors"
-	"reflect"
 	"testing"
+
+	"github.com/stretchr/testify/require"
 
 	"github.com/sighupio/furyctl/pkg/merge"
 	"github.com/sighupio/furyctl/pkg/template"
@@ -138,9 +139,7 @@ func TestNewConfig(t *testing.T) {
 				t.Fatalf("expected error but got nil")
 			}
 
-			if !reflect.DeepEqual(got, tc.want) {
-				t.Errorf("NewConfig() got = %v, want %v", got, tc.want)
-			}
+			require.Equal(t, tc.want, got)
 		})
 	}
 }

@@ -38,14 +38,12 @@ func TestTemplateModel_Will_Generate_UserHello(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	path, err := os.MkdirTemp("", "test")
+	path := t.TempDir()
 
 	err = os.Mkdir(path+"/source", os.ModePerm)
 	err = os.Mkdir(path+"/target", os.ModePerm)
 	err = os.WriteFile(path+"/source/test.md.tpl", []byte(templateTest), os.ModePerm)
 	err = os.WriteFile(path+"/configTest.yaml", confYaml, os.ModePerm)
-
-	defer os.RemoveAll(path)
 
 	tm, err := template.NewTemplateModel(
 		path+"/source",
@@ -87,14 +85,12 @@ func TestTemplateModel_Will_Generate_Dynamic_Values_From_Env(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	path, err := os.MkdirTemp("", "test")
+	path := t.TempDir()
 
 	err = os.Mkdir(path+"/source", os.ModePerm)
 	err = os.Mkdir(path+"/target", os.ModePerm)
 	err = os.WriteFile(path+"/source/test.md.tpl", []byte(templateTest), os.ModePerm)
 	err = os.WriteFile(path+"/configTest.yaml", confYaml, os.ModePerm)
-
-	defer os.RemoveAll(path)
 
 	tm, err := template.NewTemplateModel(
 		path+"/source",
@@ -125,7 +121,7 @@ func TestTemplateModel_Will_Generate_Dynamic_Values_From_Env(t *testing.T) {
 }
 
 func TestTemplateModel_Will_Generate_Dynamic_Values_From_File(t *testing.T) {
-	path, err := os.MkdirTemp("", "test")
+	path := t.TempDir()
 
 	conf := map[string]any{
 		"data": map[string]any{
@@ -146,8 +142,6 @@ func TestTemplateModel_Will_Generate_Dynamic_Values_From_File(t *testing.T) {
 	err = os.Mkdir(path+"/target", os.ModePerm)
 	err = os.WriteFile(path+"/source/test.md.tpl", []byte(templateTest), os.ModePerm)
 	err = os.WriteFile(path+"/configTest.yaml", confYaml, os.ModePerm)
-
-	defer os.RemoveAll(path)
 
 	tm, err := template.NewTemplateModel(
 		path+"/source",
