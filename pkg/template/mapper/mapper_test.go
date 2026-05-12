@@ -65,15 +65,11 @@ func TestMapper_MapEnvironmentVars(t *testing.T) {
 }
 
 func TestMapper_MapDynamicValuesAndPaths(t *testing.T) {
-	path, err := os.MkdirTemp("", "test")
-
-	assert.NoError(t, err)
+	path := t.TempDir()
 
 	exampleStr := "test!"
 
-	err = os.WriteFile(path+"/test_file.txt", []byte(exampleStr), os.ModePerm)
-
-	defer os.RemoveAll(path)
+	err := os.WriteFile(path+"/test_file.txt", []byte(exampleStr), os.ModePerm)
 
 	assert.NoError(t, err)
 
@@ -171,15 +167,11 @@ func TestMapper_MapDynamicValuesAndPaths_RelativePath(t *testing.T) {
 }
 
 func TestMapper_MapDynamicValuesAndPaths_Combined(t *testing.T) {
-	path, err := os.MkdirTemp("", "test")
-
-	assert.NoError(t, err)
+	path := t.TempDir()
 
 	exampleStr := "test!"
 
-	err = os.WriteFile(path+"/test_file.txt", []byte(exampleStr), os.ModePerm)
-
-	defer os.RemoveAll(path)
+	err := os.WriteFile(path+"/test_file.txt", []byte(exampleStr), os.ModePerm)
 
 	assert.NoError(t, err)
 

@@ -84,8 +84,8 @@ func TestConfigFlagDetection_CommandLineParsing(t *testing.T) {
 						configPath = args[i+1]
 						break
 					}
-				} else if strings.HasPrefix(arg, "--config=") {
-					configPath = strings.TrimPrefix(arg, "--config=")
+				} else if v, ok := strings.CutPrefix(arg, "--config="); ok {
+					configPath = v
 					break
 				}
 			}
@@ -153,8 +153,8 @@ func TestConfigFlagDetection_EdgeCases(t *testing.T) {
 						configPath = args[i+1]
 						break
 					}
-				} else if strings.HasPrefix(arg, "--config=") {
-					configPath = strings.TrimPrefix(arg, "--config=")
+				} else if v, ok := strings.CutPrefix(arg, "--config="); ok {
+					configPath = v
 					break
 				}
 			}
@@ -268,8 +268,8 @@ flags:
 						configPath = args[i+1]
 						break
 					}
-				} else if strings.HasPrefix(arg, "--config=") {
-					configPath = strings.TrimPrefix(arg, "--config=")
+				} else if v, ok := strings.CutPrefix(arg, "--config="); ok {
+					configPath = v
 					break
 				}
 			}
@@ -362,8 +362,8 @@ spec:
 						configPath = args[i+1]
 						break
 					}
-				} else if strings.HasPrefix(arg, "--config=") {
-					configPath = strings.TrimPrefix(arg, "--config=")
+				} else if v, ok := strings.CutPrefix(arg, "--config="); ok {
+					configPath = v
 					break
 				}
 			}
@@ -456,8 +456,8 @@ flags:
 						configPath = updatedArgs[i+1]
 						break
 					}
-				} else if strings.HasPrefix(arg, "--config=") {
-					configPath = strings.TrimPrefix(arg, "--config=")
+				} else if v, ok := strings.CutPrefix(arg, "--config="); ok {
+					configPath = v
 					break
 				}
 			}
@@ -536,8 +536,8 @@ flags:
 						configPath = args[i+1]
 						break
 					}
-				} else if strings.HasPrefix(arg, "--config=") {
-					configPath = strings.TrimPrefix(arg, "--config=")
+				} else if v, ok := strings.CutPrefix(arg, "--config="); ok {
+					configPath = v
 					break
 				}
 			}

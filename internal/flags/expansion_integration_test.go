@@ -171,13 +171,7 @@ func TestFlagExpansion_LoadFromCurrentDirectory(t *testing.T) {
 	require.NoError(t, err)
 
 	// Change to temp directory
-	originalDir, _ := os.Getwd()
-	defer func() {
-		os.Chdir(originalDir)
-	}()
-
-	err = os.Chdir(tempDir)
-	require.NoError(t, err)
+	t.Chdir(tempDir)
 
 	manager := flags.NewManager(".")
 

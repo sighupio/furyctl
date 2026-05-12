@@ -5,8 +5,9 @@
 package mapx_test
 
 import (
-	"reflect"
 	"testing"
+
+	"github.com/stretchr/testify/require"
 
 	mapx "github.com/sighupio/furyctl/pkg/x/map"
 )
@@ -94,9 +95,7 @@ func TestFromStruct(t *testing.T) {
 
 			got := builder.FromStruct(tc.sIn, tc.tag)
 
-			if !reflect.DeepEqual(got, tc.want) {
-				t.Errorf("expected %v, got %v", tc.want, got)
-			}
+			require.Equal(t, tc.want, got)
 		})
 	}
 }
@@ -145,9 +144,7 @@ func TestToMapStringAny(t *testing.T) {
 
 			got := builder.ToMapStringAny(tc.sIn)
 
-			if !reflect.DeepEqual(got, tc.want) {
-				t.Errorf("expected %v, got %v", tc.want, got)
-			}
+			require.Equal(t, tc.want, got)
 		})
 	}
 }

@@ -5,8 +5,9 @@
 package parser_test
 
 import (
-	"reflect"
 	"testing"
+
+	"github.com/stretchr/testify/require"
 
 	"github.com/sighupio/furyctl/internal/parser"
 )
@@ -38,9 +39,7 @@ func TestNewTfPlanParser(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			if got := parser.NewTfPlanParser(tt.args.plan); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("NewTfPlanParser() = %v, want %v", got, tt.want)
-			}
+			require.Equal(t, tt.want, parser.NewTfPlanParser(tt.args.plan))
 		})
 	}
 }
@@ -327,9 +326,7 @@ Changes to Outputs:
 
 			got := p.Parse()
 
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("Parse() got = %v, want %v", got, tt.want)
-			}
+			require.Equal(t, tt.want, got)
 		})
 	}
 }

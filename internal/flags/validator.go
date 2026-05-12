@@ -7,6 +7,7 @@ package flags
 import (
 	"errors"
 	"fmt"
+	"slices"
 	"strings"
 )
 
@@ -225,17 +226,7 @@ func (*Validator) validateSpecificFlag(flagName string, value any) error {
 
 			for _, item := range slice {
 				if str, ok := item.(string); ok {
-					found := false
-
-					for _, valid := range validForceOptions {
-						if str == valid {
-							found = true
-
-							break
-						}
-					}
-
-					if !found {
+					if !slices.Contains(validForceOptions, str) {
 						return fmt.Errorf("%w: got '%s', must be one of: %s",
 							ErrInvalidForceOption, str, strings.Join(validForceOptions, ", "))
 					}

@@ -348,7 +348,7 @@ func (p *PreFlight) CheckImmutablesDiffs(d r3diff.Changelog, diffChecker diffs.C
 	errs = append(errs, diffChecker.AssertImmutableViolations(d, distroImmutablePaths)...)
 
 	if len(errs) > 0 {
-		return fmt.Errorf("%w: %s", errImmutable, errs)
+		return fmt.Errorf("%w: %w", errImmutable, errors.Join(errs...))
 	}
 
 	return nil
@@ -384,7 +384,7 @@ func (p *PreFlight) CheckReducersDiffs(d r3diff.Changelog, diffChecker diffs.Che
 	)...)
 
 	if len(errs) > 0 {
-		return fmt.Errorf("%w: %s", errUnsupported, errs)
+		return fmt.Errorf("%w: %w", errUnsupported, errors.Join(errs...))
 	}
 
 	return nil

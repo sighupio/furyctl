@@ -63,8 +63,6 @@ func TestCheckDirIsEmpty(t *testing.T) {
 		},
 	}
 	for _, tC := range testCases {
-		tC := tC
-
 		t.Run(tC.desc, func(t *testing.T) {
 			t.Parallel()
 
@@ -118,8 +116,6 @@ func TestAppendBufferToFile(t *testing.T) {
 		},
 	}
 	for _, tC := range testCases {
-		tC := tC
-
 		t.Run(tC.desc, func(t *testing.T) {
 			t.Parallel()
 
@@ -184,8 +180,6 @@ func TestCopyBufferToFile(t *testing.T) {
 		},
 	}
 	for _, tC := range testCases {
-		tC := tC
-
 		t.Run(tC.desc, func(t *testing.T) {
 			t.Parallel()
 
@@ -257,8 +251,6 @@ func TestCopyFile(t *testing.T) {
 		},
 	}
 	for _, tC := range testCases {
-		tC := tC
-
 		t.Run(tC.desc, func(t *testing.T) {
 			t.Parallel()
 
@@ -375,8 +367,6 @@ func TestCopyRecursive(t *testing.T) {
 		},
 	}
 	for _, tC := range testCases {
-		tC := tC
-
 		t.Run(tC.desc, func(t *testing.T) {
 			t.Parallel()
 
@@ -436,8 +426,6 @@ func TestEnsureDir(t *testing.T) {
 		},
 	}
 	for _, tC := range testCases {
-		tC := tC
-
 		t.Run(tC.desc, func(t *testing.T) {
 			t.Parallel()
 
