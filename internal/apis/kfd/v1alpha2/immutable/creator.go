@@ -700,16 +700,19 @@ func (c *ClusterCreator) confirmInfrastructureChanges(
 ) (bool, error) {
 	if len(rdcs) > 0 && len(unsafeReducers) > 0 {
 		askConfirmation := false
+
 		if strings.Contains(rdcs.ToString(), ".spec.infrastructure.") {
+			askConfirmation = true
+
 			logrus.Warning("Changes to infrastructure phase configuration " +
 				"that could cause data loss or service disruption have been found.")
-			askConfirmation = true
 		}
 
 		if strings.Contains(rdcs.ToString(), ".spec.infrastructure.nodes") {
+			askConfirmation = true
+
 			logrus.Warning("Changes to configuration that require nodes reprovisioning have been found. " +
 				"Manual intervention will be required to reset the nodes.")
-			askConfirmation = true
 		}
 
 		if askConfirmation {
