@@ -718,7 +718,7 @@ func (c *ClusterCreator) confirmInfrastructureChanges(
 		if askConfirmation {
 			confirm, err := cluster.AskConfirmationWithMessage(
 				cluster.IsForceEnabledForFeature(c.force, cluster.ForceFeatureMigrations),
-				"Potentially unsafe changes or that require manual intervention have been detected. Proceed with caution.",
+				"\nPotentially unsafe changes or that require manual intervention have been detected. Proceed with caution.",
 			)
 			if err != nil {
 				return false, fmt.Errorf("error while asking for confirmation: %w", err)
