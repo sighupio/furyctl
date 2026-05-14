@@ -273,7 +273,7 @@ func NewApplyCmd() *cobra.Command {
 
 			if err := clusterCreator.Create(
 				flags.StartFrom,
-				flags.Timeouts.ProcessTimeout,
+				flags.ProcessTimeout,
 				flags.PodRunningCheckTimeout,
 			); err != nil {
 				cmdEvent.AddErrorMessage(err)

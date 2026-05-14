@@ -108,16 +108,16 @@ func (t *TplNode) Set(n *Node) {
 type IfNode parse.IfNode
 
 func (i *IfNode) Set(n *Node) {
-	for _, cmd := range i.BranchNode.Pipe.Cmds {
+	for _, cmd := range i.Pipe.Cmds {
 		n.Set(n.FromNodeList(cmd.Args))
 	}
 
-	if i.BranchNode.List != nil {
-		n.Set(n.FromNodeList(i.BranchNode.List.Nodes))
+	if i.List != nil {
+		n.Set(n.FromNodeList(i.List.Nodes))
 	}
 
-	if i.BranchNode.ElseList != nil {
-		n.Set(n.FromNodeList(i.BranchNode.ElseList.Nodes))
+	if i.ElseList != nil {
+		n.Set(n.FromNodeList(i.ElseList.Nodes))
 	}
 }
 

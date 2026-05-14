@@ -31,7 +31,7 @@ func NewEKSClusterRulesExtractor(distributionPath string, renderedConfig map[str
 
 	builder.Spec = spec
 	builder.BaseExtractor = NewBaseExtractor(spec)
-	builder.BaseExtractor.RenderedConfig = renderedConfig
+	builder.RenderedConfig = renderedConfig
 
 	return &builder, nil
 }
@@ -95,21 +95,21 @@ func (r *EKSExtractor) GetReducers(phase string) []Rule {
 			return []Rule{}
 		}
 
-		return r.BaseExtractor.ExtractReducerRules(*r.Spec.Infrastructure)
+		return r.ExtractReducerRules(*r.Spec.Infrastructure)
 
 	case cluster.OperationPhaseKubernetes:
 		if r.Spec.Kubernetes == nil {
 			return []Rule{}
 		}
 
-		return r.BaseExtractor.ExtractReducerRules(*r.Spec.Kubernetes)
+		return r.ExtractReducerRules(*r.Spec.Kubernetes)
 
 	case cluster.OperationPhaseDistribution:
 		if r.Spec.Distribution == nil {
 			return []Rule{}
 		}
 
-		return r.BaseExtractor.ExtractReducerRules(*r.Spec.Distribution)
+		return r.ExtractReducerRules(*r.Spec.Distribution)
 
 	default:
 		return []Rule{}
