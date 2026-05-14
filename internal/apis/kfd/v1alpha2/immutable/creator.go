@@ -699,21 +699,23 @@ func (c *ClusterCreator) confirmInfrastructureChanges(
 	unsafeReducers []premrules.Rule,
 ) (bool, error) {
 	if len(rdcs) > 0 && len(unsafeReducers) > 0 {
-		msg := ""
+		askConfirmation := false
 		if strings.Contains(rdcs.ToString(), ".spec.infrastructure.") {
-			msg = "\nWARNING: Changes to infrastructure phase configuration " +
-				"that could cause data loss or service disruption have been found."
+			logrus.Warning("Changes to infrastructure phase configuration " +
+				"that could cause data loss or service disruption have been found.")
+			askConfirmation = true
 		}
 
 		if strings.Contains(rdcs.ToString(), ".spec.infrastructure.nodes") {
-			msg = "\nWARNING: Changes to configuration that require nodes reprovisioning have been found. " +
-				"Manual intervention will be required to reset the nodes."
+			logrus.Warning("Changes to configuration that require nodes reprovisioning have been found. " +
+				"Manual intervention will be required to reset the nodes.")
+			askConfirmation = true
 		}
 
-		if msg != "" {
+		if askConfirmation {
 			confirm, err := cluster.AskConfirmationWithMessage(
 				cluster.IsForceEnabledForFeature(c.force, cluster.ForceFeatureMigrations),
-				msg,
+				"Potentially unsafe changes or that require manual intervention have been detected. Proceed with caution.",
 			)
 			if err != nil {
 				return false, fmt.Errorf("error while asking for confirmation: %w", err)
