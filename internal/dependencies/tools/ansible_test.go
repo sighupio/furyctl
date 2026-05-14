@@ -7,8 +7,10 @@
 package tools_test
 
 import (
-	"strings"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/sighupio/furyctl/internal/dependencies/tools"
 	"github.com/sighupio/furyctl/internal/tool/ansible"
@@ -67,16 +69,11 @@ func Test_Ansible_CheckBinVersion(t *testing.T) {
 
 			err := a.CheckBinVersion()
 
-			if tC.wantErr && err == nil {
-				t.Errorf("expected error, got nil")
-			}
-
-			if !tC.wantErr && err != nil {
-				t.Errorf("expected no error, got %v", err)
-			}
-
-			if tC.wantErr && err != nil && !strings.Contains(err.Error(), tC.wantErrMsg) {
-				t.Errorf("expected error message '%s' to contain '%s'", err.Error(), tC.wantErrMsg)
+			if tC.wantErr {
+				require.Error(t, err)
+				assert.Contains(t, err.Error(), tC.wantErrMsg)
+			} else {
+				require.NoError(t, err)
 			}
 		})
 	}

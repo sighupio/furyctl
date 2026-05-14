@@ -9,6 +9,9 @@ package ekscluster_test
 import (
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
 	"github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/ekscluster"
 )
 
@@ -52,16 +55,11 @@ func Test_ExtraSchemaValidator_Validate(t *testing.T) {
 
 			err := esv.Validate(tC.confPath)
 
-			if tC.wantErr && err == nil {
-				t.Errorf("expected error, got nil")
-			}
-
-			if !tC.wantErr && err != nil {
-				t.Errorf("expected nil, got error: %v", err)
-			}
-
-			if tC.wantErr && err != nil && err.Error() != tC.wantErrMsg {
-				t.Errorf("expected error message '%s', got '%s'", tC.wantErrMsg, err.Error())
+			if tC.wantErr {
+				require.Error(t, err)
+				assert.Equal(t, tC.wantErrMsg, err.Error())
+			} else {
+				require.NoError(t, err)
 			}
 		})
 	}

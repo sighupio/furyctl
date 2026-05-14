@@ -195,6 +195,6 @@ func Test_Generator_GetMissingKeys(t *testing.T) {
 
 	missingKeys := tg.GetMissingKeys(tpl)
 
-	assert.Equal(t, 1, len(missingKeys))
+	assert.Len(t, missingKeys, 1)
 	assert.Equal(t, ".meta.name", missingKeys[0])
 }

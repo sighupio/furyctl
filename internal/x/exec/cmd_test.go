@@ -11,6 +11,9 @@ import (
 	"slices"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
 	execx "github.com/sighupio/furyctl/internal/x/exec"
 )
 
@@ -20,14 +23,10 @@ func TestNewErrCmdFailed(t *testing.T) {
 	t.Parallel()
 
 	err := execx.NewErrCmdFailed("foo", []string{"bar", "baz"}, ErrTest, nil)
-	if err == nil {
-		t.Error("error is nil")
-	}
+	require.Error(t, err)
 
 	wantErr := "foo bar baz: command failed - test error\n<nil>"
-	if err.Error() != wantErr {
-		t.Errorf("wantErr = %s, got = %s", wantErr, err.Error())
-	}
+	assert.Equal(t, wantErr, err.Error())
 }
 
 func TestNewCmd(t *testing.T) {

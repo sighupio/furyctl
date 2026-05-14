@@ -20,7 +20,7 @@ import (
 func TestNewFuncMap(t *testing.T) {
 	f := template.NewFuncMap()
 
-	assert.True(t, len(f.FuncMap) > 0)
+	assert.NotEmpty(t, f.FuncMap)
 }
 
 func TestFuncMap_Add(t *testing.T) {

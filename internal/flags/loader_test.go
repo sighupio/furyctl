@@ -7,10 +7,12 @@
 package flags_test
 
 import (
-	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/sighupio/furyctl/internal/flags"
 )
@@ -127,14 +129,9 @@ flags:
 
 			if tt.expectedFlags != nil && result.Flags != nil {
 				// Compare global flags
-				if !compareMaps(tt.expectedFlags.Global, result.Flags.Global) {
-					t.Errorf("Global flags mismatch. Expected: %+v, Got: %+v", tt.expectedFlags.Global, result.Flags.Global)
-				}
-
+				assert.Equal(t, tt.expectedFlags.Global, result.Flags.Global)
 				// Compare apply flags
-				if !compareMaps(tt.expectedFlags.Apply, result.Flags.Apply) {
-					t.Errorf("Apply flags mismatch. Expected: %+v, Got: %+v", tt.expectedFlags.Apply, result.Flags.Apply)
-				}
+				assert.Equal(t, tt.expectedFlags.Apply, result.Flags.Apply)
 			}
 		})
 	}
@@ -143,17 +140,10 @@ flags:
 func TestLoader_LoadFromFile_NonExistentFile(t *testing.T) {
 	loader := flags.NewLoader(".")
 	result, err := loader.LoadFromFile("/nonexistent/path/furyctl.yaml")
-	if err != nil {
-		t.Fatalf("LoadFromFile() should not error for non-existent file, got: %v", err)
-	}
+	require.NoError(t, err)
 
-	if len(result.Errors) == 0 {
-		t.Error("Expected error for non-existent file")
-	}
-
-	if result.Flags != nil {
-		t.Error("Expected no flags for non-existent file")
-	}
+	assert.NotEmpty(t, result.Errors)
+	assert.Nil(t, result.Flags)
 }
 
 func TestLoader_LoadFromDirectory(t *testing.T) {
@@ -172,31 +162,20 @@ flags:
 
 	configPath := filepath.Join(tmpDir, "furyctl.yaml")
 	err := os.WriteFile(configPath, []byte(configContent), 0o644)
-	if err != nil {
-		t.Fatalf("Failed to create test config file: %v", err)
-	}
+	require.NoError(t, err)
 
 	// Test loading from directory
 	loader := flags.NewLoader(tmpDir)
 	result, err := loader.LoadFromDirectory(tmpDir)
-	if err != nil {
-		t.Fatalf("LoadFromDirectory() error = %v", err)
-	}
+	require.NoError(t, err)
 
-	if len(result.Errors) > 0 {
-		t.Errorf("Unexpected errors: %v", result.Errors)
-	}
-
-	if result.Flags == nil || result.Flags.Global == nil {
-		t.Error("Expected flags to be loaded but they are nil")
-		return
-	}
+	assert.Empty(t, result.Errors)
+	require.NotNil(t, result.Flags)
+	require.NotNil(t, result.Flags.Global)
 
 	debugValue := result.Flags.Global["debug"]
 	// The value might be parsed as a string "true" or boolean true depending on YAML parser
-	if debugValue != true && debugValue != "true" {
-		t.Errorf("Expected debug flag to be true, got: %v (type: %T)", debugValue, debugValue)
-	}
+	assert.Contains(t, []any{true, "true"}, debugValue)
 }
 
 func TestLoader_LoadFromDirectory_NoConfigFile(t *testing.T) {
@@ -204,36 +183,8 @@ func TestLoader_LoadFromDirectory_NoConfigFile(t *testing.T) {
 
 	loader := flags.NewLoader(tmpDir)
 	result, err := loader.LoadFromDirectory(tmpDir)
-	if err != nil {
-		t.Fatalf("LoadFromDirectory() should not error when no config exists, got: %v", err)
-	}
+	require.NoError(t, err)
 
-	if len(result.Errors) == 0 {
-		t.Error("Expected error when no config file exists")
-	}
-
-	if result.Flags != nil {
-		t.Error("Expected no flags when no config exists")
-	}
-}
-
-// Helper function to compare maps
-func compareMaps(expected, actual map[string]any) bool {
-	if len(expected) != len(actual) {
-		return false
-	}
-
-	for key, expectedValue := range expected {
-		actualValue, exists := actual[key]
-		if !exists {
-			return false
-		}
-
-		// Use reflect.DeepEqual for better comparison
-		if fmt.Sprintf("%v", expectedValue) != fmt.Sprintf("%v", actualValue) {
-			return false
-		}
-	}
-
-	return true
+	assert.NotEmpty(t, result.Errors)
+	assert.Nil(t, result.Flags)
 }
