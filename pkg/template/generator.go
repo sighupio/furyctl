@@ -73,12 +73,12 @@ func (g *Generator) ProcessTemplate() (*template.Template, error) {
 func (g *Generator) GetMissingKeys(tpl *template.Template) []string {
 	var missingKeys []string
 
-	if tpl == nil || tpl.Tree == nil || tpl.Tree.Root == nil {
+	if tpl == nil || tpl.Tree == nil || tpl.Root == nil {
 		return missingKeys
 	}
 
 	node := NewNode()
-	node.FromNodeList(tpl.Tree.Root.Nodes)
+	node.FromNodeList(tpl.Root.Nodes)
 
 	for _, f := range node.Fields {
 		val := g.getContextValueFromPath(f)

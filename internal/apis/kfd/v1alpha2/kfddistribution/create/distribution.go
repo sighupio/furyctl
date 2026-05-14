@@ -143,8 +143,8 @@ func (d *Distribution) prepare() (template.Config, error) {
 		return template.Config{}, fmt.Errorf("error creating distribution phase folder: %w", err)
 	}
 
-	if _, err := os.Stat(path.Join(d.OperationPhase.Path, "manifests")); os.IsNotExist(err) {
-		if err := os.Mkdir(path.Join(d.OperationPhase.Path, "manifests"), iox.FullPermAccess); err != nil {
+	if _, err := os.Stat(path.Join(d.Path, "manifests")); os.IsNotExist(err) {
+		if err := os.Mkdir(path.Join(d.Path, "manifests"), iox.FullPermAccess); err != nil {
 			return template.Config{}, fmt.Errorf("error creating manifests folder: %w", err)
 		}
 	}
