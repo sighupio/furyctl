@@ -139,6 +139,56 @@ func (d *Distribution) Exec(rdcs reducers.Reducers, startFrom string, upgradeSta
 	return nil
 }
 
+func (d *Distribution) Stop() error {
+	errCh := make(chan error)
+	doneCh := make(chan bool)
+
+	var wg sync.WaitGroup
+
+	//nolint:mnd // ignore magic number linters
+	wg.Add(2)
+
+	go func() {
+		logrus.Debug("Stopping shell...")
+
+		if err := d.shellRunner.Stop(); err != nil {
+			errCh <- fmt.Errorf("error stopping shell: %w", err)
+		}
+
+		wg.Done()
+	}()
+
+	go func() {
+		logrus.Debug("Stopping kubectl...")
+
+		if err := d.kubeRunner.Stop(); err != nil {
+			errCh <- fmt.Errorf("error stopping kubectl: %w", err)
+		}
+
+		wg.Done()
+	}()
+
+	go func() {
+		wg.Wait()
+		close(doneCh)
+	}()
+
+	select {
+	case <-doneCh:
+
+	case err := <-errCh:
+		close(errCh)
+
+		return err
+	}
+
+	return nil
+}
+
+func (d *Distribution) SetUpgrade(upgradeEnabled bool) {
+	d.upgrade.Enabled = upgradeEnabled
+}
+
 func (d *Distribution) prepare() (template.Config, error) {
 	if err := d.CreateRootFolder(); err != nil {
 		return template.Config{}, fmt.Errorf("error creating distribution phase folder: %w", err)
@@ -329,56 +379,6 @@ func (d *Distribution) postDistribution(
 	}
 
 	return nil
-}
-
-func (d *Distribution) Stop() error {
-	errCh := make(chan error)
-	doneCh := make(chan bool)
-
-	var wg sync.WaitGroup
-
-	//nolint:mnd // ignore magic number linters
-	wg.Add(2)
-
-	go func() {
-		logrus.Debug("Stopping shell...")
-
-		if err := d.shellRunner.Stop(); err != nil {
-			errCh <- fmt.Errorf("error stopping shell: %w", err)
-		}
-
-		wg.Done()
-	}()
-
-	go func() {
-		logrus.Debug("Stopping kubectl...")
-
-		if err := d.kubeRunner.Stop(); err != nil {
-			errCh <- fmt.Errorf("error stopping kubectl: %w", err)
-		}
-
-		wg.Done()
-	}()
-
-	go func() {
-		wg.Wait()
-		close(doneCh)
-	}()
-
-	select {
-	case <-doneCh:
-
-	case err := <-errCh:
-		close(errCh)
-
-		return err
-	}
-
-	return nil
-}
-
-func (d *Distribution) SetUpgrade(upgradeEnabled bool) {
-	d.upgrade.Enabled = upgradeEnabled
 }
 
 func (d *Distribution) runReducers(

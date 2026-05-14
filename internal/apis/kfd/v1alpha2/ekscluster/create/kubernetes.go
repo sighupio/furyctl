@@ -143,6 +143,56 @@ func (k *Kubernetes) Exec(startFrom string, upgradeState *upgrade.State) error {
 	return nil
 }
 
+func (k *Kubernetes) SetUpgrade(upgradeEnabled bool) {
+	k.upgrade.Enabled = upgradeEnabled
+}
+
+func (k *Kubernetes) Stop() error {
+	errCh := make(chan error)
+	doneCh := make(chan bool)
+
+	var wg sync.WaitGroup
+
+	//nolint:mnd // ignore magic number linters
+	wg.Add(2)
+
+	go func() {
+		logrus.Debug("Stopping terraform...")
+
+		if err := k.tfRunner.Stop(); err != nil {
+			errCh <- fmt.Errorf("error stopping terraform: %w", err)
+		}
+
+		wg.Done()
+	}()
+
+	go func() {
+		logrus.Debug("Stopping awscli...")
+
+		if err := k.awsRunner.Stop(); err != nil {
+			errCh <- fmt.Errorf("error stopping awscli: %w", err)
+		}
+
+		wg.Done()
+	}()
+
+	go func() {
+		wg.Wait()
+		close(doneCh)
+	}()
+
+	select {
+	case <-doneCh:
+
+	case err := <-errCh:
+		close(errCh)
+
+		return err
+	}
+
+	return nil
+}
+
 func (k *Kubernetes) preKubernetes(
 	startFrom string,
 	upgradeState *upgrade.State,
@@ -277,56 +327,6 @@ func (k *Kubernetes) postKubernetes(
 
 	if k.upgrade.Enabled {
 		upgradeState.Phases.PostKubernetes.Status = upgrade.PhaseStatusSuccess
-	}
-
-	return nil
-}
-
-func (k *Kubernetes) SetUpgrade(upgradeEnabled bool) {
-	k.upgrade.Enabled = upgradeEnabled
-}
-
-func (k *Kubernetes) Stop() error {
-	errCh := make(chan error)
-	doneCh := make(chan bool)
-
-	var wg sync.WaitGroup
-
-	//nolint:mnd // ignore magic number linters
-	wg.Add(2)
-
-	go func() {
-		logrus.Debug("Stopping terraform...")
-
-		if err := k.tfRunner.Stop(); err != nil {
-			errCh <- fmt.Errorf("error stopping terraform: %w", err)
-		}
-
-		wg.Done()
-	}()
-
-	go func() {
-		logrus.Debug("Stopping awscli...")
-
-		if err := k.awsRunner.Stop(); err != nil {
-			errCh <- fmt.Errorf("error stopping awscli: %w", err)
-		}
-
-		wg.Done()
-	}()
-
-	go func() {
-		wg.Wait()
-		close(doneCh)
-	}()
-
-	select {
-	case <-doneCh:
-
-	case err := <-errCh:
-		close(errCh)
-
-		return err
 	}
 
 	return nil

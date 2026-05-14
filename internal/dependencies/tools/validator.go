@@ -22,6 +22,13 @@ var (
 	ErrToolNotFound     = errors.New("tool not found in the toolFactory, possible fury-distribution version mismatch")
 )
 
+type Validator struct {
+	executor    execx.Executor
+	toolFactory *Factory
+	furyctlPath string
+	autoConnect bool
+}
+
 func NewValidator(executor execx.Executor, binPath, furyctlPath string, autoConnect bool) *Validator {
 	return &Validator{
 		executor: executor,
@@ -31,13 +38,6 @@ func NewValidator(executor execx.Executor, binPath, furyctlPath string, autoConn
 		furyctlPath: furyctlPath,
 		autoConnect: autoConnect,
 	}
-}
-
-type Validator struct {
-	executor    execx.Executor
-	toolFactory *Factory
-	furyctlPath string
-	autoConnect bool
 }
 
 func (tv *Validator) ValidateBaseReqs() ([]string, []error) {

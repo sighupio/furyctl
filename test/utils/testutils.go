@@ -35,18 +35,18 @@ import (
 )
 
 type Conf struct {
-	APIVersion string   `validate:"required,api-version"  yaml:"apiVersion"`
-	Kind       string   `validate:"required,cluster-kind" yaml:"kind"`
-	Metadata   ConfMeta `validate:"required"              yaml:"metadata"`
-	Spec       ConfSpec `validate:"required"              yaml:"spec"`
+	APIVersion string   `yaml:"apiVersion"`
+	Kind       string   `yaml:"kind"`
+	Metadata   ConfMeta `yaml:"metadata"`
+	Spec       ConfSpec `yaml:"spec"`
 }
 
 type ConfSpec struct {
-	DistributionVersion string `validate:"required" yaml:"distributionVersion"`
+	DistributionVersion string `yaml:"distributionVersion"`
 }
 
 type ConfMeta struct {
-	Name string `validate:"required" yaml:"name"`
+	Name string `yaml:"name"`
 }
 
 type FuryctlCreator struct {

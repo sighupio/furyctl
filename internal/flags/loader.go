@@ -32,6 +32,28 @@ func NewLoader(baseDir string) *Loader {
 	}
 }
 
+// LoadFromDirectory tries to find and load flags from a furyctl.yaml file in the given directory..
+func (l *Loader) LoadFromDirectory(dir string) (*LoadResult, error) {
+	// Common configuration file names to try.
+	configNames := []string{"furyctl.yaml", "furyctl.yml"}
+
+	for _, name := range configNames {
+		configPath := filepath.Join(dir, name)
+		if _, err := os.Stat(configPath); err == nil {
+			return l.LoadFromFile(configPath)
+		}
+	}
+
+	// No configuration file found.
+	result := &LoadResult{
+		ConfigPath: "",
+		Flags:      nil,
+		Errors:     []error{fmt.Errorf("%w: %s", ErrNoFuryctlConfigFileFound, dir)},
+	}
+
+	return result, nil
+}
+
 // LoadFromFile loads flags configuration from the specified furyctl.yaml file.
 func (l *Loader) LoadFromFile(configPath string) (*LoadResult, error) {
 	result := &LoadResult{
@@ -181,26 +203,4 @@ func (l *Loader) processCommandFlags(flagsMap map[string]any) (map[string]any, e
 	}
 
 	return processed, nil
-}
-
-// LoadFromDirectory tries to find and load flags from a furyctl.yaml file in the given directory..
-func (l *Loader) LoadFromDirectory(dir string) (*LoadResult, error) {
-	// Common configuration file names to try.
-	configNames := []string{"furyctl.yaml", "furyctl.yml"}
-
-	for _, name := range configNames {
-		configPath := filepath.Join(dir, name)
-		if _, err := os.Stat(configPath); err == nil {
-			return l.LoadFromFile(configPath)
-		}
-	}
-
-	// No configuration file found.
-	result := &LoadResult{
-		ConfigPath: "",
-		Flags:      nil,
-		Errors:     []error{fmt.Errorf("%w: %s", ErrNoFuryctlConfigFileFound, dir)},
-	}
-
-	return result, nil
 }

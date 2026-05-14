@@ -184,6 +184,66 @@ func (d *Distribution) Exec(
 	return nil
 }
 
+func (d *Distribution) SetUpgrade(upgradeEnabled bool) {
+	d.upgrade.Enabled = upgradeEnabled
+}
+
+func (d *Distribution) Stop() error {
+	errCh := make(chan error)
+	doneCh := make(chan bool)
+
+	var wg sync.WaitGroup
+
+	//nolint:mnd,revive // ignore magic number linters
+	wg.Add(3)
+
+	go func() {
+		logrus.Debug("Stopping terraform...")
+
+		if err := d.TFRunner.Stop(); err != nil {
+			errCh <- fmt.Errorf("error stopping terraform: %w", err)
+		}
+
+		wg.Done()
+	}()
+
+	go func() {
+		logrus.Debug("Stopping shell...")
+
+		if err := d.shellRunner.Stop(); err != nil {
+			errCh <- fmt.Errorf("error stopping shell: %w", err)
+		}
+
+		wg.Done()
+	}()
+
+	go func() {
+		logrus.Debug("Stopping kubectl...")
+
+		if err := d.kubeRunner.Stop(); err != nil {
+			errCh <- fmt.Errorf("error stopping kubectl: %w", err)
+		}
+
+		wg.Done()
+	}()
+
+	go func() {
+		wg.Wait()
+		close(doneCh)
+	}()
+
+	select {
+	case <-doneCh:
+
+	case err := <-errCh:
+		close(errCh)
+
+		return err
+	}
+
+	return nil
+}
+
 func (d *Distribution) preDistribution(
 	startFrom string,
 	upgradeState *upgrade.State,
@@ -372,66 +432,6 @@ func (d *Distribution) runReducers(
 		); err != nil {
 			return fmt.Errorf("error applying manifests: %w", err)
 		}
-	}
-
-	return nil
-}
-
-func (d *Distribution) SetUpgrade(upgradeEnabled bool) {
-	d.upgrade.Enabled = upgradeEnabled
-}
-
-func (d *Distribution) Stop() error {
-	errCh := make(chan error)
-	doneCh := make(chan bool)
-
-	var wg sync.WaitGroup
-
-	//nolint:mnd,revive // ignore magic number linters
-	wg.Add(3)
-
-	go func() {
-		logrus.Debug("Stopping terraform...")
-
-		if err := d.TFRunner.Stop(); err != nil {
-			errCh <- fmt.Errorf("error stopping terraform: %w", err)
-		}
-
-		wg.Done()
-	}()
-
-	go func() {
-		logrus.Debug("Stopping shell...")
-
-		if err := d.shellRunner.Stop(); err != nil {
-			errCh <- fmt.Errorf("error stopping shell: %w", err)
-		}
-
-		wg.Done()
-	}()
-
-	go func() {
-		logrus.Debug("Stopping kubectl...")
-
-		if err := d.kubeRunner.Stop(); err != nil {
-			errCh <- fmt.Errorf("error stopping kubectl: %w", err)
-		}
-
-		wg.Done()
-	}()
-
-	go func() {
-		wg.Wait()
-		close(doneCh)
-	}()
-
-	select {
-	case <-doneCh:
-
-	case err := <-errCh:
-		close(errCh)
-
-		return err
 	}
 
 	return nil

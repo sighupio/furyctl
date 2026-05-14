@@ -54,16 +54,16 @@ type RunnerFactoryPaths struct {
 	Bin string
 }
 
+type RunnerFactory struct {
+	executor execx.Executor
+	paths    RunnerFactoryPaths
+}
+
 func NewRunnerFactory(executor execx.Executor, paths RunnerFactoryPaths) *RunnerFactory {
 	return &RunnerFactory{
 		executor: executor,
 		paths:    paths,
 	}
-}
-
-type RunnerFactory struct {
-	executor execx.Executor
-	paths    RunnerFactoryPaths
 }
 
 func (rf *RunnerFactory) Create(name Name, version, workDir string) Runner {

@@ -17,14 +17,14 @@ import (
 
 var ErrDownloadOptionsExhausted = errors.New("downloading options exhausted")
 
+type GoGetterClient struct {
+	protocols []string
+}
+
 func NewGoGetterClient() *GoGetterClient {
 	return &GoGetterClient{
 		protocols: []string{"", "git::", "file::", "http::", "s3::", "gcs::", "mercurial::"},
 	}
-}
-
-type GoGetterClient struct {
-	protocols []string
 }
 
 func (*GoGetterClient) Clear() error {

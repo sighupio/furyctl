@@ -32,6 +32,12 @@ func NewErrCmdFailed(name string, args []string, err error, res *CmdLog) error {
 	return fmt.Errorf("%s %s: %w - %v\n%s", name, strings.Join(args, " "), ErrCmdFailed, err, res)
 }
 
+type Cmd struct {
+	*exec.Cmd
+	Log       *CmdLog
+	Sensitive bool
+}
+
 func NewCmd(name string, opts CmdOptions) *Cmd {
 	outLog := bytes.NewBufferString("")
 	errLog := bytes.NewBufferString("")
@@ -93,12 +99,6 @@ func NewCmd(name string, opts CmdOptions) *Cmd {
 		},
 		Sensitive: opts.Sensitive,
 	}
-}
-
-type Cmd struct {
-	*exec.Cmd
-	Log       *CmdLog
-	Sensitive bool
 }
 
 func (c *Cmd) Run() error {

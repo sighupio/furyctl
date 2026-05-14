@@ -14,6 +14,13 @@ import (
 	"github.com/sighupio/furyctl/internal/tool/kubectl"
 )
 
+type Kubectl struct {
+	arch    string
+	checker *checker
+	os      string
+	version string
+}
+
 func NewKubectl(runner *kubectl.Runner, version string) *Kubectl {
 	return &Kubectl{
 		arch:    runtime.GOARCH,
@@ -33,13 +40,6 @@ func NewKubectl(runner *kubectl.Runner, version string) *Kubectl {
 			},
 		},
 	}
-}
-
-type Kubectl struct {
-	arch    string
-	checker *checker
-	os      string
-	version string
 }
 
 func (*Kubectl) SupportsDownload() bool {

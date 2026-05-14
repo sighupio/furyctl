@@ -298,22 +298,6 @@ func (v *ClusterCreator) Create(startFrom string, timeout, _ int) error {
 	return nil
 }
 
-func (*ClusterCreator) initUpgradeState() *upgrade.State {
-	return &upgrade.State{
-		Phases: upgrade.Phases{
-			PreInfrastructure:  &upgrade.Phase{Status: upgrade.PhaseStatusPending},
-			Infrastructure:     &upgrade.Phase{Status: upgrade.PhaseStatusPending},
-			PostInfrastructure: &upgrade.Phase{Status: upgrade.PhaseStatusPending},
-			PreKubernetes:      &upgrade.Phase{Status: upgrade.PhaseStatusPending},
-			Kubernetes:         &upgrade.Phase{Status: upgrade.PhaseStatusPending},
-			PostKubernetes:     &upgrade.Phase{Status: upgrade.PhaseStatusPending},
-			PreDistribution:    &upgrade.Phase{Status: upgrade.PhaseStatusPending},
-			Distribution:       &upgrade.Phase{Status: upgrade.PhaseStatusPending},
-			PostDistribution:   &upgrade.Phase{Status: upgrade.PhaseStatusPending},
-		},
-	}
-}
-
 func (v *ClusterCreator) CreateAsync(
 	phases *Phases,
 	startFrom string,
@@ -440,6 +424,53 @@ func (v *ClusterCreator) CreateAsync(
 
 	default:
 		errCh <- fmt.Errorf("%w: %s", ErrUnsupportedPhase, v.phase)
+	}
+}
+
+func (v *ClusterCreator) RenderConfig() (map[string]any, error) {
+	specMap := map[string]any{}
+
+	phase := cluster.NewOperationPhase(
+		path.Join(v.paths.WorkDir, cluster.OperationPhaseDistribution),
+		v.kfdManifest.Tools,
+		v.paths.BinPath,
+	)
+
+	furyctlMerger, err := phase.CreateFuryctlMerger(
+		v.paths.DistroPath,
+		v.paths.ConfigPath,
+		"kfd-v1alpha2",
+		"ekscluster",
+	)
+	if err != nil {
+		return nil, fmt.Errorf("error while creating furyctl merger: %w", err)
+	}
+
+	tfCfg, err := template.NewConfigWithoutData(furyctlMerger, []string{})
+	if err != nil {
+		return nil, fmt.Errorf("error while creating template config: %w", err)
+	}
+
+	for k, v := range tfCfg.Data {
+		specMap[k] = v
+	}
+
+	return specMap, nil
+}
+
+func (*ClusterCreator) initUpgradeState() *upgrade.State {
+	return &upgrade.State{
+		Phases: upgrade.Phases{
+			PreInfrastructure:  &upgrade.Phase{Status: upgrade.PhaseStatusPending},
+			Infrastructure:     &upgrade.Phase{Status: upgrade.PhaseStatusPending},
+			PostInfrastructure: &upgrade.Phase{Status: upgrade.PhaseStatusPending},
+			PreKubernetes:      &upgrade.Phase{Status: upgrade.PhaseStatusPending},
+			Kubernetes:         &upgrade.Phase{Status: upgrade.PhaseStatusPending},
+			PostKubernetes:     &upgrade.Phase{Status: upgrade.PhaseStatusPending},
+			PreDistribution:    &upgrade.Phase{Status: upgrade.PhaseStatusPending},
+			Distribution:       &upgrade.Phase{Status: upgrade.PhaseStatusPending},
+			PostDistribution:   &upgrade.Phase{Status: upgrade.PhaseStatusPending},
+		},
 	}
 }
 
@@ -811,37 +842,6 @@ func (*ClusterCreator) getDistributionSubPhase(startFrom string) string {
 	default:
 		return ""
 	}
-}
-
-func (v *ClusterCreator) RenderConfig() (map[string]any, error) {
-	specMap := map[string]any{}
-
-	phase := cluster.NewOperationPhase(
-		path.Join(v.paths.WorkDir, cluster.OperationPhaseDistribution),
-		v.kfdManifest.Tools,
-		v.paths.BinPath,
-	)
-
-	furyctlMerger, err := phase.CreateFuryctlMerger(
-		v.paths.DistroPath,
-		v.paths.ConfigPath,
-		"kfd-v1alpha2",
-		"ekscluster",
-	)
-	if err != nil {
-		return nil, fmt.Errorf("error while creating furyctl merger: %w", err)
-	}
-
-	tfCfg, err := template.NewConfigWithoutData(furyctlMerger, []string{})
-	if err != nil {
-		return nil, fmt.Errorf("error while creating template config: %w", err)
-	}
-
-	for k, v := range tfCfg.Data {
-		specMap[k] = v
-	}
-
-	return specMap, nil
 }
 
 //nolint:revive // ignore maximum number of return results

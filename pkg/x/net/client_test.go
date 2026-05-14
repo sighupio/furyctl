@@ -27,11 +27,11 @@ var (
 	errCannotCreateFakeDistroDstFolder = errors.New("cannot create fake distro dst folder")
 )
 
+type FakeClient struct{}
+
 func NewFakeClient() *FakeClient {
 	return &FakeClient{}
 }
-
-type FakeClient struct{}
 
 func (f *FakeClient) Clear() error {
 	return nil

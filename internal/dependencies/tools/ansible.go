@@ -13,6 +13,13 @@ import (
 	"github.com/sighupio/furyctl/internal/tool/ansible"
 )
 
+type Ansible struct {
+	arch    string
+	checker *checker
+	os      string
+	version string
+}
+
 func NewAnsible(runner *ansible.Runner, version string) *Ansible {
 	return &Ansible{
 		arch:    runtime.GOARCH,
@@ -29,13 +36,6 @@ func NewAnsible(runner *ansible.Runner, version string) *Ansible {
 			},
 		},
 	}
-}
-
-type Ansible struct {
-	arch    string
-	checker *checker
-	os      string
-	version string
 }
 
 func (*Ansible) SupportsDownload() bool {

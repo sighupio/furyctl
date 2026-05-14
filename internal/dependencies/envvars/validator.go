@@ -16,11 +16,11 @@ var (
 	ErrMissingRequiredEnvVar = errors.New("missing required environment variable")
 )
 
+type Validator struct{}
+
 func NewValidator() *Validator {
 	return &Validator{}
 }
-
-type Validator struct{}
 
 func (ev *Validator) Validate(kind string) ([]string, []error) {
 	if kind == "EKSCluster" {

@@ -49,6 +49,13 @@ type DownloadResult struct {
 	DistroManifest config.KFD
 }
 
+type Downloader struct {
+	client                  netx.Client
+	validate                *validator.Validate
+	gitProtocol             git.Protocol
+	customDistroPatchesPath string
+}
+
 func NewCachingDownloader(
 	client netx.Client,
 	outDir string,
@@ -69,13 +76,6 @@ func NewDownloader(client netx.Client, gitProtocol git.Protocol, customDistroPat
 		gitProtocol:             gitProtocol,
 		customDistroPatchesPath: customDistroPatchesPath,
 	}
-}
-
-type Downloader struct {
-	client                  netx.Client
-	validate                *validator.Validate
-	gitProtocol             git.Protocol
-	customDistroPatchesPath string
 }
 
 func (d *Downloader) Download(

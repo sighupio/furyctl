@@ -16,6 +16,13 @@ import (
 	iox "github.com/sighupio/furyctl/internal/x/io"
 )
 
+type Yq struct {
+	arch    string
+	checker *checker
+	os      string
+	version string
+}
+
 func NewYq(runner *yq.Runner, version string) *Yq {
 	return &Yq{
 		arch:    runtime.GOARCH,
@@ -32,13 +39,6 @@ func NewYq(runner *yq.Runner, version string) *Yq {
 			},
 		},
 	}
-}
-
-type Yq struct {
-	arch    string
-	checker *checker
-	os      string
-	version string
 }
 
 func (*Yq) SupportsDownload() bool {

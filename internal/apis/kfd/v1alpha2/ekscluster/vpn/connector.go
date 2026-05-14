@@ -132,21 +132,6 @@ func (v *Connector) GenerateCertificates() error {
 	return nil
 }
 
-func (v *Connector) writeOVPNFileToDisk(certName string, cert []byte) error {
-	err := os.WriteFile(
-		filepath.Join(
-			v.certDir,
-			certName+".ovpn"),
-		cert,
-		iox.FullRWPermAccess,
-	)
-	if err != nil {
-		return fmt.Errorf("error writing openvpn file to disk: %w", err)
-	}
-
-	return nil
-}
-
 func (v *Connector) IsConfigured() bool {
 	vpn := v.config
 	if vpn == nil {
@@ -180,6 +165,21 @@ func (v *Connector) GetKillMessage() (string, error) {
 	}
 
 	return fmt.Sprintf("%s, you can do it with the following command: '%s'", endVpnMsg, killMsg), nil
+}
+
+func (v *Connector) writeOVPNFileToDisk(certName string, cert []byte) error {
+	err := os.WriteFile(
+		filepath.Join(
+			v.certDir,
+			certName+".ovpn"),
+		cert,
+		iox.FullRWPermAccess,
+	)
+	if err != nil {
+		return fmt.Errorf("error writing openvpn file to disk: %w", err)
+	}
+
+	return nil
 }
 
 func (v *Connector) copyOpenvpnToWorkDir(clientName string) error {

@@ -170,6 +170,161 @@ func (b *BaseExtractor) FilterSafeImmutableRules(rules []Rule, ds diff.Changelog
 	return filteredRules
 }
 
+func (b *BaseExtractor) GetReducers(_ string) []Rule {
+	var reducers []Rule
+
+	if b.Spec.Infrastructure != nil {
+		for _, rule := range *b.Spec.Infrastructure {
+			if rule.Reducers != nil {
+				reducers = append(reducers, rule)
+			}
+		}
+	}
+
+	if b.Spec.Kubernetes != nil {
+		for _, rule := range *b.Spec.Kubernetes {
+			if rule.Reducers != nil {
+				reducers = append(reducers, rule)
+			}
+		}
+	}
+
+	if b.Spec.Distribution != nil {
+		for _, rule := range *b.Spec.Distribution {
+			if rule.Reducers != nil {
+				reducers = append(reducers, rule)
+			}
+		}
+	}
+
+	return reducers
+}
+
+func (*BaseExtractor) ReducerRulesByDiffs(rules []Rule, ds diff.Changelog) []Rule {
+	filteredRules := make([]Rule, 0)
+
+	for _, rule := range rules {
+		for _, d := range ds {
+			joinedPath := "." + strings.Join(d.Path, ".")
+			changePath := numbersToWildcardRegex.ReplaceAllString(joinedPath, ".*")
+
+			if changePath == rule.Path {
+				if rule.Reducers == nil {
+					continue
+				}
+
+				for i := range *rule.Reducers {
+					(*rule.Reducers)[i].To = d.To
+					(*rule.Reducers)[i].From = d.From
+				}
+
+				filteredRules = append(filteredRules, rule)
+			}
+		}
+	}
+
+	return filteredRules
+}
+
+func (b *BaseExtractor) UnsupportedReducerRulesByDiffs(rules []Rule, ds diff.Changelog) []Rule {
+	filteredRules := make([]Rule, 0)
+
+	for _, rule := range b.ReducerRulesByDiffs(rules, ds) {
+		if rule.Unsupported == nil {
+			continue
+		}
+
+		if len(*rule.Unsupported) == 0 {
+			continue
+		}
+
+		filteredRules = append(filteredRules, rule)
+	}
+
+	return filteredRules
+}
+
+func (b *BaseExtractor) UnsafeReducerRulesByDiffs(rules []Rule, ds diff.Changelog) []Rule {
+	filteredRules := make([]Rule, 0)
+
+	for _, rule := range b.ReducerRulesByDiffs(rules, ds) {
+		if rule.Safe != nil && len(*rule.Safe) > 0 {
+			if b.areReducersSafe(rule.Reducers, rule.Safe, ds) {
+				continue
+			}
+		}
+
+		filteredRules = append(filteredRules, rule)
+	}
+
+	return filteredRules
+}
+
+func (*BaseExtractor) ExtractImmutablesFromRules(rls []Rule) []string {
+	immutables := make([]string, 0)
+
+	for _, rule := range rls {
+		if rule.Immutable {
+			immutables = append(immutables, rule.Path)
+		}
+	}
+
+	return immutables
+}
+
+func (*BaseExtractor) ExtractReducerRules(rls []Rule) []Rule {
+	reducers := make([]Rule, 0)
+
+	for _, rule := range rls {
+		if rule.Reducers != nil {
+			reducers = append(reducers, rule)
+		}
+	}
+
+	return reducers
+}
+
+func (b *BaseExtractor) areReducersSafe(reducers *[]Reducer, safe *[]Safe, ds diff.Changelog) bool {
+	if safe == nil {
+		return false
+	}
+
+	for _, r := range *reducers {
+		if !b.isReducerSafe(r, *safe, ds) {
+			return false
+		}
+	}
+
+	return true
+}
+
+func (b *BaseExtractor) isReducerSafe(reducer Reducer, safe []Safe, ds diff.Changelog) bool {
+	for _, s := range safe {
+		// Check From/To conditions.
+		fromToMatch := (s.From == nil || reducer.From == *s.From) && (s.To == nil || reducer.To == *s.To)
+
+		// Check FromNodes conditions using the dedicated function.
+		fromNodesMatch := b.areNodeConditionsMet(s.FromNodes, ds)
+
+		// If either From/To conditions or FromNodes conditions match, the rule is safe.
+		if (s.FromNodes == nil && fromToMatch) ||
+			(s.From == nil && s.To == nil && fromNodesMatch) ||
+			(fromToMatch && fromNodesMatch) {
+			return true
+		}
+	}
+
+	return false
+}
+
+func (*BaseExtractor) checkConditionFrom(nodeFrom *string, diffFrom any) bool {
+	if nodeFrom == nil || *nodeFrom == "" {
+		return true
+	}
+
+	return (*nodeFrom == "none" && diffFrom == nil) || (diffFrom != nil && diffFrom == *nodeFrom)
+}
+
 func (b *BaseExtractor) isImmutableRuleSafe(rule Rule, ds diff.Changelog) bool {
 	if rule.Safe == nil || len(*rule.Safe) == 0 {
 		return false
@@ -296,165 +451,10 @@ func getNestedValue(m map[string]any, path string) (any, error) {
 	return current, nil
 }
 
-func (*BaseExtractor) checkConditionFrom(nodeFrom *string, diffFrom any) bool {
-	if nodeFrom == nil || *nodeFrom == "" {
-		return true
-	}
-
-	return (*nodeFrom == "none" && diffFrom == nil) || (diffFrom != nil && diffFrom == *nodeFrom)
-}
-
 func (*BaseExtractor) checkConditionTo(nodeTo *string, diffTo any) bool {
 	if nodeTo == nil || *nodeTo == "" {
 		return true
 	}
 
 	return (*nodeTo == "none" && diffTo == nil) || (diffTo != nil && diffTo == *nodeTo)
-}
-
-func (b *BaseExtractor) GetReducers(_ string) []Rule {
-	var reducers []Rule
-
-	if b.Spec.Infrastructure != nil {
-		for _, rule := range *b.Spec.Infrastructure {
-			if rule.Reducers != nil {
-				reducers = append(reducers, rule)
-			}
-		}
-	}
-
-	if b.Spec.Kubernetes != nil {
-		for _, rule := range *b.Spec.Kubernetes {
-			if rule.Reducers != nil {
-				reducers = append(reducers, rule)
-			}
-		}
-	}
-
-	if b.Spec.Distribution != nil {
-		for _, rule := range *b.Spec.Distribution {
-			if rule.Reducers != nil {
-				reducers = append(reducers, rule)
-			}
-		}
-	}
-
-	return reducers
-}
-
-func (*BaseExtractor) ReducerRulesByDiffs(rules []Rule, ds diff.Changelog) []Rule {
-	filteredRules := make([]Rule, 0)
-
-	for _, rule := range rules {
-		for _, d := range ds {
-			joinedPath := "." + strings.Join(d.Path, ".")
-			changePath := numbersToWildcardRegex.ReplaceAllString(joinedPath, ".*")
-
-			if changePath == rule.Path {
-				if rule.Reducers == nil {
-					continue
-				}
-
-				for i := range *rule.Reducers {
-					(*rule.Reducers)[i].To = d.To
-					(*rule.Reducers)[i].From = d.From
-				}
-
-				filteredRules = append(filteredRules, rule)
-			}
-		}
-	}
-
-	return filteredRules
-}
-
-func (b *BaseExtractor) UnsupportedReducerRulesByDiffs(rules []Rule, ds diff.Changelog) []Rule {
-	filteredRules := make([]Rule, 0)
-
-	for _, rule := range b.ReducerRulesByDiffs(rules, ds) {
-		if rule.Unsupported == nil {
-			continue
-		}
-
-		if len(*rule.Unsupported) == 0 {
-			continue
-		}
-
-		filteredRules = append(filteredRules, rule)
-	}
-
-	return filteredRules
-}
-
-func (b *BaseExtractor) UnsafeReducerRulesByDiffs(rules []Rule, ds diff.Changelog) []Rule {
-	filteredRules := make([]Rule, 0)
-
-	for _, rule := range b.ReducerRulesByDiffs(rules, ds) {
-		if rule.Safe != nil && len(*rule.Safe) > 0 {
-			if b.areReducersSafe(rule.Reducers, rule.Safe, ds) {
-				continue
-			}
-		}
-
-		filteredRules = append(filteredRules, rule)
-	}
-
-	return filteredRules
-}
-
-func (b *BaseExtractor) areReducersSafe(reducers *[]Reducer, safe *[]Safe, ds diff.Changelog) bool {
-	if safe == nil {
-		return false
-	}
-
-	for _, r := range *reducers {
-		if !b.isReducerSafe(r, *safe, ds) {
-			return false
-		}
-	}
-
-	return true
-}
-
-func (b *BaseExtractor) isReducerSafe(reducer Reducer, safe []Safe, ds diff.Changelog) bool {
-	for _, s := range safe {
-		// Check From/To conditions.
-		fromToMatch := (s.From == nil || reducer.From == *s.From) && (s.To == nil || reducer.To == *s.To)
-
-		// Check FromNodes conditions using the dedicated function.
-		fromNodesMatch := b.areNodeConditionsMet(s.FromNodes, ds)
-
-		// If either From/To conditions or FromNodes conditions match, the rule is safe.
-		if (s.FromNodes == nil && fromToMatch) ||
-			(s.From == nil && s.To == nil && fromNodesMatch) ||
-			(fromToMatch && fromNodesMatch) {
-			return true
-		}
-	}
-
-	return false
-}
-
-func (*BaseExtractor) ExtractImmutablesFromRules(rls []Rule) []string {
-	immutables := make([]string, 0)
-
-	for _, rule := range rls {
-		if rule.Immutable {
-			immutables = append(immutables, rule.Path)
-		}
-	}
-
-	return immutables
-}
-
-func (*BaseExtractor) ExtractReducerRules(rls []Rule) []Rule {
-	reducers := make([]Rule, 0)
-
-	for _, rule := range rls {
-		if rule.Reducers != nil {
-			reducers = append(reducers, rule)
-		}
-	}
-
-	return reducers
 }

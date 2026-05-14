@@ -91,17 +91,6 @@ func NewTemplateModel(
 	}, nil
 }
 
-func (tm *Model) isExcluded(source string) bool {
-	for _, exc := range tm.Config.Templates.Excludes {
-		regex := regexp.MustCompile(exc)
-		if regex.MatchString(source) {
-			return true
-		}
-	}
-
-	return false
-}
-
 func (tm *Model) Generate() error {
 	if tm.StopIfTargetNotEmpty {
 		err := iox.CheckDirIsEmpty(tm.TargetPath)
@@ -136,6 +125,17 @@ func (tm *Model) Generate() error {
 	}
 
 	return nil
+}
+
+func (tm *Model) isExcluded(source string) bool {
+	for _, exc := range tm.Config.Templates.Excludes {
+		regex := regexp.MustCompile(exc)
+		if regex.MatchString(source) {
+			return true
+		}
+	}
+
+	return false
 }
 
 func (tm *Model) applyTemplates(

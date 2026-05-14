@@ -16,6 +16,13 @@ import (
 	iox "github.com/sighupio/furyctl/internal/x/io"
 )
 
+type Kapp struct {
+	arch    string
+	checker *checker
+	os      string
+	version string
+}
+
 func NewKapp(runner *kapp.Runner, version string) *Kapp {
 	return &Kapp{
 		arch:    runtime.GOARCH,
@@ -32,13 +39,6 @@ func NewKapp(runner *kapp.Runner, version string) *Kapp {
 			},
 		},
 	}
-}
-
-type Kapp struct {
-	arch    string
-	checker *checker
-	os      string
-	version string
 }
 
 func (*Kapp) SupportsDownload() bool {

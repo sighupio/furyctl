@@ -14,6 +14,13 @@ import (
 	"github.com/sighupio/furyctl/internal/tool/terraform"
 )
 
+type OpenTofu struct {
+	arch    string
+	checker *checker
+	os      string
+	version string
+}
+
 func NewOpenTofu(runner *terraform.Runner, version string) *OpenTofu {
 	return &OpenTofu{
 		arch:    runtime.GOARCH,
@@ -30,13 +37,6 @@ func NewOpenTofu(runner *terraform.Runner, version string) *OpenTofu {
 			},
 		},
 	}
-}
-
-type OpenTofu struct {
-	arch    string
-	checker *checker
-	os      string
-	version string
 }
 
 func (*OpenTofu) SupportsDownload() bool {

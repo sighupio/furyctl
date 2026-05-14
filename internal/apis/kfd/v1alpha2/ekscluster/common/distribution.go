@@ -96,82 +96,6 @@ func (d *Distribution) PreparePreTerraform() (
 	return furyctlMerger, preTfMerger, &tfCfg, nil
 }
 
-func (d *Distribution) injectDataPreTf(fMerger *merge.Merger) (*merge.Merger, error) {
-	vpcID, err := d.extractVpcIDFromPrevPhases(fMerger)
-	if err != nil {
-		return nil, err
-	}
-
-	if vpcID == "" {
-		return fMerger, nil
-	}
-
-	injectData := InjectType{
-		Data: private.SpecDistribution{
-			Modules: private.SpecDistributionModules{
-				Ingress: private.SpecDistributionModulesIngress{
-					Dns: &private.SpecDistributionModulesIngressDNS{
-						Private: &private.SpecDistributionModulesIngressDNSPrivate{
-							VpcId: vpcID,
-						},
-					},
-				},
-			},
-		},
-	}
-
-	injectDataModel := merge.NewDefaultModelFromStruct(injectData, ".data", true)
-
-	merger := merge.NewMerger(
-		*fMerger.GetBase(),
-		injectDataModel,
-	)
-
-	_, err = merger.Merge()
-	if err != nil {
-		return nil, fmt.Errorf("error merging furyctl config: %w", err)
-	}
-
-	return merger, nil
-}
-
-func (d *Distribution) extractVpcIDFromPrevPhases(fMerger *merge.Merger) (string, error) {
-	vpcID := ""
-
-	if infraOutJSON, err := os.ReadFile(path.Join(d.InfrastructureTerraformOutputsPath, "output.json")); err == nil {
-		var infraOut terraform.OutputJSON
-
-		if err := json.Unmarshal(infraOutJSON, &infraOut); err == nil {
-			if infraOut["vpc_id"] == nil {
-				return vpcID, ErrVpcIDNotFound
-			}
-
-			vpcIDOut, ok := infraOut["vpc_id"].Value.(string)
-			if !ok {
-				return vpcID, ErrCastingVpcIDToStr
-			}
-
-			vpcID = vpcIDOut
-		}
-	} else {
-		fModel := merge.NewDefaultModel((*fMerger.GetBase()).Content(), ".spec.kubernetes")
-
-		kubeFromFuryctlConf, err := fModel.Get()
-		if err != nil {
-			return vpcID, fmt.Errorf("error getting kubernetes from furyctl config: %w", err)
-		}
-
-		vpcFromFuryctlConf, ok := kubeFromFuryctlConf["vpcId"].(string)
-		if !ok && !d.DryRun {
-			return vpcID, ErrCastingVpcIDToStr
-		}
-
-		vpcID = vpcFromFuryctlConf
-	}
-
-	return vpcID, nil
-}
-
 func (d *Distribution) PreparePostTerraform(
 	furyctlMerger *merge.Merger,
 	preTfMerger *merge.Merger,
@@ -289,6 +213,82 @@ func (d *Distribution) InjectDataPostTf(fMerger *merge.Merger) (*merge.Merger, e
 	}
 
 	return merger, nil
+}
+
+func (d *Distribution) injectDataPreTf(fMerger *merge.Merger) (*merge.Merger, error) {
+	vpcID, err := d.extractVpcIDFromPrevPhases(fMerger)
+	if err != nil {
+		return nil, err
+	}
+
+	if vpcID == "" {
+		return fMerger, nil
+	}
+
+	injectData := InjectType{
+		Data: private.SpecDistribution{
+			Modules: private.SpecDistributionModules{
+				Ingress: private.SpecDistributionModulesIngress{
+					Dns: &private.SpecDistributionModulesIngressDNS{
+						Private: &private.SpecDistributionModulesIngressDNSPrivate{
+							VpcId: vpcID,
+						},
+					},
+				},
+			},
+		},
+	}
+
+	injectDataModel := merge.NewDefaultModelFromStruct(injectData, ".data", true)
+
+	merger := merge.NewMerger(
+		*fMerger.GetBase(),
+		injectDataModel,
+	)
+
+	_, err = merger.Merge()
+	if err != nil {
+		return nil, fmt.Errorf("error merging furyctl config: %w", err)
+	}
+
+	return merger, nil
+}
+
+func (d *Distribution) extractVpcIDFromPrevPhases(fMerger *merge.Merger) (string, error) {
+	vpcID := ""
+
+	if infraOutJSON, err := os.ReadFile(path.Join(d.InfrastructureTerraformOutputsPath, "output.json")); err == nil {
+		var infraOut terraform.OutputJSON
+
+		if err := json.Unmarshal(infraOutJSON, &infraOut); err == nil {
+			if infraOut["vpc_id"] == nil {
+				return vpcID, ErrVpcIDNotFound
+			}
+
+			vpcIDOut, ok := infraOut["vpc_id"].Value.(string)
+			if !ok {
+				return vpcID, ErrCastingVpcIDToStr
+			}
+
+			vpcID = vpcIDOut
+		}
+	} else {
+		fModel := merge.NewDefaultModel((*fMerger.GetBase()).Content(), ".spec.kubernetes")
+
+		kubeFromFuryctlConf, err := fModel.Get()
+		if err != nil {
+			return vpcID, fmt.Errorf("error getting kubernetes from furyctl config: %w", err)
+		}
+
+		vpcFromFuryctlConf, ok := kubeFromFuryctlConf["vpcId"].(string)
+		if !ok && !d.DryRun {
+			return vpcID, ErrCastingVpcIDToStr
+		}
+
+		vpcID = vpcFromFuryctlConf
+	}
+
+	return vpcID, nil
 }
 
 func (d *Distribution) extractTfOutputs() (map[string]string, error) {
