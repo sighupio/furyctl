@@ -7,9 +7,10 @@
 package santhosh_test
 
 import (
-	"errors"
-	"strings"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/sighupio/furyctl/internal/schema/santhosh"
 )
@@ -52,24 +53,13 @@ func TestLoadSchema(t *testing.T) {
 
 			s, err := santhosh.LoadSchema(tC.schemaPath)
 
-			if !tC.wantErr && err != nil {
-				t.Errorf("want no error, got %v", err)
-			}
-
-			if tC.wantErr && err == nil {
-				t.Errorf("want error, got none")
-			}
-
-			if tC.wantErr && err != nil && !errors.Is(err, santhosh.ErrCannotLoadSchema) {
-				t.Errorf("want error %v, got %v", santhosh.ErrCannotLoadSchema, err)
-			}
-
-			if tC.wantErr && err != nil && !strings.Contains(err.Error(), tC.wantErrMsg) {
-				t.Errorf("want error message '%s' to contain '%s'", err.Error(), tC.wantErrMsg)
-			}
-
-			if !tC.wantErr && s == nil {
-				t.Errorf("want schema, got nil")
+			if tC.wantErr {
+				require.Error(t, err)
+				assert.ErrorIs(t, err, santhosh.ErrCannotLoadSchema)
+				assert.Contains(t, err.Error(), tC.wantErrMsg)
+			} else {
+				require.NoError(t, err)
+				require.NotNil(t, s)
 			}
 		})
 	}

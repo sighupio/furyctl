@@ -11,6 +11,8 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+
 	"github.com/sighupio/fury-distribution/pkg/apis/config"
 	"github.com/sighupio/furyctl/internal/distribution"
 )
@@ -76,16 +78,12 @@ func TestGetTemplatePath(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			got, err := distribution.GetConfigTemplatePath(tt.basePath, tt.conf)
 			if err != nil {
-				if err.Error() != tt.wantErr.Error() {
-					t.Errorf("distribution.GetTemplatePath() error = %v, wantErr %v", err, tt.wantErr)
-				}
+				assert.Equal(t, tt.wantErr.Error(), err.Error())
 
 				return
 			}
 
-			if got != tt.want {
-				t.Errorf("distribution.GetTemplatePath() = %v, want %v", got, tt.want)
-			}
+			assert.Equal(t, tt.want, got)
 		})
 	}
 }
@@ -93,16 +91,12 @@ func TestGetTemplatePath(t *testing.T) {
 func TestGetSchemaPaths(t *testing.T) {
 	verifyPaths := func(t *testing.T, fname, got, want string, err, wantErr error) {
 		if err != nil {
-			if err.Error() != wantErr.Error() {
-				t.Errorf("distribution.%s() error = %v, wantErr %v", fname, err, wantErr)
-			}
+			assert.Equal(t, wantErr.Error(), err.Error())
 
 			return
 		}
 
-		if got != want {
-			t.Errorf("distribution.%s() = %v, want %v", fname, got, want)
-		}
+		assert.Equal(t, want, got)
 	}
 
 	tests := []struct {

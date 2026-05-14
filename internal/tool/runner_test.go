@@ -11,6 +11,9 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
 	"github.com/sighupio/furyctl/internal/tool"
 	itool "github.com/sighupio/furyctl/internal/tool"
 	execx "github.com/sighupio/furyctl/internal/x/exec"
@@ -77,16 +80,11 @@ func Test_RunnerFactory_Create(t *testing.T) {
 
 			runner := rf.Create(itool.Name(tC.tool), "", os.TempDir())
 
-			if tC.wantRunner && runner == nil {
-				t.Errorf("expected a runner, got nil")
-			}
-
-			if !tC.wantRunner && runner != nil {
-				t.Errorf("expected no runner, got %v", runner)
-			}
-
-			if tC.wantRunner && reflect.TypeOf(runner).String() != tC.wantRunnerType {
-				t.Errorf("expected runner type '%s', got '%s'", tC.wantRunnerType, reflect.TypeOf(runner).String())
+			if tC.wantRunner {
+				require.NotNil(t, runner)
+				assert.Equal(t, tC.wantRunnerType, reflect.TypeOf(runner).String())
+			} else {
+				require.Nil(t, runner)
 			}
 		})
 	}

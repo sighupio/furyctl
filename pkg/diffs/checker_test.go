@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	diffx "github.com/r3labs/diff/v3"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/sighupio/furyctl/pkg/diffs"
@@ -102,16 +103,11 @@ func TestBaseChecker_GenerateDiff(t *testing.T) {
 			checker := diffs.NewBaseChecker(tC.currentCfg, tC.newCfg)
 
 			diffs, err := checker.GenerateDiff()
-			if tC.wantErr && err == nil {
-				t.Errorf("expected error, got nil")
-			}
-
-			if !tC.wantErr && err != nil {
-				t.Errorf("expected nil, got error: %v", err)
-			}
-
-			if tC.wantErr && err != nil && err.Error() != tC.wantErrMsg {
-				t.Errorf("expected error message '%s', got '%s'", tC.wantErrMsg, err.Error())
+			if tC.wantErr {
+				require.Error(t, err)
+				assert.Equal(t, tC.wantErrMsg, err.Error())
+			} else {
+				require.NoError(t, err)
 			}
 
 			require.Equal(t, tC.expectedDiffs, diffs)
@@ -178,14 +174,10 @@ func TestBaseChecker_AssertImmutableViolations(t *testing.T) {
 
 			errs := checker.AssertImmutableViolations(tC.diffs, tC.immutablePaths)
 
-			if len(errs) != len(tC.expectedErrs) {
-				t.Fatalf("expected %d errors, got %d", len(tC.expectedErrs), len(errs))
-			}
+			assert.Len(t, errs, len(tC.expectedErrs))
 
 			for i, err := range errs {
-				if err.Error() != tC.expectedErrs[i].Error() {
-					t.Fatalf("expected error %s, got %s", tC.expectedErrs[i].Error(), err.Error())
-				}
+				assert.Equal(t, tC.expectedErrs[i].Error(), err.Error())
 			}
 		})
 	}

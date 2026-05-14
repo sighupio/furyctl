@@ -9,6 +9,8 @@ package flags_test
 import (
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+
 	"github.com/sighupio/furyctl/internal/flags"
 )
 
@@ -258,9 +260,7 @@ func TestValidationError_Error(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if tt.err.Error() != tt.expected {
-				t.Errorf("Expected error message %q, got %q", tt.expected, tt.err.Error())
-			}
+			assert.Equal(t, tt.expected, tt.err.Error())
 		})
 	}
 }
