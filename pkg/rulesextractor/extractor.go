@@ -15,6 +15,37 @@ import (
 
 var numbersToWildcardRegex = regexp.MustCompile(`\.\d+\b`)
 
+// pathToRegex converts a path pattern with wildcard (**) into a regex pattern.
+// ** matches zero or more path segments (recursive).
+func pathToRegex(path string) string {
+	// Escape special regex characters except for ** which we'll handle.
+	escaped := regexp.QuoteMeta(path)
+
+	// Replace escaped \*\* with a placeholder.
+	escaped = strings.ReplaceAll(escaped, "\\*\\*", "__DOUBLE_STAR__")
+
+	// Handle ** with dots: replace escaped pattern with regex that allows zero or more segments.
+	escaped = strings.ReplaceAll(escaped, "\\.__DOUBLE_STAR__\\.", "(?:\\..*)?\\.")
+
+	// Replace standalone __DOUBLE_STAR__ with .* to match zero or more characters (including dots).
+	escaped = strings.ReplaceAll(escaped, "__DOUBLE_STAR__", ".*")
+
+	// Anchor the pattern to match the entire string.
+	return "^" + escaped + "$"
+}
+
+// MatchesPattern checks if a given path matches a pattern that may contain wildcards.
+func MatchesPattern(path, pattern string) bool {
+	regexPattern := pathToRegex(pattern)
+
+	regex, err := regexp.Compile(regexPattern)
+	if err != nil {
+		return false
+	}
+
+	return regex.MatchString(path)
+}
+
 type Spec struct {
 	Infrastructure *[]Rule `yaml:"infrastructure,omitempty"`
 	Kubernetes     *[]Rule `yaml:"kubernetes,omitempty"`
@@ -182,7 +213,7 @@ func (b *BaseExtractor) isImmutableRuleSafe(rule Rule, ds diff.Changelog) bool {
 		joinedPath := "." + strings.Join(d.Path, ".")
 		changePath := numbersToWildcardRegex.ReplaceAllString(joinedPath, ".*")
 
-		if changePath == rule.Path {
+		if MatchesPattern(changePath, rule.Path) {
 			matchingDiffFrom = d.From
 			matchingDiffTo = d.To
 
@@ -350,7 +381,7 @@ func (*BaseExtractor) ReducerRulesByDiffs(rules []Rule, ds diff.Changelog) []Rul
 			joinedPath := "." + strings.Join(d.Path, ".")
 			changePath := numbersToWildcardRegex.ReplaceAllString(joinedPath, ".*")
 
-			if changePath == rule.Path {
+			if MatchesPattern(changePath, rule.Path) {
 				if rule.Reducers == nil {
 					continue
 				}

@@ -1495,3 +1495,290 @@ func TestBaseExtractor_FilterSafeImmutableRules(t *testing.T) {
 		})
 	}
 }
+
+func TestPathToRegex(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		name   string
+		path   string
+		input  string
+		wantOK bool
+	}{
+		{
+			name:   "exact match",
+			path:   ".config.replicas",
+			input:  ".config.replicas",
+			wantOK: true,
+		},
+		{
+			name:   "exact match does not match other paths",
+			path:   ".config.replicas",
+			input:  ".config.replicas.extra",
+			wantOK: false,
+		},
+		{
+			name:   "double wildcard matches zero segments",
+			path:   ".config.**.env",
+			input:  ".config.env",
+			wantOK: true,
+		},
+		{
+			name:   "double wildcard matches one segment",
+			path:   ".config.**.env",
+			input:  ".config.spec.env",
+			wantOK: true,
+		},
+		{
+			name:   "double wildcard matches multiple segments",
+			path:   ".config.**.env",
+			input:  ".config.spec.containers.0.env",
+			wantOK: true,
+		},
+		{
+			name:   "double wildcard at end matches any depth",
+			path:   ".config.**",
+			input:  ".config.spec.containers.0.image",
+			wantOK: true,
+		},
+		{
+			name:   "double wildcard at start",
+			path:   "**.env.name",
+			input:  ".config.spec.env.name",
+			wantOK: true,
+		},
+		{
+			name:   "multiple double wildcards",
+			path:   ".**.env.**.name",
+			input:  ".config.spec.containers.env.variable.name",
+			wantOK: true,
+		},
+		{
+			name:   "double wildcard matches zero segments in middle",
+			path:   ".config.**.env.**.name",
+			input:  ".config.env.name",
+			wantOK: true,
+		},
+		{
+			name:   "does not match if it ends with different segment",
+			path:   ".config.**.env",
+			input:  ".config.spec.containers.image",
+			wantOK: false,
+		},
+	}
+
+	for _, tc := range testCases {
+		tt := t
+		tt.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			ok := rules.MatchesPattern(tc.input, tc.path)
+			if ok != tc.wantOK {
+				t.Errorf("MatchesPattern(%q, %q) = %v, want %v", tc.input, tc.path, ok, tc.wantOK)
+			}
+		})
+	}
+}
+
+func TestReducerRulesByDiffsWithWildcards(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		name  string
+		rules []rules.Rule
+		diffs diff.Changelog
+		want  []rules.Rule
+	}{
+		{
+			name: "should match paths with double wildcard (recursive)",
+			rules: []rules.Rule{
+				{
+					Path: ".config.**.image",
+					Reducers: &[]rules.Reducer{
+						{
+							Key: "containerImage",
+						},
+					},
+				},
+			},
+			diffs: diff.Changelog{
+				{
+					Path: []string{"config", "spec", "containers", "0", "image"},
+					From: "v1.0.0",
+					To:   "v1.1.0",
+					Type: diff.UPDATE,
+				},
+			},
+			want: []rules.Rule{
+				{
+					Path: ".config.**.image",
+					Reducers: &[]rules.Reducer{
+						{
+							Key:  "containerImage",
+							From: "v1.0.0",
+							To:   "v1.1.0",
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "should match paths with double wildcard at end",
+			rules: []rules.Rule{
+				{
+					Path: ".spec.**",
+					Reducers: &[]rules.Reducer{
+						{
+							Key: "specChange",
+						},
+					},
+				},
+			},
+			diffs: diff.Changelog{
+				{
+					Path: []string{"spec", "replicas"},
+					From: 1,
+					To:   5,
+					Type: diff.UPDATE,
+				},
+			},
+			want: []rules.Rule{
+				{
+					Path: ".spec.**",
+					Reducers: &[]rules.Reducer{
+						{
+							Key:  "specChange",
+							From: 1,
+							To:   5,
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "should not match if wildcard pattern does not apply",
+			rules: []rules.Rule{
+				{
+					Path: ".config.**.name",
+					Reducers: &[]rules.Reducer{
+						{
+							Key: "test",
+						},
+					},
+				},
+			},
+			diffs: diff.Changelog{
+				{
+					Path: []string{"config", "spec", "containers", "image"},
+					From: "v1",
+					To:   "v2",
+					Type: diff.UPDATE,
+				},
+			},
+			want: []rules.Rule{},
+		},
+	}
+
+	for _, tc := range testCases {
+		tt := t
+		tt.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			x := rules.NewBaseExtractor(rules.Spec{})
+			got := x.ReducerRulesByDiffs(tc.rules, tc.diffs)
+
+			if !reflect.DeepEqual(got, tc.want) {
+				t.Errorf("expected %v, got %v", tc.want, got)
+			}
+		})
+	}
+}
+
+func TestFilterSafeImmutableRulesWithWildcards(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		name  string
+		rules []rules.Rule
+		diffs diff.Changelog
+		want  []rules.Rule
+	}{
+		{
+			name: "should filter rules matching double wildcard pattern",
+			rules: []rules.Rule{
+				{
+					Path:      ".config.**.replicas",
+					Immutable: true,
+					Safe: &[]rules.Safe{
+						{
+							From: ptrAny(2),
+							To:   ptrAny(3),
+						},
+					},
+				},
+			},
+			diffs: diff.Changelog{
+				{
+					Path: []string{"config", "spec", "containers", "0", "replicas"},
+					From: 2,
+					To:   3,
+					Type: diff.UPDATE,
+				},
+			},
+			want: []rules.Rule{}, // Should be filtered out because it's safe
+		},
+		{
+			name: "should keep rules with non-matching double wildcard pattern",
+			rules: []rules.Rule{
+				{
+					Path:      ".config.**.image",
+					Immutable: true,
+					Safe: &[]rules.Safe{
+						{
+							From: ptrAny("v1"),
+							To:   ptrAny("v2"),
+						},
+					},
+				},
+			},
+			diffs: diff.Changelog{
+				{
+					Path: []string{"config", "spec", "containers", "replicas"},
+					From: 1,
+					To:   5,
+					Type: diff.UPDATE,
+				},
+			},
+			want: []rules.Rule{
+				{
+					Path:      ".config.**.image",
+					Immutable: true,
+					Safe: &[]rules.Safe{
+						{
+							From: ptrAny("v1"),
+							To:   ptrAny("v2"),
+						},
+					},
+				},
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		tt := t
+		tt.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			x := rules.NewBaseExtractor(rules.Spec{})
+			got := x.FilterSafeImmutableRules(tc.rules, tc.diffs)
+
+			if !reflect.DeepEqual(got, tc.want) {
+				t.Errorf("expected %v, got %v", tc.want, got)
+			}
+		})
+	}
+}
+
+func ptrAny(v any) *any {
+	return &v
+}
