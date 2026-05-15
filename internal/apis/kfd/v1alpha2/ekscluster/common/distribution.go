@@ -142,34 +142,30 @@ func (d *Distribution) extractVpcIDFromPrevPhases(fMerger *merge.Merger) (string
 		var infraOut terraform.OutputJSON
 
 		if err := json.Unmarshal(infraOutJSON, &infraOut); err == nil {
-			if infraOut["vpc_id"] == nil {
-				return vpcID, ErrVpcIDNotFound
+			if infraOut["vpc_id"] != nil {
+				vpcIDOut, ok := infraOut["vpc_id"].Value.(string)
+				if !ok {
+					return vpcID, ErrCastingVpcIDToStr
+				}
+
+				return vpcIDOut, nil
 			}
-
-			vpcIDOut, ok := infraOut["vpc_id"].Value.(string)
-			if !ok {
-				return vpcID, ErrCastingVpcIDToStr
-			}
-
-			vpcID = vpcIDOut
 		}
-	} else {
-		fModel := merge.NewDefaultModel((*fMerger.GetBase()).Content(), ".spec.kubernetes")
-
-		kubeFromFuryctlConf, err := fModel.Get()
-		if err != nil {
-			return vpcID, fmt.Errorf("error getting kubernetes from furyctl config: %w", err)
-		}
-
-		vpcFromFuryctlConf, ok := kubeFromFuryctlConf["vpcId"].(string)
-		if !ok && !d.DryRun {
-			return vpcID, ErrCastingVpcIDToStr
-		}
-
-		vpcID = vpcFromFuryctlConf
 	}
 
-	return vpcID, nil
+	fModel := merge.NewDefaultModel((*fMerger.GetBase()).Content(), ".spec.kubernetes")
+
+	kubeFromFuryctlConf, err := fModel.Get()
+	if err != nil {
+		return vpcID, fmt.Errorf("error getting kubernetes from furyctl config: %w", err)
+	}
+
+	vpcFromFuryctlConf, ok := kubeFromFuryctlConf["vpcId"].(string)
+	if !ok && !d.DryRun {
+		return vpcID, ErrCastingVpcIDToStr
+	}
+
+	return vpcFromFuryctlConf, nil
 }
 
 func (d *Distribution) PreparePostTerraform(
