@@ -17,7 +17,7 @@ import (
 
 	"github.com/sighupio/fury-distribution/pkg/apis/config"
 	"github.com/sighupio/fury-distribution/pkg/apis/ekscluster/v1alpha2/private"
-	"github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/ekscluster/common"
+	"github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/ekscluster/phases"
 	"github.com/sighupio/furyctl/internal/cluster"
 	"github.com/sighupio/furyctl/internal/state"
 	"github.com/sighupio/furyctl/internal/tool/kubectl"
@@ -41,7 +41,7 @@ const (
 var errClusterConnect = errors.New("error connecting to cluster")
 
 type Distribution struct {
-	*common.Distribution
+	*phases.Distribution
 
 	kfdManifest config.KFD
 
@@ -68,7 +68,7 @@ func NewDistribution(
 	)
 
 	return &Distribution{
-		Distribution: &common.Distribution{
+		Distribution: &phases.Distribution{
 			OperationPhase:                     phaseOp,
 			DryRun:                             dryRun,
 			DistroPath:                         paths.DistroPath,

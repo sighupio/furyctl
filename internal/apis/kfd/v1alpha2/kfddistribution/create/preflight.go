@@ -41,6 +41,7 @@ type Status struct {
 
 type PreFlight struct {
 	*cluster.OperationPhase
+
 	furyctlConf     public.KfddistributionKfdV1Alpha2
 	stateStore      state.Storer
 	distroPath      string

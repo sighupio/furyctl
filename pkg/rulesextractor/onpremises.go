@@ -16,6 +16,7 @@ import (
 
 type OnPremExtractor struct {
 	*BaseExtractor
+
 	Spec Spec
 }
 

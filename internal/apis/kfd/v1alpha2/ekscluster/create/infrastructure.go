@@ -17,7 +17,7 @@ import (
 
 	"github.com/sighupio/fury-distribution/pkg/apis/config"
 	"github.com/sighupio/fury-distribution/pkg/apis/ekscluster/v1alpha2/private"
-	"github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/ekscluster/common"
+	"github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/ekscluster/phases"
 	"github.com/sighupio/furyctl/internal/cluster"
 	"github.com/sighupio/furyctl/internal/parser"
 	"github.com/sighupio/furyctl/internal/tool/terraform"
@@ -30,7 +30,7 @@ import (
 var ErrAbortedByUser = errors.New("aborted by user")
 
 type Infrastructure struct {
-	*common.Infrastructure
+	*phases.Infrastructure
 
 	kfdManifest config.KFD
 	tfRunner    *terraform.Runner
@@ -55,7 +55,7 @@ func NewInfrastructure(
 	executor := execx.NewStdExecutor()
 
 	return &Infrastructure{
-		Infrastructure: &common.Infrastructure{
+		Infrastructure: &phases.Infrastructure{
 			OperationPhase: phase,
 			FuryctlConf:    furyctlConf,
 			ConfigPath:     paths.ConfigPath,

@@ -22,6 +22,7 @@ import (
 
 type CertificatesRenewer struct {
 	*cluster.OperationPhase
+
 	furyctlConf public.OnpremisesKfdV1Alpha2
 	kfdManifest config.KFD
 	distroPath  string

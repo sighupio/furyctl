@@ -19,6 +19,7 @@ var ErrReadingRulesFile = errors.New("error while reading rules file")
 
 type DistroExtractor struct {
 	*BaseExtractor
+
 	Spec Spec
 }
 

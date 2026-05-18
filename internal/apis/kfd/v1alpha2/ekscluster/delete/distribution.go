@@ -14,7 +14,7 @@ import (
 
 	"github.com/sighupio/fury-distribution/pkg/apis/config"
 	"github.com/sighupio/fury-distribution/pkg/apis/ekscluster/v1alpha2/private"
-	"github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/ekscluster/common"
+	"github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/ekscluster/phases"
 	"github.com/sighupio/furyctl/internal/cluster"
 	"github.com/sighupio/furyctl/internal/kubernetes"
 	"github.com/sighupio/furyctl/internal/state"
@@ -32,7 +32,7 @@ type Ingress struct {
 }
 
 type Distribution struct {
-	*common.Distribution
+	*phases.Distribution
 
 	awsRunner   *awscli.Runner
 	shellRunner *shell.Runner
@@ -55,7 +55,7 @@ func NewDistribution(
 	)
 
 	return &Distribution{
-		Distribution: &common.Distribution{
+		Distribution: &phases.Distribution{
 			OperationPhase:                     phase,
 			DryRun:                             dryRun,
 			DistroPath:                         paths.DistroPath,

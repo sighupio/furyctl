@@ -85,8 +85,9 @@ type StopEvent struct {
 }
 
 type CommandEvent struct {
-	name string
 	properties
+
+	name string
 }
 
 type properties map[string]any

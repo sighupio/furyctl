@@ -34,6 +34,7 @@ func NewErrCmdFailed(name string, args []string, err error, res *CmdLog) error {
 
 type Cmd struct {
 	*exec.Cmd
+
 	Log       *CmdLog
 	Sensitive bool
 }

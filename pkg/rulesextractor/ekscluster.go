@@ -16,6 +16,7 @@ import (
 
 type EKSExtractor struct {
 	*BaseExtractor
+
 	Spec Spec
 }
 

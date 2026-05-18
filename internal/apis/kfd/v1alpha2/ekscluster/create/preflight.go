@@ -14,7 +14,7 @@ import (
 
 	"github.com/sighupio/fury-distribution/pkg/apis/config"
 	"github.com/sighupio/fury-distribution/pkg/apis/ekscluster/v1alpha2/private"
-	"github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/ekscluster/common"
+	"github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/ekscluster/phases"
 	"github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/ekscluster/supported"
 	"github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/ekscluster/vpn"
 	"github.com/sighupio/furyctl/internal/cluster"
@@ -42,7 +42,7 @@ type Status struct {
 // Preflight is a phase tasked with ensuring cluster connectivity
 // and checking for violations in the updates made on the furyctl.yaml file.
 type PreFlight struct {
-	*common.PreFlight
+	*phases.PreFlight
 
 	stateStore   state.Storer
 	tfRunnerKube *terraform.Runner
@@ -92,7 +92,7 @@ func NewPreFlight(
 	}
 
 	return &PreFlight{
-		PreFlight: &common.PreFlight{
+		PreFlight: &phases.PreFlight{
 			OperationPhase: p,
 			FuryctlConf:    furyctlConf,
 			ConfigPath:     paths.ConfigPath,

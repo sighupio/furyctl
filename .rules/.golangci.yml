@@ -25,6 +25,10 @@ linters:
     - forbidigo
     - depguard
     - maintidx
+    # deprecated, replaced by wsl_v5 since golangci-lint v2.2.0
+    - wsl
+    - noinlineerr # more than 500 occurrences in the codebase: refactoring would be massive.
+    - wsl_v5 # [too strict and mostly code is not more readable] add or remove empty lines
 
   settings:
     decorder:
@@ -462,12 +466,6 @@ linters:
         - const C
         - T any
         - m map[string]int
-    wsl:
-      allow-cuddle-declarations: false
-      allow-multiline-assign: true
-      allow-separated-leading-comment: false
-      force-case-trailing-whitespace: 1
-      force-err-cuddling: true
   exclusions:
     # Default: strict.
     # Set to "disable" to preserve v1 behavior of `exhaustive.check-generated: true`,

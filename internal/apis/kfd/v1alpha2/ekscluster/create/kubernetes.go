@@ -19,7 +19,7 @@ import (
 
 	"github.com/sighupio/fury-distribution/pkg/apis/config"
 	"github.com/sighupio/fury-distribution/pkg/apis/ekscluster/v1alpha2/private"
-	"github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/ekscluster/common"
+	"github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/ekscluster/phases"
 	"github.com/sighupio/furyctl/internal/cluster"
 	"github.com/sighupio/furyctl/internal/parser"
 	"github.com/sighupio/furyctl/internal/tool/awscli"
@@ -49,7 +49,7 @@ const (
 )
 
 type Kubernetes struct {
-	*common.Kubernetes
+	*phases.Kubernetes
 
 	tfRunner  *terraform.Runner
 	awsRunner *awscli.Runner
@@ -72,7 +72,7 @@ func NewKubernetes(
 	)
 
 	return &Kubernetes{
-		Kubernetes: &common.Kubernetes{
+		Kubernetes: &phases.Kubernetes{
 			OperationPhase:                     phase,
 			FuryctlConf:                        furyctlConf,
 			FuryctlConfPath:                    paths.ConfigPath,
@@ -359,7 +359,7 @@ func (k *Kubernetes) checkVPCConnection() error {
 			"text",
 		)
 		if err != nil {
-			return fmt.Errorf(common.SErrWrapWithStr, errCIDRBlockFromVpc, err)
+			return fmt.Errorf(phases.SErrWrapWithStr, errCIDRBlockFromVpc, err)
 		}
 	}
 
@@ -376,17 +376,17 @@ func (k *Kubernetes) checkVPCConnection() error {
 func (*Kubernetes) queryAWSDNSServer(cidr string) error {
 	_, ipNet, err := net.ParseCIDR(cidr)
 	if err != nil {
-		return fmt.Errorf(common.SErrWrapWithStr, errParsingCIDR, err)
+		return fmt.Errorf(phases.SErrWrapWithStr, errParsingCIDR, err)
 	}
 
 	offIPNet, err := netx.AddOffsetToIPNet(ipNet, awsDNSServerIPOffset)
 	if err != nil {
-		return fmt.Errorf(common.SErrWrapWithStr, errAddingOffsetToIPNet, err)
+		return fmt.Errorf(phases.SErrWrapWithStr, errAddingOffsetToIPNet, err)
 	}
 
 	err = netx.DNSQuery(offIPNet.IP.String(), "google.com.")
 	if err != nil {
-		return fmt.Errorf(common.SErrWrapWithStr, errResolvingDNS, err)
+		return fmt.Errorf(phases.SErrWrapWithStr, errResolvingDNS, err)
 	}
 
 	return nil

@@ -21,6 +21,7 @@ const isNext = true
 
 type Tracker struct {
 	trackingInfo
+
 	client mixpanel.Mixpanel
 	events chan Event
 	enable bool
