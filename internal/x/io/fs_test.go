@@ -13,6 +13,7 @@ import (
 	"math"
 	"os"
 	"path/filepath"
+	"syscall"
 	"testing"
 	"time"
 
@@ -20,6 +21,15 @@ import (
 
 	iox "github.com/sighupio/furyctl/internal/x/io"
 )
+
+// TestMain forces a deterministic umask for the whole package, so file-permission
+// assertions in CopyRecursive tests do not depend on the environment's default umask
+// (e.g., 022 on most CI runners vs. 002 on many container images).
+func TestMain(m *testing.M) {
+	syscall.Umask(0o022)
+
+	os.Exit(m.Run())
+}
 
 func TestCheckDirIsEmpty(t *testing.T) {
 	t.Parallel()
