@@ -109,8 +109,11 @@ linters:
         - k8s.io/sample-controller
     gosec:
       excludes:
-        - G204
-        - G101
+        - G204 # subprocess launched with variable: furyctl runs external tools (terraform, kubectl, etc.) by design.
+        - G101 # hardcoded credentials: false positives on token-shaped strings.
+        - G702 # command injection via taint: only triggers in test FakeExecutor running the test binary itself.
+        - G703 # path traversal via taint: paths come from user-provided furyctl.yaml or env (kubeconfig).
+        - G704 # SSRF via taint: URLs come from user config / curated distribution manifest; CLI tool by design.
     grouper:
       const-require-single-const: true
       const-require-grouping: false
