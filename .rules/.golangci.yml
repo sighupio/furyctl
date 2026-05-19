@@ -65,6 +65,11 @@ linters:
         - "^todo:"
       capital: true
       period: true
+    godoclint:
+      enable:
+        # Assert no unused link in godocs.
+        # https://github.com/godoc-lint/godoc-lint?tab=readme-ov-file#no-unused-link
+        - no-unused-link
     gomoddirectives:
       # we need to use replace to be able to use Internal Kubernetes libraries
       # needed for the create PKI feature.
@@ -344,6 +349,14 @@ linters:
         - name: package-comments
           severity: warning
           disabled: false
+        # https://github.com/mgechev/revive/blob/master/RULES_DESCRIPTIONS.md#package-directory-mismatch
+        # Disabled because we intentionally use mismatched names in two cases:
+        #   - `delete` directories use `package del` (delete is a Go builtin).
+        #   - `internal/x/*` and `pkg/x/*` packages use the `x` suffix convention
+        #     (e.g. `execx`, `iox`, `netx`) to avoid shadowing stdlib package names.
+        - name: package-directory-mismatch
+          severity: warning
+          disabled: true
         # https://github.com/mgechev/revive/blob/master/RULES_DESCRIPTIONS.md#range
         - name: range
           severity: warning

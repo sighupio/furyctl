@@ -113,7 +113,8 @@ func (m *Merger) MergeIntoViper(flags *FlagsConfig, command string) error {
 // ConvertValue converts a value to the expected type for the flag.
 func (*Merger) ConvertValue(value any, expectedType FlagType) (any, error) {
 	switch expectedType {
-	case FlagTypeString:
+	case FlagTypeString, FlagTypeDuration:
+		// Duration is treated as string here; viper handles the actual conversion later.
 		return fmt.Sprintf("%v", value), nil
 
 	case FlagTypeBool:
@@ -180,10 +181,6 @@ func (*Merger) ConvertValue(value any, expectedType FlagType) (any, error) {
 		default:
 			return []string{}, ErrTypeConversion
 		}
-
-	case FlagTypeDuration:
-		// For now, treat duration as string and let viper handle the conversion.
-		return fmt.Sprintf("%v", value), nil
 
 	default:
 		return nil, ErrUnsupportedFlagType

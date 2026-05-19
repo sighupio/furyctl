@@ -39,7 +39,7 @@ type Status struct {
 	Success bool
 }
 
-// Preflight is a phase tasked with ensuring cluster connectivity
+// PreFlight is a phase tasked with ensuring cluster connectivity
 // and checking for violations in the updates made on the furyctl.yaml file.
 type PreFlight struct {
 	*phases.PreFlight
