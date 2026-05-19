@@ -59,6 +59,9 @@ func (k *KubeconfigGetter) SetProperty(name string, value any) {
 		if s, ok := value.(config.KFD); ok {
 			k.kfdManifest = s
 		}
+
+	default:
+		logrus.Debugf("ignoring unknown property %q", lcName)
 	}
 }
 

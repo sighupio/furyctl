@@ -165,6 +165,9 @@ func (v *ClusterCreator) SetProperty(name string, value any) {
 		if s, ok := value.([]string); ok {
 			v.postApplyPhases = s
 		}
+
+	default:
+		logrus.Debugf("ignoring unknown property %q", lcName)
 	}
 }
 
@@ -284,6 +287,9 @@ func (v *ClusterCreator) Create(startFrom string, timeout, _ int) error {
 			}()
 
 			stopWg.Wait()
+
+		default:
+			logrus.Debugf("no phase to stop: %q", v.phase)
 		}
 
 		return ErrTimeout
@@ -756,6 +762,9 @@ func (v *ClusterCreator) extraPhases(phases *Phases, upgradeState *upgrade.State
 					return fmt.Errorf("error while executing plugins phase: %w", err)
 				}
 			}
+
+		default:
+			logrus.Debugf("ignoring unknown post-apply phase %q", phase)
 		}
 	}
 

@@ -364,8 +364,8 @@ var (
 		return nil
 	}
 
-	BeforeCreateDeleteTestFunc = func(state *onPremContextState, version string) func() {
-		return func() {
+	BeforeCreateDeleteTestFunc = func(state *onPremContextState, version string) func(SpecContext) {
+		return func(ctx SpecContext) {
 			testName := fmt.Sprintf("onpremises-v%s-create-and-delete", version)
 
 			ctxState := NewContextState(testName)
@@ -423,18 +423,18 @@ var (
 			err = ChmodSSHKey(secretsDir)
 			Expect(err).To(Not(HaveOccurred()))
 
-			openVPNSession := Must1(ConnectOpenVPN(certPath))
+			openVPNSession := Must1(ConnectOpenVPN(ctx, certPath))
 			Eventually(openVPNSession, assertTimeout, assertPollingInterval).Should(gexec.Exit(0))
 		}
 	}
 
-	AfterCreateDeleteTestFunc = func(state *onPremContextState) func() {
-		return func() {
+	AfterCreateDeleteTestFunc = func(state *onPremContextState) func(SpecContext) {
+		return func(ctx SpecContext) {
 			infraDir := path.Join(state.TestDir, "infra")
 
 			Must0(DestroyInfra(state.TerraformBinPath, infraDir))
 
-			pkillSession := Must1(KillOpenVPN())
+			pkillSession := Must1(KillOpenVPN(ctx))
 
 			Eventually(pkillSession, 5*time.Minute, 1*time.Second).Should(gexec.Exit(0))
 
@@ -446,8 +446,8 @@ var (
 		}
 	}
 
-	CreateClusterTestFunc = func(state *onPremContextState) func() {
-		return func() {
+	CreateClusterTestFunc = func(state *onPremContextState) func(SpecContext) {
+		return func(ctx SpecContext) {
 			dlRes := DownloadFuryDistribution(state.TestDir, state.FuryctlYaml)
 
 			kubectlPath := DownloadKubectl(dlRes.DistroManifest.Tools.Common.Kubectl.Version)
@@ -462,6 +462,7 @@ var (
 			)
 
 			createClusterCmd := furyctlCreator.Create(
+				ctx,
 				cluster.OperationPhaseAll,
 				"",
 			)
@@ -473,7 +474,7 @@ var (
 			Eventually(state.Kubeconfig, assertTimeout, assertPollingInterval).Should(BeAnExistingFile())
 			Eventually(session, assertTimeout, assertPollingInterval).Should(gexec.Exit(0))
 
-			kubeCmd := exec.Command(kubectlPath, "--kubeconfig", state.Kubeconfig, "get", "nodes")
+			kubeCmd := exec.CommandContext(ctx, kubectlPath, "--kubeconfig", state.Kubeconfig, "get", "nodes")
 
 			kubeSession, err := gexec.Start(kubeCmd, GinkgoWriter, GinkgoWriter)
 
@@ -482,8 +483,8 @@ var (
 		}
 	}
 
-	CreateClusterPhaseKubernetesTestFunc = func(state *onPremContextState) func() {
-		return func() {
+	CreateClusterPhaseKubernetesTestFunc = func(state *onPremContextState) func(SpecContext) {
+		return func(ctx SpecContext) {
 			GinkgoWriter.Write([]byte(fmt.Sprintf("Furyctl config path: %s", state.FuryctlYaml)))
 
 			furyctlCreator := NewFuryctlCreator(
@@ -494,6 +495,7 @@ var (
 			)
 
 			createClusterCmd := furyctlCreator.Create(
+				ctx,
 				cluster.OperationPhaseKubernetes,
 				"",
 			)
@@ -507,8 +509,8 @@ var (
 		}
 	}
 
-	CreateClusterPhaseDistributionTestFunc = func(state *onPremContextState) func() {
-		return func() {
+	CreateClusterPhaseDistributionTestFunc = func(state *onPremContextState) func(SpecContext) {
+		return func(ctx SpecContext) {
 			dlRes := DownloadFuryDistribution(state.TestDir, state.FuryctlYaml)
 
 			kubectlPath := DownloadKubectl(dlRes.DistroManifest.Tools.Common.Kubectl.Version)
@@ -523,6 +525,7 @@ var (
 			)
 
 			createClusterCmd := furyctlCreator.Create(
+				ctx,
 				cluster.OperationPhaseDistribution,
 				"",
 			)
@@ -531,7 +534,7 @@ var (
 
 			Consistently(session, 1*time.Minute).ShouldNot(gexec.Exit())
 
-			kubeCmd := exec.Command(kubectlPath, "--kubeconfig", state.Kubeconfig, "get", "nodes")
+			kubeCmd := exec.CommandContext(ctx, kubectlPath, "--kubeconfig", state.Kubeconfig, "get", "nodes")
 
 			kubeSession, err := gexec.Start(kubeCmd, GinkgoWriter, GinkgoWriter)
 
@@ -540,8 +543,8 @@ var (
 		}
 	}
 
-	DeleteClusterTestFunc = func(state *onPremContextState, phase string, ephemeral bool) func() {
-		return func() {
+	DeleteClusterTestFunc = func(state *onPremContextState, phase string, ephemeral bool) func(SpecContext) {
+		return func(ctx SpecContext) {
 			if ephemeral {
 				_ = os.RemoveAll(path.Join(state.TestDir, ".furyctl"))
 			}
@@ -554,6 +557,7 @@ var (
 			)
 
 			deleteClusterCmd := furyctlDeleter.Delete(
+				ctx,
 				phase,
 			)
 

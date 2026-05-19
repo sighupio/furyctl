@@ -25,10 +25,10 @@ linters:
     - forbidigo
     - depguard
     - maintidx
-    # deprecated, replaced by wsl_v5 since golangci-lint v2.2.0
-    - wsl
+    - wsl # deprecated, replaced by wsl_v5 since golangci-lint v2.2.0
     - noinlineerr # more than 500 occurrences in the codebase: refactoring would be massive.
     - wsl_v5 # [too strict and mostly code is not more readable] add or remove empty lines
+    - nlreturn # [too strict and mostly code is not more readable] checks for a new line before return and branch statements to increase code clarity
 
   settings:
     decorder:
@@ -48,6 +48,9 @@ linters:
       comparison: true
     exhaustive:
       default-signifies-exhaustive: true
+      check:
+        - switch
+        - map
     cyclop:
       max-complexity: 80
     funlen:

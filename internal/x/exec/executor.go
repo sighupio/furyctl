@@ -21,6 +21,7 @@ func NewStdExecutor() *StdExecutor {
 }
 
 func (*StdExecutor) Command(name string, arg ...string) *exec.Cmd {
+	//nolint:noctx // it requires a massive refactor
 	return exec.Command(name, arg...)
 }
 
@@ -42,5 +43,6 @@ func (fe *FakeExecutor) Command(name string, arg ...string) *exec.Cmd {
 	cs := []string{"-test.run=" + fe.testHelperProcessFn, "--", filepath.Base(name)}
 	cs = append(cs, arg...)
 
+	//nolint:noctx // it requires a massive refactor
 	return exec.Command(os.Args[0], cs...)
 }

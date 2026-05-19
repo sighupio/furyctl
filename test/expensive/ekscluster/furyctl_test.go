@@ -7,6 +7,7 @@
 package ekscluster_test
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"os/exec"
@@ -48,7 +49,7 @@ var (
 		CreateFuryctlYaml(state, furyctlYamlTemplate, nil)
 	}
 
-	CreateClusterTest = func(state *ContextState) {
+	CreateClusterTest = func(ctx context.Context, state *ContextState) {
 		dlRes := DownloadFuryDistribution(state.TestDir, state.FuryctlYaml)
 
 		tfPlanPath := path.Join(
@@ -69,6 +70,7 @@ var (
 		)
 
 		createClusterCmd := furyctlCreator.Create(
+			ctx,
 			cluster.OperationPhaseAll,
 			"",
 		)
@@ -82,7 +84,7 @@ var (
 		Eventually(session, assertTimeout, assertPollingInterval).Should(gexec.Exit(0))
 
 		kubectlPath := DownloadKubectl(dlRes.DistroManifest.Tools.Common.Kubectl.Version)
-		kubeCmd := exec.Command(kubectlPath, "--kubeconfig", state.Kubeconfig, "get", "nodes")
+		kubeCmd := exec.CommandContext(ctx, kubectlPath, "--kubeconfig", state.Kubeconfig, "get", "nodes")
 
 		kubeSession, err := gexec.Start(kubeCmd, GinkgoWriter, GinkgoWriter)
 
@@ -90,7 +92,7 @@ var (
 		Eventually(kubeSession, assertTimeout, assertPollingInterval).Should(gexec.Exit(0))
 	}
 
-	DeleteClusterTest = func(state *ContextState, ephemeral bool) {
+	DeleteClusterTest = func(ctx context.Context, state *ContextState, ephemeral bool) {
 		DeferCleanup(func() {
 			_ = os.RemoveAll(state.TestDir)
 		})
@@ -107,6 +109,7 @@ var (
 		)
 
 		deleteClusterCmd := furyctlDeleter.Delete(
+			ctx,
 			cluster.OperationPhaseAll,
 		)
 
@@ -129,12 +132,12 @@ var (
 			contextTitle := fmt.Sprintf("v%s create and delete a minimal public cluster", version)
 
 			Context(contextTitle, Label("slow"), func() {
-				It(fmt.Sprintf("should create and delete a minimal public %s cluster", version), func(s *ContextState) func() {
-					return func() {
+				It(fmt.Sprintf("should create and delete a minimal public %s cluster", version), func(s *ContextState) func(SpecContext) {
+					return func(ctx SpecContext) {
 						PrepareCreateDeleteClusterTest(state, version, "furyctl-public-minimal.yaml.tpl")
 
-						CreateClusterTest(s)
-						DeleteClusterTest(s, ephemeral)
+						CreateClusterTest(ctx, s)
+						DeleteClusterTest(ctx, s, ephemeral)
 					}
 				}(state))
 			})

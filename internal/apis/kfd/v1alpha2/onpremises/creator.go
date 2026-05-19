@@ -146,6 +146,9 @@ func (c *ClusterCreator) SetProperty(name string, value any) {
 		if s, ok := value.([]string); ok {
 			c.postApplyPhases = s
 		}
+
+	default:
+		logrus.Debugf("ignoring unknown property %q", name)
 	}
 }
 
@@ -516,6 +519,9 @@ func (c *ClusterCreator) extraPhases(
 					return fmt.Errorf("error while executing plugins phase: %w", err)
 				}
 			}
+
+		default:
+			logrus.Debugf("ignoring unknown post-apply phase %q", phase)
 		}
 	}
 

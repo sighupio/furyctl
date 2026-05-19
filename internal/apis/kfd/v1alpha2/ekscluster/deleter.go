@@ -86,6 +86,9 @@ func (d *ClusterDeleter) SetProperty(name string, value any) {
 		if b, ok := value.(bool); ok {
 			d.dryRun = b
 		}
+
+	default:
+		logrus.Debugf("ignoring unknown property %q", lcName)
 	}
 }
 

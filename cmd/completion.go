@@ -22,6 +22,7 @@ var (
 	ErrZshCompletion        = errors.New("error generating zsh completion")
 	ErrFishCompletion       = errors.New("error generating fish completion")
 	ErrPowershellCompletion = errors.New("error generating powershell completion")
+	ErrUnsupportedShell     = errors.New("unsupported shell")
 )
 
 func NewCompletionCmd(rootCmd *cobra.Command) *cobra.Command {
@@ -114,6 +115,9 @@ PowerShell:
 
 					return fmt.Errorf("error generating powershell completion: %w", err)
 				}
+
+			default:
+				return fmt.Errorf("%w: %s", ErrUnsupportedShell, args[0])
 			}
 
 			cmdEvent.AddSuccessMessage("completion generated for " + args[0])

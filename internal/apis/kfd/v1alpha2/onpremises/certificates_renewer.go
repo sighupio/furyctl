@@ -60,6 +60,9 @@ func (k *CertificatesRenewer) SetProperty(name string, value any) {
 		if s, ok := value.(string); ok {
 			k.distroPath = s
 		}
+
+	default:
+		logrus.Debugf("ignoring unknown property %q", lcName)
 	}
 }
 
