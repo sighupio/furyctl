@@ -25,7 +25,7 @@ func TestNewNode(t *testing.T) {
 
 func TestNode_FromNodeList(t *testing.T) {
 	node := template2.NewNode()
-	tmpl := templatex.Must(templatex.New("test").Parse("{{.field1}}"))
+	tmpl := template.Must(template.New("test").Parse("{{.field1}}"))
 	node.FromNodeList(tmpl.Root.Nodes)
 
 	assert.Equal(t, []string{".field1"}, node.Fields)

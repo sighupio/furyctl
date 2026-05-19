@@ -101,7 +101,7 @@ func TestDynamicValueExpansion_EnvVars(t *testing.T) {
 
 			parser := parserx.NewConfigParser(".")
 
-			result, err := parserx.ParseDynamicValue(tc.inputValue)
+			result, err := parser.ParseDynamicValue(tc.inputValue)
 
 			if tc.shouldError {
 				assert.Error(t, err)
@@ -188,7 +188,7 @@ func TestDynamicValueExpansion_FilePaths(t *testing.T) {
 
 			parser := parserx.NewConfigParser(".")
 
-			result, err := parserx.ParseDynamicValue(inputValue)
+			result, err := parser.ParseDynamicValue(inputValue)
 
 			if tc.shouldError {
 				assert.Error(t, err)
@@ -258,7 +258,7 @@ func TestDynamicValueExpansion_MixedPatterns(t *testing.T) {
 
 			parser := parserx.NewConfigParser(".")
 
-			result, err := parserx.ParseDynamicValue(tc.inputValue)
+			result, err := parser.ParseDynamicValue(tc.inputValue)
 
 			if tc.shouldError {
 				assert.Error(t, err)
@@ -306,7 +306,7 @@ func TestDynamicValueExpansion_ErrorHandling(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			parser := parserx.NewConfigParser(".")
 
-			result, err := parserx.ParseDynamicValue(tc.inputValue)
+			result, err := parser.ParseDynamicValue(tc.inputValue)
 
 			if tc.shouldError {
 				assert.Error(t, err)
@@ -383,7 +383,7 @@ func TestDynamicValueExpansion_FlagsSpecificScenarios(t *testing.T) {
 
 			parser := parserx.NewConfigParser(".")
 
-			result, err := parserx.ParseDynamicValue(tc.inputValue)
+			result, err := parser.ParseDynamicValue(tc.inputValue)
 
 			assert.NoError(t, err)
 			assert.Equal(t, tc.expected, result)
@@ -445,7 +445,7 @@ func TestDynamicValueExpansion_NonStringTypes(t *testing.T) {
 
 			parser := parserx.NewConfigParser(".")
 
-			result, err := parserx.ParseDynamicValue(tc.inputValue)
+			result, err := parser.ParseDynamicValue(tc.inputValue)
 
 			if tc.shouldError {
 				assert.Error(t, err)

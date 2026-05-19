@@ -59,8 +59,8 @@ func TestDisjointTransform(t *testing.T) {
 		name       string
 		a          []string
 		b          []string
-		transformA slices.TransformFunc[string]
-		transformB slices.TransformFunc[string]
+		transformA slicesx.TransformFunc[string]
+		transformB slicesx.TransformFunc[string]
 		want       bool
 	}{
 		{
