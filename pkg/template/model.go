@@ -7,6 +7,7 @@ package template
 import (
 	"errors"
 	"fmt"
+	"maps"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -229,9 +230,7 @@ func (tm *Model) applyTemplates(
 func (tm *Model) generateContext() (map[string]map[any]any, error) {
 	context := make(map[string]map[any]any)
 
-	for k, v := range tm.Config.Data {
-		context[k] = v
-	}
+	maps.Copy(context, tm.Config.Data)
 
 	for k, v := range tm.Config.Include {
 		cPath := filepath.Join(filepath.Dir(tm.ConfigPath), v)

@@ -6,6 +6,7 @@ package merge
 
 import (
 	"fmt"
+	"maps"
 )
 
 type Merger struct {
@@ -48,9 +49,7 @@ func (m *Merger) Merge() (map[any]any, error) {
 
 func deepCopy(a, b map[any]any) map[any]any {
 	out := make(map[any]any, len(a))
-	for k, v := range a {
-		out[k] = v
-	}
+	maps.Copy(out, a)
 
 	for k, v := range b {
 		if v, ok := v.(map[any]any); ok {

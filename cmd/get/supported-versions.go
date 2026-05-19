@@ -103,16 +103,19 @@ func NewSupportedVersionsCmd() *cobra.Command {
 func FormatSupportedVersions(releases []distribution.KFDRelease, kinds []string) string {
 	distribution.SetRecommendedVersions(releases)
 
-	fmtSupportedVersions := "\n"
-	fmtSupportedVersions += "-----------------------------------------------------------------------------------------\n"
-	fmtSupportedVersions += "VERSION \t\tRELEASE DATE\t\t"
+	var buf strings.Builder
+
+	buf.WriteString("\n")
+	buf.WriteString("-----------------------------------------------------------------------------------------\n")
+	buf.WriteString("VERSION \t\tRELEASE DATE\t\t")
 
 	for _, k := range kinds {
-		fmtSupportedVersions += k + "\t"
+		buf.WriteString(k)
+		buf.WriteString("\t")
 	}
 
-	fmtSupportedVersions += "\n"
-	fmtSupportedVersions += "-----------------------------------------------------------------------------------------\n"
+	buf.WriteString("\n")
+	buf.WriteString("-----------------------------------------------------------------------------------------\n")
 
 	supported := func(s bool) string {
 		if s {
@@ -155,26 +158,23 @@ func FormatSupportedVersions(releases []distribution.KFDRelease, kinds []string)
 			showRecommendedMsg = true
 		}
 
-		fmtSupportedVersions += fmt.Sprintf(
-			"v%s\t\t%s",
-			versionStr,
-			dateStr,
-		)
+		fmt.Fprintf(&buf, "v%s\t\t%s", versionStr, dateStr)
 
 		for _, k := range kinds {
-			fmtSupportedVersions += "\t\t" + supported(r.Support[k])
+			buf.WriteString("\t\t")
+			buf.WriteString(supported(r.Support[k]))
 		}
 
-		fmtSupportedVersions += "\n"
+		buf.WriteString("\n")
 	}
 
 	if showUnsupportedFuryctlMsg {
-		fmtSupportedVersions += "\n* this usually indicates you are not using the latest version of furyctl, try updating or checking the online documentation.\n"
+		buf.WriteString("\n* this usually indicates you are not using the latest version of furyctl, try updating or checking the online documentation.\n")
 	}
 
 	if showRecommendedMsg {
-		fmtSupportedVersions += "\n** this indicates the recommended SD versions.\n"
+		buf.WriteString("\n** this indicates the recommended SD versions.\n")
 	}
 
-	return fmtSupportedVersions
+	return buf.String()
 }

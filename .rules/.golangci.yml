@@ -440,6 +440,8 @@ linters:
           disabled: false
           arguments:
             - "fmt.Printf"
+            - "fmt.Fprintf"
+            - "strings.Builder.WriteString"
             - "myFunction"
         # https://github.com/mgechev/revive/blob/master/RULES_DESCRIPTIONS.md#unnecessary-stmt
         - name: unnecessary-stmt
