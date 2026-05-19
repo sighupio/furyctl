@@ -136,7 +136,7 @@ func (d *Distribution) Exec(
 	startFrom string,
 	upgradeState *upgrade.State,
 ) error {
-	timestamp := time.Now().Unix()
+	timestampSec := time.Now().Unix()
 
 	logrus.Info("Installing SIGHUP Distribution...")
 
@@ -164,7 +164,7 @@ func (d *Distribution) Exec(
 		upgradeState,
 		preTfMerger,
 		furyctlMerger,
-		timestamp,
+		timestampSec,
 	); err != nil {
 		return fmt.Errorf("error running core distribution phase: %w", err)
 	}

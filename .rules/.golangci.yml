@@ -26,9 +26,11 @@ linters:
     - depguard
     - maintidx
     - wsl # deprecated, replaced by wsl_v5 since golangci-lint v2.2.0
-    - noinlineerr # more than 500 occurrences in the codebase: refactoring would be massive.
     - wsl_v5 # [too strict and mostly code is not more readable] add or remove empty lines
+    - noinlineerr # more than 500 occurrences in the codebase: refactoring would be massive.
     - nlreturn # [too strict and mostly code is not more readable] checks for a new line before return and branch statements to increase code clarity
+    - gomodguard # deprecated, replaced by gomodguard_v2 since golangci-lint v2.12.0
+    - goconst # too noisy: flags repeated string literals that are not actually meant to be a shared constant.
 
   settings:
     decorder:
@@ -56,6 +58,8 @@ linters:
     funlen:
       lines: 400
       statements: 182
+    funcorder:
+      struct-method: false
     gocognit:
       min-complexity: 210
     godot:
@@ -114,6 +118,11 @@ linters:
         - G702 # command injection via taint: only triggers in test FakeExecutor running the test binary itself.
         - G703 # path traversal via taint: paths come from user-provided furyctl.yaml or env (kubeconfig).
         - G704 # SSRF via taint: URLs come from user config / curated distribution manifest; CLI tool by design.
+    govet:
+      enable-all: true
+      disable:
+        - fieldalignment # too strict
+        - shadow # too noisy: flags idiomatic Go err shadowing in if/switch blocks.
     grouper:
       const-require-single-const: true
       const-require-grouping: false
@@ -513,7 +522,6 @@ linters:
           - errcheck
           - forcetypeassert
           - funlen
-          - goconst
           - gocyclo
           - err113
           - gosec

@@ -108,7 +108,7 @@ func (k *Kubernetes) Self() *cluster.OperationPhase {
 }
 
 func (k *Kubernetes) Exec(startFrom string, upgradeState *upgrade.State) error {
-	timestamp := time.Now().Unix()
+	timestampSec := time.Now().Unix()
 
 	logrus.Info("Configuring SIGHUP Distribution cluster...")
 
@@ -124,7 +124,7 @@ func (k *Kubernetes) Exec(startFrom string, upgradeState *upgrade.State) error {
 		return fmt.Errorf("error running pre-kubernetes phase: %w", err)
 	}
 
-	if err := k.coreKubernetes(startFrom, upgradeState, timestamp); err != nil {
+	if err := k.coreKubernetes(startFrom, upgradeState, timestampSec); err != nil {
 		return fmt.Errorf("error running core kubernetes phase: %w", err)
 	}
 

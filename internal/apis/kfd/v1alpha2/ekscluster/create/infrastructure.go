@@ -85,7 +85,7 @@ func (i *Infrastructure) Self() *cluster.OperationPhase {
 func (i *Infrastructure) Exec(startFrom string, upgradeState *upgrade.State) error {
 	logrus.Info("Creating infrastructure...")
 
-	timestamp := time.Now().Unix()
+	timestampSec := time.Now().Unix()
 
 	if err := i.Prepare(); err != nil {
 		return fmt.Errorf("error preparing infrastructure phase: %w", err)
@@ -99,7 +99,7 @@ func (i *Infrastructure) Exec(startFrom string, upgradeState *upgrade.State) err
 		return fmt.Errorf("error running pre-infrastructure phase: %w", err)
 	}
 
-	if err := i.coreInfrastructure(startFrom, upgradeState, timestamp); err != nil {
+	if err := i.coreInfrastructure(startFrom, upgradeState, timestampSec); err != nil {
 		return fmt.Errorf("error running core infrastructure phase: %w", err)
 	}
 

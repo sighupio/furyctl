@@ -91,7 +91,7 @@ func NewKubernetes(
 func (k *Kubernetes) Exec() error {
 	logrus.Info("Deleting SIGHUP Distribution cluster...")
 
-	timestamp := time.Now().Unix()
+	timestampSec := time.Now().Unix()
 
 	if err := k.Prepare(); err != nil {
 		return fmt.Errorf("error preparing kubernetes phase: %w", err)
@@ -118,12 +118,12 @@ func (k *Kubernetes) Exec() error {
 		return fmt.Errorf("error running terraform init: %w", err)
 	}
 
-	if _, err := k.tfRunner.Plan(timestamp, "-destroy"); err != nil {
+	if _, err := k.tfRunner.Plan(timestampSec, "-destroy"); err != nil {
 		return fmt.Errorf("error running terraform plan: %w", err)
 	}
 
 	if k.DryRun {
-		if _, err := k.tfRunner.Plan(timestamp, "-destroy"); err != nil {
+		if _, err := k.tfRunner.Plan(timestampSec, "-destroy"); err != nil {
 			return fmt.Errorf("error running terraform plan: %w", err)
 		}
 
