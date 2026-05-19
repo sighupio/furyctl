@@ -46,6 +46,6 @@ func (fe *FakeExecutor) Command(name string, arg ...string) *exec.Cmd {
 		arg,
 	)
 
-	//nolint:noctx // it requires a massive refactor
+	//nolint:gosec,noctx // G702: os.Args[0] is the test binary, never user-controlled. noctx: requires a massive refactor.
 	return exec.Command(os.Args[0], cs...)
 }
