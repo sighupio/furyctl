@@ -2,14 +2,14 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-package template
+package templatex
 
 import (
 	"reflect"
 	"strings"
 	"text/template/parse"
 
-	"github.com/sighupio/furyctl/internal/x/slices"
+	slicesx "github.com/sighupio/furyctl/internal/x/slices"
 )
 
 type Node struct {
@@ -34,7 +34,7 @@ func (f *Node) FromNodeList(nodes []parse.Node) []string {
 		}
 	}
 
-	return slices.Uniq(f.Fields)
+	return slicesx.Uniq(f.Fields)
 }
 
 func mapToAliasInterface(n parse.Node) any {

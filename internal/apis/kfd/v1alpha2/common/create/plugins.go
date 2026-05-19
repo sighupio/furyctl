@@ -20,7 +20,7 @@ import (
 	"github.com/sighupio/furyctl/internal/tool/shell"
 	execx "github.com/sighupio/furyctl/internal/x/exec"
 	iox "github.com/sighupio/furyctl/internal/x/io"
-	"github.com/sighupio/furyctl/pkg/template"
+	templatex "github.com/sighupio/furyctl/pkg/template"
 	yamlx "github.com/sighupio/furyctl/pkg/x/yaml"
 )
 
@@ -88,7 +88,7 @@ func (p *Plugins) Exec() error {
 		return fmt.Errorf("error creating furyctl merger: %w", err)
 	}
 
-	mCfg, err := template.NewConfigWithoutData(furyctlMerger, []string{})
+	mCfg, err := templatex.NewConfigWithoutData(furyctlMerger, []string{})
 	if err != nil {
 		return fmt.Errorf("error creating template config: %w", err)
 	}
@@ -117,7 +117,7 @@ func (p *Plugins) Exec() error {
 		return fmt.Errorf("error writing config file: %w", err)
 	}
 
-	templateModel, err := template.NewTemplateModel(
+	templateModel, err := templatex.NewTemplateModel(
 		path.Join(p.paths.DistroPath, "templates", cluster.OperationPhasePlugins),
 		path.Join(p.Path),
 		confPath,

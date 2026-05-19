@@ -18,7 +18,7 @@ import (
 	"github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/kfddistribution/supported"
 	"github.com/sighupio/furyctl/internal/cluster"
 	"github.com/sighupio/furyctl/internal/distribution"
-	"github.com/sighupio/furyctl/internal/parser"
+	parserx "github.com/sighupio/furyctl/internal/parser"
 	"github.com/sighupio/furyctl/internal/state"
 	"github.com/sighupio/furyctl/internal/tool/kubectl"
 	execx "github.com/sighupio/furyctl/internal/x/exec"
@@ -104,7 +104,7 @@ func (p *PreFlight) Exec(renderedConfig map[string]any) (*Status, error) {
 		Success: false,
 	}
 
-	cfgParser := parser.NewConfigParser(p.furyctlConfPath)
+	cfgParser := parserx.NewConfigParser(p.furyctlConfPath)
 
 	logrus.Info("Running preflight checks...")
 

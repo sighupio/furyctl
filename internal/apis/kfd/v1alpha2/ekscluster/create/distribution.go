@@ -28,7 +28,7 @@ import (
 	iox "github.com/sighupio/furyctl/internal/x/io"
 	"github.com/sighupio/furyctl/pkg/merge"
 	"github.com/sighupio/furyctl/pkg/reducers"
-	"github.com/sighupio/furyctl/pkg/template"
+	templatex "github.com/sighupio/furyctl/pkg/template"
 )
 
 const (
@@ -267,7 +267,7 @@ func (d *Distribution) preDistribution(
 
 func (d *Distribution) coreDistribution(
 	rdcs reducers.Reducers,
-	tfCfg *template.Config,
+	tfCfg *templatex.Config,
 	startFrom string,
 	upgradeState *upgrade.State,
 	preTfMerger *merge.Merger,
@@ -293,7 +293,7 @@ func (d *Distribution) coreDistribution(
 				return fmt.Errorf("error injecting data post terraform: %w", err)
 			}
 
-			mCfg, err := template.NewConfig(furyctlMerger, postTfMerger, []string{"terraform", ".gitignore"})
+			mCfg, err := templatex.NewConfig(furyctlMerger, postTfMerger, []string{"terraform", ".gitignore"})
 			if err != nil {
 				return fmt.Errorf("error creating template config: %w", err)
 			}
@@ -406,7 +406,7 @@ func (d *Distribution) checkKubeVersion() error {
 
 func (d *Distribution) runReducers(
 	rdcs reducers.Reducers,
-	cfg *template.Config,
+	cfg *templatex.Config,
 	lifecycle string,
 	excludes []string,
 ) error {

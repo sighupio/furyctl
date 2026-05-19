@@ -4,7 +4,7 @@
 
 //go:build unit
 
-package template_test
+package templatex_test
 
 import (
 	"os"
@@ -13,7 +13,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"gopkg.in/yaml.v2"
 
-	"github.com/sighupio/furyctl/pkg/template"
+	templatex "github.com/sighupio/furyctl/pkg/template"
 )
 
 func TestNewTemplateModel(t *testing.T) {
@@ -39,7 +39,7 @@ func TestNewTemplateModel(t *testing.T) {
 	err = os.WriteFile(path+"/source/test.md.tpl", []byte(templateTest), os.ModePerm)
 	err = os.WriteFile(path+"/configTest.yaml", confYaml, os.ModePerm)
 
-	tm, err := template.NewTemplateModel(
+	tm, err := templatex.NewTemplateModel(
 		path+"/source",
 		path+"/target",
 		path+"/configTest.yaml",

@@ -24,7 +24,7 @@ import (
 	"github.com/sighupio/furyctl/internal/tool/furyagent"
 	"github.com/sighupio/furyctl/internal/tool/terraform"
 	iox "github.com/sighupio/furyctl/internal/x/io"
-	"github.com/sighupio/furyctl/pkg/template"
+	templatex "github.com/sighupio/furyctl/pkg/template"
 	yamlx "github.com/sighupio/furyctl/pkg/x/yaml"
 )
 
@@ -204,7 +204,7 @@ func (p *PreFlight) createTerraformStateAWSS3Bucket() error {
 }
 
 func (p *PreFlight) copyFromTemplate() error {
-	var cfg template.Config
+	var cfg templatex.Config
 
 	tmpFolder, err := os.MkdirTemp("", "furyctl-kube-configs-")
 	if err != nil {

@@ -156,7 +156,7 @@ func NewClusterCmd() *cobra.Command {
 					}
 				}
 
-				os.Exit(1) //nolint:revive // ignore exit code
+				os.Exit(1) //nolint:revive // deep-exit acceptable in signal handler
 			}()
 
 			signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)

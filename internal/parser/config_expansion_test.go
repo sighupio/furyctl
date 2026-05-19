@@ -4,7 +4,7 @@
 
 //go:build unit
 
-package parser_test
+package parserx_test
 
 import (
 	"os"
@@ -15,7 +15,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/sighupio/furyctl/internal/parser"
+	parserx "github.com/sighupio/furyctl/internal/parser"
 )
 
 func TestDynamicValueExpansion_EnvVars(t *testing.T) {
@@ -99,9 +99,9 @@ func TestDynamicValueExpansion_EnvVars(t *testing.T) {
 				t.Setenv("TEST_PWD", "/test/current/dir")
 			}
 
-			parser := parser.NewConfigParser(".")
+			parser := parserx.NewConfigParser(".")
 
-			result, err := parser.ParseDynamicValue(tc.inputValue)
+			result, err := parserx.ParseDynamicValue(tc.inputValue)
 
 			if tc.shouldError {
 				assert.Error(t, err)
@@ -186,9 +186,9 @@ func TestDynamicValueExpansion_FilePaths(t *testing.T) {
 				inputValue = tc.inputValue
 			}
 
-			parser := parser.NewConfigParser(".")
+			parser := parserx.NewConfigParser(".")
 
-			result, err := parser.ParseDynamicValue(inputValue)
+			result, err := parserx.ParseDynamicValue(inputValue)
 
 			if tc.shouldError {
 				assert.Error(t, err)
@@ -256,9 +256,9 @@ func TestDynamicValueExpansion_MixedPatterns(t *testing.T) {
 			cleanup := tc.setup()
 			defer cleanup()
 
-			parser := parser.NewConfigParser(".")
+			parser := parserx.NewConfigParser(".")
 
-			result, err := parser.ParseDynamicValue(tc.inputValue)
+			result, err := parserx.ParseDynamicValue(tc.inputValue)
 
 			if tc.shouldError {
 				assert.Error(t, err)
@@ -304,9 +304,9 @@ func TestDynamicValueExpansion_ErrorHandling(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			parser := parser.NewConfigParser(".")
+			parser := parserx.NewConfigParser(".")
 
-			result, err := parser.ParseDynamicValue(tc.inputValue)
+			result, err := parserx.ParseDynamicValue(tc.inputValue)
 
 			if tc.shouldError {
 				assert.Error(t, err)
@@ -381,9 +381,9 @@ func TestDynamicValueExpansion_FlagsSpecificScenarios(t *testing.T) {
 			cleanup := tc.setup()
 			defer cleanup()
 
-			parser := parser.NewConfigParser(".")
+			parser := parserx.NewConfigParser(".")
 
-			result, err := parser.ParseDynamicValue(tc.inputValue)
+			result, err := parserx.ParseDynamicValue(tc.inputValue)
 
 			assert.NoError(t, err)
 			assert.Equal(t, tc.expected, result)
@@ -443,9 +443,9 @@ func TestDynamicValueExpansion_NonStringTypes(t *testing.T) {
 				t.Setenv("TEST_VAR", "test-value")
 			}
 
-			parser := parser.NewConfigParser(".")
+			parser := parserx.NewConfigParser(".")
 
-			result, err := parser.ParseDynamicValue(tc.inputValue)
+			result, err := parserx.ParseDynamicValue(tc.inputValue)
 
 			if tc.shouldError {
 				assert.Error(t, err)

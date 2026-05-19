@@ -22,7 +22,7 @@ import (
 	"github.com/sighupio/furyctl/internal/upgrade"
 	"github.com/sighupio/furyctl/pkg/reducers"
 	distrorules "github.com/sighupio/furyctl/pkg/rulesextractor"
-	"github.com/sighupio/furyctl/pkg/template"
+	templatex "github.com/sighupio/furyctl/pkg/template"
 	yamlx "github.com/sighupio/furyctl/pkg/x/yaml"
 )
 
@@ -333,7 +333,7 @@ func (c *ClusterCreator) RenderConfig() (map[string]any, error) {
 		return nil, fmt.Errorf("error while creating furyctl merger: %w", err)
 	}
 
-	tfCfg, err := template.NewConfigWithoutData(furyctlMerger, []string{})
+	tfCfg, err := templatex.NewConfigWithoutData(furyctlMerger, []string{})
 	if err != nil {
 		return nil, fmt.Errorf("error while creating template config: %w", err)
 	}

@@ -4,7 +4,7 @@
 
 //go:build unit
 
-package parser_test
+package parserx_test
 
 import (
 	"fmt"
@@ -17,13 +17,13 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/sighupio/furyctl/internal/parser"
+	parserx "github.com/sighupio/furyctl/internal/parser"
 )
 
 func TestNewConfigParser(t *testing.T) {
 	t.Parallel()
 
-	cfgParser := parser.NewConfigParser("dummy/base/dir")
+	cfgParser := parserx.NewConfigParser("dummy/base/dir")
 
 	assert.NotNil(t, cfgParser)
 }
@@ -177,7 +177,7 @@ func TestConfigParser_ParseDynamicValue(t *testing.T) {
 
 				defer teardownFn()
 
-				cfgParser := parser.NewConfigParser(baseDir)
+				cfgParser := parserx.NewConfigParser(baseDir)
 
 				res, err := cfgParser.ParseDynamicValue(value)
 

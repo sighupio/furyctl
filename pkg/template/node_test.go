@@ -4,7 +4,7 @@
 
 //go:build unit
 
-package template_test
+package templatex_test
 
 import (
 	"reflect"
@@ -25,7 +25,7 @@ func TestNewNode(t *testing.T) {
 
 func TestNode_FromNodeList(t *testing.T) {
 	node := template2.NewNode()
-	tmpl := template.Must(template.New("test").Parse("{{.field1}}"))
+	tmpl := templatex.Must(templatex.New("test").Parse("{{.field1}}"))
 	node.FromNodeList(tmpl.Root.Nodes)
 
 	assert.Equal(t, []string{".field1"}, node.Fields)

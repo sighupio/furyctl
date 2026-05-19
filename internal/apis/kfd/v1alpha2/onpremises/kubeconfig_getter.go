@@ -18,7 +18,7 @@ import (
 	"github.com/sighupio/furyctl/internal/tool/ansible"
 	execx "github.com/sighupio/furyctl/internal/x/exec"
 	iox "github.com/sighupio/furyctl/internal/x/io"
-	"github.com/sighupio/furyctl/pkg/template"
+	templatex "github.com/sighupio/furyctl/pkg/template"
 )
 
 type KubeconfigGetter struct {
@@ -104,7 +104,7 @@ func (k *KubeconfigGetter) Get() error {
 		return fmt.Errorf("error creating furyctl merger: %w", err)
 	}
 
-	mCfg, err := template.NewConfigWithoutData(furyctlMerger, []string{})
+	mCfg, err := templatex.NewConfigWithoutData(furyctlMerger, []string{})
 	if err != nil {
 		return fmt.Errorf("error creating template config: %w", err)
 	}

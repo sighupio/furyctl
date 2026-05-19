@@ -19,12 +19,12 @@ import (
 	"github.com/sighupio/fury-distribution/pkg/apis/ekscluster/v1alpha2/private"
 	"github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/ekscluster/phases"
 	"github.com/sighupio/furyctl/internal/cluster"
-	"github.com/sighupio/furyctl/internal/parser"
+	parserx "github.com/sighupio/furyctl/internal/parser"
 	"github.com/sighupio/furyctl/internal/tool/terraform"
 	"github.com/sighupio/furyctl/internal/upgrade"
 	execx "github.com/sighupio/furyctl/internal/x/exec"
 	iox "github.com/sighupio/furyctl/internal/x/io"
-	"github.com/sighupio/furyctl/internal/x/slices"
+	slicesx "github.com/sighupio/furyctl/internal/x/slices"
 )
 
 var ErrAbortedByUser = errors.New("aborted by user")
@@ -164,11 +164,11 @@ func (i *Infrastructure) coreInfrastructure(
 			return nil
 		}
 
-		tfParser := parser.NewTfPlanParser(string(plan))
+		tfParser := parserx.NewTfPlanParser(string(plan))
 
 		parsedPlan := tfParser.Parse()
 
-		criticalResources := slices.Intersection(i.getCriticalTFResourceTypes(), parsedPlan.Destroy)
+		criticalResources := slicesx.Intersection(i.getCriticalTFResourceTypes(), parsedPlan.Destroy)
 
 		if len(criticalResources) > 0 {
 			logrus.Warnf("Deletion of the following critical resources has been detected: %s. See the logs for more details.",

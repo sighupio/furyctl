@@ -17,7 +17,7 @@ import (
 	"github.com/sighupio/furyctl/internal/cluster"
 	"github.com/sighupio/furyctl/internal/tool/ansible"
 	execx "github.com/sighupio/furyctl/internal/x/exec"
-	"github.com/sighupio/furyctl/pkg/template"
+	templatex "github.com/sighupio/furyctl/pkg/template"
 )
 
 type CertificatesRenewer struct {
@@ -95,7 +95,7 @@ func (k *CertificatesRenewer) Renew() error {
 		return fmt.Errorf("error creating furyctl merger: %w", err)
 	}
 
-	mCfg, err := template.NewConfigWithoutData(furyctlMerger, []string{})
+	mCfg, err := templatex.NewConfigWithoutData(furyctlMerger, []string{})
 	if err != nil {
 		return fmt.Errorf("error creating template config: %w", err)
 	}

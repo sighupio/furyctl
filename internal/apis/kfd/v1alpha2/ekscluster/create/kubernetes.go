@@ -21,7 +21,7 @@ import (
 	"github.com/sighupio/fury-distribution/pkg/apis/ekscluster/v1alpha2/private"
 	"github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/ekscluster/phases"
 	"github.com/sighupio/furyctl/internal/cluster"
-	"github.com/sighupio/furyctl/internal/parser"
+	parserx "github.com/sighupio/furyctl/internal/parser"
 	"github.com/sighupio/furyctl/internal/tool/awscli"
 	"github.com/sighupio/furyctl/internal/tool/terraform"
 	"github.com/sighupio/furyctl/internal/upgrade"
@@ -29,7 +29,7 @@ import (
 	iox "github.com/sighupio/furyctl/internal/x/io"
 	kubex "github.com/sighupio/furyctl/internal/x/kube"
 	netx "github.com/sighupio/furyctl/internal/x/net"
-	"github.com/sighupio/furyctl/internal/x/slices"
+	slicesx "github.com/sighupio/furyctl/internal/x/slices"
 )
 
 var (
@@ -227,11 +227,11 @@ func (k *Kubernetes) coreKubernetes(
 			return nil
 		}
 
-		tfParser := parser.NewTfPlanParser(string(plan))
+		tfParser := parserx.NewTfPlanParser(string(plan))
 
 		parsedPlan := tfParser.Parse()
 
-		criticalResources := slices.Intersection(k.getCriticalTFResourceTypes(), parsedPlan.Destroy)
+		criticalResources := slicesx.Intersection(k.getCriticalTFResourceTypes(), parsedPlan.Destroy)
 
 		if len(criticalResources) > 0 {
 			logrus.Warnf("Deletion of the following critical resources has been detected: %s. See the logs for more details.",

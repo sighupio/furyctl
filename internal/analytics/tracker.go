@@ -141,6 +141,9 @@ func (a *Tracker) processEvents() {
 			}
 
 			logrus.Trace("Event sent: ", e.Name())
+
+		default:
+			logrus.Debugf("ignoring unknown event type %T", e)
 		}
 	}
 }

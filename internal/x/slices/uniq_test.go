@@ -4,12 +4,12 @@
 
 //go:build unit
 
-package slices_test
+package slicesx_test
 
 import (
 	"testing"
 
-	"github.com/sighupio/furyctl/internal/x/slices"
+	slicesx "github.com/sighupio/furyctl/internal/x/slices"
 )
 
 func TestUniq(t *testing.T) {
@@ -60,7 +60,7 @@ func TestUniq(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			got := slices.Uniq(tt.in)
+			got := slicesx.Uniq(tt.in)
 
 			if len(got) != len(tt.want) {
 				t.Errorf("got %d elements, want %d", len(got), len(tt.want))
