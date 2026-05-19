@@ -4,7 +4,7 @@
 
 //go:build unit
 
-package template_test
+package templatex_test
 
 import (
 	"fmt"
@@ -16,7 +16,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"gopkg.in/yaml.v2"
 
-	"github.com/sighupio/furyctl/pkg/template"
+	templatex "github.com/sighupio/furyctl/pkg/template"
 )
 
 type Meta struct {
@@ -44,7 +44,7 @@ func TestTemplateModel_Will_Generate_UserHello(t *testing.T) {
 	err = os.WriteFile(path+"/source/test.md.tpl", []byte(templateTest), os.ModePerm)
 	err = os.WriteFile(path+"/configTest.yaml", confYaml, os.ModePerm)
 
-	tm, err := template.NewTemplateModel(
+	tm, err := templatex.NewTemplateModel(
 		path+"/source",
 		path+"/target",
 		path+"/configTest.yaml",
@@ -85,7 +85,7 @@ func TestTemplateModel_Will_Generate_Dynamic_Values_From_Env(t *testing.T) {
 	err = os.WriteFile(path+"/source/test.md.tpl", []byte(templateTest), os.ModePerm)
 	err = os.WriteFile(path+"/configTest.yaml", confYaml, os.ModePerm)
 
-	tm, err := template.NewTemplateModel(
+	tm, err := templatex.NewTemplateModel(
 		path+"/source",
 		path+"/target",
 		path+"/configTest.yaml",
@@ -130,7 +130,7 @@ func TestTemplateModel_Will_Generate_Dynamic_Values_From_File(t *testing.T) {
 	err = os.WriteFile(path+"/source/test.md.tpl", []byte(templateTest), os.ModePerm)
 	err = os.WriteFile(path+"/configTest.yaml", confYaml, os.ModePerm)
 
-	tm, err := template.NewTemplateModel(
+	tm, err := templatex.NewTemplateModel(
 		path+"/source",
 		path+"/target",
 		path+"/configTest.yaml",
@@ -158,11 +158,11 @@ func Test_Generator_GetMissingKeys(t *testing.T) {
 	path, err := os.MkdirTemp("", "test")
 	require.NoError(t, err)
 
-	funcMap := template.NewFuncMap()
-	funcMap.Add("toYaml", template.ToYAML)
-	funcMap.Add("fromYaml", template.FromYAML)
+	funcMap := templatex.NewFuncMap()
+	funcMap.Add("toYaml", templatex.ToYAML)
+	funcMap.Add("fromYaml", templatex.FromYAML)
 
-	tg := template.NewGenerator(
+	tg := templatex.NewGenerator(
 		path+"/source",
 		path+"/source",
 		path+"/target",

@@ -14,7 +14,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
 
-	"github.com/sighupio/furyctl/internal/parser"
+	parserx "github.com/sighupio/furyctl/internal/parser"
 )
 
 // Static error definitions for linting compliance.
@@ -202,7 +202,7 @@ func isCriticalError(err error) bool {
 	}
 
 	// Check if this is a dynamic value parsing error.
-	if errors.Is(err, parser.ErrCannotParseDynamicValue) {
+	if errors.Is(err, parserx.ErrCannotParseDynamicValue) {
 		errMsg := err.Error()
 
 		// File-related errors are critical.

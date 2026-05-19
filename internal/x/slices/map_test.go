@@ -4,14 +4,14 @@
 
 //go:build unit
 
-package slices_test
+package slicesx_test
 
 import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/sighupio/furyctl/internal/x/slices"
+	slicesx "github.com/sighupio/furyctl/internal/x/slices"
 )
 
 func TestMap(t *testing.T) {
@@ -52,7 +52,7 @@ func TestMap(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			require.Equal(t, tt.want, slices.Map(tt.a, tt.mapFunc))
+			require.Equal(t, tt.want, slicesx.Map(tt.a, tt.mapFunc))
 		})
 	}
 }

@@ -22,7 +22,7 @@ import (
 	execx "github.com/sighupio/furyctl/internal/x/exec"
 	iox "github.com/sighupio/furyctl/internal/x/io"
 	"github.com/sighupio/furyctl/pkg/reducers"
-	"github.com/sighupio/furyctl/pkg/template"
+	templatex "github.com/sighupio/furyctl/pkg/template"
 	yamlx "github.com/sighupio/furyctl/pkg/x/yaml"
 )
 
@@ -132,14 +132,14 @@ func (d *Distribution) SetUpgrade(upgradeEnabled bool) {
 	d.upgrade.Enabled = upgradeEnabled
 }
 
-func (d *Distribution) prepare() (template.Config, error) {
+func (d *Distribution) prepare() (templatex.Config, error) {
 	if err := d.CreateRootFolder(); err != nil {
-		return template.Config{}, fmt.Errorf("error creating distribution phase folder: %w", err)
+		return templatex.Config{}, fmt.Errorf("error creating distribution phase folder: %w", err)
 	}
 
 	if _, err := os.Stat(path.Join(d.Path, "manifests")); os.IsNotExist(err) {
 		if err := os.Mkdir(path.Join(d.Path, "manifests"), iox.FullPermAccess); err != nil {
-			return template.Config{}, fmt.Errorf("error creating manifests folder: %w", err)
+			return templatex.Config{}, fmt.Errorf("error creating manifests folder: %w", err)
 		}
 	}
 
@@ -150,12 +150,12 @@ func (d *Distribution) prepare() (template.Config, error) {
 		"immutable",
 	)
 	if err != nil {
-		return template.Config{}, fmt.Errorf("error creating furyctl merger: %w", err)
+		return templatex.Config{}, fmt.Errorf("error creating furyctl merger: %w", err)
 	}
 
-	mCfg, err := template.NewConfigWithoutData(furyctlMerger, []string{"terraform", ".gitignore", "manifests/aws"})
+	mCfg, err := templatex.NewConfigWithoutData(furyctlMerger, []string{"terraform", ".gitignore", "manifests/aws"})
 	if err != nil {
-		return template.Config{}, fmt.Errorf("error creating template config: %w", err)
+		return templatex.Config{}, fmt.Errorf("error creating template config: %w", err)
 	}
 
 	d.CopyPathsToConfig(&mCfg)
@@ -168,14 +168,14 @@ func (d *Distribution) prepare() (template.Config, error) {
 	if _, err := d.kubeRunner.Version(); err != nil {
 		logrus.Debugf("Got error while running cluster reachability check: %s", err)
 
-		return template.Config{}, fmt.Errorf("error connecting to cluster: %w", err)
+		return templatex.Config{}, fmt.Errorf("error connecting to cluster: %w", err)
 	}
 
 	logrus.Info("Checking for a default storage class...")
 
 	getStorageClassesOutput, err := d.kubeRunner.Get(false, "", "storageclasses")
 	if err != nil {
-		return template.Config{}, fmt.Errorf("error while checking storage class: %w", err)
+		return templatex.Config{}, fmt.Errorf("error while checking storage class: %w", err)
 	}
 
 	if getStorageClassesOutput == "No resources found" {
@@ -207,7 +207,7 @@ func (d *Distribution) prepare() (template.Config, error) {
 
 	mCfg, err = d.injectStoredConfig(mCfg)
 	if err != nil {
-		return template.Config{}, fmt.Errorf("error injecting stored config: %w", err)
+		return templatex.Config{}, fmt.Errorf("error injecting stored config: %w", err)
 	}
 
 	if err := d.CopyFromTemplate(
@@ -217,7 +217,7 @@ func (d *Distribution) prepare() (template.Config, error) {
 		d.Path,
 		d.paths.ConfigPath,
 	); err != nil {
-		return template.Config{}, fmt.Errorf("error copying from template: %w", err)
+		return templatex.Config{}, fmt.Errorf("error copying from template: %w", err)
 	}
 
 	return mCfg, nil
@@ -247,7 +247,7 @@ func (d *Distribution) coreDistribution(
 	startFrom string,
 	upgradeState *upgrade.State,
 	rcds reducers.Reducers,
-	mCfg template.Config,
+	mCfg templatex.Config,
 ) error {
 	if startFrom != cluster.OperationSubPhasePostDistribution {
 		logrus.Info("Applying Distribution modules...")
@@ -304,7 +304,7 @@ func (d *Distribution) postDistribution(
 
 func (d *Distribution) runReducers(
 	rdcs reducers.Reducers,
-	cfg template.Config,
+	cfg templatex.Config,
 	lifecycle string,
 	excludes []string,
 ) error {
@@ -335,7 +335,7 @@ func (d *Distribution) runReducers(
 	return nil
 }
 
-func (d *Distribution) injectStoredConfig(cfg template.Config) (template.Config, error) {
+func (d *Distribution) injectStoredConfig(cfg templatex.Config) (templatex.Config, error) {
 	storedCfg := map[any]any{}
 
 	storedCfgStr, err := d.stateStore.GetConfig()

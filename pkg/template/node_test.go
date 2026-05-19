@@ -4,7 +4,7 @@
 
 //go:build unit
 
-package template_test
+package templatex_test
 
 import (
 	"reflect"
@@ -14,17 +14,17 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	template2 "github.com/sighupio/furyctl/pkg/template"
+	templatex "github.com/sighupio/furyctl/pkg/template"
 )
 
 func TestNewNode(t *testing.T) {
-	node := template2.NewNode()
+	node := templatex.NewNode()
 
 	assert.Equal(t, []string{}, node.Fields)
 }
 
 func TestNode_FromNodeList(t *testing.T) {
-	node := template2.NewNode()
+	node := templatex.NewNode()
 	tmpl := template.Must(template.New("test").Parse("{{.field1}}"))
 	node.FromNodeList(tmpl.Root.Nodes)
 
@@ -32,7 +32,7 @@ func TestNode_FromNodeList(t *testing.T) {
 }
 
 func TestActionNode_Set(t *testing.T) {
-	node := template2.NewNode()
+	node := templatex.NewNode()
 	actionNode := &parse.ActionNode{
 		NodeType: parse.NodeAction,
 		Pos:      1,
@@ -59,11 +59,11 @@ func TestActionNode_Set(t *testing.T) {
 		},
 	}
 
-	tmplActionNode := reflect.ValueOf(actionNode).Convert(reflect.TypeOf(&template2.ActionNode{})).Interface()
+	tmplActionNode := reflect.ValueOf(actionNode).Convert(reflect.TypeOf(&templatex.ActionNode{})).Interface()
 
 	assert.NotNil(t, tmplActionNode)
 
-	actionNodeSetter, ok := tmplActionNode.(template2.FieldsSetter)
+	actionNodeSetter, ok := tmplActionNode.(templatex.FieldsSetter)
 
 	assert.True(t, ok)
 
@@ -73,18 +73,18 @@ func TestActionNode_Set(t *testing.T) {
 }
 
 func TestFieldNode_Set(t *testing.T) {
-	node := template2.NewNode()
+	node := templatex.NewNode()
 	fieldNode := &parse.FieldNode{
 		NodeType: parse.NodeField,
 		Pos:      1,
 		Ident:    []string{"field1"},
 	}
 
-	tmplFieldNode := reflect.ValueOf(fieldNode).Convert(reflect.TypeOf(&template2.FieldNode{})).Interface()
+	tmplFieldNode := reflect.ValueOf(fieldNode).Convert(reflect.TypeOf(&templatex.FieldNode{})).Interface()
 
 	assert.NotNil(t, tmplFieldNode)
 
-	fieldNodeSetter, ok := tmplFieldNode.(template2.FieldsSetter)
+	fieldNodeSetter, ok := tmplFieldNode.(templatex.FieldsSetter)
 
 	assert.True(t, ok)
 
@@ -94,7 +94,7 @@ func TestFieldNode_Set(t *testing.T) {
 }
 
 func TestIfNode_Set(t *testing.T) {
-	node := template2.NewNode()
+	node := templatex.NewNode()
 	ifNode := &parse.IfNode{
 		BranchNode: parse.BranchNode{
 			NodeType: parse.NodeIf,
@@ -145,11 +145,11 @@ func TestIfNode_Set(t *testing.T) {
 		},
 	}
 
-	tmplIfNode := reflect.ValueOf(ifNode).Convert(reflect.TypeOf(&template2.IfNode{})).Interface()
+	tmplIfNode := reflect.ValueOf(ifNode).Convert(reflect.TypeOf(&templatex.IfNode{})).Interface()
 
 	assert.NotNil(t, tmplIfNode)
 
-	ifNodeSetter, ok := tmplIfNode.(template2.FieldsSetter)
+	ifNodeSetter, ok := tmplIfNode.(templatex.FieldsSetter)
 
 	assert.True(t, ok)
 
@@ -159,7 +159,7 @@ func TestIfNode_Set(t *testing.T) {
 }
 
 func TestListNode_Set(t *testing.T) {
-	node := template2.NewNode()
+	node := templatex.NewNode()
 	listNode := &parse.ListNode{
 		NodeType: parse.NodeList,
 		Pos:      1,
@@ -177,11 +177,11 @@ func TestListNode_Set(t *testing.T) {
 		},
 	}
 
-	tmplListNode := reflect.ValueOf(listNode).Convert(reflect.TypeOf(&template2.ListNode{})).Interface()
+	tmplListNode := reflect.ValueOf(listNode).Convert(reflect.TypeOf(&templatex.ListNode{})).Interface()
 
 	assert.NotNil(t, tmplListNode)
 
-	listNodeSetter, ok := tmplListNode.(template2.FieldsSetter)
+	listNodeSetter, ok := tmplListNode.(templatex.FieldsSetter)
 
 	assert.True(t, ok)
 
@@ -191,7 +191,7 @@ func TestListNode_Set(t *testing.T) {
 }
 
 func TestNode_Set(t *testing.T) {
-	node := template2.NewNode()
+	node := templatex.NewNode()
 
 	node.Set([]string{".field1", ".field2"})
 
@@ -199,18 +199,18 @@ func TestNode_Set(t *testing.T) {
 }
 
 func TestVariableNode_Set(t *testing.T) {
-	node := template2.NewNode()
+	node := templatex.NewNode()
 	variableNode := &parse.VariableNode{
 		NodeType: parse.NodeVariable,
 		Pos:      1,
 		Ident:    []string{"variable1"},
 	}
 
-	tmplVariableNode := reflect.ValueOf(variableNode).Convert(reflect.TypeOf(&template2.VariableNode{})).Interface()
+	tmplVariableNode := reflect.ValueOf(variableNode).Convert(reflect.TypeOf(&templatex.VariableNode{})).Interface()
 
 	assert.NotNil(t, tmplVariableNode)
 
-	variableNodeSetter, ok := tmplVariableNode.(template2.FieldsSetter)
+	variableNodeSetter, ok := tmplVariableNode.(templatex.FieldsSetter)
 
 	assert.True(t, ok)
 
@@ -220,7 +220,7 @@ func TestVariableNode_Set(t *testing.T) {
 }
 
 func TestRangeNode_Set(t *testing.T) {
-	node := template2.NewNode()
+	node := templatex.NewNode()
 	rangeNode := &parse.RangeNode{
 		BranchNode: parse.BranchNode{
 			NodeType: parse.NodeIf,
@@ -271,11 +271,11 @@ func TestRangeNode_Set(t *testing.T) {
 		},
 	}
 
-	tmplRangeNode := reflect.ValueOf(rangeNode).Convert(reflect.TypeOf(&template2.RangeNode{})).Interface()
+	tmplRangeNode := reflect.ValueOf(rangeNode).Convert(reflect.TypeOf(&templatex.RangeNode{})).Interface()
 
 	assert.NotNil(t, tmplRangeNode)
 
-	rangeNodeSetter, ok := tmplRangeNode.(template2.FieldsSetter)
+	rangeNodeSetter, ok := tmplRangeNode.(templatex.FieldsSetter)
 
 	assert.True(t, ok)
 
@@ -285,7 +285,7 @@ func TestRangeNode_Set(t *testing.T) {
 }
 
 func TestPipeNode_Set(t *testing.T) {
-	node := template2.NewNode()
+	node := templatex.NewNode()
 	pipeNode := &parse.PipeNode{
 		NodeType: parse.NodePipe,
 		Pos:      1,
@@ -307,11 +307,11 @@ func TestPipeNode_Set(t *testing.T) {
 		},
 	}
 
-	tmplPipeNode := reflect.ValueOf(pipeNode).Convert(reflect.TypeOf(&template2.PipeNode{})).Interface()
+	tmplPipeNode := reflect.ValueOf(pipeNode).Convert(reflect.TypeOf(&templatex.PipeNode{})).Interface()
 
 	assert.NotNil(t, tmplPipeNode)
 
-	pipeNodeSetter, ok := tmplPipeNode.(template2.FieldsSetter)
+	pipeNodeSetter, ok := tmplPipeNode.(templatex.FieldsSetter)
 
 	assert.True(t, ok)
 
@@ -321,7 +321,7 @@ func TestPipeNode_Set(t *testing.T) {
 }
 
 func TestTemplateNode_Set(t *testing.T) {
-	node := template2.NewNode()
+	node := templatex.NewNode()
 	templateNode := &parse.TemplateNode{
 		NodeType: parse.NodeTemplate,
 		Pos:      1,
@@ -349,11 +349,11 @@ func TestTemplateNode_Set(t *testing.T) {
 		},
 	}
 
-	tmplTemplateNode := reflect.ValueOf(templateNode).Convert(reflect.TypeOf(&template2.TplNode{})).Interface()
+	tmplTemplateNode := reflect.ValueOf(templateNode).Convert(reflect.TypeOf(&templatex.TplNode{})).Interface()
 
 	assert.NotNil(t, tmplTemplateNode)
 
-	templateNodeSetter, ok := tmplTemplateNode.(template2.FieldsSetter)
+	templateNodeSetter, ok := tmplTemplateNode.(templatex.FieldsSetter)
 
 	assert.True(t, ok)
 

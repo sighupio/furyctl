@@ -10,7 +10,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/sighupio/furyctl/internal/parser"
+	parserx "github.com/sighupio/furyctl/internal/parser"
 	yamlx "github.com/sighupio/furyctl/pkg/x/yaml"
 )
 
@@ -22,13 +22,13 @@ var (
 
 // Loader handles loading flags configuration from furyctl.yaml files.
 type Loader struct {
-	configParser *parser.ConfigParser
+	configParser *parserx.ConfigParser
 }
 
 // NewLoader creates a new flags loader with the given base directory.
 func NewLoader(baseDir string) *Loader {
 	return &Loader{
-		configParser: parser.NewConfigParser(baseDir),
+		configParser: parserx.NewConfigParser(baseDir),
 	}
 }
 

@@ -27,7 +27,7 @@ import (
 	"github.com/sighupio/furyctl/internal/tool/terraform"
 	execx "github.com/sighupio/furyctl/internal/x/exec"
 	iox "github.com/sighupio/furyctl/internal/x/io"
-	"github.com/sighupio/furyctl/pkg/template"
+	templatex "github.com/sighupio/furyctl/pkg/template"
 	. "github.com/sighupio/furyctl/test/utils"
 )
 
@@ -66,7 +66,7 @@ var (
 	_ = BeforeSuite(CompileFuryctl(furyctl))
 
 	CopyFromTemplate = func(src, dst, clusterName, furyctlCfgPath string) error {
-		var cfg template.Config
+		var cfg templatex.Config
 		var op cluster.OperationPhase
 
 		tmpFolder, err := os.MkdirTemp("", "furyctl-e2e-test-onpremises-infra-")

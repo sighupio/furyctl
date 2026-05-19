@@ -4,7 +4,7 @@
 
 //go:build unit
 
-package slices_test
+package slicesx_test
 
 import (
 	"strings"
@@ -12,7 +12,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/sighupio/furyctl/internal/x/slices"
+	slicesx "github.com/sighupio/furyctl/internal/x/slices"
 )
 
 func TestDisjoint(t *testing.T) {
@@ -47,7 +47,7 @@ func TestDisjoint(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			got := slices.Disjoint(tt.a, tt.b)
+			got := slicesx.Disjoint(tt.a, tt.b)
 			assert.Equal(t, tt.want, got, "Disjoint()")
 		})
 	}
@@ -60,8 +60,8 @@ func TestDisjointTransform(t *testing.T) {
 		name       string
 		a          []string
 		b          []string
-		transformA slices.TransformFunc[string]
-		transformB slices.TransformFunc[string]
+		transformA slicesx.TransformFunc[string]
+		transformB slicesx.TransformFunc[string]
 		want       bool
 	}{
 		{
@@ -95,7 +95,7 @@ func TestDisjointTransform(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			got := slices.DisjointTransform(tt.a, tt.b, tt.transformA, tt.transformB)
+			got := slicesx.DisjointTransform(tt.a, tt.b, tt.transformA, tt.transformB)
 			assert.Equal(t, tt.want, got, "DisjointTransform()")
 		})
 	}
