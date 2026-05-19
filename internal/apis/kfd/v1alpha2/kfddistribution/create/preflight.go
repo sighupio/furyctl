@@ -225,8 +225,6 @@ func (p *PreFlight) CreateDiffChecker(storedCfgStr []byte, renderedConfig map[st
 }
 
 func (p *PreFlight) CheckStateDiffs(d r3diff.Changelog, diffChecker diffs.Checker) error {
-	var errs []error
-
 	r, err := rules.NewDistroClusterRulesExtractor(p.distroPath, diffChecker.GetCurrentConfig())
 	if err != nil {
 		if !errors.Is(err, rules.ErrReadingRulesFile) {
@@ -251,7 +249,7 @@ func (p *PreFlight) CheckStateDiffs(d r3diff.Changelog, diffChecker diffs.Checke
 		immutablePaths = append(immutablePaths, rule.Path)
 	}
 
-	errs = append(errs, diffChecker.AssertImmutableViolations(d, immutablePaths)...)
+	errs := diffChecker.AssertImmutableViolations(d, immutablePaths)
 
 	if len(errs) > 0 {
 		return fmt.Errorf("%w: %w", errImmutable, errors.Join(errs...))
@@ -261,8 +259,6 @@ func (p *PreFlight) CheckStateDiffs(d r3diff.Changelog, diffChecker diffs.Checke
 }
 
 func (p *PreFlight) CheckReducerDiffs(d r3diff.Changelog, diffChecker diffs.Checker) error {
-	var errs []error
-
 	r, err := rules.NewDistroClusterRulesExtractor(p.distroPath, diffChecker.GetCurrentConfig())
 	if err != nil {
 		if !errors.Is(err, rules.ErrReadingRulesFile) {
@@ -274,10 +270,10 @@ func (p *PreFlight) CheckReducerDiffs(d r3diff.Changelog, diffChecker diffs.Chec
 		return nil
 	}
 
-	errs = append(errs, diffChecker.AssertReducerUnsupportedViolations(
+	errs := diffChecker.AssertReducerUnsupportedViolations(
 		d,
 		r.UnsupportedReducerRulesByDiffs(r.GetReducers("distribution"), d),
-	)...)
+	)
 
 	if len(errs) > 0 {
 		return fmt.Errorf("%w: %w", errUnsupported, errors.Join(errs...))

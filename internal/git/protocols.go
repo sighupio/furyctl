@@ -46,10 +46,10 @@ func Protocols() []Protocol {
 
 // ProtocolsS returns a slice of Strings representation of the Protocols that are supported.
 func ProtocolsS() []string {
-	protocols := []string{}
-	for _, p := range Protocols() {
-		protocols = append(protocols, string(p))
+	protocols := Protocols()
+	rawProtocols := make([]string, len(protocols))
+	for index, protocol := range protocols {
+		rawProtocols[index] = string(protocol)
 	}
-
-	return protocols
+	return rawProtocols
 }
