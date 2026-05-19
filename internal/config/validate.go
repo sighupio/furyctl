@@ -19,7 +19,7 @@ import (
 	"github.com/sighupio/furyctl/internal/apis"
 	"github.com/sighupio/furyctl/internal/distribution"
 	"github.com/sighupio/furyctl/internal/flags"
-	"github.com/sighupio/furyctl/internal/parser"
+	parserx "github.com/sighupio/furyctl/internal/parser"
 	"github.com/sighupio/furyctl/internal/schema/santhosh"
 	iox "github.com/sighupio/furyctl/internal/x/io"
 	dist "github.com/sighupio/furyctl/pkg/distribution"
@@ -219,7 +219,7 @@ func createCleanConfigForSchemaValidation(rawConf map[string]any) map[string]any
 // expandDynamicValues recursively expands dynamic values in the configuration
 // before schema validation.
 func expandDynamicValues(conf map[string]any, baseDir string) (map[string]any, error) {
-	result, err := expandDynamicValuesRecursive(conf, parser.NewConfigParser(baseDir))
+	result, err := expandDynamicValuesRecursive(conf, parserx.NewConfigParser(baseDir))
 	if err != nil {
 		return nil, err
 	}
@@ -234,7 +234,7 @@ func expandDynamicValues(conf map[string]any, baseDir string) (map[string]any, e
 }
 
 // expandDynamicValuesRecursive recursively processes the configuration map to expand dynamic values.
-func expandDynamicValuesRecursive(value any, configParser *parser.ConfigParser) (any, error) {
+func expandDynamicValuesRecursive(value any, configParser *parserx.ConfigParser) (any, error) {
 	switch v := value.(type) {
 	case map[string]any:
 		result := make(map[string]any)

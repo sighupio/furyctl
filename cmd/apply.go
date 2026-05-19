@@ -33,8 +33,6 @@ import (
 	netx "github.com/sighupio/furyctl/pkg/x/net"
 )
 
-const WrappedErrMessage = "%w: %s"
-
 type Timeouts struct {
 	ProcessTimeout         int
 	PodRunningCheckTimeout int
@@ -49,6 +47,8 @@ type ClusterSkipsCmdFlags struct {
 
 type ClusterCmdFlags struct {
 	Timeouts
+	ClusterSkipsCmdFlags
+
 	Debug                 bool
 	FuryctlPath           string
 	DistroLocation        string
@@ -66,7 +66,6 @@ type ClusterCmdFlags struct {
 	UpgradeNode           string
 	DistroPatchesLocation string
 	PostApplyPhases       []string
-	ClusterSkipsCmdFlags
 }
 
 var (
@@ -273,7 +272,7 @@ func NewApplyCmd() *cobra.Command {
 
 			if err := clusterCreator.Create(
 				flags.StartFrom,
-				flags.Timeouts.ProcessTimeout,
+				flags.ProcessTimeout,
 				flags.PodRunningCheckTimeout,
 			); err != nil {
 				cmdEvent.AddErrorMessage(err)

@@ -8,20 +8,26 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"slices"
 )
 
 type Executor interface {
 	Command(name string, arg ...string) *exec.Cmd
 }
 
+type StdExecutor struct{}
+
 func NewStdExecutor() *StdExecutor {
 	return &StdExecutor{}
 }
 
-type StdExecutor struct{}
-
 func (*StdExecutor) Command(name string, arg ...string) *exec.Cmd {
+	//nolint:noctx // it requires a massive refactor
 	return exec.Command(name, arg...)
+}
+
+type FakeExecutor struct {
+	testHelperProcessFn string
 }
 
 func NewFakeExecutor(testHelperProcessFn string) *FakeExecutor {
@@ -34,13 +40,12 @@ func NewFakeExecutor(testHelperProcessFn string) *FakeExecutor {
 	}
 }
 
-type FakeExecutor struct {
-	testHelperProcessFn string
-}
-
 func (fe *FakeExecutor) Command(name string, arg ...string) *exec.Cmd {
-	cs := []string{"-test.run=" + fe.testHelperProcessFn, "--", filepath.Base(name)}
-	cs = append(cs, arg...)
+	cs := slices.Concat(
+		[]string{"-test.run=" + fe.testHelperProcessFn, "--", filepath.Base(name)},
+		arg,
+	)
 
+	//nolint:noctx // it requires a massive refactor
 	return exec.Command(os.Args[0], cs...)
 }

@@ -14,6 +14,13 @@ import (
 	"github.com/sighupio/furyctl/internal/tool/helmfile"
 )
 
+type Helmfile struct {
+	arch    string
+	checker *checker
+	os      string
+	version string
+}
+
 func NewHelmfile(runner *helmfile.Runner, version string) *Helmfile {
 	return &Helmfile{
 		arch:    runtime.GOARCH,
@@ -30,13 +37,6 @@ func NewHelmfile(runner *helmfile.Runner, version string) *Helmfile {
 			},
 		},
 	}
-}
-
-type Helmfile struct {
-	arch    string
-	checker *checker
-	os      string
-	version string
 }
 
 func (*Helmfile) SupportsDownload() bool {

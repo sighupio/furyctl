@@ -8,13 +8,14 @@ import (
 	"errors"
 	"fmt"
 	"path"
+	"slices"
 
 	r3diff "github.com/r3labs/diff/v3"
 	"github.com/sirupsen/logrus"
 
 	"github.com/sighupio/fury-distribution/pkg/apis/config"
 	"github.com/sighupio/fury-distribution/pkg/apis/ekscluster/v1alpha2/private"
-	"github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/ekscluster/common"
+	"github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/ekscluster/phases"
 	"github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/ekscluster/supported"
 	"github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/ekscluster/vpn"
 	"github.com/sighupio/furyctl/internal/cluster"
@@ -39,10 +40,10 @@ type Status struct {
 	Success bool
 }
 
-// Preflight is a phase tasked with ensuring cluster connectivity
+// PreFlight is a phase tasked with ensuring cluster connectivity
 // and checking for violations in the updates made on the furyctl.yaml file.
 type PreFlight struct {
-	*common.PreFlight
+	*phases.PreFlight
 
 	stateStore   state.Storer
 	tfRunnerKube *terraform.Runner
@@ -92,7 +93,7 @@ func NewPreFlight(
 	}
 
 	return &PreFlight{
-		PreFlight: &common.PreFlight{
+		PreFlight: &phases.PreFlight{
 			OperationPhase: p,
 			FuryctlConf:    furyctlConf,
 			ConfigPath:     paths.ConfigPath,
@@ -303,8 +304,6 @@ func (p *PreFlight) CreateDiffChecker(
 }
 
 func (p *PreFlight) CheckImmutablesDiffs(d r3diff.Changelog, diffChecker diffs.Checker) error {
-	var errs []error
-
 	r, err := rules.NewEKSClusterRulesExtractor(p.paths.DistroPath, diffChecker.GetCurrentConfig())
 	if err != nil {
 		if !errors.Is(err, rules.ErrReadingRulesFile) {
@@ -343,9 +342,11 @@ func (p *PreFlight) CheckImmutablesDiffs(d r3diff.Changelog, diffChecker diffs.C
 		distroImmutablePaths = append(distroImmutablePaths, rule.Path)
 	}
 
-	errs = append(errs, diffChecker.AssertImmutableViolations(d, infraImmutablePaths)...)
-	errs = append(errs, diffChecker.AssertImmutableViolations(d, kubeImmutablePaths)...)
-	errs = append(errs, diffChecker.AssertImmutableViolations(d, distroImmutablePaths)...)
+	errs := slices.Concat(
+		diffChecker.AssertImmutableViolations(d, infraImmutablePaths),
+		diffChecker.AssertImmutableViolations(d, kubeImmutablePaths),
+		diffChecker.AssertImmutableViolations(d, distroImmutablePaths),
+	)
 
 	if len(errs) > 0 {
 		return fmt.Errorf("%w: %w", errImmutable, errors.Join(errs...))
@@ -357,8 +358,6 @@ func (p *PreFlight) CheckImmutablesDiffs(d r3diff.Changelog, diffChecker diffs.C
 // CheckReducersDiffs checks if the changes to the reducers are supported by the distribution.
 // This is needed as not all from/to combinations are supported.
 func (p *PreFlight) CheckReducersDiffs(d r3diff.Changelog, diffChecker diffs.Checker) error {
-	var errs []error
-
 	r, err := rules.NewEKSClusterRulesExtractor(p.paths.DistroPath, diffChecker.GetCurrentConfig())
 	if err != nil {
 		if !errors.Is(err, rules.ErrReadingRulesFile) {
@@ -370,18 +369,20 @@ func (p *PreFlight) CheckReducersDiffs(d r3diff.Changelog, diffChecker diffs.Che
 		return nil
 	}
 
-	errs = append(errs, diffChecker.AssertReducerUnsupportedViolations(
-		d,
-		r.UnsupportedReducerRulesByDiffs(r.GetReducers("infrastructure"), d),
-	)...)
-	errs = append(errs, diffChecker.AssertReducerUnsupportedViolations(
-		d,
-		r.UnsupportedReducerRulesByDiffs(r.GetReducers("kubernetes"), d),
-	)...)
-	errs = append(errs, diffChecker.AssertReducerUnsupportedViolations(
-		d,
-		r.UnsupportedReducerRulesByDiffs(r.GetReducers("distribution"), d),
-	)...)
+	errs := slices.Concat(
+		diffChecker.AssertReducerUnsupportedViolations(
+			d,
+			r.UnsupportedReducerRulesByDiffs(r.GetReducers("infrastructure"), d),
+		),
+		diffChecker.AssertReducerUnsupportedViolations(
+			d,
+			r.UnsupportedReducerRulesByDiffs(r.GetReducers("kubernetes"), d),
+		),
+		diffChecker.AssertReducerUnsupportedViolations(
+			d,
+			r.UnsupportedReducerRulesByDiffs(r.GetReducers("distribution"), d),
+		),
+	)
 
 	if len(errs) > 0 {
 		return fmt.Errorf("%w: %w", errUnsupported, errors.Join(errs...))

@@ -16,6 +16,13 @@ import (
 	iox "github.com/sighupio/furyctl/internal/x/io"
 )
 
+type Helm struct {
+	arch    string
+	checker *checker
+	os      string
+	version string
+}
+
 func NewHelm(runner *helm.Runner, version string) *Helm {
 	return &Helm{
 		arch:    runtime.GOARCH,
@@ -32,13 +39,6 @@ func NewHelm(runner *helm.Runner, version string) *Helm {
 			},
 		},
 	}
-}
-
-type Helm struct {
-	arch    string
-	checker *checker
-	os      string
-	version string
 }
 
 func (*Helm) SupportsDownload() bool {

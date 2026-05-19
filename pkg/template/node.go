@@ -2,14 +2,14 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-package template
+package templatex
 
 import (
 	"reflect"
 	"strings"
 	"text/template/parse"
 
-	"github.com/sighupio/furyctl/internal/x/slices"
+	slicesx "github.com/sighupio/furyctl/internal/x/slices"
 )
 
 type Node struct {
@@ -34,11 +34,12 @@ func (f *Node) FromNodeList(nodes []parse.Node) []string {
 		}
 	}
 
-	return slices.Uniq(f.Fields)
+	return slicesx.Uniq(f.Fields)
 }
 
 func mapToAliasInterface(n parse.Node) any {
 	// MapParseNodeToAlias is a map of parse.Node to its alias.
+	//exhaustive:ignore
 	mapParseNodeToAlias := map[parse.NodeType]any{
 		parse.NodeList:     &ListNode{},
 		parse.NodeRange:    &RangeNode{},
@@ -108,16 +109,16 @@ func (t *TplNode) Set(n *Node) {
 type IfNode parse.IfNode
 
 func (i *IfNode) Set(n *Node) {
-	for _, cmd := range i.BranchNode.Pipe.Cmds {
+	for _, cmd := range i.Pipe.Cmds {
 		n.Set(n.FromNodeList(cmd.Args))
 	}
 
-	if i.BranchNode.List != nil {
-		n.Set(n.FromNodeList(i.BranchNode.List.Nodes))
+	if i.List != nil {
+		n.Set(n.FromNodeList(i.List.Nodes))
 	}
 
-	if i.BranchNode.ElseList != nil {
-		n.Set(n.FromNodeList(i.BranchNode.ElseList.Nodes))
+	if i.ElseList != nil {
+		n.Set(n.FromNodeList(i.ElseList.Nodes))
 	}
 }
 

@@ -19,6 +19,14 @@ import (
 
 const isNext = true
 
+type Tracker struct {
+	trackingInfo
+
+	client mixpanel.Mixpanel
+	events chan Event
+	enable bool
+}
+
 func NewTracker(token, version, arch, os, org, hostname string) *Tracker {
 	const timeout = time.Second * 5
 
@@ -67,13 +75,6 @@ func NewTracker(token, version, arch, os, org, hostname string) *Tracker {
 	return tracker
 }
 
-type Tracker struct {
-	trackingInfo
-	client mixpanel.Mixpanel
-	events chan Event
-	enable bool
-}
-
 type trackingInfo map[string]string
 
 // Track collects the event to be consumed by the event processor.
@@ -100,6 +101,13 @@ func (a *Tracker) Flush() {
 
 		logrus.Trace("Flushed events queue")
 	}
+}
+
+// Disable disables the tracker.
+func (a *Tracker) Disable() {
+	a.enable = false
+
+	a.close()
 }
 
 // processEvents is the event processor: it will listen for new events and send them to mixpanel.
@@ -133,6 +141,9 @@ func (a *Tracker) processEvents() {
 			}
 
 			logrus.Trace("Event sent: ", e.Name())
+
+		default:
+			logrus.Debugf("ignoring unknown event type %T", e)
 		}
 	}
 }
@@ -148,13 +159,6 @@ func (a *Tracker) sendEvent(event Event) error {
 	}
 
 	return nil
-}
-
-// Disable disables the tracker.
-func (a *Tracker) Disable() {
-	a.enable = false
-
-	a.close()
 }
 
 // close closes the tracker's event chan.

@@ -17,20 +17,20 @@ import (
 
 	"github.com/sighupio/fury-distribution/pkg/apis/config"
 	"github.com/sighupio/fury-distribution/pkg/apis/ekscluster/v1alpha2/private"
-	"github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/ekscluster/common"
+	"github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/ekscluster/phases"
 	"github.com/sighupio/furyctl/internal/cluster"
-	"github.com/sighupio/furyctl/internal/parser"
+	parserx "github.com/sighupio/furyctl/internal/parser"
 	"github.com/sighupio/furyctl/internal/tool/terraform"
 	"github.com/sighupio/furyctl/internal/upgrade"
 	execx "github.com/sighupio/furyctl/internal/x/exec"
 	iox "github.com/sighupio/furyctl/internal/x/io"
-	"github.com/sighupio/furyctl/internal/x/slices"
+	slicesx "github.com/sighupio/furyctl/internal/x/slices"
 )
 
 var ErrAbortedByUser = errors.New("aborted by user")
 
 type Infrastructure struct {
-	*common.Infrastructure
+	*phases.Infrastructure
 
 	kfdManifest config.KFD
 	tfRunner    *terraform.Runner
@@ -55,7 +55,7 @@ func NewInfrastructure(
 	executor := execx.NewStdExecutor()
 
 	return &Infrastructure{
-		Infrastructure: &common.Infrastructure{
+		Infrastructure: &phases.Infrastructure{
 			OperationPhase: phase,
 			FuryctlConf:    furyctlConf,
 			ConfigPath:     paths.ConfigPath,
@@ -85,7 +85,7 @@ func (i *Infrastructure) Self() *cluster.OperationPhase {
 func (i *Infrastructure) Exec(startFrom string, upgradeState *upgrade.State) error {
 	logrus.Info("Creating infrastructure...")
 
-	timestamp := time.Now().Unix()
+	timestampSec := time.Now().Unix()
 
 	if err := i.Prepare(); err != nil {
 		return fmt.Errorf("error preparing infrastructure phase: %w", err)
@@ -99,7 +99,7 @@ func (i *Infrastructure) Exec(startFrom string, upgradeState *upgrade.State) err
 		return fmt.Errorf("error running pre-infrastructure phase: %w", err)
 	}
 
-	if err := i.coreInfrastructure(startFrom, upgradeState, timestamp); err != nil {
+	if err := i.coreInfrastructure(startFrom, upgradeState, timestampSec); err != nil {
 		return fmt.Errorf("error running core infrastructure phase: %w", err)
 	}
 
@@ -112,6 +112,20 @@ func (i *Infrastructure) Exec(startFrom string, upgradeState *upgrade.State) err
 	}
 
 	logrus.Info("Infrastructure created successfully")
+
+	return nil
+}
+
+func (i *Infrastructure) SetUpgrade(upgradeEnabled bool) {
+	i.upgrade.Enabled = upgradeEnabled
+}
+
+func (i *Infrastructure) Stop() error {
+	logrus.Debug("Stopping terraform/tofu runner...")
+
+	if err := i.tfRunner.Stop(); err != nil {
+		return fmt.Errorf("error stopping terraform/tofu runner: %w", err)
+	}
 
 	return nil
 }
@@ -150,11 +164,11 @@ func (i *Infrastructure) coreInfrastructure(
 			return nil
 		}
 
-		tfParser := parser.NewTfPlanParser(string(plan))
+		tfParser := parserx.NewTfPlanParser(string(plan))
 
 		parsedPlan := tfParser.Parse()
 
-		criticalResources := slices.Intersection(i.getCriticalTFResourceTypes(), parsedPlan.Destroy)
+		criticalResources := slicesx.Intersection(i.getCriticalTFResourceTypes(), parsedPlan.Destroy)
 
 		if len(criticalResources) > 0 {
 			logrus.Warnf("Deletion of the following critical resources has been detected: %s. See the logs for more details.",
@@ -210,20 +224,6 @@ func (i *Infrastructure) postInfrastructure(
 
 	if i.upgrade.Enabled {
 		upgradeState.Phases.PostInfrastructure.Status = upgrade.PhaseStatusSuccess
-	}
-
-	return nil
-}
-
-func (i *Infrastructure) SetUpgrade(upgradeEnabled bool) {
-	i.upgrade.Enabled = upgradeEnabled
-}
-
-func (i *Infrastructure) Stop() error {
-	logrus.Debug("Stopping terraform/tofu runner...")
-
-	if err := i.tfRunner.Stop(); err != nil {
-		return fmt.Errorf("error stopping terraform/tofu runner: %w", err)
 	}
 
 	return nil

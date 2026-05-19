@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-package common
+package phases
 
 import (
 	"encoding/json"
@@ -18,7 +18,7 @@ import (
 	"github.com/sighupio/furyctl/internal/state"
 	"github.com/sighupio/furyctl/internal/tool/terraform"
 	"github.com/sighupio/furyctl/pkg/merge"
-	"github.com/sighupio/furyctl/pkg/template"
+	templatex "github.com/sighupio/furyctl/pkg/template"
 	yamlx "github.com/sighupio/furyctl/pkg/x/yaml"
 )
 
@@ -52,7 +52,7 @@ type InjectType struct {
 func (d *Distribution) PreparePreTerraform() (
 	*merge.Merger,
 	*merge.Merger,
-	*template.Config,
+	*templatex.Config,
 	error,
 ) {
 	if err := d.CreateRootFolder(); err != nil {
@@ -74,7 +74,7 @@ func (d *Distribution) PreparePreTerraform() (
 		return nil, nil, nil, err
 	}
 
-	tfCfg, err := template.NewConfig(furyctlMerger, preTfMerger, []string{"manifests", "scripts", ".gitignore"})
+	tfCfg, err := templatex.NewConfig(furyctlMerger, preTfMerger, []string{"manifests", "scripts", ".gitignore"})
 	if err != nil {
 		return nil, nil, nil, fmt.Errorf("error creating template config: %w", err)
 	}
@@ -96,92 +96,16 @@ func (d *Distribution) PreparePreTerraform() (
 	return furyctlMerger, preTfMerger, &tfCfg, nil
 }
 
-func (d *Distribution) injectDataPreTf(fMerger *merge.Merger) (*merge.Merger, error) {
-	vpcID, err := d.extractVpcIDFromPrevPhases(fMerger)
-	if err != nil {
-		return nil, err
-	}
-
-	if vpcID == "" {
-		return fMerger, nil
-	}
-
-	injectData := InjectType{
-		Data: private.SpecDistribution{
-			Modules: private.SpecDistributionModules{
-				Ingress: private.SpecDistributionModulesIngress{
-					Dns: &private.SpecDistributionModulesIngressDNS{
-						Private: &private.SpecDistributionModulesIngressDNSPrivate{
-							VpcId: vpcID,
-						},
-					},
-				},
-			},
-		},
-	}
-
-	injectDataModel := merge.NewDefaultModelFromStruct(injectData, ".data", true)
-
-	merger := merge.NewMerger(
-		*fMerger.GetBase(),
-		injectDataModel,
-	)
-
-	_, err = merger.Merge()
-	if err != nil {
-		return nil, fmt.Errorf("error merging furyctl config: %w", err)
-	}
-
-	return merger, nil
-}
-
-func (d *Distribution) extractVpcIDFromPrevPhases(fMerger *merge.Merger) (string, error) {
-	vpcID := ""
-
-	if infraOutJSON, err := os.ReadFile(path.Join(d.InfrastructureTerraformOutputsPath, "output.json")); err == nil {
-		var infraOut terraform.OutputJSON
-
-		if err := json.Unmarshal(infraOutJSON, &infraOut); err == nil {
-			if infraOut["vpc_id"] == nil {
-				return vpcID, ErrVpcIDNotFound
-			}
-
-			vpcIDOut, ok := infraOut["vpc_id"].Value.(string)
-			if !ok {
-				return vpcID, ErrCastingVpcIDToStr
-			}
-
-			vpcID = vpcIDOut
-		}
-	} else {
-		fModel := merge.NewDefaultModel((*fMerger.GetBase()).Content(), ".spec.kubernetes")
-
-		kubeFromFuryctlConf, err := fModel.Get()
-		if err != nil {
-			return vpcID, fmt.Errorf("error getting kubernetes from furyctl config: %w", err)
-		}
-
-		vpcFromFuryctlConf, ok := kubeFromFuryctlConf["vpcId"].(string)
-		if !ok && !d.DryRun {
-			return vpcID, ErrCastingVpcIDToStr
-		}
-
-		vpcID = vpcFromFuryctlConf
-	}
-
-	return vpcID, nil
-}
-
 func (d *Distribution) PreparePostTerraform(
 	furyctlMerger *merge.Merger,
 	preTfMerger *merge.Merger,
-) (*template.Config, error) {
+) (*templatex.Config, error) {
 	postTfMerger, err := d.InjectDataPostTf(preTfMerger)
 	if err != nil {
 		return nil, err
 	}
 
-	mCfg, err := template.NewConfig(furyctlMerger, postTfMerger, []string{"terraform", ".gitignore"})
+	mCfg, err := templatex.NewConfig(furyctlMerger, postTfMerger, []string{"terraform", ".gitignore"})
 	if err != nil {
 		return nil, fmt.Errorf("error creating template config: %w", err)
 	}
@@ -209,7 +133,7 @@ func (d *Distribution) PreparePostTerraform(
 	return &mCfg, nil
 }
 
-func (d *Distribution) InjectStoredConfig(cfg *template.Config) error {
+func (d *Distribution) InjectStoredConfig(cfg *templatex.Config) error {
 	storedCfg := map[any]any{}
 
 	storedCfgStr, err := d.StateStore.GetConfig()
@@ -289,6 +213,82 @@ func (d *Distribution) InjectDataPostTf(fMerger *merge.Merger) (*merge.Merger, e
 	}
 
 	return merger, nil
+}
+
+func (d *Distribution) injectDataPreTf(fMerger *merge.Merger) (*merge.Merger, error) {
+	vpcID, err := d.extractVpcIDFromPrevPhases(fMerger)
+	if err != nil {
+		return nil, err
+	}
+
+	if vpcID == "" {
+		return fMerger, nil
+	}
+
+	injectData := InjectType{
+		Data: private.SpecDistribution{
+			Modules: private.SpecDistributionModules{
+				Ingress: private.SpecDistributionModulesIngress{
+					Dns: &private.SpecDistributionModulesIngressDNS{
+						Private: &private.SpecDistributionModulesIngressDNSPrivate{
+							VpcId: vpcID,
+						},
+					},
+				},
+			},
+		},
+	}
+
+	injectDataModel := merge.NewDefaultModelFromStruct(injectData, ".data", true)
+
+	merger := merge.NewMerger(
+		*fMerger.GetBase(),
+		injectDataModel,
+	)
+
+	_, err = merger.Merge()
+	if err != nil {
+		return nil, fmt.Errorf("error merging furyctl config: %w", err)
+	}
+
+	return merger, nil
+}
+
+func (d *Distribution) extractVpcIDFromPrevPhases(fMerger *merge.Merger) (string, error) {
+	vpcID := ""
+
+	if infraOutJSON, err := os.ReadFile(path.Join(d.InfrastructureTerraformOutputsPath, "output.json")); err == nil {
+		var infraOut terraform.OutputJSON
+
+		if err := json.Unmarshal(infraOutJSON, &infraOut); err == nil {
+			if infraOut["vpc_id"] == nil {
+				return vpcID, ErrVpcIDNotFound
+			}
+
+			vpcIDOut, ok := infraOut["vpc_id"].Value.(string)
+			if !ok {
+				return vpcID, ErrCastingVpcIDToStr
+			}
+
+			vpcID = vpcIDOut
+		}
+	} else {
+		fModel := merge.NewDefaultModel((*fMerger.GetBase()).Content(), ".spec.kubernetes")
+
+		kubeFromFuryctlConf, err := fModel.Get()
+		if err != nil {
+			return vpcID, fmt.Errorf("error getting kubernetes from furyctl config: %w", err)
+		}
+
+		vpcFromFuryctlConf, ok := kubeFromFuryctlConf["vpcId"].(string)
+		if !ok && !d.DryRun {
+			return vpcID, ErrCastingVpcIDToStr
+		}
+
+		vpcID = vpcFromFuryctlConf
+	}
+
+	return vpcID, nil
 }
 
 func (d *Distribution) extractTfOutputs() (map[string]string, error) {

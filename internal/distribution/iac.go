@@ -15,7 +15,7 @@ import (
 
 	iox "github.com/sighupio/furyctl/internal/x/io"
 	"github.com/sighupio/furyctl/pkg/merge"
-	"github.com/sighupio/furyctl/pkg/template"
+	templatex "github.com/sighupio/furyctl/pkg/template"
 	yamlx "github.com/sighupio/furyctl/pkg/x/yaml"
 )
 
@@ -101,7 +101,7 @@ func (m *IACBuilder) Build() error {
 		excluded = append(excluded, "manifests/aws")
 	}
 
-	tmplCfg, err := template.NewConfig(reverseMerger, reverseMerger, excluded)
+	tmplCfg, err := templatex.NewConfig(reverseMerger, reverseMerger, excluded)
 	if err != nil {
 		return fmt.Errorf("error creating template config: %w", err)
 	}
@@ -149,7 +149,7 @@ func (m *IACBuilder) Build() error {
 
 	logrus.Debugf("output directory = %s", m.outDir)
 
-	templateModel, err := template.NewTemplateModel(
+	templateModel, err := templatex.NewTemplateModel(
 		sourcePath,
 		m.outDir,
 		confPath,

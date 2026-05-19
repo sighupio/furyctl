@@ -110,67 +110,11 @@ func (m *Merger) MergeIntoViper(flags *FlagsConfig, command string) error {
 	return nil
 }
 
-// mergeCommandFlags merges flags for a specific command into viper.
-func (m *Merger) mergeCommandFlags(flagsMap map[string]any, command string) error {
-	var supportedFlagsMap map[string]FlagInfo
-
-	switch command {
-	case CommandGlobal:
-		supportedFlagsMap = m.supportedFlags.Global
-
-	case CommandApply:
-		supportedFlagsMap = m.supportedFlags.Apply
-
-	case CommandDelete:
-		supportedFlagsMap = m.supportedFlags.Delete
-
-	case CommandCreate:
-		supportedFlagsMap = m.supportedFlags.Create
-
-	case CommandGet:
-		supportedFlagsMap = m.supportedFlags.Get
-
-	case CommandDiff:
-		supportedFlagsMap = m.supportedFlags.Diff
-
-	case CommandTools:
-		supportedFlagsMap = m.supportedFlags.Tools
-
-	default:
-		return fmt.Errorf("%w: %s", ErrUnsupportedCommand, command)
-	}
-
-	for flagName, value := range flagsMap {
-		// Check if the flag is supported.
-		flagInfo, supported := supportedFlagsMap[flagName]
-		if !supported {
-			// Log warning but don't fail - might be a new flag.
-			continue
-		}
-
-		// Convert and validate the value.
-		convertedValue, err := m.ConvertValue(value, flagInfo.Type)
-		if err != nil {
-			return fmt.Errorf("error converting flag %s: %w", flagName, err)
-		}
-
-		// Convert camelCase flag name to kebab-case for viper.
-		viperKey := CamelToKebab(flagName)
-
-		// Set the value in viper only if it's not already set.
-		// This preserves the priority: env vars and command line flags take precedence.
-		if !viper.IsSet(viperKey) {
-			viper.Set(viperKey, convertedValue)
-		}
-	}
-
-	return nil
-}
-
 // ConvertValue converts a value to the expected type for the flag.
 func (*Merger) ConvertValue(value any, expectedType FlagType) (any, error) {
 	switch expectedType {
-	case FlagTypeString:
+	case FlagTypeString, FlagTypeDuration:
+		// Duration is treated as string here; viper handles the actual conversion later.
 		return fmt.Sprintf("%v", value), nil
 
 	case FlagTypeBool:
@@ -238,10 +182,6 @@ func (*Merger) ConvertValue(value any, expectedType FlagType) (any, error) {
 			return []string{}, ErrTypeConversion
 		}
 
-	case FlagTypeDuration:
-		// For now, treat duration as string and let viper handle the conversion.
-		return fmt.Sprintf("%v", value), nil
-
 	default:
 		return nil, ErrUnsupportedFlagType
 	}
@@ -283,4 +223,61 @@ func (m *Merger) GetSupportedFlagsForCommand(command string) map[string]FlagInfo
 	default:
 		return nil
 	}
+}
+
+// mergeCommandFlags merges flags for a specific command into viper.
+func (m *Merger) mergeCommandFlags(flagsMap map[string]any, command string) error {
+	var supportedFlagsMap map[string]FlagInfo
+
+	switch command {
+	case CommandGlobal:
+		supportedFlagsMap = m.supportedFlags.Global
+
+	case CommandApply:
+		supportedFlagsMap = m.supportedFlags.Apply
+
+	case CommandDelete:
+		supportedFlagsMap = m.supportedFlags.Delete
+
+	case CommandCreate:
+		supportedFlagsMap = m.supportedFlags.Create
+
+	case CommandGet:
+		supportedFlagsMap = m.supportedFlags.Get
+
+	case CommandDiff:
+		supportedFlagsMap = m.supportedFlags.Diff
+
+	case CommandTools:
+		supportedFlagsMap = m.supportedFlags.Tools
+
+	default:
+		return fmt.Errorf("%w: %s", ErrUnsupportedCommand, command)
+	}
+
+	for flagName, value := range flagsMap {
+		// Check if the flag is supported.
+		flagInfo, supported := supportedFlagsMap[flagName]
+		if !supported {
+			// Log warning but don't fail - might be a new flag.
+			continue
+		}
+
+		// Convert and validate the value.
+		convertedValue, err := m.ConvertValue(value, flagInfo.Type)
+		if err != nil {
+			return fmt.Errorf("error converting flag %s: %w", flagName, err)
+		}
+
+		// Convert camelCase flag name to kebab-case for viper.
+		viperKey := CamelToKebab(flagName)
+
+		// Set the value in viper only if it's not already set.
+		// This preserves the priority: env vars and command line flags take precedence.
+		if !viper.IsSet(viperKey) {
+			viper.Set(viperKey, convertedValue)
+		}
+	}
+
+	return nil
 }

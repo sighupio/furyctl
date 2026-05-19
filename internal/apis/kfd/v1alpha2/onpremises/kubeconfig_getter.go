@@ -18,11 +18,12 @@ import (
 	"github.com/sighupio/furyctl/internal/tool/ansible"
 	execx "github.com/sighupio/furyctl/internal/x/exec"
 	iox "github.com/sighupio/furyctl/internal/x/io"
-	"github.com/sighupio/furyctl/pkg/template"
+	templatex "github.com/sighupio/furyctl/pkg/template"
 )
 
 type KubeconfigGetter struct {
 	*cluster.OperationPhase
+
 	furyctlConf public.OnpremisesKfdV1Alpha2
 	kfdManifest config.KFD
 	distroPath  string
@@ -66,6 +67,9 @@ func (k *KubeconfigGetter) SetProperty(name string, value any) {
 		if s, ok := value.(string); ok {
 			k.distroPath = s
 		}
+
+	default:
+		logrus.Debugf("ignoring unknown property %q", lcName)
 	}
 }
 
@@ -100,7 +104,7 @@ func (k *KubeconfigGetter) Get() error {
 		return fmt.Errorf("error creating furyctl merger: %w", err)
 	}
 
-	mCfg, err := template.NewConfigWithoutData(furyctlMerger, []string{})
+	mCfg, err := templatex.NewConfigWithoutData(furyctlMerger, []string{})
 	if err != nil {
 		return fmt.Errorf("error creating template config: %w", err)
 	}

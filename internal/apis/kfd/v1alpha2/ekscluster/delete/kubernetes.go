@@ -15,7 +15,7 @@ import (
 
 	"github.com/sighupio/fury-distribution/pkg/apis/config"
 	"github.com/sighupio/fury-distribution/pkg/apis/ekscluster/v1alpha2/private"
-	"github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/ekscluster/common"
+	"github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/ekscluster/phases"
 	"github.com/sighupio/furyctl/internal/cluster"
 	"github.com/sighupio/furyctl/internal/tool/awscli"
 	"github.com/sighupio/furyctl/internal/tool/terraform"
@@ -39,7 +39,7 @@ var (
 )
 
 type Kubernetes struct {
-	*common.Kubernetes
+	*phases.Kubernetes
 
 	tfRunner  *terraform.Runner
 	awsRunner *awscli.Runner
@@ -59,7 +59,7 @@ func NewKubernetes(
 	)
 
 	return &Kubernetes{
-		Kubernetes: &common.Kubernetes{
+		Kubernetes: &phases.Kubernetes{
 			OperationPhase:                     phase,
 			FuryctlConf:                        furyctlConf,
 			FuryctlConfPath:                    paths.ConfigPath,
@@ -91,7 +91,7 @@ func NewKubernetes(
 func (k *Kubernetes) Exec() error {
 	logrus.Info("Deleting SIGHUP Distribution cluster...")
 
-	timestamp := time.Now().Unix()
+	timestampSec := time.Now().Unix()
 
 	if err := k.Prepare(); err != nil {
 		return fmt.Errorf("error preparing kubernetes phase: %w", err)
@@ -118,12 +118,12 @@ func (k *Kubernetes) Exec() error {
 		return fmt.Errorf("error running terraform init: %w", err)
 	}
 
-	if _, err := k.tfRunner.Plan(timestamp, "-destroy"); err != nil {
+	if _, err := k.tfRunner.Plan(timestampSec, "-destroy"); err != nil {
 		return fmt.Errorf("error running terraform plan: %w", err)
 	}
 
 	if k.DryRun {
-		if _, err := k.tfRunner.Plan(timestamp, "-destroy"); err != nil {
+		if _, err := k.tfRunner.Plan(timestampSec, "-destroy"); err != nil {
 			return fmt.Errorf("error running terraform plan: %w", err)
 		}
 

@@ -13,6 +13,13 @@ import (
 	"github.com/sighupio/furyctl/internal/tool/sed"
 )
 
+type Sed struct {
+	arch    string
+	checker *checker
+	os      string
+	version string
+}
+
 func NewSed(runner *sed.Runner, version string) *Sed {
 	return &Sed{
 		arch:    runtime.GOARCH,
@@ -29,13 +36,6 @@ func NewSed(runner *sed.Runner, version string) *Sed {
 			},
 		},
 	}
-}
-
-type Sed struct {
-	arch    string
-	checker *checker
-	os      string
-	version string
 }
 
 func (*Sed) SupportsDownload() bool {

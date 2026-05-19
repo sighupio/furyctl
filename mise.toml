@@ -1,6 +1,6 @@
 [tools]
 go = "1.24.13"
-golangci-lint = "1.64.8"
+golangci-lint = "2.12.2"
 goreleaser = "2.15.4"
 awscli = "2.15.17"
 "ubi:google/addlicense" = "v1.1.1"
@@ -125,7 +125,8 @@ run = [
 
 [tasks.lint]
 description = "run linting with golangci-lint"
-run = "golangci-lint -v run --color=always --max-same-issues 25 --config=.rules/.golangci.yml ./..."
+env = { GOMEMLIMIT = "1024MiB" }
+run = "golangci-lint -v run --timeout=5m --color=always --max-same-issues 25 --config=.rules/.golangci.yml ./..."
 
 [tasks.lint-go-common]
 description = "run common linting rules without config"

@@ -24,7 +24,7 @@ import (
 	"github.com/sighupio/furyctl/internal/upgrade"
 	iox "github.com/sighupio/furyctl/internal/x/io"
 	"github.com/sighupio/furyctl/pkg/reducers"
-	"github.com/sighupio/furyctl/pkg/template"
+	templatex "github.com/sighupio/furyctl/pkg/template"
 	yamlx "github.com/sighupio/furyctl/pkg/x/yaml"
 )
 
@@ -38,6 +38,7 @@ var (
 
 type PreUpgrade struct {
 	*cluster.OperationPhase
+
 	dryRun               bool
 	kind                 string
 	upgrade              *upgrade.Upgrade
@@ -112,7 +113,7 @@ func (p *PreUpgrade) Exec() error {
 		return fmt.Errorf("error creating furyctl merger: %w", err)
 	}
 
-	mCfg, err := template.NewConfigWithoutData(furyctlMerger, []string{})
+	mCfg, err := templatex.NewConfigWithoutData(furyctlMerger, []string{})
 	if err != nil {
 		return fmt.Errorf("error creating template config: %w", err)
 	}
@@ -165,7 +166,7 @@ func (p *PreUpgrade) Exec() error {
 		upgradesPath = path.Join(p.externalUpgradesPath, strings.ToLower(p.kind))
 	}
 
-	templateModel, err := template.NewTemplateModel(
+	templateModel, err := templatex.NewTemplateModel(
 		upgradesPath,
 		p.Path,
 		confPath,

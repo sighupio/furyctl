@@ -4,13 +4,13 @@
 
 //go:build unit
 
-package slices_test
+package slicesx_test
 
 import (
 	"strings"
 	"testing"
 
-	"github.com/sighupio/furyctl/internal/x/slices"
+	slicesx "github.com/sighupio/furyctl/internal/x/slices"
 )
 
 func TestDisjoint(t *testing.T) {
@@ -45,7 +45,7 @@ func TestDisjoint(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			if got := slices.Disjoint(tt.a, tt.b); got != tt.want {
+			if got := slicesx.Disjoint(tt.a, tt.b); got != tt.want {
 				t.Errorf("Disjoint() = %v, want %v", got, tt.want)
 			}
 		})
@@ -59,8 +59,8 @@ func TestDisjointTransform(t *testing.T) {
 		name       string
 		a          []string
 		b          []string
-		transformA slices.TransformFunc[string]
-		transformB slices.TransformFunc[string]
+		transformA slicesx.TransformFunc[string]
+		transformB slicesx.TransformFunc[string]
 		want       bool
 	}{
 		{
@@ -94,7 +94,7 @@ func TestDisjointTransform(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			if got := slices.DisjointTransform(tt.a, tt.b, tt.transformA, tt.transformB); got != tt.want {
+			if got := slicesx.DisjointTransform(tt.a, tt.b, tt.transformA, tt.transformB); got != tt.want {
 				t.Errorf("DisjointTransform() = %v, want %v", got, tt.want)
 			}
 		})

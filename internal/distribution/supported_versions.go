@@ -8,7 +8,6 @@ import (
 	"errors"
 	"fmt"
 	"slices"
-	"sort"
 	"strings"
 	"time"
 
@@ -32,7 +31,8 @@ type KFDRelease struct {
 	Recommended bool
 }
 
-// Check if current KFD version is a release or a prerelease.
+// IsNotRelease reports whether the given KFD version is a prerelease
+// (or otherwise not parsable as a stable release).
 func IsNotRelease(ghRelease git.Release) bool {
 	v, err := VersionFromString(ghRelease.TagName)
 	if err != nil || v.Prerelease() != "" {
@@ -52,21 +52,26 @@ func GetSupportedVersions(ghClient git.RepoClient) ([]KFDRelease, error) {
 		return releases, fmt.Errorf("error getting releases from GitHub: %w", err)
 	}
 
-	sort.Slice(ghReleases, func(i, j int) bool {
-		iRelease := ghReleases[i]
-		jRelease := ghReleases[j]
-
-		iVersion, err := VersionFromString(iRelease.TagName)
+	slices.SortFunc(ghReleases, func(a, b git.Release) int {
+		aVersion, err := VersionFromString(a.TagName)
 		if err != nil {
-			return false
+			return 1
 		}
 
-		jVersion, err := VersionFromString(jRelease.TagName)
+		bVersion, err := VersionFromString(b.TagName)
 		if err != nil {
-			return true
+			return -1
 		}
 
-		return jVersion.LessThan(&iVersion)
+		// Descending order: larger versions first.
+		switch {
+		case bVersion.LessThan(&aVersion):
+			return -1
+		case aVersion.LessThan(&bVersion):
+			return 1
+		default:
+			return 0
+		}
 	})
 
 	ghReleases = slices.DeleteFunc(ghReleases, IsReleaseUnsupportedByFuryctl)

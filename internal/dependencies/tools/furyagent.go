@@ -16,6 +16,13 @@ import (
 	iox "github.com/sighupio/furyctl/internal/x/io"
 )
 
+type Furyagent struct {
+	arch    string
+	checker *checker
+	os      string
+	version string
+}
+
 func NewFuryagent(runner *furyagent.Runner, version string) *Furyagent {
 	return &Furyagent{
 		arch:    runtime.GOARCH,
@@ -32,13 +39,6 @@ func NewFuryagent(runner *furyagent.Runner, version string) *Furyagent {
 			},
 		},
 	}
-}
-
-type Furyagent struct {
-	arch    string
-	checker *checker
-	os      string
-	version string
 }
 
 func (*Furyagent) SupportsDownload() bool {

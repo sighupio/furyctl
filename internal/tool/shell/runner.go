@@ -35,23 +35,6 @@ func (r *Runner) CmdPath() string {
 	return r.paths.Shell
 }
 
-func (r *Runner) newCmd(args []string) (*execx.Cmd, string) {
-	cmd := execx.NewCmd(r.paths.Shell, execx.CmdOptions{
-		Args:     args,
-		Executor: r.executor,
-		WorkDir:  r.paths.WorkDir,
-	})
-
-	id := uuid.NewString()
-	r.cmds[id] = cmd
-
-	return cmd, id
-}
-
-func (r *Runner) deleteCmd(id string) {
-	delete(r.cmds, id)
-}
-
 func (*Runner) Version() (string, error) {
 	return "", nil
 }
@@ -76,4 +59,21 @@ func (r *Runner) Stop() error {
 	}
 
 	return nil
+}
+
+func (r *Runner) newCmd(args []string) (*execx.Cmd, string) {
+	cmd := execx.NewCmd(r.paths.Shell, execx.CmdOptions{
+		Args:     args,
+		Executor: r.executor,
+		WorkDir:  r.paths.WorkDir,
+	})
+
+	id := uuid.NewString()
+	r.cmds[id] = cmd
+
+	return cmd, id
+}
+
+func (r *Runner) deleteCmd(id string) {
+	delete(r.cmds, id)
 }

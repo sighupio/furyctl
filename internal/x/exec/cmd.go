@@ -32,6 +32,13 @@ func NewErrCmdFailed(name string, args []string, err error, res *CmdLog) error {
 	return fmt.Errorf("%s %s: %w - %v\n%s", name, strings.Join(args, " "), ErrCmdFailed, err, res)
 }
 
+type Cmd struct {
+	*exec.Cmd
+
+	Log       *CmdLog
+	Sensitive bool
+}
+
 func NewCmd(name string, opts CmdOptions) *Cmd {
 	outLog := bytes.NewBufferString("")
 	errLog := bytes.NewBufferString("")
@@ -95,12 +102,6 @@ func NewCmd(name string, opts CmdOptions) *Cmd {
 	}
 }
 
-type Cmd struct {
-	*exec.Cmd
-	Log       *CmdLog
-	Sensitive bool
-}
-
 func (c *Cmd) Run() error {
 	if err := c.Cmd.Run(); err != nil {
 		return NewErrCmdFailed(c.Path, c.Args, err, c.Log)
@@ -132,28 +133,27 @@ func (c *Cmd) RunWithTimeout(timeout time.Duration) error {
 
 	defer cancel()
 
-	if len(c.Cmd.Args) == 1 {
-		cmdCtx = exec.CommandContext(ctx, c.Cmd.Path)
+	if len(c.Args) == 1 {
+		cmdCtx = exec.CommandContext(ctx, c.Path)
 	} else {
-		args := c.Cmd.Args[1:]
-
-		cmdCtx = exec.CommandContext(ctx, c.Cmd.Path, args...)
+		args := c.Args[1:]
+		cmdCtx = exec.CommandContext(ctx, c.Path, args...)
 	}
 
-	cmdCtx.Dir = c.Cmd.Dir
-	cmdCtx.Stdout = c.Cmd.Stdout
-	cmdCtx.Stderr = c.Cmd.Stderr
+	cmdCtx.Dir = c.Dir
+	cmdCtx.Stdout = c.Stdout
+	cmdCtx.Stderr = c.Stderr
 
 	err := cmdCtx.Run()
 
 	if errors.Is(ctx.Err(), context.DeadlineExceeded) {
 		return fmt.Errorf(
-			"%w after %s: %s %s", ErrCmdTimeout, timeout, c.Cmd.Path, strings.Join(c.Cmd.Args, " "),
+			"%w after %s: %s %s", ErrCmdTimeout, timeout, c.Path, strings.Join(c.Args, " "),
 		)
 	}
 
 	if err != nil {
-		return NewErrCmdFailed(c.Cmd.Path, c.Cmd.Args, err, c.Log)
+		return NewErrCmdFailed(c.Path, c.Args, err, c.Log)
 	}
 
 	return nil
@@ -184,12 +184,12 @@ func CombinedOutput(cmd *Cmd) (string, error) {
 	errOut := cmd.Log.Err.String()
 
 	if cmd.Sensitive {
-		outB, ok := cmd.Cmd.Stdout.(*bytes.Buffer)
+		outB, ok := cmd.Stdout.(*bytes.Buffer)
 		if !ok {
 			return "", ErrCastingToBuffer
 		}
 
-		errOutB, ok := cmd.Cmd.Stderr.(*bytes.Buffer)
+		errOutB, ok := cmd.Stderr.(*bytes.Buffer)
 		if !ok {
 			return "", ErrCastingToBuffer
 		}

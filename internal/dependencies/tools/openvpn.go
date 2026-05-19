@@ -13,6 +13,13 @@ import (
 	"github.com/sighupio/furyctl/internal/tool/openvpn"
 )
 
+type Openvpn struct {
+	arch    string
+	checker *checker
+	os      string
+	version string
+}
+
 func NewOpenvpn(runner *openvpn.Runner, version string) *Openvpn {
 	return &Openvpn{
 		arch:    runtime.GOARCH,
@@ -29,13 +36,6 @@ func NewOpenvpn(runner *openvpn.Runner, version string) *Openvpn {
 			},
 		},
 	}
-}
-
-type Openvpn struct {
-	arch    string
-	checker *checker
-	os      string
-	version string
 }
 
 func (*Openvpn) SupportsDownload() bool {

@@ -18,7 +18,7 @@ import (
 	"github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/kfddistribution/supported"
 	"github.com/sighupio/furyctl/internal/cluster"
 	"github.com/sighupio/furyctl/internal/distribution"
-	"github.com/sighupio/furyctl/internal/parser"
+	parserx "github.com/sighupio/furyctl/internal/parser"
 	"github.com/sighupio/furyctl/internal/state"
 	"github.com/sighupio/furyctl/internal/tool/kubectl"
 	execx "github.com/sighupio/furyctl/internal/x/exec"
@@ -41,6 +41,7 @@ type Status struct {
 
 type PreFlight struct {
 	*cluster.OperationPhase
+
 	furyctlConf     public.KfddistributionKfdV1Alpha2
 	stateStore      state.Storer
 	distroPath      string
@@ -103,7 +104,7 @@ func (p *PreFlight) Exec(renderedConfig map[string]any) (*Status, error) {
 		Success: false,
 	}
 
-	cfgParser := parser.NewConfigParser(p.furyctlConfPath)
+	cfgParser := parserx.NewConfigParser(p.furyctlConfPath)
 
 	logrus.Info("Running preflight checks...")
 
@@ -224,8 +225,6 @@ func (p *PreFlight) CreateDiffChecker(storedCfgStr []byte, renderedConfig map[st
 }
 
 func (p *PreFlight) CheckStateDiffs(d r3diff.Changelog, diffChecker diffs.Checker) error {
-	var errs []error
-
 	r, err := rules.NewDistroClusterRulesExtractor(p.distroPath, diffChecker.GetCurrentConfig())
 	if err != nil {
 		if !errors.Is(err, rules.ErrReadingRulesFile) {
@@ -250,7 +249,7 @@ func (p *PreFlight) CheckStateDiffs(d r3diff.Changelog, diffChecker diffs.Checke
 		immutablePaths = append(immutablePaths, rule.Path)
 	}
 
-	errs = append(errs, diffChecker.AssertImmutableViolations(d, immutablePaths)...)
+	errs := diffChecker.AssertImmutableViolations(d, immutablePaths)
 
 	if len(errs) > 0 {
 		return fmt.Errorf("%w: %w", errImmutable, errors.Join(errs...))
@@ -260,8 +259,6 @@ func (p *PreFlight) CheckStateDiffs(d r3diff.Changelog, diffChecker diffs.Checke
 }
 
 func (p *PreFlight) CheckReducerDiffs(d r3diff.Changelog, diffChecker diffs.Checker) error {
-	var errs []error
-
 	r, err := rules.NewDistroClusterRulesExtractor(p.distroPath, diffChecker.GetCurrentConfig())
 	if err != nil {
 		if !errors.Is(err, rules.ErrReadingRulesFile) {
@@ -273,10 +270,10 @@ func (p *PreFlight) CheckReducerDiffs(d r3diff.Changelog, diffChecker diffs.Chec
 		return nil
 	}
 
-	errs = append(errs, diffChecker.AssertReducerUnsupportedViolations(
+	errs := diffChecker.AssertReducerUnsupportedViolations(
 		d,
 		r.UnsupportedReducerRulesByDiffs(r.GetReducers("distribution"), d),
-	)...)
+	)
 
 	if len(errs) > 0 {
 		return fmt.Errorf("%w: %w", errUnsupported, errors.Join(errs...))

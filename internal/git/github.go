@@ -55,6 +55,17 @@ type GitHubClient struct {
 	config ClientConfig
 }
 
+// NewGitHubClient creates a new GitHub client with the given configuration.
+func NewGitHubClient() *GitHubClient {
+	return &GitHubClient{
+		client: http.DefaultClient,
+		config: ClientConfig{
+			ReleaseAPI: "https://api.github.com/repos/sighupio/fury-distribution/releases",
+			Timeout:    gitHubClientTimeout,
+		},
+	}
+}
+
 var ErrGHRateLimit = errors.New("rate limited from GitHub public API, retry in 1 hour")
 
 // GetReleases fetches all releases from GitHub.
@@ -122,15 +133,4 @@ func (gc GitHubClient) fetchReleasesPage(page, perPage int) ([]Release, int, err
 	}
 
 	return releases, page + 1, nil
-}
-
-// NewGitHubClient creates a new GitHub client with the given configuration.
-func NewGitHubClient() *GitHubClient {
-	return &GitHubClient{
-		client: http.DefaultClient,
-		config: ClientConfig{
-			ReleaseAPI: "https://api.github.com/repos/sighupio/fury-distribution/releases",
-			Timeout:    gitHubClientTimeout,
-		},
-	}
 }

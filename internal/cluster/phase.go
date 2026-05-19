@@ -20,7 +20,7 @@ import (
 	iox "github.com/sighupio/furyctl/internal/x/io"
 	slicesx "github.com/sighupio/furyctl/internal/x/slices"
 	"github.com/sighupio/furyctl/pkg/merge"
-	"github.com/sighupio/furyctl/pkg/template"
+	templatex "github.com/sighupio/furyctl/pkg/template"
 	yamlx "github.com/sighupio/furyctl/pkg/x/yaml"
 )
 
@@ -270,7 +270,7 @@ func (op *OperationPhase) CreateTerraformFolderStructure() error {
 }
 
 func (*OperationPhase) CopyFromTemplate(
-	cfg template.Config,
+	cfg templatex.Config,
 	prefix,
 	sourcePath,
 	targetPath,
@@ -294,7 +294,7 @@ func (*OperationPhase) CopyFromTemplate(
 		return fmt.Errorf("error writing config file: %w", err)
 	}
 
-	templateModel, err := template.NewTemplateModel(
+	templateModel, err := templatex.NewTemplateModel(
 		sourcePath,
 		targetPath,
 		confPath,
@@ -316,7 +316,7 @@ func (*OperationPhase) CopyFromTemplate(
 	return nil
 }
 
-func (op *OperationPhase) CopyPathsToConfig(cfg *template.Config) {
+func (op *OperationPhase) CopyPathsToConfig(cfg *templatex.Config) {
 	cfg.Data["paths"] = map[any]any{
 		"helm":       op.HelmPath,
 		"helmfile":   op.HelmfilePath,

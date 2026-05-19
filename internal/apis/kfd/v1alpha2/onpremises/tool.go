@@ -17,6 +17,12 @@ type ExtraToolsValidator struct {
 	executor execx.Executor
 }
 
+func NewExtraToolsValidator(executor execx.Executor) *ExtraToolsValidator {
+	return &ExtraToolsValidator{
+		executor: executor,
+	}
+}
+
 func (x *ExtraToolsValidator) Validate(_ string) ([]string, []error) {
 	var (
 		oks  []string
@@ -43,10 +49,4 @@ func (x *ExtraToolsValidator) validateAnsible() error {
 	}
 
 	return nil
-}
-
-func NewExtraToolsValidator(executor execx.Executor) *ExtraToolsValidator {
-	return &ExtraToolsValidator{
-		executor: executor,
-	}
 }

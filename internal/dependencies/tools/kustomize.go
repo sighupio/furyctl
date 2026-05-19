@@ -14,6 +14,13 @@ import (
 	"github.com/sighupio/furyctl/internal/tool/kustomize"
 )
 
+type Kustomize struct {
+	arch    string
+	checker *checker
+	os      string
+	version string
+}
+
 func NewKustomize(runner *kustomize.Runner, version string) *Kustomize {
 	arch := runtime.GOARCH
 	// Older versions of kustomize did not provide ARM64 binaries.
@@ -36,13 +43,6 @@ func NewKustomize(runner *kustomize.Runner, version string) *Kustomize {
 			},
 		},
 	}
-}
-
-type Kustomize struct {
-	arch    string
-	checker *checker
-	os      string
-	version string
 }
 
 func (*Kustomize) SupportsDownload() bool {

@@ -13,6 +13,13 @@ import (
 	"github.com/sighupio/furyctl/internal/tool/awscli"
 )
 
+type Awscli struct {
+	arch    string
+	checker *checker
+	os      string
+	version string
+}
+
 func NewAwscli(runner *awscli.Runner, version string) *Awscli {
 	return &Awscli{
 		arch:    "x86_64",
@@ -29,13 +36,6 @@ func NewAwscli(runner *awscli.Runner, version string) *Awscli {
 			},
 		},
 	}
-}
-
-type Awscli struct {
-	arch    string
-	checker *checker
-	os      string
-	version string
 }
 
 func (*Awscli) SupportsDownload() bool {

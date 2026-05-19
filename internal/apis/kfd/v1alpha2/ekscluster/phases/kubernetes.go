@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-package common
+package phases
 
 import (
 	"encoding/json"
@@ -16,7 +16,7 @@ import (
 	"github.com/sighupio/furyctl/internal/distribution"
 	"github.com/sighupio/furyctl/internal/tool/terraform"
 	"github.com/sighupio/furyctl/pkg/merge"
-	"github.com/sighupio/furyctl/pkg/template"
+	templatex "github.com/sighupio/furyctl/pkg/template"
 	yamlx "github.com/sighupio/furyctl/pkg/x/yaml"
 )
 
@@ -52,8 +52,8 @@ func (k *Kubernetes) Prepare() error {
 	return nil
 }
 
-func (k *Kubernetes) mergeConfig() (template.Config, error) {
-	var cfg template.Config
+func (k *Kubernetes) mergeConfig() (templatex.Config, error) {
+	var cfg templatex.Config
 
 	defaultsFilePath := path.Join(k.DistroPath, "defaults", "ekscluster-kfd-v1alpha2.yaml")
 
@@ -87,7 +87,7 @@ func (k *Kubernetes) mergeConfig() (template.Config, error) {
 		return cfg, fmt.Errorf("error merging files: %w", err)
 	}
 
-	cfg, err = template.NewConfig(reverseMerger, reverseMerger, []string{".gitignore"})
+	cfg, err = templatex.NewConfig(reverseMerger, reverseMerger, []string{".gitignore"})
 	if err != nil {
 		return cfg, fmt.Errorf("error creating template config: %w", err)
 	}
@@ -95,7 +95,7 @@ func (k *Kubernetes) mergeConfig() (template.Config, error) {
 	return cfg, nil
 }
 
-func (k *Kubernetes) copyFromTemplate(furyctlCfg template.Config) error {
+func (k *Kubernetes) copyFromTemplate(furyctlCfg templatex.Config) error {
 	eksInstallerPath := path.Join(k.Path, "..", "vendor", "installers", "eks", "modules", "eks")
 
 	nodeSelector, tolerations, err := k.getCommonDataFromDistribution(furyctlCfg)
@@ -145,7 +145,7 @@ func (k *Kubernetes) copyFromTemplate(furyctlCfg template.Config) error {
 	return nil
 }
 
-func (*Kubernetes) getCommonDataFromDistribution(furyctlCfg template.Config) (map[any]any, []any, error) {
+func (*Kubernetes) getCommonDataFromDistribution(furyctlCfg templatex.Config) (map[any]any, []any, error) {
 	var nodeSelector map[any]any
 
 	var tolerations []any

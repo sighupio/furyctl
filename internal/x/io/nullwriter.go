@@ -4,11 +4,11 @@
 
 package iox
 
+type NullWriter struct{}
+
 func NewNullWriter() *NullWriter {
 	return &NullWriter{}
 }
-
-type NullWriter struct{}
 
 func (*NullWriter) Write(_ []byte) (int, error) {
 	return 0, nil

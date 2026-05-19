@@ -145,6 +145,13 @@ type OperatorPhaseAsync interface {
 	Stop() error
 }
 
+type OperatorPhaseDecorator struct {
+	storer Storer
+	phase  OperatorPhase
+	dryRun bool
+	upgr   *Upgrade
+}
+
 func NewOperatorPhaseDecorator(
 	storer Storer,
 	phase OperatorPhase,
@@ -157,13 +164,6 @@ func NewOperatorPhaseDecorator(
 		dryRun: dryRun,
 		upgr:   upgr,
 	}
-}
-
-type OperatorPhaseDecorator struct {
-	storer Storer
-	phase  OperatorPhase
-	dryRun bool
-	upgr   *Upgrade
 }
 
 func (d *OperatorPhaseDecorator) Exec(startFrom string, upgradeState *State) error {

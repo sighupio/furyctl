@@ -44,23 +44,6 @@ func (r *Runner) CmdPath() string {
 	return r.paths.Helmfile
 }
 
-func (r *Runner) newCmd(args []string) (*execx.Cmd, string) {
-	cmd := execx.NewCmd(r.paths.Helmfile, execx.CmdOptions{
-		Args:     args,
-		Executor: r.executor,
-		WorkDir:  r.paths.WorkDir,
-	})
-
-	id := uuid.NewString()
-	r.cmds[id] = cmd
-
-	return cmd, id
-}
-
-func (r *Runner) deleteCmd(id string) {
-	delete(r.cmds, id)
-}
-
 func (r *Runner) Init(helmBinary string) error {
 	args := []string{"init", "--force", "--helm-binary", helmBinary}
 
@@ -107,4 +90,21 @@ func (r *Runner) Stop() error {
 	}
 
 	return nil
+}
+
+func (r *Runner) newCmd(args []string) (*execx.Cmd, string) {
+	cmd := execx.NewCmd(r.paths.Helmfile, execx.CmdOptions{
+		Args:     args,
+		Executor: r.executor,
+		WorkDir:  r.paths.WorkDir,
+	})
+
+	id := uuid.NewString()
+	r.cmds[id] = cmd
+
+	return cmd, id
+}
+
+func (r *Runner) deleteCmd(id string) {
+	delete(r.cmds, id)
 }

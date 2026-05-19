@@ -2,11 +2,12 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-package template
+package templatex
 
 import (
 	"errors"
 	"fmt"
+	"maps"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -91,17 +92,6 @@ func NewTemplateModel(
 	}, nil
 }
 
-func (tm *Model) isExcluded(source string) bool {
-	for _, exc := range tm.Config.Templates.Excludes {
-		regex := regexp.MustCompile(exc)
-		if regex.MatchString(source) {
-			return true
-		}
-	}
-
-	return false
-}
-
 func (tm *Model) Generate() error {
 	if tm.StopIfTargetNotEmpty {
 		err := iox.CheckDirIsEmpty(tm.TargetPath)
@@ -136,6 +126,17 @@ func (tm *Model) Generate() error {
 	}
 
 	return nil
+}
+
+func (tm *Model) isExcluded(source string) bool {
+	for _, exc := range tm.Config.Templates.Excludes {
+		regex := regexp.MustCompile(exc)
+		if regex.MatchString(source) {
+			return true
+		}
+	}
+
+	return false
 }
 
 func (tm *Model) applyTemplates(
@@ -229,9 +230,7 @@ func (tm *Model) applyTemplates(
 func (tm *Model) generateContext() (map[string]map[any]any, error) {
 	context := make(map[string]map[any]any)
 
-	for k, v := range tm.Config.Data {
-		context[k] = v
-	}
+	maps.Copy(context, tm.Config.Data)
 
 	for k, v := range tm.Config.Include {
 		cPath := filepath.Join(filepath.Dir(tm.ConfigPath), v)

@@ -40,6 +40,7 @@ type rootConfig struct {
 
 type RootCommand struct {
 	*cobra.Command
+
 	config *rootConfig
 }
 

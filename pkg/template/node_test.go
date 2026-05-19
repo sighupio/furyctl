@@ -4,7 +4,7 @@
 
 //go:build unit
 
-package template_test
+package templatex_test
 
 import (
 	"reflect"

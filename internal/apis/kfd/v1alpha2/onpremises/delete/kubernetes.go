@@ -16,7 +16,7 @@ import (
 	"github.com/sighupio/furyctl/internal/cluster"
 	"github.com/sighupio/furyctl/internal/tool/ansible"
 	execx "github.com/sighupio/furyctl/internal/x/exec"
-	"github.com/sighupio/furyctl/pkg/template"
+	templatex "github.com/sighupio/furyctl/pkg/template"
 )
 
 type Kubernetes struct {
@@ -27,6 +27,35 @@ type Kubernetes struct {
 	paths         cluster.DeleterPaths
 	dryRun        bool
 	ansibleRunner *ansible.Runner
+}
+
+func NewKubernetes(
+	furyctlConf public.OnpremisesKfdV1Alpha2,
+	kfdManifest config.KFD,
+	paths cluster.DeleterPaths,
+	dryRun bool,
+) *Kubernetes {
+	phase := cluster.NewOperationPhase(
+		path.Join(paths.WorkDir, cluster.OperationPhaseKubernetes),
+		kfdManifest.Tools,
+		paths.BinPath,
+	)
+
+	return &Kubernetes{
+		OperationPhase: phase,
+		furyctlConf:    furyctlConf,
+		kfdManifest:    kfdManifest,
+		paths:          paths,
+		dryRun:         dryRun,
+		ansibleRunner: ansible.NewRunner(
+			execx.NewStdExecutor(),
+			ansible.Paths{
+				Ansible:         "ansible",
+				AnsiblePlaybook: "ansible-playbook",
+				WorkDir:         phase.Path,
+			},
+		),
+	}
 }
 
 func (k *Kubernetes) Exec() error {
@@ -46,7 +75,7 @@ func (k *Kubernetes) Exec() error {
 		return fmt.Errorf("error creating furyctl merger: %w", err)
 	}
 
-	mCfg, err := template.NewConfigWithoutData(furyctlMerger, []string{})
+	mCfg, err := templatex.NewConfigWithoutData(furyctlMerger, []string{})
 	if err != nil {
 		return fmt.Errorf("error creating template config: %w", err)
 	}
@@ -92,33 +121,4 @@ func (k *Kubernetes) Exec() error {
 	logrus.Info("Kubernetes cluster deleted successfully")
 
 	return nil
-}
-
-func NewKubernetes(
-	furyctlConf public.OnpremisesKfdV1Alpha2,
-	kfdManifest config.KFD,
-	paths cluster.DeleterPaths,
-	dryRun bool,
-) *Kubernetes {
-	phase := cluster.NewOperationPhase(
-		path.Join(paths.WorkDir, cluster.OperationPhaseKubernetes),
-		kfdManifest.Tools,
-		paths.BinPath,
-	)
-
-	return &Kubernetes{
-		OperationPhase: phase,
-		furyctlConf:    furyctlConf,
-		kfdManifest:    kfdManifest,
-		paths:          paths,
-		dryRun:         dryRun,
-		ansibleRunner: ansible.NewRunner(
-			execx.NewStdExecutor(),
-			ansible.Paths{
-				Ansible:         "ansible",
-				AnsiblePlaybook: "ansible-playbook",
-				WorkDir:         phase.Path,
-			},
-		),
-	}
 }

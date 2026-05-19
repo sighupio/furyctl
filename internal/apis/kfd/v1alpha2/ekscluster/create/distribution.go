@@ -17,7 +17,7 @@ import (
 
 	"github.com/sighupio/fury-distribution/pkg/apis/config"
 	"github.com/sighupio/fury-distribution/pkg/apis/ekscluster/v1alpha2/private"
-	"github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/ekscluster/common"
+	"github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/ekscluster/phases"
 	"github.com/sighupio/furyctl/internal/cluster"
 	"github.com/sighupio/furyctl/internal/state"
 	"github.com/sighupio/furyctl/internal/tool/kubectl"
@@ -28,7 +28,7 @@ import (
 	iox "github.com/sighupio/furyctl/internal/x/io"
 	"github.com/sighupio/furyctl/pkg/merge"
 	"github.com/sighupio/furyctl/pkg/reducers"
-	"github.com/sighupio/furyctl/pkg/template"
+	templatex "github.com/sighupio/furyctl/pkg/template"
 )
 
 const (
@@ -41,7 +41,7 @@ const (
 var errClusterConnect = errors.New("error connecting to cluster")
 
 type Distribution struct {
-	*common.Distribution
+	*phases.Distribution
 
 	kfdManifest config.KFD
 
@@ -68,7 +68,7 @@ func NewDistribution(
 	)
 
 	return &Distribution{
-		Distribution: &common.Distribution{
+		Distribution: &phases.Distribution{
 			OperationPhase:                     phaseOp,
 			DryRun:                             dryRun,
 			DistroPath:                         paths.DistroPath,
@@ -136,7 +136,7 @@ func (d *Distribution) Exec(
 	startFrom string,
 	upgradeState *upgrade.State,
 ) error {
-	timestamp := time.Now().Unix()
+	timestampSec := time.Now().Unix()
 
 	logrus.Info("Installing SIGHUP Distribution...")
 
@@ -164,7 +164,7 @@ func (d *Distribution) Exec(
 		upgradeState,
 		preTfMerger,
 		furyctlMerger,
-		timestamp,
+		timestampSec,
 	); err != nil {
 		return fmt.Errorf("error running core distribution phase: %w", err)
 	}
@@ -180,6 +180,66 @@ func (d *Distribution) Exec(
 	}
 
 	logrus.Info("SIGHUP Distribution installed successfully")
+
+	return nil
+}
+
+func (d *Distribution) SetUpgrade(upgradeEnabled bool) {
+	d.upgrade.Enabled = upgradeEnabled
+}
+
+func (d *Distribution) Stop() error {
+	errCh := make(chan error)
+	doneCh := make(chan bool)
+
+	var wg sync.WaitGroup
+
+	//nolint:mnd,revive // ignore magic number linters
+	wg.Add(3)
+
+	go func() {
+		logrus.Debug("Stopping terraform...")
+
+		if err := d.TFRunner.Stop(); err != nil {
+			errCh <- fmt.Errorf("error stopping terraform: %w", err)
+		}
+
+		wg.Done()
+	}()
+
+	go func() {
+		logrus.Debug("Stopping shell...")
+
+		if err := d.shellRunner.Stop(); err != nil {
+			errCh <- fmt.Errorf("error stopping shell: %w", err)
+		}
+
+		wg.Done()
+	}()
+
+	go func() {
+		logrus.Debug("Stopping kubectl...")
+
+		if err := d.kubeRunner.Stop(); err != nil {
+			errCh <- fmt.Errorf("error stopping kubectl: %w", err)
+		}
+
+		wg.Done()
+	}()
+
+	go func() {
+		wg.Wait()
+		close(doneCh)
+	}()
+
+	select {
+	case <-doneCh:
+
+	case err := <-errCh:
+		close(errCh)
+
+		return err
+	}
 
 	return nil
 }
@@ -207,7 +267,7 @@ func (d *Distribution) preDistribution(
 
 func (d *Distribution) coreDistribution(
 	rdcs reducers.Reducers,
-	tfCfg *template.Config,
+	tfCfg *templatex.Config,
 	startFrom string,
 	upgradeState *upgrade.State,
 	preTfMerger *merge.Merger,
@@ -233,7 +293,7 @@ func (d *Distribution) coreDistribution(
 				return fmt.Errorf("error injecting data post terraform: %w", err)
 			}
 
-			mCfg, err := template.NewConfig(furyctlMerger, postTfMerger, []string{"terraform", ".gitignore"})
+			mCfg, err := templatex.NewConfig(furyctlMerger, postTfMerger, []string{"terraform", ".gitignore"})
 			if err != nil {
 				return fmt.Errorf("error creating template config: %w", err)
 			}
@@ -346,7 +406,7 @@ func (d *Distribution) checkKubeVersion() error {
 
 func (d *Distribution) runReducers(
 	rdcs reducers.Reducers,
-	cfg *template.Config,
+	cfg *templatex.Config,
 	lifecycle string,
 	excludes []string,
 ) error {
@@ -372,66 +432,6 @@ func (d *Distribution) runReducers(
 		); err != nil {
 			return fmt.Errorf("error applying manifests: %w", err)
 		}
-	}
-
-	return nil
-}
-
-func (d *Distribution) SetUpgrade(upgradeEnabled bool) {
-	d.upgrade.Enabled = upgradeEnabled
-}
-
-func (d *Distribution) Stop() error {
-	errCh := make(chan error)
-	doneCh := make(chan bool)
-
-	var wg sync.WaitGroup
-
-	//nolint:mnd,revive // ignore magic number linters
-	wg.Add(3)
-
-	go func() {
-		logrus.Debug("Stopping terraform...")
-
-		if err := d.TFRunner.Stop(); err != nil {
-			errCh <- fmt.Errorf("error stopping terraform: %w", err)
-		}
-
-		wg.Done()
-	}()
-
-	go func() {
-		logrus.Debug("Stopping shell...")
-
-		if err := d.shellRunner.Stop(); err != nil {
-			errCh <- fmt.Errorf("error stopping shell: %w", err)
-		}
-
-		wg.Done()
-	}()
-
-	go func() {
-		logrus.Debug("Stopping kubectl...")
-
-		if err := d.kubeRunner.Stop(); err != nil {
-			errCh <- fmt.Errorf("error stopping kubectl: %w", err)
-		}
-
-		wg.Done()
-	}()
-
-	go func() {
-		wg.Wait()
-		close(doneCh)
-	}()
-
-	select {
-	case <-doneCh:
-
-	case err := <-errCh:
-		close(errCh)
-
-		return err
 	}
 
 	return nil

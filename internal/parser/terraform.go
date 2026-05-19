@@ -2,9 +2,13 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-package parser
+package parserx
 
-import "strings"
+import (
+	"strings"
+
+	"github.com/sirupsen/logrus"
+)
 
 const MinDiffLineTokensNum = 3
 
@@ -65,6 +69,9 @@ func (p *TfPlanParser) Parse() *TfPlan {
 		case "+/-":
 			pl.Add = append(pl.Add, resourceName)
 			pl.Destroy = append(pl.Destroy, resourceName)
+
+		default:
+			logrus.Debugf("ignoring unknown diff prefix %q", diffLineTokens[0])
 		}
 	}
 

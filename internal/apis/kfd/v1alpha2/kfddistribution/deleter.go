@@ -8,6 +8,8 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/sirupsen/logrus"
+
 	"github.com/sighupio/fury-distribution/pkg/apis/config"
 	"github.com/sighupio/fury-distribution/pkg/apis/kfddistribution/v1alpha2/public"
 	del "github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/kfddistribution/delete"
@@ -71,6 +73,9 @@ func (d *ClusterDeleter) SetProperty(name string, value any) {
 		if b, ok := value.(bool); ok {
 			d.dryRun = b
 		}
+
+	default:
+		logrus.Debugf("ignoring unknown property %q", lcName)
 	}
 }
 

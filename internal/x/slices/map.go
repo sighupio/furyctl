@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-package slices
+package slicesx
 
 // Map returns a new slice containing the results of applying
 // the function f to each element of the original slice.

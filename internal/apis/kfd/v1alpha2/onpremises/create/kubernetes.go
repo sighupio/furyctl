@@ -17,7 +17,7 @@ import (
 	"github.com/sighupio/furyctl/internal/upgrade"
 	execx "github.com/sighupio/furyctl/internal/x/exec"
 	kubex "github.com/sighupio/furyctl/internal/x/kube"
-	"github.com/sighupio/furyctl/pkg/template"
+	templatex "github.com/sighupio/furyctl/pkg/template"
 )
 
 const FromSecondsToHalfMinuteRetries = 30
@@ -34,6 +34,43 @@ type Kubernetes struct {
 	upgradeNode       string
 	force             []string
 	podRunningTimeout int
+}
+
+func NewKubernetes(
+	furyctlConf public.OnpremisesKfdV1Alpha2,
+	kfdManifest config.KFD,
+	paths cluster.CreatorPaths,
+	dryRun bool,
+	upgr *upgrade.Upgrade,
+	upgradeNode string,
+	force []string,
+	podRunningTimeout int,
+) *Kubernetes {
+	phase := cluster.NewOperationPhase(
+		path.Join(paths.WorkDir, cluster.OperationPhaseKubernetes),
+		kfdManifest.Tools,
+		paths.BinPath,
+	)
+
+	return &Kubernetes{
+		OperationPhase: phase,
+		furyctlConf:    furyctlConf,
+		kfdManifest:    kfdManifest,
+		paths:          paths,
+		dryRun:         dryRun,
+		ansibleRunner: ansible.NewRunner(
+			execx.NewStdExecutor(),
+			ansible.Paths{
+				Ansible:         "ansible",
+				AnsiblePlaybook: "ansible-playbook",
+				WorkDir:         phase.Path,
+			},
+		),
+		upgrade:           upgr,
+		upgradeNode:       upgradeNode,
+		force:             force,
+		podRunningTimeout: podRunningTimeout,
+	}
 }
 
 func (k *Kubernetes) Self() *cluster.OperationPhase {
@@ -78,6 +115,10 @@ func (k *Kubernetes) Exec(startFrom string, upgradeState *upgrade.State) error {
 	return nil
 }
 
+func (k *Kubernetes) SetUpgrade(upgradeEnabled bool) {
+	k.upgrade.Enabled = upgradeEnabled
+}
+
 func (k *Kubernetes) prepare() error {
 	if err := k.CreateRootFolder(); err != nil {
 		return fmt.Errorf("error creating kubernetes phase folder: %w", err)
@@ -93,7 +134,7 @@ func (k *Kubernetes) prepare() error {
 		return fmt.Errorf("error creating furyctl merger: %w", err)
 	}
 
-	mCfg, err := template.NewConfigWithoutData(furyctlMerger, []string{})
+	mCfg, err := templatex.NewConfigWithoutData(furyctlMerger, []string{})
 	if err != nil {
 		return fmt.Errorf("error creating template config: %w", err)
 	}
@@ -170,11 +211,11 @@ func (k *Kubernetes) coreKubernetes(
 			upgradeState.Phases.Kubernetes.Status = upgrade.PhaseStatusSuccess
 		}
 
-		if err := kubex.SetConfigEnv(path.Join(k.OperationPhase.Path, "admin.conf")); err != nil {
+		if err := kubex.SetConfigEnv(path.Join(k.Path, "admin.conf")); err != nil {
 			return fmt.Errorf("error setting kubeconfig env: %w", err)
 		}
 
-		if err := kubex.CopyToWorkDir(path.Join(k.OperationPhase.Path, "admin.conf"), "kubeconfig"); err != nil {
+		if err := kubex.CopyToWorkDir(path.Join(k.Path, "admin.conf"), "kubeconfig"); err != nil {
 			return fmt.Errorf("error copying kubeconfig: %w", err)
 		}
 
@@ -182,7 +223,7 @@ func (k *Kubernetes) coreKubernetes(
 			for _, username := range k.furyctlConf.Spec.Kubernetes.Advanced.Users.Names {
 				if err := kubex.CopyToWorkDir(
 					path.Join(
-						k.OperationPhase.Path,
+						k.Path,
 						username+".kubeconfig",
 					),
 					username+".kubeconfig",
@@ -210,45 +251,4 @@ func (k *Kubernetes) postKubernetes(
 	}
 
 	return nil
-}
-
-func (k *Kubernetes) SetUpgrade(upgradeEnabled bool) {
-	k.upgrade.Enabled = upgradeEnabled
-}
-
-func NewKubernetes(
-	furyctlConf public.OnpremisesKfdV1Alpha2,
-	kfdManifest config.KFD,
-	paths cluster.CreatorPaths,
-	dryRun bool,
-	upgr *upgrade.Upgrade,
-	upgradeNode string,
-	force []string,
-	podRunningTimeout int,
-) *Kubernetes {
-	phase := cluster.NewOperationPhase(
-		path.Join(paths.WorkDir, cluster.OperationPhaseKubernetes),
-		kfdManifest.Tools,
-		paths.BinPath,
-	)
-
-	return &Kubernetes{
-		OperationPhase: phase,
-		furyctlConf:    furyctlConf,
-		kfdManifest:    kfdManifest,
-		paths:          paths,
-		dryRun:         dryRun,
-		ansibleRunner: ansible.NewRunner(
-			execx.NewStdExecutor(),
-			ansible.Paths{
-				Ansible:         "ansible",
-				AnsiblePlaybook: "ansible-playbook",
-				WorkDir:         phase.Path,
-			},
-		),
-		upgrade:           upgr,
-		upgradeNode:       upgradeNode,
-		force:             force,
-		podRunningTimeout: podRunningTimeout,
-	}
 }

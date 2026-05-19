@@ -47,6 +47,15 @@ type Tool interface {
 	SupportsDownload() bool
 }
 
+type FactoryPaths struct {
+	Bin string
+}
+type Factory struct {
+	executor      execx.Executor
+	paths         FactoryPaths
+	runnerFactory *tool.RunnerFactory
+}
+
 func NewFactory(executor execx.Executor, paths FactoryPaths) *Factory {
 	return &Factory{
 		executor: executor,
@@ -55,16 +64,6 @@ func NewFactory(executor execx.Executor, paths FactoryPaths) *Factory {
 			Bin: paths.Bin,
 		}),
 	}
-}
-
-type FactoryPaths struct {
-	Bin string
-}
-
-type Factory struct {
-	executor      execx.Executor
-	paths         FactoryPaths
-	runnerFactory *tool.RunnerFactory
 }
 
 func (f *Factory) Create(name tool.Name, version string) Tool {

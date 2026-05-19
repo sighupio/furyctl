@@ -19,6 +19,7 @@ var ErrReadingRulesFile = errors.New("error while reading rules file")
 
 type DistroExtractor struct {
 	*BaseExtractor
+
 	Spec Spec
 }
 
@@ -70,7 +71,7 @@ func (r *DistroExtractor) GetReducers(phase string) []Rule {
 			return []Rule{}
 		}
 
-		return r.BaseExtractor.ExtractReducerRules(*r.Spec.Distribution)
+		return r.ExtractReducerRules(*r.Spec.Distribution)
 
 	default:
 		return []Rule{}

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-package template
+package templatex
 
 import (
 	"errors"
@@ -83,11 +83,11 @@ func digFromDictAny(dict map[any]any, d any, ks []string) (any, error) {
 	return digFromDictAny(next, d, ns)
 }
 
-// This is a copy of the Sprig dig function that recurse a dict with any keys
+// DigAny is a copy of the Sprig dig function that recurses a dict with any keys
 // instead of map keys.
-// `digAny` will recurse all the specified keys of the given dict and return the
+// It walks all the specified keys of the given dict and returns the
 // last key value if found.
-// If any of the keys does not exist, digAny will return the default value
+// If any of the keys do not exist, DigAny returns the default value
 // passed as the last argument.
 // Usage in templates:
 //

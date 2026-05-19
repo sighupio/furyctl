@@ -29,6 +29,13 @@ func hasTerraformDarwinArm64Support(version string) bool {
 	return v.GreaterThanOrEqual(v102)
 }
 
+type Terraform struct {
+	arch    string
+	checker *checker
+	os      string
+	version string
+}
+
 func NewTerraform(runner *terraform.Runner, version string) *Terraform {
 	arch := runtime.GOARCH
 
@@ -51,13 +58,6 @@ func NewTerraform(runner *terraform.Runner, version string) *Terraform {
 			},
 		},
 	}
-}
-
-type Terraform struct {
-	arch    string
-	checker *checker
-	os      string
-	version string
 }
 
 func (*Terraform) SupportsDownload() bool {

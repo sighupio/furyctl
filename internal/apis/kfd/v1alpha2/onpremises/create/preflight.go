@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"path"
+	"slices"
 
 	r3diff "github.com/r3labs/diff/v3"
 	"github.com/sirupsen/logrus"
@@ -23,7 +24,7 @@ import (
 	kubex "github.com/sighupio/furyctl/internal/x/kube"
 	"github.com/sighupio/furyctl/pkg/diffs"
 	rules "github.com/sighupio/furyctl/pkg/rulesextractor"
-	"github.com/sighupio/furyctl/pkg/template"
+	templatex "github.com/sighupio/furyctl/pkg/template"
 	yamlx "github.com/sighupio/furyctl/pkg/x/yaml"
 )
 
@@ -121,7 +122,7 @@ func (p *PreFlight) Exec(renderedConfig map[string]any) (*Status, error) {
 		return status, fmt.Errorf("error creating furyctl merger: %w", err)
 	}
 
-	mCfg, err := template.NewConfigWithoutData(furyctlMerger, []string{})
+	mCfg, err := templatex.NewConfigWithoutData(furyctlMerger, []string{})
 	if err != nil {
 		return status, fmt.Errorf("error creating template config: %w", err)
 	}
@@ -248,8 +249,6 @@ func (p *PreFlight) CreateDiffChecker(renderedConfig map[string]any) (diffs.Chec
 }
 
 func (p *PreFlight) CheckStateDiffs(d r3diff.Changelog, diffChecker diffs.Checker) error {
-	var errs []error
-
 	r, err := rules.NewOnPremClusterRulesExtractor(p.paths.DistroPath, diffChecker.GetCurrentConfig())
 	if err != nil {
 		if !errors.Is(err, rules.ErrReadingRulesFile) {
@@ -281,8 +280,10 @@ func (p *PreFlight) CheckStateDiffs(d r3diff.Changelog, diffChecker diffs.Checke
 		distroImmutablePaths = append(distroImmutablePaths, rule.Path)
 	}
 
-	errs = append(errs, diffChecker.AssertImmutableViolations(d, kubeImmutablePaths)...)
-	errs = append(errs, diffChecker.AssertImmutableViolations(d, distroImmutablePaths)...)
+	errs := slices.Concat(
+		diffChecker.AssertImmutableViolations(d, kubeImmutablePaths),
+		diffChecker.AssertImmutableViolations(d, distroImmutablePaths),
+	)
 
 	if len(errs) > 0 {
 		return fmt.Errorf("%w: %w", errImmutable, errors.Join(errs...))
@@ -292,8 +293,6 @@ func (p *PreFlight) CheckStateDiffs(d r3diff.Changelog, diffChecker diffs.Checke
 }
 
 func (p *PreFlight) CheckReducerDiffs(d r3diff.Changelog, diffChecker diffs.Checker) error {
-	var errs []error
-
 	r, err := rules.NewOnPremClusterRulesExtractor(p.paths.DistroPath, diffChecker.GetCurrentConfig())
 	if err != nil {
 		if !errors.Is(err, rules.ErrReadingRulesFile) {
@@ -305,14 +304,16 @@ func (p *PreFlight) CheckReducerDiffs(d r3diff.Changelog, diffChecker diffs.Chec
 		return nil
 	}
 
-	errs = append(errs, diffChecker.AssertReducerUnsupportedViolations(
-		d,
-		r.UnsupportedReducerRulesByDiffs(r.GetReducers("kubernetes"), d),
-	)...)
-	errs = append(errs, diffChecker.AssertReducerUnsupportedViolations(
-		d,
-		r.UnsupportedReducerRulesByDiffs(r.GetReducers("distribution"), d),
-	)...)
+	errs := slices.Concat(
+		diffChecker.AssertReducerUnsupportedViolations(
+			d,
+			r.UnsupportedReducerRulesByDiffs(r.GetReducers("kubernetes"), d),
+		),
+		diffChecker.AssertReducerUnsupportedViolations(
+			d,
+			r.UnsupportedReducerRulesByDiffs(r.GetReducers("distribution"), d),
+		),
+	)
 
 	if len(errs) > 0 {
 		return fmt.Errorf("%w: %w", errUnsupported, errors.Join(errs...))
