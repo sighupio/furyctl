@@ -4,7 +4,7 @@
 
 //go:build integration
 
-package http_test
+package httpx_test
 
 import (
 	"testing"
