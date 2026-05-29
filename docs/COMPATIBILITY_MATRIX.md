@@ -65,34 +65,35 @@
 
 ## furyctl and Providers compatibility
 
-| furyctl / Providers |     EKSCluster     |  KFDDistribution   |     OnPremises     |
-| :------------------ | :----------------: | :----------------: | :----------------: |
-| >=0.29.6            | :white_check_mark: | :white_check_mark: | :white_check_mark: |
-| 0.29.5              |        :x:         |        :x:         |        :x:         |
-| 0.29.4              | :white_check_mark: | :white_check_mark: | :white_check_mark: |
-| 0.29.3              | :white_check_mark: | :white_check_mark: | :white_check_mark: |
-| 0.29.2              |        :x:         |        :x:         |        :x:         |
-| 0.29.1              |        :x:         |        :x:         |        :x:         |
-| 0.29.0              | :white_check_mark: | :white_check_mark: | :white_check_mark: |
-| 0.28.0              | :white_check_mark: | :white_check_mark: | :white_check_mark: |
-| 0.27.8              | :white_check_mark: | :white_check_mark: | :white_check_mark: |
-| 0.27.7              | :white_check_mark: | :white_check_mark: | :white_check_mark: |
-| 0.27.6              | :white_check_mark: | :white_check_mark: | :white_check_mark: |
-| 0.27.5              | :white_check_mark: | :white_check_mark: | :white_check_mark: |
-| 0.27.4              | :white_check_mark: | :white_check_mark: |        :x:         |
-| 0.27.3              | :white_check_mark: | :white_check_mark: |        :x:         |
-| 0.27.2              | :white_check_mark: | :white_check_mark: |        :x:         |
-| 0.27.1              | :white_check_mark: | :white_check_mark: |        :x:         |
-| 0.27.0              | :white_check_mark: | :white_check_mark: |        :x:         |
-| 0.26.3              | :white_check_mark: | :white_check_mark: |        :x:         |
-| 0.26.2              | :white_check_mark: | :white_check_mark: |        :x:         |
-| 0.26.1              | :white_check_mark: | :white_check_mark: |                    |
-| 0.26.0              | :white_check_mark: | :white_check_mark: |                    |
-| 0.25.2              | :white_check_mark: | :white_check_mark: |                    |
-| 0.25.1              | :white_check_mark: | :white_check_mark: |                    |
-| 0.25.0              | :white_check_mark: | :white_check_mark: |                    |
-| 0.25.0-beta.0       | :white_check_mark: |                    |                    |
-| 0.25.0-alpha.1      | :white_check_mark: |                    |                    |
+| furyctl / Providers |     EKSCluster     |  KFDDistribution   |     OnPremises     |     Immutable      |
+| :------------------ | :----------------: | :----------------: | :----------------: | :----------------: |
+| >=0.34.2            | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: |
+| >=0.29.6            | :white_check_mark: | :white_check_mark: | :white_check_mark: |        :x:         |
+| 0.29.5              |        :x:         |        :x:         |        :x:         |                    |
+| 0.29.4              | :white_check_mark: | :white_check_mark: | :white_check_mark: |                    |
+| 0.29.3              | :white_check_mark: | :white_check_mark: | :white_check_mark: |                    |
+| 0.29.2              |        :x:         |        :x:         |        :x:         |                    |
+| 0.29.1              |        :x:         |        :x:         |        :x:         |                    |
+| 0.29.0              | :white_check_mark: | :white_check_mark: | :white_check_mark: |                    |
+| 0.28.0              | :white_check_mark: | :white_check_mark: | :white_check_mark: |                    |
+| 0.27.8              | :white_check_mark: | :white_check_mark: | :white_check_mark: |                    |
+| 0.27.7              | :white_check_mark: | :white_check_mark: | :white_check_mark: |                    |
+| 0.27.6              | :white_check_mark: | :white_check_mark: | :white_check_mark: |                    |
+| 0.27.5              | :white_check_mark: | :white_check_mark: | :white_check_mark: |                    |
+| 0.27.4              | :white_check_mark: | :white_check_mark: |        :x:         |                    |
+| 0.27.3              | :white_check_mark: | :white_check_mark: |        :x:         |                    |
+| 0.27.2              | :white_check_mark: | :white_check_mark: |        :x:         |                    |
+| 0.27.1              | :white_check_mark: | :white_check_mark: |        :x:         |                    |
+| 0.27.0              | :white_check_mark: | :white_check_mark: |        :x:         |                    |
+| 0.26.3              | :white_check_mark: | :white_check_mark: |        :x:         |                    |
+| 0.26.2              | :white_check_mark: | :white_check_mark: |        :x:         |                    |
+| 0.26.1              | :white_check_mark: | :white_check_mark: |                    |                    |
+| 0.26.0              | :white_check_mark: | :white_check_mark: |                    |                    |
+| 0.25.2              | :white_check_mark: | :white_check_mark: |                    |                    |
+| 0.25.1              | :white_check_mark: | :white_check_mark: |                    |                    |
+| 0.25.0              | :white_check_mark: | :white_check_mark: |                    |                    |
+| 0.25.0-beta.0       | :white_check_mark: |                    |                    |                    |
+| 0.25.0-alpha.1      | :white_check_mark: |                    |                    |                    |
 
 ## Legacy compatibility
 
