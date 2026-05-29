@@ -526,12 +526,12 @@ func TestImmutableCheckIsCompatible(t *testing.T) {
 		expected            bool
 	}{
 		{
-			name:                "should return true if distribution version is greater than 1.34.0 and less than 1.34.0",
-			distributionVersion: "v1.34.0",
+			name:                "should return true if distribution version is 1.34.1",
+			distributionVersion: "v1.34.1",
 			expected:            true,
 		},
 		{
-			name:                "should return false if distribution version is less than 1.34.0",
+			name:                "should return false if distribution version is less than 1.34.1",
 			distributionVersion: "v1.25.5",
 			expected:            false,
 		},
@@ -541,8 +541,8 @@ func TestImmutableCheckIsCompatible(t *testing.T) {
 			expected:            false,
 		},
 		{
-			name:                "should return false if distribution version is greater than 1.34.0",
-			distributionVersion: "v1.34.1",
+			name:                "should return false if distribution version is 1.34.0",
+			distributionVersion: "v1.34.0",
 			expected:            false,
 		},
 	}

@@ -7,6 +7,7 @@
 package rulesextractor_test
 
 import (
+	"reflect"
 	"testing"
 
 	"github.com/r3labs/diff/v3"
