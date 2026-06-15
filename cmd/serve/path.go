@@ -139,7 +139,12 @@ func Path(address, port, root string, nodesStatus *map[string]string) error {
 				"nodeStatus": status,
 			}).Debug("received node status update")
 
-			logrus.Infof("Node %s is %s", node, status)
+			if status == "installation-blocked" {
+				logrus.Errorf("Flatcar Installation on node %s is blocked because Flatcar is already installed on disk. Manual intervention required", node)
+			} else {
+				logrus.Infof("Node %s is %s", node, status)
+			}
+
 			// Check if all nodes are in "booted" status and log if so.
 			allBooted := true
 
@@ -152,7 +157,7 @@ func Path(address, port, root string, nodesStatus *map[string]string) error {
 			}
 
 			if allBooted {
-				logrus.Infof("All %d nodes reached 'booted' state. Continuing...", len(*nodesStatus))
+				logrus.Infof("All %d nodes reached 'booted' state. Stopping server and continuing...", len(*nodesStatus))
 				close(inputCh)
 				cancel()
 			}

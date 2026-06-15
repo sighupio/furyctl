@@ -191,7 +191,9 @@ func (i *Infrastructure) renderRootTemplates() error {
 	cfg := template.Config{
 		Data: map[string]map[any]any{
 			"data": {
-				"ipxeServerURL": i.furyctlConf.Spec.Infrastructure.IpxeServer.Url,
+				"ipxeServerURL":                 i.furyctlConf.Spec.Infrastructure.IpxeServer.Url,
+				"ipxeServerPreInstallCommands":  i.furyctlConf.Spec.Infrastructure.IpxeServer.PreInstallCommands,
+				"ipxeServerPostInstallCommands": i.furyctlConf.Spec.Infrastructure.IpxeServer.PostInstallCommands,
 			},
 		},
 	}
@@ -441,14 +443,16 @@ func (i *Infrastructure) generateInstallFlatcarIgnitionFiles() error {
 		}
 
 		templateData := map[string]any{
-			"base64EncodedIgnition": base64Encoded,
-			"ipxeServerURL":         i.furyctlConf.Spec.Infrastructure.IpxeServer.Url,
-			"sshUsername":           i.furyctlConf.Spec.Infrastructure.Ssh.Username,
-			"sshPublicKey":          sshPublicKeyContent,
-			"installDisk":           node.Storage.InstallDisk,
-			"hostname":              node.Hostname,
-			"proxy":                 httpProxy,
-			"arch":                  node.Arch,
+			"base64EncodedIgnition":         base64Encoded,
+			"ipxeServerURL":                 i.furyctlConf.Spec.Infrastructure.IpxeServer.Url,
+			"ipxeServerPreInstallCommands":  i.furyctlConf.Spec.Infrastructure.IpxeServer.PreInstallCommands,
+			"ipxeServerPostInstallCommands": i.furyctlConf.Spec.Infrastructure.IpxeServer.PostInstallCommands,
+			"sshUsername":                   i.furyctlConf.Spec.Infrastructure.Ssh.Username,
+			"sshPublicKey":                  sshPublicKeyContent,
+			"installDisk":                   node.Storage.InstallDisk,
+			"hostname":                      node.Hostname,
+			"proxy":                         httpProxy,
+			"arch":                          node.Arch,
 		}
 
 		var renderedContent bytes.Buffer
