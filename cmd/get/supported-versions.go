@@ -7,7 +7,9 @@ package get
 import (
 	"errors"
 	"fmt"
+	"os"
 	"strings"
+	"text/tabwriter"
 
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -57,7 +59,7 @@ func NewSupportedVersionsCmd() *cobra.Command {
 			}
 
 			kindsToPrint := kinds
-			msg := "list of currently supported SD versions and their compatibility with this version of furyctl for "
+			msg := "List of currently supported SD versions and their compatibility with this version of furyctl for "
 
 			// Check if the kind flag is set, if it is not set we will print all kinds.
 			if cmd.Flags().Changed("kind") {
@@ -76,7 +78,22 @@ func NewSupportedVersionsCmd() *cobra.Command {
 				msg += "each kind\n"
 			}
 
-			logrus.Info(msg + FormatSupportedVersions(releases, kindsToPrint))
+			var table strings.Builder
+			padWidth := 2
+			w := tabwriter.NewWriter(&table, 0, 0, padWidth, ' ', 0)
+			_, err = w.Write([]byte(FormatSupportedVersions(releases, kindsToPrint)))
+			if err != nil {
+				cmdEvent.AddErrorMessage(err)
+				tracker.Track(cmdEvent)
+
+				return fmt.Errorf("error writing supported versions to table: %w", err)
+			}
+
+			msg += "\n" + table.String()
+			if _, err := fmt.Fprint(os.Stdout, msg); err != nil {
+				return fmt.Errorf("error writing to stdout: %w", err)
+			}
+
 			cmdEvent.AddSuccessMessage("supported SD versions")
 			tracker.Track(cmdEvent)
 
@@ -103,16 +120,13 @@ func NewSupportedVersionsCmd() *cobra.Command {
 func FormatSupportedVersions(releases []distribution.KFDRelease, kinds []string) string {
 	distribution.SetRecommendedVersions(releases)
 
-	fmtSupportedVersions := "\n"
-	fmtSupportedVersions += "-----------------------------------------------------------------------------------------\n"
-	fmtSupportedVersions += "VERSION \t\tRELEASE DATE\t\t"
+	fmtSupportedVersions := "VERSION\tRELEASE DATE"
 
 	for _, k := range kinds {
-		fmtSupportedVersions += k + "\t"
+		fmtSupportedVersions += "\t" + k
 	}
 
 	fmtSupportedVersions += "\n"
-	fmtSupportedVersions += "-----------------------------------------------------------------------------------------\n"
 
 	supported := func(s bool) string {
 		if s {
@@ -156,24 +170,24 @@ func FormatSupportedVersions(releases []distribution.KFDRelease, kinds []string)
 		}
 
 		fmtSupportedVersions += fmt.Sprintf(
-			"v%s\t\t%s",
+			"v%s\t%s",
 			versionStr,
 			dateStr,
 		)
 
 		for _, k := range kinds {
-			fmtSupportedVersions += "\t\t" + supported(r.Support[k])
+			fmtSupportedVersions += "\t" + supported(r.Support[k])
 		}
 
 		fmtSupportedVersions += "\n"
 	}
 
 	if showUnsupportedFuryctlMsg {
-		fmtSupportedVersions += "\n* this usually indicates you are not using the latest version of furyctl, try updating or checking the online documentation.\n"
+		fmtSupportedVersions += "\n* this usually indicates you are not using the latest version of furyctl, try updating or checking the online documentation:\nhttps://docs.sighup.io/furyctl/compatibility-matrix\n"
 	}
 
 	if showRecommendedMsg {
-		fmtSupportedVersions += "\n** this indicates the recommended SD versions.\n"
+		fmtSupportedVersions += "\n** indicates the recommended SD versions.\n"
 	}
 
 	return fmtSupportedVersions

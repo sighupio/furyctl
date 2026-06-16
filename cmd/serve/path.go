@@ -1,0 +1,238 @@
+// Copyright (c) 2017-present SIGHUP s.r.l All rights reserved.
+// Use of this source code is governed by a BSD-style
+// license that can be found in the LICENSE file.
+
+package serve
+
+import (
+	"bufio"
+	"context"
+	"encoding/json"
+	"errors"
+	"fmt"
+	"net/http"
+	"os"
+	"strings"
+	"time"
+
+	"github.com/sirupsen/logrus"
+)
+
+// loggingResponseWriter wraps http.ResponseWriter to capture status code and bytes written.
+type loggingResponseWriter struct {
+	http.ResponseWriter
+	status int
+	bytes  int
+}
+
+// WriteHeader captures the status code and delegates to the underlying ResponseWriter.
+func (lrw *loggingResponseWriter) WriteHeader(code int) {
+	lrw.status = code
+	lrw.ResponseWriter.WriteHeader(code)
+}
+
+// Write captures the number of bytes written and ensures a default status code.
+func (lrw *loggingResponseWriter) Write(b []byte) (int, error) {
+	if lrw.status == 0 {
+		lrw.status = http.StatusOK
+	}
+
+	n, err := lrw.ResponseWriter.Write(b)
+	lrw.bytes += n
+
+	if err != nil {
+		return n, fmt.Errorf("error writing response: %w", err)
+	}
+
+	return n, nil
+}
+
+// Start an HTTP server serving a path in the file system on a custom address and port, logging each request.
+// The server is stopped when the user presses ENTER.
+// Note: Path traversal attacks, serving directory listings, dot files, and other security vulnerabilities should be addressed.
+func Path(address, port, root string, nodesStatus *map[string]string) error {
+	// Channel to signal user requested stop (ENTER).
+	inputCh := make(chan struct{})
+
+	// Context to cancel the input goroutine when all nodes are booted.
+	ctx, cancel := context.WithCancel(context.Background())
+
+	fs := http.FileServer(http.Dir(root))
+
+	// Wrap the file server with a logging handler that logs each request.
+	typedHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Normalize MAC addresses to uppercase in /boot/ paths because iPXE sends lowercase MACs (bc-24-11-cc-dd-01)
+		// in the URL, but files are uppercase (BC-24-11-CC-DD-01).
+		if strings.HasPrefix(r.URL.Path, "/boot/") {
+			macPart := strings.TrimPrefix(r.URL.Path, "/boot/")
+			r.URL.Path = "/boot/" + strings.ToUpper(macPart)
+		}
+
+		// Use package-level loggingResponseWriter.
+		lrw := &loggingResponseWriter{ResponseWriter: w}
+		fs.ServeHTTP(lrw, r)
+
+		// Log relevant request/response information.
+		logrus.WithFields(logrus.Fields{
+			"remote":     r.RemoteAddr,
+			"user-agent": r.Header.Get("User-Agent"),
+			"method":     r.Method,
+			"path":       r.URL.Path,
+			"status":     lrw.status,
+			"bytes":      lrw.bytes,
+		}).Debug("served asset request")
+	})
+
+	// Wrap the file server with a logging handler that logs each request.
+	statusHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Use package-level loggingResponseWriter.
+		lrw := &loggingResponseWriter{ResponseWriter: w}
+
+		if r.Method == http.MethodGet {
+			lrw.Header().Set("Content-Type", "application/json")
+			lrw.WriteHeader(http.StatusOK)
+			encoder := json.NewEncoder(lrw)
+
+			if err := encoder.Encode(*nodesStatus); err != nil {
+				logrus.Errorf("error while encoding response: %s", err)
+			} else {
+				logrus.WithFields(logrus.Fields{
+					"remote":     r.RemoteAddr,
+					"user-agent": r.Header.Get("User-Agent"),
+					"method":     r.Method,
+					"path":       r.URL.Path,
+					"status":     lrw.status,
+					"bytes":      lrw.bytes,
+				}).Debug("served nodes status")
+			}
+		}
+
+		if r.Method == http.MethodPost {
+			lrw.WriteHeader(http.StatusNoContent)
+
+			// Update node status based on query parameters.
+			node := r.URL.Query().Get("node")
+			status := r.URL.Query().Get("status")
+
+			if node == "" || status == "" {
+				logrus.WithFields(logrus.Fields{
+					"remote":     r.RemoteAddr,
+					"user-agent": r.Header.Get("User-Agent"),
+					"method":     r.Method,
+					"path":       r.URL.Path,
+				}).Warn("received status update with missing node or status query parameters")
+
+				return
+			}
+
+			(*nodesStatus)[node] = status
+
+			// Log relevant request/response information.
+			logrus.WithFields(logrus.Fields{
+				"remote":     r.RemoteAddr,
+				"user-agent": r.Header.Get("User-Agent"),
+				"method":     r.Method,
+				"path":       r.URL.Path,
+				"respStatus": lrw.status,
+				"respBytes":  lrw.bytes,
+				"hostname":   node,
+				"nodeStatus": status,
+			}).Debug("received node status update")
+
+			if status == "installation-blocked" {
+				logrus.Errorf("Flatcar Installation on node %s is blocked because Flatcar is already installed on disk. Manual intervention required", node)
+			} else {
+				logrus.Infof("Node %s is %s", node, status)
+			}
+
+			// Check if all nodes are in "booted" status and log if so.
+			allBooted := true
+
+			for _, s := range *nodesStatus {
+				if s != "booted" {
+					allBooted = false
+
+					break
+				}
+			}
+
+			if allBooted {
+				logrus.Infof("All %d nodes reached 'booted' state. Stopping server and continuing...", len(*nodesStatus))
+				close(inputCh)
+				cancel()
+			}
+		}
+	})
+
+	http.Handle("/status", statusHandler)
+	http.Handle("/", typedHandler)
+
+	listenAddr := strings.Join([]string{address, port}, ":")
+	logrus.WithFields(logrus.Fields{
+		"address": address,
+		"port":    port,
+		"root":    root,
+	}).Warn("Assets server started. You can boot your machines now")
+	logrus.Info("You can press ENTER to stop the server at any time and continue or CTRL+C to cancel and exit")
+
+	const readHeaderTimeout = 5 * time.Second
+
+	// Create server so we can control shutdown and inspect errors.
+	srv := &http.Server{Addr: listenAddr, Handler: nil, ReadHeaderTimeout: readHeaderTimeout}
+
+	// Channel to receive server errors.
+	errCh := make(chan error, 1)
+	go func() {
+		// ListenAndServe returns http.ErrServerClosed on graceful shutdown.
+		err := srv.ListenAndServe()
+		errCh <- err
+	}()
+	go func() {
+		done := make(chan struct{})
+		go func() {
+			_, err := bufio.NewReader(os.Stdin).ReadBytes('\n')
+			if err != nil {
+				errCh <- err
+			}
+
+			close(done)
+		}()
+		select {
+		case <-ctx.Done():
+			// All nodes booted, stop waiting for user input.
+			return
+
+		case <-done:
+			close(inputCh)
+		}
+	}()
+
+	// Wait for either user input or server error.
+	select {
+	case <-inputCh:
+		const shutdownTimeout = 5 * time.Second
+		ctx, cancel := context.WithTimeout(context.Background(), shutdownTimeout)
+
+		defer cancel()
+
+		if err := srv.Shutdown(ctx); err != nil {
+			return fmt.Errorf("error during server shutdown: %w", err)
+		}
+
+		logrus.Info("Server stopped")
+
+		return nil
+
+	case err := <-errCh:
+		// If server was closed normally, treat as no error.
+		if err == nil || errors.Is(err, http.ErrServerClosed) {
+			logrus.Info("HTTP server closed")
+
+			return nil
+		}
+		// Unexpected error.
+		logrus.WithError(err).Error("HTTP server failed")
+
+		return err
+	}
+}

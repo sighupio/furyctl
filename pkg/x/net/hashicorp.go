@@ -36,6 +36,16 @@ func (*GoGetterClient) ClearItem(_ string) error {
 }
 
 func (g *GoGetterClient) Download(src, dst string) error {
+	return g.DownloadWithMode(src, dst, getter.ClientModeAny, nil)
+}
+
+// DownloadWithMode allows downloading with a specific mode (File, Dir, or Any).
+// The decompressors map can be used to specify custom decompressors or disable built-in ones by passing an empty map.
+func (g *GoGetterClient) DownloadWithMode(
+	src, dst string,
+	mode getter.ClientMode,
+	decompressors map[string]getter.Decompressor,
+) error {
 	protocols := []string{""}
 	if !g.URLHasForcedProtocol(src) {
 		protocols = g.protocols
@@ -45,11 +55,10 @@ func (g *GoGetterClient) Download(src, dst string) error {
 		fullSrc := fmt.Sprintf("%s%s", protocol, src)
 
 		logrus.Debugf("Downloading '%s' in '%s'", fullSrc, dst)
-
 		client := &getter.Client{
 			Src:  fullSrc,
 			Dst:  dst,
-			Mode: getter.ClientModeAny,
+			Mode: mode,
 			Getters: map[string]getter.Getter{
 				"file": &gogetterx.FileGetter{
 					Copy: true,
@@ -66,6 +75,12 @@ func (g *GoGetterClient) Download(src, dst string) error {
 				},
 			},
 			DisableSymlinks: false,
+		}
+
+		// When downloading a single file we don't want go-getter to auto-decompress
+		// archives (eg. .bz2). An empty map disables the built-in decompressors.
+		if decompressors != nil {
+			client.Decompressors = decompressors
 		}
 
 		err := client.Get()

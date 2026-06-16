@@ -14,15 +14,22 @@ import (
 	yamlx "github.com/sighupio/furyctl/pkg/x/yaml"
 )
 
-type EKSExtractor struct {
+type ImmutableExtractor struct {
 	*BaseExtractor
 	Spec Spec
 }
 
-func NewEKSClusterRulesExtractor(distributionPath string, renderedConfig map[string]any) (*EKSExtractor, error) {
-	builder := EKSExtractor{}
+func NewImmutableClusterRulesExtractor(
+	distributionPath string,
+	renderedConfig map[string]any,
+) (*ImmutableExtractor, error) {
+	builder := ImmutableExtractor{
+		BaseExtractor: &BaseExtractor{
+			RenderedConfig: renderedConfig,
+		},
+	}
 
-	rulesPath := filepath.Join(distributionPath, "rules", "ekscluster-kfd-v1alpha2.yaml")
+	rulesPath := filepath.Join(distributionPath, "rules", "immutable-kfd-v1alpha2.yaml")
 
 	spec, err := yamlx.FromFileV3[Spec](rulesPath)
 	if err != nil {
@@ -36,7 +43,7 @@ func NewEKSClusterRulesExtractor(distributionPath string, renderedConfig map[str
 	return &builder, nil
 }
 
-func (r *EKSExtractor) GetImmutableRules(phase string) []Rule { //nolint:dupl // providers might not support all phases
+func (r *ImmutableExtractor) GetImmutableRules(phase string) []Rule { //nolint:dupl // code duplication is necessary
 	switch phase {
 	case cluster.OperationPhaseInfrastructure:
 		if r.Spec.Infrastructure == nil {
@@ -88,7 +95,7 @@ func (r *EKSExtractor) GetImmutableRules(phase string) []Rule { //nolint:dupl //
 	}
 }
 
-func (r *EKSExtractor) GetReducers(phase string) []Rule {
+func (r *ImmutableExtractor) GetReducers(phase string) []Rule {
 	switch phase {
 	case cluster.OperationPhaseInfrastructure:
 		if r.Spec.Infrastructure == nil {
@@ -116,18 +123,18 @@ func (r *EKSExtractor) GetReducers(phase string) []Rule {
 	}
 }
 
-func (r *EKSExtractor) ReducerRulesByDiffs(rls []Rule, ds diff.Changelog) []Rule {
+func (r *ImmutableExtractor) ReducerRulesByDiffs(rls []Rule, ds diff.Changelog) []Rule {
 	return r.BaseExtractor.ReducerRulesByDiffs(rls, ds)
 }
 
-func (r *EKSExtractor) UnsupportedReducerRulesByDiffs(rls []Rule, ds diff.Changelog) []Rule {
+func (r *ImmutableExtractor) UnsupportedReducerRulesByDiffs(rls []Rule, ds diff.Changelog) []Rule {
 	return r.BaseExtractor.UnsupportedReducerRulesByDiffs(rls, ds)
 }
 
-func (r *EKSExtractor) UnsafeReducerRulesByDiffs(rls []Rule, ds diff.Changelog) []Rule {
+func (r *ImmutableExtractor) UnsafeReducerRulesByDiffs(rls []Rule, ds diff.Changelog) []Rule {
 	return r.BaseExtractor.UnsafeReducerRulesByDiffs(rls, ds)
 }
 
-func (r *EKSExtractor) FilterSafeImmutableRules(rules []Rule, ds diff.Changelog) []Rule {
+func (r *ImmutableExtractor) FilterSafeImmutableRules(rules []Rule, ds diff.Changelog) []Rule {
 	return r.BaseExtractor.FilterSafeImmutableRules(rules, ds)
 }

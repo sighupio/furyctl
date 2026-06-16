@@ -33,6 +33,7 @@
 - `EKSCluster`: Provides comprehensive lifecycle management for a SIGHUP Distribution Kubernetes cluster based on EKS from AWS. It handles the installation of the VPC, VPN, EKS using the installers, and deploys the Distribution onto the EKS cluster.
 - `KFDDistribution`: Dedicated provider for the distribution, which installs the SIGHUP Distribution (modules only) on an existing Kubernetes cluster.
 - `OnPremises`: Provider to manage the full lifecycle of a SIGHUP Distribution cluster on Virtual Machines.
+- `Immutable`: Provider to manage the full lifecycle of a SIGHUP Distribution cluster including the provisioning of machines with Flatcar Container Linux, an immutable Linux distribution, for the nodes.
 
 ## Support & Compatibility 🪢
 

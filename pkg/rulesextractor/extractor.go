@@ -15,6 +15,41 @@ import (
 
 var numbersToWildcardRegex = regexp.MustCompile(`\.\d+\b`)
 
+// pathToRegex converts a path pattern with wildcard (**) into a regex pattern.
+// ** matches zero or more path segments (recursive).
+func pathToRegex(path string) string {
+	// Escape special regex characters except for ** which we'll handle.
+	escaped := regexp.QuoteMeta(path)
+
+	// Replace escaped \*\* with a placeholder (__DOUBLE_STAR__) to preserve it during processing.
+	// This placeholder allows us to distinguish between different contexts where ** appears:
+	// - \.__DOUBLE_STAR__\. (with dots on both sides): should match zero or more segments between dots
+	// - __DOUBLE_STAR__ at other positions (start, end, or without surrounding dots): should match any characters
+	// Without the placeholder, we couldn't tell these cases apart when doing replacements.
+	escaped = strings.ReplaceAll(escaped, "\\*\\*", "__DOUBLE_STAR__")
+
+	// Handle ** surrounded by dots: replaces the pattern with regex that allows zero or more segments between them.
+	escaped = strings.ReplaceAll(escaped, "\\.__DOUBLE_STAR__\\.", "(?:\\..*)?\\.")
+
+	// Replace remaining __DOUBLE_STAR__ (at start, end, or without surrounding dots) with .* to match any characters.
+	escaped = strings.ReplaceAll(escaped, "__DOUBLE_STAR__", ".*")
+
+	// Anchor the pattern to match the entire string.
+	return "^" + escaped + "$"
+}
+
+// MatchesPattern checks if a given path matches a pattern that may contain wildcards.
+func MatchesPattern(path, pattern string) bool {
+	regexPattern := pathToRegex(pattern)
+
+	regex, err := regexp.Compile(regexPattern)
+	if err != nil {
+		return false
+	}
+
+	return regex.MatchString(path)
+}
+
 type Spec struct {
 	Infrastructure *[]Rule `yaml:"infrastructure,omitempty"`
 	Kubernetes     *[]Rule `yaml:"kubernetes,omitempty"`
@@ -182,7 +217,7 @@ func (b *BaseExtractor) isImmutableRuleSafe(rule Rule, ds diff.Changelog) bool {
 		joinedPath := "." + strings.Join(d.Path, ".")
 		changePath := numbersToWildcardRegex.ReplaceAllString(joinedPath, ".*")
 
-		if changePath == rule.Path {
+		if MatchesPattern(changePath, rule.Path) {
 			matchingDiffFrom = d.From
 			matchingDiffTo = d.To
 
@@ -350,7 +385,7 @@ func (*BaseExtractor) ReducerRulesByDiffs(rules []Rule, ds diff.Changelog) []Rul
 			joinedPath := "." + strings.Join(d.Path, ".")
 			changePath := numbersToWildcardRegex.ReplaceAllString(joinedPath, ".*")
 
-			if changePath == rule.Path {
+			if MatchesPattern(changePath, rule.Path) {
 				if rule.Reducers == nil {
 					continue
 				}

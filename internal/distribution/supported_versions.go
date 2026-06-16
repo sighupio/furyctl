@@ -153,6 +153,7 @@ func GetSupport(version version.Version) map[string]bool {
 	eks, errEKS := NewCompatibilityChecker(version.String(), EKSClusterKind)
 	kfd, errKFD := NewCompatibilityChecker(version.String(), KFDDistributionKind)
 	onprem, errOnPrem := NewCompatibilityChecker(version.String(), OnPremisesKind)
+	immutable, errImmutable := NewCompatibilityChecker(version.String(), ImmutableKind)
 
 	// Helper function to interpret compatibility result.
 	isCompatible := func(checker CompatibilityChecker, err error) bool {
@@ -167,6 +168,7 @@ func GetSupport(version version.Version) map[string]bool {
 	support[EKSClusterKind] = isCompatible(eks, errEKS)
 	support[KFDDistributionKind] = isCompatible(kfd, errKFD)
 	support[OnPremisesKind] = isCompatible(onprem, errOnPrem)
+	support[ImmutableKind] = isCompatible(immutable, errImmutable)
 
 	return support
 }
