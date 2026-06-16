@@ -8,6 +8,8 @@ import (
 	"errors"
 	"path/filepath"
 
+	"github.com/sirupsen/logrus"
+
 	"github.com/sighupio/fury-distribution/pkg/apis/config"
 	"github.com/sighupio/furyctl/internal/tool/ansible"
 	execx "github.com/sighupio/furyctl/internal/x/exec"
@@ -63,6 +65,10 @@ func (x *ExtraToolsValidator) Validate(_ string) ([]string, []error) {
 func (x *ExtraToolsValidator) validateAnsible() error {
 	// With a pinned ansible version this validates the downloaded bundle; otherwise it checks
 	// the system ansible (legacy behavior).
+	if x.kfd.Tools.Common.Ansible.Version == "" {
+		logrus.Info("this distribution version does not pin an ansible bundle; using the system ansible")
+	}
+
 	ansibleRunner := ansible.NewRunner(
 		x.executor,
 		ansibleBundlePaths(x.binPath, x.kfd.Tools.Common.Ansible.Version, ""),

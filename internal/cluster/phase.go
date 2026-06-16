@@ -344,15 +344,33 @@ func (*OperationPhase) CopyFromTemplate(
 
 func (op *OperationPhase) CopyPathsToConfig(cfg *template.Config) {
 	cfg.Data["paths"] = map[any]any{
-		"helm":       op.HelmPath,
-		"helmfile":   op.HelmfilePath,
-		"kubectl":    op.KubectlPath,
-		"kustomize":  op.KustomizePath,
-		"terraform":  op.TerraformPath,
-		"vendorPath": path.Join(op.Path, "..", "vendor"),
-		"yq":         op.YqPath,
-		"kapp":       op.KappPath,
+		"helm":            op.HelmPath,
+		"helmfile":        op.HelmfilePath,
+		"kubectl":         op.KubectlPath,
+		"kustomize":       op.KustomizePath,
+		"terraform":       op.TerraformPath,
+		"vendorPath":      path.Join(op.Path, "..", "vendor"),
+		"yq":              op.YqPath,
+		"kapp":            op.KappPath,
+		"ansiblePlaybook": op.AnsiblePlaybookCmd(),
 	}
+}
+
+// AnsiblePlaybookCmd returns the shell command used to invoke ansible-playbook from templated
+// scripts (e.g. upgrade scripts). When the distribution pins an ansible bundle it returns the
+// bundled interpreter invocation with inline ANSIBLE_COLLECTIONS_PATH; otherwise it falls back to
+// the system "ansible-playbook" on PATH.
+func (op *OperationPhase) AnsiblePlaybookCmd() string {
+	if op.AnsiblePythonPath == "" {
+		return op.AnsiblePlaybookPath
+	}
+
+	return fmt.Sprintf(
+		"ANSIBLE_COLLECTIONS_PATH=%q %q %q",
+		op.AnsibleCollectionsPath,
+		op.AnsiblePythonPath,
+		op.AnsiblePlaybookPath,
+	)
 }
 
 func (op *OperationPhase) Self() *OperationPhase {
