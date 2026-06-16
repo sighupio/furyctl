@@ -6,6 +6,8 @@ package ansible
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
 
 	"github.com/google/uuid"
 
@@ -16,6 +18,12 @@ type Paths struct {
 	Ansible         string
 	AnsiblePlaybook string
 	WorkDir         string
+	// Python and CollectionsPath are set when using a self-contained ansible bundle. When
+	// Python is set, ansible/ansible-playbook are invoked as `python3 <script> ...` (so the
+	// relocated bundle ignores the build-time shebang) and ANSIBLE_COLLECTIONS_PATH/PATH are
+	// injected. When empty, the runner falls back to the system ansible on PATH.
+	Python          string
+	CollectionsPath string
 }
 
 type Runner struct {
@@ -33,12 +41,48 @@ func NewRunner(executor execx.Executor, paths Paths) *Runner {
 }
 
 func (r *Runner) CmdPath() string {
+	if r.paths.Python != "" {
+		return r.paths.Python
+	}
+
 	return r.paths.Ansible
 }
 
+// resolve returns the executable and args to run a bundled or system ansible entrypoint.
+// With a bundle, the python interpreter is the executable and the console script is its first
+// argument (bypassing the broken shebang of a relocated bundle).
+func (r *Runner) resolve(script string, args []string) (string, []string) {
+	if r.paths.Python == "" {
+		return script, args
+	}
+
+	return r.paths.Python, append([]string{script}, args...)
+}
+
+// bundleEnv injects the env needed by a bundled ansible (collections path + the bundle bin on
+// PATH). Returns nil for the system-ansible fallback so the process env is inherited unchanged.
+func (r *Runner) bundleEnv() []string {
+	if r.paths.Python == "" {
+		return nil
+	}
+
+	env := []string{}
+
+	if r.paths.CollectionsPath != "" {
+		env = append(env, "ANSIBLE_COLLECTIONS_PATH="+r.paths.CollectionsPath)
+	}
+
+	env = append(env, "PATH="+filepath.Dir(r.paths.Python)+string(os.PathListSeparator)+os.Getenv("PATH"))
+
+	return env
+}
+
 func (r *Runner) newCmd(args []string) (*execx.Cmd, string) {
-	cmd := execx.NewCmd(r.paths.Ansible, execx.CmdOptions{
-		Args:     args,
+	name, cmdArgs := r.resolve(r.paths.Ansible, args)
+
+	cmd := execx.NewCmd(name, execx.CmdOptions{
+		Args:     cmdArgs,
+		Env:      r.bundleEnv(),
 		Executor: r.executor,
 		WorkDir:  r.paths.WorkDir,
 	})
@@ -50,8 +94,11 @@ func (r *Runner) newCmd(args []string) (*execx.Cmd, string) {
 }
 
 func (r *Runner) newPlaybookCmd(args []string) (*execx.Cmd, string) {
-	cmd := execx.NewCmd(r.paths.AnsiblePlaybook, execx.CmdOptions{
-		Args:     args,
+	name, cmdArgs := r.resolve(r.paths.AnsiblePlaybook, args)
+
+	cmd := execx.NewCmd(name, execx.CmdOptions{
+		Args:     cmdArgs,
+		Env:      r.bundleEnv(),
 		Executor: r.executor,
 		WorkDir:  r.paths.WorkDir,
 	})

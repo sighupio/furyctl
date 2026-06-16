@@ -241,8 +241,10 @@ func NewKubernetes(
 		ansibleRunner: ansible.NewRunner(
 			execx.NewStdExecutor(),
 			ansible.Paths{
-				Ansible:         "ansible",
-				AnsiblePlaybook: "ansible-playbook",
+				Ansible:         phase.AnsiblePath,
+				AnsiblePlaybook: phase.AnsiblePlaybookPath,
+				Python:          phase.AnsiblePythonPath,
+				CollectionsPath: phase.AnsibleCollectionsPath,
 				WorkDir:         phase.Path,
 			},
 		),

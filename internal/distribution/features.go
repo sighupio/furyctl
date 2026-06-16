@@ -24,6 +24,7 @@ const (
 	FeatureKubernetesLogTypes = Feature("KubernetesLogTypes")
 	FeatureKappSupport        = Feature("KappSupport")
 	FeatureOpenTofuSupport    = Feature("OpenTofuSupport")
+	FeatureAnsibleBundle      = Feature("AnsibleBundle")
 )
 
 func HasFeature(kfd config.KFD, name Feature) bool {
@@ -51,9 +52,18 @@ func HasFeature(kfd config.KFD, name Feature) bool {
 
 	case FeatureOpenTofuSupport:
 		return hasFeatureOpenTofuSupport(kfd)
+
+	case FeatureAnsibleBundle:
+		return hasFeatureAnsibleBundle(kfd)
 	}
 
 	return false
+}
+
+// hasFeatureAnsibleBundle is true when the distribution pins a self-contained ansible bundle
+// version. Older distros (no ansible.version) fall back to the system ansible.
+func hasFeatureAnsibleBundle(kfd config.KFD) bool {
+	return kfd.Tools.Common.Ansible.Version != ""
 }
 
 func hasFeatureClusterUpgrade(kfd config.KFD) bool {

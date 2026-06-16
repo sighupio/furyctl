@@ -226,6 +226,27 @@ type checker struct {
 	trimFn  func([]string) string
 }
 
+// presence verifies the tool binary exists in the vendor folder and runs, WITHOUT
+// comparing versions. Used by tools whose configured version is not the value reported by
+// the binary (e.g. the ansible bundle, versioned by its own release tag, not ansible-core).
+func (vc *checker) presence() error {
+	cmdDir := filepath.Dir(vc.runner.CmdPath())
+
+	if _, err := os.Stat(cmdDir); err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			return errMissingBin
+		}
+
+		return fmt.Errorf("%w: %v", errGetVersion, err)
+	}
+
+	if _, err := vc.runner.Version(); err != nil {
+		return fmt.Errorf("%w: %v", errGetVersion, err)
+	}
+
+	return nil
+}
+
 func (vc *checker) version(want string) error {
 	if vc.regex == nil {
 		return errRegexNil

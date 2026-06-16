@@ -151,7 +151,7 @@ func NewKubeconfigCmd() *cobra.Command {
 			// Download the dependencies.
 			if !skipDepsDownload {
 				logrus.Info("Downloading dependencies...")
-				if _, err := depsdl.DownloadTools(res.DistroManifest); err != nil {
+				if _, err := depsdl.DownloadTools(res.DistroManifest, res.MinimalConf.Kind); err != nil {
 					cmdEvent.AddErrorMessage(ErrDownloadDependenciesFailed)
 					tracker.Track(cmdEvent)
 
@@ -174,7 +174,7 @@ func NewKubeconfigCmd() *cobra.Command {
 				logrus.Info("Dependencies validation skipped")
 			}
 
-			getter, err := cluster.NewKubeconfigGetter(res.MinimalConf, res.DistroManifest, res.RepoPath, furyctlPath, currentDir)
+			getter, err := cluster.NewKubeconfigGetter(res.MinimalConf, res.DistroManifest, res.RepoPath, furyctlPath, currentDir, binPath)
 			if err != nil {
 				cmdEvent.AddErrorMessage(err)
 				tracker.Track(cmdEvent)

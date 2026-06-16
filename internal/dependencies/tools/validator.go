@@ -28,6 +28,7 @@ func NewValidator(executor execx.Executor, binPath, furyctlPath string, autoConn
 		toolFactory: NewFactory(executor, FactoryPaths{
 			Bin: binPath,
 		}),
+		binPath:     binPath,
 		furyctlPath: furyctlPath,
 		autoConnect: autoConnect,
 	}
@@ -36,6 +37,7 @@ func NewValidator(executor execx.Executor, binPath, furyctlPath string, autoConn
 type Validator struct {
 	executor    execx.Executor
 	toolFactory *Factory
+	binPath     string
 	furyctlPath string
 	autoConnect bool
 }
@@ -77,18 +79,25 @@ func (tv *Validator) Validate(kfdManifest config.KFD, miniConf config.Furyctl) (
 	)
 
 	// Validate common tools.
-	cOks, cErrs := tv.validateTools(kfdManifest.Tools.Common, kfdManifest)
+	cOks, cErrs := tv.validateTools(kfdManifest.Tools.Common, kfdManifest, miniConf.Kind)
 	oks = append(oks, cOks...)
 	errs = append(errs, cErrs...)
 
 	// Validate eks tools only if kind is EKSCluster.
 	if miniConf.Kind == "EKSCluster" {
-		cOks, cErrs := tv.validateTools(kfdManifest.Tools.Eks, kfdManifest)
+		cOks, cErrs := tv.validateTools(kfdManifest.Tools.Eks, kfdManifest, miniConf.Kind)
 		oks = append(oks, cOks...)
 		errs = append(errs, cErrs...)
 	}
 
-	etv := apis.NewExtraToolsValidatorFactory(tv.executor, miniConf.APIVersion, miniConf.Kind, tv.autoConnect)
+	etv := apis.NewExtraToolsValidatorFactory(
+		tv.executor,
+		miniConf.APIVersion,
+		miniConf.Kind,
+		tv.autoConnect,
+		kfdManifest,
+		tv.binPath,
+	)
 
 	if etv == nil {
 		return oks, errs
@@ -103,7 +112,7 @@ func (tv *Validator) Validate(kfdManifest config.KFD, miniConf config.Furyctl) (
 	return oks, errs
 }
 
-func (tv *Validator) validateTools(i any, kfdManifest config.KFD) ([]string, []error) {
+func (tv *Validator) validateTools(i any, kfdManifest config.KFD, kind string) ([]string, []error) {
 	var errs []error
 
 	oks := make([]string, 0)
@@ -135,6 +144,17 @@ func (tv *Validator) validateTools(i any, kfdManifest config.KFD) ([]string, []e
 		}
 
 		if (toolName == "opentofu") && !distribution.HasFeature(kfdManifest, distribution.FeatureOpenTofuSupport) {
+			continue
+		}
+
+		// Ansible is validated by the OnPremises ExtraToolsValidator (which is bundle/feature
+		// aware), not here.
+		if toolName == "ansible" {
+			continue
+		}
+
+		// Skip tools not needed by the current cluster kind (e.g. terraform on OnPremises).
+		if !distribution.ToolNeededForKind(toolName, kind) {
 			continue
 		}
 

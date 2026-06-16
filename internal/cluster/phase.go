@@ -178,7 +178,14 @@ type OperationPhase struct {
 	TerraformOutputsPath string
 	TerraformSecretsPath string
 	FuryagentPath        string
-	binPath              string
+	// Ansible* point at the self-contained ansible bundle when kfd pins an ansible version,
+	// otherwise AnsiblePath/AnsiblePlaybookPath fall back to the literals "ansible"/
+	// "ansible-playbook" (system PATH) and AnsiblePythonPath/AnsibleCollectionsPath are empty.
+	AnsiblePath            string
+	AnsiblePlaybookPath    string
+	AnsiblePythonPath      string
+	AnsibleCollectionsPath string
+	binPath                string
 }
 
 type OperationPhaseOption struct {
@@ -210,6 +217,20 @@ func NewOperationPhase(folder string, kfdTools config.KFDTools, binPath string) 
 	outputsPath := path.Join(basePath, "terraform", "outputs")
 	secretsPath := path.Join(basePath, "terraform", "secrets")
 
+	// Ansible: bundle paths when pinned, otherwise system literals (fallback).
+	ansiblePath := "ansible"
+	ansiblePlaybookPath := "ansible-playbook"
+	ansiblePythonPath := ""
+	ansibleCollectionsPath := ""
+
+	if v := kfdTools.Common.Ansible.Version; v != "" {
+		ansibleBase := path.Join(binPath, "ansible", v)
+		ansiblePythonPath = path.Join(ansibleBase, "python", "bin", "python3")
+		ansiblePath = path.Join(ansibleBase, "python", "bin", "ansible")
+		ansiblePlaybookPath = path.Join(ansibleBase, "python", "bin", "ansible-playbook")
+		ansibleCollectionsPath = path.Join(ansibleBase, "collections")
+	}
+
 	return &OperationPhase{
 		Path:                 basePath,
 		TerraformPath:        terraformPath,
@@ -225,6 +246,11 @@ func NewOperationPhase(folder string, kfdTools config.KFDTools, binPath string) 
 		HelmfilePath:         helmfilePath,
 		KappPath:             kappPath,
 		FuryagentPath:        furyagentPath,
+
+		AnsiblePath:            ansiblePath,
+		AnsiblePlaybookPath:    ansiblePlaybookPath,
+		AnsiblePythonPath:      ansiblePythonPath,
+		AnsibleCollectionsPath: ansibleCollectionsPath,
 	}
 }
 

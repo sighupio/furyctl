@@ -76,8 +76,10 @@ func NewPreFlight(
 		ansibleRunner: ansible.NewRunner(
 			execx.NewStdExecutor(),
 			ansible.Paths{
-				Ansible:         "ansible",
-				AnsiblePlaybook: "ansible-playbook",
+				Ansible:         p.AnsiblePath,
+				AnsiblePlaybook: p.AnsiblePlaybookPath,
+				Python:          p.AnsiblePythonPath,
+				CollectionsPath: p.AnsibleCollectionsPath,
 				WorkDir:         p.Path,
 			},
 		),

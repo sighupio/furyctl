@@ -80,6 +80,10 @@ func NewCmd(name string, opts CmdOptions) *Cmd {
 	coreCmd.Stderr = iox.MultiWriterTransform(errWriters...)
 	coreCmd.Dir = opts.WorkDir
 
+	if len(opts.Env) > 0 {
+		coreCmd.Env = append(os.Environ(), opts.Env...)
+	}
+
 	if opts.Sensitive {
 		coreCmd.Stdout = bytes.NewBufferString("")
 		coreCmd.Stderr = bytes.NewBufferString("")
@@ -143,6 +147,7 @@ func (c *Cmd) RunWithTimeout(timeout time.Duration) error {
 	cmdCtx.Dir = c.Cmd.Dir
 	cmdCtx.Stdout = c.Cmd.Stdout
 	cmdCtx.Stderr = c.Cmd.Stderr
+	cmdCtx.Env = c.Cmd.Env
 
 	err := cmdCtx.Run()
 
@@ -161,6 +166,7 @@ func (c *Cmd) RunWithTimeout(timeout time.Duration) error {
 
 type CmdOptions struct {
 	Args      []string
+	Env       []string
 	Err       io.Writer
 	Executor  Executor
 	Out       io.Writer

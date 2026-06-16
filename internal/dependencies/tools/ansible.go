@@ -38,20 +38,37 @@ type Ansible struct {
 	version string
 }
 
+// ansibleBundleBaseURL is the (PoC) location of the self-contained ansible-portable bundles.
+// In production this becomes the SIGHUP-hosted release repo.
+const ansibleBundleBaseURL = "https://github.com/nutellinoit/ansible-portable-poc/releases/download"
+
 func (*Ansible) SupportsDownload() bool {
-	return false
+	return true
 }
 
-func (*Ansible) SrcPath() string {
-	return ""
+// SrcPath builds the bundle URL entirely from the configured version, which is the bundle's
+// own release tag (e.g. "v0.2.0") used verbatim both as the release tag and in the filename.
+func (a *Ansible) SrcPath() string {
+	return fmt.Sprintf(
+		"%s/%s/ansible-portable-%s-%s-%s.tar.gz",
+		ansibleBundleBaseURL,
+		a.version,
+		a.version,
+		a.os,
+		a.arch,
+	)
 }
 
 func (*Ansible) Rename(_ string) error {
+	// The tarball already extracts to python/ + collections/ with executable bits preserved.
 	return nil
 }
 
+// CheckBinVersion only verifies the bundle is present and runs: the configured version is the
+// bundle release tag, not the ansible-core version reported by `ansible --version`, so a
+// semver comparison would be meaningless.
 func (a *Ansible) CheckBinVersion() error {
-	if err := a.checker.version(a.version); err != nil {
+	if err := a.checker.presence(); err != nil {
 		return fmt.Errorf("ansible: %w", err)
 	}
 

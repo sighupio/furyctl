@@ -82,6 +82,9 @@ linters-settings:
   goimports:
     local-prefixes: github.com/sighupio
   gomoddirectives:
+    # PoC ansible-portable: allow the local replace to ../distribution (which adds
+    # KFDToolsCommon.Ansible). Revert once fury-distribution is released with the field.
+    replace-local: true
     # we need to use replace to be able to use Internal Kubernetes libraries
     # needed for the create PKI feature.
     replace-allow-list:

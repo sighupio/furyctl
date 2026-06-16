@@ -69,9 +69,22 @@ type RunnerFactory struct {
 func (rf *RunnerFactory) Create(name Name, version, workDir string) Runner {
 	switch name {
 	case Ansible:
+		// No pinned version → system ansible (fallback for distros without the bundle).
+		if version == "" {
+			return ansible.NewRunner(rf.executor, ansible.Paths{
+				Ansible:         string(name),
+				AnsiblePlaybook: "ansible-playbook",
+				WorkDir:         workDir,
+			})
+		}
+
+		ansibleBase := filepath.Join(rf.paths.Bin, string(name), version)
+
 		return ansible.NewRunner(rf.executor, ansible.Paths{
-			Ansible:         string(name),
-			AnsiblePlaybook: "ansible-playbook",
+			Python:          filepath.Join(ansibleBase, "python", "bin", "python3"),
+			Ansible:         filepath.Join(ansibleBase, "python", "bin", "ansible"),
+			AnsiblePlaybook: filepath.Join(ansibleBase, "python", "bin", "ansible-playbook"),
+			CollectionsPath: filepath.Join(ansibleBase, "collections"),
 			WorkDir:         workDir,
 		})
 

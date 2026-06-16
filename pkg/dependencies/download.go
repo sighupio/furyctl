@@ -69,7 +69,7 @@ type Downloader struct {
 	gitProtocol git.Protocol
 }
 
-func (dd *Downloader) DownloadAll(kfd config.KFD) ([]error, []string) {
+func (dd *Downloader) DownloadAll(kfd config.KFD, kind string) ([]error, []string) {
 	errs := []error{}
 	uts := []string{}
 
@@ -95,7 +95,7 @@ func (dd *Downloader) DownloadAll(kfd config.KFD) ([]error, []string) {
 	doneCh := make(chan bool)
 
 	go func() {
-		if err := dd.DownloadModules(kfd, gitPrefix); err != nil {
+		if err := dd.DownloadModules(kfd, gitPrefix, kind); err != nil {
 			errCh <- err
 		}
 
@@ -103,7 +103,7 @@ func (dd *Downloader) DownloadAll(kfd config.KFD) ([]error, []string) {
 	}()
 
 	go func() {
-		if err := dd.DownloadInstallers(kfd.Kubernetes, gitPrefix); err != nil {
+		if err := dd.DownloadInstallers(kfd.Kubernetes, gitPrefix, kind); err != nil {
 			errCh <- err
 		}
 
@@ -111,7 +111,7 @@ func (dd *Downloader) DownloadAll(kfd config.KFD) ([]error, []string) {
 	}()
 
 	go func() {
-		uts, err := dd.DownloadTools(kfd)
+		uts, err := dd.DownloadTools(kfd, kind)
 		if err != nil {
 			errCh <- err
 
@@ -162,7 +162,7 @@ func (dd *Downloader) DownloadAll(kfd config.KFD) ([]error, []string) {
 	}
 }
 
-func (dd *Downloader) DownloadModules(kfd config.KFD, gitPrefix string) error {
+func (dd *Downloader) DownloadModules(kfd config.KFD, gitPrefix, kind string) error {
 	oldPrefix := "kubernetes-fury"
 	newPrefix := "fury-kubernetes"
 	modules := kfd.Modules
@@ -194,6 +194,10 @@ func (dd *Downloader) DownloadModules(kfd config.KFD, gitPrefix string) error {
 			}
 
 			if name == "tracing" && !distribution.HasFeature(kfd, distribution.FeatureTracingModule) {
+				return
+			}
+
+			if !distribution.ModuleNeededForKind(name, kind) {
 				return
 			}
 
@@ -301,11 +305,16 @@ func (dd *Downloader) DownloadModules(kfd config.KFD, gitPrefix string) error {
 	}
 }
 
-func (dd *Downloader) DownloadInstallers(installers config.KFDKubernetes, gitPrefix string) error {
+func (dd *Downloader) DownloadInstallers(installers config.KFDKubernetes, gitPrefix, kind string) error {
 	insts := reflect.ValueOf(installers)
 
 	for i := range insts.NumField() {
 		name := strings.ToLower(insts.Type().Field(i).Name)
+
+		// Only download the installer for the current cluster kind.
+		if !distribution.InstallerNeededForKind(name, kind) {
+			continue
+		}
 
 		dst := filepath.Join(dd.basePath, "vendor", "installers", name)
 
@@ -315,11 +324,13 @@ func (dd *Downloader) DownloadInstallers(installers config.KFDKubernetes, gitPre
 		}
 
 		version := v.Installer
+
+		// Installer repos follow the "installer-<name>" convention.
 		src := fmt.Sprintf("git::%s/installer-%s?ref=%s&depth=1", gitPrefix, name, version)
 
-		// Rename the repository.
+		// The onpremises field maps to the hyphenated repo name.
 		if name == "onpremises" {
-			src = fmt.Sprintf("git::%s/fury-kubernetes-on-premises?ref=%s&depth=1", gitPrefix, version)
+			src = fmt.Sprintf("git::%s/installer-on-premises?ref=%s&depth=1", gitPrefix, version)
 		}
 
 		if err := dd.client.Download(src, dst); err != nil {
@@ -335,7 +346,7 @@ func (dd *Downloader) DownloadInstallers(installers config.KFDKubernetes, gitPre
 	return nil
 }
 
-func (dd *Downloader) DownloadTools(kfd config.KFD) ([]string, error) {
+func (dd *Downloader) DownloadTools(kfd config.KFD, kind string) ([]string, error) {
 	toolsCount := 0
 	kfdTools := kfd.Tools
 	tls := reflect.ValueOf(kfdTools)
@@ -380,6 +391,14 @@ func (dd *Downloader) DownloadTools(kfd config.KFD) ([]string, error) {
 				}
 
 				if (name == "opentofu") && !distribution.HasFeature(kfd, distribution.FeatureOpenTofuSupport) {
+					return
+				}
+
+				if name == "ansible" && !distribution.HasFeature(kfd, distribution.FeatureAnsibleBundle) {
+					return
+				}
+
+				if !distribution.ToolNeededForKind(name, kind) {
 					return
 				}
 

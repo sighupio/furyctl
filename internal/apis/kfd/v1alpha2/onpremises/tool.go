@@ -6,15 +6,43 @@ package onpremises
 
 import (
 	"errors"
+	"path/filepath"
 
+	"github.com/sighupio/fury-distribution/pkg/apis/config"
 	"github.com/sighupio/furyctl/internal/tool/ansible"
 	execx "github.com/sighupio/furyctl/internal/x/exec"
 )
 
-var ErrAnsibleNotInstalled = errors.New("ansible is not installed")
+var ErrAnsibleNotInstalled = errors.New("ansible is not installed, run 'furyctl download dependencies'")
+
+// ansibleBundlePaths builds the ansible.Paths for a given workDir. When the kfd pins an
+// ansible (bundle) version, the paths point at the self-contained bundle in
+// binPath/ansible/<version>/ and are invoked through the bundle's Python; otherwise they fall
+// back to the system "ansible"/"ansible-playbook" on PATH.
+func ansibleBundlePaths(binPath, version, workDir string) ansible.Paths {
+	if version == "" {
+		return ansible.Paths{
+			Ansible:         "ansible",
+			AnsiblePlaybook: "ansible-playbook",
+			WorkDir:         workDir,
+		}
+	}
+
+	base := filepath.Join(binPath, "ansible", version)
+
+	return ansible.Paths{
+		Python:          filepath.Join(base, "python", "bin", "python3"),
+		Ansible:         filepath.Join(base, "python", "bin", "ansible"),
+		AnsiblePlaybook: filepath.Join(base, "python", "bin", "ansible-playbook"),
+		CollectionsPath: filepath.Join(base, "collections"),
+		WorkDir:         workDir,
+	}
+}
 
 type ExtraToolsValidator struct {
 	executor execx.Executor
+	kfd      config.KFD
+	binPath  string
 }
 
 func (x *ExtraToolsValidator) Validate(_ string) ([]string, []error) {
@@ -33,10 +61,12 @@ func (x *ExtraToolsValidator) Validate(_ string) ([]string, []error) {
 }
 
 func (x *ExtraToolsValidator) validateAnsible() error {
-	ansibleRunner := ansible.NewRunner(x.executor, ansible.Paths{
-		Ansible:         "ansible",
-		AnsiblePlaybook: "ansible-playbook",
-	})
+	// With a pinned ansible version this validates the downloaded bundle; otherwise it checks
+	// the system ansible (legacy behavior).
+	ansibleRunner := ansible.NewRunner(
+		x.executor,
+		ansibleBundlePaths(x.binPath, x.kfd.Tools.Common.Ansible.Version, ""),
+	)
 
 	if _, err := ansibleRunner.Version(); err != nil {
 		return ErrAnsibleNotInstalled
@@ -45,8 +75,10 @@ func (x *ExtraToolsValidator) validateAnsible() error {
 	return nil
 }
 
-func NewExtraToolsValidator(executor execx.Executor) *ExtraToolsValidator {
+func NewExtraToolsValidator(executor execx.Executor, kfd config.KFD, binPath string) *ExtraToolsValidator {
 	return &ExtraToolsValidator{
 		executor: executor,
+		kfd:      kfd,
+		binPath:  binPath,
 	}
 }

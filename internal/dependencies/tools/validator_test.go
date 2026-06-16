@@ -49,8 +49,6 @@ func Test_Validator_Validate(t *testing.T) {
 			wantOks: []string{
 				"kubectl",
 				"kustomize",
-				"terraform",
-				"furyagent",
 				"yq",
 				"helm",
 				"helmfile",
@@ -78,10 +76,8 @@ func Test_Validator_Validate(t *testing.T) {
 				Spec: config.FuryctlSpec{},
 			},
 			wantErrs: []error{
-				errors.New("furyagent: wrong tool version - installed = 0.3.0, expected = 0.4.0"),
 				errors.New("kubectl: wrong tool version - installed = 1.21.1, expected = 1.22.0"),
 				errors.New("kustomize: wrong tool version - installed = 3.9.4, expected = 3.5.3"),
-				errors.New("terraform: wrong tool version - installed = 0.15.4, expected = 1.3.0"),
 				errors.New("yq: wrong tool version - installed = 4.34.1, expected = 4.33.0"),
 				errors.New("helm: wrong tool version - installed = 3.12.3, expected = 3.11.3"),
 				errors.New("helmfile: wrong tool version - installed = 0.156.0, expected = 0.155.0"),

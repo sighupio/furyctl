@@ -18,6 +18,7 @@ const (
 	KubeconfigPropertyConfigPath  = "configpath"
 	KubeconfigPropertyKfdManifest = "kfdmanifest"
 	KubeconfigPropertyDistroPath  = "distropath"
+	KubeconfigPropertyBinPath     = "binpath"
 )
 
 var kbFactories = make(map[string]map[string]KubeconfigFactory) //nolint:gochecknoglobals, lll // This patterns requires kbFactories
@@ -42,6 +43,7 @@ func NewKubeconfigGetter(
 	distroPath string,
 	configPath string,
 	workDir string,
+	binPath string,
 ) (KubeconfigGetter, error) {
 	lcAPIVersion := strings.ToLower(minimalConf.APIVersion)
 	lcResourceType := strings.ToLower(minimalConf.Kind)
@@ -59,6 +61,10 @@ func NewKubeconfigGetter(
 			{
 				Name:  KubeconfigPropertyDistroPath,
 				Value: distroPath,
+			},
+			{
+				Name:  KubeconfigPropertyBinPath,
+				Value: binPath,
 			},
 		})
 	}
