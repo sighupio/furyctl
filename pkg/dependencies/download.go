@@ -12,6 +12,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"runtime"
 	"strings"
 	"time"
 
@@ -411,7 +412,12 @@ func (dd *Downloader) DownloadTools(kfd config.KFD, kind string) ([]string, erro
 
 				dst := filepath.Join(dd.binPath, name, toolCfg.Version)
 
-				if err := dd.client.Download(tfc.SrcPath(), dst); err != nil {
+				// When the distribution pins a per-arch checksum for this tool, append it to the
+				// source URL so go-getter verifies the downloaded artifact (fail-closed) before
+				// extraction. Tools without checksums (all others / older distros) are unaffected.
+				src := withChecksum(tfc.SrcPath(), toolCfg.Checksums)
+
+				if err := dd.client.Download(src, dst); err != nil {
 					errCh <- fmt.Errorf("%w '%s': %w", dist.ErrDownloadingFolder, tfc.SrcPath(), err)
 
 					return
@@ -456,6 +462,25 @@ func (dd *Downloader) DownloadTools(kfd config.KFD, kind string) ([]string, erro
 			return uts, fmt.Errorf("%w tools", ErrDownloadTimeout)
 		}
 	}
+}
+
+// withChecksum appends a go-getter `?checksum=sha256:<hash>` query parameter to src when the
+// checksums map contains an entry for the current platform. The key convention matches the bundle
+// tarball naming, i.e. "<os>-<arch>" (e.g. "linux-amd64"). When no checksum is pinned the src is
+// returned unchanged, preserving the previous (unverified) behaviour for tools/distros without it.
+func withChecksum(src string, checksums map[string]string) string {
+	if len(checksums) == 0 {
+		return src
+	}
+
+	key := runtime.GOOS + "-" + runtime.GOARCH
+
+	hash, ok := checksums[key]
+	if !ok || hash == "" {
+		return src
+	}
+
+	return fmt.Sprintf("%s?checksum=sha256:%s", src, hash)
 }
 
 func createURL(prefix, name, version string) string {
