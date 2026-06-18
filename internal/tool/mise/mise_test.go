@@ -105,7 +105,7 @@ func Test_WriteConfig(t *testing.T) {
 		"[tools]",
 		`"kubectl" = "1.34.4"`,
 		`"opentofu" = "1.10.0"`,
-		`"ubi:sighupio/furyagent" = "0.4.0"`,
+		`"github:sighupio/furyagent" = "0.4.0"`,
 	} {
 		if !strings.Contains(content, want) {
 			t.Errorf("config missing %q\n%s", want, content)
