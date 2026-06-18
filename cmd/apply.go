@@ -18,6 +18,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
+	"github.com/sighupio/furyctl/internal/airgap"
 	"github.com/sighupio/furyctl/internal/analytics"
 	_ "github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/ekscluster"
 	"github.com/sighupio/furyctl/internal/app"
@@ -104,6 +105,15 @@ func NewApplyCmd() *cobra.Command {
 
 			tracker := ctn.Tracker()
 			tracker.Flush()
+
+			// Air-gapped: if --airgap-bundle is set, extract it and rewire to run offline before
+			// reading the other flags (it sets skip-deps-download and distro-location).
+			if err := airgap.MaybePrepare(); err != nil {
+				cmdEvent.AddErrorMessage(err)
+				tracker.Track(cmdEvent)
+
+				return fmt.Errorf("error preparing air-gapped bundle: %w", err)
+			}
 
 			// Get flags.
 			flags, err := getApplyCmdFlags()
@@ -516,6 +526,8 @@ func setupApplyCmdFlags(cmd *cobra.Command) {
 		false,
 		"Skip validating dependencies",
 	)
+
+	airgap.RegisterFlags(cmd)
 
 	cmd.Flags().Bool(
 		"dry-run",

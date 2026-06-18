@@ -49,6 +49,9 @@ func (r *Runner) newCmd(args []string) (*execx.Cmd, string) {
 		Args:     args,
 		Executor: r.executor,
 		WorkDir:  r.paths.WorkDir,
+		// Disable helmfile's "newer version available" check: it hits the network on every
+		// invocation (including `version`), which slows things down and breaks air-gapped runs.
+		Env: []string{"HELMFILE_UPGRADE_NOTICE_DISABLED=1"},
 	})
 
 	id := uuid.NewString()
