@@ -7,7 +7,6 @@ package tools
 import (
 	"fmt"
 	"regexp"
-	"runtime"
 	"strings"
 
 	"github.com/sighupio/furyctl/internal/tool/ansible"
@@ -15,8 +14,6 @@ import (
 
 func NewAnsible(runner *ansible.Runner, version string) *Ansible {
 	return &Ansible{
-		arch:    runtime.GOARCH,
-		os:      runtime.GOOS,
 		version: version,
 		checker: &checker{
 			regex:  regexp.MustCompile(`ansible \[.*]`),
@@ -32,22 +29,8 @@ func NewAnsible(runner *ansible.Runner, version string) *Ansible {
 }
 
 type Ansible struct {
-	arch    string
 	checker *checker
-	os      string
 	version string
-}
-
-func (*Ansible) SupportsDownload() bool {
-	return false
-}
-
-func (*Ansible) SrcPath() string {
-	return ""
-}
-
-func (*Ansible) Rename(_ string) error {
-	return nil
 }
 
 func (a *Ansible) CheckBinVersion() error {

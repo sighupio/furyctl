@@ -7,10 +7,6 @@
 package tools_test
 
 import (
-	"fmt"
-	"os"
-	"path/filepath"
-	"runtime"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -20,104 +16,6 @@ import (
 	"github.com/sighupio/furyctl/internal/tool/kustomize"
 	execx "github.com/sighupio/furyctl/internal/x/exec"
 )
-
-func Test_OldKustomize_SupportsDownload(t *testing.T) {
-	a := tools.NewKustomize(newKustomizeRunner(), "3.5.3")
-
-	if a.SupportsDownload() != true {
-		t.Errorf("kustomize download must be supported")
-	}
-
-	wantSrcPath := fmt.Sprintf(
-		"https://github.com/kubernetes-sigs/kustomize/releases/download/kustomize/v3.5.3/kustomize_v3.5.3_%s_amd64.tar.gz",
-		runtime.GOOS,
-	)
-
-	if a.SrcPath() != wantSrcPath {
-		t.Errorf("Wrong kustomize src path: want = %s, got = %s", wantSrcPath, a.SrcPath())
-	}
-}
-
-func Test_Kustomize3_10_0_SupportsDownload(t *testing.T) {
-	a := tools.NewKustomize(newKustomizeRunner(), "3.10.0")
-
-	if a.SupportsDownload() != true {
-		t.Errorf("kustomize download must be supported")
-	}
-
-	wantSrcPath := fmt.Sprintf(
-		"https://github.com/kubernetes-sigs/kustomize/releases/download/kustomize/v3.10.0/kustomize_v3.10.0_%s_amd64.tar.gz",
-		runtime.GOOS,
-	)
-
-	if a.SrcPath() != wantSrcPath {
-		t.Errorf("Wrong kustomize src path: want = %s, got = %s", wantSrcPath, a.SrcPath())
-	}
-}
-
-func Test_Kustomize_SupportsDownload(t *testing.T) {
-	a := tools.NewKustomize(newKustomizeRunner(), "5.6.0")
-
-	if a.SupportsDownload() != true {
-		t.Errorf("kustomize download must be supported")
-	}
-}
-
-func Test_Kustomize_SrcPath(t *testing.T) {
-	wantSrcPath := fmt.Sprintf(
-		"https://github.com/kubernetes-sigs/kustomize/releases/download/kustomize/v5.6.0/kustomize_v5.6.0_%s_%s.tar.gz",
-		runtime.GOOS,
-		runtime.GOARCH,
-	)
-
-	testCases := []struct {
-		desc    string
-		version string
-	}{
-		{
-			desc:    "5.6.0",
-			version: "5.6.0",
-		},
-		{
-			desc:    "v5.6.0",
-			version: "v5.6.0",
-		},
-	}
-	for _, tC := range testCases {
-		t.Run(tC.desc, func(t *testing.T) {
-			fa := tools.NewKustomize(newKustomizeRunner(), tC.version)
-			if fa.SrcPath() != wantSrcPath {
-				t.Errorf("Wrong kustomize src path: want = %s, got = %s", wantSrcPath, fa.SrcPath())
-			}
-		})
-	}
-}
-
-func Test_Kustomize_Rename(t *testing.T) {
-	tmpDir, err := os.MkdirTemp("", "furyctl-test-")
-	if err != nil {
-		t.Fatalf("error creating temp dir: %v", err)
-	}
-
-	if _, err := os.Create(filepath.Join(tmpDir, "kustomize")); err != nil {
-		t.Fatalf("error creating temp file: %v", err)
-	}
-
-	fa := tools.NewKustomize(newKustomizeRunner(), "5.6.0")
-
-	if err := fa.Rename(tmpDir); err != nil {
-		t.Fatalf("Error renaming kustomize binary: %v", err)
-	}
-
-	info, err := os.Stat(filepath.Join(tmpDir, "kustomize"))
-	if err != nil {
-		t.Fatalf("Error stating kustomize binary: %v", err)
-	}
-
-	if info.IsDir() {
-		t.Errorf("kustomize binary is a directory")
-	}
-}
 
 func Test_Kustomize_CheckBinVersion(t *testing.T) {
 	t.Parallel()

@@ -7,7 +7,6 @@ package tools
 import (
 	"fmt"
 	"regexp"
-	"runtime"
 	"strings"
 
 	"github.com/sighupio/furyctl/internal/semver"
@@ -16,8 +15,6 @@ import (
 
 func NewGit(runner *git.Runner, version string) *Git {
 	return &Git{
-		arch:    runtime.GOARCH,
-		os:      runtime.GOOS,
 		version: version,
 		checker: &checker{
 			regex:  regexp.MustCompile("git version " + semver.Regex),
@@ -33,22 +30,8 @@ func NewGit(runner *git.Runner, version string) *Git {
 }
 
 type Git struct {
-	arch    string
 	checker *checker
-	os      string
 	version string
-}
-
-func (*Git) SupportsDownload() bool {
-	return false
-}
-
-func (*Git) SrcPath() string {
-	return ""
-}
-
-func (*Git) Rename(_ string) error {
-	return nil
 }
 
 func (a *Git) CheckBinVersion() error {

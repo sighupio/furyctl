@@ -40,11 +40,10 @@ var (
 	ErrInvalidRunnerType    = errors.New("invalid runner type")
 )
 
+// Tool is a downloadable/validatable tool. Since tools are installed via the bundled mise, the
+// interface only needs to expose the installed-version check used by the dependency validator.
 type Tool interface {
-	SrcPath() string
-	Rename(basePath string) error
 	CheckBinVersion() error
-	SupportsDownload() bool
 }
 
 func NewFactory(executor execx.Executor, paths FactoryPaths) *Factory {

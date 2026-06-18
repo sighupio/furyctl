@@ -7,7 +7,6 @@ package tools
 import (
 	"fmt"
 	"regexp"
-	"runtime"
 	"strings"
 
 	"github.com/sighupio/furyctl/internal/tool/openvpn"
@@ -15,8 +14,6 @@ import (
 
 func NewOpenvpn(runner *openvpn.Runner, version string) *Openvpn {
 	return &Openvpn{
-		arch:    runtime.GOARCH,
-		os:      runtime.GOOS,
 		version: version,
 		checker: &checker{
 			regex:  regexp.MustCompile(`^OpenVPN (\d+.\d+.\d+)`),
@@ -32,22 +29,8 @@ func NewOpenvpn(runner *openvpn.Runner, version string) *Openvpn {
 }
 
 type Openvpn struct {
-	arch    string
 	checker *checker
-	os      string
 	version string
-}
-
-func (*Openvpn) SupportsDownload() bool {
-	return false
-}
-
-func (*Openvpn) SrcPath() string {
-	return ""
-}
-
-func (*Openvpn) Rename(_ string) error {
-	return nil
 }
 
 func (o *Openvpn) CheckBinVersion() error {

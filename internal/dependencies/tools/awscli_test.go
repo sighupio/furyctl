@@ -17,14 +17,6 @@ import (
 	execx "github.com/sighupio/furyctl/internal/x/exec"
 )
 
-func Test_Awscli_SupportsDownload(t *testing.T) {
-	a := tools.NewAwscli(newAwscliRunner(), "2.8.12")
-
-	if a.SupportsDownload() != false {
-		t.Errorf("Awscli download must not be supported")
-	}
-}
-
 func Test_Awscli_CheckBinVersion(t *testing.T) {
 	t.Parallel()
 

@@ -166,6 +166,8 @@ furyctl is a command line interface tool to manage the full lifecycle of SIGHUP 
 				dflag := viper.GetBool("debug")
 				logrusx.InitLog(logFile, dflag, cflag)
 
+				execx.NoTTY = cflag
+
 				logrus.Debugf("Writing logs to %s", logPath)
 
 				// Deprected flags.

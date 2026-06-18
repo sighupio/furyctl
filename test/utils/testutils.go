@@ -8,7 +8,6 @@ import (
 	"bytes"
 	"crypto/rand"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"math/big"
 	"os"
@@ -23,9 +22,8 @@ import (
 	"github.com/onsi/gomega/gexec"
 
 	"github.com/sighupio/furyctl/internal/cluster"
-	"github.com/sighupio/furyctl/internal/dependencies/tools"
 	"github.com/sighupio/furyctl/internal/git"
-	"github.com/sighupio/furyctl/internal/tool"
+	"github.com/sighupio/furyctl/internal/tool/mise"
 	execx "github.com/sighupio/furyctl/internal/x/exec"
 	iox "github.com/sighupio/furyctl/internal/x/io"
 	osx "github.com/sighupio/furyctl/internal/x/os"
@@ -77,8 +75,6 @@ const (
 	TestIDCeiling = 100000
 	BuildWaitTime = 5 * time.Minute
 )
-
-var errToolDoesNotSupportDownload = errors.New("does not support download")
 
 func NewContextState(testName string) ContextState {
 	testID := Must1(rand.Int(rand.Reader, big.NewInt(TestIDCeiling))).Int64()
@@ -154,33 +150,29 @@ func DownloadFuryDistribution(outDir, furyctlConfPath string) dist.DownloadResul
 	return Must1(distrodl.Download("", furyctlConfPath))
 }
 
+// Download installs a single tool via the bundled mise and returns the absolute path to its binary.
 func Download(toolName, version string) string {
-	binPath := filepath.Join(os.TempDir(), "bin")
+	base := filepath.Join(os.TempDir(), "furyctl-test-tools")
 
-	toolFactory := tools.NewFactory(execx.NewStdExecutor(), tools.FactoryPaths{Bin: binPath})
+	misePath := Must1(mise.EnsureBinary(netx.NewGoGetterClient(), filepath.Join(base, "bin")))
 
-	client := netx.NewGoGetterClient()
+	cfg := filepath.Join(base, "mise.toml")
 
-	tfc := toolFactory.Create(tool.Name(toolName), version)
-	if tfc == nil || !tfc.SupportsDownload() {
-		panic(fmt.Errorf("tool '%s' %w", toolName, errToolDoesNotSupportDownload))
-	}
+	Must0(mise.WriteConfig(cfg, map[string]string{toolName: version}))
 
-	dst := filepath.Join(binPath, toolName, version)
+	work := Must1(os.MkdirTemp("", "furyctl-test-mise-"))
 
-	if err := client.Download(tfc.SrcPath(), dst); err != nil {
-		panic(fmt.Errorf("%w '%s': %v", dist.ErrDownloadingFolder, tfc.SrcPath(), err))
-	}
+	runner := mise.NewRunner(execx.NewStdExecutor(), mise.Paths{
+		Mise:       misePath,
+		DataDir:    filepath.Join(base, "data"),
+		CacheDir:   filepath.Join(base, "cache"),
+		ConfigFile: cfg,
+		WorkDir:    work,
+	}, false)
 
-	if err := tfc.Rename(dst); err != nil {
-		panic(fmt.Errorf("%w '%s': %v", dist.ErrRenamingFile, tfc.SrcPath(), err))
-	}
+	Must0(runner.Install(nil))
 
-	if err := os.Chmod(filepath.Join(dst, toolName), iox.FullPermAccess); err != nil {
-		panic(fmt.Errorf("%w '%s': %v", dist.ErrChangingFilePermissions, tfc.SrcPath(), err))
-	}
-
-	return path.Join(dst, toolName)
+	return Must1(runner.Which(mise.ManagedTools[toolName].Bin))
 }
 
 func DownloadKubectl(version string) string {

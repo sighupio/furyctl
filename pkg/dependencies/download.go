@@ -18,11 +18,10 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/sighupio/furyctl/internal/apis/config"
-	"github.com/sighupio/furyctl/internal/dependencies/tools"
 	"github.com/sighupio/furyctl/internal/distribution"
 	"github.com/sighupio/furyctl/internal/git"
 	"github.com/sighupio/furyctl/internal/semver"
-	"github.com/sighupio/furyctl/internal/tool"
+	"github.com/sighupio/furyctl/internal/tool/mise"
 	execx "github.com/sighupio/furyctl/internal/x/exec"
 	iox "github.com/sighupio/furyctl/internal/x/io"
 	dist "github.com/sighupio/furyctl/pkg/distribution"
@@ -51,22 +50,26 @@ func NewCachingDownloader(client netx.Client, outDir, basePath, binPath string, 
 
 func NewDownloader(client netx.Client, basePath, binPath string, gitProtocol git.Protocol) *Downloader {
 	return &Downloader{
-		client:   client,
-		basePath: basePath,
-		binPath:  binPath,
-		toolFactory: tools.NewFactory(execx.NewStdExecutor(), tools.FactoryPaths{
-			Bin: filepath.Join(basePath, "vendor", "bin"),
-		}),
+		client:      client,
+		basePath:    basePath,
+		binPath:     binPath,
 		gitProtocol: gitProtocol,
 	}
 }
 
 type Downloader struct {
 	client      netx.Client
-	toolFactory *tools.Factory
 	basePath    string
 	binPath     string
 	gitProtocol git.Protocol
+	// When true, drives mise with MISE_OFFLINE for air-gapped runs (false by default).
+	offline bool
+}
+
+// SetOffline toggles offline mode: mise is driven with MISE_OFFLINE so it resolves tools from the
+// already-populated data dir without any network access (air-gapped re-runs).
+func (dd *Downloader) SetOffline(offline bool) {
+	dd.offline = offline
 }
 
 func (dd *Downloader) DownloadAll(kfd config.KFD, kind string) ([]error, []string) {
@@ -344,113 +347,148 @@ func (dd *Downloader) DownloadInstallers(installers config.KFDKubernetes, gitPre
 	return nil
 }
 
+// DownloadTools installs the tools needed by the cluster kind using the bundled mise, then
+// materializes them into the legacy <binPath>/<tool>/<version>/<bin> layout (via relative symlinks)
+// so the rest of furyctl (phase paths, runners, templates, validator) keeps working unchanged.
+// Returns the host tools (uts) that mise does not manage and the operator must provide (e.g. awscli).
 func (dd *Downloader) DownloadTools(kfd config.KFD, kind string) ([]string, error) {
-	toolsCount := 0
-	kfdTools := kfd.Tools
-	tls := reflect.ValueOf(kfdTools)
+	managed, uts := miseToolsForKind(kfd, kind)
+	if len(managed) == 0 {
+		return uts, nil
+	}
 
-	doneCh := make(chan bool)
-	utsCh := make(chan string)
-	errCh := make(chan error)
+	misePath, err := mise.EnsureBinary(dd.client, dd.binPath)
+	if err != nil {
+		return uts, fmt.Errorf("error ensuring mise binary: %w", err)
+	}
+
+	// The mise dir lives under binPath (next to the mise binary), NOT under vendor: vendor is wiped
+	// on every DownloadAll, so keeping the installed tools here lets them cache across runs (and makes
+	// --offline / air-gapped reuse work).
+	miseDir := filepath.Join(dd.binPath, "mise")
+	configFile := filepath.Join(miseDir, "mise.toml")
+
+	if err := os.MkdirAll(miseDir, iox.FullPermAccess); err != nil {
+		return uts, fmt.Errorf("error creating mise dir: %w", err)
+	}
+
+	if err := mise.WriteConfig(configFile, managed); err != nil {
+		return uts, fmt.Errorf("error generating mise config: %w", err)
+	}
+
+	workDir, err := os.MkdirTemp("", "furyctl-mise-")
+	if err != nil {
+		return uts, fmt.Errorf("error creating mise workdir: %w", err)
+	}
+
+	defer os.RemoveAll(workDir)
+
+	runner := mise.NewRunner(execx.NewStdExecutor(), mise.Paths{
+		Mise:       misePath,
+		DataDir:    filepath.Join(miseDir, "data"),
+		CacheDir:   filepath.Join(miseDir, "cache"),
+		ConfigFile: configFile,
+		WorkDir:    workDir,
+	}, dd.offline)
+
+	// Stream mise's install progress into an ephemeral terminal region (TTY only); on debug or
+	// --no-tty the region stays disabled and mise output is captured to the log file as usual.
+	progress := iox.NewLiveRegion(os.Stderr, execx.NoTTY || logrus.GetLevel() >= logrus.DebugLevel)
+
+	if err := runner.Install(progress); err != nil {
+		progress.Clear()
+
+		return uts, fmt.Errorf("error installing tools via mise: %w", err)
+	}
+
+	progress.Clear()
+
+	logrus.Infof("Tools ready (%d installed via mise)", len(managed))
+
+	for name, version := range managed {
+		t := mise.ManagedTools[name]
+
+		realPath, err := runner.Which(t.Bin)
+		if err != nil {
+			return uts, fmt.Errorf("error resolving tool '%s' via mise: %w", name, err)
+		}
+
+		if err := materializeTool(dd.binPath, name, version, t.Bin, realPath); err != nil {
+			return uts, err
+		}
+	}
+
+	return uts, nil
+}
+
+// miseToolsForKind partitions the tools needed by the kind into mise-managed (name -> version) and
+// host tools (uts). Mirrors the per-kind/feature skip logic; when a tool is pinned in both common
+// and eks, the eks (provider) value wins (union model / provider-overrides-common).
+func miseToolsForKind(kfd config.KFD, kind string) (map[string]string, []string) {
+	managed := map[string]string{}
+	uts := []string{}
+
+	tls := reflect.ValueOf(kfd.Tools)
 
 	for i := range tls.NumField() {
-		for j := range tls.Field(i).NumField() {
-			toolsCount++
-
-			go func(i, j int) {
-				defer func() {
-					doneCh <- true
-				}()
-
-				section := strings.ToLower(tls.Type().Field(i).Name)
-				name := strings.ToLower(tls.Field(i).Type().Field(j).Name)
-
-				toolCfg, ok := tls.Field(i).Field(j).Interface().(config.KFDTool)
-
-				if !ok {
-					errCh <- fmt.Errorf("%s: %w", name, ErrModuleHasNoVersion)
-
-					return
-				}
-
-				// Only download the tools for sections relevant to the cluster kind.
-				if !distribution.ToolSectionNeededForKind(section, kind) {
-					return
-				}
-
-				// Skip tools without a pinned version: with the back-compatible union model a tool is
-				// pinned in only one section, so the other section's field is empty (opentofu lives
-				// under tools.eks on new distros and under tools.common on older ones).
-				if toolCfg.Version == "" {
-					return
-				}
-
-				if (name == "helm" || name == "helmfile") && !distribution.HasFeature(kfd, distribution.FeaturePlugins) {
-					return
-				}
-
-				if name == "yq" && !distribution.HasFeature(kfd, distribution.FeatureYqSupport) {
-					return
-				}
-
-				if (name == "kapp") && !distribution.HasFeature(kfd, distribution.FeatureKappSupport) {
-					return
-				}
-
-				tfc := dd.toolFactory.Create(tool.Name(name), toolCfg.Version)
-				if tfc == nil || !tfc.SupportsDownload() {
-					utsCh <- name
-
-					return
-				}
-
-				dst := filepath.Join(dd.binPath, name, toolCfg.Version)
-
-				if err := dd.client.Download(tfc.SrcPath(), dst); err != nil {
-					errCh <- fmt.Errorf("%w '%s': %w", dist.ErrDownloadingFolder, tfc.SrcPath(), err)
-
-					return
-				}
-
-				if err := tfc.Rename(dst); err != nil {
-					errCh <- fmt.Errorf("%w '%s': %w", dist.ErrRenamingFile, tfc.SrcPath(), err)
-
-					return
-				}
-
-				if _, err := os.Stat(filepath.Join(dst, name)); err == nil {
-					if err := os.Chmod(filepath.Join(dst, name), iox.FullPermAccess); err != nil {
-						errCh <- fmt.Errorf("%w '%s': %w", dist.ErrChangingFilePermissions, filepath.Join(dst, name), err)
-
-						return
-					}
-				}
-			}(i, j)
+		section := strings.ToLower(tls.Type().Field(i).Name)
+		if !distribution.ToolSectionNeededForKind(section, kind) {
+			continue
 		}
-	}
 
-	uts := []string{}
-	done := 0
+		for j := range tls.Field(i).NumField() {
+			name := strings.ToLower(tls.Field(i).Type().Field(j).Name)
 
-	for {
-		select {
-		case <-doneCh:
-			done++
-
-			if done == toolsCount {
-				return uts, nil
+			toolCfg, ok := tls.Field(i).Field(j).Interface().(config.KFDTool)
+			if !ok || toolCfg.Version == "" {
+				continue
 			}
 
-		case ut := <-utsCh:
-			uts = append(uts, ut)
+			if (name == "helm" || name == "helmfile") && !distribution.HasFeature(kfd, distribution.FeaturePlugins) {
+				continue
+			}
 
-		case err := <-errCh:
-			return uts, err
+			if name == "yq" && !distribution.HasFeature(kfd, distribution.FeatureYqSupport) {
+				continue
+			}
 
-		case <-time.After(downloadsTimeout):
-			return uts, fmt.Errorf("%w tools", ErrDownloadTimeout)
+			if name == "kapp" && !distribution.HasFeature(kfd, distribution.FeatureKappSupport) {
+				continue
+			}
+
+			if mise.IsManaged(name) {
+				managed[name] = toolCfg.Version
+			} else {
+				uts = append(uts, name)
+			}
 		}
 	}
+
+	return managed, uts
+}
+
+// materializeTool creates <binPath>/<name>/<version>/<bin> as a relative symlink to the mise-installed
+// binary. Relative so the whole vendor dir can be moved (air-gapped) without breaking the link.
+func materializeTool(binPath, name, version, bin, realPath string) error {
+	dir := filepath.Join(binPath, name, version)
+	if err := os.MkdirAll(dir, iox.FullPermAccess); err != nil {
+		return fmt.Errorf("error creating tool dir %s: %w", dir, err)
+	}
+
+	link := filepath.Join(dir, bin)
+
+	_ = os.Remove(link)
+
+	target := realPath
+	if rel, err := filepath.Rel(dir, realPath); err == nil {
+		target = rel
+	}
+
+	if err := os.Symlink(target, link); err != nil {
+		return fmt.Errorf("error linking tool %s: %w", link, err)
+	}
+
+	return nil
 }
 
 func createURL(prefix, name, version string) string {

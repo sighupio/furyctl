@@ -5,36 +5,14 @@
 package tools
 
 import (
-	"runtime"
-
 	"github.com/sighupio/furyctl/internal/tool/shell"
 )
 
-func NewShell(_ *shell.Runner, version string) *Shell {
-	return &Shell{
-		arch:    runtime.GOARCH,
-		os:      runtime.GOOS,
-		version: version,
-	}
+func NewShell(_ *shell.Runner, _ string) *Shell {
+	return &Shell{}
 }
 
-type Shell struct {
-	arch    string
-	os      string
-	version string
-}
-
-func (*Shell) SupportsDownload() bool {
-	return false
-}
-
-func (*Shell) SrcPath() string {
-	return ""
-}
-
-func (*Shell) Rename(_ string) error {
-	return nil
-}
+type Shell struct{}
 
 func (*Shell) CheckBinVersion() error {
 	return nil

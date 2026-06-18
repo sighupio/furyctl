@@ -6,20 +6,14 @@ package tools
 
 import (
 	"fmt"
-	"path/filepath"
 	"regexp"
-	"runtime"
 	"strings"
 
-	"github.com/sighupio/furyctl/internal/semver"
 	"github.com/sighupio/furyctl/internal/tool/helm"
-	iox "github.com/sighupio/furyctl/internal/x/io"
 )
 
 func NewHelm(runner *helm.Runner, version string) *Helm {
 	return &Helm{
-		arch:    runtime.GOARCH,
-		os:      runtime.GOOS,
 		version: version,
 		checker: &checker{
 			regex:  regexp.MustCompile(`.*`),
@@ -35,34 +29,8 @@ func NewHelm(runner *helm.Runner, version string) *Helm {
 }
 
 type Helm struct {
-	arch    string
 	checker *checker
-	os      string
 	version string
-}
-
-func (*Helm) SupportsDownload() bool {
-	return true
-}
-
-func (h *Helm) SrcPath() string {
-	return fmt.Sprintf(
-		"https://get.helm.sh/helm-%s-%s-%s.tar.gz",
-		semver.EnsurePrefix(h.version),
-		h.os,
-		h.arch,
-	)
-}
-
-func (h *Helm) Rename(basePath string) error {
-	oldPath := filepath.Join(basePath, fmt.Sprintf("%s-%s/helm", h.os, h.arch))
-	newPath := filepath.Join(basePath, "helm")
-
-	if err := iox.CopyFile(oldPath, newPath); err != nil {
-		return fmt.Errorf("error while renaming helm: %w", err)
-	}
-
-	return nil
 }
 
 func (h *Helm) CheckBinVersion() error {

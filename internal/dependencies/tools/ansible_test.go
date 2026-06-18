@@ -17,30 +17,6 @@ import (
 	execx "github.com/sighupio/furyctl/internal/x/exec"
 )
 
-func Test_Ansible_SupportsDownload(t *testing.T) {
-	a := tools.NewAnsible(newAnsibleRunner(), "2.9.27")
-
-	if a.SupportsDownload() != false {
-		t.Errorf("Ansible download is not supported")
-	}
-}
-
-func Test_Ansible_SrcPath(t *testing.T) {
-	a := tools.NewAnsible(newAnsibleRunner(), "2.9.27")
-
-	if a.SrcPath() != "" {
-		t.Errorf("Wrong ansible src path: want = %s, got = %s", "", a.SrcPath())
-	}
-}
-
-func Test_Ansible_Rename(t *testing.T) {
-	a := tools.NewAnsible(newAnsibleRunner(), "2.9.27")
-
-	if a.Rename("") != nil {
-		t.Errorf("Ansible rename never returns errors")
-	}
-}
-
 func Test_Ansible_CheckBinVersion(t *testing.T) {
 	t.Parallel()
 
