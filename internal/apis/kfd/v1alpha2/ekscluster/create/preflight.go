@@ -18,6 +18,7 @@ import (
 	"github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/ekscluster/supported"
 	"github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/ekscluster/vpn"
 	"github.com/sighupio/furyctl/internal/cluster"
+	"github.com/sighupio/furyctl/internal/distribution"
 	"github.com/sighupio/furyctl/internal/state"
 	"github.com/sighupio/furyctl/internal/tool/awscli"
 	"github.com/sighupio/furyctl/internal/tool/kubectl"
@@ -82,7 +83,7 @@ func NewPreFlight(
 		furyctlConf.Metadata.Name,
 		path.Join(p.Path, "secrets"),
 		paths.BinPath,
-		kfdManifest.Tools.Common.Furyagent.Version,
+		distribution.EffectiveFuryagentVersion(kfdManifest.Tools),
 		vpnAutoConnect,
 		skipVpn,
 		vpnConfig,

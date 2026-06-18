@@ -191,6 +191,10 @@ func DownloadTerraform(version string) string {
 	return Download("terraform", version)
 }
 
+func DownloadOpenTofu(version string) string {
+	return Download("opentofu", version)
+}
+
 func DownloadFuryagent(version string) string {
 	return Download("furyagent", version)
 }

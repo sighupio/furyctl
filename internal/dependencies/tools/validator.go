@@ -115,6 +115,12 @@ func (tv *Validator) validateTools(i any, kfdManifest config.KFD) ([]string, []e
 			continue
 		}
 
+		// Skip tools without a pinned version: with the back-compatible union model a tool is
+		// pinned in only one section, so the other section's field is empty.
+		if toolCfg.Version == "" {
+			continue
+		}
+
 		toolName := strings.ToLower(toolCfgs.Type().Field(i).Name)
 
 		if (toolName == "helm" || toolName == "helmfile") &&
@@ -127,14 +133,6 @@ func (tv *Validator) validateTools(i any, kfdManifest config.KFD) ([]string, []e
 		}
 
 		if (toolName == "kapp") && !distribution.HasFeature(kfdManifest, distribution.FeatureKappSupport) {
-			continue
-		}
-
-		if (toolName == "terraform") && distribution.HasFeature(kfdManifest, distribution.FeatureOpenTofuSupport) {
-			continue
-		}
-
-		if (toolName == "opentofu") && !distribution.HasFeature(kfdManifest, distribution.FeatureOpenTofuSupport) {
 			continue
 		}
 

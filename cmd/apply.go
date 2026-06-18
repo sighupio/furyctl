@@ -214,7 +214,7 @@ func NewApplyCmd() *cobra.Command {
 			// Download the dependencies.
 			if !flags.SkipDepsDownload {
 				logrus.Info("Downloading dependencies...")
-				if errs, _ := depsdl.DownloadAll(res.DistroManifest); len(errs) > 0 {
+				if errs, _ := depsdl.DownloadAll(res.DistroManifest, res.MinimalConf.Kind); len(errs) > 0 {
 					cmdEvent.AddErrorMessage(ErrDownloadDependenciesFailed)
 					tracker.Track(cmdEvent)
 
