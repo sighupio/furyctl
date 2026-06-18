@@ -37,7 +37,7 @@ var ManagedTools = map[string]Tool{
 	"kapp":      {Spec: "kapp", Bin: "kapp"},
 	"opentofu":  {Spec: "opentofu", Bin: "tofu"},
 	"terraform": {Spec: "aqua:hashicorp/terraform", Bin: "terraform"},
-	"furyagent": {Spec: "ubi:sighupio/furyagent", Bin: "furyagent"},
+	"furyagent": {Spec: "github:sighupio/furyagent", Bin: "furyagent"},
 }
 
 // IsManaged reports whether the given furyctl tool is managed by mise.

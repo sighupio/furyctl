@@ -29,7 +29,10 @@ import (
 	netx "github.com/sighupio/furyctl/pkg/x/net"
 )
 
-var ErrBundleOutputRequired = errors.New("--bundle-output is required")
+var (
+	ErrBundleOutputRequired = errors.New("--bundle-output is required")
+	ErrHelmDiffMissing      = errors.New("helm-diff plugin was not installed correctly (incomplete download?)")
+)
 
 // Runs `helmfile init` so the helm plugins (helm-diff and friends) are downloaded into
 // binPath/helm/plugins and bundled. It is a no-op for distributions or kinds that do not use helmfile.
@@ -63,6 +66,13 @@ func preinstallHelmPlugins(kfd config.KFD, binPath string) error {
 
 	if err := runner.Init(helmPath); err != nil {
 		return fmt.Errorf("error pre-installing helm plugins: %w", err)
+	}
+
+	// A helmfile init run can exit 0 even when a plugin's binary download hook fails, leaving an
+	// unusable plugin. Verify the helm-diff binary is actually there so we never ship a broken bundle.
+	diffBin := filepath.Join(binPath, "helm", "plugins", "helm-diff", "bin", "diff")
+	if _, err := os.Stat(diffBin); err != nil {
+		return fmt.Errorf("%w: %s", ErrHelmDiffMissing, diffBin)
 	}
 
 	return nil
