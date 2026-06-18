@@ -16,6 +16,7 @@ import (
 	"github.com/spf13/viper"
 
 	"github.com/sighupio/furyctl/configs"
+	"github.com/sighupio/furyctl/internal/airgap"
 	"github.com/sighupio/furyctl/internal/analytics"
 	distroconf "github.com/sighupio/furyctl/internal/apis/config"
 	"github.com/sighupio/furyctl/internal/app"
@@ -62,6 +63,14 @@ func NewUpgradePathsCmd() *cobra.Command {
 
 			tracker := ctn.Tracker()
 			tracker.Flush()
+
+			// Air-gapped: extract --airgap-bundle (if set) and rewire to run offline before reading flags.
+			if err := airgap.MaybePrepare(); err != nil {
+				cmdEvent.AddErrorMessage(err)
+				tracker.Track(cmdEvent)
+
+				return fmt.Errorf("error preparing air-gapped bundle: %w", err)
+			}
 
 			// Get flags.
 			debug := viper.GetBool("debug")
@@ -289,6 +298,8 @@ func NewUpgradePathsCmd() *cobra.Command {
 		false,
 		"Skip downloading the binaries",
 	)
+
+	airgap.RegisterFlags(upgradePathsCmd)
 
 	upgradePathsCmd.Flags().Bool(
 		"skip-deps-validation",
