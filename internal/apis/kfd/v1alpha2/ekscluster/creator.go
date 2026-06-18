@@ -207,7 +207,7 @@ func (v *ClusterCreator) Create(startFrom string, timeout, _ int) error {
 		v.furyctlConf.Metadata.Name,
 		infra.Self().TerraformSecretsPath,
 		v.paths.BinPath,
-		v.kfdManifest.Tools.Common.Furyagent.Version,
+		distribution.EffectiveFuryagentVersion(v.kfdManifest.Tools),
 		v.vpnAutoConnect,
 		v.skipVpn,
 		vpnConfig,

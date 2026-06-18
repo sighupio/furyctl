@@ -171,7 +171,7 @@ func NewUpgradePathsCmd() *cobra.Command {
 				// Download the dependencies.
 				if !skipDepsDownload {
 					logrus.Info("Downloading dependencies...")
-					if _, err := depsdl.DownloadTools(res.DistroManifest); err != nil {
+					if _, err := depsdl.DownloadTools(res.DistroManifest, res.MinimalConf.Kind); err != nil {
 						cmdEvent.AddErrorMessage(ErrDownloadDependenciesFailed)
 						tracker.Track(cmdEvent)
 
