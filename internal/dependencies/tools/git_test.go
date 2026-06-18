@@ -19,14 +19,6 @@ import (
 	execx "github.com/sighupio/furyctl/internal/x/exec"
 )
 
-func Test_Git_SupportsDownload(t *testing.T) {
-	a := tools.NewGit(newGitRunner("TestHelperProcessGitStandard"), "2.39.0")
-
-	if a.SupportsDownload() != false {
-		t.Errorf("Git download must not be supported")
-	}
-}
-
 func Test_Git_CheckBinVersion(t *testing.T) {
 	t.Parallel()
 

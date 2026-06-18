@@ -7,17 +7,13 @@ package tools
 import (
 	"fmt"
 	"regexp"
-	"runtime"
 	"strings"
 
-	"github.com/sighupio/furyctl/internal/semver"
 	"github.com/sighupio/furyctl/internal/tool/helmfile"
 )
 
 func NewHelmfile(runner *helmfile.Runner, version string) *Helmfile {
 	return &Helmfile{
-		arch:    runtime.GOARCH,
-		os:      runtime.GOOS,
 		version: version,
 		checker: &checker{
 			regex:  regexp.MustCompile(`.*`),
@@ -33,28 +29,8 @@ func NewHelmfile(runner *helmfile.Runner, version string) *Helmfile {
 }
 
 type Helmfile struct {
-	arch    string
 	checker *checker
-	os      string
 	version string
-}
-
-func (*Helmfile) SupportsDownload() bool {
-	return true
-}
-
-func (h *Helmfile) SrcPath() string {
-	return fmt.Sprintf(
-		"https://github.com/helmfile/helmfile/releases/download/%s/helmfile_%s_%s_%s.tar.gz",
-		semver.EnsurePrefix(h.version),
-		h.version,
-		h.os,
-		h.arch,
-	)
-}
-
-func (*Helmfile) Rename(_ string) error {
-	return nil
 }
 
 func (h *Helmfile) CheckBinVersion() error {

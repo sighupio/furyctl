@@ -7,10 +7,6 @@
 package tools_test
 
 import (
-	"fmt"
-	"os"
-	"path/filepath"
-	"runtime"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -20,70 +16,6 @@ import (
 	"github.com/sighupio/furyctl/internal/tool/terraform"
 	execx "github.com/sighupio/furyctl/internal/x/exec"
 )
-
-func Test_OpenTofu_SupportsDownload(t *testing.T) {
-	a := tools.NewOpenTofu(newOpenTofuRunner(), "1.10.0")
-
-	if a.SupportsDownload() != true {
-		t.Errorf("opentofu download must be supported")
-	}
-}
-
-func Test_OpenTofu_SrcPath(t *testing.T) {
-	wantSrcPath := fmt.Sprintf(
-		"https://github.com/opentofu/opentofu/releases/download/v1.10.0/tofu_1.10.0_%s_%s.zip",
-		runtime.GOOS,
-		runtime.GOARCH,
-	)
-
-	testCases := []struct {
-		desc    string
-		version string
-	}{
-		{
-			desc:    "1.10.0",
-			version: "1.10.0",
-		},
-		{
-			desc:    "v1.10.0",
-			version: "v1.10.0",
-		},
-	}
-	for _, tC := range testCases {
-		t.Run(tC.desc, func(t *testing.T) {
-			fa := tools.NewOpenTofu(newOpenTofuRunner(), tC.version)
-			if fa.SrcPath() != wantSrcPath {
-				t.Errorf("Wrong opentofu src path: want = %s, got = %s", wantSrcPath, fa.SrcPath())
-			}
-		})
-	}
-}
-
-func Test_OpenTofu_Rename(t *testing.T) {
-	tmpDir, err := os.MkdirTemp("", "furyctl-test-")
-	if err != nil {
-		t.Fatalf("error creating temp dir: %v", err)
-	}
-
-	if _, err := os.Create(filepath.Join(tmpDir, "tofu")); err != nil {
-		t.Fatalf("error creating temp file: %v", err)
-	}
-
-	fa := tools.NewOpenTofu(newOpenTofuRunner(), "1.10.0")
-
-	if err := fa.Rename(tmpDir); err != nil {
-		t.Fatalf("Error renaming opentofu binary: %v", err)
-	}
-
-	info, err := os.Stat(filepath.Join(tmpDir, "tofu"))
-	if err != nil {
-		t.Fatalf("Error stating opentofu binary: %v", err)
-	}
-
-	if info.IsDir() {
-		t.Errorf("opentofu binary is a directory")
-	}
-}
 
 func Test_OpenTofu_CheckBinVersion(t *testing.T) {
 	t.Parallel()

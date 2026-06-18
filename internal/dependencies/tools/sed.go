@@ -7,7 +7,6 @@ package tools
 import (
 	"fmt"
 	"regexp"
-	"runtime"
 	"strings"
 
 	"github.com/sighupio/furyctl/internal/tool/sed"
@@ -15,8 +14,6 @@ import (
 
 func NewSed(runner *sed.Runner, version string) *Sed {
 	return &Sed{
-		arch:    runtime.GOARCH,
-		os:      runtime.GOOS,
 		version: version,
 		checker: &checker{
 			regex:  regexp.MustCompile(`.*`),
@@ -32,22 +29,8 @@ func NewSed(runner *sed.Runner, version string) *Sed {
 }
 
 type Sed struct {
-	arch    string
 	checker *checker
-	os      string
 	version string
-}
-
-func (*Sed) SupportsDownload() bool {
-	return false
-}
-
-func (*Sed) SrcPath() string {
-	return ""
-}
-
-func (*Sed) Rename(_ string) error {
-	return nil
 }
 
 func (s *Sed) CheckBinVersion() error {
