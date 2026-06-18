@@ -7,7 +7,7 @@ package distribution
 import (
 	"errors"
 
-	"github.com/sighupio/fury-distribution/pkg/apis/config"
+	"github.com/sighupio/furyctl/internal/apis/config"
 	"github.com/sighupio/furyctl/internal/semver"
 )
 
