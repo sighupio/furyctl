@@ -78,6 +78,11 @@ type KFDToolsCommon struct {
 
 type KFDToolsEks struct {
 	Awscli KFDTool `yaml:"awscli" validate:"required"`
+	// OpenTofu and Furyagent are optional here: distributions may pin them under tools.eks (newer
+	// layout) or tools.common (older layout). The Effective* resolvers prefer eks, then fall back to
+	// common, so both layouts work.
+	OpenTofu  KFDTool `yaml:"opentofu"`
+	Furyagent KFDTool `yaml:"furyagent"`
 }
 
 type KFDTool struct {

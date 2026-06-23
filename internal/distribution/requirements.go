@@ -4,7 +4,7 @@
 
 package distribution
 
-import "github.com/sighupio/fury-distribution/pkg/apis/config"
+import "github.com/sighupio/furyctl/internal/apis/config"
 
 // Per-kind dependency requirements: which tool sections / modules / installers a given cluster Kind
 // actually needs. Used to avoid downloading and validating dependencies that are irrelevant to the
