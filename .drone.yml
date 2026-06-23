@@ -19,6 +19,10 @@ steps:
       - clone
     environment:
       MISE_DATA_DIR: /mise-data
+      # Authenticate mise's GitHub API calls (tool resolution/downloads) to
+      # avoid the 60 req/h unauthenticated rate limit.
+      MISE_GITHUB_TOKEN:
+        from_secret: GITHUB_TOKEN
     volumes:
       - name: mise-cache
         path: /mise-data
@@ -162,6 +166,10 @@ steps:
       GOMODCACHE: /drone/src/.go/modcache
       GOTMPDIR: /drone/src/.go/tmp
       AWSCLI_VERSION: 2.15.17
+      # Authenticate the bundled mise (furyctl download dependencies) GitHub API
+      # calls to avoid the 60 req/h unauthenticated rate limit.
+      MISE_GITHUB_TOKEN:
+        from_secret: GITHUB_TOKEN
       AWS_ACCESS_KEY_ID:
         from_secret: AWS_ACCESS_KEY_ID
       AWS_SECRET_ACCESS_KEY:
