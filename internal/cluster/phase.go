@@ -16,8 +16,7 @@ import (
 	r3diff "github.com/r3labs/diff/v3"
 	"github.com/sirupsen/logrus"
 
-	"github.com/sighupio/fury-distribution/pkg/apis/config"
-	"github.com/sighupio/furyctl/internal/distribution"
+	"github.com/sighupio/furyctl/internal/apis/config"
 	iox "github.com/sighupio/furyctl/internal/x/io"
 	slicesx "github.com/sighupio/furyctl/internal/x/slices"
 	"github.com/sighupio/furyctl/pkg/merge"

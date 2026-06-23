@@ -13,7 +13,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/sighupio/fury-distribution/pkg/apis/config"
+	"github.com/sighupio/furyctl/internal/apis/config"
 	"github.com/sighupio/furyctl/internal/dependencies/tools"
 	execx "github.com/sighupio/furyctl/internal/x/exec"
 )

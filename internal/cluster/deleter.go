@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/sighupio/fury-distribution/pkg/apis/config"
+	"github.com/sighupio/furyctl/internal/apis/config"
 	yamlx "github.com/sighupio/furyctl/pkg/x/yaml"
 )
 
