@@ -11,7 +11,7 @@ import (
 	"slices"
 	"testing"
 
-	"github.com/sighupio/fury-distribution/pkg/apis/config"
+	"github.com/sighupio/furyctl/internal/apis/config"
 )
 
 func tool(v string) config.KFDTool { return config.KFDTool{Version: v} }
