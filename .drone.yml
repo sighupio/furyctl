@@ -124,6 +124,10 @@ steps:
       GOTMPDIR: /drone/src/.go/tmp
       NETRC_FILE:
         from_secret: NETRC_FILE
+      # Authenticate furyctl's GitHub API calls (e.g. the latest-release check
+      # in the integration tests) to avoid the 60 req/h unauthenticated limit.
+      GITHUB_TOKEN:
+        from_secret: GITHUB_TOKEN
     volumes:
       - name: mise-cache
         path: /mise-data

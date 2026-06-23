@@ -10,6 +10,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"os"
 	"time"
 
 	"github.com/sirupsen/logrus"
@@ -74,6 +75,13 @@ func GetLatestRelease() (Release, error) {
 		return release, fmt.Errorf("error creating request: %w", err)
 	}
 
+	// Authenticate the request when a GitHub token is available to avoid the low
+	// unauthenticated API rate limit (60 req/h per IP), which otherwise makes the
+	// release lookup return an empty/error response (e.g. in CI).
+	if token := githubToken(); token != "" {
+		req.Header.Set("Authorization", "Bearer "+token)
+	}
+
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return release, fmt.Errorf("error performing request: %w", err)
@@ -92,4 +100,15 @@ func GetLatestRelease() (Release, error) {
 	}
 
 	return release, nil
+}
+
+// githubToken returns a GitHub API token from the environment, if any.
+func githubToken() string {
+	for _, key := range []string{"GITHUB_TOKEN", "GITHUB_API_TOKEN"} {
+		if v := os.Getenv(key); v != "" {
+			return v
+		}
+	}
+
+	return ""
 }
