@@ -54,7 +54,7 @@ func (k *Kubernetes) Exec(startFrom string, upgradeState *upgrade.State) error {
 	}
 
 	if k.upgradeNode != "" {
-		if _, err := k.ansibleRunner.Playbook("upgrade-worker-nodes.yml", "--limit", k.upgradeNode); err != nil {
+		if _, err := k.ansibleRunner.Playbook("56.upgrade-worker-nodes.yml", "--limit", k.upgradeNode); err != nil {
 			return fmt.Errorf("error upgrading node %s: %w", k.upgradeNode, err)
 		}
 

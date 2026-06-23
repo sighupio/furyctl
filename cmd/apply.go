@@ -502,7 +502,7 @@ func setupApplyCmdFlags(cmd *cobra.Command) {
 	cmd.Flags().Bool(
 		"skip-nodes-upgrade",
 		false,
-		"On kind OnPremises, this will skip the upgrade of the nodes upgrading only the control-plane",
+		"On kind OnPremises and Immutable, this will skip the upgrade of the nodes upgrading only the control-plane",
 	)
 
 	cmd.Flags().Bool(
@@ -607,6 +607,6 @@ func setupApplyCmdFlags(cmd *cobra.Command) {
 	cmd.Flags().String(
 		"upgrade-node",
 		"",
-		"On kind OnPremises, this will upgrade one specific node passed as parameter",
+		"On kind OnPremises and Immutable, this will upgrade one specific node passed as parameter",
 	)
 }
