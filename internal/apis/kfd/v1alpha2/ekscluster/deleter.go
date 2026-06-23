@@ -15,6 +15,7 @@ import (
 	"github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/ekscluster/private"
 	"github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/ekscluster/vpn"
 	"github.com/sighupio/furyctl/internal/cluster"
+	"github.com/sighupio/furyctl/internal/distribution"
 )
 
 type ClusterDeleter struct {
@@ -121,7 +122,7 @@ func (d *ClusterDeleter) Delete() error {
 		d.furyctlConf.Metadata.Name,
 		infra.TerraformSecretsPath,
 		d.paths.BinPath,
-		d.kfdManifest.Tools.Common.Furyagent.Version,
+		distribution.EffectiveFuryagentVersion(d.kfdManifest.Tools),
 		d.vpnAutoConnect,
 		d.skipVpn,
 		vpnConfig,

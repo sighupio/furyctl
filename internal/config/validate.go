@@ -406,7 +406,7 @@ func validateToolsConfiguration(repoPath string, furyctlConf map[string]any) err
 
 	_, hasTerraformConfig := toolsConfig["terraform"]
 
-	if hasTerraformConfig && kfdFile.Tools.Common.OpenTofu.Version != "" {
+	if hasTerraformConfig && distribution.EffectiveOpenTofuVersion(kfdFile.Tools) != "" {
 		logrus.Warn("'spec.toolsConfiguration.terraform' is deprecated, " +
 			"it will be removed in future versions. " +
 			"Please use 'spec.toolsConfiguration.opentofu' instead")

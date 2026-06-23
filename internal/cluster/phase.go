@@ -191,16 +191,19 @@ func NewOperationPhase(folder string, kfdTools config.KFDTools, binPath string) 
 
 	kustomizePath := path.Join(binPath, "kustomize", kfdTools.Common.Kustomize.Version, "kustomize")
 	kubectlPath := path.Join(binPath, "kubectl", kfdTools.Common.Kubectl.Version, "kubectl")
-	furyagentPath := path.Join(binPath, "furyagent", kfdTools.Common.Furyagent.Version, "furyagent")
+	furyagentPath := path.Join(binPath, "furyagent", distribution.EffectiveFuryagentVersion(kfdTools), "furyagent")
 	yqPath := path.Join(binPath, "yq", kfdTools.Common.Yq.Version, "yq")
 	helmPath := path.Join(binPath, "helm", kfdTools.Common.Helm.Version, "helm")
 	helmfilePath := path.Join(binPath, "helmfile", kfdTools.Common.Helmfile.Version, "helmfile")
 	kappPath := path.Join(binPath, "kapp", kfdTools.Common.Kapp.Version, "kapp")
 
+	// Resolve the IaC binary with provider-overrides-common semantics: OpenTofu (tools.eks on new
+	// distros, tools.common on older ones) when pinned, otherwise the deprecated terraform tool for
+	// distributions that predate OpenTofu.
 	var terraformPath string
 
-	if kfdTools.Common.OpenTofu.Version != "" {
-		terraformPath = path.Join(binPath, "opentofu", kfdTools.Common.OpenTofu.Version, "tofu")
+	if openTofuVersion := distribution.EffectiveOpenTofuVersion(kfdTools); openTofuVersion != "" {
+		terraformPath = path.Join(binPath, "opentofu", openTofuVersion, "tofu")
 	} else {
 		terraformPath = path.Join(binPath, "terraform", kfdTools.Common.Terraform.Version, "terraform")
 	}

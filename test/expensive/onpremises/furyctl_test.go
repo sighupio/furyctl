@@ -22,6 +22,7 @@ import (
 	"github.com/onsi/gomega/gexec"
 
 	"github.com/sighupio/furyctl/internal/cluster"
+	"github.com/sighupio/furyctl/internal/distribution"
 	"github.com/sighupio/furyctl/internal/tool/furyagent"
 	"github.com/sighupio/furyctl/internal/tool/terraform"
 	execx "github.com/sighupio/furyctl/internal/x/exec"
@@ -378,9 +379,9 @@ var (
 
 			dlRes := DownloadFuryDistribution(state.TestDir, ctxState.FuryctlYaml)
 
-			terraformBinPath := DownloadTerraform(dlRes.DistroManifest.Tools.Common.Terraform.Version)
+			terraformBinPath := DownloadOpenTofu(distribution.EffectiveOpenTofuVersion(dlRes.DistroManifest.Tools))
 
-			furyagentBinPath := DownloadFuryagent(dlRes.DistroManifest.Tools.Common.Furyagent.Version)
+			furyagentBinPath := DownloadFuryagent(distribution.EffectiveFuryagentVersion(dlRes.DistroManifest.Tools))
 
 			kubectlBinPath := DownloadKubectl(dlRes.DistroManifest.Tools.Common.Kubectl.Version)
 
