@@ -528,6 +528,7 @@ issues:
         - tagliatelle
         - tagalign
         - godot
+        - lll
     - path: internal/apis/config/
       linters:
         - revive

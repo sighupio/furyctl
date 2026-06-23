@@ -10,6 +10,7 @@ import (
 	"gopkg.in/yaml.v3"
 
 	"github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/ekscluster/private"
+	"github.com/sighupio/furyctl/pkg/merge"
 )
 
 // TestAntiDrift decodes a furyctl.yaml exercising the fields furyctl reads from
@@ -106,4 +107,74 @@ spec:
 		c.Spec.ToolsConfiguration.Terraform.State.S3.BucketName != "bkt" {
 		t.Errorf("ToolsConfiguration.Terraform.State.S3.BucketName did not decode")
 	}
+}
+
+// TestInjectMapUsesJSONTagKeys guards the data-injection contract: furyctl builds
+// a struct from this package and feeds it to merge.NewDefaultModelFromStruct, which
+// keys off the *json* struct tags (pkg/x/map.FromStruct(..., "json")). If those json
+// tags are missing the keys fall back to the Go field names (PascalCase), which do not
+// match the camelCase keys the distribution templates read — so the rendered terraform
+// gets an empty vpc_id and `tofu plan` fails. This exercises the actual injection path
+// for the private DNS vpcId, the first field that breaks when the tags drift.
+func TestInjectMapUsesJSONTagKeys(t *testing.T) {
+	t.Parallel()
+
+	// Mirrors common.InjectType (kept local to avoid an import cycle).
+	type injectType struct {
+		Data private.SpecDistribution `json:"data"`
+	}
+
+	inject := injectType{
+		Data: private.SpecDistribution{
+			Modules: private.SpecDistributionModules{
+				Ingress: private.SpecDistributionModulesIngress{
+					Dns: &private.SpecDistributionModulesIngressDNS{
+						Private: &private.SpecDistributionModulesIngressDNSPrivate{
+							VpcId: "vpc-0123456789",
+						},
+					},
+				},
+			},
+		},
+	}
+
+	data, err := merge.NewDefaultModelFromStruct(inject, ".data", true).Get()
+	if err != nil {
+		t.Fatalf("Get(.data): %v", err)
+	}
+
+	if _, bad := data["Modules"]; bad {
+		t.Fatalf("found PascalCase key 'Modules': json struct tags are missing on the private schema")
+	}
+
+	modules := asMap(t, data, "modules")
+	ingress := asMap(t, modules, "ingress")
+	dns := asMap(t, ingress, "dns")
+	priv := asMap(t, dns, "private")
+
+	vpcID, ok := priv["vpcId"].(string)
+	if !ok || vpcID != "vpc-0123456789" {
+		t.Errorf("expected vpcId %q at camelCase path data.modules.ingress.dns.private.vpcId, got %v (ok=%v)", "vpc-0123456789", priv["vpcId"], ok)
+	}
+}
+
+func asMap(t *testing.T, m map[any]any, key string) map[any]any {
+	t.Helper()
+
+	v, ok := m[key]
+	if !ok {
+		keys := make([]any, 0, len(m))
+		for k := range m {
+			keys = append(keys, k)
+		}
+
+		t.Fatalf("missing key %q, keys present: %v", key, keys)
+	}
+
+	mm, ok := v.(map[any]any)
+	if !ok {
+		t.Fatalf("key %q is not a map, got %T", key, v)
+	}
+
+	return mm
 }
