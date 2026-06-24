@@ -255,3 +255,53 @@ func TestBaseChecker_AssertReducerUnsupportedViolations_WithoutReducers(t *testi
 		})
 	}
 }
+
+// TestExpandMapChanges verifies that a wholesale object create/delete (a change
+// whose value is a nested map) is expanded into one change per leaf, so that
+// leaf-targeted rules/reducers match nil->value and value->nil transitions.
+func TestExpandMapChanges(t *testing.T) {
+	t.Parallel()
+
+	t.Run("parent created -> per-leaf change with nil From", func(t *testing.T) {
+		t.Parallel()
+
+		in := diffx.Changelog{
+			{Type: "create", Path: []string{"spec", "kubernetes", "advanced", "kubeProxy"}, From: nil, To: map[string]any{"type": "nftables"}},
+		}
+
+		out := diffs.ExpandMapChanges(in)
+
+		require.Len(t, out, 1)
+		assert.Equal(t, []string{"spec", "kubernetes", "advanced", "kubeProxy", "type"}, out[0].Path)
+		assert.Nil(t, out[0].From)
+		assert.Equal(t, "nftables", out[0].To)
+	})
+
+	t.Run("parent deleted -> per-leaf change with nil To", func(t *testing.T) {
+		t.Parallel()
+
+		in := diffx.Changelog{
+			{Type: "delete", Path: []string{"spec", "kubernetes", "advanced", "kubeProxy"}, From: map[string]any{"type": "ipvs"}, To: nil},
+		}
+
+		out := diffs.ExpandMapChanges(in)
+
+		require.Len(t, out, 1)
+		assert.Equal(t, []string{"spec", "kubernetes", "advanced", "kubeProxy", "type"}, out[0].Path)
+		assert.Equal(t, "ipvs", out[0].From)
+		assert.Nil(t, out[0].To)
+	})
+
+	t.Run("leaf change is returned unchanged", func(t *testing.T) {
+		t.Parallel()
+
+		in := diffx.Changelog{
+			{Type: "update", Path: []string{"spec", "kubernetes", "advanced", "kubeProxy", "type"}, From: "ipvs", To: "nftables"},
+		}
+
+		out := diffs.ExpandMapChanges(in)
+
+		require.Len(t, out, 1)
+		assert.Equal(t, in[0], out[0])
+	})
+}

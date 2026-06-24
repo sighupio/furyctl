@@ -123,7 +123,7 @@ func (*BaseChecker) AssertReducerUnsupportedViolations(diffs r3diff.Changelog, r
 	// single change at the parent path carrying a map value. Expand those into
 	// per-leaf changes so that leaf-targeted rules (e.g. `...kubeProxy.type`)
 	// catch nil -> value (and value -> nil) transitions too.
-	diffs = expandMapChanges(diffs)
+	diffs = ExpandMapChanges(diffs)
 
 	for _, diff := range diffs {
 		for _, rule := range reducerRules {
@@ -171,12 +171,12 @@ func isDiffUnsupported(diff r3diff.Change, conditions []rules.Unsupported) (stri
 	return reason, false
 }
 
-// expandMapChanges expands changes whose value is a nested map (a whole object
+// ExpandMapChanges expands changes whose value is a nested map (a whole object
 // added or removed) into one change per leaf, preserving the change type. This
 // makes leaf-targeted rules match transitions where the parent object was
 // previously absent (nil -> value) or is being removed (value -> nil). Changes
 // that do not carry a map value are returned unchanged.
-func expandMapChanges(changelog r3diff.Changelog) r3diff.Changelog {
+func ExpandMapChanges(changelog r3diff.Changelog) r3diff.Changelog {
 	expanded := make(r3diff.Changelog, 0, len(changelog))
 
 	for _, c := range changelog {
