@@ -118,6 +118,13 @@ func (*BaseChecker) AssertReducerUnsupportedViolations(diffs r3diff.Changelog, r
 		return nil
 	}
 
+	// When a nested object is added or removed wholesale (e.g. the optional
+	// `kubeProxy` object goes from absent to `{type: none}`), r3diff emits a
+	// single change at the parent path carrying a map value. Expand those into
+	// per-leaf changes so that leaf-targeted rules (e.g. `...kubeProxy.type`)
+	// catch nil -> value (and value -> nil) transitions too.
+	diffs = expandMapChanges(diffs)
+
 	for _, diff := range diffs {
 		for _, rule := range reducerRules {
 			joinedPath := "." + strings.Join(diff.Path, ".")
@@ -162,6 +169,63 @@ func isDiffUnsupported(diff r3diff.Change, conditions []rules.Unsupported) (stri
 	}
 
 	return reason, false
+}
+
+// expandMapChanges expands changes whose value is a nested map (a whole object
+// added or removed) into one change per leaf, preserving the change type. This
+// makes leaf-targeted rules match transitions where the parent object was
+// previously absent (nil -> value) or is being removed (value -> nil). Changes
+// that do not carry a map value are returned unchanged.
+func expandMapChanges(changelog r3diff.Changelog) r3diff.Changelog {
+	expanded := make(r3diff.Changelog, 0, len(changelog))
+
+	for _, c := range changelog {
+		expanded = append(expanded, expandChange(c)...)
+	}
+
+	return expanded
+}
+
+func expandChange(c r3diff.Change) []r3diff.Change {
+	// Object added wholesale: To is a map, From is nil.
+	if m, ok := c.To.(map[string]any); ok && len(m) > 0 {
+		var res []r3diff.Change
+		for k, v := range m {
+			res = append(res, expandChange(r3diff.Change{
+				Type: c.Type,
+				Path: childPath(c.Path, k),
+				From: nil,
+				To:   v,
+			})...)
+		}
+
+		return res
+	}
+
+	// Object removed wholesale: From is a map, To is nil.
+	if m, ok := c.From.(map[string]any); ok && len(m) > 0 {
+		var res []r3diff.Change
+		for k, v := range m {
+			res = append(res, expandChange(r3diff.Change{
+				Type: c.Type,
+				Path: childPath(c.Path, k),
+				From: v,
+				To:   nil,
+			})...)
+		}
+
+		return res
+	}
+
+	return []r3diff.Change{c}
+}
+
+func childPath(parent []string, key string) []string {
+	child := make([]string, 0, len(parent)+1)
+	child = append(child, parent...)
+	child = append(child, key)
+
+	return child
 }
 
 func isImmutablePathChanged(change r3diff.Change, immutables []string) bool {

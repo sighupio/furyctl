@@ -373,15 +373,15 @@ func (p *PreFlight) CheckReducersDiffs(d r3diff.Changelog, diffChecker diffs.Che
 
 	errs = append(errs, diffChecker.AssertReducerUnsupportedViolations(
 		d,
-		r.UnsupportedReducerRulesByDiffs(r.GetReducers("infrastructure"), d),
+		r.GetUnsupportedRules("infrastructure"),
 	)...)
 	errs = append(errs, diffChecker.AssertReducerUnsupportedViolations(
 		d,
-		r.UnsupportedReducerRulesByDiffs(r.GetReducers("kubernetes"), d),
+		r.GetUnsupportedRules("kubernetes"),
 	)...)
 	errs = append(errs, diffChecker.AssertReducerUnsupportedViolations(
 		d,
-		r.UnsupportedReducerRulesByDiffs(r.GetReducers("distribution"), d),
+		r.GetUnsupportedRules("distribution"),
 	)...)
 
 	if len(errs) > 0 {

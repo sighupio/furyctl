@@ -95,6 +95,7 @@ type Extractor interface {
 	GetImmutableRules(phase string) []Rule
 	FilterSafeImmutableRules(rules []Rule, ds diff.Changelog) []Rule
 	GetReducers(phase string) []Rule
+	GetUnsupportedRules(phase string) []Rule
 	ReducerRulesByDiffs(reducers []Rule, ds diff.Changelog) []Rule
 	UnsupportedReducerRulesByDiffs(rules []Rule, ds diff.Changelog) []Rule
 	UnsafeReducerRulesByDiffs(rules []Rule, ds diff.Changelog) []Rule
@@ -377,6 +378,27 @@ func (b *BaseExtractor) GetReducers(_ string) []Rule {
 	return reducers
 }
 
+// GetUnsupportedRules returns all the rules that declare unsupported transitions,
+// regardless of whether they also define reducers. This is what drives the
+// "unsupported transition" validation, which must not depend on reducers being set.
+func (b *BaseExtractor) GetUnsupportedRules(_ string) []Rule {
+	var unsupported []Rule
+
+	if b.Spec.Infrastructure != nil {
+		unsupported = append(unsupported, b.ExtractUnsupportedRules(*b.Spec.Infrastructure)...)
+	}
+
+	if b.Spec.Kubernetes != nil {
+		unsupported = append(unsupported, b.ExtractUnsupportedRules(*b.Spec.Kubernetes)...)
+	}
+
+	if b.Spec.Distribution != nil {
+		unsupported = append(unsupported, b.ExtractUnsupportedRules(*b.Spec.Distribution)...)
+	}
+
+	return unsupported
+}
+
 func (*BaseExtractor) ReducerRulesByDiffs(rules []Rule, ds diff.Changelog) []Rule {
 	filteredRules := make([]Rule, 0)
 
@@ -492,4 +514,20 @@ func (*BaseExtractor) ExtractReducerRules(rls []Rule) []Rule {
 	}
 
 	return reducers
+}
+
+// ExtractUnsupportedRules returns the rules that declare at least one unsupported
+// transition, regardless of whether they also define reducers. Unsupported
+// transitions are enforced independently from reducers (see
+// diffs.AssertReducerUnsupportedViolations).
+func (*BaseExtractor) ExtractUnsupportedRules(rls []Rule) []Rule {
+	unsupported := make([]Rule, 0)
+
+	for _, rule := range rls {
+		if rule.Unsupported != nil && len(*rule.Unsupported) > 0 {
+			unsupported = append(unsupported, rule)
+		}
+	}
+
+	return unsupported
 }

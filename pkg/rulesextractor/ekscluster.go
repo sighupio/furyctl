@@ -116,6 +116,34 @@ func (r *EKSExtractor) GetReducers(phase string) []Rule {
 	}
 }
 
+func (r *EKSExtractor) GetUnsupportedRules(phase string) []Rule {
+	switch phase {
+	case cluster.OperationPhaseInfrastructure:
+		if r.Spec.Infrastructure == nil {
+			return []Rule{}
+		}
+
+		return r.BaseExtractor.ExtractUnsupportedRules(*r.Spec.Infrastructure)
+
+	case cluster.OperationPhaseKubernetes:
+		if r.Spec.Kubernetes == nil {
+			return []Rule{}
+		}
+
+		return r.BaseExtractor.ExtractUnsupportedRules(*r.Spec.Kubernetes)
+
+	case cluster.OperationPhaseDistribution:
+		if r.Spec.Distribution == nil {
+			return []Rule{}
+		}
+
+		return r.BaseExtractor.ExtractUnsupportedRules(*r.Spec.Distribution)
+
+	default:
+		return []Rule{}
+	}
+}
+
 func (r *EKSExtractor) ReducerRulesByDiffs(rls []Rule, ds diff.Changelog) []Rule {
 	return r.BaseExtractor.ReducerRulesByDiffs(rls, ds)
 }

@@ -15,6 +15,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/sighupio/furyctl/pkg/diffs"
+	rules "github.com/sighupio/furyctl/pkg/rulesextractor"
 )
 
 func TestBaseChecker_GenerateDiff(t *testing.T) {
@@ -178,6 +179,78 @@ func TestBaseChecker_AssertImmutableViolations(t *testing.T) {
 
 			for i, err := range errs {
 				assert.Equal(t, tC.expectedErrs[i].Error(), err.Error())
+			}
+		})
+	}
+}
+
+func ptrAny(v any) *any { return &v }
+
+func ptrStr(s string) *string { return &s }
+
+// onpremKubeCfg builds a minimal on-prem-like config; pass nil to omit the
+// kubeProxy object entirely (so the parent is absent).
+func onpremKubeCfg(kubeProxy map[string]any) map[string]any {
+	advanced := map[string]any{}
+	if kubeProxy != nil {
+		advanced["kubeProxy"] = kubeProxy
+	}
+
+	return map[string]any{
+		"spec": map[string]any{
+			"kubernetes": map[string]any{
+				"advanced": advanced,
+			},
+		},
+	}
+}
+
+// TestBaseChecker_AssertReducerUnsupportedViolations_WithoutReducers guards the
+// fix for unsupported transitions declared on a rule that has NO reducers
+// (e.g. .spec.kubernetes.advanced.kubeProxy.type), including the nil -> value
+// and value -> nil cases where the parent object is added/removed wholesale.
+func TestBaseChecker_AssertReducerUnsupportedViolations_WithoutReducers(t *testing.T) {
+	t.Parallel()
+
+	// Rule with only `unsupported` (no reducers) — the case the fix enables.
+	rule := rules.Rule{
+		Path: ".spec.kubernetes.advanced.kubeProxy.type",
+		Unsupported: &[]rules.Unsupported{
+			{To: ptrAny("none"), Reason: ptrStr("disabling kube-proxy on an existing cluster is not supported")},
+			{From: ptrAny("none"), Reason: ptrStr("enabling kube-proxy where it was never installed is not supported")},
+		},
+	}
+
+	testCases := []struct {
+		desc        string
+		current     map[string]any
+		next        map[string]any
+		wantBlocked bool
+	}{
+		{"nil -> none (kubeProxy object absent before)", onpremKubeCfg(nil), onpremKubeCfg(map[string]any{"type": "none"}), true},
+		{"nil -> none (kubeProxy present, type added)", onpremKubeCfg(map[string]any{}), onpremKubeCfg(map[string]any{"type": "none"}), true},
+		{"ipvs -> none", onpremKubeCfg(map[string]any{"type": "ipvs"}), onpremKubeCfg(map[string]any{"type": "none"}), true},
+		{"none -> ipvs", onpremKubeCfg(map[string]any{"type": "none"}), onpremKubeCfg(map[string]any{"type": "ipvs"}), true},
+		{"none -> nil (kubeProxy object removed)", onpremKubeCfg(map[string]any{"type": "none"}), onpremKubeCfg(nil), true},
+		{"ipvs -> nftables (allowed)", onpremKubeCfg(map[string]any{"type": "ipvs"}), onpremKubeCfg(map[string]any{"type": "nftables"}), false},
+		{"no change", onpremKubeCfg(map[string]any{"type": "ipvs"}), onpremKubeCfg(map[string]any{"type": "ipvs"}), false},
+	}
+
+	for _, tC := range testCases {
+		t.Run(tC.desc, func(t *testing.T) {
+			t.Parallel()
+
+			checker := diffs.NewBaseChecker(tC.current, tC.next)
+
+			changelog, err := checker.GenerateDiff()
+			require.NoError(t, err)
+
+			errs := checker.AssertReducerUnsupportedViolations(changelog, []rules.Rule{rule})
+
+			if tC.wantBlocked {
+				assert.NotEmpty(t, errs, "expected an unsupported-transition violation")
+			} else {
+				assert.Empty(t, errs, "expected no violation")
 			}
 		})
 	}

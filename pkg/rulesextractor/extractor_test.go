@@ -252,6 +252,51 @@ func TestBaseExtractor_GetReducers(t *testing.T) {
 	}
 }
 
+func TestBaseExtractor_GetUnsupportedRules(t *testing.T) {
+	t.Parallel()
+
+	noneVal := any("none")
+
+	unsupportedNoReducers := rules.Rule{
+		Path:        ".spec.kubernetes.advanced.kubeProxy.type",
+		Unsupported: &[]rules.Unsupported{{To: &noneVal}},
+	}
+	reducersOnly := rules.Rule{
+		Path:     ".foo",
+		Reducers: &[]rules.Reducer{{From: "a", To: "b"}},
+	}
+	plain := rules.Rule{Path: ".bar"}
+
+	testCases := []struct {
+		name string
+		spec rules.Spec
+		want []rules.Rule
+	}{
+		{
+			name: "should return empty slice if no rules",
+			spec: rules.Spec{},
+			want: nil,
+		},
+		{
+			name: "returns unsupported-only rules and ignores reducer-only/plain ones",
+			spec: rules.Spec{
+				Kubernetes: &[]rules.Rule{unsupportedNoReducers, reducersOnly, plain},
+			},
+			want: []rules.Rule{unsupportedNoReducers},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			x := rules.NewBaseExtractor(tc.spec)
+
+			got := x.GetUnsupportedRules("")
+
+			require.Equal(t, tc.want, got)
+		})
+	}
+}
+
 func TestBaseExtractor_ReducerRulesByDiffs(t *testing.T) {
 	t.Parallel()
 
