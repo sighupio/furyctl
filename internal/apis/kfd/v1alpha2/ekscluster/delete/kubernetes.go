@@ -176,6 +176,7 @@ func (k *Kubernetes) checkVPCConnection() error {
 
 	if k.FuryctlConf.Spec.Kubernetes.ApiServer.PrivateAccess &&
 		!k.FuryctlConf.Spec.Kubernetes.ApiServer.PublicAccess &&
+		k.FuryctlConf.Spec.Infrastructure != nil &&
 		k.FuryctlConf.Spec.Infrastructure.Vpn != nil {
 		return k.queryAWSDNSServer(cidr)
 	}

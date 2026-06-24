@@ -338,7 +338,7 @@ func (k *Kubernetes) checkVPCConnection() error {
 		err  error
 	)
 
-	if k.FuryctlConf.Spec.Infrastructure != nil {
+	if k.FuryctlConf.Spec.Infrastructure != nil && k.FuryctlConf.Spec.Infrastructure.Vpc != nil {
 		cidr = string(k.FuryctlConf.Spec.Infrastructure.Vpc.Network.Cidr)
 	} else {
 		vpcID := k.FuryctlConf.Spec.Kubernetes.VpcId
