@@ -199,7 +199,6 @@ func GetSupportedFlags() SupportedFlags {
 			"binPath":        {Type: FlagTypeString, DefaultValue: "", Description: "Binary path"},
 			"distroLocation": {Type: FlagTypeString, DefaultValue: "", Description: "Distribution location"},
 			"distroPatches":  {Type: FlagTypeString, DefaultValue: "", Description: "Distribution patches location"},
-			"offline":        {Type: FlagTypeBool, DefaultValue: false, Description: "Resolve tools offline"},
 			"bundleOutput":   {Type: FlagTypeString, DefaultValue: "", Description: "Bundle tarball output path"},
 		},
 		Connect: map[string]FlagInfo{},

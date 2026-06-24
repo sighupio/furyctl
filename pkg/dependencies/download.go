@@ -62,14 +62,6 @@ type Downloader struct {
 	basePath    string
 	binPath     string
 	gitProtocol git.Protocol
-	// When true, drives mise with MISE_OFFLINE for air-gapped runs (false by default).
-	offline bool
-}
-
-// SetOffline toggles offline mode: mise is driven with MISE_OFFLINE so it resolves tools from the
-// already-populated data dir without any network access (air-gapped re-runs).
-func (dd *Downloader) SetOffline(offline bool) {
-	dd.offline = offline
 }
 
 func (dd *Downloader) DownloadAll(kfd config.KFD, kind string) ([]error, []string) {
@@ -363,8 +355,8 @@ func (dd *Downloader) DownloadTools(kfd config.KFD, kind string) ([]string, erro
 	}
 
 	// The mise dir lives under binPath (next to the mise binary), NOT under vendor: vendor is wiped
-	// on every DownloadAll, so keeping the installed tools here lets them cache across runs (and makes
-	// --offline / air-gapped reuse work).
+	// on every DownloadAll, so keeping the installed tools here lets them cache across runs (and keeps
+	// them around for air-gapped reuse).
 	miseDir := filepath.Join(dd.binPath, "mise")
 	configFile := filepath.Join(miseDir, "mise.toml")
 
@@ -389,7 +381,7 @@ func (dd *Downloader) DownloadTools(kfd config.KFD, kind string) ([]string, erro
 		CacheDir:   filepath.Join(miseDir, "cache"),
 		ConfigFile: configFile,
 		WorkDir:    workDir,
-	}, dd.offline)
+	})
 
 	// Stream mise's install progress into an ephemeral terminal region (TTY only); on debug or
 	// --no-tty the region stays disabled and mise output is captured to the log file as usual.
