@@ -16,8 +16,8 @@ import (
 	"strings"
 	"time"
 
-	distroconf "github.com/sighupio/furyctl/internal/apis/config"
 	"github.com/sighupio/furyctl/configs"
+	distroconf "github.com/sighupio/furyctl/internal/apis/config"
 	"github.com/sighupio/furyctl/internal/cluster"
 	"github.com/sighupio/furyctl/internal/tool/kubectl"
 	"github.com/sighupio/furyctl/internal/upgrade"
