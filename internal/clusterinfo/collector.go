@@ -16,7 +16,7 @@ import (
 	"strings"
 	"time"
 
-	distroconf "github.com/sighupio/fury-distribution/pkg/apis/config"
+	distroconf "github.com/sighupio/furyctl/internal/apis/config"
 	"github.com/sighupio/furyctl/configs"
 	"github.com/sighupio/furyctl/internal/cluster"
 	"github.com/sighupio/furyctl/internal/tool/kubectl"
@@ -608,6 +608,9 @@ func installerVersion(kind string, sd distroconf.KFD) string {
 
 	case "EKSCluster":
 		return sd.Kubernetes.Eks.Installer
+
+	case "Immutable":
+		return sd.Kubernetes.Immutable.Installer
 
 	default:
 		return ""
