@@ -134,29 +134,22 @@ type Paths struct {
 type Runner struct {
 	executor execx.Executor
 	paths    Paths
-	offline  bool
 }
 
-func NewRunner(executor execx.Executor, paths Paths, offline bool) *Runner {
-	return &Runner{executor: executor, paths: paths, offline: offline}
+func NewRunner(executor execx.Executor, paths Paths) *Runner {
+	return &Runner{executor: executor, paths: paths}
 }
 
-// hermeticEnv isolates our mise from the user's: dedicated data/cache/config, auto-confirm, trusted
-// config path (no prompt), and offline when requested.
+// hermeticEnv isolates our mise from the user's: dedicated data/cache/config, auto-confirm and a
+// trusted config path (no prompt).
 func (r *Runner) hermeticEnv() []string {
-	env := []string{
+	return []string{
 		"MISE_DATA_DIR=" + r.paths.DataDir,
 		"MISE_CACHE_DIR=" + r.paths.CacheDir,
 		"MISE_GLOBAL_CONFIG_FILE=" + r.paths.ConfigFile,
 		"MISE_TRUSTED_CONFIG_PATHS=" + filepath.Dir(r.paths.ConfigFile),
 		"MISE_YES=1",
 	}
-
-	if r.offline {
-		env = append(env, "MISE_OFFLINE=1")
-	}
-
-	return env
 }
 
 // newCmd builds a mise invocation: always `--cd <isolated workdir>` so config discovery can't pick
@@ -180,7 +173,7 @@ func (r *Runner) newCmdOut(progress io.Writer, args ...string) *execx.Cmd {
 }
 
 // Install installs all tools declared in the (hermetic) global config into DataDir, teeing mise's
-// progress output to progress (may be nil). No-op offline if already installed.
+// progress output to progress (may be nil). No-op if they are already installed.
 func (r *Runner) Install(progress io.Writer) error {
 	if _, err := execx.CombinedOutput(r.newCmdOut(progress, "install")); err != nil {
 		return fmt.Errorf("error running mise install: %w", err)

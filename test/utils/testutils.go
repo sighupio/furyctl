@@ -168,7 +168,7 @@ func Download(toolName, version string) string {
 		CacheDir:   filepath.Join(base, "cache"),
 		ConfigFile: cfg,
 		WorkDir:    work,
-	}, false)
+	})
 
 	Must0(runner.Install(nil))
 

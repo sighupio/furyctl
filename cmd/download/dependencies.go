@@ -129,7 +129,6 @@ func NewDependenciesCmd() *cobra.Command {
 			basePath := filepath.Join(outDir, ".furyctl", dres.MinimalConf.Metadata.Name)
 
 			depsdl := dependencies.NewCachingDownloader(client, outDir, basePath, binPath, typedGitProtocol)
-			depsdl.SetOffline(viper.GetBool("offline"))
 
 			logrus.Info("Downloading dependencies...")
 
@@ -173,13 +172,6 @@ func NewDependenciesCmd() *cobra.Command {
 		"c",
 		"furyctl.yaml",
 		"Path to the configuration file",
-	)
-
-	dependenciesCmd.Flags().Bool(
-		"offline",
-		false,
-		"Resolve tools from the already-populated mise data dir without any network access "+
-			"(air-gapped re-runs). Requires the dependencies to have been downloaded beforehand",
 	)
 
 	dependenciesCmd.Flags().StringP(
