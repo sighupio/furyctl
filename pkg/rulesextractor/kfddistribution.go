@@ -77,6 +77,20 @@ func (r *DistroExtractor) GetReducers(phase string) []Rule {
 	}
 }
 
+func (r *DistroExtractor) GetUnsupportedRules(phase string) []Rule {
+	switch phase {
+	case cluster.OperationPhaseDistribution:
+		if r.Spec.Distribution == nil {
+			return []Rule{}
+		}
+
+		return r.BaseExtractor.ExtractUnsupportedRules(*r.Spec.Distribution)
+
+	default:
+		return []Rule{}
+	}
+}
+
 func (r *DistroExtractor) ReducerRulesByDiffs(rls []Rule, ds diff.Changelog) []Rule {
 	return r.BaseExtractor.ReducerRulesByDiffs(rls, ds)
 }

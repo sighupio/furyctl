@@ -6,6 +6,7 @@ package create
 
 import (
 	"fmt"
+	"os"
 	"path"
 
 	"github.com/sirupsen/logrus"
@@ -16,8 +17,11 @@ import (
 	"github.com/sighupio/furyctl/internal/tool/ansible"
 	"github.com/sighupio/furyctl/internal/upgrade"
 	execx "github.com/sighupio/furyctl/internal/x/exec"
+	iox "github.com/sighupio/furyctl/internal/x/io"
 	kubex "github.com/sighupio/furyctl/internal/x/kube"
+	"github.com/sighupio/furyctl/pkg/reducers"
 	"github.com/sighupio/furyctl/pkg/template"
+	yamlx "github.com/sighupio/furyctl/pkg/x/yaml"
 )
 
 const FromSecondsToHalfMinuteRetries = 30
@@ -40,7 +44,7 @@ func (k *Kubernetes) Self() *cluster.OperationPhase {
 	return k.OperationPhase
 }
 
-func (k *Kubernetes) Exec(startFrom string, upgradeState *upgrade.State) error {
+func (k *Kubernetes) Exec(rdcs reducers.Reducers, startFrom string, upgradeState *upgrade.State) error {
 	logrus.Info("Configuring SIGHUP Distribution cluster...")
 
 	if err := k.prepare(); err != nil {
@@ -69,11 +73,65 @@ func (k *Kubernetes) Exec(startFrom string, upgradeState *upgrade.State) error {
 		return fmt.Errorf("error running core kubernetes phase: %w", err)
 	}
 
+	if err := k.runMigrations(rdcs); err != nil {
+		return fmt.Errorf("error running kubernetes migrations: %w", err)
+	}
+
 	if err := k.postKubernetes(upgradeState); err != nil {
 		return fmt.Errorf("error running post-kubernetes phase: %w", err)
 	}
 
 	logrus.Info("Kubernetes cluster created successfully")
+
+	return nil
+}
+
+// runMigrations runs, for each reducer lifecycle present, the matching migration
+// playbook rendered under `migrations/<lifecycle>.yaml`, passing the reducers
+// (with their from/to values) as ansible extra-vars. This is the kubernetes-phase
+// analogue of the distribution phase's `scripts/<lifecycle>.sh`: the trigger is
+// fully driven by the rules (a rule with a `reducers` block), so adding a new
+// migration needs only a new rule + a new playbook, no Go changes.
+func (k *Kubernetes) runMigrations(rdcs reducers.Reducers) error {
+	if len(rdcs) == 0 {
+		return nil
+	}
+
+	seen := make(map[string]bool)
+
+	for _, r := range rdcs {
+		if r == nil {
+			continue
+		}
+
+		lifecycle := r.GetLifecycle()
+		if lifecycle == "" || seen[lifecycle] {
+			continue
+		}
+
+		seen[lifecycle] = true
+
+		varsData := rdcs.ByLifecycle(lifecycle).Combine(map[string]map[any]any{}, "reducers")
+
+		varsYaml, err := yamlx.MarshalV2(varsData)
+		if err != nil {
+			return fmt.Errorf("error marshalling migration vars: %w", err)
+		}
+
+		varsFile := "migration-vars-" + lifecycle + ".yaml"
+		if err := os.WriteFile(path.Join(k.Path, varsFile), varsYaml, iox.FullRWPermAccess); err != nil {
+			return fmt.Errorf("error writing migration vars file: %w", err)
+		}
+
+		logrus.Infof("Running migration playbook for lifecycle %q...", lifecycle)
+
+		if _, err := k.ansibleRunner.Playbook(
+			path.Join("migrations", lifecycle+".yaml"),
+			"-e", "@"+varsFile,
+		); err != nil {
+			return fmt.Errorf("error running migration playbook for lifecycle %s: %w", lifecycle, err)
+		}
+	}
 
 	return nil
 }

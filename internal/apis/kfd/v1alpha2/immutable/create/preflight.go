@@ -315,16 +315,16 @@ func (p *PreFlight) CheckReducerDiffs(d r3diff.Changelog, diffChecker diffs.Chec
 
 	errs = append(errs, diffChecker.AssertReducerUnsupportedViolations(
 		d,
-		r.UnsupportedReducerRulesByDiffs(r.GetReducers(cluster.OperationPhaseInfrastructure), d),
+		r.GetUnsupportedRules(cluster.OperationPhaseInfrastructure),
 	)...)
 
 	errs = append(errs, diffChecker.AssertReducerUnsupportedViolations(
 		d,
-		r.UnsupportedReducerRulesByDiffs(r.GetReducers(cluster.OperationPhaseKubernetes), d),
+		r.GetUnsupportedRules(cluster.OperationPhaseKubernetes),
 	)...)
 	errs = append(errs, diffChecker.AssertReducerUnsupportedViolations(
 		d,
-		r.UnsupportedReducerRulesByDiffs(r.GetReducers(cluster.OperationPhaseDistribution), d),
+		r.GetUnsupportedRules(cluster.OperationPhaseDistribution),
 	)...)
 
 	if len(errs) > 0 {
