@@ -8,11 +8,10 @@ package parser_test
 
 import (
 	"fmt"
-	"math/rand"
 	"net/http"
+	"net/http/httptest"
 	"os"
 	"path"
-	"sync"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -109,33 +108,14 @@ func TestConfigParser_ParseDynamicValue(t *testing.T) {
 		{
 			name: "parsing http",
 			setup: func() (string, string, func()) {
-				// Get a random port between 1024 and 65535
-				port := rand.Intn(65535-1024) + 1024
-				server := &http.Server{Addr: fmt.Sprintf(":%d", port)}
-
-				wg := &sync.WaitGroup{}
-
-				wg.Add(1)
-
-				go func(t *testing.T) {
-					wg.Done()
-
-					if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-						t.Fatal(err)
-					}
-				}(t)
-
-				wg.Wait()
-
-				http.HandleFunc("/", func(w http.ResponseWriter, _ *http.Request) {
+				// httptest.NewServer binds its port synchronously and is ready to
+				// serve as soon as it returns, so there is no listener-readiness
+				// race and no random-port collision.
+				server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 					fmt.Fprint(w, "hello test")
-				})
+				}))
 
-				return "", fmt.Sprintf("{http://localhost:%d}", port), func() {
-					if err := server.Close(); err != nil {
-						t.Fatal(err)
-					}
-				}
+				return "", fmt.Sprintf("{%s}", server.URL), server.Close
 			},
 			expected: "hello test",
 		},
