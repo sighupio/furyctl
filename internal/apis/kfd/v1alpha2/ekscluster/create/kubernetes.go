@@ -333,12 +333,16 @@ func (k *Kubernetes) Stop() error {
 }
 
 func (k *Kubernetes) checkVPCConnection() error {
+	if k.FuryctlConf.Spec.Infrastructure == nil || k.FuryctlConf.Spec.Infrastructure.Vpn == nil {
+		return nil
+	}
+
 	var (
 		cidr string
 		err  error
 	)
 
-	if k.FuryctlConf.Spec.Infrastructure != nil {
+	if k.FuryctlConf.Spec.Infrastructure != nil && k.FuryctlConf.Spec.Infrastructure.Vpc != nil {
 		cidr = string(k.FuryctlConf.Spec.Infrastructure.Vpc.Network.Cidr)
 	} else {
 		vpcID := k.FuryctlConf.Spec.Kubernetes.VpcId

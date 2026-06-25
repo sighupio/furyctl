@@ -144,6 +144,10 @@ func (k *Kubernetes) Exec() error {
 }
 
 func (k *Kubernetes) checkVPCConnection() error {
+	if k.FuryctlConf.Spec.Infrastructure == nil || k.FuryctlConf.Spec.Infrastructure.Vpn == nil {
+		return nil
+	}
+
 	var cidr string
 
 	var err error
