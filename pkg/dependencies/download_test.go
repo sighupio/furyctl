@@ -35,6 +35,14 @@ func Test_miseToolsForKind(t *testing.T) {
 			Eks: config.KFDToolsEks{Awscli: tool("2.8.12")},
 		},
 	}
+	// Distribution that pins ansible per provider — only OnPremises/Immutable should pick it up.
+	ansibleLayout := config.KFD{
+		Tools: config.KFDTools{
+			Common:     config.KFDToolsCommon{Kubectl: tool("1.34.4"), Kustomize: tool("5.6.0")},
+			OnPremises: config.KFDToolsOnPremises{Ansible: config.KFDToolAnsible{Version: "2.21.0"}},
+			Immutable:  config.KFDToolsImmutable{Ansible: config.KFDToolAnsible{Version: "2.21.0"}},
+		},
+	}
 
 	testCases := []struct {
 		desc        string
@@ -62,6 +70,34 @@ func Test_miseToolsForKind(t *testing.T) {
 			kfd:         oldLayout,
 			kind:        "OnPremises",
 			wantManaged: map[string]string{"kubectl": "1.34.4", "kustomize": "5.6.0", "opentofu": "1.10.0", "furyagent": "0.4.0"},
+			wantUts:     []string{},
+		},
+		{
+			desc:        "OnPremises with ansible pinned: ansible is mise-managed",
+			kfd:         ansibleLayout,
+			kind:        "OnPremises",
+			wantManaged: map[string]string{"kubectl": "1.34.4", "kustomize": "5.6.0", "ansible": "2.21.0"},
+			wantUts:     []string{},
+		},
+		{
+			desc:        "Immutable with ansible pinned: ansible is mise-managed",
+			kfd:         ansibleLayout,
+			kind:        "Immutable",
+			wantManaged: map[string]string{"kubectl": "1.34.4", "kustomize": "5.6.0", "ansible": "2.21.0"},
+			wantUts:     []string{},
+		},
+		{
+			desc:        "EKSCluster with ansible pinned: ansible NOT managed (not used by this kind)",
+			kfd:         ansibleLayout,
+			kind:        "EKSCluster",
+			wantManaged: map[string]string{"kubectl": "1.34.4", "kustomize": "5.6.0"},
+			wantUts:     []string{},
+		},
+		{
+			desc:        "OnPremises without ansible pinned: stays host (backward compat)",
+			kfd:         newLayout,
+			kind:        "OnPremises",
+			wantManaged: map[string]string{"kubectl": "1.34.4", "kustomize": "5.6.0"},
 			wantUts:     []string{},
 		},
 	}

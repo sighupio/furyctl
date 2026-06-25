@@ -364,7 +364,8 @@ func (dd *Downloader) DownloadTools(kfd config.KFD, kind string) ([]string, erro
 		return uts, fmt.Errorf("error creating mise dir: %w", err)
 	}
 
-	if err := mise.WriteConfig(configFile, managed); err != nil {
+	ansible := distribution.EffectiveAnsible(kfd.Tools, kind)
+	if err := mise.WriteConfig(configFile, managed, ansible.Uv, ansible.Python); err != nil {
 		return uts, fmt.Errorf("error generating mise config: %w", err)
 	}
 
@@ -398,6 +399,16 @@ func (dd *Downloader) DownloadTools(kfd config.KFD, kind string) ([]string, erro
 	logrus.Infof("Tools ready (%d installed via mise)", len(managed))
 
 	for name, version := range managed {
+		// Ansible needs special handling: resolve the real pipx venv entrypoints + python and install
+		// the galaxy collections (a single Bin symlink is not enough).
+		if name == "ansible" {
+			if err := materializeAnsible(runner, dd.binPath, version, ansible.Collections); err != nil {
+				return uts, err
+			}
+
+			continue
+		}
+
 		t := mise.ManagedTools[name]
 
 		realPath, err := runner.Which(t.Bin)
@@ -411,6 +422,69 @@ func (dd *Downloader) DownloadTools(kfd config.KFD, kind string) ([]string, erro
 	}
 
 	return uts, nil
+}
+
+// materializeAnsible resolves the mise/pipx ansible venv, materializes its real entrypoints + venv python
+// into the legacy <binPath>/ansible/<version>/ layout, and installs the galaxy collections pinned by the
+// distribution into a sibling collections dir.
+func materializeAnsible(runner *mise.Runner, binPath, version string, collections []config.KFDAnsibleCollection) error {
+	// `mise which` returns the outer pipx symlink; resolve it to the real venv entrypoint so the
+	// materialized links point at the venv (whose layout survives air-gapped relocation after a small
+	// fixup), not at an absolute pipx wrapper.
+	which, err := runner.Which("ansible-playbook")
+	if err != nil {
+		return fmt.Errorf("error resolving ansible-playbook via mise: %w", err)
+	}
+
+	realAnsiblePlaybook, err := filepath.EvalSymlinks(which)
+	if err != nil {
+		return fmt.Errorf("error resolving ansible venv from %s: %w", which, err)
+	}
+
+	venvBin := filepath.Dir(realAnsiblePlaybook)
+	venvRoot := filepath.Dir(venvBin)
+
+	// Materialize a single relative symlink <binPath>/ansible/<version>/venv -> the pipx venv root, and
+	// invoke the entrypoints through it (venv/bin/...). A flattened per-binary symlink would break venv
+	// detection: CPython collapses it to the base interpreter and never loads the venv site-packages
+	// (so `import ansible` fails). Going through the venv root preserves pyvenv.cfg discovery.
+	if err := materializeTool(binPath, "ansible", version, "venv", venvRoot); err != nil {
+		return err
+	}
+
+	return installAnsibleCollections(
+		filepath.Join(venvBin, "python"),
+		filepath.Join(venvBin, "ansible-galaxy"),
+		filepath.Join(binPath, "ansible", version, "collections"),
+		collections,
+	)
+}
+
+// installAnsibleCollections installs the pinned galaxy collections into collectionsDir (created by -p)
+// using the venv python + ansible-galaxy (invoked as `python ansible-galaxy ...` to bypass the venv
+// shebang). Collections are passed as name:version args, so no requirements.yml is needed.
+func installAnsibleCollections(python, galaxy, collectionsDir string, collections []config.KFDAnsibleCollection) error {
+	if len(collections) == 0 {
+		return nil
+	}
+
+	args := []string{galaxy, "collection", "install", "-p", collectionsDir}
+	for _, c := range collections {
+		args = append(args, c.Name+":"+c.Version)
+	}
+
+	logrus.Info("Installing ansible collections...")
+
+	cmd := execx.NewCmd(python, execx.CmdOptions{
+		Args:     args,
+		Executor: execx.NewStdExecutor(),
+	})
+
+	if _, err := execx.CombinedOutput(cmd); err != nil {
+		return fmt.Errorf("error installing ansible collections: %w", err)
+	}
+
+	return nil
 }
 
 // miseToolsForKind partitions the tools needed by the kind into mise-managed (name -> version) and
@@ -454,6 +528,13 @@ func miseToolsForKind(kfd config.KFD, kind string) (map[string]string, []string)
 				uts = append(uts, name)
 			}
 		}
+	}
+
+	// Ansible is a KFDToolAnsible (not KFDTool, so the reflect loop above skips it), pinned per provider
+	// (tools.onpremises / tools.immutable). EffectiveAnsible returns it only for those kinds; otherwise
+	// (or when the distribution does not pin it) ansible stays a host dependency (backward compatible).
+	if av := distribution.EffectiveAnsible(kfd.Tools, kind).Version; av != "" {
+		managed["ansible"] = av
 	}
 
 	return managed, uts

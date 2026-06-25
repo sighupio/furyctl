@@ -33,15 +33,39 @@ func EffectiveFuryagentVersion(tools config.KFDTools) string {
 	return tools.Common.Furyagent.Version
 }
 
-// ToolSectionNeededForKind reports whether a tools section (a kfd.Tools field: common, eks) is needed
-// for the given cluster kind. The common section is always needed; provider sections only for their kind.
-func ToolSectionNeededForKind(section, kind string) bool {
-	// The common section is needed by every kind; provider sections only by their own kind.
-	if section == "eks" {
-		return kind == EKSClusterKind
-	}
+// EffectiveAnsible resolves the ansible config for the kind from its provider section (tools.onpremises
+// or tools.immutable). Empty for kinds that don't use ansible (EKSCluster/KFDDistribution) or for
+// distributions that don't pin it — in which case furyctl falls back to the host ansible.
+func EffectiveAnsible(tools config.KFDTools, kind string) config.KFDToolAnsible {
+	switch kind {
+	case OnPremisesKind:
+		return tools.OnPremises.Ansible
 
-	return true
+	case ImmutableKind:
+		return tools.Immutable.Ansible
+
+	default:
+		return config.KFDToolAnsible{}
+	}
+}
+
+// ToolSectionNeededForKind reports whether a tools section (a kfd.Tools field: common, eks, onpremises,
+// immutable) is needed for the given cluster kind. The common section is always needed; provider
+// sections only for their own kind.
+func ToolSectionNeededForKind(section, kind string) bool {
+	switch section {
+	case "eks":
+		return kind == EKSClusterKind
+
+	case "onpremises":
+		return kind == OnPremisesKind
+
+	case "immutable":
+		return kind == ImmutableKind
+
+	default:
+		return true
+	}
 }
 
 // ModuleNeededForKind reports whether the given distribution module is needed for the kind.

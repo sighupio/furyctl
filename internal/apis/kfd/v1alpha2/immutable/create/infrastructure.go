@@ -58,11 +58,11 @@ func NewInfrastructure(
 		dryRun:      dryRun,
 		ansibleRunner: ansible.NewRunner(
 			execx.NewStdExecutor(),
-			ansible.Paths{
-				Ansible:         "ansible",
-				AnsiblePlaybook: "ansible-playbook",
-				WorkDir:         filepath.Join(phase.Path, "ansible"),
-			},
+			ansible.PathsForVersion(
+				paths.BinPath,
+				kfdManifest.Tools.Immutable.Ansible.Version,
+				filepath.Join(phase.Path, "ansible"),
+			),
 		),
 		force: force,
 	}

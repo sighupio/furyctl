@@ -76,11 +76,7 @@ func NewPreFlight(
 		stateStore:     stateStore,
 		ansibleRunner: ansible.NewRunner(
 			execx.NewStdExecutor(),
-			ansible.Paths{
-				Ansible:         "ansible",
-				AnsiblePlaybook: "ansible-playbook",
-				WorkDir:         p.Path,
-			},
+			ansible.PathsForVersion(paths.BinPath, kfdManifest.Tools.Immutable.Ansible.Version, p.Path),
 		),
 		kubeRunner: kubectl.NewRunner(
 			execx.NewStdExecutor(),

@@ -9,6 +9,7 @@ package ansible_test
 import (
 	"fmt"
 	"os"
+	"strings"
 	"testing"
 
 	"github.com/sighupio/furyctl/internal/tool/ansible"
@@ -31,6 +32,33 @@ func Test_Runner_Version(t *testing.T) {
 
 	if got != want {
 		t.Errorf("expected version '%s', got '%s'", want, got)
+	}
+}
+
+func Test_PathsForVersion(t *testing.T) {
+	t.Parallel()
+
+	// Backward compat: no pinned version -> host ansible (bare command names, no python/collections).
+	host := ansible.PathsForVersion("/bin", "", "/work")
+	if host.Ansible != "ansible" || host.AnsiblePlaybook != "ansible-playbook" {
+		t.Errorf("host fallback should use bare names, got %+v", host)
+	}
+
+	if host.Python != "" || host.CollectionsPath != "" {
+		t.Errorf("host fallback must not set python/collections, got %+v", host)
+	}
+
+	// Pinned version -> mise-managed layout under <bin>/ansible/<ver>/.
+	managed := ansible.PathsForVersion("/bin", "2.21.0", "/work")
+	for name, got := range map[string]string{
+		"Ansible":         managed.Ansible,
+		"AnsiblePlaybook": managed.AnsiblePlaybook,
+		"Python":          managed.Python,
+		"CollectionsPath": managed.CollectionsPath,
+	} {
+		if got == "" || !strings.HasPrefix(got, "/bin/ansible/2.21.0/") {
+			t.Errorf("%s = %q, want under /bin/ansible/2.21.0/", name, got)
+		}
 	}
 }
 

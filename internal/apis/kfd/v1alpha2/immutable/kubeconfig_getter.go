@@ -31,6 +31,7 @@ type KubeconfigGetter struct {
 	distroPath  string
 	configPath  string
 	workDir     string
+	binPath     string
 }
 
 func (k *KubeconfigGetter) SetProperties(props []cluster.KubeconfigProperty) {
@@ -67,6 +68,11 @@ func (k *KubeconfigGetter) SetProperty(name string, value any) {
 		if s, ok := value.(string); ok {
 			k.distroPath = s
 		}
+
+	case cluster.KubeconfigPropertyBinPath:
+		if s, ok := value.(string); ok {
+			k.binPath = s
+		}
 	}
 }
 
@@ -84,11 +90,7 @@ func (k *KubeconfigGetter) Get() error {
 
 	ansibleRunner := ansible.NewRunner(
 		execx.NewStdExecutor(),
-		ansible.Paths{
-			Ansible:         "ansible",
-			AnsiblePlaybook: "ansible-playbook",
-			WorkDir:         tmpDir,
-		},
+		ansible.PathsForVersion(k.binPath, k.kfdManifest.Tools.Immutable.Ansible.Version, tmpDir),
 	)
 
 	furyctlMerger, err := k.CreateFuryctlMerger(

@@ -180,7 +180,7 @@ func NewCertificatesCmd() *cobra.Command {
 				logrus.Info("Dependencies validation skipped")
 			}
 
-			renewer, err := cluster.NewCertificatesRenewer(res.MinimalConf, res.DistroManifest, res.RepoPath, furyctlPath)
+			renewer, err := cluster.NewCertificatesRenewer(res.MinimalConf, res.DistroManifest, res.RepoPath, furyctlPath, binPath)
 			if err != nil {
 				cmdEvent.AddErrorMessage(err)
 				tracker.Track(cmdEvent)

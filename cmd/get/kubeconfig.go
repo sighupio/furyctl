@@ -183,7 +183,7 @@ func NewKubeconfigCmd() *cobra.Command {
 				logrus.Info("Dependencies validation skipped")
 			}
 
-			getter, err := cluster.NewKubeconfigGetter(res.MinimalConf, res.DistroManifest, res.RepoPath, furyctlPath, currentDir)
+			getter, err := cluster.NewKubeconfigGetter(res.MinimalConf, res.DistroManifest, res.RepoPath, furyctlPath, currentDir, binPath)
 			if err != nil {
 				cmdEvent.AddErrorMessage(err)
 				tracker.Track(cmdEvent)
