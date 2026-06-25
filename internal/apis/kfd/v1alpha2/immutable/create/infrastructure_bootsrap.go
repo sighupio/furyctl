@@ -24,6 +24,7 @@ import (
 	iox "github.com/sighupio/furyctl/internal/x/io"
 	"github.com/sighupio/furyctl/pkg/template"
 	netx "github.com/sighupio/furyctl/pkg/x/net"
+	yamlx "github.com/sighupio/furyctl/pkg/x/yaml"
 )
 
 var (
@@ -32,7 +33,15 @@ var (
 	ErrFlatcarArtifactsNotFound  = errors.New("flatcar artifacts not found for architecture")
 	ErrButaneConversionFatal     = errors.New("butane conversion fatal errors")
 	ErrButaneFatalErrors         = errors.New("butane translation has fatal errors")
+	ErrImmutableConfigMalformed  = errors.New("immutable furyctl config is malformed")
 )
+
+// defaultNodeArch mirrors the schema default of spec.infrastructure.nodes[].arch
+// from the distribution's immutable JSON schema. Because furyctl does not apply
+// JSON-schema defaults before the butane phase, and the butane templates read the
+// node arch value unguarded, a node that omits arch would fail to render unless we
+// backfill the default here.
+const defaultNodeArch = "x86-64"
 
 type immutableManifest struct {
 	Kubernetes map[string]assets `yaml:"kubernetes"`
@@ -114,6 +123,74 @@ func (i *Infrastructure) getNodeRole(node string) string {
 	}
 
 	return "worker"
+}
+
+// rawNodesByHostname indexes the nodes from an already-parsed furyctl.yaml (as an
+// opaque map) by hostname.
+//
+// The butane node templates consume many free-form node sub-trees that furyctl
+// deliberately does not model in its curated config struct: network.ethernets,
+// storage.{files,links,directories,additionalDisks}, systemd.units and
+// passwd.{users,groups}. Marshaling the typed public.SpecInfrastructureNode back
+// to YAML would silently drop every unmodeled field (and error outright on the
+// unguarded .node.network.ethernets), so the butane phase feeds the template the
+// raw node instead and lets the distribution JSON schema stay the single source
+// of truth for the node shape.
+//
+// It is a free function (not a method) so it can be unit-tested without a full
+// Infrastructure value or a file on disk.
+func rawNodesByHostname(conf map[any]any) (map[string]any, error) {
+	spec, ok := conf["spec"].(map[any]any)
+	if !ok {
+		return nil, fmt.Errorf("%w: missing spec", ErrImmutableConfigMalformed)
+	}
+
+	infra, ok := spec["infrastructure"].(map[any]any)
+	if !ok {
+		return nil, fmt.Errorf("%w: missing spec.infrastructure", ErrImmutableConfigMalformed)
+	}
+
+	nodes, ok := infra["nodes"].([]any)
+	if !ok {
+		return nil, fmt.Errorf("%w: spec.infrastructure.nodes is not a list", ErrImmutableConfigMalformed)
+	}
+
+	byHostname := make(map[string]any, len(nodes))
+
+	for _, raw := range nodes {
+		node, ok := raw.(map[any]any)
+		if !ok {
+			return nil, fmt.Errorf("%w: a node entry is not a map", ErrImmutableConfigMalformed)
+		}
+
+		hostname, ok := node["hostname"].(string)
+		if !ok || hostname == "" {
+			return nil, fmt.Errorf("%w: a node is missing its hostname", ErrImmutableConfigMalformed)
+		}
+
+		// Backfill the schema default for arch, which the butane templates read
+		// unguarded. Treat an empty or blank value the same as an omitted one.
+		arch, ok := node["arch"].(string)
+		if !ok || strings.TrimSpace(arch) == "" {
+			node["arch"] = defaultNodeArch
+		}
+
+		byHostname[hostname] = node
+	}
+
+	return byHostname, nil
+}
+
+// loadRawNodes reads the furyctl.yaml from disk and indexes its nodes by hostname.
+// It is decoded with yaml.v2 to match the marshaling used when the template config
+// is later written out (see OperationPhase.CopyFromTemplate -> yamlx.MarshalV2).
+func (i *Infrastructure) loadRawNodes() (map[string]any, error) {
+	conf, err := yamlx.FromFileV2[map[any]any](i.paths.ConfigPath)
+	if err != nil {
+		return nil, fmt.Errorf("error reading furyctl config %s: %w", i.paths.ConfigPath, err)
+	}
+
+	return rawNodesByHostname(conf)
 }
 
 // Read the SSH public key file path specified in the configuration and return its content as a string.
@@ -285,9 +362,22 @@ func (i *Infrastructure) renderButaneTemplates() error {
 	// Use CopyFromTemplate to render templates.
 	targetPath := filepath.Join(i.Path, "butane", "node-config")
 
+	// The butane templates read free-form node sub-trees furyctl does not model
+	// (network, storage extras, systemd units, passwd, ...), so feed them the raw
+	// node from the furyctl.yaml rather than the lossy typed struct.
+	rawNodes, err := i.loadRawNodes()
+	if err != nil {
+		return fmt.Errorf("error loading node configuration: %w", err)
+	}
+
 	for _, node := range i.furyctlConf.Spec.Infrastructure.Nodes {
 		nodeRole := i.getNodeRole(node.Hostname)
 		normalizedMAC := strings.ToUpper(strings.ReplaceAll(string(node.MacAddress), ":", "-"))
+
+		rawNode, ok := rawNodes[node.Hostname]
+		if !ok {
+			return fmt.Errorf("%w: no configuration found for node %q", ErrImmutableConfigMalformed, node.Hostname)
+		}
 
 		sshPublicKeyContent, err := i.getSSHPublicKeyContent()
 		if err != nil {
@@ -327,7 +417,7 @@ func (i *Infrastructure) renderButaneTemplates() error {
 				"data": {
 					"SSHUser":        i.furyctlConf.Spec.Infrastructure.Ssh.Username,
 					"SSHPublicKey":   sshPublicKeyContent,
-					"node":           node,
+					"node":           rawNode,
 					"role":           nodeRole,
 					"flatcarVersion": immutableAssets.Flatcar.Version,
 					"ipxeServerURL":  i.furyctlConf.Spec.Infrastructure.IpxeServer.Url,

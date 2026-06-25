@@ -44,6 +44,15 @@ type SpecInfrastructure struct {
 
 // SpecInfrastructureNode is referenced by name in furyctl (node ignition/boot
 // generation), so this type name must stay stable.
+//
+// Only the fields furyctl reads in Go are modeled here. The node butane templates
+// also consume several free-form sub-trees off the node (network.ethernets,
+// storage.{files,links,directories,additionalDisks}, systemd.units, passwd,
+// kernelParameters), but those are NOT modeled here on purpose: the butane phase
+// hands the templates the raw node decoded straight from the furyctl.yaml (see
+// create.rawNodesByHostname), so unmodeled fields reach the template intact.
+// Adding typed fields for them would just risk dropping their own sub-fields the
+// same way.
 type SpecInfrastructureNode struct {
 	Arch       Arch                          `yaml:"arch,omitempty"`
 	Hostname   string                        `yaml:"hostname"`
