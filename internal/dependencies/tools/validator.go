@@ -28,6 +28,7 @@ func NewValidator(executor execx.Executor, binPath, furyctlPath string, autoConn
 		toolFactory: NewFactory(executor, FactoryPaths{
 			Bin: binPath,
 		}),
+		binPath:     binPath,
 		furyctlPath: furyctlPath,
 		autoConnect: autoConnect,
 	}
@@ -36,6 +37,7 @@ func NewValidator(executor execx.Executor, binPath, furyctlPath string, autoConn
 type Validator struct {
 	executor    execx.Executor
 	toolFactory *Factory
+	binPath     string
 	furyctlPath string
 	autoConnect bool
 }
@@ -88,7 +90,14 @@ func (tv *Validator) Validate(kfdManifest config.KFD, miniConf config.Furyctl) (
 		errs = append(errs, cErrs...)
 	}
 
-	etv := apis.NewExtraToolsValidatorFactory(tv.executor, miniConf.APIVersion, miniConf.Kind, tv.autoConnect)
+	etv := apis.NewExtraToolsValidatorFactory(
+		tv.executor,
+		miniConf.APIVersion,
+		miniConf.Kind,
+		tv.autoConnect,
+		kfdManifest,
+		tv.binPath,
+	)
 
 	if etv == nil {
 		return oks, errs

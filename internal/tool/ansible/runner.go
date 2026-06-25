@@ -6,6 +6,7 @@ package ansible
 
 import (
 	"fmt"
+	"path/filepath"
 
 	"github.com/google/uuid"
 
@@ -16,6 +17,32 @@ type Paths struct {
 	Ansible         string
 	AnsiblePlaybook string
 	WorkDir         string
+	// Python and CollectionsPath are set only for the mise-managed ansible: commands are then run as
+	// `<Python> <entrypoint> ...` (bypassing the venv shebang, so it survives air-gapped relocation)
+	// with ANSIBLE_COLLECTIONS_PATH pointing at the bundled collections. When empty, the host ansible is
+	// invoked by name (backward compatible).
+	Python          string
+	CollectionsPath string
+}
+
+// PathsForVersion derives the runner Paths for the mise-managed ansible materialized under
+// <binPath>/ansible/<version>/. When version is empty (distribution does not pin ansible) it falls back
+// to the host ansible (bare command names), preserving backward compatibility.
+func PathsForVersion(binPath, version, workDir string) Paths {
+	if version == "" {
+		return Paths{Ansible: "ansible", AnsiblePlaybook: "ansible-playbook", WorkDir: workDir}
+	}
+
+	base := filepath.Join(binPath, "ansible", version)
+	venvBin := filepath.Join(base, "venv", "bin")
+
+	return Paths{
+		Ansible:         filepath.Join(venvBin, "ansible"),
+		AnsiblePlaybook: filepath.Join(venvBin, "ansible-playbook"),
+		Python:          filepath.Join(venvBin, "python"),
+		CollectionsPath: filepath.Join(base, "collections"),
+		WorkDir:         workDir,
+	}
 }
 
 type Runner struct {
@@ -37,21 +64,34 @@ func (r *Runner) CmdPath() string {
 }
 
 func (r *Runner) newCmd(args []string) (*execx.Cmd, string) {
-	cmd := execx.NewCmd(r.paths.Ansible, execx.CmdOptions{
-		Args:     args,
-		Executor: r.executor,
-		WorkDir:  r.paths.WorkDir,
-	})
-
-	id := uuid.NewString()
-	r.cmds[id] = cmd
-
-	return cmd, id
+	return r.build(r.paths.Ansible, args)
 }
 
 func (r *Runner) newPlaybookCmd(args []string) (*execx.Cmd, string) {
-	cmd := execx.NewCmd(r.paths.AnsiblePlaybook, execx.CmdOptions{
-		Args:     args,
+	return r.build(r.paths.AnsiblePlaybook, args)
+}
+
+// build runs the given ansible entrypoint directly (host) or as `<python> <entrypoint> ...` with the
+// collections env (mise-managed).
+func (r *Runner) build(entrypoint string, args []string) (*execx.Cmd, string) {
+	name := entrypoint
+	fullArgs := args
+
+	var env []string
+
+	if r.paths.Python != "" {
+		name = r.paths.Python
+
+		fullArgs = append([]string{entrypoint}, args...)
+
+		if r.paths.CollectionsPath != "" {
+			env = []string{"ANSIBLE_COLLECTIONS_PATH=" + r.paths.CollectionsPath}
+		}
+	}
+
+	cmd := execx.NewCmd(name, execx.CmdOptions{
+		Args:     fullArgs,
+		Env:      env,
 		Executor: r.executor,
 		WorkDir:  r.paths.WorkDir,
 	})

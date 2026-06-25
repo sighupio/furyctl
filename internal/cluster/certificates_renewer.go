@@ -17,6 +17,7 @@ const (
 	CertificatesRenewerPropertyConfigPath  = "configpath"
 	CertificatesRenewerPropertyKfdManifest = "kfdmanifest"
 	CertificatesRenewerPropertyDistroPath  = "distropath"
+	CertificatesRenewerPropertyBinPath     = "binpath"
 )
 
 var certificatesRenewerFactories = make(map[string]map[string]CertificatesRenewerFactory) //nolint:gochecknoglobals, lll // This patterns requires certificatesRenewerFactories as global to work with init function.
@@ -39,6 +40,7 @@ func NewCertificatesRenewer(
 	kfdManifest config.KFD,
 	distroPath string,
 	configPath string,
+	binPath string,
 ) (CertificatesRenewer, error) {
 	lcAPIVersion := strings.ToLower(minimalConf.APIVersion)
 	lcResourceType := strings.ToLower(minimalConf.Kind)
@@ -52,6 +54,10 @@ func NewCertificatesRenewer(
 			{
 				Name:  CertificatesRenewerPropertyDistroPath,
 				Value: distroPath,
+			},
+			{
+				Name:  CertificatesRenewerPropertyBinPath,
+				Value: binPath,
 			},
 		})
 	}

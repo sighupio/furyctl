@@ -298,11 +298,7 @@ func NewKubernetes(
 		dryRun:         dryRun,
 		ansibleRunner: ansible.NewRunner(
 			execx.NewStdExecutor(),
-			ansible.Paths{
-				Ansible:         "ansible",
-				AnsiblePlaybook: "ansible-playbook",
-				WorkDir:         phase.Path,
-			},
+			ansible.PathsForVersion(paths.BinPath, kfdManifest.Tools.OnPremises.Ansible.Version, phase.Path),
 		),
 		upgrade:           upgr,
 		upgradeNode:       upgradeNode,

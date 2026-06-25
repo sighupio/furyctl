@@ -66,15 +66,62 @@ func Test_DownloadURL(t *testing.T) {
 func Test_IsManaged(t *testing.T) {
 	t.Parallel()
 
-	for _, n := range []string{"kubectl", "opentofu", "furyagent", "terraform"} {
+	for _, n := range []string{"kubectl", "opentofu", "furyagent", "terraform", "ansible"} {
 		if !IsManaged(n) {
 			t.Errorf("expected %s to be managed", n)
 		}
 	}
 
-	for _, n := range []string{"awscli", "ansible", "git"} {
+	for _, n := range []string{"awscli", "git"} {
 		if IsManaged(n) {
 			t.Errorf("expected %s NOT to be managed", n)
+		}
+	}
+}
+
+func Test_WriteConfig_Ansible(t *testing.T) {
+	t.Parallel()
+
+	// Distribution-pinned uv/python win over the built-in defaults.
+	pathPinned := filepath.Join(t.TempDir(), "mise.toml")
+
+	if err := WriteConfig(pathPinned, map[string]string{"ansible": "2.21.0"}, "0.8", "3.13"); err != nil {
+		t.Fatalf("WriteConfig error: %v", err)
+	}
+
+	pinned, err := os.ReadFile(pathPinned)
+	if err != nil {
+		t.Fatalf("read error: %v", err)
+	}
+
+	for _, want := range []string{
+		`"uv" = "0.8"`,
+		`"python" = "3.13"`,
+		`"pipx:ansible-core" = "2.21.0"`,
+	} {
+		if !strings.Contains(string(pinned), want) {
+			t.Errorf("pinned config missing %q\n%s", want, string(pinned))
+		}
+	}
+
+	// Empty uv/python fall back to the built-in defaults.
+	pathDefault := filepath.Join(t.TempDir(), "mise.toml")
+
+	if err := WriteConfig(pathDefault, map[string]string{"ansible": "2.21.0"}, "", ""); err != nil {
+		t.Fatalf("WriteConfig error: %v", err)
+	}
+
+	def, err := os.ReadFile(pathDefault)
+	if err != nil {
+		t.Fatalf("read error: %v", err)
+	}
+
+	for _, want := range []string{
+		`"uv" = "` + AnsibleUvVersion + `"`,
+		`"python" = "` + AnsiblePythonVersion + `"`,
+	} {
+		if !strings.Contains(string(def), want) {
+			t.Errorf("default config missing %q\n%s", want, string(def))
 		}
 	}
 }
@@ -89,7 +136,7 @@ func Test_WriteConfig(t *testing.T) {
 		"opentofu":  "1.10.0",
 		"furyagent": "0.4.0",
 		"awscli":    "2.8.12", // not managed -> must be skipped
-	})
+	}, "", "")
 	if err != nil {
 		t.Fatalf("WriteConfig error: %v", err)
 	}

@@ -158,7 +158,7 @@ func Download(toolName, version string) string {
 
 	cfg := filepath.Join(base, "mise.toml")
 
-	Must0(mise.WriteConfig(cfg, map[string]string{toolName: version}))
+	Must0(mise.WriteConfig(cfg, map[string]string{toolName: version}, "", ""))
 
 	work := Must1(os.MkdirTemp("", "furyctl-test-mise-"))
 

@@ -13,6 +13,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -29,9 +30,15 @@ const (
 	// DistroSubdir is the folder, inside the bundle, holding the distribution manifests used as
 	// --distro-location.
 	DistroSubdir = "distro"
+
+	// File mode of a venv's pyvenv.cfg.
+	pyvenvPerm = 0o644
 )
 
-var ErrBundleNotFound = errors.New("air-gapped bundle not found")
+var (
+	ErrBundleNotFound       = errors.New("air-gapped bundle not found")
+	ErrAnsiblePythonMissing = errors.New("ansible venv present in the bundle but its python is missing")
+)
 
 // RegisterFlags adds the --airgap-bundle and --force-extract flags to a command that can consume a
 // bundle. Use together with MaybePrepare at the start of the command's RunE.
@@ -107,11 +114,71 @@ func prepare(bundle, outDir string, force bool) (string, error) {
 		return "", fmt.Errorf("error extracting air-gapped bundle: %w", err)
 	}
 
+	// The mise/pipx ansible venv carries absolute paths (pyvenv.cfg + python symlink) to the build host;
+	// fix them to the extracted location so the bundled ansible runs after relocation.
+	if err := fixupAnsibleVenv(outDir); err != nil {
+		return "", err
+	}
+
 	if err := writeMarker(marker, sum); err != nil {
 		return "", err
 	}
 
 	return distroLocation, nil
+}
+
+// fixupAnsibleVenv repoints the extracted ansible venv at the bundled (relocated) mise python. No-op
+// when the bundle does not contain ansible.
+func fixupAnsibleVenv(outDir string) error {
+	installs := filepath.Join(outDir, ".furyctl", "bin", "mise", "data", "installs")
+
+	venvs, err := filepath.Glob(filepath.Join(installs, "pipx-ansible-core", "*", "ansible-core"))
+	if err != nil || len(venvs) == 0 {
+		return nil //nolint:nilerr // no ansible in this bundle -> nothing to fix.
+	}
+
+	pythonBins, err := filepath.Glob(filepath.Join(installs, "python", "*", "bin"))
+	if err != nil || len(pythonBins) == 0 {
+		return fmt.Errorf("%w", ErrAnsiblePythonMissing)
+	}
+
+	pythonBin := pythonBins[0]
+
+	for _, venv := range venvs {
+		if err := rewritePyvenvHome(filepath.Join(venv, "pyvenv.cfg"), pythonBin); err != nil {
+			return err
+		}
+
+		link := filepath.Join(venv, "bin", "python")
+
+		_ = os.Remove(link)
+
+		if err := os.Symlink(filepath.Join(pythonBin, "python3"), link); err != nil {
+			return fmt.Errorf("error repointing %s: %w", link, err)
+		}
+	}
+
+	return nil
+}
+
+func rewritePyvenvHome(cfgPath, pythonBin string) error {
+	data, err := os.ReadFile(cfgPath)
+	if err != nil {
+		return fmt.Errorf("error reading %s: %w", cfgPath, err)
+	}
+
+	lines := strings.Split(string(data), "\n")
+	for i, l := range lines {
+		if strings.HasPrefix(strings.TrimSpace(l), "home") {
+			lines[i] = "home = " + pythonBin
+		}
+	}
+
+	if err := os.WriteFile(cfgPath, []byte(strings.Join(lines, "\n")), pyvenvPerm); err != nil {
+		return fmt.Errorf("error writing %s: %w", cfgPath, err)
+	}
+
+	return nil
 }
 
 func bundleAlreadyExtracted(marker, sum string) bool {

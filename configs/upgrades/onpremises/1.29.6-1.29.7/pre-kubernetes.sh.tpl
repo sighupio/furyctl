@@ -26,12 +26,12 @@ $kubectlbin rollout status -n logging statefulset/loki-distributed-ingester
 {{- if index .spec.kubernetes "etcd" }}
 ## etcd upgrades on dedicated nodes - only one at a time
 {{- range $h := .spec.kubernetes.etcd.hosts }}
-ansible-playbook 54.upgrade-etcd.yaml --limit "{{ $h.name }}" --become
+{{ $.paths.ansiblePlaybook }} 54.upgrade-etcd.yaml --limit "{{ $h.name }}" --become
 {{- end }}
 {{ else }}
 ## etcd upgrades on control plane nodes - only one at a time
 {{- range $h := .spec.kubernetes.masters.hosts }}
-ansible-playbook 54.upgrade-etcd.yaml --limit "{{ $h.name }}" --become
+{{ $.paths.ansiblePlaybook }} 54.upgrade-etcd.yaml --limit "{{ $h.name }}" --become
 {{- end }}
 {{- end }}
 {{- end }}

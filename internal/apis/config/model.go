@@ -62,6 +62,10 @@ type KFDSchema struct {
 type KFDTools struct {
 	Common KFDToolsCommon `yaml:"common" validate:"required"`
 	Eks    KFDToolsEks    `yaml:"eks"    validate:"required"`
+	// OnPremises and Immutable are provider sections that pin ansible (its only consumer). Optional:
+	// only newer distributions ship them; when absent furyctl uses the host ansible (backward compatible).
+	OnPremises KFDToolsOnPremises `yaml:"onpremises"`
+	Immutable  KFDToolsImmutable  `yaml:"immutable"`
 }
 
 type KFDToolsCommon struct {
@@ -74,6 +78,31 @@ type KFDToolsCommon struct {
 	Kapp      KFDTool `yaml:"kapp"`
 	Helm      KFDTool `yaml:"helm"`
 	Helmfile  KFDTool `yaml:"helmfile"`
+}
+
+// KFDToolsOnPremises and KFDToolsImmutable are the provider sections for the OnPremises and Immutable
+// kinds — the only kinds that use ansible, so it is pinned per provider (mirroring tools.eks).
+type KFDToolsOnPremises struct {
+	Ansible KFDToolAnsible `yaml:"ansible"`
+}
+
+type KFDToolsImmutable struct {
+	Ansible KFDToolAnsible `yaml:"ansible"`
+}
+
+// KFDToolAnsible pins ansible(-core) and its build toolchain. Python and Uv build the mise/pipx venv and
+// depend on the ansible version (e.g. ansible-core 2.21 needs python >= 3.11), so the distribution owns
+// them alongside the ansible version. Both are optional: furyctl falls back to its built-in defaults.
+type KFDToolAnsible struct {
+	Version     string                 `yaml:"version"`
+	Python      string                 `yaml:"python"`
+	Uv          string                 `yaml:"uv"`
+	Collections []KFDAnsibleCollection `yaml:"collections"`
+}
+
+type KFDAnsibleCollection struct {
+	Name    string `yaml:"name"`
+	Version string `yaml:"version"`
 }
 
 type KFDToolsEks struct {

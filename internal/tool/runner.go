@@ -69,11 +69,7 @@ type RunnerFactory struct {
 func (rf *RunnerFactory) Create(name Name, version, workDir string) Runner {
 	switch name {
 	case Ansible:
-		return ansible.NewRunner(rf.executor, ansible.Paths{
-			Ansible:         string(name),
-			AnsiblePlaybook: "ansible-playbook",
-			WorkDir:         workDir,
-		})
+		return ansible.NewRunner(rf.executor, ansible.PathsForVersion(rf.paths.Bin, version, workDir))
 
 	case Awscli:
 		return awscli.NewRunner(rf.executor, awscli.Paths{

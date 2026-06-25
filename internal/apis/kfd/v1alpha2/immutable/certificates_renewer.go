@@ -26,6 +26,7 @@ type CertificatesRenewer struct {
 	kfdManifest config.KFD
 	distroPath  string
 	configPath  string
+	binPath     string
 }
 
 func (c *CertificatesRenewer) SetProperties(props []cluster.CertificatesRenewerProperty) {
@@ -57,6 +58,11 @@ func (c *CertificatesRenewer) SetProperty(name string, value any) {
 		if s, ok := value.(string); ok {
 			c.distroPath = s
 		}
+
+	case cluster.CertificatesRenewerPropertyBinPath:
+		if s, ok := value.(string); ok {
+			c.binPath = s
+		}
 	}
 }
 
@@ -72,11 +78,7 @@ func (c *CertificatesRenewer) Renew() error {
 
 	ansibleRunner := ansible.NewRunner(
 		execx.NewStdExecutor(),
-		ansible.Paths{
-			Ansible:         "ansible",
-			AnsiblePlaybook: "ansible-playbook",
-			WorkDir:         tmpDir,
-		},
+		ansible.PathsForVersion(c.binPath, c.kfdManifest.Tools.Immutable.Ansible.Version, tmpDir),
 	)
 
 	furyctlMerger, err := c.CreateFuryctlMerger(
