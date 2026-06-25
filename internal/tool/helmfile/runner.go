@@ -5,13 +5,22 @@
 package helmfile
 
 import (
+	"errors"
 	"fmt"
 	"os"
+	"os/exec"
+	"path/filepath"
 
 	"github.com/google/uuid"
 	"github.com/sirupsen/logrus"
 
 	execx "github.com/sighupio/furyctl/internal/x/exec"
+)
+
+// ErrPluginDownloaderMissing is returned when a helm plugin must be installed but neither curl nor wget
+// is available to download it.
+var ErrPluginDownloaderMissing = errors.New(
+	"installing helm plugins (helm-diff) requires 'curl' or 'wget' on the PATH; install one and retry",
 )
 
 type Paths struct {
@@ -65,6 +74,24 @@ func (r *Runner) deleteCmd(id string) {
 }
 
 func (r *Runner) Init(helmBinary string) error {
+	// Helm plugin install hooks (e.g. helm-diff's install-binary.sh) call `helm` by bare name, so put the
+	// helm binary's dir on PATH — furyctl otherwise drives tools by absolute path and there may be no
+	// system helm. Set via the process env so it is the single authoritative PATH (execx appends a cmd's
+	// Env after os.Environ(), which would leave a duplicate PATH with platform-dependent resolution).
+	if err := os.Setenv("PATH", filepath.Dir(helmBinary)+string(os.PathListSeparator)+os.Getenv("PATH")); err != nil {
+		return fmt.Errorf("error preparing PATH for helm plugins: %w", err)
+	}
+
+	// The install hook downloads the plugin binary with curl/wget. Require one — but only when the plugin
+	// is not already present: an air-gapped bundle pre-installs it, so an offline run needs neither the
+	// downloader nor the network.
+	if r.paths.PluginsDir != "" {
+		diffBin := filepath.Join(r.paths.PluginsDir, "helm-diff", "bin", "diff")
+		if _, err := os.Stat(diffBin); err != nil && !hasDownloader() {
+			return ErrPluginDownloaderMissing
+		}
+	}
+
 	args := []string{"init", "--force", "--helm-binary", helmBinary}
 
 	cmd, id := r.newCmd(args)
@@ -75,6 +102,17 @@ func (r *Runner) Init(helmBinary string) error {
 	}
 
 	return nil
+}
+
+// hasDownloader reports whether curl or wget is available to download helm plugin binaries.
+func hasDownloader() bool {
+	for _, tool := range []string{"curl", "wget"} {
+		if _, err := exec.LookPath(tool); err == nil {
+			return true
+		}
+	}
+
+	return false
 }
 
 func (r *Runner) Apply() error {
