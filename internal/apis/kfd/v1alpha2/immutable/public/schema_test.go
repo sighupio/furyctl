@@ -14,7 +14,10 @@ import (
 
 // TestAntiDrift decodes a furyctl.yaml exercising the fields furyctl reads from
 // an Immutable config and asserts they decode (guards yaml-tag drift from the
-// distribution schema).
+// distribution schema). The free-form node sub-trees the butane templates consume
+// (network, storage extras, systemd and passwd) are intentionally not modeled on
+// this struct: they reach the templates via the raw furyctl.yaml handled by
+// create.rawNodesByHostname, so this test does not assert them.
 func TestAntiDrift(t *testing.T) {
 	t.Parallel()
 
