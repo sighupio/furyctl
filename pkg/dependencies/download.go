@@ -476,7 +476,13 @@ func installAnsibleCollections(python, galaxy, collectionsDir string, collection
 	logrus.Info("Installing ansible collections...")
 
 	cmd := execx.NewCmd(python, execx.CmdOptions{
-		Args:     args,
+		Args: args,
+		// Pin ANSIBLE_COLLECTIONS_PATH to the target dir so the install is hermetic: otherwise
+		// ansible-galaxy considers collections already present in the host's ~/.ansible "already
+		// installed" and skips them ("Nothing to do"), leaving collectionsDir incomplete. At runtime
+		// the runner sets ANSIBLE_COLLECTIONS_PATH to this dir (overriding ~/.ansible), so a skipped
+		// collection would be missing and its modules (e.g. community.general.ini_file) fail to resolve.
+		Env:      []string{"ANSIBLE_COLLECTIONS_PATH=" + collectionsDir},
 		Executor: execx.NewStdExecutor(),
 	})
 
