@@ -12,7 +12,7 @@ place to track your work in progress.
 
 When opening PRs in Draft, **don't assign reviewers until the PR is ready for review**.
 
-Once you are confortable with the status of the PR and all the tests and CI is green, you can assign the reviewers to start the review process.
+Once you are comfortable with the status of the PR and all the tests and CI is green, you can assign the reviewers to start the review process.
 -->
 
 ### Summary 💡
@@ -79,7 +79,7 @@ this PR can be used as context for that.
 >
 > PRs that do not have this checklist ready won't be reviewed.
 
-- [ ] My PR is has a clear scope and does not mix together several unrelated changes
+- [ ] My PR has a clear scope and does not mix together several unrelated changes
 - [ ] I've updated the `docs/releases/unreleased.md` file (or equivalent)
 - [ ] I've tested the proposed changes and wrote the tests performed in the section above
 - [ ] My branch is up-to-date with the target branch and there are no conflicts
