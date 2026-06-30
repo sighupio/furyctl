@@ -13,6 +13,7 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/sirupsen/logrus"
@@ -57,6 +58,11 @@ func Path(address, port, root string, nodesStatus *map[string]string) error {
 	// Context to cancel the input goroutine when all nodes are booted.
 	ctx, cancel := context.WithCancel(context.Background())
 
+	// Nodes POST their boot status concurrently; guard the shared map and make the all-booted stop idempotent.
+	var statusMu sync.Mutex
+
+	var bootedOnce sync.Once
+
 	fs := http.FileServer(http.Dir(root))
 
 	// Wrap the file server with a logging handler that logs each request.
@@ -93,7 +99,11 @@ func Path(address, port, root string, nodesStatus *map[string]string) error {
 			lrw.WriteHeader(http.StatusOK)
 			encoder := json.NewEncoder(lrw)
 
-			if err := encoder.Encode(*nodesStatus); err != nil {
+			statusMu.Lock()
+			err := encoder.Encode(*nodesStatus)
+			statusMu.Unlock()
+
+			if err != nil {
 				logrus.Errorf("error while encoding response: %s", err)
 			} else {
 				logrus.WithFields(logrus.Fields{
@@ -125,7 +135,9 @@ func Path(address, port, root string, nodesStatus *map[string]string) error {
 				return
 			}
 
+			statusMu.Lock()
 			(*nodesStatus)[node] = status
+			statusMu.Unlock()
 
 			// Log relevant request/response information.
 			logrus.WithFields(logrus.Fields{
@@ -146,6 +158,7 @@ func Path(address, port, root string, nodesStatus *map[string]string) error {
 			}
 
 			// Check if all nodes are in "booted" status and log if so.
+			statusMu.Lock()
 			allBooted := true
 
 			for _, s := range *nodesStatus {
@@ -156,10 +169,15 @@ func Path(address, port, root string, nodesStatus *map[string]string) error {
 				}
 			}
 
+			nodeCount := len(*nodesStatus)
+			statusMu.Unlock()
+
 			if allBooted {
-				logrus.Infof("All %d nodes reached 'booted' state. Stopping server and continuing...", len(*nodesStatus))
-				close(inputCh)
-				cancel()
+				bootedOnce.Do(func() {
+					logrus.Infof("All %d nodes reached 'booted' state. Stopping server and continuing...", nodeCount)
+					close(inputCh)
+					cancel()
+				})
 			}
 		}
 	})
