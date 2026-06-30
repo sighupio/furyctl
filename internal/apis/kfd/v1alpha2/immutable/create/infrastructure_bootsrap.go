@@ -49,8 +49,17 @@ type immutableManifest struct {
 
 // assets represents a Kubernetes version entry in immutable.yaml.
 type assets struct {
-	Sysext  []sysextPackage `yaml:"sysext"` // Array of sysext packages.
-	Flatcar flatcarRelease  `yaml:"flatcar"`
+	ImageRegistry      string `yaml:"imageRegistry"`      // Registry for cluster images (kubeadm).
+	SandboxImage       string `yaml:"sandboxImage"`       // Containerd pause/sandbox image.
+	CorednsImagePrefix string `yaml:"corednsImagePrefix"` // Coredns image path prefix.
+	//nolint:tagliatelle // YAML structure matches file.
+	HaproxyImage string `yaml:"haproxyImage"` // Haproxy LB container image.
+	//nolint:tagliatelle // YAML structure matches file.
+	HaproxyTag string `yaml:"haproxyTag"` // Haproxy LB container tag.
+	//nolint:tagliatelle // YAML structure matches file.
+	KubeletCsrApproverTag string          `yaml:"kubeletCsrApproverTag"` // kubelet-csr-approver image tag.
+	Sysext                []sysextPackage `yaml:"sysext"`                // Array of sysext packages.
+	Flatcar               flatcarRelease  `yaml:"flatcar"`
 }
 
 // sysextPackage represents a systemd-sysext package configuration.
@@ -260,6 +269,113 @@ func (i *Infrastructure) getImmutableAssets() (assets, error) {
 	}
 
 	return immutableAssets, nil
+}
+
+// normalizeVersion strips a leading "v" so the kubernetes version (e.g. "v1.34.8")
+// matches the immutable.yaml kubernetes keys (e.g. "1.34.8").
+func normalizeVersion(version string) string {
+	return strings.TrimPrefix(version, "v")
+}
+
+// selectImmutableAssets loads the vendored immutable.yaml and selects the block for the given
+// kubernetes version (normalized). The same selector is used by every furyctl phase, so baked
+// artifacts and rendered role variables never disagree on version. It is a free function (no
+// Infrastructure receiver) so the kubernetes phase can reuse it too.
+func selectImmutableAssets(phasePath, kubeVersion string) (assets, error) {
+	version := normalizeVersion(kubeVersion)
+
+	immutableSpecPath := filepath.Join(phasePath, "..", "vendor", "installers", "immutable", "immutable.yaml")
+
+	data, err := os.ReadFile(immutableSpecPath)
+	if err != nil {
+		return assets{}, fmt.Errorf("error reading immutable manifest at %s: %w", immutableSpecPath, err)
+	}
+
+	var manifest immutableManifest
+	if err := yaml.Unmarshal(data, &manifest); err != nil {
+		return assets{}, fmt.Errorf("error parsing immutable manifest: %w", err)
+	}
+
+	if len(manifest.Kubernetes) == 0 {
+		return assets{}, ErrNoKubernetesVersions
+	}
+
+	immutableAssets, ok := manifest.Kubernetes[version]
+	if !ok {
+		return assets{}, fmt.Errorf("%w: %s", ErrKubernetesVersionNotFound, version)
+	}
+
+	return immutableAssets, nil
+}
+
+// buildVersionVars turns the selected immutable.yaml block into the data the version vars template
+// consumes. The kubernetes phase injects this under "versions" into the generic template walk (so the
+// vars file is generated alongside the playbooks); the infrastructure phase feeds it to the same
+// template via renderVersionVarsFile. Selection/validation stays in Go (selectImmutableAssets).
+func buildVersionVars(version, kubectlBin string, a assets) map[string]any {
+	// Carry the explicit per-arch .raw URL from immutable.yaml (not just the version) so the sysext role
+	// downloads exactly what the manifest pins, instead of reconstructing the URL from a release-base
+	// convention — the same URL the butane/Ignition install path already uses (kills the two-dialects smell).
+	sysextTargets := make(map[string]any, len(a.Sysext))
+
+	for _, pkg := range a.Sysext {
+		arch := make(map[string]any, len(pkg.Arch))
+		for name, info := range pkg.Arch {
+			arch[name] = map[string]string{"url": info.URL}
+		}
+
+		sysextTargets[pkg.Name] = map[string]any{
+			"version": pkg.Version,
+			"arch":    arch,
+		}
+	}
+
+	vars := map[string]any{
+		"kubernetes_version":        version,
+		"containerd_sandbox_image":  a.SandboxImage,
+		"coredns_image_prefix":      a.CorednsImagePrefix,
+		"kubernetes_image_registry": a.ImageRegistry,
+		"haproxy_container_image":   a.HaproxyImage,
+		"haproxy_container_tag":     a.HaproxyTag,
+		"kubelet_csr_approver_tag":  a.KubeletCsrApproverTag,
+		"sysext_targets":            sysextTargets,
+		"os_update_target_version":  a.Flatcar.Version,
+	}
+
+	// The node-upgrade role drains/uncordons via kubectl on the controller under sudo, whose secure_path
+	// drops a bare "kubectl" from a tool manager like mise; give it the absolute path to the
+	// furyctl-vendored kubectl so the drain resolves regardless of the operator's PATH.
+	if kubectlBin != "" {
+		vars["kubectl_bin"] = kubectlBin
+	}
+
+	return vars
+}
+
+// renderVersionVarsFile renders the version vars template (group_vars/all.yml) for the infrastructure
+// phase, which does not run the generic template walk over the kubernetes templates. The data is nested
+// under "versions" so the same template works whether it is rendered here or by the walk.
+func renderVersionVarsFile(destDir, version, kubectlBin, tplPath string, a assets) error {
+	tmpl, err := texttemplate.New(filepath.Base(tplPath)).ParseFiles(tplPath)
+	if err != nil {
+		return fmt.Errorf("error parsing version vars template %s: %w", tplPath, err)
+	}
+
+	var rendered bytes.Buffer
+	if err := tmpl.Execute(&rendered, map[string]any{"versions": buildVersionVars(version, kubectlBin, a)}); err != nil {
+		return fmt.Errorf("error rendering version vars file: %w", err)
+	}
+
+	groupVarsDir := filepath.Join(destDir, "group_vars")
+	if err := os.MkdirAll(groupVarsDir, iox.FullPermAccess); err != nil {
+		return fmt.Errorf("error creating group_vars directory: %w", err)
+	}
+
+	if err := os.WriteFile(filepath.Join(groupVarsDir, "all.yml"), rendered.Bytes(), iox.FullRWPermAccess); err != nil {
+		return fmt.Errorf("error writing version vars file: %w", err)
+	}
+
+	return nil
 }
 
 // Render templates for the root of the server.

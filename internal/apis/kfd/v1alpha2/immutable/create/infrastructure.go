@@ -92,7 +92,7 @@ func (i *Infrastructure) Exec(_ string, upgradeState *upgrade.State) error {
 	i.CopyPathsToConfig(&mCfg)
 
 	mCfg.Data["kubernetes"] = map[any]any{
-		"version": i.kfdManifest.Kubernetes.Immutable.Version,
+		"version": normalizeVersion(i.kfdManifest.Kubernetes.Immutable.Version),
 	}
 
 	sourcePath := filepath.Join(
@@ -112,6 +112,26 @@ func (i *Infrastructure) Exec(_ string, upgradeState *upgrade.State) error {
 		i.paths.ConfigPath,
 	); err != nil {
 		return fmt.Errorf("error copying from templates: %w", err)
+	}
+
+	// Render the version vars file into the infrastructure ansible workdir too: the install
+	// playbook (apply.yaml) configures containerd on load balancers and nodes and reads
+	// containerd_sandbox_image (and the other version values) from this single source — the same
+	// file the kubernetes phase renders.
+	immutableAssets, err := i.getImmutableAssets()
+	if err != nil {
+		return fmt.Errorf("error selecting immutable assets: %w", err)
+	}
+
+	versionVarsTpl := filepath.Join(
+		i.paths.DistroPath, "templates", cluster.OperationPhaseKubernetes, "immutable", "group_vars", "all.yml.tpl",
+	)
+
+	if err := renderVersionVarsFile(
+		targetPath, normalizeVersion(i.kfdManifest.Kubernetes.Immutable.Version), i.KubectlPath,
+		versionVarsTpl, immutableAssets,
+	); err != nil {
+		return fmt.Errorf("error rendering version vars file: %w", err)
 	}
 
 	// Struct to keep each node's bootstrap status.
