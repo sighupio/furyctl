@@ -129,7 +129,7 @@ func (p *PreFlight) Exec(renderedConfig map[string]any) (*Status, error) {
 	}
 
 	mCfg.Data["kubernetes"] = map[any]any{
-		"version": p.kfdManifest.Kubernetes.Immutable.Version,
+		"version": normalizeVersion(p.furyctlConf.Spec.DistributionVersion),
 	}
 
 	if err := p.CopyFromTemplate(

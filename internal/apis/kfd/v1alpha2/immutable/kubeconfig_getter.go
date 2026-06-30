@@ -107,7 +107,7 @@ func (k *KubeconfigGetter) Get() error {
 	}
 
 	mCfg.Data["kubernetes"] = map[any]any{
-		"version": k.kfdManifest.Kubernetes.Immutable.Version,
+		"version": strings.TrimPrefix(k.furyctlConf.Spec.DistributionVersion, "v"),
 	}
 
 	if err := k.CopyFromTemplate(
