@@ -49,15 +49,12 @@ type immutableManifest struct {
 
 // assets represents a Kubernetes version entry in immutable.yaml.
 type assets struct {
-	ImageRegistry      string `yaml:"imageRegistry"`      // Registry for cluster images (kubeadm).
-	SandboxImage       string `yaml:"sandboxImage"`       // Containerd pause/sandbox image.
-	CorednsImagePrefix string `yaml:"corednsImagePrefix"` // Coredns image path prefix.
-	//nolint:tagliatelle // YAML structure matches file.
-	HaproxyImage string `yaml:"haproxyImage"` // Haproxy LB container image.
-	//nolint:tagliatelle // YAML structure matches file.
-	HaproxyTag string `yaml:"haproxyTag"` // Haproxy LB container tag.
-	//nolint:tagliatelle // YAML structure matches file.
-	KubeletCsrApproverTag string          `yaml:"kubeletCsrApproverTag"` // kubelet-csr-approver image tag.
+	ImageRegistry         string          `yaml:"imageRegistry"`         // Registry for cluster images (kubeadm).
+	SandboxImage          string          `yaml:"sandboxImage"`          // Containerd pause/sandbox image.
+	CorednsImagePrefix    string          `yaml:"corednsImagePrefix"`    // Coredns image path prefix.
+	HaproxyImage          string          `yaml:"haproxyImage"`          // Haproxy LB container image.
+	HaproxyTag            string          `yaml:"haproxyTag"`            // Haproxy LB container tag.
+	KubeletCsrApproverTag string          `yaml:"kubeletCsrApproverTag"` // The kubelet-csr-approver image tag.
 	Sysext                []sysextPackage `yaml:"sysext"`                // Array of sysext packages.
 	Flatcar               flatcarRelease  `yaml:"flatcar"`
 }
