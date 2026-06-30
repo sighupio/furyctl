@@ -124,6 +124,18 @@ func NewConfigCmd() *cobra.Command {
 				return ErrValidationFailed
 			}
 
+			// Fail-fast for the Immutable provider: the selected version must exist in immutable.yaml.
+			if res.MinimalConf.Kind == immutableKind {
+				if err := validateImmutableVersion(res, typedGitProtocol); err != nil {
+					logrus.Error(err)
+
+					cmdEvent.AddErrorMessage(ErrValidationFailed)
+					tracker.Track(cmdEvent)
+
+					return ErrValidationFailed
+				}
+			}
+
 			logrus.Info("configuration file validation succeeded")
 
 			cmdEvent.AddSuccessMessage("configuration file validation succeeded")
