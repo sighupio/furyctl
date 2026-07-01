@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+	"sync"
 
 	"github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v2"
@@ -30,6 +31,14 @@ var (
 	errSourceMustbeSet  = errors.New("source must be set")
 	errTargetMustbeSet  = errors.New("target must be set")
 	errTemplateNotFound = errors.New("no template found")
+
+	// Tracks custom resource paths that have already triggered an "outside the
+	// configuration directory" warning. Templates are rendered several times during
+	// a single furyctl run (preflight, preupgrade, the distribution phase, ...), so
+	// this keeps the warning to once per path per run.
+	//
+	//nolint:gochecknoglobals // process-wide dedupe set for a user-facing warning.
+	warnedResourcesOutsideConfDir sync.Map
 )
 
 type Model struct {
@@ -304,12 +313,14 @@ func (tm *Model) relativizeCustomResources(context map[string]map[any]any) {
 		}
 
 		if rel, err := filepath.Rel(furyctlConfDir, abs); err == nil && strings.HasPrefix(rel, "..") {
-			logrus.Warnf(
-				"custom resource %q resolves outside the furyctl configuration directory; "+
-					"the rendered path may differ between machines. Consider keeping custom "+
-					"resources inside the project directory.",
-				entry,
-			)
+			if _, warned := warnedResourcesOutsideConfDir.LoadOrStore(abs, struct{}{}); !warned {
+				logrus.Warnf(
+					"custom resource %q resolves outside the furyctl configuration directory; "+
+						"the rendered path may differ between machines. Consider keeping custom "+
+						"resources inside the project directory.",
+					entry,
+				)
+			}
 		}
 
 		rel, err := filepath.Rel(manifestsDir, abs)
