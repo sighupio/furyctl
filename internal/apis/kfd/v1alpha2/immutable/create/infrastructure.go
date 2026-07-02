@@ -10,6 +10,8 @@ import (
 	"path/filepath"
 	"strconv"
 
+	"github.com/sirupsen/logrus"
+
 	"github.com/sighupio/furyctl/cmd/serve"
 	"github.com/sighupio/furyctl/internal/apis/config"
 	"github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/immutable/public"
@@ -18,7 +20,6 @@ import (
 	"github.com/sighupio/furyctl/internal/upgrade"
 	execx "github.com/sighupio/furyctl/internal/x/exec"
 	"github.com/sighupio/furyctl/pkg/template"
-	"github.com/sirupsen/logrus"
 )
 
 // Infrastructure wraps the common infrastructure phase.

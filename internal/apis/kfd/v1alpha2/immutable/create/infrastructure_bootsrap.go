@@ -16,14 +16,15 @@ import (
 	texttemplate "text/template"
 
 	"github.com/hashicorp/go-getter"
+	"github.com/sirupsen/logrus"
+	"gopkg.in/yaml.v2"
+
 	"github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/immutable/public"
 	"github.com/sighupio/furyctl/internal/tool/butane"
 	iox "github.com/sighupio/furyctl/internal/x/io"
 	"github.com/sighupio/furyctl/pkg/template"
 	netx "github.com/sighupio/furyctl/pkg/x/net"
 	yamlx "github.com/sighupio/furyctl/pkg/x/yaml"
-	"github.com/sirupsen/logrus"
-	"gopkg.in/yaml.v2"
 )
 
 var (

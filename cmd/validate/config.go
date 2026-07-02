@@ -9,6 +9,10 @@ import (
 	"fmt"
 	"path/filepath"
 
+	"github.com/sirupsen/logrus"
+	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
+
 	"github.com/sighupio/furyctl/internal/analytics"
 	"github.com/sighupio/furyctl/internal/app"
 	"github.com/sighupio/furyctl/internal/config"
@@ -19,9 +23,6 @@ import (
 	"github.com/sighupio/furyctl/pkg/dependencies"
 	dist "github.com/sighupio/furyctl/pkg/distribution"
 	netx "github.com/sighupio/furyctl/pkg/x/net"
-	"github.com/sirupsen/logrus"
-	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 )
 
 var (
