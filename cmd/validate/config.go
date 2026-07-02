@@ -9,10 +9,6 @@ import (
 	"fmt"
 	"path/filepath"
 
-	"github.com/sirupsen/logrus"
-	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
-
 	"github.com/sighupio/furyctl/internal/analytics"
 	"github.com/sighupio/furyctl/internal/app"
 	"github.com/sighupio/furyctl/internal/config"
@@ -23,6 +19,9 @@ import (
 	"github.com/sighupio/furyctl/pkg/dependencies"
 	dist "github.com/sighupio/furyctl/pkg/distribution"
 	netx "github.com/sighupio/furyctl/pkg/x/net"
+	"github.com/sirupsen/logrus"
+	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 )
 
 var (
@@ -122,18 +121,6 @@ func NewConfigCmd() *cobra.Command {
 				tracker.Track(cmdEvent)
 
 				return ErrValidationFailed
-			}
-
-			// Fail-fast for the Immutable provider: the selected version must exist in immutable.yaml.
-			if res.MinimalConf.Kind == immutableKind {
-				if err := validateImmutableVersion(res, typedGitProtocol); err != nil {
-					logrus.Error(err)
-
-					cmdEvent.AddErrorMessage(ErrValidationFailed)
-					tracker.Track(cmdEvent)
-
-					return ErrValidationFailed
-				}
 			}
 
 			logrus.Info("configuration file validation succeeded")
