@@ -10,8 +10,6 @@ import (
 	"path/filepath"
 	"strconv"
 
-	"github.com/sirupsen/logrus"
-
 	"github.com/sighupio/furyctl/cmd/serve"
 	"github.com/sighupio/furyctl/internal/apis/config"
 	"github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/immutable/public"
@@ -20,6 +18,7 @@ import (
 	"github.com/sighupio/furyctl/internal/upgrade"
 	execx "github.com/sighupio/furyctl/internal/x/exec"
 	"github.com/sighupio/furyctl/pkg/template"
+	"github.com/sirupsen/logrus"
 )
 
 // Infrastructure wraps the common infrastructure phase.
@@ -92,8 +91,22 @@ func (i *Infrastructure) Exec(_ string, upgradeState *upgrade.State) error {
 	i.CopyPathsToConfig(&mCfg)
 
 	mCfg.Data["kubernetes"] = map[any]any{
-		"version": normalizeVersion(i.kfdManifest.Kubernetes.Immutable.Version),
+		"version": i.kfdManifest.Kubernetes.Immutable.Version,
 	}
+
+	// Inject the immutable.yaml version data so the infra template walk renders its own
+	// group_vars/all.yml; the apply.yaml roles need containerd_sandbox_image and the haproxy image/tag.
+	immutableAssets, err := i.getImmutableAssets()
+	if err != nil {
+		return fmt.Errorf("error selecting immutable assets: %w", err)
+	}
+
+	versionVars := map[any]any{}
+	for name, value := range buildVersionVars(i.kfdManifest.Kubernetes.Immutable.Version, i.KubectlPath, immutableAssets) {
+		versionVars[name] = value
+	}
+
+	mCfg.Data["versions"] = versionVars
 
 	sourcePath := filepath.Join(
 		i.paths.DistroPath,
@@ -112,26 +125,6 @@ func (i *Infrastructure) Exec(_ string, upgradeState *upgrade.State) error {
 		i.paths.ConfigPath,
 	); err != nil {
 		return fmt.Errorf("error copying from templates: %w", err)
-	}
-
-	// Render the version vars file into the infrastructure ansible workdir too: the install
-	// playbook (apply.yaml) configures containerd on load balancers and nodes and reads
-	// containerd_sandbox_image (and the other version values) from this single source — the same
-	// file the kubernetes phase renders.
-	immutableAssets, err := i.getImmutableAssets()
-	if err != nil {
-		return fmt.Errorf("error selecting immutable assets: %w", err)
-	}
-
-	versionVarsTpl := filepath.Join(
-		i.paths.DistroPath, "templates", cluster.OperationPhaseKubernetes, "immutable", "group_vars", "all.yml.tpl",
-	)
-
-	if err := renderVersionVarsFile(
-		targetPath, normalizeVersion(i.kfdManifest.Kubernetes.Immutable.Version), i.KubectlPath,
-		versionVarsTpl, immutableAssets,
-	); err != nil {
-		return fmt.Errorf("error rendering version vars file: %w", err)
 	}
 
 	// Struct to keep each node's bootstrap status.

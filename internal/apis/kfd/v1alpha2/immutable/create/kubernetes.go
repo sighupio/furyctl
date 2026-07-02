@@ -8,8 +8,6 @@ import (
 	"fmt"
 	"path"
 
-	"github.com/sirupsen/logrus"
-
 	"github.com/sighupio/furyctl/internal/apis/config"
 	"github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/immutable/public"
 	"github.com/sighupio/furyctl/internal/cluster"
@@ -18,6 +16,7 @@ import (
 	execx "github.com/sighupio/furyctl/internal/x/exec"
 	kubex "github.com/sighupio/furyctl/internal/x/kube"
 	"github.com/sighupio/furyctl/pkg/template"
+	"github.com/sirupsen/logrus"
 )
 
 const FromSecondsToHalfMinuteRetries = 30
@@ -100,7 +99,7 @@ func (k *Kubernetes) prepare() error {
 
 	k.CopyPathsToConfig(&mCfg)
 
-	version := normalizeVersion(k.kfdManifest.Kubernetes.Immutable.Version)
+	version := k.kfdManifest.Kubernetes.Immutable.Version
 
 	mCfg.Data["kubernetes"] = map[any]any{
 		"version": version,
