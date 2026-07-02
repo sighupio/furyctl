@@ -96,7 +96,7 @@ func (i *Infrastructure) Exec(_ string, upgradeState *upgrade.State) error {
 
 	// Inject the immutable.yaml version data so the infra template walk renders its own
 	// group_vars/all.yml; the apply.yaml roles need containerd_sandbox_image and the haproxy image/tag.
-	immutableAssets, err := i.getImmutableAssets()
+	immutableAssets, err := selectImmutableAssets(i.Path, i.kfdManifest.Kubernetes.Immutable.Version)
 	if err != nil {
 		return fmt.Errorf("error selecting immutable assets: %w", err)
 	}

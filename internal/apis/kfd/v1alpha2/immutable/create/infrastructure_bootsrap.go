@@ -228,50 +228,12 @@ func (i *Infrastructure) getSSHPublicKeyContent() (string, error) {
 	return sshPublicKeyContent, nil
 }
 
-// parseImmutableInstallerSpec parses the immutable.yaml manifest file.
-// This manifest contains all versioning information for the Immutable installer.
-func (*Infrastructure) parseImmutableInstallerSpec(path string) (*immutableManifest, error) {
-	data, err := os.ReadFile(path)
-	if err != nil {
-		return nil, fmt.Errorf("error reading immutable manifest at %s: %w", path, err)
-	}
-
-	var manifest immutableManifest
-	if err := yaml.Unmarshal(data, &manifest); err != nil {
-		return nil, fmt.Errorf("error parsing immutable manifest: %w", err)
-	}
-
-	// Validate that at least one Kubernetes version is defined.
-	if len(manifest.Kubernetes) == 0 {
-		return nil, ErrNoKubernetesVersions
-	}
-
-	return &manifest, nil
-}
-
-func (i *Infrastructure) getImmutableAssets() (assets, error) {
-	kubeVersion := i.kfdManifest.Kubernetes.Immutable.Version
-
-	immutableSpecPath := filepath.Join(i.Path, "..", "vendor", "installers", "immutable", "immutable.yaml")
-
-	immutableInstallerSpec, err := i.parseImmutableInstallerSpec(immutableSpecPath)
-	if err != nil {
-		return assets{}, fmt.Errorf("error loading immutable installer specs for templates: %w", err)
-	}
-
-	immutableAssets, ok := immutableInstallerSpec.Kubernetes[kubeVersion]
-	if !ok {
-		return assets{}, fmt.Errorf("%w: %s", ErrKubernetesVersionNotFound, kubeVersion)
-	}
-
-	return immutableAssets, nil
-}
-
 // selectImmutableAssets loads the vendored immutable.yaml and selects the block for the given
-// kubernetes version. The same selector is used by every furyctl phase, so baked artifacts and
-// rendered role variables never disagree on version. It is a free function (no Infrastructure
-// receiver) so the kubernetes phase can reuse it too. The version is passed as-is (it comes from
-// the kfd manifest, which we control), so a mismatch surfaces as ErrKubernetesVersionNotFound.
+// kubernetes version. It is the single selector used by every furyctl phase (infrastructure and
+// kubernetes), so baked artifacts and rendered role variables never disagree on version. A free
+// function (no Infrastructure receiver) so both phases call it directly. The version is passed as-is
+// (it comes from the kfd manifest, which we control), so a mismatch surfaces as
+// ErrKubernetesVersionNotFound; an empty manifest surfaces as ErrNoKubernetesVersions.
 func selectImmutableAssets(phasePath, kubeVersion string) (assets, error) {
 	immutableSpecPath := filepath.Join(phasePath, "..", "vendor", "installers", "immutable", "immutable.yaml")
 
@@ -331,7 +293,7 @@ func buildVersionVars(version, kubectlBin string, a assets) map[string]any {
 		"os_update_target_version":  a.Flatcar.Version,
 	}
 
-	// The node-upgrade role drains/uncordons via kubectl on the controller under sudo, whose secure_path
+	// The node-maintenance role drains/uncordons via kubectl on the controller under sudo, whose secure_path
 	// drops a bare "kubectl" from a tool manager like mise; give it the absolute path to the
 	// furyctl-vendored kubectl so the drain resolves regardless of the operator's PATH.
 	if kubectlBin != "" {
@@ -372,7 +334,7 @@ func (i *Infrastructure) renderRootTemplates() error {
 // Generate Butane files from distribution's templates and then convert them to ignition files.
 func (i *Infrastructure) renderButaneTemplates() error {
 	// 1. Load the full immutable manifest to pass all sysext info to templates.
-	immutableAssets, err := i.getImmutableAssets()
+	immutableAssets, err := selectImmutableAssets(i.Path, i.kfdManifest.Kubernetes.Immutable.Version)
 	if err != nil {
 		return fmt.Errorf("error getting immutable assets: %w", err)
 	}
@@ -737,7 +699,7 @@ func (i *Infrastructure) extractUsedArchitectures() []string {
 func (i *Infrastructure) downloadAssets(usedArchitectures []string) error {
 	logrus.Info("Downloading Flatcar boot artifacts and sysext packages...")
 
-	assets, err := i.getImmutableAssets()
+	assets, err := selectImmutableAssets(i.Path, i.kfdManifest.Kubernetes.Immutable.Version)
 	if err != nil {
 		return fmt.Errorf("error getting immutable assets: %w", err)
 	}
@@ -793,7 +755,7 @@ func (i *Infrastructure) generateNodeBootFile(node public.SpecInfrastructureNode
 		return fmt.Errorf("error parsing boot template %s: %w", bootTemplatePath, err)
 	}
 
-	assets, err := i.getImmutableAssets()
+	assets, err := selectImmutableAssets(i.Path, i.kfdManifest.Kubernetes.Immutable.Version)
 	if err != nil {
 		return fmt.Errorf("error getting immutable assets: %w", err)
 	}
