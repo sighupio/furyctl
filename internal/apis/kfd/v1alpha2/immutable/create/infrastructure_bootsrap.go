@@ -17,7 +17,6 @@ import (
 
 	"github.com/hashicorp/go-getter"
 	"github.com/sirupsen/logrus"
-	"gopkg.in/yaml.v2"
 
 	"github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/immutable/public"
 	"github.com/sighupio/furyctl/internal/tool/butane"
@@ -227,37 +226,6 @@ func (i *Infrastructure) getSSHPublicKeyContent() (string, error) {
 	sshPublicKeyContent := strings.TrimSpace(string(sshPublicKey))
 
 	return sshPublicKeyContent, nil
-}
-
-// selectImmutableAssets loads the vendored immutable.yaml and selects the block for the given
-// kubernetes version. It is the single selector used by every furyctl phase (infrastructure and
-// kubernetes), so baked artifacts and rendered role variables never disagree on version. A free
-// function (no Infrastructure receiver) so both phases call it directly. The version is passed as-is
-// (it comes from the kfd manifest, which we control), so a mismatch surfaces as
-// ErrKubernetesVersionNotFound; an empty manifest surfaces as ErrNoKubernetesVersions.
-func selectImmutableAssets(phasePath, kubeVersion string) (assets, error) {
-	immutableSpecPath := filepath.Join(phasePath, "..", "vendor", "installers", "immutable", "immutable.yaml")
-
-	data, err := os.ReadFile(immutableSpecPath)
-	if err != nil {
-		return assets{}, fmt.Errorf("error reading immutable manifest at %s: %w", immutableSpecPath, err)
-	}
-
-	var manifest immutableManifest
-	if err := yaml.Unmarshal(data, &manifest); err != nil {
-		return assets{}, fmt.Errorf("error parsing immutable manifest: %w", err)
-	}
-
-	if len(manifest.Kubernetes) == 0 {
-		return assets{}, ErrNoKubernetesVersions
-	}
-
-	immutableAssets, ok := manifest.Kubernetes[kubeVersion]
-	if !ok {
-		return assets{}, fmt.Errorf("%w: %s", ErrKubernetesVersionNotFound, kubeVersion)
-	}
-
-	return immutableAssets, nil
 }
 
 // buildVersionVars turns the selected immutable.yaml block into the data the version vars template
