@@ -4,8 +4,6 @@ set -eu
 
 kubectlbin="{{ .paths.kubectl }}"
 
-{{- if index .spec "kubernetes" }}
-
 ## etcd upgrade: stage the etcd sysext + renew certificates, serial:1 (quorum preserved).
 {{ .paths.ansiblePlaybook }} upgrade-etcd.yaml --become
 
@@ -15,6 +13,4 @@ kubectlbin="{{ .paths.kubectl }}"
 {{- if ne .upgrade.skipNodesUpgrade true }}
 ## worker upgrade: stage -> drain -> reboot -> kubeadm upgrade node -> uncordon, serial default 1 (configurable).
 {{ .paths.ansiblePlaybook }} upgrade-worker-nodes.yml --become
-{{- end }}
-
 {{- end }}
