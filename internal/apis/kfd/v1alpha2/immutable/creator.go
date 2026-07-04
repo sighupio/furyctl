@@ -172,6 +172,7 @@ func createInfrastructurePhase(c *ClusterCreator, upgr *upgrade.Upgrade) *create
 		c.paths.ConfigPath,
 		c.paths.DistroPath,
 		upgr,
+		c.upgradeNode,
 		c.furyctlConf,
 		c.kfdManifest,
 		c.paths,
@@ -617,6 +618,7 @@ func (c *ClusterCreator) extraPhases(
 func (*ClusterCreator) initUpgradeState() *upgrade.State {
 	return &upgrade.State{
 		Phases: upgrade.Phases{
+			Infrastructure:   &upgrade.Phase{Status: upgrade.PhaseStatusPending},
 			PreKubernetes:    &upgrade.Phase{Status: upgrade.PhaseStatusPending},
 			Kubernetes:       &upgrade.Phase{Status: upgrade.PhaseStatusPending},
 			PostKubernetes:   &upgrade.Phase{Status: upgrade.PhaseStatusPending},
