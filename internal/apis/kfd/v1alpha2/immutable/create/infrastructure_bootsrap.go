@@ -29,6 +29,7 @@ import (
 var (
 	ErrNoKubernetesVersions      = errors.New("no kubernetes versions defined in immutable installer spec")
 	ErrKubernetesVersionNotFound = errors.New("kubernetes version not found in immutable installer spec")
+	ErrSandboxTagOrRegistryEmpty = errors.New("sandboxTag and imageRegistry are required in immutable installer spec")
 	ErrFlatcarArtifactsNotFound  = errors.New("flatcar artifacts not found for architecture")
 	ErrButaneConversionFatal     = errors.New("butane conversion fatal errors")
 	ErrButaneFatalErrors         = errors.New("butane translation has fatal errors")
@@ -49,7 +50,7 @@ type immutableManifest struct {
 // assets represents a Kubernetes version entry in immutable.yaml.
 type assets struct {
 	ImageRegistry         string          `yaml:"imageRegistry"`         // Registry for cluster images (kubeadm).
-	SandboxImage          string          `yaml:"sandboxImage"`          // Containerd pause/sandbox image.
+	SandboxTag            string          `yaml:"sandboxTag"`            // Pause image tag; no registry.
 	CorednsImagePrefix    string          `yaml:"corednsImagePrefix"`    // Coredns image path prefix.
 	HaproxyImage          string          `yaml:"haproxyImage"`          // Haproxy LB container image.
 	HaproxyTag            string          `yaml:"haproxyTag"`            // Haproxy LB container tag.
@@ -252,7 +253,7 @@ func buildVersionVars(version, kubectlBin string, a assets) map[string]any {
 
 	vars := map[string]any{
 		"kubernetes_version":        version,
-		"containerd_sandbox_image":  a.SandboxImage,
+		"containerd_sandbox_tag":    a.SandboxTag,
 		"coredns_image_prefix":      a.CorednsImagePrefix,
 		"kubernetes_image_registry": a.ImageRegistry,
 		"haproxy_container_image":   a.HaproxyImage,

@@ -16,7 +16,7 @@ const testManifest = `---
 kubernetes:
   1.34.8:
     imageRegistry: registry.sighup.io/fury/on-premises
-    sandboxImage: registry.sighup.io/fury/on-premises/pause:3.10.1
+    sandboxTag: "3.10.1"
     corednsImagePrefix: /coredns
     haproxyImage: registry.sighup.io/fury/on-premises/haproxy
     haproxyTag: "3.0.6"
@@ -75,8 +75,8 @@ func TestSelectImmutableAssets(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	if got.SandboxImage != "registry.sighup.io/fury/on-premises/pause:3.10.1" {
-		t.Errorf("SandboxImage = %q", got.SandboxImage)
+	if got.SandboxTag != "3.10.1" {
+		t.Errorf("SandboxTag = %q", got.SandboxTag)
 	}
 
 	if got.ImageRegistry != "registry.sighup.io/fury/on-premises" {
@@ -93,9 +93,7 @@ func TestSelectImmutableAssets(t *testing.T) {
 	}
 }
 
-// TestBuildVersionVars covers the vars the infrastructure phase's apply.yaml roles need with no role
-// default — containerd_sandbox_image and the haproxy image/tag — whose absence silently breaks the
-// containerd/haproxy roles once the infra phase renders its own group_vars/all.yml.
+// TestBuildVersionVars checks the infra roles' required vars (sandbox tag, haproxy image/tag) are emitted.
 func TestBuildVersionVars(t *testing.T) {
 	t.Parallel()
 
@@ -109,9 +107,9 @@ func TestBuildVersionVars(t *testing.T) {
 	vars := buildVersionVars("1.34.8", "/usr/bin/kubectl", a)
 
 	want := map[string]string{
-		"containerd_sandbox_image": "registry.sighup.io/fury/on-premises/pause:3.10.1",
-		"haproxy_container_image":  "registry.sighup.io/fury/on-premises/haproxy",
-		"haproxy_container_tag":    "3.0.6",
+		"containerd_sandbox_tag":  "3.10.1",
+		"haproxy_container_image": "registry.sighup.io/fury/on-premises/haproxy",
+		"haproxy_container_tag":   "3.0.6",
 	}
 
 	for key, exp := range want {

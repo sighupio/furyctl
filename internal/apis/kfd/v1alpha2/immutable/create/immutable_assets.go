@@ -40,5 +40,10 @@ func selectImmutableAssets(phasePath, kubeVersion string) (assets, error) {
 		return assets{}, fmt.Errorf("%w: %s", ErrKubernetesVersionNotFound, kubeVersion)
 	}
 
+	// Empty tag/registry would render "<registry>/pause:" and brick every pod; fail loudly (also catches skew).
+	if immutableAssets.SandboxTag == "" || immutableAssets.ImageRegistry == "" {
+		return assets{}, fmt.Errorf("%w: kubernetes %s", ErrSandboxTagOrRegistryEmpty, kubeVersion)
+	}
+
 	return immutableAssets, nil
 }
