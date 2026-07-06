@@ -73,6 +73,12 @@ func NewInfrastructure(
 
 // Exec executes the infrastructure phase.
 func (i *Infrastructure) Exec(_ string, upgradeState *upgrade.State) error {
+	if i.dryRun {
+		logrus.Info("Infrastructure configured successfully (dry-run mode)")
+
+		return nil
+	}
+
 	if i.upgradeNode != "" {
 		logrus.Debug("node upgrade requested, skipping nodes bootstrap...")
 		logrus.Warn("Upgrade for Infrastructure phase (load balancers) not implemented yet...")
