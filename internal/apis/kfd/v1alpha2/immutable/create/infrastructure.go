@@ -27,6 +27,7 @@ type Infrastructure struct {
 	*cluster.OperationPhase
 	paths         cluster.CreatorPaths
 	upgrade       *upgrade.Upgrade
+	upgradeNode   string
 	kfdManifest   config.KFD
 	furyctlConf   public.ImmutableKfdV1Alpha2
 	dryRun        bool
@@ -40,6 +41,7 @@ func NewInfrastructure(
 	configPath string,
 	distroPath string,
 	upgr *upgrade.Upgrade,
+	upgradeNode string,
 	furyctlConf public.ImmutableKfdV1Alpha2,
 	kfdManifest config.KFD,
 	paths cluster.CreatorPaths,
@@ -53,6 +55,7 @@ func NewInfrastructure(
 			DistroPath: distroPath,
 		},
 		upgrade:     upgr,
+		upgradeNode: upgradeNode,
 		furyctlConf: furyctlConf,
 		kfdManifest: kfdManifest,
 		dryRun:      dryRun,
@@ -70,6 +73,28 @@ func NewInfrastructure(
 
 // Exec executes the infrastructure phase.
 func (i *Infrastructure) Exec(_ string, upgradeState *upgrade.State) error {
+	if i.dryRun {
+		logrus.Info("Infrastructure configured successfully (dry-run mode)")
+
+		return nil
+	}
+
+	if i.upgradeNode != "" {
+		logrus.Debug("node upgrade requested, skipping nodes bootstrap...")
+		logrus.Warn("Upgrade for Infrastructure phase (load balancers) not implemented yet...")
+
+		return nil
+	}
+
+	if i.upgrade.Enabled {
+		logrus.Debug("running an upgrade, skipping nodes bootstrap...")
+		logrus.Warn("Upgrade for Infrastructure phase not implemented yet")
+
+		upgradeState.Phases.Infrastructure.Status = upgrade.PhaseStatusSuccess
+
+		return nil
+	}
+
 	if err := i.BootstrapNodes(); err != nil {
 		return fmt.Errorf("preparing for infrastructure phase failed: %w", err)
 	}
@@ -94,6 +119,20 @@ func (i *Infrastructure) Exec(_ string, upgradeState *upgrade.State) error {
 	mCfg.Data["kubernetes"] = map[any]any{
 		"version": i.kfdManifest.Kubernetes.Immutable.Version,
 	}
+
+	// Inject the immutable.yaml version data; the infra hosts.yaml renders containerd_sandbox_tag,
+	// kubernetes_image_registry and the haproxy image/tag inline, consumed by the apply.yaml roles.
+	immutableAssets, err := selectImmutableAssets(i.Path, i.kfdManifest.Kubernetes.Immutable.Version)
+	if err != nil {
+		return fmt.Errorf("error selecting immutable assets: %w", err)
+	}
+
+	versionVars := map[any]any{}
+	for name, value := range buildVersionVars(i.kfdManifest.Kubernetes.Immutable.Version, i.KubectlPath, immutableAssets) {
+		versionVars[name] = value
+	}
+
+	mCfg.Data["versions"] = versionVars
 
 	sourcePath := filepath.Join(
 		i.paths.DistroPath,
@@ -148,12 +187,8 @@ func (i *Infrastructure) Exec(_ string, upgradeState *upgrade.State) error {
 	logrus.Info("Applying nodes configuration...")
 
 	// Run apply playbook.
-	if !i.upgrade.Enabled {
-		if _, err := i.ansibleRunner.Playbook("apply.yaml"); err != nil {
-			return fmt.Errorf("error applying playbook: %w", err)
-		}
-	} else {
-		upgradeState.Phases.Kubernetes.Status = upgrade.PhaseStatusSuccess
+	if _, err := i.ansibleRunner.Playbook("apply.yaml"); err != nil {
+		return fmt.Errorf("error applying playbook: %w", err)
 	}
 
 	return nil

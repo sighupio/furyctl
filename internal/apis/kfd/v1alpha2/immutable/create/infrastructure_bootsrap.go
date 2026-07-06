@@ -17,7 +17,6 @@ import (
 
 	"github.com/hashicorp/go-getter"
 	"github.com/sirupsen/logrus"
-	"gopkg.in/yaml.v2"
 
 	"github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/immutable/public"
 	"github.com/sighupio/furyctl/internal/tool/butane"
@@ -30,6 +29,7 @@ import (
 var (
 	ErrNoKubernetesVersions      = errors.New("no kubernetes versions defined in immutable installer spec")
 	ErrKubernetesVersionNotFound = errors.New("kubernetes version not found in immutable installer spec")
+	ErrSandboxTagOrRegistryEmpty = errors.New("sandboxTag and imageRegistry are required in immutable installer spec")
 	ErrFlatcarArtifactsNotFound  = errors.New("flatcar artifacts not found for architecture")
 	ErrButaneConversionFatal     = errors.New("butane conversion fatal errors")
 	ErrButaneFatalErrors         = errors.New("butane translation has fatal errors")
@@ -49,8 +49,14 @@ type immutableManifest struct {
 
 // assets represents a Kubernetes version entry in immutable.yaml.
 type assets struct {
-	Sysext  []sysextPackage `yaml:"sysext"` // Array of sysext packages.
-	Flatcar flatcarRelease  `yaml:"flatcar"`
+	ImageRegistry         string          `yaml:"imageRegistry"`         // Registry for cluster images (kubeadm).
+	SandboxTag            string          `yaml:"sandboxTag"`            // Pause image tag; no registry.
+	CorednsImagePrefix    string          `yaml:"corednsImagePrefix"`    // Coredns image path prefix.
+	HaproxyImage          string          `yaml:"haproxyImage"`          // Haproxy LB container image.
+	HaproxyTag            string          `yaml:"haproxyTag"`            // Haproxy LB container tag.
+	KubeletCsrApproverTag string          `yaml:"kubeletCsrApproverTag"` // The kubelet-csr-approver image tag.
+	Sysext                []sysextPackage `yaml:"sysext"`                // Array of sysext packages.
+	Flatcar               flatcarRelease  `yaml:"flatcar"`
 }
 
 // sysextPackage represents a systemd-sysext package configuration.
@@ -223,43 +229,48 @@ func (i *Infrastructure) getSSHPublicKeyContent() (string, error) {
 	return sshPublicKeyContent, nil
 }
 
-// parseImmutableInstallerSpec parses the immutable.yaml manifest file.
-// This manifest contains all versioning information for the Immutable installer.
-func (*Infrastructure) parseImmutableInstallerSpec(path string) (*immutableManifest, error) {
-	data, err := os.ReadFile(path)
-	if err != nil {
-		return nil, fmt.Errorf("error reading immutable manifest at %s: %w", path, err)
+// buildVersionVars turns the selected immutable.yaml block into the data the version vars template
+// consumes. Both the kubernetes and infrastructure phases inject this under "versions" into the
+// generic template walk, so each phase renders the version vars inline in its hosts.yaml.
+// Selection/validation stays in Go (selectImmutableAssets).
+func buildVersionVars(version, kubectlBin string, a assets) map[string]any {
+	// Carry the explicit per-arch .raw URL from immutable.yaml (not just the version) so the sysext role
+	// downloads exactly what the manifest pins, instead of reconstructing the URL from a release-base
+	// convention — the same URL the butane/Ignition install path already uses (kills the two-dialects smell).
+	sysextTargets := make(map[string]any, len(a.Sysext))
+
+	for _, pkg := range a.Sysext {
+		arch := make(map[string]any, len(pkg.Arch))
+		for name, info := range pkg.Arch {
+			arch[name] = map[string]string{"url": info.URL}
+		}
+
+		sysextTargets[pkg.Name] = map[string]any{
+			"version": pkg.Version,
+			"arch":    arch,
+		}
 	}
 
-	var manifest immutableManifest
-	if err := yaml.Unmarshal(data, &manifest); err != nil {
-		return nil, fmt.Errorf("error parsing immutable manifest: %w", err)
+	vars := map[string]any{
+		"kubernetes_version":        version,
+		"containerd_sandbox_tag":    a.SandboxTag,
+		"coredns_image_prefix":      a.CorednsImagePrefix,
+		"kubernetes_image_registry": a.ImageRegistry,
+		"haproxy_container_image":   a.HaproxyImage,
+		"haproxy_container_tag":     a.HaproxyTag,
+		"kubelet_csr_approver_tag":  a.KubeletCsrApproverTag,
+		"sysext_targets":            sysextTargets,
+		"os_update_target_version":  a.Flatcar.Version,
 	}
 
-	// Validate that at least one Kubernetes version is defined.
-	if len(manifest.Kubernetes) == 0 {
-		return nil, ErrNoKubernetesVersions
+	// The node-maintenance role drains/uncordons via kubectl on the controller under sudo, whose secure_path
+	// drops a bare "kubectl" from a tool manager like mise; give it the absolute path to the
+	// furyctl-vendored kubectl so the drain resolves regardless of the operator's PATH.
+	if kubectlBin != "" {
+		vars["kubectl_bin"] = kubectlBin
 	}
 
-	return &manifest, nil
-}
-
-func (i *Infrastructure) getImmutableAssets() (assets, error) {
-	kubeVersion := i.kfdManifest.Kubernetes.Immutable.Version
-
-	immutableSpecPath := filepath.Join(i.Path, "..", "vendor", "installers", "immutable", "immutable.yaml")
-
-	immutableInstallerSpec, err := i.parseImmutableInstallerSpec(immutableSpecPath)
-	if err != nil {
-		return assets{}, fmt.Errorf("error loading immutable installer specs for templates: %w", err)
-	}
-
-	immutableAssets, ok := immutableInstallerSpec.Kubernetes[kubeVersion]
-	if !ok {
-		return assets{}, fmt.Errorf("%w: %s", ErrKubernetesVersionNotFound, kubeVersion)
-	}
-
-	return immutableAssets, nil
+	return vars
 }
 
 // Render templates for the root of the server.
@@ -293,7 +304,7 @@ func (i *Infrastructure) renderRootTemplates() error {
 // Generate Butane files from distribution's templates and then convert them to ignition files.
 func (i *Infrastructure) renderButaneTemplates() error {
 	// 1. Load the full immutable manifest to pass all sysext info to templates.
-	immutableAssets, err := i.getImmutableAssets()
+	immutableAssets, err := selectImmutableAssets(i.Path, i.kfdManifest.Kubernetes.Immutable.Version)
 	if err != nil {
 		return fmt.Errorf("error getting immutable assets: %w", err)
 	}
@@ -658,7 +669,7 @@ func (i *Infrastructure) extractUsedArchitectures() []string {
 func (i *Infrastructure) downloadAssets(usedArchitectures []string) error {
 	logrus.Info("Downloading Flatcar boot artifacts and sysext packages...")
 
-	assets, err := i.getImmutableAssets()
+	assets, err := selectImmutableAssets(i.Path, i.kfdManifest.Kubernetes.Immutable.Version)
 	if err != nil {
 		return fmt.Errorf("error getting immutable assets: %w", err)
 	}
@@ -714,7 +725,7 @@ func (i *Infrastructure) generateNodeBootFile(node public.SpecInfrastructureNode
 		return fmt.Errorf("error parsing boot template %s: %w", bootTemplatePath, err)
 	}
 
-	assets, err := i.getImmutableAssets()
+	assets, err := selectImmutableAssets(i.Path, i.kfdManifest.Kubernetes.Immutable.Version)
 	if err != nil {
 		return fmt.Errorf("error getting immutable assets: %w", err)
 	}
