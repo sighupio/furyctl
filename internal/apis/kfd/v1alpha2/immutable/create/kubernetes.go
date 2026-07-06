@@ -112,8 +112,8 @@ func (k *Kubernetes) prepare() error {
 	)
 	mCfg.Data["options"]["podRunningTimeout"] = k.podRunningTimeout / FromSecondsToHalfMinuteRetries
 
-	// Inject the immutable.yaml version data under "versions" so the generic walk renders
-	// group_vars/all.yml.tpl alongside the playbooks (selection/validation stays in Go).
+	// Inject the immutable.yaml version data under "versions" so the generic walk renders the
+	// version vars inline in hosts.yaml alongside the playbooks (selection/validation stays in Go).
 	immutableAssets, err := selectImmutableAssets(k.Path, k.kfdManifest.Kubernetes.Immutable.Version)
 	if err != nil {
 		return fmt.Errorf("error selecting immutable assets: %w", err)
