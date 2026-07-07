@@ -68,7 +68,7 @@ $ furyctl version
 ...
 goVersion: go1.24
 osArch: arm64
-version: 0.35
+version: 0.35.0
 ```
 
 ### Installing with [asdf](https://github.com/asdf-vm/asdf)
