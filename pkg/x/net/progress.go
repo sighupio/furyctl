@@ -18,25 +18,29 @@ import (
 )
 
 const (
-	progressTTYInterval = 500 * time.Millisecond // repaint cadence on a terminal.
-	progressLogInterval = 5 * time.Second        // log cadence when not on a terminal.
-	// progressMinTrackedSize is the size below which a download isn't worth reporting.
+	progressTTYInterval = 500 * time.Millisecond // Repaint cadence on a terminal.
+	progressLogInterval = 5 * time.Second        // Log cadence when not on a terminal.
+
+	// Downloads smaller than this aren't worth reporting progress for.
 	progressMinTrackedSize = 5 * 1000 * 1000
 
-	bytesUnit = 1000
+	bytesUnit    = 1000
+	percentScale = 100
 )
 
 // downloadProgressTracker implements getter.ProgressTracker so large downloads (Flatcar boot images
 // are hundreds of MB) aren't mistaken for a hung process.
 type downloadProgressTracker struct {
 	out io.Writer
-	// tty draws an in-place animated line; otherwise progress is logged so CI/--no-tty stay readable.
+	// Draw an in-place animated line; otherwise log so CI/--no-tty stay readable.
 	tty bool
-	// fallbackTotal is the size from a HEAD probe, used when the GET response has no Content-Length.
+	// Size from a HEAD probe, used when the GET response has no Content-Length.
 	fallbackTotal int64
 }
 
 // newProgressTracker is a package var so tests can inject a tracker writing to a buffer.
+//
+//nolint:gochecknoglobals // Test seam for a buffer-backed tracker.
 var newProgressTracker = func() *downloadProgressTracker {
 	f := os.Stderr
 
@@ -118,7 +122,7 @@ func (r *progressReader) Read(p []byte) (int, error) {
 func (r *progressReader) Close() error {
 	// Erase the in-place line now the download is done; the caller logs its own completion message.
 	if r.started && r.tracker.tty {
-		fmt.Fprint(r.tracker.out, "\r\033[2K")
+		_, _ = fmt.Fprint(r.tracker.out, "\r\033[2K")
 	}
 
 	//nolint:wrapcheck // Pass the stream error through unchanged; go-getter handles it.
@@ -127,8 +131,9 @@ func (r *progressReader) Close() error {
 
 func (r *progressReader) render() {
 	status := humanizeBytes(r.read)
+
 	if r.total > 0 {
-		pct := float64(r.read) / float64(r.total) * 100 //nolint:mnd // percentage.
+		pct := float64(r.read) / float64(r.total) * percentScale
 		status = fmt.Sprintf("%3.0f%% (%s / %s)", pct, status, humanizeBytes(r.total))
 	}
 
@@ -138,8 +143,8 @@ func (r *progressReader) render() {
 		return
 	}
 
-	// \r + \033[2K rewrites the line in place.
-	fmt.Fprintf(r.tracker.out, "\r\033[2K  Downloading %s: %s", r.name, status)
+	// Rewrite the line in place: \r returns to column 0, then \033[2K clears it.
+	_, _ = fmt.Fprintf(r.tracker.out, "\r\033[2K  Downloading %s: %s", r.name, status)
 }
 
 // humanizeBytes formats a byte count using metric (base-1000) units.

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-package netx
+package netx //nolint:testpackage // Exercises unexported progress internals (tracker seam, humanizeBytes, probe).
 
 import (
 	"bytes"
@@ -38,8 +38,8 @@ func TestHumanizeBytes(t *testing.T) {
 }
 
 const (
-	largePayloadSize = 8_000_000 // above progressMinTrackedSize
-	smallPayloadSize = 1_000_000 // below progressMinTrackedSize
+	largePayloadSize = 8_000_000 // Above progressMinTrackedSize.
+	smallPayloadSize = 1_000_000 // Below progressMinTrackedSize.
 )
 
 // writeChunked streams the body without a Content-Length, so the GET reports an unknown total.
@@ -86,8 +86,10 @@ func captureDownload(t *testing.T, url string) string {
 	return buf.String()
 }
 
+//nolint:paralleltest // Mutates the global newProgressTracker seam.
 func TestDownloadProgressKnownContentLength(t *testing.T) {
 	payload := bytes.Repeat([]byte("A"), largePayloadSize)
+
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Length", strconv.Itoa(len(payload)))
 		w.WriteHeader(http.StatusOK)
@@ -107,8 +109,10 @@ func TestDownloadProgressKnownContentLength(t *testing.T) {
 	}
 }
 
+//nolint:paralleltest // Mutates the global newProgressTracker seam.
 func TestDownloadProgressHeadFallbackWhenGetHasNoContentLength(t *testing.T) {
 	payload := bytes.Repeat([]byte("A"), largePayloadSize)
+
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// HEAD advertises the size; GET streams it with no Content-Length (the Flatcar CDN case).
 		if r.Method == http.MethodHead {
@@ -129,8 +133,10 @@ func TestDownloadProgressHeadFallbackWhenGetHasNoContentLength(t *testing.T) {
 	}
 }
 
+//nolint:paralleltest // Mutates the global newProgressTracker seam.
 func TestDownloadProgressUnknownTotalShowsBytesOnly(t *testing.T) {
 	payload := bytes.Repeat([]byte("A"), largePayloadSize)
+
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		// Neither HEAD nor GET expose a size, so we can only report bytes downloaded.
 		writeChunked(w, payload)
@@ -148,8 +154,10 @@ func TestDownloadProgressUnknownTotalShowsBytesOnly(t *testing.T) {
 	}
 }
 
+//nolint:paralleltest // Mutates the global newProgressTracker seam.
 func TestDownloadProgressSkipsSmallFiles(t *testing.T) {
 	payload := bytes.Repeat([]byte("A"), smallPayloadSize)
+
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Length", strconv.Itoa(len(payload)))
 		w.WriteHeader(http.StatusOK)
@@ -163,6 +171,8 @@ func TestDownloadProgressSkipsSmallFiles(t *testing.T) {
 }
 
 func TestProbeContentLength(t *testing.T) {
+	t.Parallel()
+
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Length", "12345")
 		w.WriteHeader(http.StatusOK)
