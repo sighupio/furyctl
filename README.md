@@ -86,7 +86,7 @@ $ furyctl version
 ...
 goVersion: go1.24
 osArch: amd64
-version: 0.35
+version: 0.35.0
 ```
 
 ## Development
