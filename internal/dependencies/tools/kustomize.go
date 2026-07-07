@@ -7,23 +7,13 @@ package tools
 import (
 	"fmt"
 	"regexp"
-	"runtime"
 	"strings"
 
-	"github.com/sighupio/furyctl/internal/semver"
 	"github.com/sighupio/furyctl/internal/tool/kustomize"
 )
 
 func NewKustomize(runner *kustomize.Runner, version string) *Kustomize {
-	arch := runtime.GOARCH
-	// Older versions of kustomize did not provide ARM64 binaries.
-	if version == "3.5.3" || version == "3.10.0" {
-		arch = "amd64"
-	}
-
 	return &Kustomize{
-		arch:    arch,
-		os:      runtime.GOOS,
 		version: version,
 		checker: &checker{
 			regex:  regexp.MustCompile(`v(\S+)`),
@@ -39,28 +29,8 @@ func NewKustomize(runner *kustomize.Runner, version string) *Kustomize {
 }
 
 type Kustomize struct {
-	arch    string
 	checker *checker
-	os      string
 	version string
-}
-
-func (*Kustomize) SupportsDownload() bool {
-	return true
-}
-
-func (k *Kustomize) SrcPath() string {
-	return fmt.Sprintf(
-		"https://github.com/kubernetes-sigs/kustomize/releases/download/kustomize/%s/kustomize_%s_%s_%s.tar.gz",
-		semver.EnsurePrefix(k.version),
-		semver.EnsurePrefix(k.version),
-		k.os,
-		k.arch,
-	)
-}
-
-func (*Kustomize) Rename(_ string) error {
-	return nil
 }
 
 func (k *Kustomize) CheckBinVersion() error {

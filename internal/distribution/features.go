@@ -7,7 +7,7 @@ package distribution
 import (
 	"errors"
 
-	"github.com/sighupio/fury-distribution/pkg/apis/config"
+	"github.com/sighupio/furyctl/internal/apis/config"
 	"github.com/sighupio/furyctl/internal/semver"
 )
 
@@ -191,5 +191,5 @@ func hasFeatureKappSupport(kfd config.KFD) bool {
 
 func hasFeatureOpenTofuSupport(kfd config.KFD) bool {
 	// If empty(previous kfd.yaml), do not mark it as supported.
-	return kfd.Tools.Common.OpenTofu.Version != ""
+	return EffectiveOpenTofuVersion(kfd.Tools) != ""
 }

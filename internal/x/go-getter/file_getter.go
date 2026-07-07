@@ -271,8 +271,25 @@ func copyDir(ctx context.Context, dst, src string, ignoreDot, disableSymlinks bo
 			}
 		}
 
+		// Skip dangling symlinks: a broken symlink (e.g. furyctl's own
+		// `.furyctl/bin` tool shims pointing into a cache that is not present
+		// when the directory is copied) must not abort copying the whole tree.
+		if info.Mode()&os.ModeSymlink == os.ModeSymlink {
+			if _, statErr := os.Stat(path); statErr != nil {
+				return nil
+			}
+		}
+
 		if path == src {
 			return nil
+		}
+
+		// Never copy furyctl's own working directory: when a local
+		// distro-location is used, `.furyctl` holds tool shims/symlinks created
+		// by the bundled mise (pointing into a tool cache) that are not part of
+		// the distribution and can break the copy. Skip the whole subtree.
+		if info.IsDir() && filepath.Base(path) == ".furyctl" {
+			return filepath.SkipDir
 		}
 
 		if ignoreDot && strings.HasPrefix(filepath.Base(path), ".") {

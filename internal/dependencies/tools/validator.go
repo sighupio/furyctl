@@ -10,8 +10,8 @@ import (
 	"reflect"
 	"strings"
 
-	"github.com/sighupio/fury-distribution/pkg/apis/config"
 	"github.com/sighupio/furyctl/internal/apis"
+	"github.com/sighupio/furyctl/internal/apis/config"
 	"github.com/sighupio/furyctl/internal/distribution"
 	itool "github.com/sighupio/furyctl/internal/tool"
 	execx "github.com/sighupio/furyctl/internal/x/exec"
@@ -28,6 +28,7 @@ func NewValidator(executor execx.Executor, binPath, furyctlPath string, autoConn
 		toolFactory: NewFactory(executor, FactoryPaths{
 			Bin: binPath,
 		}),
+		binPath:     binPath,
 		furyctlPath: furyctlPath,
 		autoConnect: autoConnect,
 	}
@@ -36,6 +37,7 @@ func NewValidator(executor execx.Executor, binPath, furyctlPath string, autoConn
 type Validator struct {
 	executor    execx.Executor
 	toolFactory *Factory
+	binPath     string
 	furyctlPath string
 	autoConnect bool
 }
@@ -88,7 +90,14 @@ func (tv *Validator) Validate(kfdManifest config.KFD, miniConf config.Furyctl) (
 		errs = append(errs, cErrs...)
 	}
 
-	etv := apis.NewExtraToolsValidatorFactory(tv.executor, miniConf.APIVersion, miniConf.Kind, tv.autoConnect)
+	etv := apis.NewExtraToolsValidatorFactory(
+		tv.executor,
+		miniConf.APIVersion,
+		miniConf.Kind,
+		tv.autoConnect,
+		kfdManifest,
+		tv.binPath,
+	)
 
 	if etv == nil {
 		return oks, errs
@@ -115,6 +124,12 @@ func (tv *Validator) validateTools(i any, kfdManifest config.KFD) ([]string, []e
 			continue
 		}
 
+		// Skip tools without a pinned version: with the back-compatible union model a tool is
+		// pinned in only one section, so the other section's field is empty.
+		if toolCfg.Version == "" {
+			continue
+		}
+
 		toolName := strings.ToLower(toolCfgs.Type().Field(i).Name)
 
 		if (toolName == "helm" || toolName == "helmfile") &&
@@ -127,14 +142,6 @@ func (tv *Validator) validateTools(i any, kfdManifest config.KFD) ([]string, []e
 		}
 
 		if (toolName == "kapp") && !distribution.HasFeature(kfdManifest, distribution.FeatureKappSupport) {
-			continue
-		}
-
-		if (toolName == "terraform") && distribution.HasFeature(kfdManifest, distribution.FeatureOpenTofuSupport) {
-			continue
-		}
-
-		if (toolName == "opentofu") && !distribution.HasFeature(kfdManifest, distribution.FeatureOpenTofuSupport) {
 			continue
 		}
 

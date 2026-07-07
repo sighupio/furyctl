@@ -11,7 +11,9 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+	"sync"
 
+	"github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v2"
 
 	iox "github.com/sighupio/furyctl/internal/x/io"
@@ -19,11 +21,24 @@ import (
 	yamlx "github.com/sighupio/furyctl/pkg/x/yaml"
 )
 
+// distributionManifestsDir is the subdirectory of the distribution render target
+// where the main kustomization.yaml is written. Entries of
+// spec.distribution.customPatches.resources are resolved relative to it.
+const distributionManifestsDir = "manifests"
+
 var (
 	ErrTargetIsNotEmpty = errors.New("target directory is not empty")
 	errSourceMustbeSet  = errors.New("source must be set")
 	errTargetMustbeSet  = errors.New("target must be set")
 	errTemplateNotFound = errors.New("no template found")
+
+	// Tracks custom resource paths that have already triggered an "outside the
+	// configuration directory" warning. Templates are rendered several times during
+	// a single furyctl run (preflight, preupgrade, the distribution phase, ...), so
+	// this keeps the warning to once per path per run.
+	//
+	//nolint:gochecknoglobals // process-wide dedupe set for a user-facing warning.
+	warnedResourcesOutsideConfDir sync.Map
 )
 
 type Model struct {
@@ -128,6 +143,8 @@ func (tm *Model) Generate() error {
 	if err != nil {
 		return fmt.Errorf("error mapping dynamic values: %w", err)
 	}
+
+	tm.relativizeCustomResources(context)
 
 	tm.Context = context
 
@@ -249,4 +266,89 @@ func (tm *Model) generateContext() (map[string]map[any]any, error) {
 	}
 
 	return context, nil
+}
+
+// relativizeCustomResources rewrites spec.distribution.customResources so that
+// local filesystem paths are expressed relative to the rendered manifests
+// directory, which is what kustomize expects.
+//
+// By the time this runs, the mapper has already turned user-supplied relative paths
+// (e.g. "./foo") into absolute paths anchored at the furyctl config directory.
+// Kustomize, however, rejects absolute paths in its resources list and resolves
+// relative ones against the kustomization.yaml that declares them. We therefore
+// convert each local path into one relative to <TargetPath>/manifests, leaving the
+// referenced files in place so kustomize bases can still compose with their own
+// relative references (the distribution apply script builds with
+// --load-restrictor LoadRestrictionsNone).
+//
+// Remote resources (git/URL references) and entries that don't point to an existing
+// local file or directory are left untouched so kustomize can fetch or resolve them
+// itself. Emitting a path relative to the config directory (rather than an absolute
+// one) keeps the rendered output deterministic across machines, matching the
+// behaviour of relativeVendorPath.
+func (tm *Model) relativizeCustomResources(context map[string]map[any]any) {
+	resources, ok := customResources(context)
+	if !ok {
+		return
+	}
+
+	manifestsDir := filepath.Join(tm.TargetPath, distributionManifestsDir)
+	furyctlConfDir := filepath.Dir(tm.FuryctlConfPath)
+
+	for i, raw := range resources {
+		entry, ok := raw.(string)
+		if !ok || entry == "" {
+			continue
+		}
+
+		abs := entry
+		if !filepath.IsAbs(abs) {
+			abs = filepath.Join(furyctlConfDir, abs)
+		}
+
+		if _, err := os.Stat(abs); err != nil {
+			// Remote resource (git/URL) or non-existent path: leave it untouched
+			// so kustomize can fetch or resolve it.
+			continue
+		}
+
+		if rel, err := filepath.Rel(furyctlConfDir, abs); err == nil && strings.HasPrefix(rel, "..") {
+			if _, warned := warnedResourcesOutsideConfDir.LoadOrStore(abs, struct{}{}); !warned {
+				logrus.Warnf(
+					"custom resource %q resolves outside the furyctl configuration directory; "+
+						"the rendered path may differ between machines. Consider keeping custom "+
+						"resources inside the project directory.",
+					entry,
+				)
+			}
+		}
+
+		rel, err := filepath.Rel(manifestsDir, abs)
+		if err != nil {
+			continue
+		}
+
+		resources[i] = rel
+	}
+}
+
+// customResources safely navigates to spec.distribution.customResources in the
+// template context and returns the underlying slice (mutable in place) when present.
+func customResources(context map[string]map[any]any) ([]any, bool) {
+	spec, ok := context["spec"]
+	if !ok {
+		return nil, false
+	}
+
+	distribution, ok := spec["distribution"].(map[any]any)
+	if !ok {
+		return nil, false
+	}
+
+	resources, ok := distribution["customResources"].([]any)
+	if !ok {
+		return nil, false
+	}
+
+	return resources, true
 }

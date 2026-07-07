@@ -16,7 +16,8 @@ import (
 	r3diff "github.com/r3labs/diff/v3"
 	"github.com/sirupsen/logrus"
 
-	"github.com/sighupio/fury-distribution/pkg/apis/config"
+	"github.com/sighupio/furyctl/internal/apis/config"
+	"github.com/sighupio/furyctl/internal/distribution"
 	iox "github.com/sighupio/furyctl/internal/x/io"
 	slicesx "github.com/sighupio/furyctl/internal/x/slices"
 	"github.com/sighupio/furyctl/pkg/merge"
@@ -178,7 +179,12 @@ type OperationPhase struct {
 	TerraformOutputsPath string
 	TerraformSecretsPath string
 	FuryagentPath        string
-	binPath              string
+	// Ansible paths are set only when the distribution pins ansible (mise-managed). When empty, furyctl
+	// falls back to the host ansible (backward compatible).
+	AnsiblePlaybookPath    string
+	AnsiblePythonPath      string
+	AnsibleCollectionsPath string
+	binPath                string
 }
 
 type OperationPhaseOption struct {
@@ -191,16 +197,19 @@ func NewOperationPhase(folder string, kfdTools config.KFDTools, binPath string) 
 
 	kustomizePath := path.Join(binPath, "kustomize", kfdTools.Common.Kustomize.Version, "kustomize")
 	kubectlPath := path.Join(binPath, "kubectl", kfdTools.Common.Kubectl.Version, "kubectl")
-	furyagentPath := path.Join(binPath, "furyagent", kfdTools.Common.Furyagent.Version, "furyagent")
+	furyagentPath := path.Join(binPath, "furyagent", distribution.EffectiveFuryagentVersion(kfdTools), "furyagent")
 	yqPath := path.Join(binPath, "yq", kfdTools.Common.Yq.Version, "yq")
 	helmPath := path.Join(binPath, "helm", kfdTools.Common.Helm.Version, "helm")
 	helmfilePath := path.Join(binPath, "helmfile", kfdTools.Common.Helmfile.Version, "helmfile")
 	kappPath := path.Join(binPath, "kapp", kfdTools.Common.Kapp.Version, "kapp")
 
+	// Resolve the IaC binary with provider-overrides-common semantics: OpenTofu (tools.eks on new
+	// distros, tools.common on older ones) when pinned, otherwise the deprecated terraform tool for
+	// distributions that predate OpenTofu.
 	var terraformPath string
 
-	if kfdTools.Common.OpenTofu.Version != "" {
-		terraformPath = path.Join(binPath, "opentofu", kfdTools.Common.OpenTofu.Version, "tofu")
+	if openTofuVersion := distribution.EffectiveOpenTofuVersion(kfdTools); openTofuVersion != "" {
+		terraformPath = path.Join(binPath, "opentofu", openTofuVersion, "tofu")
 	} else {
 		terraformPath = path.Join(binPath, "terraform", kfdTools.Common.Terraform.Version, "terraform")
 	}
@@ -210,21 +219,38 @@ func NewOperationPhase(folder string, kfdTools config.KFDTools, binPath string) 
 	outputsPath := path.Join(basePath, "terraform", "outputs")
 	secretsPath := path.Join(basePath, "terraform", "secrets")
 
+	// Ansible is mise-managed only when the distribution pins it; otherwise the paths stay empty and
+	// furyctl uses the host ansible.
+	var ansiblePlaybookPath, ansiblePythonPath, ansibleCollectionsPath string
+
+	// These paths feed the onpremises upgrade scripts (`paths.ansiblePlaybook`), the only template
+	// consumer; ansible is pinned under tools.onpremises.
+	if av := kfdTools.OnPremises.Ansible.Version; av != "" {
+		ansibleBase := path.Join(binPath, "ansible", av)
+		ansibleVenvBin := path.Join(ansibleBase, "venv", "bin")
+		ansiblePlaybookPath = path.Join(ansibleVenvBin, "ansible-playbook")
+		ansiblePythonPath = path.Join(ansibleVenvBin, "python")
+		ansibleCollectionsPath = path.Join(ansibleBase, "collections")
+	}
+
 	return &OperationPhase{
-		Path:                 basePath,
-		TerraformPath:        terraformPath,
-		KustomizePath:        kustomizePath,
-		KubectlPath:          kubectlPath,
-		TerraformPlanPath:    planPath,
-		TerraformLogsPath:    logsPath,
-		TerraformOutputsPath: outputsPath,
-		TerraformSecretsPath: secretsPath,
-		binPath:              binPath,
-		YqPath:               yqPath,
-		HelmPath:             helmPath,
-		HelmfilePath:         helmfilePath,
-		KappPath:             kappPath,
-		FuryagentPath:        furyagentPath,
+		Path:                   basePath,
+		TerraformPath:          terraformPath,
+		KustomizePath:          kustomizePath,
+		KubectlPath:            kubectlPath,
+		TerraformPlanPath:      planPath,
+		TerraformLogsPath:      logsPath,
+		TerraformOutputsPath:   outputsPath,
+		TerraformSecretsPath:   secretsPath,
+		binPath:                binPath,
+		YqPath:                 yqPath,
+		HelmPath:               helmPath,
+		HelmfilePath:           helmfilePath,
+		KappPath:               kappPath,
+		FuryagentPath:          furyagentPath,
+		AnsiblePlaybookPath:    ansiblePlaybookPath,
+		AnsiblePythonPath:      ansiblePythonPath,
+		AnsibleCollectionsPath: ansibleCollectionsPath,
 	}
 }
 
@@ -318,15 +344,31 @@ func (*OperationPhase) CopyFromTemplate(
 
 func (op *OperationPhase) CopyPathsToConfig(cfg *template.Config) {
 	cfg.Data["paths"] = map[any]any{
-		"helm":       op.HelmPath,
-		"helmfile":   op.HelmfilePath,
-		"kubectl":    op.KubectlPath,
-		"kustomize":  op.KustomizePath,
-		"terraform":  op.TerraformPath,
-		"vendorPath": path.Join(op.Path, "..", "vendor"),
-		"yq":         op.YqPath,
-		"kapp":       op.KappPath,
+		"helm":            op.HelmPath,
+		"helmfile":        op.HelmfilePath,
+		"kubectl":         op.KubectlPath,
+		"kustomize":       op.KustomizePath,
+		"terraform":       op.TerraformPath,
+		"vendorPath":      path.Join(op.Path, "..", "vendor"),
+		"yq":              op.YqPath,
+		"kapp":            op.KappPath,
+		"ansiblePlaybook": op.AnsiblePlaybookCmd(),
 	}
+}
+
+// AnsiblePlaybookCmd returns the command templated scripts (upgrade paths) must use to run
+// ansible-playbook. When ansible is host (not pinned) it is the bare `ansible-playbook`, preserving
+// existing behaviour; when mise-managed it is the venv python + entrypoint with the collections path, so
+// scripts keep working without ansible on the host PATH.
+func (op *OperationPhase) AnsiblePlaybookCmd() string {
+	if op.AnsiblePythonPath == "" {
+		return "ansible-playbook"
+	}
+
+	return fmt.Sprintf(
+		"ANSIBLE_COLLECTIONS_PATH=%q %q %q",
+		op.AnsibleCollectionsPath, op.AnsiblePythonPath, op.AnsiblePlaybookPath,
+	)
 }
 
 func (op *OperationPhase) Self() *OperationPhase {

@@ -5,7 +5,7 @@
    <p>The Swiss Army Knife<br/>for the SIGHUP Distribution</p>
 
    [![Build Status](https://ci.sighup.io/api/badges/sighupio/furyctl/status.svg?ref=refs/heads/main)](https://ci.sighup.io/sighupio/furyctl)
-   ![Release](https://img.shields.io/badge/furyctl-v0.34.1-blue)
+   ![Release](https://img.shields.io/badge/furyctl-v0.35.0-blue)
    ![Slack](https://img.shields.io/badge/slack-@kubernetes/fury-yellow.svg?logo=slack)
    ![License](https://img.shields.io/github/license/sighupio/furyctl)
    [![Go Report Card](https://goreportcard.com/badge/github.com/sighupio/furyctl)](https://goreportcard.com/report/github.com/sighupio/furyctl)
@@ -58,7 +58,7 @@ Alternatively, you can install `furyctl` using `mise` or the `asdf` plugin.
 ### Installing with [mise](https://mise.jdx.dev/)
 
 ```bash
-mise use furyctl@0.34.1
+mise use furyctl@0.35.0
 ```
 
 Check that everything is working correctly with `furyctl version`:
@@ -68,7 +68,7 @@ $ furyctl version
 ...
 goVersion: go1.24
 osArch: arm64
-version: 0.34.1
+version: 0.35.0
 ```
 
 ### Installing with [asdf](https://github.com/asdf-vm/asdf)
@@ -86,7 +86,7 @@ $ furyctl version
 ...
 goVersion: go1.24
 osArch: amd64
-version: 0.34.1
+version: 0.35.0
 ```
 
 ## Development
@@ -106,7 +106,7 @@ In case you experience any problems with `furyctl` itslef, please [open a new is
 
 ## License
 
-This software is open-source and it's released under the following [LICENSE](LICENSE).
+This software is open-source, and it's released under the following [LICENSE](LICENSE).
 
 <!-- </FOOTER> -->
 

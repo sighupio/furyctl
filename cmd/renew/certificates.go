@@ -14,6 +14,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
+	"github.com/sighupio/furyctl/internal/airgap"
 	"github.com/sighupio/furyctl/internal/analytics"
 	"github.com/sighupio/furyctl/internal/app"
 	"github.com/sighupio/furyctl/internal/cluster"
@@ -54,6 +55,14 @@ func NewCertificatesCmd() *cobra.Command {
 
 			tracker := ctn.Tracker()
 			tracker.Flush()
+
+			// Air-gapped: extract --airgap-bundle (if set) and rewire to run offline before reading flags.
+			if err := airgap.MaybePrepare(); err != nil {
+				cmdEvent.AddErrorMessage(err)
+				tracker.Track(cmdEvent)
+
+				return fmt.Errorf("error preparing air-gapped bundle: %w", err)
+			}
 
 			// Get flags.
 			debug := viper.GetBool("debug")
@@ -148,7 +157,7 @@ func NewCertificatesCmd() *cobra.Command {
 			// Download the dependencies.
 			if !skipDepsDownload {
 				logrus.Info("Downloading dependencies...")
-				if _, err := depsdl.DownloadTools(res.DistroManifest); err != nil {
+				if _, err := depsdl.DownloadTools(res.DistroManifest, res.MinimalConf.Kind); err != nil {
 					cmdEvent.AddErrorMessage(ErrDownloadDependenciesFailed)
 					tracker.Track(cmdEvent)
 
@@ -171,7 +180,7 @@ func NewCertificatesCmd() *cobra.Command {
 				logrus.Info("Dependencies validation skipped")
 			}
 
-			renewer, err := cluster.NewCertificatesRenewer(res.MinimalConf, res.DistroManifest, res.RepoPath, furyctlPath)
+			renewer, err := cluster.NewCertificatesRenewer(res.MinimalConf, res.DistroManifest, res.RepoPath, furyctlPath, binPath)
 			if err != nil {
 				cmdEvent.AddErrorMessage(err)
 				tracker.Track(cmdEvent)
@@ -224,6 +233,8 @@ func NewCertificatesCmd() *cobra.Command {
 		false,
 		"Skip downloading the distribution modules, installers and binaries",
 	)
+
+	airgap.RegisterFlags(certificatesCmd)
 
 	certificatesCmd.Flags().Bool(
 		"skip-deps-validation",

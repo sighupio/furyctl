@@ -13,10 +13,10 @@ import (
 
 	"github.com/sirupsen/logrus"
 
-	"github.com/sighupio/fury-distribution/pkg/apis/config"
-	"github.com/sighupio/fury-distribution/pkg/apis/immutable/v1alpha2/public"
+	"github.com/sighupio/furyctl/internal/apis/config"
 	commcreate "github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/common/create"
 	"github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/immutable/create"
+	"github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/immutable/public"
 	"github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/immutable/supported"
 	"github.com/sighupio/furyctl/internal/cluster"
 	"github.com/sighupio/furyctl/internal/distribution"
@@ -172,6 +172,7 @@ func createInfrastructurePhase(c *ClusterCreator, upgr *upgrade.Upgrade) *create
 		c.paths.ConfigPath,
 		c.paths.DistroPath,
 		upgr,
+		c.upgradeNode,
 		c.furyctlConf,
 		c.kfdManifest,
 		c.paths,
@@ -617,6 +618,7 @@ func (c *ClusterCreator) extraPhases(
 func (*ClusterCreator) initUpgradeState() *upgrade.State {
 	return &upgrade.State{
 		Phases: upgrade.Phases{
+			Infrastructure:   &upgrade.Phase{Status: upgrade.PhaseStatusPending},
 			PreKubernetes:    &upgrade.Phase{Status: upgrade.PhaseStatusPending},
 			Kubernetes:       &upgrade.Phase{Status: upgrade.PhaseStatusPending},
 			PostKubernetes:   &upgrade.Phase{Status: upgrade.PhaseStatusPending},

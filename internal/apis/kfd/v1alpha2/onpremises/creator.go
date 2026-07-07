@@ -12,14 +12,15 @@ import (
 
 	"github.com/sirupsen/logrus"
 
-	"github.com/sighupio/fury-distribution/pkg/apis/config"
-	"github.com/sighupio/fury-distribution/pkg/apis/onpremises/v1alpha2/public"
+	"github.com/sighupio/furyctl/internal/apis/config"
 	commcreate "github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/common/create"
 	"github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/onpremises/create"
+	"github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/onpremises/public"
 	"github.com/sighupio/furyctl/internal/cluster"
 	"github.com/sighupio/furyctl/internal/distribution"
 	"github.com/sighupio/furyctl/internal/state"
 	"github.com/sighupio/furyctl/internal/upgrade"
+	"github.com/sighupio/furyctl/pkg/diffs"
 	"github.com/sighupio/furyctl/pkg/reducers"
 	premrules "github.com/sighupio/furyctl/pkg/rulesextractor"
 	"github.com/sighupio/furyctl/pkg/template"
@@ -171,7 +172,7 @@ func (*ClusterCreator) GetPhasePath(phase string) (string, error) {
 func (c *ClusterCreator) Create(startFrom string, _, podRunningCheckTimeout int) error {
 	upgr := upgrade.New(c.paths, string(c.furyctlConf.Kind))
 
-	kubernetesPhase := upgrade.NewOperatorPhaseDecorator(
+	kubernetesPhase := upgrade.NewReducerOperatorPhaseDecorator[reducers.Reducers](
 		c.upgradeStateStore,
 		create.NewKubernetes(
 			c.furyctlConf,
@@ -241,11 +242,28 @@ func (c *ClusterCreator) Create(startFrom string, _, podRunningCheckTimeout int)
 		cluster.OperationPhaseDistribution,
 	)
 
+	// The kube-proxy.type field can be added to a config that never had it (the
+	// parent object is born), so the diff lands on the parent path. Expand it to
+	// per-leaf changes so reducers targeting the leaf (e.g. kubeProxy.type) match
+	// nil -> value transitions too.
+	kubeRdcs := reducers.Build(
+		diffs.ExpandMapChanges(status.Diffs),
+		r,
+		cluster.OperationPhaseKubernetes,
+	)
+
 	unsafeReducers := r.UnsafeReducerRulesByDiffs(
 		r.GetReducers(
 			cluster.OperationPhaseDistribution,
 		),
 		status.Diffs,
+	)
+
+	unsafeKubeReducers := r.UnsafeReducerRulesByDiffs(
+		r.GetReducers(
+			cluster.OperationPhaseKubernetes,
+		),
+		diffs.ExpandMapChanges(status.Diffs),
 	)
 
 	if len(rdcs) > 0 {
@@ -275,6 +293,17 @@ func (c *ClusterCreator) Create(startFrom string, _, podRunningCheckTimeout int)
 
 	switch c.phase {
 	case cluster.OperationPhaseKubernetes:
+		if len(kubeRdcs) > 0 && len(unsafeKubeReducers) > 0 {
+			confirm, err := cluster.AskConfirmation(cluster.IsForceEnabledForFeature(c.force, cluster.ForceFeatureMigrations))
+			if err != nil {
+				return fmt.Errorf("error while asking for confirmation: %w", err)
+			}
+
+			if !confirm {
+				return ErrAbortedByUser
+			}
+		}
+
 		upgradeState := upgrade.State{
 			Phases: upgrade.Phases{
 				PreKubernetes:  &upgrade.Phase{Status: upgrade.PhaseStatusPending},
@@ -283,7 +312,7 @@ func (c *ClusterCreator) Create(startFrom string, _, podRunningCheckTimeout int)
 			},
 		}
 
-		if err := kubernetesPhase.Exec(StartFromFlagNotSet, &upgradeState); err != nil {
+		if err := kubernetesPhase.Exec(kubeRdcs, StartFromFlagNotSet, &upgradeState); err != nil {
 			return fmt.Errorf("error while executing kubernetes phase: %w", err)
 		}
 
@@ -327,7 +356,9 @@ func (c *ClusterCreator) Create(startFrom string, _, podRunningCheckTimeout int)
 			distributionPhase,
 			pluginsPhase,
 			upgr,
+			kubeRdcs,
 			rdcs,
+			unsafeKubeReducers,
 			unsafeReducers,
 		); err != nil {
 			return fmt.Errorf("error while executing cluster creation: %w", err)
@@ -360,11 +391,13 @@ func (c *ClusterCreator) Create(startFrom string, _, podRunningCheckTimeout int)
 
 func (c *ClusterCreator) allPhases(
 	startFrom string,
-	kubernetesPhase upgrade.OperatorPhase,
+	kubernetesPhase upgrade.ReducersOperatorPhase[reducers.Reducers],
 	distributionPhase upgrade.ReducersOperatorPhase[reducers.Reducers],
 	pluginsPhase *commcreate.Plugins,
 	upgr *upgrade.Upgrade,
+	kubeRdcs reducers.Reducers,
 	rdcs reducers.Reducers,
+	unsafeKubeReducers []premrules.Rule,
 	unsafeReducers []premrules.Rule,
 ) error {
 	upgradeState := &upgrade.State{}
@@ -401,7 +434,18 @@ func (c *ClusterCreator) allPhases(
 		startFrom != cluster.OperationPhaseDistribution &&
 		startFrom != cluster.OperationSubPhasePostDistribution &&
 		startFrom != cluster.OperationPhasePlugins {
-		if err := kubernetesPhase.Exec(c.getKubernetesSubPhase(startFrom), upgradeState); err != nil {
+		if len(kubeRdcs) > 0 && len(unsafeKubeReducers) > 0 {
+			confirm, err := cluster.AskConfirmation(cluster.IsForceEnabledForFeature(c.force, cluster.ForceFeatureMigrations))
+			if err != nil {
+				return fmt.Errorf("error while asking for confirmation: %w", err)
+			}
+
+			if !confirm {
+				return ErrAbortedByUser
+			}
+		}
+
+		if err := kubernetesPhase.Exec(kubeRdcs, c.getKubernetesSubPhase(startFrom), upgradeState); err != nil {
 			return fmt.Errorf("error while executing kubernetes phase: %w", err)
 		}
 
@@ -451,7 +495,7 @@ func (c *ClusterCreator) allPhases(
 }
 
 func (c *ClusterCreator) extraPhases(
-	kubernetesPhase upgrade.OperatorPhase,
+	kubernetesPhase upgrade.ReducersOperatorPhase[reducers.Reducers],
 	distributionPhase upgrade.ReducersOperatorPhase[reducers.Reducers],
 	pluginsPhase *commcreate.Plugins,
 	upgr *upgrade.Upgrade,
@@ -468,7 +512,7 @@ func (c *ClusterCreator) extraPhases(
 		case cluster.OperationPhaseKubernetes:
 			kubernetesPhase.SetUpgrade(false)
 
-			if err := kubernetesPhase.Exec(StartFromFlagNotSet, upgradeState); err != nil {
+			if err := kubernetesPhase.Exec(nil, StartFromFlagNotSet, upgradeState); err != nil {
 				return fmt.Errorf("error while executing kubernetes phase: %w", err)
 			}
 

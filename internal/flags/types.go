@@ -146,6 +146,8 @@ func GetSupportedFlags() SupportedFlags {
 			"upgrade":             {Type: FlagTypeBool, DefaultValue: false, Description: "Enable upgrade mode"},
 			"upgradePathLocation": {Type: FlagTypeString, DefaultValue: "", Description: "Upgrade path location"},
 			"upgradeNode":         {Type: FlagTypeString, DefaultValue: "", Description: "Specific node to upgrade"},
+			"airgapBundle":        {Type: FlagTypeString, DefaultValue: "", Description: "Air-gapped bundle path"},
+			"forceExtract":        {Type: FlagTypeBool, DefaultValue: false, Description: "Force bundle re-extraction"},
 		},
 		Delete: map[string]FlagInfo{
 			"phase":               {Type: FlagTypeString, DefaultValue: "", Description: "Limit execution to specific phase"},
@@ -156,6 +158,8 @@ func GetSupportedFlags() SupportedFlags {
 			"dryRun":              {Type: FlagTypeBool, DefaultValue: false, Description: "Dry run mode"},
 			"skipVpnConfirmation": {Type: FlagTypeBool, DefaultValue: false, Description: "Skip VPN confirmation"},
 			"autoApprove":         {Type: FlagTypeBool, DefaultValue: false, Description: "Auto approve deletion"},
+			"airgapBundle":        {Type: FlagTypeString, DefaultValue: "", Description: "Air-gapped bundle path"},
+			"forceExtract":        {Type: FlagTypeBool, DefaultValue: false, Description: "Force bundle re-extraction"},
 		},
 		Create: map[string]FlagInfo{
 			"name":     {Type: FlagTypeString, DefaultValue: "", Description: "Cluster name"},
@@ -174,6 +178,8 @@ func GetSupportedFlags() SupportedFlags {
 			"distroLocation":     {Type: FlagTypeString, DefaultValue: "", Description: "Distribution location"},
 			"skipDepsDownload":   {Type: FlagTypeBool, DefaultValue: false, Description: "Skip dependencies download"},
 			"skipDepsValidation": {Type: FlagTypeBool, DefaultValue: false, Description: "Skip dependencies validation"},
+			"airgapBundle":       {Type: FlagTypeString, DefaultValue: "", Description: "Air-gapped bundle path"},
+			"forceExtract":       {Type: FlagTypeBool, DefaultValue: false, Description: "Force bundle re-extraction"},
 		},
 		Diff: map[string]FlagInfo{
 			"phase":               {Type: FlagTypeString, DefaultValue: "", Description: "Limit execution to specific phase"},
@@ -181,6 +187,8 @@ func GetSupportedFlags() SupportedFlags {
 			"distroPatches":       {Type: FlagTypeString, DefaultValue: "", Description: "Distribution patches location"},
 			"binPath":             {Type: FlagTypeString, DefaultValue: "", Description: "Binary path"},
 			"upgradePathLocation": {Type: FlagTypeString, DefaultValue: "", Description: "Upgrade path location"},
+			"airgapBundle":        {Type: FlagTypeString, DefaultValue: "", Description: "Air-gapped bundle path"},
+			"forceExtract":        {Type: FlagTypeBool, DefaultValue: false, Description: "Force bundle re-extraction"},
 		},
 		Tools: map[string]FlagInfo{},
 		Validate: map[string]FlagInfo{
@@ -191,9 +199,13 @@ func GetSupportedFlags() SupportedFlags {
 			"binPath":        {Type: FlagTypeString, DefaultValue: "", Description: "Binary path"},
 			"distroLocation": {Type: FlagTypeString, DefaultValue: "", Description: "Distribution location"},
 			"distroPatches":  {Type: FlagTypeString, DefaultValue: "", Description: "Distribution patches location"},
+			"bundleOutput":   {Type: FlagTypeString, DefaultValue: "", Description: "Bundle tarball output path"},
 		},
 		Connect: map[string]FlagInfo{},
-		Renew:   map[string]FlagInfo{},
-		Dump:    map[string]FlagInfo{},
+		Renew: map[string]FlagInfo{
+			"airgapBundle": {Type: FlagTypeString, DefaultValue: "", Description: "Air-gapped bundle path"},
+			"forceExtract": {Type: FlagTypeBool, DefaultValue: false, Description: "Force bundle re-extraction"},
+		},
+		Dump: map[string]FlagInfo{},
 	}
 }

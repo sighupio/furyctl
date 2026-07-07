@@ -7,14 +7,17 @@ package onpremises
 import (
 	"errors"
 
+	"github.com/sighupio/furyctl/internal/apis/config"
 	"github.com/sighupio/furyctl/internal/tool/ansible"
 	execx "github.com/sighupio/furyctl/internal/x/exec"
 )
 
-var ErrAnsibleNotInstalled = errors.New("ansible is not installed")
+var ErrAnsibleNotInstalled = errors.New("ansible is not installed, run 'furyctl download dependencies'")
 
 type ExtraToolsValidator struct {
 	executor execx.Executor
+	kfd      config.KFD
+	binPath  string
 }
 
 func (x *ExtraToolsValidator) Validate(_ string) ([]string, []error) {
@@ -33,10 +36,12 @@ func (x *ExtraToolsValidator) Validate(_ string) ([]string, []error) {
 }
 
 func (x *ExtraToolsValidator) validateAnsible() error {
-	ansibleRunner := ansible.NewRunner(x.executor, ansible.Paths{
-		Ansible:         "ansible",
-		AnsiblePlaybook: "ansible-playbook",
-	})
+	// With a pinned ansible version this validates the mise-managed ansible; otherwise it checks the
+	// system ansible (legacy behaviour).
+	ansibleRunner := ansible.NewRunner(
+		x.executor,
+		ansible.PathsForVersion(x.binPath, x.kfd.Tools.OnPremises.Ansible.Version, ""),
+	)
 
 	if _, err := ansibleRunner.Version(); err != nil {
 		return ErrAnsibleNotInstalled
@@ -45,8 +50,10 @@ func (x *ExtraToolsValidator) validateAnsible() error {
 	return nil
 }
 
-func NewExtraToolsValidator(executor execx.Executor) *ExtraToolsValidator {
+func NewExtraToolsValidator(executor execx.Executor, kfd config.KFD, binPath string) *ExtraToolsValidator {
 	return &ExtraToolsValidator{
 		executor: executor,
+		kfd:      kfd,
+		binPath:  binPath,
 	}
 }

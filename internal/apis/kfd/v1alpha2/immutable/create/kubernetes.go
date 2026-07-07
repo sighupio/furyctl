@@ -10,8 +10,8 @@ import (
 
 	"github.com/sirupsen/logrus"
 
-	"github.com/sighupio/fury-distribution/pkg/apis/config"
-	"github.com/sighupio/fury-distribution/pkg/apis/immutable/v1alpha2/public"
+	"github.com/sighupio/furyctl/internal/apis/config"
+	"github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/immutable/public"
 	"github.com/sighupio/furyctl/internal/cluster"
 	"github.com/sighupio/furyctl/internal/tool/ansible"
 	"github.com/sighupio/furyctl/internal/upgrade"
@@ -100,8 +100,10 @@ func (k *Kubernetes) prepare() error {
 
 	k.CopyPathsToConfig(&mCfg)
 
+	version := k.kfdManifest.Kubernetes.Immutable.Version
+
 	mCfg.Data["kubernetes"] = map[any]any{
-		"version": k.kfdManifest.Kubernetes.Immutable.Version,
+		"version": version,
 	}
 
 	mCfg.Data["options"]["skipPodsRunningCheck"] = cluster.IsForceEnabledForFeature(
@@ -109,6 +111,20 @@ func (k *Kubernetes) prepare() error {
 		cluster.ForceFeaturePodsRunningCheck,
 	)
 	mCfg.Data["options"]["podRunningTimeout"] = k.podRunningTimeout / FromSecondsToHalfMinuteRetries
+
+	// Inject the immutable.yaml version data under "versions" so the generic walk renders the
+	// version vars inline in hosts.yaml alongside the playbooks (selection/validation stays in Go).
+	immutableAssets, err := selectImmutableAssets(k.Path, k.kfdManifest.Kubernetes.Immutable.Version)
+	if err != nil {
+		return fmt.Errorf("error selecting immutable assets: %w", err)
+	}
+
+	versionVars := map[any]any{}
+	for name, value := range buildVersionVars(version, k.KubectlPath, immutableAssets) {
+		versionVars[name] = value
+	}
+
+	mCfg.Data["versions"] = versionVars
 
 	if err := k.CopyFromTemplate(
 		mCfg,
@@ -240,11 +256,7 @@ func NewKubernetes(
 		dryRun:         dryRun,
 		ansibleRunner: ansible.NewRunner(
 			execx.NewStdExecutor(),
-			ansible.Paths{
-				Ansible:         "ansible",
-				AnsiblePlaybook: "ansible-playbook",
-				WorkDir:         phase.Path,
-			},
+			ansible.PathsForVersion(paths.BinPath, kfdManifest.Tools.Immutable.Ansible.Version, phase.Path),
 		),
 		upgrade:           upgr,
 		upgradeNode:       upgradeNode,

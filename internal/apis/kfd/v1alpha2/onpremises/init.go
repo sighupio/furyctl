@@ -5,7 +5,7 @@
 package onpremises
 
 import (
-	"github.com/sighupio/fury-distribution/pkg/apis/onpremises/v1alpha2/public"
+	"github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/onpremises/public"
 	"github.com/sighupio/furyctl/internal/cluster"
 )
 

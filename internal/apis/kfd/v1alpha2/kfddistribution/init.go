@@ -5,7 +5,7 @@
 package kfddistribution
 
 import (
-	"github.com/sighupio/fury-distribution/pkg/apis/kfddistribution/v1alpha2/public"
+	"github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/kfddistribution/public"
 	"github.com/sighupio/furyctl/internal/cluster"
 )
 

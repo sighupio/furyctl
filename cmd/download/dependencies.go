@@ -132,7 +132,7 @@ func NewDependenciesCmd() *cobra.Command {
 
 			logrus.Info("Downloading dependencies...")
 
-			errs, uts := depsdl.DownloadAll(dres.DistroManifest)
+			errs, uts := depsdl.DownloadAll(dres.DistroManifest, dres.MinimalConf.Kind)
 
 			for _, ut := range uts {
 				logrus.Warn(fmt.Sprintf("'%s' download is not supported, please install it manually if not present", ut))

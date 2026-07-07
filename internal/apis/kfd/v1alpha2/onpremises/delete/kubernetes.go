@@ -11,8 +11,8 @@ import (
 
 	"github.com/sirupsen/logrus"
 
-	"github.com/sighupio/fury-distribution/pkg/apis/config"
-	"github.com/sighupio/fury-distribution/pkg/apis/onpremises/v1alpha2/public"
+	"github.com/sighupio/furyctl/internal/apis/config"
+	"github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/onpremises/public"
 	"github.com/sighupio/furyctl/internal/cluster"
 	"github.com/sighupio/furyctl/internal/tool/ansible"
 	execx "github.com/sighupio/furyctl/internal/x/exec"
@@ -114,11 +114,7 @@ func NewKubernetes(
 		dryRun:         dryRun,
 		ansibleRunner: ansible.NewRunner(
 			execx.NewStdExecutor(),
-			ansible.Paths{
-				Ansible:         "ansible",
-				AnsiblePlaybook: "ansible-playbook",
-				WorkDir:         phase.Path,
-			},
+			ansible.PathsForVersion(paths.BinPath, kfdManifest.Tools.OnPremises.Ansible.Version, phase.Path),
 		),
 	}
 }

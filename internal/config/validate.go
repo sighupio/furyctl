@@ -14,9 +14,9 @@ import (
 
 	"github.com/sirupsen/logrus"
 
-	"github.com/sighupio/fury-distribution/pkg/apis/config"
 	"github.com/sighupio/furyctl/internal/analytics"
 	"github.com/sighupio/furyctl/internal/apis"
+	"github.com/sighupio/furyctl/internal/apis/config"
 	"github.com/sighupio/furyctl/internal/distribution"
 	"github.com/sighupio/furyctl/internal/flags"
 	"github.com/sighupio/furyctl/internal/parser"
@@ -406,7 +406,7 @@ func validateToolsConfiguration(repoPath string, furyctlConf map[string]any) err
 
 	_, hasTerraformConfig := toolsConfig["terraform"]
 
-	if hasTerraformConfig && kfdFile.Tools.Common.OpenTofu.Version != "" {
+	if hasTerraformConfig && distribution.EffectiveOpenTofuVersion(kfdFile.Tools) != "" {
 		logrus.Warn("'spec.toolsConfiguration.terraform' is deprecated, " +
 			"it will be removed in future versions. " +
 			"Please use 'spec.toolsConfiguration.opentofu' instead")

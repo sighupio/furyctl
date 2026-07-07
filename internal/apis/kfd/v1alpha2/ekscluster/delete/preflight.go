@@ -11,11 +11,12 @@ import (
 
 	"github.com/sirupsen/logrus"
 
-	"github.com/sighupio/fury-distribution/pkg/apis/config"
-	"github.com/sighupio/fury-distribution/pkg/apis/ekscluster/v1alpha2/private"
+	"github.com/sighupio/furyctl/internal/apis/config"
 	"github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/ekscluster/common"
+	"github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/ekscluster/private"
 	"github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/ekscluster/vpn"
 	"github.com/sighupio/furyctl/internal/cluster"
+	"github.com/sighupio/furyctl/internal/distribution"
 	"github.com/sighupio/furyctl/internal/tool/awscli"
 	"github.com/sighupio/furyctl/internal/tool/kubectl"
 	"github.com/sighupio/furyctl/internal/tool/terraform"
@@ -55,7 +56,7 @@ func NewPreFlight(
 		furyctlConf.Metadata.Name,
 		path.Join(phase.Path, "secrets"),
 		paths.BinPath,
-		kfdManifest.Tools.Common.Furyagent.Version,
+		distribution.EffectiveFuryagentVersion(kfdManifest.Tools),
 		vpnAutoConnect,
 		skipVpn,
 		vpnConfig,

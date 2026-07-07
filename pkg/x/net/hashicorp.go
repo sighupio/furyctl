@@ -5,15 +5,21 @@
 package netx
 
 import (
+	"context"
 	"errors"
 	"fmt"
+	"net/http"
 	"strings"
+	"time"
 
 	"github.com/hashicorp/go-getter"
 	"github.com/sirupsen/logrus"
 
 	gogetterx "github.com/sighupio/furyctl/internal/x/go-getter"
 )
+
+// headProbeTimeout bounds the HEAD size probe so a slow server can't hold up the download.
+const headProbeTimeout = 10 * time.Second
 
 var ErrDownloadOptionsExhausted = errors.New("downloading options exhausted")
 
@@ -77,6 +83,13 @@ func (g *GoGetterClient) DownloadWithMode(
 			DisableSymlinks: false,
 		}
 
+		// Report progress on large downloads. The tracker self-gates on size, and go-getter only
+		// invokes it for the http/s3 getters (git/file/gcs/hg clones are silent). The HEAD probe
+		// supplies a size when the GET response has no Content-Length.
+		tracker := newProgressTracker()
+		tracker.fallbackTotal = probeContentLength(fullSrc)
+		client.ProgressListener = tracker
+
 		// When downloading a single file we don't want go-getter to auto-decompress
 		// archives (eg. .bz2). An empty map disables the built-in decompressors.
 		if decompressors != nil {
@@ -92,6 +105,38 @@ func (g *GoGetterClient) DownloadWithMode(
 	}
 
 	return ErrDownloadOptionsExhausted
+}
+
+// probeContentLength HEADs a download to learn its size, for when the GET response has no
+// Content-Length (the Flatcar CDN streams over HTTP/2 without one, though a HEAD reports the size).
+// Returns -1 if unknown. Only http(s) URLs are probed; other getters don't report progress.
+func probeContentLength(src string) int64 {
+	if !strings.HasPrefix(src, "http://") && !strings.HasPrefix(src, "https://") {
+		return -1
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), headProbeTimeout)
+	defer cancel()
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodHead, src, nil)
+	if err != nil {
+		return -1
+	}
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		logrus.Debugf("progress: HEAD probe for '%s' failed: %v", src, err)
+
+		return -1
+	}
+
+	defer func() { _ = resp.Body.Close() }()
+
+	if resp.StatusCode != http.StatusOK {
+		return -1
+	}
+
+	return resp.ContentLength
 }
 
 // URLHasForcedProtocol checks if the url has a forced protocol as described in hashicorp/go-getter.

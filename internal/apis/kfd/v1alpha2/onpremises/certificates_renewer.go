@@ -12,8 +12,8 @@ import (
 
 	"github.com/sirupsen/logrus"
 
-	"github.com/sighupio/fury-distribution/pkg/apis/config"
-	"github.com/sighupio/fury-distribution/pkg/apis/onpremises/v1alpha2/public"
+	"github.com/sighupio/furyctl/internal/apis/config"
+	"github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/onpremises/public"
 	"github.com/sighupio/furyctl/internal/cluster"
 	"github.com/sighupio/furyctl/internal/tool/ansible"
 	execx "github.com/sighupio/furyctl/internal/x/exec"
@@ -26,6 +26,7 @@ type CertificatesRenewer struct {
 	kfdManifest config.KFD
 	distroPath  string
 	configPath  string
+	binPath     string
 }
 
 func (k *CertificatesRenewer) SetProperties(props []cluster.CertificatesRenewerProperty) {
@@ -59,6 +60,11 @@ func (k *CertificatesRenewer) SetProperty(name string, value any) {
 		if s, ok := value.(string); ok {
 			k.distroPath = s
 		}
+
+	case cluster.CertificatesRenewerPropertyBinPath:
+		if s, ok := value.(string); ok {
+			k.binPath = s
+		}
 	}
 }
 
@@ -74,11 +80,7 @@ func (k *CertificatesRenewer) Renew() error {
 
 	ansibleRunner := ansible.NewRunner(
 		execx.NewStdExecutor(),
-		ansible.Paths{
-			Ansible:         "ansible",
-			AnsiblePlaybook: "ansible-playbook",
-			WorkDir:         tmpDir,
-		},
+		ansible.PathsForVersion(k.binPath, k.kfdManifest.Tools.OnPremises.Ansible.Version, tmpDir),
 	)
 
 	furyctlMerger, err := k.CreateFuryctlMerger(

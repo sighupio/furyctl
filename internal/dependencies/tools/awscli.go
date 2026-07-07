@@ -7,7 +7,6 @@ package tools
 import (
 	"fmt"
 	"regexp"
-	"runtime"
 	"strings"
 
 	"github.com/sighupio/furyctl/internal/tool/awscli"
@@ -15,8 +14,6 @@ import (
 
 func NewAwscli(runner *awscli.Runner, version string) *Awscli {
 	return &Awscli{
-		arch:    "x86_64",
-		os:      runtime.GOOS,
 		version: version,
 		checker: &checker{
 			regex:  regexp.MustCompile(`aws-cli/(\S*)`),
@@ -32,24 +29,8 @@ func NewAwscli(runner *awscli.Runner, version string) *Awscli {
 }
 
 type Awscli struct {
-	arch    string
 	checker *checker
-	os      string
 	version string
-}
-
-func (*Awscli) SupportsDownload() bool {
-	return false
-}
-
-func (*Awscli) SrcPath() string {
-	// Not used for this tool because it's not downloaded.
-	return ""
-}
-
-func (*Awscli) Rename(_ string) error {
-	// Not used for this tool because it's not downloaded.
-	return nil
 }
 
 func (a *Awscli) CheckBinVersion() error {

@@ -17,6 +17,7 @@ func NewDownloadCmd() *cobra.Command {
 	}
 
 	downloadCmd.AddCommand(download.NewDependenciesCmd())
+	downloadCmd.AddCommand(download.NewAirGappedBundleCmd())
 
 	return downloadCmd
 }

@@ -12,8 +12,8 @@ import (
 	r3diff "github.com/r3labs/diff/v3"
 	"github.com/sirupsen/logrus"
 
-	"github.com/sighupio/fury-distribution/pkg/apis/config"
-	"github.com/sighupio/fury-distribution/pkg/apis/immutable/v1alpha2/public"
+	"github.com/sighupio/furyctl/internal/apis/config"
+	"github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/immutable/public"
 	"github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/immutable/supported"
 	"github.com/sighupio/furyctl/internal/cluster"
 	"github.com/sighupio/furyctl/internal/state"
@@ -76,11 +76,7 @@ func NewPreFlight(
 		stateStore:     stateStore,
 		ansibleRunner: ansible.NewRunner(
 			execx.NewStdExecutor(),
-			ansible.Paths{
-				Ansible:         "ansible",
-				AnsiblePlaybook: "ansible-playbook",
-				WorkDir:         p.Path,
-			},
+			ansible.PathsForVersion(paths.BinPath, kfdManifest.Tools.Immutable.Ansible.Version, p.Path),
 		),
 		kubeRunner: kubectl.NewRunner(
 			execx.NewStdExecutor(),
@@ -315,16 +311,16 @@ func (p *PreFlight) CheckReducerDiffs(d r3diff.Changelog, diffChecker diffs.Chec
 
 	errs = append(errs, diffChecker.AssertReducerUnsupportedViolations(
 		d,
-		r.UnsupportedReducerRulesByDiffs(r.GetReducers(cluster.OperationPhaseInfrastructure), d),
+		r.GetUnsupportedRules(cluster.OperationPhaseInfrastructure),
 	)...)
 
 	errs = append(errs, diffChecker.AssertReducerUnsupportedViolations(
 		d,
-		r.UnsupportedReducerRulesByDiffs(r.GetReducers(cluster.OperationPhaseKubernetes), d),
+		r.GetUnsupportedRules(cluster.OperationPhaseKubernetes),
 	)...)
 	errs = append(errs, diffChecker.AssertReducerUnsupportedViolations(
 		d,
-		r.UnsupportedReducerRulesByDiffs(r.GetReducers(cluster.OperationPhaseDistribution), d),
+		r.GetUnsupportedRules(cluster.OperationPhaseDistribution),
 	)...)
 
 	if len(errs) > 0 {

@@ -13,8 +13,8 @@ import (
 	r3diff "github.com/r3labs/diff/v3"
 	"github.com/sirupsen/logrus"
 
-	"github.com/sighupio/fury-distribution/pkg/apis/config"
-	"github.com/sighupio/fury-distribution/pkg/apis/kfddistribution/v1alpha2/public"
+	"github.com/sighupio/furyctl/internal/apis/config"
+	"github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/kfddistribution/public"
 	"github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/kfddistribution/supported"
 	"github.com/sighupio/furyctl/internal/cluster"
 	"github.com/sighupio/furyctl/internal/distribution"
@@ -275,7 +275,7 @@ func (p *PreFlight) CheckReducerDiffs(d r3diff.Changelog, diffChecker diffs.Chec
 
 	errs = append(errs, diffChecker.AssertReducerUnsupportedViolations(
 		d,
-		r.UnsupportedReducerRulesByDiffs(r.GetReducers("distribution"), d),
+		r.GetUnsupportedRules("distribution"),
 	)...)
 
 	if len(errs) > 0 {

@@ -14,8 +14,9 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
-	"github.com/sighupio/fury-distribution/pkg/apis/config"
+	"github.com/sighupio/furyctl/internal/airgap"
 	"github.com/sighupio/furyctl/internal/analytics"
+	"github.com/sighupio/furyctl/internal/apis/config"
 	"github.com/sighupio/furyctl/internal/app"
 	"github.com/sighupio/furyctl/internal/cluster"
 	"github.com/sighupio/furyctl/internal/flags"
@@ -66,6 +67,14 @@ func NewDiffCmd() *cobra.Command {
 
 			tracker := ctn.Tracker()
 			defer tracker.Flush()
+
+			// Air-gapped: extract --airgap-bundle (if set) and rewire to run offline before reading flags.
+			if err := airgap.MaybePrepare(); err != nil {
+				cmdEvent.AddErrorMessage(err)
+				tracker.Track(cmdEvent)
+
+				return fmt.Errorf("error preparing air-gapped bundle: %w", err)
+			}
 
 			flags, err := getDiffCommandFlags()
 			if err != nil {
@@ -208,6 +217,8 @@ func NewDiffCmd() *cobra.Command {
 		"",
 		"Location where the upgrade scripts are located, if not set the embedded ones will be used",
 	)
+
+	airgap.RegisterFlags(diffCmd)
 
 	return diffCmd
 }

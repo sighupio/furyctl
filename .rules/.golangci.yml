@@ -515,6 +515,29 @@ issues:
     - path: cmd
       linters:
         - lll
+    # Hand-maintained config "mirror" types. Field and yaml-tag names
+    # intentionally follow the distribution JSON schema / furyctl.yaml keys, so
+    # the structs read like a furyctl.yaml and the tags match the real keys
+    # (renaming them to Go style would break unmarshaling). These replace the
+    # types that used to be code-generated (and thus auto-excluded from lint),
+    # so they are excluded from the naming/style linters.
+    - path: internal/apis/kfd/v1alpha2/.*/(public|private)/schema\.go
+      linters:
+        - revive
+        - stylecheck
+        - tagliatelle
+        - tagalign
+        - godot
+        - lll
+    - path: internal/apis/config/
+      linters:
+        - revive
+        - stylecheck
+        - tagliatelle
+        - tagalign
+        - godot
+        - gochecknoglobals
+        - exptostd
   # Independently of option `exclude` we use default exclude patterns,
   # it can be disabled by this option.
   # To list all excluded by default patterns execute `golangci-lint run --help`.

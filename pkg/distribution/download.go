@@ -16,8 +16,8 @@ import (
 	"github.com/go-playground/validator/v10"
 	"github.com/sirupsen/logrus"
 
-	"github.com/sighupio/fury-distribution/pkg/apis/config"
 	"github.com/sighupio/furyctl/configs"
+	"github.com/sighupio/furyctl/internal/apis/config"
 	idist "github.com/sighupio/furyctl/internal/distribution"
 	"github.com/sighupio/furyctl/internal/git"
 	iox "github.com/sighupio/furyctl/internal/x/io"

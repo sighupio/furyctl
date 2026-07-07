@@ -17,22 +17,31 @@ import (
 
 	"github.com/hashicorp/go-getter"
 	"github.com/sirupsen/logrus"
-	"gopkg.in/yaml.v2"
 
-	"github.com/sighupio/fury-distribution/pkg/apis/immutable/v1alpha2/public"
+	"github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/immutable/public"
 	"github.com/sighupio/furyctl/internal/tool/butane"
 	iox "github.com/sighupio/furyctl/internal/x/io"
 	"github.com/sighupio/furyctl/pkg/template"
 	netx "github.com/sighupio/furyctl/pkg/x/net"
+	yamlx "github.com/sighupio/furyctl/pkg/x/yaml"
 )
 
 var (
 	ErrNoKubernetesVersions      = errors.New("no kubernetes versions defined in immutable installer spec")
 	ErrKubernetesVersionNotFound = errors.New("kubernetes version not found in immutable installer spec")
+	ErrSandboxTagOrRegistryEmpty = errors.New("sandboxTag and imageRegistry are required in immutable installer spec")
 	ErrFlatcarArtifactsNotFound  = errors.New("flatcar artifacts not found for architecture")
 	ErrButaneConversionFatal     = errors.New("butane conversion fatal errors")
 	ErrButaneFatalErrors         = errors.New("butane translation has fatal errors")
+	ErrImmutableConfigMalformed  = errors.New("immutable furyctl config is malformed")
 )
+
+// defaultNodeArch mirrors the schema default of spec.infrastructure.nodes[].arch
+// from the distribution's immutable JSON schema. Because furyctl does not apply
+// JSON-schema defaults before the butane phase, and the butane templates read the
+// node arch value unguarded, a node that omits arch would fail to render unless we
+// backfill the default here.
+const defaultNodeArch = "x86-64"
 
 type immutableManifest struct {
 	Kubernetes map[string]assets `yaml:"kubernetes"`
@@ -40,8 +49,14 @@ type immutableManifest struct {
 
 // assets represents a Kubernetes version entry in immutable.yaml.
 type assets struct {
-	Sysext  []sysextPackage `yaml:"sysext"` // Array of sysext packages.
-	Flatcar flatcarRelease  `yaml:"flatcar"`
+	ImageRegistry         string          `yaml:"imageRegistry"`         // Registry for cluster images (kubeadm).
+	SandboxTag            string          `yaml:"sandboxTag"`            // Pause image tag; no registry.
+	CorednsImagePrefix    string          `yaml:"corednsImagePrefix"`    // Coredns image path prefix.
+	HaproxyImage          string          `yaml:"haproxyImage"`          // Haproxy LB container image.
+	HaproxyTag            string          `yaml:"haproxyTag"`            // Haproxy LB container tag.
+	KubeletCsrApproverTag string          `yaml:"kubeletCsrApproverTag"` // The kubelet-csr-approver image tag.
+	Sysext                []sysextPackage `yaml:"sysext"`                // Array of sysext packages.
+	Flatcar               flatcarRelease  `yaml:"flatcar"`
 }
 
 // sysextPackage represents a systemd-sysext package configuration.
@@ -116,6 +131,74 @@ func (i *Infrastructure) getNodeRole(node string) string {
 	return "worker"
 }
 
+// rawNodesByHostname indexes the nodes from an already-parsed furyctl.yaml (as an
+// opaque map) by hostname.
+//
+// The butane node templates consume many free-form node sub-trees that furyctl
+// deliberately does not model in its curated config struct: network.ethernets,
+// storage.{files,links,directories,additionalDisks}, systemd.units and
+// passwd.{users,groups}. Marshaling the typed public.SpecInfrastructureNode back
+// to YAML would silently drop every unmodeled field (and error outright on the
+// unguarded .node.network.ethernets), so the butane phase feeds the template the
+// raw node instead and lets the distribution JSON schema stay the single source
+// of truth for the node shape.
+//
+// It is a free function (not a method) so it can be unit-tested without a full
+// Infrastructure value or a file on disk.
+func rawNodesByHostname(conf map[any]any) (map[string]any, error) {
+	spec, ok := conf["spec"].(map[any]any)
+	if !ok {
+		return nil, fmt.Errorf("%w: missing spec", ErrImmutableConfigMalformed)
+	}
+
+	infra, ok := spec["infrastructure"].(map[any]any)
+	if !ok {
+		return nil, fmt.Errorf("%w: missing spec.infrastructure", ErrImmutableConfigMalformed)
+	}
+
+	nodes, ok := infra["nodes"].([]any)
+	if !ok {
+		return nil, fmt.Errorf("%w: spec.infrastructure.nodes is not a list", ErrImmutableConfigMalformed)
+	}
+
+	byHostname := make(map[string]any, len(nodes))
+
+	for _, raw := range nodes {
+		node, ok := raw.(map[any]any)
+		if !ok {
+			return nil, fmt.Errorf("%w: a node entry is not a map", ErrImmutableConfigMalformed)
+		}
+
+		hostname, ok := node["hostname"].(string)
+		if !ok || hostname == "" {
+			return nil, fmt.Errorf("%w: a node is missing its hostname", ErrImmutableConfigMalformed)
+		}
+
+		// Backfill the schema default for arch, which the butane templates read
+		// unguarded. Treat an empty or blank value the same as an omitted one.
+		arch, ok := node["arch"].(string)
+		if !ok || strings.TrimSpace(arch) == "" {
+			node["arch"] = defaultNodeArch
+		}
+
+		byHostname[hostname] = node
+	}
+
+	return byHostname, nil
+}
+
+// loadRawNodes reads the furyctl.yaml from disk and indexes its nodes by hostname.
+// It is decoded with yaml.v2 to match the marshaling used when the template config
+// is later written out (see OperationPhase.CopyFromTemplate -> yamlx.MarshalV2).
+func (i *Infrastructure) loadRawNodes() (map[string]any, error) {
+	conf, err := yamlx.FromFileV2[map[any]any](i.paths.ConfigPath)
+	if err != nil {
+		return nil, fmt.Errorf("error reading furyctl config %s: %w", i.paths.ConfigPath, err)
+	}
+
+	return rawNodesByHostname(conf)
+}
+
 // Read the SSH public key file path specified in the configuration and return its content as a string.
 func (i *Infrastructure) getSSHPublicKeyContent() (string, error) {
 	var (
@@ -146,43 +229,48 @@ func (i *Infrastructure) getSSHPublicKeyContent() (string, error) {
 	return sshPublicKeyContent, nil
 }
 
-// parseImmutableInstallerSpec parses the immutable.yaml manifest file.
-// This manifest contains all versioning information for the Immutable installer.
-func (*Infrastructure) parseImmutableInstallerSpec(path string) (*immutableManifest, error) {
-	data, err := os.ReadFile(path)
-	if err != nil {
-		return nil, fmt.Errorf("error reading immutable manifest at %s: %w", path, err)
+// buildVersionVars turns the selected immutable.yaml block into the data the version vars template
+// consumes. Both the kubernetes and infrastructure phases inject this under "versions" into the
+// generic template walk, so each phase renders the version vars inline in its hosts.yaml.
+// Selection/validation stays in Go (selectImmutableAssets).
+func buildVersionVars(version, kubectlBin string, a assets) map[string]any {
+	// Carry the explicit per-arch .raw URL from immutable.yaml (not just the version) so the sysext role
+	// downloads exactly what the manifest pins, instead of reconstructing the URL from a release-base
+	// convention — the same URL the butane/Ignition install path already uses (kills the two-dialects smell).
+	sysextTargets := make(map[string]any, len(a.Sysext))
+
+	for _, pkg := range a.Sysext {
+		arch := make(map[string]any, len(pkg.Arch))
+		for name, info := range pkg.Arch {
+			arch[name] = map[string]string{"url": info.URL}
+		}
+
+		sysextTargets[pkg.Name] = map[string]any{
+			"version": pkg.Version,
+			"arch":    arch,
+		}
 	}
 
-	var manifest immutableManifest
-	if err := yaml.Unmarshal(data, &manifest); err != nil {
-		return nil, fmt.Errorf("error parsing immutable manifest: %w", err)
+	vars := map[string]any{
+		"kubernetes_version":        version,
+		"containerd_sandbox_tag":    a.SandboxTag,
+		"coredns_image_prefix":      a.CorednsImagePrefix,
+		"kubernetes_image_registry": a.ImageRegistry,
+		"haproxy_container_image":   a.HaproxyImage,
+		"haproxy_container_tag":     a.HaproxyTag,
+		"kubelet_csr_approver_tag":  a.KubeletCsrApproverTag,
+		"sysext_targets":            sysextTargets,
+		"os_update_target_version":  a.Flatcar.Version,
 	}
 
-	// Validate that at least one Kubernetes version is defined.
-	if len(manifest.Kubernetes) == 0 {
-		return nil, ErrNoKubernetesVersions
+	// The node-maintenance role drains/uncordons via kubectl on the controller under sudo, whose secure_path
+	// drops a bare "kubectl" from a tool manager like mise; give it the absolute path to the
+	// furyctl-vendored kubectl so the drain resolves regardless of the operator's PATH.
+	if kubectlBin != "" {
+		vars["kubectl_bin"] = kubectlBin
 	}
 
-	return &manifest, nil
-}
-
-func (i *Infrastructure) getImmutableAssets() (assets, error) {
-	kubeVersion := i.kfdManifest.Kubernetes.Immutable.Version
-
-	immutableSpecPath := filepath.Join(i.Path, "..", "vendor", "installers", "immutable", "immutable.yaml")
-
-	immutableInstallerSpec, err := i.parseImmutableInstallerSpec(immutableSpecPath)
-	if err != nil {
-		return assets{}, fmt.Errorf("error loading immutable installer specs for templates: %w", err)
-	}
-
-	immutableAssets, ok := immutableInstallerSpec.Kubernetes[kubeVersion]
-	if !ok {
-		return assets{}, fmt.Errorf("%w: %s", ErrKubernetesVersionNotFound, kubeVersion)
-	}
-
-	return immutableAssets, nil
+	return vars
 }
 
 // Render templates for the root of the server.
@@ -216,7 +304,7 @@ func (i *Infrastructure) renderRootTemplates() error {
 // Generate Butane files from distribution's templates and then convert them to ignition files.
 func (i *Infrastructure) renderButaneTemplates() error {
 	// 1. Load the full immutable manifest to pass all sysext info to templates.
-	immutableAssets, err := i.getImmutableAssets()
+	immutableAssets, err := selectImmutableAssets(i.Path, i.kfdManifest.Kubernetes.Immutable.Version)
 	if err != nil {
 		return fmt.Errorf("error getting immutable assets: %w", err)
 	}
@@ -285,9 +373,22 @@ func (i *Infrastructure) renderButaneTemplates() error {
 	// Use CopyFromTemplate to render templates.
 	targetPath := filepath.Join(i.Path, "butane", "node-config")
 
+	// The butane templates read free-form node sub-trees furyctl does not model
+	// (network, storage extras, systemd units, passwd, ...), so feed them the raw
+	// node from the furyctl.yaml rather than the lossy typed struct.
+	rawNodes, err := i.loadRawNodes()
+	if err != nil {
+		return fmt.Errorf("error loading node configuration: %w", err)
+	}
+
 	for _, node := range i.furyctlConf.Spec.Infrastructure.Nodes {
 		nodeRole := i.getNodeRole(node.Hostname)
 		normalizedMAC := strings.ToUpper(strings.ReplaceAll(string(node.MacAddress), ":", "-"))
+
+		rawNode, ok := rawNodes[node.Hostname]
+		if !ok {
+			return fmt.Errorf("%w: no configuration found for node %q", ErrImmutableConfigMalformed, node.Hostname)
+		}
 
 		sshPublicKeyContent, err := i.getSSHPublicKeyContent()
 		if err != nil {
@@ -327,7 +428,7 @@ func (i *Infrastructure) renderButaneTemplates() error {
 				"data": {
 					"SSHUser":        i.furyctlConf.Spec.Infrastructure.Ssh.Username,
 					"SSHPublicKey":   sshPublicKeyContent,
-					"node":           node,
+					"node":           rawNode,
 					"role":           nodeRole,
 					"flatcarVersion": immutableAssets.Flatcar.Version,
 					"ipxeServerURL":  i.furyctlConf.Spec.Infrastructure.IpxeServer.Url,
@@ -568,7 +669,7 @@ func (i *Infrastructure) extractUsedArchitectures() []string {
 func (i *Infrastructure) downloadAssets(usedArchitectures []string) error {
 	logrus.Info("Downloading Flatcar boot artifacts and sysext packages...")
 
-	assets, err := i.getImmutableAssets()
+	assets, err := selectImmutableAssets(i.Path, i.kfdManifest.Kubernetes.Immutable.Version)
 	if err != nil {
 		return fmt.Errorf("error getting immutable assets: %w", err)
 	}
@@ -624,7 +725,7 @@ func (i *Infrastructure) generateNodeBootFile(node public.SpecInfrastructureNode
 		return fmt.Errorf("error parsing boot template %s: %w", bootTemplatePath, err)
 	}
 
-	assets, err := i.getImmutableAssets()
+	assets, err := selectImmutableAssets(i.Path, i.kfdManifest.Kubernetes.Immutable.Version)
 	if err != nil {
 		return fmt.Errorf("error getting immutable assets: %w", err)
 	}

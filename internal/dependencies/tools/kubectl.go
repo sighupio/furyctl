@@ -7,17 +7,13 @@ package tools
 import (
 	"fmt"
 	"regexp"
-	"runtime"
 	"strings"
 
-	"github.com/sighupio/furyctl/internal/semver"
 	"github.com/sighupio/furyctl/internal/tool/kubectl"
 )
 
 func NewKubectl(runner *kubectl.Runner, version string) *Kubectl {
 	return &Kubectl{
-		arch:    runtime.GOARCH,
-		os:      runtime.GOOS,
 		version: version,
 		checker: &checker{
 			regex:  regexp.MustCompile("\"gitVersion\": \"v([^\"]*)\""),
@@ -36,27 +32,8 @@ func NewKubectl(runner *kubectl.Runner, version string) *Kubectl {
 }
 
 type Kubectl struct {
-	arch    string
 	checker *checker
-	os      string
 	version string
-}
-
-func (*Kubectl) SupportsDownload() bool {
-	return true
-}
-
-func (k *Kubectl) SrcPath() string {
-	return fmt.Sprintf(
-		"https://dl.k8s.io/release/%s/bin/%s/%s/kubectl",
-		semver.EnsurePrefix(k.version),
-		k.os,
-		k.arch,
-	)
-}
-
-func (*Kubectl) Rename(_ string) error {
-	return nil
 }
 
 func (k *Kubectl) CheckBinVersion() error {
