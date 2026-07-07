@@ -58,7 +58,7 @@ Alternatively, you can install `furyctl` using `mise` or the `asdf` plugin.
 ### Installing with [mise](https://mise.jdx.dev/)
 
 ```bash
-mise use furyctl@0.35
+mise use furyctl@0.35.0
 ```
 
 Check that everything is working correctly with `furyctl version`:
