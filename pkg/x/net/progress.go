@@ -18,8 +18,8 @@ import (
 )
 
 const (
-	progressTTYInterval = 500 * time.Millisecond // Repaint cadence on a terminal.
-	progressLogInterval = 5 * time.Second        // Log cadence when not on a terminal.
+	progressTTYInterval = 500 * time.Millisecond // Repaint cadence for the animated line.
+	progressLogInterval = 5 * time.Second        // Cadence for the fallback log lines.
 
 	// Downloads smaller than this aren't worth reporting progress for.
 	progressMinTrackedSize = 5 * 1000 * 1000
@@ -32,15 +32,16 @@ const (
 // are hundreds of MB) aren't mistaken for a hung process.
 type downloadProgressTracker struct {
 	out io.Writer
-	// Draw an in-place animated line; otherwise log so CI/--no-tty stay readable.
+	// Whether progress can be drawn as an in-place line; false on non-terminals, --no-tty and --debug.
 	tty bool
 	// Size from a HEAD probe, used when the GET response has no Content-Length.
 	fallbackTotal int64
 }
 
-// newProgressTracker is a package var so tests can inject a tracker writing to a buffer.
+// newProgressTracker builds the tracker for a download. It is a package var, not a plain func, so
+// tests can swap in one that writes to a buffer.
 //
-//nolint:gochecknoglobals // Test seam for a buffer-backed tracker.
+//nolint:gochecknoglobals // Overridable constructor so tests can inject a buffer-backed tracker.
 var newProgressTracker = func() *downloadProgressTracker {
 	f := os.Stderr
 
@@ -60,7 +61,7 @@ func (t *downloadProgressTracker) interval() time.Duration {
 	return progressLogInterval
 }
 
-// TrackProgress wraps the download stream so every read updates the progress indicator.
+// TrackProgress wraps the download stream in a reader that reports progress as it is read.
 func (t *downloadProgressTracker) TrackProgress(
 	src string,
 	currentSize, totalSize int64,
