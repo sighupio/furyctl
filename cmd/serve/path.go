@@ -165,7 +165,7 @@ func Path(address, port, root string, nodesStatus map[string]string) error {
 		"port":    port,
 		"root":    root,
 	}).Warn("Assets server started. You can boot your machines now")
-	logrus.Info("Note: you can press ENTER to skip waiting for all nodes to boot and continue or CTRL+C to cancel and exit at any time")
+	logrus.Info("To skip waiting for all nodes to boot and continue press ENTER or CTRL+C to cancel and exit at any time")
 
 	// Draw the initial table so every node shows up (as "pending") the moment the server is ready.
 	table.Start()
