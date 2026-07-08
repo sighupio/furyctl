@@ -50,14 +50,14 @@ func (lrw *loggingResponseWriter) Write(b []byte) (int, error) {
 
 // Start an HTTP server serving a path in the file system on a custom address and port, logging each request.
 // The server stops when the user presses ENTER or once every node reports "booted".
-func Path(address, port, root string, nodesStatus *map[string]string) error {
+func Path(address, port, root string, nodesStatus map[string]string) error {
 	// ENTER and all-nodes-booted both cancel this context to stop the server; cancel() is
 	// idempotent, so the two paths can't race into a double-stop panic.
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	// Nodes POST their boot status concurrently; guard the shared map.
-	var statusMu sync.Mutex
+	// Live view of node bootstrap status; owns its own locking for concurrent status POSTs.
+	table := newNodeStatusTable(nodesStatus)
 
 	var bootedOnce sync.Once
 
@@ -100,10 +100,7 @@ func Path(address, port, root string, nodesStatus *map[string]string) error {
 			lrw.WriteHeader(http.StatusOK)
 			encoder := json.NewEncoder(lrw)
 
-			statusMu.Lock()
-			err := encoder.Encode(*nodesStatus)
-			statusMu.Unlock()
-
+			err := encoder.Encode(table.Snapshot())
 			if err != nil {
 				logrus.Errorf("error while encoding response: %s", err)
 			} else {
@@ -136,11 +133,7 @@ func Path(address, port, root string, nodesStatus *map[string]string) error {
 				return
 			}
 
-			statusMu.Lock()
-			(*nodesStatus)[node] = status
-			statusMu.Unlock()
-
-			// Log relevant request/response information.
+			// Debug log for the machine-readable history; the human-facing view is the table.
 			logrus.WithFields(logrus.Fields{
 				"remote":     r.RemoteAddr,
 				"user-agent": r.Header.Get("User-Agent"),
@@ -152,30 +145,11 @@ func Path(address, port, root string, nodesStatus *map[string]string) error {
 				"nodeStatus": status,
 			}).Debug("received node status update")
 
-			if status == "installation-blocked" {
-				logrus.Errorf("Flatcar Installation on node %s is blocked because Flatcar is already installed on disk. Manual intervention required", node)
-			} else {
-				logrus.Infof("Node %s is %s", node, status)
-			}
+			table.Update(node, status)
 
-			// Check if all nodes are in "booted" status and stop the server if so.
-			statusMu.Lock()
-			allBooted := true
-
-			for _, s := range *nodesStatus {
-				if s != "booted" {
-					allBooted = false
-
-					break
-				}
-			}
-
-			nodeCount := len(*nodesStatus)
-			statusMu.Unlock()
-
-			if allBooted {
+			if table.AllBooted() {
 				bootedOnce.Do(func() {
-					logrus.Infof("All %d nodes reached 'booted' state. Stopping server and continuing...", nodeCount)
+					logrus.Infof("All %d nodes reached 'booted' state. Stopping server and continuing...", table.Len())
 					cancel()
 				})
 			}
@@ -192,6 +166,9 @@ func Path(address, port, root string, nodesStatus *map[string]string) error {
 		"root":    root,
 	}).Warn("Assets server started. You can boot your machines now")
 	logrus.Info("Note: you can press ENTER to skip waiting for all nodes to boot and continue or CTRL+C to cancel and exit at any time")
+
+	// Draw the initial table so every node shows up (as "pending") the moment the server is ready.
+	table.Start()
 
 	const readHeaderTimeout = 5 * time.Second
 

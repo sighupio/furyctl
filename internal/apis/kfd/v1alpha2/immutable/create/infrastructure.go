@@ -180,7 +180,7 @@ func (i *Infrastructure) Exec(_ string, upgradeState *upgrade.State) error {
 		ipxeServerPort = ipxeServer.Port()
 	}
 
-	if err := serve.Path(ipxeServerHost, ipxeServerPort, filepath.Join(i.Path, "server"), &nodeStatus); err != nil {
+	if err := serve.Path(ipxeServerHost, ipxeServerPort, filepath.Join(i.Path, "server"), nodeStatus); err != nil {
 		return fmt.Errorf("serving assets failed: %w", err)
 	}
 
