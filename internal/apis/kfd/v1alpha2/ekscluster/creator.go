@@ -216,6 +216,10 @@ func (v *ClusterCreator) Create(startFrom string, timeout, _ int) error {
 		return fmt.Errorf("error while creating vpn connector: %w", err)
 	}
 
+	if err := vpnConnector.ValidateConfig(); err != nil {
+		return fmt.Errorf("error while validating vpn configuration: %w", err)
+	}
+
 	errCh := make(chan error)
 	doneCh := make(chan bool)
 

@@ -82,7 +82,7 @@ func NewConfigCmd() *cobra.Command {
 
 			client := netx.NewGoGetterClient()
 			executor := execx.NewStdExecutor()
-			depsvl := dependencies.NewValidator(executor, "", furyctlPath, false)
+			depsvl := dependencies.NewValidator(executor, "", furyctlPath)
 
 			if distroLocation == "" {
 				distrodl = dist.NewCachingDownloader(client, outDir, typedGitProtocol, absDistroPatchesLocation)

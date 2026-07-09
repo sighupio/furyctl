@@ -22,7 +22,7 @@ var (
 	ErrToolNotFound     = errors.New("tool not found in the toolFactory, possible fury-distribution version mismatch")
 )
 
-func NewValidator(executor execx.Executor, binPath, furyctlPath string, autoConnect bool) *Validator {
+func NewValidator(executor execx.Executor, binPath, furyctlPath string) *Validator {
 	return &Validator{
 		executor: executor,
 		toolFactory: NewFactory(executor, FactoryPaths{
@@ -30,7 +30,6 @@ func NewValidator(executor execx.Executor, binPath, furyctlPath string, autoConn
 		}),
 		binPath:     binPath,
 		furyctlPath: furyctlPath,
-		autoConnect: autoConnect,
 	}
 }
 
@@ -39,7 +38,6 @@ type Validator struct {
 	toolFactory *Factory
 	binPath     string
 	furyctlPath string
-	autoConnect bool
 }
 
 func (tv *Validator) ValidateBaseReqs() ([]string, []error) {
@@ -94,7 +92,6 @@ func (tv *Validator) Validate(kfdManifest config.KFD, miniConf config.Furyctl) (
 		tv.executor,
 		miniConf.APIVersion,
 		miniConf.Kind,
-		tv.autoConnect,
 		kfdManifest,
 		tv.binPath,
 	)

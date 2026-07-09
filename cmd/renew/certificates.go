@@ -110,7 +110,7 @@ func NewCertificatesCmd() *cobra.Command {
 			executor := execx.NewStdExecutor()
 
 			distrodl := &dist.Downloader{}
-			depsvl := dependencies.NewValidator(executor, binPath, furyctlPath, false)
+			depsvl := dependencies.NewValidator(executor, binPath, furyctlPath)
 
 			// Init first half of collaborators.
 			client := netx.NewGoGetterClient()

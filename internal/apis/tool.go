@@ -19,7 +19,6 @@ func NewExtraToolsValidatorFactory(
 	executor execx.Executor,
 	apiVersion,
 	kind string,
-	autoConnect bool,
 	kfdManifest config.KFD,
 	binPath string,
 ) ExtraToolsValidator {
@@ -27,7 +26,7 @@ func NewExtraToolsValidatorFactory(
 	case "kfd.sighup.io/v1alpha2":
 		switch kind {
 		case "EKSCluster":
-			return ekscluster.NewExtraToolsValidator(executor, autoConnect)
+			return ekscluster.NewExtraToolsValidator(executor)
 
 		case "OnPremises":
 			return onpremises.NewExtraToolsValidator(executor, kfdManifest, binPath)

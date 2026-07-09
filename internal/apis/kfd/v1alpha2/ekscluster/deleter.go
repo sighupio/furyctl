@@ -131,6 +131,10 @@ func (d *ClusterDeleter) Delete() error {
 		return fmt.Errorf("error while creating vpn connector: %w", err)
 	}
 
+	if err := vpnConnector.ValidateConfig(); err != nil {
+		return fmt.Errorf("error while validating vpn configuration: %w", err)
+	}
+
 	preflight, err := del.NewPreFlight(
 		d.furyctlConf,
 		d.kfdManifest,

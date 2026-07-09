@@ -95,7 +95,7 @@ func NewDependenciesCmd() *cobra.Command {
 
 			client := netx.NewGoGetterClient()
 			executor := execx.NewStdExecutor()
-			depsvl := dependencies.NewValidator(executor, "", furyctlPath, false)
+			depsvl := dependencies.NewValidator(executor, "", furyctlPath)
 
 			if distroLocation == "" {
 				distrodl = dist.NewCachingDownloader(client, outDir, typedGitProtocol, absDistroPatchesLocation)
@@ -126,7 +126,7 @@ func NewDependenciesCmd() *cobra.Command {
 				KFDVersion: dres.DistroManifest.Version,
 			})
 
-			toolsValidator := tools.NewValidator(executor, binPath, furyctlPath, false)
+			toolsValidator := tools.NewValidator(executor, binPath, furyctlPath)
 			envVarsValidator := envvars.NewValidator()
 			errs := make([]error, 0)
 

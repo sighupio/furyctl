@@ -114,7 +114,7 @@ func NewClusterCmd() *cobra.Command {
 			// Init first half of collaborators.
 			client := netx.NewGoGetterClient()
 			executor := execx.NewStdExecutor()
-			depsvl := dependencies.NewValidator(executor, flags.BinPath, flags.FuryctlPath, flags.VpnAutoConnect)
+			depsvl := dependencies.NewValidator(executor, flags.BinPath, flags.FuryctlPath)
 
 			if flags.DistroLocation == "" {
 				distrodl = dist.NewCachingDownloader(client, outDir, flags.GitProtocol, flags.DistroPatchesLocation)
