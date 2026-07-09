@@ -111,7 +111,8 @@ func TestHelperProcessOpenvpnOK(t *testing.T) {
 	}
 
 	if os.Args[3] == "openvpn" && os.Args[4] == "--version" {
-		fmt.Fprint(os.Stdout, "OpenVPN 2.5.7 x86_64-pc-linux-gnu [SSL (OpenSSL)] [LZO] [LZ4]\n")
+		fmt.Fprint(os.Stdout, "OpenVPN 2.7.5 aarch64-apple-darwin25.4.0 [SSL (OpenSSL)] [LZO] [LZ4] [PKCS11] [MH/RECVDA] [AEAD]\n"+
+			"library versions: OpenSSL 3.5.0 8 Apr 2025, LZO 2.10\n")
 	}
 }
 
