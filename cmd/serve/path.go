@@ -49,19 +49,20 @@ func (lrw *loggingResponseWriter) Write(b []byte) (int, error) {
 }
 
 // Start an HTTP server serving a path in the file system on a custom address and port, logging each request.
-// The server is stopped when the user presses ENTER.
-// Note: Path traversal attacks, serving directory listings, dot files, and other security vulnerabilities should be addressed.
+// The server stops when the user presses ENTER or once every node reports "booted".
 func Path(address, port, root string, nodesStatus *map[string]string) error {
-	// Channel to signal user requested stop (ENTER).
-	inputCh := make(chan struct{})
-
-	// Context to cancel the input goroutine when all nodes are booted.
+	// ENTER and all-nodes-booted both cancel this context to stop the server; cancel() is
+	// idempotent, so the two paths can't race into a double-stop panic.
 	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 
-	// Nodes POST their boot status concurrently; guard the shared map and make the all-booted stop idempotent.
+	// Nodes POST their boot status concurrently; guard the shared map.
 	var statusMu sync.Mutex
 
 	var bootedOnce sync.Once
+
+	// Own mux (not http.DefaultServeMux) so repeated Path calls can't panic on re-registration.
+	mux := http.NewServeMux()
 
 	fs := http.FileServer(http.Dir(root))
 
@@ -89,7 +90,7 @@ func Path(address, port, root string, nodesStatus *map[string]string) error {
 		}).Debug("served asset request")
 	})
 
-	// Wrap the file server with a logging handler that logs each request.
+	// Serves the /status endpoint: GET returns the node status map, POST records an update.
 	statusHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// Use package-level loggingResponseWriter.
 		lrw := &loggingResponseWriter{ResponseWriter: w}
@@ -157,7 +158,7 @@ func Path(address, port, root string, nodesStatus *map[string]string) error {
 				logrus.Infof("Node %s is %s", node, status)
 			}
 
-			// Check if all nodes are in "booted" status and log if so.
+			// Check if all nodes are in "booted" status and stop the server if so.
 			statusMu.Lock()
 			allBooted := true
 
@@ -175,15 +176,14 @@ func Path(address, port, root string, nodesStatus *map[string]string) error {
 			if allBooted {
 				bootedOnce.Do(func() {
 					logrus.Infof("All %d nodes reached 'booted' state. Stopping server and continuing...", nodeCount)
-					close(inputCh)
 					cancel()
 				})
 			}
 		}
 	})
 
-	http.Handle("/status", statusHandler)
-	http.Handle("/", typedHandler)
+	mux.Handle("/status", statusHandler)
+	mux.Handle("/", typedHandler)
 
 	listenAddr := strings.Join([]string{address, port}, ":")
 	logrus.WithFields(logrus.Fields{
@@ -191,49 +191,42 @@ func Path(address, port, root string, nodesStatus *map[string]string) error {
 		"port":    port,
 		"root":    root,
 	}).Warn("Assets server started. You can boot your machines now")
-	logrus.Info("You can press ENTER to stop the server at any time and continue or CTRL+C to cancel and exit")
+	logrus.Info("Note: you can press ENTER to skip waiting for all nodes to boot and continue or CTRL+C to cancel and exit at any time")
 
 	const readHeaderTimeout = 5 * time.Second
 
 	// Create server so we can control shutdown and inspect errors.
-	srv := &http.Server{Addr: listenAddr, Handler: nil, ReadHeaderTimeout: readHeaderTimeout}
+	srv := &http.Server{Addr: listenAddr, Handler: mux, ReadHeaderTimeout: readHeaderTimeout}
 
 	// Channel to receive server errors.
 	errCh := make(chan error, 1)
 	go func() {
 		// ListenAndServe returns http.ErrServerClosed on graceful shutdown.
-		err := srv.ListenAndServe()
-		errCh <- err
+		errCh <- srv.ListenAndServe()
 	}()
+
+	// Stop the server when the operator presses ENTER. A read error (e.g. EOF on a
+	// non-interactive stdin) is not fatal: keep serving until all nodes have booted.
 	go func() {
-		done := make(chan struct{})
-		go func() {
-			_, err := bufio.NewReader(os.Stdin).ReadBytes('\n')
-			if err != nil {
-				errCh <- err
-			}
+		if _, err := bufio.NewReader(os.Stdin).ReadBytes('\n'); err != nil {
+			logrus.Debugf("stopped watching stdin for the stop signal: %v", err)
 
-			close(done)
-		}()
-		select {
-		case <-ctx.Done():
-			// All nodes booted, stop waiting for user input.
 			return
-
-		case <-done:
-			close(inputCh)
 		}
+
+		cancel()
 	}()
 
-	// Wait for either user input or server error.
+	// Wait for either a stop request (ENTER / all nodes booted) or a server error.
 	select {
-	case <-inputCh:
+	case <-ctx.Done():
 		const shutdownTimeout = 5 * time.Second
-		ctx, cancel := context.WithTimeout(context.Background(), shutdownTimeout)
 
-		defer cancel()
+		shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), shutdownTimeout)
 
-		if err := srv.Shutdown(ctx); err != nil {
+		defer shutdownCancel()
+
+		if err := srv.Shutdown(shutdownCtx); err != nil {
 			return fmt.Errorf("error during server shutdown: %w", err)
 		}
 
