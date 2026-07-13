@@ -95,7 +95,8 @@ func Path(address, port, root string, nodesStatus map[string]string) error {
 		// Use package-level loggingResponseWriter.
 		lrw := &loggingResponseWriter{ResponseWriter: w}
 
-		if r.Method == http.MethodGet {
+		switch r.Method {
+		case http.MethodGet:
 			lrw.Header().Set("Content-Type", "application/json")
 			lrw.WriteHeader(http.StatusOK)
 			encoder := json.NewEncoder(lrw)
@@ -113,9 +114,8 @@ func Path(address, port, root string, nodesStatus map[string]string) error {
 					"bytes":      lrw.bytes,
 				}).Debug("served nodes status")
 			}
-		}
 
-		if r.Method == http.MethodPost {
+		case http.MethodPost:
 			lrw.WriteHeader(http.StatusNoContent)
 
 			// Update node status based on query parameters.
@@ -153,6 +153,9 @@ func Path(address, port, root string, nodesStatus map[string]string) error {
 					cancel()
 				})
 			}
+
+		default:
+			lrw.WriteHeader(http.StatusMethodNotAllowed)
 		}
 	})
 
