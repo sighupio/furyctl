@@ -118,7 +118,7 @@ func TestNodeStatusTableBlockedInstallAddsNote(t *testing.T) {
 	table.Update("cp1.flatcar", statusInstallationBlocked)
 
 	out := buf.String()
-	if !strings.Contains(out, "manual intervention required") {
+	if !strings.Contains(out, "Manual intervention required") {
 		t.Fatalf("blocked install did not surface an attention note, got:\n%q", out)
 	}
 }
@@ -210,7 +210,7 @@ func TestNodeStatusTableShrinksCleanlyWithMultipleNotes(t *testing.T) {
 	table.Update("node1.flatcar", statusInstallationBlocked)
 
 	// Reproduce the reported bug: after the notes appear, replay the full stream and confirm both.
-	if blocked := countLinesContaining(replayANSI(buf.String()), "manual intervention required"); blocked != 2 {
+	if blocked := countLinesContaining(replayANSI(buf.String()), "Manual intervention required"); blocked != 2 {
 		t.Fatalf("expected 2 distinct attention notes while blocked, got %d", blocked)
 	}
 
@@ -219,7 +219,7 @@ func TestNodeStatusTableShrinksCleanlyWithMultipleNotes(t *testing.T) {
 
 	screen := replayANSI(buf.String())
 
-	if blocked := countLinesContaining(screen, "manual intervention required"); blocked != 0 {
+	if blocked := countLinesContaining(screen, "Manual intervention required"); blocked != 0 {
 		t.Fatalf("attention notes lingered after both nodes recovered:\n%s", strings.Join(screen, "\n"))
 	}
 
@@ -254,7 +254,7 @@ func TestNodeStatusTableNoteClearedOnRecovery(t *testing.T) {
 	buf.Reset()
 	table.Update("cp1.flatcar", statusBooted)
 
-	if out := buf.String(); strings.Contains(out, "manual intervention required") {
+	if out := buf.String(); strings.Contains(out, "Manual intervention required") {
 		t.Fatalf("attention note lingered after the node recovered, got:\n%q", out)
 	}
 }

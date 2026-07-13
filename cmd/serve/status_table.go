@@ -231,7 +231,7 @@ func (t *nodeStatusTable) lines() []string {
 	for _, node := range t.order {
 		if t.status[node] == statusInstallationBlocked {
 			lines = append(lines, "  ! "+node+
-				": installation blocked: Flatcar is already installed on disk. Manual intervention required.")
+				": Flatcar is already installed on disk. Manual intervention required.")
 		}
 	}
 
