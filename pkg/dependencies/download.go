@@ -386,7 +386,7 @@ func (dd *Downloader) DownloadTools(kfd config.KFD, kind string) ([]string, erro
 
 	// Stream mise's install progress into an ephemeral terminal region (TTY only); on debug or
 	// --no-tty the region stays disabled and mise output is captured to the log file as usual.
-	progress := iox.NewLiveRegion(os.Stderr, execx.NoTTY || logrus.GetLevel() >= logrus.DebugLevel)
+	progress := iox.NewLiveRegion(os.Stderr, execx.AnimationDisabled())
 
 	if err := runner.Install(progress); err != nil {
 		progress.Clear()

@@ -12,7 +12,6 @@ import (
 	"time"
 
 	"github.com/sirupsen/logrus"
-	"golang.org/x/term"
 
 	execx "github.com/sighupio/furyctl/internal/x/exec"
 )
@@ -49,7 +48,7 @@ var newProgressTracker = func() *downloadProgressTracker {
 		// Animate only on a terminal; under --no-tty/--debug fall back to logs, as the dependency
 		// downloader does for its live region.
 		out: f,
-		tty: !execx.NoTTY && logrus.GetLevel() < logrus.DebugLevel && term.IsTerminal(int(f.Fd())),
+		tty: execx.ShouldAnimate(f),
 	}
 }
 
