@@ -22,6 +22,10 @@ import (
 )
 
 const (
+	// StatusPending is the initial status every node is seeded with before it reports in.
+	// Exported because the caller building the seed map produces it; the other statuses are
+	// reported by the nodes and only consumed here.
+	StatusPending = "pending"
 	// Terminal status a node reports once it has booted into the installed OS.
 	statusBooted = "booted"
 	// Reported when Flatcar is already installed on disk and the installer refuses to
@@ -43,7 +47,6 @@ type nodeStatusTable struct {
 	order     []string             // Node hostnames in stable (sorted) order.
 	status    map[string]string    // Hostname to last reported status.
 	updatedAt map[string]time.Time // Hostname to when that status last changed.
-	notes     map[string]string    // Hostname to attention line (blocked install); cleared on recovery.
 
 	linesDrawn int // Rows painted by the previous render, so the next one knows how far up to move.
 }
@@ -67,11 +70,10 @@ var newNodeStatusTable = func(initial map[string]string) *nodeStatusTable {
 
 	return &nodeStatusTable{
 		out:       f,
-		tty:       !execx.NoTTY && logrus.GetLevel() < logrus.DebugLevel && term.IsTerminal(int(f.Fd())),
+		tty:       execx.ShouldAnimate(f),
 		order:     order,
 		status:    status,
 		updatedAt: make(map[string]time.Time, len(initial)),
-		notes:     make(map[string]string, len(initial)),
 	}
 }
 
@@ -100,13 +102,6 @@ func (t *nodeStatusTable) Update(node, status string) {
 	t.status[node] = status
 	t.updatedAt[node] = time.Now()
 
-	if status == statusInstallationBlocked {
-		t.notes[node] = node + ": Flatcar is already installed on disk; installation blocked, manual intervention required."
-	} else {
-		// The node moved on from a blocked install: drop its stale attention note.
-		delete(t.notes, node)
-	}
-
 	if !t.tty {
 		if status == statusInstallationBlocked {
 			logrus.Errorf(
@@ -129,17 +124,7 @@ func (t *nodeStatusTable) AllBooted() bool {
 	t.mu.Lock()
 	defer t.mu.Unlock()
 
-	if len(t.order) == 0 {
-		return false
-	}
-
-	for _, st := range t.status {
-		if st != statusBooted {
-			return false
-		}
-	}
-
-	return true
+	return len(t.order) > 0 && t.bootedCount() == len(t.order)
 }
 
 // Len returns the number of tracked nodes.
@@ -234,17 +219,19 @@ func (t *nodeStatusTable) lines() []string {
 
 	_ = w.Flush()
 
-	lines := make([]string, 0, len(t.order)+len(t.notes))
+	lines := make([]string, 0, len(t.order)+1)
 	lines = append(lines, fmt.Sprintf("Nodes bootstrap status — %d/%d booted", t.bootedCount(), len(t.order)))
 
 	for _, row := range strings.Split(strings.TrimRight(sb.String(), "\n"), "\n") {
 		lines = append(lines, "  "+row)
 	}
 
-	// Draw notes in node order (stable), skipping nodes with none.
+	// Draw attention notes in node order (stable) for nodes with a blocked install; a node that
+	// later recovers is no longer blocked, so its note simply stops being emitted.
 	for _, node := range t.order {
-		if note, ok := t.notes[node]; ok {
-			lines = append(lines, "  ! "+note)
+		if t.status[node] == statusInstallationBlocked {
+			lines = append(lines, "  ! "+node+
+				": installation blocked: Flatcar is already installed on disk. Manual intervention required.")
 		}
 	}
 
