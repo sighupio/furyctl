@@ -69,7 +69,6 @@
 | furyctl / Providers |     EKSCluster     |  KFDDistribution   |     OnPremises     |     Immutable      |
 |:--------------------|:------------------:|:------------------:|:------------------:|:------------------:|
 | >=0.35.0            | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: |
-| >=0.34.2            | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: |
 | >=0.29.6            | :white_check_mark: | :white_check_mark: | :white_check_mark: |        :x:         |
 | 0.29.5              |        :x:         |        :x:         |        :x:         |                    |
 | 0.29.4              | :white_check_mark: | :white_check_mark: | :white_check_mark: |                    |
