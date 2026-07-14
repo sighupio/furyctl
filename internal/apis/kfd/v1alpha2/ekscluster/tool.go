@@ -46,20 +46,21 @@ func (x *ExtraToolsValidator) Validate(confPath string) ([]string, []error) {
 }
 
 func (x *ExtraToolsValidator) openVPN(conf private.EksclusterKfdV1Alpha2) error {
-	vpnEnabled := conf.Spec.Infrastructure != nil &&
-		conf.Spec.Infrastructure.Vpn != nil &&
-		(conf.Spec.Infrastructure.Vpn.Instances == nil ||
-			*conf.Spec.Infrastructure.Vpn.Instances > 0)
+	if !vpnConfigured(conf) {
+		return nil
+	}
 
-	if vpnEnabled {
-		oRunner := openvpn.NewRunner(x.executor, openvpn.Paths{
-			Openvpn: "openvpn",
-		})
+	oRunner := openvpn.NewRunner(x.executor, openvpn.Paths{
+		Openvpn: "openvpn",
+	})
 
-		if _, err := oRunner.Version(); err != nil {
-			return ErrOpenVPNNotInstalled
-		}
+	if _, err := oRunner.Version(); err != nil {
+		return ErrOpenVPNNotInstalled
 	}
 
 	return nil
+}
+
+func vpnConfigured(conf private.EksclusterKfdV1Alpha2) bool {
+	return conf.Spec.Infrastructure != nil && conf.Spec.Infrastructure.Vpn.IsConfigured()
 }

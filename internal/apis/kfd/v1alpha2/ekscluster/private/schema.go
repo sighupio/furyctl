@@ -77,6 +77,16 @@ type SpecInfrastructureVpn struct {
 	Port                *TypesTcpPort `yaml:"port,omitempty"                json:"port,omitempty"`
 }
 
+// IsConfigured reports whether a VPN is requested. A nil receiver means no VPN
+// block; nil Instances defaults to one; otherwise configured when > 0.
+func (v *SpecInfrastructureVpn) IsConfigured() bool {
+	if v == nil {
+		return false
+	}
+
+	return v.Instances == nil || *v.Instances > 0
+}
+
 // --- kubernetes ---
 
 type SpecKubernetes struct {

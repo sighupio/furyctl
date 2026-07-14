@@ -7,6 +7,7 @@ package private_test
 import (
 	"testing"
 
+	"github.com/stretchr/testify/require"
 	"gopkg.in/yaml.v3"
 
 	"github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/ekscluster/private"
@@ -177,4 +178,30 @@ func asMap(t *testing.T, m map[any]any, key string) map[any]any {
 	}
 
 	return mm
+}
+
+func TestSpecInfrastructureVpn_IsConfigured(t *testing.T) {
+	t.Parallel()
+
+	intPtr := func(i int) *int { return &i }
+
+	testCases := []struct {
+		desc string
+		vpn  *private.SpecInfrastructureVpn
+		want bool
+	}{
+		{desc: "nil vpn is not configured", vpn: nil, want: false},
+		{desc: "nil instances defaults to configured", vpn: &private.SpecInfrastructureVpn{}, want: true},
+		{desc: "positive instances is configured", vpn: &private.SpecInfrastructureVpn{Instances: intPtr(2)}, want: true},
+		{desc: "zero instances is not configured", vpn: &private.SpecInfrastructureVpn{Instances: intPtr(0)}, want: false},
+		{desc: "negative instances is not configured", vpn: &private.SpecInfrastructureVpn{Instances: intPtr(-1)}, want: false},
+	}
+
+	for _, tC := range testCases {
+		t.Run(tC.desc, func(t *testing.T) {
+			t.Parallel()
+
+			require.Equal(t, tC.want, tC.vpn.IsConfigured())
+		})
+	}
 }

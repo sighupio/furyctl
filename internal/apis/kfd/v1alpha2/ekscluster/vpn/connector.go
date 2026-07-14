@@ -159,17 +159,7 @@ func (v *Connector) writeOVPNFileToDisk(certName string, cert []byte) error {
 }
 
 func (v *Connector) IsConfigured() bool {
-	vpn := v.config
-	if vpn == nil {
-		return false
-	}
-
-	instances := v.config.Instances
-	if instances == nil {
-		return true
-	}
-
-	return *instances > 0
+	return v.config.IsConfigured()
 }
 
 func (v *Connector) GetKillMessage() (string, error) {
