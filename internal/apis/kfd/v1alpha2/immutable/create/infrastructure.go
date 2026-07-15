@@ -156,7 +156,7 @@ func (i *Infrastructure) Exec(_ string, upgradeState *upgrade.State) error {
 	// Struct to keep each node's bootstrap status.
 	nodeStatus := make(map[string]string, len(i.furyctlConf.Spec.Infrastructure.Nodes))
 	for _, node := range i.furyctlConf.Spec.Infrastructure.Nodes {
-		nodeStatus[node.Hostname] = "pending"
+		nodeStatus[node.Hostname] = serve.StatusPending
 	}
 
 	// Serve the downloaded assets to the machines.
@@ -180,7 +180,7 @@ func (i *Infrastructure) Exec(_ string, upgradeState *upgrade.State) error {
 		ipxeServerPort = ipxeServer.Port()
 	}
 
-	if err := serve.Path(ipxeServerHost, ipxeServerPort, filepath.Join(i.Path, "server"), &nodeStatus); err != nil {
+	if err := serve.Path(ipxeServerHost, ipxeServerPort, filepath.Join(i.Path, "server"), nodeStatus); err != nil {
 		return fmt.Errorf("serving assets failed: %w", err)
 	}
 
