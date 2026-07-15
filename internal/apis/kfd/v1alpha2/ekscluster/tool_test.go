@@ -17,66 +17,118 @@ import (
 	execx "github.com/sighupio/furyctl/internal/x/exec"
 )
 
+func vpnConf(instances int) private.EksclusterKfdV1Alpha2 {
+	return private.EksclusterKfdV1Alpha2{
+		Spec: private.Spec{
+			Infrastructure: &private.SpecInfrastructure{
+				Vpn: &private.SpecInfrastructureVpn{
+					Instances: &instances,
+				},
+			},
+		},
+	}
+}
+
+func vpnConfDefault() private.EksclusterKfdV1Alpha2 {
+	return private.EksclusterKfdV1Alpha2{
+		Spec: private.Spec{
+			Infrastructure: &private.SpecInfrastructure{
+				Vpn: &private.SpecInfrastructureVpn{},
+			},
+		},
+	}
+}
+
+func noVPNInfra() private.EksclusterKfdV1Alpha2 {
+	return private.EksclusterKfdV1Alpha2{
+		Spec: private.Spec{Infrastructure: &private.SpecInfrastructure{}},
+	}
+}
+
+func noInfra() private.EksclusterKfdV1Alpha2 {
+	return private.EksclusterKfdV1Alpha2{
+		Spec: private.Spec{},
+	}
+}
+
 func Test_ExtraToolsValidator_openVPN(t *testing.T) {
 	t.Parallel()
 
-	intPtr := func(i int) *int { return &i }
-
-	vpnConf := func(instances *int) private.EksclusterKfdV1Alpha2 {
-		return private.EksclusterKfdV1Alpha2{
-			Spec: private.Spec{
-				Infrastructure: &private.SpecInfrastructure{
-					Vpn: &private.SpecInfrastructureVpn{
-						Instances: instances,
-					},
-				},
-			},
-		}
+	testCases := []struct {
+		desc  string
+		fails bool
+	}{
+		{
+			desc: "openvpn installed returns no error",
+		},
+		{
+			desc:  "openvpn missing returns error",
+			fails: true,
+		},
 	}
 
-	noVPNInfra := private.EksclusterKfdV1Alpha2{
-		Spec: private.Spec{Infrastructure: &private.SpecInfrastructure{}},
-	}
+	for _, tC := range testCases {
+		t.Run(tC.desc, func(t *testing.T) {
+			t.Parallel()
 
-	noInfra := private.EksclusterKfdV1Alpha2{
-		Spec: private.Spec{},
+			helper := "TestHelperProcessOpenvpnOK"
+			if tC.fails {
+				helper = "TestHelperProcessOpenvpnMissing"
+			}
+
+			validator := NewExtraToolsValidator(execx.NewFakeExecutor(helper))
+
+			err := validator.openVPN()
+
+			if tC.fails {
+				require.ErrorIs(t, err, ErrOpenVPNNotInstalled)
+			} else {
+				require.NoError(t, err)
+			}
+		})
 	}
+}
+
+func Test_ExtraToolsValidator_validate(t *testing.T) {
+	t.Parallel()
 
 	testCases := []struct {
 		desc           string
 		conf           private.EksclusterKfdV1Alpha2
 		openvpnMissing bool
+		wantOks        []string
 		wantErr        bool
 	}{
 		{
-			desc: "vpn enabled with default instances and openvpn installed",
-			conf: vpnConf(nil),
+			desc:    "vpn enabled with default instances and openvpn installed adds openvpn to oks",
+			conf:    vpnConfDefault(),
+			wantOks: []string{"openvpn"},
 		},
 		{
-			desc:           "vpn enabled with default instances and openvpn missing (no auto-connect)",
-			conf:           vpnConf(nil),
+			desc:           "vpn enabled with default instances and openvpn missing reports error and no oks",
+			conf:           vpnConfDefault(),
 			openvpnMissing: true,
 			wantErr:        true,
 		},
 		{
-			desc:           "vpn enabled with positive instances and openvpn missing",
-			conf:           vpnConf(intPtr(2)),
+			desc:           "vpn enabled with positive instances and openvpn missing reports error and no oks",
+			conf:           vpnConf(2),
 			openvpnMissing: true,
 			wantErr:        true,
 		},
 		{
-			desc:           "vpn disabled with zero instances does not require openvpn",
-			conf:           vpnConf(intPtr(0)),
+			desc:           "vpn disabled with zero instances does not validate openvpn",
+			conf:           vpnConf(0),
 			openvpnMissing: true,
 		},
 		{
-			desc:           "no vpn configuration does not require openvpn",
-			conf:           noVPNInfra,
+			desc:           "no vpn configuration does not validate openvpn",
+			conf:           noVPNInfra(),
 			openvpnMissing: true,
 		},
 		{
-			desc:           "no infrastructure does not require openvpn",
-			conf:           noInfra,
+			desc:           "no infrastructure does not validate openvpn",
+			conf:           noInfra(),
 			openvpnMissing: true,
 		},
 	}
@@ -92,12 +144,15 @@ func Test_ExtraToolsValidator_openVPN(t *testing.T) {
 
 			validator := NewExtraToolsValidator(execx.NewFakeExecutor(helper))
 
-			err := validator.openVPN(tC.conf)
+			oks, errs := validator.validateConf(tC.conf)
+
+			require.Equal(t, tC.wantOks, oks)
 
 			if tC.wantErr {
-				require.ErrorIs(t, err, ErrOpenVPNNotInstalled)
+				require.Len(t, errs, 1)
+				require.ErrorIs(t, errs[0], ErrOpenVPNNotInstalled)
 			} else {
-				require.NoError(t, err)
+				require.Empty(t, errs)
 			}
 		})
 	}

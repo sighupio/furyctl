@@ -26,17 +26,27 @@ func NewExtraToolsValidator(executor execx.Executor) *ExtraToolsValidator {
 }
 
 func (x *ExtraToolsValidator) Validate(confPath string) ([]string, []error) {
+	furyctlConf, err := yamlx.FromFileV3[private.EksclusterKfdV1Alpha2](confPath)
+	if err != nil {
+		return nil, []error{err}
+	}
+
+	return x.validateConf(furyctlConf)
+}
+
+// validateConf contains the real validation logic separated from Validate so that tests can
+// exercise it against the parsed struct without writing throwaway YAML files.
+func (x *ExtraToolsValidator) validateConf(conf private.EksclusterKfdV1Alpha2) ([]string, []error) {
 	var (
 		oks  []string
 		errs []error
 	)
 
-	furyctlConf, err := yamlx.FromFileV3[private.EksclusterKfdV1Alpha2](confPath)
-	if err != nil {
-		return oks, append(errs, err)
+	if !vpnConfigured(conf) {
+		return oks, errs
 	}
 
-	if err := x.openVPN(furyctlConf); err != nil {
+	if err := x.openVPN(); err != nil {
 		errs = append(errs, err)
 	} else {
 		oks = append(oks, "openvpn")
@@ -45,11 +55,7 @@ func (x *ExtraToolsValidator) Validate(confPath string) ([]string, []error) {
 	return oks, errs
 }
 
-func (x *ExtraToolsValidator) openVPN(conf private.EksclusterKfdV1Alpha2) error {
-	if !vpnConfigured(conf) {
-		return nil
-	}
-
+func (x *ExtraToolsValidator) openVPN() error {
 	oRunner := openvpn.NewRunner(x.executor, openvpn.Paths{
 		Openvpn: "openvpn",
 	})
