@@ -135,7 +135,7 @@ func NewApplyCmd() *cobra.Command {
 			// Init first half of collaborators.
 			client := netx.NewGoGetterClient()
 			executor := execx.NewStdExecutor()
-			depsvl := dependencies.NewValidator(executor, flags.BinPath, flags.FuryctlPath, flags.VpnAutoConnect)
+			depsvl := dependencies.NewValidator(executor, flags.BinPath, flags.FuryctlPath)
 
 			if flags.DistroLocation == "" {
 				distrodl = dist.NewCachingDownloader(client, flags.Outdir, flags.GitProtocol, flags.DistroPatchesLocation)

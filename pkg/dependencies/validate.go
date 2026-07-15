@@ -19,9 +19,9 @@ var (
 	errValidatingEnv   = errors.New("errors validating env vars")
 )
 
-func NewValidator(executor execx.Executor, binPath, furyctlPath string, autoConnect bool) *Validator {
+func NewValidator(executor execx.Executor, binPath, furyctlPath string) *Validator {
 	return &Validator{
-		toolsValidator:   tools.NewValidator(executor, binPath, furyctlPath, autoConnect),
+		toolsValidator:   tools.NewValidator(executor, binPath, furyctlPath),
 		envVarsValidator: envvars.NewValidator(),
 	}
 }

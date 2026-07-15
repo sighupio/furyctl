@@ -85,7 +85,7 @@ The command will dump into a 'distribution' folder in the working directory all 
 
 			client := netx.NewGoGetterClient()
 			executor := execx.NewStdExecutor()
-			depsvl := dependencies.NewValidator(executor, "", flags.FuryctlPath, false)
+			depsvl := dependencies.NewValidator(executor, "", flags.FuryctlPath)
 
 			if flags.DistroLocation == "" {
 				distrodl = dist.NewCachingDownloader(client, flags.Outdir, flags.GitProtocol, flags.DistroPatchesLocation)

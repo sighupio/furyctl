@@ -146,7 +146,7 @@ func NewAirGappedBundleCmd() *cobra.Command {
 
 			client := netx.NewGoGetterClient()
 			executor := execx.NewStdExecutor()
-			depsvl := dependencies.NewValidator(executor, binPath, furyctlPath, false)
+			depsvl := dependencies.NewValidator(executor, binPath, furyctlPath)
 
 			var distrodl *dist.Downloader
 			if distroLocation == "" {

@@ -219,10 +219,7 @@ func (p *PreFlight) copyFromTemplate() error {
 
 func (p *PreFlight) IsVPNRequired() bool {
 	return p.FuryctlConf.Spec.Infrastructure != nil &&
-		p.FuryctlConf.Spec.Infrastructure.Vpn != nil &&
-		(p.FuryctlConf.Spec.Infrastructure.Vpn.Instances == nil ||
-			p.FuryctlConf.Spec.Infrastructure.Vpn.Instances != nil &&
-				*p.FuryctlConf.Spec.Infrastructure.Vpn.Instances > 0) &&
+		p.FuryctlConf.Spec.Infrastructure.Vpn.IsConfigured() &&
 		p.FuryctlConf.Spec.Kubernetes.ApiServer.PrivateAccess &&
 		!p.FuryctlConf.Spec.Kubernetes.ApiServer.PublicAccess
 }

@@ -61,10 +61,7 @@ func (v *ExtraSchemaValidator) validateClusterName(furyctlConf *private.Eksclust
 func (*ExtraSchemaValidator) validateInfraVPNOverrides(furyctlConf *private.EksclusterKfdV1Alpha2) error {
 	//nolint:revive // ignore magic number linters
 	if len(furyctlConf.Metadata.Name) > 19 && furyctlConf.Spec.Infrastructure != nil &&
-		furyctlConf.Spec.Infrastructure.Vpn != nil &&
-		(furyctlConf.Spec.Infrastructure.Vpn.Instances == nil ||
-			(furyctlConf.Spec.Infrastructure.Vpn.Instances != nil &&
-				*furyctlConf.Spec.Infrastructure.Vpn.Instances > 0)) {
+		furyctlConf.Spec.Infrastructure.Vpn.IsConfigured() {
 		if furyctlConf.Spec.Infrastructure.Vpn.IamUserNameOverride == nil ||
 			(furyctlConf.Spec.Infrastructure.Vpn.IamUserNameOverride != nil &&
 				*furyctlConf.Spec.Infrastructure.Vpn.IamUserNameOverride == "") {

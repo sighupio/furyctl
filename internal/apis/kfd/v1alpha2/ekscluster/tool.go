@@ -16,14 +16,12 @@ import (
 var ErrOpenVPNNotInstalled = errors.New("openvpn is not installed")
 
 type ExtraToolsValidator struct {
-	executor    execx.Executor
-	autoConnect bool
+	executor execx.Executor
 }
 
-func NewExtraToolsValidator(executor execx.Executor, autoConnect bool) *ExtraToolsValidator {
+func NewExtraToolsValidator(executor execx.Executor) *ExtraToolsValidator {
 	return &ExtraToolsValidator{
-		executor:    executor,
-		autoConnect: autoConnect,
+		executor: executor,
 	}
 }
 
@@ -48,20 +46,21 @@ func (x *ExtraToolsValidator) Validate(confPath string) ([]string, []error) {
 }
 
 func (x *ExtraToolsValidator) openVPN(conf private.EksclusterKfdV1Alpha2) error {
-	if conf.Spec.Infrastructure != nil &&
-		conf.Spec.Infrastructure.Vpn != nil &&
-		(conf.Spec.Infrastructure.Vpn.Instances == nil ||
-			(conf.Spec.Infrastructure.Vpn.Instances != nil &&
-				*conf.Spec.Infrastructure.Vpn.Instances > 0)) &&
-		x.autoConnect {
-		oRunner := openvpn.NewRunner(x.executor, openvpn.Paths{
-			Openvpn: "openvpn",
-		})
+	if !vpnConfigured(conf) {
+		return nil
+	}
 
-		if _, err := oRunner.Version(); err != nil {
-			return ErrOpenVPNNotInstalled
-		}
+	oRunner := openvpn.NewRunner(x.executor, openvpn.Paths{
+		Openvpn: "openvpn",
+	})
+
+	if _, err := oRunner.Version(); err != nil {
+		return ErrOpenVPNNotInstalled
 	}
 
 	return nil
+}
+
+func vpnConfigured(conf private.EksclusterKfdV1Alpha2) bool {
+	return conf.Spec.Infrastructure != nil && conf.Spec.Infrastructure.Vpn.IsConfigured()
 }

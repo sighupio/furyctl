@@ -83,11 +83,11 @@ func NewConnector(
 }
 
 func (v *Connector) Connect() error {
-	if v.autoconnect {
-		if !v.IsConfigured() {
-			return ErrAutoConnectWithoutVpn
-		}
+	if err := v.ValidateConfig(); err != nil {
+		return err
+	}
 
+	if v.autoconnect {
 		vpn, pid, err := v.checkExistingOpenVPN()
 		if err != nil {
 			return err
@@ -104,6 +104,17 @@ func (v *Connector) Connect() error {
 
 	if !v.skip {
 		return v.prompt()
+	}
+
+	return nil
+}
+
+// ValidateConfig returns an error when auto-connect is requested but no VPN is configured, since
+// there would be nothing to connect to. Connect calls it, and the creator/deleter call it early so
+// the misconfiguration fails fast instead of deep inside a phase or being silently ignored.
+func (v *Connector) ValidateConfig() error {
+	if v.autoconnect && !v.IsConfigured() {
+		return ErrAutoConnectWithoutVpn
 	}
 
 	return nil
@@ -148,17 +159,7 @@ func (v *Connector) writeOVPNFileToDisk(certName string, cert []byte) error {
 }
 
 func (v *Connector) IsConfigured() bool {
-	vpn := v.config
-	if vpn == nil {
-		return false
-	}
-
-	instances := v.config.Instances
-	if instances == nil {
-		return true
-	}
-
-	return *instances > 0
+	return v.config.IsConfigured()
 }
 
 func (v *Connector) GetKillMessage() (string, error) {
