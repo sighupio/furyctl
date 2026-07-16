@@ -292,28 +292,21 @@ func (k *Kubernetes) Stop() error {
 
 	var wg sync.WaitGroup
 
-	//nolint:mnd // ignore magic number linters
-	wg.Add(2)
-
-	go func() {
+	wg.Go(func() {
 		logrus.Debug("Stopping terraform...")
 
 		if err := k.tfRunner.Stop(); err != nil {
 			errCh <- fmt.Errorf("error stopping terraform: %w", err)
 		}
+	})
 
-		wg.Done()
-	}()
-
-	go func() {
+	wg.Go(func() {
 		logrus.Debug("Stopping awscli...")
 
 		if err := k.awsRunner.Stop(); err != nil {
 			errCh <- fmt.Errorf("error stopping awscli: %w", err)
 		}
-
-		wg.Done()
-	}()
+	})
 
 	go func() {
 		wg.Wait()

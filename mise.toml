@@ -1,5 +1,5 @@
 [tools]
-go = "1.24.13"
+go = "1.25.12"
 golangci-lint = "1.64.8"
 goreleaser = "2.15.4"
 awscli = "2.15.17"

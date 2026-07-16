@@ -259,32 +259,23 @@ func (v *ClusterCreator) Create(startFrom string, timeout, _ int) error {
 		case cluster.OperationPhaseAll:
 			var stopWg sync.WaitGroup
 
-			//nolint:mnd,revive // ignore magic number linters
-			stopWg.Add(3)
-
-			go func() {
+			stopWg.Go(func() {
 				if err := infra.Stop(); err != nil {
 					logrus.Error(err)
 				}
+			})
 
-				stopWg.Done()
-			}()
-
-			go func() {
+			stopWg.Go(func() {
 				if err := kube.Stop(); err != nil {
 					logrus.Error(err)
 				}
+			})
 
-				stopWg.Done()
-			}()
-
-			go func() {
+			stopWg.Go(func() {
 				if err := distro.Stop(); err != nil {
 					logrus.Error(err)
 				}
-
-				stopWg.Done()
-			}()
+			})
 
 			stopWg.Wait()
 		}

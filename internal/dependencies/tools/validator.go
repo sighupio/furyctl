@@ -116,7 +116,7 @@ func (tv *Validator) validateTools(i any, kfdManifest config.KFD) ([]string, []e
 
 	toolCfgs := reflect.ValueOf(i)
 	for i := range toolCfgs.NumField() {
-		toolCfg, ok := toolCfgs.Field(i).Interface().(config.KFDTool)
+		toolCfg, ok := reflect.TypeAssert[config.KFDTool](toolCfgs.Field(i))
 		if !ok {
 			continue
 		}

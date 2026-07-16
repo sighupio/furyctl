@@ -387,38 +387,29 @@ func (d *Distribution) Stop() error {
 
 	var wg sync.WaitGroup
 
-	//nolint:mnd,revive // ignore magic number linters
-	wg.Add(3)
-
-	go func() {
+	wg.Go(func() {
 		logrus.Debug("Stopping terraform...")
 
 		if err := d.TFRunner.Stop(); err != nil {
 			errCh <- fmt.Errorf("error stopping terraform: %w", err)
 		}
+	})
 
-		wg.Done()
-	}()
-
-	go func() {
+	wg.Go(func() {
 		logrus.Debug("Stopping shell...")
 
 		if err := d.shellRunner.Stop(); err != nil {
 			errCh <- fmt.Errorf("error stopping shell: %w", err)
 		}
+	})
 
-		wg.Done()
-	}()
-
-	go func() {
+	wg.Go(func() {
 		logrus.Debug("Stopping kubectl...")
 
 		if err := d.kubeRunner.Stop(); err != nil {
 			errCh <- fmt.Errorf("error stopping kubectl: %w", err)
 		}
-
-		wg.Done()
-	}()
+	})
 
 	go func() {
 		wg.Wait()
