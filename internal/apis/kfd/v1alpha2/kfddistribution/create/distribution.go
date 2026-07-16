@@ -12,7 +12,6 @@ import (
 	"strings"
 
 	"github.com/sirupsen/logrus"
-	"golang.org/x/sync/errgroup"
 
 	"github.com/sighupio/furyctl/internal/apis/config"
 	"github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/kfddistribution/public"
@@ -332,29 +331,26 @@ func (d *Distribution) postDistribution(
 }
 
 func (d *Distribution) Stop() error {
-	var eg errgroup.Group
+	return cluster.StopAll(
+		func() error {
+			logrus.Debug("Stopping shell...")
 
-	eg.Go(func() error {
-		logrus.Debug("Stopping shell...")
+			if err := d.shellRunner.Stop(); err != nil {
+				return fmt.Errorf("error stopping shell: %w", err)
+			}
 
-		if err := d.shellRunner.Stop(); err != nil {
-			return fmt.Errorf("error stopping shell: %w", err)
-		}
+			return nil
+		},
+		func() error {
+			logrus.Debug("Stopping kubectl...")
 
-		return nil
-	})
+			if err := d.kubeRunner.Stop(); err != nil {
+				return fmt.Errorf("error stopping kubectl: %w", err)
+			}
 
-	eg.Go(func() error {
-		logrus.Debug("Stopping kubectl...")
-
-		if err := d.kubeRunner.Stop(); err != nil {
-			return fmt.Errorf("error stopping kubectl: %w", err)
-		}
-
-		return nil
-	})
-
-	return eg.Wait()
+			return nil
+		},
+	)
 }
 
 func (d *Distribution) SetUpgrade(upgradeEnabled bool) {
