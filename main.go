@@ -41,9 +41,8 @@ func main() {
 
 func exec() int {
 	wg := &sync.WaitGroup{}
-	wg.Add(1)
 
-	go checkNewRelease(wg, version)
+	wg.Go(func() { checkNewRelease(version) })
 
 	log := &logrus.Logger{
 		Out: os.Stdout,
@@ -86,9 +85,7 @@ func exec() int {
 	return 0
 }
 
-func checkNewRelease(wg *sync.WaitGroup, v string) {
-	defer wg.Done()
-
+func checkNewRelease(v string) {
 	newRel, err := app.CheckNewRelease(v)
 	if err != nil {
 		logrus.Trace(err)

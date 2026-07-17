@@ -174,7 +174,7 @@ func (dd *Downloader) DownloadModules(kfd config.KFD, gitPrefix, kind string) er
 			}()
 
 			name := strings.ToLower(mods.Type().Field(i).Name)
-			version, ok := mods.Field(i).Interface().(string)
+			version, ok := reflect.TypeAssert[string](mods.Field(i))
 
 			if !ok {
 				errCh <- fmt.Errorf("%s: %w", name, ErrModuleHasNoVersion)
@@ -313,7 +313,7 @@ func (dd *Downloader) DownloadInstallers(installers config.KFDKubernetes, gitPre
 
 		dst := filepath.Join(dd.basePath, "vendor", "installers", name)
 
-		v, ok := insts.Field(i).Interface().(config.KFDProvider)
+		v, ok := reflect.TypeAssert[config.KFDProvider](insts.Field(i))
 		if !ok {
 			return fmt.Errorf("%s: %w", name, ErrModuleHasNoVersion)
 		}
@@ -511,7 +511,7 @@ func miseToolsForKind(kfd config.KFD, kind string) (map[string]string, []string)
 		for j := range tls.Field(i).NumField() {
 			name := strings.ToLower(tls.Field(i).Type().Field(j).Name)
 
-			toolCfg, ok := tls.Field(i).Field(j).Interface().(config.KFDTool)
+			toolCfg, ok := reflect.TypeAssert[config.KFDTool](tls.Field(i).Field(j))
 			if !ok || toolCfg.Version == "" {
 				continue
 			}

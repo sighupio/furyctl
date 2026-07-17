@@ -57,9 +57,9 @@ func (d *Downloader) Download(packages []Package) error {
 	logrus.Debugf("workers = %d", len(jobs))
 
 	for i, data := range packages {
-		wg.Add(1)
-
-		go d.downloadProcess(&wg, data, errChan, i)
+		wg.Go(func() {
+			d.downloadProcess(data, errChan, i)
+		})
 
 		logrus.Debugf("created worker %d", i)
 	}
@@ -86,12 +86,10 @@ func (d *Downloader) Download(packages []Package) error {
 	return nil
 }
 
-func (d *Downloader) downloadProcess(wg *sync.WaitGroup, data Package, errChan chan<- error, i int) {
+func (d *Downloader) downloadProcess(data Package, errChan chan<- error, i int) {
 	var pU *PackageURL
 
 	var url string
-
-	defer wg.Done()
 
 	logrus.Debugf("worker %d : received data %v", i, data)
 

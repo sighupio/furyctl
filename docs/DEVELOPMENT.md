@@ -21,7 +21,7 @@ This guide covers development setup, building from source, and contributing to f
 
 2. **Install all development tools**:
    ```bash
-   mise install      # Installs Go 1.24.13, golangci-lint, goreleaser, awscli, and all Go-based tools
+   mise install      # Installs Go 1.25.12, golangci-lint, goreleaser, awscli, and all Go-based tools
    ```
 
 3. **Setup Go module dependencies**:
@@ -39,7 +39,7 @@ This guide covers development setup, building from source, and contributing to f
 5. **Find built binary**:
    The built binary will be in the `dist/` directory after running `mise run build`.
 
-> **What gets installed**: `mise install` automatically installs Go 1.24.13, golangci-lint 1.64.8, goreleaser, awscli, addlicense, gofumpt, gci, goimports, formattag, ginkgo, and go-cover-treemap - everything you need for development.
+> **What gets installed**: `mise install` automatically installs Go 1.25.12, golangci-lint 1.64.8, goreleaser, awscli, addlicense, gofumpt, gci, goimports, formattag, ginkgo, and go-cover-treemap - everything you need for development.
 
 ## Development Workflow
 
@@ -49,7 +49,7 @@ The project uses **mise** for task and tool management. Here are the essential c
 
 #### Setup and Tools
 - `mise install`: Installs ALL development tools automatically:
-  - **Native tools**: Go 1.24.13, golangci-lint 1.64.8, goreleaser, awscli 2.15.17
+  - **Native tools**: Go 1.25.12, golangci-lint 1.64.8, goreleaser, awscli 2.15.17
   - **UBI tools**: addlicense v1.1.1, gofumpt v0.6.0  
   - **Go tools**: gci v0.13.4, goimports v0.22.0, formattag v0.0.9, ginkgo v2.19.0, go-cover-treemap v1.4.2
 - `mise run setup`: Downloads and tidies Go module dependencies (`go mod download` + `go mod tidy`).
