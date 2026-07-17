@@ -129,9 +129,7 @@ func TestValidator_Validate(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			errors := validator.Validate(tt.flags)
 
-			if len(errors) != tt.expectedErrors {
-				t.Errorf("Expected %d errors, got %d: %v", tt.expectedErrors, len(errors), errors)
-			}
+			assert.Len(t, errors, tt.expectedErrors, "Expected %d errors, got %d: %v", tt.expectedErrors, len(errors), errors)
 		})
 	}
 }
@@ -206,12 +204,10 @@ func TestValidator_ValidateSpecificFlag(t *testing.T) {
 			// Test through validateFlagValue which calls validateSpecificFlag
 			err := validator.ValidateIndividualFlag(tt.flagName, tt.value, flagInfo)
 
-			if tt.expectError && err == nil {
-				t.Errorf("Expected error for flag %s with value %v, but got none", tt.flagName, tt.value)
-			}
-
-			if !tt.expectError && err != nil {
-				t.Errorf("Unexpected error for flag %s with value %v: %v", tt.flagName, tt.value, err)
+			if tt.expectError {
+				assert.Error(t, err, "Expected error for flag %s with value %v, but got none", tt.flagName, tt.value)
+			} else {
+				assert.NoError(t, err, "Unexpected error for flag %s with value %v", tt.flagName, tt.value)
 			}
 		})
 	}
@@ -356,13 +352,8 @@ func TestValidator_ErrorSeverityClassification(t *testing.T) {
 				}
 			}
 
-			if fatalCount != tt.expectedFatal {
-				t.Errorf("Expected %d fatal errors, got %d", tt.expectedFatal, fatalCount)
-			}
-
-			if warningCount != tt.expectedWarnings {
-				t.Errorf("Expected %d warning errors, got %d", tt.expectedWarnings, warningCount)
-			}
+			assert.Equal(t, tt.expectedFatal, fatalCount, "Expected %d fatal errors, got %d", tt.expectedFatal, fatalCount)
+			assert.Equal(t, tt.expectedWarnings, warningCount, "Expected %d warning errors, got %d", tt.expectedWarnings, warningCount)
 		})
 	}
 }

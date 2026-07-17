@@ -11,6 +11,9 @@ import (
 	"os"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
 	execx "github.com/sighupio/furyctl/internal/x/exec"
 )
 
@@ -18,38 +21,26 @@ func Test_StdExecutor_Command(t *testing.T) {
 	e := execx.NewStdExecutor()
 
 	cmd := e.Command("echo", "hello go world")
-	if cmd == nil {
-		t.Fatalf("expected command to be not nil")
-	}
+	require.NotNil(t, cmd, "expected command to be not nil")
 
 	out, err := cmd.Output()
-	if err != nil {
-		t.Fatalf("expected command to be executed without errors: %v", err)
-	}
+	require.NoError(t, err, "expected command to be executed without errors")
 
-	if string(out) != "hello go world\n" {
-		t.Errorf("want = 'hello go world', got = '%s'", string(out))
-	}
+	assert.Equal(t, "hello go world\n", string(out))
 }
 
 func Test_FakeExecutor_Command(t *testing.T) {
 	e := execx.NewFakeExecutor("TestHelperProcess")
 
 	cmd := e.Command("fakectl", "hello world")
-	if cmd == nil {
-		t.Fatalf("expected command to be not nil")
-	}
+	require.NotNil(t, cmd, "expected command to be not nil")
 
 	out, err := cmd.Output()
-	if err != nil {
-		t.Fatalf("expected command to be executed without errors: %v", err)
-	}
+	require.NoError(t, err, "expected command to be executed without errors")
 
 	t.Log(cmd.Args)
 
-	if string(out) != "hello world" {
-		t.Errorf("want = 'hello go world', got = '%s'", string(out))
-	}
+	assert.Equal(t, "hello world", string(out))
 }
 
 func TestHelperProcess(t *testing.T) {

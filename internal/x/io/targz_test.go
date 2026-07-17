@@ -14,6 +14,8 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/stretchr/testify/require"
+
 	iox "github.com/sighupio/furyctl/internal/x/io"
 )
 
@@ -23,34 +25,25 @@ func Test_CreateTarGz_PreservesSymlinkAndContent(t *testing.T) {
 	src := t.TempDir()
 
 	dataDir := filepath.Join(src, "data")
-	if err := os.MkdirAll(dataDir, 0o755); err != nil {
-		t.Fatalf("mkdir: %v", err)
-	}
+	err := os.MkdirAll(dataDir, 0o755)
+	require.NoError(t, err, "mkdir")
 
-	if err := os.WriteFile(filepath.Join(dataDir, "real.txt"), []byte("hello"), 0o644); err != nil {
-		t.Fatalf("write file: %v", err)
-	}
+	err = os.WriteFile(filepath.Join(dataDir, "real.txt"), []byte("hello"), 0o644)
+	require.NoError(t, err, "write file")
 
 	// Relative symlink mirroring the materialized tool layout.
-	if err := os.Symlink(filepath.Join("data", "real.txt"), filepath.Join(src, "link")); err != nil {
-		t.Fatalf("symlink: %v", err)
-	}
+	err = os.Symlink(filepath.Join("data", "real.txt"), filepath.Join(src, "link"))
+	require.NoError(t, err, "symlink")
 
 	out := filepath.Join(t.TempDir(), "bundle.tar.gz")
 
-	if err := iox.CreateTarGz(out, []iox.TarGzEntry{{Src: src, Prefix: "root"}}); err != nil {
-		t.Fatalf("CreateTarGz: %v", err)
-	}
+	err = iox.CreateTarGz(out, []iox.TarGzEntry{{Src: src, Prefix: "root"}})
+	require.NoError(t, err, "CreateTarGz")
 
 	links, contents := readTarGz(t, out)
 
-	if got := links["root/link"]; got != filepath.Join("data", "real.txt") {
-		t.Fatalf("expected symlink target preserved, got %q", got)
-	}
-
-	if got := contents["root/data/real.txt"]; got != "hello" {
-		t.Fatalf("expected file content 'hello', got %q", got)
-	}
+	require.Equal(t, filepath.Join("data", "real.txt"), links["root/link"], "expected symlink target preserved")
+	require.Equal(t, "hello", contents["root/data/real.txt"], "expected file content 'hello'")
 }
 
 func Test_ExtractTarGz_RoundTripPreservesSymlink(t *testing.T) {
@@ -59,62 +52,43 @@ func Test_ExtractTarGz_RoundTripPreservesSymlink(t *testing.T) {
 	src := t.TempDir()
 
 	dataDir := filepath.Join(src, "data")
-	if err := os.MkdirAll(dataDir, 0o755); err != nil {
-		t.Fatalf("mkdir: %v", err)
-	}
+	err := os.MkdirAll(dataDir, 0o755)
+	require.NoError(t, err, "mkdir")
 
-	if err := os.WriteFile(filepath.Join(dataDir, "real.txt"), []byte("payload"), 0o644); err != nil {
-		t.Fatalf("write: %v", err)
-	}
+	err = os.WriteFile(filepath.Join(dataDir, "real.txt"), []byte("payload"), 0o644)
+	require.NoError(t, err, "write")
 
-	if err := os.Symlink(filepath.Join("data", "real.txt"), filepath.Join(src, "link")); err != nil {
-		t.Fatalf("symlink: %v", err)
-	}
+	err = os.Symlink(filepath.Join("data", "real.txt"), filepath.Join(src, "link"))
+	require.NoError(t, err, "symlink")
 
 	archive := filepath.Join(t.TempDir(), "b.tar.gz")
-	if err := iox.CreateTarGz(archive, []iox.TarGzEntry{{Src: src, Prefix: "root"}}); err != nil {
-		t.Fatalf("CreateTarGz: %v", err)
-	}
+	err = iox.CreateTarGz(archive, []iox.TarGzEntry{{Src: src, Prefix: "root"}})
+	require.NoError(t, err, "CreateTarGz")
 
 	dst := t.TempDir()
-	if err := iox.ExtractTarGz(archive, dst); err != nil {
-		t.Fatalf("ExtractTarGz: %v", err)
-	}
+	err = iox.ExtractTarGz(archive, dst)
+	require.NoError(t, err, "ExtractTarGz")
 
 	// The symlink must survive extraction and still resolve to the real file content.
 	content, err := os.ReadFile(filepath.Join(dst, "root", "link"))
-	if err != nil {
-		t.Fatalf("read via extracted symlink: %v", err)
-	}
-
-	if string(content) != "payload" {
-		t.Fatalf("expected 'payload' via symlink, got %q", content)
-	}
+	require.NoError(t, err, "read via extracted symlink")
+	require.Equal(t, "payload", string(content))
 
 	target, err := os.Readlink(filepath.Join(dst, "root", "link"))
-	if err != nil {
-		t.Fatalf("readlink: %v", err)
-	}
-
-	if target != filepath.Join("data", "real.txt") {
-		t.Fatalf("expected relative symlink preserved, got %q", target)
-	}
+	require.NoError(t, err, "readlink")
+	require.Equal(t, filepath.Join("data", "real.txt"), target, "expected relative symlink preserved")
 }
 
 func readTarGz(t *testing.T, path string) (map[string]string, map[string]string) {
 	t.Helper()
 
 	f, err := os.Open(path)
-	if err != nil {
-		t.Fatalf("open archive: %v", err)
-	}
+	require.NoError(t, err, "open archive")
 
 	defer f.Close()
 
 	gr, err := gzip.NewReader(f)
-	if err != nil {
-		t.Fatalf("gzip reader: %v", err)
-	}
+	require.NoError(t, err, "gzip reader")
 
 	defer gr.Close()
 
@@ -129,9 +103,7 @@ func readTarGz(t *testing.T, path string) (map[string]string, map[string]string)
 			break
 		}
 
-		if err != nil {
-			t.Fatalf("tar next: %v", err)
-		}
+		require.NoError(t, err, "tar next")
 
 		switch hdr.Typeflag {
 		case tar.TypeSymlink:
@@ -139,9 +111,7 @@ func readTarGz(t *testing.T, path string) (map[string]string, map[string]string)
 
 		case tar.TypeReg:
 			b, err := io.ReadAll(tr)
-			if err != nil {
-				t.Fatalf("read tar entry: %v", err)
-			}
+			require.NoError(t, err, "read tar entry")
 
 			contents[hdr.Name] = string(b)
 		}

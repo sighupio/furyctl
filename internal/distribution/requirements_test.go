@@ -9,6 +9,8 @@ package distribution_test
 import (
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+
 	"github.com/sighupio/furyctl/internal/distribution"
 )
 
@@ -30,9 +32,8 @@ func Test_ToolSectionNeededForKind(t *testing.T) {
 	}
 
 	for _, tC := range testCases {
-		if got := distribution.ToolSectionNeededForKind(tC.section, tC.kind); got != tC.want {
-			t.Errorf("ToolSectionNeededForKind(%q, %q) = %v, want %v", tC.section, tC.kind, got, tC.want)
-		}
+		got := distribution.ToolSectionNeededForKind(tC.section, tC.kind)
+		assert.Equal(t, tC.want, got, "ToolSectionNeededForKind(%q, %q)", tC.section, tC.kind)
 	}
 }
 
@@ -52,9 +53,8 @@ func Test_ModuleNeededForKind(t *testing.T) {
 	}
 
 	for _, tC := range testCases {
-		if got := distribution.ModuleNeededForKind(tC.module, tC.kind); got != tC.want {
-			t.Errorf("ModuleNeededForKind(%q, %q) = %v, want %v", tC.module, tC.kind, got, tC.want)
-		}
+		got := distribution.ModuleNeededForKind(tC.module, tC.kind)
+		assert.Equal(t, tC.want, got, "ModuleNeededForKind(%q, %q)", tC.module, tC.kind)
 	}
 }
 
@@ -77,8 +77,7 @@ func Test_InstallerNeededForKind(t *testing.T) {
 	}
 
 	for _, tC := range testCases {
-		if got := distribution.InstallerNeededForKind(tC.installer, tC.kind); got != tC.want {
-			t.Errorf("InstallerNeededForKind(%q, %q) = %v, want %v", tC.installer, tC.kind, got, tC.want)
-		}
+		got := distribution.InstallerNeededForKind(tC.installer, tC.kind)
+		assert.Equal(t, tC.want, got, "InstallerNeededForKind(%q, %q)", tC.installer, tC.kind)
 	}
 }

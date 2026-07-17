@@ -12,6 +12,9 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
 	"github.com/sighupio/furyctl/internal/tool/ansible"
 	execx "github.com/sighupio/furyctl/internal/x/exec"
 )
@@ -24,15 +27,9 @@ func Test_Runner_Version(t *testing.T) {
 	})
 
 	got, err := r.Version()
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
-	want := "v1.2.3"
-
-	if got != want {
-		t.Errorf("expected version '%s', got '%s'", want, got)
-	}
+	assert.Equal(t, "v1.2.3", got)
 }
 
 func Test_PathsForVersion(t *testing.T) {
@@ -40,13 +37,10 @@ func Test_PathsForVersion(t *testing.T) {
 
 	// Backward compat: no pinned version -> host ansible (bare command names, no python/collections).
 	host := ansible.PathsForVersion("/bin", "", "/work")
-	if host.Ansible != "ansible" || host.AnsiblePlaybook != "ansible-playbook" {
-		t.Errorf("host fallback should use bare names, got %+v", host)
-	}
-
-	if host.Python != "" || host.CollectionsPath != "" {
-		t.Errorf("host fallback must not set python/collections, got %+v", host)
-	}
+	assert.Equal(t, "ansible", host.Ansible)
+	assert.Equal(t, "ansible-playbook", host.AnsiblePlaybook)
+	assert.Empty(t, host.Python)
+	assert.Empty(t, host.CollectionsPath)
 
 	// Pinned version -> mise-managed layout under <bin>/ansible/<ver>/.
 	managed := ansible.PathsForVersion("/bin", "2.21.0", "/work")
@@ -56,9 +50,8 @@ func Test_PathsForVersion(t *testing.T) {
 		"Python":          managed.Python,
 		"CollectionsPath": managed.CollectionsPath,
 	} {
-		if got == "" || !strings.HasPrefix(got, "/bin/ansible/2.21.0/") {
-			t.Errorf("%s = %q, want under /bin/ansible/2.21.0/", name, got)
-		}
+		assert.NotEmpty(t, got, "%s should not be empty", name)
+		assert.True(t, strings.HasPrefix(got, "/bin/ansible/2.21.0/"), "%s = %q, want under /bin/ansible/2.21.0/", name, got)
 	}
 }
 

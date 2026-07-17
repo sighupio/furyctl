@@ -30,9 +30,7 @@ func TestNewTemplateModel(t *testing.T) {
 	templateTest := "A nice day at {{.meta.name | substr 0 3}}"
 
 	confYaml, err := yaml.Marshal(conf)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	path := t.TempDir()
 

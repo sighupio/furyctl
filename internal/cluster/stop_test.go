@@ -11,8 +11,9 @@ import (
 	"sync/atomic"
 	"testing"
 
-	"github.com/sighupio/furyctl/internal/cluster"
 	"github.com/stretchr/testify/require"
+
+	"github.com/sighupio/furyctl/internal/cluster"
 )
 
 func TestStopAll_AllSucceed(t *testing.T) {

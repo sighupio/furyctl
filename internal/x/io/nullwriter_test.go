@@ -9,6 +9,9 @@ package iox_test
 import (
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
 	iox "github.com/sighupio/furyctl/internal/x/io"
 )
 
@@ -16,11 +19,7 @@ func Test_NullWriter_Write(t *testing.T) {
 	nw := iox.NewNullWriter()
 
 	n, err := nw.Write([]byte("hello world"))
-	if err != nil {
-		t.Fatalf("expected to write without errors: %v", err)
-	}
+	require.NoError(t, err, "expected to write without errors")
 
-	if n != 0 {
-		t.Errorf("want = 0, got = %d", n)
-	}
+	assert.Equal(t, 0, n)
 }

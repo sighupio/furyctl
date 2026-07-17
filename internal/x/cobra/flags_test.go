@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/spf13/cobra"
+	"github.com/stretchr/testify/assert"
 
 	cobrax "github.com/sighupio/furyctl/internal/x/cobra"
 )
@@ -81,9 +82,8 @@ func Test_Flag_Bool(t *testing.T) {
 				tC.cmd.Execute()
 			}
 
-			if got := cobrax.Flag[bool](tC.cmd, tC.name); got != tC.want {
-				t.Errorf("expected %t, got %t", tC.want, got)
-			}
+			got := cobrax.Flag[bool](tC.cmd, tC.name)
+			assert.Equal(t, tC.want, got)
 		})
 	}
 }
@@ -155,9 +155,8 @@ func Test_Flag_Int(t *testing.T) {
 				tC.cmd.Execute()
 			}
 
-			if got := cobrax.Flag[int](tC.cmd, tC.name); got != tC.want {
-				t.Errorf("expected %d, got %d", tC.want, got)
-			}
+			got := cobrax.Flag[int](tC.cmd, tC.name)
+			assert.Equal(t, tC.want, got)
 		})
 	}
 }
@@ -216,9 +215,8 @@ func Test_Flag_String(t *testing.T) {
 				tC.cmd.Execute()
 			}
 
-			if got := cobrax.Flag[string](tC.cmd, tC.name); got != tC.want {
-				t.Errorf("expected %s, got %s", tC.want, got)
-			}
+			got := cobrax.Flag[string](tC.cmd, tC.name)
+			assert.Equal(t, tC.want, got)
 		})
 	}
 }

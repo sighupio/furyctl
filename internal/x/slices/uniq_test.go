@@ -9,6 +9,8 @@ package slices_test
 import (
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+
 	"github.com/sighupio/furyctl/internal/x/slices"
 )
 
@@ -62,15 +64,7 @@ func TestUniq(t *testing.T) {
 			t.Parallel()
 			got := slices.Uniq(tt.in)
 
-			if len(got) != len(tt.want) {
-				t.Errorf("got %d elements, want %d", len(got), len(tt.want))
-			}
-
-			for i := range got {
-				if got[i] != tt.want[i] {
-					t.Errorf("got %s, want %s", got[i], tt.want[i])
-				}
-			}
+			assert.Equal(t, tt.want, got, "Uniq()")
 		})
 	}
 }

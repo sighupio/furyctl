@@ -7,11 +7,12 @@
 package helmfile_test
 
 import (
-	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/stretchr/testify/require"
 
 	"github.com/sighupio/furyctl/internal/tool/helmfile"
 	execx "github.com/sighupio/furyctl/internal/x/exec"
@@ -29,9 +30,7 @@ func Test_Init_RequiresDownloaderWhenPluginMissing(t *testing.T) {
 	})
 
 	err := r.Init(filepath.Join(t.TempDir(), "helm"))
-	if !errors.Is(err, helmfile.ErrPluginDownloaderMissing) {
-		t.Fatalf("expected ErrPluginDownloaderMissing, got %v", err)
-	}
+	require.ErrorIs(t, err, helmfile.ErrPluginDownloaderMissing)
 }
 
 // An already-installed plugin (e.g. pre-installed in an air-gapped bundle) must not trip the downloader
@@ -42,13 +41,11 @@ func Test_Init_SkipsDownloaderCheckWhenPluginPresent(t *testing.T) {
 	pluginsDir := t.TempDir()
 
 	diffBin := filepath.Join(pluginsDir, "helm-diff", "bin", "diff")
-	if err := os.MkdirAll(filepath.Dir(diffBin), os.FileMode(0o755)); err != nil {
-		t.Fatal(err)
-	}
+	err := os.MkdirAll(filepath.Dir(diffBin), os.FileMode(0o755))
+	require.NoError(t, err)
 
-	if err := os.WriteFile(diffBin, []byte("stub"), os.FileMode(0o755)); err != nil {
-		t.Fatal(err)
-	}
+	err = os.WriteFile(diffBin, []byte("stub"), os.FileMode(0o755))
+	require.NoError(t, err)
 
 	r := helmfile.NewRunner(execx.NewFakeExecutor("TestHelperProcess"), helmfile.Paths{
 		Helmfile:   "helmfile",
@@ -56,9 +53,9 @@ func Test_Init_SkipsDownloaderCheckWhenPluginPresent(t *testing.T) {
 		PluginsDir: pluginsDir,
 	})
 
-	if err := r.Init(filepath.Join(t.TempDir(), "helm")); errors.Is(err, helmfile.ErrPluginDownloaderMissing) {
-		t.Fatalf("downloader check must be skipped when the plugin is present, got %v", err)
-	}
+	err = r.Init(filepath.Join(t.TempDir(), "helm"))
+	require.NotErrorIs(t, err, helmfile.ErrPluginDownloaderMissing,
+		"downloader check must be skipped when the plugin is present")
 }
 
 func TestHelperProcess(t *testing.T) {

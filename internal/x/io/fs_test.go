@@ -16,6 +16,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"golang.org/x/exp/rand"
 
 	iox "github.com/sighupio/furyctl/internal/x/io"
@@ -67,18 +69,14 @@ func TestCheckDirIsEmpty(t *testing.T) {
 			t.Parallel()
 
 			dir, err := tC.setup()
-			if err != nil {
-				t.Fatalf("unexpected error: %v", err)
-			}
+			require.NoError(t, err, "unexpected setup error")
 
 			err = iox.CheckDirIsEmpty(dir)
 
-			if !tC.wantErr && err != nil {
-				t.Errorf("expected no error, got %v", err)
-			}
-
-			if tC.wantErr && err == nil {
-				t.Errorf("expected error, got none")
+			if tC.wantErr {
+				assert.Error(t, err, "expected error, got none")
+			} else {
+				assert.NoError(t, err, "expected no error")
 			}
 		})
 	}
@@ -120,28 +118,17 @@ func TestAppendBufferToFile(t *testing.T) {
 			t.Parallel()
 
 			file, err := tC.setup()
-			if err != nil {
-				t.Fatalf("unexpected setup error: %v", err)
-			}
+			require.NoError(t, err, "unexpected setup error")
 
 			err = iox.AppendToFile("foo", file)
-			if err != nil {
-				t.Fatalf("could not append string 'foo': %v", err)
-			}
+			require.NoError(t, err, "could not append string 'foo'")
 			err = iox.AppendToFile("bar", file)
-			if err != nil {
-				t.Fatalf("could not append string 'bar': %v", err)
-			}
+			require.NoError(t, err, "could not append string 'bar'")
 
 			got, err := os.ReadFile(file)
-			if err != nil {
-				t.Fatalf("could not get file content: %v", err)
-			}
+			require.NoError(t, err, "could not get file content")
 
-			want := "foobar"
-			if string(got) != want {
-				t.Errorf("expected %s, got %s", want, got)
-			}
+			assert.Equal(t, "foobar", string(got))
 		})
 	}
 }
@@ -184,24 +171,17 @@ func TestCopyBufferToFile(t *testing.T) {
 			t.Parallel()
 
 			dst, err := tC.setup()
-			if err != nil {
-				t.Fatalf("unexpected setup error: %v", err)
-			}
+			require.NoError(t, err, "unexpected setup error")
 
 			b := bytes.NewBufferString(tC.bufContent)
 
-			if err := iox.CopyBufferToFile(*b, dst); err != nil {
-				t.Fatalf("unexpected error: %v", err)
-			}
+			err = iox.CopyBufferToFile(*b, dst)
+			require.NoError(t, err, "unexpected error")
 
 			dstContent, err := os.ReadFile(dst)
-			if err != nil {
-				t.Fatalf("unexpected error: %v", err)
-			}
+			require.NoError(t, err, "unexpected error")
 
-			if string(dstContent) != tC.bufContent {
-				t.Errorf("expected %s, got %s", tC.bufContent, dstContent)
-			}
+			assert.Equal(t, tC.bufContent, string(dstContent))
 		})
 	}
 }
@@ -255,18 +235,14 @@ func TestCopyFile(t *testing.T) {
 			t.Parallel()
 
 			src, dst, err := tC.setup()
-			if err != nil {
-				t.Fatalf("unexpected error: %v", err)
-			}
+			require.NoError(t, err, "unexpected setup error")
 
 			err = iox.CopyFile(src, dst)
 
-			if !tC.wantErr && err != nil {
-				t.Errorf("expected no error, got %v", err)
-			}
-
-			if tC.wantErr && err == nil {
-				t.Errorf("expected error, got none")
+			if tC.wantErr {
+				assert.Error(t, err, "expected error, got none")
+			} else {
+				assert.NoError(t, err, "expected no error")
 			}
 		})
 	}
@@ -371,29 +347,21 @@ func TestCopyRecursive(t *testing.T) {
 			t.Parallel()
 
 			src, dst, err := tC.setup()
-			if err != nil {
-				t.Fatalf("unexpected error: %v", err)
-			}
+			require.NoError(t, err, "unexpected setup error")
 
-			if err := iox.CopyRecursive(src, dst); err != nil {
-				t.Fatalf("unexpected error: %v", err)
-			}
+			err = iox.CopyRecursive(src, dst)
+			require.NoError(t, err, "unexpected error")
 
 			for fname, f := range tC.want {
 				info, err := os.Stat(filepath.Join(dst, fname))
-				if err != nil {
-					t.Fatalf("expected no error, got %v", err)
-				}
+				require.NoError(t, err, "expected no error for %s", fname)
 
-				if f.FilePerm != info.Mode().Perm() {
-					t.Errorf("expected %s to have permissions %o, got %o", fname, f.FilePerm, info.Mode().Perm())
-				}
+				assert.Equal(t, f.FilePerm, info.Mode().Perm(), "expected %s to have permissions %o", fname, f.FilePerm)
 
-				if f.FileType == "dir" && !info.IsDir() {
-					t.Errorf("expected %s to be a directory", fname)
-				}
-				if f.FileType == "file" && info.IsDir() {
-					t.Errorf("expected %s to be a file", fname)
+				if f.FileType == "dir" {
+					assert.True(t, info.IsDir(), "expected %s to be a directory", fname)
+				} else {
+					assert.False(t, info.IsDir(), "expected %s to be a file", fname)
 				}
 			}
 		})
@@ -430,22 +398,15 @@ func TestEnsureDir(t *testing.T) {
 			t.Parallel()
 
 			dir, err := tC.setup()
-			if err != nil {
-				t.Fatalf("unexpected error: %v", err)
-			}
+			require.NoError(t, err, "unexpected setup error")
 
-			if err := iox.EnsureDir(filepath.Join(dir, "to-be-created.txt")); err != nil {
-				t.Errorf("expected no error, got %v", err)
-			}
+			err = iox.EnsureDir(filepath.Join(dir, "to-be-created.txt"))
+			assert.NoError(t, err, "expected no error")
 
 			info, err := os.Stat(dir)
-			if err != nil {
-				t.Errorf("expected no error, got %v", err)
-			}
+			assert.NoError(t, err, "expected no error")
 
-			if !info.IsDir() {
-				t.Errorf("expected '%s' to be a directory", dir)
-			}
+			assert.True(t, info.IsDir(), "expected '%s' to be a directory", dir)
 		})
 	}
 }

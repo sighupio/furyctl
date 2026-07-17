@@ -11,6 +11,9 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
 	netx "github.com/sighupio/furyctl/pkg/x/net"
 )
 
@@ -18,21 +21,16 @@ func Test_GoGetterClient_Download(t *testing.T) {
 	t.Parallel()
 
 	tmpDir, err := os.MkdirTemp("", "furyctl-clientget-test-")
-	if err != nil {
-		t.Fatalf("error creating temp dir: %v", err)
-	}
+	require.NoError(t, err, "error creating temp dir")
 
 	in := filepath.Join(tmpDir, "in")
 	out := filepath.Join(tmpDir, "out")
 
-	if err := os.MkdirAll(in, 0o755); err != nil {
-		t.Fatalf("error creating temp dir: %v", err)
-	}
+	err = os.MkdirAll(in, 0o755)
+	require.NoError(t, err, "error creating temp dir")
 
 	src, err := os.Create(filepath.Join(in, "test.txt"))
-	if err != nil {
-		t.Fatalf("error creating temp input file: %v", err)
-	}
+	require.NoError(t, err, "error creating temp input file")
 
 	defer func() {
 		src.Close()
@@ -41,14 +39,10 @@ func Test_GoGetterClient_Download(t *testing.T) {
 	}()
 
 	err = netx.NewGoGetterClient().Download(in, out)
-	if err != nil {
-		t.Fatalf("error getting directory: %v", err)
-	}
+	require.NoError(t, err, "error getting directory")
 
 	_, err = os.Stat(filepath.Join(out, "test.txt"))
-	if err != nil {
-		t.Fatalf("error getting file: %v", err)
-	}
+	require.NoError(t, err, "error getting file")
 }
 
 func TestUrlHasForcedProtocol(t *testing.T) {
@@ -75,9 +69,8 @@ func TestUrlHasForcedProtocol(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			if got := netx.NewGoGetterClient().URLHasForcedProtocol(tt.url); got != tt.want {
-				t.Errorf("urlHasForcedProtocol() = %v, want %v", got, tt.want)
-			}
+			got := netx.NewGoGetterClient().URLHasForcedProtocol(tt.url)
+			assert.Equal(t, tt.want, got, "urlHasForcedProtocol()")
 		})
 	}
 }

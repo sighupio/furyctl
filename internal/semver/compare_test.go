@@ -9,6 +9,8 @@ package semver_test
 import (
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+
 	"github.com/sighupio/furyctl/internal/semver"
 )
 
@@ -67,10 +69,10 @@ func TestGetVersion(t *testing.T) {
 			t.Parallel()
 
 			_, err := semver.NewVersion(tt.version)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("NewVersion() error = %v, wantErr %v", err, tt.wantErr)
-
-				return
+			if tt.wantErr {
+				assert.Error(t, err, "NewVersion() expected error")
+			} else {
+				assert.NoError(t, err, "NewVersion() unexpected error")
 			}
 		})
 	}
@@ -126,10 +128,10 @@ func TestGetConstraint(t *testing.T) {
 			t.Parallel()
 
 			_, err := semver.NewConstraint(tt.constraint)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("NewConstraint() error = %v, wantErr %v", err, tt.wantErr)
-
-				return
+			if tt.wantErr {
+				assert.Error(t, err, "NewConstraint() expected error")
+			} else {
+				assert.NoError(t, err, "NewConstraint() unexpected error")
 			}
 		})
 	}

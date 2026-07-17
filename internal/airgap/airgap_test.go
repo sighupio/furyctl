@@ -11,6 +11,8 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/stretchr/testify/require"
+
 	iox "github.com/sighupio/furyctl/internal/x/io"
 )
 
@@ -25,12 +27,11 @@ func makeBundle(t *testing.T) string {
 
 	out := filepath.Join(t.TempDir(), "bundle.tar.gz")
 
-	if err := iox.CreateTarGz(out, []iox.TarGzEntry{
+	err := iox.CreateTarGz(out, []iox.TarGzEntry{
 		{Src: filepath.Join(src, "distro"), Prefix: "distro"},
 		{Src: filepath.Join(src, ".furyctl"), Prefix: ".furyctl"},
-	}); err != nil {
-		t.Fatalf("CreateTarGz: %v", err)
-	}
+	})
+	require.NoError(t, err, "CreateTarGz")
 
 	return out
 }
@@ -38,13 +39,11 @@ func makeBundle(t *testing.T) string {
 func mustWrite(t *testing.T, path, content string) {
 	t.Helper()
 
-	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
-		t.Fatalf("mkdir: %v", err)
-	}
+	err := os.MkdirAll(filepath.Dir(path), 0o755)
+	require.NoError(t, err, "mkdir")
 
-	if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
-		t.Fatalf("write: %v", err)
-	}
+	err = os.WriteFile(path, []byte(content), 0o644)
+	require.NoError(t, err, "write")
 }
 
 func Test_prepare_ExtractsAndReturnsDistroLocation(t *testing.T) {
@@ -54,21 +53,15 @@ func Test_prepare_ExtractsAndReturnsDistroLocation(t *testing.T) {
 	outDir := t.TempDir()
 
 	distroLoc, err := prepare(bundle, outDir, false)
-	if err != nil {
-		t.Fatalf("prepare: %v", err)
-	}
+	require.NoError(t, err, "prepare")
 
-	if distroLoc != filepath.Join(outDir, DistroSubdir) {
-		t.Fatalf("unexpected distro location: %s", distroLoc)
-	}
+	require.Equal(t, filepath.Join(outDir, DistroSubdir), distroLoc, "unexpected distro location")
 
-	if _, err := os.Stat(filepath.Join(outDir, "distro", "kfd.yaml")); err != nil {
-		t.Fatalf("expected distro extracted: %v", err)
-	}
+	_, err = os.Stat(filepath.Join(outDir, "distro", "kfd.yaml"))
+	require.NoError(t, err, "expected distro extracted")
 
-	if _, err := os.Stat(filepath.Join(outDir, ".furyctl", markerFile)); err != nil {
-		t.Fatalf("expected marker written: %v", err)
-	}
+	_, err = os.Stat(filepath.Join(outDir, ".furyctl", markerFile))
+	require.NoError(t, err, "expected marker written")
 }
 
 func Test_prepare_SkipsWhenAlreadyExtracted(t *testing.T) {
@@ -77,23 +70,19 @@ func Test_prepare_SkipsWhenAlreadyExtracted(t *testing.T) {
 	bundle := makeBundle(t)
 	outDir := t.TempDir()
 
-	if _, err := prepare(bundle, outDir, false); err != nil {
-		t.Fatalf("first prepare: %v", err)
-	}
+	_, err := prepare(bundle, outDir, false)
+	require.NoError(t, err, "first prepare")
 
 	// Remove an extracted file; a skipped run (marker matches) must NOT recreate it.
 	extracted := filepath.Join(outDir, "distro", "kfd.yaml")
-	if err := os.Remove(extracted); err != nil {
-		t.Fatalf("remove: %v", err)
-	}
+	err = os.Remove(extracted)
+	require.NoError(t, err, "remove")
 
-	if _, err := prepare(bundle, outDir, false); err != nil {
-		t.Fatalf("second prepare: %v", err)
-	}
+	_, err = prepare(bundle, outDir, false)
+	require.NoError(t, err, "second prepare")
 
-	if _, err := os.Stat(extracted); !os.IsNotExist(err) {
-		t.Fatalf("expected extraction to be skipped (file should stay removed), got err=%v", err)
-	}
+	_, err = os.Stat(extracted)
+	require.True(t, os.IsNotExist(err), "expected extraction to be skipped (file should stay removed), got err=%v", err)
 }
 
 func Test_prepare_ForceReExtracts(t *testing.T) {
@@ -102,29 +91,23 @@ func Test_prepare_ForceReExtracts(t *testing.T) {
 	bundle := makeBundle(t)
 	outDir := t.TempDir()
 
-	if _, err := prepare(bundle, outDir, false); err != nil {
-		t.Fatalf("first prepare: %v", err)
-	}
+	_, err := prepare(bundle, outDir, false)
+	require.NoError(t, err, "first prepare")
 
 	extracted := filepath.Join(outDir, "distro", "kfd.yaml")
-	if err := os.Remove(extracted); err != nil {
-		t.Fatalf("remove: %v", err)
-	}
+	err = os.Remove(extracted)
+	require.NoError(t, err, "remove")
 
-	if _, err := prepare(bundle, outDir, true); err != nil {
-		t.Fatalf("forced prepare: %v", err)
-	}
+	_, err = prepare(bundle, outDir, true)
+	require.NoError(t, err, "forced prepare")
 
-	if _, err := os.Stat(extracted); err != nil {
-		t.Fatalf("expected forced re-extraction to recreate the file: %v", err)
-	}
+	_, err = os.Stat(extracted)
+	require.NoError(t, err, "expected forced re-extraction to recreate the file")
 }
 
 func Test_prepare_MissingBundle(t *testing.T) {
 	t.Parallel()
 
 	_, err := prepare(filepath.Join(t.TempDir(), "nope.tar.gz"), t.TempDir(), false)
-	if err == nil {
-		t.Fatal("expected error for missing bundle")
-	}
+	require.Error(t, err, "expected error for missing bundle")
 }

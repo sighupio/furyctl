@@ -13,6 +13,7 @@ import (
 	gotemplate "text/template"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"gopkg.in/yaml.v2"
 
 	"github.com/sighupio/furyctl/pkg/template"
@@ -34,9 +35,7 @@ func TestTemplateModel_Will_Generate_UserHello(t *testing.T) {
 	templateTest := "A nice day at {{.meta.name | substr 0 3}}"
 
 	confYaml, err := yaml.Marshal(conf)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	path := t.TempDir()
 
@@ -60,13 +59,9 @@ func TestTemplateModel_Will_Generate_UserHello(t *testing.T) {
 	assert.NoError(t, err)
 
 	result, err := os.ReadFile(path + "/target/test.md")
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
-	expectedRes := "A nice day at tes"
-
-	assert.Equal(t, expectedRes, string(result))
+	assert.Equal(t, "A nice day at tes", string(result))
 }
 
 func TestTemplateModel_Will_Generate_Dynamic_Values_From_Env(t *testing.T) {
@@ -81,9 +76,7 @@ func TestTemplateModel_Will_Generate_Dynamic_Values_From_Env(t *testing.T) {
 	templateTest := "A nice day at {{.meta.name | substr 0 3}}"
 
 	confYaml, err := yaml.Marshal(conf)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	path := t.TempDir()
 
@@ -111,13 +104,9 @@ func TestTemplateModel_Will_Generate_Dynamic_Values_From_Env(t *testing.T) {
 	assert.NoError(t, err)
 
 	result, err := os.ReadFile(path + "/target/test.md")
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
-	expectedRes := "A nice day at Tym"
-
-	assert.Equal(t, expectedRes, string(result))
+	assert.Equal(t, "A nice day at Tym", string(result))
 }
 
 func TestTemplateModel_Will_Generate_Dynamic_Values_From_File(t *testing.T) {
@@ -134,9 +123,7 @@ func TestTemplateModel_Will_Generate_Dynamic_Values_From_File(t *testing.T) {
 	templateTest := "A nice day at {{.meta.name}}"
 
 	confYaml, err := yaml.Marshal(conf)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	err = os.Mkdir(path+"/source", os.ModePerm)
 	err = os.Mkdir(path+"/target", os.ModePerm)
@@ -162,20 +149,14 @@ func TestTemplateModel_Will_Generate_Dynamic_Values_From_File(t *testing.T) {
 	assert.NoError(t, err)
 
 	result, err := os.ReadFile(path + "/target/test.md")
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
-	expectedRes := "A nice day at Tymlate! It's a nice day!"
-
-	assert.Equal(t, expectedRes, string(result))
+	assert.Equal(t, "A nice day at Tymlate! It's a nice day!", string(result))
 }
 
 func Test_Generator_GetMissingKeys(t *testing.T) {
 	path, err := os.MkdirTemp("", "test")
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	funcMap := template.NewFuncMap()
 	funcMap.Add("toYaml", template.ToYAML)

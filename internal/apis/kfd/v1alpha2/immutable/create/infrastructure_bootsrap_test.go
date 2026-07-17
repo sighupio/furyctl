@@ -7,9 +7,10 @@
 package create
 
 import (
-	"errors"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"gopkg.in/yaml.v2"
 )
 
@@ -55,44 +56,29 @@ spec:
 `
 
 	var conf map[any]any
-	if err := yaml.Unmarshal([]byte(sample), &conf); err != nil {
-		t.Fatalf("unmarshal sample: %v", err)
-	}
+	err := yaml.Unmarshal([]byte(sample), &conf)
+	require.NoError(t, err, "unmarshal sample")
 
 	nodes, err := rawNodesByHostname(conf)
-	if err != nil {
-		t.Fatalf("rawNodesByHostname: %v", err)
-	}
+	require.NoError(t, err, "rawNodesByHostname")
 
 	raw, ok := nodes["node01.example.com"].(map[any]any)
-	if !ok {
-		t.Fatalf("node not indexed by hostname, got %#v", nodes)
-	}
+	require.True(t, ok, "node not indexed by hostname, got %#v", nodes)
 
 	for _, key := range []string{"kernelParameters", "network", "systemd", "passwd", "storage"} {
-		if _, ok := raw[key]; !ok {
-			t.Errorf("node sub-tree %q was not passed through", key)
-		}
+		assert.Contains(t, raw, key, "node sub-tree %q was not passed through", key)
 	}
 
 	network, ok := raw["network"].(map[any]any)
-	if !ok {
-		t.Fatalf("network is not a map, got %T", raw["network"])
-	}
+	require.True(t, ok, "network is not a map, got %T", raw["network"])
 
-	if _, ok := network["ethernets"]; !ok {
-		t.Errorf("network.ethernets was not passed through")
-	}
+	assert.Contains(t, network, "ethernets", "network.ethernets was not passed through")
 
 	storage, ok := raw["storage"].(map[any]any)
-	if !ok {
-		t.Fatalf("storage is not a map, got %T", raw["storage"])
-	}
+	require.True(t, ok, "storage is not a map, got %T", raw["storage"])
 
 	for _, key := range []string{"installDisk", "additionalDisks", "files", "links", "directories"} {
-		if _, ok := storage[key]; !ok {
-			t.Errorf("storage.%s was not passed through", key)
-		}
+		assert.Contains(t, storage, key, "storage.%s was not passed through", key)
 	}
 }
 
@@ -122,14 +108,11 @@ spec:
 `
 
 	var conf map[any]any
-	if err := yaml.Unmarshal([]byte(sample), &conf); err != nil {
-		t.Fatalf("unmarshal sample: %v", err)
-	}
+	err := yaml.Unmarshal([]byte(sample), &conf)
+	require.NoError(t, err, "unmarshal sample")
 
 	nodes, err := rawNodesByHostname(conf)
-	if err != nil {
-		t.Fatalf("rawNodesByHostname: %v", err)
-	}
+	require.NoError(t, err, "rawNodesByHostname")
 
 	want := map[string]string{
 		"omitted.example.com":  defaultNodeArch,
@@ -139,13 +122,10 @@ spec:
 
 	for hostname, wantArch := range want {
 		node, ok := nodes[hostname].(map[any]any)
-		if !ok {
-			t.Fatalf("%s not indexed", hostname)
-		}
+		require.True(t, ok, "%s not indexed", hostname)
 
-		if got, _ := node["arch"].(string); got != wantArch {
-			t.Errorf("%s: arch = %q, want %q", hostname, got, wantArch)
-		}
+		got, _ := node["arch"].(string)
+		assert.Equal(t, wantArch, got, "%s: arch", hostname)
 	}
 }
 
@@ -164,13 +144,11 @@ func TestRawNodesByHostnameErrors(t *testing.T) {
 			t.Parallel()
 
 			var conf map[any]any
-			if err := yaml.Unmarshal([]byte(sample), &conf); err != nil {
-				t.Fatalf("unmarshal sample: %v", err)
-			}
+			err := yaml.Unmarshal([]byte(sample), &conf)
+			require.NoError(t, err, "unmarshal sample")
 
-			if _, err := rawNodesByHostname(conf); !errors.Is(err, ErrImmutableConfigMalformed) {
-				t.Errorf("expected ErrImmutableConfigMalformed, got %v", err)
-			}
+			_, err = rawNodesByHostname(conf)
+			assert.ErrorIs(t, err, ErrImmutableConfigMalformed)
 		})
 	}
 }

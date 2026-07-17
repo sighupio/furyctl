@@ -11,6 +11,8 @@ import (
 	"slices"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+
 	"github.com/sighupio/furyctl/internal/apis/config"
 )
 
@@ -108,22 +110,16 @@ func Test_miseToolsForKind(t *testing.T) {
 
 			managed, uts := miseToolsForKind(tC.kfd, tC.kind)
 
-			if len(managed) != len(tC.wantManaged) {
-				t.Errorf("managed = %v, want %v", managed, tC.wantManaged)
-			}
+			assert.Equal(t, tC.wantManaged, managed, "managed")
 
 			for k, v := range tC.wantManaged {
-				if managed[k] != v {
-					t.Errorf("managed[%s] = %q, want %q", k, managed[k], v)
-				}
+				assert.Equal(t, v, managed[k], "managed[%s]", k)
 			}
 
 			slices.Sort(uts)
 			slices.Sort(tC.wantUts)
 
-			if !slices.Equal(uts, tC.wantUts) {
-				t.Errorf("uts = %v, want %v", uts, tC.wantUts)
-			}
+			assert.Equal(t, tC.wantUts, uts, "uts")
 		})
 	}
 }

@@ -12,6 +12,9 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func Test_AssetName(t *testing.T) {
@@ -28,54 +31,37 @@ func Test_AssetName(t *testing.T) {
 		parts := strings.SplitN(osArch, "/", 2)
 
 		got, err := AssetName(parts[0], parts[1])
-		if err != nil {
-			t.Fatalf("AssetName(%s) error: %v", osArch, err)
-		}
+		require.NoError(t, err, "AssetName(%s)", osArch)
 
-		if got != want {
-			t.Errorf("AssetName(%s) = %q, want %q", osArch, got, want)
-		}
+		assert.Equal(t, want, got, "AssetName(%s)", osArch)
 	}
 
-	if _, err := AssetName("windows", "amd64"); err == nil {
-		t.Error("expected error for unsupported platform")
-	}
+	_, err := AssetName("windows", "amd64")
+	assert.Error(t, err, "expected error for unsupported platform")
 }
 
 func Test_DownloadURL(t *testing.T) {
 	t.Parallel()
 
 	url, err := DownloadURL("linux", "amd64")
-	if err != nil {
-		t.Fatalf("DownloadURL error: %v", err)
-	}
+	require.NoError(t, err, "DownloadURL")
 
-	if !strings.Contains(url, "mise-"+Version+"-linux-x64-musl") {
-		t.Errorf("url missing asset: %s", url)
-	}
+	assert.Contains(t, url, "mise-"+Version+"-linux-x64-musl", "url missing asset")
+	assert.Contains(t, url, "?checksum=sha256:"+binChecksums["linux/amd64"], "url missing checksum")
 
-	if !strings.Contains(url, "?checksum=sha256:"+binChecksums["linux/amd64"]) {
-		t.Errorf("url missing checksum: %s", url)
-	}
-
-	if _, err := DownloadURL("plan9", "arm64"); err == nil {
-		t.Error("expected error for unsupported platform")
-	}
+	_, err = DownloadURL("plan9", "arm64")
+	assert.Error(t, err, "expected error for unsupported platform")
 }
 
 func Test_IsManaged(t *testing.T) {
 	t.Parallel()
 
 	for _, n := range []string{"kubectl", "opentofu", "furyagent", "terraform", "ansible"} {
-		if !IsManaged(n) {
-			t.Errorf("expected %s to be managed", n)
-		}
+		assert.True(t, IsManaged(n), "expected %s to be managed", n)
 	}
 
 	for _, n := range []string{"awscli", "git"} {
-		if IsManaged(n) {
-			t.Errorf("expected %s NOT to be managed", n)
-		}
+		assert.False(t, IsManaged(n), "expected %s NOT to be managed", n)
 	}
 }
 
@@ -85,44 +71,34 @@ func Test_WriteConfig_Ansible(t *testing.T) {
 	// Distribution-pinned uv/python win over the built-in defaults.
 	pathPinned := filepath.Join(t.TempDir(), "mise.toml")
 
-	if err := WriteConfig(pathPinned, map[string]string{"ansible": "2.21.0"}, "0.8", "3.13"); err != nil {
-		t.Fatalf("WriteConfig error: %v", err)
-	}
+	err := WriteConfig(pathPinned, map[string]string{"ansible": "2.21.0"}, "0.8", "3.13")
+	require.NoError(t, err, "WriteConfig")
 
 	pinned, err := os.ReadFile(pathPinned)
-	if err != nil {
-		t.Fatalf("read error: %v", err)
-	}
+	require.NoError(t, err, "read")
 
 	for _, want := range []string{
 		`"uv" = "0.8"`,
 		`"python" = "3.13"`,
 		`"pipx:ansible-core" = "2.21.0"`,
 	} {
-		if !strings.Contains(string(pinned), want) {
-			t.Errorf("pinned config missing %q\n%s", want, string(pinned))
-		}
+		assert.Contains(t, string(pinned), want, "pinned config missing %q\n%s", want, string(pinned))
 	}
 
 	// Empty uv/python fall back to the built-in defaults.
 	pathDefault := filepath.Join(t.TempDir(), "mise.toml")
 
-	if err := WriteConfig(pathDefault, map[string]string{"ansible": "2.21.0"}, "", ""); err != nil {
-		t.Fatalf("WriteConfig error: %v", err)
-	}
+	err = WriteConfig(pathDefault, map[string]string{"ansible": "2.21.0"}, "", "")
+	require.NoError(t, err, "WriteConfig")
 
 	def, err := os.ReadFile(pathDefault)
-	if err != nil {
-		t.Fatalf("read error: %v", err)
-	}
+	require.NoError(t, err, "read")
 
 	for _, want := range []string{
 		`"uv" = "` + AnsibleUvVersion + `"`,
 		`"python" = "` + AnsiblePythonVersion + `"`,
 	} {
-		if !strings.Contains(string(def), want) {
-			t.Errorf("default config missing %q\n%s", want, string(def))
-		}
+		assert.Contains(t, string(def), want, "default config missing %q\n%s", want, string(def))
 	}
 }
 
@@ -137,14 +113,10 @@ func Test_WriteConfig(t *testing.T) {
 		"furyagent": "0.4.0",
 		"awscli":    "2.8.12", // not managed -> must be skipped
 	}, "", "")
-	if err != nil {
-		t.Fatalf("WriteConfig error: %v", err)
-	}
+	require.NoError(t, err, "WriteConfig")
 
 	b, err := os.ReadFile(path)
-	if err != nil {
-		t.Fatalf("read error: %v", err)
-	}
+	require.NoError(t, err, "read")
 
 	content := string(b)
 
@@ -154,30 +126,20 @@ func Test_WriteConfig(t *testing.T) {
 		`"opentofu" = "1.10.0"`,
 		`"github:sighupio/furyagent" = "0.4.0"`,
 	} {
-		if !strings.Contains(content, want) {
-			t.Errorf("config missing %q\n%s", want, content)
-		}
+		assert.Contains(t, content, want, "config missing %q\n%s", want, content)
 	}
 
-	if strings.Contains(content, "awscli") {
-		t.Errorf("unmanaged awscli leaked into config:\n%s", content)
-	}
+	assert.NotContains(t, content, "awscli", "unmanaged awscli leaked into config")
 }
 
 func Test_parseEnvJSON(t *testing.T) {
 	t.Parallel()
 
 	got, err := parseEnvJSON(`{"PATH":"/a:/b","FOO":"bar"}`)
-	if err != nil {
-		t.Fatalf("parseEnvJSON error: %v", err)
-	}
+	require.NoError(t, err, "parseEnvJSON")
 
-	want := []string{"FOO=bar", "PATH=/a:/b"} // sorted
-	if len(got) != len(want) || got[0] != want[0] || got[1] != want[1] {
-		t.Errorf("parseEnvJSON = %v, want %v", got, want)
-	}
+	assert.Equal(t, []string{"FOO=bar", "PATH=/a:/b"}, got)
 
-	if _, err := parseEnvJSON("not json"); err == nil {
-		t.Error("expected error for invalid json")
-	}
+	_, err = parseEnvJSON("not json")
+	assert.Error(t, err, "expected error for invalid json")
 }

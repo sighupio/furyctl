@@ -12,6 +12,9 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
 	"github.com/sighupio/furyctl/internal/test"
 	"github.com/sighupio/furyctl/internal/tool/terraform"
 	execx "github.com/sighupio/furyctl/internal/x/exec"
@@ -23,9 +26,8 @@ func Test_Runner_Init(t *testing.T) {
 		WorkDir:   test.MkdirTemp(t),
 	})
 
-	if err := r.Init(); err != nil {
-		t.Fatal(err)
-	}
+	err := r.Init()
+	require.NoError(t, err)
 }
 
 func Test_Runner_Plan(t *testing.T) {
@@ -39,18 +41,12 @@ func Test_Runner_Plan(t *testing.T) {
 
 	r := terraform.NewRunner(execx.NewFakeExecutor("TestHelperProcess"), paths)
 
-	if _, err := r.Plan(42); err != nil {
-		t.Fatal(err)
-	}
+	_, err := r.Plan(42)
+	require.NoError(t, err)
 
 	info, err := os.Stat(filepath.Join(paths.Plan, "plan-42.log"))
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if info.Size() == 0 {
-		t.Error("expected file to be not empty")
-	}
+	require.NoError(t, err)
+	assert.NotZero(t, info.Size(), "expected file to be not empty")
 }
 
 func Test_Runner_Apply(t *testing.T) {
@@ -64,18 +60,12 @@ func Test_Runner_Apply(t *testing.T) {
 
 	r := terraform.NewRunner(execx.NewFakeExecutor("TestHelperProcess"), paths)
 
-	if err := r.Apply(42); err != nil {
-		t.Fatal(err)
-	}
+	err := r.Apply(42)
+	require.NoError(t, err)
 
 	info1, err := os.Stat(filepath.Join(paths.Logs, "42.log"))
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if info1.Size() == 0 {
-		t.Error("expected '42.log' file to be not empty")
-	}
+	require.NoError(t, err)
+	assert.NotZero(t, info1.Size(), "expected '42.log' file to be not empty")
 }
 
 func Test_Runner_Output(t *testing.T) {
@@ -89,29 +79,17 @@ func Test_Runner_Output(t *testing.T) {
 
 	r := terraform.NewRunner(execx.NewFakeExecutor("TestHelperProcess"), paths)
 
-	if _, err := r.Output(); err != nil {
-		t.Fatal(err)
-	}
+	_, err := r.Output()
+	require.NoError(t, err)
 
 	info2, err := os.Stat(filepath.Join(paths.Outputs, "output.json"))
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if info2.Size() == 0 {
-		t.Error("expected 'output.json' file to be not empty")
-	}
+	require.NoError(t, err)
+	assert.NotZero(t, info2.Size(), "expected 'output.json' file to be not empty")
 
 	out, err := os.ReadFile(filepath.Join(paths.Outputs, "output.json"))
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
-	want := `{"outputs":{"foo":{"sensitive":false,"value":"bar"}}}`
-
-	if string(out) != want {
-		t.Errorf("expected output to be '%s', got '%s'", want, string(out))
-	}
+	assert.Equal(t, `{"outputs":{"foo":{"sensitive":false,"value":"bar"}}}`, string(out))
 }
 
 func Test_Runner_Version(t *testing.T) {
@@ -121,15 +99,9 @@ func Test_Runner_Version(t *testing.T) {
 	})
 
 	got, err := r.Version()
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
-	want := "v1.2.3"
-
-	if got != want {
-		t.Errorf("expected version '%s', got '%s'", want, got)
-	}
+	assert.Equal(t, "v1.2.3", got)
 }
 
 func TestHelperProcess(t *testing.T) {

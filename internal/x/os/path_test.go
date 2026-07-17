@@ -7,10 +7,12 @@
 package osx_test
 
 import (
-	"errors"
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	osx "github.com/sighupio/furyctl/internal/x/os"
 )
@@ -46,23 +48,18 @@ func TestCleanupTempDir(t *testing.T) {
 			t.Parallel()
 
 			dir, err := tC.setup()
-			if err != nil {
-				t.Fatalf("error setting up test: %v", err)
-			}
+			require.NoError(t, err, "error setting up test")
 
 			err = osx.CleanupTempDir(dir)
 
-			if tC.wantErr && err == nil {
-				t.Fatalf("expected error, got none")
+			if tC.wantErr {
+				require.Error(t, err, "expected error, got none")
+			} else {
+				require.NoError(t, err, "expected no errors")
 			}
 
-			if !tC.wantErr && err != nil {
-				t.Fatalf("expected no errors, got = %v", err)
-			}
-
-			if _, err := os.Stat(dir); !errors.Is(err, os.ErrNotExist) {
-				t.Fatalf("expected directory to be removed, got = %v", err)
-			}
+			_, err = os.Stat(dir)
+			assert.ErrorIs(t, err, os.ErrNotExist, "expected directory to be removed")
 		})
 	}
 }

@@ -7,10 +7,10 @@
 package rulesextractor_test
 
 import (
-	"reflect"
 	"testing"
 
 	"github.com/r3labs/diff/v3"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	rules "github.com/sighupio/furyctl/pkg/rulesextractor"
@@ -21,9 +21,7 @@ func TestNewBaseExtractor(t *testing.T) {
 
 	x := rules.NewBaseExtractor(rules.Spec{})
 
-	if x == nil {
-		t.Errorf("expected not nil, got %v", x)
-	}
+	assert.NotNil(t, x)
 }
 
 func TestBaseExtractor_GetImmutables(t *testing.T) {
@@ -1598,14 +1596,11 @@ func TestPathToRegex(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		tt := t
-		tt.Run(tc.name, func(t *testing.T) {
+		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
 			ok := rules.MatchesPattern(tc.input, tc.path)
-			if ok != tc.wantOK {
-				t.Errorf("MatchesPattern(%q, %q) = %v, want %v", tc.input, tc.path, ok, tc.wantOK)
-			}
+			assert.Equal(t, tc.wantOK, ok, "MatchesPattern(%q, %q)", tc.input, tc.path)
 		})
 	}
 }
@@ -1710,16 +1705,13 @@ func TestReducerRulesByDiffsWithWildcards(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		tt := t
-		tt.Run(tc.name, func(t *testing.T) {
+		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
 			x := rules.NewBaseExtractor(rules.Spec{})
 			got := x.ReducerRulesByDiffs(tc.rules, tc.diffs)
 
-			if !reflect.DeepEqual(got, tc.want) {
-				t.Errorf("expected %v, got %v", tc.want, got)
-			}
+			assert.Equal(t, tc.want, got)
 		})
 	}
 }
@@ -1795,16 +1787,13 @@ func TestFilterSafeImmutableRulesWithWildcards(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		tt := t
-		tt.Run(tc.name, func(t *testing.T) {
+		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
 			x := rules.NewBaseExtractor(rules.Spec{})
 			got := x.FilterSafeImmutableRules(tc.rules, tc.diffs)
 
-			if !reflect.DeepEqual(got, tc.want) {
-				t.Errorf("expected %v, got %v", tc.want, got)
-			}
+			assert.Equal(t, tc.want, got)
 		})
 	}
 }
