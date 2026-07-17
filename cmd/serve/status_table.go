@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"sort"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -66,7 +66,7 @@ var newNodeStatusTable = func(initial map[string]string) *nodeStatusTable {
 		status[node] = st
 	}
 
-	sort.Strings(order)
+	slices.Sort(order)
 
 	return &nodeStatusTable{
 		out:       f,
@@ -96,7 +96,7 @@ func (t *nodeStatusTable) Update(node, status string) {
 	if _, known := t.status[node]; !known {
 		// A node we didn't seed: keep it visible rather than dropping the update.
 		t.order = append(t.order, node)
-		sort.Strings(t.order)
+		slices.Sort(t.order)
 	}
 
 	t.status[node] = status

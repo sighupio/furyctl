@@ -7,7 +7,7 @@ package mise
 import (
 	"encoding/json"
 	"fmt"
-	"sort"
+	"slices"
 )
 
 // parseEnvJSON converts the output of `mise env --json` ({"KEY":"VALUE", ...}) into a sorted slice
@@ -23,7 +23,7 @@ func parseEnvJSON(s string) ([]string, error) {
 		out = append(out, k+"="+v)
 	}
 
-	sort.Strings(out)
+	slices.Sort(out)
 
 	return out, nil
 }
