@@ -78,12 +78,7 @@ func Test_Factory_Create(t *testing.T) {
 		})
 		t.Run(tC.desc, func(t *testing.T) {
 			tool := f.Create(itool.Name(tC.desc), "0.0.0")
-			if tool == nil && tC.wantTool {
-				assert.Fail(t, "Expected tool %s, got nil", tC.desc)
-			}
-			if tool != nil && !tC.wantTool {
-				assert.Fail(t, "Expected nil, got tool %s", tC.desc)
-			}
+			assert.Equal(t, tC.wantTool, tool != nil, "tool mismatch for %s", tC.desc)
 		})
 	}
 }

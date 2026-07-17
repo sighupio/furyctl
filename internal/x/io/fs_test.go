@@ -358,9 +358,10 @@ func TestCopyRecursive(t *testing.T) {
 
 				assert.Equal(t, f.FilePerm, info.Mode().Perm(), "expected %s to have permissions %o", fname, f.FilePerm)
 
-				if f.FileType == "dir" {
+				switch f.FileType {
+				case "dir":
 					assert.True(t, info.IsDir(), "expected %s to be a directory", fname)
-				} else {
+				case "file":
 					assert.False(t, info.IsDir(), "expected %s to be a file", fname)
 				}
 			}
@@ -404,7 +405,7 @@ func TestEnsureDir(t *testing.T) {
 			assert.NoError(t, err, "expected no error")
 
 			info, err := os.Stat(dir)
-			assert.NoError(t, err, "expected no error")
+			require.NoError(t, err, "expected no error")
 
 			assert.True(t, info.IsDir(), "expected '%s' to be a directory", dir)
 		})

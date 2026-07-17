@@ -11,7 +11,6 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	osx "github.com/sighupio/furyctl/internal/x/os"
@@ -21,9 +20,8 @@ func TestCleanupTempDir(t *testing.T) {
 	t.Parallel()
 
 	testCases := []struct {
-		desc    string
-		setup   func() (string, error)
-		wantErr bool
+		desc  string
+		setup func() (string, error)
 	}{
 		{
 			desc: "directory does not exist",
@@ -51,15 +49,10 @@ func TestCleanupTempDir(t *testing.T) {
 			require.NoError(t, err, "error setting up test")
 
 			err = osx.CleanupTempDir(dir)
-
-			if tC.wantErr {
-				require.Error(t, err, "expected error, got none")
-			} else {
-				require.NoError(t, err, "expected no errors")
-			}
+			require.NoError(t, err, "expected no errors")
 
 			_, err = os.Stat(dir)
-			assert.ErrorIs(t, err, os.ErrNotExist, "expected directory to be removed")
+			require.ErrorIs(t, err, os.ErrNotExist, "expected directory to be removed")
 		})
 	}
 }

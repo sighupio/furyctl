@@ -24,7 +24,7 @@ func TestAddOffsetToIPNet(t *testing.T) {
 		ipNet   *net.IPNet
 		offset  int
 		want    *net.IPNet
-		wantErr *error
+		wantErr error
 	}{
 		{
 			name:    "test valid ipnet positive offset",
@@ -45,14 +45,14 @@ func TestAddOffsetToIPNet(t *testing.T) {
 			ipNet:   nil,
 			offset:  1,
 			want:    nil,
-			wantErr: &netx.ErrIPNetIsNil,
+			wantErr: netx.ErrIPNetIsNil,
 		},
 		{
 			name:    "test invalid ipnet",
 			ipNet:   &net.IPNet{IP: []byte{0, 168, 0, 0, 1}, Mask: net.CIDRMask(24, 32)},
 			offset:  1,
 			want:    nil,
-			wantErr: &netx.ErrInvalidIP,
+			wantErr: netx.ErrInvalidIP,
 		},
 	}
 
@@ -64,7 +64,7 @@ func TestAddOffsetToIPNet(t *testing.T) {
 
 			if tc.wantErr != nil {
 				require.Error(t, err, "expected error, got nil")
-				assert.ErrorIs(t, err, *tc.wantErr)
+				assert.ErrorIs(t, err, tc.wantErr)
 
 				return
 			}
