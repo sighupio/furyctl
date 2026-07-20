@@ -13,7 +13,6 @@ import (
 	"time"
 
 	"github.com/sirupsen/logrus"
-	"golang.org/x/sync/errgroup"
 
 	"github.com/sighupio/furyctl/internal/apis/config"
 	"github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/ekscluster/common"
@@ -382,39 +381,35 @@ func (d *Distribution) SetUpgrade(upgradeEnabled bool) {
 }
 
 func (d *Distribution) Stop() error {
-	var eg errgroup.Group
+	return cluster.StopAll(
+		func() error {
+			logrus.Debug("Stopping terraform...")
 
-	eg.Go(func() error {
-		logrus.Debug("Stopping terraform...")
+			if err := d.TFRunner.Stop(); err != nil {
+				return fmt.Errorf("error stopping terraform: %w", err)
+			}
 
-		if err := d.TFRunner.Stop(); err != nil {
-			return fmt.Errorf("error stopping terraform: %w", err)
-		}
+			return nil
+		},
+		func() error {
+			logrus.Debug("Stopping shell...")
 
-		return nil
-	})
+			if err := d.shellRunner.Stop(); err != nil {
+				return fmt.Errorf("error stopping shell: %w", err)
+			}
 
-	eg.Go(func() error {
-		logrus.Debug("Stopping shell...")
+			return nil
+		},
+		func() error {
+			logrus.Debug("Stopping kubectl...")
 
-		if err := d.shellRunner.Stop(); err != nil {
-			return fmt.Errorf("error stopping shell: %w", err)
-		}
+			if err := d.kubeRunner.Stop(); err != nil {
+				return fmt.Errorf("error stopping kubectl: %w", err)
+			}
 
-		return nil
-	})
-
-	eg.Go(func() error {
-		logrus.Debug("Stopping kubectl...")
-
-		if err := d.kubeRunner.Stop(); err != nil {
-			return fmt.Errorf("error stopping kubectl: %w", err)
-		}
-
-		return nil
-	})
-
-	return eg.Wait()
+			return nil
+		},
+	)
 }
 
 func (d *Distribution) createDummyOutput() error {

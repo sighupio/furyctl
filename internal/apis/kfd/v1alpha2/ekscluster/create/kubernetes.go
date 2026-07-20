@@ -15,7 +15,6 @@ import (
 	"time"
 
 	"github.com/sirupsen/logrus"
-	"golang.org/x/sync/errgroup"
 
 	"github.com/sighupio/furyctl/internal/apis/config"
 	"github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/ekscluster/common"
@@ -287,29 +286,26 @@ func (k *Kubernetes) SetUpgrade(upgradeEnabled bool) {
 }
 
 func (k *Kubernetes) Stop() error {
-	var eg errgroup.Group
+	return cluster.StopAll(
+		func() error {
+			logrus.Debug("Stopping terraform...")
 
-	eg.Go(func() error {
-		logrus.Debug("Stopping terraform...")
+			if err := k.tfRunner.Stop(); err != nil {
+				return fmt.Errorf("error stopping terraform: %w", err)
+			}
 
-		if err := k.tfRunner.Stop(); err != nil {
-			return fmt.Errorf("error stopping terraform: %w", err)
-		}
+			return nil
+		},
+		func() error {
+			logrus.Debug("Stopping awscli...")
 
-		return nil
-	})
+			if err := k.awsRunner.Stop(); err != nil {
+				return fmt.Errorf("error stopping awscli: %w", err)
+			}
 
-	eg.Go(func() error {
-		logrus.Debug("Stopping awscli...")
-
-		if err := k.awsRunner.Stop(); err != nil {
-			return fmt.Errorf("error stopping awscli: %w", err)
-		}
-
-		return nil
-	})
-
-	return eg.Wait()
+			return nil
+		},
+	)
 }
 
 func (k *Kubernetes) checkVPCConnection() error {
