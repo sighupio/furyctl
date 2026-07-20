@@ -10,6 +10,9 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 const testManifest = `---
@@ -49,17 +52,14 @@ func writeManifest(t *testing.T) string {
 	phaseDir := filepath.Join(base, "kubernetes")
 	manifestDir := filepath.Join(base, "vendor", "installers", "immutable")
 
-	if err := os.MkdirAll(phaseDir, 0o755); err != nil {
-		t.Fatal(err)
-	}
+	err := os.MkdirAll(phaseDir, 0o755)
+	require.NoError(t, err)
 
-	if err := os.MkdirAll(manifestDir, 0o755); err != nil {
-		t.Fatal(err)
-	}
+	err = os.MkdirAll(manifestDir, 0o755)
+	require.NoError(t, err)
 
-	if err := os.WriteFile(filepath.Join(manifestDir, "immutable.yaml"), []byte(testManifest), 0o600); err != nil {
-		t.Fatal(err)
-	}
+	err = os.WriteFile(filepath.Join(manifestDir, "immutable.yaml"), []byte(testManifest), 0o600)
+	require.NoError(t, err)
 
 	return phaseDir
 }
@@ -71,26 +71,15 @@ func TestSelectImmutableAssets(t *testing.T) {
 
 	// The version is used as-is (it comes from kfd.immutable.version, which carries no leading "v").
 	got, err := selectImmutableAssets(phaseDir, "1.34.8")
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
+	require.NoError(t, err)
 
-	if got.SandboxTag != "3.10.1" {
-		t.Errorf("SandboxTag = %q", got.SandboxTag)
-	}
-
-	if got.ImageRegistry != "registry.sighup.io/fury/on-premises" {
-		t.Errorf("ImageRegistry = %q", got.ImageRegistry)
-	}
-
-	if got.CorednsImagePrefix != "/coredns" {
-		t.Errorf("CorednsImagePrefix = %q", got.CorednsImagePrefix)
-	}
+	assert.Equal(t, "3.10.1", got.SandboxTag)
+	assert.Equal(t, "registry.sighup.io/fury/on-premises", got.ImageRegistry)
+	assert.Equal(t, "/coredns", got.CorednsImagePrefix)
 
 	// A version absent from the manifest is an error.
-	if _, err := selectImmutableAssets(phaseDir, "9.99.99"); err == nil {
-		t.Error("expected error for missing version, got nil")
-	}
+	_, err = selectImmutableAssets(phaseDir, "9.99.99")
+	assert.Error(t, err, "expected error for missing version, got nil")
 }
 
 // TestBuildVersionVars checks the infra roles' required vars (sandbox tag, haproxy image/tag) are emitted.
@@ -100,9 +89,7 @@ func TestBuildVersionVars(t *testing.T) {
 	phaseDir := writeManifest(t)
 
 	a, err := selectImmutableAssets(phaseDir, "1.34.8")
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	vars := buildVersionVars("1.34.8", "/usr/bin/kubectl", a)
 
@@ -114,14 +101,12 @@ func TestBuildVersionVars(t *testing.T) {
 
 	for key, exp := range want {
 		got, ok := vars[key]
-		if !ok {
-			t.Errorf("buildVersionVars missing %q", key)
+		assert.True(t, ok, "buildVersionVars missing %q", key)
 
+		if !ok {
 			continue
 		}
 
-		if got != exp {
-			t.Errorf("buildVersionVars[%q] = %v, want %q", key, got, exp)
-		}
+		assert.Equal(t, exp, got, "buildVersionVars[%q]", key)
 	}
 }

@@ -7,9 +7,11 @@
 package netx_test
 
 import (
-	"errors"
 	"net"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	netx "github.com/sighupio/furyctl/internal/x/net"
 )
@@ -22,7 +24,7 @@ func TestAddOffsetToIPNet(t *testing.T) {
 		ipNet   *net.IPNet
 		offset  int
 		want    *net.IPNet
-		wantErr *error
+		wantErr error
 	}{
 		{
 			name:    "test valid ipnet positive offset",
@@ -43,14 +45,14 @@ func TestAddOffsetToIPNet(t *testing.T) {
 			ipNet:   nil,
 			offset:  1,
 			want:    nil,
-			wantErr: &netx.ErrIPNetIsNil,
+			wantErr: netx.ErrIPNetIsNil,
 		},
 		{
 			name:    "test invalid ipnet",
 			ipNet:   &net.IPNet{IP: []byte{0, 168, 0, 0, 1}, Mask: net.CIDRMask(24, 32)},
 			offset:  1,
 			want:    nil,
-			wantErr: &netx.ErrInvalidIP,
+			wantErr: netx.ErrInvalidIP,
 		},
 	}
 
@@ -61,20 +63,14 @@ func TestAddOffsetToIPNet(t *testing.T) {
 			got, err := netx.AddOffsetToIPNet(tc.ipNet, tc.offset)
 
 			if tc.wantErr != nil {
-				if err == nil {
-					t.Fatalf("expected error %v, got nil", *tc.wantErr)
-				}
-
-				if !errors.Is(err, *tc.wantErr) {
-					t.Errorf("expected error %v, got %v", *tc.wantErr, err)
-				}
+				require.Error(t, err, "expected error, got nil")
+				assert.ErrorIs(t, err, tc.wantErr)
 
 				return
 			}
 
-			if got.String() != tc.want.String() {
-				t.Errorf("expected %v, got %v", tc.want, got)
-			}
+			require.NoError(t, err)
+			assert.Equal(t, tc.want.String(), got.String())
 		})
 	}
 }

@@ -11,6 +11,8 @@ import (
 	"os"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+
 	"github.com/sighupio/furyctl/internal/dependencies/tools"
 	itool "github.com/sighupio/furyctl/internal/tool"
 	execx "github.com/sighupio/furyctl/internal/x/exec"
@@ -76,12 +78,7 @@ func Test_Factory_Create(t *testing.T) {
 		})
 		t.Run(tC.desc, func(t *testing.T) {
 			tool := f.Create(itool.Name(tC.desc), "0.0.0")
-			if tool == nil && tC.wantTool {
-				t.Errorf("Expected tool %s, got nil", tC.desc)
-			}
-			if tool != nil && !tC.wantTool {
-				t.Errorf("Expected nil, got tool %s", tC.desc)
-			}
+			assert.Equal(t, tC.wantTool, tool != nil, "tool mismatch for %s", tC.desc)
 		})
 	}
 }

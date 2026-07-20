@@ -11,6 +11,9 @@ import (
 	"os"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
 	"github.com/sighupio/furyctl/internal/tool/yq"
 	execx "github.com/sighupio/furyctl/internal/x/exec"
 )
@@ -22,15 +25,9 @@ func Test_Runner_Version(t *testing.T) {
 	})
 
 	got, err := r.Version()
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
-	want := "yq (https://github.com/mikefarah/yq/) version v4.34.1"
-
-	if got != want {
-		t.Errorf("expected version '%s', got '%s'", want, got)
-	}
+	assert.Equal(t, "yq (https://github.com/mikefarah/yq/) version v4.34.1", got)
 }
 
 func TestHelperProcess(t *testing.T) {

@@ -11,6 +11,9 @@ import (
 	"os"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
 	"github.com/sighupio/furyctl/internal/tool/openvpn"
 	execx "github.com/sighupio/furyctl/internal/x/exec"
 )
@@ -22,15 +25,9 @@ func Test_Runner_Version(t *testing.T) {
 	})
 
 	got, err := r.Version()
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
-	want := "v1.2.3"
-
-	if got != want {
-		t.Errorf("expected version '%s', got '%s'", want, got)
-	}
+	assert.Equal(t, "v1.2.3", got)
 }
 
 func Test_Runner_Connect(t *testing.T) {
@@ -39,9 +36,8 @@ func Test_Runner_Connect(t *testing.T) {
 		WorkDir: os.TempDir(),
 	})
 
-	if err := r.Connect("furyctltest"); err != nil {
-		t.Fatal(err)
-	}
+	err := r.Connect("furyctltest")
+	require.NoError(t, err)
 }
 
 func TestHelperProcess(t *testing.T) {

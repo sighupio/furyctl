@@ -8,10 +8,12 @@
 package clusterinfo
 
 import (
-	"reflect"
 	"sort"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestPrimaryRole(t *testing.T) {
@@ -40,9 +42,7 @@ func TestPrimaryRole(t *testing.T) {
 
 	for _, tt := range tests {
 		got := primaryRole(tt.labels)
-		if got != tt.want {
-			t.Fatalf("%s: primaryRole() = %q, want %q", tt.name, got, tt.want)
-		}
+		require.Equal(t, tt.want, got, "primaryRole()")
 	}
 }
 
@@ -54,9 +54,7 @@ func TestRoleSort(t *testing.T) {
 
 	sort.Slice(input, func(i, j int) bool { return roleSort(input[i], input[j]) })
 
-	if !reflect.DeepEqual(input, want) {
-		t.Fatalf("roleSort order = %v, want %v", input, want)
-	}
+	require.Equal(t, want, input, "roleSort order")
 }
 
 func TestParseCPU(t *testing.T) {
@@ -79,9 +77,8 @@ func TestParseCPU(t *testing.T) {
 		t.Run(tt.in, func(t *testing.T) {
 			t.Parallel()
 
-			if got := parseCPU(tt.in); got != tt.want {
-				t.Errorf("parseCPU(%q) = %d, want %d", tt.in, got, tt.want)
-			}
+			got := parseCPU(tt.in)
+			assert.Equal(t, tt.want, got, "parseCPU(%q)", tt.in)
 		})
 	}
 }
@@ -128,9 +125,7 @@ func TestHasCustomPatches(t *testing.T) {
 	t.Parallel()
 
 	// Absent.
-	if hasCustomPatches(map[string]any{}) {
-		t.Fatal("expected false when customPatches absent")
-	}
+	require.False(t, hasCustomPatches(map[string]any{}), "expected false when customPatches absent")
 
 	// Present but empty arrays.
 	m1 := map[string]any{
@@ -143,9 +138,7 @@ func TestHasCustomPatches(t *testing.T) {
 		},
 	}
 
-	if hasCustomPatches(m1) {
-		t.Fatal("expected false when all arrays are empty")
-	}
+	require.False(t, hasCustomPatches(m1), "expected false when all arrays are empty")
 
 	// One non-empty.
 	m2 := map[string]any{
@@ -159,9 +152,7 @@ func TestHasCustomPatches(t *testing.T) {
 		},
 	}
 
-	if !hasCustomPatches(m2) {
-		t.Fatal("expected true when one array has elements")
-	}
+	require.True(t, hasCustomPatches(m2), "expected true when one array has elements")
 
 	// Not a map.
 	m3 := map[string]any{
@@ -172,27 +163,22 @@ func TestHasCustomPatches(t *testing.T) {
 		},
 	}
 
-	if hasCustomPatches(m3) {
-		t.Fatal("expected false when customPatches is not a map")
-	}
+	require.False(t, hasCustomPatches(m3), "expected false when customPatches is not a map")
 }
 
 func TestEtcdTopology(t *testing.T) {
 	t.Parallel()
 
 	// Non OnPremises.
-	if got := etcdTopology("EKSCluster", nil); got != "" {
-		t.Fatalf("expected empty for EKSCluster, got %q", got)
-	}
+	got := etcdTopology("EKSCluster", nil)
+	require.Empty(t, got, "expected empty for EKSCluster")
 
-	if got := etcdTopology("KFDDistribution", nil); got != "" {
-		t.Fatalf("expected empty for KFDDistribution, got %q", got)
-	}
+	got = etcdTopology("KFDDistribution", nil)
+	require.Empty(t, got, "expected empty for KFDDistribution")
 
 	// OnPremises cases.
-	if got := etcdTopology("OnPremises", map[string]any{}); got != "Stacked" {
-		t.Fatalf("expected Stacked when etcd missing, got %q", got)
-	}
+	got = etcdTopology("OnPremises", map[string]any{})
+	require.Equal(t, "Stacked", got, "expected Stacked when etcd missing")
 
 	mEmpty := map[string]any{
 		"spec": map[string]any{
@@ -204,9 +190,8 @@ func TestEtcdTopology(t *testing.T) {
 		},
 	}
 
-	if got := etcdTopology("OnPremises", mEmpty); got != "Stacked" {
-		t.Fatalf("expected Stacked when hosts empty, got %q", got)
-	}
+	got = etcdTopology("OnPremises", mEmpty)
+	require.Equal(t, "Stacked", got, "expected Stacked when hosts empty")
 
 	mDedicated := map[string]any{
 		"spec": map[string]any{
@@ -218,14 +203,12 @@ func TestEtcdTopology(t *testing.T) {
 		},
 	}
 
-	if got := etcdTopology("OnPremises", mDedicated); got != "Dedicated" {
-		t.Fatalf("expected Dedicated when hosts present, got %q", got)
-	}
+	got = etcdTopology("OnPremises", mDedicated)
+	require.Equal(t, "Dedicated", got, "expected Dedicated when hosts present")
 
 	// Immutable cases.
-	if got := etcdTopology("Immutable", map[string]any{}); got != "Stacked" {
-		t.Fatalf("expected Stacked when etcd missing for Immutable, got %q", got)
-	}
+	got = etcdTopology("Immutable", map[string]any{})
+	require.Equal(t, "Stacked", got, "expected Stacked when etcd missing for Immutable")
 
 	mImmutableStacked := map[string]any{
 		"spec": map[string]any{
@@ -245,9 +228,8 @@ func TestEtcdTopology(t *testing.T) {
 		},
 	}
 
-	if got := etcdTopology("Immutable", mImmutableStacked); got != "Stacked" {
-		t.Fatalf("expected Stacked when etcd members are a subset of controlPlane, got %q", got)
-	}
+	got = etcdTopology("Immutable", mImmutableStacked)
+	require.Equal(t, "Stacked", got, "expected Stacked when etcd members are a subset of controlPlane")
 
 	mImmutableDedicated := map[string]any{
 		"spec": map[string]any{
@@ -267,18 +249,16 @@ func TestEtcdTopology(t *testing.T) {
 		},
 	}
 
-	if got := etcdTopology("Immutable", mImmutableDedicated); got != "Dedicated" {
-		t.Fatalf("expected Dedicated when etcd members differ from controlPlane, got %q", got)
-	}
+	got = etcdTopology("Immutable", mImmutableDedicated)
+	require.Equal(t, "Dedicated", got, "expected Dedicated when etcd members differ from controlPlane")
 }
 
 func TestIngressType(t *testing.T) {
 	t.Parallel()
 
 	// All none/absent.
-	if got := ingressType(map[string]any{}); got != "none" {
-		t.Fatalf("expected none, got %q", got)
-	}
+	got := ingressType(map[string]any{})
+	require.Equal(t, "none", got)
 
 	// Nginx only.
 	nginx := map[string]any{
@@ -287,9 +267,8 @@ func TestIngressType(t *testing.T) {
 		},
 	}
 
-	if got := ingressType(nginx); got != "nginx/single" {
-		t.Fatalf("expected nginx/single, got %q", got)
-	}
+	got = ingressType(nginx)
+	require.Equal(t, "nginx/single", got)
 
 	// Haproxy only.
 	hap := map[string]any{
@@ -298,9 +277,8 @@ func TestIngressType(t *testing.T) {
 		},
 	}
 
-	if got := ingressType(hap); got != "haproxy/dual" {
-		t.Fatalf("expected haproxy/dual, got %q", got)
-	}
+	got = ingressType(hap)
+	require.Equal(t, "haproxy/dual", got)
 
 	// Both nginx and haproxy. Output order is deterministic because ingressType appends
 	// nginx, haproxy, byoic in a fixed sequence, not by iterating the input map.
@@ -311,9 +289,8 @@ func TestIngressType(t *testing.T) {
 		},
 	}
 
-	if got := ingressType(both); got != "nginx/single, haproxy/dual" {
-		t.Fatalf("expected combined output, got %q", got)
-	}
+	got = ingressType(both)
+	require.Equal(t, "nginx/single, haproxy/dual", got)
 
 	// Byoic enabled with class.
 	byoicWithClass := map[string]any{
@@ -322,9 +299,8 @@ func TestIngressType(t *testing.T) {
 		},
 	}
 
-	if got := ingressType(byoicWithClass); got != "byoic/custom" {
-		t.Fatalf("expected byoic/custom, got %q", got)
-	}
+	got = ingressType(byoicWithClass)
+	require.Equal(t, "byoic/custom", got)
 
 	// Byoic enabled without class.
 	byoicEnabled := map[string]any{
@@ -333,9 +309,8 @@ func TestIngressType(t *testing.T) {
 		},
 	}
 
-	if got := ingressType(byoicEnabled); got != "byoic" {
-		t.Fatalf("expected byoic, got %q", got)
-	}
+	got = ingressType(byoicEnabled)
+	require.Equal(t, "byoic", got)
 
 	// Byoic disabled.
 	byoicDisabled := map[string]any{
@@ -344,9 +319,8 @@ func TestIngressType(t *testing.T) {
 		},
 	}
 
-	if got := ingressType(byoicDisabled); got != "none" {
-		t.Fatalf("expected none when byoic disabled, got %q", got)
-	}
+	got = ingressType(byoicDisabled)
+	require.Equal(t, "none", got)
 
 	// Nginx type none excluded.
 	nginxNone := map[string]any{
@@ -355,18 +329,15 @@ func TestIngressType(t *testing.T) {
 		},
 	}
 
-	if got := ingressType(nginxNone); got != "none" {
-		t.Fatalf("expected none when nginx type is none, got %q", got)
-	}
+	got = ingressType(nginxNone)
+	require.Equal(t, "none", got)
 }
 
 func TestExtractPlugins(t *testing.T) {
 	t.Parallel()
 
 	// No plugins key.
-	if extractPlugins(map[string]any{}) != nil {
-		t.Fatal("expected nil when plugins absent")
-	}
+	require.Nil(t, extractPlugins(map[string]any{}), "expected nil when plugins absent")
 
 	// Present but empty.
 	empty := map[string]any{
@@ -378,9 +349,7 @@ func TestExtractPlugins(t *testing.T) {
 		},
 	}
 
-	if extractPlugins(empty) != nil {
-		t.Fatal("expected nil when plugins lists are empty")
-	}
+	require.Nil(t, extractPlugins(empty), "expected nil when plugins lists are empty")
 
 	// Kustomize only.
 	kus := map[string]any{
@@ -396,9 +365,9 @@ func TestExtractPlugins(t *testing.T) {
 
 	got := extractPlugins(kus)
 
-	if got == nil || !reflect.DeepEqual(got.Kustomize, []string{"a", "b"}) || got.Helm != nil {
-		t.Fatalf("unexpected kustomize-only parse: %+v", got)
-	}
+	require.NotNil(t, got, "expected non-nil for kustomize-only parse")
+	require.Equal(t, []string{"a", "b"}, got.Kustomize)
+	require.Nil(t, got.Helm)
 
 	// Helm only.
 	helm := map[string]any{
@@ -416,9 +385,9 @@ func TestExtractPlugins(t *testing.T) {
 
 	got = extractPlugins(helm)
 
-	if got == nil || !reflect.DeepEqual(got.Helm, []string{"x", "y"}) || got.Kustomize != nil {
-		t.Fatalf("unexpected helm-only parse: %+v", got)
-	}
+	require.NotNil(t, got, "expected non-nil for helm-only parse")
+	require.Equal(t, []string{"x", "y"}, got.Helm)
+	require.Nil(t, got.Kustomize)
 
 	// Both.
 	both := map[string]any{
@@ -434,9 +403,9 @@ func TestExtractPlugins(t *testing.T) {
 
 	got = extractPlugins(both)
 
-	if got == nil || !reflect.DeepEqual(got.Kustomize, []string{"k1"}) || !reflect.DeepEqual(got.Helm, []string{"h1"}) {
-		t.Fatalf("unexpected both parse: %+v", got)
-	}
+	require.NotNil(t, got, "expected non-nil for both parse")
+	require.Equal(t, []string{"k1"}, got.Kustomize)
+	require.Equal(t, []string{"h1"}, got.Helm)
 
 	// Entries without name ignored.
 	invalid := map[string]any{
@@ -447,18 +416,14 @@ func TestExtractPlugins(t *testing.T) {
 		},
 	}
 
-	if got := extractPlugins(invalid); got != nil {
-		t.Fatalf("expected nil when only invalid entries present, got: %+v", got)
-	}
+	require.Nil(t, extractPlugins(invalid), "expected nil when only invalid entries present")
 }
 
 func TestLatestManagedFieldTime(t *testing.T) {
 	t.Parallel()
 
 	// No metadata.
-	if !latestManagedFieldTime(map[string]any{}).IsZero() {
-		t.Fatal("expected zero time when no metadata present")
-	}
+	require.True(t, latestManagedFieldTime(map[string]any{}).IsZero(), "expected zero time when no metadata present")
 
 	// ManagedFields with multiple timestamps.
 	t1, _ := time.Parse(time.RFC3339, "2024-01-01T10:00:00Z")
@@ -473,10 +438,7 @@ func TestLatestManagedFieldTime(t *testing.T) {
 	}
 
 	got := latestManagedFieldTime(raw)
-
-	if !got.Equal(t2) {
-		t.Fatalf("expected latest managedFields time %v, got %v", t2, got)
-	}
+	require.True(t, got.Equal(t2), "expected latest managedFields time %v, got %v", t2, got)
 
 	// Malformed managedFields, fallback to creationTimestamp.
 	ct, _ := time.Parse(time.RFC3339, "2024-02-02T10:00:00Z")
@@ -488,14 +450,8 @@ func TestLatestManagedFieldTime(t *testing.T) {
 	}
 
 	got = latestManagedFieldTime(raw2)
-
-	if !got.Equal(ct) {
-		t.Fatalf("expected creationTimestamp fallback %v, got %v", ct, got)
-	}
+	require.True(t, got.Equal(ct), "expected creationTimestamp fallback %v, got %v", ct, got)
 
 	raw3 := map[string]any{"metadata": map[string]any{"creationTimestamp": "bad"}}
-
-	if !latestManagedFieldTime(raw3).IsZero() {
-		t.Fatal("expected zero when creationTimestamp is malformed")
-	}
+	require.True(t, latestManagedFieldTime(raw3).IsZero(), "expected zero when creationTimestamp is malformed")
 }

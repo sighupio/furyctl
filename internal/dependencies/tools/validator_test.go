@@ -13,6 +13,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+
 	"github.com/sighupio/furyctl/internal/apis/config"
 	"github.com/sighupio/furyctl/internal/dependencies/tools"
 	execx "github.com/sighupio/furyctl/internal/x/exec"
@@ -165,26 +167,17 @@ func Test_Validator_Validate(t *testing.T) {
 
 			oks, errs := v.Validate(tC.manifest, tC.state)
 
-			if len(oks) != len(tC.wantOks) {
-				t.Errorf("Expected %d oks, got %d - %v", len(tC.wantOks), len(oks), oks)
-			}
-
-			if len(errs) != len(tC.wantErrs) {
-				t.Errorf("Expected %d errors, got %d - %v", len(tC.wantErrs), len(errs), errs)
-			}
+			assert.Len(t, oks, len(tC.wantOks), "Expected %d oks, got %d - %v", len(tC.wantOks), len(oks), oks)
+			assert.Len(t, errs, len(tC.wantErrs), "Expected %d errors, got %d - %v", len(tC.wantErrs), len(errs), errs)
 
 			for _, ok := range oks {
-				if !slices.Contains(tC.wantOks, ok) {
-					t.Errorf("Unexpected ok: %s", ok)
-				}
+				assert.Contains(t, tC.wantOks, ok, "Unexpected ok: %s", ok)
 			}
 
 			for _, err := range errs {
-				if !slices.ContainsFunc(tC.wantErrs, func(wantErr error) bool {
+				assert.True(t, slices.ContainsFunc(tC.wantErrs, func(wantErr error) bool {
 					return strings.Trim(err.Error(), "\n") == strings.Trim(wantErr.Error(), "\n")
-				}) {
-					t.Errorf("Unexpected error: %s", err)
-				}
+				}), "Unexpected error: %s", err)
 			}
 		})
 	}
@@ -214,26 +207,17 @@ func TestValidator_ValidateBaseReqs(t *testing.T) {
 
 			oks, errs := v.ValidateBaseReqs()
 
-			if len(oks) != len(tC.wantOks) {
-				t.Errorf("Expected %d oks, got %d - %v", len(tC.wantOks), len(oks), oks)
-			}
-
-			if len(errs) != len(tC.wantErrs) {
-				t.Errorf("Expected %d errors, got %d - %v", len(tC.wantErrs), len(errs), errs)
-			}
+			assert.Len(t, oks, len(tC.wantOks), "Expected %d oks, got %d - %v", len(tC.wantOks), len(oks), oks)
+			assert.Len(t, errs, len(tC.wantErrs), "Expected %d errors, got %d - %v", len(tC.wantErrs), len(errs), errs)
 
 			for _, ok := range oks {
-				if !slices.Contains(tC.wantOks, ok) {
-					t.Errorf("Unexpected ok: %s", ok)
-				}
+				assert.Contains(t, tC.wantOks, ok, "Unexpected ok: %s", ok)
 			}
 
 			for _, err := range errs {
-				if !slices.ContainsFunc(tC.wantErrs, func(wantErr error) bool {
+				assert.True(t, slices.ContainsFunc(tC.wantErrs, func(wantErr error) bool {
 					return strings.Trim(err.Error(), "\n") == strings.Trim(wantErr.Error(), "\n")
-				}) {
-					t.Errorf("Unexpected error: %s", err)
-				}
+				}), "Unexpected error: %s", err)
 			}
 		})
 	}

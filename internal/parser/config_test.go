@@ -15,6 +15,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/sighupio/furyctl/internal/parser"
 )
@@ -31,9 +32,7 @@ func TestConfigParser_ParseDynamicValue(t *testing.T) {
 	t.Parallel()
 
 	pathTmpDir, err := os.MkdirTemp("", "test")
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	testCases := []struct {
 		name     string
@@ -57,14 +56,10 @@ func TestConfigParser_ParseDynamicValue(t *testing.T) {
 		{
 			name: "parsing env",
 			setup: func() (string, string, func()) {
-				if err := os.Setenv("TEST_ENV_VAR", "hello test"); err != nil {
-					t.Fatal(err)
-				}
+				require.NoError(t, os.Setenv("TEST_ENV_VAR", "hello test"))
 
 				return "", "{env://TEST_ENV_VAR}", func() {
-					if err := os.Unsetenv("TEST_ENV_VAR"); err != nil {
-						t.Fatal(err)
-					}
+					require.NoError(t, os.Unsetenv("TEST_ENV_VAR"))
 				}
 			},
 			expected: "hello test",
@@ -73,13 +68,9 @@ func TestConfigParser_ParseDynamicValue(t *testing.T) {
 			name: "parsing file - relative path",
 			setup: func() (string, string, func()) {
 				tmpDir, err := os.MkdirTemp("", "test")
-				if err != nil {
-					t.Fatal(err)
-				}
+				require.NoError(t, err)
 
-				if err := os.WriteFile(tmpDir+"/test_file.txt", []byte("hello test"), os.ModePerm); err != nil {
-					t.Fatal(err)
-				}
+				require.NoError(t, os.WriteFile(tmpDir+"/test_file.txt", []byte("hello test"), os.ModePerm))
 
 				return tmpDir, fmt.Sprintf("{file://./test_file.txt}"), func() {
 					os.RemoveAll(tmpDir)
@@ -91,13 +82,9 @@ func TestConfigParser_ParseDynamicValue(t *testing.T) {
 			name: "parsing file - absolute path",
 			setup: func() (string, string, func()) {
 				tmpDir, err := os.MkdirTemp("", "test")
-				if err != nil {
-					t.Fatal(err)
-				}
+				require.NoError(t, err)
 
-				if err := os.WriteFile(tmpDir+"/test_file.txt", []byte("hello test"), os.ModePerm); err != nil {
-					t.Fatal(err)
-				}
+				require.NoError(t, os.WriteFile(tmpDir+"/test_file.txt", []byte("hello test"), os.ModePerm))
 
 				return tmpDir, fmt.Sprintf("{file://%s}", path.Join(tmpDir, "test_file.txt")), func() {
 					os.RemoveAll(tmpDir)
@@ -122,9 +109,7 @@ func TestConfigParser_ParseDynamicValue(t *testing.T) {
 		{
 			name: "parsing path relative - one level",
 			setup: func() (string, string, func()) {
-				if err := os.WriteFile(pathTmpDir+"/test_file.txt", []byte("hello test"), os.ModePerm); err != nil {
-					t.Fatal(err)
-				}
+				require.NoError(t, os.WriteFile(pathTmpDir+"/test_file.txt", []byte("hello test"), os.ModePerm))
 
 				return pathTmpDir, fmt.Sprintf("{path://./test_file.txt}"), func() {}
 			},
@@ -134,13 +119,9 @@ func TestConfigParser_ParseDynamicValue(t *testing.T) {
 			name: "parsing path relative - two levels",
 			setup: func() (string, string, func()) {
 				err := os.Mkdir(pathTmpDir+"/test_dir", os.ModePerm)
-				if err != nil {
-					t.Fatal(err)
-				}
+				require.NoError(t, err)
 
-				if err := os.WriteFile(pathTmpDir+"/test_file_2.txt", []byte("hello test"), os.ModePerm); err != nil {
-					t.Fatal(err)
-				}
+				require.NoError(t, os.WriteFile(pathTmpDir+"/test_file_2.txt", []byte("hello test"), os.ModePerm))
 
 				return path.Join(pathTmpDir, "/test_dir"), fmt.Sprintf("{path://../test_file_2.txt}"), func() {}
 			},

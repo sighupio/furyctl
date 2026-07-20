@@ -9,6 +9,8 @@ package distribution_test
 import (
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+
 	"github.com/sighupio/furyctl/internal/distribution"
 )
 
@@ -190,9 +192,7 @@ func TestEKSClusterCheckIsCompatible(t *testing.T) {
 
 			got := checker.IsCompatible()
 
-			if got != tc.expected {
-				t.Errorf("IsCompatible() got = %v, want %v", got, tc.expected)
-			}
+			assert.Equal(t, tc.expected, got, "IsCompatible()")
 		})
 	}
 }
@@ -375,9 +375,7 @@ func TestKFDDistributionCheckIsCompatible(t *testing.T) {
 
 			got := checker.IsCompatible()
 
-			if got != tc.expected {
-				t.Errorf("IsCompatible() got = %v, want %v", got, tc.expected)
-			}
+			assert.Equal(t, tc.expected, got, "IsCompatible()")
 		})
 	}
 }
@@ -555,9 +553,7 @@ func TestOnPremisesCheckIsCompatible(t *testing.T) {
 
 			got := checker.IsCompatible()
 
-			if got != tc.expected {
-				t.Errorf("IsCompatible() got = %v, want %v", got, tc.expected)
-			}
+			assert.Equal(t, tc.expected, got, "IsCompatible()")
 		})
 	}
 }
@@ -622,9 +618,7 @@ func TestImmutableCheckIsCompatible(t *testing.T) {
 
 			got := checker.IsCompatible()
 
-			if got != tc.expected {
-				t.Errorf("IsCompatible() got = %v, want %v", got, tc.expected)
-			}
+			assert.Equal(t, tc.expected, got, "IsCompatible()")
 		})
 	}
 }

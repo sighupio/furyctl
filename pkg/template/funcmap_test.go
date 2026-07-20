@@ -7,12 +7,12 @@
 package template_test
 
 import (
-	"errors"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/sighupio/furyctl/pkg/template"
 )
@@ -79,9 +79,7 @@ func TestToYAML(t *testing.T) {
 
 			got := template.ToYAML(tC.data)
 
-			if got != tC.want {
-				t.Fatalf("expected %q, got %q", tC.want, got)
-			}
+			require.Equal(t, tC.want, got)
 		})
 	}
 }
@@ -121,9 +119,7 @@ func TestFromYAML(t *testing.T) {
 
 			got := template.FromYAML(tC.data)
 
-			if !cmp.Equal(got, tC.want, cmpopts.EquateEmpty()) {
-				t.Fatalf("expected %+v, got %+v", tC.want, got)
-			}
+			require.True(t, cmp.Equal(got, tC.want, cmpopts.EquateEmpty()), "expected %+v, got %+v", tC.want, got)
 		})
 	}
 }
@@ -134,55 +130,37 @@ func TestDigAny_Success(t *testing.T) {
 	}
 
 	got, err := template.DigAny("a", "b", "default", dict)
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	if got != "value" {
-		t.Fatalf("expected %q, got %v", "value", got)
-	}
+	require.NoError(t, err)
+	require.Equal(t, "value", got)
 }
 
 func TestDigAny_MissingKeyReturnsDefault(t *testing.T) {
 	dict := map[any]any{"a": map[any]any{"b": "value"}}
 
 	got, err := template.DigAny("a", "x", "DEF", dict)
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	if got != "DEF" {
-		t.Fatalf("expected default %q, got %v", "DEF", got)
-	}
+	require.NoError(t, err)
+	require.Equal(t, "DEF", got)
 }
 
 func TestDigAny_InsufficientArgs(t *testing.T) {
 	_, err := template.DigAny("only-one")
-	if !errors.Is(err, template.ErrDigAnyInsufficientArgs) {
-		t.Fatalf("expected ErrDigAnyInsufficientArgs, got %v", err)
-	}
+	require.ErrorIs(t, err, template.ErrDigAnyInsufficientArgs)
 }
 
 func TestDigAny_NonStringKey(t *testing.T) {
 	dict := map[any]any{"a": map[any]any{"b": "value"}}
 	_, err := template.DigAny(123, "default", dict)
-	if err == nil || !errors.Is(err, template.ErrDigAnyInvalidKeyType) {
-		t.Fatalf("expected ErrDigAnyInvalidKeyType, got %v", err)
-	}
+	require.ErrorIs(t, err, template.ErrDigAnyInvalidKeyType)
 }
 
 func TestDigAny_LastArgNotMap(t *testing.T) {
 	_, err := template.DigAny("a", "default", 123)
-	if err == nil || !errors.Is(err, template.ErrDigAnyInvalidDictType) {
-		t.Fatalf("expected ErrDigAnyInvalidDictType, got %v", err)
-	}
+	require.ErrorIs(t, err, template.ErrDigAnyInvalidDictType)
 }
 
 func TestDigAny_NestedNotMapReturnsDefault(t *testing.T) {
 	dict := map[any]any{"a": "not-a-map"}
 	got, err := template.DigAny("a", "b", "DEF", dict)
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	if got != "DEF" {
-		t.Fatalf("expected default %q, got %v", "DEF", got)
-	}
+	require.NoError(t, err)
+	require.Equal(t, "DEF", got)
 }

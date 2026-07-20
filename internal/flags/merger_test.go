@@ -10,6 +10,8 @@ import (
 	"testing"
 
 	"github.com/spf13/viper"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/sighupio/furyctl/internal/flags"
 )
@@ -103,22 +105,16 @@ func TestMerger_MergeIntoViper(t *testing.T) {
 
 			merger := flags.NewMerger()
 			err := merger.MergeIntoViper(tt.flags, tt.command)
-			if err != nil {
-				t.Fatalf("MergeIntoViper() error = %v", err)
-			}
+			require.NoError(t, err, "MergeIntoViper()")
 
 			// Check expected values
 			for key, expectedValue := range tt.expectedValues {
 				actualValue := viper.Get(key)
 
 				if expectedValue == nil {
-					if actualValue != nil {
-						t.Errorf("Expected %s to be nil, got: %v", key, actualValue)
-					}
+					assert.Nil(t, actualValue, "Expected %s to be nil", key)
 				} else {
-					if actualValue != expectedValue {
-						t.Errorf("Expected %s to be %v, got: %v", key, expectedValue, actualValue)
-					}
+					assert.Equal(t, expectedValue, actualValue, "Expected %s", key)
 				}
 			}
 		})
@@ -159,9 +155,7 @@ func TestCamelToKebab(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.input, func(t *testing.T) {
 			result := flags.CamelToKebab(tt.input)
-			if result != tt.expected {
-				t.Errorf("camelToKebab(%q) = %q, want %q", tt.input, result, tt.expected)
-			}
+			assert.Equal(t, tt.expected, result, "camelToKebab(%q)", tt.input)
 		})
 	}
 }
@@ -268,33 +262,11 @@ func TestMerger_ConvertValue(t *testing.T) {
 			actualValue, err := merger.ConvertValue(tt.value, tt.expectedType)
 
 			if tt.expectError {
-				if err == nil {
-					t.Errorf("Expected error but got none")
-				}
+				assert.Error(t, err, "Expected error but got none")
 			} else {
-				if err != nil {
-					t.Errorf("Unexpected error: %v", err)
-				}
+				assert.NoError(t, err, "Unexpected error")
 
-				// For string slices, we need to compare them properly
-				if expectedSlice, ok := tt.expected.([]string); ok {
-					if actualSlice, ok := actualValue.([]string); ok {
-						if len(expectedSlice) != len(actualSlice) {
-							t.Errorf("Expected %v, got %v", tt.expected, actualValue)
-						} else {
-							for i := range expectedSlice {
-								if expectedSlice[i] != actualSlice[i] {
-									t.Errorf("Expected %v, got %v", tt.expected, actualValue)
-									break
-								}
-							}
-						}
-					} else {
-						t.Errorf("Expected []string type, got %T", actualValue)
-					}
-				} else if actualValue != tt.expected {
-					t.Errorf("Expected %v, got %v", tt.expected, actualValue)
-				}
+				assert.Equal(t, tt.expected, actualValue)
 			}
 		})
 	}
@@ -312,17 +284,10 @@ func TestMerger_MergeGlobalFlags(t *testing.T) {
 
 	merger := flags.NewMerger()
 	err := merger.MergeGlobalFlags(flagsConfig)
-	if err != nil {
-		t.Fatalf("MergeGlobalFlags() error = %v", err)
-	}
+	require.NoError(t, err, "MergeGlobalFlags()")
 
-	if viper.GetBool("debug") != true {
-		t.Errorf("Expected debug to be true, got: %v", viper.GetBool("debug"))
-	}
-
-	if viper.GetBool("disableAnalytics") != false {
-		t.Errorf("Expected disableAnalytics to be false, got: %v", viper.GetBool("disableAnalytics"))
-	}
+	assert.True(t, viper.GetBool("debug"), "Expected debug to be true")
+	assert.False(t, viper.GetBool("disableAnalytics"), "Expected disableAnalytics to be false")
 }
 
 func TestMerger_GetSupportedFlagsForCommand(t *testing.T) {
@@ -343,12 +308,10 @@ func TestMerger_GetSupportedFlagsForCommand(t *testing.T) {
 		t.Run(tt.command, func(t *testing.T) {
 			supportedFlags := merger.GetSupportedFlagsForCommand(tt.command)
 
-			if tt.expectNil && supportedFlags != nil {
-				t.Errorf("Expected nil for unknown command, got: %+v", supportedFlags)
-			}
-
-			if !tt.expectNil && supportedFlags == nil {
-				t.Errorf("Expected supported flags for command %s, got nil", tt.command)
+			if tt.expectNil {
+				assert.Nil(t, supportedFlags, "Expected nil for unknown command")
+			} else {
+				assert.NotNil(t, supportedFlags, "Expected supported flags for command %s", tt.command)
 			}
 		})
 	}

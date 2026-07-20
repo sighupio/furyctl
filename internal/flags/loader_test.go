@@ -102,35 +102,22 @@ flags:
 			configPath := filepath.Join(tmpDir, "furyctl.yaml")
 
 			err := os.WriteFile(configPath, []byte(tt.configContent), 0o644)
-			if err != nil {
-				t.Fatalf("Failed to create test config file: %v", err)
-			}
+			require.NoError(t, err, "Failed to create test config file")
 
 			// Create loader and load flags
 			loader := flags.NewLoader(tmpDir)
 			result, err := loader.LoadFromFile(configPath)
-			if err != nil {
-				t.Fatalf("LoadFromFile() error = %v", err)
-			}
+			require.NoError(t, err, "LoadFromFile()")
 
 			// Check errors count
-			if len(result.Errors) != tt.expectedErrors {
-				t.Errorf("Expected %d errors, got %d: %v", tt.expectedErrors, len(result.Errors), result.Errors)
-			}
+			assert.Len(t, result.Errors, tt.expectedErrors, "Expected %d errors, got %d: %v", tt.expectedErrors, len(result.Errors), result.Errors)
 
 			// Check flags result
-			if tt.expectedFlags == nil && result.Flags != nil {
-				t.Errorf("Expected no flags, but got: %+v", result.Flags)
-			}
-
-			if tt.expectedFlags != nil && result.Flags == nil {
-				t.Errorf("Expected flags but got nil")
-			}
-
-			if tt.expectedFlags != nil && result.Flags != nil {
-				// Compare global flags
+			if tt.expectedFlags == nil {
+				assert.Nil(t, result.Flags, "Expected no flags but got: %+v", result.Flags)
+			} else {
+				require.NotNil(t, result.Flags, "Expected flags but got nil")
 				assert.Equal(t, tt.expectedFlags.Global, result.Flags.Global)
-				// Compare apply flags
 				assert.Equal(t, tt.expectedFlags.Apply, result.Flags.Apply)
 			}
 		})
