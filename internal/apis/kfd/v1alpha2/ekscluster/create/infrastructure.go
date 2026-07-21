@@ -116,6 +116,20 @@ func (i *Infrastructure) Exec(startFrom string, upgradeState *upgrade.State) err
 	return nil
 }
 
+func (i *Infrastructure) SetUpgrade(upgradeEnabled bool) {
+	i.upgrade.Enabled = upgradeEnabled
+}
+
+func (i *Infrastructure) Stop() error {
+	logrus.Debug("Stopping terraform/tofu runner...")
+
+	if err := i.tfRunner.Stop(); err != nil {
+		return fmt.Errorf("error stopping terraform/tofu runner: %w", err)
+	}
+
+	return nil
+}
+
 func (i *Infrastructure) preInfrastructure(
 	startFrom string,
 	upgradeState *upgrade.State,
@@ -210,20 +224,6 @@ func (i *Infrastructure) postInfrastructure(
 
 	if i.upgrade.Enabled {
 		upgradeState.Phases.PostInfrastructure.Status = upgrade.PhaseStatusSuccess
-	}
-
-	return nil
-}
-
-func (i *Infrastructure) SetUpgrade(upgradeEnabled bool) {
-	i.upgrade.Enabled = upgradeEnabled
-}
-
-func (i *Infrastructure) Stop() error {
-	logrus.Debug("Stopping terraform/tofu runner...")
-
-	if err := i.tfRunner.Stop(); err != nil {
-		return fmt.Errorf("error stopping terraform/tofu runner: %w", err)
 	}
 
 	return nil

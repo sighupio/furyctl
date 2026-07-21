@@ -12,6 +12,11 @@ import (
 	"github.com/sighupio/furyctl/internal/tool/sed"
 )
 
+type Sed struct {
+	checker *checker
+	version string
+}
+
 func NewSed(runner *sed.Runner, version string) *Sed {
 	return &Sed{
 		version: version,
@@ -26,11 +31,6 @@ func NewSed(runner *sed.Runner, version string) *Sed {
 			},
 		},
 	}
-}
-
-type Sed struct {
-	checker *checker
-	version string
 }
 
 func (s *Sed) CheckBinVersion() error {

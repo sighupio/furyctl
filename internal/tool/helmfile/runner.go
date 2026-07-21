@@ -53,26 +53,6 @@ func (r *Runner) CmdPath() string {
 	return r.paths.Helmfile
 }
 
-func (r *Runner) newCmd(args []string) (*execx.Cmd, string) {
-	cmd := execx.NewCmd(r.paths.Helmfile, execx.CmdOptions{
-		Args:     args,
-		Executor: r.executor,
-		WorkDir:  r.paths.WorkDir,
-		// Disable helmfile's "newer version available" check: it hits the network on every
-		// invocation (including `version`), which slows things down and breaks air-gapped runs.
-		Env: []string{"HELMFILE_UPGRADE_NOTICE_DISABLED=1"},
-	})
-
-	id := uuid.NewString()
-	r.cmds[id] = cmd
-
-	return cmd, id
-}
-
-func (r *Runner) deleteCmd(id string) {
-	delete(r.cmds, id)
-}
-
 func (r *Runner) Init(helmBinary string) error {
 	// Helm plugin install hooks (e.g. helm-diff's install-binary.sh) call `helm` by bare name, so put the
 	// helm binary's dir on PATH — furyctl otherwise drives tools by absolute path and there may be no
@@ -102,17 +82,6 @@ func (r *Runner) Init(helmBinary string) error {
 	}
 
 	return nil
-}
-
-// hasDownloader reports whether curl or wget is available to download helm plugin binaries.
-func hasDownloader() bool {
-	for _, tool := range []string{"curl", "wget"} {
-		if _, err := exec.LookPath(tool); err == nil {
-			return true
-		}
-	}
-
-	return false
 }
 
 func (r *Runner) Apply() error {
@@ -148,4 +117,35 @@ func (r *Runner) Stop() error {
 	}
 
 	return nil
+}
+
+func (r *Runner) newCmd(args []string) (*execx.Cmd, string) {
+	cmd := execx.NewCmd(r.paths.Helmfile, execx.CmdOptions{
+		Args:     args,
+		Executor: r.executor,
+		WorkDir:  r.paths.WorkDir,
+		// Disable helmfile's "newer version available" check: it hits the network on every
+		// invocation (including `version`), which slows things down and breaks air-gapped runs.
+		Env: []string{"HELMFILE_UPGRADE_NOTICE_DISABLED=1"},
+	})
+
+	id := uuid.NewString()
+	r.cmds[id] = cmd
+
+	return cmd, id
+}
+
+func (r *Runner) deleteCmd(id string) {
+	delete(r.cmds, id)
+}
+
+// hasDownloader reports whether curl or wget is available to download helm plugin binaries.
+func hasDownloader() bool {
+	for _, tool := range []string{"curl", "wget"} {
+		if _, err := exec.LookPath(tool); err == nil {
+			return true
+		}
+	}
+
+	return false
 }

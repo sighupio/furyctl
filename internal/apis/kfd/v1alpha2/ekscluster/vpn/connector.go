@@ -143,21 +143,6 @@ func (v *Connector) GenerateCertificates() error {
 	return nil
 }
 
-func (v *Connector) writeOVPNFileToDisk(certName string, cert []byte) error {
-	err := os.WriteFile(
-		filepath.Join(
-			v.certDir,
-			certName+".ovpn"),
-		cert,
-		iox.FullRWPermAccess,
-	)
-	if err != nil {
-		return fmt.Errorf("error writing openvpn file to disk: %w", err)
-	}
-
-	return nil
-}
-
 func (v *Connector) IsConfigured() bool {
 	return v.config.IsConfigured()
 }
@@ -292,6 +277,21 @@ func (v *Connector) prompt() error {
 
 	if _, err := bufio.NewReader(os.Stdin).ReadBytes('\n'); err != nil {
 		return fmt.Errorf("%w: %v", ErrReadStdin, err)
+	}
+
+	return nil
+}
+
+func (v *Connector) writeOVPNFileToDisk(certName string, cert []byte) error {
+	err := os.WriteFile(
+		filepath.Join(
+			v.certDir,
+			certName+".ovpn"),
+		cert,
+		iox.FullRWPermAccess,
+	)
+	if err != nil {
+		return fmt.Errorf("error writing openvpn file to disk: %w", err)
 	}
 
 	return nil

@@ -316,6 +316,8 @@ linters:
           severity: warning
           disabled: false
         - name: struct-tag
+          arguments:
+            - "validate,api-version,cluster-kind,eks-version,permissive-semver,permissive-constraint,aws-region"
           severity: warning
           disabled: false
         - name: superfluous-else

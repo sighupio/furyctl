@@ -40,6 +40,39 @@ type Kubernetes struct {
 	podRunningTimeout int
 }
 
+func NewKubernetes(
+	furyctlConf public.OnpremisesKfdV1Alpha2,
+	kfdManifest config.KFD,
+	paths cluster.CreatorPaths,
+	dryRun bool,
+	upgr *upgrade.Upgrade,
+	upgradeNode string,
+	force []string,
+	podRunningTimeout int,
+) *Kubernetes {
+	phase := cluster.NewOperationPhase(
+		path.Join(paths.WorkDir, cluster.OperationPhaseKubernetes),
+		kfdManifest.Tools,
+		paths.BinPath,
+	)
+
+	return &Kubernetes{
+		OperationPhase: phase,
+		furyctlConf:    furyctlConf,
+		kfdManifest:    kfdManifest,
+		paths:          paths,
+		dryRun:         dryRun,
+		ansibleRunner: ansible.NewRunner(
+			execx.NewStdExecutor(),
+			ansible.PathsForVersion(paths.BinPath, kfdManifest.Tools.OnPremises.Ansible.Version, phase.Path),
+		),
+		upgrade:           upgr,
+		upgradeNode:       upgradeNode,
+		force:             force,
+		podRunningTimeout: podRunningTimeout,
+	}
+}
+
 func (k *Kubernetes) Self() *cluster.OperationPhase {
 	return k.OperationPhase
 }
@@ -84,6 +117,10 @@ func (k *Kubernetes) Exec(rdcs reducers.Reducers, startFrom string, upgradeState
 	logrus.Info("Kubernetes cluster created successfully")
 
 	return nil
+}
+
+func (k *Kubernetes) SetUpgrade(upgradeEnabled bool) {
+	k.upgrade.Enabled = upgradeEnabled
 }
 
 // runMigrations runs, for each reducer lifecycle present, the matching migration
@@ -268,41 +305,4 @@ func (k *Kubernetes) postKubernetes(
 	}
 
 	return nil
-}
-
-func (k *Kubernetes) SetUpgrade(upgradeEnabled bool) {
-	k.upgrade.Enabled = upgradeEnabled
-}
-
-func NewKubernetes(
-	furyctlConf public.OnpremisesKfdV1Alpha2,
-	kfdManifest config.KFD,
-	paths cluster.CreatorPaths,
-	dryRun bool,
-	upgr *upgrade.Upgrade,
-	upgradeNode string,
-	force []string,
-	podRunningTimeout int,
-) *Kubernetes {
-	phase := cluster.NewOperationPhase(
-		path.Join(paths.WorkDir, cluster.OperationPhaseKubernetes),
-		kfdManifest.Tools,
-		paths.BinPath,
-	)
-
-	return &Kubernetes{
-		OperationPhase: phase,
-		furyctlConf:    furyctlConf,
-		kfdManifest:    kfdManifest,
-		paths:          paths,
-		dryRun:         dryRun,
-		ansibleRunner: ansible.NewRunner(
-			execx.NewStdExecutor(),
-			ansible.PathsForVersion(paths.BinPath, kfdManifest.Tools.OnPremises.Ansible.Version, phase.Path),
-		),
-		upgrade:           upgr,
-		upgradeNode:       upgradeNode,
-		force:             force,
-		podRunningTimeout: podRunningTimeout,
-	}
 }

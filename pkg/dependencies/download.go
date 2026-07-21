@@ -38,6 +38,13 @@ var (
 	ErrModuleNotFound     = errors.New("module not found")
 )
 
+type Downloader struct {
+	client      netx.Client
+	basePath    string
+	binPath     string
+	gitProtocol git.Protocol
+}
+
 func NewCachingDownloader(client netx.Client, outDir, basePath, binPath string, gitProtocol git.Protocol) *Downloader {
 	return NewDownloader(netx.WithLocalCache(
 		client,
@@ -55,13 +62,6 @@ func NewDownloader(client netx.Client, basePath, binPath string, gitProtocol git
 		binPath:     binPath,
 		gitProtocol: gitProtocol,
 	}
-}
-
-type Downloader struct {
-	client      netx.Client
-	basePath    string
-	binPath     string
-	gitProtocol git.Protocol
 }
 
 func (dd *Downloader) DownloadAll(kfd config.KFD, kind string) ([]error, []string) {

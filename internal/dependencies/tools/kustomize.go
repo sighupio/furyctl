@@ -12,6 +12,11 @@ import (
 	"github.com/sighupio/furyctl/internal/tool/kustomize"
 )
 
+type Kustomize struct {
+	checker *checker
+	version string
+}
+
 func NewKustomize(runner *kustomize.Runner, version string) *Kustomize {
 	return &Kustomize{
 		version: version,
@@ -26,11 +31,6 @@ func NewKustomize(runner *kustomize.Runner, version string) *Kustomize {
 			},
 		},
 	}
-}
-
-type Kustomize struct {
-	checker *checker
-	version string
 }
 
 func (k *Kustomize) CheckBinVersion() error {

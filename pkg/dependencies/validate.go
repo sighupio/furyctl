@@ -19,16 +19,16 @@ var (
 	errValidatingEnv   = errors.New("errors validating env vars")
 )
 
+type Validator struct {
+	toolsValidator   *tools.Validator
+	envVarsValidator *envvars.Validator
+}
+
 func NewValidator(executor execx.Executor, binPath, furyctlPath string) *Validator {
 	return &Validator{
 		toolsValidator:   tools.NewValidator(executor, binPath, furyctlPath),
 		envVarsValidator: envvars.NewValidator(),
 	}
-}
-
-type Validator struct {
-	toolsValidator   *tools.Validator
-	envVarsValidator *envvars.Validator
 }
 
 func (v *Validator) ValidateBaseReqs() error {

@@ -79,6 +79,11 @@ func (v *Validator) Validate(flags *FlagsConfig) []ValidationError {
 	return validationErrors
 }
 
+// ValidateIndividualFlag ValidateFlagValue is a public wrapper for testing the flag value validation.
+func (v *Validator) ValidateIndividualFlag(flagName string, value any, flagInfo FlagInfo) error {
+	return v.validateFlagValue(flagName, value, flagInfo)
+}
+
 // validateCommandFlags validates flags for a specific command.
 func (v *Validator) validateCommandFlags(flagsMap map[string]any, command string) []ValidationError {
 	var validationErrors []ValidationError
@@ -350,9 +355,4 @@ func getValidationSeverity(flagName string, err error) ValidationSeverity {
 
 	// Default to warning for less critical validation issues.
 	return ValidationSeverityWarning
-}
-
-// ValidateFlagValue is a public wrapper for testing the flag value validation.
-func (v *Validator) ValidateIndividualFlag(flagName string, value any, flagInfo FlagInfo) error {
-	return v.validateFlagValue(flagName, value, flagInfo)
 }

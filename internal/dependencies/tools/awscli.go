@@ -12,6 +12,11 @@ import (
 	"github.com/sighupio/furyctl/internal/tool/awscli"
 )
 
+type Awscli struct {
+	checker *checker
+	version string
+}
+
 func NewAwscli(runner *awscli.Runner, version string) *Awscli {
 	return &Awscli{
 		version: version,
@@ -26,11 +31,6 @@ func NewAwscli(runner *awscli.Runner, version string) *Awscli {
 			},
 		},
 	}
-}
-
-type Awscli struct {
-	checker *checker
-	version string
 }
 
 func (a *Awscli) CheckBinVersion() error {

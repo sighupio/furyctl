@@ -12,6 +12,11 @@ import (
 	"github.com/sighupio/furyctl/internal/tool/furyagent"
 )
 
+type Furyagent struct {
+	checker *checker
+	version string
+}
+
 func NewFuryagent(runner *furyagent.Runner, version string) *Furyagent {
 	return &Furyagent{
 		version: version,
@@ -26,11 +31,6 @@ func NewFuryagent(runner *furyagent.Runner, version string) *Furyagent {
 			},
 		},
 	}
-}
-
-type Furyagent struct {
-	checker *checker
-	version string
 }
 
 func (f *Furyagent) CheckBinVersion() error {

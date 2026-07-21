@@ -13,6 +13,11 @@ import (
 	"github.com/sighupio/furyctl/internal/tool/git"
 )
 
+type Git struct {
+	checker *checker
+	version string
+}
+
 func NewGit(runner *git.Runner, version string) *Git {
 	return &Git{
 		version: version,
@@ -27,11 +32,6 @@ func NewGit(runner *git.Runner, version string) *Git {
 			},
 		},
 	}
-}
-
-type Git struct {
-	checker *checker
-	version string
 }
 
 func (a *Git) CheckBinVersion() error {

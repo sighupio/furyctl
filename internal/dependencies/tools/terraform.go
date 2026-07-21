@@ -12,6 +12,11 @@ import (
 	"github.com/sighupio/furyctl/internal/tool/terraform"
 )
 
+type Terraform struct {
+	checker *checker
+	version string
+}
+
 func NewTerraform(runner *terraform.Runner, version string) *Terraform {
 	return &Terraform{
 		version: version,
@@ -26,11 +31,6 @@ func NewTerraform(runner *terraform.Runner, version string) *Terraform {
 			},
 		},
 	}
-}
-
-type Terraform struct {
-	checker *checker
-	version string
 }
 
 func (t *Terraform) CheckBinVersion() error {

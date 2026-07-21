@@ -20,6 +20,14 @@ type ExtraToolsValidator struct {
 	binPath  string
 }
 
+func NewExtraToolsValidator(executor execx.Executor, kfd config.KFD, binPath string) *ExtraToolsValidator {
+	return &ExtraToolsValidator{
+		executor: executor,
+		kfd:      kfd,
+		binPath:  binPath,
+	}
+}
+
 func (x *ExtraToolsValidator) Validate(_ string) ([]string, []error) {
 	var (
 		oks  []string
@@ -48,12 +56,4 @@ func (x *ExtraToolsValidator) validateAnsible() error {
 	}
 
 	return nil
-}
-
-func NewExtraToolsValidator(executor execx.Executor, kfd config.KFD, binPath string) *ExtraToolsValidator {
-	return &ExtraToolsValidator{
-		executor: executor,
-		kfd:      kfd,
-		binPath:  binPath,
-	}
 }

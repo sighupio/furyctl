@@ -63,49 +63,6 @@ func (r *Runner) CmdPath() string {
 	return r.paths.Ansible
 }
 
-func (r *Runner) newCmd(args []string) (*execx.Cmd, string) {
-	return r.build(r.paths.Ansible, args)
-}
-
-func (r *Runner) newPlaybookCmd(args []string) (*execx.Cmd, string) {
-	return r.build(r.paths.AnsiblePlaybook, args)
-}
-
-// build runs the given ansible entrypoint directly (host) or as `<python> <entrypoint> ...` with the
-// collections env (mise-managed).
-func (r *Runner) build(entrypoint string, args []string) (*execx.Cmd, string) {
-	name := entrypoint
-	fullArgs := args
-
-	var env []string
-
-	if r.paths.Python != "" {
-		name = r.paths.Python
-
-		fullArgs = append([]string{entrypoint}, args...)
-
-		if r.paths.CollectionsPath != "" {
-			env = []string{"ANSIBLE_COLLECTIONS_PATH=" + r.paths.CollectionsPath}
-		}
-	}
-
-	cmd := execx.NewCmd(name, execx.CmdOptions{
-		Args:     fullArgs,
-		Env:      env,
-		Executor: r.executor,
-		WorkDir:  r.paths.WorkDir,
-	})
-
-	id := uuid.NewString()
-	r.cmds[id] = cmd
-
-	return cmd, id
-}
-
-func (r *Runner) deleteCmd(id string) {
-	delete(r.cmds, id)
-}
-
 func (r *Runner) Playbook(params ...string) ([]byte, error) {
 	args := []string{}
 	out := []byte{}
@@ -168,4 +125,47 @@ func (r *Runner) Stop() error {
 	}
 
 	return nil
+}
+
+func (r *Runner) newCmd(args []string) (*execx.Cmd, string) {
+	return r.build(r.paths.Ansible, args)
+}
+
+func (r *Runner) newPlaybookCmd(args []string) (*execx.Cmd, string) {
+	return r.build(r.paths.AnsiblePlaybook, args)
+}
+
+// build runs the given ansible entrypoint directly (host) or as `<python> <entrypoint> ...` with the
+// collections env (mise-managed).
+func (r *Runner) build(entrypoint string, args []string) (*execx.Cmd, string) {
+	name := entrypoint
+	fullArgs := args
+
+	var env []string
+
+	if r.paths.Python != "" {
+		name = r.paths.Python
+
+		fullArgs = append([]string{entrypoint}, args...)
+
+		if r.paths.CollectionsPath != "" {
+			env = []string{"ANSIBLE_COLLECTIONS_PATH=" + r.paths.CollectionsPath}
+		}
+	}
+
+	cmd := execx.NewCmd(name, execx.CmdOptions{
+		Args:     fullArgs,
+		Env:      env,
+		Executor: r.executor,
+		WorkDir:  r.paths.WorkDir,
+	})
+
+	id := uuid.NewString()
+	r.cmds[id] = cmd
+
+	return cmd, id
+}
+
+func (r *Runner) deleteCmd(id string) {
+	delete(r.cmds, id)
 }

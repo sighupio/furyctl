@@ -90,6 +90,21 @@ func (lr *LiveRegion) Write(p []byte) (int, error) {
 	return len(p), nil
 }
 
+// Clear wipes the painted region, leaving the cursor where the region began.
+func (lr *LiveRegion) Clear() {
+	if !lr.enabled || lr.painted == 0 {
+		return
+	}
+
+	if _, err := io.WriteString(lr.w, "\033["+strconv.Itoa(lr.painted)+"A\033[J"); err != nil {
+		lr.enabled = false
+	}
+
+	lr.painted = 0
+	lr.lines = nil
+	lr.partial = ""
+}
+
 // truncate clips a line to the terminal width so it never wraps and breaks the line accounting.
 func (lr *LiveRegion) truncate(line string) string {
 	if lr.width <= 0 || len(line) <= lr.width {
@@ -116,19 +131,4 @@ func (lr *LiveRegion) repaint() {
 		// The terminal is no longer writable; stop painting so we don't garble output.
 		lr.enabled = false
 	}
-}
-
-// Clear wipes the painted region, leaving the cursor where the region began.
-func (lr *LiveRegion) Clear() {
-	if !lr.enabled || lr.painted == 0 {
-		return
-	}
-
-	if _, err := io.WriteString(lr.w, "\033["+strconv.Itoa(lr.painted)+"A\033[J"); err != nil {
-		lr.enabled = false
-	}
-
-	lr.painted = 0
-	lr.lines = nil
-	lr.partial = ""
 }

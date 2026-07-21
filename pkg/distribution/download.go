@@ -43,10 +43,11 @@ var (
 	ErrUnsupportedVersion         = errors.New("unsupported SD version")
 )
 
-type DownloadResult struct {
-	RepoPath       string
-	MinimalConf    config.Furyctl
-	DistroManifest config.KFD
+type Downloader struct {
+	client                  netx.Client
+	validate                *validator.Validate
+	gitProtocol             git.Protocol
+	customDistroPatchesPath string
 }
 
 func NewCachingDownloader(
@@ -71,11 +72,10 @@ func NewDownloader(client netx.Client, gitProtocol git.Protocol, customDistroPat
 	}
 }
 
-type Downloader struct {
-	client                  netx.Client
-	validate                *validator.Validate
-	gitProtocol             git.Protocol
-	customDistroPatchesPath string
+type DownloadResult struct {
+	RepoPath       string
+	MinimalConf    config.Furyctl
+	DistroManifest config.KFD
 }
 
 func (d *Downloader) Download(
