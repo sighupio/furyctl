@@ -11,7 +11,6 @@ run:
   modules-download-mode: readonly
   go: "1.24.13"
   concurrency: 2
-  memory-limit: 1024
 
 # output configuration options
 output:
