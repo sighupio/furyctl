@@ -110,13 +110,13 @@ func genMarkdownCustom(cmd *cobra.Command, w io.Writer, linkHandler func(string)
 	}
 
 	if cmd.Runnable() {
-		if _, err := buf.WriteString(fmt.Sprintf("## Usage\n\n```bash\n%s\n```\n\n", strings.ReplaceAll(cmd.UseLine(), "\t", "  "))); err != nil {
+		if _, err := fmt.Fprintf(buf, "## Usage\n\n```bash\n%s\n```\n\n", strings.ReplaceAll(cmd.UseLine(), "\t", "  ")); err != nil {
 			return fmt.Errorf("error while writing to buffer: %w", err)
 		}
 	}
 
 	if len(cmd.Example) > 0 {
-		if _, err := buf.WriteString(fmt.Sprintf("## Examples\n\n```bash\n%s\n```\n\n", strings.ReplaceAll(cmd.Example, "\t", "  "))); err != nil {
+		if _, err := fmt.Fprintf(buf, "## Examples\n\n```bash\n%s\n```\n\n", strings.ReplaceAll(cmd.Example, "\t", "  ")); err != nil {
 			return fmt.Errorf("error while writing to buffer: %w", err)
 		}
 	}
@@ -136,7 +136,7 @@ func genMarkdownCustom(cmd *cobra.Command, w io.Writer, linkHandler func(string)
 			link := pname + markdownExtension
 			link = strings.ReplaceAll(link, " ", "_")
 
-			if _, err := buf.WriteString(fmt.Sprintf("* [%s](%s) - %s\n", pname, linkHandler(link), parent.Short)); err != nil {
+			if _, err := fmt.Fprintf(buf, "* [%s](%s) - %s\n", pname, linkHandler(link), parent.Short); err != nil {
 				return fmt.Errorf("error while writing to buffer: %w", err)
 			}
 
@@ -161,7 +161,7 @@ func genMarkdownCustom(cmd *cobra.Command, w io.Writer, linkHandler func(string)
 			link := cname + markdownExtension
 			link = strings.ReplaceAll(link, " ", "_")
 
-			if _, err := buf.WriteString(fmt.Sprintf("* [%s](%s) - %s\n", cname, linkHandler(link), child.Short)); err != nil {
+			if _, err := fmt.Fprintf(buf, "* [%s](%s) - %s\n", cname, linkHandler(link), child.Short); err != nil {
 				return fmt.Errorf("error while writing to buffer: %w", err)
 			}
 		}

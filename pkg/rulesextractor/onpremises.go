@@ -82,14 +82,14 @@ func (r *OnPremExtractor) GetReducers(phase string) []Rule {
 			return []Rule{}
 		}
 
-		return r.BaseExtractor.ExtractReducerRules(*r.Spec.Kubernetes)
+		return r.ExtractReducerRules(*r.Spec.Kubernetes)
 
 	case cluster.OperationPhaseDistribution:
 		if r.Spec.Distribution == nil {
 			return []Rule{}
 		}
 
-		return r.BaseExtractor.ExtractReducerRules(*r.Spec.Distribution)
+		return r.ExtractReducerRules(*r.Spec.Distribution)
 
 	default:
 		return []Rule{}
@@ -103,14 +103,14 @@ func (r *OnPremExtractor) GetUnsupportedRules(phase string) []Rule {
 			return []Rule{}
 		}
 
-		return r.BaseExtractor.ExtractUnsupportedRules(*r.Spec.Kubernetes)
+		return r.ExtractUnsupportedRules(*r.Spec.Kubernetes)
 
 	case cluster.OperationPhaseDistribution:
 		if r.Spec.Distribution == nil {
 			return []Rule{}
 		}
 
-		return r.BaseExtractor.ExtractUnsupportedRules(*r.Spec.Distribution)
+		return r.ExtractUnsupportedRules(*r.Spec.Distribution)
 
 	default:
 		return []Rule{}
