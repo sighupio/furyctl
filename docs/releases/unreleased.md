@@ -5,6 +5,7 @@ Welcome to the latest release of `furyctl` maintained by SIGHUP by ReeVo team.
 ## New features 🌟
 
 - [[#696](https://github.com/sighupio/furyctl/pull/696)] Immutable: show a dynamic table for the nodes provisioning phase instead of single line logs so the user does not need to mentally track the status of the nodes.
+- [[#710](https://github.com/sighupio/furyctl/pull/710)] Immutable: add support for `furyctl dump template` command.
 
 ## Bug fixes 🐞
 
@@ -14,3 +15,4 @@ Welcome to the latest release of `furyctl` maintained by SIGHUP by ReeVo team.
 ## Breaking Changes 💔
 
 TBD
+
