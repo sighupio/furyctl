@@ -91,8 +91,8 @@ var (
 		}
 	}
 
-	CreateClusterTestFunc = func(state *distroContextState, phase string) func() {
-		return func() {
+	CreateClusterTestFunc = func(state *distroContextState, phase string) func(SpecContext) {
+		return func(ctx SpecContext) {
 			dlRes := DownloadFuryDistribution(state.TestDir, state.FuryctlYaml)
 
 			kubectlPath := DownloadKubectl(dlRes.DistroManifest.Tools.Common.Kubectl.Version)
@@ -107,6 +107,7 @@ var (
 			)
 
 			createClusterCmd := furyctlCreator.Create(
+				ctx,
 				phase,
 				"",
 			)
@@ -118,7 +119,7 @@ var (
 			Eventually(state.Kubeconfig, assertTimeout, assertPollingInterval).Should(BeAnExistingFile())
 			Eventually(session, assertTimeout, assertPollingInterval).Should(gexec.Exit(0))
 
-			kubeCmd := exec.Command(kubectlPath, "--kubeconfig", state.Kubeconfig, "get", "nodes")
+			kubeCmd := exec.CommandContext(ctx, kubectlPath, "--kubeconfig", state.Kubeconfig, "get", "nodes")
 
 			kubeSession, err := gexec.Start(kubeCmd, GinkgoWriter, GinkgoWriter)
 
@@ -135,8 +136,8 @@ var (
 		}
 	}
 
-	DeleteClusterTestFunc = func(state *distroContextState, phase string, ephemeral bool) func() {
-		return func() {
+	DeleteClusterTestFunc = func(state *distroContextState, phase string, ephemeral bool) func(SpecContext) {
+		return func(ctx SpecContext) {
 			if ephemeral {
 				_ = os.RemoveAll(path.Join(state.TestDir, ".furyctl"))
 			}
@@ -149,6 +150,7 @@ var (
 			)
 
 			deleteClusterCmd := furyctlDeleter.Delete(
+				ctx,
 				phase,
 			)
 

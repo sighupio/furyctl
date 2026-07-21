@@ -47,6 +47,9 @@ func (k *KubeconfigGetter) SetProperty(name string, value any) {
 		if s, ok := value.(string); ok {
 			k.workDir = s
 		}
+
+	default:
+		logrus.Debugf("ignoring unknown property %q", lcName)
 	}
 }
 

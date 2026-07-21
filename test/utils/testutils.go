@@ -6,6 +6,7 @@ package test
 
 import (
 	"bytes"
+	"context"
 	"crypto/rand"
 	"encoding/json"
 	"fmt"
@@ -134,9 +135,9 @@ func Copy(src, dst string) {
 	Must0(os.WriteFile(dst, input, iox.RWPermAccess))
 }
 
-func CompileFuryctl(outputPath string) func() {
-	return func() {
-		cmd := exec.Command("go", "build", "-o", outputPath, "../../../main.go")
+func CompileFuryctl(outputPath string) func(SpecContext) {
+	return func(ctx SpecContext) {
+		cmd := exec.CommandContext(ctx, "go", "build", "-o", outputPath, "../../../main.go")
 
 		session := Must1(gexec.Start(cmd, GinkgoWriter, GinkgoWriter))
 
@@ -217,7 +218,7 @@ func LoadFuryCtl(furyctlYamlPath string) Conf {
 	return Must1(yamlx.FromFileV3[Conf](furyctlYamlPath))
 }
 
-func ConnectOpenVPN(certPath string) (*gexec.Session, error) {
+func ConnectOpenVPN(ctx context.Context, certPath string) (*gexec.Session, error) {
 	var cmd *exec.Cmd
 
 	isRoot, err := osx.IsRoot()
@@ -226,9 +227,9 @@ func ConnectOpenVPN(certPath string) (*gexec.Session, error) {
 	}
 
 	if isRoot {
-		cmd = exec.Command("openvpn", "--config", certPath, "--daemon")
+		cmd = exec.CommandContext(ctx, "openvpn", "--config", certPath, "--daemon")
 	} else {
-		cmd = exec.Command("sudo", "openvpn", "--config", certPath, "--daemon")
+		cmd = exec.CommandContext(ctx, "sudo", "openvpn", "--config", certPath, "--daemon")
 	}
 
 	session, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
@@ -239,7 +240,7 @@ func ConnectOpenVPN(certPath string) (*gexec.Session, error) {
 	return session, nil
 }
 
-func KillOpenVPN() (*gexec.Session, error) {
+func KillOpenVPN(ctx context.Context) (*gexec.Session, error) {
 	var cmd *exec.Cmd
 
 	isRoot, err := osx.IsRoot()
@@ -248,9 +249,9 @@ func KillOpenVPN() (*gexec.Session, error) {
 	}
 
 	if isRoot {
-		cmd = exec.Command("pkill", "openvpn")
+		cmd = exec.CommandContext(ctx, "pkill", "openvpn")
 	} else {
-		cmd = exec.Command("sudo", "pkill", "openvpn")
+		cmd = exec.CommandContext(ctx, "sudo", "pkill", "openvpn")
 	}
 
 	session, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
@@ -270,7 +271,7 @@ func NewFuryctlCreator(furyctl, configPath, testDir string, dryRun bool) *Furyct
 	}
 }
 
-func (f *FuryctlCreator) Create(phase, startFrom string) *exec.Cmd {
+func (f *FuryctlCreator) Create(ctx context.Context, phase, startFrom string) *exec.Cmd {
 	args := []string{
 		"create",
 		"cluster",
@@ -303,7 +304,7 @@ func (f *FuryctlCreator) Create(phase, startFrom string) *exec.Cmd {
 		args = append(args, "--dry-run")
 	}
 
-	return exec.Command(f.furyctl, args...)
+	return exec.CommandContext(ctx, f.furyctl, args...)
 }
 
 func NewFuryctlDeleter(
@@ -320,7 +321,7 @@ func NewFuryctlDeleter(
 	}
 }
 
-func (f *FuryctlDeleter) Delete(phase string) *exec.Cmd {
+func (f *FuryctlDeleter) Delete(ctx context.Context, phase string) *exec.Cmd {
 	args := []string{
 		"delete",
 		"cluster",
@@ -343,5 +344,5 @@ func (f *FuryctlDeleter) Delete(phase string) *exec.Cmd {
 		args = append(args, "--dry-run")
 	}
 
-	return exec.Command(f.furyctl, args...)
+	return exec.CommandContext(ctx, f.furyctl, args...)
 }

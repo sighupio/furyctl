@@ -51,9 +51,10 @@ func HasFeature(kfd config.KFD, name Feature) bool {
 
 	case FeatureOpenTofuSupport:
 		return hasFeatureOpenTofuSupport(kfd)
-	}
 
-	return false
+	default:
+		return false
+	}
 }
 
 func hasFeatureClusterUpgrade(kfd config.KFD) bool {

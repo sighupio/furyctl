@@ -45,24 +45,6 @@ func NewPki(etcd, controlplane bool, pkiPath string) error {
 	data.CertConfig = certConfig
 
 	switch {
-	default:
-		logrus.Debug("creating PKI for etcd and Kubernetes control plane")
-
-		etcd := clusterpki.Etcd{ClusterPKI: data}
-		cp := clusterpki.ControlPlanePKI{ClusterPKI: data}
-
-		err = etcd.Create()
-		if err != nil {
-			msg = fmt.Errorf("got error while creating etcd PKI: %w", err)
-		}
-
-		err = cp.Create()
-		if err != nil {
-			msg = fmt.Errorf("got error while creating control plane PKI: %w", err)
-		}
-
-		return msg
-
 	case etcd:
 		logrus.Debug("creating PKI for etcd")
 
@@ -83,6 +65,24 @@ func NewPki(etcd, controlplane bool, pkiPath string) error {
 		err := cp.Create()
 		if err != nil {
 			msg = fmt.Errorf("creating PKI for etcd failed: %w", err)
+		}
+
+		return msg
+
+	default:
+		logrus.Debug("creating PKI for etcd and Kubernetes control plane")
+
+		etcd := clusterpki.Etcd{ClusterPKI: data}
+		cp := clusterpki.ControlPlanePKI{ClusterPKI: data}
+
+		err = etcd.Create()
+		if err != nil {
+			msg = fmt.Errorf("got error while creating etcd PKI: %w", err)
+		}
+
+		err = cp.Create()
+		if err != nil {
+			msg = fmt.Errorf("got error while creating control plane PKI: %w", err)
 		}
 
 		return msg

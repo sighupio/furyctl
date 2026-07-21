@@ -9,6 +9,8 @@ import (
 	"fmt"
 	"slices"
 	"strings"
+
+	"github.com/sirupsen/logrus"
 )
 
 // Static error definitions for linting compliance.
@@ -196,6 +198,9 @@ func (v *Validator) validateFlagValue(flagName string, value any, flagInfo FlagI
 		// No validation needed - most types can be converted to string/duration.
 		// This is intentionally permissive for these types.
 		_ = value // No-op to satisfy WSL linter.
+
+	default:
+		logrus.Debugf("flag %q has unknown type %v; skipping basic type validation", flagName, flagInfo.Type)
 	}
 
 	// Specific flag validations.
@@ -216,6 +221,7 @@ func (*Validator) validateSpecificFlag(flagName string, value any) error {
 
 			return fmt.Errorf("%w: got '%s', must be one of: %s", ErrInvalidProtocol, str, strings.Join(validProtocols, ", "))
 		}
+		return nil
 
 	case "phase":
 		if str, ok := value.(string); ok && str != "" {
@@ -224,6 +230,7 @@ func (*Validator) validateSpecificFlag(flagName string, value any) error {
 			// For now, accept any non-empty string.
 			_ = str // Prevent unused variable warning.
 		}
+		return nil
 
 	case "force":
 		if slice, ok := value.([]any); ok {
@@ -238,6 +245,7 @@ func (*Validator) validateSpecificFlag(flagName string, value any) error {
 				}
 			}
 		}
+		return nil
 
 	case "timeout", "podRunningCheckTimeout":
 		if val, ok := value.(int); ok {
@@ -245,9 +253,12 @@ func (*Validator) validateSpecificFlag(flagName string, value any) error {
 				return fmt.Errorf("%w: %s must be greater than 0, got %v", ErrMustBePositiveInteger, flagName, val)
 			}
 		}
-	}
+		return nil
 
-	return nil
+	default:
+		logrus.Debugf("flag %q has no specific validation rule", flagName)
+		return nil
+	}
 }
 
 // validateFlagCombinations validates combinations of flags that might be incompatible.

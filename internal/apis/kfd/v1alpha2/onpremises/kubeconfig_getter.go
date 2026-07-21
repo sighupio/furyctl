@@ -72,6 +72,9 @@ func (k *KubeconfigGetter) SetProperty(name string, value any) {
 		if s, ok := value.(string); ok {
 			k.binPath = s
 		}
+
+	default:
+		logrus.Debugf("ignoring unknown property %q", lcName)
 	}
 }
 

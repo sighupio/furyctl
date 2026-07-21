@@ -39,6 +39,7 @@ func (f *Node) FromNodeList(nodes []parse.Node) []string {
 
 func mapToAliasInterface(n parse.Node) any {
 	// MapParseNodeToAlias is a map of parse.Node to its alias.
+	//exhaustive:ignore
 	mapParseNodeToAlias := map[parse.NodeType]any{
 		parse.NodeList:     &ListNode{},
 		parse.NodeRange:    &RangeNode{},
