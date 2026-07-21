@@ -224,7 +224,6 @@ func childPath(parent []string, key string) []string {
 	child := make([]string, 0, len(parent)+1)
 	child = append(child, parent...)
 	child = append(child, key)
-
 	return child
 }
 

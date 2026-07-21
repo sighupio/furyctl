@@ -8,7 +8,7 @@
 // It is called "private" for historical reasons: besides the fields furyctl
 // reads from the user's furyctl.yaml, it also models the EKS-internal fields
 // that furyctl itself fills in by injecting infrastructure (Terraform/OpenTofu)
-// outputs before rendering templates — see common/distribution.go
+// outputs before rendering templates — see phases/distribution.go
 // (injectDataPreTf / InjectDataPostTf). Those values (IAM role ARNs, VPC id)
 // are never user input.
 //

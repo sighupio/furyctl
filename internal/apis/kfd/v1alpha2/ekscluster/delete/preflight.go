@@ -5,14 +5,13 @@
 package del
 
 import (
-	"errors"
 	"fmt"
 	"path"
 
 	"github.com/sirupsen/logrus"
 
 	"github.com/sighupio/furyctl/internal/apis/config"
-	"github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/ekscluster/common"
+	"github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/ekscluster/phases"
 	"github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/ekscluster/private"
 	"github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/ekscluster/vpn"
 	"github.com/sighupio/furyctl/internal/cluster"
@@ -24,10 +23,8 @@ import (
 	kubex "github.com/sighupio/furyctl/internal/x/kube"
 )
 
-var ErrClusterDoesNotExist = errors.New("cluster does not exist, nothing to delete")
-
 type PreFlight struct {
-	*common.PreFlight
+	*phases.PreFlight
 
 	tfRunnerKube *terraform.Runner
 	kubeRunner   *kubectl.Runner
@@ -66,7 +63,7 @@ func NewPreFlight(
 	}
 
 	return &PreFlight{
-		PreFlight: &common.PreFlight{
+		PreFlight: &phases.PreFlight{
 			OperationPhase: phase,
 			FuryctlConf:    furyctlConf,
 			ConfigPath:     paths.ConfigPath,

@@ -206,7 +206,7 @@ func (t *nodeStatusTable) lines() []string {
 
 	w := tabwriter.NewWriter(&sb, 0, 0, tabPadding, ' ', 0)
 
-	_, _ = fmt.Fprintf(w, "NODE\tSTATUS\tUPDATED\n")
+	_, _ = fmt.Fprint(w, "NODE\tSTATUS\tUPDATED\n")
 
 	for _, node := range t.order {
 		updated := "—"

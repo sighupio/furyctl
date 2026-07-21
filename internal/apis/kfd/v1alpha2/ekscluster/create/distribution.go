@@ -15,7 +15,7 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/sighupio/furyctl/internal/apis/config"
-	"github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/ekscluster/common"
+	"github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/ekscluster/phases"
 	"github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/ekscluster/private"
 	"github.com/sighupio/furyctl/internal/cluster"
 	"github.com/sighupio/furyctl/internal/state"
@@ -40,7 +40,7 @@ const (
 var errClusterConnect = errors.New("error connecting to cluster")
 
 type Distribution struct {
-	*common.Distribution
+	*phases.Distribution
 
 	kfdManifest config.KFD
 
@@ -67,7 +67,7 @@ func NewDistribution(
 	)
 
 	return &Distribution{
-		Distribution: &common.Distribution{
+		Distribution: &phases.Distribution{
 			OperationPhase:                     phaseOp,
 			DryRun:                             dryRun,
 			DistroPath:                         paths.DistroPath,
