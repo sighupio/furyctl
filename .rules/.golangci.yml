@@ -7,7 +7,6 @@
 
 # Options for analysis running.
 run:
-  timeout: 5m
   modules-download-mode: readonly
   go: "1.24.13"
   concurrency: 2

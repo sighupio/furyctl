@@ -126,7 +126,7 @@ run = [
 [tasks.lint]
 description = "run linting with golangci-lint"
 env = { GOMEMLIMIT = "1GiB" }
-run = "golangci-lint -v run --color=always --max-same-issues 25 --config=.rules/.golangci.yml ./..."
+run = "golangci-lint -v run --timeout=5m --color=always --max-same-issues 25 --config=.rules/.golangci.yml ./..."
 
 [tasks.lint-go-common]
 description = "run common linting rules without config"
