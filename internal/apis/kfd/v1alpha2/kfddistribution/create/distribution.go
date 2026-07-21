@@ -139,7 +139,7 @@ func (d *Distribution) Exec(rdcs reducers.Reducers, startFrom string, upgradeSta
 }
 
 func (d *Distribution) Stop() error {
-	return cluster.StopAll(
+	if err := cluster.StopAll(
 		func() error {
 			logrus.Debug("Stopping shell...")
 
@@ -158,7 +158,11 @@ func (d *Distribution) Stop() error {
 
 			return nil
 		},
-	)
+	); err != nil {
+		return fmt.Errorf("error stopping distribution: %w", err)
+	}
+
+	return nil
 }
 
 func (d *Distribution) SetUpgrade(upgradeEnabled bool) {

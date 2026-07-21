@@ -16,6 +16,7 @@ import (
 
 type ImmutableExtractor struct {
 	*BaseExtractor
+
 	Spec Spec
 }
 

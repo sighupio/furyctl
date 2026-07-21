@@ -86,6 +86,7 @@ type StopEvent struct {
 
 type CommandEvent struct {
 	properties
+
 	name string
 }
 

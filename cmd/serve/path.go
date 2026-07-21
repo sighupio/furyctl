@@ -22,6 +22,7 @@ import (
 // loggingResponseWriter wraps http.ResponseWriter to capture status code and bytes written.
 type loggingResponseWriter struct {
 	http.ResponseWriter
+
 	status int
 	bytes  int
 }

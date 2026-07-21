@@ -38,6 +38,7 @@ var (
 
 type PreUpgrade struct {
 	*cluster.OperationPhase
+
 	dryRun               bool
 	kind                 string
 	upgrade              *upgrade.Upgrade

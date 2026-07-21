@@ -22,6 +22,7 @@ import (
 
 type CertificatesRenewer struct {
 	*cluster.OperationPhase
+
 	furyctlConf public.ImmutableKfdV1Alpha2
 	kfdManifest config.KFD
 	distroPath  string
@@ -38,7 +39,9 @@ func (c *CertificatesRenewer) SetProperties(props []cluster.CertificatesRenewerP
 }
 
 func (c *CertificatesRenewer) SetProperty(name string, value any) {
-	switch strings.ToLower(name) {
+	lcName := strings.ToLower(name)
+
+	switch lcName {
 	case cluster.CertificatesRenewerPropertyFuryctlConf:
 		if s, ok := value.(public.ImmutableKfdV1Alpha2); ok {
 			c.furyctlConf = s
@@ -63,6 +66,9 @@ func (c *CertificatesRenewer) SetProperty(name string, value any) {
 		if s, ok := value.(string); ok {
 			c.binPath = s
 		}
+
+	default:
+		logrus.Debugf("ignoring unknown property %q", lcName)
 	}
 }
 

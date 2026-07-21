@@ -40,18 +40,14 @@ type rootConfig struct {
 
 type RootCommand struct {
 	*cobra.Command
+
 	config *rootConfig
 }
 
-var (
-	ErrInvalidPath    = errors.New("invalid path")
-	ErrUnexpandedPath = errors.New("cannot create log file with unexpanded dynamic values in path")
-)
+var ErrUnexpandedPath = errors.New("cannot create log file with unexpanded dynamic values in path")
 
 const (
-	timeout      = 100 * time.Millisecond
-	logRndCeil   = 100000
-	spinnerStyle = 11
+	logRndCeil = 100000
 )
 
 func NewRootCmd() *RootCommand {

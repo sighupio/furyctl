@@ -20,8 +20,13 @@ const (
 	copyChunk = 1 << 20 // 1 MiB per io.CopyN step when extracting regular files.
 )
 
-// ErrIllegalArchivePath is returned when a tar entry would extract outside the destination dir.
-var ErrIllegalArchivePath = errors.New("illegal path in archive (escapes destination)")
+var (
+	// ErrIllegalArchivePath is returned when a tar entry would extract outside the destination dir.
+	ErrIllegalArchivePath = errors.New("illegal path in archive (escapes destination)")
+
+	// ErrUnsupportedTarEntryType is returned when a tar entry has an unsupported type flag.
+	ErrUnsupportedTarEntryType = errors.New("unsupported tar entry type")
+)
 
 // TarGzEntry maps a file or directory on disk to the path prefix it should appear under inside the
 // archive.
@@ -186,6 +191,9 @@ func extractEntry(tr *tar.Reader, hdr *tar.Header, target string) error {
 		if err := os.Symlink(hdr.Linkname, target); err != nil {
 			return fmt.Errorf("error creating symlink %s: %w", target, err)
 		}
+
+	default:
+		return fmt.Errorf("%w: %b", ErrUnsupportedTarEntryType, hdr.Typeflag)
 	}
 
 	return nil

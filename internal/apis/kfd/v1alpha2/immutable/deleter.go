@@ -8,6 +8,8 @@ import (
 	"errors"
 	"strings"
 
+	"github.com/sirupsen/logrus"
+
 	"github.com/sighupio/furyctl/internal/apis/config"
 	"github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/immutable/public"
 	"github.com/sighupio/furyctl/internal/cluster"
@@ -28,7 +30,9 @@ func (c *ClusterDeleter) SetProperties(props []cluster.DeleterProperty) {
 }
 
 func (c *ClusterDeleter) SetProperty(name string, value any) {
-	switch strings.ToLower(name) {
+	lcName := strings.ToLower(name)
+
+	switch lcName {
 	case cluster.DeleterPropertyConfigPath:
 		if s, ok := value.(string); ok {
 			c.paths.ConfigPath = s
@@ -58,6 +62,9 @@ func (c *ClusterDeleter) SetProperty(name string, value any) {
 		if s, ok := value.(config.KFD); ok {
 			c.kfdManifest = s
 		}
+
+	default:
+		logrus.Debugf("ignoring unknown property %q", lcName)
 	}
 }
 

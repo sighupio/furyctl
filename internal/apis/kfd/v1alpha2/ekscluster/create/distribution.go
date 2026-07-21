@@ -188,7 +188,7 @@ func (d *Distribution) SetUpgrade(upgradeEnabled bool) {
 }
 
 func (d *Distribution) Stop() error {
-	return cluster.StopAll(
+	if err := cluster.StopAll(
 		func() error {
 			logrus.Debug("Stopping terraform...")
 
@@ -216,7 +216,11 @@ func (d *Distribution) Stop() error {
 
 			return nil
 		},
-	)
+	); err != nil {
+		return fmt.Errorf("error stopping distribution: %w", err)
+	}
+
+	return nil
 }
 
 func (d *Distribution) preDistribution(
