@@ -1,6 +1,6 @@
 [tools]
 go = "1.25.12"
-#golangci-lint = "1.64.8"
+golangci-lint = "1.64.8"
 goreleaser = "2.15.4"
 awscli = "2.15.17"
 "ubi:google/addlicense" = "v1.1.1"
@@ -123,13 +123,13 @@ run = [
   "mise run formattag",
 ]
 
-#[tasks.lint]
-#description = "run linting with golangci-lint"
-#run = "golangci-lint -v run --color=always --max-same-issues 25 --config=.rules/.golangci.yml ./..."
+[tasks.lint]
+description = "run linting with golangci-lint"
+run = "golangci-lint -v run --color=always --max-same-issues 25 --config=.rules/.golangci.yml ./..."
 
-#[tasks.lint-go-common]
-#description = "run common linting rules without config"
-#run = "golangci-lint run --no-config -E godot -E wsl -E nlreturn -E grouper --color=always --max-same-issues 25 ./..."
+[tasks.lint-go-common]
+description = "run common linting rules without config"
+run = "golangci-lint run --no-config -E godot -E wsl -E nlreturn -E grouper --color=always --max-same-issues 25 ./..."
 
 [tasks.test-unit]
 description = "run unit tests"
