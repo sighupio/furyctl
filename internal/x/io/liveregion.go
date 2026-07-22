@@ -115,19 +115,19 @@ func (lr *LiveRegion) truncate(line string) string {
 }
 
 func (lr *LiveRegion) repaint() {
-	out := ""
+	var sb strings.Builder
 
 	if lr.painted > 0 {
-		out += "\033[" + strconv.Itoa(lr.painted) + "A"
+		sb.WriteString("\033[" + strconv.Itoa(lr.painted) + "A")
 	}
 
 	for _, line := range lr.lines {
-		out += "\033[2K" + line + "\r\n"
+		sb.WriteString("\033[2K" + line + "\r\n")
 	}
 
 	lr.painted = len(lr.lines)
 
-	if _, err := io.WriteString(lr.w, out); err != nil {
+	if _, err := io.WriteString(lr.w, sb.String()); err != nil {
 		// The terminal is no longer writable; stop painting so we don't garble output.
 		lr.enabled = false
 	}

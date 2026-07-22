@@ -7,6 +7,7 @@ package serve
 import (
 	"fmt"
 	"io"
+	"maps"
 	"os"
 	"slices"
 	"strconv"
@@ -141,9 +142,7 @@ func (t *nodeStatusTable) Snapshot() map[string]string {
 	defer t.mu.Unlock()
 
 	out := make(map[string]string, len(t.status))
-	for node, st := range t.status {
-		out[node] = st
-	}
+	maps.Copy(out, t.status)
 
 	return out
 }
@@ -222,7 +221,7 @@ func (t *nodeStatusTable) lines() []string {
 	lines := make([]string, 0, len(t.order)+1)
 	lines = append(lines, fmt.Sprintf("Nodes bootstrap status — %d/%d booted", t.bootedCount(), len(t.order)))
 
-	for _, row := range strings.Split(strings.TrimRight(sb.String(), "\n"), "\n") {
+	for row := range strings.SplitSeq(strings.TrimRight(sb.String(), "\n"), "\n") {
 		lines = append(lines, "  "+row)
 	}
 

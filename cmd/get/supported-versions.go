@@ -120,13 +120,15 @@ func NewSupportedVersionsCmd() *cobra.Command {
 func FormatSupportedVersions(releases []distribution.KFDRelease, kinds []string) string {
 	distribution.SetRecommendedVersions(releases)
 
-	fmtSupportedVersions := "VERSION\tRELEASE DATE"
+	var sb strings.Builder
+
+	sb.WriteString("VERSION\tRELEASE DATE")
 
 	for _, k := range kinds {
-		fmtSupportedVersions += "\t" + k
+		sb.WriteString("\t" + k)
 	}
 
-	fmtSupportedVersions += "\n"
+	sb.WriteString("\n")
 
 	supported := func(s bool) string {
 		if s {
@@ -169,26 +171,22 @@ func FormatSupportedVersions(releases []distribution.KFDRelease, kinds []string)
 			showRecommendedMsg = true
 		}
 
-		fmtSupportedVersions += fmt.Sprintf(
-			"v%s\t%s",
-			versionStr,
-			dateStr,
-		)
+		sb.WriteString("v" + versionStr + "\t" + dateStr)
 
 		for _, k := range kinds {
-			fmtSupportedVersions += "\t" + supported(r.Support[k])
+			sb.WriteString("\t" + supported(r.Support[k]))
 		}
 
-		fmtSupportedVersions += "\n"
+		sb.WriteString("\n")
 	}
 
 	if showUnsupportedFuryctlMsg {
-		fmtSupportedVersions += "\n* this usually indicates you are not using the latest version of furyctl, try updating or checking the online documentation:\nhttps://docs.sighup.io/furyctl/compatibility-matrix\n"
+		sb.WriteString("\n* this usually indicates you are not using the latest version of furyctl, try updating or checking the online documentation:\nhttps://docs.sighup.io/furyctl/compatibility-matrix\n")
 	}
 
 	if showRecommendedMsg {
-		fmtSupportedVersions += "\n** indicates the recommended SD versions.\n"
+		sb.WriteString("\n** indicates the recommended SD versions.\n")
 	}
 
-	return fmtSupportedVersions
+	return sb.String()
 }
