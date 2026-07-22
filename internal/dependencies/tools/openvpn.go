@@ -12,6 +12,11 @@ import (
 	"github.com/sighupio/furyctl/internal/tool/openvpn"
 )
 
+type Openvpn struct {
+	checker *checker
+	version string
+}
+
 func NewOpenvpn(runner *openvpn.Runner, version string) *Openvpn {
 	return &Openvpn{
 		version: version,
@@ -26,11 +31,6 @@ func NewOpenvpn(runner *openvpn.Runner, version string) *Openvpn {
 			},
 		},
 	}
-}
-
-type Openvpn struct {
-	checker *checker
-	version string
 }
 
 func (o *Openvpn) CheckBinVersion() error {

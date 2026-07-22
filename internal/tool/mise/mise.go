@@ -140,38 +140,6 @@ func NewRunner(executor execx.Executor, paths Paths) *Runner {
 	return &Runner{executor: executor, paths: paths}
 }
 
-// hermeticEnv isolates our mise from the user's: dedicated data/cache/config, auto-confirm and a
-// trusted config path (no prompt).
-func (r *Runner) hermeticEnv() []string {
-	return []string{
-		"MISE_DATA_DIR=" + r.paths.DataDir,
-		"MISE_CACHE_DIR=" + r.paths.CacheDir,
-		"MISE_GLOBAL_CONFIG_FILE=" + r.paths.ConfigFile,
-		"MISE_TRUSTED_CONFIG_PATHS=" + filepath.Dir(r.paths.ConfigFile),
-		"MISE_YES=1",
-	}
-}
-
-// newCmd builds a mise invocation: always `--cd <isolated workdir>` so config discovery can't pick
-// up ambient mise.toml files, with the hermetic env.
-func (r *Runner) newCmd(args ...string) *execx.Cmd {
-	return r.newCmdOut(nil, args...)
-}
-
-// newCmdOut is like newCmd but also tees mise's stdout/stderr to progress (in addition to the
-// captured buffers), so the caller can stream install output live.
-func (r *Runner) newCmdOut(progress io.Writer, args ...string) *execx.Cmd {
-	fullArgs := append([]string{"--cd", r.paths.WorkDir}, args...)
-
-	return execx.NewCmd(r.paths.Mise, execx.CmdOptions{
-		Args:     fullArgs,
-		Env:      r.hermeticEnv(),
-		Executor: r.executor,
-		Out:      progress,
-		Err:      progress,
-	})
-}
-
 // Install installs all tools declared in the (hermetic) global config into DataDir, teeing mise's
 // progress output to progress (may be nil). No-op if they are already installed.
 func (r *Runner) Install(progress io.Writer) error {
@@ -221,4 +189,36 @@ func (r *Runner) Version() (string, error) {
 	}
 
 	return strings.TrimSpace(out), nil
+}
+
+// hermeticEnv isolates our mise from the user's: dedicated data/cache/config, auto-confirm and a
+// trusted config path (no prompt).
+func (r *Runner) hermeticEnv() []string {
+	return []string{
+		"MISE_DATA_DIR=" + r.paths.DataDir,
+		"MISE_CACHE_DIR=" + r.paths.CacheDir,
+		"MISE_GLOBAL_CONFIG_FILE=" + r.paths.ConfigFile,
+		"MISE_TRUSTED_CONFIG_PATHS=" + filepath.Dir(r.paths.ConfigFile),
+		"MISE_YES=1",
+	}
+}
+
+// newCmd builds a mise invocation: always `--cd <isolated workdir>` so config discovery can't pick
+// up ambient mise.toml files, with the hermetic env.
+func (r *Runner) newCmd(args ...string) *execx.Cmd {
+	return r.newCmdOut(nil, args...)
+}
+
+// newCmdOut is like newCmd but also tees mise's stdout/stderr to progress (in addition to the
+// captured buffers), so the caller can stream install output live.
+func (r *Runner) newCmdOut(progress io.Writer, args ...string) *execx.Cmd {
+	fullArgs := append([]string{"--cd", r.paths.WorkDir}, args...)
+
+	return execx.NewCmd(r.paths.Mise, execx.CmdOptions{
+		Args:     fullArgs,
+		Env:      r.hermeticEnv(),
+		Executor: r.executor,
+		Out:      progress,
+		Err:      progress,
+	})
 }

@@ -12,6 +12,11 @@ import (
 	"github.com/sighupio/furyctl/internal/tool/kubectl"
 )
 
+type Kubectl struct {
+	checker *checker
+	version string
+}
+
 func NewKubectl(runner *kubectl.Runner, version string) *Kubectl {
 	return &Kubectl{
 		version: version,
@@ -29,11 +34,6 @@ func NewKubectl(runner *kubectl.Runner, version string) *Kubectl {
 			},
 		},
 	}
-}
-
-type Kubectl struct {
-	checker *checker
-	version string
 }
 
 func (k *Kubectl) CheckBinVersion() error {

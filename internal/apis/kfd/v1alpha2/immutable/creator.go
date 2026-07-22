@@ -158,31 +158,6 @@ func (*ClusterCreator) GetPhasePath(phase string) (string, error) {
 	return schemaPath, nil
 }
 
-func createInfrastructurePhase(c *ClusterCreator, upgr *upgrade.Upgrade) *create.Infrastructure {
-	infraPath := filepath.Join(c.paths.WorkDir, "infrastructure")
-
-	phase := cluster.NewOperationPhase(
-		infraPath,
-		c.kfdManifest.Tools,
-		c.paths.BinPath,
-	)
-
-	infra := create.NewInfrastructure(
-		phase,
-		c.paths.ConfigPath,
-		c.paths.DistroPath,
-		upgr,
-		c.upgradeNode,
-		c.furyctlConf,
-		c.kfdManifest,
-		c.paths,
-		c.dryRun,
-		c.force,
-	)
-
-	return infra
-}
-
 func (c *ClusterCreator) Create(startFrom string, _, podRunningCheckTimeout int) error {
 	upgr := upgrade.New(c.paths, string(c.furyctlConf.Kind))
 
@@ -425,6 +400,70 @@ func (c *ClusterCreator) Create(startFrom string, _, podRunningCheckTimeout int)
 	return nil
 }
 
+// RenderConfig loads the complete furyctl configuration merged with defaults from fury-distribution.
+// For infrastructure phase, we need the full spec including infrastructure config.
+func (c *ClusterCreator) RenderConfig() (map[string]any, error) {
+	// Create phase for infrastructure.
+	phase := cluster.NewOperationPhase(
+		path.Join(c.paths.WorkDir, cluster.OperationPhaseInfrastructure),
+		c.kfdManifest.Tools,
+		c.paths.BinPath,
+	)
+
+	// Use CreateFuryctlMerger to merge defaults + user config.
+	furyctlMerger, err := phase.CreateFuryctlMerger(
+		c.paths.DistroPath,
+		c.paths.ConfigPath,
+		"kfd-v1alpha2",
+		"immutable",
+	)
+	if err != nil {
+		return nil, fmt.Errorf("error while creating furyctl merger: %w", err)
+	}
+
+	// Create template config without data.
+	tfCfg, err := template.NewConfigWithoutData(furyctlMerger, []string{})
+	if err != nil {
+		return nil, fmt.Errorf("error while creating template config: %w", err)
+	}
+
+	// TfCfg.Data already contains the properly structured merged config
+	// with "spec", "metadata", etc. from the user config merged with defaults.
+	// Convert to map[string]any (including nested maps).
+	result := make(map[string]any)
+
+	for k, v := range tfCfg.Data {
+		result[k] = convertValue(v)
+	}
+
+	return result, nil
+}
+
+func createInfrastructurePhase(c *ClusterCreator, upgr *upgrade.Upgrade) *create.Infrastructure {
+	infraPath := filepath.Join(c.paths.WorkDir, "infrastructure")
+
+	phase := cluster.NewOperationPhase(
+		infraPath,
+		c.kfdManifest.Tools,
+		c.paths.BinPath,
+	)
+
+	infra := create.NewInfrastructure(
+		phase,
+		c.paths.ConfigPath,
+		c.paths.DistroPath,
+		upgr,
+		c.upgradeNode,
+		c.furyctlConf,
+		c.kfdManifest,
+		c.paths,
+		c.dryRun,
+		c.force,
+	)
+
+	return infra
+}
+
 // convertValue recursively converts any value, handling maps and slices.
 func convertValue(v any) any {
 	switch val := v.(type) {
@@ -655,45 +694,6 @@ func (*ClusterCreator) getDistributionSubPhase(startFrom string) string {
 	default:
 		return ""
 	}
-}
-
-// RenderConfig loads the complete furyctl configuration merged with defaults from fury-distribution.
-// For infrastructure phase, we need the full spec including infrastructure config.
-func (c *ClusterCreator) RenderConfig() (map[string]any, error) {
-	// Create phase for infrastructure.
-	phase := cluster.NewOperationPhase(
-		path.Join(c.paths.WorkDir, cluster.OperationPhaseInfrastructure),
-		c.kfdManifest.Tools,
-		c.paths.BinPath,
-	)
-
-	// Use CreateFuryctlMerger to merge defaults + user config.
-	furyctlMerger, err := phase.CreateFuryctlMerger(
-		c.paths.DistroPath,
-		c.paths.ConfigPath,
-		"kfd-v1alpha2",
-		"immutable",
-	)
-	if err != nil {
-		return nil, fmt.Errorf("error while creating furyctl merger: %w", err)
-	}
-
-	// Create template config without data.
-	tfCfg, err := template.NewConfigWithoutData(furyctlMerger, []string{})
-	if err != nil {
-		return nil, fmt.Errorf("error while creating template config: %w", err)
-	}
-
-	// TfCfg.Data already contains the properly structured merged config
-	// with "spec", "metadata", etc. from the user config merged with defaults.
-	// Convert to map[string]any (including nested maps).
-	result := make(map[string]any)
-
-	for k, v := range tfCfg.Data {
-		result[k] = convertValue(v)
-	}
-
-	return result, nil
 }
 
 func (c *ClusterCreator) confirmInfrastructureChanges(

@@ -183,6 +183,42 @@ func (d *Distribution) Exec(
 	return nil
 }
 
+func (d *Distribution) SetUpgrade(upgradeEnabled bool) {
+	d.upgrade.Enabled = upgradeEnabled
+}
+
+func (d *Distribution) Stop() error {
+	return cluster.StopAll(
+		func() error {
+			logrus.Debug("Stopping terraform...")
+
+			if err := d.TFRunner.Stop(); err != nil {
+				return fmt.Errorf("error stopping terraform: %w", err)
+			}
+
+			return nil
+		},
+		func() error {
+			logrus.Debug("Stopping shell...")
+
+			if err := d.shellRunner.Stop(); err != nil {
+				return fmt.Errorf("error stopping shell: %w", err)
+			}
+
+			return nil
+		},
+		func() error {
+			logrus.Debug("Stopping kubectl...")
+
+			if err := d.kubeRunner.Stop(); err != nil {
+				return fmt.Errorf("error stopping kubectl: %w", err)
+			}
+
+			return nil
+		},
+	)
+}
+
 func (d *Distribution) preDistribution(
 	startFrom string,
 	upgradeState *upgrade.State,
@@ -374,42 +410,6 @@ func (d *Distribution) runReducers(
 	}
 
 	return nil
-}
-
-func (d *Distribution) SetUpgrade(upgradeEnabled bool) {
-	d.upgrade.Enabled = upgradeEnabled
-}
-
-func (d *Distribution) Stop() error {
-	return cluster.StopAll(
-		func() error {
-			logrus.Debug("Stopping terraform...")
-
-			if err := d.TFRunner.Stop(); err != nil {
-				return fmt.Errorf("error stopping terraform: %w", err)
-			}
-
-			return nil
-		},
-		func() error {
-			logrus.Debug("Stopping shell...")
-
-			if err := d.shellRunner.Stop(); err != nil {
-				return fmt.Errorf("error stopping shell: %w", err)
-			}
-
-			return nil
-		},
-		func() error {
-			logrus.Debug("Stopping kubectl...")
-
-			if err := d.kubeRunner.Stop(); err != nil {
-				return fmt.Errorf("error stopping kubectl: %w", err)
-			}
-
-			return nil
-		},
-	)
 }
 
 func (d *Distribution) createDummyOutput() error {

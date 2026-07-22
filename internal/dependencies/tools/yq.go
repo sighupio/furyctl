@@ -12,6 +12,11 @@ import (
 	"github.com/sighupio/furyctl/internal/tool/yq"
 )
 
+type Yq struct {
+	checker *checker
+	version string
+}
+
 func NewYq(runner *yq.Runner, version string) *Yq {
 	return &Yq{
 		version: version,
@@ -26,11 +31,6 @@ func NewYq(runner *yq.Runner, version string) *Yq {
 			},
 		},
 	}
-}
-
-type Yq struct {
-	checker *checker
-	version string
 }
 
 func (y *Yq) CheckBinVersion() error {

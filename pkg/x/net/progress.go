@@ -52,14 +52,6 @@ var newProgressTracker = func() *downloadProgressTracker {
 	}
 }
 
-func (t *downloadProgressTracker) interval() time.Duration {
-	if t.tty {
-		return progressTTYInterval
-	}
-
-	return progressLogInterval
-}
-
 // TrackProgress wraps the download stream in a reader that reports progress as it is read.
 func (t *downloadProgressTracker) TrackProgress(
 	src string,
@@ -80,6 +72,14 @@ func (t *downloadProgressTracker) TrackProgress(
 	}
 }
 
+func (t *downloadProgressTracker) interval() time.Duration {
+	if t.tty {
+		return progressTTYInterval
+	}
+
+	return progressLogInterval
+}
+
 // progressReader counts bytes read from the download stream and renders progress, throttled by the
 // tracker's interval.
 type progressReader struct {
@@ -90,16 +90,6 @@ type progressReader struct {
 	total      int64
 	lastRender time.Time
 	started    bool
-}
-
-// tracked reports whether the download is large enough to report. With a known size we decide upfront;
-// with an unknown size we start once enough bytes have streamed to prove it's large.
-func (r *progressReader) tracked() bool {
-	if r.total >= progressMinTrackedSize {
-		return true
-	}
-
-	return r.total <= 0 && r.read >= progressMinTrackedSize
 }
 
 func (r *progressReader) Read(p []byte) (int, error) {
@@ -127,6 +117,16 @@ func (r *progressReader) Close() error {
 
 	//nolint:wrapcheck // Pass the stream error through unchanged; go-getter handles it.
 	return r.stream.Close()
+}
+
+// tracked reports whether the download is large enough to report. With a known size we decide upfront;
+// with an unknown size we start once enough bytes have streamed to prove it's large.
+func (r *progressReader) tracked() bool {
+	if r.total >= progressMinTrackedSize {
+		return true
+	}
+
+	return r.total <= 0 && r.read >= progressMinTrackedSize
 }
 
 func (r *progressReader) render() {

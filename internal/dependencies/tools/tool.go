@@ -46,16 +46,6 @@ type Tool interface {
 	CheckBinVersion() error
 }
 
-func NewFactory(executor execx.Executor, paths FactoryPaths) *Factory {
-	return &Factory{
-		executor: executor,
-		paths:    paths,
-		runnerFactory: tool.NewRunnerFactory(executor, tool.RunnerFactoryPaths{
-			Bin: paths.Bin,
-		}),
-	}
-}
-
 type FactoryPaths struct {
 	Bin string
 }
@@ -64,6 +54,16 @@ type Factory struct {
 	executor      execx.Executor
 	paths         FactoryPaths
 	runnerFactory *tool.RunnerFactory
+}
+
+func NewFactory(executor execx.Executor, paths FactoryPaths) *Factory {
+	return &Factory{
+		executor: executor,
+		paths:    paths,
+		runnerFactory: tool.NewRunnerFactory(executor, tool.RunnerFactoryPaths{
+			Bin: paths.Bin,
+		}),
+	}
 }
 
 func (f *Factory) Create(name tool.Name, version string) Tool {

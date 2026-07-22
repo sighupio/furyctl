@@ -311,6 +311,37 @@ func (c *ClusterCreator) Create(startFrom string, _, _ int) error {
 	return nil
 }
 
+func (c *ClusterCreator) RenderConfig() (map[string]any, error) {
+	specMap := map[string]any{}
+
+	phase := cluster.NewOperationPhase(
+		path.Join(c.paths.WorkDir, cluster.OperationPhaseDistribution),
+		c.kfdManifest.Tools,
+		c.paths.BinPath,
+	)
+
+	furyctlMerger, err := phase.CreateFuryctlMerger(
+		c.paths.DistroPath,
+		c.paths.ConfigPath,
+		"kfd-v1alpha2",
+		"kfddistribution",
+	)
+	if err != nil {
+		return nil, fmt.Errorf("error while creating furyctl merger: %w", err)
+	}
+
+	tfCfg, err := template.NewConfigWithoutData(furyctlMerger, []string{})
+	if err != nil {
+		return nil, fmt.Errorf("error while creating template config: %w", err)
+	}
+
+	for k, v := range tfCfg.Data {
+		specMap[k] = v
+	}
+
+	return specMap, nil
+}
+
 func (c *ClusterCreator) allPhases(
 	startFrom string,
 	rdcs reducers.Reducers,
@@ -436,35 +467,4 @@ func (*ClusterCreator) getDistributionSubPhase(startFrom string) string {
 	default:
 		return ""
 	}
-}
-
-func (c *ClusterCreator) RenderConfig() (map[string]any, error) {
-	specMap := map[string]any{}
-
-	phase := cluster.NewOperationPhase(
-		path.Join(c.paths.WorkDir, cluster.OperationPhaseDistribution),
-		c.kfdManifest.Tools,
-		c.paths.BinPath,
-	)
-
-	furyctlMerger, err := phase.CreateFuryctlMerger(
-		c.paths.DistroPath,
-		c.paths.ConfigPath,
-		"kfd-v1alpha2",
-		"kfddistribution",
-	)
-	if err != nil {
-		return nil, fmt.Errorf("error while creating furyctl merger: %w", err)
-	}
-
-	tfCfg, err := template.NewConfigWithoutData(furyctlMerger, []string{})
-	if err != nil {
-		return nil, fmt.Errorf("error while creating template config: %w", err)
-	}
-
-	for k, v := range tfCfg.Data {
-		specMap[k] = v
-	}
-
-	return specMap, nil
 }

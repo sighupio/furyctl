@@ -8,11 +8,11 @@ import (
 	"github.com/sighupio/furyctl/internal/tool/shell"
 )
 
+type Shell struct{}
+
 func NewShell(_ *shell.Runner, _ string) *Shell {
 	return &Shell{}
 }
-
-type Shell struct{}
 
 func (*Shell) CheckBinVersion() error {
 	return nil

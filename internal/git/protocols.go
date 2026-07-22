@@ -12,6 +12,8 @@ import (
 
 var ErrUnsupportedGitProtocol = errors.New("unsupported git protocol")
 
+type Protocol string
+
 func NewProtocol(protocol string) (Protocol, error) {
 	switch protocol {
 	case "ssh":
@@ -27,8 +29,6 @@ func NewProtocol(protocol string) (Protocol, error) {
 		strings.Join(ProtocolsS(), ", "),
 	)
 }
-
-type Protocol string
 
 const (
 	ProtocolSSH   = Protocol("ssh")

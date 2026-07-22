@@ -206,6 +206,157 @@ func (b *BaseExtractor) FilterSafeImmutableRules(rules []Rule, ds diff.Changelog
 	return filteredRules
 }
 
+func (b *BaseExtractor) GetReducers(_ string) []Rule {
+	var reducers []Rule
+
+	if b.Spec.Infrastructure != nil {
+		for _, rule := range *b.Spec.Infrastructure {
+			if rule.Reducers != nil {
+				reducers = append(reducers, rule)
+			}
+		}
+	}
+
+	if b.Spec.Kubernetes != nil {
+		for _, rule := range *b.Spec.Kubernetes {
+			if rule.Reducers != nil {
+				reducers = append(reducers, rule)
+			}
+		}
+	}
+
+	if b.Spec.Distribution != nil {
+		for _, rule := range *b.Spec.Distribution {
+			if rule.Reducers != nil {
+				reducers = append(reducers, rule)
+			}
+		}
+	}
+
+	return reducers
+}
+
+// GetUnsupportedRules returns all the rules that declare unsupported transitions,
+// regardless of whether they also define reducers. This is what drives the
+// "unsupported transition" validation, which must not depend on reducers being set.
+func (b *BaseExtractor) GetUnsupportedRules(_ string) []Rule {
+	var unsupported []Rule
+
+	if b.Spec.Infrastructure != nil {
+		unsupported = append(unsupported, b.ExtractUnsupportedRules(*b.Spec.Infrastructure)...)
+	}
+
+	if b.Spec.Kubernetes != nil {
+		unsupported = append(unsupported, b.ExtractUnsupportedRules(*b.Spec.Kubernetes)...)
+	}
+
+	if b.Spec.Distribution != nil {
+		unsupported = append(unsupported, b.ExtractUnsupportedRules(*b.Spec.Distribution)...)
+	}
+
+	return unsupported
+}
+
+func (*BaseExtractor) ReducerRulesByDiffs(rules []Rule, ds diff.Changelog) []Rule {
+	filteredRules := make([]Rule, 0)
+
+	for _, rule := range rules {
+		for _, d := range ds {
+			joinedPath := "." + strings.Join(d.Path, ".")
+			changePath := numbersToWildcardRegex.ReplaceAllString(joinedPath, ".*")
+
+			if MatchesPattern(changePath, rule.Path) {
+				if rule.Reducers == nil {
+					continue
+				}
+
+				for i := range *rule.Reducers {
+					(*rule.Reducers)[i].To = d.To
+					(*rule.Reducers)[i].From = d.From
+				}
+
+				filteredRules = append(filteredRules, rule)
+			}
+		}
+	}
+
+	return filteredRules
+}
+
+func (b *BaseExtractor) UnsupportedReducerRulesByDiffs(rules []Rule, ds diff.Changelog) []Rule {
+	filteredRules := make([]Rule, 0)
+
+	for _, rule := range b.ReducerRulesByDiffs(rules, ds) {
+		if rule.Unsupported == nil {
+			continue
+		}
+
+		if len(*rule.Unsupported) == 0 {
+			continue
+		}
+
+		filteredRules = append(filteredRules, rule)
+	}
+
+	return filteredRules
+}
+
+func (b *BaseExtractor) UnsafeReducerRulesByDiffs(rules []Rule, ds diff.Changelog) []Rule {
+	filteredRules := make([]Rule, 0)
+
+	for _, rule := range b.ReducerRulesByDiffs(rules, ds) {
+		if rule.Safe != nil && len(*rule.Safe) > 0 {
+			if b.areReducersSafe(rule.Reducers, rule.Safe, ds) {
+				continue
+			}
+		}
+
+		filteredRules = append(filteredRules, rule)
+	}
+
+	return filteredRules
+}
+
+func (*BaseExtractor) ExtractImmutablesFromRules(rls []Rule) []string {
+	immutables := make([]string, 0)
+
+	for _, rule := range rls {
+		if rule.Immutable {
+			immutables = append(immutables, rule.Path)
+		}
+	}
+
+	return immutables
+}
+
+func (*BaseExtractor) ExtractReducerRules(rls []Rule) []Rule {
+	reducers := make([]Rule, 0)
+
+	for _, rule := range rls {
+		if rule.Reducers != nil {
+			reducers = append(reducers, rule)
+		}
+	}
+
+	return reducers
+}
+
+// ExtractUnsupportedRules returns the rules that declare at least one unsupported
+// transition, regardless of whether they also define reducers. Unsupported
+// transitions are enforced independently from reducers (see
+// diffs.AssertReducerUnsupportedViolations).
+func (*BaseExtractor) ExtractUnsupportedRules(rls []Rule) []Rule {
+	unsupported := make([]Rule, 0)
+
+	for _, rule := range rls {
+		if rule.Unsupported != nil && len(*rule.Unsupported) > 0 {
+			unsupported = append(unsupported, rule)
+		}
+	}
+
+	return unsupported
+}
+
 func (b *BaseExtractor) isImmutableRuleSafe(rule Rule, ds diff.Changelog) bool {
 	if rule.Safe == nil || len(*rule.Safe) == 0 {
 		return false
@@ -348,117 +499,6 @@ func (*BaseExtractor) checkConditionTo(nodeTo *string, diffTo any) bool {
 	return (*nodeTo == "none" && diffTo == nil) || (diffTo != nil && diffTo == *nodeTo)
 }
 
-func (b *BaseExtractor) GetReducers(_ string) []Rule {
-	var reducers []Rule
-
-	if b.Spec.Infrastructure != nil {
-		for _, rule := range *b.Spec.Infrastructure {
-			if rule.Reducers != nil {
-				reducers = append(reducers, rule)
-			}
-		}
-	}
-
-	if b.Spec.Kubernetes != nil {
-		for _, rule := range *b.Spec.Kubernetes {
-			if rule.Reducers != nil {
-				reducers = append(reducers, rule)
-			}
-		}
-	}
-
-	if b.Spec.Distribution != nil {
-		for _, rule := range *b.Spec.Distribution {
-			if rule.Reducers != nil {
-				reducers = append(reducers, rule)
-			}
-		}
-	}
-
-	return reducers
-}
-
-// GetUnsupportedRules returns all the rules that declare unsupported transitions,
-// regardless of whether they also define reducers. This is what drives the
-// "unsupported transition" validation, which must not depend on reducers being set.
-func (b *BaseExtractor) GetUnsupportedRules(_ string) []Rule {
-	var unsupported []Rule
-
-	if b.Spec.Infrastructure != nil {
-		unsupported = append(unsupported, b.ExtractUnsupportedRules(*b.Spec.Infrastructure)...)
-	}
-
-	if b.Spec.Kubernetes != nil {
-		unsupported = append(unsupported, b.ExtractUnsupportedRules(*b.Spec.Kubernetes)...)
-	}
-
-	if b.Spec.Distribution != nil {
-		unsupported = append(unsupported, b.ExtractUnsupportedRules(*b.Spec.Distribution)...)
-	}
-
-	return unsupported
-}
-
-func (*BaseExtractor) ReducerRulesByDiffs(rules []Rule, ds diff.Changelog) []Rule {
-	filteredRules := make([]Rule, 0)
-
-	for _, rule := range rules {
-		for _, d := range ds {
-			joinedPath := "." + strings.Join(d.Path, ".")
-			changePath := numbersToWildcardRegex.ReplaceAllString(joinedPath, ".*")
-
-			if MatchesPattern(changePath, rule.Path) {
-				if rule.Reducers == nil {
-					continue
-				}
-
-				for i := range *rule.Reducers {
-					(*rule.Reducers)[i].To = d.To
-					(*rule.Reducers)[i].From = d.From
-				}
-
-				filteredRules = append(filteredRules, rule)
-			}
-		}
-	}
-
-	return filteredRules
-}
-
-func (b *BaseExtractor) UnsupportedReducerRulesByDiffs(rules []Rule, ds diff.Changelog) []Rule {
-	filteredRules := make([]Rule, 0)
-
-	for _, rule := range b.ReducerRulesByDiffs(rules, ds) {
-		if rule.Unsupported == nil {
-			continue
-		}
-
-		if len(*rule.Unsupported) == 0 {
-			continue
-		}
-
-		filteredRules = append(filteredRules, rule)
-	}
-
-	return filteredRules
-}
-
-func (b *BaseExtractor) UnsafeReducerRulesByDiffs(rules []Rule, ds diff.Changelog) []Rule {
-	filteredRules := make([]Rule, 0)
-
-	for _, rule := range b.ReducerRulesByDiffs(rules, ds) {
-		if rule.Safe != nil && len(*rule.Safe) > 0 {
-			if b.areReducersSafe(rule.Reducers, rule.Safe, ds) {
-				continue
-			}
-		}
-
-		filteredRules = append(filteredRules, rule)
-	}
-
-	return filteredRules
-}
-
 func (b *BaseExtractor) areReducersSafe(reducers *[]Reducer, safe *[]Safe, ds diff.Changelog) bool {
 	if safe == nil {
 		return false
@@ -490,44 +530,4 @@ func (b *BaseExtractor) isReducerSafe(reducer Reducer, safe []Safe, ds diff.Chan
 	}
 
 	return false
-}
-
-func (*BaseExtractor) ExtractImmutablesFromRules(rls []Rule) []string {
-	immutables := make([]string, 0)
-
-	for _, rule := range rls {
-		if rule.Immutable {
-			immutables = append(immutables, rule.Path)
-		}
-	}
-
-	return immutables
-}
-
-func (*BaseExtractor) ExtractReducerRules(rls []Rule) []Rule {
-	reducers := make([]Rule, 0)
-
-	for _, rule := range rls {
-		if rule.Reducers != nil {
-			reducers = append(reducers, rule)
-		}
-	}
-
-	return reducers
-}
-
-// ExtractUnsupportedRules returns the rules that declare at least one unsupported
-// transition, regardless of whether they also define reducers. Unsupported
-// transitions are enforced independently from reducers (see
-// diffs.AssertReducerUnsupportedViolations).
-func (*BaseExtractor) ExtractUnsupportedRules(rls []Rule) []Rule {
-	unsupported := make([]Rule, 0)
-
-	for _, rule := range rls {
-		if rule.Unsupported != nil && len(*rule.Unsupported) > 0 {
-			unsupported = append(unsupported, rule)
-		}
-	}
-
-	return unsupported
 }

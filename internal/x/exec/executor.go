@@ -14,14 +14,18 @@ type Executor interface {
 	Command(name string, arg ...string) *exec.Cmd
 }
 
+type StdExecutor struct{}
+
 func NewStdExecutor() *StdExecutor {
 	return &StdExecutor{}
 }
 
-type StdExecutor struct{}
-
 func (*StdExecutor) Command(name string, arg ...string) *exec.Cmd {
 	return exec.Command(name, arg...)
+}
+
+type FakeExecutor struct {
+	testHelperProcessFn string
 }
 
 func NewFakeExecutor(testHelperProcessFn string) *FakeExecutor {
@@ -32,10 +36,6 @@ func NewFakeExecutor(testHelperProcessFn string) *FakeExecutor {
 	return &FakeExecutor{
 		testHelperProcessFn: testHelperProcessFn,
 	}
-}
-
-type FakeExecutor struct {
-	testHelperProcessFn string
 }
 
 func (fe *FakeExecutor) Command(name string, arg ...string) *exec.Cmd {

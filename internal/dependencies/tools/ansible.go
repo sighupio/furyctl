@@ -12,6 +12,11 @@ import (
 	"github.com/sighupio/furyctl/internal/tool/ansible"
 )
 
+type Ansible struct {
+	checker *checker
+	version string
+}
+
 func NewAnsible(runner *ansible.Runner, version string) *Ansible {
 	return &Ansible{
 		version: version,
@@ -26,11 +31,6 @@ func NewAnsible(runner *ansible.Runner, version string) *Ansible {
 			},
 		},
 	}
-}
-
-type Ansible struct {
-	checker *checker
-	version string
 }
 
 func (a *Ansible) CheckBinVersion() error {

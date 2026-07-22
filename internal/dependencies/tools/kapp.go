@@ -13,6 +13,11 @@ import (
 	"github.com/sighupio/furyctl/internal/tool/kapp"
 )
 
+type Kapp struct {
+	checker *checker
+	version string
+}
+
 func NewKapp(runner *kapp.Runner, version string) *Kapp {
 	return &Kapp{
 		version: version,
@@ -27,11 +32,6 @@ func NewKapp(runner *kapp.Runner, version string) *Kapp {
 			},
 		},
 	}
-}
-
-type Kapp struct {
-	checker *checker
-	version string
 }
 
 func (k *Kapp) CheckBinVersion() error {

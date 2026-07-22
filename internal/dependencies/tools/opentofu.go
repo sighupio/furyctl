@@ -12,6 +12,11 @@ import (
 	"github.com/sighupio/furyctl/internal/tool/terraform"
 )
 
+type OpenTofu struct {
+	checker *checker
+	version string
+}
+
 func NewOpenTofu(runner *terraform.Runner, version string) *OpenTofu {
 	return &OpenTofu{
 		version: version,
@@ -26,11 +31,6 @@ func NewOpenTofu(runner *terraform.Runner, version string) *OpenTofu {
 			},
 		},
 	}
-}
-
-type OpenTofu struct {
-	checker *checker
-	version string
 }
 
 func (t *OpenTofu) CheckBinVersion() error {

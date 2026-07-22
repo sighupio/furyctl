@@ -36,6 +36,51 @@ type Distribution struct {
 	stateStore  state.Storer
 }
 
+func NewDistribution(
+	furyctlConf public.OnpremisesKfdV1Alpha2,
+	kfdManifest config.KFD,
+	paths cluster.DeleterPaths,
+	dryRun bool,
+) *Distribution {
+	phase := cluster.NewOperationPhase(
+		path.Join(paths.WorkDir, cluster.OperationPhaseDistribution),
+		kfdManifest.Tools,
+		paths.BinPath,
+	)
+
+	return &Distribution{
+		OperationPhase: phase,
+		furyctlConf:    furyctlConf,
+		kfdManifest:    kfdManifest,
+		paths:          paths,
+		dryRun:         dryRun,
+		shellRunner: shell.NewRunner(
+			execx.NewStdExecutor(),
+			shell.Paths{
+				Shell:   "sh",
+				WorkDir: path.Join(phase.Path, "manifests"),
+			},
+		),
+		kubeRunner: kubectl.NewRunner(
+			execx.NewStdExecutor(),
+			kubectl.Paths{
+				Kubectl: phase.KubectlPath,
+				WorkDir: path.Join(phase.Path, "manifests"),
+			},
+			true,
+			true,
+			false,
+		),
+		stateStore: state.NewStore(
+			paths.DistroPath,
+			paths.ConfigPath,
+			paths.WorkDir,
+			kfdManifest.Tools.Common.Kubectl.Version,
+			paths.BinPath,
+		),
+	}
+}
+
 func (d *Distribution) Exec() error {
 	logrus.Info("Deleting SIGHUP Distribution...")
 
@@ -142,49 +187,4 @@ func (d *Distribution) injectStoredConfig(cfg template.Config) (template.Config,
 	cfg.Data["storedCfg"] = storedCfg
 
 	return cfg, nil
-}
-
-func NewDistribution(
-	furyctlConf public.OnpremisesKfdV1Alpha2,
-	kfdManifest config.KFD,
-	paths cluster.DeleterPaths,
-	dryRun bool,
-) *Distribution {
-	phase := cluster.NewOperationPhase(
-		path.Join(paths.WorkDir, cluster.OperationPhaseDistribution),
-		kfdManifest.Tools,
-		paths.BinPath,
-	)
-
-	return &Distribution{
-		OperationPhase: phase,
-		furyctlConf:    furyctlConf,
-		kfdManifest:    kfdManifest,
-		paths:          paths,
-		dryRun:         dryRun,
-		shellRunner: shell.NewRunner(
-			execx.NewStdExecutor(),
-			shell.Paths{
-				Shell:   "sh",
-				WorkDir: path.Join(phase.Path, "manifests"),
-			},
-		),
-		kubeRunner: kubectl.NewRunner(
-			execx.NewStdExecutor(),
-			kubectl.Paths{
-				Kubectl: phase.KubectlPath,
-				WorkDir: path.Join(phase.Path, "manifests"),
-			},
-			true,
-			true,
-			false,
-		),
-		stateStore: state.NewStore(
-			paths.DistroPath,
-			paths.ConfigPath,
-			paths.WorkDir,
-			kfdManifest.Tools.Common.Kubectl.Version,
-			paths.BinPath,
-		),
-	}
 }

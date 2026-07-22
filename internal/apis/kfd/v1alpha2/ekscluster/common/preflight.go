@@ -50,19 +50,6 @@ type PreFlight struct {
 	InfrastructureTerraformOutputsPath string
 }
 
-func (p *PreFlight) getTerraformStateConfig() private.SpecToolsConfigurationTerraformStateS3 {
-	if p.FuryctlConf.Spec.ToolsConfiguration.Opentofu != nil {
-		return private.SpecToolsConfigurationTerraformStateS3{
-			BucketName:           p.FuryctlConf.Spec.ToolsConfiguration.Opentofu.State.S3.BucketName,
-			KeyPrefix:            p.FuryctlConf.Spec.ToolsConfiguration.Opentofu.State.S3.KeyPrefix,
-			Region:               p.FuryctlConf.Spec.ToolsConfiguration.Opentofu.State.S3.Region,
-			SkipRegionValidation: p.FuryctlConf.Spec.ToolsConfiguration.Opentofu.State.S3.SkipRegionValidation,
-		}
-	}
-
-	return p.FuryctlConf.Spec.ToolsConfiguration.Terraform.State.S3
-}
-
 func (p *PreFlight) Prepare() error {
 	if err := p.CreateRootFolder(); err != nil {
 		return fmt.Errorf("error creating preflight phase folder: %w", err)
@@ -106,6 +93,56 @@ func (p *PreFlight) EnsureTerraformStateAWSS3Bucket() error {
 	}
 
 	return getErr
+}
+
+func (p *PreFlight) IsVPNRequired() bool {
+	return p.FuryctlConf.Spec.Infrastructure != nil &&
+		p.FuryctlConf.Spec.Infrastructure.Vpn.IsConfigured() &&
+		p.FuryctlConf.Spec.Kubernetes.ApiServer.PrivateAccess &&
+		!p.FuryctlConf.Spec.Kubernetes.ApiServer.PublicAccess
+}
+
+func (p *PreFlight) HandleVPN() error {
+	logrus.Info("VPN required, checking if configuration file exists...")
+
+	wd, err := os.Getwd()
+	if err != nil {
+		return fmt.Errorf("error getting current dir: %w", err)
+	}
+
+	ovpnFileName := p.FuryctlConf.Metadata.Name + ".ovpn"
+
+	ovpnPath, err := filepath.Abs(path.Join(wd, ovpnFileName))
+	if err != nil {
+		return fmt.Errorf("error getting ovpn absolute path: %w", err)
+	}
+
+	if _, err := os.Stat(ovpnPath); err != nil {
+		logrus.Info("No ovpn file found, generating it...")
+
+		if err := p.regenVPNCerts(); err != nil {
+			return fmt.Errorf("error regenerating vpn certs: %w", err)
+		}
+	}
+
+	if err := p.VPNConnector.Connect(); err != nil {
+		return fmt.Errorf("error connecting to vpn: %w", err)
+	}
+
+	return nil
+}
+
+func (p *PreFlight) getTerraformStateConfig() private.SpecToolsConfigurationTerraformStateS3 {
+	if p.FuryctlConf.Spec.ToolsConfiguration.Opentofu != nil {
+		return private.SpecToolsConfigurationTerraformStateS3{
+			BucketName:           p.FuryctlConf.Spec.ToolsConfiguration.Opentofu.State.S3.BucketName,
+			KeyPrefix:            p.FuryctlConf.Spec.ToolsConfiguration.Opentofu.State.S3.KeyPrefix,
+			Region:               p.FuryctlConf.Spec.ToolsConfiguration.Opentofu.State.S3.Region,
+			SkipRegionValidation: p.FuryctlConf.Spec.ToolsConfiguration.Opentofu.State.S3.SkipRegionValidation,
+		}
+	}
+
+	return p.FuryctlConf.Spec.ToolsConfiguration.Terraform.State.S3
 }
 
 func (p *PreFlight) assertTerraformStateAWSS3BucketMatches() error {
@@ -212,43 +249,6 @@ func (p *PreFlight) copyFromTemplate() error {
 	)
 	if err != nil {
 		return fmt.Errorf("error generating from template files: %w", err)
-	}
-
-	return nil
-}
-
-func (p *PreFlight) IsVPNRequired() bool {
-	return p.FuryctlConf.Spec.Infrastructure != nil &&
-		p.FuryctlConf.Spec.Infrastructure.Vpn.IsConfigured() &&
-		p.FuryctlConf.Spec.Kubernetes.ApiServer.PrivateAccess &&
-		!p.FuryctlConf.Spec.Kubernetes.ApiServer.PublicAccess
-}
-
-func (p *PreFlight) HandleVPN() error {
-	logrus.Info("VPN required, checking if configuration file exists...")
-
-	wd, err := os.Getwd()
-	if err != nil {
-		return fmt.Errorf("error getting current dir: %w", err)
-	}
-
-	ovpnFileName := p.FuryctlConf.Metadata.Name + ".ovpn"
-
-	ovpnPath, err := filepath.Abs(path.Join(wd, ovpnFileName))
-	if err != nil {
-		return fmt.Errorf("error getting ovpn absolute path: %w", err)
-	}
-
-	if _, err := os.Stat(ovpnPath); err != nil {
-		logrus.Info("No ovpn file found, generating it...")
-
-		if err := p.regenVPNCerts(); err != nil {
-			return fmt.Errorf("error regenerating vpn certs: %w", err)
-		}
-	}
-
-	if err := p.VPNConnector.Connect(); err != nil {
-		return fmt.Errorf("error connecting to vpn: %w", err)
 	}
 
 	return nil

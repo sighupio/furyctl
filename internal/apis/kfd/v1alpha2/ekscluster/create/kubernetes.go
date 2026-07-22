@@ -142,6 +142,33 @@ func (k *Kubernetes) Exec(startFrom string, upgradeState *upgrade.State) error {
 	return nil
 }
 
+func (k *Kubernetes) SetUpgrade(upgradeEnabled bool) {
+	k.upgrade.Enabled = upgradeEnabled
+}
+
+func (k *Kubernetes) Stop() error {
+	return cluster.StopAll(
+		func() error {
+			logrus.Debug("Stopping terraform...")
+
+			if err := k.tfRunner.Stop(); err != nil {
+				return fmt.Errorf("error stopping terraform: %w", err)
+			}
+
+			return nil
+		},
+		func() error {
+			logrus.Debug("Stopping awscli...")
+
+			if err := k.awsRunner.Stop(); err != nil {
+				return fmt.Errorf("error stopping awscli: %w", err)
+			}
+
+			return nil
+		},
+	)
+}
+
 func (k *Kubernetes) preKubernetes(
 	startFrom string,
 	upgradeState *upgrade.State,
@@ -279,33 +306,6 @@ func (k *Kubernetes) postKubernetes(
 	}
 
 	return nil
-}
-
-func (k *Kubernetes) SetUpgrade(upgradeEnabled bool) {
-	k.upgrade.Enabled = upgradeEnabled
-}
-
-func (k *Kubernetes) Stop() error {
-	return cluster.StopAll(
-		func() error {
-			logrus.Debug("Stopping terraform...")
-
-			if err := k.tfRunner.Stop(); err != nil {
-				return fmt.Errorf("error stopping terraform: %w", err)
-			}
-
-			return nil
-		},
-		func() error {
-			logrus.Debug("Stopping awscli...")
-
-			if err := k.awsRunner.Stop(); err != nil {
-				return fmt.Errorf("error stopping awscli: %w", err)
-			}
-
-			return nil
-		},
-	)
 }
 
 func (k *Kubernetes) checkVPCConnection() error {

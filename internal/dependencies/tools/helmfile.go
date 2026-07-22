@@ -12,6 +12,11 @@ import (
 	"github.com/sighupio/furyctl/internal/tool/helmfile"
 )
 
+type Helmfile struct {
+	checker *checker
+	version string
+}
+
 func NewHelmfile(runner *helmfile.Runner, version string) *Helmfile {
 	return &Helmfile{
 		version: version,
@@ -26,11 +31,6 @@ func NewHelmfile(runner *helmfile.Runner, version string) *Helmfile {
 			},
 		},
 	}
-}
-
-type Helmfile struct {
-	checker *checker
-	version string
 }
 
 func (h *Helmfile) CheckBinVersion() error {
