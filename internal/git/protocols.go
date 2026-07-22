@@ -21,13 +21,14 @@ func NewProtocol(protocol string) (Protocol, error) {
 
 	case "https":
 		return ProtocolHTTPS, nil
-	}
 
-	return "", fmt.Errorf("%w: %s. Supported protocols are %s",
-		ErrUnsupportedGitProtocol,
-		protocol,
-		strings.Join(ProtocolsS(), ", "),
-	)
+	default:
+		return "", fmt.Errorf("%w: %s. Supported protocols are %s",
+			ErrUnsupportedGitProtocol,
+			protocol,
+			strings.Join(ProtocolsS(), ", "),
+		)
+	}
 }
 
 const (

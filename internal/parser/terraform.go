@@ -4,7 +4,11 @@
 
 package parser
 
-import "strings"
+import (
+	"strings"
+
+	"github.com/sirupsen/logrus"
+)
 
 const MinDiffLineTokensNum = 3
 
@@ -65,6 +69,9 @@ func (p *TfPlanParser) Parse() *TfPlan {
 		case "+/-":
 			pl.Add = append(pl.Add, resourceName)
 			pl.Destroy = append(pl.Destroy, resourceName)
+
+		default:
+			logrus.Debugf("ignoring unknown diff prefix %q", diffLineTokens[0])
 		}
 	}
 
