@@ -228,7 +228,7 @@ The command will dump into a 'distribution' folder in the working directory all 
 func getDumpTemplateCmdFlags() (TemplateCmdFlags, error) {
 	gitProtocol := viper.GetString("git-protocol")
 
-	typedGitProtocol, err := git.NewProtocol(gitProtocol)
+	typedGitProtocol, err := git.ParseProtocol(gitProtocol)
 	if err != nil {
 		return TemplateCmdFlags{}, fmt.Errorf("%w: %w", ErrParsingFlag, err)
 	}

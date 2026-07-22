@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"path"
+	"slices"
 
 	r3diff "github.com/r3labs/diff/v3"
 	"github.com/sirupsen/logrus"
@@ -304,8 +305,6 @@ func (p *PreFlight) CreateDiffChecker(
 }
 
 func (p *PreFlight) CheckImmutablesDiffs(d r3diff.Changelog, diffChecker diffs.Checker) error {
-	var errs []error
-
 	r, err := rules.NewEKSClusterRulesExtractor(p.paths.DistroPath, diffChecker.GetCurrentConfig())
 	if err != nil {
 		if !errors.Is(err, rules.ErrReadingRulesFile) {
@@ -344,9 +343,11 @@ func (p *PreFlight) CheckImmutablesDiffs(d r3diff.Changelog, diffChecker diffs.C
 		distroImmutablePaths = append(distroImmutablePaths, rule.Path)
 	}
 
-	errs = append(errs, diffChecker.AssertImmutableViolations(d, infraImmutablePaths)...)
-	errs = append(errs, diffChecker.AssertImmutableViolations(d, kubeImmutablePaths)...)
-	errs = append(errs, diffChecker.AssertImmutableViolations(d, distroImmutablePaths)...)
+	errs := slices.Concat(
+		diffChecker.AssertImmutableViolations(d, infraImmutablePaths),
+		diffChecker.AssertImmutableViolations(d, kubeImmutablePaths),
+		diffChecker.AssertImmutableViolations(d, distroImmutablePaths),
+	)
 
 	if len(errs) > 0 {
 		return fmt.Errorf("%w: %w", errImmutable, errors.Join(errs...))
@@ -358,8 +359,6 @@ func (p *PreFlight) CheckImmutablesDiffs(d r3diff.Changelog, diffChecker diffs.C
 // CheckReducersDiffs checks if the changes to the reducers are supported by the distribution.
 // This is needed as not all from/to combinations are supported.
 func (p *PreFlight) CheckReducersDiffs(d r3diff.Changelog, diffChecker diffs.Checker) error {
-	var errs []error
-
 	r, err := rules.NewEKSClusterRulesExtractor(p.paths.DistroPath, diffChecker.GetCurrentConfig())
 	if err != nil {
 		if !errors.Is(err, rules.ErrReadingRulesFile) {
@@ -371,18 +370,19 @@ func (p *PreFlight) CheckReducersDiffs(d r3diff.Changelog, diffChecker diffs.Che
 		return nil
 	}
 
-	errs = append(errs, diffChecker.AssertReducerUnsupportedViolations(
+	errs := slices.Concat(diffChecker.AssertReducerUnsupportedViolations(
 		d,
 		r.GetUnsupportedRules("infrastructure"),
-	)...)
-	errs = append(errs, diffChecker.AssertReducerUnsupportedViolations(
-		d,
-		r.GetUnsupportedRules("kubernetes"),
-	)...)
-	errs = append(errs, diffChecker.AssertReducerUnsupportedViolations(
-		d,
-		r.GetUnsupportedRules("distribution"),
-	)...)
+	),
+		diffChecker.AssertReducerUnsupportedViolations(
+			d,
+			r.GetUnsupportedRules("kubernetes"),
+		),
+		diffChecker.AssertReducerUnsupportedViolations(
+			d,
+			r.GetUnsupportedRules("distribution"),
+		),
+	)
 
 	if len(errs) > 0 {
 		return fmt.Errorf("%w: %w", errUnsupported, errors.Join(errs...))

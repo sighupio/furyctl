@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"path/filepath"
+	"slices"
 
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -74,7 +75,7 @@ func NewDependenciesCmd() *cobra.Command {
 			}
 
 			gitProtocol := viper.GetString("git-protocol")
-			typedGitProtocol, err := git.NewProtocol(gitProtocol)
+			typedGitProtocol, err := git.ParseProtocol(gitProtocol)
 			if err != nil {
 				return fmt.Errorf("%w: %w", ErrParsingFlag, err)
 			}
@@ -128,7 +129,6 @@ func NewDependenciesCmd() *cobra.Command {
 
 			toolsValidator := tools.NewValidator(executor, binPath, furyctlPath)
 			envVarsValidator := envvars.NewValidator()
-			errs := make([]error, 0)
 
 			logrus.Info("Validating tools...")
 
@@ -143,8 +143,7 @@ func NewDependenciesCmd() *cobra.Command {
 
 			logrus.Info("Validating tools configuration...")
 
-			errs = append(errs, terrs...)
-			errs = append(errs, eerrs...)
+			errs := slices.Concat(terrs, eerrs)
 
 			for _, tok := range toks {
 				logrus.Infof("%s: binary found in vendor folder", tok)

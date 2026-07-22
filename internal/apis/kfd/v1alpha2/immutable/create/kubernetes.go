@@ -157,7 +157,6 @@ func (k *Kubernetes) prepare() error {
 	}
 
 	versionVars := map[any]any{}
-	//nolint:modernize // maps.Copy requires identical map types
 	for name, value := range buildVersionVars(version, k.KubectlPath, immutableAssets) {
 		versionVars[name] = value
 	}

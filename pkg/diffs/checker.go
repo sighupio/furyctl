@@ -190,7 +190,7 @@ func ExpandMapChanges(changelog r3diff.Changelog) r3diff.Changelog {
 func expandChange(c r3diff.Change) []r3diff.Change {
 	// Object added wholesale: To is a map, From is nil.
 	if m, ok := c.To.(map[string]any); ok && len(m) > 0 {
-		var res []r3diff.Change
+		res := make([]r3diff.Change, 0, len(m))
 		for k, v := range m {
 			res = append(res, expandChange(r3diff.Change{
 				Type: c.Type,
@@ -205,7 +205,7 @@ func expandChange(c r3diff.Change) []r3diff.Change {
 
 	// Object removed wholesale: From is a map, To is nil.
 	if m, ok := c.From.(map[string]any); ok && len(m) > 0 {
-		var res []r3diff.Change
+		res := make([]r3diff.Change, 0, len(m))
 		for k, v := range m {
 			res = append(res, expandChange(r3diff.Change{
 				Type: c.Type,
@@ -222,10 +222,7 @@ func expandChange(c r3diff.Change) []r3diff.Change {
 }
 
 func childPath(parent []string, key string) []string {
-	child := make([]string, 0, len(parent)+1)
-	child = append(child, parent...)
-	child = append(child, key)
-	return child
+	return append(slices.Clone(parent), key)
 }
 
 func isImmutablePathChanged(change r3diff.Change, immutables []string) bool {

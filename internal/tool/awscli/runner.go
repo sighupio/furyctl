@@ -6,6 +6,7 @@ package awscli
 
 import (
 	"fmt"
+	"slices"
 
 	"github.com/google/uuid"
 
@@ -54,8 +55,7 @@ func (r *Runner) Ec2(sensitive bool, sub string, params ...string) (string, erro
 }
 
 func (r *Runner) S3(sensitive bool, params ...string) (string, error) {
-	args := []string{"s3"}
-	args = append(args, params...)
+	args := slices.Concat([]string{"s3"}, params)
 
 	cmd, id := r.newCmd(args, sensitive)
 	defer r.deleteCmd(id)
@@ -69,8 +69,7 @@ func (r *Runner) S3(sensitive bool, params ...string) (string, error) {
 }
 
 func (r *Runner) S3Api(sensitive bool, params ...string) (string, error) {
-	args := []string{"s3api"}
-	args = append(args, params...)
+	args := slices.Concat([]string{"s3api"}, params)
 
 	cmd, id := r.newCmd(args, sensitive)
 	defer r.deleteCmd(id)
@@ -84,8 +83,7 @@ func (r *Runner) S3Api(sensitive bool, params ...string) (string, error) {
 }
 
 func (r *Runner) Eks(sensitive bool, params ...string) (string, error) {
-	args := []string{"eks"}
-	args = append(args, params...)
+	args := slices.Concat([]string{"eks"}, params)
 
 	cmd, id := r.newCmd(args, sensitive)
 	defer r.deleteCmd(id)
@@ -99,8 +97,7 @@ func (r *Runner) Eks(sensitive bool, params ...string) (string, error) {
 }
 
 func (r *Runner) Configure(sensitive bool, params ...string) (string, error) {
-	args := []string{"configure"}
-	args = append(args, params...)
+	args := slices.Concat([]string{"configure"}, params)
 
 	cmd, id := r.newCmd(args, sensitive)
 	defer r.deleteCmd(id)

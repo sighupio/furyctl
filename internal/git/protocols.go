@@ -14,26 +14,9 @@ var ErrUnsupportedGitProtocol = errors.New("unsupported git protocol")
 
 type Protocol string
 
-func NewProtocol(protocol string) (Protocol, error) {
-	switch protocol {
-	case "ssh":
-		return ProtocolSSH, nil
-
-	case "https":
-		return ProtocolHTTPS, nil
-
-	default:
-		return "", fmt.Errorf("%w: %s. Supported protocols are %s",
-			ErrUnsupportedGitProtocol,
-			protocol,
-			strings.Join(ProtocolsS(), ", "),
-		)
-	}
-}
-
 const (
-	ProtocolSSH   = Protocol("ssh")
-	ProtocolHTTPS = Protocol("https")
+	ProtocolSSH   Protocol = "ssh"
+	ProtocolHTTPS Protocol = "https"
 )
 
 // Protocols returns a slice of Protocols that are supported.
@@ -46,10 +29,25 @@ func Protocols() []Protocol {
 
 // ProtocolsS returns a slice of Strings representation of the Protocols that are supported.
 func ProtocolsS() []string {
-	protocols := []string{}
-	for _, p := range Protocols() {
-		protocols = append(protocols, string(p))
+	ps := Protocols()
+	result := make([]string, len(ps))
+	for i, p := range ps {
+		result[i] = string(p)
 	}
 
-	return protocols
+	return result
+}
+
+func ParseProtocol(protocol string) (Protocol, error) {
+	for _, p := range Protocols() {
+		if string(p) == protocol {
+			return p, nil
+		}
+	}
+
+	return "", fmt.Errorf("%w: %s. Supported protocols are %s",
+		ErrUnsupportedGitProtocol,
+		protocol,
+		strings.Join(ProtocolsS(), ", "),
+	)
 }
