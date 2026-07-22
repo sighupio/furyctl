@@ -859,7 +859,7 @@ func (*Infrastructure) downloadSysextPackages(
 	return nil
 }
 
-// Bootstrap Flatcar nodes by:
+// BootstrapNodes bootstraps Flatcar nodes by:
 // - Downloading the Flatcar image and prepare the assets for the installer defined in immutable.yaml.
 // - Starting a server to serve the assets to the installer.
 func (i *Infrastructure) BootstrapNodes() error {

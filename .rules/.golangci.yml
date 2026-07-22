@@ -92,6 +92,10 @@ linters:
         - k8s.io/sample-apiserver
         - k8s.io/sample-cli-plugin
         - k8s.io/sample-controller
+    godoclint:
+      default: basic
+      enable:
+        - no-unused-link
     gosec:
       excludes:
         - G204
@@ -291,6 +295,13 @@ linters:
         - name: package-comments
           severity: warning
           disabled: false
+          # Disabled because we intentionally use mismatched names in two cases:
+          #   - `delete` directories use `package del` (delete is a Go builtin).
+          #   - `internal/x/*` and `pkg/x/*` packages use the `x` suffix convention
+          #     (e.g. `execx`, `iox`, `netx`) to avoid shadowing stdlib package names.
+        - name: package-directory-mismatch
+          severity: warning
+          disabled: true
         - name: range
           severity: warning
           disabled: false

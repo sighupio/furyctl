@@ -32,7 +32,8 @@ type KFDRelease struct {
 	Recommended bool
 }
 
-// Check if current KFD version is a release or a prerelease.
+// IsNotRelease reports whether the given KFD version is a prerelease
+// (or otherwise not parsable as a stable release).
 func IsNotRelease(ghRelease git.Release) bool {
 	v, err := VersionFromString(ghRelease.TagName)
 	if err != nil || v.Prerelease() != "" {
