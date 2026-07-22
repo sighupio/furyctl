@@ -13,7 +13,7 @@ volumes:
 
 steps:
   - name: install-tools
-    image: quay.io/sighup/mise:v2025.4.4
+    image: quay.io/sighup/mise:v2026.6.14
     pull: always
     depends_on:
       - clone
@@ -35,7 +35,7 @@ steps:
         eval "$(mise activate bash --shims)"
 
   - name: prepare
-    image: quay.io/sighup/mise:v2025.4.4
+    image: quay.io/sighup/mise:v2026.6.14
     pull: always
     depends_on:
       - install-tools
@@ -54,7 +54,7 @@ steps:
         path: /mise-data
 
   - name: license
-    image: quay.io/sighup/mise:v2025.4.4
+    image: quay.io/sighup/mise:v2026.6.14
     pull: always
     depends_on:
       - prepare
@@ -72,7 +72,7 @@ steps:
         path: /mise-data
 
   - name: lint
-    image: quay.io/sighup/mise:v2025.4.4
+    image: quay.io/sighup/mise:v2026.6.14
     pull: always
     depends_on:
       - prepare
@@ -90,7 +90,7 @@ steps:
         path: /mise-data
 
   - name: test-unit
-    image: quay.io/sighup/mise:v2025.4.4
+    image: quay.io/sighup/mise:v2026.6.14
     pull: always
     depends_on:
       - prepare
@@ -108,7 +108,7 @@ steps:
         path: /mise-data
 
   - name: test-integration
-    image: quay.io/sighup/mise:v2025.4.4
+    image: quay.io/sighup/mise:v2026.6.14
     pull: always
     depends_on:
       - prepare
@@ -133,7 +133,7 @@ steps:
         path: /mise-data
 
   - name: test-flags
-    image: quay.io/sighup/mise:v2025.4.4
+    image: quay.io/sighup/mise:v2026.6.14
     pull: always
     depends_on:
       - prepare
@@ -151,7 +151,7 @@ steps:
         path: /mise-data
 
   - name: test-e2e
-    image: quay.io/sighup/mise:v2025.4.4
+    image: quay.io/sighup/mise:v2026.6.14
     pull: always
     depends_on:
       - prepare
@@ -193,7 +193,7 @@ steps:
         path: /mise-data
 
   - name: build
-    image: quay.io/sighup/mise:v2025.4.4
+    image: quay.io/sighup/mise:v2026.6.14
     pull: always
     depends_on:
       - lint
@@ -241,7 +241,7 @@ steps:
           - refs/tags/v**
 
   - name: build-release
-    image: quay.io/sighup/mise:v2025.4.4
+    image: quay.io/sighup/mise:v2026.6.14
     pull: always
     depends_on:
       - prepare-release-notes
