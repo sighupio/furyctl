@@ -81,7 +81,7 @@ func (v *Validator) Validate(flags *FlagsConfig) []ValidationError {
 	return validationErrors
 }
 
-// ValidateIndividualFlag ValidateFlagValue is a public wrapper for testing the flag value validation.
+// ValidateIndividualFlag is a public wrapper around validateFlagValue, exposed for testing.
 func (v *Validator) ValidateIndividualFlag(flagName string, value any, flagInfo FlagInfo) error {
 	return v.validateFlagValue(flagName, value, flagInfo)
 }

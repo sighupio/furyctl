@@ -49,7 +49,7 @@ func (lrw *loggingResponseWriter) Write(b []byte) (int, error) {
 	return n, nil
 }
 
-// Start an HTTP server serving a path in the file system on a custom address and port, logging each request.
+// Path starts an HTTP server serving a path in the file system on a custom address and port, logging each request.
 // The server stops when the user presses ENTER or once every node reports "booted".
 func Path(address, port, root string, nodesStatus map[string]string) error {
 	// ENTER and all-nodes-booted both cancel this context to stop the server; cancel() is

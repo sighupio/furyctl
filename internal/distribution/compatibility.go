@@ -1,6 +1,8 @@
 // Copyright (c) 2017-present SIGHUP s.r.l All rights reserved.
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
+
+// Package distribution provides compatibility checks for distribution versions.
 package distribution
 
 import (
@@ -120,7 +122,8 @@ type CompatibilityCheck struct {
 	distributionVersion string
 }
 
-// Check the minimal KDF version supported by furyctl.
+// IsReleaseUnsupportedByFuryctl reports whether the given release is below
+// the minimal KFD version supported by furyctl.
 func IsReleaseUnsupportedByFuryctl(ghRelease git.Release) bool {
 	distributionVersion := ghRelease.TagName
 

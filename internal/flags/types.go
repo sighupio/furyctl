@@ -56,8 +56,9 @@ const (
 	FlagTypeStringSlice FlagType = "stringSlice"
 	FlagTypeDuration    FlagType = "duration"
 
-	// Default timeout values.
-	DefaultTimeoutSeconds         = 3600
+	// DefaultTimeoutSeconds is the default timeout for cluster operations, in seconds.
+	DefaultTimeoutSeconds = 3600
+	// DefaultPodRunningCheckTimeout is the default timeout for the pod-running check, in seconds.
 	DefaultPodRunningCheckTimeout = 300
 
 	// ValidationSeverityFatal indicates a critical error that should stop execution.
