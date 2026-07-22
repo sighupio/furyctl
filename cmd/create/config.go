@@ -88,7 +88,7 @@ func NewConfigCmd() *cobra.Command {
 
 			gitProtocol := viper.GetString("git-protocol")
 
-			typedGitProtocol, err := git.NewProtocol(gitProtocol)
+			typedGitProtocol, err := git.ParseProtocol(gitProtocol)
 			if err != nil {
 				return fmt.Errorf("%w: %w", ErrParsingFlag, err)
 			}

@@ -331,7 +331,7 @@ func getDiffCommandFlags() (DiffCommandFlags, error) {
 
 	gitProtocol := viper.GetString("git-protocol")
 
-	typedGitProtocol, err := git.NewProtocol(gitProtocol)
+	typedGitProtocol, err := git.ParseProtocol(gitProtocol)
 	if err != nil {
 		return DiffCommandFlags{}, fmt.Errorf("%w: %w", ErrParsingFlag, err)
 	}

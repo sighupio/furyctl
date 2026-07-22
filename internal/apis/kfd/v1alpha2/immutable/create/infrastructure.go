@@ -129,7 +129,6 @@ func (i *Infrastructure) Exec(_ string, upgradeState *upgrade.State) error {
 	}
 
 	versionVars := map[any]any{}
-	//nolint:modernize // maps.Copy requires identical map types
 	for name, value := range buildVersionVars(i.kfdManifest.Kubernetes.Immutable.Version, i.KubectlPath, immutableAssets) {
 		versionVars[name] = value
 	}

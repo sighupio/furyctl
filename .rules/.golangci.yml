@@ -96,6 +96,7 @@ linters:
       default: basic
       enable:
         - no-unused-link
+        - require-stdlib-doclink
     gosec:
       excludes:
         - G204

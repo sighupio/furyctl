@@ -51,7 +51,8 @@ func newFormatterHook(writer io.Writer, formatter logrus.Formatter, logLevels []
 	}
 }
 
-func InitLog(logFile *os.File, debug, disableColors bool) { //nolint:revive // debug is a boolean flag
+//revive:disable:flag-parameter // debug is a boolean flag
+func InitLog(logFile *os.File, debug, disableColors bool) {
 	logrus.SetOutput(io.Discard)
 
 	stdLevels := []logrus.Level{

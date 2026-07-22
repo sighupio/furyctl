@@ -83,7 +83,7 @@ func MaybePrepare() error {
 	return nil
 }
 
-//nolint:revive // force is an explicit user choice (--force-extract), not an internal mode toggle.
+//revive:disable:flag-parameter // force is an explicit user choice (--force-extract), not an internal mode toggle.
 func prepare(bundle, outDir string, force bool) (string, error) {
 	bundle, err := filepath.Abs(bundle)
 	if err != nil {

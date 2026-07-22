@@ -61,7 +61,7 @@ func NewConfigCmd() *cobra.Command {
 			outDir := viper.GetString("outdir")
 			distroPatchesLocation := viper.GetString("distro-patches")
 
-			typedGitProtocol, err := git.NewProtocol(gitProtocol)
+			typedGitProtocol, err := git.ParseProtocol(gitProtocol)
 			if err != nil {
 				return fmt.Errorf("%w: %w", ErrParsingFlag, err)
 			}

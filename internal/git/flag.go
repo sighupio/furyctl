@@ -20,7 +20,7 @@ func (p *ProtocolFlag) String() string {
 }
 
 func (p *ProtocolFlag) Set(value string) error {
-	protocol, err := NewProtocol(value)
+	protocol, err := ParseProtocol(value)
 	if err != nil {
 		return fmt.Errorf("%w: \"%s\". Supported protocols are %s",
 			ErrUnsupportedGitProtocol,

@@ -19,7 +19,7 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-// loggingResponseWriter wraps http.ResponseWriter to capture status code and bytes written.
+// loggingResponseWriter wraps [http.ResponseWriter] to capture status code and bytes written.
 type loggingResponseWriter struct {
 	http.ResponseWriter
 

@@ -61,7 +61,7 @@ func NewDependenciesCmd() *cobra.Command {
 			distroPatchesLocation := viper.GetString("distro-patches")
 			binPath := viper.GetString("bin-path")
 
-			typedGitProtocol, err := git.NewProtocol(gitProtocol)
+			typedGitProtocol, err := git.ParseProtocol(gitProtocol)
 			if err != nil {
 				cmdEvent.AddErrorMessage(err)
 				tracker.Track(cmdEvent)
