@@ -120,7 +120,7 @@ spec:
 func TestInjectMapUsesJSONTagKeys(t *testing.T) {
 	t.Parallel()
 
-	// Mirrors common.InjectType (kept local to avoid an import cycle).
+	// Mirrors phases.InjectType (kept local to avoid an import cycle).
 	type injectType struct {
 		Data private.SpecDistribution `json:"data"`
 	}

@@ -12,7 +12,7 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/sighupio/furyctl/internal/apis/config"
-	"github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/ekscluster/common"
+	"github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/ekscluster/phases"
 	"github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/ekscluster/private"
 	"github.com/sighupio/furyctl/internal/cluster"
 	"github.com/sighupio/furyctl/internal/tool/terraform"
@@ -21,7 +21,7 @@ import (
 )
 
 type Infrastructure struct {
-	*common.Infrastructure
+	*phases.Infrastructure
 
 	tfRunner *terraform.Runner
 	dryRun   bool
@@ -40,7 +40,7 @@ func NewInfrastructure(
 	)
 
 	return &Infrastructure{
-		Infrastructure: &common.Infrastructure{
+		Infrastructure: &phases.Infrastructure{
 			OperationPhase: phase,
 			FuryctlConf:    furyctlConf,
 			ConfigPath:     paths.ConfigPath,

@@ -251,7 +251,6 @@ func (dd *Downloader) DownloadModules(kfd config.KFD, gitPrefix, kind string) er
 
 				if err := dd.client.Download(src, dst); err != nil {
 					errs = append(errs, fmt.Errorf("%w '%s': %v", dist.ErrDownloadingFolder, src, err))
-
 					if _, err := os.Stat(dst); err == nil {
 						if err := os.RemoveAll(dst); err != nil {
 							logrus.Warningf("Error while cleaning up folder after failing download: %v", err)

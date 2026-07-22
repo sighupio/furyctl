@@ -16,10 +16,12 @@ linters:
     - forbidigo
     - ireturn
     - maintidx
+    - noinlineerr
     - rowserrcheck
     - sqlclosecheck
     - varnamelen
     - wastedassign
+    - wsl # deprecated, replaced by wsl_v5 since golangci-lint v2.2.0
   settings:
     cyclop:
       max-complexity: 80
@@ -388,12 +390,9 @@ linters:
         - const C
         - T any
         - m map[string]int
-    wsl:
-      allow-multiline-assign: true
-      force-case-trailing-whitespace: 1
-      allow-separated-leading-comment: false
-      allow-cuddle-declarations: false
-      force-err-cuddling: true
+    wsl_v5:
+      allow-whole-block: true
+      default: all
   exclusions:
     generated: disable
     presets:

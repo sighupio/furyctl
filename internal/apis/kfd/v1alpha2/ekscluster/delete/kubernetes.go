@@ -14,7 +14,7 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/sighupio/furyctl/internal/apis/config"
-	"github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/ekscluster/common"
+	"github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/ekscluster/phases"
 	"github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/ekscluster/private"
 	"github.com/sighupio/furyctl/internal/cluster"
 	"github.com/sighupio/furyctl/internal/tool/awscli"
@@ -39,7 +39,7 @@ var (
 )
 
 type Kubernetes struct {
-	*common.Kubernetes
+	*phases.Kubernetes
 
 	tfRunner  *terraform.Runner
 	awsRunner *awscli.Runner
@@ -59,7 +59,7 @@ func NewKubernetes(
 	)
 
 	return &Kubernetes{
-		Kubernetes: &common.Kubernetes{
+		Kubernetes: &phases.Kubernetes{
 			OperationPhase:                     phase,
 			FuryctlConf:                        furyctlConf,
 			FuryctlConfPath:                    paths.ConfigPath,

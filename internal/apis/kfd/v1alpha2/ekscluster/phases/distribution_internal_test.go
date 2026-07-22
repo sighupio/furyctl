@@ -4,7 +4,7 @@
 
 //go:build unit
 
-package common
+package phases
 
 import (
 	"os"
