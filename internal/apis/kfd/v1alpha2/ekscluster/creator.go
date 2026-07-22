@@ -66,6 +66,7 @@ type ClusterCreator struct {
 type Phases struct {
 	*create.PreFlight
 	*commcreate.Plugins
+
 	Infrastructure upgrade.OperatorPhaseAsync
 	Kubernetes     upgrade.OperatorPhaseAsync
 	Distribution   upgrade.ReducersOperatorPhaseAsync[reducers.Reducers]

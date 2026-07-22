@@ -49,6 +49,7 @@ type ClusterSkipsCmdFlags struct {
 type ClusterCmdFlags struct {
 	ClusterSkipsCmdFlags
 	Timeouts
+
 	Debug                 bool
 	FuryctlPath           string
 	DistroLocation        string

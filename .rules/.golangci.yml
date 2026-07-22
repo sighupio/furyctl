@@ -5,7 +5,7 @@
 version: "2"
 run:
   concurrency: 2
-  go: 1.24.13
+  go: 1.25.12
   modules-download-mode: readonly
 
 linters:
@@ -16,12 +16,14 @@ linters:
     - forbidigo
     - ireturn
     - maintidx
+    - nlreturn # too strict and mostly code is not more readable
     - noinlineerr
     - rowserrcheck
     - sqlclosecheck
     - varnamelen
     - wastedassign
     - wsl # deprecated, replaced by wsl_v5 since golangci-lint v2.2.0
+    - wsl_v5 # too strict and mostly code is not more readable
   settings:
     cyclop:
       max-complexity: 80
@@ -393,9 +395,6 @@ linters:
         - const C
         - T any
         - m map[string]int
-    wsl_v5:
-      allow-whole-block: true
-      default: all
   exclusions:
     generated: disable
     presets:

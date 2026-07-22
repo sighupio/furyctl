@@ -25,6 +25,7 @@ import (
 // Infrastructure wraps the common infrastructure phase.
 type Infrastructure struct {
 	*cluster.OperationPhase
+
 	paths         cluster.CreatorPaths
 	upgrade       *upgrade.Upgrade
 	upgradeNode   string

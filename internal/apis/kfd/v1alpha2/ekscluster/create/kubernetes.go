@@ -147,7 +147,7 @@ func (k *Kubernetes) SetUpgrade(upgradeEnabled bool) {
 }
 
 func (k *Kubernetes) Stop() error {
-	return cluster.StopAll(
+	if err := cluster.StopAll(
 		func() error {
 			logrus.Debug("Stopping terraform...")
 
@@ -166,7 +166,11 @@ func (k *Kubernetes) Stop() error {
 
 			return nil
 		},
-	)
+	); err != nil {
+		return fmt.Errorf("error stopping kubernetes: %w", err)
+	}
+
+	return nil
 }
 
 func (k *Kubernetes) preKubernetes(

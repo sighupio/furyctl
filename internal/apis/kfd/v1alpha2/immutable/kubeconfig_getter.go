@@ -5,7 +5,6 @@
 package immutable
 
 import (
-	"errors"
 	"fmt"
 	"os"
 	"path"
@@ -22,10 +21,9 @@ import (
 	"github.com/sighupio/furyctl/pkg/template"
 )
 
-var ErrKubeconfigGetNotImplemented = errors.New("kubeconfig get not implemented for Immutable kind")
-
 type KubeconfigGetter struct {
 	*cluster.OperationPhase
+
 	furyctlConf public.ImmutableKfdV1Alpha2
 	kfdManifest config.KFD
 	distroPath  string
@@ -43,7 +41,9 @@ func (k *KubeconfigGetter) SetProperties(props []cluster.KubeconfigProperty) {
 }
 
 func (k *KubeconfigGetter) SetProperty(name string, value any) {
-	switch strings.ToLower(name) {
+	lcName := strings.ToLower(name)
+
+	switch lcName {
 	case cluster.KubeconfigPropertyFuryctlConf:
 		if s, ok := value.(public.ImmutableKfdV1Alpha2); ok {
 			k.furyctlConf = s
@@ -73,6 +73,9 @@ func (k *KubeconfigGetter) SetProperty(name string, value any) {
 		if s, ok := value.(string); ok {
 			k.binPath = s
 		}
+
+	default:
+		logrus.Debugf("ignoring unknown property %q", lcName)
 	}
 }
 

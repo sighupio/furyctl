@@ -4,7 +4,11 @@
 
 package cluster
 
-import "golang.org/x/sync/errgroup"
+import (
+	"fmt"
+
+	"golang.org/x/sync/errgroup"
+)
 
 // StopAll runs the given stop functions concurrently, waits for all of them to finish, and returns
 // the first non-nil error (or nil if they all succeed).
@@ -15,5 +19,9 @@ func StopAll(fns ...func() error) error {
 		eg.Go(fn)
 	}
 
-	return eg.Wait()
+	if err := eg.Wait(); err != nil {
+		return fmt.Errorf("error waiting for stop functions: %w", err)
+	}
+
+	return nil
 }

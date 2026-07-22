@@ -76,7 +76,9 @@ func (c *ClusterCreator) SetProperties(props []cluster.CreatorProperty) {
 }
 
 func (c *ClusterCreator) SetProperty(name string, value any) {
-	switch strings.ToLower(name) {
+	lcName := strings.ToLower(name)
+
+	switch lcName {
 	case cluster.CreatorPropertyConfigPath:
 		if s, ok := value.(string); ok {
 			c.paths.ConfigPath = s
@@ -146,6 +148,9 @@ func (c *ClusterCreator) SetProperty(name string, value any) {
 		if s, ok := value.([]string); ok {
 			c.postApplyPhases = s
 		}
+
+	default:
+		logrus.Debugf("ignoring unknown property %q", lcName)
 	}
 }
 
@@ -648,6 +653,9 @@ func (c *ClusterCreator) extraPhases(
 					return fmt.Errorf("error while executing plugins phase: %w", err)
 				}
 			}
+
+		default:
+			logrus.Debugf("ignoring unknown post-apply phase %q", phase)
 		}
 	}
 
