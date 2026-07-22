@@ -138,9 +138,9 @@ func (d *Distribution) Exec() error {
 	}
 
 	if d.dryRun {
-		timestamp := time.Now().Unix()
+		timestampSec := time.Now().Unix()
 
-		if _, err := d.TFRunner.Plan(timestamp, "-destroy"); err != nil {
+		if _, err := d.TFRunner.Plan(timestampSec, "-destroy"); err != nil {
 			return fmt.Errorf("error running terraform plan: %w", err)
 		}
 
