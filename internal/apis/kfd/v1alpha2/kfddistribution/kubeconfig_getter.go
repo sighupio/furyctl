@@ -17,7 +17,7 @@ import (
 	"github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/kfddistribution/public"
 	"github.com/sighupio/furyctl/internal/cluster"
 	"github.com/sighupio/furyctl/internal/distribution"
-	"github.com/sighupio/furyctl/internal/parser"
+	parserx "github.com/sighupio/furyctl/internal/parser"
 	iox "github.com/sighupio/furyctl/internal/x/io"
 )
 
@@ -70,7 +70,7 @@ func (k *KubeconfigGetter) Get() error {
 
 	var err error
 
-	cfgParser := parser.NewConfigParser(k.configPath)
+	cfgParser := parserx.NewConfigParser(k.configPath)
 
 	kubeconfigPath := os.Getenv("KUBECONFIG")
 

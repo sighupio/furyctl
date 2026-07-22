@@ -2,14 +2,14 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-package parser_test
+package parserx_test
 
 import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/sighupio/furyctl/internal/parser"
+	parserx "github.com/sighupio/furyctl/internal/parser"
 )
 
 func TestNewTfPlanParser(t *testing.T) {
@@ -22,14 +22,14 @@ func TestNewTfPlanParser(t *testing.T) {
 	tests := []struct {
 		name string
 		args args
-		want *parser.TfPlanParser
+		want *parserx.TfPlanParser
 	}{
 		{
 			name: "test empty plan",
 			args: args{
 				plan: ``,
 			},
-			want: &parser.TfPlanParser{
+			want: &parserx.TfPlanParser{
 				Plan: ``,
 			},
 		},
@@ -39,7 +39,7 @@ func TestNewTfPlanParser(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			require.Equal(t, tt.want, parser.NewTfPlanParser(tt.args.plan))
+			require.Equal(t, tt.want, parserx.NewTfPlanParser(tt.args.plan))
 		})
 	}
 }
@@ -54,14 +54,14 @@ func TestTfPlanParser_Parse(t *testing.T) {
 	tests := []struct {
 		name   string
 		fields fields
-		want   *parser.TfPlan
+		want   *parserx.TfPlan
 	}{
 		{
 			name: "test empty plan",
 			fields: fields{
 				plan: ``,
 			},
-			want: &parser.TfPlan{
+			want: &parserx.TfPlan{
 				Destroy: []string{},
 				Add:     []string{},
 				Change:  []string{},
@@ -72,7 +72,7 @@ func TestTfPlanParser_Parse(t *testing.T) {
 			fields: fields{
 				plan: `No changes. Infrastructure is up-to-date.`,
 			},
-			want: &parser.TfPlan{
+			want: &parserx.TfPlan{
 				Destroy: []string{},
 				Add:     []string{},
 				Change:  []string{},
@@ -151,7 +151,7 @@ Changes to Outputs:
   + vpc_cidr_block              = "10.0.0.0/16"
   + vpc_id                      = (known after apply)`,
 			},
-			want: &parser.TfPlan{
+			want: &parserx.TfPlan{
 				Destroy: []string{},
 				Add:     []string{"aws_eip", "aws_vpc"},
 				Change:  []string{},
@@ -206,7 +206,7 @@ Changes to Outputs:
       + "10.0.152.0/24",
     ]`,
 			},
-			want: &parser.TfPlan{
+			want: &parserx.TfPlan{
 				Destroy: []string{"aws_route_table_association", "aws_subnet"},
 				Add:     []string{"aws_route_table_association", "aws_subnet"},
 				Change:  []string{},
@@ -256,7 +256,7 @@ Terraform will perform the following actions:
 
 Plan: 2 to add, 1 to change, 2 to destroy.`,
 			},
-			want: &parser.TfPlan{
+			want: &parserx.TfPlan{
 				Destroy: []string{"local_file", "null_resource"},
 				Add:     []string{"local_file", "null_resource"},
 				Change:  []string{"aws_eip"},
@@ -308,7 +308,7 @@ Changes to Outputs:
     ] -> null
 `,
 			},
-			want: &parser.TfPlan{
+			want: &parserx.TfPlan{
 				Destroy: []string{"aws_eip", "aws_eip_association"},
 				Add:     []string{},
 				Change:  []string{},
@@ -320,7 +320,7 @@ Changes to Outputs:
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			p := &parser.TfPlanParser{
+			p := &parserx.TfPlanParser{
 				Plan: tt.fields.plan,
 			}
 

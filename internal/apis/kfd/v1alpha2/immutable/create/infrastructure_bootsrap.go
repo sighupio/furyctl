@@ -21,7 +21,7 @@ import (
 	"github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/immutable/public"
 	"github.com/sighupio/furyctl/internal/tool/butane"
 	iox "github.com/sighupio/furyctl/internal/x/io"
-	"github.com/sighupio/furyctl/pkg/template"
+	templatex "github.com/sighupio/furyctl/pkg/template"
 	netx "github.com/sighupio/furyctl/pkg/x/net"
 	yamlx "github.com/sighupio/furyctl/pkg/x/yaml"
 )
@@ -276,7 +276,7 @@ func buildVersionVars(version, kubectlBin string, a assets) map[string]any {
 // Render templates for the root of the server.
 func (i *Infrastructure) renderRootTemplates() error {
 	// Create data that will be passed to the template.
-	cfg := template.Config{
+	cfg := templatex.Config{
 		Data: map[string]map[any]any{
 			"data": {
 				"ipxeServerURL":                 i.furyctlConf.Spec.Infrastructure.IpxeServer.Url,
@@ -423,7 +423,7 @@ func (i *Infrastructure) renderButaneTemplates() error {
 		}
 
 		// Create data that will be passed to the template.
-		cfg := template.Config{
+		cfg := templatex.Config{
 			Data: map[string]map[any]any{
 				"data": {
 					"SSHUser":        i.furyctlConf.Spec.Infrastructure.Ssh.Username,
@@ -702,7 +702,7 @@ func (i *Infrastructure) downloadAssets(usedArchitectures []string) error {
 	return nil
 }
 
-// Generate node-specific boot iPXE file from template.
+// Generate node-specific boot iPXE file from templatex.
 func (i *Infrastructure) generateNodeBootFile(node public.SpecInfrastructureNode) error {
 	normalizedMAC := strings.ToUpper(strings.ReplaceAll(string(node.MacAddress), ":", "-"))
 	bootDir := filepath.Join(i.Path, "server", "boot")

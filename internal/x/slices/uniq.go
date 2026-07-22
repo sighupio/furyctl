@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-package slices
+package slicesx
 
 func Uniq[T comparable](s []T) []T {
 	unique := make(map[T]bool, len(s))

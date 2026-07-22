@@ -23,7 +23,7 @@ import (
 	execx "github.com/sighupio/furyctl/internal/x/exec"
 	"github.com/sighupio/furyctl/pkg/dependencies"
 	dist "github.com/sighupio/furyctl/pkg/distribution"
-	"github.com/sighupio/furyctl/pkg/template"
+	templatex "github.com/sighupio/furyctl/pkg/template"
 	netx "github.com/sighupio/furyctl/pkg/x/net"
 	yamlx "github.com/sighupio/furyctl/pkg/x/yaml"
 )
@@ -160,7 +160,7 @@ The command will dump into a 'distribution' folder in the working directory all 
 				cmdEvent.AddErrorMessage(err)
 				tracker.Track(cmdEvent)
 
-				if errors.Is(err, template.ErrTargetIsNotEmpty) {
+				if errors.Is(err, templatex.ErrTargetIsNotEmpty) {
 					return fmt.Errorf("%w: \"%s\"", ErrTargetIsNotEmpty, dumpDir)
 				}
 

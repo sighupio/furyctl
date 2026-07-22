@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-package template_test
+package templatex_test
 
 import (
 	"errors"
@@ -11,7 +11,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/sighupio/furyctl/pkg/merge"
-	"github.com/sighupio/furyctl/pkg/template"
+	templatex "github.com/sighupio/furyctl/pkg/template"
 )
 
 func TestNewConfig(t *testing.T) {
@@ -22,7 +22,7 @@ func TestNewConfig(t *testing.T) {
 		tplSource *merge.Merger
 		data      *merge.Merger
 		excluded  []string
-		want      template.Config
+		want      templatex.Config
 		wantErr   bool
 		err       error
 	}{
@@ -31,9 +31,9 @@ func TestNewConfig(t *testing.T) {
 			tplSource: &merge.Merger{},
 			data:      &merge.Merger{},
 			excluded:  []string{},
-			want:      template.Config{},
+			want:      templatex.Config{},
 			wantErr:   true,
-			err:       template.ErrTemplateSourceCustomIsNil,
+			err:       templatex.ErrTemplateSourceCustomIsNil,
 		},
 		{
 			desc: "should return an error if data source base is nil",
@@ -55,9 +55,9 @@ func TestNewConfig(t *testing.T) {
 			),
 			data:     &merge.Merger{},
 			excluded: []string{},
-			want:     template.Config{},
+			want:     templatex.Config{},
 			wantErr:  true,
-			err:      template.ErrDataSourceBaseIsNil,
+			err:      templatex.ErrDataSourceBaseIsNil,
 		},
 		{
 			desc: "should return a config with the correct values",
@@ -99,8 +99,8 @@ func TestNewConfig(t *testing.T) {
 				}, ".data"),
 			),
 			excluded: []string{"baz", "ar"},
-			want: template.Config{
-				Templates: template.Templates{
+			want: templatex.Config{
+				Templates: templatex.Templates{
 					Includes: []string{},
 					Excludes: []string{"foo", "bar", "baz", "ar"},
 				},
@@ -124,7 +124,7 @@ func TestNewConfig(t *testing.T) {
 		t.Run(tc.desc, func(t *testing.T) {
 			t.Parallel()
 
-			got, err := template.NewConfig(tc.tplSource, tc.data, tc.excluded)
+			got, err := templatex.NewConfig(tc.tplSource, tc.data, tc.excluded)
 			if err != nil {
 				if !tc.wantErr {
 					t.Fatalf("unexpected error: %v", err)

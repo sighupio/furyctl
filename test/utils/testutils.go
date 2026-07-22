@@ -18,8 +18,8 @@ import (
 	"strings"
 	"time"
 
-	. "github.com/onsi/ginkgo/v2" //nolint:revive,staticcheck // dot import is required for ginkgo
-	. "github.com/onsi/gomega"    //nolint:revive,staticcheck // dot import is required for gomega
+	. "github.com/onsi/ginkgo/v2" //nolint:staticcheck,revive // dot import is required for ginkgo
+	. "github.com/onsi/gomega"    //nolint:staticcheck,revive // dot import is required for gomega
 	"github.com/onsi/gomega/gexec"
 
 	"github.com/sighupio/furyctl/internal/cluster"

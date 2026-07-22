@@ -20,7 +20,7 @@ import (
 	"github.com/sighupio/furyctl/internal/tool/shell"
 	execx "github.com/sighupio/furyctl/internal/x/exec"
 	iox "github.com/sighupio/furyctl/internal/x/io"
-	"github.com/sighupio/furyctl/pkg/template"
+	templatex "github.com/sighupio/furyctl/pkg/template"
 	yamlx "github.com/sighupio/furyctl/pkg/x/yaml"
 )
 
@@ -104,7 +104,7 @@ func (d *Distribution) Exec() error {
 		return fmt.Errorf("error creating furyctl merger: %w", err)
 	}
 
-	mCfg, err := template.NewConfigWithoutData(furyctlMerger, []string{"terraform", ".gitignore", "manifests/aws"})
+	mCfg, err := templatex.NewConfigWithoutData(furyctlMerger, []string{"terraform", ".gitignore", "manifests/aws"})
 	if err != nil {
 		return fmt.Errorf("error creating template config: %w", err)
 	}
@@ -170,7 +170,7 @@ func (d *Distribution) Exec() error {
 	return nil
 }
 
-func (d *Distribution) injectStoredConfig(cfg template.Config) (template.Config, error) {
+func (d *Distribution) injectStoredConfig(cfg templatex.Config) (templatex.Config, error) {
 	storedCfg := map[any]any{}
 
 	storedCfgStr, err := d.stateStore.GetConfig()

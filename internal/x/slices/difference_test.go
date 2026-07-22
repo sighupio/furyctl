@@ -4,14 +4,14 @@
 
 //go:build unit
 
-package slices_test
+package slicesx_test
 
 import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/sighupio/furyctl/internal/x/slices"
+	slicesx "github.com/sighupio/furyctl/internal/x/slices"
 )
 
 func TestDifference(t *testing.T) {
@@ -52,7 +52,7 @@ func TestDifference(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			require.Equal(t, tt.want, slices.Difference(tt.a, tt.b))
+			require.Equal(t, tt.want, slicesx.Difference(tt.a, tt.b))
 		})
 	}
 }

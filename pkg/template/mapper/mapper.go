@@ -12,7 +12,7 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/sighupio/furyctl/internal/parser"
+	parserx "github.com/sighupio/furyctl/internal/parser"
 )
 
 var RelativePathRegexp = regexp.MustCompile(`^\.{1,}\/`)
@@ -123,7 +123,7 @@ func (m *Mapper) injectDynamicValuesAndPaths(
 }
 
 func (m *Mapper) injectDynamicValuesAndPathsString(value string) (string, error) {
-	cfgParser := parser.NewConfigParser(m.furyctlConfDir)
+	cfgParser := parserx.NewConfigParser(m.furyctlConfDir)
 
 	// Use the shared parser method to handle multiple dynamic values.
 	parsedValue, err := cfgParser.ParseMultipleDynamicValues(value)

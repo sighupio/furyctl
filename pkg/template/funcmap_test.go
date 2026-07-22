@@ -4,7 +4,7 @@
 
 //go:build unit
 
-package template_test
+package templatex_test
 
 import (
 	"testing"
@@ -14,17 +14,17 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/sighupio/furyctl/pkg/template"
+	templatex "github.com/sighupio/furyctl/pkg/template"
 )
 
 func TestNewFuncMap(t *testing.T) {
-	f := template.NewFuncMap()
+	f := templatex.NewFuncMap()
 
 	assert.NotEmpty(t, f.FuncMap)
 }
 
 func TestFuncMap_Add(t *testing.T) {
-	f := template.NewFuncMap()
+	f := templatex.NewFuncMap()
 
 	f.Add("test", func() string {
 		return "test"
@@ -34,7 +34,7 @@ func TestFuncMap_Add(t *testing.T) {
 }
 
 func TestFuncMap_Delete(t *testing.T) {
-	f := template.NewFuncMap()
+	f := templatex.NewFuncMap()
 
 	f.Add("test", func() string {
 		return "test"
@@ -77,7 +77,7 @@ func TestToYAML(t *testing.T) {
 		t.Run(tC.desc, func(t *testing.T) {
 			t.Parallel()
 
-			got := template.ToYAML(tC.data)
+			got := templatex.ToYAML(tC.data)
 
 			require.Equal(t, tC.want, got)
 		})
@@ -117,7 +117,7 @@ func TestFromYAML(t *testing.T) {
 		t.Run(tC.desc, func(t *testing.T) {
 			t.Parallel()
 
-			got := template.FromYAML(tC.data)
+			got := templatex.FromYAML(tC.data)
 
 			require.True(t, cmp.Equal(got, tC.want, cmpopts.EquateEmpty()), "expected %+v, got %+v", tC.want, got)
 		})
@@ -129,7 +129,7 @@ func TestDigAny_Success(t *testing.T) {
 		"a": map[any]any{"b": "value"},
 	}
 
-	got, err := template.DigAny("a", "b", "default", dict)
+	got, err := templatex.DigAny("a", "b", "default", dict)
 	require.NoError(t, err)
 	require.Equal(t, "value", got)
 }
@@ -137,30 +137,30 @@ func TestDigAny_Success(t *testing.T) {
 func TestDigAny_MissingKeyReturnsDefault(t *testing.T) {
 	dict := map[any]any{"a": map[any]any{"b": "value"}}
 
-	got, err := template.DigAny("a", "x", "DEF", dict)
+	got, err := templatex.DigAny("a", "x", "DEF", dict)
 	require.NoError(t, err)
 	require.Equal(t, "DEF", got)
 }
 
 func TestDigAny_InsufficientArgs(t *testing.T) {
-	_, err := template.DigAny("only-one")
-	require.ErrorIs(t, err, template.ErrDigAnyInsufficientArgs)
+	_, err := templatex.DigAny("only-one")
+	require.ErrorIs(t, err, templatex.ErrDigAnyInsufficientArgs)
 }
 
 func TestDigAny_NonStringKey(t *testing.T) {
 	dict := map[any]any{"a": map[any]any{"b": "value"}}
-	_, err := template.DigAny(123, "default", dict)
-	require.ErrorIs(t, err, template.ErrDigAnyInvalidKeyType)
+	_, err := templatex.DigAny(123, "default", dict)
+	require.ErrorIs(t, err, templatex.ErrDigAnyInvalidKeyType)
 }
 
 func TestDigAny_LastArgNotMap(t *testing.T) {
-	_, err := template.DigAny("a", "default", 123)
-	require.ErrorIs(t, err, template.ErrDigAnyInvalidDictType)
+	_, err := templatex.DigAny("a", "default", 123)
+	require.ErrorIs(t, err, templatex.ErrDigAnyInvalidDictType)
 }
 
 func TestDigAny_NestedNotMapReturnsDefault(t *testing.T) {
 	dict := map[any]any{"a": "not-a-map"}
-	got, err := template.DigAny("a", "b", "DEF", dict)
+	got, err := templatex.DigAny("a", "b", "DEF", dict)
 	require.NoError(t, err)
 	require.Equal(t, "DEF", got)
 }

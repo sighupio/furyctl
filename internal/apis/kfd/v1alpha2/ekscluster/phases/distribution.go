@@ -18,7 +18,7 @@ import (
 	"github.com/sighupio/furyctl/internal/state"
 	"github.com/sighupio/furyctl/internal/tool/terraform"
 	"github.com/sighupio/furyctl/pkg/merge"
-	"github.com/sighupio/furyctl/pkg/template"
+	templatex "github.com/sighupio/furyctl/pkg/template"
 	yamlx "github.com/sighupio/furyctl/pkg/x/yaml"
 )
 
@@ -52,7 +52,7 @@ type InjectType struct {
 func (d *Distribution) PreparePreTerraform() (
 	*merge.Merger,
 	*merge.Merger,
-	*template.Config,
+	*templatex.Config,
 	error,
 ) {
 	if err := d.CreateRootFolder(); err != nil {
@@ -74,7 +74,7 @@ func (d *Distribution) PreparePreTerraform() (
 		return nil, nil, nil, err
 	}
 
-	tfCfg, err := template.NewConfig(furyctlMerger, preTfMerger, []string{"manifests", "scripts", ".gitignore"})
+	tfCfg, err := templatex.NewConfig(furyctlMerger, preTfMerger, []string{"manifests", "scripts", ".gitignore"})
 	if err != nil {
 		return nil, nil, nil, fmt.Errorf("error creating template config: %w", err)
 	}
@@ -99,13 +99,13 @@ func (d *Distribution) PreparePreTerraform() (
 func (d *Distribution) PreparePostTerraform(
 	furyctlMerger *merge.Merger,
 	preTfMerger *merge.Merger,
-) (*template.Config, error) {
+) (*templatex.Config, error) {
 	postTfMerger, err := d.InjectDataPostTf(preTfMerger)
 	if err != nil {
 		return nil, err
 	}
 
-	mCfg, err := template.NewConfig(furyctlMerger, postTfMerger, []string{"terraform", ".gitignore"})
+	mCfg, err := templatex.NewConfig(furyctlMerger, postTfMerger, []string{"terraform", ".gitignore"})
 	if err != nil {
 		return nil, fmt.Errorf("error creating template config: %w", err)
 	}
@@ -133,7 +133,7 @@ func (d *Distribution) PreparePostTerraform(
 	return &mCfg, nil
 }
 
-func (d *Distribution) InjectStoredConfig(cfg *template.Config) error {
+func (d *Distribution) InjectStoredConfig(cfg *templatex.Config) error {
 	storedCfg := map[any]any{}
 
 	storedCfgStr, err := d.StateStore.GetConfig()
