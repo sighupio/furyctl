@@ -244,6 +244,7 @@ func (t *nodeStatusTable) termWidth() int {
 		return 0
 	}
 
+	//nolint:gosec // G115: fd fits in int on all supported platforms.
 	w, _, err := term.GetSize(int(f.Fd()))
 	if err != nil || w <= 0 {
 		return 0

@@ -99,8 +99,10 @@ linters:
         - require-stdlib-doclink
     gosec:
       excludes:
-        - G204
-        - G101
+        - G101 # hardcoded credentials: false positives on token-shaped strings.
+        - G204 # subprocess launched with variable: furyctl runs external tools (terraform, kubectl, etc.) by design.
+        - G703 # path traversal via taint: paths come from user-provided furyctl.yaml or env (kubeconfig).
+        - G704 # SSRF via taint: URLs are hardcoded or from user config / curated distribution manifest; CLI tool by design.
     grouper:
       const-require-single-const: true
       const-require-grouping: false
