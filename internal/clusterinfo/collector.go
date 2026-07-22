@@ -655,10 +655,8 @@ func primaryRole(labels map[string]string) string {
 	var roles []string
 
 	for k := range labels {
-		if strings.HasPrefix(k, prefix) {
-			if role := strings.TrimPrefix(k, prefix); role != "" {
-				roles = append(roles, role)
-			}
+		if role, ok := strings.CutPrefix(k, prefix); ok && role != "" {
+			roles = append(roles, role)
 		}
 	}
 

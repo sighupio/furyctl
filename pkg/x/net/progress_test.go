@@ -50,10 +50,7 @@ func writeChunked(w http.ResponseWriter, payload []byte) {
 
 	const chunk = 1_000_000
 	for off := 0; off < len(payload); off += chunk {
-		end := off + chunk
-		if end > len(payload) {
-			end = len(payload)
-		}
+		end := min(off+chunk, len(payload))
 
 		_, _ = w.Write(payload[off:end])
 

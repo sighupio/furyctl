@@ -55,9 +55,7 @@ func (b *DefaultModel) Path() string {
 func (b *DefaultModel) Get() (map[any]any, error) {
 	ret := b.content
 
-	fields := strings.Split(b.path[1:], ".")
-
-	for _, f := range fields {
+	for f := range strings.SplitSeq(b.path[1:], ".") {
 		mapAtKey, ok := ret[f]
 		if !ok {
 			return nil, fmt.Errorf("%w %s on map", errCannotAccessKey, f)

@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"regexp"
+	"slices"
 	"strings"
 
 	r3diff "github.com/r3labs/diff/v3"
@@ -75,15 +76,15 @@ func (*BaseChecker) FilterDiffFromPhase(changelog r3diff.Changelog, phasePath st
 }
 
 func (*BaseChecker) DiffToString(diffs r3diff.Changelog) string {
-	var str string
+	var buf strings.Builder
 
 	for _, diff := range diffs {
 		joinedPath := "." + strings.Join(diff.Path, ".")
 
-		str += fmt.Sprintf("%s: %v -> %v\n", joinedPath, diff.From, diff.To)
+		fmt.Fprintf(&buf, "%s: %v -> %v\n", joinedPath, diff.From, diff.To)
 	}
 
-	return str
+	return buf.String()
 }
 
 func (*BaseChecker) AssertImmutableViolations(diffs r3diff.Changelog, immutablePaths []string) []error {
@@ -231,11 +232,5 @@ func isImmutablePathChanged(change r3diff.Change, immutables []string) bool {
 	joinedPath := "." + strings.Join(change.Path, ".")
 	changePath := numbersToWildcardRegex.ReplaceAllString(joinedPath, ".*")
 
-	for _, immutable := range immutables {
-		if changePath == immutable {
-			return true
-		}
-	}
-
-	return false
+	return slices.Contains(immutables, changePath)
 }

@@ -4,7 +4,10 @@
 
 package reducers
 
-import "fmt"
+import (
+	"fmt"
+	"strings"
+)
 
 type Reducers []Reducer
 
@@ -97,15 +100,14 @@ func (rs Reducers) Combine(origin map[string]map[any]any, key string) map[string
 }
 
 func (rs Reducers) ToString() string {
-	res := ""
+	var buf strings.Builder
 
 	for _, r := range rs {
 		if r == nil {
 			continue
 		}
-
-		res += fmt.Sprintf("%s: %v -> %v\n", r.GetPath(), r.GetFrom(), r.GetTo())
+		fmt.Fprintf(&buf, "%s: %v -> %v\n", r.GetPath(), r.GetFrom(), r.GetTo())
 	}
 
-	return res
+	return buf.String()
 }

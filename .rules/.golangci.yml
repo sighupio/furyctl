@@ -368,7 +368,8 @@ linters:
         - name: unhandled-error
           arguments:
             - fmt.Printf
-            - myFunction
+            - fmt.Fprintf
+            - strings.Builder.WriteString
           severity: warning
           disabled: false
         - name: unnecessary-stmt

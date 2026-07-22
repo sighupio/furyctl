@@ -213,10 +213,8 @@ func (*Validator) validateSpecificFlag(flagName string, value any) error {
 	case "gitProtocol":
 		if str, ok := value.(string); ok {
 			validProtocols := []string{"https", "ssh"}
-			for _, valid := range validProtocols {
-				if str == valid {
-					return nil
-				}
+			if slices.Contains(validProtocols, str) {
+				return nil
 			}
 
 			return fmt.Errorf("%w: got '%s', must be one of: %s", ErrInvalidProtocol, str, strings.Join(validProtocols, ", "))
