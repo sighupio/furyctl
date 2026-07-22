@@ -52,7 +52,7 @@ func (b *Builder) FromStruct(s any, tagType string) map[any]any {
 
 		val := sVal.Field(i)
 
-		if val.Kind() == reflect.Ptr {
+		if val.Kind() == reflect.Pointer {
 			val = reflect.Indirect(val)
 		}
 

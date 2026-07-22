@@ -20,8 +20,7 @@ func AnimationDisabled() bool {
 }
 
 // ShouldAnimate reports whether f can carry animated, in-place terminal output: animation must not
-// be disabled (see AnimationDisabled) and f must be a real terminal.
+// be disabled (see AnimationDisabled), and f must be a real terminal.
 func ShouldAnimate(f *os.File) bool {
-	//nolint:gosec // G115: fd fits in int on all supported platforms.
 	return !AnimationDisabled() && term.IsTerminal(int(f.Fd()))
 }
