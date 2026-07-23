@@ -17,7 +17,7 @@ spec:
 
     ssh:
       username: "core"
-      keyPath: "${HOME}/.ssh/id_ed25519.pub"
+      privateKeyPath: "${HOME}/.ssh/id_ed25519"
 
     nodes:
       # Control Plane Node
@@ -64,9 +64,8 @@ spec:
       members:
         - hostname: "ctrl01.k8s.test.local"
 
-    etcd:
-      members:
-        - hostname: "ctrl01.k8s.test.local"
+    # Stacked etcd: co-located on the control-plane nodes by omitting the
+    # .spec.kubernetes.etcd block (an explicit etcd block means dedicated nodes).
 
     nodeGroups:
       - name: workers
@@ -101,6 +100,7 @@ spec:
 
       dr:
         type: on-premises
+        velero: {}
 
       auth:
         provider:
