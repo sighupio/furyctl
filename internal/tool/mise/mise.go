@@ -22,7 +22,7 @@ import (
 // Version is the pinned mise release furyctl bundles. It is owned by furyctl (the tool-management
 // engine), NOT by the distribution, to avoid a circular dependency with fury-distribution.
 const (
-	Version = "v2026.6.11"
+	Version = "v2026.6.14"
 
 	// File mode for the bundled mise binary (owner rwx, group/other rx).
 	binPerm = 0o755
@@ -36,10 +36,10 @@ var (
 	// Version). Linux uses the static musl build for portability across distros.
 	//nolint:gochecknoglobals // lookup table for the pinned release.
 	binChecksums = map[string]string{
-		"linux/amd64":  "f2ec4b3122fafeabf309da45cd25764786338020cd07b8005f57cb7a9d965828",
-		"linux/arm64":  "33361920f098cff390b943e6e710e065e5de54788cd88ab0a9de7d16cec6356d",
-		"darwin/amd64": "1a97ee1816816166a800b561d952a704e68a513c2440713d184dfc24ada86658",
-		"darwin/arm64": "5cde7e282e64fd1cea3b1e28b1dc918ee118c3a651be4d8ce27b8494950a26c7",
+		"linux/amd64":  "f9ef55de0a8bc2e1290837d9d502347b80aec387c8d5f32c39dd5288c97ba366",
+		"linux/arm64":  "4862659710d8750d845e152842134a447e8aebaa657c27b4d09a589ffaed2736",
+		"darwin/amd64": "4afa2119311abfff0b1c8ff55fbd55004f1d1b54f3cb02f69d21b73ce9f92e7f",
+		"darwin/arm64": "2f70a4df7f12d50226c34b857821c80f911b382598cf3f7972e9d0dee0706bb9",
 	}
 )
 
