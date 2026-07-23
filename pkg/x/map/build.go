@@ -35,28 +35,26 @@ func (b *Builder) FromStruct(s any, tagType string) map[any]any {
 
 	sVal := reflect.ValueOf(s)
 
-	for i := range sVal.NumField() {
-		if !sVal.Field(i).CanInterface() {
+	for field, value := range sVal.Fields() {
+		if !value.CanInterface() {
 			continue
 		}
 
-		fieldName := sType.Field(i).Name
+		fieldName := field.Name
 
 		if tagType != "" {
-			tag, ok := sType.Field(i).Tag.Lookup(tagType)
+			tag, ok := field.Tag.Lookup(tagType)
 			if ok {
 				tag = strings.Split(tag, ",")[0]
 				fieldName = tag
 			}
 		}
 
-		val := sVal.Field(i)
-
-		if val.Kind() == reflect.Pointer {
-			val = reflect.Indirect(val)
+		if value.Kind() == reflect.Pointer {
+			value = reflect.Indirect(value)
 		}
 
-		if !val.IsValid() {
+		if !value.IsValid() {
 			if !b.skipEmpty {
 				out[fieldName] = nil
 			}
@@ -64,17 +62,17 @@ func (b *Builder) FromStruct(s any, tagType string) map[any]any {
 			continue
 		}
 
-		if b.skipEmpty && val.IsZero() {
+		if b.skipEmpty && value.IsZero() {
 			continue
 		}
 
-		if val.Kind() != reflect.Struct {
-			out[fieldName] = val.Interface()
+		if value.Kind() != reflect.Struct {
+			out[fieldName] = value.Interface()
 
 			continue
 		}
 
-		out[fieldName] = b.FromStruct(val.Interface(), tagType)
+		out[fieldName] = b.FromStruct(value.Interface(), tagType)
 	}
 
 	return out

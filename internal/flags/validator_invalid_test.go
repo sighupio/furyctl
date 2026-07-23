@@ -7,6 +7,7 @@
 package flags_test
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -100,13 +101,13 @@ func TestValidator_InvalidFlags_ShouldBeFatal(t *testing.T) {
 				require.NotEmpty(t, fatalErrors, "Expected fatal validation errors")
 
 				// Check error messages contain expected content.
-				allErrorsText := ""
+				var allErrorsText strings.Builder
 				for _, err := range fatalErrors {
-					allErrorsText += err.Error() + " "
+					allErrorsText.WriteString(err.Error() + " ")
 				}
 
 				for _, expectedContent := range tt.errorContains {
-					assert.Contains(t, allErrorsText, expectedContent, "Expected to find '%s' in error messages", expectedContent)
+					assert.Contains(t, allErrorsText.String(), expectedContent, "Expected to find '%s' in error messages", expectedContent)
 				}
 			} else {
 				// No fatal errors expected.

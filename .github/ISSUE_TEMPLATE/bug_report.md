@@ -36,12 +36,12 @@ If applicable, add logs or screenshots to help explain your problem.
 $ furyctl version
 buildTime: 2025-04-14T14:38:20Z
 gitCommit: b2741d0ea623d83209fd488f9893ca33d3d335dd
-goVersion: go1.25.12
+goVersion: go1.26.5
 osArch: arm64
-version: 0.32.1
+version: 0.35.0
 ```
 
-- SIGHUP Distribution version: [e.g. 1.31.1]
+- SIGHUP Distribution version: [e.g. 1.35.0]
 - Operating system: [e.g. macos 15]
 
 ### Additional context

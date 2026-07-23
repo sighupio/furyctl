@@ -69,7 +69,7 @@ var (
 
 			Copy(kubecfg, fmt.Sprintf("%s/kubeconfig", ctxState.DataDir))
 
-			GinkgoWriter.Write([]byte(fmt.Sprintf("Test id: %d", state.TestID)))
+			GinkgoWriter.Write(fmt.Appendf(nil, "Test id: %d", state.TestID))
 
 			Copy(fmt.Sprintf("%s/kubeconfig", ctxState.DataDir), state.Kubeconfig)
 
@@ -97,7 +97,7 @@ var (
 
 			kubectlPath := DownloadKubectl(dlRes.DistroManifest.Tools.Common.Kubectl.Version)
 
-			GinkgoWriter.Write([]byte(fmt.Sprintf("Furyctl config path: %s", state.FuryctlYaml)))
+			GinkgoWriter.Write(fmt.Appendf(nil, "Furyctl config path: %s", state.FuryctlYaml))
 
 			furyctlCreator := NewFuryctlCreator(
 				furyctl,
@@ -130,7 +130,7 @@ var (
 
 	InjectKubeconfig = func(kubeconfigPath string) FuryctlYamlCreatorStrategy {
 		return func(prevData []byte) []byte {
-			data := bytes.ReplaceAll(prevData, []byte("__KUBECONFIG__"), []byte(fmt.Sprintf("%s", kubeconfigPath)))
+			data := bytes.ReplaceAll(prevData, []byte("__KUBECONFIG__"), []byte(kubeconfigPath))
 
 			return data
 		}
@@ -165,7 +165,7 @@ var (
 		return func() {
 			_ = AfterEach(func() {
 				if CurrentSpecReport().Failed() {
-					GinkgoWriter.Write([]byte(fmt.Sprintf("Test for version %s failed, cleaning up...", version)))
+					GinkgoWriter.Write(fmt.Appendf(nil, "Test for version %s failed, cleaning up...", version))
 				}
 			})
 
@@ -189,7 +189,7 @@ var (
 		return func() {
 			_ = AfterEach(func() {
 				if CurrentSpecReport().Failed() {
-					GinkgoWriter.Write([]byte(fmt.Sprintf("Test for version %s failed, cleaning up...", version)))
+					GinkgoWriter.Write(fmt.Appendf(nil, "Test for version %s failed, cleaning up...", version))
 				}
 			})
 

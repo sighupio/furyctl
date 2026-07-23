@@ -184,10 +184,6 @@ func TestBaseChecker_AssertImmutableViolations(t *testing.T) {
 	}
 }
 
-func ptrAny(v any) *any { return &v }
-
-func ptrStr(s string) *string { return &s }
-
 // onpremKubeCfg builds a minimal on-prem-like config; pass nil to omit the
 // kubeProxy object entirely (so the parent is absent).
 func onpremKubeCfg(kubeProxy map[string]any) map[string]any {
@@ -216,8 +212,8 @@ func TestBaseChecker_AssertReducerUnsupportedViolations_WithoutReducers(t *testi
 	rule := rules.Rule{
 		Path: ".spec.kubernetes.advanced.kubeProxy.type",
 		Unsupported: &[]rules.Unsupported{
-			{To: ptrAny("none"), Reason: ptrStr("disabling kube-proxy on an existing cluster is not supported")},
-			{From: ptrAny("none"), Reason: ptrStr("enabling kube-proxy where it was never installed is not supported")},
+			{To: new(any("none")), Reason: new("disabling kube-proxy on an existing cluster is not supported")},
+			{From: new(any("none")), Reason: new("enabling kube-proxy where it was never installed is not supported")},
 		},
 	}
 

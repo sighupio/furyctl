@@ -395,7 +395,7 @@ var (
 			)
 			Expect(err).To(Not(HaveOccurred()))
 
-			GinkgoWriter.Write([]byte(fmt.Sprintf("Template location: %s", state.TestDir)))
+			GinkgoWriter.Write(fmt.Appendf(nil, "Template location: %s", state.TestDir))
 
 			infraDir := path.Join(state.TestDir, "infra")
 
@@ -453,7 +453,7 @@ var (
 
 			kubectlPath := DownloadKubectl(dlRes.DistroManifest.Tools.Common.Kubectl.Version)
 
-			GinkgoWriter.Write([]byte(fmt.Sprintf("Furyctl config path: %s", state.FuryctlYaml)))
+			GinkgoWriter.Write(fmt.Appendf(nil, "Furyctl config path: %s", state.FuryctlYaml))
 
 			furyctlCreator := NewFuryctlCreator(
 				furyctl,
@@ -486,7 +486,7 @@ var (
 
 	CreateClusterPhaseKubernetesTestFunc = func(state *onPremContextState) func(SpecContext) {
 		return func(ctx SpecContext) {
-			GinkgoWriter.Write([]byte(fmt.Sprintf("Furyctl config path: %s", state.FuryctlYaml)))
+			GinkgoWriter.Write(fmt.Appendf(nil, "Furyctl config path: %s", state.FuryctlYaml))
 
 			furyctlCreator := NewFuryctlCreator(
 				furyctl,
@@ -516,7 +516,7 @@ var (
 
 			kubectlPath := DownloadKubectl(dlRes.DistroManifest.Tools.Common.Kubectl.Version)
 
-			GinkgoWriter.Write([]byte(fmt.Sprintf("Furyctl config path: %s", state.FuryctlYaml)))
+			GinkgoWriter.Write(fmt.Appendf(nil, "Furyctl config path: %s", state.FuryctlYaml))
 
 			furyctlCreator := NewFuryctlCreator(
 				furyctl,
@@ -573,7 +573,7 @@ var (
 		return func() {
 			_ = AfterEach(func() {
 				if CurrentSpecReport().Failed() {
-					GinkgoWriter.Write([]byte(fmt.Sprintf("Test for version %s failed, cleaning up...", version)))
+					GinkgoWriter.Write(fmt.Appendf(nil, "Test for version %s failed, cleaning up...", version))
 				}
 			})
 
@@ -597,7 +597,7 @@ var (
 		return func() {
 			_ = AfterEach(func() {
 				if CurrentSpecReport().Failed() {
-					GinkgoWriter.Write([]byte(fmt.Sprintf("Test for version %s failed, cleaning up...", version)))
+					GinkgoWriter.Write(fmt.Appendf(nil, "Test for version %s failed, cleaning up...", version))
 				}
 			})
 
