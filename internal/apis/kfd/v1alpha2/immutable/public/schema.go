@@ -94,6 +94,13 @@ type SpecKubernetes struct {
 	Advanced     *SpecKubernetesAdvanced    `yaml:"advanced,omitempty"`
 	ControlPlane SpecKubernetesControlPlane `yaml:"controlPlane"`
 	Etcd         *SpecKubernetesEtcd        `yaml:"etcd,omitempty"`
+	NodeGroups   []SpecKubernetesNodeGroup  `yaml:"nodeGroups,omitempty"`
+}
+
+// SpecKubernetesNodeGroup assigns nodes the worker role by hostname.
+type SpecKubernetesNodeGroup struct {
+	Name  string   `yaml:"name,omitempty"`
+	Nodes []Member `yaml:"nodes,omitempty"`
 }
 
 type SpecKubernetesAdvanced struct {
@@ -116,4 +123,60 @@ type SpecKubernetesEtcd struct {
 // reads only the hostname.
 type Member struct {
 	Hostname string `yaml:"hostname"`
+}
+
+// Node roles. The value also names the node's butane template (<role>.bu.tpl).
+const (
+	NodeRoleNone         = "" // hostname not referenced by any role list
+	NodeRoleControlPlane = "controlplane"
+	NodeRoleLoadBalancer = "loadbalancer"
+	NodeRoleEtcd         = "etcd"
+	NodeRoleWorker       = "worker"
+)
+
+// RoleAssignment pairs a hostname with a role it is listed under.
+type RoleAssignment struct {
+	Hostname string
+	Role     string
+}
+
+// RoleAssignments returns one (hostname, role) pair per membership-list entry, in
+// role order (control plane, load balancer, etcd, node groups). Single source of
+// truth for role derivation; a new role list only needs adding here.
+func (c *ImmutableKfdV1Alpha2) RoleAssignments() []RoleAssignment {
+	var assignments []RoleAssignment
+
+	add := func(role string, members []Member) {
+		for _, m := range members {
+			assignments = append(assignments, RoleAssignment{Hostname: m.Hostname, Role: role})
+		}
+	}
+
+	add(NodeRoleControlPlane, c.Spec.Kubernetes.ControlPlane.Members)
+
+	if lb := c.Spec.Infrastructure.LoadBalancers; lb != nil {
+		add(NodeRoleLoadBalancer, lb.Members)
+	}
+
+	if etcd := c.Spec.Kubernetes.Etcd; etcd != nil {
+		add(NodeRoleEtcd, etcd.Members)
+	}
+
+	for _, ng := range c.Spec.Kubernetes.NodeGroups {
+		add(NodeRoleWorker, ng.Nodes)
+	}
+
+	return assignments
+}
+
+// NodeRole returns hostname's role, or NodeRoleNone if none. Role order makes the
+// first match the effective role (a control-plane host stays controlplane).
+func (c *ImmutableKfdV1Alpha2) NodeRole(hostname string) string {
+	for _, ra := range c.RoleAssignments() {
+		if ra.Hostname == hostname {
+			return ra.Role
+		}
+	}
+
+	return NodeRoleNone
 }

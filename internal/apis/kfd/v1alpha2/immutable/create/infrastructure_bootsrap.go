@@ -101,36 +101,6 @@ type assetDownloader struct {
 	assetsPath     string
 }
 
-// getNodeRole determines the role of a node based on its hostname by checking the cluster configuration.
-// It returns "controlplane", "loadbalancer", "etcd", or "worker".
-func (i *Infrastructure) getNodeRole(node string) string {
-	// There must be at least one control plane member.
-	for _, controlPlaneNode := range i.furyctlConf.Spec.Kubernetes.ControlPlane.Members {
-		if node == controlPlaneNode.Hostname {
-			return "controlplane"
-		}
-	}
-
-	if i.furyctlConf.Spec.Infrastructure.LoadBalancers != nil &&
-		i.furyctlConf.Spec.Infrastructure.LoadBalancers.Members != nil {
-		for _, loadBalancerNode := range i.furyctlConf.Spec.Infrastructure.LoadBalancers.Members {
-			if node == loadBalancerNode.Hostname {
-				return "loadbalancer"
-			}
-		}
-	}
-
-	if i.furyctlConf.Spec.Kubernetes.Etcd != nil && i.furyctlConf.Spec.Kubernetes.Etcd.Members != nil {
-		for _, etcdNode := range i.furyctlConf.Spec.Kubernetes.Etcd.Members {
-			if node == etcdNode.Hostname {
-				return "etcd"
-			}
-		}
-	}
-
-	return "worker"
-}
-
 // rawNodesByHostname indexes the nodes from an already-parsed furyctl.yaml (as an
 // opaque map) by hostname.
 //
@@ -382,7 +352,9 @@ func (i *Infrastructure) renderButaneTemplates() error {
 	}
 
 	for _, node := range i.furyctlConf.Spec.Infrastructure.Nodes {
-		nodeRole := i.getNodeRole(node.Hostname)
+		// Roles are guaranteed assigned by the ExtraSchemaValidator at validate time.
+		nodeRole := i.furyctlConf.NodeRole(node.Hostname)
+
 		normalizedMAC := strings.ToUpper(strings.ReplaceAll(string(node.MacAddress), ":", "-"))
 
 		rawNode, ok := rawNodes[node.Hostname]

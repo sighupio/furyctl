@@ -102,3 +102,52 @@ spec:
 		t.Errorf("LoadBalancers.Members did not decode")
 	}
 }
+
+// TestNodeRole covers role derivation from the four role lists and NodeRoleNone
+// for a node not referenced by any of them.
+func TestNodeRole(t *testing.T) {
+	t.Parallel()
+
+	c := public.ImmutableKfdV1Alpha2{
+		Spec: public.Spec{
+			Infrastructure: public.SpecInfrastructure{
+				LoadBalancers: &public.SpecInfrastructureLoadBalancers{
+					Members: []public.Member{{Hostname: "lb01"}},
+				},
+			},
+			Kubernetes: public.SpecKubernetes{
+				ControlPlane: public.SpecKubernetesControlPlane{
+					Members: []public.Member{{Hostname: "ctrl01"}},
+				},
+				Etcd: &public.SpecKubernetesEtcd{
+					Members: []public.Member{{Hostname: "etcd01"}},
+				},
+				NodeGroups: []public.SpecKubernetesNodeGroup{
+					{Name: "workers", Nodes: []public.Member{{Hostname: "worker01"}}},
+				},
+			},
+		},
+	}
+
+	testCases := []struct {
+		desc     string
+		hostname string
+		want     string
+	}{
+		{desc: "control plane member", hostname: "ctrl01", want: public.NodeRoleControlPlane},
+		{desc: "load balancer member", hostname: "lb01", want: public.NodeRoleLoadBalancer},
+		{desc: "etcd member", hostname: "etcd01", want: public.NodeRoleEtcd},
+		{desc: "node group member", hostname: "worker01", want: public.NodeRoleWorker},
+		{desc: "unassigned node has no role", hostname: "orphan01", want: public.NodeRoleNone},
+	}
+
+	for _, tC := range testCases {
+		t.Run(tC.desc, func(t *testing.T) {
+			t.Parallel()
+
+			if got := c.NodeRole(tC.hostname); got != tC.want {
+				t.Errorf("NodeRole(%q) = %q, want %q", tC.hostname, got, tC.want)
+			}
+		})
+	}
+}
