@@ -59,7 +59,7 @@ func TestActionNode_Set(t *testing.T) {
 		},
 	}
 
-	tmplActionNode := reflect.ValueOf(actionNode).Convert(reflect.TypeOf(&templatex.ActionNode{})).Interface()
+	tmplActionNode := reflect.ValueOf(actionNode).Convert(reflect.TypeFor[*templatex.ActionNode]()).Interface()
 
 	assert.NotNil(t, tmplActionNode)
 
@@ -80,7 +80,7 @@ func TestFieldNode_Set(t *testing.T) {
 		Ident:    []string{"field1"},
 	}
 
-	tmplFieldNode := reflect.ValueOf(fieldNode).Convert(reflect.TypeOf(&templatex.FieldNode{})).Interface()
+	tmplFieldNode := reflect.ValueOf(fieldNode).Convert(reflect.TypeFor[*templatex.FieldNode]()).Interface()
 
 	assert.NotNil(t, tmplFieldNode)
 
@@ -145,7 +145,7 @@ func TestIfNode_Set(t *testing.T) {
 		},
 	}
 
-	tmplIfNode := reflect.ValueOf(ifNode).Convert(reflect.TypeOf(&templatex.IfNode{})).Interface()
+	tmplIfNode := reflect.ValueOf(ifNode).Convert(reflect.TypeFor[*templatex.IfNode]()).Interface()
 
 	assert.NotNil(t, tmplIfNode)
 
@@ -177,7 +177,7 @@ func TestListNode_Set(t *testing.T) {
 		},
 	}
 
-	tmplListNode := reflect.ValueOf(listNode).Convert(reflect.TypeOf(&templatex.ListNode{})).Interface()
+	tmplListNode := reflect.ValueOf(listNode).Convert(reflect.TypeFor[*templatex.ListNode]()).Interface()
 
 	assert.NotNil(t, tmplListNode)
 
@@ -206,7 +206,7 @@ func TestVariableNode_Set(t *testing.T) {
 		Ident:    []string{"variable1"},
 	}
 
-	tmplVariableNode := reflect.ValueOf(variableNode).Convert(reflect.TypeOf(&templatex.VariableNode{})).Interface()
+	tmplVariableNode := reflect.ValueOf(variableNode).Convert(reflect.TypeFor[*templatex.VariableNode]()).Interface()
 
 	assert.NotNil(t, tmplVariableNode)
 
@@ -271,7 +271,7 @@ func TestRangeNode_Set(t *testing.T) {
 		},
 	}
 
-	tmplRangeNode := reflect.ValueOf(rangeNode).Convert(reflect.TypeOf(&templatex.RangeNode{})).Interface()
+	tmplRangeNode := reflect.ValueOf(rangeNode).Convert(reflect.TypeFor[*templatex.RangeNode]()).Interface()
 
 	assert.NotNil(t, tmplRangeNode)
 
@@ -307,7 +307,7 @@ func TestPipeNode_Set(t *testing.T) {
 		},
 	}
 
-	tmplPipeNode := reflect.ValueOf(pipeNode).Convert(reflect.TypeOf(&templatex.PipeNode{})).Interface()
+	tmplPipeNode := reflect.ValueOf(pipeNode).Convert(reflect.TypeFor[*templatex.PipeNode]()).Interface()
 
 	assert.NotNil(t, tmplPipeNode)
 
@@ -349,7 +349,7 @@ func TestTemplateNode_Set(t *testing.T) {
 		},
 	}
 
-	tmplTemplateNode := reflect.ValueOf(templateNode).Convert(reflect.TypeOf(&templatex.TplNode{})).Interface()
+	tmplTemplateNode := reflect.ValueOf(templateNode).Convert(reflect.TypeFor[*templatex.TplNode]()).Interface()
 
 	assert.NotNil(t, tmplTemplateNode)
 

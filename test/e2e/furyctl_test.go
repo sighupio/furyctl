@@ -713,7 +713,7 @@ func patchFuryctlYaml(furyctlYamlPath string, infra *EKSInfra) (string, error) {
 		furyctlYaml = bytes.ReplaceAll(furyctlYaml, []byte("__VPC_ID__"), []byte(infra.VpcID))
 
 		for i, subnetID := range infra.SubnetIDs {
-			furyctlYaml = bytes.ReplaceAll(furyctlYaml, []byte(fmt.Sprintf("__SUBNET_%d_ID__", i+1)), []byte(subnetID))
+			furyctlYaml = bytes.ReplaceAll(furyctlYaml, fmt.Appendf(nil, "__SUBNET_%d_ID__", i+1), []byte(subnetID))
 		}
 	}
 

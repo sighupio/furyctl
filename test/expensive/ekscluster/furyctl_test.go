@@ -41,7 +41,7 @@ var (
 	PrepareCreateDeleteClusterTest = func(state *ContextState, version, furyctlYamlTemplate string) {
 		*state = NewContextState(fmt.Sprintf("ekscluster-v%s-create-and-delete", version))
 
-		GinkgoWriter.Write([]byte(fmt.Sprintf("Test id: %d", state.TestID)))
+		GinkgoWriter.Write(fmt.Appendf(nil, "Test id: %d", state.TestID))
 
 		Copy("./testdata/id_ed25519", path.Join(state.TestDir, "id_ed25519"))
 		Copy("./testdata/id_ed25519.pub", path.Join(state.TestDir, "id_ed25519.pub"))
@@ -125,7 +125,7 @@ var (
 		return func() {
 			_ = AfterEach(func() {
 				if CurrentSpecReport().Failed() {
-					GinkgoWriter.Write([]byte(fmt.Sprintf("Test for version %s failed, cleaning up...", version)))
+					GinkgoWriter.Write(fmt.Appendf(nil, "Test for version %s failed, cleaning up...", version))
 				}
 			})
 

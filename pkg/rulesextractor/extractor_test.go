@@ -1733,8 +1733,8 @@ func TestFilterSafeImmutableRulesWithWildcards(t *testing.T) {
 					Immutable: true,
 					Safe: &[]rules.Safe{
 						{
-							From: ptrAny(2),
-							To:   ptrAny(3),
+							From: new(any(2)),
+							To:   new(any(3)),
 						},
 					},
 				},
@@ -1757,8 +1757,8 @@ func TestFilterSafeImmutableRulesWithWildcards(t *testing.T) {
 					Immutable: true,
 					Safe: &[]rules.Safe{
 						{
-							From: ptrAny("v1"),
-							To:   ptrAny("v2"),
+							From: new(any("v1")),
+							To:   new(any("v2")),
 						},
 					},
 				},
@@ -1777,8 +1777,8 @@ func TestFilterSafeImmutableRulesWithWildcards(t *testing.T) {
 					Immutable: true,
 					Safe: &[]rules.Safe{
 						{
-							From: ptrAny("v1"),
-							To:   ptrAny("v2"),
+							From: new(any("v1")),
+							To:   new(any("v2")),
 						},
 					},
 				},
@@ -1796,8 +1796,4 @@ func TestFilterSafeImmutableRulesWithWildcards(t *testing.T) {
 			assert.Equal(t, tc.want, got)
 		})
 	}
-}
-
-func ptrAny(v any) *any {
-	return &v
 }

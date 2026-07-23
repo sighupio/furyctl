@@ -167,14 +167,14 @@ func (dd *Downloader) DownloadModules(kfd config.KFD, gitPrefix, kind string) er
 	doneCh := make(chan bool)
 	errCh := make(chan error)
 
-	for i := range mods.NumField() {
-		go func(i int) {
+	for field, value := range mods.Fields() {
+		go func() {
 			defer func() {
 				doneCh <- true
 			}()
 
-			name := strings.ToLower(mods.Type().Field(i).Name)
-			version, ok := reflect.TypeAssert[string](mods.Field(i))
+			name := strings.ToLower(field.Name)
+			version, ok := reflect.TypeAssert[string](value)
 
 			if !ok {
 				errCh <- fmt.Errorf("%s: %w", name, ErrModuleHasNoVersion)
@@ -276,7 +276,7 @@ func (dd *Downloader) DownloadModules(kfd config.KFD, gitPrefix, kind string) er
 
 				return
 			}
-		}(i)
+		}()
 	}
 
 	done := 0
@@ -302,8 +302,8 @@ func (dd *Downloader) DownloadModules(kfd config.KFD, gitPrefix, kind string) er
 func (dd *Downloader) DownloadInstallers(installers config.KFDKubernetes, gitPrefix, kind string) error {
 	insts := reflect.ValueOf(installers)
 
-	for i := range insts.NumField() {
-		name := strings.ToLower(insts.Type().Field(i).Name)
+	for field, value := range insts.Fields() {
+		name := strings.ToLower(field.Name)
 
 		// Only download the installer for the current cluster kind.
 		if !distribution.InstallerNeededForKind(name, kind) {
@@ -312,7 +312,7 @@ func (dd *Downloader) DownloadInstallers(installers config.KFDKubernetes, gitPre
 
 		dst := filepath.Join(dd.basePath, "vendor", "installers", name)
 
-		v, ok := reflect.TypeAssert[config.KFDProvider](insts.Field(i))
+		v, ok := reflect.TypeAssert[config.KFDProvider](value)
 		if !ok {
 			return fmt.Errorf("%s: %w", name, ErrModuleHasNoVersion)
 		}
@@ -501,16 +501,16 @@ func miseToolsForKind(kfd config.KFD, kind string) (map[string]string, []string)
 
 	tls := reflect.ValueOf(kfd.Tools)
 
-	for i := range tls.NumField() {
-		section := strings.ToLower(tls.Type().Field(i).Name)
+	for sectionField, sectionValue := range tls.Fields() {
+		section := strings.ToLower(sectionField.Name)
 		if !distribution.ToolSectionNeededForKind(section, kind) {
 			continue
 		}
 
-		for j := range tls.Field(i).NumField() {
-			name := strings.ToLower(tls.Field(i).Type().Field(j).Name)
+		for field, value := range sectionValue.Fields() {
+			name := strings.ToLower(field.Name)
 
-			toolCfg, ok := reflect.TypeAssert[config.KFDTool](tls.Field(i).Field(j))
+			toolCfg, ok := reflect.TypeAssert[config.KFDTool](value)
 			if !ok || toolCfg.Version == "" {
 				continue
 			}

@@ -115,8 +115,8 @@ func (tv *Validator) validateTools(i any, kfdManifest config.KFD) ([]string, []e
 	oks := make([]string, 0)
 
 	toolCfgs := reflect.ValueOf(i)
-	for i := range toolCfgs.NumField() {
-		toolCfg, ok := reflect.TypeAssert[config.KFDTool](toolCfgs.Field(i))
+	for field, value := range toolCfgs.Fields() {
+		toolCfg, ok := reflect.TypeAssert[config.KFDTool](value)
 		if !ok {
 			continue
 		}
@@ -127,7 +127,7 @@ func (tv *Validator) validateTools(i any, kfdManifest config.KFD) ([]string, []e
 			continue
 		}
 
-		toolName := strings.ToLower(toolCfgs.Type().Field(i).Name)
+		toolName := strings.ToLower(field.Name)
 
 		if (toolName == "helm" || toolName == "helmfile") &&
 			!distribution.HasFeature(kfdManifest, distribution.FeaturePlugins) {
