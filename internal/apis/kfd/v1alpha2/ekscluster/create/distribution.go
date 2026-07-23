@@ -135,7 +135,7 @@ func (d *Distribution) Exec(
 	startFrom string,
 	upgradeState *upgrade.State,
 ) error {
-	timestamp := time.Now().Unix()
+	timestampSec := time.Now().Unix()
 
 	logrus.Info("Installing SIGHUP Distribution...")
 
@@ -163,7 +163,7 @@ func (d *Distribution) Exec(
 		upgradeState,
 		preTfMerger,
 		furyctlMerger,
-		timestamp,
+		timestampSec,
 	); err != nil {
 		return fmt.Errorf("error running core distribution phase: %w", err)
 	}
@@ -251,14 +251,14 @@ func (d *Distribution) coreDistribution(
 	upgradeState *upgrade.State,
 	preTfMerger *merge.Merger,
 	furyctlMerger *merge.Merger,
-	timestamp int64,
+	timestampSec int64,
 ) error {
 	if startFrom != cluster.OperationSubPhasePostDistribution {
 		if err := d.runReducers(rdcs, tfCfg, LifecyclePreTf, []string{"manifests", ".gitignore"}); err != nil {
 			return fmt.Errorf("error running pre-tf reducers: %w", err)
 		}
 
-		if _, err := d.TFRunner.Plan(timestamp); err != nil && !d.DryRun {
+		if _, err := d.TFRunner.Plan(timestampSec); err != nil && !d.DryRun {
 			return fmt.Errorf("error running terraform plan: %w", err)
 		}
 
@@ -298,7 +298,7 @@ func (d *Distribution) coreDistribution(
 
 		logrus.Warn("Creating cloud resources, this could take a while...")
 
-		if err := d.TFRunner.Apply(timestamp); err != nil {
+		if err := d.TFRunner.Apply(timestampSec); err != nil {
 			return fmt.Errorf("cannot create cloud resources: %w", err)
 		}
 

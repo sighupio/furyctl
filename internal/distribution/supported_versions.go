@@ -8,7 +8,6 @@ import (
 	"errors"
 	"fmt"
 	"slices"
-	"sort"
 	"strings"
 	"time"
 
@@ -43,6 +42,28 @@ func IsNotRelease(ghRelease git.Release) bool {
 	return false
 }
 
+func releaseSort(a, b git.Release) int {
+	aVersion, err := VersionFromString(a.TagName)
+	if err != nil {
+		return 1
+	}
+
+	bVersion, err := VersionFromString(b.TagName)
+	if err != nil {
+		return -1
+	}
+
+	if bVersion.LessThan(&aVersion) {
+		return -1
+	}
+
+	if aVersion.LessThan(&bVersion) {
+		return 1
+	}
+
+	return 0
+}
+
 // GetSupportedVersions retrieves all distro releases filtering out prereleases and invalid versions.
 func GetSupportedVersions(ghClient git.RepoClient) ([]KFDRelease, error) {
 	releases := []KFDRelease{}
@@ -53,22 +74,7 @@ func GetSupportedVersions(ghClient git.RepoClient) ([]KFDRelease, error) {
 		return releases, fmt.Errorf("error getting releases from GitHub: %w", err)
 	}
 
-	sort.Slice(ghReleases, func(i, j int) bool {
-		iRelease := ghReleases[i]
-		jRelease := ghReleases[j]
-
-		iVersion, err := VersionFromString(iRelease.TagName)
-		if err != nil {
-			return false
-		}
-
-		jVersion, err := VersionFromString(jRelease.TagName)
-		if err != nil {
-			return true
-		}
-
-		return jVersion.LessThan(&iVersion)
-	})
+	slices.SortFunc(ghReleases, releaseSort)
 
 	ghReleases = slices.DeleteFunc(ghReleases, IsReleaseUnsupportedByFuryctl)
 

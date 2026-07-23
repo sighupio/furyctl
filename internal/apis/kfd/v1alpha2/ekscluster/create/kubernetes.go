@@ -107,7 +107,7 @@ func (k *Kubernetes) Self() *cluster.OperationPhase {
 }
 
 func (k *Kubernetes) Exec(startFrom string, upgradeState *upgrade.State) error {
-	timestamp := time.Now().Unix()
+	timestampSec := time.Now().Unix()
 
 	logrus.Info("Configuring SIGHUP Distribution cluster...")
 
@@ -123,7 +123,7 @@ func (k *Kubernetes) Exec(startFrom string, upgradeState *upgrade.State) error {
 		return fmt.Errorf("error running pre-kubernetes phase: %w", err)
 	}
 
-	if err := k.coreKubernetes(startFrom, upgradeState, timestamp); err != nil {
+	if err := k.coreKubernetes(startFrom, upgradeState, timestampSec); err != nil {
 		return fmt.Errorf("error running core kubernetes phase: %w", err)
 	}
 
@@ -195,10 +195,10 @@ func (k *Kubernetes) preKubernetes(
 func (k *Kubernetes) coreKubernetes(
 	startFrom string,
 	upgradeState *upgrade.State,
-	timestamp int64,
+	timestampSec int64,
 ) error {
 	if startFrom != cluster.OperationSubPhasePostKubernetes {
-		plan, err := k.tfRunner.Plan(timestamp)
+		plan, err := k.tfRunner.Plan(timestampSec)
 		if err != nil {
 			return fmt.Errorf("error running terraform plan: %w", err)
 		}
@@ -249,7 +249,7 @@ func (k *Kubernetes) coreKubernetes(
 
 		logrus.Warn("Creating cloud resources, this could take a while...")
 
-		if err := k.tfRunner.Apply(timestamp); err != nil {
+		if err := k.tfRunner.Apply(timestampSec); err != nil {
 			if k.upgrade.Enabled {
 				upgradeState.Phases.Kubernetes.Status = upgrade.PhaseStatusFailed
 			}

@@ -85,7 +85,7 @@ func (i *Infrastructure) Self() *cluster.OperationPhase {
 func (i *Infrastructure) Exec(startFrom string, upgradeState *upgrade.State) error {
 	logrus.Info("Creating infrastructure...")
 
-	timestamp := time.Now().Unix()
+	timestampSec := time.Now().Unix()
 
 	if err := i.Prepare(); err != nil {
 		return fmt.Errorf("error preparing infrastructure phase: %w", err)
@@ -99,7 +99,7 @@ func (i *Infrastructure) Exec(startFrom string, upgradeState *upgrade.State) err
 		return fmt.Errorf("error running pre-infrastructure phase: %w", err)
 	}
 
-	if err := i.coreInfrastructure(startFrom, upgradeState, timestamp); err != nil {
+	if err := i.coreInfrastructure(startFrom, upgradeState, timestampSec); err != nil {
 		return fmt.Errorf("error running core infrastructure phase: %w", err)
 	}
 
@@ -152,10 +152,10 @@ func (i *Infrastructure) preInfrastructure(
 func (i *Infrastructure) coreInfrastructure(
 	startFrom string,
 	upgradeState *upgrade.State,
-	timestamp int64,
+	timestampSec int64,
 ) error {
 	if startFrom != cluster.OperationSubPhasePostInfrastructure {
-		plan, err := i.tfRunner.Plan(timestamp)
+		plan, err := i.tfRunner.Plan(timestampSec)
 		if err != nil {
 			return fmt.Errorf("error running terraform/tofu plan: %w", err)
 		}
@@ -189,7 +189,7 @@ func (i *Infrastructure) coreInfrastructure(
 
 		logrus.Warn("Creating cloud resources, this could take a while...")
 
-		if err := i.tfRunner.Apply(timestamp); err != nil {
+		if err := i.tfRunner.Apply(timestampSec); err != nil {
 			if i.upgrade.Enabled {
 				upgradeState.Phases.Infrastructure.Status = upgrade.PhaseStatusFailed
 			}

@@ -8,7 +8,7 @@
 package clusterinfo
 
 import (
-	"sort"
+	"slices"
 	"testing"
 	"time"
 
@@ -52,7 +52,7 @@ func TestRoleSort(t *testing.T) {
 	input := []string{"<none>", "worker", "master", "infra", "control-plane", "b", "a"}
 	want := []string{"control-plane", "master", "a", "b", "infra", "worker", "<none>"}
 
-	sort.Slice(input, func(i, j int) bool { return roleSort(input[i], input[j]) })
+	slices.SortFunc(input, roleSort)
 
 	require.Equal(t, want, input, "roleSort order")
 }

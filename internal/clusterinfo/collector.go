@@ -12,7 +12,7 @@ import (
 	"io/fs"
 	"path/filepath"
 	"reflect"
-	"sort"
+	"slices"
 	"strings"
 	"time"
 
@@ -290,9 +290,7 @@ func (c *Collector) fetchNodes() (*NodesSummary, error) {
 		totals.RAMGb += ramGb
 	}
 
-	sort.Slice(roleOrder, func(i, j int) bool {
-		return roleSort(roleOrder[i], roleOrder[j])
-	})
+	slices.SortFunc(roleOrder, roleSort)
 
 	roles := make([]NodeRoleGroup, 0, len(roleOrder))
 	for _, r := range roleOrder {
@@ -664,37 +662,45 @@ func primaryRole(labels map[string]string) string {
 		return roleNone
 	}
 
-	sort.Slice(roles, func(i, j int) bool { return roleSort(roles[i], roles[j]) })
+	slices.SortFunc(roles, roleSort)
 
 	return roles[0]
 }
 
-func roleSort(a, b string) bool {
+func roleSort(a, b string) int {
+	if a == b {
+		return 0
+	}
+
 	if a == roleControlPlane {
-		return true
+		return -1
 	}
 
 	if b == roleControlPlane {
-		return false
+		return 1
 	}
 
 	if a == roleMaster {
-		return true
+		return -1
 	}
 
 	if b == roleMaster {
-		return false
+		return 1
 	}
 
 	if a == roleNone {
-		return false
+		return 1
 	}
 
 	if b == roleNone {
-		return true
+		return -1
 	}
 
-	return a < b
+	if a < b {
+		return -1
+	}
+
+	return 1
 }
 
 // parseCPU converts a Kubernetes CPU quantity string (e.g. "4" or "500m") to an integer vCPU count.

@@ -103,6 +103,11 @@ linters:
         - G204 # subprocess launched with variable: furyctl runs external tools (terraform, kubectl, etc.) by design.
         - G703 # path traversal via taint: paths come from user-provided furyctl.yaml or env (kubeconfig).
         - G704 # SSRF via taint: URLs are hardcoded or from user config / curated distribution manifest; CLI tool by design.
+    govet:
+      enable-all: true
+      disable:
+        - fieldalignment # this is a CLI, not a long-running process; struct memory savings are irrelevant
+        - shadow # too noisy
     grouper:
       const-require-single-const: true
       const-require-grouping: false
