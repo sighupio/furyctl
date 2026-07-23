@@ -43,14 +43,12 @@ func NewLiveRegion(f *os.File, disable bool) *LiveRegion {
 		width:    0,
 	}
 
-	//nolint:gosec // G115: fd fits in int on all supported platforms.
 	if disable || f == nil || !term.IsTerminal(int(f.Fd())) {
 		return lr
 	}
 
 	lr.enabled = true
 
-	//nolint:gosec // G115: fd fits in int on all supported platforms.
 	if w, _, err := term.GetSize(int(f.Fd())); err == nil && w > minRegionWidth {
 		lr.width = w
 	}

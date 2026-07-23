@@ -14,6 +14,8 @@ linters:
     - depguard
     - exhaustruct
     - forbidigo
+    - goconst # flags repeated string literals that are not actually meant to be a shared constant
+    - gomodguard # deprecated, replaced by gomodguard_v2 since golangci-lint v2.12.0
     - ireturn
     - maintidx
     - nlreturn # too strict and mostly code is not more readable
@@ -102,7 +104,6 @@ linters:
         - G101 # hardcoded credentials: false positives on token-shaped strings.
         - G204 # subprocess launched with variable: furyctl runs external tools (terraform, kubectl, etc.) by design.
         - G703 # path traversal via taint: paths come from user-provided furyctl.yaml or env (kubeconfig).
-        - G704 # SSRF via taint: URLs are hardcoded or from user config / curated distribution manifest; CLI tool by design.
     govet:
       enable-all: true
       disable:
