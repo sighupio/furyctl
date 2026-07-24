@@ -114,7 +114,7 @@ func (g *Generator) ProcessFilename(
 		tpl := template.Must(
 			template.New("currentTarget").Funcs(g.funcMap.FuncMap).Parse(g.target))
 
-		destination := bytes.NewBufferString("")
+		destination := new(bytes.Buffer)
 
 		if err := tpl.Execute(destination, g.context); err != nil {
 			return "", fmt.Errorf("error processing filename: %w", err)
@@ -166,10 +166,6 @@ func (*Generator) WriteMissingKeysToFile(
 
 func (g *Generator) getContextValueFromPath(path string) any {
 	paths := strings.Split(path[1:], ".")
-
-	if len(paths) == 0 {
-		return nil
-	}
 
 	ret := g.context[paths[0]]
 

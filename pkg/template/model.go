@@ -57,22 +57,22 @@ type Model struct {
 }
 
 func NewTemplateModel(
-	source,
-	target,
-	configPath,
-	outPath,
-	furyctlConfPath,
+	source string,
+	target string,
+	configPath string,
+	outPath string,
+	furyctlConfPath string,
 	suffix string,
-	stopIfNotEmpty,
+	stopIfNotEmpty bool,
 	dryRun bool,
 ) (*Model, error) {
 	var model Config
 
-	if len(source) < 1 {
+	if source == "" {
 		return nil, errSourceMustbeSet
 	}
 
-	if len(target) < 1 {
+	if target == "" {
 		return nil, errTargetMustbeSet
 	}
 
@@ -161,15 +161,7 @@ func (tm *Model) applyTemplates(
 	info os.FileInfo,
 	err error,
 ) error {
-	if tm.isExcluded(relSource) {
-		return err
-	}
-
-	if info == nil {
-		return err
-	}
-
-	if info.IsDir() {
+	if tm.isExcluded(relSource) || info == nil || info.IsDir() {
 		return err
 	}
 

@@ -11,10 +11,8 @@ import (
 )
 
 func CleanupTempDir(dir string) error {
-	if err := os.RemoveAll(dir); err != nil {
-		if !errors.Is(err, os.ErrNotExist) {
-			return fmt.Errorf("error removing dir: %w", err)
-		}
+	if err := os.RemoveAll(dir); err != nil && !errors.Is(err, os.ErrNotExist) {
+		return fmt.Errorf("error removing dir: %w", err)
 	}
 
 	return nil

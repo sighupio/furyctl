@@ -65,8 +65,8 @@ func NewDownloader(client netx.Client, basePath, binPath string, gitProtocol git
 }
 
 func (dd *Downloader) DownloadAll(kfd config.KFD, kind string) ([]error, []string) {
-	errs := []error{}
-	uts := []string{}
+	var errs []error
+	var uts []string
 
 	vendorFolder := filepath.Join(dd.basePath, "vendor")
 
@@ -497,7 +497,7 @@ func installAnsibleCollections(python, galaxy, collectionsDir string, collection
 // and eks, the eks (provider) value wins (union model / provider-overrides-common).
 func miseToolsForKind(kfd config.KFD, kind string) (map[string]string, []string) {
 	managed := map[string]string{}
-	uts := []string{}
+	var uts []string
 
 	tls := reflect.ValueOf(kfd.Tools)
 
@@ -570,12 +570,9 @@ func materializeTool(binPath, name, version, bin, realPath string) error {
 }
 
 func createURL(prefix, name, version string) string {
-	ver := semver.EnsurePrefix(version)
-
 	kindPrefix := "releases/tag"
 
-	_, err := semver.NewVersion(ver)
-	if err != nil {
+	if _, err := semver.NewVersion(semver.EnsurePrefix(version)); err != nil {
 		kindPrefix = "tree"
 	}
 

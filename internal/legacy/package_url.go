@@ -67,11 +67,6 @@ func (n *PackageURL) getURLFromCompanyRepos() string {
 		return fmt.Sprintf("%s-%s%s//%s?ref=%s", n.Prefix, n.Blocks[0], dG, n.Kind, n.Version)
 	}
 
-	remainingBlocks := ""
-
-	for i := 1; i < len(n.Blocks); i++ {
-		remainingBlocks = path.Join(remainingBlocks, n.Blocks[i])
-	}
-
-	return fmt.Sprintf("%s-%s%s//%s/%s?ref=%s", n.Prefix, n.Blocks[0], dG, n.Kind, remainingBlocks, n.Version)
+	return fmt.Sprintf("%s-%s%s//%s/%s?ref=%s",
+		n.Prefix, n.Blocks[0], dG, n.Kind, path.Join(n.Blocks[1:]...), n.Version)
 }

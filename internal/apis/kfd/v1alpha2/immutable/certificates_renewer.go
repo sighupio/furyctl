@@ -39,36 +39,19 @@ func (c *CertificatesRenewer) SetProperties(props []cluster.CertificatesRenewerP
 }
 
 func (c *CertificatesRenewer) SetProperty(name string, value any) {
-	lcName := strings.ToLower(name)
-
-	switch lcName {
+	switch strings.ToLower(name) {
 	case cluster.CertificatesRenewerPropertyFuryctlConf:
-		if s, ok := value.(public.ImmutableKfdV1Alpha2); ok {
-			c.furyctlConf = s
-		}
-
+		cluster.SetPropertyValue(value, &c.furyctlConf)
 	case cluster.CertificatesRenewerPropertyConfigPath:
-		if s, ok := value.(string); ok {
-			c.configPath = s
-		}
-
+		cluster.SetPropertyValue(value, &c.configPath)
 	case cluster.CertificatesRenewerPropertyKfdManifest:
-		if s, ok := value.(config.KFD); ok {
-			c.kfdManifest = s
-		}
-
+		cluster.SetPropertyValue(value, &c.kfdManifest)
 	case cluster.CertificatesRenewerPropertyDistroPath:
-		if s, ok := value.(string); ok {
-			c.distroPath = s
-		}
-
+		cluster.SetPropertyValue(value, &c.distroPath)
 	case cluster.CertificatesRenewerPropertyBinPath:
-		if s, ok := value.(string); ok {
-			c.binPath = s
-		}
-
+		cluster.SetPropertyValue(value, &c.binPath)
 	default:
-		logrus.Debugf("ignoring unknown property %q", lcName)
+		logrus.Debugf("ignoring unknown property %q", name)
 	}
 }
 

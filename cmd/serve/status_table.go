@@ -59,21 +59,11 @@ type nodeStatusTable struct {
 var newNodeStatusTable = func(initial map[string]string) *nodeStatusTable {
 	f := os.Stderr
 
-	order := make([]string, 0, len(initial))
-	status := make(map[string]string, len(initial))
-
-	for node, st := range initial {
-		order = append(order, node)
-		status[node] = st
-	}
-
-	slices.Sort(order)
-
 	return &nodeStatusTable{
 		out:       f,
 		tty:       execx.ShouldAnimate(f),
-		order:     order,
-		status:    status,
+		order:     slices.Sorted(maps.Keys(initial)),
+		status:    maps.Clone(initial),
 		updatedAt: make(map[string]time.Time, len(initial)),
 	}
 }

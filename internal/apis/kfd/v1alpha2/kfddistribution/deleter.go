@@ -31,51 +31,25 @@ func (d *ClusterDeleter) SetProperties(props []cluster.DeleterProperty) {
 }
 
 func (d *ClusterDeleter) SetProperty(name string, value any) {
-	lcName := strings.ToLower(name)
-
-	switch lcName {
+	switch strings.ToLower(name) {
 	case cluster.DeleterPropertyDistroPath:
-		if s, ok := value.(string); ok {
-			d.paths.DistroPath = s
-		}
-
+		cluster.SetPropertyValue(value, &d.paths.DistroPath)
 	case cluster.DeleterPropertyWorkDir:
-		if s, ok := value.(string); ok {
-			d.paths.WorkDir = s
-		}
-
+		cluster.SetPropertyValue(value, &d.paths.WorkDir)
 	case cluster.DeleterPropertyBinPath:
-		if s, ok := value.(string); ok {
-			d.paths.BinPath = s
-		}
-
+		cluster.SetPropertyValue(value, &d.paths.BinPath)
 	case cluster.DeleterPropertyConfigPath:
-		if s, ok := value.(string); ok {
-			d.paths.ConfigPath = s
-		}
-
+		cluster.SetPropertyValue(value, &d.paths.ConfigPath)
 	case cluster.DeleterPropertyKfdManifest:
-		if kfdManifest, ok := value.(config.KFD); ok {
-			d.kfdManifest = kfdManifest
-		}
-
+		cluster.SetPropertyValue(value, &d.kfdManifest)
 	case cluster.DeleterPropertyFuryctlConf:
-		if s, ok := value.(public.KfddistributionKfdV1Alpha2); ok {
-			d.furyctlConf = s
-		}
-
+		cluster.SetPropertyValue(value, &d.furyctlConf)
 	case cluster.DeleterPropertyPhase:
-		if s, ok := value.(string); ok {
-			d.phase = s
-		}
-
+		cluster.SetPropertyValue(value, &d.phase)
 	case cluster.DeleterPropertyDryRun:
-		if b, ok := value.(bool); ok {
-			d.dryRun = b
-		}
-
+		cluster.SetPropertyValue(value, &d.dryRun)
 	default:
-		logrus.Debugf("ignoring unknown property %q", lcName)
+		logrus.Debugf("ignoring unknown property %q", name)
 	}
 }
 

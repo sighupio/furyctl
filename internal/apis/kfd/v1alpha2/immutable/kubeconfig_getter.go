@@ -41,41 +41,21 @@ func (k *KubeconfigGetter) SetProperties(props []cluster.KubeconfigProperty) {
 }
 
 func (k *KubeconfigGetter) SetProperty(name string, value any) {
-	lcName := strings.ToLower(name)
-
-	switch lcName {
+	switch strings.ToLower(name) {
 	case cluster.KubeconfigPropertyFuryctlConf:
-		if s, ok := value.(public.ImmutableKfdV1Alpha2); ok {
-			k.furyctlConf = s
-		}
-
+		cluster.SetPropertyValue(value, &k.furyctlConf)
 	case cluster.KubeconfigPropertyConfigPath:
-		if s, ok := value.(string); ok {
-			k.configPath = s
-		}
-
+		cluster.SetPropertyValue(value, &k.configPath)
 	case cluster.KubeconfigPropertyWorkDir:
-		if s, ok := value.(string); ok {
-			k.workDir = s
-		}
-
+		cluster.SetPropertyValue(value, &k.workDir)
 	case cluster.KubeconfigPropertyKfdManifest:
-		if s, ok := value.(config.KFD); ok {
-			k.kfdManifest = s
-		}
-
+		cluster.SetPropertyValue(value, &k.kfdManifest)
 	case cluster.KubeconfigPropertyDistroPath:
-		if s, ok := value.(string); ok {
-			k.distroPath = s
-		}
-
+		cluster.SetPropertyValue(value, &k.distroPath)
 	case cluster.KubeconfigPropertyBinPath:
-		if s, ok := value.(string); ok {
-			k.binPath = s
-		}
-
+		cluster.SetPropertyValue(value, &k.binPath)
 	default:
-		logrus.Debugf("ignoring unknown property %q", lcName)
+		logrus.Debugf("ignoring unknown property %q", name)
 	}
 }
 

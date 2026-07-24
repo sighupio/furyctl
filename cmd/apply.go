@@ -115,7 +115,7 @@ func NewApplyCmd() *cobra.Command {
 			}
 
 			// Get flags.
-			flags, err := getApplyCmdFlags()
+			cmdFlags, err := getApplyCmdFlags()
 			if err != nil {
 				cmdEvent.AddErrorMessage(err)
 				tracker.Track(cmdEvent)
@@ -123,27 +123,27 @@ func NewApplyCmd() *cobra.Command {
 				return err
 			}
 
-			if flags.DryRun {
+			if cmdFlags.DryRun {
 				logrus.Info("Dry run mode enabled, no changes will be applied")
 			}
 
 			var distrodl *dist.Downloader
 
-			logrus.Debugf("Using configuration file from path %s", flags.FuryctlPath)
+			logrus.Debugf("Using configuration file from path %s", cmdFlags.FuryctlPath)
 
 			// Init first half of collaborators.
 			client := netx.NewGoGetterClient()
 			executor := execx.NewStdExecutor()
-			depsvl := dependencies.NewValidator(executor, flags.BinPath, flags.FuryctlPath)
+			depsvl := dependencies.NewValidator(executor, cmdFlags.BinPath, cmdFlags.FuryctlPath)
 
-			if flags.DistroLocation == "" {
-				distrodl = dist.NewCachingDownloader(client, flags.Outdir, flags.GitProtocol, flags.DistroPatchesLocation)
+			if cmdFlags.DistroLocation == "" {
+				distrodl = dist.NewCachingDownloader(client, cmdFlags.Outdir, cmdFlags.GitProtocol, cmdFlags.DistroPatchesLocation)
 			} else {
-				distrodl = dist.NewDownloader(client, flags.GitProtocol, flags.DistroPatchesLocation)
+				distrodl = dist.NewDownloader(client, cmdFlags.GitProtocol, cmdFlags.DistroPatchesLocation)
 			}
 
 			// Init packages.
-			execx.NoTTY = flags.NoTTY
+			execx.NoTTY = cmdFlags.NoTTY
 
 			// Validate base requirements.
 			if err := depsvl.ValidateBaseReqs(); err != nil {
@@ -155,7 +155,7 @@ func NewApplyCmd() *cobra.Command {
 
 			// Download the distribution.
 			logrus.Info("Downloading distribution...")
-			res, err := distrodl.Download(flags.DistroLocation, flags.FuryctlPath)
+			res, err := distrodl.Download(cmdFlags.DistroLocation, cmdFlags.FuryctlPath)
 			if err != nil {
 				cmdEvent.AddErrorMessage(err)
 				tracker.Track(cmdEvent)
@@ -166,8 +166,8 @@ func NewApplyCmd() *cobra.Command {
 			cmdEvent.AddClusterDetails(analytics.ClusterDetails{
 				Provider:   res.MinimalConf.Kind,
 				KFDVersion: res.DistroManifest.Version,
-				Phase:      flags.Phase,
-				DryRun:     flags.DryRun,
+				Phase:      cmdFlags.Phase,
+				DryRun:     cmdFlags.DryRun,
 			})
 
 			lockFileHandler := lockfile.NewLockFile(res.MinimalConf.Metadata.Name)
@@ -206,14 +206,14 @@ func NewApplyCmd() *cobra.Command {
 			}
 			defer lockFileHandler.Remove() //nolint:errcheck // ignore error
 
-			basePath := filepath.Join(flags.Outdir, ".furyctl", res.MinimalConf.Metadata.Name)
+			basePath := filepath.Join(cmdFlags.Outdir, ".furyctl", res.MinimalConf.Metadata.Name)
 
 			// Init second half of collaborators.
-			depsdl := dependencies.NewCachingDownloader(client, flags.Outdir, basePath, flags.BinPath, flags.GitProtocol)
+			depsdl := dependencies.NewCachingDownloader(client, cmdFlags.Outdir, basePath, cmdFlags.BinPath, cmdFlags.GitProtocol)
 
 			// Validate the furyctl.yaml file.
 			logrus.Info("Validating configuration file...")
-			if err := config.Validate(flags.FuryctlPath, res.RepoPath); err != nil {
+			if err := config.Validate(cmdFlags.FuryctlPath, res.RepoPath); err != nil {
 				cmdEvent.AddErrorMessage(err)
 				tracker.Track(cmdEvent)
 
@@ -221,7 +221,7 @@ func NewApplyCmd() *cobra.Command {
 			}
 
 			// Download the dependencies.
-			if !flags.SkipDepsDownload {
+			if !cmdFlags.SkipDepsDownload {
 				logrus.Info("Downloading dependencies...")
 				if errs, _ := depsdl.DownloadAll(res.DistroManifest, res.MinimalConf.Kind); len(errs) > 0 {
 					cmdEvent.AddErrorMessage(ErrDownloadDependenciesFailed)
@@ -234,7 +234,7 @@ func NewApplyCmd() *cobra.Command {
 			}
 
 			// Validate the dependencies, unless explicitly told to skip it.
-			if !flags.SkipDepsValidation {
+			if !cmdFlags.SkipDepsValidation {
 				logrus.Info("Validating dependencies...")
 				if err := depsvl.Validate(res); err != nil {
 					cmdEvent.AddErrorMessage(err)
@@ -248,30 +248,30 @@ func NewApplyCmd() *cobra.Command {
 
 			// Define cluster creation paths.
 			paths := cluster.CreatorPaths{
-				ConfigPath: flags.FuryctlPath,
+				ConfigPath: cmdFlags.FuryctlPath,
 				WorkDir:    basePath,
 				DistroPath: res.RepoPath,
-				BinPath:    flags.BinPath,
+				BinPath:    cmdFlags.BinPath,
 			}
 
 			// Set debug mode.
-			execx.Debug = flags.Debug
+			execx.Debug = cmdFlags.Debug
 
 			// Create the cluster.
 			clusterCreator, err := cluster.NewCreator(
 				res.MinimalConf,
 				res.DistroManifest,
 				paths,
-				flags.Phase,
-				flags.SkipVpn,
-				flags.VpnAutoConnect,
-				flags.SkipNodesUpgrade,
-				flags.DryRun,
-				flags.Force,
-				flags.Upgrade,
-				flags.UpgradePathLocation,
-				flags.UpgradeNode,
-				flags.PostApplyPhases,
+				cmdFlags.Phase,
+				cmdFlags.SkipVpn,
+				cmdFlags.VpnAutoConnect,
+				cmdFlags.SkipNodesUpgrade,
+				cmdFlags.DryRun,
+				cmdFlags.Force,
+				cmdFlags.Upgrade,
+				cmdFlags.UpgradePathLocation,
+				cmdFlags.UpgradeNode,
+				cmdFlags.PostApplyPhases,
 			)
 			if err != nil {
 				cmdEvent.AddErrorMessage(err)
@@ -281,9 +281,9 @@ func NewApplyCmd() *cobra.Command {
 			}
 
 			if err := clusterCreator.Create(
-				flags.StartFrom,
-				flags.ProcessTimeout,
-				flags.PodRunningCheckTimeout,
+				cmdFlags.StartFrom,
+				cmdFlags.ProcessTimeout,
+				cmdFlags.PodRunningCheckTimeout,
 			); err != nil {
 				cmdEvent.AddErrorMessage(err)
 				tracker.Track(cmdEvent)
@@ -572,15 +572,15 @@ func setupApplyCmdFlags(cmd *cobra.Command) {
 
 	// Tab-autocomplete for post-apply-phases.
 	if err := cmd.RegisterFlagCompletionFunc("post-apply-phases", func(_ *cobra.Command, _ []string, toComplete string) ([]string, cobra.ShellCompDirective) {
-		// The post-apply-phases flag accepts a comma separated list of phases, so we need to take the passed list and add a new valid option at the end of it.
+		// The post-apply-phases flag accepts a comma-separated list of phases, so we need to take the passed list and add a new valid option at the end of it.
 		phases := cluster.MainPhases()
 		toCompleteList := strings.Split(toComplete, ",")
 		toCompleteLast := toCompleteList[len(toCompleteList)-1]
-		completion := []string{}
+		var completion []string
 
-		for p := range phases {
-			if strings.HasPrefix(phases[p], toCompleteLast) {
-				toCompleteList[len(toCompleteList)-1] = phases[p]
+		for _, phase := range phases {
+			if strings.HasPrefix(phase, toCompleteLast) {
+				toCompleteList[len(toCompleteList)-1] = phase
 				completion = append(completion, strings.Join(toCompleteList, ","))
 			}
 		}

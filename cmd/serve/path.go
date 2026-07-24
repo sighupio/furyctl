@@ -162,7 +162,7 @@ func Path(address, port, root string, nodesStatus map[string]string) error {
 	mux.Handle("/status", statusHandler)
 	mux.Handle("/", typedHandler)
 
-	listenAddr := strings.Join([]string{address, port}, ":")
+	listenAddr := address + ":" + port
 	logrus.WithFields(logrus.Fields{
 		"address": address,
 		"port":    port,

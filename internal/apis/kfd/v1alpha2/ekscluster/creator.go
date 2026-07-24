@@ -93,81 +93,37 @@ func (v *ClusterCreator) SetProperties(props []cluster.CreatorProperty) {
 }
 
 func (v *ClusterCreator) SetProperty(name string, value any) {
-	lcName := strings.ToLower(name)
-
-	switch lcName {
+	switch strings.ToLower(name) {
 	case cluster.CreatorPropertyFuryctlConf:
-		if s, ok := value.(private.EksclusterKfdV1Alpha2); ok {
-			v.furyctlConf = s
-		}
-
+		cluster.SetPropertyValue(value, &v.furyctlConf)
 	case cluster.CreatorPropertyKfdManifest:
-		if s, ok := value.(config.KFD); ok {
-			v.kfdManifest = s
-		}
-
+		cluster.SetPropertyValue(value, &v.kfdManifest)
 	case cluster.CreatorPropertyPhase:
-		if s, ok := value.(string); ok {
-			v.phase = s
-		}
-
+		cluster.SetPropertyValue(value, &v.phase)
 	case cluster.CreatorPropertySkipVpn:
-		if b, ok := value.(bool); ok {
-			v.skipVpn = b
-		}
-
+		cluster.SetPropertyValue(value, &v.skipVpn)
 	case cluster.CreatorPropertyVpnAutoConnect:
-		if b, ok := value.(bool); ok {
-			v.vpnAutoConnect = b
-		}
-
+		cluster.SetPropertyValue(value, &v.vpnAutoConnect)
 	case cluster.CreatorPropertyConfigPath:
-		if s, ok := value.(string); ok {
-			v.paths.ConfigPath = s
-		}
-
+		cluster.SetPropertyValue(value, &v.paths.ConfigPath)
 	case cluster.CreatorPropertyDistroPath:
-		if s, ok := value.(string); ok {
-			v.paths.DistroPath = s
-		}
-
+		cluster.SetPropertyValue(value, &v.paths.DistroPath)
 	case cluster.CreatorPropertyWorkDir:
-		if s, ok := value.(string); ok {
-			v.paths.WorkDir = s
-		}
-
+		cluster.SetPropertyValue(value, &v.paths.WorkDir)
 	case cluster.CreatorPropertyBinPath:
-		if s, ok := value.(string); ok {
-			v.paths.BinPath = s
-		}
-
+		cluster.SetPropertyValue(value, &v.paths.BinPath)
 	case cluster.CreatorPropertyDryRun:
-		if b, ok := value.(bool); ok {
-			v.dryRun = b
-		}
-
+		cluster.SetPropertyValue(value, &v.dryRun)
 	case cluster.CreatorPropertyForce:
-		if f, ok := value.([]string); ok {
-			v.force = f
-		}
-
+		cluster.SetPropertyValue(value, &v.force)
 	case cluster.CreatorPropertyUpgrade:
-		if b, ok := value.(bool); ok {
-			v.upgrade = b
-		}
-
+		cluster.SetPropertyValue(value, &v.upgrade)
 	case cluster.CreatorPropertyExternalUpgradesPath:
-		if s, ok := value.(string); ok {
-			v.externalUpgradesPath = s
-		}
-
+		cluster.SetPropertyValue(value, &v.externalUpgradesPath)
 	case cluster.CreatorPropertyPostApplyPhases:
-		if s, ok := value.([]string); ok {
-			v.postApplyPhases = s
-		}
-
+		cluster.SetPropertyValue(value, &v.postApplyPhases)
 	default:
-		logrus.Debugf("ignoring unknown property %q", lcName)
+		logrus.Debugf("ignoring unknown property %q", name)
 	}
 }
 

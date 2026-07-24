@@ -119,7 +119,7 @@ func (p *Plugins) Exec() error {
 
 	templateModel, err := templatex.NewTemplateModel(
 		path.Join(p.paths.DistroPath, "templates", cluster.OperationPhasePlugins),
-		path.Join(p.Path),
+		p.Path,
 		confPath,
 		outDirPath1,
 		p.paths.ConfigPath,

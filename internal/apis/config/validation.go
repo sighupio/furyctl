@@ -6,11 +6,12 @@ package config
 
 import (
 	"regexp"
+	"slices"
 	"strings"
 
 	"github.com/Al-Pragliola/go-version"
 	"github.com/go-playground/validator/v10"
-	"golang.org/x/exp/slices"
+	"github.com/sirupsen/logrus"
 )
 
 const (
@@ -57,32 +58,22 @@ var (
 )
 
 func NewValidator() *validator.Validate {
-	var err error
-
 	validate := validator.New()
 
-	if err = validate.RegisterValidation("api-version", ValidateAPIVersion); err != nil {
-		return nil
+	validations := map[string]validator.Func{
+		"api-version":           ValidateAPIVersion,
+		"cluster-kind":          ValidateClusterKind,
+		"eks-version":           ValidateEksVersion,
+		"permissive-semver":     ValidatePermissiveSemVer,
+		"permissive-constraint": ValidatePermissiveConstraint,
+		"aws-region":            ValidateAwsRegion,
 	}
 
-	if err = validate.RegisterValidation("cluster-kind", ValidateClusterKind); err != nil {
-		return nil
-	}
-
-	if err = validate.RegisterValidation("eks-version", ValidateEksVersion); err != nil {
-		return nil
-	}
-
-	if err = validate.RegisterValidation("permissive-semver", ValidatePermissiveSemVer); err != nil {
-		return nil
-	}
-
-	if err = validate.RegisterValidation("permissive-constraint", ValidatePermissiveConstraint); err != nil {
-		return nil
-	}
-
-	if err = validate.RegisterValidation("aws-region", ValidateAwsRegion); err != nil {
-		return nil
+	for name, fn := range validations {
+		if err := validate.RegisterValidation(name, fn); err != nil {
+			logrus.Warnf("error registering validation %q: %v", name, err)
+			return nil
+		}
 	}
 
 	return validate

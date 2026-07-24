@@ -17,11 +17,9 @@ func EnsurePrefix(version string) string {
 }
 
 func EnsureNoPrefix(version string) string {
-	if v, ok := strings.CutPrefix(version, prefix); ok {
-		return v
-	}
+	v, _ := strings.CutPrefix(version, prefix)
 
-	return version
+	return v
 }
 
 func EnsureNoBuild(version string) string {

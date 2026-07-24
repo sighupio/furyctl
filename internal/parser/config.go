@@ -133,8 +133,7 @@ func (p *ConfigParser) parseDynamicString(strVal string) (string, error) {
 
 		case File:
 			// If the value is a relative path, we need to convert it to an absolute path.
-			isRelativePath := RelativePathRegexp.MatchString(sourceValue)
-			if isRelativePath {
+			if RelativePathRegexp.MatchString(sourceValue) {
 				sourceValue = filepath.Clean(sourceValue)
 				sourceValue = filepath.Join(p.baseDir, sourceValue)
 			}

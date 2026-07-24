@@ -134,11 +134,11 @@ func (tv *Validator) validateTools(i any, kfdManifest config.KFD) ([]string, []e
 			continue
 		}
 
-		if (toolName == "yq") && !distribution.HasFeature(kfdManifest, distribution.FeatureYqSupport) {
+		if toolName == "yq" && !distribution.HasFeature(kfdManifest, distribution.FeatureYqSupport) {
 			continue
 		}
 
-		if (toolName == "kapp") && !distribution.HasFeature(kfdManifest, distribution.FeatureKappSupport) {
+		if toolName == "kapp" && !distribution.HasFeature(kfdManifest, distribution.FeatureKappSupport) {
 			continue
 		}
 
