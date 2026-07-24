@@ -6,6 +6,7 @@ package state
 
 import (
 	"encoding/base64"
+	"errors"
 	"fmt"
 	"os"
 	"path"
@@ -17,6 +18,11 @@ import (
 	iox "github.com/sighupio/furyctl/internal/x/io"
 	kubex "github.com/sighupio/furyctl/internal/x/kube"
 	yamlx "github.com/sighupio/furyctl/pkg/x/yaml"
+)
+
+var (
+	errSecretDataNotFound      = errors.New("secret data not found")
+	errSecretConfigKeyNotFound = errors.New("secret config key not found")
 )
 
 type Storer interface {
@@ -139,12 +145,12 @@ func (s *Store) getBaseConfig(key string) ([]byte, error) {
 
 	data, ok := secret["data"].(map[string]any)
 	if !ok {
-		return nil, fmt.Errorf("error while getting current cluster config: %w", err)
+		return nil, errSecretDataNotFound
 	}
 
 	configData, ok := data[key].(string)
 	if !ok {
-		return nil, fmt.Errorf("error while getting current cluster config: %w", err)
+		return nil, fmt.Errorf("%w: %q", errSecretConfigKeyNotFound, key)
 	}
 
 	decodedConfig, err := base64.StdEncoding.DecodeString(configData)

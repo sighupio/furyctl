@@ -162,14 +162,22 @@ func (*Kubernetes) getCommonDataFromDistribution(furyctlCfg templatex.Config) (m
 	if commonData["nodeSelector"] != nil {
 		nodeSelector, ok = commonData["nodeSelector"].(map[any]any)
 		if !ok {
-			return nodeSelector, tolerations, fmt.Errorf("error getting nodeSelector from distribution: %w", err)
+			return nodeSelector, tolerations, fmt.Errorf(
+				"%w: unexpected type %T",
+				ErrGettingDistributionNS,
+				commonData["nodeSelector"],
+			)
 		}
 	}
 
 	if commonData["tolerations"] != nil {
 		tolerations, ok = commonData["tolerations"].([]any)
 		if !ok {
-			return nodeSelector, tolerations, fmt.Errorf("error getting tolerations from distribution: %w", err)
+			return nodeSelector, tolerations, fmt.Errorf(
+				"%w: unexpected type %T",
+				ErrGettingDistributionTolers,
+				commonData["tolerations"],
+			)
 		}
 	}
 
