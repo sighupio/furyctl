@@ -121,16 +121,10 @@ func (i *Infrastructure) Exec(_ string, upgradeState *upgrade.State) error {
 		"version": i.kfdManifest.Kubernetes.Immutable.Version,
 	}
 
-	// Inject the immutable.yaml version data; the infra hosts.yaml renders containerd_sandbox_tag,
-	// kubernetes_image_registry and the haproxy image/tag inline, consumed by the apply.yaml roles.
-	immutableAssets, err := selectImmutableAssets(i.Path, i.kfdManifest.Kubernetes.Immutable.Version)
+	// Inject the immutable.yaml version data; the infra hosts.yaml renders the pins consumed by apply.yaml.
+	versionVars, err := VersionVarsForPhase(i.Path, i.kfdManifest.Kubernetes.Immutable.Version, i.KubectlPath)
 	if err != nil {
-		return fmt.Errorf("error selecting immutable assets: %w", err)
-	}
-
-	versionVars := map[any]any{}
-	for name, value := range buildVersionVars(i.kfdManifest.Kubernetes.Immutable.Version, i.KubectlPath, immutableAssets) {
-		versionVars[name] = value
+		return fmt.Errorf("error building version vars: %w", err)
 	}
 
 	mCfg.Data["versions"] = versionVars
