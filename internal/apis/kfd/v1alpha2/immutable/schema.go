@@ -7,7 +7,6 @@ package immutable
 import (
 	"errors"
 	"fmt"
-	"slices"
 	"strings"
 
 	"github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/immutable/public"
@@ -27,10 +26,11 @@ var (
 		"every hostname referenced by a role (" + roleListPaths +
 			") must have a matching entry in .spec.infrastructure.nodes",
 	)
-	ErrNodeMultipleRoles = errors.New(
-		"a node must be assigned a single role, but these hostnames are referenced by more than one of " +
+	ErrNodeMultipleReferences = errors.New(
+		"a node must be referenced exactly once, but these hostnames appear more than once across " +
 			roleListPaths +
-			" (for stacked etcd omit the .spec.kubernetes.etcd block instead of repeating hostnames)",
+			" (a node belongs to a single role, and to a single node group; for stacked etcd omit " +
+			"the .spec.kubernetes.etcd block instead of repeating hostnames)",
 	)
 )
 
@@ -43,12 +43,12 @@ func (*ExtraSchemaValidator) Validate(confPath string) error {
 	}
 
 	// Cross-check node lists and role lists: every node has a role, every referenced
-	// hostname is a defined node, and no hostname holds more than one role. Report
+	// hostname is a defined node, and no hostname is referenced more than once. Report
 	// them together to surface all issues at once.
 	return errors.Join(
 		validateNodeRoles(&conf),
 		validateNodeReferences(&conf),
-		validateSingleRole(&conf),
+		validateSingleReference(&conf),
 	)
 }
 
@@ -88,8 +88,8 @@ func validateNodeReferences(conf *public.ImmutableKfdV1Alpha2) error {
 			continue
 		}
 
-		// A hostname wrongly listed under several roles (see validateSingleRole)
-		// would recur here; report it once.
+		// A hostname referenced more than once (see validateSingleReference) would
+		// recur here; report it once.
 		if _, dup := seen[ra.Hostname]; dup {
 			continue
 		}
@@ -105,34 +105,32 @@ func validateNodeReferences(conf *public.ImmutableKfdV1Alpha2) error {
 	return nil
 }
 
-// validateSingleRole asserts no hostname is referenced by more than one role list.
-// Roles are gathered per hostname (first-seen order) for a message like
-// "ctrl01 (controlplane, etcd)".
-func validateSingleRole(conf *public.ImmutableKfdV1Alpha2) error {
-	roles := make(map[string][]string)
+// validateSingleReference asserts no hostname is referenced more than once across
+// all role lists (whether by two node groups, or by a control-plane host repeated
+// under a dedicated etcd block).
+func validateSingleReference(conf *public.ImmutableKfdV1Alpha2) error {
+	count := make(map[string]int)
 
 	var order []string
 
 	for _, ra := range conf.RoleAssignments() {
-		if _, seen := roles[ra.Hostname]; !seen {
+		if count[ra.Hostname] == 0 {
 			order = append(order, ra.Hostname)
 		}
 
-		if !slices.Contains(roles[ra.Hostname], ra.Role) {
-			roles[ra.Hostname] = append(roles[ra.Hostname], ra.Role)
-		}
+		count[ra.Hostname]++
 	}
 
 	var offenders []string
 
 	for _, hostname := range order {
-		if len(roles[hostname]) > 1 {
-			offenders = append(offenders, fmt.Sprintf("%s (%s)", hostname, strings.Join(roles[hostname], ", ")))
+		if count[hostname] > 1 {
+			offenders = append(offenders, hostname)
 		}
 	}
 
 	if len(offenders) > 0 {
-		return fmt.Errorf("%w: %s", ErrNodeMultipleRoles, strings.Join(offenders, ", "))
+		return fmt.Errorf("%w: %s", ErrNodeMultipleReferences, strings.Join(offenders, ", "))
 	}
 
 	return nil

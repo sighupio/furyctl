@@ -78,11 +78,21 @@ func Test_ExtraSchemaValidator_Validate(t *testing.T) {
 			desc:     "a hostname is referenced by more than one role",
 			confPath: "test/schema/node_with_multiple_roles.yaml",
 			wantErr:  true,
-			wantErrMsg: "a node must be assigned a single role, but these hostnames are referenced by more than " +
-				"one of .spec.kubernetes.controlPlane.members, .spec.kubernetes.etcd.members, " +
+			wantErrMsg: "a node must be referenced exactly once, but these hostnames appear more than once " +
+				"across .spec.kubernetes.controlPlane.members, .spec.kubernetes.etcd.members, " +
 				".spec.kubernetes.nodeGroups[].nodes or .spec.infrastructure.loadBalancers.members " +
-				"(for stacked etcd omit the .spec.kubernetes.etcd block instead of repeating hostnames): " +
-				"ctrl01 (controlplane, etcd)",
+				"(a node belongs to a single role, and to a single node group; for stacked etcd omit " +
+				"the .spec.kubernetes.etcd block instead of repeating hostnames): ctrl01",
+		},
+		{
+			desc:     "a hostname is referenced by more than one node group",
+			confPath: "test/schema/node_in_multiple_node_groups.yaml",
+			wantErr:  true,
+			wantErrMsg: "a node must be referenced exactly once, but these hostnames appear more than once " +
+				"across .spec.kubernetes.controlPlane.members, .spec.kubernetes.etcd.members, " +
+				".spec.kubernetes.nodeGroups[].nodes or .spec.infrastructure.loadBalancers.members " +
+				"(a node belongs to a single role, and to a single node group; for stacked etcd omit " +
+				"the .spec.kubernetes.etcd block instead of repeating hostnames): worker01",
 		},
 		{
 			desc:     "furyctl config is invalid",
