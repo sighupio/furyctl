@@ -67,6 +67,8 @@ func NewRunnerFactory(executor execx.Executor, paths RunnerFactoryPaths) *Runner
 }
 
 func (rf *RunnerFactory) Create(name Name, version, workDir string) Runner {
+	binPath := filepath.Join(rf.paths.Bin, string(name), version, string(name))
+
 	switch name {
 	case Ansible:
 		return ansible.NewRunner(rf.executor, ansible.PathsForVersion(rf.paths.Bin, version, workDir))
@@ -79,7 +81,7 @@ func (rf *RunnerFactory) Create(name Name, version, workDir string) Runner {
 
 	case Furyagent:
 		return furyagent.NewRunner(rf.executor, furyagent.Paths{
-			Furyagent: filepath.Join(rf.paths.Bin, string(name), version, string(name)),
+			Furyagent: binPath,
 			WorkDir:   workDir,
 		})
 
@@ -99,7 +101,7 @@ func (rf *RunnerFactory) Create(name Name, version, workDir string) Runner {
 		return kubectl.NewRunner(
 			rf.executor,
 			kubectl.Paths{
-				Kubectl: filepath.Join(rf.paths.Bin, string(name), version, string(name)),
+				Kubectl: binPath,
 				WorkDir: workDir,
 			},
 			false, true, true,
@@ -107,19 +109,19 @@ func (rf *RunnerFactory) Create(name Name, version, workDir string) Runner {
 
 	case Kustomize:
 		return kustomize.NewRunner(rf.executor, kustomize.Paths{
-			Kustomize: filepath.Join(rf.paths.Bin, string(name), version, string(name)),
+			Kustomize: binPath,
 			WorkDir:   workDir,
 		})
 
 	case Openvpn:
 		return openvpn.NewRunner(rf.executor, openvpn.Paths{
-			Openvpn: filepath.Join(rf.paths.Bin, string(name), version, string(name)),
+			Openvpn: binPath,
 			WorkDir: workDir,
 		})
 
 	case Terraform:
 		return terraform.NewRunner(rf.executor, terraform.Paths{
-			Terraform: filepath.Join(rf.paths.Bin, string(name), version, string(name)),
+			Terraform: binPath,
 			WorkDir:   workDir,
 		})
 
@@ -131,7 +133,7 @@ func (rf *RunnerFactory) Create(name Name, version, workDir string) Runner {
 
 	case Yq:
 		return yq.NewRunner(rf.executor, yq.Paths{
-			Yq:      filepath.Join(rf.paths.Bin, string(name), version, string(name)),
+			Yq:      binPath,
 			WorkDir: workDir,
 		})
 
@@ -143,13 +145,13 @@ func (rf *RunnerFactory) Create(name Name, version, workDir string) Runner {
 
 	case Helm:
 		return helm.NewRunner(rf.executor, helm.Paths{
-			Helm:    filepath.Join(rf.paths.Bin, string(name), version, string(name)),
+			Helm:    binPath,
 			WorkDir: workDir,
 		})
 
 	case Helmfile:
 		return helmfile.NewRunner(rf.executor, helmfile.Paths{
-			Helmfile: filepath.Join(rf.paths.Bin, string(name), version, string(name)),
+			Helmfile: binPath,
 			WorkDir:  workDir,
 		})
 
@@ -157,12 +159,11 @@ func (rf *RunnerFactory) Create(name Name, version, workDir string) Runner {
 		return kapp.NewRunner(
 			rf.executor,
 			kapp.Paths{
-				Kapp:    filepath.Join(rf.paths.Bin, string(name), version, string(name)),
+				Kapp:    binPath,
 				WorkDir: workDir,
 			},
 			false,
 		)
-
 	default:
 		return nil
 	}

@@ -22,6 +22,7 @@ import (
 	"github.com/sighupio/furyctl/internal/tool/kubectl"
 	execx "github.com/sighupio/furyctl/internal/x/exec"
 	kubex "github.com/sighupio/furyctl/internal/x/kube"
+	slicesx "github.com/sighupio/furyctl/internal/x/slices"
 	"github.com/sighupio/furyctl/pkg/diffs"
 	rules "github.com/sighupio/furyctl/pkg/rulesextractor"
 	templatex "github.com/sighupio/furyctl/pkg/template"
@@ -256,32 +257,14 @@ func (p *PreFlight) CheckStateDiffs(d r3diff.Changelog, diffChecker diffs.Checke
 		return nil
 	}
 
-	// Get all immutable rules for each phase.
-	infraImmutableRules := r.GetImmutableRules("infrastructure")
-	kubeImmutableRules := r.GetImmutableRules("kubernetes")
-	distroImmutableRules := r.GetImmutableRules("distribution")
-
-	// Filter out the rules that have matching safe conditions.
-	infraFilteredRules := r.FilterSafeImmutableRules(infraImmutableRules, d)
-	kubeFilteredRules := r.FilterSafeImmutableRules(kubeImmutableRules, d)
-	distroFilteredRules := r.FilterSafeImmutableRules(distroImmutableRules, d)
-
-	// Extract the paths from the filtered rules.
-	infraImmutablePaths := make([]string, 0)
-	kubeImmutablePaths := make([]string, 0)
-	distroImmutablePaths := make([]string, 0)
-
-	for _, rule := range infraFilteredRules {
-		infraImmutablePaths = append(infraImmutablePaths, rule.Path)
+	// Extract the paths from the rules left after filtering out the ones with matching safe conditions.
+	extractPaths := func(filteredRules []rules.Rule) []string {
+		return slicesx.Map(filteredRules, func(rule rules.Rule) string { return rule.Path })
 	}
 
-	for _, rule := range kubeFilteredRules {
-		kubeImmutablePaths = append(kubeImmutablePaths, rule.Path)
-	}
-
-	for _, rule := range distroFilteredRules {
-		distroImmutablePaths = append(distroImmutablePaths, rule.Path)
-	}
+	infraImmutablePaths := extractPaths(r.FilterSafeImmutableRules(r.GetImmutableRules("infrastructure"), d))
+	kubeImmutablePaths := extractPaths(r.FilterSafeImmutableRules(r.GetImmutableRules("kubernetes"), d))
+	distroImmutablePaths := extractPaths(r.FilterSafeImmutableRules(r.GetImmutableRules("distribution"), d))
 
 	errs := slices.Concat(
 		diffChecker.AssertImmutableViolations(d, infraImmutablePaths),

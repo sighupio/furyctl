@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"html/template"
+	"maps"
 	"os"
 	"path/filepath"
 	"strings"
@@ -130,35 +131,22 @@ func Validate(path, repoPath string) error {
 		}
 	}
 
-	// Check if the schema supports flags field.
-	schemaSupportsFlags := checkSchemaSupportsFlags(schemaPath)
+	// Choose validation path based on schema capabilities: new schemas know about the flags
+	// field, old schemas need it stripped before validation (current behavior).
+	confToValidate := rawConf
+	if !checkSchemaSupportsFlags(schemaPath) {
+		confToValidate = createCleanConfigForSchemaValidation(rawConf)
+	}
 
-	// Choose validation path based on schema capabilities.
-	if schemaSupportsFlags {
-		// New path: schema knows about flags, validate with flags included.
-		expandedConf, err := expandDynamicValues(rawConf, filepath.Dir(path))
-		if err != nil {
-			return fmt.Errorf("error expanding dynamic values: %w", err)
-		}
+	// Expand dynamic values before schema validation.
+	expandedConf, err := expandDynamicValues(confToValidate, filepath.Dir(path))
+	if err != nil {
+		return fmt.Errorf("error expanding dynamic values: %w", err)
+	}
 
-		// Validate configuration with flags included.
-		if err = schema.Validate(expandedConf); err != nil {
-			return fmt.Errorf("error while validating against schema: %w", err)
-		}
-	} else {
-		// Fallback path: old schema, strip flags before validation (current behavior).
-		cleanConf := createCleanConfigForSchemaValidation(rawConf)
-
-		// Expand dynamic values before schema validation.
-		expandedConf, err := expandDynamicValues(cleanConf, filepath.Dir(path))
-		if err != nil {
-			return fmt.Errorf("error expanding dynamic values: %w", err)
-		}
-
-		// Validate expanded configuration against fury-distribution schema.
-		if err = schema.Validate(expandedConf); err != nil {
-			return fmt.Errorf("error while validating against schema: %w", err)
-		}
+	// Validate expanded configuration against the schema.
+	if err = schema.Validate(expandedConf); err != nil {
+		return fmt.Errorf("error while validating against schema: %w", err)
 	}
 
 	// Run additional schema validation rules.
@@ -198,20 +186,10 @@ func checkSchemaSupportsFlags(schemaPath string) bool {
 // createCleanConfigForSchemaValidation removes furyctl-specific sections that shouldn't be validated
 // against fury-distribution schemas.
 func createCleanConfigForSchemaValidation(rawConf map[string]any) map[string]any {
-	cleanConf := make(map[string]any)
+	cleanConf := maps.Clone(rawConf)
 
-	// Copy all sections except furyctl-specific ones.
-	for key, value := range rawConf {
-		switch key {
-		case "flags":
-			// Skip flags section - it's furyctl-specific.
-			continue
-
-		default:
-			// Copy all other sections for schema validation.
-			cleanConf[key] = value
-		}
-	}
+	// Skip the flags section - it's furyctl-specific.
+	delete(cleanConf, "flags")
 
 	return cleanConf
 }
@@ -283,22 +261,17 @@ func expandDynamicValuesRecursive(value any, configParser *parserx.ConfigParser)
 	}
 }
 
-const (
-	envPrefixLen   = 6 // "env://"
-	filePrefixLen  = 7 // "file://"
-	httpPrefixLen  = 8 // "http://"
-	httpsPrefixLen = 9 // "https://"
-	pathPrefixLen  = 8 // "path://"
-)
-
 // containsDynamicPattern checks if a string contains dynamic value patterns like {env://}, {file://}, etc.
 func containsDynamicPattern(s string) bool {
-	// Simple check for dynamic value patterns.
-	return len(s) > 0 && s[0] == '{' && ((len(s) > envPrefixLen && s[1:envPrefixLen+1] == "env://") ||
-		(len(s) > filePrefixLen && s[1:filePrefixLen+1] == "file://") ||
-		(len(s) > httpPrefixLen && s[1:httpPrefixLen+1] == "http://") ||
-		(len(s) > httpsPrefixLen && s[1:httpsPrefixLen+1] == "https://") ||
-		(len(s) > pathPrefixLen && s[1:pathPrefixLen+1] == "path://"))
+	if len(s) == 0 || s[0] != '{' {
+		return false
+	}
+
+	return strings.HasPrefix(s[1:], "env://") ||
+		strings.HasPrefix(s[1:], "file://") ||
+		strings.HasPrefix(s[1:], "http://") ||
+		strings.HasPrefix(s[1:], "https://") ||
+		strings.HasPrefix(s[1:], "path://")
 }
 
 // validateFlagsSection validates the flags section using furyctl-specific validation rules.
@@ -405,7 +378,6 @@ func validateToolsConfiguration(repoPath string, furyctlConf map[string]any) err
 	}
 
 	_, hasTerraformConfig := toolsConfig["terraform"]
-
 	if hasTerraformConfig && distribution.EffectiveOpenTofuVersion(kfdFile.Tools) != "" {
 		logrus.Warn("'spec.toolsConfiguration.terraform' is deprecated, " +
 			"it will be removed in future versions. " +
@@ -425,5 +397,5 @@ func loadFromFile(path string) (config.Furyctl, error) {
 		return config.Furyctl{}, fmt.Errorf("%w: %v", dist.ErrValidateConfig, err)
 	}
 
-	return conf, err
+	return conf, nil
 }

@@ -4,10 +4,6 @@
 
 package furyagent
 
-import (
-	yamlx "github.com/sighupio/furyctl/pkg/x/yaml"
-)
-
 type Storage struct {
 	BucketName   string `yaml:"bucketName"`
 	Provider     string `yaml:"provider"`
@@ -40,13 +36,4 @@ type Adapter struct {
 type AgentConfig struct {
 	Storage          Storage          `yaml:"storage"`
 	ClusterComponent ClusterComponent `yaml:"clusterComponent"`
-}
-
-func ParseConfig(cfgPath string) (*AgentConfig, error) {
-	cfg, err := yamlx.FromFileV3[*AgentConfig](cfgPath)
-	if err != nil {
-		return nil, err
-	}
-
-	return cfg, nil
 }

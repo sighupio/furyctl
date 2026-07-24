@@ -185,7 +185,7 @@ func NewAirGappedBundleCmd() *cobra.Command {
 			errs, uts := depsdl.DownloadAll(dres.DistroManifest, dres.MinimalConf.Kind)
 
 			for _, ut := range uts {
-				logrus.Warn(fmt.Sprintf("'%s' is a host dependency and is NOT bundled, install it on the target machine", ut))
+				logrus.Warnf("'%s' is a host dependency and is NOT bundled, install it on the target machine", ut)
 			}
 
 			if len(errs) > 0 {

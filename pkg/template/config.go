@@ -110,12 +110,6 @@ func NewConfigWithoutData(tplSource *merge.Merger, excluded []string) (Config, e
 }
 
 func newTemplatesFromMap(t any) (*Templates, error) {
-	var exc []string
-
-	var inc []string
-
-	var err error
-
 	m, ok := t.(map[any]any)
 	if !ok {
 		return nil, fmt.Errorf("%w %v to map", errCannotConvert, t)
@@ -126,7 +120,7 @@ func newTemplatesFromMap(t any) (*Templates, error) {
 		incS = nil
 	}
 
-	inc, err = toTypeSlice[string](incS)
+	inc, err := toTypeSlice[string](incS)
 	if err != nil {
 		return nil, err
 	}
@@ -136,7 +130,7 @@ func newTemplatesFromMap(t any) (*Templates, error) {
 		excS = nil
 	}
 
-	exc, err = toTypeSlice[string](excS)
+	exc, err := toTypeSlice[string](excS)
 	if err != nil {
 		return nil, err
 	}
@@ -161,10 +155,6 @@ func newTemplatesFromMap(t any) (*Templates, error) {
 
 func toTypeSlice[T any](t []any) ([]T, error) {
 	s := make([]T, len(t))
-
-	if t == nil {
-		return s, nil
-	}
 
 	for i, v := range t {
 		sV, err := toType[T](v)

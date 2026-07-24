@@ -119,7 +119,7 @@ func Test_miseToolsForKind(t *testing.T) {
 			slices.Sort(uts)
 			slices.Sort(tC.wantUts)
 
-			assert.Equal(t, tC.wantUts, uts, "uts")
+			assert.ElementsMatch(t, tC.wantUts, uts, "uts")
 		})
 	}
 }

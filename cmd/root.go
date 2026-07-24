@@ -46,9 +46,7 @@ type RootCommand struct {
 
 var ErrUnexpandedPath = errors.New("cannot create log file with unexpanded dynamic values in path")
 
-const (
-	logRndCeil = 100000
-)
+const logRndCeil = 100000
 
 func NewRootCmd() *RootCommand {
 	rootCmd := &RootCommand{
@@ -233,7 +231,7 @@ furyctl is a command line interface tool to manage the full lifecycle of SIGHUP 
 		"Download repositories using the given protocol. Use when SSH traffic is being blocked or when SSH "+
 			"client has not been configured\nset the GITHUB_TOKEN environment variable with your "+
 			"token to use authentication while downloading, for example for private repositories. "+
-			"\nOptions are: "+strings.Join(git.ProtocolsS(), ", ")+"",
+			"\nOptions are: "+strings.Join(git.ProtocolsS(), ", "),
 	)
 
 	if err := rootCmd.RegisterFlagCompletionFunc("git-protocol", git.ProtocolFlagCompletion); err != nil {

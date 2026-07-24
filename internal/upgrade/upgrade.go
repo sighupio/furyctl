@@ -45,7 +45,7 @@ func (u *Upgrade) Exec(workdir, phase string) error {
 	upgradePath := path.Join(
 		u.paths.WorkDir,
 		"upgrades",
-		fmt.Sprintf("%s-%s", from, to),
+		from+"-"+to,
 	)
 
 	upgradeScript := path.Join(upgradePath, phase+".sh")
