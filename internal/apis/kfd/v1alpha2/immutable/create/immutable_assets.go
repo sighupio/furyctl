@@ -47,3 +47,14 @@ func selectImmutableAssets(phasePath, kubeVersion string) (assets, error) {
 
 	return immutableAssets, nil
 }
+
+// VersionVarsForPhase resolves the immutable.yaml pins for kubeVersion (from phasePath/../vendor)
+// into the "versions" template data shared by the create phases and the certificates renewer.
+func VersionVarsForPhase(phasePath, kubeVersion, kubectlBin string) (map[any]any, error) {
+	immutableAssets, err := selectImmutableAssets(phasePath, kubeVersion)
+	if err != nil {
+		return nil, fmt.Errorf("error selecting immutable assets: %w", err)
+	}
+
+	return versionVarsFromAssets(kubeVersion, kubectlBin, immutableAssets), nil
+}

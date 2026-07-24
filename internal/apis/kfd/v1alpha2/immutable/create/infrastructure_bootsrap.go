@@ -199,11 +199,9 @@ func (i *Infrastructure) getSSHPublicKeyContent() (string, error) {
 	return sshPublicKeyContent, nil
 }
 
-// buildVersionVars turns the selected immutable.yaml block into the data the version vars template
-// consumes. Both the kubernetes and infrastructure phases inject this under "versions" into the
-// generic template walk, so each phase renders the version vars inline in its hosts.yaml.
-// Selection/validation stays in Go (selectImmutableAssets).
-func buildVersionVars(version, kubectlBin string, a assets) map[string]any {
+// versionVarsFromAssets turns the selected immutable.yaml block into the "versions" template data.
+// Callers reach it through VersionVarsForPhase, which handles selection/validation.
+func versionVarsFromAssets(version, kubectlBin string, a assets) map[any]any {
 	// Carry the explicit per-arch .raw URL from immutable.yaml (not just the version) so the sysext role
 	// downloads exactly what the manifest pins, instead of reconstructing the URL from a release-base
 	// convention — the same URL the butane/Ignition install path already uses (kills the two-dialects smell).
@@ -221,7 +219,7 @@ func buildVersionVars(version, kubectlBin string, a assets) map[string]any {
 		}
 	}
 
-	vars := map[string]any{
+	vars := map[any]any{
 		"kubernetes_version":        version,
 		"containerd_sandbox_tag":    a.SandboxTag,
 		"coredns_image_prefix":      a.CorednsImagePrefix,

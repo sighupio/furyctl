@@ -13,6 +13,7 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/sighupio/furyctl/internal/apis/config"
+	"github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/immutable/create"
 	"github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/immutable/public"
 	"github.com/sighupio/furyctl/internal/cluster"
 	"github.com/sighupio/furyctl/internal/tool/ansible"
@@ -28,6 +29,7 @@ type CertificatesRenewer struct {
 	distroPath  string
 	configPath  string
 	binPath     string
+	workDir     string
 }
 
 func (c *CertificatesRenewer) SetProperties(props []cluster.CertificatesRenewerProperty) {
@@ -67,6 +69,11 @@ func (c *CertificatesRenewer) SetProperty(name string, value any) {
 			c.binPath = s
 		}
 
+	case cluster.CertificatesRenewerPropertyWorkDir:
+		if s, ok := value.(string); ok {
+			c.workDir = s
+		}
+
 	default:
 		logrus.Debugf("ignoring unknown property %q", lcName)
 	}
@@ -81,6 +88,14 @@ func (c *CertificatesRenewer) Renew() error {
 	}
 
 	defer os.RemoveAll(tmpDir)
+
+	// Root the phase at workDir/kubernetes so version vars resolve the vendored immutable.yaml and
+	// KubectlPath, like the create phase (hosts.yaml reads .versions.kubectl_bin under missingkey=error).
+	c.OperationPhase = cluster.NewOperationPhase(
+		path.Join(c.workDir, cluster.OperationPhaseKubernetes),
+		c.kfdManifest.Tools,
+		c.binPath,
+	)
 
 	ansibleRunner := ansible.NewRunner(
 		execx.NewStdExecutor(),
@@ -102,9 +117,19 @@ func (c *CertificatesRenewer) Renew() error {
 		return fmt.Errorf("error creating template config: %w", err)
 	}
 
+	version := c.kfdManifest.Kubernetes.Immutable.Version
+
 	mCfg.Data["kubernetes"] = map[any]any{
-		"version": c.kfdManifest.Kubernetes.OnPremises.Version,
+		"version": version,
 	}
+
+	// Inject the same "versions" data as the create phase; hosts.yaml fails on the missing key otherwise.
+	versionVars, err := create.VersionVarsForPhase(c.Path, version, c.KubectlPath)
+	if err != nil {
+		return fmt.Errorf("error building version vars: %w", err)
+	}
+
+	mCfg.Data["versions"] = versionVars
 
 	mCfg.Data["paths"] = map[any]any{
 		"helm":       "",
