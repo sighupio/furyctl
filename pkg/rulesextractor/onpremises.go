@@ -41,36 +41,9 @@ func NewOnPremClusterRulesExtractor(distributionPath string, renderedConfig map[
 
 func (r *OnPremExtractor) GetImmutableRules(phase string) []Rule {
 	switch phase {
-	case cluster.OperationPhaseKubernetes:
-		if r.Spec.Kubernetes == nil {
-			return []Rule{}
-		}
-
-		var immutableRules []Rule
-
-		for _, rule := range *r.Spec.Kubernetes {
-			if rule.Immutable {
-				immutableRules = append(immutableRules, rule)
-			}
-		}
-
-		return immutableRules
-
-	case cluster.OperationPhaseDistribution:
-		if r.Spec.Distribution == nil {
-			return []Rule{}
-		}
-
-		var immutableRules []Rule
-
-		for _, rule := range *r.Spec.Distribution {
-			if rule.Immutable {
-				immutableRules = append(immutableRules, rule)
-			}
-		}
-
-		return immutableRules
-
+	case cluster.OperationPhaseKubernetes,
+		cluster.OperationPhaseDistribution:
+		return extractFromPhase(r.Spec, phase, r.ExtractImmutableRules)
 	default:
 		return []Rule{}
 	}
@@ -78,20 +51,9 @@ func (r *OnPremExtractor) GetImmutableRules(phase string) []Rule {
 
 func (r *OnPremExtractor) GetReducers(phase string) []Rule {
 	switch phase {
-	case cluster.OperationPhaseKubernetes:
-		if r.Spec.Kubernetes == nil {
-			return []Rule{}
-		}
-
-		return r.ExtractReducerRules(*r.Spec.Kubernetes)
-
-	case cluster.OperationPhaseDistribution:
-		if r.Spec.Distribution == nil {
-			return []Rule{}
-		}
-
-		return r.ExtractReducerRules(*r.Spec.Distribution)
-
+	case cluster.OperationPhaseKubernetes,
+		cluster.OperationPhaseDistribution:
+		return extractFromPhase(r.Spec, phase, r.ExtractReducerRules)
 	default:
 		return []Rule{}
 	}
@@ -99,20 +61,9 @@ func (r *OnPremExtractor) GetReducers(phase string) []Rule {
 
 func (r *OnPremExtractor) GetUnsupportedRules(phase string) []Rule {
 	switch phase {
-	case cluster.OperationPhaseKubernetes:
-		if r.Spec.Kubernetes == nil {
-			return []Rule{}
-		}
-
-		return r.ExtractUnsupportedRules(*r.Spec.Kubernetes)
-
-	case cluster.OperationPhaseDistribution:
-		if r.Spec.Distribution == nil {
-			return []Rule{}
-		}
-
-		return r.ExtractUnsupportedRules(*r.Spec.Distribution)
-
+	case cluster.OperationPhaseKubernetes,
+		cluster.OperationPhaseDistribution:
+		return extractFromPhase(r.Spec, phase, r.ExtractUnsupportedRules)
 	default:
 		return []Rule{}
 	}

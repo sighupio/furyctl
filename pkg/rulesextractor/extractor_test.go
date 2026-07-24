@@ -696,7 +696,7 @@ func TestBaseExtractor_ExtractImmutablesFromRules(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			x := rules.NewBaseExtractor(rules.Spec{})
 
-			got := x.ExtractImmutablesFromRules(tc.rules)
+			got := x.ExtractImmutablesFromRules(&tc.rules)
 
 			require.Equal(t, tc.want, got)
 		})
@@ -1180,7 +1180,7 @@ func TestBaseExtractor_ExtractReducerRules(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			x := rules.NewBaseExtractor(rules.Spec{})
 
-			got := x.ExtractReducerRules(tc.rules)
+			got := x.ExtractReducerRules(&tc.rules)
 
 			require.Equal(t, tc.want, got)
 		})

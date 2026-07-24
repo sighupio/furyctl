@@ -37,53 +37,12 @@ func NewEKSClusterRulesExtractor(distributionPath string, renderedConfig map[str
 	return &builder, nil
 }
 
-func (r *EKSExtractor) GetImmutableRules(phase string) []Rule { //nolint:dupl // providers might not support all phases
+func (r *EKSExtractor) GetImmutableRules(phase string) []Rule {
 	switch phase {
-	case cluster.OperationPhaseInfrastructure:
-		if r.Spec.Infrastructure == nil {
-			return []Rule{}
-		}
-
-		var immutableRules []Rule
-
-		for _, rule := range *r.Spec.Infrastructure {
-			if rule.Immutable {
-				immutableRules = append(immutableRules, rule)
-			}
-		}
-
-		return immutableRules
-
-	case cluster.OperationPhaseKubernetes:
-		if r.Spec.Kubernetes == nil {
-			return []Rule{}
-		}
-
-		var immutableRules []Rule
-
-		for _, rule := range *r.Spec.Kubernetes {
-			if rule.Immutable {
-				immutableRules = append(immutableRules, rule)
-			}
-		}
-
-		return immutableRules
-
-	case cluster.OperationPhaseDistribution:
-		if r.Spec.Distribution == nil {
-			return []Rule{}
-		}
-
-		var immutableRules []Rule
-
-		for _, rule := range *r.Spec.Distribution {
-			if rule.Immutable {
-				immutableRules = append(immutableRules, rule)
-			}
-		}
-
-		return immutableRules
-
+	case cluster.OperationPhaseInfrastructure,
+		cluster.OperationPhaseKubernetes,
+		cluster.OperationPhaseDistribution:
+		return extractFromPhase(r.Spec, phase, r.ExtractImmutableRules)
 	default:
 		return []Rule{}
 	}
@@ -91,27 +50,10 @@ func (r *EKSExtractor) GetImmutableRules(phase string) []Rule { //nolint:dupl //
 
 func (r *EKSExtractor) GetReducers(phase string) []Rule {
 	switch phase {
-	case cluster.OperationPhaseInfrastructure:
-		if r.Spec.Infrastructure == nil {
-			return []Rule{}
-		}
-
-		return r.ExtractReducerRules(*r.Spec.Infrastructure)
-
-	case cluster.OperationPhaseKubernetes:
-		if r.Spec.Kubernetes == nil {
-			return []Rule{}
-		}
-
-		return r.ExtractReducerRules(*r.Spec.Kubernetes)
-
-	case cluster.OperationPhaseDistribution:
-		if r.Spec.Distribution == nil {
-			return []Rule{}
-		}
-
-		return r.ExtractReducerRules(*r.Spec.Distribution)
-
+	case cluster.OperationPhaseInfrastructure,
+		cluster.OperationPhaseKubernetes,
+		cluster.OperationPhaseDistribution:
+		return extractFromPhase(r.Spec, phase, r.ExtractReducerRules)
 	default:
 		return []Rule{}
 	}
@@ -119,27 +61,10 @@ func (r *EKSExtractor) GetReducers(phase string) []Rule {
 
 func (r *EKSExtractor) GetUnsupportedRules(phase string) []Rule {
 	switch phase {
-	case cluster.OperationPhaseInfrastructure:
-		if r.Spec.Infrastructure == nil {
-			return []Rule{}
-		}
-
-		return r.ExtractUnsupportedRules(*r.Spec.Infrastructure)
-
-	case cluster.OperationPhaseKubernetes:
-		if r.Spec.Kubernetes == nil {
-			return []Rule{}
-		}
-
-		return r.ExtractUnsupportedRules(*r.Spec.Kubernetes)
-
-	case cluster.OperationPhaseDistribution:
-		if r.Spec.Distribution == nil {
-			return []Rule{}
-		}
-
-		return r.ExtractUnsupportedRules(*r.Spec.Distribution)
-
+	case cluster.OperationPhaseInfrastructure,
+		cluster.OperationPhaseKubernetes,
+		cluster.OperationPhaseDistribution:
+		return extractFromPhase(r.Spec, phase, r.ExtractUnsupportedRules)
 	default:
 		return []Rule{}
 	}

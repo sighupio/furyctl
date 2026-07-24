@@ -193,7 +193,7 @@ func (m *Merger) MergeGlobalFlags(flags *FlagsConfig) error {
 		return nil
 	}
 
-	return m.mergeCommandFlags(flags.Global, "global")
+	return m.mergeCommandFlags(flags.Global, CommandGlobal)
 }
 
 // GetSupportedFlagsForCommand returns the supported flags for a specific command.
@@ -202,22 +202,22 @@ func (m *Merger) GetSupportedFlagsForCommand(command string) map[string]FlagInfo
 	case CommandGlobal:
 		return m.supportedFlags.Global
 
-	case "apply":
+	case CommandApply:
 		return m.supportedFlags.Apply
 
-	case "delete":
+	case CommandDelete:
 		return m.supportedFlags.Delete
 
-	case "create":
+	case CommandCreate:
 		return m.supportedFlags.Create
 
-	case "get":
+	case CommandGet:
 		return m.supportedFlags.Get
 
-	case "diff":
+	case CommandDiff:
 		return m.supportedFlags.Diff
 
-	case "tools":
+	case CommandTools:
 		return m.supportedFlags.Tools
 
 	default:

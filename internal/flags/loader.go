@@ -99,91 +99,52 @@ func (l *Loader) LoadFromDirectory(dir string) (*LoadResult, error) {
 func (l *Loader) processDynamicValues(flags *FlagsConfig) (*FlagsConfig, error) {
 	processed := &FlagsConfig{}
 
-	var err error
-
-	// Process each command's flags.
-	if flags.Global != nil {
-		processed.Global, err = l.processCommandFlags(flags.Global)
-		if err != nil {
-			return nil, fmt.Errorf("error processing global flags: %w", err)
-		}
+	if err := l.processField(flags.Global, &processed.Global, "global"); err != nil {
+		return nil, err
 	}
 
-	if flags.Apply != nil {
-		processed.Apply, err = l.processCommandFlags(flags.Apply)
-		if err != nil {
-			return nil, fmt.Errorf("error processing apply flags: %w", err)
-		}
+	if err := l.processField(flags.Apply, &processed.Apply, "apply"); err != nil {
+		return nil, err
 	}
 
-	if flags.Delete != nil {
-		processed.Delete, err = l.processCommandFlags(flags.Delete)
-		if err != nil {
-			return nil, fmt.Errorf("error processing delete flags: %w", err)
-		}
+	if err := l.processField(flags.Delete, &processed.Delete, "delete"); err != nil {
+		return nil, err
 	}
 
-	if flags.Create != nil {
-		processed.Create, err = l.processCommandFlags(flags.Create)
-		if err != nil {
-			return nil, fmt.Errorf("error processing create flags: %w", err)
-		}
+	if err := l.processField(flags.Create, &processed.Create, "create"); err != nil {
+		return nil, err
 	}
 
-	if flags.Get != nil {
-		processed.Get, err = l.processCommandFlags(flags.Get)
-		if err != nil {
-			return nil, fmt.Errorf("error processing get flags: %w", err)
-		}
+	if err := l.processField(flags.Get, &processed.Get, "get"); err != nil {
+		return nil, err
 	}
 
-	if flags.Diff != nil {
-		processed.Diff, err = l.processCommandFlags(flags.Diff)
-		if err != nil {
-			return nil, fmt.Errorf("error processing diff flags: %w", err)
-		}
+	if err := l.processField(flags.Diff, &processed.Diff, "diff"); err != nil {
+		return nil, err
 	}
 
-	if flags.Tools != nil {
-		processed.Tools, err = l.processCommandFlags(flags.Tools)
-		if err != nil {
-			return nil, fmt.Errorf("error processing tools flags: %w", err)
-		}
+	if err := l.processField(flags.Tools, &processed.Tools, "tools"); err != nil {
+		return nil, err
 	}
 
-	if flags.Validate != nil {
-		processed.Validate, err = l.processCommandFlags(flags.Validate)
-		if err != nil {
-			return nil, fmt.Errorf("error processing validate flags: %w", err)
-		}
+	if err := l.processField(flags.Validate, &processed.Validate, "validate"); err != nil {
+		return nil, err
 	}
 
-	if flags.Download != nil {
-		processed.Download, err = l.processCommandFlags(flags.Download)
-		if err != nil {
-			return nil, fmt.Errorf("error processing download flags: %w", err)
-		}
+	if err := l.processField(flags.Download, &processed.Download, "download"); err != nil {
+		return nil, err
 	}
 
-	if flags.Connect != nil {
-		processed.Connect, err = l.processCommandFlags(flags.Connect)
-		if err != nil {
-			return nil, fmt.Errorf("error processing connect flags: %w", err)
-		}
+	if err := l.processField(flags.Connect, &processed.Connect, "connect"); err != nil {
+		return nil, err
 	}
 
-	if flags.Renew != nil {
-		processed.Renew, err = l.processCommandFlags(flags.Renew)
-		if err != nil {
-			return nil, fmt.Errorf("error processing renew flags: %w", err)
-		}
+	if err := l.processField(flags.Renew, &processed.Renew, "renew"); err != nil {
+		return nil, err
 	}
 
-	if flags.Dump != nil {
-		processed.Dump, err = l.processCommandFlags(flags.Dump)
-		if err != nil {
-			return nil, fmt.Errorf("error processing dump flags: %w", err)
-		}
+	if err := l.processField(flags.Dump, &processed.Dump, "dump"); err != nil {
+		return nil, err
 	}
 
 	return processed, nil
@@ -203,4 +164,19 @@ func (l *Loader) processCommandFlags(flagsMap map[string]any) (map[string]any, e
 	}
 
 	return processed, nil
+}
+
+func (l *Loader) processField(src map[string]any, dst *map[string]any, name string) error {
+	if src == nil {
+		return nil
+	}
+
+	var err error
+
+	*dst, err = l.processCommandFlags(src)
+	if err != nil {
+		return fmt.Errorf("error processing %s flags: %w", name, err)
+	}
+
+	return nil
 }

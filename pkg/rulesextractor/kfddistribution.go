@@ -45,20 +45,7 @@ func NewDistroClusterRulesExtractor(distributionPath string, renderedConfig map[
 func (r *DistroExtractor) GetImmutableRules(phase string) []Rule {
 	switch phase {
 	case cluster.OperationPhaseDistribution:
-		if r.Spec.Distribution == nil {
-			return []Rule{}
-		}
-
-		var immutableRules []Rule
-
-		for _, rule := range *r.Spec.Distribution {
-			if rule.Immutable {
-				immutableRules = append(immutableRules, rule)
-			}
-		}
-
-		return immutableRules
-
+		return extractFromPhase(r.Spec, phase, r.ExtractImmutableRules)
 	default:
 		return []Rule{}
 	}
@@ -67,12 +54,7 @@ func (r *DistroExtractor) GetImmutableRules(phase string) []Rule {
 func (r *DistroExtractor) GetReducers(phase string) []Rule {
 	switch phase {
 	case cluster.OperationPhaseDistribution:
-		if r.Spec.Distribution == nil {
-			return []Rule{}
-		}
-
-		return r.ExtractReducerRules(*r.Spec.Distribution)
-
+		return extractFromPhase(r.Spec, phase, r.ExtractReducerRules)
 	default:
 		return []Rule{}
 	}
@@ -81,12 +63,7 @@ func (r *DistroExtractor) GetReducers(phase string) []Rule {
 func (r *DistroExtractor) GetUnsupportedRules(phase string) []Rule {
 	switch phase {
 	case cluster.OperationPhaseDistribution:
-		if r.Spec.Distribution == nil {
-			return []Rule{}
-		}
-
-		return r.ExtractUnsupportedRules(*r.Spec.Distribution)
-
+		return extractFromPhase(r.Spec, phase, r.ExtractUnsupportedRules)
 	default:
 		return []Rule{}
 	}
