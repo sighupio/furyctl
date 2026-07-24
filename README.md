@@ -8,7 +8,7 @@
    ![Release](https://img.shields.io/badge/furyctl-v0.35.0-blue)
    ![Slack](https://img.shields.io/badge/slack-@kubernetes/fury-yellow.svg?logo=slack)
    ![License](https://img.shields.io/github/license/sighupio/furyctl)
-   [![Go Report Card](https://goreportcard.com/badge/github.com/sighupio/furyctl)](https://goreportcard.com/report/github.com/sighupio/furyctl)
+   [![golangci-lint](https://img.shields.io/badge/linter-golangci--lint-blue)](https://golangci-lint.run/)
 
 </h1>
 <!-- markdownlint-eable MD033 -->
