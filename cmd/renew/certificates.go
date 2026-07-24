@@ -101,7 +101,7 @@ func NewCertificatesCmd() *cobra.Command {
 				cmdEvent.AddErrorMessage(err)
 				tracker.Track(cmdEvent)
 
-				return fmt.Errorf("%w", err)
+				return fmt.Errorf("error while parsing git protocol: %w", err)
 			}
 
 			// Init packages.

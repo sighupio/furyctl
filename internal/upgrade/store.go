@@ -5,6 +5,7 @@
 package upgrade
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path"
@@ -18,6 +19,11 @@ import (
 	iox "github.com/sighupio/furyctl/internal/x/io"
 	kubex "github.com/sighupio/furyctl/internal/x/kube"
 	yamlx "github.com/sighupio/furyctl/pkg/x/yaml"
+)
+
+var (
+	errStateDataNotFound = errors.New("upgrade state data not found")
+	errStateKeyNotFound  = errors.New("upgrade state key not found")
 )
 
 type PhaseStatus string
@@ -114,12 +120,12 @@ func (s *StateStore) Get() ([]byte, error) {
 
 	data, ok := configMap["data"].(map[string]any)
 	if !ok {
-		return nil, fmt.Errorf("error while getting current cluster upgrade state: %w", err)
+		return nil, errStateDataNotFound
 	}
 
 	configData, ok := data["state"].(string)
 	if !ok {
-		return nil, fmt.Errorf("error while getting current cluster upgrade state: %w", err)
+		return nil, errStateKeyNotFound
 	}
 
 	return []byte(configData), nil

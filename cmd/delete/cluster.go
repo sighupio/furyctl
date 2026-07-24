@@ -34,8 +34,6 @@ import (
 	netx "github.com/sighupio/furyctl/pkg/x/net"
 )
 
-const WrappedErrMessage = "%w: %s"
-
 type ClusterCmdFlags struct {
 	Debug                 bool
 	FuryctlPath           string

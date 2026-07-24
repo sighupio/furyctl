@@ -313,6 +313,8 @@ func (v *ClusterCreator) CreateAsync(
 	renderedConfig, err := v.RenderConfig()
 	if err != nil {
 		errCh <- fmt.Errorf("error while rendering config: %w", err)
+
+		return
 	}
 
 	status, err := phases.PreFlight.Exec(renderedConfig)
@@ -371,11 +373,15 @@ func (v *ClusterCreator) CreateAsync(
 	case cluster.OperationPhaseInfrastructure:
 		if err := v.infraPhase(phases.Infrastructure, vpnConnector); err != nil {
 			errCh <- err
+
+			return
 		}
 
 	case cluster.OperationPhaseKubernetes:
 		if err := v.kubernetesPhase(phases.Kubernetes, vpnConnector, renderedConfig); err != nil {
 			errCh <- err
+
+			return
 		}
 
 	case cluster.OperationPhaseDistribution:
@@ -383,24 +389,34 @@ func (v *ClusterCreator) CreateAsync(
 			confirm, err := cluster.AskConfirmation(cluster.IsForceEnabledForFeature(v.force, cluster.ForceFeatureMigrations))
 			if err != nil {
 				errCh <- err
+
+				return
 			}
 
 			if !confirm {
 				errCh <- ErrAbortedByUser
+
+				return
 			}
 		}
 
 		if err := v.distributionPhase(phases.Distribution, vpnConnector, rdcs, renderedConfig); err != nil {
 			errCh <- err
+
+			return
 		}
 
 	case cluster.OperationPhasePlugins:
 		if !distribution.HasFeature(v.kfdManifest, distribution.FeaturePlugins) {
 			errCh <- fmt.Errorf("error while executing plugins phase: %w", distribution.ErrPluginsFeatureNotSupported)
+
+			return
 		}
 
 		if err := phases.Plugins.Exec(); err != nil {
 			errCh <- err
+
+			return
 		}
 
 	case cluster.OperationPhaseAll:
@@ -408,10 +424,14 @@ func (v *ClusterCreator) CreateAsync(
 			confirm, err := cluster.AskConfirmation(cluster.IsForceEnabledForFeature(v.force, cluster.ForceFeatureMigrations))
 			if err != nil {
 				errCh <- err
+
+				return
 			}
 
 			if !confirm {
 				errCh <- ErrAbortedByUser
+
+				return
 			}
 		}
 
@@ -424,8 +444,12 @@ func (v *ClusterCreator) CreateAsync(
 			renderedConfig,
 		)
 
+		return
+
 	default:
 		errCh <- fmt.Errorf("%w: %s", ErrUnsupportedPhase, v.phase)
+
+		return
 	}
 }
 
