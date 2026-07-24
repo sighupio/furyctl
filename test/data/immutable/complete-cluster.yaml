@@ -17,7 +17,12 @@ spec:
 
     ssh:
       username: "core"
-      keyPath: "${HOME}/.ssh/id_ed25519.pub"
+      privateKeyPath: "${HOME}/.ssh/id_ed25519"
+
+    loadBalancers:
+      members:
+        - hostname: "lb01.k8s.test.local"
+        - hostname: "lb02.k8s.test.local"
 
     nodes:
       # Load Balancer Node 1
@@ -149,12 +154,6 @@ spec:
       podCIDR: "10.244.0.0/16"
       serviceCIDR: "10.96.0.0/12"
 
-    loadBalancers:
-      virtualIP: "192.168.1.5"
-      members:
-        - hostname: "lb01.k8s.test.local"
-        - hostname: "lb02.k8s.test.local"
-
     controlPlane:
       address: "192.168.1.5:6443"
       members:
@@ -199,6 +198,7 @@ spec:
 
       dr:
         type: on-premises
+        velero: {}
 
       auth:
         provider:
