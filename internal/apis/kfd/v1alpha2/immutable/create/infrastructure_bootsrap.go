@@ -7,9 +7,12 @@ package create
 import (
 	"bytes"
 	"compress/gzip"
+	"crypto/sha256"
 	"encoding/base64"
+	"encoding/hex"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -34,6 +37,7 @@ var (
 	ErrButaneConversionFatal     = errors.New("butane conversion fatal errors")
 	ErrButaneFatalErrors         = errors.New("butane translation has fatal errors")
 	ErrImmutableConfigMalformed  = errors.New("immutable furyctl config is malformed")
+	ErrSysextChecksumMismatch    = errors.New("sysext package checksum mismatch")
 )
 
 // defaultNodeArch mirrors the schema default of spec.infrastructure.nodes[].arch
@@ -72,6 +76,29 @@ type sysextPackage struct {
 // sysextArchInfo contains architecture-specific information.
 type sysextArchInfo struct {
 	URL string `yaml:"url"`
+	// SHA256 optionally pins the .raw content; packages without one are downloaded unverified.
+	SHA256 string `yaml:"sha256"`
+}
+
+// verifySHA256 streams the file and checks it against its pinned digest.
+func verifySHA256(path, want string) error {
+	file, err := os.Open(path)
+	if err != nil {
+		return fmt.Errorf("error opening %s for checksum verification: %w", path, err)
+	}
+	defer file.Close()
+
+	hasher := sha256.New()
+	if _, err := io.Copy(hasher, file); err != nil {
+		return fmt.Errorf("error reading %s for checksum verification: %w", path, err)
+	}
+
+	got := hex.EncodeToString(hasher.Sum(nil))
+	if !strings.EqualFold(got, want) {
+		return fmt.Errorf("%w: %s: want %s, got %s", ErrSysextChecksumMismatch, path, want, got)
+	}
+
+	return nil
 }
 
 // flatcarRelease represents a Flatcar Container Linux version.
@@ -204,15 +231,14 @@ func (i *Infrastructure) getSSHPublicKeyContent() (string, error) {
 // generic template walk, so each phase renders the version vars inline in its hosts.yaml.
 // Selection/validation stays in Go (selectImmutableAssets).
 func buildVersionVars(version, kubectlBin string, a assets) map[string]any {
-	// Carry the explicit per-arch .raw URL from immutable.yaml (not just the version) so the sysext role
-	// downloads exactly what the manifest pins, instead of reconstructing the URL from a release-base
-	// convention — the same URL the butane/Ignition install path already uses (kills the two-dialects smell).
+	// Carry the per-arch .raw URL + sha256 from immutable.yaml so the sysext role downloads what the manifest pins.
 	sysextTargets := make(map[string]any, len(a.Sysext))
 
 	for _, pkg := range a.Sysext {
 		arch := make(map[string]any, len(pkg.Arch))
+
 		for name, info := range pkg.Arch {
-			arch[name] = map[string]string{"url": info.URL}
+			arch[name] = map[string]string{"url": info.URL, "sha256": info.SHA256}
 		}
 
 		sysextTargets[pkg.Name] = map[string]any{
@@ -823,6 +849,19 @@ func (*Infrastructure) downloadSysextPackages(
 			); err != nil {
 				return fmt.Errorf("error downloading %s for %s: %w", pkg.Name, arch, err)
 			}
+
+			// Only packages that pin a sha256 are verified; the rest keep the previous behaviour.
+			if archInfo.SHA256 == "" {
+				logrus.Warnf("Sysext package %s (%s) has no pinned sha256, skipping verification", pkg.Name, arch)
+
+				continue
+			}
+
+			if err := verifySHA256(destPath, archInfo.SHA256); err != nil {
+				return fmt.Errorf("error verifying %s for %s: %w", pkg.Name, arch, err)
+			}
+
+			logrus.Debugf("Verified %s against pinned sha256", filename)
 		}
 
 		logrus.Infof("%s sysext package downloaded successfully", pkg.Name)
