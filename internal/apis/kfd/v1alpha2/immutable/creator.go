@@ -155,6 +155,14 @@ func (c *ClusterCreator) SetProperty(name string, value any) {
 }
 
 func (*ClusterCreator) GetPhasePath(phase string) (string, error) {
+	// An empty phase is the "all phases" sentinel (cluster.OperationPhaseAll),
+	// used e.g. by `furyctl diff` without the --phase flag. In that case there
+	// is no single schema path to scope to, so we return AllPhaseSchemaPath and
+	// let the diff be computed against the whole configuration.
+	if phase == cluster.OperationPhaseAll {
+		return AllPhaseSchemaPath, nil
+	}
+
 	schemaPath, ok := supported.GetSchemaPath(phase)
 	if !ok {
 		return "", fmt.Errorf("%w: %s", ErrUnsupportedPhase, phase)
