@@ -69,8 +69,8 @@ func NewValidator() *validator.Validate {
 		"aws-region":            ValidateAwsRegion,
 	}
 
-	for name, fn := range validations {
-		if err := validate.RegisterValidation(name, fn); err != nil {
+	for name, validation := range validations {
+		if err := validate.RegisterValidation(name, validation); err != nil {
 			logrus.Warnf("error registering validation %q: %v", name, err)
 			return nil
 		}
