@@ -317,9 +317,13 @@ func (p *PreFlight) CheckImmutablesDiffs(d r3diff.Changelog, diffChecker diffs.C
 	}
 
 	// Extract the paths from the rules left after filtering out the ones with matching safe conditions.
-	infraImmutablePaths := rules.Paths(r.FilterSafeImmutableRules(r.GetImmutableRules("infrastructure"), d))
-	kubeImmutablePaths := rules.Paths(r.FilterSafeImmutableRules(r.GetImmutableRules("kubernetes"), d))
-	distroImmutablePaths := rules.Paths(r.FilterSafeImmutableRules(r.GetImmutableRules("distribution"), d))
+	filteredInfraImmutableRules := r.FilterSafeImmutableRules(r.GetImmutableRules("infrastructure"), d)
+	filteredKubeImmutableRules := r.FilterSafeImmutableRules(r.GetImmutableRules("kubernetes"), d)
+	filteredDistroImmutableRules := r.FilterSafeImmutableRules(r.GetImmutableRules("distribution"), d)
+
+	infraImmutablePaths := rules.Paths(filteredInfraImmutableRules)
+	kubeImmutablePaths := rules.Paths(filteredKubeImmutableRules)
+	distroImmutablePaths := rules.Paths(filteredDistroImmutableRules)
 
 	errs := slices.Concat(
 		diffChecker.AssertImmutableViolations(d, infraImmutablePaths),
