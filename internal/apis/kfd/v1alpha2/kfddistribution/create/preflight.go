@@ -23,7 +23,6 @@ import (
 	"github.com/sighupio/furyctl/internal/tool/kubectl"
 	execx "github.com/sighupio/furyctl/internal/x/exec"
 	kubex "github.com/sighupio/furyctl/internal/x/kube"
-	slicesx "github.com/sighupio/furyctl/internal/x/slices"
 	"github.com/sighupio/furyctl/pkg/diffs"
 	rules "github.com/sighupio/furyctl/pkg/rulesextractor"
 	yamlx "github.com/sighupio/furyctl/pkg/x/yaml"
@@ -240,10 +239,7 @@ func (p *PreFlight) CheckStateDiffs(d r3diff.Changelog, diffChecker diffs.Checke
 	// Extract the paths from the rules left after filtering out the ones with matching safe conditions.
 	immutableRules := r.GetImmutableRules("distribution")
 	filteredImmutableRules := r.FilterSafeImmutableRules(immutableRules, d)
-	immutablePaths := slicesx.Map(
-		filteredImmutableRules,
-		func(rule rules.Rule) string { return rule.Path },
-	)
+	immutablePaths := rules.Paths(filteredImmutableRules)
 
 	errs := diffChecker.AssertImmutableViolations(d, immutablePaths)
 

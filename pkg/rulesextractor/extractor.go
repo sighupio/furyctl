@@ -11,6 +11,8 @@ import (
 
 	"github.com/r3labs/diff/v3"
 	"github.com/sirupsen/logrus"
+
+	slicesx "github.com/sighupio/furyctl/internal/x/slices"
 )
 
 var numbersToWildcardRegex = regexp.MustCompile(`\.\d+\b`)
@@ -63,6 +65,13 @@ type Rule struct {
 	Unsupported *[]Unsupported `yaml:"unsupported,omitempty"`
 	Safe        *[]Safe        `yaml:"safe,omitempty"`
 	Reducers    *[]Reducer     `yaml:"reducers,omitempty"`
+}
+
+// Paths returns the paths of the given rules.
+func Paths(rls []Rule) []string {
+	return slicesx.Map(rls, func(rule Rule) string {
+		return rule.Path
+	})
 }
 
 type Unsupported struct {

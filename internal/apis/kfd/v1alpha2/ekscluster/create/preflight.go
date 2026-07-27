@@ -26,7 +26,6 @@ import (
 	"github.com/sighupio/furyctl/internal/tool/terraform"
 	execx "github.com/sighupio/furyctl/internal/x/exec"
 	kubex "github.com/sighupio/furyctl/internal/x/kube"
-	slicesx "github.com/sighupio/furyctl/internal/x/slices"
 	"github.com/sighupio/furyctl/pkg/diffs"
 	rules "github.com/sighupio/furyctl/pkg/rulesextractor"
 	yamlx "github.com/sighupio/furyctl/pkg/x/yaml"
@@ -318,13 +317,9 @@ func (p *PreFlight) CheckImmutablesDiffs(d r3diff.Changelog, diffChecker diffs.C
 	}
 
 	// Extract the paths from the rules left after filtering out the ones with matching safe conditions.
-	extractPaths := func(filteredRules []rules.Rule) []string {
-		return slicesx.Map(filteredRules, func(rule rules.Rule) string { return rule.Path })
-	}
-
-	infraImmutablePaths := extractPaths(r.FilterSafeImmutableRules(r.GetImmutableRules("infrastructure"), d))
-	kubeImmutablePaths := extractPaths(r.FilterSafeImmutableRules(r.GetImmutableRules("kubernetes"), d))
-	distroImmutablePaths := extractPaths(r.FilterSafeImmutableRules(r.GetImmutableRules("distribution"), d))
+	infraImmutablePaths := rules.Paths(r.FilterSafeImmutableRules(r.GetImmutableRules("infrastructure"), d))
+	kubeImmutablePaths := rules.Paths(r.FilterSafeImmutableRules(r.GetImmutableRules("kubernetes"), d))
+	distroImmutablePaths := rules.Paths(r.FilterSafeImmutableRules(r.GetImmutableRules("distribution"), d))
 
 	errs := slices.Concat(
 		diffChecker.AssertImmutableViolations(d, infraImmutablePaths),
