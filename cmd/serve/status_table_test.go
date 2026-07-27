@@ -243,6 +243,17 @@ func TestNodeStatusTableNoteClearedOnRecovery(t *testing.T) {
 		"attention note lingered after the node recovered, got:\n%q", out)
 }
 
+func TestNodeStatusTableNilSeedStillAcceptsUpdates(t *testing.T) {
+	t.Parallel()
+
+	// A nil seed must not leave the table with a nil status map: Update would panic writing to it.
+	table := newTestTable(&bytes.Buffer{}, nil)
+
+	require.NotPanics(t, func() { table.Update("cp1.flatcar", statusBooted) })
+	require.Equal(t, map[string]string{"cp1.flatcar": statusBooted}, table.Snapshot())
+	require.True(t, table.AllBooted())
+}
+
 func TestNodeStatusTableSnapshotIsACopy(t *testing.T) {
 	t.Parallel()
 

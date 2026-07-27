@@ -59,11 +59,15 @@ type nodeStatusTable struct {
 var newNodeStatusTable = func(initial map[string]string) *nodeStatusTable {
 	f := os.Stderr
 
+	// Use make+Copy rather than maps.Clone to guarantee non-nil slice.
+	status := make(map[string]string, len(initial))
+	maps.Copy(status, initial)
+
 	return &nodeStatusTable{
 		out:       f,
 		tty:       execx.ShouldAnimate(f),
 		order:     slices.Sorted(maps.Keys(initial)),
-		status:    maps.Clone(initial),
+		status:    status,
 		updatedAt: make(map[string]time.Time, len(initial)),
 	}
 }
