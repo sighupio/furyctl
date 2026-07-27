@@ -82,8 +82,8 @@ func TestSelectImmutableAssets(t *testing.T) {
 	assert.Error(t, err, "expected error for missing version, got nil")
 }
 
-// TestBuildVersionVars checks the infra roles' required vars (sandbox tag, haproxy image/tag) are emitted.
-func TestBuildVersionVars(t *testing.T) {
+// TestVersionVarsFromAssets checks the infra roles' required vars (sandbox tag, haproxy image/tag) are emitted.
+func TestVersionVarsFromAssets(t *testing.T) {
 	t.Parallel()
 
 	phaseDir := writeManifest(t)
@@ -91,7 +91,7 @@ func TestBuildVersionVars(t *testing.T) {
 	a, err := selectImmutableAssets(phaseDir, "1.34.8")
 	require.NoError(t, err)
 
-	vars := buildVersionVars("1.34.8", "/usr/bin/kubectl", a)
+	vars := versionVarsFromAssets("1.34.8", "/usr/bin/kubectl", a)
 
 	want := map[string]string{
 		"containerd_sandbox_tag":  "3.10.1",
@@ -101,12 +101,30 @@ func TestBuildVersionVars(t *testing.T) {
 
 	for key, exp := range want {
 		got, ok := vars[key]
-		assert.True(t, ok, "buildVersionVars missing %q", key)
+		assert.True(t, ok, "versionVarsFromAssets missing %q", key)
 
 		if !ok {
 			continue
 		}
 
-		assert.Equal(t, exp, got, "buildVersionVars[%q]", key)
+		assert.Equal(t, exp, got, "versionVarsFromAssets[%q]", key)
 	}
+}
+
+// TestVersionVarsForPhaseKubectlBin: kubectl_bin is set when a bin path is given (hosts.yaml reads it
+// under missingkey=error) and omitted when empty.
+func TestVersionVarsForPhaseKubectlBin(t *testing.T) {
+	t.Parallel()
+
+	phaseDir := writeManifest(t)
+
+	withBin, err := VersionVarsForPhase(phaseDir, "1.34.8", "/opt/bin/kubectl")
+	require.NoError(t, err)
+	assert.Equal(t, "/opt/bin/kubectl", withBin["kubectl_bin"], "kubectl_bin must be set when a bin path is given")
+
+	noBin, err := VersionVarsForPhase(phaseDir, "1.34.8", "")
+	require.NoError(t, err)
+
+	_, ok := noBin["kubectl_bin"]
+	assert.False(t, ok, "kubectl_bin must be omitted when the bin path is empty")
 }

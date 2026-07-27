@@ -19,6 +19,7 @@ import (
 	"github.com/sighupio/furyctl/internal/app"
 	"github.com/sighupio/furyctl/internal/cluster"
 	"github.com/sighupio/furyctl/internal/config"
+	"github.com/sighupio/furyctl/internal/distribution"
 	"github.com/sighupio/furyctl/internal/flags"
 	"github.com/sighupio/furyctl/internal/git"
 	cobrax "github.com/sighupio/furyctl/internal/x/cobra"
@@ -163,6 +164,24 @@ func NewCertificatesCmd() *cobra.Command {
 
 					return fmt.Errorf("%w: %v", ErrDownloadDependenciesFailed, err)
 				}
+
+				// Only immutable renew needs the vendored immutable.yaml (hosts.yaml "versions"); others skip it.
+				if res.MinimalConf.Kind == distribution.ImmutableKind {
+					gitPrefix, err := git.RepoPrefixByProtocol(typedGitProtocol)
+					if err != nil {
+						cmdEvent.AddErrorMessage(err)
+						tracker.Track(cmdEvent)
+
+						return fmt.Errorf("%w", err)
+					}
+
+					if err := depsdl.DownloadInstallers(res.DistroManifest.Kubernetes, gitPrefix, res.MinimalConf.Kind); err != nil {
+						cmdEvent.AddErrorMessage(ErrDownloadDependenciesFailed)
+						tracker.Track(cmdEvent)
+
+						return fmt.Errorf("%w: %v", ErrDownloadDependenciesFailed, err)
+					}
+				}
 			} else {
 				logrus.Info("Dependencies download skipped")
 			}
@@ -186,6 +205,11 @@ func NewCertificatesCmd() *cobra.Command {
 				tracker.Track(cmdEvent)
 
 				return fmt.Errorf("error while creating the certificates renewer: %w", err)
+			}
+
+			// Immutable-only: the renewer uses workDir to find the vendored immutable.yaml.
+			if res.MinimalConf.Kind == distribution.ImmutableKind {
+				renewer.SetProperty(cluster.CertificatesRenewerPropertyWorkDir, basePath)
 			}
 
 			if err := renewer.Renew(); err != nil {

@@ -18,6 +18,7 @@ const (
 	CertificatesRenewerPropertyKfdManifest = "kfdmanifest"
 	CertificatesRenewerPropertyDistroPath  = "distropath"
 	CertificatesRenewerPropertyBinPath     = "binpath"
+	CertificatesRenewerPropertyWorkDir     = "workdir"
 )
 
 var certificatesRenewerFactories = make(map[string]map[string]CertificatesRenewerFactory) //nolint:gochecknoglobals, lll // This patterns requires certificatesRenewerFactories as global to work with init function.
