@@ -67,7 +67,7 @@ func NewRunnerFactory(executor execx.Executor, paths RunnerFactoryPaths) *Runner
 }
 
 func (rf *RunnerFactory) Create(name Name, version, workDir string) Runner {
-	binPath := filepath.Join(rf.paths.Bin, string(name), version, string(name))
+	toolBinPath := filepath.Join(rf.paths.Bin, string(name), version, string(name))
 
 	switch name {
 	case Ansible:
@@ -81,7 +81,7 @@ func (rf *RunnerFactory) Create(name Name, version, workDir string) Runner {
 
 	case Furyagent:
 		return furyagent.NewRunner(rf.executor, furyagent.Paths{
-			Furyagent: binPath,
+			Furyagent: toolBinPath,
 			WorkDir:   workDir,
 		})
 
@@ -101,7 +101,7 @@ func (rf *RunnerFactory) Create(name Name, version, workDir string) Runner {
 		return kubectl.NewRunner(
 			rf.executor,
 			kubectl.Paths{
-				Kubectl: binPath,
+				Kubectl: toolBinPath,
 				WorkDir: workDir,
 			},
 			false, true, true,
@@ -109,19 +109,19 @@ func (rf *RunnerFactory) Create(name Name, version, workDir string) Runner {
 
 	case Kustomize:
 		return kustomize.NewRunner(rf.executor, kustomize.Paths{
-			Kustomize: binPath,
+			Kustomize: toolBinPath,
 			WorkDir:   workDir,
 		})
 
 	case Openvpn:
 		return openvpn.NewRunner(rf.executor, openvpn.Paths{
-			Openvpn: binPath,
+			Openvpn: toolBinPath,
 			WorkDir: workDir,
 		})
 
 	case Terraform:
 		return terraform.NewRunner(rf.executor, terraform.Paths{
-			Terraform: binPath,
+			Terraform: toolBinPath,
 			WorkDir:   workDir,
 		})
 
@@ -133,7 +133,7 @@ func (rf *RunnerFactory) Create(name Name, version, workDir string) Runner {
 
 	case Yq:
 		return yq.NewRunner(rf.executor, yq.Paths{
-			Yq:      binPath,
+			Yq:      toolBinPath,
 			WorkDir: workDir,
 		})
 
@@ -145,13 +145,13 @@ func (rf *RunnerFactory) Create(name Name, version, workDir string) Runner {
 
 	case Helm:
 		return helm.NewRunner(rf.executor, helm.Paths{
-			Helm:    binPath,
+			Helm:    toolBinPath,
 			WorkDir: workDir,
 		})
 
 	case Helmfile:
 		return helmfile.NewRunner(rf.executor, helmfile.Paths{
-			Helmfile: binPath,
+			Helmfile: toolBinPath,
 			WorkDir:  workDir,
 		})
 
@@ -159,7 +159,7 @@ func (rf *RunnerFactory) Create(name Name, version, workDir string) Runner {
 		return kapp.NewRunner(
 			rf.executor,
 			kapp.Paths{
-				Kapp:    binPath,
+				Kapp:    toolBinPath,
 				WorkDir: workDir,
 			},
 			false,
