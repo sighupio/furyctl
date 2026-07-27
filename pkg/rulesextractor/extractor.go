@@ -113,8 +113,9 @@ type Extractor interface {
 }
 
 type BaseExtractor struct {
-	Spec           Spec
-	RenderedConfig map[string]any
+	Spec            Spec
+	RenderedConfig  map[string]any
+	SupportedPhases cluster.SupportedPhases
 }
 
 type PathNotFoundError struct {
@@ -166,13 +167,12 @@ func (b *BaseExtractor) GetImmutables(_ string) []string {
 	)
 }
 
-// GetImmutableRules returns all the rules that are marked as immutable across all phases.
-func (b *BaseExtractor) GetImmutableRules(_ string) []Rule {
-	return slices.Concat(
-		b.ExtractImmutableRules(b.Spec.Infrastructure),
-		b.ExtractImmutableRules(b.Spec.Kubernetes),
-		b.ExtractImmutableRules(b.Spec.Distribution),
-	)
+func (b *BaseExtractor) GetImmutableRules(phase string) []Rule {
+	if !b.supportsPhase(phase) {
+		return []Rule{}
+	}
+
+	return extractFromPhase(b.Spec, phase, b.ExtractImmutableRules)
 }
 
 func (b *BaseExtractor) FilterSafeImmutableRules(rules []Rule, ds diff.Changelog) []Rule {
@@ -190,23 +190,20 @@ func (b *BaseExtractor) FilterSafeImmutableRules(rules []Rule, ds diff.Changelog
 	return filteredRules
 }
 
-func (b *BaseExtractor) GetReducers(_ string) []Rule {
-	return slices.Concat(
-		b.ExtractReducerRules(b.Spec.Infrastructure),
-		b.ExtractReducerRules(b.Spec.Kubernetes),
-		b.ExtractReducerRules(b.Spec.Distribution),
-	)
+func (b *BaseExtractor) GetReducers(phase string) []Rule {
+	if !b.supportsPhase(phase) {
+		return []Rule{}
+	}
+
+	return extractFromPhase(b.Spec, phase, b.ExtractReducerRules)
 }
 
-// GetUnsupportedRules returns all the rules that declare unsupported transitions,
-// regardless of whether they also define reducers. This is what drives the
-// "unsupported transition" validation, which must not depend on reducers being set.
-func (b *BaseExtractor) GetUnsupportedRules(_ string) []Rule {
-	return slices.Concat(
-		b.ExtractUnsupportedRules(b.Spec.Infrastructure),
-		b.ExtractUnsupportedRules(b.Spec.Kubernetes),
-		b.ExtractUnsupportedRules(b.Spec.Distribution),
-	)
+func (b *BaseExtractor) GetUnsupportedRules(phase string) []Rule {
+	if !b.supportsPhase(phase) {
+		return []Rule{}
+	}
+
+	return extractFromPhase(b.Spec, phase, b.ExtractUnsupportedRules)
 }
 
 func (*BaseExtractor) ReducerRulesByDiffs(rules []Rule, ds diff.Changelog) []Rule {
@@ -301,6 +298,12 @@ func (*BaseExtractor) ExtractUnsupportedRules(rules *[]Rule) []Rule {
 	return filterRules(rules, func(rule Rule) bool {
 		return rule.Unsupported != nil && len(*rule.Unsupported) > 0
 	})
+}
+
+// supportsPhase reports whether the given phase is enabled for this extractor.
+// A nil SupportedPhases list means no restriction.
+func (b *BaseExtractor) supportsPhase(phase string) bool {
+	return b.SupportedPhases == nil || b.SupportedPhases.IsSupported(phase)
 }
 
 func (b *BaseExtractor) isImmutableRuleSafe(rule Rule, ds diff.Changelog) bool {

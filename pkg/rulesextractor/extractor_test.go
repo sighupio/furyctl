@@ -134,116 +134,155 @@ func TestBaseExtractor_GetImmutables(t *testing.T) {
 	}
 }
 
-func TestBaseExtractor_GetReducers(t *testing.T) {
+func TestBaseExtractor_GetImmutableRules(t *testing.T) {
 	t.Parallel()
 
+	infraRule := rules.Rule{Path: ".infra", Immutable: true}
+	infraMutable := rules.Rule{Path: ".infra.mutable", Immutable: false}
+	kubeRule := rules.Rule{Path: ".kube", Immutable: true}
+	distroRule := rules.Rule{Path: ".distro", Immutable: true}
+
+	spec := rules.Spec{
+		Infrastructure: &[]rules.Rule{infraRule, infraMutable},
+		Kubernetes:     &[]rules.Rule{kubeRule},
+		Distribution:   &[]rules.Rule{distroRule},
+	}
+
 	testCases := []struct {
-		name string
-		spec rules.Spec
-		want []rules.Rule
+		name  string
+		spec  rules.Spec
+		phase string
+		want  []rules.Rule
 	}{
 		{
-			name: "should return empty slice if no rules",
-			spec: rules.Spec{},
-			want: nil,
+			name:  "empty spec returns empty slice",
+			spec:  rules.Spec{},
+			phase: "infrastructure",
+			want:  []rules.Rule{},
 		},
 		{
-			name: "return reducers from infrastructure rules",
-			spec: rules.Spec{
-				Infrastructure: &[]rules.Rule{
-					{
-						Path: ".foo",
-						Reducers: &[]rules.Reducer{
-							{
-								From: "foo",
-								To:   "bar",
-							},
-						},
-					},
-					{
-						Path: "bar",
-					},
-				},
-			},
-			want: []rules.Rule{
-				{
-					Path: ".foo",
-					Reducers: &[]rules.Reducer{
-						{
-							From: "foo",
-							To:   "bar",
-						},
-					},
-				},
-			},
+			name:  "unknown phase returns empty slice",
+			spec:  spec,
+			phase: "plugins",
+			want:  []rules.Rule{},
 		},
 		{
-			name: "return reducers from kubernetes rules",
-			spec: rules.Spec{
-				Kubernetes: &[]rules.Rule{
-					{
-						Path: ".foo",
-						Reducers: &[]rules.Reducer{
-							{
-								From: "foo",
-								To:   "bar",
-							},
-						},
-					},
-					{
-						Path: "bar",
-					},
-				},
-			},
-			want: []rules.Rule{
-				{
-					Path: ".foo",
-					Reducers: &[]rules.Reducer{
-						{
-							From: "foo",
-							To:   "bar",
-						},
-					},
-				},
-			},
+			name:  "infrastructure phase returns only infra immutables",
+			spec:  spec,
+			phase: "infrastructure",
+			want:  []rules.Rule{infraRule},
 		},
 		{
-			name: "return reducers from distribution rules",
-			spec: rules.Spec{
-				Distribution: &[]rules.Rule{
-					{
-						Path: ".foo",
-						Reducers: &[]rules.Reducer{
-							{
-								From: "foo",
-								To:   "bar",
-							},
-						},
-					},
-					{
-						Path: "bar",
-					},
-				},
-			},
-			want: []rules.Rule{
-				{
-					Path: ".foo",
-					Reducers: &[]rules.Reducer{
-						{
-							From: "foo",
-							To:   "bar",
-						},
-					},
-				},
-			},
+			name:  "kubernetes phase returns only kube immutables",
+			spec:  spec,
+			phase: "kubernetes",
+			want:  []rules.Rule{kubeRule},
+		},
+		{
+			name:  "distribution phase returns only distro immutables",
+			spec:  spec,
+			phase: "distribution",
+			want:  []rules.Rule{distroRule},
+		},
+		{
+			name:  "nil section returns empty slice",
+			spec:  rules.Spec{Distribution: &[]rules.Rule{distroRule}},
+			phase: "infrastructure",
+			want:  []rules.Rule{},
 		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			x := rules.NewBaseExtractor(tc.spec)
+			t.Parallel()
 
-			got := x.GetReducers("")
+			x := rules.NewBaseExtractor(tc.spec)
+			got := x.GetImmutableRules(tc.phase)
+
+			require.Equal(t, tc.want, got)
+		})
+	}
+}
+
+func TestBaseExtractor_GetReducers(t *testing.T) {
+	t.Parallel()
+
+	infraReducer := rules.Rule{
+		Path: ".infra",
+		Reducers: &[]rules.Reducer{
+			{From: "foo", To: "bar"},
+		},
+	}
+	infraPlain := rules.Rule{Path: ".infra.plain"}
+	kubeReducer := rules.Rule{
+		Path: ".kube",
+		Reducers: &[]rules.Reducer{
+			{From: "bar", To: "baz"},
+		},
+	}
+	distroReducer := rules.Rule{
+		Path: ".distro",
+		Reducers: &[]rules.Reducer{
+			{From: "baz", To: "qux"},
+		},
+	}
+
+	spec := rules.Spec{
+		Infrastructure: &[]rules.Rule{infraReducer, infraPlain},
+		Kubernetes:     &[]rules.Rule{kubeReducer},
+		Distribution:   &[]rules.Rule{distroReducer},
+	}
+
+	testCases := []struct {
+		name  string
+		spec  rules.Spec
+		phase string
+		want  []rules.Rule
+	}{
+		{
+			name:  "empty spec returns empty slice",
+			spec:  rules.Spec{},
+			phase: "infrastructure",
+			want:  []rules.Rule{},
+		},
+		{
+			name:  "unknown phase returns empty slice",
+			spec:  spec,
+			phase: "plugins",
+			want:  []rules.Rule{},
+		},
+		{
+			name:  "infrastructure phase returns only infra reducers",
+			spec:  spec,
+			phase: "infrastructure",
+			want:  []rules.Rule{infraReducer},
+		},
+		{
+			name:  "kubernetes phase returns only kube reducers",
+			spec:  spec,
+			phase: "kubernetes",
+			want:  []rules.Rule{kubeReducer},
+		},
+		{
+			name:  "distribution phase returns only distro reducers",
+			spec:  spec,
+			phase: "distribution",
+			want:  []rules.Rule{distroReducer},
+		},
+		{
+			name:  "nil section returns empty slice",
+			spec:  rules.Spec{Distribution: &[]rules.Rule{distroReducer}},
+			phase: "infrastructure",
+			want:  []rules.Rule{},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			x := rules.NewBaseExtractor(tc.spec)
+			got := x.GetReducers(tc.phase)
 
 			require.Equal(t, tc.want, got)
 		})
@@ -266,33 +305,105 @@ func TestBaseExtractor_GetUnsupportedRules(t *testing.T) {
 	plain := rules.Rule{Path: ".bar"}
 
 	testCases := []struct {
-		name string
-		spec rules.Spec
-		want []rules.Rule
+		name  string
+		spec  rules.Spec
+		phase string
+		want  []rules.Rule
 	}{
 		{
-			name: "should return empty slice if no rules",
-			spec: rules.Spec{},
-			want: nil,
+			name:  "empty spec returns empty slice",
+			spec:  rules.Spec{},
+			phase: "kubernetes",
+			want:  []rules.Rule{},
 		},
 		{
-			name: "returns unsupported-only rules and ignores reducer-only/plain ones",
+			name: "returns unsupported-only rules for the given phase",
 			spec: rules.Spec{
 				Kubernetes: &[]rules.Rule{unsupportedNoReducers, reducersOnly, plain},
 			},
-			want: []rules.Rule{unsupportedNoReducers},
+			phase: "kubernetes",
+			want:  []rules.Rule{unsupportedNoReducers},
+		},
+		{
+			name: "returns empty for a phase with no unsupported rules",
+			spec: rules.Spec{
+				Kubernetes: &[]rules.Rule{unsupportedNoReducers, reducersOnly, plain},
+			},
+			phase: "infrastructure",
+			want:  []rules.Rule{},
+		},
+		{
+			name: "unknown phase returns empty slice",
+			spec: rules.Spec{
+				Kubernetes: &[]rules.Rule{unsupportedNoReducers, reducersOnly, plain},
+			},
+			phase: "plugins",
+			want:  []rules.Rule{},
 		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			x := rules.NewBaseExtractor(tc.spec)
+			t.Parallel()
 
-			got := x.GetUnsupportedRules("")
+			x := rules.NewBaseExtractor(tc.spec)
+			got := x.GetUnsupportedRules(tc.phase)
 
 			require.Equal(t, tc.want, got)
 		})
 	}
+}
+
+func TestBaseExtractor_PhaseWhitelist(t *testing.T) {
+	t.Parallel()
+
+	noneVal := any("none")
+
+	immutableRule := rules.Rule{Path: ".distro.immutable", Immutable: true}
+	reducerRule := rules.Rule{
+		Path:     ".distro.reducer",
+		Reducers: &[]rules.Reducer{{From: "a", To: "b"}},
+	}
+	unsupportedRule := rules.Rule{
+		Path:        ".distro.unsupported",
+		Unsupported: &[]rules.Unsupported{{To: &noneVal}},
+	}
+
+	spec := rules.Spec{
+		Distribution: &[]rules.Rule{immutableRule, reducerRule, unsupportedRule},
+	}
+
+	t.Run("phase not in the list returns empty even if spec has rules", func(t *testing.T) {
+		t.Parallel()
+
+		x := rules.NewBaseExtractor(spec)
+		x.SupportedPhases = []string{"kubernetes"}
+
+		require.Equal(t, []rules.Rule{}, x.GetImmutableRules("distribution"))
+		require.Equal(t, []rules.Rule{}, x.GetReducers("distribution"))
+		require.Equal(t, []rules.Rule{}, x.GetUnsupportedRules("distribution"))
+	})
+
+	t.Run("phase in the list returns rules", func(t *testing.T) {
+		t.Parallel()
+
+		x := rules.NewBaseExtractor(spec)
+		x.SupportedPhases = []string{"distribution"}
+
+		require.Equal(t, []rules.Rule{immutableRule}, x.GetImmutableRules("distribution"))
+		require.Equal(t, []rules.Rule{reducerRule}, x.GetReducers("distribution"))
+		require.Equal(t, []rules.Rule{unsupportedRule}, x.GetUnsupportedRules("distribution"))
+	})
+
+	t.Run("nil list is permissive", func(t *testing.T) {
+		t.Parallel()
+
+		x := rules.NewBaseExtractor(spec)
+
+		require.Equal(t, []rules.Rule{immutableRule}, x.GetImmutableRules("distribution"))
+		require.Equal(t, []rules.Rule{reducerRule}, x.GetReducers("distribution"))
+		require.Equal(t, []rules.Rule{unsupportedRule}, x.GetUnsupportedRules("distribution"))
+	})
 }
 
 func TestBaseExtractor_ReducerRulesByDiffs(t *testing.T) {

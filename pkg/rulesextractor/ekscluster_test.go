@@ -116,7 +116,9 @@ func TestEKSBuilder_GetImmutableRules(t *testing.T) {
 			t.Parallel()
 
 			builder := eksrules.EKSExtractor{
-				Spec: *tC.eksRulesSpec,
+				BaseExtractor: &rules.BaseExtractor{
+					Spec: *tC.eksRulesSpec,
+				},
 			}
 
 			got := builder.GetImmutableRules(tC.phase)
@@ -237,7 +239,9 @@ func TestEKSBuilder_FilterSafeImmutableRules(t *testing.T) {
 			t.Parallel()
 
 			builder := eksrules.EKSExtractor{
-				Spec: *tC.eksRulesSpec,
+				BaseExtractor: &rules.BaseExtractor{
+					Spec: *tC.eksRulesSpec,
+				},
 			}
 
 			got := builder.FilterSafeImmutableRules(tC.rules, tC.diffs)

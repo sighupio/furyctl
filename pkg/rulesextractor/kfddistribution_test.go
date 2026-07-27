@@ -60,7 +60,9 @@ func TestKFDBuilder_GetImmutableRules(t *testing.T) {
 			t.Parallel()
 
 			builder := rules_extractor.DistroExtractor{
-				Spec: *tC.Spec,
+				BaseExtractor: &rules_extractor.BaseExtractor{
+					Spec: *tC.Spec,
+				},
 			}
 
 			got := builder.GetImmutableRules(tC.phase)
@@ -181,7 +183,9 @@ func TestKFDBuilder_FilterSafeImmutableRules(t *testing.T) {
 			t.Parallel()
 
 			builder := rules_extractor.DistroExtractor{
-				Spec: *tC.Spec,
+				BaseExtractor: &rules_extractor.BaseExtractor{
+					Spec: *tC.Spec,
+				},
 			}
 
 			got := builder.FilterSafeImmutableRules(tC.rules, tC.diffs)

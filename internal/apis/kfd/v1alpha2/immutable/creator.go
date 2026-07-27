@@ -196,7 +196,11 @@ func (c *ClusterCreator) Create(startFrom string, _, podRunningCheckTimeout int)
 		return fmt.Errorf("error while executing preflight phase: %w", err)
 	}
 
-	rulesExtractor, err := premrules.NewImmutableClusterRulesExtractor(c.paths.DistroPath, renderedConfig)
+	rulesExtractor, err := premrules.NewImmutableClusterRulesExtractor(
+		c.paths.DistroPath,
+		renderedConfig,
+		supported.Phases(),
+	)
 	if err != nil {
 		if !errors.Is(err, premrules.ErrReadingRulesFile) {
 			return fmt.Errorf("error while creating rules builder: %w", err)

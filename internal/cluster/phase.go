@@ -70,6 +70,14 @@ func CheckPhase(phase string) error {
 	return ErrUnsupportedPhase
 }
 
+// SupportedPhases is the list of operation phases supported by a provider.
+type SupportedPhases []string
+
+// IsSupported reports whether the given phase is in the list.
+func (s SupportedPhases) IsSupported(phase string) bool {
+	return slices.Contains(s, phase)
+}
+
 // MainPhases returns all the main phases that can be used in the operation phase.
 func MainPhases() []string {
 	return []string{

@@ -5,26 +5,14 @@
 package supported
 
 import (
-	"slices"
-
 	"github.com/sighupio/furyctl/internal/cluster"
 )
 
-type Phases struct{}
-
-func NewPhases() *Phases {
-	return &Phases{}
-}
-
-func (*Phases) Get() []string {
-	return []string{
+func Phases() cluster.SupportedPhases {
+	return cluster.SupportedPhases{
 		cluster.OperationPhaseInfrastructure,
 		cluster.OperationPhaseKubernetes,
 		cluster.OperationPhaseDistribution,
 		cluster.OperationPhasePlugins,
 	}
-}
-
-func (s *Phases) IsSupported(phase string) bool {
-	return slices.Contains(s.Get(), phase)
 }
