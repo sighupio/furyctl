@@ -11,6 +11,8 @@ import (
 
 	"github.com/r3labs/diff/v3"
 	"github.com/sirupsen/logrus"
+
+	slicesx "github.com/sighupio/furyctl/internal/x/slices"
 )
 
 var numbersToWildcardRegex = regexp.MustCompile(`\.\d+\b`)
@@ -63,6 +65,13 @@ type Rule struct {
 	Unsupported *[]Unsupported `yaml:"unsupported,omitempty"`
 	Safe        *[]Safe        `yaml:"safe,omitempty"`
 	Reducers    *[]Reducer     `yaml:"reducers,omitempty"`
+}
+
+// Paths returns the paths of the given rules.
+func Paths(rls []Rule) []string {
+	return slicesx.Map(rls, func(rule Rule) string {
+		return rule.Path
+	})
 }
 
 type Unsupported struct {
@@ -194,10 +203,8 @@ func (b *BaseExtractor) FilterSafeImmutableRules(rules []Rule, ds diff.Changelog
 
 	for _, rule := range rules {
 		// If the rule has safe conditions and they match, skip this rule.
-		if rule.Safe != nil && len(*rule.Safe) > 0 {
-			if b.isImmutableRuleSafe(rule, ds) {
-				continue
-			}
+		if rule.Safe != nil && len(*rule.Safe) > 0 && b.isImmutableRuleSafe(rule, ds) {
+			continue
 		}
 
 		filteredRules = append(filteredRules, rule)
@@ -265,11 +272,7 @@ func (*BaseExtractor) ReducerRulesByDiffs(rules []Rule, ds diff.Changelog) []Rul
 			joinedPath := "." + strings.Join(d.Path, ".")
 			changePath := numbersToWildcardRegex.ReplaceAllString(joinedPath, ".*")
 
-			if MatchesPattern(changePath, rule.Path) {
-				if rule.Reducers == nil {
-					continue
-				}
-
+			if MatchesPattern(changePath, rule.Path) && rule.Reducers != nil {
 				for i := range *rule.Reducers {
 					(*rule.Reducers)[i].To = d.To
 					(*rule.Reducers)[i].From = d.From
@@ -287,11 +290,7 @@ func (b *BaseExtractor) UnsupportedReducerRulesByDiffs(rules []Rule, ds diff.Cha
 	filteredRules := make([]Rule, 0)
 
 	for _, rule := range b.ReducerRulesByDiffs(rules, ds) {
-		if rule.Unsupported == nil {
-			continue
-		}
-
-		if len(*rule.Unsupported) == 0 {
+		if rule.Unsupported == nil || len(*rule.Unsupported) == 0 {
 			continue
 		}
 
@@ -305,10 +304,8 @@ func (b *BaseExtractor) UnsafeReducerRulesByDiffs(rules []Rule, ds diff.Changelo
 	filteredRules := make([]Rule, 0)
 
 	for _, rule := range b.ReducerRulesByDiffs(rules, ds) {
-		if rule.Safe != nil && len(*rule.Safe) > 0 {
-			if b.areReducersSafe(rule.Reducers, rule.Safe, ds) {
-				continue
-			}
+		if rule.Safe != nil && len(*rule.Safe) > 0 && b.areReducersSafe(rule.Reducers, rule.Safe, ds) {
+			continue
 		}
 
 		filteredRules = append(filteredRules, rule)
@@ -455,7 +452,7 @@ func getNestedValue(m map[string]any, path string) (any, error) {
 	keys := strings.Split(path, ".")
 
 	// Start with the root map.
-	var current any = m
+	current := any(m)
 
 	// Traverse the nested structure.
 	for _, key := range keys {

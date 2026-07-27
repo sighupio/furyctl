@@ -163,8 +163,7 @@ func (m *IACBuilder) Build() error {
 		return fmt.Errorf("error creating template model: %w", err)
 	}
 
-	err = templateModel.Generate()
-	if err != nil {
+	if err := templateModel.Generate(); err != nil {
 		return fmt.Errorf("error generating from template: %w", err)
 	}
 

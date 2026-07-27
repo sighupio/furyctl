@@ -133,18 +133,11 @@ func (c *Cmd) Stop() error {
 }
 
 func (c *Cmd) RunWithTimeout(timeout time.Duration) error {
-	var cmdCtx *exec.Cmd
-
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 
 	defer cancel()
 
-	if len(c.Args) == 1 {
-		cmdCtx = exec.CommandContext(ctx, c.Path)
-	} else {
-		args := c.Args[1:]
-		cmdCtx = exec.CommandContext(ctx, c.Path, args...)
-	}
+	cmdCtx := exec.CommandContext(ctx, c.Path, c.Args[1:]...)
 
 	cmdCtx.Dir = c.Dir
 	cmdCtx.Env = c.Env

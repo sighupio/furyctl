@@ -109,7 +109,7 @@ func NewCertificatesCmd() *cobra.Command {
 
 			executor := execx.NewStdExecutor()
 
-			distrodl := &dist.Downloader{}
+			var distrodl *dist.Downloader
 			depsvl := dependencies.NewValidator(executor, binPath, furyctlPath)
 
 			// Init first half of collaborators.
@@ -195,7 +195,7 @@ func NewCertificatesCmd() *cobra.Command {
 				return fmt.Errorf("error while renewing certificates: %w", err)
 			}
 
-			logrus.Infof("Certificates successfully renewed")
+			logrus.Info("Certificates successfully renewed")
 
 			cmdEvent.AddSuccessMessage("certificates successfully renewed")
 			tracker.Track(cmdEvent)

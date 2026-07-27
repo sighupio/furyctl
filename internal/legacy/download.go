@@ -226,12 +226,12 @@ func (d *Downloader) downloadProcess(data Package, errChan chan<- error, i int) 
 func humanReadableSource(src string) string {
 	humanReadableSrc := src
 
-	if strings.Count(src, "@") >= 1 {
+	if strings.Contains(src, "@") {
 		humanReadableSrc = strings.Join(strings.Split(src, ":")[1:], ":")
 		humanReadableSrc = strings.Replace(humanReadableSrc, "//", "/", 1)
 	}
 
-	if strings.Count(humanReadableSrc, "//") >= 1 {
+	if strings.Contains(humanReadableSrc, "//") {
 		humanReadableSrc = strings.Join(strings.Split(humanReadableSrc, "//")[1:], "/")
 	}
 
@@ -295,8 +295,7 @@ func renameDir(src, dest string) error {
 		}
 	}
 
-	err := os.Rename(src, dest)
-	if err != nil {
+	if err := os.Rename(src, dest); err != nil {
 		return fmt.Errorf("%w: %s -> %s", ErrRenameDir, src, dest)
 	}
 
@@ -334,9 +333,7 @@ func normalizeURLWithAPI(src string) string {
 }
 
 func normalizeURLWithToken(src string) string {
-	s := strings.Replace(src, "git::https://", "git::https://oauth2:"+os.Getenv("GITHUB_TOKEN")+"@", 1)
-
-	return s
+	return strings.Replace(src, "git::https://", "git::https://oauth2:"+os.Getenv("GITHUB_TOKEN")+"@", 1)
 }
 
 func checkRepository(pu *PackageURL) (*http.Response, error) {
@@ -356,10 +353,8 @@ func checkRepository(pu *PackageURL) (*http.Response, error) {
 
 	req.Header.Set("Accept", "application/vnd.github.v3+json")
 
-	ghToken := os.Getenv("GITHUB_TOKEN")
-
-	if ghToken != "" {
-		req.Header.Set("Authorization", "Bearer "+ghToken)
+	if token != "" {
+		req.Header.Set("Authorization", "Bearer "+token)
 	}
 
 	resp, err := http.DefaultClient.Do(req)

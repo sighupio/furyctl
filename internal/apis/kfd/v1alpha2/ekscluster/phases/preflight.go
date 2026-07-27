@@ -337,7 +337,7 @@ func (p *PreFlight) getVPNBucketName() (string, error) {
 }
 
 func (p *PreFlight) getVPNServers() ([]string, error) {
-	servers := []string{}
+	var servers []string
 	port := vpnDefaultPort
 
 	if p.FuryctlConf.Spec.Infrastructure.Vpn.Port != nil {

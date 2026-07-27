@@ -64,8 +64,8 @@ func (r *Runner) CmdPath() string {
 }
 
 func (r *Runner) Playbook(params ...string) ([]byte, error) {
-	args := []string{}
-	out := []byte{}
+	var args []string
+	var out []byte
 
 	if len(params) > 0 {
 		args = append(args, params...)
@@ -84,8 +84,8 @@ func (r *Runner) Playbook(params ...string) ([]byte, error) {
 }
 
 func (r *Runner) Exec(params ...string) ([]byte, error) {
-	args := []string{}
-	out := []byte{}
+	var args []string
+	var out []byte
 
 	if len(params) > 0 {
 		args = append(args, params...)

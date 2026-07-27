@@ -320,8 +320,6 @@ func writeNodesTable(sb *strings.Builder, nodes *clusterinfo.NodesSummary) {
 	_, _ = sb.WriteString(insertSeparator(buf.String(), "-", "="))
 }
 
-//
-
 func insertHeaderSeparator(table, char string) string {
 	lines := strings.SplitN(table, "\n", 2) //nolint:mnd // split into header + rest
 	if len(lines) < 2 {                     //nolint:mnd // need at least header + data

@@ -236,18 +236,10 @@ func (p *PreFlight) CheckStateDiffs(d r3diff.Changelog, diffChecker diffs.Checke
 		return nil
 	}
 
-	// Get all immutable rules.
+	// Extract the paths from the rules left after filtering out the ones with matching safe conditions.
 	immutableRules := r.GetImmutableRules("distribution")
-
-	// Filter out the rules that have matching safe conditions.
-	filteredRules := r.FilterSafeImmutableRules(immutableRules, d)
-
-	// Extract the paths from the filtered rules.
-	immutablePaths := make([]string, 0)
-
-	for _, rule := range filteredRules {
-		immutablePaths = append(immutablePaths, rule.Path)
-	}
+	filteredImmutableRules := r.FilterSafeImmutableRules(immutableRules, d)
+	immutablePaths := rules.Paths(filteredImmutableRules)
 
 	errs := diffChecker.AssertImmutableViolations(d, immutablePaths)
 

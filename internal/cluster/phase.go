@@ -268,27 +268,16 @@ func (op *OperationPhase) CreateRootFolder() error {
 }
 
 func (op *OperationPhase) CreateTerraformFolderStructure() error {
-	if _, err := os.Stat(op.TerraformPlanPath); os.IsNotExist(err) {
-		if err := os.Mkdir(op.TerraformPlanPath, iox.FullPermAccess); err != nil {
-			return fmt.Errorf("error creating folder %s: %w", op.TerraformPlanPath, err)
-		}
-	}
-
-	if _, err := os.Stat(op.TerraformLogsPath); os.IsNotExist(err) {
-		if err := os.Mkdir(op.TerraformLogsPath, iox.FullPermAccess); err != nil {
-			return fmt.Errorf("error creating folder %s: %w", op.TerraformLogsPath, err)
-		}
-	}
-
-	if _, err := os.Stat(op.TerraformSecretsPath); os.IsNotExist(err) {
-		if err := os.Mkdir(op.TerraformSecretsPath, iox.FullPermAccess); err != nil {
-			return fmt.Errorf("error creating folder %s: %w", op.TerraformSecretsPath, err)
-		}
-	}
-
-	if _, err := os.Stat(op.TerraformOutputsPath); os.IsNotExist(err) {
-		if err := os.Mkdir(op.TerraformOutputsPath, iox.FullPermAccess); err != nil {
-			return fmt.Errorf("error creating folder %s: %w", op.TerraformOutputsPath, err)
+	for _, dir := range []string{
+		op.TerraformPlanPath,
+		op.TerraformLogsPath,
+		op.TerraformSecretsPath,
+		op.TerraformOutputsPath,
+	} {
+		if _, err := os.Stat(dir); os.IsNotExist(err) {
+			if err := os.Mkdir(dir, iox.FullPermAccess); err != nil {
+				return fmt.Errorf("error creating folder %s: %w", dir, err)
+			}
 		}
 	}
 

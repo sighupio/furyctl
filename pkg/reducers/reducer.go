@@ -70,10 +70,6 @@ func (r *BaseReducer) GetTo() any {
 func (rs Reducers) ByLifecycle(lifecycle string) Reducers {
 	var filtered Reducers
 
-	if len(rs) == 0 {
-		return filtered
-	}
-
 	for _, r := range rs {
 		if r == nil {
 			continue

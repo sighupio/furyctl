@@ -32,11 +32,10 @@ func NewExtraSchemaValidatorFactory(apiVersion, kind string) ExtraSchemaValidato
 			return &immutable.ExtraSchemaValidator{}
 
 		default:
+			return nil
 		}
 
 	default:
 		return nil
 	}
-
-	return nil
 }

@@ -8,6 +8,7 @@ import (
 	"bufio"
 	"fmt"
 	"os"
+	"slices"
 
 	iox "github.com/sighupio/furyctl/internal/x/io"
 )
@@ -20,13 +21,9 @@ const (
 )
 
 func IsForceEnabledForFeature(force []string, feature string) bool {
-	for _, f := range force {
-		if f == "all" || f == feature {
-			return true
-		}
-	}
-
-	return false
+	return slices.ContainsFunc(force, func(f string) bool {
+		return f == "all" || f == feature
+	})
 }
 
 //nolint:revive // force bool needs to be here

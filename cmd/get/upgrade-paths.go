@@ -132,7 +132,7 @@ func NewUpgradePathsCmd() *cobra.Command {
 			if kind == "" || fromVersion == "" {
 				executor := execx.NewStdExecutor()
 
-				distrodl := &dist.Downloader{}
+				var distrodl *dist.Downloader
 				depsvl := dependencies.NewValidator(executor, binPath, furyctlPath)
 
 				// Init first half of collaborators.

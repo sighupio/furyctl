@@ -134,8 +134,7 @@ func (m *Mapper) injectDynamicValuesAndPathsString(value string) (string, error)
 	value = parsedValue
 
 	// If the value is a relative path, we need to convert it to an absolute path.
-	isRelativePath := RelativePathRegexp.MatchString(value)
-	if isRelativePath {
+	if RelativePathRegexp.MatchString(value) {
 		value = filepath.Clean(value)
 		value = filepath.Join(m.furyctlConfDir, value)
 	}

@@ -52,8 +52,7 @@ func (l *LockFile) Create() error {
 }
 
 func (l *LockFile) Remove() error {
-	err := os.Remove(l.Path)
-	if err != nil {
+	if err := os.Remove(l.Path); err != nil {
 		return fmt.Errorf("error while removing lock file: %w", err)
 	}
 

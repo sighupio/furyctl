@@ -22,22 +22,20 @@ func Build(
 
 	rdcs := make(Reducers, len(filteredReducers))
 
-	if len(filteredReducers) > 0 {
-		for i, reducer := range filteredReducers {
-			if reducer.Reducers != nil {
-				if reducer.Description != nil {
-					logrus.Infof("%s", *reducer.Description)
-				}
+	for i, reducer := range filteredReducers {
+		if reducer.Reducers != nil {
+			if reducer.Description != nil {
+				logrus.Infof("%s", *reducer.Description)
+			}
 
-				for _, red := range *reducer.Reducers {
-					rdcs[i] = NewBaseReducer(
-						red.Key,
-						red.From,
-						red.To,
-						red.Lifecycle,
-						reducer.Path,
-					)
-				}
+			for _, red := range *reducer.Reducers {
+				rdcs[i] = NewBaseReducer(
+					red.Key,
+					red.From,
+					red.To,
+					red.Lifecycle,
+					reducer.Path,
+				)
 			}
 		}
 	}

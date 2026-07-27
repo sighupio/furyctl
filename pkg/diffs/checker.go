@@ -131,22 +131,20 @@ func (*BaseChecker) AssertReducerUnsupportedViolations(diffs r3diff.Changelog, r
 			joinedPath := "." + strings.Join(diff.Path, ".")
 			changePath := numbersToWildcardRegex.ReplaceAllString(joinedPath, ".*")
 
-			if rule.Path == changePath {
-				if rule.Unsupported != nil && len(*rule.Unsupported) > 0 {
-					if reason, unsupported := isDiffUnsupported(diff, *rule.Unsupported); unsupported {
-						unsupportedGenericErrMsg := fmt.Sprintf(
-							"changing %s from %v to %v is not supported",
-							changePath,
-							diff.From,
-							diff.To,
-						)
+			if rule.Path == changePath && rule.Unsupported != nil && len(*rule.Unsupported) > 0 {
+				if reason, unsupported := isDiffUnsupported(diff, *rule.Unsupported); unsupported {
+					unsupportedGenericErrMsg := fmt.Sprintf(
+						"changing %s from %v to %v is not supported",
+						changePath,
+						diff.From,
+						diff.To,
+					)
 
-						if reason != "" {
-							unsupportedGenericErrMsg = reason
-						}
-
-						errs = append(errs, fmt.Errorf("%w: %s", errUnsupported, unsupportedGenericErrMsg))
+					if reason != "" {
+						unsupportedGenericErrMsg = reason
 					}
+
+					errs = append(errs, fmt.Errorf("%w: %s", errUnsupported, unsupportedGenericErrMsg))
 				}
 			}
 		}
@@ -159,8 +157,8 @@ func isDiffUnsupported(diff r3diff.Change, conditions []rules.Unsupported) (stri
 	reason := ""
 
 	for _, condition := range conditions {
-		if (condition.From == nil || (condition.From != nil && diff.From == *condition.From)) &&
-			(condition.To == nil || (condition.To != nil && diff.To == *condition.To)) {
+		if (condition.From == nil || diff.From == *condition.From) &&
+			(condition.To == nil || diff.To == *condition.To) {
 			if condition.Reason != nil {
 				reason = *condition.Reason
 			}

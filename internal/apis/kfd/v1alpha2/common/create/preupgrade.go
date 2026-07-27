@@ -87,8 +87,6 @@ func NewPreUpgrade(
 }
 
 func (p *PreUpgrade) Exec() error {
-	var ok bool
-
 	logrus.Info("Running preupgrade phase...")
 
 	logrus.Debug("Cleaning up upgrade folder...")
@@ -188,15 +186,17 @@ func (p *PreUpgrade) Exec() error {
 	if len(distributionVersionChanges) > 0 {
 		distributionVersionChange := distributionVersionChanges[0]
 
-		p.upgrade.From, ok = distributionVersionChange.From.(string)
+		from, ok := distributionVersionChange.From.(string)
 		if !ok {
 			return errGettingDistroVersionFrom
 		}
+		p.upgrade.From = from
 
-		p.upgrade.To, ok = distributionVersionChange.To.(string)
+		to, ok := distributionVersionChange.To.(string)
 		if !ok {
 			return errGettingDistroVersionTo
 		}
+		p.upgrade.To = to
 
 		logrus.Warnf(
 			"Distribution version changed from %s to %s, you are about to upgrade the cluster.\n",
@@ -208,10 +208,11 @@ func (p *PreUpgrade) Exec() error {
 			return errUpgradeFlagNotSet
 		}
 
-		from := semver.EnsureNoPrefix(p.upgrade.From)
-		to := semver.EnsureNoPrefix(p.upgrade.To)
-
-		upgradePath := path.Join(p.Path, fmt.Sprintf("%s-%s", from, to))
+		upgradePath := path.Join(p.Path, fmt.Sprintf(
+			"%s-%s",
+			semver.EnsureNoPrefix(p.upgrade.From),
+			semver.EnsureNoPrefix(p.upgrade.To),
+		))
 
 		if _, err := os.Stat(upgradePath); err != nil {
 			if cluster.IsForceEnabledForFeature(p.forceFlag, cluster.ForceFeatureUpgrades) {

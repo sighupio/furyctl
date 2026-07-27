@@ -19,7 +19,7 @@ var (
 )
 
 func NewVersion(v string) (*version.Version, error) {
-	if len(v) == 0 {
+	if v == "" {
 		return nil, fmt.Errorf("%w: version is empty", ErrInvalidVersion)
 	}
 
@@ -38,7 +38,7 @@ func NewVersion(v string) (*version.Version, error) {
 }
 
 func NewConstraint(c string) (version.Constraints, error) {
-	if len(c) == 0 {
+	if c == "" {
 		return nil, fmt.Errorf("%w: constraint is empty", ErrInvalidConstraint)
 	}
 

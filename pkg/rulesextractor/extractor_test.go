@@ -1797,3 +1797,35 @@ func TestFilterSafeImmutableRulesWithWildcards(t *testing.T) {
 		})
 	}
 }
+
+func TestPaths(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		name  string
+		rules []rules.Rule
+		want  []string
+	}{
+		{
+			name:  "should return empty slice on nil rules",
+			rules: nil,
+			want:  []string{},
+		},
+		{
+			name: "should extract the path of every rule",
+			rules: []rules.Rule{
+				{Path: ".spec.distribution"},
+				{Path: ".spec.kubernetes", Immutable: true},
+			},
+			want: []string{".spec.distribution", ".spec.kubernetes"},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			assert.Equal(t, tc.want, rules.Paths(tc.rules))
+		})
+	}
+}

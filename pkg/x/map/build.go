@@ -43,10 +43,8 @@ func (b *Builder) FromStruct(s any, tagType string) map[any]any {
 		fieldName := field.Name
 
 		if tagType != "" {
-			tag, ok := field.Tag.Lookup(tagType)
-			if ok {
-				tag = strings.Split(tag, ",")[0]
-				fieldName = tag
+			if tag, ok := field.Tag.Lookup(tagType); ok {
+				fieldName = strings.Split(tag, ",")[0]
 			}
 		}
 

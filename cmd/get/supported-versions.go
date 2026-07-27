@@ -78,8 +78,8 @@ func NewSupportedVersionsCmd() *cobra.Command {
 				msg += "each kind\n"
 			}
 
+			const padWidth = 2
 			var table strings.Builder
-			padWidth := 2
 			w := tabwriter.NewWriter(&table, 0, 0, padWidth, ' ', 0)
 			_, err = w.Write([]byte(FormatSupportedVersions(releases, kindsToPrint)))
 			if err != nil {

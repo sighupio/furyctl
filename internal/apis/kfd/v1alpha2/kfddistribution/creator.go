@@ -75,65 +75,29 @@ func (c *ClusterCreator) SetProperties(props []cluster.CreatorProperty) {
 func (c *ClusterCreator) SetProperty(name string, value any) {
 	switch strings.ToLower(name) {
 	case cluster.CreatorPropertyConfigPath:
-		if s, ok := value.(string); ok {
-			c.paths.ConfigPath = s
-		}
-
+		cluster.SetPropertyValue(value, &c.paths.ConfigPath)
 	case cluster.CreatorPropertyDistroPath:
-		if s, ok := value.(string); ok {
-			c.paths.DistroPath = s
-		}
-
+		cluster.SetPropertyValue(value, &c.paths.DistroPath)
 	case cluster.CreatorPropertyWorkDir:
-		if s, ok := value.(string); ok {
-			c.paths.WorkDir = s
-		}
-
+		cluster.SetPropertyValue(value, &c.paths.WorkDir)
 	case cluster.CreatorPropertyBinPath:
-		if s, ok := value.(string); ok {
-			c.paths.BinPath = s
-		}
-
+		cluster.SetPropertyValue(value, &c.paths.BinPath)
 	case cluster.CreatorPropertyFuryctlConf:
-		if s, ok := value.(public.KfddistributionKfdV1Alpha2); ok {
-			c.furyctlConf = s
-		}
-
+		cluster.SetPropertyValue(value, &c.furyctlConf)
 	case cluster.CreatorPropertyKfdManifest:
-		if s, ok := value.(config.KFD); ok {
-			c.kfdManifest = s
-		}
-
+		cluster.SetPropertyValue(value, &c.kfdManifest)
 	case cluster.CreatorPropertyPhase:
-		if s, ok := value.(string); ok {
-			c.phase = s
-		}
-
+		cluster.SetPropertyValue(value, &c.phase)
 	case cluster.CreatorPropertyDryRun:
-		if b, ok := value.(bool); ok {
-			c.dryRun = b
-		}
-
+		cluster.SetPropertyValue(value, &c.dryRun)
 	case cluster.CreatorPropertyForce:
-		if b, ok := value.([]string); ok {
-			c.force = b
-		}
-
+		cluster.SetPropertyValue(value, &c.force)
 	case cluster.CreatorPropertyUpgrade:
-		if b, ok := value.(bool); ok {
-			c.upgrade = b
-		}
-
+		cluster.SetPropertyValue(value, &c.upgrade)
 	case cluster.CreatorPropertyExternalUpgradesPath:
-		if s, ok := value.(string); ok {
-			c.externalUpgradesPath = s
-		}
-
+		cluster.SetPropertyValue(value, &c.externalUpgradesPath)
 	case cluster.CreatorPropertyPostApplyPhases:
-		if s, ok := value.([]string); ok {
-			c.postApplyPhases = s
-		}
-
+		cluster.SetPropertyValue(value, &c.postApplyPhases)
 	default:
 		logrus.Debugf("ignoring unknown property %q", name)
 	}

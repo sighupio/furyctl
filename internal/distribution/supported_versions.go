@@ -35,11 +35,8 @@ type KFDRelease struct {
 // (or otherwise not parsable as a stable release).
 func IsNotRelease(ghRelease git.Release) bool {
 	v, err := VersionFromString(ghRelease.TagName)
-	if err != nil || v.Prerelease() != "" {
-		return true
-	}
 
-	return false
+	return err != nil || v.Prerelease() != ""
 }
 
 func releaseSort(a, b git.Release) int {
@@ -135,24 +132,20 @@ func SetRecommendedVersions(releases []KFDRelease) {
 
 // NewKFDRelease creates a KFDRelease from a Release.
 func newKFDRelease(ghRelease git.Release) (KFDRelease, error) {
-	var release KFDRelease
-
 	// Parse version from Release tag name.
-	version, err := VersionFromString(ghRelease.TagName)
+	versionFromString, err := VersionFromString(ghRelease.TagName)
 	if err != nil {
 		logrus.Debug(err)
 
-		return release, fmt.Errorf("invalid version: %w", err)
+		return KFDRelease{}, fmt.Errorf("invalid version: %w", err)
 	}
 
 	// Build the release struct.
-	release = KFDRelease{
-		Version: version,
+	return KFDRelease{
+		Version: versionFromString,
 		Date:    ghRelease.CreatedAt,
-		Support: GetSupport(version),
-	}
-
-	return release, nil
+		Support: GetSupport(versionFromString),
+	}, nil
 }
 
 // GetSupport checks for compatibility with various distributions.
@@ -171,13 +164,12 @@ func GetSupport(version version.Version) map[string]bool {
 		return checker.IsCompatible()
 	}
 
-	support := make(map[string]bool)
-	support[EKSClusterKind] = isCompatible(eks, errEKS)
-	support[KFDDistributionKind] = isCompatible(kfd, errKFD)
-	support[OnPremisesKind] = isCompatible(onprem, errOnPrem)
-	support[ImmutableKind] = isCompatible(immutable, errImmutable)
-
-	return support
+	return map[string]bool{
+		EKSClusterKind:      isCompatible(eks, errEKS),
+		KFDDistributionKind: isCompatible(kfd, errKFD),
+		OnPremisesKind:      isCompatible(onprem, errOnPrem),
+		ImmutableKind:       isCompatible(immutable, errImmutable),
+	}
 }
 
 // VersionFromString converts a tag ref string to a semver version.

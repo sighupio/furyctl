@@ -30,41 +30,21 @@ func (c *ClusterDeleter) SetProperties(props []cluster.DeleterProperty) {
 }
 
 func (c *ClusterDeleter) SetProperty(name string, value any) {
-	lcName := strings.ToLower(name)
-
-	switch lcName {
+	switch strings.ToLower(name) {
 	case cluster.DeleterPropertyConfigPath:
-		if s, ok := value.(string); ok {
-			c.paths.ConfigPath = s
-		}
-
+		cluster.SetPropertyValue(value, &c.paths.ConfigPath)
 	case cluster.DeleterPropertyDistroPath:
-		if s, ok := value.(string); ok {
-			c.paths.DistroPath = s
-		}
-
+		cluster.SetPropertyValue(value, &c.paths.DistroPath)
 	case cluster.DeleterPropertyWorkDir:
-		if s, ok := value.(string); ok {
-			c.paths.WorkDir = s
-		}
-
+		cluster.SetPropertyValue(value, &c.paths.WorkDir)
 	case cluster.DeleterPropertyBinPath:
-		if s, ok := value.(string); ok {
-			c.paths.BinPath = s
-		}
-
+		cluster.SetPropertyValue(value, &c.paths.BinPath)
 	case cluster.DeleterPropertyFuryctlConf:
-		if s, ok := value.(public.ImmutableKfdV1Alpha2); ok {
-			c.furyctlConf = s
-		}
-
+		cluster.SetPropertyValue(value, &c.furyctlConf)
 	case cluster.DeleterPropertyKfdManifest:
-		if s, ok := value.(config.KFD); ok {
-			c.kfdManifest = s
-		}
-
+		cluster.SetPropertyValue(value, &c.kfdManifest)
 	default:
-		logrus.Debugf("ignoring unknown property %q", lcName)
+		logrus.Debugf("ignoring unknown property %q", name)
 	}
 }
 
