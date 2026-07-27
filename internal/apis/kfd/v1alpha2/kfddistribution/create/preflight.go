@@ -238,8 +238,10 @@ func (p *PreFlight) CheckStateDiffs(d r3diff.Changelog, diffChecker diffs.Checke
 	}
 
 	// Extract the paths from the rules left after filtering out the ones with matching safe conditions.
+	immutableRules := r.GetImmutableRules("distribution")
+	filteredImmutableRules := r.FilterSafeImmutableRules(immutableRules, d)
 	immutablePaths := slicesx.Map(
-		r.FilterSafeImmutableRules(r.GetImmutableRules("distribution"), d),
+		filteredImmutableRules,
 		func(rule rules.Rule) string { return rule.Path },
 	)
 
