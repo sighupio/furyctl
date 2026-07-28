@@ -263,7 +263,7 @@ func (p *PreFlight) Exec(renderedConfig map[string]any) (*Status, error) {
 			if p.phase != cluster.OperationPhaseAll && !p.upgradeEnabled {
 				logrus.Info("Cluster configuration has changed, checking if changes are supported in the current phase...")
 
-				if err := cluster.AssertPhaseDiffs(d, p.phase, (&supported.Phases{}).Get()); err != nil {
+				if err := cluster.AssertPhaseDiffs(d, p.phase, supported.Phases()); err != nil {
 					return status, fmt.Errorf("error checking changes to other phases: %w", err)
 				}
 			}
@@ -305,7 +305,11 @@ func (p *PreFlight) CreateDiffChecker(
 }
 
 func (p *PreFlight) CheckImmutablesDiffs(d r3diff.Changelog, diffChecker diffs.Checker) error {
-	r, err := rules.NewEKSClusterRulesExtractor(p.paths.DistroPath, diffChecker.GetCurrentConfig())
+	r, err := rules.NewEKSClusterRulesExtractor(
+		p.paths.DistroPath,
+		diffChecker.GetCurrentConfig(),
+		supported.Phases(),
+	)
 	if err != nil {
 		if !errors.Is(err, rules.ErrReadingRulesFile) {
 			return fmt.Errorf("error while creating rules builder: %w", err)
@@ -341,7 +345,11 @@ func (p *PreFlight) CheckImmutablesDiffs(d r3diff.Changelog, diffChecker diffs.C
 // CheckReducersDiffs checks if the changes to the reducers are supported by the distribution.
 // This is needed as not all from/to combinations are supported.
 func (p *PreFlight) CheckReducersDiffs(d r3diff.Changelog, diffChecker diffs.Checker) error {
-	r, err := rules.NewEKSClusterRulesExtractor(p.paths.DistroPath, diffChecker.GetCurrentConfig())
+	r, err := rules.NewEKSClusterRulesExtractor(
+		p.paths.DistroPath,
+		diffChecker.GetCurrentConfig(),
+		supported.Phases(),
+	)
 	if err != nil {
 		if !errors.Is(err, rules.ErrReadingRulesFile) {
 			return fmt.Errorf("error while creating rules builder: %w", err)

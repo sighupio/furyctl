@@ -88,7 +88,9 @@ func TestOnPremisesBuilder_GetImmutableRules(t *testing.T) {
 			t.Parallel()
 
 			builder := onpremrules.OnPremExtractor{
-				Spec: *tC.onPremRulesSpec,
+				BaseExtractor: &rules.BaseExtractor{
+					Spec: *tC.onPremRulesSpec,
+				},
 			}
 
 			got := builder.GetImmutableRules(tC.phase)
@@ -209,7 +211,9 @@ func TestOnPremisesBuilder_FilterSafeImmutableRules(t *testing.T) {
 			t.Parallel()
 
 			builder := onpremrules.OnPremExtractor{
-				Spec: *tC.onPremRulesSpec,
+				BaseExtractor: &rules.BaseExtractor{
+					Spec: *tC.onPremRulesSpec,
+				},
 			}
 
 			got := builder.FilterSafeImmutableRules(tC.rules, tC.diffs)

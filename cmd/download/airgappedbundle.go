@@ -132,10 +132,8 @@ func NewAirGappedBundleCmd() *cobra.Command {
 
 			binPath := filepath.Join(outDir, ".furyctl", "bin")
 
-			absDistroPatchesLocation := distroPatchesLocation
-
-			if absDistroPatchesLocation != "" {
-				absDistroPatchesLocation, err = filepath.Abs(distroPatchesLocation)
+			if distroPatchesLocation != "" {
+				distroPatchesLocation, err = filepath.Abs(distroPatchesLocation)
 				if err != nil {
 					cmdEvent.AddErrorMessage(err)
 					tracker.Track(cmdEvent)
@@ -150,9 +148,9 @@ func NewAirGappedBundleCmd() *cobra.Command {
 
 			var distrodl *dist.Downloader
 			if distroLocation == "" {
-				distrodl = dist.NewCachingDownloader(client, outDir, typedGitProtocol, absDistroPatchesLocation)
+				distrodl = dist.NewCachingDownloader(client, outDir, typedGitProtocol, distroPatchesLocation)
 			} else {
-				distrodl = dist.NewDownloader(client, typedGitProtocol, absDistroPatchesLocation)
+				distrodl = dist.NewDownloader(client, typedGitProtocol, distroPatchesLocation)
 			}
 
 			if err := depsvl.ValidateBaseReqs(); err != nil {

@@ -115,7 +115,9 @@ func TestImmutableBuilder_GetImmutableRules(t *testing.T) {
 			t.Parallel()
 
 			builder := rulesextractor.ImmutableExtractor{
-				Spec: *tC.ImmutableRulesSpec,
+				BaseExtractor: &rulesextractor.BaseExtractor{
+					Spec: *tC.ImmutableRulesSpec,
+				},
 			}
 
 			got := builder.GetImmutableRules(tC.phase)
@@ -236,7 +238,9 @@ func TestImmutableBuilder_FilterSafeImmutableRules(t *testing.T) {
 			t.Parallel()
 
 			builder := rulesextractor.ImmutableExtractor{
-				Spec: *tC.ImmutableRulesSpec,
+				BaseExtractor: &rulesextractor.BaseExtractor{
+					Spec: *tC.ImmutableRulesSpec,
+				},
 			}
 
 			got := builder.FilterSafeImmutableRules(tC.rules, tC.diffs)

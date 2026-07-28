@@ -69,51 +69,15 @@ func NewFuryFile(path string) (*FuryFile, error) {
 }
 
 func (f *FuryFile) BuildPackages(prefix string) ([]Package, error) {
-	pkgs := make([]Package, 0)
-
 	if prefix != "" {
 		logrus.Infof("prefix is set to '%s', downloading only matching modules", prefix)
 	}
 
-	for _, v := range f.Roles {
-		v.Kind = "roles"
-		if strings.HasPrefix(v.Name, prefix) {
-			logrus.Debugf("role '%s' matches prefix, adding it to the download list", v.Name)
-			pkgs = append(pkgs, v)
-		} else {
-			logrus.Debugf("role '%s' does not match prefix, skipping it", v.Name)
-		}
-	}
-
-	for _, v := range f.Modules {
-		v.Kind = "modules"
-		if strings.HasPrefix(v.Name, prefix) {
-			logrus.Debugf("module '%s' matches prefix, adding it to the download list", v.Name)
-			pkgs = append(pkgs, v)
-		} else {
-			logrus.Debugf("module '%s' does not match prefix, skipping it", v.Name)
-		}
-	}
-
-	for _, v := range f.Bases {
-		v.Kind = "katalog"
-		if strings.HasPrefix(v.Name, prefix) {
-			logrus.Debugf("katalog '%s' matches prefix, adding it to the download list", v.Name)
-			pkgs = append(pkgs, v)
-		} else {
-			logrus.Debugf("katalog '%s' does not match prefix, skipping it", v.Name)
-		}
-	}
-
-	for _, v := range f.External {
-		v.Kind = "external"
-		if strings.HasPrefix(v.Name, prefix) {
-			logrus.Debugf("external '%s' matches prefix, adding it to the download list", v.Name)
-			pkgs = append(pkgs, v)
-		} else {
-			logrus.Debugf("external '%s' does not match prefix, skipping it", v.Name)
-		}
-	}
+	pkgs := make([]Package, 0)
+	f.collectPackages(&pkgs, f.Roles, "roles", prefix)
+	f.collectPackages(&pkgs, f.Modules, "modules", prefix)
+	f.collectPackages(&pkgs, f.Bases, "katalog", prefix)
+	f.collectPackages(&pkgs, f.External, "external", prefix)
 
 	for i := range pkgs {
 		pkgs[i].ProviderKind = f.Provider[pkgs[i].Kind]
@@ -133,4 +97,16 @@ func (f *FuryFile) BuildPackages(prefix string) ([]Package, error) {
 	}
 
 	return pkgs, nil
+}
+
+func (*FuryFile) collectPackages(pkgs *[]Package, source []Package, kind, prefix string) {
+	for _, v := range source {
+		v.Kind = kind
+		if strings.HasPrefix(v.Name, prefix) {
+			logrus.Debugf("%s '%s' matches prefix, adding it to the download list", kind, v.Name)
+			*pkgs = append(*pkgs, v)
+		} else {
+			logrus.Debugf("%s '%s' does not match prefix, skipping it", kind, v.Name)
+		}
+	}
 }

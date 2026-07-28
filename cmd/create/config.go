@@ -104,10 +104,8 @@ func NewConfigCmd() *cobra.Command {
 				},
 			}
 
-			absDistroPatchesLocation := distroPatchesLocation
-
-			if absDistroPatchesLocation != "" {
-				absDistroPatchesLocation, err = filepath.Abs(distroPatchesLocation)
+			if distroPatchesLocation != "" {
+				distroPatchesLocation, err = filepath.Abs(distroPatchesLocation)
 				if err != nil {
 					cmdEvent.AddErrorMessage(err)
 					tracker.Track(cmdEvent)
@@ -124,9 +122,9 @@ func NewConfigCmd() *cobra.Command {
 			depsvl := dependencies.NewValidator(executor, "", "")
 
 			if distroLocation == "" {
-				distrodl = dist.NewCachingDownloader(client, outDir, typedGitProtocol, absDistroPatchesLocation)
+				distrodl = dist.NewCachingDownloader(client, outDir, typedGitProtocol, distroPatchesLocation)
 			} else {
-				distrodl = dist.NewDownloader(client, typedGitProtocol, absDistroPatchesLocation)
+				distrodl = dist.NewDownloader(client, typedGitProtocol, distroPatchesLocation)
 			}
 
 			// Init packages.

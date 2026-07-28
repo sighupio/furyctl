@@ -47,32 +47,32 @@ func (v *Validator) Validate(flags *FlagsConfig) []ValidationError {
 
 	// Validate global flags.
 	if flags.Global != nil {
-		validationErrors = append(validationErrors, v.validateCommandFlags(flags.Global, "global")...)
+		validationErrors = append(validationErrors, v.validateCommandFlags(flags.Global, CommandGlobal)...)
 	}
 
 	// Validate command-specific flags.
 	if flags.Apply != nil {
-		validationErrors = append(validationErrors, v.validateCommandFlags(flags.Apply, "apply")...)
+		validationErrors = append(validationErrors, v.validateCommandFlags(flags.Apply, CommandApply)...)
 	}
 
 	if flags.Delete != nil {
-		validationErrors = append(validationErrors, v.validateCommandFlags(flags.Delete, "delete")...)
+		validationErrors = append(validationErrors, v.validateCommandFlags(flags.Delete, CommandDelete)...)
 	}
 
 	if flags.Create != nil {
-		validationErrors = append(validationErrors, v.validateCommandFlags(flags.Create, "create")...)
+		validationErrors = append(validationErrors, v.validateCommandFlags(flags.Create, CommandCreate)...)
 	}
 
 	if flags.Get != nil {
-		validationErrors = append(validationErrors, v.validateCommandFlags(flags.Get, "get")...)
+		validationErrors = append(validationErrors, v.validateCommandFlags(flags.Get, CommandGet)...)
 	}
 
 	if flags.Diff != nil {
-		validationErrors = append(validationErrors, v.validateCommandFlags(flags.Diff, "diff")...)
+		validationErrors = append(validationErrors, v.validateCommandFlags(flags.Diff, CommandDiff)...)
 	}
 
 	if flags.Tools != nil {
-		validationErrors = append(validationErrors, v.validateCommandFlags(flags.Tools, "tools")...)
+		validationErrors = append(validationErrors, v.validateCommandFlags(flags.Tools, CommandTools)...)
 	}
 
 	// Cross-validation: check for conflicting flags.
@@ -93,25 +93,25 @@ func (v *Validator) validateCommandFlags(flagsMap map[string]any, command string
 	var supportedFlagsMap map[string]FlagInfo
 
 	switch command {
-	case "global":
+	case CommandGlobal:
 		supportedFlagsMap = v.supportedFlags.Global
 
-	case "apply":
+	case CommandApply:
 		supportedFlagsMap = v.supportedFlags.Apply
 
-	case "delete":
+	case CommandDelete:
 		supportedFlagsMap = v.supportedFlags.Delete
 
-	case "create":
+	case CommandCreate:
 		supportedFlagsMap = v.supportedFlags.Create
 
-	case "get":
+	case CommandGet:
 		supportedFlagsMap = v.supportedFlags.Get
 
-	case "diff":
+	case CommandDiff:
 		supportedFlagsMap = v.supportedFlags.Diff
 
-	case "tools":
+	case CommandTools:
 		supportedFlagsMap = v.supportedFlags.Tools
 
 	default:
@@ -136,7 +136,7 @@ func (v *Validator) validateCommandFlags(flagsMap map[string]any, command string
 				Value:   value,
 				Reason: fmt.Sprintf("flag '%s' is not supported for '%s' %s. "+
 					"Check documentation for supported flags.", flagName, command, func() string {
-					if command == "global" {
+					if command == CommandGlobal {
 						return "configuration"
 					}
 
@@ -271,7 +271,7 @@ func (*Validator) validateFlagCombinations(flags *FlagsConfig) []ValidationError
 				if skipVpnBool, ok := skipVpn.(bool); ok && skipVpnBool {
 					if autoConnectBool, ok := autoConnect.(bool); ok && autoConnectBool {
 						validationErrors = append(validationErrors, ValidationError{
-							Command:  "apply",
+							Command:  CommandApply,
 							Flag:     "vpnAutoConnect",
 							Value:    autoConnect,
 							Reason:   "vpnAutoConnect=true conflicts with skipVpnConfirmation=true. Use only one of these flags.",
@@ -288,7 +288,7 @@ func (*Validator) validateFlagCombinations(flags *FlagsConfig) []ValidationError
 				if upgradeBool, ok := upgrade.(bool); ok && upgradeBool {
 					if upgradeNodeStr, ok := upgradeNode.(string); ok && upgradeNodeStr != "" {
 						validationErrors = append(validationErrors, ValidationError{
-							Command: "apply",
+							Command: CommandApply,
 							Flag:    "upgradeNode",
 							Value:   upgradeNode,
 							Reason: "upgradeNode cannot be used when upgrade=true. " +
@@ -306,7 +306,7 @@ func (*Validator) validateFlagCombinations(flags *FlagsConfig) []ValidationError
 				if phaseStr, ok := phase.(string); ok && phaseStr != "" && phaseStr != "all" {
 					if startFromStr, ok := startFrom.(string); ok && startFromStr != "" {
 						validationErrors = append(validationErrors, ValidationError{
-							Command: "apply",
+							Command: CommandApply,
 							Flag:    "startFrom",
 							Value:   startFrom,
 							Reason: "startFrom cannot be used when phase is specified (and not 'all'). " +
@@ -324,7 +324,7 @@ func (*Validator) validateFlagCombinations(flags *FlagsConfig) []ValidationError
 				if phaseStr, ok := phase.(string); ok && phaseStr != "" && phaseStr != "all" {
 					if phases, ok := postApplyPhases.([]any); ok && len(phases) > 0 {
 						validationErrors = append(validationErrors, ValidationError{
-							Command: "apply",
+							Command: CommandApply,
 							Flag:    "postApplyPhases",
 							Value:   postApplyPhases,
 							Reason: "postApplyPhases cannot be used when phase is specified (and not 'all'). " +

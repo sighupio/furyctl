@@ -8,22 +8,23 @@ import (
 	"fmt"
 	"path/filepath"
 
-	"github.com/r3labs/diff/v3"
-
 	"github.com/sighupio/furyctl/internal/cluster"
 	yamlx "github.com/sighupio/furyctl/pkg/x/yaml"
 )
 
 type OnPremExtractor struct {
 	*BaseExtractor
-
-	Spec Spec
 }
 
-func NewOnPremClusterRulesExtractor(distributionPath string, renderedConfig map[string]any) (*OnPremExtractor, error) {
-	builder := OnPremExtractor{
+func NewOnPremClusterRulesExtractor(
+	distributionPath string,
+	renderedConfig map[string]any,
+	supportedPhases cluster.SupportedPhases,
+) (*OnPremExtractor, error) {
+	builder := &OnPremExtractor{
 		BaseExtractor: &BaseExtractor{
-			RenderedConfig: renderedConfig,
+			RenderedConfig:  renderedConfig,
+			SupportedPhases: supportedPhases,
 		},
 	}
 
@@ -31,105 +32,10 @@ func NewOnPremClusterRulesExtractor(distributionPath string, renderedConfig map[
 
 	spec, err := yamlx.FromFileV3[Spec](rulesPath)
 	if err != nil {
-		return &builder, fmt.Errorf("%w: %s", ErrReadingRulesFile, err)
+		return builder, fmt.Errorf("%w: %s", ErrReadingRulesFile, err)
 	}
 
 	builder.Spec = spec
 
-	return &builder, nil
-}
-
-func (r *OnPremExtractor) GetImmutableRules(phase string) []Rule {
-	switch phase {
-	case cluster.OperationPhaseKubernetes:
-		if r.Spec.Kubernetes == nil {
-			return []Rule{}
-		}
-
-		var immutableRules []Rule
-
-		for _, rule := range *r.Spec.Kubernetes {
-			if rule.Immutable {
-				immutableRules = append(immutableRules, rule)
-			}
-		}
-
-		return immutableRules
-
-	case cluster.OperationPhaseDistribution:
-		if r.Spec.Distribution == nil {
-			return []Rule{}
-		}
-
-		var immutableRules []Rule
-
-		for _, rule := range *r.Spec.Distribution {
-			if rule.Immutable {
-				immutableRules = append(immutableRules, rule)
-			}
-		}
-
-		return immutableRules
-
-	default:
-		return []Rule{}
-	}
-}
-
-func (r *OnPremExtractor) GetReducers(phase string) []Rule {
-	switch phase {
-	case cluster.OperationPhaseKubernetes:
-		if r.Spec.Kubernetes == nil {
-			return []Rule{}
-		}
-
-		return r.ExtractReducerRules(*r.Spec.Kubernetes)
-
-	case cluster.OperationPhaseDistribution:
-		if r.Spec.Distribution == nil {
-			return []Rule{}
-		}
-
-		return r.ExtractReducerRules(*r.Spec.Distribution)
-
-	default:
-		return []Rule{}
-	}
-}
-
-func (r *OnPremExtractor) GetUnsupportedRules(phase string) []Rule {
-	switch phase {
-	case cluster.OperationPhaseKubernetes:
-		if r.Spec.Kubernetes == nil {
-			return []Rule{}
-		}
-
-		return r.ExtractUnsupportedRules(*r.Spec.Kubernetes)
-
-	case cluster.OperationPhaseDistribution:
-		if r.Spec.Distribution == nil {
-			return []Rule{}
-		}
-
-		return r.ExtractUnsupportedRules(*r.Spec.Distribution)
-
-	default:
-		return []Rule{}
-	}
-}
-
-func (r *OnPremExtractor) ReducerRulesByDiffs(rls []Rule, ds diff.Changelog) []Rule {
-	return r.BaseExtractor.ReducerRulesByDiffs(rls, ds)
-}
-
-func (r *OnPremExtractor) UnsupportedReducerRulesByDiffs(rls []Rule, ds diff.Changelog) []Rule {
-	return r.BaseExtractor.UnsupportedReducerRulesByDiffs(rls, ds)
-}
-
-func (r *OnPremExtractor) UnsafeReducerRulesByDiffs(rls []Rule, ds diff.Changelog) []Rule {
-	return r.BaseExtractor.UnsafeReducerRulesByDiffs(rls, ds)
-}
-
-func (r *OnPremExtractor) FilterSafeImmutableRules(rules []Rule, ds diff.Changelog) []Rule {
-	return r.BaseExtractor.FilterSafeImmutableRules(rules, ds)
+	return builder, nil
 }

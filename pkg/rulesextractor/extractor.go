@@ -7,11 +7,13 @@ package rulesextractor
 import (
 	"fmt"
 	"regexp"
+	"slices"
 	"strings"
 
 	"github.com/r3labs/diff/v3"
 	"github.com/sirupsen/logrus"
 
+	"github.com/sighupio/furyctl/internal/cluster"
 	slicesx "github.com/sighupio/furyctl/internal/x/slices"
 )
 
@@ -111,8 +113,9 @@ type Extractor interface {
 }
 
 type BaseExtractor struct {
-	Spec           Spec
-	RenderedConfig map[string]any
+	Spec            Spec
+	RenderedConfig  map[string]any
+	SupportedPhases cluster.SupportedPhases
 }
 
 type PathNotFoundError struct {
@@ -137,65 +140,39 @@ func NewBaseExtractor(spec Spec) *BaseExtractor {
 	}
 }
 
-func (b *BaseExtractor) GetImmutables(_ string) []string {
-	var immutables []string
-
-	if b.Spec.Infrastructure != nil {
-		for _, rule := range *b.Spec.Infrastructure {
-			if rule.Immutable {
-				immutables = append(immutables, rule.Path)
-			}
-		}
+// phaseRules returns the rule slice for the given operation phase, or nil.
+func phaseRules(spec Spec, phase string) *[]Rule {
+	switch phase {
+	case cluster.OperationPhaseInfrastructure:
+		return spec.Infrastructure
+	case cluster.OperationPhaseKubernetes:
+		return spec.Kubernetes
+	case cluster.OperationPhaseDistribution:
+		return spec.Distribution
+	default:
+		return nil
 	}
-
-	if b.Spec.Kubernetes != nil {
-		for _, rule := range *b.Spec.Kubernetes {
-			if rule.Immutable {
-				immutables = append(immutables, rule.Path)
-			}
-		}
-	}
-
-	if b.Spec.Distribution != nil {
-		for _, rule := range *b.Spec.Distribution {
-			if rule.Immutable {
-				immutables = append(immutables, rule.Path)
-			}
-		}
-	}
-
-	return immutables
 }
 
-// GetImmutableRules returns all the rules that are marked as immutable.
-func (b *BaseExtractor) GetImmutableRules(_ string) []Rule {
-	var immutableRules []Rule
+// extractFromPhase applies extract to the rules of the given phase.
+func extractFromPhase(spec Spec, phase string, extract func(*[]Rule) []Rule) []Rule {
+	return extract(phaseRules(spec, phase))
+}
 
-	if b.Spec.Infrastructure != nil {
-		for _, rule := range *b.Spec.Infrastructure {
-			if rule.Immutable {
-				immutableRules = append(immutableRules, rule)
-			}
-		}
+func (b *BaseExtractor) GetImmutables(_ string) []string {
+	return slices.Concat(
+		b.ExtractImmutablesFromRules(b.Spec.Infrastructure),
+		b.ExtractImmutablesFromRules(b.Spec.Kubernetes),
+		b.ExtractImmutablesFromRules(b.Spec.Distribution),
+	)
+}
+
+func (b *BaseExtractor) GetImmutableRules(phase string) []Rule {
+	if !b.supportsPhase(phase) {
+		return []Rule{}
 	}
 
-	if b.Spec.Kubernetes != nil {
-		for _, rule := range *b.Spec.Kubernetes {
-			if rule.Immutable {
-				immutableRules = append(immutableRules, rule)
-			}
-		}
-	}
-
-	if b.Spec.Distribution != nil {
-		for _, rule := range *b.Spec.Distribution {
-			if rule.Immutable {
-				immutableRules = append(immutableRules, rule)
-			}
-		}
-	}
-
-	return immutableRules
+	return extractFromPhase(b.Spec, phase, b.ExtractImmutableRules)
 }
 
 func (b *BaseExtractor) FilterSafeImmutableRules(rules []Rule, ds diff.Changelog) []Rule {
@@ -213,55 +190,20 @@ func (b *BaseExtractor) FilterSafeImmutableRules(rules []Rule, ds diff.Changelog
 	return filteredRules
 }
 
-func (b *BaseExtractor) GetReducers(_ string) []Rule {
-	var reducers []Rule
-
-	if b.Spec.Infrastructure != nil {
-		for _, rule := range *b.Spec.Infrastructure {
-			if rule.Reducers != nil {
-				reducers = append(reducers, rule)
-			}
-		}
+func (b *BaseExtractor) GetReducers(phase string) []Rule {
+	if !b.supportsPhase(phase) {
+		return []Rule{}
 	}
 
-	if b.Spec.Kubernetes != nil {
-		for _, rule := range *b.Spec.Kubernetes {
-			if rule.Reducers != nil {
-				reducers = append(reducers, rule)
-			}
-		}
-	}
-
-	if b.Spec.Distribution != nil {
-		for _, rule := range *b.Spec.Distribution {
-			if rule.Reducers != nil {
-				reducers = append(reducers, rule)
-			}
-		}
-	}
-
-	return reducers
+	return extractFromPhase(b.Spec, phase, b.ExtractReducerRules)
 }
 
-// GetUnsupportedRules returns all the rules that declare unsupported transitions,
-// regardless of whether they also define reducers. This is what drives the
-// "unsupported transition" validation, which must not depend on reducers being set.
-func (b *BaseExtractor) GetUnsupportedRules(_ string) []Rule {
-	var unsupported []Rule
-
-	if b.Spec.Infrastructure != nil {
-		unsupported = append(unsupported, b.ExtractUnsupportedRules(*b.Spec.Infrastructure)...)
+func (b *BaseExtractor) GetUnsupportedRules(phase string) []Rule {
+	if !b.supportsPhase(phase) {
+		return []Rule{}
 	}
 
-	if b.Spec.Kubernetes != nil {
-		unsupported = append(unsupported, b.ExtractUnsupportedRules(*b.Spec.Kubernetes)...)
-	}
-
-	if b.Spec.Distribution != nil {
-		unsupported = append(unsupported, b.ExtractUnsupportedRules(*b.Spec.Distribution)...)
-	}
-
-	return unsupported
+	return extractFromPhase(b.Spec, phase, b.ExtractUnsupportedRules)
 }
 
 func (*BaseExtractor) ReducerRulesByDiffs(rules []Rule, ds diff.Changelog) []Rule {
@@ -314,44 +256,54 @@ func (b *BaseExtractor) UnsafeReducerRulesByDiffs(rules []Rule, ds diff.Changelo
 	return filteredRules
 }
 
-func (*BaseExtractor) ExtractImmutablesFromRules(rls []Rule) []string {
-	immutables := make([]string, 0)
+// filterRules returns the rules matching the keep predicate, or an empty slice
+// if rules is nil.
+func filterRules(rules *[]Rule, keep func(Rule) bool) []Rule {
+	if rules == nil {
+		return []Rule{}
+	}
 
-	for _, rule := range rls {
-		if rule.Immutable {
-			immutables = append(immutables, rule.Path)
+	filtered := make([]Rule, 0)
+
+	for _, rule := range *rules {
+		if keep(rule) {
+			filtered = append(filtered, rule)
 		}
 	}
 
-	return immutables
+	return filtered
 }
 
-func (*BaseExtractor) ExtractReducerRules(rls []Rule) []Rule {
-	reducers := make([]Rule, 0)
+func (b *BaseExtractor) ExtractImmutablesFromRules(rules *[]Rule) []string {
+	return Paths(b.ExtractImmutableRules(rules))
+}
 
-	for _, rule := range rls {
-		if rule.Reducers != nil {
-			reducers = append(reducers, rule)
-		}
-	}
+func (*BaseExtractor) ExtractImmutableRules(rules *[]Rule) []Rule {
+	return filterRules(rules, func(rule Rule) bool {
+		return rule.Immutable
+	})
+}
 
-	return reducers
+func (*BaseExtractor) ExtractReducerRules(rules *[]Rule) []Rule {
+	return filterRules(rules, func(rule Rule) bool {
+		return rule.Reducers != nil
+	})
 }
 
 // ExtractUnsupportedRules returns the rules that declare at least one unsupported
 // transition, regardless of whether they also define reducers. Unsupported
 // transitions are enforced independently from reducers (see
 // diffs.AssertReducerUnsupportedViolations).
-func (*BaseExtractor) ExtractUnsupportedRules(rls []Rule) []Rule {
-	unsupported := make([]Rule, 0)
+func (*BaseExtractor) ExtractUnsupportedRules(rules *[]Rule) []Rule {
+	return filterRules(rules, func(rule Rule) bool {
+		return rule.Unsupported != nil && len(*rule.Unsupported) > 0
+	})
+}
 
-	for _, rule := range rls {
-		if rule.Unsupported != nil && len(*rule.Unsupported) > 0 {
-			unsupported = append(unsupported, rule)
-		}
-	}
-
-	return unsupported
+// supportsPhase reports whether the given phase is enabled for this extractor.
+// A nil SupportedPhases list means no restriction.
+func (b *BaseExtractor) supportsPhase(phase string) bool {
+	return b.SupportedPhases == nil || b.SupportedPhases.IsSupported(phase)
 }
 
 func (b *BaseExtractor) isImmutableRuleSafe(rule Rule, ds diff.Changelog) bool {

@@ -20,6 +20,7 @@ import (
 	commcreate "github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/common/create"
 	"github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/ekscluster/create"
 	"github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/ekscluster/private"
+	"github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/ekscluster/supported"
 	"github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/ekscluster/vpn"
 	"github.com/sighupio/furyctl/internal/cluster"
 	"github.com/sighupio/furyctl/internal/distribution"
@@ -280,7 +281,7 @@ func (v *ClusterCreator) CreateAsync(
 		return
 	}
 
-	r, err := eksrules.NewEKSClusterRulesExtractor(v.paths.DistroPath, renderedConfig)
+	r, err := eksrules.NewEKSClusterRulesExtractor(v.paths.DistroPath, renderedConfig, supported.Phases())
 	if err != nil {
 		if !errors.Is(err, eksrules.ErrReadingRulesFile) {
 			errCh <- fmt.Errorf("error while creating rules builder: %w", err)
