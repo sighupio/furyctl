@@ -852,7 +852,7 @@ func (*Infrastructure) downloadSysextPackages(
 
 			// Only packages that pin a sha256 are verified; the rest keep the previous behaviour.
 			if archInfo.SHA256 == "" {
-				logrus.Warnf("Sysext package %s (%s) has no pinned sha256, skipping verification", pkg.Name, arch)
+				logrus.Debugf("Sysext package %s (%s) has no pinned sha256, skipping verification", pkg.Name, arch)
 
 				continue
 			}
