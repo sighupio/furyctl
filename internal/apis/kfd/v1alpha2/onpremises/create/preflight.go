@@ -7,6 +7,7 @@ package create
 import (
 	"errors"
 	"fmt"
+	"os"
 	"path"
 	"slices"
 
@@ -142,13 +143,21 @@ func (p *PreFlight) Exec(renderedConfig map[string]any) (*Status, error) {
 	}
 
 	if _, err := p.ansibleRunner.Playbook("verify-playbook.yaml"); err != nil {
+		return status, fmt.Errorf("error checking if the cluster already exists: %w", err)
+	}
+
+	if _, err := os.Stat(path.Join(p.Path, "admin.conf")); err != nil {
+		if !os.IsNotExist(err) {
+			return status, fmt.Errorf("cluster exists, but error reading its kubeconfig locally: %w", err)
+		}
+
 		status.Success = true
 
 		logrus.Debug("Cluster does not exist, skipping state checks")
 
 		logrus.Info("Preflight checks completed successfully")
 
-		return status, nil //nolint:nilerr // we want to return nil here
+		return status, nil
 	}
 
 	if err := kubex.SetConfigEnv(path.Join(p.Path, "admin.conf")); err != nil {
