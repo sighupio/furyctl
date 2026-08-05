@@ -95,6 +95,9 @@ type SpecKubernetes struct {
 	ControlPlane SpecKubernetesControlPlane `yaml:"controlPlane"`
 	Etcd         *SpecKubernetesEtcd        `yaml:"etcd,omitempty"`
 	NodeGroups   []SpecKubernetesNodeGroup  `yaml:"nodeGroups,omitempty"`
+	// PkiPath is the folder that holds the CA certificates and keys for the control plane and etcd. The
+	// playbooks read them from the `master` and `etcd` subfolders.
+	PkiPath *string `yaml:"pkiPath,omitempty"`
 }
 
 // SpecKubernetesNodeGroup assigns nodes the worker role by hostname.

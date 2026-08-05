@@ -159,6 +159,31 @@ func Validate(path, repoPath string) error {
 	return validateToolsConfiguration(repoPath, rawConf)
 }
 
+// ValidatePKI checks the local PKI folder that the configuration points at, for each kind that reads a
+// local PKI. It is a separate function, and not a rule of Validate, because most commands that call
+// Validate read no local PKI. `furyctl create config` writes a configuration whose PKI folder does not
+// exist yet, and it deletes the file when Validate fails. Only `furyctl apply` and
+// `furyctl validate config` call this function.
+func ValidatePKI(path string) error {
+	miniConf, err := loadFromFile(path)
+	if err != nil {
+		return err
+	}
+
+	validator := apis.NewPKIValidatorFactory(miniConf.APIVersion, miniConf.Kind)
+	if validator == nil {
+		logrus.Debugf("kind %s reads no local PKI. The PKI folder check does not run", miniConf.Kind)
+
+		return nil
+	}
+
+	if err := validator.ValidatePKI(path); err != nil {
+		return fmt.Errorf("error while validating the PKI folder: %w", err)
+	}
+
+	return nil
+}
+
 // checkSchemaSupportsFlags determines if the schema includes support for the flags field.
 // This allows furyctl to work with both old schemas (without flags) and new schemas (with flags).
 func checkSchemaSupportsFlags(schemaPath string) bool {

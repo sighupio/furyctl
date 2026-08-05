@@ -15,6 +15,34 @@ type ExtraSchemaValidator interface {
 	Validate(confPath string) error
 }
 
+// PKIValidator checks the local PKI folder that a configuration points at.
+type PKIValidator interface {
+	ValidatePKI(confPath string) error
+}
+
+// NewPKIValidatorFactory returns the PKI validator of the kind, or nil for a kind that reads no local
+// PKI. This check is separate from ExtraSchemaValidator because only `furyctl apply` and
+// `furyctl validate config` run it. The other commands must not run it. For example,
+// `furyctl create config` writes a configuration whose PKI folder does not exist yet.
+func NewPKIValidatorFactory(apiVersion, kind string) PKIValidator {
+	switch apiVersion {
+	case "kfd.sighup.io/v1alpha2":
+		switch kind {
+		case "OnPremises":
+			return &onpremises.PKIValidator{}
+
+		case "Immutable":
+			return &immutable.PKIValidator{}
+
+		default:
+			return nil
+		}
+
+	default:
+		return nil
+	}
+}
+
 func NewExtraSchemaValidatorFactory(apiVersion, kind string) ExtraSchemaValidator {
 	switch apiVersion {
 	case "kfd.sighup.io/v1alpha2":

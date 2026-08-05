@@ -220,6 +220,28 @@ func NewApplyCmd() *cobra.Command {
 				return fmt.Errorf("error while validating configuration file: %w", err)
 			}
 
+			// The infrastructure and kubernetes phases copy the CA certificates and keys to the nodes.
+			// The check runs before the apply reaches Ansible. The other phases read no local PKI: an
+			// apply of the distribution phase alone must not ask for the CA keys.
+			switch {
+			case !phasesReadPKI(cmdFlags.Phase, cmdFlags.StartFrom, cmdFlags.PostApplyPhases):
+				logrus.Debug("The selected phases read no local PKI. The PKI folder check does not run")
+
+			case cmdFlags.DryRun:
+				// A dry run stops before Ansible, so it reads no CA file. The warning is necessary,
+				// because the folder can still stop the apply that comes after the dry run.
+				logrus.Warn("In dry run mode, the PKI folder check does not run. " +
+					"To check the folder, run `furyctl validate config`")
+
+			default:
+				if err := config.ValidatePKI(cmdFlags.FuryctlPath); err != nil {
+					cmdEvent.AddErrorMessage(err)
+					tracker.Track(cmdEvent)
+
+					return fmt.Errorf("the PKI folder check failed: %w", err)
+				}
+			}
+
 			// Download the dependencies.
 			if !cmdFlags.SkipDepsDownload {
 				logrus.Info("Downloading dependencies...")
@@ -443,6 +465,41 @@ func validatePostApplyPhasesFlag(phases []string) error {
 	}
 
 	return nil
+}
+
+// phasesReadPKI reports whether the phases that the apply runs read the local PKI folder. Only the
+// infrastructure and kubernetes phases copy the CA certificates and keys to the nodes. The startFrom
+// flag also excludes the earlier phases when phase is empty, the value for all the phases.
+//
+// One case gives a false positive: a resumed upgrade. ClusterCreator.allPhases reads startFrom from the
+// stored upgrade state, after this function ran with the value of the flag. A resume at the
+// post-distribution sub-phase then checks a PKI folder that no phase reads.
+func phasesReadPKI(phase, startFrom string, postApplyPhases []string) bool {
+	// The postApplyPhases flag repeats a phase after the apply, so a phase that startFrom excluded can
+	// still run. This flag and the phase flag cannot be used together, so phase is empty here. Only the
+	// kubernetes phase is relevant: ClusterCreator.extraPhases ignores an infrastructure value.
+	if slices.Contains(postApplyPhases, cluster.OperationPhaseKubernetes) {
+		return true
+	}
+
+	if phase != cluster.OperationPhaseAll {
+		return phaseReadsPKI(phase)
+	}
+
+	// A start from the post-kubernetes sub-phase skips apply.yaml, the playbook that copies the CA files.
+	// See Kubernetes.coreKubernetes.
+	return !slices.Contains([]string{
+		cluster.OperationSubPhasePostKubernetes,
+		cluster.OperationSubPhasePreDistribution,
+		cluster.OperationPhaseDistribution,
+		cluster.OperationSubPhasePostDistribution,
+		cluster.OperationPhasePlugins,
+	}, startFrom)
+}
+
+// phaseReadsPKI reports whether one phase copies the CA certificates and keys to the nodes.
+func phaseReadsPKI(phase string) bool {
+	return phase == cluster.OperationPhaseInfrastructure || phase == cluster.OperationPhaseKubernetes
 }
 
 func setupApplyCmdFlags(cmd *cobra.Command) {
