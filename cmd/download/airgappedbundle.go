@@ -84,11 +84,13 @@ func NewAirGappedBundleCmd() *cobra.Command {
 	airGappedBundleCmd := &cobra.Command{
 		Args:  cobra.NoArgs,
 		Use:   "air-gapped-bundle",
-		Short: "Build a self-contained tarball with the distribution, modules, installers and tools to run furyctl offline",
-		Long: "Build a self-contained tarball with everything needed to run furyctl on an air-gapped machine: " +
-			"the distribution manifests, modules, installers and all the tools installed via the bundled mise. " +
-			"The bundle is built for the host platform only. On the target machine, extract it in the working " +
-			"directory and run 'furyctl apply --skip-deps-download --distro-location ./distro'.",
+		Short: "Build a self-contained bundle with the distribution, modules, installers and tools to run furyctl offline",
+		Long: "Build a self-contained bundle with everything necessary to run furyctl on an air-gapped machine. " +
+			"The bundle holds the distribution manifests, the modules, the installers and all the tools from " +
+			"the bundled mise. furyctl builds the bundle for the host platform only. " +
+			"On the target machine, copy the bundle and your furyctl.yaml. " +
+			"Then run 'furyctl apply --airgap-bundle /path/to/bundle.tar.gz'. " +
+			"furyctl extracts the bundle in the working directory and runs offline.",
 		PreRun: func(cmd *cobra.Command, _ []string) {
 			cmdEvent = analytics.NewCommandEvent(cobrax.GetFullname(cmd))
 
@@ -226,9 +228,12 @@ func NewAirGappedBundleCmd() *cobra.Command {
 				return fmt.Errorf("error creating air-gapped bundle: %w", err)
 			}
 
-			logrus.Infof("Air-gapped bundle ready: %s", bundleOutput)
-			logrus.Info("On the target machine: extract it in the working directory, then run " +
-				"'furyctl apply --skip-deps-download --distro-location ./distro'")
+			logrus.Infof("The air-gapped bundle is ready: %s", bundleOutput)
+			logrus.Infof("On the target machine, copy the bundle and your furyctl.yaml. "+
+				"Then run: furyctl apply --airgap-bundle %s", bundleOutput)
+			logrus.Info("furyctl extracts the bundle in the working directory and runs offline. " +
+				"You can use the same --airgap-bundle flag with these commands: diff, delete cluster, " +
+				"get kubeconfig, get upgrade-paths, renew certificates.")
 
 			cmdEvent.AddSuccessMessage("Air-gapped bundle created successfully")
 			tracker.Track(cmdEvent)
@@ -247,7 +252,7 @@ func NewAirGappedBundleCmd() *cobra.Command {
 	airGappedBundleCmd.Flags().String(
 		"bundle-output",
 		"",
-		"Path of the air-gapped bundle tarball to create (eg: ./cluster-airgap.tar.gz)",
+		"Path of the air-gapped bundle to create (eg: ./cluster-airgap.tar.gz)",
 	)
 
 	airGappedBundleCmd.Flags().StringP(
