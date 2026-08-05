@@ -471,9 +471,14 @@ func validatePostApplyPhasesFlag(phases []string) error {
 // infrastructure and kubernetes phases copy the CA certificates and keys to the nodes. The startFrom
 // flag also excludes the earlier phases when phase is empty, the value for all the phases.
 //
-// One case gives a false positive: a resumed upgrade. ClusterCreator.allPhases reads startFrom from the
-// stored upgrade state, after this function ran with the value of the flag. A resume at the
-// post-distribution sub-phase then checks a PKI folder that no phase reads.
+// One case gives a false positive: a resumed upgrade. ClusterCreator.allPhases reads startFrom from a
+// ConfigMap in the cluster, after this function ran with the value of the flag. The resume point is not
+// available here, because kubectl arrives with the dependencies, later. So an empty startFrom keeps the
+// check, and a resume at the post-distribution sub-phase checks a PKI folder that no phase reads.
+//
+// The user has a way past it. An explicit --start-from skips the check, and allPhases reads the
+// ConfigMap only when startFrom is empty. For example, `furyctl apply --upgrade --start-from
+// post-distribution` resumes at the same phase and does no check.
 func phasesReadPKI(phase, startFrom string, postApplyPhases []string) bool {
 	// The postApplyPhases flag repeats a phase after the apply, so a phase that startFrom excluded can
 	// still run. This flag and the phase flag cannot be used together, so phase is empty here. Only the
