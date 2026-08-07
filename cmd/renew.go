@@ -17,6 +17,7 @@ func NewRenewCmd() *cobra.Command {
 	}
 
 	renewCmd.AddCommand(renew.NewCertificatesCmd())
+	renewCmd.AddCommand(renew.NewKubeconfigsCmd())
 
 	return renewCmd
 }

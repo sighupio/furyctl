@@ -1,0 +1,222 @@
+// Copyright (c) 2017-present SIGHUP s.r.l All rights reserved.
+// Use of this source code is governed by a BSD-style
+// license that can be found in the LICENSE file.
+
+package renew
+
+import (
+	"errors"
+	"fmt"
+	"path"
+	"path/filepath"
+
+	"github.com/sirupsen/logrus"
+	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
+
+	"github.com/sighupio/furyctl/internal/airgap"
+	"github.com/sighupio/furyctl/internal/analytics"
+	"github.com/sighupio/furyctl/internal/cluster"
+	"github.com/sighupio/furyctl/internal/config"
+	"github.com/sighupio/furyctl/internal/distribution"
+	"github.com/sighupio/furyctl/internal/flags"
+	"github.com/sighupio/furyctl/internal/git"
+	cobrax "github.com/sighupio/furyctl/internal/x/cobra"
+	execx "github.com/sighupio/furyctl/internal/x/exec"
+	"github.com/sighupio/furyctl/pkg/dependencies"
+	dist "github.com/sighupio/furyctl/pkg/distribution"
+	netx "github.com/sighupio/furyctl/pkg/x/net"
+)
+
+var ErrDownloadDependenciesFailed = errors.New("dependencies download failed")
+
+// preRun is the PreRun every `furyctl renew` subcommand shares.
+func preRun(cmd *cobra.Command) analytics.Event {
+	cmdEvent := analytics.NewCommandEvent(cobrax.GetFullname(cmd))
+
+	// Load and validate flags from configuration FIRST.
+	if err := flags.LoadAndMergeCommandFlags("renew"); err != nil {
+		logrus.Fatalf("failed to load flags from configuration: %v", err)
+	}
+
+	if err := viper.BindPFlags(cmd.Flags()); err != nil {
+		logrus.Fatalf("error while binding flags: %v", err)
+	}
+
+	return cmdEvent
+}
+
+// newRenewer downloads the distribution and the dependencies, validates the configuration file and
+// the dependencies, then builds the renewer for the cluster kind.
+func newRenewer(cmdEvent analytics.Event, tracker *analytics.Tracker) (cluster.Renewer, error) {
+	fail := func(err error) (cluster.Renewer, error) {
+		cmdEvent.AddErrorMessage(err)
+		tracker.Track(cmdEvent)
+
+		return nil, err
+	}
+
+	// Air-gapped: extract --airgap-bundle (if set) and rewire to run offline before reading flags.
+	if err := airgap.MaybePrepare(); err != nil {
+		return fail(fmt.Errorf("error preparing air-gapped bundle: %w", err))
+	}
+
+	// Get flags.
+	debug := viper.GetBool("debug")
+	binPath := viper.GetString("bin-path")
+	furyctlPath := viper.GetString("config")
+	outDir := viper.GetString("outdir")
+	distroLocation := viper.GetString("distro-location")
+	gitProtocol := viper.GetString("git-protocol")
+	skipDepsDownload := viper.GetBool("skip-deps-download")
+	skipDepsValidation := viper.GetBool("skip-deps-validation")
+
+	// Get absolute path to the config file.
+	furyctlPath, err := filepath.Abs(furyctlPath)
+	if err != nil {
+		return fail(fmt.Errorf("error while getting config directory: %w", err))
+	}
+
+	if binPath == "" {
+		binPath = path.Join(outDir, ".furyctl", "bin")
+	} else {
+		binPath, err = filepath.Abs(binPath)
+		if err != nil {
+			return fail(fmt.Errorf("error while getting absolute path for bin folder: %w", err))
+		}
+	}
+
+	typedGitProtocol, err := git.ParseProtocol(gitProtocol)
+	if err != nil {
+		return fail(fmt.Errorf("error while parsing git protocol: %w", err))
+	}
+
+	// Init packages.
+	execx.Debug = debug
+
+	executor := execx.NewStdExecutor()
+
+	var distrodl *dist.Downloader
+	depsvl := dependencies.NewValidator(executor, binPath, furyctlPath)
+
+	// Init first half of collaborators.
+	client := netx.NewGoGetterClient()
+
+	if distroLocation == "" {
+		distrodl = dist.NewCachingDownloader(client, outDir, typedGitProtocol, "")
+	} else {
+		distrodl = dist.NewDownloader(client, typedGitProtocol, "")
+	}
+
+	// Validate base requirements.
+	if err := depsvl.ValidateBaseReqs(); err != nil {
+		return fail(fmt.Errorf("error while validating requirements: %w", err))
+	}
+
+	// Download the distribution.
+	logrus.Info("Downloading distribution...")
+
+	res, err := distrodl.Download(distroLocation, furyctlPath)
+	if err != nil {
+		return fail(fmt.Errorf("error while downloading distribution: %w", err))
+	}
+
+	basePath := path.Join(outDir, ".furyctl", res.MinimalConf.Metadata.Name)
+
+	// Init second half of collaborators.
+	depsdl := dependencies.NewCachingDownloader(client, outDir, basePath, binPath, typedGitProtocol)
+
+	// Validate the furyctl.yaml file.
+	logrus.Info("Validating configuration file...")
+
+	if err := config.Validate(furyctlPath, res.RepoPath); err != nil {
+		return fail(fmt.Errorf("error while validating configuration file: %w", err))
+	}
+
+	// Download the dependencies.
+	if !skipDepsDownload {
+		logrus.Info("Downloading dependencies...")
+
+		if _, err := depsdl.DownloadTools(res.DistroManifest, res.MinimalConf.Kind); err != nil {
+			return fail(fmt.Errorf("%w: %v", ErrDownloadDependenciesFailed, err))
+		}
+
+		// Only immutable renew needs the vendored immutable.yaml (hosts.yaml "versions"); others skip it.
+		if res.MinimalConf.Kind == distribution.ImmutableKind {
+			gitPrefix, err := git.RepoPrefixByProtocol(typedGitProtocol)
+			if err != nil {
+				return fail(err)
+			}
+
+			if err := depsdl.DownloadInstallers(res.DistroManifest.Kubernetes, gitPrefix, res.MinimalConf.Kind); err != nil {
+				return fail(fmt.Errorf("%w: %v", ErrDownloadDependenciesFailed, err))
+			}
+		}
+	} else {
+		logrus.Info("Dependencies download skipped")
+	}
+
+	// Validate the dependencies, unless explicitly told to skip it.
+	if !skipDepsValidation {
+		logrus.Info("Validating dependencies...")
+
+		if err := depsvl.Validate(res); err != nil {
+			return fail(fmt.Errorf("error while validating dependencies: %w", err))
+		}
+	} else {
+		logrus.Info("Dependencies validation skipped")
+	}
+
+	renewer, err := cluster.NewRenewer(res.MinimalConf, res.DistroManifest, res.RepoPath, furyctlPath, binPath)
+	if err != nil {
+		return fail(fmt.Errorf("error while creating the renewer: %w", err))
+	}
+
+	// Immutable-only: the renewer uses workDir to find the vendored immutable.yaml.
+	if res.MinimalConf.Kind == distribution.ImmutableKind {
+		renewer.SetProperty(cluster.RenewerPropertyWorkDir, basePath)
+	}
+
+	return renewer, nil
+}
+
+// registerFlags adds the flags every `furyctl renew` subcommand shares.
+func registerFlags(cmd *cobra.Command) {
+	cmd.Flags().StringP(
+		"bin-path",
+		"b",
+		"",
+		"Path to the folder where all the dependencies' binaries are downloaded",
+	)
+
+	cmd.Flags().StringP(
+		"config",
+		"c",
+		"furyctl.yaml",
+		"Path to the configuration file",
+	)
+
+	cmd.Flags().StringP(
+		"distro-location",
+		"",
+		"",
+		"Location where to download schemas, defaults and the distribution manifests from. "+
+			"It can either be a local path (eg: /path/to/distribution) or "+
+			"a remote URL (eg: git::git@github.com:sighupio/distribution?depth=1&ref=BRANCH_NAME). "+
+			"Any format supported by hashicorp/go-getter can be used",
+	)
+
+	cmd.Flags().Bool(
+		"skip-deps-download",
+		false,
+		"Skip downloading the distribution modules, installers and binaries",
+	)
+
+	airgap.RegisterFlags(cmd)
+
+	cmd.Flags().Bool(
+		"skip-deps-validation",
+		false,
+		"Skip validating dependencies",
+	)
+}

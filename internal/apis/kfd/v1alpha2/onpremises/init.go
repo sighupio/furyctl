@@ -30,9 +30,9 @@ func init() {
 		cluster.NewKubeconfigFactory[*KubeconfigGetter, public.OnpremisesKfdV1Alpha2](&KubeconfigGetter{}),
 	)
 
-	cluster.RegisterCertificatesRenewerFactory(
+	cluster.RegisterRenewerFactory(
 		distribution.APIVersionV1Alpha2,
 		distribution.OnPremisesKind,
-		cluster.NewCertificatesRenewerFactory[*CertificatesRenewer, public.OnpremisesKfdV1Alpha2](&CertificatesRenewer{}),
+		cluster.NewRenewerFactory[*Renewer, public.OnpremisesKfdV1Alpha2](&Renewer{}),
 	)
 }
