@@ -54,6 +54,9 @@ var (
 	ErrChangesToOtherPhases = errors.New("changes to other phases detected. When using the --phase flag, changes " +
 		"only to the section corresponding to the selected phase are accepted. ",
 	)
+	ErrChangesToSkippedPhases = errors.New("changes to skipped phases detected. When using the --start-from flag, " +
+		"changes only to the sections corresponding to the phases that will be applied are accepted. ",
+	)
 )
 
 func CheckPhase(phase string) error {
@@ -413,28 +416,62 @@ func (*OperationPhase) CreateFuryctlMerger(
 	return reverseMerger, nil
 }
 
-func AssertPhaseDiffs(d r3diff.Changelog, currentPhase string, supportedPhases []string) error {
-	unsupportedChanges := make([]string, 0)
+// AssertPhaseDiffs checks that the changelog has no changes to phases that the current run does not apply,
+// either because --phase selects a single phase or because --start-from skips the phases before it.
+func AssertPhaseDiffs(d r3diff.Changelog, currentPhase, startFrom string, supportedPhases []string) error {
+	if currentPhase != OperationPhaseAll {
+		if changes := changesToPhases(d, slicesx.Difference(supportedPhases, []string{currentPhase})); len(changes) > 0 {
+			logrus.Debugf("unsupported changes to other phases: %s", changes)
 
-	otherPhases := slicesx.Map(slicesx.Difference(supportedPhases, []string{currentPhase}), func(s string) string {
+			return ErrChangesToOtherPhases
+		}
+	}
+
+	if startFrom != OperationPhaseAll {
+		if changes := changesToPhases(d, skippedPhases(startFrom, supportedPhases)); len(changes) > 0 {
+			logrus.Debugf("unsupported changes to skipped phases: %s", changes)
+
+			return ErrChangesToSkippedPhases
+		}
+	}
+
+	return nil
+}
+
+// skippedPhases returns the supported phases that a run with --start-from does not apply.
+func skippedPhases(startFrom string, supportedPhases []string) []string {
+	mainPhase := strings.TrimPrefix(strings.TrimPrefix(startFrom, "pre-"), "post-")
+
+	idx := slices.Index(supportedPhases, mainPhase)
+	if idx < 0 {
+		return nil
+	}
+
+	// Starting from a post sub-phase also skips the phase it belongs to.
+	if strings.HasPrefix(startFrom, "post-") {
+		idx++
+	}
+
+	return supportedPhases[:idx]
+}
+
+// changesToPhases returns the paths in the changelog that belong to one of the given phases.
+func changesToPhases(d r3diff.Changelog, phases []string) []string {
+	changes := make([]string, 0)
+
+	prefixes := slicesx.Map(phases, func(s string) string {
 		return fmt.Sprintf(".spec.%s.", s)
 	})
 
 	for _, dfs := range d {
 		joinedPath := "." + strings.Join(dfs.Path, ".")
 
-		if slices.ContainsFunc(otherPhases, func(s string) bool {
+		if slices.ContainsFunc(prefixes, func(s string) bool {
 			return strings.HasPrefix(joinedPath, s)
 		}) {
-			unsupportedChanges = append(unsupportedChanges, joinedPath)
+			changes = append(changes, joinedPath)
 		}
 	}
 
-	if len(unsupportedChanges) > 0 {
-		logrus.Debugf("unsupported changes to other phases: %s", unsupportedChanges)
-
-		return ErrChangesToOtherPhases
-	}
-
-	return nil
+	return changes
 }

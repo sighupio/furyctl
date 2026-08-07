@@ -54,10 +54,11 @@ type PreFlight struct {
 	paths          cluster.CreatorPaths
 	force          []string
 	phase          string
+	startFrom      string
 	upgradeEnabled bool
 }
 
-func NewPreFlight(
+func NewPreFlight( //nolint:revive // ignore maximum number of arguments
 	furyctlConf private.EksclusterKfdV1Alpha2,
 	kfdManifest config.KFD,
 	paths cluster.CreatorPaths,
@@ -67,6 +68,7 @@ func NewPreFlight(
 	force []string,
 	infraOutputsPath,
 	phase string,
+	startFrom string,
 	upgradeEnabled bool,
 ) (*PreFlight, error) {
 	p := cluster.NewOperationPhase(
@@ -143,6 +145,7 @@ func NewPreFlight(
 		paths:          paths,
 		force:          force,
 		phase:          phase,
+		startFrom:      startFrom,
 		upgradeEnabled: upgradeEnabled,
 	}, nil
 }
@@ -260,10 +263,10 @@ func (p *PreFlight) Exec(renderedConfig map[string]any) (*Status, error) {
 				return status, fmt.Errorf("error checking reducer diffs: %w", err)
 			}
 
-			if p.phase != cluster.OperationPhaseAll && !p.upgradeEnabled {
-				logrus.Info("Cluster configuration has changed, checking if changes are supported in the current phase...")
+			if (p.phase != cluster.OperationPhaseAll || p.startFrom != cluster.OperationPhaseAll) && !p.upgradeEnabled {
+				logrus.Info("Cluster configuration has changed, checking if changes are supported in the phases to apply...")
 
-				if err := cluster.AssertPhaseDiffs(d, p.phase, supported.Phases()); err != nil {
+				if err := cluster.AssertPhaseDiffs(d, p.phase, p.startFrom, supported.Phases()); err != nil {
 					return status, fmt.Errorf("error checking changes to other phases: %w", err)
 				}
 			}
