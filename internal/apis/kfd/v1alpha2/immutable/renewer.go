@@ -124,9 +124,10 @@ func (c *Renewer) RenewKubeconfigs(users []string) error {
 	return nil
 }
 
-// render writes the kubernetes phase templates into workDir and returns an ansible runner rooted
-// there, with the hosts already checked.
-func (c *Renewer) render(workDir string) (*ansible.Runner, error) {
+// render writes the kubernetes phase templates into renderDir (an ephemeral temp dir) and returns an
+// ansible runner rooted there, with the hosts already checked. Vendor/kubectl resolution uses the
+// persistent c.workDir, not renderDir.
+func (c *Renewer) render(renderDir string) (*ansible.Runner, error) {
 	// Root the phase at the cluster's workDir/kubernetes so version vars resolve the vendored
 	// immutable.yaml and KubectlPath, like the create phase (hosts.yaml reads .versions.kubectl_bin
 	// under missingkey=error).
@@ -138,7 +139,7 @@ func (c *Renewer) render(workDir string) (*ansible.Runner, error) {
 
 	ansibleRunner := ansible.NewRunner(
 		execx.NewStdExecutor(),
-		ansible.PathsForVersion(c.binPath, c.kfdManifest.Tools.Immutable.Ansible.Version, workDir),
+		ansible.PathsForVersion(c.binPath, c.kfdManifest.Tools.Immutable.Ansible.Version, renderDir),
 	)
 
 	furyctlMerger, err := c.CreateFuryctlMerger(
@@ -176,7 +177,7 @@ func (c *Renewer) render(workDir string) (*ansible.Runner, error) {
 		mCfg,
 		"kubernetes",
 		path.Join(c.distroPath, "templates", cluster.OperationPhaseKubernetes, "immutable"),
-		workDir,
+		renderDir,
 		c.configPath,
 	); err != nil {
 		return nil, fmt.Errorf("error copying from template: %w", err)
