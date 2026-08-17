@@ -170,15 +170,16 @@ func Check(absPath string) error {
 // that furyctl cannot read gives an error, and not a name in the list. The message for an absent file
 // tells the user to delete the folder. That step destroys the CA of a cluster that exists.
 func missingFiles(absPath, dir string, files []string) ([]string, error) {
-	missing := []string{}
+	var missing []string
 
 	for _, file := range files {
-		path := filepath.Join(absPath, dir, file)
+		relPath := filepath.Join(dir, file)
+		path := filepath.Join(absPath, relPath)
 
 		info, err := os.Stat(path)
 		if err != nil {
 			if errors.Is(err, os.ErrNotExist) {
-				missing = append(missing, filepath.Join(dir, file))
+				missing = append(missing, relPath)
 
 				continue
 			}
@@ -187,7 +188,7 @@ func missingFiles(absPath, dir string, files []string) ([]string, error) {
 		}
 
 		if !info.Mode().IsRegular() || info.Size() == 0 {
-			missing = append(missing, filepath.Join(dir, file))
+			missing = append(missing, relPath)
 		}
 	}
 
