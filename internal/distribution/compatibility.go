@@ -17,6 +17,7 @@ import (
 )
 
 const (
+	APIVersionV1Alpha2     = "kfd.sighup.io/v1alpha2"
 	EKSClusterKind         = "EKSCluster"
 	KFDDistributionKind    = "KFDDistribution"
 	OnPremisesKind         = "OnPremises"

@@ -9,6 +9,7 @@ import (
 	"github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/immutable"
 	"github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/kfddistribution"
 	"github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/onpremises"
+	"github.com/sighupio/furyctl/internal/distribution"
 )
 
 type ExtraSchemaValidator interface {
@@ -26,12 +27,12 @@ type PKIValidator interface {
 // `furyctl create config` writes a configuration whose PKI folder does not exist yet.
 func NewPKIValidatorFactory(apiVersion, kind string) PKIValidator {
 	switch apiVersion {
-	case "kfd.sighup.io/v1alpha2":
+	case distribution.APIVersionV1Alpha2:
 		switch kind {
-		case "OnPremises":
+		case distribution.OnPremisesKind:
 			return &onpremises.PKIValidator{}
 
-		case "Immutable":
+		case distribution.ImmutableKind:
 			return &immutable.PKIValidator{}
 
 		default:
@@ -45,18 +46,18 @@ func NewPKIValidatorFactory(apiVersion, kind string) PKIValidator {
 
 func NewExtraSchemaValidatorFactory(apiVersion, kind string) ExtraSchemaValidator {
 	switch apiVersion {
-	case "kfd.sighup.io/v1alpha2":
+	case distribution.APIVersionV1Alpha2:
 		switch kind {
-		case "EKSCluster":
+		case distribution.EKSClusterKind:
 			return &ekscluster.ExtraSchemaValidator{}
 
-		case "KFDDistribution":
+		case distribution.KFDDistributionKind:
 			return &kfddistribution.ExtraSchemaValidator{}
 
-		case "OnPremises":
+		case distribution.OnPremisesKind:
 			return &onpremises.ExtraSchemaValidator{}
 
-		case "Immutable":
+		case distribution.ImmutableKind:
 			return &immutable.ExtraSchemaValidator{}
 
 		default:
