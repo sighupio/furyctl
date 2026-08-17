@@ -415,6 +415,9 @@ linters:
         - const C
         - T any
         - m map[string]int
+    wrapcheck:
+      ignore-package-globs:
+        - github.com/samber/lo
   exclusions:
     generated: disable
     presets:

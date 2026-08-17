@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/go-getter"
+	"github.com/samber/lo"
 	"github.com/sirupsen/logrus"
 
 	gogetterx "github.com/sighupio/furyctl/internal/x/go-getter"
@@ -141,11 +142,7 @@ func probeContentLength(src string) int64 {
 
 // URLHasForcedProtocol checks if the url has a forced protocol as described in hashicorp/go-getter.
 func (g *GoGetterClient) URLHasForcedProtocol(url string) bool {
-	for _, dp := range g.protocols {
-		if dp != "" && strings.HasPrefix(url, dp) {
-			return true
-		}
-	}
-
-	return false
+	return lo.ContainsBy(g.protocols, func(dp string) bool {
+		return dp != "" && strings.HasPrefix(url, dp)
+	})
 }

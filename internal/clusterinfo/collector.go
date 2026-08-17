@@ -16,6 +16,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/samber/lo"
+
 	"github.com/sighupio/furyctl/configs"
 	distroconf "github.com/sighupio/furyctl/internal/apis/config"
 	"github.com/sighupio/furyctl/internal/cluster"
@@ -293,10 +295,9 @@ func (c *Collector) fetchNodes() (*NodesSummary, error) {
 
 	slices.SortFunc(roleOrder, roleSort)
 
-	roles := make([]NodeRoleGroup, 0, len(roleOrder))
-	for _, r := range roleOrder {
-		roles = append(roles, *groups[r])
-	}
+	roles := lo.Map(roleOrder, func(r string, _ int) NodeRoleGroup {
+		return *groups[r]
+	})
 
 	return &NodesSummary{Roles: roles, Totals: totals}, nil
 }
@@ -461,22 +462,18 @@ func extractModules(configMap map[string]any, sd distroconf.KFD, kind string) []
 		})
 	}
 
-	result := make([]ModuleInfo, 0, len(specs))
-
-	for _, s := range specs {
+	return lo.Map(specs, func(s moduleSpec, _ int) ModuleInfo {
 		modType := ""
 		if modules != nil {
 			modType = s.typeGetter(modules)
 		}
 
-		result = append(result, ModuleInfo{
+		return ModuleInfo{
 			Name:    s.name,
 			Version: s.version,
 			Type:    modType,
-		})
-	}
-
-	return result
+		}
+	})
 }
 
 // extractPlugins builds the grouped PluginsInfo from the stored configuration,
@@ -488,37 +485,36 @@ func extractPlugins(configMap map[string]any) *PluginsInfo {
 	}
 
 	result := &PluginsInfo{}
-	hasAny := false
 
 	if kustomize, ok := plugins["kustomize"].([]any); ok {
-		for _, item := range kustomize {
-			if entry, ok := item.(map[string]any); ok {
-				if name, ok := entry["name"].(string); ok {
-					result.Kustomize = append(result.Kustomize, name)
-					hasAny = true
-				}
-			}
-		}
+		result.Kustomize = pluginNames(kustomize)
 	}
 
 	if helm, ok := plugins["helm"].(map[string]any); ok {
 		if releases, ok := helm["releases"].([]any); ok {
-			for _, item := range releases {
-				if entry, ok := item.(map[string]any); ok {
-					if name, ok := entry["name"].(string); ok {
-						result.Helm = append(result.Helm, name)
-						hasAny = true
-					}
-				}
-			}
+			result.Helm = pluginNames(releases)
 		}
 	}
 
-	if !hasAny {
+	if len(result.Kustomize) == 0 && len(result.Helm) == 0 {
 		return nil
 	}
 
 	return result
+}
+
+// pluginNames extracts the "name" field of every entry that carries one.
+func pluginNames(items []any) []string {
+	return lo.FilterMap(items, func(item any, _ int) (string, bool) {
+		entry, ok := item.(map[string]any)
+		if !ok {
+			return "", false
+		}
+
+		name, ok := entry["name"].(string)
+
+		return name, ok
+	})
 }
 
 func etcdTopology(kind string, configMap map[string]any) string {
@@ -560,15 +556,8 @@ func immutableEtcdTopology(configMap map[string]any) string {
 
 	cpHosts := memberHostnames(nestedMap(configMap, "spec", "kubernetes", "controlPlane"))
 
-	cpSet := make(map[string]struct{}, len(cpHosts))
-	for _, h := range cpHosts {
-		cpSet[h] = struct{}{}
-	}
-
-	for _, h := range etcdHosts {
-		if _, ok := cpSet[h]; !ok {
-			return etcdDedicated
-		}
+	if !lo.Every(cpHosts, etcdHosts) {
+		return etcdDedicated
 	}
 
 	return etcdStacked
@@ -584,20 +573,16 @@ func memberHostnames(section map[string]any) []string {
 		return nil
 	}
 
-	hostnames := make([]string, 0, len(members))
-
-	for _, m := range members {
+	return lo.FilterMap(members, func(m any, _ int) (string, bool) {
 		entry, ok := m.(map[string]any)
 		if !ok {
-			continue
+			return "", false
 		}
 
-		if h := stringField(entry, "hostname"); h != "" {
-			hostnames = append(hostnames, h)
-		}
-	}
+		h := stringField(entry, "hostname")
 
-	return hostnames
+		return h, h != ""
+	})
 }
 
 func installerVersion(kind string, sd distroconf.KFD) string {
@@ -628,20 +613,16 @@ func computeUpgradePaths(kind, fromVersion string) []string {
 		return nil
 	}
 
-	targets := make([]string, 0, len(matches))
-
-	for _, match := range matches {
+	return lo.FilterMap(matches, func(match string, _ int) (string, bool) {
 		info, err := fs.Stat(configs.Tpl, match)
 		if err != nil || !info.IsDir() {
-			continue
+			return "", false
 		}
 
 		parts := strings.Split(filepath.Base(match), "-")
-		to := parts[len(parts)-1]
-		targets = append(targets, "v"+to)
-	}
 
-	return targets
+		return "v" + parts[len(parts)-1], true
+	})
 }
 
 // primaryRole returns the display role for a node by inspecting its labels.
@@ -651,13 +632,12 @@ func computeUpgradePaths(kind, fromVersion string) []string {
 func primaryRole(labels map[string]string) string {
 	const prefix = "node-role.kubernetes.io/"
 
-	var roles []string
+	// FilterMapToSlice consumes the map directly, so no intermediate lo.Keys slice.
+	roles := lo.FilterMapToSlice(labels, func(k, _ string) (string, bool) {
+		role, ok := strings.CutPrefix(k, prefix)
 
-	for k := range labels {
-		if role, ok := strings.CutPrefix(k, prefix); ok && role != "" {
-			roles = append(roles, role)
-		}
-	}
+		return role, ok && role != ""
+	})
 
 	if len(roles) == 0 {
 		return roleNone
@@ -804,11 +784,8 @@ func ingressType(modules map[string]any) string {
 
 	if byoic := nestedMap(modules, "ingress", "byoic"); byoic != nil {
 		if enabled, ok := byoic["enabled"].(bool); ok && enabled {
-			if class := stringField(byoic, "ingressClass"); class != "" {
-				active = append(active, "byoic/"+class)
-			} else {
-				active = append(active, "byoic")
-			}
+			class := stringField(byoic, "ingressClass")
+			active = append(active, lo.Ternary(class != "", "byoic/"+class, "byoic"))
 		}
 	}
 

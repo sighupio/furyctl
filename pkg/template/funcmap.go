@@ -100,6 +100,7 @@ func DigAny(ps ...any) (any, error) {
 
 	// Build keys slice, validating each key is a string.
 	const knownArgs = 2
+
 	count := len(ps) - knownArgs
 
 	ks := make([]string, count)

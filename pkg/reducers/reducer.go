@@ -7,6 +7,8 @@ package reducers
 import (
 	"fmt"
 	"strings"
+
+	"github.com/samber/lo"
 )
 
 type Reducers []Reducer
@@ -68,19 +70,9 @@ func (r *BaseReducer) GetTo() any {
 }
 
 func (rs Reducers) ByLifecycle(lifecycle string) Reducers {
-	var filtered Reducers
-
-	for _, r := range rs {
-		if r == nil {
-			continue
-		}
-
-		if r.GetLifecycle() == lifecycle {
-			filtered = append(filtered, r)
-		}
-	}
-
-	return filtered
+	return lo.Filter(rs, func(r Reducer, _ int) bool {
+		return r != nil && r.GetLifecycle() == lifecycle
+	})
 }
 
 func (rs Reducers) Combine(origin map[string]map[any]any, key string) map[string]map[any]any {
@@ -98,10 +90,7 @@ func (rs Reducers) Combine(origin map[string]map[any]any, key string) map[string
 func (rs Reducers) ToString() string {
 	var buf strings.Builder
 
-	for _, r := range rs {
-		if r == nil {
-			continue
-		}
+	for _, r := range lo.Compact(rs) {
 		fmt.Fprintf(&buf, "%s: %v -> %v\n", r.GetPath(), r.GetFrom(), r.GetTo())
 	}
 

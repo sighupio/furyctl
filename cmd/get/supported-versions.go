@@ -11,6 +11,7 @@ import (
 	"strings"
 	"text/tabwriter"
 
+	"github.com/samber/lo"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -130,14 +131,6 @@ func FormatSupportedVersions(releases []distribution.KFDRelease, kinds []string)
 
 	sb.WriteString("\n")
 
-	supported := func(s bool) string {
-		if s {
-			return "Yes"
-		}
-
-		return "No"
-	}
-
 	showUnsupportedFuryctlMsg := false
 	showRecommendedMsg := false
 
@@ -149,17 +142,11 @@ func FormatSupportedVersions(releases []distribution.KFDRelease, kinds []string)
 
 		versionStr := r.Version.String()
 
-		allKindsSupported := func() bool {
-			for _, v := range r.Support {
-				if v {
-					return false
-				}
-			}
+		noKindSupported := lo.NoneBy(lo.Values(r.Support), func(kindSupported bool) bool {
+			return kindSupported
+		})
 
-			return true
-		}
-
-		if allKindsSupported() {
+		if noKindSupported {
 			showUnsupportedFuryctlMsg = true
 			versionStr += " *"
 		} else {
@@ -174,7 +161,7 @@ func FormatSupportedVersions(releases []distribution.KFDRelease, kinds []string)
 		sb.WriteString("v" + versionStr + "\t" + dateStr)
 
 		for _, k := range kinds {
-			sb.WriteString("\t" + supported(r.Support[k]))
+			sb.WriteString("\t" + lo.Ternary(r.Support[k], "Yes", "No"))
 		}
 
 		sb.WriteString("\n")

@@ -14,6 +14,7 @@ import (
 	"strings"
 	"syscall"
 
+	"github.com/samber/lo"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -635,17 +636,18 @@ func setupApplyCmdFlags(cmd *cobra.Command) {
 	// Tab-autocomplete for post-apply-phases.
 	if err := cmd.RegisterFlagCompletionFunc("post-apply-phases", func(_ *cobra.Command, _ []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 		// The post-apply-phases flag accepts a comma-separated list of phases, so we need to take the passed list and add a new valid option at the end of it.
-		phases := cluster.MainPhases()
 		toCompleteList := strings.Split(toComplete, ",")
 		toCompleteLast := toCompleteList[len(toCompleteList)-1]
-		var completion []string
 
-		for _, phase := range phases {
-			if strings.HasPrefix(phase, toCompleteLast) {
-				toCompleteList[len(toCompleteList)-1] = phase
-				completion = append(completion, strings.Join(toCompleteList, ","))
+		completion := lo.FilterMap(cluster.MainPhases(), func(phase string, _ int) (string, bool) {
+			if !strings.HasPrefix(phase, toCompleteLast) {
+				return "", false
 			}
-		}
+
+			toCompleteList[len(toCompleteList)-1] = phase
+
+			return strings.Join(toCompleteList, ","), true
+		})
 
 		return completion, cobra.ShellCompDirectiveNoFileComp | cobra.ShellCompDirectiveNoSpace
 	}); err != nil {

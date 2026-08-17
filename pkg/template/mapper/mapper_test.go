@@ -64,6 +64,38 @@ func TestMapper_MapEnvironmentVars(t *testing.T) {
 	assert.Equal(t, expectedEnvMap["TEST_MAPPER_ENV"], envMap["TEST_MAPPER_ENV"])
 }
 
+// TestMapper_MapEnvironmentVarsValueWithEquals pins the split of an "os.Environ" entry
+// to the first "=" only. Real environments carry values full of them (LS_COLORS,
+// base64-encoded secrets), and splitting on every "=" silently truncated the value.
+func TestMapper_MapEnvironmentVarsValueWithEquals(t *testing.T) {
+	testCases := []struct {
+		desc  string
+		value string
+		want  string
+	}{
+		{desc: "no equals sign", value: "plain", want: "plain"},
+		{desc: "one equals sign inside the value", value: "a=b", want: "a=b"},
+		{desc: "several equals signs", value: "k1=v1:k2=v2", want: "k1=v1:k2=v2"},
+		{desc: "base64 padding", value: "c2lnaHVw==", want: "c2lnaHVw=="},
+		{desc: "empty value", value: "", want: ""},
+	}
+
+	m := mapper.NewMapper(
+		map[string]map[any]any{},
+		"dummy/furyctlconf/path/furyctl.yaml",
+	)
+
+	for _, tC := range testCases {
+		t.Run(tC.desc, func(t *testing.T) {
+			t.Setenv("TEST_MAPPER_ENV_WITH_EQUALS", tC.value)
+
+			envMap := m.MapEnvironmentVars()
+
+			assert.Equal(t, tC.want, envMap["TEST_MAPPER_ENV_WITH_EQUALS"])
+		})
+	}
+}
+
 func TestMapper_MapDynamicValuesAndPaths(t *testing.T) {
 	path := t.TempDir()
 

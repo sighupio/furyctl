@@ -113,6 +113,12 @@ mise run show-coverage      # Opens coverage report in browser
 - Use lowercase for private variables and methods
 - Follow Go's naming and formatting conventions
 
+### Collection helpers: `samber/lo`
+
+The project uses [`samber/lo`](https://github.com/samber/lo) for generic operations on slices and
+maps that the standard library does not provide (`Map`, `Filter`, `Uniq`, `GroupBy` and similar). It
+keeps collection code shorter and type-safe, and replaced the hand-written `internal/x/slices`.
+
 ### Pre-Commit Requirements
 
 **MANDATORY**: Before committing any code changes:

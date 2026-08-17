@@ -16,6 +16,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gexec"
+	"github.com/samber/lo"
 )
 
 func TestFlagsBehaviorE2E(t *testing.T) {
@@ -295,14 +296,9 @@ var _ = Describe("Flag Behavior E2E", func() {
 
 // Helper function to filter out specific environment variables
 func filterEnv(env []string, varToRemove string) []string {
-	filtered := make([]string, 0, len(env))
 	prefix := varToRemove + "="
 
-	for _, e := range env {
-		if !strings.HasPrefix(e, prefix) && e != varToRemove {
-			filtered = append(filtered, e)
-		}
-	}
-
-	return filtered
+	return lo.Reject(env, func(e string, _ int) bool {
+		return strings.HasPrefix(e, prefix) || e == varToRemove
+	})
 }

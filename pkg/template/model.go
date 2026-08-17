@@ -14,6 +14,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/samber/lo"
 	"github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v2"
 
@@ -146,14 +147,9 @@ func (tm *Model) Generate() error {
 }
 
 func (tm *Model) isExcluded(source string) bool {
-	for _, exc := range tm.Config.Templates.Excludes {
-		regex := regexp.MustCompile(exc)
-		if regex.MatchString(source) {
-			return true
-		}
-	}
-
-	return false
+	return lo.SomeBy(tm.Config.Templates.Excludes, func(exc string) bool {
+		return regexp.MustCompile(exc).MatchString(source)
+	})
 }
 
 func (tm *Model) applyTemplates(

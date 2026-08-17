@@ -12,6 +12,7 @@ import (
 	"path/filepath"
 
 	"github.com/google/uuid"
+	"github.com/samber/lo"
 	"github.com/sirupsen/logrus"
 
 	execx "github.com/sighupio/furyctl/internal/x/exec"
@@ -141,11 +142,9 @@ func (r *Runner) deleteCmd(id string) {
 
 // hasDownloader reports whether curl or wget is available to download helm plugin binaries.
 func hasDownloader() bool {
-	for _, tool := range []string{"curl", "wget"} {
-		if _, err := exec.LookPath(tool); err == nil {
-			return true
-		}
-	}
+	return lo.SomeBy([]string{"curl", "wget"}, func(tool string) bool {
+		_, err := exec.LookPath(tool)
 
-	return false
+		return err == nil
+	})
 }

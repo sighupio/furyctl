@@ -7,11 +7,15 @@
 package create
 
 import (
+	"fmt"
 	"testing"
 
+	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gopkg.in/yaml.v2"
+
+	"github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/immutable/public"
 )
 
 // TestRawNodesByHostnamePassesThroughEveryField is the data-passthrough contract
@@ -149,6 +153,60 @@ func TestRawNodesByHostnameErrors(t *testing.T) {
 
 			_, err = rawNodesByHostname(conf)
 			assert.ErrorIs(t, err, ErrImmutableConfigMalformed)
+		})
+	}
+}
+
+// TestExtractUsedArchitectures covers the list that drives the Flatcar artifact
+// download: each architecture appears once, and the order follows the nodes as the
+// configuration declares them. The order matters because the previous
+// implementation returned the iteration order of a map, so two runs on the same
+// configuration could disagree.
+func TestExtractUsedArchitectures(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		desc  string
+		archs []public.Arch
+		want  []string
+	}{
+		{
+			desc:  "no nodes",
+			archs: nil,
+			want:  []string{},
+		},
+		{
+			desc:  "one architecture repeated",
+			archs: []public.Arch{"x86-64", "x86-64", "x86-64"},
+			want:  []string{"x86-64"},
+		},
+		{
+			desc:  "two architectures keep the declaration order",
+			archs: []public.Arch{"arm64", "x86-64", "arm64", "x86-64"},
+			want:  []string{"arm64", "x86-64"},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.desc, func(t *testing.T) {
+			t.Parallel()
+
+			nodes := lo.Map(tc.archs, func(arch public.Arch, i int) public.SpecInfrastructureNode {
+				return public.SpecInfrastructureNode{
+					Hostname: fmt.Sprintf("node%02d.example.com", i),
+					Arch:     arch,
+				}
+			})
+
+			infra := &Infrastructure{
+				furyctlConf: public.ImmutableKfdV1Alpha2{
+					Spec: public.Spec{
+						Infrastructure: public.SpecInfrastructure{Nodes: nodes},
+					},
+				},
+			}
+
+			assert.Equal(t, tc.want, infra.extractUsedArchitectures())
 		})
 	}
 }

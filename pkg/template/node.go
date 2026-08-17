@@ -9,7 +9,7 @@ import (
 	"strings"
 	"text/template/parse"
 
-	slicesx "github.com/sighupio/furyctl/internal/x/slices"
+	"github.com/samber/lo"
 )
 
 type Node struct {
@@ -34,7 +34,7 @@ func (f *Node) FromNodeList(nodes []parse.Node) []string {
 		}
 	}
 
-	return slicesx.Uniq(f.Fields)
+	return lo.Uniq(f.Fields)
 }
 
 func mapToAliasInterface(n parse.Node) any {

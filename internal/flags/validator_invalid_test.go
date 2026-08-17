@@ -10,6 +10,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -90,13 +91,9 @@ func TestValidator_InvalidFlags_ShouldBeFatal(t *testing.T) {
 
 			if tt.expectFatal {
 				// Check that we have fatal errors.
-				var fatalErrors []flags.ValidationError
-
-				for _, err := range validationErrors {
-					if err.Severity == flags.ValidationSeverityFatal {
-						fatalErrors = append(fatalErrors, err)
-					}
-				}
+				fatalErrors := lo.Filter(validationErrors, func(err flags.ValidationError, _ int) bool {
+					return err.Severity == flags.ValidationSeverityFatal
+				})
 
 				require.NotEmpty(t, fatalErrors, "Expected fatal validation errors")
 

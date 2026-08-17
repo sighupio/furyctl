@@ -14,12 +14,12 @@ import (
 	"strings"
 
 	r3diff "github.com/r3labs/diff/v3"
+	"github.com/samber/lo"
 	"github.com/sirupsen/logrus"
 
 	"github.com/sighupio/furyctl/internal/apis/config"
 	"github.com/sighupio/furyctl/internal/distribution"
 	iox "github.com/sighupio/furyctl/internal/x/io"
-	slicesx "github.com/sighupio/furyctl/internal/x/slices"
 	"github.com/sighupio/furyctl/pkg/merge"
 	templatex "github.com/sighupio/furyctl/pkg/template"
 	yamlx "github.com/sighupio/furyctl/pkg/x/yaml"
@@ -420,7 +420,7 @@ func (*OperationPhase) CreateFuryctlMerger(
 // either because --phase selects a single phase or because --start-from skips the phases before it.
 func AssertPhaseDiffs(d r3diff.Changelog, currentPhase, startFrom string, supportedPhases []string) error {
 	if currentPhase != OperationPhaseAll {
-		if changes := changesToPhases(d, slicesx.Difference(supportedPhases, []string{currentPhase})); len(changes) > 0 {
+		if changes := changesToPhases(d, lo.Without(supportedPhases, currentPhase)); len(changes) > 0 {
 			logrus.Debugf("unsupported changes to other phases: %s", changes)
 
 			return ErrChangesToOtherPhases
@@ -459,7 +459,7 @@ func skippedPhases(startFrom string, supportedPhases []string) []string {
 func changesToPhases(d r3diff.Changelog, phases []string) []string {
 	changes := make([]string, 0)
 
-	prefixes := slicesx.Map(phases, func(s string) string {
+	prefixes := lo.Map(phases, func(s string, _ int) string {
 		return fmt.Sprintf(".spec.%s.", s)
 	})
 

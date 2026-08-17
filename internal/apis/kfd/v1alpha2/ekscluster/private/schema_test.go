@@ -7,6 +7,7 @@ package private_test
 import (
 	"testing"
 
+	"github.com/samber/lo"
 	"github.com/stretchr/testify/require"
 	"gopkg.in/yaml.v3"
 
@@ -164,12 +165,7 @@ func asMap(t *testing.T, m map[any]any, key string) map[any]any {
 
 	v, ok := m[key]
 	if !ok {
-		keys := make([]any, 0, len(m))
-		for k := range m {
-			keys = append(keys, k)
-		}
-
-		t.Fatalf("missing key %q, keys present: %v", key, keys)
+		t.Fatalf("missing key %q, keys present: %v", key, lo.Keys(m))
 	}
 
 	mm, ok := v.(map[any]any)

@@ -12,6 +12,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/samber/lo"
 	"github.com/stretchr/testify/require"
 )
 
@@ -169,15 +170,9 @@ func replayANSI(data string) []string {
 		}
 	}
 
-	out := make([]string, 0, len(screen))
-
-	for _, line := range screen {
-		if strings.TrimSpace(line) != "" {
-			out = append(out, line)
-		}
-	}
-
-	return out
+	return lo.Filter(screen, func(line string, _ int) bool {
+		return strings.TrimSpace(line) != ""
+	})
 }
 
 func TestNodeStatusTableShrinksCleanlyWithMultipleNotes(t *testing.T) {

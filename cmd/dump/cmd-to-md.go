@@ -13,6 +13,7 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/samber/lo"
 	"github.com/spf13/cobra"
 )
 
@@ -153,7 +154,7 @@ func genMarkdownCustom(cmd *cobra.Command, w io.Writer, linkHandler func(string)
 		})
 
 		for _, child := range children {
-			if !child.IsAvailableCommand() || child.IsAdditionalHelpTopicCommand() {
+			if !isDocumentedCommand(child) {
 				continue
 			}
 
@@ -178,7 +179,7 @@ func genMarkdownCustom(cmd *cobra.Command, w io.Writer, linkHandler func(string)
 // with custom filePrepender and linkHandler.
 func genMarkdownTreeCustom(cmd *cobra.Command, dir string, filePrepender, linkHandler func(string) string) error {
 	for _, c := range cmd.Commands() {
-		if !c.IsAvailableCommand() || c.IsAdditionalHelpTopicCommand() {
+		if !isDocumentedCommand(c) {
 			continue
 		}
 
@@ -208,18 +209,15 @@ func genMarkdownTreeCustom(cmd *cobra.Command, dir string, filePrepender, linkHa
 	return nil
 }
 
+// isDocumentedCommand reports whether a subcommand belongs in the generated docs.
+func isDocumentedCommand(c *cobra.Command) bool {
+	return c.IsAvailableCommand() && !c.IsAdditionalHelpTopicCommand()
+}
+
 func hasSeeAlso(cmd *cobra.Command) bool {
 	if cmd.HasParent() {
 		return true
 	}
 
-	for _, c := range cmd.Commands() {
-		if !c.IsAvailableCommand() || c.IsAdditionalHelpTopicCommand() {
-			continue
-		}
-
-		return true
-	}
-
-	return false
+	return lo.ContainsBy(cmd.Commands(), isDocumentedCommand)
 }
