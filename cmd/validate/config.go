@@ -122,6 +122,17 @@ func NewConfigCmd() *cobra.Command {
 				return ErrValidationFailed
 			}
 
+			// The PKI folder check is not a rule of config.Validate, because the other commands that
+			// validate a configuration do not read the PKI. See config.ValidatePKI.
+			if err := config.ValidatePKI(furyctlPath); err != nil {
+				logrus.Error(err)
+
+				cmdEvent.AddErrorMessage(ErrValidationFailed)
+				tracker.Track(cmdEvent)
+
+				return ErrValidationFailed
+			}
+
 			logrus.Info("configuration file validation succeeded")
 
 			cmdEvent.AddSuccessMessage("configuration file validation succeeded")
