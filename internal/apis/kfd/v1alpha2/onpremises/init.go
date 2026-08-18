@@ -7,31 +7,32 @@ package onpremises
 import (
 	"github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/onpremises/public"
 	"github.com/sighupio/furyctl/internal/cluster"
+	"github.com/sighupio/furyctl/internal/distribution"
 )
 
 //nolint:gochecknoinits // this pattern requires init function to work.
 func init() {
 	cluster.RegisterCreatorFactory(
-		"kfd.sighup.io/v1alpha2",
-		"OnPremises",
+		distribution.APIVersionV1Alpha2,
+		distribution.OnPremisesKind,
 		cluster.NewCreatorFactory[*ClusterCreator, public.OnpremisesKfdV1Alpha2](&ClusterCreator{}),
 	)
 
 	cluster.RegisterDeleterFactory(
-		"kfd.sighup.io/v1alpha2",
-		"OnPremises",
+		distribution.APIVersionV1Alpha2,
+		distribution.OnPremisesKind,
 		cluster.NewDeleterFactory[*ClusterDeleter, public.OnpremisesKfdV1Alpha2](&ClusterDeleter{}),
 	)
 
 	cluster.RegisterKubeconfigFactory(
-		"kfd.sighup.io/v1alpha2",
-		"OnPremises",
+		distribution.APIVersionV1Alpha2,
+		distribution.OnPremisesKind,
 		cluster.NewKubeconfigFactory[*KubeconfigGetter, public.OnpremisesKfdV1Alpha2](&KubeconfigGetter{}),
 	)
 
 	cluster.RegisterCertificatesRenewerFactory(
-		"kfd.sighup.io/v1alpha2",
-		"OnPremises",
+		distribution.APIVersionV1Alpha2,
+		distribution.OnPremisesKind,
 		cluster.NewCertificatesRenewerFactory[*CertificatesRenewer, public.OnpremisesKfdV1Alpha2](&CertificatesRenewer{}),
 	)
 }

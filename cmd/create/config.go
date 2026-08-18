@@ -252,7 +252,7 @@ func NewConfigCmd() *cobra.Command {
 	configCmd.Flags().StringP(
 		"api-version",
 		"a",
-		"kfd.sighup.io/v1alpha2",
+		distribution.APIVersionV1Alpha2,
 		"Version of the API to use for the selected kind (eg: kfd.sighup.io/v1alpha2)",
 	)
 
