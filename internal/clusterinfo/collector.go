@@ -19,6 +19,7 @@ import (
 	"github.com/sighupio/furyctl/configs"
 	distroconf "github.com/sighupio/furyctl/internal/apis/config"
 	"github.com/sighupio/furyctl/internal/cluster"
+	"github.com/sighupio/furyctl/internal/distribution"
 	"github.com/sighupio/furyctl/internal/tool/kubectl"
 	"github.com/sighupio/furyctl/internal/upgrade"
 	execx "github.com/sighupio/furyctl/internal/x/exec"
@@ -452,7 +453,7 @@ func extractModules(configMap map[string]any, sd distroconf.KFD, kind string) []
 		},
 	}
 
-	if sd.Modules.Aws != "" && kind == "EKSCluster" {
+	if sd.Modules.Aws != "" && kind == distribution.EKSClusterKind {
 		specs = append(specs, moduleSpec{
 			name:       "AWS",
 			version:    sd.Modules.Aws,
@@ -522,10 +523,10 @@ func extractPlugins(configMap map[string]any) *PluginsInfo {
 
 func etcdTopology(kind string, configMap map[string]any) string {
 	switch kind {
-	case "OnPremises":
+	case distribution.OnPremisesKind:
 		return onPremisesEtcdTopology(configMap)
 
-	case "Immutable":
+	case distribution.ImmutableKind:
 		return immutableEtcdTopology(configMap)
 
 	default:
@@ -601,13 +602,13 @@ func memberHostnames(section map[string]any) []string {
 
 func installerVersion(kind string, sd distroconf.KFD) string {
 	switch kind {
-	case "OnPremises":
+	case distribution.OnPremisesKind:
 		return sd.Kubernetes.OnPremises.Installer
 
-	case "EKSCluster":
+	case distribution.EKSClusterKind:
 		return sd.Kubernetes.Eks.Installer
 
-	case "Immutable":
+	case distribution.ImmutableKind:
 		return sd.Kubernetes.Immutable.Installer
 
 	default:

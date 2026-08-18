@@ -9,6 +9,8 @@ import (
 	"fmt"
 	"os"
 	"strings"
+
+	"github.com/sighupio/furyctl/internal/distribution"
 )
 
 var (
@@ -23,7 +25,7 @@ func NewValidator() *Validator {
 }
 
 func (ev *Validator) Validate(kind string) ([]string, []error) {
-	if kind == "EKSCluster" {
+	if kind == distribution.EKSClusterKind {
 		return ev.checkEKSCluster()
 	}
 

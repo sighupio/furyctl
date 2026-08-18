@@ -7,31 +7,32 @@ package ekscluster
 import (
 	"github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/ekscluster/private"
 	"github.com/sighupio/furyctl/internal/cluster"
+	"github.com/sighupio/furyctl/internal/distribution"
 )
 
 //nolint:gochecknoinits // this pattern requires init function to work.
 func init() {
 	cluster.RegisterCreatorFactory(
-		"kfd.sighup.io/v1alpha2",
-		"EKSCluster",
+		distribution.APIVersionV1Alpha2,
+		distribution.EKSClusterKind,
 		cluster.NewCreatorFactory[*ClusterCreator, private.EksclusterKfdV1Alpha2](&ClusterCreator{}),
 	)
 
 	cluster.RegisterDeleterFactory(
-		"kfd.sighup.io/v1alpha2",
-		"EKSCluster",
+		distribution.APIVersionV1Alpha2,
+		distribution.EKSClusterKind,
 		cluster.NewDeleterFactory[*ClusterDeleter, private.EksclusterKfdV1Alpha2](&ClusterDeleter{}),
 	)
 
 	cluster.RegisterKubeconfigFactory(
-		"kfd.sighup.io/v1alpha2",
-		"EKSCluster",
+		distribution.APIVersionV1Alpha2,
+		distribution.EKSClusterKind,
 		cluster.NewKubeconfigFactory[*KubeconfigGetter, private.EksclusterKfdV1Alpha2](&KubeconfigGetter{}),
 	)
 
 	cluster.RegisterCertificatesRenewerFactory(
-		"kfd.sighup.io/v1alpha2",
-		"EKSCluster",
+		distribution.APIVersionV1Alpha2,
+		distribution.EKSClusterKind,
 		cluster.NewCertificatesRenewerFactory[*CertificatesRenewer, private.EksclusterKfdV1Alpha2](
 			&CertificatesRenewer{},
 		),
