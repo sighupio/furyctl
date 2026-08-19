@@ -178,6 +178,7 @@ func (c *ClusterCreator) Create(startFrom string, _, podRunningCheckTimeout int)
 		c.stateStore,
 		c.force,
 		c.phase,
+		startFrom,
 		c.upgrade,
 	)
 

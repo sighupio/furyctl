@@ -50,6 +50,7 @@ type PreFlight struct {
 	dryRun         bool
 	force          []string
 	phase          string
+	startFrom      string
 	upgradeEnabled bool
 }
 
@@ -61,6 +62,7 @@ func NewPreFlight(
 	stateStore state.Storer,
 	force []string,
 	phase string,
+	startFrom string,
 	upgradeEnabled bool,
 ) *PreFlight {
 	p := cluster.NewOperationPhase(
@@ -92,6 +94,7 @@ func NewPreFlight(
 		dryRun:         dryRun,
 		force:          force,
 		phase:          phase,
+		startFrom:      startFrom,
 		upgradeEnabled: upgradeEnabled,
 	}
 }
@@ -198,10 +201,10 @@ func (p *PreFlight) Exec(renderedConfig map[string]any) (*Status, error) {
 				return status, fmt.Errorf("error checking reducer diffs: %w", err)
 			}
 
-			if p.phase != cluster.OperationPhaseAll && !p.upgradeEnabled {
-				logrus.Info("Cluster configuration has changed, checking if changes are supported in the current phase...")
+			if (p.phase != cluster.OperationPhaseAll || p.startFrom != cluster.OperationPhaseAll) && !p.upgradeEnabled {
+				logrus.Info("Cluster configuration has changed, checking if changes are supported in the phases to apply...")
 
-				if err := cluster.AssertPhaseDiffs(d, p.phase, supported.Phases()); err != nil {
+				if err := cluster.AssertPhaseDiffs(d, p.phase, p.startFrom, supported.Phases()); err != nil {
 					return status, fmt.Errorf("error checking changes to other phases: %w", err)
 				}
 			}

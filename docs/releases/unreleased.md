@@ -8,8 +8,10 @@ Welcome to the latest release of `furyctl` maintained by SIGHUP by ReeVo team.
 
 ## Bug fixes 🐞
 
-TBD
+- [[#743](https://github.com/sighupio/furyctl/pull/743)] All kinds: `apply --start-from` now stops when the configuration has changes to a phase before the selected one. Before this fix furyctl skipped those changes and wrote the new configuration to the cluster, so the change was lost and the next `diff` did not show it as pending.
+
 
 ## Breaking Changes 💔
 
 None
+
