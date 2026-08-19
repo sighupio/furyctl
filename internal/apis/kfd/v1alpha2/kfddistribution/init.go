@@ -34,7 +34,7 @@ func init() {
 		distribution.APIVersionV1Alpha2,
 		distribution.KFDDistributionKind,
 		cluster.NewRenewerFactory[*cluster.UnsupportedRenewer, public.KfddistributionKfdV1Alpha2](
-			&cluster.UnsupportedRenewer{Kind: "KFDDistribution"},
+			&cluster.UnsupportedRenewer{Kind: distribution.KFDDistributionKind},
 		),
 	)
 }

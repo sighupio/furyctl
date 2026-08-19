@@ -34,7 +34,7 @@ func init() {
 		distribution.APIVersionV1Alpha2,
 		distribution.EKSClusterKind,
 		cluster.NewRenewerFactory[*cluster.UnsupportedRenewer, private.EksclusterKfdV1Alpha2](
-			&cluster.UnsupportedRenewer{Kind: "EKSCluster"},
+			&cluster.UnsupportedRenewer{Kind: distribution.EKSClusterKind},
 		),
 	)
 }
