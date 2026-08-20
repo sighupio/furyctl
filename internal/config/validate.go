@@ -320,26 +320,38 @@ func validateFlagsSection(flagsSection any) error {
 
 		// Set the command flags in the appropriate section.
 		switch command {
-		case "global":
+		case flags.CommandGlobal:
 			flagsConfig.Global = commandFlagsMap
 
-		case "apply":
+		case flags.CommandApply:
 			flagsConfig.Apply = commandFlagsMap
 
-		case "delete":
+		case flags.CommandDelete:
 			flagsConfig.Delete = commandFlagsMap
 
-		case "create":
+		case flags.CommandCreate:
 			flagsConfig.Create = commandFlagsMap
 
-		case "get":
+		case flags.CommandGet:
 			flagsConfig.Get = commandFlagsMap
 
-		case "diff":
+		case flags.CommandDiff:
 			flagsConfig.Diff = commandFlagsMap
 
-		case "tools":
-			flagsConfig.Tools = commandFlagsMap
+		case flags.CommandValidate:
+			flagsConfig.Validate = commandFlagsMap
+
+		case flags.CommandDownload:
+			flagsConfig.Download = commandFlagsMap
+
+		case flags.CommandConnect:
+			flagsConfig.Connect = commandFlagsMap
+
+		case flags.CommandRenew:
+			flagsConfig.Renew = commandFlagsMap
+
+		case flags.CommandDump:
+			flagsConfig.Dump = commandFlagsMap
 
 		default:
 			return fmt.Errorf("%w: %s", ErrUnsupportedFlagsCommand, command)
