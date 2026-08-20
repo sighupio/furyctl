@@ -12,6 +12,8 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/samber/lo"
+
 	parserx "github.com/sighupio/furyctl/internal/parser"
 )
 
@@ -33,29 +35,17 @@ func NewMapper(
 }
 
 func (m *Mapper) MapDynamicValuesAndPaths() (map[string]map[any]any, error) {
-	mappedCtx := make(map[string]map[any]any, len(m.context))
-
-	for k, c := range m.context {
-		res, err := m.injectDynamicValuesAndPaths(c)
-		mappedCtx[k] = res
-
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	return mappedCtx, nil
+	return lo.MapValuesErr(m.context, func(c map[any]any, _ string) (map[any]any, error) {
+		return m.injectDynamicValuesAndPaths(c)
+	})
 }
 
 func (*Mapper) MapEnvironmentVars() map[any]any {
-	envMap := make(map[any]any)
+	return lo.SliceToMap(os.Environ(), func(v string) (any, any) {
+		name, value, _ := strings.Cut(v, "=")
 
-	for _, v := range os.Environ() {
-		part := strings.Split(v, "=")
-		envMap[part[0]] = part[1]
-	}
-
-	return envMap
+		return name, value
+	})
 }
 
 func (m *Mapper) injectDynamicValuesAndPaths(

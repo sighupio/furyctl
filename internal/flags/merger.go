@@ -11,6 +11,7 @@ import (
 	"strings"
 	"unicode"
 
+	"github.com/samber/lo"
 	"github.com/spf13/viper"
 )
 
@@ -160,12 +161,9 @@ func (*Merger) ConvertValue(value any, expectedType FlagType) (any, error) {
 	case FlagTypeStringSlice:
 		switch v := value.(type) {
 		case []any:
-			result := make([]string, len(v))
-			for i, item := range v {
-				result[i] = fmt.Sprintf("%v", item)
-			}
-
-			return result, nil
+			return lo.Map(v, func(item any, _ int) string {
+				return fmt.Sprintf("%v", item)
+			}), nil
 
 		case []string:
 			return v, nil

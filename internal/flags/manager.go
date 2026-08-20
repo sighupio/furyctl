@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/samber/lo"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
 
@@ -243,17 +244,9 @@ func (*Manager) handleValidationErrors(validationErrors []ValidationError, fatal
 	}
 
 	// Separate fatal errors from warnings.
-	var fatalErrors []ValidationError
-
-	var warnings []ValidationError
-
-	for _, valErr := range validationErrors {
-		if valErr.Severity == ValidationSeverityFatal {
-			fatalErrors = append(fatalErrors, valErr)
-		} else {
-			warnings = append(warnings, valErr)
-		}
-	}
+	fatalErrors, warnings := lo.FilterReject(validationErrors, func(valErr ValidationError, _ int) bool {
+		return valErr.Severity == ValidationSeverityFatal
+	})
 
 	// Return immediately if there are fatal errors.
 	if len(fatalErrors) > 0 {

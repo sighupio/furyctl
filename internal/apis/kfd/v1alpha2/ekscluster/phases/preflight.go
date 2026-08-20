@@ -14,6 +14,7 @@ import (
 	"regexp"
 	"strconv"
 
+	"github.com/samber/lo"
 	"github.com/sirupsen/logrus"
 
 	"github.com/sighupio/furyctl/configs"
@@ -338,13 +339,8 @@ func (p *PreFlight) getVPNBucketName() (string, error) {
 
 func (p *PreFlight) getVPNServers() ([]string, error) {
 	var servers []string
-	port := vpnDefaultPort
 
-	if p.FuryctlConf.Spec.Infrastructure.Vpn.Port != nil {
-		p := *p.FuryctlConf.Spec.Infrastructure.Vpn.Port
-
-		port = int(p)
-	}
+	port := int(lo.FromPtrOr(p.FuryctlConf.Spec.Infrastructure.Vpn.Port, vpnDefaultPort))
 
 	for i := range *p.FuryctlConf.Spec.Infrastructure.Vpn.Instances {
 		out, err := p.TFRunnerInfra.State("show", fmt.Sprintf("module.vpn[0].aws_eip.vpn[%d]", i), "-no-color")
@@ -359,11 +355,5 @@ func (p *PreFlight) getVPNServers() ([]string, error) {
 }
 
 func (p *PreFlight) getOperatorName() string {
-	operatorName := "sighup"
-
-	if p.FuryctlConf.Spec.Infrastructure.Vpn.OperatorName != nil {
-		operatorName = *p.FuryctlConf.Spec.Infrastructure.Vpn.OperatorName
-	}
-
-	return operatorName
+	return lo.FromPtrOr(p.FuryctlConf.Spec.Infrastructure.Vpn.OperatorName, "sighup")
 }

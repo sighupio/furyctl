@@ -12,6 +12,10 @@
 // safe. Keep this struct readable: it should read like a furyctl.yaml skeleton.
 package public
 
+import (
+	"github.com/samber/lo"
+)
+
 // Domain string types. They carry meaning (and keep the string(...) conversions
 // at the call sites meaningful) while behaving as plain strings.
 type (
@@ -175,11 +179,9 @@ func (c *ImmutableKfdV1Alpha2) RoleAssignments() []RoleAssignment {
 // NodeRole returns hostname's role, or NodeRoleNone if none. Role order makes the
 // first match the effective role (a control-plane host stays controlplane).
 func (c *ImmutableKfdV1Alpha2) NodeRole(hostname string) string {
-	for _, ra := range c.RoleAssignments() {
-		if ra.Hostname == hostname {
-			return ra.Role
-		}
-	}
+	ra, _ := lo.Find(c.RoleAssignments(), func(ra RoleAssignment) bool {
+		return ra.Hostname == hostname
+	})
 
-	return NodeRoleNone
+	return ra.Role
 }

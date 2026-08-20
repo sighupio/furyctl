@@ -13,6 +13,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/samber/lo"
 	"github.com/sirupsen/logrus"
 
 	"github.com/sighupio/furyctl/internal/apis/config"
@@ -24,7 +25,6 @@ import (
 	"github.com/sighupio/furyctl/internal/upgrade"
 	execx "github.com/sighupio/furyctl/internal/x/exec"
 	iox "github.com/sighupio/furyctl/internal/x/io"
-	slicesx "github.com/sighupio/furyctl/internal/x/slices"
 )
 
 var ErrAbortedByUser = errors.New("aborted by user")
@@ -168,7 +168,7 @@ func (i *Infrastructure) coreInfrastructure(
 
 		parsedPlan := tfParser.Parse()
 
-		criticalResources := slicesx.Intersection(i.getCriticalTFResourceTypes(), parsedPlan.Destroy)
+		criticalResources := lo.Intersect(parsedPlan.Destroy, i.getCriticalTFResourceTypes())
 
 		if len(criticalResources) > 0 {
 			logrus.Warnf("Deletion of the following critical resources has been detected: %s. See the logs for more details.",

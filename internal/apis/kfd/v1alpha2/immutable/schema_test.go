@@ -63,6 +63,20 @@ func Test_ExtraSchemaValidator_Validate(t *testing.T) {
 				".spec.infrastructure.nodes: ghost01, ghost02",
 		},
 		{
+			desc:     "a dangling hostname referenced twice is reported once",
+			confPath: "test/schema/repeated_dangling_node_reference.yaml",
+			wantErr:  true,
+			wantErrMsg: "every hostname referenced by a role (.spec.kubernetes.controlPlane.members, " +
+				".spec.kubernetes.etcd.members, .spec.kubernetes.nodeGroups[].nodes or " +
+				".spec.infrastructure.loadBalancers.members) must have a matching entry in " +
+				".spec.infrastructure.nodes: ghost01\n" +
+				"a node must be referenced exactly once, but these hostnames appear more than once " +
+				"across .spec.kubernetes.controlPlane.members, .spec.kubernetes.etcd.members, " +
+				".spec.kubernetes.nodeGroups[].nodes or .spec.infrastructure.loadBalancers.members " +
+				"(a node belongs to a single role, and to a single node group; for stacked etcd omit " +
+				"the .spec.kubernetes.etcd block instead of repeating hostnames): ghost01",
+		},
+		{
 			desc:     "both an unassigned node and a dangling reference are reported",
 			confPath: "test/schema/orphan_and_dangling.yaml",
 			wantErr:  true,

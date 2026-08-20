@@ -235,11 +235,10 @@ func (*Validator) validateSpecificFlag(flagName string, value any) error {
 			validForceOptions := []string{"all", "upgrades", "migrations", "pods-running-check"}
 
 			for _, item := range slice {
-				if str, ok := item.(string); ok {
-					if !slices.Contains(validForceOptions, str) {
-						return fmt.Errorf("%w: got '%s', must be one of: %s",
-							ErrInvalidForceOption, str, strings.Join(validForceOptions, ", "))
-					}
+				str, ok := item.(string)
+				if ok && !slices.Contains(validForceOptions, str) {
+					return fmt.Errorf("%w: got '%s', must be one of: %s",
+						ErrInvalidForceOption, str, strings.Join(validForceOptions, ", "))
 				}
 			}
 		}

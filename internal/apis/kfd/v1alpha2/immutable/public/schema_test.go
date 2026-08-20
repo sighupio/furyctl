@@ -117,13 +117,13 @@ func TestNodeRole(t *testing.T) {
 			},
 			Kubernetes: public.SpecKubernetes{
 				ControlPlane: public.SpecKubernetesControlPlane{
-					Members: []public.Member{{Hostname: "ctrl01"}},
+					Members: []public.Member{{Hostname: "ctrl01"}, {Hostname: "dual01"}},
 				},
 				Etcd: &public.SpecKubernetesEtcd{
 					Members: []public.Member{{Hostname: "etcd01"}},
 				},
 				NodeGroups: []public.SpecKubernetesNodeGroup{
-					{Name: "workers", Nodes: []public.Member{{Hostname: "worker01"}}},
+					{Name: "workers", Nodes: []public.Member{{Hostname: "worker01"}, {Hostname: "dual01"}}},
 				},
 			},
 		},
@@ -139,6 +139,11 @@ func TestNodeRole(t *testing.T) {
 		{desc: "etcd member", hostname: "etcd01", want: public.NodeRoleEtcd},
 		{desc: "node group member", hostname: "worker01", want: public.NodeRoleWorker},
 		{desc: "unassigned node has no role", hostname: "orphan01", want: public.NodeRoleNone},
+		{
+			desc:     "host in two lists keeps the first role in role order",
+			hostname: "dual01",
+			want:     public.NodeRoleControlPlane,
+		},
 	}
 
 	for _, tC := range testCases {

@@ -152,7 +152,7 @@ func (l *Loader) processDynamicValues(flags *FlagsConfig) (*FlagsConfig, error) 
 
 // processCommandFlags processes dynamic values in a single command's flags map.
 func (l *Loader) processCommandFlags(flagsMap map[string]any) (map[string]any, error) {
-	processed := make(map[string]any)
+	processed := make(map[string]any, len(flagsMap))
 
 	for key, value := range flagsMap {
 		processedValue, err := l.configParser.ParseDynamicValue(value)

@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	r3diff "github.com/r3labs/diff/v3"
+	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -47,10 +48,10 @@ func TestBuild_KubeProxyType_NilToNftables(t *testing.T) {
 
 	// Without expansion the parent-level change does not match the leaf rule.
 	rawRdcs := reducers.Build(parentCreate, kubeProxyExtractor(), "kubernetes")
-	assert.Empty(t, filterNonNil(rawRdcs), "raw parent-level change should not match the leaf reducer")
+	assert.Empty(t, lo.Compact(rawRdcs), "raw parent-level change should not match the leaf reducer")
 
 	// With expansion the leaf change matches and carries from=nil, to=nftables.
-	rdcs := filterNonNil(reducers.Build(diffs.ExpandMapChanges(parentCreate), kubeProxyExtractor(), "kubernetes"))
+	rdcs := lo.Compact(reducers.Build(diffs.ExpandMapChanges(parentCreate), kubeProxyExtractor(), "kubernetes"))
 	require.Len(t, rdcs, 1)
 	assert.Equal(t, "kubeProxyType", rdcs[0].GetKey())
 	assert.Equal(t, "post-kubernetes", rdcs[0].GetLifecycle())
@@ -66,21 +67,9 @@ func TestBuild_KubeProxyType_IpvsToNftables(t *testing.T) {
 		{Type: "update", Path: []string{"spec", "kubernetes", "advanced", "kubeProxy", "type"}, From: "ipvs", To: "nftables"},
 	}
 
-	rdcs := filterNonNil(reducers.Build(diffs.ExpandMapChanges(cl), kubeProxyExtractor(), "kubernetes"))
+	rdcs := lo.Compact(reducers.Build(diffs.ExpandMapChanges(cl), kubeProxyExtractor(), "kubernetes"))
 	require.Len(t, rdcs, 1)
 	assert.Equal(t, "kubeProxyType", rdcs[0].GetKey())
 	assert.Equal(t, "ipvs", rdcs[0].GetFrom())
 	assert.Equal(t, "nftables", rdcs[0].GetTo())
-}
-
-func filterNonNil(rs reducers.Reducers) reducers.Reducers {
-	out := reducers.Reducers{}
-
-	for _, r := range rs {
-		if r != nil {
-			out = append(out, r)
-		}
-	}
-
-	return out
 }

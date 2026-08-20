@@ -1,0 +1,21 @@
+# Copyright (c) 2017-present SIGHUP s.r.l All rights reserved.
+# Use of this source code is governed by a BSD-style
+# license that can be found in the LICENSE file.
+
+# ghost01 is referenced twice and defined nowhere: the dangling-reference message
+# must name it once, and the multiple-references message reports the repetition.
+spec:
+  infrastructure:
+    nodes:
+      - hostname: ctrl01
+  kubernetes:
+    controlPlane:
+      members:
+        - hostname: ctrl01
+    etcd:
+      members:
+        - hostname: ghost01
+    nodeGroups:
+      - name: workers
+        nodes:
+          - hostname: ghost01

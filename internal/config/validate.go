@@ -13,6 +13,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/samber/lo"
 	"github.com/sirupsen/logrus"
 
 	"github.com/sighupio/furyctl/internal/analytics"
@@ -240,7 +241,7 @@ func expandDynamicValues(conf map[string]any, baseDir string) (map[string]any, e
 func expandDynamicValuesRecursive(value any, configParser *parserx.ConfigParser) (any, error) {
 	switch v := value.(type) {
 	case map[string]any:
-		result := make(map[string]any)
+		result := make(map[string]any, len(v))
 
 		for key, val := range v {
 			expandedVal, err := expandDynamicValuesRecursive(val, configParser)
@@ -351,17 +352,9 @@ func validateFlagsSection(flagsSection any) error {
 
 	if len(validationErrors) > 0 {
 		// Separate fatal errors from warnings.
-		var fatalErrors []flags.ValidationError
-
-		var warnings []flags.ValidationError
-
-		for _, err := range validationErrors {
-			if err.Severity == flags.ValidationSeverityFatal {
-				fatalErrors = append(fatalErrors, err)
-			} else {
-				warnings = append(warnings, err)
-			}
-		}
+		fatalErrors, warnings := lo.FilterReject(validationErrors, func(err flags.ValidationError, _ int) bool {
+			return err.Severity == flags.ValidationSeverityFatal
+		})
 
 		// Log warnings but don't fail validation.
 		if len(warnings) > 0 {

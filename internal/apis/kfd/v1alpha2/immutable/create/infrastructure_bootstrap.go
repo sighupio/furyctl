@@ -19,6 +19,7 @@ import (
 	texttemplate "text/template"
 
 	"github.com/hashicorp/go-getter"
+	"github.com/samber/lo"
 	"github.com/sirupsen/logrus"
 
 	"github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/immutable/public"
@@ -232,20 +233,16 @@ func versionVarsFromAssets(version, kubectlBin string, a assets) map[any]any {
 	// Carry the explicit per-arch .raw URL + sha256 from immutable.yaml (not just the version) so the sysext role
 	// downloads exactly what the manifest pins, instead of reconstructing the URL from a release-base
 	// convention — the same URL the butane/Ignition install path already uses (kills the two-dialects smell).
-	sysextTargets := make(map[string]any, len(a.Sysext))
+	sysextTargets := lo.SliceToMap(a.Sysext, func(pkg sysextPackage) (string, any) {
+		arch := lo.MapValues(pkg.Arch, func(info sysextArchInfo, _ string) any {
+			return map[string]string{"url": info.URL, "sha256": info.SHA256}
+		})
 
-	for _, pkg := range a.Sysext {
-		arch := make(map[string]any, len(pkg.Arch))
-
-		for name, info := range pkg.Arch {
-			arch[name] = map[string]string{"url": info.URL, "sha256": info.SHA256}
-		}
-
-		sysextTargets[pkg.Name] = map[string]any{
+		return pkg.Name, map[string]any{
 			"version": pkg.Version,
 			"arch":    arch,
 		}
-	}
+	})
 
 	vars := map[any]any{
 		"kubernetes_version":        version,
@@ -306,28 +303,18 @@ func (i *Infrastructure) renderButaneTemplates() error {
 	}
 
 	// Convert sysext packages to template-friendly format.
-	sysextData := make(map[any]any)
+	sysextData := lo.SliceToMap(immutableAssets.Sysext, func(pkg sysextPackage) (any, any) {
+		// Add arch-specific info.
+		arch := lo.MapEntries(pkg.Arch, func(arch string, archInfo sysextArchInfo) (any, any) {
+			return arch, map[any]any{"url": archInfo.URL}
+		})
 
-	for _, pkg := range immutableAssets.Sysext {
-		pkgData := map[any]any{
+		return pkg.Name, map[any]any{
 			"name":    pkg.Name,
 			"version": pkg.Version,
-			"arch":    make(map[any]any),
+			"arch":    arch,
 		}
-
-		// Add arch-specific info.
-		for arch, archInfo := range pkg.Arch {
-			archData := map[any]any{
-				"url": archInfo.URL,
-			}
-
-			if archMap, ok := pkgData["arch"].(map[any]any); ok {
-				archMap[arch] = archData
-			}
-		}
-
-		sysextData[pkg.Name] = pkgData
-	}
+	})
 
 	// Convert Flatcar boot artifacts to template-friendly format.
 	flatcarData := map[any]any{
@@ -646,17 +633,14 @@ func (i *Infrastructure) generateNodeIgnition(node public.SpecInfrastructureNode
 	return nil
 }
 
-// Analyze nodes and returns unique architectures.
+// Analyze nodes and returns unique architectures, in the order the nodes declare them.
 func (i *Infrastructure) extractUsedArchitectures() []string {
-	archMap := make(map[string]bool)
-	for _, node := range i.furyctlConf.Spec.Infrastructure.Nodes {
-		archMap[string(node.Arch)] = true
-	}
-
-	architectures := make([]string, 0, len(archMap))
-	for arch := range archMap {
-		architectures = append(architectures, arch)
-	}
+	architectures := lo.Uniq(lo.Map(
+		i.furyctlConf.Spec.Infrastructure.Nodes,
+		func(node public.SpecInfrastructureNode, _ int) string {
+			return string(node.Arch)
+		},
+	))
 
 	logrus.Debugf("Detected architectures in cluster: %v", architectures)
 

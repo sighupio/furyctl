@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/samber/lo"
 	"github.com/sirupsen/logrus"
 
 	"github.com/sighupio/furyctl/internal/apis/config"
@@ -404,13 +405,9 @@ func (c *ClusterCreator) RenderConfig() (map[string]any, error) {
 	// TfCfg.Data already contains the properly structured merged config
 	// with "spec", "metadata", etc. from the user config merged with defaults.
 	// Convert to map[string]any (including nested maps).
-	result := make(map[string]any)
-
-	for k, v := range tfCfg.Data {
-		result[k] = convertValue(v)
-	}
-
-	return result, nil
+	return lo.MapValues(tfCfg.Data, func(v map[any]any, _ string) any {
+		return convertValue(v)
+	}), nil
 }
 
 func createInfrastructurePhase(c *ClusterCreator, upgr *upgrade.Upgrade) *create.Infrastructure {
@@ -442,8 +439,8 @@ func createInfrastructurePhase(c *ClusterCreator, upgr *upgrade.Upgrade) *create
 func convertValue(v any) any {
 	switch val := v.(type) {
 	case map[any]any:
-		// Convert map[any]any to map[string]any.
-		result := make(map[string]any)
+		// Convert map[any]any to map[string]any, dropping non-string keys.
+		result := make(map[string]any, len(val))
 
 		for k, v := range val {
 			keyStr, ok := k.(string)
@@ -458,20 +455,14 @@ func convertValue(v any) any {
 
 	case map[string]any:
 		// Already correct type, but check nested values.
-		result := make(map[string]any)
-		for k, v := range val {
-			result[k] = convertValue(v)
-		}
-
-		return result
+		return lo.MapValues(val, func(v any, _ string) any {
+			return convertValue(v)
+		})
 
 	case []any:
-		result := make([]any, len(val))
-		for i, item := range val {
-			result[i] = convertValue(item)
-		}
-
-		return result
+		return lo.Map(val, func(item any, _ int) any {
+			return convertValue(item)
+		})
 
 	default:
 		return val

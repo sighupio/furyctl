@@ -12,6 +12,7 @@ import (
 	"strings"
 
 	r3diff "github.com/r3labs/diff/v3"
+	"github.com/samber/lo"
 
 	rules "github.com/sighupio/furyctl/pkg/rulesextractor"
 )
@@ -62,17 +63,9 @@ func (v *BaseChecker) GenerateDiff() (r3diff.Changelog, error) {
 }
 
 func (*BaseChecker) FilterDiffFromPhase(changelog r3diff.Changelog, phasePath string) r3diff.Changelog {
-	var filteredChangelog r3diff.Changelog
-
-	for _, diff := range changelog {
-		joinedPath := "." + strings.Join(diff.Path, ".")
-
-		if strings.HasPrefix(joinedPath, phasePath) {
-			filteredChangelog = append(filteredChangelog, diff)
-		}
-	}
-
-	return filteredChangelog
+	return lo.Filter(changelog, func(diff r3diff.Change, _ int) bool {
+		return strings.HasPrefix("."+strings.Join(diff.Path, "."), phasePath)
+	})
 }
 
 func (*BaseChecker) DiffToString(diffs r3diff.Changelog) string {
@@ -88,28 +81,19 @@ func (*BaseChecker) DiffToString(diffs r3diff.Changelog) string {
 }
 
 func (*BaseChecker) AssertImmutableViolations(diffs r3diff.Changelog, immutablePaths []string) []error {
-	var errs []error
-
-	if len(diffs) == 0 {
-		return nil
-	}
-
-	for _, diff := range diffs {
-		if isImmutablePathChanged(diff, immutablePaths) {
-			errs = append(
-				errs,
-				fmt.Errorf(
-					"%w: path %s  oldValue %v newValue %v",
-					errImmutable,
-					"."+strings.Join(diff.Path, "."),
-					diff.From,
-					diff.To,
-				),
-			)
+	return lo.FilterMap(diffs, func(diff r3diff.Change, _ int) (error, bool) {
+		if !isImmutablePathChanged(diff, immutablePaths) {
+			return nil, false
 		}
-	}
 
-	return errs
+		return fmt.Errorf(
+			"%w: path %s  oldValue %v newValue %v",
+			errImmutable,
+			"."+strings.Join(diff.Path, "."),
+			diff.From,
+			diff.To,
+		), true
+	})
 }
 
 func (*BaseChecker) AssertReducerUnsupportedViolations(diffs r3diff.Changelog, reducerRules []rules.Rule) []error {
@@ -154,20 +138,14 @@ func (*BaseChecker) AssertReducerUnsupportedViolations(diffs r3diff.Changelog, r
 }
 
 func isDiffUnsupported(diff r3diff.Change, conditions []rules.Unsupported) (string, bool) {
-	reason := ""
-
 	for _, condition := range conditions {
 		if (condition.From == nil || diff.From == *condition.From) &&
 			(condition.To == nil || diff.To == *condition.To) {
-			if condition.Reason != nil {
-				reason = *condition.Reason
-			}
-
-			return reason, true
+			return lo.FromPtr(condition.Reason), true
 		}
 	}
 
-	return reason, false
+	return "", false
 }
 
 // ExpandMapChanges expands changes whose value is a nested map (a whole object
@@ -176,47 +154,36 @@ func isDiffUnsupported(diff r3diff.Change, conditions []rules.Unsupported) (stri
 // previously absent (nil -> value) or is being removed (value -> nil). Changes
 // that do not carry a map value are returned unchanged.
 func ExpandMapChanges(changelog r3diff.Changelog) r3diff.Changelog {
-	expanded := make(r3diff.Changelog, 0, len(changelog))
-
-	for _, c := range changelog {
-		expanded = append(expanded, expandChange(c)...)
-	}
-
-	return expanded
+	return lo.FlatMap(changelog, func(c r3diff.Change, _ int) []r3diff.Change {
+		return expandChange(c)
+	})
 }
 
 func expandChange(c r3diff.Change) []r3diff.Change {
 	// Object added wholesale: To is a map, From is nil.
 	if m, ok := c.To.(map[string]any); ok && len(m) > 0 {
-		res := make([]r3diff.Change, 0, len(m))
-		for k, v := range m {
-			res = append(res, expandChange(r3diff.Change{
-				Type: c.Type,
-				Path: childPath(c.Path, k),
-				From: nil,
-				To:   v,
-			})...)
-		}
-
-		return res
+		return expandMap(m, func(k string, v any) r3diff.Change {
+			return r3diff.Change{Type: c.Type, Path: childPath(c.Path, k), From: nil, To: v}
+		})
 	}
 
 	// Object removed wholesale: From is a map, To is nil.
 	if m, ok := c.From.(map[string]any); ok && len(m) > 0 {
-		res := make([]r3diff.Change, 0, len(m))
-		for k, v := range m {
-			res = append(res, expandChange(r3diff.Change{
-				Type: c.Type,
-				Path: childPath(c.Path, k),
-				From: v,
-				To:   nil,
-			})...)
-		}
-
-		return res
+		return expandMap(m, func(k string, v any) r3diff.Change {
+			return r3diff.Change{Type: c.Type, Path: childPath(c.Path, k), From: v, To: nil}
+		})
 	}
 
 	return []r3diff.Change{c}
+}
+
+// expandMap recurses into every entry of a wholesale-added or wholesale-removed
+// object. The child callback builds the leaf change, so the caller keeps the only
+// difference between the two cases: which side of the change carries the value.
+func expandMap(m map[string]any, child func(k string, v any) r3diff.Change) []r3diff.Change {
+	return lo.Flatten(lo.MapToSlice(m, func(k string, v any) []r3diff.Change {
+		return expandChange(child(k, v))
+	}))
 }
 
 func childPath(parent []string, key string) []string {

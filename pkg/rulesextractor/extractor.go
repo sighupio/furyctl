@@ -11,10 +11,10 @@ import (
 	"strings"
 
 	"github.com/r3labs/diff/v3"
+	"github.com/samber/lo"
 	"github.com/sirupsen/logrus"
 
 	"github.com/sighupio/furyctl/internal/cluster"
-	slicesx "github.com/sighupio/furyctl/internal/x/slices"
 )
 
 var numbersToWildcardRegex = regexp.MustCompile(`\.\d+\b`)
@@ -71,7 +71,7 @@ type Rule struct {
 
 // Paths returns the paths of the given rules.
 func Paths(rls []Rule) []string {
-	return slicesx.Map(rls, func(rule Rule) string {
+	return lo.Map(rls, func(rule Rule, _ int) string {
 		return rule.Path
 	})
 }
@@ -176,18 +176,10 @@ func (b *BaseExtractor) GetImmutableRules(phase string) []Rule {
 }
 
 func (b *BaseExtractor) FilterSafeImmutableRules(rules []Rule, ds diff.Changelog) []Rule {
-	filteredRules := make([]Rule, 0)
-
-	for _, rule := range rules {
-		// If the rule has safe conditions and they match, skip this rule.
-		if rule.Safe != nil && len(*rule.Safe) > 0 && b.isImmutableRuleSafe(rule, ds) {
-			continue
-		}
-
-		filteredRules = append(filteredRules, rule)
-	}
-
-	return filteredRules
+	// Drop the rules whose safe conditions match.
+	return lo.Reject(rules, func(rule Rule, _ int) bool {
+		return rule.Safe != nil && len(*rule.Safe) > 0 && b.isImmutableRuleSafe(rule, ds)
+	})
 }
 
 func (b *BaseExtractor) GetReducers(phase string) []Rule {
@@ -229,49 +221,23 @@ func (*BaseExtractor) ReducerRulesByDiffs(rules []Rule, ds diff.Changelog) []Rul
 }
 
 func (b *BaseExtractor) UnsupportedReducerRulesByDiffs(rules []Rule, ds diff.Changelog) []Rule {
-	filteredRules := make([]Rule, 0)
-
-	for _, rule := range b.ReducerRulesByDiffs(rules, ds) {
-		if rule.Unsupported == nil || len(*rule.Unsupported) == 0 {
-			continue
-		}
-
-		filteredRules = append(filteredRules, rule)
-	}
-
-	return filteredRules
+	return lo.Filter(b.ReducerRulesByDiffs(rules, ds), func(rule Rule, _ int) bool {
+		return rule.Unsupported != nil && len(*rule.Unsupported) > 0
+	})
 }
 
 func (b *BaseExtractor) UnsafeReducerRulesByDiffs(rules []Rule, ds diff.Changelog) []Rule {
-	filteredRules := make([]Rule, 0)
-
-	for _, rule := range b.ReducerRulesByDiffs(rules, ds) {
-		if rule.Safe != nil && len(*rule.Safe) > 0 && b.areReducersSafe(rule.Reducers, rule.Safe, ds) {
-			continue
-		}
-
-		filteredRules = append(filteredRules, rule)
-	}
-
-	return filteredRules
+	return lo.Reject(b.ReducerRulesByDiffs(rules, ds), func(rule Rule, _ int) bool {
+		return rule.Safe != nil && len(*rule.Safe) > 0 && b.areReducersSafe(rule.Reducers, rule.Safe, ds)
+	})
 }
 
 // filterRules returns the rules matching the keep predicate, or an empty slice
 // if rules is nil.
 func filterRules(rules *[]Rule, keep func(Rule) bool) []Rule {
-	if rules == nil {
-		return []Rule{}
-	}
-
-	filtered := make([]Rule, 0)
-
-	for _, rule := range *rules {
-		if keep(rule) {
-			filtered = append(filtered, rule)
-		}
-	}
-
-	return filtered
+	return lo.Filter(lo.FromPtr(rules), func(rule Rule, _ int) bool {
+		return keep(rule)
+	})
 }
 
 func (b *BaseExtractor) ExtractImmutablesFromRules(rules *[]Rule) []string {
@@ -311,38 +277,28 @@ func (b *BaseExtractor) isImmutableRuleSafe(rule Rule, ds diff.Changelog) bool {
 		return false
 	}
 
-	// Find the diff that matches this rule's path.
-	var matchingDiffFrom, matchingDiffTo any
-
-	for _, d := range ds {
+	// Find the diff that matches this rule's path; the zero Change leaves both
+	// From and To nil, as when no diff matches.
+	matchingDiff, _ := lo.Find(ds, func(d diff.Change) bool {
 		joinedPath := "." + strings.Join(d.Path, ".")
 		changePath := numbersToWildcardRegex.ReplaceAllString(joinedPath, ".*")
 
-		if MatchesPattern(changePath, rule.Path) {
-			matchingDiffFrom = d.From
-			matchingDiffTo = d.To
+		return MatchesPattern(changePath, rule.Path)
+	})
 
-			break
-		}
-	}
-
-	for _, s := range *rule.Safe {
+	return lo.SomeBy(*rule.Safe, func(s Safe) bool {
 		// Check From/To conditions.
-		fromToMatch := (s.From == nil || matchingDiffFrom == *s.From) &&
-			(s.To == nil || matchingDiffTo == *s.To)
+		fromToMatch := (s.From == nil || matchingDiff.From == *s.From) &&
+			(s.To == nil || matchingDiff.To == *s.To)
 
 		// Check FromNodes conditions.
 		fromNodesMatch := b.areNodeConditionsMet(s.FromNodes, ds)
 
 		// If either From/To conditions or FromNodes conditions match, the rule is safe.
-		if (s.FromNodes == nil && fromToMatch) ||
+		return (s.FromNodes == nil && fromToMatch) ||
 			(s.From == nil && s.To == nil && fromNodesMatch) ||
-			(fromToMatch && fromNodesMatch) {
-			return true
-		}
-	}
-
-	return false
+			(fromToMatch && fromNodesMatch)
+	})
 }
 
 func (b *BaseExtractor) areNodeConditionsMet(fromNodes *[]FromNode, ds diff.Changelog) bool {
@@ -351,49 +307,40 @@ func (b *BaseExtractor) areNodeConditionsMet(fromNodes *[]FromNode, ds diff.Chan
 	}
 
 	// We need at least one node to match.
-	anyNodeMatches := false
-
-	for _, node := range *fromNodes {
+	return lo.SomeBy(*fromNodes, func(node FromNode) bool {
 		if node.Path == nil {
-			continue
+			return false
+		}
+
+		isNodePath := func(d diff.Change) bool {
+			return "."+strings.Join(d.Path, ".") == *node.Path
 		}
 
 		// Check if the path exists in the diffs and has the expected value.
-		nodeMatches := false
-		foundNodeInDiff := false
-
-		for _, d := range ds {
-			joinedPath := "." + strings.Join(d.Path, ".")
-			if joinedPath == *node.Path {
-				foundNodeInDiff = true
-				// Check if the node matches based on From/To or Value.
-				nodeMatches = b.checkConditionFrom(node.From, d.From) &&
-					b.checkConditionTo(node.To, d.To)
-
-				if nodeMatches {
-					break
-				}
-			}
+		if lo.ContainsBy(ds, func(d diff.Change) bool {
+			return isNodePath(d) &&
+				b.checkConditionFrom(node.From, d.From) &&
+				b.checkConditionTo(node.To, d.To)
+		}) {
+			return true
 		}
 
-		if !foundNodeInDiff && !nodeMatches {
-			unchangedValue, err := getNestedValue(b.RenderedConfig, *node.Path)
-			if err == nil {
-				nodeMatches = b.checkConditionFrom(node.From, unchangedValue) &&
-					b.checkConditionTo(node.To, unchangedValue)
-			} else {
-				logrus.Error(fmt.Sprintf("error getting value for %s: %s", *node.Path, err))
-			}
+		// The path did change but with an unexpected value: not a match.
+		if lo.ContainsBy(ds, isNodePath) {
+			return false
 		}
 
-		if nodeMatches {
-			anyNodeMatches = true
+		// The path is not in the diffs at all: compare against its unchanged value.
+		unchangedValue, err := getNestedValue(b.RenderedConfig, *node.Path)
+		if err != nil {
+			logrus.Error(fmt.Sprintf("error getting value for %s: %s", *node.Path, err))
 
-			break // We found a matching node, no need to check others.
+			return false
 		}
-	}
 
-	return anyNodeMatches
+		return b.checkConditionFrom(node.From, unchangedValue) &&
+			b.checkConditionTo(node.To, unchangedValue)
+	})
 }
 
 func getNestedValue(m map[string]any, path string) (any, error) {
@@ -453,17 +400,13 @@ func (b *BaseExtractor) areReducersSafe(reducers *[]Reducer, safe *[]Safe, ds di
 		return false
 	}
 
-	for _, r := range *reducers {
-		if !b.isReducerSafe(r, *safe, ds) {
-			return false
-		}
-	}
-
-	return true
+	return lo.EveryBy(*reducers, func(r Reducer) bool {
+		return b.isReducerSafe(r, *safe, ds)
+	})
 }
 
 func (b *BaseExtractor) isReducerSafe(reducer Reducer, safe []Safe, ds diff.Changelog) bool {
-	for _, s := range safe {
+	return lo.SomeBy(safe, func(s Safe) bool {
 		// Check From/To conditions.
 		fromToMatch := (s.From == nil || reducer.From == *s.From) && (s.To == nil || reducer.To == *s.To)
 
@@ -471,12 +414,8 @@ func (b *BaseExtractor) isReducerSafe(reducer Reducer, safe []Safe, ds diff.Chan
 		fromNodesMatch := b.areNodeConditionsMet(s.FromNodes, ds)
 
 		// If either From/To conditions or FromNodes conditions match, the rule is safe.
-		if (s.FromNodes == nil && fromToMatch) ||
+		return (s.FromNodes == nil && fromToMatch) ||
 			(s.From == nil && s.To == nil && fromNodesMatch) ||
-			(fromToMatch && fromNodesMatch) {
-			return true
-		}
-	}
-
-	return false
+			(fromToMatch && fromNodesMatch)
+	})
 }

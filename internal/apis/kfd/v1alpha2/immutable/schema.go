@@ -9,6 +9,8 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/samber/lo"
+
 	"github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/immutable/public"
 	yamlx "github.com/sighupio/furyctl/pkg/x/yaml"
 )
@@ -55,13 +57,12 @@ func (*ExtraSchemaValidator) Validate(confPath string) error {
 // validateNodeRoles asserts every node in .spec.infrastructure.nodes is assigned
 // a role; an unreferenced node has no role (public.NodeRole returns NodeRoleNone).
 func validateNodeRoles(conf *public.ImmutableKfdV1Alpha2) error {
-	var orphans []string
-
-	for _, node := range conf.Spec.Infrastructure.Nodes {
-		if conf.NodeRole(node.Hostname) == public.NodeRoleNone {
-			orphans = append(orphans, node.Hostname)
-		}
-	}
+	orphans := lo.FilterMap(
+		conf.Spec.Infrastructure.Nodes,
+		func(node public.SpecInfrastructureNode, _ int) (string, bool) {
+			return node.Hostname, conf.NodeRole(node.Hostname) == public.NodeRoleNone
+		},
+	)
 
 	if len(orphans) > 0 {
 		return fmt.Errorf("%w: %s", ErrNodeWithoutRole, strings.Join(orphans, ", "))
@@ -73,30 +74,17 @@ func validateNodeRoles(conf *public.ImmutableKfdV1Alpha2) error {
 // validateNodeReferences asserts every hostname referenced by a role list has a
 // matching entry in .spec.infrastructure.nodes.
 func validateNodeReferences(conf *public.ImmutableKfdV1Alpha2) error {
-	defined := make(map[string]struct{}, len(conf.Spec.Infrastructure.Nodes))
-	for _, node := range conf.Spec.Infrastructure.Nodes {
-		defined[node.Hostname] = struct{}{}
-	}
+	defined := lo.Map(conf.Spec.Infrastructure.Nodes, func(node public.SpecInfrastructureNode, _ int) string {
+		return node.Hostname
+	})
 
-	var (
-		dangling []string
-		seen     = make(map[string]struct{})
-	)
+	referenced := lo.Map(conf.RoleAssignments(), func(ra public.RoleAssignment, _ int) string {
+		return ra.Hostname
+	})
 
-	for _, ra := range conf.RoleAssignments() {
-		if _, ok := defined[ra.Hostname]; ok {
-			continue
-		}
-
-		// A hostname referenced more than once (see validateSingleReference) would
-		// recur here; report it once.
-		if _, dup := seen[ra.Hostname]; dup {
-			continue
-		}
-
-		seen[ra.Hostname] = struct{}{}
-		dangling = append(dangling, ra.Hostname)
-	}
+	// A hostname referenced more than once (see validateSingleReference) would recur here;
+	// lo.Uniq reports it once.
+	dangling := lo.Uniq(lo.Without(referenced, defined...))
 
 	if len(dangling) > 0 {
 		return fmt.Errorf("%w: %s", ErrNodeNotDefined, strings.Join(dangling, ", "))
@@ -109,25 +97,10 @@ func validateNodeReferences(conf *public.ImmutableKfdV1Alpha2) error {
 // all role lists (whether by two node groups, or by a control-plane host repeated
 // under a dedicated etcd block).
 func validateSingleReference(conf *public.ImmutableKfdV1Alpha2) error {
-	count := make(map[string]int)
-
-	var order []string
-
-	for _, ra := range conf.RoleAssignments() {
-		if count[ra.Hostname] == 0 {
-			order = append(order, ra.Hostname)
-		}
-
-		count[ra.Hostname]++
-	}
-
-	var offenders []string
-
-	for _, hostname := range order {
-		if count[hostname] > 1 {
-			offenders = append(offenders, hostname)
-		}
-	}
+	// FindDuplicates reports each repeated hostname once, in order of first occurrence.
+	offenders := lo.FindDuplicates(lo.Map(conf.RoleAssignments(), func(ra public.RoleAssignment, _ int) string {
+		return ra.Hostname
+	}))
 
 	if len(offenders) > 0 {
 		return fmt.Errorf("%w: %s", ErrNodeMultipleReferences, strings.Join(offenders, ", "))

@@ -9,6 +9,7 @@ import (
 	"os"
 	"path"
 
+	"github.com/samber/lo"
 	"github.com/sirupsen/logrus"
 
 	"github.com/sighupio/furyctl/internal/apis/config"
@@ -134,20 +135,19 @@ func (k *Kubernetes) runMigrations(rdcs reducers.Reducers) error {
 		return nil
 	}
 
-	seen := make(map[string]bool)
-
-	for _, r := range rdcs {
+	// A lifecycle with more than one reducer runs its playbook once, with the vars of every
+	// reducer of that lifecycle.
+	lifecycles := lo.Uniq(lo.FilterMap(rdcs, func(r reducers.Reducer, _ int) (string, bool) {
 		if r == nil {
-			continue
+			return "", false
 		}
 
 		lifecycle := r.GetLifecycle()
-		if lifecycle == "" || seen[lifecycle] {
-			continue
-		}
 
-		seen[lifecycle] = true
+		return lifecycle, lifecycle != ""
+	}))
 
+	for _, lifecycle := range lifecycles {
 		varsData := rdcs.ByLifecycle(lifecycle).Combine(map[string]map[any]any{}, "reducers")
 
 		varsYaml, err := yamlx.MarshalV2(varsData)
