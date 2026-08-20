@@ -30,15 +30,15 @@ func NewServeCmd() *cobra.Command {
 			tracker := ctn.Tracker()
 			tracker.Flush()
 
-			// Load and validate flags from configuration FIRST.
-			if err := flags.LoadAndMergeCommandFlags("serve"); err != nil {
-				logrus.Fatalf("failed to load flags from configuration: %v", err)
+			// Bind the flags first: a flag on the command line has precedence over the configuration file.
+			if err := viper.BindPFlags(cmd.Flags()); err != nil {
+				logrus.Fatalf("error while binding flags: %v", err)
 				cmdEvent.AddErrorMessage(err)
 				tracker.Track(cmdEvent)
 			}
 
-			if err := viper.BindPFlags(cmd.Flags()); err != nil {
-				logrus.Fatalf("error while binding flags: %v", err)
+			if err := flags.LoadAndMergeCommandFlags("serve"); err != nil {
+				logrus.Fatalf("failed to load flags from configuration: %v", err)
 				cmdEvent.AddErrorMessage(err)
 				tracker.Track(cmdEvent)
 			}

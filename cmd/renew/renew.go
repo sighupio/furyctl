@@ -34,13 +34,13 @@ var ErrDownloadDependenciesFailed = errors.New("dependencies download failed")
 func preRun(cmd *cobra.Command) analytics.Event {
 	cmdEvent := analytics.NewCommandEvent(cobrax.GetFullname(cmd))
 
-	// Load and validate flags from configuration FIRST.
-	if err := flags.LoadAndMergeCommandFlags("renew"); err != nil {
-		logrus.Fatalf("failed to load flags from configuration: %v", err)
-	}
-
+	// Bind the flags first: a flag on the command line has precedence over the configuration file.
 	if err := viper.BindPFlags(cmd.Flags()); err != nil {
 		logrus.Fatalf("error while binding flags: %v", err)
+	}
+
+	if err := flags.LoadAndMergeCommandFlags("renew"); err != nil {
+		logrus.Fatalf("failed to load flags from configuration: %v", err)
 	}
 
 	return cmdEvent

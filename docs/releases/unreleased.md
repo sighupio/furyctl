@@ -10,6 +10,7 @@ Welcome to the latest release of `furyctl` maintained by SIGHUP by ReeVo team.
 ## Bug fixes 🐞
 
 - [[#743](https://github.com/sighupio/furyctl/pull/743)] All kinds: `apply --start-from` now stops when the configuration has changes to a phase before the selected one. Before this fix furyctl skipped those changes and wrote the new configuration to the cluster, so the change was lost and the next `diff` did not show it as pending.
+- [[#746](https://github.com/sighupio/furyctl/issues/746)] All kinds: a flag that you give on the command line now has precedence over the same flag in the `flags` section of `furyctl.yaml`. The documented priority is `furyctl.yaml` < environment variable < command line. Before this release the commands `diff`, `create config`, `get cluster-info` and `get upgrade-paths` read the configuration file first, thus the configuration file had the precedence. If you want the value of the configuration file, do not give the flag on the command line.
 
 
 ## Breaking Changes 💔
