@@ -39,7 +39,12 @@ func NewKubeconfigCmd() *cobra.Command {
 	kubeconfigCmd := &cobra.Command{
 		Args:  cobra.NoArgs,
 		Use:   "kubeconfig",
-		Short: "Get kubeconfig from a cluster",
+		Short: "Get the cluster admin kubeconfig (admin.conf)",
+		Long: "Download the admin kubeconfig (admin.conf) from the cluster to the working directory. " +
+			"The file is named \"kubeconfig\".\n\n" +
+			"This command downloads the admin kubeconfig only. " +
+			"The apply command writes the per-user kubeconfigs. " +
+			"To renew kubeconfigs, use \"furyctl renew kubeconfigs\".",
 		PreRun: func(cmd *cobra.Command, _ []string) {
 			cmdEvent = analytics.NewCommandEvent(cobrax.GetFullname(cmd))
 

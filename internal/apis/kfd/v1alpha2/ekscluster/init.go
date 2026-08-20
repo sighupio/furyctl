@@ -30,11 +30,11 @@ func init() {
 		cluster.NewKubeconfigFactory[*KubeconfigGetter, private.EksclusterKfdV1Alpha2](&KubeconfigGetter{}),
 	)
 
-	cluster.RegisterCertificatesRenewerFactory(
+	cluster.RegisterRenewerFactory(
 		distribution.APIVersionV1Alpha2,
 		distribution.EKSClusterKind,
-		cluster.NewCertificatesRenewerFactory[*CertificatesRenewer, private.EksclusterKfdV1Alpha2](
-			&CertificatesRenewer{},
+		cluster.NewRenewerFactory[*cluster.UnsupportedRenewer, private.EksclusterKfdV1Alpha2](
+			&cluster.UnsupportedRenewer{Kind: distribution.EKSClusterKind},
 		),
 	)
 }
