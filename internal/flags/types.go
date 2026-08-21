@@ -102,20 +102,22 @@ func GetSupportedFlags() SupportedFlags {
 		},
 		CommandDelete: {
 			"phase":               FlagTypeString,
-			"startFrom":           FlagTypeString,
 			"distroLocation":      FlagTypeString,
 			"distroPatches":       FlagTypeString,
 			"binPath":             FlagTypeString,
 			"dryRun":              FlagTypeBool,
 			"skipVpnConfirmation": FlagTypeBool,
-			"autoApprove":         FlagTypeBool,
+			"vpnAutoConnect":      FlagTypeBool,
 			"airgapBundle":        FlagTypeString,
 			"forceExtract":        FlagTypeBool,
+			"skipDepsDownload":    FlagTypeBool,
+			"skipDepsValidation":  FlagTypeBool,
+			// `delete cluster --force` is a boolean. `apply --force` takes a list.
+			"force": FlagTypeBool,
 		},
+		// Only `create pki` reads a configuration file. `create config` stops when the file is
+		// already present, thus its flags can never come from that file.
 		CommandCreate: {
-			"name":         FlagTypeString,
-			"version":      FlagTypeString,
-			"provider":     FlagTypeString,
 			"path":         FlagTypeString,
 			"etcd":         FlagTypeBool,
 			"controlplane": FlagTypeBool,
@@ -127,6 +129,9 @@ func GetSupportedFlags() SupportedFlags {
 			"skipDepsValidation": FlagTypeBool,
 			"airgapBundle":       FlagTypeString,
 			"forceExtract":       FlagTypeBool,
+			"format":             FlagTypeString,
+			"from":               FlagTypeString,
+			"kind":               FlagTypeString,
 		},
 		CommandDiff: {
 			"phase":               FlagTypeString,
@@ -136,6 +141,7 @@ func GetSupportedFlags() SupportedFlags {
 			"upgradePathLocation": FlagTypeString,
 			"airgapBundle":        FlagTypeString,
 			"forceExtract":        FlagTypeBool,
+			"skipDepsDownload":    FlagTypeBool,
 		},
 		CommandValidate: {
 			"distroLocation": FlagTypeString,

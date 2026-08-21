@@ -133,7 +133,7 @@ func TestCamelToKebab(t *testing.T) {
 		{"postApplyPhases", "post-apply-phases"},
 		{"noTty", "no-tty"},
 		{"startFrom", "start-from"},
-		{"autoApprove", "auto-approve"},
+		{"airgapBundle", "airgap-bundle"},
 		// Edge cases
 		{"debug", "debug"},     // No camelCase
 		{"timeout", "timeout"}, // No camelCase
