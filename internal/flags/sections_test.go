@@ -7,8 +7,6 @@
 package flags_test
 
 import (
-	"reflect"
-	"strings"
 	"testing"
 
 	"github.com/spf13/cobra"
@@ -19,26 +17,17 @@ import (
 	"github.com/sighupio/furyctl/internal/flags"
 )
 
-// The merger must know each section of the `flags` field. The section must also have flags that
-// furyctl supports. furyctl parses a section with no map, or with an empty map, and then drops it.
-// The `tools` section had this fault.
+// Each section that furyctl supports must list its flags. A section with an empty map reaches the
+// user as a section that furyctl parses and then drops. The `tools` section had this fault.
 func TestEverySectionHasSupportedFlags(t *testing.T) {
 	t.Parallel()
 
-	merger := flags.NewMerger()
-	cfg := reflect.TypeOf(flags.FlagsConfig{})
+	supported := flags.GetSupportedFlags()
 
-	for i := range cfg.NumField() {
-		section := strings.Split(cfg.Field(i).Tag.Get("yaml"), ",")[0]
+	require.NotEmpty(t, supported, "furyctl supports no section at all")
 
-		t.Run(section, func(t *testing.T) {
-			t.Parallel()
-
-			supported := merger.GetSupportedFlagsForCommand(section)
-
-			require.NotNil(t, supported, "the merger does not know the %q section", section)
-			assert.NotEmpty(t, supported, "the %q section has no supported flags", section)
-		})
+	for section, sectionFlags := range supported {
+		assert.NotEmpty(t, sectionFlags, "the %q section lists no flag", section)
 	}
 }
 
@@ -69,7 +58,7 @@ func TestMergeIntoViper_CommandSections(t *testing.T) {
 
 			require.NoError(t, viper.BindPFlags(cmd.Flags()))
 
-			cfg := sectionConfig(tc.section, map[string]any{tc.flag: "/from-config"})
+			cfg := flags.FlagsConfig{tc.section: {tc.flag: "/from-config"}}
 			require.NoError(t, flags.NewMerger().MergeIntoViper(cfg, tc.section))
 
 			assert.Equal(t, "/from-config", viper.GetString(tc.key))
@@ -77,26 +66,34 @@ func TestMergeIntoViper_CommandSections(t *testing.T) {
 	}
 }
 
-// sectionConfig puts the given flags in the named section of a FlagsConfig.
-func sectionConfig(section string, values map[string]any) *flags.FlagsConfig {
-	cfg := &flags.FlagsConfig{}
+// furyctl merges the global flags for a command that it does not support, and nothing else. The
+// merge relies on the absent entry in the supported flags, thus this test keeps that behavior.
+func TestMergeIntoViper_UnsupportedCommandGetsGlobalOnly(t *testing.T) {
+	cmd := &cobra.Command{Use: "serve"}
+	cmd.Flags().String("outdir", "", "")
+	cmd.Flags().String("address", "", "")
+	require.NoError(t, cmd.ParseFlags([]string{}))
 
-	switch section {
-	case flags.CommandValidate:
-		cfg.Validate = values
+	viper.Reset()
+	t.Cleanup(viper.Reset)
 
-	case flags.CommandDownload:
-		cfg.Download = values
+	require.NoError(t, viper.BindPFlags(cmd.Flags()))
 
-	case flags.CommandConnect:
-		cfg.Connect = values
-
-	case flags.CommandRenew:
-		cfg.Renew = values
-
-	case flags.CommandDump:
-		cfg.Dump = values
+	cfg := flags.FlagsConfig{
+		flags.CommandGlobal: {"outdir": "/from-global"},
+		"serve":             {"address": "1.2.3.4"},
 	}
+	require.NoError(t, flags.NewMerger().MergeIntoViper(cfg, "serve"))
 
-	return cfg
+	assert.Equal(t, "/from-global", viper.GetString("outdir"))
+	assert.Empty(t, viper.GetString("address"), "furyctl must not merge the flags of a command that it does not support")
+}
+
+// A configuration without a `flags` field gives no error and no validation message.
+func TestNilConfigIsHarmless(t *testing.T) {
+	viper.Reset()
+	t.Cleanup(viper.Reset)
+
+	require.NoError(t, flags.NewMerger().MergeIntoViper(nil, flags.CommandApply))
+	assert.Empty(t, flags.NewValidator().Validate(nil))
 }

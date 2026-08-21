@@ -126,17 +126,15 @@ func (m *Manager) LoadAndMergeGlobalFlags(configPath string) error {
 	}
 
 	// Validate only global flags.
-	if result.Flags.Global != nil {
-		validationErrors := m.validator.validateCommandFlags(result.Flags.Global, "global")
-		if err := m.handleValidationErrors(
-			validationErrors, ErrGlobalFlagsValidationFailed, "global flags configuration",
-		); err != nil {
-			return err
-		}
+	validationErrors := m.validator.validateCommandFlags(result.Flags[CommandGlobal], CommandGlobal)
+	if err := m.handleValidationErrors(
+		validationErrors, ErrGlobalFlagsValidationFailed, "global flags configuration",
+	); err != nil {
+		return err
 	}
 
 	// Merge only global flags.
-	if err := m.merger.MergeGlobalFlags(result.Flags); err != nil {
+	if err := m.merger.mergeCommandFlags(result.Flags[CommandGlobal], CommandGlobal); err != nil {
 		return fmt.Errorf("failed to merge global flags: %w", err)
 	}
 

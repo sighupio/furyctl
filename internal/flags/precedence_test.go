@@ -35,7 +35,7 @@ func TestMergeIntoViper_CommandLineFlagWins(t *testing.T) {
 
 	require.NoError(t, viper.BindPFlags(cmd.Flags()))
 
-	cfg := &flags.FlagsConfig{Apply: map[string]any{"distroLocation": "/from-config"}}
+	cfg := flags.FlagsConfig{flags.CommandApply: {"distroLocation": "/from-config"}}
 	require.NoError(t, flags.NewMerger().MergeIntoViper(cfg, flags.CommandApply))
 
 	assert.Equal(t, "/from-cli", viper.GetString("distro-location"))
