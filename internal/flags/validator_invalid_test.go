@@ -22,15 +22,15 @@ func TestValidator_InvalidFlags_ShouldBeFatal(t *testing.T) {
 
 	tests := []struct {
 		name           string
-		flagsConfig    *flags.FlagsConfig
+		flagsConfig    flags.FlagsConfig
 		expectedErrors int
 		expectFatal    bool
 		errorContains  []string
 	}{
 		{
 			name: "invalid global flags should be fatal",
-			flagsConfig: &flags.FlagsConfig{
-				Global: map[string]any{
+			flagsConfig: flags.FlagsConfig{
+				flags.CommandGlobal: {
 					"debug":          true,  // Valid.
 					"invalidFlag":    "bad", // Invalid.
 					"anotherBadFlag": 42,    // Invalid.
@@ -42,8 +42,8 @@ func TestValidator_InvalidFlags_ShouldBeFatal(t *testing.T) {
 		},
 		{
 			name: "invalid apply flags should be fatal",
-			flagsConfig: &flags.FlagsConfig{
-				Apply: map[string]any{
+			flagsConfig: flags.FlagsConfig{
+				flags.CommandApply: {
 					"dryRun":          true,  // Valid.
 					"unsupportedFlag": "bad", // Invalid.
 					"fakeApplyFlag":   false, // Invalid.
@@ -55,11 +55,21 @@ func TestValidator_InvalidFlags_ShouldBeFatal(t *testing.T) {
 		},
 		{
 			name: "all valid flags should pass",
-			flagsConfig: &flags.FlagsConfig{
-				Global: map[string]any{
-					"debug":       true,
-					"log":         "/tmp/furyctl.log",
-					"gitProtocol": "ssh",
+			flagsConfig: flags.FlagsConfig{
+				flags.CommandGlobal: {
+					"debug":            true,
+					"disableAnalytics": false,
+					"noTty":            false,
+					"workdir":          "/tmp",
+					"outdir":           "/tmp/out",
+					"log":              "/tmp/furyctl.log",
+					"gitProtocol":      "ssh",
+				},
+				flags.CommandApply: {
+					"phase":              "infrastructure",
+					"dryRun":             true,
+					"skipDepsDownload":   false,
+					"skipDepsValidation": false,
 				},
 			},
 			expectedErrors: 0,
@@ -67,8 +77,8 @@ func TestValidator_InvalidFlags_ShouldBeFatal(t *testing.T) {
 		},
 		{
 			name: "mixed valid and invalid flags should be fatal",
-			flagsConfig: &flags.FlagsConfig{
-				Apply: map[string]any{
+			flagsConfig: flags.FlagsConfig{
+				flags.CommandApply: {
 					"dryRun":  true,    // Valid.
 					"phase":   "infra", // Valid.
 					"badFlag": "oops",  // Invalid.
@@ -120,8 +130,8 @@ func TestValidator_InvalidFlags_ErrorMessages(t *testing.T) {
 	t.Parallel()
 
 	validator := flags.NewValidator()
-	flagsConfig := &flags.FlagsConfig{
-		Global: map[string]any{
+	flagsConfig := flags.FlagsConfig{
+		flags.CommandGlobal: {
 			"invalidFlag": "value",
 		},
 	}
@@ -137,55 +147,4 @@ func TestValidator_InvalidFlags_ErrorMessages(t *testing.T) {
 	assert.Equal(t, "value", err.Value)
 	assert.Contains(t, err.Reason, "flag 'invalidFlag' is not supported for 'global' configuration")
 	assert.Contains(t, err.Reason, "Check documentation for supported flags")
-}
-
-func TestValidator_SupportedFlags_DoNotCauseFatalErrors(t *testing.T) {
-	t.Parallel()
-
-	tests := []struct {
-		name        string
-		flagsConfig *flags.FlagsConfig
-	}{
-		{
-			name: "all global flags should be valid",
-			flagsConfig: &flags.FlagsConfig{
-				Global: map[string]any{
-					"debug":            true,
-					"disableAnalytics": false,
-					"noTty":            false,
-					"workdir":          "/tmp",
-					"outdir":           "/tmp/out",
-					"log":              "/tmp/furyctl.log",
-					"gitProtocol":      "https",
-				},
-			},
-		},
-		{
-			name: "common apply flags should be valid",
-			flagsConfig: &flags.FlagsConfig{
-				Apply: map[string]any{
-					"phase":              "infrastructure",
-					"dryRun":             true,
-					"skipDepsDownload":   false,
-					"skipDepsValidation": false,
-				},
-			},
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-
-			validator := flags.NewValidator()
-			validationErrors := validator.Validate(tt.flagsConfig)
-
-			// Check that no fatal errors occurred due to unsupported flags.
-			for _, err := range validationErrors {
-				if err.Severity == flags.ValidationSeverityFatal {
-					assert.NotContains(t, err.Reason, "not supported", "Unexpected fatal error for supported flag: %v", err)
-				}
-			}
-		})
-	}
 }

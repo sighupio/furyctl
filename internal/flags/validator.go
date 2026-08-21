@@ -7,6 +7,7 @@ package flags
 import (
 	"errors"
 	"fmt"
+	"maps"
 	"slices"
 	"strings"
 
@@ -38,57 +39,12 @@ func NewValidator() *Validator {
 }
 
 // Validate validates the entire flags configuration.
-func (v *Validator) Validate(flags *FlagsConfig) []ValidationError {
-	var validationErrors []ValidationError
+func (v *Validator) Validate(flags FlagsConfig) []ValidationError {
+	validationErrors := make([]ValidationError, 0, len(flags))
 
-	if flags == nil {
-		return validationErrors
-	}
-
-	// Validate global flags.
-	if flags.Global != nil {
-		validationErrors = append(validationErrors, v.validateCommandFlags(flags.Global, CommandGlobal)...)
-	}
-
-	// Validate command-specific flags.
-	if flags.Apply != nil {
-		validationErrors = append(validationErrors, v.validateCommandFlags(flags.Apply, CommandApply)...)
-	}
-
-	if flags.Delete != nil {
-		validationErrors = append(validationErrors, v.validateCommandFlags(flags.Delete, CommandDelete)...)
-	}
-
-	if flags.Create != nil {
-		validationErrors = append(validationErrors, v.validateCommandFlags(flags.Create, CommandCreate)...)
-	}
-
-	if flags.Get != nil {
-		validationErrors = append(validationErrors, v.validateCommandFlags(flags.Get, CommandGet)...)
-	}
-
-	if flags.Diff != nil {
-		validationErrors = append(validationErrors, v.validateCommandFlags(flags.Diff, CommandDiff)...)
-	}
-
-	if flags.Validate != nil {
-		validationErrors = append(validationErrors, v.validateCommandFlags(flags.Validate, CommandValidate)...)
-	}
-
-	if flags.Download != nil {
-		validationErrors = append(validationErrors, v.validateCommandFlags(flags.Download, CommandDownload)...)
-	}
-
-	if flags.Connect != nil {
-		validationErrors = append(validationErrors, v.validateCommandFlags(flags.Connect, CommandConnect)...)
-	}
-
-	if flags.Renew != nil {
-		validationErrors = append(validationErrors, v.validateCommandFlags(flags.Renew, CommandRenew)...)
-	}
-
-	if flags.Dump != nil {
-		validationErrors = append(validationErrors, v.validateCommandFlags(flags.Dump, CommandDump)...)
+	// Sort the sections so that the messages keep the same order between runs.
+	for _, section := range slices.Sorted(maps.Keys(flags)) {
+		validationErrors = append(validationErrors, v.validateCommandFlags(flags[section], section)...)
 	}
 
 	// Cross-validation: check for conflicting flags.
@@ -97,66 +53,24 @@ func (v *Validator) Validate(flags *FlagsConfig) []ValidationError {
 	return validationErrors
 }
 
-// ValidateIndividualFlag is a public wrapper around validateFlagValue, exposed for testing.
-func (v *Validator) ValidateIndividualFlag(flagName string, value any, flagInfo FlagInfo) error {
-	return v.validateFlagValue(flagName, value, flagInfo)
-}
-
 // validateCommandFlags validates flags for a specific command.
 func (v *Validator) validateCommandFlags(flagsMap map[string]any, command string) []ValidationError {
 	var validationErrors []ValidationError
 
-	var supportedFlagsMap map[string]FlagInfo
-
-	switch command {
-	case CommandGlobal:
-		supportedFlagsMap = v.supportedFlags.Global
-
-	case CommandApply:
-		supportedFlagsMap = v.supportedFlags.Apply
-
-	case CommandDelete:
-		supportedFlagsMap = v.supportedFlags.Delete
-
-	case CommandCreate:
-		supportedFlagsMap = v.supportedFlags.Create
-
-	case CommandGet:
-		supportedFlagsMap = v.supportedFlags.Get
-
-	case CommandDiff:
-		supportedFlagsMap = v.supportedFlags.Diff
-
-	case CommandValidate:
-		supportedFlagsMap = v.supportedFlags.Validate
-
-	case CommandDownload:
-		supportedFlagsMap = v.supportedFlags.Download
-
-	case CommandConnect:
-		supportedFlagsMap = v.supportedFlags.Connect
-
-	case CommandRenew:
-		supportedFlagsMap = v.supportedFlags.Renew
-
-	case CommandDump:
-		supportedFlagsMap = v.supportedFlags.Dump
-
-	default:
-		validationErrors = append(validationErrors, ValidationError{
+	supportedFlagsMap, supported := v.supportedFlags[command]
+	if !supported {
+		return []ValidationError{{
 			Command:  command,
 			Flag:     "",
 			Value:    nil,
 			Reason:   "unsupported command",
 			Severity: ValidationSeverityFatal,
-		})
-
-		return validationErrors
+		}}
 	}
 
 	for flagName, value := range flagsMap {
 		// Check if flag is supported.
-		flagInfo, supported := supportedFlagsMap[flagName]
+		flagType, supported := supportedFlagsMap[flagName]
 		if !supported {
 			validationErrors = append(validationErrors, ValidationError{
 				Command: command,
@@ -177,7 +91,7 @@ func (v *Validator) validateCommandFlags(flagsMap map[string]any, command string
 		}
 
 		// Validate the value type and content.
-		if err := v.validateFlagValue(flagName, value, flagInfo); err != nil {
+		if err := v.validateFlagValue(flagName, value, flagType); err != nil {
 			validationErrors = append(validationErrors, ValidationError{
 				Command:  command,
 				Flag:     flagName,
@@ -192,9 +106,9 @@ func (v *Validator) validateCommandFlags(flagsMap map[string]any, command string
 }
 
 // validateFlagValue validates a single flag's value.
-func (v *Validator) validateFlagValue(flagName string, value any, flagInfo FlagInfo) error {
+func (v *Validator) validateFlagValue(flagName string, value any, flagType FlagType) error {
 	// Basic type validation.
-	switch flagInfo.Type {
+	switch flagType {
 	case FlagTypeBool:
 		if _, ok := value.(bool); !ok {
 			if str, ok := value.(string); !ok {
@@ -228,7 +142,7 @@ func (v *Validator) validateFlagValue(flagName string, value any, flagInfo FlagI
 		_ = value // No-op to satisfy WSL linter.
 
 	default:
-		logrus.Debugf("flag %q has unknown type %v; skipping basic type validation", flagName, flagInfo.Type)
+		logrus.Debugf("flag %q has unknown type %v; skipping basic type validation", flagName, flagType)
 	}
 
 	// Specific flag validations.
@@ -287,84 +201,42 @@ func (*Validator) validateSpecificFlag(flagName string, value any) error {
 }
 
 // validateFlagCombinations validates combinations of flags that might be incompatible.
-func (*Validator) validateFlagCombinations(flags *FlagsConfig) []ValidationError {
-	var validationErrors []ValidationError
+func (*Validator) validateFlagCombinations(flags FlagsConfig) []ValidationError {
+	apply := flags[CommandApply]
 
-	// Check apply-specific flag combinations.
-	if flags.Apply != nil {
-		// Check skipVpnConfirmation vs vpnAutoConnect.
-		if skipVpn, hasSkipVpn := flags.Apply["skipVpnConfirmation"]; hasSkipVpn {
-			if autoConnect, hasAutoConnect := flags.Apply["vpnAutoConnect"]; hasAutoConnect {
-				if skipVpnBool, ok := skipVpn.(bool); ok && skipVpnBool {
-					if autoConnectBool, ok := autoConnect.(bool); ok && autoConnectBool {
-						validationErrors = append(validationErrors, ValidationError{
-							Command:  CommandApply,
-							Flag:     "vpnAutoConnect",
-							Value:    autoConnect,
-							Reason:   "vpnAutoConnect=true conflicts with skipVpnConfirmation=true. Use only one of these flags.",
-							Severity: ValidationSeverityFatal,
-						})
-					}
-				}
-			}
-		}
+	isTrue := func(name string) bool { v, ok := apply[name].(bool); return ok && v }
+	isSet := func(name string) bool { v, ok := apply[name].(string); return ok && v != "" }
+	hasItems := func(name string) bool { v, ok := apply[name].([]any); return ok && len(v) > 0 }
+	phaseSet := isSet("phase") && apply["phase"] != "all"
 
-		// Check upgrade vs upgradeNode.
-		if upgrade, hasUpgrade := flags.Apply["upgrade"]; hasUpgrade {
-			if upgradeNode, hasUpgradeNode := flags.Apply["upgradeNode"]; hasUpgradeNode {
-				if upgradeBool, ok := upgrade.(bool); ok && upgradeBool {
-					if upgradeNodeStr, ok := upgradeNode.(string); ok && upgradeNodeStr != "" {
-						validationErrors = append(validationErrors, ValidationError{
-							Command: CommandApply,
-							Flag:    "upgradeNode",
-							Value:   upgradeNode,
-							Reason: "upgradeNode cannot be used when upgrade=true. " +
-								"Use either 'upgrade' for all nodes or 'upgradeNode' for a specific node.",
-							Severity: ValidationSeverityFatal,
-						})
-					}
-				}
-			}
-		}
+	var errs []ValidationError
 
-		// Check phase vs startFrom.
-		if phase, hasPhase := flags.Apply["phase"]; hasPhase {
-			if startFrom, hasStartFrom := flags.Apply["startFrom"]; hasStartFrom {
-				if phaseStr, ok := phase.(string); ok && phaseStr != "" && phaseStr != "all" {
-					if startFromStr, ok := startFrom.(string); ok && startFromStr != "" {
-						validationErrors = append(validationErrors, ValidationError{
-							Command: CommandApply,
-							Flag:    "startFrom",
-							Value:   startFrom,
-							Reason: "startFrom cannot be used when phase is specified (and not 'all'). " +
-								"Use either 'phase' or 'startFrom', not both.",
-							Severity: ValidationSeverityFatal,
-						})
-					}
-				}
-			}
-		}
-
-		// Check phase vs postApplyPhases.
-		if phase, hasPhase := flags.Apply["phase"]; hasPhase {
-			if postApplyPhases, hasPostApply := flags.Apply["postApplyPhases"]; hasPostApply {
-				if phaseStr, ok := phase.(string); ok && phaseStr != "" && phaseStr != "all" {
-					if phases, ok := postApplyPhases.([]any); ok && len(phases) > 0 {
-						validationErrors = append(validationErrors, ValidationError{
-							Command: CommandApply,
-							Flag:    "postApplyPhases",
-							Value:   postApplyPhases,
-							Reason: "postApplyPhases cannot be used when phase is specified (and not 'all'). " +
-								"Use either 'phase' or 'postApplyPhases', not both.",
-							Severity: ValidationSeverityFatal,
-						})
-					}
-				}
-			}
-		}
+	add := func(flag, reason string) {
+		errs = append(errs, ValidationError{
+			Command: CommandApply, Flag: flag, Value: apply[flag], Reason: reason, Severity: ValidationSeverityFatal,
+		})
 	}
 
-	return validationErrors
+	if isTrue("skipVpnConfirmation") && isTrue("vpnAutoConnect") {
+		add("vpnAutoConnect", "vpnAutoConnect=true conflicts with skipVpnConfirmation=true. Use only one of these flags.")
+	}
+
+	if isTrue("upgrade") && isSet("upgradeNode") {
+		add("upgradeNode", "upgradeNode cannot be used when upgrade=true. "+
+			"Use either 'upgrade' for all nodes or 'upgradeNode' for a specific node.")
+	}
+
+	if phaseSet && isSet("startFrom") {
+		add("startFrom", "startFrom cannot be used when phase is specified (and not 'all'). "+
+			"Use either 'phase' or 'startFrom', not both.")
+	}
+
+	if phaseSet && hasItems("postApplyPhases") {
+		add("postApplyPhases", "postApplyPhases cannot be used when phase is specified (and not 'all'). "+
+			"Use either 'phase' or 'postApplyPhases', not both.")
+	}
+
+	return errs
 }
 
 // getValidationSeverity determines the severity level for a validation error.

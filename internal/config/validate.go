@@ -31,7 +31,6 @@ import (
 // Static error definitions for linting compliance.
 var (
 	ErrFlagsMustBeObject            = errors.New("flags section must be an object")
-	ErrUnsupportedFlagsCommand      = errors.New("unsupported flags command")
 	ErrFlagsValidationFailed        = errors.New("flags validation failed")
 	ErrExpandedConfigurationNotAMap = errors.New("expanded configuration is not a map[string]any")
 	ErrReadingSpec                  = errors.New("error reading spec from kfd.yaml")
@@ -302,60 +301,22 @@ func containsDynamicPattern(s string) bool {
 
 // validateFlagsSection validates the flags section using furyctl-specific validation rules.
 func validateFlagsSection(flagsSection any) error {
-	// Convert to FlagsConfig type for validation.
 	flagsMap, ok := flagsSection.(map[string]any)
 	if !ok {
 		return ErrFlagsMustBeObject
 	}
 
-	// Convert to internal flags structure for validation.
-	flagsConfig := &flags.FlagsConfig{}
+	// Convert to the internal flags structure for validation. The validator reports a section
+	// that furyctl does not support.
+	flagsConfig := flags.FlagsConfig{}
 
-	// Extract and validate each command section.
-	for command, commandFlags := range flagsMap {
-		commandFlagsMap, ok := commandFlags.(map[string]any)
+	for section, sectionFlags := range flagsMap {
+		values, ok := sectionFlags.(map[string]any)
 		if !ok {
-			return fmt.Errorf("%w: flags.%s must be an object", ErrFlagsMustBeObject, command)
+			return fmt.Errorf("%w: flags.%s must be an object", ErrFlagsMustBeObject, section)
 		}
 
-		// Set the command flags in the appropriate section.
-		switch command {
-		case flags.CommandGlobal:
-			flagsConfig.Global = commandFlagsMap
-
-		case flags.CommandApply:
-			flagsConfig.Apply = commandFlagsMap
-
-		case flags.CommandDelete:
-			flagsConfig.Delete = commandFlagsMap
-
-		case flags.CommandCreate:
-			flagsConfig.Create = commandFlagsMap
-
-		case flags.CommandGet:
-			flagsConfig.Get = commandFlagsMap
-
-		case flags.CommandDiff:
-			flagsConfig.Diff = commandFlagsMap
-
-		case flags.CommandValidate:
-			flagsConfig.Validate = commandFlagsMap
-
-		case flags.CommandDownload:
-			flagsConfig.Download = commandFlagsMap
-
-		case flags.CommandConnect:
-			flagsConfig.Connect = commandFlagsMap
-
-		case flags.CommandRenew:
-			flagsConfig.Renew = commandFlagsMap
-
-		case flags.CommandDump:
-			flagsConfig.Dump = commandFlagsMap
-
-		default:
-			return fmt.Errorf("%w: %s", ErrUnsupportedFlagsCommand, command)
-		}
+		flagsConfig[section] = values
 	}
 
 	// Validate flags using the flags package validator.

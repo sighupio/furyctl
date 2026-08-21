@@ -4,45 +4,14 @@
 
 package flags
 
-// FlagsConfig represents the flags section in a furyctl.yaml file.
+// FlagsConfig holds the sections of the `flags` field of furyctl.yaml, keyed by the command name.
 //
 //nolint:revive // FlagsConfig name is intentionally explicit for external API clarity
-type FlagsConfig struct {
-	Global   map[string]any `yaml:"global,omitempty"`
-	Apply    map[string]any `yaml:"apply,omitempty"`
-	Delete   map[string]any `yaml:"delete,omitempty"`
-	Create   map[string]any `yaml:"create,omitempty"`
-	Get      map[string]any `yaml:"get,omitempty"`
-	Diff     map[string]any `yaml:"diff,omitempty"`
-	Validate map[string]any `yaml:"validate,omitempty"`
-	Download map[string]any `yaml:"download,omitempty"`
-	Connect  map[string]any `yaml:"connect,omitempty"`
-	Renew    map[string]any `yaml:"renew,omitempty"`
-	Dump     map[string]any `yaml:"dump,omitempty"`
-}
+type FlagsConfig map[string]map[string]any
 
-// SupportedFlags defines the mapping between flag names and their expected types
-// This helps with validation and type conversion.
-type SupportedFlags struct {
-	Global   map[string]FlagInfo
-	Apply    map[string]FlagInfo
-	Delete   map[string]FlagInfo
-	Create   map[string]FlagInfo
-	Get      map[string]FlagInfo
-	Diff     map[string]FlagInfo
-	Validate map[string]FlagInfo
-	Download map[string]FlagInfo
-	Connect  map[string]FlagInfo
-	Renew    map[string]FlagInfo
-	Dump     map[string]FlagInfo
-}
-
-// FlagInfo contains metadata about a supported flag.
-type FlagInfo struct {
-	Type         FlagType
-	DefaultValue any
-	Description  string
-}
+// SupportedFlags holds the flags that furyctl supports in each section, keyed by the command name.
+// A section that is absent from this map is not a section that furyctl supports.
+type SupportedFlags map[string]map[string]FlagType
 
 // FlagType represents the type of a flag value.
 type FlagType string
@@ -53,11 +22,6 @@ const (
 	FlagTypeInt         FlagType = "int"
 	FlagTypeStringSlice FlagType = "stringSlice"
 	FlagTypeDuration    FlagType = "duration"
-
-	// DefaultTimeoutSeconds is the default timeout for cluster operations, in seconds.
-	DefaultTimeoutSeconds = 3600
-	// DefaultPodRunningCheckTimeout is the default timeout for the pod-running check, in seconds.
-	DefaultPodRunningCheckTimeout = 300
 
 	// ValidationSeverityFatal indicates a critical error that should stop execution.
 	ValidationSeverityFatal ValidationSeverity = "fatal"
@@ -74,13 +38,13 @@ type ConfigWithFlags struct {
 	Kind       string         `yaml:"kind"`
 	Metadata   map[string]any `yaml:"metadata"`
 	Spec       map[string]any `yaml:"spec"`
-	Flags      *FlagsConfig   `yaml:"flags,omitempty"`
+	Flags      FlagsConfig    `yaml:"flags,omitempty"`
 }
 
 // LoadResult contains the result of loading and processing flags.
 type LoadResult struct {
 	ConfigPath string
-	Flags      *FlagsConfig
+	Flags      FlagsConfig
 	Errors     []error
 }
 
@@ -105,118 +69,102 @@ func (e ValidationError) Error() string {
 // GetSupportedFlags returns the complete mapping of supported flags for all commands.
 func GetSupportedFlags() SupportedFlags {
 	return SupportedFlags{
-		Global: map[string]FlagInfo{
-			"debug":            {Type: FlagTypeBool, DefaultValue: false, Description: "Enable debug output"},
-			"disableAnalytics": {Type: FlagTypeBool, DefaultValue: false, Description: "Disable analytics"},
-			"noTty":            {Type: FlagTypeBool, DefaultValue: false, Description: "Disable TTY"},
-			"workdir":          {Type: FlagTypeString, DefaultValue: "", Description: "Working directory"},
-			"outdir":           {Type: FlagTypeString, DefaultValue: "", Description: "Output directory"},
-			"log":              {Type: FlagTypeString, DefaultValue: "", Description: "Log file path"},
-			"gitProtocol":      {Type: FlagTypeString, DefaultValue: "https", Description: "Git protocol to use"},
+		CommandGlobal: {
+			"debug":            FlagTypeBool,
+			"disableAnalytics": FlagTypeBool,
+			"noTty":            FlagTypeBool,
+			"workdir":          FlagTypeString,
+			"outdir":           FlagTypeString,
+			"log":              FlagTypeString,
+			"gitProtocol":      FlagTypeString,
 		},
-		Apply: map[string]FlagInfo{
-			"phase": {Type: FlagTypeString, DefaultValue: "", Description: "Limit execution to specific phase"},
-			"startFrom": {
-				Type:         FlagTypeString,
-				DefaultValue: "",
-				Description:  "Start execution from specific phase",
-			},
-			"distroLocation":      {Type: FlagTypeString, DefaultValue: "", Description: "Distribution location"},
-			"distroPatches":       {Type: FlagTypeString, DefaultValue: "", Description: "Distribution patches location"},
-			"binPath":             {Type: FlagTypeString, DefaultValue: "", Description: "Binary path"},
-			"skipNodesUpgrade":    {Type: FlagTypeBool, DefaultValue: false, Description: "Skip nodes upgrade"},
-			"skipDepsDownload":    {Type: FlagTypeBool, DefaultValue: false, Description: "Skip dependencies download"},
-			"skipDepsValidation":  {Type: FlagTypeBool, DefaultValue: false, Description: "Skip dependencies validation"},
-			"dryRun":              {Type: FlagTypeBool, DefaultValue: false, Description: "Dry run mode"},
-			"vpnAutoConnect":      {Type: FlagTypeBool, DefaultValue: false, Description: "Auto connect VPN"},
-			"skipVpnConfirmation": {Type: FlagTypeBool, DefaultValue: false, Description: "Skip VPN confirmation"},
-			"force":               {Type: FlagTypeStringSlice, DefaultValue: []string{}, Description: "Force options"},
-			"postApplyPhases":     {Type: FlagTypeStringSlice, DefaultValue: []string{}, Description: "Post apply phases"},
-			"timeout": {
-				Type:         FlagTypeInt,
-				DefaultValue: DefaultTimeoutSeconds,
-				Description:  "Timeout in seconds",
-			},
-			"podRunningCheckTimeout": {
-				Type:         FlagTypeInt,
-				DefaultValue: DefaultPodRunningCheckTimeout,
-				Description:  "Pod running check timeout",
-			},
-			"upgrade":             {Type: FlagTypeBool, DefaultValue: false, Description: "Enable upgrade mode"},
-			"upgradePathLocation": {Type: FlagTypeString, DefaultValue: "", Description: "Upgrade path location"},
-			"upgradeNode":         {Type: FlagTypeString, DefaultValue: "", Description: "Specific node to upgrade"},
-			"airgapBundle":        {Type: FlagTypeString, DefaultValue: "", Description: "Air-gapped bundle path"},
-			"forceExtract":        {Type: FlagTypeBool, DefaultValue: false, Description: "Force bundle re-extraction"},
+		CommandApply: {
+			"phase":                  FlagTypeString,
+			"startFrom":              FlagTypeString,
+			"distroLocation":         FlagTypeString,
+			"distroPatches":          FlagTypeString,
+			"binPath":                FlagTypeString,
+			"skipNodesUpgrade":       FlagTypeBool,
+			"skipDepsDownload":       FlagTypeBool,
+			"skipDepsValidation":     FlagTypeBool,
+			"dryRun":                 FlagTypeBool,
+			"vpnAutoConnect":         FlagTypeBool,
+			"skipVpnConfirmation":    FlagTypeBool,
+			"force":                  FlagTypeStringSlice,
+			"postApplyPhases":        FlagTypeStringSlice,
+			"timeout":                FlagTypeInt,
+			"podRunningCheckTimeout": FlagTypeInt,
+			"upgrade":                FlagTypeBool,
+			"upgradePathLocation":    FlagTypeString,
+			"upgradeNode":            FlagTypeString,
+			"airgapBundle":           FlagTypeString,
+			"forceExtract":           FlagTypeBool,
 		},
-		Delete: map[string]FlagInfo{
-			"phase":               {Type: FlagTypeString, DefaultValue: "", Description: "Limit execution to specific phase"},
-			"startFrom":           {Type: FlagTypeString, DefaultValue: "", Description: "Start execution from specific phase"},
-			"distroLocation":      {Type: FlagTypeString, DefaultValue: "", Description: "Distribution location"},
-			"distroPatches":       {Type: FlagTypeString, DefaultValue: "", Description: "Distribution patches location"},
-			"binPath":             {Type: FlagTypeString, DefaultValue: "", Description: "Binary path"},
-			"dryRun":              {Type: FlagTypeBool, DefaultValue: false, Description: "Dry run mode"},
-			"skipVpnConfirmation": {Type: FlagTypeBool, DefaultValue: false, Description: "Skip VPN confirmation"},
-			"autoApprove":         {Type: FlagTypeBool, DefaultValue: false, Description: "Auto approve deletion"},
-			"airgapBundle":        {Type: FlagTypeString, DefaultValue: "", Description: "Air-gapped bundle path"},
-			"forceExtract":        {Type: FlagTypeBool, DefaultValue: false, Description: "Force bundle re-extraction"},
+		CommandDelete: {
+			"phase":               FlagTypeString,
+			"startFrom":           FlagTypeString,
+			"distroLocation":      FlagTypeString,
+			"distroPatches":       FlagTypeString,
+			"binPath":             FlagTypeString,
+			"dryRun":              FlagTypeBool,
+			"skipVpnConfirmation": FlagTypeBool,
+			"autoApprove":         FlagTypeBool,
+			"airgapBundle":        FlagTypeString,
+			"forceExtract":        FlagTypeBool,
 		},
-		Create: map[string]FlagInfo{
-			"name":     {Type: FlagTypeString, DefaultValue: "", Description: "Cluster name"},
-			"version":  {Type: FlagTypeString, DefaultValue: "", Description: "Distribution version"},
-			"provider": {Type: FlagTypeString, DefaultValue: "", Description: "Provider type"},
-			"path":     {Type: FlagTypeString, DefaultValue: "pki", Description: "Path where to save PKI files"},
-			"etcd":     {Type: FlagTypeBool, DefaultValue: false, Description: "Create PKI only for etcd"},
-			"controlplane": {
-				Type:         FlagTypeBool,
-				DefaultValue: false,
-				Description:  "Create PKI only for Kubernetes control plane",
-			},
+		CommandCreate: {
+			"name":         FlagTypeString,
+			"version":      FlagTypeString,
+			"provider":     FlagTypeString,
+			"path":         FlagTypeString,
+			"etcd":         FlagTypeBool,
+			"controlplane": FlagTypeBool,
 		},
-		Get: map[string]FlagInfo{
-			"binPath":            {Type: FlagTypeString, DefaultValue: "", Description: "Binary path"},
-			"distroLocation":     {Type: FlagTypeString, DefaultValue: "", Description: "Distribution location"},
-			"skipDepsDownload":   {Type: FlagTypeBool, DefaultValue: false, Description: "Skip dependencies download"},
-			"skipDepsValidation": {Type: FlagTypeBool, DefaultValue: false, Description: "Skip dependencies validation"},
-			"airgapBundle":       {Type: FlagTypeString, DefaultValue: "", Description: "Air-gapped bundle path"},
-			"forceExtract":       {Type: FlagTypeBool, DefaultValue: false, Description: "Force bundle re-extraction"},
+		CommandGet: {
+			"binPath":            FlagTypeString,
+			"distroLocation":     FlagTypeString,
+			"skipDepsDownload":   FlagTypeBool,
+			"skipDepsValidation": FlagTypeBool,
+			"airgapBundle":       FlagTypeString,
+			"forceExtract":       FlagTypeBool,
 		},
-		Diff: map[string]FlagInfo{
-			"phase":               {Type: FlagTypeString, DefaultValue: "", Description: "Limit execution to specific phase"},
-			"distroLocation":      {Type: FlagTypeString, DefaultValue: "", Description: "Distribution location"},
-			"distroPatches":       {Type: FlagTypeString, DefaultValue: "", Description: "Distribution patches location"},
-			"binPath":             {Type: FlagTypeString, DefaultValue: "", Description: "Binary path"},
-			"upgradePathLocation": {Type: FlagTypeString, DefaultValue: "", Description: "Upgrade path location"},
-			"airgapBundle":        {Type: FlagTypeString, DefaultValue: "", Description: "Air-gapped bundle path"},
-			"forceExtract":        {Type: FlagTypeBool, DefaultValue: false, Description: "Force bundle re-extraction"},
+		CommandDiff: {
+			"phase":               FlagTypeString,
+			"distroLocation":      FlagTypeString,
+			"distroPatches":       FlagTypeString,
+			"binPath":             FlagTypeString,
+			"upgradePathLocation": FlagTypeString,
+			"airgapBundle":        FlagTypeString,
+			"forceExtract":        FlagTypeBool,
 		},
-		Validate: map[string]FlagInfo{
-			"distroLocation": {Type: FlagTypeString, DefaultValue: "", Description: "Distribution location"},
-			"distroPatches":  {Type: FlagTypeString, DefaultValue: "", Description: "Distribution patches location"},
-			"binPath":        {Type: FlagTypeString, DefaultValue: "", Description: "Binary path"},
+		CommandValidate: {
+			"distroLocation": FlagTypeString,
+			"distroPatches":  FlagTypeString,
+			"binPath":        FlagTypeString,
 		},
-		Download: map[string]FlagInfo{
-			"binPath":        {Type: FlagTypeString, DefaultValue: "", Description: "Binary path"},
-			"distroLocation": {Type: FlagTypeString, DefaultValue: "", Description: "Distribution location"},
-			"distroPatches":  {Type: FlagTypeString, DefaultValue: "", Description: "Distribution patches location"},
-			"bundleOutput":   {Type: FlagTypeString, DefaultValue: "", Description: "Bundle tarball output path"},
+		CommandDownload: {
+			"binPath":        FlagTypeString,
+			"distroLocation": FlagTypeString,
+			"distroPatches":  FlagTypeString,
+			"bundleOutput":   FlagTypeString,
 		},
-		Connect: map[string]FlagInfo{
-			"profile": {Type: FlagTypeString, DefaultValue: "", Description: "OpenVPN profile name"},
+		CommandConnect: {
+			"profile": FlagTypeString,
 		},
-		Renew: map[string]FlagInfo{
-			"airgapBundle":       {Type: FlagTypeString, DefaultValue: "", Description: "Air-gapped bundle path"},
-			"forceExtract":       {Type: FlagTypeBool, DefaultValue: false, Description: "Force bundle re-extraction"},
-			"binPath":            {Type: FlagTypeString, DefaultValue: "", Description: "Binary path"},
-			"distroLocation":     {Type: FlagTypeString, DefaultValue: "", Description: "Distribution location"},
-			"skipDepsDownload":   {Type: FlagTypeBool, DefaultValue: false, Description: "Skip dependencies download"},
-			"skipDepsValidation": {Type: FlagTypeBool, DefaultValue: false, Description: "Skip dependencies validation"},
+		CommandRenew: {
+			"airgapBundle":       FlagTypeString,
+			"forceExtract":       FlagTypeBool,
+			"binPath":            FlagTypeString,
+			"distroLocation":     FlagTypeString,
+			"skipDepsDownload":   FlagTypeBool,
+			"skipDepsValidation": FlagTypeBool,
 		},
-		Dump: map[string]FlagInfo{
-			"distroLocation": {Type: FlagTypeString, DefaultValue: "", Description: "Distribution location"},
-			"distroPatches":  {Type: FlagTypeString, DefaultValue: "", Description: "Distribution patches location"},
-			"dryRun":         {Type: FlagTypeBool, DefaultValue: false, Description: "Dry run"},
-			"noOverwrite":    {Type: FlagTypeBool, DefaultValue: false, Description: "Do not overwrite existing files"},
-			"skipValidation": {Type: FlagTypeBool, DefaultValue: false, Description: "Skip validation"},
+		CommandDump: {
+			"distroLocation": FlagTypeString,
+			"distroPatches":  FlagTypeString,
+			"dryRun":         FlagTypeBool,
+			"noOverwrite":    FlagTypeBool,
+			"skipValidation": FlagTypeBool,
 		},
 	}
 }

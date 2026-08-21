@@ -7,8 +7,10 @@ package flags
 import (
 	"errors"
 	"fmt"
+	"maps"
 	"os"
 	"path/filepath"
+	"slices"
 
 	parserx "github.com/sighupio/furyctl/internal/parser"
 	yamlx "github.com/sighupio/furyctl/pkg/x/yaml"
@@ -95,52 +97,16 @@ func (l *Loader) LoadFromDirectory(dir string) (*LoadResult, error) {
 	return result, nil
 }
 
-// processDynamicValues processes dynamic values like {env://VAR} and {file://path} in the flags configuration.
-func (l *Loader) processDynamicValues(flags *FlagsConfig) (*FlagsConfig, error) {
-	processed := &FlagsConfig{}
+func (l *Loader) processDynamicValues(flags FlagsConfig) (FlagsConfig, error) {
+	processed := FlagsConfig{}
 
-	if err := l.processField(flags.Global, &processed.Global, "global"); err != nil {
-		return nil, err
-	}
+	for _, section := range slices.Sorted(maps.Keys(flags)) {
+		values, err := l.processCommandFlags(flags[section])
+		if err != nil {
+			return nil, fmt.Errorf("error processing %s flags: %w", section, err)
+		}
 
-	if err := l.processField(flags.Apply, &processed.Apply, "apply"); err != nil {
-		return nil, err
-	}
-
-	if err := l.processField(flags.Delete, &processed.Delete, "delete"); err != nil {
-		return nil, err
-	}
-
-	if err := l.processField(flags.Create, &processed.Create, "create"); err != nil {
-		return nil, err
-	}
-
-	if err := l.processField(flags.Get, &processed.Get, "get"); err != nil {
-		return nil, err
-	}
-
-	if err := l.processField(flags.Diff, &processed.Diff, "diff"); err != nil {
-		return nil, err
-	}
-
-	if err := l.processField(flags.Validate, &processed.Validate, "validate"); err != nil {
-		return nil, err
-	}
-
-	if err := l.processField(flags.Download, &processed.Download, "download"); err != nil {
-		return nil, err
-	}
-
-	if err := l.processField(flags.Connect, &processed.Connect, "connect"); err != nil {
-		return nil, err
-	}
-
-	if err := l.processField(flags.Renew, &processed.Renew, "renew"); err != nil {
-		return nil, err
-	}
-
-	if err := l.processField(flags.Dump, &processed.Dump, "dump"); err != nil {
-		return nil, err
+		processed[section] = values
 	}
 
 	return processed, nil
@@ -160,19 +126,4 @@ func (l *Loader) processCommandFlags(flagsMap map[string]any) (map[string]any, e
 	}
 
 	return processed, nil
-}
-
-func (l *Loader) processField(src map[string]any, dst *map[string]any, name string) error {
-	if src == nil {
-		return nil
-	}
-
-	var err error
-
-	*dst, err = l.processCommandFlags(src)
-	if err != nil {
-		return fmt.Errorf("error processing %s flags: %w", name, err)
-	}
-
-	return nil
 }

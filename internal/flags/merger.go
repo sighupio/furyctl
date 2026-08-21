@@ -36,7 +36,6 @@ var (
 	ErrUnsupportedFlagType = errors.New("unsupported flag type")
 	ErrBoolConversion      = errors.New("cannot convert to bool")
 	ErrIntConversion       = errors.New("cannot convert to int")
-	ErrUnsupportedCommand  = errors.New("unsupported command")
 )
 
 // Merger handles merging flags from configuration file into viper with proper priority.
@@ -69,59 +68,20 @@ func CamelToKebab(s string) string {
 
 // MergeIntoViper merges flags from the configuration into viper with the lowest priority.
 // This ensures the priority order: furyctl.yaml < environment variables < command line flags.
-func (m *Merger) MergeIntoViper(flags *FlagsConfig, command string) error {
-	if flags == nil {
-		return nil
-	}
-
-	// Merge global flags first.
-	if err := m.mergeCommandFlags(flags.Global, CommandGlobal); err != nil {
+func (m *Merger) MergeIntoViper(flags FlagsConfig, command string) error {
+	// Merge the global flags first.
+	if err := m.mergeCommandFlags(flags[CommandGlobal], CommandGlobal); err != nil {
 		return fmt.Errorf("error merging global flags: %w", err)
 	}
 
-	// Merge command-specific flags.
-	var commandFlags map[string]any
-
-	switch command {
-	case CommandApply:
-		commandFlags = flags.Apply
-
-	case CommandDelete:
-		commandFlags = flags.Delete
-
-	case CommandCreate:
-		commandFlags = flags.Create
-
-	case CommandGet:
-		commandFlags = flags.Get
-
-	case CommandDiff:
-		commandFlags = flags.Diff
-
-	case CommandValidate:
-		commandFlags = flags.Validate
-
-	case CommandDownload:
-		commandFlags = flags.Download
-
-	case CommandConnect:
-		commandFlags = flags.Connect
-
-	case CommandRenew:
-		commandFlags = flags.Renew
-
-	case CommandDump:
-		commandFlags = flags.Dump
-
-	default:
-		// Unknown command, skip command-specific flags.
+	// The global flags are merged already.
+	if command == CommandGlobal {
 		return nil
 	}
 
-	if commandFlags != nil {
-		if err := m.mergeCommandFlags(commandFlags, command); err != nil {
-			return fmt.Errorf("error merging %s flags: %w", command, err)
-		}
+	// A command that furyctl does not support has no supported flags, thus this merge does nothing.
+	if err := m.mergeCommandFlags(flags[command], command); err != nil {
+		return fmt.Errorf("error merging %s flags: %w", command, err)
 	}
 
 	return nil
@@ -201,108 +161,20 @@ func (*Merger) ConvertValue(value any, expectedType FlagType) (any, error) {
 	}
 }
 
-// MergeGlobalFlags is a convenience method to merge only global flags.
-func (m *Merger) MergeGlobalFlags(flags *FlagsConfig) error {
-	if flags == nil || flags.Global == nil {
-		return nil
-	}
-
-	return m.mergeCommandFlags(flags.Global, CommandGlobal)
-}
-
-// GetSupportedFlagsForCommand returns the supported flags for a specific command.
-func (m *Merger) GetSupportedFlagsForCommand(command string) map[string]FlagInfo {
-	switch command {
-	case CommandGlobal:
-		return m.supportedFlags.Global
-
-	case CommandApply:
-		return m.supportedFlags.Apply
-
-	case CommandDelete:
-		return m.supportedFlags.Delete
-
-	case CommandCreate:
-		return m.supportedFlags.Create
-
-	case CommandGet:
-		return m.supportedFlags.Get
-
-	case CommandDiff:
-		return m.supportedFlags.Diff
-
-	case CommandValidate:
-		return m.supportedFlags.Validate
-
-	case CommandDownload:
-		return m.supportedFlags.Download
-
-	case CommandConnect:
-		return m.supportedFlags.Connect
-
-	case CommandRenew:
-		return m.supportedFlags.Renew
-
-	case CommandDump:
-		return m.supportedFlags.Dump
-
-	default:
-		return nil
-	}
-}
-
 // mergeCommandFlags merges flags for a specific command into viper.
 func (m *Merger) mergeCommandFlags(flagsMap map[string]any, command string) error {
-	var supportedFlagsMap map[string]FlagInfo
-
-	switch command {
-	case CommandGlobal:
-		supportedFlagsMap = m.supportedFlags.Global
-
-	case CommandApply:
-		supportedFlagsMap = m.supportedFlags.Apply
-
-	case CommandDelete:
-		supportedFlagsMap = m.supportedFlags.Delete
-
-	case CommandCreate:
-		supportedFlagsMap = m.supportedFlags.Create
-
-	case CommandGet:
-		supportedFlagsMap = m.supportedFlags.Get
-
-	case CommandDiff:
-		supportedFlagsMap = m.supportedFlags.Diff
-
-	case CommandValidate:
-		supportedFlagsMap = m.supportedFlags.Validate
-
-	case CommandDownload:
-		supportedFlagsMap = m.supportedFlags.Download
-
-	case CommandConnect:
-		supportedFlagsMap = m.supportedFlags.Connect
-
-	case CommandRenew:
-		supportedFlagsMap = m.supportedFlags.Renew
-
-	case CommandDump:
-		supportedFlagsMap = m.supportedFlags.Dump
-
-	default:
-		return fmt.Errorf("%w: %s", ErrUnsupportedCommand, command)
-	}
+	supportedFlagsMap := m.supportedFlags[command]
 
 	for flagName, value := range flagsMap {
 		// Check if the flag is supported.
-		flagInfo, supported := supportedFlagsMap[flagName]
+		flagType, supported := supportedFlagsMap[flagName]
 		if !supported {
 			// Log warning but don't fail - might be a new flag.
 			continue
 		}
 
 		// Convert and validate the value.
-		convertedValue, err := m.ConvertValue(value, flagInfo.Type)
+		convertedValue, err := m.ConvertValue(value, flagType)
 		if err != nil {
 			return fmt.Errorf("error converting flag %s: %w", flagName, err)
 		}
