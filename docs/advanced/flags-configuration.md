@@ -87,7 +87,7 @@ The following commands support flags configuration:
 - `global` - Flags that apply to all commands
 - `apply` - Cluster deployment and updates
 - `delete` - Cluster deletion
-- `create` - Initial cluster configuration creation
+- `create` - PKI creation (`furyctl create pki` only, see below)
 - `get` - Information retrieval
 - `diff` - Configuration comparison
 - `validate` - Configuration validation
@@ -150,12 +150,11 @@ flags:
   # Delete command specific flags  
   delete:
     dryRun: true
-    autoApprove: false
+    skipDepsValidation: false
     
-  # Create command specific flags
+  # Create command specific flags (furyctl create pki only)
   create:
-    provider: "onpremises"
-    version: "v1.31.0"
+    path: "/path/to/pki"
 ```
 
 ### Dynamic Values
@@ -240,8 +239,8 @@ flags:
     # Safety first - always dry run by default
     dryRun: true
     
-    # Require manual approval for deletions
-    autoApprove: false
+    # Do not force: furyctl asks for a confirmation
+    force: false
 ```
 
 ### Upgrade Scenario
@@ -361,23 +360,29 @@ The flags configuration includes built-in validation that will **stop execution*
 - `upgrade` (bool) - Enable upgrade mode
 - `upgradePathLocation` (string) - Upgrade path location
 - `upgradeNode` (string) - Specific node to upgrade
+- `airgapBundle` (string) - Air-gapped bundle path
+- `forceExtract` (bool) - Force bundle re-extraction
 
 ### Delete Command Flags
 
 - `phase` (string) - Limit execution to specific phase
-- `startFrom` (string) - Start execution from specific phase
 - `distroLocation` (string) - Distribution location
 - `distroPatches` (string) - Distribution patches location
 - `binPath` (string) - Binary path
 - `dryRun` (bool) - Dry run mode
 - `skipVpnConfirmation` (bool) - Skip VPN confirmation
-- `autoApprove` (bool) - Auto approve deletion
+- `vpnAutoConnect` (bool) - Auto connect VPN
+- `skipDepsDownload` (bool) - Skip dependencies download
+- `skipDepsValidation` (bool) - Skip dependencies validation
+- `airgapBundle` (string) - Air-gapped bundle path
+- `forceExtract` (bool) - Force bundle re-extraction
+- `force` (bool) - Delete without a confirmation. Note the different type: `apply` takes an array here
 
 ### Create Command Flags
 
-- `name` (string) - Cluster name
-- `version` (string) - Distribution version
-- `provider` (string) - Provider type
+Only `furyctl create pki` reads these flags. `furyctl create config` creates the configuration file,
+thus it cannot read flags from one: it stops when the file is already present.
+
 - `path` (string) - Path where to save PKI files
 - `etcd` (bool) - Create PKI only for etcd
 - `controlplane` (bool) - Create PKI only for Kubernetes control plane
@@ -389,6 +394,11 @@ The flags configuration includes built-in validation that will **stop execution*
 - `distroLocation` (string) - Distribution location
 - `skipDepsDownload` (bool) - Skip dependencies download
 - `skipDepsValidation` (bool) - Skip dependencies validation
+- `airgapBundle` (string) - Air-gapped bundle path
+- `forceExtract` (bool) - Force bundle re-extraction
+- `format` (string) - Output format of `get cluster-info`. Values are text, json and yaml
+- `from` (string) - Version to show the upgrade paths of, instead of the version in the configuration file
+- `kind` (string) - Kind of cluster to show the supported versions or the upgrade paths of
 
 **Diff Command:**
 - `phase` (string) - Limit execution to specific phase
@@ -396,6 +406,9 @@ The flags configuration includes built-in validation that will **stop execution*
 - `distroPatches` (string) - Distribution patches location
 - `binPath` (string) - Binary path
 - `upgradePathLocation` (string) - Upgrade path location
+- `skipDepsDownload` (bool) - Skip dependencies download
+- `airgapBundle` (string) - Air-gapped bundle path
+- `forceExtract` (bool) - Force bundle re-extraction
 
 **Validate Command:**
 - `distroLocation` (string) - Distribution location
