@@ -123,10 +123,6 @@ func (l *Loader) processDynamicValues(flags *FlagsConfig) (*FlagsConfig, error) 
 		return nil, err
 	}
 
-	if err := l.processField(flags.Tools, &processed.Tools, "tools"); err != nil {
-		return nil, err
-	}
-
 	if err := l.processField(flags.Validate, &processed.Validate, "validate"); err != nil {
 		return nil, err
 	}

@@ -71,8 +71,24 @@ func (v *Validator) Validate(flags *FlagsConfig) []ValidationError {
 		validationErrors = append(validationErrors, v.validateCommandFlags(flags.Diff, CommandDiff)...)
 	}
 
-	if flags.Tools != nil {
-		validationErrors = append(validationErrors, v.validateCommandFlags(flags.Tools, CommandTools)...)
+	if flags.Validate != nil {
+		validationErrors = append(validationErrors, v.validateCommandFlags(flags.Validate, CommandValidate)...)
+	}
+
+	if flags.Download != nil {
+		validationErrors = append(validationErrors, v.validateCommandFlags(flags.Download, CommandDownload)...)
+	}
+
+	if flags.Connect != nil {
+		validationErrors = append(validationErrors, v.validateCommandFlags(flags.Connect, CommandConnect)...)
+	}
+
+	if flags.Renew != nil {
+		validationErrors = append(validationErrors, v.validateCommandFlags(flags.Renew, CommandRenew)...)
+	}
+
+	if flags.Dump != nil {
+		validationErrors = append(validationErrors, v.validateCommandFlags(flags.Dump, CommandDump)...)
 	}
 
 	// Cross-validation: check for conflicting flags.
@@ -111,8 +127,20 @@ func (v *Validator) validateCommandFlags(flagsMap map[string]any, command string
 	case CommandDiff:
 		supportedFlagsMap = v.supportedFlags.Diff
 
-	case CommandTools:
-		supportedFlagsMap = v.supportedFlags.Tools
+	case CommandValidate:
+		supportedFlagsMap = v.supportedFlags.Validate
+
+	case CommandDownload:
+		supportedFlagsMap = v.supportedFlags.Download
+
+	case CommandConnect:
+		supportedFlagsMap = v.supportedFlags.Connect
+
+	case CommandRenew:
+		supportedFlagsMap = v.supportedFlags.Renew
+
+	case CommandDump:
+		supportedFlagsMap = v.supportedFlags.Dump
 
 	default:
 		validationErrors = append(validationErrors, ValidationError{

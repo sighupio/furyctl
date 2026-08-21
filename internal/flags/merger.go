@@ -15,15 +15,19 @@ import (
 	"github.com/spf13/viper"
 )
 
-// Command name constants.
+// Command name constants. Each one is a section of the `flags` field of furyctl.yaml.
 const (
-	CommandGlobal = "global"
-	CommandApply  = "apply"
-	CommandDelete = "delete"
-	CommandCreate = "create"
-	CommandGet    = "get"
-	CommandDiff   = "diff"
-	CommandTools  = "tools"
+	CommandGlobal   = "global"
+	CommandApply    = "apply"
+	CommandDelete   = "delete"
+	CommandCreate   = "create"
+	CommandGet      = "get"
+	CommandDiff     = "diff"
+	CommandValidate = "validate"
+	CommandDownload = "download"
+	CommandConnect  = "connect"
+	CommandRenew    = "renew"
+	CommandDump     = "dump"
 )
 
 // Static error definitions for linting compliance.
@@ -94,8 +98,20 @@ func (m *Merger) MergeIntoViper(flags *FlagsConfig, command string) error {
 	case CommandDiff:
 		commandFlags = flags.Diff
 
-	case CommandTools:
-		commandFlags = flags.Tools
+	case CommandValidate:
+		commandFlags = flags.Validate
+
+	case CommandDownload:
+		commandFlags = flags.Download
+
+	case CommandConnect:
+		commandFlags = flags.Connect
+
+	case CommandRenew:
+		commandFlags = flags.Renew
+
+	case CommandDump:
+		commandFlags = flags.Dump
 
 	default:
 		// Unknown command, skip command-specific flags.
@@ -215,8 +231,20 @@ func (m *Merger) GetSupportedFlagsForCommand(command string) map[string]FlagInfo
 	case CommandDiff:
 		return m.supportedFlags.Diff
 
-	case CommandTools:
-		return m.supportedFlags.Tools
+	case CommandValidate:
+		return m.supportedFlags.Validate
+
+	case CommandDownload:
+		return m.supportedFlags.Download
+
+	case CommandConnect:
+		return m.supportedFlags.Connect
+
+	case CommandRenew:
+		return m.supportedFlags.Renew
+
+	case CommandDump:
+		return m.supportedFlags.Dump
 
 	default:
 		return nil
@@ -246,8 +274,20 @@ func (m *Merger) mergeCommandFlags(flagsMap map[string]any, command string) erro
 	case CommandDiff:
 		supportedFlagsMap = m.supportedFlags.Diff
 
-	case CommandTools:
-		supportedFlagsMap = m.supportedFlags.Tools
+	case CommandValidate:
+		supportedFlagsMap = m.supportedFlags.Validate
+
+	case CommandDownload:
+		supportedFlagsMap = m.supportedFlags.Download
+
+	case CommandConnect:
+		supportedFlagsMap = m.supportedFlags.Connect
+
+	case CommandRenew:
+		supportedFlagsMap = m.supportedFlags.Renew
+
+	case CommandDump:
+		supportedFlagsMap = m.supportedFlags.Dump
 
 	default:
 		return fmt.Errorf("%w: %s", ErrUnsupportedCommand, command)

@@ -14,7 +14,6 @@ type FlagsConfig struct {
 	Create   map[string]any `yaml:"create,omitempty"`
 	Get      map[string]any `yaml:"get,omitempty"`
 	Diff     map[string]any `yaml:"diff,omitempty"`
-	Tools    map[string]any `yaml:"tools,omitempty"`
 	Validate map[string]any `yaml:"validate,omitempty"`
 	Download map[string]any `yaml:"download,omitempty"`
 	Connect  map[string]any `yaml:"connect,omitempty"`
@@ -31,7 +30,6 @@ type SupportedFlags struct {
 	Create   map[string]FlagInfo
 	Get      map[string]FlagInfo
 	Diff     map[string]FlagInfo
-	Tools    map[string]FlagInfo
 	Validate map[string]FlagInfo
 	Download map[string]FlagInfo
 	Connect  map[string]FlagInfo
@@ -191,10 +189,10 @@ func GetSupportedFlags() SupportedFlags {
 			"airgapBundle":        {Type: FlagTypeString, DefaultValue: "", Description: "Air-gapped bundle path"},
 			"forceExtract":        {Type: FlagTypeBool, DefaultValue: false, Description: "Force bundle re-extraction"},
 		},
-		Tools: map[string]FlagInfo{},
 		Validate: map[string]FlagInfo{
 			"distroLocation": {Type: FlagTypeString, DefaultValue: "", Description: "Distribution location"},
 			"distroPatches":  {Type: FlagTypeString, DefaultValue: "", Description: "Distribution patches location"},
+			"binPath":        {Type: FlagTypeString, DefaultValue: "", Description: "Binary path"},
 		},
 		Download: map[string]FlagInfo{
 			"binPath":        {Type: FlagTypeString, DefaultValue: "", Description: "Binary path"},
@@ -202,11 +200,23 @@ func GetSupportedFlags() SupportedFlags {
 			"distroPatches":  {Type: FlagTypeString, DefaultValue: "", Description: "Distribution patches location"},
 			"bundleOutput":   {Type: FlagTypeString, DefaultValue: "", Description: "Bundle tarball output path"},
 		},
-		Connect: map[string]FlagInfo{},
-		Renew: map[string]FlagInfo{
-			"airgapBundle": {Type: FlagTypeString, DefaultValue: "", Description: "Air-gapped bundle path"},
-			"forceExtract": {Type: FlagTypeBool, DefaultValue: false, Description: "Force bundle re-extraction"},
+		Connect: map[string]FlagInfo{
+			"profile": {Type: FlagTypeString, DefaultValue: "", Description: "OpenVPN profile name"},
 		},
-		Dump: map[string]FlagInfo{},
+		Renew: map[string]FlagInfo{
+			"airgapBundle":       {Type: FlagTypeString, DefaultValue: "", Description: "Air-gapped bundle path"},
+			"forceExtract":       {Type: FlagTypeBool, DefaultValue: false, Description: "Force bundle re-extraction"},
+			"binPath":            {Type: FlagTypeString, DefaultValue: "", Description: "Binary path"},
+			"distroLocation":     {Type: FlagTypeString, DefaultValue: "", Description: "Distribution location"},
+			"skipDepsDownload":   {Type: FlagTypeBool, DefaultValue: false, Description: "Skip dependencies download"},
+			"skipDepsValidation": {Type: FlagTypeBool, DefaultValue: false, Description: "Skip dependencies validation"},
+		},
+		Dump: map[string]FlagInfo{
+			"distroLocation": {Type: FlagTypeString, DefaultValue: "", Description: "Distribution location"},
+			"distroPatches":  {Type: FlagTypeString, DefaultValue: "", Description: "Distribution patches location"},
+			"dryRun":         {Type: FlagTypeBool, DefaultValue: false, Description: "Dry run"},
+			"noOverwrite":    {Type: FlagTypeBool, DefaultValue: false, Description: "Do not overwrite existing files"},
+			"skipValidation": {Type: FlagTypeBool, DefaultValue: false, Description: "Skip validation"},
+		},
 	}
 }
