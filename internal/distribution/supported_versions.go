@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/Al-Pragliola/go-version"
+	"github.com/samber/lo"
 	"github.com/sirupsen/logrus"
 
 	"github.com/sighupio/furyctl/internal/git"
@@ -63,12 +64,10 @@ func releaseSort(a, b git.Release) int {
 
 // GetSupportedVersions retrieves all distro releases filtering out prereleases and invalid versions.
 func GetSupportedVersions(ghClient git.RepoClient) ([]KFDRelease, error) {
-	releases := []KFDRelease{}
-
 	// Fetch all releases from the GitHub API.
 	ghReleases, err := ghClient.GetReleases()
 	if err != nil {
-		return releases, fmt.Errorf("error getting releases from GitHub: %w", err)
+		return nil, fmt.Errorf("error getting releases from GitHub: %w", err)
 	}
 
 	slices.SortFunc(ghReleases, releaseSort)
@@ -77,18 +76,12 @@ func GetSupportedVersions(ghClient git.RepoClient) ([]KFDRelease, error) {
 
 	ghReleases = slices.DeleteFunc(ghReleases, IsNotRelease)
 
-	// Loop over releases and skip invalid versions.
-	for _, ghRelease := range ghReleases {
+	// Skip releases that cannot be parsed or processed.
+	return lo.FilterMap(ghReleases, func(ghRelease git.Release, _ int) (KFDRelease, bool) {
 		release, err := newKFDRelease(ghRelease)
-		if err != nil {
-			// Skip releases that cannot be parsed or processed.
-			continue
-		}
 
-		releases = append(releases, release)
-	}
-
-	return releases, nil
+		return release, err == nil
+	}), nil
 }
 
 // GetLatestSupportedVersion returns the supported version based on the second segment of the version.

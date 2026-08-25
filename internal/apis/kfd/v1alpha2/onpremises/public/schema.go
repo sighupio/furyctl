@@ -27,6 +27,9 @@ type Spec struct {
 
 type Kubernetes struct {
 	Advanced *Advanced `yaml:"advanced,omitempty"`
+	// PkiFolder is the folder that holds the CA certificates and keys for the control plane and etcd.
+	// The playbooks read them from the `master` and `etcd` subfolders.
+	PkiFolder *string `yaml:"pkiFolder,omitempty"`
 }
 
 type Advanced struct {

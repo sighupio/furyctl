@@ -77,7 +77,7 @@ func (b *Builder) FromStruct(s any, tagType string) map[any]any {
 }
 
 func (*Builder) ToMapStringAny(t map[any]any) map[string]map[any]any {
-	out := make(map[string]map[any]any)
+	out := make(map[string]map[any]any, len(t))
 
 	for k, v := range t {
 		val, ok := v.(map[any]any)

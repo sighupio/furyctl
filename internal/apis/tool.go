@@ -8,6 +8,7 @@ import (
 	"github.com/sighupio/furyctl/internal/apis/config"
 	"github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/ekscluster"
 	"github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/onpremises"
+	"github.com/sighupio/furyctl/internal/distribution"
 	execx "github.com/sighupio/furyctl/internal/x/exec"
 )
 
@@ -23,12 +24,12 @@ func NewExtraToolsValidatorFactory(
 	binPath string,
 ) ExtraToolsValidator {
 	switch apiVersion {
-	case "kfd.sighup.io/v1alpha2":
+	case distribution.APIVersionV1Alpha2:
 		switch kind {
-		case "EKSCluster":
+		case distribution.EKSClusterKind:
 			return ekscluster.NewExtraToolsValidator(executor)
 
-		case "OnPremises":
+		case distribution.OnPremisesKind:
 			return onpremises.NewExtraToolsValidator(executor, kfdManifest, binPath)
 
 		default:

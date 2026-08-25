@@ -153,7 +153,7 @@ func (*ClusterCreator) GetPhasePath(phase string) (string, error) {
 func (v *ClusterCreator) Create(startFrom string, timeout, _ int) error {
 	upgr := upgrade.New(v.paths, string(v.furyctlConf.Kind))
 
-	infra, kube, distro, plugins, preflight, err := v.setupPhases(upgr, v.upgrade)
+	infra, kube, distro, plugins, preflight, err := v.setupPhases(upgr, v.upgrade, startFrom)
 	if err != nil {
 		return err
 	}
@@ -831,7 +831,7 @@ func (*ClusterCreator) getDistributionSubPhase(startFrom string) string {
 }
 
 //nolint:revive // ignore maximum number of return results
-func (v *ClusterCreator) setupPhases(upgr *upgrade.Upgrade, upgradeFlag bool) (
+func (v *ClusterCreator) setupPhases(upgr *upgrade.Upgrade, upgradeFlag bool, startFrom string) (
 	*upgrade.OperatorPhaseAsyncDecorator,
 	*upgrade.OperatorPhaseAsyncDecorator,
 	*upgrade.ReducerOperatorPhaseAsyncDecorator[reducers.Reducers],
@@ -898,6 +898,7 @@ func (v *ClusterCreator) setupPhases(upgr *upgrade.Upgrade, upgradeFlag bool) (
 		v.force,
 		infra.Self().TerraformOutputsPath,
 		v.phase,
+		startFrom,
 		upgradeFlag,
 	)
 	if err != nil {

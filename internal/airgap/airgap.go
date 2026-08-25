@@ -46,15 +46,15 @@ func RegisterFlags(cmd *cobra.Command) {
 	cmd.Flags().String(
 		"airgap-bundle",
 		"",
-		"Path to an air-gapped bundle (.tar.gz) produced by 'furyctl download air-gapped-bundle'. "+
-			"When set, furyctl extracts it into the working directory and runs fully offline "+
-			"(implies --skip-deps-download and --distro-location)",
+		"Path to an air-gapped bundle (.tar.gz) that 'furyctl download air-gapped-bundle' creates. "+
+			"If you set this flag, furyctl extracts the bundle in the working directory and runs offline. "+
+			"furyctl also sets --skip-deps-download and --distro-location",
 	)
 
 	cmd.Flags().Bool(
 		"force-extract",
 		false,
-		"Force re-extraction of the --airgap-bundle even when it was already extracted",
+		"Extract the --airgap-bundle again, also when furyctl extracted it before",
 	)
 }
 
@@ -103,7 +103,7 @@ func prepare(bundle, outDir string, force bool) (string, error) {
 	distroLocation := filepath.Join(outDir, DistroSubdir)
 
 	if !force && bundleAlreadyExtracted(marker, sum) {
-		logrus.Infof("Air-gapped bundle already extracted, reusing it (use --force-extract to re-extract)")
+		logrus.Info("Air-gapped bundle already extracted, reusing it (use --force-extract to re-extract)")
 
 		return distroLocation, nil
 	}

@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/samber/lo"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
 
@@ -125,17 +126,15 @@ func (m *Manager) LoadAndMergeGlobalFlags(configPath string) error {
 	}
 
 	// Validate only global flags.
-	if result.Flags.Global != nil {
-		validationErrors := m.validator.validateCommandFlags(result.Flags.Global, "global")
-		if err := m.handleValidationErrors(
-			validationErrors, ErrGlobalFlagsValidationFailed, "global flags configuration",
-		); err != nil {
-			return err
-		}
+	validationErrors := m.validator.validateCommandFlags(result.Flags[CommandGlobal], CommandGlobal)
+	if err := m.handleValidationErrors(
+		validationErrors, ErrGlobalFlagsValidationFailed, "global flags configuration",
+	); err != nil {
+		return err
 	}
 
 	// Merge only global flags.
-	if err := m.merger.MergeGlobalFlags(result.Flags); err != nil {
+	if err := m.merger.mergeCommandFlags(result.Flags[CommandGlobal], CommandGlobal); err != nil {
 		return fmt.Errorf("failed to merge global flags: %w", err)
 	}
 
@@ -243,17 +242,9 @@ func (*Manager) handleValidationErrors(validationErrors []ValidationError, fatal
 	}
 
 	// Separate fatal errors from warnings.
-	var fatalErrors []ValidationError
-
-	var warnings []ValidationError
-
-	for _, valErr := range validationErrors {
-		if valErr.Severity == ValidationSeverityFatal {
-			fatalErrors = append(fatalErrors, valErr)
-		} else {
-			warnings = append(warnings, valErr)
-		}
-	}
+	fatalErrors, warnings := lo.FilterReject(validationErrors, func(valErr ValidationError, _ int) bool {
+		return valErr.Severity == ValidationSeverityFatal
+	})
 
 	// Return immediately if there are fatal errors.
 	if len(fatalErrors) > 0 {

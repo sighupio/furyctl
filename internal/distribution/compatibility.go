@@ -11,12 +11,14 @@ import (
 	"strings"
 
 	"github.com/Al-Pragliola/go-version"
+	"github.com/samber/lo"
 
 	"github.com/sighupio/furyctl/internal/git"
 	"github.com/sighupio/furyctl/internal/semver"
 )
 
 const (
+	APIVersionV1Alpha2     = "kfd.sighup.io/v1alpha2"
 	EKSClusterKind         = "EKSCluster"
 	KFDDistributionKind    = "KFDDistribution"
 	OnPremisesKind         = "OnPremises"
@@ -66,7 +68,7 @@ func getEKSCompatibleRanges() []VersionRange {
 		{"v1.32.0", "v1.32.2"},
 		{"v1.33.0", "v1.33.3"},
 		{"v1.34.0", "v1.34.2"},
-		{"v1.35.0", "v1.35.0"},
+		{"v1.35.0", "v1.35.1"},
 	}
 }
 
@@ -83,14 +85,14 @@ func getKFDCompatibleRanges() []VersionRange {
 		{"v1.32.0", "v1.32.2"},
 		{"v1.33.0", "v1.33.3"},
 		{"v1.34.0", "v1.34.2"},
-		{"v1.35.0", "v1.35.0"},
+		{"v1.35.0", "v1.35.1"},
 	}
 }
 
 func getImmutableCompatibleRanges() []VersionRange {
 	return []VersionRange{
 		{"v1.34.2", "v1.34.2"},
-		{"v1.35.0", "v1.35.0"},
+		{"v1.35.0", "v1.35.1"},
 	}
 }
 
@@ -107,7 +109,7 @@ func getOnPremisesCompatibleRanges() []VersionRange {
 		{"v1.32.0", "v1.32.2"},
 		{"v1.33.0", "v1.33.3"},
 		{"v1.34.0", "v1.34.2"},
-		{"v1.35.0", "v1.35.0"},
+		{"v1.35.0", "v1.35.1"},
 	}
 }
 
@@ -214,20 +216,15 @@ func isVersionInAnyRange(currentVersion *version.Version, compatibleRanges []Ver
 	}
 
 	// Check if current version is within any of the compatible ranges.
-	for _, r := range compatibleRanges {
+	return lo.SomeBy(compatibleRanges, func(r VersionRange) bool {
 		minVersion, minOk := newVersion(r.Min)
 		maxVersion, maxOk := newVersion(r.Max)
 
-		if !minOk || !maxOk {
-			continue // Skip this range if we can't parse the versions.
-		}
-
-		if currentVersion.GreaterThanOrEqual(minVersion) && currentVersion.LessThanOrEqual(maxVersion) {
-			return true
-		}
-	}
-
-	return false
+		// Skip this range if we can't parse the versions.
+		return minOk && maxOk &&
+			currentVersion.GreaterThanOrEqual(minVersion) &&
+			currentVersion.LessThanOrEqual(maxVersion)
+	})
 }
 
 type OnPremisesCheck struct {

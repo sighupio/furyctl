@@ -40,13 +40,13 @@ func NewConfigCmd() *cobra.Command {
 		PreRun: func(cmd *cobra.Command, _ []string) {
 			cmdEvent = analytics.NewCommandEvent(cobrax.GetFullname(cmd))
 
-			// Load and validate flags from configuration FIRST.
-			if err := flags.LoadAndMergeCommandFlags("validate"); err != nil {
-				logrus.Fatalf("failed to load flags from configuration: %v", err)
-			}
-
+			// Bind the flags first: a flag on the command line has precedence over the configuration file.
 			if err := viper.BindPFlags(cmd.Flags()); err != nil {
 				logrus.Fatalf("error while binding flags: %v", err)
+			}
+
+			if err := flags.LoadAndMergeCommandFlags("validate"); err != nil {
+				logrus.Fatalf("failed to load flags from configuration: %v", err)
 			}
 		},
 		RunE: func(_ *cobra.Command, _ []string) error {
@@ -114,6 +114,17 @@ func NewConfigCmd() *cobra.Command {
 			if err := config.Validate(furyctlPath, res.RepoPath); err != nil {
 				logrus.Debugf("Repository path: %s", res.RepoPath)
 
+				logrus.Error(err)
+
+				cmdEvent.AddErrorMessage(ErrValidationFailed)
+				tracker.Track(cmdEvent)
+
+				return ErrValidationFailed
+			}
+
+			// The PKI folder check is not a rule of config.Validate, because the other commands that
+			// validate a configuration do not read the PKI. See config.ValidatePKI.
+			if err := config.ValidatePKI(furyctlPath); err != nil {
 				logrus.Error(err)
 
 				cmdEvent.AddErrorMessage(ErrValidationFailed)

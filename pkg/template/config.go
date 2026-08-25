@@ -9,6 +9,8 @@ import (
 	"fmt"
 	"reflect"
 
+	"github.com/samber/lo"
+
 	"github.com/sighupio/furyctl/pkg/merge"
 	mapx "github.com/sighupio/furyctl/pkg/x/map"
 )
@@ -154,18 +156,9 @@ func newTemplatesFromMap(t any) (*Templates, error) {
 }
 
 func toTypeSlice[T any](t []any) ([]T, error) {
-	s := make([]T, len(t))
-
-	for i, v := range t {
-		sV, err := toType[T](v)
-		if err != nil {
-			return s, err
-		}
-
-		s[i] = sV
-	}
-
-	return s, nil
+	return lo.MapErr(t, func(v any, _ int) (T, error) {
+		return toType[T](v)
+	})
 }
 
 func toType[T any](t any) (T, error) {

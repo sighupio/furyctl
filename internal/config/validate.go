@@ -13,6 +13,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/samber/lo"
 	"github.com/sirupsen/logrus"
 
 	"github.com/sighupio/furyctl/internal/analytics"
@@ -30,7 +31,6 @@ import (
 // Static error definitions for linting compliance.
 var (
 	ErrFlagsMustBeObject            = errors.New("flags section must be an object")
-	ErrUnsupportedFlagsCommand      = errors.New("unsupported flags command")
 	ErrFlagsValidationFailed        = errors.New("flags validation failed")
 	ErrExpandedConfigurationNotAMap = errors.New("expanded configuration is not a map[string]any")
 	ErrReadingSpec                  = errors.New("error reading spec from kfd.yaml")
@@ -159,6 +159,31 @@ func Validate(path, repoPath string) error {
 	return validateToolsConfiguration(repoPath, rawConf)
 }
 
+// ValidatePKI checks the local PKI folder that the configuration points at, for each kind that reads a
+// local PKI. It is a separate function, and not a rule of Validate, because most commands that call
+// Validate read no local PKI. `furyctl create config` writes a configuration whose PKI folder does not
+// exist yet, and it deletes the file when Validate fails. Only `furyctl apply` and
+// `furyctl validate config` call this function.
+func ValidatePKI(path string) error {
+	miniConf, err := loadFromFile(path)
+	if err != nil {
+		return err
+	}
+
+	validator := apis.NewPKIValidatorFactory(miniConf.APIVersion, miniConf.Kind)
+	if validator == nil {
+		logrus.Debugf("kind %s reads no local PKI. The PKI folder check does not run", miniConf.Kind)
+
+		return nil
+	}
+
+	if err := validator.ValidatePKI(path); err != nil {
+		return fmt.Errorf("error while validating the PKI folder: %w", err)
+	}
+
+	return nil
+}
+
 // checkSchemaSupportsFlags determines if the schema includes support for the flags field.
 // This allows furyctl to work with both old schemas (without flags) and new schemas (with flags).
 func checkSchemaSupportsFlags(schemaPath string) bool {
@@ -215,7 +240,7 @@ func expandDynamicValues(conf map[string]any, baseDir string) (map[string]any, e
 func expandDynamicValuesRecursive(value any, configParser *parserx.ConfigParser) (any, error) {
 	switch v := value.(type) {
 	case map[string]any:
-		result := make(map[string]any)
+		result := make(map[string]any, len(v))
 
 		for key, val := range v {
 			expandedVal, err := expandDynamicValuesRecursive(val, configParser)
@@ -276,48 +301,22 @@ func containsDynamicPattern(s string) bool {
 
 // validateFlagsSection validates the flags section using furyctl-specific validation rules.
 func validateFlagsSection(flagsSection any) error {
-	// Convert to FlagsConfig type for validation.
 	flagsMap, ok := flagsSection.(map[string]any)
 	if !ok {
 		return ErrFlagsMustBeObject
 	}
 
-	// Convert to internal flags structure for validation.
-	flagsConfig := &flags.FlagsConfig{}
+	// Convert to the internal flags structure for validation. The validator reports a section
+	// that furyctl does not support.
+	flagsConfig := flags.FlagsConfig{}
 
-	// Extract and validate each command section.
-	for command, commandFlags := range flagsMap {
-		commandFlagsMap, ok := commandFlags.(map[string]any)
+	for section, sectionFlags := range flagsMap {
+		values, ok := sectionFlags.(map[string]any)
 		if !ok {
-			return fmt.Errorf("%w: flags.%s must be an object", ErrFlagsMustBeObject, command)
+			return fmt.Errorf("%w: flags.%s must be an object", ErrFlagsMustBeObject, section)
 		}
 
-		// Set the command flags in the appropriate section.
-		switch command {
-		case "global":
-			flagsConfig.Global = commandFlagsMap
-
-		case "apply":
-			flagsConfig.Apply = commandFlagsMap
-
-		case "delete":
-			flagsConfig.Delete = commandFlagsMap
-
-		case "create":
-			flagsConfig.Create = commandFlagsMap
-
-		case "get":
-			flagsConfig.Get = commandFlagsMap
-
-		case "diff":
-			flagsConfig.Diff = commandFlagsMap
-
-		case "tools":
-			flagsConfig.Tools = commandFlagsMap
-
-		default:
-			return fmt.Errorf("%w: %s", ErrUnsupportedFlagsCommand, command)
-		}
+		flagsConfig[section] = values
 	}
 
 	// Validate flags using the flags package validator.
@@ -326,17 +325,9 @@ func validateFlagsSection(flagsSection any) error {
 
 	if len(validationErrors) > 0 {
 		// Separate fatal errors from warnings.
-		var fatalErrors []flags.ValidationError
-
-		var warnings []flags.ValidationError
-
-		for _, err := range validationErrors {
-			if err.Severity == flags.ValidationSeverityFatal {
-				fatalErrors = append(fatalErrors, err)
-			} else {
-				warnings = append(warnings, err)
-			}
-		}
+		fatalErrors, warnings := lo.FilterReject(validationErrors, func(err flags.ValidationError, _ int) bool {
+			return err.Severity == flags.ValidationSeverityFatal
+		})
 
 		// Log warnings but don't fail validation.
 		if len(warnings) > 0 {

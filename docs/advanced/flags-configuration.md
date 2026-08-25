@@ -382,7 +382,7 @@ The flags configuration includes built-in validation that will **stop execution*
 - `etcd` (bool) - Create PKI only for etcd
 - `controlplane` (bool) - Create PKI only for Kubernetes control plane
 
-### Get, Diff, and Tools Command Flags
+### Get and Diff Command Flags
 
 **Get Command:**
 - `binPath` (string) - Binary path
@@ -400,11 +400,28 @@ The flags configuration includes built-in validation that will **stop execution*
 **Validate Command:**
 - `distroLocation` (string) - Distribution location
 - `distroPatches` (string) - Distribution patches location
+- `binPath` (string) - Binary path
 
 **Download Command:**
-- `binPath` (string) - Binary path  
+- `binPath` (string) - Binary path
 - `distroLocation` (string) - Distribution location
 - `distroPatches` (string) - Distribution patches location
+- `bundleOutput` (string) - Bundle tarball output path
 
-**Other Commands:**
-- `Connect`, `Renew`, `Dump` commands currently have no configurable flags - use `furyctl [command] --help` for details
+**Connect Command:**
+- `profile` (string) - OpenVPN profile name
+
+**Renew Command:**
+- `binPath` (string) - Binary path
+- `distroLocation` (string) - Distribution location
+- `skipDepsDownload` (bool) - Skip dependencies download
+- `skipDepsValidation` (bool) - Skip dependencies validation
+- `airgapBundle` (string) - Air-gapped bundle path
+- `forceExtract` (bool) - Force bundle re-extraction
+
+**Dump Command:**
+- `distroLocation` (string) - Distribution location
+- `distroPatches` (string) - Distribution patches location
+- `dryRun` (bool) - Dry run
+- `noOverwrite` (bool) - Do not overwrite existing files
+- `skipValidation` (bool) - Skip validation

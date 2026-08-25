@@ -81,8 +81,7 @@ func (tv *Validator) Validate(kfdManifest config.KFD, miniConf config.Furyctl) (
 	oks = append(oks, cOks...)
 	errs = append(errs, cErrs...)
 
-	// Validate eks tools only if kind is EKSCluster.
-	if miniConf.Kind == "EKSCluster" {
+	if miniConf.Kind == distribution.EKSClusterKind {
 		cOks, cErrs := tv.validateTools(kfdManifest.Tools.Eks, kfdManifest)
 		oks = append(oks, cOks...)
 		errs = append(errs, cErrs...)

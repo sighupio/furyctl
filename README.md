@@ -5,7 +5,7 @@
    <p>The Swiss Army Knife<br/>for the SIGHUP Distribution</p>
 
    [![Build Status](https://ci.sighup.io/api/badges/sighupio/furyctl/status.svg?ref=refs/heads/main)](https://ci.sighup.io/sighupio/furyctl)
-   ![Release](https://img.shields.io/badge/furyctl-v0.35.0-blue)
+   ![Release](https://img.shields.io/badge/furyctl-v0.35.1-blue)
    ![Slack](https://img.shields.io/badge/slack-@kubernetes/fury-yellow.svg?logo=slack)
    ![License](https://img.shields.io/github/license/sighupio/furyctl)
    [![golangci-lint](https://img.shields.io/badge/linter-golangci--lint-blue)](https://golangci-lint.run/)
@@ -58,7 +58,7 @@ Alternatively, you can install `furyctl` using `mise` or the `asdf` plugin.
 ### Installing with [mise](https://mise.jdx.dev/)
 
 ```bash
-mise use furyctl@0.35.0
+mise use furyctl@0.35.1
 ```
 
 Check that everything is working correctly with `furyctl version`:
@@ -68,7 +68,7 @@ $ furyctl version
 ...
 goVersion: go1.26
 osArch: arm64
-version: 0.35.0
+version: 0.35.1
 ```
 
 ### Installing with [asdf](https://github.com/asdf-vm/asdf)
@@ -86,7 +86,7 @@ $ furyctl version
 ...
 goVersion: go1.26
 osArch: amd64
-version: 0.35.0
+version: 0.35.1
 ```
 
 ## Development

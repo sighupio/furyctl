@@ -12,6 +12,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -20,12 +21,9 @@ func TestPrimaryRole(t *testing.T) {
 	t.Parallel()
 
 	mk := func(labels ...string) map[string]string {
-		m := map[string]string{}
-		for _, r := range labels {
-			m["node-role.kubernetes.io/"+r] = ""
-		}
-
-		return m
+		return lo.SliceToMap(labels, func(r string) (string, string) {
+			return "node-role.kubernetes.io/" + r, ""
+		})
 	}
 
 	tests := []struct {
@@ -417,6 +415,57 @@ func TestExtractPlugins(t *testing.T) {
 	}
 
 	require.Nil(t, extractPlugins(invalid), "expected nil when only invalid entries present")
+}
+
+// TestPluginNames covers the per-entry filtering: a plugin list read from the stored
+// configuration is untyped, so entries that are not maps, or that carry no usable
+// "name", are dropped while their neighbours still come through.
+func TestPluginNames(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		desc  string
+		items []any
+		want  []string
+	}{
+		{
+			desc:  "no items",
+			items: nil,
+			want:  []string{},
+		},
+		{
+			desc:  "every entry has a name",
+			items: []any{map[string]any{"name": "a"}, map[string]any{"name": "b"}},
+			want:  []string{"a", "b"},
+		},
+		{
+			desc: "an entry without a name does not drop its neighbours",
+			items: []any{
+				map[string]any{"name": "a"},
+				map[string]any{"version": "1.0.0"},
+				map[string]any{"name": "c"},
+			},
+			want: []string{"a", "c"},
+		},
+		{
+			desc:  "an entry that is not a map is skipped",
+			items: []any{"plain-string", map[string]any{"name": "a"}, 42},
+			want:  []string{"a"},
+		},
+		{
+			desc:  "a non-string name is skipped",
+			items: []any{map[string]any{"name": 7}, map[string]any{"name": "a"}},
+			want:  []string{"a"},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.desc, func(t *testing.T) {
+			t.Parallel()
+
+			assert.Equal(t, tc.want, pluginNames(tc.items))
+		})
+	}
 }
 
 func TestLatestManagedFieldTime(t *testing.T) {

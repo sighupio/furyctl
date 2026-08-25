@@ -10,6 +10,8 @@ import (
 	"os"
 	"slices"
 	"strings"
+
+	"github.com/samber/lo"
 )
 
 const (
@@ -78,28 +80,17 @@ func WriteConfig(path string, tools map[string]string, ansibleUv, ansiblePython 
 	// the install is self-contained on a clean machine. The distribution chooses the versions (they track
 	// the ansible version); otherwise furyctl's defaults apply.
 	if _, ok := tools["ansible"]; ok {
-		if ansibleUv == "" {
-			ansibleUv = AnsibleUvVersion
-		}
-
-		if ansiblePython == "" {
-			ansiblePython = AnsiblePythonVersion
-		}
-
 		lines = append(lines,
-			fmt.Sprintf("%q = %q", "uv", ansibleUv),
-			fmt.Sprintf("%q = %q", "python", ansiblePython),
+			fmt.Sprintf("%q = %q", "uv", lo.CoalesceOrEmpty(ansibleUv, AnsibleUvVersion)),
+			fmt.Sprintf("%q = %q", "python", lo.CoalesceOrEmpty(ansiblePython, AnsiblePythonVersion)),
 		)
 	}
 
-	for _, n := range names {
+	lines = append(lines, lo.FilterMap(names, func(n string, _ int) (string, bool) {
 		t, ok := ManagedTools[n]
-		if !ok {
-			continue
-		}
 
-		lines = append(lines, fmt.Sprintf("%q = %q", t.Spec, tools[n]))
-	}
+		return fmt.Sprintf("%q = %q", t.Spec, tools[n]), ok
+	})...)
 
 	content := strings.Join(lines, "\n") + "\n"
 

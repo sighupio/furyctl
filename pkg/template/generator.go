@@ -13,6 +13,7 @@ import (
 	"strings"
 	"text/template"
 
+	"github.com/samber/lo"
 	"github.com/sirupsen/logrus"
 
 	iox "github.com/sighupio/furyctl/internal/x/io"
@@ -71,23 +72,16 @@ func (g *Generator) ProcessTemplate() (*template.Template, error) {
 }
 
 func (g *Generator) GetMissingKeys(tpl *template.Template) []string {
-	var missingKeys []string
-
 	if tpl == nil || tpl.Tree == nil || tpl.Root == nil {
-		return missingKeys
+		return nil
 	}
 
 	node := NewNode()
 	node.FromNodeList(tpl.Root.Nodes)
 
-	for _, f := range node.Fields {
-		val := g.getContextValueFromPath(f)
-		if val == nil {
-			missingKeys = append(missingKeys, f)
-		}
-	}
-
-	return missingKeys
+	return lo.Filter(node.Fields, func(f string, _ int) bool {
+		return g.getContextValueFromPath(f) == nil
+	})
 }
 
 func (g *Generator) ProcessFile(tpl *template.Template) (bytes.Buffer, error) {

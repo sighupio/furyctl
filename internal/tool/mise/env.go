@@ -8,6 +8,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"slices"
+
+	"github.com/samber/lo"
 )
 
 // parseEnvJSON converts the output of `mise env --json` ({"KEY":"VALUE", ...}) into a sorted slice
@@ -18,10 +20,9 @@ func parseEnvJSON(s string) ([]string, error) {
 		return nil, fmt.Errorf("error parsing mise env json: %w", err)
 	}
 
-	out := make([]string, 0, len(m))
-	for k, v := range m {
-		out = append(out, k+"="+v)
-	}
+	out := lo.MapToSlice(m, func(k, v string) string {
+		return k + "=" + v
+	})
 
 	slices.Sort(out)
 

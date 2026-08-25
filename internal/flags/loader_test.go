@@ -21,7 +21,7 @@ func TestLoader_LoadFromFile(t *testing.T) {
 	tests := []struct {
 		name           string
 		configContent  string
-		expectedFlags  *flags.FlagsConfig
+		expectedFlags  flags.FlagsConfig
 		expectedErrors int
 	}{
 		{
@@ -40,12 +40,12 @@ flags:
     skipDepsValidation: true
     distroLocation: "/tmp/test"
     dryRun: false`,
-			expectedFlags: &flags.FlagsConfig{
-				Global: map[string]any{
+			expectedFlags: flags.FlagsConfig{
+				flags.CommandGlobal: {
 					"debug":            true,
 					"disableAnalytics": false,
 				},
-				Apply: map[string]any{
+				flags.CommandApply: {
 					"skipDepsValidation": true,
 					"distroLocation":     "/tmp/test",
 					"dryRun":             false,
@@ -77,11 +77,11 @@ flags:
     outdir: "{env://TEST_OUTDIR}"
   apply:
     distroPatches: "{env://TEST_PATCHES}"`,
-			expectedFlags: &flags.FlagsConfig{
-				Global: map[string]any{
+			expectedFlags: flags.FlagsConfig{
+				flags.CommandGlobal: {
 					"outdir": "/test/output",
 				},
-				Apply: map[string]any{
+				flags.CommandApply: {
 					"distroPatches": "/test/patches",
 				},
 			},
@@ -117,8 +117,8 @@ flags:
 				assert.Nil(t, result.Flags, "Expected no flags but got: %+v", result.Flags)
 			} else {
 				require.NotNil(t, result.Flags, "Expected flags but got nil")
-				assert.Equal(t, tt.expectedFlags.Global, result.Flags.Global)
-				assert.Equal(t, tt.expectedFlags.Apply, result.Flags.Apply)
+				assert.Equal(t, tt.expectedFlags[flags.CommandGlobal], result.Flags[flags.CommandGlobal])
+				assert.Equal(t, tt.expectedFlags[flags.CommandApply], result.Flags[flags.CommandApply])
 			}
 		})
 	}
@@ -158,9 +158,9 @@ flags:
 
 	assert.Empty(t, result.Errors)
 	require.NotNil(t, result.Flags)
-	require.NotNil(t, result.Flags.Global)
+	require.NotNil(t, result.Flags[flags.CommandGlobal])
 
-	debugValue := result.Flags.Global["debug"]
+	debugValue := result.Flags[flags.CommandGlobal]["debug"]
 	// The value might be parsed as a string "true" or boolean true depending on YAML parser
 	assert.Contains(t, []any{true, "true"}, debugValue)
 }

@@ -8,6 +8,8 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+
+	"github.com/samber/lo"
 )
 
 var ErrUnsupportedGitProtocol = errors.New("unsupported git protocol")
@@ -29,13 +31,9 @@ func Protocols() []Protocol {
 
 // ProtocolsS returns a slice of Strings representation of the Protocols that are supported.
 func ProtocolsS() []string {
-	ps := Protocols()
-	result := make([]string, len(ps))
-	for i, p := range ps {
-		result[i] = string(p)
-	}
-
-	return result
+	return lo.Map(Protocols(), func(p Protocol, _ int) string {
+		return string(p)
+	})
 }
 
 func ParseProtocol(protocol string) (Protocol, error) {

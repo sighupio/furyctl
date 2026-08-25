@@ -12,6 +12,7 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/samber/lo"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -83,16 +84,20 @@ func NewDumpCLIReferenceCmd() *cobra.Command {
 				return ""
 			}
 
+			// Maps a generated page name back to the top-level command it belongs to.
+			findCommandByPage := func(name string) (*cobra.Command, bool) {
+				return lo.Find(cmd.Root().Commands(), func(command *cobra.Command) bool {
+					return strings.ReplaceAll(command.CommandPath(), " ", "_")+".md" == name
+				})
+			}
+
 			linkHandlerRoot := func(name string) string {
 				if name == "furyctl.md" {
 					return "index.md"
 				}
 
-				for _, command := range cmd.Root().Commands() {
-					basename := strings.ReplaceAll(command.CommandPath(), " ", "_") + ".md"
-					if basename == name {
-						return filepath.Join(command.Name(), "index.md")
-					}
+				if command, found := findCommandByPage(name); found {
+					return filepath.Join(command.Name(), "index.md")
 				}
 
 				return name
@@ -103,11 +108,8 @@ func NewDumpCLIReferenceCmd() *cobra.Command {
 					return "../index.md"
 				}
 
-				for _, command := range cmd.Root().Commands() {
-					basename := strings.ReplaceAll(command.CommandPath(), " ", "_") + ".md"
-					if basename == name {
-						return fmt.Sprintf("../%s/index.md", command.Name())
-					}
+				if command, found := findCommandByPage(name); found {
+					return fmt.Sprintf("../%s/index.md", command.Name())
 				}
 
 				return name

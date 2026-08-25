@@ -14,6 +14,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/samber/lo"
 	"github.com/sirupsen/logrus"
 
 	"github.com/sighupio/furyctl/internal/apis/config"
@@ -28,7 +29,6 @@ import (
 	iox "github.com/sighupio/furyctl/internal/x/io"
 	kubex "github.com/sighupio/furyctl/internal/x/kube"
 	netx "github.com/sighupio/furyctl/internal/x/net"
-	slicesx "github.com/sighupio/furyctl/internal/x/slices"
 )
 
 var (
@@ -211,7 +211,7 @@ func (k *Kubernetes) coreKubernetes(
 
 		parsedPlan := tfParser.Parse()
 
-		criticalResources := slicesx.Intersection(k.getCriticalTFResourceTypes(), parsedPlan.Destroy)
+		criticalResources := lo.Intersect(parsedPlan.Destroy, k.getCriticalTFResourceTypes())
 
 		if len(criticalResources) > 0 {
 			logrus.Warnf("Deletion of the following critical resources has been detected: %s. See the logs for more details.",

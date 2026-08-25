@@ -97,7 +97,7 @@ func (m *IACBuilder) Build() error {
 
 	excluded := []string{"terraform", ".gitignore"}
 
-	if m.kind != "EKSCluster" {
+	if m.kind != EKSClusterKind {
 		excluded = append(excluded, "manifests/aws")
 	}
 
@@ -174,16 +174,16 @@ func (m *IACBuilder) defaultsFile() (map[any]any, error) {
 	var defaultsFileName string
 
 	switch m.kind {
-	case "EKSCluster":
+	case EKSClusterKind:
 		defaultsFileName = "ekscluster-kfd-v1alpha2.yaml"
 
-	case "KFDDistribution":
+	case KFDDistributionKind:
 		defaultsFileName = "kfddistribution-kfd-v1alpha2.yaml"
 
-	case "OnPremises":
+	case OnPremisesKind:
 		defaultsFileName = "onpremises-kfd-v1alpha2.yaml"
 
-	case "Immutable":
+	case ImmutableKind:
 		defaultsFileName = "immutable-kfd-v1alpha2.yaml"
 
 	default:

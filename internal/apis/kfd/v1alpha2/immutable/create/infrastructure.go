@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"strconv"
 
+	"github.com/samber/lo"
 	"github.com/sirupsen/logrus"
 
 	"github.com/sighupio/furyctl/cmd/serve"
@@ -149,25 +150,22 @@ func (i *Infrastructure) Exec(_ string, upgradeState *upgrade.State) error {
 	}
 
 	// Struct to keep each node's bootstrap status.
-	nodeStatus := make(map[string]string, len(i.furyctlConf.Spec.Infrastructure.Nodes))
-	for _, node := range i.furyctlConf.Spec.Infrastructure.Nodes {
-		nodeStatus[node.Hostname] = serve.StatusPending
-	}
+	nodeStatus := lo.SliceToMap(
+		i.furyctlConf.Spec.Infrastructure.Nodes,
+		func(node public.SpecInfrastructureNode) (string, string) {
+			return node.Hostname, serve.StatusPending
+		},
+	)
 
 	// Serve the downloaded assets to the machines.
 	ipxeServer, err := url.Parse(string(i.furyctlConf.Spec.Infrastructure.IpxeServer.Url))
-	ipxeServerHost := ""
 	ipxeServerPort := ""
 
 	if err != nil {
 		return fmt.Errorf("failed to parse ipxe server URL: %w", err)
 	}
 
-	if i.furyctlConf.Spec.Infrastructure.IpxeServer.BindAddress != nil {
-		ipxeServerHost = *i.furyctlConf.Spec.Infrastructure.IpxeServer.BindAddress
-	} else {
-		ipxeServerHost = ipxeServer.Hostname()
-	}
+	ipxeServerHost := lo.FromPtrOr(i.furyctlConf.Spec.Infrastructure.IpxeServer.BindAddress, ipxeServer.Hostname())
 
 	if i.furyctlConf.Spec.Infrastructure.IpxeServer.BindPort != nil {
 		ipxeServerPort = strconv.Itoa(*i.furyctlConf.Spec.Infrastructure.IpxeServer.BindPort)

@@ -19,19 +19,19 @@ import (
 func TestMerger_MergeIntoViper(t *testing.T) {
 	tests := []struct {
 		name           string
-		flags          *flags.FlagsConfig
+		flags          flags.FlagsConfig
 		command        string
 		expectedValues map[string]any
 		setupViper     func()
 	}{
 		{
 			name: "merge global and apply flags",
-			flags: &flags.FlagsConfig{
-				Global: map[string]any{
+			flags: flags.FlagsConfig{
+				flags.CommandGlobal: {
 					"debug":            true,
 					"disableAnalytics": false,
 				},
-				Apply: map[string]any{
+				flags.CommandApply: {
 					"skipDepsValidation": true,
 					"dryRun":             false,
 					"timeout":            7200,
@@ -51,11 +51,11 @@ func TestMerger_MergeIntoViper(t *testing.T) {
 		},
 		{
 			name: "flags do not override existing viper values",
-			flags: &flags.FlagsConfig{
-				Global: map[string]any{
+			flags: flags.FlagsConfig{
+				flags.CommandGlobal: {
 					"debug": true,
 				},
-				Apply: map[string]any{
+				flags.CommandApply: {
 					"dryRun": true,
 				},
 			},
@@ -71,11 +71,11 @@ func TestMerger_MergeIntoViper(t *testing.T) {
 		},
 		{
 			name: "merge only global flags for unknown command",
-			flags: &flags.FlagsConfig{
-				Global: map[string]any{
+			flags: flags.FlagsConfig{
+				flags.CommandGlobal: {
 					"debug": true,
 				},
-				Apply: map[string]any{
+				flags.CommandApply: {
 					"dryRun": true,
 				},
 			},
@@ -84,15 +84,6 @@ func TestMerger_MergeIntoViper(t *testing.T) {
 				"debug":   true,
 				"dry-run": nil, // Should not be set
 			},
-			setupViper: func() {
-				viper.Reset()
-			},
-		},
-		{
-			name:           "nil flags",
-			flags:          nil,
-			command:        "apply",
-			expectedValues: map[string]any{},
 			setupViper: func() {
 				viper.Reset()
 			},
@@ -267,51 +258,6 @@ func TestMerger_ConvertValue(t *testing.T) {
 				assert.NoError(t, err, "Unexpected error")
 
 				assert.Equal(t, tt.expected, actualValue)
-			}
-		})
-	}
-}
-
-func TestMerger_MergeGlobalFlags(t *testing.T) {
-	defer viper.Reset()
-
-	flagsConfig := &flags.FlagsConfig{
-		Global: map[string]any{
-			"debug":            true,
-			"disableAnalytics": false,
-		},
-	}
-
-	merger := flags.NewMerger()
-	err := merger.MergeGlobalFlags(flagsConfig)
-	require.NoError(t, err, "MergeGlobalFlags()")
-
-	assert.True(t, viper.GetBool("debug"), "Expected debug to be true")
-	assert.False(t, viper.GetBool("disableAnalytics"), "Expected disableAnalytics to be false")
-}
-
-func TestMerger_GetSupportedFlagsForCommand(t *testing.T) {
-	merger := flags.NewMerger()
-
-	tests := []struct {
-		command   string
-		expectNil bool
-	}{
-		{"global", false},
-		{"apply", false},
-		{"delete", false},
-		{"create", false},
-		{"unknown", true},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.command, func(t *testing.T) {
-			supportedFlags := merger.GetSupportedFlagsForCommand(tt.command)
-
-			if tt.expectNil {
-				assert.Nil(t, supportedFlags, "Expected nil for unknown command")
-			} else {
-				assert.NotNil(t, supportedFlags, "Expected supported flags for command %s", tt.command)
 			}
 		})
 	}

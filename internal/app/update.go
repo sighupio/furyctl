@@ -13,6 +13,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/samber/lo"
 	"github.com/sirupsen/logrus"
 
 	"github.com/sighupio/furyctl/internal/semver"
@@ -104,11 +105,5 @@ func GetLatestRelease() (Release, error) {
 
 // githubToken returns a GitHub API token from the environment, if any.
 func githubToken() string {
-	for _, key := range []string{"GITHUB_TOKEN", "GITHUB_API_TOKEN"} {
-		if v := os.Getenv(key); v != "" {
-			return v
-		}
-	}
-
-	return ""
+	return lo.CoalesceOrEmpty(os.Getenv("GITHUB_TOKEN"), os.Getenv("GITHUB_API_TOKEN"))
 }

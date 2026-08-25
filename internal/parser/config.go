@@ -12,6 +12,8 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/samber/lo"
+
 	httpx "github.com/sighupio/furyctl/internal/x/http"
 )
 
@@ -53,38 +55,29 @@ func (p *ConfigParser) ParseDynamicValue(val any) (any, error) {
 
 	case []any:
 		// Process each element in the array.
-		result := make([]any, len(v))
-
-		for i, item := range v {
-			processedItem, err := p.ParseDynamicValue(item)
-			if err != nil {
-				return nil, fmt.Errorf("error processing array element %d: %w", i, err)
-			}
-
-			result[i] = processedItem
-		}
-
-		return result, nil
+		return parseDynamicSlice(p, v)
 
 	case []string:
 		// Process each string in the array.
-		result := make([]any, len(v))
-
-		for i, item := range v {
-			processedItem, err := p.ParseDynamicValue(item)
-			if err != nil {
-				return nil, fmt.Errorf("error processing array element %d: %w", i, err)
-			}
-
-			result[i] = processedItem
-		}
-
-		return result, nil
+		return parseDynamicSlice(p, v)
 
 	default:
 		// For other types (bool, int, float, etc.), return as-is.
 		return val, nil
 	}
+}
+
+// parseDynamicSlice resolves every element of a slice, preserving order. It is a free
+// function rather than a method because Go methods cannot be generic.
+func parseDynamicSlice[T any](p *ConfigParser, items []T) ([]any, error) {
+	return lo.MapErr(items, func(item T, i int) (any, error) {
+		processedItem, err := p.ParseDynamicValue(item)
+		if err != nil {
+			return nil, fmt.Errorf("error processing array element %d: %w", i, err)
+		}
+
+		return processedItem, nil
+	})
 }
 
 // ParseMultipleDynamicValues processes a string that may contain multiple dynamic value patterns.

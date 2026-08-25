@@ -19,18 +19,18 @@ func TestValidator_Validate(t *testing.T) {
 
 	tests := []struct {
 		name           string
-		flags          *flags.FlagsConfig
+		flags          flags.FlagsConfig
 		expectedErrors int
 	}{
 		{
 			name: "valid flags configuration",
-			flags: &flags.FlagsConfig{
-				Global: map[string]any{
+			flags: flags.FlagsConfig{
+				flags.CommandGlobal: {
 					"debug":            true,
 					"disableAnalytics": false,
 					"gitProtocol":      "https",
 				},
-				Apply: map[string]any{
+				flags.CommandApply: {
 					"skipDepsValidation": true,
 					"dryRun":             false,
 					"timeout":            3600,
@@ -41,11 +41,11 @@ func TestValidator_Validate(t *testing.T) {
 		},
 		{
 			name: "unsupported flags",
-			flags: &flags.FlagsConfig{
-				Global: map[string]any{
+			flags: flags.FlagsConfig{
+				flags.CommandGlobal: {
 					"unknownFlag": "value",
 				},
-				Apply: map[string]any{
+				flags.CommandApply: {
 					"anotherUnknownFlag": true,
 				},
 			},
@@ -53,8 +53,8 @@ func TestValidator_Validate(t *testing.T) {
 		},
 		{
 			name: "invalid git protocol",
-			flags: &flags.FlagsConfig{
-				Global: map[string]any{
+			flags: flags.FlagsConfig{
+				flags.CommandGlobal: {
 					"gitProtocol": "invalid",
 				},
 			},
@@ -62,8 +62,8 @@ func TestValidator_Validate(t *testing.T) {
 		},
 		{
 			name: "invalid force options",
-			flags: &flags.FlagsConfig{
-				Apply: map[string]any{
+			flags: flags.FlagsConfig{
+				flags.CommandApply: {
 					"force": []any{"invalid-option"},
 				},
 			},
@@ -71,8 +71,8 @@ func TestValidator_Validate(t *testing.T) {
 		},
 		{
 			name: "invalid timeout",
-			flags: &flags.FlagsConfig{
-				Apply: map[string]any{
+			flags: flags.FlagsConfig{
+				flags.CommandApply: {
 					"timeout": -1,
 				},
 			},
@@ -80,8 +80,8 @@ func TestValidator_Validate(t *testing.T) {
 		},
 		{
 			name: "conflicting vpn flags",
-			flags: &flags.FlagsConfig{
-				Apply: map[string]any{
+			flags: flags.FlagsConfig{
+				flags.CommandApply: {
 					"skipVpnConfirmation": true,
 					"vpnAutoConnect":      true,
 				},
@@ -90,8 +90,8 @@ func TestValidator_Validate(t *testing.T) {
 		},
 		{
 			name: "conflicting upgrade flags",
-			flags: &flags.FlagsConfig{
-				Apply: map[string]any{
+			flags: flags.FlagsConfig{
+				flags.CommandApply: {
 					"upgrade":     true,
 					"upgradeNode": "worker1",
 				},
@@ -100,8 +100,8 @@ func TestValidator_Validate(t *testing.T) {
 		},
 		{
 			name: "conflicting phase and startFrom",
-			flags: &flags.FlagsConfig{
-				Apply: map[string]any{
+			flags: flags.FlagsConfig{
+				flags.CommandApply: {
 					"phase":     "distribution",
 					"startFrom": "infrastructure",
 				},
@@ -110,18 +110,13 @@ func TestValidator_Validate(t *testing.T) {
 		},
 		{
 			name: "conflicting phase and postApplyPhases",
-			flags: &flags.FlagsConfig{
-				Apply: map[string]any{
+			flags: flags.FlagsConfig{
+				flags.CommandApply: {
 					"phase":           "distribution",
 					"postApplyPhases": []any{"distribution"},
 				},
 			},
 			expectedErrors: 1, // Conflicting flags
-		},
-		{
-			name:           "nil flags",
-			flags:          nil,
-			expectedErrors: 0,
 		},
 	}
 
@@ -130,85 +125,6 @@ func TestValidator_Validate(t *testing.T) {
 			errors := validator.Validate(tt.flags)
 
 			assert.Len(t, errors, tt.expectedErrors, "Expected %d errors, got %d: %v", tt.expectedErrors, len(errors), errors)
-		})
-	}
-}
-
-func TestValidator_ValidateSpecificFlag(t *testing.T) {
-	validator := flags.NewValidator()
-
-	tests := []struct {
-		name        string
-		flagName    string
-		value       any
-		expectError bool
-	}{
-		{
-			name:        "valid gitProtocol https",
-			flagName:    "gitProtocol",
-			value:       "https",
-			expectError: false,
-		},
-		{
-			name:        "valid gitProtocol ssh",
-			flagName:    "gitProtocol",
-			value:       "ssh",
-			expectError: false,
-		},
-		{
-			name:        "invalid gitProtocol",
-			flagName:    "gitProtocol",
-			value:       "ftp",
-			expectError: true,
-		},
-		{
-			name:        "valid timeout",
-			flagName:    "timeout",
-			value:       3600,
-			expectError: false,
-		},
-		{
-			name:        "invalid timeout negative",
-			flagName:    "timeout",
-			value:       -1,
-			expectError: true,
-		},
-		{
-			name:        "valid force options",
-			flagName:    "force",
-			value:       []any{"all", "upgrades"},
-			expectError: false,
-		},
-		{
-			name:        "invalid force option",
-			flagName:    "force",
-			value:       []any{"invalid"},
-			expectError: true,
-		},
-		{
-			name:        "unknown flag",
-			flagName:    "unknownFlag",
-			value:       "value",
-			expectError: false, // Should not error for unknown flags
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			// Create a simple flag info for testing
-			flagInfo := flags.FlagInfo{
-				Type:        flags.FlagTypeString,
-				Description: "Test flag",
-			}
-
-			// Test through validateFlagValue which calls validateSpecificFlag
-			err := validator.ValidateIndividualFlag(tt.flagName, tt.value, flagInfo)
-
-			if tt.expectError {
-				assert.Error(t, err, "Expected error for flag %s with value %v, but got none", tt.flagName, tt.value)
-			} else {
-				assert.NoError(t, err, "Unexpected error for flag %s with value %v", tt.flagName, tt.value)
-			}
 		})
 	}
 }
@@ -266,17 +182,17 @@ func TestValidator_ErrorSeverityClassification(t *testing.T) {
 
 	tests := []struct {
 		name             string
-		flags            *flags.FlagsConfig
+		flags            flags.FlagsConfig
 		expectedFatal    int
 		expectedWarnings int
 	}{
 		{
 			name: "fatal errors - invalid protocol and negative timeout",
-			flags: &flags.FlagsConfig{
-				Global: map[string]any{
+			flags: flags.FlagsConfig{
+				flags.CommandGlobal: {
 					"gitProtocol": "ftp", // Fatal: invalid protocol
 				},
-				Apply: map[string]any{
+				flags.CommandApply: {
 					"timeout": -5, // Fatal: negative timeout
 				},
 			},
@@ -285,11 +201,11 @@ func TestValidator_ErrorSeverityClassification(t *testing.T) {
 		},
 		{
 			name: "fatal errors - unsupported flags",
-			flags: &flags.FlagsConfig{
-				Global: map[string]any{
+			flags: flags.FlagsConfig{
+				flags.CommandGlobal: {
 					"unknownGlobalFlag": "value", // Fatal: unsupported
 				},
-				Apply: map[string]any{
+				flags.CommandApply: {
 					"unknownApplyFlag": true, // Fatal: unsupported
 				},
 			},
@@ -298,8 +214,8 @@ func TestValidator_ErrorSeverityClassification(t *testing.T) {
 		},
 		{
 			name: "fatal errors - conflicting flags",
-			flags: &flags.FlagsConfig{
-				Apply: map[string]any{
+			flags: flags.FlagsConfig{
+				flags.CommandApply: {
 					"vpnAutoConnect":      true, // Fatal: conflicts with skipVpnConfirmation
 					"skipVpnConfirmation": true,
 					"upgrade":             true, // Fatal: conflicts with upgradeNode
@@ -311,8 +227,8 @@ func TestValidator_ErrorSeverityClassification(t *testing.T) {
 		},
 		{
 			name: "fatal errors - invalid force options",
-			flags: &flags.FlagsConfig{
-				Apply: map[string]any{
+			flags: flags.FlagsConfig{
+				flags.CommandApply: {
 					"force": []any{"invalid-option"}, // Fatal: invalid force option
 				},
 			},
@@ -321,12 +237,12 @@ func TestValidator_ErrorSeverityClassification(t *testing.T) {
 		},
 		{
 			name: "mixed fatal errors",
-			flags: &flags.FlagsConfig{
-				Global: map[string]any{
+			flags: flags.FlagsConfig{
+				flags.CommandGlobal: {
 					"gitProtocol": "invalid", // Fatal: invalid protocol
 					"unknownFlag": "value",   // Fatal: unsupported
 				},
-				Apply: map[string]any{
+				flags.CommandApply: {
 					"timeout":        -1,     // Fatal: negative timeout
 					"anotherUnknown": "test", // Fatal: unsupported
 				},

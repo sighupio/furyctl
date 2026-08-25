@@ -15,6 +15,7 @@ import (
 	"strings"
 	"text/tabwriter"
 
+	"github.com/samber/lo"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -52,12 +53,13 @@ func NewClusterInfoCmd() *cobra.Command {
 		PreRun: func(cmd *cobra.Command, _ []string) {
 			cmdEvent = analytics.NewCommandEvent(cobrax.GetFullname(cmd))
 
-			if err := flags.LoadAndMergeCommandFlags("get"); err != nil {
-				logrus.Fatalf("failed to load flags from configuration: %v", err)
-			}
-
+			// Bind the flags first: a flag on the command line has precedence over the configuration file.
 			if err := viper.BindPFlags(cmd.Flags()); err != nil {
 				logrus.Fatalf("error while binding flags: %v", err)
+			}
+
+			if err := flags.LoadAndMergeCommandFlags("get"); err != nil {
+				logrus.Fatalf("failed to load flags from configuration: %v", err)
 			}
 		},
 		RunE: func(_ *cobra.Command, _ []string) error {
@@ -208,11 +210,8 @@ func formatText(info *clusterinfo.Info) string {
 		_, _ = fmt.Fprintf(w, "%s\t%s\n", "SD Installer version:", info.SDInstallerVersion)
 	}
 
-	if len(info.SDUpgradePaths) > 0 {
-		_, _ = fmt.Fprintf(w, "%s\t%s\n", "SD Upgrade paths:", strings.Join(info.SDUpgradePaths, ", "))
-	} else {
-		_, _ = fmt.Fprintf(w, "%s\t%s\n", "SD Upgrade paths:", "None")
-	}
+	_, _ = fmt.Fprintf(w, "%s\t%s\n", "SD Upgrade paths:",
+		lo.Ternary(len(info.SDUpgradePaths) > 0, strings.Join(info.SDUpgradePaths, ", "), "None"))
 
 	if info.SDOngoingUpgrade != nil {
 		u := info.SDOngoingUpgrade
@@ -234,11 +233,8 @@ func formatText(info *clusterinfo.Info) string {
 			info.LastConfigurationChange.UTC().Format("2006-01-02 15:04:05 (UTC)"))
 	}
 
-	if info.CustomPatchesPresent {
-		_, _ = fmt.Fprintf(w, "%s\t%s\n", "Custom Patches present:", "Yes")
-	} else {
-		_, _ = fmt.Fprintf(w, "%s\t%s\n", "Custom Patches present:", "None")
-	}
+	_, _ = fmt.Fprintf(w, "%s\t%s\n", "Custom Patches present:",
+		lo.Ternary(info.CustomPatchesPresent, "Yes", "None"))
 
 	_ = w.Flush()
 

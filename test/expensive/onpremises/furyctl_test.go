@@ -20,6 +20,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gexec"
+	"github.com/samber/lo"
 
 	"github.com/sighupio/furyctl/internal/cluster"
 	"github.com/sighupio/furyctl/internal/distribution"
@@ -261,9 +262,9 @@ var (
 			return nil, nil, fmt.Errorf("error extracting master private ips")
 		}
 
-		for _, ip := range mIps {
-			masterPrivateIps = append(masterPrivateIps, ip.(string))
-		}
+		masterPrivateIps = lo.Map(mIps, func(ip any, _ int) string {
+			return ip.(string)
+		})
 
 		if tfOut["worker_private_ips"] == nil {
 			return nil, nil, fmt.Errorf("error extracting worker private ips")
@@ -274,9 +275,9 @@ var (
 			return nil, nil, fmt.Errorf("error extracting worker private ips")
 		}
 
-		for _, ip := range wIps {
-			workerPrivateIps = append(workerPrivateIps, ip.(string))
-		}
+		workerPrivateIps = lo.Map(wIps, func(ip any, _ int) string {
+			return ip.(string)
+		})
 
 		return masterPrivateIps, workerPrivateIps, nil
 	}
