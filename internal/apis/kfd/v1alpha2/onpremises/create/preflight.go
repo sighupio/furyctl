@@ -34,8 +34,9 @@ var (
 )
 
 type Status struct {
-	Diffs   r3diff.Changelog
-	Success bool
+	Diffs         r3diff.Changelog
+	Success       bool
+	ClusterExists bool
 }
 
 type PreFlight struct {
@@ -157,6 +158,8 @@ func (p *PreFlight) Exec(renderedConfig map[string]any) (*Status, error) {
 	if err := kubex.SetConfigEnv(path.Join(p.Path, "admin.conf")); err != nil {
 		return status, fmt.Errorf("error setting kubeconfig env: %w", err)
 	}
+	// Set ClusterExists only after KUBECONFIG points to the verified cluster.
+	status.ClusterExists = true
 
 	logrus.Info("Checking that the cluster is reachable...")
 

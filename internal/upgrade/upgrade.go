@@ -38,17 +38,7 @@ func (u *Upgrade) Exec(workdir, phase string) error {
 		u.To,
 	)
 
-	from := semver.EnsureNoPrefix(u.From)
-	to := semver.EnsureNoPrefix(u.To)
-
-	// Compose the path to the upgrade script.
-	upgradePath := path.Join(
-		u.paths.WorkDir,
-		"upgrades",
-		from+"-"+to,
-	)
-
-	upgradeScript := path.Join(upgradePath, phase+".sh")
+	upgradeScript := u.scriptPath(phase)
 
 	if _, err := os.Stat(upgradeScript); err != nil {
 		if os.IsNotExist(err) {
@@ -73,6 +63,27 @@ func (u *Upgrade) Exec(workdir, phase string) error {
 	}
 
 	return nil
+}
+
+// HasScript reports whether the requested upgrade script exists.
+func (u *Upgrade) HasScript(phase string) (bool, error) {
+	_, err := os.Stat(u.scriptPath(phase))
+	if err == nil {
+		return true, nil
+	}
+
+	if os.IsNotExist(err) {
+		return false, nil
+	}
+
+	return false, fmt.Errorf("error checking upgrade path: %w", err)
+}
+
+func (u *Upgrade) scriptPath(phase string) string {
+	from := semver.EnsureNoPrefix(u.From)
+	to := semver.EnsureNoPrefix(u.To)
+
+	return path.Join(u.paths.WorkDir, "upgrades", from+"-"+to, phase+".sh")
 }
 
 func New(

@@ -37,6 +37,8 @@ type Kubernetes struct {
 	ansibleRunner     *ansible.Runner
 	upgrade           *upgrade.Upgrade
 	upgradeNode       string
+	skipNodesUpgrade  bool
+	workerNodes       []string
 	force             []string
 	podRunningTimeout int
 }
@@ -48,6 +50,8 @@ func NewKubernetes(
 	dryRun bool,
 	upgr *upgrade.Upgrade,
 	upgradeNode string,
+	skipNodesUpgrade bool,
+	workerNodes []string,
 	force []string,
 	podRunningTimeout int,
 ) *Kubernetes {
@@ -69,6 +73,8 @@ func NewKubernetes(
 		),
 		upgrade:           upgr,
 		upgradeNode:       upgradeNode,
+		skipNodesUpgrade:  skipNodesUpgrade,
+		workerNodes:       workerNodes,
 		force:             force,
 		podRunningTimeout: podRunningTimeout,
 	}
@@ -92,11 +98,7 @@ func (k *Kubernetes) Exec(rdcs reducers.Reducers, startFrom string, upgradeState
 	}
 
 	if k.upgradeNode != "" {
-		if _, err := k.ansibleRunner.Playbook("56.upgrade-worker-nodes.yml", "--limit", k.upgradeNode); err != nil {
-			return fmt.Errorf("error upgrading node %s: %w", k.upgradeNode, err)
-		}
-
-		return nil
+		return k.runWorkerUpgradePlaybooks([]string{k.upgradeNode}, nil)
 	}
 
 	if err := k.preKubernetes(startFrom, upgradeState); err != nil {
@@ -122,6 +124,51 @@ func (k *Kubernetes) Exec(rdcs reducers.Reducers, startFrom string, upgradeState
 
 func (k *Kubernetes) SetUpgrade(upgradeEnabled bool) {
 	k.upgrade.Enabled = upgradeEnabled
+}
+
+// UpgradeWorkerNodes upgrades the requested worker nodes.
+func (k *Kubernetes) UpgradeWorkerNodes(
+	nodes []string,
+	onResult func(node string, status upgrade.PhaseStatus) error,
+) error {
+	if err := k.prepare(); err != nil {
+		return fmt.Errorf("error preparing kubernetes phase: %w", err)
+	}
+
+	if k.dryRun {
+		logrus.Infof("Would upgrade %d worker nodes (dry-run mode)", len(nodes))
+
+		return nil
+	}
+
+	return k.runWorkerUpgradePlaybooks(nodes, onResult)
+}
+
+func (k *Kubernetes) runWorkerUpgradePlaybooks(
+	nodes []string,
+	onResult func(node string, status upgrade.PhaseStatus) error,
+) error {
+	for _, node := range nodes {
+		if _, err := k.ansibleRunner.Playbook("56.upgrade-worker-nodes.yml", "--limit", node); err != nil {
+			workerErr := fmt.Errorf("error upgrading node %s: %w", node, err)
+
+			if onResult != nil {
+				if stateErr := onResult(node, upgrade.PhaseStatusFailed); stateErr != nil {
+					return fmt.Errorf("%w, error saving worker upgrade state: %w", workerErr, stateErr)
+				}
+			}
+
+			return workerErr
+		}
+
+		if onResult != nil {
+			if err := onResult(node, upgrade.PhaseStatusSuccess); err != nil {
+				return fmt.Errorf("error saving successful upgrade state for node %s: %w", node, err)
+			}
+		}
+	}
+
+	return nil
 }
 
 // runMigrations runs, for each reducer lifecycle present, the matching migration
@@ -243,6 +290,26 @@ func (k *Kubernetes) preKubernetes(
 
 		if k.upgrade.Enabled {
 			upgradeState.Phases.PreKubernetes.Status = upgrade.PhaseStatusSuccess
+
+			if k.skipNodesUpgrade && len(k.workerNodes) > 0 {
+				hasScript, err := k.upgrade.HasScript("pre-kubernetes")
+				if err != nil {
+					return fmt.Errorf("error checking pre-kubernetes upgrade script: %w", err)
+				}
+
+				if hasScript {
+					nodes := make(map[string]upgrade.PhaseStatus, len(k.workerNodes))
+					for _, node := range k.workerNodes {
+						nodes[node] = upgrade.PhaseStatusPending
+					}
+
+					upgradeState.Transition = &upgrade.Transition{
+						From: k.upgrade.From,
+						To:   k.upgrade.To,
+					}
+					upgradeState.StagedWorkers = &upgrade.StagedWorkers{Nodes: nodes}
+				}
+			}
 		}
 	}
 

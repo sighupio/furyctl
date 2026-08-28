@@ -12,9 +12,7 @@ import (
 	"github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/onpremises/public"
 )
 
-// TestAntiDrift decodes a furyctl.yaml exercising the fields furyctl reads from
-// an OnPremises config and asserts they decode (guards yaml-tag drift from the
-// distribution schema).
+// TestAntiDrift checks that the fields furyctl reads decode from an OnPremises config.
 func TestAntiDrift(t *testing.T) {
 	t.Parallel()
 
@@ -22,6 +20,11 @@ func TestAntiDrift(t *testing.T) {
 kind: OnPremises
 spec:
   kubernetes:
+    nodes:
+      - name: workers
+        hosts:
+          - name: worker-a
+          - name: worker-b
     advanced:
       users:
         names:
@@ -44,5 +47,9 @@ spec:
 
 	if got := c.Spec.Kubernetes.Advanced.Users.Names; len(got) != 2 || got[0] != "alice" || got[1] != "bob" {
 		t.Errorf("Spec.Kubernetes.Advanced.Users.Names did not decode, got %v", got)
+	}
+
+	if got := c.Spec.Kubernetes.Nodes; len(got) != 1 || len(got[0].Hosts) != 2 || got[0].Hosts[0].Name != "worker-a" {
+		t.Errorf("Spec.Kubernetes.Nodes did not decode, got %v", got)
 	}
 }
