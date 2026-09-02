@@ -24,6 +24,7 @@ const DICTS = {
     "steps.current": "current",
     "steps.locked": "not yet",
     lang: "Language",
+    "picker.lead": "Pick the provider and the distribution version to configure.",
     "picker.kind": "Provider",
     "picker.version": "Distribution version",
     "picker.start": "Start",

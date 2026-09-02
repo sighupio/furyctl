@@ -13,6 +13,12 @@ steps:
     title: Cluster
     description: Identity of the cluster and how furyctl reaches the machines.
     fields:
+      - id: nodeKind
+        type: choice
+        label: What are the nodes
+        help: "Bare metal turns on the settings the SIGHUP Distribution documentation prescribes for physical machines: the inotify limits, the pod density of the kubelet, the pod subnet per node and the dedicated data disks. On virtual machines the distribution defaults are left alone."
+        options: [bare-metal, virtual-machines]
+        default: bare-metal
       - id: name
         type: text
         example: "production"
@@ -294,6 +300,7 @@ steps:
         fields:
           - id: dataDisk
             type: dataDisk
+            when: cluster.nodeKind == bare-metal
             label: Add a data disk
             help: "Answer three questions and the disk, its partition and the filesystem that mounts it are written below, consistent with each other. The raw lists stay editable."
             config:
@@ -571,15 +578,18 @@ steps:
               type: text
           - id: knownKernelParameters
             type: preset
+            when: cluster.nodeKind == bare-metal
             label: Settings documented for bare metal nodes
             help: From "Installing on bare-metal nodes" in the SIGHUP Distribution documentation. The parameters the container runtime needs (bridge-nf-call-iptables, ip_forward) are applied by the installer itself, so they are not offered here.
             target: kernelParameters
             presets:
               - label: inotify instances 8192
                 help: Every container watches files through inotify. With 200 to 500 pods per node the default of 128 instances runs out and pods stop starting.
+                default: true
                 value: {name: fs.inotify.max_user_instances, value: "8192"}
               - label: inotify watches 524288
                 help: The companion limit to the instances one. The default of 8192 watches is exhausted by a busy node.
+                default: true
                 value: {name: fs.inotify.max_user_watches, value: "524288"}
           - id: kernelParameters
             type: list
@@ -697,11 +707,14 @@ steps:
       - id: maxPods
         type: number
         example: "500"
+        when: cluster.nodeKind == bare-metal
+        default: 500
         label: Max pods per node
         help: "The kubelet allows 110 by default. It must stay below the addresses available in the per-node pod subnet: a /24 gives about 250, a /23 about 500, a /22 about 1000."
         min: 1
       - id: systemReserved
         type: group
+        when: cluster.nodeKind == bare-metal
         label: Resources reserved for the system
         help: Kept aside for the kubelet, the container runtime and the OS, so a busy node does not starve them. The documented rule of thumb is in each field.
         collapsed: true
@@ -737,6 +750,8 @@ steps:
           - id: nodeSubnetSize
             type: number
             example: "23"
+            when: cluster.nodeKind == bare-metal
+            default: 23
             label: Pod subnet size per node
             help: The prefix length the CNI carves out of the pod CIDR for each node. A /23 gives about 500 addresses, which matches 500 pods per node. Keep it consistent with the max pods per node.
             min: 8

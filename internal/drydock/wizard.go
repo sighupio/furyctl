@@ -93,6 +93,9 @@ type Preset struct {
 	Label Text `json:"label"          yaml:"label"`
 	Help  Text `json:"help,omitempty" yaml:"help"`
 	Value any  `json:"value"          yaml:"value"`
+	// Default puts the entry in the target list when the wizard opens, for the settings the
+	// documentation prescribes rather than merely offers.
+	Default bool `json:"default,omitempty" yaml:"default"`
 }
 
 func isFieldType(s string) bool {

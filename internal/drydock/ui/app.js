@@ -9,7 +9,7 @@
 import { LANGS, getLang, setLang, t, text } from "./i18n.js";
 import { makeDataDisk } from "./datadisk.js";
 import { makeNodeTable } from "./nodetable.js";
-import { button, collectStep, el, initScope, missingRequired, renderFields } from "./renderer.js";
+import { button, collectStep, el, initScope, missingRequired, renderFields, syncPresets } from "./renderer.js";
 import { collectReferences } from "./sources.js";
 
 const $ = (id) => document.getElementById(id);
@@ -112,8 +112,8 @@ async function api(path, body) {
 function renderPicker() {
   const box = $("picker");
   box.replaceChildren();
-  box.append(Object.assign(el("h2"), { textContent: t("app.title") }));
-  box.append(Object.assign(el("p", "lead"), { textContent: t("app.subtitle") }));
+  // The header already says what this is; the card only asks the two questions.
+  box.append(Object.assign(el("p", "lead"), { textContent: t("picker.lead") }));
   const kindSel = el("select", "wz-input wz-select");
   for (const w of state.wizards) {
     const o = el("option");
@@ -186,6 +186,7 @@ function startWizard(wizard, version) {
 
 function collectAll() {
   const out = {};
+  for (const s of state.wizard.steps) syncPresets(s.fields, state.answers[s.id], state.answers);
   for (const s of state.wizard.steps) out[s.id] = collectStep(s, state.answers[s.id], state.answers, state.widgets);
   return out;
 }
@@ -237,6 +238,7 @@ function renderStepper(blanks) {
 function rerender() {
   if (!state.wizard) return;
   const steps = state.wizard.steps;
+  for (const s of steps) syncPresets(s.fields, state.answers[s.id], state.answers);
   const blanks = blanksByStep();
   renderStepper(blanks);
 

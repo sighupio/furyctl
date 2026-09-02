@@ -99,6 +99,7 @@ steps:
         presets:
           - label: inotify watches
             help: Many operators watch a lot of files.
+            default: true
             value: {name: fs.inotify.max_user_watches, value: "524288"}
 `))
 	require.NoError(t, err)
@@ -108,6 +109,7 @@ steps:
 	require.Len(t, p.Presets, 1)
 	assert.Equal(t, Text{"en": "inotify watches"}, p.Presets[0].Label)
 	assert.NotNil(t, p.Presets[0].Value)
+	assert.True(t, p.Presets[0].Default)
 }
 
 func TestParseWizardRejects(t *testing.T) {

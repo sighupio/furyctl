@@ -37,6 +37,29 @@ function defaultFor(field) {
   }
 }
 
+const key = (v) => JSON.stringify(v);
+
+// A preset marked as a default belongs to the field that offers it: present while the field is
+// visible, taken out of the file when the answer above hides it. A default the user switched
+// off stays off, remembered in the field's own slot, which holds no answer of its own.
+export function syncPresets(fields, scope, root) {
+  for (const f of fields) {
+    if (f.type === "preset") {
+      const visible = evalWhen(f.when, scope, root);
+      const list = (scope[f.target] ??= []);
+      const off = scope[f.id]?.off ?? [];
+      for (const p of f.presets) {
+        if (!p.default) continue;
+        const at = list.findIndex((item) => key(item) === key(p.value));
+        if (visible && at < 0 && !off.includes(key(p.value))) list.push(structuredClone(p.value));
+        if (!visible && at >= 0) list.splice(at, 1);
+      }
+    }
+    if (f.type === "group") syncPresets(f.fields, (scope[f.id] ??= {}), root);
+  }
+  return scope;
+}
+
 // Fills scope with defaults for every field that has no value yet, recursively.
 export function initScope(fields, scope) {
   for (const f of fields) {
@@ -237,17 +260,23 @@ function tipFor(f, get, set) {
 function presets(f, scope, cb) {
   const box = el("div", "presets");
   const list = (scope[f.target] ??= []);
-  const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+  const memory = (scope[f.id] ??= { off: [] });
+  memory.off ??= [];
   for (const p of f.presets) {
-    const at = list.findIndex((item) => same(item, p.value));
+    const at = list.findIndex((item) => key(item) === key(p.value));
     const chip = el("button", `preset-chip${at >= 0 ? " on" : ""}`);
     chip.type = "button";
     chip.textContent = text(p.label);
     chip.title = text(p.help);
     chip.setAttribute("aria-pressed", String(at >= 0));
     chip.addEventListener("click", () => {
-      if (at >= 0) list.splice(at, 1);
-      else list.push(structuredClone(p.value));
+      if (at >= 0) {
+        list.splice(at, 1);
+        if (p.default) memory.off.push(key(p.value));
+      } else {
+        list.push(structuredClone(p.value));
+        memory.off = memory.off.filter((k) => k !== key(p.value));
+      }
       cb.both();
     });
     box.append(chip);
