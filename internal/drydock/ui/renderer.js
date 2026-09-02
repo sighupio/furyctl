@@ -159,7 +159,9 @@ function renderField(f, scope, root, cb, widgets) {
     // A widget keeps its own state object. Overrides are rendered without initScope, so it
     // may not exist yet.
     scope[f.id] ??= {};
-    widget.render(box, f, scope[f.id], root, cb.onChange);
+    // Widgets get the step re-render too: one that writes into sibling fields has to make
+    // them redraw, and one that only edits its own cells must not.
+    widget.render(box, f, scope[f.id], root, cb.onChange, cb.rerender);
     return box;
   }
 

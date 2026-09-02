@@ -57,14 +57,14 @@ export function entriesFor({ device, purpose, mount, format }) {
 
 export function makeDataDisk() {
   return {
-    render(container, field, state, root, onChange) {
+    render(container, field, state, root, onChange, rerenderStep) {
       state.device ??= "";
       state.purpose ??= "containerd";
       state.format ??= "ext4";
       state.mount ??= "";
 
       const box = el("div", "datadisk");
-      const rerender = () => this.render(container, field, state, root, onChange);
+      const rerender = () => this.render(container, field, state, root, onChange, rerenderStep);
 
       const label = el("label");
       label.textContent = text(field.label) || t("disk.title");
@@ -128,7 +128,8 @@ export function makeDataDisk() {
         state.device = "";
         state.mount = "";
         onChange();
-        rerender();
+        // The disk lands in the lists below: they have to redraw, not just this form.
+        (rerenderStep ?? rerender)();
       });
       const foot = el("div", "datadisk-foot");
       foot.append(add, Object.assign(el("span", "help"), { textContent: t("disk.result") }));

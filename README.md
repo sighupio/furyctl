@@ -97,6 +97,8 @@ For development setup, building from source, and contributing guidelines, see [D
 
 For basic and advanced usage instructions, please refer to furyctl's [official documentation](https://docs.sighup.io/furyctl/) and the [SIGHUP Distribution getting started guides](https://docs.sighup.io/docs/getting-started/).
 
+To write a configuration file through a guided wizard instead of by hand, see [`furyctl drydock`](docs/drydock.md).
+
 <!-- </SD-DOCS> -->
 <!-- <FOOTER> -->
 

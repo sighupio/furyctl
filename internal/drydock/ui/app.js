@@ -214,9 +214,11 @@ function renderStepper(blanks) {
   stepper.replaceChildren();
   const all = steps.concat([{ id: "__review", title: { en: t("review.title") } }]);
   all.forEach((s, i) => {
-    const done = i < state.step;
     const active = i === state.step;
     const locked = i > state.maxStep;
+    const left = blanks[s.id]?.length ?? 0;
+    // Done means visited with nothing missing, so stepping back does not undo the ticks.
+    const done = !active && !locked && !left;
     const item = el("button", `step-item${done ? " done" : ""}${active ? " active" : ""}${locked ? " locked" : ""}`);
     item.type = "button";
     item.disabled = locked;
@@ -224,9 +226,14 @@ function renderStepper(blanks) {
     bullet.textContent = done ? "✓" : String(i + 1);
     const label = el("span", "step-label");
     label.textContent = text(s.title) || s.id;
-    const left = blanks[s.id]?.length ?? 0;
     const sub = el("span", "step-sub");
-    sub.textContent = left ? t("steps.missing", { n: left }) : done ? t("steps.done") : active ? t("steps.current") : t("steps.locked");
+    sub.textContent = left
+      ? t("steps.missing", { n: left })
+      : active
+        ? t("steps.current")
+        : done
+          ? t("steps.done")
+          : t("steps.locked");
     if (left) sub.classList.add("todo");
     label.append(sub);
     item.append(bullet, label);
@@ -302,6 +309,7 @@ async function preview() {
     }
     if (data.templateError) setStatus("fix", 0, 1);
     else setStatus(fix.length ? "fix" : todo.length ? "todo" : "ok", todo.length, fix.length);
+    renderStepper(blanksByStep()); // Typing does not re-render the step; the counters still have to follow.
     showError("");
     if (state.step === state.wizard.steps.length) rerender();
   } catch (e) {
