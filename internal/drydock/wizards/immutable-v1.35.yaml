@@ -214,8 +214,8 @@ steps:
                 default: NoSchedule
 
   - id: nodeDefaults
-    title: Nodes, what they share
-    description: Set once for every node. In the next step you can override any of it per role or per node.
+    title: Shared configuration
+    description: What every node has in common. In the next step you can override any of it per role or per node.
     fields:
       - id: arch
         type: choice
@@ -358,7 +358,7 @@ steps:
                 type: choice
                 label: Format
                 options: [ext4, xfs, btrfs, vfat, swap, none]
-                default: xfs
+                default: ext4
               - id: path
                 type: text
                 example: "/var/lib/longhorn"

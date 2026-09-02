@@ -947,6 +947,11 @@ details.group[open] > summary { margin-bottom: 0.75rem; }
 .review dl { display: grid; grid-template-columns: max-content 1fr; gap: 0.35rem 1.25rem; margin: 0.5rem 0 1.25rem; }
 .review dt { font-family: "Geist Mono", ui-monospace, monospace; font-size: 0.85rem; }
 .review dd { margin: 0; color: var(--muted-foreground); font-size: 0.85rem; }
+.review .blanks { border: 1px solid color-mix(in srgb, var(--progress) 35%, var(--border)); background: color-mix(in srgb, var(--progress) 6%, var(--card)); border-radius: calc(var(--radius) / 2); padding: 0.75rem 1rem; margin: 0 0 0.75rem; }
+.review .blanks-head { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
+.review .blanks ul { margin: 0.5rem 0 0; font-size: 0.85rem; }
+.review h3.todo { color: var(--progress); }
+.step-sub.todo { color: var(--progress); font-weight: 600; }
 .review h3 { font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted-foreground); margin: 1.5rem 0 0.5rem; }
 .review ul { padding-left: 1.25rem; line-height: 1.6; }
 .review .written { padding: 1rem; border-radius: calc(var(--radius) / 2); background: color-mix(in srgb, var(--success) 10%, var(--card)); border: 1px solid color-mix(in srgb, var(--success) 40%, var(--border)); }

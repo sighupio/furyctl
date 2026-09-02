@@ -18,14 +18,21 @@ import { button, collectFields, el, initScope, renderFields } from "./renderer.j
 export function makeNodeTable(wizardSteps) {
   const defaultsFields = (field) => wizardSteps.find((s) => s.id === field.config.defaultsStep).fields;
 
+  // The rows exist as soon as the topology says so, even before this step is ever shown: the
+  // preview and the "still to fill" count both need them.
+  const ensure = (field, state, root) => {
+    state.rows ??= [];
+    state.roleOverrides ??= {};
+    state.firstIp ??= {};
+    Object.assign(state, reconcile(state, root[field.config.topologyStep], root[field.config.clusterStep]?.domain ?? ""));
+
+    return state;
+  };
+
   const widget = {
     render(container, field, state, root, onChange) {
       const topology = root[field.config.topologyStep];
-      const domain = root[field.config.clusterStep]?.domain ?? "";
-      state.rows ??= [];
-      state.roleOverrides ??= {};
-      state.firstIp ??= {};
-      Object.assign(state, reconcile(state, topology, domain));
+      ensure(field, state, root);
 
       const fields = defaultsFields(field);
       const defaultsScope = root[field.config.defaultsStep];
@@ -53,12 +60,24 @@ export function makeNodeTable(wizardSteps) {
       container.replaceChildren(box);
     },
 
+    // MAC addresses cannot be derived, and a static node needs its IP: those are the blanks
+    // that keep a configuration from being written.
+    missing(field, state, root) {
+      ensure(field, state, root);
+
+      const defaultsScope = root[field.config.defaultsStep];
+      const out = [];
+      for (const row of state.rows ?? []) {
+        const ov = state.roleOverrides?.[roleKey(row)];
+        const mode = row.overrides.networkMode ?? (ov?.enabled ? ov.values.networkMode : undefined) ?? defaultsScope.networkMode;
+        if (!row.macAddress) out.push(t("nodes.missingMac", { host: row.hostname }));
+        if (mode !== "dhcp" && !row.ip) out.push(t("nodes.missingIp", { host: row.hostname }));
+      }
+      return out;
+    },
+
     collect(field, state, root) {
-      // The preview may run before this step is ever shown: generate the rows from the topology.
-      state.rows ??= [];
-      state.roleOverrides ??= {};
-      state.firstIp ??= {};
-      Object.assign(state, reconcile(state, root[field.config.topologyStep], root[field.config.clusterStep]?.domain ?? ""));
+      ensure(field, state, root);
 
       const fields = defaultsFields(field);
       const defaults = collectFields(fields, root[field.config.defaultsStep], root);

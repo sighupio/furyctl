@@ -8,7 +8,7 @@
 
 import { LANGS, getLang, setLang, t, text } from "./i18n.js";
 import { makeNodeTable } from "./nodetable.js";
-import { button, collectStep, el, initScope, renderFields } from "./renderer.js";
+import { button, collectStep, el, initScope, missingRequired, renderFields } from "./renderer.js";
 import { collectReferences } from "./sources.js";
 
 const $ = (id) => document.getElementById(id);
@@ -189,6 +189,16 @@ function collectAll() {
   return out;
 }
 
+// What each step is still missing, keyed by step id. Recomputed on every render: cheap, and
+// always in step with what the user just typed.
+function blanksByStep() {
+  const out = {};
+  for (const s of state.wizard.steps) {
+    out[s.id] = missingRequired(s.fields, state.answers[s.id], state.answers, state.widgets);
+  }
+  return out;
+}
+
 function goTo(i) {
   state.step = i;
   state.maxStep = Math.max(state.maxStep, i);
@@ -196,7 +206,7 @@ function goTo(i) {
   window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
-function renderStepper() {
+function renderStepper(blanks) {
   const steps = state.wizard.steps;
   const stepper = $("stepper");
   stepper.replaceChildren();
@@ -212,8 +222,10 @@ function renderStepper() {
     bullet.textContent = done ? "✓" : String(i + 1);
     const label = el("span", "step-label");
     label.textContent = text(s.title) || s.id;
+    const left = blanks[s.id]?.length ?? 0;
     const sub = el("span", "step-sub");
-    sub.textContent = done ? t("steps.done") : active ? t("steps.current") : t("steps.locked");
+    sub.textContent = left ? t("steps.missing", { n: left }) : done ? t("steps.done") : active ? t("steps.current") : t("steps.locked");
+    if (left) sub.classList.add("todo");
     label.append(sub);
     item.append(bullet, label);
     if (!locked) item.addEventListener("click", () => goTo(i));
@@ -224,7 +236,8 @@ function renderStepper() {
 function rerender() {
   if (!state.wizard) return;
   const steps = state.wizard.steps;
-  renderStepper();
+  const blanks = blanksByStep();
+  renderStepper(blanks);
 
   const body = $("step");
   body.className = "step-body";
@@ -232,7 +245,7 @@ function rerender() {
   $("back").disabled = state.step === 0;
 
   if (state.step === steps.length) {
-    renderReview(body);
+    renderReview(body, blanks);
     $("next").hidden = true;
   } else {
     const s = steps[state.step];
@@ -306,11 +319,33 @@ function setStatus(kind, todo = 0, fix = 0) {
 }
 
 // --- review -------------------------------------------------------------------
-function renderReview(body) {
+function renderReview(body, blanks) {
   body.className = "step-body review";
   const h = el("h2");
   h.textContent = t("review.title");
   body.append(h, Object.assign(el("p", "desc"), { textContent: t("review.intro") }));
+
+  const stepsWithBlanks = state.wizard.steps
+    .map((s, i) => ({ step: s, index: i, items: blanks[s.id] ?? [] }))
+    .filter((x) => x.items.length);
+
+  if (stepsWithBlanks.length) {
+    const h3 = el("h3", "todo");
+    h3.textContent = t("review.missing");
+    body.append(h3);
+    for (const { step, index, items } of stepsWithBlanks) {
+      const box = el("div", "blanks");
+      const head = el("div", "blanks-head");
+      head.append(
+        Object.assign(el("strong"), { textContent: text(step.title) || step.id }),
+        button(t("review.goToStep", { step: text(step.title) || step.id }), "btn ghost small", () => goTo(index)),
+      );
+      const ul = el("ul");
+      for (const item of items) ul.append(Object.assign(el("li"), { textContent: item }));
+      box.append(head, ul);
+      body.append(box);
+    }
+  }
 
   const answers = collectAll();
   const refs = collectReferences(answers);
@@ -350,8 +385,9 @@ function renderReview(body) {
     return;
   }
 
-  const blocked = !state.lastPreview || state.lastPreview.templateError || state.lastPreview.errors?.length;
-  if (blocked) body.append(Object.assign(el("p", "error"), { textContent: t("review.blocked") }));
+  const wrong = (state.lastPreview?.errors ?? []).filter((e) => !e.missing).length;
+  const blocked = !state.lastPreview || state.lastPreview.templateError || stepsWithBlanks.length || wrong;
+  if (blocked && !stepsWithBlanks.length) body.append(Object.assign(el("p", "error"), { textContent: t("review.blocked") }));
   const write = button(t("review.write"), "btn primary", async () => {
     write.disabled = true;
     try {

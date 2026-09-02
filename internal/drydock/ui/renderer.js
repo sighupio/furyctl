@@ -58,6 +58,32 @@ export function collectFields(fields, scope, root) {
   return out;
 }
 
+// The visible required fields that are still empty, as labels the user can recognise.
+// Hidden fields never count: a required field behind a `when` that is false is not asked.
+export function missingRequired(fields, scope, root, widgets = {}) {
+  const out = [];
+  for (const f of fields) {
+    if (!evalWhen(f.when, scope, root)) continue;
+    const widget = widgets[f.type];
+    if (widget?.missing) {
+      out.push(...widget.missing(f, scope[f.id], root));
+      continue;
+    }
+    const v = scope[f.id];
+    if (f.type === "group") out.push(...missingRequired(f.fields, v ?? {}, root, widgets));
+    else if (f.type === "list" && f.fields) {
+      (v ?? []).forEach((item, i) => {
+        for (const label of missingRequired(f.fields, item, root, widgets)) {
+          out.push(`${text(f.label) || f.id} ${i + 1}: ${label}`);
+        }
+      });
+    } else if (f.required && (v === "" || v === null || v === undefined)) {
+      out.push(text(f.label) || f.id);
+    }
+  }
+  return out;
+}
+
 // A step made of a single widget (nodeTable) collects to what the widget produces.
 export function collectStep(step, scope, root, widgets) {
   const widget = step.fields.length === 1 && widgets[step.fields[0].type];
