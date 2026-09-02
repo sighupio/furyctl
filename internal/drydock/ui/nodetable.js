@@ -1,3 +1,9 @@
+/**
+ * Copyright (c) 2017-present SIGHUP s.r.l All rights reserved.
+ * Use of this source code is governed by a BSD-style
+ * license that can be found in the LICENSE file.
+ */
+
 // The nodeTable widget: one section per role with the first-IP helper and the role override,
 // one row per node with hostname, MAC, IP and a per-node override.
 //
@@ -48,6 +54,12 @@ export function makeNodeTable(wizardSteps) {
     },
 
     collect(field, state, root) {
+      // The preview may run before this step is ever shown: generate the rows from the topology.
+      state.rows ??= [];
+      state.roleOverrides ??= {};
+      state.firstIp ??= {};
+      Object.assign(state, reconcile(state, root[field.config.topologyStep], root[field.config.clusterStep]?.domain ?? ""));
+
       const fields = defaultsFields(field);
       const defaults = collectFields(fields, root[field.config.defaultsStep], root);
       // Overrides go through the same `when` rules as the defaults, so a hidden field in an
