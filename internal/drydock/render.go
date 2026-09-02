@@ -49,8 +49,8 @@ type FieldError struct {
 }
 
 // Validate checks a rendered document against a distribution schema. Values that furyctl
-// expands at apply time ({env://...}, {file://...}, ...) cannot satisfy patterns before
-// expansion, so violations on those values are dropped: the user has not exported them yet.
+// expands at apply time (such as {env://NAME} and {file://PATH}) cannot satisfy patterns
+// before expansion, so violations on those values are dropped: the user has not exported them yet.
 func Validate(schemaPath, doc string) ([]FieldError, error) {
 	var parsed any
 	if err := yaml.Unmarshal([]byte(doc), &parsed); err != nil {
@@ -70,7 +70,7 @@ func Validate(schemaPath, doc string) ([]FieldError, error) {
 
 	schema, err := santhosh.LoadSchema(schemaPath)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("loading schema: %w", err)
 	}
 
 	err = schema.Validate(instance)

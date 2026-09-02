@@ -14,10 +14,12 @@ import (
 	"github.com/sighupio/furyctl/internal/semver"
 )
 
-//go:embed wizards
-var wizardsFS embed.FS
+var (
+	//go:embed wizards
+	wizardsFS embed.FS
 
-var ErrNoWizard = errors.New("no wizard for this kind and version")
+	ErrNoWizard = errors.New("no wizard for this kind and version")
+)
 
 type WizardInfo struct {
 	Kind           string `json:"kind"`
