@@ -121,7 +121,6 @@ function renderPicker() {
     kindSel.append(o);
   }
   const version = el("select", "wz-input wz-select");
-  const help = el("span", "help");
   const syncVersion = () => {
     const w = state.wizards.find((x) => x.kind === kindSel.value);
     if (!w) return;
@@ -134,7 +133,6 @@ function renderPicker() {
       version.append(o);
     }
     if (!w.versions.length) version.append(Object.assign(el("option"), { textContent: t("picker.noVersions"), disabled: true }));
-    help.textContent = t("picker.versionHelp", { range: w.range });
   };
   kindSel.addEventListener("change", syncVersion);
   syncVersion();
@@ -150,7 +148,7 @@ function renderPicker() {
       start.textContent = t("picker.start");
     }
   });
-  box.append(field(t("picker.kind"), kindSel), field(t("picker.version"), version), help, start);
+  box.append(field(t("picker.kind"), kindSel), field(t("picker.version"), version), start);
 }
 
 function field(label, control) {

@@ -26,7 +26,6 @@ const DICTS = {
     lang: "Language",
     "picker.kind": "Provider",
     "picker.version": "Distribution version",
-    "picker.versionHelp": "Supported range: {range}",
     "picker.start": "Start",
     "picker.loading": "Downloading the distribution…",
     "nav.back": "Back",
