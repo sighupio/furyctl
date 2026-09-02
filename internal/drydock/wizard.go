@@ -1,0 +1,222 @@
+// Copyright (c) 2017-present SIGHUP s.r.l All rights reserved.
+// Use of this source code is governed by a BSD-style
+// license that can be found in the LICENSE file.
+
+// Package drydock serves a local web wizard that writes a furyctl.yaml step by step.
+//
+// A wizard is a YAML file of questions (steps and fields, see Wizard) plus a Go template
+// that maps the answers to a furyctl.yaml. The questions stay declarative; the mapping
+// lives in the template, the same language the distribution uses for its own templates.
+package drydock
+
+import (
+	"bytes"
+	"errors"
+	"fmt"
+
+	"gopkg.in/yaml.v3"
+
+	"github.com/sighupio/furyctl/internal/semver"
+)
+
+var ErrInvalidWizard = errors.New("invalid wizard")
+
+// Text is a user-visible string in one or more languages, keyed by language code.
+// In YAML it is either a plain string (English) or a {en: ..., it: ...} map.
+type Text map[string]string
+
+func (t *Text) UnmarshalYAML(n *yaml.Node) error {
+	if n.Kind == yaml.ScalarNode {
+		var s string
+		if err := n.Decode(&s); err != nil {
+			return fmt.Errorf("decoding text: %w", err)
+		}
+
+		*t = Text{"en": s}
+
+		return nil
+	}
+
+	m := map[string]string{}
+	if err := n.Decode(&m); err != nil {
+		return fmt.Errorf("decoding text map: %w", err)
+	}
+
+	*t = m
+
+	return nil
+}
+
+type Wizard struct {
+	Kind           string `json:"kind"           yaml:"kind"`
+	Versions       string `json:"versions"       yaml:"versions"`
+	DefaultVersion string `json:"defaultVersion" yaml:"defaultVersion"`
+	Template       string `json:"template"       yaml:"template"`
+	Steps          []Step `json:"steps"          yaml:"steps"`
+}
+
+type Step struct {
+	ID          string  `json:"id"                    yaml:"id"`
+	Title       Text    `json:"title,omitempty"       yaml:"title"`
+	Description Text    `json:"description,omitempty" yaml:"description"`
+	Fields      []Field `json:"fields"                yaml:"fields"`
+}
+
+type Field struct {
+	ID          string            `json:"id"                    yaml:"id"`
+	Type        string            `json:"type"                  yaml:"type"`
+	Label       Text              `json:"label,omitempty"       yaml:"label"`
+	Help        Text              `json:"help,omitempty"        yaml:"help"`
+	Default     any               `json:"default,omitempty"     yaml:"default"`
+	Required    bool              `json:"required,omitempty"    yaml:"required"`
+	When        string            `json:"when,omitempty"        yaml:"when"`
+	Suggest     string            `json:"suggest,omitempty"     yaml:"suggest"`
+	Placeholder string            `json:"placeholder,omitempty" yaml:"placeholder"`
+	Multiline   bool              `json:"multiline,omitempty"   yaml:"multiline"`
+	Options     []any             `json:"options,omitempty"     yaml:"options"`
+	Min         *float64          `json:"min,omitempty"         yaml:"min"`
+	Max         *float64          `json:"max,omitempty"         yaml:"max"`
+	Collapsed   bool              `json:"collapsed,omitempty"   yaml:"collapsed"`
+	Item        *Field            `json:"item,omitempty"        yaml:"item"`   // List of scalars.
+	Fields      []Field           `json:"fields,omitempty"      yaml:"fields"` // Group, list of groups.
+	Config      map[string]string `json:"config,omitempty"      yaml:"config"` // Widget-specific.
+}
+
+func isFieldType(s string) bool {
+	switch s {
+	case "text", "number", "bool", "choice", "path", "cidr", "list", "group", "nodeTable":
+		return true
+
+	default:
+		return false
+	}
+}
+
+func isSuggest(s string) bool {
+	switch s {
+	case "", "env", "file", "path", "http":
+		return true
+
+	default:
+		return false
+	}
+}
+
+// Parse decodes a wizard file and checks its structure. Unknown keys are errors, so a typo
+// in a wizard file fails the registry test instead of silently doing nothing.
+func Parse(b []byte) (*Wizard, error) {
+	dec := yaml.NewDecoder(bytes.NewReader(b))
+	dec.KnownFields(true)
+
+	var w Wizard
+	if err := dec.Decode(&w); err != nil {
+		return nil, fmt.Errorf("%w: %w", ErrInvalidWizard, err)
+	}
+
+	if err := w.check(); err != nil {
+		return nil, err
+	}
+
+	return &w, nil
+}
+
+func (w *Wizard) check() error {
+	if w.Kind == "" {
+		return fmt.Errorf("%w: kind is required", ErrInvalidWizard)
+	}
+
+	if _, err := semver.NewConstraint(w.Versions); err != nil {
+		return fmt.Errorf("%w: versions %q: %w", ErrInvalidWizard, w.Versions, err)
+	}
+
+	if w.Template == "" {
+		return fmt.Errorf("%w: template is required", ErrInvalidWizard)
+	}
+
+	seen := map[string]bool{}
+
+	for _, s := range w.Steps {
+		if s.ID == "" || seen[s.ID] {
+			return fmt.Errorf("%w: step id %q missing or duplicated", ErrInvalidWizard, s.ID)
+		}
+
+		seen[s.ID] = true
+
+		if err := checkFields(s.ID, s.Fields); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func checkFields(scope string, fields []Field) error {
+	seen := map[string]bool{}
+
+	for i := range fields {
+		f := &fields[i]
+		where := scope + "." + f.ID
+
+		if f.ID == "" || seen[f.ID] {
+			return fmt.Errorf("%w: field id %q missing or duplicated in %s", ErrInvalidWizard, f.ID, scope)
+		}
+
+		seen[f.ID] = true
+
+		if !isFieldType(f.Type) {
+			return fmt.Errorf("%w: %s: unknown type %q", ErrInvalidWizard, where, f.Type)
+		}
+
+		if !isSuggest(f.Suggest) {
+			return fmt.Errorf("%w: %s: unknown suggest %q", ErrInvalidWizard, where, f.Suggest)
+		}
+
+		if _, err := ParseWhen(f.When); err != nil {
+			return fmt.Errorf("%w: %s: %w", ErrInvalidWizard, where, err)
+		}
+
+		if err := checkFieldShape(where, f); err != nil {
+			return err
+		}
+
+		if len(f.Fields) > 0 {
+			if err := checkFields(where, f.Fields); err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
+}
+
+func checkFieldShape(where string, f *Field) error {
+	switch f.Type {
+	case "choice":
+		if len(f.Options) == 0 {
+			return fmt.Errorf("%w: %s: choice needs options", ErrInvalidWizard, where)
+		}
+
+	case "list":
+		if f.Item == nil && len(f.Fields) == 0 {
+			return fmt.Errorf("%w: %s: list needs item or fields", ErrInvalidWizard, where)
+		}
+
+		if f.Item != nil {
+			item := *f.Item
+			if item.ID == "" {
+				item.ID = "item"
+			}
+
+			return checkFields(where, []Field{item})
+		}
+
+	case "group":
+		if len(f.Fields) == 0 {
+			return fmt.Errorf("%w: %s: group needs fields", ErrInvalidWizard, where)
+		}
+
+	default:
+	}
+
+	return nil
+}
