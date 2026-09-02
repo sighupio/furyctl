@@ -7,6 +7,7 @@
 // The wizard application: kind/version picker, vertical stepper, YAML drawer, review and write.
 
 import { LANGS, getLang, setLang, t, text } from "./i18n.js";
+import { makeDataDisk } from "./datadisk.js";
 import { makeNodeTable } from "./nodetable.js";
 import { button, collectStep, el, initScope, missingRequired, renderFields } from "./renderer.js";
 import { collectReferences } from "./sources.js";
@@ -165,7 +166,7 @@ function startWizard(wizard, version) {
   state.version = version;
   state.answers = {};
   for (const s of wizard.steps) state.answers[s.id] = initScope(s.fields, {});
-  state.widgets = { nodeTable: makeNodeTable(wizard.steps) };
+  state.widgets = { nodeTable: makeNodeTable(wizard.steps), dataDisk: makeDataDisk() };
   state.step = 0;
   state.maxStep = 0;
   state.written = null;

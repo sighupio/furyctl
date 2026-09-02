@@ -905,6 +905,21 @@ body {
 .tip .example-label { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted-foreground); }
 .tip code { display: block; flex: 1 1 100%; max-height: 7rem; overflow: auto; font-family: "Geist Mono", ui-monospace, monospace; font-size: 0.78rem; background: var(--secondary); border: 1px solid var(--border); padding: 0.4rem 0.6rem; border-radius: 6px; white-space: pre-wrap; word-break: break-all; }
 
+/* Add a data disk */
+.datadisk { border: 1px solid color-mix(in srgb, var(--primary) 30%, var(--border)); background: color-mix(in srgb, var(--primary) 5%, var(--card)); border-radius: calc(var(--radius) / 2); padding: 1rem; margin: 0.5rem 0 1.25rem; }
+.datadisk > label { display: block; font-weight: 600; margin-bottom: 0.25rem; }
+.datadisk > .help { margin: 0 0 0.75rem; }
+.datadisk .wz-field { margin-bottom: 0.75rem; }
+.datadisk-foot { display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap; }
+.datadisk-foot .help { margin: 0; }
+
+/* Documented settings offered as chips */
+.presets { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+.preset-chip { font: inherit; font-size: 0.85rem; padding: 0.45rem 0.85rem; border: 1px dashed var(--input); border-radius: 999px; background: var(--card); color: var(--foreground); cursor: pointer; transition: all 0.15s ease; }
+.preset-chip:hover { border-color: var(--primary); }
+.preset-chip.on { border-style: solid; border-color: var(--primary); background: color-mix(in srgb, var(--primary) 12%, transparent); font-weight: 600; }
+.preset-chip.on::before { content: "✓ "; color: var(--primary); }
+
 /* Lists and groups */
 .list-item { border: 1px solid var(--border); border-radius: calc(var(--radius) / 2); padding: 1rem; margin: 0.5rem 0; background: var(--secondary); }
 .list-item-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem; }

@@ -17,6 +17,9 @@ import { evalWhen } from "./when.js";
 
 const SOURCED = new Set(["text", "path", "cidr"]);
 
+// Field types that help the user fill other fields and produce no value of their own.
+const HELPERS = new Set(["preset", "dataDisk"]);
+
 function defaultFor(field) {
   if (field.default !== undefined && field.default !== null) return structuredClone(field.default);
   switch (field.type) {
@@ -37,6 +40,7 @@ function defaultFor(field) {
 // Fills scope with defaults for every field that has no value yet, recursively.
 export function initScope(fields, scope) {
   for (const f of fields) {
+    if (HELPERS.has(f.type)) continue;
     if (!Object.hasOwn(scope, f.id)) scope[f.id] = defaultFor(f);
     if (f.type === "group") initScope(f.fields, scope[f.id]);
     if (f.type === "list" && f.fields) for (const item of scope[f.id]) initScope(f.fields, item);
@@ -49,6 +53,7 @@ export function collectFields(fields, scope, root) {
   const out = {};
   for (const f of fields) {
     if (!evalWhen(f.when, scope, root)) continue;
+    if (HELPERS.has(f.type)) continue; // Helpers fill other fields; they hold no answer of their own.
     const v = scope[f.id];
     if (f.type === "group") out[f.id] = collectFields(f.fields, v ?? {}, root);
     else if (f.type === "list" && f.fields) out[f.id] = (v ?? []).map((item) => collectFields(f.fields, item, root));
@@ -92,6 +97,7 @@ export function collectStep(step, scope, root, widgets) {
 }
 
 export function renderFields(container, fields, scope, root, onChange, widgets = {}) {
+  wireTips();
   const rerender = () => renderFields(container, fields, scope, root, onChange, widgets);
   const cb = { onChange, rerender, both: () => { onChange(); rerender(); } };
   container.replaceChildren();
@@ -110,17 +116,26 @@ function closeTips() {
   for (const box of document.querySelectorAll(".tip:not([hidden])")) box.hidden = true;
   for (const b of document.querySelectorAll('.hint[aria-expanded="true"]')) b.setAttribute("aria-expanded", "false");
 }
-document.addEventListener("click", (e) => {
-  if (!e.target.closest(".tip, .hint")) closeTips();
-});
-document.addEventListener("keydown", (e) => {
-  if (e.key === "Escape") closeTips();
-});
+// Registered on first render, not on import: this module is also loaded by tests with no DOM.
+let tipsWired = false;
+function wireTips() {
+  if (tipsWired) return;
+  tipsWired = true;
+  document.addEventListener("click", (e) => {
+    if (!e.target.closest(".tip, .hint")) closeTips();
+  });
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") closeTips();
+  });
+}
 
 function renderField(f, scope, root, cb, widgets) {
   const widget = widgets[f.type];
   if (widget) {
     const box = el("div", "widget");
+    // A widget keeps its own state object. Overrides are rendered without initScope, so it
+    // may not exist yet.
+    scope[f.id] ??= {};
     widget.render(box, f, scope[f.id], root, cb.onChange);
     return box;
   }
@@ -160,6 +175,9 @@ function renderField(f, scope, root, cb, widgets) {
       break;
     case "list":
       wrap.append(f.fields ? groupList(f, scope, root, cb, widgets) : scalarList(f, scope, root, cb));
+      break;
+    case "preset":
+      wrap.append(presets(f, scope, cb));
       break;
     default:
       break;
@@ -212,6 +230,29 @@ function tipFor(f, get, set) {
     btn.setAttribute("aria-expanded", String(open));
   });
   return { button: btn, box };
+}
+
+// Known-good entries from the documentation: a click puts one in the target list, another
+// click takes it out. The chip shows what it does; the (?) of the chip explains why.
+function presets(f, scope, cb) {
+  const box = el("div", "presets");
+  const list = (scope[f.target] ??= []);
+  const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+  for (const p of f.presets) {
+    const at = list.findIndex((item) => same(item, p.value));
+    const chip = el("button", `preset-chip${at >= 0 ? " on" : ""}`);
+    chip.type = "button";
+    chip.textContent = text(p.label);
+    chip.title = text(p.help);
+    chip.setAttribute("aria-pressed", String(at >= 0));
+    chip.addEventListener("click", () => {
+      if (at >= 0) list.splice(at, 1);
+      else list.push(structuredClone(p.value));
+      cb.both();
+    });
+    box.append(chip);
+  }
+  return box;
 }
 
 // An input plus the source dropdown. The stored value is always the encoded string.
@@ -315,7 +356,9 @@ function select(f, scope, changed) {
 
 function scalarList(f, scope, root, cb) {
   const box = el("div", "scalar-list");
-  const items = scope[f.id];
+  // An override renders without initScope: read through a fallback and only write to the
+  // scope when the user adds something, so an untouched override stays empty and inherits.
+  const items = scope[f.id] ?? [];
   items.forEach((_, i) => {
     const row = el("div", "list-row");
     const control = SOURCED.has(f.item.type)
@@ -333,7 +376,7 @@ function scalarList(f, scope, root, cb) {
   });
   box.append(
     button(t("list.add"), "btn ghost small", () => {
-      items.push("");
+      (scope[f.id] ??= []).push("");
       cb.both();
     }),
   );
@@ -342,7 +385,7 @@ function scalarList(f, scope, root, cb) {
 
 function groupList(f, scope, root, cb, widgets) {
   const box = el("div", "group-list");
-  const items = scope[f.id];
+  const items = scope[f.id] ?? [];
   items.forEach((item, i) => {
     const card = el("div", "list-item");
     const head = el("div", "list-item-head");
@@ -361,7 +404,7 @@ function groupList(f, scope, root, cb, widgets) {
   });
   box.append(
     button(t("list.add"), "btn ghost small", () => {
-      items.push(initScope(f.fields, {}));
+      (scope[f.id] ??= []).push(initScope(f.fields, {}));
       cb.both();
     }),
   );
@@ -377,6 +420,7 @@ function group(f, scope, root, cb, widgets) {
   const help = text(f.help);
   if (help) details.append(Object.assign(el("p", "help"), { textContent: help }));
   const body = el("div");
+  scope[f.id] ??= {};
   initScope(f.fields, scope[f.id]);
   renderFields(body, f.fields, scope[f.id], root, cb.onChange, widgets);
   details.append(body);
