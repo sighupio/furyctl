@@ -1,0 +1,975 @@
+# Immutable provider wizard for SIGHUP Distribution v1.35.x.
+# Questions only: the mapping to furyctl.yaml lives in immutable-v1.35.yaml.tpl.
+kind: Immutable
+versions: ">= 1.35.1, < 1.36.0"
+defaultVersion: v1.35.1
+template: immutable-v1.35.yaml.tpl
+steps:
+  - id: cluster
+    title: Cluster
+    description: Identity of the cluster and how furyctl reaches the machines.
+    fields:
+      - id: name
+        type: text
+        label: Cluster name
+        help: Lowercase letters, digits and dashes. Used as metadata.name.
+        required: true
+        placeholder: production
+      - id: domain
+        type: text
+        label: Node domain
+        help: Node hostnames are generated as <role><n>.<domain>. You can edit each one later.
+        required: true
+        default: k8s.example.com
+      - id: sshUser
+        type: text
+        label: SSH user
+        default: core
+        required: true
+      - id: sshPrivateKey
+        type: path
+        label: SSH private key
+        help: furyctl uses this key to reach the nodes after the first boot.
+        default: ~/.ssh/id_ed25519
+        suggest: env
+      - id: sshPublicKey
+        type: path
+        label: SSH public key
+        help: Leave empty to use the private key path with a .pub extension.
+      - id: ipxeUrl
+        type: text
+        label: iPXE server URL
+        help: furyctl serves the boot assets itself. This is the URL the nodes will reach, pointing at the machine where furyctl runs.
+        required: true
+        placeholder: https://ipxe.example.com:8080
+      - id: ipxeBindAddress
+        type: text
+        label: iPXE bind address
+        help: Leave empty for the default.
+      - id: ipxeBindPort
+        type: number
+        label: iPXE bind port
+        min: 1
+        max: 65535
+      - id: pkiPath
+        type: path
+        label: PKI directory
+        help: Run `furyctl create pki` to generate the CA files here before `furyctl apply`.
+        default: ./pki
+        required: true
+      - id: proxy
+        type: group
+        label: HTTP proxy
+        help: Only if the nodes reach the internet through a proxy.
+        collapsed: true
+        fields:
+          - id: http
+            type: text
+            label: HTTP proxy
+            placeholder: http://proxy.example.com:3128
+          - id: https
+            type: text
+            label: HTTPS proxy
+            placeholder: http://proxy.example.com:3128
+          - id: noProxy
+            type: text
+            label: No proxy
+            help: Comma-separated hosts and CIDRs that bypass the proxy.
+            placeholder: localhost,127.0.0.1,10.0.0.0/8
+
+  - id: topology
+    title: Topology
+    description: Roles and counts. The wizard generates the node list from these.
+    fields:
+      - id: cpCount
+        type: choice
+        label: Control plane nodes
+        help: Three for high availability, one for a lab.
+        options: [1, 3]
+        default: 3
+      - id: dedicatedEtcd
+        type: bool
+        label: Dedicated etcd nodes
+        help: When off, etcd runs on the control plane nodes. When on, three etcd nodes are added.
+        default: false
+      - id: lbMode
+        type: choice
+        label: Load balancer for the API server
+        help: "dedicated: one or two HAProxy nodes in front of the control plane. keepalived-on-cp: a floating IP directly on the control plane nodes. none: clients reach the first control plane node."
+        options: [dedicated, keepalived-on-cp, none]
+        default: dedicated
+      - id: lbCount
+        type: choice
+        label: Load balancer nodes
+        help: Two nodes share a floating IP with keepalived.
+        options: [1, 2]
+        default: 2
+        when: lbMode == dedicated
+      - id: vip
+        type: text
+        label: Floating IP
+        help: The keepalived virtual IP. Point the control plane address at it.
+        required: true
+        placeholder: 192.168.1.201
+        when: lbMode == keepalived-on-cp || lbMode == dedicated && lbCount == 2
+      - id: vipInterface
+        type: text
+        label: Floating IP interface
+        default: eth0
+        when: lbMode == keepalived-on-cp || lbMode == dedicated && lbCount == 2
+      - id: virtualRouterId
+        type: number
+        label: Virtual router ID
+        help: Unique among keepalived clusters on the same network, 1 to 255.
+        default: 1
+        min: 1
+        max: 255
+        when: lbMode == keepalived-on-cp || lbMode == dedicated && lbCount == 2
+      - id: controlPlaneAddress
+        type: text
+        label: Control plane address
+        help: Host and port clients use for the API server. Leave empty for api.<domain>:6443. Make it resolve to the floating IP, the load balancer, or the first control plane node.
+        placeholder: api.<domain>:6443
+      - id: infraCount
+        type: number
+        label: Infrastructure worker nodes
+        help: Run the distribution's own components (ingress, logging, monitoring). Labelled and tainted node-role.kubernetes.io/infra; the distribution is pinned to them. Zero to skip.
+        default: 3
+        min: 0
+      - id: workersCount
+        type: number
+        label: Application worker nodes
+        default: 3
+        min: 0
+      - id: extraGroups
+        type: list
+        label: Additional node groups
+        help: Other worker pools with their own labels and taints.
+        fields:
+          - id: name
+            type: text
+            label: Group name
+            required: true
+            placeholder: gpu
+          - id: count
+            type: number
+            label: Nodes
+            default: 1
+            min: 1
+          - id: labels
+            type: list
+            label: Labels
+            fields:
+              - id: key
+                type: text
+                label: Key
+                required: true
+              - id: value
+                type: text
+                label: Value
+          - id: taints
+            type: list
+            label: Taints
+            fields:
+              - id: key
+                type: text
+                label: Key
+                required: true
+              - id: value
+                type: text
+                label: Value
+                required: true
+              - id: effect
+                type: choice
+                label: Effect
+                options: [NoSchedule, PreferNoSchedule, NoExecute]
+                default: NoSchedule
+
+  - id: nodeDefaults
+    title: Nodes, what they share
+    description: Set once for every node. In the next step you can override any of it per role or per node.
+    fields:
+      - id: arch
+        type: choice
+        label: CPU architecture
+        options: [x86-64, arm64]
+        default: x86-64
+      - id: installDisk
+        type: text
+        label: Install disk
+        help: The device Flatcar is installed on. It is wiped.
+        default: /dev/sda
+        required: true
+      - id: interface
+        type: text
+        label: Network interface
+        default: eth0
+        required: true
+      - id: networkMode
+        type: choice
+        label: Addressing
+        options: [static, dhcp]
+        default: static
+      - id: prefixLength
+        type: number
+        label: Prefix length
+        default: 24
+        min: 1
+        max: 32
+        when: networkMode == static
+      - id: gateway
+        type: text
+        label: Gateway
+        required: true
+        placeholder: 192.168.1.1
+        when: networkMode == static
+      - id: nameservers
+        type: list
+        label: DNS servers
+        default: ["8.8.8.8", "8.8.4.4"]
+        item:
+          type: text
+        when: networkMode == static
+      - id: searchDomains
+        type: list
+        label: DNS search domains
+        item:
+          type: text
+        when: networkMode == static
+      - id: routes
+        type: list
+        label: Static routes
+        fields:
+          - id: to
+            type: text
+            label: Destination
+            required: true
+            placeholder: 10.10.0.0/16
+          - id: via
+            type: text
+            label: Via
+            required: true
+            placeholder: 192.168.1.254
+      - id: advanced
+        type: group
+        label: Advanced node configuration
+        help: Extra disks, filesystems, files, systemd units, users and kernel settings. Everything here is written to every node unless overridden.
+        collapsed: true
+        fields:
+          - id: disks
+            type: list
+            label: Extra disks to partition
+            fields:
+              - id: device
+                type: text
+                label: Device
+                required: true
+                placeholder: /dev/sdb
+              - id: wipeTable
+                type: bool
+                label: Wipe partition table
+                default: true
+              - id: partitions
+                type: list
+                label: Partitions
+                fields:
+                  - id: label
+                    type: text
+                    label: Label
+                    required: true
+                    placeholder: data
+                  - id: number
+                    type: number
+                    label: Number
+                    min: 1
+                  - id: sizeMib
+                    type: number
+                    label: Size (MiB)
+                    help: Zero or empty uses the rest of the disk.
+                    min: 0
+                  - id: startMib
+                    type: number
+                    label: Start (MiB)
+                    min: 0
+                  - id: typeGuid
+                    type: text
+                    label: Type GUID
+                  - id: shouldExist
+                    type: bool
+                    label: Should exist
+                    default: true
+                  - id: resize
+                    type: bool
+                    label: Resize existing
+                    default: false
+          - id: filesystems
+            type: list
+            label: Filesystems
+            fields:
+              - id: device
+                type: text
+                label: Device
+                required: true
+                placeholder: /dev/disk/by-partlabel/data
+              - id: format
+                type: choice
+                label: Format
+                options: [ext4, xfs, btrfs, vfat, swap, none]
+                default: xfs
+              - id: path
+                type: text
+                label: Mount point
+                placeholder: /var/lib/data
+              - id: label
+                type: text
+                label: Filesystem label
+              - id: wipeFilesystem
+                type: bool
+                label: Wipe filesystem
+                default: false
+              - id: withMountUnit
+                type: bool
+                label: Generate mount unit
+                default: true
+              - id: options
+                type: list
+                label: mkfs options
+                item:
+                  type: text
+              - id: mountOptions
+                type: list
+                label: Mount options
+                item:
+                  type: text
+          - id: directories
+            type: list
+            label: Directories
+            fields:
+              - id: path
+                type: text
+                label: Path
+                required: true
+              - id: mode
+                type: number
+                label: Mode (decimal)
+                help: Decimal, as Butane wants it. 0755 is 493.
+                default: 493
+              - id: overwrite
+                type: bool
+                label: Overwrite
+                default: false
+              - id: user
+                type: text
+                label: Owner
+              - id: group
+                type: text
+                label: Group
+          - id: files
+            type: list
+            label: Files
+            fields:
+              - id: path
+                type: text
+                label: Path
+                required: true
+              - id: mode
+                type: number
+                label: Mode (decimal)
+                default: 420
+              - id: overwrite
+                type: bool
+                label: Overwrite
+                default: true
+              - id: contents
+                type: text
+                label: Contents
+                multiline: true
+                suggest: file
+              - id: user
+                type: text
+                label: Owner
+              - id: group
+                type: text
+                label: Group
+          - id: links
+            type: list
+            label: Links
+            fields:
+              - id: path
+                type: text
+                label: Path
+                required: true
+              - id: target
+                type: text
+                label: Target
+                required: true
+              - id: hard
+                type: bool
+                label: Hard link
+                default: false
+          - id: systemdUnits
+            type: list
+            label: systemd units
+            fields:
+              - id: name
+                type: text
+                label: Unit name
+                required: true
+                placeholder: my-agent.service
+              - id: enabled
+                type: bool
+                label: Enabled
+                default: true
+              - id: mask
+                type: bool
+                label: Masked
+                default: false
+              - id: contents
+                type: text
+                label: Unit file
+                multiline: true
+                suggest: file
+              - id: dropins
+                type: list
+                label: Drop-ins
+                fields:
+                  - id: name
+                    type: text
+                    label: Name
+                    required: true
+                    placeholder: 10-override.conf
+                  - id: contents
+                    type: text
+                    label: Contents
+                    multiline: true
+                    suggest: file
+          - id: users
+            type: list
+            label: Extra users
+            fields:
+              - id: name
+                type: text
+                label: Username
+                required: true
+              - id: sshAuthorizedKeys
+                type: list
+                label: SSH authorized keys
+                item:
+                  type: text
+              - id: groups
+                type: list
+                label: Groups
+                item:
+                  type: text
+              - id: shell
+                type: text
+                label: Shell
+              - id: passwordHash
+                type: text
+                label: Password hash
+                suggest: env
+          - id: groups
+            type: list
+            label: Extra groups
+            fields:
+              - id: name
+                type: text
+                label: Group name
+                required: true
+              - id: gid
+                type: number
+                label: GID
+          - id: kernelArgsAdd
+            type: list
+            label: Kernel arguments to add
+            item:
+              type: text
+          - id: kernelArgsRemove
+            type: list
+            label: Kernel arguments to remove
+            item:
+              type: text
+          - id: kernelParameters
+            type: list
+            label: Kernel parameters (sysctl)
+            fields:
+              - id: name
+                type: text
+                label: Name
+                required: true
+                placeholder: net.ipv4.ip_forward
+              - id: value
+                type: text
+                label: Value
+                required: true
+                placeholder: "1"
+
+  - id: nodes
+    title: Nodes
+    description: One row per node. Hostnames and IPs are prefilled; MAC addresses are yours to fill.
+    fields:
+      - id: nodes
+        type: nodeTable
+        config:
+          clusterStep: cluster
+          topologyStep: topology
+          defaultsStep: nodeDefaults
+
+  - id: kubernetes
+    title: Kubernetes
+    fields:
+      - id: podCIDR
+        type: cidr
+        label: Pod CIDR
+        default: 10.244.0.0/16
+        required: true
+      - id: serviceCIDR
+        type: cidr
+        label: Service CIDR
+        default: 10.96.0.0/12
+        required: true
+      - id: version
+        type: text
+        label: Kubernetes version
+        help: Leave empty for the version the distribution ships.
+      - id: kubeProxy
+        type: choice
+        label: kube-proxy
+        help: "none disables kube-proxy and puts Cilium in kube-proxy replacement mode; only with the Cilium CNI."
+        options: [default, nftables, none]
+        default: default
+      - id: encryption
+        type: bool
+        label: Encrypt secrets at rest in etcd
+        default: false
+      - id: encryptionConfig
+        type: path
+        label: Encryption configuration file
+        help: An EncryptionConfiguration manifest. Keep it out of the repository.
+        default: ./secrets/etcd-encryption-config.yaml
+        suggest: file
+        required: true
+        when: encryption
+      - id: oidcEnabled
+        type: bool
+        label: OIDC authentication on the API server
+        default: false
+      - id: oidc
+        type: group
+        label: OIDC
+        when: oidcEnabled
+        fields:
+          - id: issuerUrl
+            type: text
+            label: Issuer URL
+            required: true
+            placeholder: https://login.example.com/realms/main
+          - id: clientId
+            type: text
+            label: Client ID
+            required: true
+          - id: usernameClaim
+            type: text
+            label: Username claim
+            default: email
+          - id: groupsClaim
+            type: text
+            label: Groups claim
+            default: groups
+          - id: caFile
+            type: path
+            label: Issuer CA file
+            suggest: file
+      - id: registry
+        type: text
+        label: Private registry for Kubernetes images
+        help: Leave empty to pull from the default registry.
+      - id: certSANs
+        type: list
+        label: Extra API server SANs
+        item:
+          type: text
+      - id: maxPods
+        type: number
+        label: Max pods per node
+        min: 1
+
+  - id: modules
+    title: Distribution modules
+    fields:
+      - id: networking
+        type: group
+        label: Networking (CNI)
+        fields:
+          - id: type
+            type: choice
+            label: CNI
+            options: [cilium, calico]
+            default: cilium
+      - id: ingress
+        type: group
+        label: Ingress
+        fields:
+          - id: baseDomain
+            type: text
+            label: Base domain for the distribution's ingresses
+            required: true
+            placeholder: internal.example.com
+          - id: controller
+            type: choice
+            label: Ingress controller
+            options: [haproxy, nginx, byoic]
+            default: haproxy
+          - id: type
+            type: choice
+            label: Controller layout
+            help: "single: one controller. dual: one internal and one external. none: cert-manager only."
+            options: [single, dual, none]
+            default: single
+            when: controller != byoic
+          - id: byoicIngressClass
+            type: text
+            label: IngressClass for infrastructure ingresses
+            required: true
+            when: controller == byoic
+          - id: tlsProvider
+            type: choice
+            label: TLS for the controller
+            options: [certManager, secret, none]
+            default: certManager
+            when: controller != byoic && type != none
+          - id: tlsCert
+            type: path
+            label: TLS certificate file
+            suggest: file
+            required: true
+            when: controller != byoic && type != none && tlsProvider == secret
+          - id: tlsKey
+            type: path
+            label: TLS key file
+            suggest: file
+            required: true
+            when: controller != byoic && type != none && tlsProvider == secret
+          - id: tlsCa
+            type: path
+            label: TLS CA file
+            suggest: file
+            required: true
+            when: controller != byoic && type != none && tlsProvider == secret
+          - id: issuerName
+            type: text
+            label: cert-manager ClusterIssuer name
+            default: letsencrypt
+            required: true
+          - id: issuerEmail
+            type: text
+            label: ClusterIssuer e-mail
+            required: true
+            placeholder: platform@example.com
+          - id: issuerType
+            type: choice
+            label: ClusterIssuer challenge
+            help: "http01 through the ingress controller, or your own ACME solvers as YAML."
+            options: [http01, custom]
+            default: http01
+          - id: issuerSolvers
+            type: text
+            label: ACME solvers (YAML list)
+            multiline: true
+            required: true
+            when: issuerType == custom
+      - id: logging
+        type: group
+        label: Logging
+        fields:
+          - id: type
+            type: choice
+            label: Stack
+            options: [loki, opensearch, none]
+            default: loki
+          - id: lokiBackend
+            type: choice
+            label: Loki storage
+            options: [minio, externalEndpoint]
+            default: minio
+            when: type == loki
+          - id: lokiRetention
+            type: text
+            label: Log retention
+            placeholder: 720h
+            when: type == loki
+          - id: lokiEndpoint
+            type: text
+            label: S3 endpoint
+            required: true
+            when: type == loki && lokiBackend == externalEndpoint
+          - id: lokiBucket
+            type: text
+            label: Bucket
+            required: true
+            when: type == loki && lokiBackend == externalEndpoint
+          - id: lokiAccessKeyId
+            type: text
+            label: Access key ID
+            required: true
+            suggest: env
+            when: type == loki && lokiBackend == externalEndpoint
+          - id: lokiSecretAccessKey
+            type: text
+            label: Secret access key
+            required: true
+            suggest: env
+            when: type == loki && lokiBackend == externalEndpoint
+          - id: lokiInsecure
+            type: bool
+            label: Skip TLS verification
+            default: false
+            when: type == loki && lokiBackend == externalEndpoint
+          - id: opensearchType
+            type: choice
+            label: OpenSearch layout
+            options: [single, triple]
+            default: triple
+            when: type == opensearch
+          - id: opensearchStorageSize
+            type: text
+            label: OpenSearch volume size
+            default: 150Gi
+            when: type == opensearch
+      - id: monitoring
+        type: group
+        label: Monitoring
+        fields:
+          - id: type
+            type: choice
+            label: Stack
+            options: [prometheus, prometheusAgent, mimir, none]
+            default: prometheus
+          - id: retentionTime
+            type: text
+            label: Retention time
+            default: 30d
+            when: type == prometheus
+          - id: retentionSize
+            type: text
+            label: Retention size
+            default: 120GB
+            when: type == prometheus
+          - id: storageSize
+            type: text
+            label: Storage size
+            default: 150Gi
+            when: type == prometheus
+          - id: remoteWriteUrl
+            type: text
+            label: Remote write URL
+            required: true
+            when: type == prometheusAgent
+          - id: mimirBackend
+            type: choice
+            label: Mimir storage
+            options: [minio, externalEndpoint]
+            default: minio
+            when: type == mimir
+          - id: mimirEndpoint
+            type: text
+            label: S3 endpoint
+            required: true
+            when: type == mimir && mimirBackend == externalEndpoint
+          - id: mimirBucket
+            type: text
+            label: Bucket
+            required: true
+            when: type == mimir && mimirBackend == externalEndpoint
+          - id: mimirAccessKeyId
+            type: text
+            label: Access key ID
+            required: true
+            suggest: env
+            when: type == mimir && mimirBackend == externalEndpoint
+          - id: mimirSecretAccessKey
+            type: text
+            label: Secret access key
+            required: true
+            suggest: env
+            when: type == mimir && mimirBackend == externalEndpoint
+          - id: slackWebhookUrl
+            type: text
+            label: Alertmanager Slack webhook
+            suggest: env
+            when: type != none
+      - id: tracing
+        type: group
+        label: Tracing
+        fields:
+          - id: type
+            type: choice
+            label: Stack
+            options: [none, tempo]
+            default: none
+          - id: tempoBackend
+            type: choice
+            label: Tempo storage
+            options: [minio, externalEndpoint]
+            default: minio
+            when: type == tempo
+          - id: tempoEndpoint
+            type: text
+            label: S3 endpoint
+            required: true
+            when: type == tempo && tempoBackend == externalEndpoint
+          - id: tempoBucket
+            type: text
+            label: Bucket
+            required: true
+            when: type == tempo && tempoBackend == externalEndpoint
+          - id: tempoAccessKeyId
+            type: text
+            label: Access key ID
+            required: true
+            suggest: env
+            when: type == tempo && tempoBackend == externalEndpoint
+          - id: tempoSecretAccessKey
+            type: text
+            label: Secret access key
+            required: true
+            suggest: env
+            when: type == tempo && tempoBackend == externalEndpoint
+      - id: policy
+        type: group
+        label: Policy
+        fields:
+          - id: type
+            type: choice
+            label: Engine
+            options: [none, gatekeeper, kyverno]
+            default: none
+          - id: gatekeeperAction
+            type: choice
+            label: Enforcement action
+            options: [deny, dryrun, warn]
+            default: deny
+            when: type == gatekeeper
+          - id: kyvernoAction
+            type: choice
+            label: Validation failure action
+            options: [Audit, Enforce]
+            default: Enforce
+            when: type == kyverno
+      - id: dr
+        type: group
+        label: Disaster recovery
+        fields:
+          - id: type
+            type: choice
+            label: Velero
+            options: [none, on-premises]
+            default: none
+          - id: veleroBackend
+            type: choice
+            label: Velero storage
+            options: [minio, externalEndpoint]
+            default: minio
+            when: type == on-premises
+          - id: veleroEndpoint
+            type: text
+            label: S3 endpoint
+            required: true
+            when: type == on-premises && veleroBackend == externalEndpoint
+          - id: veleroBucket
+            type: text
+            label: Bucket
+            required: true
+            when: type == on-premises && veleroBackend == externalEndpoint
+          - id: veleroAccessKeyId
+            type: text
+            label: Access key ID
+            required: true
+            suggest: env
+            when: type == on-premises && veleroBackend == externalEndpoint
+          - id: veleroSecretAccessKey
+            type: text
+            label: Secret access key
+            required: true
+            suggest: env
+            when: type == on-premises && veleroBackend == externalEndpoint
+          - id: etcdBackupType
+            type: choice
+            label: etcd backup
+            options: [none, pvc, s3, all]
+            default: none
+            when: type == on-premises
+          - id: etcdBackupSchedule
+            type: text
+            label: Backup schedule (cron)
+            default: "0 2 * * *"
+            when: type == on-premises && etcdBackupType != none
+          - id: etcdBackupRetention
+            type: text
+            label: Backup retention
+            default: 720h
+            when: type == on-premises && etcdBackupType != none
+          - id: etcdPvcSize
+            type: text
+            label: PVC size
+            default: 10Gi
+            when: type == on-premises && etcdBackupType == pvc || type == on-premises && etcdBackupType == all
+          - id: etcdPvcStorageClass
+            type: text
+            label: PVC storage class
+            when: type == on-premises && etcdBackupType == pvc || type == on-premises && etcdBackupType == all
+          - id: etcdS3Endpoint
+            type: text
+            label: S3 endpoint
+            required: true
+            when: type == on-premises && etcdBackupType == s3 || type == on-premises && etcdBackupType == all
+          - id: etcdS3Bucket
+            type: text
+            label: Bucket
+            required: true
+            when: type == on-premises && etcdBackupType == s3 || type == on-premises && etcdBackupType == all
+          - id: etcdS3AccessKeyId
+            type: text
+            label: Access key ID
+            required: true
+            suggest: env
+            when: type == on-premises && etcdBackupType == s3 || type == on-premises && etcdBackupType == all
+          - id: etcdS3SecretAccessKey
+            type: text
+            label: Secret access key
+            required: true
+            suggest: env
+            when: type == on-premises && etcdBackupType == s3 || type == on-premises && etcdBackupType == all
+      - id: auth
+        type: group
+        label: Authentication for the distribution's UIs
+        fields:
+          - id: provider
+            type: choice
+            label: Provider
+            help: "basicAuth protects Grafana and friends with one user. sso puts Pomerium and Dex in front of them."
+            options: [none, basicAuth, sso]
+            default: none
+          - id: basicUsername
+            type: text
+            label: Username
+            default: admin
+            required: true
+            when: provider == basicAuth
+          - id: basicPassword
+            type: text
+            label: Password
+            required: true
+            suggest: env
+            when: provider == basicAuth
+          - id: baseDomain
+            type: text
+            label: Base domain for the auth ingresses
+            help: Leave empty to reuse the ingress base domain.
+            when: provider == sso
+          - id: dexConnectors
+            type: text
+            label: Dex connectors (YAML list)
+            help: Follows the Dex connector format. A placeholder is written if you leave it empty; complete it by hand.
+            multiline: true
+            when: provider == sso
