@@ -8,6 +8,8 @@ import (
 	"context"
 	"fmt"
 	"net"
+	"path/filepath"
+	"strings"
 
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -74,7 +76,15 @@ the schema of the chosen distribution version and writes it to --output.`,
 				return fmt.Errorf("loading wizards: %w", err)
 			}
 
-			srv := drydock.NewServer(reg, viper.GetString("distro-location"), viper.GetString("output"), protocol)
+			// A relative local path must survive the downloader, which resolves only paths starting with a dot.
+			distroLocation := viper.GetString("distro-location")
+			if distroLocation != "" && !strings.Contains(distroLocation, "://") {
+				if distroLocation, err = filepath.Abs(distroLocation); err != nil {
+					return fmt.Errorf("resolving distro location: %w", err)
+				}
+			}
+
+			srv := drydock.NewServer(reg, distroLocation, viper.GetString("output"), protocol)
 
 			ctx := cmd.Context()
 			if ctx == nil {
