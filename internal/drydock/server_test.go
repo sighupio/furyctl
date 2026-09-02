@@ -170,4 +170,5 @@ func TestUIIsServed(t *testing.T) {
 	rec := do(t, h, http.MethodGet, "/", nil)
 	assert.Equal(t, http.StatusOK, rec.Code)
 	assert.Contains(t, rec.Header().Get("Content-Type"), "text/html")
+	assert.Equal(t, "no-store", rec.Header().Get("Cache-Control"))
 }

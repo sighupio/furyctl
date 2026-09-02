@@ -95,7 +95,13 @@ func (s *Server) Handler() (http.Handler, error) {
 	mux.HandleFunc("POST /api/session", s.handleSession)
 	mux.HandleFunc("POST /api/preview", s.handlePreview)
 	mux.HandleFunc("POST /api/write", s.handleWrite)
-	mux.Handle("/", http.FileServer(http.FS(ui)))
+	// The UI ships inside the binary: a newer furyctl must never be served stale files from the
+	// browser cache, and embedded files carry no modification time for the cache to key on.
+	files := http.FileServer(http.FS(ui))
+	mux.Handle("/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Cache-Control", "no-store")
+		files.ServeHTTP(w, r)
+	}))
 
 	return mux, nil
 }
