@@ -197,6 +197,39 @@ func TestValidateReportsPathsAndToleratesDynamicValues(t *testing.T) {
 
 	assert.Contains(t, paths, "/spec/infrastructure/nodes/1/macAddress")
 	assert.NotContains(t, paths, "/spec/infrastructure/nodes/2/macAddress", "{env://CP1_MAC} must not be reported")
+
+	for _, e := range errs {
+		if e.Path == "/spec/infrastructure/nodes/1/macAddress" {
+			assert.False(t, e.Missing, "a wrong value is a mistake, not a blank")
+		}
+	}
+}
+
+func TestValidateMarksBlanksAsMissing(t *testing.T) {
+	t.Parallel()
+
+	answers := loadAnswers(t)
+
+	cluster, ok := answers["cluster"].(map[string]any)
+	require.True(t, ok)
+
+	cluster["name"] = ""
+
+	out := renderImmutable(t, answers)
+
+	errs, err := Validate(immutableSchema, out)
+	require.NoError(t, err)
+	require.NotEmpty(t, errs)
+
+	for _, e := range errs {
+		if e.Path == "/metadata/name" {
+			assert.True(t, e.Missing)
+
+			return
+		}
+	}
+
+	t.Fatal("no error reported for the empty name")
 }
 
 func TestValidateRejectsBrokenYAML(t *testing.T) {

@@ -43,9 +43,12 @@ func Render(tpl string, answers map[string]any) (string, error) {
 }
 
 // FieldError is one schema violation, located by a JSON pointer into the document.
+// Missing marks violations that only mean "not filled in yet": a required key that is
+// absent, or an empty string. The UI counts those calmly; the rest are real mistakes.
 type FieldError struct {
 	Path    string `json:"path"`
 	Message string `json:"message"`
+	Missing bool   `json:"missing"`
 }
 
 // Validate checks a rendered document against a distribution schema. Values that furyctl
@@ -90,7 +93,11 @@ func Validate(schemaPath, doc string) ([]FieldError, error) {
 			continue
 		}
 
-		out = append(out, FieldError{Path: leaf.InstanceLocation, Message: leaf.Message})
+		out = append(out, FieldError{
+			Path:    leaf.InstanceLocation,
+			Message: leaf.Message,
+			Missing: strings.HasSuffix(leaf.KeywordLocation, "/required") || isEmpty(instance, leaf.InstanceLocation),
+		})
 	}
 
 	return out, nil
@@ -111,6 +118,27 @@ func leaves(e *jsonschema.ValidationError) []*jsonschema.ValidationError {
 
 // isDynamic reports whether the value at a JSON pointer is a string furyctl will expand later.
 func isDynamic(instance any, pointer string) bool {
+	s, ok := valueAt(instance, pointer).(string)
+
+	return ok && parserx.DynamicRegexp.MatchString(s)
+}
+
+// isEmpty reports whether the value at a JSON pointer is absent, nil or an empty string.
+func isEmpty(instance any, pointer string) bool {
+	switch v := valueAt(instance, pointer).(type) {
+	case nil:
+		return true
+
+	case string:
+		return v == ""
+
+	default:
+		return false
+	}
+}
+
+// valueAt resolves a JSON pointer against a decoded document; nil when the path does not exist.
+func valueAt(instance any, pointer string) any {
 	cur := instance
 
 	for seg := range strings.SplitSeq(strings.TrimPrefix(pointer, "/"), "/") {
@@ -127,17 +155,15 @@ func isDynamic(instance any, pointer string) bool {
 		case []any:
 			i, err := strconv.Atoi(seg)
 			if err != nil || i < 0 || i >= len(node) {
-				return false
+				return nil
 			}
 
 			cur = node[i]
 
 		default:
-			return false
+			return nil
 		}
 	}
 
-	s, ok := cur.(string)
-
-	return ok && parserx.DynamicRegexp.MatchString(s)
+	return cur
 }

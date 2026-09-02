@@ -176,7 +176,8 @@ spec:
               dhcp4: true
 {{- else }}
               addresses:
-                - {{ printf "%s/%v" .ip .prefixLength | quote }}
+{{- /* A blank IP stays blank, so the schema reports "still to fill" and not a broken "/24". */}}
+                - {{ if .ip }}{{ printf "%s/%v" .ip .prefixLength | quote }}{{ else }}""{{ end }}
               gateway: {{ .gateway | quote }}
 {{- if or .nameservers .searchDomains }}
               nameservers:
