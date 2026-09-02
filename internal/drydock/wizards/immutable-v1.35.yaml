@@ -15,48 +15,57 @@ steps:
     fields:
       - id: name
         type: text
+        example: "production"
         label: Cluster name
         help: Lowercase letters, digits and dashes. Used as metadata.name.
         required: true
         placeholder: production
       - id: domain
         type: text
+        example: "k8s.example.com"
         label: Node domain
         help: Node hostnames are generated as <role><n>.<domain>. You can edit each one later.
         required: true
         default: k8s.example.com
       - id: sshUser
         type: text
+        example: "core"
         label: SSH user
         default: core
         required: true
       - id: sshPrivateKey
         type: path
+        example: "~/.ssh/id_ed25519"
         label: SSH private key
         help: furyctl uses this key to reach the nodes after the first boot.
         default: ~/.ssh/id_ed25519
         suggest: env
       - id: sshPublicKey
         type: path
+        example: "~/.ssh/id_ed25519.pub"
         label: SSH public key
         help: Leave empty to use the private key path with a .pub extension.
       - id: ipxeUrl
         type: text
+        example: "https://ipxe.example.com:8080"
         label: iPXE server URL
         help: furyctl serves the boot assets itself. This is the URL the nodes will reach, pointing at the machine where furyctl runs.
         required: true
         placeholder: https://ipxe.example.com:8080
       - id: ipxeBindAddress
         type: text
+        example: "0.0.0.0"
         label: iPXE bind address
         help: Leave empty for the default.
       - id: ipxeBindPort
         type: number
+        example: "8080"
         label: iPXE bind port
         min: 1
         max: 65535
       - id: pkiPath
         type: path
+        example: "./pki"
         label: PKI directory
         help: Run `furyctl create pki` to generate the CA files here before `furyctl apply`.
         default: ./pki
@@ -69,14 +78,17 @@ steps:
         fields:
           - id: http
             type: text
+            example: "http://proxy.example.com:3128"
             label: HTTP proxy
             placeholder: http://proxy.example.com:3128
           - id: https
             type: text
+            example: "http://proxy.example.com:3128"
             label: HTTPS proxy
             placeholder: http://proxy.example.com:3128
           - id: noProxy
             type: text
+            example: "localhost,127.0.0.1,10.0.0.0/8,.example.com"
             label: No proxy
             help: Comma-separated hosts and CIDRs that bypass the proxy.
             placeholder: localhost,127.0.0.1,10.0.0.0/8
@@ -111,6 +123,7 @@ steps:
         when: lbMode == dedicated
       - id: vip
         type: text
+        example: "192.168.1.201"
         label: Floating IP
         help: The keepalived virtual IP. Point the control plane address at it.
         required: true
@@ -118,11 +131,13 @@ steps:
         when: lbMode == keepalived-on-cp || lbMode == dedicated && lbCount == 2
       - id: vipInterface
         type: text
+        example: "eth0"
         label: Floating IP interface
         default: eth0
         when: lbMode == keepalived-on-cp || lbMode == dedicated && lbCount == 2
       - id: virtualRouterId
         type: number
+        example: "1"
         label: Virtual router ID
         help: Unique among keepalived clusters on the same network, 1 to 255.
         default: 1
@@ -131,17 +146,20 @@ steps:
         when: lbMode == keepalived-on-cp || lbMode == dedicated && lbCount == 2
       - id: controlPlaneAddress
         type: text
+        example: "api.k8s.example.com:6443"
         label: Control plane address
         help: Host and port clients use for the API server. Leave empty for api.<domain>:6443. Make it resolve to the floating IP, the load balancer, or the first control plane node.
         placeholder: api.<domain>:6443
       - id: infraCount
         type: number
+        example: "3"
         label: Infrastructure worker nodes
         help: Run the distribution's own components (ingress, logging, monitoring). Labelled and tainted node-role.kubernetes.io/infra; the distribution is pinned to them. Zero to skip.
         default: 3
         min: 0
       - id: workersCount
         type: number
+        example: "3"
         label: Application worker nodes
         default: 3
         min: 0
@@ -152,11 +170,13 @@ steps:
         fields:
           - id: name
             type: text
+            example: "gpu"
             label: Group name
             required: true
             placeholder: gpu
           - id: count
             type: number
+            example: "2"
             label: Nodes
             default: 1
             min: 1
@@ -166,10 +186,12 @@ steps:
             fields:
               - id: key
                 type: text
+                example: "accelerator"
                 label: Key
                 required: true
               - id: value
                 type: text
+                example: "nvidia"
                 label: Value
           - id: taints
             type: list
@@ -177,10 +199,12 @@ steps:
             fields:
               - id: key
                 type: text
+                example: "nvidia.com/gpu"
                 label: Key
                 required: true
               - id: value
                 type: text
+                example: "true"
                 label: Value
                 required: true
               - id: effect
@@ -200,12 +224,14 @@ steps:
         default: x86-64
       - id: installDisk
         type: text
+        example: "/dev/sda"
         label: Install disk
         help: The device Flatcar is installed on. It is wiped.
         default: /dev/sda
         required: true
       - id: interface
         type: text
+        example: "eth0"
         label: Network interface
         default: eth0
         required: true
@@ -216,6 +242,7 @@ steps:
         default: static
       - id: prefixLength
         type: number
+        example: "24"
         label: Prefix length
         default: 24
         min: 1
@@ -223,12 +250,14 @@ steps:
         when: networkMode == static
       - id: gateway
         type: text
+        example: "192.168.1.1"
         label: Gateway
         required: true
         placeholder: 192.168.1.1
         when: networkMode == static
       - id: nameservers
         type: list
+        example: "8.8.8.8"
         label: DNS servers
         default: ["8.8.8.8", "8.8.4.4"]
         item:
@@ -236,6 +265,7 @@ steps:
         when: networkMode == static
       - id: searchDomains
         type: list
+        example: "k8s.example.com"
         label: DNS search domains
         item:
           type: text
@@ -246,11 +276,13 @@ steps:
         fields:
           - id: to
             type: text
+            example: "10.10.0.0/16"
             label: Destination
             required: true
             placeholder: 10.10.0.0/16
           - id: via
             type: text
+            example: "192.168.1.254"
             label: Via
             required: true
             placeholder: 192.168.1.254
@@ -266,6 +298,7 @@ steps:
             fields:
               - id: device
                 type: text
+                example: "/dev/sdb"
                 label: Device
                 required: true
                 placeholder: /dev/sdb
@@ -279,24 +312,29 @@ steps:
                 fields:
                   - id: label
                     type: text
+                    example: "data"
                     label: Label
                     required: true
                     placeholder: data
                   - id: number
                     type: number
+                    example: "1"
                     label: Number
                     min: 1
                   - id: sizeMib
                     type: number
+                    example: "0"
                     label: Size (MiB)
                     help: Zero or empty uses the rest of the disk.
                     min: 0
                   - id: startMib
                     type: number
+                    example: "0"
                     label: Start (MiB)
                     min: 0
                   - id: typeGuid
                     type: text
+                    example: "0FC63DAF-8483-4772-8E79-3D69D8477DE4"
                     label: Type GUID
                   - id: shouldExist
                     type: bool
@@ -312,6 +350,7 @@ steps:
             fields:
               - id: device
                 type: text
+                example: "/dev/disk/by-partlabel/data"
                 label: Device
                 required: true
                 placeholder: /dev/disk/by-partlabel/data
@@ -322,10 +361,12 @@ steps:
                 default: xfs
               - id: path
                 type: text
+                example: "/var/lib/longhorn"
                 label: Mount point
                 placeholder: /var/lib/data
               - id: label
                 type: text
+                example: "data"
                 label: Filesystem label
               - id: wipeFilesystem
                 type: bool
@@ -337,11 +378,13 @@ steps:
                 default: true
               - id: options
                 type: list
+                example: "-L data"
                 label: mkfs options
                 item:
                   type: text
               - id: mountOptions
                 type: list
+                example: "noatime"
                 label: Mount options
                 item:
                   type: text
@@ -351,10 +394,12 @@ steps:
             fields:
               - id: path
                 type: text
+                example: "/var/lib/longhorn"
                 label: Path
                 required: true
               - id: mode
                 type: number
+                example: "493"
                 label: Mode (decimal)
                 help: Decimal, as Butane wants it. 0755 is 493.
                 default: 493
@@ -364,9 +409,11 @@ steps:
                 default: false
               - id: user
                 type: text
+                example: "core"
                 label: Owner
               - id: group
                 type: text
+                example: "core"
                 label: Group
           - id: files
             type: list
@@ -374,10 +421,12 @@ steps:
             fields:
               - id: path
                 type: text
+                example: "/etc/motd"
                 label: Path
                 required: true
               - id: mode
                 type: number
+                example: "420"
                 label: Mode (decimal)
                 default: 420
               - id: overwrite
@@ -386,14 +435,17 @@ steps:
                 default: true
               - id: contents
                 type: text
+                example: "Managed by furyctl. Changes are lost at the next apply."
                 label: Contents
                 multiline: true
                 suggest: file
               - id: user
                 type: text
+                example: "root"
                 label: Owner
               - id: group
                 type: text
+                example: "root"
                 label: Group
           - id: links
             type: list
@@ -401,10 +453,12 @@ steps:
             fields:
               - id: path
                 type: text
+                example: "/etc/localtime"
                 label: Path
                 required: true
               - id: target
                 type: text
+                example: "/usr/share/zoneinfo/Europe/Rome"
                 label: Target
                 required: true
               - id: hard
@@ -417,6 +471,7 @@ steps:
             fields:
               - id: name
                 type: text
+                example: "iscsid.service"
                 label: Unit name
                 required: true
                 placeholder: my-agent.service
@@ -430,6 +485,7 @@ steps:
                 default: false
               - id: contents
                 type: text
+                example: "[Unit]\nDescription=My agent\n[Service]\nExecStart=/opt/bin/agent\n[Install]\nWantedBy=multi-user.target"
                 label: Unit file
                 multiline: true
                 suggest: file
@@ -439,11 +495,13 @@ steps:
                 fields:
                   - id: name
                     type: text
+                    example: "10-override.conf"
                     label: Name
                     required: true
                     placeholder: 10-override.conf
                   - id: contents
                     type: text
+                    example: "[Service]\nEnvironment=HTTP_PROXY=http://proxy.example.com:3128"
                     label: Contents
                     multiline: true
                     suggest: file
@@ -453,23 +511,28 @@ steps:
             fields:
               - id: name
                 type: text
+                example: "ops"
                 label: Username
                 required: true
               - id: sshAuthorizedKeys
                 type: list
+                example: "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAA... ops@example.com"
                 label: SSH authorized keys
                 item:
                   type: text
               - id: groups
                 type: list
+                example: "sudo"
                 label: Groups
                 item:
                   type: text
               - id: shell
                 type: text
+                example: "/bin/bash"
                 label: Shell
               - id: passwordHash
                 type: text
+                example: "$6$rounds=4096$saltsalt$hashhashhash"
                 label: Password hash
                 suggest: env
           - id: groups
@@ -478,18 +541,22 @@ steps:
             fields:
               - id: name
                 type: text
+                example: "ops"
                 label: Group name
                 required: true
               - id: gid
                 type: number
+                example: "1500"
                 label: GID
           - id: kernelArgsAdd
             type: list
+            example: "console=ttyS0,115200"
             label: Kernel arguments to add
             item:
               type: text
           - id: kernelArgsRemove
             type: list
+            example: "quiet"
             label: Kernel arguments to remove
             item:
               type: text
@@ -499,11 +566,13 @@ steps:
             fields:
               - id: name
                 type: text
+                example: "vm.max_map_count"
                 label: Name
                 required: true
                 placeholder: net.ipv4.ip_forward
               - id: value
                 type: text
+                example: "262144"
                 label: Value
                 required: true
                 placeholder: "1"
@@ -524,16 +593,19 @@ steps:
     fields:
       - id: podCIDR
         type: cidr
+        example: "10.244.0.0/16"
         label: Pod CIDR
         default: 10.244.0.0/16
         required: true
       - id: serviceCIDR
         type: cidr
+        example: "10.96.0.0/12"
         label: Service CIDR
         default: 10.96.0.0/12
         required: true
       - id: version
         type: text
+        example: "1.35.5"
         label: Kubernetes version
         help: Leave empty for the version the distribution ships.
       - id: kubeProxy
@@ -548,6 +620,7 @@ steps:
         default: false
       - id: encryptionConfig
         type: path
+        example: "./secrets/etcd-encryption-config.yaml"
         label: Encryption configuration file
         help: An EncryptionConfiguration manifest. Keep it out of the repository.
         default: ./secrets/etcd-encryption-config.yaml
@@ -565,36 +638,44 @@ steps:
         fields:
           - id: issuerUrl
             type: text
+            example: "https://login.example.com/realms/main"
             label: Issuer URL
             required: true
             placeholder: https://login.example.com/realms/main
           - id: clientId
             type: text
+            example: "kubernetes"
             label: Client ID
             required: true
           - id: usernameClaim
             type: text
+            example: "email"
             label: Username claim
             default: email
           - id: groupsClaim
             type: text
+            example: "groups"
             label: Groups claim
             default: groups
           - id: caFile
             type: path
+            example: "./secrets/oidc-ca.crt"
             label: Issuer CA file
             suggest: file
       - id: registry
         type: text
+        example: "registry.example.com/kubernetes"
         label: Private registry for Kubernetes images
         help: Leave empty to pull from the default registry.
       - id: certSANs
         type: list
+        example: "api.k8s.example.com"
         label: Extra API server SANs
         item:
           type: text
       - id: maxPods
         type: number
+        example: "200"
         label: Max pods per node
         min: 1
 
@@ -616,6 +697,7 @@ steps:
         fields:
           - id: baseDomain
             type: text
+            example: "internal.example.com"
             label: Base domain for the distribution's ingresses
             required: true
             placeholder: internal.example.com
@@ -633,6 +715,7 @@ steps:
             when: controller != byoic
           - id: byoicIngressClass
             type: text
+            example: "nginx"
             label: IngressClass for infrastructure ingresses
             required: true
             when: controller == byoic
@@ -644,29 +727,34 @@ steps:
             when: controller != byoic && type != none
           - id: tlsCert
             type: path
+            example: "./secrets/ingress.crt"
             label: TLS certificate file
             suggest: file
             required: true
             when: controller != byoic && type != none && tlsProvider == secret
           - id: tlsKey
             type: path
+            example: "./secrets/ingress.key"
             label: TLS key file
             suggest: file
             required: true
             when: controller != byoic && type != none && tlsProvider == secret
           - id: tlsCa
             type: path
+            example: "./secrets/ingress-ca.crt"
             label: TLS CA file
             suggest: file
             required: true
             when: controller != byoic && type != none && tlsProvider == secret
           - id: issuerName
             type: text
+            example: "letsencrypt"
             label: cert-manager ClusterIssuer name
             default: letsencrypt
             required: true
           - id: issuerEmail
             type: text
+            example: "platform@example.com"
             label: ClusterIssuer e-mail
             required: true
             placeholder: platform@example.com
@@ -678,6 +766,7 @@ steps:
             default: http01
           - id: issuerSolvers
             type: text
+            example: "- dns01:\n    cloudflare:\n      apiTokenSecretRef:\n        name: cloudflare-api-token\n        key: token"
             label: ACME solvers (YAML list)
             multiline: true
             required: true
@@ -699,27 +788,32 @@ steps:
             when: type == loki
           - id: lokiRetention
             type: text
+            example: "720h"
             label: Log retention
             placeholder: 720h
             when: type == loki
           - id: lokiEndpoint
             type: text
+            example: "s3.example.com"
             label: S3 endpoint
             required: true
             when: type == loki && lokiBackend == externalEndpoint
           - id: lokiBucket
             type: text
+            example: "loki"
             label: Bucket
             required: true
             when: type == loki && lokiBackend == externalEndpoint
           - id: lokiAccessKeyId
             type: text
+            example: "AKIAIOSFODNN7EXAMPLE"
             label: Access key ID
             required: true
             suggest: env
             when: type == loki && lokiBackend == externalEndpoint
           - id: lokiSecretAccessKey
             type: text
+            example: "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"
             label: Secret access key
             required: true
             suggest: env
@@ -737,6 +831,7 @@ steps:
             when: type == opensearch
           - id: opensearchStorageSize
             type: text
+            example: "150Gi"
             label: OpenSearch volume size
             default: 150Gi
             when: type == opensearch
@@ -751,21 +846,25 @@ steps:
             default: prometheus
           - id: retentionTime
             type: text
+            example: "30d"
             label: Retention time
             default: 30d
             when: type == prometheus
           - id: retentionSize
             type: text
+            example: "120GB"
             label: Retention size
             default: 120GB
             when: type == prometheus
           - id: storageSize
             type: text
+            example: "150Gi"
             label: Storage size
             default: 150Gi
             when: type == prometheus
           - id: remoteWriteUrl
             type: text
+            example: "https://mimir.example.com/api/v1/push"
             label: Remote write URL
             required: true
             when: type == prometheusAgent
@@ -777,28 +876,33 @@ steps:
             when: type == mimir
           - id: mimirEndpoint
             type: text
+            example: "s3.example.com"
             label: S3 endpoint
             required: true
             when: type == mimir && mimirBackend == externalEndpoint
           - id: mimirBucket
             type: text
+            example: "mimir"
             label: Bucket
             required: true
             when: type == mimir && mimirBackend == externalEndpoint
           - id: mimirAccessKeyId
             type: text
+            example: "AKIAIOSFODNN7EXAMPLE"
             label: Access key ID
             required: true
             suggest: env
             when: type == mimir && mimirBackend == externalEndpoint
           - id: mimirSecretAccessKey
             type: text
+            example: "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"
             label: Secret access key
             required: true
             suggest: env
             when: type == mimir && mimirBackend == externalEndpoint
           - id: slackWebhookUrl
             type: text
+            example: "https://hooks.slack.com/services/T000/B000/XXXX"
             label: Alertmanager Slack webhook
             suggest: env
             when: type != none
@@ -819,22 +923,26 @@ steps:
             when: type == tempo
           - id: tempoEndpoint
             type: text
+            example: "s3.example.com"
             label: S3 endpoint
             required: true
             when: type == tempo && tempoBackend == externalEndpoint
           - id: tempoBucket
             type: text
+            example: "tempo"
             label: Bucket
             required: true
             when: type == tempo && tempoBackend == externalEndpoint
           - id: tempoAccessKeyId
             type: text
+            example: "AKIAIOSFODNN7EXAMPLE"
             label: Access key ID
             required: true
             suggest: env
             when: type == tempo && tempoBackend == externalEndpoint
           - id: tempoSecretAccessKey
             type: text
+            example: "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"
             label: Secret access key
             required: true
             suggest: env
@@ -877,22 +985,26 @@ steps:
             when: type == on-premises
           - id: veleroEndpoint
             type: text
+            example: "s3.example.com"
             label: S3 endpoint
             required: true
             when: type == on-premises && veleroBackend == externalEndpoint
           - id: veleroBucket
             type: text
+            example: "velero"
             label: Bucket
             required: true
             when: type == on-premises && veleroBackend == externalEndpoint
           - id: veleroAccessKeyId
             type: text
+            example: "AKIAIOSFODNN7EXAMPLE"
             label: Access key ID
             required: true
             suggest: env
             when: type == on-premises && veleroBackend == externalEndpoint
           - id: veleroSecretAccessKey
             type: text
+            example: "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"
             label: Secret access key
             required: true
             suggest: env
@@ -905,41 +1017,49 @@ steps:
             when: type == on-premises
           - id: etcdBackupSchedule
             type: text
+            example: "0 2 * * *"
             label: Backup schedule (cron)
             default: "0 2 * * *"
             when: type == on-premises && etcdBackupType != none
           - id: etcdBackupRetention
             type: text
+            example: "720h"
             label: Backup retention
             default: 720h
             when: type == on-premises && etcdBackupType != none
           - id: etcdPvcSize
             type: text
+            example: "10Gi"
             label: PVC size
             default: 10Gi
             when: type == on-premises && etcdBackupType == pvc || type == on-premises && etcdBackupType == all
           - id: etcdPvcStorageClass
             type: text
+            example: "longhorn"
             label: PVC storage class
             when: type == on-premises && etcdBackupType == pvc || type == on-premises && etcdBackupType == all
           - id: etcdS3Endpoint
             type: text
+            example: "s3.example.com"
             label: S3 endpoint
             required: true
             when: type == on-premises && etcdBackupType == s3 || type == on-premises && etcdBackupType == all
           - id: etcdS3Bucket
             type: text
+            example: "etcd-backup"
             label: Bucket
             required: true
             when: type == on-premises && etcdBackupType == s3 || type == on-premises && etcdBackupType == all
           - id: etcdS3AccessKeyId
             type: text
+            example: "AKIAIOSFODNN7EXAMPLE"
             label: Access key ID
             required: true
             suggest: env
             when: type == on-premises && etcdBackupType == s3 || type == on-premises && etcdBackupType == all
           - id: etcdS3SecretAccessKey
             type: text
+            example: "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"
             label: Secret access key
             required: true
             suggest: env
@@ -956,23 +1076,27 @@ steps:
             default: none
           - id: basicUsername
             type: text
+            example: "admin"
             label: Username
             default: admin
             required: true
             when: provider == basicAuth
           - id: basicPassword
             type: text
+            example: "a-long-random-password"
             label: Password
             required: true
             suggest: env
             when: provider == basicAuth
           - id: baseDomain
             type: text
+            example: "auth.example.com"
             label: Base domain for the auth ingresses
             help: Leave empty to reuse the ingress base domain.
             when: provider == sso
           - id: dexConnectors
             type: text
+            example: "- type: github\n  id: github\n  name: GitHub\n  config:\n    clientID: \"{env://DEX_GITHUB_CLIENT_ID}\"\n    clientSecret: \"{env://DEX_GITHUB_CLIENT_SECRET}\"\n    redirectURI: https://login.auth.example.com/callback"
             label: Dex connectors (YAML list)
             help: Follows the Dex connector format. A placeholder is written if you leave it empty; complete it by hand.
             multiline: true

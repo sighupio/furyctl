@@ -63,10 +63,12 @@ type Step struct {
 }
 
 type Field struct {
-	ID          string            `json:"id"                    yaml:"id"`
-	Type        string            `json:"type"                  yaml:"type"`
-	Label       Text              `json:"label,omitempty"       yaml:"label"`
-	Help        Text              `json:"help,omitempty"        yaml:"help"`
+	ID    string `json:"id"              yaml:"id"`
+	Type  string `json:"type"            yaml:"type"`
+	Label Text   `json:"label,omitempty" yaml:"label"`
+	Help  Text   `json:"help,omitempty"  yaml:"help"`
+	// Example is a realistic value, shown in the help tip next to the label.
+	Example     string            `json:"example,omitempty"     yaml:"example"`
 	Default     any               `json:"default,omitempty"     yaml:"default"`
 	Required    bool              `json:"required,omitempty"    yaml:"required"`
 	When        string            `json:"when,omitempty"        yaml:"when"`
