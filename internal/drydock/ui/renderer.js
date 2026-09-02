@@ -80,6 +80,8 @@ export function collectFields(fields, scope, root) {
     const v = scope[f.id];
     if (f.type === "group") out[f.id] = collectFields(f.fields, v ?? {}, root);
     else if (f.type === "list" && f.fields) out[f.id] = (v ?? []).map((item) => collectFields(f.fields, item, root));
+    // A blank row of a scalar list is a row the user opened and never filled: it is not an answer.
+    else if (f.type === "list") out[f.id] = (v ?? []).filter((x) => x !== "" && x !== null && x !== undefined);
     else if (f.type === "number") out[f.id] = v === "" || v === null || v === undefined ? "" : Number(v);
     else out[f.id] = v;
   }
@@ -290,6 +292,9 @@ function presets(f, scope, cb) {
 function sourced(f, scope, root, cb, key = f.id) {
   const row = el("div", "with-source");
   const current = decode(scope[key] ?? "");
+  // `suggest` in the wizard preselects the source for a value that is a secret or belongs outside
+  // the file. Only while the field is still empty: once something is typed, the value decides.
+  if (!current.raw && f.suggest) current.source = f.suggest;
   const input = f.multiline ? el("textarea", "wz-input wz-textarea") : el("input", "wz-input");
   if (!f.multiline) input.type = "text";
   input.value = current.raw ?? "";

@@ -68,6 +68,14 @@ describe("reconcile", () => {
     expect(state.rows.some((r) => r.role === "lb")).toBe(false);
   });
 
+  test("a hostname nobody edited follows the domain", () => {
+    let state = reconcile({ rows: [], roleOverrides: {}, firstIp: {} }, topology, "k8s.example.com");
+    state.rows.find((r) => r.role === "cp" && r.index === 2).hostname = "chosen.example.com";
+    state = reconcile(state, topology, "hc.example.com");
+    const cps = state.rows.filter((r) => r.role === "cp").map((r) => r.hostname);
+    expect(cps).toEqual(["cp1.hc.example.com", "chosen.example.com", "cp3.hc.example.com"]);
+  });
+
   test("fills ips from firstIp when a row has none", () => {
     const state = reconcile({ rows: [], roleOverrides: {}, firstIp: { cp: "192.168.1.10" } }, topology, "k8s.example.com");
     expect(state.rows.filter((r) => r.role === "cp").map((r) => r.ip)).toEqual([

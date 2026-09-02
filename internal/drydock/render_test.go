@@ -164,6 +164,55 @@ func TestRenderKeepalivedOnControlPlane(t *testing.T) {
 	assert.Empty(t, errs)
 }
 
+func TestRenderHyperconverged(t *testing.T) {
+	t.Parallel()
+
+	answers := loadAnswers(t)
+
+	topo, ok := answers["topology"].(map[string]any)
+	require.True(t, ok)
+
+	// Three machines, everything on them: no load balancer nodes, no workers, and the control
+	// plane taints emptied so ordinary pods are scheduled there.
+	topo["lbMode"] = "keepalived-on-cp"
+	topo["schedulableControlPlane"] = true
+	topo["infraCount"] = float64(0)
+	topo["workersCount"] = float64(0)
+	topo["extraGroups"] = []any{}
+
+	nodes, ok := answers["nodes"].([]any)
+	require.True(t, ok)
+
+	cps := make([]any, 0, 3)
+
+	for _, n := range nodes {
+		node, ok := n.(map[string]any)
+		require.True(t, ok)
+
+		if node["role"] == "cp" {
+			cps = append(cps, n)
+		}
+	}
+
+	require.Len(t, cps, 3)
+	answers["nodes"] = cps
+
+	out := renderImmutable(t, answers)
+
+	assert.Contains(t, out, "taints: []")
+	assert.NotContains(t, out, "loadBalancers:")
+	assert.Contains(t, out, "nodeGroups: []", "an explicit empty list, as the reference configuration writes it")
+	assert.NotContains(t, out, "nodeSelector:", "with no infra nodes the distribution is not pinned anywhere")
+
+	idx := strings.Index(out, "controlPlane:")
+	require.Positive(t, idx)
+	assert.Contains(t, out[idx:], "keepalived:\n        enabled: true")
+
+	errs, err := Validate(immutableSchema, out)
+	require.NoError(t, err)
+	assert.Empty(t, errs)
+}
+
 func TestRenderTemplateErrorIsTyped(t *testing.T) {
 	t.Parallel()
 

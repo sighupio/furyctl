@@ -45,7 +45,8 @@
           }
         ]
       }
-    ]
+    ],
+    "schedulableControlPlane": false
   },
   "nodeDefaults": {
     "arch": "x86-64",

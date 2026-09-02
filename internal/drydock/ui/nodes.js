@@ -53,16 +53,22 @@ export function reconcile(state, topology, domain) {
   for (const r of roles(topology)) {
     const first = state.firstIp?.[roleKey(r)] ?? "";
     for (let i = 1; i <= r.count; i++) {
+      const want = hostnameFor(r.role, r.group, i, domain);
       const existing = state.rows.find((x) => x.role === r.role && x.group === r.group && x.index === i);
       const row = existing ?? {
         role: r.role,
         group: r.group,
         index: i,
-        hostname: hostnameFor(r.role, r.group, i, domain),
+        hostname: want,
+        generated: want,
         macAddress: "",
         ip: "",
         overrides: {},
       };
+      // The domain can change after the rows exist. A hostname nobody edited follows it; one that
+      // was typed over stays as it was typed.
+      if (row.hostname === row.generated) row.hostname = want;
+      row.generated = want;
       if (!row.ip && first) row.ip = incrementIp(first, i - 1);
       rows.push(row);
     }

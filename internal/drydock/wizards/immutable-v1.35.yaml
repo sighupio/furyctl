@@ -156,6 +156,11 @@ steps:
         label: Control plane address
         help: Host and port clients use for the API server. Leave empty for api.<domain>:6443. Make it resolve to the floating IP, the load balancer, or the first control plane node.
         placeholder: api.<domain>:6443
+      - id: schedulableControlPlane
+        type: bool
+        label: Run workloads on the control plane nodes
+        help: "For a hyperconverged cluster with no dedicated workers: it empties the control plane taints, so ordinary pods are scheduled there. Leave it off when the cluster has worker nodes."
+        default: false
       - id: infraCount
         type: number
         example: "3"
@@ -232,7 +237,7 @@ steps:
         type: text
         example: "/dev/sda"
         label: Install disk
-        help: The device Flatcar is installed on. It is wiped.
+        help: "The device Flatcar is installed on, and it is wiped. A plain device name: the schema does not accept the /dev/disk/by-id form here, unlike the data disks below."
         default: /dev/sda
         required: true
       - id: interface
@@ -454,7 +459,6 @@ steps:
                 example: "Managed by furyctl. Changes are lost at the next apply."
                 label: Contents
                 multiline: true
-                suggest: file
               - id: user
                 type: text
                 example: "root"
@@ -504,7 +508,6 @@ steps:
                 example: "[Unit]\nDescription=My agent\n[Service]\nExecStart=/opt/bin/agent\n[Install]\nWantedBy=multi-user.target"
                 label: Unit file
                 multiline: true
-                suggest: file
               - id: dropins
                 type: list
                 label: Drop-ins
@@ -520,7 +523,6 @@ steps:
                     example: "[Service]\nEnvironment=HTTP_PROXY=http://proxy.example.com:3128"
                     label: Contents
                     multiline: true
-                    suggest: file
           - id: users
             type: list
             label: Extra users
@@ -653,8 +655,8 @@ steps:
         type: path
         example: "./secrets/etcd-encryption-config.yaml"
         label: Encryption configuration file
-        help: An EncryptionConfiguration manifest. Keep it out of the repository.
-        default: ./secrets/etcd-encryption-config.yaml
+        help: "An EncryptionConfiguration manifest. furyctl reads the file and puts its content in the configuration, so the value stays a {file://} reference and the keys never enter the repository."
+        default: "{file://./secrets/etcd-encryption-config.yaml}"
         suggest: file
         required: true
         when: encryption

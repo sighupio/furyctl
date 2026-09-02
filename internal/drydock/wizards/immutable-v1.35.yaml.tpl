@@ -321,6 +321,10 @@ spec:
 {{- range $cps }}
         - hostname: {{ .hostname | quote }}
 {{- end }}
+{{- if $t.schedulableControlPlane }}
+      # No dedicated workers: ordinary pods are scheduled on the control plane too.
+      taints: []
+{{- end }}
 {{- if eq $t.lbMode "keepalived-on-cp" }}
       keepalived:
         enabled: true
@@ -335,7 +339,10 @@ spec:
         - hostname: {{ .hostname | quote }}
 {{- end }}
 {{- end }}
-{{- if or $infra $workers (dig "topology" "extraGroups" (list) .) }}
+{{- if not (or $infra $workers (dig "topology" "extraGroups" (list) .)) }}
+    # Every machine is a control plane node: there are no worker groups.
+    nodeGroups: []
+{{- else }}
     nodeGroups:
 {{- if $infra }}
       - name: infra
