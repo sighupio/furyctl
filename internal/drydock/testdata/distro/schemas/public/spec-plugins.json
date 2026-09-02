@@ -1,0 +1,132 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "helm": {
+      "$ref": "#/$defs/Spec.Plugins.Helm"
+    },
+    "kustomize": {
+      "$ref": "#/$defs/Spec.Plugins.Kustomize"
+    }
+  },
+  "$defs": {
+    "Spec.Plugins.Helm": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "repositories": {
+          "$ref": "#/$defs/Spec.Plugins.Helm.Repositories"
+        },
+        "releases": {
+          "$ref": "#/$defs/Spec.Plugins.Helm.Releases"
+        }
+      }
+    },
+    "Spec.Plugins.Helm.Repositories": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "The name of the repository"
+          },
+          "url": {
+            "type": "string",
+            "description": "The url of the repository"
+          }
+        },
+        "required": [
+          "name",
+          "url"
+        ]
+      }
+    },
+    "Spec.Plugins.Helm.Releases": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "The name of the release"
+          },
+          "namespace": {
+            "type": "string",
+            "description": "The namespace of the release"
+          },
+          "chart": {
+            "type": "string",
+            "description": "The chart of the release"
+          },
+          "version": {
+            "type": "string",
+            "description": "The version of the release"
+          },
+          "set": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "description": "The name of the set"
+                },
+                "value": {
+                  "type": "string",
+                  "description": "The value of the set"
+                }
+              },
+              "required": [
+                "name",
+                "value"
+              ]
+            }
+          },
+          "values": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "The values of the release"
+          },
+          "disableValidationOnInstall": {
+            "type": "boolean",
+            "description": "Disable running `helm diff` validation when installing the plugin, it will still be done when upgrading."
+          }
+        },
+        "required": [
+          "name",
+          "namespace",
+          "chart"
+        ]
+      }
+    },
+    "Spec.Plugins.Kustomize": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "The name of the kustomize plugin. A lowercase RFC 1123 subdomain must consist of lower case alphanumeric characters, '-' or '.', and must start and end with an alphanumeric character (e.g. 'example.com', 'local-storage')",
+            "pattern": "^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$"
+          },
+          "folder": {
+            "type": "string",
+            "description": "The folder of the kustomize plugin"
+          }
+        },
+        "required": [
+          "name",
+          "folder"
+        ]
+      }
+    }
+  }
+}
