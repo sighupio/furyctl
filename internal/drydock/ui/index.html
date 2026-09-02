@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="light dark" />
+    <title>furyctl drydock</title>
+    <link rel="preload" href="/fonts/Geist-Variable.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="stylesheet" href="/style.css" />
+    <script>
+      // Applied before paint so the stored appearance wins with no flash of the wrong theme.
+      (() => {
+        try {
+          const a = localStorage.getItem("drydock.appearance") || "auto";
+          let dark;
+          if (a === "dark") dark = true;
+          else if (a === "light") dark = false;
+          else dark = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
+          document.documentElement.classList.toggle("dark", dark);
+        } catch {}
+      })();
+    </script>
+  </head>
+  <body>
+    <header class="topbar">
+      <div class="brand">
+        <div class="titles">
+          <h1 data-t="app.title">drydock</h1>
+          <p class="desc" data-t="app.subtitle"></p>
+        </div>
+      </div>
+      <div class="actions">
+        <select class="wz-input wz-select" id="lang" aria-label="Language"></select>
+        <button class="btn ghost appearance" id="appearance" type="button"></button>
+      </div>
+    </header>
+
+    <p class="error" id="error" hidden></p>
+
+    <main class="split">
+      <section class="pane" id="left">
+        <div class="picker" id="picker"></div>
+        <div class="stepper" id="stepper" hidden></div>
+        <div class="step-body" id="step" hidden></div>
+        <div class="wz-foot" id="nav" hidden>
+          <button class="btn ghost" id="back" type="button"></button>
+          <span class="wz-grow"></span>
+          <button class="btn primary" id="next" type="button"></button>
+        </div>
+      </section>
+
+      <section class="pane">
+        <div class="pane-head">
+          <span class="pane-title" data-t="preview.title"></span>
+          <span class="pill pill-idle" id="status"></span>
+        </div>
+        <div class="empty" id="empty"><p data-t="preview.empty"></p></div>
+        <pre class="yaml" id="yaml" hidden></pre>
+        <div class="template-error" id="template-error" hidden></div>
+        <ul class="errors" id="errors" hidden></ul>
+      </section>
+    </main>
+
+    <script type="module" src="/app.js"></script>
+  </body>
+</html>

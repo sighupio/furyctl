@@ -1,0 +1,828 @@
+/* Geist, the console's typeface, served from this image rather than from Google Fonts:
+   the editor is meant to run on an internal host and must look the same on a machine with
+   no way out to the internet. Two variable files cover every weight the page asks for.
+   Licensed under the SIL Open Font License — see fonts/LICENSE.txt, which ships with them.
+   There is no italic face: the only italic on the page is a figure caption in the draft,
+   and a synthesised slant is enough for that. */
+@font-face {
+  font-family: "Geist";
+  src: url("/fonts/Geist-Variable.woff2") format("woff2-variations");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Geist Mono";
+  src: url("/fonts/GeistMono-Variable.woff2") format("woff2-variations");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* The AIgis console theme, "Occhio di Sauron", carried over verbatim.
+   In AIgis the tokens are delivered through Tailwind; the theme itself is these custom
+   properties, so nothing here needs a build step. Keep the two blocks below in sync with
+   aigis/ui/app/globals.css — they are a copy, not a reinterpretation.
+
+   The rules that come with the theme: the teal accent means "clickable" and nothing else,
+   and the state family (success / warning / destructive / progress) is never used for
+   interaction. */
+:root {
+  color-scheme: light;
+  --background: #eef2f7;
+  --foreground: #18212f;
+  --card: #ffffff;
+  --card-foreground: #18212f;
+  --primary: #0d6f8c;
+  --primary-foreground: #ffffff;
+  --secondary: #f4f7fb;
+  --secondary-foreground: #18212f;
+  --muted: #f4f7fb;
+  --muted-foreground: #4f5f78;
+  --accent: #e7eef8;
+  --accent-foreground: #18212f;
+  --destructive: #c0362e;
+  --success: #0e8f5b;
+  --warning: #8f6a06;
+  --progress: #2b5fc4;
+  --border: #d5dde9;
+  --input: #b8c5d8;
+  --ring: #0d6f8c;
+  --radius: 0.875rem;
+}
+
+.dark {
+  color-scheme: dark;
+  --background: #0a111f;
+  --foreground: #e8eef9;
+  --card: #101a2e;
+  --card-foreground: #e8eef9;
+  --primary: #5bc8e8;
+  --primary-foreground: #062736;
+  --secondary: #16233c;
+  --secondary-foreground: #e8eef9;
+  --muted: #16233c;
+  --muted-foreground: #a3b2cc;
+  --accent: #1d2c49;
+  --accent-foreground: #e8eef9;
+  --destructive: #f47069;
+  --success: #3fcf8e;
+  --warning: #e8b93e;
+  --progress: #6d9ef7;
+  --border: #22334f;
+  --input: #2f4468;
+  --ring: #5bc8e8;
+}
+
+:root {
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --font-sans: "Geist", ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-mono: "Geist Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+/* The panes are laid out with flex, and a `display` declaration beats the browser's own
+   rule for [hidden]: without this, hiding the empty state or the asset bar in JavaScript
+   does nothing at all. */
+[hidden] {
+  display: none !important;
+}
+
+body {
+  margin: 0;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  font: 14px / 1.5 var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  color: var(--foreground);
+  background: var(--background);
+}
+
+/* --- top bar: the PageHeader grammar — title, description, actions on the right --- */
+
+.topbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 20px;
+  background: var(--card);
+  border-bottom: 1px solid var(--border);
+}
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+.titles h1 {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--foreground);
+}
+.titles .desc {
+  margin: 2px 0 0;
+  font-size: 13px;
+  color: var(--muted-foreground);
+}
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.btn {
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  padding: 6px 12px;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: background-color 0.12s ease, border-color 0.12s ease;
+}
+.btn:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+.btn.primary {
+  background: var(--primary);
+  color: var(--primary-foreground);
+}
+.btn.primary:hover:not(:disabled) {
+  background: color-mix(in oklab, var(--primary) 88%, black);
+}
+.btn.primary:disabled {
+  opacity: 0.6;
+  cursor: progress;
+}
+.btn.ghost {
+  background: var(--secondary);
+  color: var(--secondary-foreground);
+  border-color: var(--border);
+}
+.btn.ghost:hover {
+  background: var(--accent);
+}
+.btn kbd {
+  font: inherit;
+  font-size: 11px;
+  opacity: 0.75;
+}
+
+/* Appearance: one button showing the theme in force, which changes when clicked. The three
+   choices side by side, the way the AIgis console lays them out, work there because they
+   sit in a card with a heading that says what they are — in a toolbar they are three words
+   with nothing to tie them to the theme. */
+.btn.icon-only {
+  padding: 6px 9px;
+}
+.btn svg,
+.appearance svg {
+  width: 16px;
+  height: 16px;
+  stroke: currentColor;
+  fill: none;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* Five-state vocabulary: green done, blue working, yellow with reservation, red a human
+   must act, grey paused. Working is blue, never red. */
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border-radius: 999px;
+  padding: 3px 10px;
+  font-size: 12px;
+  font-weight: 500;
+  box-shadow: inset 0 0 0 1px currentColor;
+}
+.pill::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: currentColor;
+}
+.pill-idle {
+  color: var(--muted-foreground);
+  background: var(--muted);
+}
+.pill-working {
+  color: var(--progress);
+  background: color-mix(in oklab, var(--progress) 12%, transparent);
+}
+/* A hollow dot, so "in progress" reads without relying on colour. */
+.pill-working::before {
+  background: transparent;
+  box-shadow: inset 0 0 0 2px currentColor;
+}
+.pill-ok {
+  color: var(--success);
+  background: color-mix(in oklab, var(--success) 12%, transparent);
+}
+.pill-error {
+  color: var(--destructive);
+  background: color-mix(in oklab, var(--destructive) 12%, transparent);
+}
+
+/* A status bar along the bottom, where an editor's state belongs. In the toolbar the pill
+   stood in the row of controls and read as one more of them; on a line of its own under
+   them it left the header lopsided. */
+.statusbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 6px 16px;
+  background: var(--card);
+  border-top: 1px solid var(--border);
+  font-size: 12px;
+}
+.statusbar-info {
+  color: var(--muted-foreground);
+}
+
+.error {
+  margin: 0;
+  padding: 10px 20px;
+  background: color-mix(in oklab, var(--destructive) 10%, transparent);
+  color: var(--destructive);
+  border-bottom: 1px solid color-mix(in oklab, var(--destructive) 25%, transparent);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  white-space: pre-wrap;
+}
+
+/* --- the two panes, in the Card grammar --- */
+
+.split {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  padding: 14px;
+  min-height: 0;
+}
+.pane {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  position: relative;
+}
+
+/* Shown over the document pane while a build runs. It veils rather than replaces: the PDF
+   from the previous build stays where it was, so the pane does not empty out and jump. */
+.busy {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: color-mix(in oklab, var(--card) 72%, transparent);
+  backdrop-filter: blur(1.5px);
+  z-index: 2;
+}
+.busy-card {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--card);
+  color: var(--foreground);
+  font-size: 13px;
+  box-shadow: 0 6px 20px rgb(0 0 0 / 0.12);
+}
+.spinner {
+  width: 14px;
+  height: 14px;
+  border-radius: 999px;
+  border: 2px solid color-mix(in oklab, var(--primary) 30%, transparent);
+  border-top-color: var(--primary);
+  animation: spin 0.7s linear infinite;
+}
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+/* Someone who asked the system for less movement gets a still ring, not a spinning one. */
+@media (prefers-reduced-motion: reduce) {
+  .spinner {
+    animation: none;
+  }
+}
+
+.pane-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--border);
+  min-height: 44px;
+}
+/* Pushed to the right of the pane's own header: the two downloads belong to the document
+   shown underneath them, not to the toolbar at the top of the window. */
+.pane-actions {
+  margin-left: auto;
+  display: flex;
+  gap: 6px;
+}
+.btn.small {
+  padding: 4px 10px;
+  font-size: 12px;
+}
+
+.pane-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted-foreground);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding-left: 4px;
+}
+
+.tabs {
+  display: flex;
+  gap: 2px;
+}
+.tab {
+  border: 1px solid transparent;
+  background: transparent;
+  border-radius: var(--radius-sm);
+  padding: 4px 12px;
+  font: inherit;
+  font-size: 13px;
+  color: var(--muted-foreground);
+  cursor: pointer;
+}
+.tab:hover {
+  background: var(--secondary);
+}
+.tab.active {
+  background: var(--accent);
+  color: var(--accent-foreground);
+  font-weight: 500;
+}
+
+.tools {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px;
+}
+.tools button {
+  border: 1px solid transparent;
+  background: transparent;
+  border-radius: var(--radius-sm);
+  padding: 3px 8px;
+  font: inherit;
+  font-size: 12px;
+  color: var(--muted-foreground);
+  cursor: pointer;
+  min-width: 26px;
+  justify-content: center;
+}
+.tools button:hover {
+  background: var(--secondary);
+  color: var(--foreground);
+}
+
+#source {
+  flex: 1;
+  border: 0;
+  outline: 0;
+  resize: none;
+  padding: 16px 18px;
+  font: 13px / 1.7 var(--font-mono);
+  color: var(--foreground);
+  background: var(--card);
+  tab-size: 2;
+}
+#source::placeholder {
+  color: var(--muted-foreground);
+}
+
+#pdf {
+  flex: 1;
+  border: 0;
+  background: var(--muted);
+}
+.empty {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  color: var(--muted-foreground);
+}
+.muted {
+  color: var(--muted-foreground);
+  font-size: 13px;
+}
+
+/* --- guided tour, shown the first time the editor is opened ------------------
+   One element stays lit while everything else is dimmed by a shadow wide enough to cover
+   any screen: cheaper and sharper than four rectangles around a hole. */
+.tour {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+}
+/* One element does the darkening: a shadow with a spread wide enough to reach past any
+   screen, and a hole where the element being explained is. */
+.tour-hole {
+  position: absolute;
+  border-radius: var(--radius-sm);
+  box-shadow: 0 0 0 9999px rgb(5 7 13 / 0.62);
+  outline: 2px solid var(--primary);
+  transition: top 0.18s ease, left 0.18s ease, width 0.18s ease, height 0.18s ease;
+  pointer-events: none;
+}
+.tour-card {
+  position: absolute;
+  width: min(360px, calc(100vw - 20px));
+  background: var(--card);
+  color: var(--foreground);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  box-shadow: 0 18px 40px rgb(0 0 0 / 0.28);
+  padding: 16px;
+}
+.tour-card h2 {
+  margin: 0 0 6px;
+  font-size: 15px;
+  font-weight: 600;
+}
+.tour-card p {
+  margin: 0 0 14px;
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--muted-foreground);
+}
+.tour-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.tour-count {
+  font-size: 12px;
+  color: var(--muted-foreground);
+}
+.tour-buttons {
+  display: flex;
+  gap: 8px;
+}
+/* The arrow sits under the element it explains, wherever the card had to be clamped to. */
+.tour-card::before {
+  content: "";
+  position: absolute;
+  left: calc(var(--arrow, 50%) - 7px);
+  width: 14px;
+  height: 14px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  transform: rotate(45deg);
+}
+.tour-card.below::before {
+  top: -8px;
+  border-right: 0;
+  border-bottom: 0;
+}
+.tour-card.above::before {
+  bottom: -8px;
+  border-left: 0;
+  border-top: 0;
+}
+
+/* --- wizard: it takes over the left pane, so it inherits the card around it --- */
+
+.wizard {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.wz-head {
+  padding: 12px 16px 0;
+}
+.wz-steps {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.wz-step {
+  font-size: 12px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  color: var(--muted-foreground);
+  background: var(--secondary);
+}
+.wz-step.done {
+  color: var(--foreground);
+}
+.wz-step.active {
+  background: var(--accent);
+  color: var(--accent-foreground);
+  font-weight: 500;
+}
+
+.wz-body {
+  flex: 1;
+  overflow: auto;
+  padding: 16px;
+  min-height: 0;
+}
+
+.wz-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.wz-field {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.wz-field > label {
+  width: 130px;
+  flex: none;
+  font-size: 13px;
+  color: var(--muted-foreground);
+}
+.wz-input {
+  font: inherit;
+  font-size: 13px;
+  color: var(--foreground);
+  background: var(--card);
+  border: 1px solid var(--input);
+  border-radius: var(--radius-sm);
+  padding: 5px 9px;
+  min-width: 0;
+}
+.wz-input:focus {
+  outline: 2px solid var(--ring);
+  outline-offset: -1px;
+  border-color: transparent;
+}
+.wz-grow {
+  flex: 1;
+}
+.wz-number {
+  width: 76px;
+}
+.wz-select {
+  flex: none;
+}
+/* A field is a row: the label sits in a fixed column and the control takes what is left,
+   up to a width past which a single-line input stops being comfortable to read. */
+.wz-form .wz-field > .wz-input {
+  flex: 1;
+  max-width: 460px;
+}
+.wz-field > .wz-check {
+  flex: 1;
+}
+.wz-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.wz-chapters {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.wz-chapter {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 10px;
+  background: var(--secondary);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.wz-chapter-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.wz-block {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--card);
+  padding: 8px 10px;
+}
+.wz-block-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+.wz-block-name {
+  flex: 1;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--muted-foreground);
+}
+.wz-block-fields {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 14px;
+}
+.wz-block-fields .wz-field > label {
+  width: auto;
+}
+
+.wz-icon {
+  border: 0;
+  background: transparent;
+  color: var(--muted-foreground);
+  border-radius: var(--radius-sm);
+  width: 24px;
+  height: 24px;
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+  flex: none;
+}
+.wz-icon:hover {
+  background: var(--accent);
+  color: var(--foreground);
+}
+
+.wz-chip,
+.wz-add {
+  border: 1px dashed var(--input);
+  background: transparent;
+  color: var(--muted-foreground);
+  border-radius: var(--radius-sm);
+  padding: 4px 10px;
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+.wz-chip:hover,
+.wz-add:hover {
+  border-style: solid;
+  border-color: var(--ring);
+  color: var(--foreground);
+}
+.wz-block-add {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.wz-add {
+  align-self: flex-start;
+  font-size: 13px;
+  padding: 6px 14px;
+}
+
+.wz-preview-wrap {
+  margin-top: 8px;
+}
+.wz-preview-label {
+  margin: 0 0 6px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--muted-foreground);
+}
+.wz-preview {
+  margin: 0;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--secondary);
+  font: 12px / 1.6 var(--font-mono);
+  color: var(--foreground);
+  white-space: pre-wrap;
+  overflow-x: auto;
+}
+
+.wz-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 16px;
+  border-top: 1px solid var(--border);
+}
+.wz-foot-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.wz-warn {
+  font-size: 12px;
+  color: var(--warning);
+}
+
+.assets {
+  border-top: 1px solid var(--border);
+  padding: 8px 10px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  background: var(--secondary);
+}
+/* One chip per picture the browser is holding: click the name to insert it in the
+   markdown, the cross to drop it. */
+.asset {
+  display: inline-flex;
+  align-items: stretch;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--card);
+  overflow: hidden;
+}
+.asset button {
+  border: 0;
+  background: transparent;
+  padding: 3px 9px;
+  font: inherit;
+  font-size: 12px;
+  color: var(--foreground);
+  cursor: pointer;
+}
+.asset button:hover {
+  background: var(--accent);
+}
+.asset-directive,
+.asset-remove {
+  color: var(--muted-foreground);
+  border-left: 1px solid var(--border) !important;
+  padding: 3px 7px !important;
+}
+.asset-remove:hover {
+  color: var(--destructive);
+}
+
+/* A picture the markdown asks for and the browser is not holding. Saying so on the page is
+   the point: in the document it would come out as "[missing image]". */
+
+/* ---- drydock ------------------------------------------------------------- */
+.stepper { display: flex; gap: 0.5rem; flex-wrap: wrap; padding: 0.75rem 1rem; border-bottom: 1px solid var(--border); }
+.stepper .wz-step { cursor: pointer; }
+.stepper .wz-step.disabled { opacity: 0.5; cursor: default; }
+.step-body { padding: 1rem; overflow: auto; flex: 1; }
+.step-body h2 { margin: 0 0 0.25rem; font-size: 1.1rem; }
+.step-body .desc { margin: 0 0 1rem; color: var(--muted-foreground); }
+.help { display: block; margin-top: 0.25rem; font-size: 0.8rem; color: var(--muted-foreground); }
+.required::after { content: " *"; color: var(--destructive); }
+.with-source { display: flex; gap: 0.5rem; align-items: stretch; }
+.with-source .wz-input { flex: 1; }
+.with-source .source-select { flex: 0 0 11rem; }
+.wz-textarea { min-height: 6rem; font-family: "Geist Mono", ui-monospace, monospace; font-size: 0.85rem; }
+.radios { display: flex; gap: 1rem; flex-wrap: wrap; }
+.radios label { display: inline-flex; gap: 0.35rem; align-items: center; }
+.list-item { border: 1px solid var(--border); border-radius: calc(var(--radius) / 2); padding: 0.75rem; margin: 0.5rem 0; background: var(--secondary); }
+.list-item-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem; }
+.list-row { display: flex; gap: 0.5rem; align-items: center; margin: 0.25rem 0; }
+details.group { border: 1px solid var(--border); border-radius: calc(var(--radius) / 2); padding: 0.5rem 0.75rem; margin: 0.75rem 0; }
+details.group > summary { cursor: pointer; font-weight: 600; }
+.nodetable table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+.nodetable th, .nodetable td { text-align: left; padding: 0.35rem 0.5rem; border-bottom: 1px solid var(--border); vertical-align: top; }
+.nodetable .role-head { display: flex; gap: 0.75rem; align-items: center; margin: 1rem 0 0.5rem; }
+.nodetable .role-head h3 { margin: 0; font-size: 1rem; }
+.yaml { margin: 0; padding: 1rem; overflow: auto; flex: 1; font-family: "Geist Mono", ui-monospace, monospace; font-size: 0.8rem; line-height: 1.45; white-space: pre; }
+.errors { list-style: none; margin: 0; padding: 0.5rem 1rem; border-top: 1px solid var(--border); max-height: 30vh; overflow: auto; font-size: 0.85rem; }
+.errors li { padding: 0.25rem 0; }
+.errors code { color: var(--destructive); }
+.template-error { padding: 1rem; color: var(--destructive); white-space: pre-wrap; font-family: "Geist Mono", ui-monospace, monospace; font-size: 0.8rem; }
+.review dl { display: grid; grid-template-columns: max-content 1fr; gap: 0.25rem 1rem; }
+.review dt { font-family: "Geist Mono", ui-monospace, monospace; }
+.review ul { padding-left: 1.25rem; }
+.picker { max-width: 28rem; margin: 3rem auto; display: flex; flex-direction: column; gap: 1rem; }
