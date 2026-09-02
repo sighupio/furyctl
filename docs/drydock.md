@@ -36,9 +36,9 @@ SIGHUP Distribution documentation prescribes for physical machines, which appear
 the wizard, already filled in where the documentation gives a value.
 
 Every free-text field has a source next to it: a literal value, an environment variable, the
-contents of a file, a path, or a URL. The wizard preselects one where the value is a secret or
-belongs outside the file, as with the SSH key below. `furyctl` expands these when it applies the
-configuration, so nothing sensitive has to live in the YAML.
+contents of a file, a path, or a URL. A field whose value is a secret starts on the source that
+suits it, and picking `Environment variable` proposes the variable name as well. `furyctl` expands
+these when it applies the configuration, so nothing sensitive has to live in the YAML.
 
 The `?` next to a label opens the explanation and a realistic example, which one click copies into
 the field.
@@ -92,6 +92,12 @@ status next to it counts what is still to fill in a calm blue and turns amber on
 actually wrong.
 
 ![The generated furyctl.yaml, with the data disk and the documented kernel parameters](assets/drydock/08-yaml.jpg)
+
+Once written, the review says so and `furyctl` stops. This one is a hyperconverged cluster: three
+machines carrying the control plane and the workloads, with the variable to export and the
+encryption manifest to prepare listed above the confirmation.
+
+![The review after writing the file, with the variable and the file it still needs](assets/drydock/09-hyperconverged-review.jpg)
 
 ## After writing
 
