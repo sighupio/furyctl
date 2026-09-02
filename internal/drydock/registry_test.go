@@ -21,7 +21,7 @@ func TestLoadEmbedded(t *testing.T) {
 
 	list := reg.List()
 	require.Len(t, list, 1)
-	assert.Equal(t, WizardInfo{Kind: "Immutable", Versions: ">= 1.35.1, < 1.36.0", DefaultVersion: "v1.35.1"}, list[0])
+	assert.Equal(t, WizardInfo{Kind: "Immutable", Range: ">= 1.35.1, < 1.36.0", DefaultVersion: "v1.35.1", Versions: []string{}}, list[0])
 
 	w, tpl, err := reg.Find("Immutable", "v1.35.1")
 	require.NoError(t, err)
@@ -44,4 +44,42 @@ func TestLoadEmbedded(t *testing.T) {
 
 	_, _, err = reg.Find("Immutable", "banana")
 	require.Error(t, err)
+}
+
+// Every field the user types into carries an example, so the (?) tip is never empty.
+func TestEmbeddedWizardsHaveExamples(t *testing.T) {
+	t.Parallel()
+
+	reg, err := LoadEmbedded()
+	require.NoError(t, err)
+
+	w, _, err := reg.Find("Immutable", "v1.35.1")
+	require.NoError(t, err)
+
+	var missing []string
+
+	var walk func(scope string, fields []Field)
+
+	walk = func(scope string, fields []Field) {
+		for _, f := range fields {
+			where := scope + "." + f.ID
+
+			switch {
+			case f.Type == "group" || f.Type == "nodeTable" || (f.Type == "list" && f.Item == nil):
+				walk(where, f.Fields)
+
+			case f.Type == "bool" || f.Type == "choice":
+				// Self-explanatory controls.
+
+			case f.Example == "":
+				missing = append(missing, where)
+			}
+		}
+	}
+
+	for _, s := range w.Steps {
+		walk(s.ID, s.Fields)
+	}
+
+	assert.Empty(t, missing)
 }

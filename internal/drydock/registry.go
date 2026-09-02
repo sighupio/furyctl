@@ -22,9 +22,10 @@ var (
 )
 
 type WizardInfo struct {
-	Kind           string `json:"kind"`
-	Versions       string `json:"versions"`
-	DefaultVersion string `json:"defaultVersion"`
+	Kind           string   `json:"kind"`
+	Range          string   `json:"range"`
+	DefaultVersion string   `json:"defaultVersion"`
+	Versions       []string `json:"versions"` // Concrete releases in Range, filled by the server.
 }
 
 type Registry struct {
@@ -73,10 +74,22 @@ func (r *Registry) List() []WizardInfo {
 	out := make([]WizardInfo, 0, len(r.wizards))
 
 	for _, w := range r.wizards {
-		out = append(out, WizardInfo{Kind: w.Kind, Versions: w.Versions, DefaultVersion: w.DefaultVersion})
+		out = append(out, WizardInfo{Kind: w.Kind, Range: w.Versions, DefaultVersion: w.DefaultVersion, Versions: []string{}})
 	}
 
 	return out
+}
+
+// InRange reports whether version falls in the wizard's range.
+func (w *Wizard) InRange(version string) bool {
+	v, err := semver.NewVersion(version)
+	if err != nil {
+		return false
+	}
+
+	c, err := semver.NewConstraint(w.Versions)
+
+	return err == nil && c.Check(v)
 }
 
 // Find returns the wizard for kind whose version range contains version, and its template.

@@ -68,6 +68,7 @@ func TestWizardsEndpoint(t *testing.T) {
 	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &got))
 	require.Len(t, got, 1)
 	assert.Equal(t, "Immutable", got[0].Kind)
+	assert.Equal(t, []string{"v1.35.1"}, got[0].Versions, "a local distro location offers exactly its own version")
 }
 
 func TestSessionPreviewWrite(t *testing.T) {

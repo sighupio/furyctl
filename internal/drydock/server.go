@@ -22,8 +22,10 @@ import (
 	distroconf "github.com/sighupio/furyctl/internal/apis/config"
 	"github.com/sighupio/furyctl/internal/distribution"
 	"github.com/sighupio/furyctl/internal/git"
+	"github.com/sighupio/furyctl/internal/semver"
 	dist "github.com/sighupio/furyctl/pkg/distribution"
 	netx "github.com/sighupio/furyctl/pkg/x/net"
+	yamlx "github.com/sighupio/furyctl/pkg/x/yaml"
 )
 
 var (
@@ -58,10 +60,12 @@ type Server struct {
 	outputPath     string
 	gitProtocol    git.Protocol
 
-	mu      sync.Mutex
-	sess    *session
-	written chan struct{}
-	once    sync.Once
+	mu       sync.Mutex
+	sess     *session
+	written  chan struct{}
+	once     sync.Once
+	releases []string // Release tags known for the picker, resolved once.
+	relOnce  sync.Once
 }
 
 func NewServer(reg *Registry, distroLocation, outputPath string, gitProtocol git.Protocol) *Server {
@@ -97,7 +101,70 @@ func (s *Server) Handler() (http.Handler, error) {
 }
 
 func (s *Server) handleWizards(w http.ResponseWriter, _ *http.Request) {
-	writeJSON(w, http.StatusOK, s.reg.List())
+	infos := s.reg.List()
+
+	for i := range infos {
+		infos[i].Versions = s.versionsFor(infos[i])
+	}
+
+	writeJSON(w, http.StatusOK, infos)
+}
+
+// versionsFor lists the releases a wizard can be used with, newest first. With a local
+// --distro-location there is exactly one candidate, the version of that checkout; otherwise
+// the GitHub releases are filtered by the wizard range and by furyctl's own compatibility.
+// When nothing can be listed, the wizard default is offered so the picker never comes empty.
+func (s *Server) versionsFor(info WizardInfo) []string {
+	wizard, _, err := s.reg.Find(info.Kind, info.DefaultVersion)
+	if err != nil {
+		return []string{info.DefaultVersion}
+	}
+
+	var out []string
+
+	for _, v := range s.knownReleases() {
+		if !wizard.InRange(v) {
+			continue
+		}
+
+		if checker, err := distribution.NewCompatibilityChecker(v, info.Kind); err != nil || !checker.IsCompatible() {
+			continue
+		}
+
+		out = append(out, v)
+	}
+
+	if len(out) == 0 {
+		return []string{info.DefaultVersion}
+	}
+
+	return out
+}
+
+func (s *Server) knownReleases() []string {
+	s.relOnce.Do(func() {
+		if s.distroLocation != "" {
+			manifest, err := yamlx.FromFileV3[distroconf.KFD](s.distroLocation + "/kfd.yaml")
+			if err == nil && manifest.Version != "" {
+				s.releases = []string{semver.EnsurePrefix(manifest.Version)}
+			}
+
+			return
+		}
+
+		releases, err := distribution.GetSupportedVersions(git.NewGitHubClient())
+		if err != nil {
+			logrus.Warnf("cannot list distribution releases, offering the wizard default only: %v", err)
+
+			return
+		}
+
+		for _, r := range releases {
+			s.releases = append(s.releases, semver.EnsurePrefix(r.Version.String()))
+		}
+	})
+
+	return s.releases
 }
 
 func (s *Server) handleSession(w http.ResponseWriter, r *http.Request) {
