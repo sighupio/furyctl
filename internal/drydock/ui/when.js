@@ -1,3 +1,9 @@
+/**
+ * Copyright (c) 2017-present SIGHUP s.r.l All rights reserved.
+ * Use of this source code is governed by a BSD-style
+ * license that can be found in the LICENSE file.
+ */
+
 // Same grammar as internal/drydock/when.go: OR of ANDs of terms; a term is `a`, `!a`,
 // `a == lit`, `a != lit`. Dotted identifiers resolve from root when the first segment names
 // a step, from the current scope otherwise. Comparison is on String(value).

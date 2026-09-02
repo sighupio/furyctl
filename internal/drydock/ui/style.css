@@ -1,3 +1,9 @@
+/**
+ * Copyright (c) 2017-present SIGHUP s.r.l All rights reserved.
+ * Use of this source code is governed by a BSD-style
+ * license that can be found in the LICENSE file.
+ */
+
 /* Geist, the console's typeface, served from this image rather than from Google Fonts:
    the editor is meant to run on an internal host and must look the same on a machine with
    no way out to the internet. Two variable files cover every weight the page asks for.

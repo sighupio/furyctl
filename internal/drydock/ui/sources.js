@@ -1,3 +1,9 @@
+/**
+ * Copyright (c) 2017-present SIGHUP s.r.l All rights reserved.
+ * Use of this source code is governed by a BSD-style
+ * license that can be found in the LICENSE file.
+ */
+
 // Value sources: how a field's value is written into furyctl.yaml. furyctl expands these
 // patterns at apply time (internal/parser/config.go), on any string in the file.
 

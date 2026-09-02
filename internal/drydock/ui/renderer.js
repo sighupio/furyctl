@@ -1,3 +1,9 @@
+/**
+ * Copyright (c) 2017-present SIGHUP s.r.l All rights reserved.
+ * Use of this source code is governed by a BSD-style
+ * license that can be found in the LICENSE file.
+ */
+
 // Turns wizard fields into DOM and back into answers. One case per field type.
 // State lives in `scope` (the step's answers object); rendering never keeps its own copy.
 //

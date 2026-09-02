@@ -1,3 +1,9 @@
+/**
+ * Copyright (c) 2017-present SIGHUP s.r.l All rights reserved.
+ * Use of this source code is governed by a BSD-style
+ * license that can be found in the LICENSE file.
+ */
+
 // User-visible strings of the UI chrome. Wizard labels come from the wizard file and are
 // resolved with text(). Adding a language = adding a dictionary here and a code to LANGS.
 
