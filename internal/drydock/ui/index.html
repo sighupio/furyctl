@@ -10,7 +10,8 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="color-scheme" content="light dark" />
-    <title>furyctl drydock</title>
+    <title>drydock · SIGHUP Distribution</title>
+    <link rel="icon" type="image/svg+xml" href="/img/favicon.svg" />
     <link rel="preload" href="/fonts/Geist-Variable.woff2" as="font" type="font/woff2" crossorigin />
     <link rel="stylesheet" href="/style.css" />
     <script>
@@ -30,42 +31,55 @@
   <body>
     <header class="topbar">
       <div class="brand">
+        <img class="logo logo-light" src="/img/sd-logo.svg" alt="SIGHUP Distribution" height="34" />
+        <img class="logo logo-dark" src="/img/sd-logo-white.svg" alt="SIGHUP Distribution" height="34" />
         <div class="titles">
           <h1 data-t="app.title">drydock</h1>
           <p class="desc" data-t="app.subtitle"></p>
         </div>
       </div>
       <div class="actions">
-        <select class="wz-input wz-select" id="lang" aria-label="Language"></select>
-        <button class="btn ghost appearance" id="appearance" type="button"></button>
+        <span class="chip" id="session-chip" hidden></span>
+        <span class="pill pill-idle" id="status" hidden></span>
+        <button class="btn ghost" id="toggle-yaml" type="button" hidden></button>
+        <select class="wz-input wz-select lang" id="lang" aria-label="Language"></select>
+        <button class="btn ghost icon-only appearance" id="appearance" type="button"></button>
       </div>
     </header>
 
     <p class="error" id="error" hidden></p>
 
-    <main class="split">
-      <section class="pane" id="left">
-        <div class="picker" id="picker"></div>
-        <div class="stepper" id="stepper" hidden></div>
-        <div class="step-body" id="step" hidden></div>
-        <div class="wz-foot" id="nav" hidden>
-          <button class="btn ghost" id="back" type="button"></button>
-          <span class="wz-grow"></span>
-          <button class="btn primary" id="next" type="button"></button>
-        </div>
-      </section>
+    <main class="layout">
+      <aside class="steps" id="stepper" hidden></aside>
 
-      <section class="pane">
-        <div class="pane-head">
-          <span class="pane-title" data-t="preview.title"></span>
-          <span class="pill pill-idle" id="status"></span>
+      <section class="content">
+        <div class="picker card" id="picker"></div>
+        <div class="card step-card" id="step-card" hidden>
+          <div class="step-body" id="step"></div>
+          <div class="wz-foot" id="nav">
+            <button class="btn ghost" id="back" type="button"></button>
+            <span class="wz-grow"></span>
+            <button class="btn primary" id="next" type="button"></button>
+          </div>
         </div>
-        <div class="empty" id="empty"><p data-t="preview.empty"></p></div>
-        <pre class="yaml" id="yaml" hidden></pre>
-        <div class="template-error" id="template-error" hidden></div>
-        <ul class="errors" id="errors" hidden></ul>
       </section>
     </main>
+
+    <aside class="drawer" id="drawer" hidden>
+      <div class="pane-head">
+        <span class="pane-title" data-t="preview.title"></span>
+        <button class="btn ghost small" id="close-yaml" type="button" data-t="yaml.close"></button>
+      </div>
+      <div class="empty" id="empty"><p data-t="preview.empty"></p></div>
+      <pre class="yaml" id="yaml" hidden></pre>
+      <div class="template-error" id="template-error" hidden></div>
+      <ul class="errors" id="errors" hidden></ul>
+    </aside>
+
+    <footer class="statusbar">
+      <span class="statusbar-info" data-t="app.footer"></span>
+      <span class="statusbar-info" id="footer-version"></span>
+    </footer>
 
     <script type="module" src="/app.js"></script>
   </body>

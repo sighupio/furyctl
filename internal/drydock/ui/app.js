@@ -4,7 +4,7 @@
  * license that can be found in the LICENSE file.
  */
 
-// The wizard application: kind/version picker, stepper, live preview, review and write.
+// The wizard application: kind/version picker, vertical stepper, YAML drawer, review and write.
 
 import { LANGS, getLang, setLang, t, text } from "./i18n.js";
 import { makeNodeTable } from "./nodetable.js";
@@ -12,13 +12,25 @@ import { button, collectStep, el, initScope, renderFields } from "./renderer.js"
 import { collectReferences } from "./sources.js";
 
 const $ = (id) => document.getElementById(id);
-const state = { wizards: [], wizard: null, version: "", answers: {}, step: 0, widgets: {}, lastPreview: null, written: null };
+const state = {
+  wizards: [],
+  wizard: null,
+  version: "",
+  answers: {},
+  step: 0,
+  maxStep: 0, // Furthest step reached: later ones stay locked in the stepper.
+  widgets: {},
+  lastPreview: null,
+  written: null,
+  drawerOpen: false,
+};
 
 // --- chrome -------------------------------------------------------------------
 function applyStaticText() {
   for (const node of document.querySelectorAll("[data-t]")) node.textContent = t(node.dataset.t);
   $("back").textContent = t("nav.back");
   $("next").textContent = state.wizard && state.step === state.wizard.steps.length - 1 ? t("nav.review") : t("nav.next");
+  $("toggle-yaml").textContent = state.drawerOpen ? t("yaml.hide") : t("yaml.show");
   document.documentElement.lang = getLang();
 }
 
@@ -66,6 +78,19 @@ function setupAppearance() {
   paint();
 }
 
+function setupDrawer() {
+  const toggle = (open) => {
+    state.drawerOpen = open;
+    $("drawer").hidden = !open;
+    applyStaticText();
+  };
+  $("toggle-yaml").addEventListener("click", () => toggle(!state.drawerOpen));
+  $("close-yaml").addEventListener("click", () => toggle(false));
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && state.drawerOpen) toggle(false);
+  });
+}
+
 function showError(message) {
   const p = $("error");
   p.hidden = !message;
@@ -86,6 +111,8 @@ async function api(path, body) {
 function renderPicker() {
   const box = $("picker");
   box.replaceChildren();
+  box.append(Object.assign(el("h2"), { textContent: t("app.title") }));
+  box.append(Object.assign(el("p", "lead"), { textContent: t("app.subtitle") }));
   const kindSel = el("select", "wz-input wz-select");
   for (const w of state.wizards) {
     const o = el("option");
@@ -93,13 +120,21 @@ function renderPicker() {
     o.textContent = w.kind;
     kindSel.append(o);
   }
-  const version = el("input", "wz-input");
+  const version = el("select", "wz-input wz-select");
   const help = el("span", "help");
   const syncVersion = () => {
     const w = state.wizards.find((x) => x.kind === kindSel.value);
     if (!w) return;
-    version.value = w.defaultVersion;
-    help.textContent = t("picker.versionHelp", { range: w.versions });
+    version.replaceChildren();
+    for (const v of w.versions) {
+      const o = el("option");
+      o.value = v;
+      o.textContent = v === w.defaultVersion ? `${v} (default)` : v;
+      o.selected = v === w.defaultVersion;
+      version.append(o);
+    }
+    if (!w.versions.length) version.append(Object.assign(el("option"), { textContent: t("picker.noVersions"), disabled: true }));
+    help.textContent = t("picker.versionHelp", { range: w.range });
   };
   kindSel.addEventListener("change", syncVersion);
   syncVersion();
@@ -134,12 +169,17 @@ function startWizard(wizard, version) {
   for (const s of wizard.steps) state.answers[s.id] = initScope(s.fields, {});
   state.widgets = { nodeTable: makeNodeTable(wizard.steps) };
   state.step = 0;
+  state.maxStep = 0;
   state.written = null;
   state.lastPreview = null;
   $("picker").hidden = true;
   $("stepper").hidden = false;
-  $("step").hidden = false;
-  $("nav").hidden = false;
+  $("step-card").hidden = false;
+  $("toggle-yaml").hidden = false;
+  $("status").hidden = false;
+  $("session-chip").hidden = false;
+  $("session-chip").textContent = `${wizard.kind} · ${version}`;
+  $("footer-version").textContent = `SIGHUP Distribution ${version}`;
   showError("");
   rerender();
   schedulePreview();
@@ -151,20 +191,42 @@ function collectAll() {
   return out;
 }
 
-function rerender() {
-  if (!state.wizard) return;
+function goTo(i) {
+  state.step = i;
+  state.maxStep = Math.max(state.maxStep, i);
+  rerender();
+  window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+function renderStepper() {
   const steps = state.wizard.steps;
   const stepper = $("stepper");
   stepper.replaceChildren();
-  steps.concat([{ id: "__review", title: { en: t("review.title") } }]).forEach((s, i) => {
-    const pill = el("span", `wz-step${i === state.step ? " active" : ""}${i < state.step ? " done" : ""}`);
-    pill.textContent = `${i + 1}. ${text(s.title) || s.id}`;
-    pill.addEventListener("click", () => {
-      state.step = i;
-      rerender();
-    });
-    stepper.append(pill);
+  const all = steps.concat([{ id: "__review", title: { en: t("review.title") } }]);
+  all.forEach((s, i) => {
+    const done = i < state.step;
+    const active = i === state.step;
+    const locked = i > state.maxStep;
+    const item = el("button", `step-item${done ? " done" : ""}${active ? " active" : ""}${locked ? " locked" : ""}`);
+    item.type = "button";
+    item.disabled = locked;
+    const bullet = el("span", "bullet");
+    bullet.textContent = done ? "✓" : String(i + 1);
+    const label = el("span", "step-label");
+    label.textContent = text(s.title) || s.id;
+    const sub = el("span", "step-sub");
+    sub.textContent = done ? t("steps.done") : active ? t("steps.current") : t("steps.locked");
+    label.append(sub);
+    item.append(bullet, label);
+    if (!locked) item.addEventListener("click", () => goTo(i));
+    stepper.append(item);
   });
+}
+
+function rerender() {
+  if (!state.wizard) return;
+  const steps = state.wizard.steps;
+  renderStepper();
 
   const body = $("step");
   body.className = "step-body";
@@ -188,14 +250,8 @@ function rerender() {
   applyStaticText();
 }
 
-$("back").addEventListener("click", () => {
-  state.step = Math.max(0, state.step - 1);
-  rerender();
-});
-$("next").addEventListener("click", () => {
-  state.step = Math.min(state.wizard.steps.length, state.step + 1);
-  rerender();
-});
+$("back").addEventListener("click", () => goTo(Math.max(0, state.step - 1)));
+$("next").addEventListener("click", () => goTo(Math.min(state.wizard.steps.length, state.step + 1)));
 
 // --- preview ------------------------------------------------------------------
 let previewTimer = null;
@@ -281,7 +337,7 @@ function renderReview(body) {
   body.append(h3, todo);
 
   if (state.written) {
-    body.append(Object.assign(el("p"), { textContent: t("review.written", { path: state.written }) }));
+    body.append(Object.assign(el("p", "written"), { textContent: t("review.written", { path: state.written }) }));
     return;
   }
 
@@ -314,6 +370,7 @@ function renderReview(body) {
 // --- boot ---------------------------------------------------------------------
 setupLang();
 setupAppearance();
+setupDrawer();
 applyStaticText();
 setStatus("idle");
 try {

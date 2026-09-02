@@ -69,11 +69,27 @@ export function renderFields(container, fields, scope, root, onChange, widgets =
   const rerender = () => renderFields(container, fields, scope, root, onChange, widgets);
   const cb = { onChange, rerender, both: () => { onChange(); rerender(); } };
   container.replaceChildren();
+  container.classList.add("fields");
   for (const f of fields) {
     if (!evalWhen(f.when, scope, root)) continue;
-    container.append(renderField(f, scope, root, cb, widgets));
+    const node = renderField(f, scope, root, cb, widgets);
+    // Short scalars sit two per row; anything tall or repeating takes the full width.
+    if (f.type === "list" || f.type === "group" || f.multiline || widgets[f.type]) node.classList.add("span-2");
+    container.append(node);
   }
 }
+
+// One tip open at a time; a click elsewhere or Escape closes it.
+function closeTips() {
+  for (const box of document.querySelectorAll(".tip:not([hidden])")) box.hidden = true;
+  for (const b of document.querySelectorAll('.hint[aria-expanded="true"]')) b.setAttribute("aria-expanded", "false");
+}
+document.addEventListener("click", (e) => {
+  if (!e.target.closest(".tip, .hint")) closeTips();
+});
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape") closeTips();
+});
 
 function renderField(f, scope, root, cb, widgets) {
   const widget = widgets[f.type];
@@ -86,11 +102,15 @@ function renderField(f, scope, root, cb, widgets) {
   if (f.type === "group") return group(f, scope, root, cb, widgets);
 
   const wrap = el("div", "wz-field");
+  const head = el("div", "field-head");
   if (f.type !== "bool") {
     const label = el("label", f.required ? "required" : "");
     label.textContent = text(f.label) || f.id;
-    wrap.append(label);
+    head.append(label);
   }
+  const tip = tipFor(f, () => scope[f.id], (v) => { scope[f.id] = v; cb.both(); });
+  if (tip) head.append(tip.button, tip.box);
+  if (head.hasChildNodes()) wrap.append(head);
 
   switch (f.type) {
     case "text":
@@ -114,9 +134,53 @@ function renderField(f, scope, root, cb, widgets) {
       break;
   }
 
-  const help = text(f.help);
-  if (help) wrap.append(Object.assign(el("span", "help"), { textContent: help }));
   return wrap;
+}
+
+// The (?) next to a label: opens a box with the explanation and a realistic example.
+// "Use this example" fills the field when it is a scalar; for lists it appends one item.
+function tipFor(f, get, set) {
+  const help = text(f.help);
+  if (!help && !f.example) return null;
+  const btn = el("button", "hint");
+  btn.type = "button";
+  btn.textContent = "?";
+  btn.title = t("tip.open");
+  btn.setAttribute("aria-expanded", "false");
+  const box = el("div", "tip");
+  box.hidden = true;
+  box.setAttribute("role", "dialog");
+  const close = el("button", "tip-close");
+  close.type = "button";
+  close.textContent = "×";
+  close.title = t("tip.close");
+  close.setAttribute("aria-label", t("tip.close"));
+  close.addEventListener("click", closeTips);
+  box.append(close);
+  if (help) box.append(Object.assign(el("p"), { textContent: help }));
+  if (f.example) {
+    const ex = el("div", "example");
+    ex.append(Object.assign(el("span", "example-label"), { textContent: t("tip.example") }));
+    ex.append(Object.assign(el("code"), { textContent: f.example }));
+    const usable = ["text", "path", "cidr", "number"].includes(f.type) || (f.type === "list" && f.item);
+    if (usable) {
+      ex.append(
+        button(t("tip.use"), "btn ghost small", () => {
+          const v = f.type === "number" ? Number(f.example) : f.example;
+          if (f.type === "list") set([...(get() ?? []), v]);
+          else set(v);
+        }),
+      );
+    }
+    box.append(ex);
+  }
+  btn.addEventListener("click", () => {
+    const open = box.hidden;
+    closeTips();
+    box.hidden = !open;
+    btn.setAttribute("aria-expanded", String(open));
+  });
+  return { button: btn, box };
 }
 
 // An input plus the source dropdown. The stored value is always the encoded string.
@@ -180,8 +244,6 @@ function checkbox(f, scope, changed) {
     changed();
   });
   label.append(box, document.createTextNode(text(f.label) || f.id));
-  const help = text(f.help);
-  if (help) label.append(Object.assign(el("span", "help"), { textContent: help }));
   return label;
 }
 
@@ -282,7 +344,7 @@ function group(f, scope, root, cb, widgets) {
   summary.textContent = text(f.label) || f.id;
   details.append(summary);
   const help = text(f.help);
-  if (help) details.append(Object.assign(el("span", "help"), { textContent: help }));
+  if (help) details.append(Object.assign(el("p", "help"), { textContent: help }));
   const body = el("div");
   initScope(f.fields, scope[f.id]);
   renderFields(body, f.fields, scope[f.id], root, cb.onChange, widgets);
