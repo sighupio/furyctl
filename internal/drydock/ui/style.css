@@ -809,6 +809,9 @@ body {
     radial-gradient(1200px 600px at 10% -10%, color-mix(in srgb, var(--primary) 14%, transparent), transparent 60%),
     radial-gradient(900px 500px at 110% 110%, color-mix(in srgb, var(--primary) 10%, transparent), transparent 60%),
     var(--background);
+  background-repeat: no-repeat;
+  background-attachment: fixed;
+  height: auto; /* mdcarta pins the body to 100vh; here the page scrolls and the header sticks. */
   min-height: 100vh;
   display: flex;
   flex-direction: column;
@@ -930,9 +933,14 @@ details.group[open] > summary { margin-bottom: 0.75rem; }
 @keyframes slide-in { from { transform: translateX(24px); opacity: 0; } to { transform: none; opacity: 1; } }
 .drawer .pane-head { padding: 0.9rem 1.25rem; }
 .yaml { margin: 0; padding: 1rem 1.25rem; overflow: auto; flex: 1; font-family: "Geist Mono", ui-monospace, monospace; font-size: 0.78rem; line-height: 1.5; white-space: pre; }
-.errors { list-style: none; margin: 0; padding: 0.75rem 1.25rem; border-top: 1px solid var(--border); max-height: 30vh; overflow: auto; font-size: 0.85rem; background: color-mix(in srgb, var(--destructive) 6%, var(--card)); }
+.pill-todo { background: color-mix(in srgb, var(--progress) 14%, var(--card)); color: var(--progress); border-color: color-mix(in srgb, var(--progress) 40%, transparent); }
+.pill-warn { background: color-mix(in srgb, var(--warning) 16%, var(--card)); color: var(--warning); border-color: color-mix(in srgb, var(--warning) 40%, transparent); }
+.errors-head { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted-foreground); padding-top: 0.6rem !important; }
+.errors li.todo code { color: var(--progress); }
+.errors li.fix code { color: var(--warning); }
+.errors { list-style: none; margin: 0; padding: 0.75rem 1.25rem; border-top: 1px solid var(--border); max-height: 30vh; overflow: auto; font-size: 0.85rem; background: var(--secondary); }
 .errors li { padding: 0.25rem 0; }
-.errors code { color: var(--destructive); font-family: "Geist Mono", ui-monospace, monospace; font-size: 0.78rem; }
+.errors code { font-family: "Geist Mono", ui-monospace, monospace; font-size: 0.78rem; }
 .template-error { padding: 1rem 1.25rem; color: var(--destructive); white-space: pre-wrap; font-family: "Geist Mono", ui-monospace, monospace; font-size: 0.8rem; }
 
 /* Review */

@@ -271,14 +271,21 @@ async function preview() {
     const errs = $("errors");
     errs.replaceChildren();
     errs.hidden = !data.errors?.length;
-    for (const e of data.errors ?? []) {
-      const li = el("li");
-      const code = el("code");
-      code.textContent = e.path || "/";
-      li.append(code, document.createTextNode(` ${e.message}`));
-      errs.append(li);
+    const todo = (data.errors ?? []).filter((e) => e.missing);
+    const fix = (data.errors ?? []).filter((e) => !e.missing);
+    for (const [key, list, cls] of [["errors.fix", fix, "fix"], ["errors.todo", todo, "todo"]]) {
+      if (!list.length) continue;
+      errs.append(Object.assign(el("li", `errors-head ${cls}`), { textContent: t(key) }));
+      for (const e of list) {
+        const li = el("li", cls);
+        const code = el("code");
+        code.textContent = e.path || "/";
+        li.append(code, document.createTextNode(` ${e.message}`));
+        errs.append(li);
+      }
     }
-    setStatus(data.templateError || data.errors?.length ? "errors" : "ok", data.errors?.length ?? 0);
+    if (data.templateError) setStatus("fix", 0, 1);
+    else setStatus(fix.length ? "fix" : todo.length ? "todo" : "ok", todo.length, fix.length);
     showError("");
     if (state.step === state.wizard.steps.length) rerender();
   } catch (e) {
@@ -287,11 +294,15 @@ async function preview() {
   }
 }
 
-function setStatus(kind, n = 0) {
+// Blanks are the normal state while filling in: they count in a calm blue. Only a value
+// that is actually wrong turns the pill amber; green means the file validates.
+function setStatus(kind, todo = 0, fix = 0) {
   const pill = $("status");
-  const cls = { ok: "ok", errors: "error", working: "working" }[kind] ?? "idle";
+  const cls = { ok: "ok", todo: "todo", fix: "warn", working: "working" }[kind] ?? "idle";
   pill.className = `pill pill-${cls}`;
-  pill.textContent = kind === "errors" ? t("status.errors", { n }) : t(`status.${kind}`);
+  if (kind === "fix") pill.textContent = todo ? t("status.todoFix", { n: todo, m: fix }) : t("status.fix", { n: fix });
+  else if (kind === "todo") pill.textContent = t("status.todo", { n: todo });
+  else pill.textContent = t(`status.${kind}`);
 }
 
 // --- review -------------------------------------------------------------------
