@@ -102,15 +102,23 @@ function renderField(f, scope, root, cb, widgets) {
   if (f.type === "group") return group(f, scope, root, cb, widgets);
 
   const wrap = el("div", "wz-field");
-  const head = el("div", "field-head");
-  if (f.type !== "bool") {
-    const label = el("label", f.required ? "required" : "");
-    label.textContent = text(f.label) || f.id;
-    head.append(label);
-  }
   const tip = tipFor(f, () => scope[f.id], (v) => { scope[f.id] = v; cb.both(); });
+
+  // A checkbox is its own label: the (?) sits on the same row, after it.
+  if (f.type === "bool") {
+    const row = el("div", "field-head bool-row");
+    row.append(checkbox(f, scope, cb.both));
+    if (tip) row.append(tip.button, tip.box);
+    wrap.append(row);
+    return wrap;
+  }
+
+  const head = el("div", "field-head");
+  const label = el("label", f.required ? "required" : "");
+  label.textContent = text(f.label) || f.id;
+  head.append(label);
   if (tip) head.append(tip.button, tip.box);
-  if (head.hasChildNodes()) wrap.append(head);
+  wrap.append(head);
 
   switch (f.type) {
     case "text":
@@ -120,9 +128,6 @@ function renderField(f, scope, root, cb, widgets) {
       break;
     case "number":
       wrap.append(numberInput(f, scope, cb.onChange));
-      break;
-    case "bool":
-      wrap.append(checkbox(f, scope, cb.both));
       break;
     case "choice":
       wrap.append(f.options.length <= 4 ? radios(f, scope, cb.both) : select(f, scope, cb.both));

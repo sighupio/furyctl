@@ -133,19 +133,26 @@ function rowsTable(state, key, ov, defaultsScope, fields, root, onChange) {
     const mode = row.overrides.networkMode ?? (ov.enabled ? ov.values.networkMode : undefined) ?? defaultsScope.networkMode;
     tr.append(mode === "dhcp" ? Object.assign(el("td"), { textContent: t("nodes.dhcp") }) : cell(row, "ip", onChange));
 
-    const td = el("td");
-    const details = el("details", "group");
-    const summary = el("summary");
-    summary.textContent = t("nodes.rowOverride");
-    details.append(summary);
-    const body = el("div");
-    details.addEventListener("toggle", () => {
-      if (details.open && !body.hasChildNodes()) renderFields(body, fields, row.overrides, root, onChange);
+    // The override opens in its own full-width row under the node, not squeezed in a cell.
+    const td = el("td", "override-cell");
+    const toggle = button(t("nodes.rowOverride"), "btn ghost small", () => {
+      overrideRow.hidden = !overrideRow.hidden;
+      toggle.setAttribute("aria-expanded", String(!overrideRow.hidden));
+      if (!overrideRow.hidden && !body.hasChildNodes()) renderFields(body, fields, row.overrides, root, onChange);
     });
-    details.append(body);
-    td.append(details);
+    toggle.setAttribute("aria-expanded", "false");
+    td.append(toggle);
     tr.append(td);
     tbody.append(tr);
+
+    const overrideRow = el("tr", "override-row");
+    overrideRow.hidden = true;
+    const overrideCell = el("td");
+    overrideCell.colSpan = 4;
+    const body = el("div", "list-item");
+    overrideCell.append(body);
+    overrideRow.append(overrideCell);
+    tbody.append(overrideRow);
   }
   table.append(tbody);
   return table;

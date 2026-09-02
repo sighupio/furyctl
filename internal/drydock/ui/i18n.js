@@ -56,7 +56,7 @@ const DICTS = {
     "nodes.firstIp": "First IP",
     "nodes.fill": "Fill IPs",
     "nodes.override": "This role differs from the defaults",
-    "nodes.rowOverride": "Override for this node",
+    "nodes.rowOverride": "Override…",
     "nodes.hostname": "Hostname",
     "nodes.mac": "MAC address",
     "nodes.ip": "IP address",
