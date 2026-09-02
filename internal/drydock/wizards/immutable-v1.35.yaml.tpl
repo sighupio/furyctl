@@ -383,7 +383,8 @@ spec:
 {{- end }}
 {{- $kp := dig "kubernetes" "kubeProxy" "default" . }}
 {{- $oidc := dig "kubernetes" "oidc" (dict) . }}
-{{- if or (ne $kp "default") $k.encryption $k.oidcEnabled $k.registry $k.certSANs $k.maxPods }}
+{{- $sr := dig "kubernetes" "systemReserved" (dict) . }}
+{{- if or (ne $kp "default") $k.encryption $k.oidcEnabled $k.registry $k.certSANs $k.maxPods $sr.cpu $sr.memory $sr.ephemeralStorage }}
     advanced:
 {{- if ne $kp "default" }}
       kubeProxy:
@@ -417,9 +418,23 @@ spec:
           - {{ . | quote }}
 {{- end }}
 {{- end }}
-{{- with $k.maxPods }}
+{{- if or $k.maxPods $sr.cpu $sr.memory $sr.ephemeralStorage }}
       kubeletConfiguration:
+{{- with $k.maxPods }}
         maxPods: {{ . }}
+{{- end }}
+{{- if or $sr.cpu $sr.memory $sr.ephemeralStorage }}
+        systemReserved:
+{{- with $sr.cpu }}
+          cpu: {{ . | quote }}
+{{- end }}
+{{- with $sr.memory }}
+          memory: {{ . | quote }}
+{{- end }}
+{{- with $sr.ephemeralStorage }}
+          ephemeral-storage: {{ . | quote }}
+{{- end }}
+{{- end }}
 {{- end }}
 {{- end }}
 
@@ -437,6 +452,17 @@ spec:
     modules:
       networking:
         type: {{ $m.networking.type }}
+{{- with $m.networking.nodeSubnetSize }}
+{{- if eq $m.networking.type "calico" }}
+        tigeraOperator:
+          # One /{{ . }} of the pod CIDR per node.
+          blockSize: {{ . }}
+{{- else }}
+        cilium:
+          # One /{{ . }} of the pod CIDR per node.
+          maskSize: {{ . | toString | quote }}
+{{- end }}
+{{- end }}
 {{- $ing := $m.ingress }}
 
       ingress:

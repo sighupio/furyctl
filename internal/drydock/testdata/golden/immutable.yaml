@@ -308,6 +308,10 @@ spec:
           - "api.k8s.example.com"
       kubeletConfiguration:
         maxPods: 200
+        systemReserved:
+          cpu: "2000m"
+          memory: "4Gi"
+          ephemeral-storage: "1Gi"
 
   distribution:
     common:
@@ -321,6 +325,9 @@ spec:
     modules:
       networking:
         type: cilium
+        cilium:
+          # One /23 of the pod CIDR per node.
+          maskSize: "23"
 
       ingress:
         baseDomain: "internal.example.com"
