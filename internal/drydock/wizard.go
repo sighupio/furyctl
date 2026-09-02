@@ -79,14 +79,25 @@ type Field struct {
 	Min         *float64          `json:"min,omitempty"         yaml:"min"`
 	Max         *float64          `json:"max,omitempty"         yaml:"max"`
 	Collapsed   bool              `json:"collapsed,omitempty"   yaml:"collapsed"`
-	Item        *Field            `json:"item,omitempty"        yaml:"item"`   // List of scalars.
-	Fields      []Field           `json:"fields,omitempty"      yaml:"fields"` // Group, list of groups.
-	Config      map[string]string `json:"config,omitempty"      yaml:"config"` // Widget-specific.
+	Item        *Field            `json:"item,omitempty"        yaml:"item"`    // List of scalars.
+	Fields      []Field           `json:"fields,omitempty"      yaml:"fields"`  // Group, list of groups.
+	Config      map[string]string `json:"config,omitempty"      yaml:"config"`  // Widget-specific.
+	Target      string            `json:"target,omitempty"      yaml:"target"`  // Preset: the sibling list to fill.
+	Presets     []Preset          `json:"presets,omitempty"     yaml:"presets"` // Preset: the entries offered.
+}
+
+// Preset is one known-good entry a `preset` field offers: a click adds it to the list named
+// by the field's Target, another click takes it away. It exists for the settings an operator
+// is expected to copy from documentation rather than invent.
+type Preset struct {
+	Label Text `json:"label"          yaml:"label"`
+	Help  Text `json:"help,omitempty" yaml:"help"`
+	Value any  `json:"value"          yaml:"value"`
 }
 
 func isFieldType(s string) bool {
 	switch s {
-	case "text", "number", "bool", "choice", "path", "cidr", "list", "group", "nodeTable":
+	case "text", "number", "bool", "choice", "path", "cidr", "list", "group", "nodeTable", "preset", "dataDisk":
 		return true
 
 	default:
@@ -154,6 +165,13 @@ func (w *Wizard) check() error {
 
 func checkFields(scope string, fields []Field) error {
 	seen := map[string]bool{}
+	lists := map[string]bool{}
+
+	for i := range fields {
+		if fields[i].Type == "list" {
+			lists[fields[i].ID] = true
+		}
+	}
 
 	for i := range fields {
 		f := &fields[i]
@@ -179,6 +197,10 @@ func checkFields(scope string, fields []Field) error {
 
 		if err := checkFieldShape(where, f); err != nil {
 			return err
+		}
+
+		if f.Type == "preset" && !lists[f.Target] {
+			return fmt.Errorf("%w: %s: target %q is not a list in the same step", ErrInvalidWizard, where, f.Target)
 		}
 
 		if len(f.Fields) > 0 {
@@ -215,6 +237,17 @@ func checkFieldShape(where string, f *Field) error {
 	case "group":
 		if len(f.Fields) == 0 {
 			return fmt.Errorf("%w: %s: group needs fields", ErrInvalidWizard, where)
+		}
+
+	case "preset":
+		if f.Target == "" || len(f.Presets) == 0 {
+			return fmt.Errorf("%w: %s: preset needs target and presets", ErrInvalidWizard, where)
+		}
+
+		for i, p := range f.Presets {
+			if len(p.Label) == 0 || p.Value == nil {
+				return fmt.Errorf("%w: %s: preset %d needs label and value", ErrInvalidWizard, where, i)
+			}
 		}
 
 	default:

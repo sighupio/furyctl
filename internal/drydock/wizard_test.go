@@ -77,6 +77,39 @@ func TestParseWizard(t *testing.T) {
 	assert.JSONEq(t, `{"en":"Cluster name","it":"Nome del cluster"}`, string(b))
 }
 
+func TestParseWizardAcceptsPresets(t *testing.T) {
+	t.Parallel()
+
+	w, err := Parse([]byte(`
+kind: K
+versions: ">= 1"
+template: x
+steps:
+  - id: a
+    fields:
+      - id: kernelParameters
+        type: list
+        fields:
+          - id: name
+            type: text
+      - id: known
+        type: preset
+        label: Common settings
+        target: kernelParameters
+        presets:
+          - label: inotify watches
+            help: Many operators watch a lot of files.
+            value: {name: fs.inotify.max_user_watches, value: "524288"}
+`))
+	require.NoError(t, err)
+
+	p := w.Steps[0].Fields[1]
+	assert.Equal(t, "kernelParameters", p.Target)
+	require.Len(t, p.Presets, 1)
+	assert.Equal(t, Text{"en": "inotify watches"}, p.Presets[0].Label)
+	assert.NotNil(t, p.Presets[0].Value)
+}
+
 func TestParseWizardRejects(t *testing.T) {
 	t.Parallel()
 
@@ -93,6 +126,9 @@ func TestParseWizardRejects(t *testing.T) {
 		"group w/o fields":   "kind: K\nversions: '>= 1'\ntemplate: x\nsteps: [{id: a, fields: [{id: f, type: group}]}]",
 		"unknown key":        "kind: K\nversions: '>= 1'\ntemplate: x\nbanana: 1\nsteps: [{id: a, fields: []}]",
 		"bad suggest":        "kind: K\nversions: '>= 1'\ntemplate: x\nsteps: [{id: a, fields: [{id: f, type: text, suggest: ftp}]}]",
+		"preset w/o target":  "kind: K\nversions: '>= 1'\ntemplate: x\nsteps: [{id: a, fields: [{id: p, type: preset, presets: [{label: x, value: {a: 1}}]}]}]",
+		"preset bad target":  "kind: K\nversions: '>= 1'\ntemplate: x\nsteps: [{id: a, fields: [{id: p, type: preset, target: nope, presets: [{label: x, value: {a: 1}}]}]}]",
+		"preset w/o value":   "kind: K\nversions: '>= 1'\ntemplate: x\nsteps: [{id: a, fields: [{id: l, type: list, item: {type: text}}, {id: p, type: preset, target: l, presets: [{label: x}]}]}]",
 	}
 
 	for name, src := range cases {

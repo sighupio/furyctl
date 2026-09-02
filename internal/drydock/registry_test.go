@@ -65,10 +65,10 @@ func TestEmbeddedWizardsHaveExamples(t *testing.T) {
 			where := scope + "." + f.ID
 
 			switch {
-			case f.Type == "group" || f.Type == "nodeTable" || (f.Type == "list" && f.Item == nil):
+			case f.Type == "group" || f.Type == "nodeTable" || f.Type == "dataDisk" || (f.Type == "list" && f.Item == nil):
 				walk(where, f.Fields)
 
-			case f.Type == "bool" || f.Type == "choice":
+			case f.Type == "bool" || f.Type == "choice" || f.Type == "preset":
 				// Self-explanatory controls.
 
 			case f.Example == "":
