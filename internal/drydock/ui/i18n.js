@@ -51,6 +51,8 @@ const DICTS = {
     "source.envName": "VARIABLE_NAME",
     "source.filePath": "./path/to/file",
     "source.url": "https://…",
+    "keyValue.key": "key",
+    "keyValue.value": "value",
     "list.add": "Add",
     "list.remove": "Remove",
     "nodes.role.cp": "Control plane",

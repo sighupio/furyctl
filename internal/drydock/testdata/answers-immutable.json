@@ -31,12 +31,9 @@
       {
         "name": "gpu",
         "count": 1,
-        "labels": [
-          {
-            "key": "accelerator",
-            "value": "nvidia"
-          }
-        ],
+        "labels": {
+          "accelerator": "nvidia"
+        },
         "taints": [
           {
             "key": "nvidia.com/gpu",

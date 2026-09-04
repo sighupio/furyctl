@@ -192,18 +192,10 @@ steps:
             default: 1
             min: 1
           - id: labels
-            type: list
+            type: keyValue
+            example: "accelerator=nvidia"
             label: Labels
-            fields:
-              - id: key
-                type: text
-                example: "accelerator"
-                label: Key
-                required: true
-              - id: value
-                type: text
-                example: "nvidia"
-                label: Value
+            help: Kubernetes labels put on every node of this group.
           - id: taints
             type: list
             label: Taints
@@ -832,10 +824,10 @@ steps:
             options: [http01, custom]
             default: http01
           - id: issuerSolvers
-            type: text
+            type: yaml
             example: "- dns01:\n    cloudflare:\n      apiTokenSecretRef:\n        name: cloudflare-api-token\n        key: token"
-            label: ACME solvers (YAML list)
-            multiline: true
+            label: ACME solvers
+            help: A YAML list of cert-manager solvers, written into the file as it is. The wizard checks that it parses.
             required: true
             when: issuerType == custom
       - id: logging
@@ -1162,9 +1154,8 @@ steps:
             help: Leave empty to reuse the ingress base domain.
             when: provider == sso
           - id: dexConnectors
-            type: text
+            type: yaml
             example: "- type: github\n  id: github\n  name: GitHub\n  config:\n    clientID: \"{env://DEX_GITHUB_CLIENT_ID}\"\n    clientSecret: \"{env://DEX_GITHUB_CLIENT_SECRET}\"\n    redirectURI: https://login.auth.example.com/callback"
-            label: Dex connectors (YAML list)
-            help: Follows the Dex connector format. A placeholder is written if you leave it empty; complete it by hand.
-            multiline: true
+            label: Dex connectors
+            help: A YAML list in the Dex connector format, written into the file as it is and checked that it parses. A placeholder is written if you leave it empty.
             when: provider == sso

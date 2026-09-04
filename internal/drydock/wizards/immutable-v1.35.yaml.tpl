@@ -368,8 +368,8 @@ spec:
       - name: {{ $g.name | quote }}
 {{- with $g.labels }}
         labels:
-{{- range . }}
-          {{ .key | quote }}: {{ .value | quote }}
+{{- range $k, $v := . }}
+          {{ $k | quote }}: {{ $v | quote }}
 {{- end }}
 {{- end }}
 {{- with $g.taints }}

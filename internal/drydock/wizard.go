@@ -100,7 +100,8 @@ type Preset struct {
 
 func isFieldType(s string) bool {
 	switch s {
-	case "text", "number", "bool", "choice", "path", "cidr", "list", "group", "nodeTable", "preset", "dataDisk":
+	case "text", "number", "bool", "choice", "path", "cidr", "yaml", "keyValue",
+		"list", "group", "nodeTable", "preset", "dataDisk":
 		return true
 
 	default:
@@ -240,6 +241,11 @@ func checkFieldShape(where string, f *Field) error {
 	case "group":
 		if len(f.Fields) == 0 {
 			return fmt.Errorf("%w: %s: group needs fields", ErrInvalidWizard, where)
+		}
+
+	case "keyValue":
+		if f.Item != nil || len(f.Fields) > 0 {
+			return fmt.Errorf("%w: %s: keyValue takes no item and no fields", ErrInvalidWizard, where)
 		}
 
 	case "preset":

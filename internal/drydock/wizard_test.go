@@ -131,6 +131,7 @@ func TestParseWizardRejects(t *testing.T) {
 		"preset w/o target":  "kind: K\nversions: '>= 1'\ntemplate: x\nsteps: [{id: a, fields: [{id: p, type: preset, presets: [{label: x, value: {a: 1}}]}]}]",
 		"preset bad target":  "kind: K\nversions: '>= 1'\ntemplate: x\nsteps: [{id: a, fields: [{id: p, type: preset, target: nope, presets: [{label: x, value: {a: 1}}]}]}]",
 		"preset w/o value":   "kind: K\nversions: '>= 1'\ntemplate: x\nsteps: [{id: a, fields: [{id: l, type: list, item: {type: text}}, {id: p, type: preset, target: l, presets: [{label: x}]}]}]",
+		"keyValue w/ fields": "kind: K\nversions: '>= 1'\ntemplate: x\nsteps: [{id: a, fields: [{id: kv, type: keyValue, fields: [{id: k, type: text}]}]}]",
 	}
 
 	for name, src := range cases {

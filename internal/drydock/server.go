@@ -267,6 +267,12 @@ func (s *Server) render(w http.ResponseWriter, r *http.Request) (renderResult, b
 
 	req.Answers["version"] = sess.version
 
+	// A yaml field that does not parse is the user's mistake, not the template's: it is reported
+	// against the field, and the document is not rendered around broken YAML.
+	if errs := CheckYAML(sess.wizard, req.Answers); len(errs) > 0 {
+		return renderResult{Errors: errs}, true
+	}
+
 	doc, err := Render(sess.tpl, req.Answers)
 	if err != nil {
 		return renderResult{TemplateError: err.Error()}, true

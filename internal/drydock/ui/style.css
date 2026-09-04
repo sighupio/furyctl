@@ -920,6 +920,9 @@ body {
 .preset-chip.on { border-style: solid; border-color: var(--primary); background: color-mix(in srgb, var(--primary) 12%, transparent); font-weight: 600; }
 .preset-chip.on::before { content: "✓ "; color: var(--primary); }
 
+.keyvalue .wz-input { min-width: 0; }
+.wz-yaml { min-height: 8rem; }
+
 /* Lists and groups */
 .list-item { border: 1px solid var(--border); border-radius: calc(var(--radius) / 2); padding: 1rem; margin: 0.5rem 0; background: var(--secondary); }
 .list-item-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem; }

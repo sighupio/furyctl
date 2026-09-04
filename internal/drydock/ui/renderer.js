@@ -32,6 +32,8 @@ function defaultFor(field) {
     case "group":
     case "nodeTable":
       return {};
+    case "keyValue":
+      return [];
     default:
       return "";
   }
@@ -82,6 +84,10 @@ export function collectFields(fields, scope, root) {
     else if (f.type === "list" && f.fields) out[f.id] = (v ?? []).map((item) => collectFields(f.fields, item, root));
     // A blank row of a scalar list is a row the user opened and never filled: it is not an answer.
     else if (f.type === "list") out[f.id] = (v ?? []).filter((x) => x !== "" && x !== null && x !== undefined);
+    // Pairs are the editable form; a map is what the file wants. A pair with no key is not one yet.
+    else if (f.type === "keyValue") {
+      out[f.id] = Object.fromEntries((v ?? []).filter((p) => p?.key).map((p) => [p.key, p.value ?? ""]));
+    }
     else if (f.type === "number") out[f.id] = v === "" || v === null || v === undefined ? "" : Number(v);
     else out[f.id] = v;
   }
@@ -202,6 +208,12 @@ function renderField(f, scope, root, cb, widgets) {
       break;
     case "list":
       wrap.append(f.fields ? groupList(f, scope, root, cb, widgets) : scalarList(f, scope, root, cb));
+      break;
+    case "keyValue":
+      wrap.append(keyValue(f, scope, cb));
+      break;
+    case "yaml":
+      wrap.append(yamlBox(f, scope, cb));
       break;
     case "preset":
       wrap.append(presets(f, scope, cb));
@@ -397,9 +409,12 @@ function scalarList(f, scope, root, cb) {
   const items = scope[f.id] ?? [];
   items.forEach((_, i) => {
     const row = el("div", "list-row");
-    const control = SOURCED.has(f.item.type)
-      ? sourced({ ...f.item, id: String(i) }, items, root, cb, i)
-      : numberInput(f.item, items, cb.onChange, i);
+    const control =
+      f.item.type === "choice"
+        ? select({ ...f.item, id: i }, items, cb.both)
+        : f.item.type === "number"
+          ? numberInput(f.item, items, cb.onChange, i)
+          : sourced({ ...f.item, id: String(i) }, items, root, cb, i);
     control.classList.add("wz-grow");
     row.append(
       control,
@@ -417,6 +432,58 @@ function scalarList(f, scope, root, cb) {
     }),
   );
   return box;
+}
+
+// Rows of key and value, which the file wants as a map. Labels, annotations and tags are the most
+// repeated shape in the schema, and a card per entry was too much furniture for two words.
+function keyValue(f, scope, cb) {
+  const box = el("div", "keyvalue");
+  const pairs = scope[f.id] ?? [];
+  pairs.forEach((pair, i) => {
+    const row = el("div", "list-row");
+    row.append(
+      plainInput(pair, "key", t("keyValue.key"), cb.onChange),
+      plainInput(pair, "value", t("keyValue.value"), cb.onChange),
+      button(t("list.remove"), "btn ghost small", () => {
+        pairs.splice(i, 1);
+        cb.both();
+      }),
+    );
+    box.append(row);
+  });
+  box.append(
+    button(t("list.add"), "btn ghost small", () => {
+      (scope[f.id] ??= []).push({ key: "", value: "" });
+      cb.both();
+    }),
+  );
+  return box;
+}
+
+function plainInput(target, key, placeholder, onChange) {
+  const input = el("input", "wz-input wz-grow");
+  input.type = "text";
+  input.value = target[key] ?? "";
+  input.placeholder = placeholder;
+  input.addEventListener("input", () => {
+    target[key] = input.value;
+    onChange();
+  });
+  return input;
+}
+
+// A block of YAML that goes into the file as it is written. The server parses it and reports a
+// mistake against this field, so a stray indent does not surface as a broken document.
+function yamlBox(f, scope, cb) {
+  const area = el("textarea", "wz-input wz-textarea wz-yaml");
+  area.value = scope[f.id] ?? "";
+  area.placeholder = f.placeholder ?? "";
+  area.spellcheck = false;
+  area.addEventListener("input", () => {
+    scope[f.id] = area.value;
+    cb.onChange();
+  });
+  return area;
 }
 
 function groupList(f, scope, root, cb, widgets) {

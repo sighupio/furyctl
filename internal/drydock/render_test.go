@@ -213,6 +213,46 @@ func TestRenderHyperconverged(t *testing.T) {
 	assert.Empty(t, errs)
 }
 
+func TestCheckYAMLReportsTheFieldThatHoldsIt(t *testing.T) {
+	t.Parallel()
+
+	w, err := Parse([]byte(`
+kind: K
+versions: ">= 1"
+template: x
+steps:
+  - id: modules
+    fields:
+      - id: ingress
+        type: group
+        fields:
+          - id: solvers
+            type: yaml
+      - id: extras
+        type: list
+        fields:
+          - id: patch
+            type: yaml
+`))
+	require.NoError(t, err)
+
+	answers := map[string]any{
+		"modules": map[string]any{
+			"ingress": map[string]any{"solvers": "- dns01:\n    cloudflare: {}"},
+			"extras":  []any{map[string]any{"patch": "- ok: true"}, map[string]any{"patch": "\tnot: yaml"}},
+		},
+	}
+
+	errs := CheckYAML(w, answers)
+	require.Len(t, errs, 1)
+	assert.Equal(t, "modules.extras.1.patch", errs[0].Path)
+	assert.Contains(t, errs[0].Message, "not valid YAML")
+
+	// An empty field is not a mistake, it is a field nobody filled.
+	answers["modules"].(map[string]any)["extras"] = []any{map[string]any{"patch": "  \n"}}
+	assert.Empty(t, CheckYAML(w, answers))
+}
+
 func TestRenderTemplateErrorIsTyped(t *testing.T) {
 	t.Parallel()
 

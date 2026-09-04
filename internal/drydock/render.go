@@ -42,6 +42,70 @@ func Render(tpl string, answers map[string]any) (string, error) {
 	return buf.String(), nil
 }
 
+// CheckYAML parses what the user typed into every `yaml` field of the wizard, so a mistake is
+// reported against the field that holds it instead of breaking the whole rendered document with
+// a message about a line number nobody can place.
+func CheckYAML(w *Wizard, answers map[string]any) []FieldError {
+	out := make([]FieldError, 0, len(w.Steps))
+
+	for _, s := range w.Steps {
+		scope, ok := answers[s.ID].(map[string]any)
+		if !ok {
+			continue
+		}
+
+		out = append(out, checkYAMLFields(s.ID, s.Fields, scope)...)
+	}
+
+	return out
+}
+
+func checkYAMLFields(path string, fields []Field, scope map[string]any) []FieldError {
+	var out []FieldError
+
+	for i := range fields {
+		f := &fields[i]
+		where := path + "." + f.ID
+
+		switch f.Type {
+		case "yaml":
+			text, ok := scope[f.ID].(string)
+			if !ok || strings.TrimSpace(text) == "" {
+				continue
+			}
+
+			var parsed any
+			if err := yaml.Unmarshal([]byte(text), &parsed); err != nil {
+				out = append(out, FieldError{Path: where, Message: "is not valid YAML: " + err.Error()})
+			}
+
+		case "group":
+			if nested, ok := scope[f.ID].(map[string]any); ok {
+				out = append(out, checkYAMLFields(where, f.Fields, nested)...)
+			}
+
+		case "list":
+			items, ok := scope[f.ID].([]any)
+			if !ok {
+				continue
+			}
+
+			for j, item := range items {
+				nested, ok := item.(map[string]any)
+				if !ok {
+					continue
+				}
+
+				out = append(out, checkYAMLFields(fmt.Sprintf("%s.%d", where, j), f.Fields, nested)...)
+			}
+
+		default:
+		}
+	}
+
+	return out
+}
+
 // FieldError is one schema violation, located by a JSON pointer into the document.
 // Missing marks violations that only mean "not filled in yet": a required key that is
 // absent, or an empty string. The UI counts those calmly; the rest are real mistakes.
