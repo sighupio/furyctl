@@ -11,6 +11,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"gopkg.in/yaml.v3"
 )
 
 func TestLoadEmbedded(t *testing.T) {
@@ -47,6 +48,44 @@ func TestLoadEmbedded(t *testing.T) {
 }
 
 // Every field the user types into carries an example, so the (?) tip is never empty.
+// The file examples are transcribed from the documentation, so at least the one that is YAML has to
+// still parse as the object it claims to be.
+func TestEncryptionFileExampleIsAnEncryptionConfiguration(t *testing.T) {
+	t.Parallel()
+
+	reg, err := LoadEmbedded()
+	require.NoError(t, err)
+
+	w, _, err := reg.Find("Immutable", "v1.35.1")
+	require.NoError(t, err)
+
+	var found string
+
+	for _, s := range w.Steps {
+		for _, f := range s.Fields {
+			if f.ID == "encryptionConfig" {
+				found = f.FileExample
+			}
+		}
+	}
+
+	require.NotEmpty(t, found, "the encryption configuration field carries no file example")
+
+	var manifest struct {
+		APIVersion string `yaml:"apiVersion"`
+		Kind       string `yaml:"kind"`
+		Resources  []struct {
+			Resources []string `yaml:"resources"`
+		} `yaml:"resources"`
+	}
+
+	require.NoError(t, yaml.Unmarshal([]byte(found), &manifest))
+	assert.Equal(t, "apiserver.config.k8s.io/v1", manifest.APIVersion)
+	assert.Equal(t, "EncryptionConfiguration", manifest.Kind)
+	require.Len(t, manifest.Resources, 1)
+	assert.Equal(t, []string{"secrets"}, manifest.Resources[0].Resources)
+}
+
 func TestEmbeddedWizardsHaveExamples(t *testing.T) {
 	t.Parallel()
 

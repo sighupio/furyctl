@@ -933,6 +933,7 @@ body {
 .modal-backdrop { position: fixed; inset: 0; z-index: 40; display: grid; place-items: center; padding: 2rem; background: rgb(0 0 0 / 0.45); animation: pop 0.12s ease; }
 .modal { width: min(46rem, 100%); max-height: 85vh; overflow: auto; padding: 1.5rem; border-radius: var(--radius); background: var(--card); border: 1px solid var(--border); box-shadow: 0 24px 64px -16px rgb(0 0 0 / 0.5); }
 .modal-head h3 { margin: 0 0 1rem; font-size: 1.15rem; }
+.wz-mode { width: 6rem; font-family: "Geist Mono", ui-monospace, monospace; }
 .modal-editor { min-height: 16rem; width: 100%; box-sizing: border-box; line-height: 1.5; }
 .modal-foot { display: flex; align-items: center; gap: 0.5rem; margin-top: 1rem; }
 

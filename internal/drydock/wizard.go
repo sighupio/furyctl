@@ -72,7 +72,10 @@ type Field struct {
 	Label Text   `json:"label,omitempty" yaml:"label"`
 	Help  Text   `json:"help,omitempty"  yaml:"help"`
 	// Example is a realistic value, shown in the help tip next to the label.
-	Example     string            `json:"example,omitempty"     yaml:"example"`
+	Example string `json:"example,omitempty" yaml:"example"`
+	// FileExample is what the file behind a {file://…} value looks like, offered as the starting
+	// point in the editor that writes it. Transcribed from the documentation, never invented.
+	FileExample string            `json:"fileExample,omitempty" yaml:"fileExample"`
 	Default     any               `json:"default,omitempty"     yaml:"default"`
 	Required    bool              `json:"required,omitempty"    yaml:"required"`
 	When        string            `json:"when,omitempty"        yaml:"when"`

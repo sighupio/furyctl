@@ -439,7 +439,9 @@ function sourced(f, scope, root, cb, key = f.id, { hideSource = false } = {}) {
       button(t("file.create"), "btn ghost small", () =>
         openFileEditor({
           path: current.raw,
-          content: "",
+          // What the file looks like, from the wizard: the documentation's own example is a better
+          // starting point than an empty box.
+          content: f.fileExample ?? "",
           onSaved: (relative) => {
             scope[key] = encode("file", relative);
             cb.both();

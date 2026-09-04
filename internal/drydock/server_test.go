@@ -192,6 +192,19 @@ func TestFileEndpointStaysUnderTheOutputDirectory(t *testing.T) {
 		map[string]any{"path": "secrets/etcd-encryption-config.yaml", "content": "replaced", "overwrite": true})
 	assert.Equal(t, http.StatusOK, rec.Code)
 
+	// The permissions are the caller's choice, within reason.
+	rec = do(t, h, http.MethodPost, "/api/file", map[string]any{"path": "motd", "content": "hello", "mode": "0644"})
+	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+
+	info, err = os.Stat(filepath.Join(dir, "motd"))
+	require.NoError(t, err)
+	assert.Equal(t, os.FileMode(0o644), info.Mode().Perm())
+
+	for _, mode := range []string{"0044", "4755", "banana", "99"} {
+		rec = do(t, h, http.MethodPost, "/api/file", map[string]any{"path": "refused", "content": "x", "mode": mode})
+		assert.Equal(t, http.StatusBadRequest, rec.Code, mode)
+	}
+
 	// Nothing above the configuration's own directory can be reached.
 	for _, path := range []string{"../escape.yaml", "secrets/../../escape.yaml", "/etc/passwd", ""} {
 		rec = do(t, h, http.MethodPost, "/api/file", map[string]any{"path": path, "content": "x"})

@@ -69,6 +69,8 @@ const DICTS = {
     "file.path": "Path",
     "file.content": "Contents",
     "file.hint": "Written next to the configuration, readable only by you. Nothing above that directory can be written.",
+    "file.mode": "Permissions",
+    "file.modeHelp": "Octal. 0600 keeps it to you, which is what a secret wants; 0644 lets anyone on the machine read it.",
     "file.save": "Write it",
     "file.replace": "Replace it",
     "file.cancel": "Cancel",

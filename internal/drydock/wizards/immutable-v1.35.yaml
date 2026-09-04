@@ -647,6 +647,18 @@ steps:
         default: false
       - id: encryptionConfig
         type: path
+        # Transcribed from the SIGHUP Distribution reference, .spec.kubernetes.advanced.encryption.configuration
+        fileExample: |
+          apiVersion: apiserver.config.k8s.io/v1
+          kind: EncryptionConfiguration
+          resources:
+            - resources:
+              - secrets
+              providers:
+              - aescbc:
+                  keys:
+                  - name: mykey
+                    secret: base64_encoded_secret
         example: "./secrets/etcd-encryption-config.yaml"
         label: Encryption configuration file
         help: "An EncryptionConfiguration manifest. furyctl reads the file and puts its content in the configuration, so the value stays a {file://} reference and the keys never enter the repository."
@@ -686,9 +698,9 @@ steps:
             default: groups
           - id: caFile
             type: path
-            example: "./secrets/oidc-ca.crt"
+            example: "/etc/kubernetes/pki/oidc-ca.crt"
             label: Issuer CA file
-            suggest: file
+            help: "The path the API server reads the issuer's CA from, so it has to exist on the control plane nodes: it is a path on the node, not a file whose content is copied into the configuration."
       - id: registry
         type: text
         example: "registry.example.com/kubernetes"
@@ -788,6 +800,10 @@ steps:
             when: controller != byoic && type != none
           - id: tlsCert
             type: path
+            fileExample: |
+              -----BEGIN CERTIFICATE-----
+              paste the base64 body here
+              -----END CERTIFICATE-----
             example: "./secrets/ingress.crt"
             label: TLS certificate file
             suggest: file
@@ -795,6 +811,10 @@ steps:
             when: controller != byoic && type != none && tlsProvider == secret
           - id: tlsKey
             type: path
+            fileExample: |
+              -----BEGIN PRIVATE KEY-----
+              paste the base64 body here
+              -----END PRIVATE KEY-----
             example: "./secrets/ingress.key"
             label: TLS key file
             suggest: file
@@ -802,6 +822,10 @@ steps:
             when: controller != byoic && type != none && tlsProvider == secret
           - id: tlsCa
             type: path
+            fileExample: |
+              -----BEGIN CERTIFICATE-----
+              paste the base64 body here
+              -----END CERTIFICATE-----
             example: "./secrets/ingress-ca.crt"
             label: TLS CA file
             suggest: file

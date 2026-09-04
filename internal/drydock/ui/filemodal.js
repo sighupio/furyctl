@@ -16,7 +16,7 @@ import { button, el } from "./dom.js";
 /** What was written in this session, so the review can say so. Keyed by the path in the file. */
 export const created = new Map();
 
-export function openFileEditor({ path = "", content = "", onSaved } = {}) {
+export function openFileEditor({ path = "", content = "", mode = "0600", onSaved } = {}) {
   const backdrop = el("div", "modal-backdrop");
   const modal = el("div", "modal");
   modal.setAttribute("role", "dialog");
@@ -34,6 +34,14 @@ export function openFileEditor({ path = "", content = "", onSaved } = {}) {
   pathInput.placeholder = "./secrets/etcd-encryption-config.yaml";
   pathField.append(pathInput, Object.assign(el("span", "help"), { textContent: t("file.hint") }));
   modal.append(pathField);
+
+  const modeField = el("div", "wz-field");
+  modeField.append(Object.assign(el("label"), { textContent: t("file.mode") }));
+  const modeInput = el("input", "wz-input wz-mode");
+  modeInput.type = "text";
+  modeInput.value = mode;
+  modeField.append(modeInput, Object.assign(el("span", "help"), { textContent: t("file.modeHelp") }));
+  modal.append(modeField);
 
   const contentField = el("div", "wz-field");
   contentField.append(Object.assign(el("label"), { textContent: t("file.content") }));
@@ -63,7 +71,12 @@ export function openFileEditor({ path = "", content = "", onSaved } = {}) {
       const res = await fetch("/api/file", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ path: pathInput.value.trim(), content: area.value, overwrite }),
+        body: JSON.stringify({
+          path: pathInput.value.trim(),
+          content: area.value,
+          mode: modeInput.value.trim(),
+          overwrite,
+        }),
       });
       const data = await res.json().catch(() => ({}));
 

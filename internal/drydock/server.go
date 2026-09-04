@@ -15,6 +15,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -38,6 +39,7 @@ var (
 	ErrOutputExists  = errors.New("output file already exists")
 	ErrFileOutside   = errors.New("a file can only be created next to the configuration")
 	ErrFileExists    = errors.New("file already exists")
+	ErrFileMode      = errors.New("invalid permissions")
 	ErrUnsupported   = errors.New("version not supported by this furyctl")
 	ErrEmbeddedUI    = errors.New("embedded ui not found")
 	errDecodeRequest = errors.New("decoding request")
@@ -49,6 +51,9 @@ const (
 	maxBodyBytes      = 8 << 20 // Answers with many nodes and inline files stay far below this.
 	outputFileMode    = 0o600
 	outputDirMode     = 0o700
+	ownerRead         = 0o400
+	octal             = 8
+	modeBits          = 32
 )
 
 type session struct {
@@ -345,6 +350,7 @@ func (s *Server) handleFile(w http.ResponseWriter, r *http.Request) {
 	var req struct {
 		Path      string `json:"path"`
 		Content   string `json:"content"`
+		Mode      string `json:"mode"`
 		Overwrite bool   `json:"overwrite"`
 	}
 
@@ -353,6 +359,13 @@ func (s *Server) handleFile(w http.ResponseWriter, r *http.Request) {
 	}
 
 	full, err := s.resolveUnderOutput(req.Path)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, err)
+
+		return
+	}
+
+	mode, err := parseFileMode(req.Mode)
 	if err != nil {
 		writeError(w, http.StatusBadRequest, err)
 
@@ -371,14 +384,47 @@ func (s *Server) handleFile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := os.WriteFile(full, []byte(req.Content), outputFileMode); err != nil {
+	if err := os.WriteFile(full, []byte(req.Content), mode); err != nil {
 		writeError(w, http.StatusInternalServerError, fmt.Errorf("writing %s: %w", full, err))
 
 		return
 	}
 
-	logrus.Infof("Wrote %s", full)
-	writeJSON(w, http.StatusOK, map[string]string{"path": full})
+	// An existing file keeps whatever mode it had unless it is created anew, so ask for it either way.
+	if err := os.Chmod(full, mode); err != nil {
+		writeError(w, http.StatusInternalServerError, fmt.Errorf("setting the permissions of %s: %w", full, err))
+
+		return
+	}
+
+	logrus.Infof("Wrote %s with mode %#o", full, mode)
+	writeJSON(w, http.StatusOK, map[string]string{"path": full, "mode": fmt.Sprintf("%04o", mode)})
+}
+
+// parseFileMode reads the permissions asked for, as octal. Only permission bits are accepted — no
+// setuid, setgid or sticky — and the owner must keep the read bit, because a file the configuration
+// points at and furyctl cannot read is a mistake rather than a choice.
+func parseFileMode(mode string) (os.FileMode, error) {
+	mode = strings.TrimSpace(mode)
+	if mode == "" {
+		return outputFileMode, nil
+	}
+
+	parsed, err := strconv.ParseUint(mode, octal, modeBits)
+	if err != nil {
+		return 0, fmt.Errorf("%w: %q is not octal", ErrFileMode, mode)
+	}
+
+	perm := os.FileMode(parsed)
+	if perm&^os.ModePerm != 0 {
+		return 0, fmt.Errorf("%w: %q sets more than permissions", ErrFileMode, mode)
+	}
+
+	if perm&ownerRead == 0 {
+		return 0, fmt.Errorf("%w: %q leaves the file unreadable by its owner", ErrFileMode, mode)
+	}
+
+	return perm, nil
 }
 
 // resolveUnderOutput turns the path a {file://…} value carries into an absolute one inside the
