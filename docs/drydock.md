@@ -16,7 +16,7 @@ by itself once the file is written.
 | `-a, --address` | `127.0.0.1` | Address to listen on. It writes files on this machine, so it stays on loopback unless you say otherwise. |
 | `-p, --port` | `8080` | Port to listen on. |
 | `--output` | `furyctl.yaml` | Where the file is written. It refuses to overwrite an existing one. |
-| `--distro-location` | empty | A local checkout or URL of the distribution, instead of downloading it. |
+| `--distro-location` | empty | A local checkout or URL of the distribution, instead of downloading it. Optional: without it the chosen version is downloaded when the session starts. |
 | `--git-protocol` | `https` | `https` or `ssh`, for the download. |
 | `--no-browser` | `false` | Do not open the browser. |
 
@@ -24,8 +24,14 @@ Only the Immutable provider has a wizard today, for distribution v1.35.x.
 
 ## Pick the provider and the version
 
-The versions offered are the releases the wizard supports and this `furyctl` can install. With
-`--distro-location` there is exactly one: the version of that checkout.
+The versions offered are the ones **this** `furyctl` ships compatibility with for that provider,
+narrowed by the range the wizard declares — a wizard covers a subset of what furyctl supports.
+Nothing is looked up on the network, so the list is instant and can never disagree with the check
+that follows. Today that intersection is a single version, v1.35.1.
+
+`--distro-location` is optional and narrows it once more, to the version of that checkout: it is
+the only distribution on hand. Without it, the distribution of the chosen version is downloaded
+when you press Start, which takes a couple of seconds.
 
 ![The opening screen: a provider and a distribution version to choose](assets/drydock/01-picker.jpg)
 

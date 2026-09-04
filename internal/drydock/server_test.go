@@ -18,6 +18,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/sighupio/furyctl/internal/distribution"
 	"github.com/sighupio/furyctl/internal/git"
 )
 
@@ -69,6 +70,32 @@ func TestWizardsEndpoint(t *testing.T) {
 	require.Len(t, got, 1)
 	assert.Equal(t, "Immutable", got[0].Kind)
 	assert.Equal(t, []string{"v1.35.1"}, got[0].Versions, "a local distro location offers exactly its own version")
+}
+
+// The picker asks nobody: the versions are the ones this furyctl supports for the kind, narrowed by
+// the range the wizard declares. Today that intersection is a single version.
+func TestWizardsEndpointOffersWhatFuryctlSupports(t *testing.T) {
+	t.Parallel()
+
+	reg, err := LoadEmbedded()
+	require.NoError(t, err)
+
+	s := NewServer(reg, "", filepath.Join(t.TempDir(), "furyctl.yaml"), git.ProtocolHTTPS)
+
+	h, err := s.Handler()
+	require.NoError(t, err)
+
+	rec := do(t, h, http.MethodGet, "/api/wizards", nil)
+	require.Equal(t, http.StatusOK, rec.Code)
+
+	var got []WizardInfo
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &got))
+	require.Len(t, got, 1)
+
+	supported, err := distribution.CompatibleVersions("Immutable")
+	require.NoError(t, err)
+	assert.Subset(t, supported, got[0].Versions, "a wizard covers a subset of what furyctl supports")
+	assert.Equal(t, []string{"v1.35.1"}, got[0].Versions)
 }
 
 func TestSessionPreviewWrite(t *testing.T) {

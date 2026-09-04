@@ -127,28 +127,37 @@ func (s *Server) handleWizards(w http.ResponseWriter, _ *http.Request) {
 	writeJSON(w, http.StatusOK, infos)
 }
 
-// versionsFor lists the releases a wizard can be used with, newest first. With a local
-// --distro-location there is exactly one candidate, the version of that checkout; otherwise
-// the GitHub releases are filtered by the wizard range and by furyctl's own compatibility.
-// When nothing can be listed, the wizard default is offered so the picker never comes empty.
+// versionsFor lists the versions a wizard can be used with, newest first.
+//
+// The wizards are a SUBSET of what furyctl supports: the candidates are the versions this furyctl
+// ships compatibility with for that kind, and the wizard's own range narrows them further. Nothing
+// is looked up over the network — which versions a furyctl can install is a decision that ships
+// with it, and a list fetched from GitHub would both stall the picker and disagree with the check
+// a moment later.
+//
+// A local --distro-location narrows it once more, to the version of that checkout: it is the only
+// distribution on hand.
 func (s *Server) versionsFor(info WizardInfo) []string {
 	wizard, _, err := s.reg.Find(info.Kind, info.DefaultVersion)
 	if err != nil {
 		return []string{info.DefaultVersion}
 	}
 
+	candidates, err := distribution.CompatibleVersions(info.Kind)
+	if err != nil {
+		return []string{info.DefaultVersion}
+	}
+
+	if local := s.localVersion(); local != "" {
+		candidates = []string{local}
+	}
+
 	var out []string
 
-	for _, v := range s.knownReleases() {
-		if !wizard.InRange(v) {
-			continue
+	for _, v := range candidates {
+		if wizard.InRange(v) {
+			out = append(out, v)
 		}
-
-		if checker, err := distribution.NewCompatibilityChecker(v, info.Kind); err != nil || !checker.IsCompatible() {
-			continue
-		}
-
-		out = append(out, v)
 	}
 
 	if len(out) == 0 {
@@ -158,30 +167,28 @@ func (s *Server) versionsFor(info WizardInfo) []string {
 	return out
 }
 
-func (s *Server) knownReleases() []string {
+// localVersion is the version of the checkout --distro-location points at, read once.
+func (s *Server) localVersion() string {
 	s.relOnce.Do(func() {
-		if s.distroLocation != "" {
-			manifest, err := yamlx.FromFileV3[distroconf.KFD](s.distroLocation + "/kfd.yaml")
-			if err == nil && manifest.Version != "" {
-				s.releases = []string{semver.EnsurePrefix(manifest.Version)}
-			}
+		if s.distroLocation == "" {
+			return
+		}
+
+		manifest, err := yamlx.FromFileV3[distroconf.KFD](filepath.Join(s.distroLocation, "kfd.yaml"))
+		if err != nil || manifest.Version == "" {
+			logrus.Warnf("cannot read the version of %s, offering the ones furyctl supports", s.distroLocation)
 
 			return
 		}
 
-		releases, err := distribution.GetSupportedVersions(git.NewGitHubClient())
-		if err != nil {
-			logrus.Warnf("cannot list distribution releases, offering the wizard default only: %v", err)
-
-			return
-		}
-
-		for _, r := range releases {
-			s.releases = append(s.releases, semver.EnsurePrefix(r.Version.String()))
-		}
+		s.releases = []string{semver.EnsurePrefix(manifest.Version)}
 	})
 
-	return s.releases
+	if len(s.releases) == 0 {
+		return ""
+	}
+
+	return s.releases[0]
 }
 
 func (s *Server) handleSession(w http.ResponseWriter, r *http.Request) {

@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/sighupio/furyctl/internal/distribution"
 )
@@ -639,4 +640,28 @@ func TestImmutableCheckIsCompatible(t *testing.T) {
 			assert.Equal(t, tc.expected, got, "IsCompatible()")
 		})
 	}
+}
+
+// The versions offered anywhere in furyctl come from these ranges and from nowhere else: a list
+// fetched over the network would disagree with the check the next moment.
+func TestCompatibleVersions(t *testing.T) {
+	t.Parallel()
+
+	immutable, err := distribution.CompatibleVersions("Immutable")
+	require.NoError(t, err)
+	assert.Equal(t, []string{"v1.35.1", "v1.35.0", "v1.34.2"}, immutable, "newest first, patches walked")
+
+	for _, version := range immutable {
+		checker, err := distribution.NewCompatibilityChecker(version, "Immutable")
+		require.NoError(t, err)
+		assert.True(t, checker.IsCompatible(), version)
+	}
+
+	onprem, err := distribution.CompatibleVersions("OnPremises")
+	require.NoError(t, err)
+	assert.Equal(t, "v1.35.1", onprem[0])
+	assert.Contains(t, onprem, "v1.33.1", "a patch in the middle of a range is offered too")
+
+	_, err = distribution.CompatibleVersions("Nonsense")
+	require.Error(t, err)
 }

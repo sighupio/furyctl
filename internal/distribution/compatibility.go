@@ -8,6 +8,7 @@ package distribution
 import (
 	"errors"
 	"fmt"
+	"slices"
 	"strings"
 
 	"github.com/Al-Pragliola/go-version"
@@ -53,6 +54,80 @@ func ValidateConfigKind(kind string) (string, error) {
 	}
 
 	return "", fmt.Errorf("\"%s\" %w", kind, ErrUnsupportedKind)
+}
+
+// CompatibleVersions lists every distribution version this furyctl supports for a kind, newest
+// first. It walks the same ranges the compatibility check uses, so the list and the check can never
+// disagree, and it asks nobody: which versions a furyctl can install is a decision that ships with
+// it, not something to look up on a network.
+func CompatibleVersions(kind string) ([]string, error) {
+	ranges, err := compatibleRanges(kind)
+	if err != nil {
+		return nil, err
+	}
+
+	var out []string
+
+	for _, r := range ranges {
+		minVersion, errMin := semver.NewVersion(r.Min)
+		maxVersion, errMax := semver.NewVersion(r.Max)
+
+		if errMin != nil || errMax != nil {
+			continue
+		}
+
+		minSeg, maxSeg := minVersion.Segments(), maxVersion.Segments()
+
+		// Every range declared above stays inside one minor, so walking the patches covers it
+		// exactly. Anything else would be a range whose middle nobody can name: keep its ends.
+		if minSeg[0] != maxSeg[0] || minSeg[1] != maxSeg[1] {
+			out = append(out, r.Min, r.Max)
+
+			continue
+		}
+
+		for patch := minSeg[2]; patch <= maxSeg[2]; patch++ {
+			out = append(out, fmt.Sprintf("v%d.%d.%d", minSeg[0], minSeg[1], patch))
+		}
+	}
+
+	slices.SortFunc(out, func(a, b string) int {
+		av, errA := semver.NewVersion(a)
+		bv, errB := semver.NewVersion(b)
+
+		if errA != nil || errB != nil {
+			return 0
+		}
+
+		return bv.Compare(av)
+	})
+
+	return out, nil
+}
+
+// compatibleRanges answers with the ranges of one kind, by the same name the checker accepts.
+func compatibleRanges(kind string) ([]VersionRange, error) {
+	normalisedKind, err := ValidateConfigKind(kind)
+	if err != nil {
+		return nil, fmt.Errorf("\"%s\" %w", kind, ErrUnsupportedKind)
+	}
+
+	switch normalisedKind {
+	case EKSClusterKind:
+		return getEKSCompatibleRanges(), nil
+
+	case KFDDistributionKind:
+		return getKFDCompatibleRanges(), nil
+
+	case OnPremisesKind:
+		return getOnPremisesCompatibleRanges(), nil
+
+	case ImmutableKind:
+		return getImmutableCompatibleRanges(), nil
+
+	default:
+		return nil, fmt.Errorf("%w: %s", ErrUnsupportedKind, kind)
+	}
 }
 
 // getEKSCompatibleRanges returns version ranges compatible with EKS.
