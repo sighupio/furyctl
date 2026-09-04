@@ -163,6 +163,45 @@ func TestSessionRejectsUnknownWizard(t *testing.T) {
 	assert.Equal(t, http.StatusNotFound, rec.Code)
 }
 
+func TestFileEndpointStaysUnderTheOutputDirectory(t *testing.T) {
+	t.Parallel()
+
+	_, h, out := newTestServer(t)
+	dir := filepath.Dir(out)
+
+	rec := do(t, h, http.MethodPost, "/api/file", map[string]any{
+		"path":    "secrets/etcd-encryption-config.yaml",
+		"content": "apiVersion: apiserver.config.k8s.io/v1\n",
+	})
+	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+
+	written := filepath.Join(dir, "secrets/etcd-encryption-config.yaml")
+	content, err := os.ReadFile(written)
+	require.NoError(t, err)
+	assert.Contains(t, string(content), "apiserver.config.k8s.io")
+
+	info, err := os.Stat(written)
+	require.NoError(t, err)
+	assert.Equal(t, os.FileMode(0o600), info.Mode().Perm(), "these files are usually secrets")
+
+	// An existing file is never replaced by accident.
+	rec = do(t, h, http.MethodPost, "/api/file", map[string]any{"path": "secrets/etcd-encryption-config.yaml", "content": "x"})
+	assert.Equal(t, http.StatusConflict, rec.Code)
+
+	rec = do(t, h, http.MethodPost, "/api/file",
+		map[string]any{"path": "secrets/etcd-encryption-config.yaml", "content": "replaced", "overwrite": true})
+	assert.Equal(t, http.StatusOK, rec.Code)
+
+	// Nothing above the configuration's own directory can be reached.
+	for _, path := range []string{"../escape.yaml", "secrets/../../escape.yaml", "/etc/passwd", ""} {
+		rec = do(t, h, http.MethodPost, "/api/file", map[string]any{"path": path, "content": "x"})
+		assert.Equal(t, http.StatusBadRequest, rec.Code, path)
+	}
+
+	_, err = os.Stat(filepath.Join(filepath.Dir(dir), "escape.yaml"))
+	assert.True(t, os.IsNotExist(err), "a path above the output directory must not be written")
+}
+
 func TestUIIsServed(t *testing.T) {
 	t.Parallel()
 

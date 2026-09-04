@@ -913,6 +913,29 @@ body {
 .datadisk-foot { display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap; }
 .datadisk-foot .help { margin: 0; }
 
+/* Where a value comes from: a chip and a menu instead of a dropdown on every row */
+.source-picker { position: relative; flex: 0 0 auto; }
+.source-chip { font-family: "Geist Mono", ui-monospace, monospace; font-size: 0.72rem; letter-spacing: 0.02em; width: 3.4rem; padding: 0.5rem 0; border: 1px solid var(--input); border-radius: calc(var(--radius) / 2); background: var(--secondary); color: var(--muted-foreground); cursor: pointer; }
+.source-chip:hover { border-color: var(--primary); color: var(--primary); }
+.source-chip.on { border-color: var(--primary); background: color-mix(in srgb, var(--primary) 12%, transparent); color: var(--primary); font-weight: 600; }
+.source-menu { position: absolute; z-index: 30; top: calc(100% + 0.4rem); left: 0; width: min(30rem, 88vw); padding: 0.5rem; border-radius: calc(var(--radius) / 2); background: var(--card); border: 1px solid var(--border); box-shadow: 0 12px 32px -8px rgb(0 0 0 / 0.25); animation: pop 0.12s ease; }
+.source-menu-head { margin: 0.25rem 0.5rem 0.5rem; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted-foreground); }
+.source-option { display: grid; grid-template-columns: 3.4rem 1fr auto; gap: 0.15rem 0.75rem; width: 100%; text-align: left; padding: 0.5rem; border: 0; border-radius: calc(var(--radius) / 2); background: none; font: inherit; color: inherit; cursor: pointer; }
+.source-option:hover { background: var(--secondary); }
+.source-option.on { background: color-mix(in srgb, var(--primary) 10%, transparent); }
+.source-option-chip { grid-row: span 2; align-self: center; justify-self: stretch; text-align: center; font-family: "Geist Mono", ui-monospace, monospace; font-size: 0.72rem; padding: 0.35rem 0; border-radius: calc(var(--radius) / 2); background: var(--secondary); color: var(--muted-foreground); }
+.source-option.on .source-option-chip { background: color-mix(in srgb, var(--primary) 18%, transparent); color: var(--primary); }
+.source-option-name { font-weight: 600; font-size: 0.9rem; }
+.source-option-why { grid-column: 2; font-size: 0.8rem; color: var(--muted-foreground); }
+.source-option-shape { grid-column: 3; grid-row: span 2; align-self: center; font-family: "Geist Mono", ui-monospace, monospace; font-size: 0.72rem; color: var(--muted-foreground); }
+
+/* The editor behind a file value */
+.modal-backdrop { position: fixed; inset: 0; z-index: 40; display: grid; place-items: center; padding: 2rem; background: rgb(0 0 0 / 0.45); animation: pop 0.12s ease; }
+.modal { width: min(46rem, 100%); max-height: 85vh; overflow: auto; padding: 1.5rem; border-radius: var(--radius); background: var(--card); border: 1px solid var(--border); box-shadow: 0 24px 64px -16px rgb(0 0 0 / 0.5); }
+.modal-head h3 { margin: 0 0 1rem; font-size: 1.15rem; }
+.modal-editor { min-height: 16rem; width: 100%; box-sizing: border-box; line-height: 1.5; }
+.modal-foot { display: flex; align-items: center; gap: 0.5rem; margin-top: 1rem; }
+
 /* Documented settings offered as chips */
 .presets { display: flex; flex-wrap: wrap; gap: 0.5rem; }
 .preset-chip { font: inherit; font-size: 0.85rem; padding: 0.45rem 0.85rem; border: 1px dashed var(--input); border-radius: 999px; background: var(--card); color: var(--foreground); cursor: pointer; transition: all 0.15s ease; }

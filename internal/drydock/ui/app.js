@@ -10,6 +10,7 @@ import { LANGS, getLang, setLang, t, text } from "./i18n.js";
 import { makeDataDisk } from "./datadisk.js";
 import { makeNodeTable } from "./nodetable.js";
 import { button, collectStep, el, initScope, missingRequired, renderFields, syncPresets } from "./renderer.js";
+import { created } from "./filemodal.js";
 import { collectReferences } from "./sources.js";
 
 const $ = (id) => document.getElementById(id);
@@ -372,6 +373,16 @@ function renderReview(body, blanks) {
       const dd = el("dd");
       dd.textContent = r.path;
       dl.append(dt, dd);
+    }
+    body.append(h3, dl);
+  }
+
+  if (created.size) {
+    const h3 = el("h3");
+    h3.textContent = t("review.created");
+    const dl = el("dl");
+    for (const [relative, absolute] of created) {
+      dl.append(Object.assign(el("dt"), { textContent: relative }), Object.assign(el("dd"), { textContent: absolute }));
     }
     body.append(h3, dl);
   }

@@ -11,9 +11,14 @@
 // preview), and `rerender` only after edits that can change which fields are visible
 // (choices, checkboxes, sources, list add/remove). Typing never re-renders, so inputs keep focus.
 
+import { button, el } from "./dom.js";
 import { t, text } from "./i18n.js";
 import { SOURCES, decode, encode, suggestName } from "./sources.js";
+import { openFileEditor } from "./filemodal.js";
 import { evalWhen } from "./when.js";
+
+// Re-exported: the widgets and the app already build their DOM through the renderer.
+export { button, el } from "./dom.js";
 
 const SOURCED = new Set(["text", "path", "cidr"]);
 
@@ -147,10 +152,11 @@ export function renderFields(container, fields, scope, root, onChange, widgets =
   }
 }
 
-// One tip open at a time; a click elsewhere or Escape closes it.
-function closeTips() {
-  for (const box of document.querySelectorAll(".tip:not([hidden])")) box.hidden = true;
-  for (const b of document.querySelectorAll('.hint[aria-expanded="true"]')) b.setAttribute("aria-expanded", "false");
+// One popover open at a time — the help bubble and the source menu are the same mechanism — and a
+// click elsewhere or Escape closes it.
+function closePopovers() {
+  for (const box of document.querySelectorAll(".popover:not([hidden])")) box.hidden = true;
+  for (const b of document.querySelectorAll('[aria-expanded="true"]')) b.setAttribute("aria-expanded", "false");
 }
 // Registered on first render, not on import: this module is also loaded by tests with no DOM.
 let tipsWired = false;
@@ -158,10 +164,10 @@ function wireTips() {
   if (tipsWired) return;
   tipsWired = true;
   document.addEventListener("click", (e) => {
-    if (!e.target.closest(".tip, .hint")) closeTips();
+    if (!e.target.closest(".popover, .hint, .source-chip")) closePopovers();
   });
   document.addEventListener("keydown", (e) => {
-    if (e.key === "Escape") closeTips();
+    if (e.key === "Escape" && !document.querySelector(".modal-backdrop")) closePopovers();
   });
 }
 
@@ -239,7 +245,7 @@ function tipFor(f, get, set) {
   btn.textContent = "?";
   btn.title = t("tip.open");
   btn.setAttribute("aria-expanded", "false");
-  const box = el("div", "tip");
+  const box = el("div", "tip popover");
   box.hidden = true;
   box.setAttribute("role", "dialog");
   const close = el("button", "tip-close");
@@ -247,7 +253,7 @@ function tipFor(f, get, set) {
   close.textContent = "×";
   close.title = t("tip.close");
   close.setAttribute("aria-label", t("tip.close"));
-  close.addEventListener("click", closeTips);
+  close.addEventListener("click", closePopovers);
   box.append(close);
   if (help) box.append(Object.assign(el("p"), { textContent: help }));
   if (f.example) {
@@ -268,7 +274,7 @@ function tipFor(f, get, set) {
   }
   btn.addEventListener("click", () => {
     const open = box.hidden;
-    closeTips();
+    closePopovers();
     box.hidden = !open;
     btn.setAttribute("aria-expanded", String(open));
   });
@@ -403,8 +409,9 @@ function sourced(f, scope, root, cb, key = f.id, { hideSource = false } = {}) {
   const row = el("div", "with-source");
   const current = decode(scope[key] ?? "");
   // `suggest` in the wizard preselects the source for a value that is a secret or belongs outside
-  // the file. Only while the field is still empty: once something is typed, the value decides.
-  if (!current.raw && f.suggest) current.source = f.suggest;
+  // the file, and only while nothing has decided otherwise: a value already carries its source, and
+  // choosing one stores it even before anything is typed — `{file://}` is a choice, not a blank.
+  if (!current.raw && current.source === "value" && f.suggest) current.source = f.suggest;
   const input = f.multiline ? el("textarea", "wz-input wz-textarea") : el("input", "wz-input");
   if (!f.multiline) input.type = "text";
   input.value = current.raw ?? "";
@@ -414,25 +421,80 @@ function sourced(f, scope, root, cb, key = f.id, { hideSource = false } = {}) {
     cb.onChange();
   });
 
-  const sel = el("select", "wz-input wz-select source-select");
-  for (const s of SOURCES) {
-    const o = el("option");
-    o.value = s;
-    o.textContent = t(`source.${s}`);
-    o.selected = s === current.source;
-    sel.append(o);
-  }
-  sel.addEventListener("change", () => {
-    const raw = sel.value === "env" ? suggestName(String(key), root?.cluster?.name ?? "") : "";
-    scope[key] = encode(sel.value, raw);
+  const pick = (source) => {
+    const raw = source === "env" ? suggestName(String(key), root?.cluster?.name ?? "") : "";
+    scope[key] = encode(source, raw);
     cb.both();
-  });
-  // In a table cell the dropdown doubles the width for nothing, so it shows up only where the
-  // wizard says the value belongs outside the file. The stored value is encoded either way.
-  row.append(input);
+  };
+  const sel = sourcePicker(current.source, pick);
+  // In a table cell the picker doubles the width for nothing, so it shows up only where the wizard
+  // says the value belongs outside the file. The stored value is encoded either way.
   if (!hideSource) row.append(sel);
+  row.append(input);
+
+  // A file the configuration refers to can be written from here, instead of being a chore left for
+  // afterwards. Only for `file`: a `path` value is a path, it has no content of its own.
+  if (!hideSource && current.source === "file") {
+    row.append(
+      button(t("file.create"), "btn ghost small", () =>
+        openFileEditor({
+          path: current.raw,
+          content: "",
+          onSaved: (relative) => {
+            scope[key] = encode("file", relative);
+            cb.both();
+          },
+        }),
+      ),
+    );
+  }
 
   return row;
+}
+
+/**
+ * A chip saying where the value comes from, and a menu that explains the five choices instead of
+ * making the reader guess from five words in a dropdown. The chip is three characters wide, which is
+ * what the row can spare on every field.
+ */
+function sourcePicker(currentSource, pick) {
+  const wrap = el("div", "source-picker");
+  const chip = el("button", `source-chip${currentSource === "value" ? "" : " on"}`);
+  chip.type = "button";
+  chip.textContent = t(`source.chip.${currentSource}`);
+  chip.title = t("source.pick");
+  chip.setAttribute("aria-expanded", "false");
+
+  const menu = el("div", "source-menu popover");
+  menu.hidden = true;
+  menu.append(Object.assign(el("p", "source-menu-head"), { textContent: t("source.pick") }));
+
+  for (const source of SOURCES) {
+    const option = el("button", `source-option${source === currentSource ? " on" : ""}`);
+    option.type = "button";
+    option.append(
+      Object.assign(el("span", "source-option-chip"), { textContent: t(`source.chip.${source}`) }),
+      Object.assign(el("span", "source-option-name"), { textContent: t(`source.${source}`) }),
+      Object.assign(el("span", "source-option-why"), { textContent: t(`source.why.${source}`) }),
+      Object.assign(el("code", "source-option-shape"), { textContent: t(`source.shape.${source}`) }),
+    );
+    option.addEventListener("click", () => {
+      closePopovers();
+      pick(source);
+    });
+    menu.append(option);
+  }
+
+  chip.addEventListener("click", () => {
+    const open = menu.hidden;
+    closePopovers();
+    menu.hidden = !open;
+    chip.setAttribute("aria-expanded", String(open));
+  });
+
+  wrap.append(chip, menu);
+
+  return wrap;
 }
 
 function placeholderFor(source, f) {
@@ -630,18 +692,4 @@ function group(f, scope, root, cb, widgets) {
   renderFields(body, f.fields, scope[f.id], root, cb.onChange, widgets);
   details.append(body);
   return details;
-}
-
-export function el(tag, className = "") {
-  const e = document.createElement(tag);
-  if (className) e.className = className;
-  return e;
-}
-
-export function button(label, className, onClick) {
-  const b = el("button", className);
-  b.type = "button";
-  b.textContent = label;
-  b.addEventListener("click", onClick);
-  return b;
 }

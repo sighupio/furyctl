@@ -14,6 +14,8 @@ import (
 	"io/fs"
 	"net/http"
 	"os"
+	"path/filepath"
+	"strings"
 	"sync"
 	"time"
 
@@ -34,6 +36,8 @@ var (
 
 	ErrNoSession     = errors.New("no session: choose a kind and a version first")
 	ErrOutputExists  = errors.New("output file already exists")
+	ErrFileOutside   = errors.New("a file can only be created next to the configuration")
+	ErrFileExists    = errors.New("file already exists")
 	ErrUnsupported   = errors.New("version not supported by this furyctl")
 	ErrEmbeddedUI    = errors.New("embedded ui not found")
 	errDecodeRequest = errors.New("decoding request")
@@ -44,6 +48,7 @@ const (
 	shutdownTimeout   = 5 * time.Second
 	maxBodyBytes      = 8 << 20 // Answers with many nodes and inline files stay far below this.
 	outputFileMode    = 0o600
+	outputDirMode     = 0o700
 )
 
 type session struct {
@@ -95,6 +100,7 @@ func (s *Server) Handler() (http.Handler, error) {
 	mux.HandleFunc("POST /api/session", s.handleSession)
 	mux.HandleFunc("POST /api/preview", s.handlePreview)
 	mux.HandleFunc("POST /api/write", s.handleWrite)
+	mux.HandleFunc("POST /api/file", s.handleFile)
 	// The UI ships inside the binary: a newer furyctl must never be served stale files from the
 	// browser cache, and embedded files carry no modification time for the cache to key on.
 	files := http.FileServer(http.FS(ui))
@@ -327,6 +333,72 @@ func (s *Server) handleWrite(w http.ResponseWriter, r *http.Request) {
 	s.once.Do(func() { close(s.written) })
 
 	writeJSON(w, http.StatusOK, map[string]string{"path": s.outputPath})
+}
+
+// handleFile creates one of the files the configuration refers to with {file://…}, so the operator
+// does not have to leave the wizard to write an encryption manifest or a certificate.
+//
+// Deliberately narrow: the path is resolved under the directory the configuration is written to,
+// nothing above it can be reached, an existing file is never overwritten unless it is asked for
+// explicitly, and the mode is 0600 because most of these files are secrets.
+func (s *Server) handleFile(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		Path      string `json:"path"`
+		Content   string `json:"content"`
+		Overwrite bool   `json:"overwrite"`
+	}
+
+	if !readJSON(w, r, &req) {
+		return
+	}
+
+	full, err := s.resolveUnderOutput(req.Path)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, err)
+
+		return
+	}
+
+	if _, err := os.Stat(full); err == nil && !req.Overwrite {
+		writeError(w, http.StatusConflict, fmt.Errorf("%w: %s", ErrFileExists, full))
+
+		return
+	}
+
+	if err := os.MkdirAll(filepath.Dir(full), outputDirMode); err != nil {
+		writeError(w, http.StatusInternalServerError, fmt.Errorf("creating the directory: %w", err))
+
+		return
+	}
+
+	if err := os.WriteFile(full, []byte(req.Content), outputFileMode); err != nil {
+		writeError(w, http.StatusInternalServerError, fmt.Errorf("writing %s: %w", full, err))
+
+		return
+	}
+
+	logrus.Infof("Wrote %s", full)
+	writeJSON(w, http.StatusOK, map[string]string{"path": full})
+}
+
+// resolveUnderOutput turns the path a {file://…} value carries into an absolute one inside the
+// directory of the configuration file, and refuses anything that would land outside it.
+func (s *Server) resolveUnderOutput(path string) (string, error) {
+	if path == "" || filepath.IsAbs(path) {
+		return "", fmt.Errorf("%w: %q", ErrFileOutside, path)
+	}
+
+	base, err := filepath.Abs(filepath.Dir(s.outputPath))
+	if err != nil {
+		return "", fmt.Errorf("resolving the output directory: %w", err)
+	}
+
+	full := filepath.Join(base, filepath.Clean(path))
+	if full != base && !strings.HasPrefix(full, base+string(filepath.Separator)) {
+		return "", fmt.Errorf("%w: %q", ErrFileOutside, path)
+	}
+
+	return full, nil
 }
 
 func readJSON(w http.ResponseWriter, r *http.Request, dst any) bool {
