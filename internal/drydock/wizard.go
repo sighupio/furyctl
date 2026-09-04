@@ -13,6 +13,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"strings"
 
 	"gopkg.in/yaml.v3"
 
@@ -20,6 +21,9 @@ import (
 )
 
 var ErrInvalidWizard = errors.New("invalid wizard")
+
+// A nodeTable's config.domainFrom names a step and a field in it.
+const domainFromParts = 2
 
 // Text is a user-visible string in one or more languages, keyed by language code.
 // In YAML it is either a plain string (English) or a {en: ..., it: ...} map.
@@ -243,6 +247,11 @@ func checkFieldShape(where string, f *Field) error {
 			return fmt.Errorf("%w: %s: group needs fields", ErrInvalidWizard, where)
 		}
 
+	case "nodeTable":
+		if err := checkNodeTableConfig(where, f.Config); err != nil {
+			return err
+		}
+
 	case "keyValue":
 		if f.Item != nil || len(f.Fields) > 0 {
 			return fmt.Errorf("%w: %s: keyValue takes no item and no fields", ErrInvalidWizard, where)
@@ -260,6 +269,35 @@ func checkFieldShape(where string, f *Field) error {
 		}
 
 	default:
+	}
+
+	return nil
+}
+
+// checkNodeTableConfig keeps the widget's contract honest: a typo in a step name or in the list of
+// columns would otherwise show up as an empty table rather than as a broken wizard.
+func checkNodeTableConfig(where string, config map[string]string) error {
+	// Only these two are dereferenced without a guard: the widget reads the roles out of the
+	// topology and the node defaults out of its step.
+	for _, key := range []string{"topologyStep", "defaultsStep"} {
+		if config[key] == "" {
+			return fmt.Errorf("%w: %s: nodeTable needs config.%s", ErrInvalidWizard, where, key)
+		}
+	}
+
+	// `domainFrom` is a step.field path and is optional: without it the generated hostnames stay
+	// short, which is what a provider that composes the fully qualified name itself expects.
+	if from := config["domainFrom"]; from != "" && len(strings.Split(from, ".")) != domainFromParts {
+		return fmt.Errorf("%w: %s: domainFrom must be a step.field path, got %q", ErrInvalidWizard, where, from)
+	}
+
+	for column := range strings.SplitSeq(config["columns"], ",") {
+		switch strings.TrimSpace(column) {
+		case "", "hostname", "macAddress", "ip":
+
+		default:
+			return fmt.Errorf("%w: %s: unknown column %q", ErrInvalidWizard, where, column)
+		}
 	}
 
 	return nil

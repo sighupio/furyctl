@@ -15,6 +15,40 @@ import { t } from "./i18n.js";
 import { fillIps, reconcile, resolve, roleKey, roles } from "./nodes.js";
 import { button, collectFields, el, initScope, renderFields } from "./renderer.js";
 
+/**
+ * The columns a wizard can ask for. `config.columns` picks and orders them; the default is the
+ * Immutable set. A provider that boots without PXE (OnPremises) leaves out `macAddress`, and the
+ * widget then neither shows the column nor counts it as something still to fill.
+ */
+const COLUMNS = { hostname: "nodes.hostname", macAddress: "nodes.mac", ip: "nodes.ip" };
+const DEFAULT_COLUMNS = ["hostname", "macAddress", "ip"];
+const PLACEHOLDERS = { macAddress: "52:54:00:00:00:01" };
+
+/**
+ * The suffix the generated hostnames carry, from `config.domainFrom` as a `step.field` path.
+ *
+ * Without it the names stay short, which is what a provider wants when it composes the fully
+ * qualified name itself: OnPremises appends `spec.kubernetes.dnsZone` to the name of every host,
+ * so its node entries hold `cp1`, while an Immutable node holds `cp1.k8s.example.com`.
+ */
+export function domainOf(field, root) {
+  const path = field.config?.domainFrom;
+  if (!path) return "";
+
+  const [step, name] = path.split(".");
+
+  return root?.[step]?.[name] ?? "";
+}
+
+export function columnsOf(field) {
+  const asked = (field.config?.columns ?? "")
+    .split(",")
+    .map((c) => c.trim())
+    .filter((c) => c in COLUMNS);
+
+  return asked.length ? asked : DEFAULT_COLUMNS;
+}
+
 export function makeNodeTable(wizardSteps) {
   const defaultsFields = (field) => wizardSteps.find((s) => s.id === field.config.defaultsStep).fields;
 
@@ -24,7 +58,7 @@ export function makeNodeTable(wizardSteps) {
     state.rows ??= [];
     state.roleOverrides ??= {};
     state.firstIp ??= {};
-    Object.assign(state, reconcile(state, root[field.config.topologyStep], root[field.config.clusterStep]?.domain ?? ""));
+    Object.assign(state, reconcile(state, root[field.config.topologyStep], domainOf(field, root)));
 
     return state;
   };
@@ -55,7 +89,7 @@ export function makeNodeTable(wizardSteps) {
           box.append(ovBox);
         }
 
-        box.append(rowsTable(state, key, ov, defaultsScope, fields, root, onChange));
+        box.append(rowsTable(state, key, ov, defaultsScope, fields, root, onChange, columnsOf(field)));
       }
       container.replaceChildren(box);
     },
@@ -66,12 +100,13 @@ export function makeNodeTable(wizardSteps) {
       ensure(field, state, root);
 
       const defaultsScope = root[field.config.defaultsStep];
+      const columns = columnsOf(field);
       const out = [];
       for (const row of state.rows ?? []) {
         const ov = state.roleOverrides?.[roleKey(row)];
         const mode = row.overrides.networkMode ?? (ov?.enabled ? ov.values.networkMode : undefined) ?? defaultsScope.networkMode;
-        if (!row.macAddress) out.push(t("nodes.missingMac", { host: row.hostname }));
-        if (mode !== "dhcp" && !row.ip) out.push(t("nodes.missingIp", { host: row.hostname }));
+        if (columns.includes("macAddress") && !row.macAddress) out.push(t("nodes.missingMac", { host: row.hostname }));
+        if (columns.includes("ip") && mode !== "dhcp" && !row.ip) out.push(t("nodes.missingIp", { host: row.hostname }));
       }
       return out;
     },
@@ -133,11 +168,11 @@ function roleHead(r, key, state, defaultsScope, both) {
   return head;
 }
 
-function rowsTable(state, key, ov, defaultsScope, fields, root, onChange) {
+function rowsTable(state, key, ov, defaultsScope, fields, root, onChange, columns) {
   const table = el("table");
   const thead = el("thead");
   const hr = el("tr");
-  for (const h of ["nodes.hostname", "nodes.mac", "nodes.ip", ""]) {
+  for (const h of [...columns.map((c) => COLUMNS[c]), ""]) {
     const th = el("th");
     th.textContent = h ? t(h) : "";
     hr.append(th);
@@ -148,9 +183,12 @@ function rowsTable(state, key, ov, defaultsScope, fields, root, onChange) {
   const tbody = el("tbody");
   for (const row of state.rows.filter((x) => roleKey(x) === key)) {
     const tr = el("tr");
-    tr.append(cell(row, "hostname", onChange), cell(row, "macAddress", onChange, "52:54:00:00:00:01"));
     const mode = row.overrides.networkMode ?? (ov.enabled ? ov.values.networkMode : undefined) ?? defaultsScope.networkMode;
-    tr.append(mode === "dhcp" ? Object.assign(el("td"), { textContent: t("nodes.dhcp") }) : cell(row, "ip", onChange));
+    for (const column of columns) {
+      // An address the provider gets from DHCP is not a field: it says so and asks nothing.
+      if (column === "ip" && mode === "dhcp") tr.append(Object.assign(el("td"), { textContent: t("nodes.dhcp") }));
+      else tr.append(cell(row, column, onChange, PLACEHOLDERS[column]));
+    }
 
     // The override opens in its own full-width row under the node, not squeezed in a cell.
     const td = el("td", "override-cell");
@@ -167,7 +205,7 @@ function rowsTable(state, key, ov, defaultsScope, fields, root, onChange) {
     const overrideRow = el("tr", "override-row");
     overrideRow.hidden = true;
     const overrideCell = el("td");
-    overrideCell.colSpan = 4;
+    overrideCell.colSpan = columns.length + 1;
     const body = el("div", "list-item");
     overrideCell.append(body);
     overrideRow.append(overrideCell);

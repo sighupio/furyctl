@@ -7,6 +7,11 @@
 // Pure node logic: which nodes exist, what they are called, how their config is resolved.
 // No DOM here so it can be tested with bun.
 
+// The topology answers this reads, and therefore the field ids a wizard using the node table has to
+// use in its topology step: lbMode ("dedicated" adds lbCount load balancer nodes), cpCount,
+// dedicatedEtcd, infraCount, workersCount, and extraGroups[{name, count}]. OnPremises has the same
+// roles as Immutable, so it can reuse this as it is; a provider with a different shape (EKS node
+// pools) wants its own widget rather than a wider version of this one.
 const PREFIX = { cp: "cp", etcd: "etcd", lb: "lb", infra: "infra", workers: "workers" };
 
 export function roles(topology) {

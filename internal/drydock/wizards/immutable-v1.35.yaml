@@ -609,7 +609,7 @@ steps:
       - id: nodes
         type: nodeTable
         config:
-          clusterStep: cluster
+          domainFrom: cluster.domain
           topologyStep: topology
           defaultsStep: nodeDefaults
 
