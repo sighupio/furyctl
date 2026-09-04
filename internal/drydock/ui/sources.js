@@ -10,13 +10,23 @@
 export const SOURCES = ["value", "env", "file", "path", "http"];
 
 const PATTERN = /^\{(env|file|path|https?):\/\/(.*)\}$/s;
+// A URL carries its own scheme, so `{…}` on its own is how an http value looks while it is still
+// being typed. Reading it back as a literal would lose the source the operator picked.
+const UNFINISHED_URL = /^\{([^{}]*)\}$/s;
 
 export function decode(value) {
   if (typeof value !== "string") return { source: "value", raw: value };
   const m = PATTERN.exec(value);
-  if (!m) return { source: "value", raw: value };
-  if (m[1] === "http" || m[1] === "https") return { source: "http", raw: `${m[1]}://${m[2]}` };
-  return { source: m[1], raw: m[2] };
+  if (m) {
+    if (m[1] === "http" || m[1] === "https") return { source: "http", raw: `${m[1]}://${m[2]}` };
+
+    return { source: m[1], raw: m[2] };
+  }
+
+  const u = UNFINISHED_URL.exec(value);
+  if (u) return { source: "http", raw: u[1] };
+
+  return { source: "value", raw: value };
 }
 
 export function encode(source, raw) {

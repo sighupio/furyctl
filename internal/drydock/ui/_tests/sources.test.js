@@ -15,6 +15,12 @@ describe("decode", () => {
   test("https keeps the scheme in raw", () =>
     expect(decode("{https://x.io/a}")).toEqual({ source: "http", raw: "https://x.io/a" }));
   test("non-string", () => expect(decode(3)).toEqual({ source: "value", raw: 3 }));
+  // Picking the URL source stores `{}`: without the scheme there is nothing else to recognise it by,
+  // so an address still being typed has to keep the source rather than turn into a literal `{…}`.
+  test("a url without its scheme yet is still a url", () => {
+    expect(decode("{}")).toEqual({ source: "http", raw: "" });
+    expect(decode("{example.io/ca.crt}")).toEqual({ source: "http", raw: "example.io/ca.crt" });
+  });
 });
 
 describe("encode", () => {

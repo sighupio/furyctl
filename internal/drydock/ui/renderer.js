@@ -422,7 +422,9 @@ function sourced(f, scope, root, cb, key = f.id, { hideSource = false } = {}) {
   });
 
   const pick = (source) => {
-    const raw = source === "env" ? suggestName(String(key), root?.cluster?.name ?? "") : "";
+    // The name of the variable and the scheme of the URL are the parts nobody wants to type.
+    const raw =
+      source === "env" ? suggestName(String(key), root?.cluster?.name ?? "") : source === "http" ? "https://" : "";
     scope[key] = encode(source, raw);
     cb.both();
   };
