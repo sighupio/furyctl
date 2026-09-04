@@ -53,6 +53,7 @@ const DICTS = {
     "source.url": "https://…",
     "keyValue.key": "key",
     "keyValue.value": "value",
+    "table.more": "More…",
     "list.add": "Add",
     "list.remove": "Remove",
     "nodes.role.cp": "Control plane",

@@ -28,6 +28,7 @@ function defaultFor(field) {
     case "choice":
       return field.options[0];
     case "list":
+    case "table":
       return [];
     case "group":
     case "nodeTable":
@@ -68,7 +69,9 @@ export function initScope(fields, scope) {
     if (HELPERS.has(f.type)) continue;
     if (!Object.hasOwn(scope, f.id)) scope[f.id] = defaultFor(f);
     if (f.type === "group") initScope(f.fields, scope[f.id]);
-    if (f.type === "list" && f.fields) for (const item of scope[f.id]) initScope(f.fields, item);
+    if ((f.type === "list" || f.type === "table") && f.fields) {
+      for (const item of scope[f.id]) initScope(f.fields, item);
+    }
   }
   return scope;
 }
@@ -81,7 +84,9 @@ export function collectFields(fields, scope, root) {
     if (HELPERS.has(f.type)) continue; // Helpers fill other fields; they hold no answer of their own.
     const v = scope[f.id];
     if (f.type === "group") out[f.id] = collectFields(f.fields, v ?? {}, root);
-    else if (f.type === "list" && f.fields) out[f.id] = (v ?? []).map((item) => collectFields(f.fields, item, root));
+    else if ((f.type === "list" || f.type === "table") && f.fields) {
+      out[f.id] = (v ?? []).map((item) => collectFields(f.fields, item, root));
+    }
     // A blank row of a scalar list is a row the user opened and never filled: it is not an answer.
     else if (f.type === "list") out[f.id] = (v ?? []).filter((x) => x !== "" && x !== null && x !== undefined);
     // Pairs are the editable form; a map is what the file wants. A pair with no key is not one yet.
@@ -107,7 +112,7 @@ export function missingRequired(fields, scope, root, widgets = {}) {
     }
     const v = scope[f.id];
     if (f.type === "group") out.push(...missingRequired(f.fields, v ?? {}, root, widgets));
-    else if (f.type === "list" && f.fields) {
+    else if ((f.type === "list" || f.type === "table") && f.fields) {
       (v ?? []).forEach((item, i) => {
         for (const label of missingRequired(f.fields, item, root, widgets)) {
           out.push(`${text(f.label) || f.id} ${i + 1}: ${label}`);
@@ -198,16 +203,15 @@ function renderField(f, scope, root, cb, widgets) {
     case "text":
     case "path":
     case "cidr":
-      wrap.append(sourced(f, scope, root, cb));
-      break;
     case "number":
-      wrap.append(numberInput(f, scope, cb.onChange));
-      break;
     case "choice":
-      wrap.append(f.options.length <= 4 ? radios(f, scope, cb.both) : select(f, scope, cb.both));
+      wrap.append(control(f, scope, root, cb));
       break;
     case "list":
       wrap.append(f.fields ? groupList(f, scope, root, cb, widgets) : scalarList(f, scope, root, cb));
+      break;
+    case "table":
+      wrap.append(table(f, scope, root, cb, widgets));
       break;
     case "keyValue":
       wrap.append(keyValue(f, scope, cb));
@@ -300,8 +304,102 @@ function presets(f, scope, cb) {
   return box;
 }
 
+/**
+ * The control of a scalar field, without its label or its tip. `renderField` wraps it in a labelled
+ * row; a table cell holds it on its own. `compact` is for a cell, where a row of radio pills would
+ * not fit.
+ */
+function control(f, scope, root, cb, { compact = false } = {}) {
+  switch (f.type) {
+    case "number":
+      return numberInput(f, scope, cb.onChange);
+    case "bool":
+      return checkbox({ ...f, label: compact ? { en: "" } : f.label }, scope, cb.both);
+    case "choice":
+      return !compact && f.options.length <= 4 ? radios(f, scope, cb.both) : select(f, scope, cb.both);
+    default:
+      return sourced(f, scope, root, cb, f.id, { hideSource: compact && !f.suggest });
+  }
+}
+
+/**
+ * A list of groups shown as a table: the fields named in `config.columns` are the columns, and
+ * whatever is left of the group opens in a row under it. The same answers as a `list` of groups —
+ * only the shape on screen differs — so nothing else in the renderer treats it specially.
+ */
+function table(f, scope, root, cb, widgets) {
+  const columns = (f.config?.columns ?? "")
+    .split(",")
+    .map((c) => c.trim())
+    .filter((c) => f.fields.some((x) => x.id === c));
+  const inColumns = (x) => columns.includes(x.id);
+  const rest = f.fields.filter((x) => !inColumns(x));
+  const items = scope[f.id] ?? [];
+
+  const box = el("div", "nodetable");
+  const tbl = el("table");
+  const head = el("tr");
+  for (const id of columns) {
+    const field = f.fields.find((x) => x.id === id);
+    const th = el("th");
+    th.textContent = text(field.label) || id;
+    head.append(th);
+  }
+  head.append(el("th"));
+  tbl.append(Object.assign(el("thead"), {}), head);
+
+  const body = el("tbody");
+  items.forEach((item, i) => {
+    initScope(f.fields, item);
+    const tr = el("tr");
+    for (const id of columns) {
+      const cell = el("td");
+      cell.append(control(f.fields.find((x) => x.id === id), item, root, cb, { compact: true }));
+      tr.append(cell);
+    }
+
+    const actions = el("td", "override-cell");
+    const more = el("tr", "override-row");
+    more.hidden = true;
+    const moreCell = el("td");
+    moreCell.colSpan = columns.length + 1;
+    const moreBox = el("div", "list-item");
+    moreCell.append(moreBox);
+    more.append(moreCell);
+
+    if (rest.length) {
+      const toggle = button(t("table.more"), "btn ghost small", () => {
+        more.hidden = !more.hidden;
+        toggle.setAttribute("aria-expanded", String(!more.hidden));
+        if (!more.hidden && !moreBox.hasChildNodes()) renderFields(moreBox, rest, item, root, cb.onChange, widgets);
+      });
+      toggle.setAttribute("aria-expanded", "false");
+      actions.append(toggle);
+    }
+
+    actions.append(
+      button(t("list.remove"), "btn ghost small", () => {
+        items.splice(i, 1);
+        cb.both();
+      }),
+    );
+    tr.append(actions);
+    body.append(tr, more);
+  });
+
+  tbl.append(body);
+  box.append(tbl);
+  box.append(
+    button(t("list.add"), "btn ghost small", () => {
+      (scope[f.id] ??= []).push(initScope(f.fields, {}));
+      cb.both();
+    }),
+  );
+  return box;
+}
+
 // An input plus the source dropdown. The stored value is always the encoded string.
-function sourced(f, scope, root, cb, key = f.id) {
+function sourced(f, scope, root, cb, key = f.id, { hideSource = false } = {}) {
   const row = el("div", "with-source");
   const current = decode(scope[key] ?? "");
   // `suggest` in the wizard preselects the source for a value that is a secret or belongs outside
@@ -329,7 +427,11 @@ function sourced(f, scope, root, cb, key = f.id) {
     scope[key] = encode(sel.value, raw);
     cb.both();
   });
-  row.append(input, sel);
+  // In a table cell the dropdown doubles the width for nothing, so it shows up only where the
+  // wizard says the value belongs outside the file. The stored value is encoded either way.
+  row.append(input);
+  if (!hideSource) row.append(sel);
+
   return row;
 }
 

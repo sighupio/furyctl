@@ -105,7 +105,7 @@ type Preset struct {
 func isFieldType(s string) bool {
 	switch s {
 	case "text", "number", "bool", "choice", "path", "cidr", "yaml", "keyValue",
-		"list", "group", "nodeTable", "preset", "dataDisk":
+		"list", "table", "group", "nodeTable", "preset", "dataDisk":
 		return true
 
 	default:
@@ -247,6 +247,15 @@ func checkFieldShape(where string, f *Field) error {
 			return fmt.Errorf("%w: %s: group needs fields", ErrInvalidWizard, where)
 		}
 
+	case "table":
+		if len(f.Fields) == 0 {
+			return fmt.Errorf("%w: %s: table needs fields", ErrInvalidWizard, where)
+		}
+
+		if err := checkTableColumns(where, f); err != nil {
+			return err
+		}
+
 	case "nodeTable":
 		if err := checkNodeTableConfig(where, f.Config); err != nil {
 			return err
@@ -297,6 +306,39 @@ func checkNodeTableConfig(where string, config map[string]string) error {
 
 		default:
 			return fmt.Errorf("%w: %s: unknown column %q", ErrInvalidWizard, where, column)
+		}
+	}
+
+	return nil
+}
+
+// checkTableColumns holds a table's columns to the fields it actually has, and to the ones a cell
+// can hold: a list or a group in a cell would have nowhere to open.
+func checkTableColumns(where string, f *Field) error {
+	for column := range strings.SplitSeq(f.Config["columns"], ",") {
+		column = strings.TrimSpace(column)
+		if column == "" {
+			continue
+		}
+
+		var found *Field
+
+		for i := range f.Fields {
+			if f.Fields[i].ID == column {
+				found = &f.Fields[i]
+			}
+		}
+
+		if found == nil {
+			return fmt.Errorf("%w: %s: column %q is not one of its fields", ErrInvalidWizard, where, column)
+		}
+
+		switch found.Type {
+		case "text", "number", "bool", "choice", "path", "cidr":
+
+		default:
+			return fmt.Errorf("%w: %s: column %q is a %s, which does not fit in a cell",
+				ErrInvalidWizard, where, column, found.Type)
 		}
 	}
 

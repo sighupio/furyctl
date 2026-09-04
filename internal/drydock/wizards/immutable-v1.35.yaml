@@ -175,9 +175,11 @@ steps:
         default: 3
         min: 0
       - id: extraGroups
-        type: list
+        type: table
         label: Additional node groups
-        help: Other worker pools with their own labels and taints.
+        help: Other worker pools with their own labels and taints. The name and the size are the columns; the rest opens per group.
+        config:
+          columns: name,count
         fields:
           - id: name
             type: text

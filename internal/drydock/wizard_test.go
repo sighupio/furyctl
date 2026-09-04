@@ -132,6 +132,9 @@ func TestParseWizardRejects(t *testing.T) {
 		"preset bad target":    "kind: K\nversions: '>= 1'\ntemplate: x\nsteps: [{id: a, fields: [{id: p, type: preset, target: nope, presets: [{label: x, value: {a: 1}}]}]}]",
 		"preset w/o value":     "kind: K\nversions: '>= 1'\ntemplate: x\nsteps: [{id: a, fields: [{id: l, type: list, item: {type: text}}, {id: p, type: preset, target: l, presets: [{label: x}]}]}]",
 		"keyValue w/ fields":   "kind: K\nversions: '>= 1'\ntemplate: x\nsteps: [{id: a, fields: [{id: kv, type: keyValue, fields: [{id: k, type: text}]}]}]",
+		"table w/o fields":     "kind: K\nversions: '>= 1'\ntemplate: x\nsteps: [{id: a, fields: [{id: t, type: table}]}]",
+		"table bad column":     "kind: K\nversions: '>= 1'\ntemplate: x\nsteps: [{id: a, fields: [{id: t, type: table, config: {columns: nope}, fields: [{id: n, type: text}]}]}]",
+		"table fat column":     "kind: K\nversions: '>= 1'\ntemplate: x\nsteps: [{id: a, fields: [{id: t, type: table, config: {columns: l}, fields: [{id: l, type: list, item: {type: text}}]}]}]",
 		"nodeTable w/o steps":  "kind: K\nversions: '>= 1'\ntemplate: x\nsteps: [{id: a, fields: [{id: n, type: nodeTable, config: {defaultsStep: a}}]}]",
 		"nodeTable bad column": "kind: K\nversions: '>= 1'\ntemplate: x\nsteps: [{id: a, fields: [{id: n, type: nodeTable, config: {topologyStep: a, defaultsStep: a, columns: 'hostname,mac'}}]}]",
 	}
