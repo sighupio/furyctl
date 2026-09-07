@@ -28,12 +28,13 @@ func NewClusterCmd() *cobra.Command {
 func NewCreateCmd() *cobra.Command {
 	createCmd := &cobra.Command{
 		Use:   "create",
-		Short: "Create a cluster, a sample configuration file, or the PKI needed for an on-premises cluster",
+		Short: "Create a cluster, a sample configuration file, the secrets of a cluster, or a PKI",
 	}
 
 	createCmd.AddCommand(NewClusterCmd())
 	createCmd.AddCommand(create.NewConfigCmd())
 	createCmd.AddCommand(create.NewPKICmd())
+	createCmd.AddCommand(create.NewSecretsCmd())
 
 	return createCmd
 }
