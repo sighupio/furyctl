@@ -406,7 +406,6 @@ thus it cannot read flags from one: it stops when the file is already present.
 - `distroPatches` (string) - Distribution patches location
 - `binPath` (string) - Binary path
 - `upgradePathLocation` (string) - Upgrade path location
-- `skipDepsDownload` (bool) - Skip dependencies download
 - `airgapBundle` (string) - Air-gapped bundle path
 - `forceExtract` (bool) - Force bundle re-extraction
 

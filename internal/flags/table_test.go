@@ -50,11 +50,19 @@ var flagsNotInTheTable = []string{
 	"https",
 }
 
+// customFlagTypes maps the type of a flag that has its own pflag value to the type that the
+// configuration file uses. `--git-protocol` reports the type `git-protocol`, but the
+// configuration file gives it as a string, and the validation checks the value against the
+// list of protocols.
+var customFlagTypes = map[string]flags.FlagType{
+	"git-protocol": flags.FlagTypeString,
+}
+
 var flagName = regexp.MustCompile(`--([a-z][a-z0-9-]*)`)
 
 // TestTableMatchesTheCommands keeps the supported flags and the commands together. It fails when a
-// command gains a flag that the table does not list, and when the table lists a flag that no
-// command has.
+// command gains a flag that the table does not list, when the table lists a flag that no command
+// has, and when the table gives a flag a different type than the command.
 func TestTableMatchesTheCommands(t *testing.T) {
 	t.Parallel()
 
@@ -78,31 +86,50 @@ func TestTableMatchesTheCommands(t *testing.T) {
 		commands, mapped := commandsPerSection[section]
 		require.True(t, mapped, "the %q section has no command in commandsPerSection", section)
 
-		real := map[string]bool{}
+		real := map[string]flags.FlagType{}
 
 		for _, name := range commands {
 			command, found := tree[name]
 			require.True(t, found, "the command %q of the %q section is not in the tree", name, section)
 
-			usage := command.Flags().FlagUsages()
+			set := command.Flags()
 			if section == flags.CommandGlobal {
-				usage = root.PersistentFlags().FlagUsages()
+				set = root.PersistentFlags()
 			}
 
-			for _, m := range flagName.FindAllStringSubmatch(usage, -1) {
-				real[m[1]] = true
+			for _, m := range flagName.FindAllStringSubmatch(set.FlagUsages(), -1) {
+				// The usage also holds the flags that a description mentions, for example the
+				// description of `--airgap-bundle`. Lookup finds only the declared flags.
+				flag := set.Lookup(m[1])
+				if flag == nil {
+					continue
+				}
+
+				flagType, custom := customFlagTypes[flag.Value.Type()]
+				if !custom {
+					flagType = flags.FlagType(flag.Value.Type())
+				}
+
+				real[m[1]] = flagType
 			}
 		}
 
 		declared := map[string]bool{}
 
-		for name := range sectionFlags {
+		for name, wantType := range sectionFlags {
 			kebab := flags.CamelToKebab(name)
 			declared[kebab] = true
 
-			assert.True(t, real[kebab],
+			flagType, has := real[kebab]
+			if !assert.True(t, has,
 				"the %q section lists %q, but no command of that section has the flag --%s",
-				section, name, kebab)
+				section, name, kebab) {
+				continue
+			}
+
+			assert.Equal(t, wantType, flagType,
+				"the %q section gives %q the type %q, but the flag --%s has the type %q",
+				section, name, wantType, kebab, flagType)
 		}
 
 		for name := range real {
