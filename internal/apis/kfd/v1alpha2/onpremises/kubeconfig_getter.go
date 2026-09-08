@@ -13,6 +13,7 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/sighupio/furyctl/internal/apis/config"
+	preflightx "github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/onpremises/preflight"
 	"github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/onpremises/public"
 	"github.com/sighupio/furyctl/internal/cluster"
 	"github.com/sighupio/furyctl/internal/tool/ansible"
@@ -109,7 +110,12 @@ func (k *KubeconfigGetter) Get() error {
 		return fmt.Errorf("error checking hosts: %w", err)
 	}
 
-	if _, err := ansibleRunner.Playbook("verify-playbook.yaml"); err != nil {
+	adminConfPlaybook, err := preflightx.AdminConfPlaybookName(tmpDir)
+	if err != nil {
+		return fmt.Errorf("error selecting admin.conf playbook: %w", err)
+	}
+
+	if _, err := ansibleRunner.Playbook(adminConfPlaybook); err != nil {
 		return fmt.Errorf("error getting kubeconfig: %w", err)
 	}
 

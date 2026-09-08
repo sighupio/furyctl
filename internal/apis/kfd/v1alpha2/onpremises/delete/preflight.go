@@ -12,6 +12,7 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/sighupio/furyctl/internal/apis/config"
+	preflightx "github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/onpremises/preflight"
 	"github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/onpremises/public"
 	"github.com/sighupio/furyctl/internal/cluster"
 	"github.com/sighupio/furyctl/internal/tool/ansible"
@@ -109,7 +110,12 @@ func (p *PreFlight) Exec() error {
 		return fmt.Errorf("error checking hosts: %w", err)
 	}
 
-	if _, err := p.ansibleRunner.Playbook("verify-playbook.yaml"); err != nil {
+	adminConfPlaybook, err := preflightx.AdminConfPlaybookName(p.Path)
+	if err != nil {
+		return fmt.Errorf("error selecting admin.conf playbook: %w", err)
+	}
+
+	if _, err := p.ansibleRunner.Playbook(adminConfPlaybook); err != nil {
 		logrus.Debug("Cluster does not exist, skipping state checks")
 
 		logrus.Info("Preflight checks completed successfully")
