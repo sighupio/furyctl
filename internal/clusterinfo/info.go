@@ -25,8 +25,21 @@ type Info struct {
 
 // OngoingUpgrade describes an in-progress or failed cluster upgrade.
 type OngoingUpgrade struct {
-	Status string `json:"status" yaml:"status"`
-	Phase  string `json:"phase"  yaml:"phase"`
+	Status      string                 `json:"status"                yaml:"status"`
+	Phase       string                 `json:"phase"                 yaml:"phase"`
+	From        string                 `json:"from,omitempty"        yaml:"from,omitempty"`
+	To          string                 `json:"to,omitempty"          yaml:"to,omitempty"`
+	WorkerNodes *WorkerUpgradeProgress `json:"workerNodes,omitempty" yaml:"workerNodes,omitempty"`
+}
+
+// WorkerUpgradeProgress summarizes a staged worker rollout without listing
+// node names, which would be unreadable on large OnPremises clusters.
+type WorkerUpgradeProgress struct {
+	Total     int `json:"total"     yaml:"total"`
+	Succeeded int `json:"succeeded" yaml:"succeeded"`
+	Pending   int `json:"pending"   yaml:"pending"`
+	Failed    int `json:"failed"    yaml:"failed"`
+	Remaining int `json:"remaining" yaml:"remaining"`
 }
 
 // ModuleInfo describes an SD module with its installed version and type.

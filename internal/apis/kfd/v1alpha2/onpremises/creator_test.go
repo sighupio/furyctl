@@ -104,18 +104,18 @@ func TestStagedUpgradeDecision(t *testing.T) {
 	}{
 		{"no staged state", ClusterCreator{upgrade: true}, nil, nil, stagedUpgradeProceed, false, ""},
 		{"plain apply", ClusterCreator{}, incomplete, nil, stagedUpgradeProceed, true, "worker upgrade is pending"},
-		{"incomplete skip workers", ClusterCreator{upgrade: true, skipNodesUpgrade: true}, incomplete, versionPlusDefaults, stagedUpgradeProceed, false, ""},
-		{"incomplete without diff", ClusterCreator{upgrade: true}, incomplete, nil, stagedUpgradeProceed, true, `set spec.distributionVersion to "v1.34.1"`},
-		{"incomplete matching diff", ClusterCreator{upgrade: true}, incomplete, matchingVersion, stagedUpgradeProceed, false, ""},
-		{"incomplete matching diff plus defaults", ClusterCreator{upgrade: true}, incomplete, versionPlusDefaults, stagedUpgradeProceed, false, ""},
+		{"finalize skipped workers", ClusterCreator{upgrade: true, skipNodesUpgrade: true}, incomplete, versionPlusDefaults, stagedUpgradeFinalize, false, ""},
+		{"recover finalization without diff", ClusterCreator{upgrade: true}, incomplete, nil, stagedUpgradeFinalize, false, ""},
+		{"finalize matching diff", ClusterCreator{upgrade: true}, incomplete, matchingVersion, stagedUpgradeFinalize, false, ""},
+		{"finalize matching diff plus defaults", ClusterCreator{upgrade: true}, incomplete, versionPlusDefaults, stagedUpgradeFinalize, false, ""},
 		{"incomplete changes without version bump", ClusterCreator{upgrade: true}, incomplete, onlyDefaults, stagedUpgradeProceed, true, "does not request the recorded transition"},
 		{"ready batch resume", ClusterCreator{upgrade: true}, ready, nil, stagedUpgradeResumeBatch, false, ""},
-		{"ready skip workers", ClusterCreator{upgrade: true, skipNodesUpgrade: true}, ready, nil, stagedUpgradeProceed, true, "control-plane nodes are updated"},
+		{"ready skip workers", ClusterCreator{upgrade: true, skipNodesUpgrade: true}, ready, nil, stagedUpgradeNoop, false, ""},
 		{"ready changed config", ClusterCreator{upgrade: true}, ready, matchingVersion, stagedUpgradeProceed, true, "configuration changed"},
 		{"ready selected worker", ClusterCreator{upgradeNode: "worker-a"}, ready, nil, stagedUpgradeResumeNode, false, ""},
-		{"ready selected worker with skip", ClusterCreator{upgradeNode: "worker-a", skipNodesUpgrade: true}, ready, nil, stagedUpgradeProceed, true, "control-plane nodes are updated"},
+		{"ready selected worker with skip", ClusterCreator{upgradeNode: "worker-a", skipNodesUpgrade: true}, ready, nil, stagedUpgradeResumeNode, false, ""},
 		{"selected worker changed config", ClusterCreator{upgradeNode: "worker-a"}, ready, matchingVersion, stagedUpgradeProceed, true, "configuration changed"},
-		{"pending state with phase", ClusterCreator{upgrade: true, phase: "kubernetes"}, ready, nil, stagedUpgradeProceed, true, "cannot be used"},
+		{"pending state with phase", ClusterCreator{upgrade: true, phase: "kubernetes"}, ready, nil, stagedUpgradeNoop, false, ""},
 	}
 
 	for _, test := range tests {
@@ -206,6 +206,68 @@ func TestPersistStagedUpgradeReady(t *testing.T) {
 	assert.Equal(t, []bool{true}, upgradeStore.storedReadyStates)
 	assert.Equal(t, 1, configStore.storeConfigCalls)
 	assert.Equal(t, 1, configStore.storeKFDCalls)
+}
+
+func TestPersistStagedUpgradeReadyCanBeRetried(t *testing.T) {
+	t.Parallel()
+
+	state := completedStagedState(map[string]upgrade.PhaseStatus{
+		"worker-a": upgrade.PhaseStatusPending,
+	})
+	upgradeStore := &fakeUpgradeStorer{storeErr: errors.New("simulated state write failure")}
+	configStore := &fakeStateStorer{}
+	creator := &ClusterCreator{upgrade: true, upgradeStateStore: upgradeStore, stateStore: configStore}
+
+	err := creator.persistStagedUpgradeReady(state, map[string]any{"spec": "target"})
+	require.Error(t, err)
+	assert.Equal(t, 1, configStore.storeConfigCalls)
+	assert.Equal(t, 1, configStore.storeKFDCalls)
+
+	// The failed write leaves the remote representation not ready even though
+	// the local object was mutated before Store returned.
+	state.StagedWorkers.ReadyForResume = false
+	upgradeStore.storeErr = nil
+
+	action, err := creator.stagedUpgradeDecision(state, nil, "")
+	require.NoError(t, err)
+	assert.Equal(t, stagedUpgradeFinalize, action)
+
+	require.NoError(t, creator.persistStagedUpgradeReady(state, map[string]any{"spec": "target"}))
+	assert.True(t, state.StagedWorkers.ReadyForResume)
+	assert.Equal(t, 2, configStore.storeConfigCalls)
+	assert.Equal(t, 2, configStore.storeKFDCalls)
+}
+
+func TestPersistPhaseScopedStagedUpgradeReady(t *testing.T) {
+	t.Parallel()
+
+	succeeded := func() *upgrade.Phase {
+		return &upgrade.Phase{Status: upgrade.PhaseStatusSuccess}
+	}
+	state := &upgrade.State{
+		Transition: &upgrade.Transition{From: "v1.33.1", To: "v1.34.1"},
+		StagedWorkers: &upgrade.StagedWorkers{Nodes: map[string]upgrade.PhaseStatus{
+			"worker-a": upgrade.PhaseStatusPending,
+		}},
+		Phases: upgrade.Phases{
+			PreKubernetes:  succeeded(),
+			Kubernetes:     succeeded(),
+			PostKubernetes: succeeded(),
+		},
+	}
+	upgradeStore := &fakeUpgradeStorer{}
+	configStore := &fakeStateStorer{}
+	creator := &ClusterCreator{upgradeStateStore: upgradeStore, stateStore: configStore}
+
+	require.NoError(t, creator.persistAppliedConfig(
+		state,
+		&upgrade.Upgrade{},
+		map[string]any{"spec": "target"},
+	))
+	assert.True(t, state.StagedWorkers.ReadyForResume)
+	assert.Equal(t, 1, configStore.storeConfigCalls)
+	assert.Equal(t, 1, configStore.storeKFDCalls)
+	assert.False(t, upgradeStore.deleted)
 }
 
 func TestPersistAppliedConfigRejectsIncompleteStagedUpgrade(t *testing.T) {
@@ -310,9 +372,14 @@ type fakeUpgradeStorer struct {
 	storedReadyStates  []bool
 	rawState           []byte
 	deleted            bool
+	storeErr           error
 }
 
 func (f *fakeUpgradeStorer) Store(state *upgrade.State) error {
+	if f.storeErr != nil {
+		return f.storeErr
+	}
+
 	workers := make(map[string]upgrade.PhaseStatus, len(state.StagedWorkers.Nodes))
 	for node, status := range state.StagedWorkers.Nodes {
 		workers[node] = status

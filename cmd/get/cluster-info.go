@@ -216,6 +216,21 @@ func formatText(info *clusterinfo.Info) string {
 	if info.SDOngoingUpgrade != nil {
 		u := info.SDOngoingUpgrade
 		_, _ = fmt.Fprintf(w, "%s\t%s\n", "SD Ongoing upgrade:", fmt.Sprintf("Yes (%s: %s)", u.Phase, u.Status))
+		if u.From != "" && u.To != "" {
+			_, _ = fmt.Fprintf(w, "%s\t%s -> %s\n", "SD Upgrade transition:", u.From, u.To)
+		}
+		if u.WorkerNodes != nil {
+			_, _ = fmt.Fprintf(
+				w,
+				"%s\ttotal=%d, succeeded=%d, pending=%d, failed=%d, remaining=%d\n",
+				"Worker upgrade:",
+				u.WorkerNodes.Total,
+				u.WorkerNodes.Succeeded,
+				u.WorkerNodes.Pending,
+				u.WorkerNodes.Failed,
+				u.WorkerNodes.Remaining,
+			)
+		}
 	} else {
 		_, _ = fmt.Fprintf(w, "%s\t%s\n", "SD Ongoing upgrade:", "None")
 	}

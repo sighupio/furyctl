@@ -24,6 +24,10 @@ type Upgrade struct {
 	Enabled bool
 	From    string
 	To      string
+	// IncludesWorkerUpgrade is set from the selected raw upgrade-path template.
+	// The rendered script cannot be inspected because --skip-nodes-upgrade
+	// intentionally removes the worker playbook from it.
+	IncludesWorkerUpgrade bool
 }
 
 func (u *Upgrade) Exec(workdir, phase string) error {
@@ -63,20 +67,6 @@ func (u *Upgrade) Exec(workdir, phase string) error {
 	}
 
 	return nil
-}
-
-// HasScript reports whether the requested upgrade script exists.
-func (u *Upgrade) HasScript(phase string) (bool, error) {
-	_, err := os.Stat(u.scriptPath(phase))
-	if err == nil {
-		return true, nil
-	}
-
-	if os.IsNotExist(err) {
-		return false, nil
-	}
-
-	return false, fmt.Errorf("error checking upgrade path: %w", err)
 }
 
 func (u *Upgrade) scriptPath(phase string) string {

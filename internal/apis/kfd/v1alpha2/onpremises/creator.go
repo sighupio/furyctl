@@ -38,6 +38,8 @@ const (
 	stagedUpgradeProceed        stagedUpgradeAction = 0
 	stagedUpgradeResumeBatch    stagedUpgradeAction = 1
 	stagedUpgradeResumeNode     stagedUpgradeAction = 2
+	stagedUpgradeFinalize       stagedUpgradeAction = 3
+	stagedUpgradeNoop           stagedUpgradeAction = 4
 )
 
 var (
@@ -149,14 +151,6 @@ func (c *ClusterCreator) Create(startFrom string, _, podRunningCheckTimeout int)
 	upgr := upgrade.New(c.paths, string(c.furyctlConf.Kind))
 	var workerNodes []string
 	if c.skipNodesUpgrade && c.upgrade {
-		if c.phase != cluster.OperationPhaseAll || startFrom != "" || len(c.postApplyPhases) > 0 {
-			return fmt.Errorf(
-				"%w: --skip-nodes-upgrade requires a full apply; do not combine it with "+
-					"--phase, --start-from, or --post-apply-phases",
-				errStagedUpgrade,
-			)
-		}
-
 		workerNodes = c.workerNodes()
 	}
 
@@ -221,7 +215,7 @@ func (c *ClusterCreator) Create(startFrom string, _, podRunningCheckTimeout int)
 		return fmt.Errorf("error while executing preflight phase: %w", err)
 	}
 	var existingUpgradeState *upgrade.State
-	if status.ClusterExists && !c.dryRun {
+	if status.ClusterExists {
 		var found bool
 		existingUpgradeState, found, err = c.loadUpgradeState()
 		if err != nil {
@@ -234,6 +228,20 @@ func (c *ClusterCreator) Create(startFrom string, _, podRunningCheckTimeout int)
 		action, err := c.stagedUpgradeDecision(existingUpgradeState, status.Diffs, startFrom)
 		if err != nil {
 			return err
+		}
+		if action == stagedUpgradeFinalize {
+			if c.dryRun {
+				existingUpgradeState.StagedWorkers.ReadyForResume = true
+			} else if err := c.persistStagedUpgradeReady(existingUpgradeState, renderedConfig); err != nil {
+				return err
+			}
+
+			// The target configuration is now persisted (or would be in dry-run),
+			// therefore the preflight diff from before reconciliation is stale.
+			action, err = c.stagedUpgradeDecision(existingUpgradeState, nil, startFrom)
+			if err != nil {
+				return err
+			}
 		}
 
 		switch action {
@@ -249,6 +257,11 @@ func (c *ClusterCreator) Create(startFrom string, _, podRunningCheckTimeout int)
 				[]string{c.upgradeNode},
 				renderedConfig,
 			)
+
+		case stagedUpgradeNoop:
+			logStagedWorkerNextSteps(existingUpgradeState)
+
+			return nil
 
 		default:
 			return fmt.Errorf("%w: unsupported staged upgrade action %d", errStagedUpgrade, action)
@@ -478,13 +491,19 @@ func (c *ClusterCreator) persistAppliedConfig(
 
 	if appliedUpgradeState.HasStagedWorkers() {
 		switch {
-		case appliedUpgradeState.AllOnPremisesPhasesSucceeded() && appliedUpgradeState.AllStagedWorkersSucceeded():
+		case appliedUpgradeState.AllTrackedPhasesSucceeded() && appliedUpgradeState.AllStagedWorkersSucceeded():
 			if err := c.upgradeStateStore.Delete(); err != nil {
 				return fmt.Errorf("error while deleting completed staged worker state: %w", err)
 			}
 
-		case appliedUpgradeState.AllOnPremisesPhasesSucceeded():
-			return c.persistStagedUpgradeReady(appliedUpgradeState, renderedConfig)
+		case appliedUpgradeState.AllTrackedPhasesSucceeded():
+			if err := c.persistStagedUpgradeReady(appliedUpgradeState, renderedConfig); err != nil {
+				return err
+			}
+
+			logStagedWorkerNextSteps(appliedUpgradeState)
+
+			return nil
 
 		default:
 			return fmt.Errorf(
@@ -557,24 +576,14 @@ func (c *ClusterCreator) stagedUpgradeDecision(
 			errStagedUpgrade,
 		)
 	}
-	if c.skipNodesUpgrade {
-		if upgradeState.StagedWorkers.ReadyForResume {
-			return stagedUpgradeProceed, fmt.Errorf(
-				"%w: control-plane nodes are updated and worker nodes are pending; "+
-					"run 'furyctl apply --upgrade' to upgrade them",
-				errStagedUpgrade,
-			)
-		}
-	}
-
-	if c.phase != cluster.OperationPhaseAll || startFrom != "" || len(c.postApplyPhases) > 0 {
-		return stagedUpgradeProceed, fmt.Errorf(
-			"%w: --phase, --start-from, and --post-apply-phases cannot be used while worker nodes are pending",
-			errStagedUpgrade,
-		)
-	}
-
 	if c.upgradeNode != "" {
+		if !upgradeState.StagedWorkers.ReadyForResume && upgradeState.AllTrackedPhasesSucceeded() {
+			if err := validateStagedTransition(upgradeState, changes); err != nil {
+				return stagedUpgradeProceed, err
+			}
+
+			return stagedUpgradeFinalize, nil
+		}
 		if len(changes) != 0 {
 			return stagedUpgradeProceed, fmt.Errorf(
 				"%w: configuration changed while workers are pending; run 'furyctl apply --upgrade' before using --upgrade-node",
@@ -589,7 +598,19 @@ func (c *ClusterCreator) stagedUpgradeDecision(
 	}
 
 	if !upgradeState.StagedWorkers.ReadyForResume {
+		if upgradeState.AllTrackedPhasesSucceeded() {
+			if err := validateStagedTransition(upgradeState, changes); err != nil {
+				return stagedUpgradeProceed, err
+			}
+
+			return stagedUpgradeFinalize, nil
+		}
+
 		return stagedUpgradeProceed, rejectIncompleteStagedUpgrade(upgradeState, changes)
+	}
+	phaseScoped := c.phase != "" && c.phase != cluster.OperationPhaseAll
+	if c.skipNodesUpgrade || phaseScoped || startFrom != "" || len(c.postApplyPhases) > 0 {
+		return stagedUpgradeNoop, nil
 	}
 	if len(changes) != 0 {
 		return stagedUpgradeProceed, fmt.Errorf(
@@ -697,14 +718,27 @@ func validateLoadedStagedUpgradeState(upgradeState *upgrade.State) error {
 		}
 	}
 
-	if upgradeState.StagedWorkers.ReadyForResume && !upgradeState.AllOnPremisesPhasesSucceeded() {
+	if upgradeState.StagedWorkers.ReadyForResume && !upgradeState.AllTrackedPhasesSucceeded() {
 		return fmt.Errorf(
-			"%w: state is ready to resume worker nodes but the control plane upgrade is incomplete",
+			"%w: state is ready to resume worker nodes but a tracked upgrade phase is incomplete",
 			errStagedUpgrade,
 		)
 	}
 
 	return nil
+}
+
+func logStagedWorkerNextSteps(upgradeState *upgrade.State) {
+	remaining := len(upgradeState.PendingStagedWorkers())
+	if remaining == 0 {
+		return
+	}
+
+	logrus.Infof(
+		"%d worker nodes remain to be upgraded. Run 'furyctl apply --upgrade' to upgrade all remaining "+
+			"workers, or 'furyctl apply --upgrade-node <node-name>' to upgrade one worker.",
+		remaining,
+	)
 }
 
 // pendingStagedWorkersInConfigOrder returns workers in configuration order.
@@ -806,6 +840,10 @@ func (c *ClusterCreator) resumeStagedWorkers(
 	}
 
 	if c.dryRun || !upgradeState.AllStagedWorkersSucceeded() {
+		if !c.dryRun {
+			logStagedWorkerNextSteps(upgradeState)
+		}
+
 		return nil
 	}
 
@@ -839,7 +877,7 @@ func (c *ClusterCreator) allPhases(
 		upgradeState = &upgrade.State{}
 	}
 
-	if upgr.Enabled && !c.dryRun {
+	if upgr.Enabled {
 		if existingUpgradeState != nil {
 			if startFrom == "" {
 				resumableState := c.upgradeStateStore.GetLatestResumablePhase(upgradeState)
@@ -850,7 +888,7 @@ func (c *ClusterCreator) allPhases(
 
 				startFrom = resumableState
 			}
-		} else {
+		} else if !c.dryRun {
 			logrus.Debugf("creating a new upgrade state on the cluster...")
 
 			upgradeState = c.initUpgradeState()

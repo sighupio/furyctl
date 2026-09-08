@@ -44,7 +44,7 @@ func TestAllStagedWorkersSucceededRejectsUnknownStatus(t *testing.T) {
 	assert.False(t, state.AllStagedWorkersSucceeded())
 }
 
-func TestAllOnPremisesPhasesSucceeded(t *testing.T) {
+func TestAllTrackedPhasesSucceeded(t *testing.T) {
 	t.Parallel()
 
 	succeeded := &Phase{Status: PhaseStatusSuccess}
@@ -57,8 +57,16 @@ func TestAllOnPremisesPhasesSucceeded(t *testing.T) {
 		PostDistribution: succeeded,
 	}}
 
-	assert.True(t, state.AllOnPremisesPhasesSucceeded())
+	assert.True(t, state.AllTrackedPhasesSucceeded())
 
 	state.Phases.PostDistribution = &Phase{Status: PhaseStatusFailed}
-	assert.False(t, state.AllOnPremisesPhasesSucceeded())
+	assert.False(t, state.AllTrackedPhasesSucceeded())
+
+	assert.True(t, (&State{Phases: Phases{
+		PreKubernetes:  succeeded,
+		Kubernetes:     succeeded,
+		PostKubernetes: succeeded,
+	}}).AllTrackedPhasesSucceeded())
+
+	assert.False(t, (&State{}).AllTrackedPhasesSucceeded())
 }

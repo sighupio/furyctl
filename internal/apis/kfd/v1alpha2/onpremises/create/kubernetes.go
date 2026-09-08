@@ -292,12 +292,7 @@ func (k *Kubernetes) preKubernetes(
 			upgradeState.Phases.PreKubernetes.Status = upgrade.PhaseStatusSuccess
 
 			if k.skipNodesUpgrade && len(k.workerNodes) > 0 {
-				hasScript, err := k.upgrade.HasScript("pre-kubernetes")
-				if err != nil {
-					return fmt.Errorf("error checking pre-kubernetes upgrade script: %w", err)
-				}
-
-				if hasScript {
+				if k.upgrade.IncludesWorkerUpgrade {
 					nodes := make(map[string]upgrade.PhaseStatus, len(k.workerNodes))
 					for _, node := range k.workerNodes {
 						nodes[node] = upgrade.PhaseStatusPending

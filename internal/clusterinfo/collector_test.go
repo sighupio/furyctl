@@ -15,7 +15,57 @@ import (
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/sighupio/furyctl/internal/upgrade"
 )
+
+func TestUpgradeInfoFromStagedWorkers(t *testing.T) {
+	t.Parallel()
+
+	succeeded := &upgrade.Phase{Status: upgrade.PhaseStatusSuccess}
+	state := &upgrade.State{
+		Transition: &upgrade.Transition{From: "v1.34.1", To: "v1.35.1"},
+		StagedWorkers: &upgrade.StagedWorkers{Nodes: map[string]upgrade.PhaseStatus{
+			"worker-a": upgrade.PhaseStatusSuccess,
+			"worker-b": upgrade.PhaseStatusPending,
+			"worker-c": upgrade.PhaseStatusFailed,
+		}},
+		Phases: upgrade.Phases{
+			PreKubernetes:  succeeded,
+			Kubernetes:     succeeded,
+			PostKubernetes: succeeded,
+		},
+	}
+
+	info := upgradeInfoFromState(state)
+	require.NotNil(t, info)
+	assert.Equal(t, phaseWorkerNodes, info.Phase)
+	assert.Equal(t, string(upgrade.PhaseStatusFailed), info.Status)
+	assert.Equal(t, "v1.34.1", info.From)
+	assert.Equal(t, "v1.35.1", info.To)
+	assert.Equal(t, &WorkerUpgradeProgress{
+		Total: 3, Succeeded: 1, Pending: 1, Failed: 1, Remaining: 2,
+	}, info.WorkerNodes)
+}
+
+func TestUpgradeInfoKeepsRegularPhaseWithWorkerCounts(t *testing.T) {
+	t.Parallel()
+
+	state := &upgrade.State{
+		StagedWorkers: &upgrade.StagedWorkers{Nodes: map[string]upgrade.PhaseStatus{
+			"worker-a": upgrade.PhaseStatusPending,
+		}},
+		Phases: upgrade.Phases{
+			PreKubernetes: &upgrade.Phase{Status: upgrade.PhaseStatusFailed},
+		},
+	}
+
+	info := upgradeInfoFromState(state)
+	require.NotNil(t, info)
+	assert.Equal(t, "pre-kubernetes", info.Phase)
+	assert.Equal(t, string(upgrade.PhaseStatusFailed), info.Status)
+	assert.Equal(t, 1, info.WorkerNodes.Remaining)
+}
 
 func TestPrimaryRole(t *testing.T) {
 	t.Parallel()

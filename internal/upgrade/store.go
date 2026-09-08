@@ -106,13 +106,19 @@ func (s *State) AllStagedWorkersSucceeded() bool {
 	return true
 }
 
-func (s *State) AllOnPremisesPhasesSucceeded() bool {
+// AllTrackedPhasesSucceeded reports whether every phase recorded in the state
+// completed successfully. Phase-scoped upgrades intentionally leave unrelated
+// phases nil, so they must not prevent a staged worker rollout from resuming.
+func (s *State) AllTrackedPhasesSucceeded() bool {
 	if s == nil {
 		return false
 	}
 
-	// Worker upgrades require every OnPremises phase to succeed.
+	hasPhase := false
 	for _, phase := range []*Phase{
+		s.Phases.PreInfrastructure,
+		s.Phases.Infrastructure,
+		s.Phases.PostInfrastructure,
 		s.Phases.PreKubernetes,
 		s.Phases.Kubernetes,
 		s.Phases.PostKubernetes,
@@ -120,12 +126,17 @@ func (s *State) AllOnPremisesPhasesSucceeded() bool {
 		s.Phases.Distribution,
 		s.Phases.PostDistribution,
 	} {
-		if phase == nil || phase.Status != PhaseStatusSuccess {
+		if phase == nil {
+			continue
+		}
+
+		hasPhase = true
+		if phase.Status != PhaseStatusSuccess {
 			return false
 		}
 	}
 
-	return true
+	return hasPhase
 }
 
 func (s *State) MarkStagedWorker(node string, status PhaseStatus) {
