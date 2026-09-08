@@ -88,7 +88,7 @@ flags:
     force: ["upgrades", "migrations"]
   delete:
     dryRun: true
-    autoApprove: false
+    skipDepsDownload: true
 `,
 			expected: map[string]any{
 				"debug":                false,
@@ -99,7 +99,7 @@ flags:
 				"vpn-auto-connect":     true,
 				"force":                []string{"upgrades", "migrations"},
 				"dry-run":              true,
-				"auto-approve":         false,
+				"skip-deps-download":   true,
 			},
 		},
 	}
