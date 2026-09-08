@@ -362,10 +362,8 @@ func upgradeInfoFromState(state *upgrade.State) *OngoingUpgrade {
 				progress.Succeeded++
 			case upgrade.PhaseStatusFailed:
 				progress.Failed++
-			case upgrade.PhaseStatusPending:
-				progress.Pending++
 			default:
-				// Keep malformed or future statuses visible as remaining work.
+				// Keep pending, malformed, or future statuses visible as remaining work.
 				progress.Pending++
 			}
 		}
