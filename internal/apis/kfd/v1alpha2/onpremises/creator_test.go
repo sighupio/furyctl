@@ -115,7 +115,9 @@ func TestStagedUpgradeDecision(t *testing.T) {
 		{"ready selected worker", ClusterCreator{upgradeNode: "worker-a"}, ready, nil, stagedUpgradeResumeNode, false, ""},
 		{"ready selected worker with skip", ClusterCreator{upgradeNode: "worker-a", skipNodesUpgrade: true}, ready, nil, stagedUpgradeResumeNode, false, ""},
 		{"selected worker changed config", ClusterCreator{upgradeNode: "worker-a"}, ready, matchingVersion, stagedUpgradeProceed, true, "configuration changed"},
-		{"pending state with phase", ClusterCreator{upgrade: true, phase: "kubernetes"}, ready, nil, stagedUpgradeNoop, false, ""},
+		{"ready state with phase", ClusterCreator{upgrade: true, phase: "distribution"}, ready, nil, stagedUpgradeProceed, true, "without --phase"},
+		{"ready state with skip and phase", ClusterCreator{upgrade: true, skipNodesUpgrade: true, phase: "distribution"}, ready, nil, stagedUpgradeProceed, true, "without --phase"},
+		{"ready state with post apply phases", ClusterCreator{upgrade: true, postApplyPhases: []string{"distribution"}}, ready, nil, stagedUpgradeProceed, true, "--post-apply-phases"},
 	}
 
 	for _, test := range tests {
@@ -129,6 +131,10 @@ func TestStagedUpgradeDecision(t *testing.T) {
 			}
 		})
 	}
+
+	action, err := (&ClusterCreator{upgrade: true}).stagedUpgradeDecision(ready, nil, "distribution")
+	assert.ErrorContains(t, err, "without --phase")
+	assert.Equal(t, stagedUpgradeProceed, action)
 }
 
 func TestResumeStagedWorkers(t *testing.T) {

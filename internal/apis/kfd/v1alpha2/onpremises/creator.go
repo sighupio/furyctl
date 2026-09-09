@@ -608,9 +608,18 @@ func (c *ClusterCreator) stagedUpgradeDecision(
 
 		return stagedUpgradeProceed, rejectIncompleteStagedUpgrade(upgradeState, changes)
 	}
-	phaseScoped := c.phase != "" && c.phase != cluster.OperationPhaseAll
-	if c.skipNodesUpgrade || phaseScoped || startFrom != "" || len(c.postApplyPhases) > 0 {
+	phaseSelected := c.phase != cluster.OperationPhaseAll ||
+		startFrom != cluster.OperationPhaseAll ||
+		len(c.postApplyPhases) > 0
+	if c.skipNodesUpgrade && !phaseSelected {
 		return stagedUpgradeNoop, nil
+	}
+	if phaseSelected {
+		return stagedUpgradeProceed, fmt.Errorf(
+			"%w: worker nodes are pending; run 'furyctl apply --upgrade' without --phase, --start-from, or "+
+				"--post-apply-phases to complete their upgrade first.",
+			errStagedUpgrade,
+		)
 	}
 	if len(changes) != 0 {
 		return stagedUpgradeProceed, fmt.Errorf(
