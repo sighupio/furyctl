@@ -238,7 +238,7 @@ flags:
     force: ["upgrades"]
   delete:
     dryRun: true
-    autoApprove: false
+    skipVpnConfirmation: false
 `
 
 	tempDir := t.TempDir()
@@ -523,7 +523,7 @@ flags:
     force: ["upgrades", "migrations"]
   delete:
     dryRun: true
-    autoApprove: false
+    skipVpnConfirmation: false
 `
 
 	tempDir := t.TempDir()

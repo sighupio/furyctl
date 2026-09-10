@@ -20,7 +20,6 @@ import (
 	"github.com/sighupio/furyctl/internal/app"
 	"github.com/sighupio/furyctl/internal/config"
 	"github.com/sighupio/furyctl/internal/distribution"
-	"github.com/sighupio/furyctl/internal/flags"
 	"github.com/sighupio/furyctl/internal/git"
 	"github.com/sighupio/furyctl/internal/semver"
 	cobrax "github.com/sighupio/furyctl/internal/x/cobra"
@@ -47,13 +46,10 @@ func NewConfigCmd() *cobra.Command {
 		PreRun: func(cmd *cobra.Command, _ []string) {
 			cmdEvent = analytics.NewCommandEvent(cobrax.GetFullname(cmd))
 
-			// Bind the flags first: a flag on the command line has precedence over the configuration file.
+			// This command creates the configuration file, thus it cannot read flags from one:
+			// it stops when the file is already present. The root command merges the global flags.
 			if err := viper.BindPFlags(cmd.Flags()); err != nil {
 				logrus.Fatalf("error while binding flags: %v", err)
-			}
-
-			if err := flags.LoadAndMergeCommandFlags("create"); err != nil {
-				logrus.Fatalf("failed to load flags from configuration: %v", err)
 			}
 		},
 		RunE: func(_ *cobra.Command, _ []string) error {
