@@ -24,6 +24,10 @@ type Upgrade struct {
 	Enabled bool
 	From    string
 	To      string
+	// IncludesWorkerUpgrade is set from the selected raw upgrade-path template.
+	// The rendered script cannot be inspected because --skip-nodes-upgrade
+	// intentionally removes the worker playbook from it.
+	IncludesWorkerUpgrade bool
 }
 
 func (u *Upgrade) Exec(workdir, phase string) error {
@@ -38,17 +42,7 @@ func (u *Upgrade) Exec(workdir, phase string) error {
 		u.To,
 	)
 
-	from := semver.EnsureNoPrefix(u.From)
-	to := semver.EnsureNoPrefix(u.To)
-
-	// Compose the path to the upgrade script.
-	upgradePath := path.Join(
-		u.paths.WorkDir,
-		"upgrades",
-		from+"-"+to,
-	)
-
-	upgradeScript := path.Join(upgradePath, phase+".sh")
+	upgradeScript := u.scriptPath(phase)
 
 	if _, err := os.Stat(upgradeScript); err != nil {
 		if os.IsNotExist(err) {
@@ -73,6 +67,13 @@ func (u *Upgrade) Exec(workdir, phase string) error {
 	}
 
 	return nil
+}
+
+func (u *Upgrade) scriptPath(phase string) string {
+	from := semver.EnsureNoPrefix(u.From)
+	to := semver.EnsureNoPrefix(u.To)
+
+	return path.Join(u.paths.WorkDir, "upgrades", from+"-"+to, phase+".sh")
 }
 
 func New(

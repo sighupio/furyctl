@@ -37,6 +37,7 @@ const (
 	roleControlPlane = "control-plane"
 	roleMaster       = "master"
 	roleNone         = "<none>"
+	phaseWorkerNodes = "worker-nodes"
 	ingressNone      = "none"
 	thousandDec      = 1000.0
 	thousandBin      = 1024.0
@@ -352,6 +353,29 @@ func latestManagedFieldTime(raw map[string]any) time.Time {
 // upgradeInfoFromState returns the first pending/failed phase in canonical
 // order; nil if all succeeded.
 func upgradeInfoFromState(state *upgrade.State) *OngoingUpgrade {
+	var info *OngoingUpgrade
+	if state.HasStagedWorkers() {
+		progress := &WorkerUpgradeProgress{Total: len(state.StagedWorkers.Nodes)}
+		for _, status := range state.StagedWorkers.Nodes {
+			switch status {
+			case upgrade.PhaseStatusSuccess:
+				progress.Succeeded++
+			case upgrade.PhaseStatusFailed:
+				progress.Failed++
+			default:
+				// Keep pending, malformed, or future statuses visible as remaining work.
+				progress.Pending++
+			}
+		}
+		progress.Remaining = progress.Pending + progress.Failed
+
+		info = &OngoingUpgrade{WorkerNodes: progress}
+		if state.Transition != nil {
+			info.From = state.Transition.From
+			info.To = state.Transition.To
+		}
+	}
+
 	for _, phaseName := range cluster.GetPhasesOrder() {
 		reflectedPhase := reflect.ValueOf(state.Phases).FieldByName(phaseName)
 		if !reflectedPhase.IsValid() || reflectedPhase.IsNil() {
@@ -360,14 +384,27 @@ func upgradeInfoFromState(state *upgrade.State) *OngoingUpgrade {
 
 		status := reflectedPhase.Elem().FieldByName("Status").String()
 		if status == string(upgrade.PhaseStatusPending) || status == string(upgrade.PhaseStatusFailed) {
-			return &OngoingUpgrade{
-				Status: status,
-				Phase:  cluster.GetPhase(phaseName),
+			if info == nil {
+				info = &OngoingUpgrade{}
 			}
+			info.Status = status
+			info.Phase = cluster.GetPhase(phaseName)
+
+			return info
 		}
 	}
 
-	return nil
+	if info == nil || info.WorkerNodes.Remaining == 0 {
+		return nil
+	}
+
+	info.Phase = phaseWorkerNodes
+	info.Status = string(upgrade.PhaseStatusPending)
+	if info.WorkerNodes.Failed > 0 {
+		info.Status = string(upgrade.PhaseStatusFailed)
+	}
+
+	return info
 }
 
 func hasCustomPatches(configMap map[string]any) bool {

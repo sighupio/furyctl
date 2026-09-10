@@ -36,6 +36,8 @@ var (
 	errGettingDistroVersionTo   = errors.New("error while getting distribution version to")
 )
 
+const workerUpgradePlaybook = "56.upgrade-worker-nodes.yml"
+
 type PreUpgrade struct {
 	*cluster.OperationPhase
 
@@ -232,6 +234,15 @@ func (p *PreUpgrade) Exec() error {
 			return fmt.Errorf("error checking upgrade path: %w", err)
 		}
 
+		includesWorkerUpgrade, err := upgradePathIncludesWorkerNodes(
+			upgradesPath,
+			semver.EnsureNoPrefix(p.upgrade.From)+"-"+semver.EnsureNoPrefix(p.upgrade.To),
+		)
+		if err != nil {
+			return fmt.Errorf("error detecting worker-node upgrade: %w", err)
+		}
+		p.upgrade.IncludesWorkerUpgrade = includesWorkerUpgrade
+
 		// We should find a smarer way to stop the process if the reducers are from the upgrade or not
 		// if len(p.reducers) > 0 {
 		// return errUpgradeWithReducersNotAllowed
@@ -261,4 +272,21 @@ func (p *PreUpgrade) Exec() error {
 	logrus.Info("Preupgrade phase completed successfully")
 
 	return nil
+}
+
+// upgradePathIncludesWorkerNodes inspects the raw template because rendering it
+// with --skip-nodes-upgrade removes the worker playbook invocation.
+func upgradePathIncludesWorkerNodes(upgradesPath, transition string) (bool, error) {
+	templatePath := path.Join(upgradesPath, transition, "pre-kubernetes.sh.tpl")
+
+	data, err := os.ReadFile(templatePath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return false, nil
+		}
+
+		return false, fmt.Errorf("error reading %s: %w", templatePath, err)
+	}
+
+	return strings.Contains(string(data), workerUpgradePlaybook), nil
 }

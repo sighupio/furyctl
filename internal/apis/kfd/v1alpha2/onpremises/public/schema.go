@@ -26,10 +26,22 @@ type Spec struct {
 }
 
 type Kubernetes struct {
-	Advanced *Advanced `yaml:"advanced,omitempty"`
+	Nodes    []NodeGroup `yaml:"nodes,omitempty"`
+	Advanced *Advanced   `yaml:"advanced,omitempty"`
 	// PkiFolder is the folder that holds the CA certificates and keys for the control plane and etcd.
 	// The playbooks read them from the `master` and `etcd` subfolders.
 	PkiFolder *string `yaml:"pkiFolder,omitempty"`
+}
+
+// NodeGroup is a group of worker nodes with the same Kubernetes role.
+type NodeGroup struct {
+	Name  string `yaml:"name"`
+	Hosts []Host `yaml:"hosts"`
+}
+
+// Host contains the data needed to address a worker node.
+type Host struct {
+	Name string `yaml:"name"`
 }
 
 type Advanced struct {
