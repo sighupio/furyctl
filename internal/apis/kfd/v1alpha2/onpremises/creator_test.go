@@ -9,6 +9,7 @@ package onpremises
 import (
 	"errors"
 	"fmt"
+	"os"
 	"testing"
 
 	r3diff "github.com/r3labs/diff/v3"
@@ -194,6 +195,35 @@ func TestResumeStagedWorkers(t *testing.T) {
 			assert.Equal(t, test.wantStores, configStore.storeKFDCalls)
 		})
 	}
+}
+
+func TestResumeStagedWorkerBatchDryRunDoesNotAskForConfirmation(t *testing.T) {
+	state := completedStagedState(map[string]upgrade.PhaseStatus{
+		"worker-a": upgrade.PhaseStatusPending,
+	})
+	upgradeStore := &fakeUpgradeStorer{}
+	workerUpgrader := &fakeWorkerUpgrader{}
+	creator := &ClusterCreator{
+		dryRun:            true,
+		upgradeStateStore: upgradeStore,
+	}
+
+	stdin, err := os.Open(os.DevNull)
+	require.NoError(t, err)
+	t.Cleanup(func() { require.NoError(t, stdin.Close()) })
+
+	originalStdin := os.Stdin
+	os.Stdin = stdin
+	t.Cleanup(func() { os.Stdin = originalStdin })
+
+	require.NoError(t, creator.resumeStagedWorkerBatch(
+		workerUpgrader,
+		state,
+		map[string]any{"spec": "target"},
+	))
+	assert.Equal(t, []string{"worker-a"}, workerUpgrader.nodes)
+	assert.Empty(t, upgradeStore.storedWorkerStates)
+	assert.False(t, upgradeStore.deleted)
 }
 
 func TestPersistStagedUpgradeReady(t *testing.T) {

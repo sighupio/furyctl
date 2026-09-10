@@ -617,7 +617,7 @@ func (c *ClusterCreator) stagedUpgradeDecision(
 	if phaseSelected {
 		return stagedUpgradeProceed, fmt.Errorf(
 			"%w: worker nodes are pending; run 'furyctl apply --upgrade' without --phase, --start-from, or "+
-				"--post-apply-phases to complete their upgrade first.",
+				"--post-apply-phases to complete their upgrade first",
 			errStagedUpgrade,
 		)
 	}
@@ -789,22 +789,24 @@ func (c *ClusterCreator) resumeStagedWorkerBatch(
 		return c.resumeStagedWorkers(kubernetes, upgradeState, nodes, renderedConfig)
 	}
 
-	// Do not list worker node names because a cluster can have hundreds of workers.
-	message := fmt.Sprintf(
-		"\nResuming staged upgrade %s to %s for %d pending worker nodes.",
-		upgradeState.Transition.From,
-		upgradeState.Transition.To,
-		len(nodes),
-	)
-	confirm, err := cluster.AskConfirmationWithMessage(
-		cluster.IsForceEnabledForFeature(c.force, cluster.ForceFeatureUpgrades),
-		message,
-	)
-	if err != nil {
-		return fmt.Errorf("%w: error asking for confirmation: %w", errStagedUpgrade, err)
-	}
-	if !confirm {
-		return ErrAbortedByUser
+	if !c.dryRun {
+		// Do not list worker node names because a cluster can have hundreds of workers.
+		message := fmt.Sprintf(
+			"\nResuming staged upgrade %s to %s for %d pending worker nodes.",
+			upgradeState.Transition.From,
+			upgradeState.Transition.To,
+			len(nodes),
+		)
+		confirm, err := cluster.AskConfirmationWithMessage(
+			cluster.IsForceEnabledForFeature(c.force, cluster.ForceFeatureUpgrades),
+			message,
+		)
+		if err != nil {
+			return fmt.Errorf("%w: error asking for confirmation: %w", errStagedUpgrade, err)
+		}
+		if !confirm {
+			return ErrAbortedByUser
+		}
 	}
 
 	return c.resumeStagedWorkers(kubernetes, upgradeState, nodes, renderedConfig)
