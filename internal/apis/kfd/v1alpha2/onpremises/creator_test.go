@@ -119,6 +119,9 @@ func TestStagedUpgradeDecision(t *testing.T) {
 		{"ready state with phase", ClusterCreator{upgrade: true, phase: "distribution"}, ready, nil, stagedUpgradeProceed, true, "without --phase"},
 		{"ready state with skip and phase", ClusterCreator{upgrade: true, skipNodesUpgrade: true, phase: "distribution"}, ready, nil, stagedUpgradeProceed, true, "without --phase"},
 		{"ready state with post apply phases", ClusterCreator{upgrade: true, postApplyPhases: []string{"distribution"}}, ready, nil, stagedUpgradeProceed, true, "--post-apply-phases"},
+		{"forced phase", ClusterCreator{upgrade: true, phase: "distribution", force: []string{"upgrades"}}, ready, nil, stagedUpgradeProceed, false, ""},
+		{"post apply phases forced for all", ClusterCreator{upgrade: true, postApplyPhases: []string{"distribution"}, force: []string{"all"}}, ready, nil, stagedUpgradeProceed, false, ""},
+		{"forced phase with changes", ClusterCreator{upgrade: true, phase: "distribution", force: []string{"upgrades"}}, ready, matchingVersion, stagedUpgradeProceed, true, "configuration changed"},
 	}
 
 	for _, test := range tests {
@@ -135,6 +138,11 @@ func TestStagedUpgradeDecision(t *testing.T) {
 
 	action, err := (&ClusterCreator{upgrade: true}).stagedUpgradeDecision(ready, nil, "distribution")
 	assert.ErrorContains(t, err, "without --phase")
+	assert.Equal(t, stagedUpgradeProceed, action)
+
+	action, err = (&ClusterCreator{upgrade: true, force: []string{"upgrades"}}).
+		stagedUpgradeDecision(ready, nil, "distribution")
+	assert.NoError(t, err)
 	assert.Equal(t, stagedUpgradeProceed, action)
 }
 

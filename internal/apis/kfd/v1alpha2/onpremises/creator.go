@@ -614,17 +614,24 @@ func (c *ClusterCreator) stagedUpgradeDecision(
 	if c.skipNodesUpgrade && !phaseSelected {
 		return stagedUpgradeNoop, nil
 	}
-	if phaseSelected {
-		return stagedUpgradeProceed, fmt.Errorf(
-			"%w: worker nodes are pending; run 'furyctl apply --upgrade' without --phase, --start-from, or "+
-				"--post-apply-phases to complete their upgrade first",
-			errStagedUpgrade,
-		)
-	}
 	if len(changes) != 0 {
 		return stagedUpgradeProceed, fmt.Errorf(
 			"%w: configuration changed while workers are pending; "+
 				"complete the staged worker upgrade before changing configuration",
+			errStagedUpgrade,
+		)
+	}
+	if phaseSelected {
+		if cluster.IsForceEnabledForFeature(c.force, cluster.ForceFeatureUpgrades) {
+			logrus.Warn("Worker nodes have not been upgraded yet, but the force flag was set, so the process will continue. " +
+				"This can leave the cluster in an unsupported state.")
+
+			return stagedUpgradeProceed, nil
+		}
+
+		return stagedUpgradeProceed, fmt.Errorf(
+			"%w: worker nodes are pending; run 'furyctl apply --upgrade' without --phase, --start-from, or "+
+				"--post-apply-phases to complete their upgrade first",
 			errStagedUpgrade,
 		)
 	}
