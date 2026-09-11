@@ -35,8 +35,6 @@ var (
 	ErrKubernetesVersionNotFound = errors.New("kubernetes version not found in immutable installer spec")
 	ErrSandboxTagOrRegistryEmpty = errors.New("sandboxTag and imageRegistry are required in immutable installer spec")
 	ErrFlatcarArtifactsNotFound  = errors.New("flatcar artifacts not found for architecture")
-	ErrButaneConversionFatal     = errors.New("butane conversion fatal errors")
-	ErrButaneFatalErrors         = errors.New("butane translation has fatal errors")
 	ErrImmutableConfigMalformed  = errors.New("immutable furyctl config is malformed")
 	ErrSysextChecksumMismatch    = errors.New("sysext package checksum mismatch")
 )
@@ -482,11 +480,6 @@ func (i *Infrastructure) generateInstallFlatcarIgnitionFiles() error {
 			return fmt.Errorf("error converting %s to ignition: %w", nodeConfigPath, err)
 		}
 
-		// Check for fatal errors in report.
-		if report.IsFatal() {
-			return fmt.Errorf("%w for %s: %s", ErrButaneConversionFatal, node.Hostname, report.String())
-		}
-
 		// Log warnings if present.
 		if len(report.Entries) > 0 {
 			logrus.Warnf("Butane conversion warnings for %s: %s", node.Hostname, report.String())
@@ -584,17 +577,12 @@ func convertButaneToIgnition(butanePath, ignitionPath string) error {
 		return fmt.Errorf("error converting butane to ignition: %w", err)
 	}
 
-	// 4. Check for fatal errors in report.
-	if report.IsFatal() {
-		return fmt.Errorf("%w: %s", ErrButaneFatalErrors, report.String())
-	}
-
-	// 5. Log warnings if present.
+	// 4. Log warnings if present.
 	if len(report.Entries) > 0 {
 		logrus.Warnf("Butane conversion warnings: %s", report.String())
 	}
 
-	// 6. Write Ignition JSON.
+	// 5. Write Ignition JSON.
 	if err := os.WriteFile(ignitionPath, ignitionJSON, iox.FullRWPermAccess); err != nil {
 		return fmt.Errorf("error writing ignition file %s: %w", ignitionPath, err)
 	}
