@@ -597,6 +597,22 @@ func TestWriteRefusesAPathThatHoldsNoSecret(t *testing.T) {
 				require.NoError(t, os.Mkdir(file, 0o700))
 			},
 		},
+		{
+			// The `{file://}` notation reads the file with furyctl, thus a file that furyctl cannot
+			// read holds no value for the cluster: see keepsASecret.
+			desc: "a file that furyctl cannot read",
+			build: func(t *testing.T, file string) {
+				t.Helper()
+				require.NoError(t, os.WriteFile(file, []byte("a value"), 0o600))
+				require.NoError(t, os.Chmod(file, 0o000))
+
+				// An account with no limits reads such a file, and the test then has nothing to
+				// report. The pipelines run as one of those accounts.
+				if _, err := os.ReadFile(file); err == nil {
+					t.Skip("this account reads a file with no permissions for it")
+				}
+			},
+		},
 	}
 
 	for _, test := range tests {

@@ -605,8 +605,7 @@ func writeNew(file string, generate func() (string, error)) (bool, error) {
 // O_EXCL flag in the same way as a file, and a file with no value in it gives the cluster an empty
 // secret, thus furyctl looks at both.
 //
-// A file that furyctl cannot read keeps its value. Another account can hold a secret that this one
-// cannot see, and the cluster reads the file with that account.
+// Only furyctl reads a `{file://}` value: a file that it cannot read gives the cluster nothing.
 func keepsASecret(file string) error {
 	info, err := os.Stat(file)
 	if err != nil {
@@ -619,13 +618,7 @@ func keepsASecret(file string) error {
 
 	content, err := os.ReadFile(file)
 	if err != nil {
-		logrus.Warnf(
-			"furyctl keeps the value of %s, because it cannot read that file: %v. Make sure that the "+
-				"file holds the secret that the cluster needs.",
-			file, err,
-		)
-
-		return nil
+		return fmt.Errorf("%w: furyctl cannot read the file %s: %w", ErrFileHoldsNoSecret, file, err)
 	}
 
 	if strings.TrimSpace(string(content)) == "" {
