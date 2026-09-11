@@ -135,9 +135,11 @@ You can limit the creation of the PKI to just etcd or just Kubernetes using the 
 				return fmt.Errorf("PKI creation failed with error: %w", err)
 			}
 
+			logrus.Infof("PKI files successfully created at %s", pkiPath)
+			warnSecretFiles(pkiPath)
+
 			cmdEvent.AddSuccessMessage("PKI files successfully created at" + pkiPath)
 			tracker.Track(cmdEvent)
-			logrus.Infof("PKI files successfully created at %s", pkiPath)
 
 			return nil
 		},
