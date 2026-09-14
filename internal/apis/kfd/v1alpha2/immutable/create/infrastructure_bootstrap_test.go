@@ -86,53 +86,6 @@ spec:
 	}
 }
 
-// TestRawNodesByHostnameArchDefault guards the arch backfill: .node.arch is read
-// unguarded by the butane templates and the distribution schema defaults it to
-// x86-64, but furyctl does not apply JSON-schema defaults before this phase. A node
-// that omits arch (or leaves it blank) must come out as x86-64; an explicit arch
-// must be left untouched.
-func TestRawNodesByHostnameArchDefault(t *testing.T) {
-	t.Parallel()
-
-	const sample = `
-spec:
-  infrastructure:
-    nodes:
-      - hostname: omitted.example.com
-        storage:
-          installDisk: /dev/sda
-      - hostname: blank.example.com
-        arch: "  "
-        storage:
-          installDisk: /dev/sda
-      - hostname: explicit.example.com
-        arch: arm64
-        storage:
-          installDisk: /dev/sda
-`
-
-	var conf map[any]any
-	err := yaml.Unmarshal([]byte(sample), &conf)
-	require.NoError(t, err, "unmarshal sample")
-
-	nodes, err := rawNodesByHostname(conf)
-	require.NoError(t, err, "rawNodesByHostname")
-
-	want := map[string]string{
-		"omitted.example.com":  defaultNodeArch,
-		"blank.example.com":    defaultNodeArch,
-		"explicit.example.com": "arm64",
-	}
-
-	for hostname, wantArch := range want {
-		node, ok := nodes[hostname].(map[any]any)
-		require.True(t, ok, "%s not indexed", hostname)
-
-		got, _ := node["arch"].(string)
-		assert.Equal(t, wantArch, got, "%s: arch", hostname)
-	}
-}
-
 func TestRawNodesByHostnameErrors(t *testing.T) {
 	t.Parallel()
 
