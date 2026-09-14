@@ -41,13 +41,6 @@ var (
 	ErrSysextChecksumMismatch    = errors.New("sysext package checksum mismatch")
 )
 
-// defaultNodeArch mirrors the schema default of spec.infrastructure.nodes[].arch
-// from the distribution's immutable JSON schema. Because furyctl does not apply
-// JSON-schema defaults before the butane phase, and the butane templates read the
-// node arch value unguarded, a node that omits arch would fail to render unless we
-// backfill the default here.
-const defaultNodeArch = "x86-64"
-
 type immutableManifest struct {
 	Kubernetes map[string]assets `yaml:"kubernetes"`
 }
@@ -170,13 +163,6 @@ func rawNodesByHostname(conf map[any]any) (map[string]any, error) {
 		hostname, ok := node["hostname"].(string)
 		if !ok || hostname == "" {
 			return nil, fmt.Errorf("%w: a node is missing its hostname", ErrImmutableConfigMalformed)
-		}
-
-		// Backfill the schema default for arch, which the butane templates read
-		// unguarded. Treat an empty or blank value the same as an omitted one.
-		arch, ok := node["arch"].(string)
-		if !ok || strings.TrimSpace(arch) == "" {
-			node["arch"] = defaultNodeArch
 		}
 
 		byHostname[hostname] = node
