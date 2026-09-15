@@ -7,6 +7,7 @@ package butane
 import (
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/coreos/butane/config"
 	"github.com/coreos/butane/config/common"
@@ -49,7 +50,7 @@ func NewRunnerWithOptions(options common.TranslateBytesOptions) *Runner {
 func (r *Runner) Convert(butaneConfig []byte) ([]byte, error) {
 	ignitionJSON, rpt, err := config.TranslateBytes(butaneConfig, r.options)
 	if err != nil {
-		return nil, fmt.Errorf("error translating butane config: %w", err)
+		return nil, translationError(err, rpt)
 	}
 
 	if rpt.IsFatal() {
@@ -64,10 +65,21 @@ func (r *Runner) Convert(butaneConfig []byte) ([]byte, error) {
 func (r *Runner) ConvertWithReport(butaneConfig []byte) ([]byte, report.Report, error) {
 	ignitionJSON, rpt, err := config.TranslateBytes(butaneConfig, r.options)
 	if err != nil {
-		return nil, rpt, fmt.Errorf("error translating butane config: %w", err)
+		return nil, rpt, translationError(err, rpt)
 	}
 
 	return ignitionJSON, rpt, nil
+}
+
+// translationError wraps a translation failure together with the report, which
+// holds the details the user needs to fix the config (path, line, column and
+// reason). Butane returns those in the report, not in the error.
+func translationError(err error, rpt report.Report) error {
+	if details := strings.TrimSpace(rpt.String()); details != "" {
+		return fmt.Errorf("error translating butane config: %w:\n%s", err, details)
+	}
+
+	return fmt.Errorf("error translating butane config: %w", err)
 }
 
 // SetFilesDir sets the directory for embedding local files in butane configs.

@@ -17,6 +17,7 @@ Welcome to the latest release of `furyctl` maintained by SIGHUP by ReeVo team.
 - [[#739](https://github.com/sighupio/furyctl/pull/739)] Makes furyctl distinguish an error "the cluster doesn't exist yet" from any other preflight failure on OnPremises clusters. Supports both the renamed `fetch-admin-conf-playbook.yaml` and the legacy `verify-playbook.yaml` used by older SD versions.
 - [[#750](https://github.com/sighupio/furyctl/issues/750)] All kinds: the `flags` section of `furyctl.yaml` now accepts every flag of its commands. `delete` accepts `force`, `skipDepsDownload`, `skipDepsValidation` and `vpnAutoConnect`. `get` accepts `format`, `from` and `kind`. Before this release furyctl stopped with `flag 'X' is not supported`, although the command has the flag. The documentation of the `flags` section now gives the same list of flags as furyctl accepts.
 - [[#754](https://github.com/sighupio/furyctl/pull/754)] OnPremises: after `apply --upgrade --skip-nodes-upgrade`, a later `apply --upgrade` now upgrades only the worker nodes that are still pending or failed, one at a time. furyctl saves the result after each worker node, so an interrupted upgrade continues from the remaining nodes. While worker nodes are pending, a plain apply and partial upgrade options stop to prevent an unsafe apply; `--force upgrades` or `--force all` allows partial upgrade options to continue with a warning.
+- [[#759](https://github.com/sighupio/furyctl/pull/759)] Immutable: surface butane-to-ignition translation errors to the user.
 
 ## Breaking Changes 💔
 
