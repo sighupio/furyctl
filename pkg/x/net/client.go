@@ -14,6 +14,7 @@ import (
 	"regexp"
 
 	"github.com/sighupio/furyctl/internal/git"
+	"github.com/sighupio/furyctl/internal/semver"
 	iox "github.com/sighupio/furyctl/internal/x/io"
 )
 
@@ -24,7 +25,34 @@ var (
 	ErrCannotCopyCacheToDestination = errors.New("cannot copy cache to destination")
 	ErrCannotClearCache             = errors.New("cannot clear cache")
 	URLPrefixRegexp                 = regexp.MustCompile(`^[A-z0-9]+::`)
+
+	// Captures the git ref of a download URL, as in "?ref=v1.2.3&depth=1".
+	refRegexp = regexp.MustCompile(`[?&]ref=([^&]*)`)
+	// Matches a full git commit SHA.
+	commitSHARegexp = regexp.MustCompile(`^[0-9a-fA-F]{40}$`)
 )
+
+// immutableRef reports whether the ref of src always resolves to the same commit.
+// A version tag and a commit SHA do. A branch does not.
+//
+// The cache key is the URL, which cannot tell two commits of one branch apart. A
+// cached branch therefore stays stale for ever: a push to that branch is invisible
+// to every later run. Only an immutable ref is safe to serve from the cache.
+func immutableRef(src string) bool {
+	match := refRegexp.FindStringSubmatch(src)
+	if match == nil || match[1] == "" {
+		// No ref means the default branch, which moves.
+		return false
+	}
+
+	ref := match[1]
+
+	if _, err := semver.NewVersion(ref); err == nil {
+		return true
+	}
+
+	return commitSHARegexp.MatchString(ref)
+}
 
 type Client interface {
 	Download(src, dst string) error
@@ -68,6 +96,20 @@ func (d *LocalCacheClientDecorator) Download(src, dst string) error {
 	hlc, err := d.hasLocalCache(csrc)
 	if err != nil {
 		return fmt.Errorf("%w: %w", ErrCannotCacheDownload, err)
+	}
+
+	// A branch moves, so its cached copy can be behind the remote. Drop the entry and
+	// the stale destination, then download again.
+	if hlc && !immutableRef(csrc) {
+		if err := d.ClearItem(csrc); err != nil {
+			return fmt.Errorf("%w: %w", ErrCannotCacheDownload, err)
+		}
+
+		if err := os.RemoveAll(dst); err != nil {
+			return fmt.Errorf("%w: %w", ErrCannotCacheDownload, err)
+		}
+
+		hlc = false
 	}
 
 	if hlc {
