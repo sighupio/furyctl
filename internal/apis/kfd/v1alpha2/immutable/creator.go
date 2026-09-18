@@ -469,6 +469,40 @@ func convertValue(v any) any {
 	}
 }
 
+// readUpgradeState reads a stored upgrade state, and gives the phase to resume from.
+//
+// It reads the state twice, because the two answers need two different readings of it.
+// The phase to resume from needs the phases exactly as the earlier run stored them:
+// GetLatestResumablePhase skips a phase that the state does not hold, so a phase that
+// this version of furyctl adds must stay absent for that decision. Otherwise every
+// resumed upgrade starts again from the first phase of the order.
+//
+// The run itself needs every phase to exist, because a write to a phase that the state
+// does not hold panics, and a state that an older furyctl version wrote has no
+// infrastructure sub-phases. A read over a complete state keeps every stored status and
+// leaves the rest pending.
+func (c *ClusterCreator) readUpgradeState(stored []byte, startFrom string) (*upgrade.State, string, error) {
+	storedState := &upgrade.State{}
+	if err := yamlx.UnmarshalV3(stored, storedState); err != nil {
+		return nil, "", fmt.Errorf("error while unmarshalling upgrade state: %w", err)
+	}
+
+	if startFrom == "" {
+		startFrom = c.upgradeStateStore.GetLatestResumablePhase(storedState)
+
+		logrus.Infof("An upgrade is already in progress, resuming from %s phase.\n"+
+			"If you wish to start from a different phase, you can use the --start-from "+
+			"flag to select the desired phase to resume.", startFrom)
+	}
+
+	upgradeState := c.initUpgradeState()
+	if err := yamlx.UnmarshalV3(stored, upgradeState); err != nil {
+		return nil, "", fmt.Errorf("error while unmarshalling upgrade state: %w", err)
+	}
+
+	return upgradeState, startFrom, nil
+}
+
 func (c *ClusterCreator) allPhases(
 	startFrom string,
 	infrastructurePhase upgrade.OperatorPhase,
@@ -484,18 +518,9 @@ func (c *ClusterCreator) allPhases(
 	if upgr.Enabled && !c.dryRun {
 		s, err := c.upgradeStateStore.Get()
 		if err == nil {
-			if err := yamlx.UnmarshalV3(s, &upgradeState); err != nil {
-				return fmt.Errorf("error while unmarshalling upgrade state: %w", err)
-			}
-
-			if startFrom == "" {
-				resumableState := c.upgradeStateStore.GetLatestResumablePhase(upgradeState)
-
-				logrus.Infof("An upgrade is already in progress, resuming from %s phase.\n"+
-					"If you wish to start from a different phase, you can use the --start-from "+
-					"flag to select the desired phase to resume.", resumableState)
-
-				startFrom = resumableState
+			upgradeState, startFrom, err = c.readUpgradeState(s, startFrom)
+			if err != nil {
+				return err
 			}
 		} else {
 			logrus.Debugf("error while getting upgrade state: %v", err)

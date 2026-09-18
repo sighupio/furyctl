@@ -19,6 +19,7 @@ Welcome to the latest release of `furyctl` maintained by SIGHUP by ReeVo team.
 - [[#754](https://github.com/sighupio/furyctl/pull/754)] OnPremises: after `apply --upgrade --skip-nodes-upgrade`, a later `apply --upgrade` now upgrades only the worker nodes that are still pending or failed, one at a time. furyctl saves the result after each worker node, so an interrupted upgrade continues from the remaining nodes. While worker nodes are pending, a plain apply and partial upgrade options stop to prevent an unsafe apply; `--force upgrades` or `--force all` allows partial upgrade options to continue with a warning.
 - [[#759](https://github.com/sighupio/furyctl/pull/759)] Immutable: surface butane-to-ignition translation errors to the user.
 - [[#762](https://github.com/sighupio/furyctl/pull/762)] furyctl local cache was not being invalidate when commits have landed on the upstream. Now it does.
+- [[#NNN](https://github.com/sighupio/furyctl/pull/NNN)] Immutable: furyctl no longer stops with a panic when it resumes an upgrade whose stored state does not hold every phase. A state that an older furyctl version wrote has no infrastructure sub-phases, and the load balancer upgrade writes them. furyctl now reads the stored state over a complete one, so every phase exists. It still reads the state as it was stored for the decision of which phase to resume from.
 
 ## Breaking Changes 💔
 
