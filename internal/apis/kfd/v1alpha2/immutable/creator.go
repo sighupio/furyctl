@@ -38,6 +38,7 @@ var (
 	ErrUnsupportedPhase              = errors.New("unsupported phase")
 	ErrAbortedByUser                 = errors.New("operation aborted by user")
 	ErrClusterCreationNotImplemented = errors.New("cluster creation not implemented for Immutable kind")
+	ErrUpgradeNodeUnsupported        = errors.New("unsupported --upgrade-node host")
 )
 
 type ClusterCreator struct {
@@ -129,6 +130,10 @@ func (*ClusterCreator) GetPhasePath(phase string) (string, error) {
 }
 
 func (c *ClusterCreator) Create(startFrom string, _, podRunningCheckTimeout int) error {
+	if err := c.validateUpgradeNode(startFrom); err != nil {
+		return err
+	}
+
 	upgr := upgrade.New(c.paths, string(c.furyctlConf.Kind))
 
 	infra := createInfrastructurePhase(c, upgr)
@@ -198,15 +203,9 @@ func (c *ClusterCreator) Create(startFrom string, _, podRunningCheckTimeout int)
 		return fmt.Errorf("error while executing preflight phase: %w", err)
 	}
 
-	rulesExtractor, err := premrules.NewImmutableClusterRulesExtractor(
-		c.paths.DistroPath,
-		renderedConfig,
-		supported.Phases(),
-	)
+	rulesExtractor, err := c.newRulesExtractor(renderedConfig)
 	if err != nil {
-		if !errors.Is(err, premrules.ErrReadingRulesFile) {
-			return fmt.Errorf("error while creating rules builder: %w", err)
-		}
+		return err
 	}
 
 	rdcsInfrastructure := reducers.Build(
@@ -410,6 +409,84 @@ func (c *ClusterCreator) RenderConfig() (map[string]any, error) {
 	}), nil
 }
 
+// newRulesExtractor builds the rules extractor of the distribution. A distribution
+// without a rules file is not an error: the extractor is then empty.
+func (c *ClusterCreator) newRulesExtractor(renderedConfig map[string]any) (*premrules.ImmutableExtractor, error) {
+	rulesExtractor, err := premrules.NewImmutableClusterRulesExtractor(
+		c.paths.DistroPath,
+		renderedConfig,
+		supported.Phases(),
+	)
+	if err != nil && !errors.Is(err, premrules.ErrReadingRulesFile) {
+		return nil, fmt.Errorf("error while creating rules builder: %w", err)
+	}
+
+	return rulesExtractor, nil
+}
+
+// validateUpgradeNode rejects a --upgrade-node host that this kind cannot upgrade on its
+// own, and a phase selection that does not match the role of that host. The role selects
+// the phase: the infrastructure phase upgrades a load balancer and the kubernetes phase
+// upgrades a worker node. A phase that the user selects as well either does no work, or
+// it runs the playbook of the other role against the host. A run for one host also
+// returns before the extra phases, so --post-apply-phases belongs to the same rule.
+//
+// Only the Immutable kind has this rule, because only here does the phase depend on the
+// role. OnPremises upgrades every --upgrade-node host in its kubernetes phase.
+func (c *ClusterCreator) validateUpgradeNode(startFrom string) error {
+	if _, err := c.upgradeNodeRole(); err != nil {
+		return err
+	}
+
+	if c.upgradeNode == "" {
+		return nil
+	}
+
+	if c.phase != cluster.OperationPhaseAll ||
+		startFrom != StartFromFlagNotSet ||
+		len(c.postApplyPhases) > 0 {
+		return fmt.Errorf(
+			"%w: %q selects its own phase, so --phase, --start-from and --post-apply-phases "+
+				"cannot be used with it",
+			ErrUpgradeNodeUnsupported,
+			c.upgradeNode,
+		)
+	}
+
+	return nil
+}
+
+// upgradeNodeRole resolves the role of the --upgrade-node host. Only a worker and a
+// load balancer have a single-host upgrade path. The control plane and etcd are
+// upgraded as a group, with the quorum guarded.
+func (c *ClusterCreator) upgradeNodeRole() (string, error) {
+	if c.upgradeNode == "" {
+		return public.NodeRoleNone, nil
+	}
+
+	role := c.furyctlConf.NodeRole(c.upgradeNode)
+
+	switch role {
+	case public.NodeRoleWorker, public.NodeRoleLoadBalancer:
+		return role, nil
+
+	case public.NodeRoleNone:
+		return "", fmt.Errorf(
+			"%w: %q is not a host of this cluster configuration",
+			ErrUpgradeNodeUnsupported,
+			c.upgradeNode,
+		)
+
+	default:
+		return "", fmt.Errorf(
+			"%w: %q is a %s host, and only worker and load balancer hosts can be upgraded one at a time",
+			ErrUpgradeNodeUnsupported,
+			c.upgradeNode,
+			role,
+		)
+	}
+}
+
 func createInfrastructurePhase(c *ClusterCreator, upgr *upgrade.Upgrade) *create.Infrastructure {
 	infraPath := filepath.Join(c.paths.WorkDir, "infrastructure")
 
@@ -469,6 +546,40 @@ func convertValue(v any) any {
 	}
 }
 
+// readUpgradeState reads a stored upgrade state, and gives the phase to resume from.
+//
+// It reads the state twice, because the two answers need two different readings of it.
+// The phase to resume from needs the phases exactly as the earlier run stored them:
+// GetLatestResumablePhase skips a phase that the state does not hold, so a phase that
+// this version of furyctl adds must stay absent for that decision. Otherwise every
+// resumed upgrade starts again from the first phase of the order.
+//
+// The run itself needs every phase to exist, because a write to a phase that the state
+// does not hold panics, and a state that an older furyctl version wrote has no
+// infrastructure sub-phases. A read over a complete state keeps every stored status and
+// leaves the rest pending.
+func (c *ClusterCreator) readUpgradeState(stored []byte, startFrom string) (*upgrade.State, string, error) {
+	storedState := &upgrade.State{}
+	if err := yamlx.UnmarshalV3(stored, storedState); err != nil {
+		return nil, "", fmt.Errorf("error while unmarshalling upgrade state: %w", err)
+	}
+
+	if startFrom == "" {
+		startFrom = c.upgradeStateStore.GetLatestResumablePhase(storedState)
+
+		logrus.Infof("An upgrade is already in progress, resuming from %s phase.\n"+
+			"If you wish to start from a different phase, you can use the --start-from "+
+			"flag to select the desired phase to resume.", startFrom)
+	}
+
+	upgradeState := c.initUpgradeState()
+	if err := yamlx.UnmarshalV3(stored, upgradeState); err != nil {
+		return nil, "", fmt.Errorf("error while unmarshalling upgrade state: %w", err)
+	}
+
+	return upgradeState, startFrom, nil
+}
+
 func (c *ClusterCreator) allPhases(
 	startFrom string,
 	infrastructurePhase upgrade.OperatorPhase,
@@ -484,18 +595,9 @@ func (c *ClusterCreator) allPhases(
 	if upgr.Enabled && !c.dryRun {
 		s, err := c.upgradeStateStore.Get()
 		if err == nil {
-			if err := yamlx.UnmarshalV3(s, &upgradeState); err != nil {
-				return fmt.Errorf("error while unmarshalling upgrade state: %w", err)
-			}
-
-			if startFrom == "" {
-				resumableState := c.upgradeStateStore.GetLatestResumablePhase(upgradeState)
-
-				logrus.Infof("An upgrade is already in progress, resuming from %s phase.\n"+
-					"If you wish to start from a different phase, you can use the --start-from "+
-					"flag to select the desired phase to resume.", resumableState)
-
-				startFrom = resumableState
+			upgradeState, startFrom, err = c.readUpgradeState(s, startFrom)
+			if err != nil {
+				return err
 			}
 		} else {
 			logrus.Debugf("error while getting upgrade state: %v", err)
@@ -524,6 +626,12 @@ func (c *ClusterCreator) allPhases(
 
 		if err := infrastructurePhase.Exec(c.getInfrastructureSubPhase(startFrom), upgradeState); err != nil {
 			return fmt.Errorf("error while executing infrastructure phase: %w", err)
+		}
+
+		// A load balancer is upgraded by the infrastructure phase alone. It is not a
+		// Kubernetes node, so the phases below have nothing to do with it.
+		if c.upgradeNode != "" && c.furyctlConf.NodeRole(c.upgradeNode) == public.NodeRoleLoadBalancer {
+			return nil
 		}
 	}
 
@@ -625,13 +733,15 @@ func (c *ClusterCreator) extraPhases(
 func (*ClusterCreator) initUpgradeState() *upgrade.State {
 	return &upgrade.State{
 		Phases: upgrade.Phases{
-			Infrastructure:   &upgrade.Phase{Status: upgrade.PhaseStatusPending},
-			PreKubernetes:    &upgrade.Phase{Status: upgrade.PhaseStatusPending},
-			Kubernetes:       &upgrade.Phase{Status: upgrade.PhaseStatusPending},
-			PostKubernetes:   &upgrade.Phase{Status: upgrade.PhaseStatusPending},
-			PreDistribution:  &upgrade.Phase{Status: upgrade.PhaseStatusPending},
-			Distribution:     &upgrade.Phase{Status: upgrade.PhaseStatusPending},
-			PostDistribution: &upgrade.Phase{Status: upgrade.PhaseStatusPending},
+			PreInfrastructure:  &upgrade.Phase{Status: upgrade.PhaseStatusPending},
+			Infrastructure:     &upgrade.Phase{Status: upgrade.PhaseStatusPending},
+			PostInfrastructure: &upgrade.Phase{Status: upgrade.PhaseStatusPending},
+			PreKubernetes:      &upgrade.Phase{Status: upgrade.PhaseStatusPending},
+			Kubernetes:         &upgrade.Phase{Status: upgrade.PhaseStatusPending},
+			PostKubernetes:     &upgrade.Phase{Status: upgrade.PhaseStatusPending},
+			PreDistribution:    &upgrade.Phase{Status: upgrade.PhaseStatusPending},
+			Distribution:       &upgrade.Phase{Status: upgrade.PhaseStatusPending},
+			PostDistribution:   &upgrade.Phase{Status: upgrade.PhaseStatusPending},
 		},
 	}
 }
