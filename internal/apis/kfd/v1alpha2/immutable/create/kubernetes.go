@@ -154,7 +154,9 @@ func (k *Kubernetes) runWorkerUpgradePlaybooks(
 	nodes []string,
 	onResult func(node string, status upgrade.PhaseStatus) error,
 ) error {
-	for _, node := range nodes {
+	for i, node := range nodes {
+		logrus.Infof("Upgrading the worker node %s (%d of %d)...", node, i+1, len(nodes))
+
 		if _, err := k.ansibleRunner.Playbook(workerUpgradePlaybook, "--limit", node); err != nil {
 			workerErr := fmt.Errorf("error upgrading node %s: %w", node, err)
 
