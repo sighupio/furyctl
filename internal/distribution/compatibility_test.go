@@ -626,6 +626,16 @@ func TestImmutableCheckIsCompatible(t *testing.T) {
 			distributionVersion: "v1.35.2",
 			expected:            false,
 		},
+		{
+			name:                "should return true if distribution version equals 1.36.0",
+			distributionVersion: "v1.36.0",
+			expected:            true,
+		},
+		{
+			name:                "should return false if distribution version is greater than 1.36.0",
+			distributionVersion: "v1.36.1",
+			expected:            false,
+		},
 	}
 
 	for _, tc := range testCases {
