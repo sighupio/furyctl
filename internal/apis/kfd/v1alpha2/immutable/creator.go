@@ -515,35 +515,16 @@ func (c *ClusterCreator) stagedUpgradeDecision(
 		return c.stagedUpgradeNodeDecision(upgradeState, changes)
 	}
 
-	if !upgradeState.StagedWorkers.ReadyForResume {
-		if upgradeState.AllTrackedPhasesSucceeded() {
-			if err := validateStagedTransition(upgradeState, changes); err != nil {
-				return stagedUpgradeProceed, err
-			}
-
-			return stagedUpgradeFinalize, nil
-		}
-
-		return stagedUpgradeProceed, rejectIncompleteStagedUpgrade(upgradeState, changes)
-	}
-
 	// A selected phase runs a part of the cluster, and it leaves the rollout incomplete.
 	// The Immutable infrastructure phase counts here, because c.phase holds it too.
+	//
+	// This test comes before the state of the rollout, and not after it. A run for one phase
+	// builds its own upgrade state, which holds no staged worker. The finalize step then reads
+	// a state with nothing staged, and it deletes the stored state and writes the configuration
+	// of the target version. The workers stay on the old version, and no record of them remains.
 	phaseSelected := c.phase != cluster.OperationPhaseAll ||
 		startFrom != StartFromFlagNotSet ||
 		len(c.postApplyPhases) > 0
-
-	if c.skipNodesUpgrade && !phaseSelected {
-		return stagedUpgradeNoop, nil
-	}
-
-	if len(changes) != 0 {
-		return stagedUpgradeProceed, fmt.Errorf(
-			"%w: configuration changed while workers are pending, "+
-				"complete the staged worker upgrade before changing configuration",
-			errStagedUpgrade,
-		)
-	}
 
 	if phaseSelected {
 		if cluster.IsForceEnabledForFeature(c.force, cluster.ForceFeatureUpgrades) {
@@ -556,6 +537,30 @@ func (c *ClusterCreator) stagedUpgradeDecision(
 		return stagedUpgradeProceed, fmt.Errorf(
 			"%w: worker nodes are pending, run 'furyctl apply --upgrade' without --phase, --start-from, or "+
 				"--post-apply-phases to complete their upgrade first",
+			errStagedUpgrade,
+		)
+	}
+
+	if !upgradeState.StagedWorkers.ReadyForResume {
+		if upgradeState.AllTrackedPhasesSucceeded() {
+			if err := validateStagedTransition(upgradeState, changes); err != nil {
+				return stagedUpgradeProceed, err
+			}
+
+			return stagedUpgradeFinalize, nil
+		}
+
+		return stagedUpgradeProceed, rejectIncompleteStagedUpgrade(upgradeState, changes)
+	}
+
+	if c.skipNodesUpgrade {
+		return stagedUpgradeNoop, nil
+	}
+
+	if len(changes) != 0 {
+		return stagedUpgradeProceed, fmt.Errorf(
+			"%w: configuration changed while workers are pending, "+
+				"complete the staged worker upgrade before changing configuration",
 			errStagedUpgrade,
 		)
 	}

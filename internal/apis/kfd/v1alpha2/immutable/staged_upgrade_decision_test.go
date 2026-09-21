@@ -59,6 +59,13 @@ func TestStagedUpgradeDecision(t *testing.T) {
 		"node2": upgrade.PhaseStatusPending,
 	}
 
+	versionChange := r3diff.Changelog{{
+		Type: "update",
+		Path: []string{"spec", "distributionVersion"},
+		From: "v1.35.1",
+		To:   "v1.36.0",
+	}}
+
 	tests := []struct {
 		name             string
 		state            *upgrade.State
@@ -66,6 +73,8 @@ func TestStagedUpgradeDecision(t *testing.T) {
 		upgradeNode      string
 		skipNodesUpgrade bool
 		phase            string
+		startFrom        string
+		force            []string
 		changes          r3diff.Changelog
 		want             stagedUpgradeAction
 		wantErr          bool
@@ -134,6 +143,35 @@ func TestStagedUpgradeDecision(t *testing.T) {
 			wantErr:     true,
 		},
 		{
+			// A run for one phase builds its own state, which holds no staged worker. The
+			// finalize step then deletes the stored state and writes the configuration of
+			// the target version, and the pending workers leave no record.
+			name:        "a selected phase before the state is ready: refuse",
+			state:       stagedState(false, pending),
+			upgradeFlag: true,
+			phase:       cluster.OperationPhaseDistribution,
+			changes:     versionChange,
+			wantErr:     true,
+		},
+		{
+			name:        "--start-from before the state is ready: refuse",
+			state:       stagedState(false, pending),
+			upgradeFlag: true,
+			phase:       cluster.OperationPhaseAll,
+			startFrom:   cluster.OperationSubPhasePreDistribution,
+			changes:     versionChange,
+			wantErr:     true,
+		},
+		{
+			name:        "the force flag lets a selected phase continue",
+			state:       stagedState(false, pending),
+			upgradeFlag: true,
+			phase:       cluster.OperationPhaseDistribution,
+			changes:     versionChange,
+			force:       []string{"upgrades"},
+			want:        stagedUpgradeProceed,
+		},
+		{
 			name:        "every worker succeeded: run the phases",
 			state:       stagedState(true, map[string]upgrade.PhaseStatus{"node1": upgrade.PhaseStatusSuccess}),
 			upgradeFlag: true,
@@ -152,9 +190,15 @@ func TestStagedUpgradeDecision(t *testing.T) {
 				upgradeNode:      tc.upgradeNode,
 				skipNodesUpgrade: tc.skipNodesUpgrade,
 				phase:            tc.phase,
+				force:            tc.force,
 			}
 
-			got, err := c.stagedUpgradeDecision(tc.state, tc.changes, StartFromFlagNotSet)
+			startFrom := tc.startFrom
+			if startFrom == "" {
+				startFrom = StartFromFlagNotSet
+			}
+
+			got, err := c.stagedUpgradeDecision(tc.state, tc.changes, startFrom)
 
 			if tc.wantErr {
 				require.Error(t, err)
