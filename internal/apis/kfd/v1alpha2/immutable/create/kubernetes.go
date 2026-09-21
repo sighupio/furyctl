@@ -20,7 +20,13 @@ import (
 	templatex "github.com/sighupio/furyctl/pkg/template"
 )
 
-const FromSecondsToHalfMinuteRetries = 30
+const (
+	FromSecondsToHalfMinuteRetries = 30
+
+	// The playbook that upgrades one worker node. This is the file name of the playbook,
+	// and not the value that the pre-upgrade phase looks for in an upgrade path template.
+	workerUpgradePlaybook = "upgrade-worker-nodes.yml"
+)
 
 type Kubernetes struct {
 	*cluster.OperationPhase
@@ -32,6 +38,8 @@ type Kubernetes struct {
 	ansibleRunner     *ansible.Runner
 	upgrade           *upgrade.Upgrade
 	upgradeNode       string
+	skipNodesUpgrade  bool
+	workerNodes       []string
 	force             []string
 	podRunningTimeout int
 }
@@ -43,6 +51,8 @@ func NewKubernetes(
 	dryRun bool,
 	upgr *upgrade.Upgrade,
 	upgradeNode string,
+	skipNodesUpgrade bool,
+	workerNodes []string,
 	force []string,
 	podRunningTimeout int,
 ) *Kubernetes {
@@ -64,6 +74,8 @@ func NewKubernetes(
 		),
 		upgrade:           upgr,
 		upgradeNode:       upgradeNode,
+		skipNodesUpgrade:  skipNodesUpgrade,
+		workerNodes:       workerNodes,
 		force:             force,
 		podRunningTimeout: podRunningTimeout,
 	}
@@ -87,11 +99,9 @@ func (k *Kubernetes) Exec(startFrom string, upgradeState *upgrade.State) error {
 	}
 
 	if k.upgradeNode != "" {
-		if _, err := k.ansibleRunner.Playbook("upgrade-worker-nodes.yml", "--limit", k.upgradeNode); err != nil {
-			return fmt.Errorf("error upgrading node %s: %w", k.upgradeNode, err)
-		}
-
-		return nil
+		// Exec already called prepare(), so this goes to the runner and not to
+		// UpgradeWorkerNodes.
+		return k.runWorkerUpgradePlaybooks([]string{k.upgradeNode}, nil)
 	}
 
 	if err := k.preKubernetes(startFrom, upgradeState); err != nil {
@@ -113,6 +123,58 @@ func (k *Kubernetes) Exec(startFrom string, upgradeState *upgrade.State) error {
 
 func (k *Kubernetes) SetUpgrade(upgradeEnabled bool) {
 	k.upgrade.Enabled = upgradeEnabled
+}
+
+// UpgradeWorkerNodes upgrades the given worker nodes. The resume path calls this, and
+// that path has no earlier phase to render the folder, so this method calls prepare().
+func (k *Kubernetes) UpgradeWorkerNodes(
+	nodes []string,
+	onResult func(node string, status upgrade.PhaseStatus) error,
+) error {
+	if err := k.prepare(); err != nil {
+		return fmt.Errorf("error preparing kubernetes phase: %w", err)
+	}
+
+	if k.dryRun {
+		logrus.Infof("Would upgrade %d worker nodes (dry-run mode)", len(nodes))
+
+		return nil
+	}
+
+	return k.runWorkerUpgradePlaybooks(nodes, onResult)
+}
+
+// runWorkerUpgradePlaybooks upgrades one node for each run of the playbook. The caller
+// renders the phase first.
+//
+// A full upgrade does not come here. That path runs the playbook one time for every
+// worker from the pre-kubernetes script, and the serial value of the playbook gives the
+// order. This method gives the per-node result that the resume path records.
+func (k *Kubernetes) runWorkerUpgradePlaybooks(
+	nodes []string,
+	onResult func(node string, status upgrade.PhaseStatus) error,
+) error {
+	for _, node := range nodes {
+		if _, err := k.ansibleRunner.Playbook(workerUpgradePlaybook, "--limit", node); err != nil {
+			workerErr := fmt.Errorf("error upgrading node %s: %w", node, err)
+
+			if onResult != nil {
+				if stateErr := onResult(node, upgrade.PhaseStatusFailed); stateErr != nil {
+					return fmt.Errorf("%w, error saving worker upgrade state: %w", workerErr, stateErr)
+				}
+			}
+
+			return workerErr
+		}
+
+		if onResult != nil {
+			if err := onResult(node, upgrade.PhaseStatusSuccess); err != nil {
+				return fmt.Errorf("error saving successful upgrade state for node %s: %w", node, err)
+			}
+		}
+	}
+
+	return nil
 }
 
 func (k *Kubernetes) prepare() error {
@@ -195,10 +257,36 @@ func (k *Kubernetes) preKubernetes(
 
 		if k.upgrade.Enabled {
 			upgradeState.Phases.PreKubernetes.Status = upgrade.PhaseStatusSuccess
+
+			k.stageWorkers(upgradeState)
 		}
 	}
 
 	return nil
+}
+
+// stageWorkers records the workers that this run does not upgrade, so that a later run
+// upgrades them one at a time.
+//
+// The upgrade path must hold a worker upgrade for this to make sense. A path that
+// upgrades no worker leaves nothing to stage, and IncludesWorkerUpgrade reports this.
+func (k *Kubernetes) stageWorkers(upgradeState *upgrade.State) {
+	if !k.skipNodesUpgrade || len(k.workerNodes) == 0 || !k.upgrade.IncludesWorkerUpgrade {
+		return
+	}
+
+	nodes := make(map[string]upgrade.PhaseStatus, len(k.workerNodes))
+	for _, node := range k.workerNodes {
+		nodes[node] = upgrade.PhaseStatusPending
+	}
+
+	upgradeState.Transition = &upgrade.Transition{
+		From: k.upgrade.From,
+		To:   k.upgrade.To,
+	}
+	upgradeState.StagedWorkers = &upgrade.StagedWorkers{Nodes: nodes}
+
+	logrus.Infof("Skipped the upgrade of %d worker nodes, run furyctl apply --upgrade-node for each of them", len(nodes))
 }
 
 func (k *Kubernetes) coreKubernetes(

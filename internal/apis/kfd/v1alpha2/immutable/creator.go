@@ -154,6 +154,8 @@ func (c *ClusterCreator) Create(startFrom string, _, podRunningCheckTimeout int)
 			c.dryRun,
 			upgr,
 			c.upgradeNode,
+			c.skipNodesUpgrade,
+			c.stagedWorkerNodes(),
 			c.force,
 			podRunningCheckTimeout,
 		),
@@ -422,6 +424,33 @@ func (c *ClusterCreator) newRulesExtractor(renderedConfig map[string]any) (*prem
 	}
 
 	return rulesExtractor, nil
+}
+
+// stagedWorkerNodes gives the workers that this run does not upgrade. Only an upgrade
+// with --skip-nodes-upgrade stages them, so every other run gets no host and the
+// kubernetes phase stages nothing.
+func (c *ClusterCreator) stagedWorkerNodes() []string {
+	if !c.skipNodesUpgrade || !c.upgrade {
+		return nil
+	}
+
+	return c.workerNodes()
+}
+
+// workerNodes gives every host that the configuration lists under a node group.
+//
+// The Immutable configuration holds the workers under spec.kubernetes.nodeGroups[].nodes,
+// which differs from the OnPremises layout. RoleAssignments hides that difference.
+func (c *ClusterCreator) workerNodes() []string {
+	nodes := make([]string, 0)
+
+	for _, ra := range c.furyctlConf.RoleAssignments() {
+		if ra.Role == public.NodeRoleWorker {
+			nodes = append(nodes, ra.Hostname)
+		}
+	}
+
+	return nodes
 }
 
 // validateUpgradeNode rejects a --upgrade-node host that this kind cannot upgrade on its

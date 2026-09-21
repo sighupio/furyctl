@@ -233,3 +233,49 @@ func TestReadUpgradeState(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, cluster.OperationPhaseKubernetes, startFrom)
 }
+
+// workerNodes gives the hosts that the staged rollout upgrades one at a time. The
+// Immutable configuration holds them under the node groups, and no other role list
+// belongs in the result.
+func TestWorkerNodes(t *testing.T) {
+	t.Parallel()
+
+	c := &ClusterCreator{
+		furyctlConf: public.ImmutableKfdV1Alpha2{
+			Spec: public.Spec{
+				Infrastructure: public.SpecInfrastructure{
+					LoadBalancers: &public.SpecInfrastructureLoadBalancers{
+						Members: []public.Member{{Hostname: "lb01"}},
+					},
+				},
+				Kubernetes: public.SpecKubernetes{
+					ControlPlane: public.SpecKubernetesControlPlane{
+						Members: []public.Member{{Hostname: "cp01"}},
+					},
+					Etcd: &public.SpecKubernetesEtcd{
+						Members: []public.Member{{Hostname: "etcd01"}},
+					},
+					NodeGroups: []public.SpecKubernetesNodeGroup{
+						{Name: "infra", Nodes: []public.Member{{Hostname: "infra01"}}},
+						{Name: "workers", Nodes: []public.Member{
+							{Hostname: "worker01"},
+							{Hostname: "worker02"},
+						}},
+					},
+				},
+			},
+		},
+	}
+
+	assert.Equal(t, []string{"infra01", "worker01", "worker02"}, c.workerNodes())
+}
+
+// A configuration with no node group gives an empty list, and not a nil one, so that the
+// kubernetes phase stages nothing.
+func TestWorkerNodesWithoutNodeGroups(t *testing.T) {
+	t.Parallel()
+
+	c := &ClusterCreator{}
+
+	assert.Empty(t, c.workerNodes())
+}
