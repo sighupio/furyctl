@@ -39,6 +39,7 @@ var (
 	ErrAbortedByUser                 = errors.New("operation aborted by user")
 	ErrClusterCreationNotImplemented = errors.New("cluster creation not implemented for Immutable kind")
 	ErrUpgradeNodeUnsupported        = errors.New("unsupported --upgrade-node host")
+	errStagedUpgrade                 = errors.New("staged worker upgrade")
 )
 
 type ClusterCreator struct {
@@ -266,6 +267,9 @@ func (c *ClusterCreator) Create(startFrom string, _, podRunningCheckTimeout int)
 		}
 	}
 
+	// The finalize step reads this. Every case that tracks an upgrade assigns to it.
+	appliedUpgradeState := &upgrade.State{}
+
 	switch c.phase {
 	case cluster.OperationPhaseInfrastructure:
 		confirm, err := c.confirmInfrastructureChanges(rdcsInfrastructure, unsafeReducers)
@@ -277,28 +281,24 @@ func (c *ClusterCreator) Create(startFrom string, _, podRunningCheckTimeout int)
 			return ErrAbortedByUser
 		}
 
-		upgradeState := upgrade.State{
-			Phases: upgrade.Phases{
-				PreInfrastructure:  &upgrade.Phase{Status: upgrade.PhaseStatusPending},
-				Infrastructure:     &upgrade.Phase{Status: upgrade.PhaseStatusPending},
-				PostInfrastructure: &upgrade.Phase{Status: upgrade.PhaseStatusPending},
-			},
+		appliedUpgradeState.Phases = upgrade.Phases{
+			PreInfrastructure:  &upgrade.Phase{Status: upgrade.PhaseStatusPending},
+			Infrastructure:     &upgrade.Phase{Status: upgrade.PhaseStatusPending},
+			PostInfrastructure: &upgrade.Phase{Status: upgrade.PhaseStatusPending},
 		}
 
-		if err := infrastructurePhase.Exec(StartFromFlagNotSet, &upgradeState); err != nil {
+		if err := infrastructurePhase.Exec(StartFromFlagNotSet, appliedUpgradeState); err != nil {
 			return fmt.Errorf("error while executing infrastructure phase: %w", err)
 		}
 
 	case cluster.OperationPhaseKubernetes:
-		upgradeState := upgrade.State{
-			Phases: upgrade.Phases{
-				PreKubernetes:  &upgrade.Phase{Status: upgrade.PhaseStatusPending},
-				Kubernetes:     &upgrade.Phase{Status: upgrade.PhaseStatusPending},
-				PostKubernetes: &upgrade.Phase{Status: upgrade.PhaseStatusPending},
-			},
+		appliedUpgradeState.Phases = upgrade.Phases{
+			PreKubernetes:  &upgrade.Phase{Status: upgrade.PhaseStatusPending},
+			Kubernetes:     &upgrade.Phase{Status: upgrade.PhaseStatusPending},
+			PostKubernetes: &upgrade.Phase{Status: upgrade.PhaseStatusPending},
 		}
 
-		if err := kubernetesPhase.Exec(StartFromFlagNotSet, &upgradeState); err != nil {
+		if err := kubernetesPhase.Exec(StartFromFlagNotSet, appliedUpgradeState); err != nil {
 			return fmt.Errorf("error while executing kubernetes phase: %w", err)
 		}
 
@@ -312,15 +312,13 @@ func (c *ClusterCreator) Create(startFrom string, _, podRunningCheckTimeout int)
 			return ErrAbortedByUser
 		}
 
-		upgradeState := upgrade.State{
-			Phases: upgrade.Phases{
-				PreDistribution:  &upgrade.Phase{Status: upgrade.PhaseStatusPending},
-				Distribution:     &upgrade.Phase{Status: upgrade.PhaseStatusPending},
-				PostDistribution: &upgrade.Phase{Status: upgrade.PhaseStatusPending},
-			},
+		appliedUpgradeState.Phases = upgrade.Phases{
+			PreDistribution:  &upgrade.Phase{Status: upgrade.PhaseStatusPending},
+			Distribution:     &upgrade.Phase{Status: upgrade.PhaseStatusPending},
+			PostDistribution: &upgrade.Phase{Status: upgrade.PhaseStatusPending},
 		}
 
-		if err := distributionPhase.Exec(rdcsDistribution, StartFromFlagNotSet, &upgradeState); err != nil {
+		if err := distributionPhase.Exec(rdcsDistribution, StartFromFlagNotSet, appliedUpgradeState); err != nil {
 			return fmt.Errorf("error while executing distribution phase: %w", err)
 		}
 
@@ -334,7 +332,7 @@ func (c *ClusterCreator) Create(startFrom string, _, podRunningCheckTimeout int)
 		}
 
 	case cluster.OperationPhaseAll:
-		if err := c.allPhases(
+		allPhasesState, err := c.allPhases(
 			startFrom,
 			infrastructurePhase,
 			kubernetesPhase,
@@ -343,37 +341,18 @@ func (c *ClusterCreator) Create(startFrom string, _, podRunningCheckTimeout int)
 			upgr,
 			rdcs,
 			unsafeReducers,
-		); err != nil {
+		)
+		if err != nil {
 			return fmt.Errorf("error while executing cluster creation: %w", err)
 		}
+
+		appliedUpgradeState = allPhasesState
 
 	default:
 		return fmt.Errorf("%w: %s", ErrUnsupportedPhase, c.phase)
 	}
 
-	if c.dryRun {
-		return nil
-	}
-
-	if upgr.Enabled {
-		if err := c.upgradeStateStore.Delete(); err != nil {
-			return fmt.Errorf("error while deleting upgrade state: %w", err)
-		}
-	}
-
-	if !status.ClusterExists && c.phase == cluster.OperationPhaseInfrastructure {
-		logrus.Info("skipping saving status to cluster because Kubernetes cluster does not exist yet")
-	} else {
-		if err := c.stateStore.StoreConfig(renderedConfig); err != nil {
-			return fmt.Errorf("error while creating secret with the cluster configuration: %w", err)
-		}
-
-		if err := c.stateStore.StoreKFD(); err != nil {
-			return fmt.Errorf("error while creating secret with the distribution configuration: %w", err)
-		}
-	}
-
-	return nil
+	return c.persistAppliedConfig(appliedUpgradeState, upgr, renderedConfig, status)
 }
 
 // RenderConfig loads the complete furyctl configuration merged with defaults from fury-distribution.
@@ -409,6 +388,130 @@ func (c *ClusterCreator) RenderConfig() (map[string]any, error) {
 	return lo.MapValues(tfCfg.Data, func(v map[any]any, _ string) any {
 		return convertValue(v)
 	}), nil
+}
+
+// persistAppliedConfig stores the configuration of the target version, and it decides what
+// happens to the upgrade state.
+//
+// A run that leaves workers behind must not store that configuration as a complete upgrade.
+// The cluster then reports a version that the workers do not run, and the next
+// "furyctl apply --upgrade" finds no difference between the two versions and does nothing.
+// The upgrade state is the only record of the workers that stay behind, so a run that leaves
+// any of them keeps it.
+func (c *ClusterCreator) persistAppliedConfig(
+	appliedUpgradeState *upgrade.State,
+	upgr *upgrade.Upgrade,
+	renderedConfig map[string]any,
+	status *create.Status,
+) error {
+	if c.dryRun {
+		return nil
+	}
+
+	if appliedUpgradeState.HasStagedWorkers() {
+		switch {
+		// Every phase and every worker succeeded. The upgrade is complete.
+		case appliedUpgradeState.AllTrackedPhasesSucceeded() && appliedUpgradeState.AllStagedWorkersSucceeded():
+			if err := c.upgradeStateStore.Delete(); err != nil {
+				return fmt.Errorf("error while deleting completed staged worker state: %w", err)
+			}
+
+		// Every phase succeeded and some worker did not. Keep the state for the next run.
+		case appliedUpgradeState.AllTrackedPhasesSucceeded():
+			if err := c.persistStagedUpgradeReady(appliedUpgradeState, renderedConfig); err != nil {
+				return err
+			}
+
+			logStagedWorkerNextSteps(appliedUpgradeState)
+
+			return nil
+
+		// A phase did not succeed. Store no configuration, because the cluster is not at
+		// the target version.
+		default:
+			return fmt.Errorf(
+				"%w: the rollout is incomplete, set spec.distributionVersion to %s and run "+
+					"'furyctl apply --upgrade'",
+				errStagedUpgrade,
+				stagedTargetVersion(appliedUpgradeState),
+			)
+		}
+	} else if upgr.Enabled {
+		if err := c.upgradeStateStore.Delete(); err != nil {
+			return fmt.Errorf("error while deleting upgrade state: %w", err)
+		}
+	}
+
+	// A cluster that does not exist yet holds no configuration to store. This happens when
+	// the infrastructure phase runs on its own, before the kubernetes phase ever ran.
+	if !status.ClusterExists && c.phase == cluster.OperationPhaseInfrastructure {
+		logrus.Info("skipping saving status to cluster because Kubernetes cluster does not exist yet")
+
+		return nil
+	}
+
+	return c.storeTargetConfig(renderedConfig)
+}
+
+// stagedTargetVersion gives the version that the staged rollout goes to.
+//
+// The staging step writes the transition together with the workers, so a state that holds
+// workers holds a transition. A state that a user edited breaks that rule, and a read of a
+// missing transition panics, therefore this function does not assume one.
+func stagedTargetVersion(upgradeState *upgrade.State) string {
+	if upgradeState.Transition == nil {
+		return "the version of the target distribution"
+	}
+
+	return fmt.Sprintf("%q", upgradeState.Transition.To)
+}
+
+// persistStagedUpgradeReady stores the configuration, and then marks the staged workers as
+// ready to continue. The order matters: a mark without a stored configuration gives a state
+// that reports a target version that the cluster does not hold.
+func (c *ClusterCreator) persistStagedUpgradeReady(
+	upgradeState *upgrade.State,
+	renderedConfig map[string]any,
+) error {
+	if err := c.storeTargetConfig(renderedConfig); err != nil {
+		return err
+	}
+
+	upgradeState.StagedWorkers.ReadyForResume = true
+
+	if err := c.upgradeStateStore.Store(upgradeState); err != nil {
+		return fmt.Errorf("error while marking staged worker upgrade ready to resume: %w", err)
+	}
+
+	return nil
+}
+
+// storeTargetConfig saves the configuration of the cluster and of the distribution.
+func (c *ClusterCreator) storeTargetConfig(renderedConfig map[string]any) error {
+	if err := c.stateStore.StoreConfig(renderedConfig); err != nil {
+		return fmt.Errorf("error while creating secret with the cluster configuration: %w", err)
+	}
+
+	if err := c.stateStore.StoreKFD(); err != nil {
+		return fmt.Errorf("error while creating secret with the distribution configuration: %w", err)
+	}
+
+	return nil
+}
+
+// logStagedWorkerNextSteps tells the user how many workers stay behind, and how to upgrade
+// them.
+func logStagedWorkerNextSteps(upgradeState *upgrade.State) {
+	remaining := len(upgradeState.PendingStagedWorkers())
+	if remaining == 0 {
+		return
+	}
+
+	logrus.Infof(
+		"%d worker nodes remain to be upgraded. Run 'furyctl apply --upgrade' to upgrade all "+
+			"remaining workers, or 'furyctl apply --upgrade-node <node-name>' to upgrade one worker.",
+		remaining,
+	)
 }
 
 // newRulesExtractor builds the rules extractor of the distribution. A distribution
@@ -618,7 +721,7 @@ func (c *ClusterCreator) allPhases(
 	upgr *upgrade.Upgrade,
 	rdcs reducers.Reducers,
 	unsafeReducers []premrules.Rule,
-) error {
+) (*upgrade.State, error) {
 	upgradeState := &upgrade.State{}
 
 	if upgr.Enabled && !c.dryRun {
@@ -626,7 +729,7 @@ func (c *ClusterCreator) allPhases(
 		if err == nil {
 			upgradeState, startFrom, err = c.readUpgradeState(s, startFrom)
 			if err != nil {
-				return err
+				return nil, err
 			}
 		} else {
 			logrus.Debugf("error while getting upgrade state: %v", err)
@@ -635,7 +738,7 @@ func (c *ClusterCreator) allPhases(
 			upgradeState = c.initUpgradeState()
 
 			if err := c.upgradeStateStore.Store(upgradeState); err != nil {
-				return fmt.Errorf("error while storing upgrade state: %w", err)
+				return nil, fmt.Errorf("error while storing upgrade state: %w", err)
 			}
 		}
 	}
@@ -646,21 +749,21 @@ func (c *ClusterCreator) allPhases(
 		startFrom == cluster.OperationSubPhasePostInfrastructure {
 		confirm, err := c.confirmInfrastructureChanges(rdcs, unsafeReducers)
 		if err != nil {
-			return fmt.Errorf("error while asking for confirmation: %w", err)
+			return nil, fmt.Errorf("error while asking for confirmation: %w", err)
 		}
 
 		if !confirm {
-			return ErrAbortedByUser
+			return nil, ErrAbortedByUser
 		}
 
 		if err := infrastructurePhase.Exec(c.getInfrastructureSubPhase(startFrom), upgradeState); err != nil {
-			return fmt.Errorf("error while executing infrastructure phase: %w", err)
+			return nil, fmt.Errorf("error while executing infrastructure phase: %w", err)
 		}
 
 		// A load balancer is upgraded by the infrastructure phase alone. It is not a
 		// Kubernetes node, so the phases below have nothing to do with it.
 		if c.upgradeNode != "" && c.furyctlConf.NodeRole(c.upgradeNode) == public.NodeRoleLoadBalancer {
-			return nil
+			return upgradeState, nil
 		}
 	}
 
@@ -669,32 +772,32 @@ func (c *ClusterCreator) allPhases(
 		startFrom != cluster.OperationSubPhasePostDistribution &&
 		startFrom != cluster.OperationPhasePlugins {
 		if err := kubernetesPhase.Exec(c.getKubernetesSubPhase(startFrom), upgradeState); err != nil {
-			return fmt.Errorf("error while executing kubernetes phase: %w", err)
+			return nil, fmt.Errorf("error while executing kubernetes phase: %w", err)
 		}
 
 		if c.upgradeNode != "" {
-			return nil
+			return upgradeState, nil
 		}
 	}
 
 	if startFrom != cluster.OperationPhasePlugins {
 		confirm, err := c.confirmDistributionChanges(rdcs, unsafeReducers)
 		if err != nil {
-			return fmt.Errorf("error while asking for confirmation: %w", err)
+			return nil, fmt.Errorf("error while asking for confirmation: %w", err)
 		}
 
 		if !confirm {
-			return ErrAbortedByUser
+			return nil, ErrAbortedByUser
 		}
 
 		if err := distributionPhase.Exec(rdcs, c.getDistributionSubPhase(startFrom), upgradeState); err != nil {
-			return fmt.Errorf("error while executing distribution phase: %w", err)
+			return nil, fmt.Errorf("error while executing distribution phase: %w", err)
 		}
 	}
 
 	if distribution.HasFeature(c.kfdManifest, distribution.FeaturePlugins) {
 		if err := pluginsPhase.Exec(); err != nil {
-			return fmt.Errorf("error while executing plugins phase: %w", err)
+			return nil, fmt.Errorf("error while executing plugins phase: %w", err)
 		}
 	}
 
@@ -708,11 +811,11 @@ func (c *ClusterCreator) allPhases(
 			upgr,
 			upgradeState,
 		); err != nil {
-			return fmt.Errorf("error while executing extra phases: %w", err)
+			return nil, fmt.Errorf("error while executing extra phases: %w", err)
 		}
 	}
 
-	return nil
+	return upgradeState, nil
 }
 
 func (c *ClusterCreator) extraPhases(
