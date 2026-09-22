@@ -202,15 +202,7 @@ func Path(address, port, root string, nodesStatus map[string]string) error {
 	case <-ctx.Done():
 		const shutdownTimeout = 5 * time.Second
 
-		shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), shutdownTimeout)
-
-		defer shutdownCancel()
-
-		if err := srv.Shutdown(shutdownCtx); err != nil {
-			return fmt.Errorf("error during server shutdown: %w", err)
-		}
-
-		logrus.Info("Server stopped")
+		stopServer(srv, shutdownTimeout)
 
 		return nil
 
@@ -226,4 +218,35 @@ func Path(address, port, root string, nodesStatus map[string]string) error {
 
 		return err
 	}
+}
+
+// stopServer ends the assets server, and it gives no error.
+//
+// Shutdown waits for the requests that are still open. A machine that the user resets in the
+// middle of a transfer leaves one, and the server then waits for a client that is gone. The
+// wait ends at the timeout with "context deadline exceeded".
+//
+// The server has done its work when this runs, because every machine booted or the user asked
+// to continue. A shutdown that does not finish is therefore not a failure of the phase, and an
+// error here stopped an apply that had succeeded. Close the connections that remain instead.
+func stopServer(srv *http.Server, timeout time.Duration) {
+	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), timeout)
+
+	defer shutdownCancel()
+
+	if err := srv.Shutdown(shutdownCtx); err != nil {
+		logrus.Warnf(
+			"The assets server had a download that did not finish in %s, so furyctl closed it and "+
+				"continues. If a machine was still downloading, boot that machine again.",
+			timeout,
+		)
+
+		logrus.Debugf("assets server shutdown: %v", err)
+
+		if err := srv.Close(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			logrus.Debugf("error closing the assets server: %v", err)
+		}
+	}
+
+	logrus.Info("Server stopped")
 }

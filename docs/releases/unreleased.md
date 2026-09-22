@@ -21,6 +21,7 @@ Welcome to the latest release of `furyctl` maintained by SIGHUP by ReeVo team.
 - [[#759](https://github.com/sighupio/furyctl/pull/759)] Immutable: surface butane-to-ignition translation errors to the user.
 - [[#762](https://github.com/sighupio/furyctl/pull/762)] furyctl local cache was not being invalidate when commits have landed on the upstream. Now it does.
 - [[#764](https://github.com/sighupio/furyctl/pull/764)] Immutable: furyctl no longer stops with a panic when it resumes an upgrade whose stored state does not hold every phase. A state that an older furyctl version wrote has no infrastructure sub-phases, and the load balancer upgrade writes them. furyctl now reads the stored state over a complete one, so every phase exists. It still reads the state as it was stored for the decision of which phase to resume from.
+- [[#767](https://github.com/sighupio/furyctl/pull/767)] Immutable: `apply` no longer stops with `error during server shutdown: context deadline exceeded` after the machines boot. The assets server waited for a request that a reset machine left open, and the timeout of that wait failed the infrastructure phase although every machine had booted.
 
 ## Breaking Changes 💔
 
