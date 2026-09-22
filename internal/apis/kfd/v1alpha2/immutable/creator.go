@@ -63,6 +63,7 @@ var (
 	ErrAbortedByUser                 = errors.New("operation aborted by user")
 	ErrClusterCreationNotImplemented = errors.New("cluster creation not implemented for Immutable kind")
 	ErrUpgradeNodeUnsupported        = errors.New("unsupported --upgrade-node host")
+	ErrClusterNotFound               = errors.New("cluster not found")
 	errStagedUpgrade                 = errors.New("staged worker upgrade")
 )
 
@@ -231,6 +232,20 @@ func (c *ClusterCreator) Create(startFrom string, _, podRunningCheckTimeout int)
 	status, err := preflight.Exec(renderedConfig)
 	if err != nil {
 		return fmt.Errorf("error while executing preflight phase: %w", err)
+	}
+
+	if phase := c.firstPhase(startFrom); !status.ClusterExists && requiresCluster(phase) {
+		// The advice stops here. A host that does not answer gives its own warning in the
+		// preflight check, and that warning holds what to do about it. A host that answers
+		// with no cluster gives no warning, and "make sure that the hosts answer" would be
+		// wrong for it.
+		return fmt.Errorf(
+			"%w: the %s phase needs a cluster, and the preflight check found no kubeconfig on these "+
+				"control plane hosts: %s. Apply the infrastructure phase and the kubernetes phase first",
+			ErrClusterNotFound,
+			phase,
+			strings.Join(c.controlPlaneNodes(), ", "),
+		)
 	}
 
 	if status.ClusterExists {
@@ -1002,15 +1017,51 @@ func (c *ClusterCreator) stagedWorkerNodes() []string {
 // The Immutable configuration holds the workers under spec.kubernetes.nodeGroups[].nodes,
 // which differs from the OnPremises layout. RoleAssignments hides that difference.
 func (c *ClusterCreator) workerNodes() []string {
+	return c.nodesWithRole(public.NodeRoleWorker)
+}
+
+// controlPlaneNodes gives the hosts that the preflight check probes. Its inventory holds
+// the control plane group only.
+func (c *ClusterCreator) controlPlaneNodes() []string {
+	return c.nodesWithRole(public.NodeRoleControlPlane)
+}
+
+func (c *ClusterCreator) nodesWithRole(role string) []string {
 	nodes := make([]string, 0)
 
 	for _, ra := range c.furyctlConf.RoleAssignments() {
-		if ra.Role == public.NodeRoleWorker {
+		if ra.Role == role {
 			nodes = append(nodes, ra.Hostname)
 		}
 	}
 
 	return nodes
+}
+
+// firstPhase gives the phase that a run starts with. A run of every phase starts where
+// --start-from says, and an empty value starts at the infrastructure phase.
+func (c *ClusterCreator) firstPhase(startFrom string) string {
+	if c.phase != cluster.OperationPhaseAll {
+		return c.phase
+	}
+
+	return startFrom
+}
+
+// requiresCluster reports whether a phase reads the cluster. Every phase before the
+// distribution phase builds what the distribution and the plugins phases read, so only the
+// first phase of a run carries the requirement.
+func requiresCluster(phase string) bool {
+	switch phase {
+	case cluster.OperationPhaseDistribution,
+		cluster.OperationSubPhasePreDistribution,
+		cluster.OperationSubPhasePostDistribution,
+		cluster.OperationPhasePlugins:
+		return true
+
+	default:
+		return false
+	}
 }
 
 // validateUpgradeNode rejects a --upgrade-node host that this kind cannot upgrade on its
