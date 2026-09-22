@@ -11,7 +11,7 @@ import (
 	"path/filepath"
 
 	"github.com/sirupsen/logrus"
-	pki "k8s.io/kubernetes/cmd/kubeadm/app/util/pkiutil"
+	certutil "k8s.io/client-go/util/cert"
 )
 
 type ClusterPKI struct {
@@ -23,7 +23,7 @@ type Config struct {
 	Etcd         EtcdConfig         `json:"etcd"`
 	ControlPlane ControlPlaneConfig `json:"controlPlane"`
 	Path         string             `json:"path"`
-	CertConfig   pki.CertConfig     `json:"certConfig"`
+	CertConfig   certutil.Config    `json:"certConfig"`
 }
 
 // EtcdConfig is used to store the path to the several certificates for etcd.
