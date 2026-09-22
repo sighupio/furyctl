@@ -4,7 +4,7 @@
 
 //go:build unit
 
-package serve //nolint:testpackage // exercises the unexported shutdown step.
+package serve
 
 import (
 	"net"
@@ -51,7 +51,7 @@ func TestStopServerWithARequestThatNeverEnds(t *testing.T) {
 	clientDone := make(chan error, 1)
 
 	go func() {
-		//nolint:noctx // the request must outlive the shutdown on purpose.
+		// The request outlives the shutdown on purpose, so it takes no context.
 		resp, err := http.Get("http://" + listener.Addr().String())
 		if err != nil {
 			clientDone <- err
