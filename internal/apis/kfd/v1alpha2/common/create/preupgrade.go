@@ -36,7 +36,11 @@ var (
 	errGettingDistroVersionTo   = errors.New("error while getting distribution version to")
 )
 
-const workerUpgradePlaybook = "56.upgrade-worker-nodes.yml"
+// workerUpgradePlaybook is the name of the playbook that upgrades the worker nodes.
+// The name holds no numeric prefix on purpose. The OnPremises templates call the playbook
+// "56.upgrade-worker-nodes.yml" and the Immutable templates call it
+// "upgrade-worker-nodes.yml", so a match on the bare name finds both.
+const workerUpgradePlaybook = "upgrade-worker-nodes.yml"
 
 type PreUpgrade struct {
 	*cluster.OperationPhase
