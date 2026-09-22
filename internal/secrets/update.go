@@ -11,7 +11,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"gopkg.in/yaml.v3"
+	"go.yaml.in/yaml/v3"
 )
 
 // ErrConfigHoldsNoFields reports a configuration file that furyctl cannot write a field in. The

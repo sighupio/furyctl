@@ -9,7 +9,7 @@ import (
 
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/require"
-	"gopkg.in/yaml.v3"
+	"go.yaml.in/yaml/v3"
 
 	"github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/ekscluster/private"
 	"github.com/sighupio/furyctl/pkg/merge"

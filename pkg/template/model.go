@@ -16,7 +16,7 @@ import (
 
 	"github.com/samber/lo"
 	"github.com/sirupsen/logrus"
-	"gopkg.in/yaml.v2"
+	"go.yaml.in/yaml/v2"
 
 	iox "github.com/sighupio/furyctl/internal/x/io"
 	"github.com/sighupio/furyctl/pkg/template/mapper"
