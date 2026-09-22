@@ -235,10 +235,16 @@ func stopServer(srv *http.Server, timeout time.Duration) {
 	defer shutdownCancel()
 
 	if err := srv.Shutdown(shutdownCtx); err != nil {
-		logrus.Warnf("The assets server did not stop inside %s, closing it: %v", timeout, err)
+		logrus.Warnf(
+			"The assets server had a download that did not finish in %s, so furyctl closed it and "+
+				"continues. If a machine was still downloading, boot that machine again.",
+			timeout,
+		)
+
+		logrus.Debugf("assets server shutdown: %v", err)
 
 		if err := srv.Close(); err != nil && !errors.Is(err, http.ErrServerClosed) {
-			logrus.Warnf("error closing the assets server: %v", err)
+			logrus.Debugf("error closing the assets server: %v", err)
 		}
 	}
 
