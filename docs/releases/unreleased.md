@@ -26,6 +26,7 @@ Welcome to the latest release of `furyctl` maintained by SIGHUP by ReeVo team.
 - [[#767](https://github.com/sighupio/furyctl/pull/767)] Immutable: `apply` no longer stops with `error during server shutdown: context deadline exceeded` after the machines boot. The assets server waited for a request that a reset machine left open, and the timeout of that wait failed the infrastructure phase although every machine had booted.
 
 - [[#770](https://github.com/sighupio/furyctl/pull/770)] Immutable: `apply --phase distribution` and `apply --phase plugins` now stop when the cluster does not exist. Before this release they continued, and they applied to the cluster of the current kubeconfig context. The preflight check now also says when it cannot reach a control plane host, instead of reporting a cluster that does not exist.
+- [[#774](https://github.com/sighupio/furyctl/pull/774)] Immutable: the preflight check now reads every host, and not only the control plane hosts. When other hosts belong to a cluster and no control plane host gives its kubeconfig, the apply now stops. Before this release, furyctl continued as if the cluster did not exist. The check also names each host that does not answer.
 
 ## Breaking Changes 💔
 

@@ -152,18 +152,45 @@ func (p *PreFlight) Exec(renderedConfig map[string]any) (*Status, error) {
 		return status, fmt.Errorf("error selecting admin.conf playbook: %w", err)
 	}
 
-	// The phase folder holds the admin.conf of an earlier run, because CreateRootFolder keeps a
+	// The phase folder holds the files of an earlier run, because CreateRootFolder keeps a
 	// folder that exists. A cluster that the operator removed would therefore read as a cluster
-	// that is there. Remove the file, so that only the playbook below can put it back.
-	if err := os.Remove(adminConfPath); err != nil && !errors.Is(err, os.ErrNotExist) {
-		return status, fmt.Errorf("error removing the kubeconfig of an earlier run: %w", err)
+	// that is there. Remove the files, so that only the playbook below can put them back.
+	for _, f := range []string{adminConfPath, path.Join(p.Path, clusterStateFile)} {
+		if err := os.Remove(f); err != nil && !errors.Is(err, os.ErrNotExist) {
+			return status, fmt.Errorf("error removing %s of an earlier run: %w", path.Base(f), err)
+		}
 	}
 
-	if _, err := p.ansibleRunner.Playbook(adminConfPlaybook); err != nil {
-		// This kind creates its machines in the infrastructure phase, so a first apply cannot
-		// reach the control plane hosts, and an error here is the normal answer for a cluster
-		// that is not there yet. The run therefore continues, and the check below gives the
-		// same answer as before. What keeps the run away from another cluster is the gate of
+	_, playbookErr := p.ansibleRunner.Playbook(adminConfPlaybook)
+
+	probe, hasProbe, err := readClusterState(p.Path)
+	if err != nil {
+		return status, err
+	}
+
+	switch {
+	case hasProbe && playbookErr != nil:
+		// This playbook does not fail when a host does not answer, so its error is a true error.
+		return status, fmt.Errorf("error checking the hosts of the cluster: %w", playbookErr)
+
+	case hasProbe:
+		logrus.Info(probe.summary())
+
+		warning, err := probe.assess(p.controlPlaneHosts())
+		if err != nil {
+			return status, err
+		}
+
+		if warning != "" {
+			logrus.Warn(warning)
+		}
+
+	case playbookErr != nil:
+		// A distribution released before the state file gives a playbook that fails when a host
+		// does not answer. This kind creates its machines in the infrastructure phase, so a first
+		// apply cannot reach the control plane hosts, and an error here is the normal answer for
+		// a cluster that is not there yet. The run therefore continues, and the check below gives
+		// the same answer as before. What keeps the run away from another cluster is the gate of
 		// the creator, which stops a phase that reads a cluster when there is none.
 		logrus.Warnf(
 			"furyctl could not read these control plane hosts: %s. It continues as if the cluster "+
@@ -173,7 +200,11 @@ func (p *PreFlight) Exec(renderedConfig map[string]any) (*Status, error) {
 			strings.Join(p.controlPlaneHosts(), ", "),
 		)
 
-		logrus.Debugf("%s: %v", adminConfPlaybook, err)
+		logrus.Debugf("%s: %v", adminConfPlaybook, playbookErr)
+
+	default:
+		// A distribution released before the state file gives a playbook that ran without an
+		// error, so every control plane host answered. The check below reads admin.conf.
 	}
 
 	// The playbook fetches admin.conf when a control plane node holds one, and it does not
