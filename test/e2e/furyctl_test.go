@@ -9,7 +9,6 @@ package e2e_test
 import (
 	"bytes"
 	"fmt"
-	"math/rand"
 	"os"
 	"os/exec"
 	"path"
@@ -700,8 +699,7 @@ func patchFuryctlYaml(furyctlYamlPath string, infra *EKSInfra) (string, error) {
 		return "", err
 	}
 
-	// we need to cap the string to 36 chars due to the s3 key prefix limit
-	newKeyPrefix := fmt.Sprintf("furyctl-%d-%d", time.Now().UTC().Unix(), rand.Int())[0:36]
+	newKeyPrefix := NewS3KeyPrefix()
 
 	tfBucketName := os.Getenv("TERRAFORM_TF_STATES_BUCKET_NAME")
 

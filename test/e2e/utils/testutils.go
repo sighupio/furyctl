@@ -6,10 +6,25 @@ package test
 
 import (
 	"fmt"
+	"math/rand"
+	"time"
 
 	"github.com/sighupio/furyctl/internal/tool/awscli"
 	execx "github.com/sighupio/furyctl/internal/x/exec"
 )
+
+// s3KeyPrefixLen is the maximum length allowed for the Terraform state's S3 key prefix.
+const s3KeyPrefixLen = 36
+
+// NewS3KeyPrefix returns a key prefix of exactly s3KeyPrefixLen characters, unique enough to avoid
+// collisions between runs and between parallel test processes on the shared bucket. The random part
+// is zero-padded to the width of the largest int64 so the string is never shorter than the cap.
+func NewS3KeyPrefix() string {
+	//nolint:gosec // collision avoidance between test runs, not security.
+	prefix := fmt.Sprintf("furyctl-%d-%019d", time.Now().UTC().Unix(), rand.Int())
+
+	return prefix[:s3KeyPrefixLen]
+}
 
 type EKSInfra struct {
 	VpcID     string
