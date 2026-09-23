@@ -4,14 +4,17 @@
 
 //go:build unit
 
-//nolint:testpackage // miseToolsForKind is unexported.
+//nolint:testpackage // miseToolsForKind and materializeTool are unexported.
 package dependencies
 
 import (
+	"os"
+	"path/filepath"
 	"slices"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/sighupio/furyctl/internal/apis/config"
 )
@@ -122,4 +125,29 @@ func Test_miseToolsForKind(t *testing.T) {
 			assert.ElementsMatch(t, tC.wantUts, uts, "uts")
 		})
 	}
+}
+
+// Test_materializeToolThroughSymlinkedBinPath reproduces /tmp -> /private/tmp on macOS: binPath is a
+// symlink and the target is a physical path, as filepath.EvalSymlinks returns it.
+func Test_materializeToolThroughSymlinkedBinPath(t *testing.T) {
+	t.Parallel()
+
+	physical := t.TempDir()
+	logical := filepath.Join(t.TempDir(), "bin")
+	require.NoError(t, os.Symlink(physical, logical))
+
+	venv := filepath.Join(physical, "mise", "installs", "ansible-core")
+	require.NoError(t, os.MkdirAll(venv, 0o755))
+
+	require.NoError(t, materializeTool(logical, "ansible", "2.20.0", "venv", venv))
+
+	link := filepath.Join(logical, "ansible", "2.20.0", "venv")
+
+	got, err := filepath.EvalSymlinks(link)
+	require.NoError(t, err)
+	assert.Equal(t, physicalPath(venv), got)
+
+	target, err := os.Readlink(link)
+	require.NoError(t, err)
+	assert.False(t, filepath.IsAbs(target), "expected a relative link, got %q", target)
 }
