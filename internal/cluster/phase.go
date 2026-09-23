@@ -190,8 +190,9 @@ type OperationPhase struct {
 	TerraformOutputsPath string
 	TerraformSecretsPath string
 	FuryagentPath        string
-	// Ansible paths are set only when the distribution pins ansible (mise-managed). When empty, furyctl
-	// falls back to the host ansible (backward compatible).
+	// Ansible paths feed `paths.ansiblePlaybook` in the upgrade scripts. Only the preupgrade phase sets
+	// them, because the ansible tools section depends on the kind. When empty, the scripts use the host
+	// ansible.
 	AnsiblePlaybookPath    string
 	AnsiblePythonPath      string
 	AnsibleCollectionsPath string
@@ -230,38 +231,21 @@ func NewOperationPhase(folder string, kfdTools config.KFDTools, binPath string) 
 	outputsPath := path.Join(basePath, "terraform", "outputs")
 	secretsPath := path.Join(basePath, "terraform", "secrets")
 
-	// Ansible is mise-managed only when the distribution pins it; otherwise the paths stay empty and
-	// furyctl uses the host ansible.
-	var ansiblePlaybookPath, ansiblePythonPath, ansibleCollectionsPath string
-
-	// These paths feed the onpremises upgrade scripts (`paths.ansiblePlaybook`), the only template
-	// consumer; ansible is pinned under tools.onpremises.
-	if av := kfdTools.OnPremises.Ansible.Version; av != "" {
-		ansibleBase := path.Join(binPath, "ansible", av)
-		ansibleVenvBin := path.Join(ansibleBase, "venv", "bin")
-		ansiblePlaybookPath = path.Join(ansibleVenvBin, "ansible-playbook")
-		ansiblePythonPath = path.Join(ansibleVenvBin, "python")
-		ansibleCollectionsPath = path.Join(ansibleBase, "collections")
-	}
-
 	return &OperationPhase{
-		Path:                   basePath,
-		TerraformPath:          terraformPath,
-		KustomizePath:          kustomizePath,
-		KubectlPath:            kubectlPath,
-		TerraformPlanPath:      planPath,
-		TerraformLogsPath:      logsPath,
-		TerraformOutputsPath:   outputsPath,
-		TerraformSecretsPath:   secretsPath,
-		binPath:                binPath,
-		YqPath:                 yqPath,
-		HelmPath:               helmPath,
-		HelmfilePath:           helmfilePath,
-		KappPath:               kappPath,
-		FuryagentPath:          furyagentPath,
-		AnsiblePlaybookPath:    ansiblePlaybookPath,
-		AnsiblePythonPath:      ansiblePythonPath,
-		AnsibleCollectionsPath: ansibleCollectionsPath,
+		Path:                 basePath,
+		TerraformPath:        terraformPath,
+		KustomizePath:        kustomizePath,
+		KubectlPath:          kubectlPath,
+		TerraformPlanPath:    planPath,
+		TerraformLogsPath:    logsPath,
+		TerraformOutputsPath: outputsPath,
+		TerraformSecretsPath: secretsPath,
+		binPath:              binPath,
+		YqPath:               yqPath,
+		HelmPath:             helmPath,
+		HelmfilePath:         helmfilePath,
+		KappPath:             kappPath,
+		FuryagentPath:        furyagentPath,
 	}
 }
 

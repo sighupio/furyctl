@@ -9,7 +9,12 @@ package create
 import (
 	"os"
 	"path"
+	"strings"
 	"testing"
+
+	"github.com/sighupio/furyctl/internal/apis/config"
+	"github.com/sighupio/furyctl/internal/cluster"
+	"github.com/sighupio/furyctl/internal/distribution"
 )
 
 // TestUpgradePathIncludesWorkerNodes runs against templates that hold the two shapes of the
@@ -80,5 +85,42 @@ func TestUpgradePathIncludesWorkerNodesWithoutTemplate(t *testing.T) {
 
 	if got {
 		t.Error("expected false when the template is absent")
+	}
+}
+
+// TestNewPreUpgradeUsesTheAnsibleOfTheKind checks that the upgrade scripts get the ansible that
+// furyctl installs for the kind, and not the ansible of the other kind.
+func TestNewPreUpgradeUsesTheAnsibleOfTheKind(t *testing.T) {
+	t.Parallel()
+
+	tools := config.KFDTools{
+		OnPremises: config.KFDToolsOnPremises{Ansible: config.KFDToolAnsible{Version: "2.20.0"}},
+		Immutable:  config.KFDToolsImmutable{Ansible: config.KFDToolAnsible{Version: "2.21.0"}},
+	}
+
+	testCases := []struct {
+		kind    string
+		version string
+	}{
+		{kind: distribution.OnPremisesKind, version: "2.20.0"},
+		{kind: distribution.ImmutableKind, version: "2.21.0"},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.kind, func(t *testing.T) {
+			t.Parallel()
+
+			p := NewPreUpgrade(
+				cluster.CreatorPaths{BinPath: "/bin"},
+				config.KFD{Tools: tools},
+				tc.kind,
+				false, false, nil, nil, nil, nil, "", false,
+			)
+
+			want := path.Join("/bin", "ansible", tc.version, "venv", "bin", "python")
+			if got := p.AnsiblePlaybookCmd(); !strings.Contains(got, want) {
+				t.Errorf("AnsiblePlaybookCmd() = %q, want it to contain %q", got, want)
+			}
+		})
 	}
 }
