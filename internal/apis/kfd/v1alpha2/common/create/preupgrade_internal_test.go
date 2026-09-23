@@ -30,12 +30,12 @@ func TestUpgradePathIncludesWorkerNodes(t *testing.T) {
 		},
 		{
 			name:     "immutable calls the playbook without a prefix",
-			template: "ansible-playbook upgrade-worker-nodes.yml --become",
+			template: "{{ .paths.ansiblePlaybook }} upgrade-worker-nodes.yml --become",
 			expected: true,
 		},
 		{
 			name:     "a path that upgrades no worker",
-			template: "ansible-playbook upgrade-control-plane.yml --become",
+			template: "{{ .paths.ansiblePlaybook }} upgrade-control-plane.yml --become",
 			expected: false,
 		},
 	}
