@@ -6,7 +6,6 @@ package clusterpki
 
 import (
 	"github.com/sirupsen/logrus"
-	pki "k8s.io/kubernetes/cmd/kubeadm/app/util/pkiutil"
 )
 
 const (
@@ -30,27 +29,27 @@ type ControlPlanePKI struct {
 
 func (cp ControlPlanePKI) Create() error {
 	// Create certificates for Kubernetes control plane.
-	caCert, caKey, err := pki.NewCertificateAuthority(&cp.CertConfig)
+	caCert, caKey, err := NewCertificateAuthority(&cp.CertConfig)
 	if err != nil {
 		logrus.Fatal(err)
 	}
 
-	saCert, saKey, err := pki.NewCertificateAuthority(&cp.CertConfig)
+	saCert, saKey, err := NewCertificateAuthority(&cp.CertConfig)
 	if err != nil {
 		logrus.Fatal(err)
 	}
 
-	fpCert, fpKey, err := pki.NewCertificateAuthority(&cp.CertConfig)
+	fpCert, fpKey, err := NewCertificateAuthority(&cp.CertConfig)
 	if err != nil {
 		logrus.Fatal(err)
 	}
 
 	certs := map[string][]byte{
-		ControlPlaneCaCrt:     pki.EncodeCertPEM(caCert),
+		ControlPlaneCaCrt:     EncodeCertPEM(caCert),
 		ControlPlaneCaKey:     EncodePrivateKey(caKey),
-		ControlPlaneSaPub:     pki.EncodeCertPEM(saCert),
+		ControlPlaneSaPub:     EncodeCertPEM(saCert),
 		ControlPlaneSaKey:     EncodePrivateKey(saKey),
-		ControlPlaneFProxyCrt: pki.EncodeCertPEM(fpCert),
+		ControlPlaneFProxyCrt: EncodeCertPEM(fpCert),
 		ControlPlaneFProxyKey: EncodePrivateKey(fpKey),
 	}
 

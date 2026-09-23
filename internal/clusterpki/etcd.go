@@ -6,8 +6,6 @@ package clusterpki
 
 import (
 	"fmt"
-
-	pki "k8s.io/kubernetes/cmd/kubeadm/app/util/pkiutil"
 )
 
 const (
@@ -22,13 +20,13 @@ type Etcd struct {
 }
 
 func (e Etcd) Create() error {
-	ca, privateKey, err := pki.NewCertificateAuthority(&e.CertConfig)
+	ca, privateKey, err := NewCertificateAuthority(&e.CertConfig)
 	if err != nil {
 		return fmt.Errorf("error while creating CA for etcd: %w", err)
 	}
 
 	certs := map[string][]byte{
-		EtcdCaCrt: pki.EncodeCertPEM(ca),
+		EtcdCaCrt: EncodeCertPEM(ca),
 		EtcdCaKey: EncodePrivateKey(privateKey),
 	}
 

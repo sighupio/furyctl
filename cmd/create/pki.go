@@ -14,7 +14,6 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	certutil "k8s.io/client-go/util/cert"
-	pki "k8s.io/kubernetes/cmd/kubeadm/app/util/pkiutil"
 
 	"github.com/sighupio/furyctl/internal/analytics"
 	"github.com/sighupio/furyctl/internal/app"
@@ -35,14 +34,10 @@ func NewPki(etcd, controlplane bool, pkiPath string) error {
 			AltNames:     certutil.AltNames{DNSNames: []string{}, IPs: []net.IP{}},
 			Usages:       []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
 		}
-		certConfig = pki.CertConfig{
-			Config:              cert,
-			EncryptionAlgorithm: "",
-		}
 	)
 
 	data.Path = pkiPath
-	data.CertConfig = certConfig
+	data.CertConfig = cert
 
 	switch {
 	case etcd:
