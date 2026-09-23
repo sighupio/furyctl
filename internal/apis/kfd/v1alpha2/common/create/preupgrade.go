@@ -20,7 +20,9 @@ import (
 	"github.com/sighupio/furyctl/configs"
 	"github.com/sighupio/furyctl/internal/apis/config"
 	"github.com/sighupio/furyctl/internal/cluster"
+	"github.com/sighupio/furyctl/internal/distribution"
 	"github.com/sighupio/furyctl/internal/semver"
+	"github.com/sighupio/furyctl/internal/tool/ansible"
 	"github.com/sighupio/furyctl/internal/upgrade"
 	iox "github.com/sighupio/furyctl/internal/x/io"
 	"github.com/sighupio/furyctl/pkg/reducers"
@@ -76,6 +78,16 @@ func NewPreUpgrade(
 		kfdManifest.Tools,
 		paths.BinPath,
 	)
+
+	// The upgrade scripts run the ansible that furyctl installs for this kind.
+	ansiblePaths := ansible.PathsForVersion(
+		paths.BinPath,
+		distribution.EffectiveAnsible(kfdManifest.Tools, kind).Version,
+		"",
+	)
+	phaseOp.AnsiblePlaybookPath = ansiblePaths.AnsiblePlaybook
+	phaseOp.AnsiblePythonPath = ansiblePaths.Python
+	phaseOp.AnsibleCollectionsPath = ansiblePaths.CollectionsPath
 
 	return &PreUpgrade{
 		OperationPhase:       phaseOp,
