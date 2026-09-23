@@ -27,6 +27,7 @@ Welcome to the latest release of `furyctl` maintained by SIGHUP by ReeVo team.
 
 - [[#770](https://github.com/sighupio/furyctl/pull/770)] Immutable: `apply --phase distribution` and `apply --phase plugins` now stop when the cluster does not exist. Before this release they continued, and they applied to the cluster of the current kubeconfig context. The preflight check now also says when it cannot reach a control plane host, instead of reporting a cluster that does not exist.
 - [[#774](https://github.com/sighupio/furyctl/pull/774)] Immutable: the preflight check now reads every host, and not only the control plane hosts. When other hosts belong to a cluster and no control plane host gives its kubeconfig, the apply now stops. Before this release, furyctl continued as if the cluster did not exist. The check also names each host that does not answer.
+- [[#776](https://github.com/sighupio/furyctl/pull/776)] OnPremises and Immutable: the ansible that furyctl installs now works when the `--outdir` path contains a symlink, for example `/tmp` on macOS. Before this fix the link to the ansible venv was broken in that case, and each playbook failed with `no such file or directory`.
 
 ## Breaking Changes 💔
 
