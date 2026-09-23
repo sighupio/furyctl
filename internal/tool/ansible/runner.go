@@ -75,7 +75,7 @@ func (r *Runner) Playbook(params ...string) ([]byte, error) {
 	region := execx.NewOutputRegion()
 	defer region.Clear()
 
-	cmd, id := r.build(r.paths.AnsiblePlaybook, args, region)
+	cmd, id := r.build(r.paths.AnsiblePlaybook, args, region, region.Stream())
 	defer r.deleteCmd(id)
 
 	if err := cmd.Run(); err != nil {
@@ -132,12 +132,12 @@ func (r *Runner) Stop() error {
 }
 
 func (r *Runner) newCmd(args []string) (*execx.Cmd, string) {
-	return r.build(r.paths.Ansible, args, nil)
+	return r.build(r.paths.Ansible, args, nil, nil)
 }
 
 // build runs the given ansible entrypoint directly (host) or as `<python> <entrypoint> ...` with the
-// collections env (mise-managed). A non-nil out also gets the command output.
-func (r *Runner) build(entrypoint string, args []string, out io.Writer) (*execx.Cmd, string) {
+// collections env (mise-managed). Non-nil out and errOut also get stdout and stderr.
+func (r *Runner) build(entrypoint string, args []string, out, errOut io.Writer) (*execx.Cmd, string) {
 	name := entrypoint
 	fullArgs := args
 
@@ -158,7 +158,7 @@ func (r *Runner) build(entrypoint string, args []string, out io.Writer) (*execx.
 		Env:      env,
 		Executor: r.executor,
 		Out:      out,
-		Err:      out,
+		Err:      errOut,
 		WorkDir:  r.paths.WorkDir,
 	})
 

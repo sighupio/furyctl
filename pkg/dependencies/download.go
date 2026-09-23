@@ -387,7 +387,7 @@ func (dd *Downloader) DownloadTools(kfd config.KFD, kind string) ([]string, erro
 	// --no-tty the region stays disabled and mise output is captured to the log file as usual.
 	progress := execx.NewOutputRegion()
 
-	if err := runner.Install(progress); err != nil {
+	if err := runner.Install(progress, progress.Stream()); err != nil {
 		progress.Clear()
 
 		return uts, fmt.Errorf("error installing tools via mise: %w", err)

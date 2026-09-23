@@ -45,7 +45,7 @@ func (r *Runner) Run(args ...string) (string, error) {
 	region := execx.NewOutputRegion()
 	defer region.Clear()
 
-	cmd, id := r.newCmd(args, region)
+	cmd, id := r.newCmd(args, region, region.Stream())
 	defer r.deleteCmd(id)
 
 	out, err := execx.CombinedOutput(cmd)
@@ -66,12 +66,12 @@ func (r *Runner) Stop() error {
 	return nil
 }
 
-func (r *Runner) newCmd(args []string, out io.Writer) (*execx.Cmd, string) {
+func (r *Runner) newCmd(args []string, out, errOut io.Writer) (*execx.Cmd, string) {
 	cmd := execx.NewCmd(r.paths.Shell, execx.CmdOptions{
 		Args:     args,
 		Executor: r.executor,
 		Out:      out,
-		Err:      out,
+		Err:      errOut,
 		WorkDir:  r.paths.WorkDir,
 	})
 

@@ -76,7 +76,7 @@ func (r *Runner) Init(helmBinary string) error {
 
 	args := []string{"init", "--force", "--helm-binary", helmBinary}
 
-	cmd, id := r.newCmd(args, nil)
+	cmd, id := r.newCmd(args, nil, nil)
 	defer r.deleteCmd(id)
 
 	if _, err := execx.CombinedOutput(cmd); err != nil {
@@ -92,7 +92,7 @@ func (r *Runner) Apply() error {
 	region := execx.NewOutputRegion()
 	defer region.Clear()
 
-	cmd, id := r.newCmd(args, region)
+	cmd, id := r.newCmd(args, region, region.Stream())
 	defer r.deleteCmd(id)
 
 	if _, err := execx.CombinedOutput(cmd); err != nil {
@@ -103,7 +103,7 @@ func (r *Runner) Apply() error {
 }
 
 func (r *Runner) Version() (string, error) {
-	cmd, id := r.newCmd([]string{"version", "-o=short"}, nil)
+	cmd, id := r.newCmd([]string{"version", "-o=short"}, nil, nil)
 	defer r.deleteCmd(id)
 
 	out, err := execx.CombinedOutput(cmd)
@@ -124,12 +124,12 @@ func (r *Runner) Stop() error {
 	return nil
 }
 
-func (r *Runner) newCmd(args []string, out io.Writer) (*execx.Cmd, string) {
+func (r *Runner) newCmd(args []string, out, errOut io.Writer) (*execx.Cmd, string) {
 	cmd := execx.NewCmd(r.paths.Helmfile, execx.CmdOptions{
 		Args:     args,
 		Executor: r.executor,
 		Out:      out,
-		Err:      out,
+		Err:      errOut,
 		WorkDir:  r.paths.WorkDir,
 		// Disable helmfile's "newer version available" check: it hits the network on every
 		// invocation (including `version`), which slows things down and breaks air-gapped runs.

@@ -9,6 +9,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"sync"
 
 	"golang.org/x/term"
 )
@@ -23,6 +24,8 @@ const (
 // only when attached to a real terminal; otherwise Write and Clear are no-ops so logs stay clean and
 // the caller can route the same output elsewhere (e.g. to DEBUG).
 type LiveRegion struct {
+	// mu serializes all writes: os/exec copies stdout and stderr from separate goroutines.
+	mu       sync.Mutex
 	w        io.Writer
 	enabled  bool
 	maxLines int
@@ -63,20 +66,43 @@ func (lr *LiveRegion) Enabled() bool {
 
 // Write consumes streamed bytes, keeping the most recent lines visible in place.
 func (lr *LiveRegion) Write(p []byte) (int, error) {
+	return lr.feed(&lr.partial, p)
+}
+
+// Stream returns another writer into the region with its own buffer for incomplete lines. Give one
+// to each stream of a command, so that a partial stdout line and a partial stderr line never join.
+func (lr *LiveRegion) Stream() io.Writer {
+	return &regionStream{lr: lr}
+}
+
+type regionStream struct {
+	lr      *LiveRegion
+	partial string
+}
+
+func (s *regionStream) Write(p []byte) (int, error) {
+	return s.lr.feed(&s.partial, p)
+}
+
+// feed appends p to partial, moves each complete line into the region and repaints it.
+func (lr *LiveRegion) feed(partial *string, p []byte) (int, error) {
+	lr.mu.Lock()
+	defer lr.mu.Unlock()
+
 	if !lr.enabled {
 		return len(p), nil
 	}
 
-	lr.partial += string(p)
+	*partial += string(p)
 
 	for {
-		idx := strings.IndexByte(lr.partial, '\n')
+		idx := strings.IndexByte(*partial, '\n')
 		if idx < 0 {
 			break
 		}
 
-		line := strings.TrimRight(lr.partial[:idx], "\r")
-		lr.partial = lr.partial[idx+1:]
+		line := strings.TrimRight((*partial)[:idx], "\r")
+		*partial = (*partial)[idx+1:]
 
 		lr.lines = append(lr.lines, lr.truncate(line))
 
@@ -92,6 +118,9 @@ func (lr *LiveRegion) Write(p []byte) (int, error) {
 
 // Clear wipes the painted region, leaving the cursor where the region began.
 func (lr *LiveRegion) Clear() {
+	lr.mu.Lock()
+	defer lr.mu.Unlock()
+
 	if !lr.enabled || lr.painted == 0 {
 		return
 	}

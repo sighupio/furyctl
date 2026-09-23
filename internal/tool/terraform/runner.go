@@ -7,6 +7,7 @@ package terraform
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"os"
 	"path"
 
@@ -46,13 +47,13 @@ func (r *Runner) CmdPath() string {
 }
 
 func (r *Runner) Init() error {
-	args := []string{"init", "-upgrade"}
+	// Always -no-color: the live region truncates lines by bytes and would cut color codes.
+	args := []string{"init", "-upgrade", "-no-color"}
 
-	if execx.NoTTY {
-		args = append(args, "-no-color")
-	}
+	region := execx.NewOutputRegion()
+	defer region.Clear()
 
-	cmd, id := r.newCmd(args)
+	cmd, id := r.newCmd(args, region, region.Stream())
 	defer r.deleteCmd(id)
 
 	if err := cmd.Run(); err != nil {
@@ -72,7 +73,10 @@ func (r *Runner) Plan(timestamp int64, params ...string) ([]byte, error) {
 
 	args = append(args, "-no-color", "-out", "plan/terraform.plan")
 
-	cmd, id := r.newCmd(args)
+	region := execx.NewOutputRegion()
+	defer region.Clear()
+
+	cmd, id := r.newCmd(args, region, region.Stream())
 	defer r.deleteCmd(id)
 
 	if err := cmd.Run(); err != nil {
@@ -93,7 +97,15 @@ func (r *Runner) Plan(timestamp int64, params ...string) ([]byte, error) {
 }
 
 func (r *Runner) Apply(timestamp int64) error {
-	cmd, applyID := r.newCmd([]string{"apply", "-no-color", "-json", "plan/terraform.plan"})
+	region := execx.NewOutputRegion()
+	defer region.Clear()
+
+	// -json prints one object per line: show only its human-readable message.
+	cmd, applyID := r.newCmd(
+		[]string{"apply", "-no-color", "-json", "plan/terraform.plan"},
+		&jsonMessageWriter{w: region},
+		&jsonMessageWriter{w: region.Stream()},
+	)
 	defer r.deleteCmd(applyID)
 
 	if err := cmd.Run(); err != nil {
@@ -114,7 +126,7 @@ func (r *Runner) Apply(timestamp int64) error {
 func (r *Runner) Output() (OutputJSON, error) {
 	var oj OutputJSON
 
-	cmd, outputID := r.newCmd([]string{"output", "-json"})
+	cmd, outputID := r.newCmd([]string{"output", "-json"}, nil, nil)
 	defer r.deleteCmd(outputID)
 
 	if err := cmd.Run(); err != nil {
@@ -137,7 +149,7 @@ func (r *Runner) Output() (OutputJSON, error) {
 }
 
 func (r *Runner) State(params ...string) (string, error) {
-	cmd, outputID := r.newCmd(append([]string{"state"}, params...))
+	cmd, outputID := r.newCmd(append([]string{"state"}, params...), nil, nil)
 
 	defer r.deleteCmd(outputID)
 
@@ -149,13 +161,12 @@ func (r *Runner) State(params ...string) (string, error) {
 }
 
 func (r *Runner) Destroy() error {
-	args := []string{"destroy", "-auto-approve"}
+	args := []string{"destroy", "-auto-approve", "-no-color"}
 
-	if execx.NoTTY {
-		args = append(args, "-no-color")
-	}
+	region := execx.NewOutputRegion()
+	defer region.Clear()
 
-	cmd, id := r.newCmd(args)
+	cmd, id := r.newCmd(args, region, region.Stream())
 	defer r.deleteCmd(id)
 
 	if err := cmd.Run(); err != nil {
@@ -168,7 +179,7 @@ func (r *Runner) Destroy() error {
 func (r *Runner) Version() (string, error) {
 	args := []string{"version"}
 
-	cmd, id := r.newCmd(args)
+	cmd, id := r.newCmd(args, nil, nil)
 	defer r.deleteCmd(id)
 
 	log, err := execx.CombinedOutput(cmd)
@@ -189,10 +200,13 @@ func (r *Runner) Stop() error {
 	return nil
 }
 
-func (r *Runner) newCmd(args []string) (*execx.Cmd, string) {
+// newCmd builds a terraform command. Non-nil out and errOut also get stdout and stderr.
+func (r *Runner) newCmd(args []string, out, errOut io.Writer) (*execx.Cmd, string) {
 	cmd := execx.NewCmd(r.paths.Terraform, execx.CmdOptions{
 		Args:     args,
 		Executor: r.executor,
+		Out:      out,
+		Err:      errOut,
 		WorkDir:  r.paths.WorkDir,
 	})
 

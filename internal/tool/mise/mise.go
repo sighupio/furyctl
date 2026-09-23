@@ -141,9 +141,9 @@ func NewRunner(executor execx.Executor, paths Paths) *Runner {
 }
 
 // Install installs all tools declared in the (hermetic) global config into DataDir, teeing mise's
-// progress output to progress (may be nil). No-op if they are already installed.
-func (r *Runner) Install(progress io.Writer) error {
-	if _, err := execx.CombinedOutput(r.newCmdOut(progress, "install")); err != nil {
+// stdout to out and its stderr to errOut (either may be nil). No-op if they are already installed.
+func (r *Runner) Install(out, errOut io.Writer) error {
+	if _, err := execx.CombinedOutput(r.newCmdOut(out, errOut, "install")); err != nil {
 		return fmt.Errorf("error running mise install: %w", err)
 	}
 
@@ -206,19 +206,19 @@ func (r *Runner) hermeticEnv() []string {
 // newCmd builds a mise invocation: always `--cd <isolated workdir>` so config discovery can't pick
 // up ambient mise.toml files, with the hermetic env.
 func (r *Runner) newCmd(args ...string) *execx.Cmd {
-	return r.newCmdOut(nil, args...)
+	return r.newCmdOut(nil, nil, args...)
 }
 
-// newCmdOut is like newCmd but also tees mise's stdout/stderr to progress (in addition to the
-// captured buffers), so the caller can stream install output live.
-func (r *Runner) newCmdOut(progress io.Writer, args ...string) *execx.Cmd {
+// newCmdOut is like newCmd but also tees mise's stdout to out and its stderr to errOut (in addition
+// to the captured buffers), so the caller can stream install output live.
+func (r *Runner) newCmdOut(out, errOut io.Writer, args ...string) *execx.Cmd {
 	fullArgs := append([]string{"--cd", r.paths.WorkDir}, args...)
 
 	return execx.NewCmd(r.paths.Mise, execx.CmdOptions{
 		Args:     fullArgs,
 		Env:      r.hermeticEnv(),
 		Executor: r.executor,
-		Out:      progress,
-		Err:      progress,
+		Out:      out,
+		Err:      errOut,
 	})
 }
