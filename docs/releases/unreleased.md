@@ -24,6 +24,8 @@ Welcome to the latest release of `furyctl` maintained by SIGHUP by ReeVo team.
 - [[#766](https://github.com/sighupio/furyctl/pull/766)] Immutable: `apply --upgrade --skip-nodes-upgrade` now records the worker nodes that it does not upgrade. Before this release furyctl stored the configuration of the new version as a complete upgrade. The cluster then reported a version that the worker nodes did not run, and the next `apply --upgrade` found no difference between the two versions and upgraded nothing.
 - [[#767](https://github.com/sighupio/furyctl/pull/767)] Immutable: `apply` no longer stops with `error during server shutdown: context deadline exceeded` after the machines boot. The assets server waited for a request that a reset machine left open, and the timeout of that wait failed the infrastructure phase although every machine had booted.
 
+- [[#770](https://github.com/sighupio/furyctl/pull/770)] Immutable: `apply --phase distribution` and `apply --phase plugins` now stop when the cluster does not exist. Before this release they continued, and they applied to the cluster of the current kubeconfig context. The preflight check now also says when it cannot reach a control plane host, instead of reporting a cluster that does not exist.
+
 ## Breaking Changes 💔
 
 - [[#764](https://github.com/sighupio/furyctl/pull/764)] Immutable: `apply --upgrade-node <host>` now stops when you give `--phase`, `--start-from` or `--post-apply-phases` with it. Before this release furyctl accepted these together. `--phase kubernetes` did the same work as `--upgrade-node` alone, and the other two did no extra work without a message. Give `--upgrade-node` alone. Kind OnPremises is not affected.

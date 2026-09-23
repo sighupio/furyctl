@@ -7,13 +7,16 @@ package create
 import (
 	"errors"
 	"fmt"
+	"os"
 	"path"
 	"slices"
+	"strings"
 
 	r3diff "github.com/r3labs/diff/v3"
 	"github.com/sirupsen/logrus"
 
 	"github.com/sighupio/furyctl/internal/apis/config"
+	preflightx "github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/immutable/preflight"
 	"github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/immutable/public"
 	"github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/immutable/supported"
 	"github.com/sighupio/furyctl/internal/cluster"
@@ -142,21 +145,60 @@ func (p *PreFlight) Exec(renderedConfig map[string]any) (*Status, error) {
 		return status, fmt.Errorf("error copying from template: %w", err)
 	}
 
-	if _, err := p.ansibleRunner.Playbook("verify-playbook.yaml"); err != nil {
+	adminConfPath := path.Join(p.Path, "admin.conf")
+
+	adminConfPlaybook, err := preflightx.AdminConfPlaybookName(p.Path)
+	if err != nil {
+		return status, fmt.Errorf("error selecting admin.conf playbook: %w", err)
+	}
+
+	// The phase folder holds the admin.conf of an earlier run, because CreateRootFolder keeps a
+	// folder that exists. A cluster that the operator removed would therefore read as a cluster
+	// that is there. Remove the file, so that only the playbook below can put it back.
+	if err := os.Remove(adminConfPath); err != nil && !errors.Is(err, os.ErrNotExist) {
+		return status, fmt.Errorf("error removing the kubeconfig of an earlier run: %w", err)
+	}
+
+	if _, err := p.ansibleRunner.Playbook(adminConfPlaybook); err != nil {
+		// This kind creates its machines in the infrastructure phase, so a first apply cannot
+		// reach the control plane hosts, and an error here is the normal answer for a cluster
+		// that is not there yet. The run therefore continues, and the check below gives the
+		// same answer as before. What keeps the run away from another cluster is the gate of
+		// the creator, which stops a phase that reads a cluster when there is none.
+		logrus.Warnf(
+			"furyctl could not read these control plane hosts: %s. It continues as if the cluster "+
+				"does not exist. A first apply gives this message, because the infrastructure phase "+
+				"creates those hosts. If the cluster is there, stop furyctl and make sure that these "+
+				"hosts answer.",
+			strings.Join(p.controlPlaneHosts(), ", "),
+		)
+
+		logrus.Debugf("%s: %v", adminConfPlaybook, err)
+	}
+
+	// The playbook fetches admin.conf when a control plane node holds one, and it does not
+	// fail when no node holds one. The local file therefore answers the question, which
+	// keeps an error of the playbook an error.
+	if _, err := os.Stat(adminConfPath); err != nil {
+		if !errors.Is(err, os.ErrNotExist) {
+			return status, fmt.Errorf("error reading the kubeconfig of the cluster: %w", err)
+		}
+
 		status.Success = true
 
 		logrus.Debug("Cluster does not exist, skipping state checks")
 
 		logrus.Info("Preflight checks completed successfully")
 
-		return status, nil //nolint:nilerr // we want to return nil here
+		return status, nil
 	}
 
-	status.ClusterExists = true
-
-	if err := kubex.SetConfigEnv(path.Join(p.Path, "admin.conf")); err != nil {
+	if err := kubex.SetConfigEnv(adminConfPath); err != nil {
 		return status, fmt.Errorf("error setting kubeconfig env: %w", err)
 	}
+
+	// ClusterExists comes after KUBECONFIG points to the cluster that the check found.
+	status.ClusterExists = true
 
 	logrus.Info("Checking that the Kubernetes API is reachable...")
 
@@ -321,4 +363,16 @@ func (p *PreFlight) CheckReducerDiffs(d r3diff.Changelog, diffChecker diffs.Chec
 	}
 
 	return nil
+}
+
+// controlPlaneHosts gives the hosts that this check probes. Its inventory holds the
+// control plane group only.
+func (p *PreFlight) controlPlaneHosts() []string {
+	hosts := make([]string, 0, len(p.furyctlConf.Spec.Kubernetes.ControlPlane.Members))
+
+	for _, m := range p.furyctlConf.Spec.Kubernetes.ControlPlane.Members {
+		hosts = append(hosts, m.Hostname)
+	}
+
+	return hosts
 }
