@@ -217,6 +217,11 @@ linters:
         - name: empty-lines
           severity: warning
           disabled: false
+        # epoch-naming and inefficient-map-lookup stop all later revive rules on a file when type-checking fails.
+        # revive runs its rules in random order, so some runs silently lose revive issues.
+        # Enable them again when golangci-lint includes revive v1.16.0 or later: https://github.com/mgechev/revive/issues/1718
+        - name: epoch-naming
+          disabled: true
         - name: error-naming
           severity: warning
           disabled: false
@@ -269,6 +274,9 @@ linters:
         - name: indent-error-flow
           severity: warning
           disabled: false
+        # See epoch-naming.
+        - name: inefficient-map-lookup
+          disabled: true
         - name: imports-blocklist
           arguments:
             - crypto/md5
@@ -469,8 +477,8 @@ linters:
       - .*\.gen\.go$
       - file_getter.go
 issues:
-  max-issues-per-linter: 50
-  max-same-issues: 3
+  max-issues-per-linter: 0
+  max-same-issues: 0
   new: false
   fix: false
 severity:
