@@ -6,6 +6,7 @@ package shell
 
 import (
 	"fmt"
+	"io"
 
 	"github.com/google/uuid"
 
@@ -40,7 +41,11 @@ func (*Runner) Version() (string, error) {
 }
 
 func (r *Runner) Run(args ...string) (string, error) {
-	cmd, id := r.newCmd(args)
+	// Scripts run long tools (ansible, kapp): show their last lines while they run.
+	region := execx.NewOutputRegion()
+	defer region.Clear()
+
+	cmd, id := r.newCmd(args, region)
 	defer r.deleteCmd(id)
 
 	out, err := execx.CombinedOutput(cmd)
@@ -61,10 +66,12 @@ func (r *Runner) Stop() error {
 	return nil
 }
 
-func (r *Runner) newCmd(args []string) (*execx.Cmd, string) {
+func (r *Runner) newCmd(args []string, out io.Writer) (*execx.Cmd, string) {
 	cmd := execx.NewCmd(r.paths.Shell, execx.CmdOptions{
 		Args:     args,
 		Executor: r.executor,
+		Out:      out,
+		Err:      out,
 		WorkDir:  r.paths.WorkDir,
 	})
 

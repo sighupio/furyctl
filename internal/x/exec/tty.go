@@ -9,6 +9,8 @@ import (
 
 	"github.com/sirupsen/logrus"
 	"golang.org/x/term"
+
+	iox "github.com/sighupio/furyctl/internal/x/io"
 )
 
 // AnimationDisabled reports whether live, in-place terminal output has been turned off — either
@@ -23,4 +25,10 @@ func AnimationDisabled() bool {
 // be disabled (see AnimationDisabled), and f must be a real terminal.
 func ShouldAnimate(f *os.File) bool {
 	return !AnimationDisabled() && term.IsTerminal(int(f.Fd()))
+}
+
+// NewOutputRegion returns a live region on stderr that shows the last lines of a running command.
+// It stays off when the command output already reaches the terminal raw (debug or --log stdout).
+func NewOutputRegion() *iox.LiveRegion {
+	return iox.NewLiveRegion(os.Stderr, AnimationDisabled() || LogFile == nil)
 }

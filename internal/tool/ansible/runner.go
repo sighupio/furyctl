@@ -6,6 +6,7 @@ package ansible
 
 import (
 	"fmt"
+	"io"
 	"path/filepath"
 
 	"github.com/google/uuid"
@@ -71,7 +72,10 @@ func (r *Runner) Playbook(params ...string) ([]byte, error) {
 		args = append(args, params...)
 	}
 
-	cmd, id := r.newPlaybookCmd(args)
+	region := execx.NewOutputRegion()
+	defer region.Clear()
+
+	cmd, id := r.build(r.paths.AnsiblePlaybook, args, region)
 	defer r.deleteCmd(id)
 
 	if err := cmd.Run(); err != nil {
@@ -128,16 +132,12 @@ func (r *Runner) Stop() error {
 }
 
 func (r *Runner) newCmd(args []string) (*execx.Cmd, string) {
-	return r.build(r.paths.Ansible, args)
-}
-
-func (r *Runner) newPlaybookCmd(args []string) (*execx.Cmd, string) {
-	return r.build(r.paths.AnsiblePlaybook, args)
+	return r.build(r.paths.Ansible, args, nil)
 }
 
 // build runs the given ansible entrypoint directly (host) or as `<python> <entrypoint> ...` with the
-// collections env (mise-managed).
-func (r *Runner) build(entrypoint string, args []string) (*execx.Cmd, string) {
+// collections env (mise-managed). A non-nil out also gets the command output.
+func (r *Runner) build(entrypoint string, args []string, out io.Writer) (*execx.Cmd, string) {
 	name := entrypoint
 	fullArgs := args
 
@@ -157,6 +157,8 @@ func (r *Runner) build(entrypoint string, args []string) (*execx.Cmd, string) {
 		Args:     fullArgs,
 		Env:      env,
 		Executor: r.executor,
+		Out:      out,
+		Err:      out,
 		WorkDir:  r.paths.WorkDir,
 	})
 
