@@ -5,6 +5,7 @@
 package immutable
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path"
@@ -21,6 +22,8 @@ import (
 	iox "github.com/sighupio/furyctl/internal/x/io"
 	templatex "github.com/sighupio/furyctl/pkg/template"
 )
+
+var errNoKubeconfig = errors.New("no control plane host gave its kubeconfig")
 
 type KubeconfigGetter struct {
 	*cluster.OperationPhase
@@ -106,21 +109,29 @@ func (k *KubeconfigGetter) Get() error {
 		return fmt.Errorf("error copying from template: %w", err)
 	}
 
-	if _, err := ansibleRunner.Exec("all", "-m", "ping"); err != nil {
-		return fmt.Errorf("error checking hosts: %w", err)
-	}
-
 	adminConfPlaybook, err := preflightx.AdminConfPlaybookName(tmpDir)
 	if err != nil {
 		return fmt.Errorf("error selecting admin.conf playbook: %w", err)
 	}
 
+	// The playbook of a current distribution does not fail when a host does not answer, and it
+	// fetches admin.conf from a control plane host that holds one. One control plane host that
+	// answers is therefore enough. The playbook of an older distribution fails when a host does
+	// not answer, and the command then stops here with that error.
 	if _, err := ansibleRunner.Playbook(adminConfPlaybook); err != nil {
 		return fmt.Errorf("error getting kubeconfig: %w", err)
 	}
 
 	kubeconfig, err := os.ReadFile(path.Join(tmpDir, "admin.conf"))
 	if err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			return fmt.Errorf(
+				"%w: make sure that at least one control plane host answers and holds "+
+					"/etc/kubernetes/admin.conf",
+				errNoKubeconfig,
+			)
+		}
+
 		return fmt.Errorf("error reading kubeconfig file: %w", err)
 	}
 
