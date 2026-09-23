@@ -219,6 +219,7 @@ linters:
           disabled: false
         # epoch-naming and inefficient-map-lookup stop all later revive rules on a file when type-checking fails.
         # revive runs its rules in random order, so some runs silently lose revive issues.
+        # Enable them again when golangci-lint includes revive v1.16.0 or later: https://github.com/mgechev/revive/issues/1718
         - name: epoch-naming
           disabled: true
         - name: error-naming
