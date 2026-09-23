@@ -24,7 +24,7 @@ const (
 // only when attached to a real terminal; otherwise Write and Clear are no-ops so logs stay clean and
 // the caller can route the same output elsewhere (e.g. to DEBUG).
 type LiveRegion struct {
-	// mu serializes all writes: os/exec copies stdout and stderr from separate goroutines.
+	// The mutex serializes all writes: os/exec copies stdout and stderr from separate goroutines.
 	mu       sync.Mutex
 	w        io.Writer
 	enabled  bool
@@ -84,6 +84,24 @@ func (s *regionStream) Write(p []byte) (int, error) {
 	return s.lr.feed(&s.partial, p)
 }
 
+// Clear wipes the painted region, leaving the cursor where the region began.
+func (lr *LiveRegion) Clear() {
+	lr.mu.Lock()
+	defer lr.mu.Unlock()
+
+	if !lr.enabled || lr.painted == 0 {
+		return
+	}
+
+	if _, err := io.WriteString(lr.w, "\033["+strconv.Itoa(lr.painted)+"A\033[J"); err != nil {
+		lr.enabled = false
+	}
+
+	lr.painted = 0
+	lr.lines = nil
+	lr.partial = ""
+}
+
 // feed appends p to partial, moves each complete line into the region and repaints it.
 func (lr *LiveRegion) feed(partial *string, p []byte) (int, error) {
 	lr.mu.Lock()
@@ -114,24 +132,6 @@ func (lr *LiveRegion) feed(partial *string, p []byte) (int, error) {
 	lr.repaint()
 
 	return len(p), nil
-}
-
-// Clear wipes the painted region, leaving the cursor where the region began.
-func (lr *LiveRegion) Clear() {
-	lr.mu.Lock()
-	defer lr.mu.Unlock()
-
-	if !lr.enabled || lr.painted == 0 {
-		return
-	}
-
-	if _, err := io.WriteString(lr.w, "\033["+strconv.Itoa(lr.painted)+"A\033[J"); err != nil {
-		lr.enabled = false
-	}
-
-	lr.painted = 0
-	lr.lines = nil
-	lr.partial = ""
 }
 
 // truncate clips a line to the terminal width so it never wraps and breaks the line accounting.
