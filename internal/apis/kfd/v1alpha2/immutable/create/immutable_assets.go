@@ -9,7 +9,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"gopkg.in/yaml.v2"
+	"go.yaml.in/yaml/v2"
 )
 
 // selectImmutableAssets loads the vendored immutable.yaml and selects the block for the given

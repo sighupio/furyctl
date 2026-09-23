@@ -8,8 +8,8 @@ import (
 	"fmt"
 	"os"
 
-	v2 "gopkg.in/yaml.v2"
-	v3 "gopkg.in/yaml.v3"
+	yamlv2 "go.yaml.in/yaml/v2"
+	yamlv3 "go.yaml.in/yaml/v3"
 )
 
 func FromFileV2[T any](path string) (T, error) {
@@ -20,7 +20,7 @@ func FromFileV2[T any](path string) (T, error) {
 		return data, fmt.Errorf("error while reading file from %s :%w", path, err)
 	}
 
-	if err := v2.Unmarshal(res, &data); err != nil {
+	if err := yamlv2.Unmarshal(res, &data); err != nil {
 		return data, fmt.Errorf("error while unmarshalling file from %s :%w", path, err)
 	}
 
@@ -28,7 +28,7 @@ func FromFileV2[T any](path string) (T, error) {
 }
 
 func MarshalV2(in any) ([]byte, error) {
-	out, err := v2.Marshal(in)
+	out, err := yamlv2.Marshal(in)
 	if err != nil {
 		return nil, fmt.Errorf("error while marshalling yaml: %w", err)
 	}
@@ -37,7 +37,7 @@ func MarshalV2(in any) ([]byte, error) {
 }
 
 func UnmarshalV2(in []byte, out any) error {
-	if err := v2.Unmarshal(in, out); err != nil {
+	if err := yamlv2.Unmarshal(in, out); err != nil {
 		return fmt.Errorf("error while unmarshalling yaml: %w", err)
 	}
 
@@ -52,7 +52,7 @@ func FromFileV3[T any](file string) (T, error) {
 		return data, fmt.Errorf("error while reading file from %s :%w", file, err)
 	}
 
-	if err := v3.Unmarshal(res, &data); err != nil {
+	if err := yamlv3.Unmarshal(res, &data); err != nil {
 		return data, fmt.Errorf("error while unmarshalling file from %s :%w", file, err)
 	}
 
@@ -60,7 +60,7 @@ func FromFileV3[T any](file string) (T, error) {
 }
 
 func MarshalV3(in any) ([]byte, error) {
-	out, err := v3.Marshal(in)
+	out, err := yamlv3.Marshal(in)
 	if err != nil {
 		return nil, fmt.Errorf("error while marshalling yaml: %w", err)
 	}
@@ -69,7 +69,7 @@ func MarshalV3(in any) ([]byte, error) {
 }
 
 func UnmarshalV3(in []byte, out any) error {
-	if err := v3.Unmarshal(in, out); err != nil {
+	if err := yamlv3.Unmarshal(in, out); err != nil {
 		return fmt.Errorf("error while unmarshalling yaml: %w", err)
 	}
 

@@ -12,7 +12,7 @@ import (
 	"strings"
 
 	"github.com/samber/lo"
-	"gopkg.in/yaml.v3"
+	"go.yaml.in/yaml/v3"
 
 	parserx "github.com/sighupio/furyctl/internal/parser"
 )

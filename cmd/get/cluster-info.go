@@ -19,7 +19,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
-	v3 "gopkg.in/yaml.v3"
+	"go.yaml.in/yaml/v3"
 
 	"github.com/sighupio/furyctl/internal/analytics"
 	"github.com/sighupio/furyctl/internal/app"
@@ -185,7 +185,7 @@ func printJSON(info *clusterinfo.Info) error {
 }
 
 func printYAML(info *clusterinfo.Info) error {
-	enc := v3.NewEncoder(os.Stdout)
+	enc := yaml.NewEncoder(os.Stdout)
 	defer enc.Close()
 
 	if err := enc.Encode(info); err != nil {

@@ -11,7 +11,7 @@ import (
 	"text/template"
 
 	"github.com/Masterminds/sprig/v3"
-	"gopkg.in/yaml.v2"
+	"go.yaml.in/yaml/v2"
 )
 
 var (

@@ -7,7 +7,7 @@ package public_test
 import (
 	"testing"
 
-	"gopkg.in/yaml.v3"
+	"go.yaml.in/yaml/v3"
 
 	"github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/immutable/public"
 )
