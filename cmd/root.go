@@ -60,8 +60,8 @@ furyctl is a command line interface tool to manage the full lifecycle of SIGHUP 
 			SilenceErrors: true,
 			PersistentPreRun: func(cmd *cobra.Command, _ []string) {
 				var err error
+				// Not closed: the commands and main write to it until the process exits.
 				var logFile *os.File
-				defer logFile.Close()
 
 				ctn := app.GetContainerInstance()
 
