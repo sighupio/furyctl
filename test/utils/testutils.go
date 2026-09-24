@@ -171,7 +171,7 @@ func Download(toolName, version string) string {
 		WorkDir:    work,
 	})
 
-	Must0(runner.Install(nil))
+	Must0(runner.Install(nil, nil))
 
 	return Must1(runner.Which(mise.ManagedTools[toolName].Bin))
 }
