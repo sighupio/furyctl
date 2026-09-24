@@ -557,8 +557,10 @@ func materializeTool(binPath, name, version, bin, realPath string) error {
 
 	_ = os.Remove(link)
 
+	// The kernel resolves "../" from the physical folder of the link. Compute the relative path
+	// between physical paths, or a symlink in binPath (for example /tmp on macOS) breaks the link.
 	target := realPath
-	if rel, err := filepath.Rel(dir, realPath); err == nil {
+	if rel, err := filepath.Rel(physicalPath(dir), physicalPath(realPath)); err == nil {
 		target = rel
 	}
 
@@ -567,6 +569,15 @@ func materializeTool(binPath, name, version, bin, realPath string) error {
 	}
 
 	return nil
+}
+
+// physicalPath returns p with all symlinks resolved, or p when it cannot resolve them.
+func physicalPath(p string) string {
+	if resolved, err := filepath.EvalSymlinks(p); err == nil {
+		return resolved
+	}
+
+	return p
 }
 
 func createURL(prefix, name, version string) string {
