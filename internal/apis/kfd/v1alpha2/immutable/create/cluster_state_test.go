@@ -169,3 +169,14 @@ func TestClusterStateSummary(t *testing.T) {
 		state.summary(),
 	)
 }
+
+func TestClusterStateAnswers(t *testing.T) {
+	t.Parallel()
+
+	nodes := []string{"cp1", "w1"}
+
+	assert.True(t, clusterState{Reachable: []string{"cp1", "w1", "lb1"}}.answers(nodes))
+	assert.False(t, clusterState{Reachable: []string{"cp1"}, Unreachable: []string{"w1"}}.answers(nodes))
+	// An inventory that does not hold a node gives no answer for it.
+	assert.False(t, clusterState{Reachable: []string{"cp1"}}.answers(nodes))
+}

@@ -13,6 +13,7 @@ import (
 	"strings"
 
 	r3diff "github.com/r3labs/diff/v3"
+	"github.com/samber/lo"
 	"github.com/sirupsen/logrus"
 
 	"github.com/sighupio/furyctl/internal/apis/config"
@@ -40,6 +41,9 @@ type Status struct {
 	Diffs         r3diff.Changelog
 	Success       bool
 	ClusterExists bool
+	// AllNodesAnswer is true when every node of spec.infrastructure.nodes answered. It is
+	// false when the distribution gives no state file, because furyctl does not know then.
+	AllNodesAnswer bool
 }
 
 type PreFlight struct {
@@ -105,9 +109,10 @@ func NewPreFlight(
 
 func (p *PreFlight) Exec(renderedConfig map[string]any) (*Status, error) {
 	status := &Status{
-		Diffs:         r3diff.Changelog{},
-		Success:       false,
-		ClusterExists: false,
+		Diffs:          r3diff.Changelog{},
+		Success:        false,
+		ClusterExists:  false,
+		AllNodesAnswer: false,
 	}
 
 	logrus.Info("Running preflight checks...")
@@ -184,6 +189,11 @@ func (p *PreFlight) Exec(renderedConfig map[string]any) (*Status, error) {
 		if warning != "" {
 			logrus.Warn(warning)
 		}
+
+		status.AllNodesAnswer = probe.answers(lo.Map(
+			p.furyctlConf.Spec.Infrastructure.Nodes,
+			func(n public.SpecInfrastructureNode, _ int) string { return n.Hostname },
+		))
 
 	case playbookErr != nil:
 		// A distribution released before the state file gives a playbook that fails when a host
