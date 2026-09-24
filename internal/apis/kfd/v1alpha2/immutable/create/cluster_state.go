@@ -12,6 +12,8 @@ import (
 	"path/filepath"
 	"slices"
 	"strings"
+
+	"github.com/samber/lo"
 )
 
 // clusterStateFile is the file that the preflight playbook writes. A distribution released
@@ -135,4 +137,10 @@ func (s clusterState) summary() string {
 	}
 
 	return line
+}
+
+// answers reports whether every host in hosts answered. A host that the playbook did not probe
+// did not answer.
+func (s clusterState) answers(hosts []string) bool {
+	return lo.Every(s.Reachable, hosts)
 }
