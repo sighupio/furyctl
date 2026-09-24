@@ -14,6 +14,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"slices"
 	"strings"
 
 	execx "github.com/sighupio/furyctl/internal/x/exec"
@@ -191,20 +192,32 @@ func (r *Runner) Version() (string, error) {
 	return strings.TrimSpace(out), nil
 }
 
-// hermeticEnv isolates our mise from the user's: dedicated data/cache/config, auto-confirm and a
-// trusted config path (no prompt).
+// hermeticEnv isolates our mise from the mise of the user. It keeps the user environment, but it
+// removes all MISE_* and __MISE_* variables. Then it sets dedicated data, cache and config paths, a
+// trusted config path and auto-confirm.
 func (r *Runner) hermeticEnv() []string {
-	return []string{
-		"MISE_DATA_DIR=" + r.paths.DataDir,
-		"MISE_CACHE_DIR=" + r.paths.CacheDir,
-		"MISE_GLOBAL_CONFIG_FILE=" + r.paths.ConfigFile,
-		"MISE_TRUSTED_CONFIG_PATHS=" + filepath.Dir(r.paths.ConfigFile),
+	configDir := filepath.Dir(r.paths.ConfigFile)
+
+	env := slices.DeleteFunc(os.Environ(), func(kv string) bool {
+		// An activated user shell also sets __MISE_* (session state), and mise reads it.
+		return strings.HasPrefix(kv, "MISE_") || strings.HasPrefix(kv, "__MISE_")
+	})
+
+	return append(env,
+		"MISE_DATA_DIR="+r.paths.DataDir,
+		"MISE_CACHE_DIR="+r.paths.CacheDir,
+		"MISE_GLOBAL_CONFIG_FILE="+r.paths.ConfigFile,
+		// This file never exists, thus mise does not read the system config in /etc/mise.
+		"MISE_SYSTEM_CONFIG_FILE="+filepath.Join(configDir, "system.toml"),
+		// The settings search starts in the working directory and goes up through each parent
+		// directory. This value stops the search at the isolated workdir.
+		"MISE_CEILING_PATHS="+r.paths.WorkDir,
+		"MISE_TRUSTED_CONFIG_PATHS="+configDir,
 		"MISE_YES=1",
-	}
+	)
 }
 
-// newCmd builds a mise invocation: always `--cd <isolated workdir>` so config discovery can't pick
-// up ambient mise.toml files, with the hermetic env.
+// newCmd builds a mise command with the hermetic env. The command runs in the isolated workdir.
 func (r *Runner) newCmd(args ...string) *execx.Cmd {
 	return r.newCmdOut(nil, nil, args...)
 }
@@ -212,13 +225,17 @@ func (r *Runner) newCmd(args ...string) *execx.Cmd {
 // newCmdOut is like newCmd but also tees mise's stdout to out and its stderr to errOut (in addition
 // to the captured buffers), so the caller can stream install output live.
 func (r *Runner) newCmdOut(out, errOut io.Writer, args ...string) *execx.Cmd {
-	fullArgs := append([]string{"--cd", r.paths.WorkDir}, args...)
-
-	return execx.NewCmd(r.paths.Mise, execx.CmdOptions{
-		Args:     fullArgs,
-		Env:      r.hermeticEnv(),
+	cmd := execx.NewCmd(r.paths.Mise, execx.CmdOptions{
+		Args:     args,
+		WorkDir:  r.paths.WorkDir,
 		Executor: r.executor,
 		Out:      out,
 		Err:      errOut,
 	})
+
+	// CmdOptions.Env only adds variables to os.Environ(). It cannot remove the MISE_* variables of the
+	// user, thus set the env here.
+	cmd.Env = r.hermeticEnv()
+
+	return cmd
 }
