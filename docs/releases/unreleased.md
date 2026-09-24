@@ -31,6 +31,7 @@ Welcome to the latest release of `furyctl` maintained by SIGHUP by ReeVo team.
 - [[#774](https://github.com/sighupio/furyctl/pull/774)] Immutable: the preflight check now reads every host, and not only the control plane hosts. When other hosts belong to a cluster and no control plane host gives its kubeconfig, the apply now stops. Before this release, furyctl continued as if the cluster did not exist. The check also names each host that does not answer.
 - [[#776](https://github.com/sighupio/furyctl/pull/776)] OnPremises and Immutable: the ansible that furyctl installs now works when the `--outdir` path contains a symlink, for example `/tmp` on macOS. Before this fix the link to the ansible venv was broken in that case, and each playbook failed with `no such file or directory`.
 - [[#780](https://github.com/sighupio/furyctl/pull/780)] All kinds: furyctl now writes the error that stops a command to the log file, and not only to the terminal. Before this release the log file did not have this error.
+- [[#781](https://github.com/sighupio/furyctl/pull/781)] All kinds: the mise that furyctl bundles no longer reads your own mise configuration or your `MISE_*` and `__MISE_*` environment variables. Before this fix it read the settings of `~/.config/mise`, `/etc/mise`, the `mise.toml` files of the current directory and its parents, and the environment.
 
 ## Breaking Changes 💔
 
