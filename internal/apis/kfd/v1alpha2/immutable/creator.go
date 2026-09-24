@@ -290,6 +290,12 @@ func (c *ClusterCreator) Create(startFrom string, _, podRunningCheckTimeout int)
 		status.Diffs,
 	)
 
+	// A node that must be provisioned again does not answer, or a change of the configuration
+	// needs it. In both cases the operator boots it while the assets server waits.
+	infra.SetSkipBootWait(
+		status.AllNodesAnswer && !nodesNeedReprovisioning(rdcsInfrastructure, unsafeReducersInfrastructure),
+	)
+
 	rdcs := rdcsInfrastructure
 	rdcs = append(rdcs, rdcsDistribution...)
 	unsafeReducers := unsafeReducersInfrastructure
@@ -1428,7 +1434,7 @@ func (c *ClusterCreator) confirmInfrastructureChanges(
 				"that could cause data loss or service disruption have been found.")
 		}
 
-		if strings.Contains(rdcs.ToString(), ".spec.infrastructure.nodes") {
+		if nodesNeedReprovisioning(rdcs, unsafeReducers) {
 			askConfirmation = true
 
 			logrus.Warning("Changes to configuration that require nodes reprovisioning have been found. " +
@@ -1449,6 +1455,12 @@ func (c *ClusterCreator) confirmInfrastructureChanges(
 	}
 
 	return true, nil
+}
+
+// nodesNeedReprovisioning reports whether a change of the configuration needs the nodes
+// provisioned again. The confirmation prompt and the skip of the assets server read it.
+func nodesNeedReprovisioning(rdcs reducers.Reducers, unsafeReducers []premrules.Rule) bool {
+	return len(unsafeReducers) > 0 && strings.Contains(rdcs.ToString(), ".spec.infrastructure.nodes")
 }
 
 func (c *ClusterCreator) confirmDistributionChanges(

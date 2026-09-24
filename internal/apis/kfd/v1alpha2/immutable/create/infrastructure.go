@@ -70,6 +70,7 @@ type Infrastructure struct {
 	dryRun        bool
 	ansibleRunner *ansible.Runner
 	force         []string
+	skipBootWait  bool
 }
 
 // NewInfrastructure creates a new Infrastructure phase.
@@ -163,32 +164,12 @@ func (i *Infrastructure) Exec(_ string, upgradeState *upgrade.State) error {
 		return err
 	}
 
-	// Struct to keep each node's bootstrap status.
-	nodeStatus := lo.SliceToMap(
-		i.furyctlConf.Spec.Infrastructure.Nodes,
-		func(node public.SpecInfrastructureNode) (string, string) {
-			return node.Hostname, serve.StatusPending
-		},
-	)
-
-	// Serve the downloaded assets to the machines.
-	ipxeServer, err := url.Parse(string(i.furyctlConf.Spec.Infrastructure.IpxeServer.Url))
-	ipxeServerPort := ""
-
-	if err != nil {
-		return fmt.Errorf("failed to parse ipxe server URL: %w", err)
-	}
-
-	ipxeServerHost := lo.FromPtrOr(i.furyctlConf.Spec.Infrastructure.IpxeServer.BindAddress, ipxeServer.Hostname())
-
-	if i.furyctlConf.Spec.Infrastructure.IpxeServer.BindPort != nil {
-		ipxeServerPort = strconv.Itoa(*i.furyctlConf.Spec.Infrastructure.IpxeServer.BindPort)
-	} else {
-		ipxeServerPort = ipxeServer.Port()
-	}
-
-	if err := serve.Path(ipxeServerHost, ipxeServerPort, filepath.Join(i.Path, "server"), nodeStatus); err != nil {
-		return fmt.Errorf("serving assets failed: %w", err)
+	if i.skipBootWait {
+		logrus.Info("Every node answers, and no change needs a node provisioned again. " +
+			"Skipping the wait for the nodes to boot. To provision a node again, erase its disk and power it off " +
+			"before the apply")
+	} else if err := i.serveAssets(); err != nil {
+		return err
 	}
 
 	logrus.Info("Applying nodes configuration...")
@@ -208,6 +189,12 @@ func (i *Infrastructure) Self() *cluster.OperationPhase {
 
 func (i *Infrastructure) SetUpgrade(upgradeEnabled bool) {
 	i.upgrade.Enabled = upgradeEnabled
+}
+
+// SetSkipBootWait skips the assets server. A node that already runs does not boot again, so
+// the server waits for nothing.
+func (i *Infrastructure) SetSkipBootWait(skip bool) {
+	i.skipBootWait = skip
 }
 
 // ansibleTemplatesPath gives the folder of the infrastructure ansible templates of the
@@ -332,6 +319,40 @@ func (i *Infrastructure) upgradeLoadBalancers(upgradeState *upgrade.State) error
 
 	if hasPlaybook {
 		logrus.Info("Load balancers upgraded successfully")
+	}
+
+	return nil
+}
+
+// serveAssets serves the downloaded assets to the machines, and it waits until every node
+// boots, or until the operator presses ENTER.
+func (i *Infrastructure) serveAssets() error {
+	// Struct to keep each node's bootstrap status.
+	nodeStatus := lo.SliceToMap(
+		i.furyctlConf.Spec.Infrastructure.Nodes,
+		func(node public.SpecInfrastructureNode) (string, string) {
+			return node.Hostname, serve.StatusPending
+		},
+	)
+
+	// Serve the downloaded assets to the machines.
+	ipxeServer, err := url.Parse(string(i.furyctlConf.Spec.Infrastructure.IpxeServer.Url))
+	ipxeServerPort := ""
+
+	if err != nil {
+		return fmt.Errorf("failed to parse ipxe server URL: %w", err)
+	}
+
+	ipxeServerHost := lo.FromPtrOr(i.furyctlConf.Spec.Infrastructure.IpxeServer.BindAddress, ipxeServer.Hostname())
+
+	if i.furyctlConf.Spec.Infrastructure.IpxeServer.BindPort != nil {
+		ipxeServerPort = strconv.Itoa(*i.furyctlConf.Spec.Infrastructure.IpxeServer.BindPort)
+	} else {
+		ipxeServerPort = ipxeServer.Port()
+	}
+
+	if err := serve.Path(ipxeServerHost, ipxeServerPort, filepath.Join(i.Path, "server"), nodeStatus); err != nil {
+		return fmt.Errorf("serving assets failed: %w", err)
 	}
 
 	return nil

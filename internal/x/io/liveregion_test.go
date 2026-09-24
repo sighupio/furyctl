@@ -8,8 +8,11 @@ package iox //nolint:testpackage // exercises unexported region state.
 
 import (
 	"bytes"
+	"io"
+	"sync"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -74,4 +77,53 @@ func Test_LiveRegion_Truncate(t *testing.T) {
 
 	got = lr.truncate("abcdefghijklmnop")
 	require.Len(t, got, 9, "expected line clipped to width-1 (9), got %q", got)
+}
+
+// Run with -race: os/exec writes stdout and stderr from separate goroutines.
+func Test_LiveRegion_ConcurrentWrites(t *testing.T) {
+	t.Parallel()
+
+	lr := &LiveRegion{w: &bytes.Buffer{}, enabled: true, maxLines: defaultRegionLines}
+
+	var wg sync.WaitGroup
+
+	for _, w := range []io.Writer{lr, lr.Stream()} {
+		wg.Add(1)
+
+		go func() {
+			defer wg.Done()
+
+			for range 100 {
+				_, err := w.Write([]byte("line\n"))
+				assert.NoError(t, err)
+			}
+		}()
+	}
+
+	wg.Wait()
+	lr.Clear()
+
+	require.Equal(t, 0, lr.painted)
+}
+
+func Test_LiveRegion_StreamKeepsPartialLinesApart(t *testing.T) {
+	t.Parallel()
+
+	lr := &LiveRegion{w: &bytes.Buffer{}, enabled: true, maxLines: defaultRegionLines}
+	stderr := lr.Stream()
+
+	for _, step := range []struct {
+		w    io.Writer
+		data string
+	}{
+		{lr, "out-"},
+		{stderr, "err-"},
+		{lr, "a\n"},
+		{stderr, "b\n"},
+	} {
+		_, err := step.w.Write([]byte(step.data))
+		require.NoError(t, err)
+	}
+
+	require.Equal(t, []string{"out-a", "err-b"}, lr.lines)
 }
