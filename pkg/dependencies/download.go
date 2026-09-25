@@ -348,7 +348,13 @@ func (dd *Downloader) DownloadTools(kfd config.KFD, kind string) ([]string, erro
 		return uts, nil
 	}
 
-	misePath, err := mise.EnsureBinary(dd.client, dd.binPath)
+	// Some commands do not make --bin-path absolute, and mise runs in its own workdir.
+	binPath, err := filepath.Abs(dd.binPath)
+	if err != nil {
+		return uts, fmt.Errorf("error getting absolute bin path: %w", err)
+	}
+
+	misePath, err := mise.EnsureBinary(dd.client, binPath)
 	if err != nil {
 		return uts, fmt.Errorf("error ensuring mise binary: %w", err)
 	}
@@ -356,7 +362,7 @@ func (dd *Downloader) DownloadTools(kfd config.KFD, kind string) ([]string, erro
 	// The mise dir lives under binPath (next to the mise binary), NOT under vendor: vendor is wiped
 	// on every DownloadAll, so keeping the installed tools here lets them cache across runs (and keeps
 	// them around for air-gapped reuse).
-	miseDir := filepath.Join(dd.binPath, "mise")
+	miseDir := filepath.Join(binPath, "mise")
 	configFile := filepath.Join(miseDir, "mise.toml")
 
 	if err := os.MkdirAll(miseDir, iox.FullPermAccess); err != nil {
@@ -401,7 +407,7 @@ func (dd *Downloader) DownloadTools(kfd config.KFD, kind string) ([]string, erro
 		// Ansible needs special handling: resolve the real pipx venv entrypoints + python and install
 		// the galaxy collections (a single Bin symlink is not enough).
 		if name == "ansible" {
-			if err := materializeAnsible(runner, dd.binPath, version, ansible.Collections); err != nil {
+			if err := materializeAnsible(runner, binPath, version, ansible.Collections); err != nil {
 				return uts, err
 			}
 
@@ -415,7 +421,7 @@ func (dd *Downloader) DownloadTools(kfd config.KFD, kind string) ([]string, erro
 			return uts, fmt.Errorf("error resolving tool '%s' via mise: %w", name, err)
 		}
 
-		if err := materializeTool(dd.binPath, name, version, t.Bin, realPath); err != nil {
+		if err := materializeTool(binPath, name, version, t.Bin, realPath); err != nil {
 			return uts, err
 		}
 	}
