@@ -77,6 +77,8 @@ func exec() int {
 
 	defer wg.Wait()
 
+	execx.HandleSignals()
+
 	if _, err := cmd.NewRootCmd().ExecuteC(); err != nil {
 		// The global logger writes to the terminal and to the log file. Before the root pre-run
 		// configures it, for example on an unknown flag, there is no log file.
