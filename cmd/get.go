@@ -19,6 +19,7 @@ func NewGetCmd() *cobra.Command {
 	getCmd.AddCommand(get.NewClusterInfoCmd())
 	getCmd.AddCommand(get.NewKubeconfigCmd())
 	getCmd.AddCommand(get.NewUpgradePathsCmd())
+	getCmd.AddCommand(get.NewUpgradeAnalysisCmd())
 	getCmd.AddCommand(get.NewSupportedVersionsCmd())
 
 	return getCmd

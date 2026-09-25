@@ -9,8 +9,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io/fs"
-	"path/filepath"
 	"reflect"
 	"slices"
 	"strings"
@@ -24,6 +22,7 @@ import (
 	"github.com/sighupio/furyctl/internal/distribution"
 	"github.com/sighupio/furyctl/internal/tool/kubectl"
 	"github.com/sighupio/furyctl/internal/upgrade"
+	"github.com/sighupio/furyctl/internal/upgradepath"
 	execx "github.com/sighupio/furyctl/internal/x/exec"
 	yamlx "github.com/sighupio/furyctl/pkg/x/yaml"
 )
@@ -44,6 +43,16 @@ const (
 	milliCPU         = 1000
 	etcdStacked      = "Stacked"
 	etcdDedicated    = "Dedicated"
+
+	ModuleNetworking = "Networking"
+	ModuleIngress    = "Ingress"
+	ModuleMonitoring = "Monitoring"
+	ModuleLogging    = "Logging"
+	ModuleTracing    = "Tracing"
+	ModulePolicy     = "Policy"
+	ModuleAuth       = "Auth"
+	ModuleDR         = "Disaster Recovery"
+	ModuleAWS        = "AWS"
 
 	condReady          = "Ready"
 	condTrue           = "True"
@@ -525,79 +534,93 @@ func hasCustomPatches(configMap map[string]any) bool {
 	return false
 }
 
+// ModuleVersions returns the version of every SD module in a KFD manifest, keyed by the
+// display name used in ModuleInfo. Keeping this mapping in one place lets callers line up
+// module versions across two manifests without restating which KFD field backs which module.
+func ModuleVersions(sd distroconf.KFD, kind string) map[string]string {
+	versions := map[string]string{
+		ModuleNetworking: sd.Modules.Networking,
+		ModuleIngress:    sd.Modules.Ingress,
+		ModuleMonitoring: sd.Modules.Monitoring,
+		ModuleLogging:    sd.Modules.Logging,
+		ModuleTracing:    sd.Modules.Tracing,
+		ModulePolicy:     sd.Modules.Opa,
+		ModuleAuth:       sd.Modules.Auth,
+		ModuleDR:         sd.Modules.Dr,
+	}
+
+	// The AWS module only exists on EKS clusters.
+	if sd.Modules.Aws != "" && kind == distribution.EKSClusterKind {
+		versions[ModuleAWS] = sd.Modules.Aws
+	}
+
+	return versions
+}
+
 // extractModules combines types from furyctl config with versions from the KFD
 // YAML. Fixed order keeps output stable; for EKS, an AWS row is appended when
 // present.
 func extractModules(configMap map[string]any, sd distroconf.KFD, kind string) []ModuleInfo {
 	modules := nestedMap(configMap, "spec", "distribution", "modules")
+	versions := ModuleVersions(sd, kind)
 
 	type moduleSpec struct {
 		name       string
-		version    string
 		typeGetter func(map[string]any) string
 	}
 
 	specs := []moduleSpec{
 		{
-			name:    "Networking",
-			version: sd.Modules.Networking,
+			name: ModuleNetworking,
 			typeGetter: func(m map[string]any) string {
 				return stringField(nestedMap(m, "networking"), "type")
 			},
 		},
 		{
-			name:       "Ingress",
-			version:    sd.Modules.Ingress,
+			name:       ModuleIngress,
 			typeGetter: ingressType,
 		},
 		{
-			name:    "Monitoring",
-			version: sd.Modules.Monitoring,
+			name: ModuleMonitoring,
 			typeGetter: func(m map[string]any) string {
 				return stringField(nestedMap(m, "monitoring"), "type")
 			},
 		},
 		{
-			name:    "Logging",
-			version: sd.Modules.Logging,
+			name: ModuleLogging,
 			typeGetter: func(m map[string]any) string {
 				return stringField(nestedMap(m, "logging"), "type")
 			},
 		},
 		{
-			name:    "Tracing",
-			version: sd.Modules.Tracing,
+			name: ModuleTracing,
 			typeGetter: func(m map[string]any) string {
 				return stringField(nestedMap(m, "tracing"), "type")
 			},
 		},
 		{
-			name:    "Policy",
-			version: sd.Modules.Opa,
+			name: ModulePolicy,
 			typeGetter: func(m map[string]any) string {
 				return stringField(nestedMap(m, "policy"), "type")
 			},
 		},
 		{
-			name:    "Auth",
-			version: sd.Modules.Auth,
+			name: ModuleAuth,
 			typeGetter: func(m map[string]any) string {
 				return stringField(nestedMap(nestedMap(m, "auth"), "provider"), "type")
 			},
 		},
 		{
-			name:    "Disaster Recovery",
-			version: sd.Modules.Dr,
+			name: ModuleDR,
 			typeGetter: func(m map[string]any) string {
 				return stringField(nestedMap(m, "dr"), "type")
 			},
 		},
 	}
 
-	if sd.Modules.Aws != "" && kind == distribution.EKSClusterKind {
+	if _, hasAWS := versions[ModuleAWS]; hasAWS {
 		specs = append(specs, moduleSpec{
-			name:       "AWS",
-			version:    sd.Modules.Aws,
+			name:       ModuleAWS,
 			typeGetter: func(_ map[string]any) string { return "" },
 		})
 	}
@@ -610,14 +633,12 @@ func extractModules(configMap map[string]any, sd distroconf.KFD, kind string) []
 
 		return ModuleInfo{
 			Name:    s.name,
-			Version: s.version,
+			Version: versions[s.name],
 			Type:    modType,
 		}
 	})
 }
 
-// extractPlugins builds the grouped PluginsInfo from the stored configuration,
-// separating Kustomize and Helm plugin types.
 func extractPlugins(configMap map[string]any) *PluginsInfo {
 	plugins := nestedMap(configMap, "spec", "plugins")
 	if plugins == nil {
@@ -741,28 +762,10 @@ func installerVersion(kind string, sd distroconf.KFD) string {
 	}
 }
 
-// computeUpgradePaths returns the list of available upgrade target versions for the given
-// cluster kind and current distribution version, using the embedded upgrade paths filesystem.
+// computeUpgradePaths returns the distribution versions directly reachable from the
+// current one, for the given cluster kind.
 func computeUpgradePaths(kind, fromVersion string) []string {
-	from := strings.TrimPrefix(fromVersion, "v")
-
-	globPattern := fmt.Sprintf("upgrades/%s/%s-*", strings.ToLower(kind), from)
-
-	matches, err := fs.Glob(configs.Tpl, globPattern)
-	if err != nil || len(matches) == 0 {
-		return nil
-	}
-
-	return lo.FilterMap(matches, func(match string, _ int) (string, bool) {
-		info, err := fs.Stat(configs.Tpl, match)
-		if err != nil || !info.IsDir() {
-			return "", false
-		}
-
-		parts := strings.Split(filepath.Base(match), "-")
-
-		return "v" + parts[len(parts)-1], true
-	})
+	return upgradepath.Next(configs.Tpl, kind, fromVersion)
 }
 
 // primaryRole returns the display role for a node by inspecting its labels.

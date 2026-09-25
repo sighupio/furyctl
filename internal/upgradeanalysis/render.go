@@ -1,0 +1,135 @@
+// Copyright (c) 2017-present SIGHUP s.r.l All rights reserved.
+// Use of this source code is governed by a BSD-style
+// license that can be found in the LICENSE file.
+
+package upgradeanalysis
+
+import (
+	"fmt"
+	"strings"
+	"text/tabwriter"
+)
+
+const tabPadding = 2
+
+// Text renders the analysis for a terminal, in the order an upgrade is planned: what the
+// chain looks like, then what each hop changes.
+func Text(a *Analysis) string {
+	var sb strings.Builder
+
+	w := tabwriter.NewWriter(&sb, 0, 0, tabPadding, ' ', 0)
+
+	_, _ = fmt.Fprintf(w, "%s\t%s\n", "Cluster Name:", a.ClusterName)
+	_, _ = fmt.Fprintf(w, "%s\t%s\n", "SD Kind:", a.Kind)
+	_, _ = fmt.Fprintf(w, "%s\t%s\n", "Current version:", a.From)
+	_, _ = fmt.Fprintf(w, "%s\t%s\n", "Target version:", a.To)
+	_ = w.Flush()
+
+	if a.AlreadyAtTarget() {
+		_, _ = sb.WriteString("\nThe cluster already runs the target version, nothing to plan.\n")
+
+		return sb.String()
+	}
+
+	_, _ = sb.WriteString("\n" + chainLine(a) + "\n")
+
+	if len(a.Skipped) > 0 {
+		_, _ = fmt.Fprintf(&sb,
+			"\nNot deployed on this cluster, left out of the report: %s\n",
+			strings.Join(a.Skipped, ", "),
+		)
+	}
+
+	for i := range a.Hops {
+		writeHop(&sb, &a.Hops[i])
+	}
+
+	if len(a.Warnings) > 0 {
+		_, _ = sb.WriteString("\nWarnings\n")
+
+		for _, warning := range a.Warnings {
+			_, _ = sb.WriteString("  - " + warning + "\n")
+		}
+	}
+
+	return sb.String()
+}
+
+// chainLine renders the hop chain as a single arrow-separated line.
+func chainLine(a *Analysis) string {
+	versions := make([]string, 0, len(a.Hops)+1)
+	versions = append(versions, a.Hops[0].From)
+
+	for i := range a.Hops {
+		versions = append(versions, a.Hops[i].To)
+	}
+
+	return fmt.Sprintf(
+		"Upgrade path (%s): %s",
+		pluralHops(len(a.Hops)),
+		strings.Join(versions, " -> "),
+	)
+}
+
+func pluralHops(n int) string {
+	if n == 1 {
+		return "1 hop"
+	}
+
+	return fmt.Sprintf("%d hops", n)
+}
+
+func writeHop(sb *strings.Builder, hop *Hop) {
+	_, _ = fmt.Fprintf(sb, "\n%s -> %s\n", hop.From, hop.To)
+
+	if hop.KubernetesFrom != "" || hop.KubernetesTo != "" {
+		if hop.KubernetesChanged() {
+			_, _ = fmt.Fprintf(sb, "  Kubernetes:  %s -> %s\n", hop.KubernetesFrom, hop.KubernetesTo)
+		} else {
+			_, _ = fmt.Fprintf(sb, "  Kubernetes:  %s (unchanged)\n", hop.KubernetesFrom)
+		}
+	}
+
+	if hop.InstallerFrom != "" || hop.InstallerTo != "" {
+		installer := fmt.Sprintf("%s -> %s", hop.InstallerFrom, hop.InstallerTo)
+		if hop.InstallerFrom == hop.InstallerTo {
+			installer = hop.InstallerFrom + " (unchanged)"
+		}
+
+		_, _ = sb.WriteString("  Installer:   " + installer + "\n")
+	}
+
+	if hop.DistributionOnly {
+		_, _ = sb.WriteString("  Phase:       distribution only, Kubernetes is not touched\n")
+	}
+
+	writeModuleTable(sb, hop)
+}
+
+func writeModuleTable(sb *strings.Builder, hop *Hop) {
+	changed := hop.ChangedModules()
+
+	if len(changed) == 0 {
+		_, _ = sb.WriteString("  No deployed module changes version in this hop.\n")
+
+		return
+	}
+
+	var buf strings.Builder
+
+	w := tabwriter.NewWriter(&buf, 0, 0, tabPadding, ' ', 0)
+
+	_, _ = fmt.Fprintln(w, "  Module\tType\tFrom\tTo")
+
+	for _, module := range changed {
+		_, _ = fmt.Fprintf(w, "  %s\t%s\t%s\t%s\n", module.Name, module.Type, module.From, module.To)
+	}
+
+	_ = w.Flush()
+
+	_, _ = sb.WriteString(buf.String())
+
+	if unchanged := hop.UnchangedModules(); len(unchanged) > 0 {
+		_, _ = sb.WriteString("  Unchanged: " + strings.Join(unchanged, ", ") + "\n")
+	}
+}

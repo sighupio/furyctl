@@ -132,6 +132,7 @@ func GetSupportedFlags() SupportedFlags {
 			"detail":             FlagTypeBool,
 			"format":             FlagTypeString,
 			"from":               FlagTypeString,
+			"to":                 FlagTypeString,
 			"kind":               FlagTypeString,
 		},
 		CommandDiff: {
