@@ -135,8 +135,18 @@ func (c *Collector) Collect() (*Info, error) {
 		EtcdTopology:            etcdTopology(furyctlConf.Kind, configMap),
 	}
 
-	if ongoingUpgrade, upgradeErr := c.fetchOngoingUpgrade(); upgradeErr == nil {
+	ongoingUpgrade, upgradeErr := c.fetchOngoingUpgrade()
+
+	switch {
+	case upgradeErr == nil:
 		info.SDOngoingUpgrade = ongoingUpgrade
+
+	// A missing configmap is the normal case on a cluster that is not mid-upgrade, and
+	// means there is genuinely no upgrade in progress.
+	case errors.Is(upgradeErr, ErrUpgradeStateMissing), isNotFound(upgradeErr):
+
+	default:
+		info.SDOngoingUpgradeError = upgradeErr.Error()
 	}
 
 	if k8sVersion, versionErr := c.fetchKubernetesVersion(); versionErr == nil {
@@ -236,6 +246,12 @@ func (c *Collector) fetchOngoingUpgrade() (*OngoingUpgrade, error) {
 	}
 
 	return upgradeInfoFromState(state), nil
+}
+
+// isNotFound reports whether kubectl failed because the resource does not exist, which is
+// the expected outcome when no upgrade has ever run on the cluster.
+func isNotFound(err error) bool {
+	return err != nil && strings.Contains(err.Error(), "NotFound")
 }
 
 // fetchKubernetesVersion retrieves the Kubernetes server version.

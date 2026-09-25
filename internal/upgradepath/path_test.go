@@ -7,6 +7,8 @@
 package upgradepath_test
 
 import (
+	"io/fs"
+	"strings"
 	"testing"
 	"testing/fstest"
 
@@ -260,12 +262,37 @@ func TestResolveChainAgainstShippedPaths(t *testing.T) {
 	}
 }
 
-// TestShippedDeadEndPatch pins the fact that drove this package: SD v1.34.0 cannot go
-// straight to any v1.35.x, it has to pass through v1.34.1 first. If the distribution
-// ever ships a direct path, this test should be revisited rather than deleted.
-func TestShippedDeadEndPatch(t *testing.T) {
+// TestShippedPathsAreAllUsable holds for whatever upgrade paths the distribution ships, now
+// and in the future. Pinning a particular version's paths instead would make this test a
+// record of one release rather than a check of the resolver.
+func TestShippedPathsAreAllUsable(t *testing.T) {
 	t.Parallel()
 
-	assert.Equal(t, []string{"v1.34.1"}, upgradepath.Next(configs.Tpl, "OnPremises", "1.34.0"),
-		"v1.34.0 is expected to reach only v1.34.1")
+	for _, kind := range []string{"OnPremises", "EKSCluster", "KFDDistribution", "Immutable"} {
+		t.Run(kind, func(t *testing.T) {
+			t.Parallel()
+
+			entries, err := fs.ReadDir(configs.Tpl, "upgrades/"+strings.ToLower(kind))
+			require.NoError(t, err, "reading the shipped upgrade paths")
+			require.NotEmpty(t, entries, "the kind ships no upgrade path at all")
+
+			for _, entry := range entries {
+				if !entry.IsDir() {
+					continue
+				}
+
+				from, to, ok := strings.Cut(entry.Name(), "-")
+				require.True(t, ok, "%s is not shaped like <from>-<to>", entry.Name())
+
+				// Every shipped hop must be reachable through the resolver, otherwise the
+				// directory exists but no upgrade can ever use it.
+				assert.Contains(t, upgradepath.Next(configs.Tpl, kind, from), "v"+to,
+					"%s ships the hop %s but the resolver does not offer it", kind, entry.Name())
+
+				chain, err := upgradepath.ResolveChain(configs.Tpl, kind, from, to)
+				require.NoError(t, err, "resolving the shipped hop %s", entry.Name())
+				require.Len(t, chain, 1, "a shipped hop must resolve to itself in one step")
+			}
+		})
+	}
 }

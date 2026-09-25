@@ -13,6 +13,7 @@ import (
 	"strings"
 
 	"github.com/sighupio/furyctl/internal/apis/config"
+	"github.com/sighupio/furyctl/internal/clusterhealth"
 	"github.com/sighupio/furyctl/internal/clusterinfo"
 	"github.com/sighupio/furyctl/internal/distribution"
 	"github.com/sighupio/furyctl/internal/semver"
@@ -69,6 +70,7 @@ func Build(
 		Skipped:     skipped,
 
 		ConfigChecked: cfg != nil,
+		Cluster:       info,
 	}
 
 	// Nothing to plan: the cluster already runs the target version.
@@ -83,6 +85,21 @@ func Build(
 
 	for _, hop := range chain {
 		built := buildHop(fsys, info.SDKind, hop, distributions, deployed)
+
+		// What the target release itself declares breaking. Read from the release rather
+		// than restated here, so a future version needs no change to furyctl.
+		notes, notesErr := breakingChanges(distributions[hop.To].Path, hop.To)
+
+		switch {
+		case notesErr == nil:
+			built.BreakingChanges = notes
+
+		// A release with no such section is a fact about that release, not a failure.
+		case errors.Is(notesErr, ErrNoBreakingChangesSection):
+
+		default:
+			built.BreakingChangesError = notesErr.Error()
+		}
 
 		// Configuration findings need the schemas of both ends of the hop. A failure here
 		// must not sink the whole report: the version deltas above are still worth having,
@@ -108,6 +125,10 @@ func Build(
 	}
 
 	analysis.Warnings = append(analysis.Warnings, compatibilityWarnings(info.SDKind, chain)...)
+
+	// Preflight checks that read furyctl's own state rather than the cluster's workloads,
+	// so they do not belong in the health collector.
+	analysis.Preflight = []clusterhealth.Check{ongoingUpgradeCheck(info)}
 
 	if cfg != nil {
 		last := chain[len(chain)-1]

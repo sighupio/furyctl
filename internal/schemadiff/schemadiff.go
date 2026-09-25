@@ -7,10 +7,10 @@
 // disappear, and properties that become required.
 //
 // This is deliberately separate from schema validation. Validating a configuration
-// against the target schema catches what the schema enforces; this package catches what
-// it should enforce but does not. The v1.35.1 on-premises schema, for example, nests
-// `additionalProperties: false` inside `properties` rather than beside it, so a removed
-// key such as `kubeProxy.enabled` still validates while no longer having any effect.
+// against the target schema catches what the schema enforces; this package catches what it
+// should enforce but does not. A schema that nests `additionalProperties: false` inside
+// `properties` rather than beside it, for instance, keeps accepting a key that has been
+// removed, so the configuration still validates while the key no longer has any effect.
 package schemadiff
 
 import (

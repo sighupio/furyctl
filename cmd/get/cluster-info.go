@@ -227,7 +227,8 @@ func formatText(info *clusterinfo.Info, opts textOptions) string {
 	_, _ = fmt.Fprintf(w, "%s\t%s\n", "SD Upgrade paths:",
 		lo.Ternary(len(info.SDUpgradePaths) > 0, strings.Join(info.SDUpgradePaths, ", "), "None"))
 
-	if info.SDOngoingUpgrade != nil {
+	switch {
+	case info.SDOngoingUpgrade != nil:
 		u := info.SDOngoingUpgrade
 		_, _ = fmt.Fprintf(w, "%s\t%s\n", "SD Ongoing upgrade:", fmt.Sprintf("Yes (%s: %s)", u.Phase, u.Status))
 		if u.From != "" && u.To != "" {
@@ -245,7 +246,11 @@ func formatText(info *clusterinfo.Info, opts textOptions) string {
 				u.WorkerNodes.Remaining,
 			)
 		}
-	} else {
+	// Never report "None" for a state that could not be read.
+	case info.SDOngoingUpgradeError != "":
+		_, _ = fmt.Fprintf(w, "%s\t%s\n", "SD Ongoing upgrade:", "unknown: "+info.SDOngoingUpgradeError)
+
+	default:
 		_, _ = fmt.Fprintf(w, "%s\t%s\n", "SD Ongoing upgrade:", "None")
 	}
 

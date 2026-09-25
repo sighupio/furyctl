@@ -21,11 +21,16 @@ func Text(a *Analysis) string {
 
 	w := tabwriter.NewWriter(&sb, 0, 0, tabPadding, ' ', 0)
 
-	_, _ = fmt.Fprintf(w, "%s\t%s\n", "Cluster Name:", a.ClusterName)
-	_, _ = fmt.Fprintf(w, "%s\t%s\n", "SD Kind:", a.Kind)
-	_, _ = fmt.Fprintf(w, "%s\t%s\n", "Current version:", a.From)
-	_, _ = fmt.Fprintf(w, "%s\t%s\n", "Target version:", a.To)
+	for _, row := range inventoryRows(a) {
+		_, _ = fmt.Fprintf(w, "%s:\t%s\n", row[0], row[1])
+	}
+
 	_ = w.Flush()
+
+	if a.Cluster != nil && a.Cluster.Nodes != nil && len(a.Cluster.Nodes.Nodes) > 0 {
+		_, _ = sb.WriteString("\n")
+		writeNodeTable(&sb, a.Cluster.Nodes)
+	}
 
 	if a.AlreadyAtTarget() {
 		_, _ = sb.WriteString("\nThe cluster already runs the target version, nothing to plan.\n")
@@ -44,6 +49,11 @@ func Text(a *Analysis) string {
 
 	for i := range a.Hops {
 		writeHop(&sb, a, &a.Hops[i])
+	}
+
+	if len(a.Preflight) > 0 {
+		_, _ = sb.WriteString("\nPreflight\n")
+		writeChecks(&sb, a.Preflight)
 	}
 
 	writeHealth(&sb, a.Health)
@@ -109,6 +119,27 @@ func writeHop(sb *strings.Builder, a *Analysis, hop *Hop) {
 
 	writeModuleTable(sb, hop)
 	writeFindings(sb, a, hop)
+	writeBreakingChanges(sb, hop)
+}
+
+// writeBreakingChanges shows what the target release declares breaking. The three outcomes
+// are kept apart: a section, a release that ships none, and notes that could not be read.
+func writeBreakingChanges(sb *strings.Builder, hop *Hop) {
+	switch {
+	case hop.BreakingChangesError != "":
+		_, _ = fmt.Fprintf(sb, "  Breaking changes: could not be read: %s\n", hop.BreakingChangesError)
+
+	case hop.BreakingChanges == "":
+		_, _ = fmt.Fprintf(sb,
+			"  Breaking changes: the release notes for %s list no breaking-changes section\n", hop.To)
+
+	default:
+		_, _ = fmt.Fprintf(sb, "  Breaking changes declared by %s:\n", hop.To)
+
+		for line := range strings.SplitSeq(hop.BreakingChanges, "\n") {
+			_, _ = fmt.Fprintf(sb, "    %s\n", line)
+		}
+	}
 }
 
 // writeFindings lists the configuration changes a hop requires. When the configuration was
@@ -176,23 +207,5 @@ func writeHealth(sb *strings.Builder, report *clusterhealth.Report) {
 	}
 
 	_, _ = sb.WriteString("\nCluster health\n")
-
-	for i := range report.Checks {
-		check := &report.Checks[i]
-
-		switch {
-		case !check.Ran():
-			_, _ = fmt.Fprintf(sb, "  %s: could not be checked: %s\n", check.Name, check.Err)
-
-		case check.Clean():
-			_, _ = fmt.Fprintf(sb, "  %s: checked, nothing found (%s)\n", check.Name, check.Description)
-
-		default:
-			_, _ = fmt.Fprintf(sb, "  %s: %d found (%s)\n", check.Name, len(check.Issues), check.Description)
-
-			for _, issue := range check.Issues {
-				_, _ = fmt.Fprintf(sb, "    [%s] %s: %s\n", issue.Severity, issue.Subject, issue.Detail)
-			}
-		}
-	}
+	writeChecks(sb, report.Checks)
 }

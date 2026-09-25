@@ -27,6 +27,7 @@ func Markdown(a *Analysis) string {
 		return sb.String()
 	}
 
+	writePreflightMD(&sb, a.Preflight)
 	writeHealthMD(&sb, a.Health)
 	writePlanMD(&sb, a)
 	writeWarningsMD(&sb, a)
@@ -37,18 +38,9 @@ func Markdown(a *Analysis) string {
 func writeInventoryMD(sb *strings.Builder, a *Analysis) {
 	_, _ = sb.WriteString("# Cluster Inventory\n\n")
 	_, _ = sb.WriteString("| | |\n| --- | --- |\n")
-	_, _ = fmt.Fprintf(sb, "| Cluster | %s |\n", a.ClusterName)
-	_, _ = fmt.Fprintf(sb, "| Kind | %s |\n", a.Kind)
-	_, _ = fmt.Fprintf(sb, "| Current version | %s |\n", a.From)
-	_, _ = fmt.Fprintf(sb, "| Target version | %s |\n", a.To)
 
-	if len(a.Hops) > 1 {
-		intermediate := make([]string, 0, len(a.Hops)-1)
-		for _, hop := range a.Hops[:len(a.Hops)-1] {
-			intermediate = append(intermediate, hop.To)
-		}
-
-		_, _ = fmt.Fprintf(sb, "| Intermediate versions | %s |\n", strings.Join(intermediate, ", "))
+	for _, row := range inventoryRows(a) {
+		_, _ = fmt.Fprintf(sb, "| %s | %s |\n", row[0], row[1])
 	}
 
 	if len(a.Deployed) > 0 {
@@ -58,6 +50,34 @@ func writeInventoryMD(sb *strings.Builder, a *Analysis) {
 	if len(a.Skipped) > 0 {
 		_, _ = fmt.Fprintf(sb, "| Not deployed | %s |\n", strings.Join(a.Skipped, ", "))
 	}
+
+	writeNodeTableMD(sb, a)
+}
+
+// writeNodeTableMD renders the per-node table an analysis document opens with.
+func writeNodeTableMD(sb *strings.Builder, a *Analysis) {
+	if a.Cluster == nil || a.Cluster.Nodes == nil || len(a.Cluster.Nodes.Nodes) == 0 {
+		return
+	}
+
+	_, _ = sb.WriteString("\n| Node | Status | Role | Version | OS Image | Kernel | Container Runtime |\n")
+	_, _ = sb.WriteString("| --- | --- | --- | --- | --- | --- | --- |\n")
+
+	for _, node := range a.Cluster.Nodes.Nodes {
+		_, _ = fmt.Fprintf(sb, "| %s | %s | %s | %s | %s | %s | %s |\n",
+			node.Name, node.Status, node.Role, node.KubeletVersion,
+			node.OSImage, node.KernelVersion, node.ContainerRuntime)
+	}
+}
+
+// writePreflightMD renders the checks that must pass before the upgrade starts.
+func writePreflightMD(sb *strings.Builder, checks []clusterhealth.Check) {
+	if len(checks) == 0 {
+		return
+	}
+
+	_, _ = sb.WriteString("\n# Preflight\n\n")
+	writeChecksMD(sb, checks)
 }
 
 func writeHealthMD(sb *strings.Builder, report *clusterhealth.Report) {
@@ -66,9 +86,12 @@ func writeHealthMD(sb *strings.Builder, report *clusterhealth.Report) {
 	}
 
 	_, _ = sb.WriteString("\n# Cluster health Analysis\n\n")
+	writeChecksMD(sb, report.Checks)
+}
 
-	for i := range report.Checks {
-		check := &report.Checks[i]
+func writeChecksMD(sb *strings.Builder, checks []clusterhealth.Check) {
+	for i := range checks {
+		check := &checks[i]
 
 		switch {
 		case !check.Ran():
@@ -134,6 +157,23 @@ func writeHopMD(sb *strings.Builder, a *Analysis, hop *Hop) {
 
 	writeHopModulesMD(sb, hop)
 	writeHopFindingsMD(sb, a, hop)
+	writeBreakingChangesMD(sb, hop)
+}
+
+// writeBreakingChangesMD quotes what the target release declares breaking, verbatim.
+func writeBreakingChangesMD(sb *strings.Builder, hop *Hop) {
+	switch {
+	case hop.BreakingChangesError != "":
+		_, _ = fmt.Fprintf(sb, "\nBreaking changes: could not be read: %s\n", hop.BreakingChangesError)
+
+	case hop.BreakingChanges == "":
+		_, _ = fmt.Fprintf(sb,
+			"\nBreaking changes: the release notes for %s list no breaking-changes section.\n", hop.To)
+
+	default:
+		_, _ = fmt.Fprintf(sb, "\n**Breaking changes declared by %s**\n\n%s\n",
+			hop.To, hop.BreakingChanges)
+	}
 }
 
 func writeHopModulesMD(sb *strings.Builder, hop *Hop) {

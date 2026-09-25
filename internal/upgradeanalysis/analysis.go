@@ -8,7 +8,10 @@
 // distribution manifests of the versions along the way.
 package upgradeanalysis
 
-import "github.com/sighupio/furyctl/internal/clusterhealth"
+import (
+	"github.com/sighupio/furyctl/internal/clusterhealth"
+	"github.com/sighupio/furyctl/internal/clusterinfo"
+)
 
 // Analysis is the full report for one cluster and one target version.
 type Analysis struct {
@@ -27,6 +30,14 @@ type Analysis struct {
 
 	// Health is the state of the running cluster. Nil when health was not collected.
 	Health *clusterhealth.Report `json:"health,omitempty" yaml:"health,omitempty"`
+
+	// Preflight are the checks that depend on the target version, such as whether the nodes
+	// can run the Kubernetes release being upgraded to.
+	Preflight []clusterhealth.Check `json:"preflight,omitempty" yaml:"preflight,omitempty"`
+
+	// Cluster is the inventory the report opens with: nodes, plugins, etcd topology and the
+	// rest of what `furyctl get cluster-info` reports.
+	Cluster *clusterinfo.Info `json:"cluster,omitempty" yaml:"cluster,omitempty"`
 }
 
 // AlreadyAtTarget reports whether the cluster already runs the target version, in
@@ -56,6 +67,14 @@ type Hop struct {
 	// Findings are the configuration changes this hop requires, found by comparing the
 	// schema of the two versions against the configuration the cluster stores.
 	Findings []Finding `json:"findings,omitempty" yaml:"findings,omitempty"`
+
+	// BreakingChanges is what the target version of this hop declares breaking, taken
+	// verbatim from the release notes it ships. Empty with an empty BreakingChangesError
+	// means the release ships notes with no such section, which is not the same as a
+	// release that declares no breaking changes.
+	BreakingChanges string `json:"breakingChanges,omitempty" yaml:"breakingChanges,omitempty"`
+	// BreakingChangesError is set when the release notes could not be read at all.
+	BreakingChangesError string `json:"breakingChangesError,omitempty" yaml:"breakingChangesError,omitempty"`
 
 	// ConfigCheckError is set when the comparison could not run for this hop. An empty
 	// Findings list means nothing only when this is empty too: a failed check produces no
