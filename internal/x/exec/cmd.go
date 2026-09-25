@@ -6,14 +6,13 @@ package execx
 
 import (
 	"bytes"
-	"context"
 	"errors"
 	"fmt"
 	"io"
 	"os"
 	"os/exec"
 	"strings"
-	"time"
+	"syscall"
 
 	bytesx "github.com/sighupio/furyctl/internal/x/bytes"
 	iox "github.com/sighupio/furyctl/internal/x/io"
@@ -24,7 +23,6 @@ var (
 	LogFile            *os.File //nolint:gochecknoglobals // This variable is shared between all the command instances.
 	NoTTY              = false  //nolint:gochecknoglobals // This variable is shared between all the command instances.
 	ErrCmdFailed       = errors.New("command failed")
-	ErrCmdTimeout      = errors.New("command timed out")
 	ErrCastingToBuffer = errors.New("error casting stdout to bytes.Buffer")
 )
 
@@ -87,6 +85,11 @@ func NewCmd(name string, opts CmdOptions) *Cmd {
 	coreCmd.Stderr = iox.MultiWriterTransform(errWriters...)
 	coreCmd.Dir = opts.WorkDir
 
+	// A process group of its own lets stopAll reach the descendants too, for example the ansible workers.
+	if !opts.Foreground {
+		coreCmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
+	}
+
 	// Extra env vars are appended to the inherited environment (used e.g. to invoke the bundled mise
 	// hermetically: MISE_DATA_DIR, MISE_GLOBAL_CONFIG_FILE, ...).
 	if len(opts.Env) > 0 {
@@ -109,7 +112,7 @@ func NewCmd(name string, opts CmdOptions) *Cmd {
 }
 
 func (c *Cmd) Run() error {
-	if err := c.Cmd.Run(); err != nil {
+	if err := run(c.Cmd); err != nil {
 		return NewErrCmdFailed(c.Path, c.Args, err, c.Log)
 	}
 
@@ -121,52 +124,29 @@ func (c *Cmd) Stop() error {
 		return nil
 	}
 
-	if c.ProcessState != nil && c.ProcessState.Exited() {
-		return nil
+	// Signal 0 fails after Wait reaps the process, so kill cannot hit a reused process group.
+	if err := c.Process.Signal(syscall.Signal(0)); err != nil {
+		return nil //nolint:nilerr // The process is already gone.
 	}
 
-	if err := c.Process.Signal(os.Interrupt); err != nil {
+	if err := kill(c.Cmd, syscall.SIGINT); err != nil {
 		return fmt.Errorf("failed to interrupt process: %w", err)
 	}
 
 	return nil
 }
 
-func (c *Cmd) RunWithTimeout(timeout time.Duration) error {
-	ctx, cancel := context.WithTimeout(context.Background(), timeout)
-
-	defer cancel()
-
-	cmdCtx := exec.CommandContext(ctx, c.Path, c.Args[1:]...)
-
-	cmdCtx.Dir = c.Dir
-	cmdCtx.Env = c.Env
-	cmdCtx.Stdout = c.Stdout
-	cmdCtx.Stderr = c.Stderr
-
-	err := cmdCtx.Run()
-
-	if errors.Is(ctx.Err(), context.DeadlineExceeded) {
-		return fmt.Errorf(
-			"%w after %s: %s %s", ErrCmdTimeout, timeout, c.Path, strings.Join(c.Args, " "),
-		)
-	}
-
-	if err != nil {
-		return NewErrCmdFailed(c.Path, c.Args, err, c.Log)
-	}
-
-	return nil
-}
-
 type CmdOptions struct {
-	Args      []string
-	Env       []string
-	Err       io.Writer
-	Executor  Executor
-	Out       io.Writer
-	Sensitive bool
-	WorkDir   string
+	Args     []string
+	Env      []string
+	Err      io.Writer
+	Executor Executor
+	// Foreground keeps the command in the process group of furyctl, so it can read the terminal,
+	// for example for the sudo password prompt.
+	Foreground bool
+	Out        io.Writer
+	Sensitive  bool
+	WorkDir    string
 }
 
 type CmdLog struct {

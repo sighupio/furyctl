@@ -86,9 +86,10 @@ func (r *Runner) Stop() error {
 
 func (r *Runner) newCmdWithPath(path string, args []string) (*execx.Cmd, string) {
 	cmd := execx.NewCmd(path, execx.CmdOptions{
-		Args:     args,
-		Executor: r.executor,
-		WorkDir:  r.paths.WorkDir,
+		Args:       args,
+		Executor:   r.executor,
+		Foreground: true,
+		WorkDir:    r.paths.WorkDir,
 	})
 
 	id := uuid.NewString()
