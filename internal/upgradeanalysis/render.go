@@ -117,6 +117,12 @@ func writeFindings(sb *strings.Builder, a *Analysis, hop *Hop) {
 		return
 	}
 
+	if hop.ConfigCheckError != "" {
+		_, _ = fmt.Fprintf(sb, "  Configuration: could not be checked: %s\n", hop.ConfigCheckError)
+
+		return
+	}
+
 	if len(hop.Findings) == 0 {
 		_, _ = sb.WriteString("  Configuration: checked, no changes required\n")
 

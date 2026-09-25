@@ -92,12 +92,16 @@ func Build(
 				distributions[hop.From], distributions[hop.To], info.SDKind, cfg, hop.To,
 			)
 			if err != nil {
+				// Record the failure on the hop as well as in the warnings. Without it the
+				// empty findings list would render as a clean check.
+				built.ConfigCheckError = err.Error()
+
 				analysis.Warnings = append(analysis.Warnings, fmt.Sprintf(
 					"could not compare the configuration schemas for %s -> %s: %v", hop.From, hop.To, err,
 				))
+			} else {
+				built.Findings = findings
 			}
-
-			built.Findings = findings
 		}
 
 		analysis.Hops = append(analysis.Hops, built)

@@ -141,3 +141,111 @@ func TestTextStatesTheConfigurationCheckOutcome(t *testing.T) {
 			"the report must not imply a clean configuration it never looked at")
 	})
 }
+
+// TestCleanConfigurationMessageIsTrustworthy is the regression guard for the message
+// "Configuration: checked, no changes required". That sentence is a claim about the
+// cluster, so every path that cannot substantiate it must say something else.
+func TestCleanConfigurationMessageIsTrustworthy(t *testing.T) {
+	t.Parallel()
+
+	const cleanMessage = "Configuration: checked, no changes required"
+
+	fsys := hopsFS([]string{"1.34.1-1.35.1"}, []string{"1.34.1-1.35.1"})
+
+	// A cluster that sets kubeProxy.enabled, which the target schema no longer accepts.
+	affected := map[string]any{
+		"spec": map[string]any{
+			"kubernetes": map[string]any{
+				"advanced": map[string]any{"kubeProxy": map[string]any{"enabled": true}},
+			},
+		},
+	}
+
+	// A cluster on loki, which none of the schema changes can touch.
+	unaffected := map[string]any{
+		"spec": map[string]any{
+			"distribution": map[string]any{
+				"modules": map[string]any{"logging": map[string]any{"type": "loki"}},
+			},
+		},
+	}
+
+	t.Run("claimed only when the check ran and found nothing", func(t *testing.T) {
+		t.Parallel()
+
+		fetcher := pathFetcher{
+			from:    "v1.34.1",
+			to:      "v1.35.1",
+			fromDir: distDir(t, schemaBefore),
+			toDir:   distDir(t, schemaAfter),
+		}
+
+		analysis, err := upgradeanalysis.Build(fsys, fetcher, qaCluster("v1.34.1"), unaffected, "v1.35.1")
+		require.NoError(t, err, "Build")
+
+		require.Len(t, analysis.Hops, 1, "one hop")
+		assert.Empty(t, analysis.Hops[0].ConfigCheckError, "the check must have run")
+		assert.Contains(t, upgradeanalysis.Text(analysis), cleanMessage, "clean result")
+	})
+
+	t.Run("never claimed when the cluster is affected", func(t *testing.T) {
+		t.Parallel()
+
+		fetcher := pathFetcher{
+			from:    "v1.34.1",
+			to:      "v1.35.1",
+			fromDir: distDir(t, schemaBefore),
+			toDir:   distDir(t, schemaAfter),
+		}
+
+		analysis, err := upgradeanalysis.Build(fsys, fetcher, qaCluster("v1.34.1"), affected, "v1.35.1")
+		require.NoError(t, err, "Build")
+
+		out := upgradeanalysis.Text(analysis)
+		require.NotEmpty(t, analysis.Hops[0].Findings, "the cluster is affected")
+		assert.NotContains(t, out, cleanMessage, "a cluster with findings must never be called clean")
+		assert.Contains(t, out, "kubeProxy.enabled", "the finding itself")
+	})
+
+	t.Run("never claimed when the schemas cannot be read", func(t *testing.T) {
+		t.Parallel()
+
+		// Distribution directories with no schema inside: the comparison cannot run. A
+		// failed check yields no findings either, which is exactly how this used to be
+		// misreported as a clean configuration.
+		fetcher := pathFetcher{
+			from:    "v1.34.1",
+			to:      "v1.35.1",
+			fromDir: t.TempDir(),
+			toDir:   t.TempDir(),
+		}
+
+		analysis, err := upgradeanalysis.Build(fsys, fetcher, qaCluster("v1.34.1"), unaffected, "v1.35.1")
+		require.NoError(t, err, "Build must still produce the version deltas")
+
+		out := upgradeanalysis.Text(analysis)
+
+		require.Empty(t, analysis.Hops[0].Findings, "a failed check produces no findings")
+		assert.NotEmpty(t, analysis.Hops[0].ConfigCheckError, "the failure must be recorded on the hop")
+		assert.NotContains(t, out, cleanMessage, "a failed check must never read as clean")
+		assert.Contains(t, out, "could not be checked", "the failure must be visible in the hop")
+		assert.NotEmpty(t, analysis.Warnings, "and also surfaced as a warning")
+	})
+
+	t.Run("never claimed when the configuration was unavailable", func(t *testing.T) {
+		t.Parallel()
+
+		fetcher := pathFetcher{
+			from:    "v1.34.1",
+			to:      "v1.35.1",
+			fromDir: distDir(t, schemaBefore),
+			toDir:   distDir(t, schemaAfter),
+		}
+
+		analysis, err := upgradeanalysis.Build(fsys, fetcher, qaCluster("v1.34.1"), nil, "v1.35.1")
+		require.NoError(t, err, "Build")
+
+		assert.NotContains(t, upgradeanalysis.Text(analysis), cleanMessage,
+			"without a configuration there is nothing to call clean")
+	})
+}

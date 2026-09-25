@@ -51,6 +51,11 @@ type Hop struct {
 	// Findings are the configuration changes this hop requires, found by comparing the
 	// schema of the two versions against the configuration the cluster stores.
 	Findings []Finding `json:"findings,omitempty" yaml:"findings,omitempty"`
+
+	// ConfigCheckError is set when the comparison could not run for this hop. An empty
+	// Findings list means nothing only when this is empty too: a failed check produces no
+	// findings either, and reporting that as a clean result would be a lie.
+	ConfigCheckError string `json:"configCheckError,omitempty" yaml:"configCheckError,omitempty"`
 }
 
 // KubernetesChanged reports whether the Kubernetes version moves in this hop.
