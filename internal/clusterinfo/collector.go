@@ -150,6 +150,23 @@ func (c *Collector) Collect() (*Info, error) {
 	return info, nil
 }
 
+// Config returns the rendered furyctl configuration that furyctl stores in the cluster.
+// It is the configuration as applied, with defaults already materialised, which is what a
+// check against a schema or a set of rules has to run on.
+func (c *Collector) Config() (map[string]any, error) {
+	raw, _, err := c.fetchSecret(furyctlConfigSecret, "config")
+	if err != nil {
+		return nil, fmt.Errorf("%w: %w", ErrConfigSecretNotFound, err)
+	}
+
+	configMap := map[string]any{}
+	if err := yamlx.UnmarshalV3(raw, &configMap); err != nil {
+		return nil, fmt.Errorf("error while parsing stored cluster configuration: %w", err)
+	}
+
+	return configMap, nil
+}
+
 func (c *Collector) fetchSecret(secretName, dataKey string) ([]byte, time.Time, error) {
 	out, err := c.KubectlRunner.Get(
 		true,

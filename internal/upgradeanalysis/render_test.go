@@ -40,7 +40,7 @@ func TestTextRendersTheChainAndEachHop(t *testing.T) {
 		}.kfd(),
 	}
 
-	analysis, err := upgradeanalysis.Build(fsys, fetcher, qaCluster("v1.34.0"), "v1.35.1")
+	analysis, err := upgradeanalysis.Build(fsys, fetcher, qaCluster("v1.34.0"), nil, "v1.35.1")
 	require.NoError(t, err, "Build")
 
 	out := upgradeanalysis.Text(analysis)
@@ -63,7 +63,7 @@ func TestTextAlreadyAtTarget(t *testing.T) {
 
 	fsys := hopsFS([]string{"1.34.1-1.35.1"}, nil)
 
-	analysis, err := upgradeanalysis.Build(fsys, fakeFetcher{}, qaCluster("v1.35.1"), "v1.35.1")
+	analysis, err := upgradeanalysis.Build(fsys, fakeFetcher{}, qaCluster("v1.35.1"), nil, "v1.35.1")
 	require.NoError(t, err, "Build")
 
 	out := upgradeanalysis.Text(analysis)
@@ -92,7 +92,7 @@ func TestTextSingleHopWording(t *testing.T) {
 		}.kfd(),
 	}
 
-	analysis, err := upgradeanalysis.Build(fsys, fetcher, qaCluster("v1.34.1"), "v1.35.1")
+	analysis, err := upgradeanalysis.Build(fsys, fetcher, qaCluster("v1.34.1"), nil, "v1.35.1")
 	require.NoError(t, err, "Build")
 
 	assert.Contains(t, upgradeanalysis.Text(analysis), "Upgrade path (1 hop):", "singular wording")

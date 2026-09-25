@@ -26,10 +26,10 @@ import (
 // `create config` is absent on purpose: it stops when the configuration file is already present,
 // thus it can never read a flag from that file. Only `create pki` reads one.
 var commandsPerSection = map[string][]string{
-	flags.CommandGlobal:   {"furyctl"},
-	flags.CommandApply:    {"furyctl apply"},
-	flags.CommandDelete:   {"furyctl delete cluster"},
-	flags.CommandCreate:   {"furyctl create pki"},
+	flags.CommandGlobal: {"furyctl"},
+	flags.CommandApply:  {"furyctl apply"},
+	flags.CommandDelete: {"furyctl delete cluster"},
+	flags.CommandCreate: {"furyctl create pki"},
 	flags.CommandGet: {
 		"furyctl get kubeconfig",
 		"furyctl get cluster-info",

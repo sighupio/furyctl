@@ -43,6 +43,10 @@ type Hop struct {
 	DistributionOnly bool `json:"distributionOnly" yaml:"distributionOnly"`
 
 	Modules []ModuleDelta `json:"modules" yaml:"modules"`
+
+	// Findings are the configuration changes this hop requires, found by comparing the
+	// schema of the two versions against the configuration the cluster stores.
+	Findings []Finding `json:"findings,omitempty" yaml:"findings,omitempty"`
 }
 
 // KubernetesChanged reports whether the Kubernetes version moves in this hop.

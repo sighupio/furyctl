@@ -45,13 +45,13 @@ func (m manifest) kfd() config.KFD {
 
 type fakeFetcher map[string]config.KFD
 
-func (f fakeFetcher) Manifest(_, version string) (config.KFD, error) {
+func (f fakeFetcher) Fetch(_, version string) (upgradeanalysis.Distribution, error) {
 	kfd, ok := f[version]
 	if !ok {
-		return config.KFD{}, errors.New("no fixture for " + version)
+		return upgradeanalysis.Distribution{}, errors.New("no fixture for " + version)
 	}
 
-	return kfd, nil
+	return upgradeanalysis.Distribution{Manifest: kfd}, nil
 }
 
 // hopsFS builds an upgrade-paths filesystem. A hop listed in withKubernetes also gets the
@@ -124,7 +124,7 @@ func TestBuildResolvesTheWholeChain(t *testing.T) {
 		}.kfd(),
 	}
 
-	analysis, err := upgradeanalysis.Build(fsys, fetcher, qaCluster("v1.32.0"), "v1.35.1")
+	analysis, err := upgradeanalysis.Build(fsys, fetcher, qaCluster("v1.32.0"), nil, "v1.35.1")
 	require.NoError(t, err, "Build")
 
 	require.Len(t, analysis.Hops, 3, "three minors means three hops")
@@ -165,7 +165,7 @@ func TestBuildReportsOnlyDeployedModules(t *testing.T) {
 		}.kfd(),
 	}
 
-	analysis, err := upgradeanalysis.Build(fsys, fetcher, qaCluster("v1.34.1"), "v1.35.1")
+	analysis, err := upgradeanalysis.Build(fsys, fetcher, qaCluster("v1.34.1"), nil, "v1.35.1")
 	require.NoError(t, err, "Build")
 	require.Len(t, analysis.Hops, 1, "one hop")
 
@@ -220,7 +220,7 @@ func TestBuildDistributionOnlyHop(t *testing.T) {
 		}.kfd(),
 	}
 
-	analysis, err := upgradeanalysis.Build(fsys, fetcher, qaCluster("v1.34.0"), "v1.35.1")
+	analysis, err := upgradeanalysis.Build(fsys, fetcher, qaCluster("v1.34.0"), nil, "v1.35.1")
 	require.NoError(t, err, "Build")
 	require.Len(t, analysis.Hops, 2, "v1.34.0 cannot reach v1.35.1 directly")
 
@@ -244,7 +244,7 @@ func TestBuildAlreadyAtTarget(t *testing.T) {
 
 	fsys := hopsFS([]string{"1.34.1-1.35.1"}, nil)
 
-	analysis, err := upgradeanalysis.Build(fsys, fakeFetcher{}, qaCluster("v1.35.1"), "v1.35.1")
+	analysis, err := upgradeanalysis.Build(fsys, fakeFetcher{}, qaCluster("v1.35.1"), nil, "v1.35.1")
 	require.NoError(t, err, "Build")
 
 	assert.True(t, analysis.AlreadyAtTarget(), "AlreadyAtTarget")
@@ -260,7 +260,7 @@ func TestBuildErrors(t *testing.T) {
 	t.Run("an unreachable target fails before anything is downloaded", func(t *testing.T) {
 		t.Parallel()
 
-		_, err := upgradeanalysis.Build(fsys, fakeFetcher{}, qaCluster("v1.34.1"), "v1.99.0")
+		_, err := upgradeanalysis.Build(fsys, fakeFetcher{}, qaCluster("v1.34.1"), nil, "v1.99.0")
 		require.Error(t, err, "Build")
 		assert.Contains(t, err.Error(), "cannot plan the upgrade", "error context")
 	})
@@ -268,7 +268,7 @@ func TestBuildErrors(t *testing.T) {
 	t.Run("a missing manifest is reported with the version that is missing", func(t *testing.T) {
 		t.Parallel()
 
-		_, err := upgradeanalysis.Build(fsys, fakeFetcher{}, qaCluster("v1.34.1"), "v1.35.1")
+		_, err := upgradeanalysis.Build(fsys, fakeFetcher{}, qaCluster("v1.34.1"), nil, "v1.35.1")
 		require.ErrorIs(t, err, upgradeanalysis.ErrNoManifest, "error kind")
 		assert.Contains(t, err.Error(), "v1.34.1", "the missing version must be named")
 	})

@@ -104,6 +104,20 @@ func writeHop(sb *strings.Builder, hop *Hop) {
 	}
 
 	writeModuleTable(sb, hop)
+	writeFindings(sb, hop.Findings)
+}
+
+// writeFindings lists the configuration changes a hop requires, blockers first.
+func writeFindings(sb *strings.Builder, findings []Finding) {
+	if len(findings) == 0 {
+		return
+	}
+
+	_, _ = sb.WriteString("  Configuration changes required:\n")
+
+	for _, finding := range findings {
+		_, _ = fmt.Fprintf(sb, "    [%s] %s\n", finding.Severity, finding.Message)
+	}
 }
 
 func writeModuleTable(sb *strings.Builder, hop *Hop) {

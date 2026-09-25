@@ -1,0 +1,45 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "properties": {
+    "apiVersion": { "type": "string" },
+    "kind": { "type": "string" },
+    "spec": { "$ref": "#/$defs/Spec" }
+  },
+  "required": ["apiVersion", "kind", "spec"],
+  "$defs": {
+    "Spec.Kubernetes.Advanced": {
+      "type": "object",
+      "properties": {
+        "kubeProxy": {
+          "type": "object",
+          "properties": {
+            "type": { "type": "string", "enum": ["none", "ipvs", "nftables"] }
+          }
+        },
+        "encryption": { "$ref": "#/$defs/Spec.Kubernetes.Advanced.Encryption" }
+      }
+    },
+    "Spec.Kubernetes.Advanced.Encryption": {
+      "type": "object",
+      "properties": {
+        "tlsCipherSuites": { "type": "array" },
+        "tlsCipherSuitesKubelet": { "type": "array" }
+      }
+    },
+    "Spec.Distribution.Modules.Logging.CustomOutputs": {
+      "type": "object",
+      "properties": {
+        "audit": { "type": "string" },
+        "ingressNginx": { "type": "string" },
+        "ingressHaproxy": { "type": "string" }
+      },
+      "required": ["audit", "ingressNginx", "ingressHaproxy"]
+    },
+    "Spec.Distribution.Modules.Ingress.HAProxy": {
+      "type": "object",
+      "properties": { "type": { "type": "string" } },
+      "required": ["type"]
+    }
+  }
+}

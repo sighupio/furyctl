@@ -29,10 +29,17 @@ const (
 // ErrNoManifest is returned when a version in the chain has no distribution manifest.
 var ErrNoManifest = errors.New("no distribution manifest available for version")
 
-// ManifestFetcher returns the KFD manifest of one distribution version. It exists so the
-// analysis logic can be exercised without downloading anything.
-type ManifestFetcher interface {
-	Manifest(kind, version string) (config.KFD, error)
+// Distribution is one version of the distribution: its manifest, and the local directory
+// holding the rest of it, such as the schemas.
+type Distribution struct {
+	Manifest config.KFD
+	Path     string
+}
+
+// Fetcher provides the distribution of one version. It exists so the analysis logic can be
+// exercised without downloading anything.
+type Fetcher interface {
+	Fetch(kind, version string) (Distribution, error)
 }
 
 // Build assembles the analysis for a cluster, given its current state and a target version.
@@ -40,8 +47,9 @@ type ManifestFetcher interface {
 // the cluster actually deploys.
 func Build(
 	fsys fs.FS,
-	fetcher ManifestFetcher,
+	fetcher Fetcher,
 	info *clusterinfo.Info,
+	cfg map[string]any,
 	to string,
 ) (*Analysis, error) {
 	chain, err := upgradepath.ResolveChain(fsys, info.SDKind, info.SDVersion, to)
@@ -66,41 +74,66 @@ func Build(
 		return analysis, nil
 	}
 
-	manifests, err := fetchManifests(fetcher, info.SDKind, chain)
+	distributions, err := fetchAll(fetcher, info.SDKind, chain)
 	if err != nil {
 		return nil, err
 	}
 
 	for _, hop := range chain {
-		analysis.Hops = append(analysis.Hops, buildHop(fsys, info.SDKind, hop, manifests, deployed))
+		built := buildHop(fsys, info.SDKind, hop, distributions, deployed)
+
+		// Configuration findings need the schemas of both ends of the hop. A failure here
+		// must not sink the whole report: the version deltas above are still worth having,
+		// so the problem is reported as a warning instead.
+		if cfg != nil {
+			findings, err := configFindings(
+				distributions[hop.From], distributions[hop.To], info.SDKind, cfg, hop.To,
+			)
+			if err != nil {
+				analysis.Warnings = append(analysis.Warnings, fmt.Sprintf(
+					"could not compare the configuration schemas for %s -> %s: %v", hop.From, hop.To, err,
+				))
+			}
+
+			built.Findings = findings
+		}
+
+		analysis.Hops = append(analysis.Hops, built)
 	}
 
-	analysis.Warnings = compatibilityWarnings(info.SDKind, chain)
+	analysis.Warnings = append(analysis.Warnings, compatibilityWarnings(info.SDKind, chain)...)
+
+	if cfg != nil {
+		last := chain[len(chain)-1]
+		for _, finding := range validationFindings(distributions[last.To], info.SDKind, cfg, last.To) {
+			analysis.Warnings = append(analysis.Warnings, finding.Message)
+		}
+	}
 
 	return analysis, nil
 }
 
-// fetchManifests retrieves the KFD manifest of every version the chain touches, the
-// starting one included, so that each hop can be described as a before and an after.
-func fetchManifests(fetcher ManifestFetcher, kind string, chain []upgradepath.Hop) (map[string]config.KFD, error) {
-	manifests := map[string]config.KFD{}
+// fetchAll retrieves every version the chain touches, the starting one included, so that
+// each hop can be described as a before and an after.
+func fetchAll(fetcher Fetcher, kind string, chain []upgradepath.Hop) (map[string]Distribution, error) {
+	distributions := map[string]Distribution{}
 
 	for _, hop := range chain {
 		for _, version := range []string{hop.From, hop.To} {
-			if _, done := manifests[version]; done {
+			if _, done := distributions[version]; done {
 				continue
 			}
 
-			manifest, err := fetcher.Manifest(kind, version)
+			dist, err := fetcher.Fetch(kind, version)
 			if err != nil {
 				return nil, fmt.Errorf("%w %s: %w", ErrNoManifest, version, err)
 			}
 
-			manifests[version] = manifest
+			distributions[version] = dist
 		}
 	}
 
-	return manifests, nil
+	return distributions, nil
 }
 
 // buildHop describes a single hop: what Kubernetes does, and which deployed modules move.
@@ -108,10 +141,10 @@ func buildHop(
 	fsys fs.FS,
 	kind string,
 	hop upgradepath.Hop,
-	manifests map[string]config.KFD,
+	distributions map[string]Distribution,
 	deployed []clusterinfo.ModuleInfo,
 ) Hop {
-	from, to := manifests[hop.From], manifests[hop.To]
+	from, to := distributions[hop.From].Manifest, distributions[hop.To].Manifest
 
 	k8sFrom := kubernetesVersion(from, kind)
 	k8sTo := kubernetesVersion(to, kind)

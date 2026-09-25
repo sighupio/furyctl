@@ -1,0 +1,38 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "properties": {
+    "apiVersion": { "type": "string" },
+    "kind": { "type": "string" },
+    "spec": { "$ref": "#/$defs/Spec" }
+  },
+  "required": ["apiVersion", "kind", "spec"],
+  "$defs": {
+    "Spec.Kubernetes.Advanced": {
+      "type": "object",
+      "properties": {
+        "kubeProxy": {
+          "type": "object",
+          "properties": {
+            "enabled": { "type": "boolean" }
+          }
+        },
+        "encryption": { "$ref": "#/$defs/Spec.Kubernetes.Advanced.Encryption" }
+      }
+    },
+    "Spec.Kubernetes.Advanced.Encryption": {
+      "type": "object",
+      "properties": {
+        "tlsCipherSuites": { "type": "array" }
+      }
+    },
+    "Spec.Distribution.Modules.Logging.CustomOutputs": {
+      "type": "object",
+      "properties": {
+        "audit": { "type": "string" },
+        "ingressNginx": { "type": "string" }
+      },
+      "required": ["audit", "ingressNginx"]
+    }
+  }
+}

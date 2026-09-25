@@ -104,12 +104,24 @@ downloaded, so the command needs access to the distribution repository.`,
 
 			kubectlBin := resolveKubectlBin(binPath, outDir)
 
-			info, err := clusterinfo.NewCollector(kubectlBin, currentDir).Collect()
+			collector := clusterinfo.NewCollector(kubectlBin, currentDir)
+
+			info, err := collector.Collect()
 			if err != nil {
 				cmdEvent.AddErrorMessage(err)
 				tracker.Track(cmdEvent)
 
 				return fmt.Errorf("error while collecting cluster information: %w", err)
+			}
+
+			// The stored configuration drives the configuration checks. Without it the
+			// version deltas are still worth reporting, so a failure here is not fatal.
+			storedConfig, err := collector.Config()
+			if err != nil {
+				logrus.Warnf("could not read the stored configuration, "+
+					"the report will not include configuration checks: %v", err)
+
+				storedConfig = nil
 			}
 
 			logrus.Info("Resolving the upgrade path and downloading the distribution manifests...")
@@ -118,7 +130,7 @@ downloaded, so the command needs access to the distribution repository.`,
 				dist.NewCachingDownloader(netx.NewGoGetterClient(), outDir, typedGitProtocol, ""),
 			)
 
-			analysis, err := upgradeanalysis.Build(configs.Tpl, fetcher, info, to)
+			analysis, err := upgradeanalysis.Build(configs.Tpl, fetcher, info, storedConfig, to)
 			if err != nil {
 				cmdEvent.AddErrorMessage(err)
 				tracker.Track(cmdEvent)

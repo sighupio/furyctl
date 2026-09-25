@@ -17,20 +17,20 @@ import (
 // chain visits the same version twice: as the target of one hop and the source of the next.
 type DownloadFetcher struct {
 	downloader *dist.Downloader
-	cache      map[string]config.KFD
+	cache      map[string]Distribution
 }
 
 func NewDownloadFetcher(downloader *dist.Downloader) *DownloadFetcher {
 	return &DownloadFetcher{
 		downloader: downloader,
-		cache:      map[string]config.KFD{},
+		cache:      map[string]Distribution{},
 	}
 }
 
-// Manifest returns the KFD manifest of one distribution version.
-func (f *DownloadFetcher) Manifest(kind, version string) (config.KFD, error) {
-	if manifest, cached := f.cache[version]; cached {
-		return manifest, nil
+// Fetch returns the distribution of one version, downloading it when needed.
+func (f *DownloadFetcher) Fetch(kind, version string) (Distribution, error) {
+	if cached, hit := f.cache[version]; hit {
+		return cached, nil
 	}
 
 	result, err := f.downloader.DoDownload("", config.Furyctl{
@@ -38,10 +38,11 @@ func (f *DownloadFetcher) Manifest(kind, version string) (config.KFD, error) {
 		Spec: config.FuryctlSpec{DistributionVersion: semver.EnsurePrefix(version)},
 	})
 	if err != nil {
-		return config.KFD{}, fmt.Errorf("error downloading distribution %s: %w", version, err)
+		return Distribution{}, fmt.Errorf("error downloading distribution %s: %w", version, err)
 	}
 
-	f.cache[version] = result.DistroManifest
+	distribution := Distribution{Manifest: result.DistroManifest, Path: result.RepoPath}
+	f.cache[version] = distribution
 
-	return result.DistroManifest, nil
+	return distribution, nil
 }
