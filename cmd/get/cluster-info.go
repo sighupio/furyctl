@@ -30,13 +30,14 @@ import (
 )
 
 const (
-	outputFormatText = "text"
-	outputFormatJSON = "json"
-	outputFormatYAML = "yaml"
-	minTableLines    = 3
+	outputFormatText     = "text"
+	outputFormatJSON     = "json"
+	outputFormatYAML     = "yaml"
+	outputFormatMarkdown = "markdown"
+	minTableLines        = 3
 )
 
-var errInvalidOutputFormat = errors.New("invalid output format, supported values are: text, json, yaml")
+var errInvalidOutputFormat = errors.New("invalid output format, supported values are: text, json, yaml, markdown")
 
 func NewClusterInfoCmd() *cobra.Command {
 	var cmdEvent analytics.Event

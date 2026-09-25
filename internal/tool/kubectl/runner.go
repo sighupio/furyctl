@@ -86,6 +86,23 @@ func (r *Runner) Get(sensitive bool, ns string, params ...string) (string, error
 	return out, nil
 }
 
+// Top runs `kubectl top` for a resource kind, for example "nodes". It needs metrics-server
+// in the cluster and fails when that is missing, which callers are expected to treat as
+// missing information rather than as an unhealthy cluster.
+func (r *Runner) Top(params ...string) (string, error) {
+	args := append([]string{"top"}, params...)
+
+	cmd, id := r.newCmd(args, false)
+	defer r.deleteCmd(id)
+
+	out, err := execx.CombinedOutput(cmd)
+	if err != nil {
+		return out, fmt.Errorf("error while getting resource usage: %w", err)
+	}
+
+	return out, nil
+}
+
 func (r *Runner) Delete(params ...string) error {
 	args := []string{"delete"}
 

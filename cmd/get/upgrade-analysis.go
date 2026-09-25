@@ -18,6 +18,7 @@ import (
 	"github.com/sighupio/furyctl/configs"
 	"github.com/sighupio/furyctl/internal/analytics"
 	"github.com/sighupio/furyctl/internal/app"
+	"github.com/sighupio/furyctl/internal/clusterhealth"
 	"github.com/sighupio/furyctl/internal/clusterinfo"
 	"github.com/sighupio/furyctl/internal/flags"
 	"github.com/sighupio/furyctl/internal/git"
@@ -87,7 +88,8 @@ downloaded, so the command needs access to the distribution repository.`,
 				return errMissingTarget
 			}
 
-			if format != outputFormatText && format != outputFormatJSON && format != outputFormatYAML {
+			if format != outputFormatText && format != outputFormatJSON &&
+				format != outputFormatYAML && format != outputFormatMarkdown {
 				cmdEvent.AddErrorMessage(errInvalidOutputFormat)
 				tracker.Track(cmdEvent)
 
@@ -138,6 +140,10 @@ downloaded, so the command needs access to the distribution repository.`,
 				return fmt.Errorf("error while building the upgrade analysis: %w", err)
 			}
 
+			logrus.Info("Checking the health of the cluster...")
+
+			analysis.Health = clusterhealth.NewCollector(kubectlBin, currentDir).Collect()
+
 			if err := printAnalysis(analysis, format); err != nil {
 				cmdEvent.AddErrorMessage(err)
 				tracker.Track(cmdEvent)
@@ -171,11 +177,13 @@ downloaded, so the command needs access to the distribution repository.`,
 		"format",
 		"f",
 		outputFormatText,
-		"Output format. Supported values: text, json, yaml",
+		"Output format. Supported values: text, json, yaml, markdown",
 	)
 
 	if err := upgradeAnalysisCmd.RegisterFlagCompletionFunc("format", func(_ *cobra.Command, _ []string, _ string) ([]string, cobra.ShellCompDirective) {
-		return []string{outputFormatText, outputFormatJSON, outputFormatYAML}, cobra.ShellCompDirectiveDefault
+		return []string{
+			outputFormatText, outputFormatJSON, outputFormatYAML, outputFormatMarkdown,
+		}, cobra.ShellCompDirectiveDefault
 	}); err != nil {
 		logrus.Fatalf("error while registering flag completion: %v", err)
 	}
@@ -201,6 +209,13 @@ func printAnalysis(analysis *upgradeanalysis.Analysis, format string) error {
 
 		if err := enc.Encode(analysis); err != nil {
 			return fmt.Errorf("error encoding YAML: %w", err)
+		}
+
+		return nil
+
+	case outputFormatMarkdown:
+		if _, err := fmt.Fprint(os.Stdout, upgradeanalysis.Markdown(analysis)); err != nil {
+			return fmt.Errorf("error writing output: %w", err)
 		}
 
 		return nil

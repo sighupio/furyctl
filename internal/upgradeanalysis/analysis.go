@@ -8,6 +8,8 @@
 // distribution manifests of the versions along the way.
 package upgradeanalysis
 
+import "github.com/sighupio/furyctl/internal/clusterhealth"
+
 // Analysis is the full report for one cluster and one target version.
 type Analysis struct {
 	ClusterName string   `json:"clusterName" yaml:"clusterName"`
@@ -22,6 +24,9 @@ type Analysis struct {
 	ConfigChecked bool     `json:"configChecked"      yaml:"configChecked"`
 	Skipped       []string `json:"skipped,omitempty"  yaml:"skipped,omitempty"`
 	Warnings      []string `json:"warnings,omitempty" yaml:"warnings,omitempty"`
+
+	// Health is the state of the running cluster. Nil when health was not collected.
+	Health *clusterhealth.Report `json:"health,omitempty" yaml:"health,omitempty"`
 }
 
 // AlreadyAtTarget reports whether the cluster already runs the target version, in

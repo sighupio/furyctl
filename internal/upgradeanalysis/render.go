@@ -8,6 +8,8 @@ import (
 	"fmt"
 	"strings"
 	"text/tabwriter"
+
+	"github.com/sighupio/furyctl/internal/clusterhealth"
 )
 
 const tabPadding = 2
@@ -43,6 +45,8 @@ func Text(a *Analysis) string {
 	for i := range a.Hops {
 		writeHop(&sb, a, &a.Hops[i])
 	}
+
+	writeHealth(&sb, a.Health)
 
 	if len(a.Warnings) > 0 {
 		_, _ = sb.WriteString("\nWarnings\n")
@@ -161,5 +165,34 @@ func writeModuleTable(sb *strings.Builder, hop *Hop) {
 
 	if unchanged := hop.UnchangedModules(); len(unchanged) > 0 {
 		_, _ = sb.WriteString("  Unchanged: " + strings.Join(unchanged, ", ") + "\n")
+	}
+}
+
+// writeHealth renders the state of the running cluster. Each check says whether it ran, so
+// that a check which failed is never mistaken for a cluster that is fine.
+func writeHealth(sb *strings.Builder, report *clusterhealth.Report) {
+	if report == nil {
+		return
+	}
+
+	_, _ = sb.WriteString("\nCluster health\n")
+
+	for i := range report.Checks {
+		check := &report.Checks[i]
+
+		switch {
+		case !check.Ran():
+			_, _ = fmt.Fprintf(sb, "  %s: could not be checked: %s\n", check.Name, check.Err)
+
+		case check.Clean():
+			_, _ = fmt.Fprintf(sb, "  %s: checked, nothing found (%s)\n", check.Name, check.Description)
+
+		default:
+			_, _ = fmt.Fprintf(sb, "  %s: %d found (%s)\n", check.Name, len(check.Issues), check.Description)
+
+			for _, issue := range check.Issues {
+				_, _ = fmt.Fprintf(sb, "    [%s] %s: %s\n", issue.Severity, issue.Subject, issue.Detail)
+			}
+		}
 	}
 }

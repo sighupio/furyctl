@@ -13,6 +13,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/sighupio/furyctl/internal/clusterhealth"
 	"github.com/sighupio/furyctl/internal/upgradeanalysis"
 )
 
@@ -248,4 +249,39 @@ func TestCleanConfigurationMessageIsTrustworthy(t *testing.T) {
 		assert.NotContains(t, upgradeanalysis.Text(analysis), cleanMessage,
 			"without a configuration there is nothing to call clean")
 	})
+}
+
+func TestTextRendersHealthAndDistinguishesFailedChecks(t *testing.T) {
+	t.Parallel()
+
+	fsys := hopsFS([]string{"1.34.1-1.35.1"}, []string{"1.34.1-1.35.1"})
+
+	fetcher := pathFetcher{
+		from:    "v1.34.1",
+		to:      "v1.35.1",
+		fromDir: distDir(t, schemaBefore),
+		toDir:   distDir(t, schemaAfter),
+	}
+
+	analysis, err := upgradeanalysis.Build(fsys, fetcher, qaCluster("v1.34.1"), nil, "v1.35.1")
+	require.NoError(t, err, "Build")
+
+	analysis.Health = &clusterhealth.Report{Checks: []clusterhealth.Check{
+		{Name: "pods", Description: "pods that are not Running"},
+		{Name: "node-usage", Description: "nodes close to saturation", Err: "metrics API not available"},
+		{Name: "drain-fit", Description: "whether pods fit elsewhere", Issues: []clusterhealth.Issue{{
+			Severity: clusterhealth.SeverityWarning,
+			Subject:  "node worker01",
+			Detail:   "its pod requests do not fit on the other \"worker\" nodes",
+		}}},
+	}}
+
+	out := upgradeanalysis.Text(analysis)
+
+	assert.Contains(t, out, "pods: checked, nothing found", "a clean check states that it ran")
+	assert.Contains(t, out, "node-usage: could not be checked: metrics API not available",
+		"a failed check names the reason and is never called clean")
+	assert.NotContains(t, out, "node-usage: checked", "a failed check must not claim to have run")
+	assert.Contains(t, out, "drain-fit: 1 found", "a check with issues reports the count")
+	assert.Contains(t, out, "node worker01", "the issue itself")
 }
