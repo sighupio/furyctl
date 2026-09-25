@@ -10,14 +10,18 @@ package upgradeanalysis
 
 // Analysis is the full report for one cluster and one target version.
 type Analysis struct {
-	ClusterName string   `json:"clusterName"        yaml:"clusterName"`
-	Kind        string   `json:"kind"               yaml:"kind"`
-	From        string   `json:"from"               yaml:"from"`
-	To          string   `json:"to"                 yaml:"to"`
-	Hops        []Hop    `json:"hops"               yaml:"hops"`
-	Deployed    []string `json:"deployed"           yaml:"deployed"`
-	Skipped     []string `json:"skipped,omitempty"  yaml:"skipped,omitempty"`
-	Warnings    []string `json:"warnings,omitempty" yaml:"warnings,omitempty"`
+	ClusterName string   `json:"clusterName" yaml:"clusterName"`
+	Kind        string   `json:"kind"        yaml:"kind"`
+	From        string   `json:"from"        yaml:"from"`
+	To          string   `json:"to"          yaml:"to"`
+	Hops        []Hop    `json:"hops"        yaml:"hops"`
+	Deployed    []string `json:"deployed"    yaml:"deployed"`
+	// ConfigChecked records whether the stored configuration was available. Without it the
+	// report still shows version deltas, but it cannot say anything about configuration, and
+	// an empty list of findings would otherwise be indistinguishable from a clean one.
+	ConfigChecked bool     `json:"configChecked"      yaml:"configChecked"`
+	Skipped       []string `json:"skipped,omitempty"  yaml:"skipped,omitempty"`
+	Warnings      []string `json:"warnings,omitempty" yaml:"warnings,omitempty"`
 }
 
 // AlreadyAtTarget reports whether the cluster already runs the target version, in

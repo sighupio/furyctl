@@ -97,3 +97,47 @@ func TestTextSingleHopWording(t *testing.T) {
 
 	assert.Contains(t, upgradeanalysis.Text(analysis), "Upgrade path (1 hop):", "singular wording")
 }
+
+func TestTextStatesTheConfigurationCheckOutcome(t *testing.T) {
+	t.Parallel()
+
+	fsys := hopsFS([]string{"1.34.1-1.35.1"}, []string{"1.34.1-1.35.1"})
+
+	fetcher := pathFetcher{
+		from:    "v1.34.1",
+		to:      "v1.35.1",
+		fromDir: distDir(t, schemaBefore),
+		toDir:   distDir(t, schemaAfter),
+	}
+
+	t.Run("a clean check says so rather than staying silent", func(t *testing.T) {
+		t.Parallel()
+
+		// A loki cluster: no customOutputs block, and kubeProxy never set.
+		cfg := map[string]any{
+			"spec": map[string]any{
+				"distribution": map[string]any{
+					"modules": map[string]any{"logging": map[string]any{"type": "loki"}},
+				},
+			},
+		}
+
+		analysis, err := upgradeanalysis.Build(fsys, fetcher, qaCluster("v1.34.1"), cfg, "v1.35.1")
+		require.NoError(t, err, "Build")
+
+		assert.True(t, analysis.ConfigChecked, "ConfigChecked")
+		assert.Contains(t, upgradeanalysis.Text(analysis), "Configuration: checked, no changes required",
+			"a clean result must be stated, not implied by silence")
+	})
+
+	t.Run("an unreadable configuration is reported as not checked", func(t *testing.T) {
+		t.Parallel()
+
+		analysis, err := upgradeanalysis.Build(fsys, fetcher, qaCluster("v1.34.1"), nil, "v1.35.1")
+		require.NoError(t, err, "Build")
+
+		assert.False(t, analysis.ConfigChecked, "ConfigChecked")
+		assert.Contains(t, upgradeanalysis.Text(analysis), "Configuration: not checked",
+			"the report must not imply a clean configuration it never looked at")
+	})
+}

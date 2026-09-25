@@ -41,7 +41,7 @@ func Text(a *Analysis) string {
 	}
 
 	for i := range a.Hops {
-		writeHop(&sb, &a.Hops[i])
+		writeHop(&sb, a, &a.Hops[i])
 	}
 
 	if len(a.Warnings) > 0 {
@@ -79,7 +79,7 @@ func pluralHops(n int) string {
 	return fmt.Sprintf("%d hops", n)
 }
 
-func writeHop(sb *strings.Builder, hop *Hop) {
+func writeHop(sb *strings.Builder, a *Analysis, hop *Hop) {
 	_, _ = fmt.Fprintf(sb, "\n%s -> %s\n", hop.From, hop.To)
 
 	if hop.KubernetesFrom != "" || hop.KubernetesTo != "" {
@@ -104,18 +104,28 @@ func writeHop(sb *strings.Builder, hop *Hop) {
 	}
 
 	writeModuleTable(sb, hop)
-	writeFindings(sb, hop.Findings)
+	writeFindings(sb, a, hop)
 }
 
-// writeFindings lists the configuration changes a hop requires, blockers first.
-func writeFindings(sb *strings.Builder, findings []Finding) {
-	if len(findings) == 0 {
+// writeFindings lists the configuration changes a hop requires. When the configuration was
+// checked and nothing came up it says so explicitly: an empty section would otherwise read
+// the same as a check that never ran.
+func writeFindings(sb *strings.Builder, a *Analysis, hop *Hop) {
+	if !a.ConfigChecked {
+		_, _ = sb.WriteString("  Configuration: not checked, the stored configuration could not be read\n")
+
+		return
+	}
+
+	if len(hop.Findings) == 0 {
+		_, _ = sb.WriteString("  Configuration: checked, no changes required\n")
+
 		return
 	}
 
 	_, _ = sb.WriteString("  Configuration changes required:\n")
 
-	for _, finding := range findings {
+	for _, finding := range hop.Findings {
 		_, _ = fmt.Fprintf(sb, "    [%s] %s\n", finding.Severity, finding.Message)
 	}
 }

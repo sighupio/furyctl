@@ -67,6 +67,8 @@ func Build(
 		Hops:        make([]Hop, 0, len(chain)),
 		Deployed:    moduleNames(deployed),
 		Skipped:     skipped,
+
+		ConfigChecked: cfg != nil,
 	}
 
 	// Nothing to plan: the cluster already runs the target version.
