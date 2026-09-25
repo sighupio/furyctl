@@ -44,6 +44,16 @@ const (
 	milliCPU         = 1000
 	etcdStacked      = "Stacked"
 	etcdDedicated    = "Dedicated"
+
+	condReady          = "Ready"
+	condTrue           = "True"
+	condFalse          = "False"
+	condPressureSuffix = "Pressure"
+
+	nodeStatusReady              = "Ready"
+	nodeStatusNotReady           = "NotReady"
+	nodeStatusUnknown            = "Unknown"
+	nodeStatusSchedulingDisabled = "SchedulingDisabled"
 )
 
 var (
@@ -225,7 +235,53 @@ func (c *Collector) fetchKubernetesVersion() (string, error) {
 	return info.ServerVersion.GitVersion, nil
 }
 
-// fetchNodes summarizes node capacity by role to report cluster shape.
+// nodeResource holds the CPU and memory fields of a node's capacity block.
+type nodeResource struct {
+	CPU    string `json:"cpu"`
+	Memory string `json:"memory"`
+}
+
+// nodeCondition is a single entry of a node's status.conditions list.
+type nodeCondition struct {
+	Type   string `json:"type"`
+	Status string `json:"status"`
+}
+
+// nodeSystemInfo mirrors the subset of status.nodeInfo shown by `kubectl get nodes -o wide`.
+type nodeSystemInfo struct {
+	KubeletVersion          string `json:"kubeletVersion"`
+	OSImage                 string `json:"osImage"`
+	KernelVersion           string `json:"kernelVersion"`
+	ContainerRuntimeVersion string `json:"containerRuntimeVersion"`
+}
+
+type nodeStatus struct {
+	Capacity   nodeResource    `json:"capacity"`
+	Conditions []nodeCondition `json:"conditions"`
+	NodeInfo   nodeSystemInfo  `json:"nodeInfo"`
+}
+
+type nodeSpec struct {
+	Unschedulable bool `json:"unschedulable"`
+}
+
+type nodeMetadata struct {
+	Name   string            `json:"name"`
+	Labels map[string]string `json:"labels"`
+}
+
+type nodeItem struct {
+	Metadata nodeMetadata `json:"metadata"`
+	Spec     nodeSpec     `json:"spec"`
+	Status   nodeStatus   `json:"status"`
+}
+
+type nodeList struct {
+	Items []nodeItem `json:"items"`
+}
+
+// fetchNodes summarizes node capacity by role and collects the per-node details
+// used to report cluster shape.
 func (c *Collector) fetchNodes() (*NodesSummary, error) {
 	out, err := c.KubectlRunner.Get(
 		false,
@@ -237,36 +293,19 @@ func (c *Collector) fetchNodes() (*NodesSummary, error) {
 		return nil, fmt.Errorf("error getting nodes: %w", err)
 	}
 
-	type nodeResource struct {
-		CPU    string `json:"cpu"`
-		Memory string `json:"memory"`
-	}
-
-	type nodeStatus struct {
-		Capacity nodeResource `json:"capacity"`
-	}
-
-	type nodeMetadata struct {
-		Name   string            `json:"name"`
-		Labels map[string]string `json:"labels"`
-	}
-
-	type nodeItem struct {
-		Metadata nodeMetadata `json:"metadata"`
-		Status   nodeStatus   `json:"status"`
-	}
-
-	type nodeList struct {
-		Items []nodeItem `json:"items"`
-	}
-
 	var list nodeList
 	if err := json.Unmarshal([]byte(out), &list); err != nil {
 		return nil, fmt.Errorf("error parsing nodes JSON: %w", err)
 	}
 
-	if len(list.Items) == 0 {
-		return &NodesSummary{}, nil
+	return summarizeNodes(list.Items), nil
+}
+
+// summarizeNodes aggregates node capacity by role and builds the per-node detail list.
+// The detail list is sorted by node name, matching the output of `kubectl get nodes`.
+func summarizeNodes(items []nodeItem) *NodesSummary {
+	if len(items) == 0 {
+		return &NodesSummary{}
 	}
 
 	groups := map[string]*NodeRoleGroup{}
@@ -274,8 +313,9 @@ func (c *Collector) fetchNodes() (*NodesSummary, error) {
 	var roleOrder []string
 
 	totals := NodeTotals{}
+	details := make([]NodeDetail, 0, len(items))
 
-	for _, item := range list.Items {
+	for _, item := range items {
 		role := primaryRole(item.Metadata.Labels)
 		vcpu := parseCPU(item.Status.Capacity.CPU)
 		ramGb := parseMemoryGb(item.Status.Capacity.Memory)
@@ -292,6 +332,19 @@ func (c *Collector) fetchNodes() (*NodesSummary, error) {
 		totals.Quantity++
 		totals.VCPU += vcpu
 		totals.RAMGb += ramGb
+
+		details = append(details, NodeDetail{
+			Name:             item.Metadata.Name,
+			Role:             role,
+			Status:           nodeStatusString(item),
+			KubeletVersion:   item.Status.NodeInfo.KubeletVersion,
+			OSImage:          item.Status.NodeInfo.OSImage,
+			KernelVersion:    item.Status.NodeInfo.KernelVersion,
+			ContainerRuntime: item.Status.NodeInfo.ContainerRuntimeVersion,
+			VCPU:             vcpu,
+			RAMGb:            ramGb,
+			Pressures:        nodePressures(item.Status.Conditions),
+		})
 	}
 
 	slices.SortFunc(roleOrder, roleSort)
@@ -300,7 +353,57 @@ func (c *Collector) fetchNodes() (*NodesSummary, error) {
 		return *groups[r]
 	})
 
-	return &NodesSummary{Roles: roles, Totals: totals}, nil
+	slices.SortFunc(details, func(a, b NodeDetail) int {
+		return strings.Compare(a.Name, b.Name)
+	})
+
+	return &NodesSummary{Roles: roles, Totals: totals, Nodes: details}
+}
+
+// nodeStatusString reproduces the STATUS column of `kubectl get nodes`: the value of the
+// Ready condition, with ",SchedulingDisabled" appended when the node is cordoned.
+func nodeStatusString(item nodeItem) string {
+	status := nodeStatusUnknown
+
+	for _, cond := range item.Status.Conditions {
+		if cond.Type != condReady {
+			continue
+		}
+
+		switch cond.Status {
+		case condTrue:
+			status = nodeStatusReady
+
+		case condFalse:
+			status = nodeStatusNotReady
+
+		default:
+			status = nodeStatusUnknown
+		}
+
+		break
+	}
+
+	if item.Spec.Unschedulable {
+		return status + "," + nodeStatusSchedulingDisabled
+	}
+
+	return status
+}
+
+// nodePressures returns the node pressure conditions that are currently active, for
+// example MemoryPressure or DiskPressure. Returns nil when the node reports none, so
+// that the field is omitted from the output entirely.
+func nodePressures(conditions []nodeCondition) []string {
+	var pressures []string
+
+	for _, cond := range conditions {
+		if cond.Status == condTrue && strings.HasSuffix(cond.Type, condPressureSuffix) {
+			pressures = append(pressures, cond.Type)
+		}
+	}
+
+	return pressures
 }
 
 // latestManagedFieldTime returns the most recent managedFields[].time,

@@ -129,6 +129,7 @@ func GetSupportedFlags() SupportedFlags {
 			"skipDepsValidation": FlagTypeBool,
 			"airgapBundle":       FlagTypeString,
 			"forceExtract":       FlagTypeBool,
+			"detail":             FlagTypeBool,
 			"format":             FlagTypeString,
 			"from":               FlagTypeString,
 			"kind":               FlagTypeString,

@@ -554,3 +554,245 @@ func TestLatestManagedFieldTime(t *testing.T) {
 	raw3 := map[string]any{"metadata": map[string]any{"creationTimestamp": "bad"}}
 	require.True(t, latestManagedFieldTime(raw3).IsZero(), "expected zero when creationTimestamp is malformed")
 }
+
+func TestNodeStatusString(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name          string
+		conditions    []nodeCondition
+		unschedulable bool
+		want          string
+	}{
+		{
+			name:       "ready",
+			conditions: []nodeCondition{{Type: "Ready", Status: "True"}},
+			want:       "Ready",
+		},
+		{
+			name:       "not ready",
+			conditions: []nodeCondition{{Type: "Ready", Status: "False"}},
+			want:       "NotReady",
+		},
+		{
+			name:       "ready status unknown",
+			conditions: []nodeCondition{{Type: "Ready", Status: "Unknown"}},
+			want:       "Unknown",
+		},
+		{
+			name:       "no ready condition at all",
+			conditions: []nodeCondition{{Type: "MemoryPressure", Status: "False"}},
+			want:       "Unknown",
+		},
+		{
+			name:       "no conditions at all",
+			conditions: nil,
+			want:       "Unknown",
+		},
+		{
+			name:          "ready but cordoned",
+			conditions:    []nodeCondition{{Type: "Ready", Status: "True"}},
+			unschedulable: true,
+			want:          "Ready,SchedulingDisabled",
+		},
+		{
+			name:          "not ready and cordoned",
+			conditions:    []nodeCondition{{Type: "Ready", Status: "False"}},
+			unschedulable: true,
+			want:          "NotReady,SchedulingDisabled",
+		},
+		{
+			name: "ready condition is not the first one",
+			conditions: []nodeCondition{
+				{Type: "DiskPressure", Status: "False"},
+				{Type: "Ready", Status: "True"},
+			},
+			want: "Ready",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			item := nodeItem{
+				Spec:   nodeSpec{Unschedulable: tt.unschedulable},
+				Status: nodeStatus{Conditions: tt.conditions},
+			}
+
+			assert.Equal(t, tt.want, nodeStatusString(item), "nodeStatusString")
+		})
+	}
+}
+
+func TestNodePressures(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name       string
+		conditions []nodeCondition
+		want       []string
+	}{
+		{
+			name:       "no conditions",
+			conditions: nil,
+			want:       nil,
+		},
+		{
+			name: "healthy node reports no active pressure",
+			conditions: []nodeCondition{
+				{Type: "Ready", Status: "True"},
+				{Type: "MemoryPressure", Status: "False"},
+				{Type: "DiskPressure", Status: "False"},
+				{Type: "PIDPressure", Status: "False"},
+			},
+			want: nil,
+		},
+		{
+			name: "single active pressure",
+			conditions: []nodeCondition{
+				{Type: "Ready", Status: "True"},
+				{Type: "MemoryPressure", Status: "True"},
+			},
+			want: []string{"MemoryPressure"},
+		},
+		{
+			name: "multiple active pressures keep their order",
+			conditions: []nodeCondition{
+				{Type: "MemoryPressure", Status: "True"},
+				{Type: "DiskPressure", Status: "False"},
+				{Type: "PIDPressure", Status: "True"},
+			},
+			want: []string{"MemoryPressure", "PIDPressure"},
+		},
+		{
+			name: "a true non-pressure condition is not reported",
+			conditions: []nodeCondition{
+				{Type: "Ready", Status: "True"},
+				{Type: "NetworkUnavailable", Status: "True"},
+			},
+			want: nil,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			assert.Equal(t, tt.want, nodePressures(tt.conditions), "nodePressures")
+		})
+	}
+}
+
+func TestSummarizeNodesEmpty(t *testing.T) {
+	t.Parallel()
+
+	got := summarizeNodes(nil)
+
+	require.NotNil(t, got, "summary must not be nil")
+	assert.Empty(t, got.Roles, "roles")
+	assert.Empty(t, got.Nodes, "nodes")
+	assert.Equal(t, NodeTotals{}, got.Totals, "totals")
+}
+
+func TestSummarizeNodes(t *testing.T) {
+	t.Parallel()
+
+	// Deliberately out of name order, to prove the detail list gets sorted.
+	items := []nodeItem{
+		{
+			Metadata: nodeMetadata{
+				Name:   "worker02",
+				Labels: map[string]string{"node-role.kubernetes.io/worker": ""},
+			},
+			Status: nodeStatus{
+				Capacity:   nodeResource{CPU: "8", Memory: "16Gi"},
+				Conditions: []nodeCondition{{Type: "Ready", Status: "True"}},
+				NodeInfo: nodeSystemInfo{
+					KubeletVersion:          "v1.34.4",
+					OSImage:                 "Ubuntu 24.04.2 LTS",
+					KernelVersion:           "6.11.0-1018-azure",
+					ContainerRuntimeVersion: "containerd://1.7.29",
+				},
+			},
+		},
+		{
+			Metadata: nodeMetadata{
+				Name:   "master01",
+				Labels: map[string]string{"node-role.kubernetes.io/control-plane": ""},
+			},
+			Status: nodeStatus{
+				Capacity: nodeResource{CPU: "4", Memory: "8Gi"},
+				Conditions: []nodeCondition{
+					{Type: "Ready", Status: "True"},
+					{Type: "MemoryPressure", Status: "True"},
+				},
+				NodeInfo: nodeSystemInfo{KubeletVersion: "v1.34.4"},
+			},
+		},
+		{
+			Metadata: nodeMetadata{
+				Name:   "worker01",
+				Labels: map[string]string{"node-role.kubernetes.io/worker": ""},
+			},
+			Spec: nodeSpec{Unschedulable: true},
+			Status: nodeStatus{
+				Capacity:   nodeResource{CPU: "8", Memory: "16Gi"},
+				Conditions: []nodeCondition{{Type: "Ready", Status: "True"}},
+				NodeInfo:   nodeSystemInfo{KubeletVersion: "v1.34.4"},
+			},
+		},
+		{
+			Metadata: nodeMetadata{
+				Name:   "infra01",
+				Labels: map[string]string{"node-role.kubernetes.io/infra": ""},
+			},
+			Status: nodeStatus{
+				Capacity:   nodeResource{CPU: "2", Memory: "4Gi"},
+				Conditions: []nodeCondition{{Type: "Ready", Status: "False"}},
+				NodeInfo:   nodeSystemInfo{KubeletVersion: "v1.33.7"},
+			},
+		},
+	}
+
+	got := summarizeNodes(items)
+	require.NotNil(t, got, "summary must not be nil")
+
+	// Role aggregation must keep working exactly as before.
+	wantRoles := []NodeRoleGroup{
+		{Role: "control-plane", Quantity: 1, VCPU: 4, RAMGb: 8},
+		{Role: "infra", Quantity: 1, VCPU: 2, RAMGb: 4},
+		{Role: "worker", Quantity: 2, VCPU: 16, RAMGb: 32},
+	}
+	assert.Equal(t, wantRoles, got.Roles, "roles")
+	assert.Equal(t, NodeTotals{Quantity: 4, VCPU: 22, RAMGb: 44}, got.Totals, "totals")
+
+	// Detail list is sorted by node name.
+	gotNames := lo.Map(got.Nodes, func(n NodeDetail, _ int) string { return n.Name })
+	assert.Equal(t, []string{"infra01", "master01", "worker01", "worker02"}, gotNames, "node order")
+
+	byName := lo.KeyBy(got.Nodes, func(n NodeDetail) string { return n.Name })
+
+	assert.Equal(
+		t,
+		NodeDetail{
+			Name:             "worker02",
+			Role:             "worker",
+			Status:           "Ready",
+			KubeletVersion:   "v1.34.4",
+			OSImage:          "Ubuntu 24.04.2 LTS",
+			KernelVersion:    "6.11.0-1018-azure",
+			ContainerRuntime: "containerd://1.7.29",
+			VCPU:             8,
+			RAMGb:            16,
+		},
+		byName["worker02"],
+		"fully populated node",
+	)
+
+	assert.Equal(t, "Ready,SchedulingDisabled", byName["worker01"].Status, "cordoned node status")
+	assert.Equal(t, "NotReady", byName["infra01"].Status, "not ready node status")
+	assert.Equal(t, []string{"MemoryPressure"}, byName["master01"].Pressures, "node under pressure")
+	assert.Nil(t, byName["worker02"].Pressures, "healthy node reports no pressures")
+	assert.Equal(t, "v1.33.7", byName["infra01"].KubeletVersion, "kubelet version skew is visible")
+}

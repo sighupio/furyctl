@@ -73,6 +73,7 @@ func NewClusterInfoCmd() *cobra.Command {
 			debug := viper.GetBool("debug")
 			format := viper.GetString("format")
 			outDir := viper.GetString("outdir")
+			detail := viper.GetBool("detail")
 
 			execx.Debug = debug
 
@@ -95,7 +96,7 @@ func NewClusterInfoCmd() *cobra.Command {
 				return fmt.Errorf("error while collecting cluster information: %w", err)
 			}
 
-			if err := printInfo(info, format); err != nil {
+			if err := printInfo(info, format, textOptions{nodeDetail: detail}); err != nil {
 				cmdEvent.AddErrorMessage(err)
 				tracker.Track(cmdEvent)
 
@@ -123,6 +124,13 @@ func NewClusterInfoCmd() *cobra.Command {
 		"f",
 		outputFormatText,
 		"Output format. Supported values: text, json, yaml",
+	)
+
+	clusterInfoCmd.Flags().Bool(
+		"detail",
+		false,
+		"Include the per-node detail table in the text output. "+
+			"Node details are always included in the json and yaml output.",
 	)
 
 	// Tab-completion for the "format" flag.
@@ -154,7 +162,12 @@ func resolveKubectlBin(binPath, outDir string) string {
 	return "kubectl"
 }
 
-func printInfo(info *clusterinfo.Info, format string) error {
+// textOptions selects the optional sections of the text output.
+type textOptions struct {
+	nodeDetail bool
+}
+
+func printInfo(info *clusterinfo.Info, format string, opts textOptions) error {
 	switch format {
 	case outputFormatJSON:
 		return printJSON(info)
@@ -165,7 +178,7 @@ func printInfo(info *clusterinfo.Info, format string) error {
 	default:
 		// Print plain text directly to stdout to avoid log prefixes and match
 		// the JSON/YAML behavior (clean pipeable output).
-		if _, err := fmt.Fprint(os.Stdout, formatText(info)); err != nil {
+		if _, err := fmt.Fprint(os.Stdout, formatText(info, opts)); err != nil {
 			return fmt.Errorf("error writing output: %w", err)
 		}
 
@@ -195,7 +208,7 @@ func printYAML(info *clusterinfo.Info) error {
 	return nil
 }
 
-func formatText(info *clusterinfo.Info) string {
+func formatText(info *clusterinfo.Info, opts textOptions) string {
 	const tabPadding = 2
 
 	var sb strings.Builder
@@ -268,6 +281,12 @@ func formatText(info *clusterinfo.Info) string {
 		writeNodesTable(&sb, info.Nodes)
 	}
 
+	// The per-node table is opt-in: on a large cluster it would bury the summary.
+	if opts.nodeDetail && info.Nodes != nil && len(info.Nodes.Nodes) > 0 {
+		_, _ = sb.WriteString("\n")
+		writeNodeDetailTable(&sb, info.Nodes.Nodes)
+	}
+
 	return sb.String()
 }
 
@@ -329,6 +348,52 @@ func writeNodesTable(sb *strings.Builder, nodes *clusterinfo.NodesSummary) {
 	_ = w.Flush()
 
 	_, _ = sb.WriteString(insertSeparator(buf.String(), "-", "="))
+}
+
+// writeNodeDetailTable renders one row per node, with the columns of
+// `kubectl get nodes -o wide`. The Pressures column only appears when at least one
+// node reports an active pressure condition, so that a healthy cluster stays readable.
+func writeNodeDetailTable(sb *strings.Builder, nodes []clusterinfo.NodeDetail) {
+	const tabPadding = 2
+
+	showPressures := lo.SomeBy(nodes, func(n clusterinfo.NodeDetail) bool {
+		return len(n.Pressures) > 0
+	})
+
+	var buf strings.Builder
+
+	w := tabwriter.NewWriter(&buf, 0, 0, tabPadding, ' ', 0)
+
+	header := "Name\tStatus\tRole\tVersion\tOS Image\tKernel\tContainer Runtime"
+	if showPressures {
+		header += "\tPressures"
+	}
+
+	_, _ = fmt.Fprintln(w, header)
+
+	for _, n := range nodes {
+		_, _ = fmt.Fprintf(
+			w,
+			"%s\t%s\t%s\t%s\t%s\t%s\t%s",
+			n.Name,
+			n.Status,
+			n.Role,
+			n.KubeletVersion,
+			n.OSImage,
+			n.KernelVersion,
+			n.ContainerRuntime,
+		)
+
+		if showPressures {
+			_, _ = fmt.Fprintf(w, "\t%s", lo.Ternary(len(n.Pressures) > 0, strings.Join(n.Pressures, ","), "-"))
+		}
+
+		_, _ = fmt.Fprintln(w)
+	}
+
+	_ = w.Flush()
+
+	_, _ = sb.WriteString(insertHeaderSeparator(buf.String(), "-"))
 }
 
 func insertHeaderSeparator(table, char string) string {

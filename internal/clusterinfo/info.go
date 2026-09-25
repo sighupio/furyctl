@@ -63,10 +63,29 @@ type NodeRoleGroup struct {
 	RAMGb    float64 `json:"ramGb"    yaml:"ramGb"`
 }
 
-// NodesSummary groups node capacity by role with aggregate totals.
+// NodesSummary groups node capacity by role with aggregate totals, and lists
+// the individual nodes with the details needed before an upgrade.
 type NodesSummary struct {
-	Roles  []NodeRoleGroup `json:"roles"  yaml:"roles"`
-	Totals NodeTotals      `json:"totals" yaml:"totals"`
+	Roles  []NodeRoleGroup `json:"roles"           yaml:"roles"`
+	Totals NodeTotals      `json:"totals"          yaml:"totals"`
+	Nodes  []NodeDetail    `json:"nodes,omitempty" yaml:"nodes,omitempty"`
+}
+
+// NodeDetail holds the per-node facts shown by `kubectl get nodes -o wide`, plus the
+// node pressure conditions. Both matter when planning an upgrade: the OS image and
+// kernel decide whether a node meets the target Kubernetes requirements, and a node
+// already under pressure is one that may not survive a drain.
+type NodeDetail struct {
+	Name             string   `json:"name"                yaml:"name"`
+	Role             string   `json:"role"                yaml:"role"`
+	Status           string   `json:"status"              yaml:"status"`
+	KubeletVersion   string   `json:"kubeletVersion"      yaml:"kubeletVersion"`
+	OSImage          string   `json:"osImage"             yaml:"osImage"`
+	KernelVersion    string   `json:"kernelVersion"       yaml:"kernelVersion"`
+	ContainerRuntime string   `json:"containerRuntime"    yaml:"containerRuntime"`
+	VCPU             int64    `json:"vcpu"                yaml:"vcpu"`
+	RAMGb            float64  `json:"ramGb"               yaml:"ramGb"`
+	Pressures        []string `json:"pressures,omitempty" yaml:"pressures,omitempty"`
 }
 
 // NodeTotals holds the aggregate capacity across all nodes.
