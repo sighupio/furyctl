@@ -10,6 +10,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"strings"
 
 	"github.com/sighupio/furyctl/internal/semver"
@@ -19,7 +20,7 @@ import (
 // changes section. That is not the same as a release with no breaking changes: some releases
 // state "None" explicitly, others omit the section, and only the release itself knows which.
 var (
-	ErrNoBreakingChangesSection = errors.New("the release notes list no breaking-changes section")
+	ErrNoBreakingChangesSection = errors.New("no release notes cover this hop")
 
 	// Matches the breaking changes heading. Releases have spelled it both "Breaking changes"
 	// and "Breaking Changes", and decorate it with an emoji, so the match is case-insensitive
@@ -30,28 +31,100 @@ var (
 	anyHeading = regexp.MustCompile(`^##\s`)
 )
 
-// breakingChanges returns the breaking changes a distribution version declares, taken
-// verbatim from the release notes that version ships.
+// ReleaseBreakingChanges is what one release declares breaking, in its own words.
+type ReleaseBreakingChanges struct {
+	Version string `json:"version" yaml:"version"`
+	// Section is the release's breaking changes, verbatim. Empty means the release ships
+	// notes without such a section, which is not the same as declaring none: some releases
+	// say "None" explicitly, and only the release itself knows which it meant.
+	Section string `json:"section,omitempty" yaml:"section,omitempty"`
+}
+
+// breakingChangesBetween returns what every release in (from, to] declares breaking.
 //
-// Reading them from the distribution rather than restating them here is what keeps the
-// analysis correct for versions that do not exist yet: whatever a future release declares
-// breaking is what the report will show, with no change to furyctl.
-func breakingChanges(distributionPath, version string) (string, error) {
-	notes := filepath.Join(
-		distributionPath, "docs", "releases", semver.EnsurePrefix(version)+".md",
-	)
+// A hop can skip releases: an upgrade path may jump over a patch that is never installed,
+// while everything that patch declared breaking still applies to the cluster. Reading only
+// the target's notes would hide exactly the changes an upgrade most needs to know about.
+//
+// The notes of every earlier release ship inside the target's distribution, so this needs no
+// extra download and stays correct for versions that do not exist yet.
+func breakingChangesBetween(distributionPath, from, to string) ([]ReleaseBreakingChanges, error) {
+	dir := filepath.Join(distributionPath, "docs", "releases")
 
-	raw, err := os.ReadFile(notes)
+	entries, err := os.ReadDir(dir)
 	if err != nil {
-		return "", fmt.Errorf("cannot read the release notes: %w", err)
+		return nil, fmt.Errorf("cannot read the release notes: %w", err)
 	}
 
-	section := extractSection(string(raw))
-	if section == "" {
-		return "", ErrNoBreakingChangesSection
+	versions, err := versionsInSpan(entries, from, to)
+	if err != nil {
+		return nil, err
 	}
 
-	return section, nil
+	out := make([]ReleaseBreakingChanges, 0, len(versions))
+
+	for _, version := range versions {
+		raw, readErr := os.ReadFile(filepath.Join(dir, version+".md"))
+		if readErr != nil {
+			return nil, fmt.Errorf("cannot read the release notes of %s: %w", version, readErr)
+		}
+
+		out = append(out, ReleaseBreakingChanges{
+			Version: version,
+			Section: extractSection(string(raw)),
+		})
+	}
+
+	if len(out) == 0 {
+		return nil, ErrNoBreakingChangesSection
+	}
+
+	return out, nil
+}
+
+// versionsInSpan selects the release notes covering (from, to], oldest first.
+func versionsInSpan(entries []os.DirEntry, from, to string) ([]string, error) {
+	lower, err := semver.NewVersion(from)
+	if err != nil {
+		return nil, fmt.Errorf("cannot read the version %s: %w", from, err)
+	}
+
+	upper, err := semver.NewVersion(to)
+	if err != nil {
+		return nil, fmt.Errorf("cannot read the version %s: %w", to, err)
+	}
+
+	var versions []string
+
+	for _, entry := range entries {
+		if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".md") {
+			continue
+		}
+
+		name := strings.TrimSuffix(entry.Name(), ".md")
+
+		parsed, parseErr := semver.NewVersion(name)
+		if parseErr != nil {
+			continue
+		}
+
+		if parsed.GreaterThan(lower) && !parsed.GreaterThan(upper) {
+			versions = append(versions, name)
+		}
+	}
+
+	slices.SortFunc(versions, func(a, b string) int {
+		va, errA := semver.NewVersion(a)
+		vb, errB := semver.NewVersion(b)
+
+		if errA != nil || errB != nil {
+			return strings.Compare(a, b)
+		}
+
+		return va.Compare(vb)
+	})
+
+	return versions, nil
 }
 
 // extractSection returns the breaking changes section of a release notes document, from its

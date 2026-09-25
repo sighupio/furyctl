@@ -73,6 +73,17 @@ func hopsFS(hops []string, withKubernetes []string) fstest.MapFS {
 	return fsys
 }
 
+// fsWithKind builds an upgrade-paths filesystem for a kind other than onpremises.
+func fsWithKind(kind string, hops ...string) fstest.MapFS {
+	fsys := fstest.MapFS{}
+
+	for _, hop := range hops {
+		fsys["upgrades/"+kind+"/"+hop+"/pre-distribution.sh.tpl"] = &fstest.MapFile{Data: []byte("#!/bin/sh\n")}
+	}
+
+	return fsys
+}
+
 // qaCluster mirrors the module set of a real OnPremises cluster: cilium, loki, prometheus,
 // sso, on-premises DR, with tracing and policy switched off.
 func qaCluster(version string) *clusterinfo.Info {

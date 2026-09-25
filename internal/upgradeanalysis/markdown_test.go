@@ -61,7 +61,9 @@ func TestMarkdownProducesTheDocumentSkeleton(t *testing.T) {
 	assert.Contains(t, out, "| Not deployed | Tracing, Policy |", "omissions stay visible")
 	assert.Contains(t, out, "## Hop v1.34.0 → v1.34.1", "first hop")
 	assert.Contains(t, out, "## Hop v1.34.1 → v1.35.1", "second hop")
-	assert.Contains(t, out, "Distribution phase only", "the cheap hop is marked")
+	assert.Contains(t, out, "Phase: distribution only", "the cheap hop is marked")
+	assert.Contains(t, out, "Phase: Kubernetes and distribution",
+		"and the phase is always stated, so its absence is never ambiguous")
 	assert.Contains(t, out, "| Module | Type | Current version | New version | Update Notes |",
 		"the module table matches the one the document uses, with a column left for prose")
 

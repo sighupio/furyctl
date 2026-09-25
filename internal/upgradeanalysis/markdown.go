@@ -151,28 +151,53 @@ func writeHopMD(sb *strings.Builder, a *Analysis, hop *Hop) {
 		_, _ = fmt.Fprintf(sb, "- Installer: %s\n", installer)
 	}
 
+	phase := "Kubernetes and distribution"
 	if hop.DistributionOnly {
-		_, _ = sb.WriteString("- Distribution phase only, Kubernetes is not touched\n")
+		phase = "distribution only, Kubernetes is not touched"
 	}
+
+	_, _ = fmt.Fprintf(sb, "- Phase: %s\n", phase)
 
 	writeHopModulesMD(sb, hop)
 	writeHopFindingsMD(sb, a, hop)
 	writeBreakingChangesMD(sb, hop)
 }
 
-// writeBreakingChangesMD quotes what the target release declares breaking, verbatim.
+// writeBreakingChangesMD quotes what every release in the hop declares breaking, verbatim.
 func writeBreakingChangesMD(sb *strings.Builder, hop *Hop) {
-	switch {
-	case hop.BreakingChangesError != "":
+	if hop.BreakingChangesError != "" {
 		_, _ = fmt.Fprintf(sb, "\nBreaking changes: could not be read: %s\n", hop.BreakingChangesError)
 
-	case hop.BreakingChanges == "":
-		_, _ = fmt.Fprintf(sb,
-			"\nBreaking changes: the release notes for %s list no breaking-changes section.\n", hop.To)
+		return
+	}
 
-	default:
-		_, _ = fmt.Fprintf(sb, "\n**Breaking changes declared by %s**\n\n%s\n",
-			hop.To, hop.BreakingChanges)
+	if len(hop.BreakingChanges) == 0 {
+		_, _ = sb.WriteString("\nBreaking changes: no release notes cover this hop.\n")
+
+		return
+	}
+
+	for _, release := range hop.BreakingChanges {
+		if release.Section == "" {
+			_, _ = fmt.Fprintf(sb,
+				"\n**Breaking changes in %s** — the release notes list no such section.\n", release.Version)
+
+			continue
+		}
+
+		_, _ = fmt.Fprintf(sb, "\n**Breaking changes in %s**\n\n%s\n", release.Version, release.Section)
+	}
+}
+
+func writeWarningsMD(sb *strings.Builder, a *Analysis) {
+	if len(a.Warnings) == 0 {
+		return
+	}
+
+	_, _ = sb.WriteString("\n# Warnings\n\n")
+
+	for _, warning := range a.Warnings {
+		_, _ = fmt.Fprintf(sb, "- %s\n", warning)
 	}
 }
 
@@ -213,17 +238,5 @@ func writeHopFindingsMD(sb *strings.Builder, a *Analysis, hop *Hop) {
 		for _, finding := range hop.Findings {
 			_, _ = fmt.Fprintf(sb, "- **%s** %s\n", finding.Severity, finding.Message)
 		}
-	}
-}
-
-func writeWarningsMD(sb *strings.Builder, a *Analysis) {
-	if len(a.Warnings) == 0 {
-		return
-	}
-
-	_, _ = sb.WriteString("\n# Warnings\n\n")
-
-	for _, warning := range a.Warnings {
-		_, _ = fmt.Fprintf(sb, "- %s\n", warning)
 	}
 }

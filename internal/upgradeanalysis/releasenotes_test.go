@@ -101,13 +101,14 @@ Check the docs.
 			hop := hopWithNotes(t, dir)
 
 			assert.Empty(t, hop.BreakingChangesError, "the notes were readable")
-			assert.Contains(t, hop.BreakingChanges, "cgroup v1 support removed",
+			require.Len(t, hop.BreakingChanges, 1, "one release in this hop")
+
+			section := hop.BreakingChanges[0].Section
+			assert.Contains(t, section, "cgroup v1 support removed",
 				"the release's own wording is carried through")
-			assert.Contains(t, hop.BreakingChanges, "kubeProxy.enabled", "every entry")
-			assert.NotContains(t, hop.BreakingChanges, "something new",
-				"the preceding section must not leak in")
-			assert.NotContains(t, hop.BreakingChanges, "Check the docs",
-				"the section ends at the next heading")
+			assert.Contains(t, section, "kubeProxy.enabled", "every entry")
+			assert.NotContains(t, section, "something new", "the preceding section must not leak in")
+			assert.NotContains(t, section, "Check the docs", "the section ends at the next heading")
 		})
 	}
 }
@@ -122,7 +123,8 @@ func TestBreakingChangesDistinguishesAbsentFromNone(t *testing.T) {
 
 		hop := hopWithNotes(t, notesDir(t, "v1.35.1", "# Release\n\n## New features 🌟\n\n- something\n"))
 
-		assert.Empty(t, hop.BreakingChanges, "nothing to show")
+		require.Len(t, hop.BreakingChanges, 1, "the release is still listed")
+		assert.Empty(t, hop.BreakingChanges[0].Section, "nothing to show for it")
 		assert.Empty(t, hop.BreakingChangesError, "that is not a failure")
 
 		out := upgradeanalysis.Text(&upgradeanalysis.Analysis{Hops: []upgradeanalysis.Hop{hop}})
@@ -135,7 +137,9 @@ func TestBreakingChangesDistinguishesAbsentFromNone(t *testing.T) {
 
 		hop := hopWithNotes(t, notesDir(t, "v1.35.1", "# Release\n\n## Breaking changes 💔\n\nNone.\n"))
 
-		assert.Equal(t, "None.", hop.BreakingChanges, "the release's own answer is carried through")
+		require.Len(t, hop.BreakingChanges, 1, "the release is listed")
+		assert.Equal(t, "None.", hop.BreakingChanges[0].Section,
+			"the release's own answer is carried through")
 	})
 }
 
@@ -152,4 +156,37 @@ func TestBreakingChangesUnreadableNotes(t *testing.T) {
 	assert.Contains(t, out, "could not be read", "a failed read is never reported as no changes")
 	assert.NotContains(t, out, "list no breaking-changes section",
 		"an unreadable file is not the same as a release without the section")
+}
+
+// TestBreakingChangesCoverSkippedReleases is the behaviour that matters most here: an upgrade
+// path can jump over a release that is never installed, and everything that release declared
+// breaking still applies to the cluster. Reading only the target's notes would hide it.
+func TestBreakingChangesCoverSkippedReleases(t *testing.T) {
+	t.Parallel()
+
+	dir := t.TempDir()
+	releases := filepath.Join(dir, "docs", "releases")
+	require.NoError(t, os.MkdirAll(releases, 0o755), "creating the releases directory")
+
+	write := func(name, body string) {
+		require.NoError(t, os.WriteFile(filepath.Join(releases, name), []byte(body), 0o600), name)
+	}
+
+	// The hop goes from v1.34.1 to v1.35.1, so v1.35.0 is never installed.
+	write("v1.34.1.md", "# r\n\n## Breaking changes 💔\n\nalready applied, must not appear\n")
+	write("v1.35.0.md", "# r\n\n## Breaking changes 💔\n\nskipped release, still applies\n")
+	write("v1.35.1.md", "# r\n\n## Breaking changes 💔\n\nthe target release\n")
+
+	hop := hopWithNotes(t, dir)
+
+	require.Len(t, hop.BreakingChanges, 2, "the skipped release and the target, not the source")
+	assert.Equal(t, "v1.35.0", hop.BreakingChanges[0].Version, "oldest first")
+	assert.Equal(t, "skipped release, still applies", hop.BreakingChanges[0].Section,
+		"a release the upgrade jumps over still declares breaking changes that apply")
+	assert.Equal(t, "v1.35.1", hop.BreakingChanges[1].Version, "then the target")
+
+	// The version the cluster already runs has nothing left to tell it.
+	for _, release := range hop.BreakingChanges {
+		assert.NotEqual(t, "v1.34.1", release.Version, "the source version is already applied")
+	}
 }

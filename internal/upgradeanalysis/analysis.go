@@ -68,11 +68,10 @@ type Hop struct {
 	// schema of the two versions against the configuration the cluster stores.
 	Findings []Finding `json:"findings,omitempty" yaml:"findings,omitempty"`
 
-	// BreakingChanges is what the target version of this hop declares breaking, taken
-	// verbatim from the release notes it ships. Empty with an empty BreakingChangesError
-	// means the release ships notes with no such section, which is not the same as a
-	// release that declares no breaking changes.
-	BreakingChanges string `json:"breakingChanges,omitempty" yaml:"breakingChanges,omitempty"`
+	// BreakingChanges is what every release this hop passes through declares breaking, in
+	// its own words. A hop can skip releases, and a skipped release's breaking changes
+	// still apply, so this covers all of them rather than only the target.
+	BreakingChanges []ReleaseBreakingChanges `json:"breakingChanges,omitempty" yaml:"breakingChanges,omitempty"`
 	// BreakingChangesError is set when the release notes could not be read at all.
 	BreakingChangesError string `json:"breakingChangesError,omitempty" yaml:"breakingChangesError,omitempty"`
 

@@ -113,61 +113,49 @@ func writeHop(sb *strings.Builder, a *Analysis, hop *Hop) {
 		_, _ = sb.WriteString("  Installer:   " + installer + "\n")
 	}
 
+	phase := "Kubernetes and distribution"
 	if hop.DistributionOnly {
-		_, _ = sb.WriteString("  Phase:       distribution only, Kubernetes is not touched\n")
+		phase = "distribution only, Kubernetes is not touched"
 	}
+
+	_, _ = fmt.Fprintf(sb, "  Phase:       %s\n", phase)
 
 	writeModuleTable(sb, hop)
 	writeFindings(sb, a, hop)
 	writeBreakingChanges(sb, hop)
 }
 
-// writeBreakingChanges shows what the target release declares breaking. The three outcomes
-// are kept apart: a section, a release that ships none, and notes that could not be read.
+// writeBreakingChanges shows what every release this hop passes through declares breaking.
+// A release that ships no such section is named as well, so that its silence is visible
+// rather than mistaken for a release with nothing to declare.
 func writeBreakingChanges(sb *strings.Builder, hop *Hop) {
-	switch {
-	case hop.BreakingChangesError != "":
+	if hop.BreakingChangesError != "" {
 		_, _ = fmt.Fprintf(sb, "  Breaking changes: could not be read: %s\n", hop.BreakingChangesError)
 
-	case hop.BreakingChanges == "":
-		_, _ = fmt.Fprintf(sb,
-			"  Breaking changes: the release notes for %s list no breaking-changes section\n", hop.To)
+		return
+	}
 
-	default:
-		_, _ = fmt.Fprintf(sb, "  Breaking changes declared by %s:\n", hop.To)
+	if len(hop.BreakingChanges) == 0 {
+		_, _ = sb.WriteString("  Breaking changes: no release notes cover this hop\n")
 
-		for line := range strings.SplitSeq(hop.BreakingChanges, "\n") {
-			_, _ = fmt.Fprintf(sb, "    %s\n", line)
+		return
+	}
+
+	_, _ = sb.WriteString("  Breaking changes declared by the releases in this hop:\n")
+
+	for _, release := range hop.BreakingChanges {
+		if release.Section == "" {
+			_, _ = fmt.Fprintf(sb,
+				"    %s: the release notes list no breaking-changes section\n", release.Version)
+
+			continue
 		}
-	}
-}
 
-// writeFindings lists the configuration changes a hop requires. When the configuration was
-// checked and nothing came up it says so explicitly: an empty section would otherwise read
-// the same as a check that never ran.
-func writeFindings(sb *strings.Builder, a *Analysis, hop *Hop) {
-	if !a.ConfigChecked {
-		_, _ = sb.WriteString("  Configuration: not checked, the stored configuration could not be read\n")
+		_, _ = fmt.Fprintf(sb, "    %s:\n", release.Version)
 
-		return
-	}
-
-	if hop.ConfigCheckError != "" {
-		_, _ = fmt.Fprintf(sb, "  Configuration: could not be checked: %s\n", hop.ConfigCheckError)
-
-		return
-	}
-
-	if len(hop.Findings) == 0 {
-		_, _ = sb.WriteString("  Configuration: checked, no changes required\n")
-
-		return
-	}
-
-	_, _ = sb.WriteString("  Configuration changes required:\n")
-
-	for _, finding := range hop.Findings {
-		_, _ = fmt.Fprintf(sb, "    [%s] %s\n", finding.Severity, finding.Message)
+		for line := range strings.SplitSeq(release.Section, "\n") {
+			_, _ = fmt.Fprintf(sb, "      %s\n", line)
+		}
 	}
 }
 
@@ -208,4 +196,33 @@ func writeHealth(sb *strings.Builder, report *clusterhealth.Report) {
 
 	_, _ = sb.WriteString("\nCluster health\n")
 	writeChecks(sb, report.Checks)
+}
+
+// writeFindings lists the configuration changes a hop requires. When the configuration was
+// checked and nothing came up it says so explicitly: an empty section would otherwise read
+// the same as a check that never ran.
+func writeFindings(sb *strings.Builder, a *Analysis, hop *Hop) {
+	if !a.ConfigChecked {
+		_, _ = sb.WriteString("  Configuration: not checked, the stored configuration could not be read\n")
+
+		return
+	}
+
+	if hop.ConfigCheckError != "" {
+		_, _ = fmt.Fprintf(sb, "  Configuration: could not be checked: %s\n", hop.ConfigCheckError)
+
+		return
+	}
+
+	if len(hop.Findings) == 0 {
+		_, _ = sb.WriteString("  Configuration: checked, no changes required\n")
+
+		return
+	}
+
+	_, _ = sb.WriteString("  Configuration changes required:\n")
+
+	for _, finding := range hop.Findings {
+		_, _ = fmt.Fprintf(sb, "    [%s] %s\n", finding.Severity, finding.Message)
+	}
 }

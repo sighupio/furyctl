@@ -88,7 +88,7 @@ func Build(
 
 		// What the target release itself declares breaking. Read from the release rather
 		// than restated here, so a future version needs no change to furyctl.
-		notes, notesErr := breakingChanges(distributions[hop.To].Path, hop.To)
+		notes, notesErr := breakingChangesBetween(distributions[hop.To].Path, hop.From, hop.To)
 
 		switch {
 		case notesErr == nil:
