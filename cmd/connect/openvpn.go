@@ -102,9 +102,10 @@ func NewOpenVPNCmd() *cobra.Command {
 
 			executor := execx.NewStdExecutor()
 			openVPNCmd := execx.NewCmd("sudo", execx.CmdOptions{
-				Args:     []string{"openvpn", "--config", fmt.Sprintf("%s-%s.ovpn", furyctlConf.Metadata.Name, flags.Profile)},
-				Executor: executor,
-				WorkDir:  openVPNWorkDir,
+				Args:       []string{"openvpn", "--config", fmt.Sprintf("%s-%s.ovpn", furyctlConf.Metadata.Name, flags.Profile)},
+				Executor:   executor,
+				Foreground: true,
+				WorkDir:    openVPNWorkDir,
 			})
 
 			// Start openvpn process.

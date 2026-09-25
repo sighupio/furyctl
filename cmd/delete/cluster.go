@@ -9,10 +9,8 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"os/signal"
 	"path/filepath"
 	"strings"
-	"syscall"
 
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -150,24 +148,6 @@ func NewClusterCmd() *cobra.Command {
 			})
 
 			lockFileHandler := lockfile.NewLockFile(res.MinimalConf.Metadata.Name)
-			sigs := make(chan os.Signal, 1)
-
-			go func() {
-				<-sigs
-
-				if lockFileHandler != nil {
-					logrus.Debugf("Removing lock file %s", lockFileHandler.Path)
-
-					if err := lockFileHandler.Remove(); err != nil {
-						logrus.Errorf("error while removing lock file %s: %v", lockFileHandler.Path, err)
-					}
-				}
-
-				os.Exit(1) //nolint:revive // deep-exit acceptable in signal handler
-			}()
-
-			signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
-
 			err = lockFileHandler.Verify()
 			if err != nil {
 				cmdEvent.AddErrorMessage(err)
@@ -184,6 +164,15 @@ func NewClusterCmd() *cobra.Command {
 				return fmt.Errorf("error while creating lock file %s: %w", lockFileHandler.Path, err)
 			}
 			defer lockFileHandler.Remove() //nolint:errcheck // ignore error
+
+			execx.OnStop(func() {
+				logrus.Debugf("Removing lock file %s", lockFileHandler.Path)
+
+				if err := lockFileHandler.Remove(); err != nil {
+					logrus.Errorf("error while removing lock file %s: %v", lockFileHandler.Path, err)
+				}
+			})
+			defer execx.OnStop(nil)
 
 			basePath := filepath.Join(outDir, ".furyctl", res.MinimalConf.Metadata.Name)
 
