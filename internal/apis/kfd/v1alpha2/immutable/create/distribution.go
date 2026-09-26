@@ -8,11 +8,11 @@ import (
 	"fmt"
 	"os"
 	"path"
-	"strings"
 
 	"github.com/sirupsen/logrus"
 
 	"github.com/sighupio/furyctl/internal/apis/config"
+	commcreate "github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/common/create"
 	"github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/immutable/public"
 	"github.com/sighupio/furyctl/internal/cluster"
 	"github.com/sighupio/furyctl/internal/state"
@@ -33,6 +33,7 @@ const (
 
 type Distribution struct {
 	*cluster.OperationPhase
+	*commcreate.StorageClassCheck
 
 	furyctlConfPath string
 	furyctlConf     public.ImmutableKfdV1Alpha2
@@ -58,6 +59,17 @@ func NewDistribution(
 		paths.BinPath,
 	)
 
+	kubeRunner := kubectl.NewRunner(
+		execx.NewStdExecutor(),
+		kubectl.Paths{
+			Kubectl: phase.KubectlPath,
+			WorkDir: path.Join(phase.Path, "manifests"),
+		},
+		true,
+		true,
+		false,
+	)
+
 	return &Distribution{
 		OperationPhase:  phase,
 		furyctlConf:     furyctlConf,
@@ -79,17 +91,9 @@ func NewDistribution(
 				WorkDir: path.Join(phase.Path, "manifests"),
 			},
 		),
-		kubeRunner: kubectl.NewRunner(
-			execx.NewStdExecutor(),
-			kubectl.Paths{
-				Kubectl: phase.KubectlPath,
-				WorkDir: path.Join(phase.Path, "manifests"),
-			},
-			true,
-			true,
-			false,
-		),
-		upgrade: upgr,
+		kubeRunner:        kubeRunner,
+		StorageClassCheck: commcreate.NewStorageClassCheck(kubeRunner, dryRun),
+		upgrade:           upgr,
 	}
 }
 
@@ -161,8 +165,6 @@ func (d *Distribution) prepare() (templatex.Config, error) {
 	d.CopyPathsToConfig(&mCfg)
 
 	// Check cluster connection and requirements.
-	storageClassAvailable := true
-
 	logrus.Info("Checking that the cluster is reachable...")
 
 	if _, err := d.kubeRunner.Version(); err != nil {
@@ -171,34 +173,9 @@ func (d *Distribution) prepare() (templatex.Config, error) {
 		return templatex.Config{}, fmt.Errorf("error connecting to cluster: %w", err)
 	}
 
-	logrus.Info("Checking for a default storage class...")
-
-	getStorageClassesOutput, err := d.kubeRunner.Get(false, "", "storageclasses")
+	storageClassAvailable, err := d.CheckDefaultStorageClass(mCfg.Data)
 	if err != nil {
-		return templatex.Config{}, fmt.Errorf("error while checking storage class: %w", err)
-	}
-
-	if getStorageClassesOutput == "No resources found" {
-		logrus.Warn(
-			"No storage classes found in the cluster. " +
-				"logging module (if enabled), tracing module (if enabled), dr module (if enabled) " +
-				"and prometheus-operated package installation will be skipped. " +
-				"Install a *default* StorageClass and re-run furyctl to install the missing components.",
-		)
-
-		storageClassAvailable = false
-	}
-
-	defaultSC := "(default)"
-	if !strings.Contains(getStorageClassesOutput, defaultSC) && getStorageClassesOutput != "No resources found" {
-		logrus.Warn(
-			"No *default* storage classes found in the cluster. " +
-				"logging module (if enabled), tracing module (if enabled), dr module (if enabled) " +
-				"and prometheus-operated package installation will be skipped. " +
-				"Set a default StorageClass and re-run furyctl to install the missing components.",
-		)
-
-		storageClassAvailable = false
+		return templatex.Config{}, err //nolint:wrapcheck // already wrapped by the check.
 	}
 
 	mCfg.Data["checks"] = map[any]any{
