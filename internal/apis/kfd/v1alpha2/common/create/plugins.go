@@ -27,6 +27,9 @@ import (
 type Plugins struct {
 	*cluster.OperationPhase
 
+	// True when the last Exec applied plugins.
+	applied bool
+
 	helmfileRunner *helmfile.Runner
 	shellRunner    *shell.Runner
 	dryRun         bool
@@ -71,8 +74,15 @@ func NewPlugins(
 	}
 }
 
+// Applied reports whether the last Exec applied plugins.
+func (p *Plugins) Applied() bool {
+	return p.applied
+}
+
 func (p *Plugins) Exec() error {
 	logrus.Info("Applying plugins...")
+
+	p.applied = false
 
 	if err := p.CreateRootFolder(); err != nil {
 		return fmt.Errorf("error creating plugins phase folder: %w", err)
@@ -143,6 +153,8 @@ func (p *Plugins) Exec() error {
 		return nil
 	}
 
+	p.applied = pluginsApplied(specPlugins)
+
 	specPluginsHelmReleases := []any{}
 
 	specPluginsHelm, hasSpecPluginsHelm := specPlugins["helm"].(map[any]any)
@@ -180,4 +192,18 @@ func (p *Plugins) Exec() error {
 	logrus.Info("Plugins installed successfully")
 
 	return nil
+}
+
+// pluginsApplied reports whether spec.plugins holds something to apply: a Helm release or a
+// kustomize entry. Helm repositories alone apply nothing.
+func pluginsApplied(specPlugins map[any]any) bool {
+	if helm, ok := specPlugins["helm"].(map[any]any); ok {
+		if releases, ok := helm["releases"].([]any); ok && len(releases) > 0 {
+			return true
+		}
+	}
+
+	kustomize, ok := specPlugins["kustomize"].([]any)
+
+	return ok && len(kustomize) > 0
 }

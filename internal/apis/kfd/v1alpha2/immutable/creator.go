@@ -68,6 +68,8 @@ var (
 )
 
 type ClusterCreator struct {
+	// The undecorated distribution phase, see newDistributionPhase.
+	distribution         *create.Distribution
 	paths                cluster.CreatorPaths
 	furyctlConf          public.ImmutableKfdV1Alpha2
 	stateStore           state.Storer
@@ -192,18 +194,7 @@ func (c *ClusterCreator) Create(startFrom string, _, podRunningCheckTimeout int)
 		upgr,
 	)
 
-	distributionPhase := upgrade.NewReducerOperatorPhaseDecorator[reducers.Reducers](
-		c.upgradeStateStore,
-		create.NewDistribution(
-			c.furyctlConf,
-			c.kfdManifest,
-			c.paths,
-			c.dryRun,
-			upgr,
-		),
-		c.dryRun,
-		upgr,
-	)
+	distributionPhase := c.newDistributionPhase(upgr)
 
 	pluginsPhase := commcreate.NewPlugins(
 		c.paths,
@@ -381,6 +372,12 @@ func (c *ClusterCreator) Create(startFrom string, _, podRunningCheckTimeout int)
 			return fmt.Errorf("error while executing distribution phase: %w", err)
 		}
 
+		if err := commcreate.ReapplyDistribution(
+			distributionPhase, c.distribution, 0, upgr, appliedUpgradeState,
+		); err != nil {
+			return err //nolint:wrapcheck // already wrapped.
+		}
+
 	case cluster.OperationPhasePlugins:
 		if !distribution.HasFeature(c.kfdManifest, distribution.FeaturePlugins) {
 			return fmt.Errorf("error while executing plugins phase: %w", distribution.ErrPluginsFeatureNotSupported)
@@ -447,6 +444,27 @@ func (c *ClusterCreator) RenderConfig() (map[string]any, error) {
 	return lo.MapValues(tfCfg.Data, func(v map[any]any, _ string) any {
 		return convertValue(v)
 	}), nil
+}
+
+// newDistributionPhase builds the distribution phase as the operations run it, and keeps the
+// undecorated phase in c.distribution: the upgrade decorator hides its StorageSkipper methods.
+func (c *ClusterCreator) newDistributionPhase(
+	upgr *upgrade.Upgrade,
+) *upgrade.ReducerOperatorPhaseDecorator[reducers.Reducers] {
+	c.distribution = create.NewDistribution(
+		c.furyctlConf,
+		c.kfdManifest,
+		c.paths,
+		c.dryRun,
+		upgr,
+	)
+
+	return upgrade.NewReducerOperatorPhaseDecorator[reducers.Reducers](
+		c.upgradeStateStore,
+		c.distribution,
+		c.dryRun,
+		upgr,
+	)
 }
 
 // routeStagedUpgrade reads the upgrade state of the cluster, and it acts on any staged worker
@@ -1307,12 +1325,15 @@ func (c *ClusterCreator) allPhases(
 		if err := distributionPhase.Exec(rdcs, c.getDistributionSubPhase(startFrom), upgradeState); err != nil {
 			return nil, fmt.Errorf("error while executing distribution phase: %w", err)
 		}
+
+		// A StorageClass provider in customResources: complete the distribution before the plugins.
+		if err := commcreate.ReapplyDistribution(distributionPhase, c.distribution, 0, upgr, upgradeState); err != nil {
+			return nil, err //nolint:wrapcheck // already wrapped.
+		}
 	}
 
-	if distribution.HasFeature(c.kfdManifest, distribution.FeaturePlugins) {
-		if err := pluginsPhase.Exec(); err != nil {
-			return nil, fmt.Errorf("error while executing plugins phase: %w", err)
-		}
+	if err := c.pluginsPhase(pluginsPhase, distributionPhase, upgr, upgradeState); err != nil {
+		return nil, err
 	}
 
 	if len(c.postApplyPhases) > 0 {
@@ -1330,6 +1351,30 @@ func (c *ClusterCreator) allPhases(
 	}
 
 	return upgradeState, nil
+}
+
+// pluginsPhase runs the plugins phase, then the distribution phase again if a StorageClass
+// provider in spec.plugins created a default StorageClass.
+func (c *ClusterCreator) pluginsPhase(
+	pluginsPhase *commcreate.Plugins,
+	distributionPhase upgrade.ReducersOperatorPhase[reducers.Reducers],
+	upgr *upgrade.Upgrade,
+	upgradeState *upgrade.State,
+) error {
+	if !distribution.HasFeature(c.kfdManifest, distribution.FeaturePlugins) {
+		return nil
+	}
+
+	if err := pluginsPhase.Exec(); err != nil {
+		return fmt.Errorf("error while executing plugins phase: %w", err)
+	}
+
+	wait := commcreate.PluginsStorageClassWait(pluginsPhase)
+	if err := commcreate.ReapplyDistribution(distributionPhase, c.distribution, wait, upgr, upgradeState); err != nil {
+		return err //nolint:wrapcheck // already wrapped.
+	}
+
+	return nil
 }
 
 func (c *ClusterCreator) extraPhases(

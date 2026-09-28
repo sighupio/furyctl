@@ -40,6 +40,8 @@ var (
 )
 
 type ClusterCreator struct {
+	// The undecorated distribution phase, see newDistributionPhase.
+	distribution         *create.Distribution
 	paths                cluster.CreatorPaths
 	furyctlConf          public.KfddistributionKfdV1Alpha2
 	stateStore           state.Storer
@@ -122,18 +124,7 @@ func (*ClusterCreator) GetPhasePath(phase string) (string, error) {
 
 func (c *ClusterCreator) Create(startFrom string, _, _ int) error {
 	upgr := upgrade.New(c.paths, string(c.furyctlConf.Kind))
-	distributionPhase := upgrade.NewReducerOperatorPhaseDecorator[reducers.Reducers](
-		c.upgradeStateStore,
-		create.NewDistribution(
-			c.paths,
-			c.furyctlConf,
-			c.kfdManifest,
-			c.dryRun,
-			upgr,
-		),
-		c.dryRun,
-		upgr,
-	)
+	distributionPhase := c.newDistributionPhase(upgr)
 
 	pluginsPhase := commcreate.NewPlugins(
 		c.paths,
@@ -234,6 +225,10 @@ func (c *ClusterCreator) Create(startFrom string, _, _ int) error {
 			return fmt.Errorf("error while executing distribution phase: %w", err)
 		}
 
+		if err := commcreate.ReapplyDistribution(distributionPhase, c.distribution, 0, upgr, &upgradeState); err != nil {
+			return err //nolint:wrapcheck // already wrapped.
+		}
+
 	case cluster.OperationPhasePlugins:
 		if !distribution.HasFeature(c.kfdManifest, distribution.FeaturePlugins) {
 			return fmt.Errorf("error while executing plugins phase: %w", distribution.ErrPluginsFeatureNotSupported)
@@ -311,6 +306,27 @@ func (c *ClusterCreator) RenderConfig() (map[string]any, error) {
 	return specMap, nil
 }
 
+// newDistributionPhase builds the distribution phase as the operations run it, and keeps the
+// undecorated phase in c.distribution: the upgrade decorator hides its StorageSkipper methods.
+func (c *ClusterCreator) newDistributionPhase(
+	upgr *upgrade.Upgrade,
+) *upgrade.ReducerOperatorPhaseDecorator[reducers.Reducers] {
+	c.distribution = create.NewDistribution(
+		c.paths,
+		c.furyctlConf,
+		c.kfdManifest,
+		c.dryRun,
+		upgr,
+	)
+
+	return upgrade.NewReducerOperatorPhaseDecorator[reducers.Reducers](
+		c.upgradeStateStore,
+		c.distribution,
+		c.dryRun,
+		upgr,
+	)
+}
+
 func (c *ClusterCreator) allPhases(
 	startFrom string,
 	rdcs reducers.Reducers,
@@ -364,11 +380,22 @@ func (c *ClusterCreator) allPhases(
 		if err := distributionPhase.Exec(rdcs, c.getDistributionSubPhase(startFrom), upgradeState); err != nil {
 			return fmt.Errorf("error while executing distribution phase: %w", err)
 		}
+
+		// A StorageClass provider in customResources: complete the distribution before the plugins.
+		if err := commcreate.ReapplyDistribution(distributionPhase, c.distribution, 0, upgr, upgradeState); err != nil {
+			return err //nolint:wrapcheck // already wrapped.
+		}
 	}
 
 	if distribution.HasFeature(c.kfdManifest, distribution.FeaturePlugins) {
 		if err := pluginsPhase.Exec(); err != nil {
 			return fmt.Errorf("error while executing plugins phase: %w", err)
+		}
+
+		// A StorageClass provider in spec.plugins.
+		wait := commcreate.PluginsStorageClassWait(pluginsPhase)
+		if err := commcreate.ReapplyDistribution(distributionPhase, c.distribution, wait, upgr, upgradeState); err != nil {
+			return err //nolint:wrapcheck // already wrapped.
 		}
 	}
 
