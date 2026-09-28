@@ -36,6 +36,7 @@ type KFDModules struct {
 	Monitoring string `yaml:"monitoring" validate:"required"`
 	Networking string `yaml:"networking" validate:"required"`
 	Tracing    string `yaml:"tracing"`
+	Utilities  string `yaml:"utilities"`
 	Opa        string `yaml:"opa"        validate:"required"`
 }
 
