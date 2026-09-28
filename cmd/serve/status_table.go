@@ -48,6 +48,7 @@ type nodeStatusTable struct {
 	order     []string             // Node hostnames in stable (sorted) order.
 	status    map[string]string    // Hostname to last reported status.
 	updatedAt map[string]time.Time // Hostname to when that status last changed.
+	source    map[string]string    // Hostname to the IP its last report came from.
 
 	linesDrawn int // Rows painted by the previous render, so the next one knows how far up to move.
 }
@@ -69,6 +70,7 @@ var newNodeStatusTable = func(initial map[string]string) *nodeStatusTable {
 		order:     slices.Sorted(maps.Keys(initial)),
 		status:    status,
 		updatedAt: make(map[string]time.Time, len(initial)),
+		source:    make(map[string]string, len(initial)),
 	}
 }
 
@@ -83,8 +85,8 @@ func (t *nodeStatusTable) Start() {
 	}
 }
 
-// Update records a node's new status and repaints (TTY) or logs it (non-TTY).
-func (t *nodeStatusTable) Update(node, status string) {
+// Update records a node's new status and the IP it reported from, and repaints (TTY) or logs it (non-TTY).
+func (t *nodeStatusTable) Update(node, status, source string) {
 	t.mu.Lock()
 	defer t.mu.Unlock()
 
@@ -96,16 +98,17 @@ func (t *nodeStatusTable) Update(node, status string) {
 
 	t.status[node] = status
 	t.updatedAt[node] = time.Now()
+	t.source[node] = source
 
 	if !t.tty {
 		if status == statusInstallationBlocked {
 			logrus.Errorf(
-				"Flatcar Installation on node %s is blocked because Flatcar is already installed on disk. "+
+				"Flatcar Installation on node %s (%s) is blocked because Flatcar is already installed on disk. "+
 					"Manual intervention required",
-				node,
+				node, source,
 			)
 		} else {
-			logrus.Infof("Node %s is %s", node, status)
+			logrus.Infof("Node %s is %s (reported from %s)", node, status, source)
 		}
 
 		return
@@ -199,7 +202,7 @@ func (t *nodeStatusTable) lines() []string {
 
 	w := tabwriter.NewWriter(&sb, 0, 0, tabPadding, ' ', 0)
 
-	_, _ = fmt.Fprint(w, "NODE\tSTATUS\tUPDATED\n")
+	_, _ = fmt.Fprint(w, "NODE\tSTATUS\tSOURCE IP\tUPDATED\n")
 
 	for _, node := range t.order {
 		updated := "—"
@@ -207,7 +210,12 @@ func (t *nodeStatusTable) lines() []string {
 			updated = ts.Format(updatedTimeLayout)
 		}
 
-		_, _ = fmt.Fprintf(w, "%s\t%s\t%s\n", node, t.status[node], updated)
+		source := "—"
+		if ip := t.source[node]; ip != "" {
+			source = ip
+		}
+
+		_, _ = fmt.Fprintf(w, "%s\t%s\t%s\t%s\n", node, t.status[node], source, updated)
 	}
 
 	_ = w.Flush()

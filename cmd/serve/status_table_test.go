@@ -39,7 +39,7 @@ func TestNodeStatusTableRendersRowsAndCounts(t *testing.T) {
 	require.Contains(t, out, "Nodes bootstrap status — 0/2 booted",
 		"initial render missing title with counts, got:\n%q", out)
 
-	for _, want := range []string{"NODE", "STATUS", "UPDATED", "cp1.flatcar", "cp2.flatcar", "pending", "—"} {
+	for _, want := range []string{"NODE", "STATUS", "SOURCE IP", "UPDATED", "cp1.flatcar", "cp2.flatcar", "pending", "—"} {
 		require.Contains(t, out, want, "initial render missing %q, got:\n%q", want, out)
 	}
 }
@@ -54,7 +54,7 @@ func TestNodeStatusTableUpdateRepaintsInPlace(t *testing.T) {
 	table.Start() // title + header + 2 rows = 4 lines.
 
 	buf.Reset()
-	table.Update("cp1.flatcar", statusBooted)
+	table.Update("cp1.flatcar", statusBooted, "10.0.0.1")
 
 	out := buf.String()
 
@@ -67,6 +67,9 @@ func TestNodeStatusTableUpdateRepaintsInPlace(t *testing.T) {
 
 	require.Contains(t, out, "booted",
 		"repaint did not show booted status, got:\n%q", out)
+
+	require.Contains(t, out, "10.0.0.1",
+		"repaint did not show the source IP, got:\n%q", out)
 }
 
 func TestNodeStatusTableAllBooted(t *testing.T) {
@@ -78,11 +81,11 @@ func TestNodeStatusTableAllBooted(t *testing.T) {
 
 	require.False(t, table.AllBooted(), "AllBooted must be false while nodes are pending")
 
-	table.Update("cp1.flatcar", statusBooted)
+	table.Update("cp1.flatcar", statusBooted, "10.0.0.1")
 
 	require.False(t, table.AllBooted(), "AllBooted must be false while one node is still pending")
 
-	table.Update("cp2.flatcar", statusBooted)
+	table.Update("cp2.flatcar", statusBooted, "10.0.0.1")
 
 	require.True(t, table.AllBooted(), "AllBooted must be true once every node is booted")
 }
@@ -104,7 +107,7 @@ func TestNodeStatusTableBlockedInstallAddsNote(t *testing.T) {
 
 	table.Start()
 	buf.Reset()
-	table.Update("cp1.flatcar", statusInstallationBlocked)
+	table.Update("cp1.flatcar", statusInstallationBlocked, "10.0.0.1")
 
 	out := buf.String()
 	require.Contains(t, out, "Manual intervention required",
@@ -188,15 +191,15 @@ func TestNodeStatusTableShrinksCleanlyWithMultipleNotes(t *testing.T) {
 	table.Start()
 
 	// Two nodes hit the blocked state, then both are intervened on and boot.
-	table.Update("cp1.flatcar", statusInstallationBlocked)
-	table.Update("node1.flatcar", statusInstallationBlocked)
+	table.Update("cp1.flatcar", statusInstallationBlocked, "10.0.0.1")
+	table.Update("node1.flatcar", statusInstallationBlocked, "10.0.0.1")
 
 	// Reproduce the reported bug: after the notes appear, replay the full stream and confirm both.
 	blocked := countLinesContaining(replayANSI(buf.String()), "Manual intervention required")
 	require.Equal(t, 2, blocked, "expected 2 distinct attention notes while blocked")
 
-	table.Update("cp1.flatcar", statusBooted)
-	table.Update("node1.flatcar", statusBooted)
+	table.Update("cp1.flatcar", statusBooted, "10.0.0.1")
+	table.Update("node1.flatcar", statusBooted, "10.0.0.1")
 
 	screen := replayANSI(buf.String())
 
@@ -227,11 +230,11 @@ func TestNodeStatusTableNoteClearedOnRecovery(t *testing.T) {
 
 	table := newTestTable(&buf, map[string]string{"cp1.flatcar": "pending"})
 
-	table.Update("cp1.flatcar", statusInstallationBlocked)
+	table.Update("cp1.flatcar", statusInstallationBlocked, "10.0.0.1")
 
 	// The node was intervened on and now boots: its attention note must disappear.
 	buf.Reset()
-	table.Update("cp1.flatcar", statusBooted)
+	table.Update("cp1.flatcar", statusBooted, "10.0.0.1")
 
 	out := buf.String()
 	require.False(t, strings.Contains(out, "Manual intervention required"),
@@ -244,7 +247,7 @@ func TestNodeStatusTableNilSeedStillAcceptsUpdates(t *testing.T) {
 	// A nil seed must not leave the table with a nil status map: Update would panic writing to it.
 	table := newTestTable(&bytes.Buffer{}, nil)
 
-	require.NotPanics(t, func() { table.Update("cp1.flatcar", statusBooted) })
+	require.NotPanics(t, func() { table.Update("cp1.flatcar", statusBooted, "10.0.0.1") })
 	require.Equal(t, map[string]string{"cp1.flatcar": statusBooted}, table.Snapshot())
 	require.True(t, table.AllBooted())
 }

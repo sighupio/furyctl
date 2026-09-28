@@ -10,6 +10,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net"
 	"net/http"
 	"os"
 	"strings"
@@ -145,7 +146,13 @@ func Path(address, port, root string, nodesStatus map[string]string) error {
 				"nodeStatus": status,
 			}).Debug("received node status update")
 
-			table.Update(node, status)
+			// The nodes POST directly to this server, so the TCP peer is the node itself.
+			source, _, err := net.SplitHostPort(r.RemoteAddr)
+			if err != nil {
+				source = r.RemoteAddr
+			}
+
+			table.Update(node, status, source)
 
 			if table.AllBooted() {
 				bootedOnce.Do(func() {
