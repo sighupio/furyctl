@@ -83,6 +83,9 @@ type ClusterCreator struct {
 	externalUpgradesPath string
 	upgradeNode          string
 	postApplyPhases      []string
+
+	// The rendered configuration of this run, which persistStagedUpgradeReadyAfterPhases stores.
+	renderedConfig map[string]any
 }
 
 func (c *ClusterCreator) SetProperties(props []cluster.CreatorProperty) {
@@ -219,6 +222,8 @@ func (c *ClusterCreator) Create(startFrom string, _, podRunningCheckTimeout int)
 	if err != nil {
 		return fmt.Errorf("error while rendering config: %w", err)
 	}
+
+	c.renderedConfig = renderedConfig
 
 	status, err := preflight.Exec(renderedConfig)
 	if err != nil {
@@ -554,13 +559,12 @@ func (c *ClusterCreator) stagedUpgradeDecision(
 		return c.stagedUpgradeNodeDecision(upgradeState, changes)
 	}
 
-	// A selected phase runs a part of the cluster, and it leaves the rollout incomplete.
-	// The Immutable infrastructure phase counts here, because c.phase holds it too.
+	// A selected phase leaves the rollout incomplete. The Immutable infrastructure phase counts
+	// here, because c.phase holds it too.
 	//
-	// This test comes before the state of the rollout, and not after it. A run for one phase
-	// builds its own upgrade state, which holds no staged worker. The finalize step then reads
-	// a state with nothing staged, and it deletes the stored state and writes the configuration
-	// of the target version. The workers stay on the old version, and no record of them remains.
+	// This test comes before the tests of the rollout state. A run for one phase builds its own
+	// upgrade state, without the staged workers. At its end, the run deletes the stored state and
+	// stores the target configuration. Then no record of the pending workers remains.
 	phaseSelected := c.phase != cluster.OperationPhaseAll ||
 		startFrom != StartFromFlagNotSet ||
 		len(c.postApplyPhases) > 0
@@ -982,6 +986,35 @@ func (c *ClusterCreator) persistStagedUpgradeReady(
 	return nil
 }
 
+// persistStagedUpgradeReadyAfterPhases stores the target configuration and marks the staged
+// workers ready as soon as the tracked phases succeed. A later step, for example the plugins
+// phase, can still fail. If the configuration then changes, the next run refuses the change and
+// does not record it as applied. The end of the run stores the same configuration again.
+//
+// A distribution phase that runs after this store (the StorageClass reapply, or distribution in
+// --post-apply-phases) reads the target version in .storedCfg. This has no effect: only the
+// reducer blocks of the templates read .storedCfg, and such a phase passes no reducers.
+func (c *ClusterCreator) persistStagedUpgradeReadyAfterPhases(upgradeState *upgrade.State) error {
+	if c.dryRun || !upgradeState.HasStagedWorkers() || !upgradeState.AllTrackedPhasesSucceeded() {
+		return nil
+	}
+
+	return c.persistStagedUpgradeReady(upgradeState, c.renderedConfig)
+}
+
+// stagedWorkersAdvice tells the operator how to continue when a step fails after
+// persistStagedUpgradeReadyAfterPhases. The state is then ready, so a retry with
+// --skip-nodes-upgrade does nothing. A retry with --upgrade upgrades the workers, but it does not
+// run the failed step again.
+func stagedWorkersAdvice(err error, upgradeState *upgrade.State) error {
+	if !upgradeState.HasStagedWorkers() {
+		return err
+	}
+
+	return fmt.Errorf("%w\nThe worker nodes stay staged. Run 'furyctl apply --upgrade' to upgrade them, "+
+		"then run 'furyctl apply' to run this step again", err)
+}
+
 // storeTargetConfig saves the configuration of the cluster and of the distribution.
 func (c *ClusterCreator) storeTargetConfig(renderedConfig map[string]any) error {
 	if err := c.stateStore.StoreConfig(renderedConfig); err != nil {
@@ -1326,14 +1359,18 @@ func (c *ClusterCreator) allPhases(
 			return nil, fmt.Errorf("error while executing distribution phase: %w", err)
 		}
 
+		if err := c.persistStagedUpgradeReadyAfterPhases(upgradeState); err != nil {
+			return nil, err
+		}
+
 		// A StorageClass provider in customResources: complete the distribution before the plugins.
 		if err := commcreate.ReapplyDistribution(distributionPhase, c.distribution, 0, upgr, upgradeState); err != nil {
-			return nil, err //nolint:wrapcheck // already wrapped.
+			return nil, stagedWorkersAdvice(err, upgradeState)
 		}
 	}
 
 	if err := c.pluginsPhase(pluginsPhase, distributionPhase, upgr, upgradeState); err != nil {
-		return nil, err
+		return nil, stagedWorkersAdvice(err, upgradeState)
 	}
 
 	if len(c.postApplyPhases) > 0 {
@@ -1346,7 +1383,7 @@ func (c *ClusterCreator) allPhases(
 			upgr,
 			upgradeState,
 		); err != nil {
-			return nil, fmt.Errorf("error while executing extra phases: %w", err)
+			return nil, stagedWorkersAdvice(fmt.Errorf("error while executing extra phases: %w", err), upgradeState)
 		}
 	}
 

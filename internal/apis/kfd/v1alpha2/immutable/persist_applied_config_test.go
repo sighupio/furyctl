@@ -186,3 +186,62 @@ func TestPersistAppliedConfigSkipsAnAbsentCluster(t *testing.T) {
 	assert.False(t, configStore.storedConfig)
 	assert.False(t, configStore.storedKFD)
 }
+
+// persistStagedUpgradeReadyAfterPhases stores only when the run has staged workers and every
+// tracked phase succeeded, and never in a dry run.
+func TestPersistStagedUpgradeReadyAfterPhases(t *testing.T) {
+	t.Parallel()
+
+	pending := map[string]upgrade.PhaseStatus{"node1": upgrade.PhaseStatusPending}
+
+	pendingPhase := stagedState(false, pending)
+	pendingPhase.Phases.Distribution.Status = upgrade.PhaseStatusPending
+
+	tests := []struct {
+		name      string
+		state     *upgrade.State
+		dryRun    bool
+		wantStore bool
+	}{
+		{name: "staged workers and every tracked phase succeeded", state: stagedState(false, pending), wantStore: true},
+		{name: "no staged worker", state: &upgrade.State{Phases: succeededPhases()}},
+		{name: "a tracked phase did not succeed", state: pendingPhase},
+		{name: "dry run", state: stagedState(false, pending), dryRun: true},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			upgradeStore := &fakeUpgradeStore{}
+			configStore := &fakeConfigStore{}
+			c := &ClusterCreator{
+				dryRun:            tc.dryRun,
+				upgradeStateStore: upgradeStore,
+				stateStore:        configStore,
+				renderedConfig:    map[string]any{"spec": "target"},
+			}
+
+			require.NoError(t, c.persistStagedUpgradeReadyAfterPhases(tc.state))
+			assert.Equal(t, tc.wantStore, configStore.storedConfig)
+			assert.Equal(t, tc.wantStore, upgradeStore.stored != nil)
+
+			if tc.wantStore {
+				assert.True(t, upgradeStore.stored.StagedWorkers.ReadyForResume)
+			}
+		})
+	}
+}
+
+// stagedWorkersAdvice tells the operator how to continue only when workers are staged.
+func TestStagedWorkersAdvice(t *testing.T) {
+	t.Parallel()
+
+	errStep := errors.New("error while executing plugins phase")
+
+	staged := stagedWorkersAdvice(errStep, stagedState(true, map[string]upgrade.PhaseStatus{"node1": upgrade.PhaseStatusPending}))
+	require.ErrorIs(t, staged, errStep)
+	assert.Contains(t, staged.Error(), "Run 'furyctl apply --upgrade' to upgrade them")
+
+	assert.Equal(t, errStep, stagedWorkersAdvice(errStep, &upgrade.State{}))
+}
