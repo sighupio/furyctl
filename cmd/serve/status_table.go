@@ -40,8 +40,10 @@ const (
 // nodeStatusTable renders a live, in-place table of node bootstrap status on a terminal
 // (cursor-up + clear-line repaint), falling back to one log line per update under --debug/--no-tty.
 type nodeStatusTable struct {
-	mu  sync.Mutex
-	out io.Writer
+	mu sync.Mutex
+	// Serializes terminal writes, so a stalled terminal cannot block Snapshot. Lock order: writeMu, then mu.
+	writeMu sync.Mutex
+	out     io.Writer
 	// True only when the table can be animated; false on non-terminals, --no-tty and --debug.
 	tty bool
 
@@ -50,7 +52,7 @@ type nodeStatusTable struct {
 	updatedAt map[string]time.Time // Hostname to when that status last changed.
 	source    map[string]string    // Hostname to the IP its last report came from.
 
-	linesDrawn int // Rows painted by the previous render, so the next one knows how far up to move.
+	linesDrawn int // Rows painted by the previous render, so the next one knows how far up to move. Guarded by writeMu.
 }
 
 // newNodeStatusTable seeds the table from the initial hostname->status map (typically every node at
@@ -77,18 +79,14 @@ var newNodeStatusTable = func(initial map[string]string) *nodeStatusTable {
 // Start draws the initial table once, so the operator sees every node (as "pending") the moment the
 // server is ready. No-op when not animating.
 func (t *nodeStatusTable) Start() {
-	t.mu.Lock()
-	defer t.mu.Unlock()
-
 	if t.tty {
-		t.render()
+		t.paint()
 	}
 }
 
 // Update records a node's new status and the IP it reported from, and repaints (TTY) or logs it (non-TTY).
 func (t *nodeStatusTable) Update(node, status, source string) {
 	t.mu.Lock()
-	defer t.mu.Unlock()
 
 	if _, known := t.status[node]; !known {
 		// A node we didn't seed: keep it visible rather than dropping the update.
@@ -99,6 +97,8 @@ func (t *nodeStatusTable) Update(node, status, source string) {
 	t.status[node] = status
 	t.updatedAt[node] = time.Now()
 	t.source[node] = source
+
+	t.mu.Unlock()
 
 	if !t.tty {
 		if status == statusInstallationBlocked {
@@ -114,7 +114,7 @@ func (t *nodeStatusTable) Update(node, status, source string) {
 		return
 	}
 
-	t.render()
+	t.paint()
 }
 
 // AllBooted reports whether every known node has reached the "booted" state.
@@ -157,9 +157,21 @@ func (t *nodeStatusTable) bootedCount() int {
 	return n
 }
 
-// render repaints the table in place. Caller holds t.mu and t.tty is true.
-func (t *nodeStatusTable) render() {
+// paint repaints the table in place with the latest state. Caller holds no lock and t.tty is true.
+// The terminal write runs without t.mu, so a stalled terminal blocks only other paints.
+func (t *nodeStatusTable) paint() {
+	t.writeMu.Lock()
+	defer t.writeMu.Unlock()
+
+	t.mu.Lock()
 	lines := t.lines()
+	t.mu.Unlock()
+
+	_, _ = fmt.Fprint(t.out, t.frame(lines))
+}
+
+// frame builds the bytes that replace the previous render with lines. Caller holds t.writeMu.
+func (t *nodeStatusTable) frame(lines []string) string {
 	prev := t.linesDrawn
 	width := t.termWidth()
 
@@ -183,7 +195,7 @@ func (t *nodeStatusTable) render() {
 
 	t.linesDrawn = len(lines)
 
-	_, _ = fmt.Fprint(t.out, strings.Join(out, ""))
+	return strings.Join(out, "")
 }
 
 // cursorUp returns the ANSI escape that moves the cursor up n rows.

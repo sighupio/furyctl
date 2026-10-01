@@ -10,7 +10,9 @@ import (
 	"bytes"
 	"fmt"
 	"strings"
+	"sync"
 	"testing"
+	"time"
 
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/require"
@@ -263,6 +265,89 @@ func TestNodeStatusTableSnapshotIsACopy(t *testing.T) {
 	again := table.Snapshot()
 	require.Equal(t, "pending", again["cp1.flatcar"],
 		"Snapshot must return an independent copy, got %q", again["cp1.flatcar"])
+}
+
+// gatedWriter blocks every Write until release is closed, like a terminal that stopped reading.
+type gatedWriter struct {
+	mu      sync.Mutex
+	writes  []string
+	started chan struct{}
+	release chan struct{}
+	once    sync.Once
+}
+
+func newGatedWriter() *gatedWriter {
+	return &gatedWriter{started: make(chan struct{}), release: make(chan struct{})}
+}
+
+func (g *gatedWriter) Write(b []byte) (int, error) {
+	g.once.Do(func() { close(g.started) })
+	<-g.release
+
+	g.mu.Lock()
+	defer g.mu.Unlock()
+
+	g.writes = append(g.writes, string(b))
+
+	return len(b), nil
+}
+
+func newGatedTable(w *gatedWriter, initial map[string]string) *nodeStatusTable {
+	table := newNodeStatusTable(initial)
+	table.out = w
+	table.tty = true
+
+	return table
+}
+
+func TestNodeStatusTableSnapshotNotBlockedByStalledTerminal(t *testing.T) {
+	t.Parallel()
+
+	w := newGatedWriter()
+	table := newGatedTable(w, map[string]string{"cp1.flatcar": "pending"})
+
+	defer close(w.release)
+
+	go table.Update("cp1.flatcar", "installing", "10.0.0.1")
+
+	<-w.started
+
+	done := make(chan map[string]string, 1)
+
+	go func() { done <- table.Snapshot() }()
+
+	select {
+	case snap := <-done:
+		require.Equal(t, "installing", snap["cp1.flatcar"])
+	case <-time.After(time.Second):
+		require.FailNow(t, "Snapshot blocked while the terminal write was stalled")
+	}
+}
+
+func TestNodeStatusTableWritesFramesInUpdateOrder(t *testing.T) {
+	t.Parallel()
+
+	w := newGatedWriter()
+	table := newGatedTable(w, map[string]string{"cp1.flatcar": "pending"})
+
+	var wg sync.WaitGroup
+
+	wg.Go(func() { table.Update("cp1.flatcar", "installing", "10.0.0.1") })
+
+	<-w.started
+
+	wg.Go(func() { table.Update("cp1.flatcar", statusBooted, "10.0.0.1") })
+
+	// The second frame is built once its status is visible; only then let the writes go.
+	require.Eventually(t, func() bool { return table.Snapshot()["cp1.flatcar"] == statusBooted },
+		time.Second, time.Millisecond)
+
+	close(w.release)
+	wg.Wait()
+
+	require.Len(t, w.writes, 2)
+	require.Contains(t, w.writes[0], "installing")
+	require.Contains(t, w.writes[1], statusBooted)
 }
 
 func TestTruncateLine(t *testing.T) {
