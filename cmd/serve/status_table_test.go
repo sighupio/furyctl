@@ -269,19 +269,30 @@ func TestNodeStatusTableSnapshotIsACopy(t *testing.T) {
 
 // gatedWriter blocks every Write until release is closed, like a terminal that stopped reading.
 type gatedWriter struct {
-	mu      sync.Mutex
-	writes  []string
-	started chan struct{}
-	release chan struct{}
-	once    sync.Once
+	mu          sync.Mutex
+	writes      []string
+	started     chan struct{}
+	release     chan struct{}
+	startOnce   sync.Once
+	releaseOnce sync.Once
 }
 
-func newGatedWriter() *gatedWriter {
-	return &gatedWriter{started: make(chan struct{}), release: make(chan struct{})}
+// newGatedWriter also opens the gate at cleanup, so a failed test does not leave writers blocked.
+func newGatedWriter(t *testing.T) *gatedWriter {
+	t.Helper()
+
+	g := &gatedWriter{started: make(chan struct{}), release: make(chan struct{})}
+	t.Cleanup(g.open)
+
+	return g
+}
+
+func (g *gatedWriter) open() {
+	g.releaseOnce.Do(func() { close(g.release) })
 }
 
 func (g *gatedWriter) Write(b []byte) (int, error) {
-	g.once.Do(func() { close(g.started) })
+	g.startOnce.Do(func() { close(g.started) })
 	<-g.release
 
 	g.mu.Lock()
@@ -303,10 +314,8 @@ func newGatedTable(w *gatedWriter, initial map[string]string) *nodeStatusTable {
 func TestNodeStatusTableSnapshotNotBlockedByStalledTerminal(t *testing.T) {
 	t.Parallel()
 
-	w := newGatedWriter()
+	w := newGatedWriter(t)
 	table := newGatedTable(w, map[string]string{"cp1.flatcar": "pending"})
-
-	defer close(w.release)
 
 	go table.Update("cp1.flatcar", "installing", "10.0.0.1")
 
@@ -327,7 +336,7 @@ func TestNodeStatusTableSnapshotNotBlockedByStalledTerminal(t *testing.T) {
 func TestNodeStatusTableWritesFramesInUpdateOrder(t *testing.T) {
 	t.Parallel()
 
-	w := newGatedWriter()
+	w := newGatedWriter(t)
 	table := newGatedTable(w, map[string]string{"cp1.flatcar": "pending"})
 
 	var wg sync.WaitGroup
@@ -342,7 +351,7 @@ func TestNodeStatusTableWritesFramesInUpdateOrder(t *testing.T) {
 	require.Eventually(t, func() bool { return table.Snapshot()["cp1.flatcar"] == statusBooted },
 		time.Second, time.Millisecond)
 
-	close(w.release)
+	w.open()
 	wg.Wait()
 
 	require.Len(t, w.writes, 2)

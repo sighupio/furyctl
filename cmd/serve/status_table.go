@@ -52,7 +52,7 @@ type nodeStatusTable struct {
 	updatedAt map[string]time.Time // Hostname to when that status last changed.
 	source    map[string]string    // Hostname to the IP its last report came from.
 
-	linesDrawn int // Rows painted by the previous render, so the next one knows how far up to move. Guarded by writeMu.
+	linesDrawn int // Rows painted by the previous render. Guarded by writeMu.
 }
 
 // newNodeStatusTable seeds the table from the initial hostname->status map (typically every node at
