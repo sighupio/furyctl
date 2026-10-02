@@ -95,6 +95,8 @@ func TestStagedUpgradeDecision(t *testing.T) {
 	incomplete := completedStagedState(map[string]upgrade.PhaseStatus{"worker-a": upgrade.PhaseStatusPending})
 	ready := completedStagedState(map[string]upgrade.PhaseStatus{"worker-a": upgrade.PhaseStatusPending})
 	ready.StagedWorkers.ReadyForResume = true
+	failedPhase := completedStagedState(map[string]upgrade.PhaseStatus{"worker-a": upgrade.PhaseStatusPending})
+	failedPhase.Phases.Distribution.Status = upgrade.PhaseStatusFailed
 
 	tests := []struct {
 		name        string
@@ -124,6 +126,10 @@ func TestStagedUpgradeDecision(t *testing.T) {
 		{"forced phase", ClusterCreator{upgrade: true, phase: "distribution", force: []string{"upgrades"}}, ready, nil, stagedUpgradeProceed, false, ""},
 		{"post apply phases forced for all", ClusterCreator{upgrade: true, postApplyPhases: []string{"distribution"}, force: []string{"all"}}, ready, nil, stagedUpgradeProceed, false, ""},
 		{"forced phase with changes", ClusterCreator{upgrade: true, phase: "distribution", force: []string{"upgrades"}}, ready, matchingVersion, stagedUpgradeProceed, true, "configuration changed"},
+		// stagedUpgradeDecision refuses a selected phase also when the rollout is not ready.
+		{"selected phase with a failed phase", ClusterCreator{upgrade: true, phase: "distribution"}, failedPhase, matchingVersion, stagedUpgradeProceed, true, "without --phase"},
+		{"selected phase before finalize", ClusterCreator{upgrade: true, phase: "distribution"}, incomplete, matchingVersion, stagedUpgradeProceed, true, "without --phase"},
+		{"post apply phases before finalize", ClusterCreator{upgrade: true, postApplyPhases: []string{"distribution"}}, incomplete, matchingVersion, stagedUpgradeProceed, true, "--post-apply-phases"},
 	}
 
 	for _, test := range tests {
@@ -146,6 +152,71 @@ func TestStagedUpgradeDecision(t *testing.T) {
 		stagedUpgradeDecision(ready, nil, "distribution")
 	assert.NoError(t, err)
 	assert.Equal(t, stagedUpgradeProceed, action)
+}
+
+// persistStagedUpgradeReadyAfterPhases stores only when the run has staged workers and every
+// tracked phase succeeded, and never in a dry run.
+func TestPersistStagedUpgradeReadyAfterPhases(t *testing.T) {
+	t.Parallel()
+
+	pending := map[string]upgrade.PhaseStatus{"worker-a": upgrade.PhaseStatusPending}
+
+	pendingPhase := completedStagedState(pending)
+	pendingPhase.Phases.Distribution.Status = upgrade.PhaseStatusPending
+
+	tests := []struct {
+		name      string
+		state     *upgrade.State
+		dryRun    bool
+		wantStore bool
+	}{
+		{name: "staged workers and every tracked phase succeeded", state: completedStagedState(pending), wantStore: true},
+		{name: "no staged worker", state: &upgrade.State{}},
+		{name: "a tracked phase did not succeed", state: pendingPhase},
+		{name: "dry run", state: completedStagedState(pending), dryRun: true},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+
+			upgradeStore := &fakeUpgradeStorer{}
+			configStore := &fakeStateStorer{}
+			creator := &ClusterCreator{
+				dryRun:            test.dryRun,
+				upgradeStateStore: upgradeStore,
+				stateStore:        configStore,
+				renderedConfig:    map[string]any{"spec": "target"},
+			}
+
+			require.NoError(t, creator.persistStagedUpgradeReadyAfterPhases(test.state))
+
+			if !test.wantStore {
+				assert.Zero(t, configStore.storeConfigCalls)
+				assert.Empty(t, upgradeStore.storedReadyStates)
+
+				return
+			}
+
+			assert.Equal(t, 1, configStore.storeConfigCalls)
+			assert.Equal(t, []bool{true}, upgradeStore.storedReadyStates)
+		})
+	}
+}
+
+// stagedWorkersAdvice tells the operator how to continue only when workers are staged.
+func TestStagedWorkersAdvice(t *testing.T) {
+	t.Parallel()
+
+	errStep := errors.New("error while executing plugins phase")
+
+	staged := stagedWorkersAdvice(errStep, completedStagedState(map[string]upgrade.PhaseStatus{
+		"worker-a": upgrade.PhaseStatusPending,
+	}))
+	require.ErrorIs(t, staged, errStep)
+	assert.Contains(t, staged.Error(), "Run 'furyctl apply --upgrade' to upgrade them")
+
+	assert.Equal(t, errStep, stagedWorkersAdvice(errStep, &upgrade.State{}))
 }
 
 func TestResumeStagedWorkers(t *testing.T) {

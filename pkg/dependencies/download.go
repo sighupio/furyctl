@@ -158,8 +158,7 @@ func (dd *Downloader) DownloadAll(kfd config.KFD, kind string) ([]error, []strin
 }
 
 func (dd *Downloader) DownloadModules(kfd config.KFD, gitPrefix, kind string) error {
-	oldPrefix := "kubernetes-fury"
-	newPrefix := "fury-kubernetes"
+	modulePrefixes := []string{"kubernetes-fury", "fury-kubernetes", "module"}
 	modules := kfd.Modules
 
 	mods := reflect.ValueOf(modules)
@@ -192,6 +191,10 @@ func (dd *Downloader) DownloadModules(kfd config.KFD, gitPrefix, kind string) er
 				return
 			}
 
+			if name == "utilities" && !distribution.HasFeature(kfd, distribution.FeatureUtilitiesModule) {
+				return
+			}
+
 			if !distribution.ModuleNeededForKind(name, kind) {
 				return
 			}
@@ -201,7 +204,7 @@ func (dd *Downloader) DownloadModules(kfd config.KFD, gitPrefix, kind string) er
 
 			dst := filepath.Join(dd.basePath, "vendor", "modules", name)
 
-			for _, prefix := range []string{oldPrefix, newPrefix} {
+			for _, prefix := range modulePrefixes {
 				src := fmt.Sprintf("git::%s/%s-%s?ref=%s&depth=1", gitPrefix, prefix, name, version)
 
 				moduleURL := createURL(prefix, name, version)
@@ -230,8 +233,8 @@ func (dd *Downloader) DownloadModules(kfd config.KFD, gitPrefix, kind string) er
 
 				retries[name]++
 
-				// Threshold to retry with the new prefix according to the fallback mechanism.
-				threshold := 2
+				// Threshold to retry with all the supported repository prefixes according to the fallback mechanism.
+				threshold := len(modulePrefixes)
 
 				if resp.StatusCode != http.StatusOK {
 					if retries[name] >= threshold {

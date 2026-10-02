@@ -499,6 +499,16 @@ func extractModules(configMap map[string]any, sd distroconf.KFD, kind string) []
 		})
 	}
 
+	if sd.Modules.Utilities != "" && (kind == distribution.OnPremisesKind || kind == distribution.ImmutableKind) {
+		specs = append(specs, moduleSpec{
+			name:    "Utilities",
+			version: sd.Modules.Utilities,
+			typeGetter: func(m map[string]any) string {
+				return stringField(nestedMap(nestedMap(m, "utilities"), "headlamp"), "type")
+			},
+		})
+	}
+
 	return lo.Map(specs, func(s moduleSpec, _ int) ModuleInfo {
 		modType := ""
 		if modules != nil {
