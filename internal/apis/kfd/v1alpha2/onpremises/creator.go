@@ -475,7 +475,7 @@ func (c *ClusterCreator) executePhase(
 			existingUpgradeState,
 		)
 		if err != nil {
-			return nil, fmt.Errorf("error while executing cluster creation: %w", err)
+			return nil, err
 		}
 
 		return upgradeState, nil

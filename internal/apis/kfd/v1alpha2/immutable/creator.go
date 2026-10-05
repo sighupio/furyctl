@@ -59,12 +59,11 @@ type stagedWorkersUpgrader interface {
 }
 
 var (
-	ErrUnsupportedPhase              = errors.New("unsupported phase")
-	ErrAbortedByUser                 = errors.New("operation aborted by user")
-	ErrClusterCreationNotImplemented = errors.New("cluster creation not implemented for Immutable kind")
-	ErrUpgradeNodeUnsupported        = errors.New("unsupported --upgrade-node host")
-	ErrClusterNotFound               = errors.New("cluster not found")
-	errStagedUpgrade                 = errors.New("staged worker upgrade")
+	ErrUnsupportedPhase       = errors.New("unsupported phase")
+	ErrAbortedByUser          = errors.New("operation aborted by user")
+	ErrUpgradeNodeUnsupported = errors.New("unsupported --upgrade-node host")
+	ErrClusterNotFound        = errors.New("cluster not found")
+	errStagedUpgrade          = errors.New("staged worker upgrade")
 )
 
 type ClusterCreator struct {
@@ -404,7 +403,7 @@ func (c *ClusterCreator) Create(startFrom string, _, podRunningCheckTimeout int)
 			unsafeReducers,
 		)
 		if err != nil {
-			return fmt.Errorf("error while executing cluster creation: %w", err)
+			return err
 		}
 
 		appliedUpgradeState = allPhasesState

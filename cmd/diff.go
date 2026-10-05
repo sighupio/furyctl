@@ -235,7 +235,7 @@ func getPhasePath(
 ) (string, error) {
 	absFuryctlPath, err := filepath.Abs(furyctlPath)
 	if err != nil {
-		return "", fmt.Errorf("error while initializing cluster creation: %w", err)
+		return "", fmt.Errorf("error while getting absolute path of the configuration file: %w", err)
 	}
 
 	paths := cluster.CreatorPaths{
