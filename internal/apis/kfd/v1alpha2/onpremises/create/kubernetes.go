@@ -92,7 +92,7 @@ func (k *Kubernetes) Exec(rdcs reducers.Reducers, startFrom string, upgradeState
 	}
 
 	if k.dryRun {
-		logrus.Info("Kubernetes cluster created successfully (dry-run mode)")
+		logrus.Info("Kubernetes cluster configured successfully (dry-run mode)")
 
 		return nil
 	}
@@ -117,7 +117,7 @@ func (k *Kubernetes) Exec(rdcs reducers.Reducers, startFrom string, upgradeState
 		return fmt.Errorf("error running post-kubernetes phase: %w", err)
 	}
 
-	logrus.Info("Kubernetes cluster created successfully")
+	logrus.Info("Kubernetes cluster configured successfully")
 
 	return nil
 }

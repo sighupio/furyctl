@@ -350,7 +350,7 @@ func NewClusterCmd() *cobra.Command {
 	clusterCmd.Flags().Bool(
 		"vpn-auto-connect",
 		false,
-		"When set will automatically connect to the created VPN by the infrastructure phase "+
+		"When set will automatically connect to the VPN that the infrastructure phase creates "+
 			"(requires OpenVPN installed in the system)",
 	)
 

@@ -482,12 +482,12 @@ func (v *ClusterCreator) infraPhase(infra upgrade.OperatorPhaseAsync, vpnConnect
 	}
 
 	if v.dryRun {
-		logrus.Info("Infrastructure created successfully (dry-run mode)")
+		logrus.Info("Infrastructure configured successfully (dry-run mode)")
 
 		return nil
 	}
 
-	logrus.Info("Infrastructure created successfully")
+	logrus.Info("Infrastructure configured successfully")
 
 	if vpnConnector.IsConfigured() {
 		if err := vpnConnector.GenerateCertificates(); err != nil {
@@ -527,7 +527,7 @@ func (v *ClusterCreator) kubernetesPhase(
 	}
 
 	if v.dryRun {
-		logrus.Info("Kubernetes cluster created successfully (dry-run mode)")
+		logrus.Info("Kubernetes cluster configured successfully (dry-run mode)")
 
 		return nil
 	}
@@ -540,7 +540,7 @@ func (v *ClusterCreator) kubernetesPhase(
 		return fmt.Errorf("error while creating secret with the distribution configuration: %w", err)
 	}
 
-	logrus.Info("Kubernetes cluster created successfully")
+	logrus.Info("Kubernetes cluster configured successfully")
 
 	if err := v.logKubeconfig(); err != nil {
 		return fmt.Errorf("error while logging kubeconfig path: %w", err)
@@ -645,7 +645,7 @@ func (v *ClusterCreator) allPhases(
 		}
 	}
 
-	logrus.Info("Creating cluster...")
+	logrus.Info("Applying the configuration...")
 
 	if err := v.allPhasesExec(
 		startFrom,
@@ -666,7 +666,7 @@ func (v *ClusterCreator) allPhases(
 	}
 
 	if v.dryRun {
-		logrus.Info("SIGHUP Distribution cluster created successfully (dry-run mode)")
+		logrus.Info("SIGHUP Distribution cluster configured successfully (dry-run mode)")
 
 		return nil
 	}
@@ -685,7 +685,7 @@ func (v *ClusterCreator) allPhases(
 		return fmt.Errorf("error while creating secret with the distribution configuration: %w", err)
 	}
 
-	logrus.Info("SIGHUP Distribution cluster created successfully")
+	logrus.Info("SIGHUP Distribution cluster configured successfully")
 
 	if err := v.logVPNKill(vpnConnector); err != nil {
 		return fmt.Errorf("error while logging vpn kill message: %w", err)
