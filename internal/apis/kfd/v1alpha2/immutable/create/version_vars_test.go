@@ -42,6 +42,14 @@ kubernetes:
           kernel:
             filename: k
             url: https://example/k
+          update:
+            filename: flatcar_production_update.gz
+            url: https://example/amd64-usr/4593.2.1/flatcar_production_update.gz
+            sha256: abc123
+        arm64:
+          kernel:
+            filename: k
+            url: https://example/k
 `
 
 // writeManifest lays out a phase dir with a sibling vendor/installers/immutable/immutable.yaml.
@@ -127,4 +135,21 @@ func TestVersionVarsForPhaseKubectlBin(t *testing.T) {
 
 	_, ok := noBin["kubectl_bin"]
 	assert.False(t, ok, "kubectl_bin must be omitted when the bin path is empty")
+}
+
+// TestVersionVarsOSUpdatePayloadPins: only an arch with an update entry gets a payload.
+func TestVersionVarsOSUpdatePayloadPins(t *testing.T) {
+	t.Parallel()
+
+	phaseDir := writeManifest(t)
+
+	vars, err := VersionVarsForPhase(phaseDir, "1.34.8", "")
+	require.NoError(t, err)
+
+	assert.Equal(t, map[string]any{
+		"x86-64": map[string]string{
+			"url":    "https://example/amd64-usr/4593.2.1/flatcar_production_update.gz",
+			"sha256": "abc123",
+		},
+	}, vars["os_update_payload_pins"])
 }
