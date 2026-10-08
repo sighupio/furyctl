@@ -105,12 +105,15 @@ type flatcarArch struct {
 	Kernel flatcarArtifact `yaml:"kernel"`
 	Initrd flatcarArtifact `yaml:"initrd"`
 	Image  flatcarArtifact `yaml:"image"`
+	// Update is the update payload that the os-upgrade role stages with flatcar-update.
+	Update flatcarArtifact `yaml:"update"`
 }
 
-// flatcarArtifact represents a single boot artifact (kernel, initrd, image).
+// flatcarArtifact represents a single Flatcar artifact (kernel, initrd, image, update payload).
 type flatcarArtifact struct {
 	Filename string `yaml:"filename"`
 	URL      string `yaml:"url"`
+	SHA256   string `yaml:"sha256"`
 }
 
 // assetDownloader wraps the HTTP client with asset-specific download logic.
@@ -228,6 +231,15 @@ func versionVarsFromAssets(version, kubectlBin string, a assets) map[any]any {
 		}
 	})
 
+	// The pinned update payload of each arch; the os-upgrade role downloads it and checks the sha256 before the drain.
+	osUpdatePayloadPins := map[string]any{}
+
+	for arch, info := range a.Flatcar.Arch {
+		if info.Update.URL != "" {
+			osUpdatePayloadPins[arch] = map[string]string{"url": info.Update.URL, "sha256": info.Update.SHA256}
+		}
+	}
+
 	vars := map[any]any{
 		"kubernetes_version":        version,
 		"containerd_sandbox_tag":    a.SandboxTag,
@@ -238,6 +250,7 @@ func versionVarsFromAssets(version, kubectlBin string, a assets) map[any]any {
 		"kubelet_csr_approver_tag":  a.KubeletCsrApproverTag,
 		"sysext_targets":            sysextTargets,
 		"os_update_target_version":  a.Flatcar.Version,
+		"os_update_payload_pins":    osUpdatePayloadPins,
 	}
 
 	// The node-maintenance role drains/uncordons via kubectl on the controller under sudo, whose secure_path
