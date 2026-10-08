@@ -537,12 +537,20 @@ func (c *ClusterCreator) routeStagedUpgrade(
 //
 // The Immutable kind adds one rule that OnPremises does not have: --upgrade-node also takes a
 // load balancer, and the infrastructure phase upgrades that host. Only a worker belongs to
-// the resume path, so any other role proceeds to the phases.
+// the resume path. A load balancer goes to the phases when the state is ready and the
+// configuration did not change.
 func (c *ClusterCreator) stagedUpgradeDecision(
 	upgradeState *upgrade.State,
 	changes r3diff.Changelog,
 	startFrom string,
 ) (stagedUpgradeAction, error) {
+	// The stored configuration still holds the source version, and the preupgrade phase then
+	// refuses --upgrade-node with "upgrade flag not set" (issue #645).
+	if c.upgradeNode != "" && upgradeState != nil && !upgradeState.AllTrackedPhasesSucceeded() &&
+		len(changes.Filter([]string{"spec", "distributionVersion"})) != 0 {
+		return stagedUpgradeProceed, errUpgradeIncomplete()
+	}
+
 	if upgradeState == nil || !upgradeState.HasStagedWorkers() {
 		return stagedUpgradeProceed, nil
 	}
@@ -620,12 +628,13 @@ func (c *ClusterCreator) stagedUpgradeNodeDecision(
 		return stagedUpgradeProceed, err
 	}
 
-	// A load balancer belongs to the infrastructure phase, and not to this rollout.
-	if role != public.NodeRoleWorker {
-		return stagedUpgradeProceed, nil
-	}
-
 	if !upgradeState.StagedWorkers.ReadyForResume && upgradeState.AllTrackedPhasesSucceeded() {
+		// After the finalize step, the preupgrade phase gets the version difference from before
+		// the store. It then refuses the run, because --upgrade is not set.
+		if role != public.NodeRoleWorker {
+			return stagedUpgradeProceed, errUpgradeIncomplete()
+		}
+
 		if err := validateStagedTransition(upgradeState, changes); err != nil {
 			return stagedUpgradeProceed, err
 		}
@@ -645,7 +654,21 @@ func (c *ClusterCreator) stagedUpgradeNodeDecision(
 		return stagedUpgradeProceed, rejectIncompleteStagedUpgrade(upgradeState, changes)
 	}
 
+	// A load balancer belongs to the infrastructure phase, and not to this rollout.
+	if role != public.NodeRoleWorker {
+		return stagedUpgradeProceed, nil
+	}
+
 	return stagedUpgradeResumeNode, nil
+}
+
+// errUpgradeIncomplete refuses --upgrade-node while an upgrade is not complete.
+func errUpgradeIncomplete() error {
+	return fmt.Errorf(
+		"%w: the previous upgrade did not complete, run 'furyctl apply --upgrade --skip-nodes-upgrade' "+
+			"to complete it, then use --upgrade-node",
+		errStagedUpgrade,
+	)
 }
 
 // loadUpgradeState reads the upgrade state of the cluster. The second result reports whether
