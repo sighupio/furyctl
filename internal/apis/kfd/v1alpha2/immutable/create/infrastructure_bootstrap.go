@@ -36,7 +36,7 @@ var (
 	ErrSandboxTagOrRegistryEmpty = errors.New("sandboxTag and imageRegistry are required in immutable installer spec")
 	ErrFlatcarArtifactsNotFound  = errors.New("flatcar artifacts not found for architecture")
 	ErrImmutableConfigMalformed  = errors.New("immutable furyctl config is malformed")
-	ErrSysextChecksumMismatch    = errors.New("sysext package checksum mismatch")
+	ErrChecksumMismatch          = errors.New("checksum mismatch")
 )
 
 type immutableManifest struct {
@@ -68,11 +68,13 @@ type sysextPackage struct {
 // sysextArchInfo contains architecture-specific information.
 type sysextArchInfo struct {
 	URL string `yaml:"url"`
-	// SHA256 optionally pins the .raw content; packages without one are downloaded unverified.
+	// SHA256 is optional. If it is not empty, the downloaded .raw file must have this SHA-256 checksum.
 	SHA256 string `yaml:"sha256"`
 }
 
-// verifySHA256 streams the file and checks it against its pinned digest.
+// verifySHA256 reads the file and compares its SHA-256 checksum with want.
+// If the checksums are different, it deletes the file. The go-getter client does not download a file
+// again if a file of the same size is on disk. The delete makes the next apply download the file again.
 func verifySHA256(path, want string) error {
 	file, err := os.Open(path)
 	if err != nil {
@@ -86,11 +88,15 @@ func verifySHA256(path, want string) error {
 	}
 
 	got := hex.EncodeToString(hasher.Sum(nil))
-	if !strings.EqualFold(got, want) {
-		return fmt.Errorf("%w: %s: want %s, got %s", ErrSysextChecksumMismatch, path, want, got)
+	if strings.EqualFold(got, want) {
+		return nil
 	}
 
-	return nil
+	if err := os.Remove(path); err != nil {
+		return fmt.Errorf("%w: %s: want %s, got %s, cannot delete the file: %w", ErrChecksumMismatch, path, want, got, err)
+	}
+
+	return fmt.Errorf("%w: %s: want %s, got %s, furyctl deleted the file", ErrChecksumMismatch, path, want, got)
 }
 
 // flatcarRelease represents a Flatcar Container Linux version.
@@ -113,7 +119,8 @@ type flatcarArch struct {
 type flatcarArtifact struct {
 	Filename string `yaml:"filename"`
 	URL      string `yaml:"url"`
-	SHA256   string `yaml:"sha256"`
+	// SHA256 is optional. If it is not empty, the downloaded file must have this SHA-256 checksum.
+	SHA256 string `yaml:"sha256"`
 }
 
 // assetDownloader wraps the HTTP client with asset-specific download logic.
@@ -743,48 +750,55 @@ func (*Infrastructure) downloadFlatcarArtifacts(
 			return fmt.Errorf("error creating directory %s: %w", flatcarDir, err)
 		}
 
-		// Download kernel.
-		if err := downloader.goGetterClient.DownloadWithMode(
-			archInfo.Kernel.URL,
-			filepath.Join(flatcarDir, archInfo.Kernel.Filename),
-			getter.ClientModeFile,
-			map[string]getter.Decompressor{},
-		); err != nil {
-			return fmt.Errorf("error downloading kernel for %s: %w", arch, err)
-		}
-
-		// Download initrd.
-		if err := downloader.goGetterClient.DownloadWithMode(
-			archInfo.Initrd.URL,
-			filepath.Join(flatcarDir, archInfo.Initrd.Filename),
-			getter.ClientModeFile,
-			map[string]getter.Decompressor{},
-		); err != nil {
-			return fmt.Errorf("error downloading initrd for %s: %w", arch, err)
-		}
-
-		// Download image.
-		if err := downloader.goGetterClient.DownloadWithMode(
-			archInfo.Image.URL,
-			filepath.Join(flatcarDir, archInfo.Image.Filename),
-			getter.ClientModeFile,
-			map[string]getter.Decompressor{},
-		); err != nil {
-			return fmt.Errorf("error downloading image for %s: %w", arch, err)
-		}
-
-		// Download image signature.
-		if err := downloader.goGetterClient.DownloadWithMode(
-			archInfo.Image.URL+".sig",
-			filepath.Join(flatcarDir, archInfo.Image.Filename+".sig"),
-			getter.ClientModeFile,
-			map[string]getter.Decompressor{},
-		); err != nil {
-			return fmt.Errorf("error downloading image signature for %s: %w", arch, err)
+		for _, a := range []struct {
+			name     string
+			artifact flatcarArtifact
+		}{
+			{"kernel", archInfo.Kernel},
+			{"initrd", archInfo.Initrd},
+			{"image", archInfo.Image},
+			{"image signature", flatcarArtifact{
+				Filename: archInfo.Image.Filename + ".sig",
+				URL:      archInfo.Image.URL + ".sig",
+			}},
+		} {
+			if err := downloadFlatcarArtifact(downloader, flatcarDir, arch, a.name, a.artifact); err != nil {
+				return err
+			}
 		}
 
 		logrus.Infof("Flatcar artifacts for %s downloaded successfully", arch)
 	}
+
+	return nil
+}
+
+// downloadFlatcarArtifact downloads one Flatcar artifact into dir.
+// If the artifact has a SHA-256 checksum, the function also checks the file with it.
+func downloadFlatcarArtifact(downloader *assetDownloader, dir, arch, name string, artifact flatcarArtifact) error {
+	destPath := filepath.Join(dir, artifact.Filename)
+
+	if err := downloader.goGetterClient.DownloadWithMode(
+		artifact.URL,
+		destPath,
+		getter.ClientModeFile,
+		map[string]getter.Decompressor{},
+	); err != nil {
+		return fmt.Errorf("error downloading Flatcar %s for %s: %w", name, arch, err)
+	}
+
+	// If the artifact has no SHA-256 checksum, furyctl does not check the file, the same as for the sysext packages.
+	if artifact.SHA256 == "" {
+		logrus.Debugf("Flatcar %s (%s) has no SHA-256 checksum. furyctl does not check the file", name, arch)
+
+		return nil
+	}
+
+	if err := verifySHA256(destPath, artifact.SHA256); err != nil {
+		return fmt.Errorf("cannot check the Flatcar %s for %s: %w", name, arch, err)
+	}
+
+	logrus.Debugf("The SHA-256 checksum of %s is correct", artifact.Filename)
 
 	return nil
 }
@@ -821,9 +835,9 @@ func (*Infrastructure) downloadSysextPackages(
 				return fmt.Errorf("error downloading %s for %s: %w", pkg.Name, arch, err)
 			}
 
-			// Only packages that pin a sha256 are verified; the rest keep the previous behaviour.
+			// If the package has no SHA-256 checksum, furyctl does not check the file.
 			if archInfo.SHA256 == "" {
-				logrus.Debugf("Sysext package %s (%s) has no pinned sha256, skipping verification", pkg.Name, arch)
+				logrus.Debugf("Sysext package %s (%s) has no SHA-256 checksum. furyctl does not check the file", pkg.Name, arch)
 
 				continue
 			}
@@ -832,7 +846,7 @@ func (*Infrastructure) downloadSysextPackages(
 				return fmt.Errorf("error verifying %s for %s: %w", pkg.Name, arch, err)
 			}
 
-			logrus.Debugf("Verified %s against pinned sha256", filename)
+			logrus.Debugf("The SHA-256 checksum of %s is correct", filename)
 		}
 
 		logrus.Infof("%s sysext package downloaded successfully", pkg.Name)

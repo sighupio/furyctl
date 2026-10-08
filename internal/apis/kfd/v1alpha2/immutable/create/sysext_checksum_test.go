@@ -31,7 +31,11 @@ func TestVerifySHA256(t *testing.T) {
 		t.Errorf("matching digest: got %v, want nil", err)
 	}
 
-	if err := verifySHA256(path, "deadbeef"); !errors.Is(err, ErrSysextChecksumMismatch) {
-		t.Errorf("wrong digest: got %v, want ErrSysextChecksumMismatch", err)
+	if err := verifySHA256(path, "deadbeef"); !errors.Is(err, ErrChecksumMismatch) {
+		t.Errorf("wrong digest: got %v, want ErrChecksumMismatch", err)
+	}
+
+	if _, err := os.Stat(path); !errors.Is(err, os.ErrNotExist) {
+		t.Errorf("wrong digest: the file is still on disk (stat error: %v)", err)
 	}
 }
