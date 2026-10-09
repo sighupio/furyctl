@@ -97,6 +97,14 @@ func TestStagedUpgradeDecision(t *testing.T) {
 	ready.StagedWorkers.ReadyForResume = true
 	failedPhase := completedStagedState(map[string]upgrade.PhaseStatus{"worker-a": upgrade.PhaseStatusPending})
 	failedPhase.Phases.Distribution.Status = upgrade.PhaseStatusFailed
+	stoppedBeforeStaging := &upgrade.State{Phases: completedStagedState(nil).Phases}
+	stoppedBeforeStaging.Phases.PreKubernetes.Status = upgrade.PhaseStatusFailed
+	stoppedBeforeStaging.Phases.Kubernetes.Status = upgrade.PhaseStatusPending
+	otherVersion := r3diff.Changelog{{
+		Path: []string{"spec", "distributionVersion"},
+		From: "v1.33.1",
+		To:   "v1.35.0",
+	}}
 
 	tests := []struct {
 		name        string
@@ -130,6 +138,11 @@ func TestStagedUpgradeDecision(t *testing.T) {
 		{"selected phase with a failed phase", ClusterCreator{upgrade: true, phase: "distribution"}, failedPhase, matchingVersion, stagedUpgradeProceed, true, "without --phase"},
 		{"selected phase before finalize", ClusterCreator{upgrade: true, phase: "distribution"}, incomplete, matchingVersion, stagedUpgradeProceed, true, "without --phase"},
 		{"post apply phases before finalize", ClusterCreator{upgrade: true, postApplyPhases: []string{"distribution"}}, incomplete, matchingVersion, stagedUpgradeProceed, true, "--post-apply-phases"},
+		{"selected worker after an upgrade that stopped before staging", ClusterCreator{upgradeNode: "worker-a"}, stoppedBeforeStaging, matchingVersion, stagedUpgradeProceed, true, "did not complete"},
+		{"selected worker after a stopped upgrade with no version change", ClusterCreator{upgradeNode: "worker-a"}, stoppedBeforeStaging, nil, stagedUpgradeProceed, false, ""},
+		{"selected worker after an upgrade that stopped after staging", ClusterCreator{upgradeNode: "worker-a"}, failedPhase, matchingVersion, stagedUpgradeProceed, true, "did not complete"},
+		// The refusal comes before the test of the transition. The next run gives that error.
+		{"selected worker after a stopped upgrade to another version", ClusterCreator{upgradeNode: "worker-a"}, failedPhase, otherVersion, stagedUpgradeProceed, true, "did not complete"},
 	}
 
 	for _, test := range tests {

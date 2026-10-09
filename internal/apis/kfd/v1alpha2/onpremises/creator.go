@@ -617,6 +617,16 @@ func (c *ClusterCreator) stagedUpgradeDecision(
 	changes r3diff.Changelog,
 	startFrom string,
 ) (stagedUpgradeAction, error) {
+	// The stored configuration still holds the source version, and the preupgrade phase then
+	// refuses --upgrade-node with "upgrade flag not set" (issue #645).
+	if c.upgradeNode != "" && upgradeState != nil && !upgradeState.AllTrackedPhasesSucceeded() &&
+		len(changes.Filter([]string{"spec", "distributionVersion"})) != 0 {
+		return stagedUpgradeProceed, fmt.Errorf(
+			"%w: the previous upgrade did not complete; run 'furyctl apply --upgrade --skip-nodes-upgrade' "+
+				"to complete it, then use --upgrade-node",
+			errStagedUpgrade,
+		)
+	}
 	if upgradeState == nil || !upgradeState.HasStagedWorkers() {
 		return stagedUpgradeProceed, nil
 	}
