@@ -257,7 +257,7 @@ func TestStagedUpgradeDecision(t *testing.T) {
 		},
 		{
 			// Before the state is ready, the difference holds the version change of the upgrade, so the
-			// message keeps naming --upgrade.
+			// message still names --upgrade.
 			name:        "a change before the state is ready, plain apply: refuse, name --upgrade",
 			state:       stagedState(false, pending),
 			phase:       cluster.OperationPhaseAll,

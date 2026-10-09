@@ -609,7 +609,7 @@ func (c *ClusterCreator) stagedUpgradeDecision(
 		return stagedUpgradeProceed, rejectIncompleteStagedUpgrade(upgradeState, changes)
 	}
 
-	// Before the noop of --skip-nodes-upgrade, which reports success and ignores the change.
+	// This test comes before the noop of --skip-nodes-upgrade, which reports success and ignores the change.
 	if len(changes) != 0 {
 		return stagedUpgradeProceed, errConfigChangedWhileStaged()
 	}
@@ -665,7 +665,7 @@ func (c *ClusterCreator) stagedUpgradeNodeDecision(
 // command that continues the rollout refuses the change, so the message gives the full path.
 func errConfigChangedWhileStaged() error {
 	return fmt.Errorf(
-		"%w: configuration changed while workers are pending, revert the change, upgrade every pending worker with "+
+		"%w: the configuration changed while workers are pending, revert the change, upgrade every pending worker with "+
 			"'furyctl apply --upgrade' or 'furyctl apply --upgrade-node <node>', then restore the change and "+
 			"run 'furyctl apply'",
 		errStagedUpgrade,
