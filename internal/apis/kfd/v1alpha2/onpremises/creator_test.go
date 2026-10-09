@@ -127,6 +127,8 @@ func TestStagedUpgradeDecision(t *testing.T) {
 		{"ready changed config", ClusterCreator{upgrade: true}, ready, matchingVersion, stagedUpgradeProceed, true, "revert the change"},
 		// Every command that continues the rollout refuses a change, so each message gives the same path out.
 		{"ready changed config, plain apply", ClusterCreator{}, ready, onlyDefaults, stagedUpgradeProceed, true, "revert the change"},
+		// Before the state is ready, the difference holds the version change, so the message names --upgrade.
+		{"version change before the state is ready, plain apply", ClusterCreator{}, incomplete, matchingVersion, stagedUpgradeProceed, true, "a worker upgrade is pending"},
 		{"ready changed config, skip workers", ClusterCreator{upgrade: true, skipNodesUpgrade: true}, ready, onlyDefaults, stagedUpgradeProceed, true, "revert the change"},
 		{"ready changed config, selected worker", ClusterCreator{upgradeNode: "worker-a"}, ready, onlyDefaults, stagedUpgradeProceed, true, "revert the change"},
 		{"ready selected worker", ClusterCreator{upgradeNode: "worker-a"}, ready, nil, stagedUpgradeResumeNode, false, ""},

@@ -256,6 +256,16 @@ func TestStagedUpgradeDecision(t *testing.T) {
 			errContains: "did not complete",
 		},
 		{
+			// Before the state is ready, the difference holds the version change of the upgrade, so the
+			// message keeps naming --upgrade.
+			name:        "a change before the state is ready, plain apply: refuse, name --upgrade",
+			state:       stagedState(false, pending),
+			phase:       cluster.OperationPhaseAll,
+			changes:     versionChange,
+			wantErr:     true,
+			errContains: "a worker upgrade is pending",
+		},
+		{
 			// A plain apply, --upgrade, --skip-nodes-upgrade and --upgrade-node all refuse a change while
 			// workers are pending. Each message gives the same path out.
 			name:        "a change while workers are pending, plain apply: refuse with the path out",

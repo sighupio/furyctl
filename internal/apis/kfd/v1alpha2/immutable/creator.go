@@ -665,7 +665,7 @@ func (c *ClusterCreator) stagedUpgradeNodeDecision(
 // command that continues the rollout refuses the change, so the message gives the full path.
 func errConfigChangedWhileStaged() error {
 	return fmt.Errorf(
-		"%w: configuration changed while workers are pending, revert the change, upgrade the workers with "+
+		"%w: configuration changed while workers are pending, revert the change, upgrade every pending worker with "+
 			"'furyctl apply --upgrade' or 'furyctl apply --upgrade-node <node>', then restore the change and "+
 			"run 'furyctl apply'",
 		errStagedUpgrade,
