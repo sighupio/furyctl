@@ -243,9 +243,6 @@ func (c *ClusterCreator) Create(startFrom string, _, podRunningCheckTimeout int)
 
 		switch action {
 		case stagedUpgradeProceed:
-			if err := c.validateUpgradeNodeChanges(status.Diffs); err != nil {
-				return err
-			}
 
 		case stagedUpgradeResumeBatch:
 			return c.resumeStagedWorkerBatch(kubernetes, existingUpgradeState, renderedConfig)
@@ -632,7 +629,7 @@ func (c *ClusterCreator) stagedUpgradeDecision(
 		)
 	}
 	if upgradeState == nil || !upgradeState.HasStagedWorkers() {
-		return stagedUpgradeProceed, nil
+		return stagedUpgradeProceed, c.validateUpgradeNodeChanges(changes)
 	}
 	if !c.upgrade && c.upgradeNode == "" {
 		return stagedUpgradeProceed, fmt.Errorf(

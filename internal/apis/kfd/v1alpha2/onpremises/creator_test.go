@@ -140,6 +140,9 @@ func TestStagedUpgradeDecision(t *testing.T) {
 		{"post apply phases before finalize", ClusterCreator{upgrade: true, postApplyPhases: []string{"distribution"}}, incomplete, matchingVersion, stagedUpgradeProceed, true, "--post-apply-phases"},
 		{"selected worker after an upgrade that stopped before staging", ClusterCreator{upgradeNode: "worker-a"}, stoppedBeforeStaging, matchingVersion, stagedUpgradeProceed, true, "did not complete"},
 		{"selected worker after a stopped upgrade with no version change", ClusterCreator{upgradeNode: "worker-a"}, stoppedBeforeStaging, nil, stagedUpgradeProceed, false, ""},
+		// A run for one host with no staged worker goes to the phases, so it must find no change.
+		{"selected worker, no state, a change", ClusterCreator{upgradeNode: "worker-a", phase: cluster.OperationPhaseAll}, nil, onlyDefaults, stagedUpgradeProceed, true, "run 'furyctl apply' to"},
+		{"selected worker, no staged worker, a change", ClusterCreator{upgradeNode: "worker-a", phase: cluster.OperationPhaseAll}, &upgrade.State{Phases: completedStagedState(nil).Phases}, onlyDefaults, stagedUpgradeProceed, true, "run 'furyctl apply' to"},
 		{"selected worker after an upgrade that stopped after staging", ClusterCreator{upgradeNode: "worker-a"}, failedPhase, matchingVersion, stagedUpgradeProceed, true, "did not complete"},
 		// The refusal comes before the test of the transition. The next run gives that error.
 		{"selected worker after a stopped upgrade to another version", ClusterCreator{upgradeNode: "worker-a"}, failedPhase, otherVersion, stagedUpgradeProceed, true, "did not complete"},
