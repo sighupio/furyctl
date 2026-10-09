@@ -64,6 +64,7 @@ var (
 	ErrUpgradeNodeUnsupported = errors.New("unsupported --upgrade-node host")
 	ErrClusterNotFound        = errors.New("cluster not found")
 	errStagedUpgrade          = errors.New("staged worker upgrade")
+	errUpgradeNodeChanges     = errors.New("--upgrade-node does not apply configuration changes")
 )
 
 type ClusterCreator struct {
@@ -474,7 +475,8 @@ func (c *ClusterCreator) newDistributionPhase(
 // routeStagedUpgrade reads the upgrade state of the cluster, and it acts on any staged worker
 // that the state holds. The first result reports whether this run is complete.
 //
-// A cluster with no staged worker gives false, and the phases then run as usual.
+// A cluster with no staged worker gives false, and the phases then run as usual. A run for one
+// host that goes to the phases must find no configuration change, see validateUpgradeNodeChanges.
 func (c *ClusterCreator) routeStagedUpgrade(
 	kubernetes stagedWorkersUpgrader,
 	renderedConfig map[string]any,
@@ -487,7 +489,7 @@ func (c *ClusterCreator) routeStagedUpgrade(
 	}
 
 	if !found {
-		return false, nil
+		return false, c.validateUpgradeNodeChanges(changes)
 	}
 
 	action, err := c.stagedUpgradeDecision(upgradeState, changes, startFrom)
@@ -512,7 +514,7 @@ func (c *ClusterCreator) routeStagedUpgrade(
 
 	switch action {
 	case stagedUpgradeProceed:
-		return false, nil
+		return false, c.validateUpgradeNodeChanges(changes)
 
 	case stagedUpgradeResumeBatch:
 		return true, c.resumeStagedWorkerBatch(kubernetes, upgradeState, renderedConfig)
@@ -1173,6 +1175,29 @@ func (c *ClusterCreator) validateUpgradeNode(startFrom string) error {
 	}
 
 	return nil
+}
+
+// validateUpgradeNodeChanges refuses --upgrade-node when the configuration changed. The run
+// applies only the playbook of one host, and then stores the configuration as applied, so no
+// later apply or diff sees the change. The OnPremises kind has its own copy of this rule.
+func (c *ClusterCreator) validateUpgradeNodeChanges(changes r3diff.Changelog) error {
+	if c.upgradeNode == "" || len(changes) == 0 {
+		return nil
+	}
+
+	// A plain apply refuses a version change, see the preupgrade phase.
+	if len(changes.Filter([]string{"spec", "distributionVersion"})) != 0 {
+		return fmt.Errorf(
+			"%w: the distribution version changed, run 'furyctl apply --upgrade --skip-nodes-upgrade' "+
+				"to upgrade the control plane, then use --upgrade-node",
+			errUpgradeNodeChanges,
+		)
+	}
+
+	return fmt.Errorf(
+		"%w: the configuration changed, run 'furyctl apply' to apply the changes, then use --upgrade-node",
+		errUpgradeNodeChanges,
+	)
 }
 
 // upgradeNodeRole resolves the role of the --upgrade-node host. Only a worker and a
