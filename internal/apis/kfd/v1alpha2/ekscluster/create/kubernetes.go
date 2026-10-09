@@ -128,7 +128,7 @@ func (k *Kubernetes) Exec(startFrom string, upgradeState *upgrade.State) error {
 	}
 
 	if k.DryRun {
-		logrus.Info("Kubernetes cluster created successfully (dry-run mode)")
+		logrus.Info("Kubernetes cluster configured successfully (dry-run mode)")
 
 		return nil
 	}
@@ -137,7 +137,7 @@ func (k *Kubernetes) Exec(startFrom string, upgradeState *upgrade.State) error {
 		return fmt.Errorf("error running post-kubernetes phase: %w", err)
 	}
 
-	logrus.Info("Kubernetes cluster created successfully")
+	logrus.Info("Kubernetes cluster configured successfully")
 
 	return nil
 }

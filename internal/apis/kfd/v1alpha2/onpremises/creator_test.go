@@ -95,6 +95,16 @@ func TestStagedUpgradeDecision(t *testing.T) {
 	incomplete := completedStagedState(map[string]upgrade.PhaseStatus{"worker-a": upgrade.PhaseStatusPending})
 	ready := completedStagedState(map[string]upgrade.PhaseStatus{"worker-a": upgrade.PhaseStatusPending})
 	ready.StagedWorkers.ReadyForResume = true
+	failedPhase := completedStagedState(map[string]upgrade.PhaseStatus{"worker-a": upgrade.PhaseStatusPending})
+	failedPhase.Phases.Distribution.Status = upgrade.PhaseStatusFailed
+	stoppedBeforeStaging := &upgrade.State{Phases: completedStagedState(nil).Phases}
+	stoppedBeforeStaging.Phases.PreKubernetes.Status = upgrade.PhaseStatusFailed
+	stoppedBeforeStaging.Phases.Kubernetes.Status = upgrade.PhaseStatusPending
+	otherVersion := r3diff.Changelog{{
+		Path: []string{"spec", "distributionVersion"},
+		From: "v1.33.1",
+		To:   "v1.35.0",
+	}}
 
 	tests := []struct {
 		name        string
@@ -124,6 +134,18 @@ func TestStagedUpgradeDecision(t *testing.T) {
 		{"forced phase", ClusterCreator{upgrade: true, phase: "distribution", force: []string{"upgrades"}}, ready, nil, stagedUpgradeProceed, false, ""},
 		{"post apply phases forced for all", ClusterCreator{upgrade: true, postApplyPhases: []string{"distribution"}, force: []string{"all"}}, ready, nil, stagedUpgradeProceed, false, ""},
 		{"forced phase with changes", ClusterCreator{upgrade: true, phase: "distribution", force: []string{"upgrades"}}, ready, matchingVersion, stagedUpgradeProceed, true, "configuration changed"},
+		// stagedUpgradeDecision refuses a selected phase also when the rollout is not ready.
+		{"selected phase with a failed phase", ClusterCreator{upgrade: true, phase: "distribution"}, failedPhase, matchingVersion, stagedUpgradeProceed, true, "without --phase"},
+		{"selected phase before finalize", ClusterCreator{upgrade: true, phase: "distribution"}, incomplete, matchingVersion, stagedUpgradeProceed, true, "without --phase"},
+		{"post apply phases before finalize", ClusterCreator{upgrade: true, postApplyPhases: []string{"distribution"}}, incomplete, matchingVersion, stagedUpgradeProceed, true, "--post-apply-phases"},
+		{"selected worker after an upgrade that stopped before staging", ClusterCreator{upgradeNode: "worker-a"}, stoppedBeforeStaging, matchingVersion, stagedUpgradeProceed, true, "did not complete"},
+		{"selected worker after a stopped upgrade with no version change", ClusterCreator{upgradeNode: "worker-a"}, stoppedBeforeStaging, nil, stagedUpgradeProceed, false, ""},
+		// A run for one host with no staged worker goes to the phases, so it must find no change.
+		{"selected worker, no state, a change", ClusterCreator{upgradeNode: "worker-a", phase: cluster.OperationPhaseAll}, nil, onlyDefaults, stagedUpgradeProceed, true, "run 'furyctl apply' to"},
+		{"selected worker, no staged worker, a change", ClusterCreator{upgradeNode: "worker-a", phase: cluster.OperationPhaseAll}, &upgrade.State{Phases: completedStagedState(nil).Phases}, onlyDefaults, stagedUpgradeProceed, true, "run 'furyctl apply' to"},
+		{"selected worker after an upgrade that stopped after staging", ClusterCreator{upgradeNode: "worker-a"}, failedPhase, matchingVersion, stagedUpgradeProceed, true, "did not complete"},
+		// The refusal comes before the test of the transition. The next run gives that error.
+		{"selected worker after a stopped upgrade to another version", ClusterCreator{upgradeNode: "worker-a"}, failedPhase, otherVersion, stagedUpgradeProceed, true, "did not complete"},
 	}
 
 	for _, test := range tests {
@@ -146,6 +168,71 @@ func TestStagedUpgradeDecision(t *testing.T) {
 		stagedUpgradeDecision(ready, nil, "distribution")
 	assert.NoError(t, err)
 	assert.Equal(t, stagedUpgradeProceed, action)
+}
+
+// persistStagedUpgradeReadyAfterPhases stores only when the run has staged workers and every
+// tracked phase succeeded, and never in a dry run.
+func TestPersistStagedUpgradeReadyAfterPhases(t *testing.T) {
+	t.Parallel()
+
+	pending := map[string]upgrade.PhaseStatus{"worker-a": upgrade.PhaseStatusPending}
+
+	pendingPhase := completedStagedState(pending)
+	pendingPhase.Phases.Distribution.Status = upgrade.PhaseStatusPending
+
+	tests := []struct {
+		name      string
+		state     *upgrade.State
+		dryRun    bool
+		wantStore bool
+	}{
+		{name: "staged workers and every tracked phase succeeded", state: completedStagedState(pending), wantStore: true},
+		{name: "no staged worker", state: &upgrade.State{}},
+		{name: "a tracked phase did not succeed", state: pendingPhase},
+		{name: "dry run", state: completedStagedState(pending), dryRun: true},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+
+			upgradeStore := &fakeUpgradeStorer{}
+			configStore := &fakeStateStorer{}
+			creator := &ClusterCreator{
+				dryRun:            test.dryRun,
+				upgradeStateStore: upgradeStore,
+				stateStore:        configStore,
+				renderedConfig:    map[string]any{"spec": "target"},
+			}
+
+			require.NoError(t, creator.persistStagedUpgradeReadyAfterPhases(test.state))
+
+			if !test.wantStore {
+				assert.Zero(t, configStore.storeConfigCalls)
+				assert.Empty(t, upgradeStore.storedReadyStates)
+
+				return
+			}
+
+			assert.Equal(t, 1, configStore.storeConfigCalls)
+			assert.Equal(t, []bool{true}, upgradeStore.storedReadyStates)
+		})
+	}
+}
+
+// stagedWorkersAdvice tells the operator how to continue only when workers are staged.
+func TestStagedWorkersAdvice(t *testing.T) {
+	t.Parallel()
+
+	errStep := errors.New("error while executing plugins phase")
+
+	staged := stagedWorkersAdvice(errStep, completedStagedState(map[string]upgrade.PhaseStatus{
+		"worker-a": upgrade.PhaseStatusPending,
+	}))
+	require.ErrorIs(t, staged, errStep)
+	assert.Contains(t, staged.Error(), "Run 'furyctl apply --upgrade' to upgrade them")
+
+	assert.Equal(t, errStep, stagedWorkersAdvice(errStep, &upgrade.State{}))
 }
 
 func TestResumeStagedWorkers(t *testing.T) {
@@ -488,4 +575,54 @@ func TestNewDistributionPhaseKeepsTheStorageSkipper(t *testing.T) {
 
 	_, ok := any(phase).(commcreate.StorageSkipper)
 	assert.False(t, ok, "the decorator hides StorageSkipper, use c.distribution")
+}
+
+// A run for one host applies only its playbook, and then stores the configuration as applied.
+// A change in the configuration is then lost, so the run refuses it. A run of a phase that does
+// not use --upgrade-node keeps its changes.
+func TestValidateUpgradeNodeChanges(t *testing.T) {
+	t.Parallel()
+
+	changes := r3diff.Changelog{{
+		Type: "create",
+		Path: []string{"spec", "distribution", "customPatches"},
+		To:   map[string]any{},
+	}}
+
+	versionChange := r3diff.Changelog{{
+		Path: []string{"spec", "distributionVersion"},
+		From: "v1.35.1",
+		To:   "v1.36.0",
+	}}
+
+	tests := []struct {
+		name    string
+		creator ClusterCreator
+		changes r3diff.Changelog
+		wantErr string
+	}{
+		{"no host, a change", ClusterCreator{phase: cluster.OperationPhaseAll}, changes, ""},
+		{"a host, no change", ClusterCreator{upgradeNode: "worker-a", phase: cluster.OperationPhaseAll}, nil, ""},
+		{"a host and a change", ClusterCreator{upgradeNode: "worker-a", phase: cluster.OperationPhaseAll}, changes, "run 'furyctl apply' to"},
+		{"a host and a change, kubernetes phase", ClusterCreator{upgradeNode: "worker-a", phase: cluster.OperationPhaseKubernetes}, changes, "run 'furyctl apply' to"},
+		{"a host and a change, distribution phase", ClusterCreator{upgradeNode: "worker-a", phase: cluster.OperationPhaseDistribution}, changes, ""},
+		// A plain apply refuses a version change, so the advice names the upgrade.
+		{"a host and a version change", ClusterCreator{upgradeNode: "worker-a", phase: cluster.OperationPhaseAll}, versionChange, "--upgrade --skip-nodes-upgrade"},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+
+			err := test.creator.validateUpgradeNodeChanges(test.changes)
+			if test.wantErr != "" {
+				assert.ErrorIs(t, err, errUpgradeNodeChanges)
+				assert.ErrorContains(t, err, test.wantErr)
+
+				return
+			}
+
+			assert.NoError(t, err)
+		})
+	}
 }
