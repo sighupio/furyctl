@@ -573,3 +573,53 @@ func TestNewDistributionPhaseKeepsTheStorageSkipper(t *testing.T) {
 	_, ok := any(phase).(commcreate.StorageSkipper)
 	assert.False(t, ok, "the decorator hides StorageSkipper, use c.distribution")
 }
+
+// A run for one host applies only its playbook, and then stores the configuration as applied.
+// A change in the configuration is then lost, so the run refuses it. A run of a phase that does
+// not use --upgrade-node keeps its changes.
+func TestValidateUpgradeNodeChanges(t *testing.T) {
+	t.Parallel()
+
+	changes := r3diff.Changelog{{
+		Type: "create",
+		Path: []string{"spec", "distribution", "customPatches"},
+		To:   map[string]any{},
+	}}
+
+	versionChange := r3diff.Changelog{{
+		Path: []string{"spec", "distributionVersion"},
+		From: "v1.35.1",
+		To:   "v1.36.0",
+	}}
+
+	tests := []struct {
+		name    string
+		creator ClusterCreator
+		changes r3diff.Changelog
+		wantErr string
+	}{
+		{"no host, a change", ClusterCreator{phase: cluster.OperationPhaseAll}, changes, ""},
+		{"a host, no change", ClusterCreator{upgradeNode: "worker-a", phase: cluster.OperationPhaseAll}, nil, ""},
+		{"a host and a change", ClusterCreator{upgradeNode: "worker-a", phase: cluster.OperationPhaseAll}, changes, "run 'furyctl apply' to"},
+		{"a host and a change, kubernetes phase", ClusterCreator{upgradeNode: "worker-a", phase: cluster.OperationPhaseKubernetes}, changes, "run 'furyctl apply' to"},
+		{"a host and a change, distribution phase", ClusterCreator{upgradeNode: "worker-a", phase: cluster.OperationPhaseDistribution}, changes, ""},
+		// A plain apply refuses a version change, so the advice names the upgrade.
+		{"a host and a version change", ClusterCreator{upgradeNode: "worker-a", phase: cluster.OperationPhaseAll}, versionChange, "--upgrade --skip-nodes-upgrade"},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+
+			err := test.creator.validateUpgradeNodeChanges(test.changes)
+			if test.wantErr != "" {
+				assert.ErrorIs(t, err, errUpgradeNodeChanges)
+				assert.ErrorContains(t, err, test.wantErr)
+
+				return
+			}
+
+			assert.NoError(t, err)
+		})
+	}
+}

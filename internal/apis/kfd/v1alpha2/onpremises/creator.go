@@ -43,9 +43,10 @@ const (
 )
 
 var (
-	ErrUnsupportedPhase = errors.New("unsupported phase")
-	ErrAbortedByUser    = errors.New("operation aborted by user")
-	errStagedUpgrade    = errors.New("staged worker upgrade")
+	ErrUnsupportedPhase   = errors.New("unsupported phase")
+	ErrAbortedByUser      = errors.New("operation aborted by user")
+	errStagedUpgrade      = errors.New("staged worker upgrade")
+	errUpgradeNodeChanges = errors.New("--upgrade-node does not apply configuration changes")
 )
 
 type ClusterCreator struct {
@@ -242,6 +243,9 @@ func (c *ClusterCreator) Create(startFrom string, _, podRunningCheckTimeout int)
 
 		switch action {
 		case stagedUpgradeProceed:
+			if err := c.validateUpgradeNodeChanges(status.Diffs); err != nil {
+				return err
+			}
 
 		case stagedUpgradeResumeBatch:
 			return c.resumeStagedWorkerBatch(kubernetes, existingUpgradeState, renderedConfig)
@@ -702,6 +706,33 @@ func (c *ClusterCreator) stagedUpgradeDecision(
 		return stagedUpgradeProceed, nil
 	}
 	return stagedUpgradeResumeBatch, nil
+}
+
+// validateUpgradeNodeChanges refuses --upgrade-node when the configuration changed. The run
+// applies only the playbook of one host, and then stores the configuration as applied, so no
+// later apply or diff sees the change. The Immutable kind has its own copy of this rule.
+//
+// A run with --phase distribution or --phase plugins does not use --upgrade-node, so it keeps
+// its changes.
+func (c *ClusterCreator) validateUpgradeNodeChanges(changes r3diff.Changelog) error {
+	if c.upgradeNode == "" || len(changes) == 0 ||
+		(c.phase != cluster.OperationPhaseAll && c.phase != cluster.OperationPhaseKubernetes) {
+		return nil
+	}
+
+	// A plain apply refuses a version change, see the preupgrade phase.
+	if len(changes.Filter([]string{"spec", "distributionVersion"})) != 0 {
+		return fmt.Errorf(
+			"%w: the distribution version changed; run 'furyctl apply --upgrade --skip-nodes-upgrade' "+
+				"to upgrade the control plane, then use --upgrade-node",
+			errUpgradeNodeChanges,
+		)
+	}
+
+	return fmt.Errorf(
+		"%w: the configuration changed; run 'furyctl apply' to apply the changes, then use --upgrade-node",
+		errUpgradeNodeChanges,
+	)
 }
 
 // rejectIncompleteStagedUpgrade requires the recorded version change to continue.
