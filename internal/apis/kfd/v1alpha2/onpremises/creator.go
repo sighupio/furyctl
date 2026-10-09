@@ -632,6 +632,10 @@ func (c *ClusterCreator) stagedUpgradeDecision(
 		return stagedUpgradeProceed, c.validateUpgradeNodeChanges(changes)
 	}
 	if !c.upgrade && c.upgradeNode == "" {
+		if upgradeState.StagedWorkers.ReadyForResume && len(changes) != 0 {
+			return stagedUpgradeProceed, errConfigChangedWhileStaged()
+		}
+
 		return stagedUpgradeProceed, fmt.Errorf(
 			"%w: a worker upgrade is pending; run 'furyctl apply --upgrade' to continue",
 			errStagedUpgrade,
@@ -646,10 +650,7 @@ func (c *ClusterCreator) stagedUpgradeDecision(
 			return stagedUpgradeFinalize, nil
 		}
 		if len(changes) != 0 {
-			return stagedUpgradeProceed, fmt.Errorf(
-				"%w: configuration changed while workers are pending; run 'furyctl apply --upgrade' before using --upgrade-node",
-				errStagedUpgrade,
-			)
+			return stagedUpgradeProceed, errConfigChangedWhileStaged()
 		}
 		if !upgradeState.StagedWorkers.ReadyForResume {
 			return stagedUpgradeProceed, rejectIncompleteStagedUpgrade(upgradeState, changes)
@@ -686,15 +687,12 @@ func (c *ClusterCreator) stagedUpgradeDecision(
 
 		return stagedUpgradeProceed, rejectIncompleteStagedUpgrade(upgradeState, changes)
 	}
+	// Before the noop of --skip-nodes-upgrade, which reports success and ignores the change.
+	if len(changes) != 0 {
+		return stagedUpgradeProceed, errConfigChangedWhileStaged()
+	}
 	if c.skipNodesUpgrade && !phaseSelected {
 		return stagedUpgradeNoop, nil
-	}
-	if len(changes) != 0 {
-		return stagedUpgradeProceed, fmt.Errorf(
-			"%w: configuration changed while workers are pending; "+
-				"complete the staged worker upgrade before changing configuration",
-			errStagedUpgrade,
-		)
 	}
 	if phaseSelected {
 		logrus.Warn("Worker nodes have not been upgraded yet, but the force flag was set, so the process will continue. " +
@@ -729,6 +727,17 @@ func (c *ClusterCreator) validateUpgradeNodeChanges(changes r3diff.Changelog) er
 	return fmt.Errorf(
 		"%w: the configuration changed; run 'furyctl apply' to apply the changes, then use --upgrade-node",
 		errUpgradeNodeChanges,
+	)
+}
+
+// errConfigChangedWhileStaged refuses a configuration change while workers are pending. Every
+// command that continues the rollout refuses the change, so the message gives the full path.
+func errConfigChangedWhileStaged() error {
+	return fmt.Errorf(
+		"%w: configuration changed while workers are pending; revert the change, upgrade the workers with "+
+			"'furyctl apply --upgrade' or 'furyctl apply --upgrade-node <node>', then restore the change and "+
+			"run 'furyctl apply'",
+		errStagedUpgrade,
 	)
 }
 

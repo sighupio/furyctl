@@ -124,7 +124,11 @@ func TestStagedUpgradeDecision(t *testing.T) {
 		{"incomplete changes without version bump", ClusterCreator{upgrade: true}, incomplete, onlyDefaults, stagedUpgradeProceed, true, "does not request the recorded transition"},
 		{"ready batch resume", ClusterCreator{upgrade: true}, ready, nil, stagedUpgradeResumeBatch, false, ""},
 		{"ready skip workers", ClusterCreator{upgrade: true, skipNodesUpgrade: true}, ready, nil, stagedUpgradeNoop, false, ""},
-		{"ready changed config", ClusterCreator{upgrade: true}, ready, matchingVersion, stagedUpgradeProceed, true, "configuration changed"},
+		{"ready changed config", ClusterCreator{upgrade: true}, ready, matchingVersion, stagedUpgradeProceed, true, "revert the change"},
+		// Every command that continues the rollout refuses a change, so each message gives the same path out.
+		{"ready changed config, plain apply", ClusterCreator{}, ready, onlyDefaults, stagedUpgradeProceed, true, "revert the change"},
+		{"ready changed config, skip workers", ClusterCreator{upgrade: true, skipNodesUpgrade: true}, ready, onlyDefaults, stagedUpgradeProceed, true, "revert the change"},
+		{"ready changed config, selected worker", ClusterCreator{upgradeNode: "worker-a"}, ready, onlyDefaults, stagedUpgradeProceed, true, "revert the change"},
 		{"ready selected worker", ClusterCreator{upgradeNode: "worker-a"}, ready, nil, stagedUpgradeResumeNode, false, ""},
 		{"ready selected worker with skip", ClusterCreator{upgradeNode: "worker-a", skipNodesUpgrade: true}, ready, nil, stagedUpgradeResumeNode, false, ""},
 		{"selected worker changed config", ClusterCreator{upgradeNode: "worker-a"}, ready, matchingVersion, stagedUpgradeProceed, true, "configuration changed"},

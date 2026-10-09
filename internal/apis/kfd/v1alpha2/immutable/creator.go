@@ -558,6 +558,10 @@ func (c *ClusterCreator) stagedUpgradeDecision(
 	}
 
 	if !c.upgrade && c.upgradeNode == "" {
+		if upgradeState.StagedWorkers.ReadyForResume && len(changes) != 0 {
+			return stagedUpgradeProceed, errConfigChangedWhileStaged()
+		}
+
 		return stagedUpgradeProceed, fmt.Errorf(
 			"%w: a worker upgrade is pending, run 'furyctl apply --upgrade' to continue",
 			errStagedUpgrade,
@@ -605,16 +609,13 @@ func (c *ClusterCreator) stagedUpgradeDecision(
 		return stagedUpgradeProceed, rejectIncompleteStagedUpgrade(upgradeState, changes)
 	}
 
-	if c.skipNodesUpgrade {
-		return stagedUpgradeNoop, nil
+	// Before the noop of --skip-nodes-upgrade, which reports success and ignores the change.
+	if len(changes) != 0 {
+		return stagedUpgradeProceed, errConfigChangedWhileStaged()
 	}
 
-	if len(changes) != 0 {
-		return stagedUpgradeProceed, fmt.Errorf(
-			"%w: configuration changed while workers are pending, "+
-				"complete the staged worker upgrade before changing configuration",
-			errStagedUpgrade,
-		)
+	if c.skipNodesUpgrade {
+		return stagedUpgradeNoop, nil
 	}
 
 	return stagedUpgradeResumeBatch, nil
@@ -645,11 +646,7 @@ func (c *ClusterCreator) stagedUpgradeNodeDecision(
 	}
 
 	if len(changes) != 0 {
-		return stagedUpgradeProceed, fmt.Errorf(
-			"%w: configuration changed while workers are pending, "+
-				"run 'furyctl apply --upgrade' before using --upgrade-node",
-			errStagedUpgrade,
-		)
+		return stagedUpgradeProceed, errConfigChangedWhileStaged()
 	}
 
 	if !upgradeState.StagedWorkers.ReadyForResume {
@@ -662,6 +659,17 @@ func (c *ClusterCreator) stagedUpgradeNodeDecision(
 	}
 
 	return stagedUpgradeResumeNode, nil
+}
+
+// errConfigChangedWhileStaged refuses a configuration change while workers are pending. Every
+// command that continues the rollout refuses the change, so the message gives the full path.
+func errConfigChangedWhileStaged() error {
+	return fmt.Errorf(
+		"%w: configuration changed while workers are pending, revert the change, upgrade the workers with "+
+			"'furyctl apply --upgrade' or 'furyctl apply --upgrade-node <node>', then restore the change and "+
+			"run 'furyctl apply'",
+		errStagedUpgrade,
+	)
 }
 
 // errUpgradeIncomplete refuses --upgrade-node while an upgrade is not complete.
