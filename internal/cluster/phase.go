@@ -340,6 +340,19 @@ func (op *OperationPhase) CopyPathsToConfig(cfg *templatex.Config) {
 	}
 }
 
+// CopyKFDToConfig exposes the distribution's kfd.yaml (distribution and module versions) to the
+// templates as `.kfd`.
+func (*OperationPhase) CopyKFDToConfig(cfg *templatex.Config, distroPath string) error {
+	kfd, err := distribution.KFDTemplateData(distroPath)
+	if err != nil {
+		return fmt.Errorf("error reading kfd for templates: %w", err)
+	}
+
+	cfg.Data["kfd"] = kfd
+
+	return nil
+}
+
 // AnsiblePlaybookCmd returns the command templated scripts (upgrade paths) must use to run
 // ansible-playbook. When ansible is host (not pinned) it is the bare `ansible-playbook`, preserving
 // existing behaviour; when mise-managed it is the venv python + entrypoint with the collections path, so

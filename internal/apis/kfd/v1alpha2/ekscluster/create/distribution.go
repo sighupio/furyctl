@@ -283,6 +283,10 @@ func (d *Distribution) coreDistribution(
 				"storageClassAvailable": true,
 			}
 
+			if err := d.CopyKFDToConfig(&mCfg, d.paths.DistroPath); err != nil {
+				return fmt.Errorf("error copying kfd to config: %w", err)
+			}
+
 			if err := d.CopyFromTemplate(
 				mCfg,
 				"distribution",

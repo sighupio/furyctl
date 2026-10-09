@@ -121,6 +121,13 @@ func (m *IACBuilder) Build() error {
 		"storageClassAvailable": true,
 	}
 
+	kfd, err := KFDTemplateData(m.distroPath)
+	if err != nil {
+		return fmt.Errorf("error reading kfd for templates: %w", err)
+	}
+
+	tmplCfg.Data["kfd"] = kfd
+
 	outYaml, err := yamlx.MarshalV2(tmplCfg)
 	if err != nil {
 		return fmt.Errorf("error marshaling template config: %w", err)

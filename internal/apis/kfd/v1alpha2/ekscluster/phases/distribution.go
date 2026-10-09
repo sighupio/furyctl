@@ -116,6 +116,10 @@ func (d *Distribution) PreparePostTerraform(
 		"storageClassAvailable": true,
 	}
 
+	if err := d.CopyKFDToConfig(&mCfg, d.DistroPath); err != nil {
+		return nil, fmt.Errorf("error copying kfd to config: %w", err)
+	}
+
 	if err = d.InjectStoredConfig(&mCfg); err != nil {
 		return nil, fmt.Errorf("error injecting stored config: %w", err)
 	}

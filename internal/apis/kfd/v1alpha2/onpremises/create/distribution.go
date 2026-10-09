@@ -182,6 +182,10 @@ func (d *Distribution) prepare() (templatex.Config, error) {
 		"storageClassAvailable": storageClassAvailable,
 	}
 
+	if err := d.CopyKFDToConfig(&mCfg, d.paths.DistroPath); err != nil {
+		return templatex.Config{}, fmt.Errorf("error copying kfd to config: %w", err)
+	}
+
 	mCfg, err = d.injectStoredConfig(mCfg)
 	if err != nil {
 		return templatex.Config{}, fmt.Errorf("error injecting stored config: %w", err)
