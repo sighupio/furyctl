@@ -256,6 +256,55 @@ func TestStagedUpgradeDecision(t *testing.T) {
 			errContains: "did not complete",
 		},
 		{
+			// Before the state is ready, the difference holds the version change of the upgrade, so the
+			// message still names --upgrade.
+			name:        "a change before the state is ready, plain apply: refuse, name --upgrade",
+			state:       stagedState(false, pending),
+			phase:       cluster.OperationPhaseAll,
+			changes:     versionChange,
+			wantErr:     true,
+			errContains: "a worker upgrade is pending",
+		},
+		{
+			// A plain apply, --upgrade, --skip-nodes-upgrade and --upgrade-node all refuse a change while
+			// workers are pending. Each message gives the same path out.
+			name:        "a change while workers are pending, plain apply: refuse with the path out",
+			state:       stagedState(true, pending),
+			phase:       cluster.OperationPhaseAll,
+			changes:     otherChange,
+			wantErr:     true,
+			errContains: "revert the change",
+		},
+		{
+			name:        "a change while workers are pending, --upgrade: refuse with the path out",
+			state:       stagedState(true, pending),
+			upgradeFlag: true,
+			phase:       cluster.OperationPhaseAll,
+			changes:     otherChange,
+			wantErr:     true,
+			errContains: "revert the change",
+		},
+		{
+			// The noop reported success and ignored the change.
+			name:             "a change while workers are pending, --skip-nodes-upgrade: refuse with the path out",
+			state:            stagedState(true, pending),
+			upgradeFlag:      true,
+			skipNodesUpgrade: true,
+			phase:            cluster.OperationPhaseAll,
+			changes:          otherChange,
+			wantErr:          true,
+			errContains:      "revert the change",
+		},
+		{
+			name:        "a change while workers are pending, --upgrade-node: refuse with the path out",
+			state:       stagedState(true, pending),
+			upgradeNode: "node1",
+			phase:       cluster.OperationPhaseAll,
+			changes:     otherChange,
+			wantErr:     true,
+			errContains: "revert the change",
+		},
+		{
 			// Without this refusal, the run upgrades only the load balancer and records the
 			// configuration as applied, but no phase applies the change.
 			name:        "a named load balancer with a configuration change: refuse",
