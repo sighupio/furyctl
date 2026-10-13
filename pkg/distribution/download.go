@@ -141,29 +141,12 @@ func (d *Downloader) DoDownload(
 		return DownloadResult{}, fmt.Errorf("%w: %v", ErrCreatingTempDir, err)
 	}
 
-	// The callers read the templates from RepoPath until furyctl exits, thus furyctl removes the
-	// folder when it exits. The registration comes first, so that a signal during the download
-	// also removes it.
+	// The callers read the templates from RepoPath until furyctl exits. The registration comes
+	// before the download, so that a failed or stopped download is also removed.
 	osx.RegisterTempDir(baseDst)
 
-	res, err := d.downloadTo(url, distroLocation, minimalConf, filepath.Join(baseDst, "data"))
-	if err != nil {
-		if errRm := osx.CleanupTempDir(baseDst); errRm != nil {
-			logrus.Debug(errRm)
-		}
-
-		return DownloadResult{}, err
-	}
-
-	return res, nil
-}
-
-func (d *Downloader) downloadTo(
-	url, distroLocation string,
-	minimalConf config.Furyctl,
-	dst string,
-) (DownloadResult, error) {
 	src := url
+	dst := filepath.Join(baseDst, "data")
 	logrus.Debugf("Downloading distribution from %s to %s", src, dst)
 
 	if err := d.client.Download(src, dst); err != nil {
@@ -198,7 +181,7 @@ func (d *Downloader) downloadTo(
 
 	kfdPath := filepath.Join(dst, "kfd.yaml")
 
-	_, err := os.Stat(kfdPath)
+	_, err = os.Stat(kfdPath)
 	if os.IsNotExist(err) {
 		if distroLocation == "" {
 			return DownloadResult{}, fmt.Errorf("%w: %s is not supported by furyctl, "+

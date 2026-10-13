@@ -57,10 +57,9 @@ func HandleSignals() {
 			f()
 		}
 
-		// The exit below skips the deferred removal in main. The removal comes after f: when a folder
-		// goes away, a command that reads it can fail and exit.
-		// ponytail: a signal during the copy of a local --distro-location can leave part of the folder,
-		// because the copy continues. Stop the copy first if that matters.
+		// The exit skips the deferred removal in main. Remove after f, so the lock file goes first.
+		// ponytail: the command keeps running meanwhile. A copy of a local --distro-location can
+		// leave part of the folder, and a render can log a missing-file error. Stop it first if needed.
 		osx.RemoveTempDirs()
 
 		os.Exit(1) //nolint:revive // deep-exit is acceptable in the signal handler.

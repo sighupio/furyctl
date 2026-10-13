@@ -55,8 +55,10 @@ func TestDoDownloadRemovesTempDirs(t *testing.T) {
 	osx.RemoveTempDirs()
 	requireEmpty()
 
-	// A download that fails after the copy removes its folder at once.
+	// A download that fails after the copy also removes its folder at exit.
 	_, err = d.DoDownload(emptyDistro, config.Furyctl{})
 	require.ErrorIs(t, err, dist.ErrUnsupportedVersion)
+
+	osx.RemoveTempDirs()
 	requireEmpty()
 }
