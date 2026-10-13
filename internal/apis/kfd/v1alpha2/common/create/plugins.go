@@ -20,6 +20,7 @@ import (
 	"github.com/sighupio/furyctl/internal/tool/shell"
 	execx "github.com/sighupio/furyctl/internal/x/exec"
 	iox "github.com/sighupio/furyctl/internal/x/io"
+	osx "github.com/sighupio/furyctl/internal/x/os"
 	templatex "github.com/sighupio/furyctl/pkg/template"
 	yamlx "github.com/sighupio/furyctl/pkg/x/yaml"
 )
@@ -117,6 +118,12 @@ func (p *Plugins) Exec() error {
 	outDirPath1, err := os.MkdirTemp("", "furyctl-plugins-")
 	if err != nil {
 		return fmt.Errorf("error creating temp dir: %w", err)
+	}
+
+	// The commands that come next run for minutes. A signal skips a defer. On a dry run, the template
+	// model writes tmpl-debug.log in this folder and tells the user its path.
+	if !p.dryRun {
+		osx.RegisterTempDir(outDirPath1)
 	}
 
 	confPath := filepath.Join(outDirPath1, "config.yaml")

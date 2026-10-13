@@ -24,6 +24,7 @@ import (
 	"github.com/sighupio/furyctl/internal/tool/mise"
 	execx "github.com/sighupio/furyctl/internal/x/exec"
 	iox "github.com/sighupio/furyctl/internal/x/io"
+	osx "github.com/sighupio/furyctl/internal/x/os"
 	dist "github.com/sighupio/furyctl/pkg/distribution"
 	netx "github.com/sighupio/furyctl/pkg/x/net"
 )
@@ -382,7 +383,8 @@ func (dd *Downloader) DownloadTools(kfd config.KFD, kind string) ([]string, erro
 		return uts, fmt.Errorf("error creating mise workdir: %w", err)
 	}
 
-	defer os.RemoveAll(workDir)
+	// A signal during the installation skips a defer.
+	osx.RegisterTempDir(workDir)
 
 	runner := mise.NewRunner(execx.NewStdExecutor(), mise.Paths{
 		Mise:       misePath,

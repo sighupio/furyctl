@@ -7,12 +7,15 @@
 package cluster_test
 
 import (
+	"os"
+	"path/filepath"
 	"testing"
 
 	r3diff "github.com/r3labs/diff/v3"
 	"github.com/stretchr/testify/require"
 
 	"github.com/sighupio/furyctl/internal/cluster"
+	templatex "github.com/sighupio/furyctl/pkg/template"
 )
 
 func TestAssertPhaseDiffs(t *testing.T) {
@@ -111,4 +114,28 @@ func TestAssertPhaseDiffs(t *testing.T) {
 			require.ErrorIs(t, err, tC.wantErr)
 		})
 	}
+}
+
+// TestCopyFromTemplate_RemovesTempDir checks that CopyFromTemplate removes the folder that holds the
+// rendered configuration.
+func TestCopyFromTemplate_RemovesTempDir(t *testing.T) {
+	tmpDir := t.TempDir()
+	t.Setenv("TMPDIR", tmpDir)
+
+	srcDir := t.TempDir()
+	require.NoError(t, os.WriteFile(filepath.Join(srcDir, "out.txt.tpl"), []byte("{{ .spec.name }}"), 0o644))
+
+	targetDir := t.TempDir()
+	cfg := templatex.Config{Data: map[string]map[any]any{"spec": {"name": "test"}}}
+
+	err := (&cluster.OperationPhase{}).CopyFromTemplate(cfg, "test", srcDir, targetDir, "")
+	require.NoError(t, err)
+
+	out, err := os.ReadFile(filepath.Join(targetDir, "out.txt"))
+	require.NoError(t, err)
+	require.Equal(t, "test", string(out))
+
+	left, err := filepath.Glob(filepath.Join(tmpDir, "furyctl-test-*"))
+	require.NoError(t, err)
+	require.Empty(t, left)
 }
