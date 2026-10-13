@@ -343,7 +343,7 @@ func (op *OperationPhase) CopyPathsToConfig(cfg *templatex.Config) {
 // CopyKFDToConfig exposes the distribution's kfd.yaml (distribution and module versions) to the
 // templates as `.kfd`.
 func (*OperationPhase) CopyKFDToConfig(cfg *templatex.Config, distroPath string) error {
-	kfd, err := distribution.KFDTemplateData(distroPath)
+	kfd, err := distribution.KFDData(distroPath)
 	if err != nil {
 		return fmt.Errorf("error reading kfd for templates: %w", err)
 	}

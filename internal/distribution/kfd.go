@@ -11,10 +11,10 @@ import (
 	yamlx "github.com/sighupio/furyctl/pkg/x/yaml"
 )
 
-// KFDTemplateData reads the distribution's kfd.yaml (distribution and module versions) so that it
+// KFDData reads the distribution's kfd.yaml (distribution and module versions) so that it
 // can be exposed to the templates as `.kfd`. It is read as a generic map rather than config.KFD so
 // that modules not yet modeled in furyctl are not silently dropped.
-func KFDTemplateData(distroPath string) (map[any]any, error) {
+func KFDData(distroPath string) (map[any]any, error) {
 	kfdPath := filepath.Join(distroPath, "kfd.yaml")
 
 	kfd, err := yamlx.FromFileV2[map[any]any](kfdPath)

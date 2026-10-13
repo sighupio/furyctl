@@ -16,7 +16,7 @@ import (
 	"github.com/sighupio/furyctl/internal/distribution"
 )
 
-func TestKFDTemplateData(t *testing.T) {
+func TestKFDData(t *testing.T) {
 	t.Parallel()
 
 	testCases := []struct {
@@ -63,7 +63,7 @@ modules:
 				require.NoError(t, os.WriteFile(filepath.Join(distroPath, "kfd.yaml"), []byte(*tC.kfd), 0o600))
 			}
 
-			got, err := distribution.KFDTemplateData(distroPath)
+			got, err := distribution.KFDData(distroPath)
 
 			if tC.wantErr {
 				require.Error(t, err)

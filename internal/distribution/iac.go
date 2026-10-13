@@ -121,7 +121,7 @@ func (m *IACBuilder) Build() error {
 		"storageClassAvailable": true,
 	}
 
-	kfd, err := KFDTemplateData(m.distroPath)
+	kfd, err := KFDData(m.distroPath)
 	if err != nil {
 		return fmt.Errorf("error reading kfd for templates: %w", err)
 	}
