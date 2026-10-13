@@ -11,9 +11,9 @@ import (
 	yamlx "github.com/sighupio/furyctl/pkg/x/yaml"
 )
 
-// KFDData reads the distribution's kfd.yaml (distribution and module versions) so that it
-// can be exposed to the templates as `.kfd`. It is read as a generic map rather than config.KFD so
-// that modules not yet modeled in furyctl are not silently dropped.
+// KFDData reads the distribution's kfd.yaml (distribution and module versions) so that it can be
+// exposed to the templates as `.kfd`. It is read as a generic map, with the same keys as the file,
+// because the template data is a map: reading it as config.KFD would need a conversion back to a map.
 func KFDData(distroPath string) (map[any]any, error) {
 	kfdPath := filepath.Join(distroPath, "kfd.yaml")
 

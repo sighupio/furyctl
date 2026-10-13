@@ -126,7 +126,7 @@ func TestOperationPhase_CopyKFDToConfig(t *testing.T) {
 		wantErr bool
 	}{
 		{
-			desc: "exposes version and every module, including ones not modeled in config.KFD",
+			desc: "exposes version and modules with the keys of the file",
 			kfd: new(`version: v1.36.0
 modules:
   monitoring: v4.3.0

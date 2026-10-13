@@ -26,7 +26,7 @@ func TestKFDData(t *testing.T) {
 		wantErr bool
 	}{
 		{
-			desc: "returns version and every module, including ones not modeled in config.KFD",
+			desc: "returns version and modules with the keys of the file",
 			kfd: new(`version: v1.36.0
 modules:
   monitoring: v4.3.0
