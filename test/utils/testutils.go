@@ -148,6 +148,9 @@ func CompileFuryctl(outputPath string) func(SpecContext) {
 func DownloadFuryDistribution(outDir, furyctlConfPath string) dist.DownloadResult {
 	distrodl := dist.NewCachingDownloader(netx.NewGoGetterClient(), outDir, git.ProtocolSSH, "")
 
+	// The test binary does not run the removal of main.go.
+	DeferCleanup(osx.RemoveTempDirs)
+
 	return Must1(distrodl.Download("", furyctlConfPath))
 }
 

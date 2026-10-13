@@ -25,6 +25,7 @@ import (
 	"github.com/sighupio/furyctl/cmd"
 	"github.com/sighupio/furyctl/internal/app"
 	execx "github.com/sighupio/furyctl/internal/x/exec"
+	osx "github.com/sighupio/furyctl/internal/x/os"
 )
 
 var (
@@ -78,6 +79,8 @@ func exec() int {
 	defer wg.Wait()
 
 	execx.HandleSignals()
+
+	defer osx.RemoveTempDirs()
 
 	if _, err := cmd.NewRootCmd().ExecuteC(); err != nil {
 		// The global logger writes to the terminal and to the log file. Before the root pre-run

@@ -24,7 +24,6 @@ import (
 	"github.com/sighupio/furyctl/internal/secrets"
 	cobrax "github.com/sighupio/furyctl/internal/x/cobra"
 	iox "github.com/sighupio/furyctl/internal/x/io"
-	osx "github.com/sighupio/furyctl/internal/x/os"
 	dist "github.com/sighupio/furyctl/pkg/distribution"
 	netx "github.com/sighupio/furyctl/pkg/x/net"
 	yamlx "github.com/sighupio/furyctl/pkg/x/yaml"
@@ -33,9 +32,6 @@ import (
 // ErrUnreadableField reports a field of the configuration file that holds a value furyctl cannot
 // read. Such fields decide which secrets a cluster needs, thus the command stops.
 var ErrUnreadableField = errors.New("cannot read the value of a field of the configuration file")
-
-// The name that DoDownload gives to the folder of a distribution that it writes: see readSchema.
-const tempFolderPrefix = "furyctl-"
 
 func NewSecretsCmd() *cobra.Command {
 	var cmdEvent analytics.Event
@@ -337,21 +333,6 @@ func readSchema(configPath string) (*secrets.Schema, error) {
 	if err != nil {
 		return nil, fmt.Errorf("error while downloading the distribution: %w", err)
 	}
-
-	// DoDownload writes the distribution to a folder of its own and gives no way to remove it. The
-	// schema is in memory after LoadSchema, thus the folder goes away with the run that made it.
-	// The name of the folder is not part of what DoDownload gives back, thus furyctl removes only a
-	// folder with the name that DoDownload uses: a removal of the wrong path takes the work of the
-	// user with it.
-	defer func() {
-		folder := filepath.Dir(res.RepoPath)
-
-		if strings.HasPrefix(filepath.Base(folder), tempFolderPrefix) {
-			if err := osx.CleanupTempDir(folder); err != nil {
-				logrus.Debugf("furyctl cannot remove the folder %s of the distribution: %v", folder, err)
-			}
-		}
-	}()
 
 	schema, err := secrets.LoadSchema(res.RepoPath, minimalConf)
 	if err != nil {
