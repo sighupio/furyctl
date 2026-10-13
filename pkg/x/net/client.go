@@ -60,6 +60,12 @@ type Client interface {
 	ClearItem(src string) error
 }
 
+// TopDotSkipper gives a Client that copies a local directory without the dot files and folders at its
+// top, for example .git.
+type TopDotSkipper interface {
+	WithoutTopDotFiles() Client
+}
+
 func WithLocalCache(c Client, dir string) Client {
 	return &LocalCacheClientDecorator{
 		client: c,

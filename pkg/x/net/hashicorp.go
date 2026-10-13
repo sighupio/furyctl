@@ -25,13 +25,23 @@ const headProbeTimeout = 10 * time.Second
 var ErrDownloadOptionsExhausted = errors.New("downloading options exhausted")
 
 type GoGetterClient struct {
-	protocols []string
+	protocols    []string
+	ignoreTopDot bool
 }
 
 func NewGoGetterClient() *GoGetterClient {
 	return &GoGetterClient{
 		protocols: []string{"", "git::", "file::", "http::", "s3::", "gcs::", "mercurial::"},
 	}
+}
+
+// WithoutTopDotFiles returns a new client that copies a local directory without the dot files and
+// folders at its top. The original client does not change.
+func (g *GoGetterClient) WithoutTopDotFiles() Client {
+	c := *g
+	c.ignoreTopDot = true
+
+	return &c
 }
 
 func (*GoGetterClient) Clear() error {
@@ -68,7 +78,8 @@ func (g *GoGetterClient) DownloadWithMode(
 			Mode: mode,
 			Getters: map[string]getter.Getter{
 				"file": &gogetterx.FileGetter{
-					Copy: true,
+					Copy:         true,
+					IgnoreTopDot: g.ignoreTopDot,
 				},
 				"git": new(getter.GitGetter),
 				"gcs": new(getter.GCSGetter),
