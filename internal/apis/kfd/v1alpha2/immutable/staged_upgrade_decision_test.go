@@ -115,6 +115,17 @@ func TestStagedUpgradeDecision(t *testing.T) {
 			wantErr:     true,
 		},
 		{
+			// The rollout stopped between the upgrade of its last worker and the delete of the state.
+			name: "every worker upgraded, plain apply: refuse, name --upgrade to complete",
+			state: stagedState(true, map[string]upgrade.PhaseStatus{
+				"node1": upgrade.PhaseStatusSuccess,
+				"node2": upgrade.PhaseStatusSuccess,
+			}),
+			phase:       cluster.OperationPhaseAll,
+			wantErr:     true,
+			errContains: "stopped after it upgraded every worker node",
+		},
+		{
 			name:        "ready to resume: upgrade every pending worker",
 			state:       stagedState(true, pending),
 			upgradeFlag: true,

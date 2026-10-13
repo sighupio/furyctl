@@ -95,6 +95,8 @@ func TestStagedUpgradeDecision(t *testing.T) {
 	incomplete := completedStagedState(map[string]upgrade.PhaseStatus{"worker-a": upgrade.PhaseStatusPending})
 	ready := completedStagedState(map[string]upgrade.PhaseStatus{"worker-a": upgrade.PhaseStatusPending})
 	ready.StagedWorkers.ReadyForResume = true
+	upgraded := completedStagedState(map[string]upgrade.PhaseStatus{"worker-a": upgrade.PhaseStatusSuccess})
+	upgraded.StagedWorkers.ReadyForResume = true
 	failedPhase := completedStagedState(map[string]upgrade.PhaseStatus{"worker-a": upgrade.PhaseStatusPending})
 	failedPhase.Phases.Distribution.Status = upgrade.PhaseStatusFailed
 	stoppedBeforeStaging := &upgrade.State{Phases: completedStagedState(nil).Phases}
@@ -117,6 +119,8 @@ func TestStagedUpgradeDecision(t *testing.T) {
 	}{
 		{"no staged state", ClusterCreator{upgrade: true}, nil, nil, stagedUpgradeProceed, false, ""},
 		{"plain apply", ClusterCreator{}, incomplete, nil, stagedUpgradeProceed, true, "worker upgrade is pending"},
+		// The rollout stopped between the upgrade of its last worker and the delete of the state.
+		{"every worker upgraded, plain apply", ClusterCreator{}, upgraded, nil, stagedUpgradeProceed, true, "stopped after it upgraded every worker node"},
 		{"finalize skipped workers", ClusterCreator{upgrade: true, skipNodesUpgrade: true}, incomplete, versionPlusDefaults, stagedUpgradeFinalize, false, ""},
 		{"recover finalization without diff", ClusterCreator{upgrade: true}, incomplete, nil, stagedUpgradeFinalize, false, ""},
 		{"finalize matching diff", ClusterCreator{upgrade: true}, incomplete, matchingVersion, stagedUpgradeFinalize, false, ""},
