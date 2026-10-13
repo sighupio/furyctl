@@ -16,6 +16,8 @@ import (
 	"time"
 
 	"github.com/sirupsen/logrus"
+
+	osx "github.com/sighupio/furyctl/internal/x/os"
 )
 
 //nolint:gochecknoglobals // The running commands are shared between all the command instances.
@@ -31,7 +33,8 @@ var (
 )
 
 // HandleSignals installs the handler for SIGINT and SIGTERM. The handler stops the running commands
-// and their descendants. Then it runs the OnStop function and exits furyctl with code 1.
+// and their descendants. Then it runs the OnStop function, removes the temporary folders and exits
+// furyctl with code 1.
 // A second signal kills the commands.
 func HandleSignals() {
 	sigs := make(chan os.Signal, 1)
@@ -53,6 +56,12 @@ func HandleSignals() {
 		if f != nil {
 			f()
 		}
+
+		// The exit below skips the deferred removal in main. The removal comes after f: when a folder
+		// goes away, a command that reads it can fail and exit.
+		// ponytail: a signal during the copy of a local --distro-location can leave part of the folder,
+		// because the copy continues. Stop the copy first if that matters.
+		osx.RemoveTempDirs()
 
 		os.Exit(1) //nolint:revive // deep-exit is acceptable in the signal handler.
 	}()

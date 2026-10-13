@@ -21,6 +21,7 @@ import (
 	idist "github.com/sighupio/furyctl/internal/distribution"
 	"github.com/sighupio/furyctl/internal/git"
 	iox "github.com/sighupio/furyctl/internal/x/io"
+	osx "github.com/sighupio/furyctl/internal/x/os"
 	netx "github.com/sighupio/furyctl/pkg/x/net"
 	yamlx "github.com/sighupio/furyctl/pkg/x/yaml"
 )
@@ -140,8 +141,29 @@ func (d *Downloader) DoDownload(
 		return DownloadResult{}, fmt.Errorf("%w: %v", ErrCreatingTempDir, err)
 	}
 
+	// The callers read the templates from RepoPath until furyctl exits, thus furyctl removes the
+	// folder when it exits. The registration comes first, so that a signal during the download
+	// also removes it.
+	osx.RegisterTempDir(baseDst)
+
+	res, err := d.downloadTo(url, distroLocation, minimalConf, filepath.Join(baseDst, "data"))
+	if err != nil {
+		if errRm := osx.CleanupTempDir(baseDst); errRm != nil {
+			logrus.Debug(errRm)
+		}
+
+		return DownloadResult{}, err
+	}
+
+	return res, nil
+}
+
+func (d *Downloader) downloadTo(
+	url, distroLocation string,
+	minimalConf config.Furyctl,
+	dst string,
+) (DownloadResult, error) {
 	src := url
-	dst := filepath.Join(baseDst, "data")
 	logrus.Debugf("Downloading distribution from %s to %s", src, dst)
 
 	if err := d.client.Download(src, dst); err != nil {
@@ -176,7 +198,7 @@ func (d *Downloader) DoDownload(
 
 	kfdPath := filepath.Join(dst, "kfd.yaml")
 
-	_, err = os.Stat(kfdPath)
+	_, err := os.Stat(kfdPath)
 	if os.IsNotExist(err) {
 		if distroLocation == "" {
 			return DownloadResult{}, fmt.Errorf("%w: %s is not supported by furyctl, "+
@@ -229,6 +251,8 @@ func (d *Downloader) applyCustomCompatibilityPatches(kfdManifest config.KFD, dst
 	if err != nil {
 		return fmt.Errorf("error creating temp dir: %w", err)
 	}
+
+	defer os.RemoveAll(tmpDir)
 
 	if err := d.client.ClearItem(d.customDistroPatchesPath); err != nil {
 		return fmt.Errorf("%w '%s': %w", ErrCannotDownloadDistribution, d.customDistroPatchesPath, err)
