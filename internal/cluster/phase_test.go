@@ -139,3 +139,71 @@ func TestCopyFromTemplate_RemovesTempDir(t *testing.T) {
 	require.NoError(t, err)
 	require.Empty(t, left)
 }
+
+func TestOperationPhase_CopyKFDToConfig(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		desc    string
+		kfd     *string
+		want    map[any]any
+		wantErr bool
+	}{
+		{
+			desc: "exposes version and modules with the keys of the file",
+			kfd: new(`version: v1.36.0
+modules:
+  monitoring: v4.3.0
+  utilities: v0.1.1
+  futuremodule: v0.0.1
+`),
+			want: map[any]any{
+				"version": "v1.36.0",
+				"modules": map[any]any{
+					"monitoring":   "v4.3.0",
+					"utilities":    "v0.1.1",
+					"futuremodule": "v0.0.1",
+				},
+			},
+		},
+		{
+			desc:    "fails when kfd.yaml is missing",
+			kfd:     nil,
+			wantErr: true,
+		},
+		{
+			desc:    "fails when kfd.yaml is not valid yaml",
+			kfd:     new("version: [v1.36.0"),
+			wantErr: true,
+		},
+	}
+
+	for _, tC := range testCases {
+		t.Run(tC.desc, func(t *testing.T) {
+			t.Parallel()
+
+			distroPath := t.TempDir()
+
+			if tC.kfd != nil {
+				require.NoError(t, os.WriteFile(filepath.Join(distroPath, "kfd.yaml"), []byte(*tC.kfd), 0o600))
+			}
+
+			cfg := templatex.Config{Data: map[string]map[any]any{
+				"checks": {"storageClassAvailable": true},
+			}}
+
+			err := (&cluster.OperationPhase{}).CopyKFDToConfig(&cfg, distroPath)
+
+			if tC.wantErr {
+				require.Error(t, err)
+				require.NotContains(t, cfg.Data, "kfd")
+
+				return
+			}
+
+			require.NoError(t, err)
+			require.Equal(t, tC.want, cfg.Data["kfd"])
+			require.Equal(t, map[any]any{"storageClassAvailable": true}, cfg.Data["checks"])
+		})
+	}
+}
