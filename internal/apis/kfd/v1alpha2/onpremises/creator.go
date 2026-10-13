@@ -636,6 +636,15 @@ func (c *ClusterCreator) stagedUpgradeDecision(
 			return stagedUpgradeProceed, errConfigChangedWhileStaged()
 		}
 
+		// The rollout stopped between the upgrade of its last worker and the delete of the state.
+		if upgradeState.AllStagedWorkersSucceeded() {
+			return stagedUpgradeProceed, fmt.Errorf(
+				"%w: the last upgrade stopped after it upgraded every worker node, "+
+					"run 'furyctl apply --upgrade' to complete it",
+				errStagedUpgrade,
+			)
+		}
+
 		return stagedUpgradeProceed, fmt.Errorf(
 			"%w: a worker upgrade is pending; run 'furyctl apply --upgrade' to continue",
 			errStagedUpgrade,
