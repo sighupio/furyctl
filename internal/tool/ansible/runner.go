@@ -79,7 +79,7 @@ func (r *Runner) Playbook(params ...string) ([]byte, error) {
 	defer r.deleteCmd(id)
 
 	if err := cmd.Run(); err != nil {
-		return out, fmt.Errorf("command execution failed: %w", err)
+		return out, err //nolint:wrapcheck // The error names the command.
 	}
 
 	out = cmd.Log.Out.Bytes()
@@ -99,7 +99,7 @@ func (r *Runner) Exec(params ...string) ([]byte, error) {
 	defer r.deleteCmd(id)
 
 	if err := cmd.Run(); err != nil {
-		return out, fmt.Errorf("command execution failed: %w", err)
+		return out, err //nolint:wrapcheck // The error names the command.
 	}
 
 	out = cmd.Log.Out.Bytes()

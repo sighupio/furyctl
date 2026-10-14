@@ -9,6 +9,7 @@ import (
 	"errors"
 	"os"
 	"slices"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -25,7 +26,7 @@ func TestNewErrCmdFailed(t *testing.T) {
 	err := execx.NewErrCmdFailed("foo", []string{"bar", "baz"}, ErrTest, nil)
 	require.Error(t, err)
 
-	wantErr := "foo bar baz: command failed - test error\n<nil>"
+	wantErr := "foo bar baz: command failed - test error"
 	assert.Equal(t, wantErr, err.Error())
 }
 
@@ -120,6 +121,16 @@ func Test_Cmd_Run(t *testing.T) {
 	}
 }
 
+func Test_Cmd_Run_ErrorNamesCommandOnce(t *testing.T) {
+	t.Parallel()
+
+	err := execx.NewCmd("false", execx.CmdOptions{Args: []string{"foo"}}).Run()
+	require.Error(t, err)
+
+	assert.Equal(t, 1, strings.Count(err.Error(), "false"), err.Error())
+	assert.Contains(t, err.Error(), "false foo: command failed")
+}
+
 func Test_Cmd_Stop(t *testing.T) {
 	t.Parallel()
 
@@ -154,18 +165,19 @@ func Test_Cmd_Stop(t *testing.T) {
 	}
 }
 
-func Test_CmdLog_String(t *testing.T) {
+func TestNewErrCmdFailed_OutputTail(t *testing.T) {
 	t.Parallel()
 
 	cmdLog := &execx.CmdLog{
-		Out: bytes.NewBufferString("foo"),
-		Err: bytes.NewBufferString("bar"),
+		Out: bytes.NewBufferString("1\n2\n3\n4\n5\n6\n7\n8\n9\n10\n11\n12\n"),
+		Err: bytes.NewBufferString("e1\n"),
 	}
 
-	want := "out: foo\nerr: bar\n"
-	if cmdLog.String() != want {
-		t.Errorf("want = %s, got = %s", want, cmdLog.String())
-	}
+	err := execx.NewErrCmdFailed("foo", nil, ErrTest, cmdLog)
+
+	want := "foo : command failed - test error\n3\n4\n5\n6\n7\n8\n9\n10\n11\n12\ne1\n\n" +
+		"The lines above are the last lines of the command output (stdout, then stderr)."
+	assert.Equal(t, want, err.Error())
 }
 
 func TestCombinedOutput(t *testing.T) {
