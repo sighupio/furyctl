@@ -32,7 +32,7 @@ import (
 
 var (
 	errUpgradeCanceled          = errors.New("upgrade canceled by user")
-	errUpgradeFlagNotSet        = errors.New("upgrade flag not set by user")
+	errUpgradeFlagNotSet        = errors.New("to upgrade the cluster, run the command again with the --upgrade flag")
 	errUpgradePathNotFound      = errors.New("upgrade path not found")
 	errGettingDistroVersionFrom = errors.New("error while getting distribution version from")
 	errGettingDistroVersionTo   = errors.New("error while getting distribution version to")
@@ -105,7 +105,7 @@ func NewPreUpgrade(
 }
 
 func (p *PreUpgrade) Exec() error {
-	logrus.Info("Running preupgrade phase...")
+	logrus.Debug("Running preupgrade phase...")
 
 	logrus.Debug("Cleaning up upgrade folder...")
 
@@ -290,7 +290,12 @@ func (p *PreUpgrade) Exec() error {
 		p.upgrade.Enabled = true
 	}
 
-	logrus.Info("Preupgrade phase completed successfully")
+	// Without an upgrade the phase only renders the scripts, so it stays out of the normal output.
+	if p.upgrade.Enabled {
+		logrus.Info("Preupgrade phase completed successfully")
+	} else {
+		logrus.Debug("Preupgrade phase completed successfully")
+	}
 
 	return nil
 }
