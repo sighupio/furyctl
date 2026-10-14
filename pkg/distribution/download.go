@@ -149,7 +149,14 @@ func (d *Downloader) DoDownload(
 	dst := filepath.Join(baseDst, "data")
 	logrus.Debugf("Downloading distribution from %s to %s", src, dst)
 
-	if err := d.client.Download(src, dst); err != nil {
+	// The distribution has no dot file at its top that furyctl reads. A local checkout can have big
+	// dot folders there, for example .git, and a copy of them file by file is slow.
+	client := d.client
+	if c, ok := client.(netx.TopDotSkipper); ok {
+		client = c.WithoutTopDotFiles()
+	}
+
+	if err := client.Download(src, dst); err != nil {
 		if errors.Is(err, netx.ErrDownloadOptionsExhausted) {
 			if distroLocation == "" {
 				msg := "try another version from the official repository"

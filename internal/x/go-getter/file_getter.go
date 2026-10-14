@@ -50,6 +50,8 @@ type FileGetter struct {
 	getter
 
 	Copy bool
+	// When IgnoreTopDot is true, Get does not copy the dot files and folders at the top of a directory.
+	IgnoreTopDot bool
 }
 
 func (g *FileGetter) ClientMode(u *url.URL) (gogetter.ClientMode, error) {
@@ -115,7 +117,7 @@ func (g *FileGetter) Get(dst string, u *url.URL) error {
 		return err
 	}
 
-	return copyDir(g.Context(), dst, path, false, g.client.DisableSymlinks, g.umask())
+	return copyDir(g.Context(), dst, path, g.IgnoreTopDot, g.client.DisableSymlinks, g.umask())
 }
 
 func (g *FileGetter) GetFile(dst string, u *url.URL) error {
@@ -240,8 +242,8 @@ func copyFile(ctx context.Context, dst, src string, disableSymlinks bool, fmode,
 // copyDir copies the src directory contents into dst. Both directories
 // should already exist.
 //
-// If ignoreDot is set to true, then dot-prefixed files/folders are ignored.
-func copyDir(ctx context.Context, dst, src string, ignoreDot, disableSymlinks bool, umask os.FileMode) error {
+// If ignoreTopDot is true, copyDir does not copy the dot files and folders at the top of src.
+func copyDir(ctx context.Context, dst, src string, ignoreTopDot, disableSymlinks bool, umask os.FileMode) error {
 	// We can safely evaluate the symlinks here, even if disabled, because they
 	// will be checked before actual use in walkFn and copyFile.
 	var err error
@@ -292,7 +294,7 @@ func copyDir(ctx context.Context, dst, src string, ignoreDot, disableSymlinks bo
 			return filepath.SkipDir
 		}
 
-		if ignoreDot && strings.HasPrefix(filepath.Base(path), ".") {
+		if ignoreTopDot && filepath.Dir(path) == src && strings.HasPrefix(filepath.Base(path), ".") {
 			// Skip any dot files.
 			if info.IsDir() {
 				return filepath.SkipDir
