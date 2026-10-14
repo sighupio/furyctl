@@ -170,13 +170,13 @@ func TestNewErrCmdFailed_OutputTail(t *testing.T) {
 
 	cmdLog := &execx.CmdLog{
 		Out: bytes.NewBufferString("1\n2\n3\n4\n5\n6\n7\n8\n9\n10\n11\n12\n"),
-		Err: bytes.NewBufferString(""),
+		Err: bytes.NewBufferString("e1\n"),
 	}
 
 	err := execx.NewErrCmdFailed("foo", nil, ErrTest, cmdLog)
 
-	want := "foo : command failed - test error\n3\n4\n5\n6\n7\n8\n9\n10\n11\n12\n\n" +
-		"Above: the last lines of the command output (stdout, then stderr)."
+	want := "foo : command failed - test error\n3\n4\n5\n6\n7\n8\n9\n10\n11\n12\ne1\n\n" +
+		"The lines above are the last lines of the command output (stdout, then stderr)."
 	assert.Equal(t, want, err.Error())
 }
 
