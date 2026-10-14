@@ -26,8 +26,11 @@ var (
 	ErrCastingToBuffer = errors.New("error casting stdout to bytes.Buffer")
 )
 
+// errOutputLines is how many lines of each stream a command error keeps. The log file keeps all of them.
+const errOutputLines = 10
+
 func NewErrCmdFailed(name string, args []string, err error, res *CmdLog) error {
-	return fmt.Errorf("%s %s: %w - %v\n%s", name, strings.Join(args, " "), ErrCmdFailed, err, res)
+	return fmt.Errorf("%s %s: %w - %v%s", name, strings.Join(args, " "), ErrCmdFailed, err, res.tail(errOutputLines))
 }
 
 type Cmd struct {
@@ -113,7 +116,7 @@ func NewCmd(name string, opts CmdOptions) *Cmd {
 
 func (c *Cmd) Run() error {
 	if err := run(c.Cmd); err != nil {
-		return NewErrCmdFailed(c.Path, c.Args, err, c.Log)
+		return NewErrCmdFailed(c.Path, c.Args[1:], err, c.Log)
 	}
 
 	return nil
@@ -154,8 +157,36 @@ type CmdLog struct {
 	Err *bytes.Buffer
 }
 
-func (c CmdLog) String() string {
-	return fmt.Sprintf("out: %s\nerr: %s\n", c.Out, c.Err)
+// tail gives the last n lines of each stream, and the log file that holds the full output.
+// On a terminal the live region clears the output of a command, so the error must show the cause.
+func (c *CmdLog) tail(n int) string {
+	if c == nil {
+		return ""
+	}
+
+	var b strings.Builder
+
+	for _, buf := range []*bytes.Buffer{c.Out, c.Err} {
+		out := strings.TrimRight(buf.String(), "\n")
+		if out == "" {
+			continue
+		}
+
+		lines := strings.Split(out, "\n")
+		b.WriteString("\n" + strings.Join(lines[max(0, len(lines)-n):], "\n"))
+	}
+
+	if b.Len() == 0 {
+		return ""
+	}
+
+	b.WriteString("\n\nAbove: the last lines of the command output (stdout, then stderr).")
+
+	if LogFile != nil {
+		fmt.Fprintf(&b, " The full output is in %s", LogFile.Name())
+	}
+
+	return b.String()
 }
 
 func CombinedOutput(cmd *Cmd) (string, error) {

@@ -57,7 +57,7 @@ func (r *Runner) Init() error {
 	defer r.deleteCmd(id)
 
 	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("command execution failed: %w", err)
+		return err //nolint:wrapcheck // The error names the command.
 	}
 
 	return nil
@@ -80,7 +80,7 @@ func (r *Runner) Plan(timestamp int64, params ...string) ([]byte, error) {
 	defer r.deleteCmd(id)
 
 	if err := cmd.Run(); err != nil {
-		return out, fmt.Errorf("command execution failed: %w", err)
+		return out, err //nolint:wrapcheck // The error names the command.
 	}
 
 	err := os.WriteFile(path.Join(r.paths.Plan,
