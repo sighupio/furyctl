@@ -296,6 +296,8 @@ func (*OperationPhase) CopyFromTemplate(
 		return fmt.Errorf("error creating temp dir: %w", err)
 	}
 
+	defer os.RemoveAll(outDirPath)
+
 	confPath := filepath.Join(outDirPath, "config.yaml")
 
 	logrus.Debugf("%s configuration file path %s", prefix, confPath)

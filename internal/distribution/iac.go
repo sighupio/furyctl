@@ -138,6 +138,11 @@ func (m *IACBuilder) Build() error {
 		return fmt.Errorf("error creating temporary directory: %w", err)
 	}
 
+	// On a dry run, the template model writes tmpl-debug.log in this folder and tells the user its path.
+	if !m.dryRun {
+		defer os.RemoveAll(outDirPath)
+	}
+
 	confPath := filepath.Join(outDirPath, "config.yaml")
 
 	logrus.Debugf("IaC configuration file path %s", confPath)

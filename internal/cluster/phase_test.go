@@ -116,6 +116,30 @@ func TestAssertPhaseDiffs(t *testing.T) {
 	}
 }
 
+// TestCopyFromTemplate_RemovesTempDir checks that CopyFromTemplate removes the folder that holds the
+// rendered configuration.
+func TestCopyFromTemplate_RemovesTempDir(t *testing.T) {
+	tmpDir := t.TempDir()
+	t.Setenv("TMPDIR", tmpDir)
+
+	srcDir := t.TempDir()
+	require.NoError(t, os.WriteFile(filepath.Join(srcDir, "out.txt.tpl"), []byte("{{ .spec.name }}"), 0o644))
+
+	targetDir := t.TempDir()
+	cfg := templatex.Config{Data: map[string]map[any]any{"spec": {"name": "test"}}}
+
+	err := (&cluster.OperationPhase{}).CopyFromTemplate(cfg, "test", srcDir, targetDir, "")
+	require.NoError(t, err)
+
+	out, err := os.ReadFile(filepath.Join(targetDir, "out.txt"))
+	require.NoError(t, err)
+	require.Equal(t, "test", string(out))
+
+	left, err := filepath.Glob(filepath.Join(tmpDir, "furyctl-test-*"))
+	require.NoError(t, err)
+	require.Empty(t, left)
+}
+
 func TestOperationPhase_CopyKFDToConfig(t *testing.T) {
 	t.Parallel()
 

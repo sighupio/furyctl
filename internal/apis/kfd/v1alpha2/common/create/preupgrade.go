@@ -150,6 +150,11 @@ func (p *PreUpgrade) Exec() error {
 		return fmt.Errorf("error creating temp dir: %w", err)
 	}
 
+	// On a dry run, the template model writes tmpl-debug.log in this folder and tells the user its path.
+	if !p.dryRun {
+		defer os.RemoveAll(outDirPath1)
+	}
+
 	confPath := filepath.Join(outDirPath1, "config.yaml")
 
 	logrus.Debugf("Preupgrade configuration file path %s", confPath)
@@ -171,11 +176,11 @@ func (p *PreUpgrade) Exec() error {
 			return fmt.Errorf("error creating temp folder: %w", err)
 		}
 
+		defer os.RemoveAll(tmpUpgradesFolder)
+
 		if err := iox.CopyRecursive(subFS, tmpUpgradesFolder); err != nil {
 			return fmt.Errorf("error copying template files: %w", err)
 		}
-
-		defer os.RemoveAll(tmpUpgradesFolder)
 
 		upgradesPath = tmpUpgradesFolder
 	} else {
