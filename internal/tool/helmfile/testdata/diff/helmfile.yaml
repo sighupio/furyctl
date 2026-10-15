@@ -1,0 +1,21 @@
+# Copyright (c) 2017-present SIGHUP s.r.l All rights reserved.
+# Use of this source code is governed by a BSD-style
+# license that can be found in the LICENSE file.
+
+repositories:
+  - name: podinfo
+    url: https://stefanprodan.github.io/podinfo
+  - name: metrics-server
+    url: https://kubernetes-sigs.github.io/metrics-server
+
+releases:
+  - chart: podinfo/podinfo
+    name: poc-podinfo
+    namespace: poc-helm
+    version: 6.7.1
+  - chart: metrics-server/metrics-server
+    name: poc-metrics
+    namespace: poc-helm
+    version: 3.12.2
+
+helmBinary: /home/user/run/.furyctl/bin/helm/3.22.0/helm

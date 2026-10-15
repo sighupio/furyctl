@@ -1,0 +1,3 @@
+Comparing release=poc-podinfo, chart=podinfo/podinfo, namespace=poc-helm
+poc-helm, poc-podinfo, Deployment (apps) to be replaced.
+Plan: 0 to add, 0 to change, 0 to destroy, 0 to change ownership.

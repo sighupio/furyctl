@@ -1,0 +1,40 @@
+{
+    "Tables": [
+        {
+            "Content": "",
+            "Header": {
+                "age": "Age",
+                "kind": "Kind",
+                "name": "Name",
+                "namespace": "Namespace",
+                "op": "Op",
+                "op_strategy": "Op st.",
+                "reconcile_info": "Ri",
+                "reconcile_state": "Rs",
+                "wait_to": "Wait to"
+            },
+            "Rows": [
+                {
+                    "age": "",
+                    "kind": "ConfigMap",
+                    "name": "furyctl-diff-plugin-probe-h45m7c46kt",
+                    "namespace": "default",
+                    "op": "create",
+                    "op_strategy": "",
+                    "reconcile_info": "",
+                    "reconcile_state": "",
+                    "wait_to": "reconcile"
+                }
+            ],
+            "Notes": [
+                "Op:      1 create, 0 delete, 0 update, 0 noop, 0 exists",
+                "Wait to: 1 reconcile, 0 delete, 0 noop"
+            ]
+        }
+    ],
+    "Blocks": null,
+    "Lines": [
+        "Target cluster 'https://cp1.homelab.poc:6443' (nodes: cp1.homelab.poc)",
+        "Succeeded"
+    ]
+}
