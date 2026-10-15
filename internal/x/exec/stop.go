@@ -5,6 +5,7 @@
 package execx
 
 import (
+	"context"
 	"errors"
 	"os"
 	"os/exec"
@@ -27,6 +28,9 @@ var (
 	runningWg sync.WaitGroup
 	stopping  bool
 	onStop    func()
+
+	// Track gives stopCtx to the in-process work, and stopAll cancels stopCtx.
+	stopCtx, cancelStop = context.WithCancel(context.Background())
 
 	leftoverCheckInterval = 500 * time.Millisecond
 	leftoverGracePeriod   = 10 * time.Second
@@ -58,8 +62,8 @@ func HandleSignals() {
 		}
 
 		// The exit skips the deferred removal in main. Remove after f, so the lock file goes first.
-		// ponytail: the command keeps running meanwhile. A copy of a local --distro-location can
-		// leave part of the folder, and a render can log a missing-file error. Stop it first if needed.
+		// ponytail: in-process work that Track does not run continues at the same time. For example,
+		// a render can log a missing-file error. If necessary, run the work with Track.
 		osx.RemoveTempDirs()
 
 		os.Exit(1) //nolint:revive // deep-exit is acceptable in the signal handler.
@@ -80,6 +84,7 @@ func OnStop(f func()) {
 func stopAll(sig syscall.Signal, force <-chan os.Signal) {
 	runningMu.Lock()
 	stopping = true
+	cancelStop()
 	runningMu.Unlock()
 
 	if names := signalAll(sig); len(names) > 0 {
@@ -202,6 +207,37 @@ func run(c *exec.Cmd) error {
 	}
 
 	return err //nolint:wrapcheck // The caller wraps it.
+}
+
+// Track runs f with a context that a signal cancels. Then stopAll waits for f to return, as it waits
+// for a command. Use Track for in-process work that writes to a temporary folder. Then the signal
+// handler removes the folder after the work stops. After stopAll starts, Track does not return.
+// Do not call Track or run a command in f, because after a signal that call does not return.
+// A second signal does not wait for f, so f must stop quickly after the cancel.
+func Track(f func(ctx context.Context) error) error {
+	runningMu.Lock()
+
+	if stopping {
+		runningMu.Unlock()
+		select {}
+	}
+
+	runningWg.Add(1)
+	ctx := stopCtx
+	runningMu.Unlock()
+
+	err := f(ctx)
+
+	runningMu.Lock()
+	runningWg.Done()
+	blocked := stopping
+	runningMu.Unlock()
+
+	if blocked {
+		select {}
+	}
+
+	return err
 }
 
 // kill sends sig to the process group of c. If c stays in the process group of furyctl, kill sends
