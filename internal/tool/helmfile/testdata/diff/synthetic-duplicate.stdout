@@ -1,0 +1,5 @@
+Comparing release=poc-podinfo, chart=podinfo/podinfo, namespace=poc-helm
+Plan: 0 to add, 0 to change, 0 to destroy, 0 to change ownership.
+
+Comparing release=poc-podinfo, chart=podinfo/podinfo, namespace=poc-helm
+Plan: 0 to add, 0 to change, 0 to destroy, 0 to change ownership.

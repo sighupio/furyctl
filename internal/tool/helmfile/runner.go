@@ -102,6 +102,20 @@ func (r *Runner) Apply() error {
 	return nil
 }
 
+// Diff compares the releases with the cluster. It returns the standard output, the standard error and the
+// exit code of helmfile; a non-zero exit code is a result, not an error.
+func (r *Runner) Diff() (string, string, int, error) {
+	cmd, id := r.newCmd([]string{"diff", "--output", "simple", "--no-color", "--suppress-secrets"}, nil, nil)
+	defer r.deleteCmd(id)
+
+	stdout, stderr, code, err := execx.RunWithExitCode(cmd)
+	if err != nil {
+		return "", "", 0, fmt.Errorf("error running helmfile diff: %w", err)
+	}
+
+	return stdout, stderr, code, nil
+}
+
 func (r *Runner) Version() (string, error) {
 	cmd, id := r.newCmd([]string{"version", "-o=short"}, nil, nil)
 	defer r.deleteCmd(id)

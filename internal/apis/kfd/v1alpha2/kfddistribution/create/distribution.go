@@ -173,6 +173,13 @@ func (d *Distribution) SetUpgrade(upgradeEnabled bool) {
 	d.upgrade.Enabled = upgradeEnabled
 }
 
+// Render generates the distribution phase folder, as the first step of Exec does, and stops there.
+func (d *Distribution) Render() error {
+	_, err := d.prepare()
+
+	return err
+}
+
 func (d *Distribution) prepare() (templatex.Config, error) {
 	if err := d.CreateRootFolder(); err != nil {
 		return templatex.Config{}, fmt.Errorf("error creating distribution phase folder: %w", err)

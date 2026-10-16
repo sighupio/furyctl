@@ -15,6 +15,7 @@
 package main
 
 import (
+	"errors"
 	"os"
 	"runtime"
 	"strings"
@@ -86,15 +87,25 @@ func exec() int {
 		// The global logger writes to the terminal and to the log file. Before the root pre-run
 		// configures it, for example on an unknown flag, there is no log file.
 		if execx.LogFile != nil {
-			logrus.Error(err)
-		} else {
-			log.Error(err)
+			log = logrus.StandardLogger()
 		}
+
+		logCommandError(log, err)
 
 		return 1
 	}
 
 	return 0
+}
+
+// logCommandError logs the error of the command, except the one of a diff report that could not compare every
+// section: the report already ends with its reason and must end with its final line.
+func logCommandError(log *logrus.Logger, err error) {
+	if errors.Is(err, cmd.ErrDiffNotCompared) {
+		return
+	}
+
+	log.Error(err)
 }
 
 func checkNewRelease(v string) {

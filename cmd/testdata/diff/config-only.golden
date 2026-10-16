@@ -1,0 +1,3 @@
+Differences found from previous cluster configuration:
+.spec.distribution.modules.ingress.nginx.type: single -> dual
+--- exit code: 0
