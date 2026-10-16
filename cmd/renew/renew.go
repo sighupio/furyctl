@@ -15,13 +15,11 @@ import (
 	"github.com/spf13/viper"
 
 	"github.com/sighupio/furyctl/internal/airgap"
-	"github.com/sighupio/furyctl/internal/analytics"
 	"github.com/sighupio/furyctl/internal/cluster"
 	"github.com/sighupio/furyctl/internal/config"
 	"github.com/sighupio/furyctl/internal/distribution"
 	"github.com/sighupio/furyctl/internal/flags"
 	"github.com/sighupio/furyctl/internal/git"
-	cobrax "github.com/sighupio/furyctl/internal/x/cobra"
 	execx "github.com/sighupio/furyctl/internal/x/exec"
 	"github.com/sighupio/furyctl/pkg/dependencies"
 	dist "github.com/sighupio/furyctl/pkg/distribution"
@@ -31,9 +29,7 @@ import (
 var ErrDownloadDependenciesFailed = errors.New("dependencies download failed")
 
 // preRun is the PreRun every `furyctl renew` subcommand shares.
-func preRun(cmd *cobra.Command) analytics.Event {
-	cmdEvent := analytics.NewCommandEvent(cobrax.GetFullname(cmd))
-
+func preRun(cmd *cobra.Command, _ []string) {
 	// Bind the flags first: a flag on the command line has precedence over the configuration file.
 	if err := viper.BindPFlags(cmd.Flags()); err != nil {
 		logrus.Fatalf("error while binding flags: %v", err)
@@ -42,23 +38,14 @@ func preRun(cmd *cobra.Command) analytics.Event {
 	if err := flags.LoadAndMergeCommandFlags("renew"); err != nil {
 		logrus.Fatalf("failed to load flags from configuration: %v", err)
 	}
-
-	return cmdEvent
 }
 
 // newRenewer downloads the distribution and the dependencies, validates the configuration file and
 // the dependencies, then builds the renewer for the cluster kind.
-func newRenewer(cmdEvent analytics.Event, tracker *analytics.Tracker) (cluster.Renewer, error) {
-	fail := func(err error) (cluster.Renewer, error) {
-		cmdEvent.AddErrorMessage(err)
-		tracker.Track(cmdEvent)
-
-		return nil, err
-	}
-
+func newRenewer() (cluster.Renewer, error) {
 	// Air-gapped: extract --airgap-bundle (if set) and rewire to run offline before reading flags.
 	if err := airgap.MaybePrepare(); err != nil {
-		return fail(fmt.Errorf("error preparing air-gapped bundle: %w", err))
+		return nil, fmt.Errorf("error preparing air-gapped bundle: %w", err)
 	}
 
 	// Get flags.
@@ -74,7 +61,7 @@ func newRenewer(cmdEvent analytics.Event, tracker *analytics.Tracker) (cluster.R
 	// Get absolute path to the config file.
 	furyctlPath, err := filepath.Abs(furyctlPath)
 	if err != nil {
-		return fail(fmt.Errorf("error while getting config directory: %w", err))
+		return nil, fmt.Errorf("error while getting config directory: %w", err)
 	}
 
 	if binPath == "" {
@@ -82,13 +69,13 @@ func newRenewer(cmdEvent analytics.Event, tracker *analytics.Tracker) (cluster.R
 	} else {
 		binPath, err = filepath.Abs(binPath)
 		if err != nil {
-			return fail(fmt.Errorf("error while getting absolute path for bin folder: %w", err))
+			return nil, fmt.Errorf("error while getting absolute path for bin folder: %w", err)
 		}
 	}
 
 	typedGitProtocol, err := git.ParseProtocol(gitProtocol)
 	if err != nil {
-		return fail(fmt.Errorf("error while parsing git protocol: %w", err))
+		return nil, fmt.Errorf("error while parsing git protocol: %w", err)
 	}
 
 	// Init packages.
@@ -110,7 +97,7 @@ func newRenewer(cmdEvent analytics.Event, tracker *analytics.Tracker) (cluster.R
 
 	// Validate base requirements.
 	if err := depsvl.ValidateBaseReqs(); err != nil {
-		return fail(fmt.Errorf("error while validating requirements: %w", err))
+		return nil, fmt.Errorf("error while validating requirements: %w", err)
 	}
 
 	// Download the distribution.
@@ -118,7 +105,7 @@ func newRenewer(cmdEvent analytics.Event, tracker *analytics.Tracker) (cluster.R
 
 	res, err := distrodl.Download(distroLocation, furyctlPath)
 	if err != nil {
-		return fail(fmt.Errorf("error while downloading distribution: %w", err))
+		return nil, fmt.Errorf("error while downloading distribution: %w", err)
 	}
 
 	basePath := path.Join(outDir, ".furyctl", res.MinimalConf.Metadata.Name)
@@ -130,7 +117,7 @@ func newRenewer(cmdEvent analytics.Event, tracker *analytics.Tracker) (cluster.R
 	logrus.Info("Validating configuration file...")
 
 	if err := config.Validate(furyctlPath, res.RepoPath); err != nil {
-		return fail(fmt.Errorf("error while validating configuration file: %w", err))
+		return nil, fmt.Errorf("error while validating configuration file: %w", err)
 	}
 
 	// Download the dependencies.
@@ -138,18 +125,18 @@ func newRenewer(cmdEvent analytics.Event, tracker *analytics.Tracker) (cluster.R
 		logrus.Info("Downloading dependencies...")
 
 		if _, err := depsdl.DownloadTools(res.DistroManifest, res.MinimalConf.Kind); err != nil {
-			return fail(fmt.Errorf("%w: %v", ErrDownloadDependenciesFailed, err))
+			return nil, fmt.Errorf("%w: %v", ErrDownloadDependenciesFailed, err)
 		}
 
 		// Only immutable renew needs the vendored immutable.yaml (hosts.yaml "versions"); others skip it.
 		if res.MinimalConf.Kind == distribution.ImmutableKind {
 			gitPrefix, err := git.RepoPrefixByProtocol(typedGitProtocol)
 			if err != nil {
-				return fail(err)
+				return nil, fmt.Errorf("error while getting the git repository prefix: %w", err)
 			}
 
 			if err := depsdl.DownloadInstallers(res.DistroManifest.Kubernetes, gitPrefix, res.MinimalConf.Kind); err != nil {
-				return fail(fmt.Errorf("%w: %v", ErrDownloadDependenciesFailed, err))
+				return nil, fmt.Errorf("%w: %v", ErrDownloadDependenciesFailed, err)
 			}
 		}
 	} else {
@@ -161,7 +148,7 @@ func newRenewer(cmdEvent analytics.Event, tracker *analytics.Tracker) (cluster.R
 		logrus.Info("Validating dependencies...")
 
 		if err := depsvl.Validate(res); err != nil {
-			return fail(fmt.Errorf("error while validating dependencies: %w", err))
+			return nil, fmt.Errorf("error while validating dependencies: %w", err)
 		}
 	} else {
 		logrus.Info("Dependencies validation skipped")
@@ -169,7 +156,7 @@ func newRenewer(cmdEvent analytics.Event, tracker *analytics.Tracker) (cluster.R
 
 	renewer, err := cluster.NewRenewer(res.MinimalConf, res.DistroManifest, res.RepoPath, furyctlPath, binPath)
 	if err != nil {
-		return fail(fmt.Errorf("error while creating the renewer: %w", err))
+		return nil, fmt.Errorf("error while creating the renewer: %w", err)
 	}
 
 	// Immutable-only: the renewer uses workDir to find the vendored immutable.yaml.

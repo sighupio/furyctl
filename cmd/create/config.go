@@ -15,14 +15,11 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
-	"github.com/sighupio/furyctl/internal/analytics"
 	distroconf "github.com/sighupio/furyctl/internal/apis/config"
-	"github.com/sighupio/furyctl/internal/app"
 	"github.com/sighupio/furyctl/internal/config"
 	"github.com/sighupio/furyctl/internal/distribution"
 	"github.com/sighupio/furyctl/internal/git"
 	"github.com/sighupio/furyctl/internal/semver"
-	cobrax "github.com/sighupio/furyctl/internal/x/cobra"
 	execx "github.com/sighupio/furyctl/internal/x/exec"
 	"github.com/sighupio/furyctl/pkg/dependencies"
 	dist "github.com/sighupio/furyctl/pkg/distribution"
@@ -36,16 +33,12 @@ var (
 )
 
 func NewConfigCmd() *cobra.Command {
-	var cmdEvent analytics.Event
-
 	configCmd := &cobra.Command{
 		Args:    cobra.NoArgs,
 		Use:     "config",
 		Short:   "Scaffolds a new furyctl configuration file for a specific version and kind",
 		Example: "furyctl create config --kind OnPremises --version v1.30.0 --name test-cluster",
 		PreRun: func(cmd *cobra.Command, _ []string) {
-			cmdEvent = analytics.NewCommandEvent(cobrax.GetFullname(cmd))
-
 			// This command creates the configuration file, thus it cannot read flags from one:
 			// it stops when the file is already present. The root command merges the global flags.
 			if err := viper.BindPFlags(cmd.Flags()); err != nil {
@@ -53,11 +46,6 @@ func NewConfigCmd() *cobra.Command {
 			}
 		},
 		RunE: func(_ *cobra.Command, _ []string) error {
-			ctn := app.GetContainerInstance()
-
-			tracker := ctn.Tracker()
-			defer tracker.Flush()
-
 			// Get flags.
 			debug := viper.GetBool("debug")
 			furyctlPath := viper.GetString("config")
@@ -76,9 +64,6 @@ func NewConfigCmd() *cobra.Command {
 			kind := viper.GetString("kind")
 
 			if _, err := distribution.NewCompatibilityChecker(version, kind); err != nil {
-				cmdEvent.AddErrorMessage(err)
-				tracker.Track(cmdEvent)
-
 				return fmt.Errorf("error while checking compatibility: %w", err)
 			}
 
@@ -103,9 +88,6 @@ func NewConfigCmd() *cobra.Command {
 			if distroPatchesLocation != "" {
 				distroPatchesLocation, err = filepath.Abs(distroPatchesLocation)
 				if err != nil {
-					cmdEvent.AddErrorMessage(err)
-					tracker.Track(cmdEvent)
-
 					return fmt.Errorf("error while getting absolute path of distro patches location: %w", err)
 				}
 			}
@@ -144,9 +126,6 @@ func NewConfigCmd() *cobra.Command {
 
 			// Validate base requirements.
 			if err := depsvl.ValidateBaseReqs(); err != nil {
-				cmdEvent.AddErrorMessage(err)
-				tracker.Track(cmdEvent)
-
 				return fmt.Errorf("error while validating requirements: %w", err)
 			}
 
@@ -154,16 +133,8 @@ func NewConfigCmd() *cobra.Command {
 			logrus.Info("Downloading distribution...")
 			res, err := distrodl.DoDownload(distroLocation, minimalConf)
 			if err != nil {
-				cmdEvent.AddErrorMessage(err)
-				tracker.Track(cmdEvent)
-
 				return fmt.Errorf("failed to download distribution: %w", err)
 			}
-
-			cmdEvent.AddClusterDetails(analytics.ClusterDetails{
-				Provider:   res.MinimalConf.Kind,
-				KFDVersion: res.DistroManifest.Version,
-			})
 
 			data := map[string]string{
 				"Kind":                kind,
@@ -171,27 +142,18 @@ func NewConfigCmd() *cobra.Command {
 				"DistributionVersion": semver.EnsurePrefix(version),
 			}
 
-			out, err := config.Create(res, furyctlPath, cmdEvent, tracker, data)
+			out, err := config.Create(res, furyctlPath, data)
 			if err != nil {
-				cmdEvent.AddErrorMessage(err)
-				tracker.Track(cmdEvent)
-
 				return fmt.Errorf("failed to create configuration file: %w", err)
 			}
 
 			if err := config.Validate(furyctlPath, res.RepoPath); err != nil {
-				cmdEvent.AddErrorMessage(err)
-				tracker.Track(cmdEvent)
-
 				_ = os.Remove(furyctlPath)
 
 				return fmt.Errorf("error while validating configuration file: %w", err)
 			}
 
 			logrus.Infof("Configuration file created successfully at: %s", out.Name())
-
-			cmdEvent.AddSuccessMessage("Configuration file created successfully at:" + out.Name())
-			tracker.Track(cmdEvent)
 
 			return nil
 		},

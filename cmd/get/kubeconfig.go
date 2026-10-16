@@ -15,13 +15,10 @@ import (
 	"github.com/spf13/viper"
 
 	"github.com/sighupio/furyctl/internal/airgap"
-	"github.com/sighupio/furyctl/internal/analytics"
-	"github.com/sighupio/furyctl/internal/app"
 	"github.com/sighupio/furyctl/internal/cluster"
 	"github.com/sighupio/furyctl/internal/config"
 	"github.com/sighupio/furyctl/internal/flags"
 	"github.com/sighupio/furyctl/internal/git"
-	cobrax "github.com/sighupio/furyctl/internal/x/cobra"
 	execx "github.com/sighupio/furyctl/internal/x/exec"
 	"github.com/sighupio/furyctl/pkg/dependencies"
 	dist "github.com/sighupio/furyctl/pkg/distribution"
@@ -34,8 +31,6 @@ var (
 )
 
 func NewKubeconfigCmd() *cobra.Command {
-	var cmdEvent analytics.Event
-
 	kubeconfigCmd := &cobra.Command{
 		Args:  cobra.NoArgs,
 		Use:   "kubeconfig",
@@ -46,8 +41,6 @@ func NewKubeconfigCmd() *cobra.Command {
 			"The apply command writes the per-user kubeconfigs. " +
 			"To renew kubeconfigs, use \"furyctl renew kubeconfigs\".",
 		PreRun: func(cmd *cobra.Command, _ []string) {
-			cmdEvent = analytics.NewCommandEvent(cobrax.GetFullname(cmd))
-
 			if err := viper.BindPFlags(cmd.Flags()); err != nil {
 				logrus.Fatalf("error while binding flags: %v", err)
 			}
@@ -59,16 +52,9 @@ func NewKubeconfigCmd() *cobra.Command {
 		},
 		RunE: func(_ *cobra.Command, _ []string) error {
 			var err error
-			ctn := app.GetContainerInstance()
-
-			tracker := ctn.Tracker()
-			tracker.Flush()
 
 			// Air-gapped: extract --airgap-bundle (if set) and rewire to run offline before reading flags.
 			if err := airgap.MaybePrepare(); err != nil {
-				cmdEvent.AddErrorMessage(err)
-				tracker.Track(cmdEvent)
-
 				return fmt.Errorf("error preparing air-gapped bundle: %w", err)
 			}
 
@@ -86,9 +72,6 @@ func NewKubeconfigCmd() *cobra.Command {
 			// Get absolute path to the config file.
 			furyctlPath, err = filepath.Abs(furyctlPath)
 			if err != nil {
-				cmdEvent.AddErrorMessage(err)
-				tracker.Track(cmdEvent)
-
 				return fmt.Errorf("error while getting config directory: %w", err)
 			}
 
@@ -97,18 +80,12 @@ func NewKubeconfigCmd() *cobra.Command {
 			} else {
 				binPath, err = filepath.Abs(binPath)
 				if err != nil {
-					cmdEvent.AddErrorMessage(err)
-					tracker.Track(cmdEvent)
-
 					return fmt.Errorf("error while getting absolute path for bin folder: %w", err)
 				}
 			}
 
 			typedGitProtocol, err := git.ParseProtocol(gitProtocol)
 			if err != nil {
-				cmdEvent.AddErrorMessage(err)
-				tracker.Track(cmdEvent)
-
 				return fmt.Errorf("%w: %w", ErrParsingFlag, err)
 			}
 
@@ -131,9 +108,6 @@ func NewKubeconfigCmd() *cobra.Command {
 
 			// Validate base requirements.
 			if err := depsvl.ValidateBaseReqs(); err != nil {
-				cmdEvent.AddErrorMessage(err)
-				tracker.Track(cmdEvent)
-
 				return fmt.Errorf("error while validating requirements: %w", err)
 			}
 
@@ -142,9 +116,6 @@ func NewKubeconfigCmd() *cobra.Command {
 
 			res, err := distrodl.Download(distroLocation, furyctlPath)
 			if err != nil {
-				cmdEvent.AddErrorMessage(err)
-				tracker.Track(cmdEvent)
-
 				return fmt.Errorf("error while downloading distribution: %w", err)
 			}
 
@@ -156,9 +127,6 @@ func NewKubeconfigCmd() *cobra.Command {
 			// Validate the furyctl.yaml file.
 			logrus.Info("Validating configuration file...")
 			if err := config.Validate(furyctlPath, res.RepoPath); err != nil {
-				cmdEvent.AddErrorMessage(err)
-				tracker.Track(cmdEvent)
-
 				return fmt.Errorf("error while validating configuration file: %w", err)
 			}
 
@@ -166,9 +134,6 @@ func NewKubeconfigCmd() *cobra.Command {
 			if !skipDepsDownload {
 				logrus.Info("Downloading dependencies...")
 				if _, err := depsdl.DownloadTools(res.DistroManifest, res.MinimalConf.Kind); err != nil {
-					cmdEvent.AddErrorMessage(ErrDownloadDependenciesFailed)
-					tracker.Track(cmdEvent)
-
 					return fmt.Errorf("%w: %v", ErrDownloadDependenciesFailed, err)
 				}
 			} else {
@@ -179,9 +144,6 @@ func NewKubeconfigCmd() *cobra.Command {
 			if !skipDepsValidation {
 				logrus.Info("Validating dependencies...")
 				if err := depsvl.Validate(res); err != nil {
-					cmdEvent.AddErrorMessage(err)
-					tracker.Track(cmdEvent)
-
 					return fmt.Errorf("error while validating dependencies: %w", err)
 				}
 			} else {
@@ -190,23 +152,14 @@ func NewKubeconfigCmd() *cobra.Command {
 
 			getter, err := cluster.NewKubeconfigGetter(res.MinimalConf, res.DistroManifest, res.RepoPath, furyctlPath, currentDir, binPath)
 			if err != nil {
-				cmdEvent.AddErrorMessage(err)
-				tracker.Track(cmdEvent)
-
 				return fmt.Errorf("error while creating the kubeconfig getter: %w", err)
 			}
 
 			if err := getter.Get(); err != nil {
-				cmdEvent.AddErrorMessage(err)
-				tracker.Track(cmdEvent)
-
 				return fmt.Errorf("error while getting the kubeconfig, please check that the cluster is up and running and is reachable: %w", err)
 			}
 
 			logrus.Infof("Kubeconfig successfully retrieved, you can find it at: %s", path.Join(currentDir, "kubeconfig"))
-
-			cmdEvent.AddSuccessMessage("kubeconfig successfully retrieved")
-			tracker.Track(cmdEvent)
 
 			return nil
 		},

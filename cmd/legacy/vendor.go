@@ -14,10 +14,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
-	"github.com/sighupio/furyctl/internal/analytics"
-	"github.com/sighupio/furyctl/internal/app"
 	"github.com/sighupio/furyctl/internal/legacy"
-	cobrax "github.com/sighupio/furyctl/internal/x/cobra"
 )
 
 type VendorCmdFlags struct {
@@ -34,39 +31,24 @@ var (
 )
 
 func NewVendorCmd() *cobra.Command {
-	var cmdEvent analytics.Event
-
 	vendorCmd := &cobra.Command{
 		Use:   "vendor",
 		Short: "Download the dependencies specified in the Furyfile.yml",
 		PreRun: func(cmd *cobra.Command, _ []string) {
-			cmdEvent = analytics.NewCommandEvent(cobrax.GetFullname(cmd))
-
 			if err := viper.BindPFlags(cmd.Flags()); err != nil {
 				logrus.Fatalf("error while binding flags: %v", err)
 			}
 		},
 		RunE: func(_ *cobra.Command, _ []string) error {
-			ctn := app.GetContainerInstance()
-
-			tracker := ctn.Tracker()
-			tracker.Flush()
-
 			flags := getLegacyVendorCmdFlags()
 
 			ff, err := legacy.NewFuryFile(flags.FuryFilePath)
 			if err != nil {
-				cmdEvent.AddErrorMessage(err)
-				tracker.Track(cmdEvent)
-
 				return fmt.Errorf("%w: %v", ErrParsingFuryFile, err)
 			}
 
 			ps, err := ff.BuildPackages(flags.Prefix)
 			if err != nil {
-				cmdEvent.AddErrorMessage(err)
-				tracker.Track(cmdEvent)
-
 				return fmt.Errorf("%w: %v", ErrParsingPackages, err)
 			}
 
@@ -90,14 +72,8 @@ func NewVendorCmd() *cobra.Command {
 
 			err = downloader.Download(ps)
 			if err != nil {
-				cmdEvent.AddErrorMessage(err)
-				tracker.Track(cmdEvent)
-
 				return fmt.Errorf("%w: %v", ErrDownloading, err)
 			}
-
-			cmdEvent.AddSuccessMessage("dependencies downloaded successfully")
-			tracker.Track(cmdEvent)
 
 			return nil
 		},

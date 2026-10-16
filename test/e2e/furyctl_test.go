@@ -133,7 +133,7 @@ var (
 	_ = Describe("furyctl", func() {
 		Context("version display", func() {
 			It("should print its version information", func() {
-				out, err := RunCmd(furyctl, "version", "--disable-analytics", "--log", "stdout")
+				out, err := RunCmd(furyctl, "version", "--log", "stdout")
 
 				Expect(err).To(Not(HaveOccurred()))
 				Expect(out).To(ContainSubstring(
@@ -155,7 +155,6 @@ var (
 					"--config", filepath.Join(absBasepath, "furyctl.yaml"),
 					"--distro-location", absBasepath,
 					"--debug",
-					"--disable-analytics",
 				)
 			}
 
@@ -242,7 +241,6 @@ var (
 					"--config", tempConfigPath,
 					"--distro-location", tempDir,
 					"--debug",
-					"--disable-analytics",
 				)
 
 				Expect(err).To(Not(HaveOccurred()))
@@ -267,7 +265,6 @@ var (
 					"--distro-location", absBasepath,
 					"--bin-path", binpath,
 					"--debug",
-					"--disable-analytics",
 					"--log", "stdout",
 				)
 			}
@@ -297,7 +294,6 @@ var (
 					"PATH",
 					"AWS_ACCESS_KEY_ID",
 					"AWS_SECRET_ACCESS_KEY",
-					"FURYCTL_MIXPANEL_TOKEN",
 				)
 				defer RestoreEnvVars()
 
@@ -308,7 +304,6 @@ var (
 				os.Unsetenv("AWS_SECRET_ACCESS_KEY")
 				os.Unsetenv("AWS_DEFAULT_REGION")
 				os.Unsetenv("AWS_REGION")
-				os.Unsetenv("FURYCTL_MIXPANEL_TOKEN")
 
 				out, err := FuryctlValidateDependencies(bp, bp)
 
@@ -334,14 +329,12 @@ var (
 					"PATH",
 					"AWS_ACCESS_KEY_ID",
 					"AWS_SECRET_ACCESS_KEY",
-					"FURYCTL_MIXPANEL_TOKEN",
 				)
 				defer RestoreEnvVars()
 
 				bp := Abs("../data/e2e/validate/dependencies/correct")
 
 				os.Setenv("PATH", bp+":"+os.Getenv("PATH"))
-				os.Setenv("FURYCTL_MIXPANEL_TOKEN", "test")
 
 				out, err := FuryctlValidateDependencies(bp, bp)
 
@@ -369,7 +362,6 @@ var (
 						"--distro-location", bp+"/distro",
 						"--workdir", bp,
 						"--debug",
-						"--disable-analytics",
 						"--log", "stdout",
 						"--git-protocol", gitProtocol,
 					)
@@ -416,7 +408,6 @@ var (
 					"--debug",
 					"--workdir", workdir,
 					"--distro-location", ".",
-					"--disable-analytics",
 					"--log", "stdout",
 					"--skip-validation",
 				}
@@ -522,7 +513,6 @@ var (
 					"--config", workdir+"/target/furyctl.yaml",
 					"--kind", "EKSCluster",
 					"--debug",
-					"--disable-analytics",
 					"--distro-location", absBasepath+"/distro",
 					"--version", "1.25.1",
 					"--log", "stdout",
@@ -573,8 +563,6 @@ var (
 					"--debug",
 					"--workdir",
 					w,
-					"--disable-analytics",
-					"true",
 				}
 
 				if phase != "" {

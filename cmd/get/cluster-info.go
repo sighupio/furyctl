@@ -21,11 +21,8 @@ import (
 	"github.com/spf13/viper"
 	"go.yaml.in/yaml/v3"
 
-	"github.com/sighupio/furyctl/internal/analytics"
-	"github.com/sighupio/furyctl/internal/app"
 	"github.com/sighupio/furyctl/internal/clusterinfo"
 	"github.com/sighupio/furyctl/internal/flags"
-	cobrax "github.com/sighupio/furyctl/internal/x/cobra"
 	execx "github.com/sighupio/furyctl/internal/x/exec"
 )
 
@@ -39,8 +36,6 @@ const (
 var errInvalidOutputFormat = errors.New("invalid output format, supported values are: text, json, yaml")
 
 func NewClusterInfoCmd() *cobra.Command {
-	var cmdEvent analytics.Event
-
 	clusterInfoCmd := &cobra.Command{
 		Args:  cobra.NoArgs,
 		Use:   "cluster-info",
@@ -51,8 +46,6 @@ func NewClusterInfoCmd() *cobra.Command {
   furyctl get cluster-info --format yaml   display cluster info as YAML
  `,
 		PreRun: func(cmd *cobra.Command, _ []string) {
-			cmdEvent = analytics.NewCommandEvent(cobrax.GetFullname(cmd))
-
 			// Bind the flags first: a flag on the command line has precedence over the configuration file.
 			if err := viper.BindPFlags(cmd.Flags()); err != nil {
 				logrus.Fatalf("error while binding flags: %v", err)
@@ -63,11 +56,6 @@ func NewClusterInfoCmd() *cobra.Command {
 			}
 		},
 		RunE: func(_ *cobra.Command, _ []string) error {
-			ctn := app.GetContainerInstance()
-
-			tracker := ctn.Tracker()
-			tracker.Flush()
-
 			binPath := viper.GetString("bin-path")
 			currentDir := viper.GetString("workdir")
 			debug := viper.GetBool("debug")
@@ -77,9 +65,6 @@ func NewClusterInfoCmd() *cobra.Command {
 			execx.Debug = debug
 
 			if format != outputFormatText && format != outputFormatJSON && format != outputFormatYAML {
-				cmdEvent.AddErrorMessage(errInvalidOutputFormat)
-				tracker.Track(cmdEvent)
-
 				return errInvalidOutputFormat
 			}
 
@@ -89,21 +74,12 @@ func NewClusterInfoCmd() *cobra.Command {
 
 			info, err := collector.Collect()
 			if err != nil {
-				cmdEvent.AddErrorMessage(err)
-				tracker.Track(cmdEvent)
-
 				return fmt.Errorf("error while collecting cluster information: %w", err)
 			}
 
 			if err := printInfo(info, format); err != nil {
-				cmdEvent.AddErrorMessage(err)
-				tracker.Track(cmdEvent)
-
 				return fmt.Errorf("error while printing cluster information: %w", err)
 			}
-
-			cmdEvent.AddSuccessMessage("cluster info successfully retrieved")
-			tracker.Track(cmdEvent)
 
 			return nil
 		},
