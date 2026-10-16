@@ -8,6 +8,7 @@ package iox_test
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"io/fs"
 	"math"
@@ -367,6 +368,26 @@ func TestCopyRecursive(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestCopyRecursiveContextStopsOnCancel(t *testing.T) {
+	t.Parallel()
+
+	src := t.TempDir()
+	dst := t.TempDir()
+
+	require.NoError(t, os.MkdirAll(filepath.Join(src, "dir"), iox.FullPermAccess))
+	require.NoError(t, os.WriteFile(filepath.Join(src, "dir", "file"), []byte("x"), iox.FullRWPermAccess))
+
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	err := iox.CopyRecursiveContext(ctx, os.DirFS(src), dst)
+	require.ErrorIs(t, err, context.Canceled)
+
+	entries, err := os.ReadDir(dst)
+	require.NoError(t, err)
+	assert.Empty(t, entries)
 }
 
 func TestEnsureDir(t *testing.T) {

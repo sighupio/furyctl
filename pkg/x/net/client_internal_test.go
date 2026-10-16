@@ -7,10 +7,88 @@
 package netx //nolint:testpackage // exercises the unexported cache-validity test.
 
 import (
+	"context"
+	"os"
+	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
+
+// An interrupted copy to the cache must leave no entry: a later run uses any entry that exists.
+func TestCopyDownloadToLocalCache(t *testing.T) {
+	t.Parallel()
+
+	src := "https://github.com/sighupio/fury-distribution?ref=v1.35.1"
+
+	testCases := map[string]struct {
+		cancelled   bool
+		entryExists bool
+		wantErr     error
+		wantEntries int
+	}{
+		"complete copy":  {wantEntries: 1},
+		"cancelled copy": {cancelled: true, wantErr: context.Canceled},
+		// A parallel run created the entry during the copy.
+		"entry exists": {entryExists: true, wantEntries: 1},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			download := t.TempDir()
+			require.NoError(t, os.WriteFile(filepath.Join(download, "kfd.yaml"), []byte("x"), 0o600))
+
+			ctx, cancel := context.WithCancel(context.Background())
+			defer cancel()
+
+			if tc.cancelled {
+				cancel()
+			}
+
+			d := &LocalCacheClientDecorator{dir: t.TempDir()}
+
+			if tc.entryExists {
+				require.NoError(t, os.MkdirAll(d.getKeyFromURL(src), 0o755))
+				require.NoError(t, os.WriteFile(filepath.Join(d.getKeyFromURL(src), "kfd.yaml"), []byte("x"), 0o600))
+			}
+
+			err := d.copyDownloadToLocalCache(ctx, src, download)
+			require.ErrorIs(t, err, tc.wantErr)
+
+			entries, err := os.ReadDir(d.dir)
+			require.NoError(t, err)
+			assert.Len(t, entries, tc.wantEntries)
+
+			if tc.wantEntries > 0 {
+				assert.FileExists(t, filepath.Join(d.getKeyFromURL(src), "kfd.yaml"))
+			}
+		})
+	}
+}
+
+// A killed run leaves a partial folder. Only an old one goes, because a parallel run can use a new one.
+func TestRemoveStalePartials(t *testing.T) {
+	t.Parallel()
+
+	dir := t.TempDir()
+	stale := filepath.Join(dir, "partial-stale")
+	fresh := filepath.Join(dir, "partial-fresh")
+
+	require.NoError(t, os.Mkdir(stale, 0o755))
+	require.NoError(t, os.Mkdir(fresh, 0o755))
+
+	old := time.Now().Add(-2 * stalePartialAge)
+	require.NoError(t, os.Chtimes(stale, old, old))
+
+	removeStalePartials(dir)
+
+	assert.NoDirExists(t, stale)
+	assert.DirExists(t, fresh)
+}
 
 // The cache key is the URL, so only a ref that always resolves to the same commit
 // can be served from the cache. A branch must download again every time.

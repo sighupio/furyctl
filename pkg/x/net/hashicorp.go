@@ -16,6 +16,7 @@ import (
 	"github.com/samber/lo"
 	"github.com/sirupsen/logrus"
 
+	execx "github.com/sighupio/furyctl/internal/x/exec"
 	gogetterx "github.com/sighupio/furyctl/internal/x/go-getter"
 )
 
@@ -108,7 +109,12 @@ func (g *GoGetterClient) DownloadWithMode(
 			client.Decompressors = decompressors
 		}
 
-		err := client.Get()
+		// A signal stops the download before furyctl removes the temporary folders.
+		err := execx.Track(func(ctx context.Context) error {
+			client.Ctx = ctx
+
+			return client.Get()
+		})
 		if err == nil {
 			return nil
 		}
