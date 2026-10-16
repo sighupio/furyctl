@@ -8,8 +8,6 @@ require (
 	github.com/briandowns/spinner v1.23.1
 	github.com/coreos/butane v0.28.0
 	github.com/coreos/vcontext v0.0.0-20260306102053-7a68b5426c74
-	github.com/denisbrodbeck/machineid v1.0.1
-	github.com/dukex/mixpanel v1.0.1
 	github.com/go-playground/validator/v10 v10.22.1
 	github.com/google/go-cmp v0.7.0
 	github.com/google/uuid v1.6.0

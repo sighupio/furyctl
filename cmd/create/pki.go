@@ -15,11 +15,8 @@ import (
 	"github.com/spf13/viper"
 	certutil "k8s.io/client-go/util/cert"
 
-	"github.com/sighupio/furyctl/internal/analytics"
-	"github.com/sighupio/furyctl/internal/app"
 	"github.com/sighupio/furyctl/internal/clusterpki"
 	"github.com/sighupio/furyctl/internal/flags"
-	cobrax "github.com/sighupio/furyctl/internal/x/cobra"
 )
 
 func NewPki(etcd, controlplane bool, pkiPath string) error {
@@ -85,8 +82,6 @@ func NewPki(etcd, controlplane bool, pkiPath string) error {
 }
 
 func NewPKICmd() *cobra.Command {
-	var cmdEvent analytics.Event
-
 	pkiCmd := &cobra.Command{
 		Args:  cobra.NoArgs,
 		Use:   "pki",
@@ -94,8 +89,6 @@ func NewPKICmd() *cobra.Command {
 		Long: `Creates the Public Key Infrastructure files needed (CA, certificates, keys, etc.) by a Kubernetes cluster and its etcd database.
 You can limit the creation of the PKI to just etcd or just Kubernetes using the flags, if not specified the command will create the PKI for both of them.`,
 		PreRun: func(cmd *cobra.Command, _ []string) {
-			cmdEvent = analytics.NewCommandEvent(cobrax.GetFullname(cmd))
-
 			if err := viper.BindPFlags(cmd.Flags()); err != nil {
 				logrus.Fatalf("error while binding flags: %v", err)
 			}
@@ -106,11 +99,6 @@ You can limit the creation of the PKI to just etcd or just Kubernetes using the 
 			}
 		},
 		RunE: func(_ *cobra.Command, _ []string) error {
-			ctn := app.GetContainerInstance()
-
-			tracker := ctn.Tracker()
-			defer tracker.Flush()
-
 			// Get flags.
 			etcd := viper.GetBool("etcd")
 			controlplane := viper.GetBool("controlplane")
@@ -118,23 +106,15 @@ You can limit the creation of the PKI to just etcd or just Kubernetes using the 
 			pkiPath := viper.GetString("path")
 			pkiPath, err := filepath.Abs(pkiPath)
 			if err != nil {
-				tracker.Track(cmdEvent)
-				cmdEvent.AddErrorMessage(err)
-
 				return fmt.Errorf("error while getting absolute path for PKI folder path: %w", err)
 			}
 
 			if err := NewPki(etcd, controlplane, pkiPath); err != nil {
-				cmdEvent.AddErrorMessage(err)
-
 				return fmt.Errorf("PKI creation failed with error: %w", err)
 			}
 
 			logrus.Infof("PKI files successfully created at %s", pkiPath)
 			warnSecretFiles(pkiPath)
-
-			cmdEvent.AddSuccessMessage("PKI files successfully created at" + pkiPath)
-			tracker.Track(cmdEvent)
 
 			return nil
 		},

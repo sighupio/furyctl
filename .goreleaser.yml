@@ -12,7 +12,6 @@ before:
 builds:
   - env:
       - CGO_ENABLED=0
-      - MIX_PANEL_TOKEN={{ if index .Env "FURYCTL_MIXPANEL_TOKEN" }}{{ .Env.FURYCTL_MIXPANEL_TOKEN }}{{ else }}""{{ end }}
     goos:
       - linux
       - darwin
@@ -26,7 +25,6 @@ builds:
       - -X main.buildTime={{.Date}}
       - -X main.goVersion={{.Env.GO_VERSION}}
       - -X main.osArch={{.Arch}}
-      - -X main.mixPanelToken={{.Env.MIX_PANEL_TOKEN}}
 git:
   tag_sort: -version:creatordate
 archives:

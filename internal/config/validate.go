@@ -16,7 +16,6 @@ import (
 	"github.com/samber/lo"
 	"github.com/sirupsen/logrus"
 
-	"github.com/sighupio/furyctl/internal/analytics"
 	"github.com/sighupio/furyctl/internal/apis"
 	"github.com/sighupio/furyctl/internal/apis/config"
 	"github.com/sighupio/furyctl/internal/distribution"
@@ -40,8 +39,6 @@ var (
 func Create(
 	res dist.DownloadResult,
 	furyctlPath string,
-	cmdEvent analytics.Event,
-	tracker *analytics.Tracker,
 	data map[string]string,
 ) (*os.File, error) {
 	tplPath, err := distribution.GetConfigTemplatePath(res.RepoPath, res.MinimalConf)
@@ -51,32 +48,20 @@ func Create(
 
 	tplContent, err := os.ReadFile(tplPath)
 	if err != nil {
-		cmdEvent.AddErrorMessage(err)
-		tracker.Track(cmdEvent)
-
 		return nil, fmt.Errorf("error reading furyctl yaml template: %w", err)
 	}
 
 	tmpl, err := template.New("furyctl.yaml").Parse(string(tplContent))
 	if err != nil {
-		cmdEvent.AddErrorMessage(err)
-		tracker.Track(cmdEvent)
-
 		return nil, fmt.Errorf("error parsing furyctl yaml template: %w", err)
 	}
 
 	out, err := createNewEmptyConfigFile(furyctlPath)
 	if err != nil {
-		cmdEvent.AddErrorMessage(err)
-		tracker.Track(cmdEvent)
-
 		return nil, err
 	}
 
 	if err := tmpl.Execute(out, data); err != nil {
-		cmdEvent.AddErrorMessage(err)
-		tracker.Track(cmdEvent)
-
 		return nil, fmt.Errorf("error executing furyctl yaml template: %w", err)
 	}
 

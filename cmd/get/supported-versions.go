@@ -16,11 +16,8 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
-	"github.com/sighupio/furyctl/internal/analytics"
-	"github.com/sighupio/furyctl/internal/app"
 	"github.com/sighupio/furyctl/internal/distribution"
 	"github.com/sighupio/furyctl/internal/git"
-	cobrax "github.com/sighupio/furyctl/internal/x/cobra"
 )
 
 const DateFmt = "2006-01-02"
@@ -28,8 +25,6 @@ const DateFmt = "2006-01-02"
 var ErrInvalidKind = errors.New("invalid value for kind flag")
 
 func NewSupportedVersionsCmd() *cobra.Command {
-	var cmdEvent analytics.Event
-
 	kinds := distribution.ConfigKinds()
 
 	supportedVersionCmd := &cobra.Command{
@@ -41,21 +36,13 @@ func NewSupportedVersionsCmd() *cobra.Command {
   furyctl get supported-versions --kind OnPremises  lists the currently supported SD versions and their compatibility with this version of furyctl but for the OnPremises kind.
 `,
 		PreRun: func(cmd *cobra.Command, _ []string) {
-			cmdEvent = analytics.NewCommandEvent(cobrax.GetFullname(cmd))
 			if err := viper.BindPFlags(cmd.Flags()); err != nil {
 				logrus.Fatalf("error while binding flags: %v", err)
 			}
 		},
 		RunE: func(cmd *cobra.Command, _ []string) error {
-			ctn := app.GetContainerInstance()
-			tracker := ctn.Tracker()
-			tracker.Flush()
-
 			releases, err := distribution.GetSupportedVersions(git.NewGitHubClient())
 			if err != nil {
-				cmdEvent.AddErrorMessage(err)
-				tracker.Track(cmdEvent)
-
 				return fmt.Errorf("error getting supported SD versions: %w", err)
 			}
 
@@ -67,9 +54,6 @@ func NewSupportedVersionsCmd() *cobra.Command {
 				kind := viper.GetString("kind")
 				validKind, err := distribution.ValidateConfigKind(kind)
 				if err != nil {
-					cmdEvent.AddErrorMessage(err)
-					tracker.Track(cmdEvent)
-
 					return fmt.Errorf("error while validating kind: %w", err)
 				}
 
@@ -84,9 +68,6 @@ func NewSupportedVersionsCmd() *cobra.Command {
 			w := tabwriter.NewWriter(&table, 0, 0, padWidth, ' ', 0)
 			_, err = w.Write([]byte(FormatSupportedVersions(releases, kindsToPrint)))
 			if err != nil {
-				cmdEvent.AddErrorMessage(err)
-				tracker.Track(cmdEvent)
-
 				return fmt.Errorf("error writing supported versions to table: %w", err)
 			}
 
@@ -94,9 +75,6 @@ func NewSupportedVersionsCmd() *cobra.Command {
 			if _, err := fmt.Fprint(os.Stdout, msg); err != nil {
 				return fmt.Errorf("error writing to stdout: %w", err)
 			}
-
-			cmdEvent.AddSuccessMessage("supported SD versions")
-			tracker.Track(cmdEvent)
 
 			return nil
 		},
