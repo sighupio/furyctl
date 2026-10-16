@@ -296,6 +296,8 @@ func (*OperationPhase) CopyFromTemplate(
 		return fmt.Errorf("error creating temp dir: %w", err)
 	}
 
+	defer os.RemoveAll(outDirPath)
+
 	confPath := filepath.Join(outDirPath, "config.yaml")
 
 	logrus.Debugf("%s configuration file path %s", prefix, confPath)
@@ -338,6 +340,19 @@ func (op *OperationPhase) CopyPathsToConfig(cfg *templatex.Config) {
 		"kapp":            op.KappPath,
 		"ansiblePlaybook": op.AnsiblePlaybookCmd(),
 	}
+}
+
+// CopyKFDToConfig exposes the distribution's kfd.yaml (distribution and module versions) to the
+// templates as `.kfd`.
+func (*OperationPhase) CopyKFDToConfig(cfg *templatex.Config, distroPath string) error {
+	kfd, err := distribution.KFDData(distroPath)
+	if err != nil {
+		return fmt.Errorf("error reading kfd for templates: %w", err)
+	}
+
+	cfg.Data["kfd"] = kfd
+
+	return nil
 }
 
 // AnsiblePlaybookCmd returns the command templated scripts (upgrade paths) must use to run

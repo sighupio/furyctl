@@ -7,7 +7,6 @@ package create
 import (
 	"errors"
 	"fmt"
-	"os"
 	"path"
 	"slices"
 
@@ -133,10 +132,12 @@ func (p *PreFlight) Exec(renderedConfig map[string]any) (*Status, error) {
 		"version": p.kfdManifest.Kubernetes.OnPremises.Version,
 	}
 
+	templatesDir := path.Join(p.paths.DistroPath, "templates", cluster.OperationPhasePreFlight, "onpremises")
+
 	if err := p.CopyFromTemplate(
 		mCfg,
 		"preflight",
-		path.Join(p.paths.DistroPath, "templates", cluster.OperationPhasePreFlight, "onpremises"),
+		templatesDir,
 		p.Path,
 		p.paths.ConfigPath,
 	); err != nil {
@@ -147,20 +148,12 @@ func (p *PreFlight) Exec(renderedConfig map[string]any) (*Status, error) {
 		return status, fmt.Errorf("error checking hosts: %w", err)
 	}
 
-	adminConfPlaybook, err := preflightx.AdminConfPlaybookName(p.Path)
+	clusterExists, err := preflightx.FetchAdminConf(p.ansibleRunner, p.Path, templatesDir)
 	if err != nil {
-		return status, fmt.Errorf("error selecting admin.conf playbook: %w", err)
-	}
-
-	if _, err := p.ansibleRunner.Playbook(adminConfPlaybook); err != nil {
 		return status, fmt.Errorf("error checking if the cluster already exists: %w", err)
 	}
 
-	if _, err := os.Stat(path.Join(p.Path, "admin.conf")); err != nil {
-		if !os.IsNotExist(err) {
-			return status, fmt.Errorf("cluster exists, but error reading its kubeconfig locally: %w", err)
-		}
-
+	if !clusterExists {
 		status.Success = true
 
 		logrus.Debug("Cluster does not exist, skipping state checks")

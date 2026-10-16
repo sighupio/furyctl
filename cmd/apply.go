@@ -83,7 +83,7 @@ func NewApplyCmd() *cobra.Command {
   furyctl apply --config mycluster.yaml             Apply a custom configuration file
   furyctl apply --phase distribution                Apply a single phase, for example the distribution phase
   furyctl apply --post-apply-phases distribution    Apply all the phases, and repeat the distribution phase afterwards
-  furyctl apply --upgrade                           Upgrade a cluster after bumping it's version in the configuration file.
+  furyctl apply --upgrade                           Upgrade a cluster after bumping its version in the configuration file.
 `,
 		PreRun: func(cmd *cobra.Command, _ []string) {
 			cmdEvent = analytics.NewCommandEvent(cobrax.GetFullname(cmd))
@@ -257,7 +257,7 @@ func NewApplyCmd() *cobra.Command {
 				logrus.Info("Dependencies validation skipped")
 			}
 
-			// Define cluster creation paths.
+			// Define the apply paths.
 			paths := cluster.CreatorPaths{
 				ConfigPath: cmdFlags.FuryctlPath,
 				WorkDir:    basePath,
@@ -268,7 +268,7 @@ func NewApplyCmd() *cobra.Command {
 			// Set debug mode.
 			execx.Debug = cmdFlags.Debug
 
-			// Create the cluster.
+			// Apply the configuration.
 			clusterCreator, err := cluster.NewCreator(
 				res.MinimalConf,
 				res.DistroManifest,
@@ -288,7 +288,7 @@ func NewApplyCmd() *cobra.Command {
 				cmdEvent.AddErrorMessage(err)
 				tracker.Track(cmdEvent)
 
-				return fmt.Errorf("error while initializing cluster creation: %w", err)
+				return fmt.Errorf("error while initializing the apply: %w", err)
 			}
 
 			if err := clusterCreator.Create(
@@ -299,7 +299,7 @@ func NewApplyCmd() *cobra.Command {
 				cmdEvent.AddErrorMessage(err)
 				tracker.Track(cmdEvent)
 
-				return fmt.Errorf("error while creating cluster: %w", err)
+				return fmt.Errorf("error while applying the configuration: %w", err)
 			}
 
 			cmdEvent.AddSuccessMessage("apply configuration succeeded")
@@ -583,13 +583,13 @@ func setupApplyCmdFlags(cmd *cobra.Command) {
 	cmd.Flags().Bool(
 		"dry-run",
 		false,
-		"Allows to inspect what resources will be created before applying them",
+		"Allows to inspect what resources will be created or changed before applying them",
 	)
 
 	cmd.Flags().Bool(
 		"vpn-auto-connect",
 		false,
-		"When set will automatically connect to the created VPN by the infrastructure phase "+
+		"When set will automatically connect to the VPN that the infrastructure phase creates "+
 			"(requires OpenVPN installed in the system)",
 	)
 
@@ -646,7 +646,7 @@ func setupApplyCmdFlags(cmd *cobra.Command) {
 	cmd.Flags().Int(
 		"timeout",
 		3600, //nolint:mnd,revive // ignore magic number linters
-		"Timeout for the whole cluster creation process, expressed in seconds",
+		"Timeout for the whole apply process, expressed in seconds",
 	)
 
 	cmd.Flags().Int(

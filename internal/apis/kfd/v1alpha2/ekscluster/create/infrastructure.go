@@ -111,7 +111,7 @@ func (i *Infrastructure) Exec(startFrom string, upgradeState *upgrade.State) err
 		return fmt.Errorf("error running post-infrastructure phase: %w", err)
 	}
 
-	logrus.Info("Infrastructure created successfully")
+	logrus.Info("Infrastructure configured successfully")
 
 	return nil
 }

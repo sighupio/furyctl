@@ -121,6 +121,13 @@ func (m *IACBuilder) Build() error {
 		"storageClassAvailable": true,
 	}
 
+	kfd, err := KFDData(m.distroPath)
+	if err != nil {
+		return fmt.Errorf("error reading kfd for templates: %w", err)
+	}
+
+	tmplCfg.Data["kfd"] = kfd
+
 	outYaml, err := yamlx.MarshalV2(tmplCfg)
 	if err != nil {
 		return fmt.Errorf("error marshaling template config: %w", err)
@@ -129,6 +136,11 @@ func (m *IACBuilder) Build() error {
 	outDirPath, err := os.MkdirTemp("", "furyctl-dist-")
 	if err != nil {
 		return fmt.Errorf("error creating temporary directory: %w", err)
+	}
+
+	// On a dry run, the template model writes tmpl-debug.log in this folder and tells the user its path.
+	if !m.dryRun {
+		defer os.RemoveAll(outDirPath)
 	}
 
 	confPath := filepath.Join(outDirPath, "config.yaml")

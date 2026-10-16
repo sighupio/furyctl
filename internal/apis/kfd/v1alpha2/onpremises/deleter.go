@@ -5,6 +5,7 @@
 package onpremises
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 
@@ -15,6 +16,8 @@ import (
 	"github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/onpremises/public"
 	"github.com/sighupio/furyctl/internal/cluster"
 )
+
+var errClusterNotFound = errors.New("the cluster does not exist")
 
 type ClusterDeleter struct {
 	paths       cluster.DeleterPaths
@@ -73,33 +76,60 @@ func (d *ClusterDeleter) Delete() error {
 
 	preflight := del.NewPreFlight(d.furyctlConf, d.kfdManifest, d.paths, d.dryRun)
 
-	if err := preflight.Exec(); err != nil {
+	clusterExists, err := preflight.Exec()
+	if err != nil {
 		return fmt.Errorf("error while executing preflight phase: %w", err)
 	}
 
-	switch d.phase {
-	case cluster.OperationPhaseKubernetes:
-		if err := kubernetesPhase.Exec(); err != nil {
-			return fmt.Errorf("error while deleting kubernetes phase: %w", err)
-		}
+	deleteDistribution, err := distributionDeletion(d.phase, clusterExists)
+	if err != nil {
+		return err
+	}
 
-	case cluster.OperationPhaseDistribution:
+	if deleteDistribution {
 		if err := distributionPhase.Exec(); err != nil {
 			return fmt.Errorf("error while deleting distribution phase: %w", err)
 		}
+	}
 
-	case cluster.OperationPhaseAll:
-		if err := distributionPhase.Exec(); err != nil {
-			return fmt.Errorf("error while deleting distribution phase: %w", err)
-		}
-
+	if d.phase != cluster.OperationPhaseDistribution {
 		if err := kubernetesPhase.Exec(); err != nil {
 			return fmt.Errorf("error while deleting kubernetes phase: %w", err)
 		}
-
-	default:
-		return ErrUnsupportedPhase
 	}
 
 	return nil
+}
+
+// distributionDeletion reports whether a delete runs the distribution phase. Without a cluster the
+// preflight check sets no KUBECONFIG, and the distribution phase would then delete the manifests
+// from the cluster of the current kubeconfig context, so it must not run.
+//
+//nolint:revive // clusterExists is the result of the preflight check, not a mode.
+func distributionDeletion(phase string, clusterExists bool) (bool, error) {
+	switch phase {
+	case cluster.OperationPhaseKubernetes:
+		return false, nil
+
+	case cluster.OperationPhaseDistribution, cluster.OperationPhaseAll:
+		if clusterExists {
+			return true, nil
+		}
+
+		if phase == cluster.OperationPhaseDistribution {
+			return false, fmt.Errorf(
+				"%w: the preflight check read no kubeconfig from the control plane hosts, so there is no "+
+					"distribution to delete",
+				errClusterNotFound,
+			)
+		}
+
+		logrus.Info("The preflight check read no kubeconfig from the control plane hosts, skipping the " +
+			"distribution phase...")
+
+		return false, nil
+
+	default:
+		return false, ErrUnsupportedPhase
+	}
 }

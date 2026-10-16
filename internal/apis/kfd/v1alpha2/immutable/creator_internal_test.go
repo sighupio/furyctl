@@ -9,6 +9,7 @@ package immutable //nolint:testpackage // exercises the unexported upgrade state
 import (
 	"testing"
 
+	r3diff "github.com/r3labs/diff/v3"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -297,4 +298,115 @@ func TestNewDistributionPhaseKeepsTheStorageSkipper(t *testing.T) {
 
 	_, ok := any(phase).(commcreate.StorageSkipper)
 	assert.False(t, ok, "the decorator hides StorageSkipper, use c.distribution")
+}
+
+// A run for one host applies only its playbook, and then stores the configuration as applied.
+// A change in the configuration is then lost, so the run refuses it.
+func TestValidateUpgradeNodeChanges(t *testing.T) {
+	t.Parallel()
+
+	changes := r3diff.Changelog{{
+		Type: "create",
+		Path: []string{"spec", "distribution", "customPatches"},
+		To:   map[string]any{},
+	}}
+
+	versionChange := r3diff.Changelog{{
+		Type: "update",
+		Path: []string{"spec", "distributionVersion"},
+		From: "v1.35.1",
+		To:   "v1.36.0",
+	}}
+
+	tests := []struct {
+		name        string
+		upgradeNode string
+		changes     r3diff.Changelog
+		wantErr     string
+	}{
+		{name: "no host, a change: apply as usual", changes: changes},
+		{name: "a host, no change: upgrade the host", upgradeNode: "node1"},
+		{name: "a host and a change: refuse", upgradeNode: "node1", changes: changes, wantErr: "run 'furyctl apply' to"},
+		{name: "a load balancer and a change: refuse", upgradeNode: "lb1", changes: changes, wantErr: "run 'furyctl apply' to"},
+		{
+			// A plain apply refuses a version change, so the advice names the upgrade.
+			name:        "a host and a version change: refuse, name the upgrade",
+			upgradeNode: "node1",
+			changes:     versionChange,
+			wantErr:     "--upgrade --skip-nodes-upgrade",
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			err := (&ClusterCreator{upgradeNode: tc.upgradeNode}).validateUpgradeNodeChanges(tc.changes)
+
+			if tc.wantErr != "" {
+				require.ErrorIs(t, err, errUpgradeNodeChanges)
+				assert.ErrorContains(t, err, tc.wantErr)
+
+				return
+			}
+
+			require.NoError(t, err)
+		})
+	}
+}
+
+type rawUpgradeStore struct {
+	raw []byte
+}
+
+func (*rawUpgradeStore) Store(*upgrade.State) error { return nil }
+func (*rawUpgradeStore) Delete() error              { return nil }
+func (*rawUpgradeStore) GetLatestResumablePhase(*upgrade.State) string {
+	return ""
+}
+
+func (s *rawUpgradeStore) Get() ([]byte, error) {
+	if s.raw == nil {
+		return nil, upgrade.ErrStateNotFound
+	}
+
+	return s.raw, nil
+}
+
+// routeStagedUpgrade sends a run with no staged worker to the phases. A run for one host must
+// then find no change, with or without a stored upgrade state.
+func TestRouteStagedUpgradeRefusesUpgradeNodeChanges(t *testing.T) {
+	t.Parallel()
+
+	changes := r3diff.Changelog{{
+		Type: "create",
+		Path: []string{"spec", "distribution", "customPatches"},
+		To:   map[string]any{},
+	}}
+
+	tests := []struct {
+		name string
+		raw  []byte
+	}{
+		{name: "no upgrade state"},
+		{name: "an upgrade state with no staged worker", raw: []byte("phases:\n  preKubernetes:\n    status: success\n")},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			c := &ClusterCreator{
+				furyctlConf:       labConf(),
+				upgradeNode:       "node1",
+				phase:             cluster.OperationPhaseAll,
+				upgradeStateStore: &rawUpgradeStore{raw: tc.raw},
+			}
+
+			done, err := c.routeStagedUpgrade(nil, nil, changes, StartFromFlagNotSet)
+
+			require.ErrorIs(t, err, errUpgradeNodeChanges)
+			assert.False(t, done)
+		})
+	}
 }

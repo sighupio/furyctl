@@ -5,6 +5,7 @@
 package netx
 
 import (
+	"context"
 	"crypto/sha256"
 	"encoding/hex"
 	"errors"
@@ -12,10 +13,13 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"time"
 
 	"github.com/sighupio/furyctl/internal/git"
 	"github.com/sighupio/furyctl/internal/semver"
+	execx "github.com/sighupio/furyctl/internal/x/exec"
 	iox "github.com/sighupio/furyctl/internal/x/io"
+	osx "github.com/sighupio/furyctl/internal/x/os"
 )
 
 var (
@@ -23,6 +27,7 @@ var (
 	ErrCannotCheckLocalCache        = errors.New("cannot check local cache")
 	ErrCannotGetKeyFromURL          = errors.New("cannot get key from url")
 	ErrCannotCopyCacheToDestination = errors.New("cannot copy cache to destination")
+	ErrCannotCopyDownloadToCache    = errors.New("cannot copy download to cache")
 	ErrCannotClearCache             = errors.New("cannot clear cache")
 	URLPrefixRegexp                 = regexp.MustCompile(`^[A-z0-9]+::`)
 
@@ -58,6 +63,12 @@ type Client interface {
 	Download(src, dst string) error
 	Clear() error
 	ClearItem(src string) error
+}
+
+// TopDotSkipper gives a Client that copies a local directory without the dot files and folders at its
+// top, for example .git.
+type TopDotSkipper interface {
+	WithoutTopDotFiles() Client
 }
 
 func WithLocalCache(c Client, dir string) Client {
@@ -114,7 +125,10 @@ func (d *LocalCacheClientDecorator) Download(src, dst string) error {
 
 	if hlc {
 		if _, err := os.Stat(dst); err != nil {
-			return d.copyCacheToDestination(csrc, dst)
+			// A signal stops the copy, so that furyctl can remove the destination.
+			return execx.Track(func(ctx context.Context) error { //nolint:wrapcheck // The function wraps it.
+				return d.copyCacheToDestination(ctx, csrc, dst)
+			})
 		}
 
 		return nil
@@ -124,7 +138,10 @@ func (d *LocalCacheClientDecorator) Download(src, dst string) error {
 		return fmt.Errorf("%w: %w", ErrCannotCacheDownload, err)
 	}
 
-	if err := d.copyDownloadToLocalCache(csrc, dst); err != nil {
+	// The copy reads dst. A signal stops it before furyctl removes dst.
+	if err := execx.Track(func(ctx context.Context) error {
+		return d.copyDownloadToLocalCache(ctx, csrc, dst)
+	}); err != nil {
 		return fmt.Errorf("%w: %w", ErrCannotCacheDownload, err)
 	}
 
@@ -153,7 +170,7 @@ func (d *LocalCacheClientDecorator) getKeyFromURL(url string) string {
 	return filepath.Join(d.dir, hex.EncodeToString(urlSum[:]))
 }
 
-func (d *LocalCacheClientDecorator) copyCacheToDestination(cacheFolder, destFolder string) error {
+func (d *LocalCacheClientDecorator) copyCacheToDestination(ctx context.Context, cacheFolder, destFolder string) error {
 	key := d.getKeyFromURL(cacheFolder)
 
 	if _, err := os.Stat(destFolder); err != nil {
@@ -166,29 +183,67 @@ func (d *LocalCacheClientDecorator) copyCacheToDestination(cacheFolder, destFold
 		}
 	}
 
-	if err := iox.CopyRecursive(os.DirFS(key), destFolder); err != nil {
+	if err := iox.CopyRecursiveContext(ctx, os.DirFS(key), destFolder); err != nil {
 		return fmt.Errorf("%w: %w", ErrCannotCopyCacheToDestination, err)
 	}
 
 	return nil
 }
 
-func (d *LocalCacheClientDecorator) copyDownloadToLocalCache(downloadFolder, cacheFolder string) error {
+// copyDownloadToLocalCache copies the download to a partial folder. Then it renames the folder to the
+// cache key. Only a complete copy gets the name of the cache entry, so an interrupted copy leaves no entry.
+func (d *LocalCacheClientDecorator) copyDownloadToLocalCache(
+	ctx context.Context,
+	downloadFolder, cacheFolder string,
+) error {
 	key := d.getKeyFromURL(downloadFolder)
 
-	if _, err := os.Stat(key); err != nil {
-		if !errors.Is(err, os.ErrNotExist) {
-			return fmt.Errorf("%w: %w", ErrCannotCopyCacheToDestination, err)
-		}
-
-		if err := os.MkdirAll(key, iox.FullPermAccess); err != nil {
-			return fmt.Errorf("%w: %w", ErrCannotCopyCacheToDestination, err)
-		}
+	if err := os.MkdirAll(d.dir, iox.FullPermAccess); err != nil {
+		return fmt.Errorf("%w: %w", ErrCannotCopyDownloadToCache, err)
 	}
 
-	if err := iox.CopyRecursive(os.DirFS(cacheFolder), key); err != nil {
-		return fmt.Errorf("%w: %w", ErrCannotCopyCacheToDestination, err)
+	removeStalePartials(d.dir)
+
+	partial, err := os.MkdirTemp(d.dir, "partial-")
+	if err != nil {
+		return fmt.Errorf("%w: %w", ErrCannotCopyDownloadToCache, err)
+	}
+
+	defer os.RemoveAll(partial)
+
+	// A second signal or a kill skips the defer.
+	osx.RegisterTempDir(partial)
+
+	if err := iox.CopyRecursiveContext(ctx, os.DirFS(cacheFolder), partial); err != nil {
+		return fmt.Errorf("%w: %w", ErrCannotCopyDownloadToCache, err)
+	}
+
+	if err := os.Rename(partial, key); err != nil {
+		// A parallel run can create the entry first. Its copy is also complete.
+		if _, serr := os.Stat(key); serr == nil {
+			return nil
+		}
+
+		return fmt.Errorf("%w: %w", ErrCannotCopyDownloadToCache, err)
 	}
 
 	return nil
+}
+
+// A copy to the cache takes seconds. An older partial folder is from a killed run.
+const stalePartialAge = time.Hour
+
+// removeStalePartials removes the partial folders that a killed run left in dir. A parallel run can
+// use a new partial folder, so the function removes only the old ones.
+func removeStalePartials(dir string) {
+	partials, err := filepath.Glob(filepath.Join(dir, "partial-*"))
+	if err != nil {
+		return
+	}
+
+	for _, p := range partials {
+		if fi, err := os.Stat(p); err == nil && time.Since(fi.ModTime()) > stalePartialAge {
+			_ = os.RemoveAll(p) // A folder that stays only uses disk space.
+		}
+	}
 }

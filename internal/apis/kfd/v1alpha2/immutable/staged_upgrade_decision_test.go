@@ -66,6 +66,29 @@ func TestStagedUpgradeDecision(t *testing.T) {
 		To:   "v1.36.0",
 	}}
 
+	otherVersionChange := r3diff.Changelog{{
+		Type: "update",
+		Path: []string{"spec", "distributionVersion"},
+		From: "v1.35.1",
+		To:   "v1.37.0",
+	}}
+
+	otherChange := r3diff.Changelog{{
+		Type: "update",
+		Path: []string{"spec", "distribution", "modules", "logging", "type"},
+		From: "loki",
+		To:   "none",
+	}}
+
+	// An upgrade that stopped in the pre-kubernetes step, before it staged the workers.
+	stoppedBeforeStaging := &upgrade.State{Phases: succeededPhases()}
+	stoppedBeforeStaging.Phases.PreKubernetes.Status = upgrade.PhaseStatusFailed
+	stoppedBeforeStaging.Phases.Kubernetes.Status = upgrade.PhaseStatusPending
+
+	// An upgrade that stopped in the distribution phase, after it staged the workers.
+	stoppedAfterStaging := stagedState(false, pending)
+	stoppedAfterStaging.Phases.Distribution.Status = upgrade.PhaseStatusFailed
+
 	tests := []struct {
 		name             string
 		state            *upgrade.State
@@ -78,6 +101,7 @@ func TestStagedUpgradeDecision(t *testing.T) {
 		changes          r3diff.Changelog
 		want             stagedUpgradeAction
 		wantErr          bool
+		errContains      string
 	}{
 		{
 			name:  "no state: run the phases",
@@ -89,6 +113,17 @@ func TestStagedUpgradeDecision(t *testing.T) {
 			state:       stagedState(true, pending),
 			upgradeFlag: false,
 			wantErr:     true,
+		},
+		{
+			// The rollout stopped between the upgrade of its last worker and the delete of the state.
+			name: "every worker upgraded, plain apply: refuse, name --upgrade to complete",
+			state: stagedState(true, map[string]upgrade.PhaseStatus{
+				"node1": upgrade.PhaseStatusSuccess,
+				"node2": upgrade.PhaseStatusSuccess,
+			}),
+			phase:       cluster.OperationPhaseAll,
+			wantErr:     true,
+			errContains: "stopped after it upgraded every worker node",
 		},
 		{
 			name:        "ready to resume: upgrade every pending worker",
@@ -178,6 +213,119 @@ func TestStagedUpgradeDecision(t *testing.T) {
 			phase:       cluster.OperationPhaseAll,
 			want:        stagedUpgradeResumeBatch,
 		},
+		{
+			name:        "a named worker after an upgrade that stopped before staging: refuse",
+			state:       stoppedBeforeStaging,
+			upgradeNode: "node1",
+			phase:       cluster.OperationPhaseAll,
+			changes:     versionChange,
+			wantErr:     true,
+			errContains: "did not complete",
+		},
+		{
+			name:        "a named worker after an upgrade that stopped after staging: refuse",
+			state:       stoppedAfterStaging,
+			upgradeNode: "node1",
+			phase:       cluster.OperationPhaseAll,
+			changes:     versionChange,
+			wantErr:     true,
+			errContains: "did not complete",
+		},
+		{
+			// The refusal comes before the test of the transition. The next run gives that error.
+			name:        "a named worker after a stopped upgrade to another version: refuse",
+			state:       stoppedAfterStaging,
+			upgradeNode: "node1",
+			phase:       cluster.OperationPhaseAll,
+			changes:     otherVersionChange,
+			wantErr:     true,
+			errContains: "did not complete",
+		},
+		{
+			name:        "a named load balancer after a stopped upgrade with no version change: refuse",
+			state:       stoppedAfterStaging,
+			upgradeNode: "lb1",
+			phase:       cluster.OperationPhaseAll,
+			wantErr:     true,
+			errContains: "staged target",
+		},
+		{
+			// A state of an upgrade that the operator stopped and reverted gives no refusal.
+			name:        "a named worker after a stopped upgrade with no version change: run the phases",
+			state:       stoppedBeforeStaging,
+			upgradeNode: "node1",
+			phase:       cluster.OperationPhaseAll,
+			want:        stagedUpgradeProceed,
+		},
+		{
+			name:        "a named load balancer before the state is ready: refuse",
+			state:       stagedState(false, pending),
+			upgradeNode: "lb1",
+			phase:       cluster.OperationPhaseAll,
+			changes:     versionChange,
+			wantErr:     true,
+			errContains: "did not complete",
+		},
+		{
+			// Before the state is ready, the difference holds the version change of the upgrade, so the
+			// message still names --upgrade.
+			name:        "a change before the state is ready, plain apply: refuse, name --upgrade",
+			state:       stagedState(false, pending),
+			phase:       cluster.OperationPhaseAll,
+			changes:     versionChange,
+			wantErr:     true,
+			errContains: "a worker upgrade is pending",
+		},
+		{
+			// A plain apply, --upgrade, --skip-nodes-upgrade and --upgrade-node all refuse a change while
+			// workers are pending. Each message gives the same path out.
+			name:        "a change while workers are pending, plain apply: refuse with the path out",
+			state:       stagedState(true, pending),
+			phase:       cluster.OperationPhaseAll,
+			changes:     otherChange,
+			wantErr:     true,
+			errContains: "revert the change",
+		},
+		{
+			name:        "a change while workers are pending, --upgrade: refuse with the path out",
+			state:       stagedState(true, pending),
+			upgradeFlag: true,
+			phase:       cluster.OperationPhaseAll,
+			changes:     otherChange,
+			wantErr:     true,
+			errContains: "revert the change",
+		},
+		{
+			// The noop reported success and ignored the change.
+			name:             "a change while workers are pending, --skip-nodes-upgrade: refuse with the path out",
+			state:            stagedState(true, pending),
+			upgradeFlag:      true,
+			skipNodesUpgrade: true,
+			phase:            cluster.OperationPhaseAll,
+			changes:          otherChange,
+			wantErr:          true,
+			errContains:      "revert the change",
+		},
+		{
+			name:        "a change while workers are pending, --upgrade-node: refuse with the path out",
+			state:       stagedState(true, pending),
+			upgradeNode: "node1",
+			phase:       cluster.OperationPhaseAll,
+			changes:     otherChange,
+			wantErr:     true,
+			errContains: "revert the change",
+		},
+		{
+			// Without this refusal, the run upgrades only the load balancer and records the
+			// configuration as applied, but no phase applies the change.
+			name:        "a named load balancer with a configuration change: refuse",
+			state:       stagedState(true, pending),
+			upgradeNode: "lb1",
+			phase:       cluster.OperationPhaseAll,
+			changes:     otherChange,
+			wantErr:     true,
+			errContains: "configuration changed",
+		},
 	}
 
 	for _, tc := range tests {
@@ -201,7 +349,7 @@ func TestStagedUpgradeDecision(t *testing.T) {
 			got, err := c.stagedUpgradeDecision(tc.state, tc.changes, startFrom)
 
 			if tc.wantErr {
-				require.Error(t, err)
+				require.ErrorContains(t, err, tc.errContains)
 
 				return
 			}

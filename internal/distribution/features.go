@@ -18,6 +18,7 @@ var ErrPluginsFeatureNotSupported = errors.New("plugins feature not supported")
 const (
 	FeatureClusterUpgrade     = Feature("ClusterUpgrade")
 	FeatureTracingModule      = Feature("TracingModule")
+	FeatureUtilitiesModule    = Feature("UtilitiesModule")
 	FeatureKubeconfigInSchema = Feature("KubeconfigInSchema")
 	FeaturePlugins            = Feature("Plugins")
 	FeatureYqSupport          = Feature("YqSupport")
@@ -36,6 +37,9 @@ func HasFeature(kfd config.KFD, name Feature) bool {
 
 	case FeatureTracingModule:
 		return hasFeatureTracingModule(kfd)
+
+	case FeatureUtilitiesModule:
+		return hasFeatureUtilitiesModule(kfd)
 
 	case FeaturePlugins:
 		return hasFeaturePlugins(kfd)
@@ -108,6 +112,20 @@ func hasFeatureTracingModule(kfd config.KFD) bool {
 	}
 
 	return v1.GreaterThanOrEqual(v1264)
+}
+
+func hasFeatureUtilitiesModule(kfd config.KFD) bool {
+	v1, err := semver.NewVersion(kfd.Version)
+	if err != nil {
+		return false
+	}
+
+	v1360, err := semver.NewVersion("v1.36.0")
+	if err != nil {
+		return false
+	}
+
+	return v1.GreaterThanOrEqual(v1360)
 }
 
 func hasFeaturePlugins(kfd config.KFD) bool {
