@@ -7,12 +7,12 @@
 package flags_test
 
 import (
-	"regexp"
 	"slices"
 	"strings"
 	"testing"
 
 	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -58,8 +58,6 @@ var customFlagTypes = map[string]flags.FlagType{
 	"git-protocol": flags.FlagTypeString,
 }
 
-var flagName = regexp.MustCompile(`--([a-z][a-z0-9-]*)`)
-
 // TestTableMatchesTheCommands keeps the supported flags and the commands together. It fails when a
 // command gains a flag that the table does not list, when the table lists a flag that no command
 // has, and when the table gives a flag a different type than the command.
@@ -97,21 +95,15 @@ func TestTableMatchesTheCommands(t *testing.T) {
 				set = root.PersistentFlags()
 			}
 
-			for _, m := range flagName.FindAllStringSubmatch(set.FlagUsages(), -1) {
-				// The usage also holds the flags that a description mentions, for example the
-				// description of `--airgap-bundle`. Lookup finds only the declared flags.
-				flag := set.Lookup(m[1])
-				if flag == nil {
-					continue
-				}
-
+			// VisitAll also visits the hidden flags, for example the deprecated `disable-analytics`.
+			set.VisitAll(func(flag *pflag.Flag) {
 				flagType, custom := customFlagTypes[flag.Value.Type()]
 				if !custom {
 					flagType = flags.FlagType(flag.Value.Type())
 				}
 
-				real[m[1]] = flagType
-			}
+				real[flag.Name] = flagType
+			})
 		}
 
 		declared := map[string]bool{}
