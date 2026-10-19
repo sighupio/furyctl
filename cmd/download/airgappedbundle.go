@@ -15,13 +15,10 @@ import (
 	"github.com/spf13/viper"
 
 	"github.com/sighupio/furyctl/internal/airgap"
-	"github.com/sighupio/furyctl/internal/analytics"
 	"github.com/sighupio/furyctl/internal/apis/config"
-	"github.com/sighupio/furyctl/internal/app"
 	"github.com/sighupio/furyctl/internal/flags"
 	"github.com/sighupio/furyctl/internal/git"
 	"github.com/sighupio/furyctl/internal/tool/helmfile"
-	cobrax "github.com/sighupio/furyctl/internal/x/cobra"
 	execx "github.com/sighupio/furyctl/internal/x/exec"
 	iox "github.com/sighupio/furyctl/internal/x/io"
 	"github.com/sighupio/furyctl/pkg/dependencies"
@@ -79,8 +76,6 @@ func preinstallHelmPlugins(kfd config.KFD, binPath string) error {
 }
 
 func NewAirGappedBundleCmd() *cobra.Command {
-	var cmdEvent analytics.Event
-
 	airGappedBundleCmd := &cobra.Command{
 		Args:  cobra.NoArgs,
 		Use:   "air-gapped-bundle",
@@ -92,8 +87,6 @@ func NewAirGappedBundleCmd() *cobra.Command {
 			"Then run 'furyctl apply --airgap-bundle /path/to/bundle.tar.gz'. " +
 			"furyctl extracts the bundle in the working directory and runs offline.",
 		PreRun: func(cmd *cobra.Command, _ []string) {
-			cmdEvent = analytics.NewCommandEvent(cobrax.GetFullname(cmd))
-
 			// Bind the flags first: a flag on the command line has precedence over the configuration file.
 			if err := viper.BindPFlags(cmd.Flags()); err != nil {
 				logrus.Fatalf("error while binding flags: %v", err)
@@ -104,11 +97,6 @@ func NewAirGappedBundleCmd() *cobra.Command {
 			}
 		},
 		RunE: func(_ *cobra.Command, _ []string) error {
-			ctn := app.GetContainerInstance()
-
-			tracker := ctn.Tracker()
-			tracker.Flush()
-
 			furyctlPath := viper.GetString("config")
 			distroLocation := viper.GetString("distro-location")
 			gitProtocol := viper.GetString("git-protocol")
@@ -127,9 +115,6 @@ func NewAirGappedBundleCmd() *cobra.Command {
 
 			typedGitProtocol, err := git.ParseProtocol(gitProtocol)
 			if err != nil {
-				cmdEvent.AddErrorMessage(err)
-				tracker.Track(cmdEvent)
-
 				return fmt.Errorf("%w: %w", ErrParsingFlag, err)
 			}
 
@@ -138,9 +123,6 @@ func NewAirGappedBundleCmd() *cobra.Command {
 			if distroPatchesLocation != "" {
 				distroPatchesLocation, err = filepath.Abs(distroPatchesLocation)
 				if err != nil {
-					cmdEvent.AddErrorMessage(err)
-					tracker.Track(cmdEvent)
-
 					return fmt.Errorf("error while getting absolute path of distro patches location: %w", err)
 				}
 			}
@@ -157,24 +139,13 @@ func NewAirGappedBundleCmd() *cobra.Command {
 			}
 
 			if err := depsvl.ValidateBaseReqs(); err != nil {
-				cmdEvent.AddErrorMessage(err)
-				tracker.Track(cmdEvent)
-
 				return fmt.Errorf("error while validating requirements: %w", err)
 			}
 
 			dres, err := distrodl.Download(distroLocation, furyctlPath)
 			if err != nil {
-				cmdEvent.AddErrorMessage(err)
-				tracker.Track(cmdEvent)
-
 				return fmt.Errorf("failed to download distribution: %w", err)
 			}
-
-			cmdEvent.AddClusterDetails(analytics.ClusterDetails{
-				Provider:   dres.MinimalConf.Kind,
-				KFDVersion: dres.DistroManifest.Version,
-			})
 
 			clusterName := dres.MinimalConf.Metadata.Name
 			basePath := filepath.Join(outDir, ".furyctl", clusterName)
@@ -194,9 +165,6 @@ func NewAirGappedBundleCmd() *cobra.Command {
 					logrus.Error(err)
 				}
 
-				cmdEvent.AddErrorMessage(ErrDownloadFailed)
-				tracker.Track(cmdEvent)
-
 				return ErrDownloadFailed
 			}
 
@@ -204,9 +172,6 @@ func NewAirGappedBundleCmd() *cobra.Command {
 			// network by helmfile init during the distribution and plugins phases; doing it here, on the
 			// connected build host, is what makes those phases work on the target offline.
 			if err := preinstallHelmPlugins(dres.DistroManifest, binPath); err != nil {
-				cmdEvent.AddErrorMessage(err)
-				tracker.Track(cmdEvent)
-
 				return err
 			}
 
@@ -223,9 +188,6 @@ func NewAirGappedBundleCmd() *cobra.Command {
 			}
 
 			if err := iox.CreateTarGz(bundleOutput, entries); err != nil {
-				cmdEvent.AddErrorMessage(err)
-				tracker.Track(cmdEvent)
-
 				return fmt.Errorf("error creating air-gapped bundle: %w", err)
 			}
 
@@ -235,9 +197,6 @@ func NewAirGappedBundleCmd() *cobra.Command {
 			logrus.Info("furyctl extracts the bundle in the working directory and runs offline. " +
 				"You can use the same --airgap-bundle flag with these commands: diff, delete cluster, " +
 				"get kubeconfig, get upgrade-paths, renew certificates.")
-
-			cmdEvent.AddSuccessMessage("Air-gapped bundle created successfully")
-			tracker.Track(cmdEvent)
 
 			return nil
 		},

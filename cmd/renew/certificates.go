@@ -9,14 +9,9 @@ import (
 
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
-
-	"github.com/sighupio/furyctl/internal/analytics"
-	"github.com/sighupio/furyctl/internal/app"
 )
 
 func NewCertificatesCmd() *cobra.Command {
-	var cmdEvent analytics.Event
-
 	certificatesCmd := &cobra.Command{
 		Args:  cobra.NoArgs,
 		Use:   "certificates",
@@ -28,31 +23,18 @@ func NewCertificatesCmd() *cobra.Command {
 		Example: `  furyctl renew certificates                            Renew the certificates of the cluster PKI
   furyctl renew certificates --config mycluster.yaml    Renew with a custom configuration file
 `,
-		PreRun: func(cmd *cobra.Command, _ []string) {
-			cmdEvent = preRun(cmd)
-		},
+		PreRun: preRun,
 		RunE: func(_ *cobra.Command, _ []string) error {
-			ctn := app.GetContainerInstance()
-
-			tracker := ctn.Tracker()
-			tracker.Flush()
-
-			renewer, err := newRenewer(cmdEvent, tracker)
+			renewer, err := newRenewer()
 			if err != nil {
 				return err
 			}
 
 			if err := renewer.RenewCertificates(); err != nil {
-				cmdEvent.AddErrorMessage(err)
-				tracker.Track(cmdEvent)
-
 				return fmt.Errorf("error while renewing certificates: %w", err)
 			}
 
 			logrus.Info("Certificates successfully renewed")
-
-			cmdEvent.AddSuccessMessage("certificates successfully renewed")
-			tracker.Track(cmdEvent)
 
 			return nil
 		},

@@ -14,13 +14,10 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
-	"github.com/sighupio/furyctl/internal/analytics"
-	"github.com/sighupio/furyctl/internal/app"
 	"github.com/sighupio/furyctl/internal/dependencies/envvars"
 	"github.com/sighupio/furyctl/internal/dependencies/tools"
 	"github.com/sighupio/furyctl/internal/flags"
 	"github.com/sighupio/furyctl/internal/git"
-	cobrax "github.com/sighupio/furyctl/internal/x/cobra"
 	execx "github.com/sighupio/furyctl/internal/x/exec"
 	"github.com/sighupio/furyctl/pkg/dependencies"
 	dist "github.com/sighupio/furyctl/pkg/distribution"
@@ -30,15 +27,11 @@ import (
 var ErrDependencies = errors.New("dependencies are not satisfied")
 
 func NewDependenciesCmd() *cobra.Command {
-	var cmdEvent analytics.Event
-
 	dependenciesCmd := &cobra.Command{
 		Args:  cobra.NoArgs,
 		Use:   "dependencies",
 		Short: "Validate dependencies for the SIGHUP Distribution version specified in the configuration file",
 		PreRun: func(cmd *cobra.Command, _ []string) {
-			cmdEvent = analytics.NewCommandEvent(cobrax.GetFullname(cmd))
-
 			// Bind the flags first: a flag on the command line has precedence over the configuration file.
 			if err := viper.BindPFlags(cmd.Flags()); err != nil {
 				logrus.Fatalf("error while binding flags: %v", err)
@@ -50,10 +43,6 @@ func NewDependenciesCmd() *cobra.Command {
 		},
 		RunE: func(_ *cobra.Command, _ []string) error {
 			var err error
-			ctn := app.GetContainerInstance()
-
-			tracker := ctn.Tracker()
-			tracker.Flush()
 
 			furyctlPath := viper.GetString("config")
 			distroLocation := viper.GetString("distro-location")
@@ -67,9 +56,6 @@ func NewDependenciesCmd() *cobra.Command {
 			} else {
 				binPath, err = filepath.Abs(binPath)
 				if err != nil {
-					cmdEvent.AddErrorMessage(err)
-					tracker.Track(cmdEvent)
-
 					return fmt.Errorf("error while getting absolute path for bin folder: %w", err)
 				}
 			}
@@ -83,9 +69,6 @@ func NewDependenciesCmd() *cobra.Command {
 			if distroPatchesLocation != "" {
 				distroPatchesLocation, err = filepath.Abs(distroPatchesLocation)
 				if err != nil {
-					cmdEvent.AddErrorMessage(err)
-					tracker.Track(cmdEvent)
-
 					return fmt.Errorf("error while getting absolute path of distro patches location: %w", err)
 				}
 			}
@@ -104,9 +87,6 @@ func NewDependenciesCmd() *cobra.Command {
 
 			// Validate base requirements.
 			if err := depsvl.ValidateBaseReqs(); err != nil {
-				cmdEvent.AddErrorMessage(err)
-				tracker.Track(cmdEvent)
-
 				return fmt.Errorf("error while validating requirements: %w", err)
 			}
 
@@ -114,16 +94,8 @@ func NewDependenciesCmd() *cobra.Command {
 			logrus.Info("Downloading distribution...")
 			dres, err := distrodl.Download(distroLocation, furyctlPath)
 			if err != nil {
-				cmdEvent.AddErrorMessage(err)
-				tracker.Track(cmdEvent)
-
 				return fmt.Errorf("failed to download distribution: %w", err)
 			}
-
-			cmdEvent.AddClusterDetails(analytics.ClusterDetails{
-				Provider:   dres.MinimalConf.Kind,
-				KFDVersion: dres.DistroManifest.Version,
-			})
 
 			toolsValidator := tools.NewValidator(executor, binPath, furyctlPath)
 			envVarsValidator := envvars.NewValidator()
@@ -158,9 +130,6 @@ func NewDependenciesCmd() *cobra.Command {
 					logrus.Error(err)
 				}
 
-				cmdEvent.AddErrorMessage(ErrDependencies)
-				tracker.Track(cmdEvent)
-
 				logrus.Info(
 					"You can use the `furyctl download dependencies` command to download most dependencies, " +
 						"and a package manager such as `asdf` or `mise` to install the remaining ones.",
@@ -170,9 +139,6 @@ func NewDependenciesCmd() *cobra.Command {
 			}
 
 			logrus.Info("Dependencies validation succeeded")
-
-			cmdEvent.AddSuccessMessage("Dependencies validation succeeded")
-			tracker.Track(cmdEvent)
 
 			return nil
 		},

@@ -17,15 +17,12 @@ import (
 	"github.com/spf13/viper"
 
 	"github.com/sighupio/furyctl/internal/airgap"
-	"github.com/sighupio/furyctl/internal/analytics"
 	_ "github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/ekscluster"
-	"github.com/sighupio/furyctl/internal/app"
 	"github.com/sighupio/furyctl/internal/cluster"
 	"github.com/sighupio/furyctl/internal/config"
 	"github.com/sighupio/furyctl/internal/flags"
 	"github.com/sighupio/furyctl/internal/git"
 	"github.com/sighupio/furyctl/internal/lockfile"
-	cobrax "github.com/sighupio/furyctl/internal/x/cobra"
 	execx "github.com/sighupio/furyctl/internal/x/exec"
 	"github.com/sighupio/furyctl/pkg/dependencies"
 	dist "github.com/sighupio/furyctl/pkg/distribution"
@@ -73,8 +70,6 @@ var (
 )
 
 func NewApplyCmd() *cobra.Command {
-	var cmdEvent analytics.Event
-
 	applyCmd := &cobra.Command{
 		Args:  cobra.NoArgs,
 		Use:   "apply",
@@ -86,8 +81,6 @@ func NewApplyCmd() *cobra.Command {
   furyctl apply --upgrade                           Upgrade a cluster after bumping its version in the configuration file.
 `,
 		PreRun: func(cmd *cobra.Command, _ []string) {
-			cmdEvent = analytics.NewCommandEvent(cobrax.GetFullname(cmd))
-
 			if err := viper.BindPFlags(cmd.Flags()); err != nil {
 				logrus.Fatalf("error while binding flags: %v", err)
 			}
@@ -98,26 +91,15 @@ func NewApplyCmd() *cobra.Command {
 			}
 		},
 		RunE: func(_ *cobra.Command, _ []string) error {
-			ctn := app.GetContainerInstance()
-
-			tracker := ctn.Tracker()
-			tracker.Flush()
-
 			// Air-gapped: if --airgap-bundle is set, extract it and rewire to run offline before
 			// reading the other flags (it sets skip-deps-download and distro-location).
 			if err := airgap.MaybePrepare(); err != nil {
-				cmdEvent.AddErrorMessage(err)
-				tracker.Track(cmdEvent)
-
 				return fmt.Errorf("error preparing air-gapped bundle: %w", err)
 			}
 
 			// Get flags.
 			cmdFlags, err := getApplyCmdFlags()
 			if err != nil {
-				cmdEvent.AddErrorMessage(err)
-				tracker.Track(cmdEvent)
-
 				return err
 			}
 
@@ -145,9 +127,6 @@ func NewApplyCmd() *cobra.Command {
 
 			// Validate base requirements.
 			if err := depsvl.ValidateBaseReqs(); err != nil {
-				cmdEvent.AddErrorMessage(err)
-				tracker.Track(cmdEvent)
-
 				return fmt.Errorf("error while validating requirements: %w", err)
 			}
 
@@ -155,33 +134,17 @@ func NewApplyCmd() *cobra.Command {
 			logrus.Info("Downloading distribution...")
 			res, err := distrodl.Download(cmdFlags.DistroLocation, cmdFlags.FuryctlPath)
 			if err != nil {
-				cmdEvent.AddErrorMessage(err)
-				tracker.Track(cmdEvent)
-
 				return fmt.Errorf("error while downloading distribution: %w", err)
 			}
-
-			cmdEvent.AddClusterDetails(analytics.ClusterDetails{
-				Provider:   res.MinimalConf.Kind,
-				KFDVersion: res.DistroManifest.Version,
-				Phase:      cmdFlags.Phase,
-				DryRun:     cmdFlags.DryRun,
-			})
 
 			lockFileHandler := lockfile.NewLockFile(res.MinimalConf.Metadata.Name)
 			err = lockFileHandler.Verify()
 			if err != nil {
-				cmdEvent.AddErrorMessage(err)
-				tracker.Track(cmdEvent)
-
 				return fmt.Errorf("error while verifying lock file %s: %w", lockFileHandler.Path, err)
 			}
 
 			err = lockFileHandler.Create()
 			if err != nil {
-				cmdEvent.AddErrorMessage(err)
-				tracker.Track(cmdEvent)
-
 				return fmt.Errorf("error while creating lock file %s: %w", lockFileHandler.Path, err)
 			}
 			defer lockFileHandler.Remove() //nolint:errcheck // ignore error
@@ -203,9 +166,6 @@ func NewApplyCmd() *cobra.Command {
 			// Validate the furyctl.yaml file.
 			logrus.Info("Validating configuration file...")
 			if err := config.Validate(cmdFlags.FuryctlPath, res.RepoPath); err != nil {
-				cmdEvent.AddErrorMessage(err)
-				tracker.Track(cmdEvent)
-
 				return fmt.Errorf("error while validating configuration file: %w", err)
 			}
 
@@ -224,9 +184,6 @@ func NewApplyCmd() *cobra.Command {
 
 			default:
 				if err := config.ValidatePKI(cmdFlags.FuryctlPath); err != nil {
-					cmdEvent.AddErrorMessage(err)
-					tracker.Track(cmdEvent)
-
 					return fmt.Errorf("the PKI folder check failed: %w", err)
 				}
 			}
@@ -235,9 +192,6 @@ func NewApplyCmd() *cobra.Command {
 			if !cmdFlags.SkipDepsDownload {
 				logrus.Info("Downloading dependencies...")
 				if errs, _ := depsdl.DownloadAll(res.DistroManifest, res.MinimalConf.Kind); len(errs) > 0 {
-					cmdEvent.AddErrorMessage(ErrDownloadDependenciesFailed)
-					tracker.Track(cmdEvent)
-
 					return fmt.Errorf("%w: %v", ErrDownloadDependenciesFailed, errs)
 				}
 			} else {
@@ -248,9 +202,6 @@ func NewApplyCmd() *cobra.Command {
 			if !cmdFlags.SkipDepsValidation {
 				logrus.Info("Validating dependencies...")
 				if err := depsvl.Validate(res); err != nil {
-					cmdEvent.AddErrorMessage(err)
-					tracker.Track(cmdEvent)
-
 					return fmt.Errorf("error while validating dependencies: %w", err)
 				}
 			} else {
@@ -285,9 +236,6 @@ func NewApplyCmd() *cobra.Command {
 				cmdFlags.PostApplyPhases,
 			)
 			if err != nil {
-				cmdEvent.AddErrorMessage(err)
-				tracker.Track(cmdEvent)
-
 				return fmt.Errorf("error while initializing the apply: %w", err)
 			}
 
@@ -296,14 +244,8 @@ func NewApplyCmd() *cobra.Command {
 				cmdFlags.ProcessTimeout,
 				cmdFlags.PodRunningCheckTimeout,
 			); err != nil {
-				cmdEvent.AddErrorMessage(err)
-				tracker.Track(cmdEvent)
-
 				return fmt.Errorf("error while applying the configuration: %w", err)
 			}
-
-			cmdEvent.AddSuccessMessage("apply configuration succeeded")
-			tracker.Track(cmdEvent)
 
 			return nil
 		},

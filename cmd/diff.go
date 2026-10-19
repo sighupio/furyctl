@@ -15,14 +15,11 @@ import (
 	"github.com/spf13/viper"
 
 	"github.com/sighupio/furyctl/internal/airgap"
-	"github.com/sighupio/furyctl/internal/analytics"
 	"github.com/sighupio/furyctl/internal/apis/config"
-	"github.com/sighupio/furyctl/internal/app"
 	"github.com/sighupio/furyctl/internal/cluster"
 	"github.com/sighupio/furyctl/internal/flags"
 	"github.com/sighupio/furyctl/internal/git"
 	"github.com/sighupio/furyctl/internal/state"
-	cobrax "github.com/sighupio/furyctl/internal/x/cobra"
 	execx "github.com/sighupio/furyctl/internal/x/exec"
 	"github.com/sighupio/furyctl/pkg/diffs"
 	dist "github.com/sighupio/furyctl/pkg/distribution"
@@ -44,15 +41,11 @@ type DiffCommandFlags struct {
 }
 
 func NewDiffCmd() *cobra.Command {
-	var cmdEvent analytics.Event
-
 	diffCmd := &cobra.Command{
 		Args:  cobra.NoArgs,
 		Use:   "diff",
 		Short: "Diff the current configuration with the one in the cluster",
 		PreRun: func(cmd *cobra.Command, _ []string) {
-			cmdEvent = analytics.NewCommandEvent(cobrax.GetFullname(cmd))
-
 			// Bind the flags first: a flag on the command line has precedence over the configuration file.
 			if err := viper.BindPFlags(cmd.Flags()); err != nil {
 				logrus.Fatalf("error while binding flags: %v", err)
@@ -63,24 +56,13 @@ func NewDiffCmd() *cobra.Command {
 			}
 		},
 		RunE: func(_ *cobra.Command, _ []string) error {
-			ctn := app.GetContainerInstance()
-
-			tracker := ctn.Tracker()
-			defer tracker.Flush()
-
 			// Air-gapped: extract --airgap-bundle (if set) and rewire to run offline before reading flags.
 			if err := airgap.MaybePrepare(); err != nil {
-				cmdEvent.AddErrorMessage(err)
-				tracker.Track(cmdEvent)
-
 				return fmt.Errorf("error preparing air-gapped bundle: %w", err)
 			}
 
 			flags, err := getDiffCommandFlags()
 			if err != nil {
-				cmdEvent.AddErrorMessage(err)
-				tracker.Track(cmdEvent)
-
 				return err
 			}
 
@@ -97,9 +79,6 @@ func NewDiffCmd() *cobra.Command {
 			logrus.Info("Downloading distribution...")
 			res, err := distrodl.Download(flags.DistroLocation, flags.FuryctlPath)
 			if err != nil {
-				cmdEvent.AddErrorMessage(err)
-				tracker.Track(cmdEvent)
-
 				return fmt.Errorf("error while downloading distribution: %w", err)
 			}
 
@@ -115,9 +94,6 @@ func NewDiffCmd() *cobra.Command {
 
 			diffChecker, err := createDiffChecker(stateStore, flags.FuryctlPath)
 			if err != nil {
-				cmdEvent.AddErrorMessage(err)
-				tracker.Track(cmdEvent)
-
 				return fmt.Errorf("error while creating configuration diff checker: %w", err)
 			}
 
@@ -132,17 +108,11 @@ func NewDiffCmd() *cobra.Command {
 				flags.UpgradePathLocation,
 			)
 			if err != nil {
-				cmdEvent.AddErrorMessage(err)
-				tracker.Track(cmdEvent)
-
 				return fmt.Errorf("error while getting phase path: %w", err)
 			}
 
 			d, err := getDiffs(diffChecker, phasePath)
 			if err != nil {
-				cmdEvent.AddErrorMessage(err)
-				tracker.Track(cmdEvent)
-
 				return fmt.Errorf("error while getting diffs: %w", err)
 			}
 
@@ -154,9 +124,6 @@ func NewDiffCmd() *cobra.Command {
 			} else {
 				logrus.Info("No differences found from previous cluster configuration")
 			}
-
-			cmdEvent.AddSuccessMessage("diff command executed successfully")
-			tracker.Track(cmdEvent)
 
 			return nil
 		},

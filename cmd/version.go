@@ -9,27 +9,15 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/sighupio/furyctl/internal/analytics"
 	"github.com/sighupio/furyctl/internal/app"
-	cobrax "github.com/sighupio/furyctl/internal/x/cobra"
 )
 
 func NewVersionCmd() *cobra.Command {
-	var cmdEvent analytics.Event
-
 	versionCmd := &cobra.Command{
 		Use:   "version",
 		Short: "Print the version number and build information of furyctl",
-		PreRun: func(cmd *cobra.Command, _ []string) {
-			cmdEvent = analytics.NewCommandEvent(cobrax.GetFullname(cmd))
-		},
 		RunE: func(_ *cobra.Command, _ []string) error {
-			ctn := app.GetContainerInstance()
-
-			tracker := ctn.Tracker()
-			defer tracker.Flush()
-
-			versions := ctn.Versions()
+			versions := app.Versions
 
 			if _, err := fmt.Println("buildTime:", versions.BuildTime); err != nil {
 				return fmt.Errorf("error while printing buildTime: %w", err)
@@ -50,9 +38,6 @@ func NewVersionCmd() *cobra.Command {
 			if _, err := fmt.Println("version:", versions.Version); err != nil {
 				return fmt.Errorf("error while printing version: %w", err)
 			}
-
-			cmdEvent.AddSuccessMessage("version command executed successfully")
-			tracker.Track(cmdEvent)
 
 			return nil
 		},

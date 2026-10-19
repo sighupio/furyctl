@@ -19,7 +19,6 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
-	"github.com/sighupio/furyctl/internal/app"
 	"github.com/sighupio/furyctl/internal/flags"
 	"github.com/sighupio/furyctl/internal/git"
 	execx "github.com/sighupio/furyctl/internal/x/exec"
@@ -28,14 +27,13 @@ import (
 )
 
 type rootConfig struct {
-	Debug            bool
-	DisableAnalytics bool
-	DisableTty       bool
-	GitProtocol      git.Protocol
-	Log              string
-	Outdir           string
-	Spinner          *spinner.Spinner
-	Workdir          string
+	Debug       bool
+	DisableTty  bool
+	GitProtocol git.Protocol
+	Log         string
+	Outdir      string
+	Spinner     *spinner.Spinner
+	Workdir     string
 }
 
 type RootCommand struct {
@@ -62,15 +60,6 @@ furyctl is a command line interface tool to manage the full lifecycle of SIGHUP 
 				var err error
 				// Not closed: the commands and main write to it until the process exits.
 				var logFile *os.File
-
-				ctn := app.GetContainerInstance()
-
-				// Configure analytics.
-				tracker := ctn.Tracker()
-				if viper.GetBool("disable-analytics") {
-					tracker.Disable()
-				}
-				defer tracker.Flush()
 
 				// Tab-autocompletion.
 				if cmd.Name() == "__complete" {
@@ -169,6 +158,13 @@ furyctl is a command line interface tool to manage the full lifecycle of SIGHUP 
 				if !https {
 					logrus.Warn("The --https flag is deprecated and https is the default, if you want to use SSH protocol to download repositories use --git-protocol ssh")
 				}
+
+				// The command line flag prints its own deprecation message. Stderr, like that message, keeps
+				// the warning out of the shell completion output.
+				if viper.IsSet("disable-analytics") && !cmd.Flags().Changed("disable-analytics") {
+					cmd.PrintErrln("The disableAnalytics flag of furyctl.yaml and the FURYCTL_DISABLE_ANALYTICS " +
+						"environment variable are deprecated and have no effect, remove them")
+				}
 			},
 		},
 		config: &rootConfig{},
@@ -184,13 +180,11 @@ furyctl is a command line interface tool to manage the full lifecycle of SIGHUP 
 		"Enables furyctl debug output. This will greatly increase the verbosity. Debug logs and additional logs are also always written to the log file. See the --log flag.",
 	)
 
-	rootCmd.PersistentFlags().BoolVarP(
-		&rootCmd.config.DisableAnalytics,
-		"disable-analytics",
-		"d",
-		false,
-		"Disable analytics",
-	)
+	// Kept so existing scripts do not fail: furyctl has no analytics anymore.
+	rootCmd.PersistentFlags().BoolP("disable-analytics", "d", false, "")
+
+	//nolint:errcheck // MarkDeprecated fails only for an unknown flag name.
+	_ = rootCmd.PersistentFlags().MarkDeprecated("disable-analytics", "furyctl does not collect analytics anymore, the flag has no effect")
 
 	rootCmd.PersistentFlags().BoolVarP(
 		&rootCmd.config.DisableTty,

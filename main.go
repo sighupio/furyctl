@@ -16,8 +16,6 @@ package main
 
 import (
 	"os"
-	"runtime"
-	"strings"
 	"sync"
 
 	"github.com/sirupsen/logrus"
@@ -29,12 +27,11 @@ import (
 )
 
 var (
-	version       = "unknown"
-	gitCommit     = "unknown"
-	buildTime     = "unknown"
-	goVersion     = "unknown"
-	osArch        = "unknown"
-	mixPanelToken = ""
+	version   = "unknown"
+	gitCommit = "unknown"
+	buildTime = "unknown"
+	goVersion = "unknown"
+	osArch    = "unknown"
 )
 
 func main() {
@@ -55,26 +52,13 @@ func exec() int {
 		Level: logrus.DebugLevel,
 	}
 
-	h, err := os.Hostname()
-	if err != nil {
-		log.Debug(err)
-
-		h = "unknown"
+	app.Versions = app.VersionsCtn{
+		Version:   version,
+		GitCommit: gitCommit,
+		BuildTime: buildTime,
+		GoVersion: goVersion,
+		OSArch:    osArch,
 	}
-
-	mixPanelToken = strings.ReplaceAll(mixPanelToken, "\"", "")
-	mixPanelToken = strings.ReplaceAll(mixPanelToken, "'", "")
-
-	ctn := app.GetContainerInstance()
-
-	ctn.Version = version
-	ctn.GitCommit = gitCommit
-	ctn.BuildTime = buildTime
-	ctn.GoVersion = goVersion
-	ctn.MachineArch = osArch
-	ctn.MachineOS = runtime.GOOS
-	ctn.TrackerToken = mixPanelToken
-	ctn.MachineHostname = h
 
 	defer wg.Wait()
 

@@ -330,7 +330,6 @@ var (
 			configPath,
 			"--distro-location",
 			distroPath,
-			"--disable-analytics",
 			"--debug",
 			"--force",
 			"all",

@@ -280,7 +280,6 @@ func (f *FuryctlCreator) Create(ctx context.Context, phase, startFrom string) *e
 		"cluster",
 		"--config",
 		f.configPath,
-		"--disable-analytics",
 		"--debug",
 		"--force",
 		"all",

@@ -10,37 +10,22 @@ import (
 	"github.com/spf13/viper"
 
 	"github.com/sighupio/furyctl/cmd/serve"
-	"github.com/sighupio/furyctl/internal/analytics"
-	"github.com/sighupio/furyctl/internal/app"
 	"github.com/sighupio/furyctl/internal/flags"
-	cobrax "github.com/sighupio/furyctl/internal/x/cobra"
 )
 
 func NewServeCmd() *cobra.Command {
-	var cmdEvent analytics.Event
-
 	serveCmd := &cobra.Command{
 		Args:  cobra.NoArgs,
 		Use:   "serve",
 		Short: "Start HTTP server to serve assets from a custom path for the Immutable OS machines bootstrap",
 		PreRun: func(cmd *cobra.Command, _ []string) {
-			cmdEvent = analytics.NewCommandEvent(cobrax.GetFullname(cmd))
-			ctn := app.GetContainerInstance()
-
-			tracker := ctn.Tracker()
-			tracker.Flush()
-
 			// Bind the flags first: a flag on the command line has precedence over the configuration file.
 			if err := viper.BindPFlags(cmd.Flags()); err != nil {
 				logrus.Fatalf("error while binding flags: %v", err)
-				cmdEvent.AddErrorMessage(err)
-				tracker.Track(cmdEvent)
 			}
 
 			if err := flags.LoadAndMergeCommandFlags("serve"); err != nil {
 				logrus.Fatalf("failed to load flags from configuration: %v", err)
-				cmdEvent.AddErrorMessage(err)
-				tracker.Track(cmdEvent)
 			}
 		},
 

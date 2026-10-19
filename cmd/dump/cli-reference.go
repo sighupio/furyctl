@@ -17,9 +17,6 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
-	"github.com/sighupio/furyctl/internal/analytics"
-	"github.com/sighupio/furyctl/internal/app"
-	cobrax "github.com/sighupio/furyctl/internal/x/cobra"
 	iox "github.com/sighupio/furyctl/internal/x/io"
 )
 
@@ -34,26 +31,17 @@ var (
 )
 
 func NewDumpCLIReferenceCmd() *cobra.Command {
-	var cmdEvent analytics.Event
-
 	dumpCLIReferenceCmd := &cobra.Command{
 		Use:     "cli-reference [folder]",
 		Short:   "Exports the CLI reference in markdown format into a specified folder in the working directory",
 		Long:    "Exports the CLI reference in markdown format into a specified folder in the working directory. The folder will be created if it does not exist.",
 		Example: `furyctl dump cli-reference ./docs/cli-reference`,
 		PreRun: func(cmd *cobra.Command, _ []string) {
-			cmdEvent = analytics.NewCommandEvent(cobrax.GetFullname(cmd))
-
 			if err := viper.BindPFlags(cmd.Flags()); err != nil {
 				logrus.Fatalf("error while binding flags: %v", err)
 			}
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
-			ctn := app.GetContainerInstance()
-
-			tracker := ctn.Tracker()
-			tracker.Flush()
-
 			flags := getDumpCliReferenceCmdFlags()
 
 			outputFolder := flags.Workdir
@@ -141,9 +129,6 @@ func NewDumpCLIReferenceCmd() *cobra.Command {
 			}
 
 			logrus.Infof("Markdown CLI reference successfully exported to %s", outputFolder)
-
-			cmdEvent.AddSuccessMessage("CIL Reference generated successfully")
-			tracker.Track(cmdEvent)
 
 			return nil
 		},
