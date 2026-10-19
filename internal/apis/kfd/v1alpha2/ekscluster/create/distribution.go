@@ -165,7 +165,7 @@ func (d *Distribution) Exec(
 		furyctlMerger,
 		timestampSec,
 	); err != nil {
-		return fmt.Errorf("error running core distribution phase: %w", err)
+		return err
 	}
 
 	if d.DryRun {
@@ -339,7 +339,7 @@ func (d *Distribution) coreDistribution(
 				upgradeState.Phases.Distribution.Status = upgrade.PhaseStatusFailed
 			}
 
-			return fmt.Errorf("error applying Distribution modules: %w", err)
+			return fmt.Errorf("error applying modules: %w", err)
 		}
 
 		if d.upgrade.Enabled {

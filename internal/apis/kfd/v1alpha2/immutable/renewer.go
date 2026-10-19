@@ -184,7 +184,7 @@ func (c *Renewer) render(renderDir string) (*ansible.Runner, error) {
 	}
 
 	if _, err := ansibleRunner.Exec("all", "-m", "ping"); err != nil {
-		return nil, fmt.Errorf("error checking hosts: %w", err)
+		return nil, err //nolint:wrapcheck // The error names the hosts that failed.
 	}
 
 	return ansibleRunner, nil

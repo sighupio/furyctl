@@ -111,7 +111,7 @@ func (p *PreFlight) Exec() (bool, error) {
 	}
 
 	if _, err := p.ansibleRunner.Exec("all", "-m", "ping"); err != nil {
-		return false, fmt.Errorf("error checking hosts: %w", err)
+		return false, err //nolint:wrapcheck // The error names the hosts that failed.
 	}
 
 	clusterExists, err := preflightx.FetchAdminConf(p.ansibleRunner, p.Path, templatesDir)

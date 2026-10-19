@@ -145,6 +145,9 @@ func (r *Runner) newCmd(args []string, sensitive bool) (*execx.Cmd, string) {
 		Sensitive: sensitive,
 	})
 
+	// Its stdout is data (JSON, YAML, tables) and its errors go to stderr.
+	cmd.OnError = execx.StderrBlock
+
 	id := uuid.NewString()
 	r.cmds[id] = cmd
 

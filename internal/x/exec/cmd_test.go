@@ -19,14 +19,34 @@ import (
 
 var ErrTest = errors.New("test error")
 
-func TestNewErrCmdFailed(t *testing.T) {
+func Test_Cmd_Run_Error(t *testing.T) {
 	t.Parallel()
 
-	err := execx.NewErrCmdFailed("foo", []string{"bar", "baz"}, ErrTest, nil)
-	require.Error(t, err)
+	err := execx.NewCmd("sh", execx.CmdOptions{
+		Args: []string{"-c", "echo out; printf '\\n\\n'; sleep 0.1; echo err >&2; exit 3"},
+	}).Run()
+	require.ErrorIs(t, err, execx.ErrCmdFailed)
 
-	wantErr := "foo bar baz: command failed - test error\n<nil>"
-	assert.Equal(t, wantErr, err.Error())
+	want := "command failed: sh -c echo out; printf '\\n\\n'; sleep 0.1; echo err >&2; exit 3 (exit status 3)\n\n" +
+		"Last lines of the command output:\n │ out\n │\n │\n │ err"
+	assert.Equal(t, want, err.Error())
+}
+
+func Test_Cmd_Run_OnError(t *testing.T) {
+	t.Parallel()
+
+	cmd := execx.NewCmd("sh", execx.CmdOptions{Args: []string{"-c", "echo out; exit 1"}})
+	cmd.OnError = func(e *execx.CmdError) {
+		e.Summary = "it broke"
+		e.Name = "tool"
+		e.Args = e.Args[1:]
+		e.Block = nil
+	}
+
+	err := cmd.Run()
+	require.ErrorIs(t, err, execx.ErrCmdFailed)
+
+	assert.Equal(t, "it broke\n\ncommand failed: tool echo out; exit 1 (exit status 1)", err.Error())
 }
 
 func TestNewCmd(t *testing.T) {
@@ -151,20 +171,6 @@ func Test_Cmd_Stop(t *testing.T) {
 				t.Errorf("Cmd.Err = %v, want = %v", tC.cmd.Err, execx.ErrCmdFailed)
 			}
 		})
-	}
-}
-
-func Test_CmdLog_String(t *testing.T) {
-	t.Parallel()
-
-	cmdLog := &execx.CmdLog{
-		Out: bytes.NewBufferString("foo"),
-		Err: bytes.NewBufferString("bar"),
-	}
-
-	want := "out: foo\nerr: bar\n"
-	if cmdLog.String() != want {
-		t.Errorf("want = %s, got = %s", want, cmdLog.String())
 	}
 }
 

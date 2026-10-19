@@ -7,11 +7,14 @@ package ansible
 import (
 	"fmt"
 	"io"
+	"os"
 	"path/filepath"
 
 	"github.com/google/uuid"
 
 	execx "github.com/sighupio/furyctl/internal/x/exec"
+	iox "github.com/sighupio/furyctl/internal/x/io"
+	osx "github.com/sighupio/furyctl/internal/x/os"
 )
 
 type Paths struct {
@@ -65,46 +68,14 @@ func (r *Runner) CmdPath() string {
 }
 
 func (r *Runner) Playbook(params ...string) ([]byte, error) {
-	var args []string
-	var out []byte
-
-	if len(params) > 0 {
-		args = append(args, params...)
-	}
-
 	region := execx.NewOutputRegion()
 	defer region.Clear()
 
-	cmd, id := r.build(r.paths.AnsiblePlaybook, args, region, region.Stream())
-	defer r.deleteCmd(id)
-
-	if err := cmd.Run(); err != nil {
-		return out, fmt.Errorf("command execution failed: %w", err)
-	}
-
-	out = cmd.Log.Out.Bytes()
-
-	return out, nil
+	return r.run(r.paths.AnsiblePlaybook, params, region, region.Stream())
 }
 
 func (r *Runner) Exec(params ...string) ([]byte, error) {
-	var args []string
-	var out []byte
-
-	if len(params) > 0 {
-		args = append(args, params...)
-	}
-
-	cmd, id := r.newCmd(args)
-	defer r.deleteCmd(id)
-
-	if err := cmd.Run(); err != nil {
-		return out, fmt.Errorf("command execution failed: %w", err)
-	}
-
-	out = cmd.Log.Out.Bytes()
-
-	return out, nil
+	return r.run(r.paths.Ansible, params, nil, nil)
 }
 
 func (r *Runner) Version() (string, error) {
@@ -131,17 +102,62 @@ func (r *Runner) Stop() error {
 	return nil
 }
 
+// run runs the given ansible entrypoint with the furyctl_failures callback, so a failure can name the
+// failed hosts. It returns stdout.
+func (r *Runner) run(entrypoint string, args []string, out, errOut io.Writer) ([]byte, error) {
+	dir, err := os.MkdirTemp("", "furyctl-ansible-")
+	if err != nil {
+		return nil, fmt.Errorf("error creating the ansible callback folder: %w", err)
+	}
+
+	osx.RegisterTempDir(dir)
+
+	defer os.RemoveAll(dir)
+
+	if err := os.WriteFile(filepath.Join(dir, "furyctl_failures.py"), failuresPlugin, iox.FullRWPermAccess); err != nil {
+		return nil, fmt.Errorf("error writing the ansible callback: %w", err)
+	}
+
+	failuresFile := filepath.Join(dir, "failures.json")
+
+	// ANSIBLE_LOAD_CALLBACK_PLUGINS makes the ad-hoc ansible command load the callback too.
+	// Keep the callback folders that the user set, after the one of furyctl.
+	plugins := dir
+	if p := os.Getenv("ANSIBLE_CALLBACK_PLUGINS"); p != "" {
+		plugins += string(os.PathListSeparator) + p
+	}
+
+	env := []string{
+		"ANSIBLE_CALLBACK_PLUGINS=" + plugins,
+		"ANSIBLE_LOAD_CALLBACK_PLUGINS=True",
+		"FURYCTL_ANSIBLE_FAILURES=" + failuresFile,
+	}
+
+	cmd, id := r.build(entrypoint, args, env, out, errOut)
+	defer r.deleteCmd(id)
+
+	cmd.OnError = func(e *execx.CmdError) { describe(e, entrypoint, args, failuresFile) }
+
+	if err := cmd.Run(); err != nil {
+		return nil, err //nolint:wrapcheck // The error names the command.
+	}
+
+	return cmd.Log.Out.Bytes(), nil
+}
+
 func (r *Runner) newCmd(args []string) (*execx.Cmd, string) {
-	return r.build(r.paths.Ansible, args, nil, nil)
+	return r.build(r.paths.Ansible, args, nil, nil, nil)
 }
 
 // build runs the given ansible entrypoint directly (host) or as `<python> <entrypoint> ...` with the
 // collections env (mise-managed). Non-nil out and errOut also get stdout and stderr.
-func (r *Runner) build(entrypoint string, args []string, out, errOut io.Writer) (*execx.Cmd, string) {
+func (r *Runner) build(
+	entrypoint string,
+	args, env []string,
+	out, errOut io.Writer,
+) (*execx.Cmd, string) {
 	name := entrypoint
 	fullArgs := args
-
-	var env []string
 
 	if r.paths.Python != "" {
 		name = r.paths.Python
@@ -149,7 +165,7 @@ func (r *Runner) build(entrypoint string, args []string, out, errOut io.Writer) 
 		fullArgs = append([]string{entrypoint}, args...)
 
 		if r.paths.CollectionsPath != "" {
-			env = []string{"ANSIBLE_COLLECTIONS_PATH=" + r.paths.CollectionsPath}
+			env = append(env, "ANSIBLE_COLLECTIONS_PATH="+r.paths.CollectionsPath)
 		}
 	}
 

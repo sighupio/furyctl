@@ -41,3 +41,24 @@ func TestJSONMessageWriter(t *testing.T) {
 		out.String(),
 	)
 }
+
+func TestJSONText(t *testing.T) {
+	t.Parallel()
+
+	lines := []string{
+		`{"@level":"info","@message":"aws_vpc.main: Creating..."}`,
+		"plain text",
+		`{"@level":"error","@message":"Error: creating VPC","type":"diagnostic",` +
+			`"diagnostic":{"severity":"error","summary":"creating VPC","detail":"limit reached\nask for more"}}`,
+		`{"@level":"warn","@message":"Warning: old","diagnostic":{"detail":"not shown"}}`,
+	}
+
+	assert.Equal(t, []string{
+		"aws_vpc.main: Creating...",
+		"plain text",
+		"Error: creating VPC",
+		"  limit reached",
+		"  ask for more",
+		"Warning: old",
+	}, jsonText(lines))
+}

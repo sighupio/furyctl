@@ -244,7 +244,7 @@ func NewApplyCmd() *cobra.Command {
 				cmdFlags.ProcessTimeout,
 				cmdFlags.PodRunningCheckTimeout,
 			); err != nil {
-				return fmt.Errorf("error while applying the configuration: %w", err)
+				return err //nolint:wrapcheck // The error names the phase that failed.
 			}
 
 			return nil

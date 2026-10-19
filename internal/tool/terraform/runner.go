@@ -13,6 +13,7 @@ import (
 
 	"github.com/google/uuid"
 	tfjson "github.com/hashicorp/terraform-json"
+	"github.com/sirupsen/logrus"
 
 	execx "github.com/sighupio/furyctl/internal/x/exec"
 	iox "github.com/sighupio/furyctl/internal/x/io"
@@ -57,7 +58,7 @@ func (r *Runner) Init() error {
 	defer r.deleteCmd(id)
 
 	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("command execution failed: %w", err)
+		return err //nolint:wrapcheck // The error names the command.
 	}
 
 	return nil
@@ -80,7 +81,7 @@ func (r *Runner) Plan(timestamp int64, params ...string) ([]byte, error) {
 	defer r.deleteCmd(id)
 
 	if err := cmd.Run(); err != nil {
-		return out, fmt.Errorf("command execution failed: %w", err)
+		return out, err //nolint:wrapcheck // The error names the command.
 	}
 
 	err := os.WriteFile(path.Join(r.paths.Plan,
@@ -106,10 +107,15 @@ func (r *Runner) Apply(timestamp int64) error {
 		&jsonMessageWriter{w: region},
 		&jsonMessageWriter{w: region.Stream()},
 	)
+	// The output is JSON too: the error and the output file show its messages.
+	cmd.OnError = func(e *execx.CmdError) {
+		e.Text = jsonText(e.Text)
+		e.Block = execx.Tail(e.Text, execx.OutputLines)
+	}
 	defer r.deleteCmd(applyID)
 
 	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("failed to run terraform apply: %w", err)
+		return err //nolint:wrapcheck // The error names the command.
 	}
 
 	if err := os.WriteFile(
@@ -158,6 +164,23 @@ func (r *Runner) State(params ...string) (string, error) {
 	}
 
 	return cmd.Log.Out.String(), nil
+}
+
+// HasState reports whether the state holds the resource at address. The check is a probe: when it
+// fails, it saves no output file.
+func (r *Runner) HasState(address string) bool {
+	cmd, id := r.newCmd([]string{"state", "show", address}, nil, nil)
+	defer r.deleteCmd(id)
+
+	cmd.Probe = true
+
+	if err := cmd.Run(); err != nil {
+		logrus.Debugf("terraform state has no %s: %v", address, err)
+
+		return false
+	}
+
+	return true
 }
 
 func (r *Runner) Destroy() error {

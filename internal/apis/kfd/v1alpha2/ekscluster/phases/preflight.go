@@ -149,8 +149,7 @@ func (p *PreFlight) getTerraformStateConfig() private.SpecToolsConfigurationTerr
 func (p *PreFlight) assertTerraformStateAWSS3BucketMatches() error {
 	stateConfig := p.getTerraformStateConfig()
 
-	r, err := p.AWSRunner.S3Api(
-		false,
+	r, err := p.AWSRunner.S3ApiProbe(
 		"get-bucket-location",
 		"--bucket",
 		string(stateConfig.BucketName),
@@ -158,6 +157,8 @@ func (p *PreFlight) assertTerraformStateAWSS3BucketMatches() error {
 		"text",
 	)
 	if err != nil {
+		logrus.Debugf("cannot read the location of the bucket %s: %v", stateConfig.BucketName, err)
+
 		return fmt.Errorf(
 			"%s: %w",
 			string(stateConfig.BucketName),
