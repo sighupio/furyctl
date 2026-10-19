@@ -36,6 +36,10 @@ type fakeLister struct {
 	calls int
 }
 
+func (f *fakeLister) GetProbe(ns string, params ...string) (string, error) {
+	return f.Get(false, ns, params...)
+}
+
 func (f *fakeLister) Get(_ bool, _ string, _ ...string) (string, error) {
 	i := min(f.calls, len(f.outs)-1)
 	f.calls++

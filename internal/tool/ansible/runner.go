@@ -68,14 +68,16 @@ func (r *Runner) CmdPath() string {
 }
 
 func (r *Runner) Playbook(params ...string) ([]byte, error) {
-	region := execx.NewOutputRegion()
-	defer region.Clear()
+	return r.runPlaybook(false, params)
+}
 
-	return r.run(r.paths.AnsiblePlaybook, params, region, region.Stream())
+// PlaybookProbe runs a playbook whose failure the caller expects and handles, so a failure saves no output file.
+func (r *Runner) PlaybookProbe(params ...string) ([]byte, error) {
+	return r.runPlaybook(true, params)
 }
 
 func (r *Runner) Exec(params ...string) ([]byte, error) {
-	return r.run(r.paths.Ansible, params, nil, nil)
+	return r.run(r.paths.Ansible, params, nil, nil, false)
 }
 
 func (r *Runner) Version() (string, error) {
@@ -102,9 +104,16 @@ func (r *Runner) Stop() error {
 	return nil
 }
 
+func (r *Runner) runPlaybook(probe bool, params []string) ([]byte, error) {
+	region := execx.NewOutputRegion()
+	defer region.Clear()
+
+	return r.run(r.paths.AnsiblePlaybook, params, region, region.Stream(), probe)
+}
+
 // run runs the given ansible entrypoint with the furyctl_failures callback, so a failure can name the
 // failed hosts. It returns stdout.
-func (r *Runner) run(entrypoint string, args []string, out, errOut io.Writer) ([]byte, error) {
+func (r *Runner) run(entrypoint string, args []string, out, errOut io.Writer, probe bool) ([]byte, error) {
 	dir, err := os.MkdirTemp("", "furyctl-ansible-")
 	if err != nil {
 		return nil, fmt.Errorf("error creating the ansible callback folder: %w", err)
@@ -137,6 +146,7 @@ func (r *Runner) run(entrypoint string, args []string, out, errOut io.Writer) ([
 	defer r.deleteCmd(id)
 
 	cmd.OnError = func(e *execx.CmdError) { describe(e, entrypoint, args, failuresFile) }
+	cmd.Probe = probe
 
 	if err := cmd.Run(); err != nil {
 		return nil, err //nolint:wrapcheck // The error names the command.

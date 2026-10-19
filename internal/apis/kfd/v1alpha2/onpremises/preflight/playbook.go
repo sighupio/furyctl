@@ -21,6 +21,7 @@ const (
 // PlaybookRunner runs a playbook in the folder of the preflight phase. *ansible.Runner is one.
 type PlaybookRunner interface {
 	Playbook(params ...string) ([]byte, error)
+	PlaybookProbe(params ...string) ([]byte, error)
 }
 
 // AdminConfPlaybookName returns the playbook that fetches admin.conf.
@@ -60,7 +61,12 @@ func FetchAdminConf(runner PlaybookRunner, phaseDir, templatesDir string) (bool,
 		return false, fmt.Errorf("error selecting admin.conf playbook: %w", err)
 	}
 
-	if _, err := runner.Playbook(playbook); err != nil {
+	run := runner.Playbook
+	if playbook == legacyVerifyPlaybook {
+		run = runner.PlaybookProbe
+	}
+
+	if _, err := run(playbook); err != nil {
 		if playbook != legacyVerifyPlaybook {
 			return false, fmt.Errorf("error fetching admin.conf: %w", err)
 		}

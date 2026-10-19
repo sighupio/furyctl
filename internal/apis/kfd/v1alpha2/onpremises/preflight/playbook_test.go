@@ -26,6 +26,13 @@ type fakeRunner struct {
 	writeAdminConf bool
 	err            error
 	ran            string
+	probe          bool
+}
+
+func (f *fakeRunner) PlaybookProbe(params ...string) ([]byte, error) {
+	f.probe = true
+
+	return f.Playbook(params...)
 }
 
 func (f *fakeRunner) Playbook(params ...string) ([]byte, error) {
@@ -94,6 +101,8 @@ func TestFetchAdminConf(t *testing.T) {
 			exists, err := preflight.FetchAdminConf(runner, phaseDir, templatesDir)
 
 			assert.Equal(t, tc.wantPlaybook, runner.ran)
+			// Only the legacy playbook fails on purpose, so only its failure saves no output file.
+			assert.Equal(t, tc.wantPlaybook == "verify-playbook.yaml", runner.probe)
 
 			if tc.wantErr {
 				require.ErrorIs(t, err, errPlaybook)

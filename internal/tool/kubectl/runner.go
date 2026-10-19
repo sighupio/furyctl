@@ -65,25 +65,12 @@ func (r *Runner) Apply(manifestPath string, params ...string) error {
 }
 
 func (r *Runner) Get(sensitive bool, ns string, params ...string) (string, error) {
-	args := []string{"get"}
+	return r.runGet(false, sensitive, ns, params)
+}
 
-	if ns != "all" {
-		args = append(args, "-n", ns)
-	} else {
-		args = append(args, "-A")
-	}
-
-	args = append(args, params...)
-
-	cmd, id := r.newCmd(args, sensitive)
-	defer r.deleteCmd(id)
-
-	out, err := execx.CombinedOutput(cmd)
-	if err != nil {
-		return out, fmt.Errorf("error while getting resources: %w", err)
-	}
-
-	return out, nil
+// GetProbe runs kubectl get for a caller that expects and handles a failure, so a failure saves no output file.
+func (r *Runner) GetProbe(ns string, params ...string) (string, error) {
+	return r.runGet(true, false, ns, params)
 }
 
 func (r *Runner) Delete(params ...string) error {
@@ -135,6 +122,30 @@ func (r *Runner) Stop() error {
 	}
 
 	return nil
+}
+
+func (r *Runner) runGet(probe, sensitive bool, ns string, params []string) (string, error) {
+	args := []string{"get"}
+
+	if ns != "all" {
+		args = append(args, "-n", ns)
+	} else {
+		args = append(args, "-A")
+	}
+
+	args = append(args, params...)
+
+	cmd, id := r.newCmd(args, sensitive)
+	defer r.deleteCmd(id)
+
+	cmd.Probe = probe
+
+	out, err := execx.CombinedOutput(cmd)
+	if err != nil {
+		return out, fmt.Errorf("error while getting resources: %w", err)
+	}
+
+	return out, nil
 }
 
 func (r *Runner) newCmd(args []string, sensitive bool) (*execx.Cmd, string) {

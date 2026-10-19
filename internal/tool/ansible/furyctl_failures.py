@@ -11,6 +11,11 @@ import os
 from ansible.plugins.callback import CallbackBase
 
 
+def _attr(result, name):
+    # ansible-core 2.19 added result, host and task. Older versions have only _result, _host and _task.
+    return getattr(result, name) if hasattr(result, name) else getattr(result, '_' + name)
+
+
 class CallbackModule(CallbackBase):
     CALLBACK_VERSION = 2.0
     CALLBACK_TYPE = 'aggregate'
@@ -26,14 +31,14 @@ class CallbackModule(CallbackBase):
         self._play = play.get_name()
 
     def _record(self, unreachable, result):
-        res = result.result
+        res = _attr(result, 'result')
         msg = res.get('msg', '')
         rc = res.get('rc')
         stderr = res.get('stderr', '')
-        self._last[result.host.get_name()] = {
+        self._last[_attr(result, 'host').get_name()] = {
             'unreachable': unreachable,
             'play': self._play,
-            'task': result.task.get_name(),
+            'task': _attr(result, 'task').get_name(),
             'msg': msg if isinstance(msg, str) else json.dumps(msg),
             'rc': rc if isinstance(rc, int) else None,
             'stderr': stderr if isinstance(stderr, str) else '',
@@ -44,7 +49,7 @@ class CallbackModule(CallbackBase):
             self._record(False, result)
 
     def v2_runner_on_unreachable(self, result):
-        if not result.task.ignore_unreachable:
+        if not _attr(result, 'task').ignore_unreachable:
             self._record(True, result)
 
     def v2_playbook_on_stats(self, stats):
