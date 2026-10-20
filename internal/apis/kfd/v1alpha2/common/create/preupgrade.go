@@ -32,7 +32,7 @@ import (
 
 var (
 	errUpgradeCanceled          = errors.New("upgrade canceled by user")
-	errUpgradeFlagNotSet        = errors.New("upgrade flag not set by user")
+	errUpgradeFlagNotSet        = errors.New("to upgrade the cluster, run the command again with the --upgrade flag")
 	errUpgradePathNotFound      = errors.New("upgrade path not found")
 	errGettingDistroVersionFrom = errors.New("error while getting distribution version from")
 	errGettingDistroVersionTo   = errors.New("error while getting distribution version to")
@@ -105,7 +105,7 @@ func NewPreUpgrade(
 }
 
 func (p *PreUpgrade) Exec() error {
-	logrus.Info("Running preupgrade phase...")
+	logrus.Debug("Running preupgrade phase...")
 
 	logrus.Debug("Cleaning up upgrade folder...")
 
@@ -150,6 +150,11 @@ func (p *PreUpgrade) Exec() error {
 		return fmt.Errorf("error creating temp dir: %w", err)
 	}
 
+	// On a dry run, the template model writes tmpl-debug.log in this folder and tells the user its path.
+	if !p.dryRun {
+		defer os.RemoveAll(outDirPath1)
+	}
+
 	confPath := filepath.Join(outDirPath1, "config.yaml")
 
 	logrus.Debugf("Preupgrade configuration file path %s", confPath)
@@ -171,11 +176,11 @@ func (p *PreUpgrade) Exec() error {
 			return fmt.Errorf("error creating temp folder: %w", err)
 		}
 
+		defer os.RemoveAll(tmpUpgradesFolder)
+
 		if err := iox.CopyRecursive(subFS, tmpUpgradesFolder); err != nil {
 			return fmt.Errorf("error copying template files: %w", err)
 		}
-
-		defer os.RemoveAll(tmpUpgradesFolder)
 
 		upgradesPath = tmpUpgradesFolder
 	} else {
@@ -285,7 +290,12 @@ func (p *PreUpgrade) Exec() error {
 		p.upgrade.Enabled = true
 	}
 
-	logrus.Info("Preupgrade phase completed successfully")
+	// Without an upgrade the phase only renders the scripts, so it stays out of the normal output.
+	if p.upgrade.Enabled {
+		logrus.Info("Preupgrade phase completed successfully")
+	} else {
+		logrus.Debug("Preupgrade phase completed successfully")
+	}
 
 	return nil
 }

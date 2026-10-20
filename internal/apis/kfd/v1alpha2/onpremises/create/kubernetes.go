@@ -92,7 +92,7 @@ func (k *Kubernetes) Exec(rdcs reducers.Reducers, startFrom string, upgradeState
 	}
 
 	if k.dryRun {
-		logrus.Info("Kubernetes cluster created successfully (dry-run mode)")
+		logrus.Info("Kubernetes cluster configured successfully (dry-run mode)")
 
 		return nil
 	}
@@ -117,7 +117,7 @@ func (k *Kubernetes) Exec(rdcs reducers.Reducers, startFrom string, upgradeState
 		return fmt.Errorf("error running post-kubernetes phase: %w", err)
 	}
 
-	logrus.Info("Kubernetes cluster created successfully")
+	logrus.Info("Kubernetes cluster configured successfully")
 
 	return nil
 }
@@ -148,7 +148,9 @@ func (k *Kubernetes) runWorkerUpgradePlaybooks(
 	nodes []string,
 	onResult func(node string, status upgrade.PhaseStatus) error,
 ) error {
-	for _, node := range nodes {
+	for i, node := range nodes {
+		logrus.Infof("Upgrading the worker node %s (%d of %d)...", node, i+1, len(nodes))
+
 		if _, err := k.ansibleRunner.Playbook("56.upgrade-worker-nodes.yml", "--limit", node); err != nil {
 			workerErr := fmt.Errorf("error upgrading node %s: %w", node, err)
 

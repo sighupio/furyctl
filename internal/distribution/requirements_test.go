@@ -48,6 +48,10 @@ func Test_ModuleNeededForKind(t *testing.T) {
 		{"aws", distribution.EKSClusterKind, true},
 		{"aws", distribution.OnPremisesKind, false},
 		{"aws", distribution.KFDDistributionKind, false},
+		{"utilities", distribution.OnPremisesKind, true},
+		{"utilities", distribution.ImmutableKind, true},
+		{"utilities", distribution.EKSClusterKind, false},
+		{"utilities", distribution.KFDDistributionKind, false},
 		{"monitoring", distribution.EKSClusterKind, true},
 		{"monitoring", distribution.OnPremisesKind, true},
 	}

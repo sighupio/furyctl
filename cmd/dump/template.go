@@ -13,13 +13,10 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
-	"github.com/sighupio/furyctl/internal/analytics"
-	"github.com/sighupio/furyctl/internal/app"
 	"github.com/sighupio/furyctl/internal/config"
 	"github.com/sighupio/furyctl/internal/distribution"
 	"github.com/sighupio/furyctl/internal/flags"
 	"github.com/sighupio/furyctl/internal/git"
-	cobrax "github.com/sighupio/furyctl/internal/x/cobra"
 	execx "github.com/sighupio/furyctl/internal/x/exec"
 	"github.com/sighupio/furyctl/pkg/dependencies"
 	dist "github.com/sighupio/furyctl/pkg/distribution"
@@ -45,8 +42,6 @@ var (
 )
 
 func NewTemplateCmd() *cobra.Command {
-	var cmdEvent analytics.Event
-
 	templateCmd := &cobra.Command{
 		Args:  cobra.NoArgs,
 		Use:   "template",
@@ -56,8 +51,6 @@ The command will dump into a 'distribution' folder in the working directory all 
 		SilenceUsage:  true,
 		SilenceErrors: true,
 		PreRun: func(cmd *cobra.Command, _ []string) {
-			cmdEvent = analytics.NewCommandEvent(cobrax.GetFullname(cmd))
-
 			// Bind the flags first: a flag on the command line has precedence over the configuration file.
 			if err := viper.BindPFlags(cmd.Flags()); err != nil {
 				logrus.Fatalf("error while binding flags: %v", err)
@@ -68,16 +61,8 @@ The command will dump into a 'distribution' folder in the working directory all 
 			}
 		},
 		RunE: func(_ *cobra.Command, _ []string) error {
-			ctn := app.GetContainerInstance()
-
-			tracker := ctn.Tracker()
-			tracker.Flush()
-
 			flags, err := getDumpTemplateCmdFlags()
 			if err != nil {
-				cmdEvent.AddErrorMessage(err)
-				tracker.Track(cmdEvent)
-
 				return err
 			}
 
@@ -94,33 +79,18 @@ The command will dump into a 'distribution' folder in the working directory all 
 			}
 
 			if err := depsvl.ValidateBaseReqs(); err != nil {
-				cmdEvent.AddErrorMessage(err)
-				tracker.Track(cmdEvent)
-
 				return fmt.Errorf("error while validating requirements: %w", err)
 			}
 
 			logrus.Info("Downloading distribution...")
 			res, err := distrodl.Download(flags.DistroLocation, flags.FuryctlPath)
 			if err != nil {
-				cmdEvent.AddErrorMessage(err)
-				tracker.Track(cmdEvent)
-
 				return fmt.Errorf("error downloading distribution: %w", err)
 			}
-
-			cmdEvent.AddClusterDetails(analytics.ClusterDetails{
-				Provider:   res.MinimalConf.Kind,
-				KFDVersion: res.DistroManifest.Version,
-				DryRun:     flags.DryRun,
-			})
 
 			if !flags.SkipValidation {
 				logrus.Info("Validating configuration file...")
 				if err := config.Validate(flags.FuryctlPath, res.RepoPath); err != nil {
-					cmdEvent.AddErrorMessage(err)
-					tracker.Track(cmdEvent)
-
 					return fmt.Errorf("error while validating configuration file: %w", err)
 				}
 			} else {
@@ -129,9 +99,6 @@ The command will dump into a 'distribution' folder in the working directory all 
 
 			furyctlFile, err := yamlx.FromFileV2[map[any]any](flags.FuryctlPath)
 			if err != nil {
-				cmdEvent.AddErrorMessage(err)
-				tracker.Track(cmdEvent)
-
 				return fmt.Errorf("%s - %w", flags.FuryctlPath, err)
 			}
 
@@ -150,16 +117,10 @@ The command will dump into a 'distribution' folder in the working directory all 
 				flags.DryRun,
 			)
 			if err != nil {
-				cmdEvent.AddErrorMessage(err)
-				tracker.Track(cmdEvent)
-
 				return fmt.Errorf("error while creating distribution manifest builder: %w", err)
 			}
 
 			if err := distroManBuilder.Build(); err != nil {
-				cmdEvent.AddErrorMessage(err)
-				tracker.Track(cmdEvent)
-
 				if errors.Is(err, templatex.ErrTargetIsNotEmpty) {
 					return fmt.Errorf("%w: \"%s\"", ErrTargetIsNotEmpty, dumpDir)
 				}
@@ -168,9 +129,6 @@ The command will dump into a 'distribution' folder in the working directory all 
 			}
 
 			logrus.Info("Distribution manifests successfully dumped to ", dumpDir)
-
-			cmdEvent.AddSuccessMessage("Distribution manifests dumped successfully")
-			tracker.Track(cmdEvent)
 
 			return nil
 		},

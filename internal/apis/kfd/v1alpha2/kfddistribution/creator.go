@@ -247,7 +247,7 @@ func (c *ClusterCreator) Create(startFrom string, _, _ int) error {
 			pluginsPhase,
 			upgr,
 		); err != nil {
-			return fmt.Errorf("error while executing cluster creation: %w", err)
+			return err
 		}
 
 	default:

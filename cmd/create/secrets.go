@@ -17,14 +17,10 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
-	"github.com/sighupio/furyctl/internal/analytics"
 	distroconf "github.com/sighupio/furyctl/internal/apis/config"
-	"github.com/sighupio/furyctl/internal/app"
 	"github.com/sighupio/furyctl/internal/git"
 	"github.com/sighupio/furyctl/internal/secrets"
-	cobrax "github.com/sighupio/furyctl/internal/x/cobra"
 	iox "github.com/sighupio/furyctl/internal/x/io"
-	osx "github.com/sighupio/furyctl/internal/x/os"
 	dist "github.com/sighupio/furyctl/pkg/distribution"
 	netx "github.com/sighupio/furyctl/pkg/x/net"
 	yamlx "github.com/sighupio/furyctl/pkg/x/yaml"
@@ -34,12 +30,7 @@ import (
 // read. Such fields decide which secrets a cluster needs, thus the command stops.
 var ErrUnreadableField = errors.New("cannot read the value of a field of the configuration file")
 
-// The name that DoDownload gives to the folder of a distribution that it writes: see readSchema.
-const tempFolderPrefix = "furyctl-"
-
 func NewSecretsCmd() *cobra.Command {
-	var cmdEvent analytics.Event
-
 	secretsCmd := &cobra.Command{
 		Args:      cobra.ArbitraryArgs,
 		ValidArgs: secrets.Names(),
@@ -75,8 +66,6 @@ furyctl creates only the secrets that your cluster can hold. The kind of the clu
   furyctl create secrets --config mycluster.yaml    Read another configuration file
 `,
 		PreRun: func(cmd *cobra.Command, _ []string) {
-			cmdEvent = analytics.NewCommandEvent(cobrax.GetFullname(cmd))
-
 			// The command reads no flag from the `flags` field of the configuration file: give
 			// --distro-location on the command line. Only `create pki` reads the `create` section
 			// of that field, and there `path` means the folder of the PKI and not the folder of the
@@ -86,30 +75,18 @@ furyctl creates only the secrets that your cluster can hold. The kind of the clu
 			}
 		},
 		RunE: func(_ *cobra.Command, args []string) error {
-			ctn := app.GetContainerInstance()
-
-			tracker := ctn.Tracker()
-			defer tracker.Flush()
-
-			fail := func(err error) error {
-				cmdEvent.AddErrorMessage(err)
-				tracker.Track(cmdEvent)
-
-				return err
-			}
-
 			// Each message of the command names a path, and `create pki` names an absolute one. An
 			// absolute path leaves no doubt about the folder that holds the secrets, above all with
 			// the --workdir flag. The `{file://}` references stay relative to the configuration
 			// file: Reference makes them so.
 			folder, err := filepath.Abs(viper.GetString("path"))
 			if err != nil {
-				return fail(fmt.Errorf("error while getting the absolute path of the secrets folder: %w", err))
+				return fmt.Errorf("error while getting the absolute path of the secrets folder: %w", err)
 			}
 
 			configPath, err := filepath.Abs(viper.GetString("config"))
 			if err != nil {
-				return fail(fmt.Errorf("error while getting the absolute path of the configuration file: %w", err))
+				return fmt.Errorf("error while getting the absolute path of the configuration file: %w", err)
 			}
 
 			updateConfig := viper.GetBool("update-config")
@@ -122,10 +99,10 @@ furyctl creates only the secrets that your cluster can hold. The kind of the clu
 			case err == nil:
 
 			case !errors.Is(err, os.ErrNotExist):
-				return fail(fmt.Errorf("error while reading the configuration file: %w", err))
+				return fmt.Errorf("error while reading the configuration file: %w", err)
 
 			case updateConfig:
-				return fail(fmt.Errorf("cannot write the references with the --update-config flag: %w", err))
+				return fmt.Errorf("cannot write the references with the --update-config flag: %w", err)
 
 			// The names on the command line already say what to create, thus the absent file is no
 			// surprise. Without them, furyctl tells the user why it creates so many secrets.
@@ -159,7 +136,7 @@ furyctl creates only the secrets that your cluster can hold. The kind of the clu
 
 			components, err := secrets.Select(args, cfg)
 			if err != nil {
-				return fail(err)
+				return fmt.Errorf("error while selecting the components: %w", err)
 			}
 
 			components, dropped := secrets.Keep(components, schema)
@@ -189,9 +166,9 @@ furyctl creates only the secrets that your cluster can hold. The kind of the clu
 			// stops here instead of a guess: a guess creates the secrets of the wrong components,
 			// and it reads a field that holds a reference as a field that holds nothing.
 			if unreadable := secrets.Unreadable(components, cfg, schema, args); len(unreadable) > 0 {
-				return fail(fmt.Errorf("%w: %s. Give each field a value that furyctl can read, or take "+
+				return fmt.Errorf("%w: %s. Give each field a value that furyctl can read, or take "+
 					"it out of %s",
-					ErrUnreadableField, strings.Join(unreadable, ", "), configPath))
+					ErrUnreadableField, strings.Join(unreadable, ", "), configPath)
 			}
 
 			if encrypts && askForEncryption() {
@@ -214,7 +191,7 @@ furyctl creates only the secrets that your cluster can hold. The kind of the clu
 
 			if len(components) == 0 {
 				if noFieldErr != nil {
-					return fail(noFieldErr)
+					return noFieldErr
 				}
 
 				if len(held) == 0 {
@@ -225,9 +202,6 @@ furyctl creates only the secrets that your cluster can hold. The kind of the clu
 						strings.Join(secrets.Names(), ", "),
 					)
 				}
-
-				cmdEvent.AddSuccessMessage("no secret to create")
-				tracker.Track(cmdEvent)
 
 				return nil
 			}
@@ -260,14 +234,7 @@ furyctl creates only the secrets that your cluster can hold. The kind of the clu
 				warnSecretFiles(folder)
 			}
 
-			if err := errors.Join(noFieldErr, writeErr, err); err != nil {
-				return fail(err)
-			}
-
-			cmdEvent.AddSuccessMessage("secrets successfully created at " + folder)
-			tracker.Track(cmdEvent)
-
-			return nil
+			return errors.Join(noFieldErr, writeErr, err)
 		},
 	}
 
@@ -337,21 +304,6 @@ func readSchema(configPath string) (*secrets.Schema, error) {
 	if err != nil {
 		return nil, fmt.Errorf("error while downloading the distribution: %w", err)
 	}
-
-	// DoDownload writes the distribution to a folder of its own and gives no way to remove it. The
-	// schema is in memory after LoadSchema, thus the folder goes away with the run that made it.
-	// The name of the folder is not part of what DoDownload gives back, thus furyctl removes only a
-	// folder with the name that DoDownload uses: a removal of the wrong path takes the work of the
-	// user with it.
-	defer func() {
-		folder := filepath.Dir(res.RepoPath)
-
-		if strings.HasPrefix(filepath.Base(folder), tempFolderPrefix) {
-			if err := osx.CleanupTempDir(folder); err != nil {
-				logrus.Debugf("furyctl cannot remove the folder %s of the distribution: %v", folder, err)
-			}
-		}
-	}()
 
 	schema, err := secrets.LoadSchema(res.RepoPath, minimalConf)
 	if err != nil {

@@ -68,11 +68,13 @@ func NewPreFlight(
 	}
 }
 
-func (p *PreFlight) Exec() error {
+// Exec checks the hosts and reports whether the cluster exists. When it exists, KUBECONFIG
+// points to it after this call.
+func (p *PreFlight) Exec() (bool, error) {
 	logrus.Info("Running preflight checks...")
 
 	if err := p.CreateRootFolder(); err != nil {
-		return fmt.Errorf("error creating kubernetes phase folder: %w", err)
+		return false, fmt.Errorf("error creating kubernetes phase folder: %w", err)
 	}
 
 	furyctlMerger, err := p.CreateFuryctlMerger(
@@ -82,12 +84,12 @@ func (p *PreFlight) Exec() error {
 		"onpremises",
 	)
 	if err != nil {
-		return fmt.Errorf("error creating furyctl merger: %w", err)
+		return false, fmt.Errorf("error creating furyctl merger: %w", err)
 	}
 
 	mCfg, err := templatex.NewConfigWithoutData(furyctlMerger, []string{})
 	if err != nil {
-		return fmt.Errorf("error creating template config: %w", err)
+		return false, fmt.Errorf("error creating template config: %w", err)
 	}
 
 	p.CopyPathsToConfig(&mCfg)
@@ -96,44 +98,50 @@ func (p *PreFlight) Exec() error {
 		"version": p.kfdManifest.Kubernetes.OnPremises.Version,
 	}
 
+	templatesDir := path.Join(p.paths.DistroPath, "templates", cluster.OperationPhasePreFlight, "onpremises")
+
 	if err := p.CopyFromTemplate(
 		mCfg,
 		"preflight",
-		path.Join(p.paths.DistroPath, "templates", cluster.OperationPhasePreFlight, "onpremises"),
+		templatesDir,
 		p.Path,
 		p.paths.ConfigPath,
 	); err != nil {
-		return fmt.Errorf("error copying from template: %w", err)
+		return false, fmt.Errorf("error copying from template: %w", err)
 	}
 
 	if _, err := p.ansibleRunner.Exec("all", "-m", "ping"); err != nil {
-		return fmt.Errorf("error checking hosts: %w", err)
+		return false, fmt.Errorf("error checking hosts: %w", err)
 	}
 
-	adminConfPlaybook, err := preflightx.AdminConfPlaybookName(p.Path)
+	clusterExists, err := preflightx.FetchAdminConf(p.ansibleRunner, p.Path, templatesDir)
 	if err != nil {
-		return fmt.Errorf("error selecting admin.conf playbook: %w", err)
+		// Without a cluster the deleter runs no phase that needs one, and it still resets the hosts.
+		// A delete of a broken cluster can therefore continue, where an error would stop it.
+		logrus.Warn("furyctl could not read the kubeconfig of the cluster, so it deletes as if the cluster " +
+			"does not exist. Run with --debug to see the error.")
+		logrus.Debug(err)
 	}
 
-	if _, err := p.ansibleRunner.Playbook(adminConfPlaybook); err != nil {
+	if !clusterExists {
 		logrus.Debug("Cluster does not exist, skipping state checks")
 
 		logrus.Info("Preflight checks completed successfully")
 
-		return nil //nolint:nilerr // we want to return nil here
+		return false, nil
 	}
 
 	if err := kubex.SetConfigEnv(path.Join(p.Path, "admin.conf")); err != nil {
-		return fmt.Errorf("error setting kubeconfig env: %w", err)
+		return false, fmt.Errorf("error setting kubeconfig env: %w", err)
 	}
 
 	logrus.Info("Checking that the cluster is reachable...")
 
 	if _, err := p.kubeRunner.Version(); err != nil {
-		return fmt.Errorf("cluster is unreachable, make sure you have access to the cluster: %w", err)
+		return false, fmt.Errorf("cluster is unreachable, make sure you have access to the cluster: %w", err)
 	}
 
 	logrus.Info("Preflight checks completed successfully")
 
-	return nil
+	return true, nil
 }

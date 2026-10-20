@@ -6,6 +6,7 @@ package iox
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -130,12 +131,21 @@ func CopyFile(src, dst string) error {
 }
 
 func CopyRecursive(src fs.FS, dest string) error {
+	return CopyRecursiveContext(context.Background(), src, dest)
+}
+
+// CopyRecursiveContext is CopyRecursive, but it stops before the next file when ctx is canceled.
+func CopyRecursiveContext(ctx context.Context, src fs.FS, dest string) error {
 	stuff, err := fs.ReadDir(src, ".")
 	if err != nil {
 		return fmt.Errorf("error while reading directory %s: %w", src, err)
 	}
 
 	for _, file := range stuff {
+		if err := ctx.Err(); err != nil {
+			return fmt.Errorf("error while copying to %s: %w", dest, err)
+		}
+
 		if file.IsDir() {
 			sub, err := fs.Sub(src, file.Name())
 			if err != nil {
@@ -146,7 +156,7 @@ func CopyRecursive(src fs.FS, dest string) error {
 				return fmt.Errorf("error while creating directory %s: %w", file.Name(), err)
 			}
 
-			if err := CopyRecursive(sub, path.Join(dest, file.Name())); err != nil {
+			if err := CopyRecursiveContext(ctx, sub, path.Join(dest, file.Name())); err != nil {
 				return err
 			}
 

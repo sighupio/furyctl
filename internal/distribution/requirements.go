@@ -74,6 +74,10 @@ func ModuleNeededForKind(module, kind string) bool {
 		return kind == EKSClusterKind
 	}
 
+	if module == "utilities" {
+		return kind == OnPremisesKind || kind == ImmutableKind
+	}
+
 	return true
 }
 

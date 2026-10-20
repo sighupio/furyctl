@@ -68,7 +68,6 @@ flags:
   global:
     # Global flags that apply to all commands
     debug: true
-    disableAnalytics: false
     
   apply:
     # Flags specific to the 'apply' command
@@ -134,7 +133,6 @@ flags:
   # Global flags apply to all commands
   global:
     debug: true
-    disableAnalytics: false
     gitProtocol: "https"
     workdir: "/tmp/furyctl-workspace"
     
@@ -206,9 +204,6 @@ flags:
   global:
     # Standardize debug output for the team
     debug: false
-    
-    # Ensure analytics are disabled for compliance
-    disableAnalytics: true
     
     # Standardize git protocol for corporate environments
     gitProtocol: "ssh"
@@ -328,12 +323,12 @@ The flags configuration includes built-in validation that will **stop execution*
 
 ## Supported Flags
 
-**Note:** All flag names in the `furyctl.yaml` file use camelCase format (e.g., `disableAnalytics`, `skipDepsValidation`). These are automatically converted to kebab-case internally for CLI compatibility (e.g., `--disable-analytics`, `--skip-deps-validation`).
+**Note:** All flag names in the `furyctl.yaml` file use camelCase format (e.g., `noTty`, `skipDepsValidation`). These are automatically converted to kebab-case internally for CLI compatibility (e.g., `--no-tty`, `--skip-deps-validation`).
 
 ### Global Flags
 
 - `debug` (bool) - Enable debug output
-- `disableAnalytics` (bool) - Disable analytics
+- `disableAnalytics` (bool) - Deprecated, has no effect
 - `noTty` (bool) - Disable TTY
 - `workdir` (string) - Working directory
 - `outdir` (string) - Output directory

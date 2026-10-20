@@ -5,6 +5,7 @@
 package distribution
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io/fs"
@@ -20,7 +21,9 @@ import (
 	"github.com/sighupio/furyctl/internal/apis/config"
 	idist "github.com/sighupio/furyctl/internal/distribution"
 	"github.com/sighupio/furyctl/internal/git"
+	execx "github.com/sighupio/furyctl/internal/x/exec"
 	iox "github.com/sighupio/furyctl/internal/x/io"
+	osx "github.com/sighupio/furyctl/internal/x/os"
 	netx "github.com/sighupio/furyctl/pkg/x/net"
 	yamlx "github.com/sighupio/furyctl/pkg/x/yaml"
 )
@@ -140,11 +143,22 @@ func (d *Downloader) DoDownload(
 		return DownloadResult{}, fmt.Errorf("%w: %v", ErrCreatingTempDir, err)
 	}
 
+	// The callers read the templates from RepoPath until furyctl exits. The registration comes
+	// before the download, so that a failed or stopped download is also removed.
+	osx.RegisterTempDir(baseDst)
+
 	src := url
 	dst := filepath.Join(baseDst, "data")
 	logrus.Debugf("Downloading distribution from %s to %s", src, dst)
 
-	if err := d.client.Download(src, dst); err != nil {
+	// The distribution has no dot file at its top that furyctl reads. A local checkout can have big
+	// dot folders there, for example .git, and a copy of them file by file is slow.
+	client := d.client
+	if c, ok := client.(netx.TopDotSkipper); ok {
+		client = c.WithoutTopDotFiles()
+	}
+
+	if err := client.Download(src, dst); err != nil {
 		if errors.Is(err, netx.ErrDownloadOptionsExhausted) {
 			if distroLocation == "" {
 				msg := "try another version from the official repository"
@@ -230,6 +244,11 @@ func (d *Downloader) applyCustomCompatibilityPatches(kfdManifest config.KFD, dst
 		return fmt.Errorf("error creating temp dir: %w", err)
 	}
 
+	defer os.RemoveAll(tmpDir)
+
+	// After a signal, the download does not return, so the defer does not run.
+	osx.RegisterTempDir(tmpDir)
+
 	if err := d.client.ClearItem(d.customDistroPatchesPath); err != nil {
 		return fmt.Errorf("%w '%s': %w", ErrCannotDownloadDistribution, d.customDistroPatchesPath, err)
 	}
@@ -263,7 +282,7 @@ func (d *Downloader) applyCustomCompatibilityPatches(kfdManifest config.KFD, dst
 		return fmt.Errorf("error reading custom distribution patches directory: %w", err)
 	}
 
-	if err := iox.CopyRecursive(fsPatches, dst); err != nil {
+	if err := copyPatches(fsPatches, dst); err != nil {
 		return fmt.Errorf("error copying custom distribution patches directory files: %w", err)
 	}
 
@@ -289,7 +308,7 @@ func (*Downloader) applyCompatibilityPatches(kfdManifest config.KFD, dst string)
 	}
 
 	if finfo.IsDir() {
-		if err := iox.CopyRecursive(subFS, dst); err != nil {
+		if err := copyPatches(subFS, dst); err != nil {
 			return fmt.Errorf("error copying template files: %w", err)
 		}
 	}
@@ -297,4 +316,11 @@ func (*Downloader) applyCompatibilityPatches(kfdManifest config.KFD, dst string)
 	logrus.Infof("Compatibility patches applied for %s", kfdManifest.Version)
 
 	return nil
+}
+
+// copyPatches copies the patches to dst, the temporary folder of the distribution.
+func copyPatches(src fs.FS, dst string) error {
+	return execx.Track(func(ctx context.Context) error { //nolint:wrapcheck // The callers wrap it.
+		return iox.CopyRecursiveContext(ctx, src, dst)
+	})
 }

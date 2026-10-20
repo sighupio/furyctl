@@ -7,6 +7,7 @@
 package execx
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -36,9 +37,7 @@ func TestStopAllReachesDescendants(t *testing.T) {
 			t.Cleanup(func() {
 				leftoverGracePeriod = 10 * time.Second
 
-				runningMu.Lock()
-				stopping = false
-				runningMu.Unlock()
+				resetStop()
 			})
 
 			pidFile := filepath.Join(t.TempDir(), "pid")
@@ -71,6 +70,39 @@ func TestStopAllReachesDescendants(t *testing.T) {
 			waitFor(t, func() bool { return syscall.Kill(pid, 0) != nil })
 		})
 	}
+}
+
+func TestStopAllWaitsForTrack(t *testing.T) {
+	t.Cleanup(resetStop)
+
+	started := make(chan struct{})
+	returned := make(chan struct{})
+
+	go Track(func(ctx context.Context) error { //nolint:errcheck // Track never returns after stopAll.
+		close(started)
+		<-ctx.Done()
+		time.Sleep(100 * time.Millisecond)
+		close(returned)
+
+		return ctx.Err()
+	})
+
+	<-started
+	stopAll(syscall.SIGINT, nil)
+
+	select {
+	case <-returned:
+	default:
+		t.Fatal("stopAll returned before the tracked function returned")
+	}
+}
+
+func resetStop() {
+	runningMu.Lock()
+	defer runningMu.Unlock()
+
+	stopping = false
+	stopCtx, cancelStop = context.WithCancel(context.Background())
 }
 
 func waitFor(t *testing.T, cond func() bool) {

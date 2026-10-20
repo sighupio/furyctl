@@ -12,12 +12,5 @@ type VersionsCtn struct {
 	OSArch    string
 }
 
-func NewVersionsCtn(version, gitCommit, buildTime, goVersion, osArch string) *VersionsCtn {
-	return &VersionsCtn{
-		Version:   version,
-		GitCommit: gitCommit,
-		BuildTime: buildTime,
-		GoVersion: goVersion,
-		OSArch:    osArch,
-	}
-}
+// Versions holds the build information, main sets it at start.
+var Versions VersionsCtn //nolint:gochecknoglobals // Set once by main.

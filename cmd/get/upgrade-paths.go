@@ -17,15 +17,12 @@ import (
 
 	"github.com/sighupio/furyctl/configs"
 	"github.com/sighupio/furyctl/internal/airgap"
-	"github.com/sighupio/furyctl/internal/analytics"
 	distroconf "github.com/sighupio/furyctl/internal/apis/config"
-	"github.com/sighupio/furyctl/internal/app"
 	"github.com/sighupio/furyctl/internal/config"
 	"github.com/sighupio/furyctl/internal/distribution"
 	"github.com/sighupio/furyctl/internal/flags"
 	"github.com/sighupio/furyctl/internal/git"
 	"github.com/sighupio/furyctl/internal/semver"
-	cobrax "github.com/sighupio/furyctl/internal/x/cobra"
 	execx "github.com/sighupio/furyctl/internal/x/exec"
 	"github.com/sighupio/furyctl/pkg/dependencies"
 	dist "github.com/sighupio/furyctl/pkg/distribution"
@@ -34,8 +31,6 @@ import (
 )
 
 func NewUpgradePathsCmd() *cobra.Command {
-	var cmdEvent analytics.Event
-
 	upgradePathsCmd := &cobra.Command{
 		Args:  cobra.NoArgs,
 		Use:   "upgrade-paths",
@@ -47,8 +42,6 @@ func NewUpgradePathsCmd() *cobra.Command {
   furyctl get upgrade-paths --kind OnPremises --from X.Y.X  shows the available upgrade paths for the version X.Y.Z of the OnPremises kind, without reading the configuration file.
  `,
 		PreRun: func(cmd *cobra.Command, _ []string) {
-			cmdEvent = analytics.NewCommandEvent(cobrax.GetFullname(cmd))
-
 			// Bind the flags first: a flag on the command line has precedence over the configuration file.
 			if err := viper.BindPFlags(cmd.Flags()); err != nil {
 				logrus.Fatalf("error while binding flags: %v", err)
@@ -59,16 +52,8 @@ func NewUpgradePathsCmd() *cobra.Command {
 			}
 		},
 		RunE: func(_ *cobra.Command, _ []string) error {
-			ctn := app.GetContainerInstance()
-
-			tracker := ctn.Tracker()
-			tracker.Flush()
-
 			// Air-gapped: extract --airgap-bundle (if set) and rewire to run offline before reading flags.
 			if err := airgap.MaybePrepare(); err != nil {
-				cmdEvent.AddErrorMessage(err)
-				tracker.Track(cmdEvent)
-
 				return fmt.Errorf("error preparing air-gapped bundle: %w", err)
 			}
 
@@ -88,9 +73,6 @@ func NewUpgradePathsCmd() *cobra.Command {
 			var err error
 			furyctlPath, err = filepath.Abs(furyctlPath)
 			if err != nil {
-				cmdEvent.AddErrorMessage(err)
-				tracker.Track(cmdEvent)
-
 				return fmt.Errorf("error while getting config directory: %w", err)
 			}
 
@@ -99,18 +81,12 @@ func NewUpgradePathsCmd() *cobra.Command {
 			} else {
 				binPath, err = filepath.Abs(binPath)
 				if err != nil {
-					cmdEvent.AddErrorMessage(err)
-					tracker.Track(cmdEvent)
-
 					return fmt.Errorf("error while getting absolute path for bin folder: %w", err)
 				}
 			}
 
 			typedGitProtocol, err := git.ParseProtocol(gitProtocol)
 			if err != nil {
-				cmdEvent.AddErrorMessage(err)
-				tracker.Track(cmdEvent)
-
 				return fmt.Errorf("%w: %w", ErrParsingFlag, err)
 			}
 
@@ -120,9 +96,6 @@ func NewUpgradePathsCmd() *cobra.Command {
 			// Check that the version passed by the user is semVer valid.
 			if fromVersion != "" {
 				if _, err := semver.NewVersion(fromVersion); err != nil {
-					cmdEvent.AddErrorMessage(err)
-					tracker.Track(cmdEvent)
-
 					return fmt.Errorf("'%s' is not a valid version string: %w", fromVersion, err)
 				}
 			}
@@ -146,9 +119,6 @@ func NewUpgradePathsCmd() *cobra.Command {
 
 				// Validate base requirements.
 				if err := depsvl.ValidateBaseReqs(); err != nil {
-					cmdEvent.AddErrorMessage(err)
-					tracker.Track(cmdEvent)
-
 					return fmt.Errorf("error while validating requirements: %w", err)
 				}
 
@@ -157,9 +127,6 @@ func NewUpgradePathsCmd() *cobra.Command {
 
 				res, err := distrodl.Download(distroLocation, furyctlPath)
 				if err != nil {
-					cmdEvent.AddErrorMessage(err)
-					tracker.Track(cmdEvent)
-
 					return fmt.Errorf("error while downloading distribution: %w", err)
 				}
 
@@ -171,9 +138,6 @@ func NewUpgradePathsCmd() *cobra.Command {
 				// Validate the furyctl.yaml file.
 				logrus.Info("Validating configuration file...")
 				if err := config.Validate(furyctlPath, res.RepoPath); err != nil {
-					cmdEvent.AddErrorMessage(err)
-					tracker.Track(cmdEvent)
-
 					return fmt.Errorf("error while validating configuration file: %w", err)
 				}
 
@@ -181,9 +145,6 @@ func NewUpgradePathsCmd() *cobra.Command {
 				if !skipDepsDownload {
 					logrus.Info("Downloading dependencies...")
 					if _, err := depsdl.DownloadTools(res.DistroManifest, res.MinimalConf.Kind); err != nil {
-						cmdEvent.AddErrorMessage(ErrDownloadDependenciesFailed)
-						tracker.Track(cmdEvent)
-
 						return fmt.Errorf("%w: %v", ErrDownloadDependenciesFailed, err)
 					}
 				} else {
@@ -194,9 +155,6 @@ func NewUpgradePathsCmd() *cobra.Command {
 				if !skipDepsValidation {
 					logrus.Info("Validating dependencies...")
 					if err := depsvl.Validate(res); err != nil {
-						cmdEvent.AddErrorMessage(err)
-						tracker.Track(cmdEvent)
-
 						return fmt.Errorf("error while validating dependencies: %w", err)
 					}
 				} else {
@@ -206,9 +164,6 @@ func NewUpgradePathsCmd() *cobra.Command {
 				logrus.Debugf("either kind or fromVersion is not specified, reading them from the configuration file in path %s.", furyctlPath)
 				furyctlConf, err := yamlx.FromFileV3[distroconf.Furyctl](furyctlPath)
 				if err != nil {
-					cmdEvent.AddErrorMessage(err)
-					tracker.Track(cmdEvent)
-
 					return fmt.Errorf("error while reading configuration file in path %s: %w", furyctlPath, err)
 				}
 				if kind == "" {
@@ -226,9 +181,6 @@ func NewUpgradePathsCmd() *cobra.Command {
 
 			// Validate the kind. We don't need the normalised kind because we are checking against the folder names.
 			if _, err := distribution.ValidateConfigKind(kind); err != nil {
-				cmdEvent.AddErrorMessage(err)
-				tracker.Track(cmdEvent)
-
 				return fmt.Errorf("error while validating kind: %w", err)
 			}
 
@@ -236,9 +188,6 @@ func NewUpgradePathsCmd() *cobra.Command {
 			availablePaths, err := fs.Glob(configs.Tpl, globPattern)
 			logrus.Debug("found folders: ", availablePaths)
 			if err != nil {
-				cmdEvent.AddErrorMessage(err)
-				tracker.Track(cmdEvent)
-
 				return fmt.Errorf("error while getting the upgrade paths for version %s: %w", fromVersion, err)
 			}
 
@@ -247,9 +196,6 @@ func NewUpgradePathsCmd() *cobra.Command {
 				for _, match := range availablePaths {
 					f, err := fs.Stat(configs.Tpl, match)
 					if err != nil {
-						cmdEvent.AddErrorMessage(err)
-						tracker.Track(cmdEvent)
-
 						return fmt.Errorf("error while checking filesystem: %w", err)
 					}
 					if f.IsDir() {
@@ -262,8 +208,6 @@ func NewUpgradePathsCmd() *cobra.Command {
 			} else {
 				logrus.Infof("There are no upgrade paths available for version %s of kind %s", fromVersion, kind)
 			}
-			cmdEvent.AddSuccessMessage("upgrade paths successfully retrieved")
-			tracker.Track(cmdEvent)
 
 			return nil
 		},

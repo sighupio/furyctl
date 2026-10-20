@@ -148,6 +148,9 @@ func CompileFuryctl(outputPath string) func(SpecContext) {
 func DownloadFuryDistribution(outDir, furyctlConfPath string) dist.DownloadResult {
 	distrodl := dist.NewCachingDownloader(netx.NewGoGetterClient(), outDir, git.ProtocolSSH, "")
 
+	// The test binary does not run the removal of main.go.
+	DeferCleanup(osx.RemoveTempDirs)
+
 	return Must1(distrodl.Download("", furyctlConfPath))
 }
 
@@ -277,7 +280,6 @@ func (f *FuryctlCreator) Create(ctx context.Context, phase, startFrom string) *e
 		"cluster",
 		"--config",
 		f.configPath,
-		"--disable-analytics",
 		"--debug",
 		"--force",
 		"all",

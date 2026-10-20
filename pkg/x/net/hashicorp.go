@@ -16,6 +16,7 @@ import (
 	"github.com/samber/lo"
 	"github.com/sirupsen/logrus"
 
+	execx "github.com/sighupio/furyctl/internal/x/exec"
 	gogetterx "github.com/sighupio/furyctl/internal/x/go-getter"
 )
 
@@ -25,13 +26,23 @@ const headProbeTimeout = 10 * time.Second
 var ErrDownloadOptionsExhausted = errors.New("downloading options exhausted")
 
 type GoGetterClient struct {
-	protocols []string
+	protocols    []string
+	ignoreTopDot bool
 }
 
 func NewGoGetterClient() *GoGetterClient {
 	return &GoGetterClient{
 		protocols: []string{"", "git::", "file::", "http::", "s3::", "gcs::", "mercurial::"},
 	}
+}
+
+// WithoutTopDotFiles returns a new client that copies a local directory without the dot files and
+// folders at its top. The original client does not change.
+func (g *GoGetterClient) WithoutTopDotFiles() Client {
+	c := *g
+	c.ignoreTopDot = true
+
+	return &c
 }
 
 func (*GoGetterClient) Clear() error {
@@ -68,7 +79,8 @@ func (g *GoGetterClient) DownloadWithMode(
 			Mode: mode,
 			Getters: map[string]getter.Getter{
 				"file": &gogetterx.FileGetter{
-					Copy: true,
+					Copy:         true,
+					IgnoreTopDot: g.ignoreTopDot,
 				},
 				"git": new(getter.GitGetter),
 				"gcs": new(getter.GCSGetter),
@@ -97,7 +109,12 @@ func (g *GoGetterClient) DownloadWithMode(
 			client.Decompressors = decompressors
 		}
 
-		err := client.Get()
+		// A signal stops the download before furyctl removes the temporary folders.
+		err := execx.Track(func(ctx context.Context) error {
+			client.Ctx = ctx
+
+			return client.Get()
+		})
 		if err == nil {
 			return nil
 		}

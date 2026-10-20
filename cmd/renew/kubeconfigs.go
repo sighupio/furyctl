@@ -12,16 +12,11 @@ import (
 
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
-
-	"github.com/sighupio/furyctl/internal/analytics"
-	"github.com/sighupio/furyctl/internal/app"
 )
 
 var ErrUnknownKubeconfig = errors.New("unknown kubeconfig")
 
 func NewKubeconfigsCmd() *cobra.Command {
-	var cmdEvent analytics.Event
-
 	kubeconfigsCmd := &cobra.Command{
 		Args:  cobra.ArbitraryArgs,
 		Use:   "kubeconfigs [NAME...]",
@@ -35,39 +30,23 @@ func NewKubeconfigsCmd() *cobra.Command {
   furyctl renew kubeconfigs alice bob                  Renew the kubeconfig files of two users
   furyctl renew kubeconfigs --config mycluster.yaml    Renew with a custom configuration file
 `,
-		PreRun: func(cmd *cobra.Command, _ []string) {
-			cmdEvent = preRun(cmd)
-		},
+		PreRun: preRun,
 		RunE: func(_ *cobra.Command, args []string) error {
-			ctn := app.GetContainerInstance()
-
-			tracker := ctn.Tracker()
-			tracker.Flush()
-
-			renewer, err := newRenewer(cmdEvent, tracker)
+			renewer, err := newRenewer()
 			if err != nil {
 				return err
 			}
 
 			users, err := selectKubeconfigs(args, renewer.Users())
 			if err != nil {
-				cmdEvent.AddErrorMessage(err)
-				tracker.Track(cmdEvent)
-
 				return err
 			}
 
 			if err := renewer.RenewKubeconfigs(users); err != nil {
-				cmdEvent.AddErrorMessage(err)
-				tracker.Track(cmdEvent)
-
 				return fmt.Errorf("error while renewing the kubeconfig files: %w", err)
 			}
 
 			logrus.Infof("Kubeconfig files successfully renewed: %s", strings.Join(users, ", "))
-
-			cmdEvent.AddSuccessMessage("kubeconfig files successfully renewed")
-			tracker.Track(cmdEvent)
 
 			return nil
 		},

@@ -16,8 +16,6 @@ package main
 
 import (
 	"os"
-	"runtime"
-	"strings"
 	"sync"
 
 	"github.com/sirupsen/logrus"
@@ -25,15 +23,15 @@ import (
 	"github.com/sighupio/furyctl/cmd"
 	"github.com/sighupio/furyctl/internal/app"
 	execx "github.com/sighupio/furyctl/internal/x/exec"
+	osx "github.com/sighupio/furyctl/internal/x/os"
 )
 
 var (
-	version       = "unknown"
-	gitCommit     = "unknown"
-	buildTime     = "unknown"
-	goVersion     = "unknown"
-	osArch        = "unknown"
-	mixPanelToken = ""
+	version   = "unknown"
+	gitCommit = "unknown"
+	buildTime = "unknown"
+	goVersion = "unknown"
+	osArch    = "unknown"
 )
 
 func main() {
@@ -54,30 +52,19 @@ func exec() int {
 		Level: logrus.DebugLevel,
 	}
 
-	h, err := os.Hostname()
-	if err != nil {
-		log.Debug(err)
-
-		h = "unknown"
+	app.Versions = app.VersionsCtn{
+		Version:   version,
+		GitCommit: gitCommit,
+		BuildTime: buildTime,
+		GoVersion: goVersion,
+		OSArch:    osArch,
 	}
-
-	mixPanelToken = strings.ReplaceAll(mixPanelToken, "\"", "")
-	mixPanelToken = strings.ReplaceAll(mixPanelToken, "'", "")
-
-	ctn := app.GetContainerInstance()
-
-	ctn.Version = version
-	ctn.GitCommit = gitCommit
-	ctn.BuildTime = buildTime
-	ctn.GoVersion = goVersion
-	ctn.MachineArch = osArch
-	ctn.MachineOS = runtime.GOOS
-	ctn.TrackerToken = mixPanelToken
-	ctn.MachineHostname = h
 
 	defer wg.Wait()
 
 	execx.HandleSignals()
+
+	defer osx.RemoveTempDirs()
 
 	if _, err := cmd.NewRootCmd().ExecuteC(); err != nil {
 		// The global logger writes to the terminal and to the log file. Before the root pre-run

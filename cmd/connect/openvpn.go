@@ -14,11 +14,8 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
-	"github.com/sighupio/furyctl/internal/analytics"
 	"github.com/sighupio/furyctl/internal/apis/config"
-	"github.com/sighupio/furyctl/internal/app"
 	"github.com/sighupio/furyctl/internal/flags"
-	cobrax "github.com/sighupio/furyctl/internal/x/cobra"
 	execx "github.com/sighupio/furyctl/internal/x/exec"
 	yamlx "github.com/sighupio/furyctl/pkg/x/yaml"
 )
@@ -37,14 +34,10 @@ var (
 )
 
 func NewOpenVPNCmd() *cobra.Command {
-	var cmdEvent analytics.Event
-
 	openvpnCmd := &cobra.Command{
 		Use:   "openvpn",
 		Short: "Connect to OpenVPN with the specified profile name",
 		PreRun: func(cmd *cobra.Command, _ []string) {
-			cmdEvent = analytics.NewCommandEvent(cobrax.GetFullname(cmd))
-
 			// Bind the flags first: a flag on the command line has precedence over the configuration file.
 			if err := viper.BindPFlags(cmd.Flags()); err != nil {
 				logrus.Fatalf("error while binding flags: %v", err)
@@ -55,11 +48,6 @@ func NewOpenVPNCmd() *cobra.Command {
 			}
 		},
 		RunE: func(_ *cobra.Command, _ []string) error {
-			ctn := app.GetContainerInstance()
-
-			tracker := ctn.Tracker()
-			tracker.Flush()
-
 			logrus.Info("Connecting to OpenVPN...")
 
 			// Parse flags.
@@ -75,9 +63,6 @@ func NewOpenVPNCmd() *cobra.Command {
 			outDir := flags.Outdir
 			homeDir, err := os.UserHomeDir()
 			if err != nil {
-				cmdEvent.AddErrorMessage(err)
-				tracker.Track(cmdEvent)
-
 				return fmt.Errorf("%w: %w", ErrCannotGetHomeDir, err)
 			}
 
@@ -89,9 +74,6 @@ func NewOpenVPNCmd() *cobra.Command {
 			logrus.Debug("Parsing furyctl.yaml file...")
 			furyctlConf, err := yamlx.FromFileV3[config.Furyctl](flags.FuryctlPath)
 			if err != nil {
-				cmdEvent.AddErrorMessage(err)
-				tracker.Track(cmdEvent)
-
 				return err
 			}
 
@@ -111,11 +93,7 @@ func NewOpenVPNCmd() *cobra.Command {
 			// Start openvpn process.
 			logrus.Debug("Running OpenVPN...")
 			if err := openVPNCmd.Run(); err != nil {
-				err = fmt.Errorf("%w: %w", ErrRunningOpenVPN, err)
-				cmdEvent.AddErrorMessage(err)
-				tracker.Track(cmdEvent)
-
-				return err
+				return fmt.Errorf("%w: %w", ErrRunningOpenVPN, err)
 			}
 
 			return nil
