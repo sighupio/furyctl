@@ -1,0 +1,9 @@
+# furyctl release vTBD
+
+Welcome to the latest release of `furyctl` maintained by SIGHUP by ReeVo team.
+
+## New features 🌟
+
+### All kinds
+
+- [[#808](https://github.com/sighupio/furyctl/pull/808)] When a tool that furyctl runs fails, the error now starts with the cause, for example each Ansible host that failed or does not answer, then gives the command and the last lines of its output. furyctl saves the full output to a text file in `.furyctl/logs` and gives its path. Before this release, the error repeated the name of the command and gave its full output, and the cause was difficult to find in it.
