@@ -505,12 +505,12 @@ func TestDiffCmd_Help(t *testing.T) {
 		}
 	})
 
-	t.Run("the command accepts exactly the flags it accepted before", func(t *testing.T) {
+	t.Run("the command accepts exactly the flags it accepted before and --config-only", func(t *testing.T) {
 		t.Parallel()
 
 		want := []string{
 			"config", "phase", "distro-location", "distro-patches", "bin-path", "upgrade-path-location",
-			"airgap-bundle", "force-extract",
+			"airgap-bundle", "force-extract", "config-only",
 		}
 
 		flagSet := NewDiffCmd().Flags()

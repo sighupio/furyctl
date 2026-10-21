@@ -7,6 +7,7 @@ package diffs
 import (
 	"errors"
 	"fmt"
+	"reflect"
 	"regexp"
 	"slices"
 	"strings"
@@ -96,8 +97,8 @@ func (*BaseChecker) AssertImmutableViolations(diffs r3diff.Changelog, immutableP
 			"%w: path %s  oldValue %v newValue %v",
 			errImmutable,
 			"."+strings.Join(diff.Path, "."),
-			diff.From,
-			diff.To,
+			violationValue(diff.Path, diff.From),
+			violationValue(diff.Path, diff.To),
 		), true
 	})
 }
@@ -126,8 +127,8 @@ func (*BaseChecker) AssertReducerUnsupportedViolations(diffs r3diff.Changelog, r
 					unsupportedGenericErrMsg := fmt.Sprintf(
 						"changing %s from %v to %v is not supported",
 						changePath,
-						diff.From,
-						diff.To,
+						violationValue(diff.Path, diff.From),
+						violationValue(diff.Path, diff.To),
 					)
 
 					if reason != "" {
@@ -201,4 +202,24 @@ func isImmutablePathChanged(change r3diff.Change, immutables []string) bool {
 	changePath := numbersToWildcardRegex.ReplaceAllString(joinedPath, ".*")
 
 	return slices.Contains(immutables, changePath)
+}
+
+// violationValue is the value a violation message prints for a change at the path: HiddenValue when the path is
+// sensitive, an object or a list with its sensitive values hidden, any other value as it is.
+func violationValue(path []string, value any) any {
+	if value == nil {
+		return value
+	}
+
+	if IsSensitivePath(path) {
+		return HiddenValue
+	}
+
+	switch reflect.ValueOf(value).Kind() {
+	case reflect.Map, reflect.Slice, reflect.Array:
+		return MaskSensitive(path, value)
+
+	default:
+		return value
+	}
 }

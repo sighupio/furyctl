@@ -28,6 +28,11 @@ func TestPluginsApplied(t *testing.T) {
 		{name: "empty helm releases", plugins: map[any]any{"helm": map[any]any{"releases": []any{}}}},
 		{name: "empty kustomize", plugins: map[any]any{"kustomize": []any{}}},
 		{
+			// The template data is decoded with yaml.v2: a helm map of another type is not one apply reads.
+			name:    "helm map with string keys",
+			plugins: map[any]any{"helm": map[string]any{"releases": []any{map[any]any{"name": "longhorn"}}}},
+		},
+		{
 			name:    "helm release",
 			plugins: map[any]any{"helm": map[any]any{"releases": []any{map[any]any{"name": "longhorn"}}}},
 			want:    true,

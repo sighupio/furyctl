@@ -11,6 +11,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"slices"
 
 	"github.com/google/uuid"
 	"github.com/samber/lo"
@@ -19,10 +20,15 @@ import (
 	execx "github.com/sighupio/furyctl/internal/x/exec"
 )
 
-// ErrPluginDownloaderMissing is returned when a helm plugin must be installed but neither curl nor wget
-// is available to download it.
-var ErrPluginDownloaderMissing = errors.New(
-	"installing helm plugins (helm-diff) requires 'curl' or 'wget' on the PATH; install one and retry",
+var (
+	// ErrPluginDownloaderMissing is returned when a helm plugin must be installed but neither curl nor wget
+	// is available to download it.
+	ErrPluginDownloaderMissing = errors.New(
+		"installing helm plugins (helm-diff) requires 'curl' or 'wget' on the PATH; install one and retry",
+	)
+
+	// ErrDiffNotReadOnly is returned when the helmfile diff command could write to the cluster or print secrets.
+	ErrDiffNotReadOnly = errors.New("the helmfile diff command is not read-only")
 )
 
 type Paths struct {
@@ -97,6 +103,52 @@ func (r *Runner) Apply() error {
 
 	if _, err := execx.CombinedOutput(cmd); err != nil {
 		return err //nolint:wrapcheck // The error names the command.
+	}
+
+	return nil
+}
+
+// Diff compares the releases with the cluster. It returns the standard output, the standard error and the
+// exit code of helmfile; a non-zero exit code is a result, not an error.
+func (r *Runner) Diff() (string, string, int, error) {
+	args := diffArgs()
+
+	if err := checkReadOnlyDiffArgs(args); err != nil {
+		return "", "", 0, err
+	}
+
+	cmd, id := r.newCmd(args, nil, nil)
+	defer r.deleteCmd(id)
+
+	stdout, stderr, code, err := execx.RunWithExitCode(cmd)
+	if err != nil {
+		return "", "", 0, fmt.Errorf("error running helmfile diff: %w", err)
+	}
+
+	return stdout, stderr, code, nil
+}
+
+// diffArgs are the arguments of the helmfile diff that furyctl diff runs.
+func diffArgs() []string {
+	return []string{"diff", "--output", "simple", "--no-color", "--suppress-secrets"}
+}
+
+// checkReadOnlyDiffArgs refuses helmfile arguments that are not a diff, that name a writing subcommand, or that do
+// not suppress the secrets in the output. It checks the command line only: hooks and templates of the rendered
+// helmfile.yaml run as helmfile decides.
+func checkReadOnlyDiffArgs(args []string) error {
+	if len(args) == 0 || args[0] != "diff" {
+		return fmt.Errorf("%w: the subcommand is not diff", ErrDiffNotReadOnly)
+	}
+
+	for _, verb := range []string{"apply", "sync", "destroy", "delete"} {
+		if slices.Contains(args, verb) {
+			return fmt.Errorf("%w: it names %s", ErrDiffNotReadOnly, verb)
+		}
+	}
+
+	if !slices.Contains(args, "--suppress-secrets") {
+		return fmt.Errorf("%w: it does not pass --suppress-secrets", ErrDiffNotReadOnly)
 	}
 
 	return nil

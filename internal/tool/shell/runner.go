@@ -56,6 +56,20 @@ func (r *Runner) Run(args ...string) (string, error) {
 	return out, nil
 }
 
+// RunCapture runs the shell with the given arguments and returns its combined output and its exit code.
+// A non-zero exit code is a result, not an error.
+func (r *Runner) RunCapture(args ...string) (string, int, error) {
+	cmd, id := r.newCmd(args, nil, nil)
+	defer r.deleteCmd(id)
+
+	stdout, stderr, code, err := execx.RunWithExitCode(cmd)
+	if err != nil {
+		return "", 0, fmt.Errorf("error while running shell: %w", err)
+	}
+
+	return stdout + stderr, code, nil
+}
+
 func (r *Runner) Stop() error {
 	for _, cmd := range r.cmds {
 		if err := cmd.Stop(); err != nil {

@@ -31,12 +31,23 @@ type Plugins struct {
 	// True when the last Exec applied plugins.
 	applied bool
 
-	helmfileRunner *helmfile.Runner
-	shellRunner    *shell.Runner
+	helmfileRunner helmfileRunner
+	shellRunner    shellRunner
 	dryRun         bool
 	kfd            config.KFD
 	kind           string
 	paths          cluster.CreatorPaths
+}
+
+type helmfileRunner interface {
+	Init(helmBinary string) error
+	Apply() error
+	Diff() (string, string, int, error)
+}
+
+type shellRunner interface {
+	Run(args ...string) (string, error)
+	RunCapture(args ...string) (string, int, error)
 }
 
 func NewPlugins(
@@ -85,8 +96,51 @@ func (p *Plugins) Exec() error {
 
 	p.applied = false
 
+	specPlugins, hasPlugins, err := p.render()
+	if err != nil {
+		return err
+	}
+
+	if !hasPlugins {
+		logrus.Info("Skipping plugins phase as spec.plugins is not defined")
+
+		return nil
+	}
+
+	p.applied = pluginsApplied(specPlugins)
+
+	if p.dryRun {
+		logrus.Info("Plugins installed successfully (dry-run mode)")
+
+		return nil
+	}
+
+	if hasHelmReleases(specPlugins) {
+		if err := p.helmfileRunner.Init(p.HelmPath); err != nil {
+			return fmt.Errorf("error applying plugins with helmfile: %w", err)
+		}
+
+		if err := p.helmfileRunner.Apply(); err != nil {
+			return fmt.Errorf("error applying plugins with helmfile: %w", err)
+		}
+	}
+
+	if hasKustomizeEntries(specPlugins) {
+		if _, err := p.shellRunner.Run(path.Join(p.Path, "scripts", "apply.sh"), "false"); err != nil {
+			return fmt.Errorf("error applying plugins with kustomize: %w", err)
+		}
+	}
+
+	logrus.Info("Plugins installed successfully")
+
+	return nil
+}
+
+// render generates the plugins phase folder from the distribution templates. It returns the spec.plugins of the
+// configuration, and whether it is defined.
+func (p *Plugins) render() (map[any]any, bool, error) {
 	if err := p.CreateRootFolder(); err != nil {
-		return fmt.Errorf("error creating plugins phase folder: %w", err)
+		return nil, false, fmt.Errorf("error creating plugins phase folder: %w", err)
 	}
 
 	furyctlMerger, err := p.CreateFuryctlMerger(
@@ -96,12 +150,12 @@ func (p *Plugins) Exec() error {
 		strings.ToLower(p.kind),
 	)
 	if err != nil {
-		return fmt.Errorf("error creating furyctl merger: %w", err)
+		return nil, false, fmt.Errorf("error creating furyctl merger: %w", err)
 	}
 
 	mCfg, err := templatex.NewConfigWithoutData(furyctlMerger, []string{})
 	if err != nil {
-		return fmt.Errorf("error creating template config: %w", err)
+		return nil, false, fmt.Errorf("error creating template config: %w", err)
 	}
 
 	p.CopyPathsToConfig(&mCfg)
@@ -110,28 +164,9 @@ func (p *Plugins) Exec() error {
 		mCfg.Data["paths"]["kubeconfig"] = os.Getenv("KUBECONFIG")
 	}
 
-	outYaml, err := yamlx.MarshalV2(mCfg)
+	outDirPath1, confPath, err := p.writeTemplateConfig(mCfg)
 	if err != nil {
-		return fmt.Errorf("error marshaling template config: %w", err)
-	}
-
-	outDirPath1, err := os.MkdirTemp("", "furyctl-plugins-")
-	if err != nil {
-		return fmt.Errorf("error creating temp dir: %w", err)
-	}
-
-	// The commands that come next run for minutes. A signal skips a defer. On a dry run, the template
-	// model writes tmpl-debug.log in this folder and tells the user its path.
-	if !p.dryRun {
-		osx.RegisterTempDir(outDirPath1)
-	}
-
-	confPath := filepath.Join(outDirPath1, "config.yaml")
-
-	logrus.Debugf("Plugins configuration file path %s", confPath)
-
-	if err = os.WriteFile(confPath, outYaml, iox.FullRWPermAccess); err != nil {
-		return fmt.Errorf("error writing config file: %w", err)
+		return nil, false, err
 	}
 
 	templateModel, err := templatex.NewTemplateModel(
@@ -145,72 +180,50 @@ func (p *Plugins) Exec() error {
 		p.dryRun,
 	)
 	if err != nil {
-		return fmt.Errorf("error creating template model: %w", err)
+		return nil, false, fmt.Errorf("error creating template model: %w", err)
 	}
 
 	err = templateModel.Generate()
 	if err != nil {
-		return fmt.Errorf("error generating from template files: %w", err)
+		return nil, false, fmt.Errorf("error generating from template files: %w", err)
 	}
 
 	specPlugins, hasPlugins := templateModel.Config.Data["spec"]["plugins"].(map[any]any)
-	if !hasPlugins {
-		logrus.Info("Skipping plugins phase as spec.plugins is not defined")
 
-		return nil
+	return specPlugins, hasPlugins, nil
+}
+
+// writeTemplateConfig writes the template configuration in a new temp dir. It returns the dir and the file.
+func (p *Plugins) writeTemplateConfig(mCfg templatex.Config) (string, string, error) {
+	outYaml, err := yamlx.MarshalV2(mCfg)
+	if err != nil {
+		return "", "", fmt.Errorf("error marshaling template config: %w", err)
 	}
 
-	p.applied = pluginsApplied(specPlugins)
-
-	specPluginsHelmReleases := []any{}
-
-	specPluginsHelm, hasSpecPluginsHelm := specPlugins["helm"].(map[any]any)
-	if hasSpecPluginsHelm {
-		releases, hasSpecPluginHelmReleases := specPluginsHelm["releases"].([]any)
-		if hasSpecPluginHelmReleases {
-			specPluginsHelmReleases = releases
-		}
+	outDirPath1, err := os.MkdirTemp("", "furyctl-plugins-")
+	if err != nil {
+		return "", "", fmt.Errorf("error creating temp dir: %w", err)
 	}
 
-	specPluginsKustomize, hasSpecPluginsKustomize := specPlugins["kustomize"].([]any)
-
-	if p.dryRun {
-		logrus.Info("Plugins installed successfully (dry-run mode)")
-
-		return nil
+	// The commands that come next run for minutes. A signal skips a defer. On a dry run, the template
+	// model writes tmpl-debug.log in this folder and tells the user its path.
+	if !p.dryRun {
+		osx.RegisterTempDir(outDirPath1)
 	}
 
-	if hasSpecPluginsHelm && len(specPluginsHelmReleases) > 0 {
-		if err := p.helmfileRunner.Init(p.HelmPath); err != nil {
-			return fmt.Errorf("error applying plugins with helmfile: %w", err)
-		}
+	confPath := filepath.Join(outDirPath1, "config.yaml")
 
-		if err := p.helmfileRunner.Apply(); err != nil {
-			return fmt.Errorf("error applying plugins with helmfile: %w", err)
-		}
+	logrus.Debugf("Plugins configuration file path %s", confPath)
+
+	if err = os.WriteFile(confPath, outYaml, iox.FullRWPermAccess); err != nil {
+		return "", "", fmt.Errorf("error writing config file: %w", err)
 	}
 
-	if hasSpecPluginsKustomize && len(specPluginsKustomize) > 0 {
-		if _, err := p.shellRunner.Run(path.Join(p.Path, "scripts", "apply.sh"), "false"); err != nil {
-			return fmt.Errorf("error applying plugins with kustomize: %w", err)
-		}
-	}
-
-	logrus.Info("Plugins installed successfully")
-
-	return nil
+	return outDirPath1, confPath, nil
 }
 
 // pluginsApplied reports whether spec.plugins holds something to apply: a Helm release or a
 // kustomize entry. Helm repositories alone apply nothing.
 func pluginsApplied(specPlugins map[any]any) bool {
-	if helm, ok := specPlugins["helm"].(map[any]any); ok {
-		if releases, ok := helm["releases"].([]any); ok && len(releases) > 0 {
-			return true
-		}
-	}
-
-	kustomize, ok := specPlugins["kustomize"].([]any)
-
-	return ok && len(kustomize) > 0
+	return hasHelmReleases(specPlugins) || hasKustomizeEntries(specPlugins)
 }

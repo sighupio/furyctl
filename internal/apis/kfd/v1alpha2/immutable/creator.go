@@ -85,6 +85,9 @@ type ClusterCreator struct {
 	upgradeNode          string
 	postApplyPhases      []string
 
+	// The constructor of the preflight that Diff runs, nil for the one of the kind.
+	newPreflight func(dryRun bool, force []string, startFrom string, upgradeEnabled bool) DiffPreflight
+
 	// The rendered configuration of this run, which persistStagedUpgradeReadyAfterPhases stores.
 	renderedConfig map[string]any
 }
@@ -394,6 +397,52 @@ func (c *ClusterCreator) Create(startFrom string, _, podRunningCheckTimeout int)
 	return c.persistAppliedConfig(appliedUpgradeState, upgr, renderedConfig, status)
 }
 
+// DiffPreflight is the part of the kind's preflight that Diff runs.
+type DiffPreflight interface {
+	Exec(renderedConfig map[string]any) (*create.Status, error)
+}
+
+// Diff compares the resources of the cluster with the configuration. It runs the preflight with the apply
+// defaults, renders the distribution phase and runs the diff commands, nothing that writes to the cluster.
+// It calls afterPreflight once, right after the preflight attempt whatever its outcome, before any render.
+func (c *ClusterCreator) Diff(afterPreflight func()) ([]commcreate.Section, error) {
+	if _, err := c.GetPhasePath(c.phase); err != nil {
+		return nil, err
+	}
+
+	renderedConfig, err := c.RenderConfig()
+	if err != nil {
+		return nil, fmt.Errorf("error while rendering config: %w", err)
+	}
+
+	return commcreate.RunDiff(commcreate.KindDiff{
+		Phase:          c.phase,
+		RenderedConfig: renderedConfig,
+		PluginsFeature: distribution.HasFeature(c.kfdManifest, distribution.FeaturePlugins),
+		AfterPreflight: afterPreflight,
+		Preflight: func() (bool, error) {
+			// The apply defaults, whatever this creator was built with.
+			preflight := c.diffPreflight(false, nil, StartFromFlagNotSet, false)
+
+			status, err := preflight.Exec(renderedConfig)
+			if err != nil {
+				return false, err //nolint:wrapcheck // the message goes to the report as it is.
+			}
+
+			return status.ClusterExists, nil
+		},
+		RenderDistribution: func() error {
+			c.newDistributionPhase(upgrade.New(c.paths, string(c.furyctlConf.Kind)))
+
+			return c.distribution.Render()
+		},
+		DiffDistribution: commcreate.NewDistributionDiffer(c.paths),
+		DiffPlugins: func() ([]commcreate.Section, error) {
+			return commcreate.NewPlugins(c.paths, c.kfdManifest, string(c.furyctlConf.Kind), false).Diff()
+		},
+	}), nil
+}
+
 // RenderConfig loads the complete furyctl configuration merged with defaults from fury-distribution.
 // For infrastructure phase, we need the full spec including infrastructure config.
 func (c *ClusterCreator) RenderConfig() (map[string]any, error) {
@@ -427,6 +476,29 @@ func (c *ClusterCreator) RenderConfig() (map[string]any, error) {
 	return lo.MapValues(tfCfg.Data, func(v map[any]any, _ string) any {
 		return convertValue(v)
 	}), nil
+}
+
+func (c *ClusterCreator) diffPreflight(
+	dryRun bool,
+	force []string,
+	startFrom string,
+	upgradeEnabled bool,
+) DiffPreflight {
+	if c.newPreflight != nil {
+		return c.newPreflight(dryRun, force, startFrom, upgradeEnabled)
+	}
+
+	return create.NewPreFlight(
+		c.furyctlConf,
+		c.kfdManifest,
+		c.paths,
+		dryRun,
+		c.stateStore,
+		force,
+		c.phase,
+		startFrom,
+		upgradeEnabled,
+	)
 }
 
 // newDistributionPhase builds the distribution phase as the operations run it, and keeps the

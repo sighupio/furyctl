@@ -7,14 +7,18 @@
 package cluster_test
 
 import (
+	"bytes"
 	"os"
 	"path/filepath"
+	"regexp"
 	"testing"
 
 	r3diff "github.com/r3labs/diff/v3"
+	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
 
 	"github.com/sighupio/furyctl/internal/cluster"
+	osx "github.com/sighupio/furyctl/internal/x/os"
 	templatex "github.com/sighupio/furyctl/pkg/template"
 )
 
@@ -138,6 +142,44 @@ func TestCopyFromTemplate_RemovesTempDir(t *testing.T) {
 	left, err := filepath.Glob(filepath.Join(tmpDir, "furyctl-test-*"))
 	require.NoError(t, err)
 	require.Empty(t, left)
+}
+
+// TestCopyFromTemplate_RegistersTempDir checks that the folder of the rendered configuration is registered for
+// removal, so that the signal handler removes it when a signal stops furyctl before the deferred removal runs.
+func TestCopyFromTemplate_RegistersTempDir(t *testing.T) {
+	tmpDir := t.TempDir()
+	t.Setenv("TMPDIR", tmpDir)
+
+	logs := &bytes.Buffer{}
+	level, output := logrus.GetLevel(), logrus.StandardLogger().Out
+
+	logrus.SetLevel(logrus.DebugLevel)
+	logrus.SetOutput(logs)
+
+	t.Cleanup(func() {
+		logrus.SetLevel(level)
+		logrus.SetOutput(output)
+	})
+
+	srcDir := t.TempDir()
+	require.NoError(t, os.WriteFile(filepath.Join(srcDir, "out.txt.tpl"), []byte("{{ .spec.name }}"), 0o644))
+
+	cfg := templatex.Config{Data: map[string]map[any]any{"spec": {"name": "test"}}}
+
+	require.NoError(t, (&cluster.OperationPhase{}).CopyFromTemplate(cfg, "registered", srcDir, t.TempDir(), ""))
+
+	match := regexp.MustCompile(`registered configuration file path ([^\s"]+)`).FindStringSubmatch(logs.String())
+	require.Len(t, match, 2)
+
+	// The deferred removal ran. A folder at the same path, as a signal would leave it, goes at exit.
+	outDir := filepath.Dir(match[1])
+	require.Equal(t, tmpDir, filepath.Dir(outDir))
+	require.NoDirExists(t, outDir)
+	require.NoError(t, os.Mkdir(outDir, 0o700))
+
+	osx.RemoveTempDirs()
+
+	require.NoDirExists(t, outDir)
 }
 
 func TestOperationPhase_CopyKFDToConfig(t *testing.T) {
