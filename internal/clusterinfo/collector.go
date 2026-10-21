@@ -52,6 +52,7 @@ var (
 	ErrConfigSecretNotFound = errors.New("furyctl-config secret not found in the cluster")
 	ErrUpgradeStateNoData   = errors.New("upgrade state configmap has no data")
 	ErrUpgradeStateMissing  = errors.New("upgrade state configmap missing state key")
+	ErrUpgradeStateNotFound = errors.New("upgrade state configmap not found")
 )
 
 // Collector reads cluster information from the Kubernetes secrets and configmaps
@@ -174,9 +175,15 @@ func (c *Collector) fetchOngoingUpgrade() (*OngoingUpgrade, error) {
 		kubeSystemNamespace,
 		"cm", upgradeStateConfigMap,
 		"-o", "yaml",
+		"--ignore-not-found",
 	)
 	if err != nil {
-		return nil, fmt.Errorf("upgrade state configmap not found: %w", err)
+		return nil, fmt.Errorf("error reading upgrade state configmap: %w", err)
+	}
+
+	// No upgrade runs. With --ignore-not-found this is not a failed command.
+	if strings.TrimSpace(out) == "" {
+		return nil, ErrUpgradeStateNotFound
 	}
 
 	raw := map[string]any{}

@@ -17,7 +17,7 @@ import (
 // A change to one of the two copies needs a look at the other one.
 const (
 	fetchAdminConfPlaybook = "fetch-admin-conf-playbook.yaml"
-	legacyVerifyPlaybook   = "verify-playbook.yaml"
+	LegacyVerifyPlaybook   = "verify-playbook.yaml"
 )
 
 // AdminConfPlaybookName returns the playbook that fetches admin.conf.
@@ -28,7 +28,7 @@ func AdminConfPlaybookName(workDir string) (string, error) {
 			return "", fmt.Errorf("checking for %s: %w", fetchAdminConfPlaybook, err)
 		}
 
-		return legacyVerifyPlaybook, nil
+		return LegacyVerifyPlaybook, nil
 	}
 
 	return fetchAdminConfPlaybook, nil

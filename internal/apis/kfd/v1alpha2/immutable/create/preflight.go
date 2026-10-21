@@ -166,7 +166,7 @@ func (p *PreFlight) Exec(renderedConfig map[string]any) (*Status, error) {
 		}
 	}
 
-	_, playbookErr := p.ansibleRunner.Playbook(adminConfPlaybook)
+	playbookErr := p.runAdminConfPlaybook(adminConfPlaybook)
 
 	probe, hasProbe, err := readClusterState(p.Path)
 	if err != nil {
@@ -404,6 +404,19 @@ func (p *PreFlight) CheckReducerDiffs(d r3diff.Changelog, diffChecker diffs.Chec
 	}
 
 	return nil
+}
+
+// runAdminConfPlaybook runs the playbook that reads the cluster. The legacy playbook fails when a
+// host does not answer, which is normal on a first apply, so its failure saves no output file.
+func (p *PreFlight) runAdminConfPlaybook(name string) error {
+	run := p.ansibleRunner.Playbook
+	if name == preflightx.LegacyVerifyPlaybook {
+		run = p.ansibleRunner.PlaybookProbe
+	}
+
+	_, err := run(name)
+
+	return err
 }
 
 // controlPlaneHosts gives the hosts that this check probes. Its inventory holds the

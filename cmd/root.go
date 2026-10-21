@@ -119,6 +119,8 @@ furyctl is a command line interface tool to manage the full lifecycle of SIGHUP 
 				defer logrus.Debugf("Outdir is set to %s", outDir)
 				viper.Set("outdir", outDir)
 
+				execx.LogDir = filepath.Join(outDir, ".furyctl", "logs")
+
 				// Configure the logging options. Set the logging target (stdout or a file).
 				// Note that we can't move this upper because we depend on calculating the workdir and outdir first.
 				logPath := viper.GetString("log")

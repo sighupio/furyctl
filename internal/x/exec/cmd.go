@@ -21,28 +21,32 @@ import (
 var (
 	Debug              = false  //nolint:gochecknoglobals // This variable is shared between all the command instances.
 	LogFile            *os.File //nolint:gochecknoglobals // This variable is shared between all the command instances.
+	LogDir             string   //nolint:gochecknoglobals // The folder for the output files of the failed commands.
 	NoTTY              = false  //nolint:gochecknoglobals // This variable is shared between all the command instances.
 	ErrCmdFailed       = errors.New("command failed")
 	ErrCastingToBuffer = errors.New("error casting stdout to bytes.Buffer")
+	ErrNoLogDir        = errors.New("no folder for the output files")
 )
-
-func NewErrCmdFailed(name string, args []string, err error, res *CmdLog) error {
-	return fmt.Errorf("%s %s: %w - %v\n%s", name, strings.Join(args, " "), ErrCmdFailed, err, res)
-}
 
 type Cmd struct {
 	*exec.Cmd
 
 	Log       *CmdLog
 	Sensitive bool
+	// OnError, when set, can change the error of a failed command before it is saved, see CmdError.
+	OnError func(*CmdError)
+	// Probe marks a command whose failure is expected and handled, for example a check that a resource
+	// exists: its failure saves no output file.
+	Probe bool
 }
 
 func NewCmd(name string, opts CmdOptions) *Cmd {
 	outLog := bytes.NewBufferString("")
 	errLog := bytes.NewBufferString("")
+	lines := &lineLog{}
 
-	outWriters := []iox.WriterTransform{{W: outLog}}
-	errWriters := []iox.WriterTransform{{W: errLog}}
+	outWriters := []iox.WriterTransform{{W: outLog}, {W: lineWriter{log: lines}}}
+	errWriters := []iox.WriterTransform{{W: errLog}, {W: lineWriter{log: lines, stderr: true}}}
 
 	if LogFile != nil {
 		cmd := strings.Split(name, "/")
@@ -104,8 +108,9 @@ func NewCmd(name string, opts CmdOptions) *Cmd {
 	return &Cmd{
 		Cmd: coreCmd,
 		Log: &CmdLog{
-			Out: outLog,
-			Err: errLog,
+			Out:   outLog,
+			Err:   errLog,
+			lines: lines,
 		},
 		Sensitive: opts.Sensitive,
 	}
@@ -113,7 +118,7 @@ func NewCmd(name string, opts CmdOptions) *Cmd {
 
 func (c *Cmd) Run() error {
 	if err := run(c.Cmd); err != nil {
-		return NewErrCmdFailed(c.Path, c.Args, err, c.Log)
+		return newCmdError(c, err)
 	}
 
 	return nil
@@ -152,10 +157,8 @@ type CmdOptions struct {
 type CmdLog struct {
 	Out *bytes.Buffer
 	Err *bytes.Buffer
-}
 
-func (c CmdLog) String() string {
-	return fmt.Sprintf("out: %s\nerr: %s\n", c.Out, c.Err)
+	lines *lineLog
 }
 
 func CombinedOutput(cmd *Cmd) (string, error) {

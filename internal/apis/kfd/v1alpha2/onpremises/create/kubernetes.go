@@ -88,7 +88,7 @@ func (k *Kubernetes) Exec(rdcs reducers.Reducers, startFrom string, upgradeState
 	logrus.Info("Configuring SIGHUP Distribution cluster...")
 
 	if err := k.prepare(); err != nil {
-		return fmt.Errorf("error preparing kubernetes phase: %w", err)
+		return err
 	}
 
 	if k.dryRun {
@@ -106,7 +106,7 @@ func (k *Kubernetes) Exec(rdcs reducers.Reducers, startFrom string, upgradeState
 	}
 
 	if err := k.coreKubernetes(startFrom, upgradeState); err != nil {
-		return fmt.Errorf("error running core kubernetes phase: %w", err)
+		return err
 	}
 
 	if err := k.runMigrations(rdcs); err != nil {
@@ -132,7 +132,7 @@ func (k *Kubernetes) UpgradeWorkerNodes(
 	onResult func(node string, status upgrade.PhaseStatus) error,
 ) error {
 	if err := k.prepare(); err != nil {
-		return fmt.Errorf("error preparing kubernetes phase: %w", err)
+		return err
 	}
 
 	if k.dryRun {
@@ -272,7 +272,7 @@ func (k *Kubernetes) prepare() error {
 	logrus.Info("Checking that the hosts are reachable...")
 
 	if _, err := k.ansibleRunner.Exec("all", "-m", "ping"); err != nil {
-		return fmt.Errorf("error checking hosts: %w", err)
+		return err //nolint:wrapcheck // The error names the hosts that failed.
 	}
 
 	return nil

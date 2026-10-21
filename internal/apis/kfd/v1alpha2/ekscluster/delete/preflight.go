@@ -122,12 +122,12 @@ func (p *PreFlight) Exec() error {
 		return fmt.Errorf("error running terraform init: %w", err)
 	}
 
-	if _, err := p.tfRunnerKube.State("show", "data.aws_eks_cluster.fury"); err != nil {
+	if !p.tfRunnerKube.HasState("data.aws_eks_cluster.fury") {
 		logrus.Debug("Cluster does not exist, skipping state checks")
 
 		logrus.Info("Preflight checks completed successfully")
 
-		return nil //nolint:nilerr // we want to return nil here
+		return nil
 	}
 
 	kubeconfig := path.Join(p.Path, "secrets", "kubeconfig")

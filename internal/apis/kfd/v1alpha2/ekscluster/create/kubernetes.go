@@ -112,7 +112,7 @@ func (k *Kubernetes) Exec(startFrom string, upgradeState *upgrade.State) error {
 	logrus.Info("Configuring SIGHUP Distribution cluster...")
 
 	if err := k.Prepare(); err != nil {
-		return fmt.Errorf("error preparing kubernetes phase: %w", err)
+		return err //nolint:wrapcheck // Each step of Prepare wraps its own error.
 	}
 
 	if err := k.tfRunner.Init(); err != nil {
@@ -124,7 +124,7 @@ func (k *Kubernetes) Exec(startFrom string, upgradeState *upgrade.State) error {
 	}
 
 	if err := k.coreKubernetes(startFrom, upgradeState, timestampSec); err != nil {
-		return fmt.Errorf("error running core kubernetes phase: %w", err)
+		return err
 	}
 
 	if k.DryRun {

@@ -94,7 +94,7 @@ func (k *Kubernetes) Exec() error {
 	timestampSec := time.Now().Unix()
 
 	if err := k.Prepare(); err != nil {
-		return fmt.Errorf("error preparing kubernetes phase: %w", err)
+		return err //nolint:wrapcheck // Each step of Prepare wraps its own error.
 	}
 
 	if k.FuryctlConf.Spec.Kubernetes.ApiServer.PrivateAccess &&

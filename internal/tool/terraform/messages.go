@@ -9,7 +9,45 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"strings"
 )
+
+// jsonLine is a line that `terraform -json` prints.
+type jsonLine struct {
+	Level      string         `json:"@level"`
+	Message    string         `json:"@message"`
+	Diagnostic jsonDiagnostic `json:"diagnostic"`
+}
+
+type jsonDiagnostic struct {
+	Detail string `json:"detail"`
+}
+
+// jsonText converts the lines that `terraform -json` prints to their messages. An error also gives the
+// detail of its diagnostic, indented. Lines that are not JSON, or have no message, stay as they are.
+func jsonText(lines []string) []string {
+	text := make([]string, 0, len(lines))
+
+	for _, l := range lines {
+		var j jsonLine
+
+		if err := json.Unmarshal([]byte(l), &j); err != nil || j.Message == "" {
+			text = append(text, l)
+
+			continue
+		}
+
+		text = append(text, strings.Split(j.Message, "\n")...)
+
+		if j.Level == "error" && j.Diagnostic.Detail != "" {
+			for d := range strings.SplitSeq(strings.TrimRight(j.Diagnostic.Detail, "\n"), "\n") {
+				text = append(text, "  "+d)
+			}
+		}
+	}
+
+	return text
+}
 
 // jsonMessageWriter forwards the "@message" field of each JSON line that `terraform -json` prints.
 // Lines that are not JSON, or have no message, go through unchanged. Use one for each stream.
@@ -29,9 +67,7 @@ func (j *jsonMessageWriter) Write(p []byte) (int, error) {
 
 		line := j.partial[:i+1]
 
-		var msg struct {
-			Message string `json:"@message"`
-		}
+		var msg jsonLine
 
 		if err := json.Unmarshal(line, &msg); err == nil && msg.Message != "" {
 			line = []byte(msg.Message + "\n")

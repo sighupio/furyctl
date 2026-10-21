@@ -51,7 +51,7 @@ func NewClient(
 func (c *Client) ListNamespaceResources(resName, ns string) ([]Resource, error) {
 	var result []Resource
 
-	cmdOut, err := c.kubeRunner.Get(false, ns, resName, "-o",
+	cmdOut, err := c.kubeRunner.GetProbe(ns, resName, "-o",
 		`jsonpath='[{range .items[*]}{"{"}"name": "{.metadata.name}", "kind": "{.kind}"{"}"},{end}]'`)
 	if err != nil {
 		return result, fmt.Errorf("error while reading resources from cluster: %w", err)

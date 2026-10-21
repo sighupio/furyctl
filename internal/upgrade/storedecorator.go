@@ -61,7 +61,7 @@ func (d *ReducerOperatorPhaseDecorator[T]) Exec(reducers T, startFrom string, up
 	}
 
 	if fnErr != nil {
-		return fmt.Errorf("error while executing phase: %w", fnErr)
+		return fnErr //nolint:wrapcheck // The phase names itself. A prefix here adds no fact.
 	}
 
 	return nil
@@ -112,7 +112,7 @@ func (d *ReducerOperatorPhaseAsyncDecorator[T]) Exec(reducers T, startFrom strin
 	}
 
 	if fnErr != nil {
-		return fmt.Errorf("error while executing phase: %w", fnErr)
+		return fnErr //nolint:wrapcheck // The phase names itself. A prefix here adds no fact.
 	}
 
 	return nil
@@ -182,7 +182,7 @@ func (d *OperatorPhaseDecorator) Exec(startFrom string, upgradeState *State) err
 	}
 
 	if fnErr != nil {
-		return fmt.Errorf("error while executing phase: %w", fnErr)
+		return fnErr //nolint:wrapcheck // The phase names itself. A prefix here adds no fact.
 	}
 
 	return nil
@@ -233,7 +233,7 @@ func (d *OperatorPhaseAsyncDecorator) Exec(startFrom string, upgradeState *State
 	}
 
 	if fnErr != nil {
-		return fmt.Errorf("error while executing phase: %w", fnErr)
+		return fnErr //nolint:wrapcheck // The phase names itself. A prefix here adds no fact.
 	}
 
 	return nil

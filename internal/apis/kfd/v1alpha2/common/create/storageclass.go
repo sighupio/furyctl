@@ -23,9 +23,11 @@ const (
 	StorageClassWaitInterval = 5 * time.Second
 )
 
-// StorageClassLister lists the StorageClasses of the cluster, as kubectl.Runner.Get does.
+// StorageClassLister lists the StorageClasses of the cluster, as kubectl.Runner does. The wait
+// polls with GetProbe, so a failed attempt saves no output file.
 type StorageClassLister interface {
 	Get(sensitive bool, ns string, params ...string) (string, error)
+	GetProbe(ns string, params ...string) (string, error)
 }
 
 // StorageSkipper is a distribution phase that reports the packages it left out because the
@@ -146,7 +148,7 @@ func (s *StorageClassCheck) WaitForDefaultStorageClass(timeout, interval time.Du
 	deadline := time.Now().Add(timeout)
 
 	for polls := 0; ; polls++ {
-		out, err := s.lister.Get(false, "", "storageclasses")
+		out, err := s.lister.GetProbe("", "storageclasses")
 		if err != nil {
 			logrus.Debugf("error while checking storage class: %v", err)
 		} else if name := defaultStorageClassName(out); name != "" {

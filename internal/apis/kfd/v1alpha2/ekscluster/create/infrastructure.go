@@ -100,7 +100,7 @@ func (i *Infrastructure) Exec(startFrom string, upgradeState *upgrade.State) err
 	}
 
 	if err := i.coreInfrastructure(startFrom, upgradeState, timestampSec); err != nil {
-		return fmt.Errorf("error running core infrastructure phase: %w", err)
+		return err
 	}
 
 	if i.dryRun {

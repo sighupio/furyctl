@@ -80,7 +80,7 @@ func (r *Runner) Init(helmBinary string) error {
 	defer r.deleteCmd(id)
 
 	if _, err := execx.CombinedOutput(cmd); err != nil {
-		return fmt.Errorf("error running helmfile init: %w", err)
+		return err //nolint:wrapcheck // The error names the command.
 	}
 
 	return nil
@@ -96,7 +96,7 @@ func (r *Runner) Apply() error {
 	defer r.deleteCmd(id)
 
 	if _, err := execx.CombinedOutput(cmd); err != nil {
-		return fmt.Errorf("error running helmfile apply: %w", err)
+		return err //nolint:wrapcheck // The error names the command.
 	}
 
 	return nil

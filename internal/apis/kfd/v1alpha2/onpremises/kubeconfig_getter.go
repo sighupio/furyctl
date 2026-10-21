@@ -107,7 +107,7 @@ func (k *KubeconfigGetter) Get() error {
 	}
 
 	if _, err := ansibleRunner.Exec("all", "-m", "ping"); err != nil {
-		return fmt.Errorf("error checking hosts: %w", err)
+		return err //nolint:wrapcheck // The error names the hosts that failed.
 	}
 
 	adminConfPlaybook, err := preflightx.AdminConfPlaybookName(tmpDir)

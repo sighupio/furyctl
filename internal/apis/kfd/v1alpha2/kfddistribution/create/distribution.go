@@ -130,7 +130,7 @@ func (d *Distribution) Exec(rdcs reducers.Reducers, startFrom string, upgradeSta
 	}
 
 	if err := d.coreDistribution(rdcs, startFrom, upgradeState, mCfg); err != nil {
-		return fmt.Errorf("error running core distribution phase: %w", err)
+		return err
 	}
 
 	if err := d.postDistribution(upgradeState); err != nil {
@@ -306,7 +306,7 @@ func (d *Distribution) coreDistribution(
 				upgradeState.Phases.Distribution.Status = upgrade.PhaseStatusFailed
 			}
 
-			return fmt.Errorf("error applying Distribution modules: %w", err)
+			return fmt.Errorf("error applying modules: %w", err)
 		}
 
 		if err := d.runReducers(

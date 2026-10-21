@@ -68,6 +68,22 @@ func (r *Runner) S3(sensitive bool, params ...string) (string, error) {
 	return out, nil
 }
 
+// S3ApiProbe runs an s3api command whose failure is expected and handled, for example a check that a
+// bucket exists. Its failure saves no output file.
+func (r *Runner) S3ApiProbe(params ...string) (string, error) {
+	cmd, id := r.newCmd(slices.Concat([]string{"s3api"}, params), false)
+	defer r.deleteCmd(id)
+
+	cmd.Probe = true
+
+	out, err := execx.CombinedOutput(cmd)
+	if err != nil {
+		return "", fmt.Errorf("error executing awscli s3api: %w", err)
+	}
+
+	return out, nil
+}
+
 func (r *Runner) S3Api(sensitive bool, params ...string) (string, error) {
 	args := slices.Concat([]string{"s3api"}, params)
 
@@ -141,6 +157,9 @@ func (r *Runner) newCmd(args []string, sensitive bool) (*execx.Cmd, string) {
 		WorkDir:   r.paths.WorkDir,
 		Sensitive: sensitive,
 	})
+
+	// Its stdout is data (JSON, YAML, tables) and its errors go to stderr.
+	cmd.OnError = execx.StderrBlock
 
 	id := uuid.NewString()
 	r.cmds[id] = cmd

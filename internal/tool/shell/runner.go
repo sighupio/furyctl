@@ -50,7 +50,7 @@ func (r *Runner) Run(args ...string) (string, error) {
 
 	out, err := execx.CombinedOutput(cmd)
 	if err != nil {
-		return "", fmt.Errorf("error while running shell: %w", err)
+		return "", err //nolint:wrapcheck // The error names the command.
 	}
 
 	return out, nil
