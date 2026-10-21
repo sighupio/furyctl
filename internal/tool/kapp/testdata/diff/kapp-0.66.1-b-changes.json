@@ -1,0 +1,62 @@
+{
+    "Tables": [
+        {
+            "Content": "",
+            "Header": {
+                "age": "Age",
+                "kind": "Kind",
+                "name": "Name",
+                "namespace": "Namespace",
+                "op": "Op",
+                "op_strategy": "Op st.",
+                "reconcile_info": "Ri",
+                "reconcile_state": "Rs",
+                "wait_to": "Wait to"
+            },
+            "Rows": [
+                {
+                    "age": "",
+                    "kind": "ConfigMap",
+                    "name": "furyctl-diff-probe-dd8m84k84c",
+                    "namespace": "default",
+                    "op": "create",
+                    "op_strategy": "",
+                    "reconcile_info": "",
+                    "reconcile_state": "",
+                    "wait_to": "reconcile"
+                },
+                {
+                    "age": "3m",
+                    "kind": "Deployment",
+                    "name": "hubble-relay",
+                    "namespace": "kube-system",
+                    "op": "update",
+                    "op_strategy": "fallback on replace",
+                    "reconcile_info": "",
+                    "reconcile_state": "ok",
+                    "wait_to": "reconcile"
+                },
+                {
+                    "age": "4m",
+                    "kind": "ConfigMap",
+                    "name": "hubble-ui-nginx",
+                    "namespace": "kube-system",
+                    "op": "delete",
+                    "op_strategy": "",
+                    "reconcile_info": "",
+                    "reconcile_state": "ok",
+                    "wait_to": "delete"
+                }
+            ],
+            "Notes": [
+                "Op:      1 create, 1 delete, 1 update, 0 noop, 0 exists",
+                "Wait to: 2 reconcile, 1 delete, 0 noop"
+            ]
+        }
+    ],
+    "Blocks": null,
+    "Lines": [
+        "Target cluster 'https://cp1.homelab.poc:6443' (nodes: cp1.homelab.poc)",
+        "Succeeded"
+    ]
+}

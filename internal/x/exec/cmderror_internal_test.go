@@ -147,6 +147,27 @@ func TestCmd_Run_NoOutputFile(t *testing.T) {
 	}
 }
 
+// Not parallel: it sets the shared LogDir.
+func TestRunWithExitCode_NonZeroExitSavesNoOutputFile(t *testing.T) {
+	saved := LogDir
+
+	defer func() { LogDir = saved }()
+
+	LogDir = t.TempDir()
+
+	stdout, stderr, code, err := RunWithExitCode(
+		NewCmd("sh", CmdOptions{Args: []string{"-c", "echo plan; echo boom >&2; exit 3"}}),
+	)
+	require.NoError(t, err)
+	assert.Equal(t, "plan\n", stdout)
+	assert.Equal(t, "boom\n", stderr)
+	assert.Equal(t, 3, code)
+
+	files, err := os.ReadDir(LogDir)
+	require.NoError(t, err)
+	assert.Empty(t, files)
+}
+
 func TestStderrBlock(t *testing.T) {
 	t.Parallel()
 

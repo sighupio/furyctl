@@ -187,3 +187,18 @@ func CombinedOutput(cmd *Cmd) (string, error) {
 
 	return strings.Trim(trimOut+"\n"+trimErr, "\n"), err
 }
+
+// RunWithExitCode runs the command and returns its standard output, its standard error and its exit code.
+// A non-zero exit code is a result, not an error: the error is only set when the command did not run to completion.
+// The caller reports a non-zero exit code itself, so it saves no output file.
+func RunWithExitCode(cmd *Cmd) (string, string, int, error) {
+	cmd.Probe = true
+
+	err := cmd.Run()
+
+	if cmd.ProcessState == nil {
+		return "", "", 0, err
+	}
+
+	return cmd.Log.Out.String(), cmd.Log.Err.String(), cmd.ProcessState.ExitCode(), nil
+}

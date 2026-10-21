@@ -388,9 +388,9 @@ func (r *paintedRow) cut(widths columnWidths) {
 func paintRow(row Row) paintedRow {
 	painted := paintedRow{
 		marker:      row.Marker,
-		field:       []rune(sanitize(row.Field)),
-		current:     []rune(sanitize(row.Current)),
-		updated:     []rune(sanitize(row.New)),
+		field:       []rune(Sanitize(row.Field)),
+		current:     []rune(Sanitize(row.Current)),
+		updated:     []rune(Sanitize(row.New)),
 		symbol:      "",
 		label:       "",
 		explanation: "",
@@ -400,7 +400,7 @@ func paintRow(row Row) paintedRow {
 		painted.symbol = symbol
 		painted.label = " " + label
 
-		if text := sanitize(row.Text); text != "" {
+		if text := Sanitize(row.Text); text != "" {
 			painted.explanation = ": " + text
 		}
 	}
@@ -509,11 +509,11 @@ func markerColour(marker Marker) string {
 	}
 }
 
-// sanitize removes the control and format characters of a text that comes from a
+// Sanitize removes the control and format characters of a text that comes from a
 // configuration or a rule file, so that it cannot move the cursor, change colours,
 // reverse the direction of the text, hide characters or break the row: a line break
 // or a tab becomes one space and the others are dropped.
-func sanitize(text string) string {
+func Sanitize(text string) string {
 	return strings.Map(func(r rune) rune {
 		switch {
 		case r == '\n' || r == '\t':

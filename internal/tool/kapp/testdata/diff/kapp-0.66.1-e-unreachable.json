@@ -1,0 +1,8 @@
+{
+    "Tables": null,
+    "Blocks": null,
+    "Lines": [
+        "Target cluster 'https://192.168.200.250:6999'",
+        "kapp: Error: Getting app:\n  Get \"https://192.168.200.250:6999/api/v1/namespaces/kube-system/configmaps/kfd.apps.k14s.io\": dial tcp 192.168.200.250:6999: connect: connection refused"
+    ]
+}
