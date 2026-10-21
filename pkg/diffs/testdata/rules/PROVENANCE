@@ -1,0 +1,3 @@
+Source: https://github.com/sighupio/distribution (BSD-3-Clause)
+Tag: v1.36.0 (commit 999836577dee43ac3244c9b3f64e079fa11e2337)
+Files: rules/{onpremises,immutable,kfddistribution,ekscluster}-kfd-v1alpha2.yaml, copied unmodified

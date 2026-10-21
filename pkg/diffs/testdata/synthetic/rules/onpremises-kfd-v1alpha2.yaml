@@ -1,0 +1,36 @@
+# Copyright (c) 2017-present SIGHUP s.r.l All rights reserved.
+# Use of this source code is governed by a BSD-style
+# license that can be found in the LICENSE file.
+
+# Rules written for the tests of the OnPremises profile, not rules of the
+# distribution. The two reducer rules on .spec.kubernetes.advanced.scheduler.profile, one
+# per phase, show the order of the phases of the unsafe reducer check: the verdict
+# takes the text of the first unsafe rule it meets. The reducer rules on the leaves of
+# .spec.kubernetes.advanced.encryption show where the check expands an object.
+---
+kubernetes:
+  - path: .spec.kubernetes.advanced.scheduler.profile
+    immutable: false
+    description: "kubernetes phase: the scheduler profile changed"
+    reducers:
+      - key: kubernetesSchedulerProfile
+        lifecycle: pre-apply
+  - path: .spec.kubernetes.advanced.encryption.provider
+    immutable: false
+    description: "kubernetes phase: the encryption provider changed"
+    reducers:
+      - key: kubernetesEncryptionProvider
+        lifecycle: pre-apply
+distribution:
+  - path: .spec.kubernetes.advanced.scheduler.profile
+    immutable: false
+    description: "distribution phase: the scheduler profile changed"
+    reducers:
+      - key: distributionSchedulerProfile
+        lifecycle: pre-apply
+  - path: .spec.kubernetes.advanced.encryption.mode
+    immutable: false
+    description: "distribution phase: the encryption mode changed"
+    reducers:
+      - key: distributionEncryptionMode
+        lifecycle: pre-apply

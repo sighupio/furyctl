@@ -301,3 +301,99 @@ func TestExpandMapChanges(t *testing.T) {
 		assert.Equal(t, in[0], out[0])
 	})
 }
+
+func TestBaseChecker_DiffToString(t *testing.T) {
+	t.Parallel()
+
+	checker := diffs.NewBaseChecker(nil, nil)
+
+	t.Run("the apply debug text hides the same values", func(t *testing.T) {
+		t.Parallel()
+
+		got := checker.DiffToString(diffx.Changelog{
+			{
+				Type: diffx.UPDATE,
+				Path: []string{"spec", "infrastructure", "loadBalancers", "keepalived", "passphrase"},
+				From: "sentinel-old-4f1c",
+				To:   "sentinel-new-9a7e",
+			},
+			{
+				Type: diffx.CREATE,
+				Path: []string{"spec", "distribution", "modules", "auth", "dex"},
+				From: nil,
+				To:   map[string]any{"clientSecret": "sentinel-nested-22b0", "issuer": "https://dex.example.test"},
+			},
+		})
+
+		assert.Equal(
+			t,
+			".spec.infrastructure.loadBalancers.keepalived.passphrase: (hidden) -> (hidden)\n"+
+				".spec.distribution.modules.auth.dex: <nil> -> map[clientSecret:(hidden) issuer:https://dex.example.test]\n",
+			got,
+		)
+		assert.NotContains(t, got, "sentinel-")
+	})
+
+	t.Run("a side where a sensitive field does not exist is not hidden", func(t *testing.T) {
+		t.Parallel()
+
+		got := checker.DiffToString(diffx.Changelog{
+			{Type: diffx.CREATE, Path: []string{"spec", "plugins", "apiToken"}, From: nil, To: "sentinel-added-50ee"},
+			{Type: diffx.DELETE, Path: []string{"spec", "plugins", "sshKey"}, From: "sentinel-removed-60ff", To: nil},
+		})
+
+		assert.Equal(
+			t,
+			".spec.plugins.apiToken: <nil> -> (hidden)\n.spec.plugins.sshKey: (hidden) -> <nil>\n",
+			got,
+		)
+	})
+
+	t.Run("a change without secrets is printed as before", func(t *testing.T) {
+		t.Parallel()
+
+		got := checker.DiffToString(diffx.Changelog{
+			{Type: diffx.UPDATE, Path: []string{"spec", "distribution", "modules", "logging", "type"}, From: "none", To: "loki"},
+			{Type: diffx.CREATE, Path: []string{"spec", "kubernetes", "advanced", "kubeProxy"}, From: nil, To: map[string]any{"type": "nftables"}},
+			{Type: diffx.UPDATE, Path: []string{"spec", "kubernetes", "nodes", "0", "replicas"}, From: 1, To: 3},
+		})
+
+		assert.Equal(
+			t,
+			".spec.distribution.modules.logging.type: none -> loki\n"+
+				".spec.kubernetes.advanced.kubeProxy: <nil> -> map[type:nftables]\n"+
+				".spec.kubernetes.nodes.0.replicas: 1 -> 3\n",
+			got,
+		)
+	})
+}
+
+// An object with no key has no leaf to expand into: its change stays as it is, so
+// the table still has a row for it and the rule checks still see it.
+func TestExpandMapChanges_EmptyObject(t *testing.T) {
+	t.Parallel()
+
+	path := []string{"spec", "kubernetes", "advanced"}
+
+	testCases := []struct {
+		name   string
+		change diffx.Change
+	}{
+		{
+			name:   "an added object without keys stays one change",
+			change: diffx.Change{Type: diffx.CREATE, Path: path, From: nil, To: map[string]any{}},
+		},
+		{
+			name:   "a removed object without keys stays one change",
+			change: diffx.Change{Type: diffx.DELETE, Path: path, From: map[string]any{}, To: nil},
+		},
+	}
+
+	for _, tC := range testCases {
+		t.Run(tC.name, func(t *testing.T) {
+			t.Parallel()
+
+			assert.Equal(t, diffx.Changelog{tC.change}, diffs.ExpandMapChanges(diffx.Changelog{tC.change}))
+		})
+	}
+}

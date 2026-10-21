@@ -74,7 +74,13 @@ func (*BaseChecker) DiffToString(diffs r3diff.Changelog) string {
 	for _, diff := range diffs {
 		joinedPath := "." + strings.Join(diff.Path, ".")
 
-		fmt.Fprintf(&buf, "%s: %v -> %v\n", joinedPath, diff.From, diff.To)
+		fmt.Fprintf(
+			&buf,
+			"%s: %v -> %v\n",
+			joinedPath,
+			MaskSensitive(diff.Path, diff.From),
+			MaskSensitive(diff.Path, diff.To),
+		)
 	}
 
 	return buf.String()
