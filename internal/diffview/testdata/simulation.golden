@@ -1,0 +1,17 @@
+CONFIG   10 changes · 2 blocked · 1 needs confirmation
+
+   FIELD                                                    CURRENT          NEW                   RULE
+───────────────────────────────────────────────────────────────────────────────────────────────────────
+Infrastructure
+~  loadBalancers.keepalived.passphrase                      (hidden)         (hidden)
+Kubernetes
+~  networking.podCIDR                                       172.16.128.0/17  10.42.0.0/16          ✗ blocked: Pod CIDR cannot be changed after cluster creation
++  nodeGroups[worker].nodes[worker4.example.test].hostname  –                worker4.example.test
+Distribution
+~  common.networkPoliciesEnabled                            false            true                  ! needs confirmation: changes to the network policies have been detected. This will cause the reconfiguration or deletion of the current network policies.
+~  modules.ingress.nginx.type                               single           dual                  ✗ blocked: currently, switching Ingress from single to dual nginx is not supported. You need to first remove the current stack with type: none.
+~  modules.logging.type                                     none             loki                  · migration: changes to the logging module type have been detected. This will cause the reconfiguration or deletion of the current logging stack.
++  modules.monitoring.prometheus.retentionTime              –                15d
++  modules.monitoring.prometheus.storageSize                –                50Gi
+~  modules.monitoring.type                                  none             prometheus            · migration: changes to the Monitoring module type have been detected. This will cause the reconfiguration or deletion of the current monitoring stack.
+-  modules.tracing.type                                     none             –

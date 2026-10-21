@@ -1,0 +1,4 @@
+Comparing release=poc-podinfo, chart=podinfo/podinfo, namespace=poc-helm
+poc-helm, poc-podinfo, Deployment (apps) to be added.
+poc-helm, poc-podinfo, Service (v1) to be added.
+Plan: 1 to add, 0 to change, 0 to destroy, 0 to change ownership.

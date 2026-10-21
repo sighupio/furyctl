@@ -1,0 +1,17 @@
+Comparing release=poc-podinfo, chart=podinfo/podinfo, namespace=poc-helm
+poc-helm, poc-podinfo, Deployment (apps) to be changed.
+poc-helm, poc-podinfo, HorizontalPodAutoscaler (autoscaling) to be removed.
+Plan: 0 to add, 1 to change, 1 to destroy, 0 to change ownership.
+
+Comparing release=poc-metrics, chart=metrics-server/metrics-server, namespace=poc-helm
+kube-system, poc-metrics-metrics-server-auth-reader, RoleBinding (rbac.authorization.k8s.io) to be added.
+poc-helm, poc-metrics-metrics-server, Deployment (apps) to be added.
+poc-helm, poc-metrics-metrics-server, Service (v1) to be added.
+poc-helm, poc-metrics-metrics-server, ServiceAccount (v1) to be added.
+poc-helm, poc-metrics-metrics-server:system:auth-delegator, ClusterRoleBinding (rbac.authorization.k8s.io) to be added.
+poc-helm, system:metrics-server-aggregated-reader, ClusterRole (rbac.authorization.k8s.io) to be added.
+poc-helm, system:poc-metrics-metrics-server, ClusterRole (rbac.authorization.k8s.io) to be added.
+poc-helm, system:poc-metrics-metrics-server, ClusterRoleBinding (rbac.authorization.k8s.io) to be added.
+poc-helm, v1beta1.metrics.k8s.io, APIService (apiregistration.k8s.io) to be added.
+Plan: 9 to add, 0 to change, 0 to destroy, 0 to change ownership.
+

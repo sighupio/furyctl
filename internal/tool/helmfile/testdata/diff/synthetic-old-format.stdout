@@ -1,0 +1,4 @@
+Comparing release=poc-podinfo, chart=podinfo/podinfo
+poc-helm, poc-podinfo, Deployment (apps) to be changed.
+poc-helm, poc-podinfo, HorizontalPodAutoscaler (autoscaling) to be removed.
+Plan: 0 to add, 1 to change, 1 to destroy.

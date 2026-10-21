@@ -20,6 +20,7 @@ import (
 	"github.com/sighupio/furyctl/internal/apis/config"
 	"github.com/sighupio/furyctl/internal/distribution"
 	iox "github.com/sighupio/furyctl/internal/x/io"
+	osx "github.com/sighupio/furyctl/internal/x/os"
 	"github.com/sighupio/furyctl/pkg/merge"
 	templatex "github.com/sighupio/furyctl/pkg/template"
 	yamlx "github.com/sighupio/furyctl/pkg/x/yaml"
@@ -295,6 +296,10 @@ func (*OperationPhase) CopyFromTemplate(
 	if err != nil {
 		return fmt.Errorf("error creating temp dir: %w", err)
 	}
+
+	// The folder holds the merged configuration, secrets included. A signal skips the defer, so the signal
+	// handler removes it too.
+	osx.RegisterTempDir(outDirPath)
 
 	defer os.RemoveAll(outDirPath)
 

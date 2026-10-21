@@ -1,0 +1,77 @@
+Adding repo podinfo https://stefanprodan.github.io/podinfo
+"podinfo" has been added to your repositories
+
+Adding repo metrics-server https://kubernetes-sigs.github.io/metrics-server
+"metrics-server" has been added to your repositories
+
+in ./helmfile.yaml: 2 errors:
+err 0: command "/opt/user/run/.furyctl/bin/helm/3.22.0/helm" exited with non-zero status:
+
+PATH:
+  /opt/user/run/.furyctl/bin/helm/3.22.0/helm
+
+ARGS:
+  0: /opt/user/run/.furyctl/bin/helm/3.22.0/helm (69 bytes)
+  1: diff (4 bytes)
+  2: upgrade (7 bytes)
+  3: --allow-unreleased (18 bytes)
+  4: poc-podinfo (11 bytes)
+  5: podinfo/podinfo (15 bytes)
+  6: --version (9 bytes)
+  7: 6.7.1 (5 bytes)
+  8: --namespace (11 bytes)
+  9: poc-helm (8 bytes)
+  10: --reset-values (14 bytes)
+  11: --suppress-secrets (18 bytes)
+  12: --no-color (10 bytes)
+  13: --output (8 bytes)
+  14: simple (6 bytes)
+
+ERROR:
+  exit status 1
+
+EXIT STATUS
+  1
+
+STDERR:
+  Error: Failed to get release poc-podinfo in namespace poc-helm: exit status 1: Error: Kubernetes cluster unreachable: Get "https://192.168.200.250:6999/version": dial tcp 192.168.200.250:6999: connect: connection refused
+  Error: plugin "diff" exited with error
+
+COMBINED OUTPUT:
+  Error: Failed to get release poc-podinfo in namespace poc-helm: exit status 1: Error: Kubernetes cluster unreachable: Get "https://192.168.200.250:6999/version": dial tcp 192.168.200.250:6999: connect: connection refused
+  Error: plugin "diff" exited with error
+err 1: command "/opt/user/run/.furyctl/bin/helm/3.22.0/helm" exited with non-zero status:
+
+PATH:
+  /opt/user/run/.furyctl/bin/helm/3.22.0/helm
+
+ARGS:
+  0: /opt/user/run/.furyctl/bin/helm/3.22.0/helm (69 bytes)
+  1: diff (4 bytes)
+  2: upgrade (7 bytes)
+  3: --allow-unreleased (18 bytes)
+  4: poc-metrics (11 bytes)
+  5: metrics-server/metrics-server (29 bytes)
+  6: --version (9 bytes)
+  7: 3.12.2 (6 bytes)
+  8: --namespace (11 bytes)
+  9: poc-helm (8 bytes)
+  10: --reset-values (14 bytes)
+  11: --suppress-secrets (18 bytes)
+  12: --no-color (10 bytes)
+  13: --output (8 bytes)
+  14: simple (6 bytes)
+
+ERROR:
+  exit status 1
+
+EXIT STATUS
+  1
+
+STDERR:
+  Error: Failed to get release poc-metrics in namespace poc-helm: exit status 1: Error: Kubernetes cluster unreachable: Get "https://192.168.200.250:6999/version": dial tcp 192.168.200.250:6999: connect: connection refused
+  Error: plugin "diff" exited with error
+
+COMBINED OUTPUT:
+  Error: Failed to get release poc-metrics in namespace poc-helm: exit status 1: Error: Kubernetes cluster unreachable: Get "https://192.168.200.250:6999/version": dial tcp 192.168.200.250:6999: connect: connection refused
+  Error: plugin "diff" exited with error
