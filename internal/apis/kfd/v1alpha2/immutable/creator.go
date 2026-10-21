@@ -24,6 +24,7 @@ import (
 	"github.com/sighupio/furyctl/internal/distribution"
 	"github.com/sighupio/furyctl/internal/state"
 	"github.com/sighupio/furyctl/internal/upgrade"
+	"github.com/sighupio/furyctl/pkg/diffs"
 	"github.com/sighupio/furyctl/pkg/reducers"
 	premrules "github.com/sighupio/furyctl/pkg/rulesextractor"
 	templatex "github.com/sighupio/furyctl/pkg/template"
@@ -255,36 +256,13 @@ func (c *ClusterCreator) Create(startFrom string, _, podRunningCheckTimeout int)
 		}
 	}
 
-	rulesExtractor, err := c.newRulesExtractor(renderedConfig)
+	changes, err := c.reducerChanges(renderedConfig, status.Diffs)
 	if err != nil {
 		return err
 	}
 
-	rdcsInfrastructure := reducers.Build(
-		status.Diffs,
-		rulesExtractor,
-		cluster.OperationPhaseInfrastructure,
-	)
-
-	rdcsDistribution := reducers.Build(
-		status.Diffs,
-		rulesExtractor,
-		cluster.OperationPhaseDistribution,
-	)
-
-	unsafeReducersInfrastructure := rulesExtractor.UnsafeReducerRulesByDiffs(
-		rulesExtractor.GetReducers(
-			cluster.OperationPhaseInfrastructure,
-		),
-		status.Diffs,
-	)
-
-	unsafeReducersDistribution := rulesExtractor.UnsafeReducerRulesByDiffs(
-		rulesExtractor.GetReducers(
-			cluster.OperationPhaseDistribution,
-		),
-		status.Diffs,
-	)
+	rdcsInfrastructure, rdcsDistribution := changes.infrastructure, changes.distribution
+	unsafeReducersInfrastructure, unsafeReducersDistribution := changes.unsafeInfrastructure, changes.unsafeDistribution
 
 	// A node that must be provisioned again does not answer, or a change of the configuration
 	// needs it. In both cases the operator boots it while the assets server waits.
@@ -1082,6 +1060,61 @@ func logStagedWorkerNextSteps(upgradeState *upgrade.State) {
 			"remaining workers, or 'furyctl apply --upgrade-node <node-name>' to upgrade one worker.",
 		remaining,
 	)
+}
+
+// unsafeReducerRules gives the rules with unsafe reducers of the infrastructure phase
+// and of the distribution phase. The shared verdict computes them with the profile of
+// the kind, both on the changes as reported.
+func unsafeReducerRules(r premrules.Extractor, changelog r3diff.Changelog) (
+	[]premrules.Rule,
+	[]premrules.Rule,
+	error,
+) {
+	profile, err := diffs.RequireProfileForKind(distribution.ImmutableKind)
+	if err != nil {
+		return nil, nil, fmt.Errorf("error while reading the rule checks of the kind: %w", err)
+	}
+
+	unsafe := diffs.DecideRules(changelog, r, profile.OnlyUnsafeReducerCheck()).UnsafeReducers
+
+	return unsafe[cluster.OperationPhaseInfrastructure], unsafe[cluster.OperationPhaseDistribution], nil
+}
+
+// reducerChanges holds the reducers of the changes and the rules with unsafe reducers,
+// of the infrastructure phase and of the distribution phase.
+type reducerChanges struct {
+	infrastructure       reducers.Reducers
+	distribution         reducers.Reducers
+	unsafeInfrastructure []premrules.Rule
+	unsafeDistribution   []premrules.Rule
+}
+
+// reducerChanges builds the rules extractor of the distribution with the rendered
+// configuration, then the reducers of the changes of each phase, then the lists of
+// rules with unsafe reducers, in this order: the unsafe reducer check writes the
+// values of the changes it matches into the reducers of the rules.
+func (c *ClusterCreator) reducerChanges(
+	renderedConfig map[string]any,
+	changelog r3diff.Changelog,
+) (reducerChanges, error) {
+	rulesExtractor, err := c.newRulesExtractor(renderedConfig)
+	if err != nil {
+		return reducerChanges{}, err
+	}
+
+	changes := reducerChanges{
+		infrastructure:       reducers.Build(changelog, rulesExtractor, cluster.OperationPhaseInfrastructure),
+		distribution:         reducers.Build(changelog, rulesExtractor, cluster.OperationPhaseDistribution),
+		unsafeInfrastructure: nil,
+		unsafeDistribution:   nil,
+	}
+
+	changes.unsafeInfrastructure, changes.unsafeDistribution, err = unsafeReducerRules(rulesExtractor, changelog)
+	if err != nil {
+		return reducerChanges{}, err
+	}
+
+	return changes, nil
 }
 
 // newRulesExtractor builds the rules extractor of the distribution. A distribution

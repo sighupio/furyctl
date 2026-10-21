@@ -1,0 +1,17 @@
+CONFIG   10 changes · 2 blocked · 1 needs confirmation
+
+   FIELD                                     CURRENT          NEW                   RULE
+────────────────────────────────────────────────────────────────────────────────────────
+Infrastructure
+~  loadBalancers.keepalived.passphrase       (hidden)         (hidden)
+Kubernetes
+~  networking.podCIDR                        172.16.128.0/17  10.42.0.0/16          ✗ blocked: Pod CIDR cannot be chang…
++  nodeGroups[worker].nodes[worker4.exampl…  –                worker4.example.test
+Distribution
+~  common.networkPoliciesEnabled             false            true                  ! needs confirmation: changes to th…
+~  modules.ingress.nginx.type                single           dual                  ✗ blocked: currently, switching Ing…
+~  modules.logging.type                      none             loki                  · migration: changes to the logging…
++  modules.monitoring.prometheus.retention…  –                15d
++  modules.monitoring.prometheus.storageSi…  –                50Gi
+~  modules.monitoring.type                   none             prometheus            · migration: changes to the Monitor…
+-  modules.tracing.type                      none             –

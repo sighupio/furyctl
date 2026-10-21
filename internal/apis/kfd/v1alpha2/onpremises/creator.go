@@ -292,19 +292,10 @@ func (c *ClusterCreator) Create(startFrom string, _, podRunningCheckTimeout int)
 		cluster.OperationPhaseKubernetes,
 	)
 
-	unsafeReducers := r.UnsafeReducerRulesByDiffs(
-		r.GetReducers(
-			cluster.OperationPhaseDistribution,
-		),
-		status.Diffs,
-	)
-
-	unsafeKubeReducers := r.UnsafeReducerRulesByDiffs(
-		r.GetReducers(
-			cluster.OperationPhaseKubernetes,
-		),
-		diffs.ExpandMapChanges(status.Diffs),
-	)
+	unsafeReducers, unsafeKubeReducers, err := unsafeReducerRules(r, status.Diffs)
+	if err != nil {
+		return err
+	}
 
 	if len(rdcs) > 0 {
 		logrus.Infof("Differences found from previous cluster configuration, "+
@@ -484,6 +475,25 @@ func (c *ClusterCreator) executePhase(
 	default:
 		return nil, fmt.Errorf("%w: %s", ErrUnsupportedPhase, c.phase)
 	}
+}
+
+// unsafeReducerRules gives the rules with unsafe reducers of the distribution phase
+// and of the kubernetes phase. The shared verdict computes them with the profile of
+// the kind: the distribution rules on the changes as reported, then the kubernetes
+// ones on the expanded changes.
+func unsafeReducerRules(r premrules.Extractor, changelog r3diff.Changelog) (
+	[]premrules.Rule,
+	[]premrules.Rule,
+	error,
+) {
+	profile, err := diffs.RequireProfileForKind(distribution.OnPremisesKind)
+	if err != nil {
+		return nil, nil, fmt.Errorf("error while reading the rule checks of the kind: %w", err)
+	}
+
+	unsafe := diffs.DecideRules(changelog, r, profile.OnlyUnsafeReducerCheck()).UnsafeReducers
+
+	return unsafe[cluster.OperationPhaseDistribution], unsafe[cluster.OperationPhaseKubernetes], nil
 }
 
 func (c *ClusterCreator) confirmUnsafeReducers(rdcs reducers.Reducers, unsafe []premrules.Rule) error {

@@ -1,0 +1,31 @@
+# Copyright (c) 2017-present SIGHUP s.r.l All rights reserved.
+# Use of this source code is governed by a BSD-style
+# license that can be found in the LICENSE file.
+
+# Rules written for the tests of the EKSCluster profile, not rules of the
+# distribution: one immutable and one unsupported rule in the infrastructure and in
+# the kubernetes phase, which the real rules of the kind leave empty.
+---
+infrastructure:
+  - path: .spec.infrastructure.vpc.network.cidr
+    immutable: true
+    description: "the CIDR of the VPC cannot be changed"
+  - path: .spec.infrastructure.vpn.instances
+    immutable: false
+    description: "the number of VPN instances changed"
+    unsupported:
+      - from: 2
+        to: 1
+        reason: "removing a VPN instance is not supported"
+kubernetes:
+  - path: .spec.kubernetes.serviceIpV4Cidr
+    immutable: true
+    description: "the service CIDR cannot be changed"
+  - path: .spec.kubernetes.nodePoolsLaunchKind
+    immutable: false
+    description: "the launch kind of the node pools changed"
+    unsupported:
+      - from: launch_templates
+        to: launch_configurations
+        reason: "going back to launch configurations is not supported"
+distribution: []
