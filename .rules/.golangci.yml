@@ -5,7 +5,7 @@
 version: "2"
 run:
   concurrency: 2
-  go: 1.26.5
+  go: 1.26.10
   modules-download-mode: readonly
 
 linters:
