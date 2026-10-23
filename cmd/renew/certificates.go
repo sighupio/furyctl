@@ -9,6 +9,8 @@ import (
 
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
+
+	statusx "github.com/sighupio/furyctl/internal/x/status"
 )
 
 func NewCertificatesCmd() *cobra.Command {
@@ -35,6 +37,8 @@ func NewCertificatesCmd() *cobra.Command {
 			}
 
 			logrus.Info("Certificates successfully renewed")
+
+			statusx.Done("Certificates renewed")
 
 			return nil
 		},

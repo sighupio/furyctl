@@ -16,6 +16,7 @@ import (
 
 	bytesx "github.com/sighupio/furyctl/internal/x/bytes"
 	iox "github.com/sighupio/furyctl/internal/x/io"
+	statusx "github.com/sighupio/furyctl/internal/x/status"
 )
 
 var (
@@ -78,6 +79,11 @@ func NewCmd(name string, opts CmdOptions) *Cmd {
 	if opts.Err != nil {
 		errWriters = append(errWriters, iox.WriterTransform{W: opts.Err})
 	}
+
+	// Report the progress lines of the command (kapp, ansible) to the terminal.
+	statusColors := []bytesx.TransformFunc{bytesx.StripColor}
+	outWriters = append(outWriters, iox.WriterTransform{W: &statusx.Scanner{}, Transforms: statusColors})
+	errWriters = append(errWriters, iox.WriterTransform{W: &statusx.Scanner{}, Transforms: statusColors})
 
 	if Debug || LogFile == nil {
 		outWriters = append(outWriters, iox.WriterTransform{W: os.Stdout})

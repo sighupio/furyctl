@@ -25,6 +25,7 @@ import (
 	"github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/immutable/public"
 	"github.com/sighupio/furyctl/internal/tool/butane"
 	iox "github.com/sighupio/furyctl/internal/x/io"
+	statusx "github.com/sighupio/furyctl/internal/x/status"
 	templatex "github.com/sighupio/furyctl/pkg/template"
 	netx "github.com/sighupio/furyctl/pkg/x/net"
 	yamlx "github.com/sighupio/furyctl/pkg/x/yaml"
@@ -743,6 +744,7 @@ func (*Infrastructure) downloadFlatcarArtifacts(
 		}
 
 		logrus.Infof("Downloading Flatcar %s artifacts for %s...", flatcar.Version, arch)
+		statusx.Working(fmt.Sprintf("Downloading the Flatcar %s artifacts for %s", flatcar.Version, arch), -1)
 
 		// Create subdirectory by architecture: server/assets/flatcar/{arch}/{version}/.
 		flatcarDir := filepath.Join(downloader.assetsPath, "flatcar", arch, flatcar.Version)
@@ -813,6 +815,7 @@ func (*Infrastructure) downloadSysextPackages(
 
 	for _, pkg := range sysextPackages {
 		logrus.Infof("Downloading %s sysext package %s...", pkg.Name, pkg.Version)
+		statusx.Working(fmt.Sprintf("Downloading the %s sysext package %s", pkg.Name, pkg.Version), -1)
 
 		for _, arch := range architectures {
 			archInfo, ok := pkg.Arch[arch]

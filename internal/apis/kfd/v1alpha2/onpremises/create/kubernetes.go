@@ -20,6 +20,7 @@ import (
 	execx "github.com/sighupio/furyctl/internal/x/exec"
 	iox "github.com/sighupio/furyctl/internal/x/io"
 	kubex "github.com/sighupio/furyctl/internal/x/kube"
+	statusx "github.com/sighupio/furyctl/internal/x/status"
 	"github.com/sighupio/furyctl/pkg/reducers"
 	templatex "github.com/sighupio/furyctl/pkg/template"
 	yamlx "github.com/sighupio/furyctl/pkg/x/yaml"
@@ -150,6 +151,7 @@ func (k *Kubernetes) runWorkerUpgradePlaybooks(
 ) error {
 	for i, node := range nodes {
 		logrus.Infof("Upgrading the worker node %s (%d of %d)...", node, i+1, len(nodes))
+		statusx.Step(fmt.Sprintf("Upgrading the worker node %s (%d of %d)", node, i+1, len(nodes)), i, len(nodes))
 
 		if _, err := k.ansibleRunner.Playbook("56.upgrade-worker-nodes.yml", "--limit", node); err != nil {
 			workerErr := fmt.Errorf("error upgrading node %s: %w", node, err)

@@ -20,6 +20,7 @@ import (
 	"github.com/sighupio/furyctl/internal/apis/config"
 	"github.com/sighupio/furyctl/internal/distribution"
 	iox "github.com/sighupio/furyctl/internal/x/io"
+	statusx "github.com/sighupio/furyctl/internal/x/status"
 	"github.com/sighupio/furyctl/pkg/merge"
 	templatex "github.com/sighupio/furyctl/pkg/template"
 	yamlx "github.com/sighupio/furyctl/pkg/x/yaml"
@@ -249,7 +250,16 @@ func NewOperationPhase(folder string, kfdTools config.KFDTools, binPath string) 
 	}
 }
 
+// CreateRootFolder is the first step of each phase, so it also reports the phase to the terminal.
 func (op *OperationPhase) CreateRootFolder() error {
+	name := filepath.Base(op.Path)
+	if name == "upgrades" {
+		// The pre-upgrade phase works in the upgrades folder.
+		name = OperationPhasePreUpgrade
+	}
+
+	statusx.Phase(name)
+
 	if _, err := os.Stat(op.Path); !os.IsNotExist(err) {
 		return nil
 	}
@@ -435,6 +445,29 @@ func AssertPhaseDiffs(d r3diff.Changelog, currentPhase, startFrom string, suppor
 	}
 
 	return nil
+}
+
+// PhasesToRun returns the main phases that an apply runs, in order: the phase of --phase alone,
+// or the supported phases without the phases that --start-from skips.
+func PhasesToRun(supported []string, phase, startFrom string) []string {
+	if phase != OperationPhaseAll {
+		return []string{phase}
+	}
+
+	return supported[len(skippedPhases(startFrom, supported)):]
+}
+
+// PhasesToDelete returns the main phases that a delete runs, in order: the phase of --phase alone,
+// or the supported phases without the plugins phase, the last phase first.
+func PhasesToDelete(supported []string, phase string) []string {
+	if phase != OperationPhaseAll {
+		return []string{phase}
+	}
+
+	phases := lo.Without(supported, OperationPhasePlugins)
+	slices.Reverse(phases)
+
+	return phases
 }
 
 // skippedPhases returns the supported phases that a run with --start-from does not apply.

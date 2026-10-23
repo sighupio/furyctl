@@ -24,6 +24,7 @@ import (
 	"github.com/sighupio/furyctl/internal/lockfile"
 	execx "github.com/sighupio/furyctl/internal/x/exec"
 	iox "github.com/sighupio/furyctl/internal/x/io"
+	statusx "github.com/sighupio/furyctl/internal/x/status"
 	"github.com/sighupio/furyctl/pkg/dependencies"
 	dist "github.com/sighupio/furyctl/pkg/distribution"
 	netx "github.com/sighupio/furyctl/pkg/x/net"
@@ -102,17 +103,22 @@ func NewClusterCmd() *cobra.Command {
 
 			execx.NoTTY = flags.NoTTY
 
+			statusx.Start("delete", flags.NoTTY)
+
 			// Validate base requirements.
 			if err := depsvl.ValidateBaseReqs(); err != nil {
 				return fmt.Errorf("error while validating requirements: %w", err)
 			}
 
 			// Download the distribution.
+			statusx.Working("Downloading the distribution", -1)
 			logrus.Info("Downloading distribution...")
 			res, err := distrodl.Download(flags.DistroLocation, flags.FuryctlPath)
 			if err != nil {
 				return fmt.Errorf("error while downloading distribution: %w", err)
 			}
+
+			statusx.SetTitle("delete " + res.MinimalConf.Metadata.Name)
 
 			lockFileHandler := lockfile.NewLockFile(res.MinimalConf.Metadata.Name)
 			err = lockFileHandler.Verify()
@@ -148,6 +154,7 @@ func NewClusterCmd() *cobra.Command {
 
 			// Download the dependencies.
 			if !flags.SkipDepsDownload {
+				statusx.Working("Downloading the dependencies", -1)
 				logrus.Info("Downloading dependencies...")
 				if errs, _ := depsdl.DownloadAll(res.DistroManifest, res.MinimalConf.Kind); len(errs) > 0 {
 					return fmt.Errorf("%w: %v", ErrDownloadDependenciesFailed, errs)
@@ -217,6 +224,8 @@ func NewClusterCmd() *cobra.Command {
 			if err != nil {
 				return fmt.Errorf("error while deleting cluster: %w", err)
 			}
+
+			statusx.Done("Cluster deleted")
 
 			return nil
 		},

@@ -20,6 +20,7 @@ import (
 	"golang.org/x/term"
 
 	execx "github.com/sighupio/furyctl/internal/x/exec"
+	statusx "github.com/sighupio/furyctl/internal/x/status"
 )
 
 const (
@@ -79,6 +80,8 @@ var newNodeStatusTable = func(initial map[string]string) *nodeStatusTable {
 // Start draws the initial table once, so the operator sees every node (as "pending") the moment the
 // server is ready. No-op when not animating.
 func (t *nodeStatusTable) Start() {
+	t.report()
+
 	if t.tty {
 		t.paint()
 	}
@@ -99,6 +102,8 @@ func (t *nodeStatusTable) Update(node, status, source string) {
 	t.source[node] = source
 
 	t.mu.Unlock()
+
+	t.report()
 
 	if !t.tty {
 		if status == statusInstallationBlocked {
@@ -155,6 +160,48 @@ func (t *nodeStatusTable) bootedCount() int {
 	}
 
 	return n
+}
+
+// report sends the boot progress to the terminal (see statusx). It holds t.writeMu, so that two
+// updates cannot send their reports in the wrong order.
+func (t *nodeStatusTable) report() {
+	t.writeMu.Lock()
+	defer t.writeMu.Unlock()
+
+	t.mu.Lock()
+
+	total, booted, pending := len(t.order), t.bootedCount(), 0
+
+	var blocked []string
+
+	for _, node := range t.order {
+		switch t.status[node] {
+		case StatusPending:
+			pending++
+
+		case statusInstallationBlocked:
+			blocked = append(blocked, node)
+
+		default:
+			// The other statuses are progress: bootedCount counts the booted nodes.
+		}
+	}
+
+	t.mu.Unlock()
+
+	switch {
+	case total == 0:
+		statusx.Working("Serving the assets", -1)
+
+	case len(blocked) > 0:
+		statusx.Blocked("Installation blocked on " + strings.Join(blocked, ", "))
+
+	case pending > 0:
+		statusx.Blocked(fmt.Sprintf("Boot the machines: %d of %d nodes booted", booted, total))
+
+	default:
+		statusx.Step(fmt.Sprintf("%d of %d nodes booted", booted, total), booted, total)
+	}
 }
 
 // paint repaints the table in place with the latest state. Caller holds no lock and t.tty is true.

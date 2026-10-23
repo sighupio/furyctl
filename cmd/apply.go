@@ -24,6 +24,7 @@ import (
 	"github.com/sighupio/furyctl/internal/git"
 	"github.com/sighupio/furyctl/internal/lockfile"
 	execx "github.com/sighupio/furyctl/internal/x/exec"
+	statusx "github.com/sighupio/furyctl/internal/x/status"
 	"github.com/sighupio/furyctl/pkg/dependencies"
 	dist "github.com/sighupio/furyctl/pkg/distribution"
 	netx "github.com/sighupio/furyctl/pkg/x/net"
@@ -125,17 +126,22 @@ func NewApplyCmd() *cobra.Command {
 			// Init packages.
 			execx.NoTTY = cmdFlags.NoTTY
 
+			statusx.Start("apply", cmdFlags.NoTTY)
+
 			// Validate base requirements.
 			if err := depsvl.ValidateBaseReqs(); err != nil {
 				return fmt.Errorf("error while validating requirements: %w", err)
 			}
 
 			// Download the distribution.
+			statusx.Working("Downloading the distribution", -1)
 			logrus.Info("Downloading distribution...")
 			res, err := distrodl.Download(cmdFlags.DistroLocation, cmdFlags.FuryctlPath)
 			if err != nil {
 				return fmt.Errorf("error while downloading distribution: %w", err)
 			}
+
+			statusx.SetTitle("apply " + res.MinimalConf.Metadata.Name)
 
 			lockFileHandler := lockfile.NewLockFile(res.MinimalConf.Metadata.Name)
 			err = lockFileHandler.Verify()
@@ -190,6 +196,7 @@ func NewApplyCmd() *cobra.Command {
 
 			// Download the dependencies.
 			if !cmdFlags.SkipDepsDownload {
+				statusx.Working("Downloading the dependencies", -1)
 				logrus.Info("Downloading dependencies...")
 				if errs, _ := depsdl.DownloadAll(res.DistroManifest, res.MinimalConf.Kind); len(errs) > 0 {
 					return fmt.Errorf("%w: %v", ErrDownloadDependenciesFailed, errs)
@@ -245,6 +252,12 @@ func NewApplyCmd() *cobra.Command {
 				cmdFlags.PodRunningCheckTimeout,
 			); err != nil {
 				return err //nolint:wrapcheck // The error names the phase that failed.
+			}
+
+			if cmdFlags.DryRun {
+				statusx.Done("Dry run finished")
+			} else {
+				statusx.Done("Configuration applied")
 			}
 
 			return nil

@@ -12,6 +12,7 @@ import (
 	"testing"
 
 	r3diff "github.com/r3labs/diff/v3"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/sighupio/furyctl/internal/cluster"
@@ -206,4 +207,28 @@ modules:
 			require.Equal(t, map[any]any{"storageClassAvailable": true}, cfg.Data["checks"])
 		})
 	}
+}
+
+func TestPhasesToRunAndDelete(t *testing.T) {
+	t.Parallel()
+
+	all := []string{
+		cluster.OperationPhaseInfrastructure,
+		cluster.OperationPhaseKubernetes,
+		cluster.OperationPhaseDistribution,
+		cluster.OperationPhasePlugins,
+	}
+
+	assert.Equal(t, all, cluster.PhasesToRun(all, cluster.OperationPhaseAll, ""))
+	assert.Equal(t, []string{cluster.OperationPhaseDistribution}, cluster.PhasesToRun(all, cluster.OperationPhaseDistribution, ""))
+	assert.Equal(t, all[1:], cluster.PhasesToRun(all, cluster.OperationPhaseAll, cluster.OperationSubPhasePreKubernetes))
+	assert.Equal(t, all[2:], cluster.PhasesToRun(all, cluster.OperationPhaseAll, cluster.OperationSubPhasePostKubernetes))
+
+	assert.Equal(t, []string{
+		cluster.OperationPhaseDistribution,
+		cluster.OperationPhaseKubernetes,
+		cluster.OperationPhaseInfrastructure,
+	}, cluster.PhasesToDelete(all, cluster.OperationPhaseAll))
+	assert.Equal(t, []string{cluster.OperationPhaseKubernetes}, cluster.PhasesToDelete(all, cluster.OperationPhaseKubernetes))
+	assert.Equal(t, cluster.OperationPhaseInfrastructure, all[0], "PhasesToDelete does not change the supported phases")
 }

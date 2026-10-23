@@ -12,6 +12,7 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/sighupio/furyctl/internal/upgrade"
+	statusx "github.com/sighupio/furyctl/internal/x/status"
 	"github.com/sighupio/furyctl/pkg/reducers"
 )
 
@@ -145,7 +146,8 @@ func (s *StorageClassCheck) WaitForDefaultStorageClass(timeout, interval time.Du
 		return "", false
 	}
 
-	deadline := time.Now().Add(timeout)
+	start := time.Now()
+	deadline := start.Add(timeout)
 
 	for polls := 0; ; polls++ {
 		out, err := s.lister.GetProbe("", "storageclasses")
@@ -165,6 +167,10 @@ func (s *StorageClassCheck) WaitForDefaultStorageClass(timeout, interval time.Du
 		if polls == 0 {
 			logrus.Infof("Waiting up to %s for a default StorageClass...", timeout)
 		}
+
+		// The progress is the part of the wait that has passed: the wait can end before 100%.
+		statusx.Step(fmt.Sprintf("Waiting up to %s for a default StorageClass", timeout),
+			int(time.Since(start).Seconds()), int(timeout.Seconds()))
 
 		time.Sleep(interval)
 	}

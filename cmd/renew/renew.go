@@ -21,6 +21,7 @@ import (
 	"github.com/sighupio/furyctl/internal/flags"
 	"github.com/sighupio/furyctl/internal/git"
 	execx "github.com/sighupio/furyctl/internal/x/exec"
+	statusx "github.com/sighupio/furyctl/internal/x/status"
 	"github.com/sighupio/furyctl/pkg/dependencies"
 	dist "github.com/sighupio/furyctl/pkg/distribution"
 	netx "github.com/sighupio/furyctl/pkg/x/net"
@@ -101,12 +102,16 @@ func newRenewer() (cluster.Renewer, error) {
 	}
 
 	// Download the distribution.
+	statusx.Start("renew", execx.NoTTY)
+	statusx.Working("Downloading the distribution", -1)
 	logrus.Info("Downloading distribution...")
 
 	res, err := distrodl.Download(distroLocation, furyctlPath)
 	if err != nil {
 		return nil, fmt.Errorf("error while downloading distribution: %w", err)
 	}
+
+	statusx.SetTitle("renew " + res.MinimalConf.Metadata.Name)
 
 	basePath := path.Join(outDir, ".furyctl", res.MinimalConf.Metadata.Name)
 
@@ -122,6 +127,7 @@ func newRenewer() (cluster.Renewer, error) {
 
 	// Download the dependencies.
 	if !skipDepsDownload {
+		statusx.Working("Downloading the dependencies", -1)
 		logrus.Info("Downloading dependencies...")
 
 		if _, err := depsdl.DownloadTools(res.DistroManifest, res.MinimalConf.Kind); err != nil {

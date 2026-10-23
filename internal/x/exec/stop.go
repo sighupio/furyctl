@@ -19,6 +19,7 @@ import (
 	"github.com/sirupsen/logrus"
 
 	osx "github.com/sighupio/furyctl/internal/x/os"
+	statusx "github.com/sighupio/furyctl/internal/x/status"
 )
 
 //nolint:gochecknoglobals // The running commands are shared between all the command instances.
@@ -50,6 +51,9 @@ func HandleSignals() {
 		if <-sigs == os.Interrupt {
 			sig = syscall.SIGINT
 		}
+
+		// Before stopAll: the stopped commands make main report an error, and a cancel is not one.
+		statusx.Idle("Stopped by the operator")
 
 		stopAll(sig, sigs)
 

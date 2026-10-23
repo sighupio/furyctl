@@ -24,6 +24,7 @@ import (
 	"github.com/sighupio/furyctl/internal/distribution"
 	"github.com/sighupio/furyctl/internal/state"
 	"github.com/sighupio/furyctl/internal/upgrade"
+	statusx "github.com/sighupio/furyctl/internal/x/status"
 	"github.com/sighupio/furyctl/pkg/reducers"
 	premrules "github.com/sighupio/furyctl/pkg/rulesextractor"
 	templatex "github.com/sighupio/furyctl/pkg/template"
@@ -161,6 +162,8 @@ func (*ClusterCreator) GetPhasePath(phase string) (string, error) {
 }
 
 func (c *ClusterCreator) Create(startFrom string, _, podRunningCheckTimeout int) error {
+	statusx.SetPhases(cluster.PhasesToRun(supported.Phases(), c.phase, startFrom)...)
+
 	if err := c.validateUpgradeNode(startFrom); err != nil {
 		return err
 	}
