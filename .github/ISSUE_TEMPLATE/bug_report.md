@@ -36,7 +36,7 @@ If applicable, add logs or screenshots to help explain your problem.
 $ furyctl version
 buildTime: 2025-04-14T14:38:20Z
 gitCommit: b2741d0ea623d83209fd488f9893ca33d3d335dd
-goVersion: go1.26.5
+goVersion: go1.26.10
 osArch: arm64
 version: 0.35.0
 ```
