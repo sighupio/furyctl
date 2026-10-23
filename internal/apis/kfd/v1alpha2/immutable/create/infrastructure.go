@@ -22,6 +22,7 @@ import (
 	"github.com/sighupio/furyctl/internal/tool/ansible"
 	"github.com/sighupio/furyctl/internal/upgrade"
 	execx "github.com/sighupio/furyctl/internal/x/exec"
+	statusx "github.com/sighupio/furyctl/internal/x/status"
 	templatex "github.com/sighupio/furyctl/pkg/template"
 )
 
@@ -111,6 +112,9 @@ func NewInfrastructure(
 
 // Exec executes the infrastructure phase.
 func (i *Infrastructure) Exec(_ string, upgradeState *upgrade.State) error {
+	// This phase does not call CreateRootFolder, which reports the other phases.
+	statusx.Phase(cluster.OperationPhaseInfrastructure)
+
 	if i.dryRun {
 		logrus.Info("Infrastructure configured successfully (dry-run mode)")
 
@@ -172,6 +176,8 @@ func (i *Infrastructure) Exec(_ string, upgradeState *upgrade.State) error {
 		return err
 	}
 
+	// Without it, the Resume after the boot wait sends the last download message again.
+	statusx.Working("Applying the nodes configuration", -1)
 	logrus.Info("Applying nodes configuration...")
 
 	// Run apply playbook.

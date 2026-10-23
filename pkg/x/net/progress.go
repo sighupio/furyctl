@@ -9,11 +9,13 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"sync/atomic"
 	"time"
 
 	"github.com/sirupsen/logrus"
 
 	execx "github.com/sighupio/furyctl/internal/x/exec"
+	statusx "github.com/sighupio/furyctl/internal/x/status"
 )
 
 const (
@@ -37,20 +39,25 @@ type downloadProgressTracker struct {
 	fallbackTotal int64
 }
 
-// newProgressTracker builds the tracker for a download. It is a package var, not a plain func, so
-// tests can swap in one that writes to a buffer.
-//
-//nolint:gochecknoglobals // Overridable constructor so tests can inject a buffer-backed tracker.
-var newProgressTracker = func() *downloadProgressTracker {
-	f := os.Stderr
+//nolint:gochecknoglobals // A counter shared by all the trackers, and a constructor that tests replace.
+var (
+	// The downloads that run now. Only a download that runs alone reports to the terminal status:
+	// with parallel downloads, the progress would jump from one file to the other.
+	activeDownloads atomic.Int32
 
-	return &downloadProgressTracker{
-		// Animate only on a terminal; under --no-tty/--debug fall back to logs, as the dependency
-		// downloader does for its live region.
-		out: f,
-		tty: execx.ShouldAnimate(f),
+	// The constructor of the tracker for a download, newProgressTracker. It is a package var, not a func,
+	// so tests can swap in one that writes to a buffer.
+	newProgressTracker = func() *downloadProgressTracker {
+		f := os.Stderr
+
+		return &downloadProgressTracker{
+			// Animate only on a terminal; under --no-tty/--debug fall back to logs, as the dependency
+			// downloader does for its live region.
+			out: f,
+			tty: execx.ShouldAnimate(f),
+		}
 	}
-}
+)
 
 // TrackProgress wraps the download stream in a reader that reports progress as it is read.
 func (t *downloadProgressTracker) TrackProgress(
@@ -62,6 +69,8 @@ func (t *downloadProgressTracker) TrackProgress(
 	if totalSize <= 0 && t.fallbackTotal > 0 {
 		totalSize = t.fallbackTotal
 	}
+
+	activeDownloads.Add(1)
 
 	return &progressReader{
 		tracker: t,
@@ -90,6 +99,7 @@ type progressReader struct {
 	total      int64
 	lastRender time.Time
 	started    bool
+	reported   bool // Sent a terminal status, so Close goes back to the status of the caller.
 }
 
 func (r *progressReader) Read(p []byte) (int, error) {
@@ -110,6 +120,12 @@ func (r *progressReader) Read(p []byte) (int, error) {
 }
 
 func (r *progressReader) Close() error {
+	activeDownloads.Add(-1)
+
+	if r.reported {
+		statusx.Resume()
+	}
+
 	// Erase the in-place line now the download is done; the caller logs its own completion message.
 	if r.started && r.tracker.tty {
 		_, _ = fmt.Fprint(r.tracker.out, "\r\033[2K")
@@ -135,6 +151,12 @@ func (r *progressReader) render() {
 	if r.total > 0 {
 		pct := float64(r.read) / float64(r.total) * percentScale
 		status = fmt.Sprintf("%3.0f%% (%s / %s)", pct, status, humanizeBytes(r.total))
+	}
+
+	// The percentage of one file goes in the message: the bar shows the progress of the command.
+	if activeDownloads.Load() == 1 {
+		r.reported = true
+		statusx.Detail("Downloading "+r.name+": "+status, -1)
 	}
 
 	if !r.tracker.tty {

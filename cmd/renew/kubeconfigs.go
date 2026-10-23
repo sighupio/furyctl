@@ -12,6 +12,8 @@ import (
 
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
+
+	statusx "github.com/sighupio/furyctl/internal/x/status"
 )
 
 var ErrUnknownKubeconfig = errors.New("unknown kubeconfig")
@@ -47,6 +49,8 @@ func NewKubeconfigsCmd() *cobra.Command {
 			}
 
 			logrus.Infof("Kubeconfig files successfully renewed: %s", strings.Join(users, ", "))
+
+			statusx.Done("Kubeconfig files renewed")
 
 			return nil
 		},

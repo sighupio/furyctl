@@ -22,6 +22,7 @@ import (
 	"github.com/sighupio/furyctl/internal/distribution"
 	"github.com/sighupio/furyctl/internal/state"
 	"github.com/sighupio/furyctl/internal/upgrade"
+	statusx "github.com/sighupio/furyctl/internal/x/status"
 	"github.com/sighupio/furyctl/pkg/diffs"
 	"github.com/sighupio/furyctl/pkg/reducers"
 	premrules "github.com/sighupio/furyctl/pkg/rulesextractor"
@@ -154,6 +155,8 @@ func (*ClusterCreator) GetPhasePath(phase string) (string, error) {
 }
 
 func (c *ClusterCreator) Create(startFrom string, _, podRunningCheckTimeout int) error {
+	statusx.SetPhases(cluster.PhasesToRun(supported.Phases(), c.phase, startFrom)...)
+
 	upgr := upgrade.New(c.paths, string(c.furyctlConf.Kind))
 	var workerNodes []string
 	if c.skipNodesUpgrade && c.upgrade {
