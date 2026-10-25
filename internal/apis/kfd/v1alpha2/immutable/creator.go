@@ -24,6 +24,7 @@ import (
 	"github.com/sighupio/furyctl/internal/distribution"
 	"github.com/sighupio/furyctl/internal/state"
 	"github.com/sighupio/furyctl/internal/upgrade"
+	"github.com/sighupio/furyctl/pkg/diffs"
 	"github.com/sighupio/furyctl/pkg/reducers"
 	premrules "github.com/sighupio/furyctl/pkg/rulesextractor"
 	templatex "github.com/sighupio/furyctl/pkg/template"
@@ -83,6 +84,9 @@ type ClusterCreator struct {
 	externalUpgradesPath string
 	upgradeNode          string
 	postApplyPhases      []string
+
+	// The constructor of the preflight that Diff runs, nil for the one of the kind.
+	newPreflight func(dryRun bool, force []string, startFrom string, upgradeEnabled bool) DiffPreflight
 
 	// The rendered configuration of this run, which persistStagedUpgradeReadyAfterPhases stores.
 	renderedConfig map[string]any
@@ -255,36 +259,13 @@ func (c *ClusterCreator) Create(startFrom string, _, podRunningCheckTimeout int)
 		}
 	}
 
-	rulesExtractor, err := c.newRulesExtractor(renderedConfig)
+	changes, err := c.reducerChanges(renderedConfig, status.Diffs)
 	if err != nil {
 		return err
 	}
 
-	rdcsInfrastructure := reducers.Build(
-		status.Diffs,
-		rulesExtractor,
-		cluster.OperationPhaseInfrastructure,
-	)
-
-	rdcsDistribution := reducers.Build(
-		status.Diffs,
-		rulesExtractor,
-		cluster.OperationPhaseDistribution,
-	)
-
-	unsafeReducersInfrastructure := rulesExtractor.UnsafeReducerRulesByDiffs(
-		rulesExtractor.GetReducers(
-			cluster.OperationPhaseInfrastructure,
-		),
-		status.Diffs,
-	)
-
-	unsafeReducersDistribution := rulesExtractor.UnsafeReducerRulesByDiffs(
-		rulesExtractor.GetReducers(
-			cluster.OperationPhaseDistribution,
-		),
-		status.Diffs,
-	)
+	rdcsInfrastructure, rdcsDistribution := changes.infrastructure, changes.distribution
+	unsafeReducersInfrastructure, unsafeReducersDistribution := changes.unsafeInfrastructure, changes.unsafeDistribution
 
 	// A node that must be provisioned again does not answer, or a change of the configuration
 	// needs it. In both cases the operator boots it while the assets server waits.
@@ -416,6 +397,52 @@ func (c *ClusterCreator) Create(startFrom string, _, podRunningCheckTimeout int)
 	return c.persistAppliedConfig(appliedUpgradeState, upgr, renderedConfig, status)
 }
 
+// DiffPreflight is the part of the kind's preflight that Diff runs.
+type DiffPreflight interface {
+	Exec(renderedConfig map[string]any) (*create.Status, error)
+}
+
+// Diff compares the resources of the cluster with the configuration. It runs the preflight with the apply
+// defaults, renders the distribution phase and runs the diff commands, nothing that writes to the cluster.
+// It calls afterPreflight once, right after the preflight attempt whatever its outcome, before any render.
+func (c *ClusterCreator) Diff(afterPreflight func()) ([]commcreate.Section, error) {
+	if _, err := c.GetPhasePath(c.phase); err != nil {
+		return nil, err
+	}
+
+	renderedConfig, err := c.RenderConfig()
+	if err != nil {
+		return nil, fmt.Errorf("error while rendering config: %w", err)
+	}
+
+	return commcreate.RunDiff(commcreate.KindDiff{
+		Phase:          c.phase,
+		RenderedConfig: renderedConfig,
+		PluginsFeature: distribution.HasFeature(c.kfdManifest, distribution.FeaturePlugins),
+		AfterPreflight: afterPreflight,
+		Preflight: func() (bool, error) {
+			// The apply defaults, whatever this creator was built with.
+			preflight := c.diffPreflight(false, nil, StartFromFlagNotSet, false)
+
+			status, err := preflight.Exec(renderedConfig)
+			if err != nil {
+				return false, err //nolint:wrapcheck // the message goes to the report as it is.
+			}
+
+			return status.ClusterExists, nil
+		},
+		RenderDistribution: func() error {
+			c.newDistributionPhase(upgrade.New(c.paths, string(c.furyctlConf.Kind)))
+
+			return c.distribution.Render()
+		},
+		DiffDistribution: commcreate.NewDistributionDiffer(c.paths),
+		DiffPlugins: func() ([]commcreate.Section, error) {
+			return commcreate.NewPlugins(c.paths, c.kfdManifest, string(c.furyctlConf.Kind), false).Diff()
+		},
+	}), nil
+}
+
 // RenderConfig loads the complete furyctl configuration merged with defaults from fury-distribution.
 // For infrastructure phase, we need the full spec including infrastructure config.
 func (c *ClusterCreator) RenderConfig() (map[string]any, error) {
@@ -449,6 +476,29 @@ func (c *ClusterCreator) RenderConfig() (map[string]any, error) {
 	return lo.MapValues(tfCfg.Data, func(v map[any]any, _ string) any {
 		return convertValue(v)
 	}), nil
+}
+
+func (c *ClusterCreator) diffPreflight(
+	dryRun bool,
+	force []string,
+	startFrom string,
+	upgradeEnabled bool,
+) DiffPreflight {
+	if c.newPreflight != nil {
+		return c.newPreflight(dryRun, force, startFrom, upgradeEnabled)
+	}
+
+	return create.NewPreFlight(
+		c.furyctlConf,
+		c.kfdManifest,
+		c.paths,
+		dryRun,
+		c.stateStore,
+		force,
+		c.phase,
+		startFrom,
+		upgradeEnabled,
+	)
 }
 
 // newDistributionPhase builds the distribution phase as the operations run it, and keeps the
@@ -1082,6 +1132,61 @@ func logStagedWorkerNextSteps(upgradeState *upgrade.State) {
 			"remaining workers, or 'furyctl apply --upgrade-node <node-name>' to upgrade one worker.",
 		remaining,
 	)
+}
+
+// unsafeReducerRules gives the rules with unsafe reducers of the infrastructure phase
+// and of the distribution phase. The shared verdict computes them with the profile of
+// the kind, both on the changes as reported.
+func unsafeReducerRules(r premrules.Extractor, changelog r3diff.Changelog) (
+	[]premrules.Rule,
+	[]premrules.Rule,
+	error,
+) {
+	profile, err := diffs.RequireProfileForKind(distribution.ImmutableKind)
+	if err != nil {
+		return nil, nil, fmt.Errorf("error while reading the rule checks of the kind: %w", err)
+	}
+
+	unsafe := diffs.DecideRules(changelog, r, profile.OnlyUnsafeReducerCheck()).UnsafeReducers
+
+	return unsafe[cluster.OperationPhaseInfrastructure], unsafe[cluster.OperationPhaseDistribution], nil
+}
+
+// reducerChanges holds the reducers of the changes and the rules with unsafe reducers,
+// of the infrastructure phase and of the distribution phase.
+type reducerChanges struct {
+	infrastructure       reducers.Reducers
+	distribution         reducers.Reducers
+	unsafeInfrastructure []premrules.Rule
+	unsafeDistribution   []premrules.Rule
+}
+
+// reducerChanges builds the rules extractor of the distribution with the rendered
+// configuration, then the reducers of the changes of each phase, then the lists of
+// rules with unsafe reducers, in this order: the unsafe reducer check writes the
+// values of the changes it matches into the reducers of the rules.
+func (c *ClusterCreator) reducerChanges(
+	renderedConfig map[string]any,
+	changelog r3diff.Changelog,
+) (reducerChanges, error) {
+	rulesExtractor, err := c.newRulesExtractor(renderedConfig)
+	if err != nil {
+		return reducerChanges{}, err
+	}
+
+	changes := reducerChanges{
+		infrastructure:       reducers.Build(changelog, rulesExtractor, cluster.OperationPhaseInfrastructure),
+		distribution:         reducers.Build(changelog, rulesExtractor, cluster.OperationPhaseDistribution),
+		unsafeInfrastructure: nil,
+		unsafeDistribution:   nil,
+	}
+
+	changes.unsafeInfrastructure, changes.unsafeDistribution, err = unsafeReducerRules(rulesExtractor, changelog)
+	if err != nil {
+		return reducerChanges{}, err
+	}
+
+	return changes, nil
 }
 
 // newRulesExtractor builds the rules extractor of the distribution. A distribution

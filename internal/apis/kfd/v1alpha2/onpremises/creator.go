@@ -66,6 +66,9 @@ type ClusterCreator struct {
 	upgradeNode          string
 	postApplyPhases      []string
 
+	// The constructor of the preflight that Diff runs, nil for the one of the kind.
+	newPreflight func(dryRun bool, force []string, startFrom string, upgradeEnabled bool) DiffPreflight
+
 	// The rendered configuration of this run, which persistStagedUpgradeReadyAfterPhases stores.
 	renderedConfig map[string]any
 }
@@ -292,19 +295,10 @@ func (c *ClusterCreator) Create(startFrom string, _, podRunningCheckTimeout int)
 		cluster.OperationPhaseKubernetes,
 	)
 
-	unsafeReducers := r.UnsafeReducerRulesByDiffs(
-		r.GetReducers(
-			cluster.OperationPhaseDistribution,
-		),
-		status.Diffs,
-	)
-
-	unsafeKubeReducers := r.UnsafeReducerRulesByDiffs(
-		r.GetReducers(
-			cluster.OperationPhaseKubernetes,
-		),
-		diffs.ExpandMapChanges(status.Diffs),
-	)
+	unsafeReducers, unsafeKubeReducers, err := unsafeReducerRules(r, status.Diffs)
+	if err != nil {
+		return err
+	}
 
 	if len(rdcs) > 0 {
 		logrus.Infof("Differences found from previous cluster configuration, "+
@@ -350,6 +344,52 @@ func (c *ClusterCreator) Create(startFrom string, _, podRunningCheckTimeout int)
 	return c.persistAppliedConfig(appliedUpgradeState, upgr, renderedConfig)
 }
 
+// DiffPreflight is the part of the kind's preflight that Diff runs.
+type DiffPreflight interface {
+	Exec(renderedConfig map[string]any) (*create.Status, error)
+}
+
+// Diff compares the resources of the cluster with the configuration. It runs the preflight with the apply
+// defaults, renders the distribution phase and runs the diff commands, nothing that writes to the cluster.
+// It calls afterPreflight once, right after the preflight attempt whatever its outcome, before any render.
+func (c *ClusterCreator) Diff(afterPreflight func()) ([]commcreate.Section, error) {
+	if _, err := c.GetPhasePath(c.phase); err != nil {
+		return nil, err
+	}
+
+	renderedConfig, err := c.RenderConfig()
+	if err != nil {
+		return nil, fmt.Errorf("error while rendering config: %w", err)
+	}
+
+	return commcreate.RunDiff(commcreate.KindDiff{
+		Phase:          c.phase,
+		RenderedConfig: renderedConfig,
+		PluginsFeature: distribution.HasFeature(c.kfdManifest, distribution.FeaturePlugins),
+		AfterPreflight: afterPreflight,
+		Preflight: func() (bool, error) {
+			// The apply defaults, whatever this creator was built with.
+			preflight := c.diffPreflight(false, nil, StartFromFlagNotSet, false)
+
+			status, err := preflight.Exec(renderedConfig)
+			if err != nil {
+				return false, err //nolint:wrapcheck // the message goes to the report as it is.
+			}
+
+			return status.ClusterExists, nil
+		},
+		RenderDistribution: func() error {
+			c.newDistributionPhase(upgrade.New(c.paths, string(c.furyctlConf.Kind)))
+
+			return c.distribution.Render()
+		},
+		DiffDistribution: commcreate.NewDistributionDiffer(c.paths),
+		DiffPlugins: func() ([]commcreate.Section, error) {
+			return commcreate.NewPlugins(c.paths, c.kfdManifest, string(c.furyctlConf.Kind), false).Diff()
+		},
+	}), nil
+}
+
 func (c *ClusterCreator) RenderConfig() (map[string]any, error) {
 	specMap := map[string]any{}
 
@@ -379,6 +419,29 @@ func (c *ClusterCreator) RenderConfig() (map[string]any, error) {
 	}
 
 	return specMap, nil
+}
+
+func (c *ClusterCreator) diffPreflight(
+	dryRun bool,
+	force []string,
+	startFrom string,
+	upgradeEnabled bool,
+) DiffPreflight {
+	if c.newPreflight != nil {
+		return c.newPreflight(dryRun, force, startFrom, upgradeEnabled)
+	}
+
+	return create.NewPreFlight(
+		c.furyctlConf,
+		c.kfdManifest,
+		c.paths,
+		dryRun,
+		c.stateStore,
+		force,
+		c.phase,
+		startFrom,
+		upgradeEnabled,
+	)
 }
 
 // newDistributionPhase builds the distribution phase as the operations run it, and keeps the
@@ -484,6 +547,25 @@ func (c *ClusterCreator) executePhase(
 	default:
 		return nil, fmt.Errorf("%w: %s", ErrUnsupportedPhase, c.phase)
 	}
+}
+
+// unsafeReducerRules gives the rules with unsafe reducers of the distribution phase
+// and of the kubernetes phase. The shared verdict computes them with the profile of
+// the kind: the distribution rules on the changes as reported, then the kubernetes
+// ones on the expanded changes.
+func unsafeReducerRules(r premrules.Extractor, changelog r3diff.Changelog) (
+	[]premrules.Rule,
+	[]premrules.Rule,
+	error,
+) {
+	profile, err := diffs.RequireProfileForKind(distribution.OnPremisesKind)
+	if err != nil {
+		return nil, nil, fmt.Errorf("error while reading the rule checks of the kind: %w", err)
+	}
+
+	unsafe := diffs.DecideRules(changelog, r, profile.OnlyUnsafeReducerCheck()).UnsafeReducers
+
+	return unsafe[cluster.OperationPhaseDistribution], unsafe[cluster.OperationPhaseKubernetes], nil
 }
 
 func (c *ClusterCreator) confirmUnsafeReducers(rdcs reducers.Reducers, unsafe []premrules.Rule) error {

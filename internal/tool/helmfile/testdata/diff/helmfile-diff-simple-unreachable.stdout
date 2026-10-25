@@ -1,0 +1,2 @@
+Comparing release=poc-podinfo, chart=podinfo/podinfo, namespace=poc-helm
+Comparing release=poc-metrics, chart=metrics-server/metrics-server, namespace=poc-helm

@@ -1,0 +1,9 @@
+CONFIG   1 change
+
+   FIELD                       CURRENT  NEW   RULE
+──────────────────────────────────────────────────
+Distribution
+~  modules.ingress.nginx.type  single   dual
+
+RULE   not available: the distribution has no rules file for this kind
+--- exit code: 0

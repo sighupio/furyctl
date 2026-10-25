@@ -1,0 +1,17 @@
+CONFIG   [1m10[0m changes · [31m2[0m blocked · [33m1[0m needs confirmation
+
+   FIELD                                                    CURRENT          NEW                   RULE
+───────────────────────────────────────────────────────────────────────────────────────────────────────
+Infrastructure
+[33m~[0m  loadBalancers.keepalived.passphrase                      (hidden)         (hidden)
+Kubernetes
+[33m~[0m  networking.podCIDR                                       172.16.128.0/17  10.42.0.0/16          [31m✗[0m blocked: Pod CIDR cannot be changed after cluster creation
+[32m+[0m  nodeGroups[worker].nodes[worker4.example.test].hostname  –                worker4.example.test
+Distribution
+[33m~[0m  common.networkPoliciesEnabled                            false            true                  [33m![0m needs confirmation: changes to the network policies have been detected. This will cause the reconfiguration or deletion of the current network policies.
+[33m~[0m  modules.ingress.nginx.type                               single           dual                  [31m✗[0m blocked: currently, switching Ingress from single to dual nginx is not supported. You need to first remove the current stack with type: none.
+[33m~[0m  modules.logging.type                                     none             loki                  [36m·[0m migration: changes to the logging module type have been detected. This will cause the reconfiguration or deletion of the current logging stack.
+[32m+[0m  modules.monitoring.prometheus.retentionTime              –                15d
+[32m+[0m  modules.monitoring.prometheus.storageSize                –                50Gi
+[33m~[0m  modules.monitoring.type                                  none             prometheus            [36m·[0m migration: changes to the Monitoring module type have been detected. This will cause the reconfiguration or deletion of the current monitoring stack.
+[31m-[0m  modules.tracing.type                                     none             –

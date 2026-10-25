@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"os"
 	"path"
-	"slices"
 	"strings"
 
 	r3diff "github.com/r3labs/diff/v3"
@@ -21,6 +20,7 @@ import (
 	"github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/immutable/public"
 	"github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/immutable/supported"
 	"github.com/sighupio/furyctl/internal/cluster"
+	"github.com/sighupio/furyctl/internal/distribution"
 	"github.com/sighupio/furyctl/internal/state"
 	"github.com/sighupio/furyctl/internal/tool/ansible"
 	"github.com/sighupio/furyctl/internal/tool/kubectl"
@@ -346,20 +346,15 @@ func (p *PreFlight) CheckStateDiffs(d r3diff.Changelog, diffChecker diffs.Checke
 		return nil
 	}
 
-	// Extract the paths from the rules left after filtering out the ones with matching safe conditions.
-	filteredInfraImmutableRules := r.FilterSafeImmutableRules(r.GetImmutableRules("infrastructure"), d)
-	filteredKubeImmutableRules := r.FilterSafeImmutableRules(r.GetImmutableRules("kubernetes"), d)
-	filteredDistroImmutableRules := r.FilterSafeImmutableRules(r.GetImmutableRules("distribution"), d)
+	// The shared verdict runs the immutable check of each phase of the kind: the rules
+	// left after filtering out the ones with matching safe conditions, on the changes
+	// as reported.
+	profile, err := diffs.RequireProfileForKind(distribution.ImmutableKind)
+	if err != nil {
+		return fmt.Errorf("error while reading the rule checks of the kind: %w", err)
+	}
 
-	infraImmutablePaths := rules.Paths(filteredInfraImmutableRules)
-	kubeImmutablePaths := rules.Paths(filteredKubeImmutableRules)
-	distroImmutablePaths := rules.Paths(filteredDistroImmutableRules)
-
-	errs := slices.Concat(
-		diffChecker.AssertImmutableViolations(d, infraImmutablePaths),
-		diffChecker.AssertImmutableViolations(d, kubeImmutablePaths),
-		diffChecker.AssertImmutableViolations(d, distroImmutablePaths),
-	)
+	errs := diffs.DecideRules(d, r, profile.OnlyImmutableCheck()).ImmutableViolations
 
 	if len(errs) > 0 {
 		return fmt.Errorf("%w: %w", errImmutable, errors.Join(errs...))
@@ -384,20 +379,14 @@ func (p *PreFlight) CheckReducerDiffs(d r3diff.Changelog, diffChecker diffs.Chec
 		return nil
 	}
 
-	errs := slices.Concat(
-		diffChecker.AssertReducerUnsupportedViolations(
-			d,
-			r.GetUnsupportedRules(cluster.OperationPhaseInfrastructure),
-		),
-		diffChecker.AssertReducerUnsupportedViolations(
-			d,
-			r.GetUnsupportedRules(cluster.OperationPhaseKubernetes),
-		),
-		diffChecker.AssertReducerUnsupportedViolations(
-			d,
-			r.GetUnsupportedRules(cluster.OperationPhaseDistribution),
-		),
-	)
+	// The shared verdict runs the unsupported check of each phase of the kind, on the
+	// expanded changes.
+	profile, err := diffs.RequireProfileForKind(distribution.ImmutableKind)
+	if err != nil {
+		return fmt.Errorf("error while reading the rule checks of the kind: %w", err)
+	}
+
+	errs := diffs.DecideRules(d, r, profile.OnlyUnsupportedCheck()).UnsupportedViolations
 
 	if len(errs) > 0 {
 		return fmt.Errorf("%w: %w", errUnsupported, errors.Join(errs...))

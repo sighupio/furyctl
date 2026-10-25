@@ -1,0 +1,2 @@
+level=info msg="Downloading distribution..."
+level=warning msg="The specified SD version v1.25.1 is not supported by this version of furyctl, please upgrade furyctl to the latest version or use a supported SD version. Run `furyctl get supported-versions` for a compatibility matrix."

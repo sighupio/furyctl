@@ -1,0 +1,159 @@
+# Copyright (c) 2017-present SIGHUP s.r.l All rights reserved.
+# Use of this source code is governed by a BSD-style
+# license that can be found in the LICENSE file.
+
+# Fixture of the CONFIG table tests: an Immutable cluster configuration. cur.yaml is the
+# stored configuration and new2.yaml the local file; they differ in ten leaf fields.
+# Host names, addresses and paths are examples (example.test, RFC 5737, RFC 7042).
+---
+apiVersion: kfd.sighup.io/v1alpha2
+kind: Immutable
+metadata:
+  name: example
+spec:
+  distributionVersion: v1.36.0
+  toolsConfiguration:
+    ansible:
+      config: callbacks_enabled = ansible.posix.profile_tasks
+  infrastructure:
+    # The public key is written into every machine. furyctl uses the private key to connect
+    # to the machines after they boot.
+    ssh:
+      username: user
+      privateKeyPath: /home/user/.ssh/id_ed25519
+    # Address of the boot server that furyctl starts. Every machine must reach this address.
+    ipxeServer:
+      url: http://furyctl.example.test:8080
+    nodes:
+      # Load balancer machines
+      # Set `arch` on every node. Do not rely on a default value.
+      - hostname: lb1.example.test
+        macAddress: 00:00:5E:00:53:01
+        arch: x86-64
+        storage:
+          installDisk: /dev/sda
+        network:
+          ethernets:
+            eth0:
+              dhcp4: true
+      - hostname: lb2.example.test
+        macAddress: 00:00:5E:00:53:02
+        arch: x86-64
+        storage:
+          installDisk: /dev/sda
+        network:
+          ethernets:
+            eth0:
+              dhcp4: true
+      # Control-plane machines
+      - hostname: cp1.example.test
+        macAddress: 00:00:5E:00:53:03
+        arch: x86-64
+        storage:
+          installDisk: /dev/sda
+        network:
+          ethernets:
+            eth0:
+              dhcp4: true
+      - hostname: cp2.example.test
+        macAddress: 00:00:5E:00:53:04
+        arch: x86-64
+        storage:
+          installDisk: /dev/sda
+        network:
+          ethernets:
+            eth0:
+              dhcp4: true
+      - hostname: cp3.example.test
+        macAddress: 00:00:5E:00:53:05
+        arch: x86-64
+        storage:
+          installDisk: /dev/sda
+        network:
+          ethernets:
+            eth0:
+              dhcp4: true
+      # Worker machines
+      - hostname: worker1.example.test
+        macAddress: 00:00:5E:00:53:06
+        arch: x86-64
+        storage:
+          installDisk: /dev/sda
+        network:
+          ethernets:
+            eth0:
+              dhcp4: true
+      - hostname: worker2.example.test
+        macAddress: 00:00:5E:00:53:07
+        arch: x86-64
+        storage:
+          installDisk: /dev/sda
+        network:
+          ethernets:
+            eth0:
+              dhcp4: true
+      - hostname: worker3.example.test
+        macAddress: 00:00:5E:00:53:08
+        arch: x86-64
+        storage:
+          installDisk: /dev/sda
+        network:
+          ethernets:
+            eth0:
+              dhcp4: true
+    loadBalancers:
+      members:
+        - hostname: lb1.example.test
+        - hostname: lb2.example.test
+      keepalived:
+        enabled: true
+        interface: eth0
+        ip: 192.0.2.20
+        virtualRouterId: "201"
+        passphrase: "new-example"
+      haproxy:
+        configuration: "{file://./configs/haproxy.cfg}"
+  kubernetes:
+    pkiPath: ./pki
+    networking:
+      podCIDR: 10.42.0.0/16
+      serviceCIDR: 172.16.0.0/17
+    controlPlane:
+      address: api.example.test:6443
+      members:
+        - hostname: cp1.example.test
+        - hostname: cp2.example.test
+        - hostname: cp3.example.test
+    nodeGroups:
+      - name: worker
+        nodes:
+          - hostname: worker1.example.test
+          - hostname: worker2.example.test
+          - hostname: worker3.example.test
+          - hostname: worker4.example.test
+  distribution:
+    common:
+      networkPoliciesEnabled: true
+    modules:
+      networking:
+        type: cilium
+      ingress:
+        baseDomain: example.test
+        nginx:
+          type: dual
+          tls:
+            provider: none
+      logging:
+        type: loki
+      monitoring:
+        type: prometheus
+        prometheus:
+          retentionTime: 15d
+          storageSize: 50Gi
+      policy:
+        type: none
+      dr:
+        type: none
+      auth:
+        provider:
+          type: none

@@ -1,0 +1,111 @@
+# Copyright (c) 2017-present SIGHUP s.r.l All rights reserved.
+# Use of this source code is governed by a BSD-style
+# license that can be found in the LICENSE file.
+
+# Fields of the public schemas of the distribution (schemas/public at v1.36.0, the four
+# kinds), with every list item written as position 0.
+#
+# hidden: the fields that hold a credential, by the name of their key or by what they
+# hold. A field the schema leaves free-form is written with the key that the tool it
+# configures uses for a credential.
+# shown: the fields whose key holds a sensitive word but whose value is not a secret.
+hidden:
+  # auth
+  - spec.distribution.modules.auth.oidcKubernetesAuth.clientSecret
+  - spec.distribution.modules.auth.oidcKubernetesAuth.sessionSecurityKey
+  - spec.distribution.modules.auth.pomerium.secrets.COOKIE_SECRET
+  - spec.distribution.modules.auth.pomerium.secrets.IDP_CLIENT_SECRET
+  - spec.distribution.modules.auth.pomerium.secrets.SHARED_SECRET
+  - spec.distribution.modules.auth.pomerium.secrets.SIGNING_KEY
+  - spec.distribution.modules.auth.provider.basicAuth.password
+  - spec.distribution.modules.auth.dex.additionalStaticClients.0.secret
+  - spec.distribution.modules.auth.dex.connectors.0.config.clientSecret
+  - spec.distribution.modules.auth.dex.connectors.0.config.bindPW
+  # object storage
+  - spec.distribution.modules.dr.etcdBackup.s3.accessKeyId
+  - spec.distribution.modules.dr.etcdBackup.s3.secretAccessKey
+  - spec.distribution.modules.dr.velero.externalEndpoint.accessKeyId
+  - spec.distribution.modules.dr.velero.externalEndpoint.secretAccessKey
+  - spec.distribution.modules.logging.loki.externalEndpoint.accessKeyId
+  - spec.distribution.modules.logging.loki.externalEndpoint.secretAccessKey
+  - spec.distribution.modules.monitoring.mimir.externalEndpoint.accessKeyId
+  - spec.distribution.modules.monitoring.mimir.externalEndpoint.secretAccessKey
+  - spec.distribution.modules.tracing.tempo.externalEndpoint.accessKeyId
+  - spec.distribution.modules.tracing.tempo.externalEndpoint.secretAccessKey
+  - spec.distribution.modules.logging.minio.rootUser.password
+  - spec.distribution.modules.monitoring.minio.rootUser.password
+  - spec.distribution.modules.tracing.minio.rootUser.password
+  # ingress
+  - spec.distribution.modules.ingress.nginx.tls.secret.key
+  - spec.distribution.modules.ingress.haproxy.tls.secret.key
+  # monitoring
+  - spec.distribution.modules.monitoring.alertmanager.slackWebhookUrl
+  - spec.distribution.modules.monitoring.alertmanager.deadManSwitchWebhookUrl
+  - spec.distribution.modules.monitoring.prometheus.remoteWrite.0.basicAuth.password
+  - spec.distribution.modules.monitoring.prometheus.remoteWrite.0.authorization.credentials
+  - spec.distribution.modules.monitoring.prometheus.remoteWrite.0.bearerToken
+  - spec.distribution.modules.monitoring.prometheus.remoteWrite.0.oauth2.clientSecret
+  - spec.distribution.modules.monitoring.prometheus.remoteWrite.0.headers.X-Api-Auth
+  - spec.distribution.modules.monitoring.prometheusAgent.remoteWrite.0.authorization.credentials
+  - spec.distribution.modules.monitoring.prometheusAgent.remoteWrite.0.headers.Authorization
+  # logging
+  - spec.distribution.modules.logging.customOutputs.audit
+  - spec.distribution.modules.logging.customOutputs.errors
+  - spec.distribution.modules.logging.customOutputs.events
+  - spec.distribution.modules.logging.customOutputs.infra
+  - spec.distribution.modules.logging.customOutputs.ingressHaproxy
+  - spec.distribution.modules.logging.customOutputs.ingressNginx
+  - spec.distribution.modules.logging.customOutputs.kubernetes
+  - spec.distribution.modules.logging.customOutputs.systemdCommon
+  - spec.distribution.modules.logging.customOutputs.systemdEtcd
+  # custom patches
+  - spec.distribution.customPatches.patches.0.patch
+  - spec.distribution.customPatches.patchesStrategicMerge.0
+  - spec.distribution.customPatches.secretGenerator.0.literals.0
+  # kubernetes
+  - spec.kubernetes.advanced.encryption.configuration
+  - spec.kubernetes.advanced.cloud.config
+  - spec.kubernetes.advanced.containerd.registryConfigs.0.password
+  - spec.kubernetes.controlPlane.keepalived.passphrase
+  - spec.kubernetes.loadBalancers.keepalived.passphrase
+  - spec.kubernetes.loadBalancers.stats.password
+  - spec.kubernetes.loadBalancers.additionalConfig
+  # infrastructure
+  - spec.infrastructure.loadBalancers.keepalived.passphrase
+  - spec.infrastructure.loadBalancers.haproxy.configuration
+  - spec.infrastructure.loadBalancers.containerd.registryConfigs.0.password
+  - spec.infrastructure.ipxeServer.preInstallCommands.0
+  - spec.infrastructure.ipxeServer.postInstallCommands.0
+  - spec.infrastructure.nodes.0.passwd.users.0.password_hash
+  - spec.infrastructure.nodes.0.passwd.groups.0.password_hash
+  - spec.infrastructure.nodes.0.storage.files.0.contents.inline
+  - spec.infrastructure.nodes.0.storage.files.0.contents.source
+  - spec.infrastructure.nodes.0.storage.files.0.contents.http_headers.0.value
+  - spec.infrastructure.nodes.0.storage.files.0.append.0.inline
+  - spec.infrastructure.nodes.0.storage.files.0.append.0.source
+  - spec.infrastructure.nodes.0.storage.files.0.append.0.http_headers.0.value
+  - spec.infrastructure.nodes.0.systemd.units.0.contents
+  - spec.infrastructure.nodes.0.systemd.units.0.dropins.0.contents
+  # plugins
+  - spec.plugins.helm.releases.0.set.0.value
+shown:
+  - spec.distribution.common.tolerations.0.key
+  - spec.distribution.modules.ingress.nginx.overrides.tolerations.0.key
+  - spec.distribution.modules.monitoring.prometheus.remoteWrite.0.url
+  - spec.distribution.modules.monitoring.alertmanager.installDefaultRules
+  - spec.kubernetes.nodes.0.taints.0.key
+  - spec.kubernetes.nodeGroups.0.taints.0.key
+  - spec.kubernetes.controlPlane.taints.0.key
+  - spec.kubernetes.masters.taints.0.key
+  - spec.kubernetes.ssh.keyPath
+  - spec.kubernetes.nodePoolsCommon.metadataHttpTokens
+  - spec.kubernetes.proxy.https
+  - spec.infrastructure.ssh.privateKeyPath
+  - spec.infrastructure.ssh.publicKeyPath
+  - spec.infrastructure.proxy.https
+  - spec.infrastructure.nodes.0.storage.files.0.path
+  - spec.infrastructure.nodes.0.storage.files.0.contents.http_headers.0.name
+  - spec.toolsConfiguration.terraform.state.s3.keyPrefix
+  - spec.toolsConfiguration.opentofu.state.s3.keyPrefix
+  - spec.plugins.helm.releases.0.set.0.name
+  - spec.plugins.helm.repositories.0.url

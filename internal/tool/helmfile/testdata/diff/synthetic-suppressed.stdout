@@ -1,0 +1,4 @@
+Comparing release=poc-podinfo, chart=podinfo/podinfo, namespace=poc-helm
+poc-helm, poc-podinfo, Deployment (apps) to be changed.
+poc-helm, poc-podinfo-config, Secret (v1) has changed, but diff is empty after suppression.
+Plan: 0 to add, 1 to change, 0 to destroy, 0 to change ownership.
