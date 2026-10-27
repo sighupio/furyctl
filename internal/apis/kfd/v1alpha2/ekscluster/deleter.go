@@ -13,9 +13,11 @@ import (
 	"github.com/sighupio/furyctl/internal/apis/config"
 	del "github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/ekscluster/delete"
 	"github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/ekscluster/private"
+	"github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/ekscluster/supported"
 	"github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/ekscluster/vpn"
 	"github.com/sighupio/furyctl/internal/cluster"
 	"github.com/sighupio/furyctl/internal/distribution"
+	statusx "github.com/sighupio/furyctl/internal/x/status"
 )
 
 type ClusterDeleter struct {
@@ -62,6 +64,8 @@ func (d *ClusterDeleter) SetProperty(name string, value any) {
 }
 
 func (d *ClusterDeleter) Delete() error {
+	statusx.SetPhases(cluster.PhasesToDelete(supported.Phases(), d.phase)...)
+
 	infra := del.NewInfrastructure(
 		d.furyctlConf,
 		d.dryRun,

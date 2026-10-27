@@ -24,6 +24,7 @@ import (
 	"github.com/sighupio/furyctl/internal/app"
 	execx "github.com/sighupio/furyctl/internal/x/exec"
 	osx "github.com/sighupio/furyctl/internal/x/os"
+	statusx "github.com/sighupio/furyctl/internal/x/status"
 )
 
 var (
@@ -67,6 +68,8 @@ func exec() int {
 	defer osx.RemoveTempDirs()
 
 	if _, err := cmd.NewRootCmd().ExecuteC(); err != nil {
+		statusx.Error(err.Error())
+
 		// The global logger writes to the terminal and to the log file. Before the root pre-run
 		// configures it, for example on an unknown flag, there is no log file.
 		if execx.LogFile != nil {

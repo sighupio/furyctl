@@ -13,7 +13,9 @@ import (
 	"github.com/sighupio/furyctl/internal/apis/config"
 	del "github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/kfddistribution/delete"
 	"github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/kfddistribution/public"
+	"github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/kfddistribution/supported"
 	"github.com/sighupio/furyctl/internal/cluster"
+	statusx "github.com/sighupio/furyctl/internal/x/status"
 )
 
 type ClusterDeleter struct {
@@ -54,6 +56,8 @@ func (d *ClusterDeleter) SetProperty(name string, value any) {
 }
 
 func (d *ClusterDeleter) Delete() error {
+	statusx.SetPhases(cluster.PhasesToDelete(supported.Phases(), d.phase)...)
+
 	if d.phase != "" && d.phase != cluster.OperationPhaseDistribution {
 		return ErrUnsupportedPhase
 	}

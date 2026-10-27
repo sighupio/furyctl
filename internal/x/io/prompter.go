@@ -8,6 +8,8 @@ import (
 	"bufio"
 	"fmt"
 	"strings"
+
+	statusx "github.com/sighupio/furyctl/internal/x/status"
 )
 
 type Prompter struct {
@@ -21,6 +23,8 @@ func NewPrompter(r *bufio.Reader) *Prompter {
 }
 
 func (p *Prompter) Ask(w string) (bool, error) {
+	statusx.Question("Type '" + w + "' to continue")
+
 	response, err := p.Reader.ReadString('\n')
 	if err != nil {
 		return false, fmt.Errorf("error reading from stdin: %w", err)
@@ -29,8 +33,16 @@ func (p *Prompter) Ask(w string) (bool, error) {
 	response = strings.TrimSuffix(response, "\n")
 	response = strings.Trim(response, " ")
 
-	return strings.Compare(
+	ok := strings.Compare(
 		strings.ToLower(response),
 		strings.ToLower(w),
-	) == 0, nil
+	) == 0
+
+	if ok {
+		statusx.Resume()
+	} else {
+		statusx.Idle("Cancelled by the operator")
+	}
+
+	return ok, nil
 }

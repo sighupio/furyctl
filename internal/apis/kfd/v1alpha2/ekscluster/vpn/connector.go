@@ -22,6 +22,7 @@ import (
 	execx "github.com/sighupio/furyctl/internal/x/exec"
 	iox "github.com/sighupio/furyctl/internal/x/io"
 	osx "github.com/sighupio/furyctl/internal/x/os"
+	statusx "github.com/sighupio/furyctl/internal/x/status"
 )
 
 var (
@@ -238,9 +239,13 @@ func (*Connector) promptAutoConnect(pid int32) error {
 
 	logrus.Info("Press ENTER to continue or CTRL-C to abort...")
 
+	statusx.Question("Press ENTER to continue")
+
 	if _, err := bufio.NewReader(os.Stdin).ReadBytes('\n'); err != nil {
 		return fmt.Errorf("%w: %v", ErrReadStdin, err)
 	}
+
+	statusx.Resume()
 
 	return nil
 }
@@ -275,9 +280,13 @@ func (v *Connector) prompt() error {
 
 	logrus.Info("Press ENTER when you are ready to continue...")
 
+	statusx.Question("Press ENTER to continue")
+
 	if _, err := bufio.NewReader(os.Stdin).ReadBytes('\n'); err != nil {
 		return fmt.Errorf("%w: %v", ErrReadStdin, err)
 	}
+
+	statusx.Resume()
 
 	return nil
 }

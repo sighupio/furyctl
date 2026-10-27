@@ -14,7 +14,9 @@ import (
 	"github.com/sighupio/furyctl/internal/apis/config"
 	del "github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/onpremises/delete"
 	"github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/onpremises/public"
+	"github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/onpremises/supported"
 	"github.com/sighupio/furyctl/internal/cluster"
+	statusx "github.com/sighupio/furyctl/internal/x/status"
 )
 
 var errClusterNotFound = errors.New("the cluster does not exist")
@@ -57,6 +59,8 @@ func (d *ClusterDeleter) SetProperty(name string, value any) {
 }
 
 func (d *ClusterDeleter) Delete() error {
+	statusx.SetPhases(cluster.PhasesToDelete(supported.Phases(), d.phase)...)
+
 	logrus.Warn("This process will only reset the Kubernetes cluster " +
 		"and will not uninstall all the packages installed on the nodes.")
 

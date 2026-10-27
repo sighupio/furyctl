@@ -11,6 +11,8 @@ import (
 
 	"github.com/sighupio/furyctl/cmd/serve"
 	"github.com/sighupio/furyctl/internal/flags"
+	execx "github.com/sighupio/furyctl/internal/x/exec"
+	statusx "github.com/sighupio/furyctl/internal/x/status"
 )
 
 func NewServeCmd() *cobra.Command {
@@ -32,7 +34,15 @@ func NewServeCmd() *cobra.Command {
 		RunE: func(_ *cobra.Command, _ []string) error {
 			nodes := map[string]string{}
 
-			return serve.Path(viper.GetString("address"), viper.GetString("port"), viper.GetString("path"), nodes)
+			statusx.Start("serve", execx.NoTTY)
+
+			if err := serve.Path(viper.GetString("address"), viper.GetString("port"), viper.GetString("path"), nodes); err != nil {
+				return err //nolint:wrapcheck // Path gives the full error.
+			}
+
+			statusx.Done("Assets server stopped")
+
+			return nil
 		},
 	}
 

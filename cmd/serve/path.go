@@ -18,6 +18,8 @@ import (
 	"time"
 
 	"github.com/sirupsen/logrus"
+
+	statusx "github.com/sighupio/furyctl/internal/x/status"
 )
 
 // loggingResponseWriter wraps [http.ResponseWriter] to capture status code and bytes written.
@@ -210,6 +212,9 @@ func Path(address, port, root string, nodesStatus map[string]string) error {
 		const shutdownTimeout = 5 * time.Second
 
 		stopServer(srv, shutdownTimeout)
+
+		// After ENTER, the last report can still ask for a machine boot.
+		statusx.Resume()
 
 		return nil
 
