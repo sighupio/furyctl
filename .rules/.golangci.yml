@@ -12,7 +12,8 @@ linters:
   default: all
   disable:
     - depguard
-    - exhaustruct
+    - exhaustruct # Deprecated alias; use exhaustruct_v5 if this linter is enabled.
+    - exhaustruct_v5
     - forbidigo
     - goconst # flags repeated string literals that are not actually meant to be a shared constant
     - gomodguard # deprecated, replaced by gomodguard_v2 since golangci-lint v2.12.0
@@ -46,7 +47,7 @@ linters:
       default-signifies-exhaustive: true
       check:
         - switch
-        - map
+        - mapliteral
     funlen:
       lines: 400
       statements: 182
@@ -127,7 +128,7 @@ linters:
         - name: add-constant
           arguments:
             - allowFloats: 0.0,0.,1.0,1.,2.0,2.
-              allowInts: 0,1,2
+              allowInts: 0,1,2,3
               allowStrs: '""'
               maxLitCount: "15"
           severity: warning
@@ -217,11 +218,9 @@ linters:
         - name: empty-lines
           severity: warning
           disabled: false
-        # epoch-naming and inefficient-map-lookup stop all later revive rules on a file when type-checking fails.
-        # revive runs its rules in random order, so some runs silently lose revive issues.
-        # Enable them again when golangci-lint includes revive v1.16.0 or later: https://github.com/mgechev/revive/issues/1718
         - name: epoch-naming
-          disabled: true
+          severity: warning
+          disabled: false
         - name: error-naming
           severity: warning
           disabled: false
@@ -274,9 +273,9 @@ linters:
         - name: indent-error-flow
           severity: warning
           disabled: false
-        # See epoch-naming.
         - name: inefficient-map-lookup
-          disabled: true
+          severity: warning
+          disabled: false
         - name: imports-blocklist
           arguments:
             - crypto/md5
@@ -291,6 +290,9 @@ linters:
             - 140
           severity: warning
           disabled: true
+        - name: marshal-receiver
+          severity: warning
+          disabled: false
         - name: max-public-structs
           arguments:
             - 10
@@ -302,6 +304,8 @@ linters:
         - name: modifies-value-receiver
           severity: warning
           disabled: false
+        - name: multiline-if-init
+          disabled: true
         - name: nested-structs
           severity: warning
           disabled: false
@@ -386,6 +390,9 @@ linters:
             - fmt.Printf
             - fmt.Fprintf
             - strings.Builder.WriteString
+          severity: warning
+          disabled: false
+        - name: use-slices-concat
           severity: warning
           disabled: false
         - name: unnecessary-stmt
@@ -501,7 +508,10 @@ formatters:
         - prefix(github.com/sighupio)
       custom-order: true
     gofumpt:
-      extra-rules: true
+      extra:
+        group-params: true
+        clothe-returns: true
+        balance-calls: false
     goimports:
       local-prefixes:
         - github.com/sighupio
