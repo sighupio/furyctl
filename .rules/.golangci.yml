@@ -12,7 +12,8 @@ linters:
   default: all
   disable:
     - depguard
-    - exhaustruct
+    - exhaustruct # Deprecated alias remains active in golangci-lint 2.13.0.
+    - exhaustruct_v5
     - forbidigo
     - goconst # flags repeated string literals that are not actually meant to be a shared constant
     - gomodguard # deprecated, replaced by gomodguard_v2 since golangci-lint v2.12.0
@@ -501,7 +502,10 @@ formatters:
         - prefix(github.com/sighupio)
       custom-order: true
     gofumpt:
-      extra-rules: true
+      extra:
+        group-params: true
+        clothe-returns: true
+        balance-calls: false
     goimports:
       local-prefixes:
         - github.com/sighupio

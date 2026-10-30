@@ -23,7 +23,7 @@ func EnsureNoPrefix(version string) string {
 }
 
 func EnsureNoBuild(version string) string {
-	v := strings.Split(version, "+")[0]
+	v := strings.Split(version, "+")[0] //nolint:modernize // Keep current implementation; modernization is deferred.
 
 	return strings.Split(v, "-")[0]
 }

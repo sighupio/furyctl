@@ -299,9 +299,8 @@ func (*Downloader) applyCompatibilityPatches(kfdManifest config.KFD, dst string)
 
 	finfo, err := fs.Stat(subFS, ".")
 	if err != nil {
-		var perr *fs.PathError
-		if errors.As(err, &perr) {
-			return nil
+		if pathErr, ok := errors.AsType[*fs.PathError](err); ok && pathErr != nil {
+			return nil //nolint:nilerr // A missing patch directory means there are no compatibility patches to apply.
 		}
 
 		return fmt.Errorf("error getting subfs stat: %w", err)
