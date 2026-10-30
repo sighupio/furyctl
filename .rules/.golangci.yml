@@ -12,7 +12,7 @@ linters:
   default: all
   disable:
     - depguard
-    - exhaustruct # Deprecated alias remains active in golangci-lint 2.13.0.
+    - exhaustruct # Deprecated alias remains active in golangci-lint 2.13.1.
     - exhaustruct_v5
     - forbidigo
     - goconst # flags repeated string literals that are not actually meant to be a shared constant
