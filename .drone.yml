@@ -6,6 +6,9 @@ kind: pipeline
 type: docker
 name: main
 
+node:
+  performance: low
+
 volumes:
   - name: mise-cache
     host:
