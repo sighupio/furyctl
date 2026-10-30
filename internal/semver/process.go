@@ -21,9 +21,3 @@ func EnsureNoPrefix(version string) string {
 
 	return v
 }
-
-func EnsureNoBuild(version string) string {
-	v := strings.Split(version, "+")[0] //nolint:modernize // Keep current implementation; modernization is deferred.
-
-	return strings.Split(v, "-")[0]
-}
