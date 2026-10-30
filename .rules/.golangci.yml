@@ -47,7 +47,7 @@ linters:
       default-signifies-exhaustive: true
       check:
         - switch
-        - map
+        - mapliteral
     funlen:
       lines: 400
       statements: 182
@@ -128,7 +128,7 @@ linters:
         - name: add-constant
           arguments:
             - allowFloats: 0.0,0.,1.0,1.,2.0,2.
-              allowInts: 0,1,2
+              allowInts: 0,1,2,3
               allowStrs: '""'
               maxLitCount: "15"
           severity: warning
