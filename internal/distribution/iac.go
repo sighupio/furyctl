@@ -145,6 +145,15 @@ func (m *IACBuilder) Build() error {
 
 	confPath := filepath.Join(outDirPath, "config.yaml")
 
+	// The dry run keeps the folder for tmpl-debug.log, not the configuration file: it holds the secrets of the
+	// configuration. The folder goes too when the template model wrote nothing in it.
+	if m.dryRun {
+		defer func() {
+			_ = os.Remove(confPath)
+			_ = os.Remove(outDirPath)
+		}()
+	}
+
 	logrus.Debugf("IaC configuration file path %s", confPath)
 
 	if err = os.WriteFile(confPath, outYaml, iox.FullRWPermAccess); err != nil {
