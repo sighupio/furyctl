@@ -141,6 +141,9 @@ func GetSupportedFlags() SupportedFlags {
 			"upgradePathLocation": FlagTypeString,
 			"airgapBundle":        FlagTypeString,
 			"forceExtract":        FlagTypeBool,
+			"configOnly":          FlagTypeBool,
+			"skipDepsDownload":    FlagTypeBool,
+			"skipDepsValidation":  FlagTypeBool,
 		},
 		CommandValidate: {
 			"distroLocation": FlagTypeString,

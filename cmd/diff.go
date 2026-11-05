@@ -48,13 +48,16 @@ type DiffCommandFlags struct {
 	Outdir                string
 	UpgradePathLocation   string
 	DistroPatchesLocation string
+	ConfigOnly            bool
+	SkipDepsDownload      bool
+	SkipDepsValidation    bool
 }
 
 func NewDiffCmd() *cobra.Command {
 	diffCmd := &cobra.Command{
 		Args:  cobra.NoArgs,
 		Use:   "diff",
-		Short: "Show the CONFIG table of the changes between the cluster configuration and the local one",
+		Short: "Show the changes an apply would make: the configuration and the resources of the cluster",
 		Long: `Compare the configuration stored in the cluster with the local configuration file and print
 the CONFIG table: one row for each changed field, sorted by field, with the columns FIELD,
 CURRENT, NEW and RULE.
@@ -71,7 +74,16 @@ can decide differently for a field that only one of the two files sets.
 A secret is printed as (hidden): the value of a field whose name contains pass, secret,
 token, key, credential or authorization, of a field known to hold credentials (helm set
 values, webhook URLs, inline file contents, the encryption configuration and other free
-text), and the user and password of a URL.`,
+text), and the user and password of a URL.
+
+Then, unless --config-only is set, the diff renders the distribution and plugins phases as
+"furyctl apply --dry-run" does, with the same --phase, and compares them with the cluster: the
+RESOURCES section lists what kapp and helm would create (+), update (~) or delete (-), without
+the values of the helm releases. The dry run writes nothing to the cluster and takes the lock of
+apply. A change that the apply would refuse is reported as not compared, with the reason, and the
+exit code is 1. An upgrade (a change of distributionVersion) is not compared.
+The kind EKSCluster, the phases infrastructure and kubernetes, and a distribution without the diff
+scripts print the CONFIG table only, with exit code 0.`,
 		PreRun: func(cmd *cobra.Command, _ []string) {
 			// Bind the flags first: a flag on the command line has precedence over the configuration file.
 			if err := viper.BindPFlags(cmd.Flags()); err != nil {
@@ -133,13 +145,21 @@ text), and the user and password of a URL.`,
 				return fmt.Errorf("error while getting phase path: %w", err)
 			}
 
-			return runDiff(diffRun{
+			if err := runDiff(diffRun{
 				Out:         os.Stdout,
 				Store:       stateStore,
 				FuryctlPath: flags.FuryctlPath,
 				DistroPath:  res.RepoPath,
 				PhasePath:   phasePath,
-			})
+			}); err != nil {
+				return err
+			}
+
+			if flags.ConfigOnly {
+				return nil
+			}
+
+			return diffResources(os.Stdout, flags, res, basePath)
 		},
 	}
 
@@ -197,6 +217,24 @@ text), and the user and password of a URL.`,
 		"",
 		"",
 		"Location where the upgrade scripts are located, if not set the embedded ones will be used",
+	)
+
+	diffCmd.Flags().Bool(
+		"config-only",
+		false,
+		"Print only the CONFIG table, without comparing the resources of the cluster",
+	)
+
+	diffCmd.Flags().Bool(
+		"skip-deps-download",
+		false,
+		"Skip downloading the distribution modules, installers and binaries",
+	)
+
+	diffCmd.Flags().Bool(
+		"skip-deps-validation",
+		false,
+		"Skip validating dependencies",
 	)
 
 	airgap.RegisterFlags(diffCmd)
@@ -466,5 +504,8 @@ func getDiffCommandFlags() (DiffCommandFlags, error) {
 		Outdir:                viper.GetString("outdir"),
 		UpgradePathLocation:   viper.GetString("upgrade-path-location"),
 		DistroPatchesLocation: distroPatchesLocation,
+		ConfigOnly:            viper.GetBool("config-only"),
+		SkipDepsDownload:      viper.GetBool("skip-deps-download"),
+		SkipDepsValidation:    viper.GetBool("skip-deps-validation"),
 	}, nil
 }
