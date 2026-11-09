@@ -12,4 +12,4 @@ Welcome to the latest release of `furyctl` maintained by SIGHUP by ReeVo team.
 
 ### All kinds
 
-- [[#817](https://github.com/sighupio/furyctl/pull/817)] A dry run no longer leaves the configuration file, with its secrets, in the temporary folder. `tmpl-debug.log` is still kept.
+- [[#817](https://github.com/sighupio/furyctl/pull/817)] A dry run no longer leaves a copy of the configuration file, with its inlined secrets if any, in the temporary folder.
