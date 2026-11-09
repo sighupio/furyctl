@@ -157,6 +157,15 @@ func (p *PreUpgrade) Exec() error {
 
 	confPath := filepath.Join(outDirPath1, "config.yaml")
 
+	// The dry run keeps the folder for tmpl-debug.log, not the configuration file: it holds the secrets of the
+	// configuration. The folder goes too when the template model wrote nothing in it.
+	if p.dryRun {
+		defer func() {
+			_ = os.Remove(confPath)
+			_ = os.Remove(outDirPath1)
+		}()
+	}
+
 	logrus.Debugf("Preupgrade configuration file path %s", confPath)
 
 	if err = os.WriteFile(confPath, outYaml, iox.FullRWPermAccess); err != nil {
