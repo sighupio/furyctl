@@ -76,9 +76,9 @@ token, key, credential or authorization, of a field known to hold credentials (h
 values, webhook URLs, inline file contents, the encryption configuration and other free
 text), and the user and password of a URL.
 
-Then, unless --config-only is set, the diff renders the distribution and plugins phases as
-"furyctl apply --dry-run" does, with the same --phase, and compares them with the cluster: the
-RESOURCES section lists what kapp and helm would create (+), update (~) or delete (-), without
+Then, unless --config-only is set, the diff runs "furyctl apply --dry-run" with the same --phase
+(all the phases when --phase is not set, so it connects to the nodes like a dry run does) and
+compares the rendered distribution and plugins with the cluster: the RESOURCES section lists what kapp and helm would create (+), update (~) or delete (-), without
 the values of the helm releases. The dry run writes nothing to the cluster and takes the lock of
 apply. A change that the apply would refuse is reported as not compared, with the reason, and the
 exit code is 1. An upgrade (a change of distributionVersion) is not compared.
