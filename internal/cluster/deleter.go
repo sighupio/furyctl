@@ -48,6 +48,16 @@ type Deleter interface {
 	Delete() error
 }
 
+// DeleteWarner is a deleter with its own warning before the delete confirmation.
+type DeleteWarner interface {
+	DeleteWarning() string
+}
+
+// DeleteStopper is a deleter that undoes part of its work when a signal stops furyctl.
+type DeleteStopper interface {
+	OnDeleteStop()
+}
+
 func NewDeleter(
 	minimalConf config.Furyctl,
 	kfdManifest config.KFD,

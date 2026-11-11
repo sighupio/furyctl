@@ -117,37 +117,8 @@ func (p *PreFlight) Exec(renderedConfig map[string]any) (*Status, error) {
 
 	logrus.Info("Running preflight checks...")
 
-	if err := p.CreateRootFolder(); err != nil {
-		return status, fmt.Errorf("error creating preflight phase folder: %w", err)
-	}
-
-	furyctlMerger, err := p.CreateFuryctlMerger(
-		p.paths.DistroPath,
-		p.paths.ConfigPath,
-		"kfd-v1alpha2",
-		"immutable",
-	)
-	if err != nil {
-		return status, fmt.Errorf("error creating furyctl merger: %w", err)
-	}
-
-	mCfg, err := templatex.NewConfigWithoutData(furyctlMerger, []string{})
-	if err != nil {
-		return status, fmt.Errorf("error creating template config: %w", err)
-	}
-
-	mCfg.Data["kubernetes"] = map[any]any{
-		"version": p.kfdManifest.Kubernetes.Immutable.Version,
-	}
-
-	if err := p.CopyFromTemplate(
-		mCfg,
-		"preflight",
-		path.Join(p.paths.DistroPath, "templates", cluster.OperationPhasePreFlight, "immutable"),
-		p.Path,
-		p.paths.ConfigPath,
-	); err != nil {
-		return status, fmt.Errorf("error copying from template: %w", err)
+	if err := p.Render(); err != nil {
+		return status, err
 	}
 
 	adminConfPath := path.Join(p.Path, "admin.conf")
@@ -404,6 +375,49 @@ func (p *PreFlight) CheckReducerDiffs(d r3diff.Changelog, diffChecker diffs.Chec
 	}
 
 	return nil
+}
+
+// Render writes the preflight inventory and ansible.cfg, which delete also uses.
+func (p *PreFlight) Render() error {
+	if err := p.CreateRootFolder(); err != nil {
+		return fmt.Errorf("error creating preflight phase folder: %w", err)
+	}
+
+	furyctlMerger, err := p.CreateFuryctlMerger(
+		p.paths.DistroPath,
+		p.paths.ConfigPath,
+		"kfd-v1alpha2",
+		"immutable",
+	)
+	if err != nil {
+		return fmt.Errorf("error creating furyctl merger: %w", err)
+	}
+
+	mCfg, err := templatex.NewConfigWithoutData(furyctlMerger, []string{})
+	if err != nil {
+		return fmt.Errorf("error creating template config: %w", err)
+	}
+
+	mCfg.Data["kubernetes"] = map[any]any{
+		"version": p.kfdManifest.Kubernetes.Immutable.Version,
+	}
+
+	if err := p.CopyFromTemplate(
+		mCfg,
+		"preflight",
+		path.Join(p.paths.DistroPath, "templates", cluster.OperationPhasePreFlight, "immutable"),
+		p.Path,
+		p.paths.ConfigPath,
+	); err != nil {
+		return fmt.Errorf("error copying from template: %w", err)
+	}
+
+	return nil
+}
+
+// AnsibleRunner runs in the phase folder, against the inventory of Render.
+func (p *PreFlight) AnsibleRunner() *ansible.Runner {
+	return p.ansibleRunner
 }
 
 // runAdminConfPlaybook runs the playbook that reads the cluster. The legacy playbook fails when a
