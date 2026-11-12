@@ -215,6 +215,14 @@ func formatText(info *clusterinfo.Info) string {
 		_, _ = fmt.Fprintf(w, "%s\t%s\n", "Kubernetes version:", info.KubernetesVersion)
 	}
 
+	if len(info.FlatcarVersions) > 0 {
+		_, _ = fmt.Fprintf(w, "%s\t%s\n", "Flatcar version:", strings.Join(info.FlatcarVersions, ", "))
+	}
+
+	if len(info.KernelVersions) > 0 {
+		_, _ = fmt.Fprintf(w, "%s\t%s\n", "Kernel version:", strings.Join(info.KernelVersions, ", "))
+	}
+
 	if info.EtcdTopology != "" {
 		_, _ = fmt.Fprintf(w, "%s\t%s\n", "Etcd topology:", info.EtcdTopology)
 	}

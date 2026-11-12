@@ -94,6 +94,28 @@ func TestPrimaryRole(t *testing.T) {
 	}
 }
 
+func TestOSVersions(t *testing.T) {
+	t.Parallel()
+
+	mk := func(osImage, kernel string) nodeItem {
+		n := nodeItem{}
+		n.Status.NodeInfo.OSImage = osImage
+		n.Status.NodeInfo.KernelVersion = kernel
+
+		return n
+	}
+
+	flatcar, kernel := osVersions([]nodeItem{
+		mk("Flatcar Container Linux by Kinvolk 4230.2.3 (Oklo)", "6.6.95-flatcar"),
+		mk("Flatcar Container Linux by Kinvolk 4230.2.3 (Oklo)", "6.6.95-flatcar"),
+		mk("Flatcar Container Linux by Kinvolk 4459.2.0 (Oklo)", "6.12.47-flatcar"),
+		mk("Some Other OS", ""),
+	})
+
+	assert.Equal(t, []string{"4230.2.3", "4459.2.0", "Some Other OS"}, flatcar)
+	assert.Equal(t, []string{"6.6.95-flatcar", "6.12.47-flatcar"}, kernel)
+}
+
 func TestRoleSort(t *testing.T) {
 	t.Parallel()
 
