@@ -15,6 +15,8 @@ type Info struct {
 	SDUpgradePaths          []string        `json:"sdUpgradePaths"               yaml:"sdUpgradePaths"`
 	SDOngoingUpgrade        *OngoingUpgrade `json:"sdOngoingUpgrade,omitempty"   yaml:"sdOngoingUpgrade,omitempty"`
 	KubernetesVersion       string          `json:"kubernetesVersion"            yaml:"kubernetesVersion"`
+	FlatcarVersions         []string        `json:"flatcarVersions,omitempty"    yaml:"flatcarVersions,omitempty"`
+	KernelVersions          []string        `json:"kernelVersions,omitempty"     yaml:"kernelVersions,omitempty"`
 	EtcdTopology            string          `json:"etcdTopology,omitempty"       yaml:"etcdTopology,omitempty"`
 	LastConfigurationChange time.Time       `json:"lastConfigurationChange"      yaml:"lastConfigurationChange"`
 	CustomPatchesPresent    bool            `json:"customPatchesPresent"         yaml:"customPatchesPresent"`

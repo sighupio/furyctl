@@ -12,6 +12,7 @@ import (
 	"io/fs"
 	"path/filepath"
 	"reflect"
+	"regexp"
 	"slices"
 	"strings"
 	"time"
@@ -53,6 +54,9 @@ var (
 	ErrUpgradeStateNoData   = errors.New("upgrade state configmap has no data")
 	ErrUpgradeStateMissing  = errors.New("upgrade state configmap missing state key")
 	ErrUpgradeStateNotFound = errors.New("upgrade state configmap not found")
+
+	// Matches the version in an osImage such as "Flatcar Container Linux by Kinvolk 4230.2.3 (Oklo)".
+	flatcarVersionRe = regexp.MustCompile(`\d+\.\d+\.\d+`)
 )
 
 // Collector reads cluster information from the Kubernetes secrets and configmaps
@@ -126,7 +130,11 @@ func (c *Collector) Collect() (*Info, error) {
 	}
 
 	if nodes, nodesErr := c.fetchNodes(); nodesErr == nil {
-		info.Nodes = nodes
+		info.Nodes = summarizeNodes(nodes)
+
+		if furyctlConf.Kind == distribution.ImmutableKind {
+			info.FlatcarVersions, info.KernelVersions = osVersions(nodes)
+		}
 	}
 
 	return info, nil
@@ -232,8 +240,32 @@ func (c *Collector) fetchKubernetesVersion() (string, error) {
 	return info.ServerVersion.GitVersion, nil
 }
 
-// fetchNodes summarizes node capacity by role to report cluster shape.
-func (c *Collector) fetchNodes() (*NodesSummary, error) {
+type nodeResource struct {
+	CPU    string `json:"cpu"`
+	Memory string `json:"memory"`
+}
+
+type nodeSystemInfo struct {
+	OSImage       string `json:"osImage"`
+	KernelVersion string `json:"kernelVersion"`
+}
+
+type nodeStatus struct {
+	Capacity nodeResource   `json:"capacity"`
+	NodeInfo nodeSystemInfo `json:"nodeInfo"`
+}
+
+type nodeMetadata struct {
+	Name   string            `json:"name"`
+	Labels map[string]string `json:"labels"`
+}
+
+type nodeItem struct {
+	Metadata nodeMetadata `json:"metadata"`
+	Status   nodeStatus   `json:"status"`
+}
+
+func (c *Collector) fetchNodes() ([]nodeItem, error) {
 	out, err := c.KubectlRunner.Get(
 		false,
 		"all",
@@ -244,36 +276,35 @@ func (c *Collector) fetchNodes() (*NodesSummary, error) {
 		return nil, fmt.Errorf("error getting nodes: %w", err)
 	}
 
-	type nodeResource struct {
-		CPU    string `json:"cpu"`
-		Memory string `json:"memory"`
-	}
-
-	type nodeStatus struct {
-		Capacity nodeResource `json:"capacity"`
-	}
-
-	type nodeMetadata struct {
-		Name   string            `json:"name"`
-		Labels map[string]string `json:"labels"`
-	}
-
-	type nodeItem struct {
-		Metadata nodeMetadata `json:"metadata"`
-		Status   nodeStatus   `json:"status"`
-	}
-
-	type nodeList struct {
+	var list struct {
 		Items []nodeItem `json:"items"`
 	}
-
-	var list nodeList
 	if err := json.Unmarshal([]byte(out), &list); err != nil {
 		return nil, fmt.Errorf("error parsing nodes JSON: %w", err)
 	}
 
-	if len(list.Items) == 0 {
-		return &NodesSummary{}, nil
+	return list.Items, nil
+}
+
+// osVersions returns the distinct Flatcar and kernel versions of the nodes.
+// There is more than one value during a rolling upgrade.
+func osVersions(nodes []nodeItem) ([]string, []string) {
+	flatcar := make([]string, 0, len(nodes))
+	kernel := make([]string, 0, len(nodes))
+
+	for _, n := range nodes {
+		img := n.Status.NodeInfo.OSImage
+		flatcar = append(flatcar, lo.CoalesceOrEmpty(flatcarVersionRe.FindString(img), img))
+		kernel = append(kernel, n.Status.NodeInfo.KernelVersion)
+	}
+
+	return lo.Compact(lo.Uniq(flatcar)), lo.Compact(lo.Uniq(kernel))
+}
+
+// summarizeNodes groups node capacity by role to report cluster shape.
+func summarizeNodes(nodes []nodeItem) *NodesSummary {
+	if len(nodes) == 0 {
+		return &NodesSummary{}
 	}
 
 	groups := map[string]*NodeRoleGroup{}
@@ -282,7 +313,7 @@ func (c *Collector) fetchNodes() (*NodesSummary, error) {
 
 	totals := NodeTotals{}
 
-	for _, item := range list.Items {
+	for _, item := range nodes {
 		role := primaryRole(item.Metadata.Labels)
 		vcpu := parseCPU(item.Status.Capacity.CPU)
 		ramGb := parseMemoryGb(item.Status.Capacity.Memory)
@@ -307,7 +338,7 @@ func (c *Collector) fetchNodes() (*NodesSummary, error) {
 		return *groups[r]
 	})
 
-	return &NodesSummary{Roles: roles, Totals: totals}, nil
+	return &NodesSummary{Roles: roles, Totals: totals}
 }
 
 // latestManagedFieldTime returns the most recent managedFields[].time,
