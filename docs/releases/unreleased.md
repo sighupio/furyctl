@@ -10,7 +10,7 @@ Welcome to the latest release of `furyctl` maintained by SIGHUP by ReeVo team.
 
 ### Immutable
 
-- [[#TBD](https://github.com/sighupio/furyctl/pull/TBD)] `get cluster-info` now shows the Flatcar version and the kernel version of the nodes. If the nodes run different versions, for example during an upgrade, the command shows all of them.
+- [[#820](https://github.com/sighupio/furyctl/pull/820)] `get cluster-info` now shows the Flatcar version and the kernel version of the nodes. If the nodes run different versions, for example during an upgrade, the command shows all of them.
 
 ## Bug fixes 🐞
 
