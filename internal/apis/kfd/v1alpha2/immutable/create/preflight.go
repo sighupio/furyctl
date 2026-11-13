@@ -35,6 +35,11 @@ import (
 var (
 	errImmutable   = errors.New("immutable path changed")
 	errUnsupported = errors.New("unsupported reducer values detected")
+
+	// ErrNoAdminConf means that no control plane host gave admin.conf: the cluster does not exist or does not answer.
+	ErrNoAdminConf = errors.New("no control plane host gave admin.conf")
+	// ErrClusterUnreachable means that the Kubernetes API did not answer with the fetched admin.conf.
+	ErrClusterUnreachable = errors.New("cluster is unreachable")
 )
 
 type Status struct {
@@ -117,85 +122,12 @@ func (p *PreFlight) Exec(renderedConfig map[string]any) (*Status, error) {
 
 	logrus.Info("Running preflight checks...")
 
-	if err := p.Render(); err != nil {
-		return status, err
-	}
+	kc, err := p.FetchKubeconfig()
 
-	adminConfPath := path.Join(p.Path, "admin.conf")
+	status.AllNodesAnswer = kc.AllNodesAnswer
+	status.ClusterExists = kc.ClusterExists
 
-	adminConfPlaybook, err := preflightx.AdminConfPlaybookName(p.Path)
-	if err != nil {
-		return status, fmt.Errorf("error selecting admin.conf playbook: %w", err)
-	}
-
-	// The phase folder holds the files of an earlier run, because CreateRootFolder keeps a
-	// folder that exists. A cluster that the operator removed would therefore read as a cluster
-	// that is there. Remove the files, so that only the playbook below can put them back.
-	for _, f := range []string{adminConfPath, path.Join(p.Path, clusterStateFile)} {
-		if err := os.Remove(f); err != nil && !errors.Is(err, os.ErrNotExist) {
-			return status, fmt.Errorf("error removing %s of an earlier run: %w", path.Base(f), err)
-		}
-	}
-
-	playbookErr := p.runAdminConfPlaybook(adminConfPlaybook)
-
-	probe, hasProbe, err := readClusterState(p.Path)
-	if err != nil {
-		return status, err
-	}
-
-	switch {
-	case hasProbe && playbookErr != nil:
-		// This playbook does not fail when a host does not answer, so its error is a true error.
-		return status, fmt.Errorf("error checking the hosts of the cluster: %w", playbookErr)
-
-	case hasProbe:
-		logrus.Info(probe.summary())
-
-		warning, err := probe.assess(p.controlPlaneHosts())
-		if err != nil {
-			return status, err
-		}
-
-		if warning != "" {
-			logrus.Warn(warning)
-		}
-
-		status.AllNodesAnswer = probe.answers(lo.Map(
-			p.furyctlConf.Spec.Infrastructure.Nodes,
-			func(n public.SpecInfrastructureNode, _ int) string { return n.Hostname },
-		))
-
-	case playbookErr != nil:
-		// A distribution released before the state file gives a playbook that fails when a host
-		// does not answer. This kind creates its machines in the infrastructure phase, so a first
-		// apply cannot reach the control plane hosts, and an error here is the normal answer for
-		// a cluster that is not there yet. The run therefore continues, and the check below gives
-		// the same answer as before. What keeps the run away from another cluster is the gate of
-		// the creator, which stops a phase that reads a cluster when there is none.
-		logrus.Warnf(
-			"furyctl could not read these control plane hosts: %s. It continues as if the cluster "+
-				"does not exist. A first apply gives this message, because the infrastructure phase "+
-				"creates those hosts. If the cluster is there, stop furyctl and make sure that these "+
-				"hosts answer.",
-			strings.Join(p.controlPlaneHosts(), ", "),
-		)
-
-		logrus.Debugf("%s: %v", adminConfPlaybook, playbookErr)
-
-	default:
-		// A distribution released before the state file gives a playbook that ran without an
-		// error, so every control plane host answered. The check below reads admin.conf.
-	}
-
-	// The playbook fetches admin.conf when a control plane node holds one, and it does not
-	// fail when no node holds one. The local file therefore answers the question, which
-	// keeps an error of the playbook an error.
-	if _, err := os.Stat(adminConfPath); err != nil {
-		if !errors.Is(err, os.ErrNotExist) {
-			return status, fmt.Errorf("error reading the kubeconfig of the cluster: %w", err)
-		}
-
+	if errors.Is(err, ErrNoAdminConf) {
 		status.Success = true
 
 		logrus.Debug("Cluster does not exist, skipping state checks")
@@ -205,17 +137,8 @@ func (p *PreFlight) Exec(renderedConfig map[string]any) (*Status, error) {
 		return status, nil
 	}
 
-	if err := kubex.SetConfigEnv(adminConfPath); err != nil {
-		return status, fmt.Errorf("error setting kubeconfig env: %w", err)
-	}
-
-	// ClusterExists comes after KUBECONFIG points to the cluster that the check found.
-	status.ClusterExists = true
-
-	logrus.Info("Checking that the Kubernetes API is reachable...")
-
-	if _, err := p.kubeRunner.Version(); err != nil {
-		return status, fmt.Errorf("cluster is unreachable, make sure you have access to the cluster: %w", err)
+	if err != nil {
+		return status, err
 	}
 
 	diffChecker, err := p.CreateDiffChecker(renderedConfig)
@@ -270,6 +193,144 @@ func (p *PreFlight) Exec(renderedConfig map[string]any) (*Status, error) {
 	status.Success = true
 
 	return status, nil
+}
+
+// Kubeconfig is what FetchKubeconfig learns about the cluster.
+type Kubeconfig struct {
+	// AllNodesAnswer is true when every node of spec.infrastructure.nodes answered.
+	AllNodesAnswer bool
+	// ClusterExists is true when a control plane host gave admin.conf and KUBECONFIG points to it.
+	ClusterExists bool
+}
+
+// FetchKubeconfig fetches admin.conf from the control plane hosts, points KUBECONFIG to it and probes the API.
+// It returns ErrNoAdminConf when no control plane host gives admin.conf. It does not use the state store.
+func (p *PreFlight) FetchKubeconfig() (Kubeconfig, error) {
+	var kc Kubeconfig
+
+	if err := p.Render(); err != nil {
+		return kc, err
+	}
+
+	adminConfPath := path.Join(p.Path, "admin.conf")
+
+	adminConfPlaybook, err := preflightx.AdminConfPlaybookName(p.Path)
+	if err != nil {
+		return kc, fmt.Errorf("error selecting admin.conf playbook: %w", err)
+	}
+
+	// The phase folder holds the files of an earlier run, because CreateRootFolder keeps a
+	// folder that exists. A cluster that the operator removed would therefore read as a cluster
+	// that is there. Remove the files, so that only the playbook below can put them back.
+	if err := removeEarlierRun(adminConfPath, path.Join(p.Path, clusterStateFile)); err != nil {
+		return kc, err
+	}
+
+	playbookErr := p.runAdminConfPlaybook(adminConfPlaybook)
+
+	probe, hasProbe, err := readClusterState(p.Path)
+	if err != nil {
+		return kc, err
+	}
+
+	kc.AllNodesAnswer, err = hostsAnswer(probe, hasProbe, playbookErr, adminConfPlaybook, p.controlPlaneHosts(),
+		lo.Map(p.furyctlConf.Spec.Infrastructure.Nodes,
+			func(n public.SpecInfrastructureNode, _ int) string { return n.Hostname }))
+	if err != nil {
+		return kc, err
+	}
+
+	if err := adminConfFetched(adminConfPath); err != nil {
+		return kc, err
+	}
+
+	if err := kubex.SetConfigEnv(adminConfPath); err != nil {
+		return kc, fmt.Errorf("error setting kubeconfig env: %w", err)
+	}
+
+	// ClusterExists comes after KUBECONFIG points to the cluster that the check found.
+	kc.ClusterExists = true
+
+	logrus.Info("Checking that the Kubernetes API is reachable...")
+
+	if _, err := p.kubeRunner.Version(); err != nil {
+		return kc, fmt.Errorf("%w, make sure you have access to the cluster: %w", ErrClusterUnreachable, err)
+	}
+
+	return kc, nil
+}
+
+// hostsAnswer reads the state of the hosts that the admin.conf playbook left, and whether every node answered.
+func hostsAnswer(
+	probe clusterState, hasProbe bool, playbookErr error, playbook string, controlPlane, nodes []string,
+) (bool, error) {
+	switch {
+	case hasProbe && playbookErr != nil:
+		// This playbook does not fail when a host does not answer, so its error is a true error.
+		return false, fmt.Errorf("error checking the hosts of the cluster: %w", playbookErr)
+
+	case hasProbe:
+		logrus.Info(probe.summary())
+
+		warning, err := probe.assess(controlPlane)
+		if err != nil {
+			return false, err
+		}
+
+		if warning != "" {
+			logrus.Warn(warning)
+		}
+
+		return probe.answers(nodes), nil
+
+	case playbookErr != nil:
+		// A distribution released before the state file gives a playbook that fails when a host
+		// does not answer. This kind creates its machines in the infrastructure phase, so a first
+		// apply cannot reach the control plane hosts, and an error here is the normal answer for
+		// a cluster that is not there yet. The run therefore continues, and the admin.conf check gives
+		// the same answer as before. What keeps the run away from another cluster is the gate of
+		// the creator, which stops a phase that reads a cluster when there is none.
+		logrus.Warnf(
+			"furyctl could not read these control plane hosts: %s. It continues as if the cluster "+
+				"does not exist. A first apply gives this message, because the infrastructure phase "+
+				"creates those hosts. If the cluster is there, stop furyctl and make sure that these "+
+				"hosts answer.",
+			strings.Join(controlPlane, ", "),
+		)
+
+		logrus.Debugf("%s: %v", playbook, playbookErr)
+
+	default:
+		// A distribution released before the state file gives a playbook that ran without an
+		// error, so every control plane host answered. The admin.conf check of the caller decides.
+	}
+
+	return false, nil
+}
+
+// The local admin.conf answers whether the cluster has one: the playbook fetches it when a control plane node
+// holds one and does not fail when no node holds one, which keeps an error of the playbook an error.
+func adminConfFetched(adminConfPath string) error {
+	if _, err := os.Stat(adminConfPath); err != nil {
+		if !errors.Is(err, os.ErrNotExist) {
+			return fmt.Errorf("error reading the kubeconfig of the cluster: %w", err)
+		}
+
+		return ErrNoAdminConf
+	}
+
+	return nil
+}
+
+// removeEarlierRun ignores a missing file: a first run has none.
+func removeEarlierRun(files ...string) error {
+	for _, f := range files {
+		if err := os.Remove(f); err != nil && !errors.Is(err, os.ErrNotExist) {
+			return fmt.Errorf("error removing %s of an earlier run: %w", path.Base(f), err)
+		}
+	}
+
+	return nil
 }
 
 func (p *PreFlight) CreateDiffChecker(renderedConfig map[string]any) (diffs.Checker, error) {

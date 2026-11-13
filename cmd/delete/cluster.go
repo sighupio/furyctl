@@ -289,6 +289,7 @@ func NewClusterCmd() *cobra.Command {
 			cluster.OperationPhaseInfrastructure,
 			cluster.OperationPhaseKubernetes,
 			cluster.OperationPhaseDistribution,
+			cluster.OperationPhasePlugins + " (Immutable only)",
 		}, ", "),
 	)
 
@@ -297,6 +298,7 @@ func NewClusterCmd() *cobra.Command {
 			cluster.OperationPhaseInfrastructure,
 			cluster.OperationPhaseKubernetes,
 			cluster.OperationPhaseDistribution,
+			cluster.OperationPhasePlugins,
 		}, cobra.ShellCompDirectiveDefault
 	}); err != nil {
 		logrus.Fatalf("error while registering flag completion: %v", err)
