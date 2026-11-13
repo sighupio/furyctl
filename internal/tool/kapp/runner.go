@@ -5,6 +5,7 @@
 package kapp
 
 import (
+	"bytes"
 	"fmt"
 
 	"github.com/google/uuid"
@@ -62,6 +63,40 @@ func (r *Runner) Deploy(manifestPath string, params ...string) error {
 	}
 
 	return nil
+}
+
+// Delete deletes every object of the app in the order of kapp's built-in delete rules.
+func (r *Runner) Delete(app string, params ...string) error {
+	args := append([]string{"delete", "-a", app, "-n", "kube-system", "-y"}, params...)
+
+	cmd, id := r.newCmd(args, false)
+	defer r.deleteCmd(id)
+
+	if _, err := execx.CombinedOutput(cmd); err != nil {
+		return fmt.Errorf("error deleting app %s: %w", app, err)
+	}
+
+	return nil
+}
+
+// Inspect returns the standard output of kapp inspect for the app.
+func (r *Runner) Inspect(app string, params ...string) (string, error) {
+	args := append([]string{"inspect", "-a", app, "-n", "kube-system"}, params...)
+
+	// Sensitive: --raw prints whole objects, Secrets included, so nothing reaches the terminal or the logs.
+	cmd, id := r.newCmd(args, true)
+	defer r.deleteCmd(id)
+
+	if err := cmd.Run(); err != nil {
+		return "", fmt.Errorf("error inspecting app %s: %w", app, err)
+	}
+
+	out, ok := cmd.Stdout.(*bytes.Buffer)
+	if !ok {
+		return "", execx.ErrCastingToBuffer
+	}
+
+	return out.String(), nil
 }
 
 func (r *Runner) Version() (string, error) {

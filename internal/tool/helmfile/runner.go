@@ -102,6 +102,23 @@ func (r *Runner) Apply() error {
 	return nil
 }
 
+// Destroy runs helmfile destroy with the config, folder and output of Apply.
+func (r *Runner) Destroy(params ...string) error {
+	args := append([]string{"destroy"}, params...)
+
+	region := execx.NewOutputRegion()
+	defer region.Clear()
+
+	cmd, id := r.newCmd(args, region, region.Stream())
+	defer r.deleteCmd(id)
+
+	if _, err := execx.CombinedOutput(cmd); err != nil {
+		return err //nolint:wrapcheck // The error names the command.
+	}
+
+	return nil
+}
+
 func (r *Runner) Version() (string, error) {
 	cmd, id := r.newCmd([]string{"version", "-o=short"}, nil, nil)
 	defer r.deleteCmd(id)
