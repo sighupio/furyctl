@@ -19,6 +19,7 @@ import (
 	"github.com/sighupio/furyctl/internal/airgap"
 	"github.com/sighupio/furyctl/internal/cluster"
 	"github.com/sighupio/furyctl/internal/config"
+	"github.com/sighupio/furyctl/internal/distribution"
 	"github.com/sighupio/furyctl/internal/flags"
 	"github.com/sighupio/furyctl/internal/git"
 	"github.com/sighupio/furyctl/internal/lockfile"
@@ -35,6 +36,7 @@ type ClusterCmdFlags struct {
 	FuryctlPath           string
 	DistroLocation        string
 	Phase                 string
+	DeleteNode            string
 	BinPath               string
 	Force                 bool
 	SkipVpn               bool
@@ -80,160 +82,7 @@ func NewClusterCmd() *cobra.Command {
 				return err
 			}
 
-			// Init paths.
-
-			outDir := flags.Outdir
-
-			if flags.DryRun {
-				logrus.Info("Dry run mode enabled, no changes will be applied")
-			}
-
-			var distrodl *dist.Downloader
-
-			// Init first half of collaborators.
-			client := netx.NewGoGetterClient()
-			executor := execx.NewStdExecutor()
-			depsvl := dependencies.NewValidator(executor, flags.BinPath, flags.FuryctlPath)
-
-			if flags.DistroLocation == "" {
-				distrodl = dist.NewCachingDownloader(client, outDir, flags.GitProtocol, flags.DistroPatchesLocation)
-			} else {
-				distrodl = dist.NewDownloader(client, flags.GitProtocol, flags.DistroPatchesLocation)
-			}
-
-			execx.NoTTY = flags.NoTTY
-
-			statusx.Start("delete", flags.NoTTY)
-
-			// Validate base requirements.
-			if err := depsvl.ValidateBaseReqs(); err != nil {
-				return fmt.Errorf("error while validating requirements: %w", err)
-			}
-
-			// Download the distribution.
-			statusx.Working("Downloading the distribution", -1)
-			logrus.Info("Downloading distribution...")
-			res, err := distrodl.Download(flags.DistroLocation, flags.FuryctlPath)
-			if err != nil {
-				return fmt.Errorf("error while downloading distribution: %w", err)
-			}
-
-			statusx.SetTitle("delete " + res.MinimalConf.Metadata.Name)
-
-			lockFileHandler := lockfile.NewLockFile(res.MinimalConf.Metadata.Name)
-			err = lockFileHandler.Verify()
-			if err != nil {
-				return fmt.Errorf("error while verifying lock file %s: %w", lockFileHandler.Path, err)
-			}
-
-			err = lockFileHandler.Create()
-			if err != nil {
-				return fmt.Errorf("error while creating lock file %s: %w", lockFileHandler.Path, err)
-			}
-			defer lockFileHandler.Remove() //nolint:errcheck // ignore error
-
-			execx.OnStop(func() {
-				logrus.Debugf("Removing lock file %s", lockFileHandler.Path)
-
-				if err := lockFileHandler.Remove(); err != nil {
-					logrus.Errorf("error while removing lock file %s: %v", lockFileHandler.Path, err)
-				}
-			})
-			defer execx.OnStop(nil)
-
-			basePath := filepath.Join(outDir, ".furyctl", res.MinimalConf.Metadata.Name)
-
-			// Init second half of collaborators.
-			depsdl := dependencies.NewCachingDownloader(client, outDir, basePath, flags.BinPath, flags.GitProtocol)
-
-			// Validate the furyctl.yaml file.
-			logrus.Info("Validating configuration file...")
-			if err := config.Validate(flags.FuryctlPath, res.RepoPath); err != nil {
-				return fmt.Errorf("error while validating configuration file: %w", err)
-			}
-
-			// Download the dependencies.
-			if !flags.SkipDepsDownload {
-				statusx.Working("Downloading the dependencies", -1)
-				logrus.Info("Downloading dependencies...")
-				if errs, _ := depsdl.DownloadAll(res.DistroManifest, res.MinimalConf.Kind); len(errs) > 0 {
-					return fmt.Errorf("%w: %v", ErrDownloadDependenciesFailed, errs)
-				}
-			} else {
-				logrus.Info("Dependencies download skipped")
-			}
-
-			// Validate the dependencies, unless explicitly told to skip it.
-			if !flags.SkipDepsValidation {
-				logrus.Info("Validating dependencies...")
-				if err := depsvl.Validate(res); err != nil {
-					return fmt.Errorf("error while validating dependencies: %w", err)
-				}
-			} else {
-				logrus.Info("Dependencies validation skipped")
-			}
-
-			// Define cluster deletion paths.
-			paths := cluster.DeleterPaths{
-				ConfigPath: flags.FuryctlPath,
-				WorkDir:    basePath,
-				BinPath:    flags.BinPath,
-				DistroPath: res.RepoPath,
-			}
-
-			// Set debug mode.
-			execx.Debug = flags.Debug
-
-			clusterDeleter, err := cluster.NewDeleter(
-				res.MinimalConf,
-				res.DistroManifest,
-				paths,
-				flags.Phase,
-				flags.SkipVpn,
-				flags.VpnAutoConnect,
-				flags.DryRun,
-			)
-			if err != nil {
-				return fmt.Errorf("error while initializing cluster deleter: %w", err)
-			}
-
-			if !flags.Force {
-				warning := "\nWARNING: You are about to delete a cluster. This action is irreversible."
-
-				if warner, ok := clusterDeleter.(cluster.DeleteWarner); ok {
-					warning = "\n" + warner.DeleteWarning()
-				}
-
-				_, err = fmt.Println(warning)
-				if err != nil {
-					return fmt.Errorf("error while printing to stdout: %w", err)
-				}
-
-				_, err = fmt.Println("Are you sure you want to continue? Only 'yes' will be accepted to confirm.")
-				if err != nil {
-					return fmt.Errorf("error while printing to stdout: %w", err)
-				}
-
-				prompter := iox.NewPrompter(bufio.NewReader(os.Stdin))
-
-				prompt, err := prompter.Ask("yes")
-				if err != nil {
-					return fmt.Errorf("error reading user input: %w", err)
-				}
-
-				if !prompt {
-					return nil
-				}
-			}
-
-			err = clusterDeleter.Delete()
-			if err != nil {
-				return fmt.Errorf("error while deleting cluster: %w", err)
-			}
-
-			statusx.Done("Cluster deleted")
-
-			return nil
+			return runDelete(flags)
 		},
 	}
 
@@ -335,6 +184,189 @@ func NewClusterCmd() *cobra.Command {
 	)
 
 	return clusterCmd
+}
+
+// runDelete is shared by delete cluster and delete node.
+func runDelete(cmdFlags ClusterCmdFlags) error {
+	// Init paths.
+
+	outDir := cmdFlags.Outdir
+
+	if cmdFlags.DryRun {
+		logrus.Info("Dry run mode enabled, no changes will be applied")
+	}
+
+	var distrodl *dist.Downloader
+
+	// Init first half of collaborators.
+	client := netx.NewGoGetterClient()
+	executor := execx.NewStdExecutor()
+	depsvl := dependencies.NewValidator(executor, cmdFlags.BinPath, cmdFlags.FuryctlPath)
+
+	if cmdFlags.DistroLocation == "" {
+		distrodl = dist.NewCachingDownloader(client, outDir, cmdFlags.GitProtocol, cmdFlags.DistroPatchesLocation)
+	} else {
+		distrodl = dist.NewDownloader(client, cmdFlags.GitProtocol, cmdFlags.DistroPatchesLocation)
+	}
+
+	execx.NoTTY = cmdFlags.NoTTY
+
+	statusx.Start("delete", cmdFlags.NoTTY)
+
+	// Validate base requirements.
+	if err := depsvl.ValidateBaseReqs(); err != nil {
+		return fmt.Errorf("error while validating requirements: %w", err)
+	}
+
+	// Download the distribution.
+	statusx.Working("Downloading the distribution", -1)
+	logrus.Info("Downloading distribution...")
+	res, err := distrodl.Download(cmdFlags.DistroLocation, cmdFlags.FuryctlPath)
+	if err != nil {
+		return fmt.Errorf("error while downloading distribution: %w", err)
+	}
+
+	statusx.SetTitle("delete " + res.MinimalConf.Metadata.Name)
+
+	lockFileHandler := lockfile.NewLockFile(res.MinimalConf.Metadata.Name)
+	err = lockFileHandler.Verify()
+	if err != nil {
+		return fmt.Errorf("error while verifying lock file %s: %w", lockFileHandler.Path, err)
+	}
+
+	err = lockFileHandler.Create()
+	if err != nil {
+		return fmt.Errorf("error while creating lock file %s: %w", lockFileHandler.Path, err)
+	}
+	defer lockFileHandler.Remove() //nolint:errcheck // ignore error
+
+	execx.OnStop(func() {
+		logrus.Debugf("Removing lock file %s", lockFileHandler.Path)
+
+		if err := lockFileHandler.Remove(); err != nil {
+			logrus.Errorf("error while removing lock file %s: %v", lockFileHandler.Path, err)
+		}
+	})
+	defer execx.OnStop(nil)
+
+	basePath := filepath.Join(outDir, ".furyctl", res.MinimalConf.Metadata.Name)
+
+	// Init second half of collaborators.
+	depsdl := dependencies.NewCachingDownloader(client, outDir, basePath, cmdFlags.BinPath, cmdFlags.GitProtocol)
+
+	// Validate the furyctl.yaml file.
+	logrus.Info("Validating configuration file...")
+	if err := config.Validate(cmdFlags.FuryctlPath, res.RepoPath); err != nil {
+		return fmt.Errorf("error while validating configuration file: %w", err)
+	}
+
+	// Download the dependencies.
+	if !cmdFlags.SkipDepsDownload {
+		statusx.Working("Downloading the dependencies", -1)
+		logrus.Info("Downloading dependencies...")
+		if errs, _ := depsdl.DownloadAll(res.DistroManifest, res.MinimalConf.Kind); len(errs) > 0 {
+			return fmt.Errorf("%w: %v", ErrDownloadDependenciesFailed, errs)
+		}
+	} else {
+		logrus.Info("Dependencies download skipped")
+	}
+
+	// Validate the dependencies, unless explicitly told to skip it.
+	if !cmdFlags.SkipDepsValidation {
+		logrus.Info("Validating dependencies...")
+		if err := depsvl.Validate(res); err != nil {
+			return fmt.Errorf("error while validating dependencies: %w", err)
+		}
+	} else {
+		logrus.Info("Dependencies validation skipped")
+	}
+
+	// Define cluster deletion paths.
+	paths := cluster.DeleterPaths{
+		ConfigPath: cmdFlags.FuryctlPath,
+		WorkDir:    basePath,
+		BinPath:    cmdFlags.BinPath,
+		DistroPath: res.RepoPath,
+	}
+
+	// Set debug mode.
+	execx.Debug = cmdFlags.Debug
+
+	clusterDeleter, err := cluster.NewDeleter(
+		res.MinimalConf,
+		res.DistroManifest,
+		paths,
+		cmdFlags.Phase,
+		cmdFlags.SkipVpn,
+		cmdFlags.VpnAutoConnect,
+		cmdFlags.DryRun,
+	)
+	if err != nil {
+		return fmt.Errorf("error while initializing cluster deleter: %w", err)
+	}
+
+	if cmdFlags.DeleteNode != "" {
+		if res.MinimalConf.Kind != distribution.ImmutableKind {
+			return fmt.Errorf("%w: only the Immutable kind supports delete node", ErrParsingFlag)
+		}
+
+		clusterDeleter.SetProperty(cluster.DeleterPropertyDeleteNode, cmdFlags.DeleteNode)
+
+		if checker, ok := clusterDeleter.(cluster.NodeChecker); ok {
+			if err := checker.CheckNode(); err != nil {
+				return fmt.Errorf("error while deleting node: %w", err)
+			}
+		}
+	}
+
+	// A dry run of delete node changes nothing: no confirmation.
+	if !cmdFlags.Force && (cmdFlags.DeleteNode == "" || !cmdFlags.DryRun) {
+		warning := "\nWARNING: You are about to delete a cluster. This action is irreversible."
+
+		if warner, ok := clusterDeleter.(cluster.DeleteWarner); ok {
+			warning = "\n" + warner.DeleteWarning()
+		}
+
+		_, err = fmt.Println(warning)
+		if err != nil {
+			return fmt.Errorf("error while printing to stdout: %w", err)
+		}
+
+		_, err = fmt.Println("Are you sure you want to continue? Only 'yes' will be accepted to confirm.")
+		if err != nil {
+			return fmt.Errorf("error while printing to stdout: %w", err)
+		}
+
+		prompter := iox.NewPrompter(bufio.NewReader(os.Stdin))
+
+		prompt, err := prompter.Ask("yes")
+		if err != nil {
+			return fmt.Errorf("error reading user input: %w", err)
+		}
+
+		if !prompt {
+			return nil
+		}
+	}
+
+	err = clusterDeleter.Delete()
+	if err != nil && cmdFlags.DeleteNode != "" {
+		return fmt.Errorf("error while deleting node: %w", err)
+	}
+
+	if err != nil {
+		return fmt.Errorf("error while deleting cluster: %w", err)
+	}
+
+	if cmdFlags.DeleteNode != "" {
+		statusx.Done("Node deleted")
+
+		return nil
+	}
+
+	statusx.Done("Cluster deleted")
+
+	return nil
 }
 
 func getDeleteClusterCmdFlags() (ClusterCmdFlags, error) {

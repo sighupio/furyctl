@@ -145,6 +145,21 @@ func (k *Kubernetes) UpgradeWorkerNodes(
 	return k.runWorkerUpgradePlaybooks(nodes, onResult)
 }
 
+// JoinNode joins one reinstalled worker again with reinstall-node.yaml.
+func (k *Kubernetes) JoinNode(host string) error {
+	if err := k.prepare(); err != nil {
+		return err
+	}
+
+	logrus.Infof("Joining %s to the cluster...", host)
+
+	if _, err := k.ansibleRunner.Playbook(ReinstallNodePlaybook, "-e", ReinstallTargetVar+"="+host); err != nil {
+		return fmt.Errorf("error joining %s: %w", host, err)
+	}
+
+	return nil
+}
+
 // runWorkerUpgradePlaybooks upgrades one node for each run of the playbook. The caller
 // renders the phase first.
 //

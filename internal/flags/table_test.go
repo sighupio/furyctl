@@ -28,7 +28,7 @@ import (
 var commandsPerSection = map[string][]string{
 	flags.CommandGlobal:   {"furyctl"},
 	flags.CommandApply:    {"furyctl apply"},
-	flags.CommandDelete:   {"furyctl delete cluster"},
+	flags.CommandDelete:   {"furyctl delete cluster", "furyctl delete node"},
 	flags.CommandCreate:   {"furyctl create pki"},
 	flags.CommandGet:      {"furyctl get kubeconfig", "furyctl get cluster-info", "furyctl get upgrade-paths", "furyctl get supported-versions"},
 	flags.CommandDiff:     {"furyctl diff"},
@@ -48,6 +48,8 @@ var flagsNotInTheTable = []string{
 	"help",
 	// `https` is deprecated in favor of `git-protocol`.
 	"https",
+	// It erases one host. A value in the file would erase it again at each run.
+	"reinstall-node",
 }
 
 // customFlagTypes maps the type of a flag that has its own pflag value to the type that the

@@ -23,6 +23,7 @@ const (
 	DeleterPropertySkipVpn        = "skipvpn"
 	DeleterPropertyVpnAutoConnect = "vpnautoconnect"
 	DeleterPropertyDryRun         = "dryrun"
+	DeleterPropertyDeleteNode     = "deletenode"
 )
 
 var delFactories = make(map[string]map[string]DeleterFactory) //nolint:gochecknoglobals, lll // This patterns requires factories
@@ -51,6 +52,11 @@ type Deleter interface {
 // DeleteWarner is a deleter with its own warning before the delete confirmation.
 type DeleteWarner interface {
 	DeleteWarning() string
+}
+
+// NodeChecker is a deleter that checks the host of delete node before the confirmation.
+type NodeChecker interface {
+	CheckNode() error
 }
 
 func NewDeleter(

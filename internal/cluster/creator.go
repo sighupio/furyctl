@@ -29,6 +29,7 @@ const (
 	CreatorPropertyUpgrade              = "upgrade"
 	CreatorPropertyExternalUpgradesPath = "externalupgradespath"
 	CreatorPropertyUpgradeNode          = "upgradenode"
+	CreatorPropertyReinstallNode        = "reinstallnode"
 	CreatorPropertyPostApplyPhases      = "postapplyphases"
 )
 
