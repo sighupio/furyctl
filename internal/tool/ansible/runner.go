@@ -8,7 +8,9 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"os/exec"
 	"path/filepath"
+	"syscall"
 
 	"github.com/google/uuid"
 
@@ -74,6 +76,32 @@ func (r *Runner) Playbook(params ...string) ([]byte, error) {
 // PlaybookProbe runs a playbook whose failure the caller expects and handles, so a failure saves no output file.
 func (r *Runner) PlaybookProbe(params ...string) ([]byte, error) {
 	return r.runPlaybook(true, params)
+}
+
+// PlaybookUnstoppable runs a playbook outside execx, so that a signal does not stop it.
+func (r *Runner) PlaybookUnstoppable(params ...string) ([]byte, error) {
+	name, args := r.paths.AnsiblePlaybook, params
+	env := os.Environ()
+
+	if r.paths.Python != "" {
+		name, args = r.paths.Python, append([]string{r.paths.AnsiblePlaybook}, params...)
+
+		if r.paths.CollectionsPath != "" {
+			env = append(env, "ANSIBLE_COLLECTIONS_PATH="+r.paths.CollectionsPath)
+		}
+	}
+
+	cmd := exec.Command(name, args...) //nolint:noctx // The stop context is already cancelled.
+	cmd.Dir = r.paths.WorkDir
+	cmd.Env = env
+	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true} // Another Ctrl-C does not stop it.
+
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		return out, fmt.Errorf("error running %s: %w", r.paths.AnsiblePlaybook, err)
+	}
+
+	return out, nil
 }
 
 func (r *Runner) Exec(params ...string) ([]byte, error) {

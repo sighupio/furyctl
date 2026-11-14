@@ -132,13 +132,15 @@ func NewClusterCmd() *cobra.Command {
 			}
 			defer lockFileHandler.Remove() //nolint:errcheck // ignore error
 
-			execx.OnStop(func() {
+			removeLock := func() {
 				logrus.Debugf("Removing lock file %s", lockFileHandler.Path)
 
 				if err := lockFileHandler.Remove(); err != nil {
 					logrus.Errorf("error while removing lock file %s: %v", lockFileHandler.Path, err)
 				}
-			})
+			}
+
+			execx.OnStop(removeLock)
 			defer execx.OnStop(nil)
 
 			basePath := filepath.Join(outDir, ".furyctl", res.MinimalConf.Metadata.Name)
@@ -197,8 +199,21 @@ func NewClusterCmd() *cobra.Command {
 				return fmt.Errorf("error while initializing cluster deleter: %w", err)
 			}
 
+			if stopper, ok := clusterDeleter.(cluster.DeleteStopper); ok {
+				execx.OnStop(func() {
+					stopper.OnDeleteStop()
+					removeLock()
+				})
+			}
+
 			if !flags.Force {
-				_, err = fmt.Println("\nWARNING: You are about to delete a cluster. This action is irreversible.")
+				warning := "\nWARNING: You are about to delete a cluster. This action is irreversible."
+
+				if warner, ok := clusterDeleter.(cluster.DeleteWarner); ok {
+					warning = "\n" + warner.DeleteWarning()
+				}
+
+				_, err = fmt.Println(warning)
 				if err != nil {
 					return fmt.Errorf("error while printing to stdout: %w", err)
 				}
@@ -274,6 +289,7 @@ func NewClusterCmd() *cobra.Command {
 			cluster.OperationPhaseInfrastructure,
 			cluster.OperationPhaseKubernetes,
 			cluster.OperationPhaseDistribution,
+			cluster.OperationPhasePlugins + " (Immutable only)",
 		}, ", "),
 	)
 
@@ -282,6 +298,7 @@ func NewClusterCmd() *cobra.Command {
 			cluster.OperationPhaseInfrastructure,
 			cluster.OperationPhaseKubernetes,
 			cluster.OperationPhaseDistribution,
+			cluster.OperationPhasePlugins,
 		}, cobra.ShellCompDirectiveDefault
 	}); err != nil {
 		logrus.Fatalf("error while registering flag completion: %v", err)
