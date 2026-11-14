@@ -8,6 +8,8 @@ Welcome to the latest release of `furyctl` maintained by SIGHUP by ReeVo team.
 
 - [[#812](https://github.com/sighupio/furyctl/pull/812)] `apply`, `delete cluster`, `serve` and `renew` now report their status to the terminal: the phase, the progress, a prompt that waits for an answer, and the result. A terminal with OSC 7501 support (for example Rex) shows the status on the tab, and the result stays after furyctl stops. A terminal with OSC 9;4 support (for example iTerm2, Ghostty, Windows Terminal, or the VS Code terminal with `${progress}` in its tab title) shows a progress bar. Other terminals ignore the sequences, and furyctl sends none with `--no-tty` or when the output is not a terminal.
 
+- [[#818](https://github.com/sighupio/furyctl/pull/818)] `furyctl diff` has a new output: a CONFIG table with one row for each changed field, with secrets hidden, and a RESOURCES section with the objects an apply would create, update or delete in the cluster. To get the resources, `furyctl diff` now works like `furyctl apply --dry-run`: it takes the lock of apply, downloads the dependencies and connects to the nodes, so it is slower than before. Use the new `--config-only` flag to print only the CONFIG table, without the lock, the downloads or the dry run.
+
 ### Immutable
 
 - [[#820](https://github.com/sighupio/furyctl/pull/820)] `get cluster-info` now shows the Flatcar version and the kernel version of the nodes. If the nodes run different versions, for example during an upgrade, the command shows all of them.
