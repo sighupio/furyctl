@@ -6,6 +6,7 @@ Welcome to the latest release of `furyctl` maintained by SIGHUP by ReeVo team.
 
 ### All kinds
 
+- [[#TBD](https://github.com/sighupio/furyctl/pull/TBD)] Adds support for SD v1.36.1, with the upgrade paths `1.36.0-1.36.1` and `1.35.2-1.36.1` for all kinds.
 - [[#812](https://github.com/sighupio/furyctl/pull/812)] `apply`, `delete cluster`, `serve` and `renew` now report their status to the terminal: the phase, the progress, a prompt that waits for an answer, and the result. A terminal with OSC 7501 support (for example Rex) shows the status on the tab, and the result stays after furyctl stops. A terminal with OSC 9;4 support (for example iTerm2, Ghostty, Windows Terminal, or the VS Code terminal with `${progress}` in its tab title) shows a progress bar. Other terminals ignore the sequences, and furyctl sends none with `--no-tty` or when the output is not a terminal.
 
 ### Immutable
