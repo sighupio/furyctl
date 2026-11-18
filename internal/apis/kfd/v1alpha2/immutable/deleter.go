@@ -12,7 +12,6 @@ import (
 	"slices"
 	"strconv"
 	"strings"
-	"sync/atomic"
 
 	"github.com/samber/lo"
 	"github.com/sirupsen/logrus"
@@ -22,6 +21,7 @@ import (
 	del "github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/immutable/delete"
 	"github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/immutable/public"
 	"github.com/sighupio/furyctl/internal/cluster"
+	"github.com/sighupio/furyctl/internal/tool/ansible"
 )
 
 var (
@@ -34,11 +34,7 @@ var (
 	)
 	ErrDeleteNotSupported = errors.New("does not support Immutable delete")
 	ErrPreflightFailed    = errors.New("the delete preflight failed, nothing was changed on any host")
-	ErrDeleteStopped      = errors.New("stopped before erasing any disk, nothing was changed on any host")
-	ErrWipeFailed         = errors.New(
-		"erasing the install disks failed on some hosts: the ansible output above names them, " +
-			"the other hosts are erased and restart",
-	)
+	ErrWipeFailed         = errors.New("erasing the install disks failed on some hosts: " + wipeRecovery)
 
 	// The phases of a delete without --phase, in reverse order of apply.
 	//
@@ -59,17 +55,11 @@ const (
 	// The plugins delete script deletes only the plugins that own a StorageClass with this flag, the others without it.
 	storageClassProvidersFlag = "--storage-class-providers"
 
-	stepIdle    int32 = 0
-	stepStopped int32 = 1
-	stepWiping  int32 = 2
+	// Erasing an install disk again changes nothing: the recovery does not need to know which hosts were erased.
+	wipeRecovery = "erase by hand the install disk of every host that you can still reach (wipefs -af <install disk>, " +
+		"then reboot; it changes nothing on a host that is already erased), then run furyctl apply to install " +
+		"the cluster again"
 )
-
-// playbookRunner is ansible.Runner in the rendered preflight folder.
-type playbookRunner interface {
-	Playbook(params ...string) ([]byte, error)
-	// PlaybookUnstoppable runs a playbook that a signal does not stop.
-	PlaybookUnstoppable(params ...string) ([]byte, error)
-}
 
 type ClusterDeleter struct {
 	paths       cluster.DeleterPaths
@@ -78,14 +68,8 @@ type ClusterDeleter struct {
 	phase       string
 	dryRun      bool
 
-	// A signal before the wipe call stops the delete, and during it waits for the call to end.
-	step  atomic.Int32
-	wiped chan struct{}
-
-	// The tests replace these; nil means the real ones.
-	newRunner       func() (playbookRunner, error)
-	fetchKubeconfig func() error
-	shell           del.ShellRunner
+	// The preflight folder, rendered once for the node checks and the kubeconfig.
+	pf *create.PreFlight
 }
 
 func (c *ClusterDeleter) SetProperties(props []cluster.DeleterProperty) {
@@ -128,35 +112,40 @@ func (c *ClusterDeleter) DeleteWarning() string {
 		return "WARNING: The Immutable kind has no kubernetes delete: nothing will be deleted."
 	}
 
-	var parts []string
+	var actions []string
 
 	if slices.Contains(phases, cluster.OperationPhasePlugins) {
-		parts = append(parts, "You are about to DELETE the plugins of the Immutable cluster: the kapp apps "+
-			"kfd-plugin-* and the helm releases of spec.plugins, with their custom resources and CRDs.")
+		actions = append(actions, "- DELETE all the plugins defined in spec.plugins, with their custom resources and CRDs.")
 	}
 
 	if slices.Contains(phases, cluster.OperationPhaseDistribution) {
-		parts = append(parts, "You are about to DELETE the distribution of the Immutable cluster: the kapp app kfd, "+
-			"with its custom resources, CRDs and the PVCs of its StatefulSets.")
+		actions = append(actions, "- DELETE the distribution modules with its custom resources, CRDs and the PVCs "+
+			"of its StatefulSets.")
 	}
 
-	if slices.Contains(phases, cluster.OperationPhaseInfrastructure) {
+	infra := slices.Contains(phases, cluster.OperationPhaseInfrastructure)
+	if infra {
 		hosts := c.hosts()
 
-		parts = append(parts, fmt.Sprintf(
-			"You are about to ERASE every node of the Immutable cluster (%d hosts: %s).\n"+
-				"The partition table of the install disk of every host is erased, and the host restarts. "+
-				"Nothing of the cluster or of the install can be used again.\n"+
-				"NOT removed: data on other disks, and resources outside the nodes (LoadBalancer IPs, DNS records, "+
-				"external volumes). This is not a secure erase.\n"+
-				"With an empty install disk the hosts boot from the network and wait there until furyctl apply "+
-				"installs them again.",
+		actions = append(actions, fmt.Sprintf(
+			"- ERASE every node of the Immutable cluster (%d hosts: %s). The partition table of the install disk of "+
+				"every host is erased, and the host restarts. Nothing of the cluster or of the install can be used again.",
 			len(hosts), strings.Join(hosts, ", "),
 		))
 	}
 
-	return "WARNING: " + strings.Join(parts, "\n") +
-		"\nThis action is irreversible. Run with --dry-run first to check it without changing anything."
+	warning := "WARNING: You are about to perform the following unrecoverable actions:\n\n" + strings.Join(actions, "\n")
+
+	if infra {
+		warning += "\n\nNOT removed: data on other disks, and resources outside the nodes (LoadBalancer IPs, " +
+			"DNS records, external volumes). This is not a secure erase."
+	}
+
+	if !c.dryRun {
+		warning += "\n\nRun with --dry-run first to check it without changing anything."
+	}
+
+	return warning
 }
 
 // Delete runs the selected phases in reverse order of apply and stops at the first error.
@@ -168,7 +157,7 @@ func (c *ClusterDeleter) Delete() error {
 
 	if slices.Equal(phases, []string{cluster.OperationPhaseKubernetes}) {
 		logrus.Info("The Immutable kind has no kubernetes delete, nothing was deleted. " +
-			"--phase infrastructure returns the nodes to their original state and erases all the OS content.")
+			"Use --phase infrastructure to erase the install disk of the nodes.")
 
 		return nil
 	}
@@ -179,7 +168,7 @@ func (c *ClusterDeleter) Delete() error {
 
 	infra := slices.Contains(phases, cluster.OperationPhaseInfrastructure)
 
-	var runner playbookRunner
+	var runner *ansible.Runner
 
 	if infra {
 		if runner, err = c.prepare(); err != nil {
@@ -210,16 +199,6 @@ func (c *ClusterDeleter) Delete() error {
 	return c.wipe(runner)
 }
 
-// OnDeleteStop keeps a signal from starting the wipe call, or waits for a running one, when a signal stops furyctl.
-func (c *ClusterDeleter) OnDeleteStop() {
-	if c.step.CompareAndSwap(stepIdle, stepStopped) || c.step.Load() != stepWiping {
-		return
-	}
-
-	logrus.Warn("The wipe call does not stop, waiting for it to end...")
-	<-c.wiped
-}
-
 // A workloadStep runs a delete script when its phase is selected.
 type workloadStep struct {
 	phase   string
@@ -230,14 +209,14 @@ type workloadStep struct {
 
 // deleteWorkloads runs the plugins and distribution delete scripts of the selected phases; a dry run only renders them.
 func (c *ClusterDeleter) deleteWorkloads(phases []string) error {
-	plugins := del.NewPlugins(c.kfdManifest, c.paths, c.dryRun, c.shell)
+	plugins := del.NewPlugins(c.kfdManifest, c.paths, c.dryRun)
 
 	// The StorageClass providers go after the distribution, whose PVCs they serve.
 	steps := lo.Filter([]workloadStep{
 		{cluster.OperationPhasePlugins, "Deleting the plugins that own no StorageClass...", plugins, nil},
 		{
 			cluster.OperationPhaseDistribution, "Deleting SIGHUP Distribution...",
-			del.NewDistribution(c.kfdManifest, c.paths, c.dryRun, c.shell), nil,
+			del.NewDistribution(c.kfdManifest, c.paths, c.dryRun), nil,
 		},
 		{
 			cluster.OperationPhasePlugins, "Deleting the plugins that own a StorageClass...",
@@ -268,7 +247,7 @@ func (c *ClusterDeleter) deleteWorkloads(phases []string) error {
 }
 
 // checkNodes runs the node checks of the delete playbook.
-func (c *ClusterDeleter) checkNodes(runner playbookRunner) error {
+func (c *ClusterDeleter) checkNodes(runner *ansible.Runner) error {
 	hosts := c.hosts()
 
 	logrus.Infof("Checking the %d hosts: MAC address, Flatcar, install disk...", len(hosts))
@@ -281,29 +260,18 @@ func (c *ClusterDeleter) checkNodes(runner playbookRunner) error {
 }
 
 // wipe erases the install disk of every host with the distribution delete playbook.
-func (c *ClusterDeleter) wipe(runner playbookRunner) error {
+func (c *ClusterDeleter) wipe(runner *ansible.Runner) error {
 	hosts := c.hosts()
-
-	c.wiped = make(chan struct{})
-	if !c.step.CompareAndSwap(stepIdle, stepWiping) {
-		return ErrDeleteStopped
-	}
 
 	logrus.Infof("Erasing the install disk of the %d hosts and restarting them...", len(hosts))
 
-	// Unstoppable: a wipe call cut short erases only part of the cluster.
-	out, err := runner.PlaybookUnstoppable(playbookArgs(hosts, "wipe")...)
-
-	// The result of each host is printed before wiped is closed: a stop handler waiting on it exits furyctl.
-	logrus.Info(strings.TrimSpace(string(out)))
-	close(c.wiped)
-
-	if err != nil {
+	// One fork per host: every host gets the wipe in the same batch.
+	if _, err := runner.Playbook(append(playbookArgs(hosts, "wipe"), "-f", strconv.Itoa(len(hosts)))...); err != nil {
 		return fmt.Errorf("%w: %w", ErrWipeFailed, err)
 	}
 
 	logrus.Infof("Delete completed, the install disks of %d hosts are erased: %s", len(hosts), strings.Join(hosts, ", "))
-	logrus.Info("The hosts boot from the network and wait there: run furyctl apply to install them again")
+	logrus.Info("Run furyctl apply to install them again")
 
 	return nil
 }
@@ -342,7 +310,7 @@ func (c *ClusterDeleter) checkScripts(phases []string) error {
 }
 
 // prepare checks that the distribution ships the delete playbook and renders the preflight folder.
-func (c *ClusterDeleter) prepare() (playbookRunner, error) {
+func (c *ClusterDeleter) prepare() (*ansible.Runner, error) {
 	// The distribution, not the rendered folder: an older render can still hold the playbook.
 	template := filepath.Join(
 		c.paths.DistroPath, "templates", cluster.OperationPhasePreFlight, "immutable", deletePlaybook,
@@ -374,22 +342,22 @@ func (c *ClusterDeleter) hosts() []string {
 	)
 }
 
-func (c *ClusterDeleter) runner() (playbookRunner, error) {
-	if c.newRunner != nil {
-		return c.newRunner()
+func (c *ClusterDeleter) runner() (*ansible.Runner, error) {
+	pf, err := c.preflight()
+	if err != nil {
+		return nil, err
 	}
 
-	preflight := c.preflight()
-
-	if err := preflight.Render(); err != nil {
-		return nil, fmt.Errorf("error rendering the preflight templates: %w", err)
-	}
-
-	return preflight.AnsibleRunner(), nil
+	return pf.AnsibleRunner(), nil
 }
 
-func (c *ClusterDeleter) preflight() *create.PreFlight {
-	return create.NewPreFlight(
+// preflight renders the preflight folder the first time, and returns it.
+func (c *ClusterDeleter) preflight() (*create.PreFlight, error) {
+	if c.pf != nil {
+		return c.pf, nil
+	}
+
+	pf := create.NewPreFlight(
 		c.furyctlConf,
 		c.kfdManifest,
 		cluster.CreatorPaths{
@@ -405,15 +373,24 @@ func (c *ClusterDeleter) preflight() *create.PreFlight {
 		cluster.OperationPhaseAll,
 		false,
 	)
+
+	if err := pf.Render(); err != nil {
+		return nil, fmt.Errorf("error rendering the preflight templates: %w", err)
+	}
+
+	c.pf = pf
+
+	return pf, nil
 }
 
 // kubeconfig points KUBECONFIG to the admin.conf of a control plane host and checks that the API answers.
 func (c *ClusterDeleter) kubeconfig() error {
-	if c.fetchKubeconfig != nil {
-		return c.fetchKubeconfig()
+	pf, err := c.preflight()
+	if err != nil {
+		return err
 	}
 
-	_, err := c.preflight().FetchKubeconfig()
+	_, err = pf.FetchKubeconfig()
 
 	return err //nolint:wrapcheck // Delete wraps it with ErrAPIUnreachable.
 }

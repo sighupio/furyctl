@@ -18,11 +18,6 @@ import (
 	templatex "github.com/sighupio/furyctl/pkg/template"
 )
 
-// ShellRunner is shell.Runner.
-type ShellRunner interface {
-	Run(args ...string) (string, error)
-}
-
 // Script renders templates/<phase> of the distribution in the work dir and runs its scripts/delete.sh, the way
 // onpremises/delete/distribution.go does: the delete logic of each distribution version lives in its templates.
 type Script struct {
@@ -31,29 +26,26 @@ type Script struct {
 	name   string
 	paths  cluster.DeleterPaths
 	dryRun bool
-	shell  ShellRunner
+	shell  *shell.Runner
 }
 
-// NewDistribution deletes with templates/distribution/scripts/delete.sh. A nil runner is the real shell.
-func NewDistribution(kfdManifest config.KFD, paths cluster.DeleterPaths, dryRun bool, runner ShellRunner) *Script {
-	return newScript(cluster.OperationPhaseDistribution, kfdManifest, paths, dryRun, runner)
+// NewDistribution deletes with templates/distribution/scripts/delete.sh.
+func NewDistribution(kfdManifest config.KFD, paths cluster.DeleterPaths, dryRun bool) *Script {
+	return newScript(cluster.OperationPhaseDistribution, kfdManifest, paths, dryRun)
 }
 
-// NewPlugins deletes the plugins with templates/plugins/scripts/delete.sh. A nil runner is the real shell.
-func NewPlugins(kfdManifest config.KFD, paths cluster.DeleterPaths, dryRun bool, runner ShellRunner) *Script {
-	return newScript(cluster.OperationPhasePlugins, kfdManifest, paths, dryRun, runner)
+// NewPlugins deletes the plugins with templates/plugins/scripts/delete.sh.
+func NewPlugins(kfdManifest config.KFD, paths cluster.DeleterPaths, dryRun bool) *Script {
+	return newScript(cluster.OperationPhasePlugins, kfdManifest, paths, dryRun)
 }
 
-func newScript(
-	name string, kfdManifest config.KFD, paths cluster.DeleterPaths, dryRun bool, runner ShellRunner,
-) *Script {
+func newScript(name string, kfdManifest config.KFD, paths cluster.DeleterPaths, dryRun bool) *Script {
 	phase := cluster.NewOperationPhase(path.Join(paths.WorkDir, name), kfdManifest.Tools, paths.BinPath)
 
-	if runner == nil {
-		runner = shell.NewRunner(execx.NewStdExecutor(), shell.Paths{Shell: "sh", WorkDir: phase.Path})
+	return &Script{
+		OperationPhase: phase, name: name, paths: paths, dryRun: dryRun,
+		shell: shell.NewRunner(execx.NewStdExecutor(), shell.Paths{Shell: "sh", WorkDir: phase.Path}),
 	}
-
-	return &Script{OperationPhase: phase, name: name, paths: paths, dryRun: dryRun, shell: runner}
 }
 
 // Exec renders the templates and, outside a dry run, runs scripts/delete.sh with args.

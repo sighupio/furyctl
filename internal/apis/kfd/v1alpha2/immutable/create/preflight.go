@@ -36,10 +36,7 @@ var (
 	errImmutable   = errors.New("immutable path changed")
 	errUnsupported = errors.New("unsupported reducer values detected")
 
-	// ErrNoAdminConf means that no control plane host gave admin.conf: the cluster does not exist or does not answer.
-	ErrNoAdminConf = errors.New("no control plane host gave admin.conf")
-	// ErrClusterUnreachable means that the Kubernetes API did not answer with the fetched admin.conf.
-	ErrClusterUnreachable = errors.New("cluster is unreachable")
+	errNoAdminConf = errors.New("no control plane host gave admin.conf")
 )
 
 type Status struct {
@@ -122,12 +119,16 @@ func (p *PreFlight) Exec(renderedConfig map[string]any) (*Status, error) {
 
 	logrus.Info("Running preflight checks...")
 
+	if err := p.Render(); err != nil {
+		return status, err
+	}
+
 	kc, err := p.FetchKubeconfig()
 
 	status.AllNodesAnswer = kc.AllNodesAnswer
 	status.ClusterExists = kc.ClusterExists
 
-	if errors.Is(err, ErrNoAdminConf) {
+	if errors.Is(err, errNoAdminConf) {
 		status.Success = true
 
 		logrus.Debug("Cluster does not exist, skipping state checks")
@@ -204,13 +205,10 @@ type Kubeconfig struct {
 }
 
 // FetchKubeconfig fetches admin.conf from the control plane hosts, points KUBECONFIG to it and probes the API.
-// It returns ErrNoAdminConf when no control plane host gives admin.conf. It does not use the state store.
+// It returns errNoAdminConf when no control plane host gives admin.conf. It does not use the state store.
+// The caller renders the preflight folder first.
 func (p *PreFlight) FetchKubeconfig() (Kubeconfig, error) {
 	var kc Kubeconfig
-
-	if err := p.Render(); err != nil {
-		return kc, err
-	}
 
 	adminConfPath := path.Join(p.Path, "admin.conf")
 
@@ -254,7 +252,7 @@ func (p *PreFlight) FetchKubeconfig() (Kubeconfig, error) {
 	logrus.Info("Checking that the Kubernetes API is reachable...")
 
 	if _, err := p.kubeRunner.Version(); err != nil {
-		return kc, fmt.Errorf("%w, make sure you have access to the cluster: %w", ErrClusterUnreachable, err)
+		return kc, fmt.Errorf("cluster is unreachable, make sure you have access to the cluster: %w", err)
 	}
 
 	return kc, nil
@@ -316,7 +314,7 @@ func adminConfFetched(adminConfPath string) error {
 			return fmt.Errorf("error reading the kubeconfig of the cluster: %w", err)
 		}
 
-		return ErrNoAdminConf
+		return errNoAdminConf
 	}
 
 	return nil

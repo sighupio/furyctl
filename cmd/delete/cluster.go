@@ -132,15 +132,13 @@ func NewClusterCmd() *cobra.Command {
 			}
 			defer lockFileHandler.Remove() //nolint:errcheck // ignore error
 
-			removeLock := func() {
+			execx.OnStop(func() {
 				logrus.Debugf("Removing lock file %s", lockFileHandler.Path)
 
 				if err := lockFileHandler.Remove(); err != nil {
 					logrus.Errorf("error while removing lock file %s: %v", lockFileHandler.Path, err)
 				}
-			}
-
-			execx.OnStop(removeLock)
+			})
 			defer execx.OnStop(nil)
 
 			basePath := filepath.Join(outDir, ".furyctl", res.MinimalConf.Metadata.Name)
@@ -197,13 +195,6 @@ func NewClusterCmd() *cobra.Command {
 			)
 			if err != nil {
 				return fmt.Errorf("error while initializing cluster deleter: %w", err)
-			}
-
-			if stopper, ok := clusterDeleter.(cluster.DeleteStopper); ok {
-				execx.OnStop(func() {
-					stopper.OnDeleteStop()
-					removeLock()
-				})
 			}
 
 			if !flags.Force {
