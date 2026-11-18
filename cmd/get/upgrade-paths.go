@@ -5,12 +5,17 @@
 package get
 
 import (
+	"errors"
 	"fmt"
 	"io/fs"
+	"os"
 	"path"
 	"path/filepath"
+	"slices"
 	"strings"
+	"text/tabwriter"
 
+	"github.com/Al-Pragliola/go-version"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -18,16 +23,15 @@ import (
 	"github.com/sighupio/furyctl/configs"
 	"github.com/sighupio/furyctl/internal/airgap"
 	distroconf "github.com/sighupio/furyctl/internal/apis/config"
-	"github.com/sighupio/furyctl/internal/config"
 	"github.com/sighupio/furyctl/internal/distribution"
 	"github.com/sighupio/furyctl/internal/flags"
-	"github.com/sighupio/furyctl/internal/git"
 	"github.com/sighupio/furyctl/internal/semver"
-	execx "github.com/sighupio/furyctl/internal/x/exec"
-	"github.com/sighupio/furyctl/pkg/dependencies"
-	dist "github.com/sighupio/furyctl/pkg/distribution"
-	netx "github.com/sighupio/furyctl/pkg/x/net"
 	yamlx "github.com/sighupio/furyctl/pkg/x/yaml"
+)
+
+var (
+	ErrInvalidUpgradeFolder    = errors.New("upgrade folder name is not <from>-<to>")
+	ErrUpgradePathsConfigField = errors.New("field is empty in the configuration file")
 )
 
 func NewUpgradePathsCmd() *cobra.Command {
@@ -52,46 +56,10 @@ func NewUpgradePathsCmd() *cobra.Command {
 			}
 		},
 		RunE: func(_ *cobra.Command, _ []string) error {
-			// Air-gapped: extract --airgap-bundle (if set) and rewire to run offline before reading flags.
-			if err := airgap.MaybePrepare(); err != nil {
-				return fmt.Errorf("error preparing air-gapped bundle: %w", err)
-			}
-
 			// Get flags.
-			debug := viper.GetBool("debug")
-			binPath := viper.GetString("bin-path")
 			furyctlPath := viper.GetString("config")
-			outDir := viper.GetString("outdir")
-			distroLocation := viper.GetString("distro-location")
-			gitProtocol := viper.GetString("git-protocol")
-			skipDepsDownload := viper.GetBool("skip-deps-download")
-			skipDepsValidation := viper.GetBool("skip-deps-validation")
 			fromVersion := viper.GetString("from")
 			kind := viper.GetString("kind")
-
-			// Get absolute path to the config file.
-			var err error
-			furyctlPath, err = filepath.Abs(furyctlPath)
-			if err != nil {
-				return fmt.Errorf("error while getting config directory: %w", err)
-			}
-
-			if binPath == "" {
-				binPath = path.Join(outDir, ".furyctl", "bin")
-			} else {
-				binPath, err = filepath.Abs(binPath)
-				if err != nil {
-					return fmt.Errorf("error while getting absolute path for bin folder: %w", err)
-				}
-			}
-
-			typedGitProtocol, err := git.ParseProtocol(gitProtocol)
-			if err != nil {
-				return fmt.Errorf("%w: %w", ErrParsingFlag, err)
-			}
-
-			// Init packages.
-			execx.Debug = debug
 
 			// Check that the version passed by the user is semVer valid.
 			if fromVersion != "" {
@@ -100,78 +68,21 @@ func NewUpgradePathsCmd() *cobra.Command {
 				}
 			}
 
-			// Load the configuration file only if we need to get some of the values from there.
-			// It's time consuming and requires downloading stuff from Internet.
+			// The upgrade paths are embedded in furyctl: only kind and version are needed from the configuration
+			// file, not the distribution, its schemas or the tools.
 			if kind == "" || fromVersion == "" {
-				executor := execx.NewStdExecutor()
-
-				var distrodl *dist.Downloader
-				depsvl := dependencies.NewValidator(executor, binPath, furyctlPath)
-
-				// Init first half of collaborators.
-				client := netx.NewGoGetterClient()
-
-				if distroLocation == "" {
-					distrodl = dist.NewCachingDownloader(client, outDir, typedGitProtocol, "")
-				} else {
-					distrodl = dist.NewDownloader(client, typedGitProtocol, "")
-				}
-
-				// Validate base requirements.
-				if err := depsvl.ValidateBaseReqs(); err != nil {
-					return fmt.Errorf("error while validating requirements: %w", err)
-				}
-
-				// Download the distribution.
-				logrus.Info("Downloading distribution...")
-
-				res, err := distrodl.Download(distroLocation, furyctlPath)
+				confKind, confVersion, err := ReadUpgradePathsConfig(furyctlPath)
 				if err != nil {
-					return fmt.Errorf("error while downloading distribution: %w", err)
+					return err
 				}
 
-				basePath := path.Join(outDir, ".furyctl", res.MinimalConf.Metadata.Name)
-
-				// Init second half of collaborators.
-				depsdl := dependencies.NewCachingDownloader(client, outDir, basePath, binPath, typedGitProtocol)
-
-				// Validate the furyctl.yaml file.
-				logrus.Info("Validating configuration file...")
-				if err := config.Validate(furyctlPath, res.RepoPath); err != nil {
-					return fmt.Errorf("error while validating configuration file: %w", err)
-				}
-
-				// Download the dependencies.
-				if !skipDepsDownload {
-					logrus.Info("Downloading dependencies...")
-					if _, err := depsdl.DownloadTools(res.DistroManifest, res.MinimalConf.Kind); err != nil {
-						return fmt.Errorf("%w: %v", ErrDownloadDependenciesFailed, err)
-					}
-				} else {
-					logrus.Info("Dependencies download skipped")
-				}
-
-				// Validate the dependencies, unless explicitly told to skip it.
-				if !skipDepsValidation {
-					logrus.Info("Validating dependencies...")
-					if err := depsvl.Validate(res); err != nil {
-						return fmt.Errorf("error while validating dependencies: %w", err)
-					}
-				} else {
-					logrus.Info("Dependencies validation skipped")
-				}
-
-				logrus.Debugf("either kind or fromVersion is not specified, reading them from the configuration file in path %s.", furyctlPath)
-				furyctlConf, err := yamlx.FromFileV3[distroconf.Furyctl](furyctlPath)
-				if err != nil {
-					return fmt.Errorf("error while reading configuration file in path %s: %w", furyctlPath, err)
-				}
 				if kind == "" {
-					kind = furyctlConf.Kind
+					kind = confKind
 					logrus.Debugf("got kind %s from the configuration file.", kind)
 				}
+
 				if fromVersion == "" {
-					fromVersion = furyctlConf.Spec.DistributionVersion
+					fromVersion = confVersion
 					logrus.Debugf("got version %s from the configuration file.", fromVersion)
 				}
 			}
@@ -209,7 +120,7 @@ func NewUpgradePathsCmd() *cobra.Command {
 				logrus.Infof("There are no upgrade paths available for version %s of kind %s", fromVersion, kind)
 			}
 
-			return nil
+			return printUpgradePaths(kind, fromVersion)
 		},
 	}
 
@@ -271,4 +182,183 @@ func NewUpgradePathsCmd() *cobra.Command {
 	}
 
 	return upgradePathsCmd
+}
+
+func printUpgradePaths(kind, fromVersion string) error {
+	out, err := FormatUpgradePaths(configs.Tpl, kind, fromVersion)
+	if err != nil {
+		return fmt.Errorf("error while computing the upgrade paths for version %s: %w", fromVersion, err)
+	}
+
+	if _, err := fmt.Fprint(os.Stdout, out); err != nil {
+		return fmt.Errorf("error writing to stdout: %w", err)
+	}
+
+	return nil
+}
+
+// FormatUpgradePaths returns the human output of the upgrade paths of kind from version from, computed from
+// the upgrades/<kind>/<from>-<to> folders of fsys: every folder is an edge of the upgrade graph.
+func FormatUpgradePaths(fsys fs.FS, kind, from string) (string, error) {
+	edges, err := readUpgradeGraph(fsys, strings.ToLower(kind))
+	if err != nil {
+		return "", err
+	}
+
+	direct := edges[from]
+	if len(direct) == 0 {
+		return fmt.Sprintf("No upgrade paths: %s is the latest version furyctl can upgrade to.\n", from), nil
+	}
+
+	slices.SortFunc(direct, compareVersions)
+
+	var sb strings.Builder
+
+	fmt.Fprintf(&sb, "Current version: %s (%s)\n\nDirect upgrades:\n", from, kind)
+
+	const padWidth = 3
+
+	w := tabwriter.NewWriter(&sb, 0, 0, padWidth, ' ', 0)
+
+	var table strings.Builder
+
+	table.WriteString("  TARGET\tRELEASE NOTES\n")
+
+	for _, to := range direct {
+		fmt.Fprintf(&table, "  %s\thttps://github.com/sighupio/distribution/blob/v%s/docs/releases/v%s.md\n", to, to, to)
+	}
+
+	if _, err := w.Write([]byte(table.String())); err != nil {
+		return "", fmt.Errorf("error writing upgrade paths to table: %w", err)
+	}
+
+	if err := w.Flush(); err != nil {
+		return "", fmt.Errorf("error writing upgrade paths to table: %w", err)
+	}
+
+	chain := pathToLatest(edges, from, direct[len(direct)-1])
+	if !slices.Contains(direct, chain[len(chain)-1]) {
+		hops := chain[1:]
+		fmt.Fprintf(&sb, "\nPath to the latest version (%s), one upgrade at a time:\n  %s\n  Read the release notes of %s and %s before you start.\n",
+			chain[len(chain)-1], strings.Join(chain, " -> "), strings.Join(hops[:len(hops)-1], ", "), hops[len(hops)-1])
+	}
+
+	fmt.Fprintf(&sb, "\nNext step: set spec.distributionVersion to v%s in furyctl.yaml and run furyctl apply --upgrade\n"+
+		"Upgrade guide: https://docs.sighup.io/docs/installation/upgrades/\n", chain[1])
+
+	return sb.String(), nil
+}
+
+func readUpgradeGraph(fsys fs.FS, kind string) (map[string][]string, error) {
+	entries, err := fs.ReadDir(fsys, path.Join("upgrades", kind))
+	if errors.Is(err, fs.ErrNotExist) {
+		return map[string][]string{}, nil
+	}
+
+	if err != nil {
+		return nil, fmt.Errorf("error while reading the upgrade paths of kind %s: %w", kind, err)
+	}
+
+	edges := map[string][]string{}
+
+	for _, e := range entries {
+		if !e.IsDir() {
+			continue
+		}
+
+		from, to, ok := strings.Cut(e.Name(), "-")
+		_, fromErr := semver.NewVersion(from)
+		_, toErr := semver.NewVersion(to)
+
+		if !ok || fromErr != nil || toErr != nil {
+			return nil, fmt.Errorf("%w: %s", ErrInvalidUpgradeFolder, e.Name())
+		}
+
+		edges[from] = append(edges[from], to)
+	}
+
+	return edges, nil
+}
+
+// pathToLatest returns the shortest chain from "from" to the highest version reachable from it, taking at each
+// hop the highest version still on a shortest chain. "from" is skipped because the search reaches it at hop 0:
+// on a graph where every reachable version is lower than "from" the chain would otherwise have no hop.
+func pathToLatest(edges map[string][]string, from, highestDirect string) []string {
+	latest := highestDirect
+	for v := range distances(edges, from) {
+		if v != from && compareVersions(v, latest) > 0 {
+			latest = v
+		}
+	}
+
+	toLatest := distances(reverseEdges(edges), latest)
+	chain := []string{from}
+
+	for cur := from; cur != latest; {
+		next := ""
+
+		for _, n := range edges[cur] {
+			if d, ok := toLatest[n]; ok && d == toLatest[cur]-1 && (next == "" || compareVersions(n, next) > 0) {
+				next = n
+			}
+		}
+
+		chain = append(chain, next)
+		cur = next
+	}
+
+	return chain
+}
+
+// reverseEdges returns edges with every arrow flipped, so a breadth-first search from a version counts the hops
+// needed to reach it.
+func reverseEdges(edges map[string][]string) map[string][]string {
+	reverse := map[string][]string{}
+
+	for a, targets := range edges {
+		for _, b := range targets {
+			reverse[b] = append(reverse[b], a)
+		}
+	}
+
+	return reverse
+}
+
+// distances runs a breadth-first search on edges from start and returns the hop count of every reached version.
+func distances(edges map[string][]string, start string) map[string]int {
+	hops := map[string]int{start: 0}
+
+	for queue := []string{start}; len(queue) > 0; queue = queue[1:] {
+		for _, n := range edges[queue[0]] {
+			if _, seen := hops[n]; !seen {
+				hops[n] = hops[queue[0]] + 1
+				queue = append(queue, n)
+			}
+		}
+	}
+
+	return hops
+}
+
+// compareVersions compares versions already validated by readUpgradeGraph, so Must cannot panic.
+func compareVersions(a, b string) int {
+	return version.Must(semver.NewVersion(a)).Compare(version.Must(semver.NewVersion(b)))
+}
+
+// ReadUpgradePathsConfig reads only the kind and spec.distributionVersion of the configuration file in configPath.
+func ReadUpgradePathsConfig(configPath string) (string, string, error) {
+	furyctlConf, err := yamlx.FromFileV3[distroconf.Furyctl](configPath)
+	if err != nil {
+		return "", "", fmt.Errorf("error while reading configuration file in path %s: %w", configPath, err)
+	}
+
+	if furyctlConf.Kind == "" {
+		return "", "", fmt.Errorf("%w: kind in %s", ErrUpgradePathsConfigField, configPath)
+	}
+
+	if furyctlConf.Spec.DistributionVersion == "" {
+		return "", "", fmt.Errorf("%w: spec.distributionVersion in %s", ErrUpgradePathsConfigField, configPath)
+	}
+
+	return furyctlConf.Kind, furyctlConf.Spec.DistributionVersion, nil
 }
