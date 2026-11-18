@@ -348,7 +348,13 @@ The flags configuration includes built-in validation that will **stop execution*
 - `dryRun` (bool) - Dry run mode
 - `vpnAutoConnect` (bool) - Auto connect VPN
 - `skipVpnConfirmation` (bool) - Skip VPN confirmation
-- `force` (array) - Force options
+- `force` (array) - Force options: `all`, `upgrades`, `migrations`, `pods-running-check`, `plugins-unmanage`.
+  `plugins-unmanage` continues an apply that removed plugins from `spec.plugins` and leaves their resources in
+  the cluster, outside of furyctl
+- `prunePlugins` (bool) - Delete the resources of the plugins removed from `spec.plugins` since the configuration
+  stored in the cluster, right before the plugins phase. furyctl lists them and asks for confirmation (`force: [all]`
+  skips the question, `dryRun` only lists them). Only without `phase` or with `phase: plugins`, and not together with
+  `plugins-unmanage` in `force`
 - `postApplyPhases` (array) - Post apply phases
 - `timeout` (int) - Timeout in seconds
 - `podRunningCheckTimeout` (int) - Pod running check timeout

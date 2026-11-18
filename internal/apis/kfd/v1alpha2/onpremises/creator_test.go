@@ -10,12 +10,14 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
 	"testing"
 
 	r3diff "github.com/r3labs/diff/v3"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/sighupio/furyctl/internal/apis/config"
 	commcreate "github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/common/create"
 	"github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/onpremises/public"
 	"github.com/sighupio/furyctl/internal/cluster"
@@ -633,6 +635,35 @@ func TestValidateUpgradeNodeChanges(t *testing.T) {
 			}
 
 			assert.NoError(t, err)
+		})
+	}
+}
+
+// TestPruneBeforePlugins checks that --prune-plugins makes the plugins phase start with the prune: the
+// distribution here has no prune.sh.tpl, so the prune fails before the plugins render, and the creator returns
+// that error before StoreConfig.
+func TestPruneBeforePlugins(t *testing.T) {
+	t.Parallel()
+
+	for _, prune := range []bool{true, false} {
+		t.Run(fmt.Sprintf("prune %t", prune), func(t *testing.T) {
+			t.Parallel()
+
+			paths := cluster.CreatorPaths{
+				ConfigPath: filepath.Join(t.TempDir(), "furyctl.yaml"),
+				WorkDir:    t.TempDir(),
+				DistroPath: t.TempDir(),
+				BinPath:    t.TempDir(),
+			}
+			c := &ClusterCreator{paths: paths, prunePlugins: prune}
+			plugins := commcreate.NewPlugins(paths, config.KFD{}, "Kind", false)
+
+			c.pruneBeforePlugins(plugins, []commcreate.RemovedPlugin{{Kind: commcreate.PluginKindKustomize, Name: "my-plugin"}})
+
+			err := plugins.Exec()
+
+			require.Error(t, err)
+			assert.Equal(t, prune, errors.Is(err, commcreate.ErrPruneScriptMissing))
 		})
 	}
 }

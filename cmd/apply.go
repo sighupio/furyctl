@@ -57,6 +57,7 @@ type ClusterCmdFlags struct {
 	NoTTY                 bool
 	GitProtocol           git.Protocol
 	Force                 []string
+	PrunePlugins          bool
 	Outdir                string
 	Upgrade               bool
 	UpgradePathLocation   string
@@ -68,6 +69,7 @@ type ClusterCmdFlags struct {
 var (
 	ErrDownloadDependenciesFailed = errors.New("dependencies download failed")
 	ErrPhaseInvalid               = errors.New("phase is not valid")
+	ErrPrunePluginsUsage          = errors.New("invalid use of --prune-plugins")
 )
 
 func NewApplyCmd() *cobra.Command {
@@ -246,6 +248,8 @@ func NewApplyCmd() *cobra.Command {
 				return fmt.Errorf("error while initializing the apply: %w", err)
 			}
 
+			clusterCreator.SetProperty(cluster.CreatorPropertyPrunePlugins, cmdFlags.PrunePlugins)
+
 			if err := clusterCreator.Create(
 				cmdFlags.StartFrom,
 				cmdFlags.ProcessTimeout,
@@ -375,6 +379,15 @@ func getApplyCmdFlags() (ClusterCmdFlags, error) {
 		return ClusterCmdFlags{}, fmt.Errorf("%w: %s %w", ErrParsingFlag, "post-apply-phases", err)
 	}
 
+	prunePlugins := viper.GetBool("prune-plugins")
+	force := viper.GetStringSlice("force")
+
+	if prunePlugins {
+		if err := validatePrunePluginsFlag(phase, force); err != nil {
+			return ClusterCmdFlags{}, err
+		}
+	}
+
 	return ClusterCmdFlags{
 		Debug:          viper.GetBool("debug"),
 		FuryctlPath:    furyctlPath,
@@ -385,7 +398,8 @@ func getApplyCmdFlags() (ClusterCmdFlags, error) {
 		VpnAutoConnect: vpnAutoConnect,
 		DryRun:         viper.GetBool("dry-run"),
 		NoTTY:          viper.GetBool("no-tty"),
-		Force:          viper.GetStringSlice("force"),
+		Force:          force,
+		PrunePlugins:   prunePlugins,
 		GitProtocol:    typedGitProtocol,
 		Timeouts: Timeouts{
 			ProcessTimeout:         viper.GetInt("timeout"),
@@ -399,6 +413,22 @@ func getApplyCmdFlags() (ClusterCmdFlags, error) {
 		ClusterSkipsCmdFlags:  skips,
 		PostApplyPhases:       postApplyPhases,
 	}, nil
+}
+
+// validatePrunePluginsFlag rejects the uses of --prune-plugins that cannot work, before the apply contacts the
+// cluster: the prune runs right before the plugins phase, and it contradicts --force plugins-unmanage.
+func validatePrunePluginsFlag(phase string, force []string) error {
+	if phase != cluster.OperationPhaseAll && phase != cluster.OperationPhasePlugins {
+		return fmt.Errorf("%w: --prune-plugins runs only without --phase or with --phase plugins, not with --phase %s",
+			ErrPrunePluginsUsage, phase)
+	}
+
+	if slices.Contains(force, cluster.ForceFeaturePluginsUnmanage) {
+		return fmt.Errorf("%w: --prune-plugins and --force plugins-unmanage contradict each other, choose one",
+			ErrPrunePluginsUsage)
+	}
+
+	return nil
 }
 
 func validatePostApplyPhasesFlag(phases []string) error {
@@ -536,6 +566,14 @@ func setupApplyCmdFlags(cmd *cobra.Command) {
 	airgap.RegisterFlags(cmd)
 
 	cmd.Flags().Bool(
+		"prune-plugins",
+		false,
+		"Delete the resources of the plugins removed from spec.plugins since the configuration stored in the "+
+			"cluster, then continue the apply. It lists them and asks for confirmation (--force all skips it, "+
+			"--dry-run only lists them). Only without --phase or with --phase plugins",
+	)
+
+	cmd.Flags().Bool(
 		"dry-run",
 		false,
 		"Allows to inspect what resources will be created or changed before applying them",
@@ -557,7 +595,7 @@ func setupApplyCmdFlags(cmd *cobra.Command) {
 	cmd.Flags().StringSlice(
 		"force",
 		[]string{},
-		"WARNING: furyctl won't ask for confirmation and will proceed applying upgrades and migrations. Options are: all, upgrades, migrations, pods-running-check",
+		"WARNING: furyctl won't ask for confirmation and will proceed applying upgrades and migrations. Options are: all, upgrades, migrations, pods-running-check, plugins-unmanage",
 	)
 
 	if err := cmd.RegisterFlagCompletionFunc("force", func(_ *cobra.Command, _ []string, _ string) ([]string, cobra.ShellCompDirective) {
@@ -566,6 +604,7 @@ func setupApplyCmdFlags(cmd *cobra.Command) {
 			cluster.ForceFeatureMigrations,
 			cluster.ForceFeaturePodsRunningCheck,
 			cluster.ForceFeatureUpgrades,
+			cluster.ForceFeaturePluginsUnmanage,
 		}, cobra.ShellCompDirectiveDefault
 	}); err != nil {
 		logrus.Fatalf("error while registering flag completion: %v", err)

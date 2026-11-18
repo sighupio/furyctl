@@ -2,6 +2,10 @@
 
 Welcome to the latest release of `furyctl` maintained by SIGHUP by ReeVo team.
 
+## Breaking changes 💔
+
+- `apply` now stops when plugins were removed from `spec.plugins` but their resources are still in the cluster. Run `furyctl apply --prune-plugins` to delete them, add the entries back, or run `furyctl apply --force plugins-unmanage` to leave them outside of furyctl.
+
 ## New features 🌟
 
 ### All kinds

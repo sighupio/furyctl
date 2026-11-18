@@ -16,6 +16,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/sighupio/furyctl/internal/cluster"
+	"github.com/sighupio/furyctl/pkg/diffs"
 	templatex "github.com/sighupio/furyctl/pkg/template"
 )
 
@@ -113,6 +114,45 @@ func TestAssertPhaseDiffs(t *testing.T) {
 			}
 
 			require.ErrorIs(t, err, tC.wantErr)
+		})
+	}
+}
+
+// TestAssertPhaseDiffsPluginRemoval checks that a plugin removed from spec.plugins is accepted only by a run
+// that applies the plugins phase.
+func TestAssertPhaseDiffsPluginRemoval(t *testing.T) {
+	t.Parallel()
+
+	stored := map[string]any{"spec": map[string]any{"plugins": map[string]any{
+		"kustomize": []any{map[string]any{"name": "my-plugin", "folder": "./my-plugin"}},
+	}}}
+	phases := []string{cluster.OperationPhaseDistribution, cluster.OperationPhasePlugins}
+
+	testCases := []struct {
+		desc    string
+		current map[string]any
+	}{
+		{
+			desc:    "one entry removed",
+			current: map[string]any{"spec": map[string]any{"plugins": map[string]any{"kustomize": []any{}}}},
+		},
+		{
+			desc:    "the whole spec.plugins removed",
+			current: map[string]any{"spec": map[string]any{}},
+		},
+	}
+
+	for _, tC := range testCases {
+		t.Run(tC.desc, func(t *testing.T) {
+			t.Parallel()
+
+			d, err := diffs.NewBaseChecker(stored, tC.current).GenerateDiff()
+			require.NoError(t, err)
+
+			require.ErrorIs(t,
+				cluster.AssertPhaseDiffs(d, cluster.OperationPhaseDistribution, cluster.OperationPhaseAll, phases),
+				cluster.ErrChangesToOtherPhases)
+			require.NoError(t, cluster.AssertPhaseDiffs(d, cluster.OperationPhasePlugins, cluster.OperationPhaseAll, phases))
 		})
 	}
 }

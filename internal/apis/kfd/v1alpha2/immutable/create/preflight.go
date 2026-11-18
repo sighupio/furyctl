@@ -17,6 +17,7 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/sighupio/furyctl/internal/apis/config"
+	commcreate "github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/common/create"
 	preflightx "github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/immutable/preflight"
 	"github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/immutable/public"
 	"github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/immutable/supported"
@@ -38,9 +39,11 @@ var (
 )
 
 type Status struct {
-	Diffs         r3diff.Changelog
-	Success       bool
-	ClusterExists bool
+	// RemovedPlugins are the plugins of the stored configuration absent from the new one.
+	RemovedPlugins []commcreate.RemovedPlugin
+	Diffs          r3diff.Changelog
+	Success        bool
+	ClusterExists  bool
 	// AllNodesAnswer is true when every node of spec.infrastructure.nodes answered. It is
 	// false when the distribution gives no state file, because furyctl does not know then.
 	AllNodesAnswer bool
@@ -60,6 +63,7 @@ type PreFlight struct {
 	phase          string
 	startFrom      string
 	upgradeEnabled bool
+	prunePlugins   bool
 }
 
 func NewPreFlight(
@@ -72,6 +76,7 @@ func NewPreFlight(
 	phase string,
 	startFrom string,
 	upgradeEnabled bool,
+	prunePlugins bool,
 ) *PreFlight {
 	p := cluster.NewOperationPhase(
 		path.Join(paths.WorkDir, cluster.OperationPhasePreFlight),
@@ -104,6 +109,7 @@ func NewPreFlight(
 		phase:          phase,
 		startFrom:      startFrom,
 		upgradeEnabled: upgradeEnabled,
+		prunePlugins:   prunePlugins,
 	}
 }
 
@@ -294,11 +300,7 @@ func (p *PreFlight) Exec(renderedConfig map[string]any) (*Status, error) {
 		}
 	}
 
-	logrus.Info("Preflight checks completed successfully")
-
-	status.Success = true
-
-	return status, nil
+	return status, p.checkRemovedPlugins(renderedConfig, status)
 }
 
 func (p *PreFlight) CreateDiffChecker(renderedConfig map[string]any) (diffs.Checker, error) {
@@ -429,4 +431,21 @@ func (p *PreFlight) controlPlaneHosts() []string {
 	}
 
 	return hosts
+}
+
+// checkRemovedPlugins runs the removed-plugins check shared by every kind, the last check of the preflight.
+func (p *PreFlight) checkRemovedPlugins(renderedConfig map[string]any, status *Status) error {
+	removed, err := commcreate.CheckRemovedPlugins(p.stateStore, renderedConfig, p.force, p.prunePlugins)
+
+	status.RemovedPlugins = removed
+
+	if err != nil {
+		return err //nolint:wrapcheck // The removed-plugins error reaches the user verbatim.
+	}
+
+	logrus.Info("Preflight checks completed successfully")
+
+	status.Success = true
+
+	return nil
 }

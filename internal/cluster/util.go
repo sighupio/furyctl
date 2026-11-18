@@ -18,6 +18,10 @@ const (
 	ForceFeatureMigrations       string = "migrations"
 	ForceFeatureUpgrades         string = "upgrades"
 	ForceFeaturePodsRunningCheck string = "pods-running-check"
+	ForceFeaturePluginsUnmanage  string = "plugins-unmanage"
+
+	// CreatorPropertyPrunePlugins carries the --prune-plugins flag of the apply command to the creators.
+	CreatorPropertyPrunePlugins = "pruneplugins"
 )
 
 func IsForceEnabledForFeature(force []string, feature string) bool {

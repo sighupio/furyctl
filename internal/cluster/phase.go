@@ -499,7 +499,7 @@ func changesToPhases(d r3diff.Changelog, phases []string) []string {
 		joinedPath := "." + strings.Join(dfs.Path, ".")
 
 		if slices.ContainsFunc(prefixes, func(s string) bool {
-			return strings.HasPrefix(joinedPath, s)
+			return strings.HasPrefix(joinedPath+".", s) // The trailing dot also matches a whole phase key removed.
 		}) {
 			changes = append(changes, joinedPath)
 		}

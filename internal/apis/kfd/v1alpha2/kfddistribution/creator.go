@@ -51,6 +51,7 @@ type ClusterCreator struct {
 	phase                string
 	dryRun               bool
 	force                []string
+	prunePlugins         bool
 	upgrade              bool
 	externalUpgradesPath string
 	postApplyPhases      []string
@@ -96,6 +97,8 @@ func (c *ClusterCreator) SetProperty(name string, value any) {
 		cluster.SetPropertyValue(value, &c.dryRun)
 	case cluster.CreatorPropertyForce:
 		cluster.SetPropertyValue(value, &c.force)
+	case cluster.CreatorPropertyPrunePlugins:
+		cluster.SetPropertyValue(value, &c.prunePlugins)
 	case cluster.CreatorPropertyUpgrade:
 		cluster.SetPropertyValue(value, &c.upgrade)
 	case cluster.CreatorPropertyExternalUpgradesPath:
@@ -146,6 +149,7 @@ func (c *ClusterCreator) Create(startFrom string, _, _ int) error {
 		c.phase,
 		startFrom,
 		c.upgrade,
+		c.prunePlugins,
 	)
 
 	renderedConfig, err := c.RenderConfig()
@@ -155,8 +159,10 @@ func (c *ClusterCreator) Create(startFrom string, _, _ int) error {
 
 	status, err := preflight.Exec(renderedConfig)
 	if err != nil {
-		return fmt.Errorf("error while executing preflight phase: %w", err)
+		return commcreate.PreFlightError(err) //nolint:wrapcheck // It wraps every error but the removed-plugins one.
 	}
+
+	c.pruneBeforePlugins(pluginsPhase, status.RemovedPlugins)
 
 	r, err := distrorules.NewDistroClusterRulesExtractor(c.paths.DistroPath, renderedConfig, supported.Phases())
 	if err != nil {
@@ -469,4 +475,21 @@ func (*ClusterCreator) getDistributionSubPhase(startFrom string) string {
 	default:
 		return ""
 	}
+}
+
+// pruneBeforePlugins makes the plugins phase delete the removed plugins first, with --prune-plugins.
+func (c *ClusterCreator) pruneBeforePlugins(plugins *commcreate.Plugins, removed []commcreate.RemovedPlugin) {
+	if !c.prunePlugins {
+		return
+	}
+
+	plugins.PruneFirst(commcreate.NewPluginsPrune(
+		c.paths,
+		c.kfdManifest,
+		string(c.furyctlConf.Kind),
+		c.dryRun,
+		c.force,
+		c.stateStore,
+		removed,
+	))
 }

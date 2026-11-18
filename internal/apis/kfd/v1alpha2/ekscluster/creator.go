@@ -60,6 +60,7 @@ type ClusterCreator struct {
 	vpnAutoConnect       bool
 	dryRun               bool
 	force                []string
+	prunePlugins         bool
 	upgrade              bool
 	externalUpgradesPath string
 	postApplyPhases      []string
@@ -118,6 +119,8 @@ func (v *ClusterCreator) SetProperty(name string, value any) {
 		cluster.SetPropertyValue(value, &v.dryRun)
 	case cluster.CreatorPropertyForce:
 		cluster.SetPropertyValue(value, &v.force)
+	case cluster.CreatorPropertyPrunePlugins:
+		cluster.SetPropertyValue(value, &v.prunePlugins)
 	case cluster.CreatorPropertyUpgrade:
 		cluster.SetPropertyValue(value, &v.upgrade)
 	case cluster.CreatorPropertyExternalUpgradesPath:
@@ -279,10 +282,12 @@ func (v *ClusterCreator) CreateAsync(
 
 	status, err := phases.PreFlight.Exec(renderedConfig)
 	if err != nil {
-		errCh <- fmt.Errorf("error while executing preflight phase: %w", err)
+		errCh <- commcreate.PreFlightError(err)
 
 		return
 	}
+
+	v.pruneBeforePlugins(phases.Plugins, status.RemovedPlugins)
 
 	r, err := eksrules.NewEKSClusterRulesExtractor(v.paths.DistroPath, renderedConfig, supported.Phases())
 	if err != nil {
@@ -903,6 +908,7 @@ func (v *ClusterCreator) setupPhases(upgr *upgrade.Upgrade, upgradeFlag bool, st
 		v.phase,
 		startFrom,
 		upgradeFlag,
+		v.prunePlugins,
 	)
 	if err != nil {
 		return nil, nil, nil, nil, nil, fmt.Errorf("error while initiating preflight phase: %w", err)
@@ -936,4 +942,21 @@ func (*ClusterCreator) logVPNKill(vpnConnector *vpn.Connector) error {
 	}
 
 	return nil
+}
+
+// pruneBeforePlugins makes the plugins phase delete the removed plugins first, with --prune-plugins.
+func (v *ClusterCreator) pruneBeforePlugins(plugins *commcreate.Plugins, removed []commcreate.RemovedPlugin) {
+	if !v.prunePlugins {
+		return
+	}
+
+	plugins.PruneFirst(commcreate.NewPluginsPrune(
+		v.paths,
+		v.kfdManifest,
+		string(v.furyctlConf.Kind),
+		v.dryRun,
+		v.force,
+		v.stateStore,
+		removed,
+	))
 }

@@ -91,6 +91,7 @@ func GetSupportedFlags() SupportedFlags {
 			"vpnAutoConnect":         FlagTypeBool,
 			"skipVpnConfirmation":    FlagTypeBool,
 			"force":                  FlagTypeStringSlice,
+			"prunePlugins":           FlagTypeBool,
 			"postApplyPhases":        FlagTypeStringSlice,
 			"timeout":                FlagTypeInt,
 			"podRunningCheckTimeout": FlagTypeInt,
