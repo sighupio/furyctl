@@ -198,7 +198,13 @@ func NewClusterCmd() *cobra.Command {
 			}
 
 			if !flags.Force {
-				_, err = fmt.Println("\nWARNING: You are about to delete a cluster. This action is irreversible.")
+				warning := "\nWARNING: You are about to delete a cluster. This action is irreversible."
+
+				if warner, ok := clusterDeleter.(cluster.DeleteWarner); ok {
+					warning = "\n" + warner.DeleteWarning()
+				}
+
+				_, err = fmt.Println(warning)
 				if err != nil {
 					return fmt.Errorf("error while printing to stdout: %w", err)
 				}
@@ -274,6 +280,7 @@ func NewClusterCmd() *cobra.Command {
 			cluster.OperationPhaseInfrastructure,
 			cluster.OperationPhaseKubernetes,
 			cluster.OperationPhaseDistribution,
+			cluster.OperationPhasePlugins + " (Immutable only)",
 		}, ", "),
 	)
 
@@ -282,6 +289,7 @@ func NewClusterCmd() *cobra.Command {
 			cluster.OperationPhaseInfrastructure,
 			cluster.OperationPhaseKubernetes,
 			cluster.OperationPhaseDistribution,
+			cluster.OperationPhasePlugins,
 		}, cobra.ShellCompDirectiveDefault
 	}); err != nil {
 		logrus.Fatalf("error while registering flag completion: %v", err)

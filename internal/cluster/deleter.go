@@ -48,6 +48,11 @@ type Deleter interface {
 	Delete() error
 }
 
+// DeleteWarner is a deleter with its own warning before the delete confirmation.
+type DeleteWarner interface {
+	DeleteWarning() string
+}
+
 func NewDeleter(
 	minimalConf config.Furyctl,
 	kfdManifest config.KFD,
