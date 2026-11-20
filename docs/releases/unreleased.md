@@ -13,6 +13,7 @@ Welcome to the latest release of `furyctl` maintained by SIGHUP by ReeVo team.
 
 - [[#820](https://github.com/sighupio/furyctl/pull/820)] `get cluster-info` now shows the Flatcar version and the kernel version of the nodes. If the nodes run different versions, for example during an upgrade, the command shows all of them.
 - [[#819](https://github.com/sighupio/furyctl/pull/819)] `delete cluster` now works for the Immutable kind. It deletes the plugins and the distribution, then erases the partition table of the install disk of every node; `--phase` runs a single phase.
+- [[#824](https://github.com/sighupio/furyctl/pull/824)] Immutable: two commands for a single worker or load balancer (never a control plane host). `furyctl apply --reinstall-node <host>` erases the host and installs it again, without changing `furyctl.yaml`. `furyctl delete node <worker>` drains the worker, erases it, and tells you what to remove from `furyctl.yaml` before the next `apply`. Both ask for confirmation, and `--dry-run` only checks the host. Needs [distribution#645](https://github.com/sighupio/distribution/pull/645).
 
 ## Bug fixes 🐞
 

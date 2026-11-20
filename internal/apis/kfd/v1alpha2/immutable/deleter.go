@@ -35,6 +35,14 @@ var (
 	ErrDeleteNotSupported = errors.New("does not support Immutable delete")
 	ErrPreflightFailed    = errors.New("the delete preflight failed, nothing was changed on any host")
 	ErrWipeFailed         = errors.New("erasing the install disks failed on some hosts: " + wipeRecovery)
+	ErrNodeUnsupported    = errors.New("unsupported host")
+	ErrNodeWipeFailed     = errors.New(
+		"erasing the install disk failed, the ansible output above says why: no other host was changed",
+	)
+	ErrDrainFailed = errors.New(
+		"removing the worker from Kubernetes failed, its install disk was not erased: uncordon it with kubectl " +
+			"to give it back its pods",
+	)
 
 	// The phases of a delete without --phase, in reverse order of apply.
 	//
@@ -48,6 +56,9 @@ const (
 	// Shipped with the distribution preflight templates.
 	deletePlaybook = "delete-playbook.yaml"
 	hostsVar       = "furyctl_delete_hosts"
+	// The single-host mode of the delete playbook.
+	targetVar  = "furyctl_delete_target"
+	kubectlVar = "kubectl_bin"
 
 	// The plugins delete script came with the distribution delete script for the Immutable kind.
 	pluginsDeleteTemplate = "delete.sh.tpl"
@@ -67,6 +78,8 @@ type ClusterDeleter struct {
 	kfdManifest config.KFD
 	phase       string
 	dryRun      bool
+	// The worker of delete node, or the host of apply --reinstall-node.
+	deleteNode string
 
 	// The preflight folder, rendered once for the node checks and the kubeconfig.
 	pf *create.PreFlight
@@ -96,6 +109,8 @@ func (c *ClusterDeleter) SetProperty(name string, value any) {
 		cluster.SetPropertyValue(value, &c.phase)
 	case cluster.DeleterPropertyDryRun:
 		cluster.SetPropertyValue(value, &c.dryRun)
+	case cluster.DeleterPropertyDeleteNode:
+		cluster.SetPropertyValue(value, &c.deleteNode)
 	default:
 		logrus.Debugf("ignoring unknown property %q", name)
 	}
@@ -103,6 +118,17 @@ func (c *ClusterDeleter) SetProperty(name string, value any) {
 
 // DeleteWarning replaces the generic warning of the delete confirmation and names only the phases that run.
 func (c *ClusterDeleter) DeleteWarning() string {
+	if c.deleteNode != "" {
+		return fmt.Sprintf(
+			"WARNING: You are about to DELETE the worker %s of the Immutable cluster.\n"+
+				"Its pods are evicted, its Node object is deleted, the partition table of its install disk is erased, "+
+				"and the host restarts. It boots from the network and waits there.\n"+
+				"Then remove the host from the configuration file and run furyctl apply.\n"+
+				"This action is irreversible. Run with --dry-run first to check it without changing anything.",
+			c.deleteNode,
+		)
+	}
+
 	phases, err := c.phases()
 	if err != nil {
 		return fmt.Sprintf("WARNING: %v. Nothing will run.", err)
@@ -150,6 +176,10 @@ func (c *ClusterDeleter) DeleteWarning() string {
 
 // Delete runs the selected phases in reverse order of apply and stops at the first error.
 func (c *ClusterDeleter) Delete() error {
+	if c.deleteNode != "" {
+		return c.deleteWorker()
+	}
+
 	phases, err := c.phases()
 	if err != nil {
 		return err
@@ -197,6 +227,119 @@ func (c *ClusterDeleter) Delete() error {
 	}
 
 	return c.wipe(runner)
+}
+
+// RemoveNode checks the host, drains a worker, then erases the install disk. A dry run only checks.
+func (c *ClusterDeleter) RemoveNode() error {
+	host := c.deleteNode
+
+	runner, err := c.prepare()
+	if err != nil {
+		return err
+	}
+
+	if err := c.checkSingleHostMode(); err != nil {
+		return err
+	}
+
+	logrus.Infof("Checking %s: MAC address, Flatcar, install disk...", host)
+
+	if _, err := runner.Playbook(nodeArgs(host, "preflight")...); err != nil {
+		return fmt.Errorf("%w: %w", ErrPreflightFailed, err)
+	}
+
+	if c.dryRun {
+		logrus.Infof("Dry run completed, %s passed the checks and nothing was changed", host)
+
+		return nil
+	}
+
+	if c.furyctlConf.NodeRole(host) == public.NodeRoleWorker {
+		logrus.Infof("Draining %s and deleting its Node object...", host)
+
+		args := append(nodeArgs(host, "drain"), "-e", kubectlVar+"="+c.pf.KubectlPath)
+		if _, err := runner.Playbook(args...); err != nil {
+			return fmt.Errorf("%w: %w", ErrDrainFailed, err)
+		}
+	}
+
+	logrus.Infof("Erasing the install disk of %s and restarting it...", host)
+
+	if _, err := runner.Playbook(nodeArgs(host, "wipe")...); err != nil {
+		return fmt.Errorf("%w: %w", ErrNodeWipeFailed, err)
+	}
+
+	logrus.Infof("The install disk of %s is erased, the host restarts, boots from the network and waits there", host)
+
+	return nil
+}
+
+// CheckNode refuses a host of delete node that is not a worker, before the confirmation.
+func (c *ClusterDeleter) CheckNode() error {
+	if role := c.furyctlConf.NodeRole(c.deleteNode); role != public.NodeRoleWorker {
+		return fmt.Errorf("%w: %s", ErrNodeUnsupported, nodeRoleProblem(c.deleteNode, role, "worker"))
+	}
+
+	return nil
+}
+
+// deleteWorker removes the worker and prints what to remove from the configuration file.
+func (c *ClusterDeleter) deleteWorker() error {
+	if err := c.CheckNode(); err != nil {
+		return err
+	}
+
+	if err := c.RemoveNode(); err != nil {
+		return err
+	}
+
+	if !c.dryRun {
+		logrus.Info(c.configEdit())
+	}
+
+	return nil
+}
+
+// configEdit lists the entries to remove from the configuration file: furyctl never edits it.
+func (c *ClusterDeleter) configEdit() string {
+	lines := []string{
+		fmt.Sprintf("To finish, remove %s from the configuration file and run furyctl apply:", c.deleteNode),
+		"  - spec.infrastructure.nodes: the entry with hostname " + c.deleteNode,
+	}
+
+	for _, ng := range c.furyctlConf.Spec.Kubernetes.NodeGroups {
+		if !lo.ContainsBy(ng.Nodes, func(m public.Member) bool { return m.Hostname == c.deleteNode }) {
+			continue
+		}
+
+		if len(ng.Nodes) == 1 {
+			lines = append(lines, fmt.Sprintf(
+				"  - spec.kubernetes.nodeGroups: the node group %s, whose only node is %s", ng.Name, c.deleteNode,
+			))
+
+			continue
+		}
+
+		lines = append(lines, fmt.Sprintf(
+			"  - spec.kubernetes.nodeGroups, node group %s: the entry with hostname %s in nodes", ng.Name, c.deleteNode,
+		))
+	}
+
+	return strings.Join(lines, "\n")
+}
+
+// nodeRoleProblem says why a host cannot be deleted or reinstalled alone.
+func nodeRoleProblem(host, role, accepted string) string {
+	if role == public.NodeRoleNone {
+		return fmt.Sprintf("%q is not a host of this cluster configuration", host)
+	}
+
+	problem := fmt.Sprintf("%q is a %s host, and only %s hosts can be erased one at a time", host, role, accepted)
+	if role == public.NodeRoleControlPlane {
+		problem += ": etcd and the control plane change as a group"
+	}
+
+	return problem
 }
 
 // A workloadStep runs a delete script when its phase is selected.
@@ -332,6 +475,30 @@ func playbookArgs(hosts []string, tags string) []string {
 	hostsJSON := "[" + strings.Join(lo.Map(hosts, func(h string, _ int) string { return strconv.Quote(h) }), ",") + "]"
 
 	return []string{deletePlaybook, "-e", hostsVar + "=" + hostsJSON, "--tags", tags}
+}
+
+// nodeArgs selects one host in the delete playbook; its guard checks that it is a worker or a load balancer.
+func nodeArgs(host, tags string) []string {
+	return append(playbookArgs([]string{host}, tags), "-e", targetVar+"="+host)
+}
+
+// checkSingleHostMode stops when the delete playbook of the distribution has no single-host mode.
+func (c *ClusterDeleter) checkSingleHostMode() error {
+	rel := filepath.Join("templates", cluster.OperationPhasePreFlight, "immutable", deletePlaybook)
+
+	content, err := os.ReadFile(filepath.Join(c.paths.DistroPath, rel))
+	if err != nil {
+		return fmt.Errorf("error reading %s: %w", rel, err)
+	}
+
+	if !strings.Contains(string(content), targetVar) {
+		return fmt.Errorf(
+			"the distribution version %s %w of one host: its %s has no %s, use a distribution version that does",
+			c.kfdManifest.Version, ErrDeleteNotSupported, rel, targetVar,
+		)
+	}
+
+	return nil
 }
 
 // hosts lists every machine of spec.infrastructure.nodes, as the preflight inventory does.

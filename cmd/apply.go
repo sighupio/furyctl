@@ -20,6 +20,7 @@ import (
 	_ "github.com/sighupio/furyctl/internal/apis/kfd/v1alpha2/ekscluster"
 	"github.com/sighupio/furyctl/internal/cluster"
 	"github.com/sighupio/furyctl/internal/config"
+	"github.com/sighupio/furyctl/internal/distribution"
 	"github.com/sighupio/furyctl/internal/flags"
 	"github.com/sighupio/furyctl/internal/git"
 	"github.com/sighupio/furyctl/internal/lockfile"
@@ -61,6 +62,7 @@ type ClusterCmdFlags struct {
 	Upgrade               bool
 	UpgradePathLocation   string
 	UpgradeNode           string
+	ReinstallNode         string
 	DistroPatchesLocation string
 	PostApplyPhases       []string
 }
@@ -246,6 +248,14 @@ func NewApplyCmd() *cobra.Command {
 				return fmt.Errorf("error while initializing the apply: %w", err)
 			}
 
+			if cmdFlags.ReinstallNode != "" {
+				if res.MinimalConf.Kind != distribution.ImmutableKind {
+					return fmt.Errorf("%w: reinstall-node: only the Immutable kind supports it", ErrParsingFlag)
+				}
+
+				clusterCreator.SetProperty(cluster.CreatorPropertyReinstallNode, cmdFlags.ReinstallNode)
+			}
+
 			if err := clusterCreator.Create(
 				cmdFlags.StartFrom,
 				cmdFlags.ProcessTimeout,
@@ -365,6 +375,16 @@ func getApplyCmdFlags() (ClusterCmdFlags, error) {
 		)
 	}
 
+	reinstallNode := viper.GetString("reinstall-node")
+
+	if reinstallNode != "" && (upgrade || upgradeNode != "") {
+		return ClusterCmdFlags{}, fmt.Errorf(
+			"%w: %s: cannot use together with the upgrade and upgrade-node flags",
+			ErrParsingFlag,
+			"reinstall-node",
+		)
+	}
+
 	postApplyPhases := viper.GetStringSlice("post-apply-phases")
 
 	if phase != cluster.OperationPhaseAll && len(postApplyPhases) > 0 {
@@ -395,6 +415,7 @@ func getApplyCmdFlags() (ClusterCmdFlags, error) {
 		Upgrade:               upgrade,
 		UpgradePathLocation:   viper.GetString("upgrade-path-location"),
 		UpgradeNode:           upgradeNode,
+		ReinstallNode:         reinstallNode,
 		DistroPatchesLocation: distroPatchesLocation,
 		ClusterSkipsCmdFlags:  skips,
 		PostApplyPhases:       postApplyPhases,
@@ -628,5 +649,13 @@ func setupApplyCmdFlags(cmd *cobra.Command) {
 		"",
 		"On kinds OnPremises and Immutable, this will upgrade one specific node passed as parameter. "+
 			"On kind Immutable the node can be a worker or a load balancer",
+	)
+
+	cmd.Flags().String(
+		"reinstall-node",
+		"",
+		"On kind Immutable, erase the install disk of one worker or load balancer passed as parameter, install it "+
+			"again from the network and join it back. The configuration file must have no pending changes. "+
+			"WARNING: the data on the install disk of the host is lost",
 	)
 }

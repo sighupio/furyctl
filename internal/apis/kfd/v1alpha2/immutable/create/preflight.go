@@ -46,6 +46,8 @@ type Status struct {
 	// AllNodesAnswer is true when every node of spec.infrastructure.nodes answered. It is
 	// false when the distribution gives no state file, because furyctl does not know then.
 	AllNodesAnswer bool
+	// DiffSkipped is true when --force migrations let the preflight go on without comparing the configuration.
+	DiffSkipped bool
 }
 
 type PreFlight struct {
@@ -153,6 +155,8 @@ func (p *PreFlight) Exec(renderedConfig map[string]any) (*Status, error) {
 		}
 
 		logrus.WithError(err).Warn("error creating configuration diff checker but force flag was used. Continuing")
+
+		status.DiffSkipped = true
 	} else {
 		d, err := diffChecker.GenerateDiff()
 		if err != nil {

@@ -83,6 +83,7 @@ type ClusterCreator struct {
 	upgrade              bool
 	externalUpgradesPath string
 	upgradeNode          string
+	reinstallNode        string
 	postApplyPhases      []string
 
 	// The rendered configuration of this run, which persistStagedUpgradeReadyAfterPhases stores.
@@ -137,6 +138,8 @@ func (c *ClusterCreator) SetProperty(name string, value any) {
 		cluster.SetPropertyValue(value, &c.externalUpgradesPath)
 	case cluster.CreatorPropertyUpgradeNode:
 		cluster.SetPropertyValue(value, &c.upgradeNode)
+	case cluster.CreatorPropertyReinstallNode:
+		cluster.SetPropertyValue(value, &c.reinstallNode)
 	case cluster.CreatorPropertyPostApplyPhases:
 		cluster.SetPropertyValue(value, &c.postApplyPhases)
 	default:
@@ -164,7 +167,7 @@ func (*ClusterCreator) GetPhasePath(phase string) (string, error) {
 func (c *ClusterCreator) Create(startFrom string, _, podRunningCheckTimeout int) error {
 	statusx.SetPhases(cluster.PhasesToRun(supported.Phases(), c.phase, startFrom)...)
 
-	if err := c.validateUpgradeNode(startFrom); err != nil {
+	if err := c.validateNodeFlags(startFrom); err != nil {
 		return err
 	}
 
@@ -228,23 +231,13 @@ func (c *ClusterCreator) Create(startFrom string, _, podRunningCheckTimeout int)
 
 	c.renderedConfig = renderedConfig
 
-	status, err := preflight.Exec(renderedConfig)
+	status, err := c.execPreflight(preflight, renderedConfig, startFrom)
 	if err != nil {
-		return fmt.Errorf("error while executing preflight phase: %w", err)
+		return err
 	}
 
-	if phase := c.firstPhase(startFrom); !status.ClusterExists && requiresCluster(phase) {
-		// The advice stops here. A host that does not answer gives its own warning in the
-		// preflight check, and that warning holds what to do about it. A host that answers
-		// with no cluster gives no warning, and "make sure that the hosts answer" would be
-		// wrong for it.
-		return fmt.Errorf(
-			"%w: the %s phase needs a cluster, and the preflight check found no kubeconfig on these "+
-				"control plane hosts: %s. Apply the infrastructure phase and the kubernetes phase first",
-			ErrClusterNotFound,
-			phase,
-			strings.Join(c.controlPlaneNodes(), ", "),
-		)
+	if c.reinstallNode != "" {
+		return c.reinstall(status, infra, kubernetes)
 	}
 
 	if status.ClusterExists {
@@ -452,6 +445,34 @@ func (c *ClusterCreator) RenderConfig() (map[string]any, error) {
 	return lo.MapValues(tfCfg.Data, func(v map[any]any, _ string) any {
 		return convertValue(v)
 	}), nil
+}
+
+// execPreflight runs the preflight phase and stops when the first phase needs a cluster that it did not find.
+func (c *ClusterCreator) execPreflight(
+	preflight *create.PreFlight,
+	renderedConfig map[string]any,
+	startFrom string,
+) (*create.Status, error) {
+	status, err := preflight.Exec(renderedConfig)
+	if err != nil {
+		return nil, fmt.Errorf("error while executing preflight phase: %w", err)
+	}
+
+	if phase := c.firstPhase(startFrom); !status.ClusterExists && requiresCluster(phase) {
+		// The advice stops here. A host that does not answer gives its own warning in the
+		// preflight check, and that warning holds what to do about it. A host that answers
+		// with no cluster gives no warning, and "make sure that the hosts answer" would be
+		// wrong for it.
+		return nil, fmt.Errorf(
+			"%w: the %s phase needs a cluster, and the preflight check found no kubeconfig on these "+
+				"control plane hosts: %s. Apply the infrastructure phase and the kubernetes phase first",
+			ErrClusterNotFound,
+			phase,
+			strings.Join(c.controlPlaneNodes(), ", "),
+		)
+	}
+
+	return status, nil
 }
 
 // newDistributionPhase builds the distribution phase as the operations run it, and keeps the

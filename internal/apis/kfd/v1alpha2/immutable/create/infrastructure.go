@@ -10,6 +10,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"slices"
 	"strconv"
 
 	"github.com/samber/lo"
@@ -26,11 +27,37 @@ import (
 	templatex "github.com/sighupio/furyctl/pkg/template"
 )
 
-const loadBalancerPlaybook = "upgrade-load-balancers.yml"
+const (
+	loadBalancerPlaybook = "upgrade-load-balancers.yml"
+
+	// ReinstallNodePlaybook configures one reinstalled host, in the infrastructure and kubernetes phases.
+	ReinstallNodePlaybook = "reinstall-node.yaml"
+	ReinstallTargetVar    = "furyctl_reinstall_target"
+)
+
+// CheckReinstallShipped fails when the distribution does not ship the reinstall playbooks.
+func CheckReinstallShipped(distroPath string) error {
+	for _, phase := range []string{
+		filepath.Join(cluster.OperationPhaseInfrastructure, "immutable", "ansible"),
+		filepath.Join(cluster.OperationPhaseKubernetes, "immutable"),
+	} {
+		rel := filepath.Join("templates", phase, ReinstallNodePlaybook)
+
+		if _, err := os.Stat(filepath.Join(distroPath, rel)); err != nil {
+			return fmt.Errorf("%w: it does not ship %s: %w", ErrReinstallUnsupported, rel, err)
+		}
+	}
+
+	return nil
+}
 
 // ErrLoadBalancerUpgradeUnsupported is returned when the distribution has no load
 // balancer upgrade playbook and the user asked for one load balancer by name.
-var ErrLoadBalancerUpgradeUnsupported = errors.New("this distribution version does not upgrade the load balancers")
+var (
+	ErrLoadBalancerUpgradeUnsupported = errors.New("this distribution version does not upgrade the load balancers")
+	// ErrReinstallUnsupported is returned when the distribution has no reinstall playbook.
+	ErrReinstallUnsupported = errors.New("this distribution version does not reinstall a node")
+)
 
 // loadBalancerPlaybookShipped reports whether the distribution gives the load balancer
 // upgrade playbook. A distribution released before this feature does not, and an upgrade
@@ -172,7 +199,7 @@ func (i *Infrastructure) Exec(_ string, upgradeState *upgrade.State) error {
 		logrus.Info("Every node answers, and no change needs a node provisioned again. " +
 			"Skipping the wait for the nodes to boot. To provision a node again, erase its disk and power it off " +
 			"before the apply")
-	} else if err := i.serveAssets(); err != nil {
+	} else if err := i.serveAssets(nil); err != nil {
 		return err
 	}
 
@@ -201,6 +228,32 @@ func (i *Infrastructure) SetUpgrade(upgradeEnabled bool) {
 // the server waits for nothing.
 func (i *Infrastructure) SetSkipBootWait(skip bool) {
 	i.skipBootWait = skip
+}
+
+// ReinstallNode serves the boot assets, waits for one erased host and runs reinstall-node.yaml on it.
+func (i *Infrastructure) ReinstallNode(host string) error {
+	statusx.Phase(cluster.OperationPhaseInfrastructure)
+
+	if err := i.BootstrapNodes(); err != nil {
+		return fmt.Errorf("preparing for infrastructure phase failed: %w", err)
+	}
+
+	if err := i.renderAnsible(); err != nil {
+		return err
+	}
+
+	if err := i.serveAssets([]string{host}); err != nil {
+		return err
+	}
+
+	statusx.Working("Applying the node configuration", -1)
+	logrus.Infof("Applying the configuration of %s...", host)
+
+	if _, err := i.ansibleRunner.Playbook(ReinstallNodePlaybook, "-e", ReinstallTargetVar+"="+host); err != nil {
+		return fmt.Errorf("error applying playbook: %w", err)
+	}
+
+	return nil
 }
 
 // ansibleTemplatesPath gives the folder of the infrastructure ansible templates of the
@@ -331,15 +384,9 @@ func (i *Infrastructure) upgradeLoadBalancers(upgradeState *upgrade.State) error
 }
 
 // serveAssets serves the downloaded assets to the machines, and it waits until every node
-// boots, or until the operator presses ENTER.
-func (i *Infrastructure) serveAssets() error {
-	// Struct to keep each node's bootstrap status.
-	nodeStatus := lo.SliceToMap(
-		i.furyctlConf.Spec.Infrastructure.Nodes,
-		func(node public.SpecInfrastructureNode) (string, string) {
-			return node.Hostname, serve.StatusPending
-		},
-	)
+// boots, or until the operator presses ENTER. A list of hosts waits for those hosts only.
+func (i *Infrastructure) serveAssets(hosts []string) error {
+	nodeStatus := waitingNodes(i.furyctlConf.Spec.Infrastructure.Nodes, hosts)
 
 	// Serve the downloaded assets to the machines.
 	ipxeServer, err := url.Parse(string(i.furyctlConf.Spec.Infrastructure.IpxeServer.Url))
@@ -362,4 +409,16 @@ func (i *Infrastructure) serveAssets() error {
 	}
 
 	return nil
+}
+
+// waitingNodes lists the nodes the assets server waits for: the given hosts, or every node.
+func waitingNodes(nodes []public.SpecInfrastructureNode, hosts []string) map[string]string {
+	return lo.SliceToMap(
+		lo.Filter(nodes, func(node public.SpecInfrastructureNode, _ int) bool {
+			return len(hosts) == 0 || slices.Contains(hosts, node.Hostname)
+		}),
+		func(node public.SpecInfrastructureNode) (string, string) {
+			return node.Hostname, serve.StatusPending
+		},
+	)
 }

@@ -15,6 +15,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	texttemplate "text/template"
 
@@ -873,6 +874,10 @@ func (i *Infrastructure) BootstrapNodes() error {
 		return fmt.Errorf("error rendering butane templates: %w", err)
 	}
 
+	if err := i.removeStaleNodeFiles(); err != nil {
+		return err
+	}
+
 	// Post-process: convert .bu to .ign for each node.
 	for _, node := range i.furyctlConf.Spec.Infrastructure.Nodes {
 		if err := i.generateNodeIgnition(node); err != nil {
@@ -888,6 +893,41 @@ func (i *Infrastructure) BootstrapNodes() error {
 	usedArchitectures := i.extractUsedArchitectures()
 	if err := i.downloadAssets(usedArchitectures); err != nil {
 		return fmt.Errorf("error downloading assets: %w", err)
+	}
+
+	return nil
+}
+
+// removeStaleNodeFiles removes the files of MACs no longer in the configuration: a deleted host must not reinstall.
+func (i *Infrastructure) removeStaleNodeFiles() error {
+	macs := lo.Map(i.furyctlConf.Spec.Infrastructure.Nodes, func(node public.SpecInfrastructureNode, _ int) string {
+		return strings.ToUpper(strings.ReplaceAll(string(node.MacAddress), ":", "-"))
+	})
+
+	for _, dir := range []string{
+		filepath.Join(i.Path, "server", "boot"),
+		filepath.Join(i.Path, "server", "ignition"),
+	} {
+		entries, err := os.ReadDir(dir)
+		if errors.Is(err, os.ErrNotExist) {
+			continue
+		}
+
+		if err != nil {
+			return fmt.Errorf("error reading %s: %w", dir, err)
+		}
+
+		for _, e := range entries {
+			if slices.Contains(macs, e.Name()) {
+				continue
+			}
+
+			logrus.Infof("Removing %s: the MAC address is no longer in the configuration", filepath.Join(dir, e.Name()))
+
+			if err := os.RemoveAll(filepath.Join(dir, e.Name())); err != nil {
+				return fmt.Errorf("error removing %s: %w", filepath.Join(dir, e.Name()), err)
+			}
+		}
 	}
 
 	return nil
