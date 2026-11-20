@@ -5,12 +5,18 @@
 package get
 
 import (
+	"errors"
 	"fmt"
+	"io"
 	"io/fs"
+	"os"
 	"path"
 	"path/filepath"
+	"slices"
 	"strings"
+	"text/tabwriter"
 
+	"github.com/Al-Pragliola/go-version"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -209,7 +215,7 @@ func NewUpgradePathsCmd() *cobra.Command {
 				logrus.Infof("There are no upgrade paths available for version %s of kind %s", fromVersion, kind)
 			}
 
-			return nil
+			return printUpgradePaths(os.Stdout, configs.Tpl, kind, fromVersion)
 		},
 	}
 
@@ -271,4 +277,64 @@ func NewUpgradePathsCmd() *cobra.Command {
 	}
 
 	return upgradePathsCmd
+}
+
+// printUpgradePaths writes the release notes links of the direct upgrades of kind from version from, the chain of upgrades
+// to the highest reachable version and the next step, or nothing without upgrades. Every upgrades/<kind>/<from>-<to> folder of
+// fsys is an upgrade.
+func printUpgradePaths(w io.Writer, fsys fs.FS, kind, from string) error {
+	entries, err := fs.ReadDir(fsys, path.Join("upgrades", strings.ToLower(kind)))
+	if err != nil && !errors.Is(err, fs.ErrNotExist) {
+		return fmt.Errorf("error while reading the upgrade paths of kind %s: %w", kind, err)
+	}
+
+	upgrades := map[string][]string{}
+
+	for _, e := range entries {
+		a, b, ok := strings.Cut(e.Name(), "-")
+		if e.IsDir() && ok {
+			upgrades[a] = append(upgrades[a], b)
+		}
+	}
+
+	direct := upgrades[from]
+	if len(direct) == 0 {
+		return nil
+	}
+
+	slices.SortFunc(direct, compareVersions)
+
+	const tabPadding = 2
+
+	tw := tabwriter.NewWriter(w, 0, 0, tabPadding, ' ', 0)
+	_, _ = fmt.Fprintln(tw, "TARGET\tRELEASE NOTES")
+
+	for _, to := range direct {
+		_, _ = fmt.Fprintf(tw, "%s\thttps://github.com/sighupio/distribution/blob/v%s/docs/releases/v%s.md\n", to, to, to)
+	}
+
+	if err := tw.Flush(); err != nil {
+		return fmt.Errorf("error while writing the upgrade paths: %w", err)
+	}
+
+	// shortcut: every hop takes the highest target, which reaches the highest reachable version on the embedded
+	// upgrades; use a graph search if a highest target ever becomes a dead end.
+	chain := []string{from}
+	for next := direct; len(next) > 0; next = upgrades[chain[len(chain)-1]] {
+		chain = append(chain, slices.MaxFunc(next, compareVersions))
+	}
+
+	if latest := chain[len(chain)-1]; latest != chain[1] {
+		_, _ = fmt.Fprintf(w, "\nPath to %s: %s\n", latest, strings.Join(chain, " -> "))
+	}
+
+	_, _ = fmt.Fprintf(w, "\nNext step: set spec.distributionVersion to v%s and run furyctl apply --upgrade\n"+
+		"Upgrade guide: https://docs.sighup.io/docs/installation/upgrades/\n", chain[1])
+
+	return nil
+}
+
+// compareVersions compares the versions of the upgrades folders, which are all semver.
+func compareVersions(a, b string) int {
+	return version.Must(semver.NewVersion(a)).Compare(version.Must(semver.NewVersion(b)))
 }
