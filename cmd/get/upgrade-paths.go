@@ -199,6 +199,8 @@ func NewUpgradePathsCmd() *cobra.Command {
 
 			if len(availablePaths) == 0 {
 				logrus.Infof("There are no upgrade paths available for version %s of kind %s", fromVersion, kind)
+			} else {
+				logrus.Infof("Available upgrade paths for version %s of kind %s:", fromVersion, kind)
 			}
 
 			return printUpgradePaths(os.Stdout, configs.Tpl, kind, fromVersion)
