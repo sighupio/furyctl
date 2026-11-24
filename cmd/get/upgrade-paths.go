@@ -197,21 +197,7 @@ func NewUpgradePathsCmd() *cobra.Command {
 				return fmt.Errorf("error while getting the upgrade paths for version %s: %w", fromVersion, err)
 			}
 
-			if len(availablePaths) > 0 {
-				var targetVersions []string
-				for _, match := range availablePaths {
-					f, err := fs.Stat(configs.Tpl, match)
-					if err != nil {
-						return fmt.Errorf("error while checking filesystem: %w", err)
-					}
-					if f.IsDir() {
-						fromToVersions := strings.Split(filepath.Base(match), "-")
-						toVersion := fromToVersions[len(fromToVersions)-1]
-						targetVersions = append(targetVersions, toVersion)
-					}
-				}
-				logrus.Infof("Available upgrade paths for version %s of kind %s are: %s", fromVersion, kind, strings.Join(targetVersions, ", "))
-			} else {
+			if len(availablePaths) == 0 {
 				logrus.Infof("There are no upgrade paths available for version %s of kind %s", fromVersion, kind)
 			}
 
@@ -310,7 +296,7 @@ func printUpgradePaths(w io.Writer, fsys fs.FS, kind, from string) error {
 	_, _ = fmt.Fprintln(tw, "TARGET\tRELEASE NOTES")
 
 	for _, to := range direct {
-		_, _ = fmt.Fprintf(tw, "%s\thttps://github.com/sighupio/distribution/blob/v%s/docs/releases/v%s.md\n", to, to, to)
+		_, _ = fmt.Fprintf(tw, "%s\thttps://github.com/sighupio/distribution/releases/tag/v%s\n", to, to)
 	}
 
 	if err := tw.Flush(); err != nil {
@@ -325,10 +311,11 @@ func printUpgradePaths(w io.Writer, fsys fs.FS, kind, from string) error {
 	}
 
 	if latest := chain[len(chain)-1]; latest != chain[1] {
-		_, _ = fmt.Fprintf(w, "\nPath to %s: %s\n", latest, strings.Join(chain, " -> "))
+		_, _ = fmt.Fprintf(w, "\nPossible path to %s: %s\n", latest, strings.Join(chain, " -> "))
 	}
 
-	_, _ = fmt.Fprintf(w, "\nNext step: set spec.distributionVersion to v%s and run furyctl apply --upgrade\n"+
+	_, _ = fmt.Fprintf(w, "\nNext step: set .spec.distributionVersion in the configuration file to v%s "+
+		"and run furyctl apply --upgrade\n"+
 		"Upgrade guide: https://docs.sighup.io/docs/installation/upgrades/\n", chain[1])
 
 	return nil
