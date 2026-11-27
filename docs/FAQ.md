@@ -143,7 +143,7 @@ To use `furyctl` in these environments, the following flags should be used:
 - `--distro-location`: This flag specifies the local path of the downloaded distribution, allowing `furyctl` to use the local version instead of attempting to download it.
 - `--skip-deps-download`: This flag skips downloading additional dependencies or binaries from external sources, ensuring that everything is used from the cache or the local distribution.
 
-The air-gapped feature is documented here: https://docs.kubernetesfury.com/docs/advanced-use-cases/air-gapped.
+The air-gapped feature is documented here: https://docs.sighup.io/docs/manual/plan/environments/air-gapped.
 
 </details>
 

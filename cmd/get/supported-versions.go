@@ -146,7 +146,7 @@ func FormatSupportedVersions(releases []distribution.KFDRelease, kinds []string)
 	}
 
 	if showUnsupportedFuryctlMsg {
-		sb.WriteString("\n* this usually indicates you are not using the latest version of furyctl, try updating or checking the online documentation:\nhttps://docs.sighup.io/furyctl/compatibility-matrix\n")
+		sb.WriteString("\n* this usually indicates you are not using the latest version of furyctl, try updating or checking the online documentation:\nhttps://docs.sighup.io/reference/compatibility/furyctl\n")
 	}
 
 	if showRecommendedMsg {

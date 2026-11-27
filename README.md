@@ -95,7 +95,7 @@ For development setup, building from source, and contributing guidelines, see [D
 
 ## Usage
 
-For basic and advanced usage instructions, please refer to furyctl's [official documentation](https://docs.sighup.io/furyctl/) and the [SIGHUP Distribution getting started guides](https://docs.sighup.io/docs/getting-started/).
+For basic and advanced usage instructions, see the [User manual](https://docs.sighup.io/docs/manual/), which starts with the getting started tutorials, and the [furyctl CLI reference](https://docs.sighup.io/reference/furyctl/cli-reference).
 
 <!-- </SD-DOCS> -->
 <!-- <FOOTER> -->

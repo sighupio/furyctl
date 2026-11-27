@@ -318,7 +318,7 @@ func printUpgradePaths(w io.Writer, fsys fs.FS, kind, from string) error {
 
 	_, _ = fmt.Fprintf(w, "\nNext step: set .spec.distributionVersion in the configuration file to v%s "+
 		"and run furyctl apply --upgrade\n"+
-		"Upgrade guide: https://docs.sighup.io/docs/installation/upgrades/\n", chain[1])
+		"Upgrade guide: https://docs.sighup.io/docs/manual/upgrade/\n", chain[1])
 
 	return nil
 }
